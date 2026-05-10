@@ -1,0 +1,1491 @@
+<script>
+  const AST_STATE = {
+    clientes: [],
+    unidades: [],
+    equipamentos: [],
+    tecnicos: [],
+    fornecedores: [],
+    entradas: [],
+    dashboard: {},
+    dashboardGerencial: {},
+    acessorios: []
+  };
+
+  function renderAssistenciaTecnicaModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = `
+      <div class="module-shell ast-shell">
+        <div class="module-header">
+          <div class="module-header-left">
+            <h2 class="content-title">Assistencia Tecnica</h2>
+            <p class="content-subtitle">Entrada, rastreabilidade, laboratorio, terceiros e documentos tecnicos.</p>
+          </div>
+          <div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-primary" type="button" onclick="astAbrirEntrada_()">Dar Entrada em Equipamento</button>
+            <button class="btn-secondary" type="button" onclick="astCarregarTudo_()">Atualizar</button>
+          </div>
+        </div>
+
+        <style>
+          .ast-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+          .ast-kpi{border:1px solid var(--border);background:#fff;border-radius:8px;padding:12px;min-height:76px}
+          .ast-kpi small{display:block;font-size:10px;text-transform:uppercase;color:#64748b;font-weight:800}
+          .ast-kpi strong{display:block;font-size:24px;color:#0f172a;margin-top:5px}
+          .ast-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+          .ast-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+          .ast-form-grid .full{grid-column:1/-1}
+          .ast-accessory-row{display:grid;grid-template-columns:2fr .7fr 1fr 1.8fr auto;gap:8px;align-items:end;margin-bottom:8px}
+          .ast-flag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}
+          .ast-flag.VERDE{background:#dcfce7;color:#166534}
+          .ast-flag.AMARELO{background:#fef3c7;color:#92400e}
+          .ast-flag.VERMELHO{background:#fee2e2;color:#991b1b}
+          .ast-flag.AZUL_CINZA{background:#e2e8f0;color:#334155}
+          .ast-detail{display:grid;grid-template-columns:1.3fr .9fr;gap:14px}
+          .ast-gerencial-filtros{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+          .ast-gerencial-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .ast-gerencial-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+          .ast-mini-list{max-height:320px;overflow:auto}
+          @media(max-width:800px){
+            .ast-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+            .module-header{align-items:flex-start}
+            .ast-form-grid,.ast-detail,.ast-gerencial-filtros,.ast-gerencial-grid,.ast-gerencial-actions{grid-template-columns:1fr}
+            .ast-accessory-row{grid-template-columns:1fr}
+          }
+        </style>
+
+        <div id="astKpis" class="ast-kpis"></div>
+
+        <div class="ast-tabs">
+          <button class="btn-secondary" type="button" onclick="astMostrarLista_()">Painel</button>
+          <button class="btn-secondary" type="button" onclick="astAbrirEntrada_()">Nova Entrada</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarFase_('terceiros')">Terceiros</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarFase_('laboratorio')">Laboratorio</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarGerencial_()">Gerencial</button>
+        </div>
+
+        <section id="astArea"></section>
+      </div>`;
+
+    astCarregarTudo_();
+  }
+
+  function astCarregarTudo_() {
+    if (!SESSION) return;
+    astSetArea_('<div class="empty-state">Carregando modulo de Assistencia Tecnica...</div>');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          astSetArea_('<div class="empty-state">Nao foi possivel carregar o modulo.</div>');
+          return;
+        }
+        AST_STATE.clientes = res.clientes || [];
+        AST_STATE.tecnicos = res.tecnicos || [];
+        AST_STATE.fornecedores = res.fornecedores || [];
+        AST_STATE.dashboard = res.dashboard || {};
+        astRenderKpis_();
+        astMostrarLista_();
+      })
+      .withFailureHandler(function(err) {
+        astSetArea_('<div class="empty-state">Erro: ' + escapeHtml_(err.message || err) + '</div>');
+      })
+      .astContexto(SESSION);
+  }
+
+  function astRenderKpis_() {
+    const d = AST_STATE.dashboard || {};
+    const kpis = [
+      ["Na assistencia", d.totalAssistencia],
+      ["Entradas hoje", d.entradasDia],
+      ["Em aberto", d.emAberto],
+      ["Atrasados", d.atrasados],
+      ["Aguard. diagnostico", d.aguardandoDiagnostico],
+      ["Aguard. pecas", d.aguardandoPecas],
+      ["Em terceiro", d.emTerceiro],
+      ["Prontos entrega", d.prontosEntrega]
+    ];
+    const el = document.getElementById("astKpis");
+    if (!el) return;
+    el.innerHTML = kpis.map(function(k) {
+      return '<div class="ast-kpi"><small>' + escapeHtml_(k[0]) + '</small><strong>' + escapeHtml_(k[1] || 0) + '</strong></div>';
+    }).join("");
+  }
+
+  function astMostrarLista_() {
+    astSetArea_(`
+      <div class="list-card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <input id="astFiltroTexto" class="toolbar-search" placeholder="Buscar protocolo, cliente, equipamento, tecnico..." onkeydown="if(event.key==='Enter') astPesquisar_()">
+          <select id="astFiltroStatus">
+            <option value="">Todos os status</option>
+            <option value="ENTRADA">Entrada</option>
+            <option value="TRIAGEM">Triagem</option>
+            <option value="DIAGNOSTICO">Diagnostico</option>
+            <option value="ORCAMENTO">Orcamento</option>
+            <option value="AGUARDANDO_PECAS">Aguardando pecas</option>
+            <option value="MANUTENCAO">Manutencao</option>
+            <option value="TERCEIROS">Terceiros</option>
+            <option value="ENVIADO_PARA_TERCEIRO">Enviado para terceiro</option>
+            <option value="TERCEIRO_RECEBIDO_METROLABS">Retorno de terceiro</option>
+            <option value="TERCEIRO_ATRASADO">Terceiro atrasado</option>
+            <option value="LABORATORIO">Laboratorio</option>
+            <option value="ENTRADA_LABORATORIO">Entrada laboratorio</option>
+            <option value="LAB_EM_PROCESSO">Lab em processo</option>
+            <option value="LAB_AGUARDANDO_CERTIFICADO">Lab aguardando certificado</option>
+            <option value="LAB_APROVADO">Lab aprovado</option>
+            <option value="LAB_REPROVADO">Lab reprovado</option>
+            <option value="PRONTO_ENTREGA">Pronto entrega</option>
+            <option value="ENTREGUE">Entregue</option>
+          </select>
+          <button class="btn-secondary" type="button" onclick="astPesquisar_()">Pesquisar</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Protocolo</th><th>Cliente</th><th>Equipamento</th><th>Status</th><th>Tecnico</th><th>Prazo</th><th>Acoes</th></tr></thead>
+            <tbody id="astEntradasBody"><tr><td colspan="7" class="empty-state">Carregando entradas...</td></tr></tbody>
+          </table>
+        </div>
+      </div>`);
+    astPesquisar_();
+  }
+
+  function astPesquisar_() {
+    const filtros = {
+      TEXTO: getValue_("astFiltroTexto"),
+      STATUS: getValue_("astFiltroStatus")
+    };
+    google.script.run
+      .withSuccessHandler(function(res) {
+        AST_STATE.entradas = (res && res.items) || [];
+        astRenderEntradas_();
+      })
+      .withFailureHandler(function(err) {
+        const body = document.getElementById("astEntradasBody");
+        if (body) body.innerHTML = '<tr><td colspan="7" class="empty-state">' + escapeHtml_(err.message || err) + '</td></tr>';
+      })
+      .astListarEntradas(SESSION, filtros);
+  }
+
+  function astRenderEntradas_() {
+    const body = document.getElementById("astEntradasBody");
+    if (!body) return;
+    if (!AST_STATE.entradas.length) {
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma entrada encontrada.</td></tr>';
+      return;
+    }
+    body.innerHTML = AST_STATE.entradas.map(function(e) {
+      const flag = escapeHtml_(e.BANDEIRA || "AZUL_CINZA");
+      return `<tr>
+        <td><b>${escapeHtml_(e.PROTOCOLO)}</b></td>
+        <td>${escapeHtml_(e.CLIENTE_NOME)}</td>
+        <td>${escapeHtml_(e.EQUIPAMENTO_NOME)}<br><small>${escapeHtml_(e.EQUIPAMENTO_SERIE)}</small></td>
+        <td><span class="ast-flag ${flag}">${escapeHtml_(e.STATUS)}</span></td>
+        <td>${escapeHtml_(e.TECNICO_NOME || "--")}</td>
+        <td>${escapeHtml_(e.PRAZO_PROMETIDO || "--")}</td>
+        <td><div class="table-actions">
+          <button class="btn-info" type="button" onclick="astAbrirDetalhe_('${escapeHtml_(e.ID)}')">Abrir</button>
+          <button class="btn-secondary" type="button" onclick="astEtiqueta_('${escapeHtml_(e.ID)}')">Etiqueta</button>
+        </div></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function astAbrirEntrada_() {
+    AST_STATE.acessorios = [{ DESCRICAO: "", QUANTIDADE: "1", ESTADO: "", OBSERVACAO: "" }];
+    astSetArea_(`
+      <div class="form-card">
+        <h3 class="section-card-title">Dar Entrada em Equipamento</h3>
+        <div class="ast-form-grid">
+          <div><label>Cliente</label><select id="astCliente" onchange="astClienteChange_()">${astOptionsClientes_()}</select></div>
+          <div><label>Unidade</label><select id="astUnidade" onchange="astUnidadeChange_()"><option value="">Selecione o cliente</option></select></div>
+          <div class="full"><label>Equipamento</label><select id="astEquipamento"><option value="">Selecione a unidade</option></select></div>
+          <div><label><input id="astProvisorio" type="checkbox" onchange="astToggleProvisorio_()"> Cadastro provisorio</label></div>
+          <div><label>Numero de serie informado</label><input id="astSerieInformada" placeholder="Serie visivel na chegada"></div>
+          <div class="full" id="astProvisorioBox" style="display:none;">
+            <div class="ast-form-grid">
+              <div><label>Cliente provisorio</label><input id="astClienteProv"></div>
+              <div><label>Unidade provisoria</label><input id="astUnidadeProv"></div>
+              <div class="full"><label>Equipamento provisorio</label><input id="astEquipProv"></div>
+            </div>
+          </div>
+          <div class="full"><label>Condicao fisica na chegada</label><textarea id="astCondicao" rows="3"></textarea></div>
+          <div class="full"><label>Problema relatado</label><textarea id="astProblema" rows="3"></textarea></div>
+          <div><label>Prioridade</label><select id="astPrioridade"><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>
+          <div><label>Prazo prometido</label><input id="astPrazo" type="date"></div>
+          <div class="full"><label>Tecnico responsavel</label><select id="astTecnico">${astOptionsTecnicos_()}</select></div>
+        </div>
+
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+          <h3 class="section-card-title">Acessorios recebidos</h3>
+          <div id="astAcessoriosBox"></div>
+          <button class="btn-secondary" type="button" onclick="astAddAcessorio_()">+ Acessorio</button>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;">
+            <input id="astAcessoriosConferidos" type="checkbox"> Confirmo que os acessorios foram conferidos
+          </label>
+        </div>
+
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+          <h3 class="section-card-title">Fotos de chegada</h3>
+          <input id="astFotoChegada" type="file" accept="image/*" capture="environment">
+          <textarea id="astFotoObs" rows="2" placeholder="Observacao da foto"></textarea>
+          <p class="helper-text">A foto pode ser enviada depois da entrada, pela tela de detalhe. Nesta primeira fase o registro da entrada ja gera QR, PDF e etiqueta.</p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-primary" type="button" onclick="astSalvarEntrada_()">Concluir entrada</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarLista_()">Cancelar</button>
+        </div>
+        <div id="astEntradaMsg" class="helper-text"></div>
+      </div>`);
+    astRenderAcessorios_();
+  }
+
+  function astSalvarEntrada_() {
+    const msg = document.getElementById("astEntradaMsg");
+    if (msg) msg.textContent = "Registrando entrada...";
+    const provis = document.getElementById("astProvisorio") && document.getElementById("astProvisorio").checked;
+    const payload = {
+      CLIENTE_ID: getValue_("astCliente"),
+      UNIDADE_ID: getValue_("astUnidade"),
+      EQUIPAMENTO_ID: getValue_("astEquipamento"),
+      CADASTRO_PROVISORIO: provis ? "S" : "N",
+      CLIENTE_PROVISORIO: getValue_("astClienteProv"),
+      UNIDADE_PROVISORIA: getValue_("astUnidadeProv"),
+      EQUIPAMENTO_PROVISORIO: getValue_("astEquipProv"),
+      NUMERO_SERIE_INFORMADO: getValue_("astSerieInformada"),
+      CONDICAO_FISICA: getValue_("astCondicao"),
+      PROBLEMA_RELATADO: getValue_("astProblema"),
+      PRIORIDADE: getValue_("astPrioridade"),
+      PRAZO_PROMETIDO: getValue_("astPrazo"),
+      TECNICO_ID: getValue_("astTecnico"),
+      ACESSORIOS_CONFERIDOS: document.getElementById("astAcessoriosConferidos").checked ? "S" : "N",
+      Acessorios: null,
+      ACESSORIOS: astLerAcessorios_()
+    };
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (msg) msg.textContent = (res && res.message) || "Falha ao registrar.";
+          return;
+        }
+        alert("Entrada registrada: " + res.protocolo);
+        astMostrarLista_();
+      })
+      .withFailureHandler(function(err) {
+        if (msg) msg.textContent = "Erro: " + (err.message || err);
+      })
+      .astCriarEntrada(SESSION, payload);
+  }
+
+  function astAbrirDetalhe_(id) {
+    astSetArea_('<div class="empty-state">Carregando prontuario tecnico...</div>');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          astSetArea_('<div class="empty-state">' + escapeHtml_((res && res.message) || "Nao encontrado.") + '</div>');
+          return;
+        }
+        const e = res.item;
+        const docs = res.documentos || [];
+        const protocoloDoc = astDocPorTipo_(docs, "COMPROVANTE_ENTRADA_EQUIPAMENTO");
+        const etiquetaDoc = astDocPorTipo_(docs, "ETIQUETA_RASTREABILIDADE_AST");
+        const whatsappTexto = (res.whatsapp || "");
+        astSetArea_(`
+          <div class="ast-detail">
+            <div class="form-card">
+              <h3 class="section-card-title">${escapeHtml_(e.PROTOCOLO)}</h3>
+              <p><span class="ast-flag ${escapeHtml_(e.BANDEIRA || "AZUL_CINZA")}">${escapeHtml_(e.STATUS)}</span></p>
+              <div class="ast-form-grid">
+                <div><label>Cliente</label><div>${escapeHtml_(e.CLIENTE_NOME)}</div></div>
+                <div><label>Unidade</label><div>${escapeHtml_(e.UNIDADE_NOME)}</div></div>
+                <div class="full"><label>Equipamento</label><div>${escapeHtml_(e.EQUIPAMENTO_NOME)}</div></div>
+                <div><label>Serie</label><div>${escapeHtml_(e.EQUIPAMENTO_SERIE)}</div></div>
+                <div><label>Tecnico</label><div>${escapeHtml_(e.TECNICO_NOME || "--")}</div></div>
+                <div class="full"><label>Problema</label><div>${escapeHtml_(e.PROBLEMA_RELATADO)}</div></div>
+                <div class="full"><label>Proxima acao</label><div>${escapeHtml_(e.PROXIMA_ACAO)}</div></div>
+              </div>
+              <div class="form-actions">
+                <select id="astNovoStatus">
+                  <option value="TRIAGEM">Triagem</option><option value="DIAGNOSTICO">Diagnostico</option>
+                  <option value="ORCAMENTO">Orcamento</option><option value="AGUARDANDO_APROVACAO">Aguardando aprovacao</option>
+                  <option value="AGUARDANDO_PECAS">Aguardando pecas</option><option value="MANUTENCAO">Manutencao</option>
+                  <option value="TESTE">Teste</option><option value="LABORATORIO">Laboratorio</option><option value="ENTRADA_LABORATORIO">Entrada laboratorio</option><option value="LAB_EM_PROCESSO">Lab em processo</option><option value="LAB_AGUARDANDO_CERTIFICADO">Lab aguardando certificado</option><option value="LAB_APROVADO">Lab aprovado</option><option value="LAB_REPROVADO">Lab reprovado</option>
+                  <option value="TERCEIROS">Terceiros</option><option value="ENVIADO_PARA_TERCEIRO">Enviado para terceiro</option><option value="TERCEIRO_RECEBIDO_METROLABS">Retorno de terceiro</option><option value="TERCEIRO_ATRASADO">Terceiro atrasado</option><option value="PRONTO_ENTREGA">Pronto entrega</option>
+                  <option value="ENTREGUE">Entregue</option><option value="SEM_REPARO">Sem reparo</option><option value="CANCELADO">Cancelado</option>
+                </select>
+                <input id="astProximaAcao" placeholder="Proxima acao">
+                <button class="btn-primary" type="button" onclick="astAtualizarStatus_('${escapeHtml_(e.ID)}')">Atualizar status</button>
+              </div>
+              <div class="form-actions">
+                <select id="astTrocaTecnico">${astOptionsTecnicos_(e.TECNICO_ID)}</select>
+                <input id="astMotivoTroca" placeholder="Motivo obrigatorio da troca">
+                <button class="btn-secondary" type="button" onclick="astTrocarTecnico_('${escapeHtml_(e.ID)}')">Trocar tecnico</button>
+              </div>
+            </div>
+            <div class="list-card">
+              <h3 class="section-card-title">QR, documentos e etiqueta</h3>
+              <img src="${escapeHtml_(e.QR_URL)}" style="width:160px;max-width:100%;border:1px solid var(--border);border-radius:8px;">
+              <p class="helper-text">${escapeHtml_(e.URL_PUBLICA)}</p>
+              <div class="form-actions" style="align-items:center;">
+                <select id="astEtiquetaTam">
+                  <option value="MEDIA">Media / Niimbot B21</option>
+                  <option value="PEQUENA">Pequena</option>
+                  <option value="A4">A4</option>
+                </select>
+              </div>
+              <div class="form-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+                <button class="btn-secondary" type="button" onclick="astVerQR_('${escapeHtml_(e.ID)}','${escapeHtml_(e.URL_PUBLICA)}')">Ver QR</button>
+                <button class="btn-secondary" type="button" onclick="astEtiqueta_('${escapeHtml_(e.ID)}')">Imprimir etiqueta</button>
+                <button class="btn-secondary" type="button" onclick="astBaixarEtiquetaPdf_('${escapeHtml_(e.ID)}')">Baixar etiqueta PDF</button>
+                <button class="btn-secondary" type="button" onclick="astAbrirProtocolo_('${escapeHtml_(e.ID)}','${escapeHtml_(protocoloDoc.LINK_ARQUIVO || e.DOCUMENTO_ENTRADA_LINK || "")}')">Ver protocolo PDF</button>
+                <button class="btn-secondary" type="button" onclick="astBaixarProtocolo_('${escapeHtml_(e.ID)}','${escapeHtml_(protocoloDoc.DOWNLOAD_URL || e.DOCUMENTO_ENTRADA_DOWNLOAD || protocoloDoc.LINK_ARQUIVO || e.DOCUMENTO_ENTRADA_LINK || "")}')">Baixar protocolo</button>
+                <button class="btn-secondary" type="button" onclick="astCopiarWhats_('${escapeHtml_(e.ID)}')">Copiar mensagem WhatsApp</button>
+                <button class="btn-secondary" type="button" onclick="astAbrirWhats_('${escapeHtml_(e.ID)}')">Abrir WhatsApp</button>
+                <button class="btn-secondary" type="button" onclick="astAbrirValidacao_('${escapeHtml_(e.ID)}','${escapeHtml_(protocoloDoc.URL_VALIDACAO || e.URL_PUBLICA || "")}')">Abrir validacao publica</button>
+              </div>
+              <textarea id="astWhatsappTexto" style="display:none;">${escapeHtml_(whatsappTexto)}</textarea>
+              <p class="helper-text">Etiqueta PDF mais recente: ${escapeHtml_(etiquetaDoc.LINK_ARQUIVO || "--")}</p>
+              <h3 class="section-card-title">Movimentacoes</h3>
+              <div>${astMovimentosHtml_(res.movimentos || [])}</div>
+            </div>
+          </div>
+          ${astTecnicoHtml_(e, res)}`);
+      })
+      .withFailureHandler(function(err) {
+        astSetArea_('<div class="empty-state">Erro: ' + escapeHtml_(err.message || err) + '</div>');
+      })
+      .astObterEntrada(SESSION, id);
+  }
+
+  function astAtualizarStatus_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Status atualizado.");
+      astAbrirDetalhe_(id);
+    }).astAtualizarStatus(SESSION, id, getValue_("astNovoStatus"), "Atualizacao pelo painel da Assistencia Tecnica.", getValue_("astProximaAcao"));
+  }
+
+  function astTrocarTecnico_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Tecnico atualizado.");
+      astAbrirDetalhe_(id);
+    }).astTrocarTecnico(SESSION, id, getValue_("astTrocaTecnico"), getValue_("astMotivoTroca"));
+  }
+
+  function astEtiqueta_(id) {
+    const tamanho = getValue_("astEtiquetaTam") || "MEDIA";
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert("Nao foi possivel gerar etiqueta.");
+      const w = window.open("", "_blank");
+      w.document.open();
+      w.document.write(res.html);
+      w.document.close();
+      w.print();
+    }).astGerarEtiqueta(SESSION, id, tamanho);
+  }
+
+  function astBaixarEtiquetaPdf_(id) {
+    const tamanho = getValue_("astEtiquetaTam") || "MEDIA";
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Nao foi possivel gerar etiqueta PDF.");
+      window.open(res.downloadUrl || res.pdfUrl, "_blank");
+      astAbrirDetalhe_(id);
+    }).astGerarEtiquetaPdf(SESSION, id, tamanho);
+  }
+
+  function astVerQR_(id, url) {
+    astRegistrarAcaoSilenciosa_(id, "QR_VISUALIZAR", "QR/rastreabilidade aberto pela tela interna.");
+    window.open(url, "_blank");
+  }
+
+  function astAbrirProtocolo_(id, url) {
+    if (!url) return alert("Protocolo PDF ainda nao disponivel.");
+    astRegistrarAcaoSilenciosa_(id, "PROTOCOLO_ABRIR", "Protocolo PDF aberto.");
+    window.open(url, "_blank");
+  }
+
+  function astBaixarProtocolo_(id, url) {
+    if (!url) return alert("Protocolo PDF ainda nao disponivel.");
+    astRegistrarAcaoSilenciosa_(id, "PROTOCOLO_DOWNLOAD", "Download do protocolo solicitado.");
+    window.open(url, "_blank");
+  }
+
+  function astAbrirValidacao_(id, url) {
+    if (!url) return alert("Link de validacao ainda nao disponivel.");
+    astRegistrarAcaoSilenciosa_(id, "VALIDACAO_ABRIR", "Validacao publica aberta.");
+    window.open(url, "_blank");
+  }
+
+  function astCopiarWhats_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Nao foi possivel gerar mensagem.");
+      astCopiarTexto_(res.texto);
+      alert("Mensagem copiada.");
+    }).astObterWhatsapp(SESSION, id);
+  }
+
+  function astAbrirWhats_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Nao foi possivel gerar WhatsApp.");
+      window.open(res.url, "_blank");
+    }).astObterWhatsapp(SESSION, id);
+  }
+
+  function astRegistrarAcaoSilenciosa_(id, acao, detalhe) {
+    try {
+      google.script.run.astRegistrarAcao(SESSION, id, acao, detalhe);
+    } catch (e) {}
+  }
+
+  function astCopiarTexto_(texto) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto || "");
+      return;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = texto || "";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
+  function astDocPorTipo_(docs, tipo) {
+    const alvo = String(tipo || "").toUpperCase();
+    const filtrados = (docs || []).filter(function(d) {
+      return String(d.TIPO_DOCUMENTO || "").toUpperCase() === alvo;
+    });
+    if (!filtrados.length) return {};
+    filtrados.sort(function(a, b) {
+      return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || ""));
+    });
+    return filtrados[0] || {};
+  }
+
+  function astTecnicoHtml_(e, res) {
+    const diag = ((res.diagnosticos || []).slice().sort((a, b) => String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")))[0]) || {};
+    const teste = ((res.testes || []).slice().sort((a, b) => String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")))[0]) || {};
+    const exec = ((res.execucoes || []).slice().sort((a, b) => String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")))[0]) || {};
+    return `
+      <div class="form-card" style="margin-top:14px;">
+        <h3 class="section-card-title">Fluxo tecnico da assistencia</h3>
+        <div class="ast-tabs">
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecDiag')">Diagnostico</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecPecas')">Pecas</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecTeste')">Teste de bancada</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecExec')">Execucao</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecConclusao')">Conclusao tecnica</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecTerceiro')">Terceiros</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecLab')">Laboratorio</button>
+          <button class="btn-secondary" type="button" onclick="astMostrarSubsecao_('astSecDocsTec')">Documentos tecnicos</button>
+        </div>
+
+        <section id="astSecDiag" class="ast-subsec">
+          <div class="ast-form-grid">
+            <div><label>Tecnico responsavel</label><select id="astDiagTecnico">${astOptionsTecnicos_(diag.TECNICO_ID || e.TECNICO_ID)}</select></div>
+            <div><label>Risco de uso</label><select id="astDiagRisco"><option>BAIXO</option><option>MEDIO</option><option>ALTO</option><option>CRITICO</option></select></div>
+            <div class="full"><label>Defeito relatado pelo cliente</label><textarea id="astDiagRelatado" rows="2">${escapeHtml_(diag.DEFEITO_RELATADO_CLIENTE || e.PROBLEMA_RELATADO || "")}</textarea></div>
+            <div class="full"><label>Defeito confirmado pelo tecnico</label><textarea id="astDiagConfirmado" rows="2">${escapeHtml_(diag.DEFEITO_CONFIRMADO || "")}</textarea></div>
+            <div><label>Defeito intermitente?</label><select id="astDiagIntermitente"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Equipamento liga?</label><select id="astDiagLiga"><option value="S">Sim</option><option value="N">Nao</option></select></div>
+            <div><label>Inspecao visual OK?</label><select id="astDiagVisual"><option value="S">Sim</option><option value="N">Nao</option></select></div>
+            <div><label>Teste eletrico basico</label><select id="astDiagEletrico"><option>NAO_APLICAVEL</option><option>SIM</option><option>NAO</option></select></div>
+            <div><label>Necessita limpeza?</label><select id="astDiagLimpeza"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Necessita peca?</label><select id="astDiagPeca" onchange="astDiagPecaChange_()"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Necessita terceiro?</label><select id="astDiagTerceiro"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Status apos diagnostico</label><select id="astDiagStatus"><option value="">Automatico</option><option>DIAGNOSTICO_CONCLUIDO</option><option>EM_MANUTENCAO</option><option>AGUARDANDO_PECAS</option><option>AGUARDANDO_TERCEIRO</option></select></div>
+            <div class="full"><label>Testes realizados</label><textarea id="astDiagTestes" rows="2">${escapeHtml_(diag.TESTES_REALIZADOS || "")}</textarea></div>
+            <div class="full"><label>Evidencias encontradas</label><textarea id="astDiagEvidencias" rows="2">${escapeHtml_(diag.EVIDENCIAS_ENCONTRADAS || "")}</textarea></div>
+            <div class="full"><label>Causa provavel</label><textarea id="astDiagCausa" rows="2">${escapeHtml_(diag.CAUSA_PROVAVEL || "")}</textarea></div>
+            <div class="full"><label>Recomendacao tecnica</label><textarea id="astDiagRecomendacao" rows="2">${escapeHtml_(diag.RECOMENDACAO_TECNICA || "")}</textarea></div>
+            <div class="full"><label>Conclusao preliminar</label><textarea id="astDiagConclusao" rows="2">${escapeHtml_(diag.CONCLUSAO_PRELIMINAR || "")}</textarea></div>
+          </div>
+          <div class="form-actions"><button class="btn-primary" type="button" onclick="astSalvarDiagnostico_('${escapeHtml_(e.ID)}')">Registrar diagnostico</button></div>
+        </section>
+
+        <section id="astSecPecas" class="ast-subsec" style="display:none;">
+          <div class="ast-form-grid">
+            <div><label>Nome da peca</label><input id="astPecaNome"></div>
+            <div><label>Codigo interno</label><input id="astPecaCodInt"></div>
+            <div><label>Codigo fabricante</label><input id="astPecaCodFab"></div>
+            <div><label>Quantidade</label><input id="astPecaQtd" type="number" min="1" value="1"></div>
+            <div><label>Urgencia</label><select id="astPecaUrgencia"><option>NORMAL</option><option>ALTA</option><option>CRITICA</option></select></div>
+            <div><label>Tem em estoque?</label><select id="astPecaEstoque"><option>NAO_VERIFICADO</option><option>SIM</option><option>NAO</option></select></div>
+            <div><label>Fornecedor sugerido</label><input id="astPecaFornecedor"></div>
+            <div><label>Valor estimado</label><input id="astPecaValor"></div>
+            <div><label>Status da peca</label><select id="astPecaStatus"><option>PECA_SOLICITADA</option><option>PECA_EM_COTACAO</option><option>PECA_AGUARDANDO_APROVACAO</option><option>PECA_COMPRADA</option><option>PECA_RECEBIDA</option><option>PECA_INSTALADA</option><option>PECA_CANCELADA</option><option>PECA_INDISPONIVEL</option></select></div>
+            <div class="full"><label>Justificativa tecnica</label><textarea id="astPecaJust" rows="2"></textarea></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" type="button" onclick="astSalvarPeca_('${escapeHtml_(e.ID)}')">Solicitar peca</button>
+            <button class="btn-secondary" type="button" onclick="astResumoComercial_('${escapeHtml_(e.ID)}')">Gerar resumo para orcamento</button>
+            <button class="btn-secondary" type="button" onclick="astResumoComercialWhats_('${escapeHtml_(e.ID)}')">Copiar resumo WhatsApp/comercial</button>
+          </div>
+          <div>${astPecasHtml_(res.pecas || [])}</div>
+        </section>
+
+        <section id="astSecTeste" class="ast-subsec" style="display:none;">
+          <div class="ast-form-grid">
+            <div><label>Tecnico</label><select id="astTesteTecnico">${astOptionsTecnicos_(teste.TECNICO_ID || e.TECNICO_ID)}</select></div>
+            <div><label>Tipo de teste</label><input id="astTesteTipo" value="${escapeHtml_(teste.TIPO_TESTE || "")}"></div>
+            <div class="full"><label>Condicao inicial</label><textarea id="astTesteCondicao" rows="2">${escapeHtml_(teste.CONDICAO_INICIAL || "")}</textarea></div>
+            <div class="full"><label>Procedimento realizado</label><textarea id="astTesteProcedimento" rows="2">${escapeHtml_(teste.PROCEDIMENTO_REALIZADO || "")}</textarea></div>
+            <div><label>Resultado</label><select id="astTesteResultado"><option>APROVADO</option><option>APROVADO_COM_RESSALVA</option><option>REPROVADO</option><option>TESTE_INCONCLUSIVO</option></select></div>
+            <div><label>Proxima acao</label><input id="astTesteProxima" value="${escapeHtml_(teste.PROXIMA_ACAO || "")}"></div>
+            <div class="full"><label>Parametros observados</label><textarea id="astTesteParametros" rows="2">${escapeHtml_(teste.PARAMETROS_OBSERVADOS || "")}</textarea></div>
+            <div class="full"><label>Evidencias/fotos</label><textarea id="astTesteEvidencias" rows="2">${escapeHtml_(teste.EVIDENCIAS || "")}</textarea></div>
+            <div class="full"><label>Observacoes</label><textarea id="astTesteObs" rows="2">${escapeHtml_(teste.OBSERVACOES || "")}</textarea></div>
+          </div>
+          <div class="form-actions"><button class="btn-primary" type="button" onclick="astSalvarTeste_('${escapeHtml_(e.ID)}')">Registrar teste de bancada</button></div>
+        </section>
+
+        <section id="astSecExec" class="ast-subsec" style="display:none;">
+          <div class="ast-form-grid">
+            <div><label>Tecnico executor</label><select id="astExecTecnico">${astOptionsTecnicos_(exec.TECNICO_ID || e.TECNICO_ID)}</select></div>
+            <div><label>Garantia do servico</label><input id="astExecGarantia" value="${escapeHtml_(exec.GARANTIA_SERVICO || "")}"></div>
+            <div class="full"><label>Servico realizado</label><textarea id="astExecServico" rows="2">${escapeHtml_(exec.SERVICO_REALIZADO || "")}</textarea></div>
+            <div class="full"><label>Pecas aplicadas</label><textarea id="astExecPecas" rows="2">${escapeHtml_(exec.PECAS_APLICADAS || "")}</textarea></div>
+            <div class="full"><label>Ajustes realizados</label><textarea id="astExecAjustes" rows="2">${escapeHtml_(exec.AJUSTES_REALIZADOS || "")}</textarea></div>
+            <div><label>Limpeza realizada</label><select id="astExecLimpeza"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Status final</label><select id="astExecStatus"><option>EM_MANUTENCAO</option><option>REPARO_CONCLUIDO</option><option>PRONTO_PARA_RETIRADA</option></select></div>
+            <div class="full"><label>Componentes substituidos</label><textarea id="astExecComponentes" rows="2">${escapeHtml_(exec.COMPONENTES_SUBSTITUIDOS || "")}</textarea></div>
+            <div class="full"><label>Testes apos reparo</label><textarea id="astExecTestes" rows="2">${escapeHtml_(exec.TESTES_APOS_REPARO || "")}</textarea></div>
+            <div class="full"><label>Resultado final</label><textarea id="astExecResultado" rows="2">${escapeHtml_(exec.RESULTADO_FINAL || "")}</textarea></div>
+            <div class="full"><label>Recomendacao ao cliente</label><textarea id="astExecRecomendacao" rows="2">${escapeHtml_(exec.RECOMENDACAO_CLIENTE || "")}</textarea></div>
+          </div>
+          <div class="form-actions"><button class="btn-primary" type="button" onclick="astSalvarExecucao_('${escapeHtml_(e.ID)}')">Registrar execucao</button></div>
+        </section>
+
+        <section id="astSecConclusao" class="ast-subsec" style="display:none;">
+          <div class="ast-form-grid">
+            <div><label>Tecnico executor</label><select id="astConcTecnico">${astOptionsTecnicos_(e.TECNICO_ID)}</select></div>
+            <div><label>Teste obrigatorio?</label><select id="astConcTesteObrig"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+            <div><label>Status final</label><select id="astConcStatus"><option>PRONTO_PARA_RETIRADA</option><option>REPARO_CONCLUIDO</option></select></div>
+            <div class="full"><label>Conclusao tecnica</label><textarea id="astConcConclusao" rows="3"></textarea></div>
+            <div class="full"><label>Resultado final</label><textarea id="astConcResultado" rows="3"></textarea></div>
+          </div>
+          <div class="form-actions"><button class="btn-primary" type="button" onclick="astConcluirTecnica_('${escapeHtml_(e.ID)}')">Concluir tecnicamente</button></div>
+        </section>
+
+        <section id="astSecTerceiro" class="ast-subsec" style="display:none;">
+          ${astTerceiroHtml_(e, res)}
+        </section>
+
+        <section id="astSecLab" class="ast-subsec" style="display:none;">
+          ${astLaboratorioHtml_(e, res)}
+        </section>
+
+        <section id="astSecDocsTec" class="ast-subsec" style="display:none;">
+          <div class="ast-form-grid">
+            <div><label>Tipo da evidencia</label><select id="astEvidTipo"><option>DEFEITO_ENCONTRADO</option><option>PARTE_INTERNA</option><option>PLACA_ELETRONICA</option><option>NUMERO_SERIE</option><option>COMPONENTE_DANIFICADO</option><option>TESTE_BANCADA</option><option>MEDICAO</option><option>ANTES_DEPOIS</option><option>OUTRA_EVIDENCIA</option></select></div>
+            <div><label>URL/anexo</label><input id="astEvidUrl"></div>
+            <div><label>Arquivo real</label><input id="astEvidFile" type="file"></div>
+            <div class="full"><label>Descricao</label><textarea id="astEvidDesc" rows="2"></textarea></div>
+          </div>
+          <div class="form-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+            <button class="btn-secondary" type="button" onclick="astAdicionarEvidencia_('${escapeHtml_(e.ID)}')">Adicionar evidencia</button>
+            <button class="btn-secondary" type="button" onclick="astGerarRelDiag_('${escapeHtml_(e.ID)}')">Gerar relatorio de diagnostico</button>
+            <button class="btn-secondary" type="button" onclick="astGerarRelMan_('${escapeHtml_(e.ID)}')">Gerar relatorio de manutencao</button>
+            <button class="btn-secondary" type="button" onclick="astBaixarDocTipo_('${escapeHtml_(e.ID)}','RELATORIO_DIAGNOSTICO_TECNICO')">Baixar PDF diagnostico</button>
+            <button class="btn-secondary" type="button" onclick="astBaixarDocTipo_('${escapeHtml_(e.ID)}','RELATORIO_MANUTENCAO_AST')">Baixar PDF manutencao</button>
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function astMostrarFase_(fase) {
+    if (fase === "relatorios" || fase === "gerencial") {
+      astMostrarGerencial_();
+      return;
+    }
+    const textos = {
+      terceiros: "Fluxo de terceiros estruturado: abas, anexos, acompanhamento, alertas e documentos estao prontos para o proximo bloco de tela operacional.",
+      laboratorio: "Fluxo de laboratorio estruturado: entrada, ensaios, padroes, resultados, documentos, QR e validacao estao prontos para o bloco dedicado."
+    };
+    astSetArea_('<div class="form-card"><h3 class="section-card-title">' + escapeHtml_(fase.toUpperCase()) + '</h3><p>' + escapeHtml_(textos[fase] || "") + '</p></div>');
+  }
+
+  function astMostrarGerencial_() {
+    astSetArea_(`
+      <div class="form-card">
+        <h3 class="section-card-title">Gerencial</h3>
+        <div class="ast-gerencial-filtros">
+          <div><label>Periodo inicial</label><input id="astGerIni" type="date"></div>
+          <div><label>Periodo final</label><input id="astGerFim" type="date"></div>
+          <div><label>Cliente</label><select id="astGerCliente">${astOptionsClientes_()}</select></div>
+          <div><label>Unidade</label><select id="astGerUnidade"><option value="">Todas</option></select></div>
+          <div><label>Tecnico</label><select id="astGerTecnico">${astOptionsTecnicos_("")}</select></div>
+          <div><label>Status</label><input id="astGerStatus" placeholder="Ex.: AGUARDANDO_PECAS"></div>
+          <div><label>Prioridade</label><select id="astGerPrioridade"><option value="">Todas</option><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>
+          <div><label>Tipo de fluxo</label><select id="astGerFluxo"><option value="">Todos</option><option value="OFICINA">Oficina</option><option value="TERCEIRO">Terceiro</option><option value="LABORATORIO">Laboratorio</option></select></div>
+          <div><label>Somente atrasados</label><select id="astGerAtrasados"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+          <div><label>Somente criticos</label><select id="astGerCriticos"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+          <div><label>Sem movimentacao</label><select id="astGerSemMov"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+          <div><label>Entrada/prontuario</label><input id="astGerEntradaId" placeholder="ID da entrada"></div>
+        </div>
+        <div class="ast-gerencial-actions">
+          <button class="btn-primary" type="button" onclick="astAtualizarDashboardGerencial_()">Atualizar dashboard</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('cliente')">Relatorio por cliente</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('prontuario')">Prontuario equipamento</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('executivo')">Executivo geral</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('produtividade')">Produtividade tecnicos</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('atrasados')">Equipamentos atrasados</button>
+          <button class="btn-secondary" type="button" onclick="astGerarPdfGerencial_('conformidade')">Conformidade documental</button>
+          <button class="btn-secondary" type="button" onclick="astCopiarResumoExecutivo_()">Copiar resumo executivo</button>
+        </div>
+      </div>
+      <div id="astGerencialConteudo"><div class="empty-state">Atualize o dashboard gerencial para carregar indicadores.</div></div>`);
+    const cliente = document.getElementById("astGerCliente");
+    if (cliente) cliente.onchange = function() { astGerCarregarUnidades_(); };
+    astAtualizarDashboardGerencial_();
+  }
+
+  function astFiltrosGerenciais_() {
+    return {
+      PERIODO_INICIAL: getValue_("astGerIni"),
+      PERIODO_FINAL: getValue_("astGerFim"),
+      CLIENTE_ID: getValue_("astGerCliente"),
+      UNIDADE_ID: getValue_("astGerUnidade"),
+      TECNICO_ID: getValue_("astGerTecnico"),
+      STATUS: getValue_("astGerStatus"),
+      PRIORIDADE: getValue_("astGerPrioridade"),
+      TIPO_FLUXO: getValue_("astGerFluxo"),
+      SOMENTE_ATRASADOS: getValue_("astGerAtrasados"),
+      SOMENTE_CRITICOS: getValue_("astGerCriticos"),
+      SOMENTE_SEM_MOVIMENTACAO: getValue_("astGerSemMov"),
+      ENTRADA_ID: getValue_("astGerEntradaId")
+    };
+  }
+
+  function astAtualizarDashboardGerencial_() {
+    const box = document.getElementById("astGerencialConteudo");
+    if (box) box.innerHTML = '<div class="empty-state">Carregando indicadores gerenciais...</div>';
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (box) box.innerHTML = '<div class="empty-state">Nao foi possivel carregar o dashboard gerencial.</div>';
+        return;
+      }
+      AST_STATE.dashboardGerencial = res;
+      astRenderDashboardGerencial_(res);
+    }).withFailureHandler(function(err) {
+      if (box) box.innerHTML = '<div class="empty-state">' + escapeHtml_(err.message || err) + '</div>';
+    }).astObterDashboardGerencial(SESSION, astFiltrosGerenciais_());
+  }
+
+  function astRenderDashboardGerencial_(res) {
+    const c = res.cards || {};
+    const cards = [
+      ["Total na assistencia", c.totalAssistencia], ["Entradas hoje", c.entradasHoje], ["Entradas no mes", c.entradasMes],
+      ["Concluidos no mes", c.concluidosMes], ["Em aberto", c.emAberto], ["Atrasados", c.atrasados],
+      ["Aguard. diagnostico", c.aguardandoDiagnostico], ["Aguard. pecas", c.aguardandoPecas], ["Aguard. orcamento", c.aguardandoOrcamento],
+      ["Aguard. aprovacao", c.aguardandoAprovacaoCliente], ["Em manutencao", c.emManutencao], ["Teste bancada", c.emTesteBancada],
+      ["Enviados terceiro", c.enviadosTerceiro], ["Em laboratorio", c.emLaboratorio], ["Prontos retirada", c.prontosRetirada],
+      ["Entregues", c.entregues], ["Sem movimentacao", c.semMovimentacao], ["Criticos", c.criticos]
+    ];
+    const box = document.getElementById("astGerencialConteudo");
+    if (!box) return;
+    box.innerHTML = `
+      <div class="ast-kpis">${cards.map(function(k) { return '<div class="ast-kpi"><small>' + escapeHtml_(k[0]) + '</small><strong>' + escapeHtml_(k[1] || 0) + '</strong></div>'; }).join("")}</div>
+      <div class="ast-gerencial-grid">
+        ${astPainelGerencialTabela_("Indicadores por status", res.status || [], ["grupo","total"])}
+        ${astPainelGerencialTabela_("Ranking por cliente", res.clientes || [], ["cliente","totalEquipamentos","concluidos","emAberto","atrasados","percentualConclusao"])}
+        ${astPainelGerencialTabela_("Ranking por tecnico", res.tecnicos || [], ["ranking","tecnico","equipamentosAtribuidos","concluidos","backlog","atrasados"])}
+        ${astPainelGerencialTabela_("Gargalos", res.gargalos || [], ["gargalo","total"])}
+        ${astPainelGerencialTabela_("Rotatividade", [res.rotatividade || {}], ["entradasPeriodo","saidasPeriodo","saldoAcumulado","mais7Dias","mais15Dias","mais30Dias","mais60Dias"])}
+        ${astPainelGerencialTabela_("Conformidade documental", [res.conformidade || {}], ["totalAnalisado","indiceGeral","percentualComFotos","percentualComDiagnostico","percentualDocumentoEntrada","percentualQrToken"])}
+      </div>
+      <div class="list-card" style="margin-top:12px;">
+        <h3 class="section-card-title">Alertas criticos</h3>
+        <div class="ast-mini-list">${astAlertasGerenciaisHtml_(res.alertas || [])}</div>
+      </div>`;
+  }
+
+  function astPainelGerencialTabela_(titulo, items, campos) {
+    const linhas = (items || []).slice(0, 12).map(function(item) {
+      return '<tr>' + campos.map(function(c) { return '<td>' + escapeHtml_(item && item[c] !== undefined ? item[c] : "--") + '</td>'; }).join("") + '</tr>';
+    }).join("") || '<tr><td colspan="' + campos.length + '" class="empty-state">Sem dados.</td></tr>';
+    return '<div class="list-card"><h3 class="section-card-title">' + escapeHtml_(titulo) + '</h3><div class="table-wrap"><table class="table"><thead><tr>' + campos.map(function(c) { return '<th>' + escapeHtml_(c) + '</th>'; }).join("") + '</tr></thead><tbody>' + linhas + '</tbody></table></div></div>';
+  }
+
+  function astAlertasGerenciaisHtml_(items) {
+    if (!items.length) return '<div class="empty-state">Sem alertas criticos para os filtros informados.</div>';
+    return '<table class="table"><thead><tr><th>Entrada</th><th>Cliente</th><th>Equipamento</th><th>Status</th><th>Dias parado</th><th>Responsavel</th><th>Proxima acao</th></tr></thead><tbody>' +
+      items.slice(0, 50).map(function(a) {
+        return '<tr><td>' + escapeHtml_(a.entrada) + '</td><td>' + escapeHtml_(a.cliente) + '</td><td>' + escapeHtml_(a.equipamento) + '</td><td>' + escapeHtml_(a.status) + '</td><td>' + escapeHtml_(a.diasParado) + '</td><td>' + escapeHtml_(a.responsavel) + '</td><td>' + escapeHtml_(a.proximaAcaoSugerida) + '</td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+
+  function astGerarPdfGerencial_(tipo) {
+    const filtros = astFiltrosGerenciais_();
+    if (tipo === "prontuario") {
+      if (!filtros.ENTRADA_ID) return alert("Informe o ID da entrada para gerar o prontuario do equipamento.");
+      google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarProntuarioEquipamento(SESSION, filtros.ENTRADA_ID);
+      return;
+    }
+    if (tipo === "cliente") google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarRelatorioCliente(SESSION, filtros);
+    if (tipo === "executivo") google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarRelatorioExecutivo(SESSION, filtros);
+    if (tipo === "produtividade") google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarRelatorioProdutividadeTecnicos(SESSION, filtros);
+    if (tipo === "atrasados") google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarRelatorioAtrasados(SESSION, filtros);
+    if (tipo === "conformidade") google.script.run.withSuccessHandler(astAbrirPdfGerencial_).astGerarRelatorioConformidadeDocumental(SESSION, filtros);
+  }
+
+  function astAbrirPdfGerencial_(res) {
+    if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar PDF gerencial.");
+    window.open(res.downloadUrl || res.pdfUrl, "_blank");
+    astAtualizarDashboardGerencial_();
+  }
+
+  function astCopiarResumoExecutivo_() {
+    google.script.run.withSuccessHandler(function(texto) {
+      astCopiarTexto_(texto || "");
+      alert("Resumo executivo copiado.");
+    }).astObterResumoExecutivo(SESSION, astFiltrosGerenciais_());
+  }
+
+  function astGerCarregarUnidades_() {
+    const clienteId = getValue_("astGerCliente");
+    const unidade = document.getElementById("astGerUnidade");
+    if (!unidade) return;
+    if (!clienteId) {
+      unidade.innerHTML = '<option value="">Todas</option>';
+      return;
+    }
+    google.script.run.withSuccessHandler(function(res) {
+      const items = (res && res.items) || [];
+      unidade.innerHTML = '<option value="">Todas</option>' + items.map(function(u) {
+        return '<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME_UNIDADE || u.NOME || u.ID) + '</option>';
+      }).join("");
+    }).astListarUnidades(SESSION, clienteId);
+  }
+
+  function astLaboratorioHtml_(e, res) {
+    const lab = ((res.laboratorio || [])[0]) || {};
+    const ensaio = ((lab.ENSAIOS || [])[0]) || {};
+    const resultado = ((lab.RESULTADOS || [])[0]) || {};
+    return `
+      <div class="ast-form-grid">
+        <div><label>Tipo de servico</label><select id="astLabTipo"><option>CALIBRACAO</option><option>QUALIFICACAO</option><option>VERIFICACAO</option><option>ENSAIO</option><option>MANUTENCAO_E_CALIBRACAO</option><option>MANUTENCAO_E_QUALIFICACAO</option></select></div>
+        <div><label>Area responsavel</label><select id="astLabArea"><option>LABORATORIO_INTERNO</option><option>METROLOGIA</option><option>QUALIFICACAO</option><option>ENGENHARIA_CLINICA</option></select></div>
+        <div><label>Prioridade</label><select id="astLabPrioridade"><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>
+        <div><label>Prazo prometido</label><input id="astLabPrazo" type="date" value="${escapeHtml_(lab.PRAZO_PROMETIDO || e.PRAZO_PROMETIDO || "")}"></div>
+        <div class="full"><label>Responsavel tecnico</label><select id="astLabResponsavel">${astOptionsTecnicos_(lab.RESPONSAVEL_ID || e.TECNICO_ID)}</select></div>
+        <div class="full"><label>Procedimento aplicavel</label><input id="astLabProcedimento" value="${escapeHtml_(lab.PROCEDIMENTO || "")}"></div>
+        <div class="full"><label>Norma/referencia aplicavel</label><input id="astLabNorma" value="${escapeHtml_(lab.NORMA || "")}"></div>
+        <div class="full"><label>Criterio de aceitacao</label><textarea id="astLabCriterio" rows="2">${escapeHtml_(lab.CRITERIO_ACEITACAO || "")}</textarea></div>
+        <div class="full"><label>Observacoes</label><textarea id="astLabObs" rows="2">${escapeHtml_(lab.OBSERVACOES || "")}</textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn-primary" type="button" onclick="astRegistrarLab_('${escapeHtml_(e.ID)}')">Enviar para laboratorio / registrar entrada</button></div>
+
+      <div class="ast-form-grid" style="margin-top:14px;">
+        <div><label>Padrao utilizado</label><input id="astLabPadNome"></div>
+        <div><label>Codigo interno</label><input id="astLabPadCod"></div>
+        <div><label>Numero de serie</label><input id="astLabPadSerie"></div>
+        <div><label>Certificado</label><input id="astLabPadCert"></div>
+        <div><label>Validade certificado</label><input id="astLabPadVal" type="date"></div>
+        <div><label>Situacao</label><select id="astLabPadSit"><option>VALIDO</option><option>VENCIDO</option><option>BLOQUEADO</option><option>NAO_INFORMADO</option></select></div>
+        <div><label>Liberacao gestor?</label><select id="astLabPadGestor"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+        <div class="full"><label>Rastreabilidade/observacao</label><input id="astLabPadObs"></div>
+      </div>
+      <div class="form-actions"><button class="btn-secondary" type="button" onclick="astAddPadraoLab_('${escapeHtml_(lab.ID || "")}')">Adicionar padrao utilizado</button></div>
+
+      <div class="ast-form-grid" style="margin-top:14px;">
+        <div><label>Tipo de ensaio</label><input id="astLabEnsaioTipo" value="${escapeHtml_(ensaio.TIPO_ENSAIO || "")}"></div>
+        <div><label>Tecnico executor</label><select id="astLabEnsaioTec">${astOptionsTecnicos_(ensaio.TECNICO_ID || lab.RESPONSAVEL_ID || e.TECNICO_ID)}</select></div>
+        <div><label>Temperatura</label><input id="astLabTemp" value="${escapeHtml_(ensaio.TEMPERATURA || "")}"></div>
+        <div><label>Umidade</label><input id="astLabUmid" value="${escapeHtml_(ensaio.UMIDADE || "")}"></div>
+        <div><label>Pressao</label><input id="astLabPressao" value="${escapeHtml_(ensaio.PRESSAO || "")}"></div>
+        <div><label>Conformidade</label><select id="astLabConf"><option>APROVADO</option><option>APROVADO_COM_RESSALVA</option><option>REPROVADO</option><option>INCONCLUSIVO</option></select></div>
+        <div class="full"><label>Procedimento executado</label><textarea id="astLabProcExec" rows="2">${escapeHtml_(ensaio.PROCEDIMENTO_EXECUTADO || "")}</textarea></div>
+        <div class="full"><label>Pontos avaliados</label><textarea id="astLabPontos" rows="2">${escapeHtml_(ensaio.PONTOS_AVALIADOS || "")}</textarea></div>
+        <div class="full"><label>Resultado bruto</label><textarea id="astLabBruto" rows="2">${escapeHtml_(ensaio.RESULTADO_BRUTO || "")}</textarea></div>
+        <div class="full"><label>Resultado tratado</label><textarea id="astLabTratado" rows="2">${escapeHtml_(ensaio.RESULTADO_TRATADO || "")}</textarea></div>
+        <div class="full"><label>Desvio/incerteza/observacoes</label><textarea id="astLabEnsaioObs" rows="2">${escapeHtml_(ensaio.OBSERVACOES || "")}</textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn-secondary" type="button" onclick="astRegistrarEnsaioLab_('${escapeHtml_(lab.ID || "")}')">Registrar ensaio</button></div>
+
+      <div class="ast-form-grid" style="margin-top:14px;">
+        <div><label>Tipo evidencia</label><select id="astLabEvidTipo"><option>FOTO</option><option>PLANILHA</option><option>CERTIFICADO_PADRAO</option><option>GRAFICO</option><option>PRINT</option><option>FORMULARIO</option><option>REGISTRO_CICLO</option><option>DADOS_BRUTOS</option><option>RELATORIO_AUXILIAR</option><option>OUTRO</option></select></div>
+        <div><label>Link/URL</label><input id="astLabEvidUrl"></div>
+        <div><label>Arquivo real</label><input id="astLabEvidFile" type="file"></div>
+        <div class="full"><label>Nome/observacao</label><input id="astLabEvidObs"></div>
+      </div>
+      <div class="form-actions"><button class="btn-secondary" type="button" onclick="astAnexarEvidLab_('${escapeHtml_(lab.ID || "")}')">Anexar evidencia laboratorial</button></div>
+
+      <div class="ast-form-grid" style="margin-top:14px;">
+        <div><label>Conformidade final</label><select id="astLabResConf"><option>APROVADO</option><option>APROVADO_COM_RESSALVA</option><option>REPROVADO</option><option>INCONCLUSIVO</option></select></div>
+        <div><label>Validade</label><input id="astLabValidade" type="date" value="${escapeHtml_(resultado.VALIDADE_RESULTADO || lab.VALIDADE_RESULTADO || "")}"></div>
+        <div><label>Proxima calibracao sugerida</label><input id="astLabProximaCal" type="date" value="${escapeHtml_(resultado.PROXIMA_CALIBRACAO_SUGERIDA || "")}"></div>
+        <div><label>Aprovacao gestor?</label><select id="astLabGestor"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+        <div class="full"><label>Resultado final</label><textarea id="astLabResultado" rows="2">${escapeHtml_(resultado.RESULTADO_FINAL || lab.RESULTADO_FINAL || "")}</textarea></div>
+        <div class="full"><label>Resumo tecnico</label><textarea id="astLabResumo" rows="2">${escapeHtml_(resultado.RESUMO_TECNICO || lab.RESUMO_TECNICO || "")}</textarea></div>
+        <div class="full"><label>Restricoes/recomendacoes</label><textarea id="astLabRecomendacoes" rows="2">${escapeHtml_(resultado.RECOMENDACOES || lab.RECOMENDACOES || "")}</textarea></div>
+      </div>
+      <div class="form-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+        <button class="btn-primary" type="button" onclick="astConsolidarLab_('${escapeHtml_(lab.ID || "")}')">Consolidar resultado</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocLab_('${escapeHtml_(lab.ID || "")}','PROTOCOLO_ENTRADA_LABORATORIO')">Gerar protocolo laboratorio PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocLab_('${escapeHtml_(lab.ID || "")}','FICHA_ENSAIO_LABORATORIAL')">Gerar ficha de ensaio PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocLab_('${escapeHtml_(lab.ID || "")}','CERTIFICADO_RELATORIO_CALIBRACAO')">Gerar certificado/relatorio PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocLab_('${escapeHtml_(lab.ID || "")}','RELATORIO_QUALIFICACAO')">Gerar relatorio qualificacao PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocLab_('${escapeHtml_(lab.ID || "")}','RELATORIO_CONFORMIDADE_LABORATORIAL')">Gerar conformidade laboratorial PDF</button>
+        <button class="btn-secondary" type="button" onclick="astWhatsLab_('${escapeHtml_(lab.ID || "")}')">Copiar WhatsApp laboratorio</button>
+        <button class="btn-secondary" type="button" onclick="astAbrirValidacao_('${escapeHtml_(e.ID)}','${escapeHtml_(e.URL_PUBLICA || "")}')">Abrir validacao publica</button>
+      </div>
+      <div style="margin-top:12px;">${astLabsListaHtml_(res.laboratorio || [])}</div>`;
+  }
+
+  function astTerceiroHtml_(e, res) {
+    const terceiro = ((res.terceiros || [])[0]) || {};
+    return `
+      <div class="ast-form-grid">
+        <div><label>Fornecedor existente</label><select id="astTerFornecedor" onchange="astTerFornecedorChange_()">${astOptionsFornecedores_(terceiro.FORNECEDOR_ID)}</select></div>
+        <div><label>Tipo da empresa</label><select id="astTerTipo"><option>ASSISTENCIA_TECNICA</option><option>FABRICANTE</option><option>ASSISTENCIA_AUTORIZADA</option><option>LABORATORIO_EXTERNO</option><option>FORNECEDOR_TECNICO</option><option>CALIBRACAO_EXTERNA</option><option>MANUTENCAO_ESPECIALIZADA</option></select></div>
+        <div class="full"><label>Empresa terceira</label><input id="astTerEmpresa" value="${escapeHtml_(terceiro.EMPRESA_NOME || "")}"></div>
+        <div><label>CNPJ</label><input id="astTerCnpj" value="${escapeHtml_(terceiro.EMPRESA_CNPJ || "")}"></div>
+        <div><label>Status fornecedor</label><select id="astTerStatusFornecedor"><option>APROVADO</option><option>EM_AVALIACAO</option><option>BLOQUEADO</option><option>REPROVADO</option></select></div>
+        <div><label>Responsavel</label><input id="astTerResp" value="${escapeHtml_(terceiro.RESPONSAVEL_EMPRESA || "")}"></div>
+        <div><label>Telefone/WhatsApp</label><input id="astTerTel" value="${escapeHtml_(terceiro.TELEFONE_WHATSAPP || "")}"></div>
+        <div><label>E-mail</label><input id="astTerEmail" value="${escapeHtml_(terceiro.EMAIL || "")}"></div>
+        <div><label>Cidade/UF</label><input id="astTerCidadeUf" value="${escapeHtml_(terceiro.CIDADE_UF || "")}"></div>
+        <div><label>Especialidade</label><input id="astTerEspecialidade" value="${escapeHtml_(terceiro.ESPECIALIDADE || "")}"></div>
+        <div class="full"><label>Motivo do envio</label><textarea id="astTerMotivo" rows="2">${escapeHtml_(terceiro.MOTIVO_ENVIO || "")}</textarea></div>
+        <div><label>Forma de envio</label><select id="astTerForma"><option>ENTREGUE_POR_TECNICO</option><option>RETIRADA_PELA_EMPRESA</option><option>TRANSPORTADORA</option><option>CORREIOS</option><option>MOTOBOY</option><option>OUTRO</option></select></div>
+        <div><label>Codigo de rastreio</label><input id="astTerRastreio" value="${escapeHtml_(terceiro.CODIGO_RASTREIO || "")}"></div>
+        <div><label>Prazo prometido pelo terceiro</label><input id="astTerPrazo" type="date" value="${escapeHtml_(terceiro.PRAZO_INFORMADO || terceiro.PRAZO_PROMETIDO || "")}"></div>
+        <div><label>Status terceiro</label><select id="astTerStatus">${astOptionsStatusTerceiro_(terceiro.STATUS_TERCEIRO)}</select></div>
+        <div><label>Cliente informado?</label><select id="astTerClienteInfo"><option value="S">Sim</option><option value="N">Nao</option></select></div>
+        <div><label>Necessita aprovacao cliente?</label><select id="astTerAprovCliente"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+        <div><label>Liberacao gestor?</label><select id="astTerLibGestor"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+        <div><label>Sem acessorios?</label><select id="astTerSemAce"><option value="N">Nao</option><option value="S">Sim</option></select></div>
+        <div class="full"><label>Acessorios enviados</label><textarea id="astTerAcessorios" rows="2" placeholder="Um por linha: descricao | qtd | estado | obs">${escapeHtml_(astTerAcessoriosTexto_(terceiro.ACESSORIOS || []))}</textarea></div>
+        <div class="full"><label>Anexo do terceiro</label><input id="astTerAnexoFile" type="file"></div>
+        <div class="full"><label>Observacoes</label><textarea id="astTerObs" rows="2">${escapeHtml_(terceiro.OBSERVACOES || "")}</textarea></div>
+      </div>
+      <div class="form-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+        <button class="btn-primary" type="button" onclick="astEnviarTerceiro_('${escapeHtml_(e.ID)}')">Enviar para terceiro</button>
+        <button class="btn-secondary" type="button" onclick="astRegistrarAcessorioTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Registrar acessorios enviados</button>
+        <button class="btn-secondary" type="button" onclick="astAnexarTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Anexar OS/documento do terceiro</button>
+        <button class="btn-secondary" type="button" onclick="astAcompanharTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Registrar acompanhamento</button>
+        <button class="btn-secondary" type="button" onclick="astRetornoTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Registrar retorno</button>
+        <button class="btn-secondary" type="button" onclick="astInspecaoTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Registrar inspecao pos-retorno</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_('${escapeHtml_(terceiro.ID || "")}','TERMO_ENVIO_TERCEIRO')">Gerar termo de envio PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_('${escapeHtml_(terceiro.ID || "")}','PROTOCOLO_ACOMPANHAMENTO_TERCEIRO')">Gerar protocolo acompanhamento PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_('${escapeHtml_(terceiro.ID || "")}','RELATORIO_RETORNO_TERCEIRO')">Gerar relatorio de retorno PDF</button>
+        <button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_('${escapeHtml_(terceiro.ID || "")}','RELATORIO_FINAL_CONSOLIDADO_TERCEIRO')">Gerar relatorio final consolidado PDF</button>
+        <button class="btn-secondary" type="button" onclick="astWhatsTerceiro_('${escapeHtml_(terceiro.ID || "")}')">Copiar WhatsApp de acompanhamento</button>
+      </div>
+      <div style="margin-top:12px;">${astTerceirosListaHtml_(res.terceiros || [])}</div>`;
+  }
+
+  function astOptionsFornecedores_(selected) {
+    return '<option value="">Cadastrar/informar manualmente</option>' + (AST_STATE.fornecedores || []).map(function(f) {
+      const nome = f.NOME_FANTASIA || f.RAZAO_SOCIAL || f.ID;
+      const sel = selected && selected === f.ID ? " selected" : "";
+      return '<option value="' + escapeHtml_(f.ID) + '"' + sel + '>' + escapeHtml_(nome) + '</option>';
+    }).join("");
+  }
+
+  function astOptionsStatusTerceiro_(selected) {
+    const lista = ["TERCEIRO_AGUARDANDO_ENVIO","TERCEIRO_ENVIADO","TERCEIRO_RECEBIDO_PELA_EMPRESA","TERCEIRO_AGUARDANDO_DIAGNOSTICO","TERCEIRO_EM_DIAGNOSTICO","TERCEIRO_DIAGNOSTICO_RECEBIDO","TERCEIRO_AGUARDANDO_ORCAMENTO","TERCEIRO_ORCAMENTO_RECEBIDO","TERCEIRO_AGUARDANDO_APROVACAO_CLIENTE","TERCEIRO_APROVADO","TERCEIRO_EM_REPARO","TERCEIRO_AGUARDANDO_PECA","TERCEIRO_REPARO_CONCLUIDO","TERCEIRO_EM_TESTE","TERCEIRO_LIBERADO_PARA_RETIRADA","TERCEIRO_EM_RETORNO","TERCEIRO_RECEBIDO_METROLABS","TERCEIRO_INSPECAO_RETORNO","TERCEIRO_FINALIZADO","TERCEIRO_CANCELADO","TERCEIRO_SEM_REPARO","TERCEIRO_EXTRAVIADO","TERCEIRO_ATRASADO"];
+    return lista.map(function(s) {
+      return '<option' + (selected === s ? " selected" : "") + '>' + escapeHtml_(s) + '</option>';
+    }).join("");
+  }
+
+  function astTerFornecedorChange_() {
+    const id = getValue_("astTerFornecedor");
+    const f = (AST_STATE.fornecedores || []).find(function(item) { return item.ID === id; }) || {};
+    if (!id) return;
+    setValue_("astTerEmpresa", f.NOME_FANTASIA || f.RAZAO_SOCIAL || "");
+    setValue_("astTerCnpj", f.CNPJ || "");
+    setValue_("astTerResp", f.CONTATO || "");
+    setValue_("astTerTel", f.TELEFONE || "");
+    setValue_("astTerEmail", f.EMAIL || "");
+    setValue_("astTerCidadeUf", [f.CIDADE, f.UF].filter(Boolean).join("/"));
+    setValue_("astTerStatusFornecedor", (f.BLOQUEADO === "S" || f.STATUS === "BLOQUEADO") ? "BLOQUEADO" : "APROVADO");
+  }
+
+  function astTerAcessoriosTexto_(items) {
+    return (items || []).map(function(a) {
+      return [a.DESCRICAO, a.QUANTIDADE, a.ESTADO, a.OBSERVACAO].filter(Boolean).join(" | ");
+    }).join("\n");
+  }
+
+  function astLerAcessoriosTerceiro_() {
+    return String(getValue_("astTerAcessorios") || "").split(/\n+/).map(function(linha) {
+      const p = linha.split("|").map(function(x) { return x.trim(); });
+      return { DESCRICAO: p[0] || "", QUANTIDADE: p[1] || "1", ESTADO: p[2] || "", OBSERVACAO: p[3] || "" };
+    }).filter(function(a) { return a.DESCRICAO; });
+  }
+
+  function astTerceirosListaHtml_(items) {
+    if (!items || !items.length) return '<p class="helper-text">Nenhum envio a terceiro registrado.</p>';
+    return '<table class="table"><thead><tr><th>Empresa</th><th>Status</th><th>Prazo</th><th>Proxima acao</th></tr></thead><tbody>' +
+      items.map(function(t) {
+        return '<tr><td>' + escapeHtml_(t.EMPRESA_NOME) + '</td><td>' + escapeHtml_(t.STATUS_TERCEIRO) + '</td><td>' + escapeHtml_(t.PRAZO_INFORMADO || t.PRAZO_PROMETIDO || "--") + '</td><td>' + escapeHtml_(t.PROXIMA_ACAO || "--") + '</td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+
+  function astClienteChange_() {
+    const clienteId = getValue_("astCliente");
+    const unidade = document.getElementById("astUnidade");
+    if (unidade) unidade.innerHTML = '<option value="">Carregando...</option>';
+    google.script.run.withSuccessHandler(function(res) {
+      AST_STATE.unidades = (res && res.items) || [];
+      if (unidade) unidade.innerHTML = '<option value="">Selecione</option>' + AST_STATE.unidades.map(function(u) {
+        return '<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME_UNIDADE) + '</option>';
+      }).join("");
+    }).astListarUnidades(SESSION, clienteId);
+  }
+
+  function astUnidadeChange_() {
+    const eq = document.getElementById("astEquipamento");
+    if (eq) eq.innerHTML = '<option value="">Carregando...</option>';
+    google.script.run.withSuccessHandler(function(res) {
+      AST_STATE.equipamentos = (res && res.items) || [];
+      if (eq) eq.innerHTML = '<option value="">Selecione</option>' + AST_STATE.equipamentos.map(function(item) {
+        const nome = [item.TIPO, item.TAG, item.FABRICANTE, item.MODELO, item.SERIE].filter(Boolean).join(" - ");
+        return '<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(nome) + '</option>';
+      }).join("");
+    }).astListarEquipamentos(SESSION, getValue_("astCliente"), getValue_("astUnidade"));
+  }
+
+  function astToggleProvisorio_() {
+    const box = document.getElementById("astProvisorioBox");
+    const checked = document.getElementById("astProvisorio") && document.getElementById("astProvisorio").checked;
+    if (box) box.style.display = checked ? "" : "none";
+  }
+
+  function astAddAcessorio_() {
+    AST_STATE.acessorios.push({ DESCRICAO: "", QUANTIDADE: "1", ESTADO: "", OBSERVACAO: "" });
+    astRenderAcessorios_();
+  }
+
+  function astRemoveAcessorio_(idx) {
+    AST_STATE.acessorios.splice(idx, 1);
+    if (!AST_STATE.acessorios.length) AST_STATE.acessorios.push({ DESCRICAO: "", QUANTIDADE: "1", ESTADO: "", OBSERVACAO: "" });
+    astRenderAcessorios_();
+  }
+
+  function astRenderAcessorios_() {
+    const box = document.getElementById("astAcessoriosBox");
+    if (!box) return;
+    box.innerHTML = AST_STATE.acessorios.map(function(a, idx) {
+      return `<div class="ast-accessory-row">
+        <div><label>Descricao</label><input id="astAceDesc_${idx}" value="${escapeHtml_(a.DESCRICAO)}" placeholder="Cabo, fonte, sensor..."></div>
+        <div><label>Qtd</label><input id="astAceQtd_${idx}" type="number" min="1" value="${escapeHtml_(a.QUANTIDADE || "1")}"></div>
+        <div><label>Estado</label><input id="astAceEstado_${idx}" value="${escapeHtml_(a.ESTADO)}" placeholder="Bom, avariado..."></div>
+        <div><label>Obs</label><input id="astAceObs_${idx}" value="${escapeHtml_(a.OBSERVACAO)}"></div>
+        <button class="btn-danger" type="button" onclick="astRemoveAcessorio_(${idx})">Remover</button>
+      </div>`;
+    }).join("");
+  }
+
+  function astLerAcessorios_() {
+    return AST_STATE.acessorios.map(function(a, idx) {
+      return {
+        DESCRICAO: getValue_("astAceDesc_" + idx) || "Sem acessorios",
+        QUANTIDADE: getValue_("astAceQtd_" + idx) || "1",
+        ESTADO: getValue_("astAceEstado_" + idx),
+        OBSERVACAO: getValue_("astAceObs_" + idx)
+      };
+    });
+  }
+
+  function astMovimentosHtml_(items) {
+    if (!items.length) return '<p class="helper-text">Sem movimentacoes.</p>';
+    return '<table class="table"><tbody>' + items.slice().reverse().map(function(m) {
+      return '<tr><td>' + escapeHtml_(m.CRIADO_EM) + '</td><td><b>' + escapeHtml_(m.TIPO) + '</b><br>' + escapeHtml_(m.DESCRICAO) + '</td></tr>';
+    }).join("") + '</tbody></table>';
+  }
+
+  function astOptionsClientes_() {
+    return '<option value="">Selecione</option>' + (AST_STATE.clientes || []).map(function(c) {
+      return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.NOME_FANTASIA || c.RAZAO_SOCIAL || c.NOME) + '</option>';
+    }).join("");
+  }
+
+  function astOptionsTecnicos_(selected) {
+    return '<option value="">Sem tecnico definido</option>' + (AST_STATE.tecnicos || []).map(function(t) {
+      const sel = selected && selected === t.ID ? " selected" : "";
+      return '<option value="' + escapeHtml_(t.ID) + '"' + sel + '>' + escapeHtml_(t.NOME || t.USUARIO_ID) + '</option>';
+    }).join("");
+  }
+
+  function astSetArea_(html) {
+    const area = document.getElementById("astArea");
+    if (area) area.innerHTML = html;
+  }
+
+  function astMostrarSubsecao_(id) {
+    document.querySelectorAll(".ast-subsec").forEach(function(sec) { sec.style.display = "none"; });
+    const alvo = document.getElementById(id);
+    if (alvo) alvo.style.display = "";
+  }
+
+  function astDiagPecaChange_() {
+    if (getValue_("astDiagPeca") === "S") astMostrarSubsecao_("astSecPecas");
+  }
+
+  function astSalvarDiagnostico_(id) {
+    const payload = {
+      TECNICO_ID: getValue_("astDiagTecnico"),
+      RISCO_USO: getValue_("astDiagRisco"),
+      DEFEITO_RELATADO_CLIENTE: getValue_("astDiagRelatado"),
+      DEFEITO_CONFIRMADO: getValue_("astDiagConfirmado"),
+      DEFEITO_INTERMITENTE: getValue_("astDiagIntermitente"),
+      EQUIPAMENTO_LIGA: getValue_("astDiagLiga"),
+      INSPECAO_VISUAL_OK: getValue_("astDiagVisual"),
+      TESTE_ELETRICO_BASICO: getValue_("astDiagEletrico"),
+      NECESSITA_LIMPEZA: getValue_("astDiagLimpeza"),
+      NECESSITA_PECA: getValue_("astDiagPeca"),
+      NECESSITA_TERCEIRO: getValue_("astDiagTerceiro"),
+      STATUS_APOS_DIAGNOSTICO: getValue_("astDiagStatus"),
+      TESTES_REALIZADOS: getValue_("astDiagTestes"),
+      EVIDENCIAS_ENCONTRADAS: getValue_("astDiagEvidencias"),
+      CAUSA_PROVAVEL: getValue_("astDiagCausa"),
+      RECOMENDACAO_TECNICA: getValue_("astDiagRecomendacao"),
+      CONCLUSAO_PRELIMINAR: getValue_("astDiagConclusao")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Diagnostico salvo.");
+      astAbrirDetalhe_(id);
+    }).astSalvarDiagnostico(SESSION, id, payload);
+  }
+
+  function astSalvarPeca_(id) {
+    const payload = {
+      NOME_PECA: getValue_("astPecaNome"),
+      CODIGO_INTERNO: getValue_("astPecaCodInt"),
+      CODIGO_FABRICANTE: getValue_("astPecaCodFab"),
+      QUANTIDADE: getValue_("astPecaQtd"),
+      URGENCIA: getValue_("astPecaUrgencia"),
+      TEM_ESTOQUE: getValue_("astPecaEstoque"),
+      FORNECEDOR_SUGERIDO: getValue_("astPecaFornecedor"),
+      VALOR_ESTIMADO: getValue_("astPecaValor"),
+      STATUS: getValue_("astPecaStatus"),
+      JUSTIFICATIVA_TECNICA: getValue_("astPecaJust")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Peca registrada.");
+      astAbrirDetalhe_(id);
+    }).astSalvarPeca(SESSION, id, payload);
+  }
+
+  function astSalvarTeste_(id) {
+    const payload = {
+      TECNICO_ID: getValue_("astTesteTecnico"),
+      TIPO_TESTE: getValue_("astTesteTipo"),
+      CONDICAO_INICIAL: getValue_("astTesteCondicao"),
+      PROCEDIMENTO_REALIZADO: getValue_("astTesteProcedimento"),
+      RESULTADO: getValue_("astTesteResultado"),
+      PARAMETROS_OBSERVADOS: getValue_("astTesteParametros"),
+      EVIDENCIAS: getValue_("astTesteEvidencias"),
+      OBSERVACOES: getValue_("astTesteObs"),
+      PROXIMA_ACAO: getValue_("astTesteProxima")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Teste registrado.");
+      astAbrirDetalhe_(id);
+    }).astRegistrarTesteBancada(SESSION, id, payload);
+  }
+
+  function astSalvarExecucao_(id) {
+    const payload = astPayloadExecucao_("astExec");
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Execucao registrada.");
+      astAbrirDetalhe_(id);
+    }).astRegistrarExecucao(SESSION, id, payload);
+  }
+
+  function astConcluirTecnica_(id) {
+    if (!confirm("Confirmar conclusao tecnica desta entrada?")) return;
+    const payload = {
+      TECNICO_ID: getValue_("astConcTecnico"),
+      TESTE_OBRIGATORIO: getValue_("astConcTesteObrig"),
+      STATUS_FINAL: getValue_("astConcStatus"),
+      CONCLUSAO_TECNICA: getValue_("astConcConclusao"),
+      RESULTADO_FINAL: getValue_("astConcResultado")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Conclusao registrada.");
+      astAbrirDetalhe_(id);
+    }).astConcluirTecnica(SESSION, id, payload);
+  }
+
+  function astPayloadExecucao_(prefix) {
+    return {
+      TECNICO_ID: getValue_(prefix + "Tecnico"),
+      SERVICO_REALIZADO: getValue_(prefix + "Servico"),
+      PECAS_APLICADAS: getValue_(prefix + "Pecas"),
+      AJUSTES_REALIZADOS: getValue_(prefix + "Ajustes"),
+      LIMPEZA_REALIZADA: getValue_(prefix + "Limpeza"),
+      COMPONENTES_SUBSTITUIDOS: getValue_(prefix + "Componentes"),
+      TESTES_APOS_REPARO: getValue_(prefix + "Testes"),
+      RESULTADO_FINAL: getValue_(prefix + "Resultado"),
+      RECOMENDACAO_CLIENTE: getValue_(prefix + "Recomendacao"),
+      GARANTIA_SERVICO: getValue_(prefix + "Garantia"),
+      STATUS_FINAL: getValue_(prefix + "Status")
+    };
+  }
+
+  function astUploadAnexoArquivo_(inputId, payload, done) {
+    const input = document.getElementById(inputId);
+    const file = input && input.files && input.files[0];
+    if (!file) {
+      done(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const base64 = String((ev.target && ev.target.result) || "").split(",").pop();
+      google.script.run.withSuccessHandler(function(res) {
+        done(res);
+      }).withFailureHandler(function(err) {
+        alert((err && err.message) || err || "Falha no upload do anexo.");
+        done({ success: false });
+      }).astUploadAnexo(SESSION, Object.assign({}, payload, {
+        NOME_ARQUIVO: file.name,
+        MIME_TYPE: file.type || "application/octet-stream",
+        BASE64_DATA: base64
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function astAdicionarEvidencia_(id) {
+    const payload = {
+      TIPO_EVIDENCIA: getValue_("astEvidTipo"),
+      URL_ANEXO: getValue_("astEvidUrl"),
+      DESCRICAO: getValue_("astEvidDesc")
+    };
+    const file = document.getElementById("astEvidFile");
+    if (file && file.files && file.files[0]) {
+      astUploadAnexoArquivo_("astEvidFile", {
+        VINCULO: "ENTRADA",
+        ID_RELACIONADO: id,
+        TIPO_EVIDENCIA: payload.TIPO_EVIDENCIA,
+        OBSERVACAO: payload.DESCRICAO
+      }, function(res) {
+        alert((res && res.message) || "Evidencia enviada.");
+        astAbrirDetalhe_(id);
+      });
+      return;
+    }
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Evidencia adicionada.");
+      astAbrirDetalhe_(id);
+    }).astAdicionarEvidencia(SESSION, id, payload);
+  }
+
+  function astGerarRelDiag_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar relatorio.");
+      window.open(res.downloadUrl || res.pdfUrl, "_blank");
+      astAbrirDetalhe_(id);
+    }).astGerarRelatorioDiagnostico(SESSION, id);
+  }
+
+  function astGerarRelMan_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar relatorio.");
+      window.open(res.downloadUrl || res.pdfUrl, "_blank");
+      astAbrirDetalhe_(id);
+    }).astGerarRelatorioManutencao(SESSION, id);
+  }
+
+  function astBaixarDocTipo_(id, tipo) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert("Nao foi possivel localizar documentos.");
+      const docs = res.documentos || [];
+      const doc = astDocPorTipo_(docs, tipo);
+      const url = doc.DOWNLOAD_URL || doc.LINK_ARQUIVO;
+      if (!url) return alert("PDF ainda nao gerado.");
+      astRegistrarAcaoSilenciosa_(id, "DOWNLOAD_" + tipo, "Download de documento tecnico solicitado.");
+      window.open(url, "_blank");
+    }).astObterEntrada(SESSION, id);
+  }
+
+  function astResumoComercial_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar resumo.");
+      alert(res.texto);
+    }).astObterResumoComercial(SESSION, id);
+  }
+
+  function astResumoComercialWhats_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar resumo.");
+      astCopiarTexto_(res.texto);
+      alert("Resumo comercial copiado.");
+    }).astObterResumoComercial(SESSION, id);
+  }
+
+  function astPecasHtml_(pecas) {
+    if (!pecas || !pecas.length) return '<p class="helper-text">Nenhuma peca solicitada.</p>';
+    return '<table class="table"><thead><tr><th>Peca</th><th>Qtd</th><th>Status</th><th>Urgencia</th><th>Atualizar</th></tr></thead><tbody>' +
+      pecas.map(function(p, idx) {
+        const id = escapeHtml_(p.ID);
+        return '<tr><td>' + escapeHtml_(p.NOME_PECA || p.DESCRICAO) + '</td><td>' + escapeHtml_(p.QUANTIDADE) + '</td><td>' + escapeHtml_(p.STATUS) + '</td><td>' + escapeHtml_(p.URGENCIA) + '</td><td><select id="astPecaStatusUpd_' + idx + '"><option>PECA_SOLICITADA</option><option>PECA_EM_COTACAO</option><option>PECA_AGUARDANDO_APROVACAO</option><option>PECA_COMPRADA</option><option>PECA_RECEBIDA</option><option>PECA_INSTALADA</option><option>PECA_CANCELADA</option><option>PECA_INDISPONIVEL</option></select><button class="btn-secondary" type="button" onclick="astAtualizarPeca_(\'' + id + '\',\'astPecaStatusUpd_' + idx + '\')">Atualizar</button></td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+
+  function astAtualizarPeca_(pecaId, selectId) {
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Peca atualizada.");
+    }).astAtualizarPeca(SESSION, pecaId, { STATUS: getValue_(selectId) });
+  }
+
+  function astEnviarTerceiro_(entradaId) {
+    if (!confirm("Confirmar envio do equipamento para terceiro?")) return;
+    const payload = {
+      FORNECEDOR_ID: getValue_("astTerFornecedor"),
+      EMPRESA_NOME: getValue_("astTerEmpresa"),
+      EMPRESA_CNPJ: getValue_("astTerCnpj"),
+      TIPO_EMPRESA: getValue_("astTerTipo"),
+      RESPONSAVEL_EMPRESA: getValue_("astTerResp"),
+      TELEFONE_WHATSAPP: getValue_("astTerTel"),
+      EMAIL: getValue_("astTerEmail"),
+      CIDADE_UF: getValue_("astTerCidadeUf"),
+      ESPECIALIDADE: getValue_("astTerEspecialidade"),
+      STATUS_FORNECEDOR: getValue_("astTerStatusFornecedor"),
+      MOTIVO_ENVIO: getValue_("astTerMotivo"),
+      FORMA_ENVIO: getValue_("astTerForma"),
+      CODIGO_RASTREIO: getValue_("astTerRastreio"),
+      PRAZO_PROMETIDO: getValue_("astTerPrazo"),
+      STATUS_TERCEIRO: getValue_("astTerStatus"),
+      CLIENTE_INFORMADO: getValue_("astTerClienteInfo"),
+      NECESSITA_APROVACAO_CLIENTE: getValue_("astTerAprovCliente"),
+      LIBERACAO_GESTOR: getValue_("astTerLibGestor"),
+      SEM_ACESSORIOS: getValue_("astTerSemAce"),
+      ACESSORIOS_CONFIRMADOS: "S",
+      OBSERVACOES: getValue_("astTerObs"),
+      ACESSORIOS: astLerAcessoriosTerceiro_()
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Envio registrado.");
+      astAbrirDetalhe_(entradaId);
+    }).astRegistrarEnvioTerceiro(SESSION, entradaId, payload);
+  }
+
+  function astRegistrarAcessorioTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    const desc = prompt("Descricao do acessorio enviado:");
+    if (!desc) return;
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Acessorio registrado.");
+    }).astSalvarAcessorioTerceiro(SESSION, terceiroId, { DESCRICAO: desc, QUANTIDADE: "1", ESTADO: "Conferido" });
+  }
+
+  function astAnexarTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    const tipo = prompt("Tipo do anexo externo (OS_TERCEIRO, ORCAMENTO_EXTERNO, LAUDO_EXTERNO, CERTIFICADO_EXTERNO...):", "OS_TERCEIRO");
+    if (!tipo) return;
+    const file = document.getElementById("astTerAnexoFile");
+    if (file && file.files && file.files[0]) {
+      astUploadAnexoArquivo_("astTerAnexoFile", {
+        VINCULO: "TERCEIRO",
+        ID_RELACIONADO: terceiroId,
+        TIPO_ANEXO: tipo,
+        OBSERVACAO: getValue_("astTerObs")
+      }, function(res) {
+        alert((res && res.message) || "Anexo enviado.");
+      });
+      return;
+    }
+    const url = prompt("URL/link do documento:");
+    if (!url) return;
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Anexo registrado.");
+    }).astAnexarDocumentoTerceiro(SESSION, terceiroId, { TIPO_ANEXO: tipo, LINK_ARQUIVO: url, NOME_ARQUIVO: tipo });
+  }
+
+  function astAcompanharTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    const info = prompt("Informacao recebida do terceiro:");
+    if (!info) return;
+    const status = getValue_("astTerStatus") || "TERCEIRO_ENVIADO";
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Acompanhamento registrado.");
+    }).astRegistrarAcompanhamentoTerceiro(SESSION, terceiroId, {
+      CANAL: "WHATSAPP",
+      INFORMACAO_RECEBIDA: info,
+      STATUS_INFORMADO: status,
+      PRAZO_INFORMADO: getValue_("astTerPrazo"),
+      PROXIMA_ACAO: getValue_("astTerObs")
+    });
+  }
+
+  function astRetornoTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    const cond = prompt("Condicao de retorno:");
+    if (!cond) return;
+    const servico = prompt("Servico informado pelo terceiro:", "");
+    const conclusao = prompt("Conclusao do retorno:", "Retorno recebido para inspecao Metrolabs.");
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Retorno registrado.");
+    }).astRegistrarRetornoTerceiro(SESSION, terceiroId, {
+      CONDICAO_RETORNO: cond,
+      SERVICO_TERCEIRO: servico,
+      CONCLUSAO_RETORNO: conclusao,
+      PRECISA_TESTE_INTERNO: "S",
+      PRECISA_EXECUCAO_INTERNA: "N"
+    });
+  }
+
+  function astInspecaoTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    const resultado = prompt("Resultado da inspecao (APROVADO, APROVADO_COM_RESSALVA, REPROVADO, INCONCLUSIVO):", "APROVADO");
+    if (!resultado) return;
+    const obs = prompt("Observacoes da inspecao:", "");
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Inspecao registrada.");
+    }).astRegistrarInspecaoRetornoTerceiro(SESSION, terceiroId, {
+      INSPECAO_RESULTADO: resultado,
+      INSPECAO_OBSERVACOES: obs,
+      INSPECAO_PROXIMA_ACAO: "Seguir fluxo tecnico interno"
+    });
+  }
+
+  function astGerarDocTerceiro_(terceiroId, tipo) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar documento.");
+      window.open(res.downloadUrl || res.pdfUrl, "_blank");
+    }).astGerarDocumentoTerceiro(SESSION, terceiroId, tipo);
+  }
+
+  function astWhatsTerceiro_(terceiroId) {
+    if (!terceiroId) return alert("Registre o envio para terceiro primeiro.");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar WhatsApp.");
+      astCopiarTexto_(res.texto);
+      alert("Mensagem de terceiro copiada.");
+    }).astObterWhatsappTerceiro(SESSION, terceiroId, "ACOMPANHAMENTO");
+  }
+
+  function astLabsListaHtml_(items) {
+    if (!items || !items.length) return '<p class="helper-text">Nenhum fluxo de laboratorio registrado.</p>';
+    return '<table class="table"><thead><tr><th>Servico</th><th>Status</th><th>Responsavel</th><th>Resultado</th></tr></thead><tbody>' +
+      items.map(function(l) {
+        return '<tr><td>' + escapeHtml_(l.TIPO_SERVICO) + '</td><td>' + escapeHtml_(l.STATUS) + '</td><td>' + escapeHtml_(l.RESPONSAVEL_NOME || "--") + '</td><td>' + escapeHtml_(l.CONFORMIDADE || "--") + '</td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+
+  function astRegistrarLab_(entradaId) {
+    const payload = {
+      TIPO_SERVICO: getValue_("astLabTipo"),
+      AREA_RESPONSAVEL: getValue_("astLabArea"),
+      PROCEDIMENTO: getValue_("astLabProcedimento"),
+      NORMA: getValue_("astLabNorma"),
+      CRITERIO_ACEITACAO: getValue_("astLabCriterio"),
+      PRIORIDADE: getValue_("astLabPrioridade"),
+      PRAZO_PROMETIDO: getValue_("astLabPrazo"),
+      RESPONSAVEL_ID: getValue_("astLabResponsavel"),
+      OBSERVACOES: getValue_("astLabObs")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Laboratorio registrado.");
+      astAbrirDetalhe_(entradaId);
+    }).astRegistrarEntradaLaboratorio(SESSION, entradaId, payload);
+  }
+
+  function astAddPadraoLab_(labId) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    const payload = {
+      NOME_PADRAO: getValue_("astLabPadNome"),
+      CODIGO_INTERNO: getValue_("astLabPadCod"),
+      NUMERO_SERIE: getValue_("astLabPadSerie"),
+      CERTIFICADO_PADRAO: getValue_("astLabPadCert"),
+      VALIDADE_CERTIFICADO: getValue_("astLabPadVal"),
+      SITUACAO: getValue_("astLabPadSit"),
+      LIBERACAO_GESTOR: getValue_("astLabPadGestor"),
+      RASTREABILIDADE: getValue_("astLabPadObs"),
+      OBSERVACAO: getValue_("astLabPadObs")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Padrao registrado.");
+    }).astAdicionarPadraoLaboratorio(SESSION, labId, payload);
+  }
+
+  function astRegistrarEnsaioLab_(labId) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    const payload = {
+      TIPO_ENSAIO: getValue_("astLabEnsaioTipo"),
+      TECNICO_ID: getValue_("astLabEnsaioTec"),
+      TEMPERATURA: getValue_("astLabTemp"),
+      UMIDADE: getValue_("astLabUmid"),
+      PRESSAO: getValue_("astLabPressao"),
+      CONFORMIDADE: getValue_("astLabConf"),
+      PROCEDIMENTO_EXECUTADO: getValue_("astLabProcExec"),
+      PONTOS_AVALIADOS: getValue_("astLabPontos"),
+      RESULTADO_BRUTO: getValue_("astLabBruto"),
+      RESULTADO_TRATADO: getValue_("astLabTratado"),
+      CRITERIO_ACEITACAO: getValue_("astLabCriterio"),
+      OBSERVACOES: getValue_("astLabEnsaioObs")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Ensaio registrado.");
+    }).astRegistrarEnsaioLaboratorio(SESSION, labId, payload);
+  }
+
+  function astAnexarEvidLab_(labId) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    const payload = {
+      TIPO_EVIDENCIA: getValue_("astLabEvidTipo"),
+      LINK_ARQUIVO: getValue_("astLabEvidUrl"),
+      NOME: getValue_("astLabEvidObs"),
+      OBSERVACAO: getValue_("astLabEvidObs")
+    };
+    const file = document.getElementById("astLabEvidFile");
+    if (file && file.files && file.files[0]) {
+      astUploadAnexoArquivo_("astLabEvidFile", {
+        VINCULO: "LABORATORIO",
+        ID_RELACIONADO: labId,
+        TIPO_EVIDENCIA: payload.TIPO_EVIDENCIA,
+        NOME: payload.NOME,
+        OBSERVACAO: payload.OBSERVACAO
+      }, function(res) {
+        alert((res && res.message) || "Evidencia enviada.");
+      });
+      return;
+    }
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Evidencia anexada.");
+    }).astAnexarEvidenciaLaboratorio(SESSION, labId, payload);
+  }
+
+  function astConsolidarLab_(labId) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    if (!confirm("Confirmar consolidacao do resultado laboratorial?")) return;
+    const payload = {
+      CONFORMIDADE: getValue_("astLabResConf"),
+      RESULTADO_FINAL: getValue_("astLabResultado"),
+      RESUMO_TECNICO: getValue_("astLabResumo"),
+      RECOMENDACOES: getValue_("astLabRecomendacoes"),
+      RESTRICOES: getValue_("astLabRecomendacoes"),
+      VALIDADE_RESULTADO: getValue_("astLabValidade"),
+      PROXIMA_CALIBRACAO_SUGERIDA: getValue_("astLabProximaCal"),
+      RESPONSAVEL_ID: getValue_("astLabResponsavel"),
+      APROVACAO_GESTOR: getValue_("astLabGestor")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      alert((res && res.message) || "Resultado consolidado.");
+    }).astConsolidarResultadoLaboratorio(SESSION, labId, payload);
+  }
+
+  function astGerarDocLab_(labId, tipo) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar documento.");
+      window.open(res.downloadUrl || res.pdfUrl, "_blank");
+    }).astGerarDocumentoLaboratorio(SESSION, labId, tipo);
+  }
+
+  function astWhatsLab_(labId) {
+    if (!labId) return alert("Registre a entrada de laboratorio primeiro.");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao gerar WhatsApp.");
+      astCopiarTexto_(res.texto);
+      alert("Mensagem de laboratorio copiada.");
+    }).astObterWhatsappLaboratorio(SESSION, labId, "RESULTADO");
+  }
+</script>

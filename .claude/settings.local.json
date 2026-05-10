@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(clasp push *)",
+      "Bash(npx clasp *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\")",
+      "Bash(Sort-Object Name)",
+      "Bash(Select-Object Name, Length, LastWriteTime)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\" | Sort-Object Name | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}}, LastWriteTime | Format-Table -AutoSize)",
+      "Bash(node --check SGO_Config.js)",
+      "Bash(node --check SGO_Setup_v2.js)",
+      "Bash(node --check SGO_OS.js)",
+      "Bash(node --check SGO_OS_Questionarios.js)",
+      "Bash(node --check SGO_OS_Checklist.js)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(cd \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\"; $files = @\\('JS_Mobile.html','JS_OS.html','JS_OS_Execucao.html','SGO_DocumentFactory.js'\\); foreach \\($f in $files\\) { $content = [IO.File]::ReadAllText\\($f\\); $bt = \\([regex]::Matches\\($content, '`'\\)\\).Count; Write-Host \"$f backticks=$bt\" })",
+      "PowerShell(cd \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\"; $files = @\\('SGO_IA.js','JS_OS_Execucao.html','JS_Mobile.html','SGO_DocumentFactory.js'\\); foreach \\($f in $files\\) { $c = [IO.File]::ReadAllText\\($f\\); $nbsp = \\([regex]::Matches\\($c,[char]160\\)\\).Count; $bt = \\([regex]::Matches\\($c,'`'\\)\\).Count; Write-Host \"$f | NBSP=$nbsp | backticks=$bt\" })",
+      "Bash(node --check SGO_IA.js)",
+      "Bash(node -e \"var vm=require\\('vm'\\),fs=require\\('fs'\\);try{new vm.Script\\(fs.readFileSync\\('SGO_IA.js','utf8'\\)\\);console.log\\('vm.Script OK'\\);}catch\\(e\\){console.error\\('FALHA:',e.message\\);}\")",
+      "PowerShell(cd \"c:\\\\Users\\\\venda\\\\projetos\\\\google-script-dev\"; $c = [IO.File]::ReadAllText\\('SGO_IA.js'\\); $nbsp = \\([regex]::Matches\\($c,[char]160\\)\\).Count; $bt = \\([regex]::Matches\\($c,'`'\\)\\).Count; Write-Host \"NBSP=$nbsp | backticks=$bt\")"
+    ]
+  }
+}

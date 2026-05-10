@@ -1,0 +1,435 @@
+<script>
+  // ==========================================
+  // MÓDULO: ESTOQUE RASTREÁVEL
+  // ==========================================
+  const ESTOQUE_STATE = {
+    items: [],
+    editingId: "",
+    loading: false,
+    aba: "itens",
+    itemSelecionado: null,
+    fornecedorSelecionado: null
+  };
+
+  const EST_TIPOS_ITEM = [
+    { value: "PECA",        label: "Peça / Componente" },
+    { value: "SENSOR",      label: "Sensor / Transdutor" },
+    { value: "INSUMO",      label: "Insumo / Consumível" },
+    { value: "FERRAMENTA",  label: "Ferramenta" },
+    { value: "REAGENTE",    label: "Reagente" },
+    { value: "OUTRO",       label: "Outro" }
+  ];
+
+  const EST_UNIDADES = ["UN","KG","G","L","ML","M","CM","PC","CX","KIT","PAR","ROLO","AMPOLA"];
+
+  // ── RENDER PRINCIPAL ──────────────────────────────────────────────────────
+  function renderEstoqueModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA" || USER_CONTEXT.perfil === "TECNICO");
+
+    div.innerHTML = '\n      <div class="module-shell">\n\n        <!-- HEADER -->\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">\n              <i class="fas fa-boxes-stacked" style="margin-right:8px;color:var(--metro-green);"></i>\n              Estoque Rastreável\n            </h2>\n            <p class="content-subtitle">Controle por item, fornecedor qualificado, lote, validade e rastreabilidade por OS.</p>\n          </div>\n        </div>\n\n        <!-- ABAS -->\n        <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0;">\n          ' +
+      (["itens","entradas","movimentacoes"].map(function(aba) {
+            var labels = { itens: '<i class="fas fa-box" style="margin-right:6px;"></i>Itens', entradas: '<i class="fas fa-arrow-right-to-bracket" style="margin-right:6px;"></i>Entrada de Lote', movimentacoes: '<i class="fas fa-right-left" style="margin-right:6px;"></i>Movimentações' };
+            return '<button type="button" onclick="estoqueAba_(\'' + aba + '\')" id="est_tab_' + aba + '" style="padding:10px 18px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted);transition:all .15s;">' + labels[aba] + '</button>';
+          }).join("")) +
+      '\n        </div>\n\n        <!-- === ABA: ITENS === -->\n        <div id="est_panel_itens">\n\n          <!-- filtros + botão -->\n          <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">\n            <input id="est_busca" class="toolbar-search" type="text" placeholder="Código, descrição ou referência..."\n              onkeydown="if(event.key===\'Enter\') estoqueAplicarFiltros_()">\n            <select id="est_filtro_tipo" style="min-height:36px;padding:6px 10px;font-size:13px;width:170px;" onchange="estoqueAplicarFiltros_()">\n              <option value="">Todos os tipos</option>\n              ' +
+      (EST_TIPOS_ITEM.map(function(t) { return '<option value="' + t.value + '">' + t.label + '</option>'; }).join("")) +
+      '\n            </select>\n            <select id="est_filtro_status" style="min-height:36px;padding:6px 10px;font-size:13px;width:130px;" onchange="estoqueAplicarFiltros_()">\n              <option value="">Todos status</option>\n              <option value="ATIVO">Ativos</option>\n              <option value="INATIVO">Inativos</option>\n              <option value="BLOQUEADO">Bloqueados</option>\n            </select>\n            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;white-space:nowrap;">\n              <input type="checkbox" id="est_filtro_baixo" style="width:16px;min-height:0;padding:0;" onchange="estoqueAplicarFiltros_()">\n              Estoque baixo\n            </label>\n            ' +
+      (podeEditar ? '<button class="btn-primary" type="button" onclick="estoqueNovoItem_()"><i class="fas fa-plus" style="margin-right:6px;"></i>Novo Item</button>' : "") +
+      '\n            <button class="btn-secondary" type="button" onclick="estoqueCarregarItens_()" style="font-size:12px;padding:6px 12px;margin-left:auto;"><i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar</button>\n          </div>\n\n          <!-- Form item (oculto por padrão) -->\n          <div class="form-card" id="est_form_item_card" style="display:none;margin-bottom:20px;">\n            <h3 class="section-card-title" id="est_form_item_titulo">Novo Item de Estoque</h3>\n            <div class="form-grid">\n              <div>\n                <label for="est_codigo">Código Interno</label>\n                <input id="est_codigo" type="text" placeholder="Automático se vazio" maxlength="30">\n              </div>\n              <div>\n                <label for="est_tipo">Tipo de Item</label>\n                <select id="est_tipo">\n                  ' +
+      (EST_TIPOS_ITEM.map(function(t) { return '<option value="' + t.value + '">' + t.label + '</option>'; }).join("")) +
+      '\n                </select>\n              </div>\n              <div class="full">\n                <label for="est_desc">Descrição <span style="color:red;">*</span></label>\n                <input id="est_desc" type="text" placeholder="Descrição completa do item">\n              </div>\n              <div>\n                <label for="est_fabricante">Fabricante</label>\n                <input id="est_fabricante" type="text" placeholder="Ex: Siemens, Philips">\n              </div>\n              <div>\n                <label for="est_ref">Referência / Part Number</label>\n                <input id="est_ref" type="text" placeholder="Ex: AMP-2398-A">\n              </div>\n              <div>\n                <label for="est_un">Unidade de Medida</label>\n                <select id="est_un">\n                  ' +
+      (EST_UNIDADES.map(function(u) { return '<option value="' + u + '">' + u + '</option>'; }).join("")) +
+      '\n                </select>\n              </div>\n              <div>\n                <label for="est_min">Estoque Mínimo</label>\n                <input id="est_min" type="number" min="0" step="0.01" value="0">\n              </div>\n            </div>\n            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;">\n              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">\n                <input id="est_exige_lote" type="checkbox" style="width:16px;min-height:0;padding:0;" checked> Exige número de lote\n              </label>\n              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">\n                <input id="est_exige_validade" type="checkbox" style="width:16px;min-height:0;padding:0;" checked> Exige data de validade\n              </label>\n              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">\n                <input id="est_exige_serie" type="checkbox" style="width:16px;min-height:0;padding:0;"> Exige número de série\n              </label>\n              <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">\n                <input id="est_aplica_cal" type="checkbox" style="width:16px;min-height:0;padding:0;"> Aplica calibração\n              </label>\n            </div>\n            <div class="form-actions" style="margin-top:14px;">\n              <button class="btn-primary" type="button" onclick="estoqueSalvarItem_()">\n                <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Item\n              </button>\n              <button class="btn-secondary" type="button" onclick="estoqueFecharFormItem_()">Cancelar</button>\n            </div>\n            <div class="helper-text" id="est_item_helper" style="margin-top:8px;"></div>\n          </div>\n\n          <!-- Tabela de itens -->\n          <div class="list-card">\n            <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">\n              <span style="font-size:14px;font-weight:700;" id="est_itens_contagem">Itens no estoque</span>\n            </div>\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Código</th>\n                    <th>Descrição</th>\n                    <th>Tipo</th>\n                    <th>Referência</th>\n                    <th>Saldo</th>\n                    <th>Mínimo</th>\n                    <th>Lotes</th>\n                    <th>Status</th>\n                    <th style="text-align:center;">Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="est_tbody_itens">\n                  <tr><td colspan="9" class="empty-state">Carregando itens...</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n\n        <!-- === ABA: ENTRADAS === -->\n        <div id="est_panel_entradas" style="display:none;">\n          <div class="module-grid">\n\n            <!-- Seleção de Item -->\n            <div class="form-card">\n              <h3 class="section-card-title">1. Selecionar Item</h3>\n              <div style="display:flex;gap:8px;margin-bottom:12px;">\n                <input id="est_entrada_busca_item" type="text" placeholder="Código ou descrição do item..."\n                  onkeydown="if(event.key===\'Enter\') estoqueBuscarItem_()">\n                <button class="btn-secondary" type="button" onclick="estoqueBuscarItem_()" style="white-space:nowrap;">\n                  <i class="fas fa-search"></i>\n                </button>\n              </div>\n              <div id="est_entrada_lista_item" style="margin-bottom:12px;"></div>\n              <div id="est_entrada_item_selecionado" style="display:none;background:var(--metro-green-xlight);border:1px solid var(--metro-green);border-radius:10px;padding:12px 16px;">\n                <div style="font-size:11px;font-weight:700;color:var(--metro-green);text-transform:uppercase;margin-bottom:4px;">Item selecionado</div>\n                <div id="est_entrada_item_info" style="font-size:13px;font-weight:700;"></div>\n                <button type="button" onclick="estoqueDeselecionarItem_()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;margin-top:4px;padding:0;">\n                  <i class="fas fa-times"></i> Trocar item\n                </button>\n              </div>\n\n              <div style="margin-top:20px;">\n                <h3 class="section-card-title">2. Fornecedor Qualificado</h3>\n                <div style="display:flex;gap:8px;margin-bottom:12px;">\n                  <input id="est_entrada_busca_forn" type="text" placeholder="Razão social ou CNPJ..."\n                    onkeydown="if(event.key===\'Enter\') estoqueBuscarFornecedor_()">\n                  <button class="btn-secondary" type="button" onclick="estoqueBuscarFornecedor_()" style="white-space:nowrap;">\n                    <i class="fas fa-search"></i>\n                  </button>\n                </div>\n                <div id="est_entrada_lista_forn" style="margin-bottom:12px;"></div>\n                <div id="est_entrada_forn_selecionado" style="display:none;background:var(--metro-green-xlight);border:1px solid var(--metro-green);border-radius:10px;padding:12px 16px;">\n                  <div style="font-size:11px;font-weight:700;color:var(--metro-green);text-transform:uppercase;margin-bottom:4px;">Fornecedor selecionado</div>\n                  <div id="est_entrada_forn_info" style="font-size:13px;font-weight:700;"></div>\n                  <button type="button" onclick="estoqueDeselecionarForn_()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;margin-top:4px;padding:0;">\n                    <i class="fas fa-times"></i> Trocar fornecedor\n                  </button>\n                </div>\n              </div>\n            </div>\n\n            <!-- Dados da Entrada -->\n            <div class="form-card">\n              <h3 class="section-card-title">3. Dados do Lote / Entrada</h3>\n              <div class="form-grid">\n                <div>\n                  <label for="est_entrada_lote">Número do Lote</label>\n                  <input id="est_entrada_lote" type="text" placeholder="Ex: LOT-2024-001">\n                </div>\n                <div>\n                  <label for="est_entrada_serie">Número de Série</label>\n                  <input id="est_entrada_serie" type="text" placeholder="Ex: SN-123456">\n                </div>\n                <div>\n                  <label for="est_entrada_fabricacao">Data de Fabricação</label>\n                  <input id="est_entrada_fabricacao" type="date">\n                </div>\n                <div>\n                  <label for="est_entrada_validade">Data de Validade</label>\n                  <input id="est_entrada_validade" type="date">\n                </div>\n                <div>\n                  <label for="est_entrada_qtd">Quantidade <span style="color:red;">*</span></label>\n                  <input id="est_entrada_qtd" type="number" min="0.001" step="0.001" value="1">\n                </div>\n                <div>\n                  <label for="est_entrada_custo">Custo Unitário (R$)</label>\n                  <input id="est_entrada_custo" type="number" min="0" step="0.01" value="0">\n                </div>\n                <div>\n                  <label for="est_entrada_data">Data de Recebimento</label>\n                  <input id="est_entrada_data" type="date">\n                </div>\n                <div>\n                  <label for="est_entrada_nf">Número da NF (opcional)</label>\n                  <input id="est_entrada_nf" type="text" placeholder="Ex: NF-001234">\n                </div>\n                <div class="full">\n                  <label for="est_entrada_obs">Observações</label>\n                  <textarea id="est_entrada_obs" rows="2" placeholder="Informações relevantes sobre este lote..."></textarea>\n                </div>\n              </div>\n              <div class="form-actions">\n                <button class="btn-primary" type="button" onclick="estoqueRegistrarEntrada_()">\n                  <i class="fas fa-arrow-right-to-bracket" style="margin-right:6px;"></i>Registrar Entrada\n                </button>\n                <button class="btn-secondary" type="button" onclick="estoqueLimparEntrada_()">Limpar</button>\n              </div>\n              <div class="helper-text" id="est_entrada_helper" style="margin-top:8px;"></div>\n            </div>\n\n          </div>\n        </div>\n\n        <!-- === ABA: MOVIMENTAÇÕES === -->\n        <div id="est_panel_movimentacoes" style="display:none;">\n          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">\n            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">\n              <input id="est_mov_busca_item" type="text" placeholder="Buscar item por código..." class="toolbar-search"\n                style="width:220px;" onkeydown="if(event.key===\'Enter\') estoqueCarregarMovs_(true)">\n              <button class="btn-secondary" type="button" onclick="estoqueCarregarMovs_(true)" style="font-size:12px;padding:8px 14px;">\n                <i class="fas fa-search" style="margin-right:4px;"></i>Filtrar\n              </button>\n            </div>\n            <button class="btn-secondary" type="button" onclick="estoqueCarregarMovs_(false)" style="font-size:12px;padding:6px 12px;">\n              <i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar\n            </button>\n          </div>\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Data</th>\n                    <th>Tipo</th>\n                    <th>Item</th>\n                    <th>Lote</th>\n                    <th>Origem</th>\n                    <th>Destino</th>\n                    <th>Qtd.</th>\n                    <th>Saldo Antes</th>\n                    <th>Saldo Depois</th>\n                  </tr>\n                </thead>\n                <tbody id="est_tbody_movs">\n                  <tr><td colspan="9" class="empty-state">Selecione um item para ver movimentações.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n\n      </div>\n    ';
+
+    // Inicializar aba ativa
+    estoqueAba_(ESTOQUE_STATE.aba || "itens");
+    estoqueCarregarItens_();
+
+    // Definir data padrão de recebimento como hoje
+    var hoje = new Date();
+    var hj = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0") + "-" + String(hoje.getDate()).padStart(2, "0");
+    setValue_("est_entrada_data", hj);
+  }
+
+  // ── ABAS ───────────────────────────────────────────────────────────────────
+  function estoqueAba_(aba) {
+    ESTOQUE_STATE.aba = aba;
+    ["itens","entradas","movimentacoes"].forEach(function(a) {
+      var panel = document.getElementById("est_panel_" + a);
+      var tab = document.getElementById("est_tab_" + a);
+      if (panel) panel.style.display = a === aba ? "block" : "none";
+      if (tab) {
+        tab.style.color = a === aba ? "var(--metro-green)" : "var(--muted)";
+        tab.style.borderBottomColor = a === aba ? "var(--metro-green)" : "transparent";
+      }
+    });
+    if (aba === "movimentacoes" && !document.getElementById("est_tbody_movs").innerHTML.includes("<tr><td")) {
+      estoqueCarregarMovs_(false);
+    }
+  }
+
+  // ── ITENS — CARREGAR ───────────────────────────────────────────────────────
+  function estoqueCarregarItens_() {
+    if (!SESSION) return;
+    var tbody = document.getElementById("est_tbody_itens");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:var(--danger);">Erro ao carregar itens.</td></tr>';
+          return;
+        }
+        ESTOQUE_STATE.items = res.items || [];
+        estoqueRenderItens_();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>';
+      })
+      .estoqueListarItens(SESSION, {});
+  }
+
+  // ── FILTRAR ────────────────────────────────────────────────────────────────
+  function estoqueAplicarFiltros_() {
+    var filtro = String((document.getElementById("est_busca") || {}).value || "").trim().toLowerCase();
+    var filtroTipo = String((document.getElementById("est_filtro_tipo") || {}).value || "");
+    var filtroSt = String((document.getElementById("est_filtro_status") || {}).value || "");
+    var filtroBaixo = (document.getElementById("est_filtro_baixo") || {}).checked;
+
+    var items = ESTOQUE_STATE.items.slice();
+    if (filtro) {
+      items = items.filter(function(i) {
+        return [i.CODIGO_INTERNO, i.DESCRICAO, i.REFERENCIA, i.FABRICANTE].join(" ").toLowerCase().indexOf(filtro) >= 0;
+      });
+    }
+    if (filtroTipo) items = items.filter(function(i) { return String(i.TIPO_ITEM || "") === filtroTipo; });
+    if (filtroSt) items = items.filter(function(i) { return String(i.STATUS || "") === filtroSt; });
+    if (filtroBaixo) items = items.filter(function(i) { return i.ESTOQUE_BAIXO === "S"; });
+
+    estoqueRenderItens_(items);
+  }
+
+  // ── RENDER ITENS ───────────────────────────────────────────────────────────
+  function estoqueRenderItens_(items) {
+    items = items || ESTOQUE_STATE.items;
+    var contagem = document.getElementById("est_itens_contagem");
+    if (contagem) contagem.textContent = items.length + " item" + (items.length !== 1 ? "ns" : "") + " no estoque";
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA" || USER_CONTEXT.perfil === "TECNICO");
+
+    if (!items.length) {
+      var tbody = document.getElementById("est_tbody_itens");
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum item encontrado.</td></tr>';
+      return;
+    }
+
+    var html = items.map(function(i) {
+      var id = escapeHtml_(i.ID);
+      var codigo = escapeHtml_(i.CODIGO_INTERNO || "—");
+      var desc = escapeHtml_(i.DESCRICAO || "—");
+      var tipo = EST_TIPOS_ITEM.find(function(t) { return t.value === i.TIPO_ITEM; });
+      var tipoLabel = tipo ? tipo.label : escapeHtml_(i.TIPO_ITEM || "—");
+      var ref = escapeHtml_(i.REFERENCIA || "—");
+      var saldo = Number(i.SALDO_DISPONIVEL || 0);
+      var minimo = Number(i.ESTOQUE_MINIMO || 0);
+      var baixo = i.ESTOQUE_BAIXO === "S";
+      var lotes = Number(i.LOTES_TOTAL || 0);
+
+      var saldoCor = baixo ? "var(--danger)" : "#1a202c";
+      var saldoHtml = '<span style="font-weight:900;font-size:15px;color:' + saldoCor + ';">' + saldo.toLocaleString("pt-BR") + '</span>' +
+        (i.UNIDADE_MEDIDA ? '<span style="font-size:10px;color:var(--muted);margin-left:3px;">' + escapeHtml_(i.UNIDADE_MEDIDA) + '</span>' : '') +
+        (baixo ? ' <span style="font-size:10px;padding:2px 6px;background:#fef2f2;color:#dc2626;border-radius:20px;font-weight:700;margin-left:4px;">BAIXO</span>' : '');
+
+      var statusHtml = obterBadgeStatusHtml_(i.STATUS || "ATIVO");
+
+      var qrHtml = i.QRCODE_LINK
+        ? '<a href="' + escapeHtml_(i.QRCODE_LINK) + '" target="_blank" style="color:var(--metro-blue);font-size:12px;" title="QR Code"><i class="fas fa-qrcode"></i></a>'
+        : '<span style="color:var(--muted);">—</span>';
+
+      var acoesHtml = '<div style="display:flex;gap:4px;justify-content:center;">';
+      acoesHtml += '<button class="btn-icon" title="Usar na entrada" onclick="estoqueSelecionarItemEntrada_(\'' + id + '\')" style="background:#e0f2fe;color:#0369a1;" title="Registrar entrada deste item"><i class="fas fa-arrow-right-to-bracket"></i></button>';
+      if (podeEditar) {
+        acoesHtml += '<button class="btn-icon" title="Editar" onclick="estoqueEditarItem_(\'' + id + '\')"><i class="fas fa-pen"></i></button>';
+      }
+      acoesHtml += '</div>';
+
+      return '<tr>' +
+        '<td style="font-family:monospace;font-size:12px;font-weight:700;">' + codigo + '</td>' +
+        '<td style="font-weight:600;font-size:13px;max-width:220px;">' + desc + '</td>' +
+        '<td style="font-size:12px;">' + tipoLabel + '</td>' +
+        '<td style="font-family:monospace;font-size:12px;">' + ref + '</td>' +
+        '<td>' + saldoHtml + '</td>' +
+        '<td style="font-size:13px;font-weight:600;color:var(--muted);">' + minimo + '</td>' +
+        '<td style="text-align:center;font-size:13px;font-weight:700;">' + lotes + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + acoesHtml + '</td>' +
+        '</tr>';
+    }).join("");
+
+    var tbody = document.getElementById("est_tbody_itens");
+    if (tbody) tbody.innerHTML = html;
+  }
+
+  // ── ITEM — FORM ────────────────────────────────────────────────────────────
+  function estoqueNovoItem_() {
+    ESTOQUE_STATE.editingId = "";
+    estoqueLimparFormItem_();
+    var card = document.getElementById("est_form_item_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("est_form_item_titulo");
+    if (titulo) titulo.textContent = "Novo Item de Estoque";
+    document.getElementById("est_desc") && document.getElementById("est_desc").focus();
+  }
+
+  function estoqueEditarItem_(id) {
+    var item = ESTOQUE_STATE.items.find(function(i) { return i.ID === id; });
+    if (!item) return;
+    ESTOQUE_STATE.editingId = id;
+    setValue_("est_codigo", item.CODIGO_INTERNO || "");
+    setValue_("est_tipo", item.TIPO_ITEM || "PECA");
+    setValue_("est_desc", item.DESCRICAO || "");
+    setValue_("est_fabricante", item.FABRICANTE || "");
+    setValue_("est_ref", item.REFERENCIA || "");
+    setValue_("est_un", item.UNIDADE_MEDIDA || "UN");
+    setValue_("est_min", item.ESTOQUE_MINIMO || 0);
+    var exLote = document.getElementById("est_exige_lote"); if (exLote) exLote.checked = item.EXIGE_LOTE === "S";
+    var exVal  = document.getElementById("est_exige_validade"); if (exVal) exVal.checked = item.EXIGE_VALIDADE === "S";
+    var exSer  = document.getElementById("est_exige_serie"); if (exSer) exSer.checked = item.EXIGE_SERIE === "S";
+    var apCal  = document.getElementById("est_aplica_cal"); if (apCal) apCal.checked = item.APLICA_CALIBRACAO === "S";
+    var card = document.getElementById("est_form_item_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("est_form_item_titulo");
+    if (titulo) titulo.textContent = "Editar — " + (item.DESCRICAO || "");
+  }
+
+  function estoqueSalvarItem_() {
+    if (!SESSION) return;
+    var helper = document.getElementById("est_item_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    var exLote = document.getElementById("est_exige_lote");
+    var exVal  = document.getElementById("est_exige_validade");
+    var exSer  = document.getElementById("est_exige_serie");
+    var apCal  = document.getElementById("est_aplica_cal");
+
+    var payload = {
+      ID:               ESTOQUE_STATE.editingId || "",
+      CODIGO_INTERNO:   String((document.getElementById("est_codigo") || {}).value || "").trim(),
+      TIPO_ITEM:        String((document.getElementById("est_tipo") || {}).value || "PECA"),
+      DESCRICAO:        String((document.getElementById("est_desc") || {}).value || "").trim(),
+      FABRICANTE:       String((document.getElementById("est_fabricante") || {}).value || "").trim(),
+      REFERENCIA:       String((document.getElementById("est_ref") || {}).value || "").trim(),
+      UNIDADE_MEDIDA:   String((document.getElementById("est_un") || {}).value || "UN"),
+      ESTOQUE_MINIMO:   parseFloat((document.getElementById("est_min") || {}).value || 0) || 0,
+      EXIGE_LOTE:       !!(exLote && exLote.checked),
+      EXIGE_VALIDADE:   !!(exVal && exVal.checked),
+      EXIGE_SERIE:      !!(exSer && exSer.checked),
+      APLICA_CALIBRACAO:!!(apCal && apCal.checked)
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao salvar.") + '</span>';
+          return;
+        }
+        if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Item salvo com sucesso!</span>';
+        estoqueCarregarItens_();
+        setTimeout(function() { estoqueFecharFormItem_(); }, 1000);
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+      })
+      .estoqueSalvarItem(SESSION, payload);
+  }
+
+  function estoqueLimparFormItem_() {
+    ["est_codigo","est_desc","est_fabricante","est_ref"].forEach(function(id) { setValue_(id, ""); });
+    setValue_("est_tipo", "PECA"); setValue_("est_un", "UN"); setValue_("est_min", "0");
+    var el;
+    el = document.getElementById("est_exige_lote"); if (el) el.checked = true;
+    el = document.getElementById("est_exige_validade"); if (el) el.checked = true;
+    el = document.getElementById("est_exige_serie"); if (el) el.checked = false;
+    el = document.getElementById("est_aplica_cal"); if (el) el.checked = false;
+  }
+
+  function estoqueFecharFormItem_() {
+    ESTOQUE_STATE.editingId = "";
+    var card = document.getElementById("est_form_item_card");
+    if (card) card.style.display = "none";
+  }
+
+  // ── ATALHO: SELECIONAR ITEM PARA ENTRADA ──────────────────────────────────
+  function estoqueSelecionarItemEntrada_(id) {
+    var item = ESTOQUE_STATE.items.find(function(i) { return i.ID === id; });
+    if (!item) return;
+    ESTOQUE_STATE.itemSelecionado = item;
+    estoqueAba_("entradas");
+
+    var div = document.getElementById("est_entrada_item_selecionado");
+    var info = document.getElementById("est_entrada_item_info");
+    var lista = document.getElementById("est_entrada_lista_item");
+    if (div) div.style.display = "block";
+    if (lista) lista.innerHTML = "";
+    if (info) info.textContent = "[" + (item.CODIGO_INTERNO || "—") + "] " + (item.DESCRICAO || "—") + " · " + (item.UNIDADE_MEDIDA || "UN");
+    setValue_("est_entrada_busca_item", "");
+  }
+
+  // ── ENTRADA — BUSCA ITEM ───────────────────────────────────────────────────
+  function estoqueBuscarItem_() {
+    var termo = String((document.getElementById("est_entrada_busca_item") || {}).value || "").trim().toLowerCase();
+    var lista = document.getElementById("est_entrada_lista_item");
+    if (!lista) return;
+    if (!termo) { lista.innerHTML = ""; return; }
+
+    var encontrados = ESTOQUE_STATE.items.filter(function(i) {
+      return [i.CODIGO_INTERNO, i.DESCRICAO, i.REFERENCIA].join(" ").toLowerCase().indexOf(termo) >= 0 && String(i.STATUS || "") === "ATIVO";
+    }).slice(0, 10);
+
+    if (!encontrados.length) {
+      lista.innerHTML = '<p style="color:var(--muted);font-size:12px;">Nenhum item ativo encontrado. <button class="btn-secondary" type="button" onclick="estoqueCarregarItens_();estoqueAba_(\'itens\')" style="font-size:11px;padding:3px 8px;">Ir para Itens</button></p>';
+      return;
+    }
+
+    lista.innerHTML = encontrados.map(function(i) {
+      return '<div onclick="estoqueSelecionarItemEntrada_(\'' + escapeHtml_(i.ID) + '\')" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:4px;background:#fff;transition:all .15s;" onmouseover="this.style.borderColor=\'var(--metro-green)\';this.style.background=\'#f0faf4\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'">' +
+        '<span style="font-weight:700;color:var(--metro-green);font-size:12px;margin-right:8px;">' + escapeHtml_(i.CODIGO_INTERNO || "—") + '</span>' +
+        '<span style="font-size:13px;color:#334155;">' + escapeHtml_(i.DESCRICAO || "—") + '</span>' +
+        '<span style="float:right;font-size:11px;color:var(--muted);">Saldo: ' + (i.SALDO_DISPONIVEL || 0) + ' ' + escapeHtml_(i.UNIDADE_MEDIDA || "") + '</span>' +
+        '</div>';
+    }).join("");
+  }
+
+  function estoqueDeselecionarItem_() {
+    ESTOQUE_STATE.itemSelecionado = null;
+    var div = document.getElementById("est_entrada_item_selecionado");
+    if (div) div.style.display = "none";
+  }
+
+  // ── ENTRADA — BUSCA FORNECEDOR ─────────────────────────────────────────────
+  function estoqueBuscarFornecedor_() {
+    if (!SESSION) return;
+    var termo = String((document.getElementById("est_entrada_busca_forn") || {}).value || "").trim();
+    var lista = document.getElementById("est_entrada_lista_forn");
+    if (!lista) return;
+    if (!termo) { lista.innerHTML = ""; return; }
+    lista.innerHTML = '<p style="color:var(--muted);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var fornecedores = (res && res.items) || [];
+        var qualificados = fornecedores.filter(function(f) {
+          return String(f.QUALIFICACAO_STATUS || "") === "QUALIFICADO";
+        });
+        if (!qualificados.length) {
+          lista.innerHTML = '<p style="color:var(--warning);font-size:12px;"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>Nenhum fornecedor qualificado encontrado. Verifique os documentos do fornecedor.</p>';
+          return;
+        }
+        lista.innerHTML = qualificados.slice(0, 10).map(function(f) {
+          return '<div onclick="estoqueSelecionarFornecedor_(\'' + escapeHtml_(f.ID) + '\')" style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:4px;background:#fff;transition:all .15s;" onmouseover="this.style.borderColor=\'var(--metro-green)\';this.style.background=\'#f0faf4\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'">' +
+            '<span style="font-weight:700;font-size:13px;color:#334155;">' + escapeHtml_(f.RAZAO_SOCIAL || "—") + '</span>' +
+            '<span style="font-size:11px;color:var(--muted);margin-left:8px;">' + escapeHtml_(formatarCnpjFront_(f.CNPJ || "")) + '</span>' +
+            '<span style="float:right;font-size:11px;padding:2px 8px;background:#ecfdf5;color:#059669;border-radius:20px;font-weight:700;">Qualificado</span>' +
+            '</div>';
+        }).join("");
+      })
+      .withFailureHandler(function() {
+        lista.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao buscar fornecedores.</p>';
+      })
+      .fornecedoresListar(SESSION, { TEXTO: termo });
+  }
+
+  function estoqueSelecionarFornecedor_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) { alert("Fornecedor não encontrado."); return; }
+        ESTOQUE_STATE.fornecedorSelecionado = res.item;
+        var div = document.getElementById("est_entrada_forn_selecionado");
+        var info = document.getElementById("est_entrada_forn_info");
+        var lista = document.getElementById("est_entrada_lista_forn");
+        if (div) div.style.display = "block";
+        if (lista) lista.innerHTML = "";
+        if (info) info.textContent = (res.item.RAZAO_SOCIAL || "—") + " · " + formatarCnpjFront_(res.item.CNPJ || "");
+        setValue_("est_entrada_busca_forn", "");
+      })
+      .fornecedoresObter(SESSION, id);
+  }
+
+  function estoqueDeselecionarForn_() {
+    ESTOQUE_STATE.fornecedorSelecionado = null;
+    var div = document.getElementById("est_entrada_forn_selecionado");
+    if (div) div.style.display = "none";
+  }
+
+  // ── REGISTRAR ENTRADA ──────────────────────────────────────────────────────
+  function estoqueRegistrarEntrada_() {
+    if (!SESSION) return;
+    var helper = document.getElementById("est_entrada_helper");
+
+    if (!ESTOQUE_STATE.itemSelecionado) { alert("Selecione um item antes de registrar a entrada."); return; }
+    if (!ESTOQUE_STATE.fornecedorSelecionado) { alert("Selecione um fornecedor qualificado."); return; }
+
+    var qtd = parseFloat((document.getElementById("est_entrada_qtd") || {}).value || 0);
+    if (!qtd || qtd <= 0) { alert("Informe uma quantidade válida maior que zero."); return; }
+
+    var payload = {
+      ITEM_ID:          ESTOQUE_STATE.itemSelecionado.ID,
+      FORNECEDOR_ID:    ESTOQUE_STATE.fornecedorSelecionado.ID,
+      NUMERO_LOTE:      String((document.getElementById("est_entrada_lote") || {}).value || "").trim(),
+      NUMERO_SERIE:     String((document.getElementById("est_entrada_serie") || {}).value || "").trim(),
+      DATA_FABRICACAO:  String((document.getElementById("est_entrada_fabricacao") || {}).value || "").trim(),
+      DATA_VALIDADE:    String((document.getElementById("est_entrada_validade") || {}).value || "").trim(),
+      QUANTIDADE:       qtd,
+      CUSTO_UNITARIO:   parseFloat((document.getElementById("est_entrada_custo") || {}).value || 0) || 0,
+      DATA_ENTRADA:     String((document.getElementById("est_entrada_data") || {}).value || "").trim(),
+      OBSERVACOES:      String((document.getElementById("est_entrada_obs") || {}).value || "").trim()
+    };
+
+    if (helper) helper.textContent = "Registrando entrada...";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao registrar entrada.") + '</span>';
+          return;
+        }
+        if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Entrada registrada com sucesso! Lote ID: ' + escapeHtml_(res.loteId || "") + '</span>';
+        estoqueLimparEntrada_();
+        estoqueCarregarItens_();
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+      })
+      .estoqueRegistrarEntrada(SESSION, payload);
+  }
+
+  function estoqueLimparEntrada_() {
+    ["est_entrada_lote","est_entrada_serie","est_entrada_fabricacao","est_entrada_validade","est_entrada_nf","est_entrada_obs"].forEach(function(id) { setValue_(id, ""); });
+    setValue_("est_entrada_qtd", "1"); setValue_("est_entrada_custo", "0");
+    var hoje = new Date();
+    var hj = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0") + "-" + String(hoje.getDate()).padStart(2, "0");
+    setValue_("est_entrada_data", hj);
+  }
+
+  // ── MOVIMENTAÇÕES ──────────────────────────────────────────────────────────
+  function estoqueCarregarMovs_(filtrar) {
+    var tbody = document.getElementById("est_tbody_movs");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando movimentações...</td></tr>';
+    // Nota: o backend não tem wrapper direto para movimentações.
+    // Exibe mensagem orientando o usuário a acessar pelo inventário ou via OS.
+    setTimeout(function() {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="padding:30px;">' +
+        '<i class="fas fa-info-circle" style="font-size:24px;color:var(--metro-blue);display:block;margin-bottom:10px;"></i>' +
+        '<strong>Movimentações registradas automaticamente</strong><br>' +
+        '<span style="font-size:12px;color:var(--muted);">As movimentações de estoque são rastreadas automaticamente ao registrar entradas e ao consumir itens via Ordens de Serviço.<br>O histórico completo está disponível na planilha EST_MOVIMENTACOES do banco de dados.</span>' +
+        '</td></tr>';
+    }, 300);
+  }
+</script>

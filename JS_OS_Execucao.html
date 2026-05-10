@@ -1,0 +1,1576 @@
+<script>
+
+  const EXEC_FOTO_CATS = ["Plaqueta","Antes","Durante","Depois","Defeito encontrado","Peça substituída","Teste final","Documento","Outro"];
+
+  function renderOSExecucaoModulo_(osId) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    
+    if (!osId) {
+      div.innerHTML = `
+        <div class="module-shell" style="padding:40px 16px;text-align:center;">
+          <i class="fas fa-triangle-exclamation" style="font-size:36px;color:#f59e0b;"></i>
+          <div style="font-size:15px;font-weight:700;margin-top:12px;">ID da OS não localizado.</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:6px;">Atualize a lista e tente novamente.</div>
+          <button class="btn-secondary" type="button" onclick="abrir('os')" style="margin-top:20px;">&#8592; Voltar</button>
+        </div>`;
+      return;
+    }
+    
+    div.innerHTML = `
+      <div class="module-shell" style="padding:48px 16px;text-align:center;">
+        <i class="fas fa-spinner fa-spin" style="font-size:36px;color:var(--metro-green);"></i>
+        <div style="font-size:16px;font-weight:700;margin-top:16px;color:var(--text);">Carregando execução da OS...</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;">${escapeHtml_(osId || "")}</div>
+      </div>`;
+
+    setTimeout(function() {
+      if (!document.getElementById("conteudo")) return;
+      document.getElementById("conteudo").innerHTML = `
+        <div class="module-shell">
+          <div class="module-header">
+            <div class="module-header-left">
+              <h2 class="content-title" id="osExecTitulo">Execução de OS</h2>
+              <p class="content-subtitle" id="osExecSubtitulo">Carregando...</p>
+            </div>
+            <div class="module-header-right" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-secondary" type="button" onclick="abrir('os')">&#8592; Voltar</button>
+              <button class="btn-success" type="button" onclick="osExecGerarDocumento_()">Gerar PDF</button>
+            </div>
+          </div>
+          <div class="os-exec-steps">
+            <button class="os-exec-step-btn os-exec-step-ativo" id="osStep1Btn" type="button" onclick="osExecStep_(1)">
+              <span class="os-exec-step-num">1</span>
+              <span>Resumo</span>
+            </button>
+            <button class="os-exec-step-btn" id="osStep2Btn" type="button" onclick="osExecStep_(2)">
+              <span class="os-exec-step-num">2</span>
+              <span>Fotos<span id="osStepBadge2" style="display:none;margin-left:3px;background:#059669;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>
+            </button>
+            <button class="os-exec-step-btn" id="osStep3Btn" type="button" onclick="osExecStep_(3)">
+              <span class="os-exec-step-num">3</span>
+              <span>Quest.<span id="osStepBadge3" style="display:none;margin-left:3px;background:#2563eb;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>
+            </button>
+            <button class="os-exec-step-btn" id="osStep4Btn" type="button" onclick="osExecStep_(4)">
+              <span class="os-exec-step-num">4</span>
+              <span>Relato</span>
+            </button>
+            <button class="os-exec-step-btn" id="osStep5Btn" type="button" onclick="osExecStep_(5)">
+              <span class="os-exec-step-num">5</span>
+              <span>Assin.<span id="osStepBadge5" style="display:none;margin-left:3px;background:#059669;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>
+            </button>
+            <button class="os-exec-step-btn" id="osStep6Btn" type="button" onclick="osExecStep_(6)">
+              <span class="os-exec-step-num">6</span>
+              <span>Concluir</span>
+            </button>
+          </div>
+
+          <div id="osExecPane1">
+            <div class="form-card" id="osExecResumoCard">
+              <div class="empty-state">Carregando resumo da OS...</div>
+            </div>
+          </div>
+
+          <div id="osExecPane2" style="display:none;">
+            <div class="form-card">
+              <h3 class="section-card-title">Fotos e Evidências</h3>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:700;">
+                  &#128247; Tirar foto
+                  <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="osExecFotoSelecionada_(this)">
+                </label>
+                <label class="btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:700;">
+                  &#128190; Galeria / Arquivo
+                  <input type="file" accept="image/*" multiple style="display:none;" onchange="osExecFotoSelecionada_(this)">
+                </label>
+                <button class="btn-success" type="button" id="osBtnEnviarFotos" onclick="osExecEnviarFotos_()">&#8679; Enviar fotos</button>
+              </div>
+              <div id="osFotoFila" style="margin-bottom:16px;">
+                <div class="empty-state" style="padding:16px;">Nenhuma foto na fila. Toque em "Tirar foto" ou "Galeria".</div>
+              </div>
+              <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+                <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Fotos já enviadas</div>
+                <div id="osFotosEnviadas">
+                  <div class="empty-state" style="padding:16px;">Nenhuma foto registrada.</div>
+                </div>
+              </div>
+              <div class="os-exec-nav">
+                <button class="btn-secondary" type="button" onclick="osExecStep_(1)">&#8592; Resumo</button>
+                <button class="btn-primary" type="button" onclick="osExecStep_(3)">Questionário &#8594;</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="osExecPane3" style="display:none;">
+            <div class="form-card">
+              <h3 class="section-card-title">Questionário</h3>
+              <div id="osCheckProgressWrap" style="display:none;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+                  <span>Progresso</span><span id="osCheckProgressText">0/0 respondidas</span>
+                </div>
+                <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                  <div id="osCheckProgressBar" style="height:100%;background:var(--metro-green);border-radius:3px;width:0%;transition:width .3s;"></div>
+                </div>
+              </div>
+              <div id="osChecklistWrap">
+                <div class="empty-state">Carregando questionário...</div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" type="button" onclick="osExecSalvarChecklist_()">Salvar questionário</button>
+              </div>
+              <div class="os-exec-nav">
+                <button class="btn-secondary" type="button" onclick="osExecStep_(2)">&#8592; Fotos</button>
+                <button class="btn-primary" type="button" onclick="osExecStep_(4)">Relato &#8594;</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="osExecPane4" style="display:none;">
+            <div class="form-card">
+              <h3 class="section-card-title">Relato Técnico</h3>
+              <div class="form-grid">
+                <div class="full">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <label style="margin:0;">Relato técnico do atendimento *</label>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-ia-sm" type="button" title="Lapidar texto com IA" onclick="osIAChamar_('os_exec_relato','lapidar')">&#10024; Lapidar com IA</button>
+                      <button class="btn-ia-sm btn-ia-gerar" type="button" title="Gerar relato completo com IA" onclick="osIAChamar_('os_exec_relato','gerar')">&#9997; Gerar com IA</button>
+                    </div>
+                  </div>
+                  <textarea id="os_exec_relato" rows="6" placeholder="Descreva o que foi encontrado, o que foi feito e o resultado do atendimento..."></textarea>
+                  <div id="ia_sug_os_exec_relato" class="ia-sug-panel" style="display:none;"></div>
+                </div>
+
+                <div class="full">
+                  <details style="border:1px solid var(--border);border-radius:8px;background:#fff;padding:10px 12px;">
+                    <summary style="cursor:pointer;font-weight:800;color:var(--metro-blue);">+ Informações técnicas complementares</summary>
+                    <div style="margin-top:12px;display:grid;gap:12px;">
+                      
+                      <div class="full">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                          <label style="margin:0;">Diagnóstico final</label>
+                          <button class="btn-ia-sm" type="button" onclick="osIAChamar_('os_exec_diagnostico','lapidar')">&#10024; Lapidar com IA</button>
+                        </div>
+                        <textarea id="os_exec_diagnostico" rows="3" placeholder="Diagnóstico técnico conclusivo do problema encontrado..."></textarea>
+                        <div id="ia_sug_os_exec_diagnostico" class="ia-sug-panel" style="display:none;"></div>
+                      </div>
+
+                      <div class="full">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                          <label style="margin:0;">Condição encontrada</label>
+                          <button class="btn-ia-sm" type="button" onclick="osIAChamar_('os_exec_condicao','lapidar')">&#10024; Lapidar com IA</button>
+                        </div>
+                        <textarea id="os_exec_condicao" rows="2" placeholder="Estado do equipamento no momento do atendimento..."></textarea>
+                        <div id="ia_sug_os_exec_condicao" class="ia-sug-panel" style="display:none;"></div>
+                      </div>
+
+                      <div class="full">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                          <label style="margin:0;">Causa provável</label>
+                          <button class="btn-ia-sm" type="button" onclick="osIAChamar_('os_exec_causa','lapidar')">&#10024; Lapidar com IA</button>
+                        </div>
+                        <textarea id="os_exec_causa" rows="2" placeholder="Causa provável identificada para o problema..."></textarea>
+                        <div id="ia_sug_os_exec_causa" class="ia-sug-panel" style="display:none;"></div>
+                      </div>
+
+                      <div class="full">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                          <label style="margin:0;">Recomendação</label>
+                          <div style="display:flex;gap:6px;">
+                            <button class="btn-ia-sm" type="button" onclick="osIAChamar_('os_exec_recomendacao','lapidar')">&#10024; Lapidar com IA</button>
+                            <button class="btn-ia-sm btn-ia-gerar" type="button" onclick="osIAChamar_('os_exec_recomendacao','recomendar')">&#9997; Gerar com IA</button>
+                          </div>
+                        </div>
+                        <textarea id="os_exec_recomendacao" rows="3" placeholder="Recomendações técnicas para o cliente ou próximos atendimentos..."></textarea>
+                        <div id="ia_sug_os_exec_recomendacao" class="ia-sug-panel" style="display:none;"></div>
+                      </div>
+
+                      <div class="full">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                          <label style="margin:0;">Pendências</label>
+                          <button class="btn-ia-sm" type="button" onclick="osIAChamar_('os_exec_pendencias','lapidar')">&#10024; Lapidar com IA</button>
+                        </div>
+                        <textarea id="os_exec_pendencias" rows="2" placeholder="Pendências identificadas que requerem ação futura..."></textarea>
+                        <div id="ia_sug_os_exec_pendencias" class="ia-sug-panel" style="display:none;"></div>
+                      </div>
+
+                    </div>
+                  </details>
+                </div>
+
+                <div class="full">
+                  <label>Resultado do atendimento</label>
+                  <select id="os_exec_resultado">
+                    <option value="">Selecione</option>
+                    <option value="RESOLVIDO">Resolvido</option>
+                    <option value="RESOLVIDO_COM_RESSALVA">Resolvido com ressalva</option>
+                    <option value="NAO_RESOLVIDO">Não resolvido</option>
+                    <option value="NECESSITA_ORCAMENTO">Necessita orçamento</option>
+                    <option value="NECESSITA_RETORNO">Necessita retorno</option>
+                  </select>
+                </div>
+                <div><label><input type="checkbox" id="os_exec_retorno"> Necessita retorno</label></div>
+                <div><label><input type="checkbox" id="os_exec_orcamento"> Necessita orçamento</label></div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" type="button" onclick="osExecSalvarRelato_()">Salvar relato</button>
+              </div>
+              <div class="os-exec-nav">
+                <button class="btn-secondary" type="button" onclick="osExecStep_(3)">&#8592; Questionário</button>
+                <button class="btn-primary" type="button" onclick="osExecStep_(5)">Assinaturas &#8594;</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="osExecPane5" style="display:none;">
+            <div class="form-card">
+              <h3 class="section-card-title">Assinatura do Técnico</h3>
+              <div class="form-grid">
+                <div class="full">
+                  <label>Nome do técnico</label>
+                  <input id="os_ass_tec_nome" placeholder="Nome do técnico responsável">
+                </div>
+                <div class="full">
+                  <label>Assinatura</label>
+                  <div class="os-ass-canvas-wrap">
+                    <canvas id="os_ass_tec_canvas" width="800" height="200"></canvas>
+                    <span class="os-ass-hint" id="os_ass_tec_hint">Assine aqui</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:12px;">
+                <button class="btn-secondary" type="button" onclick="osExecLimparCanvas_('os_ass_tec_canvas','os_ass_tec_hint')">Limpar</button>
+                <button class="btn-success" type="button" onclick="osExecSalvarAssinatura_('TECNICO')">Salvar assinatura do técnico</button>
+              </div>
+            </div>
+
+            <div class="form-card" style="margin-top:14px;">
+              <h3 class="section-card-title">Assinatura do Responsável pelo Local</h3>
+              <div class="form-grid">
+                <div>
+                  <label>Nome do responsável *</label>
+                  <input id="os_ass_resp_nome" placeholder="Nome completo">
+                </div>
+                <div>
+                  <label>Cargo / Função</label>
+                  <input id="os_ass_resp_cargo" placeholder="Ex: Gerente, Coordenador...">
+                </div>
+                <div class="full">
+                  <label>Assinatura</label>
+                  <div class="os-ass-canvas-wrap">
+                    <canvas id="os_ass_resp_canvas" width="800" height="200"></canvas>
+                    <span class="os-ass-hint" id="os_ass_resp_hint">Assine aqui</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-actions" style="margin-top:12px;">
+                <button class="btn-secondary" type="button" onclick="osExecLimparCanvas_('os_ass_resp_canvas','os_ass_resp_hint')">Limpar</button>
+                <button class="btn-success" type="button" onclick="osExecSalvarAssinatura_('RESPONSAVEL')">Salvar assinatura do responsável</button>
+              </div>
+              <div id="osAssLista" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+                <div style="font-size:12px;color:var(--muted);">Nenhuma assinatura registrada.</div>
+              </div>
+            </div>
+            <div class="os-exec-nav" style="margin-top:0;padding-top:0;border:none;">
+              <button class="btn-secondary" type="button" onclick="osExecStep_(4)">&#8592; Relato</button>
+              <button class="btn-primary" type="button" onclick="osExecStep_(6)">Concluir &#8594;</button>
+            </div>
+          </div>
+
+          <div id="osExecPane6" style="display:none;">
+            <div class="form-card">
+              <h3 class="section-card-title">Concluir Atendimento</h3>
+              <div id="osExecPendenciasBox" style="margin-bottom:16px;">
+                <div style="color:var(--muted);font-size:13px;padding:10px 0;">Clique em "Verificar pendências" para checar o que falta antes de concluir.</div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-secondary" type="button" onclick="osExecValidar_()">Verificar pendências</button>
+                <button class="btn-primary" type="button" id="osBtnConcluir" onclick="osExecConcluir_()">Concluir atendimento</button>
+              </div>
+              <div class="os-exec-nav">
+                <button class="btn-secondary" type="button" onclick="osExecStep_(5)">&#8592; Assinaturas</button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="osExecDocResultado" style="display:none;margin-top:16px;"></div>
+        </div>`;
+        
+      OS_EXEC_STATE.osId = osId;
+      OS_EXEC_STATE.checklistModelo = null;
+      OS_EXEC_STATE.checklist = [];
+      OS_EXEC_STATE.fotosFila = [];
+      osExecCarregar_();
+    }, 30);
+  }
+  
+  window.renderOSExecucaoModulo_ = renderOSExecucaoModulo_;
+
+  /* ---- Navegação de etapas ---- */
+
+  function osExecStep_(n) {
+    for (var i = 1; i <= 6; i++) {
+      var pane = document.getElementById("osExecPane" + i);
+      var btn  = document.getElementById("osStep" + i + "Btn");
+      if (pane) pane.style.display = i === n ? "" : "none";
+      if (btn) { btn.classList.remove("os-exec-step-ativo"); if (i === n) btn.classList.add("os-exec-step-ativo"); }
+    }
+    if (n === 5) setTimeout(function() {
+      osExecInitCanvas_("os_ass_tec_canvas", "os_ass_tec_hint");
+      osExecInitCanvas_("os_ass_resp_canvas", "os_ass_resp_hint");
+    }, 80);
+    if (n === 6) osExecValidar_();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---- Carregamento ---- */
+
+  function osExecCarregar_() {
+    google.script.run
+      .withFailureHandler(function(err) {
+        var card = document.getElementById("osExecResumoCard");
+        if (card) {
+          card.innerHTML = `
+            <div style="padding:20px;text-align:center;color:#dc2626;">
+              <i class="fas fa-circle-exclamation" style="font-size:28px;"></i>
+              <div style="font-weight:700;margin-top:8px;">Erro ao carregar OS</div>
+              <div style="font-size:12px;margin-top:4px;">${escapeHtml_(String((err && err.message) || err))}</div>
+            </div>`;
+        }
+      })
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) {
+          var card = document.getElementById("osExecResumoCard");
+          if (card) {
+            card.innerHTML = `
+              <div style="padding:20px;text-align:center;color:#dc2626;">
+                <i class="fas fa-circle-exclamation" style="font-size:28px;"></i>
+                <div style="font-weight:700;margin-top:8px;">OS não encontrada</div>
+                <div style="font-size:12px;margin-top:4px;">${escapeHtml_((res && res.message) || "Verifique o ID e tente novamente.")}</div>
+                <div style="font-size:11px;margin-top:4px;color:#6b7280;">osId: ${escapeHtml_(OS_EXEC_STATE.osId || "vazio")}</div>
+              </div>`;
+          }
+          return;
+        }
+        
+        const i = res.item;
+        OS_EXEC_STATE.os = i;
+        const t = document.getElementById("osExecTitulo");
+        if (t) t.innerText = "Execução OS " + (i.NUMERO_OS || "");
+        
+        const s = document.getElementById("osExecSubtitulo");
+        if (s) s.innerText = [i.CLIENTE_NOME, i.UNIDADE_NOME, i.STATUS].filter(Boolean).join(" | ");
+        
+        setValue_("os_exec_relato",       i.RELATO_TECNICO || i.ENCERRAMENTO_TECNICO || i.SERVICO_EXECUTADO || "");
+        setValue_("os_exec_diagnostico",  i.DIAGNOSTICO_FINAL || "");
+        setValue_("os_exec_condicao",     i.CONDICAO_ENCONTRADA || "");
+        setValue_("os_exec_causa",        i.CAUSA_PROVAVEL || "");
+        setValue_("os_exec_recomendacao", i.RECOMENDACAO || "");
+        setValue_("os_exec_pendencias",   i.PENDENCIAS || "");
+        setValue_("os_exec_resultado",    i.RESULTADO_ATENDIMENTO || "");
+        
+        const ret = document.getElementById("os_exec_retorno");
+        if (ret) ret.checked = i.NECESSITA_RETORNO === "S";
+        
+        const orc = document.getElementById("os_exec_orcamento"); 
+        if (orc) orc.checked = i.NECESSITA_ORCAMENTO === "S";
+        
+        const tecNome = document.getElementById("os_ass_tec_nome");
+        if (tecNome && !tecNome.value) tecNome.value = i.TECNICO_NOME || (SESSION && SESSION.usuario) || "";
+        
+        osExecRenderResumo_(i);
+        osExecCarregarChecklist_();
+        osExecCarregarFotosEnviadas_();
+        osExecCarregarAssinaturas_();
+      }).osObter(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Etapa 1: Resumo ---- */
+
+  function osExecRenderResumo_(i) {
+    const card = document.getElementById("osExecResumoCard");
+    if (!card) return;
+    
+    const statusAtual = (i.STATUS || "").toUpperCase();
+    const podeIniciar = ["ABERTA","AGENDADA","EM_EXECUCAO"].indexOf(statusAtual) >= 0;
+    const jaIniciou = statusAtual === "EM_EXECUCAO" || i.CHECKIN_EM;
+    
+    const campo = function(label, val) {
+      return val ? `
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">${escapeHtml_(label)}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-top:2px;">${escapeHtml_(val)}</div>
+        </div>` : '';
+    };
+    
+    card.innerHTML = `
+      <h3 class="section-card-title">Resumo da Tarefa</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px 20px;margin-bottom:16px;">
+        ${campo("N° OS", i.NUMERO_OS || i.ID)}
+        ${campo("Status", "")} ${obterBadgeStatusHtml_(i.STATUS)}
+        ${campo("Tipo OS", i.TIPO_OS)}
+        ${campo("Prioridade", i.PRIORIDADE)}
+        ${campo("Cliente", i.CLIENTE_NOME)}
+        ${campo("Unidade", i.UNIDADE_NOME)}
+        ${campo("Endereço", i.UNIDADE_ENDERECO || i.ENDERECO)}
+        ${campo("Equipamento", [i.EQUIPAMENTO_TAG, i.EQUIPAMENTO_TIPO, i.EQUIPAMENTO_MODELO].filter(Boolean).join(" - "))}
+        ${campo("TAG", i.EQUIPAMENTO_TAG)}
+        ${campo("Agendado para", formatarDataFront_(i.DATA_AGENDADA))}
+      </div>
+      ${i.RELATO_CLIENTE ? `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Relato do cliente</div>
+          <div style="font-size:13px;line-height:1.5;">${escapeHtml_(i.RELATO_CLIENTE)}</div>
+        </div>` : ''}
+      ${i.MISSAO_TECNICA ? `
+        <div style="background:var(--info-bg);border:1px solid #93c5fd;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--metro-blue);text-transform:uppercase;margin-bottom:4px;">Orientação técnica</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--metro-blue-dark);">${escapeHtml_(i.MISSAO_TECNICA)}</div>
+        </div>` : ''}
+      ${i.CHECKIN_EM ? `
+        <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#065f46;">
+          <strong>&#10003; Atendimento iniciado</strong> em ${escapeHtml_(formatarDataFront_(i.CHECKIN_EM))}
+        </div>` : ''}
+      ${podeIniciar ? `
+        <div class="form-actions">
+          <button class="btn-primary" style="font-size:15px;min-height:46px;padding:0 28px;" type="button" id="osBtnIniciar" onclick="osExecIniciarAtendimento_()">
+            ${jaIniciou ? '&#9654; Continuar atendimento' : '&#9654; Iniciar atendimento'}
+          </button>
+        </div>` : ''}
+      <div class="os-exec-nav" style="margin-top:16px;">
+        <div></div>
+        <button class="btn-primary" type="button" onclick="osExecStep_(2)">Fotos &#8594;</button>
+      </div>`;
+  }
+
+  function osExecIniciarAtendimento_() {
+    const btn = document.getElementById("osBtnIniciar");
+    if (btn) { btn.disabled = true; btn.textContent = "Iniciando..."; }
+    
+    const agora = new Date();
+    const hora = agora.getHours().toString().padStart(2, "0") + ":" + agora.getMinutes().toString().padStart(2, "0");
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (btn) { btn.disabled = false; btn.textContent = "Iniciar atendimento"; }
+        _osExecToast((res && res.message) || "Erro ao iniciar.", "error");
+        return;
+      }
+      
+      var capturarGPS = function(onDone) {
+        if (!navigator.geolocation) { onDone(null, null); return; }
+        navigator.geolocation.getCurrentPosition(
+          function(pos) { onDone(String(pos.coords.latitude), String(pos.coords.longitude)); },
+          function() { onDone(null, null); },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      };
+      
+      capturarGPS(function(lat, lng) {
+        var msg;
+        if (lat && lng) {
+          msg = "Atendimento iniciado as " + hora + ". Localizacao capturada.";
+          google.script.run.withSuccessHandler(function() {}).osRegistrarCheckin(SESSION, OS_EXEC_STATE.osId, { LAT: lat, LNG: lng });
+        } else {
+          msg = "Atendimento iniciado às " + hora + ". Localização não capturada.";
+        }
+        _osExecToast(msg, "success");
+        osExecCarregar_();
+        if (btn) { btn.disabled = false; }
+      });
+    }).osIniciarExecucao(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Etapa 2: Fotos ---- */
+
+  function osExecFotoSelecionada_(input) {
+    var files = Array.from(input.files || []);
+    OS_EXEC_STATE.fotosFila = OS_EXEC_STATE.fotosFila || [];
+    
+    files.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        OS_EXEC_STATE.fotosFila.push({
+          file: file,
+          dataUrl: e.target.result,
+          nome: file.name,
+          tipo: "Outro",
+          obs: "",
+          status: "pendente"
+        });
+        osExecRenderFilaFotos_();
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = "";
+  }
+
+  function osExecRenderFilaFotos_() {
+    var el = document.getElementById("osFotoFila"); 
+    if (!el) return;
+    
+    var fila = OS_EXEC_STATE.fotosFila || [];
+    if (!fila.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:16px;">Nenhuma foto na fila. Toque em "Tirar foto" ou "Galeria".</div>';
+      return;
+    }
+    
+    el.innerHTML = fila.map(function(item, idx) {
+      var statusHtml = item.status === "ok" ? '<span class="os-foto-status-ok">&#10003; Enviada</span>'
+        : item.status === "erro" ? '<span class="os-foto-status-err">&#10007; Erro ao enviar</span>'
+        : item.status === "enviando" ? '<span class="os-foto-status-wait">Enviando...</span>'
+        : '<span class="os-foto-status-wait">Aguardando envio</span>';
+        
+      var optsHtml = EXEC_FOTO_CATS.map(function(c) {
+        return `<option value="${escapeHtml_(c)}"${item.tipo === c ? " selected" : ""}>${escapeHtml_(c)}</option>`;
+      }).join("");
+      
+      return `
+        <div class="os-foto-item">
+          <img class="os-foto-thumb" src="${escapeHtml_(item.dataUrl)}" alt="foto">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px;">${escapeHtml_(item.nome)}</div>
+            <select style="font-size:12px;min-height:30px;margin-bottom:4px;" onchange="osExecFotoTipo_(${idx},this.value)">${optsHtml}</select>
+            <input style="font-size:12px;min-height:30px;" type="text" placeholder="Obs opcional" value="${escapeHtml_(item.obs)}" oninput="osExecFotoObs_(${idx},this.value)">
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              ${statusHtml}
+              ${item.status !== "ok" ? `<button style="font-size:11px;padding:2px 8px;" class="btn-secondary" type="button" onclick="osExecRemoverDaFila_(${idx})">Remover</button>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function osExecFotoTipo_(idx, val) {
+    if (OS_EXEC_STATE.fotosFila && OS_EXEC_STATE.fotosFila[idx]) OS_EXEC_STATE.fotosFila[idx].tipo = val;
+  }
+  function osExecFotoObs_(idx, val) {
+    if (OS_EXEC_STATE.fotosFila && OS_EXEC_STATE.fotosFila[idx]) OS_EXEC_STATE.fotosFila[idx].obs = val;
+  }
+  function osExecRemoverDaFila_(idx) {
+    if (OS_EXEC_STATE.fotosFila) OS_EXEC_STATE.fotosFila.splice(idx, 1);
+    osExecRenderFilaFotos_();
+  }
+
+  function osExecEnviarFotos_() {
+    var fila = (OS_EXEC_STATE.fotosFila || []).filter(function(i) { return i.status === "pendente" || i.status === "erro"; });
+    if (!fila.length) { _osExecToast("Nenhuma foto pendente de envio.", "info"); return; }
+    
+    var btn = document.getElementById("osBtnEnviarFotos");
+    if (btn) { btn.disabled = true; btn.textContent = "Enviando " + fila.length + " foto(s)..."; }
+    
+    var idx = 0;
+    function enviarProxima() {
+      if (idx >= fila.length) {
+        if (btn) { btn.disabled = false; btn.textContent = "&#8679; Enviar fotos"; }
+        _osExecToast("Fotos enviadas!", "success");
+        osExecCarregarFotosEnviadas_();
+        osExecAtualizarBadgeFotos_();
+        return;
+      }
+      var item = fila[idx];
+      item.status = "enviando";
+      osExecRenderFilaFotos_();
+      var base64 = item.dataUrl.replace(/^data:[^;]+;base64,/, "");
+      
+      var payload = {
+        NOME_ARQUIVO: item.nome,
+        MIME_TYPE: item.file.type || "image/jpeg",
+        BASE64_DATA: base64,
+        TIPO_FOTO: item.tipo,
+        OBSERVACAO: item.obs
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          item.status = (res && res.success) ? "ok" : "erro";
+          osExecRenderFilaFotos_();
+          idx++;
+          enviarProxima();
+        })
+        .withFailureHandler(function() {
+          item.status = "erro";
+          osExecRenderFilaFotos_();
+          idx++;
+          enviarProxima();
+        })
+        .osFotoUploadBase64(SESSION, OS_EXEC_STATE.osId, payload);
+    }
+    enviarProxima();
+  }
+
+  function osExecCarregarFotosEnviadas_() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var el = document.getElementById("osFotosEnviadas");
+        if (!el) return;
+
+        var items = (res && res.items) || [];
+        var podeEditar = osExecPodeEditarExecucao_();
+        osExecAtualizarBadgeFotos_(items.length);
+
+        if (!items.length) {
+          el.innerHTML = '<div class="empty-state" style="padding:16px;">Nenhuma foto registrada.</div>';
+          return;
+        }
+
+        var html = '';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">';
+
+        items.forEach(function(i) {
+          var id = escapeHtml_(i.ID || '');
+          var link = escapeHtml_(i.LINK_DRIVE || '');
+          var nome = escapeHtml_(i.NOME_ARQUIVO || 'Foto');
+          var tipoAtual = i.TIPO_FOTO || i.MOMENTO || 'OUTRO';
+          var tipoEsc = escapeHtml_(tipoAtual);
+          var obsEsc = escapeHtml_(i.OBSERVACAO || '');
+          var dataEsc = escapeHtml_(formatarDataFront_(i.DATA_UPLOAD || i.DATA_CRIACAO || ''));
+
+          var optsHtml = '';
+          EXEC_FOTO_CATS.forEach(function(c) {
+            optsHtml += '<option value="' + escapeHtml_(c) + '"' +
+              (String(c).toUpperCase() === String(tipoAtual).toUpperCase() ? ' selected' : '') +
+              '>' + escapeHtml_(c) + '</option>';
+          });
+
+          var controles = '';
+          if (podeEditar) {
+            controles += '<div style="display:grid;gap:5px;margin-top:6px;">';
+            controles += '<select id="osFotoTipo_' + id + '" style="font-size:11px;min-height:28px;">' + optsHtml + '</select>';
+            controles += '<input id="osFotoObs_' + id + '" type="text" placeholder="Observação" value="' + obsEsc + '" style="font-size:11px;min-height:28px;">';
+            controles += '<div style="display:flex;gap:4px;">';
+            controles += '<button class="btn-secondary" type="button" style="font-size:11px;min-height:26px;padding:2px 6px;flex:1;" onclick="osExecAtualizarFotoMeta_(\'' + id + '\')">Salvar</button>';
+            controles += '<button class="btn-danger" type="button" style="font-size:11px;min-height:26px;padding:2px 6px;flex:1;" onclick="osExecRemoverFoto_(\'' + id + '\')">Remover</button>';
+            controles += '</div></div>';
+          }
+
+          html += '<div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:#fff;">';
+          if (link) {
+            html += '<a href="' + link + '" target="_blank" style="display:block;text-decoration:none;color:inherit;">';
+          } else {
+            html += '<span style="display:block;">';
+          }
+          html += '<div style="height:70px;background:#f1f5f9;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;color:#64748b;font-size:20px;">&#128247;</div>';
+          html += '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + nome + '</div>';
+          html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + tipoEsc + '</div>';
+          html += '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + dataEsc + '</div>';
+          if (link) html += '</a>'; else html += '</span>';
+          html += controles;
+          html += '</div>';
+        });
+
+        html += '</div>';
+        el.innerHTML = html;
+      })
+      .withFailureHandler(function() {
+        var el = document.getElementById("osFotosEnviadas");
+        if (el) el.innerHTML = '<div class="empty-state" style="padding:16px;">Não foi possível carregar as fotos.</div>';
+      })
+      .osFotosListar(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  function osExecStatusPermiteEdicao_() {
+    var st = String((OS_EXEC_STATE.os && OS_EXEC_STATE.os.STATUS) || "").toUpperCase();
+    return ["ABERTA", "AGENDADA", "EM_EXECUCAO"].indexOf(st) >= 0;
+  }
+
+  function osExecPodeEditarExecucao_() {
+    var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return true;
+    if (perfil === "CLIENTE") return false;
+    return osExecStatusPermiteEdicao_();
+  }
+
+  function osExecRemoverFoto_(fotoId) {
+    if (!osExecPodeEditarExecucao_()) return _osExecToast("Acesso negado.", "error");
+    var motivo = osExecStatusPermiteEdicao_() ? "Correcao durante execucao" : prompt("Informe o motivo para remover esta evidencia:");
+    if (!motivo) return;
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return _osExecToast((res && res.message) || "Erro ao remover evidencia.", "error");
+      _osExecToast("Foto/evidencia removida.", "success");
+      osExecCarregarFotosEnviadas_();
+    }).osFotosRemover(SESSION, fotoId, motivo);
+  }
+
+  function osExecAtualizarFotoMeta_(fotoId) {
+    if (!osExecPodeEditarExecucao_()) return _osExecToast("Acesso negado.", "error");
+    
+    var tipoEl = document.getElementById("osFotoTipo_" + fotoId);
+    var obsEl = document.getElementById("osFotoObs_" + fotoId);
+    
+    var payload = {
+      TIPO_FOTO: tipoEl ? tipoEl.value : "",
+      OBSERVACAO: obsEl ? obsEl.value : "",
+      MOTIVO: osExecStatusPermiteEdicao_() ? "Correcao durante execucao" : ""
+    };
+    
+    if (!osExecStatusPermiteEdicao_()) {
+      payload.MOTIVO = prompt("Informe o motivo para alterar esta evidencia:");
+      if (!payload.MOTIVO) return;
+    }
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return _osExecToast((res && res.message) || "Erro ao atualizar evidencia.", "error");
+      _osExecToast("Foto/evidencia atualizada.", "success");
+      osExecCarregarFotosEnviadas_();
+    }).osFotosAtualizarMeta(SESSION, fotoId, payload);
+  }
+
+  function osExecAtualizarBadgeFotos_(n) {
+    var el = document.getElementById("osStepBadge2");
+    if (!el) return;
+    if (n > 0) { el.textContent = n; el.style.display = ""; }
+    else el.style.display = "none";
+  }
+
+  /* ---- Etapa 3: Questionário ---- */
+
+  function osExecCarregarChecklist_() {
+    var os = OS_EXEC_STATE.os || {};
+    var modeloId = os.QUESTIONARIO_MODELO_ID;
+    var wrap = document.getElementById("osChecklistWrap");
+    var progressWrap = document.getElementById("osCheckProgressWrap");
+    
+    if (!modeloId) {
+      if (wrap) wrap.innerHTML = `
+        <div style="background:var(--warning-bg);border:1px solid #fcd34d;border-radius:8px;padding:14px;font-size:13px;color:#92400e;">
+          <strong>Sem questionário vinculado.</strong> Esta OS não possui um modelo de questionário configurado. Você pode prosseguir sem preencher o questionário.
+        </div>`;
+      return;
+    }
+
+    google.script.run.withSuccessHandler(function(modeloRes) {
+      if (!modeloRes || !modeloRes.success || !modeloRes.item) {
+        if (wrap) wrap.innerHTML = '<div class="empty-state">Questionário não encontrado.</div>';
+        return;
+      }
+      
+      OS_EXEC_STATE.checklistModelo = modeloRes.item;
+      OS_EXEC_STATE.checklist = modeloRes.item.perguntas || [];
+      if (progressWrap) progressWrap.style.display = OS_EXEC_STATE.checklist.length ? "" : "none";
+
+      google.script.run.withSuccessHandler(function(resp) {
+        var respostas = {};
+        ((resp && resp.items) || []).forEach(function(r) { respostas[r.PERGUNTA_ID] = r; });
+        osExecRenderChecklist_(OS_EXEC_STATE.checklist, respostas);
+      }).checklistRespostasListarPorOS(SESSION, OS_EXEC_STATE.osId);
+    }).checklistModeloObterCompleto(SESSION, modeloId);
+  }
+
+  function osExecRenderChecklist_(perguntas, respostas) {
+    var wrap = document.getElementById("osChecklistWrap"); 
+    if (!wrap) return;
+    
+    if (!perguntas.length) { wrap.innerHTML = '<div class="empty-state">Modelo sem perguntas cadastradas.</div>'; return; }
+
+    var secoes = {};
+    perguntas.forEach(function(p) { var sec = p.SECAO || "Geral"; (secoes[sec] = secoes[sec] || []).push(p); });
+    
+    wrap.innerHTML = Object.keys(secoes).map(function(sec) {
+      return `
+        <div class="os-check-secao">${escapeHtml_(sec)}</div>
+        ${secoes[sec].map(function(p) {
+          var r = respostas[p.ID] || {};
+          var fotoSecaoHtml = '';
+          
+          if (p.TIPO_RESPOSTA !== 'FOTO' && p.EXIGE_FOTO_SE_NAO_OK === 'S') {
+            var temFoto = !!(r.EVIDENCIA_LINK);
+            fotoSecaoHtml = `
+              <div style="margin-top:6px;">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Evidência foto (se não conforme):</div>
+                <label class="btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;min-height:28px;padding:0 8px;border-radius:6px;">
+                  &#128247; Foto
+                  <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="osExecFotoQuestao_(this,'${escapeHtml_(p.ID)}')">
+                </label>
+                <span id="osCheckFotoStatus_${escapeHtml_(p.ID)}" style="font-size:11px;margin-left:6px;color:${temFoto ? '#059669' : 'var(--muted)'};">
+                  ${temFoto ? '&#10003; Foto registrada' : 'Nenhuma foto'}
+                </span>
+                <input type="hidden" class="os-check-foto" value="${escapeHtml_(r.EVIDENCIA_LINK || '')}">
+              </div>`;
+          }
+          
+          return `
+            <div class="os-check-pergunta" data-pergunta="${escapeHtml_(p.ID)}">
+              <div class="os-check-label">${escapeHtml_(p.PERGUNTA || "")} ${p.OBRIGATORIO === "S" ? '<span class="os-check-req">*</span>' : ''}</div>
+              ${osExecInputResposta_(p, r.RESPOSTA || "")}
+              <input class="os-check-obs" type="text" placeholder="${p.EXIGE_OBSERVACAO_SE_NAO_OK === "S" || r.OBSERVACAO ? 'Observação (se não conforme)' : 'Observação (opcional)'}" value="${escapeHtml_(r.OBSERVACAO || "")}" style="margin-top:6px;">
+              ${fotoSecaoHtml}
+              ${p.AJUDA ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${escapeHtml_(p.AJUDA)}</div>` : ''}
+            </div>`;
+        }).join("")}`;
+    }).join("");
+
+    var respondidas = perguntas.filter(function(p) { return respostas[p.ID] && respostas[p.ID].RESPOSTA; }).length;
+    osExecAtualizarProgressoCheck_(respondidas, perguntas.length);
+  }
+
+  function osExecInputResposta_(p, valor) {
+    var tipo = String((p && p.TIPO_RESPOSTA) || "SIM_NAO").toUpperCase();
+    valor = valor || "";
+    var perguntaId = p && p.ID ? String(p.ID) : "";
+
+    if (tipo === "TEXTO_LONGO") {
+      return '<textarea class="os-check-resp" rows="3" style="margin-top:4px;">' + escapeHtml_(valor) + '</textarea>';
+    }
+
+    if (tipo === "TEXTO_CURTO") {
+      return '<input class="os-check-resp" type="text" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    }
+
+    if (tipo === "NUMERO" || tipo === "MEDICAO") {
+      return '<input class="os-check-resp" type="number" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    }
+
+    if (tipo === "DATA") {
+      return '<input class="os-check-resp" type="date" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    }
+
+    if (tipo === "HORA") {
+      return '<input class="os-check-resp" type="time" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    }
+
+    if (tipo === "ASSINATURA") {
+      return ''
+        + '<div style="font-size:12px;color:var(--muted);padding:6px 0;"><em>Registre na etapa Assinaturas (passo 5).</em></div>'
+        + '<input type="hidden" class="os-check-resp" value="' + escapeHtml_(valor) + '">';
+    }
+
+    if (tipo === "FOTO") {
+      var temFoto = !!valor;
+      return ''
+        + '<div style="margin-top:4px;">'
+        + '<label class="btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12px;min-height:32px;padding:0 10px;border-radius:6px;">'
+        + '&#128247; Tirar/Selecionar foto'
+        + '<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="osExecFotoQuestao_(this,\'' + escapeHtml_(perguntaId) + '\')">'
+        + '</label>'
+        + '<span id="osCheckFotoStatus_' + escapeHtml_(perguntaId) + '" style="font-size:11px;margin-left:6px;color:' + (temFoto ? '#059669' : 'var(--muted)') + ';">'
+        + (temFoto ? '&#10003; Foto registrada' : 'Nenhuma foto')
+        + '</span>'
+        + '<input type="hidden" class="os-check-resp" value="' + escapeHtml_(valor) + '">'
+        + '<input type="hidden" class="os-check-foto" value="' + escapeHtml_(valor) + '">'
+        + '</div>';
+    }
+
+    if (tipo === "MULTIPLA_ESCOLHA" || tipo === "SELECAO_UNICA") {
+      var opcoes = String((p && p.OPCOES) || "").split(";").filter(Boolean);
+      var html = '<select class="os-check-resp" style="margin-top:4px;">';
+      html += '<option value="">Selecione</option>';
+      opcoes.forEach(function(o) {
+        html += '<option value="' + escapeHtml_(o) + '"' + (o === valor ? ' selected' : '') + '>' + escapeHtml_(o) + '</option>';
+      });
+      html += '</select>';
+      return html;
+    }
+
+    var op = tipo === "CONFORME_NAO_CONFORME_NA"
+      ? [["CONFORME", "Conforme"], ["NAO_CONFORME", "Não conforme"], ["NA", "N/A"]]
+      : [["SIM", "Sim"], ["NAO", "Não"]];
+
+    var htmlFinal = '<select class="os-check-resp" style="margin-top:4px;">';
+    htmlFinal += '<option value="">Selecione</option>';
+    op.forEach(function(o) {
+      htmlFinal += '<option value="' + o[0] + '"' + (o[0] === valor ? ' selected' : '') + '>' + o[1] + '</option>';
+    });
+    htmlFinal += '</select>';
+    return htmlFinal;
+  }
+
+  function osExecSalvarChecklist_(silencioso, callback) {
+    var modelo = OS_EXEC_STATE.checklistModelo || {};
+    var respostas = [];
+    
+    document.querySelectorAll("#osChecklistWrap [data-pergunta]").forEach(function(row) {
+      var perguntaId = row.getAttribute("data-pergunta");
+      var p = (OS_EXEC_STATE.checklist || []).find(function(i) { return i.ID === perguntaId; }) || {};
+      var respVal = (row.querySelector(".os-check-resp") || {}).value || "";
+      respostas.push({
+        MISSAO_ID: OS_EXEC_STATE.os && OS_EXEC_STATE.os.MISSAO_ID,
+        MODELO_ID: modelo.ID,
+        PERGUNTA_ID: perguntaId,
+        SECAO: p.SECAO,
+        PERGUNTA: p.PERGUNTA,
+        TIPO_RESPOSTA: p.TIPO_RESPOSTA,
+        OBRIGATORIO: p.OBRIGATORIO,
+        RESPOSTA: respVal,
+        OBSERVACAO: (row.querySelector(".os-check-obs") || {}).value || "",
+        EVIDENCIA_LINK: (row.querySelector(".os-check-foto") || {}).value || ""
+      });
+    });
+    
+    var respondidas = respostas.filter(function(r) { return r.RESPOSTA; }).length;
+    var totalPerguntas = (OS_EXEC_STATE.checklist && OS_EXEC_STATE.checklist.length) || respostas.length;
+    var motivoAlteracao = "";
+    
+    if (!osExecStatusPermiteEdicao_() && osExecPodeEditarExecucao_()) {
+      motivoAlteracao = prompt("Informe o motivo para alterar questionário de OS já concluída:");
+      if (!motivoAlteracao) {
+        if (typeof callback === "function") callback({ success: false, message: "Motivo obrigatório." });
+        return;
+      }
+    }
+    
+    google.script.run
+    .withSuccessHandler(function(res) {
+      if (!silencioso) {
+        if (res && res.success) _osExecToast("Questionário salvo.", "success");
+        else _osExecToast((res && res.message) || "Erro ao salvar.", "error");
+      }
+      osExecAtualizarProgressoCheck_(respondidas, totalPerguntas);
+      if (typeof callback === "function") callback(res);
+    })
+    .withFailureHandler(function(err) {
+      if (!silencioso) _osExecToast("Erro ao salvar questionário.", "error");
+      if (typeof callback === "function") callback({ success: false, message: err && err.message });
+    })
+    .checklistRespostasSalvar(SESSION, {
+      OS_ID: OS_EXEC_STATE.osId,
+      MISSAO_ID: OS_EXEC_STATE.os && OS_EXEC_STATE.os.MISSAO_ID,
+      MODELO_ID: modelo.ID,
+      MOTIVO_ALTERACAO: motivoAlteracao,
+      RESPOSTAS: respostas
+    });
+  }
+
+  function osExecAtualizarProgressoCheck_(respondidas, total) {
+    var txt = document.getElementById("osCheckProgressText");
+    var bar = document.getElementById("osCheckProgressBar");
+    var badge = document.getElementById("osStepBadge3");
+    
+    if (txt) txt.textContent = respondidas + "/" + total + " respondidas";
+    if (bar) bar.style.width = total > 0 ? Math.round((respondidas / total) * 100) + "%" : "0%";
+    if (badge) { badge.textContent = respondidas + "/" + total; badge.style.display = total > 0 ? "" : "none"; }
+  }
+
+  function osExecFotoQuestao_(input, perguntaId) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    
+    input.value = "";
+    var statusEl = document.getElementById("osCheckFotoStatus_" + perguntaId);
+    if (statusEl) { statusEl.style.color = "var(--muted)"; statusEl.textContent = "Enviando..."; }
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var base64 = e.target.result.replace(/^data:[^;]+;base64,/, "");
+      var payload = {
+        NOME_ARQUIVO: file.name,
+        MIME_TYPE: file.type || "image/jpeg",
+        BASE64_DATA: base64,
+        TIPO_FOTO: "CHECKLIST",
+        PERGUNTA_ID: perguntaId
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Erro ao enviar foto."; }
+            return;
+          }
+          var link = (res.item && res.item.LINK_DRIVE) || (res.item && res.item.FILE_ID) || "ok";
+          var row = document.querySelector(`[data-pergunta="${perguntaId}"]`);
+          
+          if (row) {
+            var respInput = row.querySelector(".os-check-resp");
+            var fotoInput = row.querySelector(".os-check-foto");
+            if (respInput && !respInput.value) respInput.value = link;
+            if (fotoInput) fotoInput.value = link;
+          }
+          if (statusEl) { statusEl.style.color = "#059669"; statusEl.textContent = "✓ Foto registrada"; }
+        })
+        .withFailureHandler(function(err) {
+          if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Erro: " + ((err && err.message) || "falha"); }
+        })
+        .osFotoUploadBase64(SESSION, OS_EXEC_STATE.osId, payload);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ---- Etapa 4: Relato ---- */
+
+  function osExecRegistroPayload_() {
+    return {
+      RELATO_TECNICO:        getValue_("os_exec_relato"),
+      ENCERRAMENTO_TECNICO:  getValue_("os_exec_relato"),
+      SERVICO_EXECUTADO:     getValue_("os_exec_relato"),
+      DIAGNOSTICO_FINAL:     getValue_("os_exec_diagnostico"),
+      CONDICAO_ENCONTRADA:   getValue_("os_exec_condicao"),
+      CAUSA_PROVAVEL:        getValue_("os_exec_causa"),
+      RECOMENDACAO:          getValue_("os_exec_recomendacao"),
+      PENDENCIAS:            getValue_("os_exec_pendencias"),
+      RESULTADO_ATENDIMENTO: getValue_("os_exec_resultado"),
+      NECESSITA_RETORNO:     !!(document.getElementById("os_exec_retorno")  || {}).checked,
+      NECESSITA_ORCAMENTO:   !!(document.getElementById("os_exec_orcamento") || {}).checked
+    };
+  }
+
+  function osExecSalvarRelato_(silencioso, callback) {
+    var payload = osExecRegistroPayload_();
+    if (!payload.RELATO_TECNICO && !silencioso) return _osExecToast("Informe o relato técnico do atendimento.", "error");
+    
+    if (!osExecStatusPermiteEdicao_() && osExecPodeEditarExecucao_()) {
+      payload.MOTIVO_ALTERACAO = prompt("Informe o motivo para alterar registro técnico de OS já concluída:");
+      if (!payload.MOTIVO_ALTERACAO) {
+        if (typeof callback === "function") callback({ success: false, message: "Motivo obrigatório." });
+        return;
+      }
+    }
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if (!silencioso) {
+        if (res && res.success) _osExecToast("Relato salvo.", "success");
+        else _osExecToast((res && res.message) || "Erro ao salvar.", "error");
+      }
+      if (typeof callback === "function") callback(res);
+    }).withFailureHandler(function(err) {
+      if (!silencioso) _osExecToast("Erro ao salvar relato.", "error");
+      if (typeof callback === "function") callback({ success: false, message: err && err.message });
+    }).osSalvarRegistroTecnico(SESSION, OS_EXEC_STATE.osId, payload);
+  }
+
+  /* ---- Etapa 5: Assinaturas ---- */
+
+  function osExecInitCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas || canvas.__sgoReady) return;
+    
+    canvas.__sgoReady = true;
+    var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 2.5; 
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round"; 
+    ctx.strokeStyle = "#111827";
+    var desenhando = false;
+    
+    function posicao(evt) {
+      var rect = canvas.getBoundingClientRect();
+      var e = evt.touches && evt.touches.length ? evt.touches[0] : evt;
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+    
+    function iniciar(evt) {
+      desenhando = true;
+      var p = posicao(evt);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      evt.preventDefault();
+      var hint = document.getElementById(hintId); 
+      if (hint) hint.style.display = "none";
+    }
+    
+    function mover(evt) {
+      if (!desenhando) return;
+      var p = posicao(evt);
+      ctx.lineTo(p.x, p.y); 
+      ctx.stroke();
+      evt.preventDefault();
+    }
+    
+    function parar() { desenhando = false; }
+    
+    ["mousedown","touchstart"].forEach(function(ev) { canvas.addEventListener(ev, iniciar, { passive: false }); });
+    ["mousemove","touchmove"].forEach(function(ev) { canvas.addEventListener(ev, mover, { passive: false }); });
+    ["mouseup","mouseleave","touchend"].forEach(function(ev) { canvas.addEventListener(ev, parar); });
+  }
+
+  function osExecLimparCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId); 
+    if (!canvas) return;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    var hint = document.getElementById(hintId); 
+    if (hint) hint.style.display = "";
+  }
+
+  function osExecSalvarAssinatura_(tipo) {
+    var nomeId = tipo === "TECNICO" ? "os_ass_tec_nome" : "os_ass_resp_nome";
+    var cargoId = tipo === "RESPONSAVEL" ? "os_ass_resp_cargo" : null;
+    var canvasId = tipo === "TECNICO" ? "os_ass_tec_canvas" : "os_ass_resp_canvas";
+
+    var nome = getValue_(nomeId);
+    if (!nome) return _osExecToast("Informe o nome para assinar.", "error");
+
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    var dataUrl = canvas.toDataURL("image/png");
+    var blank = document.createElement("canvas");
+    blank.width = canvas.width; 
+    blank.height = canvas.height;
+    
+    if (dataUrl === blank.toDataURL()) return _osExecToast("Desenhe a assinatura antes de salvar.", "error");
+    
+    var payload = {
+      OS_ID: OS_EXEC_STATE.osId,
+      TIPO_ASSINATURA: tipo,
+      TIPO: tipo,
+      ASSINADO_POR: nome,
+      CARGO: cargoId ? getValue_(cargoId) : "",
+      ASSINATURA_DATA_URL: dataUrl,
+      USER_AGENT: navigator.userAgent || ""
+    };
+
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return _osExecToast((res && res.message) || "Erro ao salvar assinatura.", "error");
+      _osExecToast("Assinatura " + (tipo === "TECNICO" ? "do técnico" : "do responsável") + " salva.", "success");
+      osExecCarregarAssinaturas_();
+    }).assinaturasSalvar(SESSION, payload);
+  }
+
+  function osExecCarregarAssinaturas_() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var el = document.getElementById("osAssLista");
+        if (!el) return;
+
+        var items = (res && res.items) || [];
+        var badge = document.getElementById("osStepBadge5");
+        if (badge) {
+          badge.textContent = items.length;
+          badge.style.display = items.length ? "" : "none";
+        }
+
+        var podeRemover = osExecPodeGerenciarAssinaturas_();
+
+        if (!items.length) {
+          el.innerHTML = '<div class="empty-state" style="padding:12px;">Nenhuma assinatura registrada.</div>';
+          return;
+        }
+
+        var html = '';
+        items.forEach(function(i) {
+          var id = escapeHtml_(i.ID || '');
+          var tipoAss = i.TIPO_ASSINATURA || i.TIPO || '';
+          var tipoLabel = tipoAss === 'TECNICO' ? 'Técnico' : (tipoAss === 'RESPONSAVEL' ? 'Responsável' : 'Cliente');
+          var bg = tipoAss === 'TECNICO' ? '#dbeafe' : '#dcfce7';
+          var cor = tipoAss === 'TECNICO' ? '#1e40af' : '#166534';
+          var link = escapeHtml_(i.LINK_DRIVE || '');
+
+          html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
+          html += '<div style="background:' + bg + ';color:' + cor + ';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;">' + escapeHtml_(tipoLabel) + '</div>';
+          html += '<div style="flex:1;">';
+          html += '<strong style="font-size:13px;">' + escapeHtml_(i.ASSINADO_POR || '') + '</strong>';
+          if (i.CARGO) html += ' <span style="color:var(--muted);font-size:12px;">— ' + escapeHtml_(i.CARGO) + '</span>';
+          if (link) html += ' <a href="' + link + '" target="_blank" style="font-size:11px;">ver</a>';
+          html += '<div style="font-size:11px;color:var(--muted);">' + escapeHtml_(formatarDataFront_(i.DATA_ASSINATURA || i.DATA_CRIACAO || '')) + '</div>';
+          html += '</div>';
+          if (podeRemover) {
+            html += '<button class="btn-warning" type="button" style="font-size:11px;min-height:26px;padding:2px 8px;" onclick="osExecRemoverAssinaturaAdmin_(\'' + id + '\')">Remover/Refazer</button>';
+          }
+          html += '</div>';
+        });
+
+        el.innerHTML = html;
+      })
+      .withFailureHandler(function() {
+        var el = document.getElementById("osAssLista");
+        if (el) el.innerHTML = '<div class="empty-state" style="padding:12px;">Não foi possível carregar assinaturas.</div>';
+      })
+      .assinaturasListarPorOS(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  function osExecPodeGerenciarAssinaturas_() {
+    var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return true;
+    if (perfil === "CLIENTE") return false;
+    return osExecStatusPermiteEdicao_();
+  }
+
+  function osExecRemoverAssinaturaAdmin_(assinaturaId) {
+    if (!osExecPodeGerenciarAssinaturas_()) return _osExecToast("Acesso negado.", "error");
+    var motivo = osExecStatusPermiteEdicao_() ? "Correcao durante execucao" : prompt("Informe o motivo para remover/inativar esta assinatura:");
+    if (!motivo) return;
+    
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return _osExecToast((res && res.message) || "Erro ao remover assinatura.", "error");
+      _osExecToast("Assinatura removida. Ajuste o relato e colete nova assinatura.", "success");
+      osExecCarregar_();
+      osExecStep_(4);
+    }).assinaturasRemoverAdmin(SESSION, assinaturaId, motivo);
+  }
+
+  /* ---- Etapa 6: Concluir ---- */
+
+  function osExecValidar_() {
+    var box = document.getElementById("osExecPendenciasBox");
+    if (box) box.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:10px 0;">Verificando pendências...</div>';
+    
+    osExecSalvarChecklist_(true, function() {
+      osExecSalvarRelato_(true, function(salvarRes) {
+        if (salvarRes && salvarRes.success === false) {
+          osExecMostrarPendencias_({ success: false, code: salvarRes.code, canAdminResolve: salvarRes.canAdminResolve, pendencias: [salvarRes.message || "Não foi possível salvar o relato."] });
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(function(res) { osExecMostrarPendencias_(res); })
+          .withFailureHandler(function(err) {
+            osExecMostrarPendencias_({ success: false, pendencias: ["Erro ao validar: " + ((err && err.message) || "falha")] });
+          })
+          .osValidarConclusao(SESSION, OS_EXEC_STATE.osId);
+      });
+    });
+  }
+
+  function osExecConcluir_() {
+    var btn = document.getElementById("osBtnConcluir");
+    if (btn) { btn.disabled = true; btn.textContent = "Concluindo..."; }
+
+    osExecSalvarChecklist_(true, function() {
+      osExecSalvarRelato_(true, function(salvarRes) {
+        if (salvarRes && salvarRes.success === false) {
+          if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+          osExecMostrarPendencias_({ success: false, code: salvarRes.code, canAdminResolve: salvarRes.canAdminResolve, pendencias: [salvarRes.message || "Não foi possível salvar o relato."] });
+          return;
+        }
+     
+        google.script.run
+        .withSuccessHandler(function(val) {
+          if (!val || !val.success) {
+            if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+            osExecMostrarPendencias_(val);
+            return;
+          }
+
+          var concluir = function(lat, lng) {
+            if (lat && lng) {
+              google.script.run.withSuccessHandler(function() {}).osRegistrarCheckout(SESSION, OS_EXEC_STATE.osId, { LAT: lat, lng: lng });
+            }
+            google.script.run
+            .withSuccessHandler(function(res) {
+              if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+              if (!res || !res.success) {
+                osExecMostrarPendencias_(res);
+                return;
+              }
+              _osExecToast("Atendimento concluído com sucesso. PDF final disponível para validação.", "success");
+              osExecCarregar_();
+              osExecMostrarPendencias_({ success: true });
+            })
+            .withFailureHandler(function(err) {
+              if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+              osExecMostrarPendencias_({ success: false, pendencias: ["Erro ao concluir: " + ((err && err.message) || "falha")] });
+            })
+            .osConcluirTecnica(SESSION, OS_EXEC_STATE.osId, {});
+          };
+
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              function(pos) { concluir(String(pos.coords.latitude), String(pos.coords.longitude)); },
+              function() { concluir(null, null); },
+              { timeout: 5000 }
+            );
+          } else {
+            concluir(null, null);
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+          osExecMostrarPendencias_({ success: false, pendencias: ["Erro ao validar: " + ((err && err.message) || "falha")] });
+        })
+        .osValidarConclusao(SESSION, OS_EXEC_STATE.osId);
+      });
+    });
+  }
+
+  function osExecMostrarPendencias_(res) {
+    var box = document.getElementById("osExecPendenciasBox");
+    if (!box) return;
+
+    var pendencias = (res && res.pendencias) || [];
+    if (res && res.success) {
+      box.innerHTML = ''
+        + '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:14px 16px;">'
+        + '<div style="font-weight:700;color:#065f46;font-size:14px;">&#10003; Tudo certo! OS pronta para ser concluída.</div>'
+        + '</div>';
+      return;
+    }
+
+    var itensHtml = pendencias.length ? pendencias.map(function(p) {
+      p = String(p || "");
+      var k = p.toLowerCase();
+      var ico = "&#8226;";
+      var step = null;
+
+      if (k.indexOf("relato") >= 0 || k.indexOf("tecnico") >= 0 || k.indexOf("técnico") >= 0) {
+        ico = "&#128221;";
+        step = 4;
+      } else if (k.indexOf("assinatura") >= 0) {
+        ico = "&#9997;";
+        step = 5;
+      } else if (k.indexOf("foto") >= 0 || k.indexOf("evidencia") >= 0 || k.indexOf("evidência") >= 0) {
+        ico = "&#128247;";
+        step = 2;
+      } else if (k.indexOf("pergunta") >= 0 || k.indexOf("checklist") >= 0 || k.indexOf("questionário") >= 0 || k.indexOf("obrigatorio") >= 0 || k.indexOf("obrigatório") >= 0) {
+        ico = "&#9744;";
+        step = 3;
+      }
+
+      var irBtn = step
+        ? ' <button class="btn-secondary" type="button" style="font-size:11px;padding:2px 8px;min-height:24px;flex-shrink:0;" onclick="osExecStep_(' + step + ')">Ir &#8594;</button>'
+        : '';
+
+      return ''
+        + '<li style="padding:5px 0;font-size:13px;color:#7f1d1d;display:flex;align-items:center;gap:6px;">'
+        + ico
+        + '<span style="flex:1;">' + escapeHtml_(p) + '</span>'
+        + irBtn
+        + '</li>';
+    }).join("") : '<li style="padding:5px 0;font-size:13px;color:#7f1d1d;">Verifique os campos obrigatórios antes de concluir.</li>';
+
+    box.innerHTML = ''
+      + '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 16px;">'
+      + '<div style="font-weight:700;color:#dc2626;font-size:14px;margin-bottom:10px;">&#9888; Pendências antes de concluir:</div>'
+      + '<ul style="margin:0;padding:0;list-style:none;">'
+      + itensHtml
+      + '</ul>'
+      + '</div>';
+  }
+
+  /* ---- Gerar PDF ---- */
+
+  function osExecGerarDocumento_() {
+    var box = document.getElementById("osExecDocResultado");
+    if (box) {
+      box.style.display = "block";
+      box.innerHTML = '<div class="form-card"><div class="empty-state">Gerando documento...</div></div>';
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!box) return;
+
+        if (!res || !res.success) {
+          box.innerHTML = '<div class="form-card"><div class="empty-state">' + escapeHtml_((res && res.message) || "Erro ao gerar documento.") + '</div></div>';
+          return;
+        }
+
+        var qr = res.qrCodeDataUrl || res.qrCodeUrl || "";
+        var html = "";
+        html += '<div class="form-card">';
+        html += '<h3 class="section-card-title">Documento gerado</h3>';
+        html += '<div class="form-grid">';
+        html += '<div><a class="btn-primary" href="' + escapeHtml_(res.pdfUrl || "#") + '" target="_blank">Abrir PDF</a></div>';
+        html += '<div><a class="btn-secondary" href="' + escapeHtml_(res.validacaoUrl || "#") + '" target="_blank">Validar</a></div>';
+        html += '<div class="full"><label>Token de validação</label><input value="' + escapeHtml_(res.tokenValidacao || "") + '" readonly></div>';
+        html += '</div>';
+
+        if (qr) {
+          html += '<img src="' + escapeHtml_(qr) + '" alt="QR Code" style="width:120px;height:120px;margin-top:12px;border:1px solid var(--border);border-radius:8px;">';
+        }
+
+        html += '</div>';
+        box.innerHTML = html;
+        osExecCarregar_();
+        box.scrollIntoView({ behavior: "smooth" });
+      })
+      .withFailureHandler(function(err) {
+        if (box) {
+          box.innerHTML = '<div class="form-card"><div class="empty-state">Erro ao gerar documento: ' + escapeHtml_((err && err.message) || String(err || "falha")) + '</div></div>';
+        }
+      })
+      .osGerarDocumento(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- IA — Lapidação de textos ---- */
+
+  (function injetarCssIA_() {
+    if (document.getElementById("sgo-ia-css")) return;
+    var s = document.createElement("style");
+    s.id = "sgo-ia-css";
+    s.textContent =
+      ".btn-ia-sm{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;font-size:11px;font-weight:700;" +
+      "background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;white-space:nowrap;}" +
+      ".btn-ia-sm:hover{background:#dbeafe;}" +
+      ".btn-ia-gerar{background:#f0fdf4;color:#15803d;border-color:#86efac;}" +
+      ".btn-ia-gerar:hover{background:#dcfce7;}" +
+      ".btn-ia-sm:disabled{opacity:.5;cursor:not-allowed;}" +
+      ".ia-sug-panel{margin-top:8px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;padding:12px;}" +
+      ".ia-sug-header{font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;}" +
+      ".ia-sug-texto{font-size:13px;color:#111827;white-space:pre-wrap;line-height:1.5;margin-bottom:10px;" +
+      "background:#fff;border:1px solid #dbeafe;border-radius:6px;padding:8px;max-height:none;overflow:visible;}" +
+      ".ia-sug-aviso{font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px;margin-bottom:10px;white-space:pre-wrap;}" +
+      ".ia-sug-actions{display:flex;gap:8px;}";
+    document.head.appendChild(s);
+  })();
+
+  function osIAContextoAtual_() {
+    var os = OS_EXEC_STATE.os || {};
+    return {
+      osId:        OS_EXEC_STATE.osId || os.ID || "",
+      numeroOS:    os.NUMERO_OS || "",
+      tipo:        os.TIPO_OS || "",
+      equipamento: [os.EQUIPAMENTO_TAG, os.EQUIPAMENTO_TIPO, os.EQUIPAMENTO_MODELO].filter(Boolean).join(" - "),
+      cliente:     os.CLIENTE_NOME || "",
+      missao:      os.MISSAO_TECNICA || "",
+      relatoCliente: os.RELATO_CLIENTE || os.SOLICITACAO || os.DESCRICAO_SOLICITACAO || "",
+      relato:      getValue_("os_exec_relato") || os.RELATO_TECNICO || "",
+      diagnostico: getValue_("os_exec_diagnostico") || os.DIAGNOSTICO_FINAL || "",
+      condicao:    getValue_("os_exec_condicao")    || os.CONDICAO_ENCONTRADA || "",
+      causa:       getValue_("os_exec_causa")        || os.CAUSA_PROVAVEL || "",
+      resultado:   getValue_("os_exec_resultado")    || os.RESULTADO_ATENDIMENTO || "",
+      recomendacao: getValue_("os_exec_recomendacao") || os.RECOMENDACAO || "",
+      pendencias:  getValue_("os_exec_pendencias")   || os.PENDENCIAS || ""
+    };
+  }
+
+  function osIAChamar_(campoId, modo) {
+    var texto  = getValue_(campoId);
+    var sugId  = "ia_sug_" + campoId;
+    var sugEl  = document.getElementById(sugId);
+    var btns   = document.querySelectorAll(".btn-ia-sm");
+    
+    if (modo === "lapidar" && !texto) {
+      _osExecToast("Preencha o campo antes de usar a IA.", "error");
+      return;
+    }
+
+    btns.forEach(function(b) { b.disabled = true; });
+    
+    if (sugEl) {
+      sugEl.style.display = "block";
+      sugEl.innerHTML = `
+        <div class="ia-sug-header">&#9889; Processando com IA...</div>
+        <div style="font-size:12px;color:#6b7280;">Aguarde alguns segundos.</div>`;
+    }
+
+    var gasFunc;
+    var payload;
+
+    if (modo === "gerar") {
+      gasFunc = "iaGerarTextoTecnicoOS";
+      payload = { contexto: osIAContextoAtual_() };
+    } else if (modo === "recomendar") {
+      gasFunc = "iaCriarRecomendacaoTecnicaOS";
+      payload = { contexto: osIAContextoAtual_() };
+    } else {
+      gasFunc = "iaLapidarTexto";
+      payload = { texto: texto, campo: campoId.replace("os_exec_", "").replace(/_/g, " "), contexto: osIAContextoAtual_() };
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btns.forEach(function(b) { b.disabled = false; });
+        if (!res || !res.success) {
+          if (sugEl) sugEl.innerHTML = `
+            <div class="ia-sug-header" style="color:#dc2626;">Erro da IA</div>
+            <div style="font-size:12px;color:#7f1d1d;">${escapeHtml_((res && res.message) || "Falha desconhecida.")}</div>
+            <div class="ia-sug-actions"><button class="btn-secondary" type="button" style="font-size:12px;" onclick="osIADescartar_('${campoId}')">Fechar</button></div>`;
+          return;
+        }
+        osIAMostrarSugestao_(campoId, osIANormalizarResposta_(res));
+      })
+      .withFailureHandler(function(err) {
+        btns.forEach(function(b) { b.disabled = false; });
+        if (sugEl) sugEl.innerHTML = `
+          <div class="ia-sug-header" style="color:#dc2626;">Erro de comunicação</div>
+          <div style="font-size:12px;color:#7f1d1d;">${escapeHtml_((err && err.message) || "Falha ao chamar a IA.")}</div>
+          <div class="ia-sug-actions"><button class="btn-secondary" type="button" style="font-size:12px;" onclick="osIADescartar_('${campoId}')">Fechar</button></div>`;
+      })
+      [gasFunc](SESSION, payload);
+  }
+
+  function osIANormalizarResposta_(res) {
+    res = res || {};
+    var texto = res.textoCompleto || res.versaoRelatorio || res.texto || "";
+    return {
+      textoCompleto: texto,
+      versaoRelatorio: res.versaoRelatorio || texto,
+      resumoCurto: res.resumoCurto || "",
+      versaoWhatsApp: res.versaoWhatsApp || "",
+      avisos: res.avisos || []
+    };
+  }
+
+  function osIAMostrarSugestao_(campoId, resposta) {
+    var sugEl = document.getElementById("ia_sug_" + campoId);
+    if (!sugEl) return;
+    var texto = resposta.textoCompleto || resposta.versaoRelatorio || "";
+    var avisos = (resposta.avisos || []).filter(Boolean);
+    var avisoHtml = avisos.length ? '<div class="ia-sug-aviso">' + escapeHtml_(avisos.join("\n")) + '</div>' : '';
+    var whats = resposta.versaoWhatsApp || "";
+    
+    sugEl.style.display = "block";
+    sugEl.innerHTML = `
+      <div class="ia-sug-header">&#10024; Sugestão da IA — revise antes de usar:</div>
+      ${avisoHtml}
+      <div class="ia-sug-texto" id="ia_sug_texto_${campoId}">${escapeHtml_(texto)}</div>
+      <textarea id="ia_sug_whats_${campoId}" style="display:none;">${escapeHtml_(whats)}</textarea>
+      <div class="ia-sug-actions">
+        <button class="btn-primary" type="button" style="font-size:12px;" onclick="osIAAplicar_('${campoId}')">Usar texto completo</button>
+        <button class="btn-secondary" type="button" style="font-size:12px;" onclick="osIACopiar_('${campoId}')">Copiar texto completo</button>
+        <button class="btn-secondary" type="button" style="font-size:12px;" onclick="osIACopiarWhats_('${campoId}')">Copiar WhatsApp</button>
+        <button class="btn-secondary" type="button" style="font-size:12px;" onclick="osIADescartar_('${campoId}')">Descartar</button>
+      </div>`;
+  }
+
+  function osIAAplicar_(campoId) {
+    var textoEl = document.getElementById("ia_sug_texto_" + campoId);
+    if (!textoEl) return;
+    
+    var el = document.getElementById(campoId);
+    if (el) el.value = textoEl.textContent;
+    
+    osIADescartar_(campoId);
+    _osExecToast("Texto aplicado. Salve o relato quando estiver pronto.", "success");
+  }
+
+  function osIACopiar_(campoId) {
+    var textoEl = document.getElementById("ia_sug_texto_" + campoId);
+    if (!textoEl) return;
+    osExecCopiarTexto_(textoEl.textContent || "");
+    _osExecToast("Texto completo copiado.", "success");
+  }
+
+  function osIACopiarWhats_(campoId) {
+    var el = document.getElementById("ia_sug_whats_" + campoId);
+    var textoEl = document.getElementById("ia_sug_texto_" + campoId);
+    var texto = (el && el.value) || (textoEl && textoEl.textContent) || "";
+    osExecCopiarTexto_(texto);
+    _osExecToast("Versao WhatsApp copiada.", "success");
+  }
+
+  function osExecCopiarTexto_(texto) {
+    texto = String(texto || "");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto);
+      return;
+    }
+    var tmp = document.createElement("textarea");
+    tmp.value = texto;
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand("copy");
+    document.body.removeChild(tmp);
+  }
+
+  function osIADescartar_(campoId) {
+    var sugEl = document.getElementById("ia_sug_" + campoId);
+    if (sugEl) { 
+      sugEl.style.display = "none";
+      sugEl.innerHTML = ""; 
+    }
+  }
+
+  /* ---- Toast ---- */
+
+  function _osExecToast(msg, type) {
+    var color = type === "error" ? "#dc2626" : type === "success" ? "#059669" : "#2563eb";
+    var bg    = type === "error" ? "#fef2f2" : type === "success" ? "#ecfdf5" : "#eff6ff";
+    var el = document.createElement("div");
+    
+    el.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;background:" + bg + ";color:" + color + ";border:1px solid " + color + ";border-radius:8px;padding:12px 20px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:90vw;text-align:center;pointer-events:none;";
+    el.textContent = msg;
+    
+    document.body.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
+  }
+
+  window.renderOSExecucaoModulo_ = renderOSExecucaoModulo_;
+  
+  function diagnosticoExecucaoOS_() {
+  }
+  
+  window.diagnosticoExecucaoOS_ = diagnosticoExecucaoOS_;
+</script>

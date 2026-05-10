@@ -1,0 +1,653 @@
+<script>
+  /* ================================================================
+   * MÓDULO EXECUÇÃO DE OS — Mobile-First
+   * 6 etapas: Resumo | Fotos | Questionário | Relato | Assinaturas | Concluir
+   * ================================================================ */
+
+  const EXEC_FOTO_CATS = ["Plaqueta","Antes","Durante","Depois","Defeito encontrado","Peca substituida","Teste final","Documento","Outro"];
+
+  function renderOSExecucaoModulo_(osId) {
+    console.log("[OS_EXEC] renderOSExecucaoModulo_", osId);
+    const div = document.getElementById("conteudo");
+    if (!div) { console.error("[OS_EXEC] #conteudo nao encontrado"); return; }
+    if (!osId) {
+      div.innerHTML = '<div class="module-shell" style="padding:40px 16px;text-align:center;">' +
+        '<i class="fas fa-triangle-exclamation" style="font-size:36px;color:#f59e0b;"></i>' +
+        '<div style="font-size:15px;font-weight:700;margin-top:12px;">ID da OS nao localizado.</div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-top:6px;">Atualize a lista e tente novamente.</div>' +
+        '<button class="btn-secondary" type="button" onclick="abrir(\'os\')" style="margin-top:20px;">&#8592; Voltar</button>' +
+        '</div>';
+      return;
+    }
+    // Blindagem visual imediata — usuario ve que algo aconteceu
+    div.innerHTML = '<div class="module-shell" style="padding:48px 16px;text-align:center;">' +
+      '<i class="fas fa-spinner fa-spin" style="font-size:36px;color:var(--metro-green);"></i>' +
+      '<div style="font-size:16px;font-weight:700;margin-top:16px;color:var(--text);">Carregando execucao da OS...</div>' +
+      '<div style="font-size:13px;color:var(--muted);margin-top:8px;">' + (osId || "") + '</div>' +
+      '</div>';
+    // Renderiza modulo completo (minusculo delay garante paint do loading)
+    setTimeout(function() {
+      if (!document.getElementById("conteudo")) return;
+      document.getElementById("conteudo").innerHTML = '\n      <div class="module-shell">\n\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title" id="osExecTitulo">Execucao de OS</h2>\n            <p class="content-subtitle" id="osExecSubtitulo">Carregando...</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">\n            <button class="btn-secondary" type="button" onclick="abrir(\'os\')">&#8592; Voltar</button>\n            <button class="btn-success" type="button" onclick="osExecGerarDocumento_()">Gerar PDF</button>\n          </div>\n        </div>\n\n        <!-- Step navigation -->\n        <div class="os-exec-steps">\n          <button class="os-exec-step-btn os-exec-step-ativo" id="osStep1Btn" type="button" onclick="osExecStep_(1)">\n            <span class="os-exec-step-num">1</span>\n            <span>Resumo</span>\n          </button>\n          <button class="os-exec-step-btn" id="osStep2Btn" type="button" onclick="osExecStep_(2)">\n            <span class="os-exec-step-num">2</span>\n            <span>Fotos<span id="osStepBadge2" style="display:none;margin-left:3px;background:#059669;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>\n          </button>\n          <button class="os-exec-step-btn" id="osStep3Btn" type="button" onclick="osExecStep_(3)">\n            <span class="os-exec-step-num">3</span>\n            <span>Quest.<span id="osStepBadge3" style="display:none;margin-left:3px;background:#2563eb;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>\n          </button>\n          <button class="os-exec-step-btn" id="osStep4Btn" type="button" onclick="osExecStep_(4)">\n            <span class="os-exec-step-num">4</span>\n            <span>Relato</span>\n          </button>\n          <button class="os-exec-step-btn" id="osStep5Btn" type="button" onclick="osExecStep_(5)">\n            <span class="os-exec-step-num">5</span>\n            <span>Assin.<span id="osStepBadge5" style="display:none;margin-left:3px;background:#059669;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;"></span></span>\n          </button>\n          <button class="os-exec-step-btn" id="osStep6Btn" type="button" onclick="osExecStep_(6)">\n            <span class="os-exec-step-num">6</span>\n            <span>Concluir</span>\n          </button>\n        </div>\n\n        <!-- Pane 1: Resumo -->\n        <div id="osExecPane1">\n          <div class="form-card" id="osExecResumoCard">\n            <div class="empty-state">Carregando resumo da OS...</div>\n          </div>\n        </div>\n\n        <!-- Pane 2: Fotos -->\n        <div id="osExecPane2" style="display:none;">\n          <div class="form-card">\n            <h3 class="section-card-title">Fotos e Evidencias</h3>\n            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">\n              <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:700;">\n                &#128247; Tirar foto\n                <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="osExecFotoSelecionada_(this)">\n              </label>\n              <label class="btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:700;">\n                &#128190; Galeria / Arquivo\n                <input type="file" accept="image/*" multiple style="display:none;" onchange="osExecFotoSelecionada_(this)">\n              </label>\n              <button class="btn-success" type="button" id="osBtnEnviarFotos" onclick="osExecEnviarFotos_()">&#8679; Enviar fotos</button>\n            </div>\n\n            <div id="osFotoFila" style="margin-bottom:16px;">\n              <div class="empty-state" style="padding:16px;">Nenhuma foto na fila. Toque em "Tirar foto" ou "Galeria".</div>\n            </div>\n\n            <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">\n              <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Fotos ja enviadas</div>\n              <div id="osFotosEnviadas">\n                <div class="empty-state" style="padding:16px;">Nenhuma foto registrada.</div>\n              </div>\n            </div>\n\n            <div class="os-exec-nav">\n              <button class="btn-secondary" type="button" onclick="osExecStep_(1)">&#8592; Resumo</button>\n              <button class="btn-primary" type="button" onclick="osExecStep_(3)">Questionario &#8594;</button>\n            </div>\n          </div>\n        </div>\n\n        <!-- Pane 3: Questionário -->\n        <div id="osExecPane3" style="display:none;">\n          <div class="form-card">\n            <h3 class="section-card-title">Questionario</h3>\n            <div id="osCheckProgressWrap" style="display:none;margin-bottom:12px;">\n              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">\n                <span>Progresso</span><span id="osCheckProgressText">0/0 respondidas</span>\n              </div>\n              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">\n                <div id="osCheckProgressBar" style="height:100%;background:var(--metro-green);border-radius:3px;width:0%;transition:width .3s;"></div>\n              </div>\n            </div>\n            <div id="osChecklistWrap">\n              <div class="empty-state">Carregando questionario...</div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="osExecSalvarChecklist_()">Salvar questionario</button>\n            </div>\n            <div class="os-exec-nav">\n              <button class="btn-secondary" type="button" onclick="osExecStep_(2)">&#8592; Fotos</button>\n              <button class="btn-primary" type="button" onclick="osExecStep_(4)">Relato &#8594;</button>\n            </div>\n          </div>\n        </div>\n\n        <!-- Pane 4: Relato -->\n        <div id="osExecPane4" style="display:none;">\n          <div class="form-card">\n            <h3 class="section-card-title">Relato Tecnico</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label>Relato tecnico do atendimento *</label>\n                <textarea id="os_exec_relato" rows="6" placeholder="Descreva o que foi encontrado, o que foi feito e o resultado do atendimento..."></textarea>\n              </div>\n              <div class="full">\n                <label>Resultado do atendimento</label>\n                <select id="os_exec_resultado">\n                  <option value="">Selecione</option>\n                  <option value="RESOLVIDO">Resolvido</option>\n                  <option value="RESOLVIDO_COM_RESSALVA">Resolvido com ressalva</option>\n                  <option value="NAO_RESOLVIDO">Nao resolvido</option>\n                  <option value="NECESSITA_ORCAMENTO">Necessita orcamento</option>\n                  <option value="NECESSITA_RETORNO">Necessita retorno</option>\n                </select>\n              </div>\n              <div><label><input type="checkbox" id="os_exec_retorno"> Necessita retorno</label></div>\n              <div><label><input type="checkbox" id="os_exec_orcamento"> Necessita orcamento</label></div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="osExecSalvarRelato_()">Salvar relato</button>\n            </div>\n            <div class="os-exec-nav">\n              <button class="btn-secondary" type="button" onclick="osExecStep_(3)">&#8592; Questionario</button>\n              <button class="btn-primary" type="button" onclick="osExecStep_(5)">Assinaturas &#8594;</button>\n            </div>\n          </div>\n        </div>\n\n        <!-- Pane 5: Assinaturas -->\n        <div id="osExecPane5" style="display:none;">\n          <div class="form-card">\n            <h3 class="section-card-title">Assinatura do Tecnico</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label>Nome do tecnico</label>\n                <input id="os_ass_tec_nome" placeholder="Nome do tecnico responsavel">\n              </div>\n              <div class="full">\n                <label>Assinatura</label>\n                <div class="os-ass-canvas-wrap">\n                  <canvas id="os_ass_tec_canvas" width="800" height="200"></canvas>\n                  <span class="os-ass-hint" id="os_ass_tec_hint">Assine aqui</span>\n                </div>\n              </div>\n            </div>\n            <div class="form-actions" style="margin-top:12px;">\n              <button class="btn-secondary" type="button" onclick="osExecLimparCanvas_(\'os_ass_tec_canvas\',\'os_ass_tec_hint\')">Limpar</button>\n              <button class="btn-success" type="button" onclick="osExecSalvarAssinatura_(\'TECNICO\')">Salvar assinatura do tecnico</button>\n            </div>\n          </div>\n\n          <div class="form-card" style="margin-top:14px;">\n            <h3 class="section-card-title">Assinatura do Responsavel pelo Local</h3>\n            <div class="form-grid">\n              <div>\n                <label>Nome do responsavel *</label>\n                <input id="os_ass_resp_nome" placeholder="Nome completo">\n              </div>\n              <div>\n                <label>Cargo / Funcao</label>\n                <input id="os_ass_resp_cargo" placeholder="Ex: Gerente, Coordenador...">\n              </div>\n              <div class="full">\n                <label>Assinatura</label>\n                <div class="os-ass-canvas-wrap">\n                  <canvas id="os_ass_resp_canvas" width="800" height="200"></canvas>\n                  <span class="os-ass-hint" id="os_ass_resp_hint">Assine aqui</span>\n                </div>\n              </div>\n            </div>\n            <div class="form-actions" style="margin-top:12px;">\n              <button class="btn-secondary" type="button" onclick="osExecLimparCanvas_(\'os_ass_resp_canvas\',\'os_ass_resp_hint\')">Limpar</button>\n              <button class="btn-success" type="button" onclick="osExecSalvarAssinatura_(\'RESPONSAVEL\')">Salvar assinatura do responsavel</button>\n            </div>\n\n            <div id="osAssLista" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">\n              <div style="font-size:12px;color:var(--muted);">Nenhuma assinatura registrada.</div>\n            </div>\n          </div>\n\n          <div class="os-exec-nav" style="margin-top:0;padding-top:0;border:none;">\n            <button class="btn-secondary" type="button" onclick="osExecStep_(4)">&#8592; Relato</button>\n            <button class="btn-primary" type="button" onclick="osExecStep_(6)">Concluir &#8594;</button>\n          </div>\n        </div>\n\n        <!-- Pane 6: Concluir -->\n        <div id="osExecPane6" style="display:none;">\n          <div class="form-card">\n            <h3 class="section-card-title">Concluir Atendimento</h3>\n            <div id="osExecPendenciasBox" style="margin-bottom:16px;">\n              <div style="color:var(--muted);font-size:13px;padding:10px 0;">Clique em "Verificar pendencias" para checar o que falta antes de concluir.</div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-secondary" type="button" onclick="osExecValidar_()">Verificar pendencias</button>\n              <button class="btn-primary" type="button" id="osBtnConcluir" onclick="osExecConcluir_()">Concluir atendimento</button>\n            </div>\n            <div class="os-exec-nav">\n              <button class="btn-secondary" type="button" onclick="osExecStep_(5)">&#8592; Assinaturas</button>\n            </div>\n          </div>\n        </div>\n\n        <div id="osExecDocResultado" style="display:none;margin-top:16px;"></div>\n\n      </div>';
+      OS_EXEC_STATE.osId = osId;
+      OS_EXEC_STATE.checklistModelo = null;
+      OS_EXEC_STATE.checklist = [];
+      OS_EXEC_STATE.fotosFila = [];
+      osExecCarregar_();
+    }, 30);
+  }
+  window.renderOSExecucaoModulo_ = renderOSExecucaoModulo_;
+
+  /* ---- Navegação de etapas ---- */
+
+  function osExecStep_(n) {
+    for (var i = 1; i <= 6; i++) {
+      var pane = document.getElementById("osExecPane" + i);
+      var btn  = document.getElementById("osStep" + i + "Btn");
+      if (pane) pane.style.display = i === n ? "" : "none";
+      if (btn) { btn.classList.remove("os-exec-step-ativo"); if (i === n) btn.classList.add("os-exec-step-ativo"); }
+    }
+    if (n === 5) setTimeout(function() {
+      osExecInitCanvas_("os_ass_tec_canvas", "os_ass_tec_hint");
+      osExecInitCanvas_("os_ass_resp_canvas", "os_ass_resp_hint");
+    }, 80);
+    if (n === 6) osExecValidar_();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---- Carregamento ---- */
+
+  function osExecCarregar_() {
+    console.log("[OS_EXEC] osExecCarregar_ osId=", OS_EXEC_STATE.osId, "SESSION=", SESSION ? "ok" : "NULL");
+    google.script.run
+    .withFailureHandler(function(err) {
+      console.error("[OS_EXEC] osObter failure:", err);
+      var card = document.getElementById("osExecResumoCard");
+      if (card) card.innerHTML = '<div style="padding:20px;text-align:center;color:#dc2626;">' +
+        '<i class="fas fa-circle-exclamation" style="font-size:28px;"></i>' +
+        '<div style="font-weight:700;margin-top:8px;">Erro ao carregar OS</div>' +
+        '<div style="font-size:12px;margin-top:4px;">' + String((err && err.message) || err) + '</div></div>';
+    })
+    .withSuccessHandler(function(res) {
+      console.log("[OS_EXEC] osObter retorno", res && res.success, res && res.item && res.item.NUMERO_OS);
+      if (!res || !res.success || !res.item) {
+        var card = document.getElementById("osExecResumoCard");
+        if (card) card.innerHTML = '<div style="padding:20px;text-align:center;color:#dc2626;">' +
+          '<i class="fas fa-circle-exclamation" style="font-size:28px;"></i>' +
+          '<div style="font-weight:700;margin-top:8px;">OS nao encontrada</div>' +
+          '<div style="font-size:12px;margin-top:4px;">' + ((res && res.message) || "Verifique o ID e tente novamente.") + '</div>' +
+          '<div style="font-size:11px;margin-top:4px;color:#6b7280;">osId: ' + (OS_EXEC_STATE.osId || "vazio") + '</div></div>';
+        return;
+      }
+      const i = res.item;
+      OS_EXEC_STATE.os = i;
+      const t = document.getElementById("osExecTitulo"); if (t) t.innerText = "Execucao OS " + (i.NUMERO_OS || "");
+      const s = document.getElementById("osExecSubtitulo"); if (s) s.innerText = [i.CLIENTE_NOME, i.UNIDADE_NOME, i.STATUS].filter(Boolean).join(" | ");
+      setValue_("os_exec_relato", i.RELATO_TECNICO || i.ENCERRAMENTO_TECNICO || i.SERVICO_EXECUTADO || "");
+      setValue_("os_exec_resultado", i.RESULTADO_ATENDIMENTO || "");
+      const ret = document.getElementById("os_exec_retorno"); if (ret) ret.checked = i.NECESSITA_RETORNO === "S";
+      const orc = document.getElementById("os_exec_orcamento"); if (orc) orc.checked = i.NECESSITA_ORCAMENTO === "S";
+      const tecNome = document.getElementById("os_ass_tec_nome");
+      if (tecNome && !tecNome.value) tecNome.value = i.TECNICO_NOME || (SESSION && SESSION.usuario) || "";
+      osExecRenderResumo_(i);
+      osExecCarregarChecklist_();
+      osExecCarregarFotosEnviadas_();
+      osExecCarregarAssinaturas_();
+    }).osObter(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Etapa 1: Resumo ---- */
+
+  function osExecRenderResumo_(i) {
+    const card = document.getElementById("osExecResumoCard"); if (!card) return;
+    const statusAtual = (i.STATUS || "").toUpperCase();
+    const podeIniciar = ["ABERTA","AGENDADA","EM_EXECUCAO"].indexOf(statusAtual) >= 0;
+    const jaIniciou = statusAtual === "EM_EXECUCAO" || i.CHECKIN_EM;
+    const campo = function(label, val) {
+      return val ? '<div><div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">' + label + '</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-top:2px;">' + escapeHtml_(val) + '</div></div>' : '';
+    };
+    card.innerHTML =
+      '<h3 class="section-card-title">Resumo da Tarefa</h3>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px 20px;margin-bottom:16px;">' +
+        campo("N° OS", i.NUMERO_OS || i.ID) +
+        campo("Status", "") + obterBadgeStatusHtml_(i.STATUS) +
+        campo("Tipo OS", i.TIPO_OS) +
+        campo("Prioridade", i.PRIORIDADE) +
+        campo("Cliente", i.CLIENTE_NOME) +
+        campo("Unidade", i.UNIDADE_NOME) +
+        campo("Endereco", i.UNIDADE_ENDERECO || i.ENDERECO) +
+        campo("Equipamento", [i.EQUIPAMENTO_TAG, i.EQUIPAMENTO_TIPO, i.EQUIPAMENTO_MODELO].filter(Boolean).join(" - ")) +
+        campo("TAG", i.EQUIPAMENTO_TAG) +
+        campo("Agendado para", formatarDataFront_(i.DATA_AGENDADA)) +
+      '</div>' +
+      (i.RELATO_CLIENTE ? '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Relato do cliente</div><div style="font-size:13px;line-height:1.5;">' + escapeHtml_(i.RELATO_CLIENTE) + '</div></div>' : '') +
+      (i.MISSAO_TECNICA ? '<div style="background:var(--info-bg);border:1px solid #93c5fd;border-radius:8px;padding:12px 14px;margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:var(--metro-blue);text-transform:uppercase;margin-bottom:4px;">Orientacao tecnica</div><div style="font-size:13px;line-height:1.5;color:var(--metro-blue-dark);">' + escapeHtml_(i.MISSAO_TECNICA) + '</div></div>' : '') +
+      (i.CHECKIN_EM ? '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#065f46;"><strong>&#10003; Atendimento iniciado</strong> em ' + escapeHtml_(formatarDataFront_(i.CHECKIN_EM)) + '</div>' : '') +
+      (podeIniciar ? '<div class="form-actions"><button class="btn-primary" style="font-size:15px;min-height:46px;padding:0 28px;" type="button" id="osBtnIniciar" onclick="osExecIniciarAtendimento_()">' + (jaIniciou ? '&#9654; Continuar atendimento' : '&#9654; Iniciar atendimento') + '</button></div>' : '') +
+      '<div class="os-exec-nav" style="margin-top:16px;"><div></div><button class="btn-primary" type="button" onclick="osExecStep_(2)">Fotos &#8594;</button></div>';
+  }
+
+  function osExecIniciarAtendimento_() {
+    const btn = document.getElementById("osBtnIniciar");
+    if (btn) { btn.disabled = true; btn.textContent = "Iniciando..."; }
+    const agora = new Date();
+    const hora = agora.getHours().toString().padStart(2, "0") + ":" + agora.getMinutes().toString().padStart(2, "0");
+
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (btn) { btn.disabled = false; btn.textContent = "Iniciar atendimento"; }
+        _osExecToast((res && res.message) || "Erro ao iniciar.", "error");
+        return;
+      }
+      var capturarGPS = function(onDone) {
+        if (!navigator.geolocation) { onDone(null, null); return; }
+        navigator.geolocation.getCurrentPosition(
+          function(pos) { onDone(String(pos.coords.latitude), String(pos.coords.longitude)); },
+          function() { onDone(null, null); },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      };
+      capturarGPS(function(lat, lng) {
+        var msg;
+        if (lat && lng) {
+          msg = "Atendimento iniciado as " + hora + ". Localizacao capturada.";
+          google.script.run.withSuccessHandler(function() {}).osRegistrarCheckin(SESSION, OS_EXEC_STATE.osId, { LAT: lat, LNG: lng });
+        } else {
+          msg = "Atendimento iniciado as " + hora + ". Localizacao nao capturada.";
+        }
+        _osExecToast(msg, "success");
+        osExecCarregar_();
+        if (btn) { btn.disabled = false; }
+      });
+    }).osIniciarExecucao(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Etapa 2: Fotos ---- */
+
+  function osExecFotoSelecionada_(input) {
+    var files = Array.from(input.files || []);
+    OS_EXEC_STATE.fotosFila = OS_EXEC_STATE.fotosFila || [];
+    files.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        OS_EXEC_STATE.fotosFila.push({
+          file: file,
+          dataUrl: e.target.result,
+          nome: file.name,
+          tipo: "Outro",
+          obs: "",
+          status: "pendente"
+        });
+        osExecRenderFilaFotos_();
+      };
+      reader.readAsDataURL(file);
+    });
+    input.value = "";
+  }
+
+  function osExecRenderFilaFotos_() {
+    var el = document.getElementById("osFotoFila"); if (!el) return;
+    var fila = OS_EXEC_STATE.fotosFila || [];
+    if (!fila.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:16px;">Nenhuma foto na fila. Toque em "Tirar foto" ou "Galeria".</div>';
+      return;
+    }
+    el.innerHTML = fila.map(function(item, idx) {
+      var statusHtml = item.status === "ok" ? '<span class="os-foto-status-ok">&#10003; Enviada</span>'
+        : item.status === "erro" ? '<span class="os-foto-status-err">&#10007; Erro ao enviar</span>'
+        : item.status === "enviando" ? '<span class="os-foto-status-wait">Enviando...</span>'
+        : '<span class="os-foto-status-wait">Aguardando envio</span>';
+      var optsHtml = EXEC_FOTO_CATS.map(function(c) {
+        return '<option value="' + c + '"' + (item.tipo === c ? " selected" : "") + '>' + c + '</option>';
+      }).join("");
+      return '<div class="os-foto-item">' +
+        '<img class="os-foto-thumb" src="' + escapeHtml_(item.dataUrl) + '" alt="foto">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px;">' + escapeHtml_(item.nome) + '</div>' +
+          '<select style="font-size:12px;min-height:30px;margin-bottom:4px;" onchange="osExecFotoTipo_(' + idx + ',this.value)">' + optsHtml + '</select>' +
+          '<input style="font-size:12px;min-height:30px;" type="text" placeholder="Obs opcional" value="' + escapeHtml_(item.obs) + '" oninput="osExecFotoObs_(' + idx + ',this.value)">' +
+          '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
+            statusHtml +
+            (item.status !== "ok" ? '<button style="font-size:11px;padding:2px 8px;" class="btn-secondary" type="button" onclick="osExecRemoverDaFila_(' + idx + ')">Remover</button>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function osExecFotoTipo_(idx, val) {
+    if (OS_EXEC_STATE.fotosFila && OS_EXEC_STATE.fotosFila[idx]) OS_EXEC_STATE.fotosFila[idx].tipo = val;
+  }
+  function osExecFotoObs_(idx, val) {
+    if (OS_EXEC_STATE.fotosFila && OS_EXEC_STATE.fotosFila[idx]) OS_EXEC_STATE.fotosFila[idx].obs = val;
+  }
+  function osExecRemoverDaFila_(idx) {
+    if (OS_EXEC_STATE.fotosFila) OS_EXEC_STATE.fotosFila.splice(idx, 1);
+    osExecRenderFilaFotos_();
+  }
+
+  function osExecEnviarFotos_() {
+    var fila = (OS_EXEC_STATE.fotosFila || []).filter(function(i) { return i.status === "pendente" || i.status === "erro"; });
+    if (!fila.length) { _osExecToast("Nenhuma foto pendente de envio.", "info"); return; }
+    var btn = document.getElementById("osBtnEnviarFotos");
+    if (btn) { btn.disabled = true; btn.textContent = "Enviando " + fila.length + " foto(s)..."; }
+    var idx = 0;
+    function enviarProxima() {
+      if (idx >= fila.length) {
+        if (btn) { btn.disabled = false; btn.textContent = "&#8679; Enviar fotos"; }
+        _osExecToast("Fotos enviadas!", "success");
+        osExecCarregarFotosEnviadas_();
+        osExecAtualizarBadgeFotos_();
+        return;
+      }
+      var item = fila[idx];
+      item.status = "enviando";
+      osExecRenderFilaFotos_();
+      var base64 = item.dataUrl.replace(/^data:[^;]+;base64,/, "");
+      var payload = {
+        NOME_ARQUIVO: item.nome,
+        MIME_TYPE: item.file.type || "image/jpeg",
+        BASE64_DATA: base64,
+        TIPO_FOTO: item.tipo,
+        OBSERVACAO: item.obs
+      };
+      google.script.run
+        .withSuccessHandler(function(res) {
+          item.status = (res && res.success) ? "ok" : "erro";
+          osExecRenderFilaFotos_();
+          idx++;
+          enviarProxima();
+        })
+        .withFailureHandler(function() {
+          item.status = "erro";
+          osExecRenderFilaFotos_();
+          idx++;
+          enviarProxima();
+        })
+        .osFotoUploadBase64(SESSION, OS_EXEC_STATE.osId, payload);
+    }
+    enviarProxima();
+  }
+
+  function osExecCarregarFotosEnviadas_() {
+    google.script.run.withSuccessHandler(function(res) {
+      var el = document.getElementById("osFotosEnviadas"); if (!el) return;
+      var items = (res && res.items) || [];
+      osExecAtualizarBadgeFotos_(items.length);
+      if (!items.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:16px;">Nenhuma foto registrada.</div>';
+        return;
+      }
+      el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+        items.map(function(i) {
+          var linkHtml = i.LINK_DRIVE ? '<a href="' + escapeHtml_(i.LINK_DRIVE) + '" target="_blank" style="display:block;">' : '<span>';
+          var linkClose = i.LINK_DRIVE ? '</a>' : '</span>';
+          return '<div style="width:100px;text-align:center;">' +
+            linkHtml +
+            '<div style="width:100px;height:75px;background:var(--bg);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:28px;">&#128247;</div>' +
+            linkClose +
+            '<div style="font-size:10px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml_(i.TIPO_FOTO || i.MOMENTO || "OUTRO") + '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>';
+    }).osFotosListar(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  function osExecAtualizarBadgeFotos_(n) {
+    var el = document.getElementById("osStepBadge2");
+    if (!el) return;
+    if (n > 0) { el.textContent = n; el.style.display = ""; }
+    else el.style.display = "none";
+  }
+
+  /* ---- Etapa 3: Questionário ---- */
+
+  function osExecCarregarChecklist_() {
+    var os = OS_EXEC_STATE.os || {};
+    var modeloId = os.QUESTIONARIO_MODELO_ID;
+    var wrap = document.getElementById("osChecklistWrap");
+    var progressWrap = document.getElementById("osCheckProgressWrap");
+
+    if (!modeloId) {
+      if (wrap) wrap.innerHTML = '<div style="background:var(--warning-bg);border:1px solid #fcd34d;border-radius:8px;padding:14px;font-size:13px;color:#92400e;">' +
+        '<strong>Sem questionario vinculado.</strong> Esta OS nao possui um modelo de questionario configurado. Voce pode prosseguir sem preencher questionario.</div>';
+      return;
+    }
+
+    google.script.run.withSuccessHandler(function(modeloRes) {
+      if (!modeloRes || !modeloRes.success || !modeloRes.item) {
+        if (wrap) wrap.innerHTML = '<div class="empty-state">Questionario nao encontrado.</div>';
+        return;
+      }
+      OS_EXEC_STATE.checklistModelo = modeloRes.item;
+      OS_EXEC_STATE.checklist = modeloRes.item.perguntas || [];
+      if (progressWrap) progressWrap.style.display = OS_EXEC_STATE.checklist.length ? "" : "none";
+
+      google.script.run.withSuccessHandler(function(resp) {
+        var respostas = {};
+        ((resp && resp.items) || []).forEach(function(r) { respostas[r.PERGUNTA_ID] = r; });
+        osExecRenderChecklist_(OS_EXEC_STATE.checklist, respostas);
+      }).checklistRespostasListarPorOS(SESSION, OS_EXEC_STATE.osId);
+    }).checklistModeloObterCompleto(SESSION, modeloId);
+  }
+
+  function osExecRenderChecklist_(perguntas, respostas) {
+    var wrap = document.getElementById("osChecklistWrap"); if (!wrap) return;
+    if (!perguntas.length) { wrap.innerHTML = '<div class="empty-state">Modelo sem perguntas cadastradas.</div>'; return; }
+
+    var secoes = {};
+    perguntas.forEach(function(p) { var sec = p.SECAO || "Geral"; (secoes[sec] = secoes[sec] || []).push(p); });
+
+    wrap.innerHTML = Object.keys(secoes).map(function(sec) {
+      return '<div class="os-check-secao">' + escapeHtml_(sec) + '</div>' +
+        secoes[sec].map(function(p) {
+          var r = respostas[p.ID] || {};
+          return '<div class="os-check-pergunta" data-pergunta="' + escapeHtml_(p.ID) + '">' +
+            '<div class="os-check-label">' + escapeHtml_(p.PERGUNTA || "") + (p.OBRIGATORIO === "S" ? ' <span class="os-check-req">*</span>' : '') + '</div>' +
+            osExecInputResposta_(p, r.RESPOSTA || "") +
+            (p.EXIGE_OBSERVACAO_SE_NAO_OK === "S" || r.OBSERVACAO
+              ? '<input class="os-check-obs" type="text" placeholder="Observacao" value="' + escapeHtml_(r.OBSERVACAO || "") + '" style="margin-top:6px;">'
+              : '<input class="os-check-obs" type="text" placeholder="Observacao (opcional)" value="' + escapeHtml_(r.OBSERVACAO || "") + '" style="margin-top:6px;">') +
+            (p.AJUDA ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' + escapeHtml_(p.AJUDA) + '</div>' : '') +
+          '</div>';
+        }).join("");
+    }).join("");
+
+    osExecAtualizarProgressoCheck_(Object.keys(respostas).length, perguntas.length);
+  }
+
+  function osExecInputResposta_(p, valor) {
+    var tipo = (p.TIPO_RESPOSTA || "SIM_NAO").toUpperCase();
+    if (tipo === "TEXTO_LONGO") return '<textarea class="os-check-resp" rows="3" style="margin-top:4px;">' + escapeHtml_(valor) + '</textarea>';
+    if (tipo === "TEXTO_CURTO") return '<input class="os-check-resp" type="text" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    if (tipo === "NUMERO" || tipo === "MEDICAO") return '<input class="os-check-resp" type="number" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    if (tipo === "DATA") return '<input class="os-check-resp" type="date" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    if (tipo === "HORA") return '<input class="os-check-resp" type="time" value="' + escapeHtml_(valor) + '" style="margin-top:4px;">';
+    if (tipo === "FOTO" || tipo === "ASSINATURA") return '<div style="font-size:12px;color:var(--muted);padding:6px 0;"><em>Registre em Fotos / Assinaturas</em></div><input type="hidden" class="os-check-resp" value="' + escapeHtml_(valor) + '">';
+    if (tipo === "MULTIPLA_ESCOLHA" || tipo === "SELECAO_UNICA") {
+      var opcoes = String(p.OPCOES || "").split(";").filter(Boolean);
+      return '<select class="os-check-resp" style="margin-top:4px;"><option value="">Selecione</option>' +
+        opcoes.map(function(o) { return '<option value="' + escapeHtml_(o) + '"' + (o === valor ? " selected" : "") + '>' + escapeHtml_(o) + '</option>'; }).join("") +
+        '</select>';
+    }
+    var op = tipo === "CONFORME_NAO_CONFORME_NA" ? [["CONFORME","Conforme"],["NAO_CONFORME","Nao conforme"],["NA","N/A"]] : [["SIM","Sim"],["NAO","Nao"]];
+    return '<select class="os-check-resp" style="margin-top:4px;"><option value="">Selecione</option>' +
+      op.map(function(o) { return '<option value="' + o[0] + '"' + (o[0] === valor ? " selected" : "") + '>' + o[1] + '</option>'; }).join("") +
+      '</select>';
+  }
+
+  function osExecSalvarChecklist_(silencioso, callback) {
+    var modelo = OS_EXEC_STATE.checklistModelo || {};
+    var respostas = [];
+    document.querySelectorAll("#osChecklistWrap [data-pergunta]").forEach(function(row) {
+      var perguntaId = row.getAttribute("data-pergunta");
+      var p = (OS_EXEC_STATE.checklist || []).find(function(i) { return i.ID === perguntaId; }) || {};
+      var respVal = (row.querySelector(".os-check-resp") || {}).value || "";
+      respostas.push({
+        MISSAO_ID: OS_EXEC_STATE.os && OS_EXEC_STATE.os.MISSAO_ID,
+        MODELO_ID: modelo.ID,
+        PERGUNTA_ID: perguntaId,
+        SECAO: p.SECAO,
+        PERGUNTA: p.PERGUNTA,
+        TIPO_RESPOSTA: p.TIPO_RESPOSTA,
+        OBRIGATORIO: p.OBRIGATORIO,
+        RESPOSTA: respVal,
+        OBSERVACAO: (row.querySelector(".os-check-obs") || {}).value || "",
+        EVIDENCIA_LINK: (row.querySelector(".os-check-foto") || {}).value || ""
+      });
+    });
+    var respondidas = respostas.filter(function(r) { return r.RESPOSTA; }).length;
+    google.script.run.withSuccessHandler(function(res) {
+      if (!silencioso) {
+        if (res && res.success) _osExecToast("Questionario salvo.", "success");
+        else _osExecToast((res && res.message) || "Erro ao salvar.", "error");
+      }
+      osExecAtualizarProgressoCheck_(respondidas, respostas.length);
+      if (typeof callback === "function") callback(res);
+    }).checklistRespostasSalvar(SESSION, {
+      OS_ID: OS_EXEC_STATE.osId,
+      MISSAO_ID: OS_EXEC_STATE.os && OS_EXEC_STATE.os.MISSAO_ID,
+      MODELO_ID: modelo.ID,
+      RESPOSTAS: respostas
+    });
+  }
+
+  function osExecAtualizarProgressoCheck_(respondidas, total) {
+    var txt = document.getElementById("osCheckProgressText");
+    var bar = document.getElementById("osCheckProgressBar");
+    var badge = document.getElementById("osStepBadge3");
+    if (txt) txt.textContent = respondidas + "/" + total + " respondidas";
+    if (bar) bar.style.width = total > 0 ? Math.round((respondidas / total) * 100) + "%" : "0%";
+    if (badge) { badge.textContent = respondidas + "/" + total; badge.style.display = total > 0 ? "" : "none"; }
+  }
+
+  /* ---- Etapa 4: Relato ---- */
+
+  function osExecRegistroPayload_() {
+    return {
+      RELATO_TECNICO: getValue_("os_exec_relato"),
+      ENCERRAMENTO_TECNICO: getValue_("os_exec_relato"),
+      SERVICO_EXECUTADO: getValue_("os_exec_relato"),
+      RESULTADO_ATENDIMENTO: getValue_("os_exec_resultado"),
+      NECESSITA_RETORNO: !!(document.getElementById("os_exec_retorno") || {}).checked,
+      NECESSITA_ORCAMENTO: !!(document.getElementById("os_exec_orcamento") || {}).checked
+    };
+  }
+
+  function osExecSalvarRelato_(silencioso, callback) {
+    var payload = osExecRegistroPayload_();
+    if (!payload.RELATO_TECNICO && !silencioso) return _osExecToast("Informe o relato tecnico do atendimento.", "error");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!silencioso) {
+        if (res && res.success) _osExecToast("Relato salvo.", "success");
+        else _osExecToast((res && res.message) || "Erro ao salvar.", "error");
+      }
+      if (typeof callback === "function") callback(res);
+    }).osSalvarRegistroTecnico(SESSION, OS_EXEC_STATE.osId, payload);
+  }
+
+  /* ---- Etapa 5: Assinaturas ---- */
+
+  function osExecInitCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId); if (!canvas || canvas.__sgoReady) return;
+    canvas.__sgoReady = true;
+    var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111827";
+    var desenhando = false;
+    function posicao(evt) {
+      var rect = canvas.getBoundingClientRect();
+      var e = evt.touches && evt.touches.length ? evt.touches[0] : evt;
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+    function iniciar(evt) {
+      desenhando = true;
+      var p = posicao(evt);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y);
+      evt.preventDefault();
+      var hint = document.getElementById(hintId); if (hint) hint.style.display = "none";
+    }
+    function mover(evt) {
+      if (!desenhando) return;
+      var p = posicao(evt);
+      ctx.lineTo(p.x, p.y); ctx.stroke();
+      evt.preventDefault();
+    }
+    function parar() { desenhando = false; }
+    ["mousedown","touchstart"].forEach(function(ev) { canvas.addEventListener(ev, iniciar, { passive: false }); });
+    ["mousemove","touchmove"].forEach(function(ev) { canvas.addEventListener(ev, mover, { passive: false }); });
+    ["mouseup","mouseleave","touchend"].forEach(function(ev) { canvas.addEventListener(ev, parar); });
+  }
+
+  function osExecLimparCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId); if (!canvas) return;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    var hint = document.getElementById(hintId); if (hint) hint.style.display = "";
+  }
+
+  function osExecSalvarAssinatura_(tipo) {
+    var nomeId = tipo === "TECNICO" ? "os_ass_tec_nome" : "os_ass_resp_nome";
+    var cargoId = tipo === "RESPONSAVEL" ? "os_ass_resp_cargo" : null;
+    var canvasId = tipo === "TECNICO" ? "os_ass_tec_canvas" : "os_ass_resp_canvas";
+
+    var nome = getValue_(nomeId);
+    if (!nome) return _osExecToast("Informe o nome para assinar.", "error");
+
+    var canvas = document.getElementById(canvasId); if (!canvas) return;
+    var dataUrl = canvas.toDataURL("image/png");
+    var blank = document.createElement("canvas");
+    blank.width = canvas.width; blank.height = canvas.height;
+    if (dataUrl === blank.toDataURL()) return _osExecToast("Desenhe a assinatura antes de salvar.", "error");
+
+    var payload = {
+      OS_ID: OS_EXEC_STATE.osId,
+      TIPO_ASSINATURA: tipo,
+      TIPO: tipo,
+      ASSINADO_POR: nome,
+      CARGO: cargoId ? getValue_(cargoId) : "",
+      ASSINATURA_DATA_URL: dataUrl,
+      USER_AGENT: navigator.userAgent || ""
+    };
+
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return _osExecToast((res && res.message) || "Erro ao salvar assinatura.", "error");
+      _osExecToast("Assinatura " + (tipo === "TECNICO" ? "do tecnico" : "do responsavel") + " salva.", "success");
+      osExecCarregarAssinaturas_();
+    }).assinaturasSalvar(SESSION, payload);
+  }
+
+  function osExecCarregarAssinaturas_() {
+    google.script.run.withSuccessHandler(function(res) {
+      var el = document.getElementById("osAssLista"); if (!el) return;
+      var items = (res && res.items) || [];
+      var badge = document.getElementById("osStepBadge5");
+      if (badge) { badge.textContent = items.length; badge.style.display = items.length ? "" : "none"; }
+      el.innerHTML = items.length ? items.map(function(i) {
+        var tipoLabel = i.TIPO_ASSINATURA === "TECNICO" ? "Tecnico" : i.TIPO_ASSINATURA === "RESPONSAVEL" ? "Responsavel" : "Cliente";
+        var linkHtml = i.LINK_DRIVE ? ' <a href="' + escapeHtml_(i.LINK_DRIVE) + '" target="_blank" style="font-size:11px;">ver</a>' : '';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="background:' + (i.TIPO_ASSINATURA === "TECNICO" ? "#dbeafe" : "#dcfce7") + ';color:' + (i.TIPO_ASSINATURA === "TECNICO" ? "#1e40af" : "#166534") + ';border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;">' + tipoLabel + '</div>' +
+          '<div style="flex:1;"><strong style="font-size:13px;">' + escapeHtml_(i.ASSINADO_POR || "") + '</strong>' + (i.CARGO ? ' <span style="color:var(--muted);font-size:12px;">— ' + escapeHtml_(i.CARGO) + '</span>' : '') + linkHtml + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' + escapeHtml_(formatarDataFront_(i.ASSINADO_EM) || "") + '</div>' +
+        '</div>';
+      }).join("") : '<div style="font-size:13px;color:var(--muted);">Nenhuma assinatura registrada.</div>';
+    }).assinaturasListarPorOS(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Etapa 6: Concluir ---- */
+
+  function osExecValidar_() {
+    google.script.run.withSuccessHandler(function(res) {
+      osExecMostrarPendencias_(res);
+    }).osValidarConclusao(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  function osExecConcluir_() {
+    var btn = document.getElementById("osBtnConcluir");
+    if (btn) { btn.disabled = true; btn.textContent = "Concluindo..."; }
+
+    osExecSalvarRelato_(true, function() {
+      google.script.run.withSuccessHandler(function(val) {
+        if (!val || !val.success) {
+          if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+          osExecMostrarPendencias_(val);
+          return;
+        }
+
+        var agora = new Date();
+        var concluir = function(lat, lng) {
+          if (lat && lng) {
+            google.script.run.withSuccessHandler(function() {}).osRegistrarCheckout(SESSION, OS_EXEC_STATE.osId, { LAT: lat, LNG: lng });
+          }
+          google.script.run.withSuccessHandler(function(res) {
+            if (btn) { btn.disabled = false; btn.textContent = "Concluir atendimento"; }
+            if (!res || !res.success) {
+              osExecMostrarPendencias_(res);
+              return;
+            }
+            _osExecToast("OS concluida tecnicamente. Aguardando aprovacao.", "success");
+            osExecCarregar_();
+            osExecMostrarPendencias_({ success: true });
+          }).osConcluirTecnica(SESSION, OS_EXEC_STATE.osId, {});
+        };
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(pos) { concluir(String(pos.coords.latitude), String(pos.coords.longitude)); },
+            function() { concluir(null, null); },
+            { timeout: 5000 }
+          );
+        } else {
+          concluir(null, null);
+        }
+      }).osValidarConclusao(SESSION, OS_EXEC_STATE.osId);
+    });
+  }
+
+  function osExecMostrarPendencias_(res) {
+    var box = document.getElementById("osExecPendenciasBox"); if (!box) return;
+    var pendencias = (res && res.pendencias) || [];
+    if (res && res.success) {
+      box.innerHTML = '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:14px 16px;">' +
+        '<div style="font-weight:700;color:#065f46;font-size:14px;">&#10003; Tudo certo! OS pronta para ser concluida.</div>' +
+        '</div>';
+      return;
+    }
+    box.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 16px;">' +
+      '<div style="font-weight:700;color:#dc2626;font-size:14px;margin-bottom:10px;">&#9888; Pendencias antes de concluir:</div>' +
+      '<ul style="margin:0;padding:0;list-style:none;">' +
+        pendencias.map(function(p) {
+          var k = p.toLowerCase();
+          var ico = k.includes("relato") || k.includes("tecnico") ? "&#128221;"
+            : k.includes("assinatura") ? "&#9997;"
+            : k.includes("foto") || k.includes("evidencia") ? "&#128247;"
+            : k.includes("pergunta") || k.includes("checklist") || k.includes("questionario") ? "&#9744;"
+            : "&#8226;";
+          return '<li style="padding:5px 0;font-size:13px;color:#7f1d1d;display:flex;gap:6px;">' + ico + ' <span>' + escapeHtml_(p) + '</span></li>';
+        }).join("") +
+      '</ul>' +
+      '</div>';
+  }
+
+  /* ---- Gerar PDF ---- */
+
+  function osExecGerarDocumento_() {
+    var box = document.getElementById("osExecDocResultado");
+    if (box) { box.style.display = "block"; box.innerHTML = '<div class="form-card"><div class="empty-state">Gerando documento...</div></div>'; }
+    google.script.run.withSuccessHandler(function(res) {
+      if (!box) return;
+      if (!res || !res.success) {
+        box.innerHTML = '<div class="form-card"><div class="empty-state">' + escapeHtml_((res && res.message) || "Erro ao gerar documento.") + '</div></div>';
+        return;
+      }
+      var qr = res.qrCodeDataUrl || res.qrCodeUrl || "";
+      box.innerHTML = '<div class="form-card"><h3 class="section-card-title">Documento gerado</h3>' +
+        '<div class="form-grid">' +
+          '<div><a class="btn-primary" href="' + escapeHtml_(res.pdfUrl || "#") + '" target="_blank">Abrir PDF</a></div>' +
+          '<div><a class="btn-secondary" href="' + escapeHtml_(res.validacaoUrl || "#") + '" target="_blank">Validar</a></div>' +
+          '<div class="full"><label>Token de validacao</label><input value="' + escapeHtml_(res.tokenValidacao || "") + '" readonly></div>' +
+        '</div>' +
+        (qr ? '<img src="' + escapeHtml_(qr) + '" alt="QR Code" style="width:120px;height:120px;margin-top:12px;border:1px solid var(--border);border-radius:8px;">' : '') +
+        '</div>';
+      osExecCarregar_();
+      box.scrollIntoView({ behavior: "smooth" });
+    }).osGerarDocumento(SESSION, OS_EXEC_STATE.osId);
+  }
+
+  /* ---- Toast ---- */
+
+  function _osExecToast(msg, type) {
+    var color = type === "error" ? "#dc2626" : type === "success" ? "#059669" : "#2563eb";
+    var bg    = type === "error" ? "#fef2f2" : type === "success" ? "#ecfdf5" : "#eff6ff";
+    var el = document.createElement("div");
+    el.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;background:" + bg + ";color:" + color + ";border:1px solid " + color + ";border-radius:8px;padding:12px 20px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:90vw;text-align:center;pointer-events:none;";
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
+  }
+
+  console.log("[OS_EXEC] JS_OS_Execucao carregado:", typeof renderOSExecucaoModulo_);
+  window.renderOSExecucaoModulo_ = renderOSExecucaoModulo_;
+</script>

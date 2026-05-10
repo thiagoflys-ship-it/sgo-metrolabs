@@ -1,0 +1,827 @@
+<script>
+  // ==========================================
+  // INTEGRAÇÃO BRASIL API (CNPJ)
+  // ==========================================
+  function buscarCnpjAutomacao_(inputEl, modulo) {
+    if (!inputEl) return;
+
+    var valorDigitado = String(inputEl.value || "");
+    inputEl.value = formatarCnpjFront_(valorDigitado);
+
+    var cnpjLimpo = valorDigitado.replace(/\D/g, "");
+    if (cnpjLimpo.length !== 14) {
+      alert("Digite um CNPJ válido com 14 números.");
+      return;
+    }
+
+    var tituloId = modulo === "cliente" ? "clientesFormTitulo" : "unidadesFormTitulo";
+    var tituloEl = document.getElementById(tituloId);
+    var btnSalvar = null;
+
+    if (tituloEl && tituloEl.parentElement) {
+      btnSalvar = tituloEl.parentElement.querySelector(".btn-primary");
+    }
+
+    if (btnSalvar) {
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "Buscando Receita...";
+    }
+
+    fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpjLimpo)
+      .then(function(res) {
+        if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
+        return res.json();
+      })
+      .then(function(data) {
+        var razao = data.razao_social || "";
+        var fantasia = data.nome_fantasia || razao;
+        var telefone = data.ddd_telefone_1 || "";
+
+        var logradouro = data.logradouro || "";
+        var numero = data.numero || "";
+        var bairro = data.bairro || "";
+
+        var endCompleto = "";
+        if (logradouro) {
+          endCompleto = logradouro;
+          if (numero) endCompleto += ", " + numero;
+          if (bairro) endCompleto += " - " + bairro;
+        }
+
+        var cidade = data.municipio || "";
+        var uf = data.uf || "";
+
+        if (modulo === "cliente") {
+          setValue_("cli_razao_social", razao);
+          setValue_("cli_nome_fantasia", fantasia);
+          setValue_("cli_telefone", telefone);
+          setValue_("cli_endereco", endCompleto);
+        } else if (modulo === "unidade") {
+          setValue_("uni_nome_unidade", fantasia);
+          setValue_("uni_endereco", endCompleto);
+          setValue_("uni_cidade", cidade);
+          setValue_("uni_uf", uf);
+          setValue_("uni_telefone", telefone);
+        }
+      })
+      .catch(function(err) {
+        console.warn("Autopreenchimento falhou:", err);
+        alert("Não foi possível buscar os dados na Receita para este CNPJ. Preencha manualmente.");
+      })
+      .finally(function() {
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerText = "Salvar";
+        }
+      });
+  }
+
+  function buscarCnpjCliente_() {
+    var input = document.getElementById("cli_cnpj");
+    if (!input) return;
+    buscarCnpjAutomacao_(input, "cliente");
+  }
+
+  function buscarCnpjUnidade_() {
+    var input = document.getElementById("uni_cnpj_unidade");
+    if (!input) return;
+    buscarCnpjAutomacao_(input, "unidade");
+  }
+
+  // ==========================================
+  // MÓDULO: CLIENTES
+  // ==========================================
+  function renderClientesModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header">' +
+          '<div class="module-header-left">' +
+            '<h2 class="content-title">Clientes</h2>' +
+            '<p class="content-subtitle">Cadastro mestre de clientes e rastreabilidade.</p>' +
+          '</div>' +
+          '<div class="module-header-right" style="display:flex; gap:15px; align-items:center;">' +
+            '<div style="display:flex; gap:5px;">' +
+              '<input id="clientesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') clientesPesquisar_()">' +
+              '<button class="btn-secondary" type="button" onclick="clientesPesquisar_()">Pesquisar</button>' +
+            '</div>' +
+            '<button class="btn-primary" type="button" onclick="clientesNovo_()">+ Novo Cliente</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="module-grid">' +
+          '<div class="form-card">' +
+            '<h3 class="section-card-title" id="clientesFormTitulo">Novo cliente</h3>' +
+            '<div class="form-grid">' +
+              '<div>' +
+                '<label for="cli_cnpj">CNPJ (Busca Automática)</label>' +
+                '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
+                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:280px;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
+                  '<button class="btn-secondary" type="button" onclick="buscarCnpjCliente_()">Buscar</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="cli_razao_social">Razão social</label>' +
+                '<input id="cli_razao_social" type="text" placeholder="Digite a razão social">' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="cli_nome_fantasia">Nome fantasia</label>' +
+                '<input id="cli_nome_fantasia" type="text" placeholder="Digite o nome fantasia">' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="cli_endereco">Endereço</label>' +
+                '<input id="cli_endereco" type="text" placeholder="Rua, número, bairro...">' +
+              '</div>' +
+              '<div>' +
+                '<label for="cli_status">Status</label>' +
+                '<input id="cli_status" type="text" value="ATIVO" disabled>' +
+              '</div>' +
+              '<div>' +
+                '<label for="cli_contato">Contato</label>' +
+                '<input id="cli_contato" type="text" placeholder="Nome do contato principal">' +
+              '</div>' +
+              '<div>' +
+                '<label for="cli_telefone">Telefone</label>' +
+                '<input id="cli_telefone" type="text" placeholder="Telefone principal">' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="cli_email">E-mail</label>' +
+                '<input id="cli_email" type="email" placeholder="E-mail principal">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-actions">' +
+              '<button class="btn-primary" type="button" onclick="clientesSalvar_()">Salvar</button>' +
+              '<button class="btn-secondary" type="button" onclick="clientesNovo_()">Limpar</button>' +
+            '</div>' +
+            '<div class="helper-text" id="clientesHelper">Preencha os dados do cliente e clique em salvar.</div>' +
+          '</div>' +
+
+          '<div class="list-card">' +
+            '<div class="table-wrap">' +
+              '<table class="table">' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Razão social</th>' +
+                    '<th>Nome fantasia</th>' +
+                    '<th>CNPJ</th>' +
+                    '<th>Contato</th>' +
+                    '<th>E-mail</th>' +
+                    '<th>Telefone</th>' +
+                    '<th>Status</th>' +
+                    '<th>Ações</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody id="clientesTabelaBody">' +
+                  '<tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>' +
+                '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    clientesLimparFormulario_();
+  }
+
+  function clientesPesquisar_() {
+    var el = document.getElementById("clientesPesquisa");
+    CLIENTES_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    var tbody = document.getElementById("clientesTabelaBody");
+    if (!tbody) return;
+
+    if (!CLIENTES_STATE.filtro) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Erro na pesquisa.</td></tr>';
+          return;
+        }
+        renderTabelaClientes_(Array.isArray(res.items) ? res.items : []);
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao pesquisar clientes:", err);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Erro de comunicação ao buscar clientes.</td></tr>';
+      })
+      .clientesPesquisar(SESSION, CLIENTES_STATE.filtro);
+  }
+
+  function renderTabelaClientes_(items) {
+    var tbody = document.getElementById("clientesTabelaBody");
+    if (!tbody) return;
+
+    if (!items || !items.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum cliente encontrado para esta busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function(item) {
+      var id = escapeHtml_(item.ID);
+      var status = String(item.STATUS || "").toUpperCase();
+
+      return (
+        '<tr>' +
+          '<td>' + escapeHtml_(item.RAZAO_SOCIAL) + '</td>' +
+          '<td>' + escapeHtml_(item.NOME_FANTASIA) + '</td>' +
+          '<td>' + formatarCnpjFront_(item.CNPJ) + '</td>' +
+          '<td>' + escapeHtml_(item.CONTATO) + '</td>' +
+          '<td>' + escapeHtml_(item.EMAIL) + '</td>' +
+          '<td>' + escapeHtml_(item.TELEFONE) + '</td>' +
+          '<td>' + obterBadgeStatusHtml_(status) + '</td>' +
+          '<td>' +
+            '<div class="table-actions">' +
+              '<button class="btn-info" type="button" onclick="clientesEditar_(\'' + id + '\')">Editar</button>' +
+              (
+                status === "ATIVO"
+                  ? '<button class="btn-warning" type="button" onclick="clientesInativar_(\'' + id + '\')">Inativar</button>'
+                  : '<button class="btn-success" type="button" onclick="clientesReativar_(\'' + id + '\')">Reativar</button>'
+              ) +
+              '<button class="btn-danger" type="button" onclick="clientesExcluir_(\'' + id + '\')">Excluir</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>'
+      );
+    }).join("");
+  }
+
+  function clientesNovo_() {
+    CLIENTES_STATE.editingId = "";
+    clientesLimparFormulario_();
+
+    var titulo = document.getElementById("clientesFormTitulo");
+    var helper = document.getElementById("clientesHelper");
+    if (titulo) titulo.innerText = "Novo cliente";
+    if (helper) helper.innerText = "Preencha os dados do cliente e clique em salvar.";
+  }
+
+  function clientesLimparFormulario_() {
+    setValue_("cli_razao_social", "");
+    setValue_("cli_nome_fantasia", "");
+    setValue_("cli_endereco", "");
+    setValue_("cli_cnpj", "");
+    setValue_("cli_contato", "");
+    setValue_("cli_email", "");
+    setValue_("cli_telefone", "");
+    setValue_("cli_status", "ATIVO");
+  }
+
+  function clientesLerFormulario_() {
+    return {
+      RAZAO_SOCIAL: getValue_("cli_razao_social"),
+      NOME_FANTASIA: getValue_("cli_nome_fantasia"),
+      ENDERECO: getValue_("cli_endereco"),
+      CNPJ: getValue_("cli_cnpj"),
+      CONTATO: getValue_("cli_contato"),
+      EMAIL: getValue_("cli_email"),
+      TELEFONE: getValue_("cli_telefone")
+    };
+  }
+
+  function clientesSalvar_() {
+    if (!SESSION) return;
+
+    var payload = clientesLerFormulario_();
+
+    if (!payload.RAZAO_SOCIAL) {
+      alert("Informe a razão social.");
+      focusIfExists_("cli_razao_social");
+      return;
+    }
+
+    if (CLIENTES_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar cliente.");
+          alert(res.message || "Cliente atualizado com sucesso.");
+          CLIENTES_STATE.editingId = "";
+          clientesNovo_();
+          if (CLIENTES_STATE.filtro) clientesPesquisar_();
+        })
+        .withFailureHandler(function(err) {
+          console.error("Falha ao atualizar cliente:", err);
+          alert("Erro de comunicação ao atualizar cliente.");
+        })
+        .clientesAtualizar(SESSION, CLIENTES_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar cliente.");
+        alert(res.message || "Cliente cadastrado com sucesso.");
+        clientesNovo_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao criar cliente:", err);
+        alert("Erro de comunicação ao criar cliente.");
+      })
+      .clientesCriar(SESSION, payload);
+  }
+
+  function clientesEditar_(id) {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Cliente não encontrado.");
+
+        var item = res.item;
+        CLIENTES_STATE.editingId = String(item.ID || "");
+
+        setValue_("cli_razao_social", item.RAZAO_SOCIAL || "");
+        setValue_("cli_nome_fantasia", item.NOME_FANTASIA || "");
+        setValue_("cli_endereco", item.ENDERECO || "");
+        setValue_("cli_cnpj", item.CNPJ || "");
+        setValue_("cli_contato", item.CONTATO || "");
+        setValue_("cli_email", item.EMAIL || "");
+        setValue_("cli_telefone", item.TELEFONE || "");
+        setValue_("cli_status", item.STATUS || "ATIVO");
+
+        var titulo = document.getElementById("clientesFormTitulo");
+        var helper = document.getElementById("clientesHelper");
+        if (titulo) titulo.innerText = "Editar cliente";
+        if (helper) helper.innerText = "Editando cliente selecionado. Após ajustar os dados, clique em salvar.";
+
+        focusIfExists_("cli_razao_social");
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao buscar cliente:", err);
+        alert("Erro de comunicação ao buscar cliente.");
+      })
+      .clientesObter(SESSION, id);
+  }
+
+  function clientesInativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente inativar este cliente?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar cliente.");
+        alert(res.message || "Cliente inativado com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao inativar cliente:", err);
+        alert("Erro de comunicação ao inativar cliente.");
+      })
+      .clientesInativar(SESSION, id);
+  }
+
+  function clientesReativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente reativar este cliente?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar cliente.");
+        alert(res.message || "Cliente reativado com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao reativar cliente:", err);
+        alert("Erro de comunicação ao reativar cliente.");
+      })
+      .clientesReativar(SESSION, id);
+  }
+
+  function clientesExcluir_(id) {
+    if (!SESSION || !confirm("Deseja realmente excluir este cliente? Esta ação remove o registro da planilha.")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir cliente.");
+        if (CLIENTES_STATE.editingId === id) {
+          CLIENTES_STATE.editingId = "";
+          clientesNovo_();
+        }
+        alert(res.message || "Cliente excluído com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao excluir cliente:", err);
+        alert("Erro de comunicação ao excluir cliente.");
+      })
+      .clientesExcluir(SESSION, id);
+  }
+
+  // ==========================================
+  // MÓDULO: UNIDADES
+  // ==========================================
+  function renderUnidadesModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    var styleForm = isCliente ? "display:none;" : "";
+    var styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
+    var styleAcoes = isCliente ? "display:none;" : "";
+
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header">' +
+          '<div class="module-header-left">' +
+            '<h2 class="content-title">Unidades</h2>' +
+            '<p class="content-subtitle">Cadastro de unidades vinculadas aos clientes.</p>' +
+          '</div>' +
+          '<div class="module-header-right" style="' + styleForm + '; display:flex; gap:15px; align-items:center;">' +
+            '<div style="display:flex; gap:5px;">' +
+              '<input id="unidadesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') unidadesPesquisar_()">' +
+              '<button class="btn-secondary" type="button" onclick="unidadesPesquisar_()">Pesquisar</button>' +
+            '</div>' +
+            '<button class="btn-primary" type="button" onclick="unidadesNovo_()">+ Nova unidade</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="module-grid" style="' + styleGrid + '">' +
+          '<div class="form-card" style="' + styleForm + '">' +
+            '<h3 class="section-card-title" id="unidadesFormTitulo">Nova unidade</h3>' +
+            '<div class="form-grid">' +
+              '<div class="full">' +
+                '<label for="uni_cliente_id">Cliente</label>' +
+                '<select id="uni_cliente_id"></select>' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_cnpj_unidade">CNPJ da unidade (Busca Automática)</label>' +
+                '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
+                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:280px;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
+                  '<button class="btn-secondary" type="button" onclick="buscarCnpjUnidade_()">Buscar</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="uni_nome_unidade">Nome da unidade</label>' +
+                '<input id="uni_nome_unidade" type="text" placeholder="Digite o nome da unidade">' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_status">Status</label>' +
+                '<input id="uni_status" type="text" value="ATIVO" disabled>' +
+              '</div>' +
+              '<div class="full">' +
+                '<label for="uni_endereco">Endereço</label>' +
+                '<input id="uni_endereco" type="text" placeholder="Rua, número, bairro, complemento">' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_cidade">Cidade</label>' +
+                '<input id="uni_cidade" type="text" placeholder="Cidade">' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_uf">UF</label>' +
+                '<input id="uni_uf" type="text" maxlength="2" placeholder="UF">' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_responsavel">Responsável</label>' +
+                '<input id="uni_responsavel" type="text" placeholder="Responsável local">' +
+              '</div>' +
+              '<div>' +
+                '<label for="uni_telefone">Telefone</label>' +
+                '<input id="uni_telefone" type="text" placeholder="Telefone da unidade">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-actions">' +
+              '<button class="btn-primary" type="button" onclick="unidadesSalvar_()">Salvar</button>' +
+              '<button class="btn-secondary" type="button" onclick="unidadesNovo_()">Limpar</button>' +
+            '</div>' +
+            '<div class="helper-text" id="unidadesHelper">Preencha os dados da unidade e clique em salvar.</div>' +
+          '</div>' +
+
+          '<div class="list-card">' +
+            '<div class="table-wrap">' +
+              '<table class="table">' +
+                '<thead>' +
+                  '<tr>' +
+                    '<th>Cliente</th>' +
+                    '<th>Unidade</th>' +
+                    '<th>CNPJ</th>' +
+                    '<th>Cidade</th>' +
+                    '<th>UF</th>' +
+                    '<th>Responsável</th>' +
+                    '<th>Telefone</th>' +
+                    '<th>Status</th>' +
+                    '<th style="' + styleAcoes + '">Ações</th>' +
+                  '</tr>' +
+                '</thead>' +
+                '<tbody id="unidadesTabelaBody">' +
+                  '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>' +
+                '</tbody>' +
+              '</table>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    unidadesLimparFormulario_();
+
+    if (!isCliente) {
+      carregarClientesAtivosParaUnidades_();
+    }
+  }
+
+  function carregarClientesAtivosParaUnidades_() {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          alert((res && res.message) ? res.message : "Erro ao carregar clientes ativos.");
+          return;
+        }
+        UNIDADES_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesUnidades_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao carregar clientes ativos para unidades:", err);
+        alert("Erro de comunicação ao carregar clientes.");
+      })
+      .unidadesListarClientesAtivos(SESSION);
+  }
+
+  function preencherComboClientesUnidades_() {
+    var select = document.getElementById("uni_cliente_id");
+    if (!select) return;
+
+    var options = ['<option value="">Selecione um cliente</option>'];
+    (UNIDADES_STATE.clientes || []).forEach(function(item) {
+      var nome = item.NOME || item.NOME_FANTASIA || item.RAZAO_SOCIAL || "";
+      options.push('<option value="' + escapeHtml_(item.ID || "") + '">' + escapeHtml_(nome) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function unidadesPesquisar_() {
+    var el = document.getElementById("unidadesPesquisa");
+    UNIDADES_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    var tbody = document.getElementById("unidadesTabelaBody");
+    if (!tbody) return;
+
+    if (!UNIDADES_STATE.filtro) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro na pesquisa.</td></tr>';
+          return;
+        }
+        renderTabelaUnidades_(Array.isArray(res.items) ? res.items : []);
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao pesquisar unidades:", err);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro de comunicação ao buscar unidades.</td></tr>';
+      })
+      .unidadesPesquisar(SESSION, UNIDADES_STATE.filtro);
+  }
+
+  function renderTabelaUnidades_(items) {
+    var tbody = document.getElementById("unidadesTabelaBody");
+    if (!tbody) return;
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    var styleAcoes = isCliente ? "display:none;" : "";
+
+    if (!items || !items.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma unidade encontrada.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function(item) {
+      var id = escapeHtml_(item.ID);
+      var status = String(item.STATUS || "").toUpperCase();
+
+      var acoesHtml = isCliente ? "" :
+        '<td style="' + styleAcoes + '">' +
+          '<div class="table-actions">' +
+            '<button class="btn-info" type="button" onclick="unidadesEditar_(\'' + id + '\')">Editar</button>' +
+            (
+              status === "ATIVO"
+                ? '<button class="btn-warning" type="button" onclick="unidadesInativar_(\'' + id + '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="unidadesReativar_(\'' + id + '\')">Reativar</button>'
+            ) +
+            '<button class="btn-danger" type="button" onclick="unidadesExcluir_(\'' + id + '\')">Excluir</button>' +
+          '</div>' +
+        '</td>';
+
+      return (
+        '<tr>' +
+          '<td>' + escapeHtml_(item.CLIENTE_NOME) + '</td>' +
+          '<td>' + escapeHtml_(item.NOME_UNIDADE) + '</td>' +
+          '<td>' + formatarCnpjFront_(item.CNPJ_UNIDADE) + '</td>' +
+          '<td>' + escapeHtml_(item.CIDADE) + '</td>' +
+          '<td>' + escapeHtml_(item.UF) + '</td>' +
+          '<td>' + escapeHtml_(item.RESPONSAVEL) + '</td>' +
+          '<td>' + escapeHtml_(item.TELEFONE) + '</td>' +
+          '<td>' + obterBadgeStatusHtml_(status) + '</td>' +
+          acoesHtml +
+        '</tr>'
+      );
+    }).join("");
+  }
+
+  function unidadesNovo_() {
+    UNIDADES_STATE.editingId = "";
+    unidadesLimparFormulario_();
+
+    var titulo = document.getElementById("unidadesFormTitulo");
+    var helper = document.getElementById("unidadesHelper");
+    if (titulo) titulo.innerText = "Nova unidade";
+    if (helper) helper.innerText = "Preencha os dados da unidade e clique em salvar.";
+
+    if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
+      carregarClientesAtivosParaUnidades_();
+    }
+  }
+
+  function unidadesLimparFormulario_() {
+    setSelectValueSafe_("uni_cliente_id", "");
+    setValue_("uni_nome_unidade", "");
+    setValue_("uni_cnpj_unidade", "");
+    setValue_("uni_endereco", "");
+    setValue_("uni_cidade", "");
+    setValue_("uni_uf", "");
+    setValue_("uni_responsavel", "");
+    setValue_("uni_telefone", "");
+    setValue_("uni_status", "ATIVO");
+  }
+
+  function unidadesLerFormulario_() {
+    return {
+      CLIENTE_ID: getValue_("uni_cliente_id"),
+      NOME_UNIDADE: getValue_("uni_nome_unidade"),
+      CNPJ_UNIDADE: getValue_("uni_cnpj_unidade"),
+      ENDERECO: getValue_("uni_endereco"),
+      CIDADE: getValue_("uni_cidade"),
+      UF: getValue_("uni_uf"),
+      RESPONSAVEL: getValue_("uni_responsavel"),
+      TELEFONE: getValue_("uni_telefone")
+    };
+  }
+
+  function unidadesSalvar_() {
+    if (!SESSION) return;
+
+    var payload = unidadesLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.NOME_UNIDADE) return alert("Informe o nome da unidade.");
+    payload.UF = String(payload.UF || "").trim().toUpperCase();
+
+    if (UNIDADES_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar unidade.");
+          alert(res.message || "Unidade atualizada com sucesso.");
+          UNIDADES_STATE.editingId = "";
+          unidadesNovo_();
+          if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+        })
+        .withFailureHandler(function(err) {
+          console.error("Falha ao atualizar unidade:", err);
+          alert("Erro de comunicação ao atualizar unidade.");
+        })
+        .unidadesAtualizar(SESSION, UNIDADES_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar unidade.");
+        alert(res.message || "Unidade cadastrada com sucesso.");
+        unidadesNovo_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao criar unidade:", err);
+        alert("Erro de comunicação ao criar unidade.");
+      })
+      .unidadesCriar(SESSION, payload);
+  }
+
+  function unidadesEditar_(id) {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) return alert("Unidade não encontrada.");
+
+        var item = res.item;
+        UNIDADES_STATE.editingId = String(item.ID || "");
+
+        if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
+          carregarClientesAtivosParaUnidades_();
+        }
+
+        setSelectValueSafe_("uni_cliente_id", item.CLIENTE_ID || "");
+        setValue_("uni_nome_unidade", item.NOME_UNIDADE || "");
+        setValue_("uni_cnpj_unidade", item.CNPJ_UNIDADE || "");
+        setValue_("uni_endereco", item.ENDERECO || "");
+        setValue_("uni_cidade", item.CIDADE || "");
+        setValue_("uni_uf", item.UF || "");
+        setValue_("uni_responsavel", item.RESPONSAVEL || "");
+        setValue_("uni_telefone", item.TELEFONE || "");
+        setValue_("uni_status", item.STATUS || "ATIVO");
+
+        var titulo = document.getElementById("unidadesFormTitulo");
+        var helper = document.getElementById("unidadesHelper");
+        if (titulo) titulo.innerText = "Editar unidade";
+        if (helper) helper.innerText = "Editando unidade selecionada. Após ajustar os dados, clique em salvar.";
+
+        focusIfExists_("uni_nome_unidade");
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao buscar unidade:", err);
+        alert("Erro de comunicação ao buscar unidade.");
+      })
+      .unidadesObter(SESSION, id);
+  }
+
+  function unidadesInativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente inativar esta unidade?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar unidade.");
+        alert(res.message || "Unidade inativada com sucesso.");
+        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao inativar unidade:", err);
+        alert("Erro de comunicação ao inativar unidade.");
+      })
+      .unidadesInativar(SESSION, id);
+  }
+
+  function unidadesReativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente reativar esta unidade?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar unidade.");
+        alert(res.message || "Unidade reativada com sucesso.");
+        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao reativar unidade:", err);
+        alert("Erro de comunicação ao reativar unidade.");
+      })
+      .unidadesReativar(SESSION, id);
+  }
+
+  function unidadesExcluir_(id) {
+    if (!SESSION || !confirm("Deseja realmente excluir esta unidade? Esta ação remove o registro da planilha.")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir unidade.");
+        if (UNIDADES_STATE.editingId === id) unidadesNovo_();
+        alert(res.message || "Unidade excluída com sucesso.");
+        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .withFailureHandler(function(err) {
+        console.error("Falha ao excluir unidade:", err);
+        alert("Erro de comunicação ao excluir unidade.");
+      })
+      .unidadesExcluir(SESSION, id);
+  }
+
+  // GARANTE DISPONIBILIDADE GLOBAL
+  window.buscarCnpjAutomacao_ = buscarCnpjAutomacao_;
+  window.buscarCnpjCliente_ = buscarCnpjCliente_;
+  window.buscarCnpjUnidade_ = buscarCnpjUnidade_;
+
+  window.renderClientesModulo_ = renderClientesModulo_;
+  window.clientesPesquisar_ = clientesPesquisar_;
+  window.renderTabelaClientes_ = renderTabelaClientes_;
+  window.clientesNovo_ = clientesNovo_;
+  window.clientesLimparFormulario_ = clientesLimparFormulario_;
+  window.clientesLerFormulario_ = clientesLerFormulario_;
+  window.clientesSalvar_ = clientesSalvar_;
+  window.clientesEditar_ = clientesEditar_;
+  window.clientesInativar_ = clientesInativar_;
+  window.clientesReativar_ = clientesReativar_;
+  window.clientesExcluir_ = clientesExcluir_;
+
+  window.renderUnidadesModulo_ = renderUnidadesModulo_;
+  window.carregarClientesAtivosParaUnidades_ = carregarClientesAtivosParaUnidades_;
+  window.preencherComboClientesUnidades_ = preencherComboClientesUnidades_;
+  window.unidadesPesquisar_ = unidadesPesquisar_;
+  window.renderTabelaUnidades_ = renderTabelaUnidades_;
+  window.unidadesNovo_ = unidadesNovo_;
+  window.unidadesLimparFormulario_ = unidadesLimparFormulario_;
+  window.unidadesLerFormulario_ = unidadesLerFormulario_;
+  window.unidadesSalvar_ = unidadesSalvar_;
+  window.unidadesEditar_ = unidadesEditar_;
+  window.unidadesInativar_ = unidadesInativar_;
+  window.unidadesReativar_ = unidadesReativar_;
+  window.unidadesExcluir_ = unidadesExcluir_;
+</script>

@@ -1,0 +1,244 @@
+<script>
+  function renderMissoesModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    const isTecnico = USER_CONTEXT && USER_CONTEXT.perfil === "TECNICO";
+    const styleForm = isTecnico ? "display:none;" : "";
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Agenda e Missoes</h2>\n            <p class="content-subtitle">Agenda tecnica, check-in/out e apontamento de horas.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;">\n            <input id="missoesPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar missao..." onkeydown="if(event.key===\'Enter\') missoesPesquisar_()">\n            <button class="btn-secondary" type="button" onclick="missoesPesquisar_()">Pesquisar</button>\n            <button class="btn-primary" type="button" style="' +
+      (styleForm) +
+      '" onclick="missoesNova_()">+ Nova missao</button>\n          </div>\n        </div>\n        <div class="module-grid" style="' +
+      (isTecnico ? 'grid-template-columns:1fr;' : '') +
+      '">\n          <div class="form-card" style="' +
+      (styleForm) +
+      '">\n            <h3 class="section-card-title" id="missoesFormTitulo">Nova missao</h3>\n            <div class="form-grid">\n              <div class="full"><label>OS</label><select id="missao_os_id"></select></div>\n              <div class="full"><label>Tecnico</label><select id="missao_tecnico_id"></select></div>\n              <div class="full"><label>Titulo</label><input id="missao_titulo" type="text"></div>\n              <div class="full"><label>Descricao</label><textarea id="missao_descricao" rows="3"></textarea></div>\n              <div><label>Data</label><input id="missao_data" type="date"></div>\n              <div><label>Inicio previsto</label><input id="missao_hora_ini" type="time"></div>\n              <div><label>Fim previsto</label><input id="missao_hora_fim" type="time"></div>\n              <div><label>Horas previstas</label><input id="missao_horas_prev" type="number" min="0" step="0.25"></div>\n              <div class="full"><label>Observacoes</label><textarea id="missao_obs" rows="2"></textarea></div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="missoesSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="missoesNova_()">Limpar</button>\n            </div>\n          </div>\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead><tr><th>Data</th><th>OS</th><th>Titulo</th><th>Tecnico</th><th>Status</th><th>Acoes</th></tr></thead>\n                <tbody id="missoesTabelaBody"><tr><td colspan="6" class="empty-state">Pesquise para listar missoes.</td></tr></tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n      <div id="missaoModal" class="modal-overlay" style="display:none;"></div>';
+    missoesCarregarOpcoes_();
+  }
+
+  function missoesCarregarOpcoes_() {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Falha ao carregar opcoes.");
+      MISSOES_STATE.opcoes = res;
+      preencherSelectObj_("missao_os_id", res.os || [], "ID", "LABEL");
+      missoesPreencherTecnicos_(res.tecnicos || []);
+    }).missoesListarOpcoes(SESSION);
+  }
+
+  function missoesPreencherTecnicos_(lista) {
+    const el = document.getElementById("missao_tecnico_id"); if (!el) return;
+    if (!lista || !lista.length) {
+      el.innerHTML = '<option value="">Nenhum tecnico ativo cadastrado. Cadastre um tecnico em Tecnicos de Campo.</option>';
+      return;
+    }
+    el.innerHTML = '<option value="">Selecione</option>' + lista.map(function(t) {
+      return '<option value="' + escapeHtml_(t.ID) + '">' + escapeHtml_(t.LABEL || t.NOME || t.ID) + '</option>';
+    }).join("");
+  }
+
+  function missoesPesquisar_() {
+    const body = document.getElementById("missoesTabelaBody");
+    if (body) body.innerHTML = '<tr><td colspan="6" class="empty-state">Buscando...</td></tr>';
+    google.script.run.withSuccessHandler(function(res) {
+      renderTabelaMissoes_((res && res.items) || []);
+    }).missoesPesquisar(SESSION, getValue_("missoesPesquisa"));
+  }
+
+  function renderTabelaMissoes_(items) {
+    const body = document.getElementById("missoesTabelaBody");
+    if (!body) return;
+    if (!items.length) {
+      body.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma missao encontrada.</td></tr>';
+      return;
+    }
+    const isTecnico = USER_CONTEXT && USER_CONTEXT.perfil === "TECNICO";
+    body.innerHTML = items.map(function(i) {
+      const id = escapeHtml_(i.ID);
+      const editar = isTecnico ? "" : '<button class="btn-info" type="button" onclick="missoesEditar_(\'' +
+        (id) +
+        '\')">Editar</button>';
+      return '<tr>\n        <td>' +
+        (formatarDataFront_(i.DATA_AGENDADA)) +
+        '</td>\n        <td>' +
+        (escapeHtml_(i.NUMERO_OS)) +
+        '</td>\n        <td>' +
+        (escapeHtml_(i.TITULO)) +
+        '</td>\n        <td>' +
+        (escapeHtml_(i.TECNICO_NOME || i.TECNICO_ID)) +
+        '</td>\n        <td>' +
+        (obterBadgeStatusHtml_(i.STATUS)) +
+        '</td>\n        <td><div class="table-actions">\n          ' +
+        (editar) +
+        '\n          <button class="btn-secondary" type="button" onclick="missoesAbrirOperacao_(\'' +
+        (id) +
+        '\')">Operar</button>\n        </div></td>\n      </tr>';
+    }).join("");
+  }
+
+  function missoesNova_() {
+    MISSOES_STATE.editingId = "";
+    ["missao_os_id","missao_tecnico_id","missao_titulo","missao_descricao","missao_data","missao_hora_ini","missao_hora_fim","missao_horas_prev","missao_obs"].forEach(id => setValue_(id, ""));
+    const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Nova missao";
+  }
+
+  function missoesPayload_() {
+    const tecnico = missoesTecnicoSelecionado_();
+    return {
+      OS_ID: getValue_("missao_os_id"),
+      TECNICO_ID: getValue_("missao_tecnico_id"),
+      TECNICO_USUARIO_ID: tecnico.USUARIO_ID || "",
+      TITULO: getValue_("missao_titulo"),
+      DESCRICAO: getValue_("missao_descricao"),
+      DATA_AGENDADA: getValue_("missao_data"),
+      HORA_INICIO_PREV: getValue_("missao_hora_ini"),
+      HORA_FIM_PREV: getValue_("missao_hora_fim"),
+      HORAS_PREVISTAS: getValue_("missao_horas_prev"),
+      OBSERVACOES: getValue_("missao_obs")
+    };
+  }
+
+  function missoesTecnicoSelecionado_() {
+    const id = getValue_("missao_tecnico_id");
+    return ((MISSOES_STATE.opcoes && MISSOES_STATE.opcoes.tecnicos) || []).find(t => t.ID === id) || {};
+  }
+
+  function missoesSalvar_() {
+    const payload = missoesPayload_();
+    if (!payload.OS_ID) return alert("Selecione a OS.");
+    if (!payload.TECNICO_ID) return alert("Selecione o tecnico.");
+    if (!payload.TITULO) return alert("Informe o titulo.");
+    if (payload.TECNICO_ID && !payload.TECNICO_USUARIO_ID) {
+      alert("Aviso: tecnico selecionado ainda nao possui usuario vinculado. A missao sera salva, mas ele so vera a missao apos vincular um usuario no cadastro de Tecnicos de Campo.");
+    }
+    const runner = google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar missao.");
+      alert((res.message || "Salvo.") + (res.warning ? "\n\n" + res.warning : ""));
+      missoesNova_(); missoesPesquisar_();
+    });
+    if (MISSOES_STATE.editingId) runner.missoesAtualizar(SESSION, MISSOES_STATE.editingId, payload);
+    else runner.missoesCriar(SESSION, payload);
+  }
+
+  function missoesEditar_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success || !res.item) return alert("Missao nao encontrada.");
+      const i = res.item;
+      MISSOES_STATE.editingId = i.ID;
+      setValue_("missao_os_id", i.OS_ID);
+      setValue_("missao_tecnico_id", i.TECNICO_ID);
+      setValue_("missao_titulo", i.TITULO);
+      setValue_("missao_descricao", i.DESCRICAO);
+      setValue_("missao_data", i.DATA_AGENDADA);
+      setValue_("missao_hora_ini", i.HORA_INICIO_PREV);
+      setValue_("missao_hora_fim", i.HORA_FIM_PREV);
+      setValue_("missao_horas_prev", i.HORAS_PREVISTAS);
+      setValue_("missao_obs", i.OBSERVACOES);
+      const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Editar missao";
+    }).missoesObter(SESSION, id);
+  }
+
+  function missoesAbrirOperacao_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success || !res.item) return alert("Missao nao encontrada.");
+      MISSOES_STATE.operando = res.item;
+      renderMissaoModal_(res.item);
+      missoesCarregarApontamentos_(id);
+    }).missoesObter(SESSION, id);
+  }
+
+  function renderMissaoModal_(m) {
+    const modal = document.getElementById("missaoModal");
+    if (!modal) return;
+    modal.innerHTML = '\n      <div class="modal-card" style="max-width:760px;">\n        <div class="modal-header">\n          <h3 class="modal-title">' +
+      (escapeHtml_(m.TITULO || "Missao")) +
+      '</h3>\n          <button class="btn-secondary" type="button" onclick="missoesFecharModal_()">Fechar</button>\n        </div>\n        <div class="modal-body">\n          <p style="margin:0 0 12px;color:var(--muted);">' +
+      (escapeHtml_(m.NUMERO_OS)) +
+      ' | ' +
+      (escapeHtml_(m.STATUS)) +
+      '</p>\n          <div class="form-grid">\n            <div><label>Latitude</label><input id="missao_lat" type="text"></div>\n            <div><label>Longitude</label><input id="missao_lng" type="text"></div>\n            <div><label>KM saida</label><input id="missao_km_saida" type="number" min="0"></div>\n            <div><label>KM chegada</label><input id="missao_km_chegada" type="number" min="0"></div>\n            <div class="full"><label>Conclusao tecnica</label><textarea id="missao_conclusao" rows="3"></textarea></div>\n          </div>\n          <div class="form-actions">\n            <button class="btn-primary" type="button" onclick="missoesCheckin_()">Check-in</button>\n            <button class="btn-success" type="button" onclick="missoesCheckout_()">Check-out</button>\n            <button class="btn-secondary" type="button" onclick="missoesAbrirExecucaoOS_()">Executar OS</button>\n          </div>\n          <h3 class="section-card-title" style="margin-top:18px;">Apontamento de horas</h3>\n          <div class="form-grid">\n            <div><label>Data</label><input id="apont_data" type="date"></div>\n            <div><label>Inicio</label><input id="apont_ini" type="time"></div>\n            <div><label>Fim</label><input id="apont_fim" type="time"></div>\n            <div class="full"><label>Atividade</label><input id="apont_atividade" type="text"></div>\n            <div class="full"><label>Observacoes</label><input id="apont_obs" type="text"></div>\n          </div>\n          <div class="form-actions"><button class="btn-secondary" type="button" onclick="missoesApontar_()">Adicionar horas</button></div>\n          <div class="table-wrap">\n            <table class="table"><thead><tr><th>Data</th><th>Inicio</th><th>Fim</th><th>Horas</th><th>Atividade</th></tr></thead><tbody id="apontBody"></tbody></table>\n          </div>\n        </div>\n      </div>';
+    modal.style.display = "flex";
+    tentarPreencherGeolocMissao_();
+  }
+
+  function tentarPreencherGeolocMissao_() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      setValue_("missao_lat", pos.coords.latitude);
+      setValue_("missao_lng", pos.coords.longitude);
+    }, function() {}, { enableHighAccuracy: true, timeout: 5000 });
+  }
+
+  function missoesFecharModal_() {
+    const modal = document.getElementById("missaoModal");
+    if (modal) modal.style.display = "none";
+    missoesPesquisar_();
+  }
+
+  function missoesCheckin_() {
+    const m = MISSOES_STATE.operando;
+    if (!m) return;
+    google.script.run.withSuccessHandler(function(res) { alert((res && res.message) || "Check-in feito."); }).missoesCheckin(SESSION, m.ID, {
+      LAT: getValue_("missao_lat"),
+      LNG: getValue_("missao_lng"),
+      KM_SAIDA: getValue_("missao_km_saida")
+    });
+  }
+
+  function missoesCheckout_() {
+    const m = MISSOES_STATE.operando;
+    if (!m) return;
+    google.script.run.withSuccessHandler(function(res) { alert((res && res.message) || "Check-out feito."); missoesFecharModal_(); }).missoesCheckout(SESSION, m.ID, {
+      LAT: getValue_("missao_lat"),
+      LNG: getValue_("missao_lng"),
+      KM_CHEGADA: getValue_("missao_km_chegada"),
+      CONCLUSAO_TECNICA: getValue_("missao_conclusao")
+    });
+  }
+
+  function missoesAbrirExecucaoOS_() {
+    const m = MISSOES_STATE.operando;
+    if (!m || !m.OS_ID) return alert("Missao sem OS vinculada.");
+    if (typeof window.renderOSExecucaoModulo_ !== "function") {
+      console.error("[OS_EXEC] renderOSExecucaoModulo_ nao encontrada em Missoes.", typeof window.renderOSExecucaoModulo_);
+      return alert("Modulo de execucao de OS nao carregado. Recarregue a pagina e tente novamente.");
+    }
+    missoesFecharModal_();
+    OS_EXEC_STATE.osId = m.OS_ID;
+    window.renderOSExecucaoModulo_(m.OS_ID);
+    atualizarBadgeModulo_("os_execucao");
+  }
+
+  function missoesApontar_() {
+    const m = MISSOES_STATE.operando;
+    if (!m) return;
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao apontar.");
+      setValue_("apont_atividade", ""); setValue_("apont_obs", "");
+      missoesCarregarApontamentos_(m.ID);
+    }).missoesApontarHoras(SESSION, {
+      MISSAO_ID: m.ID,
+      DATA: getValue_("apont_data"),
+      HORA_INICIO: getValue_("apont_ini"),
+      HORA_FIM: getValue_("apont_fim"),
+      ATIVIDADE: getValue_("apont_atividade"),
+      OBSERVACOES: getValue_("apont_obs")
+    });
+  }
+
+  function missoesCarregarApontamentos_(missaoId) {
+    google.script.run.withSuccessHandler(function(res) {
+      const body = document.getElementById("apontBody");
+      if (!body) return;
+      const items = (res && res.items) || [];
+      body.innerHTML = items.length ? items.map(i => '<tr><td>' +
+        (formatarDataFront_(i.DATA)) +
+        '</td><td>' +
+        (escapeHtml_(i.HORA_INICIO)) +
+        '</td><td>' +
+        (escapeHtml_(i.HORA_FIM)) +
+        '</td><td>' +
+        (escapeHtml_(i.HORAS_TOTAL)) +
+        '</td><td>' +
+        (escapeHtml_(i.ATIVIDADE)) +
+        '</td></tr>').join("") : '<tr><td colspan="5" class="empty-state">Sem apontamentos.</td></tr>';
+    }).missoesListarApontamentos(SESSION, missaoId);
+  }
+</script>

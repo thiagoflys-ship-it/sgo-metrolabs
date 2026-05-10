@@ -1,0 +1,2541 @@
+<script>
+/* ================================================================
+ * JS_Mobile.html — SGO+ Campo
+ * Interface mobile própria para operação em campo
+ * Dependência: escapeHtml_() definida em JS_Core.html
+ * ================================================================ */
+
+var MOBILE_TELA_ATUAL = "home";
+
+/* ---- Estado: Nova OS ---- */
+var MOBILE_OS_OPCOES       = null;
+var MOBILE_OS_QUESTIONARIO = null;
+var MOBILE_OS_PREFILL      = null;
+
+/* ---- Estado: Minhas OS ---- */
+var MOBILE_MINHAS_OS_DADOS  = [];
+var MOBILE_MINHAS_OS_FILTRO = "todas";
+
+/* ---- Estado: Execucao mobile ---- */
+var MOBILE_EXEC_STATE = {
+  osId: null,
+  os: null,
+  checklistModelo: null,
+  checklist: [],
+  fotosFila: [],
+  respostas: {},
+  assinaturas: []
+};
+
+/* ---- Detecção ---- */
+
+function isMobile_() {
+  if (window.innerWidth <= 900) return true;
+  try {
+    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+  } catch(e) { return false; }
+}
+
+function mobileDeveAtivar_() {
+  try { return isMobile_(); } catch(e) { return false; }
+}
+
+/* ---- Entry point ---- */
+
+function renderMobileCampo_() {
+  var topbar  = document.querySelector(".topbar");
+  var sidebar = document.querySelector(".sidebar");
+  if (topbar)  topbar.style.display  = "none";
+  if (sidebar) sidebar.style.display = "none";
+
+  var div = document.getElementById("conteudo");
+  if (!div) return;
+  
+  div.innerHTML = `
+    <div class="mobile-shell" id="mobileCampoShell">
+      <div class="mobile-top">
+        <div class="mobile-top-brand">
+          <span class="mobile-top-title">SGO+ Campo</span>
+          <span class="mobile-top-sub">Operação em campo</span>
+        </div>
+        <button class="mobile-top-exit" type="button" onclick="mobileModoGestaoCompleto_()">&#8921; Gestão</button>
+      </div>
+      <div id="mobilePaneContainer" class="mobile-pane-container"></div>
+      <nav class="mobile-bottom-nav" id="mobileBottomNav">
+        <button class="mobile-nav-btn" id="mobileNavInicio" type="button" onclick="mobileAbrirTela_('home')">
+          <i class="fas fa-house mobile-nav-icon"></i>
+          <span class="mobile-nav-label">Início</span>
+        </button>
+        <button class="mobile-nav-btn" id="mobileNavOS" type="button" onclick="mobileAbrirTela_('minhas_os')">
+          <i class="fas fa-clipboard-list mobile-nav-icon"></i>
+          <span class="mobile-nav-label">Minhas OS</span>
+        </button>
+        <button class="mobile-nav-btn" id="mobileNavFrota" type="button" onclick="mobileAbrirTela_('frota')">
+          <i class="fas fa-car-side mobile-nav-icon"></i>
+          <span class="mobile-nav-label">Frota</span>
+        </button>
+        <button class="mobile-nav-btn" id="mobileNavQR" type="button" onclick="mobileAbrirTela_('qr')">
+          <i class="fas fa-qrcode mobile-nav-icon"></i>
+          <span class="mobile-nav-label">QR</span>
+        </button>
+        <button class="mobile-nav-btn" id="mobileNavMenu" type="button" onclick="mobileAbrirTela_('menu')">
+          <i class="fas fa-bars mobile-nav-icon"></i>
+          <span class="mobile-nav-label">Menu</span>
+        </button>
+      </nav>
+    </div>
+  `;
+  mobileAbrirTela_("home");
+}
+
+/* ---- Navegação interna ---- */
+
+function mobileAbrirTela_(nome) {
+  MOBILE_TELA_ATUAL = nome;
+
+  var container = document.getElementById("mobilePaneContainer");
+  if (!container) return;
+  
+  var navMap = {
+    home:     "mobileNavInicio",
+    minhas_os:"mobileNavOS",
+    frota:    "mobileNavFrota",
+    qr:       "mobileNavQR",
+    menu:     "mobileNavMenu"
+  };
+  
+  Object.keys(navMap).forEach(function(k) {
+    var btn = document.getElementById(navMap[k]);
+    if (btn) btn.classList.toggle("mobile-nav-ativo", k === nome);
+  });
+  
+  switch (nome) {
+    case "home":
+      container.innerHTML = mobileHtmlHome_();
+      break;
+    case "minhas_os":
+      MOBILE_MINHAS_OS_DADOS  = [];
+      MOBILE_MINHAS_OS_FILTRO = "todas";
+      container.innerHTML = mobileHtmlMinhasOS_();
+      mobileCarregarMinhasOS_();
+      break;
+    case "frota":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Frota",
+        "fas fa-car-side",
+        "Em breve: retirada, devolucao e abastecimento de veiculos sera implementada no Bloco 5-E."
+      );
+      break;
+    case "qr":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Ler QR",
+        "fas fa-qrcode",
+        "Em breve: leitura de QR Code de equipamentos sera implementada no Bloco 5-F."
+      );
+      break;
+    case "menu":
+      container.innerHTML = mobileHtmlMenu_();
+      break;
+    case "cliente":
+      container.innerHTML = mobileHtmlClienteForm_();
+      break;
+    case "unidade":
+      container.innerHTML = mobileHtmlUnidadeForm_();
+      mobileCarregarClientesSelect_("mUnidadeClienteId");
+      break;
+    case "equipamento":
+      MOBILE_EQUIP_FOTOS = { plaqueta: null, equipamento: null };
+      container.innerHTML = mobileHtmlEquipamentoForm_();
+      mobileCarregarClientesEquip_("mEquipClienteId");
+      break;
+    case "nova_os":
+      MOBILE_OS_OPCOES       = null;
+      MOBILE_OS_QUESTIONARIO = null;
+      container.innerHTML = mobileHtmlNovaOS_();
+      mobileCarregarOpcoesOS_();
+      break;
+    case "documentos":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Documentos",
+        "fas fa-folder-open",
+        "Em breve: acesso a documentos técnicos será implementado no Bloco 5-F."
+      );
+      break;
+    default:
+      container.innerHTML = mobileHtmlPlaceholder_(nome, "fas fa-clock", "Em desenvolvimento.");
+  }
+
+  container.scrollTop = 0;
+}
+
+function mobileVoltar_() {
+  mobileAbrirTela_("home");
+}
+
+/* ---- Pane: Home ---- */
+
+function mobileHtmlHome_() {
+  var nome = "Tecnico";
+  if (USER_CONTEXT) {
+    var n = USER_CONTEXT.nome || USER_CONTEXT.usuario || "";
+    if (n) nome = n.split(" ")[0];
+  }
+
+  var cards = [
+    { tela: "cliente",     icone: "fas fa-building",       label: "+ Cliente",  cor: "#dbeafe" },
+    { tela: "unidade",     icone: "fas fa-location-dot",   label: "+ Unidade",  cor: "#dcfce7" },
+    { tela: "equipamento", icone: "fas fa-microscope",     label: "+ Equip.",   cor: "#fef3c7" },
+    { tela: "nova_os",     icone: "fas fa-plus-circle",    label: "Nova OS",    cor: "#ede9fe" },
+    { tela: "minhas_os",   icone: "fas fa-clipboard-list", label: "Minhas OS",  cor: "#e0f2fe" },
+    { tela: "frota",       icone: "fas fa-car-side",       label: "Frota",      cor: "#d1fae5" },
+    { tela: "qr",          icone: "fas fa-qrcode",         label: "Ler QR",     cor: "#e0e7ff" },
+    { tela: "documentos",  icone: "fas fa-folder-open",    label: "Documentos", cor: "#fce7f3" }
+  ];
+
+  return `
+    <div class="mobile-home">
+      <p class="mobile-saudacao">Olá, ${escapeHtml_(nome)}!</p>
+      <p class="mobile-saudacao-sub">Selecione uma ação</p>
+      <div class="mobile-grid">
+        ${cards.map(function(c) {
+          return `
+            <button class="mobile-card" type="button" style="background:${c.cor};" onclick="mobileAbrirTela_('${c.tela}')">
+              <i class="${c.icone} mobile-card-icon"></i>
+              <span class="mobile-card-label">${escapeHtml_(c.label)}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+/* ---- Pane: Minhas OS ---- */
+
+function mobileHtmlMinhasOS_() {
+  var filtros = [
+    { id: "todas",       label: "Todas"       },
+    { id: "hoje",        label: "Hoje"        },
+    { id: "abertas",     label: "Abertas"     },
+    { id: "em_execucao", label: "Em execução" },
+    { id: "concluidas",  label: "Concluídas"  }
+  ];
+  
+  return `
+    <div class="mobile-pane" style="padding-bottom:0;">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title" style="padding:0 0 4px;">Minhas OS</h2>
+      <div class="mobile-os-filtros" id="mOSFiltros">
+        ${filtros.map(function(f) {
+          return `<button class="mobile-os-filtro-btn${f.id === "todas" ? " mobile-os-filtro-ativo" : ""}" type="button" onclick="mobileOSFiltrar_('${f.id}')">${f.label}</button>`;
+        }).join("")}
+      </div>
+      <div id="mOSListaWrap" style="padding-top:4px;">
+        <div style="text-align:center;padding:48px 0;">
+          <i class="fas fa-spinner fa-spin" style="font-size:28px;color:var(--metro-green);"></i>
+          <div style="margin-top:12px;color:var(--muted);font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function mobileCarregarMinhasOS_() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] osListar:", res && res.total, "itens");
+      if (!res || !res.success) {
+        mobileOSRenderErroLista_((res && res.message) || "Erro ao carregar OS.");
+        return;
+      }
+      MOBILE_MINHAS_OS_DADOS = res.items || [];
+      mobileOSRenderCards_(MOBILE_MINHAS_OS_FILTRO);
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] osListar failure:", err);
+      mobileOSRenderErroLista_("Erro ao carregar: " + (err.message || String(err)));
+    })
+    .osListar(SESSION);
+}
+
+function mobileOSRenderErroLista_(msg) {
+  var wrap = document.getElementById("mOSListaWrap");
+  if (!wrap) return;
+  
+  wrap.innerHTML = `
+    <div class="mobile-placeholder-box" style="background:#fef2f2;border-color:#fca5a5;margin:16px;">
+      <i class="fas fa-circle-exclamation" style="font-size:32px;color:#ef4444;display:block;margin-bottom:10px;"></i>
+      <div style="font-size:13px;color:#b91c1c;">${escapeHtml_(msg)}</div>
+      <button class="mobile-btn-secondary" type="button" onclick="mobileCarregarMinhasOS_()" style="margin-top:14px;">Tentar novamente</button>
+    </div>
+  `;
+}
+
+function mobileOSFiltrar_(filtro) {
+  MOBILE_MINHAS_OS_FILTRO = filtro;
+  var btns = document.querySelectorAll(".mobile-os-filtro-btn");
+  var ids  = ["todas","hoje","abertas","em_execucao","concluidas"];
+  
+  btns.forEach(function(b, i) {
+    b.classList.toggle("mobile-os-filtro-ativo", ids[i] === filtro);
+  });
+  mobileOSRenderCards_(filtro);
+}
+
+function mobileOSRenderCards_(filtro) {
+  var wrap = document.getElementById("mOSListaWrap");
+  if (!wrap) return;
+
+  var itens = MOBILE_MINHAS_OS_DADOS;
+  var hoje  = new Date().toISOString().substring(0, 10);
+
+  if (filtro === "hoje") {
+    itens = itens.filter(function(o) {
+      return (o.DATA_AGENDADA && String(o.DATA_AGENDADA).substring(0,10) === hoje) ||
+             (o.DATA_ABERTURA && String(o.DATA_ABERTURA).substring(0,10) === hoje);
+    });
+  } else if (filtro === "abertas") {
+    itens = itens.filter(function(o) {
+      var s = String(o.STATUS || "").toUpperCase();
+      return s === "ABERTA" || s === "AGENDADA";
+    });
+  } else if (filtro === "em_execucao") {
+    itens = itens.filter(function(o) {
+      return String(o.STATUS || "").toUpperCase() === "EM_EXECUCAO";
+    });
+  } else if (filtro === "concluidas") {
+    itens = itens.filter(function(o) {
+      var s = String(o.STATUS || "").toUpperCase();
+      return ["CONCLUIDA","CONCLUIDA_TECNICAMENTE","APROVADA","FATURADA"].indexOf(s) >= 0;
+    });
+  }
+
+  if (!itens.length) {
+    wrap.innerHTML = `
+      <div class="mobile-placeholder-box" style="background:#f0f9ff;border-color:#bae6fd;margin:16px;">
+        <i class="fas fa-clipboard-list" style="font-size:36px;color:#0ea5e9;display:block;margin-bottom:10px;"></i>
+        <div style="font-size:13px;color:#0369a1;">Nenhuma OS encontrada para este filtro.</div>
+      </div>
+    `;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="mobile-os-lista">
+      ${itens.map(function(o) { return mobileOSRenderCard_(o); }).join("")}
+    </div>
+  `;
+}
+
+function mobileOSBadgeStatus_(status) {
+  var s = String(status || "").toUpperCase();
+  var cor = "#6b7280", bg = "#f3f4f6";
+  
+  if (s === "ABERTA") { cor = "#1d4ed8"; bg = "#dbeafe"; }
+  else if (s === "AGENDADA") { cor = "#7c3aed"; bg = "#ede9fe"; }
+  else if (s === "EM_EXECUCAO") { cor = "#059669"; bg = "#d1fae5"; }
+  else if (s === "CONCLUIDA" || s === "CONCLUIDA_TECNICAMENTE") { cor = "#065f46"; bg = "#d1fae5"; }
+  else if (s === "APROVADA") { cor = "#065f46"; bg = "#bbf7d0"; }
+  else if (s === "CANCELADA") { cor = "#991b1b"; bg = "#fee2e2"; }
+  
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${bg};color:${cor};">${escapeHtml_(s.replace(/_/g," "))}</span>`;
+}
+
+function mobileOSBadgePrioridade_(prioridade) {
+  var p = String(prioridade || "").toUpperCase();
+  var cor = "#6b7280", bg = "#f3f4f6";
+  
+  if (p === "URGENTE") { cor = "#991b1b"; bg = "#fee2e2"; }
+  else if (p === "ALTA") { cor = "#c2410c"; bg = "#ffedd5"; }
+  else if (p === "NORMAL") { cor = "#1d4ed8"; bg = "#dbeafe"; }
+  
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;background:${bg};color:${cor};">${escapeHtml_(p || "NORMAL")}</span>`;
+}
+
+function mobileOSRenderCard_(o) {
+  var osId    = String(o.ID || "");
+  var numero  = escapeHtml_(o.NUMERO_OS || o.ID || "OS");
+  var cliente = escapeHtml_(o.CLIENTE_NOME || o.CLIENTE_ID || "");
+  var unidade = escapeHtml_(o.UNIDADE_NOME || o.UNIDADE_ID || "");
+  var equip   = escapeHtml_([o.EQUIPAMENTO_TAG, o.EQUIPAMENTO_TIPO].filter(Boolean).join(" / ") || o.EQUIPAMENTO_ID || "");
+  var tipo    = escapeHtml_(String(o.TIPO_OS || "").replace(/_/g," "));
+  var dataAgd = o.DATA_AGENDADA ? String(o.DATA_AGENDADA).substring(0,16).replace("T"," ") : "";
+  var temQuest = !!(o.QUESTIONARIO_MODELO_ID);
+
+  return `
+    <div class="mobile-os-card">
+      <div class="mobile-os-card-header">
+        <span class="mobile-os-numero">${numero}</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          ${mobileOSBadgeStatus_(o.STATUS)} ${mobileOSBadgePrioridade_(o.PRIORIDADE)}
+        </div>
+      </div>
+      <div class="mobile-os-card-body">
+        ${cliente ? `<div class="mobile-os-row"><i class="fas fa-building"></i>${cliente}</div>` : ''}
+        ${unidade ? `<div class="mobile-os-row"><i class="fas fa-location-dot"></i>${unidade}</div>` : ''}
+        ${equip ? `<div class="mobile-os-row"><i class="fas fa-microscope"></i>${equip}</div>` : ''}
+        ${tipo ? `<div class="mobile-os-row"><i class="fas fa-tag"></i>${tipo}</div>` : ''}
+        ${dataAgd ? `<div class="mobile-os-row"><i class="fas fa-calendar"></i>${escapeHtml_(dataAgd)}</div>` : ''}
+        ${temQuest ? `<div class="mobile-os-row" style="color:#15803d;"><i class="fas fa-list-check" style="color:#16a34a;"></i>Questionário vinculado</div>` : ''}
+      </div>
+      <div class="mobile-os-card-footer">
+        <button class="mobile-btn-secondary" type="button" style="flex:1;" onclick="mobileOSExecutar_('${osId}')">
+          <i class="fas fa-eye" style="margin-right:6px;"></i>Abrir
+        </button>
+        <button class="mobile-btn-primary" type="button" style="flex:1;" onclick="mobileOSExecutar_('${osId}')">
+          <i class="fas fa-play" style="margin-right:6px;"></i>Executar
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function mobileOSExecutar_(osId) {
+  console.log("[OS_EXEC] mobileOSExecutar_", osId);
+  var dlg = document.getElementById("mOSDialogPos");
+  if (dlg) dlg.remove();
+  
+  if (!osId) {
+    mobileToast_("ID da OS não localizado. Atualize a lista e tente novamente.", "erro");
+    return;
+  }
+
+  mobileRenderExecucaoOS_(osId);
+}
+
+/* ---- Execucao mobile nativa ---- */
+
+function mobileRenderExecucaoOS_(osId) {
+  MOBILE_TELA_ATUAL = "execucao_os";
+  MOBILE_EXEC_STATE = {
+    osId: osId,
+    os: null,
+    checklistModelo: null,
+    checklist: [],
+    fotosFila: [],
+    respostas: {},
+    assinaturas: []
+  };
+  
+  var container = document.getElementById("mobilePaneContainer");
+  if (!container) return;
+  
+  container.innerHTML = `
+    <div class="mobile-pane" style="padding:12px 12px 88px;">
+      <button class="mobile-back" type="button" onclick="mobileAbrirTela_('minhas_os')">
+        <i class="fas fa-arrow-left"></i> Minhas OS
+      </button>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;">
+        <div>
+          <h2 class="mobile-pane-title" id="mExecTitulo" style="padding:0;margin:0;">Execução de OS</h2>
+          <p class="mobile-pane-sub" id="mExecSub" style="margin:4px 0 0;">Carregando...</p>
+        </div>
+        <span id="mExecStatusBadge" style="display:inline-flex;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800;padding:5px 9px;white-space:nowrap;">OS</span>
+      </div>
+      <div id="mExecSteps" style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:12px 0 14px;">
+        ${mobileExecStepBtnHtml_(1, "Resumo")}
+        ${mobileExecStepBtnHtml_(2, "Check")}
+        ${mobileExecStepBtnHtml_(3, "Fotos")}
+        ${mobileExecStepBtnHtml_(4, "Relato")}
+        ${mobileExecStepBtnHtml_(5, "Assin.")}
+        ${mobileExecStepBtnHtml_(6, "Fim")}
+      </div>
+      <div id="mExecPane1"></div>
+      <div id="mExecPane2" style="display:none;"></div>
+      <div id="mExecPane3" style="display:none;"></div>
+      <div id="mExecPane4" style="display:none;"></div>
+      <div id="mExecPane5" style="display:none;"></div>
+      <div id="mExecPane6" style="display:none;"></div>
+    </div>
+  `;
+  
+  mobileExecStep_(1);
+  mobileExecCarregarOS_();
+}
+
+function mobileExecStepBtnHtml_(n, label) {
+  return `
+    <button id="mExecStepBtn${n}" type="button" onclick="mobileExecStep_(${n})" style="border:1px solid var(--border);background:#fff;border-radius:8px;min-height:42px;padding:4px 2px;font-size:10px;font-weight:800;color:var(--muted);">
+      <span style="display:block;font-size:13px;">${n}</span>
+      <span>${label}</span>
+    </button>
+  `;
+}
+
+function mobileExecCarregarOS_() {
+  var pane = document.getElementById("mExecPane1");
+  if (pane) pane.innerHTML = mobileExecLoadingHtml_("Carregando OS...");
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success || !res.item) {
+        if (pane) pane.innerHTML = mobileExecErroHtml_((res && res.message) || "OS não encontrada.");
+        return;
+      }
+      var os = res.item;
+      MOBILE_EXEC_STATE.os = os;
+      var titulo = document.getElementById("mExecTitulo");
+      var sub = document.getElementById("mExecSub");
+      var badge = document.getElementById("mExecStatusBadge");
+      
+      if (titulo) titulo.textContent = "OS " + (os.NUMERO_OS || os.ID || "");
+      if (sub) sub.textContent = [os.CLIENTE_NOME, os.UNIDADE_NOME].filter(Boolean).join(" | ") || "Execução em campo";
+      if (badge) badge.textContent = os.STATUS || "OS";
+      
+      mobileExecRenderResumo_();
+      mobileExecRenderFotos_();
+      mobileExecRenderRelato_();
+      mobileExecRenderAssinatura_();
+      mobileExecRenderConcluir_();
+      mobileExecCarregarChecklist_();
+      mobileExecCarregarFotosEnviadas_();
+      mobileExecCarregarAssinaturas_();
+    })
+    .withFailureHandler(function(err) {
+      if (pane) pane.innerHTML = mobileExecErroHtml_("Erro ao carregar OS: " + ((err && err.message) || String(err)));
+    })
+    .osObter(SESSION, MOBILE_EXEC_STATE.osId);
+}
+
+function mobileExecStep_(n) {
+  for (var i = 1; i <= 6; i++) {
+    var pane = document.getElementById("mExecPane" + i);
+    var btn = document.getElementById("mExecStepBtn" + i);
+    if (pane) pane.style.display = i === n ? "" : "none";
+    
+    if (btn) {
+      btn.style.background = i === n ? "var(--metro-green)" : "#fff";
+      btn.style.color = i === n ? "#fff" : "var(--muted)";
+      btn.style.borderColor = i === n ? "var(--metro-green)" : "var(--border)";
+    }
+  }
+  
+  var container = document.getElementById("mobilePaneContainer");
+  if (container) container.scrollTop = 0;
+  
+  if (n === 5) setTimeout(function() {
+    mobileExecInitCanvas_("mExecAssTecCanvas", "mExecAssTecHint");
+    mobileExecInitCanvas_("mExecAssRespCanvas", "mExecAssRespHint");
+  }, 40);
+}
+
+function mobileExecRenderResumo_() {
+  var os = MOBILE_EXEC_STATE.os || {};
+  var pane = document.getElementById("mExecPane1");
+  if (!pane) return;
+  
+  var campo = function(label, val) {
+    return val ? `
+      <div style="padding:10px 0;border-bottom:1px solid #eef2f7;">
+        <div style="font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;">${label}</div>
+        <div style="font-size:14px;font-weight:700;margin-top:3px;color:var(--text);">${escapeHtml_(val)}</div>
+      </div>
+    ` : '';
+  };
+  
+  pane.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Resumo</div>
+      ${campo("Cliente", os.CLIENTE_NOME || os.CLIENTE_ID)}
+      ${campo("Unidade", os.UNIDADE_NOME || os.UNIDADE_ID)}
+      ${campo("Endereço", os.UNIDADE_ENDERECO || os.ENDERECO)}
+      ${campo("Equipamento", [os.EQUIPAMENTO_TAG, os.EQUIPAMENTO_TIPO, os.EQUIPAMENTO_MODELO].filter(Boolean).join(" - ") || os.EQUIPAMENTO_ID)}
+      ${campo("Tipo", os.TIPO_OS)}
+      ${campo("Prioridade", os.PRIORIDADE)}
+      ${campo("Agendamento", formatarDataFront_(os.DATA_AGENDADA) || os.DATA_AGENDADA)}
+      ${os.RELATO_CLIENTE ? `
+        <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-top:12px;">
+          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;">Relato do cliente</div>
+          <div style="font-size:13px;line-height:1.45;margin-top:5px;">${escapeHtml_(os.RELATO_CLIENTE)}</div>
+        </div>
+      ` : ''}
+      ${os.MISSAO_TECNICA ? `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin-top:12px;">
+          <div style="font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;">Orientação técnica</div>
+          <div style="font-size:13px;line-height:1.45;margin-top:5px;color:#1e3a8a;">${escapeHtml_(os.MISSAO_TECNICA)}</div>
+        </div>
+      ` : ''}
+    </div>
+    ${mobileExecNavHtml_(null, 2, "Ir para Checklist")}
+  `;
+}
+
+function mobileExecRenderChecklist_() {
+  var pane = document.getElementById("mExecPane2");
+  if (!pane) return;
+  var perguntas = MOBILE_EXEC_STATE.checklist || [];
+  var respostas = MOBILE_EXEC_STATE.respostas || {};
+  
+  if (!MOBILE_EXEC_STATE.os || !MOBILE_EXEC_STATE.os.QUESTIONARIO_MODELO_ID) {
+    pane.innerHTML = mobileExecInfoHtml_("Esta OS não possui checklist vinculado.") + mobileExecNavHtml_(1, 3, "Ir para Fotos");
+    return;
+  }
+  
+  if (!perguntas.length) {
+    pane.innerHTML = mobileExecLoadingHtml_("Carregando checklist...");
+    return;
+  }
+  
+  pane.innerHTML = `
+    <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Checklist</div>
+    ${perguntas.map(function(p, idx) {
+      var r = respostas[p.ID] || {};
+      return mobileExecPerguntaHtml_(p, r, idx);
+    }).join("")}
+    <button class="mobile-btn-primary" type="button" onclick="mobileExecSalvarChecklist_()" style="width:100%;margin-top:8px;">Salvar checklist</button>
+    ${mobileExecNavHtml_(1, 3, "Fotos")}
+  `;
+}
+
+function mobileExecPerguntaHtml_(p, r, idx) {
+  var pid = escapeHtml_(p.ID || "");
+  var valor = r.RESPOSTA || "";
+  var obs = r.OBSERVACAO || "";
+  var foto = r.EVIDENCIA_LINK || "";
+  var exigeFoto = p.TIPO_RESPOSTA === "FOTO" || p.EXIGE_FOTO_SE_NAO_OK === "S";
+  
+  return `
+    <div data-m-pergunta="${pid}" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="width:26px;height:26px;border-radius:50%;background:#ecfdf5;color:#047857;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;">${idx + 1}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;line-height:1.35;">${escapeHtml_(p.PERGUNTA || "")}${p.OBRIGATORIO === "S" ? ' <span style="color:#dc2626;">*</span>' : ''}</div>
+          ${p.AJUDA ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">${escapeHtml_(p.AJUDA)}</div>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:12px;">${mobileExecInputRespostaHtml_(p, valor)}</div>
+      <textarea class="m-exec-check-obs mobile-input" rows="2" placeholder="Observação, se necessário" style="margin-top:8px;width:100%;resize:vertical;">${escapeHtml_(obs)}</textarea>
+      ${exigeFoto ? `
+        <div style="margin-top:10px;">
+          <label class="mobile-btn-secondary" style="width:100%;display:flex;justify-content:center;align-items:center;cursor:pointer;">
+            <i class="fas fa-camera" style="margin-right:8px;"></i>Adicionar foto
+            <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="mobileExecFotoQuestao_(this,'${pid}')">
+          </label>
+          <input type="hidden" class="m-exec-check-foto" value="${escapeHtml_(foto)}">
+          <div id="mExecFotoStatus_${pid}" style="font-size:12px;font-weight:700;margin-top:7px;color:${foto ? '#059669' : 'var(--muted)'};">${foto ? 'Foto anexada' : 'Nenhuma foto anexada'}</div>
+        </div>
+      ` : `<input type="hidden" class="m-exec-check-foto" value="${escapeHtml_(foto)}">`}
+    </div>
+  `;
+}
+
+function mobileExecInputRespostaHtml_(p, valor) {
+  var tipo = String(p.TIPO_RESPOSTA || "SIM_NAO").toUpperCase();
+  
+  if (tipo === "TEXTO_LONGO") return `<textarea class="m-exec-check-resp mobile-input" rows="3" style="width:100%;resize:vertical;">${escapeHtml_(valor)}</textarea>`;
+  if (tipo === "TEXTO_CURTO") return `<input class="m-exec-check-resp mobile-input" type="text" value="${escapeHtml_(valor)}">`;
+  if (tipo === "NUMERO" || tipo === "MEDICAO") return `<input class="m-exec-check-resp mobile-input" type="number" value="${escapeHtml_(valor)}">`;
+  if (tipo === "DATA") return `<input class="m-exec-check-resp mobile-input" type="date" value="${escapeHtml_(valor)}">`;
+  if (tipo === "HORA") return `<input class="m-exec-check-resp mobile-input" type="time" value="${escapeHtml_(valor)}">`;
+  if (tipo === "FOTO") return `<input class="m-exec-check-resp" type="hidden" value="${escapeHtml_(valor)}">`;
+  
+  if (tipo === "MULTIPLA_ESCOLHA" || tipo === "SELECAO_UNICA") {
+    var opcoes = String(p.OPCOES || "").split(";").filter(Boolean);
+    return `
+      <select class="m-exec-check-resp mobile-input mobile-select">
+        <option value="">Selecione</option>
+        ${opcoes.map(function(o) { return `<option value="${escapeHtml_(o)}"${o === valor ? " selected" : ""}>${escapeHtml_(o)}</option>`; }).join("")}
+      </select>
+    `;
+  }
+  
+  var op = tipo === "CONFORME_NAO_CONFORME_NA" ? [["CONFORME","Conforme"],["NAO_CONFORME","Não conforme"],["NA","N/A"]] : [["SIM","Sim"],["NAO","Não"]];
+  
+  return `
+    <div style="display:grid;grid-template-columns:repeat(${op.length},1fr);gap:7px;">
+      ${op.map(function(o) {
+        return `
+          <label style="display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:800;background:${o[0] === valor ? '#dcfce7' : '#fff'};">
+            <input class="m-exec-check-resp" type="radio" name="m_resp_${escapeHtml_(p.ID)}" value="${o[0]}"${o[0] === valor ? " checked" : ""} style="margin-right:6px;">${o[1]}
+          </label>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function mobileExecSalvarChecklist_(silencioso, callback) {
+  var modelo = MOBILE_EXEC_STATE.checklistModelo || {};
+  
+  if (!modelo.ID) {
+    if (typeof callback === "function") callback({ success: true, skipped: true });
+    return;
+  }
+  
+  var respostas = [];
+  document.querySelectorAll("#mExecPane2 [data-m-pergunta]").forEach(function(row) {
+    var perguntaId = row.getAttribute("data-m-pergunta");
+    var p = (MOBILE_EXEC_STATE.checklist || []).filter(function(i) { return i.ID === perguntaId; })[0] || {};
+    var checked = row.querySelector(".m-exec-check-resp[type='radio']:checked");
+    var respEl = checked || row.querySelector(".m-exec-check-resp");
+    var respVal = (respEl && respEl.value) || "";
+    var fotoVal = (row.querySelector(".m-exec-check-foto") || {}).value || "";
+    if (String(p.TIPO_RESPOSTA || "").toUpperCase() === "FOTO" && !respVal) respVal = fotoVal;
+    
+    respostas.push({
+      MISSAO_ID: MOBILE_EXEC_STATE.os && MOBILE_EXEC_STATE.os.MISSAO_ID,
+      MODELO_ID: modelo.ID,
+      PERGUNTA_ID: perguntaId,
+      SECAO: p.SECAO,
+      PERGUNTA: p.PERGUNTA,
+      TIPO_RESPOSTA: p.TIPO_RESPOSTA,
+      OBRIGATORIO: p.OBRIGATORIO,
+      RESPOSTA: respVal,
+      OBSERVACAO: (row.querySelector(".m-exec-check-obs") || {}).value || "",
+      EVIDENCIA_LINK: fotoVal
+    });
+  });
+  
+  var motivoAlteracao = "";
+  if (!mobileExecStatusPermiteEdicao_() && mobileExecPodeEditarExecucao_()) {
+    motivoAlteracao = prompt("Informe o motivo para alterar questionário de OS já concluída:");
+    if (!motivoAlteracao) {
+      if (typeof callback === "function") callback({ success: false, message: "Motivo obrigatório." });
+      return;
+    }
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        respostas.forEach(function(r) { MOBILE_EXEC_STATE.respostas[r.PERGUNTA_ID] = r; });
+        if (!silencioso) mobileToast_("Checklist salvo.", "sucesso");
+      } else if (!silencioso) {
+        mobileToast_((res && res.message) || "Erro ao salvar checklist.", "erro");
+      }
+      if (typeof callback === "function") callback(res);
+    })
+    .withFailureHandler(function(err) {
+      if (!silencioso) mobileToast_("Erro ao salvar checklist.", "erro");
+      if (typeof callback === "function") callback({ success: false, message: err && err.message });
+    })
+    .checklistRespostasSalvar(SESSION, {
+      OS_ID: MOBILE_EXEC_STATE.osId,
+      MISSAO_ID: MOBILE_EXEC_STATE.os && MOBILE_EXEC_STATE.os.MISSAO_ID,
+      MODELO_ID: modelo.ID,
+      MOTIVO_ALTERACAO: motivoAlteracao,
+      RESPOSTAS: respostas
+    });
+}
+
+function mobileExecFotoQuestao_(input, perguntaId) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  input.value = "";
+  
+  var statusEl = document.getElementById("mExecFotoStatus_" + perguntaId);
+  if (statusEl) { statusEl.style.color = "var(--muted)"; statusEl.textContent = "Enviando foto..."; }
+  
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.replace(/^data:[^;]+;base64,/, "");
+    
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Erro ao enviar foto"; }
+          return;
+        }
+        var link = (res.item && res.item.LINK_DRIVE) || (res.item && res.item.FILE_ID) || "ok";
+        var row = document.querySelector('#mExecPane2 [data-m-pergunta="' + perguntaId + '"]');
+        
+        if (row) {
+          var fotoInput = row.querySelector(".m-exec-check-foto");
+          var respInput = row.querySelector(".m-exec-check-resp");
+          if (fotoInput) fotoInput.value = link;
+          if (respInput && respInput.type === "hidden") respInput.value = link;
+        }
+        if (statusEl) { statusEl.style.color = "#059669"; statusEl.textContent = "Foto anexada"; }
+      })
+      .withFailureHandler(function(err) {
+        if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Erro: " + ((err && err.message) || "falha"); }
+      })
+      .osFotoUploadBase64(SESSION, MOBILE_EXEC_STATE.osId, {
+        NOME_ARQUIVO: file.name,
+        MIME_TYPE: file.type || "image/jpeg",
+        BASE64_DATA: base64,
+        TIPO_FOTO: "CHECKLIST",
+        PERGUNTA_ID: perguntaId
+      });
+  };
+  reader.readAsDataURL(file);
+}
+
+function mobileExecFotoGeral_(input) {
+  var files = Array.prototype.slice.call(input.files || []);
+  input.value = "";
+  if (!files.length) return;
+  
+  var pendentes = files.length;
+  var status = document.getElementById("mExecFotosStatus");
+  if (status) status.textContent = "Enviando " + pendentes + " foto(s)...";
+  
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var base64 = e.target.result.replace(/^data:[^;]+;base64,/, "");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          MOBILE_EXEC_STATE.fotosFila.push({ nome: file.name, status: res && res.success ? "ok" : "erro" });
+          pendentes--;
+          if (pendentes <= 0) {
+            mobileExecCarregarFotosEnviadas_();
+            if (status) status.textContent = "Foto geral enviada.";
+          }
+        })
+        .withFailureHandler(function() {
+          MOBILE_EXEC_STATE.fotosFila.push({ nome: file.name, status: "erro" });
+          pendentes--;
+          if (pendentes <= 0 && status) status.textContent = "Uma ou mais fotos falharam.";
+        })
+        .osFotoUploadBase64(SESSION, MOBILE_EXEC_STATE.osId, {
+          NOME_ARQUIVO: file.name,
+          MIME_TYPE: file.type || "image/jpeg",
+          BASE64_DATA: base64,
+          TIPO_FOTO: "Outro"
+        });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function mobileExecRenderFotos_() {
+  var pane = document.getElementById("mExecPane3");
+  if (!pane) return;
+  
+  pane.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Fotos</div>
+      <label class="mobile-btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <i class="fas fa-camera" style="margin-right:8px;"></i>Adicionar foto geral
+        <input type="file" accept="image/*" capture="environment" multiple style="display:none;" onchange="mobileExecFotoGeral_(this)">
+      </label>
+      <div id="mExecFotosStatus" style="font-size:12px;color:var(--muted);font-weight:700;margin-top:8px;">Nenhuma foto nova selecionada.</div>
+      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;">
+        <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">Fotos registradas</div>
+        <div id="mExecFotosLista">${mobileExecLoadingHtml_("Carregando fotos...")}</div>
+      </div>
+    </div>
+    ${mobileExecNavHtml_(2, 4, "Relato")}
+  `;
+}
+
+function mobileExecSalvarRelato_(silencioso, callback) {
+  var relato = mobileValue_("mExecRelato");
+  var payload = {
+    RELATO_TECNICO: relato,
+    ENCERRAMENTO_TECNICO: relato,
+    SERVICO_EXECUTADO: relato,
+    RESULTADO_ATENDIMENTO: mobileValue_("mExecResultado"),
+    NECESSITA_RETORNO: !!(document.getElementById("mExecRetorno") || {}).checked,
+    NECESSITA_ORCAMENTO: !!(document.getElementById("mExecOrcamento") || {}).checked,
+    DIAGNOSTICO_FINAL: mobileValue_("mExecDiagnostico"),
+    CONDICAO_ENCONTRADA: mobileValue_("mExecCondicao"),
+    CAUSA_PROVAVEL: mobileValue_("mExecCausa"),
+    RECOMENDACAO: mobileValue_("mExecRecomendacao"),
+    PENDENCIAS: mobileValue_("mExecPendencias")
+  };
+  
+  if (!payload.RELATO_TECNICO && !silencioso) {
+    mobileToast_("Informe o relato do atendimento.", "erro");
+    return;
+  }
+  
+  if (!mobileExecStatusPermiteEdicao_() && mobileExecPodeEditarExecucao_()) {
+    payload.MOTIVO_ALTERACAO = prompt("Informe o motivo para alterar registro técnico de OS já concluída:");
+    if (!payload.MOTIVO_ALTERACAO) {
+      if (typeof callback === "function") callback({ success: false, message: "Motivo obrigatório." });
+      return;
+    }
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!silencioso) {
+        if (res && res.success) mobileToast_("Relato salvo.", "sucesso");
+        else mobileToast_((res && res.message) || "Erro ao salvar relato.", "erro");
+      }
+      if (typeof callback === "function") callback(res);
+    })
+    .withFailureHandler(function(err) {
+      if (!silencioso) mobileToast_("Erro ao salvar relato.", "erro");
+      if (typeof callback === "function") callback({ success: false, message: err && err.message });
+    })
+    .osSalvarRegistroTecnico(SESSION, MOBILE_EXEC_STATE.osId, payload);
+}
+
+function mobileExecRenderRelato_() {
+  var os = MOBILE_EXEC_STATE.os || {};
+  var pane = document.getElementById("mExecPane4");
+  if (!pane) return;
+  
+  var relato = os.RELATO_TECNICO || os.ENCERRAMENTO_TECNICO || os.SERVICO_EXECUTADO || "";
+  var resultado = os.RESULTADO_ATENDIMENTO || "";
+  
+  pane.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Relato</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <label class="mobile-label" style="margin:0;">Relato técnico *</label>
+        <button type="button" onclick="mobileIAMelhorar_()" style="font-size:11px;font-weight:700;padding:4px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;">&#10024; Melhorar texto</button>
+      </div>
+      <textarea id="mExecRelato" class="mobile-input" rows="6" style="width:100%;resize:vertical;" placeholder="Descreva o atendimento realizado...">${escapeHtml_(relato)}</textarea>
+      <div id="mIASugPanel" style="display:none;margin-top:8px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;padding:12px;"></div>
+      <label class="mobile-label" style="margin-top:10px;">Resultado</label>
+      <select id="mExecResultado" class="mobile-input mobile-select">
+        ${mobileOption_("","Selecione", resultado)}
+        ${mobileOption_("RESOLVIDO","Resolvido", resultado)}
+        ${mobileOption_("RESOLVIDO_COM_RESSALVA","Resolvido com ressalva", resultado)}
+        ${mobileOption_("NAO_RESOLVIDO","Não resolvido", resultado)}
+        ${mobileOption_("NECESSITA_ORCAMENTO","Necessita orçamento", resultado)}
+        ${mobileOption_("NECESSITA_RETORNO","Necessita retorno", resultado)}
+      </select>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:700;">
+        <input type="checkbox" id="mExecRetorno"${os.NECESSITA_RETORNO === "S" ? " checked" : ""}>Necessita retorno
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:700;">
+        <input type="checkbox" id="mExecOrcamento"${os.NECESSITA_ORCAMENTO === "S" ? " checked" : ""}>Necessita orçamento
+      </label>
+      <details style="border:1px solid var(--border);border-radius:10px;background:#fff;margin-top:12px;padding:10px 12px;">
+        <summary style="font-size:13px;font-weight:800;color:var(--metro-blue);cursor:pointer;">+ Informações técnicas complementares</summary>
+        <label class="mobile-label" style="margin-top:12px;">Diagnóstico final</label>
+        <textarea id="mExecDiagnostico" class="mobile-input" rows="3" style="width:100%;resize:vertical;">${escapeHtml_(os.DIAGNOSTICO_FINAL || "")}</textarea>
+        <label class="mobile-label" style="margin-top:10px;">Condição encontrada</label>
+        <textarea id="mExecCondicao" class="mobile-input" rows="2" style="width:100%;resize:vertical;">${escapeHtml_(os.CONDICAO_ENCONTRADA || "")}</textarea>
+        <label class="mobile-label" style="margin-top:10px;">Causa provável</label>
+        <textarea id="mExecCausa" class="mobile-input" rows="2" style="width:100%;resize:vertical;">${escapeHtml_(os.CAUSA_PROVAVEL || "")}</textarea>
+        <label class="mobile-label" style="margin-top:10px;">Recomendação</label>
+        <textarea id="mExecRecomendacao" class="mobile-input" rows="3" style="width:100%;resize:vertical;">${escapeHtml_(os.RECOMENDACAO || "")}</textarea>
+        <label class="mobile-label" style="margin-top:10px;">Pendências</label>
+        <textarea id="mExecPendencias" class="mobile-input" rows="2" style="width:100%;resize:vertical;">${escapeHtml_(os.PENDENCIAS || "")}</textarea>
+      </details>
+      <button class="mobile-btn-primary" type="button" onclick="mobileExecSalvarRelato_()" style="width:100%;margin-top:14px;">Salvar relato</button>
+    </div>
+    ${mobileExecNavHtml_(3, 5, "Assinatura")}
+  `;
+}
+
+function mobileIAMelhorar_() {
+  var texto = (document.getElementById("mExecRelato") || {}).value || "";
+  var painel = document.getElementById("mIASugPanel");
+  
+  if (!texto.trim()) { mobileToast_("Preencha o relato antes de usar a IA.", "erro"); return; }
+  
+  if (painel) {
+    painel.style.display = "block";
+    painel.innerHTML = `
+      <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;">&#9889; Processando com IA...</div>
+      <div style="font-size:12px;color:#6b7280;">Aguarde alguns segundos.</div>
+    `;
+  }
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!painel) return;
+      if (!res || !res.success) {
+        painel.innerHTML = `
+          <div style="font-size:11px;font-weight:800;color:#dc2626;">Erro da IA</div>
+          <div style="font-size:12px;color:#7f1d1d;margin-top:4px;">${escapeHtml_((res && res.message) || "Falha.")}</div>
+          <button class="mobile-btn-secondary" type="button" onclick="mobileIADescartar_()" style="margin-top:8px;">Fechar</button>
+        `;
+        return;
+      }
+      
+      painel.innerHTML = `
+        <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;">&#10024; Sugestão da IA — revise antes de usar:</div>
+        <div id="mIASugTexto" style="font-size:13px;color:#111827;white-space:pre-wrap;line-height:1.5;background:#fff;border:1px solid #dbeafe;border-radius:6px;padding:8px;margin-bottom:10px;max-height:180px;overflow-y:auto;">${escapeHtml_(res.texto)}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="mobile-btn-primary" type="button" onclick="mobileIAAplicar_()" style="flex:1;">Usar este texto</button>
+          <button class="mobile-btn-secondary" type="button" onclick="mobileIADescartar_()" style="flex:1;">Descartar</button>
+        </div>
+      `;
+    })
+    .withFailureHandler(function(err) {
+      if (!painel) return;
+      painel.innerHTML = `
+        <div style="font-size:11px;font-weight:800;color:#dc2626;">Erro de comunicação</div>
+        <div style="font-size:12px;color:#7f1d1d;margin-top:4px;">${escapeHtml_((err && err.message) || "Falha.")}</div>
+        <button class="mobile-btn-secondary" type="button" onclick="mobileIADescartar_()" style="margin-top:8px;">Fechar</button>
+      `;
+    })
+    .iaLapidarTexto(SESSION, { texto: texto, campo: "Relato técnico" });
+}
+
+function mobileIAAplicar_() {
+  var textoEl = document.getElementById("mIASugTexto");
+  var campoEl = document.getElementById("mExecRelato");
+  if (textoEl && campoEl) campoEl.value = textoEl.textContent;
+  mobileIADescartar_();
+  mobileToast_("Texto aplicado. Salve o relato quando estiver pronto.", "sucesso");
+}
+
+function mobileIADescartar_() {
+  var painel = document.getElementById("mIASugPanel");
+  if (painel) { painel.style.display = "none"; painel.innerHTML = ""; }
+}
+
+function mobileExecSalvarAssinatura_(tipo) {
+  var isTec = tipo === "TECNICO";
+  var nomeId = isTec ? "mExecAssTecNome" : "mExecAssRespNome";
+  var cargoId = isTec ? null : "mExecAssRespCargo";
+  var canvasId = isTec ? "mExecAssTecCanvas" : "mExecAssRespCanvas";
+  
+  var nome = mobileValue_(nomeId);
+  if (!nome) return mobileToast_("Informe o nome para assinar.", "erro");
+  
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  var dataUrl = canvas.toDataURL("image/png");
+  var blank = document.createElement("canvas");
+  blank.width = canvas.width; blank.height = canvas.height;
+  
+  if (dataUrl === blank.toDataURL()) return mobileToast_("Desenhe a assinatura antes de salvar.", "erro");
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) return mobileToast_((res && res.message) || "Erro ao salvar assinatura.", "erro");
+      mobileToast_("Assinatura salva.", "sucesso");
+      mobileExecCarregarAssinaturas_();
+    })
+    .withFailureHandler(function(err) {
+      mobileToast_("Erro ao salvar assinatura: " + ((err && err.message) || "falha"), "erro");
+    })
+    .assinaturasSalvar(SESSION, {
+      OS_ID: MOBILE_EXEC_STATE.osId,
+      TIPO_ASSINATURA: tipo,
+      TIPO: tipo,
+      ASSINADO_POR: nome,
+      CARGO: cargoId ? mobileValue_(cargoId) : "",
+      ASSINATURA_DATA_URL: dataUrl,
+      USER_AGENT: navigator.userAgent || ""
+    });
+}
+
+function mobileExecRenderAssinatura_() {
+  var os = MOBILE_EXEC_STATE.os || {};
+  var pane = document.getElementById("mExecPane5");
+  if (!pane) return;
+  
+  pane.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Assinatura do técnico</div>
+      <input id="mExecAssTecNome" class="mobile-input" placeholder="Nome do técnico" value="${escapeHtml_(os.TECNICO_NOME || (SESSION && SESSION.usuario) || "")}">
+      ${mobileExecCanvasHtml_("mExecAssTecCanvas", "mExecAssTecHint")}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecLimparCanvas_('mExecAssTecCanvas','mExecAssTecHint')">Limpar</button>
+        <button class="mobile-btn-primary" type="button" onclick="mobileExecSalvarAssinatura_('TECNICO')">Salvar</button>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Assinatura do responsável</div>
+      <input id="mExecAssRespNome" class="mobile-input" placeholder="Nome do responsável">
+      <input id="mExecAssRespCargo" class="mobile-input" placeholder="Cargo ou função" style="margin-top:8px;">
+      ${mobileExecCanvasHtml_("mExecAssRespCanvas", "mExecAssRespHint")}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecLimparCanvas_('mExecAssRespCanvas','mExecAssRespHint')">Limpar</button>
+        <button class="mobile-btn-primary" type="button" onclick="mobileExecSalvarAssinatura_('RESPONSAVEL')">Salvar</button>
+      </div>
+      <div id="mExecAssLista" style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;font-size:12px;color:var(--muted);">Nenhuma assinatura registrada.</div>
+    </div>
+    ${mobileExecNavHtml_(4, 6, "Concluir")}
+  `;
+}
+
+function mobileExecValidar_() {
+  var box = document.getElementById("mExecPendenciasBox");
+  if (box) box.innerHTML = mobileExecLoadingHtml_("Verificando pendências...");
+  
+  mobileExecSalvarChecklist_(true, function() {
+    mobileExecSalvarRelato_(true, function(salvarRes) {
+      if (salvarRes && salvarRes.success === false) {
+        mobileExecMostrarPendencias_({ success: false, code: salvarRes.code, canAdminResolve: salvarRes.canAdminResolve, pendencias: [salvarRes.message || "Não foi possível salvar o relato."] });
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(res) { mobileExecMostrarPendencias_(res); })
+        .withFailureHandler(function(err) {
+          mobileExecMostrarPendencias_({ success: false, pendencias: ["Erro ao validar: " + ((err && err.message) || "falha")] });
+        })
+        .osValidarConclusao(SESSION, MOBILE_EXEC_STATE.osId);
+    });
+  });
+}
+
+function mobileExecConcluir_() {
+  var btn = document.getElementById("mExecBtnConcluir");
+  if (btn) { btn.disabled = true; btn.textContent = "Concluindo..."; }
+  
+  mobileExecSalvarChecklist_(true, function() {
+    mobileExecSalvarRelato_(true, function(salvarRes) {
+      if (salvarRes && salvarRes.success === false) {
+        if (btn) { btn.disabled = false; btn.textContent = "Concluir OS"; }
+        mobileExecMostrarPendencias_({ success: false, code: salvarRes.code, canAdminResolve: salvarRes.canAdminResolve, pendencias: [salvarRes.message || "Não foi possível salvar o relato."] });
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(val) {
+          if (!val || !val.success) {
+            if (btn) { btn.disabled = false; btn.textContent = "Concluir OS"; }
+            mobileExecMostrarPendencias_(val);
+            return;
+          }
+          
+          var concluir = function() {
+            google.script.run
+              .withSuccessHandler(function(res) {
+                if (btn) { btn.disabled = false; btn.textContent = "Concluir OS"; }
+                if (!res || !res.success) {
+                  mobileExecMostrarPendencias_(res);
+                  return;
+                }
+                mobileToast_("OS concluída tecnicamente.", "sucesso");
+                var box = document.getElementById("mExecPendenciasBox");
+                if (box) box.innerHTML = '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:14px;color:#065f46;font-weight:800;">OS concluída. Você pode voltar para Minhas OS.</div>';
+              })
+              .withFailureHandler(function(err) {
+                if (btn) { btn.disabled = false; btn.textContent = "Concluir OS"; }
+                mobileExecMostrarPendencias_({ success: false, pendencias: ["Erro ao concluir: " + ((err && err.message) || "falha")] });
+              })
+              .osConcluirTecnica(SESSION, MOBILE_EXEC_STATE.osId, {});
+          };
+          
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              function(pos) {
+                google.script.run.withSuccessHandler(function() {}).osRegistrarCheckout(SESSION, MOBILE_EXEC_STATE.osId, {
+                  LAT: String(pos.coords.latitude),
+                  LNG: String(pos.coords.longitude)
+                });
+                concluir();
+              },
+              function() { concluir(); },
+              { timeout: 5000 }
+            );
+          } else {
+            concluir();
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (btn) { btn.disabled = false; btn.textContent = "Concluir OS"; }
+          mobileExecMostrarPendencias_({ success: false, pendencias: ["Erro ao validar: " + ((err && err.message) || "falha")] });
+        })
+        .osValidarConclusao(SESSION, MOBILE_EXEC_STATE.osId);
+    });
+  });
+}
+
+function mobileExecMostrarPendencias_(res) {
+  var box = document.getElementById("mExecPendenciasBox");
+  if (!box) return;
+  
+  if (res && res.success) {
+    box.innerHTML = '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:14px;color:#065f46;font-weight:800;">Tudo certo. A OS pode ser concluída.</div>';
+    return;
+  }
+  
+  var pendencias = (res && res.pendencias) || [(res && res.message) || "Ainda existem pendências."];
+  
+  box.innerHTML = `
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:900;color:#b91c1c;margin-bottom:8px;">Pendências antes de concluir</div>
+      ${pendencias.map(function(p) { return `<div style="font-size:13px;color:#7f1d1d;margin:6px 0;">${escapeHtml_(String(p))}</div>`; }).join("")}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecStep_(2)">Ir para Checklist</button>
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecStep_(3)">Ir para Fotos</button>
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecStep_(4)">Ir para Relato</button>
+        <button class="mobile-btn-secondary" type="button" onclick="mobileExecStep_(5)">Ir para Assinatura</button>
+      </div>
+    </div>
+  `;
+}
+
+function mobileExecCarregarChecklist_() {
+  var os = MOBILE_EXEC_STATE.os || {};
+  var modeloId = os.QUESTIONARIO_MODELO_ID;
+  
+  if (!modeloId) {
+    mobileExecRenderChecklist_();
+    return;
+  }
+  
+  google.script.run.withSuccessHandler(function(modeloRes) {
+    if (!modeloRes || !modeloRes.success || !modeloRes.item) {
+      var pane = document.getElementById("mExecPane2");
+      if (pane) pane.innerHTML = mobileExecErroHtml_("Questionário não encontrado.");
+      return;
+    }
+    MOBILE_EXEC_STATE.checklistModelo = modeloRes.item;
+    MOBILE_EXEC_STATE.checklist = modeloRes.item.perguntas || [];
+    
+    google.script.run.withSuccessHandler(function(resp) {
+      var respostas = {};
+      ((resp && resp.items) || []).forEach(function(r) { respostas[r.PERGUNTA_ID] = r; });
+      MOBILE_EXEC_STATE.respostas = respostas;
+      mobileExecRenderChecklist_();
+    }).checklistRespostasListarPorOS(SESSION, MOBILE_EXEC_STATE.osId);
+  }).checklistModeloObterCompleto(SESSION, modeloId);
+}
+
+function mobileExecCarregarFotosEnviadas_() {
+  google.script.run.withSuccessHandler(function(res) {
+    var el = document.getElementById("mExecFotosLista");
+    if (!el) return;
+    
+    var items = (res && res.items) || [];
+    var podeEditar = mobileExecPodeEditarExecucao_();
+    
+    if (!items.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Nenhuma foto registrada.</div>';
+      return;
+    }
+    
+    el.innerHTML = items.map(function(i) {
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #eef2f7;">
+          <div style="width:42px;height:42px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#0f766e;"><i class="fas fa-camera"></i></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:800;">${escapeHtml_(i.TIPO_FOTO || i.MOMENTO || "Foto")}</div>
+            <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml_(i.NOME_ARQUIVO || i.LINK_DRIVE || "")}</div>
+          </div>
+          ${podeEditar ? `<button class="mobile-btn-secondary" type="button" onclick="mobileExecRemoverFoto_('${escapeHtml_(i.ID)}')" style="width:auto;min-height:36px;padding:0 10px;font-size:12px;">Remover</button>` : ''}
+        </div>
+      `;
+    }).join("");
+  }).osFotosListar(SESSION, MOBILE_EXEC_STATE.osId);
+}
+
+function mobileExecStatusPermiteEdicao_() {
+  var st = String((MOBILE_EXEC_STATE.os && MOBILE_EXEC_STATE.os.STATUS) || "").toUpperCase();
+  return ["ABERTA", "AGENDADA", "EM_EXECUCAO"].indexOf(st) >= 0;
+}
+
+function mobileExecPodeEditarExecucao_() {
+  var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+  if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return true;
+  if (perfil === "CLIENTE") return false;
+  return mobileExecStatusPermiteEdicao_();
+}
+
+function mobileExecRemoverFoto_(fotoId) {
+  if (!mobileExecPodeEditarExecucao_()) return mobileToast_("Acesso negado.", "erro");
+  var motivo = mobileExecStatusPermiteEdicao_() ? "Correção durante execução" : prompt("Informe o motivo para remover esta evidência:");
+  if (!motivo) return;
+  
+  google.script.run.withSuccessHandler(function(res) {
+    if (!res || !res.success) return mobileToast_((res && res.message) || "Erro ao remover evidência.", "erro");
+    mobileToast_("Foto removida. Tire outra se necessario.", "sucesso");
+    mobileExecCarregarFotosEnviadas_();
+  }).osFotosRemover(SESSION, fotoId, motivo);
+}
+
+function mobileExecCarregarAssinaturas_() {
+  google.script.run.withSuccessHandler(function(res) {
+    var items = (res && res.items) || [];
+    MOBILE_EXEC_STATE.assinaturas = items;
+    var el = document.getElementById("mExecAssLista");
+    if (!el) return;
+    
+    var podeRemover = mobileExecPodeGerenciarAssinaturas_();
+    
+    el.innerHTML = items.length ? items.map(function(i) {
+      var tipoAss = i.TIPO_ASSINATURA || i.TIPO || "Assinatura";
+      return `
+        <div style="padding:8px 0;border-bottom:1px solid #eef2f7;">
+          <div style="font-size:12px;font-weight:900;color:#065f46;">${escapeHtml_(tipoAss)}</div>
+          <div style="font-size:13px;font-weight:700;">${escapeHtml_(i.ASSINADO_POR || "")}</div>
+          ${podeRemover ? `<button class="mobile-btn-secondary" type="button" onclick="mobileExecRemoverAssinaturaAdmin_('${escapeHtml_(i.ID)}')" style="width:100%;margin-top:8px;">Remover/Refazer</button>` : ''}
+        </div>
+      `;
+    }).join("") : '<div style="font-size:12px;color:var(--muted);">Nenhuma assinatura registrada.</div>';
+  }).assinaturasListarPorOS(SESSION, MOBILE_EXEC_STATE.osId);
+}
+
+function mobileExecPodeGerenciarAssinaturas_() {
+  var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+  if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return true;
+  if (perfil === "CLIENTE") return false;
+  return mobileExecStatusPermiteEdicao_();
+}
+
+function mobileExecRemoverAssinaturaAdmin_(assinaturaId) {
+  if (!mobileExecPodeGerenciarAssinaturas_()) return mobileToast_("Acesso negado.", "erro");
+  var motivo = mobileExecStatusPermiteEdicao_() ? "Correção durante execução" : prompt("Informe o motivo para remover/inativar esta assinatura:");
+  if (!motivo) return;
+  
+  google.script.run.withSuccessHandler(function(res) {
+    if (!res || !res.success) return mobileToast_((res && res.message) || "Erro ao remover assinatura.", "erro");
+    mobileToast_("Assinatura removida. Colete nova assinatura apos alterar.", "sucesso");
+    mobileExecCarregarOS_();
+    mobileExecStep_(4);
+  }).assinaturasRemoverAdmin(SESSION, assinaturaId, motivo);
+}
+
+function mobileExecRenderConcluir_() {
+  var pane = document.getElementById("mExecPane6");
+  if (!pane) return;
+  
+  pane.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px;">Concluir</div>
+      <div id="mExecPendenciasBox" style="margin-bottom:12px;font-size:13px;color:var(--muted);">Verifique as pendências antes de concluir.</div>
+      <button class="mobile-btn-secondary" type="button" onclick="mobileExecValidar_()" style="width:100%;margin-bottom:8px;">Verificar pendências</button>
+      <button class="mobile-btn-primary" id="mExecBtnConcluir" type="button" onclick="mobileExecConcluir_()" style="width:100%;">Concluir OS</button>
+      <button class="mobile-menu-action" type="button" onclick="mobileAbrirTela_('minhas_os')" style="margin-top:10px;">Voltar para Minhas OS</button>
+    </div>
+    ${mobileExecNavHtml_(5, null, "")}
+  `;
+}
+
+function mobileExecNavHtml_(prev, next, nextLabel) {
+  return `
+    <div style="display:grid;grid-template-columns:${prev && next ? '1fr 1fr' : '1fr'};gap:8px;margin-top:12px;">
+      ${prev ? `<button class="mobile-btn-secondary" type="button" onclick="mobileExecStep_(${prev})">Voltar</button>` : ''}
+      ${next ? `<button class="mobile-btn-primary" type="button" onclick="mobileExecStep_(${next})">${escapeHtml_(nextLabel || "Proximo")}</button>` : ''}
+    </div>
+  `;
+}
+
+function mobileExecCanvasHtml_(canvasId, hintId) {
+  return `
+    <div style="position:relative;border:1px dashed #94a3b8;border-radius:10px;background:#f8fafc;margin-top:10px;height:150px;touch-action:none;">
+      <canvas id="${canvasId}" width="700" height="260" style="width:100%;height:150px;display:block;touch-action:none;"></canvas>
+      <span id="${hintId}" style="position:absolute;left:0;right:0;top:58px;text-align:center;color:#94a3b8;font-size:13px;font-weight:700;pointer-events:none;">Assine aqui</span>
+    </div>
+  `;
+}
+
+function mobileExecInitCanvas_(canvasId, hintId) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas || canvas.__mobileExecReady) return;
+  canvas.__mobileExecReady = true;
+  
+  var ctx = canvas.getContext("2d");
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#111827";
+  var desenhando = false;
+  
+  function pos(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var e = evt.touches && evt.touches.length ? evt.touches[0] : evt;
+    return {
+      x: (e.clientX - rect.left) * (canvas.width / rect.width),
+      y: (e.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
+  
+  function iniciar(evt) {
+    desenhando = true;
+    var p = pos(evt);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    var hint = document.getElementById(hintId);
+    if (hint) hint.style.display = "none";
+    evt.preventDefault();
+  }
+  
+  function mover(evt) {
+    if (!desenhando) return;
+    var p = pos(evt);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    evt.preventDefault();
+  }
+  
+  function parar() { desenhando = false; }
+  
+  ["mousedown","touchstart"].forEach(function(ev) { canvas.addEventListener(ev, iniciar, { passive: false }); });
+  ["mousemove","touchmove"].forEach(function(ev) { canvas.addEventListener(ev, mover, { passive: false }); });
+  ["mouseup","mouseleave","touchend","touchcancel"].forEach(function(ev) { canvas.addEventListener(ev, parar); });
+}
+
+function mobileExecLimparCanvas_(canvasId, hintId) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  var hint = document.getElementById(hintId);
+  if (hint) hint.style.display = "";
+}
+
+function mobileExecLoadingHtml_(msg) {
+  return `
+    <div style="text-align:center;padding:28px 12px;color:var(--muted);font-size:13px;">
+      <i class="fas fa-spinner fa-spin" style="font-size:24px;color:var(--metro-green);display:block;margin-bottom:10px;"></i>
+      ${escapeHtml_(msg || "Carregando...")}
+    </div>
+  `;
+}
+
+function mobileExecErroHtml_(msg) {
+  return `
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px;color:#991b1b;font-size:13px;font-weight:700;">
+      ${escapeHtml_(msg || "Erro")}
+    </div>
+  `;
+}
+
+function mobileExecInfoHtml_(msg) {
+  return `
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;color:#1e40af;font-size:13px;font-weight:700;">
+      ${escapeHtml_(msg || "")}
+    </div>
+  `;
+}
+
+function mobileValue_(id) {
+  var el = document.getElementById(id);
+  return el ? String(el.value || "").trim() : "";
+}
+
+function mobileOption_(value, label, atual) {
+  return `<option value="${escapeHtml_(value)}"${value === atual ? " selected" : ""}>${escapeHtml_(label)}</option>`;
+}
+
+/* ---- Pane: Nova OS ---- */
+
+function mobileHtmlNovaOS_() {
+  return `
+    <div class="mobile-pane">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title">Nova OS</h2>
+      <p class="mobile-pane-sub">Criação rápida de Ordem de Serviço</p>
+      <div id="mNovaOSFormWrap">
+        <div style="text-align:center;padding:48px 0;">
+          <i class="fas fa-spinner fa-spin" style="font-size:28px;color:var(--metro-green);"></i>
+          <div style="margin-top:12px;color:var(--muted);font-size:13px;">Carregando opções...</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function mobileCarregarOpcoesOS_() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] osListarOpcoes ok:", res && res.success);
+      if (!res || !res.success) {
+        mobileNovaOSRenderErro_((res && res.message) || "Erro ao carregar opções.");
+        return;
+      }
+      MOBILE_OS_OPCOES = res;
+      mobileNovaOSRenderForm_();
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] osListarOpcoes failure:", err);
+      mobileNovaOSRenderErro_("Erro ao carregar: " + (err.message || String(err)));
+    })
+    .osListarOpcoes(SESSION);
+}
+
+function mobileNovaOSRenderErro_(msg) {
+  var wrap = document.getElementById("mNovaOSFormWrap");
+  if (!wrap) return;
+  
+  wrap.innerHTML = `
+    <div class="mobile-placeholder-box" style="background:#fef2f2;border-color:#fca5a5;">
+      <i class="fas fa-circle-exclamation" style="font-size:32px;color:#ef4444;display:block;margin-bottom:10px;"></i>
+      <div style="font-size:13px;color:#b91c1c;">${escapeHtml_(msg)}</div>
+      <button class="mobile-btn-secondary" type="button" onclick="mobileCarregarOpcoesOS_()" style="margin-top:14px;">Tentar novamente</button>
+    </div>
+  `;
+}
+
+function mobileNovaOSRenderForm_() {
+  var wrap = document.getElementById("mNovaOSFormWrap");
+  if (!wrap || !MOBILE_OS_OPCOES) return;
+
+  var clientes = MOBILE_OS_OPCOES.clientes || [];
+  var tipos    = MOBILE_OS_OPCOES.tipos    || [];
+  var priors   = MOBILE_OS_OPCOES.prioridades || [];
+  var tecnicos = MOBILE_OS_OPCOES.tecnicos || [];
+
+  var optClientes = '<option value="">Selecione o cliente...</option>' +
+    clientes.map(function(c) {
+      return `<option value="${escapeHtml_(String(c.ID))}">${escapeHtml_(c.NOME || String(c.ID))}</option>`;
+    }).join("");
+    
+  var optTipos = '<option value="">Selecione o tipo...</option>' +
+    tipos.map(function(t) {
+      return `<option value="${escapeHtml_(String(t))}">${escapeHtml_(String(t).replace(/_/g," "))}</option>`;
+    }).join("");
+    
+  var optPriors = priors.map(function(p) {
+    var sel = (String(p).toUpperCase() === "NORMAL") ? " selected" : "";
+    return `<option value="${escapeHtml_(String(p))}"${sel}>${escapeHtml_(String(p))}</option>`;
+  }).join("");
+  
+  if (!optPriors) optPriors = '<option value="NORMAL" selected>NORMAL</option>';
+
+  var optTecnicos = '<option value="">Sem técnico (opcional)</option>' +
+    tecnicos.map(function(t) {
+      return `<option value="${escapeHtml_(String(t.ID))}">${escapeHtml_(t.NOME || String(t.ID))}</option>`;
+    }).join("");
+    
+  wrap.innerHTML = `
+    <div class="mobile-form">
+      <div class="mobile-field-group">
+        <label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>
+        <select id="mOSClienteId" class="mobile-input mobile-select" onchange="mobileOSOnClienteChange_(this.value)">${optClientes}</select>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Unidade <span style="color:#ef4444;">*</span></label>
+        <select id="mOSUnidadeId" class="mobile-input mobile-select" onchange="mobileOSOnUnidadeChange_(this.value)">
+          <option value="">Selecione o cliente primeiro</option>
+        </select>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Equipamento <span style="color:#ef4444;">*</span></label>
+        <select id="mOSEquipId" class="mobile-input mobile-select" onchange="mobileOSOnEquipChange_(this.value)">
+          <option value="">Selecione a unidade primeiro</option>
+        </select>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Tipo de Equipamento</label>
+        <input id="mOSTipoEquip" class="mobile-input" type="text" readonly placeholder="Preenchido ao selecionar equipamento" style="background:#f9fafb;color:var(--muted);">
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Tipo OS <span style="color:#ef4444;">*</span></label>
+        <select id="mOSTipoOS" class="mobile-input mobile-select" onchange="mobileOSOnTipoOSChange_(this.value)">${optTipos}</select>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Prioridade <span style="color:#ef4444;">*</span></label>
+        <select id="mOSPrioridade" class="mobile-input mobile-select">${optPriors}</select>
+      </div>
+      <div id="mOSQuestionarioCard" style="display:none;margin-bottom:16px;"></div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Relato do cliente <span style="color:#ef4444;">*</span></label>
+        <textarea id="mOSRelatoCliente" class="mobile-input mobile-textarea" rows="4" placeholder="Descreva o problema ou solicitacao do cliente..."></textarea>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Orientação técnica</label>
+        <textarea id="mOSOrientacao" class="mobile-input mobile-textarea" rows="3" placeholder="Instruções para o técnico (opcional)..."></textarea>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Técnico responsável</label>
+        <select id="mOSTecnicoId" class="mobile-input mobile-select">${optTecnicos}</select>
+      </div>
+      <div class="mobile-field-group">
+        <label class="mobile-label">Data/hora agendada</label>
+        <input id="mOSDataAgendada" class="mobile-input" type="datetime-local">
+      </div>
+      <button class="mobile-btn-primary" type="button" id="mOSSalvarBtn" onclick="mobileSalvarNovaOS_()">
+        <i class="fas fa-save" style="margin-right:8px;"></i>Criar OS
+      </button>
+    </div>
+  `;
+
+  if (MOBILE_OS_PREFILL) {
+    mobileOSAplicarPrefill_();
+  }
+}
+
+function mobileOSOnClienteChange_(clienteId) {
+  var selUni = document.getElementById("mOSUnidadeId");
+  var selEqp = document.getElementById("mOSEquipId");
+  
+  if (!selUni || !MOBILE_OS_OPCOES) return;
+
+  if (!clienteId) {
+    selUni.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
+    if (selEqp) selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var unidades = (MOBILE_OS_OPCOES.unidades || []).filter(function(u) {
+    return String(u.CLIENTE_ID) === String(clienteId);
+  });
+  
+  selUni.innerHTML = unidades.length
+    ? '<option value="">Selecione a unidade...</option>' + unidades.map(function(u) {
+        return `<option value="${escapeHtml_(String(u.ID))}">${escapeHtml_(u.NOME || String(u.ID))}</option>`;
+      }).join("")
+    : '<option value="">Nenhuma unidade para este cliente</option>';
+    
+  if (selEqp) selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  if (tipoInput) tipoInput.value = "";
+  mobileOSLimparQuestionario_();
+}
+
+function mobileOSOnUnidadeChange_(unidadeId) {
+  var selEqp = document.getElementById("mOSEquipId");
+  if (!selEqp || !MOBILE_OS_OPCOES) return;
+  
+  if (!unidadeId) {
+    selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+    var tipoInput = document.getElementById("mOSTipoEquip");
+    if (tipoInput) tipoInput.value = "";
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var equips = (MOBILE_OS_OPCOES.equipamentos || []).filter(function(e) {
+    return String(e.UNIDADE_ID) === String(unidadeId);
+  });
+  
+  selEqp.innerHTML = equips.length
+    ? '<option value="">Selecione o equipamento...</option>' + equips.map(function(e) {
+        var label = e.LABEL || [e.TAG, e.TIPO, e.MODELO].filter(Boolean).join(" - ") || String(e.ID);
+        return `<option value="${escapeHtml_(String(e.ID))}" data-tipo="${escapeHtml_(e.TIPO || "")}">${escapeHtml_(label)}</option>`;
+      }).join("")
+    : '<option value="">Nenhum equipamento para esta unidade</option>';
+    
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  if (tipoInput) tipoInput.value = "";
+  mobileOSLimparQuestionario_();
+}
+
+function mobileOSOnEquipChange_(equipId) {
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  
+  if (!equipId || !MOBILE_OS_OPCOES) {
+    if (tipoInput) tipoInput.value = "";
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var equip = (MOBILE_OS_OPCOES.equipamentos || []).find(function(e) {
+    return String(e.ID) === String(equipId);
+  });
+  
+  var tipo = equip ? (equip.TIPO || "") : "";
+  if (tipoInput) tipoInput.value = tipo;
+
+  mobileOSCheckQuestionario_();
+}
+
+function mobileOSOnTipoOSChange_(tipoOS) {
+  mobileOSCheckQuestionario_();
+}
+
+function mobileOSCheckQuestionario_() {
+  var tipoOSEl    = document.getElementById("mOSTipoOS");
+  var tipoEquipEl = document.getElementById("mOSTipoEquip");
+  
+  if (!tipoOSEl || !tipoEquipEl) return;
+
+  var tipoOS    = (tipoOSEl.value    || "").trim();
+  var tipoEquip = (tipoEquipEl.value || "").trim();
+
+  if (!tipoOS || !tipoEquip) { mobileOSLimparQuestionario_(); return; }
+
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (card) {
+    card.style.display = "";
+    card.innerHTML = `
+      <div style="padding:10px 14px;border-radius:10px;background:#f0fdf4;border:1px solid #86efac;">
+        <i class="fas fa-spinner fa-spin" style="color:#16a34a;margin-right:8px;"></i>
+        <span style="font-size:13px;color:#15803d;">Buscando questionário sugerido...</span>
+      </div>
+    `;
+  }
+
+  MOBILE_OS_QUESTIONARIO = null;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success && res.item && res.item.ID) {
+        var m = res.item;
+        MOBILE_OS_QUESTIONARIO = {
+          id:    m.ID   || "",
+          nome:  m.NOME || "",
+          total: m.TOTAL_PERGUNTAS || m.TOTAL_ITENS || (m.perguntas ? m.perguntas.length : 0) || (m.itens ? m.itens.length : 0) || ""
+        };
+        mobileOSMostrarCardQuestionario_(true);
+      } else {
+        MOBILE_OS_QUESTIONARIO = null;
+        mobileOSMostrarCardQuestionario_(false);
+      }
+    })
+    .withFailureHandler(function(err) {
+      MOBILE_OS_QUESTIONARIO = null;
+      mobileOSMostrarCardQuestionario_(false);
+    })
+    .checklistModeloPorTipoOSTipoEquipamento(SESSION, tipoOS, tipoEquip);
+}
+
+function mobileOSMostrarCardQuestionario_(encontrado) {
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (!card) return;
+  card.style.display = "";
+  
+  if (encontrado && MOBILE_OS_QUESTIONARIO) {
+    var q = MOBILE_OS_QUESTIONARIO;
+    card.innerHTML = `
+      <div style="padding:12px 16px;border-radius:10px;background:#f0fdf4;border:1px solid #86efac;">
+        <div style="font-weight:700;font-size:13px;color:#166534;margin-bottom:4px;">
+          <i class="fas fa-circle-check" style="margin-right:6px;"></i>Questionário sugerido: ${escapeHtml_(q.nome)}
+        </div>
+        ${q.total ? `<div style="font-size:12px;color:#15803d;">Perguntas: ${escapeHtml_(String(q.total))}</div>` : ''}
+      </div>
+    `;
+  } else {
+    card.innerHTML = `
+      <div style="padding:12px 16px;border-radius:10px;background:#fefce8;border:1px solid #fde047;">
+        <div style="font-weight:700;font-size:13px;color:#854d0e;margin-bottom:4px;">
+          <i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i>Nenhum questionário configurado
+        </div>
+        <div style="font-size:12px;color:#713f12;">Nenhum questionário para este tipo de OS / equipamento. A OS pode ser criada mesmo assim.</div>
+      </div>
+    `;
+  }
+}
+
+function mobileOSLimparQuestionario_() {
+  MOBILE_OS_QUESTIONARIO = null;
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (card) card.style.display = "none";
+}
+
+function mobileOSAplicarPrefill_() {
+  var pf = MOBILE_OS_PREFILL;
+  if (!pf) return;
+
+  var selCliente = document.getElementById("mOSClienteId");
+  if (selCliente && pf.clienteId) {
+    selCliente.value = String(pf.clienteId);
+    mobileOSOnClienteChange_(String(pf.clienteId));
+  }
+
+  setTimeout(function() {
+    var selUnidade = document.getElementById("mOSUnidadeId");
+    if (selUnidade && pf.unidadeId) {
+      selUnidade.value = String(pf.unidadeId);
+      mobileOSOnUnidadeChange_(String(pf.unidadeId));
+    }
+    setTimeout(function() {
+      var selEquip = document.getElementById("mOSEquipId");
+      if (selEquip && pf.equipamentoId) {
+        selEquip.value = String(pf.equipamentoId);
+        mobileOSOnEquipChange_(String(pf.equipamentoId));
+      }
+      MOBILE_OS_PREFILL = null;
+    }, 60);
+  }, 60);
+}
+
+function mobileSalvarNovaOS_() {
+  var clienteId  = ((document.getElementById("mOSClienteId")    || {}).value || "").trim();
+  var unidadeId  = ((document.getElementById("mOSUnidadeId")    || {}).value || "").trim();
+  var equipId    = ((document.getElementById("mOSEquipId")      || {}).value || "").trim();
+  var tipoOS     = ((document.getElementById("mOSTipoOS")       || {}).value || "").trim();
+  var prioridade = ((document.getElementById("mOSPrioridade")   || {}).value || "").trim();
+  var relato     = ((document.getElementById("mOSRelatoCliente") || {}).value || "").trim();
+
+  if (!clienteId)  { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!unidadeId)  { mobileToast_("Selecione a unidade.", "erro"); return; }
+  if (!equipId)    { mobileToast_("Selecione o equipamento.", "erro"); return; }
+  if (!tipoOS)     { mobileToast_("Selecione o tipo de OS.", "erro"); return; }
+  if (!prioridade) { mobileToast_("Selecione a prioridade.", "erro"); return; }
+  if (!relato)     { mobileToast_("Informe o relato do cliente.", "erro"); return; }
+
+  var btn = document.getElementById("mOSSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Criando OS...'; }
+
+  var orientacao = ((document.getElementById("mOSOrientacao")   || {}).value || "").trim();
+  var tecnicoId  = ((document.getElementById("mOSTecnicoId")    || {}).value || "").trim();
+  var dataAgend  = ((document.getElementById("mOSDataAgendada") || {}).value || "").trim();
+
+  var payload = {
+    CLIENTE_ID:         clienteId,
+    UNIDADE_ID:         unidadeId,
+    EQUIPAMENTO_ID:     equipId,
+    TIPO_OS:            tipoOS,
+    PRIORIDADE:         prioridade,
+    RELATO_CLIENTE:     relato,
+    ORIENTACAO_TECNICA: orientacao
+  };
+  
+  if (tecnicoId) payload.TECNICO_ID    = tecnicoId;
+  if (dataAgend) payload.DATA_AGENDADA = dataAgend;
+  
+  if (MOBILE_OS_QUESTIONARIO && MOBILE_OS_QUESTIONARIO.id) {
+    payload.QUESTIONARIO_MODELO_ID = MOBILE_OS_QUESTIONARIO.id;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        mobileToast_((res && res.message) || "Falha ao criar OS.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+        return;
+      }
+      var osId    = (res.item && (res.item.ID || res.item.id)) || res.id || "";
+      var numOS   = (res.item && res.item.NUMERO_OS) || "";
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+      mobileOSDialogPosCriar_(osId, numOS);
+    })
+    .withFailureHandler(function(err) {
+      mobileToast_("Erro ao criar OS: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+    })
+    .osCriar(SESSION, payload);
+}
+
+function mobileOSDialogPosCriar_(osId, numeroOS) {
+  var existing = document.getElementById("mOSDialogPos");
+  if (existing) existing.remove();
+
+  var shell = document.getElementById("mobileCampoShell");
+  if (!shell) { mobileAbrirTela_("home"); return; }
+
+  var dlg = document.createElement("div");
+  dlg.id = "mOSDialogPos";
+  dlg.className = "mobile-equip-dialog";
+  
+  dlg.innerHTML = `
+    <div class="mobile-equip-dialog-box">
+      <i class="fas fa-circle-check" style="font-size:44px;color:#16a34a;display:block;margin-bottom:12px;"></i>
+      <div class="mobile-equip-dialog-title">OS criada com sucesso!</div>
+      ${numeroOS ? `<div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:6px;">${escapeHtml_(numeroOS)}</div>` : ''}
+      <div class="mobile-equip-dialog-sub">O que deseja fazer agora?</div>
+      <div class="mobile-equip-dialog-btns">
+        <button class="mobile-btn-primary" type="button" style="margin-bottom:10px;" onclick="mobileOSExecutar_('${osId}')">
+          <i class="fas fa-play-circle" style="margin-right:8px;"></i>Executar agora
+        </button>
+        <button class="mobile-menu-action" type="button" onclick="document.getElementById('mOSDialogPos').remove(); mobileAbrirTela_('home')">Fechar</button>
+      </div>
+    </div>
+  `;
+  shell.appendChild(dlg);
+}
+
+/* ---- Pane: Menu ---- */
+
+function mobileHtmlMenu_() {
+  var nome   = USER_CONTEXT ? (USER_CONTEXT.nome || USER_CONTEXT.usuario || "Usuario") : "Usuario";
+  var perfil = USER_CONTEXT ? (USER_CONTEXT.perfil || "").toUpperCase() : "";
+  
+  return `
+    <div class="mobile-pane">
+      <div class="mobile-user-card">
+        <i class="fas fa-circle-user" style="font-size:44px;color:var(--metro-green);flex-shrink:0;"></i>
+        <div>
+          <div style="font-size:16px;font-weight:800;">${escapeHtml_(nome)}</div>
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">${escapeHtml_(perfil)}</div>
+        </div>
+      </div>
+      <div class="mobile-menu-actions">
+        <button class="mobile-menu-action" type="button" onclick="mobileModoGestaoCompleto_()">
+          <i class="fas fa-desktop" style="margin-right:8px;"></i>Modo Gestão Completo
+        </button>
+        <button class="mobile-menu-action mobile-menu-danger" type="button" onclick="logout()">
+          <i class="fas fa-power-off" style="margin-right:8px;"></i>Sair do sistema
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* ---- Pane: Placeholder genérico ---- */
+
+function mobileHtmlPlaceholder_(titulo, icone, descricao) {
+  return `
+    <div class="mobile-pane">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title">${escapeHtml_(titulo)}</h2>
+      <div class="mobile-placeholder-box">
+        <i class="${icone}" style="font-size:40px;color:var(--border-strong);display:block;margin-bottom:14px;"></i>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">${escapeHtml_(descricao)}</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ---- Toast ---- */
+
+function mobileToast_(msg, tipo) {
+  var existing = document.getElementById("mobileToastEl");
+  if (existing) existing.remove();
+
+  var el = document.createElement("div");
+  el.id = "mobileToastEl";
+  el.className = "mobile-toast mobile-toast-" + (tipo || "ok");
+  el.textContent = msg;
+
+  var shell = document.getElementById("mobileCampoShell");
+  (shell || document.body).appendChild(el);
+
+  setTimeout(function() { el.classList.add("mobile-toast-show"); }, 10);
+  setTimeout(function() {
+    el.classList.remove("mobile-toast-show");
+    setTimeout(function() { el.remove(); }, 350);
+  }, 3000);
+}
+
+/* ---- Pane: + Cliente ---- */
+
+function mobileHtmlClienteForm_() {
+  return `
+    <div class="mobile-pane">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title">+ Cliente</h2>
+      <p class="mobile-pane-sub">Cadastro rapido de cliente</p>
+      <div class="mobile-form">
+        <div class="mobile-field-group">
+          <label class="mobile-label">CNPJ</label>
+          <div style="display:flex;gap:8px;">
+            <input id="mClienteCnpj" class="mobile-input" type="text" inputmode="numeric" placeholder="00.000.000/0001-00" maxlength="18">
+            <button class="mobile-btn-secondary" type="button" onclick="mobileBuscarCnpj_()" style="white-space:nowrap;flex-shrink:0;">Buscar</button>
+          </div>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Razão Social / Nome <span style="color:#ef4444;">*</span></label>
+          <input id="mClienteRazaoSocial" class="mobile-input" type="text" placeholder="Nome do cliente">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Nome Fantasia</label>
+          <input id="mClienteNomeFantasia" class="mobile-input" type="text" placeholder="Como e chamado">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Telefone / WhatsApp</label>
+          <input id="mClienteTelefone" class="mobile-input" type="tel" inputmode="tel" placeholder="(11) 99999-9999">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">E-mail</label>
+          <input id="mClienteEmail" class="mobile-input" type="email" inputmode="email" placeholder="contato@empresa.com">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Observação</label>
+          <textarea id="mClienteObs" class="mobile-input mobile-textarea" placeholder="Informacoes adicionais"></textarea>
+        </div>
+        <button class="mobile-btn-primary" type="button" id="mClienteSalvarBtn" onclick="mobileSalvarCliente_()">
+          <i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function mobileSalvarCliente_() {
+  var razao = (document.getElementById("mClienteRazaoSocial") || {}).value || "";
+  razao = razao.trim();
+  
+  if (!razao) {
+    mobileToast_("Razão Social é obrigatória.", "erro");
+    return;
+  }
+
+  var btn = document.getElementById("mClienteSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    RAZAO_SOCIAL:  razao,
+    NOME_FANTASIA: ((document.getElementById("mClienteNomeFantasia") || {}).value || "").trim(),
+    CNPJ:          ((document.getElementById("mClienteCnpj")         || {}).value || "").trim(),
+    TELEFONE:      ((document.getElementById("mClienteTelefone")     || {}).value || "").trim(),
+    EMAIL:         ((document.getElementById("mClienteEmail")        || {}).value || "").trim()
+  };
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        mobileToast_("Cliente salvo com sucesso!", "ok");
+        setTimeout(function() { mobileAbrirTela_("home"); }, 800);
+      } else {
+        mobileToast_((res && res.message) || "Falha ao salvar cliente.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente'; }
+      }
+    })
+    .withFailureHandler(function(err) {
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente'; }
+    })
+    .clientesCriar(SESSION, payload);
+}
+
+function mobileBuscarCnpj_() {
+  var cnpj = ((document.getElementById("mClienteCnpj") || {}).value || "").replace(/\D/g, "");
+  
+  if (cnpj.length !== 14) {
+    mobileToast_("Digite um CNPJ valido (14 digitos).", "aviso");
+    return;
+  }
+
+  var buscarBtn = document.querySelector('[onclick="mobileBuscarCnpj_()"]');
+  if (buscarBtn) { buscarBtn.disabled = true; buscarBtn.textContent = "..."; }
+  
+  mobileToast_("Buscando na Receita Federal...", "ok");
+
+  fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+    .then(function(res) {
+      if (!res.ok) throw new Error("CNPJ não encontrado (HTTP " + res.status + ")");
+      return res.json();
+    })
+    .then(function(data) {
+      var rsEl = document.getElementById("mClienteRazaoSocial");
+      var nfEl = document.getElementById("mClienteNomeFantasia");
+      var tfEl = document.getElementById("mClienteTelefone");
+      if (rsEl) rsEl.value = data.razao_social || "";
+      if (nfEl) nfEl.value = data.nome_fantasia || data.razao_social || "";
+      if (tfEl) tfEl.value = data.ddd_telefone_1 || "";
+      mobileToast_("Dados preenchidos pela Receita!", "ok");
+    })
+    .catch(function(err) {
+      mobileToast_("CNPJ não encontrado na Receita. Preencha manualmente.", "aviso");
+    })
+    .finally(function() {
+      if (buscarBtn) { buscarBtn.disabled = false; buscarBtn.textContent = "Buscar"; }
+    });
+}
+
+function mobileBuscarCnpjUnidade_() {
+  var cnpj = ((document.getElementById("mUnidadeCnpj") || {}).value || "").replace(/\D/g, "");
+  
+  if (cnpj.length !== 14) {
+    mobileToast_("Digite um CNPJ valido (14 digitos).", "aviso");
+    return;
+  }
+
+  var btn = document.getElementById("mUnidadeCnpjBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "..."; }
+  mobileToast_("Buscando na Receita Federal...", "ok");
+
+  fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+    .then(function(res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      var nomeEl  = document.getElementById("mUnidadeNome");
+      var endEl   = document.getElementById("mUnidadeEndereco");
+      var cidEl   = document.getElementById("mUnidadeCidade");
+      var ufEl    = document.getElementById("mUnidadeUF");
+      var telEl   = document.getElementById("mUnidadeWhatsapp");
+
+      var fantasia = data.nome_fantasia || data.razao_social || "";
+      var logr     = data.logradouro || "";
+      var num      = data.numero     || "";
+      var bairro   = data.bairro     || "";
+      var endStr   = logr + (num ? ", " + num : "") + (bairro ? " - " + bairro : "");
+
+      if (nomeEl && fantasia)        nomeEl.value  = fantasia;
+      if (endEl  && endStr.trim())   endEl.value   = endStr.trim();
+      if (cidEl  && data.municipio)  cidEl.value   = data.municipio;
+      if (ufEl   && data.uf)         ufEl.value    = data.uf;
+      if (telEl  && data.ddd_telefone_1) telEl.value = data.ddd_telefone_1;
+
+      mobileToast_("Dados preenchidos com sucesso.", "ok");
+    })
+    .catch(function(err) {
+      mobileToast_("CNPJ não encontrado na Receita. Preencha manualmente.", "aviso");
+    })
+    .finally(function() {
+      if (btn) { btn.disabled = false; btn.textContent = "Buscar"; }
+    });
+}
+
+/* ---- Pane: + Unidade ---- */
+
+var MOBILE_GPS_LAT = null;
+var MOBILE_GPS_LNG = null;
+
+function mobileHtmlUnidadeForm_() {
+  return `
+    <div class="mobile-pane">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title">+ Unidade</h2>
+      <p class="mobile-pane-sub">Cadastro rápido de unidade</p>
+      <div class="mobile-form">
+        <div class="mobile-field-group">
+          <label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>
+          <select id="mUnidadeClienteId" class="mobile-input mobile-select">
+            <option value="">Carregando clientes...</option>
+          </select>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">CNPJ da Unidade</label>
+          <div style="display:flex;gap:8px;">
+            <input id="mUnidadeCnpj" class="mobile-input" type="text" inputmode="numeric" placeholder="00.000.000/0001-00" maxlength="18">
+            <button class="mobile-btn-secondary" type="button" onclick="mobileBuscarCnpjUnidade_()" id="mUnidadeCnpjBtn" style="white-space:nowrap;flex-shrink:0;">Buscar</button>
+          </div>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Nome da Unidade <span style="color:#ef4444;">*</span></label>
+          <input id="mUnidadeNome" class="mobile-input" type="text" placeholder="Ex: Matriz, Filial SP...">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Endereço</label>
+          <input id="mUnidadeEndereco" class="mobile-input" type="text" placeholder="Rua, número, bairro">
+        </div>
+        <div style="display:flex;gap:8px;" class="mobile-field-group">
+          <div style="flex:1;">
+            <label class="mobile-label">Cidade</label>
+            <input id="mUnidadeCidade" class="mobile-input" type="text" placeholder="Cidade">
+          </div>
+          <div style="width:70px;">
+            <label class="mobile-label">UF</label>
+            <input id="mUnidadeUF" class="mobile-input" type="text" placeholder="SP" maxlength="2">
+          </div>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Contato Local</label>
+          <input id="mUnidadeContato" class="mobile-input" type="text" placeholder="Nome do responsável">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">WhatsApp</label>
+          <input id="mUnidadeWhatsapp" class="mobile-input" type="tel" inputmode="tel" placeholder="(11) 99999-9999">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Observação</label>
+          <textarea id="mUnidadeObs" class="mobile-input mobile-textarea" placeholder="Informações adicionais"></textarea>
+        </div>
+        <div class="mobile-field-group">
+          <button class="mobile-btn-gps" type="button" id="mUnidadeGpsBtn" onclick="mobileCapturaGPS_()">
+            <i class="fas fa-location-dot" style="margin-right:8px;"></i>Usar localização atual
+          </button>
+          <div id="mUnidadeGpsStatus" class="mobile-gps-status"></div>
+        </div>
+        <button class="mobile-btn-primary" type="button" id="mUnidadeSalvarBtn" onclick="mobileSalvarUnidade_()">
+          <i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function mobileCarregarClientesSelect_(selectId) {
+  MOBILE_GPS_LAT = null;
+  MOBILE_GPS_LNG = null;
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+          res.items.map(function(c) {
+            var label = escapeHtml_(c.NOME || c.RAZAO_SOCIAL || c.NOME_FANTASIA || String(c.ID));
+            return `<option value="${escapeHtml_(String(c.ID))}">${label}</option>`;
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhum cliente ativo encontrado</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      var sel = document.getElementById(selectId);
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar clientes</option>';
+    })
+    .unidadesListarClientesAtivos(SESSION);
+}
+
+function mobileCapturaGPS_() {
+  var btn    = document.getElementById("mUnidadeGpsBtn");
+  var status = document.getElementById("mUnidadeGpsStatus");
+  
+  if (!navigator.geolocation) {
+    if (status) { status.textContent = "GPS nao disponivel neste dispositivo."; status.className = "mobile-gps-status mobile-gps-erro"; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Obtendo localização...'; }
+  if (status) { status.textContent = ""; status.className = "mobile-gps-status"; }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      MOBILE_GPS_LAT = pos.coords.latitude;
+      MOBILE_GPS_LNG = pos.coords.longitude;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-circle-check" style="margin-right:8px;color:#16a34a;"></i>Localização capturada'; }
+      if (status) {
+        status.textContent = "Lat: " + MOBILE_GPS_LAT.toFixed(6) + " | Lng: " + MOBILE_GPS_LNG.toFixed(6);
+        status.className = "mobile-gps-status mobile-gps-ok";
+      }
+    },
+    function(err) {
+      MOBILE_GPS_LAT = null;
+      MOBILE_GPS_LNG = null;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-location-dot" style="margin-right:8px;"></i>Usar localização atual'; }
+      if (status) {
+        var msg = err.code === 1 ? "Permissão negada." : err.code === 2 ? "Posição indisponível." : "Tempo esgotado.";
+        status.textContent = msg;
+        status.className = "mobile-gps-status mobile-gps-erro";
+      }
+    },
+    { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+  );
+}
+
+function mobileSalvarUnidade_() {
+  var clienteId = ((document.getElementById("mUnidadeClienteId") || {}).value || "").trim();
+  var nome      = ((document.getElementById("mUnidadeNome")       || {}).value || "").trim();
+  
+  if (!clienteId) { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!nome)      { mobileToast_("Nome da unidade é obrigatório.", "erro"); return; }
+
+  var btn = document.getElementById("mUnidadeSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    CLIENTE_ID:   clienteId,
+    NOME_UNIDADE: nome,
+    CNPJ_UNIDADE: ((document.getElementById("mUnidadeCnpj")     || {}).value || "").trim(),
+    ENDERECO:     ((document.getElementById("mUnidadeEndereco") || {}).value || "").trim(),
+    CIDADE:       ((document.getElementById("mUnidadeCidade")   || {}).value || "").trim(),
+    UF:           ((document.getElementById("mUnidadeUF")       || {}).value || "").trim(),
+    RESPONSAVEL:  ((document.getElementById("mUnidadeContato")  || {}).value || "").trim(),
+    TELEFONE:     ((document.getElementById("mUnidadeWhatsapp") || {}).value || "").trim()
+  };
+
+  if (MOBILE_GPS_LAT !== null) payload.LATITUDE  = MOBILE_GPS_LAT;
+  if (MOBILE_GPS_LNG !== null) payload.LONGITUDE = MOBILE_GPS_LNG;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res && res.success) {
+        mobileToast_("Unidade salva com sucesso!", "ok");
+        setTimeout(function() { mobileAbrirTela_("home"); }, 800);
+      } else {
+        mobileToast_((res && res.message) || "Falha ao salvar unidade.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade'; }
+      }
+    })
+    .withFailureHandler(function(err) {
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade'; }
+    })
+    .unidadesCriar(SESSION, payload);
+}
+
+/* ---- Pane: + Equipamento ---- */
+
+var MOBILE_EQUIP_FOTOS = { plaqueta: null, equipamento: null };
+
+function mobileHtmlEquipamentoForm_() {
+  return `
+    <div class="mobile-pane">
+      <button class="mobile-back" type="button" onclick="mobileVoltar_()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+      <h2 class="mobile-pane-title">+ Equipamento</h2>
+      <p class="mobile-pane-sub">Cadastro rápido de equipamento</p>
+      <div class="mobile-form">
+        <div class="mobile-field-group">
+          <label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>
+          <select id="mEquipClienteId" class="mobile-input mobile-select" onchange="mobileCarregarUnidadesEquip_('mEquipUnidadeId', this.value)">
+            <option value="">Carregando clientes...</option>
+          </select>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Unidade <span style="color:#ef4444;">*</span></label>
+          <select id="mEquipUnidadeId" class="mobile-input mobile-select">
+            <option value="">Selecione o cliente primeiro</option>
+          </select>
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Tipo de Equipamento <span style="color:#ef4444;">*</span></label>
+          <input id="mEquipTipo" class="mobile-input" type="text" placeholder="Ex: Balanca, Autoclave...">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">TAG / Patrimônio</label>
+          <input id="mEquipTag" class="mobile-input" type="text" placeholder="Ex: EQ-0042">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Fabricante</label>
+          <input id="mEquipFabricante" class="mobile-input" type="text" placeholder="Ex: Mettler Toledo">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Modelo</label>
+          <input id="mEquipModelo" class="mobile-input" type="text" placeholder="Ex: ML3002E">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Número de Série</label>
+          <input id="mEquipSerie" class="mobile-input" type="text" placeholder="Ex: SN123456789">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Setor / Local de Instalação</label>
+          <input id="mEquipSetor" class="mobile-input" type="text" placeholder="Ex: Laboratorio, Farmacia...">
+        </div>
+        <div class="mobile-field-group">
+          <label class="mobile-label">Observação</label>
+          <textarea id="mEquipObs" class="mobile-input mobile-textarea" placeholder="Informações adicionais"></textarea>
+        </div>
+        <div class="mobile-foto-area">
+          <div class="mobile-foto-area-title">
+            <i class="fas fa-camera" style="margin-right:6px;"></i>Registro visual
+          </div>
+          <div class="mobile-foto-slots">
+            <div class="mobile-foto-slot" id="mEquipSlotPlaqueta">
+              <div class="mobile-foto-slot-label">Plaqueta</div>
+              <input type="file" id="mEquipInputPlaqueta" accept="image/*" capture="environment" style="display:none;" onchange="mobileEquipFotoSelecionar_('plaqueta', this)">
+              <div id="mEquipThumbPlaqueta" class="mobile-foto-thumb-wrap" style="display:none;">
+                <img id="mEquipImgPlaqueta" class="mobile-foto-thumb" alt="plaqueta">
+                <button class="mobile-foto-remove" type="button" onclick="mobileEquipFotoRemover_('plaqueta')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <button class="mobile-foto-btn" type="button" id="mEquipBtnPlaqueta" onclick="document.getElementById('mEquipInputPlaqueta').click()">
+                <i class="fas fa-camera" style="margin-right:6px;"></i>Foto da plaqueta
+              </button>
+            </div>
+            <div class="mobile-foto-slot" id="mEquipSlotEquip">
+              <div class="mobile-foto-slot-label">Equipamento</div>
+              <input type="file" id="mEquipInputEquip" accept="image/*" capture="environment" style="display:none;" onchange="mobileEquipFotoSelecionar_('equipamento', this)">
+              <div id="mEquipThumbEquip" class="mobile-foto-thumb-wrap" style="display:none;">
+                <img id="mEquipImgEquip" class="mobile-foto-thumb" alt="equipamento">
+                <button class="mobile-foto-remove" type="button" onclick="mobileEquipFotoRemover_('equipamento')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <button class="mobile-foto-btn" type="button" id="mEquipBtnEquip" onclick="document.getElementById('mEquipInputEquip').click()">
+                <i class="fas fa-camera" style="margin-right:6px;"></i>Foto do equip.
+              </button>
+            </div>
+          </div>
+        </div>
+        <button class="mobile-btn-primary" type="button" id="mEquipSalvarBtn" onclick="mobileSalvarEquipamento_()">
+          <i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function mobileCarregarClientesEquip_(selectId) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+          res.items.map(function(c) {
+            return `<option value="${escapeHtml_(String(c.ID))}">${escapeHtml_(c.NOME || String(c.ID))}</option>`;
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhum cliente ativo</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      var sel = document.getElementById(selectId);
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar</option>';
+    })
+    .equipamentosListarClientesAtivos(SESSION);
+}
+
+function mobileCarregarUnidadesEquip_(selectId, clienteId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  
+  if (!clienteId) {
+    sel.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
+    return;
+  }
+  
+  sel.innerHTML = '<option value="">Carregando unidades...</option>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione a unidade...</option>' +
+          res.items.map(function(u) {
+            return `<option value="${escapeHtml_(String(u.ID))}">${escapeHtml_(u.NOME_UNIDADE || String(u.ID))}</option>`;
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhuma unidade ativa para este cliente</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar unidades</option>';
+    })
+    .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+}
+
+function mobileEquipFotoSelecionar_(slot, inputEl) {
+  var file = inputEl && inputEl.files && inputEl.files[0];
+  if (!file) return;
+  
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl  = e.target.result;
+    var sepIdx   = dataUrl.indexOf(",");
+    var base64   = dataUrl.substring(sepIdx + 1);
+    
+    MOBILE_EQUIP_FOTOS[slot] = { base64: base64, mime: file.type || "image/jpeg", nome: file.name };
+    
+    var thumbWrap = document.getElementById(slot === "plaqueta" ? "mEquipThumbPlaqueta" : "mEquipThumbEquip");
+    var thumbImg  = document.getElementById(slot === "plaqueta" ? "mEquipImgPlaqueta"   : "mEquipImgEquip");
+    var btn       = document.getElementById(slot === "plaqueta" ? "mEquipBtnPlaqueta"   : "mEquipBtnEquip");
+    
+    if (thumbImg)  thumbImg.src      = dataUrl;
+    if (thumbWrap) thumbWrap.style.display = "";
+    if (btn)       btn.style.display = "none";
+  };
+  reader.readAsDataURL(file);
+}
+
+function mobileEquipFotoRemover_(slot) {
+  MOBILE_EQUIP_FOTOS[slot] = null;
+  
+  var thumbWrap = document.getElementById(slot === "plaqueta" ? "mEquipThumbPlaqueta" : "mEquipThumbEquip");
+  var thumbImg  = document.getElementById(slot === "plaqueta" ? "mEquipImgPlaqueta"   : "mEquipImgEquip");
+  var btn       = document.getElementById(slot === "plaqueta" ? "mEquipBtnPlaqueta"   : "mEquipBtnEquip");
+  var inputEl   = document.getElementById(slot === "plaqueta" ? "mEquipInputPlaqueta" : "mEquipInputEquip");
+  
+  if (thumbImg)  thumbImg.src        = "";
+  if (thumbWrap) thumbWrap.style.display = "none";
+  if (btn)       btn.style.display   = "";
+  if (inputEl)   inputEl.value       = "";
+}
+
+function mobileSalvarEquipamento_() {
+  var clienteId = ((document.getElementById("mEquipClienteId") || {}).value || "").trim();
+  var unidadeId = ((document.getElementById("mEquipUnidadeId") || {}).value || "").trim();
+  var tipo      = ((document.getElementById("mEquipTipo")      || {}).value || "").trim();
+  
+  if (!clienteId) { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!unidadeId) { mobileToast_("Selecione a unidade.", "erro"); return; }
+  if (!tipo)      { mobileToast_("Informe o tipo de equipamento.", "erro"); return; }
+
+  var btn = document.getElementById("mEquipSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    CLIENTE_ID: clienteId,
+    UNIDADE_ID: unidadeId,
+    TIPO:       tipo,
+    TAG:        ((document.getElementById("mEquipTag")        || {}).value || "").trim(),
+    FABRICANTE: ((document.getElementById("mEquipFabricante") || {}).value || "").trim(),
+    MODELO:     ((document.getElementById("mEquipModelo")     || {}).value || "").trim(),
+    SERIE:      ((document.getElementById("mEquipSerie")      || {}).value || "").trim(),
+    SETOR:      ((document.getElementById("mEquipSetor")      || {}).value || "").trim()
+  };
+  
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        mobileToast_((res && res.message) || "Falha ao salvar equipamento.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+        return;
+      }
+      var equipId = res.id || "";
+      
+      MOBILE_OS_PREFILL = { clienteId: clienteId, unidadeId: unidadeId, equipamentoId: equipId };
+      mobileEquipUploadFotos_(equipId, function() {
+        mobileEquipMostrarDialogPos_(equipId);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+      });
+    })
+    .withFailureHandler(function(err) {
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+    })
+    .equipamentosCriar(SESSION, payload);
+}
+
+function mobileEquipUploadFotos_(equipId, onConcluido) {
+  var slots   = ["plaqueta", "equipamento"];
+  var tipos   = { plaqueta: "PLAQUETA", equipamento: "EQUIPAMENTO" };
+  var idx     = 0;
+  var erros   = [];
+
+  function proximoSlot() {
+    if (idx >= slots.length) {
+      if (erros.length) mobileToast_("Equipamento salvo. Falha em " + erros.length + " foto(s).", "aviso");
+      else              mobileToast_("Equipamento cadastrado com sucesso!", "ok");
+      onConcluido();
+      return;
+    }
+    
+    var slot = slots[idx++];
+    var foto = MOBILE_EQUIP_FOTOS[slot];
+    if (!foto || !foto.base64) { proximoSlot(); return; }
+
+    if (!equipId) { proximoSlot(); return; }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) erros.push(slot);
+        proximoSlot();
+      })
+      .withFailureHandler(function(err) {
+        erros.push(slot);
+        proximoSlot();
+      })
+      .equipamentoFotoUploadBase64(SESSION, equipId, {
+        BASE64_DATA: foto.base64,
+        MIME_TYPE:   foto.mime,
+        TIPO_FOTO:   tipos[slot],
+        NOME_ARQUIVO: "equip_" + tipos[slot].toLowerCase() + "_" + (equipId || "novo") + "." + (foto.mime.includes("png") ? "png" : "jpg")
+      });
+  }
+
+  proximoSlot();
+}
+
+function mobileEquipMostrarDialogPos_(equipId) {
+  var existing = document.getElementById("mEquipDialogPos");
+  if (existing) existing.remove();
+
+  var shell = document.getElementById("mobileCampoShell");
+  if (!shell) return;
+
+  var dlg = document.createElement("div");
+  dlg.id = "mEquipDialogPos";
+  dlg.className = "mobile-equip-dialog";
+  
+  dlg.innerHTML = `
+    <div class="mobile-equip-dialog-box">
+      <i class="fas fa-circle-check" style="font-size:44px;color:#16a34a;display:block;margin-bottom:12px;"></i>
+      <div class="mobile-equip-dialog-title">Equipamento cadastrado!</div>
+      <div class="mobile-equip-dialog-sub">Deseja criar uma OS para este equipamento?</div>
+      <div class="mobile-equip-dialog-btns">
+        <button class="mobile-btn-primary" type="button" style="margin-bottom:10px;" onclick="mobileEquipCriarOS_('${escapeHtml_(equipId)}')">
+          <i class="fas fa-plus-circle" style="margin-right:8px;"></i>Criar OS
+        </button>
+        <button class="mobile-menu-action" type="button" onclick="document.getElementById('mEquipDialogPos').remove(); mobileAbrirTela_('home')">
+          Fechar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  shell.appendChild(dlg);
+}
+
+function mobileEquipCriarOS_(equipId) {
+  var dlg = document.getElementById("mEquipDialogPos");
+  if (dlg) dlg.remove();
+  mobileAbrirTela_("nova_os");
+}
+
+/* ---- Modo Gestão Completo ---- */
+
+function mobileModoGestaoCompleto_() {
+  var topbar  = document.querySelector(".topbar");
+  var sidebar = document.querySelector(".sidebar");
+  if (topbar)  topbar.style.display  = "";
+  if (sidebar) sidebar.style.display = "";
+  var div = document.getElementById("conteudo");
+  if (div) div.innerHTML = "";
+  abrir("dashboard");
+}
+
+
+/* ================================================================
+ * EXPORTS GLOBAIS — exigido porque JS_Core.html chama estas funções
+ * ================================================================ */
+try {
+  window.renderMobileCampo_ = renderMobileCampo_;
+  window.mobileAbrirTela_ = mobileAbrirTela_;
+  window.mobileDeveAtivar_ = mobileDeveAtivar_;
+  window.mobileModoGestaoCompleto_ = mobileModoGestaoCompleto_;
+  console.log("[JS_Mobile] carregado e exportado", typeof window.renderMobileCampo_);
+} catch (e) {
+  console.error("[JS_Mobile] falha ao exportar funções globais", e);
+}
+
+</script>

@@ -1,0 +1,982 @@
+<style>
+/* ================================================
+   INVENTÁRIO — ESTILOS DE TELA
+================================================ */
+.inv-filters-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.inv-filters-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+.inv-filters-grid label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 5px;
+}
+.inv-filters-grid select,
+.inv-filters-grid input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+.inv-btn-gerar {
+  padding: 10px 28px;
+  background: var(--metro-blue, #1a56db);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s;
+  height: 38px;
+}
+.inv-btn-gerar:hover { opacity: .88; }
+.inv-btn-gerar:disabled { opacity: .5; cursor: not-allowed; }
+
+/* KPI Cards */
+.inv-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.inv-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border-top: 3px solid;
+}
+.inv-kpi-total  { border-top-color: var(--metro-blue, #1a56db); }
+.inv-kpi-ok     { border-top-color: var(--success, #1a7f4b); }
+.inv-kpi-warn   { border-top-color: var(--warning, #d4a017); }
+.inv-kpi-danger { border-top-color: var(--danger,  #d93025); }
+.inv-kpi-muted  { border-top-color: #9ca3af; }
+.inv-kpi-posse  { border-top-color: #7c3aed; }
+
+.inv-kpi-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.inv-kpi-total  .inv-kpi-value { color: var(--metro-blue, #1a56db); }
+.inv-kpi-ok     .inv-kpi-value { color: var(--success, #1a7f4b); }
+.inv-kpi-warn   .inv-kpi-value { color: var(--warning, #d4a017); }
+.inv-kpi-danger .inv-kpi-value { color: var(--danger,  #d93025); }
+.inv-kpi-muted  .inv-kpi-value { color: #6b7280; }
+.inv-kpi-posse  .inv-kpi-value { color: #7c3aed; }
+
+.inv-kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.inv-kpi-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Action bar */
+.inv-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.inv-action-bar-left { display: flex; gap: 10px; align-items: center; }
+.inv-action-bar-right { font-size: 12px; color: var(--muted); }
+
+/* Table row colors */
+.inv-row-vencido td   { background: #fff0f0 !important; }
+.inv-row-vencendo td  { background: #fffbeb !important; }
+.inv-row-semdoc td    { background: #f9fafb !important; }
+.inv-row-inativo td   { opacity: .65; }
+
+/* Status badges inline */
+.inv-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.inv-badge-ok     { background: #d1fae5; color: #065f46; }
+.inv-badge-vencendo{ background: #fef3c7; color: #92400e; }
+.inv-badge-vencido { background: #fee2e2; color: #991b1b; }
+.inv-badge-semdoc  { background: #f3f4f6; color: #6b7280; }
+.inv-badge-proprio { background: #d1fae5; color: #1a7f4b; }
+.inv-badge-locado  { background: #e1effe; color: #1a56db; }
+.inv-badge-comodato{ background: #feecdc; color: #c05621; }
+.inv-badge-terceiro{ background: #f3e8ff; color: #6b21a8; }
+
+/* ================================================
+   IMPRESSÃO — OVERLAY DE PRÉ-VISUALIZAÇÃO
+================================================ */
+#inv-print-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #e8e8e8;
+  z-index: 9999;
+  overflow-y: auto;
+}
+.inv-print-toolbar {
+  position: sticky;
+  top: 0;
+  background: #1f2937;
+  color: #fff;
+  padding: 10px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.inv-print-toolbar-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.inv-print-toolbar-actions { display: flex; gap: 10px; }
+.inv-print-toolbar-actions button {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+}
+.btn-inv-print { background: #22c55e; color: #fff; }
+.btn-inv-close { background: #fff; color: #1f2937; }
+
+.inv-print-page-wrap {
+  max-width: 297mm;
+  margin: 24px auto;
+  padding: 0 16px 40px;
+}
+
+/* ================================================
+   DOCUMENTO IMPRESSO
+================================================ */
+.prt-doc {
+  background: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 10pt;
+  color: #111;
+  padding: 14mm 16mm 10mm;
+  box-shadow: 0 4px 24px rgba(0,0,0,.15);
+}
+
+/* Cabeçalho */
+.prt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 3px solid #007b3e;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.prt-header-brand {}
+.prt-brand-name {
+  font-size: 16pt;
+  font-weight: 900;
+  color: #007b3e;
+  letter-spacing: .5px;
+}
+.prt-brand-slogan {
+  font-size: 8pt;
+  color: #555;
+  margin-top: 2px;
+}
+.prt-header-doc { text-align: right; }
+.prt-doc-title {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #1a2e5a;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.prt-doc-sub {
+  font-size: 8pt;
+  color: #555;
+  margin-top: 2px;
+}
+
+/* Meta info do cliente */
+.prt-meta-box {
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 10px;
+}
+.prt-meta-item {}
+.prt-meta-key {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.prt-meta-val {
+  font-size: 9.5pt;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Seção */
+.prt-section-title {
+  font-size: 8pt;
+  font-weight: 800;
+  color: #1a2e5a;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  border-left: 3px solid #007b3e;
+  padding-left: 7px;
+  margin: 14px 0 8px;
+}
+
+/* KPIs no PDF */
+.prt-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prt-kpi {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: center;
+  border-top: 3px solid;
+}
+.prt-kpi-total   { border-top-color: #1a56db; }
+.prt-kpi-ok1     { border-top-color: #16a34a; }
+.prt-kpi-ok2     { border-top-color: #0891b2; }
+.prt-kpi-warn    { border-top-color: #d97706; }
+.prt-kpi-danger  { border-top-color: #dc2626; }
+.prt-kpi-gray    { border-top-color: #9ca3af; }
+
+.prt-kpi-value {
+  font-size: 18pt;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.prt-kpi-total  .prt-kpi-value  { color: #1a56db; }
+.prt-kpi-ok1    .prt-kpi-value  { color: #16a34a; }
+.prt-kpi-ok2    .prt-kpi-value  { color: #0891b2; }
+.prt-kpi-warn   .prt-kpi-value  { color: #d97706; }
+.prt-kpi-danger .prt-kpi-value  { color: #dc2626; }
+.prt-kpi-gray   .prt-kpi-value  { color: #6b7280; }
+
+.prt-kpi-label {
+  font-size: 6.5pt;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* Tabela */
+.prt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 7.5pt;
+}
+.prt-table thead tr {
+  background: #1a2e5a;
+  color: #fff;
+}
+.prt-table th {
+  padding: 5px 6px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 7pt;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+.prt-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+.prt-table tbody tr:nth-child(even) td { background: #f9fafb; }
+.prt-table tbody tr:hover td { background: #f0f4ff; }
+
+.prt-row-vencido  td { background: #fff0f0 !important; }
+.prt-row-vencendo td { background: #fffbeb !important; }
+.prt-row-semdoc   td { color: #999 !important; }
+.prt-row-inativo  td { opacity: .6; }
+
+.prt-tag { font-weight: 800; font-size: 8pt; color: #1a2e5a; }
+.prt-tipo { font-weight: 600; }
+
+.prt-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-size: 6.5pt;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.prt-badge-ok      { background: #d1fae5; color: #065f46; }
+.prt-badge-vencendo{ background: #fef3c7; color: #92400e; }
+.prt-badge-vencido { background: #fee2e2; color: #991b1b; }
+.prt-badge-semdoc  { background: #f3f4f6; color: #6b7280; }
+.prt-badge-proprio { background: #d1fae5; color: #1a7f4b; }
+.prt-badge-locado  { background: #e1effe; color: #1a56db; }
+.prt-badge-comodato{ background: #feecdc; color: #c05621; }
+.prt-badge-terceiro{ background: #f3e8ff; color: #6b21a8; }
+.prt-badge-ativo   { background: #d1fae5; color: #065f46; }
+.prt-badge-inativo { background: #f3f4f6; color: #6b7280; }
+
+/* Rodapé */
+.prt-footer {
+  margin-top: 18px;
+  border-top: 1px solid #ddd;
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 7pt;
+  color: #777;
+}
+.prt-footer-brand { font-weight: 700; color: #007b3e; }
+.prt-footer-disclaimer { font-style: italic; }
+
+/* Barra de composição de posse */
+.prt-posse-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.prt-posse-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prt-posse-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.prt-posse-num { font-weight: 800; font-size: 11pt; }
+.prt-posse-lbl { font-size: 7pt; color: #555; font-weight: 700; text-transform: uppercase; }
+
+/* ================================================
+   @MEDIA PRINT
+================================================ */
+@media print {
+  @page { size: A4 landscape; margin: 10mm 12mm; }
+
+  body.inv-printing { visibility: hidden; }
+  body.inv-printing #inv-print-overlay,
+  body.inv-printing #inv-print-overlay * { visibility: visible; }
+  body.inv-printing #inv-print-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    background: white;
+    overflow: visible;
+  }
+  .inv-print-toolbar { display: none !important; }
+  .inv-print-page-wrap {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .prt-doc {
+    box-shadow: none;
+    padding: 0;
+  }
+  .prt-table { page-break-inside: auto; }
+  .prt-table tr  { page-break-inside: avoid; }
+  .prt-table thead { display: table-header-group; }
+}
+
+@media (max-width: 900px) {
+  .inv-filters-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .inv-filters-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<!-- Overlay de impressão -->
+<div id="inv-print-overlay">
+  <div class="inv-print-toolbar">
+    <span class="inv-print-toolbar-title">Pré-visualização do Inventário</span>
+    <div class="inv-print-toolbar-actions">
+      <button class="btn-inv-print" onclick="invExecutarImpressao_()">Imprimir / Salvar PDF</button>
+      <button class="btn-inv-close" onclick="invFecharOverlay_()">Fechar</button>
+    </div>
+  </div>
+  <div class="inv-print-page-wrap">
+    <div id="inv-print-content" class="prt-doc"></div>
+  </div>
+</div>
+
+<script>
+  var INVENTARIO_STATE = {
+    dados: null,
+    clientes: [],
+    unidades: []
+  };
+
+  // ==========================================
+  // RENDER DO MÓDULO
+  // ==========================================
+  function renderInventarioModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Inventário de Equipamentos</h2>\n            <p class="content-subtitle">Relatório gerencial do parque de equipamentos — calibração, qualificação, posse e documentação.</p>\n          </div>\n        </div>\n\n        <div class="inv-filters-card">\n          <div class="inv-filters-grid">\n            <div>\n              <label for="inv_cliente_id">Cliente</label>\n              <select id="inv_cliente_id" onchange="invAoMudarCliente_()">\n                <option value="">Todos os clientes</option>\n              </select>\n            </div>\n            <div>\n              <label for="inv_unidade_id">Unidade</label>\n              <select id="inv_unidade_id">\n                <option value="">Todas as unidades</option>\n              </select>\n            </div>\n            <div>\n              <label for="inv_tipo_posse">Tipo de Posse</label>\n              <select id="inv_tipo_posse">\n                <option value="">Todos</option>\n                <option value="PROPRIO">Próprio</option>\n                <option value="LOCADO">Locado</option>\n                <option value="COMODATO">Comodato</option>\n                <option value="TERCEIRO">Terceiro</option>\n              </select>\n            </div>\n            <div>\n              <label for="inv_status">Status</label>\n              <select id="inv_status">\n                <option value="">Todos</option>\n                <option value="ATIVO">Ativo</option>\n                <option value="INATIVO">Inativo</option>\n              </select>\n            </div>\n            <div>\n              <label>&nbsp;</label>\n              <button class="inv-btn-gerar" id="inv_btn_gerar" onclick="invGerar_()">Gerar Inventário</button>\n            </div>\n          </div>\n        </div>\n\n        <div id="inv-resultados" style="display:none;">\n          <div class="inv-action-bar">\n            <div class="inv-action-bar-left">\n              <button class="btn-primary" onclick="invAbrirOverlay_()">Gerar PDF / Imprimir</button>\n            </div>\n            <div class="inv-action-bar-right" id="inv-geracao-info"></div>\n          </div>\n          <div class="inv-kpis" id="inv-kpis-container"></div>\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>#</th>\n                    <th>TAG</th>\n                    <th>Tipo</th>\n                    <th>Fabricante / Modelo</th>\n                    <th>Série</th>\n                    <th>Setor</th>\n                    <th>Unidade</th>\n                    <th>Posse</th>\n                    <th>Proprietário</th>\n                    <th>Calibração</th>\n                    <th>Qualificação</th>\n                    <th>Peças</th>\n                    <th>OS Ativa</th>\n                    <th>Custo Acum.</th>\n                    <th>Status</th>\n                  </tr>\n                </thead>\n                <tbody id="inv-tabela-body">\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n\n        <div id="inv-loading" style="display:none; padding:40px; text-align:center; color:var(--muted); font-size:14px;">\n          Gerando inventário, aguarde...\n        </div>\n\n        <div id="inv-empty" style="display:none; padding:40px; text-align:center; color:var(--muted); font-size:14px;">\n          Nenhum equipamento encontrado com os filtros selecionados.\n        </div>\n      </div>\n    ';
+
+    invCarregarClientes_();
+  }
+
+  // ==========================================
+  // CARREGAMENTO DE DADOS PARA FILTROS
+  // ==========================================
+  function invCarregarClientes_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return;
+        INVENTARIO_STATE.clientes = res.items || [];
+        invPreencherComboClientes_();
+      })
+      .withFailureHandler(function(err) { console.error("Falha ao carregar clientes:", err); })
+      .inventarioListarClientesAtivos(SESSION);
+  }
+
+  function invPreencherComboClientes_() {
+    const sel = document.getElementById("inv_cliente_id");
+    if (!sel) return;
+    const opts = ['<option value="">Todos os clientes</option>'];
+    INVENTARIO_STATE.clientes.forEach(function(c) {
+      opts.push('<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.NOME) + '</option>');
+    });
+    sel.innerHTML = opts.join("");
+  }
+
+  function invAoMudarCliente_() {
+    const clienteId = getValue_("inv_cliente_id");
+    const sel = document.getElementById("inv_unidade_id");
+    if (!sel) return;
+    if (!clienteId) {
+      sel.innerHTML = '<option value="">Todas as unidades</option>';
+      INVENTARIO_STATE.unidades = [];
+      return;
+    }
+    sel.innerHTML = '<option value="">Carregando...</option>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        INVENTARIO_STATE.unidades = (res && res.items) ? res.items : [];
+        const opts = ['<option value="">Todas as unidades</option>'];
+        INVENTARIO_STATE.unidades.forEach(function(u) {
+          opts.push('<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME_UNIDADE) + '</option>');
+        });
+        sel.innerHTML = opts.join("");
+      })
+      .withFailureHandler(function() {
+        sel.innerHTML = '<option value="">Todas as unidades</option>';
+      })
+      .inventarioListarUnidadesAtivasPorCliente(SESSION, clienteId);
+  }
+
+  // ==========================================
+  // GERADOR PRINCIPAL
+  // ==========================================
+  function invGerar_() {
+    if (!SESSION) return;
+
+    const filtros = {
+      clienteId:  getValue_("inv_cliente_id"),
+      unidadeId:  getValue_("inv_unidade_id"),
+      tipoPosse:  getValue_("inv_tipo_posse"),
+      status:     getValue_("inv_status")
+    };
+
+    const btnGerar = document.getElementById("inv_btn_gerar");
+    const elLoad   = document.getElementById("inv-loading");
+    const elResult = document.getElementById("inv-resultados");
+    const elEmpty  = document.getElementById("inv-empty");
+
+    if (btnGerar) { btnGerar.disabled = true; btnGerar.textContent = "Gerando..."; }
+    if (elLoad)   elLoad.style.display = "block";
+    if (elResult) elResult.style.display = "none";
+    if (elEmpty)  elEmpty.style.display = "none";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (btnGerar) { btnGerar.disabled = false; btnGerar.textContent = "Gerar Inventário"; }
+        if (elLoad)   elLoad.style.display = "none";
+
+        if (!res || !res.success) {
+          alert((res && res.message) ? res.message : "Erro ao gerar inventário.");
+          return;
+        }
+
+        INVENTARIO_STATE.dados = res;
+
+        if (!res.itens || res.itens.length === 0) {
+          if (elEmpty) elEmpty.style.display = "block";
+          return;
+        }
+
+        if (elResult) elResult.style.display = "block";
+        invRenderKPIs_(res.indicadores);
+        invRenderTabela_(res.itens);
+        invRenderInfoGeracao_(res);
+      })
+      .withFailureHandler(function(err) {
+        if (btnGerar) { btnGerar.disabled = false; btnGerar.textContent = "Gerar Inventário"; }
+        if (elLoad)   elLoad.style.display = "none";
+        console.error("Falha ao gerar inventário:", err);
+        alert("Erro de comunicação ao gerar inventário.");
+      })
+      .inventarioGerar(SESSION, filtros);
+  }
+
+  // ==========================================
+  // RENDER — KPIs
+  // ==========================================
+  function invRenderKPIs_(ind) {
+    const el = document.getElementById("inv-kpis-container");
+    if (!el) return;
+
+    el.innerHTML = [
+      invKpiCard_("inv-kpi-total",  ind.total,    "Total de<br>Equipamentos"),
+      invKpiCard_("inv-kpi-ok",     ind.calibPct  + "%", "Calibração<br>em Dia",    ind.calibOk + " equipamentos"),
+      invKpiCard_("inv-kpi-ok",     ind.qualPct   + "%", "Qualificação<br>em Dia",  ind.qualOk  + " equipamentos"),
+      invKpiCard_("inv-kpi-warn",   ind.vencendo,  "Vencendo<br>em 30 dias"),
+      invKpiCard_("inv-kpi-danger", ind.vencidos,  "Vencidos /<br>Irregulares"),
+      invKpiCard_("inv-kpi-muted",  ind.semDoc,    "Sem<br>Documentação"),
+      invKpiCard_("inv-kpi-warn",   ind.osAtivaTotal || 0, "Com OS<br>Ativa"),
+      invKpiCard_("inv-kpi-danger", ind.pecasVencidas || 0, "Peças<br>Vencidas"),
+      invKpiCard_("inv-kpi-posse",  invMoedaCurta_(ind.custoAcumulado || 0), "Custo<br>Acumulado"),
+      invKpiCard_("inv-kpi-posse",  ind.proprios,  "Próprios"),
+      invKpiCard_("inv-kpi-posse",  ind.locados,   "Locados"),
+      invKpiCard_("inv-kpi-posse",  ind.comodatos, "Comodatos"),
+      invKpiCard_("inv-kpi-posse",  ind.terceiros, "Terceiros")
+    ].join("");
+  }
+
+  function invKpiCard_(cls, value, label, sub) {
+    return '<div class="inv-kpi ' + cls + '">' +
+      '<div class="inv-kpi-value">' + value + '</div>' +
+      '<div class="inv-kpi-label">' + label + '</div>' +
+      (sub ? '<div class="inv-kpi-sub">' + escapeHtml_(sub) + '</div>' : '') +
+      '</div>';
+  }
+
+  function invMoedaCurta_(valor) {
+    var n = Number(valor || 0);
+    if (n >= 1000000) return "R$ " + (n / 1000000).toFixed(1).replace(".", ",") + "M";
+    if (n >= 1000) return "R$ " + (n / 1000).toFixed(1).replace(".", ",") + "k";
+    return "R$ " + n.toFixed(0);
+  }
+
+  // ==========================================
+  // RENDER — TABELA
+  // ==========================================
+  function invRenderTabela_(itens) {
+    const tbody = document.getElementById("inv-tabela-body");
+    if (!tbody) return;
+
+    if (!itens || !itens.length) {
+      tbody.innerHTML = '<tr><td colspan="15" class="empty-state">Nenhum equipamento encontrado.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = itens.map(function(item) {
+      var rowCls = invClasseLinha_(item);
+      return '<tr class="' + rowCls + '">' +
+        '<td style="color:var(--muted);font-size:11px;">' + item.IDX + '</td>' +
+        '<td style="font-weight:800;color:var(--metro-blue,#1a56db);">' + escapeHtml_(item.TAG) + '</td>' +
+        '<td>' + escapeHtml_(item.TIPO) + '</td>' +
+        '<td style="font-size:12px;">' + escapeHtml_((item.FABRICANTE + (item.MODELO ? ' / ' + item.MODELO : ''))) + '</td>' +
+        '<td style="font-size:11px;">' + escapeHtml_(item.SERIE || '--') + '</td>' +
+        '<td>' + escapeHtml_(item.SETOR || '--') + '</td>' +
+        '<td style="font-size:12px;">' + escapeHtml_(item.UNIDADE_NOME) + '</td>' +
+        '<td>' + invBadgePosse_(item.TIPO_POSSE) + '</td>' +
+        '<td style="font-size:11px;">' + escapeHtml_(item.PROPRIETARIO || '--') + '</td>' +
+        '<td>' + invBadgeDoc_(item.CALIBRACAO) + '</td>' +
+        '<td>' + invBadgeDoc_(item.QUALIFICACAO) + '</td>' +
+        '<td>' + invBadgePecas_(item.PECAS_STATUS) + '</td>' +
+        '<td>' + invBadgeOSAtiva_(item.OS_ATIVA) + '</td>' +
+        '<td style="font-size:11px;font-weight:700;">' + escapeHtml_(invMoedaCurta_(item.CUSTO_ACUMULADO || 0)) + '</td>' +
+        '<td>' + obterBadgeStatusHtml_(item.STATUS) + '</td>' +
+        '</tr>';
+    }).join("");
+  }
+
+  function invClasseLinha_(item) {
+    var cs = String(item.CALIBRACAO  && item.CALIBRACAO.status  || "");
+    var qs = String(item.QUALIFICACAO && item.QUALIFICACAO.status || "");
+    if (cs === "VENCIDO"  || qs === "VENCIDO")  return "inv-row-vencido";
+    if (cs === "VENCENDO" || qs === "VENCENDO") return "inv-row-vencendo";
+    if (cs === "SEM_DOC"  && qs === "SEM_DOC")  return "inv-row-semdoc";
+    if (String(item.STATUS || "").toUpperCase() === "INATIVO") return "inv-row-inativo";
+    return "";
+  }
+
+  function invBadgeDoc_(obj) {
+    if (!obj) return '<span class="inv-badge inv-badge-semdoc">--</span>';
+    var s = obj.status || "SEM_DOC";
+    var cls = s === "OK" ? "inv-badge-ok" : s === "VENCENDO" ? "inv-badge-vencendo" : s === "VENCIDO" ? "inv-badge-vencido" : "inv-badge-semdoc";
+    var label = s === "OK" ? "OK" : s === "VENCENDO" ? "Vencendo" : s === "VENCIDO" ? "Vencido" : "Sem doc";
+    var venc  = obj.label ? ('<div style="font-size:10px;color:var(--muted);margin-top:1px;">' + escapeHtml_(obj.label) + '</div>') : "";
+    return '<span class="inv-badge ' + cls + '">' + label + '</span>' + venc;
+  }
+
+  function invBadgePecas_(obj) {
+    if (!obj || !obj.total) return '<span class="inv-badge inv-badge-semdoc">Sem peças</span>';
+    var cls = obj.status === "VENCIDO" ? "inv-badge-vencido" : obj.status === "VENCENDO" ? "inv-badge-vencendo" : "inv-badge-ok";
+    return '<span class="inv-badge ' + cls + '">' + escapeHtml_(obj.label) + '</span>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:1px;">Total: ' + escapeHtml_(obj.total) + '</div>';
+  }
+
+  function invBadgeOSAtiva_(obj) {
+    if (!obj || !obj.total) return '<span class="inv-badge inv-badge-semdoc">Sem OS</span>';
+    return '<span class="inv-badge inv-badge-vencendo">' + escapeHtml_(obj.total + " ativa(s)") + '</span>' +
+      '<div style="font-size:10px;color:var(--muted);margin-top:1px;">' + escapeHtml_(obj.numero || obj.status || "") + '</div>';
+  }
+
+  function invBadgePosse_(tipoPosse) {
+    var t = String(tipoPosse || "").toUpperCase();
+    var map = {
+      "PROPRIO":  { label: "Próprio",  cls: "inv-badge-proprio" },
+      "LOCADO":   { label: "Locado",   cls: "inv-badge-locado"  },
+      "COMODATO": { label: "Comodato", cls: "inv-badge-comodato"},
+      "TERCEIRO": { label: "Terceiro", cls: "inv-badge-terceiro"}
+    };
+    var s = map[t];
+    if (!s) return '<span style="color:#aaa;font-size:11px;">--</span>';
+    return '<span class="inv-badge ' + s.cls + '">' + s.label + '</span>';
+  }
+
+  function invRenderInfoGeracao_(dados) {
+    var el = document.getElementById("inv-geracao-info");
+    if (!el) return;
+    var dt = invFormatarDataHora_(dados.geradoEm);
+    var cli = dados.clienteInfo ? escapeHtml_(dados.clienteInfo.NOME_FANTASIA || dados.clienteInfo.RAZAO_SOCIAL || "") : "Todos os clientes";
+    el.innerHTML = escapeHtml_(dados.itens.length) + " equipamentos &nbsp;|&nbsp; " +
+      cli + " &nbsp;|&nbsp; Gerado em: " + dt + " por " + escapeHtml_(dados.geradoPor);
+  }
+
+  // ==========================================
+  // PDF — OVERLAY DE IMPRESSÃO
+  // ==========================================
+  function invAbrirOverlay_() {
+    if (!INVENTARIO_STATE.dados || !INVENTARIO_STATE.dados.success) {
+      alert("Gere o inventário antes de imprimir.");
+      return;
+    }
+
+    var content = document.getElementById("inv-print-content");
+    if (content) content.innerHTML = invBuildPrintHtml_(INVENTARIO_STATE.dados);
+
+    var overlay = document.getElementById("inv-print-overlay");
+    if (overlay) overlay.style.display = "block";
+    document.body.classList.add("inv-printing");
+  }
+
+  function invFecharOverlay_() {
+    var overlay = document.getElementById("inv-print-overlay");
+    if (overlay) overlay.style.display = "none";
+    document.body.classList.remove("inv-printing");
+  }
+
+  function invExecutarImpressao_() {
+    document.body.classList.add("inv-printing");
+    window.print();
+    setTimeout(function() {
+      document.body.classList.remove("inv-printing");
+    }, 1000);
+  }
+
+  // ==========================================
+  // BUILDER DO HTML DO DOCUMENTO PDF
+  // ==========================================
+  function invBuildPrintHtml_(dados) {
+    var ind   = dados.indicadores;
+    var itens = dados.itens;
+    var cliObj = dados.clienteInfo;
+    var uni    = dados.unidadeInfo ? escapeHtml_(dados.unidadeInfo.NOME_UNIDADE || "") : "Todas as unidades";
+    var dtGer          = invFormatarDataHora_(dados.geradoEm);
+    var tokenValidacao = dados.tokenValidacao || "";
+    var urlValidacao   = dados.urlValidacao   || "";
+    var qrUrl          = dados.qrUrl          || "";
+
+    var cliNome = cliObj ? escapeHtml_(cliObj.NOME_FANTASIA || cliObj.RAZAO_SOCIAL || "") : "Todos os clientes";
+    var cliRazao = cliObj ? escapeHtml_(cliObj.RAZAO_SOCIAL || "") : "";
+    var cliCnpj  = cliObj ? escapeHtml_(cliObj.CNPJ || "") : "";
+    var cliEnder = cliObj ? escapeHtml_(cliObj.ENDERECO || "") : "";
+    var cliTel   = cliObj ? escapeHtml_(cliObj.TELEFONE || "") : "";
+    var cliEmail = cliObj ? escapeHtml_(cliObj.EMAIL || "") : "";
+    var cliContato = cliObj ? escapeHtml_(cliObj.CONTATO || "") : "";
+
+    // ── Cabeçalho
+    var html = '<div class="prt-header">' +
+      '<div class="prt-header-brand">' +
+        '<div class="prt-brand-name">METROLABS SGO+</div>' +
+        '<div class="prt-brand-slogan">Sistema de Gestão Operacional e Técnica</div>' +
+      '</div>' +
+      '<div class="prt-header-doc">' +
+        '<div class="prt-doc-title">Inventário de Equipamentos</div>' +
+        '<div class="prt-doc-sub">Relatório Gerencial — Engenharia Clínica</div>' +
+      '</div>' +
+    '</div>';
+
+    // ── Dados do cliente
+    if (cliObj) {
+      html += '<div style="background:#edf5ff;border:1px solid #bdd7f5;border-radius:8px;padding:12px 16px;margin-bottom:14px;">';
+      html += '<div style="font-size:7pt;font-weight:800;color:#0b3b78;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;border-bottom:1px solid #bdd7f5;padding-bottom:5px;">Dados do Cliente</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px 14px;">';
+      html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">Razão Social</div><div style="font-size:9pt;font-weight:800;color:#0b3b78;">' + cliRazao + '</div></div>';
+      if (cliNome !== cliRazao && cliNome) html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">Nome Fantasia</div><div style="font-size:9pt;font-weight:700;">' + cliNome + '</div></div>';
+      if (cliCnpj)   html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">CNPJ</div><div style="font-size:9pt;font-weight:700;font-family:monospace;">' + cliCnpj + '</div></div>';
+      if (cliEnder)  html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">Endereço</div><div style="font-size:8pt;font-weight:600;">' + cliEnder + '</div></div>';
+      if (cliContato) html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">Contato</div><div style="font-size:8pt;font-weight:600;">' + cliContato + '</div></div>';
+      if (cliTel)    html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">Telefone</div><div style="font-size:8pt;font-weight:600;">' + cliTel + '</div></div>';
+      if (cliEmail)  html += '<div><div style="font-size:6.5pt;font-weight:700;color:#667085;text-transform:uppercase;">E-mail</div><div style="font-size:8pt;font-weight:600;">' + cliEmail + '</div></div>';
+      html += '</div></div>';
+    }
+
+    // ── Meta: unidade, data, responsável
+    html += '<div class="prt-meta-box">' +
+      '<div class="prt-meta-item"><div class="prt-meta-key">Unidade</div><div class="prt-meta-val">' + uni + '</div></div>' +
+      '<div class="prt-meta-item"><div class="prt-meta-key">Gerado em</div><div class="prt-meta-val">' + escapeHtml_(dtGer) + '</div></div>' +
+      '<div class="prt-meta-item"><div class="prt-meta-key">Gerado por</div><div class="prt-meta-val">' + escapeHtml_(dados.geradoPor) + '</div></div>' +
+      '<div class="prt-meta-item"><div class="prt-meta-key">Total</div><div class="prt-meta-val">' + itens.length + ' equipamentos</div></div>' +
+    '</div>';
+
+    // ── KPIs
+    html += '<div class="prt-section-title">Indicadores do Parque</div>';
+    html += '<div class="prt-kpis">' +
+      invPrtKpi_("prt-kpi-total",  ind.total,       "Total Equipamentos") +
+      invPrtKpi_("prt-kpi-ok1",    ind.calibPct + "%","Calibração em Dia",    ind.calibOk + " equip.") +
+      invPrtKpi_("prt-kpi-ok2",    ind.qualPct  + "%","Qualificação em Dia",  ind.qualOk  + " equip.") +
+      invPrtKpi_("prt-kpi-warn",   ind.vencendo,    "Vencendo ≤30d") +
+      invPrtKpi_("prt-kpi-danger", ind.vencidos,    "Vencidos") +
+      invPrtKpi_("prt-kpi-gray",   ind.semDoc,      "Sem Documentação") +
+      invPrtKpi_("prt-kpi-warn",   ind.osAtivaTotal || 0, "Com OS Ativa") +
+      invPrtKpi_("prt-kpi-danger", ind.pecasVencidas || 0, "Peças Vencidas") +
+      invPrtKpi_("prt-kpi-total",  invMoedaCurta_(ind.custoAcumulado || 0), "Custo Acum.") +
+    '</div>';
+
+    // ── Composição de posse
+    html += '<div class="prt-section-title">Composição por Posse</div>';
+    html += '<div class="prt-posse-bar">' +
+      invPrtPosseItem_("#1a7f4b", ind.proprios,  "Próprio") +
+      invPrtPosseItem_("#1a56db", ind.locados,   "Locado") +
+      invPrtPosseItem_("#c05621", ind.comodatos, "Comodato") +
+      invPrtPosseItem_("#6b21a8", ind.terceiros, "Terceiro") +
+    '</div>';
+
+    // ── Tabela com colunas de Engenharia Clínica
+    html += '<div class="prt-section-title">Listagem Detalhada (' + itens.length + ' equipamentos)</div>';
+    html += '<table class="prt-table"><thead><tr>' +
+      '<th style="width:22px">#</th>' +
+      '<th style="width:58px">TAG</th>' +
+      '<th>Tipo / Fabricante</th>' +
+      '<th style="width:55px">Série</th>' +
+      '<th>Setor / Unidade</th>' +
+      '<th>Posse</th>' +
+      '<th>Calibração</th>' +
+      '<th>Qualificação</th>' +
+      '<th>Ensaio Elét.</th>' +
+      '<th>Manutenção Prev.</th>' +
+      '<th>Peças</th>' +
+      '<th>OS Ativa</th>' +
+      '<th>Custo</th>' +
+      '<th>Status</th>' +
+    '</tr></thead><tbody>';
+
+    itens.forEach(function(item) {
+      var rowCls = invPrtClasseLinha_(item);
+      var reg = item.REG_TECNICO || {};
+      html += '<tr class="' + rowCls + '">' +
+        '<td style="color:#999;font-size:6.5pt;">' + item.IDX + '</td>' +
+        '<td class="prt-tag">' + escapeHtml_(item.TAG) + '</td>' +
+        '<td>' +
+          '<div class="prt-tipo">' + escapeHtml_(item.TIPO) + '</div>' +
+          '<div style="font-size:6.5pt;color:#666;">' + escapeHtml_(item.FABRICANTE) + (item.MODELO ? ' / ' + escapeHtml_(item.MODELO) : '') + '</div>' +
+          (item.SERIE ? '<div style="font-size:6pt;color:#888;font-family:monospace;">S/N: ' + escapeHtml_(item.SERIE) + '</div>' : '') +
+        '</td>' +
+        '<td style="font-size:6.5pt;">' + escapeHtml_(item.SERIE || '--') + '</td>' +
+        '<td>' +
+          '<div style="font-size:7.5pt;">' + escapeHtml_(item.SETOR || '--') + '</div>' +
+          '<div style="font-size:6.5pt;color:#888;">' + escapeHtml_(item.UNIDADE_NOME) + '</div>' +
+        '</td>' +
+        '<td>' + invPrtBadgePosse_(item.TIPO_POSSE) + '</td>' +
+        '<td>' + invPrtBadgeReg_(reg.CALIBRACAO) + '</td>' +
+        '<td>' + invPrtBadgeReg_(reg.QUALIFICACAO) + '</td>' +
+        '<td>' + invPrtBadgeReg_(reg.ENSAIO_ELETRICO) + '</td>' +
+        '<td>' + invPrtBadgeReg_(reg.MANUTENCAO_PREVENTIVA) + '</td>' +
+        '<td>' + invPrtBadgePecas_(item.PECAS_STATUS) + '</td>' +
+        '<td>' + invPrtBadgeOSAtiva_(item.OS_ATIVA) + '</td>' +
+        '<td style="font-size:6.5pt;font-weight:700;">' + escapeHtml_(invMoedaCurta_(item.CUSTO_ACUMULADO || 0)) + '</td>' +
+        '<td>' + invPrtBadgeStatus_(item.STATUS) + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+
+    // ── Legenda
+    html += '<div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;font-size:6.5pt;color:#555;">' +
+      '<span style="font-weight:700;">Legenda:</span>' +
+      '<span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:8px;font-weight:700;">OK</span> Dentro do prazo ' +
+      '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;font-weight:700;">Vencendo</span> ≤ 30 dias ' +
+      '<span style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:8px;font-weight:700;">Vencido</span> Fora do prazo ' +
+      '<span style="background:#f3f4f6;color:#6b7280;padding:1px 6px;border-radius:8px;font-weight:700;">Sem reg.</span> Sem registro técnico' +
+    '</div>';
+
+    // ── Rodapé com QR
+    html += '<div style="margin-top:14px;border-top:2px solid #e2e8f0;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:8pt;font-weight:800;color:#007b3e;margin-bottom:3px;">METROLABS SGO+ — Sistema de Gestão Operacional e Técnica</div>';
+    html += '<div style="font-size:7pt;color:#777;font-style:italic;">Documento gerado em ' + escapeHtml_(dtGer) + ' por ' + escapeHtml_(dados.geradoPor) + '. Validade: data de emissão.</div>';
+    if (tokenValidacao) {
+      html += '<div style="margin-top:5px;font-size:7pt;color:#444;">Código de autenticação: <strong style="font-family:Consolas,Monaco,monospace;color:#1a2e5a;">' + escapeHtml_(tokenValidacao) + '</strong></div>';
+    }
+    if (urlValidacao) {
+      html += '<div style="margin-top:2px;font-size:6.5pt;color:#555;">Valide em: <span style="color:#1450a3;">' + escapeHtml_(urlValidacao) + '</span></div>';
+    }
+    html += '</div>';
+    if (qrUrl && urlValidacao) {
+      html += '<div style="text-align:center;flex:0 0 auto;">';
+      html += '<img src="' + escapeHtml_(qrUrl) + '" style="width:80px;height:80px;display:block;border:1px solid #e2e8f0;border-radius:4px;" alt="QR">';
+      html += '<div style="font-size:6pt;font-weight:700;color:#007b3e;text-transform:uppercase;margin-top:3px;">Valide a autenticidade</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    return html;
+  }
+
+  function invPrtBadgeReg_(obj) {
+    if (!obj || obj.status === "SEM_REG") return '<span class="prt-badge prt-badge-semdoc">--</span>';
+    var s = obj.status || "SEM_REG";
+    var cls = s === "OK" ? "prt-badge-ok" : s === "VENCENDO" ? "prt-badge-vencendo" : s === "VENCIDO" ? "prt-badge-vencido" : "prt-badge-semdoc";
+    var lbl = s === "OK" ? "OK" : s === "VENCENDO" ? "Vcdo." : s === "VENCIDO" ? "Vencido" : "--";
+    var sub = obj.vencimento ? '<div style="font-size:5.5pt;color:#777;margin-top:1px;">' + escapeHtml_(obj.vencimento.substring(0,10)) + '</div>' : '';
+    return '<span class="prt-badge ' + cls + '">' + lbl + '</span>' + sub;
+  }
+
+  function invPrtBadgePecas_(obj) {
+    if (!obj || !obj.total) return '<span class="prt-badge prt-badge-semdoc">--</span>';
+    var cls = obj.status === "VENCIDO" ? "prt-badge-vencido" : obj.status === "VENCENDO" ? "prt-badge-vencendo" : "prt-badge-ok";
+    return '<span class="prt-badge ' + cls + '">' + escapeHtml_(obj.vencidas || obj.vencendo || obj.criticas || obj.total) + '</span>';
+  }
+
+  function invPrtBadgeOSAtiva_(obj) {
+    if (!obj || !obj.total) return '<span class="prt-badge prt-badge-semdoc">--</span>';
+    return '<span class="prt-badge prt-badge-vencendo">' + escapeHtml_(obj.total) + '</span>';
+  }
+
+  function invPrtKpi_(cls, value, label, sub) {
+    return '<div class="prt-kpi ' + cls + '">' +
+      '<div class="prt-kpi-value">' + value + '</div>' +
+      '<div class="prt-kpi-label">' + label + '</div>' +
+      (sub ? '<div style="font-size:7pt;color:#666;margin-top:1px;">' + escapeHtml_(sub) + '</div>' : '') +
+    '</div>';
+  }
+
+  function invPrtPosseItem_(color, num, label) {
+    return '<div class="prt-posse-item">' +
+      '<div class="prt-posse-dot" style="background:' + color + ';"></div>' +
+      '<div><div class="prt-posse-num" style="color:' + color + ';">' + num + '</div>' +
+      '<div class="prt-posse-lbl">' + label + '</div></div>' +
+    '</div>';
+  }
+
+  function invPrtBadgeDoc_(obj) {
+    if (!obj) return '<span class="prt-badge prt-badge-semdoc">Sem doc</span>';
+    var s = obj.status || "SEM_DOC";
+    var cls  = s === "OK" ? "prt-badge-ok" : s === "VENCENDO" ? "prt-badge-vencendo" : s === "VENCIDO" ? "prt-badge-vencido" : "prt-badge-semdoc";
+    var lbl  = s === "OK" ? "OK" : s === "VENCENDO" ? "Vencendo" : s === "VENCIDO" ? "Vencido" : "Sem doc";
+    var sub  = obj.label ? '<div style="font-size:6pt;color:#777;margin-top:1px;">' + escapeHtml_(obj.label) + '</div>' : '';
+    return '<span class="prt-badge ' + cls + '">' + lbl + '</span>' + sub;
+  }
+
+  function invPrtBadgePosse_(tipoPosse) {
+    var t = String(tipoPosse || "").toUpperCase();
+    var map = {
+      "PROPRIO":  { label: "Próprio",  cls: "prt-badge-proprio" },
+      "LOCADO":   { label: "Locado",   cls: "prt-badge-locado"  },
+      "COMODATO": { label: "Comodato", cls: "prt-badge-comodato"},
+      "TERCEIRO": { label: "Terceiro", cls: "prt-badge-terceiro"}
+    };
+    var s = map[t];
+    if (!s) return '<span style="color:#bbb;font-size:7pt;">--</span>';
+    return '<span class="prt-badge ' + s.cls + '">' + s.label + '</span>';
+  }
+
+  function invPrtBadgeStatus_(status) {
+    var s = String(status || "").toUpperCase();
+    var cls = s === "ATIVO" ? "prt-badge-ativo" : "prt-badge-inativo";
+    return '<span class="prt-badge ' + cls + '">' + escapeHtml_(s) + '</span>';
+  }
+
+  function invPrtClasseLinha_(item) {
+    var cs = String(item.CALIBRACAO  && item.CALIBRACAO.status  || "");
+    var qs = String(item.QUALIFICACAO && item.QUALIFICACAO.status || "");
+    if (cs === "VENCIDO"  || qs === "VENCIDO")  return "prt-row-vencido";
+    if (cs === "VENCENDO" || qs === "VENCENDO") return "prt-row-vencendo";
+    if (cs === "SEM_DOC"  && qs === "SEM_DOC")  return "prt-row-semdoc";
+    if (String(item.STATUS || "").toUpperCase() === "INATIVO") return "prt-row-inativo";
+    return "";
+  }
+
+  // ==========================================
+  // UTILITÁRIOS
+  // ==========================================
+  function invFormatarDataHora_(iso) {
+    if (!iso) return "--";
+    try {
+      var d = new Date(iso);
+      var pad = function(n) { return String(n).padStart(2, "0"); };
+      return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() +
+        " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    } catch(e) { return String(iso); }
+  }
+</script>

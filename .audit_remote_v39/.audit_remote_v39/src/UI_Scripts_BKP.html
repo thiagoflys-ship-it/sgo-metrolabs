@@ -1,0 +1,2334 @@
+<script>
+  let SESSION = null;
+  let USER_CONTEXT = null; 
+  let MOTORES = {};
+  let LOGIN_EM_ANDAMENTO = false;
+  let PUBLIC_CONFIG = {};
+
+  let IDLE_SECONDS = 0;
+  let IDLE_LIMIT = 300;
+  let IDLE_MONITOR = null;
+  let IDLE_BEEP_INTERVAL = null;
+  let OCIOSO = false;
+  let SOM_OCIOSIDADE_ATIVO = true;
+  let AUDIO_CTX = null;
+
+  const CLIENTES_STATE = { items: [], editingId: "", loading: false, filtro: "" };
+  const UNIDADES_STATE = { items: [], clientes: [], editingId: "", loading: false, filtro: "" };
+  const EQUIPAMENTOS_STATE = { items: [], clientes: [], unidades: [], editingId: "", loading: false, filtro: "" };
+  const DOCUMENTOS_STATE = { items: [], clientes: [], unidades: [], equipamentos: [], editingId: "", loading: false, filtro: "" };
+  const USUARIOS_STATE = { items: [], editingId: "", loading: false, filtro: "" };
+
+  const MENSAGENS_FALLBACK = [
+    "Disciplina vence talento todos os dias.",
+    "Qualidade não é opção, é padrão.",
+    "Você não trabalha com equipamentos, você trabalha com vidas.",
+    "Excelência é fazer bem feito mesmo quando ninguém está vendo.",
+    "Cada relatório seu sustenta a credibilidade da Metrolabs.",
+    "Foco, padrão e consistência — esse é o jogo.",
+    "Pequenos detalhes fazem grandes auditorias passarem.",
+    "Quem domina o processo domina o resultado.",
+    "Seu trabalho impacta diretamente a segurança do paciente.",
+    "Alta performance é hábito, não evento."
+  ];
+
+  window.onload = function () {
+    carregarConfiguracoesIniciais();
+    registrarEventosDeAtividade();
+    registrarAtalhoEnterLogin();
+    tentarAutoLogin_(); 
+  };
+
+  function carregarConfiguracoesIniciais() {
+    google.script.run
+      .withSuccessHandler(function (cfg) {
+        try {
+          PUBLIC_CONFIG = cfg || {};
+          MOTORES = PUBLIC_CONFIG.motores || {};
+
+          const logo = document.getElementById("logo");
+          const logoTopo = document.getElementById("logoTopo");
+
+          if (logo && PUBLIC_CONFIG.logo) logo.src = PUBLIC_CONFIG.logo;
+          if (logoTopo && PUBLIC_CONFIG.logo) logoTopo.src = PUBLIC_CONFIG.logo;
+
+          const localIdle = localStorage.getItem("SGO_IDLE_LIMIT");
+          if (localIdle) {
+            IDLE_LIMIT = parseInt(localIdle, 10);
+          } else {
+            IDLE_LIMIT = Number(PUBLIC_CONFIG.idleSecondsDefault || 300);
+          }
+          
+          if (!isFinite(IDLE_LIMIT) || IDLE_LIMIT < 30) IDLE_LIMIT = 300;
+
+          if (typeof PUBLIC_CONFIG.idleSoundDefault === "boolean") {
+            const prefLocal = lerPreferenciaSomOciosidade_();
+            SOM_OCIOSIDADE_ATIVO = prefLocal === null ? PUBLIC_CONFIG.idleSoundDefault : prefLocal;
+          } else {
+            SOM_OCIOSIDADE_ATIVO = lerPreferenciaSomOciosidade_();
+          }
+
+          aplicarMensagemMotivacional_();
+        } catch (e) {
+          console.error("Erro ao aplicar configurações iniciais:", e);
+        }
+      })
+      .withFailureHandler(function (err) {
+        console.error("Erro ao carregar configurações públicas:", err);
+      })
+      .getPublicConfig();
+  }
+
+  /* =========================
+     SISTEMA DE LOGIN E SESSÃO
+  ========================= */
+
+  function tentarAutoLogin_() {
+    const sessaoSalva = localStorage.getItem("SGO_SESSION");
+    if (!sessaoSalva) return;
+
+    setBotaoLoginEstado_(true);
+    LOGIN_EM_ANDAMENTO = true;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+
+        if (res && res.success && res.session) {
+          SESSION = res.session.sessionId;
+          USER_CONTEXT = res.session;
+          
+          const loginBox = document.getElementById("login");
+          const appBox = document.getElementById("app");
+          const userInfo = document.getElementById("userInfo");
+
+          if (loginBox) loginBox.style.display = "none";
+          if (appBox) appBox.style.display = "flex";
+
+          if (userInfo) {
+            userInfo.innerText = (USER_CONTEXT.nome || "") + " | " + (USER_CONTEXT.perfil || "");
+          }
+
+          aplicarRegrasDeAcesso_();
+          resetarOciosidade_();
+          iniciarMonitorOciosidade_();
+          
+          // Novo interceptador de QR Code
+          verificarRedirecionamentoQR_();
+        } else {
+          localStorage.removeItem("SGO_SESSION");
+        }
+      })
+      .withFailureHandler(function () {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        localStorage.removeItem("SGO_SESSION");
+      })
+      .getSessaoAtual(sessaoSalva);
+  }
+
+  function fazerLogin() {
+    if (LOGIN_EM_ANDAMENTO) return;
+
+    const usuarioEl = document.getElementById("usuario");
+    const senhaEl = document.getElementById("senha");
+
+    const usuario = usuarioEl ? String(usuarioEl.value || "").trim() : "";
+    const senha = senhaEl ? String(senhaEl.value || "").trim() : "";
+
+    if (!usuario) {
+      alert("Informe o usuário.");
+      if (usuarioEl) usuarioEl.focus();
+      return;
+    }
+
+    if (!senha) {
+      alert("Informe a senha.");
+      if (senhaEl) senhaEl.focus();
+      return;
+    }
+
+    LOGIN_EM_ANDAMENTO = true;
+    setBotaoLoginEstado_(true);
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+
+        if (!res || !res.success) {
+          alert((res && res.message) ? res.message : "Falha no login.");
+          return;
+        }
+
+        SESSION = res.sessionId || null;
+        USER_CONTEXT = res.user || null;
+
+        if (SESSION) {
+          localStorage.setItem("SGO_SESSION", SESSION);
+        }
+
+        const loginBox = document.getElementById("login");
+        const appBox = document.getElementById("app");
+        const userInfo = document.getElementById("userInfo");
+
+        if (loginBox) loginBox.style.display = "none";
+        if (appBox) appBox.style.display = "flex";
+
+        if (userInfo && res.user) {
+          userInfo.innerText = (res.user.nome || "") + " | " + (USER_CONTEXT.perfil || "");
+        }
+
+        aplicarRegrasDeAcesso_();
+        resetarOciosidade_();
+        iniciarMonitorOciosidade_();
+        aplicarMensagemMotivacional_();
+        
+        // Novo interceptador de QR Code
+        verificarRedirecionamentoQR_();
+      })
+      .withFailureHandler(function (err) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        console.error("Erro no login:", err);
+        alert("Erro ao processar o login. Tente novamente.");
+      })
+      .login(usuario, senha);
+  }
+
+  function verificarRedirecionamentoQR_() {
+    // Verifica se a URL do WebApp possui o parâmetro "equipamento"
+    if (typeof google !== "undefined" && google.script && google.script.url) {
+      google.script.url.getLocation(function(location) {
+        if (location.parameters && location.parameters.equipamento && location.parameters.equipamento[0]) {
+          const equipId = location.parameters.equipamento[0];
+          
+          const div = document.getElementById("conteudo");
+          if (div) {
+            div.innerHTML = '\n              <div style="padding: 40px 20px; text-align: center; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: var(--shadow); border: 1px solid var(--border);">\n                <h2 style="color: var(--metro-blue); margin-bottom: 10px;">Acessando Prontuário Digital...</h2>\n                <p style="color: var(--muted); font-size: 15px;">Validando credenciais e localizando a pasta segura do equipamento.</p>\n                <div style="margin-top: 20px; padding: 15px; border-radius: 8px; background: var(--info-bg); color: var(--metro-blue); font-weight: 600;">\n                  ⏳ Por favor, aguarde o redirecionamento...\n                </div>\n              </div>\n            ';
+          }
+
+          // Dispara a consulta segura no Backend
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res && res.success && res.redirectUrl && res.equipamento) {
+                // CHAMA A NOVA FUNÇÃO DE RENDERIZAR O DRIVE SEGURO NO MOBILE
+                renderProntuarioDigital_(res.redirectUrl, res.equipamento);
+              } else {
+                alert(res ? res.message : "Erro ao tentar abrir a pasta do equipamento.");
+                abrir("dashboard");
+              }
+            })
+            .withFailureHandler(function() {
+              alert("Falha na comunicação com o servidor ao processar o QR Code.");
+              abrir("dashboard");
+            })
+            .qrcodeAcessar(SESSION, equipId);
+          
+        } else {
+          // Se não tiver QR Code na URL, abre o dashboard normalmente
+          abrir("dashboard");
+        }
+      });
+    } else {
+      abrir("dashboard");
+    }
+  }
+
+  function renderProntuarioDigital_(urlPasta, eqp) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    const titulo = `${escapeHtml_(eqp.TAG)} - ${escapeHtml_(eqp.TIPO)}`;
+    const subtitulo = `Prontuário Digital | Modelo: ${escapeHtml_(eqp.MODELO)} | Série: ${escapeHtml_(eqp.SERIE)}`;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">' +
+      (titulo) +
+      '</h2>\n            <p class="content-subtitle">' +
+      (subtitulo) +
+      '</p>\n          </div>\n          <div class="module-header-right">\n             <button class="btn-secondary" onclick="abrir(\'dashboard\')">← Voltar ao Dashboard</button>\n          </div>\n        </div>\n\n        <div style="padding: 40px 20px; text-align: center; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); margin-top: 20px;">\n          <div style="font-size: 50px; margin-bottom: 15px;">📁</div>\n          <h3 style="color: var(--metro-blue); margin-bottom: 10px;">Acesso Liberado</h3>\n          <p style="color: var(--muted); font-size: 15px; margin-bottom: 25px; line-height: 1.5; max-width: 500px; margin-left: auto; margin-right: auto;">\n            O prontuário digital deste equipamento foi localizado com sucesso. Por questões de segurança, os documentos serão abertos em uma nova guia.\n          </p>\n          <button class="btn-primary" style="padding: 12px 24px; font-size: 16px;" onclick="window.open(\'' +
+      (urlPasta) +
+      '\', \'_blank\')">Abrir Pasta de Documentos ↗</button>\n        </div>\n      </div>\n    ';
+
+    const areaAvisos = document.getElementById("areaAvisos");
+    if (areaAvisos) {
+      areaAvisos.style.display = "block";
+      areaAvisos.innerHTML = "Módulo atual: <strong>Prontuário Digital (QR)</strong>";
+    }
+  }
+
+  function logout() {
+    pararMonitorOciosidade_();
+    pararSomOciosidade_();
+
+    const currentSession = SESSION || localStorage.getItem("SGO_SESSION");
+
+    localStorage.removeItem("SGO_SESSION");
+    localStorage.removeItem("SGO_SESSION_ID");
+    SESSION = null;
+    USER_CONTEXT = null;
+
+    if (!currentSession) {
+      location.reload();
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function () {
+        location.reload();
+      })
+      .withFailureHandler(function (err) {
+        location.reload();
+      })
+      .logout(currentSession);
+  }
+
+  function setBotaoLoginEstado_(bloqueado) {
+    const botao = document.getElementById("btnLogin") || document.querySelector("#login button");
+    if (!botao) return;
+
+    botao.disabled = !!bloqueado;
+    botao.innerText = bloqueado ? "Entrando..." : "Entrar";
+  }
+
+  function registrarAtalhoEnterLogin() {
+    const usuarioEl = document.getElementById("usuario");
+    const senhaEl = document.getElementById("senha");
+
+    [usuarioEl, senhaEl].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          fazerLogin();
+        }
+      });
+    });
+  }
+
+  function aplicarRegrasDeAcesso_() {
+    if (!USER_CONTEXT) return;
+    const isCliente = (USER_CONTEXT.perfil === "CLIENTE");
+    
+    const secaoTecnica = document.getElementById("menu-secao-tecnica");
+    const btnClientes = document.getElementById("menu-btn-clientes");
+    const secaoAdmin = document.getElementById("menu-secao-admin");
+    
+    if (secaoTecnica) secaoTecnica.style.display = isCliente ? "none" : "block";
+    if (btnClientes) btnClientes.style.display = isCliente ? "none" : "block";
+    if (secaoAdmin) secaoAdmin.style.display = isCliente ? "none" : "block";
+  }
+
+  function abrir(mod) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    limparAlertasTemporarios_();
+
+    if (mod === "dashboard") {
+      div.innerHTML = montarDashboardHtml_();
+      atualizarBadgeModulo_("dashboard");
+      carregarDadosDashboard_(); 
+      carregarAlertasDashboard_();
+      return;
+    }
+
+    if (mod === "autoclave") {
+      renderMotorModulo_("Autoclaves", "autoclave");
+      atualizarBadgeModulo_("autoclave");
+      return;
+    }
+
+    if (mod === "lavadora") {
+      renderMotorModulo_("Lavadoras", "lavadora");
+      atualizarBadgeModulo_("lavadora");
+      return;
+    }
+
+    if (mod === "relatorio_conformidade") {
+      renderMotorModulo_("Carta / Relatório de Conformidade", "relatorio_conformidade");
+      atualizarBadgeModulo_("relatorio_conformidade");
+      return;
+    }
+
+    if (mod === "clientes") {
+      renderClientesModulo_();
+      atualizarBadgeModulo_("clientes");
+      return;
+    }
+
+    if (mod === "unidades") {
+      renderUnidadesModulo_();
+      atualizarBadgeModulo_("unidades");
+      carregarClientesAtivosParaUnidades_();
+      return;
+    }
+
+    if (mod === "equipamentos") {
+      renderEquipamentosModulo_();
+      atualizarBadgeModulo_("equipamentos");
+      carregarClientesParaEquipamentos_();
+      return;
+    }
+
+    if (mod === "documentos") {
+      renderDocumentosModulo_();
+      atualizarBadgeModulo_("documentos");
+      carregarClientesParaDocumentos_();
+      return;
+    }
+
+    if (mod === "admin") {
+      renderAdminModulo_();
+      atualizarBadgeModulo_("admin");
+      preencherEstadoPainelAdmin_();
+      return;
+    }
+
+    div.innerHTML = "<p>Módulo não encontrado.</p>";
+  }
+
+  function obterBadgeStatusHtml_(statusString) {
+    const status = String(statusString || "").trim().toUpperCase();
+    if (status === "ATIVO") return '<span class="badge badge-ativo">ATIVO</span>';
+    if (status === "PENDENTE") return '<span class="badge badge-pendente">PENDENTE</span>';
+    if (status === "BLOQUEADO") return '<span class="badge badge-bloqueado">BLOQUEADO</span>';
+    return '<span class="badge badge-inativo">' +
+      (escapeHtml_(status || "INATIVO")) +
+      '</span>';
+  }
+
+  /* =========================
+     DASHBOARD E ALERTAS 
+  ========================= */
+  function montarDashboardHtml_() {
+    const totalMotores = contarMotoresAtivos_();
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleAdminOnly = isCliente ? "display:none;" : "";
+
+    return '\n      <div>\n        <h2 class="content-title">Dashboard</h2>\n        <p class="content-subtitle">Bem-vindo ao METROLABS SGO+.</p>\n\n        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 20px;">\n          <div class="card-kpi" style="border-left: 4px solid var(--metro-green);">\n            <div class="card-kpi-title">TEMPO PRODUTIVO <span style="float:right;">⏱️</span></div>\n            <div class="card-kpi-value" style="font-size: 20px; color: var(--text);">Monitoramento Ativo</div>\n          </div>\n          <div class="card-kpi" style="border-left: 4px solid var(--danger); background: var(--danger-bg);">\n            <div class="card-kpi-title" style="color: var(--danger);">ALERTAS CRÍTICOS <span style="float:right;">🚨</span></div>\n            <div class="card-kpi-value" id="kpiAlertas" style="color: var(--danger);">0</div>\n          </div>\n          <div class="card-kpi" style="border-left: 4px solid var(--info);">\n            <div class="card-kpi-title">PRODUTIVIDADE <span style="float:right;">📈</span></div>\n            <div class="card-kpi-value" style="color: var(--info);">100%</div>\n          </div>\n        </div>\n\n        <h3 style="margin: 0 0 12px; font-size: 16px; color: var(--text);">Resumo Operacional</h3>\n        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">\n          <div class="card-kpi" style="' +
+      (styleAdminOnly) +
+      '">\n            <div class="card-kpi-title">Clientes</div>\n            <div class="card-kpi-value" id="dashCountClientes">...</div>\n          </div>\n          <div class="card-kpi">\n            <div class="card-kpi-title">Unidades</div>\n            <div class="card-kpi-value" id="dashCountUnidades">...</div>\n          </div>\n          <div class="card-kpi">\n            <div class="card-kpi-title">Equipamentos</div>\n            <div class="card-kpi-value" id="dashCountEquipamentos">...</div>\n          </div>\n          <div class="card-kpi">\n            <div class="card-kpi-title">Documentos</div>\n            <div class="card-kpi-value" id="dashCountDocumentos">...</div>\n          </div>\n          <div class="card-kpi" style="' +
+      (styleAdminOnly) +
+      '">\n            <div class="card-kpi-title">Motores</div>\n            <div class="card-kpi-value">' +
+      (totalMotores) +
+      '</div>\n          </div>\n        </div>\n\n        <div class="dashboard-alertas-container">\n          <h3 style="margin: 0 0 12px; font-size: 16px; color: var(--text);">Avisos de Vencimento</h3>\n          <div id="dashboardAlertas">Aguarde, carregando alertas do sistema...</div>\n        </div>\n\n        <div style="margin-top:20px;">\n          <h3 style="margin:0 0 8px;">Status da base</h3>\n          <p style="margin:0 0 6px;">Sessão segura ativa.</p>\n          <p style="margin:0;">O sistema garante sigilo total e restrição de visão por cliente.</p>\n        </div>\n      </div>\n    ';
+  }
+
+  function carregarDadosDashboard_() {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return;
+        
+        const elCli = document.getElementById("dashCountClientes");
+        const elUni = document.getElementById("dashCountUnidades");
+        const elEqp = document.getElementById("dashCountEquipamentos");
+        const elDoc = document.getElementById("dashCountDocumentos");
+
+        if(elCli) elCli.innerText = res.totais.clientes || "0";
+        if(elUni) elUni.innerText = res.totais.unidades || "0";
+        if(elEqp) elEqp.innerText = res.totais.equipamentos || "0";
+        if(elDoc) elDoc.innerText = res.totais.documentos || "0";
+      })
+      .obterTotaisDashboard(SESSION);
+  }
+
+  function carregarAlertasDashboard_() {
+    const container = document.getElementById("dashboardAlertas");
+    const kpiAlertas = document.getElementById("kpiAlertas");
+    if (!container || !SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.items || res.items.length === 0) {
+          container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">✅ Tudo certo! Nenhum documento vencido ou próximo do vencimento nos próximos 30 dias.</div>';
+          if(kpiAlertas) kpiAlertas.innerText = "0";
+          return;
+        }
+
+        let criticos = 0;
+        const html = res.items.map(a => {
+          const isCritico = a.tipo === "CRÍTICO";
+          if (isCritico) criticos++;
+          const bg = isCritico ? "var(--danger-bg)" : "var(--warning-bg)";
+          const color = isCritico ? "var(--danger)" : "var(--warning)";
+          const border = isCritico ? "#fecaca" : "#fef0c7";
+          const icone = isCritico ? "🚨" : "⚠️";
+          return '<div style="padding:12px; border-radius:8px; background:' +
+            (bg) +
+            '; color:' +
+            (color) +
+            '; border:1px solid ' +
+            (border) +
+            '; margin-bottom:10px; font-weight:700; font-size:13px;">' +
+            (icone) +
+            ' ' +
+            (escapeHtml_(a.mensagem)) +
+            '</div>';
+        }).join("");
+
+        container.innerHTML = html;
+        if(kpiAlertas) kpiAlertas.innerText = criticos;
+      })
+      .withFailureHandler(function(err) {
+        container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; font-weight:700; font-size:13px;">Falha ao carregar o sistema de alertas.</div>';
+      })
+      .alertasObterDashboard(SESSION);
+  }
+
+  function contarMotoresAtivos_() {
+    let total = 0;
+    if (MOTORES.AUTOCLAVE_TEMPLATE) total++;
+    if (MOTORES.AUTOCLAVE_RELATORIO) total++;
+    if (MOTORES.LAVADORA_TEMPLATE) total++;
+    if (MOTORES.LAVADORA_RELATORIO) total++;
+    if (MOTORES.RELATORIO_CONFORMIDADE) total++;
+    return total;
+  }
+
+  function atualizarBadgeModulo_(mod) {
+    const areaAvisos = document.getElementById("areaAvisos");
+    if (!areaAvisos) return;
+
+    const nomes = {
+      dashboard: "Dashboard",
+      autoclave: "Autoclave",
+      lavadora: "Lavadoras",
+      relatorio_conformidade: "Carta / Relatório de Conformidade",
+      clientes: "Clientes",
+      unidades: "Unidades",
+      equipamentos: "Equipamentos",
+      documentos: "Documentos",
+      admin: "Painel Admin"
+    };
+
+    areaAvisos.style.display = "block";
+    areaAvisos.innerHTML = "Módulo atual: <strong>" + (nomes[mod] || mod) + "</strong>";
+  }
+
+  function limparAlertasTemporarios_() {
+    const barra = document.getElementById("barraAlertas");
+    if (!barra) return;
+
+    if (!OCIOSO) {
+      barra.style.display = "none";
+      barra.innerHTML = "";
+    }
+  }
+
+  /* =========================
+     OCIOSIDADE E ENGAJAMENTO
+  ========================= */
+  function registrarEventosDeAtividade() {
+    const eventos = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
+    eventos.forEach(function (evt) {
+      document.addEventListener(evt, tratarAtividadeUsuario_, { passive: true });
+    });
+  }
+
+  function tratarAtividadeUsuario_() {
+    resetarOciosidade_();
+  }
+
+  function resetarOciosidade_() {
+    IDLE_SECONDS = 0;
+    if (OCIOSO) {
+      OCIOSO = false;
+      pararSomOciosidade_();
+      const barra = document.getElementById("barraAlertas");
+      if (barra) {
+        barra.style.display = "none";
+        barra.innerHTML = "";
+      }
+    }
+  }
+
+  function iniciarMonitorOciosidade_() {
+    pararMonitorOciosidade_();
+    IDLE_MONITOR = setInterval(function () {
+      IDLE_SECONDS++;
+      if (!OCIOSO && IDLE_SECONDS >= IDLE_LIMIT) {
+        OCIOSO = true;
+        exibirAlertaOciosidade_();
+        if (SOM_OCIOSIDADE_ATIVO) iniciarSomOciosidade_();
+      }
+    }, 1000);
+  }
+
+  function pararMonitorOciosidade_() {
+    if (IDLE_MONITOR) {
+      clearInterval(IDLE_MONITOR);
+      IDLE_MONITOR = null;
+    }
+  }
+
+  function exibirAlertaOciosidade_() {
+    const barra = document.getElementById("barraAlertas");
+    if (!barra) return;
+    barra.style.display = "block";
+    barra.innerHTML = "Atenção: operador em ociosidade. Nenhuma atividade detectada nos últimos " + IDLE_LIMIT + " segundos.";
+  }
+
+  function iniciarSomOciosidade_() {
+    if (IDLE_BEEP_INTERVAL) return;
+    IDLE_BEEP_INTERVAL = setInterval(function () {
+      tocarBeep_();
+    }, 2500);
+    tocarBeep_();
+  }
+
+  function pararSomOciosidade_() {
+    if (IDLE_BEEP_INTERVAL) {
+      clearInterval(IDLE_BEEP_INTERVAL);
+      IDLE_BEEP_INTERVAL = null;
+    }
+  }
+
+  function tocarBeep_() {
+    try {
+      if (!SOM_OCIOSIDADE_ATIVO) return;
+
+      const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextRef) return;
+
+      if (!AUDIO_CTX) AUDIO_CTX = new AudioContextRef();
+      if (AUDIO_CTX.state === "suspended") AUDIO_CTX.resume();
+
+      const osc = AUDIO_CTX.createOscillator();
+      const gain = AUDIO_CTX.createGain();
+
+      osc.type = "sine";
+      osc.frequency.value = 880;
+
+      gain.gain.setValueAtTime(0.0001, AUDIO_CTX.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, AUDIO_CTX.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, AUDIO_CTX.currentTime + 0.22);
+
+      osc.connect(gain);
+      gain.connect(AUDIO_CTX.destination);
+
+      osc.start();
+      osc.stop(AUDIO_CTX.currentTime + 0.22);
+    } catch (e) {
+      console.error("Falha ao tocar beep de ociosidade:", e);
+    }
+  }
+
+  function lerPreferenciaSomOciosidade_() {
+    try {
+      const raw = localStorage.getItem("SGO_SOM_OCIOSIDADE");
+      if (raw === null) return null;
+      return raw === "1";
+    } catch (e) { return null; }
+  }
+
+  function salvarPreferenciaSomOciosidade_(ativo) {
+    try { localStorage.setItem("SGO_SOM_OCIOSIDADE", ativo ? "1" : "0"); } 
+    catch (e) { console.error("Falha ao salvar preferência de som:", e); }
+  }
+
+  function salvarTempoOciosidadePainel_() {
+    const val = parseInt(document.getElementById("inputIdleLimit").value, 10);
+    if (isNaN(val) || val < 30) {
+      alert("O tempo mínimo de ociosidade é de 30 segundos.");
+      return;
+    }
+    IDLE_LIMIT = val;
+    try {
+      localStorage.setItem("SGO_IDLE_LIMIT", String(val));
+      alert("Tempo de ociosidade atualizado para " + val + " segundos!");
+      iniciarMonitorOciosidade_(); 
+    } catch(e) {
+      alert("Erro ao salvar configuração no navegador.");
+    }
+  }
+
+  function ativarSomOciosidadePainel_() {
+    SOM_OCIOSIDADE_ATIVO = true;
+    salvarPreferenciaSomOciosidade_(true);
+    preencherEstadoPainelAdmin_();
+    alert("Som de ociosidade ativado.");
+  }
+
+  function desativarSomOciosidadePainel_() {
+    SOM_OCIOSIDADE_ATIVO = false;
+    salvarPreferenciaSomOciosidade_(false);
+    pararSomOciosidade_();
+    preencherEstadoPainelAdmin_();
+    alert("Som de ociosidade desativado.");
+  }
+
+  function testarSomOciosidade_() {
+    if (!SOM_OCIOSIDADE_ATIVO) {
+      alert("O som de ociosidade está desativado no painel.");
+      return;
+    }
+    tocarBeep_();
+  }
+
+  function aplicarMensagemMotivacional_() {
+    const mensagens = Array.isArray(PUBLIC_CONFIG.mensagensMotivacionais) && PUBLIC_CONFIG.mensagensMotivacionais.length
+      ? PUBLIC_CONFIG.mensagensMotivacionais
+      : MENSAGENS_FALLBACK;
+
+    const el = document.getElementById("mensagemMotivacional");
+    if (!el || !mensagens.length) return;
+
+    const idx = sortearIndiceMensagemSemRepetir_(mensagens.length);
+    const mensagem = mensagens[idx] || mensagens[0];
+
+    el.innerText = mensagem;
+
+    try { localStorage.setItem("SGO_MSG_MOTIVACIONAL_IDX", String(idx)); } 
+    catch (e) { console.error("Falha ao persistir mensagem motivacional:", e); }
+  }
+
+  function sortearNovaMensagemMotivacional_() {
+    aplicarMensagemMotivacional_();
+    preencherEstadoPainelAdmin_();
+  }
+
+  function sortearIndiceMensagemSemRepetir_(total) {
+    if (total <= 1) return 0;
+    let anterior = -1;
+    try {
+      const raw = localStorage.getItem("SGO_MSG_MOTIVACIONAL_IDX");
+      if (raw !== null) anterior = Number(raw);
+    } catch (e) { anterior = -1; }
+
+    let novo = anterior;
+    let tentativas = 0;
+
+    while (novo === anterior && tentativas < 20) {
+      novo = Math.floor(Math.random() * total);
+      tentativas++;
+    }
+
+    if (novo < 0 || novo >= total) novo = 0;
+    return novo;
+  }
+
+  /* =========================
+     MOTORES DE ENGENHARIA
+  ========================= */
+  function renderMotorModulo_(titulo, tipoMotor) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    let urlTemplate = "";
+    let urlRelatorio = "";
+
+    if (tipoMotor === "autoclave") {
+      urlTemplate = MOTORES.AUTOCLAVE_TEMPLATE || "";
+      urlRelatorio = MOTORES.AUTOCLAVE_RELATORIO || "";
+    } else if (tipoMotor === "lavadora") {
+      urlTemplate = MOTORES.LAVADORA_TEMPLATE || "";
+      urlRelatorio = MOTORES.LAVADORA_RELATORIO || "";
+    } else if (tipoMotor === "relatorio_conformidade") {
+      urlTemplate = "";
+      urlRelatorio = MOTORES.RELATORIO_CONFORMIDADE || "";
+    }
+
+    if (!urlTemplate && !urlRelatorio) {
+      div.innerHTML = '\n        <div class="module-shell">\n          <h2 class="content-title">' +
+        (escapeHtml_(titulo)) +
+        '</h2>\n          <div class="avisos-wrap" style="display:block;">\n            Os links do motor de engenharia clínica para ' +
+        (escapeHtml_(titulo)) +
+        ' ainda não foram configurados.\n          </div>\n        </div>';
+      return;
+    }
+
+    const urlInicial = urlTemplate || urlRelatorio;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">' +
+      (escapeHtml_(titulo)) +
+      '</h2>\n            <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>\n          </div>\n        </div>\n\n        <div class="motores-tabs">\n          <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotor_(\'template\', \'' +
+      (urlTemplate) +
+      '\', \'' +
+      (urlRelatorio) +
+      '\')">GERAR TEMPLATE</button>\n          <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotor_(\'relatorio\', \'' +
+      (urlTemplate) +
+      '\', \'' +
+      (urlRelatorio) +
+      '\')">Gerar Relatório de Auditoria</button>\n        </div>\n\n        <div class="iframe-container">\n          <iframe id="iframe_motor" src="' +
+      (urlInicial) +
+      '"></iframe>\n        </div>\n      </div>\n    ';
+
+    if (!urlTemplate) {
+      document.getElementById("btn_motor_template").style.display = "none";
+      document.getElementById("btn_motor_relatorio").classList.add("active");
+    }
+    if (!urlRelatorio) {
+      document.getElementById("btn_motor_relatorio").style.display = "none";
+    }
+  }
+
+  function alternarAbaMotor_(aba, urlTemplate, urlRelatorio) {
+    const btnTemplate = document.getElementById("btn_motor_template");
+    const btnRelatorio = document.getElementById("btn_motor_relatorio");
+    const iframe = document.getElementById("iframe_motor");
+
+    if (!btnTemplate || !btnRelatorio || !iframe) return;
+
+    if (aba === 'template') {
+      if (!urlTemplate) return alert("Link de Template não configurado.");
+      btnTemplate.classList.add("active");
+      btnRelatorio.classList.remove("active");
+      iframe.src = urlTemplate;
+    } else {
+      if (!urlRelatorio) return alert("Link de Relatório não configurado.");
+      btnRelatorio.classList.add("active");
+      btnTemplate.classList.remove("active");
+      iframe.src = urlRelatorio;
+    }
+  }
+
+  /* =========================
+     INTEGRAÇÃO BRASIL API (CNPJ)
+  ========================= */
+  function buscarCnpjAutomacao_(inputEl, modulo) {
+    const valorDigitado = inputEl.value;
+    inputEl.value = formatarCnpjFront_(valorDigitado); 
+
+    const cnpjLimpo = String(valorDigitado).replace(/\D/g, "");
+    if (cnpjLimpo.length !== 14) return;
+
+    const btnSalvar = modulo === 'cliente' 
+      ? document.querySelector("#clientesFormTitulo").parentElement.querySelector(".btn-primary") 
+      : document.querySelector("#unidadesFormTitulo").parentElement.querySelector(".btn-primary");
+
+    if (btnSalvar) { 
+      btnSalvar.disabled = true; 
+      btnSalvar.innerText = "Buscando Receita..."; 
+    }
+
+    fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`)
+      .then(res => {
+        if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
+        return res.json();
+      })
+      .then(data => {
+        const razao = data.razao_social || "";
+        const fantasia = data.nome_fantasia || razao;
+        const telefone = data.ddd_telefone_1 || "";
+        
+        const logradouro = data.logradouro || "";
+        const numero = data.numero || "";
+        const bairro = data.bairro || "";
+        
+        let endCompleto = "";
+        if (logradouro) {
+          endCompleto = logradouro;
+          if (numero) endCompleto += `, ${numero}`;
+          if (bairro) endCompleto += ` - ${bairro}`;
+        }
+
+        const cidade = data.municipio || "";
+        const uf = data.uf || "";
+
+        if (modulo === 'cliente') {
+          setValue_("cli_razao_social", razao);
+          setValue_("cli_nome_fantasia", fantasia);
+          setValue_("cli_telefone", telefone);
+          setValue_("cli_endereco", endCompleto);
+        } else if (modulo === 'unidade') {
+          setValue_("uni_nome_unidade", fantasia);
+          setValue_("uni_endereco", endCompleto);
+          setValue_("uni_cidade", cidade);
+          setValue_("uni_uf", uf);
+          setValue_("uni_telefone", telefone);
+        }
+      })
+      .catch(err => {
+        console.warn("Autopreenchimento falhou:", err);
+        alert("Não foi possível buscar os dados na Receita para este CNPJ (pode ser lentidão na base do governo ou CNPJ inválido). Por favor, preencha manualmente.");
+      })
+      .finally(() => {
+        if (btnSalvar) { 
+          btnSalvar.disabled = false; 
+          btnSalvar.innerText = "Salvar"; 
+        }
+      });
+  }
+
+  /* =========================
+     CLIENTES
+  ========================= */
+  function renderClientesModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Clientes</h2>\n            <p class="content-subtitle">Cadastro mestre de clientes e rastreabilidade.</p>\n          </div>\n          \n          <div class="module-header-right" style="display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="clientesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') clientesPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="clientesPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="clientesNovo_()">+ Novo Cliente</button>\n          </div>\n        </div>\n\n        <div class="module-grid">\n          <div class="form-card">\n            <h3 class="section-card-title" id="clientesFormTitulo">Novo cliente</h3>\n            <div class="form-grid">\n              <div>\n                <label for="cli_cnpj">CNPJ (Busca Automática)</label>\n                <input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" onblur="buscarCnpjAutomacao_(this, \'cliente\')">\n              </div>\n              <div class="full">\n                <label for="cli_razao_social">Razão social</label>\n                <input id="cli_razao_social" type="text" placeholder="Digite a razão social">\n              </div>\n              <div class="full">\n                <label for="cli_nome_fantasia">Nome fantasia</label>\n                <input id="cli_nome_fantasia" type="text" placeholder="Digite o nome fantasia">\n              </div>\n              <div class="full">\n                <label for="cli_endereco">Endereço</label>\n                <input id="cli_endereco" type="text" placeholder="Rua, número, bairro...">\n              </div>\n              <div>\n                <label for="cli_status">Status</label>\n                <input id="cli_status" type="text" value="ATIVO" disabled>\n              </div>\n              <div>\n                <label for="cli_contato">Contato</label>\n                <input id="cli_contato" type="text" placeholder="Nome do contato principal">\n              </div>\n              <div>\n                <label for="cli_telefone">Telefone</label>\n                <input id="cli_telefone" type="text" placeholder="Telefone principal">\n              </div>\n              <div class="full">\n                <label for="cli_email">E-mail</label>\n                <input id="cli_email" type="email" placeholder="E-mail principal">\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="clientesSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="clientesNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="clientesHelper">Preencha os dados do cliente e clique em salvar.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Razão social</th>\n                    <th>Nome fantasia</th>\n                    <th>CNPJ</th>\n                    <th>Contato</th>\n                    <th>E-mail</th>\n                    <th>Telefone</th>\n                    <th>Status</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="clientesTabelaBody">\n                  <tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+    clientesLimparFormulario_();
+  }
+
+  function clientesPesquisar_() {
+    const el = document.getElementById("clientesPesquisa");
+    CLIENTES_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    if (!CLIENTES_STATE.filtro) {
+       document.getElementById("clientesTabelaBody").innerHTML = '<tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>';
+       return;
+    }
+
+    document.getElementById("clientesTabelaBody").innerHTML = '<tr><td colspan="8" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro na pesquisa.");
+        renderTabelaClientes_(Array.isArray(res.items) ? res.items : []);
+      })
+      .clientesPesquisar(SESSION, CLIENTES_STATE.filtro);
+  }
+
+  function renderTabelaClientes_(itemsOverride) {
+    const tbody = document.getElementById("clientesTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : CLIENTES_STATE.items;
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum cliente encontrado para esta busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.RAZAO_SOCIAL)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME_FANTASIA)) +
+        '</td>\n          <td>' +
+        (formatarCnpjFront_(item.CNPJ)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.CONTATO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.EMAIL)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TELEFONE)) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          <td>\n            <div class="table-actions">\n              <button class="btn-info" type="button" onclick="clientesEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n              ' +
+        (status === "ATIVO"
+                  ? '<button class="btn-warning" type="button" onclick="clientesInativar_(\'' +
+                    (id) +
+                    '\')">Inativar</button>'
+                  : '<button class="btn-success" type="button" onclick="clientesReativar_(\'' +
+                    (id) +
+                    '\')">Reativar</button>') +
+        '\n              <button class="btn-danger" type="button" onclick="clientesExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n            </div>\n          </td>\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function clientesNovo_() {
+    CLIENTES_STATE.editingId = "";
+    clientesLimparFormulario_();
+    document.getElementById("clientesFormTitulo").innerText = "Novo cliente";
+    document.getElementById("clientesHelper").innerText = "Preencha os dados do cliente e clique em salvar.";
+  }
+
+  function clientesLimparFormulario_() {
+    setValue_("cli_razao_social", "");
+    setValue_("cli_nome_fantasia", "");
+    setValue_("cli_endereco", "");
+    setValue_("cli_cnpj", "");
+    setValue_("cli_contato", "");
+    setValue_("cli_email", "");
+    setValue_("cli_telefone", "");
+    setValue_("cli_status", "ATIVO");
+  }
+
+  function clientesLerFormulario_() {
+    return {
+      RAZAO_SOCIAL: getValue_("cli_razao_social"),
+      NOME_FANTASIA: getValue_("cli_nome_fantasia"),
+      ENDERECO: getValue_("cli_endereco"),
+      CNPJ: getValue_("cli_cnpj"),
+      CONTATO: getValue_("cli_contato"),
+      EMAIL: getValue_("cli_email"),
+      TELEFONE: getValue_("cli_telefone")
+    };
+  }
+
+  function clientesSalvar_() {
+    if (!SESSION) return;
+    const payload = clientesLerFormulario_();
+    if (!payload.RAZAO_SOCIAL) {
+      alert("Informe a razão social.");
+      focusIfExists_("cli_razao_social");
+      return;
+    }
+
+    if (CLIENTES_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar cliente.");
+          alert(res.message || "Cliente atualizado com sucesso.");
+          CLIENTES_STATE.editingId = "";
+          clientesNovo_();
+          if (CLIENTES_STATE.filtro) clientesPesquisar_(); 
+        })
+        .clientesAtualizar(SESSION, CLIENTES_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar cliente.");
+        alert(res.message || "Cliente cadastrado com sucesso.");
+        clientesNovo_();
+      })
+      .clientesCriar(SESSION, payload);
+  }
+
+  function clientesEditar_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Cliente não encontrado.");
+
+        const item = res.item;
+        CLIENTES_STATE.editingId = String(item.ID || "");
+
+        setValue_("cli_razao_social", item.RAZAO_SOCIAL || "");
+        setValue_("cli_nome_fantasia", item.NOME_FANTASIA || "");
+        setValue_("cli_endereco", item.ENDERECO || "");
+        setValue_("cli_cnpj", item.CNPJ || "");
+        setValue_("cli_contato", item.CONTATO || "");
+        setValue_("cli_email", item.EMAIL || "");
+        setValue_("cli_telefone", item.TELEFONE || "");
+        setValue_("cli_status", item.STATUS || "ATIVO");
+
+        document.getElementById("clientesFormTitulo").innerText = "Editar cliente";
+        document.getElementById("clientesHelper").innerText = "Editando cliente selecionado. Após ajustar os dados, clique em salvar.";
+        focusIfExists_("cli_razao_social");
+      })
+      .clientesObter(SESSION, id);
+  }
+
+  function clientesInativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente inativar este cliente?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar cliente.");
+        alert(res.message || "Cliente inativado com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_(); 
+      })
+      .clientesInativar(SESSION, id);
+  }
+
+  function clientesReativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente reativar este cliente?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar cliente.");
+        alert(res.message || "Cliente reativado com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+      })
+      .clientesReativar(SESSION, id);
+  }
+
+  function clientesExcluir_(id) {
+    if (!SESSION || !confirm("Deseja realmente excluir este cliente? Esta ação remove o registro da planilha.")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir cliente.");
+        if (CLIENTES_STATE.editingId === id) {
+          CLIENTES_STATE.editingId = "";
+          clientesNovo_();
+        }
+        alert(res.message || "Cliente excluído com sucesso.");
+        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+      })
+      .clientesExcluir(SESSION, id);
+  }
+
+  /* =========================
+     UNIDADES
+  ========================= */
+  function renderUnidadesModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleForm = isCliente ? "display:none;" : "";
+    const styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
+    const styleAcoes = isCliente ? "display:none;" : "";
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Unidades</h2>\n            <p class="content-subtitle">Cadastro de unidades vinculadas aos clientes.</p>\n          </div>\n          <div class="module-header-right" style="' +
+      (styleForm) +
+      '; display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="unidadesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') unidadesPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="unidadesPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="unidadesNovo_()">+ Nova unidade</button>\n          </div>\n        </div>\n\n        <div class="module-grid" style="' +
+      (styleGrid) +
+      '">\n          <div class="form-card" style="' +
+      (styleForm) +
+      '">\n            <h3 class="section-card-title" id="unidadesFormTitulo">Nova unidade</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label for="uni_cliente_id">Cliente</label>\n                <select id="uni_cliente_id"></select>\n              </div>\n              <div>\n                <label for="uni_cnpj_unidade">CNPJ da unidade (Busca Automática)</label>\n                <input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" onblur="buscarCnpjAutomacao_(this, \'unidade\')">\n              </div>\n              <div class="full">\n                <label for="uni_nome_unidade">Nome da unidade</label>\n                <input id="uni_nome_unidade" type="text" placeholder="Digite o nome da unidade">\n              </div>\n              <div>\n                <label for="uni_status">Status</label>\n                <input id="uni_status" type="text" value="ATIVO" disabled>\n              </div>\n              <div class="full">\n                <label for="uni_endereco">Endereço</label>\n                <input id="uni_endereco" type="text" placeholder="Rua, número, bairro, complemento">\n              </div>\n              <div>\n                <label for="uni_cidade">Cidade</label>\n                <input id="uni_cidade" type="text" placeholder="Cidade">\n              </div>\n              <div>\n                <label for="uni_uf">UF</label>\n                <input id="uni_uf" type="text" maxlength="2" placeholder="UF">\n              </div>\n              <div>\n                <label for="uni_responsavel">Responsável</label>\n                <input id="uni_responsavel" type="text" placeholder="Responsável local">\n              </div>\n              <div>\n                <label for="uni_telefone">Telefone</label>\n                <input id="uni_telefone" type="text" placeholder="Telefone da unidade">\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="unidadesSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="unidadesNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="unidadesHelper">Preencha os dados da unidade e clique em salvar.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Cliente</th>\n                    <th>Unidade</th>\n                    <th>CNPJ</th>\n                    <th>Cidade</th>\n                    <th>UF</th>\n                    <th>Responsável</th>\n                    <th>Telefone</th>\n                    <th>Status</th>\n                    <th style="' +
+      (styleAcoes) +
+      '">Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="unidadesTabelaBody">\n                  <tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+    unidadesLimparFormulario_();
+  }
+
+  function carregarClientesAtivosParaUnidades_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao carregar clientes ativos.");
+        UNIDADES_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesUnidades_();
+      })
+      .unidadesListarClientesAtivos(SESSION);
+  }
+
+  function preencherComboClientesUnidades_() {
+    const select = document.getElementById("uni_cliente_id");
+    if (!select) return;
+
+    const options = ['<option value="">Selecione um cliente</option>'];
+    (UNIDADES_STATE.clientes || []).forEach(function (item) {
+      const nome = escapeHtml_(item.NOME || item.RAZAO_SOCIAL || "");
+      options.push('<option value="' + escapeHtml_(item.ID || "") + '">' + nome + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function unidadesPesquisar_() {
+    const el = document.getElementById("unidadesPesquisa");
+    UNIDADES_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    if (!UNIDADES_STATE.filtro) {
+       document.getElementById("unidadesTabelaBody").innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>';
+       return;
+    }
+
+    document.getElementById("unidadesTabelaBody").innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro na pesquisa.");
+        renderTabelaUnidades_(Array.isArray(res.items) ? res.items : []);
+      })
+      .unidadesPesquisar(SESSION, UNIDADES_STATE.filtro);
+  }
+
+  function renderTabelaUnidades_(itemsOverride) {
+    const tbody = document.getElementById("unidadesTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : UNIDADES_STATE.items;
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleAcoes = isCliente ? "display:none;" : "";
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma unidade encontrada.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      const acoesHtml = isCliente ? "" : '\n        <td style="' +
+        (styleAcoes) +
+        '">\n          <div class="table-actions">\n            <button class="btn-info" type="button" onclick="unidadesEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n            ' +
+        (status === "ATIVO"
+                ? '<button class="btn-warning" type="button" onclick="unidadesInativar_(\'' +
+                  (id) +
+                  '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="unidadesReativar_(\'' +
+                  (id) +
+                  '\')">Reativar</button>') +
+        '\n            <button class="btn-danger" type="button" onclick="unidadesExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n          </div>\n        </td>\n      ';
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.CLIENTE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME_UNIDADE)) +
+        '</td>\n          <td>' +
+        (formatarCnpjFront_(item.CNPJ_UNIDADE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.CIDADE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.UF)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.RESPONSAVEL)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TELEFONE)) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          ' +
+        (acoesHtml) +
+        '\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function unidadesNovo_() {
+    UNIDADES_STATE.editingId = "";
+    unidadesLimparFormulario_();
+    document.getElementById("unidadesFormTitulo").innerText = "Nova unidade";
+    document.getElementById("unidadesHelper").innerText = "Preencha os dados da unidade e clique em salvar.";
+  }
+
+  function unidadesLimparFormulario_() {
+    setSelectValueSafe_("uni_cliente_id", "");
+    setValue_("uni_nome_unidade", "");
+    setValue_("uni_cnpj_unidade", "");
+    setValue_("uni_endereco", "");
+    setValue_("uni_cidade", "");
+    setValue_("uni_uf", "");
+    setValue_("uni_responsavel", "");
+    setValue_("uni_telefone", "");
+    setValue_("uni_status", "ATIVO");
+  }
+
+  function unidadesLerFormulario_() {
+    return {
+      CLIENTE_ID: getValue_("uni_cliente_id"),
+      NOME_UNIDADE: getValue_("uni_nome_unidade"),
+      CNPJ_UNIDADE: getValue_("uni_cnpj_unidade"),
+      ENDERECO: getValue_("uni_endereco"),
+      CIDADE: getValue_("uni_cidade"),
+      UF: getValue_("uni_uf"),
+      RESPONSAVEL: getValue_("uni_responsavel"),
+      TELEFONE: getValue_("uni_telefone")
+    };
+  }
+
+  function unidadesSalvar_() {
+    if (!SESSION) return;
+    const payload = unidadesLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.NOME_UNIDADE) return alert("Informe o nome da unidade.");
+    payload.UF = String(payload.UF || "").trim().toUpperCase();
+
+    if (UNIDADES_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar unidade.");
+          alert(res.message || "Unidade atualizada com sucesso.");
+          UNIDADES_STATE.editingId = "";
+          unidadesNovo_();
+          if(UNIDADES_STATE.filtro) unidadesPesquisar_();
+        })
+        .unidadesAtualizar(SESSION, UNIDADES_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar unidade.");
+        alert(res.message || "Unidade cadastrada com sucesso.");
+        unidadesNovo_();
+      })
+      .unidadesCriar(SESSION, payload);
+  }
+
+  function unidadesEditar_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert("Unidade não encontrada.");
+
+        const item = res.item;
+        UNIDADES_STATE.editingId = String(item.ID || "");
+
+        setSelectValueSafe_("uni_cliente_id", item.CLIENTE_ID || "");
+        setValue_("uni_nome_unidade", item.NOME_UNIDADE || "");
+        setValue_("uni_cnpj_unidade", item.CNPJ_UNIDADE || "");
+        setValue_("uni_endereco", item.ENDERECO || "");
+        setValue_("uni_cidade", item.CIDADE || "");
+        setValue_("uni_uf", item.UF || "");
+        setValue_("uni_responsavel", item.RESPONSAVEL || "");
+        setValue_("uni_telefone", item.TELEFONE || "");
+        setValue_("uni_status", item.STATUS || "ATIVO");
+
+        document.getElementById("unidadesFormTitulo").innerText = "Editar unidade";
+        document.getElementById("unidadesHelper").innerText = "Editando unidade selecionada. Após ajustar os dados, clique em salvar.";
+        focusIfExists_("uni_nome_unidade");
+      })
+      .unidadesObter(SESSION, id);
+  }
+
+  function unidadesInativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente inativar esta unidade?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar unidade.");
+        alert(res.message || "Unidade inativada com sucesso.");
+        if(UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .unidadesInativar(SESSION, id);
+  }
+
+  function unidadesReativar_(id) {
+    if (!SESSION || !confirm("Deseja realmente reativar esta unidade?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar unidade.");
+        alert(res.message || "Unidade reativada com sucesso.");
+        if(UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .unidadesReativar(SESSION, id);
+  }
+
+  function unidadesExcluir_(id) {
+    if (!SESSION || !confirm("Deseja realmente excluir esta unidade? Esta ação remove o registro da planilha.")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir unidade.");
+        if (UNIDADES_STATE.editingId === id) unidadesNovo_();
+        alert(res.message || "Unidade excluída com sucesso.");
+        if(UNIDADES_STATE.filtro) unidadesPesquisar_();
+      })
+      .unidadesExcluir(SESSION, id);
+  }
+
+  /* =========================
+     EQUIPAMENTOS E QR CODE
+  ========================= */
+  function renderEquipamentosModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleForm = isCliente ? "display:none;" : "";
+    const styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Equipamentos</h2>\n            <p class="content-subtitle">Cadastro de equipamentos com rastreabilidade de TAG.</p>\n          </div>\n          <div class="module-header-right" style="' +
+      (styleForm) +
+      '; display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="equipamentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar TAG, série..." onkeydown="if(event.key === \'Enter\') equipamentosPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="equipamentosPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="equipamentosNovo_()">+ Novo equipamento</button>\n          </div>\n        </div>\n\n        <div class="module-grid" style="' +
+      (styleGrid) +
+      '">\n          <div class="form-card" style="' +
+      (styleForm) +
+      '">\n            <h3 class="section-card-title" id="equipamentosFormTitulo">Novo equipamento</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label for="eqp_cliente_id">Cliente</label>\n                <select id="eqp_cliente_id" onchange="aoMudarClienteEquipamentos_()"></select>\n              </div>\n              <div class="full">\n                <label for="eqp_unidade_id">Unidade</label>\n                <select id="eqp_unidade_id">\n                  <option value="">Selecione um cliente primeiro</option>\n                </select>\n              </div>\n              <div class="full">\n                <label for="eqp_tipo">Tipo do equipamento</label>\n                <input id="eqp_tipo" type="text" placeholder="Ex: Autoclave, Lavadora">\n              </div>\n              <div>\n                <label for="eqp_tag">TAG (Identificador)</label>\n                <input id="eqp_tag" type="text" placeholder="Ex: AUT-01">\n              </div>\n              <div>\n                <label for="eqp_status">Status</label>\n                <input id="eqp_status" type="text" value="ATIVO" disabled>\n              </div>\n              <div class="full">\n                <label for="eqp_fabricante">Fabricante</label>\n                <input id="eqp_fabricante" type="text" placeholder="Fabricante do equipamento">\n              </div>\n              <div>\n                <label for="eqp_modelo">Modelo</label>\n                <input id="eqp_modelo" type="text" placeholder="Modelo">\n              </div>\n              <div>\n                <label for="eqp_serie">Número de Série</label>\n                <input id="eqp_serie" type="text" placeholder="Número de Série">\n              </div>\n              <div class="full">\n                <label for="eqp_setor">Setor / Localização</label>\n                <input id="eqp_setor" type="text" placeholder="Ex: CME, Centro Cirúrgico">\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="equipamentosSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="equipamentosNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="equipamentosHelper">Selecione cliente e unidade, preencha os dados e clique em salvar.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Cliente</th>\n                    <th>Unidade</th>\n                    <th>Tipo</th>\n                    <th>TAG</th>\n                    <th>Fabricante</th>\n                    <th>Modelo</th>\n                    <th>Série</th>\n                    <th>Setor</th>\n                    <th>Status</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="equipamentosTabelaBody">\n                  <tr><td colspan="10" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+    equipamentosLimparFormulario_();
+  }
+
+  function carregarClientesParaEquipamentos_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        EQUIPAMENTOS_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesEquipamentos_();
+      })
+      .equipamentosListarClientesAtivos(SESSION);
+  }
+
+  function preencherComboClientesEquipamentos_() {
+    const select = document.getElementById("eqp_cliente_id");
+    if (!select) return;
+    const options = ['<option value="">Selecione um cliente</option>'];
+    (EQUIPAMENTOS_STATE.clientes || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarClienteEquipamentos_() {
+    const clienteId = getValue_("eqp_cliente_id");
+    if (!clienteId) {
+      EQUIPAMENTOS_STATE.unidades = [];
+      preencherComboUnidadesEquipamentos_();
+      return;
+    }
+    carregarUnidadesParaEquipamentos_(clienteId);
+  }
+
+  function carregarUnidadesParaEquipamentos_(clienteId, unidadeSelecionadaId) {
+    if (!SESSION || !clienteId) return;
+    const selectUnidade = document.getElementById("eqp_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        EQUIPAMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
+        preencherComboUnidadesEquipamentos_();
+        if (unidadeSelecionadaId) setSelectValueSafe_("eqp_unidade_id", unidadeSelecionadaId);
+      })
+      .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+  }
+
+  function preencherComboUnidadesEquipamentos_() {
+    const select = document.getElementById("eqp_unidade_id");
+    if (!select) return;
+
+    if (!EQUIPAMENTOS_STATE.unidades || EQUIPAMENTOS_STATE.unidades.length === 0) {
+      select.innerHTML = '<option value="">Nenhuma unidade ativa encontrada</option>';
+      return;
+    }
+    const options = ['<option value="">Selecione a unidade</option>'];
+    (EQUIPAMENTOS_STATE.unidades || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_UNIDADE) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function equipamentosPesquisar_() {
+    const el = document.getElementById("equipamentosPesquisa");
+    EQUIPAMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    if (!EQUIPAMENTOS_STATE.filtro) {
+       document.getElementById("equipamentosTabelaBody").innerHTML = '<tr><td colspan="10" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>';
+       return;
+    }
+
+    document.getElementById("equipamentosTabelaBody").innerHTML = '<tr><td colspan="10" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        renderTabelaEquipamentos_(Array.isArray(res.items) ? res.items : []);
+      })
+      .equipamentosPesquisar(SESSION, EQUIPAMENTOS_STATE.filtro);
+  }
+
+  function renderTabelaEquipamentos_(itemsOverride) {
+    const tbody = document.getElementById("equipamentosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : EQUIPAMENTOS_STATE.items;
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum equipamento encontrado.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      const acoesHtml = isCliente ? '\n        <td>\n          <div class="table-actions">\n             <button class="btn-secondary" type="button" onclick="equipamentosGerarQR_(\'' +
+        (id) +
+        '\')">Ver QR Code</button>\n          </div>\n        </td>\n      ' : '\n        <td>\n          <div class="table-actions">\n            <button class="btn-info" type="button" onclick="equipamentosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n            <button class="btn-secondary" type="button" onclick="equipamentosGerarQR_(\'' +
+        (id) +
+        '\')">QR Code</button>\n            ' +
+        (status === "ATIVO"
+                ? '<button class="btn-warning" type="button" onclick="equipamentosInativar_(\'' +
+                  (id) +
+                  '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="equipamentosReativar_(\'' +
+                  (id) +
+                  '\')">Reativar</button>') +
+        '\n            <button class="btn-danger" type="button" onclick="equipamentosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n          </div>\n        </td>\n      ';
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.CLIENTE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.UNIDADE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TIPO)) +
+        '</td>\n          <td style="font-weight:700;">' +
+        (escapeHtml_(item.TAG)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.FABRICANTE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.MODELO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.SERIE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.SETOR)) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          ' +
+        (acoesHtml) +
+        '\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function equipamentosNovo_() {
+    EQUIPAMENTOS_STATE.editingId = "";
+    equipamentosLimparFormulario_();
+    document.getElementById("equipamentosFormTitulo").innerText = "Novo equipamento";
+    document.getElementById("equipamentosHelper").innerText = "Selecione cliente e unidade, preencha os dados e clique em salvar.";
+  }
+
+  function equipamentosLimparFormulario_() {
+    setSelectValueSafe_("eqp_cliente_id", "");
+    setSelectValueSafe_("eqp_unidade_id", "");
+    setValue_("eqp_tipo", "");
+    setValue_("eqp_fabricante", "");
+    setValue_("eqp_modelo", "");
+    setValue_("eqp_serie", "");
+    setValue_("eqp_tag", "");
+    setValue_("eqp_setor", "");
+    setValue_("eqp_status", "ATIVO");
+
+    const selectUnidade = document.getElementById("eqp_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+  }
+
+  function equipamentosLerFormulario_() {
+    return {
+      CLIENTE_ID: getValue_("eqp_cliente_id"),
+      UNIDADE_ID: getValue_("eqp_unidade_id"),
+      TIPO: getValue_("eqp_tipo"),
+      FABRICANTE: getValue_("eqp_fabricante"),
+      MODELO: getValue_("eqp_modelo"),
+      SERIE: getValue_("eqp_serie"),
+      TAG: getValue_("eqp_tag"),
+      SETOR: getValue_("eqp_setor")
+    };
+  }
+
+  function equipamentosSalvar_() {
+    if (!SESSION) return;
+    const payload = equipamentosLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.UNIDADE_ID) return alert("Selecione a unidade.");
+    if (!payload.TIPO) return alert("Informe o tipo do equipamento.");
+
+    if (EQUIPAMENTOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          equipamentosNovo_();
+          if(EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+        })
+        .equipamentosAtualizar(SESSION, EQUIPAMENTOS_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        equipamentosNovo_();
+      })
+      .equipamentosCriar(SESSION, payload);
+  }
+
+  function equipamentosEditar_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert("Equipamento não encontrado.");
+        
+        const item = res.item;
+        EQUIPAMENTOS_STATE.editingId = String(item.ID || "");
+
+        setSelectValueSafe_("eqp_cliente_id", item.CLIENTE_ID || "");
+        carregarUnidadesParaEquipamentos_(item.CLIENTE_ID, item.UNIDADE_ID);
+
+        setValue_("eqp_tipo", item.TIPO || "");
+        setValue_("eqp_fabricante", item.FABRICANTE || "");
+        setValue_("eqp_modelo", item.MODELO || "");
+        setValue_("eqp_serie", item.SERIE || "");
+        setValue_("eqp_tag", item.TAG || "");
+        setValue_("eqp_setor", item.SETOR || "");
+        setValue_("eqp_status", item.STATUS || "ATIVO");
+
+        document.getElementById("equipamentosFormTitulo").innerText = "Editar equipamento";
+        document.getElementById("equipamentosHelper").innerText = "Editando equipamento selecionado.";
+        focusIfExists_("eqp_tipo");
+      })
+      .equipamentosObter(SESSION, id);
+  }
+
+  function equipamentosInativar_(id) {
+    if (!SESSION || !confirm("Inativar este equipamento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if(EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .equipamentosInativar(SESSION, id);
+  }
+
+  function equipamentosReativar_(id) {
+    if (!SESSION || !confirm("Reativar este equipamento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if(EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .equipamentosReativar(SESSION, id);
+  }
+
+  function equipamentosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este equipamento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (EQUIPAMENTOS_STATE.editingId === id) equipamentosNovo_();
+        if(EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .equipamentosExcluir(SESSION, id);
+  }
+
+  function equipamentosGerarQR_(id) {
+    if (!SESSION) return;
+    
+    const modalId = "modal-qr-code";
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = modalId;
+      modal.className = "modal-overlay";
+      document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = '\n      <div class="modal-card qr-print-area">\n        <div class="modal-header">\n          <h3 class="modal-title">QR Code do Equipamento</h3>\n        </div>\n        <div class="modal-body qr-wrapper" id="qr-body-content">\n          <p>Gerando QR Code...</p>\n        </div>\n        <div class="modal-footer">\n          <button class="btn-primary" type="button" onclick="imprimirQRCode_()">Imprimir Etiqueta</button>\n          <button class="btn-secondary" type="button" onclick="fecharModalQR_()">Fechar</button>\n        </div>\n      </div>\n    ';
+    modal.style.display = "flex";
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        const bodyContent = document.getElementById("qr-body-content");
+        if (!res || !res.success) {
+          bodyContent.innerHTML = '<p class="text-danger">' +
+            (res ? escapeHtml_(res.message) : "Erro ao gerar QR Code.") +
+            '</p>';
+          return;
+        }
+        
+        const eqp = res.equipamento;
+        bodyContent.innerHTML = '\n          <img src="' +
+          (escapeHtml_(res.qrUrl)) +
+          '" alt="QR Code" class="qr-image">\n          <div class="qr-info">\n            <div><strong>TAG:</strong> ' +
+          (escapeHtml_(eqp.TAG)) +
+          '</div>\n            <div><strong>Tipo:</strong> ' +
+          (escapeHtml_(eqp.TIPO)) +
+          '</div>\n            <div><strong>Modelo:</strong> ' +
+          (escapeHtml_(eqp.MODELO)) +
+          '</div>\n            <div><strong>Série:</strong> ' +
+          (escapeHtml_(eqp.SERIE)) +
+          '</div>\n            <div style="margin-top:10px; font-size:12px; color:var(--muted);">' +
+          (escapeHtml_(eqp.CLIENTE_NOME)) +
+          ' - ' +
+          (escapeHtml_(eqp.UNIDADE_NOME)) +
+          '</div>\n          </div>\n        ';
+      })
+      .qrcodeGerarParaEquipamento(SESSION, id);
+  }
+
+  function fecharModalQR_() {
+    const modal = document.getElementById("modal-qr-code");
+    if (modal) modal.style.display = "none";
+  }
+
+  function imprimirQRCode_() {
+    document.body.classList.add("printing-qr");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-qr");
+    }, 500);
+  }
+
+  /* =========================
+     ADMIN E USUÁRIOS
+  ========================= */
+  function renderAdminModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Painel Admin</h2>\n            <p class="content-subtitle">Configurações operacionais e Gestão de Usuários.</p>\n          </div>\n        </div>\n\n        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 10px;">\n          \n          <div class="card-kpi">\n            <div class="card-kpi-title">Tempo de ociosidade (Segundos)</div>\n            <div style="display:flex; gap:5px; align-items:center; margin-top:8px;">\n              <input type="number" id="inputIdleLimit" value="' +
+      (IDLE_LIMIT) +
+      '" style="width:75px; padding:4px; font-size:14px; text-align:center;" min="30">\n              <button class="btn-primary" type="button" style="padding:5px 10px; font-size:12px;" onclick="salvarTempoOciosidadePainel_()">Salvar</button>\n            </div>\n          </div>\n\n          <div class="card-kpi">\n            <div class="card-kpi-title">Som de ociosidade</div>\n            <div class="card-kpi-value" id="adminSomStatus">' +
+      (SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF") +
+      '</div>\n          </div>\n          \n          <div class="card-kpi">\n            <div class="card-kpi-title">Controle de som</div>\n            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">\n              <button class="btn-primary" type="button" style="padding:6px 10px; font-size:12px;" onclick="ativarSomOciosidadePainel_()">Ativar</button>\n              <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="desativarSomOciosidadePainel_()">Desativar</button>\n              <button class="btn-info" type="button" style="padding:6px 10px; font-size:12px;" onclick="testarSomOciosidade_()">Testar</button>\n            </div>\n          </div>\n          \n          <div class="card-kpi">\n            <div class="card-kpi-title">Mensagem motivacional atual</div>\n            <div id="adminMensagemAtual" style="font-weight:700; color:#0b4ea2; font-size:12px; line-height:1.4; margin-bottom:8px;"></div>\n            <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="sortearNovaMensagemMotivacional_()">Trocar mensagem</button>\n          </div>\n        </div>\n        \n        <div style="margin-bottom:20px;">\n             <button class="btn-danger" type="button" style="padding:6px 12px; font-size:12px;" onclick="limparCacheNavegador_()">Limpar Sessão Travada (Logout Forçado)</button>\n        </div>\n\n        <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">\n\n        <div class="module-header">\n          <div class="module-header-left">\n            <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de Usuários</h3>\n          </div>\n          <div class="module-header-right" style="display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="usuariosPesquisa" class="toolbar-search" type="text" placeholder="Nome ou Login..." onkeydown="if(event.key === \'Enter\') usuariosPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="usuariosPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="usuariosNovo_()">+ Novo usuário</button>\n          </div>\n        </div>\n\n        <div class="module-grid">\n          <div class="form-card">\n            <h3 class="section-card-title" id="usuariosFormTitulo">Novo usuário</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label for="usr_usuario">Login (Nome de usuário)</label>\n                <input id="usr_usuario" type="text" placeholder="Ex: joao.silva">\n              </div>\n              <div class="full">\n                <label for="usr_nome">Nome Completo</label>\n                <input id="usr_nome" type="text" placeholder="Nome completo do colaborador">\n              </div>\n              <div class="full">\n                <label for="usr_senha">Senha</label>\n                <input id="usr_senha" type="password" placeholder="Digite a senha (ou deixe vazio p/ manter a atual)">\n              </div>\n              <div>\n                <label for="usr_perfil">Perfil de Acesso</label>\n                <select id="usr_perfil" onchange="aoMudarPerfilUsuario_()"></select>\n              </div>\n              <div id="usr_cliente_container" style="display:none;">\n                <label for="usr_cliente_id">Vincular Cliente</label>\n                <select id="usr_cliente_id"><option value="">Selecione...</option></select>\n              </div>\n              <div>\n                <label for="usr_status">Status</label>\n                <input id="usr_status" type="text" value="ATIVO" disabled>\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="usuariosSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="usuariosNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="usuariosHelper">Preencha os dados e atribua o perfil correto.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Login</th>\n                    <th>Nome Completo</th>\n                    <th>Perfil</th>\n                    <th>Status</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="usuariosTabelaBody">\n                  <tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+    
+    usuariosLimparFormulario_();
+    preencherComboPerfis_();
+    carregarClientesParaUsuarios_();
+  }
+  
+  function limparCacheNavegador_() {
+    if(!confirm("Isso forçará a limpeza da sessão no navegador e recarregará a página. Continuar?")) return;
+    localStorage.removeItem("SGO_SESSION");
+    localStorage.removeItem("SGO_SESSION_ID");
+    location.reload();
+  }
+
+  function preencherEstadoPainelAdmin_() {
+    const elSom = document.getElementById("adminSomStatus");
+    const elMsg = document.getElementById("adminMensagemAtual");
+
+    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF";
+
+    if (elMsg) {
+      const elMsgGlobal = document.getElementById("mensagemMotivacional");
+      if (elMsgGlobal) elMsg.innerText = elMsgGlobal.innerText;
+    }
+  }
+
+  function preencherComboPerfis_() {
+    const select = document.getElementById("usr_perfil");
+    if (!select) return;
+    const profiles = PUBLIC_CONFIG.profiles && PUBLIC_CONFIG.profiles.length > 0 
+      ? PUBLIC_CONFIG.profiles 
+      : ["ADMIN", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"];
+    
+    const options = ['<option value="">Selecione o perfil</option>'];
+    profiles.forEach(function (p) {
+      options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(p) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function carregarClientesParaUsuarios_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        const select = document.getElementById("usr_cliente_id");
+        if (!select) return;
+        
+        const options = ['<option value="">Selecione o cliente</option>'];
+        (res.items || []).forEach(function (item) {
+          options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME) + '</option>');
+        });
+        select.innerHTML = options.join("");
+      })
+      .usuariosListarClientesAtivos(SESSION);
+  }
+
+  function aoMudarPerfilUsuario_() {
+    const perfil = getValue_("usr_perfil");
+    const container = document.getElementById("usr_cliente_container");
+    if (!container) return;
+    
+    if (perfil === "CLIENTE") {
+      container.style.display = "block";
+    } else {
+      container.style.display = "none";
+      setSelectValueSafe_("usr_cliente_id", "");
+    }
+  }
+
+  function usuariosPesquisar_() {
+    const el = document.getElementById("usuariosPesquisa");
+    USUARIOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    if (!USUARIOS_STATE.filtro) {
+       document.getElementById("usuariosTabelaBody").innerHTML = '<tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>';
+       return;
+    }
+
+    document.getElementById("usuariosTabelaBody").innerHTML = '<tr><td colspan="5" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        renderTabelaUsuarios_(Array.isArray(res.items) ? res.items : []);
+      })
+      .usuariosPesquisar(SESSION, USUARIOS_STATE.filtro);
+  }
+
+  function renderTabelaUsuarios_(itemsOverride) {
+    const tbody = document.getElementById("usuariosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : USUARIOS_STATE.items;
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum usuário encontrado para esta busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+      
+      return '\n        <tr>\n          <td style="font-weight:700;">' +
+        (escapeHtml_(item.USUARIO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.PERFIL)) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          <td>\n            <div class="table-actions">\n              <button class="btn-info" type="button" onclick="usuariosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n              ' +
+        (status === "ATIVO"
+                  ? '<button class="btn-warning" type="button" onclick="usuariosInativar_(\'' +
+                    (id) +
+                    '\')">Inativar</button>'
+                  : '<button class="btn-success" type="button" onclick="usuariosReativar_(\'' +
+                    (id) +
+                    '\')">Reativar</button>') +
+        '\n              <button class="btn-danger" type="button" onclick="usuariosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n            </div>\n          </td>\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function usuariosNovo_() {
+    USUARIOS_STATE.editingId = "";
+    usuariosLimparFormulario_();
+    document.getElementById("usuariosFormTitulo").innerText = "Novo usuário";
+    document.getElementById("usuariosHelper").innerText = "Preencha os dados e atribua o perfil correto.";
+  }
+
+  function usuariosLimparFormulario_() {
+    setValue_("usr_usuario", "");
+    setValue_("usr_nome", "");
+    setValue_("usr_senha", "");
+    setSelectValueSafe_("usr_perfil", "");
+    setSelectValueSafe_("usr_cliente_id", "");
+    setValue_("usr_status", "ATIVO");
+    aoMudarPerfilUsuario_();
+  }
+
+  function usuariosLerFormulario_() {
+    return {
+      USUARIO: getValue_("usr_usuario"),
+      NOME: getValue_("usr_nome"),
+      SENHA: getValue_("usr_senha"),
+      PERFIL: getValue_("usr_perfil"),
+      CLIENTE_ID: getValue_("usr_cliente_id")
+    };
+  }
+
+  function usuariosSalvar_() {
+    if (!SESSION) return;
+    const payload = usuariosLerFormulario_();
+
+    if (!payload.USUARIO) return alert("O Login é obrigatório.");
+    if (!payload.NOME) return alert("O Nome Completo é obrigatório.");
+    if (!payload.PERFIL) return alert("Selecione o perfil de acesso.");
+    if (payload.PERFIL === "CLIENTE" && !payload.CLIENTE_ID) return alert("Para perfil CLIENTE, é obrigatório vincular a empresa.");
+
+    if (USUARIOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          usuariosNovo_();
+          if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+        })
+        .usuariosAtualizar(SESSION, USUARIOS_STATE.editingId, payload);
+      return;
+    }
+
+    if (!payload.SENHA) return alert("A senha é obrigatória para um NOVO usuário.");
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        usuariosNovo_();
+      })
+      .usuariosCriar(SESSION, payload);
+  }
+
+  function usuariosEditar_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Erro ao buscar usuário.");
+        
+        const item = res.item;
+        USUARIOS_STATE.editingId = String(item.ID || "");
+
+        setValue_("usr_usuario", item.USUARIO || "");
+        setValue_("usr_nome", item.NOME || "");
+        setValue_("usr_senha", ""); 
+        setSelectValueSafe_("usr_perfil", item.PERFIL || "");
+        setSelectValueSafe_("usr_cliente_id", item.CLIENTE_ID || "");
+        setValue_("usr_status", item.STATUS || "ATIVO");
+
+        aoMudarPerfilUsuario_();
+
+        document.getElementById("usuariosFormTitulo").innerText = "Editar usuário";
+        document.getElementById("usuariosHelper").innerText = "Deixe a senha em branco caso não queira alterá-la.";
+        focusIfExists_("usr_usuario");
+      })
+      .usuariosObter(SESSION, id);
+  }
+
+  function usuariosInativar_(id) {
+    if (!SESSION || !confirm("Bloquear o acesso deste usuário?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .usuariosInativar(SESSION, id);
+  }
+
+  function usuariosReativar_(id) {
+    if (!SESSION || !confirm("Liberar o acesso deste usuário?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .usuariosReativar(SESSION, id);
+  }
+
+  function usuariosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este usuário do banco de dados?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (USUARIOS_STATE.editingId === id) usuariosNovo_();
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .usuariosExcluir(SESSION, id);
+  }
+
+  /* =========================
+     UTILITÁRIOS GERAIS E DOCUMENTOS AUXILIARES
+  ========================= */
+  function documentosPesquisar_() {
+    const el = document.getElementById("documentosPesquisa");
+    DOCUMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    if (!DOCUMENTOS_STATE.filtro) {
+       document.getElementById("documentosTabelaBody").innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr>';
+       return;
+    }
+
+    document.getElementById("documentosTabelaBody").innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        renderTabelaDocumentos_(Array.isArray(res.items) ? res.items : []);
+      })
+      .documentosPesquisar(SESSION, DOCUMENTOS_STATE.filtro);
+  }
+
+  function renderTabelaDocumentos_(itemsOverride) {
+    const tbody = document.getElementById("documentosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : DOCUMENTOS_STATE.items;
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleAcoes = isCliente ? "display:none;" : "";
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum documento encontrado para a busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+      
+      const linkHtml = item.LINK_ARQUIVO 
+        ? '<a href="' +
+          (escapeHtml_(item.LINK_ARQUIVO)) +
+          '" target="_blank" style="color:var(--metro-blue);font-weight:700;text-decoration:none;">Acessar</a>' 
+        : "--";
+
+      const vencimentoHtml = formatarDataFront_(item.DATA_VENCIMENTO);
+
+      const acoesHtml = isCliente ? "" : '\n        <td style="' +
+        (styleAcoes) +
+        '">\n          <div class="table-actions">\n            <button class="btn-info" type="button" onclick="documentosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n            ' +
+        (status === "ATIVO" || status === "PENDENTE"
+                ? '<button class="btn-warning" type="button" onclick="documentosInativar_(\'' +
+                  (id) +
+                  '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="documentosReativar_(\'' +
+                  (id) +
+                  '\')">Reativar</button>') +
+        '\n            <button class="btn-danger" type="button" onclick="documentosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n          </div>\n        </td>\n      ';
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.CLIENTE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.UNIDADE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.EQUIPAMENTO_NOME || "Geral da Unidade")) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TIPO_DOCUMENTO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME_ARQUIVO)) +
+        '</td>\n          <td><strong>' +
+        (vencimentoHtml) +
+        '</strong></td>\n          <td>' +
+        (linkHtml) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          ' +
+        (acoesHtml) +
+        '\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function documentosLimparFormulario_() {
+    setSelectValueSafe_("doc_cliente_id", "");
+    setSelectValueSafe_("doc_unidade_id", "");
+    setSelectValueSafe_("doc_equipamento_id", "");
+    setValue_("doc_tipo_documento", "");
+    setValue_("doc_nome_arquivo", "");
+    setValue_("doc_arquivo", "");
+    setValue_("doc_arquivo_base64", "");
+    setValue_("doc_arquivo_mime", "");
+    setValue_("doc_arquivo_nome", "");
+    setValue_("doc_data_vencimento", "");
+    setValue_("doc_status", "ATIVO");
+
+    const elInput = document.getElementById("doc_arquivo");
+    if(elInput) elInput.value = ""; // Garante que o input file limpe visualmente
+
+    const preview = document.getElementById("doc_arquivo_preview");
+    if (preview) preview.innerText = "";
+
+    const selectUnidade = document.getElementById("doc_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+    
+    const selectEquip = document.getElementById("doc_equipamento_id");
+    if (selectEquip) selectEquip.innerHTML = '<option value="">Selecione uma unidade primeiro</option>';
+  }
+
+  function documentosNovo_() {
+    DOCUMENTOS_STATE.editingId = "";
+    documentosLimparFormulario_();
+    document.getElementById("documentosFormTitulo").innerText = "Novo documento";
+  }
+
+  function processarArquivoDocumento_() {
+    const el = document.getElementById("doc_arquivo");
+    const file = el.files[0];
+    const preview = document.getElementById("doc_arquivo_preview");
+
+    if (!file) {
+      setValue_("doc_arquivo_base64", "");
+      setValue_("doc_arquivo_mime", "");
+      setValue_("doc_arquivo_nome", "");
+      preview.innerText = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { 
+      alert("O arquivo selecionado é muito grande. O limite máximo é de 5MB.");
+      el.value = "";
+      return;
+    }
+
+    preview.innerText = "Lendo arquivo: " + file.name + "...";
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      setValue_("doc_arquivo_base64", e.target.result);
+      setValue_("doc_arquivo_mime", file.type);
+      setValue_("doc_arquivo_nome", file.name);
+      preview.innerText = "Arquivo pronto para envio: " + file.name;
+    };
+    reader.onerror = function() {
+      alert("Erro ao tentar ler o arquivo.");
+      el.value = "";
+      preview.innerText = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function formatarDataFront_(dataString) {
+    if (!dataString) return "--";
+    const partes = dataString.split("-");
+    if (partes.length === 3) {
+      // Ajuste para não bugar com data no formato ISO completo vindo do banco
+      const dia = partes[2].substring(0, 2);
+      return dia + "/" + partes[1] + "/" + partes[0];
+    }
+    return escapeHtml_(dataString);
+  }
+
+  function carregarClientesParaDocumentos_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesDocumentos_();
+      })
+      .equipamentosListarClientesAtivos(SESSION); 
+  }
+
+  function preencherComboClientesDocumentos_() {
+    const select = document.getElementById("doc_cliente_id");
+    if (!select) return;
+    const options = ['<option value="">Selecione um cliente</option>'];
+    (DOCUMENTOS_STATE.clientes || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarClienteDocumentos_() {
+    const clienteId = getValue_("doc_cliente_id");
+    if (!clienteId) {
+      DOCUMENTOS_STATE.unidades = [];
+      DOCUMENTOS_STATE.equipamentos = [];
+      preencherComboUnidadesDocumentos_();
+      preencherComboEquipamentosDocumentos_();
+      return;
+    }
+    carregarUnidadesParaDocumentos_(clienteId);
+  }
+
+  function carregarUnidadesParaDocumentos_(clienteId, unidadeSelecionadaId, equipamentoSelecionadoId) {
+    if (!SESSION || !clienteId) return;
+    const selectUnidade = document.getElementById("doc_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
+        preencherComboUnidadesDocumentos_();
+        
+        if (unidadeSelecionadaId) {
+          setSelectValueSafe_("doc_unidade_id", unidadeSelecionadaId);
+          carregarEquipamentosParaDocumentos_(unidadeSelecionadaId, equipamentoSelecionadoId);
+        } else {
+          DOCUMENTOS_STATE.equipamentos = [];
+          preencherComboEquipamentosDocumentos_();
+        }
+      })
+      .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+  }
+
+  function preencherComboUnidadesDocumentos_() {
+    const select = document.getElementById("doc_unidade_id");
+    if (!select) return;
+    if (!DOCUMENTOS_STATE.unidades || DOCUMENTOS_STATE.unidades.length === 0) {
+      select.innerHTML = '<option value="">Nenhuma unidade ativa encontrada</option>';
+      return;
+    }
+    const options = ['<option value="">Selecione a unidade</option>'];
+    (DOCUMENTOS_STATE.unidades || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_UNIDADE) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarUnidadeDocumentos_() {
+    const unidadeId = getValue_("doc_unidade_id");
+    if (!unidadeId) {
+      DOCUMENTOS_STATE.equipamentos = [];
+      preencherComboEquipamentosDocumentos_();
+      return;
+    }
+    carregarEquipamentosParaDocumentos_(unidadeId);
+  }
+
+  function carregarEquipamentosParaDocumentos_(unidadeId, equipamentoSelecionadoId) {
+    if (!SESSION || !unidadeId) return;
+    const selectEquip = document.getElementById("doc_equipamento_id");
+    if (selectEquip) selectEquip.innerHTML = '<option value="">Carregando equipamentos...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.equipamentos = Array.isArray(res.items) ? res.items : [];
+        preencherComboEquipamentosDocumentos_();
+        if (equipamentoSelecionadoId) setSelectValueSafe_("doc_equipamento_id", equipamentoSelecionadoId);
+      })
+      .documentosListarEquipamentosAtivosPorUnidade(SESSION, unidadeId);
+  }
+
+  function preencherComboEquipamentosDocumentos_() {
+    const select = document.getElementById("doc_equipamento_id");
+    if (!select) return;
+    if (!DOCUMENTOS_STATE.equipamentos || DOCUMENTOS_STATE.equipamentos.length === 0) {
+      select.innerHTML = '<option value="">Nenhum equipamento ativo (opcional)</option>';
+      return;
+    }
+    const options = ['<option value="">Geral da Unidade (Opcional)</option>'];
+    (DOCUMENTOS_STATE.equipamentos || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_EQUIPAMENTO) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function documentosLerFormulario_() {
+    return {
+      CLIENTE_ID: getValue_("doc_cliente_id"),
+      UNIDADE_ID: getValue_("doc_unidade_id"),
+      EQUIPAMENTO_ID: getValue_("doc_equipamento_id"),
+      TIPO_DOCUMENTO: getValue_("doc_tipo_documento"),
+      NOME_ARQUIVO: getValue_("doc_nome_arquivo"),
+      ARQUIVO_BASE64: getValue_("doc_arquivo_base64"),
+      ARQUIVO_MIME: getValue_("doc_arquivo_mime"),
+      ARQUIVO_NOME: getValue_("doc_arquivo_nome"),
+      DATA_VENCIMENTO: getValue_("doc_data_vencimento")
+    };
+  }
+
+  function documentosSalvar_() {
+    if (!SESSION) return;
+    const payload = documentosLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.UNIDADE_ID) return alert("Selecione a unidade.");
+    if (!payload.TIPO_DOCUMENTO) return alert("Informe a categoria do documento.");
+    if (!payload.NOME_ARQUIVO) return alert("Informe a referência do arquivo.");
+    if (!DOCUMENTOS_STATE.editingId && !payload.ARQUIVO_BASE64) return alert("Selecione um arquivo para o upload.");
+
+    const btn = document.querySelector("#documentosFormTitulo").parentElement.querySelector(".btn-primary");
+    if (btn) { btn.disabled = true; btn.innerText = "Salvando/Enviando..."; }
+
+    if (DOCUMENTOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (btn) { btn.disabled = false; btn.innerText = "Salvar"; }
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          documentosNovo_();
+          if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+        })
+        .withFailureHandler(function() {
+          if (btn) { btn.disabled = false; btn.innerText = "Salvar"; }
+          alert("Erro de conexão ao salvar.");
+        })
+        .documentosAtualizar(SESSION, DOCUMENTOS_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) { btn.disabled = false; btn.innerText = "Salvar"; }
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        documentosNovo_();
+      })
+      .withFailureHandler(function() {
+        if (btn) { btn.disabled = false; btn.innerText = "Salvar"; }
+        alert("Erro de conexão ao enviar documento.");
+      })
+      .documentosCriar(SESSION, payload);
+  }
+
+  function documentosEditar_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert("Documento não encontrado.");
+        
+        const item = res.item;
+        DOCUMENTOS_STATE.editingId = String(item.ID || "");
+
+        setSelectValueSafe_("doc_cliente_id", item.CLIENTE_ID || "");
+        carregarUnidadesParaDocumentos_(item.CLIENTE_ID, item.UNIDADE_ID, item.EQUIPAMENTO_ID);
+
+        setValue_("doc_tipo_documento", item.TIPO_DOCUMENTO || "");
+        setValue_("doc_nome_arquivo", item.NOME_ARQUIVO || "");
+        
+        // Trata data que vem no formato "yyyy-MM-ddThh:mm:ss" do backend para preencher o input type="date"
+        let dt = item.DATA_VENCIMENTO || "";
+        if (dt.includes("T")) dt = dt.split("T")[0];
+        setValue_("doc_data_vencimento", dt);
+        
+        setValue_("doc_arquivo", "");
+        setValue_("doc_arquivo_base64", "");
+        setValue_("doc_arquivo_mime", "");
+        setValue_("doc_arquivo_nome", "");
+        setValue_("doc_status", item.STATUS || "ATIVO");
+
+        const preview = document.getElementById("doc_arquivo_preview");
+        if (preview) {
+           if (item.LINK_ARQUIVO) {
+             preview.innerHTML = 'Arquivo atual: <a href="' +
+               (escapeHtml_(item.LINK_ARQUIVO)) +
+               '" target="_blank">Visualizar no Drive</a> <br><span style="color:var(--muted); font-weight:normal;">(Selecione um novo arquivo apenas se quiser substituir o atual)</span>';
+           } else {
+             preview.innerText = "";
+           }
+        }
+
+        document.getElementById("documentosFormTitulo").innerText = "Editar documento";
+      })
+      .documentosObter(SESSION, id);
+  }
+
+  function documentosInativar_(id) {
+    if (!SESSION || !confirm("Inativar este documento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .documentosInativar(SESSION, id);
+  }
+
+  function documentosReativar_(id) {
+    if (!SESSION || !confirm("Reativar este documento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .documentosReativar(SESSION, id);
+  }
+
+  function documentosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este documento?")) return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (DOCUMENTOS_STATE.editingId === id) documentosNovo_();
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .documentosExcluir(SESSION, id);
+  }
+
+  function formatarCnpjFront_(valor) {
+    const v = String(valor || "").replace(/\D/g, "");
+    if (v.length !== 14) return escapeHtml_(valor || "");
+    return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  }
+
+  function getValue_(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function setValue_(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? "" : String(value);
+  }
+
+  function setSelectValueSafe_(id, valor) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = valor || "";
+  }
+
+  function focusIfExists_(id) {
+    const el = document.getElementById(id);
+    if (el) el.focus();
+  }
+
+  function escapeHtml_(texto) {
+    return String(texto || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>

@@ -1,0 +1,787 @@
+<script>
+  // ==========================================
+  // MÓDULO: TÉCNICOS DE CAMPO
+  // ==========================================
+  const TECNICOS_STATE = {
+    items: [],
+    editingId: "",
+    loading: false,
+    filtro: "",
+    filtroEspecialidade: "",
+    filtroStatus: "",
+    filtroDisponibilidade: "",
+    tecMissoesAtivo: null
+  };
+
+  const TEC_ESPECIALIDADES = [
+    "AUTOCLAVE", "LAVADORA", "CALIBRACAO", "QUALIFICACAO",
+    "ENSAIO_ELETRICO", "MANUTENCAO", "INSTALACAO",
+    "CADEIA_FRIA", "VISTORIA", "ORCAMENTO"
+  ];
+
+  const TEC_ESPECIALIDADE_LABELS = {
+    AUTOCLAVE:       "Autoclave",
+    LAVADORA:        "Lavadora",
+    CALIBRACAO:      "Calibração",
+    QUALIFICACAO:    "Qualificação",
+    ENSAIO_ELETRICO: "Ensaio Elétrico",
+    MANUTENCAO:      "Manutenção",
+    INSTALACAO:      "Instalação",
+    CADEIA_FRIA:     "Cadeia Fria",
+    VISTORIA:        "Vistoria",
+    ORCAMENTO:       "Orçamento"
+  };
+
+  const TEC_DISPONIBILIDADE_OPTS = [
+    { value: "DISPONIVEL",    label: "Disponível",     cor: "#059669" },
+    { value: "EM_CAMPO",      label: "Em Campo",       cor: "#2563eb" },
+    { value: "FERIAS",        label: "Férias",         cor: "#f59e0b" },
+    { value: "AFASTADO",      label: "Afastado",       cor: "#d97706" },
+    { value: "INDISPONIVEL",  label: "Indisponível",   cor: "#dc2626" }
+  ];
+
+  // ── RENDER PRINCIPAL ──────────────────────────────────────────────────────
+  function renderTecnicosModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA");
+
+    div.innerHTML = '\n      <div class="module-shell">\n\n        <!-- HEADER -->\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">\n              <i class="fas fa-user-hard-hat" style="margin-right:8px;color:var(--metro-green);"></i>\n              Técnicos de Campo\n            </h2>\n            <p class="content-subtitle">Gestão de técnicos, habilitações, especialidades e desempenho em missões.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">\n            <input id="tec_busca" class="toolbar-search" type="text"\n              placeholder="Buscar por nome, CPF ou e-mail..."\n              onkeydown="if(event.key===\'Enter\') tecnicosAplicarFiltros_()">\n            <select id="tec_filtro_esp" style="width:160px;min-height:36px;padding:6px 10px;font-size:13px;" onchange="tecnicosAplicarFiltros_()">\n              <option value="">Todas especialidades</option>\n              ' +
+      (TEC_ESPECIALIDADES.map(function(e) {
+                return '<option value="' + e + '">' + (TEC_ESPECIALIDADE_LABELS[e] || e) + '</option>';
+              }).join("")) +
+      '\n            </select>\n            <select id="tec_filtro_status" style="width:120px;min-height:36px;padding:6px 10px;font-size:13px;" onchange="tecnicosAplicarFiltros_()">\n              <option value="">Todos status</option>\n              <option value="ATIVO">Ativos</option>\n              <option value="INATIVO">Inativos</option>\n            </select>\n            <select id="tec_filtro_disp" style="width:140px;min-height:36px;padding:6px 10px;font-size:13px;" onchange="tecnicosAplicarFiltros_()">\n              <option value="">Disponibilidade</option>\n              ' +
+      (TEC_DISPONIBILIDADE_OPTS.map(function(d) {
+                return '<option value="' + d.value + '">' + d.label + '</option>';
+              }).join("")) +
+      '\n            </select>\n            ' +
+      (podeEditar ? '<button class="btn-primary" type="button" onclick="tecnicosNovo_()"><i class="fas fa-plus" style="margin-right:6px;"></i>Novo Técnico</button>' : "") +
+      '\n          </div>\n        </div>\n\n        <div class="module-grid">\n\n          <!-- FORMULÁRIO -->\n          <div class="form-card" id="tec_form_card" style="display:none;">\n            <h3 class="section-card-title" id="tec_form_titulo">Novo Técnico</h3>\n\n            <!-- DADOS PESSOAIS -->\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:0 0 10px;">\n              Dados Pessoais\n            </div>\n            <div class="form-grid">\n              <div class="full">\n                <label for="tec_nome">Nome Completo <span style="color:red;">*</span></label>\n                <input id="tec_nome" type="text" placeholder="Nome completo do técnico" maxlength="120">\n              </div>\n              <div>\n                <label for="tec_cpf">CPF <span style="color:red;">*</span></label>\n                <input id="tec_cpf" type="text" placeholder="000.000.000-00" maxlength="14"\n                  oninput="tecFormatarCpf_(this)">\n              </div>\n              <div>\n                <label for="tec_email">E-mail</label>\n                <input id="tec_email" type="email" placeholder="tecnico@empresa.com.br">\n              </div>\n              <div>\n                <label for="tec_telefone">Telefone / WhatsApp</label>\n                <input id="tec_telefone" type="text" placeholder="(11) 99999-9999" maxlength="20">\n              </div>\n              <div>\n                <label for="tec_data_admissao">Data de Admissão</label>\n                <input id="tec_data_admissao" type="date">\n              </div>\n              <div>\n                <label for="tec_custo_hora">Custo / Hora (R$)</label>\n                <input id="tec_custo_hora" type="number" placeholder="0,00" min="0" step="0.01">\n              </div>\n              <div>\n                <label for="tec_disponibilidade">Disponibilidade</label>\n                <select id="tec_disponibilidade">\n                  ' +
+      (TEC_DISPONIBILIDADE_OPTS.map(function(d) {
+                    return '<option value="' + d.value + '">' + d.label + '</option>';
+                  }).join("")) +
+      '\n                </select>\n              </div>\n            </div>\n\n            <!-- HABILITAÇÕES -->\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n              Habilitações Técnicas\n            </div>\n            <div class="form-grid">\n              <div>\n                <label for="tec_crea_crt">Possui CREA / CRT?</label>\n                <select id="tec_crea_crt" onchange="tecToggleCrea_()">\n                  <option value="">Não</option>\n                  <option value="CREA">CREA</option>\n                  <option value="CRT">CRT</option>\n                </select>\n              </div>\n              <div id="tec_crea_bloco" style="display:contents;">\n                <div>\n                  <label for="tec_numero_crea">Número CREA / CRT</label>\n                  <input id="tec_numero_crea" type="text" placeholder="Ex: 5063876012" maxlength="30">\n                </div>\n                <div>\n                  <label for="tec_uf_crea">UF CREA</label>\n                  <select id="tec_uf_crea">\n                    <option value="">Selecione</option>\n                    ' +
+      (["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(function(u) {
+                      return '<option value="' + u + '">' + u + '</option>';
+                    }).join("")) +
+      '\n                  </select>\n                </div>\n                <div>\n                  <label for="tec_venc_crea">Vencimento CREA</label>\n                  <input id="tec_venc_crea" type="date">\n                </div>\n              </div>\n              <div>\n                <label for="tec_cnh">Possui CNH?</label>\n                <select id="tec_cnh" onchange="tecToggleCnh_()">\n                  <option value="">Não</option>\n                  <option value="SIM">Sim</option>\n                </select>\n              </div>\n              <div id="tec_cnh_bloco" style="display:contents;">\n                <div>\n                  <label for="tec_categoria_cnh">Categoria CNH</label>\n                  <select id="tec_categoria_cnh">\n                    <option value="">Selecione</option>\n                    ' +
+      (["A","B","AB","C","D","E"].map(function(c) {
+                      return '<option value="' + c + '">' + c + '</option>';
+                    }).join("")) +
+      '\n                  </select>\n                </div>\n                <div>\n                  <label for="tec_venc_cnh">Vencimento CNH</label>\n                  <input id="tec_venc_cnh" type="date">\n                </div>\n              </div>\n            </div>\n\n            <!-- ESPECIALIDADES -->\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n              Especialidades Técnicas\n            </div>\n            <div id="tec_especialidades_grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:4px;">\n              ' +
+      (TEC_ESPECIALIDADES.map(function(e) {
+                return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;transition:border-color .15s,background .15s;" id="tec_esp_label_' +
+                  (e) +
+                  '" onclick="tecToggleEspLabel_(\'' +
+                  (e) +
+                  '\')">\n                  <input type="checkbox" id="tec_esp_' +
+                  (e) +
+                  '" value="' +
+                  (e) +
+                  '" style="width:16px;min-height:0;padding:0;pointer-events:none;" onchange="tecToggleEspLabel_(\'' +
+                  (e) +
+                  '\',true)">\n                  ' +
+                  (TEC_ESPECIALIDADE_LABELS[e] || e) +
+                  '\n                </label>';
+              }).join("")) +
+      '\n            </div>\n\n            <!-- ENDEREÇO -->\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n              Endereço\n            </div>\n            <div class="form-grid">\n              <div class="full">\n                <label for="tec_endereco">Endereço</label>\n                <input id="tec_endereco" type="text" placeholder="Rua, número, bairro">\n              </div>\n              <div>\n                <label for="tec_cidade">Cidade</label>\n                <input id="tec_cidade" type="text" placeholder="Cidade">\n              </div>\n              <div>\n                <label for="tec_uf">UF</label>\n                <select id="tec_uf">\n                  <option value="">Selecione</option>\n                  ' +
+      (["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(function(u) {
+                    return '<option value="' + u + '">' + u + '</option>';
+                  }).join("")) +
+      '\n                </select>\n              </div>\n              <div class="full">\n                <label for="tec_observacoes">Observações</label>\n                <textarea id="tec_observacoes" rows="2" placeholder="Informações adicionais relevantes..."></textarea>\n              </div>\n            </div>\n\n            <!-- AÇÕES DO FORM -->\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="tecnicosSalvar_()">\n                <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Técnico\n              </button>\n              <button class="btn-secondary" type="button" onclick="tecnicosFecharForm_()">\n                Cancelar\n              </button>\n            </div>\n            <div class="helper-text" id="tec_helper" style="margin-top:8px;"></div>\n          </div>\n\n          <!-- PAINEL DE MISSÕES DO TÉCNICO -->\n          <div class="form-card" id="tec_missoes_card" style="display:none;">\n            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">\n              <h3 class="section-card-title" style="margin:0;" id="tec_missoes_titulo">Missões do Técnico</h3>\n              <button class="btn-secondary" type="button" onclick="tecnicosFecharMissoes_()" style="font-size:12px;padding:6px 12px;">\n                <i class="fas fa-times" style="margin-right:4px;"></i>Fechar\n              </button>\n            </div>\n            <div id="tec_missoes_stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Data</th>\n                    <th>Código</th>\n                    <th>Cliente</th>\n                    <th>Tipo</th>\n                    <th>Status</th>\n                    <th>Horas</th>\n                  </tr>\n                </thead>\n                <tbody id="tec_missoes_tbody">\n                  <tr><td colspan="6" class="empty-state">Carregando missões...</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n\n        </div><!-- /module-grid -->\n\n        <!-- TABELA DE TÉCNICOS -->\n        <div class="list-card" style="margin-top:20px;">\n          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);">\n            <h3 style="margin:0;font-size:14px;font-weight:700;">\n              <i class="fas fa-users" style="margin-right:6px;color:var(--metro-green);"></i>\n              <span id="tec_contagem">Técnicos cadastrados</span>\n            </h3>\n            <button class="btn-secondary" type="button" onclick="tecnicosCarregar_()" style="font-size:12px;padding:6px 12px;">\n              <i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar\n            </button>\n          </div>\n          <div class="table-wrap">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>Nome</th>\n                  <th>CPF</th>\n                  <th>CREA / CRT</th>\n                  <th>CNH</th>\n                  <th>Especialidades</th>\n                  <th>Disponibilidade</th>\n                  <th>Custo/h</th>\n                  <th>Missões</th>\n                  <th>Status</th>\n                  <th style="text-align:center;">Ações</th>\n                </tr>\n              </thead>\n              <tbody id="tec_tbody">\n                <tr><td colspan="10" class="empty-state">Carregando técnicos...</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n\n      </div>\n    ';
+
+    tecnicosCarregar_();
+  }
+
+  // ── CARREGAR LISTA ─────────────────────────────────────────────────────────
+  function tecnicosCarregar_() {
+    if (!SESSION) return;
+    TECNICOS_STATE.loading = true;
+    var tbody = document.getElementById("tec_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        TECNICOS_STATE.loading = false;
+        if (!res || !res.success) {
+          tecnicosSetTbody_('<tr><td colspan="10" class="empty-state" style="color:var(--danger);">Erro ao carregar: ' + escapeHtml_((res && res.erro) || "Falha desconhecida") + '</td></tr>');
+          return;
+        }
+        TECNICOS_STATE.items = res.items || [];
+        tecnicosRenderTabela_();
+      })
+      .withFailureHandler(function(err) {
+        TECNICOS_STATE.loading = false;
+        tecnicosSetTbody_('<tr><td colspan="10" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>');
+      })
+      .tecnicosListar(SESSION);
+  }
+
+  // ── APLICAR FILTROS ────────────────────────────────────────────────────────
+  function tecnicosAplicarFiltros_() {
+    TECNICOS_STATE.filtro = String((document.getElementById("tec_busca") || {}).value || "").trim().toLowerCase();
+    TECNICOS_STATE.filtroEspecialidade = String((document.getElementById("tec_filtro_esp") || {}).value || "");
+    TECNICOS_STATE.filtroStatus = String((document.getElementById("tec_filtro_status") || {}).value || "");
+    TECNICOS_STATE.filtroDisponibilidade = String((document.getElementById("tec_filtro_disp") || {}).value || "");
+    tecnicosRenderTabela_();
+  }
+
+  // ── RENDER TABELA ──────────────────────────────────────────────────────────
+  function tecnicosRenderTabela_() {
+    var items = TECNICOS_STATE.items.slice();
+    var filtro = TECNICOS_STATE.filtro;
+    var filtroEsp = TECNICOS_STATE.filtroEspecialidade;
+    var filtroSt = TECNICOS_STATE.filtroStatus;
+    var filtroDisp = TECNICOS_STATE.filtroDisponibilidade;
+
+    if (filtro) {
+      items = items.filter(function(t) {
+        var nome = String(t.NOME || "").toLowerCase();
+        var cpf = String(t.CPF || "").toLowerCase();
+        var email = String(t.EMAIL || "").toLowerCase();
+        return nome.indexOf(filtro) >= 0 || cpf.indexOf(filtro) >= 0 || email.indexOf(filtro) >= 0;
+      });
+    }
+    if (filtroEsp) {
+      items = items.filter(function(t) {
+        var esp = String(t.ESPECIALIDADES || "").toUpperCase();
+        return esp.indexOf(filtroEsp) >= 0;
+      });
+    }
+    if (filtroSt) {
+      items = items.filter(function(t) { return String(t.STATUS || "") === filtroSt; });
+    }
+    if (filtroDisp) {
+      items = items.filter(function(t) { return String(t.DISPONIBILIDADE || "") === filtroDisp; });
+    }
+
+    var contagem = document.getElementById("tec_contagem");
+    if (contagem) {
+      contagem.textContent = items.length + " técnico" + (items.length !== 1 ? "s" : "") + " encontrado" + (items.length !== 1 ? "s" : "");
+    }
+
+    if (!items.length) {
+      tecnicosSetTbody_('<tr><td colspan="10" class="empty-state">Nenhum técnico encontrado.</td></tr>');
+      return;
+    }
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA");
+
+    var html = items.map(function(t) {
+      var id = escapeHtml_(t.ID);
+      var nome = escapeHtml_(t.NOME || "—");
+      var cpf = tecFormatarCpfDisplay_(t.CPF || "");
+      var ativo = String(t.STATUS || "") === "ATIVO";
+
+      // CREA badge
+      var creaHtml = "—";
+      if (t.NUMERO_CREA) {
+        var creaStatus = t._crea_status || "SEM_DATA";
+        var creaCor = { OK: "#059669", VENCENDO: "#f59e0b", VENCIDO: "#dc2626", SEM_DATA: "#94a3b8" }[creaStatus] || "#94a3b8";
+        var creaLabel = { OK: "OK", VENCENDO: "Vencendo", VENCIDO: "Vencido", SEM_DATA: "Sem data" }[creaStatus] || creaStatus;
+        creaHtml = '<div style="line-height:1.3;">' +
+          '<span style="font-size:12px;font-weight:600;">' + escapeHtml_(String(t.CREA_CRT || "CREA")) + ' ' + escapeHtml_(t.NUMERO_CREA) + '</span>' +
+          '<br><span style="font-size:11px;padding:1px 7px;border-radius:20px;background:' + creaCor + '20;color:' + creaCor + ';font-weight:700;">' + creaLabel + '</span>' +
+          '</div>';
+      }
+
+      // CNH badge
+      var cnhHtml = "—";
+      if (t.CNH === "SIM" || t.CATEGORIA_CNH) {
+        var cnhStatus = t._cnh_status || "SEM_DATA";
+        var cnhCor = { OK: "#059669", VENCENDO: "#f59e0b", VENCIDO: "#dc2626", SEM_DATA: "#94a3b8" }[cnhStatus] || "#94a3b8";
+        var cnhLabel = { OK: "OK", VENCENDO: "Vencendo", VENCIDO: "Vencida", SEM_DATA: "Sem data" }[cnhStatus] || cnhStatus;
+        cnhHtml = '<div style="line-height:1.3;">' +
+          '<span style="font-size:12px;font-weight:600;">Cat. ' + escapeHtml_(t.CATEGORIA_CNH || "—") + '</span>' +
+          '<br><span style="font-size:11px;padding:1px 7px;border-radius:20px;background:' + cnhCor + '20;color:' + cnhCor + ';font-weight:700;">' + cnhLabel + '</span>' +
+          '</div>';
+      }
+
+      // Especialidades badges
+      var specs = t._specs_lista || (t.ESPECIALIDADES ? String(t.ESPECIALIDADES).split(",") : []);
+      specs = specs.map(function(s) { return String(s).trim().toUpperCase(); }).filter(Boolean);
+      var specsHtml = specs.length
+        ? specs.slice(0, 3).map(function(s) {
+            return '<span style="font-size:10px;padding:2px 7px;background:#e0f2fe;color:#0369a1;border-radius:20px;font-weight:700;white-space:nowrap;">' + escapeHtml_(TEC_ESPECIALIDADE_LABELS[s] || s) + '</span>';
+          }).join("") + (specs.length > 3 ? '<span style="font-size:10px;color:var(--muted);"> +' + (specs.length - 3) + '</span>' : "")
+        : '<span style="color:var(--muted);font-size:12px;">—</span>';
+
+      // Disponibilidade badge
+      var disp = String(t.DISPONIBILIDADE || "DISPONIVEL");
+      var dispOpt = TEC_DISPONIBILIDADE_OPTS.find(function(d) { return d.value === disp; }) || { label: disp, cor: "#94a3b8" };
+      var dispHtml = '<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:' + dispOpt.cor + '20;color:' + dispOpt.cor + ';font-weight:700;white-space:nowrap;">' + escapeHtml_(dispOpt.label) + '</span>';
+
+      // Custo/h
+      var custoHtml = t.CUSTO_HORA
+        ? 'R$ ' + Number(t.CUSTO_HORA).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '<span style="color:var(--muted);">—</span>';
+
+      // Missões
+      var missoesHtml = '<span style="color:var(--muted);font-size:12px;">—</span>';
+      if (t._stats_total !== undefined) {
+        var prod = t._stats_prod || 0;
+        var prodCor = prod >= 80 ? "#059669" : prod >= 50 ? "#f59e0b" : "#dc2626";
+        missoesHtml = '<div style="text-align:center;line-height:1.3;">' +
+          '<span style="font-weight:700;font-size:14px;">' + (t._stats_total || 0) + '</span>' +
+          '<br><span style="font-size:10px;color:' + prodCor + ';font-weight:700;">' + prod + '%</span>' +
+          '</div>';
+      }
+
+      // Status badge
+      var statusHtml = ativo
+        ? '<span class="badge badge-ativo">ATIVO</span>'
+        : '<span class="badge badge-inativo">INATIVO</span>';
+
+      // Ações
+      var acoesHtml = '<div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;">';
+      acoesHtml += '<button class="btn-icon" title="Ver Missões" onclick="tecnicosMissoes_(\'' + id + '\')"><i class="fas fa-calendar-days"></i></button>';
+      acoesHtml += '<button class="btn-icon" title="Imprimir Perfil" onclick="tecnicosImprimirPerfil_(\'' + id + '\')"><i class="fas fa-print"></i></button>';
+      if (podeEditar) {
+        acoesHtml += '<button class="btn-icon" title="Editar" onclick="tecnicosEditar_(\'' + id + '\')"><i class="fas fa-pen"></i></button>';
+        if (ativo) {
+          acoesHtml += '<button class="btn-icon btn-icon-danger" title="Inativar" onclick="tecnicosInativar_(\'' + id + '\')"><i class="fas fa-user-slash"></i></button>';
+        } else {
+          acoesHtml += '<button class="btn-icon btn-icon-success" title="Reativar" onclick="tecnicosReativar_(\'' + id + '\')"><i class="fas fa-user-check"></i></button>';
+        }
+      }
+      acoesHtml += '</div>';
+
+      var trStyle = ativo ? "" : 'style="opacity:.6;"';
+      return '<tr ' + trStyle + '>' +
+        '<td><span style="font-weight:700;font-size:13px;">' + nome + '</span></td>' +
+        '<td style="font-size:12px;font-family:monospace;">' + cpf + '</td>' +
+        '<td>' + creaHtml + '</td>' +
+        '<td>' + cnhHtml + '</td>' +
+        '<td><div style="display:flex;flex-wrap:wrap;gap:3px;">' + specsHtml + '</div></td>' +
+        '<td>' + dispHtml + '</td>' +
+        '<td style="font-size:12px;white-space:nowrap;">' + custoHtml + '</td>' +
+        '<td>' + missoesHtml + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + acoesHtml + '</td>' +
+        '</tr>';
+    }).join("");
+
+    tecnicosSetTbody_(html);
+  }
+
+  function tecnicosSetTbody_(html) {
+    var tbody = document.getElementById("tec_tbody");
+    if (tbody) tbody.innerHTML = html;
+  }
+
+  // ── NOVO ───────────────────────────────────────────────────────────────────
+  function tecnicosNovo_() {
+    TECNICOS_STATE.editingId = "";
+    tecnicosFecharMissoes_();
+    tecnicosLimparForm_();
+    var card = document.getElementById("tec_form_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("tec_form_titulo");
+    if (titulo) titulo.textContent = "Novo Técnico";
+    var helper = document.getElementById("tec_helper");
+    if (helper) helper.textContent = "";
+    var nomeEl = document.getElementById("tec_nome");
+    if (nomeEl) nomeEl.focus();
+  }
+
+  // ── EDITAR ─────────────────────────────────────────────────────────────────
+  function tecnicosEditar_(id) {
+    if (!SESSION || !id) return;
+    tecnicosFecharMissoes_();
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) {
+          alert("Técnico não encontrado.");
+          return;
+        }
+        var t = res.item;
+        TECNICOS_STATE.editingId = t.ID;
+
+        tecnicosLimparForm_();
+        setValue_("tec_nome", t.NOME || "");
+        setValue_("tec_cpf", tecFormatarCpfDisplay_(t.CPF || ""));
+        setValue_("tec_email", t.EMAIL || "");
+        setValue_("tec_telefone", t.TELEFONE || "");
+        setValue_("tec_data_admissao", tecDateParaInput_(t.DATA_ADMISSAO));
+        setValue_("tec_custo_hora", t.CUSTO_HORA || "");
+        setValue_("tec_disponibilidade", t.DISPONIBILIDADE || "DISPONIVEL");
+
+        setValue_("tec_crea_crt", t.CREA_CRT || "");
+        setValue_("tec_numero_crea", t.NUMERO_CREA || "");
+        setValue_("tec_uf_crea", t.UF_CREA || "");
+        setValue_("tec_venc_crea", tecDateParaInput_(t.DATA_VENCIMENTO_CREA));
+        tecToggleCrea_();
+
+        setValue_("tec_cnh", (t.CNH === "SIM" || t.CATEGORIA_CNH) ? "SIM" : "");
+        setValue_("tec_categoria_cnh", t.CATEGORIA_CNH || "");
+        setValue_("tec_venc_cnh", tecDateParaInput_(t.VENCIMENTO_CNH));
+        tecToggleCnh_();
+
+        var specs = t.ESPECIALIDADES ? String(t.ESPECIALIDADES).split(",").map(function(s) { return s.trim().toUpperCase(); }) : [];
+        TEC_ESPECIALIDADES.forEach(function(e) {
+          var cb = document.getElementById("tec_esp_" + e);
+          if (cb) cb.checked = specs.indexOf(e) >= 0;
+          tecToggleEspLabel_(e, true);
+        });
+
+        setValue_("tec_endereco", t.ENDERECO || "");
+        setValue_("tec_cidade", t.CIDADE || "");
+        setValue_("tec_uf", t.UF || "");
+        setValue_("tec_observacoes", t.OBSERVACOES || "");
+
+        var card = document.getElementById("tec_form_card");
+        if (card) card.style.display = "block";
+        var titulo = document.getElementById("tec_form_titulo");
+        if (titulo) titulo.textContent = "Editar Técnico — " + (t.NOME || "");
+        var helper = document.getElementById("tec_helper");
+        if (helper) helper.textContent = "";
+        var nomeEl = document.getElementById("tec_nome");
+        if (nomeEl) nomeEl.focus();
+      })
+      .withFailureHandler(function(err) {
+        alert("Erro ao carregar técnico: " + (err.message || err));
+      })
+      .tecnicosObter(SESSION, id);
+  }
+
+  // ── SALVAR ─────────────────────────────────────────────────────────────────
+  function tecnicosSalvar_() {
+    if (!SESSION) return;
+
+    var nome = String((document.getElementById("tec_nome") || {}).value || "").trim();
+    var cpf = String((document.getElementById("tec_cpf") || {}).value || "").replace(/\D/g, "");
+    var email = String((document.getElementById("tec_email") || {}).value || "").trim();
+    var telefone = String((document.getElementById("tec_telefone") || {}).value || "").trim();
+    var crea_crt = String((document.getElementById("tec_crea_crt") || {}).value || "").trim();
+    var numero_crea = String((document.getElementById("tec_numero_crea") || {}).value || "").trim();
+    var uf_crea = String((document.getElementById("tec_uf_crea") || {}).value || "").trim();
+    var venc_crea = String((document.getElementById("tec_venc_crea") || {}).value || "").trim();
+    var cnh = String((document.getElementById("tec_cnh") || {}).value || "").trim();
+    var cat_cnh = String((document.getElementById("tec_categoria_cnh") || {}).value || "").trim();
+    var venc_cnh = String((document.getElementById("tec_venc_cnh") || {}).value || "").trim();
+    var custo_hora = parseFloat((document.getElementById("tec_custo_hora") || {}).value || 0) || 0;
+    var disponibilidade = String((document.getElementById("tec_disponibilidade") || {}).value || "DISPONIVEL");
+    var data_admissao = String((document.getElementById("tec_data_admissao") || {}).value || "").trim();
+    var endereco = String((document.getElementById("tec_endereco") || {}).value || "").trim();
+    var cidade = String((document.getElementById("tec_cidade") || {}).value || "").trim();
+    var uf = String((document.getElementById("tec_uf") || {}).value || "").trim();
+    var obs = String((document.getElementById("tec_observacoes") || {}).value || "").trim();
+
+    var specs = [];
+    TEC_ESPECIALIDADES.forEach(function(e) {
+      var cb = document.getElementById("tec_esp_" + e);
+      if (cb && cb.checked) specs.push(e);
+    });
+
+    var dados = {
+      NOME: nome,
+      CPF: cpf,
+      EMAIL: email,
+      TELEFONE: telefone,
+      CREA_CRT: crea_crt,
+      NUMERO_CREA: numero_crea,
+      UF_CREA: uf_crea,
+      DATA_VENCIMENTO_CREA: venc_crea,
+      CNH: cnh === "SIM" ? "SIM" : "",
+      CATEGORIA_CNH: cat_cnh,
+      VENCIMENTO_CNH: venc_cnh,
+      ESPECIALIDADES: specs.join(","),
+      CUSTO_HORA: custo_hora,
+      DISPONIBILIDADE: disponibilidade,
+      DATA_ADMISSAO: data_admissao,
+      ENDERECO: endereco,
+      CIDADE: cidade,
+      UF: uf,
+      OBSERVACOES: obs
+    };
+
+    var helper = document.getElementById("tec_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    var isEdit = !!TECNICOS_STATE.editingId;
+
+    if (isEdit) {
+      google.script.run
+        .withSuccessHandler(function(res) { tecnicosSalvarCallback_(res, helper); })
+        .withFailureHandler(function(err) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+        })
+        .tecnicosAtualizar(SESSION, TECNICOS_STATE.editingId, dados);
+    } else {
+      google.script.run
+        .withSuccessHandler(function(res) { tecnicosSalvarCallback_(res, helper); })
+        .withFailureHandler(function(err) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+        })
+        .tecnicosCriar(SESSION, dados);
+    }
+  }
+
+  function tecnicosSalvarCallback_(res, helper) {
+    if (!res || !res.success) {
+      if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_((res && res.erro) || "Falha ao salvar.") + '</span>';
+      return;
+    }
+    if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Técnico salvo com sucesso!</span>';
+    TECNICOS_STATE.editingId = "";
+    tecnicosCarregar_();
+    setTimeout(function() { tecnicosFecharForm_(); }, 1200);
+  }
+
+  // ── INATIVAR / REATIVAR ────────────────────────────────────────────────────
+  function tecnicosInativar_(id) {
+    if (!SESSION || !id) return;
+    var tec = TECNICOS_STATE.items.find(function(t) { return t.ID === id; });
+    var nome = tec ? tec.NOME : id;
+    if (!confirm("Inativar o técnico \"" + nome + "\"?\n\nSe houver missões ativas vinculadas, a operação será bloqueada.")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          alert("Não foi possível inativar: " + ((res && res.erro) || "Erro desconhecido"));
+          return;
+        }
+        alert("Técnico inativado com sucesso.");
+        tecnicosCarregar_();
+      })
+      .withFailureHandler(function(err) {
+        alert("Erro ao inativar: " + (err.message || err));
+      })
+      .tecnicosInativar(SESSION, id);
+  }
+
+  function tecnicosReativar_(id) {
+    if (!SESSION || !id) return;
+    var tec = TECNICOS_STATE.items.find(function(t) { return t.ID === id; });
+    var nome = tec ? tec.NOME : id;
+    if (!confirm("Reativar o técnico \"" + nome + "\"?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          alert("Não foi possível reativar: " + ((res && res.erro) || "Erro desconhecido"));
+          return;
+        }
+        alert("Técnico reativado com sucesso.");
+        tecnicosCarregar_();
+      })
+      .withFailureHandler(function(err) {
+        alert("Erro ao reativar: " + (err.message || err));
+      })
+      .tecnicosReativar(SESSION, id);
+  }
+
+  // ── VER MISSÕES ────────────────────────────────────────────────────────────
+  function tecnicosMissoes_(id) {
+    if (!SESSION || !id) return;
+    TECNICOS_STATE.tecMissoesAtivo = id;
+
+    var card = document.getElementById("tec_missoes_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("tec_missoes_titulo");
+    var tec = TECNICOS_STATE.items.find(function(t) { return t.ID === id; });
+    if (titulo) titulo.textContent = "Missões — " + (tec ? tec.NOME : id);
+
+    var stats = document.getElementById("tec_missoes_stats");
+    if (stats) stats.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+    var tbody = document.getElementById("tec_missoes_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando missões...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--danger);">Erro ao carregar missões.</td></tr>';
+          return;
+        }
+
+        var data = res.item || res.dados || res;
+        var missoes = data.missoes || [];
+        var statsData = data.stats || {};
+
+        // Stats cards
+        if (stats) {
+          var totalM = statsData.totalMissoes || missoes.length || 0;
+          var concM = statsData.concluidas || 0;
+          var horasM = statsData.horasApontadas || 0;
+          var prodM = statsData.produtividade_pct || (totalM ? Math.round(concM / totalM * 100) : 0);
+          var prodCor = prodM >= 80 ? "var(--success)" : prodM >= 50 ? "var(--warning)" : "var(--danger)";
+          stats.innerHTML =
+            tecnicosStatCard_("fas fa-calendar-check", "Total Missões", totalM, "#e0f2fe", "#0369a1") +
+            tecnicosStatCard_("fas fa-flag-checkered", "Concluídas", concM, "#ecfdf5", "#059669") +
+            tecnicosStatCard_("fas fa-clock", "Horas Apontadas", horasM.toFixed(1) + "h", "#fef3c7", "#d97706") +
+            tecnicosStatCard_("fas fa-chart-line", "Produtividade", prodM + "%", prodCor + "20", prodCor);
+        }
+
+        if (!missoes.length) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma missão encontrada para este técnico.</td></tr>';
+          return;
+        }
+
+        var html = missoes.map(function(m) {
+          var dataMissao = m.DATA_MISSAO || m.DATA_INICIO || m.CRIADO_EM || "";
+          var dataFmt = dataMissao ? tecFormatarDataDisplay_(dataMissao) : "—";
+          var codigo = escapeHtml_(m.CODIGO || m.ID || "—");
+          var cliente = escapeHtml_(m.CLIENTE_NOME || m.CLIENTE || "—");
+          var tipo = escapeHtml_(m.TIPO_OS || m.TIPO || "—");
+          var status = String(m.STATUS || "").toUpperCase();
+          var statusCores = {
+            CONCLUIDA: "#059669", EM_EXECUCAO: "#2563eb", AGENDADA: "#f59e0b",
+            CANCELADA: "#dc2626", CRIADA: "#94a3b8", EM_DESLOCAMENTO: "#7c3aed"
+          };
+          var statusCor = statusCores[status] || "#94a3b8";
+          var statusHtml = '<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:' + statusCor + '20;color:' + statusCor + ';font-weight:700;">' + escapeHtml_(status || "—") + '</span>';
+          var horas = m.HORAS_APONTADAS || m.DURACAO_HORAS || "";
+          var horasHtml = horas ? escapeHtml_(String(horas)) + "h" : '<span style="color:var(--muted);">—</span>';
+          return '<tr><td style="font-size:12px;">' + dataFmt + '</td><td style="font-family:monospace;font-size:12px;">' + codigo + '</td><td>' + cliente + '</td><td style="font-size:12px;">' + tipo + '</td><td>' + statusHtml + '</td><td style="text-align:center;font-size:12px;">' + horasHtml + '</td></tr>';
+        }).join("");
+
+        if (tbody) tbody.innerHTML = html;
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>';
+      })
+      .tecnicosObterMissoes(SESSION, id);
+  }
+
+  function tecnicosStatCard_(icon, label, valor, bg, cor) {
+    return '<div style="background:' + bg + ';border-radius:10px;padding:14px 16px;text-align:center;">' +
+      '<i class="' + icon + '" style="font-size:18px;color:' + cor + ';margin-bottom:6px;display:block;"></i>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">' + label + '</div>' +
+      '<div style="font-size:22px;font-weight:900;color:' + cor + ';">' + valor + '</div>' +
+      '</div>';
+  }
+
+  function tecnicosFecharMissoes_() {
+    TECNICOS_STATE.tecMissoesAtivo = null;
+    var card = document.getElementById("tec_missoes_card");
+    if (card) card.style.display = "none";
+  }
+
+  // ── IMPRESSÃO DE PERFIL ────────────────────────────────────────────────────
+  function tecnicosImprimirPerfil_(id) {
+    if (!SESSION || !id) return;
+    var tec = TECNICOS_STATE.items.find(function(t) { return t.ID === id; });
+    if (!tec) {
+      alert("Técnico não encontrado. Recarregue a lista.");
+      return;
+    }
+
+    var specs = tec._specs_lista || (tec.ESPECIALIDADES ? String(tec.ESPECIALIDADES).split(",") : []);
+    specs = specs.map(function(s) { return String(s).trim().toUpperCase(); }).filter(Boolean);
+
+    var dispOpt = TEC_DISPONIBILIDADE_OPTS.find(function(d) { return d.value === (tec.DISPONIBILIDADE || "DISPONIVEL"); }) || { label: tec.DISPONIBILIDADE, cor: "#94a3b8" };
+
+    var specsHtml = specs.length
+      ? specs.map(function(s) {
+          return '<span style="display:inline-block;margin:3px;padding:4px 12px;background:#e0f2fe;color:#0369a1;border-radius:20px;font-size:12px;font-weight:700;">' + (TEC_ESPECIALIDADE_LABELS[s] || s) + '</span>';
+        }).join("")
+      : '<span style="color:#94a3b8;">Nenhuma especialidade cadastrada</span>';
+
+    var creaStatus = tec._crea_status || "SEM_DATA";
+    var creaCores = { OK: "#059669", VENCENDO: "#f59e0b", VENCIDO: "#dc2626", SEM_DATA: "#94a3b8" };
+    var creaLabel = { OK: "Regular", VENCENDO: "Vencendo em breve", VENCIDO: "VENCIDO", SEM_DATA: "Sem data" };
+
+    var html = '<!DOCTYPE html><html lang="pt-BR"><head>' +
+      '<meta charset="UTF-8"><title>Perfil Técnico — ' + escapeHtml_(tec.NOME || "") + '</title>' +
+      '<style>' +
+        'body{font-family:Arial,sans-serif;margin:0;padding:30px;color:#1a202c;background:#fff;}' +
+        '.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #059669;padding-bottom:16px;margin-bottom:20px;}' +
+        '.header-left h1{margin:0 0 4px;font-size:22px;font-weight:900;color:#059669;}' +
+        '.header-left p{margin:0;font-size:13px;color:#64748b;}' +
+        '.header-right{text-align:right;font-size:12px;color:#94a3b8;}' +
+        '.section{margin-bottom:20px;}' +
+        '.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-bottom:12px;}' +
+        '.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;}' +
+        '.field label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;margin-bottom:2px;display:block;}' +
+        '.field span{font-size:13px;font-weight:600;color:#1a202c;}' +
+        '.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}' +
+        '.footer{border-top:1px solid #e2e8f0;padding-top:12px;margin-top:20px;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;}' +
+        '@media print{body{padding:15px;}}' +
+      '</style></head><body>';
+
+    html += '<div class="header">' +
+      '<div class="header-left">' +
+        '<h1><i>Perfil Técnico — ' + escapeHtml_(tec.NOME || "—") + '</i></h1>' +
+        '<p>METROLABS SGO+ &nbsp;·&nbsp; Engenharia Clínica</p>' +
+      '</div>' +
+      '<div class="header-right">' +
+        '<div>Gerado em: ' + new Date().toLocaleDateString("pt-BR") + '</div>' +
+        '<div style="margin-top:4px;">Status: <strong style="color:' + (String(tec.STATUS) === "ATIVO" ? "#059669" : "#dc2626") + ';">' + (tec.STATUS || "—") + '</strong></div>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div class="section"><div class="section-title">Dados Pessoais</div><div class="grid">';
+    html += tecFieldHtml_("Nome", tec.NOME || "—");
+    html += tecFieldHtml_("CPF", tecFormatarCpfDisplay_(tec.CPF || "") || "—");
+    html += tecFieldHtml_("E-mail", tec.EMAIL || "—");
+    html += tecFieldHtml_("Telefone", tec.TELEFONE || "—");
+    html += tecFieldHtml_("Data Admissão", tecFormatarDataDisplay_(tec.DATA_ADMISSAO) || "—");
+    html += tecFieldHtml_("Custo / Hora", tec.CUSTO_HORA ? "R$ " + Number(tec.CUSTO_HORA).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—");
+    html += tecFieldHtml_("Disponibilidade", '<span class="badge" style="background:' + dispOpt.cor + '20;color:' + dispOpt.cor + ';">' + escapeHtml_(dispOpt.label) + '</span>');
+    html += '</div></div>';
+
+    html += '<div class="section"><div class="section-title">Habilitações</div><div class="grid">';
+    if (tec.NUMERO_CREA) {
+      var creaCor = creaCores[creaStatus] || "#94a3b8";
+      html += tecFieldHtml_(tec.CREA_CRT || "CREA", tec.NUMERO_CREA + ' / ' + (tec.UF_CREA || "—") +
+        ' &nbsp;<span class="badge" style="background:' + creaCor + '20;color:' + creaCor + ';">' + (creaLabel[creaStatus] || creaStatus) + '</span>');
+      html += tecFieldHtml_("Validade CREA", tecFormatarDataDisplay_(tec.DATA_VENCIMENTO_CREA) || "—");
+    } else {
+      html += tecFieldHtml_("CREA / CRT", "Não informado");
+    }
+    if (tec.CATEGORIA_CNH) {
+      var cnhStatus = tec._cnh_status || "SEM_DATA";
+      var cnhCor = creaCores[cnhStatus] || "#94a3b8";
+      html += tecFieldHtml_("CNH Categoria", tec.CATEGORIA_CNH + ' &nbsp;<span class="badge" style="background:' + cnhCor + '20;color:' + cnhCor + ';">' + (creaLabel[cnhStatus] || cnhStatus) + '</span>');
+      html += tecFieldHtml_("Validade CNH", tecFormatarDataDisplay_(tec.VENCIMENTO_CNH) || "—");
+    } else {
+      html += tecFieldHtml_("CNH", "Não informado");
+    }
+    html += '</div></div>';
+
+    html += '<div class="section"><div class="section-title">Especialidades Técnicas</div>' + specsHtml + '</div>';
+
+    if (tec.ENDERECO || tec.CIDADE) {
+      html += '<div class="section"><div class="section-title">Endereço</div><div class="grid">';
+      html += tecFieldHtml_("Endereço", tec.ENDERECO || "—");
+      html += tecFieldHtml_("Cidade / UF", (tec.CIDADE || "—") + " / " + (tec.UF || "—"));
+      html += '</div></div>';
+    }
+
+    if (tec.OBSERVACOES) {
+      html += '<div class="section"><div class="section-title">Observações</div>' +
+        '<p style="font-size:13px;color:#334155;margin:0;">' + escapeHtml_(tec.OBSERVACOES) + '</p>' +
+        '</div>';
+    }
+
+    html += '<div class="footer">' +
+      '<span>METROLABS SGO+ — Sistema de Gestão Operacional e Técnica</span>' +
+      '<span>ID: ' + escapeHtml_(tec.ID || "") + '</span>' +
+    '</div>';
+
+    html += '<script>window.onload=function(){window.print();};<\/script>';
+    html += '</body></html>';
+
+    var w = window.open("", "_blank", "width=900,height=700,scrollbars=yes");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
+  }
+
+  function tecFieldHtml_(label, valor) {
+    return '<div class="field"><label>' + label + '</label><span>' + valor + '</span></div>';
+  }
+
+  // ── HELPERS DE FORM ────────────────────────────────────────────────────────
+  function tecnicosLimparForm_() {
+    var ids = [
+      "tec_nome","tec_cpf","tec_email","tec_telefone","tec_data_admissao",
+      "tec_custo_hora","tec_crea_crt","tec_numero_crea","tec_uf_crea","tec_venc_crea",
+      "tec_cnh","tec_categoria_cnh","tec_venc_cnh",
+      "tec_disponibilidade","tec_endereco","tec_cidade","tec_uf","tec_observacoes"
+    ];
+    ids.forEach(function(id) { setValue_(id, ""); });
+    setValue_("tec_disponibilidade", "DISPONIVEL");
+
+    TEC_ESPECIALIDADES.forEach(function(e) {
+      var cb = document.getElementById("tec_esp_" + e);
+      if (cb) cb.checked = false;
+      tecToggleEspLabel_(e, true);
+    });
+    tecToggleCrea_();
+    tecToggleCnh_();
+  }
+
+  function tecnicosFecharForm_() {
+    TECNICOS_STATE.editingId = "";
+    var card = document.getElementById("tec_form_card");
+    if (card) card.style.display = "none";
+  }
+
+  function tecToggleCrea_() {
+    var val = String((document.getElementById("tec_crea_crt") || {}).value || "");
+    var campos = ["tec_numero_crea", "tec_uf_crea", "tec_venc_crea"];
+    campos.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        var wrap = el.parentElement;
+        if (wrap) wrap.style.display = val ? "block" : "none";
+      }
+    });
+  }
+
+  function tecToggleCnh_() {
+    var val = String((document.getElementById("tec_cnh") || {}).value || "");
+    var campos = ["tec_categoria_cnh", "tec_venc_cnh"];
+    campos.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        var wrap = el.parentElement;
+        if (wrap) wrap.style.display = val ? "block" : "none";
+      }
+    });
+  }
+
+  function tecToggleEspLabel_(key, skipToggle) {
+    var cb = document.getElementById("tec_esp_" + key);
+    var label = document.getElementById("tec_esp_label_" + key);
+    if (!cb || !label) return;
+    if (!skipToggle) cb.checked = !cb.checked;
+    if (cb.checked) {
+      label.style.borderColor = "var(--metro-green)";
+      label.style.background = "var(--metro-green-xlight)";
+    } else {
+      label.style.borderColor = "var(--border)";
+      label.style.background = "";
+    }
+  }
+
+  // ── FORMATADORES ───────────────────────────────────────────────────────────
+  function tecFormatarCpf_(input) {
+    var v = String(input.value || "").replace(/\D/g, "").substring(0, 11);
+    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4");
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{0,3})/, "$1.$2.$3");
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{0,3})/, "$1.$2");
+    input.value = v;
+  }
+
+  function tecFormatarCpfDisplay_(cpf) {
+    var v = String(cpf || "").replace(/\D/g, "").substring(0, 11);
+    if (v.length === 11) return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    return v;
+  }
+
+  function tecFormatarDataDisplay_(val) {
+    if (!val) return "";
+    var s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      var parts = s.substring(0, 10).split("-");
+      return parts[2] + "/" + parts[1] + "/" + parts[0];
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0, 10);
+    return s.substring(0, 10);
+  }
+
+  function tecDateParaInput_(val) {
+    if (!val) return "";
+    var s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+      var p = s.split("/");
+      return p[2].substring(0, 4) + "-" + p[1] + "-" + p[0];
+    }
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      var yr = d.getFullYear();
+      var mo = String(d.getMonth() + 1).padStart(2, "0");
+      var dy = String(d.getDate()).padStart(2, "0");
+      return yr + "-" + mo + "-" + dy;
+    }
+    return "";
+  }
+</script>

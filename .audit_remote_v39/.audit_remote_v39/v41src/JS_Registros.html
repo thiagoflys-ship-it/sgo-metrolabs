@@ -1,0 +1,594 @@
+<script>
+  // ==========================================
+  // MÓDULO: REGISTROS TÉCNICOS — ENGENHARIA CLÍNICA
+  // ==========================================
+  const REGISTROS_STATE = {
+    equipamentoSelecionado: null,
+    tipoAtivo: "CALIBRACAO",
+    items: [],
+    editingId: ""
+  };
+
+  const REG_TIPOS = [
+    { key: "CALIBRACAO",           label: "Calibração",             icon: "fas fa-ruler-combined" },
+    { key: "QUALIFICACAO",         label: "Qualificação",           icon: "fas fa-certificate" },
+    { key: "ENSAIO_ELETRICO",      label: "Ensaio Elétrico",        icon: "fas fa-bolt" },
+    { key: "MANUTENCAO_PREVENTIVA",label: "Manutenção Preventiva",  icon: "fas fa-screwdriver-wrench" },
+    { key: "MANUTENCAO_CORRETIVA", label: "Manutenção Corretiva",   icon: "fas fa-triangle-exclamation" },
+    { key: "INSPECAO_SEGURANCA",   label: "Inspeção de Segurança",  icon: "fas fa-shield-halved" }
+  ];
+
+  const REG_RESULTADO_OPTS = ["APROVADO", "REPROVADO", "CONDICIONAL", "PENDENTE"];
+
+  // ── RENDERIZAÇÃO DO MÓDULO ────────────────────────────────────────────────
+  function renderRegistrosModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title"><i class="fas fa-stethoscope" style="margin-right:8px;color:var(--metro-green);"></i>Registros Técnicos</h2>\n            <p class="content-subtitle">Calibração, qualificação, ensaio elétrico e manutenções por equipamento.</p>\n          </div>\n        </div>\n\n        <!-- BUSCA DE EQUIPAMENTO -->\n        <div class="form-card" style="margin-bottom:20px;">\n          <h3 class="section-card-title"><i class="fas fa-search" style="margin-right:6px;"></i>Selecionar Equipamento</h3>\n          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">\n            <div style="flex:1;min-width:200px;">\n              <label for="reg_busca_eqp">TAG / Modelo / Tipo</label>\n              <input id="reg_busca_eqp" type="text" placeholder="Ex: AUT-01, Autoclave, Thermometer..."\n                onkeydown="if(event.key===\'Enter\') regBuscarEquipamento_()">\n            </div>\n            <button class="btn-primary" type="button" onclick="regBuscarEquipamento_()" style="height:40px;">\n              <i class="fas fa-search" style="margin-right:6px;"></i>Buscar\n            </button>\n          </div>\n          <div id="reg_lista_eqp" style="margin-top:12px;"></div>\n        </div>\n\n        <!-- PAINEL DE REGISTROS (oculto até selecionar equipamento) -->\n        <div id="reg_painel" style="display:none;">\n          <!-- INFO DO EQUIPAMENTO SELECIONADO -->\n          <div id="reg_eqp_info" class="form-card" style="background:var(--metro-green);color:#fff;padding:16px 20px;border-radius:10px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">\n          </div>\n\n          <!-- ABAS DE TIPO DE SERVIÇO -->\n          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;" id="reg_tabs">\n          </div>\n\n          <!-- FORMULÁRIO DE NOVO REGISTRO -->\n          <div class="form-card" id="reg_form_card">\n            <h3 class="section-card-title" id="reg_form_titulo">Novo Registro</h3>\n            <div class="form-grid">\n              <div>\n                <label for="reg_data_realizado">Data de Realização *</label>\n                <input id="reg_data_realizado" type="date">\n              </div>\n              <div>\n                <label for="reg_data_validade">Data de Validade</label>\n                <input id="reg_data_validade" type="date">\n              </div>\n              <div>\n                <label for="reg_numero_cert">Nº Certificado / Relatório</label>\n                <input id="reg_numero_cert" type="text" placeholder="Ex: CAL-2024-001">\n              </div>\n              <div>\n                <label for="reg_resultado">Resultado</label>\n                <select id="reg_resultado">\n                  <option value="">Selecione...</option>\n                  <option value="APROVADO">Aprovado</option>\n                  <option value="REPROVADO">Reprovado</option>\n                  <option value="CONDICIONAL">Condicional</option>\n                  <option value="PENDENTE">Pendente</option>\n                </select>\n              </div>\n              <div class="full">\n                <label for="reg_empresa">Empresa Responsável</label>\n                <input id="reg_empresa" type="text" placeholder="Nome da empresa executante">\n              </div>\n              <div>\n                <label for="reg_tecnico">Técnico Responsável</label>\n                <input id="reg_tecnico" type="text" placeholder="Nome do técnico">\n              </div>\n              <div>\n                <label for="reg_link_doc">Link do Documento (Drive)</label>\n                <input id="reg_link_doc" type="url" placeholder="https://drive.google.com/...">\n              </div>\n              <div class="full">\n                <label for="reg_obs">Observações</label>\n                <textarea id="reg_obs" rows="2" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Observações técnicas relevantes..."></textarea>\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="regSalvar_()">\n                <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Registro\n              </button>\n              <button class="btn-secondary" type="button" onclick="regLimparForm_()">\n                Limpar\n              </button>\n            </div>\n            <div class="helper-text" id="reg_helper"></div>\n          </div>\n\n          <!-- TABELA DE HISTÓRICO -->\n          <div class="list-card" style="margin-top:20px;">\n            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);">\n              <h3 style="margin:0;font-size:14px;font-weight:700;" id="reg_tabela_titulo">Histórico</h3>\n            </div>\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Data Realizado</th>\n                    <th>Validade</th>\n                    <th>Status</th>\n                    <th>Nº Certificado</th>\n                    <th>Resultado</th>\n                    <th>Empresa</th>\n                    <th>Técnico</th>\n                    <th>Documento</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="reg_tbody">\n                  <tr><td colspan="9" class="empty-state">Selecione um tipo de serviço.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+  }
+
+  // ── BUSCA DE EQUIPAMENTO ──────────────────────────────────────────────────
+  function regBuscarEquipamento_() {
+    if (!SESSION) return;
+    const termo = (document.getElementById("reg_busca_eqp") || {}).value || "";
+    const lista = document.getElementById("reg_lista_eqp");
+    if (!lista) return;
+
+    if (!String(termo).trim()) {
+      lista.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Digite uma TAG, modelo ou tipo para buscar.</p>';
+      return;
+    }
+
+    lista.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Buscando...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.items || !res.items.length) {
+          lista.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Nenhum equipamento encontrado.</p>';
+          return;
+        }
+        const html = res.items.slice(0, 20).map(function(e) {
+          const id = escapeHtml_(e.ID);
+          const tag = escapeHtml_(e.TAG || "—");
+          const tipo = escapeHtml_(e.TIPO || "—");
+          const cli = escapeHtml_(e.CLIENTE_NOME || "—");
+          const uni = escapeHtml_(e.UNIDADE_NOME || "—");
+          const modelo = escapeHtml_(e.MODELO || "");
+          return '<div onclick="regSelecionarEquipamento_(\'' +
+            (id) +
+            '\')" style="\n            padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;\n            display:flex;align-items:center;gap:12px;margin-bottom:6px;\n            background:#fff;transition:border-color .15s,background .15s;\n          " onmouseover="this.style.borderColor=\'var(--metro-green)\';this.style.background=\'#f0faf4\'"\n             onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'#fff\'">\n            <span style="font-weight:700;color:var(--metro-green);font-size:15px;min-width:80px;">' +
+            (tag) +
+            '</span>\n            <span style="font-size:13px;color:#334155;flex:1;">' +
+            (tipo) +
+            (modelo ? ' · ' + modelo : '') +
+            '</span>\n            <span style="font-size:12px;color:#94a3b8;">' +
+            (cli) +
+            ' · ' +
+            (uni) +
+            '</span>\n          </div>';
+        }).join("");
+        lista.innerHTML = html;
+      })
+      .withFailureHandler(function(err) {
+        lista.innerHTML = '<p style="color:#dc2626;font-size:13px;">Erro ao buscar: ' + (err.message || err) + '</p>';
+      })
+      .equipamentosPesquisar(SESSION, String(termo).trim());
+  }
+
+  // ── SELECIONAR EQUIPAMENTO ────────────────────────────────────────────────
+  function regSelecionarEquipamento_(id) {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) return alert("Equipamento não encontrado.");
+        REGISTROS_STATE.equipamentoSelecionado = res.item;
+        REGISTROS_STATE.editingId = "";
+        regRenderizarPainel_();
+        regCarregarRegistros_();
+      })
+      .withFailureHandler(function(err) {
+        alert("Erro ao carregar equipamento: " + (err.message || err));
+      })
+      .equipamentosObter(SESSION, id);
+  }
+
+  // ── RENDERIZAR PAINEL ─────────────────────────────────────────────────────
+  function regRenderizarPainel_() {
+    const eqp = REGISTROS_STATE.equipamentoSelecionado;
+    if (!eqp) return;
+
+    const painel = document.getElementById("reg_painel");
+    if (painel) painel.style.display = "block";
+
+    const info = document.getElementById("reg_eqp_info");
+    if (info) {
+      const risco = eqp.RISCO || "";
+      const riscoCores = { BAIXO: "#22c55e", MEDIO: "#f59e0b", ALTO: "#f97316", CRITICO: "#ef4444" };
+      const riscoColor = riscoCores[risco] || "#94a3b8";
+      info.innerHTML = '\n        <div>\n          <div style="font-size:11px;opacity:.75;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Equipamento selecionado</div>\n          <div style="font-size:20px;font-weight:800;margin:2px 0;">' +
+        (escapeHtml_(eqp.TAG || "—")) +
+        '</div>\n          <div style="font-size:13px;opacity:.9;">' +
+        (escapeHtml_(eqp.TIPO || "")) +
+        ' · ' +
+        (escapeHtml_(eqp.FABRICANTE || "")) +
+        ' ' +
+        (escapeHtml_(eqp.MODELO || "")) +
+        '</div>\n          <div style="font-size:12px;opacity:.8;margin-top:4px;">' +
+        (escapeHtml_(eqp.CLIENTE_NOME || "")) +
+        ' · ' +
+        (escapeHtml_(eqp.UNIDADE_NOME || "")) +
+        '</div>\n        </div>\n        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">\n          ' +
+        (eqp.CLASSE_ANVISA ? '<span style="background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;">ANVISA Cl. ' +
+          (escapeHtml_(eqp.CLASSE_ANVISA)) +
+          '</span>' : "") +
+        '\n          ' +
+        (risco ? '<span style="background:' +
+          (riscoColor) +
+          ';color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;">Risco ' +
+          (escapeHtml_(risco)) +
+          '</span>' : "") +
+        '\n          ' +
+        (eqp.PERIODICIDADE_MANUTENCAO ? '<span style="background:rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:12px;">Manut. a cada ' +
+          (escapeHtml_(eqp.PERIODICIDADE_MANUTENCAO)) +
+          ' meses</span>' : "") +
+        '\n          <button onclick="regGerarProntuario_()" style="background:#fff;color:var(--metro-green);border:none;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;cursor:pointer;" title="Gerar prontuário técnico PDF">\n            <i class="fas fa-file-medical"></i> Prontuário\n          </button>\n          <button onclick="regSelecionarEquipamento_(null)" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;" title="Trocar equipamento">\n            <i class="fas fa-exchange-alt"></i> Trocar\n          </button>\n        </div>\n      ';
+      info.onclick = null;
+    }
+
+    // Montar abas
+    const tabs = document.getElementById("reg_tabs");
+    if (tabs) {
+      tabs.innerHTML = REG_TIPOS.map(function(t) {
+        const ativo = t.key === REGISTROS_STATE.tipoAtivo;
+        return '<button type="button" onclick="regMudarTipo_(\'' +
+          (t.key) +
+          '\')"\n          style="\n            padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;\n            border:2px solid ' +
+          (ativo ? 'var(--metro-green)' : 'var(--border)') +
+          ';\n            background:' +
+          (ativo ? 'var(--metro-green)' : '#fff') +
+          ';\n            color:' +
+          (ativo ? '#fff' : '#334155') +
+          ';\n            transition:all .15s;\n          " id="reg_tab_' +
+          (t.key) +
+          '">\n          <i class="' +
+          (t.icon) +
+          '" style="margin-right:5px;"></i>' +
+          (t.label) +
+          '\n        </button>';
+      }).join("");
+    }
+
+    const titulo = document.getElementById("reg_tabela_titulo");
+    const tipo = REG_TIPOS.find(t => t.key === REGISTROS_STATE.tipoAtivo);
+    if (titulo && tipo) titulo.innerText = "Histórico — " + tipo.label;
+
+    const formTitulo = document.getElementById("reg_form_titulo");
+    if (formTitulo && tipo) formTitulo.innerText = "Novo Registro — " + tipo.label;
+  }
+
+  // ── MUDAR ABA ─────────────────────────────────────────────────────────────
+  function regMudarTipo_(tipo) {
+    REGISTROS_STATE.tipoAtivo = tipo;
+    REGISTROS_STATE.editingId = "";
+    regLimparForm_();
+
+    // Atualizar visual das abas
+    REG_TIPOS.forEach(function(t) {
+      const btn = document.getElementById("reg_tab_" + t.key);
+      if (!btn) return;
+      const ativo = t.key === tipo;
+      btn.style.background = ativo ? "var(--metro-green)" : "#fff";
+      btn.style.color = ativo ? "#fff" : "#334155";
+      btn.style.borderColor = ativo ? "var(--metro-green)" : "var(--border)";
+    });
+
+    const titulo = document.getElementById("reg_tabela_titulo");
+    const formTitulo = document.getElementById("reg_form_titulo");
+    const t = REG_TIPOS.find(x => x.key === tipo);
+    if (titulo && t) titulo.innerText = "Histórico — " + t.label;
+    if (formTitulo && t) formTitulo.innerText = "Novo Registro — " + t.label;
+
+    regCarregarRegistros_();
+  }
+
+  // ── CARREGAR REGISTROS ────────────────────────────────────────────────────
+  function regCarregarRegistros_() {
+    if (!SESSION || !REGISTROS_STATE.equipamentoSelecionado) return;
+    const eqpId = REGISTROS_STATE.equipamentoSelecionado.ID;
+
+    const tbody = document.getElementById("reg_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar registros.</td></tr>';
+          return;
+        }
+        const tipo = REGISTROS_STATE.tipoAtivo;
+        const filtrados = (res.items || []).filter(function(r) {
+          return String(r.TIPO_SERVICO || "").toUpperCase() === tipo;
+        });
+        REGISTROS_STATE.items = filtrados;
+        regRenderizarTabela_();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro de comunicação.</td></tr>';
+      })
+      .registrosListar(SESSION, eqpId);
+  }
+
+  // ── RENDERIZAR TABELA ─────────────────────────────────────────────────────
+  function regRenderizarTabela_() {
+    const tbody = document.getElementById("reg_tbody");
+    if (!tbody) return;
+
+    const items = REGISTROS_STATE.items;
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum registro encontrado para este tipo de serviço.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function(r) {
+      const id = escapeHtml_(r.ID);
+      const sv = r.STATUS_VENCIMENTO || "SEM_VENCIMENTO";
+      const svBadge = sv === "VENCIDO"   ? '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Vencido</span>' :
+                      sv === "VENCENDO"  ? '<span style="background:#fff7ed;color:#ea580c;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Vencendo</span>' :
+                      sv === "OK"        ? '<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Em dia</span>' :
+                                           '<span style="background:#f8fafc;color:#94a3b8;padding:2px 8px;border-radius:20px;font-size:11px;">Sem venc.</span>';
+      const resBadge = r.RESULTADO === "APROVADO"    ? '<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Aprovado</span>' :
+                       r.RESULTADO === "REPROVADO"   ? '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Reprovado</span>' :
+                       r.RESULTADO === "CONDICIONAL" ? '<span style="background:#fefce8;color:#ca8a04;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;">Condicional</span>' :
+                       r.RESULTADO ? escapeHtml_(r.RESULTADO) : "—";
+      const docLink = r.LINK_DOCUMENTO
+        ? '<a href="' +
+          (escapeHtml_(r.LINK_DOCUMENTO)) +
+          '" target="_blank" style="color:var(--metro-green);font-size:12px;"><i class="fas fa-file-arrow-down"></i> Ver</a>'
+        : "—";
+      return '\n        <tr>\n          <td style="font-weight:600;">' +
+        (escapeHtml_(r.DATA_REALIZADO || "—")) +
+        '</td>\n          <td>' +
+        (escapeHtml_(r.DATA_VALIDADE || "—")) +
+        '</td>\n          <td>' +
+        (svBadge) +
+        '</td>\n          <td style="font-size:12px;">' +
+        (escapeHtml_(r.NUMERO_CERTIFICADO || "—")) +
+        '</td>\n          <td>' +
+        (resBadge) +
+        '</td>\n          <td style="font-size:12px;">' +
+        (escapeHtml_(r.EMPRESA_RESPONSAVEL || "—")) +
+        '</td>\n          <td style="font-size:12px;">' +
+        (escapeHtml_(r.TECNICO || "—")) +
+        '</td>\n          <td>' +
+        (docLink) +
+        '</td>\n          <td>\n            <div class="table-actions">\n              <button class="btn-info" type="button" onclick="regEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n              <button class="btn-danger" type="button" onclick="regExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n            </div>\n          </td>\n        </tr>\n      ';
+    }).join("");
+  }
+
+  // ── SALVAR ────────────────────────────────────────────────────────────────
+  function regSalvar_() {
+    if (!SESSION || !REGISTROS_STATE.equipamentoSelecionado) return;
+
+    const payload = {
+      EQUIPAMENTO_ID: REGISTROS_STATE.equipamentoSelecionado.ID,
+      TIPO_SERVICO: REGISTROS_STATE.tipoAtivo,
+      DATA_REALIZADO: (document.getElementById("reg_data_realizado") || {}).value || "",
+      DATA_VALIDADE: (document.getElementById("reg_data_validade") || {}).value || "",
+      NUMERO_CERTIFICADO: (document.getElementById("reg_numero_cert") || {}).value || "",
+      RESULTADO: (document.getElementById("reg_resultado") || {}).value || "",
+      EMPRESA_RESPONSAVEL: (document.getElementById("reg_empresa") || {}).value || "",
+      TECNICO: (document.getElementById("reg_tecnico") || {}).value || "",
+      LINK_DOCUMENTO: (document.getElementById("reg_link_doc") || {}).value || "",
+      OBSERVACOES: (document.getElementById("reg_obs") || {}).value || ""
+    };
+
+    if (!payload.DATA_REALIZADO) return alert("A data de realização é obrigatória.");
+
+    const helper = document.getElementById("reg_helper");
+    if (helper) helper.innerText = "Salvando...";
+
+    if (REGISTROS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) return alert((res && res.message) || "Erro ao atualizar.");
+          regLimparForm_();
+          regCarregarRegistros_();
+          if (helper) helper.innerText = "Registro atualizado com sucesso.";
+        })
+        .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+        .registrosAtualizar(SESSION, REGISTROS_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) || "Erro ao criar.");
+        regLimparForm_();
+        regCarregarRegistros_();
+        if (helper) helper.innerText = "Registro criado com sucesso.";
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .registrosCriar(SESSION, payload);
+  }
+
+  // ── EDITAR ────────────────────────────────────────────────────────────────
+  function regEditar_(id) {
+    const reg = REGISTROS_STATE.items.find(function(r) { return r.ID === id; });
+    if (!reg) return;
+
+    REGISTROS_STATE.editingId = id;
+
+    const set = function(elId, val) {
+      const el = document.getElementById(elId);
+      if (el) el.value = val || "";
+    };
+    set("reg_data_realizado", reg.DATA_REALIZADO);
+    set("reg_data_validade", reg.DATA_VALIDADE);
+    set("reg_numero_cert", reg.NUMERO_CERTIFICADO);
+    set("reg_resultado", reg.RESULTADO);
+    set("reg_empresa", reg.EMPRESA_RESPONSAVEL);
+    set("reg_tecnico", reg.TECNICO);
+    set("reg_link_doc", reg.LINK_DOCUMENTO);
+    set("reg_obs", reg.OBSERVACOES);
+
+    const titulo = document.getElementById("reg_form_titulo");
+    if (titulo) titulo.innerText = "Editando Registro";
+    const helper = document.getElementById("reg_helper");
+    if (helper) helper.innerText = "Editando — clique em Salvar para confirmar.";
+
+    const card = document.getElementById("reg_form_card");
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // ── EXCLUIR ───────────────────────────────────────────────────────────────
+  function regExcluir_(id) {
+    if (!SESSION || !confirm("Excluir este registro técnico? Esta ação não pode ser desfeita.")) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) || "Erro ao excluir.");
+        regCarregarRegistros_();
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .registrosExcluir(SESSION, id);
+  }
+
+  // ── LIMPAR FORM ───────────────────────────────────────────────────────────
+  function regLimparForm_() {
+    REGISTROS_STATE.editingId = "";
+    ["reg_data_realizado","reg_data_validade","reg_numero_cert","reg_resultado",
+     "reg_empresa","reg_tecnico","reg_link_doc","reg_obs"].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    const titulo = document.getElementById("reg_form_titulo");
+    const tipo = REG_TIPOS.find(t => t.key === REGISTROS_STATE.tipoAtivo);
+    if (titulo && tipo) titulo.innerText = "Novo Registro — " + tipo.label;
+    const helper = document.getElementById("reg_helper");
+    if (helper) helper.innerText = "";
+  }
+
+  // ── GERAR PRONTUÁRIO ──────────────────────────────────────────────────────
+  function regGerarProntuario_() {
+    if (!SESSION || !REGISTROS_STATE.equipamentoSelecionado) return;
+    const eqpId = REGISTROS_STATE.equipamentoSelecionado.ID;
+    const helper = document.getElementById("reg_helper");
+    if (helper) helper.innerText = "Gerando prontuário...";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (helper) helper.innerText = "";
+        if (!res || !res.success) { alert("Erro ao gerar prontuário: " + (res && res.message || "Erro desconhecido.")); return; }
+        const html = regBuildProntuarioHtml_(res);
+        const w = window.open("", "_blank");
+        if (!w) { alert("Popup bloqueado. Permita popups para este site e tente novamente."); return; }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerText = "";
+        alert("Erro ao gerar prontuário: " + (err.message || err));
+      })
+      .registrosProntuario(SESSION, eqpId);
+  }
+
+  function regBuildProntuarioHtml_(data) {
+    const e = data.equipamento || {};
+    const c = data.cliente     || {};
+    const u = data.unidade     || {};
+    const historico = data.historico || [];
+    const resumo    = data.resumo    || {};
+    const geradoEm  = data.geradoEm  || "";
+    const geradoPor = data.geradoPor || "";
+
+    function s(v, d) { const r = String(v || "").trim(); return r || (d || "—"); }
+    function esc(v)  { return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    function fmtDt(iso) {
+      if (!iso) return "—";
+      const p = String(iso).substring(0,10).split("-");
+      return p.length === 3 ? p[2]+"/"+p[1]+"/"+p[0] : iso;
+    }
+    function fmtNow(iso) {
+      if (!iso) return "";
+      try { return new Date(iso).toLocaleString("pt-BR"); } catch(e) { return iso; }
+    }
+
+    const LABEL = {
+      CALIBRACAO: "Calibração", QUALIFICACAO: "Qualificação",
+      ENSAIO_ELETRICO: "Ensaio Elétrico", MANUTENCAO_PREVENTIVA: "Manutenção Preventiva",
+      MANUTENCAO_CORRETIVA: "Manutenção Corretiva", INSPECAO_SEGURANCA: "Inspeção de Segurança"
+    };
+    const TIPOS = ["CALIBRACAO","QUALIFICACAO","ENSAIO_ELETRICO","MANUTENCAO_PREVENTIVA","MANUTENCAO_CORRETIVA","INSPECAO_SEGURANCA"];
+    const APLICA_MAP = {
+      CALIBRACAO: e.APLICA_CALIBRACAO, QUALIFICACAO: e.APLICA_QUALIFICACAO,
+      ENSAIO_ELETRICO: e.APLICA_ENSAIO_ELETRICO, MANUTENCAO_PREVENTIVA: e.APLICA_MANUTENCAO_PREV
+    };
+    const riscoColor = { BAIXO: "#16a34a", MEDIO: "#d97706", ALTO: "#ea580c", CRITICO: "#dc2626" };
+    const riscoC = riscoColor[s(e.RISCO)] || "#64748b";
+
+    function svBadge(sv) {
+      if (sv === "VENCIDO")   return '<span style="background:#fef2f2;color:#dc2626;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid #fca5a5;">VENCIDO</span>';
+      if (sv === "VENCENDO")  return '<span style="background:#fff7ed;color:#ea580c;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid #fed7aa;">VENCENDO</span>';
+      if (sv === "OK")        return '<span style="background:#f0fdf4;color:#16a34a;padding:1px 8px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid #86efac;">EM DIA</span>';
+      return '<span style="color:#94a3b8;font-size:10px;">Sem venc.</span>';
+    }
+    function resBadge(res) {
+      if (res === "APROVADO")    return '<span style="color:#16a34a;font-weight:700;font-size:10px;">✓ Aprovado</span>';
+      if (res === "REPROVADO")   return '<span style="color:#dc2626;font-weight:700;font-size:10px;">✗ Reprovado</span>';
+      if (res === "CONDICIONAL") return '<span style="color:#ca8a04;font-weight:700;font-size:10px;">⚠ Condicional</span>';
+      return res ? esc(res) : "—";
+    }
+
+    // Resumo de status dos serviços (tabela)
+    let resumoRows = "";
+    TIPOS.forEach(function(tipo) {
+      const reg = resumo[tipo];
+      const aplica = APLICA_MAP[tipo];
+      const aplicaStr = aplica === "S" ? '<span style="color:#16a34a;font-weight:700;">Sim</span>' :
+                        aplica === "N" ? '<span style="color:#94a3b8;">Não</span>' : '<span style="color:#94a3b8;">—</span>';
+      if (!reg) {
+        resumoRows += '<tr><td>'+LABEL[tipo]+'</td><td>'+aplicaStr+'</td><td>—</td><td>—</td><td><span style="color:#94a3b8;font-size:10px;">Sem registro</span></td><td>—</td></tr>';
+      } else {
+        resumoRows += '<tr><td>'+LABEL[tipo]+'</td><td>'+aplicaStr+'</td><td style="font-weight:600;">'+fmtDt(reg.DATA_REALIZADO)+'</td><td>'+fmtDt(reg.DATA_VALIDADE)+'</td><td>'+svBadge(reg.STATUS_VENCIMENTO)+'</td><td style="font-size:10px;">'+esc(s(reg.NUMERO_CERTIFICADO))+'</td></tr>';
+      }
+    });
+
+    // Histórico por tipo
+    let historicoSections = "";
+    TIPOS.forEach(function(tipo) {
+      const itens = historico.filter(function(r) { return String(r.TIPO_SERVICO || "").toUpperCase() === tipo; });
+      if (!itens.length) return;
+      const rows = itens.map(function(r) {
+        const docLink = r.LINK_DOCUMENTO
+          ? '<a href="'+esc(r.LINK_DOCUMENTO)+'" target="_blank" style="color:#0b3b78;text-decoration:underline;font-size:10px;">Ver doc.</a>'
+          : "—";
+        return '<tr>'
+          + '<td style="font-weight:600;white-space:nowrap;">'+fmtDt(r.DATA_REALIZADO)+'</td>'
+          + '<td style="white-space:nowrap;">'+fmtDt(r.DATA_VALIDADE)+'</td>'
+          + '<td>'+svBadge(r.STATUS_VENCIMENTO)+'</td>'
+          + '<td style="font-size:10px;">'+esc(s(r.NUMERO_CERTIFICADO))+'</td>'
+          + '<td>'+resBadge(r.RESULTADO)+'</td>'
+          + '<td style="font-size:10px;">'+esc(s(r.EMPRESA_RESPONSAVEL))+'</td>'
+          + '<td style="font-size:10px;">'+esc(s(r.TECNICO))+'</td>'
+          + '<td style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">'+esc(s(r.OBSERVACOES))+'</td>'
+          + '<td>'+docLink+'</td>'
+          + '</tr>';
+      }).join("");
+      historicoSections += ''
+        + '<div class="section-title" style="margin-top:18px;">'+LABEL[tipo]+'</div>'
+        + '<table class="data-table"><thead><tr>'
+        + '<th>Data Realizado</th><th>Validade</th><th>Status</th><th>Nº Certificado</th>'
+        + '<th>Resultado</th><th>Empresa</th><th>Técnico</th><th>Observações</th><th>Doc.</th>'
+        + '</tr></thead><tbody>'+rows+'</tbody></table>';
+    });
+    if (!historicoSections) {
+      historicoSections = '<p style="color:#94a3b8;font-size:13px;margin:10px 0;">Nenhum registro técnico cadastrado para este equipamento.</p>';
+    }
+
+    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
+      + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+      + '<title>Prontuário — '+esc(s(e.TAG))+'</title>'
+      + '<style>'
+      + '*{box-sizing:border-box;margin:0;padding:0}'
+      + 'body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#182230;background:#fff;padding:20px}'
+      + '.page{max-width:1000px;margin:0 auto}'
+      + '.print-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding-bottom:12px;border-bottom:3px solid #0b7a3e;margin-bottom:16px}'
+      + '.logo img{max-width:200px;height:auto}'
+      + '.header-center h1{font-size:16px;color:#0b3b78;font-weight:900;text-transform:uppercase;letter-spacing:.02em}'
+      + '.header-center p{font-size:11px;color:#667085;margin-top:3px}'
+      + '.header-right{text-align:right;font-size:10px;color:#667085;line-height:1.6}'
+      + '.header-right strong{font-size:13px;color:#0b3b78;display:block}'
+      + '.eq-banner{background:#0b3b78;color:#fff;padding:12px 16px;border-radius:8px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px}'
+      + '.eq-tag{font-size:22px;font-weight:900;letter-spacing:-.01em}'
+      + '.eq-sub{font-size:11px;opacity:.85;margin-top:2px}'
+      + '.eq-meta{font-size:11px;opacity:.9;line-height:1.7}'
+      + '.badge-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-right:4px}'
+      + '.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}'
+      + '.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}'
+      + '.info-box{border:1px solid #dfe6ee;border-radius:6px;padding:9px 12px}'
+      + '.info-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#667085;margin-bottom:3px}'
+      + '.info-value{font-size:12px;font-weight:700;color:#182230;line-height:1.3}'
+      + '.info-value.mono{font-family:Consolas,Monaco,monospace;font-size:11px}'
+      + '.section-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#fff;background:#0b3b78;padding:4px 10px;border-radius:4px;margin-bottom:8px;margin-top:14px}'
+      + '.data-table{width:100%;border-collapse:collapse;font-size:11px}'
+      + '.data-table th{background:#f0f4fa;color:#344054;font-size:9px;font-weight:800;text-transform:uppercase;padding:6px 8px;text-align:left;border:1px solid #dfe6ee}'
+      + '.data-table td{padding:6px 8px;border:1px solid #dfe6ee;vertical-align:middle;color:#182230}'
+      + '.data-table tr:nth-child(even) td{background:#f8fafc}'
+      + '.summary-table{width:100%;border-collapse:collapse;font-size:11px}'
+      + '.summary-table th{background:#0b7a3e;color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;padding:7px 10px;text-align:left;border:1px solid #0b7a3e}'
+      + '.summary-table td{padding:7px 10px;border:1px solid #dfe6ee;vertical-align:middle}'
+      + '.summary-table tr:nth-child(even) td{background:#f8fafc}'
+      + '.footer{margin-top:24px;padding-top:10px;border-top:1px solid #c8d8e8;font-size:10px;color:#667085;display:flex;justify-content:space-between;align-items:center}'
+      + '.watermark{color:#f0f4fa;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}'
+      + '.no-print{margin-bottom:16px;padding:10px 14px;background:#f0f4fa;border-radius:8px;display:flex;gap:10px;align-items:center}'
+      + '.btn-print{background:#0b7a3e;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}'
+      + '.btn-close{background:#fff;color:#344054;border:1px solid #dfe6ee;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer}'
+      + '@media print{.no-print{display:none!important}.page{max-width:none;padding:0}}'
+      + '@page{size:A4 portrait;margin:14mm}'
+      + '</style></head><body>'
+      + '<div class="no-print">'
+      + '<button class="btn-print" onclick="window.print()">&#128424; Imprimir / Salvar PDF</button>'
+      + '<button class="btn-close" onclick="window.close()">Fechar</button>'
+      + '<span style="color:#667085;font-size:12px;">Prontuário Técnico — '+esc(s(e.TAG))+'</span>'
+      + '</div>'
+      + '<div class="page">'
+      // HEADER
+      + '<div class="print-header">'
+      + '<div class="logo"><img src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs" onerror="this.parentNode.innerHTML=\'<div style=&quot;font-size:22px;font-weight:900;color:#0b3b78;&quot;>Metrolab\'s</div>"></div>'
+      + '<div class="header-center"><h1>Prontuário Técnico do Equipamento</h1><p>METROLABS SGO+ — Engenharia Clínica</p></div>'
+      + '<div class="header-right"><strong>'+esc(s(e.TAG))+'</strong>Gerado em: '+fmtNow(geradoEm)+'<br>Por: '+esc(s(geradoPor))+'</div>'
+      + '</div>'
+      // EQUIPMENT BANNER
+      + '<div class="eq-banner">'
+      + '<div><div class="eq-tag">'+esc(s(e.TAG))+'</div><div class="eq-sub">'+esc(s(e.TIPO))+(s(e.FABRICANTE)!=="—"?' · '+esc(s(e.FABRICANTE)):'')+(s(e.MODELO)!=="—"?' · '+esc(s(e.MODELO)):'')+'</div>'
+      + (e.RISCO?'<div style="margin-top:6px;"><span class="badge-pill" style="background:'+riscoC+';color:#fff;">Risco '+esc(s(e.RISCO))+'</span>'+(e.CLASSE_ANVISA?'<span class="badge-pill" style="background:rgba(255,255,255,.2);color:#fff;">ANVISA Cl. '+esc(s(e.CLASSE_ANVISA))+'</span>':'')+'</div>':'')
+      + '</div>'
+      + '<div class="eq-meta">'
+      + (s(e.SERIE)!=="—"?'<div><b>Série:</b> '+esc(s(e.SERIE))+'</div>':'')
+      + (s(e.NUMERO_PATRIMONIO)!=="—"?'<div><b>Patrimônio:</b> '+esc(s(e.NUMERO_PATRIMONIO))+'</div>':'')
+      + (s(e.LOCALIZACAO)!=="—"?'<div><b>Localização:</b> '+esc(s(e.LOCALIZACAO))+'</div>':'')
+      + (s(e.TIPO_POSSE)!=="—"?'<div><b>Posse:</b> '+esc(s(e.TIPO_POSSE))+'</div>':'')
+      + '</div>'
+      + '</div>'
+      // CLIENTE / UNIDADE
+      + '<div class="section-title">Identificação do Cliente e Unidade</div>'
+      + '<div class="grid-2">'
+      + '<div class="info-box"><div class="info-label">Razão Social</div><div class="info-value">'+esc(s(c.RAZAO_SOCIAL||c.NOME_FANTASIA))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">CNPJ</div><div class="info-value mono">'+esc(s(c.CNPJ))+'</div></div>'
+      + '</div>'
+      + '<div class="grid-3">'
+      + '<div class="info-box"><div class="info-label">Unidade</div><div class="info-value">'+esc(s(u.NOME_UNIDADE||u.NOME))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Setor</div><div class="info-value">'+esc(s(e.SETOR||u.SETOR))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Cidade / UF</div><div class="info-value">'+esc(s(u.CIDADE))+(s(u.UF)!=="—"?' / '+esc(s(u.UF)):'')+'</div></div>'
+      + '</div>'
+      // DADOS TÉCNICOS
+      + '<div class="section-title">Dados Técnicos — Engenharia Clínica</div>'
+      + '<div class="grid-3">'
+      + '<div class="info-box"><div class="info-label">Classe ANVISA</div><div class="info-value">'+esc(s(e.CLASSE_ANVISA))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Nº ANVISA</div><div class="info-value">'+esc(s(e.NUMERO_ANVISA))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Risco</div><div class="info-value" style="color:'+riscoC+'">'+esc(s(e.RISCO))+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Vida Útil</div><div class="info-value">'+esc(s(e.VIDA_UTIL))+(s(e.VIDA_UTIL)!=="—"?' anos':'')+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Data de Aquisição</div><div class="info-value">'+fmtDt(e.DATA_AQUISICAO)+'</div></div>'
+      + '<div class="info-box"><div class="info-label">Periodicidade Manutenção</div><div class="info-value">'+esc(s(e.PERIODICIDADE_MANUTENCAO))+(s(e.PERIODICIDADE_MANUTENCAO)!=="—"?' meses':'')+'</div></div>'
+      + '</div>'
+      // RESUMO DOS SERVIÇOS
+      + '<div class="section-title">Status Atual dos Serviços (Resumo)</div>'
+      + '<table class="summary-table"><thead><tr>'
+      + '<th>Tipo de Serviço</th><th>Aplica?</th><th>Última Realização</th><th>Validade</th><th>Status</th><th>Nº Certificado</th>'
+      + '</tr></thead><tbody>'+resumoRows+'</tbody></table>'
+      // HISTÓRICO POR TIPO
+      + '<div class="section-title" style="margin-top:20px;">Histórico Completo de Registros</div>'
+      + historicoSections
+      // FOOTER
+      + '<div class="footer">'
+      + '<div>Gerado em: <strong>'+fmtNow(geradoEm)+'</strong> &nbsp;·&nbsp; Por: <strong>'+esc(s(geradoPor))+'</strong> &nbsp;·&nbsp; Sistema: <strong>METROLABS SGO+</strong></div>'
+      + '<div class="watermark">Documento técnico controlado — uso interno</div>'
+      + '</div>'
+      + '</div></body></html>';
+  }
+</script>

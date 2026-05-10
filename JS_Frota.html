@@ -1,0 +1,1269 @@
+<script>
+  (function frotaPrepararState_() {
+    const defaults = {
+    aba: "dashboard",
+    veiculos: [],
+    reservas: [],
+    movimentos: [],
+    vistorias: [],
+    abastecimentos: [],
+    manutencoes: [],
+    lavagens: [],
+    multas: [],
+    alertas: [],
+    dashboard: null,
+    veiculoSelecionadoId: "",
+    editingId: "",
+    uploads: {
+      checkin: [],
+      checkout: [],
+      vistoria: [],
+      abastecimentoComprovante: [],
+      abastecimentoPainel: [],
+      manutencao: [],
+      lavagemAntes: [],
+      lavagemDepois: [],
+      lavagemComprovante: [],
+      multa: []
+    }
+    };
+    const state = (typeof FROTA_STATE !== "undefined") ? FROTA_STATE : (window.FROTA_STATE = window.FROTA_STATE || {});
+    Object.keys(defaults).forEach(function(key) {
+      if (key === "uploads") return;
+      if (state[key] === undefined || state[key] === null) state[key] = defaults[key];
+    });
+    state.uploads = Object.assign({}, defaults.uploads, state.uploads || {});
+  })();
+
+  const FROTA_ABAS_UI = [
+    ["dashboard", "Dashboard"],
+    ["veiculos", "Veículos"],
+    ["reservas", "Agenda / Reservas"],
+    ["operacao", "Operação"],
+    ["vistoria", "Vistoria"],
+    ["abastecimento", "Abastecimento"],
+    ["manutencao", "Manutenção"],
+    ["lavagem", "Lavagem"],
+    ["multas", "Multas"],
+    ["relatorios", "Relatórios"]
+  ];
+
+  const FROTA_STATUS_VEICULO_UI = [
+    "DISPONIVEL", "RESERVADO", "EM_USO", "EM_MANUTENCAO", "BLOQUEADO",
+    "DOCUMENTACAO_VENCIDA", "PREVENTIVA_VENCIDA", "SINISTRO_AVARIA", "INATIVO"
+  ];
+
+  const FROTA_CHECKIN_ITENS_UI = [
+    "Painel sem alerta", "Pneus ok", "Oleo ok", "Agua/arrefecimento ok",
+    "Limpeza ok", "Documentos ok", "Luzes ok"
+  ];
+
+  const FROTA_CHECKOUT_ITENS_UI = [
+    "Painel sem alerta", "Pneus ok", "Limpeza ok", "Combustivel conferido",
+    "Objetos/ferramentas conferidos", "Avarias verificadas"
+  ];
+
+  const FROTA_VISTORIA_GRUPOS_UI = {
+    Exterior: ["Lataria dianteira", "Lataria traseira", "Lateral direita", "Lateral esquerda", "Para-brisa", "Vidros laterais", "Retrovisores", "Farois", "Lanternas", "Setas", "Luz de freio", "Luz de re"],
+    Interior: ["Cinto de seguranca", "Painel sem alerta", "Interior limpo", "Porta-malas limpo", "Ar-condicionado", "Odor interno / asseio"],
+    Seguranca: ["Buzina", "Limpador de para-brisa", "Pneus", "Estepe", "Macaco", "Chave de roda", "Triangulo"],
+    Mecanica: ["Nivel de oleo", "Agua/arrefecimento", "Fluido de freio", "Combustivel", "Freios", "Direcao"],
+    Documentacao: ["Documentos do veiculo", "Chave"]
+  };
+
+  const FROTA_PREVENTIVA_ITENS_UI = [
+    "Troca de oleo", "Filtro de oleo", "Filtro de ar", "Filtro de combustivel",
+    "Filtro de cabine", "Alinhamento", "Balanceamento", "Rodizio de pneus",
+    "Freios", "Pastilhas", "Discos/tambores", "Fluido de freio",
+    "Agua/arrefecimento", "Bateria", "Correias", "Suspensao", "Amortecedores",
+    "Luzes", "Limpadores", "Pneus", "Estepe", "Higienizacao/limpeza", "Documentacao"
+  ];
+
+  function renderFrotaModulo_() {
+    try {
+      const div = document.getElementById("conteudo");
+      if (!div) return;
+      div.innerHTML = `
+      <style>
+        .frota-shell{display:flex;flex-direction:column;gap:18px;}
+        .frota-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+        .frota-title h2{margin:0;color:#0f172a;font-size:26px;font-weight:850;}
+        .frota-title p{margin:5px 0 0;color:#64748b;font-size:13px;}
+        .frota-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding-bottom:8px;}
+        .frota-tab{border:1px solid #dbe3ef;background:#fff;color:#334155;border-radius:8px;padding:9px 12px;font-weight:750;font-size:12px;cursor:pointer;}
+        .frota-tab.active{background:#0f766e;color:#fff;border-color:#0f766e;}
+        .frota-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;}
+        .frota-card{background:#fff;border:1px solid #dbe3ef;border-radius:8px;padding:16px;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+        .frota-card.span-12{grid-column:span 12}.frota-card.span-8{grid-column:span 8}.frota-card.span-6{grid-column:span 6}.frota-card.span-4{grid-column:span 4}.frota-card.span-3{grid-column:span 3}
+        .frota-card h3{margin:0 0 12px;color:#0f172a;font-size:16px;font-weight:850;}
+        .frota-kpi{display:flex;flex-direction:column;gap:4px;min-height:78px;}
+        .frota-kpi small{color:#64748b;font-size:11px;font-weight:750;text-transform:uppercase;}
+        .frota-kpi strong{font-size:24px;color:#0f172a;}
+        .frota-exec-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch;}
+        .frota-exec-panel{background:linear-gradient(135deg,#0b3b78,#0f766e);color:#fff;border-radius:8px;padding:18px;border:1px solid #0b3b78;min-height:132px;}
+        .frota-exec-panel h3{color:#fff;margin:0 0 6px;font-size:20px}.frota-exec-panel p{margin:0;color:#dbeafe;line-height:1.45;font-size:13px;}
+        .frota-kpi-card{display:flex;gap:12px;align-items:center;border-left:4px solid #0f766e;}
+        .frota-kpi-icon{width:38px;height:38px;border-radius:8px;background:#e0f2fe;color:#075985;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex:0 0 auto;}
+        .frota-kpi-card.ok{border-left-color:#16a34a}.frota-kpi-card.ok .frota-kpi-icon{background:#dcfce7;color:#166534}
+        .frota-kpi-card.warn{border-left-color:#f59e0b}.frota-kpi-card.warn .frota-kpi-icon{background:#fef3c7;color:#92400e}
+        .frota-kpi-card.bad{border-left-color:#dc2626}.frota-kpi-card.bad .frota-kpi-icon{background:#fee2e2;color:#991b1b}
+        .frota-card-title-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.frota-card-title-row h3{margin:0}
+        .frota-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .frota-form{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;}
+        .frota-field{grid-column:span 3;display:flex;flex-direction:column;gap:5px;}
+        .frota-field.span-2{grid-column:span 2}.frota-field.span-4{grid-column:span 4}.frota-field.span-5{grid-column:span 5}.frota-field.span-6{grid-column:span 6}.frota-field.span-8{grid-column:span 8}.frota-field.span-12{grid-column:span 12}
+        .frota-field label{font-size:12px;color:#475569;font-weight:750;}
+        .frota-field input,.frota-field select,.frota-field textarea{border:1px solid #cbd5e1;border-radius:7px;padding:10px 11px;font-size:13px;background:#fff;color:#0f172a;min-height:40px;}
+        .frota-field textarea{min-height:78px;resize:vertical;}
+        .frota-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+        .frota-btn{border:0;border-radius:7px;padding:10px 14px;font-weight:850;cursor:pointer;}
+        .frota-btn.primary{background:#0f766e;color:#fff}.frota-btn.secondary{background:#e2e8f0;color:#0f172a}.frota-btn.danger{background:#b91c1c;color:#fff}.frota-btn.warn{background:#f59e0b;color:#111827}
+        .frota-table-wrap{overflow:auto;border:1px solid #e2e8f0;border-radius:8px;}
+        .frota-table{width:100%;border-collapse:collapse;font-size:12px;}
+        .frota-table th{background:#f8fafc;color:#475569;text-align:left;padding:10px;font-weight:850;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
+        .frota-table td{padding:10px;border-bottom:1px solid #eef2f7;color:#0f172a;vertical-align:top;}
+        .frota-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:850;background:#e2e8f0;color:#334155;}
+        .frota-badge.ok{background:#dcfce7;color:#166534}.frota-badge.warn{background:#fef3c7;color:#92400e}.frota-badge.bad{background:#fee2e2;color:#991b1b}.frota-badge.info{background:#dbeafe;color:#1e40af}
+        .frota-vehicle-card{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+        .frota-info{border:1px solid #e2e8f0;background:#f8fafc;border-radius:7px;padding:10px;}
+        .frota-info small{display:block;color:#64748b;font-weight:750;font-size:11px;margin-bottom:3px}.frota-info strong{color:#0f172a;font-size:13px;}
+        .frota-result{border-radius:8px;padding:12px;margin-top:12px;border:1px solid #dbe3ef;background:#f8fafc;}
+        .frota-result.ok{background:#f0fdf4;border-color:#bbf7d0}.frota-result.bad{background:#fef2f2;border-color:#fecaca}.frota-result.warn{background:#fffbeb;border-color:#fde68a}
+        .frota-checklist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+        .frota-checkitem{border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fff;}
+        .frota-checkitem-title{font-size:12px;font-weight:850;color:#0f172a;margin-bottom:8px;}
+        .frota-check-options{display:flex;gap:6px;flex-wrap:wrap}.frota-check-options label{display:flex;align-items:center;gap:4px;border:1px solid #cbd5e1;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:750;color:#334155;}
+        .frota-upload{border:1px dashed #94a3b8;border-radius:8px;background:#f8fafc;padding:12px;}
+        .frota-upload input{width:100%}.frota-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:10px;}
+        .frota-preview figure{margin:0;border:1px solid #e2e8f0;border-radius:7px;overflow:hidden;background:#fff;position:relative;}
+        .frota-preview img{width:100%;height:80px;object-fit:cover;display:block}.frota-preview figcaption{font-size:10px;color:#64748b;padding:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .frota-empty{padding:18px;text-align:center;color:#64748b;font-weight:700;}
+        @media(max-width:900px){.frota-card.span-8,.frota-card.span-6,.frota-card.span-4,.frota-card.span-3{grid-column:span 12}.frota-field,.frota-field.span-2,.frota-field.span-4,.frota-field.span-5,.frota-field.span-6,.frota-field.span-8{grid-column:span 12}.frota-checklist,.frota-vehicle-card{grid-template-columns:1fr}.frota-btn{width:100%;min-height:46px}.frota-tabs{overflow:auto;flex-wrap:nowrap}.frota-tab{white-space:nowrap}}
+      </style>
+      <div class="frota-shell">
+        <div class="frota-top">
+          <div class="frota-title">
+            <h2>Frota</h2>
+            <p>Controle operacional de veiculos, reservas, retiradas, devolucoes, evidencias, manutencoes e custos.</p>
+          </div>
+          <div class="frota-actions">
+            <button class="frota-btn secondary" type="button" onclick="frotaLoad_()">Atualizar dados</button>
+          </div>
+        </div>
+        <div class="frota-tabs">${FROTA_ABAS_UI.map(a => `<button id="frotaTab_${a[0]}" class="frota-tab" type="button" onclick="frotaSetAba_('${a[0]}')">${a[1]}</button>`).join("")}</div>
+        <div id="frotaConteudo"></div>
+      </div>`;
+      frotaSetAba_(FROTA_STATE.aba || "dashboard");
+      frotaLoad_();
+    } catch (e) {
+      console.error("[FROTA_NOVA] falha ao renderizar modulo", e);
+      const div = document.getElementById("conteudo");
+      if (div) {
+        div.innerHTML = '<div class="module-shell"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Frota</h2><p class="content-subtitle">Falha ao carregar a interface da Frota. Atualize a pagina e verifique o console.</p></div></div></div>';
+      }
+    }
+  }
+
+  function frotaSetAba_(aba) {
+    FROTA_STATE.aba = aba;
+    document.querySelectorAll(".frota-tab").forEach(btn => btn.classList.remove("active"));
+    const btn = document.getElementById("frotaTab_" + aba);
+    if (btn) btn.classList.add("active");
+    const renderers = {
+      dashboard: frotaRenderDashboard_,
+      veiculos: frotaRenderVeiculos_,
+      reservas: frotaRenderReservas_,
+      operacao: frotaRenderOperacao_,
+      vistoria: frotaRenderVistoria_,
+      abastecimento: frotaRenderAbastecimento_,
+      manutencao: frotaRenderManutencao_,
+      lavagem: frotaRenderLavagem_,
+      multas: frotaRenderMultas_,
+      relatorios: frotaRenderRelatorios_
+    };
+    (renderers[aba] || frotaRenderDashboard_)();
+  }
+
+  function frotaLoad_() {
+    frotaRun_("frotaListarVeiculos", [SESSION, ""], function(res) {
+      FROTA_STATE.veiculos = res.items || [];
+      frotaRefreshCurrent_();
+    });
+    frotaRun_("frotaListarMovimentos", [SESSION, {}], function(res) {
+      FROTA_STATE.movimentos = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarReservas", [SESSION, {}], function(res) {
+      FROTA_STATE.reservas = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarVistorias", [SESSION, {}], function(res) {
+      FROTA_STATE.vistorias = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarAbastecimentos", [SESSION, {}], function(res) {
+      FROTA_STATE.abastecimentos = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarManutencoes", [SESSION, {}], function(res) {
+      FROTA_STATE.manutencoes = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarLavagens", [SESSION, {}], function(res) {
+      FROTA_STATE.lavagens = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarMultas", [SESSION, {}], function(res) {
+      FROTA_STATE.multas = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaListarAlertas", [SESSION, {}], function(res) {
+      FROTA_STATE.alertas = res.items || [];
+      frotaRefreshCurrent_();
+    }, true);
+    frotaRun_("frotaDashboard", [SESSION, {}], function(res) {
+      FROTA_STATE.dashboard = res.resumo ? res : null;
+      frotaRefreshCurrent_();
+    }, true);
+  }
+
+  function frotaRefreshCurrent_() {
+    const aba = FROTA_STATE.aba || "dashboard";
+    if (document.getElementById("frotaConteudo")) frotaSetAba_(aba);
+  }
+
+  function frotaRun_(fn, args, onSuccess, silent) {
+    if (typeof google === "undefined" || !google.script || !google.script.run) {
+      if (!silent) frotaToast_("Ambiente google.script.run indisponivel.", "bad");
+      return;
+    }
+    const allowOkFalse = fn === "frotaVerificarDisponibilidade";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || ((res.ok === false || res.success === false) && !allowOkFalse)) {
+          if (!silent) frotaToast_((res && (res.message || res.mensagem)) || "Erro na operacao.", "bad");
+          return;
+        }
+        if (onSuccess) onSuccess(res);
+      })
+      .withFailureHandler(function(err) {
+        if (!silent) frotaToast_((err && err.message) || "Erro ao comunicar com o servidor.", "bad");
+      })[fn].apply(google.script.run, args || []);
+  }
+
+  function frotaRenderDashboard_() {
+    const d = (FROTA_STATE.dashboard && FROTA_STATE.dashboard.resumo) || {};
+    const custoTotal = Number(d.gastoCombustivel || 0) + Number(d.gastoManutencao || 0) + Number(d.gastoLavagem || 0) + Number(d.gastoMultas || 0);
+    const cards = [
+      ["🚗", "Total de veiculos", d.totalVeiculos || 0, "info"],
+      ["✓", "Disponiveis", d.disponiveis || 0, "ok"],
+      ["↗", "Em uso", d.emUso || 0, "warn"],
+      ["!", "Bloqueados", d.bloqueados || 0, "bad"],
+      ["⛽", "Custo total", frotaMoney_(custoTotal), "info"],
+      ["KM", "KM rodado", frotaNum_(d.kmRodado), "info"],
+      ["R$", "Custo por KM", frotaMoney_(d.custoMedioKm), "info"],
+      ["⚠", "Alertas criticos", d.alertasCriticos || 0, (d.alertasCriticos || 0) ? "bad" : "ok"]
+    ];
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <div class="frota-exec-hero">
+            <div class="frota-exec-panel">
+              <h3>Dashboard executivo da Frota</h3>
+              <p>Visão consolidada de disponibilidade, uso, custos, preventivas, multas e alertas críticos da Frota Operacional.</p>
+            </div>
+            <div class="frota-mini-grid">
+              ${frotaInfo_("Veiculo mais utilizado", d.veiculoMaisUtilizado || "--")}
+              ${frotaInfo_("Veiculo mais caro", d.veiculoMaisCaro || "--")}
+              ${frotaInfo_("Reservados", d.reservados || 0)}
+              ${frotaInfo_("Em manutencao", d.emManutencao || 0)}
+            </div>
+          </div>
+        </div>
+        ${cards.map(c => `<div class="frota-card span-3 frota-kpi-card ${c[3]}"><div class="frota-kpi-icon">${c[0]}</div><div class="frota-kpi"><small>${c[1]}</small><strong>${c[2]}</strong></div></div>`).join("")}
+        <div class="frota-card span-6">
+          <div class="frota-card-title-row"><h3>Alertas criticos e operacionais</h3>${frotaBadge_((d.alertasCriticos || 0) ? "VERMELHO" : "OK")}</div>
+          ${frotaRenderAlertasLista_(FROTA_STATE.alertas || [])}
+        </div>
+        <div class="frota-card span-6">
+          <div class="frota-card-title-row"><h3>Custos consolidados</h3>${frotaBadge_("INFO")}</div>
+          <div class="frota-mini-grid">
+            ${frotaInfo_("Combustivel", frotaMoney_(d.gastoCombustivel))}
+            ${frotaInfo_("Manutencao", frotaMoney_(d.gastoManutencao))}
+            ${frotaInfo_("Lavagem", frotaMoney_(d.gastoLavagem))}
+            ${frotaInfo_("Multas", frotaMoney_(d.gastoMultas))}
+          </div>
+        </div>
+        <div class="frota-card span-6">
+          <h3>Veiculos em uso</h3>
+          ${frotaTabelaSimples_((FROTA_STATE.dashboard && FROTA_STATE.dashboard.movimentosAbertos) || [], ["PLACA", "CONDUTOR_NOME", "DATA_HORA_CHECKIN", "DESTINO", "KM_SAIDA"])}
+        </div>
+        <div class="frota-card span-6">
+          <h3>Preventivas proximas</h3>
+          ${frotaTabelaSimples_((FROTA_STATE.dashboard && FROTA_STATE.dashboard.preventivasProximas) || [], ["PLACA", "KM_ATUAL", "PROXIMA_PREVENTIVA_KM", "PROXIMA_PREVENTIVA_DATA", "STATUS"])}
+        </div>
+        <div class="frota-card span-6">
+          <h3>Multas pendentes</h3>
+          ${frotaTabelaSimples_((FROTA_STATE.dashboard && FROTA_STATE.dashboard.multasPendentes) || [], ["PLACA", "CONDUTOR_NOME", "VALOR", "STATUS", "PRAZO_INDICACAO"])}
+        </div>
+        <div class="frota-card span-6">
+          <h3>Reservas cadastradas</h3>
+          ${frotaTabelaReservas_()}
+        </div>
+        <div class="frota-card span-6">
+          <h3>Ranking de uso</h3>
+          ${frotaTabelaRanking_((FROTA_STATE.dashboard && FROTA_STATE.dashboard.rankingUso) || [], "KM")}
+        </div>
+        <div class="frota-card span-6">
+          <h3>Ranking de custo</h3>
+          ${frotaTabelaRanking_((FROTA_STATE.dashboard && FROTA_STATE.dashboard.rankingCusto) || [], "R$")}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderVeiculos_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Cadastro de veiculo</h3>
+          <div class="frota-form">
+            ${frotaInput_("fro_placa", "Placa", "text", "span-2")}
+            ${frotaSelect_("fro_status", "Status", FROTA_STATUS_VEICULO_UI, "span-3")}
+            ${frotaInput_("fro_marca", "Marca", "text", "span-3")}
+            ${frotaInput_("fro_modelo", "Modelo", "text", "span-4")}
+            ${frotaInput_("fro_ano", "Ano", "number", "span-2")}
+            ${frotaInput_("fro_cor", "Cor", "text", "span-2")}
+            ${frotaSelect_("fro_combustivel", "Combustivel padrao", ["GASOLINA","ETANOL","DIESEL","FLEX","OUTRO"], "span-3")}
+            ${frotaInput_("fro_km", "KM atual", "number", "span-2")}
+            ${frotaInput_("fro_media", "Media esperada KM/L", "number", "span-3")}
+            ${frotaInput_("fro_doc", "Documentacao vence", "date", "span-3")}
+            ${frotaInput_("fro_seguro", "Seguro vence", "date", "span-3")}
+            ${frotaInput_("fro_ipva", "IPVA vence", "date", "span-3")}
+            ${frotaInput_("fro_lic", "Licenciamento vence", "date", "span-3")}
+            ${frotaInput_("fro_renavam", "Renavam", "text", "span-3")}
+            ${frotaInput_("fro_chassi", "Chassi", "text", "span-3")}
+            ${frotaInput_("fro_proprietario", "Proprietario", "text", "span-6")}
+            ${frotaInput_("fro_prev_km", "Proxima preventiva KM", "number", "span-3")}
+            ${frotaInput_("fro_prev_data", "Proxima preventiva data", "date", "span-3")}
+            ${frotaSelect_("fro_bloqueado", "Bloqueado", ["NAO","SIM"], "span-2")}
+            ${frotaInput_("fro_motivo_bloqueio", "Motivo do bloqueio", "text", "span-10")}
+            ${frotaTextarea_("fro_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions">
+            <button class="frota-btn primary" type="button" onclick="frotaSalvarVeiculoUI_()">Salvar veiculo</button>
+            <button class="frota-btn secondary" type="button" onclick="frotaLimparVeiculoUI_()">Limpar</button>
+          </div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Veiculos cadastrados</h3>
+          ${frotaTabelaVeiculos_()}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderReservas_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Nova reserva</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_res_veiculo", "Veiculo", "span-6")}
+            ${frotaInput_("fro_res_resp", "Responsavel", "text", "span-6")}
+            ${frotaInput_("fro_res_ini", "Inicio", "datetime-local", "span-3")}
+            ${frotaInput_("fro_res_fim", "Fim", "datetime-local", "span-3")}
+            ${frotaInput_("fro_res_motivo", "Motivo", "text", "span-6")}
+            ${frotaInput_("fro_res_destino", "Destino", "text", "span-4")}
+            ${frotaInput_("fro_res_os", "OS ID", "text", "span-4")}
+            ${frotaInput_("fro_res_missao", "Missao ID", "text", "span-4")}
+            ${frotaSelect_("fro_res_status", "Status", ["RESERVADO","EM_USO","CONCLUIDO","CANCELADO","EXPIRADO"], "span-3")}
+            ${frotaTextarea_("fro_res_obs", "Observacoes", "span-9")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaSalvarReservaUI_()">Salvar reserva</button></div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Reservas cadastradas</h3>
+          ${frotaTabelaReservas_()}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderOperacao_() {
+    const veiculo = frotaVeiculoSelecionado_();
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Selecionar veiculo</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_op_veiculo", "Veiculo cadastrado", "span-8", FROTA_STATE.veiculoSelecionadoId)}
+            ${frotaInput_("fro_op_condutor", "Condutor", "text", "span-4")}
+          </div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Resumo do veiculo</h3>
+          ${frotaRenderCardVeiculo_(veiculo)}
+        </div>
+        <div class="frota-card span-12">
+          <h3>Disponibilidade</h3>
+          <div class="frota-form">
+            ${frotaInput_("fro_disp_ini", "Inicio previsto", "datetime-local", "span-3")}
+            ${frotaInput_("fro_disp_fim", "Fim previsto", "datetime-local", "span-3")}
+            <div class="frota-field span-6"><label>&nbsp;</label><button class="frota-btn secondary" type="button" onclick="frotaVerificarDisponibilidadeUI_()">Verificar disponibilidade</button></div>
+          </div>
+          <div id="fro_disp_result"></div>
+        </div>
+        <div class="frota-card span-6">
+          <h3>Check-in</h3>
+          <div class="frota-form">
+            ${frotaInput_("fro_ci_km", "KM saida", "number", "span-4")}
+            ${frotaInput_("fro_ci_comb", "Combustivel saida %", "number", "span-4")}
+            ${frotaInput_("fro_ci_local", "Localizacao", "text", "span-4")}
+            ${frotaInput_("fro_ci_destino", "Destino", "text", "span-6")}
+            ${frotaInput_("fro_ci_motivo", "Motivo de uso", "text", "span-6")}
+            ${frotaInput_("fro_ci_os", "OS ID", "text", "span-6")}
+            ${frotaInput_("fro_ci_missao", "Missao ID", "text", "span-6")}
+            <div class="frota-field span-12"><label>Checklist de retirada</label>${frotaChecklistHtml_("ci", FROTA_CHECKIN_ITENS_UI)}</div>
+            <div class="frota-field span-12"><label>Fotos obrigatorias</label>${frotaUploadHtml_("checkin", "check-in")}</div>
+            ${frotaTextarea_("fro_ci_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaRealizarCheckinUI_()">Realizar check-in</button></div>
+          <div id="fro_ci_result"></div>
+        </div>
+        <div class="frota-card span-6">
+          <h3>Check-out</h3>
+          <div class="frota-form">
+            ${frotaInput_("fro_co_mov", "Movimento aberto", "text", "span-4")}
+            ${frotaInput_("fro_co_km", "KM chegada", "number", "span-4")}
+            ${frotaInput_("fro_co_comb", "Combustivel chegada %", "number", "span-4")}
+            ${frotaInput_("fro_co_local", "Localizacao chegada", "text", "span-6")}
+            ${frotaSelect_("fro_co_limpo", "Veiculo limpo?", ["SIM","NAO"], "span-3")}
+            ${frotaSelect_("fro_co_avarias", "Avarias?", ["NAO","SIM","GRAVE"], "span-3")}
+            ${frotaTextarea_("fro_co_desc_avarias", "Descricao da avaria", "span-12")}
+            <div class="frota-field span-12"><label>Checklist de devolucao</label>${frotaChecklistHtml_("co", FROTA_CHECKOUT_ITENS_UI)}</div>
+            <div class="frota-field span-12"><label>Fotos obrigatorias</label>${frotaUploadHtml_("checkout", "check-out")}</div>
+            ${frotaTextarea_("fro_co_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaRealizarCheckoutUI_()">Realizar check-out</button></div>
+          <div id="fro_co_result"></div>
+        </div>
+      </div>`);
+    const select = document.getElementById("fro_op_veiculo");
+    if (select) select.onchange = function() { frotaSelecionarVeiculoOperacao_(this.value); };
+  }
+
+  function frotaRenderVistoria_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Vistoria profissional</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_vist_veiculo", "Veiculo", "span-5")}
+            ${frotaSelect_("fro_vist_tipo", "Tipo", ["CHECKIN","CHECKOUT","AVULSA","MANUTENCAO","LAVAGEM","SINISTRO"], "span-3")}
+            ${frotaInput_("fro_vist_km", "KM", "number", "span-2")}
+            ${frotaInput_("fro_vist_comb", "Combustivel %", "number", "span-2")}
+            <div class="frota-field span-12"><label>Checklist completo</label>${Object.keys(FROTA_VISTORIA_GRUPOS_UI).map(g => `<h3 style="margin:14px 0 8px;font-size:14px;">${g}</h3>${frotaChecklistHtml_("vist_" + g, FROTA_VISTORIA_GRUPOS_UI[g])}`).join("")}</div>
+            <div class="frota-field span-12"><label>Fotos obrigatorias: frente, traseira, lateral direita, lateral esquerda, painel com KM, pneus e interior</label>${frotaUploadHtml_("vistoria", "vistoria")}</div>
+            ${frotaTextarea_("fro_vist_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaSalvarVistoriaUI_()">Salvar vistoria</button></div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Vistorias registradas</h3>
+          ${frotaTabelaSimples_(FROTA_STATE.vistorias || [], ["PLACA", "TIPO_VISTORIA", "DATA_HORA", "KM", "FINALIZADA"])}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderAbastecimento_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Abastecimento</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_ab_veiculo", "Veiculo", "span-5")}
+            ${frotaInput_("fro_ab_condutor", "Condutor", "text", "span-4")}
+            ${frotaInput_("fro_ab_data", "Data/hora", "datetime-local", "span-3")}
+            ${frotaInput_("fro_ab_km", "KM", "number", "span-2")}
+            ${frotaInput_("fro_ab_litros", "Litros", "number", "span-2")}
+            ${frotaInput_("fro_ab_valor", "Valor total", "number", "span-2")}
+            ${frotaInput_("fro_ab_valor_litro", "Valor por litro", "text", "span-2")}
+            ${frotaSelect_("fro_ab_tipo", "Combustivel", ["GASOLINA","ETANOL","DIESEL","FLEX","OUTRO"], "span-2")}
+            ${frotaSelect_("fro_ab_tanque", "Tanque cheio?", ["SIM","NAO"], "span-2")}
+            ${frotaInput_("fro_ab_posto", "Posto", "text", "span-6")}
+            ${frotaInput_("fro_ab_local", "Localizacao", "text", "span-6")}
+            <div class="frota-field span-6"><label>Comprovante</label>${frotaUploadHtml_("abastecimentoComprovante", "comprovante")}</div>
+            <div class="frota-field span-6"><label>Foto do painel</label>${frotaUploadHtml_("abastecimentoPainel", "painel")}</div>
+            ${frotaTextarea_("fro_ab_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaSalvarAbastecimentoUI_()">Salvar abastecimento</button></div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Abastecimentos registrados</h3>
+          ${frotaTabelaSimples_(FROTA_STATE.abastecimentos || [], ["PLACA", "DATA_HORA", "KM", "LITROS", "VALOR_TOTAL", "VALOR_LITRO", "CONSUMO_KM_L", "CUSTO_KM"])}
+        </div>
+      </div>`);
+    ["fro_ab_litros", "fro_ab_valor"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.oninput = frotaCalcularValorLitroUI_;
+    });
+  }
+
+  function frotaRenderManutencao_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Manutencao preventiva / corretiva</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_man_veiculo", "Veiculo", "span-5")}
+            ${frotaSelect_("fro_man_cat", "Categoria", ["PREVENTIVA","CORRETIVA"], "span-3")}
+            ${frotaSelect_("fro_man_status", "Status", ["CONCLUIDA","ABERTA","EM_OFICINA","AGUARDANDO_PECA","BLOQUEADA","CANCELADA"], "span-4")}
+            ${frotaInput_("fro_man_tipo", "Tipo/ocorrencia", "text", "span-4")}
+            ${frotaInput_("fro_man_km", "KM", "number", "span-2")}
+            ${frotaInput_("fro_man_oficina", "Oficina/local", "text", "span-6")}
+            ${frotaInput_("fro_man_custo_pecas", "Custo pecas", "number", "span-3")}
+            ${frotaInput_("fro_man_custo_mao", "Mao de obra", "number", "span-3")}
+            ${frotaInput_("fro_man_custo_total", "Custo total", "number", "span-3")}
+            ${frotaInput_("fro_man_dias", "Dias parado", "number", "span-3")}
+            ${frotaInput_("fro_man_prev_km", "Proxima preventiva KM", "number", "span-3")}
+            ${frotaInput_("fro_man_prev_data", "Proxima preventiva data", "date", "span-3")}
+            ${frotaTextarea_("fro_man_problema", "Descricao do problema", "span-6")}
+            ${frotaTextarea_("fro_man_servico", "Serviço realizado / peças", "span-6")}
+            <div class="frota-field span-12"><label>Checklist preventivo</label>${frotaChecklistHtml_("man", FROTA_PREVENTIVA_ITENS_UI)}</div>
+            <div class="frota-field span-12"><label>Fotos e comprovantes</label>${frotaUploadHtml_("manutencao", "manutencao")}</div>
+            ${frotaTextarea_("fro_man_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaSalvarManutencaoUI_()">Salvar manutencao</button></div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Manutencoes registradas</h3>
+          ${frotaTabelaSimples_(FROTA_STATE.manutencoes || [], ["PLACA", "CATEGORIA", "TIPO_MANUTENCAO", "STATUS", "KM", "CUSTO_TOTAL", "PROXIMA_PREVENTIVA_KM"])}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderLavagem_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Lavagem / asseio</h3>
+          <div class="frota-form">
+            ${frotaVeiculoSelect_("fro_lav_veiculo", "Veiculo", "span-5")}
+            ${frotaInput_("fro_lav_km", "KM", "number", "span-2")}
+            ${frotaInput_("fro_lav_local", "Local", "text", "span-5")}
+            ${frotaSelect_("fro_lav_tipo", "Tipo", ["LAVAGEM_SIMPLES","LAVAGEM_COMPLETA","HIGIENIZACAO_INTERNA","LAVAGEM_TECNICA","LIMPEZA_EMERGENCIAL"], "span-4")}
+            ${frotaInput_("fro_lav_valor", "Valor", "number", "span-2")}
+            ${frotaInput_("fro_lav_resp", "Responsavel", "text", "span-6")}
+            <div class="frota-field span-6"><label>Foto antes</label>${frotaUploadHtml_("lavagemAntes", "lavagem-antes")}</div>
+            <div class="frota-field span-6"><label>Foto depois</label>${frotaUploadHtml_("lavagemDepois", "lavagem-depois")}</div>
+            <div class="frota-field span-12"><label>Comprovante</label>${frotaUploadHtml_("lavagemComprovante", "comprovante")}</div>
+            ${frotaTextarea_("fro_lav_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions"><button class="frota-btn primary" type="button" onclick="frotaSalvarLavagemUI_()">Salvar lavagem</button></div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Lavagens registradas</h3>
+          ${frotaTabelaSimples_(FROTA_STATE.lavagens || [], ["PLACA", "DATA_HORA", "KM", "LOCAL", "TIPO_LAVAGEM", "VALOR"])}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderMultas_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Multas e responsabilidade do condutor</h3>
+          <div class="frota-result warn">Registro utilizado para identificacao do condutor responsavel, conforme regras do Codigo de Transito Brasileiro, art. 257.</div>
+          <div class="frota-form" style="margin-top:12px;">
+            ${frotaVeiculoSelect_("fro_mul_veiculo", "Veiculo", "span-4")}
+            ${frotaInput_("fro_mul_condutor", "Condutor", "text", "span-4")}
+            ${frotaInput_("fro_mul_cpf", "CPF/CNH", "text", "span-4")}
+            ${frotaInput_("fro_mul_data", "Data/hora infracao", "datetime-local", "span-3")}
+            ${frotaInput_("fro_mul_local", "Local", "text", "span-5")}
+            ${frotaInput_("fro_mul_auto", "Numero auto", "text", "span-4")}
+            ${frotaInput_("fro_mul_orgao", "Orgao autuador", "text", "span-4")}
+            ${frotaInput_("fro_mul_valor", "Valor", "number", "span-2")}
+            ${frotaInput_("fro_mul_pontos", "Pontuacao", "number", "span-2")}
+            ${frotaInput_("fro_mul_prazo", "Prazo indicacao", "date", "span-4")}
+            ${frotaSelect_("fro_mul_status", "Status", ["RECEBIDA","AGUARDANDO_CONDUTOR","CONDUTOR_IDENTIFICADO","EM_DEFESA","PAGA","DESCONTADA_ACORDADA","ENCERRADA"], "span-4")}
+            ${frotaInput_("fro_mul_ass", "Assinatura do condutor", "text", "span-8")}
+            ${frotaTextarea_("fro_mul_desc", "Descricao da infracao", "span-12")}
+            <div class="frota-field span-12"><label>Anexo da notificacao</label>${frotaUploadHtml_("multa", "multa")}</div>
+            ${frotaTextarea_("fro_mul_obs", "Observacoes", "span-12")}
+          </div>
+          <div class="frota-actions">
+            <button class="frota-btn primary" type="button" onclick="frotaSalvarMultaUI_()">Registrar multa</button>
+          </div>
+        </div>
+        <div class="frota-card span-12">
+          <h3>Multas registradas</h3>
+          ${frotaTabelaMultas_()}
+        </div>
+      </div>`);
+  }
+
+  function frotaRenderRelatorios_() {
+    setFrotaHtml_(`
+      <div class="frota-grid">
+        <div class="frota-card span-12">
+          <h3>Relatórios</h3>
+          <div class="frota-form-grid">
+            ${frotaVeiculoSelect_("fro_rel_veiculo", "Veiculo para relatorio individual", "span-4")}
+            ${frotaInput_("fro_rel_inicio", "Inicio", "date", "span-3")}
+            ${frotaInput_("fro_rel_fim", "Fim", "date", "span-3")}
+            <div class="frota-field span-2"><label>&nbsp;</label><button class="frota-btn primary" type="button" onclick="frotaGerarRelatorioVeiculoUI_()">Relatório individual</button></div>
+            <div class="frota-field span-2"><label>&nbsp;</label><button class="frota-btn secondary" type="button" onclick="frotaGerarRelatorioGeralUI_()">Relatório geral</button></div>
+          </div>
+          <div id="fro_rel_result" class="frota-result warn">Documentos PDF da Frota serao gerados pelo DocumentFactory central, com token, hash e QR Code.</div>
+        </div>
+      </div>`);
+  }
+
+  function frotaSalvarVeiculoUI_() {
+    const payload = {
+      ID: FROTA_STATE.editingId || "",
+      PLACA: frotaVal_("fro_placa").toUpperCase(),
+      STATUS: frotaVal_("fro_status"),
+      MARCA: frotaVal_("fro_marca"),
+      MODELO: frotaVal_("fro_modelo"),
+      ANO: frotaVal_("fro_ano"),
+      COR: frotaVal_("fro_cor"),
+      COMBUSTIVEL_PADRAO: frotaVal_("fro_combustivel"),
+      KM_ATUAL: frotaVal_("fro_km"),
+      MEDIA_ESPERADA_KM_L: frotaVal_("fro_media"),
+      DOCUMENTACAO_VENCE: frotaVal_("fro_doc"),
+      SEGURO_VENCE: frotaVal_("fro_seguro"),
+      IPVA_VENCE: frotaVal_("fro_ipva"),
+      LICENCIAMENTO_VENCE: frotaVal_("fro_lic"),
+      RENAVAM: frotaVal_("fro_renavam"),
+      CHASSI: frotaVal_("fro_chassi"),
+      PROPRIETARIO: frotaVal_("fro_proprietario"),
+      BLOQUEADO: frotaVal_("fro_bloqueado") === "SIM",
+      MOTIVO_BLOQUEIO: frotaVal_("fro_motivo_bloqueio"),
+      PROXIMA_PREVENTIVA_KM: frotaVal_("fro_prev_km"),
+      PROXIMA_PREVENTIVA_DATA: frotaVal_("fro_prev_data"),
+      OBSERVACOES: frotaVal_("fro_obs"),
+      ATIVO: "SIM"
+    };
+    if (!payload.PLACA) return frotaToast_("Informe a placa.", "bad");
+    frotaRun_("frotaSalvarVeiculo", [SESSION, payload], function(res) {
+      frotaToast_(res.message || "Veiculo salvo.", "ok");
+      frotaLimparVeiculoUI_();
+      frotaLoad_();
+    });
+  }
+
+  function frotaEditarVeiculoUI_(id) {
+    const v = (FROTA_STATE.veiculos || []).find(item => item.ID === id);
+    if (!v) return;
+    FROTA_STATE.editingId = id;
+    const map = {
+      fro_placa: v.PLACA, fro_status: v.STATUS, fro_marca: v.MARCA, fro_modelo: v.MODELO,
+      fro_ano: v.ANO, fro_cor: v.COR, fro_combustivel: v.COMBUSTIVEL_PADRAO,
+      fro_km: v.KM_ATUAL, fro_media: v.MEDIA_ESPERADA_KM_L, fro_doc: v.DOCUMENTACAO_VENCE,
+      fro_seguro: v.SEGURO_VENCE, fro_ipva: v.IPVA_VENCE, fro_lic: v.LICENCIAMENTO_VENCE,
+      fro_renavam: v.RENAVAM, fro_chassi: v.CHASSI, fro_proprietario: v.PROPRIETARIO,
+      fro_bloqueado: v.BLOQUEADO || "NAO", fro_motivo_bloqueio: v.MOTIVO_BLOQUEIO,
+      fro_prev_km: v.PROXIMA_PREVENTIVA_KM, fro_prev_data: v.PROXIMA_PREVENTIVA_DATA,
+      fro_obs: v.OBSERVACOES
+    };
+    Object.keys(map).forEach(idCampo => frotaSetVal_(idCampo, map[idCampo] || ""));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function frotaLimparVeiculoUI_() {
+    FROTA_STATE.editingId = "";
+    document.querySelectorAll("#frotaConteudo input,#frotaConteudo textarea").forEach(el => el.value = "");
+    frotaSetVal_("fro_status", "DISPONIVEL");
+    frotaSetVal_("fro_bloqueado", "NAO");
+  }
+
+  function frotaSalvarReservaUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_res_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    const payload = {
+      veiculoId: veiculo.ID,
+      responsavelNome: frotaVal_("fro_res_resp"),
+      inicio: frotaVal_("fro_res_ini"),
+      fim: frotaVal_("fro_res_fim"),
+      motivo: frotaVal_("fro_res_motivo"),
+      destino: frotaVal_("fro_res_destino"),
+      osId: frotaVal_("fro_res_os"),
+      missaoId: frotaVal_("fro_res_missao"),
+      status: frotaVal_("fro_res_status"),
+      observacoes: frotaVal_("fro_res_obs")
+    };
+    frotaRun_("frotaSalvarReserva", [SESSION, payload], function(res) {
+      frotaToast_(res.message || "Reserva salva.", "ok");
+      frotaLoad_();
+    });
+  }
+
+  function frotaSelecionarVeiculoOperacao_(id) {
+    FROTA_STATE.veiculoSelecionadoId = id;
+    frotaRenderOperacao_();
+  }
+
+  function frotaVerificarDisponibilidadeUI_() {
+    const veiculo = frotaVeiculoSelecionado_();
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    frotaRun_("frotaVerificarDisponibilidade", [SESSION, {
+      veiculoId: veiculo.ID,
+      inicio: frotaVal_("fro_disp_ini"),
+      fim: frotaVal_("fro_disp_fim")
+    }], function(res) {
+      const box = document.getElementById("fro_disp_result");
+      if (box) box.innerHTML = frotaResultadoDisponibilidadeHtml_(res);
+    });
+  }
+
+  async function frotaRealizarCheckinUI_() {
+    const veiculo = frotaVeiculoSelecionado_();
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    if (!frotaVal_("fro_ci_km") || !frotaVal_("fro_ci_comb") || !frotaVal_("fro_ci_destino") || !frotaVal_("fro_ci_motivo")) return frotaToast_("Preencha KM, combustivel, destino e motivo.", "bad");
+    if (!frotaFiles_("checkin").length && !FROTA_STATE.uploads.checkin.length) return frotaToast_("Tire ou selecione ao menos uma foto de check-in.", "bad");
+    const fotos = await frotaUploadGrupo_("checkin", veiculo, "CHECKIN");
+    const payload = {
+      veiculoId: veiculo.ID,
+      condutorNome: frotaVal_("fro_op_condutor"),
+      kmSaida: frotaVal_("fro_ci_km"),
+      combustivelSaida: frotaVal_("fro_ci_comb"),
+      destino: frotaVal_("fro_ci_destino"),
+      motivoUso: frotaVal_("fro_ci_motivo"),
+      osId: frotaVal_("fro_ci_os"),
+      missaoId: frotaVal_("fro_ci_missao"),
+      localizacaoSaida: frotaVal_("fro_ci_local"),
+      checklistJson: frotaColetarChecklist_("ci"),
+      fotosJson: fotos,
+      observacoes: frotaVal_("fro_ci_obs")
+    };
+    frotaRun_("frotaRealizarCheckin", [SESSION, payload], function(res) {
+      const box = document.getElementById("fro_ci_result");
+      if (box) box.innerHTML = frotaResultadoOkHtml_(res.message || res.mensagem, `Movimento: ${res.movimentoId || ""}<br>${res.frase || ""}`);
+      frotaToast_("Check-in realizado.", "ok");
+      frotaLoad_();
+    });
+  }
+
+  async function frotaRealizarCheckoutUI_() {
+    const veiculo = frotaVeiculoSelecionado_();
+    if (!veiculo && !frotaVal_("fro_co_mov")) return frotaToast_("Selecione um veiculo ou informe o movimento.", "bad");
+    if (!frotaVal_("fro_co_km") || !frotaVal_("fro_co_comb")) return frotaToast_("Preencha KM e combustivel de chegada.", "bad");
+    if (frotaVal_("fro_co_avarias") !== "NAO" && !frotaVal_("fro_co_desc_avarias")) return frotaToast_("Descreva a avaria antes de finalizar.", "bad");
+    if (!frotaFiles_("checkout").length && !FROTA_STATE.uploads.checkout.length) return frotaToast_("Tire ou selecione ao menos uma foto de check-out.", "bad");
+    const fotos = await frotaUploadGrupo_("checkout", veiculo || {}, "CHECKOUT");
+    const payload = {
+      movimentoId: frotaVal_("fro_co_mov"),
+      veiculoId: veiculo && veiculo.ID,
+      kmChegada: frotaVal_("fro_co_km"),
+      combustivelChegada: frotaVal_("fro_co_comb"),
+      localizacaoChegada: frotaVal_("fro_co_local"),
+      veiculoLimpo: frotaVal_("fro_co_limpo"),
+      avarias: frotaVal_("fro_co_avarias"),
+      descricaoAvarias: frotaVal_("fro_co_desc_avarias"),
+      checklistJson: frotaColetarChecklist_("co"),
+      fotosJson: fotos,
+      observacoes: frotaVal_("fro_co_obs")
+    };
+    frotaRun_("frotaRealizarCheckout", [SESSION, payload], function(res) {
+      const box = document.getElementById("fro_co_result");
+      if (box) box.innerHTML = frotaResultadoOkHtml_(res.message || res.mensagem, `KM rodado: ${res.kmRodado || 0}<br>${res.frase || ""}`);
+      frotaToast_("Check-out realizado.", "ok");
+      frotaLoad_();
+    });
+  }
+
+  async function frotaSalvarVistoriaUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_vist_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    if (frotaFiles_("vistoria").length < 7 && (FROTA_STATE.uploads.vistoria || []).length < 7) {
+      return frotaToast_("Informe as fotos obrigatorias da vistoria.", "bad");
+    }
+    const fotos = await frotaUploadGrupo_("vistoria", veiculo, "VISTORIA");
+    frotaRun_("frotaSalvarVistoria", [SESSION, {
+      veiculoId: veiculo.ID,
+      tipoVistoria: frotaVal_("fro_vist_tipo"),
+      km: frotaVal_("fro_vist_km"),
+      combustivelPercentual: frotaVal_("fro_vist_comb"),
+      checklistJson: frotaColetarChecklistPrefixo_("vist_"),
+      fotosJson: fotos,
+      observacoes: frotaVal_("fro_vist_obs")
+    }], function(res) { frotaToast_(res.message || "Vistoria salva.", "ok"); frotaLoad_(); });
+  }
+
+  async function frotaSalvarAbastecimentoUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_ab_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    if (!frotaVal_("fro_ab_km") || !frotaVal_("fro_ab_litros") || !frotaVal_("fro_ab_valor") || !frotaVal_("fro_ab_tipo")) return frotaToast_("Preencha KM, litros, valor total e combustivel.", "bad");
+    if (!frotaFiles_("abastecimentoComprovante").length && !(FROTA_STATE.uploads.abastecimentoComprovante || []).length) return frotaToast_("Anexe o comprovante do abastecimento.", "bad");
+    if (!frotaFiles_("abastecimentoPainel").length && !(FROTA_STATE.uploads.abastecimentoPainel || []).length) return frotaToast_("Anexe a foto do painel/KM.", "bad");
+    const comprovante = await frotaUploadGrupo_("abastecimentoComprovante", veiculo, "ABASTECIMENTO_COMPROVANTE");
+    const painel = await frotaUploadGrupo_("abastecimentoPainel", veiculo, "ABASTECIMENTO_PAINEL");
+    frotaRun_("frotaSalvarAbastecimento", [SESSION, {
+      veiculoId: veiculo.ID,
+      condutorNome: frotaVal_("fro_ab_condutor"),
+      dataHora: frotaVal_("fro_ab_data"),
+      km: frotaVal_("fro_ab_km"),
+      litros: frotaVal_("fro_ab_litros"),
+      valorTotal: frotaVal_("fro_ab_valor"),
+      tipoCombustivel: frotaVal_("fro_ab_tipo"),
+      tanqueCheio: frotaVal_("fro_ab_tanque"),
+      posto: frotaVal_("fro_ab_posto"),
+      localizacaoPosto: frotaVal_("fro_ab_local"),
+      comprovanteJson: comprovante,
+      fotoPainelJson: painel,
+      observacoes: frotaVal_("fro_ab_obs")
+    }], function(res) { frotaToast_(res.message || "Abastecimento salvo.", "ok"); frotaLoad_(); });
+  }
+
+  async function frotaSalvarManutencaoUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_man_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    const fotos = await frotaUploadGrupo_("manutencao", veiculo, "MANUTENCAO");
+    frotaRun_("frotaSalvarManutencao", [SESSION, {
+      veiculoId: veiculo.ID,
+      categoria: frotaVal_("fro_man_cat"),
+      status: frotaVal_("fro_man_status"),
+      tipoManutencao: frotaVal_("fro_man_tipo"),
+      km: frotaVal_("fro_man_km"),
+      oficinaLocal: frotaVal_("fro_man_oficina"),
+      custoPecas: frotaVal_("fro_man_custo_pecas"),
+      custoMaoObra: frotaVal_("fro_man_custo_mao"),
+      custoTotal: frotaVal_("fro_man_custo_total"),
+      diasParado: frotaVal_("fro_man_dias"),
+      proximaPreventivaKm: frotaVal_("fro_man_prev_km"),
+      proximaPreventivaData: frotaVal_("fro_man_prev_data"),
+      descricaoProblema: frotaVal_("fro_man_problema"),
+      servicoRealizado: frotaVal_("fro_man_servico"),
+      checklistJson: frotaColetarChecklist_("man"),
+      fotosJson: fotos,
+      observacoes: frotaVal_("fro_man_obs")
+    }], function(res) { frotaToast_(res.message || "Manutencao salva.", "ok"); frotaLoad_(); });
+  }
+
+  async function frotaSalvarLavagemUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_lav_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    const antes = await frotaUploadGrupo_("lavagemAntes", veiculo, "LAVAGEM_ANTES");
+    const depois = await frotaUploadGrupo_("lavagemDepois", veiculo, "LAVAGEM_DEPOIS");
+    const comprovante = await frotaUploadGrupo_("lavagemComprovante", veiculo, "LAVAGEM_COMPROVANTE");
+    frotaRun_("frotaSalvarLavagem", [SESSION, {
+      veiculoId: veiculo.ID,
+      km: frotaVal_("fro_lav_km"),
+      local: frotaVal_("fro_lav_local"),
+      tipoLavagem: frotaVal_("fro_lav_tipo"),
+      valor: frotaVal_("fro_lav_valor"),
+      responsavelNome: frotaVal_("fro_lav_resp"),
+      fotoAntesJson: antes,
+      fotoDepoisJson: depois,
+      comprovanteJson: comprovante,
+      observacoes: frotaVal_("fro_lav_obs")
+    }], function(res) { frotaToast_(res.message || "Lavagem salva.", "ok"); frotaLoad_(); });
+  }
+
+  async function frotaSalvarMultaUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_mul_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo.", "bad");
+    const anexo = await frotaUploadGrupo_("multa", veiculo, "MULTA");
+    frotaRun_("frotaSalvarMulta", [SESSION, {
+      veiculoId: veiculo.ID,
+      condutorNome: frotaVal_("fro_mul_condutor"),
+      cpfCnh: frotaVal_("fro_mul_cpf"),
+      dataHoraInfracao: frotaVal_("fro_mul_data"),
+      localInfracao: frotaVal_("fro_mul_local"),
+      numeroAuto: frotaVal_("fro_mul_auto"),
+      orgaoAutuador: frotaVal_("fro_mul_orgao"),
+      descricaoInfracao: frotaVal_("fro_mul_desc"),
+      valor: frotaVal_("fro_mul_valor"),
+      pontuacao: frotaVal_("fro_mul_pontos"),
+      prazoIndicacao: frotaVal_("fro_mul_prazo"),
+      status: frotaVal_("fro_mul_status"),
+      assinaturaCondutor: frotaVal_("fro_mul_ass"),
+      anexoNotificacaoJson: anexo,
+      observacoes: frotaVal_("fro_mul_obs")
+    }], function(res) { frotaToast_(res.message || "Multa registrada.", "ok"); frotaLoad_(); });
+  }
+
+  function frotaGerarRelatorioVeiculoUI_() {
+    const veiculo = frotaVeiculoBySelect_("fro_rel_veiculo");
+    if (!veiculo) return frotaToast_("Selecione um veiculo para o relatorio individual.", "bad");
+    const box = document.getElementById("fro_rel_result");
+    if (box) box.innerHTML = "Gerando relatorio individual pelo DocumentFactory central...";
+    frotaRun_("frotaGerarRelatorioVeiculo", [SESSION, {
+      veiculoId: veiculo.ID,
+      inicio: frotaVal_("fro_rel_inicio"),
+      fim: frotaVal_("fro_rel_fim")
+    }], function(res) {
+      frotaRenderDocumentoResultado_(res, "Relatorio individual gerado.");
+    });
+  }
+
+  function frotaGerarRelatorioGeralUI_() {
+    const box = document.getElementById("fro_rel_result");
+    if (box) box.innerHTML = "Gerando relatorio geral pelo DocumentFactory central...";
+    frotaRun_("frotaGerarRelatorioGeral", [SESSION, {
+      inicio: frotaVal_("fro_rel_inicio"),
+      fim: frotaVal_("fro_rel_fim")
+    }], function(res) {
+      frotaRenderDocumentoResultado_(res, "Relatorio geral gerado.");
+    });
+  }
+
+  function frotaGerarTermoMultaUI_(multaId) {
+    if (!multaId) return frotaToast_("Multa não informada.", "bad");
+    const box = document.getElementById("fro_rel_result");
+    if (box) box.innerHTML = "Gerando termo de multa pelo DocumentFactory central...";
+    frotaRun_("frotaGerarTermoMulta", [SESSION, { multaId: multaId }], function(res) {
+      frotaRenderDocumentoResultado_(res, "Termo de multa gerado.");
+      frotaLoad_();
+    });
+  }
+
+  function frotaTabelaVeiculos_() {
+    const rows = (FROTA_STATE.veiculos || []).map(v => `
+      <tr>
+        <td><strong>${frotaEsc_(v.PLACA)}</strong></td>
+        <td>${frotaEsc_([v.MARCA, v.MODELO].filter(Boolean).join(" "))}</td>
+        <td>${frotaEsc_(v.ANO || "")}</td>
+        <td>${frotaEsc_(v.KM_ATUAL || "0")}</td>
+        <td>${frotaBadge_(v.STATUS)}</td>
+        <td><button class="frota-btn secondary" type="button" onclick="frotaEditarVeiculoUI_('${frotaEsc_(v.ID)}')">Editar</button></td>
+      </tr>`).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr><th>Placa</th><th>Marca/modelo</th><th>Ano</th><th>KM</th><th>Status</th><th>Acoes</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="frota-empty">Nenhum veiculo cadastrado na nova estrutura.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaTabelaReservas_() {
+    const rows = (FROTA_STATE.reservas || []).map(r => `
+      <tr>
+        <td><strong>${frotaEsc_(r.PLACA)}</strong></td>
+        <td>${frotaEsc_(r.RESPONSAVEL_NOME)}</td>
+        <td>${frotaEsc_(r.DATA_HORA_INICIO)}</td>
+        <td>${frotaEsc_(r.DATA_HORA_FIM)}</td>
+        <td>${frotaEsc_(r.MOTIVO)}</td>
+        <td>${frotaBadge_(r.STATUS)}</td>
+      </tr>`).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr><th>Placa</th><th>Responsavel</th><th>Inicio</th><th>Fim</th><th>Motivo</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="frota-empty">Nenhuma reserva cadastrada.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaTabelaMultas_() {
+    const rows = (FROTA_STATE.multas || []).map(m => `
+      <tr>
+        <td><strong>${frotaEsc_(m.PLACA)}</strong></td>
+        <td>${frotaEsc_(m.CONDUTOR_NOME)}</td>
+        <td>${frotaEsc_(m.DATA_HORA_INFRACAO)}</td>
+        <td>${frotaEsc_(m.LOCAL_INFRACAO)}</td>
+        <td>${frotaMoney_(m.VALOR)}</td>
+        <td>${frotaBadge_(m.STATUS)}</td>
+        <td>
+          ${m.LINK_PDF ? `<a class="frota-btn secondary" href="${frotaEsc_(m.LINK_PDF)}" target="_blank" rel="noopener">PDF</a>` : ""}
+          <button class="frota-btn primary" type="button" onclick="frotaGerarTermoMultaUI_('${frotaEsc_(m.ID)}')">Termo de ciência</button>
+        </td>
+      </tr>`).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr><th>Placa</th><th>Condutor</th><th>Data/hora</th><th>Local</th><th>Valor</th><th>Status</th><th>Documento</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="frota-empty">Nenhuma multa registrada.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaTabelaSimples_(items, campos) {
+    const lista = items || [];
+    const cols = campos || [];
+    const head = cols.map(c => `<th>${frotaEsc_(c.replace(/_/g, " "))}</th>`).join("");
+    const rows = lista.slice(0, 50).map(item => `<tr>${cols.map(c => `<td>${frotaEsc_(frotaValorTabela_(item[c]))}</td>`).join("")}</tr>`).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr>${head}</tr></thead><tbody>${rows || `<tr><td colspan="${cols.length || 1}" class="frota-empty">Nenhum registro encontrado.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaTabelaRanking_(items, unidade) {
+    const rows = (items || []).map(function(item) {
+      return `<tr><td>${frotaEsc_(item.chave || "--")}</td><td>${frotaEsc_(item.total || 0)}</td><td>${frotaEsc_(unidade || "")} ${frotaValorTabela_(item.valor)}</td></tr>`;
+    }).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr><th>Veiculo</th><th>Registros</th><th>Total</th></tr></thead><tbody>${rows || `<tr><td colspan="3" class="frota-empty">Sem ranking.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaValorTabela_(valor) {
+    if (valor === null || valor === undefined || valor === "") return "--";
+    if (typeof valor === "number") return Number.isInteger(valor) ? String(valor) : valor.toFixed(2);
+    return valor;
+  }
+
+  function frotaVeiculoSelect_(id, label, span, selected) {
+    const options = (FROTA_STATE.veiculos || []).map(v => `<option value="${frotaEsc_(v.ID)}" ${selected === v.ID ? "selected" : ""}>${frotaEsc_(v.PLACA)} | ${frotaEsc_([v.MARCA, v.MODELO].filter(Boolean).join(" "))} | ${frotaEsc_(v.STATUS || "")}</option>`).join("");
+    return `<div class="frota-field ${span || "span-4"}"><label>${label}</label><select id="${id}"><option value="">Selecione</option>${options}</select></div>`;
+  }
+
+  function frotaRenderCardVeiculo_(v) {
+    if (!v) return `<div class="frota-empty">Selecione um veiculo cadastrado para ver status, vencimentos, KM e bloqueios.</div>`;
+    return `<div class="frota-vehicle-card">
+      ${frotaInfo_("Placa", v.PLACA)}
+      ${frotaInfo_("Marca/modelo", [v.MARCA, v.MODELO].filter(Boolean).join(" "))}
+      ${frotaInfo_("Ano/cor", [v.ANO, v.COR].filter(Boolean).join(" / "))}
+      ${frotaInfo_("Combustivel", v.COMBUSTIVEL_PADRAO)}
+      ${frotaInfo_("KM atual", v.KM_ATUAL)}
+      ${frotaInfo_("Status", v.STATUS)}
+      ${frotaInfo_("Documentacao", v.DOCUMENTACAO_VENCE)}
+      ${frotaInfo_("Preventiva", v.PROXIMA_PREVENTIVA_KM ? `${v.PROXIMA_PREVENTIVA_KM} km` : v.PROXIMA_PREVENTIVA_DATA)}
+    </div>`;
+  }
+
+  function frotaChecklistHtml_(prefixo, itens) {
+    return `<div class="frota-checklist">${itens.map((item, idx) => {
+      const name = `${prefixo}_${idx}`;
+      return `<div class="frota-checkitem">
+        <div class="frota-checkitem-title">${frotaEsc_(item)}</div>
+        <div class="frota-check-options">
+          <label><input type="radio" name="${name}" value="SIM" checked>SIM</label>
+          <label><input type="radio" name="${name}" value="NAO">NAO</label>
+          <label><input type="radio" name="${name}" value="NAO_SE_APLICA">N/A</label>
+        </div>
+        <input type="text" id="${name}_obs" placeholder="Observacao" style="margin-top:8px;width:100%;min-height:34px;">
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  function frotaUploadHtml_(grupo, label) {
+    return `<div class="frota-upload">
+      <input id="fro_upload_${grupo}" type="file" accept="image/*" capture="environment" multiple onchange="frotaPreviewUpload_('${grupo}')">
+      <div id="fro_preview_${grupo}" class="frota-preview">${frotaPreviewExistente_(grupo)}</div>
+      <small style="display:block;margin-top:8px;color:#64748b;font-weight:700;">Use a camera do celular ou selecione imagens da galeria para ${label}.</small>
+    </div>`;
+  }
+
+  function frotaPreviewUpload_(grupo) {
+    const files = frotaFiles_(grupo);
+    const box = document.getElementById("fro_preview_" + grupo);
+    if (!box) return;
+    box.innerHTML = "";
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        box.insertAdjacentHTML("beforeend", `<figure><img src="${e.target.result}" alt=""><figcaption>${frotaEsc_(file.name)}</figcaption></figure>`);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function frotaUploadGrupo_(grupo, veiculo, moduloOrigem) {
+    const files = frotaFiles_(grupo);
+    if (!files.length && FROTA_STATE.uploads[grupo]) return FROTA_STATE.uploads[grupo];
+    const enviados = [];
+    for (const file of files) {
+      const base64 = await frotaFileBase64_(file);
+      const upload = await frotaUploadArquivoPromise_({
+        nomeArquivo: file.name,
+        mimeType: file.type || "image/jpeg",
+        base64: base64,
+        veiculoId: veiculo.ID || "",
+        placa: veiculo.PLACA || "",
+        moduloOrigem: moduloOrigem,
+        tipoArquivo: grupo
+      });
+      if (upload) enviados.push(upload);
+    }
+    FROTA_STATE.uploads[grupo] = enviados;
+    return enviados;
+  }
+
+  function frotaUploadArquivoPromise_(payload) {
+    return new Promise((resolve, reject) => {
+      if (typeof google === "undefined" || !google.script || !google.script.run) {
+        reject(new Error("Ambiente google.script.run indisponivel."));
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || res.ok === false || res.success === false) {
+            const msg = (res && (res.message || res.mensagem)) || "Falha no upload.";
+            frotaToast_(msg, "bad");
+            reject(new Error(msg));
+            return;
+          }
+          resolve(res.item || res);
+        })
+        .withFailureHandler(function(err) {
+          const msg = (err && err.message) || "Falha no upload.";
+          frotaToast_(msg, "bad");
+          reject(err);
+        })
+        .frotaUploadArquivo(SESSION, payload);
+    });
+  }
+
+  function frotaColetarChecklist_(prefixo) {
+    const result = {};
+    document.querySelectorAll(`[name^="${prefixo}_"]`).forEach(input => {
+      if (!input.checked) return;
+      const idx = input.name.replace(prefixo + "_", "");
+      const title = input.closest(".frota-checkitem").querySelector(".frota-checkitem-title").textContent;
+      const obs = document.getElementById(`${prefixo}_${idx}_obs`);
+      result[title] = { resposta: input.value, observacao: obs ? obs.value : "" };
+    });
+    return result;
+  }
+
+  function frotaColetarChecklistPrefixo_(prefixo) {
+    const result = {};
+    document.querySelectorAll(`[name^="${prefixo}"]`).forEach(input => {
+      if (!input.checked) return;
+      const title = input.closest(".frota-checkitem").querySelector(".frota-checkitem-title").textContent;
+      const obs = document.getElementById(input.name + "_obs");
+      result[title] = { resposta: input.value, observacao: obs ? obs.value : "" };
+    });
+    return result;
+  }
+
+  function frotaResultadoDisponibilidadeHtml_(res) {
+    const ok = !!res.ok;
+    const bloqueios = (res.bloqueios || []).map(b => `<li>${frotaEsc_(b)}</li>`).join("");
+    const alertas = (res.alertas || []).map(a => `<li>${frotaEsc_(a)}</li>`).join("");
+    return `<div class="frota-result ${ok ? "ok" : "bad"}">
+      <strong>${ok ? "DISPONIVEL" : "BLOQUEADO"} - ${frotaEsc_(res.status || "")}</strong>
+      ${bloqueios ? `<ul>${bloqueios}</ul>` : ""}
+      ${alertas ? `<div style="margin-top:8px;"><strong>Alertas</strong><ul>${alertas}</ul></div>` : ""}
+    </div>`;
+  }
+
+  function frotaResultadoOkHtml_(titulo, detalhe) {
+    return `<div class="frota-result ok"><strong>${frotaEsc_(titulo || "Operação concluída.")}</strong><div style="margin-top:6px;">${detalhe || ""}</div></div>`;
+  }
+
+  function frotaRenderDocumentoResultado_(res, titulo) {
+    const linkPdf = res.linkPdf || res.pdfUrl || "";
+    const linkDownload = res.linkDownload || res.downloadUrl || "";
+    const msgWhats = res.mensagemWhatsApp || res.whatsappTexto || "";
+    const html = frotaResultadoOkHtml_(titulo || res.message || "Documento gerado.", `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        ${linkPdf ? `<a class="frota-btn primary" href="${frotaEsc_(linkPdf)}" target="_blank" rel="noopener">Abrir PDF</a>` : ""}
+        ${linkDownload ? `<a class="frota-btn secondary" href="${frotaEsc_(linkDownload)}" target="_blank" rel="noopener">Download</a>` : ""}
+        ${msgWhats ? `<a class="frota-btn secondary" href="https://wa.me/?text=${encodeURIComponent(msgWhats)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+        ${res.validacaoUrl ? `<a class="frota-btn secondary" href="${frotaEsc_(res.validacaoUrl)}" target="_blank" rel="noopener">Validar</a>` : ""}
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#475569;">Token: ${frotaEsc_(res.tokenValidacao || "")}<br>Hash: ${frotaEsc_(res.hash || "")}<br>Validação: ${frotaEsc_(res.validacaoUrl || "")}</div>
+      ${res.aviso ? `<div style="margin-top:8px;color:#92400e;">${frotaEsc_(res.aviso)}</div>` : ""}
+    `);
+    const rel = document.getElementById("fro_rel_result");
+    if (rel) rel.outerHTML = html;
+    else {
+      const content = document.getElementById("frotaConteudo");
+      if (content) content.insertAdjacentHTML("afterbegin", html);
+    }
+    frotaToast_(titulo || "Documento gerado.", "ok");
+  }
+
+  function frotaRenderAlertasLista_(items) {
+    const rows = (items || []).slice(0, 12).map(a => `<tr><td>${frotaBadge_(a.NIVEL)}</td><td>${frotaEsc_(a.TIPO_ALERTA)}</td><td>${frotaEsc_(a.PLACA)}</td><td>${frotaEsc_(a.MENSAGEM)}</td></tr>`).join("");
+    return `<div class="frota-table-wrap"><table class="frota-table"><thead><tr><th>Nivel</th><th>Tipo</th><th>Placa</th><th>Mensagem</th></tr></thead><tbody>${rows || `<tr><td colspan="4" class="frota-empty">Sem alertas na nova estrutura.</td></tr>`}</tbody></table></div>`;
+  }
+
+  function frotaInput_(id, label, type, span) {
+    return `<div class="frota-field ${span || ""}"><label>${label}</label><input id="${id}" type="${type || "text"}"></div>`;
+  }
+
+  function frotaTextarea_(id, label, span) {
+    return `<div class="frota-field ${span || ""}"><label>${label}</label><textarea id="${id}"></textarea></div>`;
+  }
+
+  function frotaSelect_(id, label, options, span) {
+    return `<div class="frota-field ${span || ""}"><label>${label}</label><select id="${id}">${options.map(o => `<option value="${frotaEsc_(o)}">${frotaEsc_(o)}</option>`).join("")}</select></div>`;
+  }
+
+  function frotaInfo_(label, value) {
+    return `<div class="frota-info"><small>${label}</small><strong>${frotaEsc_(value || "--")}</strong></div>`;
+  }
+
+  function frotaBadge_(status) {
+    const s = String(status || "INFO").toUpperCase();
+    let cls = "info";
+    if (["DISPONIVEL", "CONCLUIDO", "OK", "SIM"].indexOf(s) >= 0) cls = "ok";
+    if (["AMARELO", "LARANJA", "RESERVADO", "EM_USO"].indexOf(s) >= 0) cls = "warn";
+    if (["BLOQUEADO", "DOCUMENTACAO_VENCIDA", "PREVENTIVA_VENCIDA", "VERMELHO", "BLOQUEIO", "SINISTRO_AVARIA"].indexOf(s) >= 0) cls = "bad";
+    return `<span class="frota-badge ${cls}">${frotaEsc_(s)}</span>`;
+  }
+
+  function frotaVal_(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function frotaSetVal_(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? "" : value;
+  }
+
+  function frotaVeiculoSelecionado_() {
+    return (FROTA_STATE.veiculos || []).find(v => v.ID === FROTA_STATE.veiculoSelecionadoId) || null;
+  }
+
+  function frotaVeiculoBySelect_(id) {
+    const selected = frotaVal_(id);
+    return (FROTA_STATE.veiculos || []).find(v => v.ID === selected) || null;
+  }
+
+  function frotaFiles_(grupo) {
+    const el = document.getElementById("fro_upload_" + grupo);
+    return el && el.files ? Array.from(el.files) : [];
+  }
+
+  function frotaFileBase64_(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function frotaPreviewExistente_(grupo) {
+    return (FROTA_STATE.uploads[grupo] || []).map(u => `<figure><img src="${frotaEsc_(u.LINK_VISUALIZACAO || "")}" alt=""><figcaption>${frotaEsc_(u.NOME_ARQUIVO || "")}</figcaption></figure>`).join("");
+  }
+
+  function frotaCalcularValorLitroUI_() {
+    const litros = Number(frotaVal_("fro_ab_litros"));
+    const valor = Number(frotaVal_("fro_ab_valor"));
+    frotaSetVal_("fro_ab_valor_litro", litros > 0 ? (valor / litros).toFixed(2) : "");
+  }
+
+  function setFrotaHtml_(html) {
+    const el = document.getElementById("frotaConteudo");
+    if (el) el.innerHTML = html;
+  }
+
+  function frotaToast_(msg, tipo) {
+    if (typeof showToast_ === "function") return showToast_(msg, tipo || "info");
+    alert(msg);
+  }
+
+  function frotaMoney_(valor) {
+    const n = Number(valor || 0);
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function frotaNum_(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR");
+  }
+
+  function frotaEsc_(valor) {
+    if (typeof escapeHtml_ === "function") return escapeHtml_(valor);
+    return String(valor == null ? "" : valor).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  if (typeof window !== "undefined") {
+    Object.assign(window, {
+      renderFrotaModulo_: renderFrotaModulo_,
+      frotaSetAba_: frotaSetAba_,
+      frotaLoad_: frotaLoad_,
+      frotaSalvarVeiculoUI_: frotaSalvarVeiculoUI_,
+      frotaEditarVeiculoUI_: frotaEditarVeiculoUI_,
+      frotaLimparVeiculoUI_: frotaLimparVeiculoUI_,
+      frotaSalvarReservaUI_: frotaSalvarReservaUI_,
+      frotaSelecionarVeiculoOperacao_: frotaSelecionarVeiculoOperacao_,
+      frotaVerificarDisponibilidadeUI_: frotaVerificarDisponibilidadeUI_,
+      frotaRealizarCheckinUI_: frotaRealizarCheckinUI_,
+      frotaRealizarCheckoutUI_: frotaRealizarCheckoutUI_,
+      frotaSalvarVistoriaUI_: frotaSalvarVistoriaUI_,
+      frotaSalvarAbastecimentoUI_: frotaSalvarAbastecimentoUI_,
+      frotaSalvarManutencaoUI_: frotaSalvarManutencaoUI_,
+      frotaSalvarLavagemUI_: frotaSalvarLavagemUI_,
+      frotaSalvarMultaUI_: frotaSalvarMultaUI_,
+      frotaGerarRelatorioVeiculoUI_: frotaGerarRelatorioVeiculoUI_,
+      frotaGerarRelatorioGeralUI_: frotaGerarRelatorioGeralUI_,
+      frotaGerarTermoMultaUI_: frotaGerarTermoMultaUI_,
+      frotaRenderDocumentoResultado_: frotaRenderDocumentoResultado_,
+      frotaPreviewUpload_: frotaPreviewUpload_
+    });
+  }
+</script>

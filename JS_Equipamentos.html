@@ -1,0 +1,485 @@
+<script>
+  // ==========================================
+  // MÓDULO: EQUIPAMENTOS E QR CODE
+  // ==========================================
+  function renderEquipamentosModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleForm = isCliente ? "display:none;" : "";
+    const styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Equipamentos</h2>\n            <p class="content-subtitle">Cadastro de equipamentos com rastreabilidade de TAG.</p>\n          </div>\n          <div class="module-header-right" style="' +
+      (styleForm) +
+      '; display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="equipamentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar TAG, série..." onkeydown="if(event.key === \'Enter\') equipamentosPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="equipamentosPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="equipamentosNovo_()">+ Novo equipamento</button>\n          </div>\n        </div>\n\n        <div class="module-grid" style="' +
+      (styleGrid) +
+      '">\n          <div class="form-card" style="' +
+      (styleForm) +
+      '">\n            <h3 class="section-card-title" id="equipamentosFormTitulo">Novo equipamento</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label for="eqp_cliente_id">Cliente</label>\n                <select id="eqp_cliente_id" onchange="aoMudarClienteEquipamentos_()"></select>\n              </div>\n              <div class="full">\n                <label for="eqp_unidade_id">Unidade</label>\n                <select id="eqp_unidade_id">\n                  <option value="">Selecione um cliente primeiro</option>\n                </select>\n              </div>\n              <div class="full">\n                <label for="eqp_tipo">Tipo do equipamento</label>\n                <input id="eqp_tipo" type="text" placeholder="Ex: Autoclave, Lavadora">\n              </div>\n              <div>\n                <label for="eqp_tag">TAG (Identificador)</label>\n                <input id="eqp_tag" type="text" placeholder="Ex: AUT-01">\n              </div>\n              <div>\n                <label for="eqp_status">Status</label>\n                <input id="eqp_status" type="text" value="ATIVO" disabled>\n              </div>\n              <div class="full">\n                <label for="eqp_fabricante">Fabricante</label>\n                <input id="eqp_fabricante" type="text" placeholder="Fabricante do equipamento">\n              </div>\n              <div>\n                <label for="eqp_modelo">Modelo</label>\n                <input id="eqp_modelo" type="text" placeholder="Modelo">\n              </div>\n              <div>\n                <label for="eqp_serie">Número de Série</label>\n                <input id="eqp_serie" type="text" placeholder="Número de Série">\n              </div>\n              <div class="full">\n                <label for="eqp_setor">Setor / Localização</label>\n                <input id="eqp_setor" type="text" placeholder="Ex: CME, Centro Cirúrgico">\n              </div>\n              <div>\n                <label for="eqp_tipo_posse">Tipo de Posse</label>\n                <select id="eqp_tipo_posse">\n                  <option value="">Selecione...</option>\n                  <option value="PROPRIO">Próprio</option>\n                  <option value="LOCADO">Locado</option>\n                  <option value="COMODATO">Comodato</option>\n                  <option value="TERCEIRO">Terceiro</option>\n                </select>\n              </div>\n              <div>\n                <label for="eqp_proprietario">Proprietário / Fornecedor</label>\n                <input id="eqp_proprietario" type="text" placeholder="Nome se não for próprio">\n              </div>\n            </div>\n\n            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">\n              <p style="font-size:12px;font-weight:700;color:var(--metro-green);text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">\n                <i class="fas fa-stethoscope" style="margin-right:6px;"></i>Dados Técnicos — Engenharia Clínica\n              </p>\n              <div class="form-grid">\n                <div>\n                  <label for="eqp_classe_anvisa">Classe ANVISA</label>\n                  <select id="eqp_classe_anvisa">\n                    <option value="">Não informado</option>\n                    <option value="I">Classe I</option>\n                    <option value="II">Classe II</option>\n                    <option value="III">Classe III</option>\n                    <option value="IV">Classe IV</option>\n                  </select>\n                </div>\n                <div>\n                  <label for="eqp_numero_anvisa">Nº Registro ANVISA</label>\n                  <input id="eqp_numero_anvisa" type="text" placeholder="Ex: 80125330001">\n                </div>\n                <div>\n                  <label for="eqp_risco">Classificação de Risco</label>\n                  <select id="eqp_risco">\n                    <option value="">Não informado</option>\n                    <option value="BAIXO">Baixo</option>\n                    <option value="MEDIO">Médio</option>\n                    <option value="ALTO">Alto</option>\n                    <option value="CRITICO">Crítico</option>\n                  </select>\n                </div>\n                <div>\n                  <label for="eqp_vida_util">Vida Útil (anos)</label>\n                  <input id="eqp_vida_util" type="number" min="1" max="99" placeholder="Ex: 10">\n                </div>\n                <div>\n                  <label for="eqp_data_aquisicao">Data de Aquisição</label>\n                  <input id="eqp_data_aquisicao" type="date">\n                </div>\n                <div>\n                  <label for="eqp_periodicidade">Periodicidade Manutenção (meses)</label>\n                  <input id="eqp_periodicidade" type="number" min="1" max="60" placeholder="Ex: 6">\n                </div>\n              </div>\n              <p style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;">Serviços Aplicáveis</p>\n              <div style="display:flex;flex-wrap:wrap;gap:12px;">\n                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">\n                  <input id="eqp_aplica_calibracao" type="checkbox"> Calibração\n                </label>\n                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">\n                  <input id="eqp_aplica_qualificacao" type="checkbox"> Qualificação\n                </label>\n                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">\n                  <input id="eqp_aplica_ensaio" type="checkbox"> Ensaio Elétrico\n                </label>\n                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">\n                  <input id="eqp_aplica_manutencao" type="checkbox"> Manutenção Preventiva\n                </label>\n              </div>\n            </div>\n\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="equipamentosSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="equipamentosNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="equipamentosHelper">Selecione cliente e unidade, preencha os dados e clique em salvar.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Cliente</th>\n                    <th>Unidade</th>\n                    <th>Tipo</th>\n                    <th>TAG</th>\n                    <th>Fabricante</th>\n                    <th>Modelo</th>\n                    <th>Série</th>\n                    <th>Setor</th>\n                    <th>Posse</th>\n                    <th>Proprietário</th>\n                    <th>Status</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="equipamentosTabelaBody">\n                  <tr><td colspan="12" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+
+    equipamentosLimparFormulario_();
+
+    if (!isCliente) {
+      carregarClientesParaEquipamentos_();
+    }
+  }
+
+  function carregarClientesParaEquipamentos_() {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        EQUIPAMENTOS_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesEquipamentos_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar clientes para equipamentos:", err);
+      })
+      .equipamentosListarClientesAtivos(SESSION);
+  }
+
+  function preencherComboClientesEquipamentos_() {
+    const select = document.getElementById("eqp_cliente_id");
+    if (!select) return;
+
+    const options = ['<option value="">Selecione um cliente</option>'];
+    (EQUIPAMENTOS_STATE.clientes || []).forEach(function (item) {
+      const nome = item.NOME || item.NOME_FANTASIA || item.RAZAO_SOCIAL || "";
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(nome) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarClienteEquipamentos_() {
+    const clienteId = getValue_("eqp_cliente_id");
+    if (!clienteId) {
+      EQUIPAMENTOS_STATE.unidades = [];
+      preencherComboUnidadesEquipamentos_();
+      return;
+    }
+    carregarUnidadesParaEquipamentos_(clienteId);
+  }
+
+  function carregarUnidadesParaEquipamentos_(clienteId, unidadeSelecionadaId) {
+    if (!SESSION || !clienteId) return;
+
+    const selectUnidade = document.getElementById("eqp_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        EQUIPAMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
+        preencherComboUnidadesEquipamentos_();
+        if (unidadeSelecionadaId) setSelectValueSafe_("eqp_unidade_id", unidadeSelecionadaId);
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar unidades para equipamentos:", err);
+      })
+      .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+  }
+
+  function preencherComboUnidadesEquipamentos_() {
+    const select = document.getElementById("eqp_unidade_id");
+    if (!select) return;
+
+    if (!EQUIPAMENTOS_STATE.unidades || EQUIPAMENTOS_STATE.unidades.length === 0) {
+      select.innerHTML = '<option value="">Nenhuma unidade ativa encontrada</option>';
+      return;
+    }
+
+    const options = ['<option value="">Selecione a unidade</option>'];
+    (EQUIPAMENTOS_STATE.unidades || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_UNIDADE) + '</option>');
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function equipamentosPesquisar_() {
+    const el = document.getElementById("equipamentosPesquisa");
+    EQUIPAMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    const tbody = document.getElementById("equipamentosTabelaBody");
+    if (!tbody) return;
+
+    if (!EQUIPAMENTOS_STATE.filtro) {
+      tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) {
+          tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Falha ao buscar equipamentos.</td></tr>';
+          return;
+        }
+        renderTabelaEquipamentos_(Array.isArray(res.items) ? res.items : []);
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao pesquisar equipamentos:", err);
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Erro de comunicação ao buscar equipamentos.</td></tr>';
+      })
+      .equipamentosPesquisar(SESSION, EQUIPAMENTOS_STATE.filtro);
+  }
+
+  function renderTabelaEquipamentos_(itemsOverride) {
+    const tbody = document.getElementById("equipamentosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : EQUIPAMENTOS_STATE.items;
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Nenhum equipamento encontrado.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      const acoesHtml = isCliente ? '\n        <td>\n          <div class="table-actions">\n            <button class="btn-secondary" type="button" onclick="equipamentosGerarQR_(\'' +
+        (id) +
+        '\')">Ver QR Code</button>\n          </div>\n        </td>\n      ' : '\n        <td>\n          <div class="table-actions">\n            <button class="btn-info" type="button" onclick="equipamentosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n            <button class="btn-secondary" type="button" onclick="equipamentosGerarQR_(\'' +
+        (id) +
+        '\')">QR Code</button>\n            ' +
+        (status === "ATIVO"
+                ? '<button class="btn-warning" type="button" onclick="equipamentosInativar_(\'' +
+                  (id) +
+                  '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="equipamentosReativar_(\'' +
+                  (id) +
+                  '\')">Reativar</button>') +
+        '\n            <button class="btn-danger" type="button" onclick="equipamentosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n          </div>\n        </td>\n      ';
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.CLIENTE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.UNIDADE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TIPO)) +
+        '</td>\n          <td style="font-weight:700;">' +
+        (escapeHtml_(item.TAG)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.FABRICANTE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.MODELO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.SERIE)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.SETOR)) +
+        '</td>\n          <td>' +
+        (badgePosseEqp_(item.TIPO_POSSE)) +
+        '</td>\n          <td style="font-size:12px;">' +
+        (escapeHtml_(item.PROPRIETARIO || '--')) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          ' +
+        (acoesHtml) +
+        '\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function equipamentosNovo_() {
+    EQUIPAMENTOS_STATE.editingId = "";
+    equipamentosLimparFormulario_();
+
+    const titulo = document.getElementById("equipamentosFormTitulo");
+    const helper = document.getElementById("equipamentosHelper");
+
+    if (titulo) titulo.innerText = "Novo equipamento";
+    if (helper) helper.innerText = "Selecione cliente e unidade, preencha os dados e clique em salvar.";
+
+    if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
+      carregarClientesParaEquipamentos_();
+    }
+  }
+
+  function equipamentosLimparFormulario_() {
+    setSelectValueSafe_("eqp_cliente_id", "");
+    setSelectValueSafe_("eqp_unidade_id", "");
+    setValue_("eqp_tipo", "");
+    setValue_("eqp_fabricante", "");
+    setValue_("eqp_modelo", "");
+    setValue_("eqp_serie", "");
+    setValue_("eqp_tag", "");
+    setValue_("eqp_setor", "");
+    setSelectValueSafe_("eqp_tipo_posse", "");
+    setValue_("eqp_proprietario", "");
+    setValue_("eqp_status", "ATIVO");
+    setSelectValueSafe_("eqp_classe_anvisa", "");
+    setValue_("eqp_numero_anvisa", "");
+    setSelectValueSafe_("eqp_risco", "");
+    setValue_("eqp_vida_util", "");
+    setValue_("eqp_data_aquisicao", "");
+    setValue_("eqp_periodicidade", "");
+    setCheckbox_("eqp_aplica_calibracao", false);
+    setCheckbox_("eqp_aplica_qualificacao", false);
+    setCheckbox_("eqp_aplica_ensaio", false);
+    setCheckbox_("eqp_aplica_manutencao", false);
+
+    EQUIPAMENTOS_STATE.unidades = [];
+
+    const selectUnidade = document.getElementById("eqp_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+  }
+
+  function setCheckbox_(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!val;
+  }
+
+  function equipamentosLerFormulario_() {
+    const chk = function(id) {
+      const el = document.getElementById(id);
+      return el ? el.checked : false;
+    };
+    return {
+      CLIENTE_ID: getValue_("eqp_cliente_id"),
+      UNIDADE_ID: getValue_("eqp_unidade_id"),
+      TIPO: getValue_("eqp_tipo"),
+      FABRICANTE: getValue_("eqp_fabricante"),
+      MODELO: getValue_("eqp_modelo"),
+      SERIE: getValue_("eqp_serie"),
+      TAG: getValue_("eqp_tag"),
+      SETOR: getValue_("eqp_setor"),
+      TIPO_POSSE: getValue_("eqp_tipo_posse"),
+      PROPRIETARIO: getValue_("eqp_proprietario"),
+      CLASSE_ANVISA: getValue_("eqp_classe_anvisa"),
+      NUMERO_ANVISA: getValue_("eqp_numero_anvisa"),
+      RISCO: getValue_("eqp_risco"),
+      VIDA_UTIL: getValue_("eqp_vida_util"),
+      DATA_AQUISICAO: getValue_("eqp_data_aquisicao"),
+      PERIODICIDADE_MANUTENCAO: getValue_("eqp_periodicidade"),
+      APLICA_CALIBRACAO: chk("eqp_aplica_calibracao"),
+      APLICA_QUALIFICACAO: chk("eqp_aplica_qualificacao"),
+      APLICA_ENSAIO_ELETRICO: chk("eqp_aplica_ensaio"),
+      APLICA_MANUTENCAO_PREV: chk("eqp_aplica_manutencao")
+    };
+  }
+
+  function equipamentosSalvar_() {
+    if (!SESSION) return;
+
+    const payload = equipamentosLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.UNIDADE_ID) return alert("Selecione a unidade.");
+    if (!payload.TIPO) return alert("Informe o tipo do equipamento.");
+
+    if (EQUIPAMENTOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          equipamentosNovo_();
+          if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+        })
+        .withFailureHandler(function (err) {
+          console.error("Falha ao atualizar equipamento:", err);
+          alert("Erro de comunicação ao atualizar equipamento.");
+        })
+        .equipamentosAtualizar(SESSION, EQUIPAMENTOS_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        equipamentosNovo_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao criar equipamento:", err);
+        alert("Erro de comunicação ao criar equipamento.");
+      })
+      .equipamentosCriar(SESSION, payload);
+  }
+
+  function equipamentosEditar_(id) {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert("Equipamento não encontrado.");
+
+        const item = res.item;
+        EQUIPAMENTOS_STATE.editingId = String(item.ID || "");
+
+        if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
+          carregarClientesParaEquipamentos_();
+        }
+
+        setSelectValueSafe_("eqp_cliente_id", item.CLIENTE_ID || "");
+        carregarUnidadesParaEquipamentos_(item.CLIENTE_ID, item.UNIDADE_ID);
+
+        setValue_("eqp_tipo", item.TIPO || "");
+        setValue_("eqp_fabricante", item.FABRICANTE || "");
+        setValue_("eqp_modelo", item.MODELO || "");
+        setValue_("eqp_serie", item.SERIE || "");
+        setValue_("eqp_tag", item.TAG || "");
+        setValue_("eqp_setor", item.SETOR || "");
+        setSelectValueSafe_("eqp_tipo_posse", item.TIPO_POSSE || "");
+        setValue_("eqp_proprietario", item.PROPRIETARIO || "");
+        setValue_("eqp_status", item.STATUS || "ATIVO");
+        setSelectValueSafe_("eqp_classe_anvisa", item.CLASSE_ANVISA || "");
+        setValue_("eqp_numero_anvisa", item.NUMERO_ANVISA || "");
+        setSelectValueSafe_("eqp_risco", item.RISCO || "");
+        setValue_("eqp_vida_util", item.VIDA_UTIL || "");
+        setValue_("eqp_data_aquisicao", item.DATA_AQUISICAO || "");
+        setValue_("eqp_periodicidade", item.PERIODICIDADE_MANUTENCAO || "");
+        setCheckbox_("eqp_aplica_calibracao", item.APLICA_CALIBRACAO === "S");
+        setCheckbox_("eqp_aplica_qualificacao", item.APLICA_QUALIFICACAO === "S");
+        setCheckbox_("eqp_aplica_ensaio", item.APLICA_ENSAIO_ELETRICO === "S");
+        setCheckbox_("eqp_aplica_manutencao", item.APLICA_MANUTENCAO_PREV === "S");
+
+        const titulo = document.getElementById("equipamentosFormTitulo");
+        const helper = document.getElementById("equipamentosHelper");
+
+        if (titulo) titulo.innerText = "Editar equipamento";
+        if (helper) helper.innerText = "Editando equipamento selecionado.";
+
+        focusIfExists_("eqp_tipo");
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao buscar equipamento:", err);
+        alert("Erro de comunicação ao buscar equipamento.");
+      })
+      .equipamentosObter(SESSION, id);
+  }
+
+  function equipamentosInativar_(id) {
+    if (!SESSION || !confirm("Inativar este equipamento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao inativar equipamento:", err);
+        alert("Erro de comunicação ao inativar equipamento.");
+      })
+      .equipamentosInativar(SESSION, id);
+  }
+
+  function equipamentosReativar_(id) {
+    if (!SESSION || !confirm("Reativar este equipamento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao reativar equipamento:", err);
+        alert("Erro de comunicação ao reativar equipamento.");
+      })
+      .equipamentosReativar(SESSION, id);
+  }
+
+  function equipamentosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este equipamento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (EQUIPAMENTOS_STATE.editingId === id) equipamentosNovo_();
+        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao excluir equipamento:", err);
+        alert("Erro de comunicação ao excluir equipamento.");
+      })
+      .equipamentosExcluir(SESSION, id);
+  }
+
+  function equipamentosGerarQR_(id) {
+    if (!SESSION) return;
+
+    const modalId = "modal-qr-code";
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = modalId;
+      modal.className = "modal-overlay";
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = '\n      <div class="modal-card qr-print-area">\n        <div class="modal-header">\n          <h3 class="modal-title">QR Code do Equipamento</h3>\n        </div>\n        <div class="modal-body qr-wrapper" id="qr-body-content">\n          <p>Gerando QR Code...</p>\n        </div>\n        <div class="modal-footer">\n          <button class="btn-primary" type="button" onclick="imprimirQRCode_()">Imprimir Etiqueta</button>\n          <button class="btn-secondary" type="button" onclick="fecharModalQR_()">Fechar</button>\n        </div>\n      </div>\n    ';
+    modal.style.display = "flex";
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        const bodyContent = document.getElementById("qr-body-content");
+        if (!bodyContent) return;
+
+        if (!res || !res.success) {
+          bodyContent.innerHTML = '<p class="text-danger">' +
+            (res ? escapeHtml_(res.message) : "Erro ao gerar QR Code.") +
+            '</p>';
+          return;
+        }
+
+        const eqp = res.equipamento || {};
+        bodyContent.innerHTML = '\n          <img src="' +
+          (escapeHtml_(res.qrUrl)) +
+          '" alt="QR Code" class="qr-image">\n          <div class="qr-info">\n            <div><strong>TAG:</strong> ' +
+          (escapeHtml_(eqp.TAG)) +
+          '</div>\n            <div><strong>Tipo:</strong> ' +
+          (escapeHtml_(eqp.TIPO)) +
+          '</div>\n            <div><strong>Modelo:</strong> ' +
+          (escapeHtml_(eqp.MODELO)) +
+          '</div>\n            <div><strong>Série:</strong> ' +
+          (escapeHtml_(eqp.SERIE)) +
+          '</div>\n            <div style="margin-top:10px; font-size:12px; color:var(--muted);">' +
+          (escapeHtml_(eqp.CLIENTE_NOME)) +
+          ' - ' +
+          (escapeHtml_(eqp.UNIDADE_NOME)) +
+          '</div>\n          </div>\n        ';
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao gerar QR Code:", err);
+        const bodyContent = document.getElementById("qr-body-content");
+        if (bodyContent) {
+          bodyContent.innerHTML = '<p class="text-danger">Erro de comunicação ao gerar QR Code.</p>';
+        }
+      })
+      .qrcodeGerarParaEquipamento(SESSION, id);
+  }
+
+  function fecharModalQR_() {
+    const modal = document.getElementById("modal-qr-code");
+    if (modal) modal.style.display = "none";
+  }
+
+  function imprimirQRCode_() {
+    document.body.classList.add("printing-qr");
+    window.print();
+    setTimeout(function () {
+      document.body.classList.remove("printing-qr");
+    }, 500);
+  }
+
+  function badgePosseEqp_(tipoPosse) {
+    const t = String(tipoPosse || "").toUpperCase();
+    const map = {
+      "PROPRIO":   { label: "Próprio",  color: "#1a7f4b", bg: "#d1fae5" },
+      "LOCADO":    { label: "Locado",   color: "#1a56db", bg: "#e1effe" },
+      "COMODATO":  { label: "Comodato", color: "#c05621", bg: "#feecdc" },
+      "TERCEIRO":  { label: "Terceiro", color: "#6b21a8", bg: "#f3e8ff" }
+    };
+    const s = map[t];
+    if (!s) return '<span style="color:#888;font-size:12px;">--</span>';
+    return '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;color:' + s.color + ';background:' + s.bg + ';">' + s.label + '</span>';
+  }
+</script>

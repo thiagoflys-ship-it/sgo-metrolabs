@@ -1,0 +1,424 @@
+<script>
+  // ==========================================
+  // MÓDULO: CONTRATOS
+  // ==========================================
+
+  const CONTRATOS_TIPOS = [
+    "MANUTENCAO_PREVENTIVA", "MANUTENCAO_CORRETIVA", "MANUTENCAO_TOTAL",
+    "CALIBRACAO", "QUALIFICACAO", "LOCACAO", "COMODATO", "CONSULTORIA", "OUTRO"
+  ];
+
+  const CONTRATOS_TIPOS_LABELS = {
+    MANUTENCAO_PREVENTIVA: "Manutenção Preventiva",
+    MANUTENCAO_CORRETIVA: "Manutenção Corretiva",
+    MANUTENCAO_TOTAL: "Manutenção Total",
+    CALIBRACAO: "Calibração",
+    QUALIFICACAO: "Qualificação",
+    LOCACAO: "Locação",
+    COMODATO: "Comodato",
+    CONSULTORIA: "Consultoria",
+    OUTRO: "Outro"
+  };
+
+  // ── RENDER PRINCIPAL ──────────────────────────────────────────────────────
+  function renderContratosModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    var podeEditar = USER_CONTEXT && (
+      USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "DIRETORIA" ||
+      USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "COMERCIAL" ||
+      USER_CONTEXT.perfil === "FINANCEIRO"
+    );
+
+    div.innerHTML = '\n      <div class="module-shell">\n\n        <!-- HEADER -->\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">\n              <i class="fas fa-file-signature" style="margin-right:8px;color:var(--metro-green);"></i>\n              Contratos\n            </h2>\n            <p class="content-subtitle">Contratos por cliente, cobertura de equipamentos e controle de vencimento.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">\n            <input id="ctr_busca" class="toolbar-search" type="text"\n              placeholder="Número, cliente, objeto..."\n              onkeydown="if(event.key===\'Enter\') contratosAplicarFiltros_()">\n            <select id="ctr_filtro_tipo" style="min-height:36px;padding:6px 10px;font-size:13px;width:180px;" onchange="contratosAplicarFiltros_()">\n              <option value="">Todos os tipos</option>\n              ' +
+      (CONTRATOS_TIPOS.map(function(t) { return '<option value="' + t + '">' + (CONTRATOS_TIPOS_LABELS[t] || t) + '</option>'; }).join("")) +
+      '\n            </select>\n            <select id="ctr_filtro_status" style="min-height:36px;padding:6px 10px;font-size:13px;width:120px;" onchange="contratosAplicarFiltros_()">\n              <option value="">Todos status</option>\n              <option value="ATIVO">Ativos</option>\n              <option value="INATIVO">Inativos</option>\n            </select>\n            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;white-space:nowrap;">\n              <input type="checkbox" id="ctr_filtro_vencendo" style="width:16px;min-height:0;padding:0;" onchange="contratosAplicarFiltros_()">\n              Vencendo em 60d\n            </label>\n            ' +
+      (podeEditar ? '<button class="btn-primary" type="button" onclick="contratosNovo_()"><i class="fas fa-plus" style="margin-right:6px;"></i>Novo Contrato</button>' : "") +
+      '\n          </div>\n        </div>\n\n        <!-- FORMULÁRIO -->\n        <div class="form-card" id="ctr_form_card" style="display:none;margin-bottom:20px;">\n          <h3 class="section-card-title" id="ctr_form_titulo">Novo Contrato</h3>\n\n          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Identificação</div>\n          <div class="form-grid">\n            <div class="full">\n              <label for="ctr_cliente_id">Cliente <span style="color:red;">*</span></label>\n              <select id="ctr_cliente_id" onchange="contratosAoMudarCliente_()">\n                <option value="">Carregando clientes...</option>\n              </select>\n            </div>\n            <div>\n              <label for="ctr_numero">Número do Contrato <span style="color:red;">*</span></label>\n              <input id="ctr_numero" type="text" placeholder="Ex: CTR-2024-001">\n            </div>\n            <div>\n              <label for="ctr_tipo">Tipo de Contrato</label>\n              <select id="ctr_tipo">\n                <option value="">Selecione</option>\n                ' +
+      (CONTRATOS_TIPOS.map(function(t) { return '<option value="' + t + '">' + (CONTRATOS_TIPOS_LABELS[t] || t) + '</option>'; }).join("")) +
+      '\n              </select>\n            </div>\n            <div class="full">\n              <label for="ctr_objeto">Objeto do Contrato</label>\n              <input id="ctr_objeto" type="text" placeholder="Breve descrição do escopo contratado">\n            </div>\n          </div>\n\n          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n            Vigência e Valores\n          </div>\n          <div class="form-grid">\n            <div>\n              <label for="ctr_inicio">Data de Início</label>\n              <input id="ctr_inicio" type="date">\n            </div>\n            <div>\n              <label for="ctr_fim">Data de Encerramento</label>\n              <input id="ctr_fim" type="date" onchange="contratosCalcularAlerta_()">\n            </div>\n            <div>\n              <label for="ctr_alerta">Alertar Vencimento em (dias antes)</label>\n              <input id="ctr_alerta" type="number" min="0" value="60" placeholder="Ex: 60">\n            </div>\n            <div>\n              <label for="ctr_valor_mensal">Valor Mensal (R$)</label>\n              <input id="ctr_valor_mensal" type="number" min="0" step="0.01" placeholder="0,00">\n            </div>\n            <div>\n              <label for="ctr_valor_total">Valor Total (R$)</label>\n              <input id="ctr_valor_total" type="number" min="0" step="0.01" placeholder="0,00">\n            </div>\n          </div>\n\n          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n            Contato e Documentação\n          </div>\n          <div class="form-grid">\n            <div>\n              <label for="ctr_responsavel">Responsável no Cliente</label>\n              <input id="ctr_responsavel" type="text" placeholder="Nome do responsável">\n            </div>\n            <div>\n              <label for="ctr_contato">E-mail / Telefone Contato</label>\n              <input id="ctr_contato" type="text" placeholder="email@cliente.com.br">\n            </div>\n            <div class="full">\n              <label for="ctr_link">Link do Contrato (Drive)</label>\n              <input id="ctr_link" type="url" placeholder="https://drive.google.com/...">\n            </div>\n            <div class="full">\n              <label for="ctr_obs">Observações</label>\n              <textarea id="ctr_obs" rows="2" placeholder="Cláusulas especiais, restrições, renovação automática..."></textarea>\n            </div>\n          </div>\n\n          <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n            Equipamentos Cobertos\n          </div>\n          <div id="ctr_eqp_aviso" style="font-size:12px;color:var(--muted);margin-bottom:8px;">\n            Selecione um cliente para carregar os equipamentos disponíveis.\n          </div>\n          <div id="ctr_eqp_lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;max-height:220px;overflow-y:auto;padding:2px;"></div>\n\n          <div class="form-actions" style="margin-top:16px;">\n            <button class="btn-primary" type="button" onclick="contratosSalvar_()">\n              <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Contrato\n            </button>\n            <button class="btn-secondary" type="button" onclick="contratosFecharForm_()">Cancelar</button>\n          </div>\n          <div class="helper-text" id="ctr_helper" style="margin-top:8px;"></div>\n        </div>\n\n        <!-- TABELA -->\n        <div class="list-card">\n          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);">\n            <h3 style="margin:0;font-size:14px;font-weight:700;">\n              <i class="fas fa-file-contract" style="margin-right:6px;color:var(--metro-green);"></i>\n              <span id="ctr_contagem">Contratos cadastrados</span>\n            </h3>\n            <button class="btn-secondary" type="button" onclick="contratosCarregar_()" style="font-size:12px;padding:6px 12px;">\n              <i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar\n            </button>\n          </div>\n          <div class="table-wrap">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>Cliente</th>\n                  <th>Número</th>\n                  <th>Tipo</th>\n                  <th>Início</th>\n                  <th>Vencimento</th>\n                  <th>Dias Restantes</th>\n                  <th>Valor Mensal</th>\n                  <th>Equip.</th>\n                  <th>Status</th>\n                  <th style="text-align:center;">Ações</th>\n                </tr>\n              </thead>\n              <tbody id="ctr_tbody">\n                <tr><td colspan="10" class="empty-state">Carregando contratos...</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n\n      </div>\n    ';
+
+    contratosCarregar_();
+    contratosCarregarClientes_();
+  }
+
+  // ── CARREGAR ───────────────────────────────────────────────────────────────
+  function contratosCarregar_() {
+    if (!SESSION) return;
+    var tbody = document.getElementById("ctr_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state" style="color:var(--danger);">Erro ao carregar contratos.</td></tr>';
+          return;
+        }
+        CONTRATOS_STATE.items = res.items || [];
+        contratosRenderTabela_();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>';
+      })
+      .contratosListar(SESSION);
+  }
+
+  function contratosCarregarClientes_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var sel = document.getElementById("ctr_cliente_id");
+        if (!sel || !res || !res.success) return;
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+          (res.items || []).map(function(c) {
+            return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.NOME) + '</option>';
+          }).join("");
+      })
+      .contratosListarClientesAtivos(SESSION);
+  }
+
+  // ── FILTROS ────────────────────────────────────────────────────────────────
+  function contratosAplicarFiltros_() {
+    var termo = String((document.getElementById("ctr_busca") || {}).value || "").trim().toLowerCase();
+    var filtroTipo = String((document.getElementById("ctr_filtro_tipo") || {}).value || "");
+    var filtroSt = String((document.getElementById("ctr_filtro_status") || {}).value || "");
+    var filtroVencendo = (document.getElementById("ctr_filtro_vencendo") || {}).checked;
+
+    var items = CONTRATOS_STATE.items.slice();
+    if (termo) {
+      items = items.filter(function(c) {
+        return [c.NUMERO_CONTRATO, c.TIPO_CONTRATO, c.OBJETO, c.CLIENTE_NOME,
+                c.RESPONSAVEL_CLIENTE, c.CONTATO_CLIENTE].join(" ").toLowerCase().indexOf(termo) >= 0;
+      });
+    }
+    if (filtroTipo) items = items.filter(function(c) { return String(c.TIPO_CONTRATO || "") === filtroTipo; });
+    if (filtroSt) items = items.filter(function(c) { return String(c.STATUS || "") === filtroSt; });
+    if (filtroVencendo) {
+      var hoje = new Date(); hoje.setHours(0,0,0,0);
+      items = items.filter(function(c) {
+        if (!c.DATA_FIM) return false;
+        var fim = new Date(c.DATA_FIM); fim.setHours(0,0,0,0);
+        var diff = Math.floor((fim - hoje) / 86400000);
+        return diff >= 0 && diff <= 60;
+      });
+    }
+
+    contratosRenderTabela_(items);
+  }
+
+  // ── RENDER TABELA ──────────────────────────────────────────────────────────
+  function contratosRenderTabela_(items) {
+    items = items || CONTRATOS_STATE.items;
+    var contagem = document.getElementById("ctr_contagem");
+    if (contagem) contagem.textContent = items.length + " contrato" + (items.length !== 1 ? "s" : "") + " encontrado" + (items.length !== 1 ? "s" : "");
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    var podeEditar = USER_CONTEXT && (
+      USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "DIRETORIA" ||
+      USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "COMERCIAL" ||
+      USER_CONTEXT.perfil === "FINANCEIRO"
+    );
+
+    if (!items.length) {
+      ctrSetTbody_('<tr><td colspan="10" class="empty-state">Nenhum contrato encontrado.</td></tr>');
+      return;
+    }
+
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+
+    var html = items.map(function(c) {
+      var id = escapeHtml_(c.ID);
+      var cliente = escapeHtml_(c.CLIENTE_NOME || "—");
+      var numero = escapeHtml_(c.NUMERO_CONTRATO || "—");
+      var tipoLabel = CONTRATOS_TIPOS_LABELS[c.TIPO_CONTRATO] || escapeHtml_(c.TIPO_CONTRATO || "—");
+      var inicio = c.DATA_INICIO ? formatarDataFront_(c.DATA_INICIO) : "—";
+      var fim = c.DATA_FIM ? formatarDataFront_(c.DATA_FIM) : "—";
+      var ativo = String(c.STATUS || "") === "ATIVO";
+
+      // Dias restantes
+      var diasHtml = '<span style="color:var(--muted);">—</span>';
+      if (c.DATA_FIM) {
+        var dtFim = new Date(c.DATA_FIM); dtFim.setHours(0,0,0,0);
+        var diff = Math.floor((dtFim - hoje) / 86400000);
+        var diasCor, diasLabel;
+        if (diff < 0) { diasCor = "#dc2626"; diasLabel = "VENCIDO"; }
+        else if (diff === 0) { diasCor = "#dc2626"; diasLabel = "Vence hoje"; }
+        else if (diff <= 30) { diasCor = "#dc2626"; diasLabel = diff + " dias"; }
+        else if (diff <= 60) { diasCor = "#f59e0b"; diasLabel = diff + " dias"; }
+        else { diasCor = "#059669"; diasLabel = diff + " dias"; }
+        diasHtml = '<span style="font-weight:700;font-size:13px;color:' + diasCor + ';">' + diasLabel + '</span>';
+      }
+
+      // Valor mensal
+      var valorHtml = c.VALOR_MENSAL
+        ? 'R$ ' + Number(c.VALOR_MENSAL).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '<span style="color:var(--muted);">—</span>';
+
+      // Equipamentos
+      var eqpHtml = '<span style="font-weight:700;font-size:14px;">' + (Number(c.EQUIPAMENTOS_COBERTOS) || 0) + '</span>';
+
+      // Link
+      var linkHtml = c.LINK_CONTRATO
+        ? ' <a href="' + escapeHtml_(c.LINK_CONTRATO) + '" target="_blank" style="color:var(--metro-blue);font-size:11px;" title="Abrir contrato"><i class="fas fa-external-link-alt"></i></a>'
+        : '';
+
+      var statusHtml = obterBadgeStatusHtml_(c.STATUS || "ATIVO");
+
+      var acoesHtml = '<div style="display:flex;gap:4px;justify-content:center;">';
+      if (podeEditar) {
+        acoesHtml += '<button class="btn-icon" title="Editar" onclick="contratosEditar_(\'' + id + '\')"><i class="fas fa-pen"></i></button>';
+        if (ativo) {
+          acoesHtml += '<button class="btn-icon btn-icon-danger" title="Inativar" onclick="contratosInativar_(\'' + id + '\')"><i class="fas fa-ban"></i></button>';
+        } else {
+          acoesHtml += '<button class="btn-icon btn-icon-success" title="Reativar" onclick="contratosReativar_(\'' + id + '\')"><i class="fas fa-check"></i></button>';
+        }
+      }
+      acoesHtml += '</div>';
+
+      return '<tr style="' + (ativo ? '' : 'opacity:.6;') + '">' +
+        '<td style="font-weight:600;font-size:13px;">' + cliente + '</td>' +
+        '<td style="font-family:monospace;font-size:12px;font-weight:700;">' + numero + linkHtml + '</td>' +
+        '<td style="font-size:12px;">' + tipoLabel + '</td>' +
+        '<td style="font-size:12px;">' + inicio + '</td>' +
+        '<td style="font-size:12px;">' + fim + '</td>' +
+        '<td>' + diasHtml + '</td>' +
+        '<td style="font-size:12px;white-space:nowrap;">' + valorHtml + '</td>' +
+        '<td style="text-align:center;">' + eqpHtml + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + acoesHtml + '</td>' +
+        '</tr>';
+    }).join("");
+
+    ctrSetTbody_(html);
+  }
+
+  function ctrSetTbody_(html) {
+    var tbody = document.getElementById("ctr_tbody");
+    if (tbody) tbody.innerHTML = html;
+  }
+
+  // ── NOVO ───────────────────────────────────────────────────────────────────
+  function contratosNovo_() {
+    CONTRATOS_STATE.editingId = "";
+    contratosLimparForm_();
+    var card = document.getElementById("ctr_form_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("ctr_form_titulo");
+    if (titulo) titulo.textContent = "Novo Contrato";
+    var helper = document.getElementById("ctr_helper");
+    if (helper) helper.textContent = "";
+    var numEl = document.getElementById("ctr_numero");
+    if (numEl) numEl.focus();
+  }
+
+  // ── AO MUDAR CLIENTE ───────────────────────────────────────────────────────
+  function contratosAoMudarCliente_() {
+    var clienteId = String((document.getElementById("ctr_cliente_id") || {}).value || "").trim();
+    var aviso = document.getElementById("ctr_eqp_aviso");
+    var lista = document.getElementById("ctr_eqp_lista");
+    if (!lista) return;
+
+    if (!clienteId) {
+      if (aviso) aviso.style.display = "block";
+      lista.innerHTML = "";
+      return;
+    }
+    if (aviso) aviso.style.display = "none";
+    lista.innerHTML = '<span style="color:var(--muted);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Carregando equipamentos...</span>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.items || !res.items.length) {
+          lista.innerHTML = '<span style="color:var(--muted);font-size:12px;">Nenhum equipamento ativo para este cliente.</span>';
+          return;
+        }
+        lista.innerHTML = res.items.map(function(e) {
+          return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;transition:all .15s;" id="ctr_eqp_label_' + escapeHtml_(e.ID) + '">' +
+            '<input type="checkbox" class="ctr_eqp_chk" value="' + escapeHtml_(e.ID) + '" style="width:16px;min-height:0;padding:0;" onchange="ctrToggleEqpLabel_(this)">' +
+            '<span>' + escapeHtml_(e.LABEL) + '</span>' +
+            '</label>';
+        }).join("");
+      })
+      .withFailureHandler(function() {
+        lista.innerHTML = '<span style="color:var(--danger);font-size:12px;">Erro ao carregar equipamentos.</span>';
+      })
+      .contratosListarEquipamentosPorCliente(SESSION, clienteId);
+  }
+
+  function ctrToggleEqpLabel_(chk) {
+    var label = chk && chk.parentElement;
+    if (!label) return;
+    if (chk.checked) {
+      label.style.borderColor = "var(--metro-green)";
+      label.style.background = "var(--metro-green-xlight)";
+    } else {
+      label.style.borderColor = "var(--border)";
+      label.style.background = "";
+    }
+  }
+
+  // ── CALCULAR ALERTA AUTOMATICAMENTE ───────────────────────────────────────
+  function contratosCalcularAlerta_() {
+    var fim = String((document.getElementById("ctr_fim") || {}).value || "").trim();
+    if (!fim) return;
+    var alerta = document.getElementById("ctr_alerta");
+    if (alerta && !alerta.value) alerta.value = "60";
+  }
+
+  // ── EDITAR ─────────────────────────────────────────────────────────────────
+  function contratosEditar_(id) {
+    if (!SESSION || !id) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) { alert("Contrato não encontrado."); return; }
+        var c = res.item;
+        CONTRATOS_STATE.editingId = c.ID;
+
+        contratosLimparForm_();
+        setValue_("ctr_cliente_id", c.CLIENTE_ID || "");
+        setValue_("ctr_numero", c.NUMERO_CONTRATO || "");
+        setValue_("ctr_tipo", c.TIPO_CONTRATO || "");
+        setValue_("ctr_objeto", c.OBJETO || "");
+        setValue_("ctr_inicio", ctrDateParaInput_(c.DATA_INICIO));
+        setValue_("ctr_fim", ctrDateParaInput_(c.DATA_FIM));
+        setValue_("ctr_alerta", c.DATA_RENOVACAO_ALERTA || "60");
+        setValue_("ctr_valor_mensal", c.VALOR_MENSAL || "");
+        setValue_("ctr_valor_total", c.VALOR_TOTAL || "");
+        setValue_("ctr_responsavel", c.RESPONSAVEL_CLIENTE || "");
+        setValue_("ctr_contato", c.CONTATO_CLIENTE || "");
+        setValue_("ctr_link", c.LINK_CONTRATO || "");
+        setValue_("ctr_obs", c.OBSERVACOES || "");
+
+        var idsVinculados = (res.equipamentos || []).map(function(e) { return e.EQUIPAMENTO_ID; });
+
+        // Carregar equipamentos e marcar os vinculados
+        if (c.CLIENTE_ID) {
+          var aviso = document.getElementById("ctr_eqp_aviso");
+          if (aviso) aviso.style.display = "none";
+          google.script.run
+            .withSuccessHandler(function(resEqp) {
+              var lista = document.getElementById("ctr_eqp_lista");
+              if (!lista || !resEqp || !resEqp.success) return;
+              lista.innerHTML = (resEqp.items || []).map(function(e) {
+                var marcado = idsVinculados.indexOf(e.ID) >= 0;
+                return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 10px;border:1.5px solid ' + (marcado ? 'var(--metro-green)' : 'var(--border)') + ';border-radius:8px;background:' + (marcado ? 'var(--metro-green-xlight)' : '') + ';transition:all .15s;">' +
+                  '<input type="checkbox" class="ctr_eqp_chk" value="' + escapeHtml_(e.ID) + '" style="width:16px;min-height:0;padding:0;" onchange="ctrToggleEqpLabel_(this)"' + (marcado ? ' checked' : '') + '>' +
+                  '<span>' + escapeHtml_(e.LABEL) + '</span></label>';
+              }).join("");
+            })
+            .contratosListarEquipamentosPorCliente(SESSION, c.CLIENTE_ID);
+        }
+
+        var card = document.getElementById("ctr_form_card");
+        if (card) card.style.display = "block";
+        var titulo = document.getElementById("ctr_form_titulo");
+        if (titulo) titulo.textContent = "Editar — " + (c.NUMERO_CONTRATO || "");
+        var helper = document.getElementById("ctr_helper");
+        if (helper) helper.textContent = "";
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .contratosObter(SESSION, id);
+  }
+
+  // ── SALVAR ─────────────────────────────────────────────────────────────────
+  function contratosSalvar_() {
+    if (!SESSION) return;
+
+    // Coletar equipamentos marcados
+    var chks = document.querySelectorAll(".ctr_eqp_chk:checked");
+    var equipamentos = [];
+    chks.forEach(function(chk) {
+      if (chk.value) equipamentos.push({ EQUIPAMENTO_ID: chk.value, TIPO_COBERTURA: "TOTAL" });
+    });
+
+    var payload = {
+      CLIENTE_ID:           String((document.getElementById("ctr_cliente_id") || {}).value || "").trim(),
+      NUMERO_CONTRATO:      String((document.getElementById("ctr_numero") || {}).value || "").trim(),
+      TIPO_CONTRATO:        String((document.getElementById("ctr_tipo") || {}).value || "").trim(),
+      OBJETO:               String((document.getElementById("ctr_objeto") || {}).value || "").trim(),
+      DATA_INICIO:          String((document.getElementById("ctr_inicio") || {}).value || "").trim(),
+      DATA_FIM:             String((document.getElementById("ctr_fim") || {}).value || "").trim(),
+      DATA_RENOVACAO_ALERTA:String((document.getElementById("ctr_alerta") || {}).value || "60").trim(),
+      VALOR_MENSAL:         parseFloat((document.getElementById("ctr_valor_mensal") || {}).value || 0) || 0,
+      VALOR_TOTAL:          parseFloat((document.getElementById("ctr_valor_total") || {}).value || 0) || 0,
+      RESPONSAVEL_CLIENTE:  String((document.getElementById("ctr_responsavel") || {}).value || "").trim(),
+      CONTATO_CLIENTE:      String((document.getElementById("ctr_contato") || {}).value || "").trim(),
+      LINK_CONTRATO:        String((document.getElementById("ctr_link") || {}).value || "").trim(),
+      OBSERVACOES:          String((document.getElementById("ctr_obs") || {}).value || "").trim(),
+      EQUIPAMENTOS:         equipamentos
+    };
+
+    var helper = document.getElementById("ctr_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    var isEdit = !!CONTRATOS_STATE.editingId;
+    var onSuccess = function(res) {
+      if (!res || !res.success) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao salvar.") + '</span>';
+        return;
+      }
+      if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Contrato salvo com sucesso!</span>';
+      CONTRATOS_STATE.editingId = "";
+      contratosCarregar_();
+      setTimeout(function() { contratosFecharForm_(); }, 1000);
+    };
+    var onError = function(err) {
+      if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+    };
+
+    if (isEdit) {
+      google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError).contratosAtualizar(SESSION, CONTRATOS_STATE.editingId, payload);
+    } else {
+      google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError).contratosCriar(SESSION, payload);
+    }
+  }
+
+  // ── INATIVAR / REATIVAR ────────────────────────────────────────────────────
+  function contratosInativar_(id) {
+    if (!id || !confirm("Inativar este contrato?")) return;
+    google.script.run
+      .withSuccessHandler(function(res) { if (res && res.success) contratosCarregar_(); else alert((res && res.message) || "Erro."); })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .contratosInativar(SESSION, id);
+  }
+
+  function contratosReativar_(id) {
+    if (!id || !confirm("Reativar este contrato?")) return;
+    google.script.run
+      .withSuccessHandler(function(res) { if (res && res.success) contratosCarregar_(); else alert((res && res.message) || "Erro."); })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .contratosReativar(SESSION, id);
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function contratosLimparForm_() {
+    ["ctr_cliente_id","ctr_numero","ctr_tipo","ctr_objeto","ctr_inicio","ctr_fim",
+     "ctr_valor_mensal","ctr_valor_total","ctr_responsavel","ctr_contato","ctr_link","ctr_obs"
+    ].forEach(function(id) { setValue_(id, ""); });
+    setValue_("ctr_alerta", "60");
+    var lista = document.getElementById("ctr_eqp_lista");
+    if (lista) lista.innerHTML = "";
+    var aviso = document.getElementById("ctr_eqp_aviso");
+    if (aviso) aviso.style.display = "block";
+  }
+
+  function contratosFecharForm_() {
+    CONTRATOS_STATE.editingId = "";
+    var card = document.getElementById("ctr_form_card");
+    if (card) card.style.display = "none";
+  }
+
+  function ctrDateParaInput_(val) {
+    if (!val) return "";
+    var s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+      var p = s.split("/"); return p[2].substring(0, 4) + "-" + p[1] + "-" + p[0];
+    }
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    return "";
+  }
+</script>

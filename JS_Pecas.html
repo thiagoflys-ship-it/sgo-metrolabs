@@ -1,0 +1,320 @@
+<script>
+  // ==========================================
+  // MÓDULO: PEÇAS E SUBCONJUNTOS
+  // ==========================================
+
+  const PECAS_TIPOS = ["PLACA", "SENSOR", "VALVULA", "MOTOR", "BOMBA", "FILTRO",
+    "RESISTENCIA", "DISPLAY", "BATERIA", "CABO", "ROLAMENTO", "VEDACAO", "OUTRO"];
+
+  // ── RENDER PRINCIPAL ──────────────────────────────────────────────────────
+  function renderPecasModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    var podeEditar = !isCliente;
+
+    div.innerHTML = '\n      <div class="module-shell">\n\n        <!-- HEADER -->\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">\n              <i class="fas fa-screwdriver-wrench" style="margin-right:8px;color:var(--metro-green);"></i>\n              Peças e Subconjuntos\n            </h2>\n            <p class="content-subtitle">Rastreabilidade de componentes instalados, calibrações e vida útil por equipamento.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">\n            <input id="pec_busca" class="toolbar-search" type="text"\n              placeholder="Peça, referência, série, TAG..."\n              onkeydown="if(event.key===\'Enter\') pecasAplicarFiltros_()">\n            <select id="pec_filtro_status" style="min-height:36px;padding:6px 10px;font-size:13px;width:130px;" onchange="pecasAplicarFiltros_()">\n              <option value="">Todos status</option>\n              <option value="ATIVO">Ativos</option>\n              <option value="INATIVO">Inativos</option>\n            </select>\n            <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;text-transform:none;letter-spacing:0;cursor:pointer;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;white-space:nowrap;">\n              <input type="checkbox" id="pec_filtro_cal" style="width:16px;min-height:0;padding:0;" onchange="pecasAplicarFiltros_()">\n              Só c/ calibração\n            </label>\n            ' +
+      (podeEditar ? '<button class="btn-primary" type="button" onclick="pecasNovo_()"><i class="fas fa-plus" style="margin-right:6px;"></i>Nova Peça</button>' : "") +
+      '\n          </div>\n        </div>\n\n        <div class="module-grid">\n\n          <!-- FORMULÁRIO -->\n          <div class="form-card" id="pec_form_card" style="display:' +
+      (isCliente ? 'none' : 'none') +
+      ';">\n            <h3 class="section-card-title" id="pec_form_titulo">Nova Peça</h3>\n\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Identificação</div>\n            <div class="form-grid">\n              <div class="full">\n                <label for="pec_equipamento_id">Equipamento <span style="color:red;">*</span></label>\n                <select id="pec_equipamento_id">\n                  <option value="">Carregando equipamentos...</option>\n                </select>\n              </div>\n              <div class="full">\n                <label for="pec_nome">Nome da Peça <span style="color:red;">*</span></label>\n                <input id="pec_nome" type="text" placeholder="Ex: Placa CPU Principal, Sensor de Pressão">\n              </div>\n              <div>\n                <label for="pec_tipo">Tipo</label>\n                <select id="pec_tipo">\n                  <option value="">Selecione</option>\n                  ' +
+      (PECAS_TIPOS.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join("")) +
+      '\n                </select>\n              </div>\n              <div>\n                <label for="pec_fabricante">Fabricante</label>\n                <input id="pec_fabricante" type="text" placeholder="Ex: Siemens, Philips">\n              </div>\n              <div>\n                <label for="pec_modelo">Modelo</label>\n                <input id="pec_modelo" type="text" placeholder="Modelo do componente">\n              </div>\n              <div>\n                <label for="pec_referencia">Referência / Part Number</label>\n                <input id="pec_referencia" type="text" placeholder="Ex: AMP-2398-A">\n              </div>\n              <div>\n                <label for="pec_serie">Número de Série</label>\n                <input id="pec_serie" type="text" placeholder="Número de série único">\n              </div>\n              <div>\n                <label for="pec_lote">Lote</label>\n                <input id="pec_lote" type="text" placeholder="Ex: LOT-2024-001">\n              </div>\n            </div>\n\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n              Instalação e Vida Útil\n            </div>\n            <div class="form-grid">\n              <div>\n                <label for="pec_data_instalacao">Data de Instalação</label>\n                <input id="pec_data_instalacao" type="date">\n              </div>\n              <div>\n                <label for="pec_vida_util">Vida Útil (meses)</label>\n                <input id="pec_vida_util" type="number" min="0" placeholder="Ex: 24">\n              </div>\n            </div>\n\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">\n              Calibração\n            </div>\n            <div class="form-grid">\n              <div style="grid-column:1/-1;">\n                <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">\n                  <input id="pec_aplica_cal" type="checkbox" style="width:16px;min-height:0;padding:0;" onchange="pecasToggleCal_()">\n                  Esta peça aplica calibração\n                </label>\n              </div>\n              <div id="pec_cal_bloco" style="display:contents;">\n                <div>\n                  <label for="pec_ultima_cal">Última Calibração</label>\n                  <input id="pec_ultima_cal" type="date">\n                </div>\n                <div>\n                  <label for="pec_proxima_cal">Próxima Calibração</label>\n                  <input id="pec_proxima_cal" type="date">\n                </div>\n                <div>\n                  <label for="pec_certificado">Nº do Certificado</label>\n                  <input id="pec_certificado" type="text" placeholder="Ex: CAL-2024-001">\n                </div>\n                <div>\n                  <label for="pec_link_certificado">Link do Certificado (Drive)</label>\n                  <input id="pec_link_certificado" type="url" placeholder="https://drive.google.com/...">\n                </div>\n              </div>\n            </div>\n\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="pecasSalvar_()">\n                <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Peça\n              </button>\n              <button class="btn-secondary" type="button" onclick="pecasFecharForm_()">Cancelar</button>\n            </div>\n            <div class="helper-text" id="pec_helper" style="margin-top:8px;"></div>\n          </div>\n\n        </div><!-- /module-grid -->\n\n        <!-- TABELA -->\n        <div class="list-card" style="margin-top:20px;">\n          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);">\n            <h3 style="margin:0;font-size:14px;font-weight:700;">\n              <i class="fas fa-microchip" style="margin-right:6px;color:var(--metro-green);"></i>\n              <span id="pec_contagem">Peças cadastradas</span>\n            </h3>\n            <button class="btn-secondary" type="button" onclick="pecasCarregar_()" style="font-size:12px;padding:6px 12px;">\n              <i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar\n            </button>\n          </div>\n          <div class="table-wrap">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>Equipamento</th>\n                  <th>Peça</th>\n                  <th>Tipo</th>\n                  <th>Referência</th>\n                  <th>Série</th>\n                  <th>Instalação</th>\n                  <th>Calibração</th>\n                  <th>Status</th>\n                  <th style="text-align:center;">Ações</th>\n                </tr>\n              </thead>\n              <tbody id="pec_tbody">\n                <tr><td colspan="9" class="empty-state">Carregando peças...</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n\n      </div>\n    ';
+
+    pecasCarregar_();
+    if (!isCliente) pecasCarregarEquipamentos_();
+    pecasToggleCal_();
+  }
+
+  // ── CARREGAR ───────────────────────────────────────────────────────────────
+  function pecasCarregar_() {
+    if (!SESSION) return;
+    var tbody = document.getElementById("pec_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:var(--danger);">Erro ao carregar.</td></tr>';
+          return;
+        }
+        PECAS_STATE.items = res.items || [];
+        pecasRenderTabela_();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>';
+      })
+      .pecasListar(SESSION);
+  }
+
+  function pecasCarregarEquipamentos_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var sel = document.getElementById("pec_equipamento_id");
+        if (!sel || !res || !res.success) return;
+        sel.innerHTML = '<option value="">Selecione o equipamento...</option>' +
+          (res.items || []).map(function(i) {
+            return '<option value="' + escapeHtml_(i.ID) + '">' + escapeHtml_(i.LABEL) + '</option>';
+          }).join("");
+      })
+      .pecasListarEquipamentosAtivos(SESSION);
+  }
+
+  // ── FILTROS ────────────────────────────────────────────────────────────────
+  function pecasAplicarFiltros_() {
+    var termo = String((document.getElementById("pec_busca") || {}).value || "").trim().toLowerCase();
+    var filtroSt = String((document.getElementById("pec_filtro_status") || {}).value || "");
+    var filtroCal = (document.getElementById("pec_filtro_cal") || {}).checked;
+
+    var items = PECAS_STATE.items.slice();
+    if (termo) {
+      items = items.filter(function(p) {
+        return [p.NOME, p.TIPO_PECA, p.REFERENCIA, p.NUMERO_SERIE, p.LOTE,
+                p.EQUIPAMENTO_TAG, p.EQUIPAMENTO_TIPO, p.FABRICANTE, p.MODELO].join(" ").toLowerCase().indexOf(termo) >= 0;
+      });
+    }
+    if (filtroSt) items = items.filter(function(p) { return String(p.STATUS || "") === filtroSt; });
+    if (filtroCal) items = items.filter(function(p) { return p.APLICA_CALIBRACAO === "S"; });
+
+    pecasRenderTabela_(items);
+  }
+
+  // ── RENDER TABELA ──────────────────────────────────────────────────────────
+  function pecasRenderTabela_(items) {
+    items = items || PECAS_STATE.items;
+    var contagem = document.getElementById("pec_contagem");
+    if (contagem) contagem.textContent = items.length + " peça" + (items.length !== 1 ? "s" : "") + " encontrada" + (items.length !== 1 ? "s" : "");
+
+    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+
+    if (!items.length) {
+      pecasSetTbody_('<tr><td colspan="9" class="empty-state">Nenhuma peça encontrada.</td></tr>');
+      return;
+    }
+
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+
+    var html = items.map(function(p) {
+      var id = escapeHtml_(p.ID);
+      var eqpTag = escapeHtml_(p.EQUIPAMENTO_TAG || "—");
+      var eqpTipo = escapeHtml_(p.EQUIPAMENTO_TIPO || "");
+      var nome = escapeHtml_(p.NOME || "—");
+      var tipo = escapeHtml_(p.TIPO_PECA || "—");
+      var ref = escapeHtml_(p.REFERENCIA || "—");
+      var serie = escapeHtml_(p.NUMERO_SERIE || "—");
+      var instalacao = p.DATA_INSTALACAO ? formatarDataFront_(p.DATA_INSTALACAO) : "—";
+      var ativo = String(p.STATUS || "") === "ATIVO";
+
+      // Calibração status
+      var calHtml = '<span style="color:var(--muted);font-size:12px;">N/A</span>';
+      if (p.APLICA_CALIBRACAO === "S") {
+        if (p.DATA_PROXIMA_CAL) {
+          var proxCal = new Date(p.DATA_PROXIMA_CAL); proxCal.setHours(0,0,0,0);
+          var diff = Math.floor((proxCal - hoje) / 86400000);
+          var calStatus, calCor, calIcon;
+          if (diff < 0) { calStatus = "VENCIDA"; calCor = "#dc2626"; calIcon = "fas fa-triangle-exclamation"; }
+          else if (diff <= 30) { calStatus = diff + "d"; calCor = "#f59e0b"; calIcon = "fas fa-clock"; }
+          else { calStatus = diff + "d"; calCor = "#059669"; calIcon = "fas fa-check-circle"; }
+          calHtml = '<div style="line-height:1.4;">' +
+            '<div style="font-size:11px;color:var(--muted);">' + formatarDataFront_(p.DATA_PROXIMA_CAL) + '</div>' +
+            '<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:' + calCor + '20;color:' + calCor + ';font-weight:700;">' +
+            '<i class="' + calIcon + '" style="margin-right:3px;"></i>' + calStatus + '</span></div>';
+        } else {
+          calHtml = '<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:#fef2f2;color:#dc2626;font-weight:700;">Sem data</span>';
+        }
+      }
+
+      var statusHtml = obterBadgeStatusHtml_(p.STATUS || "ATIVO");
+
+      var acoesHtml = '<div style="display:flex;gap:4px;justify-content:center;">';
+      if (!isCliente) {
+        acoesHtml += '<button class="btn-icon" title="Editar" onclick="pecasEditar_(\'' + id + '\')"><i class="fas fa-pen"></i></button>';
+        if (ativo) {
+          acoesHtml += '<button class="btn-icon btn-icon-danger" title="Inativar" onclick="pecasInativar_(\'' + id + '\')"><i class="fas fa-ban"></i></button>';
+        } else {
+          acoesHtml += '<button class="btn-icon btn-icon-success" title="Reativar" onclick="pecasReativar_(\'' + id + '\')"><i class="fas fa-check"></i></button>';
+        }
+      }
+      acoesHtml += '</div>';
+
+      return '<tr style="' + (ativo ? '' : 'opacity:.6;') + '">' +
+        '<td><div style="font-weight:700;font-size:12px;color:var(--metro-green);">' + eqpTag + '</div>' +
+        (eqpTipo ? '<div style="font-size:11px;color:var(--muted);">' + eqpTipo + '</div>' : '') + '</td>' +
+        '<td style="font-weight:600;font-size:13px;">' + nome + '</td>' +
+        '<td style="font-size:12px;">' + tipo + '</td>' +
+        '<td style="font-family:monospace;font-size:12px;">' + ref + '</td>' +
+        '<td style="font-family:monospace;font-size:12px;">' + serie + '</td>' +
+        '<td style="font-size:12px;">' + instalacao + '</td>' +
+        '<td>' + calHtml + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + acoesHtml + '</td>' +
+        '</tr>';
+    }).join("");
+
+    pecasSetTbody_(html);
+  }
+
+  function pecasSetTbody_(html) {
+    var tbody = document.getElementById("pec_tbody");
+    if (tbody) tbody.innerHTML = html;
+  }
+
+  // ── NOVO ───────────────────────────────────────────────────────────────────
+  function pecasNovo_() {
+    PECAS_STATE.editingId = "";
+    pecasLimparForm_();
+    var card = document.getElementById("pec_form_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("pec_form_titulo");
+    if (titulo) titulo.textContent = "Nova Peça";
+    var helper = document.getElementById("pec_helper");
+    if (helper) helper.textContent = "";
+  }
+
+  // ── EDITAR ─────────────────────────────────────────────────────────────────
+  function pecasEditar_(id) {
+    if (!SESSION || !id) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) { alert("Peça não encontrada."); return; }
+        var p = res.item;
+        PECAS_STATE.editingId = p.ID;
+
+        pecasLimparForm_();
+        setValue_("pec_equipamento_id", p.EQUIPAMENTO_ID || "");
+        setValue_("pec_nome", p.NOME || "");
+        setValue_("pec_tipo", p.TIPO_PECA || "");
+        setValue_("pec_fabricante", p.FABRICANTE || "");
+        setValue_("pec_modelo", p.MODELO || "");
+        setValue_("pec_referencia", p.REFERENCIA || "");
+        setValue_("pec_serie", p.NUMERO_SERIE || "");
+        setValue_("pec_lote", p.LOTE || "");
+        setValue_("pec_data_instalacao", pecDateParaInput_(p.DATA_INSTALACAO));
+        setValue_("pec_vida_util", p.VIDA_UTIL_MESES || "");
+
+        var calChk = document.getElementById("pec_aplica_cal");
+        if (calChk) calChk.checked = p.APLICA_CALIBRACAO === "S";
+        pecasToggleCal_();
+
+        setValue_("pec_ultima_cal", pecDateParaInput_(p.DATA_ULTIMA_CAL));
+        setValue_("pec_proxima_cal", pecDateParaInput_(p.DATA_PROXIMA_CAL));
+        setValue_("pec_certificado", p.CERTIFICADO_NUMERO || "");
+        setValue_("pec_link_certificado", p.LINK_CERTIFICADO || "");
+
+        var card = document.getElementById("pec_form_card");
+        if (card) card.style.display = "block";
+        var titulo = document.getElementById("pec_form_titulo");
+        if (titulo) titulo.textContent = "Editar — " + (p.NOME || "");
+        var helper = document.getElementById("pec_helper");
+        if (helper) helper.textContent = "";
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .pecasObter(SESSION, id);
+  }
+
+  // ── SALVAR ─────────────────────────────────────────────────────────────────
+  function pecasSalvar_() {
+    if (!SESSION) return;
+    var calChk = document.getElementById("pec_aplica_cal");
+
+    var payload = {
+      EQUIPAMENTO_ID:    String((document.getElementById("pec_equipamento_id") || {}).value || "").trim(),
+      NOME:              String((document.getElementById("pec_nome") || {}).value || "").trim(),
+      TIPO_PECA:         String((document.getElementById("pec_tipo") || {}).value || "").trim(),
+      FABRICANTE:        String((document.getElementById("pec_fabricante") || {}).value || "").trim(),
+      MODELO:            String((document.getElementById("pec_modelo") || {}).value || "").trim(),
+      REFERENCIA:        String((document.getElementById("pec_referencia") || {}).value || "").trim(),
+      NUMERO_SERIE:      String((document.getElementById("pec_serie") || {}).value || "").trim(),
+      LOTE:              String((document.getElementById("pec_lote") || {}).value || "").trim(),
+      DATA_INSTALACAO:   String((document.getElementById("pec_data_instalacao") || {}).value || "").trim(),
+      VIDA_UTIL_MESES:   String((document.getElementById("pec_vida_util") || {}).value || "").trim(),
+      APLICA_CALIBRACAO: !!(calChk && calChk.checked),
+      DATA_ULTIMA_CAL:   String((document.getElementById("pec_ultima_cal") || {}).value || "").trim(),
+      DATA_PROXIMA_CAL:  String((document.getElementById("pec_proxima_cal") || {}).value || "").trim(),
+      CERTIFICADO_NUMERO:String((document.getElementById("pec_certificado") || {}).value || "").trim(),
+      LINK_CERTIFICADO:  String((document.getElementById("pec_link_certificado") || {}).value || "").trim()
+    };
+
+    var helper = document.getElementById("pec_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    var isEdit = !!PECAS_STATE.editingId;
+    var onSuccess = function(res) {
+      if (!res || !res.success) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao salvar.") + '</span>';
+        return;
+      }
+      if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Peça salva com sucesso!</span>';
+      PECAS_STATE.editingId = "";
+      pecasCarregar_();
+      setTimeout(function() { pecasFecharForm_(); }, 1000);
+    };
+    var onError = function(err) {
+      if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+    };
+
+    if (isEdit) {
+      google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError).pecasAtualizar(SESSION, PECAS_STATE.editingId, payload);
+    } else {
+      google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError).pecasCriar(SESSION, payload);
+    }
+  }
+
+  // ── INATIVAR / REATIVAR ────────────────────────────────────────────────────
+  function pecasInativar_(id) {
+    if (!id || !confirm("Inativar esta peça?")) return;
+    google.script.run
+      .withSuccessHandler(function(res) { if (res && res.success) pecasCarregar_(); else alert((res && res.message) || "Erro."); })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .pecasInativar(SESSION, id);
+  }
+
+  function pecasReativar_(id) {
+    if (!id || !confirm("Reativar esta peça?")) return;
+    google.script.run
+      .withSuccessHandler(function(res) { if (res && res.success) pecasCarregar_(); else alert((res && res.message) || "Erro."); })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .pecasReativar(SESSION, id);
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function pecasLimparForm_() {
+    ["pec_equipamento_id","pec_nome","pec_tipo","pec_fabricante","pec_modelo",
+     "pec_referencia","pec_serie","pec_lote","pec_data_instalacao","pec_vida_util",
+     "pec_ultima_cal","pec_proxima_cal","pec_certificado","pec_link_certificado"
+    ].forEach(function(id) { setValue_(id, ""); });
+    var calChk = document.getElementById("pec_aplica_cal");
+    if (calChk) calChk.checked = false;
+    pecasToggleCal_();
+  }
+
+  function pecasFecharForm_() {
+    PECAS_STATE.editingId = "";
+    var card = document.getElementById("pec_form_card");
+    if (card) card.style.display = "none";
+  }
+
+  function pecasToggleCal_() {
+    var calChk = document.getElementById("pec_aplica_cal");
+    var ativo = calChk && calChk.checked;
+    var campos = ["pec_ultima_cal","pec_proxima_cal","pec_certificado","pec_link_certificado"];
+    campos.forEach(function(fid) {
+      var el = document.getElementById(fid);
+      if (el && el.parentElement) el.parentElement.style.display = ativo ? "block" : "none";
+    });
+  }
+
+  function pecDateParaInput_(val) {
+    if (!val) return "";
+    var s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+      var p = s.split("/"); return p[2].substring(0, 4) + "-" + p[1] + "-" + p[0];
+    }
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    return "";
+  }
+</script>

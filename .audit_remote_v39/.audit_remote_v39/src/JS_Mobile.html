@@ -1,0 +1,1549 @@
+<script>
+/* ================================================================
+ * JS_Mobile.html — SGO+ Campo
+ * Interface mobile própria para operação em campo
+ * Dependência: escapeHtml_() definida em JS_Core.html
+ * ================================================================ */
+
+var MOBILE_TELA_ATUAL = "home";
+
+/* ---- Estado: Nova OS ---- */
+var MOBILE_OS_OPCOES       = null;
+var MOBILE_OS_QUESTIONARIO = null;
+var MOBILE_OS_PREFILL      = null;
+
+/* ---- Estado: Minhas OS ---- */
+var MOBILE_MINHAS_OS_DADOS  = [];
+var MOBILE_MINHAS_OS_FILTRO = "todas";
+
+/* ---- Detecção ---- */
+
+function isMobile_() {
+  if (window.innerWidth <= 900) return true;
+  try {
+    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+  } catch(e) { return false; }
+}
+
+function mobileDeveAtivar_() {
+  try { return isMobile_(); } catch(e) { return false; }
+}
+
+/* ---- Entry point ---- */
+
+function renderMobileCampo_() {
+  var topbar  = document.querySelector(".topbar");
+  var sidebar = document.querySelector(".sidebar");
+  if (topbar)  topbar.style.display  = "none";
+  if (sidebar) sidebar.style.display = "none";
+
+  var div = document.getElementById("conteudo");
+  if (!div) return;
+
+  div.innerHTML =
+    '<div class="mobile-shell" id="mobileCampoShell">' +
+      '<div class="mobile-top">' +
+        '<div class="mobile-top-brand">' +
+          '<span class="mobile-top-title">SGO+ Campo</span>' +
+          '<span class="mobile-top-sub">Operação em campo</span>' +
+        '</div>' +
+        '<button class="mobile-top-exit" type="button" onclick="mobileModoGestaoCompleto_()">&#8921; Gestão</button>' +
+      '</div>' +
+      '<div id="mobilePaneContainer" class="mobile-pane-container"></div>' +
+      '<nav class="mobile-bottom-nav" id="mobileBottomNav">' +
+        '<button class="mobile-nav-btn" id="mobileNavInicio" type="button" onclick="mobileAbrirTela_(\'home\')">' +
+          '<i class="fas fa-house mobile-nav-icon"></i>' +
+          '<span class="mobile-nav-label">Início</span>' +
+        '</button>' +
+        '<button class="mobile-nav-btn" id="mobileNavOS" type="button" onclick="mobileAbrirTela_(\'minhas_os\')">' +
+          '<i class="fas fa-clipboard-list mobile-nav-icon"></i>' +
+          '<span class="mobile-nav-label">Minhas OS</span>' +
+        '</button>' +
+        '<button class="mobile-nav-btn" id="mobileNavFrota" type="button" onclick="mobileAbrirTela_(\'frota\')">' +
+          '<i class="fas fa-car-side mobile-nav-icon"></i>' +
+          '<span class="mobile-nav-label">Frota</span>' +
+        '</button>' +
+        '<button class="mobile-nav-btn" id="mobileNavQR" type="button" onclick="mobileAbrirTela_(\'qr\')">' +
+          '<i class="fas fa-qrcode mobile-nav-icon"></i>' +
+          '<span class="mobile-nav-label">QR</span>' +
+        '</button>' +
+        '<button class="mobile-nav-btn" id="mobileNavMenu" type="button" onclick="mobileAbrirTela_(\'menu\')">' +
+          '<i class="fas fa-bars mobile-nav-icon"></i>' +
+          '<span class="mobile-nav-label">Menu</span>' +
+        '</button>' +
+      '</nav>' +
+    '</div>';
+
+  mobileAbrirTela_("home");
+}
+
+/* ---- Navegação interna ---- */
+
+function mobileAbrirTela_(nome) {
+  MOBILE_TELA_ATUAL = nome;
+
+  var container = document.getElementById("mobilePaneContainer");
+  if (!container) return;
+
+  // Atualiza bottom nav
+  var navMap = {
+    home:     "mobileNavInicio",
+    minhas_os:"mobileNavOS",
+    frota:    "mobileNavFrota",
+    qr:       "mobileNavQR",
+    menu:     "mobileNavMenu"
+  };
+  Object.keys(navMap).forEach(function(k) {
+    var btn = document.getElementById(navMap[k]);
+    if (btn) btn.classList.toggle("mobile-nav-ativo", k === nome);
+  });
+
+  // Renderiza pane
+  switch (nome) {
+    case "home":
+      container.innerHTML = mobileHtmlHome_();
+      break;
+    case "minhas_os":
+      MOBILE_MINHAS_OS_DADOS  = [];
+      MOBILE_MINHAS_OS_FILTRO = "todas";
+      container.innerHTML = mobileHtmlMinhasOS_();
+      mobileCarregarMinhasOS_();
+      break;
+    case "frota":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Frota",
+        "fas fa-car-side",
+        "Em breve: retirada, devolucao e abastecimento de veiculos sera implementada no Bloco 5-E."
+      );
+      break;
+    case "qr":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Ler QR",
+        "fas fa-qrcode",
+        "Em breve: leitura de QR Code de equipamentos sera implementada no Bloco 5-F."
+      );
+      break;
+    case "menu":
+      container.innerHTML = mobileHtmlMenu_();
+      break;
+    case "cliente":
+      container.innerHTML = mobileHtmlClienteForm_();
+      break;
+    case "unidade":
+      container.innerHTML = mobileHtmlUnidadeForm_();
+      mobileCarregarClientesSelect_("mUnidadeClienteId");
+      break;
+    case "equipamento":
+      MOBILE_EQUIP_FOTOS = { plaqueta: null, equipamento: null };
+      container.innerHTML = mobileHtmlEquipamentoForm_();
+      mobileCarregarClientesEquip_("mEquipClienteId");
+      break;
+    case "nova_os":
+      MOBILE_OS_OPCOES       = null;
+      MOBILE_OS_QUESTIONARIO = null;
+      container.innerHTML = mobileHtmlNovaOS_();
+      mobileCarregarOpcoesOS_();
+      break;
+    case "documentos":
+      container.innerHTML = mobileHtmlPlaceholder_(
+        "Documentos",
+        "fas fa-folder-open",
+        "Em breve: acesso a documentos tecnicos sera implementado no Bloco 5-F."
+      );
+      break;
+    default:
+      container.innerHTML = mobileHtmlPlaceholder_(nome, "fas fa-clock", "Em desenvolvimento.");
+  }
+
+  container.scrollTop = 0;
+}
+
+function mobileVoltar_() {
+  mobileAbrirTela_("home");
+}
+
+/* ---- Pane: Home ---- */
+
+function mobileHtmlHome_() {
+  var nome = "Tecnico";
+  if (USER_CONTEXT) {
+    var n = USER_CONTEXT.nome || USER_CONTEXT.usuario || "";
+    if (n) nome = n.split(" ")[0];
+  }
+
+  var cards = [
+    { tela: "cliente",     icone: "fas fa-building",       label: "+ Cliente",  cor: "#dbeafe" },
+    { tela: "unidade",     icone: "fas fa-location-dot",   label: "+ Unidade",  cor: "#dcfce7" },
+    { tela: "equipamento", icone: "fas fa-microscope",     label: "+ Equip.",   cor: "#fef3c7" },
+    { tela: "nova_os",     icone: "fas fa-plus-circle",    label: "Nova OS",    cor: "#ede9fe" },
+    { tela: "minhas_os",   icone: "fas fa-clipboard-list", label: "Minhas OS",  cor: "#e0f2fe" },
+    { tela: "frota",       icone: "fas fa-car-side",       label: "Frota",      cor: "#d1fae5" },
+    { tela: "qr",          icone: "fas fa-qrcode",         label: "Ler QR",     cor: "#e0e7ff" },
+    { tela: "documentos",  icone: "fas fa-folder-open",    label: "Documentos", cor: "#fce7f3" }
+  ];
+
+  return '<div class="mobile-home">' +
+    '<p class="mobile-saudacao">Ola, ' + escapeHtml_(nome) + '!</p>' +
+    '<p class="mobile-saudacao-sub">Selecione uma acao</p>' +
+    '<div class="mobile-grid">' +
+    cards.map(function(c) {
+      return '<button class="mobile-card" type="button" ' +
+        'style="background:' + c.cor + ';" ' +
+        'onclick="mobileAbrirTela_(\'' + c.tela + '\')">' +
+        '<i class="' + c.icone + ' mobile-card-icon"></i>' +
+        '<span class="mobile-card-label">' + escapeHtml_(c.label) + '</span>' +
+        '</button>';
+    }).join("") +
+    '</div></div>';
+}
+
+/* ---- Pane: Minhas OS ---- */
+
+function mobileHtmlMinhasOS_() {
+  var filtros = [
+    { id: "todas",       label: "Todas"       },
+    { id: "hoje",        label: "Hoje"        },
+    { id: "abertas",     label: "Abertas"     },
+    { id: "em_execucao", label: "Em execucao" },
+    { id: "concluidas",  label: "Concluidas"  }
+  ];
+  return '<div class="mobile-pane" style="padding-bottom:0;">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+    '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title" style="padding:0 0 4px;">Minhas OS</h2>' +
+    '<div class="mobile-os-filtros" id="mOSFiltros">' +
+    filtros.map(function(f, i) {
+      return '<button class="mobile-os-filtro-btn' + (f.id === "todas" ? " mobile-os-filtro-ativo" : "") + '" ' +
+        'type="button" onclick="mobileOSFiltrar_(\'' + f.id + '\')">' + f.label + '</button>';
+    }).join("") +
+    '</div>' +
+    '<div id="mOSListaWrap" style="padding-top:4px;">' +
+      '<div style="text-align:center;padding:48px 0;">' +
+        '<i class="fas fa-spinner fa-spin" style="font-size:28px;color:var(--metro-green);"></i>' +
+        '<div style="margin-top:12px;color:var(--muted);font-size:13px;">Carregando...</div>' +
+      '</div>' +
+    '</div></div>';
+}
+
+function mobileCarregarMinhasOS_() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] osListar:", res && res.total, "itens");
+      if (!res || !res.success) {
+        mobileOSRenderErroLista_((res && res.message) || "Erro ao carregar OS.");
+        return;
+      }
+      MOBILE_MINHAS_OS_DADOS = res.items || [];
+      mobileOSRenderCards_(MOBILE_MINHAS_OS_FILTRO);
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] osListar failure:", err);
+      mobileOSRenderErroLista_("Erro ao carregar: " + (err.message || String(err)));
+    })
+    .osListar(SESSION);
+}
+
+function mobileOSRenderErroLista_(msg) {
+  var wrap = document.getElementById("mOSListaWrap");
+  if (!wrap) return;
+  wrap.innerHTML =
+    '<div class="mobile-placeholder-box" style="background:#fef2f2;border-color:#fca5a5;margin:16px;">' +
+    '<i class="fas fa-circle-exclamation" style="font-size:32px;color:#ef4444;display:block;margin-bottom:10px;"></i>' +
+    '<div style="font-size:13px;color:#b91c1c;">' + escapeHtml_(msg) + '</div>' +
+    '<button class="mobile-btn-secondary" type="button" onclick="mobileCarregarMinhasOS_()" style="margin-top:14px;">Tentar novamente</button>' +
+    '</div>';
+}
+
+function mobileOSFiltrar_(filtro) {
+  MOBILE_MINHAS_OS_FILTRO = filtro;
+  var btns = document.querySelectorAll(".mobile-os-filtro-btn");
+  var ids  = ["todas","hoje","abertas","em_execucao","concluidas"];
+  btns.forEach(function(b, i) {
+    b.classList.toggle("mobile-os-filtro-ativo", ids[i] === filtro);
+  });
+  mobileOSRenderCards_(filtro);
+}
+
+function mobileOSRenderCards_(filtro) {
+  var wrap = document.getElementById("mOSListaWrap");
+  if (!wrap) return;
+
+  var itens = MOBILE_MINHAS_OS_DADOS;
+  var hoje  = new Date().toISOString().substring(0, 10);
+
+  if (filtro === "hoje") {
+    itens = itens.filter(function(o) {
+      return (o.DATA_AGENDADA && String(o.DATA_AGENDADA).substring(0,10) === hoje) ||
+             (o.DATA_ABERTURA && String(o.DATA_ABERTURA).substring(0,10) === hoje);
+    });
+  } else if (filtro === "abertas") {
+    itens = itens.filter(function(o) {
+      var s = String(o.STATUS || "").toUpperCase();
+      return s === "ABERTA" || s === "AGENDADA";
+    });
+  } else if (filtro === "em_execucao") {
+    itens = itens.filter(function(o) {
+      return String(o.STATUS || "").toUpperCase() === "EM_EXECUCAO";
+    });
+  } else if (filtro === "concluidas") {
+    itens = itens.filter(function(o) {
+      var s = String(o.STATUS || "").toUpperCase();
+      return ["CONCLUIDA","CONCLUIDA_TECNICAMENTE","APROVADA","FATURADA"].indexOf(s) >= 0;
+    });
+  }
+
+  if (!itens.length) {
+    wrap.innerHTML =
+      '<div class="mobile-placeholder-box" style="background:#f0f9ff;border-color:#bae6fd;margin:16px;">' +
+      '<i class="fas fa-clipboard-list" style="font-size:36px;color:#0ea5e9;display:block;margin-bottom:10px;"></i>' +
+      '<div style="font-size:13px;color:#0369a1;">Nenhuma OS encontrada para este filtro.</div>' +
+      '</div>';
+    return;
+  }
+
+  wrap.innerHTML = '<div class="mobile-os-lista">' +
+    itens.map(function(o) { return mobileOSRenderCard_(o); }).join("") +
+  '</div>';
+}
+
+function mobileOSBadgeStatus_(status) {
+  var s = String(status || "").toUpperCase();
+  var cor = "#6b7280", bg = "#f3f4f6";
+  if (s === "ABERTA")                          { cor = "#1d4ed8"; bg = "#dbeafe"; }
+  else if (s === "AGENDADA")                   { cor = "#7c3aed"; bg = "#ede9fe"; }
+  else if (s === "EM_EXECUCAO")                { cor = "#059669"; bg = "#d1fae5"; }
+  else if (s === "CONCLUIDA" || s === "CONCLUIDA_TECNICAMENTE") { cor = "#065f46"; bg = "#d1fae5"; }
+  else if (s === "APROVADA")                   { cor = "#065f46"; bg = "#bbf7d0"; }
+  else if (s === "CANCELADA")                  { cor = "#991b1b"; bg = "#fee2e2"; }
+  return '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;' +
+    'background:' + bg + ';color:' + cor + ';">' + escapeHtml_(s.replace(/_/g," ")) + '</span>';
+}
+
+function mobileOSBadgePrioridade_(prioridade) {
+  var p = String(prioridade || "").toUpperCase();
+  var cor = "#6b7280", bg = "#f3f4f6";
+  if (p === "URGENTE")     { cor = "#991b1b"; bg = "#fee2e2"; }
+  else if (p === "ALTA")   { cor = "#c2410c"; bg = "#ffedd5"; }
+  else if (p === "NORMAL") { cor = "#1d4ed8"; bg = "#dbeafe"; }
+  return '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;' +
+    'background:' + bg + ';color:' + cor + ';">' + escapeHtml_(p || "NORMAL") + '</span>';
+}
+
+function mobileOSRenderCard_(o) {
+  var osId    = String(o.ID || "");
+  var numero  = escapeHtml_(o.NUMERO_OS || o.ID || "OS");
+  var cliente = escapeHtml_(o.CLIENTE_NOME || o.CLIENTE_ID || "");
+  var unidade = escapeHtml_(o.UNIDADE_NOME || o.UNIDADE_ID || "");
+  var equip   = escapeHtml_([o.EQUIPAMENTO_TAG, o.EQUIPAMENTO_TIPO].filter(Boolean).join(" / ") || o.EQUIPAMENTO_ID || "");
+  var tipo    = escapeHtml_(String(o.TIPO_OS || "").replace(/_/g," "));
+  var dataAgd = o.DATA_AGENDADA ? String(o.DATA_AGENDADA).substring(0,16).replace("T"," ") : "";
+  var temQuest = !!(o.QUESTIONARIO_MODELO_ID);
+
+  return '<div class="mobile-os-card">' +
+    '<div class="mobile-os-card-header">' +
+      '<span class="mobile-os-numero">' + numero + '</span>' +
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;">' +
+        mobileOSBadgeStatus_(o.STATUS) + mobileOSBadgePrioridade_(o.PRIORIDADE) +
+      '</div>' +
+    '</div>' +
+    '<div class="mobile-os-card-body">' +
+      (cliente  ? '<div class="mobile-os-row"><i class="fas fa-building"></i>' + cliente + '</div>'  : '') +
+      (unidade  ? '<div class="mobile-os-row"><i class="fas fa-location-dot"></i>' + unidade + '</div>' : '') +
+      (equip    ? '<div class="mobile-os-row"><i class="fas fa-microscope"></i>' + equip + '</div>'  : '') +
+      (tipo     ? '<div class="mobile-os-row"><i class="fas fa-tag"></i>' + tipo + '</div>'          : '') +
+      (dataAgd  ? '<div class="mobile-os-row"><i class="fas fa-calendar"></i>' + escapeHtml_(dataAgd) + '</div>' : '') +
+      (temQuest ? '<div class="mobile-os-row" style="color:#15803d;"><i class="fas fa-list-check" style="color:#16a34a;"></i>Questionario vinculado</div>' : '') +
+    '</div>' +
+    '<div class="mobile-os-card-footer">' +
+      '<button class="mobile-btn-secondary" type="button" style="flex:1;" ' +
+        'onclick="mobileOSExecutar_(\'' + osId + '\')">' +
+        '<i class="fas fa-eye" style="margin-right:6px;"></i>Abrir' +
+      '</button>' +
+      '<button class="mobile-btn-primary" type="button" style="flex:1;" ' +
+        'onclick="mobileOSExecutar_(\'' + osId + '\')">' +
+        '<i class="fas fa-play" style="margin-right:6px;"></i>Executar' +
+      '</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function mobileOSExecutar_(osId) {
+  console.log("[OS_EXEC] mobileOSExecutar_", osId);
+  var dlg = document.getElementById("mOSDialogPos");
+  if (dlg) dlg.remove();
+
+  if (!osId) {
+    mobileToast_("ID da OS nao localizado. Atualize a lista e tente novamente.", "erro");
+    return;
+  }
+
+  if (typeof window.renderOSExecucaoModulo_ !== "function") {
+    mobileToast_("Erro interno: modulo de execucao nao carregado. Recarregue a pagina.", "erro");
+    console.error("[OS_EXEC] window.renderOSExecucaoModulo_ nao definida. bare=" + typeof renderOSExecucaoModulo_ + " window=" + typeof window.renderOSExecucaoModulo_);
+    return;
+  }
+
+  window.renderOSExecucaoModulo_(osId);
+
+  // Patch the back button to return to SGO+ Campo instead of desktop
+  setTimeout(function() {
+    var btns = document.querySelectorAll(".module-header .btn-secondary");
+    btns.forEach(function(b) {
+      if ((b.getAttribute("onclick") || "").indexOf("abrir") >= 0 ||
+          b.textContent.indexOf("Voltar") >= 0) {
+        b.setAttribute("onclick", "renderMobileCampo_()");
+        b.innerHTML = "&#8592; SGO+ Campo";
+      }
+    });
+  }, 80);
+}
+
+/* ---- Pane: Nova OS ---- */
+
+function mobileHtmlNovaOS_() {
+  return '<div class="mobile-pane">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+    '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title">Nova OS</h2>' +
+    '<p class="mobile-pane-sub">Criacao rapida de Ordem de Servico</p>' +
+    '<div id="mNovaOSFormWrap">' +
+      '<div style="text-align:center;padding:48px 0;">' +
+        '<i class="fas fa-spinner fa-spin" style="font-size:28px;color:var(--metro-green);"></i>' +
+        '<div style="margin-top:12px;color:var(--muted);font-size:13px;">Carregando opcoes...</div>' +
+      '</div>' +
+    '</div></div>';
+}
+
+function mobileCarregarOpcoesOS_() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] osListarOpcoes ok:", res && res.success);
+      if (!res || !res.success) {
+        mobileNovaOSRenderErro_((res && res.message) || "Erro ao carregar opcoes.");
+        return;
+      }
+      MOBILE_OS_OPCOES = res;
+      mobileNovaOSRenderForm_();
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] osListarOpcoes failure:", err);
+      mobileNovaOSRenderErro_("Erro ao carregar: " + (err.message || String(err)));
+    })
+    .osListarOpcoes(SESSION);
+}
+
+function mobileNovaOSRenderErro_(msg) {
+  var wrap = document.getElementById("mNovaOSFormWrap");
+  if (!wrap) return;
+  wrap.innerHTML =
+    '<div class="mobile-placeholder-box" style="background:#fef2f2;border-color:#fca5a5;">' +
+    '<i class="fas fa-circle-exclamation" style="font-size:32px;color:#ef4444;display:block;margin-bottom:10px;"></i>' +
+    '<div style="font-size:13px;color:#b91c1c;">' + escapeHtml_(msg) + '</div>' +
+    '<button class="mobile-btn-secondary" type="button" onclick="mobileCarregarOpcoesOS_()" style="margin-top:14px;">Tentar novamente</button>' +
+    '</div>';
+}
+
+function mobileNovaOSRenderForm_() {
+  var wrap = document.getElementById("mNovaOSFormWrap");
+  if (!wrap || !MOBILE_OS_OPCOES) return;
+
+  var clientes = MOBILE_OS_OPCOES.clientes || [];
+  var tipos    = MOBILE_OS_OPCOES.tipos    || [];
+  var priors   = MOBILE_OS_OPCOES.prioridades || [];
+  var tecnicos = MOBILE_OS_OPCOES.tecnicos || [];
+
+  var optClientes = '<option value="">Selecione o cliente...</option>' +
+    clientes.map(function(c) {
+      return '<option value="' + escapeHtml_(String(c.ID)) + '">' + escapeHtml_(c.NOME || String(c.ID)) + '</option>';
+    }).join("");
+
+  var optTipos = '<option value="">Selecione o tipo...</option>' +
+    tipos.map(function(t) {
+      return '<option value="' + escapeHtml_(String(t)) + '">' + escapeHtml_(String(t).replace(/_/g," ")) + '</option>';
+    }).join("");
+
+  var optPriors = priors.map(function(p) {
+    var sel = (String(p).toUpperCase() === "NORMAL") ? " selected" : "";
+    return '<option value="' + escapeHtml_(String(p)) + '"' + sel + '>' + escapeHtml_(String(p)) + '</option>';
+  }).join("");
+  if (!optPriors) optPriors = '<option value="NORMAL" selected>NORMAL</option>';
+
+  var optTecnicos = '<option value="">Sem tecnico (opcional)</option>' +
+    tecnicos.map(function(t) {
+      return '<option value="' + escapeHtml_(String(t.ID)) + '">' + escapeHtml_(t.NOME || String(t.ID)) + '</option>';
+    }).join("");
+
+  wrap.innerHTML =
+    '<div class="mobile-form">' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>' +
+    '<select id="mOSClienteId" class="mobile-input mobile-select" onchange="mobileOSOnClienteChange_(this.value)">' +
+    optClientes + '</select>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Unidade <span style="color:#ef4444;">*</span></label>' +
+    '<select id="mOSUnidadeId" class="mobile-input mobile-select" onchange="mobileOSOnUnidadeChange_(this.value)">' +
+    '<option value="">Selecione o cliente primeiro</option>' +
+    '</select>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Equipamento <span style="color:#ef4444;">*</span></label>' +
+    '<select id="mOSEquipId" class="mobile-input mobile-select" onchange="mobileOSOnEquipChange_(this.value)">' +
+    '<option value="">Selecione a unidade primeiro</option>' +
+    '</select>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Tipo de Equipamento</label>' +
+    '<input id="mOSTipoEquip" class="mobile-input" type="text" readonly ' +
+    'placeholder="Preenchido ao selecionar equipamento" style="background:#f9fafb;color:var(--muted);">' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Tipo OS <span style="color:#ef4444;">*</span></label>' +
+    '<select id="mOSTipoOS" class="mobile-input mobile-select" onchange="mobileOSOnTipoOSChange_(this.value)">' +
+    optTipos + '</select>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Prioridade <span style="color:#ef4444;">*</span></label>' +
+    '<select id="mOSPrioridade" class="mobile-input mobile-select">' + optPriors + '</select>' +
+    '</div>' +
+
+    '<div id="mOSQuestionarioCard" style="display:none;margin-bottom:16px;"></div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Relato do cliente <span style="color:#ef4444;">*</span></label>' +
+    '<textarea id="mOSRelatoCliente" class="mobile-input mobile-textarea" rows="4" ' +
+    'placeholder="Descreva o problema ou solicitacao do cliente..."></textarea>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Orientacao tecnica</label>' +
+    '<textarea id="mOSOrientacao" class="mobile-input mobile-textarea" rows="3" ' +
+    'placeholder="Instrucoes para o tecnico (opcional)..."></textarea>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Tecnico responsavel</label>' +
+    '<select id="mOSTecnicoId" class="mobile-input mobile-select">' + optTecnicos + '</select>' +
+    '</div>' +
+
+    '<div class="mobile-field-group">' +
+    '<label class="mobile-label">Data/hora agendada</label>' +
+    '<input id="mOSDataAgendada" class="mobile-input" type="datetime-local">' +
+    '</div>' +
+
+    '<button class="mobile-btn-primary" type="button" id="mOSSalvarBtn" onclick="mobileSalvarNovaOS_()">' +
+    '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS' +
+    '</button>' +
+
+    '</div>';
+
+  if (MOBILE_OS_PREFILL) {
+    mobileOSAplicarPrefill_();
+  }
+}
+
+function mobileOSOnClienteChange_(clienteId) {
+  var selUni = document.getElementById("mOSUnidadeId");
+  var selEqp = document.getElementById("mOSEquipId");
+  if (!selUni || !MOBILE_OS_OPCOES) return;
+
+  if (!clienteId) {
+    selUni.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
+    if (selEqp) selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var unidades = (MOBILE_OS_OPCOES.unidades || []).filter(function(u) {
+    return String(u.CLIENTE_ID) === String(clienteId);
+  });
+
+  selUni.innerHTML = unidades.length
+    ? '<option value="">Selecione a unidade...</option>' + unidades.map(function(u) {
+        return '<option value="' + escapeHtml_(String(u.ID)) + '">' + escapeHtml_(u.NOME || String(u.ID)) + '</option>';
+      }).join("")
+    : '<option value="">Nenhuma unidade para este cliente</option>';
+
+  if (selEqp) selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  if (tipoInput) tipoInput.value = "";
+  mobileOSLimparQuestionario_();
+}
+
+function mobileOSOnUnidadeChange_(unidadeId) {
+  var selEqp = document.getElementById("mOSEquipId");
+  if (!selEqp || !MOBILE_OS_OPCOES) return;
+
+  if (!unidadeId) {
+    selEqp.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+    var tipoInput = document.getElementById("mOSTipoEquip");
+    if (tipoInput) tipoInput.value = "";
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var equips = (MOBILE_OS_OPCOES.equipamentos || []).filter(function(e) {
+    return String(e.UNIDADE_ID) === String(unidadeId);
+  });
+
+  selEqp.innerHTML = equips.length
+    ? '<option value="">Selecione o equipamento...</option>' + equips.map(function(e) {
+        var label = e.LABEL || [e.TAG, e.TIPO, e.MODELO].filter(Boolean).join(" - ") || String(e.ID);
+        return '<option value="' + escapeHtml_(String(e.ID)) + '" data-tipo="' + escapeHtml_(e.TIPO || "") + '">' +
+          escapeHtml_(label) + '</option>';
+      }).join("")
+    : '<option value="">Nenhum equipamento para esta unidade</option>';
+
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  if (tipoInput) tipoInput.value = "";
+  mobileOSLimparQuestionario_();
+}
+
+function mobileOSOnEquipChange_(equipId) {
+  var tipoInput = document.getElementById("mOSTipoEquip");
+  if (!equipId || !MOBILE_OS_OPCOES) {
+    if (tipoInput) tipoInput.value = "";
+    mobileOSLimparQuestionario_();
+    return;
+  }
+
+  var equip = (MOBILE_OS_OPCOES.equipamentos || []).find(function(e) {
+    return String(e.ID) === String(equipId);
+  });
+
+  var tipo = equip ? (equip.TIPO || "") : "";
+  if (tipoInput) tipoInput.value = tipo;
+
+  mobileOSCheckQuestionario_();
+}
+
+function mobileOSOnTipoOSChange_(tipoOS) {
+  mobileOSCheckQuestionario_();
+}
+
+function mobileOSCheckQuestionario_() {
+  var tipoOSEl    = document.getElementById("mOSTipoOS");
+  var tipoEquipEl = document.getElementById("mOSTipoEquip");
+  if (!tipoOSEl || !tipoEquipEl) return;
+
+  var tipoOS    = (tipoOSEl.value    || "").trim();
+  var tipoEquip = (tipoEquipEl.value || "").trim();
+
+  if (!tipoOS || !tipoEquip) { mobileOSLimparQuestionario_(); return; }
+
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (card) {
+    card.style.display = "";
+    card.innerHTML =
+      '<div style="padding:10px 14px;border-radius:10px;background:#f0fdf4;border:1px solid #86efac;">' +
+      '<i class="fas fa-spinner fa-spin" style="color:#16a34a;margin-right:8px;"></i>' +
+      '<span style="font-size:13px;color:#15803d;">Buscando questionario sugerido...</span></div>';
+  }
+
+  MOBILE_OS_QUESTIONARIO = null;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] checklistModeloPorTipoOSTipoEquipamento:", res && res.success, res && res.item && res.item.NOME);
+      if (res && res.success && res.item && res.item.ID) {
+        var m = res.item;
+        MOBILE_OS_QUESTIONARIO = {
+          id:    m.ID   || "",
+          nome:  m.NOME || "",
+          total: m.TOTAL_PERGUNTAS || m.TOTAL_ITENS ||
+                 (m.perguntas ? m.perguntas.length : 0) ||
+                 (m.itens     ? m.itens.length     : 0) || ""
+        };
+        mobileOSMostrarCardQuestionario_(true);
+      } else {
+        MOBILE_OS_QUESTIONARIO = null;
+        mobileOSMostrarCardQuestionario_(false);
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] checklistModeloPorTipoOSTipoEquipamento failure:", err);
+      MOBILE_OS_QUESTIONARIO = null;
+      mobileOSMostrarCardQuestionario_(false);
+    })
+    .checklistModeloPorTipoOSTipoEquipamento(SESSION, tipoOS, tipoEquip);
+}
+
+function mobileOSMostrarCardQuestionario_(encontrado) {
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (!card) return;
+  card.style.display = "";
+
+  if (encontrado && MOBILE_OS_QUESTIONARIO) {
+    var q = MOBILE_OS_QUESTIONARIO;
+    card.innerHTML =
+      '<div style="padding:12px 16px;border-radius:10px;background:#f0fdf4;border:1px solid #86efac;">' +
+      '<div style="font-weight:700;font-size:13px;color:#166534;margin-bottom:4px;">' +
+      '<i class="fas fa-circle-check" style="margin-right:6px;"></i>Questionario sugerido: ' + escapeHtml_(q.nome) + '</div>' +
+      (q.total ? '<div style="font-size:12px;color:#15803d;">Perguntas: ' + escapeHtml_(String(q.total)) + '</div>' : '') +
+      '</div>';
+  } else {
+    card.innerHTML =
+      '<div style="padding:12px 16px;border-radius:10px;background:#fefce8;border:1px solid #fde047;">' +
+      '<div style="font-weight:700;font-size:13px;color:#854d0e;margin-bottom:4px;">' +
+      '<i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i>Nenhum questionario configurado</div>' +
+      '<div style="font-size:12px;color:#713f12;">Nenhum questionario para este tipo de OS / equipamento. A OS pode ser criada mesmo assim.</div>' +
+      '</div>';
+  }
+}
+
+function mobileOSLimparQuestionario_() {
+  MOBILE_OS_QUESTIONARIO = null;
+  var card = document.getElementById("mOSQuestionarioCard");
+  if (card) card.style.display = "none";
+}
+
+function mobileOSAplicarPrefill_() {
+  var pf = MOBILE_OS_PREFILL;
+  if (!pf) return;
+
+  var selCliente = document.getElementById("mOSClienteId");
+  if (selCliente && pf.clienteId) {
+    selCliente.value = String(pf.clienteId);
+    mobileOSOnClienteChange_(String(pf.clienteId));
+  }
+
+  setTimeout(function() {
+    var selUnidade = document.getElementById("mOSUnidadeId");
+    if (selUnidade && pf.unidadeId) {
+      selUnidade.value = String(pf.unidadeId);
+      mobileOSOnUnidadeChange_(String(pf.unidadeId));
+    }
+    setTimeout(function() {
+      var selEquip = document.getElementById("mOSEquipId");
+      if (selEquip && pf.equipamentoId) {
+        selEquip.value = String(pf.equipamentoId);
+        mobileOSOnEquipChange_(String(pf.equipamentoId));
+      }
+      MOBILE_OS_PREFILL = null;
+    }, 60);
+  }, 60);
+}
+
+function mobileSalvarNovaOS_() {
+  var clienteId  = ((document.getElementById("mOSClienteId")    || {}).value || "").trim();
+  var unidadeId  = ((document.getElementById("mOSUnidadeId")    || {}).value || "").trim();
+  var equipId    = ((document.getElementById("mOSEquipId")      || {}).value || "").trim();
+  var tipoOS     = ((document.getElementById("mOSTipoOS")       || {}).value || "").trim();
+  var prioridade = ((document.getElementById("mOSPrioridade")   || {}).value || "").trim();
+  var relato     = ((document.getElementById("mOSRelatoCliente") || {}).value || "").trim();
+
+  if (!clienteId)  { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!unidadeId)  { mobileToast_("Selecione a unidade.", "erro"); return; }
+  if (!equipId)    { mobileToast_("Selecione o equipamento.", "erro"); return; }
+  if (!tipoOS)     { mobileToast_("Selecione o tipo de OS.", "erro"); return; }
+  if (!prioridade) { mobileToast_("Selecione a prioridade.", "erro"); return; }
+  if (!relato)     { mobileToast_("Informe o relato do cliente.", "erro"); return; }
+
+  var btn = document.getElementById("mOSSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Criando OS...'; }
+
+  var orientacao = ((document.getElementById("mOSOrientacao")   || {}).value || "").trim();
+  var tecnicoId  = ((document.getElementById("mOSTecnicoId")    || {}).value || "").trim();
+  var dataAgend  = ((document.getElementById("mOSDataAgendada") || {}).value || "").trim();
+
+  var payload = {
+    CLIENTE_ID:         clienteId,
+    UNIDADE_ID:         unidadeId,
+    EQUIPAMENTO_ID:     equipId,
+    TIPO_OS:            tipoOS,
+    PRIORIDADE:         prioridade,
+    RELATO_CLIENTE:     relato,
+    ORIENTACAO_TECNICA: orientacao
+  };
+
+  if (tecnicoId) payload.TECNICO_ID    = tecnicoId;
+  if (dataAgend) payload.DATA_AGENDADA = dataAgend;
+  if (MOBILE_OS_QUESTIONARIO && MOBILE_OS_QUESTIONARIO.id) {
+    payload.QUESTIONARIO_MODELO_ID = MOBILE_OS_QUESTIONARIO.id;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] osCriar response:", JSON.stringify(res).substring(0, 200));
+      if (!res || !res.success) {
+        mobileToast_((res && res.message) || "Falha ao criar OS.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+        return;
+      }
+      var osId    = (res.item && (res.item.ID || res.item.id)) || res.id || "";
+      var numOS   = (res.item && res.item.NUMERO_OS) || "";
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+      mobileOSDialogPosCriar_(osId, numOS);
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] osCriar failure:", err);
+      mobileToast_("Erro ao criar OS: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Criar OS'; }
+    })
+    .osCriar(SESSION, payload);
+}
+
+function mobileOSDialogPosCriar_(osId, numeroOS) {
+  var existing = document.getElementById("mOSDialogPos");
+  if (existing) existing.remove();
+
+  var shell = document.getElementById("mobileCampoShell");
+  if (!shell) { mobileAbrirTela_("home"); return; }
+
+  var dlg = document.createElement("div");
+  dlg.id = "mOSDialogPos";
+  dlg.className = "mobile-equip-dialog";
+  dlg.innerHTML =
+    '<div class="mobile-equip-dialog-box">' +
+      '<i class="fas fa-circle-check" style="font-size:44px;color:#16a34a;display:block;margin-bottom:12px;"></i>' +
+      '<div class="mobile-equip-dialog-title">OS criada com sucesso!</div>' +
+      (numeroOS ? '<div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:6px;">' + escapeHtml_(numeroOS) + '</div>' : '') +
+      '<div class="mobile-equip-dialog-sub">O que deseja fazer agora?</div>' +
+      '<div class="mobile-equip-dialog-btns">' +
+        '<button class="mobile-btn-primary" type="button" style="margin-bottom:10px;" ' +
+          'onclick="mobileOSExecutar_(\'' + osId + '\')">' +
+          '<i class="fas fa-play-circle" style="margin-right:8px;"></i>Executar agora' +
+        '</button>' +
+        '<button class="mobile-menu-action" type="button" ' +
+          'onclick="document.getElementById(\'mOSDialogPos\').remove(); mobileAbrirTela_(\'home\')">' +
+          'Fechar' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+  shell.appendChild(dlg);
+}
+
+/* ---- Pane: Menu ---- */
+
+function mobileHtmlMenu_() {
+  var nome   = USER_CONTEXT ? (USER_CONTEXT.nome || USER_CONTEXT.usuario || "Usuario") : "Usuario";
+  var perfil = USER_CONTEXT ? (USER_CONTEXT.perfil || "").toUpperCase() : "";
+
+  return '<div class="mobile-pane">' +
+    '<div class="mobile-user-card">' +
+    '<i class="fas fa-circle-user" style="font-size:44px;color:var(--metro-green);flex-shrink:0;"></i>' +
+    '<div>' +
+    '<div style="font-size:16px;font-weight:800;">' + escapeHtml_(nome) + '</div>' +
+    '<div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">' + escapeHtml_(perfil) + '</div>' +
+    '</div></div>' +
+    '<div class="mobile-menu-actions">' +
+    '<button class="mobile-menu-action" type="button" onclick="mobileModoGestaoCompleto_()">' +
+    '<i class="fas fa-desktop" style="margin-right:8px;"></i>Modo Gestao Completo</button>' +
+    '<button class="mobile-menu-action mobile-menu-danger" type="button" onclick="logout()">' +
+    '<i class="fas fa-power-off" style="margin-right:8px;"></i>Sair do sistema</button>' +
+    '</div></div>';
+}
+
+/* ---- Pane: Placeholder genérico ---- */
+
+function mobileHtmlPlaceholder_(titulo, icone, descricao) {
+  return '<div class="mobile-pane">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+    '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title">' + escapeHtml_(titulo) + '</h2>' +
+    '<div class="mobile-placeholder-box">' +
+    '<i class="' + icone + '" style="font-size:40px;color:var(--border-strong);display:block;margin-bottom:14px;"></i>' +
+    '<div style="font-size:13px;color:var(--muted);line-height:1.6;">' + escapeHtml_(descricao) + '</div>' +
+    '</div></div>';
+}
+
+/* ---- Toast ---- */
+
+function mobileToast_(msg, tipo) {
+  var existing = document.getElementById("mobileToastEl");
+  if (existing) existing.remove();
+
+  var el = document.createElement("div");
+  el.id = "mobileToastEl";
+  el.className = "mobile-toast mobile-toast-" + (tipo || "ok");
+  el.textContent = msg;
+
+  var shell = document.getElementById("mobileCampoShell");
+  (shell || document.body).appendChild(el);
+
+  setTimeout(function() { el.classList.add("mobile-toast-show"); }, 10);
+  setTimeout(function() {
+    el.classList.remove("mobile-toast-show");
+    setTimeout(function() { el.remove(); }, 350);
+  }, 3000);
+}
+
+/* ---- Pane: + Cliente ---- */
+
+function mobileHtmlClienteForm_() {
+  return '<div class="mobile-pane">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+    '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title">+ Cliente</h2>' +
+    '<p class="mobile-pane-sub">Cadastro rapido de cliente</p>' +
+    '<div class="mobile-form">' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">CNPJ</label>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<input id="mClienteCnpj" class="mobile-input" type="text" inputmode="numeric" ' +
+            'placeholder="00.000.000/0001-00" maxlength="18">' +
+          '<button class="mobile-btn-secondary" type="button" onclick="mobileBuscarCnpj_()" ' +
+            'style="white-space:nowrap;flex-shrink:0;">Buscar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Razao Social / Nome <span style="color:#ef4444;">*</span></label>' +
+        '<input id="mClienteRazaoSocial" class="mobile-input" type="text" placeholder="Nome do cliente">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Nome Fantasia</label>' +
+        '<input id="mClienteNomeFantasia" class="mobile-input" type="text" placeholder="Como e chamado">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Telefone / WhatsApp</label>' +
+        '<input id="mClienteTelefone" class="mobile-input" type="tel" inputmode="tel" placeholder="(11) 99999-9999">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">E-mail</label>' +
+        '<input id="mClienteEmail" class="mobile-input" type="email" inputmode="email" placeholder="contato@empresa.com">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Observacao</label>' +
+        '<textarea id="mClienteObs" class="mobile-input mobile-textarea" placeholder="Informacoes adicionais"></textarea>' +
+      '</div>' +
+      '<button class="mobile-btn-primary" type="button" id="mClienteSalvarBtn" onclick="mobileSalvarCliente_()">' +
+        '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente' +
+      '</button>' +
+    '</div></div>';
+}
+
+function mobileSalvarCliente_() {
+  var razao = (document.getElementById("mClienteRazaoSocial") || {}).value || "";
+  razao = razao.trim();
+  if (!razao) {
+    mobileToast_("Razao Social e obrigatoria.", "erro");
+    return;
+  }
+
+  var btn = document.getElementById("mClienteSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    RAZAO_SOCIAL:  razao,
+    NOME_FANTASIA: ((document.getElementById("mClienteNomeFantasia") || {}).value || "").trim(),
+    CNPJ:          ((document.getElementById("mClienteCnpj")         || {}).value || "").trim(),
+    TELEFONE:      ((document.getElementById("mClienteTelefone")     || {}).value || "").trim(),
+    EMAIL:         ((document.getElementById("mClienteEmail")        || {}).value || "").trim()
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] clientesCriar response:", JSON.stringify(res));
+      if (res && res.success) {
+        mobileToast_("Cliente salvo com sucesso!", "ok");
+        setTimeout(function() { mobileAbrirTela_("home"); }, 800);
+      } else {
+        mobileToast_((res && res.message) || "Falha ao salvar cliente.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente'; }
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] clientesCriar failure:", err);
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Cliente'; }
+    })
+    .clientesCriar(SESSION, payload);
+}
+
+function mobileBuscarCnpj_() {
+  var cnpj = ((document.getElementById("mClienteCnpj") || {}).value || "").replace(/\D/g, "");
+  if (cnpj.length !== 14) {
+    mobileToast_("Digite um CNPJ valido (14 digitos).", "aviso");
+    return;
+  }
+
+  var buscarBtn = document.querySelector('[onclick="mobileBuscarCnpj_()"]');
+  if (buscarBtn) { buscarBtn.disabled = true; buscarBtn.textContent = "..."; }
+  mobileToast_("Buscando na Receita Federal...", "ok");
+
+  fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+    .then(function(res) {
+      if (!res.ok) throw new Error("CNPJ nao encontrado (HTTP " + res.status + ")");
+      return res.json();
+    })
+    .then(function(data) {
+      var rsEl = document.getElementById("mClienteRazaoSocial");
+      var nfEl = document.getElementById("mClienteNomeFantasia");
+      var tfEl = document.getElementById("mClienteTelefone");
+      if (rsEl) rsEl.value = data.razao_social || "";
+      if (nfEl) nfEl.value = data.nome_fantasia || data.razao_social || "";
+      if (tfEl) tfEl.value = data.ddd_telefone_1 || "";
+      mobileToast_("Dados preenchidos pela Receita!", "ok");
+    })
+    .catch(function(err) {
+      console.warn("[mobile] BrasilAPI CNPJ:", err);
+      mobileToast_("CNPJ nao encontrado na Receita. Preencha manualmente.", "aviso");
+    })
+    .finally(function() {
+      if (buscarBtn) { buscarBtn.disabled = false; buscarBtn.textContent = "Buscar"; }
+    });
+}
+
+function mobileBuscarCnpjUnidade_() {
+  var cnpj = ((document.getElementById("mUnidadeCnpj") || {}).value || "").replace(/\D/g, "");
+  if (cnpj.length !== 14) {
+    mobileToast_("Digite um CNPJ valido (14 digitos).", "aviso");
+    return;
+  }
+
+  var btn = document.getElementById("mUnidadeCnpjBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "..."; }
+  mobileToast_("Buscando na Receita Federal...", "ok");
+
+  fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+    .then(function(res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      var nomeEl  = document.getElementById("mUnidadeNome");
+      var endEl   = document.getElementById("mUnidadeEndereco");
+      var cidEl   = document.getElementById("mUnidadeCidade");
+      var ufEl    = document.getElementById("mUnidadeUF");
+      var telEl   = document.getElementById("mUnidadeWhatsapp");
+
+      var fantasia = data.nome_fantasia || data.razao_social || "";
+      var logr     = data.logradouro || "";
+      var num      = data.numero     || "";
+      var bairro   = data.bairro     || "";
+      var endStr   = logr + (num ? ", " + num : "") + (bairro ? " - " + bairro : "");
+
+      if (nomeEl && fantasia)          nomeEl.value  = fantasia;
+      if (endEl  && endStr.trim())     endEl.value   = endStr.trim();
+      if (cidEl  && data.municipio)    cidEl.value   = data.municipio;
+      if (ufEl   && data.uf)           ufEl.value    = data.uf;
+      if (telEl  && data.ddd_telefone_1) telEl.value = data.ddd_telefone_1;
+
+      mobileToast_("Dados preenchidos com sucesso.", "ok");
+    })
+    .catch(function(err) {
+      console.warn("[mobile] BrasilAPI CNPJ unidade:", err);
+      mobileToast_("CNPJ nao encontrado na Receita. Preencha manualmente.", "aviso");
+    })
+    .finally(function() {
+      if (btn) { btn.disabled = false; btn.textContent = "Buscar"; }
+    });
+}
+
+/* ---- Pane: + Unidade ---- */
+
+var MOBILE_GPS_LAT = null;
+var MOBILE_GPS_LNG = null;
+
+function mobileHtmlUnidadeForm_() {
+  return '<div class="mobile-pane">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+    '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title">+ Unidade</h2>' +
+    '<p class="mobile-pane-sub">Cadastro rapido de unidade</p>' +
+    '<div class="mobile-form">' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>' +
+        '<select id="mUnidadeClienteId" class="mobile-input mobile-select">' +
+          '<option value="">Carregando clientes...</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">CNPJ da Unidade</label>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<input id="mUnidadeCnpj" class="mobile-input" type="text" inputmode="numeric" ' +
+            'placeholder="00.000.000/0001-00" maxlength="18">' +
+          '<button class="mobile-btn-secondary" type="button" onclick="mobileBuscarCnpjUnidade_()" ' +
+            'id="mUnidadeCnpjBtn" style="white-space:nowrap;flex-shrink:0;">Buscar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Nome da Unidade <span style="color:#ef4444;">*</span></label>' +
+        '<input id="mUnidadeNome" class="mobile-input" type="text" placeholder="Ex: Matriz, Filial SP...">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Endereco</label>' +
+        '<input id="mUnidadeEndereco" class="mobile-input" type="text" placeholder="Rua, numero, bairro">' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;" class="mobile-field-group">' +
+        '<div style="flex:1;">' +
+          '<label class="mobile-label">Cidade</label>' +
+          '<input id="mUnidadeCidade" class="mobile-input" type="text" placeholder="Cidade">' +
+        '</div>' +
+        '<div style="width:70px;">' +
+          '<label class="mobile-label">UF</label>' +
+          '<input id="mUnidadeUF" class="mobile-input" type="text" placeholder="SP" maxlength="2">' +
+        '</div>' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Contato Local</label>' +
+        '<input id="mUnidadeContato" class="mobile-input" type="text" placeholder="Nome do responsavel">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">WhatsApp</label>' +
+        '<input id="mUnidadeWhatsapp" class="mobile-input" type="tel" inputmode="tel" placeholder="(11) 99999-9999">' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Observacao</label>' +
+        '<textarea id="mUnidadeObs" class="mobile-input mobile-textarea" placeholder="Informacoes adicionais"></textarea>' +
+      '</div>' +
+      '<div class="mobile-field-group">' +
+        '<button class="mobile-btn-gps" type="button" id="mUnidadeGpsBtn" onclick="mobileCapturaGPS_()">' +
+          '<i class="fas fa-location-dot" style="margin-right:8px;"></i>Usar localizacao atual' +
+        '</button>' +
+        '<div id="mUnidadeGpsStatus" class="mobile-gps-status"></div>' +
+      '</div>' +
+      '<button class="mobile-btn-primary" type="button" id="mUnidadeSalvarBtn" onclick="mobileSalvarUnidade_()">' +
+        '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade' +
+      '</button>' +
+    '</div></div>';
+}
+
+function mobileCarregarClientesSelect_(selectId) {
+  MOBILE_GPS_LAT = null;
+  MOBILE_GPS_LNG = null;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] listarClientesAtivos response:", JSON.stringify(res));
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+          res.items.map(function(c) {
+            var label = escapeHtml_(c.NOME || c.RAZAO_SOCIAL || c.NOME_FANTASIA || String(c.ID));
+            return '<option value="' + escapeHtml_(String(c.ID)) + '">' + label + '</option>';
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhum cliente ativo encontrado</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] listarClientesAtivos failure:", err);
+      var sel = document.getElementById(selectId);
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar clientes</option>';
+    })
+    .unidadesListarClientesAtivos(SESSION);
+}
+
+function mobileCapturaGPS_() {
+  var btn    = document.getElementById("mUnidadeGpsBtn");
+  var status = document.getElementById("mUnidadeGpsStatus");
+
+  if (!navigator.geolocation) {
+    if (status) { status.textContent = "GPS nao disponivel neste dispositivo."; status.className = "mobile-gps-status mobile-gps-erro"; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Obtendo localizacao...'; }
+  if (status) { status.textContent = ""; status.className = "mobile-gps-status"; }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      MOBILE_GPS_LAT = pos.coords.latitude;
+      MOBILE_GPS_LNG = pos.coords.longitude;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-circle-check" style="margin-right:8px;color:#16a34a;"></i>Localizacao capturada'; }
+      if (status) {
+        status.textContent = "Lat: " + MOBILE_GPS_LAT.toFixed(6) + " | Lng: " + MOBILE_GPS_LNG.toFixed(6);
+        status.className = "mobile-gps-status mobile-gps-ok";
+      }
+    },
+    function(err) {
+      MOBILE_GPS_LAT = null;
+      MOBILE_GPS_LNG = null;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-location-dot" style="margin-right:8px;"></i>Usar localizacao atual'; }
+      if (status) {
+        var msg = err.code === 1 ? "Permissao negada." : err.code === 2 ? "Posicao indisponivel." : "Tempo esgotado.";
+        status.textContent = msg;
+        status.className = "mobile-gps-status mobile-gps-erro";
+      }
+    },
+    { timeout: 15000, maximumAge: 60000, enableHighAccuracy: true }
+  );
+}
+
+function mobileSalvarUnidade_() {
+  var clienteId = ((document.getElementById("mUnidadeClienteId") || {}).value || "").trim();
+  var nome      = ((document.getElementById("mUnidadeNome")       || {}).value || "").trim();
+
+  if (!clienteId) { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!nome)       { mobileToast_("Nome da unidade e obrigatorio.", "erro"); return; }
+
+  var btn = document.getElementById("mUnidadeSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    CLIENTE_ID:   clienteId,
+    NOME_UNIDADE: nome,
+    CNPJ_UNIDADE: ((document.getElementById("mUnidadeCnpj")     || {}).value || "").trim(),
+    ENDERECO:     ((document.getElementById("mUnidadeEndereco") || {}).value || "").trim(),
+    CIDADE:       ((document.getElementById("mUnidadeCidade")   || {}).value || "").trim(),
+    UF:           ((document.getElementById("mUnidadeUF")       || {}).value || "").trim(),
+    RESPONSAVEL:  ((document.getElementById("mUnidadeContato")  || {}).value || "").trim(),
+    TELEFONE:     ((document.getElementById("mUnidadeWhatsapp") || {}).value || "").trim()
+  };
+
+  if (MOBILE_GPS_LAT !== null) payload.LATITUDE  = MOBILE_GPS_LAT;
+  if (MOBILE_GPS_LNG !== null) payload.LONGITUDE = MOBILE_GPS_LNG;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] unidadesCriar response:", JSON.stringify(res));
+      if (res && res.success) {
+        mobileToast_("Unidade salva com sucesso!", "ok");
+        setTimeout(function() { mobileAbrirTela_("home"); }, 800);
+      } else {
+        mobileToast_((res && res.message) || "Falha ao salvar unidade.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade'; }
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] unidadesCriar failure:", err);
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Unidade'; }
+    })
+    .unidadesCriar(SESSION, payload);
+}
+
+/* ---- Pane: + Equipamento ---- */
+
+var MOBILE_EQUIP_FOTOS = { plaqueta: null, equipamento: null };
+
+function mobileHtmlEquipamentoForm_() {
+  return '<div class="mobile-pane">' +
+    '<button class="mobile-back" type="button" onclick="mobileVoltar_()">' +
+      '<i class="fas fa-arrow-left"></i> Voltar</button>' +
+    '<h2 class="mobile-pane-title">+ Equipamento</h2>' +
+    '<p class="mobile-pane-sub">Cadastro rapido de equipamento</p>' +
+    '<div class="mobile-form">' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Cliente <span style="color:#ef4444;">*</span></label>' +
+        '<select id="mEquipClienteId" class="mobile-input mobile-select" onchange="mobileCarregarUnidadesEquip_(\'mEquipUnidadeId\', this.value)">' +
+          '<option value="">Carregando clientes...</option>' +
+        '</select>' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Unidade <span style="color:#ef4444;">*</span></label>' +
+        '<select id="mEquipUnidadeId" class="mobile-input mobile-select">' +
+          '<option value="">Selecione o cliente primeiro</option>' +
+        '</select>' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Tipo de Equipamento <span style="color:#ef4444;">*</span></label>' +
+        '<input id="mEquipTipo" class="mobile-input" type="text" placeholder="Ex: Balanca, Autoclave...">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">TAG / Patrimonio</label>' +
+        '<input id="mEquipTag" class="mobile-input" type="text" placeholder="Ex: EQ-0042">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Fabricante</label>' +
+        '<input id="mEquipFabricante" class="mobile-input" type="text" placeholder="Ex: Mettler Toledo">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Modelo</label>' +
+        '<input id="mEquipModelo" class="mobile-input" type="text" placeholder="Ex: ML3002E">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Numero de Serie</label>' +
+        '<input id="mEquipSerie" class="mobile-input" type="text" placeholder="Ex: SN123456789">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Setor / Local de Instalacao</label>' +
+        '<input id="mEquipSetor" class="mobile-input" type="text" placeholder="Ex: Laboratorio, Farmacia...">' +
+      '</div>' +
+
+      '<div class="mobile-field-group">' +
+        '<label class="mobile-label">Observacao</label>' +
+        '<textarea id="mEquipObs" class="mobile-input mobile-textarea" placeholder="Informacoes adicionais"></textarea>' +
+      '</div>' +
+
+      '<div class="mobile-foto-area">' +
+        '<div class="mobile-foto-area-title">' +
+          '<i class="fas fa-camera" style="margin-right:6px;"></i>Registro visual' +
+        '</div>' +
+        '<div class="mobile-foto-slots">' +
+
+          '<div class="mobile-foto-slot" id="mEquipSlotPlaqueta">' +
+            '<div class="mobile-foto-slot-label">Plaqueta</div>' +
+            '<input type="file" id="mEquipInputPlaqueta" accept="image/*" capture="environment" ' +
+              'style="display:none;" onchange="mobileEquipFotoSelecionar_(\'plaqueta\', this)">' +
+            '<div id="mEquipThumbPlaqueta" class="mobile-foto-thumb-wrap" style="display:none;">' +
+              '<img id="mEquipImgPlaqueta" class="mobile-foto-thumb" alt="plaqueta">' +
+              '<button class="mobile-foto-remove" type="button" onclick="mobileEquipFotoRemover_(\'plaqueta\')">' +
+                '<i class="fas fa-times"></i>' +
+              '</button>' +
+            '</div>' +
+            '<button class="mobile-foto-btn" type="button" id="mEquipBtnPlaqueta" ' +
+              'onclick="document.getElementById(\'mEquipInputPlaqueta\').click()">' +
+              '<i class="fas fa-camera" style="margin-right:6px;"></i>Foto da plaqueta' +
+            '</button>' +
+          '</div>' +
+
+          '<div class="mobile-foto-slot" id="mEquipSlotEquip">' +
+            '<div class="mobile-foto-slot-label">Equipamento</div>' +
+            '<input type="file" id="mEquipInputEquip" accept="image/*" capture="environment" ' +
+              'style="display:none;" onchange="mobileEquipFotoSelecionar_(\'equipamento\', this)">' +
+            '<div id="mEquipThumbEquip" class="mobile-foto-thumb-wrap" style="display:none;">' +
+              '<img id="mEquipImgEquip" class="mobile-foto-thumb" alt="equipamento">' +
+              '<button class="mobile-foto-remove" type="button" onclick="mobileEquipFotoRemover_(\'equipamento\')">' +
+                '<i class="fas fa-times"></i>' +
+              '</button>' +
+            '</div>' +
+            '<button class="mobile-foto-btn" type="button" id="mEquipBtnEquip" ' +
+              'onclick="document.getElementById(\'mEquipInputEquip\').click()">' +
+              '<i class="fas fa-camera" style="margin-right:6px;"></i>Foto do equip.' +
+            '</button>' +
+          '</div>' +
+
+        '</div>' +
+      '</div>' +
+
+      '<button class="mobile-btn-primary" type="button" id="mEquipSalvarBtn" onclick="mobileSalvarEquipamento_()">' +
+        '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento' +
+      '</button>' +
+
+    '</div></div>';
+}
+
+function mobileCarregarClientesEquip_(selectId) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione o cliente...</option>' +
+          res.items.map(function(c) {
+            return '<option value="' + escapeHtml_(String(c.ID)) + '">' +
+              escapeHtml_(c.NOME || String(c.ID)) + '</option>';
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhum cliente ativo</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] listarClientesEquip:", err);
+      var sel = document.getElementById(selectId);
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar</option>';
+    })
+    .equipamentosListarClientesAtivos(SESSION);
+}
+
+function mobileCarregarUnidadesEquip_(selectId, clienteId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  if (!clienteId) {
+    sel.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Carregando unidades...</option>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!sel) return;
+      if (res && res.success && res.items && res.items.length) {
+        sel.innerHTML = '<option value="">Selecione a unidade...</option>' +
+          res.items.map(function(u) {
+            return '<option value="' + escapeHtml_(String(u.ID)) + '">' +
+              escapeHtml_(u.NOME_UNIDADE || String(u.ID)) + '</option>';
+          }).join("");
+      } else {
+        sel.innerHTML = '<option value="">Nenhuma unidade ativa para este cliente</option>';
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] listarUnidadesEquip:", err);
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar unidades</option>';
+    })
+    .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+}
+
+function mobileEquipFotoSelecionar_(slot, inputEl) {
+  var file = inputEl && inputEl.files && inputEl.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl  = e.target.result;
+    var sepIdx   = dataUrl.indexOf(",");
+    var base64   = dataUrl.substring(sepIdx + 1);
+    MOBILE_EQUIP_FOTOS[slot] = { base64: base64, mime: file.type || "image/jpeg", nome: file.name };
+
+    var thumbWrap = document.getElementById(slot === "plaqueta" ? "mEquipThumbPlaqueta" : "mEquipThumbEquip");
+    var thumbImg  = document.getElementById(slot === "plaqueta" ? "mEquipImgPlaqueta"   : "mEquipImgEquip");
+    var btn       = document.getElementById(slot === "plaqueta" ? "mEquipBtnPlaqueta"   : "mEquipBtnEquip");
+
+    if (thumbImg)  thumbImg.src      = dataUrl;
+    if (thumbWrap) thumbWrap.style.display = "";
+    if (btn)       btn.style.display = "none";
+  };
+  reader.readAsDataURL(file);
+}
+
+function mobileEquipFotoRemover_(slot) {
+  MOBILE_EQUIP_FOTOS[slot] = null;
+
+  var thumbWrap = document.getElementById(slot === "plaqueta" ? "mEquipThumbPlaqueta" : "mEquipThumbEquip");
+  var thumbImg  = document.getElementById(slot === "plaqueta" ? "mEquipImgPlaqueta"   : "mEquipImgEquip");
+  var btn       = document.getElementById(slot === "plaqueta" ? "mEquipBtnPlaqueta"   : "mEquipBtnEquip");
+  var inputEl   = document.getElementById(slot === "plaqueta" ? "mEquipInputPlaqueta" : "mEquipInputEquip");
+
+  if (thumbImg)  thumbImg.src        = "";
+  if (thumbWrap) thumbWrap.style.display = "none";
+  if (btn)       btn.style.display   = "";
+  if (inputEl)   inputEl.value       = "";
+}
+
+function mobileSalvarEquipamento_() {
+  var clienteId = ((document.getElementById("mEquipClienteId") || {}).value || "").trim();
+  var unidadeId = ((document.getElementById("mEquipUnidadeId") || {}).value || "").trim();
+  var tipo      = ((document.getElementById("mEquipTipo")      || {}).value || "").trim();
+
+  if (!clienteId) { mobileToast_("Selecione o cliente.", "erro"); return; }
+  if (!unidadeId) { mobileToast_("Selecione a unidade.", "erro"); return; }
+  if (!tipo)      { mobileToast_("Informe o tipo de equipamento.", "erro"); return; }
+
+  var btn = document.getElementById("mEquipSalvarBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Salvando...'; }
+
+  var payload = {
+    CLIENTE_ID: clienteId,
+    UNIDADE_ID: unidadeId,
+    TIPO:       tipo,
+    TAG:        ((document.getElementById("mEquipTag")        || {}).value || "").trim(),
+    FABRICANTE: ((document.getElementById("mEquipFabricante") || {}).value || "").trim(),
+    MODELO:     ((document.getElementById("mEquipModelo")     || {}).value || "").trim(),
+    SERIE:      ((document.getElementById("mEquipSerie")      || {}).value || "").trim(),
+    SETOR:      ((document.getElementById("mEquipSetor")      || {}).value || "").trim()
+  };
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      console.log("[mobile] equipamentosCriar response:", JSON.stringify(res));
+      if (!res || !res.success) {
+        mobileToast_((res && res.message) || "Falha ao salvar equipamento.", "erro");
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+        return;
+      }
+      var equipId = res.id || "";
+      // Armazena prefill para Nova OS vir pré-preenchida
+      MOBILE_OS_PREFILL = { clienteId: clienteId, unidadeId: unidadeId, equipamentoId: equipId };
+      mobileEquipUploadFotos_(equipId, function() {
+        mobileEquipMostrarDialogPos_(equipId);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+      });
+    })
+    .withFailureHandler(function(err) {
+      console.error("[mobile] equipamentosCriar failure:", err);
+      mobileToast_("Erro ao salvar: " + (err.message || String(err)), "erro");
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Salvar Equipamento'; }
+    })
+    .equipamentosCriar(SESSION, payload);
+}
+
+function mobileEquipUploadFotos_(equipId, onConcluido) {
+  var slots   = ["plaqueta", "equipamento"];
+  var tipos   = { plaqueta: "PLAQUETA", equipamento: "EQUIPAMENTO" };
+  var idx     = 0;
+  var erros   = [];
+
+  function proximoSlot() {
+    if (idx >= slots.length) {
+      if (erros.length) mobileToast_("Equipamento salvo. Falha em " + erros.length + " foto(s).", "aviso");
+      else              mobileToast_("Equipamento cadastrado com sucesso!", "ok");
+      onConcluido();
+      return;
+    }
+    var slot = slots[idx++];
+    var foto = MOBILE_EQUIP_FOTOS[slot];
+    if (!foto || !foto.base64) { proximoSlot(); return; }
+
+    if (!equipId) { proximoSlot(); return; }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        console.log("[mobile] equipamentoFotoUploadBase64 (" + slot + "):", JSON.stringify(res));
+        if (!res || !res.success) erros.push(slot);
+        proximoSlot();
+      })
+      .withFailureHandler(function(err) {
+        console.error("[mobile] foto upload failure (" + slot + "):", err);
+        erros.push(slot);
+        proximoSlot();
+      })
+      .equipamentoFotoUploadBase64(SESSION, equipId, {
+        BASE64_DATA: foto.base64,
+        MIME_TYPE:   foto.mime,
+        TIPO_FOTO:   tipos[slot],
+        NOME_ARQUIVO: "equip_" + tipos[slot].toLowerCase() + "_" + (equipId || "novo") + "." + (foto.mime.includes("png") ? "png" : "jpg")
+      });
+  }
+
+  proximoSlot();
+}
+
+function mobileEquipMostrarDialogPos_(equipId) {
+  var existing = document.getElementById("mEquipDialogPos");
+  if (existing) existing.remove();
+
+  var shell = document.getElementById("mobileCampoShell");
+  if (!shell) return;
+
+  var dlg = document.createElement("div");
+  dlg.id = "mEquipDialogPos";
+  dlg.className = "mobile-equip-dialog";
+  dlg.innerHTML =
+    '<div class="mobile-equip-dialog-box">' +
+      '<i class="fas fa-circle-check" style="font-size:44px;color:#16a34a;display:block;margin-bottom:12px;"></i>' +
+      '<div class="mobile-equip-dialog-title">Equipamento cadastrado!</div>' +
+      '<div class="mobile-equip-dialog-sub">Deseja criar uma OS para este equipamento?</div>' +
+      '<div class="mobile-equip-dialog-btns">' +
+        '<button class="mobile-btn-primary" type="button" style="margin-bottom:10px;" ' +
+          'onclick="mobileEquipCriarOS_(\'' + escapeHtml_(equipId) + '\')">' +
+          '<i class="fas fa-plus-circle" style="margin-right:8px;"></i>Criar OS' +
+        '</button>' +
+        '<button class="mobile-menu-action" type="button" ' +
+          'onclick="document.getElementById(\'mEquipDialogPos\').remove(); mobileAbrirTela_(\'home\')">' +
+          'Fechar' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
+  shell.appendChild(dlg);
+}
+
+function mobileEquipCriarOS_(equipId) {
+  var dlg = document.getElementById("mEquipDialogPos");
+  if (dlg) dlg.remove();
+  // MOBILE_OS_PREFILL foi preenchido em mobileSalvarEquipamento_ antes de chamar esta função
+  mobileAbrirTela_("nova_os");
+}
+
+/* ---- Modo Gestão Completo ---- */
+
+function mobileModoGestaoCompleto_() {
+  var topbar  = document.querySelector(".topbar");
+  var sidebar = document.querySelector(".sidebar");
+  if (topbar)  topbar.style.display  = "";
+  if (sidebar) sidebar.style.display = "";
+  var div = document.getElementById("conteudo");
+  if (div) div.innerHTML = "";
+  abrir("dashboard");
+}
+</script>

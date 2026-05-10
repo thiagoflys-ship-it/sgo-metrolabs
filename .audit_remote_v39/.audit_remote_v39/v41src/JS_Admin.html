@@ -1,0 +1,1005 @@
+<script>
+  // ==========================================
+  // MÓDULO: ADMINISTRAÇÃO E CONFIGURAÇÕES
+  // ==========================================
+  function renderAdminModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    const perfilAdmin = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    const podeTestarDocumentFactory = ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfilAdmin) >= 0;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Painel Admin</h2>\n            <p class="content-subtitle">Configurações operacionais e Gestão de Usuários.</p>\n          </div>\n        </div>\n\n        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 10px;">\n\n          <div class="card-kpi">\n            <div class="card-kpi-title">Tempo de ociosidade (Segundos)</div>\n            <div style="display:flex; gap:5px; align-items:center; margin-top:8px;">\n              <input type="number" id="inputIdleLimit" value="' +
+      (IDLE_LIMIT) +
+      '" style="width:75px; padding:4px; font-size:14px; text-align:center;" min="30">\n              <button class="btn-primary" type="button" style="padding:5px 10px; font-size:12px;" onclick="salvarTempoOciosidadePainel_()">Salvar</button>\n            </div>\n          </div>\n\n          <div class="card-kpi">\n            <div class="card-kpi-title">Som de ociosidade</div>\n            <div class="card-kpi-value" id="adminSomStatus">' +
+      (SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF") +
+      '</div>\n          </div>\n\n          <div class="card-kpi">\n            <div class="card-kpi-title">Controle de som</div>\n            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">\n              <button class="btn-primary" type="button" style="padding:6px 10px; font-size:12px;" onclick="ativarSomOciosidadePainel_()">Ativar</button>\n              <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="desativarSomOciosidadePainel_()">Desativar</button>\n              <button class="btn-info" type="button" style="padding:6px 10px; font-size:12px;" onclick="testarSomOciosidade_()">Testar</button>\n            </div>\n          </div>\n\n          <div class="card-kpi">\n            <div class="card-kpi-title">Mensagem motivacional atual</div>\n            <div id="adminMensagemAtual" style="font-weight:700; color:var(--metro-blue); font-size:12px; line-height:1.4; margin-bottom:8px;"></div>\n            <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="sortearNovaMensagemMotivacional_()">Trocar mensagem</button>\n          </div>\n        </div>\n\n        <div style="margin-bottom:20px;">\n          <button class="btn-danger" type="button" style="padding:6px 12px; font-size:12px;" onclick="limparCacheNavegador_()">Limpar Sessão Travada (Logout Forçado)</button>\n        </div>\n\n        <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">\n\n        <!-- ── ALERTAS POR E-MAIL ──────────────────────────────────────── -->\n        <div class="module-header" style="margin-bottom:14px;">\n          <div class="module-header-left">\n            <h3 style="margin:0;font-size:18px;color:var(--text);"><i class="fas fa-envelope-circle-check" style="color:var(--metro-green);margin-right:8px;"></i>Alertas por E-mail</h3>\n            <p style="margin:4px 0 0;color:var(--muted);font-size:13px;">Envio automático diário de vencimentos e pendências: documentos, registros técnicos, contratos, OS, peças e frota.</p>\n          </div>\n        </div>\n        <div class="form-card" style="margin-bottom:20px;">\n          <div id="emailAlertasStatusBox" style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:#f0f4fa;font-size:13px;color:#344054;">\n            Carregando status...\n          </div>\n          <div class="form-grid">\n            <div class="full">\n              <label for="emailAlertaDest">Destinatários (separados por vírgula)</label>\n              <input id="emailAlertaDest" type="text" placeholder="email@empresa.com, outro@empresa.com">\n            </div>\n            <div>\n              <label for="emailAlertaHora">Hora do envio diário</label>\n              <select id="emailAlertaHora">\n                ' +
+      ([...Array(24).keys()].map(h => '<option value="' +
+        (h) +
+        '">' +
+        (String(h).padStart(2,'0')) +
+        ':00</option>').join("")) +
+      '\n              </select>\n            </div>\n            <div style="display:flex;align-items:flex-end;gap:8px;padding-bottom:2px;">\n              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">\n                <input id="emailAlertaAtivo" type="checkbox" style="width:16px;height:16px;">\n                Ativar envio automático diário\n              </label>\n            </div>\n          </div>\n          <div class="form-actions">\n            <button class="btn-primary" type="button" onclick="emailAlertasSalvarConfig_()">\n              <i class="fas fa-save" style="margin-right:6px;"></i>Salvar configuração\n            </button>\n            <button class="btn-info" type="button" onclick="emailAlertasTestarEnvio_()">\n              <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Testar envio agora\n            </button>\n            <button class="btn-secondary" type="button" onclick="emailAlertasCarregarStatus_()">\n              <i class="fas fa-rotate" style="margin-right:6px;"></i>Atualizar status\n            </button>\n          </div>\n          <div class="helper-text" id="emailAlertasHelper"></div>\n        </div>\n\n        <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">\n\n        <div id="documentFactoryTesteSecao" style="' +
+      (podeTestarDocumentFactory ? "" : "display:none;") +
+      '">\n          <div class="module-header" style="margin-bottom:14px;">\n            <div class="module-header-left">\n              <h3 style="margin:0;font-size:18px;color:var(--text);">\n                <i class="fas fa-file-shield" style="color:var(--metro-green);margin-right:8px;"></i>Teste DocumentFactory\n              </h3>\n              <p style="margin:4px 0 0;color:var(--muted);font-size:13px;">Gera um documento controlado de diagnóstico para validar PDF, Drive, hash, token, QR Code e registro em DOC_DOCUMENTOS.</p>\n            </div>\n            <div class="module-header-right">\n              <button class="btn-primary" type="button" id="btnDocumentFactoryTeste" onclick="documentFactoryTesteAdmin_()">\n                <i class="fas fa-file-circle-check" style="margin-right:6px;"></i>Gerar Documento de Teste\n              </button>\n            </div>\n          </div>\n          <div class="form-card" style="margin-bottom:20px;">\n            <div id="documentFactoryTesteStatus" style="padding:10px 14px;border-radius:8px;background:#f0f4fa;font-size:13px;color:#344054;">\n              Nenhum teste executado nesta sessão.\n            </div>\n            <div id="documentFactoryTesteResultado" style="display:none;margin-top:14px;"></div>\n          </div>\n          <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">\n        </div>\n\n        <div class="module-header">\n          <div class="module-header-left">\n            <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de Usuários</h3>\n          </div>\n          <div class="module-header-right" style="display: flex; gap: 15px; align-items: center;">\n            <div style="display: flex; gap: 5px;">\n              <input id="usuariosPesquisa" class="toolbar-search" type="text" placeholder="Nome ou Login..." onkeydown="if(event.key === \'Enter\') usuariosPesquisar_()">\n              <button class="btn-secondary" type="button" onclick="usuariosPesquisar_()">Pesquisar</button>\n            </div>\n            <button class="btn-primary" type="button" onclick="usuariosNovo_()">+ Novo usuário</button>\n          </div>\n        </div>\n\n        <div class="module-grid">\n          <div class="form-card">\n            <h3 class="section-card-title" id="usuariosFormTitulo">Novo usuário</h3>\n            <div class="form-grid">\n              <div class="full">\n                <label for="usr_usuario">Login (Nome de usuário)</label>\n                <input id="usr_usuario" type="text" placeholder="Ex: joao.silva">\n              </div>\n              <div class="full">\n                <label for="usr_nome">Nome Completo</label>\n                <input id="usr_nome" type="text" placeholder="Nome completo do colaborador">\n              </div>\n              <div class="full">\n                <label for="usr_senha">Senha</label>\n                <input id="usr_senha" type="password" placeholder="Digite a senha (ou deixe vazio p/ manter a atual)">\n              </div>\n              <div>\n                <label for="usr_perfil">Perfil de Acesso</label>\n                <select id="usr_perfil" onchange="aoMudarPerfilUsuario_()"></select>\n              </div>\n              <div id="usr_cliente_container" style="display:none;">\n                <label for="usr_cliente_id">Vincular Cliente</label>\n                <select id="usr_cliente_id"><option value="">Selecione...</option></select>\n              </div>\n              <div>\n                <label for="usr_status">Status</label>\n                <input id="usr_status" type="text" value="ATIVO" disabled>\n              </div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="usuariosSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="usuariosNovo_()">Limpar</button>\n            </div>\n            <div class="helper-text" id="usuariosHelper">Preencha os dados e atribua o perfil correto.</div>\n          </div>\n\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead>\n                  <tr>\n                    <th>Login</th>\n                    <th>Nome Completo</th>\n                    <th>Perfil</th>\n                    <th>Status</th>\n                    <th>Ações</th>\n                  </tr>\n                </thead>\n                <tbody id="usuariosTabelaBody">\n                  <tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>\n                </tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+
+    usuariosLimparFormulario_();
+    preencherComboPerfis_();
+    carregarClientesParaUsuarios_();
+    preencherEstadoPainelAdmin_();
+  }
+
+  function limparCacheNavegador_() {
+    if (!confirm("Isso forçará a limpeza da sessão no navegador e recarregará a página. Continuar?")) return;
+
+    try {
+      if (typeof STORAGE_KEYS !== "undefined" && STORAGE_KEYS.SESSION) {
+        sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+        sessionStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+        localStorage.removeItem(STORAGE_KEYS.SESSION);
+        localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+      } else {
+        sessionStorage.removeItem("SGO_SESSION");
+        sessionStorage.removeItem("SGO_SESSION_ID");
+        localStorage.removeItem("SGO_SESSION");
+        localStorage.removeItem("SGO_SESSION_ID");
+      }
+    } catch (e) {
+      console.error("Falha ao limpar sessão:", e);
+    }
+
+    SESSION = null;
+    USER_CONTEXT = null;
+    location.reload();
+  }
+
+  function preencherEstadoPainelAdmin_() {
+    const elSom = document.getElementById("adminSomStatus");
+    const elMsg = document.getElementById("adminMensagemAtual");
+    const elIdle = document.getElementById("inputIdleLimit");
+
+    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF";
+    if (elIdle) elIdle.value = IDLE_LIMIT;
+
+    if (elMsg) {
+      const elMsgGlobal = document.getElementById("mensagemMotivacional");
+      elMsg.innerText = elMsgGlobal ? (elMsgGlobal.innerText || "") : "";
+    }
+
+    // Carregar status dos alertas por e-mail
+    setTimeout(emailAlertasCarregarStatus_, 400);
+  }
+
+  function documentFactoryTesteAdmin_() {
+    const status = document.getElementById("documentFactoryTesteStatus");
+    const resultado = document.getElementById("documentFactoryTesteResultado");
+    const btn = document.getElementById("btnDocumentFactoryTeste");
+
+    if (!SESSION) {
+      if (status) {
+        status.style.background = "#fff1f0";
+        status.style.color = "#7a271a";
+        status.innerHTML = "Sessão não encontrada. Faça login novamente antes de testar o DocumentFactory.";
+      }
+      if (resultado) {
+        resultado.style.display = "none";
+        resultado.innerHTML = "";
+      }
+      return;
+    }
+
+    if (status) {
+      status.style.background = "#eef6ff";
+      status.style.color = "#184980";
+      status.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Gerando documento de teste...';
+    }
+    if (resultado) {
+      resultado.style.display = "none";
+      resultado.innerHTML = "";
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Gerando...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-file-circle-check" style="margin-right:6px;"></i>Gerar Documento de Teste';
+        }
+
+        if (!res || !res.success) {
+          if (status) {
+            status.style.background = "#fff1f0";
+            status.style.color = "#7a271a";
+            status.innerHTML = "Falha ao gerar documento: " + escapeHtml_((res && res.message) || "Resposta inválida do servidor.");
+          }
+          return;
+        }
+
+        if (status) {
+          status.style.background = "#e9f7ef";
+          status.style.color = "#14532d";
+          status.innerHTML = "Documento de teste gerado com sucesso.";
+        }
+        documentFactoryRenderResultado_(res);
+      })
+      .withFailureHandler(function(err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-file-circle-check" style="margin-right:6px;"></i>Gerar Documento de Teste';
+        }
+        if (status) {
+          status.style.background = "#fff1f0";
+          status.style.color = "#7a271a";
+          status.innerHTML = "Erro ao chamar DocumentFactory: " + escapeHtml_(err && err.message ? err.message : err);
+        }
+      })
+      .documentFactoryTeste(SESSION);
+  }
+
+  function documentFactoryRenderResultado_(res) {
+    const box = document.getElementById("documentFactoryTesteResultado");
+    if (!box) return;
+
+    const email = res.email || {};
+    box.style.display = "block";
+    box.innerHTML = '\n      <div class="form-grid">\n        ' +
+      (documentFactoryCampo_("success", String(!!res.success))) +
+      '\n        ' +
+      (documentFactoryCampo_("documentoId", res.documentoId)) +
+      '\n        ' +
+      (documentFactoryCampo_("tokenValidacao", res.tokenValidacao)) +
+      '\n        ' +
+      (documentFactoryCampo_("hash", res.hash, true)) +
+      '\n        ' +
+      (documentFactoryLink_("pdfUrl", res.pdfUrl)) +
+      '\n        ' +
+      (documentFactoryLink_("downloadUrl", res.downloadUrl)) +
+      '\n        ' +
+      (documentFactoryLink_("validacaoUrl", res.validacaoUrl)) +
+      '\n        ' +
+      (documentFactoryLink_("qrCodeUrl", res.qrCodeUrl)) +
+      '\n        <div class="full">\n          <label for="df_whatsapp">whatsappTexto</label>\n          <textarea id="df_whatsapp" readonly style="min-height:110px;font-family:Consolas,monospace;font-size:12px;">' +
+      (escapeHtml_(res.whatsappTexto || "")) +
+      '</textarea>\n        </div>\n        ' +
+      (documentFactoryCampo_("email.assunto", email.assunto)) +
+      '\n        <div class="full">\n          <label for="df_email_corpo">email.corpo</label>\n          <textarea id="df_email_corpo" readonly style="min-height:130px;font-family:Consolas,monospace;font-size:12px;">' +
+      (escapeHtml_(email.corpo || "")) +
+      '</textarea>\n        </div>\n      </div>\n    ';
+  }
+
+  function documentFactoryCampo_(label, valor, mono) {
+    return '\n      <div class="full">\n        <label>' +
+      (escapeHtml_(label)) +
+      '</label>\n        <div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;word-break:break-word;' +
+      (mono ? "font-family:Consolas,monospace;font-size:12px;" : "font-size:13px;font-weight:700;") +
+      '">\n          ' +
+      (escapeHtml_(valor || "--")) +
+      '\n        </div>\n      </div>\n    ';
+  }
+
+  function documentFactoryLink_(label, url) {
+    const safeUrl = escapeHtml_(url || "");
+    const conteudo = url
+      ? '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + safeUrl + '</a>'
+      : "--";
+    return '\n      <div class="full">\n        <label>' +
+      (escapeHtml_(label)) +
+      '</label>\n        <div style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;word-break:break-all;font-size:13px;">\n          ' +
+      (conteudo) +
+      '\n        </div>\n      </div>\n    ';
+  }
+
+  // ==========================================
+  // MÓDULO: USUÁRIOS
+  // ==========================================
+  function preencherComboPerfis_() {
+    const select = document.getElementById("usr_perfil");
+    if (!select) return;
+
+    const profiles =
+      PUBLIC_CONFIG && Array.isArray(PUBLIC_CONFIG.profiles) && PUBLIC_CONFIG.profiles.length > 0
+        ? PUBLIC_CONFIG.profiles
+        : ["ADMIN", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"];
+
+    const options = ['<option value="">Selecione o perfil</option>'];
+    profiles.forEach(function (p) {
+      options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(p) + "</option>");
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function carregarClientesParaUsuarios_() {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+
+        const select = document.getElementById("usr_cliente_id");
+        if (!select) return;
+
+        const options = ['<option value="">Selecione o cliente</option>'];
+        (res.items || []).forEach(function (item) {
+          const nome = item.NOME || item.NOME_FANTASIA || item.RAZAO_SOCIAL || "";
+          options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(nome) + "</option>");
+        });
+        select.innerHTML = options.join("");
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar clientes para usuários:", err);
+      })
+      .usuariosListarClientesAtivos(SESSION);
+  }
+
+  function aoMudarPerfilUsuario_() {
+    const perfil = getValue_("usr_perfil");
+    const container = document.getElementById("usr_cliente_container");
+    if (!container) return;
+
+    if (perfil === "CLIENTE") {
+      container.style.display = "block";
+    } else {
+      container.style.display = "none";
+      setSelectValueSafe_("usr_cliente_id", "");
+    }
+  }
+
+  function usuariosPesquisar_() {
+    const el = document.getElementById("usuariosPesquisa");
+    USUARIOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    const tbody = document.getElementById("usuariosTabelaBody");
+    if (!tbody) return;
+
+    if (!USUARIOS_STATE.filtro) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Falha ao buscar usuários.</td></tr>';
+          return;
+        }
+        renderTabelaUsuarios_(Array.isArray(res.items) ? res.items : []);
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao pesquisar usuários:", err);
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Erro de comunicação ao buscar usuários.</td></tr>';
+      })
+      .usuariosPesquisar(SESSION, USUARIOS_STATE.filtro);
+  }
+
+  function renderTabelaUsuarios_(itemsOverride) {
+    const tbody = document.getElementById("usuariosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : USUARIOS_STATE.items;
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum usuário encontrado para esta busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      return '\n        <tr>\n          <td style="font-weight:700;">' +
+        (escapeHtml_(item.USUARIO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.PERFIL)) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          <td>\n            <div class="table-actions">\n              <button class="btn-info" type="button" onclick="usuariosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n              ' +
+        (status === "ATIVO"
+                  ? '<button class="btn-warning" type="button" onclick="usuariosInativar_(\'' +
+                    (id) +
+                    '\')">Inativar</button>'
+                  : '<button class="btn-success" type="button" onclick="usuariosReativar_(\'' +
+                    (id) +
+                    '\')">Reativar</button>') +
+        '\n              <button class="btn-danger" type="button" onclick="usuariosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n            </div>\n          </td>\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function usuariosNovo_() {
+    USUARIOS_STATE.editingId = "";
+    usuariosLimparFormulario_();
+
+    const titulo = document.getElementById("usuariosFormTitulo");
+    const helper = document.getElementById("usuariosHelper");
+
+    if (titulo) titulo.innerText = "Novo usuário";
+    if (helper) helper.innerText = "Preencha os dados e atribua o perfil correto.";
+  }
+
+  function usuariosLimparFormulario_() {
+    setValue_("usr_usuario", "");
+    setValue_("usr_nome", "");
+    setValue_("usr_senha", "");
+    setSelectValueSafe_("usr_perfil", "");
+    setSelectValueSafe_("usr_cliente_id", "");
+    setValue_("usr_status", "ATIVO");
+    aoMudarPerfilUsuario_();
+  }
+
+  function usuariosLerFormulario_() {
+    return {
+      USUARIO: getValue_("usr_usuario"),
+      NOME: getValue_("usr_nome"),
+      SENHA: getValue_("usr_senha"),
+      PERFIL: getValue_("usr_perfil"),
+      CLIENTE_ID: getValue_("usr_cliente_id")
+    };
+  }
+
+  function usuariosSalvar_() {
+    if (!SESSION) return;
+
+    const payload = usuariosLerFormulario_();
+
+    if (!payload.USUARIO) return alert("O Login é obrigatório.");
+    if (!payload.NOME) return alert("O Nome Completo é obrigatório.");
+    if (!payload.PERFIL) return alert("Selecione o perfil de acesso.");
+    if (payload.PERFIL === "CLIENTE" && !payload.CLIENTE_ID) return alert("Para perfil CLIENTE, é obrigatório vincular a empresa.");
+
+    if (USUARIOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          usuariosNovo_();
+          if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+        })
+        .withFailureHandler(function (err) {
+          console.error("Falha ao atualizar usuário:", err);
+          alert("Erro de comunicação ao atualizar usuário.");
+        })
+        .usuariosAtualizar(SESSION, USUARIOS_STATE.editingId, payload);
+      return;
+    }
+
+    if (!payload.SENHA) return alert("A senha é obrigatória para um NOVO usuário.");
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        usuariosNovo_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao criar usuário:", err);
+        alert("Erro de comunicação ao criar usuário.");
+      })
+      .usuariosCriar(SESSION, payload);
+  }
+
+  function usuariosEditar_(id) {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Erro ao buscar usuário.");
+
+        const item = res.item;
+        USUARIOS_STATE.editingId = String(item.ID || "");
+
+        setValue_("usr_usuario", item.USUARIO || "");
+        setValue_("usr_nome", item.NOME || "");
+        setValue_("usr_senha", "");
+        setSelectValueSafe_("usr_perfil", item.PERFIL || "");
+        setSelectValueSafe_("usr_cliente_id", item.CLIENTE_ID || "");
+        setValue_("usr_status", item.STATUS || "ATIVO");
+
+        aoMudarPerfilUsuario_();
+
+        const titulo = document.getElementById("usuariosFormTitulo");
+        const helper = document.getElementById("usuariosHelper");
+
+        if (titulo) titulo.innerText = "Editar usuário";
+        if (helper) helper.innerText = "Deixe a senha em branco caso não queira alterá-la.";
+
+        focusIfExists_("usr_usuario");
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao buscar usuário:", err);
+        alert("Erro de comunicação ao buscar usuário.");
+      })
+      .usuariosObter(SESSION, id);
+  }
+
+  function usuariosInativar_(id) {
+    if (!SESSION || !confirm("Bloquear o acesso deste usuário?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao inativar usuário:", err);
+        alert("Erro de comunicação ao inativar usuário.");
+      })
+      .usuariosInativar(SESSION, id);
+  }
+
+  function usuariosReativar_(id) {
+    if (!SESSION || !confirm("Liberar o acesso deste usuário?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao reativar usuário:", err);
+        alert("Erro de comunicação ao reativar usuário.");
+      })
+      .usuariosReativar(SESSION, id);
+  }
+
+  function usuariosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este usuário do banco de dados?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (USUARIOS_STATE.editingId === id) usuariosNovo_();
+        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao excluir usuário:", err);
+        alert("Erro de comunicação ao excluir usuário.");
+      })
+      .usuariosExcluir(SESSION, id);
+  }
+
+  // ==========================================
+  // LÓGICA DE SUPORTE: DOCUMENTOS
+  // (A renderização está no Index.html)
+  // ==========================================
+  function documentosPesquisar_() {
+    const el = document.getElementById("documentosPesquisa");
+    DOCUMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
+    if (!SESSION) return;
+
+    const tbody = document.getElementById("documentosTabelaBody");
+    if (!tbody) return;
+
+    if (!DOCUMENTOS_STATE.filtro) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Falha ao buscar documentos.</td></tr>';
+          return;
+        }
+        renderTabelaDocumentos_(Array.isArray(res.items) ? res.items : []);
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao pesquisar documentos:", err);
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro de comunicação ao buscar documentos.</td></tr>';
+      })
+      .documentosPesquisar(SESSION, DOCUMENTOS_STATE.filtro);
+  }
+
+  function renderTabelaDocumentos_(itemsOverride) {
+    const tbody = document.getElementById("documentosTabelaBody");
+    if (!tbody) return;
+
+    const items = Array.isArray(itemsOverride) ? itemsOverride : DOCUMENTOS_STATE.items;
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const styleAcoes = isCliente ? "display:none;" : "";
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum documento encontrado para a busca.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(function (item) {
+      const id = escapeHtml_(item.ID);
+      const status = String(item.STATUS || "").toUpperCase();
+
+      const linkHtml = item.LINK_ARQUIVO
+        ? '<a href="' +
+          (escapeHtml_(item.LINK_ARQUIVO)) +
+          '" target="_blank" style="color:var(--metro-blue);font-weight:700;text-decoration:none;">Acessar</a>'
+        : "--";
+
+      const vencimentoHtml = typeof formatarDataFront_ === "function"
+        ? formatarDataFront_(item.DATA_VENCIMENTO)
+        : item.DATA_VENCIMENTO;
+
+      const acoesHtml = isCliente ? "" : '\n        <td style="' +
+        (styleAcoes) +
+        '">\n          <div class="table-actions">\n            <button class="btn-info" type="button" onclick="documentosEditar_(\'' +
+        (id) +
+        '\')">Editar</button>\n            ' +
+        (status === "ATIVO" || status === "PENDENTE"
+                ? '<button class="btn-warning" type="button" onclick="documentosInativar_(\'' +
+                  (id) +
+                  '\')">Inativar</button>'
+                : '<button class="btn-success" type="button" onclick="documentosReativar_(\'' +
+                  (id) +
+                  '\')">Reativar</button>') +
+        '\n            <button class="btn-danger" type="button" onclick="documentosExcluir_(\'' +
+        (id) +
+        '\')">Excluir</button>\n          </div>\n        </td>\n      ';
+
+      return '\n        <tr>\n          <td>' +
+        (escapeHtml_(item.CLIENTE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.UNIDADE_NOME)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.EQUIPAMENTO_NOME || "Geral da Unidade")) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.TIPO_DOCUMENTO)) +
+        '</td>\n          <td>' +
+        (escapeHtml_(item.NOME_ARQUIVO)) +
+        '</td>\n          <td><strong>' +
+        (vencimentoHtml) +
+        '</strong></td>\n          <td>' +
+        (linkHtml) +
+        '</td>\n          <td>' +
+        (obterBadgeStatusHtml_(status)) +
+        '</td>\n          ' +
+        (acoesHtml) +
+        '\n        </tr>\n      ';
+    }).join("");
+  }
+
+  function documentosLimparFormulario_() {
+    setSelectValueSafe_("doc_cliente_id", "");
+    setSelectValueSafe_("doc_unidade_id", "");
+    setSelectValueSafe_("doc_equipamento_id", "");
+    setValue_("doc_tipo_documento", "");
+    setValue_("doc_nome_arquivo", "");
+    setValue_("doc_arquivo", "");
+    setValue_("doc_arquivo_base64", "");
+    setValue_("doc_arquivo_mime", "");
+    setValue_("doc_arquivo_nome", "");
+    setValue_("doc_data_vencimento", "");
+    setValue_("doc_status", "ATIVO");
+
+    const elInput = document.getElementById("doc_arquivo");
+    if (elInput) elInput.value = "";
+
+    const preview = document.getElementById("doc_arquivo_preview");
+    if (preview) preview.innerText = "";
+
+    const selectUnidade = document.getElementById("doc_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
+
+    const selectEquip = document.getElementById("doc_equipamento_id");
+    if (selectEquip) selectEquip.innerHTML = '<option value="">Selecione uma unidade primeiro</option>';
+  }
+
+  function documentosNovo_() {
+    DOCUMENTOS_STATE.editingId = "";
+    documentosLimparFormulario_();
+
+    const titulo = document.getElementById("documentosFormTitulo");
+    if (titulo) titulo.innerText = "Novo documento";
+  }
+
+  function processarArquivoDocumento_() {
+    const el = document.getElementById("doc_arquivo");
+    const file = el && el.files ? el.files[0] : null;
+    const preview = document.getElementById("doc_arquivo_preview");
+
+    if (!file) {
+      setValue_("doc_arquivo_base64", "");
+      setValue_("doc_arquivo_mime", "");
+      setValue_("doc_arquivo_nome", "");
+      if (preview) preview.innerText = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("O arquivo selecionado é muito grande. O limite máximo é de 5MB.");
+      if (el) el.value = "";
+      return;
+    }
+
+    if (preview) preview.innerText = "Lendo arquivo: " + file.name + "...";
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      setValue_("doc_arquivo_base64", e.target.result);
+      setValue_("doc_arquivo_mime", file.type);
+      setValue_("doc_arquivo_nome", file.name);
+      if (preview) preview.innerText = "Arquivo pronto para envio: " + file.name;
+    };
+    reader.onerror = function () {
+      alert("Erro ao tentar ler o arquivo.");
+      if (el) el.value = "";
+      if (preview) preview.innerText = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function carregarClientesParaDocumentos_() {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.clientes = Array.isArray(res.items) ? res.items : [];
+        preencherComboClientesDocumentos_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar clientes para documentos:", err);
+      })
+      .equipamentosListarClientesAtivos(SESSION);
+  }
+
+  function preencherComboClientesDocumentos_() {
+    const select = document.getElementById("doc_cliente_id");
+    if (!select) return;
+
+    const options = ['<option value="">Selecione um cliente</option>'];
+    (DOCUMENTOS_STATE.clientes || []).forEach(function (item) {
+      const nome = item.NOME || item.NOME_FANTASIA || item.RAZAO_SOCIAL || "";
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(nome) + "</option>");
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarClienteDocumentos_() {
+    const clienteId = getValue_("doc_cliente_id");
+    if (!clienteId) {
+      DOCUMENTOS_STATE.unidades = [];
+      DOCUMENTOS_STATE.equipamentos = [];
+      preencherComboUnidadesDocumentos_();
+      preencherComboEquipamentosDocumentos_();
+      return;
+    }
+    carregarUnidadesParaDocumentos_(clienteId);
+  }
+
+  function carregarUnidadesParaDocumentos_(clienteId, unidadeSelecionadaId, equipamentoSelecionadoId) {
+    if (!SESSION || !clienteId) return;
+
+    const selectUnidade = document.getElementById("doc_unidade_id");
+    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
+        preencherComboUnidadesDocumentos_();
+
+        if (unidadeSelecionadaId) {
+          setSelectValueSafe_("doc_unidade_id", unidadeSelecionadaId);
+          carregarEquipamentosParaDocumentos_(unidadeSelecionadaId, equipamentoSelecionadoId);
+        } else {
+          DOCUMENTOS_STATE.equipamentos = [];
+          preencherComboEquipamentosDocumentos_();
+        }
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar unidades para documentos:", err);
+      })
+      .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
+  }
+
+  function preencherComboUnidadesDocumentos_() {
+    const select = document.getElementById("doc_unidade_id");
+    if (!select) return;
+
+    if (!DOCUMENTOS_STATE.unidades || DOCUMENTOS_STATE.unidades.length === 0) {
+      select.innerHTML = '<option value="">Nenhuma unidade ativa encontrada</option>';
+      return;
+    }
+
+    const options = ['<option value="">Selecione a unidade</option>'];
+    (DOCUMENTOS_STATE.unidades || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_UNIDADE) + "</option>");
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function aoMudarUnidadeDocumentos_() {
+    const unidadeId = getValue_("doc_unidade_id");
+    if (!unidadeId) {
+      DOCUMENTOS_STATE.equipamentos = [];
+      preencherComboEquipamentosDocumentos_();
+      return;
+    }
+    carregarEquipamentosParaDocumentos_(unidadeId);
+  }
+
+  function carregarEquipamentosParaDocumentos_(unidadeId, equipamentoSelecionadoId) {
+    if (!SESSION || !unidadeId) return;
+
+    const selectEquip = document.getElementById("doc_equipamento_id");
+    if (selectEquip) selectEquip.innerHTML = '<option value="">Carregando equipamentos...</option>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return;
+        DOCUMENTOS_STATE.equipamentos = Array.isArray(res.items) ? res.items : [];
+        preencherComboEquipamentosDocumentos_();
+        if (equipamentoSelecionadoId) setSelectValueSafe_("doc_equipamento_id", equipamentoSelecionadoId);
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao carregar equipamentos para documentos:", err);
+      })
+      .documentosListarEquipamentosAtivosPorUnidade(SESSION, unidadeId);
+  }
+
+  function preencherComboEquipamentosDocumentos_() {
+    const select = document.getElementById("doc_equipamento_id");
+    if (!select) return;
+
+    if (!DOCUMENTOS_STATE.equipamentos || DOCUMENTOS_STATE.equipamentos.length === 0) {
+      select.innerHTML = '<option value="">Nenhum equipamento ativo (opcional)</option>';
+      return;
+    }
+
+    const options = ['<option value="">Geral da Unidade (Opcional)</option>'];
+    (DOCUMENTOS_STATE.equipamentos || []).forEach(function (item) {
+      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_EQUIPAMENTO) + "</option>");
+    });
+    select.innerHTML = options.join("");
+  }
+
+  function documentosLerFormulario_() {
+    return {
+      CLIENTE_ID: getValue_("doc_cliente_id"),
+      UNIDADE_ID: getValue_("doc_unidade_id"),
+      EQUIPAMENTO_ID: getValue_("doc_equipamento_id"),
+      TIPO_DOCUMENTO: getValue_("doc_tipo_documento"),
+      NOME_ARQUIVO: getValue_("doc_nome_arquivo"),
+      ARQUIVO_BASE64: getValue_("doc_arquivo_base64"),
+      ARQUIVO_MIME: getValue_("doc_arquivo_mime"),
+      ARQUIVO_NOME: getValue_("doc_arquivo_nome"),
+      DATA_VENCIMENTO: getValue_("doc_data_vencimento")
+    };
+  }
+
+  function documentosSalvar_() {
+    if (!SESSION) return;
+
+    const payload = documentosLerFormulario_();
+
+    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
+    if (!payload.UNIDADE_ID) return alert("Selecione a unidade.");
+    if (!payload.TIPO_DOCUMENTO) return alert("Informe a categoria do documento.");
+    if (!payload.NOME_ARQUIVO) return alert("Informe a referência do arquivo.");
+    if (!DOCUMENTOS_STATE.editingId && !payload.ARQUIVO_BASE64) return alert("Selecione um arquivo para o upload.");
+
+    const btn = document.querySelector("#documentosFormTitulo")?.parentElement?.querySelector(".btn-primary");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Salvando/Enviando...";
+    }
+
+    if (DOCUMENTOS_STATE.editingId) {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Salvar";
+          }
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          alert(res.message || "Atualizado com sucesso.");
+          documentosNovo_();
+          if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+        })
+        .withFailureHandler(function (err) {
+          console.error("Falha ao atualizar documento:", err);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Salvar";
+          }
+          alert("Erro de conexão ao salvar.");
+        })
+        .documentosAtualizar(SESSION, DOCUMENTOS_STATE.editingId, payload);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = "Salvar";
+        }
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        alert(res.message || "Criado com sucesso.");
+        documentosNovo_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao criar documento:", err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = "Salvar";
+        }
+        alert("Erro de conexão ao enviar documento.");
+      })
+      .documentosCriar(SESSION, payload);
+  }
+
+  function documentosEditar_(id) {
+    if (!SESSION) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success || !res.item) return alert("Documento não encontrado.");
+
+        const item = res.item;
+        DOCUMENTOS_STATE.editingId = String(item.ID || "");
+
+        setSelectValueSafe_("doc_cliente_id", item.CLIENTE_ID || "");
+        carregarUnidadesParaDocumentos_(item.CLIENTE_ID, item.UNIDADE_ID, item.EQUIPAMENTO_ID);
+
+        setValue_("doc_tipo_documento", item.TIPO_DOCUMENTO || "");
+        setValue_("doc_nome_arquivo", item.NOME_ARQUIVO || "");
+
+        let dt = item.DATA_VENCIMENTO || "";
+        if (typeof dt === "string" && dt.includes("T")) dt = dt.split("T")[0];
+        setValue_("doc_data_vencimento", dt);
+
+        setValue_("doc_arquivo", "");
+        setValue_("doc_arquivo_base64", "");
+        setValue_("doc_arquivo_mime", "");
+        setValue_("doc_arquivo_nome", "");
+        setValue_("doc_status", item.STATUS || "ATIVO");
+
+        const preview = document.getElementById("doc_arquivo_preview");
+        if (preview) {
+          if (item.LINK_ARQUIVO) {
+            preview.innerHTML = 'Arquivo atual: <a href="' +
+              (escapeHtml_(item.LINK_ARQUIVO)) +
+              '" target="_blank">Visualizar no Drive</a> <br><span style="color:var(--muted); font-weight:normal;">(Selecione um novo arquivo apenas se quiser substituir o atual)</span>';
+          } else {
+            preview.innerText = "";
+          }
+        }
+
+        const titulo = document.getElementById("documentosFormTitulo");
+        if (titulo) titulo.innerText = "Editar documento";
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao buscar documento:", err);
+        alert("Erro de comunicação ao buscar documento.");
+      })
+      .documentosObter(SESSION, id);
+  }
+
+  function documentosInativar_(id) {
+    if (!SESSION || !confirm("Inativar este documento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao inativar documento:", err);
+        alert("Erro de comunicação ao inativar documento.");
+      })
+      .documentosInativar(SESSION, id);
+  }
+
+  function documentosReativar_(id) {
+    if (!SESSION || !confirm("Reativar este documento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao reativar documento:", err);
+        alert("Erro de comunicação ao reativar documento.");
+      })
+      .documentosReativar(SESSION, id);
+  }
+
+  function documentosExcluir_(id) {
+    if (!SESSION || !confirm("Excluir definitivamente este documento?")) return;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (DOCUMENTOS_STATE.editingId === id) documentosNovo_();
+        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+      })
+      .withFailureHandler(function (err) {
+        console.error("Falha ao excluir documento:", err);
+        alert("Erro de comunicação ao excluir documento.");
+      })
+      .documentosExcluir(SESSION, id);
+  }
+
+  // ── ALERTAS POR E-MAIL ────────────────────────────────────────────────────
+  function emailAlertasCarregarStatus_() {
+    if (!SESSION) return;
+    const box = document.getElementById("emailAlertasStatusBox");
+    if (box) box.innerHTML = "Consultando status...";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (box) box.innerHTML = '<span style="color:#dc2626;">Erro ao consultar status.</span>';
+          return;
+        }
+        const cfg = res.config || {};
+        if (box) {
+          const cor = res.ativo ? "#16a34a" : "#94a3b8";
+          box.innerHTML = '<span style="font-weight:700;color:'+cor+'">'
+            + (res.ativo ? '✓ Trigger ativo' : '○ Trigger inativo') + '</span>'
+            + ' &nbsp;·&nbsp; Destinatários: <strong>' + (cfg.destinatarios || '—') + '</strong>'
+            + ' &nbsp;·&nbsp; Hora: <strong>' + String(cfg.hora || 7).padStart(2,'0') + ':00</strong>';
+        }
+        const dest = document.getElementById("emailAlertaDest");
+        const hora = document.getElementById("emailAlertaHora");
+        const ativo = document.getElementById("emailAlertaAtivo");
+        if (dest) dest.value = cfg.destinatarios || "";
+        if (hora) hora.value = String(cfg.hora || 7);
+        if (ativo) ativo.checked = !!cfg.ativo;
+      })
+      .withFailureHandler(function(err) {
+        if (box) box.innerHTML = '<span style="color:#dc2626;">Falha: ' + (err.message || err) + '</span>';
+      })
+      .emailAlertasStatus(SESSION);
+  }
+
+  function emailAlertasSalvarConfig_() {
+    if (!SESSION) return;
+    const dest  = (document.getElementById("emailAlertaDest")  || {}).value || "";
+    const hora  = (document.getElementById("emailAlertaHora")  || {}).value || "7";
+    const ativo = (document.getElementById("emailAlertaAtivo") || {}).checked || false;
+    const helper = document.getElementById("emailAlertasHelper");
+    if (helper) helper.innerText = "Salvando...";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerText = (res && res.message) || "Erro ao salvar.";
+          return;
+        }
+        if (helper) helper.innerText = res.message || "Configuração salva.";
+        emailAlertasCarregarStatus_();
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerText = "Erro: " + (err.message || err);
+      })
+      .emailAlertasConfigurar(SESSION, { destinatarios: dest, hora: parseInt(hora), ativo: ativo });
+  }
+
+  function emailAlertasTestarEnvio_() {
+    if (!SESSION || !confirm("Enviar e-mail de teste agora para os destinatários configurados?")) return;
+    const helper = document.getElementById("emailAlertasHelper");
+    if (helper) helper.innerText = "Enviando...";
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerText = (res && res.message) || "Erro ao enviar.";
+          return;
+        }
+        if (helper) helper.innerText = res.message + " (Total alertas: " + (res.totalAlertas || 0) + ")";
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerText = "Erro: " + (err.message || err);
+      })
+      .emailAlertasTestar(SESSION);
+  }
+</script>

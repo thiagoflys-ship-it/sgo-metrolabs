@@ -1,0 +1,820 @@
+<style>
+/* ================================================
+   IMPORTAÇÃO — ESTILOS DO WIZARD
+================================================ */
+.imp-shell { padding: 0; }
+
+/* --- Stepper --- */
+.imp-stepper {
+  display: flex;
+  align-items: center;
+  padding: 22px 28px 0;
+  margin-bottom: 28px;
+}
+.imp-step-item { display: flex; align-items: center; gap: 8px; }
+.imp-step-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--border); color: var(--muted);
+  font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .25s;
+}
+.imp-step-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.imp-step-item.active .imp-step-num  { background: var(--metro-blue); color: #fff; }
+.imp-step-item.active .imp-step-label { color: var(--metro-blue); font-weight: 700; }
+.imp-step-item.done   .imp-step-num  { background: var(--success); color: #fff; }
+.imp-step-item.done   .imp-step-label { color: var(--success); font-weight: 700; }
+.imp-step-sep { flex: 1; height: 2px; background: var(--border); margin: 0 6px; transition: background .25s; }
+.imp-step-sep.done { background: var(--success); }
+
+/* --- Step containers --- */
+.imp-step { display: none; padding: 0 28px 28px; }
+.imp-step.active { display: block; }
+
+/* --- Drop zone --- */
+.imp-dropzone {
+  border: 2px dashed #c0cfe0;
+  border-radius: 12px;
+  padding: 52px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s ease;
+  background: var(--card);
+  margin-bottom: 24px;
+  position: relative;
+}
+.imp-dropzone:hover, .imp-dropzone.drag-over {
+  border-color: var(--metro-blue);
+  background: var(--info-bg);
+}
+.imp-dropzone.has-file {
+  border-color: var(--success);
+  background: var(--success-bg);
+  border-style: solid;
+}
+.imp-drop-icon {
+  font-size: 52px; margin-bottom: 12px; line-height: 1;
+  transition: transform .2s;
+}
+.imp-dropzone:hover .imp-drop-icon { transform: translateY(-4px); }
+.imp-dropzone.has-file .imp-drop-icon { font-size: 40px; }
+.imp-drop-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.imp-drop-sub   { font-size: 13px; color: var(--muted); }
+.imp-drop-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--success-bg); border: 1px solid var(--success);
+  border-radius: 8px; padding: 8px 16px; margin-top: 10px;
+  font-size: 14px; font-weight: 700; color: var(--success);
+}
+#imp-file-input { display: none; }
+
+/* --- Tipo selector --- */
+.imp-tipo-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin-bottom: 28px;
+}
+.imp-tipo-card {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 18px 14px; text-align: center; cursor: pointer;
+  transition: all .2s; background: var(--card);
+}
+.imp-tipo-card:hover { border-color: var(--metro-blue); background: var(--info-bg); }
+.imp-tipo-card.selected {
+  border-color: var(--metro-blue);
+  background: linear-gradient(135deg, #e8f0fe 0%, #d1e3ff 100%);
+  box-shadow: 0 0 0 3px rgba(11,78,162,.12);
+}
+.imp-tipo-icon { font-size: 34px; margin-bottom: 8px; }
+.imp-tipo-label { font-size: 14px; font-weight: 700; color: var(--text); }
+.imp-tipo-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* --- Info bar (rows/cols count) --- */
+.imp-info-bar {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  background: var(--info-bg); border: 1px solid #c5d8f5;
+  border-radius: 8px; padding: 10px 16px; margin-bottom: 20px;
+  font-size: 13px;
+}
+.imp-info-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 600; color: var(--metro-blue);
+}
+
+/* --- Mapping table --- */
+.imp-map-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+.imp-map-table th {
+  background: var(--metro-blue); color: #fff;
+  padding: 9px 12px; text-align: left; font-size: 12px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+}
+.imp-map-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }
+.imp-map-table tbody tr:hover td { background: #f8faff; }
+.imp-conf-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 999px; padding: 2px 10px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.imp-conf-100 { background: #d1fae5; color: #065f46; }
+.imp-conf-80  { background: #d1fae5; color: #065f46; }
+.imp-conf-60  { background: #fef3c7; color: #92400e; }
+.imp-conf-0   { background: #f3f4f6; color: #6b7280; }
+.imp-field-required { color: var(--danger); font-weight: 700; margin-left: 2px; }
+.imp-map-select {
+  width: 100%; min-height: 32px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; background: #fff; color: var(--text);
+}
+.imp-map-select:focus { border-color: var(--metro-blue); outline: none; }
+
+/* --- Preview table --- */
+.imp-preview-wrap { overflow-x: auto; margin-bottom: 18px; }
+.imp-preview-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+.imp-preview-table th {
+  background: #1a2e5a; color: #fff;
+  padding: 7px 10px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
+}
+.imp-preview-table td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; }
+.imp-preview-table tbody tr:nth-child(even) td { background: #f9fafb; }
+.imp-dup-row td { background: #fff3cd !important; }
+.imp-dup-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 8px;
+  font-size: 10px; font-weight: 700;
+  background: #fef3c7; color: #92400e;
+}
+
+/* --- Options panel --- */
+.imp-options-panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px 20px; margin-bottom: 20px;
+}
+.imp-options-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+.imp-option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.imp-option-row label { font-size: 13px; font-weight: 500; margin: 0; }
+.imp-toggle { width: 40px; height: 22px; position: relative; flex-shrink: 0; }
+.imp-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.imp-toggle-slider {
+  position: absolute; inset: 0; background: #ccc;
+  border-radius: 22px; cursor: pointer; transition: .2s;
+}
+.imp-toggle-slider:before {
+  content: ""; position: absolute;
+  width: 16px; height: 16px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%; transition: .2s;
+}
+.imp-toggle input:checked + .imp-toggle-slider { background: var(--metro-blue); }
+.imp-toggle input:checked + .imp-toggle-slider:before { transform: translateX(18px); }
+
+/* --- Progress & Results --- */
+.imp-progress-wrap { margin-bottom: 20px; }
+.imp-progress-bar-bg {
+  height: 10px; background: var(--border); border-radius: 99px;
+  overflow: hidden; margin-bottom: 8px;
+}
+.imp-progress-bar {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--metro-blue), var(--success));
+  transition: width .4s ease;
+  width: 0;
+}
+.imp-progress-label { font-size: 13px; color: var(--muted); text-align: center; }
+.imp-result-cards {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  margin-bottom: 20px;
+}
+.imp-result-card {
+  border-radius: 10px; padding: 16px; text-align: center;
+  border-top: 3px solid;
+}
+.imp-result-card.imported { background: var(--success-bg); border-top-color: var(--success); }
+.imp-result-card.updated  { background: var(--info-bg); border-top-color: var(--metro-blue); }
+.imp-result-card.ignored  { background: #f9fafb; border-top-color: #9ca3af; }
+.imp-result-card.errors   { background: var(--danger-bg); border-top-color: var(--danger); }
+.imp-result-num   { font-size: 32px; font-weight: 900; line-height: 1.1; margin-bottom: 4px; }
+.imp-result-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.imp-result-card.imported .imp-result-num { color: var(--success); }
+.imp-result-card.updated  .imp-result-num { color: var(--metro-blue); }
+.imp-result-card.ignored  .imp-result-num { color: #6b7280; }
+.imp-result-card.errors   .imp-result-num { color: var(--danger); }
+.imp-errors-list {
+  background: var(--danger-bg); border: 1px solid #fca5a5;
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+  max-height: 200px; overflow-y: auto;
+}
+.imp-errors-list li { font-size: 12px; color: #7f1d1d; margin-bottom: 4px; }
+
+/* --- Nav buttons --- */
+.imp-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 16px; border-top: 1px solid var(--border);
+}
+.imp-nav-right { display: flex; gap: 10px; }
+
+/* --- Alert box --- */
+.imp-alert {
+  display: flex; gap: 10px; align-items: flex-start;
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 13px;
+}
+.imp-alert.info  { background: var(--info-bg); border: 1px solid #c5d8f5; color: #0b3b78; }
+.imp-alert.warn  { background: var(--warning-bg); border: 1px solid #fde68a; color: #7c3a00; }
+.imp-alert.ok    { background: var(--success-bg); border: 1px solid #a7f3d0; color: #064e3b; }
+
+/* --- Responsive --- */
+@media(max-width: 760px) {
+  .imp-tipo-grid { grid-template-columns: 1fr; }
+  .imp-result-cards { grid-template-columns: 1fr 1fr; }
+  .imp-step { padding: 0 14px 20px; }
+  .imp-stepper { padding: 14px 14px 0; }
+  .imp-step-label { display: none; }
+}
+</style>
+
+<!-- ================================================
+     WIZARD HTML
+================================================ -->
+<script>
+// ── State ──────────────────────────────────────────────────────────
+var IMP = {
+  step:       1,
+  tipo:       "",
+  cabecalhos: [],
+  dados:      [],        // all rows as arrays
+  mapeamento: {},        // { CAMPO: { indice, header, confianca } }
+  clientes:   [],
+  unidades:   [],
+  clienteId:  "",
+  unidadeId:  "",
+  fileName:   "",
+  totalRows:  0
+};
+
+// ── Labels / Meta ──────────────────────────────────────────────────
+var IMP_CAMPOS = {
+  CLIENTES: {
+    RAZAO_SOCIAL:  { label: "Razão Social",   obrig: true },
+    NOME_FANTASIA: { label: "Nome Fantasia",   obrig: false },
+    CNPJ:          { label: "CNPJ",            obrig: false },
+    EMAIL:         { label: "E-mail",          obrig: false },
+    TELEFONE:      { label: "Telefone",        obrig: false },
+    ENDERECO:      { label: "Endereço",        obrig: false },
+    NUMERO:        { label: "Número",          obrig: false },
+    COMPLEMENTO:   { label: "Complemento",     obrig: false },
+    BAIRRO:        { label: "Bairro",          obrig: false },
+    CIDADE:        { label: "Cidade",          obrig: false },
+    UF:            { label: "UF",              obrig: false },
+    CEP:           { label: "CEP",             obrig: false },
+    RESPONSAVEL:   { label: "Responsável",     obrig: false }
+  },
+  UNIDADES: {
+    NOME_UNIDADE:  { label: "Nome da Unidade", obrig: true },
+    CIDADE:        { label: "Cidade",          obrig: false },
+    UF:            { label: "UF",              obrig: false },
+    CEP:           { label: "CEP",             obrig: false },
+    ENDERECO:      { label: "Endereço",        obrig: false },
+    NUMERO:        { label: "Número",          obrig: false },
+    COMPLEMENTO:   { label: "Complemento",     obrig: false },
+    BAIRRO:        { label: "Bairro",          obrig: false },
+    RESPONSAVEL:   { label: "Responsável",     obrig: false },
+    TELEFONE:      { label: "Telefone",        obrig: false }
+  },
+  EQUIPAMENTOS: {
+    TAG:           { label: "TAG / Patrimônio", obrig: true },
+    TIPO:          { label: "Tipo",             obrig: false },
+    FABRICANTE:    { label: "Fabricante",       obrig: false },
+    MODELO:        { label: "Modelo",           obrig: false },
+    SERIE:         { label: "Série",            obrig: false },
+    SETOR:         { label: "Setor",            obrig: false },
+    TIPO_POSSE:    { label: "Tipo de Posse",    obrig: false },
+    PROPRIETARIO:  { label: "Proprietário",     obrig: false },
+    CLIENTE_NOME:  { label: "Cliente",          obrig: false },
+    UNIDADE_NOME:  { label: "Unidade",          obrig: false }
+  }
+};
+
+// ── Render Módulo ──────────────────────────────────────────────────
+function renderImportacaoModulo_() {
+  var div = document.getElementById("conteudo");
+  if (!div) return;
+
+  div.innerHTML =
+    '<div class="module-shell">' +
+      '<div class="module-header">' +
+        '<div class="module-header-left">' +
+          '<h2 class="content-title">Importação de Dados</h2>' +
+          '<p class="content-subtitle">Importe Clientes, Unidades ou Equipamentos de qualquer arquivo Excel (.xlsx) ou CSV. O sistema detecta as colunas automaticamente.</p>' +
+        '</div>' +
+      '</div>' +
+
+      // Stepper
+      '<div class="imp-stepper" id="imp-stepper">' +
+        '<div class="imp-step-item active" id="imp-si-1"><div class="imp-step-num">1</div><div class="imp-step-label">Arquivo</div></div>' +
+        '<div class="imp-step-sep" id="imp-sep-1"></div>' +
+        '<div class="imp-step-item" id="imp-si-2"><div class="imp-step-num">2</div><div class="imp-step-label">Colunas</div></div>' +
+        '<div class="imp-step-sep" id="imp-sep-2"></div>' +
+        '<div class="imp-step-item" id="imp-si-3"><div class="imp-step-num">3</div><div class="imp-step-label">Preview</div></div>' +
+        '<div class="imp-step-sep" id="imp-sep-3"></div>' +
+        '<div class="imp-step-item" id="imp-si-4"><div class="imp-step-num">4</div><div class="imp-step-label">Resultado</div></div>' +
+      '</div>' +
+
+      // Step 1: Upload
+      '<div id="imp-step-1" class="imp-step active">' +
+        '<input type="file" id="imp-file-input" accept=".xlsx,.xls,.csv">' +
+        '<div class="imp-dropzone" id="imp-dropzone" onclick="document.getElementById(\'imp-file-input\').click()" ondrop="impOnDrop_(event)" ondragover="impOnDragOver_(event)" ondragleave="impOnDragLeave_(event)">' +
+          '<div class="imp-drop-icon" id="imp-drop-icon">📂</div>' +
+          '<div class="imp-drop-title" id="imp-drop-title">Arraste o arquivo aqui ou clique para selecionar</div>' +
+          '<div class="imp-drop-sub" id="imp-drop-sub">Suporte: <strong>.xlsx</strong> · <strong>.xls</strong> · <strong>.csv</strong></div>' +
+        '</div>' +
+        '<div id="imp-info-bar" style="display:none;" class="imp-info-bar"></div>' +
+        '<div class="imp-tipo-grid" id="imp-tipo-grid">' +
+          impTipoCard_("CLIENTES",     "👥", "Clientes",     "Empresas e contatos") +
+          impTipoCard_("UNIDADES",     "🏢", "Unidades",     "Filiais e locais") +
+          impTipoCard_("EQUIPAMENTOS", "⚙️", "Equipamentos", "Parque de equipamentos") +
+        '</div>' +
+        '<div class="imp-nav"><div></div><div class="imp-nav-right">' +
+          '<button class="btn-primary" id="imp-btn-step1" onclick="impAvancarParaMapeamento_()" disabled>Próximo: Mapear Colunas →</button>' +
+        '</div></div>' +
+      '</div>' +
+
+      // Step 2: Mapping
+      '<div id="imp-step-2" class="imp-step">' +
+        '<div class="imp-alert info">💡 O sistema detectou automaticamente as colunas abaixo. Corrija se necessário — apenas os campos marcados com <strong>*</strong> são obrigatórios.</div>' +
+        '<div id="imp-map-container"></div>' +
+        '<div class="imp-nav">' +
+          '<button class="btn-secondary" onclick="impIrParaStep_(1)">← Voltar</button>' +
+          '<div class="imp-nav-right"><button class="btn-primary" onclick="impAvancarParaPreview_()">Próximo: Pré-visualizar →</button></div>' +
+        '</div>' +
+      '</div>' +
+
+      // Step 3: Preview
+      '<div id="imp-step-3" class="imp-step">' +
+        '<div id="imp-preview-container"></div>' +
+        '<div class="imp-options-panel">' +
+          '<div class="imp-options-title">⚙️ Opções de Importação</div>' +
+          '<div id="imp-vinculos-panel" style="display:none;margin-bottom:14px;"></div>' +
+          '<div class="imp-option-row">' +
+            '<label class="imp-toggle"><input type="checkbox" id="imp-opt-atualizar"><span class="imp-toggle-slider"></span></label>' +
+            '<label for="imp-opt-atualizar">Atualizar registros existentes (duplicatas serão sobrescritas)</label>' +
+          '</div>' +
+        '</div>' +
+        '<div class="imp-nav">' +
+          '<button class="btn-secondary" onclick="impIrParaStep_(2)">← Voltar</button>' +
+          '<div class="imp-nav-right"><button class="btn-primary" id="imp-btn-importar" onclick="impExecutarImportacao_()">🚀 Importar Agora</button></div>' +
+        '</div>' +
+      '</div>' +
+
+      // Step 4: Results
+      '<div id="imp-step-4" class="imp-step">' +
+        '<div id="imp-resultado-container"></div>' +
+        '<div class="imp-nav"><div></div><div class="imp-nav-right">' +
+          '<button class="btn-secondary" onclick="impIrParaStep_(1);impReset_()">← Nova Importação</button>' +
+        '</div></div>' +
+      '</div>' +
+
+      // Danger zone — limpeza de dados (somente ADMIN)
+      '<div id="imp-danger-zone" style="display:none;margin:0 28px 28px;border:2px solid #fca5a5;border-radius:12px;background:#fff5f5;padding:20px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">' +
+          '<i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:20px;"></i>' +
+          '<strong style="font-size:14px;color:#991b1b;">Zona de Perigo — Limpeza de Dados</strong>' +
+        '</div>' +
+        '<p style="font-size:13px;color:#7f1d1d;margin:0 0 14px;">Apaga <strong>todos os registros</strong> da aba selecionada permanentemente. Use antes de reimportar para evitar duplicatas.</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+          '<button class="btn-danger" onclick="impConfirmarLimpeza_(\'EQUIPAMENTOS\')"><i class="fas fa-trash"></i> Limpar Equipamentos</button>' +
+          '<button class="btn-danger" onclick="impConfirmarLimpeza_(\'CLIENTES\')"><i class="fas fa-trash"></i> Limpar Clientes</button>' +
+          '<button class="btn-danger" onclick="impConfirmarLimpeza_(\'UNIDADES\')"><i class="fas fa-trash"></i> Limpar Unidades</button>' +
+        '</div>' +
+        '<div id="imp-limpeza-status" style="margin-top:12px;font-size:13px;"></div>' +
+      '</div>' +
+
+    '</div>';
+
+  document.getElementById("imp-file-input").addEventListener("change", function(e) {
+    if (e.target.files && e.target.files[0]) impProcessarArquivo_(e.target.files[0]);
+  });
+
+  impMostrarDangerZone_();
+}
+
+function impTipoCard_(tipo, icon, label, sub) {
+  return '<div class="imp-tipo-card" id="imp-tipo-' + tipo + '" onclick="impSelecionarTipo_(\'' + tipo + '\')">' +
+    '<div class="imp-tipo-icon">' + icon + '</div>' +
+    '<div class="imp-tipo-label">' + label + '</div>' +
+    '<div class="imp-tipo-sub">' + sub + '</div>' +
+  '</div>';
+}
+
+// ── Tipo selection ──────────────────────────────────────────────────
+function impSelecionarTipo_(tipo) {
+  ["CLIENTES","UNIDADES","EQUIPAMENTOS"].forEach(function(t) {
+    var el = document.getElementById("imp-tipo-" + t);
+    if (el) el.classList.toggle("selected", t === tipo);
+  });
+  IMP.tipo = tipo;
+  impVerificarStep1_();
+}
+
+function impVerificarStep1_() {
+  var btn = document.getElementById("imp-btn-step1");
+  if (btn) btn.disabled = !(IMP.cabecalhos.length > 0 && IMP.tipo);
+}
+
+// ── Drag & Drop ────────────────────────────────────────────────────
+function impOnDragOver_(e) { e.preventDefault(); document.getElementById("imp-dropzone").classList.add("drag-over"); }
+function impOnDragLeave_(e) { document.getElementById("imp-dropzone").classList.remove("drag-over"); }
+function impOnDrop_(e) {
+  e.preventDefault();
+  document.getElementById("imp-dropzone").classList.remove("drag-over");
+  var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) impProcessarArquivo_(file);
+}
+
+// ── File parsing (SheetJS) ─────────────────────────────────────────
+function impProcessarArquivo_(file) {
+  IMP.fileName = file.name;
+  var dz = document.getElementById("imp-dropzone");
+  if (dz) {
+    dz.querySelector(".imp-drop-icon").textContent = "⏳";
+    dz.querySelector(".imp-drop-title").textContent = "Lendo arquivo...";
+  }
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      if (typeof XLSX === "undefined") {
+        throw new Error("Biblioteca de leitura não carregou. Aguarde alguns segundos e tente novamente.");
+      }
+      var data = new Uint8Array(e.target.result);
+      var wb   = XLSX.read(data, { type: "array" });
+      var ws   = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+      if (!rows || rows.length < 2) {
+        impAlerta_("Arquivo sem dados ou apenas com cabeçalho.", "warn");
+        impResetDropzone_();
+        return;
+      }
+
+      // Normalize headers
+      IMP.cabecalhos = rows[0].map(function(h) { return String(h || "").trim(); });
+      IMP.dados      = rows.slice(1).filter(function(r) {
+        return r.some(function(c) { return String(c || "").trim() !== ""; });
+      });
+      IMP.totalRows  = IMP.dados.length;
+
+      // Update dropzone UI
+      dz.classList.add("has-file");
+      dz.querySelector(".imp-drop-icon").textContent = "✅";
+      dz.querySelector(".imp-drop-title").textContent = IMP.fileName;
+      dz.querySelector(".imp-drop-sub").textContent   = IMP.totalRows + " linhas · " + IMP.cabecalhos.length + " colunas";
+
+      // Info bar
+      var bar = document.getElementById("imp-info-bar");
+      if (bar) {
+        bar.style.display = "flex";
+        bar.innerHTML =
+          '<div class="imp-info-pill">📄 ' + escapeHtml_(IMP.fileName) + '</div>' +
+          '<div class="imp-info-pill">📊 ' + IMP.totalRows + ' registros</div>' +
+          '<div class="imp-info-pill">🗂️ ' + IMP.cabecalhos.length + ' colunas</div>';
+      }
+
+      impVerificarStep1_();
+    } catch(err) {
+      impAlerta_("Erro ao ler arquivo: " + err.message, "warn");
+      impResetDropzone_();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function impResetDropzone_() {
+  var dz = document.getElementById("imp-dropzone");
+  if (!dz) return;
+  dz.classList.remove("has-file", "drag-over");
+  dz.querySelector(".imp-drop-icon").textContent = "📂";
+  dz.querySelector(".imp-drop-title").textContent = "Arraste o arquivo aqui ou clique para selecionar";
+  dz.querySelector(".imp-drop-sub").textContent   = "Suporte: .xlsx · .xls · .csv";
+  IMP.cabecalhos = []; IMP.dados = [];
+  impVerificarStep1_();
+}
+
+// ── Step 1 → 2 (Mapeamento) ────────────────────────────────────────
+function impAvancarParaMapeamento_() {
+  if (!IMP.cabecalhos.length || !IMP.tipo) return;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) { impAlerta_(res && res.message || "Erro no mapeamento.", "warn"); return; }
+      IMP.mapeamento = res.mapeamento;
+      impRenderMapeamento_(res);
+      impIrParaStep_(2);
+    })
+    .withFailureHandler(function(err) { impAlerta_("Erro: " + err.message, "warn"); })
+    .importacaoSugerirMapeamento(SESSION, IMP.cabecalhos, IMP.tipo);
+}
+
+function impRenderMapeamento_(res) {
+  var campos = IMP_CAMPOS[IMP.tipo] || {};
+  var mapa   = res.mapeamento || {};
+
+  var html = '<table class="imp-map-table"><thead><tr>' +
+    '<th style="width:30%">Campo SGO+</th>' +
+    '<th>Coluna detectada no arquivo</th>' +
+    '<th style="width:20%">Confiança</th>' +
+    '</tr></thead><tbody>';
+
+  Object.keys(campos).forEach(function(campo) {
+    var meta  = campos[campo] || {};
+    var sug   = mapa[campo]   || { indice: -1, header: "", confianca: 0 };
+    var conf  = sug.confianca || 0;
+    var confCls = conf >= 80 ? "imp-conf-100" : conf >= 60 ? "imp-conf-60" : "imp-conf-0";
+    var confTxt = conf >= 80 ? "✓ " + conf + "%" : conf >= 60 ? "~ " + conf + "%" : "Não detectado";
+
+    // Build select
+    var selOpts = '<option value="-1">(não mapear)</option>';
+    IMP.cabecalhos.forEach(function(h, i) {
+      var selected = (sug.indice === i) ? ' selected' : '';
+      selOpts += '<option value="' + i + '"' + selected + '>' + escapeHtml_(h) + '</option>';
+    });
+
+    html += '<tr>' +
+      '<td><strong>' + escapeHtml_(meta.label || campo) + '</strong>' + (meta.obrig ? '<span class="imp-field-required">*</span>' : '') + '</td>' +
+      '<td><select class="imp-map-select" id="imp-sel-' + campo + '" data-campo="' + campo + '">' + selOpts + '</select></td>' +
+      '<td><span class="imp-conf-badge ' + confCls + '">' + confTxt + '</span></td>' +
+      '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById("imp-map-container").innerHTML = html;
+}
+
+// ── Step 2 → 3 (Preview) ──────────────────────────────────────────
+function impAvancarParaPreview_() {
+  // Collect current mapping from selects
+  var campos = IMP_CAMPOS[IMP.tipo] || {};
+  Object.keys(campos).forEach(function(campo) {
+    var sel = document.getElementById("imp-sel-" + campo);
+    if (sel) {
+      var idx = parseInt(sel.value, 10);
+      IMP.mapeamento[campo] = { indice: idx, header: idx >= 0 ? (IMP.cabecalhos[idx] || "") : "" };
+    }
+  });
+
+  impRenderPreview_();
+  impRenderVinculos_();
+  impIrParaStep_(3);
+}
+
+function impRenderPreview_() {
+  var campos  = Object.keys(IMP_CAMPOS[IMP.tipo] || {});
+  var mapa    = IMP.mapeamento;
+  var preview = IMP.dados.slice(0, 8);
+
+  var html = '<div class="imp-alert info">Mostrando as primeiras ' + Math.min(8, IMP.dados.length) + ' de ' + IMP.totalRows + ' linhas.</div>';
+  html += '<div class="imp-preview-wrap"><table class="imp-preview-table"><thead><tr><th>#</th>';
+
+  var camposVisiveis = campos.filter(function(c) {
+    return mapa[c] && mapa[c].indice >= 0;
+  });
+
+  camposVisiveis.forEach(function(c) {
+    var meta = (IMP_CAMPOS[IMP.tipo] || {})[c] || {};
+    html += '<th>' + escapeHtml_(meta.label || c) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  preview.forEach(function(row, i) {
+    html += '<tr><td style="color:var(--muted);font-size:11px;">' + (i + 1) + '</td>';
+    camposVisiveis.forEach(function(c) {
+      var idx = mapa[c] ? mapa[c].indice : -1;
+      var val = idx >= 0 ? String(row[idx] || "") : "";
+      html += '<td>' + escapeHtml_(val) + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById("imp-preview-container").innerHTML = html;
+}
+
+function impRenderVinculos_() {
+  var panel = document.getElementById("imp-vinculos-panel");
+  if (!panel) return;
+
+  if (IMP.tipo === "UNIDADES") {
+    panel.style.display = "block";
+    panel.innerHTML = '<div class="imp-options-title" style="margin-bottom:8px;">🔗 Vincular ao Cliente</div>' +
+      '<select id="imp-sel-cliente" style="margin-bottom:6px;" onchange="impCarregarUnidadesImport_(this.value)">' +
+      '<option value="">Selecione o cliente...</option></select>';
+    impCarregarClientesImport_();
+  } else if (IMP.tipo === "EQUIPAMENTOS") {
+    panel.style.display = "block";
+    panel.innerHTML = '<div class="imp-options-title" style="margin-bottom:8px;">🔗 Vincular (opcional)</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+      '<div><label style="font-size:12px;margin-bottom:4px;">Cliente padrão</label>' +
+      '<select id="imp-sel-cliente" onchange="impCarregarUnidadesImport_(this.value)">' +
+      '<option value="">Auto-detectar pelo arquivo</option></select></div>' +
+      '<div><label style="font-size:12px;margin-bottom:4px;">Unidade padrão</label>' +
+      '<select id="imp-sel-unidade"><option value="">Auto-detectar pelo arquivo</option></select></div>' +
+      '</div>';
+    impCarregarClientesImport_();
+  } else {
+    panel.style.display = "none";
+  }
+}
+
+function impCarregarClientesImport_() {
+  if (!SESSION) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) return;
+      IMP.clientes = res.items || [];
+      var sel = document.getElementById("imp-sel-cliente");
+      if (!sel) return;
+      var opts = sel.innerHTML;
+      IMP.clientes.forEach(function(c) {
+        opts += '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.NOME) + '</option>';
+      });
+      sel.innerHTML = opts;
+    })
+    .withFailureHandler(function() {})
+    .importacaoListarClientes(SESSION);
+}
+
+function impCarregarUnidadesImport_(clienteId) {
+  IMP.clienteId = clienteId || "";
+  var sel = document.getElementById("imp-sel-unidade");
+  if (!sel) return;
+  if (!clienteId) {
+    sel.innerHTML = '<option value="">Auto-detectar pelo arquivo</option>';
+    IMP.unidades = [];
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(res) {
+      IMP.unidades = (res && res.items) ? res.items : [];
+      var opts = '<option value="">Auto-detectar pelo arquivo</option>';
+      IMP.unidades.forEach(function(u) {
+        opts += '<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME) + '</option>';
+      });
+      sel.innerHTML = opts;
+    })
+    .withFailureHandler(function() {})
+    .importacaoListarUnidades(SESSION, clienteId);
+}
+
+// ── Executar importação ────────────────────────────────────────────
+function impExecutarImportacao_() {
+  var opcoes = {
+    atualizarExistentes: document.getElementById("imp-opt-atualizar") &&
+                         document.getElementById("imp-opt-atualizar").checked,
+    clienteId: "",
+    unidadeId: ""
+  };
+
+  var selCli = document.getElementById("imp-sel-cliente");
+  var selUni = document.getElementById("imp-sel-unidade");
+  if (selCli) opcoes.clienteId = selCli.value || "";
+  if (selUni) opcoes.unidadeId = selUni.value || "";
+
+  // Map all rows
+  var registros = IMP.dados.map(function(row) {
+    var reg = {};
+    Object.keys(IMP.mapeamento).forEach(function(campo) {
+      var idx = IMP.mapeamento[campo] ? IMP.mapeamento[campo].indice : -1;
+      reg[campo] = idx >= 0 ? String(row[idx] || "").trim() : "";
+    });
+    return reg;
+  });
+
+  // Show loading in step 4
+  impIrParaStep_(4);
+  document.getElementById("imp-resultado-container").innerHTML =
+    '<div class="imp-progress-wrap">' +
+      '<div class="imp-progress-bar-bg"><div class="imp-progress-bar" id="imp-pbar" style="width:0"></div></div>' +
+      '<div class="imp-progress-label" id="imp-pbar-label">Importando ' + registros.length + ' registros...</div>' +
+    '</div>';
+
+  setTimeout(function() {
+    var bar = document.getElementById("imp-pbar");
+    if (bar) bar.style.width = "60%";
+  }, 100);
+
+  var fnName = IMP.tipo === "CLIENTES"     ? "importacaoExecutarClientes"
+             : IMP.tipo === "UNIDADES"     ? "importacaoExecutarUnidades"
+             : "importacaoExecutarEquipamentos";
+
+  var runner = google.script.run
+    .withSuccessHandler(function(res) {
+      var bar   = document.getElementById("imp-pbar");
+      var label = document.getElementById("imp-pbar-label");
+      if (bar)   bar.style.width = "100%";
+      if (label) label.textContent = "Concluído!";
+      setTimeout(function() { impRenderResultado_(res); }, 400);
+    })
+    .withFailureHandler(function(err) {
+      impRenderResultado_({ success: false, message: err && err.message || "Erro desconhecido.", importados: 0, atualizados: 0, ignorados: 0, erros: [] });
+    });
+
+  runner[fnName](SESSION, registros, opcoes);
+}
+
+function impRenderResultado_(res) {
+  var cont = document.getElementById("imp-resultado-container");
+  if (!cont) return;
+
+  if (!res || !res.success) {
+    cont.innerHTML =
+      '<div class="imp-alert warn">❌ ' + escapeHtml_(res && res.message || "Erro na importação.") + '</div>';
+    return;
+  }
+
+  var erros   = res.erros   || [];
+  var tipoMap = { CLIENTES: "clientes", UNIDADES: "unidades", EQUIPAMENTOS: "equipamentos" };
+  var tipoLabel = tipoMap[IMP.tipo] || "registros";
+
+  var html =
+    '<div class="imp-alert ok" style="margin-bottom:20px;">✅ Importação de ' + tipoLabel + ' concluída com sucesso!</div>' +
+    '<div class="imp-result-cards">' +
+      '<div class="imp-result-card imported"><div class="imp-result-num">' + (res.importados || 0) + '</div><div class="imp-result-label">Importados</div></div>' +
+      '<div class="imp-result-card updated"><div class="imp-result-num">' + (res.atualizados || 0) + '</div><div class="imp-result-label">Atualizados</div></div>' +
+      '<div class="imp-result-card ignored"><div class="imp-result-num">' + (res.ignorados || 0) + '</div><div class="imp-result-label">Ignorados</div></div>' +
+      '<div class="imp-result-card errors"><div class="imp-result-num">' + erros.length + '</div><div class="imp-result-label">Erros</div></div>' +
+    '</div>';
+
+  if (erros.length > 0) {
+    html += '<div class="imp-errors-list"><strong style="font-size:12px;color:#7f1d1d;">Linhas com erro:</strong><ul style="margin:8px 0 0;padding-left:16px;">';
+    erros.forEach(function(e) {
+      html += '<li>Linha ' + e.linha + ': ' + escapeHtml_(e.msg || "") + '</li>';
+    });
+    html += '</ul></div>';
+  }
+
+  cont.innerHTML = html;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────
+function impIrParaStep_(n) {
+  [1, 2, 3, 4].forEach(function(i) {
+    var s  = document.getElementById("imp-step-" + i);
+    var si = document.getElementById("imp-si-"   + i);
+    var sp = document.getElementById("imp-sep-"  + i);
+    if (s)  s.classList.toggle("active", i === n);
+    if (si) {
+      si.classList.toggle("active", i === n);
+      si.classList.toggle("done",   i < n);
+    }
+    if (sp) sp.classList.toggle("done", i < n);
+  });
+  IMP.step = n;
+  var shell = document.querySelector(".module-shell");
+  if (shell) shell.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function impReset_() {
+  IMP.tipo = ""; IMP.cabecalhos = []; IMP.dados = [];
+  IMP.mapeamento = {}; IMP.clienteId = ""; IMP.unidadeId = "";
+  ["CLIENTES","UNIDADES","EQUIPAMENTOS"].forEach(function(t) {
+    var el = document.getElementById("imp-tipo-" + t);
+    if (el) el.classList.remove("selected");
+  });
+  impResetDropzone_();
+  var bar = document.getElementById("imp-info-bar");
+  if (bar) bar.style.display = "none";
+}
+
+function impAlerta_(msg, tipo) {
+  alert(msg);
+}
+
+// ── Limpeza de dados (ADMIN only) ──────────────────────────────────
+function impMostrarDangerZone_() {
+  var dz = document.getElementById("imp-danger-zone");
+  if (dz && PERFIL === "ADMIN") dz.style.display = "block";
+}
+
+function impConfirmarLimpeza_(tipo) {
+  var labels = { EQUIPAMENTOS: "equipamentos", CLIENTES: "clientes", UNIDADES: "unidades" };
+  var label = labels[tipo] || tipo;
+  if (!confirm("⚠️ ATENÇÃO\n\nIsso vai apagar TODOS os " + label + " do banco de dados.\n\nEssa ação não pode ser desfeita.\n\nDigite OK para confirmar.")) return;
+  if (!confirm("Última chance — tem certeza que quer apagar todos os " + label + "?")) return;
+
+  var statusEl = document.getElementById("imp-limpeza-status");
+  if (statusEl) statusEl.innerHTML = '<span style="color:#666;">⏳ Limpando ' + label + '...</span>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + escapeHtml_(res && res.message || "Erro.") + '</span>';
+        return;
+      }
+      if (statusEl) statusEl.innerHTML =
+        '<span style="color:#16a34a;">✅ ' + (res.removidos || 0) + ' registros de ' + label + ' removidos com sucesso.</span>';
+    })
+    .withFailureHandler(function(err) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626;">❌ ' + escapeHtml_(err && err.message || "Erro.") + '</span>';
+    })
+    .importacaoLimparAba(SESSION, tipo);
+}
+</script>
+
+<!-- SheetJS CDN — parser de XLSX/XLS/CSV no browser -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>

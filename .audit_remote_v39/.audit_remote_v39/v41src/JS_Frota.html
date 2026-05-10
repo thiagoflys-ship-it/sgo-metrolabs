@@ -1,0 +1,149 @@
+<script>
+  function renderFrotaModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Frota</h2>\n            <p class="content-subtitle">Veiculos, reservas, vistorias, abastecimentos e manutencoes.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;">\n            <input id="frotaPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar veiculo..." onkeydown="if(event.key===\'Enter\') frotaPesquisar_()">\n            <button class="btn-secondary" type="button" onclick="frotaPesquisar_()">Pesquisar</button>\n          </div>\n        </div>\n        <div class="motores-tabs">\n          <button class="motores-tab-btn active" id="frotaTabVeiculos" onclick="frotaAba_(\'veiculos\')">Veiculos</button>\n          <button class="motores-tab-btn" id="frotaTabAgenda" onclick="frotaAba_(\'agenda\')">Agenda</button>\n          <button class="motores-tab-btn" id="frotaTabVistoria" onclick="frotaAba_(\'vistoria\')">Vistoria</button>\n          <button class="motores-tab-btn" id="frotaTabAbast" onclick="frotaAba_(\'abast\')">Abastecimento</button>\n          <button class="motores-tab-btn" id="frotaTabManut" onclick="frotaAba_(\'manut\')">Manutencao</button>\n        </div>\n        <div id="frotaConteudo"></div>\n      </div>';
+    FROTA_STATE.aba = "veiculos";
+    frotaAba_("veiculos");
+  }
+
+  function frotaAba_(aba) {
+    FROTA_STATE.aba = aba;
+    document.querySelectorAll(".motores-tab-btn").forEach(b => b.classList.remove("active"));
+    const map = { veiculos: "frotaTabVeiculos", agenda: "frotaTabAgenda", vistoria: "frotaTabVistoria", abast: "frotaTabAbast", manut: "frotaTabManut" };
+    const btn = document.getElementById(map[aba]); if (btn) btn.classList.add("active");
+    if (aba === "veiculos") return frotaRenderVeiculos_();
+    if (aba === "agenda") return frotaRenderAgenda_();
+    if (aba === "vistoria") return frotaRenderVistoria_();
+    if (aba === "abast") return frotaRenderAbast_();
+    if (aba === "manut") return frotaRenderManut_();
+  }
+
+  function frotaRenderVeiculos_() {
+    document.getElementById("frotaConteudo").innerHTML = '\n      <div class="module-grid">\n        <div class="form-card">\n          <h3 class="section-card-title">Veiculo</h3>\n          <div class="form-grid">\n            <div><label>Placa</label><input id="frt_placa" type="text"></div>\n            <div><label>Status</label><select id="frt_status"><option>DISPONIVEL</option><option>EM_USO</option><option>MANUTENCAO</option><option>BLOQUEADO</option><option>INATIVO</option></select></div>\n            <div><label>Marca</label><input id="frt_marca" type="text"></div>\n            <div><label>Modelo</label><input id="frt_modelo" type="text"></div>\n            <div><label>Ano</label><input id="frt_ano" type="number"></div>\n            <div><label>Cor</label><input id="frt_cor" type="text"></div>\n            <div><label>Combustivel</label><input id="frt_comb" type="text"></div>\n            <div><label>KM atual</label><input id="frt_km" type="number"></div>\n            <div><label>Custo KM</label><input id="frt_custo_km" type="text"></div>\n            <div><label>Seguro vence</label><input id="frt_seguro" type="date"></div>\n            <div><label>IPVA vence</label><input id="frt_ipva" type="date"></div>\n            <div><label>Licenciamento vence</label><input id="frt_lic" type="date"></div>\n            <div class="full"><label>Motivo bloqueio</label><input id="frt_motivo" type="text"></div>\n          </div>\n          <div class="form-actions"><button class="btn-primary" onclick="frotaSalvarVeiculo_()">Salvar</button><button class="btn-secondary" onclick="frotaLimparVeiculo_()">Limpar</button></div>\n        </div>\n        <div class="list-card"><div class="table-wrap"><table class="table"><thead><tr><th>Placa</th><th>Modelo</th><th>KM</th><th>Status</th><th>Acoes</th></tr></thead><tbody id="frotaVeiculosBody"></tbody></table></div></div>\n      </div>';
+    frotaPesquisar_();
+  }
+
+  function frotaPesquisar_() {
+    google.script.run.withSuccessHandler(function(res) {
+      FROTA_STATE.veiculos = (res && res.items) || [];
+      frotaRenderTabelaVeiculos_();
+      frotaPreencherVeiculos_();
+    }).frotaPesquisarVeiculos(SESSION, getValue_("frotaPesquisa"));
+  }
+
+  function frotaRenderTabelaVeiculos_() {
+    const body = document.getElementById("frotaVeiculosBody");
+    if (!body) return;
+    const items = FROTA_STATE.veiculos || [];
+    body.innerHTML = items.length ? items.map(v => '<tr>\n      <td style="font-weight:700;">' +
+      (escapeHtml_(v.PLACA)) +
+      '</td><td>' +
+      (escapeHtml_(v.MARCA)) +
+      ' ' +
+      (escapeHtml_(v.MODELO)) +
+      '</td><td>' +
+      (escapeHtml_(v.KM_ATUAL)) +
+      '</td><td>' +
+      (obterBadgeStatusHtml_(v.STATUS)) +
+      '</td>\n      <td><button class="btn-info" onclick="frotaEditarVeiculo_(\'' +
+      (escapeHtml_(v.ID)) +
+      '\')">Editar</button></td>\n    </tr>').join("") : '<tr><td colspan="5" class="empty-state">Nenhum veiculo.</td></tr>';
+  }
+
+  function frotaSalvarVeiculo_() {
+    const payload = {
+      ID: FROTA_STATE.editingId,
+      PLACA: getValue_("frt_placa"), STATUS: getValue_("frt_status"), MARCA: getValue_("frt_marca"), MODELO: getValue_("frt_modelo"),
+      ANO: getValue_("frt_ano"), COR: getValue_("frt_cor"), TIPO_COMBUSTIVEL: getValue_("frt_comb"), KM_ATUAL: getValue_("frt_km"),
+      CUSTO_KM: getValue_("frt_custo_km"), DATA_VENCIMENTO_SEGURO: getValue_("frt_seguro"), DATA_VENCIMENTO_IPVA: getValue_("frt_ipva"),
+      DATA_VENCIMENTO_LICENCIAMENTO: getValue_("frt_lic"), BLOQUEADO: getValue_("frt_status") === "BLOQUEADO", MOTIVO_BLOQUEIO: getValue_("frt_motivo")
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar.");
+      alert(res.message || "Salvo."); frotaLimparVeiculo_(); frotaPesquisar_();
+    }).frotaSalvarVeiculo(SESSION, payload);
+  }
+
+  function frotaEditarVeiculo_(id) {
+    const v = (FROTA_STATE.veiculos || []).find(x => x.ID === id); if (!v) return;
+    FROTA_STATE.editingId = id;
+    setValue_("frt_placa", v.PLACA); setValue_("frt_status", v.STATUS); setValue_("frt_marca", v.MARCA); setValue_("frt_modelo", v.MODELO);
+    setValue_("frt_ano", v.ANO); setValue_("frt_cor", v.COR); setValue_("frt_comb", v.TIPO_COMBUSTIVEL); setValue_("frt_km", v.KM_ATUAL);
+    setValue_("frt_custo_km", v.CUSTO_KM); setValue_("frt_seguro", v.DATA_VENCIMENTO_SEGURO); setValue_("frt_ipva", v.DATA_VENCIMENTO_IPVA);
+    setValue_("frt_lic", v.DATA_VENCIMENTO_LICENCIAMENTO); setValue_("frt_motivo", v.MOTIVO_BLOQUEIO);
+  }
+
+  function frotaLimparVeiculo_() {
+    FROTA_STATE.editingId = "";
+    ["frt_placa","frt_marca","frt_modelo","frt_ano","frt_cor","frt_comb","frt_km","frt_custo_km","frt_seguro","frt_ipva","frt_lic","frt_motivo"].forEach(id => setValue_(id, ""));
+    setValue_("frt_status", "DISPONIVEL");
+  }
+
+  function frotaRenderAgenda_() {
+    document.getElementById("frotaConteudo").innerHTML = frotaFormOperacional_("Agenda", "frotaSalvarAgenda_()", '\n      <div><label>Veiculo</label><select id="frt_agd_veic"></select></div><div><label>Tecnico ID</label><input id="frt_agd_tec"></div>\n      <div><label>Inicio</label><input id="frt_agd_ini" type="datetime-local"></div><div><label>Fim</label><input id="frt_agd_fim" type="datetime-local"></div>\n      <div><label>OS ID</label><input id="frt_agd_os"></div><div><label>Missao ID</label><input id="frt_agd_missao"></div>\n      <div><label>KM saida</label><input id="frt_agd_kms" type="number"></div><div><label>KM chegada</label><input id="frt_agd_kmc" type="number"></div>', "frotaAgendaBody");
+    frotaPreencherVeiculos_(); frotaListarAgenda_();
+  }
+
+  function frotaRenderVistoria_() {
+    document.getElementById("frotaConteudo").innerHTML = frotaFormOperacional_("Vistoria", "frotaSalvarVistoria_()", '\n      <div><label>Veiculo</label><select id="frt_vis_veic"></select></div><div><label>Tipo</label><select id="frt_vis_tipo"><option>SAIDA</option><option>CHEGADA</option></select></div>\n      <div><label>KM</label><input id="frt_vis_km" type="number"></div><div><label>Combustivel %</label><input id="frt_vis_comb" type="number"></div>\n      <div class="full"><label>Avarias</label><input id="frt_vis_avarias"></div><div class="full"><label>Link fotos</label><input id="frt_vis_fotos"></div>', "frotaVistBody");
+    frotaPreencherVeiculos_(); frotaListarVistorias_();
+  }
+
+  function frotaRenderAbast_() {
+    document.getElementById("frotaConteudo").innerHTML = frotaFormOperacional_("Abastecimento", "frotaSalvarAbast_()", '\n      <div><label>Veiculo</label><select id="frt_ab_veic"></select></div><div><label>KM</label><input id="frt_ab_km" type="number"></div>\n      <div><label>Litros</label><input id="frt_ab_litros" type="number" step="0.01"></div><div><label>Valor litro</label><input id="frt_ab_valor"></div>\n      <div><label>Combustivel</label><input id="frt_ab_comb"></div><div><label>Posto</label><input id="frt_ab_posto"></div>', "frotaAbastBody");
+    frotaPreencherVeiculos_(); frotaListarAbast_();
+  }
+
+  function frotaRenderManut_() {
+    document.getElementById("frotaConteudo").innerHTML = frotaFormOperacional_("Manutencao", "frotaSalvarManut_()", '\n      <div><label>Veiculo</label><select id="frt_man_veic"></select></div><div><label>Tipo</label><input id="frt_man_tipo"></div>\n      <div class="full"><label>Descricao</label><input id="frt_man_desc"></div><div><label>Data</label><input id="frt_man_data" type="date"></div>\n      <div><label>KM</label><input id="frt_man_km" type="number"></div><div><label>Custo</label><input id="frt_man_custo"></div>\n      <div><label>Proxima data</label><input id="frt_man_prox_data" type="date"></div><div><label>Proximo KM</label><input id="frt_man_prox_km" type="number"></div>', "frotaManutBody");
+    frotaPreencherVeiculos_(); frotaListarManut_();
+  }
+
+  function frotaFormOperacional_(titulo, salvarFn, campos, bodyId) {
+    return '<div class="module-grid"><div class="form-card"><h3 class="section-card-title">' +
+      (titulo) +
+      '</h3><div class="form-grid">' +
+      (campos) +
+      '</div><div class="form-actions"><button class="btn-primary" onclick="' +
+      (salvarFn) +
+      '">Salvar</button></div></div><div class="list-card"><div class="table-wrap"><table class="table"><thead><tr><th>Veiculo</th><th>Data</th><th>Detalhe</th></tr></thead><tbody id="' +
+      (bodyId) +
+      '"></tbody></table></div></div></div>';
+  }
+
+  function frotaPreencherVeiculos_() {
+    if (!FROTA_STATE.veiculos) {
+      google.script.run.withSuccessHandler(function(res){ FROTA_STATE.veiculos=(res&&res.items)||[]; frotaPreencherVeiculos_(); }).frotaListarVeiculos(SESSION);
+      return;
+    }
+    ["frt_agd_veic","frt_vis_veic","frt_ab_veic","frt_man_veic"].forEach(function(id) {
+      const el = document.getElementById(id); if (!el) return;
+      el.innerHTML = '<option value="">Selecione</option>' + FROTA_STATE.veiculos.map(v => '<option value="' +
+        (escapeHtml_(v.ID)) +
+        '">' +
+        (escapeHtml_(v.PLACA)) +
+        ' - ' +
+        (escapeHtml_(v.MODELO)) +
+        '</option>').join("");
+    });
+  }
+
+  function frotaSalvarAgenda_() { google.script.run.withSuccessHandler(function(r){ alert((r&&r.message)||"Salvo."); frotaListarAgenda_(); }).frotaSalvarAgendamento(SESSION,{VEICULO_ID:getValue_("frt_agd_veic"),TECNICO_ID:getValue_("frt_agd_tec"),DATA_INICIO:getValue_("frt_agd_ini"),DATA_FIM:getValue_("frt_agd_fim"),OS_ID:getValue_("frt_agd_os"),MISSAO_ID:getValue_("frt_agd_missao"),KM_SAIDA:getValue_("frt_agd_kms"),KM_CHEGADA:getValue_("frt_agd_kmc")}); }
+  function frotaSalvarVistoria_() { google.script.run.withSuccessHandler(function(r){ alert((r&&r.message)||"Salvo."); frotaListarVistorias_(); }).frotaSalvarVistoria(SESSION,{VEICULO_ID:getValue_("frt_vis_veic"),TIPO:getValue_("frt_vis_tipo"),KM:getValue_("frt_vis_km"),COMBUSTIVEL_PCT:getValue_("frt_vis_comb"),PNEUS_OK:true,LATARIA_OK:true,INTERIOR_OK:true,AVARIAS_DESCRICAO:getValue_("frt_vis_avarias"),LINK_FOTOS:getValue_("frt_vis_fotos"),APROVADO:true}); }
+  function frotaSalvarAbast_() { google.script.run.withSuccessHandler(function(r){ alert((r&&r.message)||"Salvo."); frotaListarAbast_(); }).frotaSalvarAbastecimento(SESSION,{VEICULO_ID:getValue_("frt_ab_veic"),KM:getValue_("frt_ab_km"),LITROS:getValue_("frt_ab_litros"),VALOR_LITRO:getValue_("frt_ab_valor"),TIPO_COMBUSTIVEL:getValue_("frt_ab_comb"),POSTO:getValue_("frt_ab_posto")}); }
+  function frotaSalvarManut_() { google.script.run.withSuccessHandler(function(r){ alert((r&&r.message)||"Salvo."); frotaListarManut_(); }).frotaSalvarManutencao(SESSION,{VEICULO_ID:getValue_("frt_man_veic"),TIPO_MANUT:getValue_("frt_man_tipo"),DESCRICAO:getValue_("frt_man_desc"),DATA:getValue_("frt_man_data"),KM:getValue_("frt_man_km"),CUSTO:getValue_("frt_man_custo"),PROXIMA_DATA:getValue_("frt_man_prox_data"),PROXIMO_KM:getValue_("frt_man_prox_km")}); }
+
+  function frotaListarAgenda_() { google.script.run.withSuccessHandler(r => frotaRenderOps_("frotaAgendaBody",(r&&r.items)||[], i => [i.VEICULO_PLACA, i.DATA_INICIO, i.STATUS])).frotaListarAgendamentos(SESSION); }
+  function frotaListarVistorias_() { google.script.run.withSuccessHandler(r => frotaRenderOps_("frotaVistBody",(r&&r.items)||[], i => [frotaPlaca_(i.VEICULO_ID), i.DATA, i.TIPO + " KM " + (i.KM||"")])).frotaListarVistorias(SESSION, ""); }
+  function frotaListarAbast_() { google.script.run.withSuccessHandler(r => frotaRenderOps_("frotaAbastBody",(r&&r.items)||[], i => [frotaPlaca_(i.VEICULO_ID), i.DATA, "R$ " + (i.VALOR_TOTAL||0)])).frotaListarAbastecimentos(SESSION, ""); }
+  function frotaListarManut_() { google.script.run.withSuccessHandler(r => frotaRenderOps_("frotaManutBody",(r&&r.items)||[], i => [frotaPlaca_(i.VEICULO_ID), i.DATA, i.TIPO_MANUT + " - " + (i.STATUS||"")])).frotaListarManutencoes(SESSION, ""); }
+  function frotaRenderOps_(bodyId, items, mapFn) { const body=document.getElementById(bodyId); if(!body)return; body.innerHTML=items.length?items.map(i=>{const a=mapFn(i); return '<tr><td>' +
+    (escapeHtml_(a[0])) +
+    '</td><td>' +
+    (formatarDataFront_(a[1])) +
+    '</td><td>' +
+    (escapeHtml_(a[2])) +
+    '</td></tr>';}).join(""):'<tr><td colspan="3" class="empty-state">Sem registros.</td></tr>'; }
+  function frotaPlaca_(id) { const v=(FROTA_STATE.veiculos||[]).find(x=>x.ID===id); return v ? v.PLACA : id; }
+</script>

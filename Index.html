@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>METROLABS SGO+</title>
+  <?!= include('UI_Estilos'); ?>
+</head>
+<body>
+
+  <div id="login" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand-wrap">
+        <span class="brand-sgo">SGO</span><span class="brand-plus">+</span>
+      </div>
+
+      <div class="login-title-wrap">
+        <h1 class="login-title">METROLABS SGO+</h1>
+        <p class="login-subtitle">Sistema de Gestão Operacional e Técnica</p>
+      </div>
+
+      <div class="login-form">
+        <div class="form-group">
+          <label for="usuario"><i class="fas fa-user" style="margin-right:6px;color:var(--metro-green);"></i>Usuário</label>
+          <input
+            id="usuario"
+            type="text"
+            placeholder="Digite seu usuário"
+            autocomplete="username"
+            onkeydown="if(event.key === 'Enter') document.getElementById('senha').focus()"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="senha"><i class="fas fa-lock" style="margin-right:6px;color:var(--metro-green);"></i>Senha</label>
+          <input
+            id="senha"
+            type="password"
+            placeholder="Digite sua senha"
+            autocomplete="current-password"
+            onkeydown="if(event.key === 'Enter') fazerLogin()"
+          >
+        </div>
+
+        <div class="login-actions">
+          <button id="btnLogin" type="button" onclick="fazerLogin()">
+            <i class="fas fa-right-to-bracket" style="margin-right:8px;"></i>Entrar
+          </button>
+        </div>
+      </div>
+      <p style="text-align:center;margin:20px 0 0;font-size:11px;color:#94a3b8;font-weight:500;">
+        METROLABS SGO+ &nbsp;&middot;&nbsp; v2.0
+      </p>
+    </div>
+  </div>
+
+  <div id="app" class="app-shell" style="display:none;">
+    
+    <header id="topo" class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo-block" onclick="abrir('dashboard')" style="cursor: pointer;">
+          <div class="topbar-brand-mark">
+            <span class="brand-sgo">SGO</span><span class="brand-plus">+</span>
+          </div>
+          <div class="topbar-brand">
+            <div class="topbar-title">METROLABS</div>
+            <div class="topbar-subtitle">Painel Operacional</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div
+          id="mensagemMotivacional"
+          class="mensagem-motivacional"
+          title="Mensagem do dia"
+        ></div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="topbar-info-block">
+          <div id="relogioTopo" class="relogio-texto">--/--/----, --:--:--</div>
+          <div class="status-produtivo">Status: Produtivo</div>
+        </div>
+        <div class="user-action-block">
+            <div id="userInfo" class="user-info"></div>
+            <button id="btnLogout" type="button" class="btn-logout" onclick="logout()">
+              <i class="fas fa-power-off" style="margin-right:5px;font-size:11px;"></i>Sair
+            </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      
+      <aside id="menu" class="sidebar">
+
+        <!-- PRINCIPAL -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">PRINCIPAL</div>
+          <button type="button" class="menu-btn" onclick="abrir('dashboard')">
+            <i class="fas fa-gauge-high"></i><span>Dashboard</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-dashboard-bi" onclick="abrir('dashboard_bi')">
+            <i class="fas fa-chart-line"></i><span>Dashboard BI</span>
+          </button>
+        </div>
+
+        <!-- OPERAÇÃO & O.S -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">OPERAÇÃO &amp; O.S</div>
+          <button type="button" class="menu-btn" id="menu-btn-os" onclick="abrir('os')">
+            <i class="fas fa-clipboard-check"></i><span>Ordens de Serviço</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-os_questionarios" onclick="abrir('os_questionarios')">
+            <i class="fas fa-list-check"></i><span>Questionários OS</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-assistencia_tecnica" onclick="abrir('assistencia_tecnica')">
+            <i class="fas fa-toolbox"></i><span>Assistência Técnica</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-missoes" onclick="abrir('missoes')">
+            <i class="fas fa-calendar-days"></i><span>Agenda / Missões</span>
+          </button>
+        </div>
+
+        <!-- ENGENHARIA CLÍNICA — id="menu-secao-tecnica" preservado para controle de acesso -->
+        <div class="sidebar-section" id="menu-secao-tecnica">
+          <div class="sidebar-section-title">ENGENHARIA CLÍNICA</div>
+          <button type="button" class="menu-btn" id="menu-btn-equipamentos" onclick="abrir('equipamentos')">
+            <i class="fas fa-microscope"></i><span>Equipamentos</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-documentos" onclick="abrir('documentos')">
+            <i class="fas fa-folder-open"></i><span>Documentos</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-registros" onclick="abrir('registros')">
+            <i class="fas fa-stethoscope"></i><span>Registros Técnicos</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-relatorios" onclick="abrir('relatorios')">
+            <i class="fas fa-chart-pie"></i><span>Relatórios</span>
+          </button>
+          <button type="button" class="menu-btn" onclick="abrir('relatorio_conformidade')">
+            <i class="fas fa-file-lines"></i><span>Carta / Conformidade</span>
+          </button>
+          <button type="button" class="menu-btn" onclick="abrir('planejamento_cme')">
+            <i class="fas fa-calendar-check"></i><span>Planejamento CME</span>
+          </button>
+          <button type="button" class="menu-btn menu-btn-inventario" id="menu-btn-inventario" onclick="abrir('inventario')">
+            <i class="fas fa-clipboard-list"></i><span>Inventário</span>
+          </button>
+          <button type="button" class="menu-btn" onclick="abrir('autoclave')">
+            <i class="fas fa-temperature-high"></i><span>Autoclave</span>
+          </button>
+          <button type="button" class="menu-btn" onclick="abrir('lavadora')">
+            <i class="fas fa-droplet"></i><span>Lavadoras</span>
+          </button>
+        </div>
+
+        <!-- GESTÃO & CLIENTES -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">GESTÃO &amp; CLIENTES</div>
+          <button type="button" class="menu-btn" id="menu-btn-clientes" onclick="abrir('clientes')">
+            <i class="fas fa-building"></i><span>Clientes</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-unidades" onclick="abrir('unidades')">
+            <i class="fas fa-location-dot"></i><span>Unidades</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-contratos" onclick="abrir('contratos')">
+            <i class="fas fa-file-signature"></i><span>Contratos</span>
+          </button>
+        </div>
+
+        <!-- SUPRIMENTOS & LOGÍSTICA -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">SUPRIMENTOS &amp; LOGÍSTICA</div>
+          <button type="button" class="menu-btn" id="menu-btn-pecas" onclick="abrir('pecas')">
+            <i class="fas fa-screwdriver-wrench"></i><span>Peças / Subconjuntos</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-estoque" onclick="abrir('estoque')">
+            <i class="fas fa-boxes-stacked"></i><span>Estoque</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-rastreabilidade" onclick="abrir('rastreabilidade')">
+            <i class="fas fa-barcode"></i><span>Rastreabilidade</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-fornecedores" onclick="abrir('fornecedores')">
+            <i class="fas fa-industry"></i><span>Fornecedores</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-frota" onclick="abrir('frota')">
+            <i class="fas fa-car-side"></i><span>Frota</span>
+          </button>
+        </div>
+
+        <!-- ADMINISTRAÇÃO — id="menu-secao-admin" preservado para controle de acesso -->
+        <div class="sidebar-section" id="menu-secao-admin">
+          <div class="sidebar-section-title">ADMINISTRAÇÃO</div>
+          <button type="button" class="menu-btn" id="menu-btn-admin" onclick="abrir('admin')">
+            <i class="fas fa-sliders"></i><span>Painel Admin</span>
+          </button>
+          <button type="button" class="menu-btn" id="menu-btn-tecnicos" onclick="abrir('tecnicos')">
+            <i class="fas fa-user-hard-hat"></i><span>Técnicos de Campo</span>
+          </button>
+          <button type="button" class="menu-btn menu-btn-importacao" id="menu-btn-importacao" onclick="abrir('importacao')">
+            <i class="fas fa-upload"></i><span>Importar Dados</span>
+          </button>
+          <button type="button" class="menu-btn menu-btn-sync" id="btnAtualizarDados" onclick="executarAtualizacaoDados()">
+            <i class="fas fa-rotate"></i><span>Atualizar Dados</span>
+          </button>
+        </div>
+
+      </aside>
+
+      <main class="content-area">
+        <section id="barraAlertas" class="alert-bar" style="display:none;"></section>
+        <section id="areaAvisos" class="avisos-wrap" style="display:none;"></section>
+        <section id="conteudo" class="content-panel"></section>
+      </main>
+
+    </div>
+  </div>
+
+<?!= include('JS_Core'); ?>
+<!-- JS_Mobile.html legado removido do carregamento para evitar erro de sintaxe em produção. -->
+<?!= include('JS_MobileCampo'); ?>
+<?!= include('JS_OS'); ?>
+<?!= include('JS_OS_Execucao'); ?>
+<?!= include('JS_OS_Questionarios'); ?>
+<?!= include('JS_AssistenciaTecnica'); ?>
+<?!= include('JS_Missoes'); ?>
+<?!= include('JS_Admin'); ?>
+<?!= include('JS_Cadastros'); ?>
+<?!= include('JS_Equipamentos'); ?>
+<?!= include('JS_Pecas'); ?>
+<?!= include('JS_Contratos'); ?>
+<?!= include('JS_Frota'); ?>
+<?!= include('JS_DashboardBI'); ?>
+<?!= include('JS_Fornecedores'); ?>
+<?!= include('JS_Estoque'); ?>
+<?!= include('JS_Rastreabilidade'); ?>
+<?!= include('JS_Inventario'); ?>
+<?!= include('JS_Registros'); ?>
+<?!= include('JS_Relatorios'); ?>
+<?!= include('JS_Tecnicos'); ?>
+<?!= include('JS_Importacao'); ?>
+
+  <script>
+    // Atualização interna dos dados do SGO+
+    function executarAtualizacaoDados() {
+      var btn = document.getElementById("btnAtualizarDados");
+
+      if (!confirm("Atualizar os dados internos do SGO+ agora?\n\nClientes, TAGs e usuários serão verificados.")) {
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Sincronizando...</span>';
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          alert((res && (res.mensagem || res.message)) || "Atualização concluída.");
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rotate"></i><span>Atualizar Dados</span>';
+          }
+        })
+        .withFailureHandler(function(err) {
+          alert("Erro crítico ao atualizar os dados: " + ((err && err.message) ? err.message : err));
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rotate"></i><span>Tentar Novamente</span>';
+          }
+        })
+        .dispararSincronizacaoTotal();
+    }
+
+    // Relógio em tempo real otimizado
+    document.addEventListener("DOMContentLoaded", function() {
+      var elRelogio = document.getElementById("relogioTopo");
+      if (!elRelogio) return;
+
+      function atualizarRelogioTopo_() {
+        var agora = new Date();
+        var dia = String(agora.getDate()).padStart(2, "0");
+        var mes = String(agora.getMonth() + 1).padStart(2, "0");
+        var ano = agora.getFullYear();
+        var horas = String(agora.getHours()).padStart(2, "0");
+        var min = String(agora.getMinutes()).padStart(2, "0");
+        var seg = String(agora.getSeconds()).padStart(2, "0");
+        elRelogio.innerText = dia + "/" + mes + "/" + ano + ", " + horas + ":" + min + ":" + seg;
+      }
+
+      atualizarRelogioTopo_();
+      setInterval(atualizarRelogioTopo_, 1000);
+    });
+
+    /* ============================================================
+       MÓDULO DOCUMENTOS — CATEGORIAS NBR 15943
+       ============================================================ */
+    function renderDocumentosModulo_() {
+      var div = document.getElementById("conteudo");
+      if (!div) return;
+
+      var isCliente = typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+      var styleForm = isCliente ? "display:none;" : "";
+      var styleGrid = isCliente ? "grid-template-columns:1fr;" : "";
+      var styleAcoes = isCliente ? "display:none;" : "";
+      var headerRightStyle = isCliente ? "display:none;" : "display:flex;gap:15px;align-items:center;";
+      var colspan = isCliente ? "6" : "7";
+
+      div.innerHTML = ''
+        + '<div class="module-shell">'
+        + '  <div class="module-header">'
+        + '    <div class="module-header-left">'
+        + '      <h2 class="content-title">Documentos</h2>'
+        + '      <p class="content-subtitle">Gestão de relatórios e certificados seguindo a NBR 15943.</p>'
+        + '    </div>'
+        + '    <div class="module-header-right" style="' + headerRightStyle + '">'
+        + '      <div style="display:flex;gap:5px;">'
+        + '        <input id="documentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar documento..." onkeydown="if(event.key === \'Enter\') documentosPesquisar_()">'
+        + '        <button class="btn-secondary" type="button" onclick="documentosPesquisar_()">Pesquisar</button>'
+        + '      </div>'
+        + '      <button class="btn-primary" type="button" onclick="documentosNovo_()">+ Novo Documento</button>'
+        + '    </div>'
+        + '  </div>'
+        + '  <div class="module-grid" style="' + styleGrid + '">'
+        + '    <div class="form-card" style="' + styleForm + '">'
+        + '      <h3 class="section-card-title" id="documentosFormTitulo">Novo documento</h3>'
+        + '      <div class="form-grid">'
+        + '        <div class="full"><label for="doc_cliente_id">Cliente <span style="color:red;">*</span></label><select id="doc_cliente_id" onchange="aoMudarClienteDocumentos_()"></select></div>'
+        + '        <div class="full"><label for="doc_unidade_id">Unidade <span style="color:red;">*</span></label><select id="doc_unidade_id" onchange="aoMudarUnidadeDocumentos_()"><option value="">Selecione um cliente primeiro</option></select></div>'
+        + '        <div class="full"><label for="doc_equipamento_id">Equipamento (opcional)</label><select id="doc_equipamento_id"><option value="">Selecione uma unidade primeiro</option></select></div>'
+        + '        <div class="full"><label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:red;">*</span></label><select id="doc_tipo_documento">'
+        + '          <option value="">Selecione a categoria...</option>'
+        + '          <option value="1. Relatórios de Manutenção">1. Relatórios de Manutenção</option>'
+        + '          <option value="2. Certificados de Calibração">2. Certificados de Calibração</option>'
+        + '          <option value="3. Relatórios de Qualificação">3. Relatórios de Qualificação</option>'
+        + '          <option value="4. Ordens de Serviço">4. Ordens de Serviço</option>'
+        + '          <option value="5. Contratos">5. Contratos</option>'
+        + '          <option value="Outros Documentos">Outros Documentos</option>'
+        + '        </select></div>'
+        + '        <div class="full"><label for="doc_nome_arquivo">Nome / Referência <span style="color:red;">*</span></label><input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026"></div>'
+        + '        <div class="full"><label for="doc_arquivo">Arquivo do documento (upload para Drive)</label><input id="doc_arquivo" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onchange="processarArquivoDocumento_()"><input id="doc_arquivo_base64" type="hidden"><input id="doc_arquivo_mime" type="hidden"><input id="doc_arquivo_nome" type="hidden"><div id="doc_arquivo_preview" style="margin-top:6px;font-size:12px;font-weight:700;color:var(--metro-blue);"></div></div>'
+        + '        <div class="full"><label for="doc_data_vencimento">Data de vencimento (opcional)</label><input id="doc_data_vencimento" type="date"></div>'
+        + '        <div><label for="doc_status">Status</label><input id="doc_status" type="text" value="ATIVO" disabled></div>'
+        + '      </div>'
+        + '      <div class="form-actions"><button class="btn-primary" type="button" onclick="documentosSalvar_()">Salvar</button><button class="btn-secondary" type="button" onclick="documentosNovo_()">Limpar</button></div>'
+        + '    </div>'
+        + '    <div class="list-card">'
+        + '      <div class="table-wrap">'
+        + '        <table class="table">'
+        + '          <thead><tr><th>Cliente</th><th>Unidade</th><th>Equipamento</th><th>Categoria</th><th>Arquivo</th><th>Status</th><th style="' + styleAcoes + '">Ações</th></tr></thead>'
+        + '          <tbody id="documentosTabelaBody"><tr><td colspan="' + colspan + '" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr></tbody>'
+        + '        </table>'
+        + '      </div>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>';
+
+      if (typeof documentosLimparFormulario_ === "function") {
+        documentosLimparFormulario_();
+      }
+    }
+  </script>
+
+  <script>
+    window.SGO_QR_STATE = {
+      equipamentoId: null,
+      processando: false,
+      redirecionado: false
+    };
+
+    function sgoQrGetEquipamentoId_() {
+      try {
+        var url = new URL(window.location.href);
+        return url.searchParams.get("equipamento") || "";
+      } catch (e) {
+        try {
+          var query = window.location.search || "";
+          var params = new URLSearchParams(query);
+          return params.get("equipamento") || "";
+        } catch (err) {
+          return "";
+        }
+      }
+    }
+
+    function sgoQrTemFluxo_() {
+      return !!sgoQrGetEquipamentoId_();
+    }
+
+    function sgoQrMostrarMensagem_(msg) {
+      try { alert(msg); } catch (e) {}
+    }
+
+    function sgoQrResetBotaoLogin_() {
+      var btn = document.getElementById("btnLogin");
+      if (!btn) return;
+      btn.innerText = "Entrar";
+      btn.disabled = false;
+    }
+
+    function sgoQrSetBotaoAcessando_() {
+      var btn = document.getElementById("btnLogin");
+      if (!btn) return;
+      btn.innerText = "Acessando equipamento...";
+      btn.disabled = true;
+    }
+
+    function sgoQrExecutarAcesso_(sessionId) {
+      var equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId || !sessionId) return;
+      if (window.SGO_QR_STATE.processando || window.SGO_QR_STATE.redirecionado) return;
+
+      window.SGO_QR_STATE.equipamentoId = equipamentoId;
+      window.SGO_QR_STATE.processando = true;
+      sgoQrSetBotaoAcessando_();
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          window.SGO_QR_STATE.processando = false;
+
+          if (!res || !res.success) {
+            sgoQrMostrarMensagem_((res && res.message) ? res.message : "Acesso negado ao equipamento.");
+            sgoQrResetBotaoLogin_();
+            return;
+          }
+
+          var redirectUrl = String((res.redirectUrl || "")).trim();
+          if (!redirectUrl) {
+            sgoQrMostrarMensagem_("Link do equipamento não encontrado.");
+            sgoQrResetBotaoLogin_();
+            return;
+          }
+
+          window.SGO_QR_STATE.redirecionado = true;
+          window.location.href = redirectUrl;
+        })
+        .withFailureHandler(function(err) {
+          window.SGO_QR_STATE.processando = false;
+          sgoQrMostrarMensagem_("Erro ao acessar via QR: " + ((err && err.message) ? err.message : err));
+          sgoQrResetBotaoLogin_();
+        })
+        .qrcodeAcessar(sessionId, equipamentoId);
+    }
+
+    function sgoQrLimparSessoesInvalidas_() {
+      try {
+        sessionStorage.removeItem("SGO_SESSION");
+        sessionStorage.removeItem("SGO_SESSION_ID");
+        sessionStorage.removeItem("sessionId");
+      } catch (e) {}
+    }
+
+    function sgoQrValidarSessaoEExecutar_() {
+      var equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId) return;
+
+      var sessionId = "";
+      try {
+        sessionId = sessionStorage.getItem("SGO_SESSION") ||
+          sessionStorage.getItem("SGO_SESSION_ID") ||
+          sessionStorage.getItem("sessionId") || "";
+      } catch (e) {
+        sessionId = "";
+      }
+
+      if (!sessionId) return;
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          var ok = !!(res && (res.valid || res.success));
+          if (!ok) {
+            sgoQrLimparSessoesInvalidas_();
+            return;
+          }
+          sgoQrExecutarAcesso_(sessionId);
+        })
+        .withFailureHandler(function() {
+          sgoQrLimparSessoesInvalidas_();
+        })
+        .validarSessao(sessionId);
+    }
+
+    function sgoQrPatchLogin_() {
+      if (typeof window.fazerLogin !== "function") return;
+      if (window.__SGO_QR_LOGIN_PATCHED__) return;
+
+      var loginOriginal = window.fazerLogin;
+
+      window.fazerLogin = function() {
+        var retorno = loginOriginal.apply(this, arguments);
+        setTimeout(function() {
+          if (sgoQrTemFluxo_()) {
+            sgoQrValidarSessaoEExecutar_();
+          }
+        }, 1000);
+        return retorno;
+      };
+
+      window.__SGO_QR_LOGIN_PATCHED__ = true;
+    }
+
+    function sgoQrBootstrap_() {
+      try {
+        sgoQrPatchLogin_();
+        if (sgoQrTemFluxo_()) {
+          sgoQrValidarSessaoEExecutar_();
+        }
+      } catch (e) {}
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(sgoQrBootstrap_, 300);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<script>
+  function renderDashboardBIModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Dashboard BI</h2>\n            <p class="content-subtitle">Visao executiva de OS, produtividade, custos, conformidade e frota.</p>\n          </div>\n          <div class="module-header-right">\n            <button class="btn-secondary" type="button" onclick="dashboardBICarregar_()">Atualizar</button>\n          </div>\n        </div>\n        <div id="dashboardBIConteudo">\n          <div class="empty-state">Carregando indicadores...</div>\n        </div>\n      </div>';
+    dashboardBICarregar_();
+  }
+
+  function dashboardBICarregar_() {
+    const root = document.getElementById("dashboardBIConteudo");
+    if (root) root.innerHTML = '<div class="empty-state">Carregando indicadores...</div>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (root) root.innerHTML = '<div class="empty-state">Falha ao carregar BI: ' + escapeHtml_((res && res.message) || "") + '</div>';
+          return;
+        }
+        dashboardBIRender_(res);
+      })
+      .withFailureHandler(function(err) {
+        if (root) root.innerHTML = '<div class="empty-state">Erro de comunicacao: ' + escapeHtml_(err && err.message ? err.message : err) + '</div>';
+      })
+      .dashboardBIGerar(SESSION);
+  }
+
+  function dashboardBIRender_(data) {
+    const k = data.kpis || {};
+    const s = data.series || {};
+    const root = document.getElementById("dashboardBIConteudo");
+    if (!root) return;
+
+    root.innerHTML = '\n      <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">\n        ' +
+      (dashboardBIKpi_("OS abertas", k.osAbertas, "Pendentes de fluxo")) +
+      '\n        ' +
+      (dashboardBIKpi_("OS atrasadas", k.osAtrasadas, "SLA vencido")) +
+      '\n        ' +
+      (dashboardBIKpi_("SLA OK", (k.slaOkPct || 0) + "%", "Carteira total")) +
+      '\n        ' +
+      (dashboardBIKpi_("OS finalizadas", k.osFinalizadas, "Concluidas/aprovadas")) +
+      '\n        ' +
+      (dashboardBIKpi_("Horas apontadas", k.horasApontadas, "Missoes tecnicas")) +
+      '\n        ' +
+      (dashboardBIKpi_("Custo OS", dashboardBIMoeda_(k.custoOS), "Pecas + hora + desloc.")) +
+      '\n        ' +
+      (dashboardBIKpi_("Custo frota", dashboardBIMoeda_(k.custoFrota), "Abast. + manut.")) +
+      '\n        ' +
+      (dashboardBIKpi_("Contratos vencendo", k.contratosVencendo, "Proximos 60 dias")) +
+      '\n        ' +
+      (dashboardBIKpi_("Pecas vencidas", k.pecasVencidas, "Calibracao critica")) +
+      '\n        ' +
+      (dashboardBIKpi_("Veiculos bloqueados", k.veiculosBloqueados, "Frota indisponivel")) +
+      '\n      </div>\n\n      <div class="module-grid" style="margin-top:18px;">\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">OS por status</h3>\n          ' +
+      (dashboardBIBarList_(s.osPorStatus || [])) +
+      '\n        </div>\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">OS por tipo</h3>\n          ' +
+      (dashboardBIBarList_(s.osPorTipo || [])) +
+      '\n        </div>\n      </div>\n\n      <div class="module-grid" style="margin-top:18px;">\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">Produtividade por tecnico</h3>\n          ' +
+      (dashboardBIBarList_((s.produtividadeTecnicos || []).map(function(i){ return { label: i.tecnico, total: i.horas }; }))) +
+      '\n        </div>\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">Frota por status</h3>\n          ' +
+      (dashboardBIBarList_(s.frotaPorStatus || [])) +
+      '\n        </div>\n      </div>\n\n      <div style="margin-top:16px;color:var(--muted);font-size:12px;">\n        Gerado em ' +
+      (formatarDataFront_(data.geradoEm)) +
+      '\n      </div>\n    ';
+  }
+
+  function dashboardBIKpi_(titulo, valor, subtitulo) {
+    return '\n      <div class="card-kpi">\n        <div class="card-kpi-title">' +
+      (escapeHtml_(titulo)) +
+      '</div>\n        <div class="card-kpi-value">' +
+      (escapeHtml_(valor == null ? 0 : valor)) +
+      '</div>\n        <div style="font-size:11px;color:var(--muted);font-weight:600;">' +
+      (escapeHtml_(subtitulo || "")) +
+      '</div>\n      </div>';
+  }
+
+  function dashboardBIBarList_(items) {
+    if (!items || !items.length) return '<div class="empty-state">Sem dados.</div>';
+    const max = Math.max.apply(null, items.map(function(i) { return Number(i.total || 0); })) || 1;
+    return items.slice(0, 10).map(function(i) {
+      const pct = Math.max(4, Math.round((Number(i.total || 0) / max) * 100));
+      return '\n        <div style="margin-bottom:12px;">\n          <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;margin-bottom:5px;">\n            <span>' +
+        (escapeHtml_(i.label)) +
+        '</span>\n            <span>' +
+        (escapeHtml_(i.total)) +
+        '</span>\n          </div>\n          <div style="height:9px;background:#eef2f7;border-radius:999px;overflow:hidden;">\n            <div style="height:100%;width:' +
+        (pct) +
+        '%;background:var(--metro-green);border-radius:999px;"></div>\n          </div>\n        </div>';
+    }).join("");
+  }
+
+  function dashboardBIMoeda_(valor) {
+    const n = Number(valor || 0);
+    try {
+      return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    } catch (e) {
+      return "R$ " + n.toFixed(2);
+    }
+  }
+</script>

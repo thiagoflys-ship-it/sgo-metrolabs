@@ -1,0 +1,1594 @@
+<script>
+(function () {
+  var MC = {
+    tela: "home", osId: null, os: null, os_lista: [], missoes_lista: [],
+    checklist_perguntas: [], checklist_respostas: {}, fotos_lista: [],
+    materiais_lista: [], assinaturas: [], relato: "", relato_ia: "",
+    historico: [], clientes: [], unidades: [], equipamentos: [], tecnicos: [], tipos_os: [], prioridades: [],
+    gps_unidade: null, nova_os_questionario: null, _cssInjetado: false, _busy: false, foto_retry: null, _rascunhoRelato: null
+  };
+
+  function mc_ses() { return (typeof SESSION !== "undefined") ? SESSION : null; }
+  function mc_usr() { return (typeof USER_CONTEXT !== "undefined") ? USER_CONTEXT : null; }
+  function mc_esc(v) {
+    return typeof escapeHtml_ === "function"
+      ? escapeHtml_(v)
+      : String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function mc_fmt(iso) {
+    if (!iso) return "--";
+    try { var d = new Date(iso); return d.toLocaleDateString("pt-BR") + " " + d.toTimeString().slice(0,5); }
+    catch(e) { return String(iso); }
+  }
+  function mc_cor_status(s) {
+    s = (s||"").toUpperCase();
+    if (s==="CONCLUIDA"||s==="CONCLUÍDA"||s==="CONCLUIDO"||s==="CONCLUÍDO") return "#057a55";
+    if (s==="EM_EXECUCAO"||s==="EM EXECUÇÃO"||s==="EM_ANDAMENTO") return "#1a56db";
+    if (s==="CANCELADA"||s==="CANCELADO") return "#dc2626";
+    if (s==="PENDENTE"||s==="AGUARDANDO"||s==="ABERTA") return "#c27803";
+    return "#6b7280";
+  }
+  function mc_cor_prior(p) {
+    p = (p||"").toUpperCase();
+    if (p==="CRITICA"||p==="CRÍTICA") return "#dc2626";
+    if (p==="ALTA") return "#f97316";
+    if (p==="MEDIA"||p==="MÉDIA") return "#eab308";
+    return "#3b82f6";
+  }
+
+  // ── ROBUSTEZ ──────────────────────────────
+  function mc_tamanhoLegivel_(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1048576).toFixed(1) + " MB";
+  }
+
+  function mc_setBtnBusy_(id, txt) {
+    var b = document.getElementById(id); if (!b) return;
+    b._origTxt = b.textContent; b.disabled = true; b.style.opacity = "0.6";
+    if (txt) b.textContent = txt;
+  }
+
+  function mc_resetBtn_(id) {
+    var b = document.getElementById(id); if (!b) return;
+    b.disabled = false; b.style.opacity = "";
+    if (b._origTxt !== undefined) { b.textContent = b._origTxt; delete b._origTxt; }
+  }
+
+  function mc_comprimirImagem_(file, opts, cb) {
+    var maxW = (opts && opts.maxW) || 1600;
+    var qual = (opts && opts.quality) || 0.78;
+    var origSize = file.size;
+    if (origSize < 600 * 1024) {
+      var rd0 = new FileReader();
+      rd0.onload = function(e) { cb(null, e.target.result, origSize, origSize); };
+      rd0.onerror = function() { cb(new Error("Leitura falhou")); };
+      rd0.readAsDataURL(file);
+      return;
+    }
+    var rd = new FileReader();
+    rd.onerror = function() { cb(new Error("Leitura falhou")); };
+    rd.onload = function(ev) {
+      var img = new Image();
+      img.onerror = function() { cb(null, ev.target.result, origSize, origSize); };
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        try {
+          var cv = document.createElement("canvas");
+          cv.width = w; cv.height = h;
+          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          var b64 = cv.toDataURL("image/jpeg", qual);
+          var sz = Math.round((b64.length - "data:image/jpeg;base64,".length) * 3 / 4);
+          cb(null, b64, origSize, sz);
+        } catch(ex) { cb(null, ev.target.result, origSize, origSize); }
+      };
+      img.src = ev.target.result;
+    };
+    rd.readAsDataURL(file);
+  }
+
+  // Rascunho — relato técnico
+  var _relatoDbTimer_ = null;
+  function mc_salvarRascunhoRelato_() {
+    try { if (MC.osId) { var el = document.getElementById("mc2-relato"); if (el) localStorage.setItem("sgo_r_" + MC.osId, el.value); } } catch(e) {}
+  }
+  function mc_carregarRascunhoRelato_() {
+    try { return MC.osId ? (localStorage.getItem("sgo_r_" + MC.osId) || "") : ""; } catch(e) { return ""; }
+  }
+  function mc_limparRascunhoRelato_() {
+    try { if (MC.osId) localStorage.removeItem("sgo_r_" + MC.osId); } catch(e) {}
+  }
+  function mc_onRelatoInput_() {
+    clearTimeout(_relatoDbTimer_);
+    _relatoDbTimer_ = setTimeout(mc_salvarRascunhoRelato_, 800);
+  }
+  function mc_restaurarRascunho_() {
+    var el = document.getElementById("mc2-relato"); if (!el) return;
+    var r = MC._rascunhoRelato || mc_carregarRascunhoRelato_(); if (!r) return;
+    if (el.value && el.value.trim() && el.value !== r) {
+      if (!confirm("Substituir o texto atual pelo rascunho salvo?")) return;
+    }
+    el.value = r; MC.relato = r;
+    var box = document.getElementById("mc2-rascunho-box"); if (box) box.style.display = "none";
+    mc_toast("Rascunho restaurado");
+  }
+  function mc_descartarRascunho_() {
+    mc_limparRascunhoRelato_(); MC._rascunhoRelato = null;
+    var box = document.getElementById("mc2-rascunho-box"); if (box) box.style.display = "none";
+  }
+
+  // Rascunho — checklist
+  function mc_salvarRascunhoChecklist_() {
+    try { if (MC.osId) localStorage.setItem("sgo_cl_" + MC.osId, JSON.stringify(MC.checklist_respostas)); } catch(e) {}
+  }
+  function mc_carregarRascunhoChecklist_() {
+    try { if (!MC.osId) return {}; var raw = localStorage.getItem("sgo_cl_" + MC.osId); return raw ? JSON.parse(raw) : {}; } catch(e) { return {}; }
+  }
+  function mc_limparRascunhoChecklist_() {
+    try { if (MC.osId) localStorage.removeItem("sgo_cl_" + MC.osId); } catch(e) {}
+  }
+
+  // Retentativa de foto
+  function mc_tentarNovamenteUpload_() {
+    var retry = MC.foto_retry; if (!retry) { mc_toast("Nenhuma foto pendente"); return; }
+    var ses = mc_ses(), osId = MC.osId; if (!ses||!osId) { mc_toast("Sessão inválida ou expirada."); return; }
+    if (MC._busy) return;
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-retry", "Reenviando...");
+    google.script.run
+      .withSuccessHandler(function(r) {
+        MC._busy = false;
+        if (r&&r.success) {
+          mc_toast("✅ Foto reenviada com sucesso");
+          MC.fotos_lista.push(r.item||r.foto||{ TIPO:retry.tipo, OBSERVACAO:retry.obs });
+          MC.foto_retry = null; mc_renderFotos();
+        } else {
+          mc_resetBtn_("mc2-btn-retry");
+          mc_toast(r?r.message:"Falha ao reenviar. Tente novamente.");
+        }
+      })
+      .withFailureHandler(function() {
+        MC._busy = false; mc_resetBtn_("mc2-btn-retry");
+        mc_toast("Sem conexão. Tente quando houver sinal.");
+      })
+      .osFotoUploadBase64(ses, osId, { TIPO:retry.tipo, OBSERVACAO:retry.obs, BASE64_DATA:retry.base64, NOME_ARQUIVO:retry.nome, MIME_TYPE:retry.mime });
+  }
+
+  function mc_cancelarRetentativa_() {
+    MC.foto_retry = null; mc_renderFotos();
+  }
+
+  // ── CSS ───────────────────────────────────
+  function mc_css() {
+    if (MC._cssInjetado) return;
+    MC._cssInjetado = true;
+    var s = document.createElement("style");
+    s.id = "mc2-css";
+    s.textContent = [
+      ".mc2{font-family:'Segoe UI',Arial,sans-serif;background:#f1f5f9;min-height:100vh;width:100%;box-sizing:border-box;}",
+      ".mc2-top{background:#0f172a;color:#fff;padding:14px 16px 12px;padding-top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}",
+      ".mc2-top-title{font-size:17px;font-weight:800;}",
+      ".mc2-top-sub{font-size:11px;color:rgba(255,255,255,.5);font-weight:500;}",
+      ".mc2-top-r{display:flex;gap:8px;align-items:center;}",
+      ".mc2-btn-top{background:rgba(255,255,255,.12);border:none;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}",
+      ".mc2-btn-top-red{background:#dc2626;}",
+      ".mc2-body{padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));max-width:480px;margin:0 auto;}",
+      ".mc2-card{background:#fff;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);border:1px solid #e2e8f0;}",
+      ".mc2-btn{display:block;width:100%;min-height:54px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;padding:14px 16px;box-sizing:border-box;text-align:center;margin-bottom:0;transition:opacity .15s;}",
+      ".mc2-btn:active{opacity:.8;}",
+      ".mc2-pri{background:#1a56db;color:#fff;}",
+      ".mc2-ok{background:#057a55;color:#fff;}",
+      ".mc2-red{background:#c81e1e;color:#fff;}",
+      ".mc2-warn{background:#c27803;color:#fff;}",
+      ".mc2-ghost{background:#f1f5f9;color:#334155;}",
+      ".mc2-sm{min-height:44px;font-size:14px;padding:8px 12px;border-radius:8px;}",
+      ".mc2-nav{background:#fff;border-radius:14px;padding:20px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;display:flex;align-items:center;gap:16px;cursor:pointer;min-height:70px;}",
+      ".mc2-nav:active{background:#f0f9ff;}",
+      ".mc2-nav-ico{font-size:28px;width:44px;text-align:center;flex-shrink:0;}",
+      ".mc2-nav-txt{flex:1;}",
+      ".mc2-nav-title{font-size:16px;font-weight:700;color:#0f172a;}",
+      ".mc2-nav-sub{font-size:12px;color:#64748b;margin-top:2px;}",
+      ".mc2-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;}",
+      ".mc2-lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}",
+      ".mc2-val{font-size:15px;color:#0f172a;font-weight:600;line-height:1.3;}",
+      ".mc2-row{display:flex;gap:12px;margin-bottom:14px;}",
+      ".mc2-col{flex:1;min-width:0;}",
+      ".mc2-hr{height:1px;background:#e2e8f0;margin:14px 0;}",
+      ".mc2-sec{font-size:13px;font-weight:800;color:#334155;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;}",
+      ".mc2-input{width:100%;min-height:48px;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:16px;box-sizing:border-box;font-family:inherit;background:#fff;color:#0f172a;}",
+      ".mc2-input:focus{outline:none;border-color:#1a56db;}",
+      ".mc2-ta{width:100%;min-height:120px;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:16px;box-sizing:border-box;font-family:inherit;background:#fff;color:#0f172a;resize:vertical;}",
+      ".mc2-ta:focus{outline:none;border-color:#1a56db;}",
+      ".mc2-sel{width:100%;min-height:48px;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:16px;box-sizing:border-box;font-family:inherit;background:#fff;color:#0f172a;}",
+      ".mc2-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}",
+      ".mc2-gbtn{min-height:62px;font-size:13px;line-height:1.3;padding:10px 8px;border-radius:10px;}",
+      ".mc2-q-card{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;}",
+      ".mc2-q-txt{font-size:15px;color:#0f172a;font-weight:600;line-height:1.4;margin-bottom:12px;}",
+      ".mc2-q-obrig{color:#dc2626;font-size:12px;font-weight:700;margin-left:4px;}",
+      ".mc2-q-row{display:flex;gap:8px;}",
+      ".mc2-qb{flex:1;min-height:44px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:#f8fafc;color:#334155;}",
+      ".mc2-sim{background:#d1fae5!important;border-color:#057a55!important;color:#057a55!important;}",
+      ".mc2-nao{background:#fee2e2!important;border-color:#dc2626!important;color:#dc2626!important;}",
+      ".mc2-na{background:#fef3c7!important;border-color:#c27803!important;color:#c27803!important;}",
+      ".mc2-foto-item{display:flex;align-items:center;gap:12px;padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:8px;border:1px solid #e2e8f0;}",
+      ".mc2-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:#e2e8f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;}",
+      ".mc2-mat-item{display:flex;align-items:center;gap:10px;padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:8px;border:1px solid #e2e8f0;}",
+      ".mc2-tl{position:relative;padding-left:22px;}",
+      ".mc2-tl::before{content:'';position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:#e2e8f0;}",
+      ".mc2-tl-item{position:relative;margin-bottom:16px;}",
+      ".mc2-tl-dot{position:absolute;left:-22px;top:4px;width:12px;height:12px;border-radius:50%;background:#1a56db;border:2px solid #fff;box-shadow:0 0 0 2px #1a56db;}",
+      ".mc2-tl-dt{font-size:11px;color:#64748b;font-weight:600;}",
+      ".mc2-tl-ac{font-size:14px;color:#0f172a;font-weight:700;}",
+      ".mc2-tl-us{font-size:12px;color:#64748b;}",
+      ".mc2-alrt{padding:14px 16px;border-radius:10px;font-size:14px;font-weight:600;margin-bottom:12px;}",
+      ".mc2-info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}",
+      ".mc2-awarn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}",
+      ".mc2-aerr{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}",
+      ".mc2-aok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}",
+      ".mc2-spin-wrap{display:flex;align-items:center;justify-content:center;min-height:200px;flex-direction:column;gap:12px;}",
+      ".mc2-spin{width:36px;height:36px;border:4px solid #e2e8f0;border-top-color:#1a56db;border-radius:50%;animation:mc2spin .7s linear infinite;}",
+      "@keyframes mc2spin{to{transform:rotate(360deg);}}",
+      ".mc2-empty{text-align:center;padding:40px 20px;color:#94a3b8;}",
+      ".mc2-empty-ico{font-size:40px;margin-bottom:12px;}",
+      ".mc2-canvas{border:2px solid #e2e8f0;border-radius:10px;background:#fff;touch-action:none;display:block;max-width:100%;}",
+      ".mc2-gap8{height:8px;} .mc2-gap16{height:16px;} .mc2-gap20{height:20px;}"
+    ].join("");
+    document.head.appendChild(s);
+  }
+
+  function mc_toast(msg, dur) {
+    var t = document.getElementById("mc2-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "mc2-toast";
+      t.style.cssText = "position:fixed;bottom:calc(24px + env(safe-area-inset-bottom, 0px));left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 22px;border-radius:30px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:90vw;text-align:center;transition:opacity .3s;font-family:'Segoe UI',Arial,sans-serif;";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = "1";
+    clearTimeout(t._t);
+    t._t = setTimeout(function () { t.style.opacity = "0"; }, dur || 2400);
+  }
+
+  function mc_div() { return document.getElementById("conteudo"); }
+
+  function mc_ir(tela, extra) {
+    MC.tela = tela;
+    if (extra) { Object.keys(extra).forEach(function(k){ MC[k] = extra[k]; }); }
+    mc_render();
+  }
+
+  function mc_render() {
+    mc_css();
+    var m = {
+      "home": mc_renderHome, "cliente": mc_renderCliente, "unidade": mc_renderUnidade,
+      "equipamento": mc_renderEquipamento, "nova-os": mc_renderNovaOS, "documentos": mc_renderDocumentos,
+      "minhas-os": mc_renderMinhasOS, "detalhe-os": mc_renderDetalheOS, "checklist": mc_renderChecklist,
+      "fotos": mc_renderFotos, "materiais": mc_renderMateriais, "relato": mc_renderRelato,
+      "assinatura": mc_renderAssinatura, "finalizar": mc_renderFinalizar, "historico": mc_renderHistorico,
+      "minhas-missoes": mc_renderMinhasMissoes
+    };
+    (m[MC.tela] || mc_renderHome)();
+  }
+
+  function mc_topbar(titulo, voltar) {
+    var u = mc_usr();
+    var n = u ? mc_esc(u.nome || u.usuario || "") : "";
+    return '<div class="mc2-top">' +
+      '<div><div class="mc2-top-title">SGO+ Campo <span style="font-size:10px;background:rgba(255,255,255,.18);padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:.3px;vertical-align:middle;">v2</span></div><div class="mc2-top-sub">' + n + '</div></div>' +
+      '<div class="mc2-top-r">' +
+      (voltar ? '<button class="mc2-btn-top" onclick="' + mc_esc(voltar) + '">← Voltar</button>' : '') +
+      '<button class="mc2-btn-top mc2-btn-top-red" onclick="if(confirm(\'Sair do SGO+?\'))logout()">Sair</button>' +
+      '</div></div>';
+  }
+
+  function mc_loading(titulo, voltar) {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar(titulo, voltar) +
+      '<div class="mc2-spin-wrap"><div class="mc2-spin"></div>' +
+      '<div style="color:#64748b;font-size:14px;font-weight:600;">Carregando...</div></div></div>';
+  }
+
+  // ── HOME ──────────────────────────────────
+  function mc_renderHome() {
+    var div = mc_div(); if (!div) return;
+    var u = mc_usr();
+    var n = u ? (u.nome || u.usuario || "Técnico") : "Técnico";
+    var h = new Date().getHours();
+    var g = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+    div.innerHTML = '<div class="mc2">' + mc_topbar() +
+      '<div class="mc2-body">' +
+      '<div style="margin-bottom:20px;"><div style="font-size:22px;font-weight:900;color:#0f172a;">' + mc_esc(g) + ', ' + mc_esc(n.split(" ")[0]) + ' 👋</div>' +
+      '<div style="font-size:13px;color:#64748b;margin-top:4px;">Interface exclusiva de campo</div></div>' +
+      _navCard("📋","Minhas O.S.","Ordens atribuídas a você","mc_iniciarMinhasOS()") +
+      _navCard("🗓️","Minhas Missões","Agenda e missões do dia","mc_iniciarMinhasMissoes()") +
+      _navCard("➕","Nova O.S.","Criar tarefa em campo","mc_iniciarNovaOS()") +
+      _navCard("🏢","Cadastrar Cliente","Entrada rápida de cliente","mc_iniciarCliente()") +
+      _navCard("📍","Cadastrar Unidade","Unidade com GPS e endereço","mc_iniciarUnidade()") +
+      _navCard("🔬","Cadastrar Equipamento","Equipamento vinculado à unidade","mc_iniciarEquipamento()") +
+      _navCard("📁","Documentos","Consulta rápida e validação","mc_iniciarDocumentos()") +
+      _navCard("📷","Ler QR Code","Identificar equipamento","mc_lerQRCode()") +
+      _navCard("🔄","Sincronizar","Atualizar dados","mc_sincronizar()") +
+      _navCard("🖥️","Gestão Completa","Abrir versão desktop","mc_abrirGestaoCompleta()") +
+      '<div class="mc2-nav" style="border-color:#fee2e2;" onclick="if(confirm(\'Sair do SGO+?\'))logout()">' +
+        '<div class="mc2-nav-ico">🚪</div><div class="mc2-nav-txt"><div class="mc2-nav-title" style="color:#dc2626;">Sair</div><div class="mc2-nav-sub">Encerrar sessão</div></div><div>›</div></div>' +
+      '<div style="text-align:center;padding:20px 0 8px;font-size:11px;color:#cbd5e1;font-weight:600;">METROLABS SGO+ Campo v2.0</div>' +
+      '</div></div>';
+  }
+
+  function _navCard(ico, title, sub, onclick) {
+    return '<div class="mc2-nav" onclick="' + mc_esc(onclick) + '">' +
+      '<div class="mc2-nav-ico">' + ico + '</div>' +
+      '<div class="mc2-nav-txt"><div class="mc2-nav-title">' + title + '</div><div class="mc2-nav-sub">' + sub + '</div></div>' +
+      '<div style="color:#cbd5e1;font-size:18px;">›</div></div>';
+  }
+
+  function mc_lerQRCode() {
+    mc_toast("Use a câmera do dispositivo para ler o QR Code do equipamento");
+  }
+
+  function mc_sincronizar() {
+    var ses = mc_ses(); if (!ses) { mc_toast("Sessão inválida"); return; }
+    mc_toast("Sincronizando...");
+    google.script.run
+      .withSuccessHandler(function () { mc_toast("✅ Sincronizado"); })
+      .withFailureHandler(function () { mc_toast("Falha ao sincronizar"); })
+      .getPublicConfig();
+  }
+
+
+  // ── CADASTROS RÁPIDOS E NOVA O.S. ─────────
+  function mc_val(id) {
+    var el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function mc_set(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.value = v == null ? "" : String(v);
+  }
+
+  function mc_opts(lista, idKey, labelKey, vazio, selecionado) {
+    var html = '<option value="">' + mc_esc(vazio || "Selecione") + '</option>';
+    (lista || []).forEach(function (it) {
+      var id = it && (it[idKey] || it.ID || it.id || "");
+      var label = it && (it[labelKey] || it.LABEL || it.NOME || it.NOME_FANTASIA || it.RAZAO_SOCIAL || it.NOME_UNIDADE || it.TIPO || id || "");
+      html += '<option value="' + mc_esc(id) + '"' + (String(id) === String(selecionado || "") ? ' selected' : '') + '>' + mc_esc(label) + '</option>';
+    });
+    return html;
+  }
+
+  function mc_opcoesSimples(lista, vazio, selecionado) {
+    var html = '<option value="">' + mc_esc(vazio || "Selecione") + '</option>';
+    (lista || []).forEach(function (v) {
+      html += '<option value="' + mc_esc(v) + '"' + (String(v) === String(selecionado || "") ? ' selected' : '') + '>' + mc_esc(String(v).replace(/_/g, " ")) + '</option>';
+    });
+    return html;
+  }
+
+  function mc_abrirGestaoCompleta() {
+    try { window.SGO_FORCAR_DESKTOP = true; } catch(e) {}
+    if (typeof restaurarLayoutPadrao_ === "function") restaurarLayoutPadrao_();
+    if (typeof abrir === "function") abrir("dashboard");
+  }
+
+  function mc_iniciarCliente() {
+    mc_ir("cliente");
+  }
+
+  function mc_renderCliente() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Novo Cliente", "mc_ir('home')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-sec">Cadastro rápido de cliente</div>' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl">CNPJ</div><div class="mc2-row"><div class="mc2-col"><input id="mc2-cli-cnpj" class="mc2-input" inputmode="numeric" placeholder="00.000.000/0000-00"></div><button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;min-width:96px;" onclick="mc_buscarCnpjCliente()">Buscar</button></div>' +
+        '<div class="mc2-lbl">Razão Social *</div><input id="mc2-cli-razao" class="mc2-input" placeholder="Razão social" autocomplete="organization">' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Nome Fantasia</div><input id="mc2-cli-fantasia" class="mc2-input" placeholder="Nome fantasia">' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">Telefone / WhatsApp</div><input id="mc2-cli-tel" class="mc2-input" type="tel" placeholder="(00) 00000-0000"></div><div class="mc2-col"><div class="mc2-lbl">E-mail</div><input id="mc2-cli-email" class="mc2-input" type="email" placeholder="email@dominio.com"></div></div>' +
+        '<div class="mc2-gap16"></div><button id="mc2-btn-cli-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarCliente()">💾 Salvar Cliente</button>' +
+      '</div><button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button><div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_salvarCliente() {
+    if (MC._busy) return;
+    var razao = mc_val("mc2-cli-razao");
+    if (!razao) { mc_toast("Informe a razão social do cliente."); return; }
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    var payload = {
+      RAZAO_SOCIAL: razao,
+      NOME: razao,
+      NOME_FANTASIA: mc_val("mc2-cli-fantasia"),
+      CNPJ: mc_val("mc2-cli-cnpj"),
+      TELEFONE: mc_val("mc2-cli-tel"),
+      EMAIL: mc_val("mc2-cli-email"),
+      ORIGEM: "MOBILE_CAMPO"
+    };
+    MC._busy = true; mc_setBtnBusy_("mc2-btn-cli-salvar", "Salvando...");
+    google.script.run
+      .withSuccessHandler(function(r) {
+        MC._busy = false; mc_resetBtn_("mc2-btn-cli-salvar");
+        if (r && r.success) { mc_toast("✅ Cliente salvo"); setTimeout(function(){ mc_ir("home"); }, 700); }
+        else mc_toast((r && r.message) || "Não foi possível salvar o cliente.");
+      })
+      .withFailureHandler(function(e) { MC._busy = false; mc_resetBtn_("mc2-btn-cli-salvar"); mc_toast("Falha ao salvar cliente: " + ((e && e.message) || "verifique a conexão")); })
+      .clientesCriar(ses, payload);
+  }
+
+  function mc_buscarCnpjCliente() {
+    var cnpj = mc_val("mc2-cli-cnpj").replace(/\D/g, "");
+    if (cnpj.length !== 14) { mc_toast("Informe um CNPJ com 14 dígitos."); return; }
+    mc_toast("Buscando CNPJ...");
+    fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+      .then(function(r){ if (!r.ok) throw new Error("CNPJ não encontrado"); return r.json(); })
+      .then(function(d){
+        mc_set("mc2-cli-razao", d.razao_social || "");
+        mc_set("mc2-cli-fantasia", d.nome_fantasia || d.razao_social || "");
+        mc_set("mc2-cli-tel", d.ddd_telefone_1 || "");
+        mc_set("mc2-cli-email", d.email || "");
+        mc_toast("✅ Dados preenchidos");
+      })
+      .catch(function(){ mc_toast("Não foi possível consultar o CNPJ. Preencha manualmente."); });
+  }
+
+  function mc_iniciarUnidade() {
+    mc_ir("unidade");
+    mc_carregarClientesUnidade();
+  }
+
+  function mc_renderUnidade() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Nova Unidade", "mc_ir('home')") +
+      '<div class="mc2-body"><div class="mc2-sec">Cadastro rápido de unidade</div>' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl">Cliente *</div><select id="mc2-uni-cliente" class="mc2-sel">' + mc_opts(MC.clientes, "ID", "NOME", "Carregando clientes...") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">CNPJ da unidade</div><div class="mc2-row"><div class="mc2-col"><input id="mc2-uni-cnpj" class="mc2-input" inputmode="numeric" placeholder="Opcional"></div><button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;min-width:96px;" onclick="mc_buscarCnpjUnidade()">Buscar</button></div>' +
+        '<div class="mc2-lbl">Nome da unidade *</div><input id="mc2-uni-nome" class="mc2-input" placeholder="Nome da unidade / hospital / setor">' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Endereço</div><input id="mc2-uni-end" class="mc2-input" placeholder="Rua, número, bairro">' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">Cidade</div><input id="mc2-uni-cidade" class="mc2-input"></div><div class="mc2-col"><div class="mc2-lbl">UF</div><input id="mc2-uni-uf" class="mc2-input" maxlength="2" style="text-transform:uppercase;"></div></div>' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">Responsável</div><input id="mc2-uni-resp" class="mc2-input"></div><div class="mc2-col"><div class="mc2-lbl">WhatsApp</div><input id="mc2-uni-tel" class="mc2-input" type="tel"></div></div>' +
+        '<div class="mc2-gap8"></div><button class="mc2-btn mc2-ghost" onclick="mc_capturarGPSUnidade()">📍 Capturar GPS da unidade</button><div id="mc2-uni-gps" style="font-size:12px;color:#64748b;margin-top:8px;">GPS não capturado.</div>' +
+        '<div class="mc2-gap16"></div><button id="mc2-btn-uni-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarUnidade()">💾 Salvar Unidade</button>' +
+      '</div><button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button><div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_carregarClientesUnidade() {
+    var ses = mc_ses(); if (!ses) return;
+    google.script.run
+      .withSuccessHandler(function(r){ MC.clientes = (r && r.success) ? (r.items || r.itens || []) : []; mc_renderUnidade(); })
+      .withFailureHandler(function(){ MC.clientes = []; mc_renderUnidade(); mc_toast("Falha ao carregar clientes."); })
+      .unidadesListarClientesAtivos(ses);
+  }
+
+  function mc_buscarCnpjUnidade() {
+    var cnpj = mc_val("mc2-uni-cnpj").replace(/\D/g, "");
+    if (cnpj.length !== 14) { mc_toast("Informe um CNPJ com 14 dígitos."); return; }
+    mc_toast("Buscando CNPJ...");
+    fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+      .then(function(r){ if (!r.ok) throw new Error("CNPJ não encontrado"); return r.json(); })
+      .then(function(d){
+        mc_set("mc2-uni-nome", d.nome_fantasia || d.razao_social || "");
+        mc_set("mc2-uni-end", [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", "));
+        mc_set("mc2-uni-cidade", d.municipio || "");
+        mc_set("mc2-uni-uf", d.uf || "");
+        mc_set("mc2-uni-tel", d.ddd_telefone_1 || "");
+        mc_toast("✅ Dados preenchidos");
+      })
+      .catch(function(){ mc_toast("Não foi possível consultar o CNPJ. Preencha manualmente."); });
+  }
+
+  function mc_capturarGPSUnidade() {
+    var box = document.getElementById("mc2-uni-gps");
+    if (!navigator.geolocation) { if (box) box.textContent = "GPS indisponível neste dispositivo."; return; }
+    if (box) box.textContent = "Capturando localização...";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      MC.gps_unidade = { LATITUDE: pos.coords.latitude, LONGITUDE: pos.coords.longitude };
+      if (box) box.textContent = "GPS capturado: " + pos.coords.latitude.toFixed(6) + ", " + pos.coords.longitude.toFixed(6);
+    }, function(){ if (box) box.textContent = "Não foi possível capturar GPS. Verifique a permissão do navegador."; }, { enableHighAccuracy: true, timeout: 12000 });
+  }
+
+  function mc_salvarUnidade() {
+    if (MC._busy) return;
+    var clienteId = mc_val("mc2-uni-cliente"), nome = mc_val("mc2-uni-nome");
+    if (!clienteId) { mc_toast("Selecione o cliente."); return; }
+    if (!nome) { mc_toast("Informe o nome da unidade."); return; }
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    var payload = {
+      CLIENTE_ID: clienteId, NOME_UNIDADE: nome, NOME: nome,
+      CNPJ_UNIDADE: mc_val("mc2-uni-cnpj"), ENDERECO: mc_val("mc2-uni-end"), CIDADE: mc_val("mc2-uni-cidade"), UF: mc_val("mc2-uni-uf").toUpperCase(),
+      RESPONSAVEL: mc_val("mc2-uni-resp"), TELEFONE: mc_val("mc2-uni-tel"), ORIGEM: "MOBILE_CAMPO"
+    };
+    if (MC.gps_unidade) { payload.LATITUDE = MC.gps_unidade.LATITUDE; payload.LONGITUDE = MC.gps_unidade.LONGITUDE; }
+    MC._busy = true; mc_setBtnBusy_("mc2-btn-uni-salvar", "Salvando...");
+    google.script.run
+      .withSuccessHandler(function(r){ MC._busy = false; mc_resetBtn_("mc2-btn-uni-salvar"); if (r && r.success) { mc_toast("✅ Unidade salva"); setTimeout(function(){ mc_ir("home"); }, 700); } else mc_toast((r && r.message) || "Não foi possível salvar a unidade."); })
+      .withFailureHandler(function(e){ MC._busy = false; mc_resetBtn_("mc2-btn-uni-salvar"); mc_toast("Falha ao salvar unidade: " + ((e && e.message) || "verifique a conexão")); })
+      .unidadesCriar(ses, payload);
+  }
+
+  function mc_iniciarEquipamento() {
+    MC.clientes = []; MC.unidades = [];
+    mc_ir("equipamento");
+    mc_carregarClientesEquipamento();
+  }
+
+  function mc_renderEquipamento() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Novo Equipamento", "mc_ir('home')") +
+      '<div class="mc2-body"><div class="mc2-sec">Cadastro rápido de equipamento</div>' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl">Cliente *</div><select id="mc2-eq-cliente" class="mc2-sel" onchange="mc_carregarUnidadesEquipamento()">' + mc_opts(MC.clientes, "ID", "NOME", "Selecione o cliente") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Unidade *</div><select id="mc2-eq-unidade" class="mc2-sel">' + mc_opts(MC.unidades, "ID", "NOME_UNIDADE", "Selecione a unidade") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Tipo de equipamento *</div><input id="mc2-eq-tipo" class="mc2-input" placeholder="Autoclave, Lavadora, Bomba, etc.">' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">TAG / Patrimônio</div><input id="mc2-eq-tag" class="mc2-input"></div><div class="mc2-col"><div class="mc2-lbl">Série</div><input id="mc2-eq-serie" class="mc2-input"></div></div>' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">Fabricante</div><input id="mc2-eq-fab" class="mc2-input"></div><div class="mc2-col"><div class="mc2-lbl">Modelo</div><input id="mc2-eq-modelo" class="mc2-input"></div></div>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Setor / Sala</div><input id="mc2-eq-setor" class="mc2-input" placeholder="CME, Centro Cirúrgico, UTI...">' +
+        '<div class="mc2-gap16"></div><button id="mc2-btn-eq-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarEquipamento()">💾 Salvar Equipamento</button>' +
+      '</div><button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button><div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_carregarClientesEquipamento() {
+    var ses = mc_ses(); if (!ses) return;
+    google.script.run
+      .withSuccessHandler(function(r){ MC.clientes = (r && r.success) ? (r.items || r.itens || []) : []; mc_renderEquipamento(); })
+      .withFailureHandler(function(){ MC.clientes = []; mc_renderEquipamento(); mc_toast("Falha ao carregar clientes."); })
+      .equipamentosListarClientesAtivos(ses);
+  }
+
+  function mc_carregarUnidadesEquipamento() {
+    var ses = mc_ses(), clienteId = mc_val("mc2-eq-cliente");
+    MC.unidades = [];
+    mc_renderEquipamento();
+    mc_set("mc2-eq-cliente", clienteId);
+    if (!ses || !clienteId) return;
+    google.script.run
+      .withSuccessHandler(function(r){ MC.unidades = (r && r.success) ? (r.items || r.itens || []) : []; mc_renderEquipamento(); mc_set("mc2-eq-cliente", clienteId); })
+      .withFailureHandler(function(){ MC.unidades = []; mc_renderEquipamento(); mc_set("mc2-eq-cliente", clienteId); mc_toast("Falha ao carregar unidades."); })
+      .equipamentosListarUnidadesAtivasPorCliente(ses, clienteId);
+  }
+
+  function mc_salvarEquipamento() {
+    if (MC._busy) return;
+    var clienteId = mc_val("mc2-eq-cliente"), unidadeId = mc_val("mc2-eq-unidade"), tipo = mc_val("mc2-eq-tipo");
+    if (!clienteId) { mc_toast("Selecione o cliente."); return; }
+    if (!unidadeId) { mc_toast("Selecione a unidade."); return; }
+    if (!tipo) { mc_toast("Informe o tipo de equipamento."); return; }
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    var payload = { CLIENTE_ID: clienteId, UNIDADE_ID: unidadeId, TIPO: tipo, TAG: mc_val("mc2-eq-tag"), SERIE: mc_val("mc2-eq-serie"), FABRICANTE: mc_val("mc2-eq-fab"), MODELO: mc_val("mc2-eq-modelo"), SETOR: mc_val("mc2-eq-setor"), ORIGEM: "MOBILE_CAMPO" };
+    MC._busy = true; mc_setBtnBusy_("mc2-btn-eq-salvar", "Salvando...");
+    google.script.run
+      .withSuccessHandler(function(r){ MC._busy = false; mc_resetBtn_("mc2-btn-eq-salvar"); if (r && r.success) { mc_toast("✅ Equipamento salvo"); setTimeout(function(){ mc_ir("home"); }, 700); } else mc_toast((r && r.message) || "Não foi possível salvar o equipamento."); })
+      .withFailureHandler(function(e){ MC._busy = false; mc_resetBtn_("mc2-btn-eq-salvar"); mc_toast("Falha ao salvar equipamento: " + ((e && e.message) || "verifique a conexão")); })
+      .equipamentosCriar(ses, payload);
+  }
+
+  function mc_iniciarNovaOS() {
+    MC.clientes = []; MC.unidades = []; MC.equipamentos = []; MC.tecnicos = []; MC.tipos_os = []; MC.prioridades = []; MC.nova_os_questionario = null;
+    mc_ir("nova-os");
+    mc_carregarOpcoesNovaOS();
+  }
+
+  function mc_renderNovaOS() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Nova O.S.", "mc_ir('home')") +
+      '<div class="mc2-body"><div class="mc2-sec">Criar O.S. em campo</div>' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl">Cliente *</div><select id="mc2-os-cliente" class="mc2-sel" onchange="mc_filtrarUnidadesOS()">' + mc_opts(MC.clientes, "ID", "NOME", "Selecione o cliente") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Unidade *</div><select id="mc2-os-unidade" class="mc2-sel" onchange="mc_filtrarEquipamentosOS()">' + mc_opts(MC.unidades, "ID", "NOME_UNIDADE", "Selecione a unidade") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Equipamento *</div><select id="mc2-os-equip" class="mc2-sel" onchange="mc_atualizarQuestionarioOS()">' + mc_opts(MC.equipamentos, "ID", "LABEL", "Selecione o equipamento") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-row"><div class="mc2-col"><div class="mc2-lbl">Tipo *</div><select id="mc2-os-tipo" class="mc2-sel" onchange="mc_atualizarQuestionarioOS()">' + mc_opcoesSimples(MC.tipos_os, "Selecione", "") + '</select></div><div class="mc2-col"><div class="mc2-lbl">Prioridade</div><select id="mc2-os-prior" class="mc2-sel">' + mc_opcoesSimples(MC.prioridades.length ? MC.prioridades : ["NORMAL","ALTA","URGENTE"], "Selecione", "NORMAL") + '</select></div></div>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Técnico</div><select id="mc2-os-tec" class="mc2-sel">' + mc_opts(MC.tecnicos, "ID", "NOME", "Sem técnico definido") + '</select>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Data agendada</div><input id="mc2-os-data" class="mc2-input" type="datetime-local">' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Relato do cliente *</div><textarea id="mc2-os-relato" class="mc2-ta" placeholder="Descreva o problema ou solicitação..." style="min-height:110px;"></textarea>' +
+        '<div class="mc2-gap8"></div><div class="mc2-lbl">Orientação técnica</div><textarea id="mc2-os-orient" class="mc2-ta" placeholder="Instruções para o técnico..." style="min-height:80px;"></textarea>' +
+        '<div id="mc2-os-questionario" class="mc2-alrt mc2-info" style="display:none;margin-top:12px;"></div>' +
+        '<div class="mc2-gap16"></div><button id="mc2-btn-os-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarNovaOS()">💾 Criar O.S.</button>' +
+      '</div><button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button><div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_carregarOpcoesNovaOS() {
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function(r){
+        if (!r || !r.success) { mc_toast((r && r.message) || "Falha ao carregar opções da O.S."); mc_renderNovaOS(); return; }
+        MC.clientes = r.clientes || []; MC.unidades = []; MC.equipamentos = [];
+        MC.tecnicos = r.tecnicos || []; MC.tipos_os = r.tipos || []; MC.prioridades = r.prioridades || [];
+        MC._opcoes_os_raw = r; mc_renderNovaOS();
+      })
+      .withFailureHandler(function(e){ mc_toast("Falha ao carregar opções: " + ((e && e.message) || "verifique a conexão")); mc_renderNovaOS(); })
+      .osListarOpcoes(ses);
+  }
+
+  function mc_filtrarUnidadesOS() {
+    var cli = mc_val("mc2-os-cliente"), raw = MC._opcoes_os_raw || {};
+    MC.unidades = (raw.unidades || []).filter(function(u){ return !cli || String(u.CLIENTE_ID) === String(cli); });
+    MC.equipamentos = [];
+    mc_renderNovaOS(); mc_set("mc2-os-cliente", cli);
+  }
+
+  function mc_filtrarEquipamentosOS() {
+    var cli = mc_val("mc2-os-cliente"), uni = mc_val("mc2-os-unidade"), raw = MC._opcoes_os_raw || {};
+    MC.equipamentos = (raw.equipamentos || []).filter(function(e){ return (!cli || String(e.CLIENTE_ID) === String(cli)) && (!uni || String(e.UNIDADE_ID) === String(uni)); });
+    mc_renderNovaOS(); mc_set("mc2-os-cliente", cli); mc_set("mc2-os-unidade", uni);
+  }
+
+  function mc_atualizarQuestionarioOS() {
+    var ses = mc_ses(), tipo = mc_val("mc2-os-tipo"), eqId = mc_val("mc2-os-equip"), raw = MC._opcoes_os_raw || {};
+    var box = document.getElementById("mc2-os-questionario");
+    MC.nova_os_questionario = null;
+    if (!tipo || !eqId) { if (box) box.style.display = "none"; return; }
+    var eq = (raw.equipamentos || []).filter(function(e){ return String(e.ID) === String(eqId); })[0] || {};
+    var tipoEqp = eq.TIPO || eq.EQUIPAMENTO_TIPO || "GERAL";
+    if (box) { box.style.display = "block"; box.textContent = "Buscando questionário sugerido..."; }
+    if (!ses || !google || !google.script || !google.script.run || !google.script.run.checklistModeloPorTipoOSTipoEquipamento) {
+      if (box) box.textContent = "Questionário será vinculado pelo backend, se configurado.";
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(r){
+        if (r && r.success && r.item) {
+          MC.nova_os_questionario = r.item;
+          if (box) box.innerHTML = "✅ Questionário vinculado: <strong>" + mc_esc(r.item.NOME || r.item.ID) + "</strong>";
+        } else if (box) {
+          box.textContent = "Nenhum questionário configurado para este tipo/equipamento.";
+        }
+      })
+      .withFailureHandler(function(){ if (box) box.textContent = "Não foi possível consultar questionário. A O.S. poderá ser criada normalmente."; })
+      .checklistModeloPorTipoOSTipoEquipamento(ses, tipo, tipoEqp);
+  }
+
+  function mc_salvarNovaOS() {
+    if (MC._busy) return;
+    var cli = mc_val("mc2-os-cliente"), uni = mc_val("mc2-os-unidade"), eq = mc_val("mc2-os-equip"), tipo = mc_val("mc2-os-tipo"), relato = mc_val("mc2-os-relato");
+    if (!cli) { mc_toast("Selecione o cliente."); return; }
+    if (!uni) { mc_toast("Selecione a unidade."); return; }
+    if (!eq) { mc_toast("Selecione o equipamento."); return; }
+    if (!tipo) { mc_toast("Selecione o tipo da O.S."); return; }
+    if (!relato) { mc_toast("Informe o relato do cliente."); return; }
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    var payload = { CLIENTE_ID: cli, UNIDADE_ID: uni, EQUIPAMENTO_ID: eq, TIPO_OS: tipo, PRIORIDADE: mc_val("mc2-os-prior") || "NORMAL", TECNICO_ID: mc_val("mc2-os-tec"), DATA_AGENDADA: mc_val("mc2-os-data"), RELATO_CLIENTE: relato, MISSAO_TECNICA: mc_val("mc2-os-orient"), ORIGEM: "MOBILE_CAMPO" };
+    if (MC.nova_os_questionario && MC.nova_os_questionario.ID) payload.QUESTIONARIO_MODELO_ID = MC.nova_os_questionario.ID;
+    MC._busy = true; mc_setBtnBusy_("mc2-btn-os-salvar", "Criando...");
+    google.script.run
+      .withSuccessHandler(function(r){
+        MC._busy = false; mc_resetBtn_("mc2-btn-os-salvar");
+        if (r && r.success) {
+          var novoId = (r.item && (r.item.ID || r.item.id)) || r.id || "";
+          mc_toast("✅ O.S. criada");
+          if (novoId) setTimeout(function(){ mc_abrirOS(novoId); }, 800); else setTimeout(function(){ mc_iniciarMinhasOS(); }, 800);
+        } else mc_toast((r && r.message) || "Não foi possível criar a O.S.");
+      })
+      .withFailureHandler(function(e){ MC._busy = false; mc_resetBtn_("mc2-btn-os-salvar"); mc_toast("Falha ao criar O.S.: " + ((e && e.message) || "verifique a conexão")); })
+      .osCriar(ses, payload);
+  }
+
+  function mc_iniciarDocumentos() {
+    mc_ir("documentos");
+  }
+
+  function mc_renderDocumentos() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Documentos", "mc_ir('home')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-card"><div class="mc2-sec">Documentos e validação</div>' +
+      '<div class="mc2-alrt mc2-info">Use esta área para abrir PDFs, validações e documentos oficiais vinculados à O.S. ou ao equipamento. A consulta completa continua disponível na Gestão Completa.</div>' +
+      '<button class="mc2-btn mc2-pri" onclick="mc_abrirGestaoCompleta()">🖥️ Abrir Gestão Completa</button>' +
+      '</div><button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button><div class="mc2-gap20"></div></div></div>';
+  }
+
+  // ── MINHAS OS ─────────────────────────────
+  function mc_iniciarMinhasOS() {
+    mc_loading("Minhas O.S.", "mc_ir('home')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC.os_lista = (r && r.success) ? (r.itens || r.items || []) : [];
+        mc_renderMinhasOS();
+      })
+      .withFailureHandler(function (e) { mc_toast("Erro: " + (e&&e.message||"Tente novamente")); mc_renderMinhasOS(); })
+      .osListar(ses);
+  }
+
+  function mc_renderMinhasOS() {
+    var div = mc_div(); if (!div) return;
+    var lista = MC.os_lista || [];
+    var cards = lista.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">📭</div><div>Nenhuma O.S. atribuída</div></div>'
+      : lista.map(function(os) {
+          var cs = mc_cor_status(os.STATUS), cp = mc_cor_prior(os.PRIORIDADE);
+          return '<div class="mc2-card" style="border-left:4px solid ' + cp + '">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+            '<div style="font-size:16px;font-weight:900;color:#0f172a;">' + mc_esc(os.NUMERO_OS||os.CODIGO||os.ID||"--") + '</div>' +
+            '<span class="mc2-badge" style="background:' + cs + ';">' + mc_esc(os.STATUS||"--") + '</span></div>' +
+            '<div class="mc2-row">' +
+            '<div class="mc2-col"><div class="mc2-lbl">Cliente</div><div class="mc2-val">' + mc_esc(os.CLIENTE_NOME||os.CLIENTE_ID||"--") + '</div></div>' +
+            '<div class="mc2-col"><div class="mc2-lbl">Prioridade</div><div class="mc2-val" style="color:' + cp + ';">' + mc_esc(os.PRIORIDADE||"--") + '</div></div></div>' +
+            '<div class="mc2-row">' +
+            '<div class="mc2-col"><div class="mc2-lbl">Unidade</div><div class="mc2-val">' + mc_esc(os.UNIDADE_NOME||os.UNIDADE_ID||"--") + '</div></div>' +
+            '<div class="mc2-col"><div class="mc2-lbl">Equipamento</div><div class="mc2-val">' + mc_esc(os.EQUIPAMENTO_TAG||os.EQUIPAMENTO_NOME||"--") + '</div></div></div>' +
+            '<button class="mc2-btn mc2-pri mc2-sm" onclick="mc_abrirOS(\'' + mc_esc(os.ID||"") + '\')">Abrir O.S. →</button>' +
+            '</div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Minhas O.S.", "mc_ir('home')") +
+      '<div class="mc2-body">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+      '<div class="mc2-sec" style="margin:0;">Minhas O.S. (' + lista.length + ')</div>' +
+      '<button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;padding:8px 14px;" onclick="mc_iniciarMinhasOS()">🔄 Atualizar</button></div>' +
+      cards + '</div></div>';
+  }
+
+  // ── DETALHE OS ────────────────────────────
+  function mc_abrirOS(id) {
+    MC.osId = id; MC.os = null;
+    mc_loading("Detalhe O.S.", "mc_ir('minhas-os')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (!r||!r.success) { mc_toast(r?r.message:"Erro ao abrir O.S."); mc_ir("minhas-os"); return; }
+        MC.os = r.os || r.item || r;
+        mc_renderDetalheOS();
+      })
+      .withFailureHandler(function (e) { mc_toast("Erro: "+(e&&e.message||"")); mc_ir("minhas-os"); })
+      .osObter(ses, id);
+  }
+
+  function mc_renderDetalheOS() {
+    var div = mc_div(); if (!div) return;
+    var os = MC.os; if (!os) { mc_ir("minhas-os"); return; }
+    var cs = mc_cor_status(os.STATUS), cp = mc_cor_prior(os.PRIORIDADE);
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Detalhe O.S.", "mc_ir('minhas-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-card" style="border-left:4px solid ' + cp + ';margin-bottom:16px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<div style="font-size:20px;font-weight:900;color:#0f172a;">' + mc_esc(os.NUMERO_OS||os.CODIGO||os.ID||"--") + '</div>' +
+        '<span class="mc2-badge" style="background:' + cs + ';">' + mc_esc(os.STATUS||"--") + '</span></div>' +
+        '<div class="mc2-row">' +
+        '<div class="mc2-col"><div class="mc2-lbl">Cliente</div><div class="mc2-val">' + mc_esc(os.CLIENTE_NOME||"--") + '</div></div>' +
+        '<div class="mc2-col"><div class="mc2-lbl">Prioridade</div><div class="mc2-val" style="color:' + cp + ';">' + mc_esc(os.PRIORIDADE||"--") + '</div></div></div>' +
+        '<div class="mc2-row">' +
+        '<div class="mc2-col"><div class="mc2-lbl">Unidade</div><div class="mc2-val">' + mc_esc(os.UNIDADE_NOME||"--") + '</div></div>' +
+        '<div class="mc2-col"><div class="mc2-lbl">Equipamento</div><div class="mc2-val">' + mc_esc(os.EQUIPAMENTO_TAG||os.EQUIPAMENTO_NOME||"--") + '</div></div></div>' +
+        '<div class="mc2-hr"></div>' +
+        '<div class="mc2-lbl">Problema Relatado</div>' +
+        '<div style="font-size:14px;color:#0f172a;font-weight:500;line-height:1.5;margin-top:4px;">' + mc_esc(os.RELATO_CLIENTE||os.PROBLEMA_RELATADO||os.DESCRICAO||"--") + '</div>' +
+        '<div class="mc2-hr"></div>' +
+        '<div class="mc2-row">' +
+        '<div class="mc2-col"><div class="mc2-lbl">Tipo</div><div class="mc2-val">' + mc_esc(os.TIPO_OS||os.TIPO||"--") + '</div></div>' +
+        '<div class="mc2-col"><div class="mc2-lbl">Previsão</div><div class="mc2-val">' + mc_fmt(os.DATA_PREVISTA||os.PREVISAO) + '</div></div></div>' +
+      '</div>' +
+      '<div class="mc2-sec">Ações da O.S.</div>' +
+      '<div class="mc2-g2">' +
+        '<button class="mc2-btn mc2-warn mc2-gbtn" onclick="mc_iniciarDeslocamento()">🚗 Iniciar<br>Deslocamento</button>' +
+        '<button class="mc2-btn mc2-ok mc2-gbtn" onclick="mc_chegueiAoLocal()">📍 Cheguei<br>ao Local</button>' +
+      '</div>' +
+      '<div class="mc2-g2">' +
+        '<button class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_ir(\'checklist\')">✅ Checklist</button>' +
+        '<button class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_iniciarFotos()">📷 Fotos</button>' +
+      '</div>' +
+      '<div class="mc2-g2">' +
+        '<button class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_iniciarMateriais()">🔧 Materiais</button>' +
+        '<button class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_iniciarRelato()">📝 Relato<br>Técnico</button>' +
+      '</div>' +
+      '<div class="mc2-g2">' +
+        '<button class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_iniciarAssinatura()">✍️ Assinatura</button>' +
+        '<button class="mc2-btn mc2-ghost mc2-gbtn" onclick="mc_iniciarHistorico()">🕐 Histórico</button>' +
+      '</div>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ok" style="font-size:17px;" onclick="mc_ir(\'finalizar\')">✅ Finalizar Atendimento</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_iniciarDeslocamento() {
+    var ses = mc_ses(), id = MC.osId; if (!ses||!id) { mc_toast("Sessão inválida"); return; }
+    mc_toast("Registrando deslocamento...");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        mc_toast(r&&r.success ? "✅ Deslocamento iniciado" : (r?r.message:"Erro"));
+        if (r&&r.success&&r.os) { MC.os = r.os; mc_renderDetalheOS(); }
+      })
+      .withFailureHandler(function () { mc_toast("Falha ao registrar"); })
+      .osRegistrarCheckin(ses, id, { TIPO: "DESLOCAMENTO", OBSERVACAO: "Técnico iniciou deslocamento" });
+  }
+
+  function mc_chegueiAoLocal() {
+    var ses = mc_ses(), id = MC.osId; if (!ses||!id) { mc_toast("Sessão inválida"); return; }
+    mc_toast("Registrando chegada...");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        mc_toast(r&&r.success ? "✅ Chegada registrada" : (r?r.message:"Erro"));
+        if (r&&r.success&&r.os) { MC.os = r.os; mc_renderDetalheOS(); }
+      })
+      .withFailureHandler(function () { mc_toast("Falha ao registrar"); })
+      .osRegistrarCheckout(ses, id, { TIPO: "CHEGADA", OBSERVACAO: "Técnico chegou ao local" });
+  }
+
+  // ── CHECKLIST ─────────────────────────────
+  function mc_renderChecklist() {
+    var pergs = MC.checklist_perguntas || [];
+    if (pergs.length === 0) {
+      mc_loading("Checklist", "mc_ir('detalhe-os')");
+      var ses = mc_ses(), os = MC.os;
+      if (!ses) { mc_erroSessao(); return; }
+      google.script.run
+        .withSuccessHandler(function (r) {
+          MC.checklist_perguntas = (r&&r.success) ? (r.templates||r.itens||r.items||[]) : [];
+          if (MC.osId && Object.keys(MC.checklist_respostas).length === 0) {
+            google.script.run
+              .withSuccessHandler(function (r2) {
+                if (r2&&r2.success) {
+                  var mapa = {}, lista = r2.respostas||r2.items||[];
+                  if (Array.isArray(lista)) { lista.forEach(function(it){ var pid=it.PERGUNTA_ID||it.TEMPLATE_ID; if(pid&&it.RESPOSTA) mapa[pid]=it.RESPOSTA; }); }
+                  else if (lista && typeof lista==="object") { mapa = lista; }
+                  if (Object.keys(mapa).length === 0) { var draft = mc_carregarRascunhoChecklist_(); if (Object.keys(draft).length > 0) mapa = draft; }
+                  MC.checklist_respostas = mapa;
+                }
+                mc_renderChecklist();
+              })
+              .withFailureHandler(function () { mc_renderChecklist(); })
+              .osChecklistListarRespostas(ses, MC.osId);
+          } else { mc_renderChecklist(); }
+        })
+        .withFailureHandler(function () { MC.checklist_perguntas = []; mc_renderChecklist(); })
+        .osChecklistListarTemplates(ses, os?(os.TIPO_OS||os.TIPO||""):"");
+      return;
+    }
+    var div = mc_div(); if (!div) return;
+    var itens = pergs.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">📋</div><div>Nenhum checklist configurado</div></div>'
+      : pergs.map(function(p, i) {
+          var pid = p.ID||p.id||("p"+i);
+          var r = MC.checklist_respostas[pid]||"";
+          var obr = p.OBRIGATORIO||p.obrigatorio ? '<span class="mc2-q-obrig">*</span>' : "";
+          return '<div class="mc2-q-card" id="mc2q-' + mc_esc(pid) + '">' +
+            '<div class="mc2-q-txt">' + mc_esc(p.PERGUNTA||p.TEXTO||p.pergunta||("Pergunta "+(i+1))) + obr + '</div>' +
+            '<div class="mc2-q-row">' +
+            '<button class="mc2-qb ' + (r==="SIM"?"mc2-sim":"") + '" onclick="mc_responder(\'' + mc_esc(pid) + '\',\'SIM\')">Sim</button>' +
+            '<button class="mc2-qb ' + (r==="NAO"?"mc2-nao":"") + '" onclick="mc_responder(\'' + mc_esc(pid) + '\',\'NAO\')">Não</button>' +
+            '<button class="mc2-qb ' + (r==="NA"?"mc2-na":"") + '" onclick="mc_responder(\'' + mc_esc(pid) + '\',\'NA\')">N/A</button>' +
+            '</div></div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Checklist", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-sec">Checklist da O.S.</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-bottom:14px;">* Campos obrigatórios</div>' +
+      itens +
+      '<div class="mc2-gap8"></div>' +
+      '<button id="mc2-btn-check-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarChecklist()">💾 Salvar Checklist</button>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'detalhe-os\')">← Voltar</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_responder(pid, val) {
+    MC.checklist_respostas[pid] = val;
+    var card = document.getElementById("mc2q-" + pid); if (!card) return;
+    var btns = card.querySelectorAll(".mc2-qb");
+    btns.forEach(function(b){ b.className = "mc2-qb"; });
+    if (val==="SIM" && btns[0]) btns[0].className = "mc2-qb mc2-sim";
+    if (val==="NAO" && btns[1]) btns[1].className = "mc2-qb mc2-nao";
+    if (val==="NA"  && btns[2]) btns[2].className = "mc2-qb mc2-na";
+    mc_salvarRascunhoChecklist_();
+  }
+
+  function mc_salvarChecklist() {
+    if (MC._busy) return;
+    var pergs = MC.checklist_perguntas || [];
+    var falta = pergs.filter(function(p,i) {
+      var pid = p.ID||p.id||("p"+i);
+      return (p.OBRIGATORIO||p.obrigatorio) && !MC.checklist_respostas[pid];
+    });
+    if (falta.length) { mc_toast("Responda os itens obrigatórios (*) primeiro"); return; }
+    var ses = mc_ses(), osId = MC.osId;
+    if (!ses||!osId) { mc_toast("Sessão expirada. Faça login novamente."); return; }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-check-salvar", "Salvando...");
+    var respostasArray = Object.keys(MC.checklist_respostas).map(function(pid) {
+      return { PERGUNTA_ID: pid, TEMPLATE_ID: pid, RESPOSTA: MC.checklist_respostas[pid] };
+    });
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC._busy = false; mc_resetBtn_("mc2-btn-check-salvar");
+        if (r&&r.success) { mc_limparRascunhoChecklist_(); mc_toast("✅ Checklist salvo com sucesso"); }
+        else { mc_toast(r?r.message:"Erro ao salvar checklist. Tente novamente."); }
+      })
+      .withFailureHandler(function () {
+        MC._busy = false; mc_resetBtn_("mc2-btn-check-salvar");
+        mc_toast("Falha de conexão. Respostas mantidas localmente.");
+      })
+      .osChecklistSalvarRespostas(ses, osId, respostasArray);
+  }
+
+  // ── FOTOS ─────────────────────────────────
+  function mc_iniciarFotos() {
+    mc_loading("Fotos", "mc_ir('detalhe-os')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) { MC.fotos_lista = (r&&r.success)?(r.fotos||r.itens||r.items||[]):[];  mc_renderFotos(); })
+      .withFailureHandler(function () { MC.fotos_lista = []; mc_renderFotos(); })
+      .osFotosListar(ses, MC.osId);
+  }
+
+  function mc_renderFotos() {
+    var div = mc_div(); if (!div) return;
+    var fotos = MC.fotos_lista || [];
+    var fItems = fotos.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">📷</div><div>Nenhuma foto anexada</div></div>'
+      : fotos.map(function(f) {
+          var img = (f.URL||f.LINK||f.LINK_DRIVE)
+            ? '<img src="' + mc_esc(f.URL||f.LINK||f.LINK_DRIVE) + '" class="mc2-thumb" onerror="this.style.background=\'#e2e8f0\'">'
+            : '<div class="mc2-thumb">📷</div>';
+          return '<div class="mc2-foto-item">' + img +
+            '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#334155;">' + mc_esc(f.TIPO||"Foto") + '</div>' +
+            '<div style="font-size:12px;color:#64748b;margin-top:2px;">' + mc_esc(f.OBSERVACAO||"") + '</div></div></div>';
+        }).join("");
+    var retryBanner = MC.foto_retry
+      ? '<div class="mc2-alrt mc2-awarn" style="margin-bottom:12px;">' +
+        '⚠️ Foto pendente de reenvio: <strong>' + mc_esc(MC.foto_retry.nome||"foto") + '</strong>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+        '<button id="mc2-btn-retry" class="mc2-btn mc2-warn mc2-sm" style="flex:1;" onclick="mc_tentarNovamenteUpload_()">🔄 Tentar novamente</button>' +
+        '<button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;padding:6px 12px;" onclick="mc_cancelarRetentativa_()">✕ Cancelar</button>' +
+        '</div></div>'
+      : '';
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Fotos", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      retryBanner +
+      '<div class="mc2-card">' +
+        '<div class="mc2-sec" style="margin-bottom:12px;">Adicionar Foto</div>' +
+        '<div style="margin-bottom:10px;"><div class="mc2-lbl">Tipo</div>' +
+        '<select class="mc2-sel" id="mc2-foto-tipo"><option value="ANTES">Antes do Serviço</option><option value="DURANTE">Durante o Serviço</option><option value="DEPOIS">Depois do Serviço</option><option value="DEFEITO">Defeito / Problema</option><option value="EQUIPAMENTO">Equipamento</option><option value="OUTRO">Outro</option></select></div>' +
+        '<div style="margin-bottom:10px;"><div class="mc2-lbl">Observação</div><input type="text" class="mc2-input" id="mc2-foto-obs" placeholder="Opcional"></div>' +
+        '<div style="margin-bottom:12px;"><div class="mc2-lbl">Galeria / Câmera</div>' +
+        '<input type="file" id="mc2-foto-file" accept="image/*" style="width:100%;margin-top:6px;font-size:16px;">' +
+        '<div style="margin-top:8px;display:flex;gap:8px;">' +
+        '<button class="mc2-btn mc2-ghost mc2-sm" style="flex:1;" onclick="document.getElementById(\'mc2-foto-cam\').click()">📷 Câmera Direta</button>' +
+        '<input type="file" id="mc2-foto-cam" accept="image/*" capture="environment" style="display:none;" onchange="mc_usarFotoCam(this)">' +
+        '</div></div>' +
+        '<button id="mc2-btn-foto-env" class="mc2-btn mc2-pri" onclick="mc_enviarFoto()">📤 Enviar Foto</button>' +
+      '</div>' +
+      '<div class="mc2-sec" style="margin-top:16px;">Fotos Anexadas (' + fotos.length + ')</div>' +
+      fItems + '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_enviarFoto() {
+    if (MC._busy) return;
+    var fi = document.getElementById("mc2-foto-file");
+    var tipo = (document.getElementById("mc2-foto-tipo")||{}).value||"OUTRO";
+    var obs = (document.getElementById("mc2-foto-obs")||{}).value||"";
+    var ses = mc_ses(), osId = MC.osId;
+    if (!fi||!fi.files||!fi.files.length) { mc_toast("Selecione uma foto primeiro"); return; }
+    if (!ses||!osId) { mc_toast("Sessão expirada. Faça login novamente."); return; }
+    var file = fi.files[0];
+    var MAX = 15 * 1024 * 1024;
+    if (file.size > MAX) {
+      mc_toast("Foto muito grande (" + mc_tamanhoLegivel_(file.size) + "). Limite: 15 MB. Tente uma foto com menor resolução.", 4000);
+      return;
+    }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-foto-env", "Comprimindo...");
+    mc_comprimirImagem_(file, { maxW: 1600, quality: 0.78 }, function(err, base64, origSz, compSz) {
+      if (err) { MC._busy = false; mc_resetBtn_("mc2-btn-foto-env"); mc_toast("Erro ao processar imagem. Tente novamente."); return; }
+      var mime = base64.indexOf("data:image/jpeg") === 0 ? "image/jpeg" : file.type;
+      var info = compSz < origSz
+        ? "Enviando (" + mc_tamanhoLegivel_(compSz) + " / orig " + mc_tamanhoLegivel_(origSz) + ")..."
+        : "Enviando (" + mc_tamanhoLegivel_(origSz) + ")...";
+      mc_setBtnBusy_("mc2-btn-foto-env", "Enviando...");
+      mc_toast(info, 3000);
+      google.script.run
+        .withSuccessHandler(function (r) {
+          MC._busy = false; mc_resetBtn_("mc2-btn-foto-env");
+          if (r&&r.success) {
+            mc_toast("✅ Foto enviada com sucesso");
+            MC.fotos_lista.push(r.item||r.foto||{ TIPO:tipo, OBSERVACAO:obs });
+            MC.foto_retry = null; mc_renderFotos();
+          } else {
+            MC.foto_retry = { base64:base64, nome:file.name, mime:mime, tipo:tipo, obs:obs };
+            mc_toast(r?r.message:"Erro ao enviar foto. Use 'Tentar novamente'.");
+            mc_renderFotos();
+          }
+        })
+        .withFailureHandler(function () {
+          MC._busy = false; mc_resetBtn_("mc2-btn-foto-env");
+          MC.foto_retry = { base64:base64, nome:file.name, mime:mime, tipo:tipo, obs:obs };
+          mc_toast("Falha de conexão. Foto salva para reenvio.");
+          mc_renderFotos();
+        })
+        .osFotoUploadBase64(ses, osId, { TIPO:tipo, OBSERVACAO:obs, BASE64_DATA:base64, NOME_ARQUIVO:file.name, MIME_TYPE:mime });
+    });
+  }
+
+  function mc_usarFotoCam(input) {
+    if (!input||!input.files||!input.files.length) return;
+    if (MC._busy) return;
+    var tipo = (document.getElementById("mc2-foto-tipo")||{}).value||"OUTRO";
+    var obs = (document.getElementById("mc2-foto-obs")||{}).value||"";
+    var ses = mc_ses(), osId = MC.osId;
+    if (!ses||!osId) { mc_toast("Sessão expirada. Faça login novamente."); return; }
+    var file = input.files[0];
+    var MAX = 15 * 1024 * 1024;
+    if (file.size > MAX) {
+      mc_toast("Foto muito grande (" + mc_tamanhoLegivel_(file.size) + "). Limite: 15 MB.", 4000);
+      return;
+    }
+    MC._busy = true;
+    mc_toast("Comprimindo foto...");
+    mc_comprimirImagem_(file, { maxW: 1600, quality: 0.78 }, function(err, base64, origSz, compSz) {
+      if (err) { MC._busy = false; mc_toast("Erro ao processar imagem. Tente novamente."); return; }
+      var mime = base64.indexOf("data:image/jpeg") === 0 ? "image/jpeg" : file.type;
+      mc_toast("Enviando foto da câmera...", 3000);
+      google.script.run
+        .withSuccessHandler(function (r) {
+          MC._busy = false;
+          if (r&&r.success) {
+            mc_toast("✅ Foto enviada com sucesso");
+            MC.fotos_lista.push(r.item||r.foto||{ TIPO:tipo, OBSERVACAO:obs });
+            MC.foto_retry = null; mc_renderFotos();
+          } else {
+            MC.foto_retry = { base64:base64, nome:file.name, mime:mime, tipo:tipo, obs:obs };
+            mc_toast(r?r.message:"Erro ao enviar. Use 'Tentar novamente'.");
+            mc_renderFotos();
+          }
+        })
+        .withFailureHandler(function () {
+          MC._busy = false;
+          MC.foto_retry = { base64:base64, nome:file.name, mime:mime, tipo:tipo, obs:obs };
+          mc_toast("Falha de conexão. Foto salva para reenvio.");
+          mc_renderFotos();
+        })
+        .osFotoUploadBase64(ses, osId, { TIPO:tipo, OBSERVACAO:obs, BASE64_DATA:base64, NOME_ARQUIVO:file.name, MIME_TYPE:mime });
+    });
+  }
+
+  // ── MATERIAIS ─────────────────────────────
+  function mc_iniciarMateriais() {
+    mc_loading("Materiais", "mc_ir('detalhe-os')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) { MC.materiais_lista = (r&&r.success)?(r.materiais||r.itens||r.items||[]):[];  mc_renderMateriais(); })
+      .withFailureHandler(function () { MC.materiais_lista = []; mc_renderMateriais(); })
+      .osMateriaisListar(ses, MC.osId);
+  }
+
+  function mc_renderMateriais() {
+    var div = mc_div(); if (!div) return;
+    var mats = MC.materiais_lista || [];
+    var mItems = mats.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">🔧</div><div>Nenhum material registrado</div></div>'
+      : mats.map(function(m) {
+          return '<div class="mc2-mat-item">' +
+            '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:#0f172a;">' + mc_esc(m.DESCRICAO||m.PECA||m.MATERIAL||m.NOME||"--") + '</div>' +
+            '<div style="font-size:12px;color:#64748b;margin-top:2px;">Qtd: ' + mc_esc(m.QUANTIDADE||"1") + (m.OBSERVACAO?" · "+mc_esc(m.OBSERVACAO):"") + '</div></div>' +
+            '<button class="mc2-btn mc2-red mc2-sm" style="width:auto;padding:6px 12px;" onclick="mc_removerMaterial(\'' + mc_esc(m.ID||"") + '\')">✕</button>' +
+            '</div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Materiais", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-sec" style="margin-bottom:12px;">Adicionar Material</div>' +
+        '<div style="margin-bottom:10px;"><div class="mc2-lbl">Peça / Material</div><input type="text" class="mc2-input" id="mc2-mat-nome" placeholder="Ex: Fusível 10A, Parafuso M8..."></div>' +
+        '<div class="mc2-row" style="margin-bottom:10px;">' +
+          '<div class="mc2-col"><div class="mc2-lbl">Quantidade</div><input type="number" class="mc2-input" id="mc2-mat-qtd" min="1" value="1"></div>' +
+          '<div class="mc2-col"><div class="mc2-lbl">Observação</div><input type="text" class="mc2-input" id="mc2-mat-obs" placeholder="Opcional"></div>' +
+        '</div>' +
+        '<button class="mc2-btn mc2-pri" onclick="mc_adicionarMaterial()">➕ Adicionar</button>' +
+      '</div>' +
+      '<div class="mc2-sec" style="margin-top:16px;">Registrados (' + mats.length + ')</div>' +
+      mItems + '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_adicionarMaterial() {
+    var nome = (document.getElementById("mc2-mat-nome")||{}).value||"";
+    var qtd = (document.getElementById("mc2-mat-qtd")||{}).value||"1";
+    var obs = (document.getElementById("mc2-mat-obs")||{}).value||"";
+    if (!nome.trim()) { mc_toast("Informe a peça ou material"); return; }
+    var ses = mc_ses(), osId = MC.osId; if (!ses||!osId) { mc_toast("Sessão inválida"); return; }
+    mc_toast("Salvando...");
+    var payload = { OS_ID: osId, DESCRICAO: nome.trim(), QUANTIDADE: qtd, OBSERVACAO: obs };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r&&r.success) { mc_toast("✅ Material adicionado"); MC.materiais_lista.push(r.material||payload); mc_renderMateriais(); }
+        else { mc_toast(r?r.message:"Erro"); }
+      })
+      .withFailureHandler(function () { mc_toast("Falha ao salvar"); })
+      .osMateriaisSalvar(ses, payload);
+  }
+
+  function mc_removerMaterial(id) {
+    if (!id || !confirm("Remover este material?")) return;
+    var ses = mc_ses(); if (!ses) { mc_toast("Sessão inválida"); return; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (r&&r.success) { mc_toast("Removido"); MC.materiais_lista = MC.materiais_lista.filter(function(m){return m.ID!==id;}); mc_renderMateriais(); }
+        else { mc_toast(r?r.message:"Erro"); }
+      })
+      .withFailureHandler(function () { mc_toast("Falha ao remover"); })
+      .osMateriaisRemover(ses, id);
+  }
+
+  // ── RELATO TÉCNICO ────────────────────────
+  function mc_iniciarRelato() {
+    var os = MC.os;
+    if (os && !MC.relato) MC.relato = os.RELATO_TECNICO||os.LAUDO||os.DESCRICAO_TECNICA||"";
+    var rascunho = mc_carregarRascunhoRelato_();
+    MC._rascunhoRelato = (rascunho && rascunho.trim() && rascunho !== MC.relato) ? rascunho : null;
+    mc_ir("relato");
+  }
+
+  function mc_renderRelato() {
+    var div = mc_div(); if (!div) return;
+    var rascunhoBox = MC._rascunhoRelato
+      ? '<div id="mc2-rascunho-box" class="mc2-alrt mc2-awarn" style="margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">📝 Rascunho local encontrado.' +
+        '<button class="mc2-btn mc2-warn mc2-sm" style="width:auto;padding:6px 12px;" onclick="mc_restaurarRascunho_()">Restaurar</button>' +
+        '<button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;padding:6px 12px;" onclick="mc_descartarRascunho_()">Descartar</button></div>'
+      : '';
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Relato Técnico", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-sec">Relato Técnico</div>' +
+      rascunhoBox +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl" style="margin-bottom:8px;">Descreva o serviço realizado</div>' +
+        '<textarea class="mc2-ta" id="mc2-relato" style="min-height:160px;" placeholder="Diagnóstico, procedimentos, peças substituídas, resultados..." oninput="mc_onRelatoInput_()">' + mc_esc(MC.relato||"") + '</textarea>' +
+      '</div>' +
+      '<div class="mc2-g2">' +
+        '<button id="mc2-btn-ia" class="mc2-btn mc2-pri mc2-gbtn" onclick="mc_lapidarIA()">🤖 Lapidar<br>com IA</button>' +
+        '<button class="mc2-btn mc2-ghost mc2-gbtn" onclick="mc_copiarWhatsApp()">📲 Copiar<br>WhatsApp</button>' +
+      '</div>' +
+      '<div id="mc2-ia-box" style="display:none;" class="mc2-card">' +
+        '<div class="mc2-lbl" style="color:#1a56db;margin-bottom:8px;">Sugestão da IA</div>' +
+        '<div id="mc2-ia-txt" style="font-size:14px;color:#0f172a;line-height:1.6;margin-bottom:12px;white-space:pre-wrap;"></div>' +
+        '<div class="mc2-g2">' +
+          '<button class="mc2-btn mc2-ok mc2-sm" onclick="mc_usarIA()">✅ Usar este</button>' +
+          '<button class="mc2-btn mc2-ghost mc2-sm" onclick="document.getElementById(\'mc2-ia-box\').style.display=\'none\'">✕ Descartar</button>' +
+        '</div>' +
+      '</div>' +
+      '<button id="mc2-btn-relato-salvar" class="mc2-btn mc2-ok" onclick="mc_salvarRelato()">💾 Salvar Relato</button>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'detalhe-os\')">← Voltar</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_lapidarIA() {
+    if (MC._busy) return;
+    var el = document.getElementById("mc2-relato");
+    var txt = el ? el.value.trim() : "";
+    if (!txt) { mc_toast("Escreva o relato antes de usar a IA"); return; }
+    var ses = mc_ses(), os = MC.os;
+    if (!ses) { mc_toast("Sessão expirada. Faça login novamente."); return; }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-ia", "Gerando texto...");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC._busy = false; mc_resetBtn_("mc2-btn-ia");
+        var textoIA = r && (r.textoCompleto || r.versaoRelatorio || r.texto || r.relatorio || "");
+        if (r && (r.ok || r.success) && textoIA) {
+          MC.relato_ia = textoIA;
+          var box = document.getElementById("mc2-ia-box"), txt2 = document.getElementById("mc2-ia-txt");
+          if (txt2) txt2.textContent = textoIA;
+          if (box) box.style.display = "";
+        } else { mc_toast(r?(r.message||"IA não retornou texto completo. Tente novamente."):"Falha ao gerar texto com IA."); }
+      })
+      .withFailureHandler(function () {
+        MC._busy = false; mc_resetBtn_("mc2-btn-ia");
+        mc_toast("Falha de conexão ao gerar texto. Verifique o sinal e tente novamente.");
+      })
+      .iaCriarConclusaoTecnicaOS(ses, {
+        contexto: {
+          relato: txt,
+          tipo: os?(os.TIPO_OS||os.TIPO||""):"",
+          equipamento: os?(os.EQUIPAMENTO_TAG||os.EQUIPAMENTO_NOME||""):"",
+          osId: MC.osId
+        }
+      });
+  }
+
+  function mc_usarIA() {
+    var el = document.getElementById("mc2-relato");
+    if (el && MC.relato_ia) { el.value = MC.relato_ia; MC.relato = MC.relato_ia; }
+    var box = document.getElementById("mc2-ia-box"); if (box) box.style.display = "none";
+    mc_toast("✅ Texto da IA aplicado");
+  }
+
+  function mc_copiarWhatsApp() {
+    var el = document.getElementById("mc2-relato");
+    var txt = el ? el.value.trim() : MC.relato;
+    if (!txt) { mc_toast("Nenhum texto para copiar"); return; }
+    var os = MC.os;
+    var wpp = "*O.S.: " + (os?(os.NUMERO_OS||os.CODIGO||os.ID||"--"):"--") + "*\n" +
+      "*Cliente:* " + (os?(os.CLIENTE_NOME||"--"):"--") + "\n" +
+      "*Equipamento:* " + (os?(os.EQUIPAMENTO_TAG||"--"):"--") + "\n\n" +
+      "*Relato:*\n" + txt;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(wpp).then(function(){ mc_toast("✅ Copiado"); }).catch(function(){ _copiarFB(wpp); });
+    } else { _copiarFB(wpp); }
+  }
+  function _copiarFB(t) {
+    var ta = document.createElement("textarea"); ta.value = t;
+    ta.style.cssText = "position:fixed;opacity:0;"; document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); mc_toast("✅ Copiado"); } catch(e) { mc_toast("Não foi possível copiar"); }
+    document.body.removeChild(ta);
+  }
+
+  function mc_salvarRelato() {
+    if (MC._busy) return;
+    var el = document.getElementById("mc2-relato");
+    var txt = el ? el.value.trim() : "";
+    if (!txt) { mc_toast("Escreva o relato antes de salvar"); return; }
+    MC.relato = txt;
+    var ses = mc_ses(), osId = MC.osId;
+    if (!ses||!osId) { mc_toast("Sessão expirada. Faça login novamente."); return; }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-relato-salvar", "Salvando...");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC._busy = false; mc_resetBtn_("mc2-btn-relato-salvar");
+        if (r&&r.success) {
+          mc_limparRascunhoRelato_();
+          mc_toast("✅ Relato salvo com sucesso");
+          if (r.os) MC.os = r.os;
+        } else { mc_toast(r?r.message:"Erro ao salvar relato. Tente novamente."); }
+      })
+      .withFailureHandler(function () {
+        MC._busy = false; mc_resetBtn_("mc2-btn-relato-salvar");
+        mc_toast("Falha de conexão. O rascunho local foi mantido.");
+      })
+      .osSalvarRegistroTecnico(ses, osId, { RELATO_TECNICO: txt, LAUDO: txt });
+  }
+
+  // ── ASSINATURA ────────────────────────────
+  var mc2_ctx = null, mc2_drag = false;
+
+  function mc_iniciarAssinatura() {
+    mc_loading("Assinatura", "mc_ir('detalhe-os')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) { MC.assinaturas = (r&&r.success)?(r.assinaturas||r.itens||r.items||[]):[];  mc_renderAssinatura(); })
+      .withFailureHandler(function () { MC.assinaturas = []; mc_renderAssinatura(); })
+      .assinaturasListarPorOS(ses, MC.osId);
+  }
+
+  function mc_renderAssinatura() {
+    var div = mc_div(); if (!div) return;
+    var assins = MC.assinaturas || [];
+    var aHTML = assins.length === 0
+      ? '<div class="mc2-empty" style="padding:20px;"><div class="mc2-empty-ico">✍️</div><div>Nenhuma assinatura coletada</div></div>'
+      : assins.map(function(a) {
+          return '<div class="mc2-card" style="margin-bottom:8px;">' +
+            '<div class="mc2-row">' +
+            '<div class="mc2-col"><div class="mc2-lbl">Tipo</div><div class="mc2-val">' + mc_esc(a.TIPO_ASSINATURA||a.TIPO||"--") + '</div></div>' +
+            '<div class="mc2-col"><div class="mc2-lbl">Responsável</div><div class="mc2-val">' + mc_esc(a.NOME_RESPONSAVEL||a.ASSINADO_POR||"--") + '</div></div></div>' +
+            (a.CARGO?'<div class="mc2-lbl">Cargo</div><div class="mc2-val" style="font-size:13px;">'+mc_esc(a.CARGO)+'</div>':"") +
+            '</div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Assinatura", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-sec" style="margin-bottom:12px;">Nova Assinatura</div>' +
+        '<div style="margin-bottom:10px;"><div class="mc2-lbl">Tipo</div>' +
+        '<select class="mc2-sel" id="mc2-ass-tipo"><option value="TECNICO">Técnico Responsável</option><option value="CLIENTE">Cliente / Responsável</option><option value="SUPERVISOR">Supervisor</option></select></div>' +
+        '<div style="margin-bottom:10px;"><div class="mc2-lbl">Nome do Responsável *</div><input type="text" class="mc2-input" id="mc2-ass-nome" placeholder="Nome completo"></div>' +
+        '<div class="mc2-row" style="margin-bottom:10px;">' +
+          '<div class="mc2-col"><div class="mc2-lbl">Documento</div><input type="text" class="mc2-input" id="mc2-ass-doc" placeholder="CPF/RG (opcional)"></div>' +
+          '<div class="mc2-col"><div class="mc2-lbl">Cargo</div><input type="text" class="mc2-input" id="mc2-ass-cargo" placeholder="Opcional"></div>' +
+        '</div>' +
+        '<div class="mc2-lbl" style="margin-bottom:6px;">Assinatura</div>' +
+        '<canvas id="mc2-canvas" class="mc2-canvas" width="340" height="140"></canvas>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;">' +
+          '<button class="mc2-btn mc2-ghost mc2-sm" style="flex:1;" onclick="mc_limparCanvas()">🗑️ Limpar</button>' +
+          '<button id="mc2-btn-ass-confirmar" class="mc2-btn mc2-ok mc2-sm" style="flex:1;" onclick="mc_salvarAssinatura()">✅ Confirmar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mc2-sec" style="margin-top:16px;">Coletadas (' + assins.length + ')</div>' +
+      aHTML +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'detalhe-os\')">← Voltar</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+    _initCanvas();
+  }
+
+  function _initCanvas() {
+    var c = document.getElementById("mc2-canvas"); if (!c) return;
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = 340, cssH = 140;
+    c.width = cssW * dpr; c.height = cssH * dpr;
+    c.style.width = cssW + "px"; c.style.height = cssH + "px";
+    mc2_ctx = c.getContext("2d");
+    mc2_ctx.scale(dpr, dpr);
+    mc2_ctx.strokeStyle = "#0f172a"; mc2_ctx.lineWidth = 2.5; mc2_ctx.lineCap = "round";
+    function pos(e) {
+      var r = c.getBoundingClientRect(), s = e.touches ? e.touches[0] : e;
+      return { x: s.clientX - r.left, y: s.clientY - r.top };
+    }
+    function stop() { mc2_drag = false; }
+    c.addEventListener("mousedown", function(e){ mc2_drag=true; var p=pos(e); mc2_ctx.beginPath(); mc2_ctx.moveTo(p.x,p.y); });
+    c.addEventListener("mousemove", function(e){ if(!mc2_drag)return; var p=pos(e); mc2_ctx.lineTo(p.x,p.y); mc2_ctx.stroke(); });
+    c.addEventListener("mouseup", stop);
+    c.addEventListener("mouseleave", stop);
+    c.addEventListener("touchstart", function(e){ e.preventDefault(); mc2_drag=true; var p=pos(e); mc2_ctx.beginPath(); mc2_ctx.moveTo(p.x,p.y); },{passive:false});
+    c.addEventListener("touchmove", function(e){ e.preventDefault(); if(!mc2_drag)return; var p=pos(e); mc2_ctx.lineTo(p.x,p.y); mc2_ctx.stroke(); },{passive:false});
+    c.addEventListener("touchend", stop);
+  }
+
+  function mc_limparCanvas() {
+    var c = document.getElementById("mc2-canvas");
+    if (c && mc2_ctx) {
+      mc2_ctx.save();
+      mc2_ctx.setTransform(1, 0, 0, 1, 0, 0);
+      mc2_ctx.clearRect(0, 0, c.width, c.height);
+      mc2_ctx.restore();
+    }
+  }
+
+  function _canvasVazio(c) {
+    var d = c.getContext("2d").getImageData(0,0,c.width,c.height).data;
+    for (var i=3;i<d.length;i+=4){ if(d[i]>0) return false; } return true;
+  }
+
+  function mc_salvarAssinatura() {
+    if (MC._busy) return;
+    var c = document.getElementById("mc2-canvas");
+    var nome = (document.getElementById("mc2-ass-nome")||{}).value||"";
+    var tipo = (document.getElementById("mc2-ass-tipo")||{}).value||"CLIENTE";
+    var doc = (document.getElementById("mc2-ass-doc")||{}).value||"";
+    var cargo = (document.getElementById("mc2-ass-cargo")||{}).value||"";
+    if (!nome.trim()) { mc_toast("Informe o nome do responsável"); return; }
+    if (!c || _canvasVazio(c)) { mc_toast("Desenhe a assinatura antes de confirmar"); return; }
+    var ses = mc_ses(), osId = MC.osId; if (!ses||!osId) { mc_toast("Sessão inválida"); return; }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-ass-confirmar", "Salvando...");
+    var payload = { OS_ID:osId, TIPO_ASSINATURA:tipo, ASSINADO_POR:nome.trim(), NOME_RESPONSAVEL:nome.trim(), DOCUMENTO:doc, CARGO:cargo, ASSINATURA_DATA_URL:c.toDataURL("image/png"), ASSINATURA_BASE64:c.toDataURL("image/png") };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC._busy = false;
+        if (r&&r.success) { mc_toast("✅ Assinatura salva com sucesso"); MC.assinaturas.push(r.item||r.assinatura||payload); mc_limparCanvas(); mc_renderAssinatura(); }
+        else { mc_resetBtn_("mc2-btn-ass-confirmar"); mc_toast(r?r.message:"Erro ao salvar assinatura. Tente novamente."); }
+      })
+      .withFailureHandler(function () { MC._busy = false; mc_resetBtn_("mc2-btn-ass-confirmar"); mc_toast("Falha de conexão ao salvar assinatura. Verifique o sinal e tente novamente."); })
+      .assinaturasSalvar(ses, payload);
+  }
+
+  // ── FINALIZAR ─────────────────────────────
+  function mc_renderFinalizar() {
+    mc_loading("Finalizar", "mc_ir('detalhe-os')");
+    var ses = mc_ses(), osId = MC.osId; if (!ses||!osId) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        var pend = (!r||!r.success) ? (r&&r.pendencias?r.pendencias:["Falha ao validar"]) : [];
+        mc_renderFinalizarCom(pend);
+      })
+      .withFailureHandler(function (e) { mc_renderFinalizarCom(["Falha de comunicação: "+(e&&e.message||"Tente novamente")]); })
+      .osValidarConclusao(ses, osId);
+  }
+
+  function mc_renderFinalizarCom(pend) {
+    var div = mc_div(); if (!div) return;
+    var ok = pend.length === 0, os = MC.os;
+    var pendHTML = pend.map(function(p){ return '<div class="mc2-alrt mc2-awarn" style="margin-bottom:8px;">⚠️ ' + mc_esc(p) + '</div>'; }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Finalizar O.S.", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-card" style="border-left:4px solid ' + (ok?"#057a55":"#c27803") + ';margin-bottom:16px;">' +
+        '<div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:6px;">' + (ok?"✅ Pronto para finalizar":"⚠️ Pendências encontradas") + '</div>' +
+        '<div style="font-size:13px;color:#64748b;">O.S.: ' + mc_esc(os?(os.NUMERO_OS||os.CODIGO||MC.osId):MC.osId) + '</div>' +
+      '</div>' +
+      pendHTML +
+      (ok
+        ? '<div class="mc2-alrt mc2-aok">Todos os itens obrigatórios preenchidos.</div>' +
+          '<div style="margin-bottom:10px;"><div class="mc2-lbl">Observações finais (opcional)</div><textarea class="mc2-ta" id="mc2-final-obs" style="min-height:90px;" placeholder="Recomendações, pendências futuras..."></textarea></div>' +
+          '<button id="mc2-btn-finalizar" class="mc2-btn mc2-ok" style="font-size:17px;" onclick="mc_confirmarFinalizar()">✅ Confirmar Finalização</button>' +
+          '<div class="mc2-gap8"></div>'
+        : '<div class="mc2-alrt mc2-info">Resolva as pendências acima antes de finalizar.</div>' +
+          '<button class="mc2-btn mc2-warn" onclick="mc_renderFinalizar()">🔄 Verificar novamente</button>' +
+          '<div class="mc2-gap8"></div>'
+      ) +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'detalhe-os\')">← Voltar para O.S.</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  function mc_confirmarFinalizar() {
+    if (MC._busy) return;
+    var obs = (document.getElementById("mc2-final-obs")||{}).value||"";
+    if (!confirm("Finalizar o atendimento?\nEsta ação não pode ser desfeita.")) return;
+    var ses = mc_ses(), osId = MC.osId; if (!ses||!osId) { mc_toast("Sessão inválida"); return; }
+    MC._busy = true;
+    mc_setBtnBusy_("mc2-btn-finalizar", "Finalizando...");
+    google.script.run
+      .withSuccessHandler(function (r) {
+        MC._busy = false;
+        if (r&&r.success) {
+          mc_toast("✅ Atendimento finalizado com sucesso!");
+          if (r.os) MC.os = r.os;
+          setTimeout(function(){ mc_ir("minhas-os"); }, 1500);
+        } else { mc_resetBtn_("mc2-btn-finalizar"); mc_toast(r?r.message:"Erro ao finalizar atendimento. Tente novamente."); }
+      })
+      .withFailureHandler(function () { MC._busy = false; mc_resetBtn_("mc2-btn-finalizar"); mc_toast("Falha de conexão ao finalizar. Verifique o sinal e tente novamente."); })
+      .osConcluirTecnica(ses, osId, { OBSERVACOES_FINAIS: obs, ORIGEM: "CAMPO_MOBILE" });
+  }
+
+  // ── HISTÓRICO ─────────────────────────────
+  function mc_extrairHistorico_(obj) {
+    if (!obj) return null;
+    var h = obj.HISTORICO||obj.MOVIMENTACOES||obj.movimentacoes||obj.historico||null;
+    return Array.isArray(h) && h.length > 0 ? h : null;
+  }
+
+  function mc_iniciarHistorico() {
+    var os = MC.os;
+    var hist = mc_extrairHistorico_(os);
+    if (hist) { MC.historico = hist; mc_renderHistorico(); return; }
+    mc_loading("Histórico", "mc_ir('detalhe-os')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        var o = (r&&r.success)?(r.os||r.item||{}):{};
+        MC.historico = mc_extrairHistorico_(o) || [];
+        mc_renderHistorico();
+      })
+      .withFailureHandler(function () { MC.historico = []; mc_renderHistorico(); })
+      .osObter(ses, MC.osId);
+  }
+
+  function mc_renderHistorico() {
+    var div = mc_div(); if (!div) return;
+    var hist = MC.historico || [];
+    var tl = hist.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">🕐</div><div>Nenhum histórico disponível para esta O.S.</div></div>'
+      : hist.map(function(h) {
+          return '<div class="mc2-tl-item"><div class="mc2-tl-dot"></div>' +
+            '<div class="mc2-tl-dt">' + mc_fmt(h.DATA||h.CRIADO_EM) + '</div>' +
+            '<div class="mc2-tl-ac">' + mc_esc(h.ACAO||h.STATUS||h.EVENTO||"--") + '</div>' +
+            '<div class="mc2-tl-us">' + mc_esc(h.USUARIO||h.RESPONSAVEL||"") + '</div></div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Histórico", "mc_ir('detalhe-os')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-sec">Linha do Tempo</div>' +
+      '<div class="mc2-tl">' + tl + '</div>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'detalhe-os\')">← Voltar</button>' +
+      '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  // ── MINHAS MISSÕES ────────────────────────
+  function mc_iniciarMinhasMissoes() {
+    mc_loading("Missões", "mc_ir('home')");
+    var ses = mc_ses(); if (!ses) { mc_erroSessao(); return; }
+    google.script.run
+      .withSuccessHandler(function (r) { MC.missoes_lista = (r&&r.success)?(r.itens||r.items||[]):[];  mc_renderMinhasMissoes(); })
+      .withFailureHandler(function () { MC.missoes_lista = []; mc_renderMinhasMissoes(); })
+      .missoesListar(ses);
+  }
+
+  function mc_renderMinhasMissoes() {
+    var div = mc_div(); if (!div) return;
+    var lista = MC.missoes_lista || [];
+    var cards = lista.length === 0
+      ? '<div class="mc2-empty"><div class="mc2-empty-ico">🗓️</div><div>Nenhuma missão disponível</div></div>'
+      : lista.map(function(m) {
+          var cs = mc_cor_status(m.STATUS);
+          return '<div class="mc2-card" style="border-left:4px solid ' + cs + ';margin-bottom:10px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<div style="font-size:15px;font-weight:800;color:#0f172a;">' + mc_esc(m.TITULO||m.NOME||"--") + '</div>' +
+            '<span class="mc2-badge" style="background:' + cs + ';">' + mc_esc(m.STATUS||"--") + '</span></div>' +
+            '<div class="mc2-row">' +
+            '<div class="mc2-col"><div class="mc2-lbl">Data</div><div class="mc2-val" style="font-size:13px;">' + mc_fmt(m.DATA_INICIO||m.DATA) + '</div></div>' +
+            '<div class="mc2-col"><div class="mc2-lbl">Local</div><div class="mc2-val" style="font-size:13px;">' + mc_esc(m.CLIENTE_NOME||m.LOCAL||"--") + '</div></div></div>' +
+            (m.DESCRICAO?'<div style="font-size:12px;color:#64748b;">'+mc_esc(m.DESCRICAO)+'</div>':"") +
+            '</div>';
+        }).join("");
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Minhas Missões", "mc_ir('home')") +
+      '<div class="mc2-body">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+      '<div class="mc2-sec" style="margin:0;">Missões (' + lista.length + ')</div>' +
+      '<button class="mc2-btn mc2-ghost mc2-sm" style="width:auto;padding:8px 14px;" onclick="mc_iniciarMinhasMissoes()">🔄 Atualizar</button></div>' +
+      cards + '<div class="mc2-gap20"></div></div></div>';
+  }
+
+  // ── ERRO DE SESSÃO ────────────────────────
+  function mc_erroSessao() {
+    var div = mc_div(); if (!div) return;
+    div.innerHTML = '<div class="mc2">' +
+      '<div class="mc2-top"><div><div class="mc2-top-title">SGO+ Campo</div></div>' +
+      '<button class="mc2-btn-top mc2-btn-top-red" onclick="location.reload()">Recarregar</button></div>' +
+      '<div class="mc2-body">' +
+      '<div class="mc2-alrt mc2-aerr" style="margin-top:24px;"><strong>Sessão inválida ou expirada.</strong><br>Faça login novamente para continuar.</div>' +
+      '<button class="mc2-btn mc2-red" onclick="logout()">Sair e fazer login</button>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="location.reload()">🔄 Recarregar</button>' +
+      '</div></div>';
+  }
+
+  // ── ENTRY POINT ───────────────────────────
+  window.renderMobileCampo_ = function () {
+    var _usr = (typeof USER_CONTEXT !== "undefined") ? USER_CONTEXT : null;
+    var _perfil = (_usr && _usr.perfil) ? String(_usr.perfil).toUpperCase() : "";
+    var _perfisCampo = ["ADMIN", "GESTOR", "DIRETORIA", "TECNICO", "METROLOGIA"];
+    if (_perfisCampo.indexOf(_perfil) < 0) {
+      mc_css();
+      var _div = document.getElementById("conteudo");
+      if (_div) _div.innerHTML = '<div style="padding:48px 24px;text-align:center;color:#6b7280;font-size:15px;line-height:1.6;">Seu perfil não possui acesso ao Modo Campo.<br><small>Redirecionando...</small></div>';
+      setTimeout(function() { if (typeof restaurarLayoutPadrao_ === "function") { restaurarLayoutPadrao_(); } if (typeof abrir === "function") { abrir("dashboard"); } }, 1500);
+      return;
+    }
+    mc_css();
+    MC.tela = "home"; MC.osId = null; MC.os = null;
+    MC.os_lista = []; MC.missoes_lista = [];
+    MC.checklist_perguntas = []; MC.checklist_respostas = {};
+    MC.fotos_lista = []; MC.materiais_lista = [];
+    MC.assinaturas = []; MC.relato = ""; MC.relato_ia = ""; MC.historico = [];
+    MC.clientes = []; MC.unidades = []; MC.equipamentos = []; MC.tecnicos = []; MC.tipos_os = []; MC.prioridades = [];
+    MC.gps_unidade = null; MC.nova_os_questionario = null;
+    MC.foto_retry = null; MC._rascunhoRelato = null; MC._busy = false;
+    mc_renderHome();
+  };
+
+  // Expor funções para onclicks inline
+  window.mc_ir = mc_ir;
+  window.mc_iniciarMinhasOS = mc_iniciarMinhasOS;
+  window.mc_iniciarMinhasMissoes = mc_iniciarMinhasMissoes;
+  window.mc_lerQRCode = mc_lerQRCode;
+  window.mc_sincronizar = mc_sincronizar;
+  window.mc_abrirOS = mc_abrirOS;
+  window.mc_renderDetalheOS = mc_renderDetalheOS;
+  window.mc_renderMinhasOS = mc_renderMinhasOS;
+  window.mc_renderMinhasMissoes = mc_renderMinhasMissoes;
+  window.mc_iniciarDeslocamento = mc_iniciarDeslocamento;
+  window.mc_chegueiAoLocal = mc_chegueiAoLocal;
+  window.mc_renderChecklist = mc_renderChecklist;
+  window.mc_responder = mc_responder;
+  window.mc_salvarChecklist = mc_salvarChecklist;
+  window.mc_iniciarFotos = mc_iniciarFotos;
+  window.mc_enviarFoto = mc_enviarFoto;
+  window.mc_usarFotoCam = mc_usarFotoCam;
+  window.mc_renderFotos = mc_renderFotos;
+  window.mc_iniciarMateriais = mc_iniciarMateriais;
+  window.mc_adicionarMaterial = mc_adicionarMaterial;
+  window.mc_removerMaterial = mc_removerMaterial;
+  window.mc_renderMateriais = mc_renderMateriais;
+  window.mc_iniciarRelato = mc_iniciarRelato;
+  window.mc_renderRelato = mc_renderRelato;
+  window.mc_lapidarIA = mc_lapidarIA;
+  window.mc_usarIA = mc_usarIA;
+  window.mc_copiarWhatsApp = mc_copiarWhatsApp;
+  window.mc_salvarRelato = mc_salvarRelato;
+  window.mc_iniciarAssinatura = mc_iniciarAssinatura;
+  window.mc_renderAssinatura = mc_renderAssinatura;
+  window.mc_limparCanvas = mc_limparCanvas;
+  window.mc_salvarAssinatura = mc_salvarAssinatura;
+  window.mc_renderFinalizar = mc_renderFinalizar;
+  window.mc_renderFinalizarCom = mc_renderFinalizarCom;
+  window.mc_confirmarFinalizar = mc_confirmarFinalizar;
+  window.mc_iniciarHistorico = mc_iniciarHistorico;
+  window.mc_renderHistorico = mc_renderHistorico;
+  window.mc_tentarNovamenteUpload_ = mc_tentarNovamenteUpload_;
+  window.mc_cancelarRetentativa_ = mc_cancelarRetentativa_;
+  window.mc_restaurarRascunho_ = mc_restaurarRascunho_;
+  window.mc_descartarRascunho_ = mc_descartarRascunho_;
+  window.mc_onRelatoInput_ = mc_onRelatoInput_;
+  window.mc_salvarRascunhoRelato_ = mc_salvarRascunhoRelato_;
+  window.mc_iniciarCliente = mc_iniciarCliente;
+  window.mc_renderCliente = mc_renderCliente;
+  window.mc_salvarCliente = mc_salvarCliente;
+  window.mc_buscarCnpjCliente = mc_buscarCnpjCliente;
+  window.mc_iniciarUnidade = mc_iniciarUnidade;
+  window.mc_renderUnidade = mc_renderUnidade;
+  window.mc_carregarClientesUnidade = mc_carregarClientesUnidade;
+  window.mc_buscarCnpjUnidade = mc_buscarCnpjUnidade;
+  window.mc_capturarGPSUnidade = mc_capturarGPSUnidade;
+  window.mc_salvarUnidade = mc_salvarUnidade;
+  window.mc_iniciarEquipamento = mc_iniciarEquipamento;
+  window.mc_renderEquipamento = mc_renderEquipamento;
+  window.mc_carregarClientesEquipamento = mc_carregarClientesEquipamento;
+  window.mc_carregarUnidadesEquipamento = mc_carregarUnidadesEquipamento;
+  window.mc_salvarEquipamento = mc_salvarEquipamento;
+  window.mc_iniciarNovaOS = mc_iniciarNovaOS;
+  window.mc_renderNovaOS = mc_renderNovaOS;
+  window.mc_carregarOpcoesNovaOS = mc_carregarOpcoesNovaOS;
+  window.mc_filtrarUnidadesOS = mc_filtrarUnidadesOS;
+  window.mc_filtrarEquipamentosOS = mc_filtrarEquipamentosOS;
+  window.mc_atualizarQuestionarioOS = mc_atualizarQuestionarioOS;
+  window.mc_salvarNovaOS = mc_salvarNovaOS;
+  window.mc_iniciarDocumentos = mc_iniciarDocumentos;
+  window.mc_renderDocumentos = mc_renderDocumentos;
+  window.mc_abrirGestaoCompleta = mc_abrirGestaoCompleta;
+  window.mc_salvarRascunhoChecklist_ = mc_salvarRascunhoChecklist_;
+})();
+</script>

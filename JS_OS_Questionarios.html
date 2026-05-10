@@ -1,0 +1,935 @@
+<script>
+  // ==========================================
+  // MÓDULO: QUESTIONÁRIOS DE OS
+  // ==========================================
+
+  const QC = {
+    view: "list",       // "list" | "editor"
+    modelos: [],
+    modelo: null,       // modelo em edição
+    perguntas: [],      // perguntas do modelo em edição
+    perguntaEdit: null  // pergunta sendo editada no modal
+  };
+
+  const QC_TIPOS_OS = [
+    "MANUTENCAO_CORRETIVA", "MANUTENCAO_PREVENTIVA", "ATENDIMENTO", "CALIBRACAO",
+    "QUALIFICACAO", "ENSAIO_SEGURANCA_ELETRICA", "VISTORIA", "INSTALACAO",
+    "ORCAMENTO", "TREINAMENTO", "OUTRO"
+  ];
+
+  const QC_TIPOS_OS_LABELS = {
+    "MANUTENCAO_CORRETIVA":      "Manutenção Corretiva",
+    "MANUTENCAO_PREVENTIVA":     "Manutenção Preventiva",
+    "ATENDIMENTO":               "Atendimento",
+    "CALIBRACAO":                "Calibração",
+    "QUALIFICACAO":              "Qualificação",
+    "ENSAIO_SEGURANCA_ELETRICA": "Ensaio de Segurança Elétrica",
+    "VISTORIA":                  "Vistoria",
+    "INSTALACAO":                "Instalação",
+    "ORCAMENTO":                 "Orçamento",
+    "TREINAMENTO":               "Treinamento",
+    "OUTRO":                     "Outro"
+  };
+
+  function _qcFmtTipoOs(tipo) {
+    return QC_TIPOS_OS_LABELS[tipo] || (tipo || "").replace(/_/g, " ");
+  }
+
+  const QC_TIPOS_RESPOSTA = [
+    { v: "TEXTO",                    l: "Texto curto" },
+    { v: "TEXTO_LONGO",              l: "Texto longo" },
+    { v: "NUMERO",                   l: "Número" },
+    { v: "SIM_NAO",                  l: "Sim / Não" },
+    { v: "CONFORME_NAO_CONFORME_NA", l: "Conforme / Não Conforme / N/A" },
+    { v: "FOTO",                     l: "Foto" },
+    { v: "ASSINATURA",               l: "Assinatura" },
+    { v: "DATA",                     l: "Data" },
+    { v: "LISTA",                    l: "Lista (seleção)" },
+    { v: "MULTIPLA_ESCOLHA",         l: "Múltipla escolha" }
+  ];
+
+  /* ── Entrada do roteador central ── */
+  function renderOSQuestionariosModulo_() {
+    QC.view = "list";
+    QC.modelo = null;
+    QC.perguntas = [];
+    _qcRender();
+    _qcCarregarModelos();
+  }
+
+  /* ── Botão em JS_OS.html ── */
+  function osRenderQuestionarios_() {
+    abrir("os_questionarios");
+  }
+
+  /* ─────────────────────────────────────────
+     RENDER PRINCIPAL
+  ───────────────────────────────────────── */
+  function _qcRender() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    
+    if (QC.view === "editor") {
+      _qcRenderEditor(div);
+    } else {
+      _qcRenderLista(div);
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     VISTA: LISTA DE MODELOS
+  ───────────────────────────────────────── */
+  function _qcRenderLista(div) {
+    const podeEditar = USER_CONTEXT && ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(USER_CONTEXT.perfil || "").toUpperCase()) >= 0;
+
+    div.innerHTML = `
+      <div class="module-shell">
+        <div class="module-header">
+          <div class="module-header-left">
+            <h2 class="content-title">
+              <i class="fas fa-list-check" style="margin-right:8px;color:var(--metro-green);"></i>
+              Questionários de OS
+            </h2>
+            <p class="content-subtitle">Modelos de questionários dinâmicos vinculados por tipo de OS e tipo de equipamento.</p>
+          </div>
+          <div class="module-header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input id="qc_busca" class="toolbar-search" type="text" placeholder="Buscar nome, tipo..." onkeydown="if(event.key==='Enter')_qcFiltrar()">
+            <select id="qc_filtro_tipo" style="min-height:36px;padding:6px 10px;font-size:13px;" onchange="_qcFiltrar()">
+              <option value="">Todos tipos de OS</option>
+              ${QC_TIPOS_OS.map(t => `<option value="${t}">${_qcFmtTipoOs(t)}</option>`).join("")}
+            </select>
+            <select id="qc_filtro_status" style="min-height:36px;padding:6px 10px;font-size:13px;" onchange="_qcFiltrar()">
+              <option value="">Todos status</option>
+              <option value="ATIVO">Ativo</option>
+              <option value="INATIVO">Inativo</option>
+            </select>
+            <button type="button" class="btn-secondary" onclick="_qcDiagnosticoDuplicidades()" title="Mostrar modelos duplicados">
+              <i class="fas fa-triangle-exclamation" style="margin-right:6px;color:#f59e0b;"></i>Duplicidades
+            </button>
+            ${podeEditar ? `<button class="btn-primary" type="button" onclick="_qcNovoModelo()"><i class="fas fa-plus" style="margin-right:6px;"></i>Novo Modelo</button>` : ''}
+          </div>
+        </div>
+
+        <div id="qc_kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+        <div class="form-card" style="padding:0;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tipo OS</th>
+                  <th>Tipo Equipamento</th>
+                  <th style="text-align:center;">Versão</th>
+                  <th style="text-align:center;">Perguntas</th>
+                  <th style="text-align:center;">Status</th>
+                  <th style="text-align:center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="qc_tbody">
+                <tr><td colspan="7" class="empty-state">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    _qcRenderKpis([]);
+  }
+
+  function _qcRenderKpis(modelos) {
+    const el = document.getElementById("qc_kpis");
+    if (!el) return;
+    
+    const ativos = modelos.filter(m => m.STATUS === "ATIVO").length;
+    const inativos = modelos.length - ativos;
+    const tiposOs = {};
+    
+    modelos.forEach(m => {
+      const t = m.TIPO_OS || "SEM TIPO";
+      tiposOs[t] = (tiposOs[t] || 0) + 1;
+    });
+    
+    const maisComumRaw = Object.keys(tiposOs).sort((a, b) => tiposOs[b] - tiposOs[a])[0] || "";
+    const maisComum = maisComumRaw ? _qcFmtTipoOs(maisComumRaw) : "—";
+    
+    el.innerHTML = `
+      ${_qcKpiCard("fas fa-layer-group", "Total de Modelos", modelos.length, "var(--metro-green)")}
+      ${_qcKpiCard("fas fa-circle-check", "Ativos", ativos, "#22c55e")}
+      ${_qcKpiCard("fas fa-circle-pause", "Inativos", inativos, "#94a3b8")}
+      ${_qcKpiCard("fas fa-tag", "Tipo mais comum", maisComum, "#6366f1")}
+    `;
+  }
+
+  function _qcKpiCard(icon, label, value, color) {
+    const isNum = typeof value === "number";
+    const valStr = escapeHtml_(String(value));
+    
+    return `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;min-width:150px;flex:1;max-width:260px;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div style="width:36px;height:36px;flex-shrink:0;border-radius:8px;background:${color}20;display:flex;align-items:center;justify-content:center;">
+            <i class="${icon}" style="color:${color};font-size:15px;"></i>
+          </div>
+          <div style="min-width:0;overflow:hidden;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml_(String(label))}</div>
+            <div style="font-size:${isNum ? '22' : '14'}px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${valStr}">${valStr}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function _qcPopularTabela(modelos) {
+    const tbody = document.getElementById("qc_tbody");
+    if (!tbody) return;
+    
+    if (!modelos || modelos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum modelo encontrado.</td></tr>';
+      return;
+    }
+    
+    const podeEditar = USER_CONTEXT && ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(USER_CONTEXT.perfil || "").toUpperCase()) >= 0;
+    
+    tbody.innerHTML = modelos.map(m => {
+      const statusBadge = m.STATUS === "ATIVO"
+        ? '<span class="badge badge-ativo">ATIVO</span>'
+        : `<span class="badge badge-inativo">${escapeHtml_(m.STATUS || "INATIVO")}</span>`;
+
+      const btnStyle = 'style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;border:1px solid;white-space:nowrap;"';
+      
+      let acoes = '';
+      if (podeEditar) {
+        acoes = `
+          <button ${btnStyle} style="background:#fff;border-color:#e2e8f0;color:#334155;" title="Editar modelo e perguntas" onclick="_qcEditarModelo('${escapeHtml_(m.ID)}')"><i class="fas fa-pen"></i> Editar</button>
+          <button ${btnStyle} style="background:#fff;border-color:#e2e8f0;color:#6366f1;" title="Clonar modelo com todas as perguntas" onclick="_qcClonarModelo('${escapeHtml_(m.ID)}')"><i class="fas fa-copy"></i> Clonar</button>
+          ${m.STATUS === "ATIVO" ? `<button ${btnStyle} style="background:#fff;border-color:#fecaca;color:#ef4444;" title="Inativar este modelo" onclick="_qcInativarModelo('${escapeHtml_(m.ID)}')"><i class="fas fa-ban"></i> Inativar</button>` : ''}
+          <button ${btnStyle} style="background:#f1f5f9;border-color:#e2e8f0;color:#475569;" title="Visualizar como técnico" onclick="_qcAbrirPreview('${escapeHtml_(m.ID)}')"><i class="fas fa-eye"></i> Preview</button>
+        `;
+      } else {
+        acoes = `<button ${btnStyle} style="background:#f1f5f9;border-color:#e2e8f0;color:#475569;" title="Visualizar" onclick="_qcAbrirPreview('${escapeHtml_(m.ID)}')"><i class="fas fa-eye"></i> Preview</button>`;
+      }
+
+      return `
+        <tr>
+          <td style="font-weight:700;">${escapeHtml_(m.NOME || "")}</td>
+          <td><span style="font-size:11px;background:#f1f5f9;padding:3px 7px;border-radius:5px;font-weight:600;" title="${escapeHtml_(m.TIPO_OS || "")}">${escapeHtml_(_qcFmtTipoOs(m.TIPO_OS || ""))}</span></td>
+          <td>${escapeHtml_(m.TIPO_EQUIPAMENTO || "GERAL")}</td>
+          <td style="text-align:center;">v${escapeHtml_(String(m.VERSAO || "1"))}</td>
+          <td style="text-align:center;font-weight:700;color:${Number(m.TOTAL_PERGUNTAS || 0) > 0 ? "var(--metro-green)" : "#94a3b8"};">${escapeHtml_(String(m.TOTAL_PERGUNTAS || "0"))}</td>
+          <td style="text-align:center;">${statusBadge}</td>
+          <td style="white-space:nowrap;padding:6px 10px;">${acoes}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function _qcFiltrar() {
+    const busca  = (document.getElementById("qc_busca") || {}).value || "";
+    const tipo   = (document.getElementById("qc_filtro_tipo") || {}).value || "";
+    const status = (document.getElementById("qc_filtro_status") || {}).value || "";
+    
+    const b = busca.trim().toLowerCase();
+
+    const filtrado = QC.modelos.filter(m => {
+      if (b && (m.NOME || "").toLowerCase().indexOf(b) < 0 &&
+               (m.TIPO_OS || "").toLowerCase().indexOf(b) < 0 &&
+               (m.TIPO_EQUIPAMENTO || "").toLowerCase().indexOf(b) < 0) return false;
+      if (tipo && m.TIPO_OS !== tipo) return false;
+      if (status && m.STATUS !== status) return false;
+      return true;
+    });
+    
+    _qcPopularTabela(filtrado);
+  }
+
+  /* ─────────────────────────────────────────
+     VISTA: EDITOR DE MODELO
+  ───────────────────────────────────────── */
+  function _qcRenderEditor(div) {
+    const m = QC.modelo || {};
+    const isNovo = !m.ID;
+
+    div.innerHTML = `
+      <div class="module-shell">
+        <div class="module-header">
+          <div class="module-header-left">
+            <button type="button" class="btn-secondary" style="margin-right:10px;" onclick="_qcVoltarLista()">
+              <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Voltar
+            </button>
+            <h2 class="content-title" style="display:inline;">
+              ${isNovo ? 'Novo Modelo de Questionário' : `Editar: ${escapeHtml_(m.NOME || "")}`}
+            </h2>
+          </div>
+          <div class="module-header-right" style="display:flex;gap:10px;">
+            ${!isNovo ? `<button type="button" class="btn-secondary" onclick="_qcAbrirPreview('${escapeHtml_(m.ID || "")}')"><i class="fas fa-eye" style="margin-right:6px;"></i>Ver como Técnico</button>` : ''}
+            <button type="button" class="btn-primary" onclick="_qcSalvarModelo()">
+              <i class="fas fa-floppy-disk" style="margin-right:6px;"></i>Salvar Modelo
+            </button>
+          </div>
+        </div>
+
+        <div style="display:grid;gap:20px;">
+          <div class="form-card">
+            <h3 class="section-card-title">Configuração do Modelo</h3>
+            <div class="form-grid">
+              <div class="full">
+                <label for="qc_nome">Nome do Modelo <span style="color:red;">*</span></label>
+                <input id="qc_nome" type="text" placeholder="Ex: Manutenção Preventiva Autoclave" value="${escapeHtml_(m.NOME || "")}">
+              </div>
+              <div>
+                <label for="qc_tipo_os">Tipo de OS <span style="color:red;">*</span></label>
+                <select id="qc_tipo_os">
+                  <option value="">Selecione</option>
+                  ${QC_TIPOS_OS.map(t => `<option value="${t}"${m.TIPO_OS === t ? ' selected' : ''}>${_qcFmtTipoOs(t)}</option>`).join("")}
+                </select>
+              </div>
+              <div>
+                <label for="qc_tipo_equip">Tipo de Equipamento <span style="color:red;">*</span></label>
+                <input id="qc_tipo_equip" type="text" placeholder="Ex: AUTOCLAVE, LAVADORA, GERAL" value="${escapeHtml_(m.TIPO_EQUIPAMENTO || "")}">
+              </div>
+              <div>
+                <label for="qc_versao">Versão</label>
+                <input id="qc_versao" type="text" placeholder="1" value="${escapeHtml_(String(m.VERSAO || "1"))}">
+              </div>
+              <div>
+                <label for="qc_status">Status</label>
+                <select id="qc_status">
+                  <option value="ATIVO"${(!m.STATUS || m.STATUS === "ATIVO") ? ' selected' : ''}>ATIVO</option>
+                  <option value="INATIVO"${m.STATUS === "INATIVO" ? ' selected' : ''}>INATIVO</option>
+                </select>
+              </div>
+              <div class="full">
+                <label for="qc_descricao">Descrição</label>
+                <textarea id="qc_descricao" rows="2" placeholder="Breve descrição do questionário e quando aplicá-lo.">${escapeHtml_(m.DESCRICAO || "")}</textarea>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Opções</div>
+              <div style="display:flex;flex-wrap:wrap;gap:16px;">
+                ${_qcCheckOpc("qc_exige_foto", "Exige foto", m.EXIGE_FOTO === "S")}
+                ${_qcCheckOpc("qc_exige_ass", "Exige assinatura", m.EXIGE_ASSINATURA === "S")}
+                ${_qcCheckOpc("qc_bloqueia_nc", "Bloqueia se não conforme", m.BLOQUEIA_SE_NAO_CONFORME === "S")}
+                ${_qcCheckOpc("qc_permite_sem_quest", "Permite concluir sem quest.", m.PERMITE_CONCLUIR_SEM_QUESTIONARIO === "S")}
+              </div>
+            </div>
+          </div>
+
+          ${!isNovo ? _qcRenderSecaoPerguntas() : ''}
+        </div>
+      </div>
+    `;
+    
+    if (!isNovo) _qcPopularTabelaPerguntas(QC.perguntas);
+  }
+
+  function _qcCheckOpc(id, label, checked) {
+    return `
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;">
+        <input type="checkbox" id="${id}" style="width:16px;min-height:0;padding:0;"${checked ? " checked" : ""}>${escapeHtml_(label)}
+      </label>
+    `;
+  }
+
+  function _qcRenderSecaoPerguntas() {
+    return `
+      <div class="form-card" style="padding:0;overflow:hidden;">
+        <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+          <h3 class="section-card-title" style="margin:0;">Perguntas do Questionário</h3>
+          <button type="button" class="btn-primary" onclick="_qcAbrirFormPergunta(null)">
+            <i class="fas fa-plus" style="margin-right:6px;"></i>Adicionar Pergunta
+          </button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Seção</th>
+                <th>Pergunta</th>
+                <th>Tipo Resposta</th>
+                <th style="text-align:center;">Obrig.</th>
+                <th style="text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="qc_perguntas_tbody">
+              <tr><td colspan="6" class="empty-state">Nenhuma pergunta cadastrada.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function _qcPopularTabelaPerguntas(perguntas) {
+    const tbody = document.getElementById("qc_perguntas_tbody");
+    if (!tbody) return;
+    
+    if (!perguntas || perguntas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma pergunta cadastrada. Clique em "Adicionar Pergunta".</td></tr>';
+      return;
+    }
+
+    const sorted = perguntas.slice().sort((a, b) => (parseInt(a.ORDEM) || 0) - (parseInt(b.ORDEM) || 0));
+    
+    tbody.innerHTML = sorted.map(p => {
+      const tipoLabel = (QC_TIPOS_RESPOSTA.find(r => r.v === p.TIPO_RESPOSTA) || { l: p.TIPO_RESPOSTA }).l;
+      
+      return `
+        <tr>
+          <td style="font-weight:700;color:var(--muted);">${escapeHtml_(String(p.ORDEM || ""))}</td>
+          <td><span style="font-size:11px;background:#f1f5f9;padding:3px 7px;border-radius:5px;font-weight:600;">${escapeHtml_(p.SECAO || "")}</span></td>
+          <td>${escapeHtml_(p.PERGUNTA || "")}</td>
+          <td><span style="font-size:12px;color:var(--muted);">${escapeHtml_(tipoLabel || "")}</span></td>
+          <td style="text-align:center;">${p.OBRIGATORIO === "S" ? '<i class="fas fa-circle-check" style="color:#22c55e;"></i>' : '<i class="fas fa-circle" style="color:#cbd5e1;"></i>'}</td>
+          <td style="text-align:center;white-space:nowrap;">
+            <button class="btn-icon" title="Editar" onclick="_qcAbrirFormPergunta('${escapeHtml_(p.ID)}')"><i class="fas fa-pen"></i></button>
+            <button class="btn-icon" style="color:#ef4444;" title="Excluir" onclick="_qcExcluirPergunta('${escapeHtml_(p.ID)}')"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  /* ─────────────────────────────────────────
+     CARREGAR DADOS
+  ───────────────────────────────────────── */
+  function _qcCarregarModelos() {
+    const sid = _qcSession_();
+    if (!sid) {
+      const tbody = document.getElementById("qc_tbody");
+      if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Sessão não localizada. Faça login novamente.</td></tr>';
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) {
+          _qcToast(`Erro ao carregar modelos: ${(res && res.message) || ""}`, "error");
+          return;
+        }
+        QC.modelos = res.items || [];
+        _qcRenderKpis(QC.modelos);
+        _qcPopularTabela(QC.modelos);
+      })
+      .withFailureHandler(err => {
+        _qcToast(`Falha: ${(err && err.message) || err}`, "error");
+      })
+      .checklistModelosListar(sid, {});
+  }
+
+  function _qcCarregarModeloCompleto(id, callback) {
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) {
+          _qcToast(`Erro ao carregar modelo: ${(res && res.message) || ""}`, "error");
+          return;
+        }
+        callback(res.item, (res.item && res.item.perguntas) || []);
+      })
+      .withFailureHandler(err => {
+        _qcToast(`Falha: ${(err && err.message) || err}`, "error");
+      })
+      .checklistModeloObterCompleto(sid, id);
+  }
+
+  /* ─────────────────────────────────────────
+     AÇÕES DE MODELO
+  ───────────────────────────────────────── */
+  function _qcNovoModelo() {
+    QC.view = "editor";
+    QC.modelo = {};
+    QC.perguntas = [];
+    _qcRender();
+  }
+
+  function _qcVoltarLista() {
+    QC.view = "list";
+    QC.modelo = null;
+    QC.perguntas = [];
+    _qcRender();
+    _qcCarregarModelos();
+  }
+
+  function _qcEditarModelo(id) {
+    _qcCarregarModeloCompleto(id, (modelo, perguntas) => {
+      QC.view = "editor";
+      QC.modelo = modelo;
+      QC.perguntas = perguntas;
+      _qcRender();
+    });
+  }
+
+  function _qcSalvarModelo() {
+    const nome   = (document.getElementById("qc_nome")       || {}).value || "";
+    const tipoOs = (document.getElementById("qc_tipo_os")    || {}).value || "";
+    const tipoEq = (document.getElementById("qc_tipo_equip") || {}).value || "";
+    const versao = (document.getElementById("qc_versao")     || {}).value || "1";
+    const status = (document.getElementById("qc_status")     || {}).value || "ATIVO";
+    const descr  = (document.getElementById("qc_descricao")  || {}).value || "";
+    
+    if (!nome.trim())   { _qcToast("Informe o nome do modelo.", "error"); return; }
+    if (!tipoOs.trim()) { _qcToast("Selecione o Tipo de OS.", "error"); return; }
+    if (!tipoEq.trim()) { _qcToast("Informe o Tipo de Equipamento.", "error"); return; }
+
+    const payload = {
+      NOME:                              nome.trim().toUpperCase(),
+      TIPO_OS:                           tipoOs,
+      TIPO_EQUIPAMENTO:                  tipoEq.trim().toUpperCase(),
+      VERSAO:                            versao.trim(),
+      STATUS:                            status,
+      DESCRICAO:                         descr.trim(),
+      EXIGE_FOTO:                        _qcCheckVal("qc_exige_foto"),
+      EXIGE_ASSINATURA:                  _qcCheckVal("qc_exige_ass"),
+      BLOQUEIA_SE_NAO_CONFORME:          _qcCheckVal("qc_bloqueia_nc"),
+      PERMITE_CONCLUIR_SEM_QUESTIONARIO: _qcCheckVal("qc_permite_sem_quest")
+    };
+    
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    const isNovo = !(QC.modelo && QC.modelo.ID);
+    
+    if (isNovo) {
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) { _qcToast(`Erro: ${(res && res.message) || ""}`, "error"); return; }
+          _qcToast("Modelo criado com sucesso!", "success");
+          QC.modelo = res.item;
+          QC.perguntas = [];
+          QC.view = "editor";
+          _qcRender();
+        })
+        .withFailureHandler(err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); })
+        .checklistModeloCriar(sid, payload);
+    } else {
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) { _qcToast(`Erro: ${(res && res.message) || ""}`, "error"); return; }
+          _qcToast("Modelo atualizado!", "success");
+          QC.modelo = res.item;
+        })
+        .withFailureHandler(err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); })
+        .checklistModeloAtualizar(sid, QC.modelo.ID, payload);
+    }
+  }
+
+  function _qcCheckVal(id) {
+    const el = document.getElementById(id);
+    return (el && el.checked) ? "S" : "N";
+  }
+
+  function _qcClonarModelo(id) {
+    if (!confirm("Clonar este modelo criará uma cópia com todas as perguntas. Continuar?")) return;
+    
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) { _qcToast(`Erro ao clonar: ${(res && res.message) || ""}`, "error"); return; }
+        _qcToast("Modelo clonado com sucesso!", "success");
+        _qcCarregarModelos();
+      })
+      .withFailureHandler(err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); })
+      .checklistModeloClonar(sid, id);
+  }
+
+  function _qcInativarModelo(id) {
+    if (!confirm("Inativar este modelo? Ele não será mais usado em novas OS.")) return;
+    
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) { _qcToast(`Erro ao inativar: ${(res && res.message) || ""}`, "error"); return; }
+        _qcToast("Modelo inativado.", "success");
+        _qcCarregarModelos();
+      })
+      .withFailureHandler(err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); })
+      .checklistModeloInativar(sid, id);
+  }
+
+  /* ─────────────────────────────────────────
+     MODAL: PERGUNTA
+  ───────────────────────────────────────── */
+  function _qcAbrirFormPergunta(id) {
+    let p = null;
+    if (id) {
+      p = QC.perguntas.find(x => x.ID === id) || null;
+    }
+    QC.perguntaEdit = p;
+
+    const titulo   = p ? "Editar Pergunta" : "Nova Pergunta";
+    const secao    = p ? (p.SECAO || "") : "";
+    const ordem    = p ? (p.ORDEM || "") : (QC.perguntas.length + 1);
+    const pergunta = p ? (p.PERGUNTA || "") : "";
+    const tipo     = p ? (p.TIPO_RESPOSTA || "") : "";
+    const obrig    = p ? (p.OBRIGATORIO === "S") : true;
+    const obsNok   = p ? (p.EXIGE_OBSERVACAO_SE_NAO_OK === "S") : false;
+    const fotoNok  = p ? (p.EXIGE_FOTO_SE_NAO_OK === "S") : false;
+    const bloqConc = p ? (p.BLOQUEIA_CONCLUSAO === "S") : false;
+    const permNA   = p ? (p.PERMITE_NA === "S") : false;
+    const exFoto   = p ? (p.EXIGE_FOTO === "S") : false;
+
+    const html = `
+      <div class="modal-overlay" id="qcModalPergunta" onclick="if(event.target===this)_qcFecharModal('qcModalPergunta')">
+        <div class="modal-card" style="max-width:580px;">
+          <div class="modal-header">
+            <i class="fas fa-circle-question" style="color:var(--metro-green);font-size:18px;"></i>
+            <h3 class="modal-title">${titulo}</h3>
+          </div>
+          <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+            <div class="form-grid">
+              <div>
+                <label>Seção <span style="color:red;">*</span></label>
+                <input id="qcp_secao" type="text" placeholder="Ex: Identificação, Execução, Resultado" value="${escapeHtml_(secao)}">
+              </div>
+              <div>
+                <label>Ordem</label>
+                <input id="qcp_ordem" type="number" min="1" value="${escapeHtml_(String(ordem))}">
+              </div>
+              <div class="full">
+                <label>Pergunta <span style="color:red;">*</span></label>
+                <input id="qcp_pergunta" type="text" placeholder="Ex: Equipamento voltou a funcionar?" value="${escapeHtml_(pergunta)}">
+              </div>
+              <div class="full">
+                <label>Tipo de Resposta <span style="color:red;">*</span></label>
+                <select id="qcp_tipo">
+                  <option value="">Selecione</option>
+                  ${QC_TIPOS_RESPOSTA.map(r => `<option value="${r.v}"${tipo === r.v ? ' selected' : ''}>${r.l}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Comportamentos</div>
+              <div style="display:flex;flex-wrap:wrap;gap:14px;">
+                ${_qcCheckOpc("qcp_obrig",    "Obrigatório",             obrig)}
+                ${_qcCheckOpc("qcp_obs_nok",  "Obs. se não conforme",    obsNok)}
+                ${_qcCheckOpc("qcp_foto_nok", "Foto se não conforme",    fotoNok)}
+                ${_qcCheckOpc("qcp_bloq",     "Bloqueia conclusão",      bloqConc)}
+                ${_qcCheckOpc("qcp_perm_na",  "Permite N/A",             permNA)}
+                ${_qcCheckOpc("qcp_exige_foto", "Exige foto",            exFoto)}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="_qcFecharModal('qcModalPergunta')">Cancelar</button>
+            <button type="button" class="btn-primary" onclick="_qcSalvarPergunta()"><i class="fas fa-floppy-disk" style="margin-right:6px;"></i>Salvar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    _qcMostrarModal("qcModalPergunta", html);
+  }
+
+  function _qcSalvarPergunta() {
+    const secao    = (document.getElementById("qcp_secao")    || {}).value || "";
+    const ordem    = (document.getElementById("qcp_ordem")    || {}).value || "1";
+    const pergunta = (document.getElementById("qcp_pergunta") || {}).value || "";
+    const tipo     = (document.getElementById("qcp_tipo")     || {}).value || "";
+    
+    if (!secao.trim())    { _qcToast("Informe a seção.", "error"); return; }
+    if (!pergunta.trim()) { _qcToast("Informe o texto da pergunta.", "error"); return; }
+    if (!tipo)            { _qcToast("Selecione o tipo de resposta.", "error"); return; }
+
+    const payload = {
+      MODELO_ID:                  QC.modelo.ID,
+      SECAO:                      secao.trim().toUpperCase(),
+      ORDEM:                      String(parseInt(ordem) || 1),
+      PERGUNTA:                   pergunta.trim(),
+      TIPO_RESPOSTA:              tipo,
+      OBRIGATORIO:                _qcCheckVal("qcp_obrig"),
+      EXIGE_OBSERVACAO_SE_NAO_OK: _qcCheckVal("qcp_obs_nok"),
+      EXIGE_FOTO_SE_NAO_OK:       _qcCheckVal("qcp_foto_nok"),
+      BLOQUEIA_CONCLUSAO:         _qcCheckVal("qcp_bloq"),
+      PERMITE_NA:                 _qcCheckVal("qcp_perm_na"),
+      EXIGE_FOTO:                 _qcCheckVal("qcp_exige_foto")
+    };
+    
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    const isNova = !QC.perguntaEdit;
+    
+    const onSuccess = res => {
+      if (!res || !res.success) { _qcToast(`Erro: ${(res && res.message) || ""}`, "error"); return; }
+      _qcToast(isNova ? "Pergunta adicionada!" : "Pergunta atualizada!", "success");
+      _qcFecharModal("qcModalPergunta");
+      _qcRecarregarPerguntas();
+    };
+    
+    const onFail = err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); };
+    
+    if (isNova) {
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onFail)
+        .checklistPerguntaCriar(sid, payload);
+    } else {
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onFail)
+        .checklistPerguntaAtualizar(sid, QC.perguntaEdit.ID, payload);
+    }
+  }
+
+  function _qcExcluirPergunta(id) {
+    if (!confirm("Excluir esta pergunta? Esta ação não pode ser desfeita.")) return;
+    
+    const sid = _qcSession_(); 
+    if (!sid) return;
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) { _qcToast(`Erro: ${(res && res.message) || ""}`, "error"); return; }
+        _qcToast("Pergunta excluída.", "success");
+        _qcRecarregarPerguntas();
+      })
+      .withFailureHandler(err => { _qcToast(`Falha: ${(err && err.message) || err}`, "error"); })
+      .checklistPerguntaExcluir(sid, id);
+  }
+
+  function _qcRecarregarPerguntas() {
+    if (!QC.modelo || !QC.modelo.ID) return;
+    _qcCarregarModeloCompleto(QC.modelo.ID, (modelo, perguntas) => {
+      QC.perguntas = perguntas;
+      _qcPopularTabelaPerguntas(perguntas);
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     MODAL: PREVIEW TÉCNICO
+  ───────────────────────────────────────── */
+  function _qcAbrirPreview(id) {
+    _qcCarregarModeloCompleto(id, (modelo, perguntas) => {
+      const sorted = perguntas.slice().sort((a, b) => (parseInt(a.ORDEM) || 0) - (parseInt(b.ORDEM) || 0));
+
+      const secoes = {};
+      sorted.forEach(p => {
+        const s = p.SECAO || "Geral";
+        if (!secoes[s]) secoes[s] = [];
+        secoes[s].push(p);
+      });
+
+      const corpo = Object.keys(secoes).map(secao => {
+        const rows = secoes[secao].map(p => {
+          const tipoLabel = (QC_TIPOS_RESPOSTA.find(r => r.v === p.TIPO_RESPOSTA) || { l: p.TIPO_RESPOSTA }).l;
+          
+          let badges = "";
+          if (p.OBRIGATORIO === "S") badges += '<span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">OBRIGATÓRIO</span>';
+          if (p.BLOQUEIA_CONCLUSAO === "S") badges += '<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">BLOQUEIA</span>';
+          if (p.EXIGE_FOTO_SE_NAO_OK === "S") badges += '<span style="font-size:10px;background:#fef9c3;color:#854d0e;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">FOTO SE NK</span>';
+          
+          return `
+            <div style="padding:12px 0;border-bottom:1px solid var(--border);">
+              <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+                <span style="font-size:11px;font-weight:800;color:var(--muted);min-width:20px;">${escapeHtml_(String(p.ORDEM || ""))}.</span>
+                <div>
+                  <div style="font-weight:600;font-size:14px;">${escapeHtml_(p.PERGUNTA || "")}</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml_(tipoLabel || "")}</div>
+                </div>
+                ${badges}
+              </div>
+              ${_qcPreviewCampo(p.TIPO_RESPOSTA)}
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div style="margin-bottom:4px;">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--metro-green);padding:10px 0 4px;border-bottom:2px solid var(--metro-green);margin-bottom:2px;">${escapeHtml_(secao)}</div>
+            ${rows}
+          </div>
+        `;
+      }).join("");
+
+      const html = `
+        <div class="modal-overlay" id="qcModalPreview" onclick="if(event.target===this)_qcFecharModal('qcModalPreview')">
+          <div class="modal-card" style="max-width:520px;">
+            <div class="modal-header">
+              <i class="fas fa-mobile-screen" style="color:var(--metro-green);font-size:18px;"></i>
+              <h3 class="modal-title">Visualização: ${escapeHtml_(modelo.NOME || "")}</h3>
+            </div>
+            <div class="modal-body" style="max-height:72vh;overflow-y:auto;">
+              <div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--muted);">
+                <strong>Tipo OS:</strong> ${escapeHtml_((modelo.TIPO_OS || "").replace(/_/g, " "))} &nbsp;|&nbsp;
+                <strong>Equip.:</strong> ${escapeHtml_(modelo.TIPO_EQUIPAMENTO || "")}
+              </div>
+              ${corpo || '<p style="color:var(--muted);text-align:center;">Sem perguntas cadastradas.</p>'}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" onclick="_qcFecharModal('qcModalPreview')">Fechar</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      _qcMostrarModal("qcModalPreview", html);
+    });
+  }
+
+  function _qcPreviewCampo(tipo) {
+    const style = 'style="width:100%;min-height:36px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;background:#fff;pointer-events:none;box-sizing:border-box;"';
+    
+    if (tipo === "TEXTO")     return `<input type="text" ${style} placeholder="Resposta..." readonly>`;
+    if (tipo === "TEXTO_LONGO") return `<textarea rows="3" ${style} placeholder="Resposta longa..." readonly></textarea>`;
+    if (tipo === "NUMERO")    return `<input type="number" ${style} placeholder="0.00" readonly>`;
+    if (tipo === "DATA")      return `<input type="date" ${style} readonly>`;
+    if (tipo === "SIM_NAO")   return `
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;pointer-events:none;"><input type="radio" disabled> Sim</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;pointer-events:none;"><input type="radio" disabled> Não</label>
+      </div>`;
+    if (tipo === "CONFORME_NAO_CONFORME_NA") return `
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;pointer-events:none;"><input type="radio" disabled> Conforme</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;pointer-events:none;"><input type="radio" disabled> Não Conforme</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;pointer-events:none;"><input type="radio" disabled> N/A</label>
+      </div>`;
+    if (tipo === "FOTO")      return '<div style="border:2px dashed #cbd5e1;border-radius:8px;padding:16px;text-align:center;font-size:12px;color:var(--muted);"><i class="fas fa-camera" style="font-size:22px;margin-bottom:6px;display:block;"></i>Toque para fotografar</div>';
+    if (tipo === "ASSINATURA") return '<div style="border:2px dashed #cbd5e1;border-radius:8px;padding:24px;text-align:center;font-size:12px;color:var(--muted);"><i class="fas fa-signature" style="font-size:22px;margin-bottom:6px;display:block;"></i>Área de assinatura</div>';
+    
+    return `<input type="text" ${style} placeholder="Resposta..." readonly>`;
+  }
+
+  /* ─────────────────────────────────────────
+     DIAGNÓSTICO DE DUPLICIDADES
+  ───────────────────────────────────────── */
+  function _qcDiagnosticoDuplicidades() {
+    const grupos = {};
+    
+    QC.modelos.forEach(m => {
+      if ((m.STATUS || "ATIVO") !== "ATIVO") return;
+      const chave = (m.TIPO_OS || "") + "|" + (m.TIPO_EQUIPAMENTO || "GERAL");
+      if (!grupos[chave]) grupos[chave] = [];
+      grupos[chave].push(m);
+    });
+    
+    const duplicados = Object.keys(grupos).filter(k => grupos[k].length > 1);
+
+    let corpo;
+    
+    if (duplicados.length === 0) {
+      corpo = `
+        <p style="color:#22c55e;font-weight:700;text-align:center;padding:20px 0;">
+          <i class="fas fa-circle-check" style="margin-right:8px;"></i>Nenhuma duplicidade encontrada entre modelos ativos.
+        </p>
+      `;
+    } else {
+      corpo = duplicados.map(chave => {
+        const partes = chave.split("|");
+        const tipoOs = partes[0], tipoEq = partes[1];
+        
+        const rows = grupos[chave].map(m => `
+          <tr>
+            <td style="font-weight:600;">${escapeHtml_(m.NOME || "")}</td>
+            <td style="text-align:center;">v${escapeHtml_(String(m.VERSAO || "1"))}</td>
+            <td style="text-align:center;font-weight:700;color:var(--metro-green);">${escapeHtml_(String(m.TOTAL_PERGUNTAS || "0"))}</td>
+            <td style="text-align:center;">
+              <button style="padding:3px 8px;font-size:11px;font-weight:700;border:1px solid #fecaca;border-radius:5px;background:#fff;color:#ef4444;cursor:pointer;" onclick="_qcFecharModal('qcModalDiag');_qcInativarModelo('${escapeHtml_(m.ID)}')">
+                <i class="fas fa-ban"></i> Inativar
+              </button>
+            </td>
+          </tr>
+        `).join("");
+        
+        return `
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#f59e0b;margin-bottom:8px;">
+              <i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i>
+              ${escapeHtml_(_qcFmtTipoOs(tipoOs))} / ${escapeHtml_(tipoEq)} — ${grupos[chave].length} modelos ativos
+            </div>
+            <table class="table" style="margin:0;">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th style="text-align:center;">Versão</th>
+                  <th style="text-align:center;">Perguntas</th>
+                  <th style="text-align:center;">Ação</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const html = `
+      <div class="modal-overlay" id="qcModalDiag" onclick="if(event.target===this)_qcFecharModal('qcModalDiag')">
+        <div class="modal-card" style="max-width:600px;">
+          <div class="modal-header">
+            <i class="fas fa-triangle-exclamation" style="color:#f59e0b;font-size:18px;"></i>
+            <h3 class="modal-title">Diagnóstico de Duplicidades</h3>
+          </div>
+          <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+            <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+              Modelos ATIVOS com mesmo Tipo OS + Tipo Equipamento. Apenas um modelo por combinação será usado no atendimento.
+            </p>
+            ${corpo}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="_qcFecharModal('qcModalDiag')">Fechar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    _qcMostrarModal("qcModalDiag", html);
+  }
+
+  /* ─────────────────────────────────────────
+     UTILITÁRIOS
+  ───────────────────────────────────────── */
+  function _qcSession_() {
+    if (!SESSION) {
+      _qcToast("Sessão não localizada. Faça login novamente.", "error");
+      return null;
+    }
+    return SESSION;
+  }
+
+  function _qcMostrarModal(id, html) {
+    const old = document.getElementById(id);
+    if (old) old.remove();
+    
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    
+    const el = wrapper.firstElementChild;
+    if (el) {
+      el.id = id;
+      document.body.appendChild(el);
+      el.style.display = "flex";
+    }
+  }
+
+  function _qcFecharModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function _qcToast(msg, tipo) {
+    const cor = tipo === "error" ? "#ef4444" : tipo === "warning" ? "#f59e0b" : "#22c55e";
+    const icon = tipo === "error" ? "fa-circle-xmark" : tipo === "warning" ? "fa-triangle-exclamation" : "fa-circle-check";
+
+    const t = document.createElement("div");
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;background:${cor};color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:99999;display:flex;align-items:center;gap:8px;max-width:360px;animation:qcFadeIn .2s ease;`;
+    t.innerHTML = `<i class="fas ${icon}"></i> ${escapeHtml_(msg)}`;
+    document.body.appendChild(t);
+    
+    const style = document.createElement("style");
+    style.textContent = "@keyframes qcFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}";
+    document.head.appendChild(style);
+
+    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
+  }
+</script>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Validação de Documento - <?= APP_NOME ?></title>
+  <style>
+    :root{
+      --green:#0b7a3e;--green-dark:#075c2f;--green-soft:#e9f7ef;--green-line:#bfe7cf;
+      --blue:#0b3b78;--blue-dark:#07346b;--blue-soft:#edf5ff;--blue-line:#b3d0f5;
+      --text:#182230;--muted:#667085;--bg:#f0f4fa;--card:#fff;--border:#dfe6ee;
+      --shadow:0 12px 32px rgba(16,24,40,.11);--radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;width:100%;min-height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg)}
+    body{overflow-x:hidden}
+    .page{width:100%;max-width:1100px;margin:0 auto;padding:16px 14px 28px}
+    .portal-shell{background:#fff;border:1px solid var(--border);border-top:5px solid var(--green);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+
+    /* HEADER */
+    .portal-header{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;padding:28px 36px;background:linear-gradient(135deg,#f8fafb 0%,#f0f6fc 100%);border-bottom:1px solid #e5ecf5}
+    .brand-logo img{max-width:300px;width:100%;height:auto;display:block;object-fit:contain}
+    .logo-fallback{display:none;font-size:28px;font-weight:900;color:var(--blue);letter-spacing:-.02em}
+    .header-text{text-align:right}
+    .header-text h1{margin:0;font-size:24px;color:var(--blue);font-weight:900;letter-spacing:-.02em}
+    .header-text p{margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+    .header-badge{display:inline-flex;align-items:center;gap:6px;background:var(--blue-soft);border:1px solid var(--blue-line);color:var(--blue);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;padding:5px 11px;border-radius:999px;margin-top:10px}
+
+    /* CONTENT */
+    .content{padding:24px 28px 28px}
+
+    /* STATUS ALERT */
+    .validation-alert{display:flex;gap:14px;align-items:flex-start;background:var(--green-soft);border:1px solid var(--green-line);border-radius:12px;padding:18px 20px;margin-bottom:20px;color:#14532d}
+    .alert-icon{flex:0 0 auto;width:38px;height:38px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900}
+    .alert-title{font-weight:900;font-size:16px;margin-bottom:5px}
+    .alert-text{font-size:14px;line-height:1.5}
+    .alert-error{background:#fff1f0;border-color:#fda29b;color:#7a271a}
+    .alert-error .alert-icon{background:#b42318}
+    .alert-warn{background:#fffbeb;border-color:#fcd34d;color:#78350f}
+    .alert-warn .alert-icon{background:#d97706}
+
+    /* AUTHENTICITY SEAL */
+    .seal-row{display:flex;align-items:center;gap:10px;margin-left:auto}
+    .seal{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;border:3px solid var(--green);background:#fff;flex:0 0 auto;position:relative;overflow:hidden}
+    .seal::before{content:"";position:absolute;inset:4px;border-radius:50%;border:1px dashed var(--green-line)}
+    .seal-icon{font-size:22px;color:var(--green);line-height:1}
+    .seal-text{font-size:7px;font-weight:900;color:var(--green);text-transform:uppercase;letter-spacing:.1em;line-height:1.2;text-align:center}
+    .seal-err{border-color:#b42318}.seal-err::before{border-color:#fda29b}.seal-err .seal-icon,.seal-err .seal-text{color:#b42318}
+
+    /* MAIN CARD */
+    .main-card{background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 16px rgba(16,24,40,.05);padding:22px 24px}
+
+    /* TOP GRID */
+    .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .info{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+    .info.full{grid-column:1/-1}
+    .label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+    .value{color:var(--text);font-size:15px;font-weight:800;line-height:1.4;word-break:break-word}
+    .mono{font-family:Consolas,Monaco,monospace;letter-spacing:.04em}
+    .code-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .copy-btn{width:36px;height:36px;border:1px solid var(--border);border-radius:8px;background:#fff;color:#344054;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;flex:0 0 auto}
+    .status-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px;background:#dff3e7;color:#0b6b36;font-size:13px;font-weight:900;text-transform:uppercase;border:1px solid #c1e6cf}
+    .status-pill-ok::before{content:"✓";display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;font-size:12px}
+
+    /* DOC META GRID — 3 cols */
+    .doc-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+
+    /* CLIENT SECTION */
+    .section-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;padding-bottom:7px;border-bottom:2px solid var(--blue-soft)}
+    .section-title-icon{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex:0 0 auto}
+    .client-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+    .client-grid .full{grid-column:1/-1}
+    .client-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .info-sm{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:11px 14px}
+    .info-sm .label{font-size:10px;margin-bottom:5px}
+    .info-sm .value{font-size:14px}
+
+    /* TRACE BOX */
+    .trace-box{margin-top:14px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:15px 16px}
+    .trace-title{color:var(--green);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+    .trace-line{display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:13px;line-height:1.5;margin-bottom:5px}
+    .trace-line strong{color:#102a43}
+    .url-text{color:#1450a3;word-break:break-all;font-size:12px}
+
+    /* ACTIONS */
+    .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+    .action-btn{min-height:62px;border:none;border-radius:10px;padding:13px 14px;color:#fff;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:.01em;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;text-decoration:none;text-align:center;line-height:1.3;box-shadow:0 4px 12px rgba(16,24,40,.13);transition:filter .15s,transform .15s}
+    .action-btn svg{width:22px;height:22px;flex:0 0 auto}
+    .btn-print{background:linear-gradient(135deg,#0b7a3e,#09662f)}
+    .btn-whats{background:linear-gradient(135deg,#1ebe5c,#129e46)}
+    .btn-open{background:linear-gradient(135deg,#2d72bf,#1e5ba8)}
+    .btn-download{background:linear-gradient(135deg,#124b96,#0d3b7a)}
+    .action-btn:hover{filter:brightness(.93);transform:translateY(-2px)}
+
+    /* NOTE */
+    .note{margin-top:18px;display:flex;gap:12px;align-items:flex-start;background:#eef6ff;border:1px solid var(--blue-line);border-radius:10px;padding:13px 16px;color:#184980;font-size:13px;line-height:1.5}
+    .note-icon{width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;flex:0 0 auto;font-size:12px}
+
+    /* FOOTER */
+    .footer{text-align:center;color:#8898aa;font-size:12px;line-height:1.5;padding:18px 16px 0}
+    .footer strong{color:var(--green)}
+
+    /* TOAST */
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#102a43;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:.2s ease;z-index:9999}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+    /* EMPTY STATE */
+    .loading-msg{text-align:center;padding:40px 20px;color:var(--muted);font-size:15px}
+
+    /* PRINT AREA */
+    .print-area{display:none}
+
+    /* RESPONSIVE */
+    @media(max-width:760px){
+      .page{padding:10px 10px 18px}
+      .portal-header{grid-template-columns:1fr;gap:10px;padding:18px 18px 14px}
+      .brand-logo img{max-width:240px}
+      .header-text{text-align:left}
+      .header-text h1{font-size:19px}
+      .header-text p,.header-badge{font-size:12px}
+      .content{padding:12px}
+      .main-card{padding:14px 16px;border-radius:12px}
+      .top-grid,.doc-meta-grid,.client-grid,.client-3{grid-template-columns:1fr}
+      .info,.info-sm{min-height:auto;padding:12px 14px}
+      .actions{grid-template-columns:1fr 1fr;gap:10px}
+      .action-btn{min-height:58px;font-size:12px;padding:10px}
+      .action-btn svg{width:20px;height:20px}
+      .trace-line{grid-template-columns:1fr;gap:2px}
+      .seal{width:60px;height:60px}
+      .seal-text{font-size:6px}
+      .seal-icon{font-size:18px}
+    }
+    @media(max-width:420px){
+      .actions{grid-template-columns:1fr}
+      .brand-logo img{max-width:200px}
+    }
+
+    /* PRINT */
+    @page{size:A4 portrait;margin:14mm}
+    @media print{
+      body{background:#fff;color:#000}
+      .page,.portal-shell{max-width:none;margin:0;padding:0;border:none;box-shadow:none;border-radius:0}
+      .portal-header,.content,.footer,.toast{display:none!important}
+      .print-area{display:block!important;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111}
+      .print-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;border-bottom:3px solid #0b7a3e;padding-bottom:10px;margin-bottom:14px}
+      .print-logo img{max-width:230px;height:auto}
+      .print-title{text-align:center}
+      .print-title h2{margin:0;color:#0b3b78;font-size:17px;text-transform:uppercase;letter-spacing:.03em}
+      .print-title p{margin:3px 0 0;font-size:10px;color:#555}
+      .print-seal{text-align:right;color:#0b7a3e;font-size:11px;font-weight:900;text-transform:uppercase;line-height:1.4;border:2px solid #0b7a3e;padding:6px 10px;border-radius:6px}
+      .print-status{border:2px solid #0b7a3e;background:#eef7f1;padding:10px 14px;font-weight:900;color:#0b7a3e;margin:10px 0;text-align:center;text-transform:uppercase;font-size:13px;border-radius:4px}
+      .print-section-title{background:#0b3b78;color:#fff;padding:4px 8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px;border-radius:2px}
+      .print-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+      .print-box{border:1px solid #c9d2dc;padding:8px;border-radius:3px}
+      .print-full{grid-column:1/-1}
+      .print-label{font-size:9px;color:#666;text-transform:uppercase;font-weight:800;letter-spacing:.03em}
+      .print-value{font-size:12px;font-weight:700;margin-top:3px;word-break:break-word}
+      .print-value.mono{font-family:Consolas,Monaco,monospace;font-size:11px}
+      .print-footer{margin-top:16px;border-top:1px solid #aaa;padding-top:8px;font-size:10px;color:#555;line-height:1.5}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="portal-shell">
+      <header class="portal-header">
+        <div class="brand-logo">
+          <img id="logoImg" src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+          <div id="logoFallback" class="logo-fallback">Metrolab's</div>
+        </div>
+        <div class="header-text">
+          <h1>Validação de Documento</h1>
+          <p>Consulta pública de autenticidade e rastreabilidade do documento oficial emitido pelo sistema.</p>
+          <div class="header-badge">&#128275; Consulta segura &nbsp;·&nbsp; METROLABS SGO+</div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="main-card">
+          <div id="statusBox" class="validation-alert">
+            <div class="alert-icon">&#8635;</div>
+            <div>
+              <div class="alert-title">Consultando documento…</div>
+              <div class="alert-text">Aguarde enquanto o sistema consulta o histórico documental Metrolabs SGO+.</div>
+            </div>
+          </div>
+          <div id="conteudoValidacao">
+            <div class="loading-msg">Carregando informações do documento…</div>
+          </div>
+          <div class="note">
+            <div class="note-icon">i</div>
+            <div>Esta página confirma a existência do registro documental no histórico do sistema <strong>Metrolabs SGO+</strong> e sua vinculação com o documento oficial emitido no fluxo de geração. O documento físico ou digital deve ser consultado para conferência integral do conteúdo.</div>
+          </div>
+        </section>
+      </main>
+
+      <!-- PRINT AREA -->
+      <section class="print-area" id="printArea">
+        <div class="print-header">
+          <div class="print-logo"><img src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs"></div>
+          <div class="print-title"><h2>Comprovante de Validação Documental</h2><p>Autenticidade e rastreabilidade técnica — METROLABS SGO+</p></div>
+          <div class="print-seal">DOCUMENTO<br>AUTÊNTICO<br>✓</div>
+        </div>
+        <div class="print-status" id="printStatus">Documento validado</div>
+        <div class="print-section-title">Identificação do Documento</div>
+        <div class="print-grid">
+          <div class="print-box"><div class="print-label">Tipo de documento</div><div class="print-value" id="pTipo">-</div></div>
+          <div class="print-box"><div class="print-label">Status</div><div class="print-value" id="pStatus">-</div></div>
+          <div class="print-box"><div class="print-label">Data de emissão</div><div class="print-value" id="pData">-</div></div>
+          <div class="print-box"><div class="print-label">Total de equipamentos</div><div class="print-value" id="pTotal">-</div></div>
+          <div class="print-box"><div class="print-label">Gerado por</div><div class="print-value" id="pOs">-</div></div>
+          <div class="print-box"><div class="print-label">Sistema</div><div class="print-value">METROLABS SGO+</div></div>
+          <div class="print-box print-full"><div class="print-label">Código de autenticação</div><div class="print-value mono" id="pCodigo">-</div></div>
+          <div class="print-box print-full"><div class="print-label">URL de validação</div><div class="print-value" id="pUrl">-</div></div>
+        </div>
+        <div class="print-section-title">Dados do Cliente</div>
+        <div class="print-grid">
+          <div class="print-box print-full"><div class="print-label">Razão Social</div><div class="print-value" id="pRazao">-</div></div>
+          <div class="print-box"><div class="print-label">Nome Fantasia</div><div class="print-value" id="pCliente">-</div></div>
+          <div class="print-box"><div class="print-label">CNPJ</div><div class="print-value mono" id="pCnpj">-</div></div>
+          <div class="print-box print-full"><div class="print-label">Endereço</div><div class="print-value" id="pEndereco">-</div></div>
+          <div class="print-box"><div class="print-label">Telefone</div><div class="print-value" id="pTelefone">-</div></div>
+          <div class="print-box"><div class="print-label">E-mail</div><div class="print-value" id="pEmail">-</div></div>
+        </div>
+        <div class="print-footer">Este comprovante confirma vínculo com registro documental emitido pelo sistema METROLABS SGO+. A conferência integral deve ser realizada pelo documento oficial vinculado ao registro. Gerado em: <span id="pGeradoEm">-</span></div>
+      </section>
+    </div>
+
+    <div class="footer"><strong>METROLABS SGO+</strong> — Sistema de Gestão Operacional &nbsp;·&nbsp; Documento técnico controlado &nbsp;·&nbsp; Validação pública &nbsp;·&nbsp; Consulte sempre o documento oficial.</div>
+  </div>
+  <div class="toast" id="toast">Copiado</div>
+
+  <script>
+    const CODIGO_VALIDACAO = "<?= CODIGO_VALIDACAO ?>";
+    let documentoValidadoAtual = null;
+
+    function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+    function jsEsc(v){return String(v||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g," ")}
+    function norm(v,d){const s=String(v||"").trim();return s||(d||"Não informado")}
+    function normBlank(v){const s=String(v||"").trim();return s||""}
+    function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=norm(v,"-")}
+    function showToast(msg){const t=document.getElementById("toast");if(!t)return;t.textContent=msg||"Copiado";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
+    function copiarTexto(txt){const s=String(txt||"").trim();if(!s)return;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(()=>showToast("Copiado!"));return}const ta=document.createElement("textarea");ta.value=s;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);showToast("Copiado!")}
+    function fmtTotal(n){const v=Number(n||0);if(!v)return"Não informado";return v+" equipamento"+(v!==1?"s":"")}
+    function tipoAmigavelDocumento_(tipo){const mapa={FROTA_RELATORIO_VEICULO:"Relatório Individual de Veículo",FROTA_RELATORIO_GERAL:"Relatório Geral da Frota",FROTA_TERMO_MULTA:"Termo de Ciência e Responsabilidade por Infração de Trânsito",OS_TECNICA:"Ordem de Serviço Técnica",INVENTARIO_TECNICO:"Inventário Técnico",RASTREABILIDADE_COMPLETA:"Rastreabilidade Completa"};return mapa[String(tipo||"").toUpperCase()]||tipo||"Documento Técnico"}
+    function isFrotaDoc_(item){const raw=String((item&&(item.documentoTipoRaw||item.documentoTipo))||"").toUpperCase();return !!(item&&item.isFrota)||raw.indexOf("FROTA_")===0||["FROTA_RELATORIO_VEICULO","FROTA_RELATORIO_GERAL","FROTA_TERMO_MULTA"].indexOf(raw)>=0}
+    function campoFrota_(item,nome){return normBlank(item&&item[nome])||normBlank(item&&item.extra&&item.extra[nome])}
+    function periodoFrota_(item){return normBlank(item&&item.PERIODO_LABEL)||normBlank(item&&item.periodoLabel)||normBlank(item&&item.periodo)||normBlank(item&&item.extra&&item.extra.PERIODO_LABEL)||normBlank(item&&item.extra&&item.extra.periodoLabel)||normBlank(item&&item.extra&&item.extra.periodo)}
+
+    function preencherPrint(item){
+      setText("pTipo",      item.documentoTipo);
+      setText("pStatus",    item.status);
+      setText("pData",      item.dataEmissao);
+      setText("pTotal",     fmtTotal(item.totalEquipamentos));
+      setText("pOs",        item.relatorioId);
+      setText("pCodigo",    item.codigoValidacao||CODIGO_VALIDACAO);
+      setText("pUrl",       item.urlValidacao);
+      setText("pRazao",     item.razaoSocial||item.cliente);
+      setText("pCliente",   item.cliente);
+      setText("pCnpj",      item.cnpj);
+      setText("pEndereco",  item.endereco);
+      setText("pTelefone",  item.telefone);
+      setText("pEmail",     item.email);
+      const ps=document.getElementById("printStatus");
+      if(ps) ps.textContent="DOCUMENTO VALIDADO — "+norm(item.status,"VÁLIDO");
+      const pg=document.getElementById("pGeradoEm");
+      if(pg) pg.textContent=new Date().toLocaleString("pt-BR");
+    }
+
+    function imprimirValidacao(){if(!documentoValidadoAtual){alert("Nenhum documento validado para impressão.");return}window.print()}
+
+    function enviarWhatsapp(){
+      if(!documentoValidadoAtual){alert("Nenhum documento validado.");return}
+      const i=documentoValidadoAtual;
+      const urlCompartilhamento=obterUrlCompartilhamento_(i);
+      if(!urlCompartilhamento){alert("Link de validação não disponível para compartilhamento.");return}
+      if(isFrotaDoc_(i)){
+        const linhas=[
+          "Validação de Documento - METROLABS SGO+",
+          "Tipo: "+norm(i.documentoTipo||tipoAmigavelDocumento_(i.documentoTipoRaw)),
+          "Placa: "+norm(campoFrota_(i,"placa")),
+          "Status: "+norm(i.status),
+          "Código: "+norm(i.codigoValidacao||CODIGO_VALIDACAO),
+          "Verificar: "+urlCompartilhamento
+        ];
+        window.open("https://wa.me/?text="+encodeURIComponent(linhas.join("\n")),"_blank");return
+      }
+      const linhas=[
+        "✅ *Validação de Documento — METROLABS SGO+*",
+        "━━━━━━━━━━━━━━━━━━━━━",
+        "📋 Tipo: "+norm(i.documentoTipo),
+        "🏢 Cliente: "+norm(i.razaoSocial||i.cliente),
+        "📄 CNPJ: "+norm(i.cnpj,"Não informado"),
+        "📅 Emissão: "+norm(i.dataEmissao),
+        "✔ Status: "+norm(i.status),
+        "━━━━━━━━━━━━━━━━━━━━━",
+        "🔑 Código: "+norm(i.codigoValidacao||CODIGO_VALIDACAO),
+        "🔗 Verificar: "+urlCompartilhamento
+      ];
+      window.open("https://wa.me/?text="+encodeURIComponent(linhas.join("\n")),"_blank")
+    }
+
+    function abrirPdf(){
+      if(!obterPdfUrl_(documentoValidadoAtual)){alert("PDF oficial não disponível para este registro.");return}
+      window.open(obterPdfUrl_(documentoValidadoAtual),"_blank")
+    }
+
+    function baixarPdf(){
+      const url=obterPdfUrl_(documentoValidadoAtual);
+      if(!url){alert("PDF oficial não disponível para download.");return}
+      const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";a.download="Documento_Metrolabs.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a)
+    }
+
+    function copiarLinkValidacao(){
+      if(!documentoValidadoAtual){alert("Nenhum documento validado.");return}
+      copiarTexto(documentoValidadoAtual.urlValidacao||window.location.href)
+    }
+
+    function obterPdfUrl_(item){
+      if(!item)return"";
+      return normBlank(item.urlPdf)||normBlank(item.pdfUrl)||normBlank(item.downloadUrl)||normBlank(item.documentoUrl)||normBlank(item.linkPdf)
+    }
+
+    function obterUrlCompartilhamento_(item){
+      if(!item)return"";
+      return normBlank(item.urlValidacao)
+    }
+
+    function podeCompartilharWhatsapp_(item){
+      return !!(obterUrlCompartilhamento_(item)&&(normBlank(item.codigoValidacao)||normBlank(CODIGO_VALIDACAO)))
+    }
+
+    function buildInfoCard(label, value, cls){
+      cls=cls||"";const v=norm(value);
+      return'<div class="info-sm'+cls+'"><div class="label">'+esc(label)+'</div><div class="value">'+esc(v)+'</div></div>'
+    }
+    function buildInfoCardMono(label, value, cls){
+      cls=cls||"";const v=norm(value);
+      return'<div class="info-sm'+cls+'"><div class="label">'+esc(label)+'</div><div class="value mono">'+esc(v)+'</div></div>'
+    }
+
+    function buildClientSection(item){
+      const razao = normBlank(item.razaoSocial)||normBlank(item.cliente)||"";
+      const fantasia = normBlank(item.cliente)||"";
+      const cnpj = normBlank(item.cnpj)||"";
+      const end = normBlank(item.endereco)||"";
+      const tel = normBlank(item.telefone)||"";
+      const eml = normBlank(item.email)||"";
+      const ctc = normBlank(item.contato)||"";
+      const hasClient = razao||fantasia||cnpj||end||tel||eml;
+      if(!hasClient) return'<div style="color:var(--muted);font-size:13px;padding:8px 0">Dados do cliente não disponíveis neste registro.</div>';
+      let html='';
+      html+='<div class="client-grid">';
+      if(razao && razao!==fantasia) html+=buildInfoCard("Razão Social",razao," full");
+      html+=buildInfoCard("Nome Fantasia",fantasia||razao);
+      html+=buildInfoCardMono("CNPJ",cnpj||"Não informado");
+      if(end) html+=buildInfoCard("Endereço",end," full");
+      html+='</div>';
+      const hasContact=tel||eml||ctc;
+      if(hasContact){
+        html+='<div class="client-3">';
+        if(tel) html+=buildInfoCard("Telefone",tel);
+        if(eml) html+=buildInfoCard("E-mail",eml);
+        if(ctc) html+=buildInfoCard("Contato",ctc);
+        html+='</div>';
+      }
+      return html;
+    }
+
+    function renderOk(item){
+      if(isFrotaDoc_(item)){renderFrotaOk(item);return}
+      documentoValidadoAtual=item||{};
+      preencherPrint(documentoValidadoAtual);
+      const statusBox=document.getElementById("statusBox"),conteudo=document.getElementById("conteudoValidacao");
+      statusBox.className="validation-alert";
+      statusBox.innerHTML=''
+        +'<div class="alert-icon">&#10003;</div>'
+        +'<div style="flex:1"><div class="alert-title">Documento validado com sucesso.</div>'
+        +'<div class="alert-text">O código consultado corresponde a um registro documental emitido pelo sistema <strong>METROLABS SGO+</strong> e indexado no histórico.</div></div>'
+        +'<div class="seal-row"><div class="seal"><span class="seal-icon">✓</span><span class="seal-text">AUTÊN&shy;TICO</span></div></div>';
+
+      const codigo=norm(item.codigoValidacao||CODIGO_VALIDACAO);
+      const total=fmtTotal(item.totalEquipamentos);
+      const hasPdf=!!obterPdfUrl_(item);
+      const hasWhatsapp=podeCompartilharWhatsapp_(item);
+      let actionsHtml='';
+      actionsHtml+='<button class="action-btn btn-print" type="button" onclick="imprimirValidacao()">'+iconPrint()+'<span>Imprimir<br>comprovante</span></button>';
+      actionsHtml+='<button class="action-btn btn-open" type="button" onclick="copiarLinkValidacao()">'+iconCopy()+'<span>Copiar link<br>de validação</span></button>';
+      if(hasWhatsapp) actionsHtml+='<button class="action-btn btn-whats" type="button" onclick="enviarWhatsapp()">'+iconWhats()+'<span>Enviar via<br>WhatsApp</span></button>';
+      if(hasPdf) actionsHtml+='<button class="action-btn btn-open" type="button" onclick="abrirPdf()">'+iconDoc()+'<span>Abrir PDF<br>oficial</span></button>';
+
+      conteudo.innerHTML=''
+        +'<div class="top-grid">'
+        +'<div class="info"><div class="label">&#128273; Código de autenticação</div><div class="code-row"><div class="value mono">'+esc(codigo)+'</div><button class="copy-btn" type="button" onclick="copiarTexto(\''+jsEsc(codigo)+'\')" title="Copiar código">&#10063;</button></div></div>'
+        +'<div class="info"><div class="label">&#9673; Status do documento</div><div class="value"><span class="status-pill status-pill-ok">'+esc(norm(item.status,"VÁLIDO"))+'</span></div></div>'
+        +'</div>'
+        +'<div class="doc-meta-grid">'
+        +buildInfoCard("Tipo de documento", item.documentoTipo)
+        +buildInfoCard("Numero da OS", item.numeroOS || item.osId)
+        +buildInfoCard("Unidade", item.unidade)
+        +buildInfoCard("Equipamento", item.equipamento)
+        +buildInfoCard("Data de emissão", item.dataEmissao)
+        +buildInfoCard("Hash SHA256", item.hashSha256)
+        +'</div>'
+        +'<div class="section-title"><div class="section-title-icon">&#127970;</div>Dados do Cliente</div>'
+        +buildClientSection(item)
+        +'<div class="trace-box"><div class="trace-title">&#128202; Rastreabilidade documental</div>'
+        +'<div class="trace-line"><strong>Gerado por:</strong><span>'+esc(norm(item.relatorioId,"Não informado"))+'</span></div>'
+        +'<div class="trace-line"><strong>URL de validação:</strong><span class="url-text">'+esc(norm(item.urlValidacao,"URL não disponível"))+'</span></div>'
+        +'</div>'
+        +'<div class="actions">'
+        +actionsHtml
+        +'</div>';
+    }
+
+    function renderFrotaOk(item){
+      documentoValidadoAtual=item||{};
+      preencherPrint(documentoValidadoAtual);
+      const statusBox=document.getElementById("statusBox"),conteudo=document.getElementById("conteudoValidacao");
+      statusBox.className="validation-alert";
+      statusBox.innerHTML=''
+        +'<div class="alert-icon">&#10003;</div>'
+        +'<div style="flex:1"><div class="alert-title">Documento validado com sucesso.</div>'
+        +'<div class="alert-text">O código consultado corresponde a um documento oficial da <strong>Frota Operacional METROLABS SGO+</strong>.</div></div>'
+        +'<div class="seal-row"><div class="seal"><span class="seal-icon">✓</span><span class="seal-text">AUTÊN&shy;TICO</span></div></div>';
+
+      const codigo=norm(item.codigoValidacao||CODIGO_VALIDACAO);
+      const hasPdf=!!obterPdfUrl_(item);
+      const hasWhatsapp=podeCompartilharWhatsapp_(item);
+      const raw=String(item.documentoTipoRaw||"").toUpperCase();
+      let meta='';
+      meta+=buildInfoCard("Tipo", item.documentoTipo||tipoAmigavelDocumento_(raw));
+      if(raw==="FROTA_RELATORIO_GERAL"){
+        meta+=buildInfoCard("Vínculo", "Frota Operacional");
+        meta+=buildInfoCard("Período analisado", periodoFrota_(item)||"Não informado");
+      }else if(raw==="FROTA_TERMO_MULTA"){
+        meta+=buildInfoCard("Placa", campoFrota_(item,"placa"));
+        meta+=buildInfoCard("Condutor", campoFrota_(item,"condutor"));
+        meta+=buildInfoCard("Número do auto", campoFrota_(item,"numeroAuto"));
+        meta+=buildInfoCard("Data/hora da infração", campoFrota_(item,"dataHoraInfracao"));
+        meta+=buildInfoCard("Órgão autuador", campoFrota_(item,"orgaoAutuador"));
+      }else{
+        meta+=buildInfoCard("Placa", campoFrota_(item,"placa"));
+        meta+=buildInfoCard("Veículo", campoFrota_(item,"veiculo"));
+        meta+=buildInfoCard("Período analisado", periodoFrota_(item)||"Não informado");
+      }
+      meta+=buildInfoCard("Data de emissão", item.dataEmissao);
+      meta+=buildInfoCard("Hash SHA256", item.hashSha256);
+
+      let actionsHtml='';
+      actionsHtml+='<button class="action-btn btn-print" type="button" onclick="imprimirValidacao()">'+iconPrint()+'<span>Imprimir<br>comprovante</span></button>';
+      actionsHtml+='<button class="action-btn btn-open" type="button" onclick="copiarLinkValidacao()">'+iconCopy()+'<span>Copiar link<br>de validação</span></button>';
+      if(hasWhatsapp) actionsHtml+='<button class="action-btn btn-whats" type="button" onclick="enviarWhatsapp()">'+iconWhats()+'<span>Enviar via<br>WhatsApp</span></button>';
+      if(hasPdf) actionsHtml+='<button class="action-btn btn-open" type="button" onclick="abrirPdf()">'+iconDoc()+'<span>Abrir PDF<br>oficial</span></button>';
+
+      conteudo.innerHTML=''
+        +'<div class="top-grid">'
+        +'<div class="info"><div class="label">&#128273; Código de autenticação</div><div class="code-row"><div class="value mono">'+esc(codigo)+'</div><button class="copy-btn" type="button" onclick="copiarTexto(\''+jsEsc(codigo)+'\')" title="Copiar código">&#10063;</button></div></div>'
+        +'<div class="info"><div class="label">&#9673; Status do documento</div><div class="value"><span class="status-pill status-pill-ok">'+esc(norm(item.status,"VÁLIDO"))+'</span></div></div>'
+        +'</div>'
+        +'<div class="section-title"><div class="section-title-icon">&#128663;</div>Documento da Frota</div>'
+        +'<div class="doc-meta-grid">'+meta+'</div>'
+        +'<div class="trace-box"><div class="trace-title">&#128202; Rastreabilidade documental</div>'
+        +'<div class="trace-line"><strong>Origem:</strong><span>Frota Operacional METROLABS SGO+</span></div>'
+        +'<div class="trace-line"><strong>URL de validação:</strong><span class="url-text">'+esc(norm(item.urlValidacao,"URL não disponível"))+'</span></div>'
+        +'</div>'
+        +'<div class="actions">'+actionsHtml+'</div>';
+    }
+
+    function renderErro(msg){
+      documentoValidadoAtual=null;
+      const statusBox=document.getElementById("statusBox"),conteudo=document.getElementById("conteudoValidacao");
+      statusBox.className="validation-alert alert-error";
+      statusBox.innerHTML=''
+        +'<div class="alert-icon">!</div>'
+        +'<div style="flex:1"><div class="alert-title">Documento não validado.</div>'
+        +'<div class="alert-text">'+esc(msg||"Código não localizado.")+'</div></div>'
+        +'<div class="seal-row"><div class="seal seal-err"><span class="seal-icon">✗</span><span class="seal-text">NÃO<br>VÁLIDO</span></div></div>';
+      conteudo.innerHTML=''
+        +'<div class="top-grid">'
+        +'<div class="info"><div class="label">&#128273; Código de autenticação</div><div class="code-row"><div class="value mono">'+esc(norm(CODIGO_VALIDACAO,"Código não informado"))+'</div></div></div>'
+        +'<div class="info"><div class="label">&#9673; Status</div><div class="value"><span class="status-pill" style="background:#fff1f0;color:#b42318;border-color:#fda29b;">Não validado</span></div></div>'
+        +'</div>'
+        +'<div class="trace-box"><div class="trace-title">Situação da consulta</div>'
+        +'<div style="font-size:14px;color:var(--muted);line-height:1.55">Não foi possível localizar um registro correspondente ao código informado no histórico documental da METROLABS SGO+.<br>Verifique se o código está correto ou entre em contato com a Metrolabs para suporte.</div>'
+        +'</div>';
+    }
+
+    function consultarDocumento(){
+      if(!CODIGO_VALIDACAO||!String(CODIGO_VALIDACAO).trim()){renderErro("Código de autenticação não informado.");return}
+      if(typeof google==="undefined"||!google.script||!google.script.run){renderErro("Ambiente sem acesso ao Apps Script.");return}
+      google.script.run
+        .withSuccessHandler(res=>{if(res&&res.ok)renderOk(res);else renderErro((res&&res.mensagem)||"Código não localizado.")})
+        .withFailureHandler(err=>{console.error(err);renderErro("Falha ao consultar o documento. Tente novamente.")})
+        .buscarDocumentoPorCodigo(CODIGO_VALIDACAO);
+    }
+
+    function iconPrint(){return'<svg viewBox="0 0 24 24" fill="none"><path d="M6 9V3h12v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14h12v7H6v-7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
+    function iconWhats(){return'<svg viewBox="0 0 24 24" fill="none"><path d="M12 21a9 9 0 1 0-7.7-4.35L3 21l4.55-1.2A8.96 8.96 0 0 0 12 21Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5c.5 3 3 5.5 6 6l1.2-1.2c.3-.3.3-.8 0-1.1l-1-1c-.3-.3-.8-.3-1.1 0l-.4.4c-.9-.4-1.6-1.1-2-2l.4-.4c.3-.3.3-.8 0-1.1l-1-1c-.3-.3-.8-.3-1.1 0L8.5 8.5Z" fill="currentColor"/></svg>'}
+    function iconDoc(){return'<svg viewBox="0 0 24 24" fill="none"><path d="M6 2h8l4 4v16H6V2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 2v5h5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 13h8M8 17h8M8 9h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}
+    function iconDownload(){return'<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}
+    function iconCopy(){return'<svg viewBox="0 0 24 24" fill="none"><path d="M8 8h10v12H8V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'}
+
+    consultarDocumento();
+  </script>
+</body>
+</html>

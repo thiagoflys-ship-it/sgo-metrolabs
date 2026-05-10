@@ -1,0 +1,1761 @@
+<script>
+  // ==========================================
+  // ROTEADOR MOBILE - NÚCLEO BLINDADO
+  // ==========================================
+  window.SGO_FORCAR_DESKTOP = false;
+
+  function isDispositivoMovel_() {
+    if (window.SGO_FORCAR_DESKTOP) return false;
+    var w = window.screen.width || window.innerWidth;
+    if (w <= 950) return true;
+    var ua = navigator.userAgent.toLowerCase();
+    if (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua)) return true;
+    if (('ontouchstart' in window || navigator.maxTouchPoints > 0) && w <= 1024) return true;
+    return false;
+  }
+
+  // Escuta global para destravar o PC no celular quando o usuário clica no menu mobile
+  document.addEventListener("click", function(e) {
+    if (e.target && typeof e.target.textContent === "string") {
+      if (e.target.textContent.includes("Gestão Completa") || e.target.textContent.includes("Gestão Completo") || e.target.textContent.includes("Gestao Completa") || e.target.textContent.includes("Gestao Completo")) {
+        window.SGO_FORCAR_DESKTOP = true;
+        const div = document.getElementById("conteudo");
+        if (div) div.innerHTML = "";
+        if (typeof abrir === "function") abrir("dashboard");
+      }
+    }
+  }, true);
+
+  // ==========================================
+  // VARIÁVEIS GLOBAIS E ESTADOS
+  // ==========================================
+  let SESSION = null;
+  let USER_CONTEXT = null;
+  let MOTORES = {};
+  let LOGIN_EM_ANDAMENTO = false;
+  let PUBLIC_CONFIG = {};
+
+  let IDLE_SECONDS = 0;
+  let IDLE_LIMIT = 300; // Tempo para alertas de ociosidade (5 min)
+  const AUTO_LOGOUT_LIMIT = 14400; // Tempo para logout forçado (4 horas)
+
+  let IDLE_MONITOR = null;
+  let IDLE_BEEP_INTERVAL = null;
+  let OCIOSO = false;
+  let SOM_OCIOSIDADE_ATIVO = true;
+  let AUDIO_CTX = null;
+
+  const CLIENTES_STATE = { items: [], editingId: "", loading: false, filtro: "" };
+  const UNIDADES_STATE = { items: [], clientes: [], editingId: "", loading: false, filtro: "" };
+  const EQUIPAMENTOS_STATE = { items: [], clientes: [], unidades: [], editingId: "", loading: false, filtro: "" };
+  const PECAS_STATE = { items: [], equipamentos: [], editingId: "", loading: false, filtro: "" };
+  const CONTRATOS_STATE = { items: [], clientes: [], equipamentos: [], editingId: "", loading: false, filtro: "" };
+  const OS_STATE = { items: [], opcoes: null, editingId: "", loading: false, filtro: "" };
+  const OS_EXEC_STATE = { osId: "", os: null, checklist: [] };
+  const MISSOES_STATE = { items: [], opcoes: null, editingId: "", operando: null, loading: false, filtro: "" };
+  const FROTA_STATE = { items: [], veiculos: null, editingId: "", aba: "veiculos", loading: false, filtro: "" };
+  const RASTREABILIDADE_STATE = { ultimoResultado: null, loading: false };
+  const DOCUMENTOS_STATE = { items: [], clientes: [], unidades: [], equipamentos: [], editingId: "", loading: false, filtro: "" };
+  const USUARIOS_STATE = { items: [], editingId: "", loading: false, filtro: "" };
+  const STORAGE_KEYS = {
+    SESSION: "SGO_SESSION",
+    SESSION_ID: "SGO_SESSION_ID",
+    IDLE_LIMIT: "SGO_IDLE_LIMIT",
+    SOM_OCIOSIDADE: "SGO_SOM_OCIOSIDADE",
+    MSG_MOTIVACIONAL_IDX: "SGO_MSG_MOTIVACIONAL_IDX"
+  };
+  const MENSAGENS_FALLBACK = [
+    "Disciplina vence talento todos os dias.",
+    "Qualidade não é opção, é padrão.",
+    "Você não trabalha com equipamentos, você trabalha com vidas.",
+    "Excelência é fazer bem feito mesmo quando ninguém está vendo.",
+    "Cada relatório seu sustenta a credibilidade da Metrolabs.",
+    "Foco, padrão e consistência — esse é o jogo.",
+    "Pequenos detalhes fazem grandes auditorias passarem.",
+    "Quem domina o processo domina o resultado.",
+    "Seu trabalho impacta diretamente a segurança do paciente.",
+    "Alta performance é hábito, não evento."
+  ];
+
+  window.onload = function () {
+    carregarConfiguracoesIniciais();
+    registrarEventosDeAtividade();
+    registrarAtalhoEnterLogin();
+    tentarAutoLogin_();
+  };
+
+  // ==========================================
+  // HELPERS DE STORAGE
+  // ==========================================
+  function getSessionStorageItem_(key) {
+    try {
+      return sessionStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setSessionStorageItem_(key, value) {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (e) {
+      /* Falha silenciosa ao salvar no sessionStorage. */
+    }
+  }
+
+  function removeSessionStorageItem_(key) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      /* Falha silenciosa ao remover do sessionStorage. */
+    }
+  }
+
+  function getLocalStorageItem_(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setLocalStorageItem_(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      /* Falha silenciosa ao salvar no localStorage. */
+    }
+  }
+
+  function removeLocalStorageItem_(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      /* Falha silenciosa ao remover do localStorage. */
+    }
+  }
+
+  function limparSessoesLegacy_() {
+    removeLocalStorageItem_(STORAGE_KEYS.SESSION);
+    removeLocalStorageItem_(STORAGE_KEYS.SESSION_ID);
+  }
+
+  // ==========================================
+  // CONFIGURAÇÕES INICIAIS
+  // ==========================================
+  function carregarConfiguracoesIniciais() {
+    google.script.run
+      .withSuccessHandler(function (cfg) {
+        try {
+          PUBLIC_CONFIG = cfg || {};
+          MOTORES = PUBLIC_CONFIG.motores || {};
+
+          const localIdle = getLocalStorageItem_(STORAGE_KEYS.IDLE_LIMIT);
+          if (localIdle) {
+            IDLE_LIMIT = parseInt(localIdle, 10);
+          } else {
+            IDLE_LIMIT = Number(PUBLIC_CONFIG.idleSecondsDefault || 300);
+          }
+
+          if (!isFinite(IDLE_LIMIT) || IDLE_LIMIT < 30) IDLE_LIMIT = 300;
+
+          if (typeof PUBLIC_CONFIG.idleSoundDefault === "boolean") {
+            const prefLocal = lerPreferenciaSomOciosidade_();
+            SOM_OCIOSIDADE_ATIVO = prefLocal === null ? PUBLIC_CONFIG.idleSoundDefault : prefLocal;
+          } else {
+            const prefLocal = lerPreferenciaSomOciosidade_();
+            SOM_OCIOSIDADE_ATIVO = prefLocal === null ? true : prefLocal;
+          }
+
+          aplicarMensagemMotivacional_();
+        } catch (e) {
+          /* Falha controlada ao aplicar configurações iniciais. */
+        }
+      })
+      .withFailureHandler(function (err) {
+        /* Falha controlada ao carregar configurações públicas. */
+      })
+      .getPublicConfig();
+  }
+
+  // ==========================================
+  // SISTEMA DE LOGIN E SESSÃO
+  // ==========================================
+  function tentarAutoLogin_() {
+    const sessaoSalva = getSessionStorageItem_(STORAGE_KEYS.SESSION);
+    if (!sessaoSalva) return;
+
+    setBotaoLoginEstado_(true);
+    LOGIN_EM_ANDAMENTO = true;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+
+        if (res && res.success && res.session) {
+          SESSION = res.session.sessionId || "";
+          USER_CONTEXT = res.session || null;
+
+          if (SESSION) {
+            setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+          }
+
+          exibirAppLogado_();
+          aplicarContextoUsuario_();
+          resetarOciosidade_();
+          iniciarMonitorOciosidade_();
+          verificarRedirecionamentoQR_();
+        } else {
+          limparSessaoFront_();
+        }
+      })
+      .withFailureHandler(function (err) {
+        /* Falha controlada no auto login. */
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        limparSessaoFront_();
+      })
+      .getSessaoAtual(sessaoSalva);
+  }
+
+  function fazerLogin() {
+    if (LOGIN_EM_ANDAMENTO) return;
+
+    const usuarioEl = document.getElementById("usuario");
+    const senhaEl = document.getElementById("senha");
+    const usuario = usuarioEl ? String(usuarioEl.value || "").trim() : "";
+    const senha = senhaEl ? String(senhaEl.value || "").trim() : "";
+    if (!usuario) {
+      alert("Informe o usuário.");
+      if (usuarioEl) usuarioEl.focus();
+      return;
+    }
+
+    if (!senha) {
+      alert("Informe a senha.");
+      if (senhaEl) senhaEl.focus();
+      return;
+    }
+
+    LOGIN_EM_ANDAMENTO = true;
+    setBotaoLoginEstado_(true);
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+
+        if (!res || !res.success) {
+          alert((res && res.message) ? res.message : "Falha no login.");
+          return;
+        }
+
+        SESSION = res.sessionId || null;
+        USER_CONTEXT = res.user || null;
+
+        if (SESSION) {
+          setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+        }
+
+        exibirAppLogado_();
+        aplicarContextoUsuario_();
+        resetarOciosidade_();
+        iniciarMonitorOciosidade_();
+        aplicarMensagemMotivacional_();
+        verificarRedirecionamentoQR_();
+      })
+      .withFailureHandler(function (err) {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        /* Falha controlada no login. */
+        alert("Erro ao processar o login. Tente novamente.");
+      })
+      .login(usuario, senha);
+  }
+
+  function exibirAppLogado_() {
+    const loginBox = document.getElementById("login");
+    const appBox = document.getElementById("app");
+    if (loginBox) loginBox.style.display = "none";
+    if (appBox) appBox.style.display = "flex";
+  }
+
+  function exibirTelaLogin_() {
+    const loginBox = document.getElementById("login");
+    const appBox = document.getElementById("app");
+    const inputSenha = document.getElementById("senha");
+    if (appBox) appBox.style.display = "none";
+    if (loginBox) loginBox.style.display = "flex";
+    if (inputSenha) inputSenha.value = "";
+  }
+
+  function aplicarContextoUsuario_() {
+    const userInfo = document.getElementById("userInfo");
+    if (userInfo && USER_CONTEXT) {
+      userInfo.innerHTML = `
+        <i class="fas fa-circle-user" style="font-size:22px;color:rgba(255,255,255,0.7);margin-right:8px;"></i>
+        <div style="line-height:1.3;">
+          <div style="font-size:13px;font-weight:700;">${escapeHtml_(USER_CONTEXT.nome || USER_CONTEXT.usuario || "")}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">${escapeHtml_(USER_CONTEXT.perfil || "")}</div>
+        </div>
+      `;
+    }
+
+    aplicarRegrasDeAcesso_();
+
+    // MOBILE TEM PRIORIDADE ABSOLUTA:
+    // se for celular/tablet, prepara o shell e renderiza a tela de campo imediatamente.
+    // Isso evita tela branca quando o callback assíncrono do QR demorar ou não retornar.
+    if (isDispositivoMovel_()) {
+      mobileRotearPosLogin_();
+      return;
+    }
+
+    restaurarLayoutPadrao_();
+  }
+
+  function limparSessaoFront_() {
+    removeSessionStorageItem_(STORAGE_KEYS.SESSION);
+    removeSessionStorageItem_(STORAGE_KEYS.SESSION_ID);
+    limparSessoesLegacy_();
+    SESSION = null;
+    USER_CONTEXT = null;
+  }
+
+  function verificarRedirecionamentoQR_() {
+    if (typeof google !== "undefined" && google.script && google.script.url) {
+      google.script.url.getLocation(function (location) {
+        if (location.parameters && location.parameters.equipamento && location.parameters.equipamento[0]) {
+          const equipId = location.parameters.equipamento[0];
+
+          const div = document.getElementById("conteudo");
+          if (div) {
+            div.innerHTML = `
+              <div style="padding: 40px 20px; text-align: center; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: var(--shadow); border: 1px solid var(--border);">
+                <h2 style="color: var(--metro-blue); margin-bottom: 10px;">Acessando Equipamento...</h2>
+                <p style="color: var(--muted); font-size: 15px;">Validando credenciais e localizando os dados do equipamento.</p>
+                <div style="margin-top: 20px; padding: 15px; border-radius: 8px; background: var(--info-bg); color: var(--metro-blue); font-weight: 600;">
+                  ⏳ Por favor, aguarde o redirecionamento...
+                </div>
+              </div>
+            `;
+          }
+
+          google.script.run
+            .withSuccessHandler(function (res) {
+              if (res && res.success && res.redirectUrl && res.equipamento) {
+                renderProntuarioDigital_(res.redirectUrl, res.equipamento);
+              } else {
+                alert(res ? res.message : "Erro ao tentar abrir os dados do equipamento.");
+                mobileRotearPosLogin_();
+              }
+            })
+            .withFailureHandler(function () {
+              alert("Falha na comunicação com o servidor ao processar o QR Code.");
+              mobileRotearPosLogin_();
+            })
+            .qrcodeAcessar(SESSION, equipId);
+        } else {
+          mobileRotearPosLogin_();
+        }
+      });
+    } else {
+      mobileRotearPosLogin_();
+    }
+  }
+
+  function mobileRotearPosLogin_() {
+    if (!isDispositivoMovel_()) {
+      restaurarLayoutPadrao_();
+      abrir("dashboard");
+      return;
+    }
+
+    var _perfil = (typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && USER_CONTEXT.perfil)
+      ? String(USER_CONTEXT.perfil).toUpperCase() : "";
+    var _perfisCampo = ["ADMIN", "GESTOR", "DIRETORIA", "TECNICO", "METROLOGIA"];
+    if (_perfisCampo.indexOf(_perfil) < 0) {
+      restaurarLayoutPadrao_();
+      abrir("dashboard");
+      return;
+    }
+
+    prepararShellMobile_();
+
+    var tentativas = 0;
+    var maxTentativas = 30;
+
+    function tentarRenderizarMobileReal_() {
+      tentativas++;
+
+      if (typeof window.renderMobileCampo_ === "function") {
+        try {
+          window.renderMobileCampo_();
+
+          const div = document.getElementById("conteudo");
+          const html = div ? String(div.innerHTML || "").trim() : "";
+
+          if (!html || html.length < 30) {
+            if (tentativas < maxTentativas) {
+              setTimeout(tentarRenderizarMobileReal_, 100);
+              return;
+            }
+            renderMobileErroTecnico_("JS_Mobile carregou, mas não preencheu a tela mobile.");
+          }
+          return;
+        } catch (e) {
+          /* Falha controlada ao executar renderMobileCampo_. */
+          renderMobileErroTecnico_("Erro ao executar a interface mobile real: " + (e && e.message ? e.message : e));
+          return;
+        }
+      }
+
+      if (tentativas < maxTentativas) {
+        setTimeout(tentarRenderizarMobileReal_, 100);
+        return;
+      }
+
+      renderMobileErroTecnico_("JS_MobileCampo.html não expôs renderMobileCampo_ após aguardar o carregamento.");
+    }
+
+    tentarRenderizarMobileReal_();
+  }
+
+  function renderProntuarioDigital_(urlPasta, eqp) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    const topbar = document.querySelector(".topbar");
+    const sidebar = document.querySelector(".sidebar");
+    const areaAvisos = document.getElementById("areaAvisos");
+
+    if (topbar) topbar.style.display = "none";
+    if (sidebar) sidebar.style.display = "none";
+    if (areaAvisos) areaAvisos.style.display = "none";
+    const logoSrc = (typeof PUBLIC_CONFIG !== "undefined" && PUBLIC_CONFIG && PUBLIC_CONFIG.logo)
+        ? PUBLIC_CONFIG.logo
+        : "https://metrolabs.com.br/wp-content/uploads/2021/05/logo-metrolabs.png";
+    div.innerHTML = `
+      <style>
+        .content-area { padding: 0 !important; background: #f4f7f6 !important; }
+        .main-layout { min-height: 100vh !important; }
+      </style>
+      <div style="width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 30px 20px; background: #f4f7f6; font-family: 'Segoe UI', sans-serif;">
+        <img src="${logoSrc}" alt="Metrolabs" style="width: 180px; height: auto; margin-bottom: 30px;">
+        <div style="background: #ffffff; width: 100%; max-width: 400px; border-radius: 12px; border: 1px solid #dadce0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 25px; margin-bottom: 25px;">
+          <h2 style="font-size: 16px; color: var(--metro-blue-dark, #083978); text-transform: uppercase; border-bottom: 2px solid var(--metro-green, #007b3e); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; text-align: center;">
+            Identificação do Equipamento
+          </h2>
+          <div style="display: flex; flex-direction: column; gap: 14px; text-align: left;">
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+              <span style="display: block; font-size: 11px; color: var(--muted, #5f6368); font-weight: 700; text-transform: uppercase;">TAG</span>
+              <span style="display: block; font-size: 18px; color: var(--text, #202124); font-weight: 800;">${escapeHtml_(eqp.TAG || "--")}</span>
+            </div>
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+              <span style="display: block; font-size: 11px; color: var(--muted, #5f6368); font-weight: 700; text-transform: uppercase;">Equipamento</span>
+              <span style="display: block; font-size: 15px; color: var(--text, #202124); font-weight: 600;">${escapeHtml_(eqp.TIPO || "--")}</span>
+            </div>
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+              <span style="display: block; font-size: 11px; color: var(--muted, #5f6368); font-weight: 700; text-transform: uppercase;">Fabricante / Modelo</span>
+              <span style="display: block; font-size: 14px; color: var(--text, #202124); font-weight: 500;">${escapeHtml_(eqp.FABRICANTE || "--")} / ${escapeHtml_(eqp.MODELO || "--")}</span>
+            </div>
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+              <span style="display: block; font-size: 11px; color: var(--muted, #5f6368); font-weight: 700; text-transform: uppercase;">Série</span>
+              <span style="display: block; font-size: 14px; color: var(--text, #202124); font-weight: 500;">${escapeHtml_(eqp.SERIE || "--")}</span>
+            </div>
+            <div style="padding-bottom: 4px;">
+              <span style="display: block; font-size: 11px; color: var(--muted, #5f6368); font-weight: 700; text-transform: uppercase;">Localização</span>
+              <span style="display: block; font-size: 13px; color: var(--text, #202124); font-weight: 600;">${escapeHtml_(eqp.CLIENTE_NOME || "--")} - ${escapeHtml_(eqp.UNIDADE_NOME || "--")}</span>
+            </div>
+          </div>
+          <button onclick="window.open('${urlPasta}', '_blank')" style="width: 100%; padding: 14px; background-color: var(--metro-green, #007b3e); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin-top: 25px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+            Abrir Prontuário Digital ↗
+          </button>
+        </div>
+        <button onclick="logout()" style="width: 100%; max-width: 400px; padding: 15px; background-color: var(--danger, #d93025); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          SAIR DO SISTEMA
+        </button>
+      </div>
+    `;
+  }
+
+  function restaurarLayoutPadrao_() {
+    const topbar = document.querySelector(".topbar");
+    const sidebar = document.querySelector(".sidebar");
+    const areaAvisos = document.getElementById("areaAvisos");
+    const contentArea = document.querySelector(".content-area");
+    const mainLayout = document.querySelector(".main-layout");
+    const appBox = document.getElementById("app");
+
+    // Em mobile, nunca reativa o shell desktop automaticamente.
+    // A tela de campo controla o conteúdo e a Gestão Completa só abre por clique explícito.
+    if (isDispositivoMovel_()) {
+      prepararShellMobile_();
+      return;
+    }
+
+    document.body.classList.remove("sgo-mobile-ativo");
+
+    if (appBox) appBox.style.display = "flex";
+    if (topbar) topbar.style.display = "";
+    if (sidebar) sidebar.style.display = "";
+    if (areaAvisos) areaAvisos.style.display = "none";
+
+    if (contentArea) {
+      contentArea.style.padding = "";
+      contentArea.style.background = "";
+      contentArea.style.width = "";
+      contentArea.style.minHeight = "";
+    }
+
+    if (mainLayout) {
+      mainLayout.style.minHeight = "";
+      mainLayout.style.width = "";
+    }
+  }
+
+  function prepararShellMobile_() {
+    const appBox = document.getElementById("app");
+    const topbar = document.querySelector(".topbar");
+    const sidebar = document.querySelector(".sidebar");
+    const areaAvisos = document.getElementById("areaAvisos");
+    const contentArea = document.querySelector(".content-area");
+    const mainLayout = document.querySelector(".main-layout");
+
+    document.body.classList.add("sgo-mobile-ativo");
+
+    if (appBox) appBox.style.display = "flex";
+    if (topbar) topbar.style.display = "none";
+    if (sidebar) sidebar.style.display = "none";
+    if (areaAvisos) areaAvisos.style.display = "none";
+
+    if (mainLayout) {
+      mainLayout.style.width = "100%";
+      mainLayout.style.minHeight = "100vh";
+    }
+
+    if (contentArea) {
+      contentArea.style.padding = "0";
+      contentArea.style.background = "#f8fafc";
+      contentArea.style.width = "100%";
+      contentArea.style.minHeight = "100vh";
+    }
+  }
+
+  function renderMobileErroTecnico_(mensagem) {
+    const div = document.getElementById("conteudo");
+    prepararShellMobile_();
+    if (!div) return;
+
+    div.innerHTML = `
+      <div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:20px;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif;">
+        <div style="max-width:420px;width:100%;background:#fff;border:1px solid #fecaca;border-radius:18px;padding:22px;box-shadow:0 12px 28px rgba(15,23,42,.12);">
+          <div style="font-size:13px;font-weight:900;color:#b91c1c;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Falha ao carregar o SGO+ Campo</div>
+          <div style="font-size:15px;color:#0f172a;font-weight:700;line-height:1.45;margin-bottom:10px;">${escapeHtml_(mensagem || "Interface mobile indisponível.")}</div>
+          <div style="font-size:12px;color:#64748b;line-height:1.45;margin-bottom:16px;">O núcleo aguardou a interface mobile real do arquivo JS_MobileCampo.html, mas ela não ficou disponível no navegador. Não foi carregado layout improvisado.</div>
+          <button type="button" onclick="location.reload()" style="width:100%;border:none;background:#0f172a;color:#fff;border-radius:12px;padding:13px;font-size:13px;font-weight:900;cursor:pointer;margin-bottom:8px;">Recarregar</button>
+          <button type="button" onclick="window.SGO_FORCAR_DESKTOP=true;restaurarLayoutPadrao_();abrir('dashboard')" style="width:100%;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:12px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;">Abrir Gestão Completa</button>
+        </div>
+      </div>
+    `;
+  }
+
+  
+
+  
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+  function logout(expirado = false) {
+    pararMonitorOciosidade_();
+    pararSomOciosidade_();
+    const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
+    limparSessaoFront_();
+    exibirTelaLogin_();
+
+    if (expirado === true) {
+      alert("A sua sessão foi encerrada por inatividade de 4 horas. Por favor, faça login novamente.");
+    }
+
+    if (currentSession) {
+      google.script.run
+        .withFailureHandler(function (err) {
+          /* Falha controlada ao encerrar sessão no servidor. */
+        })
+        .logout(currentSession);
+    }
+  }
+
+  function setBotaoLoginEstado_(bloqueado) {
+    const botao = document.getElementById("btnLogin") || document.querySelector("#login button");
+    if (!botao) return;
+    botao.disabled = !!bloqueado;
+    botao.innerText = bloqueado ? "Entrando..." : "Entrar";
+  }
+
+  function registrarAtalhoEnterLogin() {
+    const usuarioEl = document.getElementById("usuario");
+    const senhaEl = document.getElementById("senha");
+    [usuarioEl, senhaEl].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          fazerLogin();
+        }
+      });
+    });
+  }
+
+  function aplicarRegrasDeAcesso_() {
+    if (!USER_CONTEXT) return;
+
+    const perfil = String(USER_CONTEXT.perfil || "").toUpperCase();
+    const modulos = obterModulosPermitidosPorPerfil_(perfil);
+
+    document.querySelectorAll(".sidebar .menu-btn").forEach(function(btn) {
+      const onclick = btn.getAttribute("onclick") || "";
+      const match = onclick.match(/abrir\(['"]([^'"]+)['"]\)/);
+      if (!match) return;
+      const modulo = match[1];
+      btn.style.display = modulos.indexOf(modulo) >= 0 ? "" : "none";
+    });
+
+    ["menu-secao-tecnica", "menu-secao-admin"].forEach(function(id) {
+      const secao = document.getElementById(id);
+      if (!secao) return;
+      const algumVisivel = Array.prototype.some.call(secao.querySelectorAll(".menu-btn"), function(btn) {
+        return btn.style.display !== "none";
+      });
+      secao.style.display = algumVisivel ? "" : "none";
+    });
+  }
+
+  function obterModulosPermitidosPorPerfil_(perfil) {
+    const todos = [
+      "dashboard", "dashboard_bi", "clientes", "unidades", "equipamentos",
+      "documentos", "registros", "relatorios", "inventario", "importacao",
+      "contratos", "os", "os_questionarios", "assistencia_tecnica", "missoes", "tecnicos", "pecas", "fornecedores",
+      "estoque", "rastreabilidade", "frota", "admin", "autoclave",
+      "lavadora", "relatorio_conformidade", "planejamento_cme"
+    ];
+    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return todos;
+
+    const mapa = {
+      CLIENTE: ["dashboard", "equipamentos", "documentos", "os", "relatorios"],
+      TECNICO: ["dashboard", "equipamentos", "documentos", "registros", "os", "assistencia_tecnica", "missoes", "pecas", "rastreabilidade"],
+      METROLOGIA: ["dashboard", "dashboard_bi", "equipamentos", "documentos", "registros", "relatorios", "os", "os_questionarios", "assistencia_tecnica", "missoes", "pecas", "rastreabilidade", "autoclave", "lavadora", "relatorio_conformidade"],
+      COMERCIAL: ["dashboard", "clientes", "contratos", "relatorios", "dashboard_bi"],
+      FINANCEIRO: ["dashboard", "contratos", "os", "relatorios", "dashboard_bi"]
+    };
+    return mapa[perfil] || ["dashboard"];
+  }
+
+  function usuarioPodeAbrirModulo_(mod) {
+    if (!USER_CONTEXT) return false;
+    return obterModulosPermitidosPorPerfil_(String(USER_CONTEXT.perfil || "").toUpperCase()).indexOf(mod) >= 0;
+  }
+
+  // ==========================================
+  // ROTEADOR CENTRAL E DASHBOARD
+  // ==========================================
+  function abrir(mod) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    if (isDispositivoMovel_()) {
+      prepararShellMobile_();
+
+      // No mobile, dashboard sempre volta para a tela de campo,
+      // exceto quando o usuário clicou conscientemente em Gestão Completa.
+      if (!mod || mod === "dashboard") {
+        mobileRotearPosLogin_();
+        return;
+      }
+    } else {
+      restaurarLayoutPadrao_();
+    }
+
+    limparAlertasTemporarios_();
+
+    if (!usuarioPodeAbrirModulo_(mod)) {
+      div.innerHTML = `
+        <div class="module-shell">
+          <div class="avisos-wrap" style="display:block;">
+            Acesso visual indisponível para o seu perfil neste módulo.
+          </div>
+        </div>`;
+      atualizarBadgeModulo_(mod);
+      return;
+    }
+
+    if (mod === "dashboard") {
+      div.innerHTML = montarDashboardHtml_();
+      atualizarBadgeModulo_("dashboard");
+      carregarDadosDashboard_();
+      carregarAlertasDashboard_();
+      return;
+    }
+
+    if (mod === "autoclave") {
+      renderMotorModulo_("Autoclaves", "autoclave");
+      atualizarBadgeModulo_("autoclave");
+      return;
+    }
+
+    if (mod === "lavadora") {
+      renderMotorModulo_("Lavadoras", "lavadora");
+      atualizarBadgeModulo_("lavadora");
+      return;
+    }
+
+    if (mod === "relatorio_conformidade") {
+      renderMotorModulo_("Carta / Relatório de Conformidade", "relatorio_conformidade");
+      atualizarBadgeModulo_("relatorio_conformidade");
+      return;
+    }
+
+    if (mod === "clientes") {
+      renderClientesModulo_();
+      atualizarBadgeModulo_("clientes");
+      return;
+    }
+
+    if (mod === "unidades") {
+      renderUnidadesModulo_();
+      atualizarBadgeModulo_("unidades");
+      if (typeof carregarClientesAtivosParaUnidades_ === "function") {
+        carregarClientesAtivosParaUnidades_();
+      }
+      return;
+    }
+
+    if (mod === "equipamentos") {
+      renderEquipamentosModulo_();
+      atualizarBadgeModulo_("equipamentos");
+      if (typeof carregarClientesParaEquipamentos_ === "function") {
+        carregarClientesParaEquipamentos_();
+      }
+      return;
+    }
+
+    if (mod === "pecas") {
+      renderPecasModulo_();
+      atualizarBadgeModulo_("pecas");
+      return;
+    }
+
+    if (mod === "contratos") {
+      renderContratosModulo_();
+      atualizarBadgeModulo_("contratos");
+      return;
+    }
+
+    if (mod === "fornecedores") {
+      renderFornecedoresModulo_();
+      atualizarBadgeModulo_("fornecedores");
+      return;
+    }
+
+    if (mod === "estoque") {
+      renderEstoqueModulo_();
+      atualizarBadgeModulo_("estoque");
+      return;
+    }
+
+    if (mod === "rastreabilidade") {
+      renderRastreabilidadeModulo_();
+      atualizarBadgeModulo_("rastreabilidade");
+      return;
+    }
+
+    if (mod === "os") {
+      renderOSModulo_();
+      atualizarBadgeModulo_("os");
+      return;
+    }
+
+    if (mod === "os_questionarios") {
+      if (typeof renderOSQuestionariosModulo_ === "function") renderOSQuestionariosModulo_();
+      atualizarBadgeModulo_("os_questionarios");
+      return;
+    }
+
+    if (mod === "assistencia_tecnica") {
+      if (typeof renderAssistenciaTecnicaModulo_ === "function") renderAssistenciaTecnicaModulo_();
+      atualizarBadgeModulo_("assistencia_tecnica");
+      return;
+    }
+
+    if (mod === "missoes") {
+      renderMissoesModulo_();
+      atualizarBadgeModulo_("missoes");
+      return;
+    }
+
+    if (mod === "frota") {
+      renderFrotaModulo_();
+      atualizarBadgeModulo_("frota");
+      return;
+    }
+
+    if (mod === "dashboard_bi") {
+      renderDashboardBIModulo_();
+      atualizarBadgeModulo_("dashboard_bi");
+      return;
+    }
+
+    if (mod === "documentos") {
+      renderDocumentosModulo_();
+      atualizarBadgeModulo_("documentos");
+      if (typeof carregarClientesParaDocumentos_ === "function") {
+        carregarClientesParaDocumentos_();
+      }
+      return;
+    }
+
+    if (mod === "admin") {
+      renderAdminModulo_();
+      atualizarBadgeModulo_("admin");
+      if (typeof preencherEstadoPainelAdmin_ === "function") {
+        preencherEstadoPainelAdmin_();
+      }
+      return;
+    }
+
+    if (mod === "inventario") {
+      renderInventarioModulo_();
+      atualizarBadgeModulo_("inventario");
+      return;
+    }
+
+    if (mod === "importacao") {
+      if (typeof renderImportacaoModulo_ === "function") renderImportacaoModulo_();
+      atualizarBadgeModulo_("importacao");
+      return;
+    }
+
+    if (mod === "registros") {
+      if (typeof renderRegistrosModulo_ === "function") renderRegistrosModulo_();
+      atualizarBadgeModulo_("registros");
+      return;
+    }
+
+    if (mod === "relatorios") {
+      if (typeof renderRelatoriosModulo_ === "function") renderRelatoriosModulo_();
+      atualizarBadgeModulo_("relatorios");
+      return;
+    }
+
+    if (mod === "tecnicos") {
+      if (typeof renderTecnicosModulo_ === "function") renderTecnicosModulo_();
+      atualizarBadgeModulo_("tecnicos");
+      return;
+    }
+
+    if (mod === "planejamento_cme") {
+      const urlPlanejamento = "https://script.google.com/macros/s/AKfycbxgzM8s13T1WQkivPa6rwDe_s0pvsV8YjMHodP1TtWyIV9kl60hWIM22Bh1jjGIDfaWXQ/exec";
+      div.innerHTML = `
+        <div class="module-shell">
+          <div class="module-header">
+            <div class="module-header-left">
+              <h2 class="content-title">Planejamento CME</h2>
+              <p class="content-subtitle">Assistente guiado para cálculo de insumos e planejamento técnico.</p>
+            </div>
+          </div>
+    
+          <div class="iframe-container" style="height: calc(100vh - 180px); min-height: 700px; width: 100%;">
+            <iframe id="iframe_planejamento" src="${urlPlanejamento}" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+          </div>
+        </div>
+      `;
+      atualizarBadgeModulo_("planejamento_cme");
+      return;
+    }
+
+    div.innerHTML = "<p>Módulo não encontrado.</p>";
+  }
+
+  function obterBadgeStatusHtml_(statusString) {
+    const status = String(statusString || "").trim().toUpperCase();
+    if (status === "ATIVO") return '<span class="badge badge-ativo">ATIVO</span>';
+    if (status === "PENDENTE") return '<span class="badge badge-pendente">PENDENTE</span>';
+    if (status === "BLOQUEADO") return '<span class="badge badge-bloqueado">BLOQUEADO</span>';
+    return `<span class="badge badge-inativo">${escapeHtml_(status || "INATIVO")}</span>`;
+  }
+
+  function montarDashboardHtml_() {
+    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
+    const nome = USER_CONTEXT ? (USER_CONTEXT.nome || USER_CONTEXT.usuario || "Usuário") : "Usuário";
+    const hora = new Date().getHours();
+    const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+    const hide = isCliente ? "display:none;" : "";
+
+    return `
+    <style>
+      .db-shell{display:flex;flex-direction:column;gap:20px;}
+      .db-welcome{background:linear-gradient(135deg,#0d1f14 0%,#0a3520 55%,#0d2d3a 100%);border-radius:16px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;color:#fff;position:relative;overflow:hidden;}
+      .db-welcome::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(16,185,129,.15) 0%,transparent 70%);pointer-events:none;}
+      .db-welcome::before{content:"";position:absolute;left:40%;bottom:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(37,99,235,.1) 0%,transparent 70%);pointer-events:none;}
+      .db-w-title{font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.3px;}
+      .db-w-sub{font-size:13px;color:rgba(255,255,255,.55);margin:0;font-weight:500;}
+      .db-w-badges{display:flex;gap:10px;flex-shrink:0;}
+      .db-w-badge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 16px;text-align:center;min-width:80px;}
+      .db-w-badge-label{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;font-weight:700;}
+      .db-w-badge-val{font-size:20px;font-weight:900;color:#10b981;letter-spacing:-1px;}
+
+      .db-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+      .db-kpi{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;transition:all .2s;}
+      .db-kpi:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.1);}
+      .db-kpi-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+      .db-kpi-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+      .db-kpi-num{font-size:32px;font-weight:900;letter-spacing:-1.5px;line-height:1;margin-bottom:3px;}
+      .db-kpi-sub{font-size:11px;color:var(--muted);font-weight:500;}
+
+      .db-mid{display:grid;grid-template-columns:3fr 2fr;gap:16px;}
+      .db-card{background:#fff;border-radius:14px;padding:22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--border);}
+      .db-card-title{font-size:13px;font-weight:800;color:var(--text);margin:0 0 18px;display:flex;align-items:center;gap:8px;}
+      .db-card-title i{color:var(--metro-green);}
+
+      .db-donuts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+      .db-donut-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+      .db-donut-svg{width:96px;height:96px;transform:rotate(-90deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,.1));}
+      .db-donut-track{fill:none;stroke:#f1f5f9;stroke-width:3.5;}
+      .db-donut-fill{fill:none;stroke-width:3.5;stroke-linecap:round;transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1);}
+      .db-donut-center{position:relative;width:96px;height:96px;margin-bottom:-96px;display:flex;align-items:center;justify-content:center;}
+      .db-donut-pct{font-size:17px;font-weight:900;color:var(--text);position:absolute;}
+      .db-donut-label{font-size:11px;font-weight:700;color:var(--muted);text-align:center;line-height:1.3;text-transform:uppercase;letter-spacing:.3px;}
+
+      .db-bars{display:flex;flex-direction:column;gap:11px;}
+      .db-bar-row{display:flex;flex-direction:column;gap:4px;}
+      .db-bar-hdr{display:flex;justify-content:space-between;font-size:12px;font-weight:700;}
+      .db-bar-track{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;}
+      .db-bar-fill{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.4,0,.2,1);width:0%;}
+
+      .db-posse{display:flex;flex-direction:column;gap:14px;}
+      .db-posse-hdr{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;font-weight:700;}
+      .db-posse-track{height:10px;background:#f1f5f9;border-radius:5px;overflow:hidden;}
+      .db-posse-fill{height:100%;border-radius:5px;transition:width 1.3s cubic-bezier(.4,0,.2,1);width:0%;}
+
+      .db-bot{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+      .db-top-list{display:flex;flex-direction:column;gap:8px;}
+      .db-top-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px solid var(--border);transition:all .15s;}
+      .db-top-item:hover{background:var(--metro-green-xlight);border-color:#a7f3d0;}
+      .db-top-rank{width:26px;height:26px;border-radius:50%;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+      .db-top-name{flex:1;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .db-top-cnt{font-size:12px;font-weight:800;background:var(--metro-green-xlight);color:var(--metro-green-dark);padding:2px 10px;border-radius:12px;white-space:nowrap;}
+
+      .db-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+      .db-act-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px 10px;border-radius:12px;border:1.5px solid var(--border);background:#fff;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;line-height:1.3;}
+      .db-act-btn:hover{border-color:var(--metro-green);background:var(--metro-green-xlight);color:var(--metro-green-dark);transform:translateY(-2px);box-shadow:0 4px 12px rgba(5,150,105,.15);}
+      .db-act-btn i{font-size:22px;color:var(--metro-green);}
+      .db-act-btn:hover i{color:var(--metro-green-dark);}
+
+      .db-alert-filters{display:flex;gap:7px;flex-wrap:wrap;}
+      .db-alert-filter{padding:4px 13px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--muted);}
+      .db-alert-filter.af-active{background:var(--metro-green);border-color:var(--metro-green);color:#fff;}
+      .db-alert-item{display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border-radius:10px;margin-bottom:7px;border:1px solid;}
+      .db-alert-item.ai-vencido{background:var(--danger-bg);border-color:#fecaca;color:#991b1b;}
+      .db-alert-item.ai-vencendo{background:var(--warning-bg);border-color:#fde68a;color:#92400e;}
+      .db-alert-item.ai-ok{background:var(--success-bg);border-color:#a7f3d0;color:#065f46;}
+      .db-alert-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+      .db-alert-msg{flex:1;font-size:13px;font-weight:600;line-height:1.4;}
+
+      .db-divider{height:1px;background:var(--border);margin:18px 0;}
+
+      @media(max-width:1200px){.db-kpi-row{grid-template-columns:repeat(2,1fr)}.db-mid{grid-template-columns:1fr}.db-bot{grid-template-columns:1fr}}
+      @media(max-width:640px){.db-kpi-row{grid-template-columns:1fr 1fr}.db-donuts{grid-template-columns:1fr 1fr}.db-actions{grid-template-columns:1fr 1fr}}
+    </style>
+
+    <div class="db-shell">
+      <div class="db-welcome">
+        <div>
+          <p class="db-w-title">${saudacao}, ${escapeHtml_(nome)}!</p>
+          <p class="db-w-sub">METROLABS SGO+ &nbsp;·&nbsp; Painel de Controle Operacional</p>
+        </div>
+        <div class="db-w-badges" style="${hide}">
+          <div class="db-w-badge">
+            <div class="db-w-badge-label">Sessão</div>
+            <div class="db-w-badge-val" style="font-size:13px;color:#6ee7b7;">Ativa</div>
+          </div>
+          <div class="db-w-badge">
+            <div class="db-w-badge-label">Alertas</div>
+            <div class="db-w-badge-val" id="kpiAlertas">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-kpi-row">
+        <div class="db-kpi" style="${hide}">
+          <div class="db-kpi-icon" style="background:#ecfdf5;"><i class="fas fa-building" style="color:#059669;"></i></div>
+          <div>
+            <div class="db-kpi-label">Clientes</div>
+            <div class="db-kpi-num" id="kpiClientes" style="color:#059669;">—</div>
+            <div class="db-kpi-sub">ativos</div>
+          </div>
+        </div>
+        <div class="db-kpi">
+          <div class="db-kpi-icon" style="background:#eff6ff;"><i class="fas fa-microscope" style="color:#2563eb;"></i></div>
+          <div>
+            <div class="db-kpi-label">Equipamentos</div>
+            <div class="db-kpi-num" id="kpiEquipamentos" style="color:#2563eb;">—</div>
+            <div class="db-kpi-sub">cadastrados</div>
+          </div>
+        </div>
+        <div class="db-kpi">
+          <div class="db-kpi-icon" style="background:#fff7ed;"><i class="fas fa-folder-open" style="color:#ea580c;"></i></div>
+          <div>
+            <div class="db-kpi-label">Documentos</div>
+            <div class="db-kpi-num" id="kpiDocumentos" style="color:#ea580c;">—</div>
+            <div class="db-kpi-sub">ativos</div>
+          </div>
+        </div>
+        <div class="db-kpi">
+          <div class="db-kpi-icon" style="background:#fef2f2;"><i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i></div>
+          <div>
+            <div class="db-kpi-label">Alertas Críticos</div>
+            <div class="db-kpi-num" id="kpiAlertasKPI" style="color:#dc2626;">—</div>
+            <div class="db-kpi-sub">vencidos / urgentes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-mid">
+        <div class="db-card">
+          <div class="db-card-title"><i class="fas fa-file-circle-check"></i> Saúde Documental</div>
+          <div class="db-donuts">
+            <div class="db-donut-wrap">
+              <div class="db-donut-center"><span class="db-donut-pct" id="donutDocPct">0%</span></div>
+              <svg class="db-donut-svg" viewBox="0 0 36 36">
+                <circle class="db-donut-track" cx="18" cy="18" r="15.9"/>
+                <circle class="db-donut-fill" id="donutDocFill" cx="18" cy="18" r="15.9" stroke="#059669" stroke-dasharray="0 100" stroke-dashoffset="25"/>
+              </svg>
+              <div class="db-donut-label">Documentos<br>em dia</div>
+            </div>
+            <div class="db-donut-wrap">
+              <div class="db-donut-center"><span class="db-donut-pct" id="donutEqpPct">0%</span></div>
+              <svg class="db-donut-svg" viewBox="0 0 36 36">
+                <circle class="db-donut-track" cx="18" cy="18" r="15.9"/>
+                <circle class="db-donut-fill" id="donutEqpFill" cx="18" cy="18" r="15.9" stroke="#2563eb" stroke-dasharray="0 100" stroke-dashoffset="25"/>
+              </svg>
+              <div class="db-donut-label">Equip. com<br>documentação</div>
+            </div>
+          </div>
+          <div class="db-bars">
+            <div class="db-bar-row">
+              <div class="db-bar-hdr"><span style="color:#059669;"><i class="fas fa-circle-check"></i> Em dia</span><span id="dbDocOkN">—</span></div>
+              <div class="db-bar-track"><div class="db-bar-fill" id="dbDocOkB" style="background:linear-gradient(90deg,#059669,#10b981);"></div></div>
+            </div>
+            <div class="db-bar-row">
+              <div class="db-bar-hdr"><span style="color:#d97706;"><i class="fas fa-clock"></i> Vencendo em 30 dias</span><span id="dbDocVendN">—</span></div>
+              <div class="db-bar-track"><div class="db-bar-fill" id="dbDocVendB" style="background:linear-gradient(90deg,#f59e0b,#d97706);"></div></div>
+            </div>
+            <div class="db-bar-row">
+              <div class="db-bar-hdr"><span style="color:#dc2626;"><i class="fas fa-circle-xmark"></i> Vencidos</span><span id="dbDocVencN">—</span></div>
+              <div class="db-bar-track"><div class="db-bar-fill" id="dbDocVencB" style="background:linear-gradient(90deg,#dc2626,#b91c1c);"></div></div>
+            </div>
+            <div class="db-bar-row">
+              <div class="db-bar-hdr"><span style="color:#94a3b8;"><i class="fas fa-minus-circle"></i> Sem vencimento</span><span id="dbDocSemN">—</span></div>
+              <div class="db-bar-track"><div class="db-bar-fill" id="dbDocSemB" style="background:#cbd5e1;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="db-card">
+          <div class="db-card-title"><i class="fas fa-chart-bar"></i> Distribuição de Posse</div>
+          <div class="db-posse">
+            <div>
+              <div class="db-posse-hdr"><span><i class="fas fa-circle" style="color:#059669;font-size:9px;margin-right:5px;"></i>Próprio</span><span id="dbPropN">—</span></div>
+              <div class="db-posse-track"><div class="db-posse-fill" id="dbPropB" style="background:linear-gradient(90deg,#059669,#047857);"></div></div>
+            </div>
+            <div>
+              <div class="db-posse-hdr"><span><i class="fas fa-circle" style="color:#2563eb;font-size:9px;margin-right:5px;"></i>Locado</span><span id="dbLocN">—</span></div>
+              <div class="db-posse-track"><div class="db-posse-fill" id="dbLocB" style="background:linear-gradient(90deg,#2563eb,#1d4ed8);"></div></div>
+            </div>
+            <div>
+              <div class="db-posse-hdr"><span><i class="fas fa-circle" style="color:#d97706;font-size:9px;margin-right:5px;"></i>Comodato</span><span id="dbComN">—</span></div>
+              <div class="db-posse-track"><div class="db-posse-fill" id="dbComB" style="background:linear-gradient(90deg,#f59e0b,#d97706);"></div></div>
+            </div>
+            <div>
+              <div class="db-posse-hdr"><span><i class="fas fa-circle" style="color:#7c3aed;font-size:9px;margin-right:5px;"></i>Terceiro</span><span id="dbTerN">—</span></div>
+              <div class="db-posse-track"><div class="db-posse-fill" id="dbTerB" style="background:linear-gradient(90deg,#7c3aed,#6d28d9);"></div></div>
+            </div>
+          </div>
+
+          <div class="db-divider"></div>
+          <div class="db-card-title" style="margin-bottom:10px;"><i class="fas fa-location-dot"></i> Unidades</div>
+          <div style="font-size:38px;font-weight:900;color:#2563eb;letter-spacing:-2px;line-height:1;" id="kpiUnidades">—</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:500;margin-top:2px;">unidades ativas</div>
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-card-title"><i class="fas fa-stethoscope"></i> Saúde dos Registros Técnicos</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          <div style="background:#f8fafc;border-radius:10px;padding:14px 16px;border:1px solid var(--border);">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Total Registros</div>
+            <div style="font-size:28px;font-weight:900;color:#334155;letter-spacing:-1px;" id="regTecTotal">—</div>
+          </div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:14px 16px;border:1px solid #a7f3d0;">
+            <div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.5px;">Em dia</div>
+            <div style="font-size:28px;font-weight:900;color:#059669;letter-spacing:-1px;" id="regTecOk">—</div>
+          </div>
+          <div style="background:#fff7ed;border-radius:10px;padding:14px 16px;border:1px solid #fed7aa;">
+            <div style="font-size:10px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:.5px;">Vencendo (30d)</div>
+            <div style="font-size:28px;font-weight:900;color:#ea580c;letter-spacing:-1px;" id="regTecVend">—</div>
+          </div>
+          <div style="background:#fef2f2;border-radius:10px;padding:14px 16px;border:1px solid #fecaca;">
+            <div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;">Vencidos</div>
+            <div style="font-size:28px;font-weight:900;color:#dc2626;letter-spacing:-1px;" id="regTecVenc">—</div>
+          </div>
+        </div>
+        <button class="btn-secondary" type="button" onclick="abrir('registros')" style="font-size:12px;">
+          <i class="fas fa-stethoscope" style="margin-right:6px;"></i>Gerenciar Registros Técnicos
+        </button>
+      </div>
+
+      <div class="db-bot">
+        <div class="db-card" style="${hide}">
+          <div class="db-card-title"><i class="fas fa-ranking-star"></i> Top 5 por Equipamentos</div>
+          <div class="db-top-list" id="dbTopClientes">
+            <div style="color:var(--muted);font-size:13px;">Carregando...</div>
+          </div>
+        </div>
+
+        <div class="db-card">
+          <div class="db-card-title"><i class="fas fa-bolt"></i> Acesso Rápido</div>
+          <div class="db-actions">
+            <button class="db-act-btn" onclick="abrir('clientes')"><i class="fas fa-building"></i><span>Clientes</span></button>
+            <button class="db-act-btn" onclick="abrir('unidades')"><i class="fas fa-location-dot"></i><span>Unidades</span></button>
+            <button class="db-act-btn" onclick="abrir('equipamentos')"><i class="fas fa-microscope"></i><span>Equipamentos</span></button>
+            <button class="db-act-btn" onclick="abrir('documentos')"><i class="fas fa-file-arrow-up"></i><span>Documentos</span></button>
+            <button class="db-act-btn" onclick="abrir('registros')"><i class="fas fa-stethoscope"></i><span>Reg. Técnicos</span></button>
+            <button class="db-act-btn" onclick="abrir('relatorios')"><i class="fas fa-chart-pie"></i><span>Relatórios</span></button>
+            <button class="db-act-btn" onclick="abrir('inventario')"><i class="fas fa-clipboard-list"></i><span>Inventário</span></button>
+            <button class="db-act-btn" onclick="abrir('importacao')"><i class="fas fa-upload"></i><span>Importar</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <span><i class="fas fa-bell"></i> Central de Alertas</span>
+          <div class="db-alert-filters">
+            <button class="db-alert-filter af-active" onclick="dbFiltrarAlertas_(this,'todos')">Todos</button>
+            <button class="db-alert-filter" onclick="dbFiltrarAlertas_(this,'vencido')">Vencidos</button>
+            <button class="db-alert-filter" onclick="dbFiltrarAlertas_(this,'vencendo')">Vencendo</button>
+          </div>
+        </div>
+        <div id="dashboardAlertas">
+          <div style="color:var(--muted);font-size:13px;padding:8px 0;">Carregando alertas...</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function carregarDadosDashboard_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return;
+
+        // KPI counters animados
+        dbAnimar_(document.getElementById("kpiClientes"),    res.totais.clientes     || 0, 900);
+        dbAnimar_(document.getElementById("kpiEquipamentos"),res.totais.equipamentos || 0, 900);
+        dbAnimar_(document.getElementById("kpiDocumentos"),  res.totais.documentos   || 0, 900);
+        dbAnimar_(document.getElementById("kpiUnidades"),    res.totais.unidades     || 0, 900);
+
+        // Barras de status documental
+        if (res.documentos) {
+          var d = res.documentos;
+          var tot = (d.ok||0) + (d.vencendo||0) + (d.vencidos||0) + (d.semVencimento||0);
+          var p = function(n){ return tot > 0 ? Math.round((n/tot)*100) : 0; };
+          dbSetBar_("dbDocOkB",  "dbDocOkN",  d.ok||0,           p(d.ok||0));
+          dbSetBar_("dbDocVendB","dbDocVendN", d.vencendo||0,     p(d.vencendo||0));
+          dbSetBar_("dbDocVencB","dbDocVencN", d.vencidos||0,     p(d.vencidos||0));
+          dbSetBar_("dbDocSemB", "dbDocSemN",  d.semVencimento||0,p(d.semVencimento||0));
+
+          // Donut documentos em dia
+          dbSetDonut_("donutDocFill", "donutDocPct", res.documentos.okPct || 0);
+        }
+
+        // Donut equipamentos com documentação
+        dbSetDonut_("donutEqpFill", "donutEqpPct", res.eqpComDocPct || 0);
+        // Barras de posse
+        if (res.posse) {
+          var po = res.posse;
+          var totP = (po.proprio||0)+(po.locado||0)+(po.comodato||0)+(po.terceiro||0);
+          var pp = function(n){ return totP>0 ? Math.round((n/totP)*100) : 0; };
+          dbSetPosseBar_("dbPropB","dbPropN", po.proprio||0,  pp(po.proprio||0));
+          dbSetPosseBar_("dbLocB", "dbLocN",  po.locado||0,   pp(po.locado||0));
+          dbSetPosseBar_("dbComB", "dbComN",  po.comodato||0, pp(po.comodato||0));
+          dbSetPosseBar_("dbTerB", "dbTerN",  po.terceiro||0, pp(po.terceiro||0));
+        }
+
+        // Top clientes
+        if (res.topClientes) dbRenderTop_(res.topClientes);
+        // Registros Técnicos
+        if (res.registrosTecnicos) {
+          var rt = res.registrosTecnicos;
+          dbAnimar_(document.getElementById("regTecTotal"), rt.total   || 0, 800);
+          dbAnimar_(document.getElementById("regTecOk"),    rt.ok      || 0, 800);
+          dbAnimar_(document.getElementById("regTecVend"),  rt.vencendo|| 0, 800);
+          dbAnimar_(document.getElementById("regTecVenc"),  rt.vencidos|| 0, 800);
+        }
+      })
+      .withFailureHandler(function(err) { /* Falha controlada ao carregar totais do dashboard. */ })
+      .obterTotaisDashboard(SESSION);
+  }
+
+  function carregarAlertasDashboard_() {
+    var container = document.getElementById("dashboardAlertas");
+    if (!container || !SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var kpiEl  = document.getElementById("kpiAlertas");
+        var kpiEl2 = document.getElementById("kpiAlertasKPI");
+
+        if (!res || !res.success || !res.items || !res.items.length) {
+          container.innerHTML = `
+            <div class="db-alert-item ai-ok">
+              <span class="db-alert-icon"><i class="fas fa-circle-check"></i></span>
+              <span class="db-alert-msg">Tudo em ordem! Nenhum documento vencido ou próximo do vencimento.</span>
+            </div>`;
+          if (kpiEl)  kpiEl.textContent  = "0";
+          if (kpiEl2) kpiEl2.textContent = "0";
+          return;
+        }
+
+        var criticos = 0;
+        var html = res.items.map(function(a) {
+          var isVenc = a.tipo === "CRÍTICO" || a.tipo === "CRITICO";
+          if (isVenc) criticos++;
+          var cls  = isVenc ? "ai-vencido" : "ai-vencendo";
+          var tipo = isVenc ? "vencido"    : "vencendo";
+          var ico  = isVenc ? "fa-circle-xmark" : "fa-clock";
+          return `
+            <div class="db-alert-item ${cls}" data-tipo="${tipo}">
+              <span class="db-alert-icon"><i class="fas ${ico}"></i></span>
+              <span class="db-alert-msg">${escapeHtml_(a.mensagem)}</span>
+            </div>`;
+        }).join("");
+
+        container.innerHTML = html;
+        if (kpiEl)  dbAnimar_(kpiEl,  criticos, 600);
+        if (kpiEl2) dbAnimar_(kpiEl2, criticos, 600);
+      })
+      .withFailureHandler(function() {
+        var c = document.getElementById("dashboardAlertas");
+        if (c) c.innerHTML = `
+          <div class="db-alert-item ai-vencido">
+            <span class="db-alert-icon"><i class="fas fa-triangle-exclamation"></i></span>
+            <span class="db-alert-msg">Falha ao carregar alertas. Verifique a conexão.</span>
+          </div>`;
+      })
+      .alertasObterDashboard(SESSION);
+  }
+
+  // ── Helpers do Dashboard ──────────────────────────────────────────────
+  function dbAnimar_(el, destino, dur) {
+    if (!el) return;
+    var t0 = performance.now();
+    (function step(now) {
+      var p = Math.min((now - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(destino * e);
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function dbSetBar_(barId, numId, valor, pct) {
+    setTimeout(function() {
+      var b = document.getElementById(barId);
+      var n = document.getElementById(numId);
+      if (b) b.style.width = pct + "%";
+      if (n) n.textContent = valor;
+    }, 350);
+  }
+
+  function dbSetPosseBar_(barId, numId, valor, pct) {
+    setTimeout(function() {
+      var b = document.getElementById(barId);
+      var n = document.getElementById(numId);
+      if (b) b.style.width = pct + "%";
+      if (n) n.textContent = valor + (pct > 0 ? " (" + pct + "%)" : "");
+    }, 450);
+  }
+
+  function dbSetDonut_(fillId, pctId, pct) {
+    setTimeout(function() {
+      var f = document.getElementById(fillId);
+      var p = document.getElementById(pctId);
+      if (f) f.setAttribute("stroke-dasharray", pct + " " + (100 - pct));
+      if (p) p.textContent = pct + "%";
+    }, 500);
+  }
+
+  function dbRenderTop_(clientes) {
+    var el = document.getElementById("dbTopClientes");
+    if (!el) return;
+    if (!clientes || !clientes.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;">Nenhum dado disponível.</div>';
+      return;
+    }
+    var cores = ["#059669","#2563eb","#d97706","#7c3aed","#dc2626"];
+    el.innerHTML = clientes.map(function(c, i) {
+      return `
+        <div class="db-top-item">
+          <div class="db-top-rank" style="background:${cores[i]};">${i+1}</div>
+          <div class="db-top-name">${escapeHtml_(c.nome)}</div>
+          <div class="db-top-cnt">${c.total} equip.</div>
+        </div>`;
+    }).join("");
+  }
+
+  function dbFiltrarAlertas_(btn, tipo) {
+    document.querySelectorAll(".db-alert-filter").forEach(function(b){ b.classList.remove("af-active"); });
+    btn.classList.add("af-active");
+    document.querySelectorAll(".db-alert-item").forEach(function(item) {
+      item.style.display = (tipo === "todos" || item.dataset.tipo === tipo) ? "" : "none";
+    });
+  }
+
+  function contarMotoresAtivos_() {
+    let total = 0;
+    if (MOTORES.AUTOCLAVE_TEMPLATE) total++;
+    if (MOTORES.AUTOCLAVE_RELATORIO) total++;
+    if (MOTORES.LAVADORA_TEMPLATE) total++;
+    if (MOTORES.LAVADORA_RELATORIO) total++;
+    if (MOTORES.RELATORIO_CONFORMIDADE) total++;
+    return total;
+  }
+
+  function atualizarBadgeModulo_(mod) {
+    document.querySelectorAll(".sidebar .menu-btn").forEach(function(btn) {
+      btn.classList.remove("active");
+      btn.removeAttribute("data-active");
+    });
+    var btnMap = {
+      dashboard: null,
+      autoclave: null,
+      lavadora: null,
+      relatorio_conformidade: null,
+      planejamento_cme: null,
+      clientes: "menu-btn-clientes",
+      unidades: "menu-btn-unidades",
+      equipamentos: "menu-btn-equipamentos",
+      pecas: "menu-btn-pecas",
+      contratos: "menu-btn-contratos",
+      fornecedores: "menu-btn-fornecedores",
+      estoque: "menu-btn-estoque",
+      rastreabilidade: "menu-btn-rastreabilidade",
+      os: "menu-btn-os",
+      os_execucao: "menu-btn-os",
+      assistencia_tecnica: "menu-btn-assistencia_tecnica",
+      missoes: "menu-btn-missoes",
+      frota: "menu-btn-frota",
+      dashboard_bi: "menu-btn-dashboard-bi",
+      documentos: "menu-btn-documentos",
+      admin: "menu-btn-admin",
+      inventario: "menu-btn-inventario",
+      registros: "menu-btn-registros",
+      relatorios: "menu-btn-relatorios",
+      tecnicos: "menu-btn-tecnicos",
+      importacao: "menu-btn-importacao"
+    };
+    var btnId = btnMap[mod];
+    if (btnId) {
+      var el = document.getElementById(btnId);
+      if (el) el.classList.add("active");
+    } else {
+      document.querySelectorAll(".sidebar .menu-btn").forEach(function(btn) {
+        var onclick = btn.getAttribute("onclick") || "";
+        if (onclick.indexOf("'" + mod + "'") !== -1 || onclick.indexOf('"' + mod + '"') !== -1) {
+          btn.classList.add("active");
+        }
+      });
+    }
+
+    const areaAvisos = document.getElementById("areaAvisos");
+    if (!areaAvisos) return;
+    const nomes = {
+      dashboard: "Dashboard",
+      autoclave: "Autoclave",
+      lavadora: "Lavadoras",
+      relatorio_conformidade: "Carta / Relatório de Conformidade",
+      planejamento_cme: "Planejamento CME",
+      clientes: "Clientes",
+      unidades: "Unidades",
+      equipamentos: "Equipamentos",
+      pecas: "Peças e Subconjuntos",
+      contratos: "Contratos",
+      fornecedores: "Fornecedores Qualificados",
+      estoque: "Estoque Rastreavel",
+      rastreabilidade: "Rastreabilidade Total",
+      os: "Ordens de Serviço",
+      os_execucao: "Execução de OS",
+      assistencia_tecnica: "Assistência Técnica",
+      missoes: "Agenda e Missões",
+      frota: "Frota",
+      dashboard_bi: "Dashboard BI",
+      documentos: "Documentos",
+      admin: "Painel Admin",
+      inventario: "Inventário de Equipamentos",
+      registros: "Registros Técnicos",
+      relatorios: "Relatório de Conformidade",
+      tecnicos: "Técnicos de Campo",
+      importacao: "Importação de Dados"
+    };
+
+    areaAvisos.style.display = "block";
+    areaAvisos.innerHTML = `Módulo atual: <strong>${nomes[mod] || mod}</strong>`;
+  }
+
+  function limparAlertasTemporarios_() {
+    const barra = document.getElementById("barraAlertas");
+    if (!barra) return;
+    if (!OCIOSO) {
+      barra.style.display = "none";
+      barra.innerHTML = "";
+    }
+  }
+
+  // ==========================================
+  // OCIOSIDADE E ENGAJAMENTO
+  // ==========================================
+  function registrarEventosDeAtividade() {
+    const eventos = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
+    eventos.forEach(function (evt) {
+      document.addEventListener(evt, tratarAtividadeUsuario_, { passive: true });
+    });
+  }
+
+  function tratarAtividadeUsuario_() {
+    resetarOciosidade_();
+  }
+
+  function resetarOciosidade_() {
+    IDLE_SECONDS = 0;
+    if (OCIOSO) {
+      OCIOSO = false;
+      pararSomOciosidade_();
+      const barra = document.getElementById("barraAlertas");
+      if (barra) {
+        barra.style.display = "none";
+        barra.innerHTML = "";
+      }
+    }
+  }
+
+  function iniciarMonitorOciosidade_() {
+    pararMonitorOciosidade_();
+    IDLE_MONITOR = setInterval(function () {
+      IDLE_SECONDS++;
+
+      if (IDLE_SECONDS >= AUTO_LOGOUT_LIMIT) {
+        logout(true);
+        return;
+      }
+
+      if (!OCIOSO && IDLE_SECONDS >= IDLE_LIMIT) {
+        OCIOSO = true;
+        exibirAlertaOciosidade_();
+        if (SOM_OCIOSIDADE_ATIVO) iniciarSomOciosidade_();
+      }
+    }, 1000);
+  }
+
+  function pararMonitorOciosidade_() {
+    if (IDLE_MONITOR) {
+      clearInterval(IDLE_MONITOR);
+      IDLE_MONITOR = null;
+    }
+  }
+
+  function exibirAlertaOciosidade_() {
+    const barra = document.getElementById("barraAlertas");
+    if (!barra) return;
+    barra.style.display = "block";
+    barra.innerHTML = `Atenção: operador em ociosidade. Nenhuma atividade detectada nos últimos ${IDLE_LIMIT} segundos.`;
+  }
+
+  function iniciarSomOciosidade_() {
+    if (IDLE_BEEP_INTERVAL) return;
+    IDLE_BEEP_INTERVAL = setInterval(function () {
+      tocarBeep_();
+    }, 2500);
+    tocarBeep_();
+  }
+
+  function pararSomOciosidade_() {
+    if (IDLE_BEEP_INTERVAL) {
+      clearInterval(IDLE_BEEP_INTERVAL);
+      IDLE_BEEP_INTERVAL = null;
+    }
+  }
+
+  function tocarBeep_() {
+    try {
+      if (!SOM_OCIOSIDADE_ATIVO) return;
+      const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextRef) return;
+
+      if (!AUDIO_CTX) AUDIO_CTX = new AudioContextRef();
+      if (AUDIO_CTX.state === "suspended") AUDIO_CTX.resume();
+      const osc = AUDIO_CTX.createOscillator();
+      const gain = AUDIO_CTX.createGain();
+
+      osc.type = "sine";
+      osc.frequency.value = 880;
+
+      gain.gain.setValueAtTime(0.0001, AUDIO_CTX.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, AUDIO_CTX.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, AUDIO_CTX.currentTime + 0.22);
+
+      osc.connect(gain);
+      gain.connect(AUDIO_CTX.destination);
+
+      osc.start();
+      osc.stop(AUDIO_CTX.currentTime + 0.22);
+    } catch (e) {
+      /* Falha silenciosa ao tocar beep. */
+    }
+  }
+
+  function lerPreferenciaSomOciosidade_() {
+    try {
+      const raw = getLocalStorageItem_(STORAGE_KEYS.SOM_OCIOSIDADE);
+      if (raw === null) return null;
+      return raw === "1";
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function salvarPreferenciaSomOciosidade_(ativo) {
+    try {
+      setLocalStorageItem_(STORAGE_KEYS.SOM_OCIOSIDADE, ativo ? "1" : "0");
+    } catch (e) {
+      /* Falha silenciosa ao salvar preferência de som. */
+    }
+  }
+
+  function aplicarMensagemMotivacional_() {
+    const mensagens = Array.isArray(PUBLIC_CONFIG.mensagensMotivacionais) && PUBLIC_CONFIG.mensagensMotivacionais.length
+        ? PUBLIC_CONFIG.mensagensMotivacionais
+        : MENSAGENS_FALLBACK;
+
+    const el = document.getElementById("mensagemMotivacional");
+    if (!el || !mensagens.length) return;
+    const idx = sortearIndiceMensagemSemRepetir_(mensagens.length);
+    el.innerText = mensagens[idx] || mensagens[0];
+
+    try {
+      setLocalStorageItem_(STORAGE_KEYS.MSG_MOTIVACIONAL_IDX, String(idx));
+    } catch (e) {
+      /* Falha silenciosa ao persistir mensagem. */
+    }
+  }
+
+  function sortearNovaMensagemMotivacional_() {
+    aplicarMensagemMotivacional_();
+    if (typeof preencherEstadoPainelAdmin_ === "function") {
+      preencherEstadoPainelAdmin_();
+    }
+  }
+
+  function sortearIndiceMensagemSemRepetir_(total) {
+    if (total <= 1) return 0;
+
+    let anterior = -1;
+    try {
+      const raw = getLocalStorageItem_(STORAGE_KEYS.MSG_MOTIVACIONAL_IDX);
+      if (raw !== null) anterior = Number(raw);
+    } catch (e) {
+      anterior = -1;
+    }
+
+    let novo = anterior;
+    let tentativas = 0;
+
+    while (novo === anterior && tentativas < 20) {
+      novo = Math.floor(Math.random() * total);
+      tentativas++;
+    }
+
+    if (novo < 0 || novo >= total) novo = 0;
+    return novo;
+  }
+
+  // ==========================================
+  // MOTORES DE ENGENHARIA
+  // ==========================================
+  function renderMotorModulo_(titulo, tipoMotor) {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    let urlTemplate = "";
+    let urlRelatorio = "";
+    if (tipoMotor === "autoclave") {
+      urlTemplate = MOTORES.AUTOCLAVE_TEMPLATE || "";
+      urlRelatorio = MOTORES.AUTOCLAVE_RELATORIO || "";
+    } else if (tipoMotor === "lavadora") {
+      urlTemplate = MOTORES.LAVADORA_TEMPLATE || "";
+      urlRelatorio = MOTORES.LAVADORA_RELATORIO || "";
+    } else if (tipoMotor === "relatorio_conformidade") {
+      urlTemplate = "";
+      urlRelatorio = MOTORES.RELATORIO_CONFORMIDADE || "";
+    }
+
+    if (!urlTemplate && !urlRelatorio) {
+      div.innerHTML = `
+        <div class="module-shell">
+          <h2 class="content-title">${escapeHtml_(titulo)}</h2>
+          <div class="avisos-wrap" style="display:block;">
+            Os links do motor de engenharia clínica para ${escapeHtml_(titulo)} ainda não foram configurados.
+          </div>
+        </div>`;
+      return;
+    }
+
+    const urlInicial = urlTemplate || urlRelatorio;
+    div.innerHTML = `
+      <div class="module-shell">
+        <div class="module-header">
+          <div class="module-header-left">
+            <h2 class="content-title">${escapeHtml_(titulo)}</h2>
+            <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+          </div>
+        </div>
+        <div class="motores-tabs">
+          <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotor_('template', '${urlTemplate}', '${urlRelatorio}')">GERAR TEMPLATE</button>
+          <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotor_('relatorio', '${urlTemplate}', '${urlRelatorio}')">Gerar Relatório de Auditoria</button>
+        </div>
+        <div class="iframe-container">
+          <iframe id="iframe_motor" src="${urlInicial}"></iframe>
+        </div>
+      </div>
+    `;
+    if (!urlTemplate) {
+      const btnTemplate = document.getElementById("btn_motor_template");
+      const btnRelatorio = document.getElementById("btn_motor_relatorio");
+      if (btnTemplate) btnTemplate.style.display = "none";
+      if (btnRelatorio) btnRelatorio.classList.add("active");
+    }
+
+    if (!urlRelatorio) {
+      const btnRelatorio = document.getElementById("btn_motor_relatorio");
+      if (btnRelatorio) btnRelatorio.style.display = "none";
+    }
+  }
+
+  function alternarAbaMotor_(aba, urlTemplate, urlRelatorio) {
+    const btnTemplate = document.getElementById("btn_motor_template");
+    const btnRelatorio = document.getElementById("btn_motor_relatorio");
+    const iframe = document.getElementById("iframe_motor");
+
+    if (!btnTemplate || !btnRelatorio || !iframe) return;
+    if (aba === "template") {
+      if (!urlTemplate) return alert("Link de Template não configurado.");
+      btnTemplate.classList.add("active");
+      btnRelatorio.classList.remove("active");
+      iframe.src = urlTemplate;
+    } else {
+      if (!urlRelatorio) return alert("Link de Relatório não configurado.");
+      btnRelatorio.classList.add("active");
+      btnTemplate.classList.remove("active");
+      iframe.src = urlRelatorio;
+    }
+  }
+
+  // ==========================================
+  // FUNÇÕES DE APOIO PARA O ADMIN
+  // ==========================================
+  function salvarTempoOciosidadePainel_() {
+    const input = document.getElementById("inputIdleLimit");
+    const valor = input ? parseInt(input.value, 10) : NaN;
+
+    if (!isFinite(valor) || valor < 30) {
+      alert("O tempo mínimo de ociosidade é de 30 segundos.");
+      if (input) input.focus();
+      return;
+    }
+
+    IDLE_LIMIT = valor;
+    setLocalStorageItem_(STORAGE_KEYS.IDLE_LIMIT, String(valor));
+    resetarOciosidade_();
+    iniciarMonitorOciosidade_();
+    alert("Tempo de ociosidade atualizado com sucesso.");
+  }
+
+  function ativarSomOciosidadePainel_() {
+    SOM_OCIOSIDADE_ATIVO = true;
+    salvarPreferenciaSomOciosidade_(true);
+    if (typeof preencherEstadoPainelAdmin_ === "function") {
+      preencherEstadoPainelAdmin_();
+    }
+  }
+
+  function desativarSomOciosidadePainel_() {
+    SOM_OCIOSIDADE_ATIVO = false;
+    salvarPreferenciaSomOciosidade_(false);
+    pararSomOciosidade_();
+    if (typeof preencherEstadoPainelAdmin_ === "function") {
+      preencherEstadoPainelAdmin_();
+    }
+  }
+
+  function testarSomOciosidade_() {
+    tocarBeep_();
+  }
+
+  // ==========================================
+  // FUNÇÕES UTILITÁRIAS
+  // ==========================================
+  function formatarCnpjFront_(valor) {
+    const v = String(valor || "").replace(/\D/g, "");
+    if (v.length !== 14) return escapeHtml_(valor || "");
+    return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  }
+
+  function formatarDataFront_(dataString) {
+    if (!dataString) return "--";
+    const partes = String(dataString).split("-");
+    if (partes.length === 3) {
+      const dia = partes[2].substring(0, 2);
+      return dia + "/" + partes[1] + "/" + partes[0];
+    }
+    return escapeHtml_(dataString);
+  }
+
+  function getValue_(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function setValue_(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value == null ? "" : String(value);
+  }
+
+  function setSelectValueSafe_(id, valor) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = valor || "";
+  }
+
+  function focusIfExists_(id) {
+    const el = document.getElementById(id);
+    if (el) el.focus();
+  }
+
+  function escapeHtml_(texto) {
+    return String(texto || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>

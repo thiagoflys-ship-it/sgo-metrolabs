@@ -1,0 +1,301 @@
+<script>
+  // ==========================================
+  // MÓDULO: RELATÓRIOS DE CONFORMIDADE
+  // ==========================================
+  const REL_STATE = {
+    dados: null,
+    clienteIdFiltro: "",
+    clientes: []
+  };
+
+  const REL_TIPOS_LABEL = {
+    CALIBRACAO:           "Calibração",
+    QUALIFICACAO:         "Qualificação",
+    ENSAIO_ELETRICO:      "Ensaio Elétrico",
+    MANUTENCAO_PREVENTIVA:"Manutenção Preventiva",
+    MANUTENCAO_CORRETIVA: "Manutenção Corretiva",
+    INSPECAO_SEGURANCA:   "Inspeção de Segurança"
+  };
+
+  // ── RENDERIZAÇÃO DO MÓDULO ────────────────────────────────────────────────
+  function renderRelatoriosModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title"><i class="fas fa-chart-pie" style="margin-right:8px;color:var(--metro-blue);"></i>Relatório de Conformidade</h2>\n            <p class="content-subtitle">Panorama do status de calibração, qualificação e manutenções por equipamento.</p>\n          </div>\n          <div class="module-header-right">\n            <button class="btn-primary" type="button" onclick="relGerarRelatorio_()">\n              <i class="fas fa-rotate" style="margin-right:6px;"></i>Atualizar\n            </button>\n            <button class="btn-secondary" type="button" onclick="relImprimirRelatorio_()">\n              <i class="fas fa-print" style="margin-right:6px;"></i>Imprimir\n            </button>\n          </div>\n        </div>\n\n        <!-- FILTROS -->\n        <div class="form-card" style="margin-bottom:20px;">\n          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">\n            <div style="flex:1;min-width:200px;" id="relFiltroClienteWrap">\n              <label for="relFiltroCliente">Filtrar por Cliente</label>\n              <select id="relFiltroCliente" onchange="relGerarRelatorio_()">\n                <option value="">Todos os clientes</option>\n              </select>\n            </div>\n            <div style="display:flex;gap:8px;align-items:flex-end;">\n              <div>\n                <label for="relFiltroTipo">Tipo de Serviço</label>\n                <select id="relFiltroTipo" onchange="relFiltrarTabela_()">\n                  <option value="">Todos</option>\n                  ' +
+      (Object.keys(REL_TIPOS_LABEL).map(k=>'<option value="' +
+        (k) +
+        '">' +
+        (REL_TIPOS_LABEL[k]) +
+        '</option>').join("")) +
+      '\n                </select>\n              </div>\n              <div>\n                <label for="relFiltroStatus">Status</label>\n                <select id="relFiltroStatus" onchange="relFiltrarTabela_()">\n                  <option value="">Todos</option>\n                  <option value="VENCIDO">Vencido</option>\n                  <option value="VENCENDO">Vencendo</option>\n                  <option value="OK">Em dia</option>\n                  <option value="SEM_REG">Sem registro</option>\n                </select>\n              </div>\n            </div>\n          </div>\n        </div>\n\n        <!-- CARDS RESUMO -->\n        <div id="relCardsResumo" style="margin-bottom:20px;"></div>\n\n        <!-- GRÁFICO DE BARRAS POR TIPO -->\n        <div id="relGrafico" class="form-card" style="margin-bottom:20px;display:none;">\n          <h3 class="section-card-title"><i class="fas fa-chart-bar" style="margin-right:6px;"></i>Conformidade por Tipo de Serviço</h3>\n          <div id="relGraficoBody" style="margin-top:10px;"></div>\n        </div>\n\n        <!-- TABELA DE EQUIPAMENTOS -->\n        <div class="list-card">\n          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);">\n            <h3 style="margin:0;font-size:14px;font-weight:700;" id="relTabelaTitulo">Equipamentos</h3>\n            <span id="relContador" style="font-size:12px;color:var(--muted);"></span>\n          </div>\n          <div class="table-wrap">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>TAG</th>\n                  <th>Tipo</th>\n                  <th>Cliente</th>\n                  <th>Risco</th>\n                  <th>Calibração</th>\n                  <th>Qualificação</th>\n                  <th>Ensaio Elét.</th>\n                  <th>Manutenção Prev.</th>\n                  <th>Manutenção Corr.</th>\n                  <th>Inspeção Seg.</th>\n                </tr>\n              </thead>\n              <tbody id="relTbody">\n                <tr><td colspan="10" class="empty-state">Clique em Atualizar para carregar os dados.</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n      </div>\n    ';
+
+    relCarregarClientes_();
+  }
+
+  // ── CARREGAR CLIENTES (para filtro) ───────────────────────────────────────
+  function relCarregarClientes_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return;
+        REL_STATE.clientes = res.items || [];
+        const sel = document.getElementById("relFiltroCliente");
+        if (!sel) return;
+        // Se perfil CLIENTE, ocultar filtro
+        if (USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE") {
+          const wrap = document.getElementById("relFiltroClienteWrap");
+          if (wrap) wrap.style.display = "none";
+        }
+        res.items.forEach(function(c) {
+          const opt = document.createElement("option");
+          opt.value = c.ID;
+          opt.textContent = c.NOME_FANTASIA || c.RAZAO_SOCIAL || c.ID;
+          sel.appendChild(opt);
+        });
+        relGerarRelatorio_();
+      })
+      .withFailureHandler(function() { relGerarRelatorio_(); })
+      .clientesListar(SESSION);
+  }
+
+  // ── GERAR RELATÓRIO ───────────────────────────────────────────────────────
+  function relGerarRelatorio_() {
+    if (!SESSION) return;
+    const clienteId = (document.getElementById("relFiltroCliente") || {}).value || "";
+    REL_STATE.clienteIdFiltro = clienteId;
+
+    const tbody = document.getElementById("relTbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Carregando...</td></tr>';
+    const cards = document.getElementById("relCardsResumo");
+    if (cards) cards.innerHTML = "";
+    const graf = document.getElementById("relGrafico");
+    if (graf) graf.style.display = "none";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Erro ao carregar dados.</td></tr>';
+          return;
+        }
+        REL_STATE.dados = res;
+        relRenderizarCards_(res);
+        relRenderizarGrafico_(res);
+        relFiltrarTabela_();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Erro de comunicação.</td></tr>';
+      })
+      .registrosRelatorioConformidade(SESSION, { clienteId: clienteId });
+  }
+
+  // ── CARDS RESUMO ──────────────────────────────────────────────────────────
+  function relRenderizarCards_(res) {
+    const totais = res.totaisGerais || {};
+    const itens  = res.itens || [];
+    const tipos  = res.tipos || [];
+    const cards  = document.getElementById("relCardsResumo");
+    if (!cards) return;
+
+    let totalOk = 0, totalVencendo = 0, totalVencido = 0, totalSemReg = 0;
+    tipos.forEach(function(t) {
+      const b = (totais.porTipo || {})[t] || {};
+      totalOk      += b.ok      || 0;
+      totalVencendo += b.vencendo|| 0;
+      totalVencido  += b.vencido || 0;
+      totalSemReg   += b.semReg  || 0;
+    });
+    const grand = totalOk + totalVencendo + totalVencido + totalSemReg;
+    const pct = grand > 0 ? Math.round(totalOk / grand * 100) : 0;
+
+    cards.innerHTML = '\n      <div class="dashboard-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:0;">\n        <div class="card-kpi">\n          <div class="card-kpi-title">Equipamentos</div>\n          <div class="card-kpi-value" style="color:var(--metro-blue);">' +
+      (itens.length) +
+      '</div>\n        </div>\n        <div class="card-kpi">\n          <div class="card-kpi-title">Em conformidade</div>\n          <div class="card-kpi-value" style="color:#16a34a;">' +
+      (pct) +
+      '%</div>\n          <div style="font-size:11px;color:var(--muted);margin-top:2px;">' +
+      (totalOk) +
+      ' registros em dia</div>\n        </div>\n        <div class="card-kpi">\n          <div class="card-kpi-title">Vencidos</div>\n          <div class="card-kpi-value" style="color:#dc2626;">' +
+      (totalVencido) +
+      '</div>\n        </div>\n        <div class="card-kpi">\n          <div class="card-kpi-title">Vencendo em breve</div>\n          <div class="card-kpi-value" style="color:#d97706;">' +
+      (totalVencendo) +
+      '</div>\n        </div>\n        <div class="card-kpi">\n          <div class="card-kpi-title">Sem registro</div>\n          <div class="card-kpi-value" style="color:#94a3b8;">' +
+      (totalSemReg) +
+      '</div>\n        </div>\n      </div>\n    ';
+  }
+
+  // ── GRÁFICO DE BARRAS ─────────────────────────────────────────────────────
+  function relRenderizarGrafico_(res) {
+    const graf = document.getElementById("relGrafico");
+    const body = document.getElementById("relGraficoBody");
+    if (!graf || !body) return;
+    const totais = res.totaisGerais || {};
+    const tipos  = res.tipos || [];
+
+    let html = "";
+    tipos.forEach(function(t) {
+      const b = (totais.porTipo || {})[t] || { ok:0, vencendo:0, vencido:0, semReg:0, total:0 };
+      const total = b.total || 1;
+      const pOk   = Math.round(b.ok      / total * 100);
+      const pVend = Math.round(b.vencendo / total * 100);
+      const pVenc = Math.round(b.vencido  / total * 100);
+      const pSem  = 100 - pOk - pVend - pVenc;
+      html += '\n        <div style="margin-bottom:14px;">\n          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;">\n            <span>' +
+        (REL_TIPOS_LABEL[t] || t) +
+        '</span>\n            <span style="color:var(--muted);font-size:11px;">' +
+        (b.ok) +
+        '✓ ' +
+        (b.vencendo) +
+        '⚠ ' +
+        (b.vencido) +
+        '✗ ' +
+        (b.semReg) +
+        '○ / ' +
+        (b.total) +
+        ' eqp.</span>\n          </div>\n          <div style="display:flex;height:18px;border-radius:6px;overflow:hidden;border:1px solid var(--border);">\n            ' +
+        (pOk  >0?'<div style="width:' +
+          (pOk) +
+          '%;background:#22c55e;" title="Em dia: ' +
+          (b.ok) +
+          '"></div>':"") +
+        '\n            ' +
+        (pVend>0?'<div style="width:' +
+          (pVend) +
+          '%;background:#f59e0b;" title="Vencendo: ' +
+          (b.vencendo) +
+          '"></div>':"") +
+        '\n            ' +
+        (pVenc>0?'<div style="width:' +
+          (pVenc) +
+          '%;background:#ef4444;" title="Vencido: ' +
+          (b.vencido) +
+          '"></div>':"") +
+        '\n            ' +
+        (pSem >0?'<div style="width:' +
+          (Math.max(pSem,0)) +
+          '%;background:#e2e8f0;" title="Sem registro: ' +
+          (b.semReg) +
+          '"></div>':"") +
+        '\n          </div>\n        </div>';
+    });
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;font-weight:600;">\n      <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:3px;margin-right:4px;"></span>Em dia</span>\n      <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:4px;"></span>Vencendo</span>\n      <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:4px;"></span>Vencido</span>\n      <span><span style="display:inline-block;width:12px;height:12px;background:#e2e8f0;border-radius:3px;margin-right:4px;"></span>Sem registro</span>\n    </div>';
+    body.innerHTML = html;
+    graf.style.display = "block";
+  }
+
+  // ── FILTRAR E RENDERIZAR TABELA ───────────────────────────────────────────
+  function relFiltrarTabela_() {
+    if (!REL_STATE.dados) return;
+    const itens = REL_STATE.dados.itens || [];
+    const tipos = REL_STATE.dados.tipos || [];
+    const tipoFiltro   = (document.getElementById("relFiltroTipo")   || {}).value || "";
+    const statusFiltro = (document.getElementById("relFiltroStatus") || {}).value || "";
+
+    const filtrados = itens.filter(function(item) {
+      if (!tipoFiltro && !statusFiltro) return true;
+      if (tipoFiltro && statusFiltro) return item.porTipo[tipoFiltro] === statusFiltro;
+      if (tipoFiltro)   return true;
+      if (statusFiltro) return tipos.some(function(t) { return item.porTipo[t] === statusFiltro; });
+      return true;
+    });
+
+    const cont = document.getElementById("relContador");
+    if (cont) cont.textContent = filtrados.length + " equipamento" + (filtrados.length !== 1 ? "s" : "");
+
+    const tbody = document.getElementById("relTbody");
+    if (!tbody) return;
+    if (!filtrados.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum equipamento encontrado com estes filtros.</td></tr>';
+      return;
+    }
+
+    const riscoColor = { BAIXO:"#16a34a", MEDIO:"#d97706", ALTO:"#ea580c", CRITICO:"#dc2626" };
+    const svDot = function(sv) {
+      if (sv === "OK")       return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;" title="Em dia"></span>';
+      if (sv === "VENCENDO") return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;" title="Vencendo"></span>';
+      if (sv === "VENCIDO")  return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;" title="Vencido"></span>';
+      return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e2e8f0;border:1px solid #cbd5e1;" title="Sem registro"></span>';
+    };
+
+    tbody.innerHTML = filtrados.map(function(item) {
+      const riscoC = riscoColor[item.risco] || "#94a3b8";
+      return '<tr>'
+        + '<td style="font-weight:700;color:var(--metro-green);">' + escapeHtml_(item.tag||"—") + '</td>'
+        + '<td style="font-size:12px;">' + escapeHtml_(item.tipo||"—") + '</td>'
+        + '<td style="font-size:12px;">' + escapeHtml_(item.clienteNome||"—") + '</td>'
+        + '<td style="font-size:11px;font-weight:700;color:'+riscoC+';">' + escapeHtml_(item.risco||"—") + '</td>'
+        + tipos.map(function(t) {
+            return '<td style="text-align:center;">' + svDot(item.porTipo[t] || "SEM_REG") + '</td>';
+          }).join("")
+        + '</tr>';
+    }).join("");
+  }
+
+  // ── IMPRIMIR RELATÓRIO ────────────────────────────────────────────────────
+  function relImprimirRelatorio_() {
+    if (!REL_STATE.dados) { alert("Carregue os dados antes de imprimir."); return; }
+    const res = REL_STATE.dados;
+    const itens = res.itens || [];
+    const tipos = res.tipos || [];
+    const totais = res.totaisGerais || {};
+
+    function esc(v) { return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    function svBadgePrt(sv) {
+      if (sv === "OK")       return '<span style="color:#16a34a;font-weight:700;">✓</span>';
+      if (sv === "VENCENDO") return '<span style="color:#d97706;font-weight:700;">⚠</span>';
+      if (sv === "VENCIDO")  return '<span style="color:#dc2626;font-weight:700;">✗</span>';
+      return '<span style="color:#94a3b8;">—</span>';
+    }
+
+    const rows = itens.map(function(item) {
+      return '<tr>'
+        + '<td style="font-weight:700;">'+esc(item.tag)+'</td>'
+        + '<td style="font-size:10px;">'+esc(item.tipo)+'</td>'
+        + '<td style="font-size:10px;">'+esc(item.clienteNome)+'</td>'
+        + tipos.map(function(t){ return '<td style="text-align:center;">'+svBadgePrt(item.porTipo[t]||"SEM_REG")+'</td>'; }).join("")
+        + '</tr>';
+    }).join("");
+
+    let barraRows = "";
+    tipos.forEach(function(t) {
+      const b = (totais.porTipo||{})[t]||{ok:0,vencendo:0,vencido:0,semReg:0,total:0};
+      const total = b.total||1;
+      const pct = Math.round(b.ok/total*100);
+      barraRows += '<tr>'
+        + '<td style="font-size:10px;padding:4px 8px;">'+(REL_TIPOS_LABEL[t]||t)+'</td>'
+        + '<td style="padding:4px 8px;"><div style="width:200px;height:12px;border-radius:4px;overflow:hidden;display:flex;border:1px solid #ddd;">'
+        + '<div style="width:'+Math.round(b.ok/total*100)+'%;background:#22c55e;"></div>'
+        + '<div style="width:'+Math.round(b.vencendo/total*100)+'%;background:#f59e0b;"></div>'
+        + '<div style="width:'+Math.round(b.vencido/total*100)+'%;background:#ef4444;"></div>'
+        + '<div style="flex:1;background:#e2e8f0;"></div></div></td>'
+        + '<td style="font-size:10px;padding:4px 8px;">'+pct+'% em dia</td>'
+        + '<td style="font-size:10px;padding:4px 8px;color:#dc2626;">'+b.vencido+' vencido(s)</td>'
+        + '</tr>';
+    });
+
+    const geradoEm = new Date().toLocaleString("pt-BR");
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório de Conformidade</title>'
+      + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#182230;padding:20px}.header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #0b7a3e;padding-bottom:10px;margin-bottom:14px}.logo img{max-width:180px;height:auto}.title h1{font-size:16px;color:#0b3b78;font-weight:900;text-transform:uppercase}.title p{font-size:11px;color:#667085;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#0b3b78;color:#fff;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase}td{padding:5px 8px;border:1px solid #dfe6ee}tr:nth-child(even) td{background:#f8fafc}.section{font-size:10px;font-weight:900;text-transform:uppercase;color:#fff;background:#0b3b78;padding:4px 10px;border-radius:3px;margin:14px 0 7px}.footer{margin-top:20px;padding-top:8px;border-top:1px solid #aaa;font-size:10px;color:#667085}.no-print{margin-bottom:14px}button{background:#0b7a3e;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px}@media print{.no-print{display:none!important}}@page{size:A4;margin:12mm}</style>'
+      + '</head><body>'
+      + '<div class="no-print"><button onclick="window.print()">Imprimir / Salvar PDF</button><button onclick="window.close()" style="background:#fff;color:#344054;border:1px solid #dfe6ee;">Fechar</button></div>'
+      + '<div class="header"><div class="logo"><img src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs" onerror="this.style.display=\'none\'"></div>'
+      + '<div class="title"><h1>Relatório de Conformidade — Engenharia Clínica</h1><p>METROLABS SGO+ &nbsp;·&nbsp; Gerado em: '+geradoEm+'</p></div></div>'
+      + '<div class="section">Conformidade por Tipo de Serviço</div>'
+      + '<table><thead><tr><th>Tipo de Serviço</th><th>Barra</th><th>% Em Dia</th><th>Vencidos</th></tr></thead><tbody>'+barraRows+'</tbody></table>'
+      + '<div class="section" style="margin-top:18px;">Detalhamento por Equipamento</div>'
+      + '<table><thead><tr><th>TAG</th><th>Tipo</th><th>Cliente</th>'
+      + tipos.map(function(t){return '<th style="font-size:8px;">'+esc((REL_TIPOS_LABEL[t]||t).substring(0,8))+'</th>';}).join("")
+      + '</tr></thead><tbody>'+rows+'</tbody></table>'
+      + '<div class="section" style="margin-top:18px;">Legenda</div>'
+      + '<div style="font-size:11px;display:flex;gap:20px;flex-wrap:wrap;padding:8px 0;">'
+      + '<span><b>✓</b> Em dia</span><span><b>⚠</b> Vencendo</span><span><b>✗</b> Vencido</span><span><b>—</b> Sem registro</span>'
+      + '</div>'
+      + '<div class="footer">Total de equipamentos: <strong>'+itens.length+'</strong> &nbsp;·&nbsp; Sistema: <strong>METROLABS SGO+</strong></div>'
+      + '</body></html>';
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("Popup bloqueado. Permita popups e tente novamente."); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+</script>

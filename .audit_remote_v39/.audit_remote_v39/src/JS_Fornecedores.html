@@ -1,0 +1,463 @@
+<script>
+  // ==========================================
+  // MÓDULO: FORNECEDORES QUALIFICADOS
+  // ==========================================
+  const FORNECEDORES_STATE = {
+    items: [],
+    editingId: "",
+    loading: false,
+    filtro: "",
+    filtroStatus: "",
+    filtroTipo: "",
+    fornecedorAtivo: null
+  };
+
+  const FORN_TIPOS = [
+    { value: "PECAS",       label: "Peças e Componentes" },
+    { value: "CALIBRACAO",  label: "Calibração" },
+    { value: "SERVICO",     label: "Serviços" },
+    { value: "INSUMO",      label: "Insumos" },
+    { value: "MEDICAMENTO", label: "Medicamentos" },
+    { value: "OUTRO",       label: "Outro" }
+  ];
+
+  const FORN_DOC_TIPOS = ["ALVARA", "ANVISA", "ISO", "LICENCA_SANITARIA", "CERTIFICADO_TECNICO", "OUTRO"];
+
+  // ── RENDER PRINCIPAL ──────────────────────────────────────────────────────
+  function renderFornecedoresModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA" || USER_CONTEXT.perfil === "FINANCEIRO");
+
+    div.innerHTML = '\n      <div class="module-shell">\n\n        <!-- HEADER -->\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">\n              <i class="fas fa-industry" style="margin-right:8px;color:var(--metro-green);"></i>\n              Fornecedores Qualificados\n            </h2>\n            <p class="content-subtitle">Cadastro, documentos obrigatórios e qualificação automática por vencimento.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">\n            <input id="forn_busca" class="toolbar-search" type="text"\n              placeholder="Razão social, CNPJ ou fantasia..."\n              onkeydown="if(event.key===\'Enter\') fornecedoresAplicarFiltros_()">\n            <select id="forn_filtro_tipo" style="width:160px;min-height:36px;padding:6px 10px;font-size:13px;" onchange="fornecedoresAplicarFiltros_()">\n              <option value="">Todos os tipos</option>\n              ' +
+      (FORN_TIPOS.map(function(t) { return '<option value="' + t.value + '">' + t.label + '</option>'; }).join("")) +
+      '\n            </select>\n            <select id="forn_filtro_status" style="width:140px;min-height:36px;padding:6px 10px;font-size:13px;" onchange="fornecedoresAplicarFiltros_()">\n              <option value="">Todos status</option>\n              <option value="ATIVO">Ativos</option>\n              <option value="PENDENTE">Pendentes</option>\n              <option value="BLOQUEADO">Bloqueados</option>\n              <option value="INATIVO">Inativos</option>\n            </select>\n            ' +
+      (podeEditar ? '<button class="btn-primary" type="button" onclick="fornecedoresNovo_()"><i class="fas fa-plus" style="margin-right:6px;"></i>Novo Fornecedor</button>' : "") +
+      '\n          </div>\n        </div>\n\n        <div class="module-grid">\n\n          <!-- FORMULÁRIO CADASTRO -->\n          <div class="form-card" id="forn_form_card" style="display:none;">\n            <h3 class="section-card-title" id="forn_form_titulo">Novo Fornecedor</h3>\n\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Dados da Empresa</div>\n            <div class="form-grid">\n              <div>\n                <label for="forn_cnpj">CNPJ <span style="color:red;">*</span></label>\n                <div style="display:flex;gap:6px;">\n                  <input id="forn_cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18"\n                    oninput="fornFormatarCnpj_(this)" style="flex:1;">\n                  <button class="btn-secondary" type="button" onclick="fornBuscarCnpj_()"\n                    style="white-space:nowrap;padding:0 12px;font-size:12px;" title="Buscar na Receita Federal">\n                    <i class="fas fa-search"></i> Receita\n                  </button>\n                </div>\n              </div>\n              <div>\n                <label for="forn_tipo">Tipo de Fornecedor</label>\n                <select id="forn_tipo">\n                  ' +
+      (FORN_TIPOS.map(function(t) { return '<option value="' + t.value + '">' + t.label + '</option>'; }).join("")) +
+      '\n                </select>\n              </div>\n              <div class="full">\n                <label for="forn_razao">Razão Social <span style="color:red;">*</span></label>\n                <input id="forn_razao" type="text" placeholder="Razão social conforme CNPJ">\n              </div>\n              <div class="full">\n                <label for="forn_fantasia">Nome Fantasia</label>\n                <input id="forn_fantasia" type="text" placeholder="Nome fantasia (opcional)">\n              </div>\n              <div>\n                <label for="forn_ie">Inscrição Estadual</label>\n                <input id="forn_ie" type="text" placeholder="IE ou ISENTO">\n              </div>\n              <div>\n                <label for="forn_contato">Contato / Responsável</label>\n                <input id="forn_contato" type="text" placeholder="Nome do responsável comercial">\n              </div>\n              <div>\n                <label for="forn_email">E-mail</label>\n                <input id="forn_email" type="email" placeholder="email@fornecedor.com.br">\n              </div>\n              <div>\n                <label for="forn_tel">Telefone / WhatsApp</label>\n                <input id="forn_tel" type="text" placeholder="(11) 99999-9999" maxlength="20">\n              </div>\n              <div class="full">\n                <label for="forn_endereco">Endereço</label>\n                <input id="forn_endereco" type="text" placeholder="Rua, número, bairro">\n              </div>\n              <div>\n                <label for="forn_cidade">Cidade</label>\n                <input id="forn_cidade" type="text" placeholder="Cidade">\n              </div>\n              <div>\n                <label for="forn_uf">UF</label>\n                <select id="forn_uf">\n                  <option value="">Selecione</option>\n                  ' +
+      (["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(function(u) { return '<option value="' + u + '">' + u + '</option>'; }).join("")) +
+      '\n                </select>\n              </div>\n            </div>\n\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="fornecedoresSalvar_()">\n                <i class="fas fa-save" style="margin-right:6px;"></i>Salvar Fornecedor\n              </button>\n              <button class="btn-secondary" type="button" onclick="fornecedoresFecharForm_()">Cancelar</button>\n            </div>\n            <div class="helper-text" id="forn_helper" style="margin-top:8px;"></div>\n          </div>\n\n          <!-- PAINEL DE DOCUMENTOS DO FORNECEDOR -->\n          <div class="form-card" id="forn_docs_card" style="display:none;">\n            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">\n              <h3 class="section-card-title" style="margin:0;" id="forn_docs_titulo">Documentos do Fornecedor</h3>\n              <button class="btn-secondary" type="button" onclick="fornecedoresFecharDocs_()" style="font-size:12px;padding:6px 12px;">\n                <i class="fas fa-times" style="margin-right:4px;"></i>Fechar\n              </button>\n            </div>\n\n            <!-- Status de qualificação -->\n            <div id="forn_qual_status" style="border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;"></div>\n\n            <!-- Form novo documento -->\n            <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Adicionar Documento</div>\n            <div class="form-grid" style="grid-template-columns:repeat(2,1fr);">\n              <div>\n                <label for="forn_doc_tipo">Tipo de Documento <span style="color:red;">*</span></label>\n                <select id="forn_doc_tipo">\n                  <option value="ALVARA">Alvará de Funcionamento</option>\n                  <option value="ANVISA">Autorização ANVISA</option>\n                  <option value="ISO">Certificado ISO</option>\n                  <option value="LICENCA_SANITARIA">Licença Sanitária</option>\n                  <option value="CERTIFICADO_TECNICO">Certificado Técnico</option>\n                  <option value="OUTRO">Outro</option>\n                </select>\n              </div>\n              <div>\n                <label for="forn_doc_numero">Número do Documento</label>\n                <input id="forn_doc_numero" type="text" placeholder="Ex: ALV-2024-001">\n              </div>\n              <div>\n                <label for="forn_doc_emissao">Data de Emissão</label>\n                <input id="forn_doc_emissao" type="date">\n              </div>\n              <div>\n                <label for="forn_doc_venc">Data de Vencimento <span style="color:red;">*</span></label>\n                <input id="forn_doc_venc" type="date">\n              </div>\n              <div class="full">\n                <label for="forn_doc_link">Link do Arquivo (Drive)</label>\n                <input id="forn_doc_link" type="url" placeholder="https://drive.google.com/...">\n              </div>\n            </div>\n            <div style="margin-top:10px;">\n              <button class="btn-primary" type="button" onclick="fornecedoresSalvarDocumento_()" style="font-size:13px;padding:8px 18px;">\n                <i class="fas fa-file-circle-plus" style="margin-right:6px;"></i>Registrar Documento\n              </button>\n            </div>\n            <div class="helper-text" id="forn_doc_helper" style="margin-top:8px;"></div>\n\n            <!-- Lista de documentos -->\n            <div style="margin-top:18px;">\n              <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Documentos Cadastrados</div>\n              <div class="table-wrap">\n                <table class="table">\n                  <thead>\n                    <tr>\n                      <th>Tipo</th>\n                      <th>Número</th>\n                      <th>Emissão</th>\n                      <th>Vencimento</th>\n                      <th>Status</th>\n                      <th>Arquivo</th>\n                    </tr>\n                  </thead>\n                  <tbody id="forn_docs_tbody">\n                    <tr><td colspan="6" class="empty-state">Nenhum documento cadastrado.</td></tr>\n                  </tbody>\n                </table>\n              </div>\n            </div>\n          </div>\n\n        </div><!-- /module-grid -->\n\n        <!-- TABELA DE FORNECEDORES -->\n        <div class="list-card" style="margin-top:20px;">\n          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);">\n            <h3 style="margin:0;font-size:14px;font-weight:700;">\n              <i class="fas fa-list" style="margin-right:6px;color:var(--metro-green);"></i>\n              <span id="forn_contagem">Fornecedores cadastrados</span>\n            </h3>\n            <div style="display:flex;gap:8px;">\n              ' +
+      (podeEditar ? '<button class="btn-secondary" type="button" onclick="fornecedoresReavaliar_()" style="font-size:12px;padding:6px 12px;"><i class="fas fa-rotate" style="margin-right:4px;"></i>Reavaliar Qualificações</button>' : "") +
+      '\n              <button class="btn-secondary" type="button" onclick="fornecedoresCarregar_()" style="font-size:12px;padding:6px 12px;">\n                <i class="fas fa-rotate" style="margin-right:4px;"></i>Atualizar\n              </button>\n            </div>\n          </div>\n          <div class="table-wrap">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>Empresa</th>\n                  <th>CNPJ</th>\n                  <th>Tipo</th>\n                  <th>Contato</th>\n                  <th>Qualificação</th>\n                  <th>Docs</th>\n                  <th>Status</th>\n                  <th style="text-align:center;">Ações</th>\n                </tr>\n              </thead>\n              <tbody id="forn_tbody">\n                <tr><td colspan="8" class="empty-state">Carregando...</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n\n      </div>\n    ';
+
+    fornecedoresCarregar_();
+  }
+
+  // ── CARREGAR ───────────────────────────────────────────────────────────────
+  function fornecedoresCarregar_() {
+    if (!SESSION) return;
+    var tbody = document.getElementById("forn_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          fornSetTbody_('<tr><td colspan="8" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_((res && res.message) || "Falha ao carregar") + '</td></tr>');
+          return;
+        }
+        FORNECEDORES_STATE.items = res.items || [];
+        fornecedoresRenderTabela_();
+      })
+      .withFailureHandler(function(err) {
+        fornSetTbody_('<tr><td colspan="8" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>');
+      })
+      .fornecedoresListar(SESSION, {});
+  }
+
+  // ── FILTROS ────────────────────────────────────────────────────────────────
+  function fornecedoresAplicarFiltros_() {
+    FORNECEDORES_STATE.filtro = String((document.getElementById("forn_busca") || {}).value || "").trim().toLowerCase();
+    FORNECEDORES_STATE.filtroTipo = String((document.getElementById("forn_filtro_tipo") || {}).value || "");
+    FORNECEDORES_STATE.filtroStatus = String((document.getElementById("forn_filtro_status") || {}).value || "");
+    fornecedoresRenderTabela_();
+  }
+
+  // ── RENDER TABELA ──────────────────────────────────────────────────────────
+  function fornecedoresRenderTabela_() {
+    var items = FORNECEDORES_STATE.items.slice();
+    var filtro = FORNECEDORES_STATE.filtro;
+    var filtroTipo = FORNECEDORES_STATE.filtroTipo;
+    var filtroSt = FORNECEDORES_STATE.filtroStatus;
+
+    if (filtro) {
+      items = items.filter(function(f) {
+        var text = [f.RAZAO_SOCIAL, f.NOME_FANTASIA, f.CNPJ, f.CONTATO].join(" ").toLowerCase();
+        return text.indexOf(filtro) >= 0;
+      });
+    }
+    if (filtroTipo) items = items.filter(function(f) { return String(f.TIPO_FORNECEDOR || "") === filtroTipo; });
+    if (filtroSt) items = items.filter(function(f) { return String(f.STATUS || "") === filtroSt; });
+
+    var contagem = document.getElementById("forn_contagem");
+    if (contagem) contagem.textContent = items.length + " fornecedor" + (items.length !== 1 ? "es" : "") + " encontrado" + (items.length !== 1 ? "s" : "");
+
+    if (!items.length) {
+      fornSetTbody_('<tr><td colspan="8" class="empty-state">Nenhum fornecedor encontrado.</td></tr>');
+      return;
+    }
+
+    var podeEditar = USER_CONTEXT &&
+      (USER_CONTEXT.perfil === "ADMIN" || USER_CONTEXT.perfil === "GESTOR" || USER_CONTEXT.perfil === "DIRETORIA" || USER_CONTEXT.perfil === "FINANCEIRO");
+
+    var html = items.map(function(f) {
+      var id = escapeHtml_(f.ID);
+      var razao = escapeHtml_(f.RAZAO_SOCIAL || "—");
+      var fantasia = escapeHtml_(f.NOME_FANTASIA || "");
+      var cnpj = escapeHtml_(formatarCnpjFront_(f.CNPJ || ""));
+      var tipo = FORN_TIPOS.find(function(t) { return t.value === f.TIPO_FORNECEDOR; });
+      var tipoLabel = tipo ? tipo.label : escapeHtml_(f.TIPO_FORNECEDOR || "—");
+      var contato = escapeHtml_(f.CONTATO || f.EMAIL || "—");
+
+      // Qualificação badge
+      var qual = String(f.QUALIFICACAO_STATUS || "PENDENTE").toUpperCase();
+      var qualCores = { QUALIFICADO: "#059669", PENDENTE: "#f59e0b", VENCIDO: "#dc2626", BLOQUEADO: "#dc2626" };
+      var qualCor = qualCores[qual] || "#94a3b8";
+      var qualHtml = '<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:' + qualCor + '20;color:' + qualCor + ';font-weight:700;">' + qual + '</span>';
+
+      // Status badge
+      var status = String(f.STATUS || "PENDENTE").toUpperCase();
+      var statusHtml = obterBadgeStatusHtml_(status);
+
+      // Docs count com alerta
+      var docsTotal = Number(f.DOCUMENTOS_TOTAL || 0);
+      var docsHtml = '<span style="font-weight:700;font-size:14px;' + (docsTotal === 0 ? 'color:var(--danger)' : '') + '">' + docsTotal + '</span>';
+
+      // Ações
+      var acoesHtml = '<div style="display:flex;gap:5px;justify-content:center;">';
+      acoesHtml += '<button class="btn-icon" title="Ver Documentos" onclick="fornecedoresVerDocs_(\'' + id + '\')"><i class="fas fa-file-alt"></i></button>';
+      if (podeEditar) {
+        acoesHtml += '<button class="btn-icon" title="Editar" onclick="fornecedoresEditar_(\'' + id + '\')"><i class="fas fa-pen"></i></button>';
+      }
+      acoesHtml += '</div>';
+
+      var isQual = qual === "QUALIFICADO";
+      var isBloq = qual === "BLOQUEADO" || status === "BLOQUEADO";
+
+      return '<tr style="' + (isBloq ? 'opacity:.65;' : '') + '">' +
+        '<td><div style="font-weight:700;font-size:13px;">' + razao + '</div>' + (fantasia && fantasia !== razao ? '<div style="font-size:11px;color:var(--muted);">' + fantasia + '</div>' : '') + '</td>' +
+        '<td style="font-family:monospace;font-size:12px;">' + cnpj + '</td>' +
+        '<td style="font-size:12px;">' + tipoLabel + '</td>' +
+        '<td style="font-size:12px;">' + contato + '</td>' +
+        '<td>' + qualHtml + '</td>' +
+        '<td style="text-align:center;">' + docsHtml + '</td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + acoesHtml + '</td>' +
+        '</tr>';
+    }).join("");
+
+    fornSetTbody_(html);
+  }
+
+  function fornSetTbody_(html) {
+    var tbody = document.getElementById("forn_tbody");
+    if (tbody) tbody.innerHTML = html;
+  }
+
+  // ── NOVO ───────────────────────────────────────────────────────────────────
+  function fornecedoresNovo_() {
+    FORNECEDORES_STATE.editingId = "";
+    fornecedoresFecharDocs_();
+    fornecedoresLimparForm_();
+    var card = document.getElementById("forn_form_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("forn_form_titulo");
+    if (titulo) titulo.textContent = "Novo Fornecedor";
+    var helper = document.getElementById("forn_helper");
+    if (helper) helper.textContent = "";
+    var cnpjEl = document.getElementById("forn_cnpj");
+    if (cnpjEl) cnpjEl.focus();
+  }
+
+  // ── BUSCA CNPJ RECEITA FEDERAL ─────────────────────────────────────────────
+  function fornBuscarCnpj_() {
+    var cnpjEl = document.getElementById("forn_cnpj");
+    if (!cnpjEl) return;
+    var cnpj = cnpjEl.value.replace(/\D/g, "");
+    if (cnpj.length !== 14) { alert("Digite um CNPJ válido com 14 dígitos."); return; }
+
+    var helper = document.getElementById("forn_helper");
+    if (helper) helper.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando na Receita Federal...';
+
+    fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpj)
+      .then(function(res) {
+        if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
+        return res.json();
+      })
+      .then(function(data) {
+        setValue_("forn_razao", data.razao_social || "");
+        setValue_("forn_fantasia", data.nome_fantasia || data.razao_social || "");
+        setValue_("forn_tel", data.ddd_telefone_1 || "");
+        setValue_("forn_email", data.email || "");
+        var end = data.logradouro || "";
+        if (data.numero) end += ", " + data.numero;
+        if (data.bairro) end += " - " + data.bairro;
+        setValue_("forn_endereco", end);
+        setValue_("forn_cidade", data.municipio || "");
+        setValue_("forn_uf", data.uf || "");
+        if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Dados preenchidos automaticamente pela Receita Federal.</span>';
+      })
+      .catch(function(err) {
+        if (helper) helper.innerHTML = '<span style="color:var(--warning);"><i class="fas fa-triangle-exclamation" style="margin-right:4px;"></i>CNPJ não encontrado. Preencha os dados manualmente.</span>';
+      });
+  }
+
+  // ── EDITAR ─────────────────────────────────────────────────────────────────
+  function fornecedoresEditar_(id) {
+    if (!SESSION || !id) return;
+    fornecedoresFecharDocs_();
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) { alert("Fornecedor não encontrado."); return; }
+        var f = res.item;
+        FORNECEDORES_STATE.editingId = f.ID;
+
+        fornecedoresLimparForm_();
+        setValue_("forn_cnpj", formatarCnpjFront_(f.CNPJ || ""));
+        setValue_("forn_razao", f.RAZAO_SOCIAL || "");
+        setValue_("forn_fantasia", f.NOME_FANTASIA || "");
+        setValue_("forn_ie", f.INSCRICAO_ESTADUAL || "");
+        setValue_("forn_tipo", f.TIPO_FORNECEDOR || "PECAS");
+        setValue_("forn_contato", f.CONTATO || "");
+        setValue_("forn_email", f.EMAIL || "");
+        setValue_("forn_tel", f.TELEFONE || "");
+        setValue_("forn_endereco", f.ENDERECO || "");
+        setValue_("forn_cidade", f.CIDADE || "");
+        setValue_("forn_uf", f.UF || "");
+
+        var card = document.getElementById("forn_form_card");
+        if (card) card.style.display = "block";
+        var titulo = document.getElementById("forn_form_titulo");
+        if (titulo) titulo.textContent = "Editar — " + (f.RAZAO_SOCIAL || "");
+        var helper = document.getElementById("forn_helper");
+        if (helper) helper.textContent = "";
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .fornecedoresObter(SESSION, id);
+  }
+
+  // ── SALVAR ─────────────────────────────────────────────────────────────────
+  function fornecedoresSalvar_() {
+    if (!SESSION) return;
+
+    var payload = {
+      ID:                  FORNECEDORES_STATE.editingId || "",
+      CNPJ:                String((document.getElementById("forn_cnpj") || {}).value || "").replace(/\D/g, ""),
+      RAZAO_SOCIAL:        String((document.getElementById("forn_razao") || {}).value || "").trim(),
+      NOME_FANTASIA:       String((document.getElementById("forn_fantasia") || {}).value || "").trim(),
+      INSCRICAO_ESTADUAL:  String((document.getElementById("forn_ie") || {}).value || "").trim(),
+      TIPO_FORNECEDOR:     String((document.getElementById("forn_tipo") || {}).value || "PECAS"),
+      CONTATO:             String((document.getElementById("forn_contato") || {}).value || "").trim(),
+      EMAIL:               String((document.getElementById("forn_email") || {}).value || "").trim(),
+      TELEFONE:            String((document.getElementById("forn_tel") || {}).value || "").trim(),
+      ENDERECO:            String((document.getElementById("forn_endereco") || {}).value || "").trim(),
+      CIDADE:              String((document.getElementById("forn_cidade") || {}).value || "").trim(),
+      UF:                  String((document.getElementById("forn_uf") || {}).value || "").trim()
+    };
+
+    var helper = document.getElementById("forn_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao salvar.") + '</span>';
+          return;
+        }
+        FORNECEDORES_STATE.editingId = res.id || "";
+        if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Fornecedor salvo!</span>';
+        fornecedoresCarregar_();
+        setTimeout(function() { fornecedoresFecharForm_(); }, 1000);
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+      })
+      .fornecedoresSalvar(SESSION, payload);
+  }
+
+  // ── VER DOCUMENTOS ─────────────────────────────────────────────────────────
+  function fornecedoresVerDocs_(id) {
+    if (!SESSION || !id) return;
+    FORNECEDORES_STATE.fornecedorAtivo = id;
+
+    var forn = FORNECEDORES_STATE.items.find(function(f) { return f.ID === id; });
+    var nome = forn ? (forn.RAZAO_SOCIAL || forn.ID) : id;
+
+    var card = document.getElementById("forn_docs_card");
+    if (card) card.style.display = "block";
+    var titulo = document.getElementById("forn_docs_titulo");
+    if (titulo) titulo.textContent = "Documentos — " + nome;
+
+    var tbody = document.getElementById("forn_docs_tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Carregando...</td></tr>';
+    var qualDiv = document.getElementById("forn_qual_status");
+    if (qualDiv) qualDiv.style.display = "none";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--danger);">Erro ao carregar documentos.</td></tr>';
+          return;
+        }
+
+        // Qualificação status
+        var qual = res.qualificacao || {};
+        var qualStatus = String(qual.STATUS_QUALIFICACAO || "PENDENTE").toUpperCase();
+        var qualCores = { QUALIFICADO: { bg: "#ecfdf5", cor: "#059669", icon: "fas fa-check-circle" }, PENDENTE: { bg: "#fffbeb", cor: "#f59e0b", icon: "fas fa-clock" }, VENCIDO: { bg: "#fef2f2", cor: "#dc2626", icon: "fas fa-triangle-exclamation" }, BLOQUEADO: { bg: "#fef2f2", cor: "#dc2626", icon: "fas fa-ban" } };
+        var qc = qualCores[qualStatus] || { bg: "#f8fafc", cor: "#94a3b8", icon: "fas fa-question-circle" };
+        if (qualDiv) {
+          qualDiv.style.cssText = "border-radius:10px;padding:14px 16px;margin-bottom:16px;background:" + qc.bg + ";border:1px solid " + qc.cor + "30;";
+          qualDiv.style.display = "block";
+          qualDiv.innerHTML = '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<i class="' + qc.icon + '" style="font-size:18px;color:' + qc.cor + ';"></i>' +
+            '<div><div style="font-weight:800;font-size:14px;color:' + qc.cor + ';">Qualificação: ' + qualStatus + '</div>' +
+            '<div style="font-size:12px;color:var(--muted);margin-top:2px;">' +
+            'Álvará: <strong>' + (qual.ALVARA_OK === "S" ? "✓" : "✗") + '</strong> &nbsp;|&nbsp; ' +
+            'ANVISA: <strong>' + (qual.ANVISA_OK === "S" ? "✓" : "✗") + '</strong> &nbsp;|&nbsp; ' +
+            'ISO: <strong>' + (qual.ISO_OK === "S" ? "✓" : "✗") + '</strong>' +
+            (qual.OBSERVACOES ? '<br><span style="color:var(--danger);">' + escapeHtml_(qual.OBSERVACOES) + '</span>' : '') +
+            '</div></div></div>';
+        }
+
+        // Documentos
+        var docs = res.documentos || [];
+        if (!docs.length) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum documento cadastrado. Adicione o Álvará e ANVISA para qualificar este fornecedor.</td></tr>';
+          return;
+        }
+
+        var hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        var htmlDocs = docs.map(function(doc) {
+          var tipo = escapeHtml_(doc.TIPO_DOCUMENTO || "—");
+          var numero = escapeHtml_(doc.NUMERO_DOCUMENTO || "—");
+          var emissao = fornFormatarData_(doc.DATA_EMISSAO);
+          var venc = doc.DATA_VENCIMENTO ? new Date(doc.DATA_VENCIMENTO) : null;
+          var vencFmt = venc ? fornFormatarData_(doc.DATA_VENCIMENTO) : "Sem validade";
+          var statusDoc = "VALIDO";
+          if (venc) {
+            venc.setHours(0,0,0,0);
+            var diff = Math.floor((venc - hoje) / 86400000);
+            if (diff < 0) statusDoc = "VENCIDO";
+            else if (diff <= 30) statusDoc = "VENCENDO";
+          }
+          var docCores = { VALIDO: "#059669", VENCENDO: "#f59e0b", VENCIDO: "#dc2626" };
+          var docCor = docCores[statusDoc] || "#94a3b8";
+          var docLabel = { VALIDO: "Válido", VENCENDO: "Vencendo", VENCIDO: "VENCIDO" }[statusDoc] || statusDoc;
+          var linkHtml = doc.LINK_ARQUIVO
+            ? '<a href="' + escapeHtml_(doc.LINK_ARQUIVO) + '" target="_blank" style="color:var(--metro-blue);font-size:12px;"><i class="fas fa-external-link-alt"></i></a>'
+            : '<span style="color:var(--muted);">—</span>';
+          return '<tr><td style="font-weight:700;font-size:12px;">' + tipo + '</td>' +
+            '<td style="font-size:12px;font-family:monospace;">' + numero + '</td>' +
+            '<td style="font-size:12px;">' + emissao + '</td>' +
+            '<td style="font-size:12px;">' + vencFmt + '</td>' +
+            '<td><span style="font-size:11px;padding:3px 10px;border-radius:20px;background:' + docCor + '20;color:' + docCor + ';font-weight:700;">' + docLabel + '</span></td>' +
+            '<td style="text-align:center;">' + linkHtml + '</td></tr>';
+        }).join("");
+
+        if (tbody) tbody.innerHTML = htmlDocs;
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</td></tr>';
+      })
+      .fornecedoresObter(SESSION, id);
+  }
+
+  // ── SALVAR DOCUMENTO ───────────────────────────────────────────────────────
+  function fornecedoresSalvarDocumento_() {
+    if (!SESSION) return;
+    var fornId = FORNECEDORES_STATE.fornecedorAtivo;
+    if (!fornId) { alert("Nenhum fornecedor selecionado."); return; }
+
+    var tipo = String((document.getElementById("forn_doc_tipo") || {}).value || "").trim();
+    var venc = String((document.getElementById("forn_doc_venc") || {}).value || "").trim();
+    if (!tipo) { alert("Selecione o tipo de documento."); return; }
+    if (!venc) { alert("Informe a data de vencimento."); return; }
+
+    var helper = document.getElementById("forn_doc_helper");
+    if (helper) helper.textContent = "Salvando...";
+
+    var payload = {
+      FORNECEDOR_ID:    fornId,
+      TIPO_DOCUMENTO:   tipo,
+      NUMERO_DOCUMENTO: String((document.getElementById("forn_doc_numero") || {}).value || "").trim(),
+      DATA_EMISSAO:     String((document.getElementById("forn_doc_emissao") || {}).value || "").trim(),
+      DATA_VENCIMENTO:  venc,
+      LINK_ARQUIVO:     String((document.getElementById("forn_doc_link") || {}).value || "").trim()
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (helper) helper.innerHTML = '<span style="color:var(--danger);">' + escapeHtml_((res && res.message) || "Erro ao salvar documento.") + '</span>';
+          return;
+        }
+        if (helper) helper.innerHTML = '<span style="color:var(--success);"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Documento registrado! Qualificação atualizada automaticamente.</span>';
+        setValue_("forn_doc_numero", ""); setValue_("forn_doc_emissao", "");
+        setValue_("forn_doc_venc", ""); setValue_("forn_doc_link", "");
+        fornecedoresVerDocs_(fornId);
+        fornecedoresCarregar_();
+      })
+      .withFailureHandler(function(err) {
+        if (helper) helper.innerHTML = '<span style="color:var(--danger);">Erro: ' + escapeHtml_(err.message || String(err)) + '</span>';
+      })
+      .fornecedoresSalvarDocumento(SESSION, payload);
+  }
+
+  // ── REAVALIAR QUALIFICAÇÕES ────────────────────────────────────────────────
+  function fornecedoresReavaliar_() {
+    if (!SESSION) return;
+    if (!confirm("Reavaliar qualificação de TODOS os fornecedores com base nos documentos cadastrados?")) return;
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) { alert("Erro ao reavaliar."); return; }
+        alert("Qualificações reavaliadas. " + (res.total || 0) + " fornecedores processados.");
+        fornecedoresCarregar_();
+      })
+      .withFailureHandler(function(err) { alert("Erro: " + (err.message || err)); })
+      .fornecedoresReavaliarQualificacoes(SESSION);
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function fornecedoresLimparForm_() {
+    ["forn_cnpj","forn_razao","forn_fantasia","forn_ie","forn_contato",
+     "forn_email","forn_tel","forn_endereco","forn_cidade"].forEach(function(id) { setValue_(id, ""); });
+    setValue_("forn_tipo", "PECAS");
+    setValue_("forn_uf", "");
+  }
+
+  function fornecedoresFecharForm_() {
+    FORNECEDORES_STATE.editingId = "";
+    var card = document.getElementById("forn_form_card");
+    if (card) card.style.display = "none";
+  }
+
+  function fornecedoresFecharDocs_() {
+    FORNECEDORES_STATE.fornecedorAtivo = null;
+    var card = document.getElementById("forn_docs_card");
+    if (card) card.style.display = "none";
+  }
+
+  function fornFormatarCnpj_(input) {
+    var v = String(input.value || "").replace(/\D/g, "").substring(0, 14);
+    if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, "$1.$2.$3/$4-$5");
+    else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})$/, "$1.$2.$3/$4");
+    else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{0,3})$/, "$1.$2.$3");
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,3})$/, "$1.$2");
+    input.value = v;
+  }
+
+  function fornFormatarData_(val) {
+    if (!val) return "—";
+    var s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      var p = s.substring(0, 10).split("-");
+      return p[2] + "/" + p[1] + "/" + p[0];
+    }
+    return s.substring(0, 10) || "—";
+  }
+</script>

@@ -1,0 +1,57 @@
+<script>
+  function renderRastreabilidadeModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Rastreabilidade Total</h2>\n            <p class="content-subtitle">Consulta de origem, lote, fornecedor, OS, equipamento instalado e tecnico responsavel.</p>\n          </div>\n          <div class="module-header-right">\n            <input id="rastCodigo" class="toolbar-search" type="text" placeholder="Bipe token, lote, peca ou OS">\n            <button class="btn-primary" type="button" onclick="rastreabilidadeConsultar_()">Consultar</button>\n          </div>\n        </div>\n        <div class="list-card">\n          <div id="rastResultado" class="empty-state">Aguardando leitura do codigo ou informacao de rastreio.</div>\n        </div>\n      </div>';
+    const inp = document.getElementById("rastCodigo");
+    if (inp) inp.addEventListener("keydown", function(e) { if (e.key === "Enter") rastreabilidadeConsultar_(); });
+  }
+
+  function rastreabilidadeConsultar_() {
+    const codigo = getValue_("rastCodigo");
+    if (!codigo) return alert("Informe um codigo para rastrear.");
+    google.script.run.withSuccessHandler(function(res) {
+      const box = document.getElementById("rastResultado");
+      if (!box) return;
+      if (!res || !res.success) {
+        box.innerHTML = '<div class="empty-state">' + escapeHtml_((res && res.message) || "Nao localizado.") + '</div>';
+        return;
+      }
+      box.innerHTML = rastreabilidadeHtml_(res);
+    }).rastreabilidadeConsultar(SESSION, { CODIGO: codigo, LOTE_ID: codigo, PECA_ID: codigo, OS_ID: codigo });
+  }
+
+  function rastreabilidadeHtml_(res) {
+    if (res.tipo === "LOTE") {
+      const saidas = res.saidas || [];
+      return '<div class="module-grid" style="grid-template-columns:1fr 1fr;">' +
+        rastCard_("Item", [["Descricao", res.item && res.item.DESCRICAO], ["Referencia", res.item && res.item.REFERENCIA], ["Fabricante", res.item && res.item.FABRICANTE]]) +
+        rastCard_("Fornecedor", [["Razao", res.fornecedor && res.fornecedor.RAZAO_SOCIAL], ["CNPJ", res.fornecedor && res.fornecedor.CNPJ], ["Status", res.fornecedor && res.fornecedor.STATUS]]) +
+        rastCard_("Lote", [["Lote", res.lote.NUMERO_LOTE], ["Serie", res.lote.NUMERO_SERIE], ["Validade", formatarDataFront_(res.lote.DATA_VALIDADE)], ["Saldo", res.lote.QUANTIDADE_ATUAL]]) +
+        rastCard_("Nota Fiscal", [["Numero", res.notaFiscal && res.notaFiscal.NUMERO_NF], ["Recebimento", res.notaFiscal && formatarDataFront_(res.notaFiscal.DATA_RECEBIMENTO)]]) +
+        '<div class="full" style="grid-column:1/-1;"><h3 class="section-card-title">Saidas / Uso em OS</h3>' + rastSaidas_(saidas) + '</div>' +
+      '</div>';
+    }
+    if (res.tipo === "PECA_INSTALADA") {
+      return rastCard_("Peca Instalada", [["Nome", res.peca.NOME], ["Serie", res.peca.NUMERO_SERIE], ["Equipamento", res.peca.EQUIPAMENTO_ID], ["OS instalacao", res.peca.INSTALADA_OS_ID], ["Tecnico", res.peca.INSTALADA_POR], ["Fornecedor", res.fornecedor && res.fornecedor.RAZAO_SOCIAL]]);
+    }
+    if (res.tipo === "OS") {
+      return rastCard_("OS", [["Numero", res.os.NUMERO_OS], ["Status", res.os.STATUS], ["Equipamento", res.os.EQUIPAMENTO_ID], ["Tecnico", res.os.TECNICO_ID]]) + rastSaidas_(res.materiais || []);
+    }
+    return '<pre style="white-space:pre-wrap;">' + escapeHtml_(JSON.stringify(res, null, 2)) + '</pre>';
+  }
+
+  function rastCard_(titulo, linhas) {
+    return '<div class="form-card"><h3 class="section-card-title">' + escapeHtml_(titulo) + '</h3>' +
+      (linhas || []).map(function(l) { return '<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:8px 0;"><strong>' + escapeHtml_(l[0]) + '</strong><span>' + escapeHtml_(l[1] || "--") + '</span></div>'; }).join("") +
+      '</div>';
+  }
+
+  function rastSaidas_(saidas) {
+    if (!saidas.length) return '<div class="empty-state">Nenhuma saida localizada.</div>';
+    return '<div class="table-wrap"><table class="table"><thead><tr><th>OS</th><th>Equipamento</th><th>Peca instalada</th><th>Qtd.</th><th>Tecnico</th><th>Data</th></tr></thead><tbody>' +
+      saidas.map(function(s) {
+        return '<tr><td>' + escapeHtml_((s.os && s.os.NUMERO_OS) || s.OS_ID) + '</td><td>' + escapeHtml_(s.EQUIPAMENTO_ID || (s.os && s.os.EQUIPAMENTO_ID)) + '</td><td>' + escapeHtml_(s.PECA_INSTALADA_ID || (s.pecaInstalada && s.pecaInstalada.ID)) + '</td><td>' + escapeHtml_(s.QUANTIDADE) + '</td><td>' + escapeHtml_(s.TECNICO_ID || (s.os && s.os.TECNICO_ID)) + '</td><td>' + escapeHtml_(formatarDataFront_(s.DATA_SAIDA || s.DATA_USO)) + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+</script>

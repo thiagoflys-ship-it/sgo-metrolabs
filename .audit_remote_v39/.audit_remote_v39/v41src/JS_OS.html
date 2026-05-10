@@ -1,0 +1,824 @@
+<script>
+  /* ================================================================
+   * MÓDULO OS — Ordens de Serviço
+   * ================================================================ */
+
+  function renderOSModulo_() {
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Ordens de Servico</h2>\n            <p class="content-subtitle">Abertura, agendamento, execucao, aprovacao e documento oficial controlado.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;">\n            <button class="btn-secondary" type="button" onclick="osPesquisar_()">Atualizar</button>\n            <button class="btn-secondary" type="button" onclick="abrir(\'os_questionarios\')">OS Questionarios</button>\n            <button class="btn-primary" type="button" onclick="osNova_()">+ Nova Tarefa</button>\n          </div>\n        </div>\n\n        <div class="os-kpi-row" id="osKpiRow">\n          <div class="os-kpi-card" id="osKpiTotal">\n            <div class="os-kpi-value">—</div><div class="os-kpi-label">Total</div>\n          </div>\n          <div class="os-kpi-card os-kpi-blue" id="osKpiAbertas">\n            <div class="os-kpi-value">—</div><div class="os-kpi-label">Abertas / Agendadas</div>\n          </div>\n          <div class="os-kpi-card os-kpi-purple" id="osKpiExecucao">\n            <div class="os-kpi-value">—</div><div class="os-kpi-label">Em Execucao</div>\n          </div>\n          <div class="os-kpi-card os-kpi-green" id="osKpiConcluidas">\n            <div class="os-kpi-value">—</div><div class="os-kpi-label">Concluidas / Aprovadas</div>\n          </div>\n          <div class="os-kpi-card os-kpi-red" id="osKpiSla">\n            <div class="os-kpi-value">—</div><div class="os-kpi-label">SLA Atrasado</div>\n          </div>\n        </div>\n\n        <div class="list-card" style="display:flex;flex-direction:column;min-height:400px;">\n          <div class="os-filter-bar">\n            <select id="osFiltroStatus" onchange="osPesquisar_()">\n              <option value="">Todos os status</option>\n              <option value="ABERTA">Aberta</option>\n              <option value="AGENDADA">Agendada</option>\n              <option value="EM_EXECUCAO">Em Execucao</option>\n              <option value="CONCLUIDA_TECNICAMENTE">Concluida Tec.</option>\n              <option value="EM_APROVACAO">Em Aprovacao</option>\n              <option value="APROVADA">Aprovada</option>\n              <option value="FATURADA">Faturada</option>\n              <option value="CANCELADA">Cancelada</option>\n            </select>\n            <input id="osPesquisa" class="toolbar-search" type="text"\n              placeholder="Buscar por N° OS, cliente, equipamento..."\n              onkeydown="if(event.key===\'Enter\') osPesquisar_()">\n            <button class="btn-secondary" type="button" onclick="osPesquisar_()">Buscar</button>\n          </div>\n          <div class="table-wrap" style="flex:1;overflow:auto;">\n            <table class="table">\n              <thead>\n                <tr>\n                  <th>N° OS</th>\n                  <th>Cliente / Unidade</th>\n                  <th>Equipamento</th>\n                  <th>Tipo</th>\n                  <th>Status</th>\n                  <th>Tecnico</th>\n                  <th>SLA</th>\n                  <th>Quest.</th>\n                  <th>Acoes</th>\n                </tr>\n              </thead>\n              <tbody id="osTabelaBody">\n                <tr><td colspan="9" class="empty-state">Carregando...</td></tr>\n              </tbody>\n            </table>\n          </div>\n        </div>\n\n        <div id="osDocPanel" style="display:none;margin-top:16px;"></div>\n\n      </div>\n\n      <div id="osModalNova" class="modal-overlay" style="display:none;" onclick="if(event.target===this)osFecharModal_()">\n        <div class="modal-card" style="max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">\n          <div class="modal-header" style="flex-shrink:0;">\n            <h3 class="modal-title" id="osModalTitulo">Nova Tarefa</h3>\n            <button type="button" onclick="osFecharModal_()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px;">&times;</button>\n          </div>\n          <div style="display:flex;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;">\n            <button class="os-tab-btn os-tab-btn-ativo" id="osTab1Btn" type="button" onclick="osAbaAtiva_(1)">1. Geral</button>\n            <button class="os-tab-btn" id="osTab2Btn" type="button" onclick="osAbaAtiva_(2)">2. Local</button>\n            <button class="os-tab-btn" id="osTab3Btn" type="button" onclick="osAbaAtiva_(3)">3. Equipamento</button>\n            <button class="os-tab-btn" id="osTab4Btn" type="button" onclick="osAbaAtiva_(4)">4. Execucao</button>\n            <button class="os-tab-btn" id="osTab5Btn" type="button" onclick="osAbaAtiva_(5)">5. Notificacoes</button>\n          </div>\n          <div class="modal-body" style="flex:1;overflow-y:auto;">\n\n            <div id="osTabPane1">\n              <div class="form-grid">\n                <div class="full"><label>Cliente *</label><select id="os_cliente_id" onchange="osFiltrarCombos_()"></select></div>\n                <div class="full"><label>Unidade</label><select id="os_unidade_id" onchange="osFiltrarCombos_()"></select></div>\n                <div><label>Data agendada</label><input id="os_data_agendada" type="datetime-local"></div>\n                <div>\n                  <label>Tecnico responsavel</label>\n                  <div class="os-tecnico-picker">\n                    <input id="os_tecnico_busca" type="text" placeholder="Pesquisar tecnico..."\n                      autocomplete="off"\n                      oninput="osFiltraTecnicos_()"\n                      onfocus="osAbrirTecnicosDrop_()"\n                      onblur="setTimeout(osFecharTecnicosDrop_, 200)">\n                    <div id="os_tecnico_drop" class="os-tecnico-drop" style="display:none;"></div>\n                    <input type="hidden" id="os_tecnico_id">\n                    <div id="os_tecnico_tag" class="os-tecnico-tag" style="display:none;"></div>\n                  </div>\n                </div>\n                <div><label>Tipo *</label><select id="os_tipo" onchange="osAtualizarQuestionarioSugerido_()"></select></div>\n                <div><label>Prioridade</label><select id="os_prioridade"></select></div>\n                <div class="full"><label>Relato do cliente *</label><textarea id="os_relato" rows="3" placeholder="Descreva o problema ou solicitacao do cliente..."></textarea></div>\n                <div class="full"><label>Missao tecnica</label><textarea id="os_missao_tecnica" rows="2" placeholder="Instrucoes e objetivos para o tecnico..."></textarea></div>\n              </div>\n            </div>\n\n            <div id="osTabPane2" style="display:none;">\n              <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Voce esta no local do atendimento?</div>\n              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">\n                <button class="btn-success" type="button" onclick="osEstouNoLocal_()">Estou no local</button>\n                <button class="btn-secondary" type="button" onclick="osNaoEstouNoLocal_()">Nao estou no local</button>\n              </div>\n              <input type="hidden" id="os_local_atendimento">\n              <input type="hidden" id="os_checkin_lat">\n              <input type="hidden" id="os_checkin_lng">\n              <input type="hidden" id="os_checkin_endereco">\n              <div id="osLocalSugestao" style="margin-bottom:12px;font-size:13px;color:var(--muted);"></div>\n              <div class="form-grid">\n                <div class="full"><label>Obs. de acesso</label><textarea id="os_obs_acesso" rows="2" placeholder="Como chegar, restricoes de acesso..."></textarea></div>\n              </div>\n            </div>\n\n            <div id="osTabPane3" style="display:none;">\n              <div class="form-grid">\n                <div class="full"><label>Equipamento</label><select id="os_equipamento_id" onchange="osFiltrarPecas_();osPreencherEquipamento_();osAtualizarQuestionarioSugerido_();"></select></div>\n                <div id="osEqpDetalheBox" class="full" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;"></div>\n                <div class="full">\n                  <button type="button" id="osMaisOpcoesBtn" onclick="osToggleMaisOpcoes_()" style="background:none;border:none;color:var(--metro-blue);font-size:13px;font-weight:600;cursor:pointer;padding:4px 0;text-decoration:underline;">+ Mais opcoes</button>\n                </div>\n              </div>\n              <div id="osMaisOpcoesWrap" style="display:none;">\n                <div class="form-grid">\n                  <div class="full"><label>Peca / Subconjunto</label><select id="os_peca_id"></select></div>\n                  <div class="full"><label>Contrato</label><select id="os_contrato_id"></select></div>\n                </div>\n              </div>\n            </div>\n\n            <div id="osTabPane4" style="display:none;">\n              <div style="background:var(--info-bg);border:1px solid #93c5fd;border-radius:8px;padding:12px 14px;font-size:13px;color:var(--metro-blue-dark);margin-bottom:14px;">\n                <strong>Questionario vinculado automaticamente</strong> — O questionario e sugerido ao selecionar Tipo OS e Equipamento (aba Geral + aba Equipamento).\n              </div>\n              <input type="hidden" id="os_questionario_modelo_id">\n              <div id="osQuestionarioSugerido"></div>\n            </div>\n\n            <div id="osTabPane5" style="display:none;">\n              <div style="background:var(--warning-bg);border:1px solid #fcd34d;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400e;margin-bottom:14px;">\n                Configuracoes de notificacao. Envio real sera implementado em versao futura.\n              </div>\n              <div class="form-grid">\n                <div><label><input type="checkbox" id="os_notif_wa"> Notificar cliente (WhatsApp)</label></div>\n                <div><label><input type="checkbox" id="os_notif_email"> Notificar cliente (E-mail)</label></div>\n                <div><label><input type="checkbox" id="os_notif_tec_wa"> Notificar tecnico (WhatsApp)</label></div>\n                <div><label><input type="checkbox" id="os_notif_tec_email"> Notificar tecnico (E-mail)</label></div>\n              </div>\n            </div>\n\n          </div>\n          <div class="modal-footer" style="flex-shrink:0;display:flex;justify-content:space-between;">\n            <div style="display:flex;gap:8px;">\n              <button class="btn-secondary" type="button" id="osBtnTabAnterior" onclick="osAbaAnterior_()" style="display:none;">&#8592; Anterior</button>\n              <button class="btn-secondary" type="button" id="osBtnTabProxima" onclick="osAbaProxima_()">Proxima &#8594;</button>\n            </div>\n            <div style="display:flex;gap:8px;">\n              <button class="btn-secondary" type="button" onclick="osFecharModal_()">Cancelar</button>\n              <button class="btn-primary" id="osBtnSalvar" type="button" onclick="osSalvar_()">Salvar OS</button>\n            </div>\n          </div>\n        </div>\n      </div>\n    ';
+
+    osCarregarOpcoes_();
+
+    document.addEventListener("click", function osDdClose(e) {
+      if (!e.target.closest(".os-drop-wrap")) {
+        document.querySelectorAll(".os-dropdown").forEach(function(d) { d.style.display = "none"; });
+      }
+    });
+  }
+
+  /* ---- Opções e combos ---- */
+
+  function osCarregarOpcoes_() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert((res && res.message) || "Falha ao carregar opcoes.");
+        OS_STATE.opcoes = res;
+        preencherSelect_("os_tipo", res.tipos || [], "");
+        preencherSelect_("os_prioridade", res.prioridades || [], "NORMAL");
+        preencherSelectObj_("os_cliente_id", res.clientes || [], "ID", "NOME");
+        osFiltrarCombos_();
+        osPesquisar_();
+      })
+      .withFailureHandler(function(e) { alert("Erro ao carregar opcoes: " + e); })
+      .osListarOpcoes(SESSION);
+  }
+
+  function preencherSelect_(id, lista, selecionado) {
+    const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = '<option value="">Selecione</option>' +
+      (lista || []).map(function(v) {
+        return '<option value="' + escapeHtml_(v) + '"' + (v === selecionado ? ' selected' : '') + '>' + escapeHtml_(v) + '</option>';
+      }).join("");
+  }
+
+  function preencherSelectObj_(id, lista, idKey, labelKey) {
+    const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = '<option value="">Selecione</option>' +
+      (lista || []).map(function(v) {
+        return '<option value="' + escapeHtml_(v[idKey]) + '">' + escapeHtml_(v[labelKey] || v[idKey]) + '</option>';
+      }).join("");
+  }
+
+  function osFiltrarCombos_() {
+    const op = OS_STATE.opcoes || {};
+    const cli = getValue_("os_cliente_id");
+    const uniSel = getValue_("os_unidade_id");
+    const eqpSel = getValue_("os_equipamento_id");
+    const pecaSel = getValue_("os_peca_id");
+    const contratoSel = getValue_("os_contrato_id");
+    preencherSelectObj_("os_unidade_id", (op.unidades || []).filter(function(u) { return !cli || u.CLIENTE_ID === cli; }), "ID", "NOME");
+    if (uniSel) setValue_("os_unidade_id", uniSel);
+    const uni = getValue_("os_unidade_id");
+    preencherSelectObj_("os_equipamento_id", (op.equipamentos || []).filter(function(e) {
+      return (!cli || e.CLIENTE_ID === cli) && (!uni || e.UNIDADE_ID === uni);
+    }), "ID", "LABEL");
+    if (eqpSel) setValue_("os_equipamento_id", eqpSel);
+    preencherSelectObj_("os_contrato_id", (op.contratos || []).filter(function(c) { return !cli || c.CLIENTE_ID === cli; }), "ID", "LABEL");
+    if (contratoSel) setValue_("os_contrato_id", contratoSel);
+    osFiltrarPecas_();
+    if (pecaSel) setValue_("os_peca_id", pecaSel);
+  }
+
+  function osFiltrarPecas_() {
+    const op = OS_STATE.opcoes || {};
+    const eqp = getValue_("os_equipamento_id");
+    preencherSelectObj_("os_peca_id", (op.pecas || []).filter(function(p) { return !eqp || p.EQUIPAMENTO_ID === eqp; }), "ID", "LABEL");
+  }
+
+  function osTipoEquipamentoSelecionado_() {
+    const eqpId = getValue_("os_equipamento_id");
+    const eqp = ((OS_STATE.opcoes && OS_STATE.opcoes.equipamentos) || []).find(function(e) { return e.ID === eqpId; }) || {};
+    return eqp.TIPO || "GERAL";
+  }
+
+  function osAtualizarQuestionarioSugerido_() {
+    const box = document.getElementById("osQuestionarioSugerido"); if (!box) return;
+    const tipo = getValue_("os_tipo");
+    const tipoEqp = osTipoEquipamentoSelecionado_();
+    if (!tipo) {
+      box.innerHTML = "";
+      setValue_("os_questionario_modelo_id", "");
+      OS_STATE.questionarioModeloId = "";
+      return;
+    }
+    box.innerHTML = '<span style="color:var(--muted);">Buscando questionario...</span>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) {
+          setValue_("os_questionario_modelo_id", "");
+          OS_STATE.questionarioModeloId = "";
+          box.innerHTML =
+            '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 14px;">' +
+            '<div style="font-weight:700;color:#92400e;margin-bottom:4px;">&#9888; Sem questionario configurado</div>' +
+            '<div style="font-size:12px;color:#b45309;">Nenhum questionario encontrado para ' +
+              escapeHtml_(tipo) + ' + ' + escapeHtml_(tipoEqp) +
+            '. A OS sera salva sem questionario vinculado.</div></div>';
+          return;
+        }
+        const m = res.item;
+        setValue_("os_questionario_modelo_id", m.ID);
+        OS_STATE.questionarioModeloId = m.ID;
+        const pergs = (m.perguntas || []).length;
+        box.innerHTML =
+          '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px;">' +
+          '<div style="font-weight:700;color:#065f46;margin-bottom:6px;">&#10003; Questionario vinculado</div>' +
+          '<div style="font-size:13px;color:var(--text);font-weight:600;">' + escapeHtml_(m.NOME || "") + '</div>' +
+          '<div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;">' +
+            '<span style="font-size:12px;color:var(--muted);">v' + escapeHtml_(m.VERSAO || "1") + '</span>' +
+            '<span style="font-size:12px;color:var(--muted);">' + pergs + ' perguntas</span>' +
+            (m.EXIGE_FOTO === "S" ? '<span style="font-size:12px;color:var(--muted);">&#128247; Foto</span>' : '') +
+            (m.EXIGE_ASSINATURA === "S" ? '<span style="font-size:12px;color:var(--muted);">&#9997; Assinatura</span>' : '') +
+          '</div></div>';
+      })
+      .checklistModeloPorTipoOSTipoEquipamento(SESSION, tipo, tipoEqp);
+  }
+
+  function osEstouNoLocal_() {
+    setValue_("os_local_atendimento", "SIM");
+    const box = document.getElementById("osLocalSugestao");
+    if (box) box.innerHTML = "Capturando GPS do navegador...";
+    if (!navigator.geolocation) {
+      if (box) box.innerHTML = "GPS indisponivel neste navegador. Use a busca manual abaixo.";
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setValue_("os_checkin_lat", String(lat));
+      setValue_("os_checkin_lng", String(lng));
+      google.script.run
+        .withSuccessHandler(function(res) {
+          const items = (res && res.items) || [];
+          if (!items.length) {
+            if (box) box.innerHTML = "GPS capturado, mas nenhuma unidade cadastrada foi encontrada perto. Selecione manualmente.";
+            return;
+          }
+          const u = items[0];
+          if (box) box.innerHTML = '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg);">' +
+            '<strong>Unidade sugerida:</strong> ' + escapeHtml_(u.CLIENTE_NOME || "") + ' · ' + escapeHtml_(u.NOME_UNIDADE || u.NOME || u.ID) +
+            ' <span style="color:var(--muted);">(' + escapeHtml_(u.DISTANCIA_KM) + ' km)</span>' +
+            '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
+              '<button class="btn-success" type="button" onclick="osConfirmarUnidadeGPS_(\'' + escapeHtml_(u.CLIENTE_ID) + '\',\'' + escapeHtml_(u.ID) + '\')">Confirmar</button>' +
+              '<button class="btn-secondary" type="button" onclick="osNaoEstouNoLocal_()">Trocar</button>' +
+            '</div></div>';
+        })
+        .osBuscarUnidadesProximas(SESSION, lat, lng, 3);
+    }, function(err) {
+      if (box) box.innerHTML = "Nao foi possivel capturar GPS: " + escapeHtml_(err.message || "permissao negada") + ". Use a busca manual.";
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  }
+
+  function osConfirmarUnidadeGPS_(clienteId, unidadeId) {
+    setValue_("os_cliente_id", clienteId);
+    osFiltrarCombos_();
+    setTimeout(function() { setValue_("os_unidade_id", unidadeId); osFiltrarCombos_(); }, 80);
+  }
+
+  function osNaoEstouNoLocal_() {
+    setValue_("os_local_atendimento", "NAO");
+    const box = document.getElementById("osLocalSugestao");
+    if (box) box.innerHTML = "Busca manual liberada. Selecione cliente, unidade e equipamento nos campos abaixo.";
+  }
+
+  /* ---- Técnico picker ---- */
+
+  function osFiltraTecnicos_() {
+    const q = (document.getElementById("os_tecnico_busca") || {}).value || "";
+    osAbrirTecnicosDrop_(q);
+  }
+
+  function osAbrirTecnicosDrop_(q) {
+    const drop = document.getElementById("os_tecnico_drop"); if (!drop) return;
+    const todos = (OS_STATE.opcoes && OS_STATE.opcoes.tecnicos) || [];
+    const filtro = (q || "").toLowerCase();
+    const lista = filtro ? todos.filter(function(t) { return (t.LABEL || t.NOME || "").toLowerCase().indexOf(filtro) >= 0; }) : todos.slice(0, 15);
+    if (!lista.length) { drop.style.display = "none"; return; }
+    drop.innerHTML = lista.slice(0, 15).map(function(t) {
+      return '<div class="os-tecnico-item" onmousedown="osSelecionarTecnico_(\'' + escapeHtml_(t.ID) + '\',\'' + escapeHtml_((t.LABEL || t.NOME || t.ID).replace(/'/g, "")) + '\')">' + escapeHtml_(t.LABEL || t.NOME || t.ID) + '</div>';
+    }).join("");
+    drop.style.display = "block";
+  }
+
+  function osFecharTecnicosDrop_() {
+    const drop = document.getElementById("os_tecnico_drop"); if (drop) drop.style.display = "none";
+  }
+
+  function osSelecionarTecnico_(id, label) {
+    setValue_("os_tecnico_id", id);
+    const busca = document.getElementById("os_tecnico_busca"); if (busca) busca.value = "";
+    const tag = document.getElementById("os_tecnico_tag");
+    if (tag) {
+      tag.style.display = "inline-flex";
+      tag.innerHTML = escapeHtml_(label) + ' <span onclick="osLimparTecnico_()" style="margin-left:6px;cursor:pointer;opacity:.7;">&#215;</span>';
+    }
+    osFecharTecnicosDrop_();
+  }
+
+  function osLimparTecnico_() {
+    setValue_("os_tecnico_id", "");
+    const busca = document.getElementById("os_tecnico_busca"); if (busca) busca.value = "";
+    const tag = document.getElementById("os_tecnico_tag"); if (tag) tag.style.display = "none";
+  }
+
+  function osTecnicoSelecionado_() {
+    const id = getValue_("os_tecnico_id");
+    return ((OS_STATE.opcoes && OS_STATE.opcoes.tecnicos) || []).find(function(t) { return t.ID === id; }) || {};
+  }
+
+  /* ---- Pesquisar + KPIs ---- */
+
+  function osPesquisar_() {
+    const body = document.getElementById("osTabelaBody");
+    if (body) body.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando...</td></tr>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        const todos = (res && res.items) || [];
+        const filtroStatus = (getValue_("osFiltroStatus") || "").toUpperCase();
+        const items = filtroStatus ? todos.filter(function(i) { return (i.STATUS || "").toUpperCase() === filtroStatus; }) : todos;
+        osAtualizarKpis_(todos);
+        renderTabelaOS_(items);
+      })
+      .withFailureHandler(function(e) {
+        if (body) body.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao buscar: ' + escapeHtml_(String(e)) + '</td></tr>';
+      })
+      .osPesquisar(SESSION, getValue_("osPesquisa") || "");
+  }
+
+  function osAtualizarKpis_(items) {
+    const agora = new Date();
+    const set = function(id, v) { const el = document.getElementById(id); if (el) el.querySelector(".os-kpi-value").textContent = v; };
+    set("osKpiTotal", items.length);
+    set("osKpiAbertas", items.filter(function(i) { return ["ABERTA", "AGENDADA"].indexOf((i.STATUS || "").toUpperCase()) >= 0; }).length);
+    set("osKpiExecucao", items.filter(function(i) { return (i.STATUS || "").toUpperCase() === "EM_EXECUCAO"; }).length);
+    set("osKpiConcluidas", items.filter(function(i) { return ["CONCLUIDA_TECNICAMENTE", "APROVADA", "FATURADA"].indexOf((i.STATUS || "").toUpperCase()) >= 0; }).length);
+    set("osKpiSla", items.filter(function(i) {
+      const st = (i.STATUS || "").toUpperCase();
+      if (["APROVADA", "FATURADA", "CANCELADA"].indexOf(st) >= 0) return false;
+      return i.SLA_PRAZO && new Date(i.SLA_PRAZO) < agora;
+    }).length);
+  }
+
+  function renderTabelaOS_(items) {
+    const body = document.getElementById("osTabelaBody"); if (!body) return;
+    if (!items.length) {
+      body.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma OS encontrada.</td></tr>';
+      return;
+    }
+    const agora = new Date();
+    body.innerHTML = items.map(function(i) {
+      const id = escapeHtml_(i.ID);
+      const st = (i.STATUS || "").toUpperCase();
+      const slaAtrasado = i.SLA_PRAZO && new Date(i.SLA_PRAZO) < agora && ["APROVADA", "FATURADA", "CANCELADA"].indexOf(st) < 0;
+      const rowCls = slaAtrasado ? ' class="os-row-sla-late"' : "";
+      const uniHtml = i.UNIDADE_NOME ? '<br><small style="color:var(--muted);font-size:11px;">' + escapeHtml_(i.UNIDADE_NOME) + '</small>' : "";
+      const slaHtml = i.SLA_PRAZO
+        ? (slaAtrasado
+          ? '<span style="color:#ef4444;font-weight:700;">' + escapeHtml_(formatarDataFront_(i.SLA_PRAZO)) + '</span>'
+          : escapeHtml_(formatarDataFront_(i.SLA_PRAZO)))
+        : "—";
+      const questHtml = i.QUESTIONARIO_MODELO_ID
+        ? '<span title="Questionario vinculado" style="color:#059669;font-size:15px;">&#10003;</span>'
+        : '<span title="Sem questionario" style="color:#cbd5e1;">—</span>';
+
+      return '<tr' + rowCls + '>' +
+        '<td style="font-weight:700;font-size:13px;">' + escapeHtml_(i.NUMERO_OS || i.ID) + '</td>' +
+        '<td>' + escapeHtml_(i.CLIENTE_NOME || "—") + uniHtml + '</td>' +
+        '<td style="font-size:12px;">' + escapeHtml_(i.EQUIPAMENTO_TAG || i.EQUIPAMENTO_TIPO || "—") + '</td>' +
+        '<td style="font-size:12px;">' + escapeHtml_(i.TIPO_OS || "—") + '</td>' +
+        '<td>' + obterBadgeStatusHtml_(i.STATUS) + '</td>' +
+        '<td style="font-size:12px;">' + escapeHtml_(i.TECNICO_NOME || i.TECNICO_ID || "—") + '</td>' +
+        '<td style="font-size:12px;">' + slaHtml + '</td>' +
+        '<td style="text-align:center;">' + questHtml + '</td>' +
+        '<td>' +
+          '<div style="display:flex;gap:4px;align-items:center;">' +
+            osBotaoPrimario_(id, st) +
+            '<div class="os-drop-wrap">' +
+              '<button class="btn-secondary" style="padding:5px 10px;font-size:13px;" type="button"' +
+              ' onclick="osToggleDrop_(this,\'' + id + '\',\'' + st + '\')">&#8942;</button>' +
+              '<div class="os-dropdown" style="display:none;"></div>' +
+            '</div>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  function osBotaoPrimario_(id, st) {
+    const p = (SESSION && SESSION.perfil) ? SESSION.perfil.toUpperCase() : "";
+    const podeAprovar = ["ADMIN", "DIRETORIA", "GESTOR", "METROLOGIA"].some(function(r) { return p.indexOf(r) >= 0; });
+    if (["APROVADA", "FATURADA"].indexOf(st) >= 0) {
+      return '<button class="btn-success" style="padding:5px 12px;font-size:12px;" type="button" onclick="osGerarDocumento_(\'' + id + '\')">PDF</button>';
+    }
+    if (["CONCLUIDA_TECNICAMENTE", "EM_APROVACAO"].indexOf(st) >= 0 && podeAprovar) {
+      return '<button class="btn-success" style="padding:5px 12px;font-size:12px;" type="button" onclick="osAprovar_(\'' + id + '\')">Aprovar</button>';
+    }
+    if (["ABERTA", "EM_EXECUCAO", "AGENDADA"].indexOf(st) >= 0) {
+      return '<button style="padding:5px 12px;font-size:12px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;" type="button" onclick="osExecutar_(\'' + id + '\')">Executar</button>';
+    }
+    if (st === "CANCELADA") {
+      return '<button class="btn-secondary" style="padding:5px 12px;font-size:12px;" type="button" onclick="osEditar_(\'' + id + '\')">Ver</button>';
+    }
+    return '<button class="btn-primary" style="padding:5px 12px;font-size:12px;" type="button" onclick="osEditar_(\'' + id + '\')">Editar</button>';
+  }
+
+  function osToggleDrop_(btn, id, st) {
+    const drop = btn.nextElementSibling;
+    const estaAberto = drop && drop.style.display === "block";
+    document.querySelectorAll(".os-dropdown").forEach(function(d) { d.style.display = "none"; });
+    if (estaAberto || !drop) return;
+
+    const p = (SESSION && SESSION.perfil) ? SESSION.perfil.toUpperCase() : "";
+    const podeEditar  = ["CLIENTE"].every(function(r) { return p.indexOf(r) < 0; });
+    const podeAprovar = ["ADMIN", "DIRETORIA", "GESTOR", "METROLOGIA"].some(function(r) { return p.indexOf(r) >= 0; });
+    const podeCancelar = ["ADMIN", "DIRETORIA", "GESTOR"].some(function(r) { return p.indexOf(r) >= 0; });
+    const statusFinal = ["APROVADA", "FATURADA", "CANCELADA"].indexOf(st) >= 0;
+    const close = "document.querySelectorAll('.os-dropdown').forEach(function(d){d.style.display='none';});";
+
+    const botoes = [
+      (podeEditar && st !== "CANCELADA") ? '<button onclick="' + close + 'osEditar_(\'' + id + '\')">Editar dados</button>' : null,
+      '<button onclick="' + close + 'osExecutar_(\'' + id + '\')">Abrir execucao</button>',
+      (podeAprovar && ["CONCLUIDA_TECNICAMENTE", "EM_APROVACAO"].indexOf(st) >= 0) ? '<button onclick="' + close + 'osAprovar_(\'' + id + '\')">Aprovar OS</button>' : null,
+      '<button onclick="' + close + 'osGerarDocumento_(\'' + id + '\')">Gerar PDF</button>',
+      '<button onclick="' + close + 'osAbrirValidacao_(\'' + id + '\')">Validar documento</button>',
+      (podeCancelar && !statusFinal) ? '<button style="color:#ef4444;" onclick="' + close + 'osCancelar_(\'' + id + '\')">Cancelar OS</button>' : null
+    ].filter(Boolean);
+
+    drop.innerHTML = botoes.join("");
+    drop.style.display = "block";
+  }
+
+  /* ---- CRUD ---- */
+
+  function osNova_() {
+    OS_STATE.editingId = "";
+    OS_STATE.questionarioModeloId = "";
+    ["os_cliente_id", "os_unidade_id", "os_equipamento_id", "os_peca_id", "os_contrato_id",
+     "os_data_agendada", "os_relato", "os_missao_tecnica", "os_obs_acesso",
+     "os_questionario_modelo_id"].forEach(function(id) { setValue_(id, ""); });
+    setValue_("os_prioridade", "NORMAL");
+    osLimparTecnico_();
+    setValue_("os_local_atendimento", "");
+    setValue_("os_checkin_lat", "");
+    setValue_("os_checkin_lng", "");
+    setValue_("os_checkin_endereco", "");
+    const loc = document.getElementById("osLocalSugestao"); if (loc) loc.innerHTML = "";
+    const qs = document.getElementById("osQuestionarioSugerido"); if (qs) qs.innerHTML = "";
+    const eqpBox = document.getElementById("osEqpDetalheBox"); if (eqpBox) { eqpBox.style.display = "none"; eqpBox.innerHTML = ""; }
+    const t = document.getElementById("osModalTitulo"); if (t) t.innerText = "Nova Tarefa";
+    const btn = document.getElementById("osBtnSalvar"); if (btn) { btn.disabled = false; btn.textContent = "Salvar OS"; }
+    osAbaAtiva_(1);
+    const maisOpcoesWrap = document.getElementById("osMaisOpcoesWrap"); if (maisOpcoesWrap) maisOpcoesWrap.style.display = "none";
+    const maisOpcoesBtn = document.getElementById("osMaisOpcoesBtn"); if (maisOpcoesBtn) maisOpcoesBtn.textContent = "+ Mais opcoes";
+    const m = document.getElementById("osModalNova"); if (m) m.style.display = "flex";
+  }
+
+  function osToggleMaisOpcoes_() {
+    const wrap = document.getElementById("osMaisOpcoesWrap");
+    const btn  = document.getElementById("osMaisOpcoesBtn");
+    if (!wrap) return;
+    const abrir = wrap.style.display === "none";
+    wrap.style.display = abrir ? "" : "none";
+    if (btn) btn.textContent = abrir ? "- Menos opcoes" : "+ Mais opcoes";
+  }
+
+  function osPayload_() {
+    const tecnico = osTecnicoSelecionado_();
+    return {
+      TIPO_OS: getValue_("os_tipo"),
+      PRIORIDADE: getValue_("os_prioridade"),
+      CLIENTE_ID: getValue_("os_cliente_id"),
+      UNIDADE_ID: getValue_("os_unidade_id"),
+      EQUIPAMENTO_ID: getValue_("os_equipamento_id"),
+      PECA_ID: getValue_("os_peca_id"),
+      CONTRATO_ID: getValue_("os_contrato_id"),
+      DATA_AGENDADA: getValue_("os_data_agendada"),
+      TECNICO_ID: tecnico.ID || getValue_("os_tecnico_id"),
+      TECNICO_USUARIO_ID: tecnico.USUARIO_ID || "",
+      LOCAL_ATENDIMENTO: getValue_("os_local_atendimento"),
+      CHECKIN_LAT: getValue_("os_checkin_lat"),
+      CHECKIN_LNG: getValue_("os_checkin_lng"),
+      CHECKIN_ENDERECO: getValue_("os_checkin_endereco"),
+      OBS_ACESSO: getValue_("os_obs_acesso"),
+      RELATO_CLIENTE: getValue_("os_relato"),
+      MISSAO_TECNICA: getValue_("os_missao_tecnica"),
+      QUESTIONARIO_MODELO_ID: getValue_("os_questionario_modelo_id")
+    };
+  }
+
+  function osSalvar_() {
+    const payload = osPayload_();
+    if (!payload.TIPO_OS) { osAbaAtiva_(1); return _osToast("Informe o tipo da OS.", "error"); }
+    if (!payload.CLIENTE_ID) { osAbaAtiva_(1); return _osToast("Selecione o cliente.", "error"); }
+    if (!payload.RELATO_CLIENTE) { osAbaAtiva_(1); return _osToast("Informe o relato do cliente.", "error"); }
+    if (payload.TECNICO_ID && !payload.TECNICO_USUARIO_ID) {
+      if (!confirm("Tecnico selecionado ainda sem usuario vinculado. A OS sera salva, mas ele so vera a missao apos vincular um usuario no cadastro de Tecnicos. Continuar?")) return;
+    }
+    const btn = document.getElementById("osBtnSalvar");
+    if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
+    const done = function(res) {
+      if (btn) { btn.disabled = false; btn.textContent = "Salvar OS"; }
+      if (!res || !res.success) {
+        _osToast((res && res.message) || "Erro ao salvar OS.", "error");
+        if (res && res.warning) _osToast(res.warning, "error");
+        return;
+      }
+      osMostrarConfirmacaoSalvo_(res);
+      osPesquisar_();
+    };
+    const fail = function(e) {
+      if (btn) { btn.disabled = false; btn.textContent = "Salvar OS"; }
+      _osToast("Erro: " + e, "error");
+    };
+    const runner = google.script.run.withSuccessHandler(done).withFailureHandler(fail);
+    if (OS_STATE.editingId) runner.osAtualizar(SESSION, OS_STATE.editingId, payload);
+    else runner.osCriar(SESSION, payload);
+  }
+
+  function osEditar_(id) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) return _osToast("OS nao encontrada.", "error");
+        const i = res.item;
+        OS_STATE.editingId = i.ID;
+        OS_STATE.questionarioModeloId = i.QUESTIONARIO_MODELO_ID || "";
+        setValue_("os_tipo", i.TIPO_OS);
+        setValue_("os_prioridade", i.PRIORIDADE);
+        setValue_("os_cliente_id", i.CLIENTE_ID);
+        osFiltrarCombos_();
+        setTimeout(function() {
+          setValue_("os_unidade_id", i.UNIDADE_ID);
+          osFiltrarCombos_();
+          setTimeout(function() {
+            setValue_("os_equipamento_id", i.EQUIPAMENTO_ID);
+            osFiltrarPecas_();
+            osPreencherEquipamento_();
+            setTimeout(function() {
+              setValue_("os_peca_id", i.PECA_ID);
+              setValue_("os_contrato_id", i.CONTRATO_ID);
+            }, 60);
+          }, 60);
+        }, 60);
+        setValue_("os_data_agendada", normalizarDateTimeLocal_(i.DATA_AGENDADA));
+        if (i.TECNICO_ID) {
+          setValue_("os_tecnico_id", i.TECNICO_ID);
+          const tec = ((OS_STATE.opcoes && OS_STATE.opcoes.tecnicos) || []).find(function(t) { return t.ID === i.TECNICO_ID; }) || {};
+          const label = tec.LABEL || tec.NOME || i.TECNICO_NOME || i.TECNICO_ID;
+          const tag = document.getElementById("os_tecnico_tag");
+          if (tag) {
+            tag.style.display = "inline-flex";
+            tag.innerHTML = escapeHtml_(label) + ' <span onclick="osLimparTecnico_()" style="margin-left:6px;cursor:pointer;opacity:.7;">&#215;</span>';
+          }
+        } else {
+          osLimparTecnico_();
+        }
+        setValue_("os_relato", i.RELATO_CLIENTE);
+        setValue_("os_missao_tecnica", i.MISSAO_TECNICA);
+        setValue_("os_obs_acesso", i.OBS_ACESSO || "");
+        setValue_("os_questionario_modelo_id", i.QUESTIONARIO_MODELO_ID || "");
+        const t = document.getElementById("osModalTitulo"); if (t) t.innerText = "Editar OS " + (i.NUMERO_OS || "");
+        osLimparDocPanel_();
+        osAbaAtiva_(1);
+        const maisWrap = document.getElementById("osMaisOpcoesWrap");
+        const maisBtn  = document.getElementById("osMaisOpcoesBtn");
+        const temMaisOpcoes = !!(i.PECA_ID || i.CONTRATO_ID);
+        if (maisWrap) maisWrap.style.display = temMaisOpcoes ? "" : "none";
+        if (maisBtn)  maisBtn.textContent    = temMaisOpcoes ? "- Menos opcoes" : "+ Mais opcoes";
+        const m = document.getElementById("osModalNova"); if (m) m.style.display = "flex";
+        osAtualizarQuestionarioSugerido_();
+      })
+      .osObter(SESSION, id);
+  }
+
+  /* ---- Modal tabs ---- */
+
+  function osAbaAtiva_(n) {
+    for (var i = 1; i <= 5; i++) {
+      var pane = document.getElementById("osTabPane" + i);
+      var btn  = document.getElementById("osTab" + i + "Btn");
+      if (pane) pane.style.display = (i === n) ? "" : "none";
+      if (btn) { btn.classList.remove("os-tab-btn-ativo"); if (i === n) btn.classList.add("os-tab-btn-ativo"); }
+    }
+    var prev = document.getElementById("osBtnTabAnterior");
+    var nxt  = document.getElementById("osBtnTabProxima");
+    if (prev) prev.style.display = n > 1 ? "" : "none";
+    if (nxt)  nxt.style.display  = n < 5 ? "" : "none";
+  }
+
+  function osAbaAtual_() {
+    for (var i = 1; i <= 5; i++) {
+      var p = document.getElementById("osTabPane" + i);
+      if (p && p.style.display !== "none") return i;
+    }
+    return 1;
+  }
+
+  function osAbaAnterior_() { osAbaAtiva_(Math.max(1, osAbaAtual_() - 1)); }
+  function osAbaProxima_()  { osAbaAtiva_(Math.min(5, osAbaAtual_() + 1)); }
+
+  function osFecharModal_() {
+    const m = document.getElementById("osModalNova"); if (m) m.style.display = "none";
+  }
+
+  function osPreencherEquipamento_() {
+    const eqpId = getValue_("os_equipamento_id");
+    const box = document.getElementById("osEqpDetalheBox"); if (!box) return;
+    if (!eqpId) { box.style.display = "none"; box.innerHTML = ""; return; }
+    const eqp = ((OS_STATE.opcoes && OS_STATE.opcoes.equipamentos) || []).find(function(e) { return e.ID === eqpId; }) || {};
+    const linhas = [
+      eqp.TAG        ? "<span><strong>TAG:</strong> "        + escapeHtml_(eqp.TAG)        + "</span>" : null,
+      eqp.TIPO       ? "<span><strong>Tipo:</strong> "       + escapeHtml_(eqp.TIPO)       + "</span>" : null,
+      eqp.FABRICANTE ? "<span><strong>Fabricante:</strong> " + escapeHtml_(eqp.FABRICANTE) + "</span>" : null,
+      eqp.MODELO     ? "<span><strong>Modelo:</strong> "     + escapeHtml_(eqp.MODELO)     + "</span>" : null,
+      eqp.SERIE      ? "<span><strong>Serie:</strong> "      + escapeHtml_(eqp.SERIE)      + "</span>" : null,
+      eqp.SETOR      ? "<span><strong>Setor:</strong> "      + escapeHtml_(eqp.SETOR)      + "</span>" : null
+    ].filter(Boolean);
+    if (!linhas.length) { box.style.display = "none"; return; }
+    box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px 18px;">' + linhas.join("") + "</div>";
+    box.style.display = "";
+  }
+
+  function osMostrarConfirmacaoSalvo_(res) {
+    osFecharModal_();
+    const osId = res.id || (res.item && res.item.ID) || "";
+    const num  = res.numero || (res.item && res.item.NUMERO_OS) || osId;
+    const msg  = res.message || "OS salva com sucesso!";
+    const html =
+      '<div id="osConfirmacaoOverlay" class="modal-overlay" onclick="if(event.target===this)document.getElementById(\'osConfirmacaoOverlay\').remove()">' +
+      '<div class="modal-card" style="max-width:380px;">' +
+      '<div class="modal-header"><h3 class="modal-title" style="color:#059669;">&#10003; Salvo com sucesso</h3></div>' +
+      '<div class="modal-body">' +
+        '<p style="margin:0 0 8px;font-size:15px;font-weight:600;">' + escapeHtml_(msg) +
+          (num ? ' <strong>#' + escapeHtml_(String(num)) + '</strong>' : '') + '</p>' +
+        '<p style="margin:0;font-size:13px;color:var(--muted);">Deseja visualizar a execucao desta tarefa?</p>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn-secondary" type="button" onclick="document.getElementById(\'osConfirmacaoOverlay\').remove()">Fechar</button>' +
+        (osId ? '<button class="btn-primary" type="button" onclick="document.getElementById(\'osConfirmacaoOverlay\').remove();osExecutar_(\'' + escapeHtml_(osId) + '\')">Ver tarefa</button>' : '') +
+      '</div></div></div>';
+    document.body.insertAdjacentHTML("beforeend", html);
+  }
+
+  function _osToast(msg, type) {
+    const color = type === "error" ? "#dc2626" : "#059669";
+    const bg    = type === "error" ? "#fef2f2" : "#ecfdf5";
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:99999;background:" + bg + ";color:" + color + ";border:1px solid " + color + ";border-radius:8px;padding:12px 18px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:320px;";
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
+  }
+
+  function osExecutar_(id) {
+    console.log("[OS_EXEC] osExecutar_", id);
+    if (!id) {
+      alert("ID da OS nao localizado. Atualize a lista e tente novamente.");
+      return;
+    }
+    try {
+      OS_EXEC_STATE.osId = id;
+      if (typeof window.renderOSExecucaoModulo_ !== "function") {
+        throw new Error("Funcao renderOSExecucaoModulo_ nao encontrada. Recarregue a pagina. [window=" + typeof window.renderOSExecucaoModulo_ + " bare=" + typeof renderOSExecucaoModulo_ + "]");
+      }
+      window.renderOSExecucaoModulo_(id);
+      if (typeof atualizarBadgeModulo_ === "function") atualizarBadgeModulo_("os_execucao");
+    } catch (e) {
+      console.error("[OS_EXEC] osExecutar_ erro:", e);
+      var div = document.getElementById("conteudo");
+      if (div) {
+        div.innerHTML =
+          '<div class="module-shell" style="padding:40px 16px;text-align:center;">' +
+          '<i class="fas fa-circle-exclamation" style="font-size:36px;color:#ef4444;"></i>' +
+          '<div style="font-size:16px;font-weight:700;margin-top:12px;color:#dc2626;">Erro ao abrir execucao</div>' +
+          '<div style="font-size:13px;color:var(--muted);margin-top:8px;max-width:400px;margin-left:auto;margin-right:auto;">' + String(e.message || e) + '</div>' +
+          '<button class="btn-secondary" type="button" onclick="abrir(\'os\')" style="margin-top:20px;">&#8592; Voltar para OS</button>' +
+          '</div>';
+      }
+    }
+  }
+  function diagnosticoExecucaoOS_() {
+    console.log("typeof renderOSExecucaoModulo_ =", typeof renderOSExecucaoModulo_);
+    console.log("typeof window.renderOSExecucaoModulo_ =", typeof window.renderOSExecucaoModulo_);
+    console.log("typeof renderMobileCampo_ =", typeof renderMobileCampo_);
+    console.log("Scripts carregados:", document.scripts.length);
+  }
+  window.diagnosticoExecucaoOS_ = diagnosticoExecucaoOS_;
+  window.osExecutar_ = osExecutar_;
+
+  function osAprovar_(id) {
+    if (!confirm("Aprovar esta OS e liberar para faturamento?")) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) return alert(((res && res.message) || "Nao foi possivel aprovar.") + osFormatarPendencias_(res && res.pendencias));
+        alert(res.message || "OS aprovada com sucesso.");
+        osPesquisar_();
+      })
+      .osAprovar(SESSION, id);
+  }
+
+  function osGerarDocumento_(id) {
+    const panel = document.getElementById("osDocPanel");
+    if (panel) {
+      panel.style.display = "block";
+      panel.innerHTML = '<div class="form-card"><div class="empty-state">Gerando documento oficial...</div></div>';
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          if (panel) panel.innerHTML = '<div class="form-card"><div class="empty-state">' + escapeHtml_((res && res.message) || "Erro ao gerar documento.") + '</div></div>';
+          return;
+        }
+        osRenderDocPanel_(res);
+        osPesquisar_();
+        if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      })
+      .osGerarDocumento(SESSION, id);
+  }
+
+  function osRenderDocPanel_(res) {
+    const panel = document.getElementById("osDocPanel"); if (!panel) return;
+    panel.style.display = "block";
+    const qr = res.qrCodeDataUrl || res.qrCodeUrl || "";
+    panel.innerHTML = '<div class="form-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+        '<h3 class="section-card-title" style="margin:0;">Documento gerado com sucesso</h3>' +
+        '<button class="btn-secondary" style="padding:4px 10px;font-size:12px;" type="button" onclick="osLimparDocPanel_()">Fechar</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">' +
+        '<div style="flex:1;min-width:220px;">' +
+          '<div class="form-grid">' +
+            '<div class="full"><label>Token de validacao</label><input value="' + escapeHtml_(res.tokenValidacao || "") + '" readonly></div>' +
+            '<div><a class="btn-primary" href="' + escapeHtml_(res.pdfUrl || "#") + '" target="_blank">Abrir PDF</a></div>' +
+            '<div><a class="btn-secondary" href="' + escapeHtml_(res.downloadUrl || res.pdfUrl || "#") + '" target="_blank">Download</a></div>' +
+            '<div><a class="btn-secondary" href="' + escapeHtml_(res.validacaoUrl || "#") + '" target="_blank">Validar</a></div>' +
+            '<div class="full"><label>WhatsApp</label><textarea rows="4" readonly>' + escapeHtml_(res.whatsappTexto || "") + '</textarea></div>' +
+            (res.email && res.email.assunto ? '<div class="full"><label>E-mail - assunto</label><input value="' + escapeHtml_(res.email.assunto) + '" readonly></div>' : '') +
+          '</div>' +
+        '</div>' +
+        (qr ? '<div style="text-align:center;flex-shrink:0;"><img src="' + escapeHtml_(qr) + '" alt="QR Code" style="width:128px;height:128px;border:1px solid var(--border);border-radius:8px;"><div style="font-size:11px;color:var(--muted);margin-top:4px;">QR Validacao</div></div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function osCancelar_(id) {
+    const motivo = prompt("Informe o motivo do cancelamento:");
+    if (motivo === null) return;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        alert((res && res.message) || "Processado.");
+        osPesquisar_();
+      })
+      .osCancelar(SESSION, id, motivo);
+  }
+
+  function osAbrirValidacao_(id) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success || !res.item) return alert("OS nao encontrada.");
+        if (!res.item.TOKEN_VALIDACAO) return alert("Gere o PDF oficial antes de abrir a validacao.");
+        const base = String(window.location.href || "").split("?")[0];
+        window.open(base + "?validar=" + encodeURIComponent(res.item.TOKEN_VALIDACAO), "_blank");
+      })
+      .osObter(SESSION, id);
+  }
+
+  /* ---- OS Questionarios ---- */
+
+  function osRenderQuestionarios_() {
+    const div = document.getElementById("conteudo"); if (!div) return;
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">OS Questionarios</h2>\n            <p class="content-subtitle">Modelos por tipo de OS e tipo de equipamento, com perguntas, evidencias e bloqueios.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">\n            <button class="btn-secondary" type="button" onclick="abrir(\'os\')">Voltar para OS</button>\n            <button class="btn-primary" type="button" onclick="osQuestNovoModelo_()">Novo modelo</button>\n          </div>\n        </div>\n        <div class="module-grid">\n          <div class="form-card">\n            <h3 class="section-card-title" id="osQuestTitulo">Criar modelo</h3>\n            <input type="hidden" id="osq_modelo_id">\n            <div class="form-grid">\n              <div class="full"><label>Nome *</label><input id="osq_nome" placeholder="Ex: Preventiva - Autoclave"></div>\n              <div><label>Tipo OS *</label><select id="osq_tipo_os"></select></div>\n              <div><label>Tipo equipamento *</label><input id="osq_tipo_eqp" placeholder="AUTOCLAVE, OSMOSE, GERAL"></div>\n              <div><label>Versao</label><input id="osq_versao" value="1"></div>\n              <div><label>Status</label><select id="osq_status"><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select></div>\n              <div class="full"><label>Descricao</label><textarea id="osq_desc" rows="2"></textarea></div>\n              <div><label><input id="osq_exige_foto" type="checkbox"> Exige foto</label></div>\n              <div><label><input id="osq_exige_ass" type="checkbox" checked> Exige assinatura</label></div>\n              <div><label><input id="osq_exige_gps" type="checkbox"> Exige GPS</label></div>\n              <div><label><input id="osq_bloqueia_nc" type="checkbox"> Bloqueia se nao conforme</label></div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="osQuestSalvarModelo_()">Salvar modelo</button>\n              <button class="btn-secondary" type="button" onclick="osQuestNovoModelo_()">Limpar</button>\n            </div>\n            <div id="osQuestPerguntasBox" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">\n              <h3 class="section-card-title">Editar perguntas</h3>\n              <div class="form-grid">\n                <div><label>Secao</label><input id="osqp_secao" value="Identificacao"></div>\n                <div><label>Ordem</label><input id="osqp_ordem" type="number" value="1"></div>\n                <div class="full"><label>Pergunta *</label><input id="osqp_pergunta" placeholder="A plaqueta do equipamento esta legivel?"></div>\n                <div><label>Tipo resposta</label><select id="osqp_tipo"></select></div>\n                <div><label>Opcoes</label><input id="osqp_opcoes" placeholder="Separar por ;"></div>\n                <div><label><input id="osqp_obrig" type="checkbox" checked> Obrigatorio</label></div>\n                <div><label><input id="osqp_obs_nc" type="checkbox"> Obs. se nao OK</label></div>\n                <div><label><input id="osqp_foto_nc" type="checkbox"> Foto se nao OK</label></div>\n                <div><label><input id="osqp_bloq" type="checkbox"> Bloqueia conclusao</label></div>\n                <div class="full"><label>Ajuda</label><input id="osqp_ajuda"></div>\n              </div>\n              <div class="form-actions">\n                <button class="btn-secondary" type="button" onclick="osQuestAddPergunta_()">Adicionar pergunta</button>\n                <button class="btn-success" type="button" onclick="osQuestPerguntaPlaqueta_()">Pergunta plaqueta obrigatoria</button>\n              </div>\n              <div id="osQuestPerguntasLista" style="margin-top:12px;"></div>\n            </div>\n          </div>\n          <div class="list-card">\n            <div class="os-filter-bar">\n              <input id="osq_filtro" class="toolbar-search" placeholder="Filtrar modelos..." oninput="osQuestRenderLista_()">\n              <button class="btn-secondary" type="button" onclick="osQuestCarregar_()">Atualizar</button>\n            </div>\n            <div class="table-wrap"><table class="table"><thead><tr><th>Modelo</th><th>Tipo</th><th>Eqp</th><th>Status</th><th>Acoes</th></tr></thead><tbody id="osQuestLista"></tbody></table></div>\n          </div>\n        </div>\n      </div>';
+    preencherSelect_("osq_tipo_os", (OS_STATE.opcoes && OS_STATE.opcoes.tipos) || [], "");
+    preencherSelect_("osqp_tipo", ["TEXTO_CURTO","TEXTO_LONGO","SIM_NAO","CONFORME_NAO_CONFORME_NA","MULTIPLA_ESCOLHA","SELECAO_UNICA","NUMERO","DATA","HORA","FOTO","MEDICAO","ASSINATURA"], "SIM_NAO");
+    osQuestCarregar_();
+  }
+
+  function osQuestCarregar_() {
+    google.script.run.withSuccessHandler(function(res) {
+      OS_STATE.questionarios = (res && res.items) || [];
+      osQuestRenderLista_();
+    }).checklistModelosListar(SESSION, {});
+  }
+
+  function osQuestRenderLista_() {
+    const body = document.getElementById("osQuestLista"); if (!body) return;
+    const q = (getValue_("osq_filtro") || "").toLowerCase();
+    const items = (OS_STATE.questionarios || []).filter(function(m) {
+      return !q || [m.NOME, m.TIPO_OS, m.TIPO_EQUIPAMENTO, m.STATUS].join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    body.innerHTML = items.length ? items.map(function(m) {
+      return '<tr><td><strong>' + escapeHtml_(m.NOME || "") + '</strong><br><small>v' + escapeHtml_(m.VERSAO || "1") + '</small></td>' +
+        '<td>' + escapeHtml_(m.TIPO_OS || "") + '</td><td>' + escapeHtml_(m.TIPO_EQUIPAMENTO || "") + '</td><td>' + obterBadgeStatusHtml_(m.STATUS) + '</td>' +
+        '<td><button class="btn-secondary" type="button" onclick="osQuestEditarModelo_(\'' + escapeHtml_(m.ID) + '\')">Editar</button> ' +
+        '<button class="btn-secondary" type="button" onclick="osQuestVisualizar_(\'' + escapeHtml_(m.ID) + '\')">Tecnico</button> ' +
+        '<button class="btn-secondary" type="button" onclick="osQuestClonar_(\'' + escapeHtml_(m.ID) + '\')">Clonar</button> ' +
+        '<button class="btn-danger" type="button" onclick="osQuestInativar_(\'' + escapeHtml_(m.ID) + '\')">Inativar</button></td></tr>';
+    }).join("") : '<tr><td colspan="5" class="empty-state">Nenhum modelo cadastrado.</td></tr>';
+  }
+
+  function osQuestNovoModelo_() {
+    ["osq_modelo_id","osq_nome","osq_tipo_eqp","osq_desc"].forEach(function(id){ setValue_(id, ""); });
+    setValue_("osq_versao", "1"); setValue_("osq_status", "ATIVO");
+    ["osq_exige_foto","osq_exige_gps","osq_bloqueia_nc"].forEach(function(id){ const el=document.getElementById(id); if(el) el.checked=false; });
+    const ass = document.getElementById("osq_exige_ass"); if (ass) ass.checked = true;
+    const box = document.getElementById("osQuestPerguntasBox"); if (box) box.style.display = "none";
+    const title = document.getElementById("osQuestTitulo"); if (title) title.innerText = "Criar modelo";
+  }
+
+  function osQuestPayloadModelo_() {
+    return {
+      NOME: getValue_("osq_nome"), TIPO_OS: getValue_("osq_tipo_os"), TIPO_EQUIPAMENTO: getValue_("osq_tipo_eqp"),
+      DESCRICAO: getValue_("osq_desc"), VERSAO: getValue_("osq_versao"), STATUS: getValue_("osq_status"),
+      EXIGE_FOTO: document.getElementById("osq_exige_foto").checked,
+      EXIGE_ASSINATURA: document.getElementById("osq_exige_ass").checked,
+      EXIGE_GPS: document.getElementById("osq_exige_gps").checked,
+      BLOQUEIA_SE_NAO_CONFORME: document.getElementById("osq_bloqueia_nc").checked
+    };
+  }
+
+  function osQuestSalvarModelo_() {
+    const id = getValue_("osq_modelo_id");
+    const payload = osQuestPayloadModelo_();
+    const done = function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar modelo.");
+      if (res.item && res.item.ID) setValue_("osq_modelo_id", res.item.ID);
+      alert(res.message || "Modelo salvo.");
+      osQuestCarregar_();
+      osQuestAbrirPerguntas_(getValue_("osq_modelo_id") || (res.item && res.item.ID));
+    };
+    const runner = google.script.run.withSuccessHandler(done);
+    if (id) runner.checklistModeloAtualizar(SESSION, id, payload);
+    else runner.checklistModeloCriar(SESSION, payload);
+  }
+
+  function osQuestEditarModelo_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Modelo nao encontrado.");
+      const m = res.item;
+      setValue_("osq_modelo_id", m.ID); setValue_("osq_nome", m.NOME); setValue_("osq_tipo_os", m.TIPO_OS);
+      setValue_("osq_tipo_eqp", m.TIPO_EQUIPAMENTO); setValue_("osq_desc", m.DESCRICAO); setValue_("osq_versao", m.VERSAO); setValue_("osq_status", m.STATUS);
+      document.getElementById("osq_exige_foto").checked = m.EXIGE_FOTO === "S";
+      document.getElementById("osq_exige_ass").checked = m.EXIGE_ASSINATURA === "S";
+      document.getElementById("osq_exige_gps").checked = m.EXIGE_GPS === "S";
+      document.getElementById("osq_bloqueia_nc").checked = m.BLOQUEIA_SE_NAO_CONFORME === "S";
+      const title = document.getElementById("osQuestTitulo"); if (title) title.innerText = "Editar modelo";
+      osQuestAbrirPerguntas_(m.ID, m.perguntas || []);
+    }).checklistModeloObterCompleto(SESSION, id);
+  }
+
+  function osQuestAbrirPerguntas_(modeloId, perguntas) {
+    const box = document.getElementById("osQuestPerguntasBox"); if (box) box.style.display = "block";
+    if (perguntas) return osQuestRenderPerguntas_(perguntas);
+    google.script.run.withSuccessHandler(function(res){ osQuestRenderPerguntas_((res && res.item && res.item.perguntas) || []); }).checklistModeloObterCompleto(SESSION, modeloId);
+  }
+
+  function osQuestRenderPerguntas_(perguntas) {
+    const el = document.getElementById("osQuestPerguntasLista"); if (!el) return;
+    el.innerHTML = perguntas.length ? perguntas.map(function(p) {
+      return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:var(--bg);">' +
+        '<strong>' + escapeHtml_(p.ORDEM || "") + '. ' + escapeHtml_(p.PERGUNTA || "") + '</strong>' +
+        '<div style="font-size:12px;color:var(--muted);">' + escapeHtml_(p.SECAO || "Geral") + ' · ' + escapeHtml_(p.TIPO_RESPOSTA || "") +
+        (p.OBRIGATORIO === "S" ? ' · obrigatoria' : '') + (p.EXIGE_FOTO_SE_NAO_OK === "S" ? ' · foto se nao OK' : '') + '</div></div>';
+    }).join("") : '<div class="empty-state">Nenhuma pergunta cadastrada.</div>';
+  }
+
+  function osQuestAddPergunta_() {
+    const modeloId = getValue_("osq_modelo_id");
+    if (!modeloId) return alert("Salve o modelo antes de adicionar perguntas.");
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao adicionar pergunta.");
+      setValue_("osqp_pergunta", ""); osQuestAbrirPerguntas_(modeloId);
+    }).checklistPerguntaCriar(SESSION, {
+      MODELO_ID: modeloId, SECAO: getValue_("osqp_secao"), ORDEM: getValue_("osqp_ordem"), PERGUNTA: getValue_("osqp_pergunta"),
+      TIPO_RESPOSTA: getValue_("osqp_tipo"), OPCOES: getValue_("osqp_opcoes"), OBRIGATORIO: document.getElementById("osqp_obrig").checked,
+      EXIGE_OBSERVACAO_SE_NAO_OK: document.getElementById("osqp_obs_nc").checked,
+      EXIGE_FOTO_SE_NAO_OK: document.getElementById("osqp_foto_nc").checked,
+      BLOQUEIA_CONCLUSAO: document.getElementById("osqp_bloq").checked, AJUDA: getValue_("osqp_ajuda")
+    });
+  }
+
+  function osQuestPerguntaPlaqueta_() {
+    setValue_("osqp_secao", "Identificacao do equipamento");
+    setValue_("osqp_pergunta", "A plaqueta do equipamento esta legivel?");
+    setValue_("osqp_tipo", "SIM_NAO");
+    document.getElementById("osqp_obrig").checked = true;
+    document.getElementById("osqp_obs_nc").checked = true;
+    document.getElementById("osqp_foto_nc").checked = true;
+  }
+
+  function osQuestClonar_(id) { google.script.run.withSuccessHandler(function(res){ alert((res && res.message) || "Processado."); osQuestCarregar_(); }).checklistModeloClonar(SESSION, id); }
+  function osQuestInativar_(id) { if (!confirm("Inativar este modelo?")) return; google.script.run.withSuccessHandler(function(res){ alert((res && res.message) || "Processado."); osQuestCarregar_(); }).checklistModeloInativar(SESSION, id); }
+  function osQuestVisualizar_(id) {
+    google.script.run.withSuccessHandler(function(res) {
+      if (!res || !res.success) return alert((res && res.message) || "Modelo nao encontrado.");
+      const perguntas = (res.item && res.item.perguntas) || [];
+      alert("Visualizacao como tecnico:\n\n" + (res.item.NOME || "") + "\n\n" + perguntas.map(function(p){ return "- " + p.PERGUNTA + " [" + p.TIPO_RESPOSTA + "]"; }).join("\n"));
+    }).checklistModeloObterCompleto(SESSION, id);
+  }
+
+  /* ---- Helpers ---- */
+
+  function osLimparDocPanel_() {
+    const panel = document.getElementById("osDocPanel"); if (panel) { panel.style.display = "none"; panel.innerHTML = ""; }
+  }
+
+  function osFormatarPendencias_(pendencias) {
+    if (!pendencias || !pendencias.length) return "";
+    return "\n\nPendencias:\n- " + pendencias.join("\n- ");
+  }
+
+  function normalizarDateTimeLocal_(v) {
+    if (!v) return "";
+    return String(v).substring(0, 16);
+  }
+</script>
