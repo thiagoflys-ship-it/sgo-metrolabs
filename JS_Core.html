@@ -783,7 +783,19 @@
     }
 
     if (mod === "assistencia_tecnica") {
-      if (typeof renderAssistenciaTecnicaModulo_ === "function") renderAssistenciaTecnicaModulo_();
+      try {
+        if (typeof renderAssistenciaTecnicaModulo_ === "function") {
+          renderAssistenciaTecnicaModulo_();
+        } else if (window && typeof window.renderAssistenciaTecnicaModulo_ === "function") {
+          window.renderAssistenciaTecnicaModulo_();
+        } else {
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;"><b>Assistência Técnica indisponível.</b><br>O arquivo JS_AssistenciaTecnica.html não expôs renderAssistenciaTecnicaModulo_. Recarregue o /dev com Ctrl+F5 e verifique o console.</div></div>';
+          console.error("[SGO_CORE] renderAssistenciaTecnicaModulo_ não está disponível no escopo global.");
+        }
+      } catch (err) {
+        console.error("[SGO_CORE] Erro ao abrir Assistência Técnica", err);
+        div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;"><b>Erro ao abrir Assistência Técnica.</b><br>' + escapeHtml_((err && err.message) || err || "Falha desconhecida.") + '</div></div>';
+      }
       atualizarBadgeModulo_("assistencia_tecnica");
       return;
     }
