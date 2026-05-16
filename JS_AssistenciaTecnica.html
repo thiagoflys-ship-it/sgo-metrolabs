@@ -1167,6 +1167,7 @@
     var historico = res.historico || res.movimentos || (res.data && (res.data.historico || res.data.movimentos)) || [];
     var fotos = res.fotos || (res.data && res.data.fotos) || [];
     var acessorios = res.acessorios || (res.data && res.data.acessorios) || [];
+    var solicitacoes = res.solicitacoes || (res.data && res.data.solicitacoes) || res.pecas || (res.data && res.data.pecas) || [];
     var diag = astV2UltimoDiagnostico_(res);
     astSetArea_([
       astDetalheV2HeroHtml_(e),
@@ -1174,6 +1175,7 @@
         '<div class="ast-v2-det-main">',
           astEsteiraDetalheV2Html_(e),
           astResumoTecnicoV2Html_(e, acessorios, fotos, diag),
+          astSolicitacoesPecaV2Html_(solicitacoes),
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
@@ -1330,6 +1332,63 @@
     ].join("");
   }
 
+  function astSolicitacoesPecaV2Html_(solicitacoes) {
+    var pecas = [];
+    if (Array.isArray(solicitacoes)) {
+      for (var i = 0; i < solicitacoes.length; i++) {
+        if ((solicitacoes[i].TIPO || "").toUpperCase() === "PECA") pecas.push(solicitacoes[i]);
+      }
+    }
+    if (!pecas.length) {
+      return [
+        '<div class="ast-v2-det-section">',
+          '<h4>Pecas Solicitadas</h4>',
+          '<span style="color:#94a3b8;font-size:12px;">Nenhuma solicitacao de peca registrada ainda.</span>',
+        '</div>'
+      ].join("");
+    }
+    var cards = [];
+    for (var j = 0; j < pecas.length; j++) {
+      var p = pecas[j];
+      var urg = (p.URGENCIA || "NORMAL").toUpperCase();
+      var urgStyle = urg === "CRITICA" ? "color:#dc2626;font-weight:700;" :
+                     urg === "ALTA"    ? "color:#ea580c;font-weight:700;" :
+                     urg === "BAIXA"   ? "color:#64748b;" : "";
+      var st = (p.STATUS || "PENDENTE").toUpperCase();
+      var stStyle = (st === "INSTALADO" || st === "RECEBIDO" || st === "COMPRADO" || st === "APROVADO")
+        ? "color:#16a34a;font-weight:700;"
+        : (st === "CANCELADO" || st === "RECUSADO")
+          ? "color:#dc2626;font-weight:700;"
+          : "color:#0369a1;font-weight:700;";
+      var campos = [];
+      campos.push('<div class="ast-v2-det-field"><span>Peca</span><b>' + astEsc_(p.DESCRICAO || "--") + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Quantidade</span><b>' + astEsc_(String(p.QUANTIDADE || 1)) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Urgencia</span><b style="' + urgStyle + '">' + astEsc_(urg) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Status</span><b style="' + stStyle + '">' + astEsc_(st.replace(/_/g, " ")) + '</b></div>');
+      if (p.JUSTIFICATIVA_TECNICA) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Justificativa tecnica</span><b style="font-weight:400;">' + astEsc_(p.JUSTIFICATIVA_TECNICA) + '</b></div>');
+      if (p.FORNECEDOR_NOME) campos.push('<div class="ast-v2-det-field"><span>Fornecedor</span><b>' + astEsc_(p.FORNECEDOR_NOME) + '</b></div>');
+      if (p.VALOR_ESTIMADO && parseFloat(p.VALOR_ESTIMADO) > 0) {
+        var valStr = "R$ " + parseFloat(p.VALOR_ESTIMADO).toFixed(2).replace(".", ",");
+        campos.push('<div class="ast-v2-det-field"><span>Valor est.</span><b>' + astEsc_(valStr) + '</b></div>');
+      }
+      if (p.OBSERVACAO) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observacoes</span><b style="font-weight:400;">' + astEsc_(p.OBSERVACAO) + '</b></div>');
+      var data = astData_(p.SOLICITADO_EM || p.CRIADO_EM || "");
+      var dataTag = (data && data !== "--") ? '<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px;">' + astEsc_(data) + '</span>' : "";
+      cards.push([
+        '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">',
+          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#475569;margin-bottom:6px;">Solicitacao ' + (j + 1) + dataTag + '</div>',
+          '<div class="ast-v2-det-grid2">', campos.join(""), '</div>',
+        '</div>'
+      ].join(""));
+    }
+    return [
+      '<div class="ast-v2-det-section">',
+        '<h4>Pecas Solicitadas</h4>',
+        cards.join(""),
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
     if (!diag || !diag.dados) {
@@ -1423,6 +1482,9 @@
     if (["EM_BANCADA", "DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarDiagnosticoCard_(\'' + id + '\',\'' + status + '\')">&#128203; Registrar Diagnostico</button>');
     }
+    if (["EM_BANCADA", "DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO", "AGUARDANDO_PECA"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarSolicitacaoPecaCard_(\'' + id + '\')">&#128230; Solicitar Peca</button>');
+    }
     if (["AGUARDANDO_ORCAMENTO", "ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
       acoes.push('<span class="ast-v2-acao-stub">Enviar Orcamento &mdash; em breve (C.4)</span>');
     }
@@ -1441,6 +1503,7 @@
         '<div id="astV2DiagCardContainer"></div>',
         '<div id="astV2StatusCardContainer"></div>',
         '<div id="astV2EvidCardContainer"></div>',
+        '<div id="astV2PecaCardContainer"></div>',
       '</div>'
     ].join("");
   }
@@ -1525,6 +1588,8 @@
     if (ev) ev.innerHTML = "";
     var dg = document.getElementById("astV2DiagCardContainer");
     if (dg) dg.innerHTML = "";
+    var pc = document.getElementById("astV2PecaCardContainer");
+    if (pc) pc.innerHTML = "";
     var proximos = AST_V2_TRANSICOES[statusAtual] || [];
     if (!proximos.length) {
       astToast_("Nenhuma transicao disponivel a partir de: " + statusAtual.replace(/_/g, " "));
@@ -1575,6 +1640,8 @@
     if (st) st.innerHTML = "";
     var dg = document.getElementById("astV2DiagCardContainer");
     if (dg) dg.innerHTML = "";
+    var pc = document.getElementById("astV2PecaCardContainer");
+    if (pc) pc.innerHTML = "";
     container.innerHTML = [
       '<div class="ast-v2-card">',
         '<h5>&#128248; Registrar Evidencia</h5>',
@@ -1629,6 +1696,8 @@
     if (st) st.innerHTML = "";
     var ev = document.getElementById("astV2EvidCardContainer");
     if (ev) ev.innerHTML = "";
+    var pc = document.getElementById("astV2PecaCardContainer");
+    if (pc) pc.innerHTML = "";
     var proximos = AST_V2_TRANSICOES[statusAtual] || [];
     var optsStatus = proximos.map(function(s) {
       return '<option value="' + s + '">' + s.replace(/_/g, " ") + "</option>";
@@ -1711,6 +1780,88 @@
       })
       .withFailureHandler(astFalhaToast_)
       .astV2SalvarDiagnostico(SESSION, id, payload);
+  }
+
+  function astV2MostrarSolicitacaoPecaCard_(id) {
+    var container = document.getElementById("astV2PecaCardContainer");
+    if (!container) return;
+    var st = document.getElementById("astV2StatusCardContainer");
+    if (st) st.innerHTML = "";
+    var ev = document.getElementById("astV2EvidCardContainer");
+    if (ev) ev.innerHTML = "";
+    var dg = document.getElementById("astV2DiagCardContainer");
+    if (dg) dg.innerHTML = "";
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128230; Solicitar Peca</h5>',
+        '<label>Nome da peca *</label>',
+        '<input type="text" id="astV2PecaNome" placeholder="Ex: Capacitor 470uF 25V">',
+        '<label>Descricao / especificacao</label>',
+        '<textarea id="astV2PecaDesc" rows="2" placeholder="Referencia, modelo, especificacao tecnica..."></textarea>',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">',
+          '<div>',
+            '<label>Quantidade</label>',
+            '<input type="number" id="astV2PecaQtd" value="1" min="1">',
+          '</div>',
+          '<div>',
+            '<label>Urgencia</label>',
+            '<select id="astV2PecaUrgencia">',
+              '<option value="NORMAL">Normal</option>',
+              '<option value="BAIXA">Baixa</option>',
+              '<option value="ALTA">Alta</option>',
+              '<option value="CRITICA">Critica</option>',
+            '</select>',
+          '</div>',
+        '</div>',
+        '<label>Justificativa tecnica</label>',
+        '<textarea id="astV2PecaJustificativa" rows="2" placeholder="Por que esta peca e necessaria..."></textarea>',
+        '<label>Fornecedor sugerido</label>',
+        '<input type="text" id="astV2PecaFornecedor" placeholder="Nome do fornecedor sugerido">',
+        '<label>Valor estimado (R$)</label>',
+        '<input type="number" id="astV2PecaValor" min="0" step="0.01" placeholder="0.00">',
+        '<label>Observacoes</label>',
+        '<textarea id="astV2PecaObs" rows="2" placeholder="Observacoes adicionais..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarSolicitacaoPeca_(\'' + id + '\')">Registrar</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2PecaCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function astV2ConfirmarSolicitacaoPeca_(id) {
+    var nomeEl       = document.getElementById("astV2PecaNome");
+    var descEl       = document.getElementById("astV2PecaDesc");
+    var qtdEl        = document.getElementById("astV2PecaQtd");
+    var urgenciaEl   = document.getElementById("astV2PecaUrgencia");
+    var justEl       = document.getElementById("astV2PecaJustificativa");
+    var fornecedorEl = document.getElementById("astV2PecaFornecedor");
+    var valorEl      = document.getElementById("astV2PecaValor");
+    var obsEl        = document.getElementById("astV2PecaObs");
+    var nomeVal = nomeEl ? nomeEl.value.trim() : "";
+    if (!nomeVal) return astToast_("Informe o nome da peca.");
+    var valorNum = valorEl && valorEl.value ? parseFloat(valorEl.value) : 0;
+    var payload = {
+      TITULO:                nomeVal,
+      DESCRICAO_PECA:        nomeVal,
+      DESCRICAO:             descEl       ? descEl.value.trim()       : "",
+      QUANTIDADE:            qtdEl        ? parseInt(qtdEl.value, 10) || 1 : 1,
+      URGENCIA:              urgenciaEl   ? urgenciaEl.value          : "NORMAL",
+      JUSTIFICATIVA_TECNICA: justEl       ? justEl.value.trim()       : "",
+      FORNECEDOR_NOME:       fornecedorEl ? fornecedorEl.value.trim() : "",
+      VALOR_ESTIMADO:        isNaN(valorNum) ? 0 : valorNum,
+      OBSERVACOES:           obsEl        ? obsEl.value.trim()        : ""
+    };
+    astSetContextStatus_("Registrando solicitacao de peca...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar solicitacao de peca.");
+        astToast_("Solicitacao de peca registrada.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2SolicitarPeca(SESSION, id, payload);
   }
 
   function astAtualizarStatus_(id) {
