@@ -176,6 +176,12 @@ function criarEstruturaPrincipalV2_(ss, log) {
 }
 
 function criarEstruturaAssistenciaTecnicaV2_(ss, log) {
+  if (typeof SGO_AST !== "undefined" && SGO_AST.setupV2) {
+    const res = SGO_AST.setupV2();
+    (res.log || []).forEach(function(item) { log.push("AST V2: " + item); });
+    return;
+  }
+
   if (typeof SGO_AST !== "undefined" && SGO_AST.setup) {
     const res = SGO_AST.setup();
     (res.log || []).forEach(function(item) { log.push("AST: " + item); });
@@ -602,6 +608,132 @@ function formatarCabecalhoV2_(sheet, totalColunas) {
   sheet.getRange(1, 1, 1, qtd).setFontWeight("bold").setBackground("#f3f3f3");
   sheet.setFrozenRows(1);
 }
+function setupOrcamentosV2() {
+  var log = [];
+  var dbComercial = garantirBancoSGOv2_("DB_COMERCIAL_ID", SGO_CFG.SISTEMA.NOME_EXIBICAO + "_DB_COMERCIAL", log);
+
+  criarEstruturaOrcamentosV2_(dbComercial, log);
+
+  var ss = dbComercial;
+  var sheet = ss.getSheetByName(SGO_CFG.SHEETS.ORC_CONFIG);
+  if (sheet && sheet.getLastRow() <= 1) {
+    var seeds = [
+      ["IA_ATIVA", "NAO", "Integração IA ativa?"],
+      ["CNPJ_API_ATIVA", "NAO", "Consulta CNPJ via API?"],
+      ["VALIDADE_PADRAO_DIAS", "15", "Validade padrão de propostas em dias"],
+      ["MOEDA_PADRAO", "BRL", "Moeda padrão dos orçamentos"],
+      ["PREFIXO_NUMERO", "ORC", "Prefixo do número sequencial"]
+    ];
+    var agora = new Date().toISOString();
+    for (var i = 0; i < seeds.length; i++) {
+      var id = "CFG-" + (i + 1);
+      sheet.appendRow([id, seeds[i][0], seeds[i][1], seeds[i][2], agora]);
+    }
+    log.push("ORC_CONFIG: 5 seeds inseridos.");
+  }
+
+  if (typeof SGO_DATA !== "undefined" && SGO_DATA.clearCache) {
+    SGO_DATA.clearCache();
+    log.push("CACHE: SGO_DATA limpo.");
+  }
+
+  log.forEach(function(item) { Logger.log(item); });
+
+  return {
+    ok: true,
+    dbComercialId: dbComercial.getId(),
+    log: log
+  };
+}
+
+function criarEstruturaOrcamentosV2_(ss, log) {
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_CONFIG, [
+    "ID", "CHAVE", "VALOR", "DESCRICAO", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_ORCAMENTOS, [
+    "ID", "NUMERO_ORC", "VERSAO", "STATUS", "FUNIL_ETAPA",
+    "CLIENTE_ID", "UNIDADE_ID", "CONTATO_NOME", "CONTATO_EMAIL", "CONTATO_TELEFONE", "CONTATO_CARGO",
+    "TITULO", "DESCRICAO", "ESCOPO", "OBSERVACOES",
+    "TOTAL_BRUTO", "DESCONTO_PCT", "DESCONTO_VALOR", "TOTAL_LIQUIDO", "MOEDA",
+    "VALIDADE_DIAS", "DATA_EMISSAO", "DATA_VALIDADE", "DATA_FECHAMENTO",
+    "TEMPLATE_ID", "OS_ID", "AST_ID", "MISSAO_ID",
+    "TOKEN_APROVACAO", "APROVADO_POR", "APROVADO_EM", "APROVADO_NOME", "APROVADO_EMAIL",
+    "DOCUMENTO_ID", "PDF_URL", "PDF_LINK_DOWNLOAD",
+    "MOTIVO_RECUSA", "NOTAS_INTERNAS",
+    "CRIADO_POR", "CRIADO_EM", "ATUALIZADO_POR", "ATUALIZADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_ITENS, [
+    "ID", "ORCAMENTO_ID", "ORDEM", "TIPO_ITEM",
+    "DESCRICAO", "UNIDADE_MEDIDA", "QUANTIDADE", "VALOR_UNITARIO", "DESCONTO_PCT", "VALOR_TOTAL",
+    "OBSERVACOES", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_TEMPLATES, [
+    "ID", "NOME", "TIPO", "DESCRICAO", "ATIVO", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_TEMPLATES_ITENS, [
+    "ID", "TEMPLATE_ID", "ORDEM", "TIPO_ITEM",
+    "DESCRICAO", "UNIDADE_MEDIDA", "QUANTIDADE", "VALOR_UNITARIO",
+    "OBSERVACOES", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_HISTORICO, [
+    "ID", "ORCAMENTO_ID", "ACAO", "STATUS_ANTERIOR", "STATUS_NOVO",
+    "USUARIO_ID", "USUARIO_NOME", "DESCRICAO", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_EMAILS, [
+    "ID", "ORCAMENTO_ID", "DESTINATARIO", "ASSUNTO", "TIPO_EMAIL",
+    "STATUS", "ENVIADO_EM", "ENVIADO_POR", "ERRO", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_APROVACOES, [
+    "ID", "ORCAMENTO_ID", "DOCUMENTO_ID", "TOKEN", "STATUS", "TIPO_RESPOSTA",
+    "RESPOSTA_NOME", "RESPOSTA_EMAIL", "RESPOSTA_EM",
+    "IP_DISPOSITIVO", "USER_AGENT", "OBSERVACOES", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_DOCUMENTOS, [
+    "ID", "ORCAMENTO_ID", "TIPO_DOCUMENTO", "DOCUMENTO_ID",
+    "TOKEN_VALIDACAO", "HASH", "LINK_PDF", "LINK_DOWNLOAD",
+    "STATUS", "EMITIDO_EM", "EMITIDO_POR"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_ANEXOS, [
+    "ID", "ORCAMENTO_ID", "NUMERO_ORC", "TIPO_ANEXO",
+    "NOME_ARQUIVO", "MIME_TYPE", "DRIVE_FILE_ID",
+    "LINK_VISUALIZACAO", "LINK_DOWNLOAD", "TAMANHO_BYTES",
+    "HASH", "OBSERVACAO", "CRIADO_EM", "CRIADO_POR", "ATIVO"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_ALERTAS, [
+    "ID", "ORCAMENTO_ID", "NUMERO_ORC", "LEAD_ID",
+    "TIPO_ALERTA", "NIVEL", "MENSAGEM", "STATUS",
+    "DATA_ALERTA", "DATA_LIMITE",
+    "RESPONSAVEL_ID", "RESPONSAVEL_NOME",
+    "VISUALIZADO_EM", "RESOLVIDO_EM", "RESOLVIDO_POR",
+    "OBSERVACAO", "CRIADO_EM"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_FOLLOWUPS, [
+    "ID", "ORCAMENTO_ID", "NUMERO_ORC", "LEAD_ID",
+    "TIPO_FOLLOWUP", "CANAL", "DESCRICAO", "RESULTADO",
+    "PROXIMA_ACAO", "DATA_PROXIMA_ACAO", "STATUS",
+    "RESPONSAVEL_ID", "RESPONSAVEL_NOME",
+    "CRIADO_EM", "CRIADO_POR", "REALIZADO_EM", "OBSERVACAO"
+  ], log);
+
+  garantirAbaV2_(ss, SGO_CFG.SHEETS.ORC_LEADS, [
+    "ID", "NOME", "EMPRESA", "EMAIL", "TELEFONE", "CARGO", "ORIGEM",
+    "FUNIL_ETAPA", "TEMPERATURA", "RESPONSAVEL_ID", "ORCAMENTO_ID",
+    "OBSERVACOES", "DATA_ULTIMO_CONTATO", "PROXIMO_FOLLOWUP",
+    "STATUS", "CRIADO_EM", "ATUALIZADO_EM"
+  ], log);
+}
+
 function SETUP_CRIAR_ABA_ASSINATURAS() {
   const nomeAba = "SYS_ASSINATURAS";
   const colunas = [

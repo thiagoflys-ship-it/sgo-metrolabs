@@ -458,6 +458,7 @@ const SGO_DATA = {
     if (raw === "DB_OS") return "OS";
     if (raw === "DB_FROTA") return "FROTA";
     if (raw === "DB_ESTOQUE" || raw === "SUPRIMENTOS" || raw === "ALMOXARIFADO") return "ESTOQUE";
+    if (raw === "DB_COMERCIAL" || raw === "ORC") return "COMERCIAL";
     return raw || "PRINCIPAL";
   },
 
@@ -467,6 +468,7 @@ const SGO_DATA = {
     if (chave === "OS") return SGO_UTILS.safe(SGO_CFG.DB_OS_ID);
     if (chave === "FROTA") return SGO_UTILS.safe(SGO_CFG.DB_FROTA_ID);
     if (chave === "ESTOQUE") return SGO_UTILS.safe(SGO_CFG.DB_ESTOQUE_ID);
+    if (chave === "COMERCIAL") return SGO_UTILS.safe(SGO_CFG.DB_COMERCIAL_ID);
     throw new Error("Chave de banco desconhecida: " + chave);
   },
 
