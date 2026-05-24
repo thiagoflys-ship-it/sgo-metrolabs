@@ -1177,6 +1177,7 @@
           astResumoTecnicoV2Html_(e, acessorios, fotos, diag),
           astSolicitacoesPecaV2Html_(solicitacoes),
           astExecucaoResumoV2Html_(historico),
+          astTesteValidacaoResumoV2Html_(historico),
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
@@ -1557,6 +1558,98 @@
     ].join("");
   }
 
+  function astV2MostrarTesteValidacaoCard_(id) {
+    var container = document.getElementById("astV2TesteValidacaoCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#9989; Registrar Teste / Validacao</h5>',
+        '<label>Tipo de teste</label>',
+        '<input type="text" id="astV2TstTipo" placeholder="Ex: Funcional, eletrico, pressao...">',
+        '<label>Procedimento realizado</label>',
+        '<textarea id="astV2TstProcedimento" rows="3" placeholder="Descreva o procedimento de teste..."></textarea>',
+        '<label>Parametros observados</label>',
+        '<textarea id="astV2TstParametros" rows="2" placeholder="Ex: Tensao 220V, corrente 2A, pressao 4bar..."></textarea>',
+        '<label>Resultado *</label>',
+        '<select id="astV2TstResultado">',
+          '<option value="APROVADO">Aprovado</option>',
+          '<option value="REPROVADO">Reprovado</option>',
+          '<option value="INCONCLUSIVO">Inconclusivo</option>',
+        '</select>',
+        '<label>Evidencias</label>',
+        '<textarea id="astV2TstEvidencias" rows="2" placeholder="Descricao das evidencias coletadas..."></textarea>',
+        '<label>Recomendacao final</label>',
+        '<textarea id="astV2TstRecomendacao" rows="2" placeholder="Cuidados, proxima revisao..."></textarea>',
+        '<label>Observacoes</label>',
+        '<textarea id="astV2TstObs" rows="2" placeholder="Observacoes tecnicas..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarTesteValidacao_(\'' + idEsc + '\')">Confirmar</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2TesteValidacaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarTesteValidacao_(id) {
+    var tipEl  = document.getElementById("astV2TstTipo");
+    var procEl = document.getElementById("astV2TstProcedimento");
+    var parEl  = document.getElementById("astV2TstParametros");
+    var resEl  = document.getElementById("astV2TstResultado");
+    var evidEl = document.getElementById("astV2TstEvidencias");
+    var recEl  = document.getElementById("astV2TstRecomendacao");
+    var obsEl  = document.getElementById("astV2TstObs");
+    if (!resEl || !resEl.value) return astToast_("Selecione o resultado do teste.");
+    var payload = {
+      TIPO_TESTE:             tipEl  ? tipEl.value.trim()  : "",
+      PROCEDIMENTO_REALIZADO: procEl ? procEl.value.trim() : "",
+      PARAMETROS_OBSERVADOS:  parEl  ? parEl.value.trim()  : "",
+      RESULTADO_TESTE:        resEl.value,
+      EVIDENCIAS:             evidEl ? evidEl.value.trim() : "",
+      RECOMENDACAO_FINAL:     recEl  ? recEl.value.trim()  : "",
+      OBSERVACOES:            obsEl  ? obsEl.value.trim()  : ""
+    };
+    astSetContextStatus_("Registrando teste/validacao...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar teste/validacao.");
+        astToast_("Teste/Validacao V2 registrado.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2RegistrarTesteValidacao(SESSION, id, payload);
+  }
+  function astTesteValidacaoResumoV2Html_(historico) {
+    var ultimo = null;
+    if (Array.isArray(historico)) {
+      for (var i = historico.length - 1; i >= 0; i--) {
+        if ((historico[i].TIPO || "") === "TESTE_VALIDACAO") { ultimo = historico[i]; break; }
+      }
+    }
+    if (!ultimo) return "";
+    var dados = {};
+    try { dados = JSON.parse(ultimo.OBSERVACAO || "{}"); } catch (e_) {}
+    var res = dados.resultadoTeste || "";
+    var resColor = res === "APROVADO" ? "#15803d" : res === "REPROVADO" ? "#dc2626" : "#d97706";
+    var rows = [];
+    if (dados.resultadoTeste)         rows.push('<div class="ast-v2-det-field"><span>Resultado</span><b style="color:' + resColor + ';">' + astEsc_(dados.resultadoTeste) + '</b></div>');
+    if (dados.tipoTeste)              rows.push('<div class="ast-v2-det-field"><span>Tipo de teste</span><b>' + astEsc_(dados.tipoTeste) + '</b></div>');
+    if (dados.procedimentoRealizado)  rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Procedimento</span><b>' + astEsc_(dados.procedimentoRealizado) + '</b></div>');
+    if (dados.parametrosObservados)   rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Parametros</span><b>' + astEsc_(dados.parametrosObservados) + '</b></div>');
+    if (dados.evidencias)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Evidencias</span><b>' + astEsc_(dados.evidencias) + '</b></div>');
+    if (dados.recomendacaoFinal)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoFinal) + '</b></div>');
+    if (ultimo.EXECUTADO_EM)          rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
+    if (!rows.length) return "";
+    return [
+      '<div class="ast-v2-det-section" style="border-top:2px solid #0891b2;">',
+        '<h4 style="color:#0891b2;">&#9989; Teste / Validacao</h4>',
+        '<div class="ast-v2-det-grid2">',
+          rows.join(""),
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
     if (!diag || !diag.dados) {
@@ -1659,6 +1752,9 @@
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execucao</button>');
     }
+    if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarTesteValidacaoCard_(\'' + id + '\')">&#9989; Registrar Teste / Validacao</button>');
+    }
     acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidencia</button>');
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarStatusCard_(\'' + id + '\',\'' + status + '\')">&#128260; Atualizar Status</button>');
@@ -1673,6 +1769,7 @@
         '<div id="astV2EvidCardContainer"></div>',
         '<div id="astV2PecaCardContainer"></div>',
         '<div id="astV2ExecucaoCardContainer"></div>',
+        '<div id="astV2TesteValidacaoCardContainer"></div>',
       '</div>'
     ].join("");
   }

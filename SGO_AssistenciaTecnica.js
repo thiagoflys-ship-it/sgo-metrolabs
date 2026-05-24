@@ -3200,6 +3200,52 @@ const SGO_AST = (() => {
     };
   }
 
+  function registrarTesteValidacaoV2(sessionId, atendimentoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    const p = payload || {};
+    if (!safe_(p.RESULTADO_TESTE)) return erro_("RESULTADO_TESTE obrigatorio");
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const testeStates = [STATUS_V2.EXECUCAO_CONCLUIDA, STATUS_V2.EXECUCAO_EM_ANDAMENTO];
+    if (testeStates.indexOf(atendimento.STATUS) === -1) {
+      return erro_("Status atual nao permite teste/validacao: " + atendimento.STATUS +
+        ". Requer: EXECUCAO_CONCLUIDA ou EXECUCAO_EM_ANDAMENTO.");
+    }
+    const resultado = upper_(safe_(p.RESULTADO_TESTE));
+    const descricao = "Teste/validacao registrado. Resultado: " + resultado;
+    v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
+      descricao,
+      sessao.userId, sessao.nome, "TESTE_VALIDACAO", {
+        tipoTeste:              safe_(p.TIPO_TESTE              || ""),
+        procedimentoRealizado:  safe_(p.PROCEDIMENTO_REALIZADO  || ""),
+        parametrosObservados:   safe_(p.PARAMETROS_OBSERVADOS   || ""),
+        resultadoTeste:         resultado,
+        evidencias:             safe_(p.EVIDENCIAS              || ""),
+        recomendacaoFinal:      safe_(p.RECOMENDACAO_FINAL      || ""),
+        observacoes:            safe_(p.OBSERVACOES             || "")
+      });
+    var proximaAcao;
+    if (resultado === "APROVADO") {
+      proximaAcao = "Registrar conclusao tecnica.";
+    } else if (resultado === "REPROVADO") {
+      proximaAcao = "Retornar para execucao tecnica. Verificar falhas e executar novo reparo.";
+    } else {
+      proximaAcao = "Reavaliar teste e validacao pos-reparo.";
+    }
+    SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+      PROXIMA_ACAO:   proximaAcao,
+      ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+      ATUALIZADO_EM:  now_()
+    }, DB);
+    return {
+      success:   true,
+      data:      v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -3765,6 +3811,7 @@ const SGO_AST = (() => {
     atualizarSolicitacaoPecaV2: atualizarSolicitacaoPecaV2,
     salvarExecucaoV2: salvarExecucaoV2,
     registrarExecucaoV2: registrarExecucaoV2,
+    registrarTesteValidacaoV2: registrarTesteValidacaoV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -3875,6 +3922,7 @@ function astV2AtualizarSolicitacao(sessionId, solicitacaoId, payload) { return S
 function astV2AtualizarSolicitacaoPeca(sessionId, solicitacaoId, payload) { return SGO_AST.atualizarSolicitacaoPecaV2(sessionId, solicitacaoId, payload); }
 function astV2SalvarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.salvarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.registrarExecucaoV2(sessionId, atendimentoId, payload); }
+function astV2RegistrarTesteValidacao(sessionId, atendimentoId, payload) { return SGO_AST.registrarTesteValidacaoV2(sessionId, atendimentoId, payload); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }
