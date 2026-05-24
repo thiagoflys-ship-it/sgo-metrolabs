@@ -1179,6 +1179,7 @@
           astExecucaoResumoV2Html_(historico),
           astTesteValidacaoResumoV2Html_(historico),
           astConclusaoResumoV2Html_(historico),
+          astEntregaResumoV2Html_(historico),
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
@@ -1744,6 +1745,112 @@
     ].join("");
   }
 
+  function astV2MostrarEntregaCard_(id) {
+    var container = document.getElementById("astV2EntregaCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    var hoje = new Date();
+    var dd = String(hoje.getDate()).padStart(2, "0");
+    var mm = String(hoje.getMonth() + 1).padStart(2, "0");
+    var yyyy = hoje.getFullYear();
+    var dataHoje = yyyy + "-" + mm + "-" + dd;
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128666; Registrar Entrega</h5>',
+        '<label>Entregue para *</label>',
+        '<input type="text" id="astV2EntNome" placeholder="Nome do responsavel pela retirada">',
+        '<label>Documento / Matricula</label>',
+        '<input type="text" id="astV2EntDoc" placeholder="CPF, RG ou matricula">',
+        '<label>Cargo / Funcao</label>',
+        '<input type="text" id="astV2EntCargo" placeholder="Cargo ou funcao">',
+        '<label>Data da entrega</label>',
+        '<input type="date" id="astV2EntData" value="' + dataHoje + '">',
+        '<label>Condicao de entrega</label>',
+        '<select id="astV2EntCondicao">',
+          '<option value="BOM_ESTADO">Bom estado</option>',
+          '<option value="COM_RESSALVA">Com ressalva</option>',
+          '<option value="SEM_REPARO">Sem reparo / devolvido como veio</option>',
+        '</select>',
+        '<label>Acessorios devolvidos</label>',
+        '<textarea id="astV2EntAcessorios" rows="2" placeholder="Liste os acessorios entregues..."></textarea>',
+        '<label>Observacoes</label>',
+        '<textarea id="astV2EntObs" rows="2" placeholder="Observacoes adicionais..."></textarea>',
+        '<label>Finalizar atendimento?</label>',
+        '<select id="astV2EntFinalizar">',
+          '<option value="S">Sim - encerrar atendimento</option>',
+          '<option value="N">Nao - manter em acompanhamento</option>',
+        '</select>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarEntrega_(\'' + idEsc + '\')">Confirmar Entrega</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2EntregaCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarEntrega_(id) {
+    var nomeEl  = document.getElementById("astV2EntNome");
+    var docEl   = document.getElementById("astV2EntDoc");
+    var cargoEl = document.getElementById("astV2EntCargo");
+    var dataEl  = document.getElementById("astV2EntData");
+    var condEl  = document.getElementById("astV2EntCondicao");
+    var aceEl   = document.getElementById("astV2EntAcessorios");
+    var obsEl   = document.getElementById("astV2EntObs");
+    var finEl   = document.getElementById("astV2EntFinalizar");
+    if (!nomeEl || !nomeEl.value.trim()) return astToast_("Informe o nome do responsavel pela retirada.");
+    var payload = {
+      ENTREGUE_PARA_NOME:       nomeEl.value.trim(),
+      ENTREGUE_PARA_DOC:        docEl   ? docEl.value.trim()   : "",
+      ENTREGUE_PARA_CARGO:      cargoEl ? cargoEl.value.trim() : "",
+      DATA_ENTREGA:             dataEl  ? dataEl.value         : "",
+      CONDICAO_ENTREGA:         condEl  ? condEl.value         : "BOM_ESTADO",
+      ACESSORIOS_DEVOLVIDOS:    aceEl   ? aceEl.value.trim()   : "",
+      OBSERVACOES:              obsEl   ? obsEl.value.trim()   : "",
+      ASSINATURA_ENTREGA_BASE64: "",
+      FINALIZAR_ATENDIMENTO:    finEl   ? finEl.value          : "N"
+    };
+    astSetContextStatus_("Registrando entrega...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar entrega.");
+        astToast_("Entrega V2 registrada.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2RegistrarEntrega(SESSION, id, payload);
+  }
+  function astEntregaResumoV2Html_(historico) {
+    var ultimo = null;
+    if (Array.isArray(historico)) {
+      for (var i = historico.length - 1; i >= 0; i--) {
+        if ((historico[i].TIPO || "") === "ENTREGA") { ultimo = historico[i]; break; }
+      }
+    }
+    if (!ultimo) return "";
+    var dados = {};
+    try { dados = JSON.parse(ultimo.OBSERVACAO || "{}"); } catch (e_) {}
+    var fin = dados.finalizado || "N";
+    var rows = [];
+    if (dados.entregueParaNome)     rows.push('<div class="ast-v2-det-field"><span>Entregue para</span><b>' + astEsc_(dados.entregueParaNome) + '</b></div>');
+    if (dados.entregueParaDoc)      rows.push('<div class="ast-v2-det-field"><span>Documento / Matricula</span><b>' + astEsc_(dados.entregueParaDoc) + '</b></div>');
+    if (dados.entregueParaCargo)    rows.push('<div class="ast-v2-det-field"><span>Cargo / Funcao</span><b>' + astEsc_(dados.entregueParaCargo) + '</b></div>');
+    if (dados.dataEntrega)          rows.push('<div class="ast-v2-det-field"><span>Data da entrega</span><b>' + astEsc_(dados.dataEntrega) + '</b></div>');
+    if (dados.condicaoEntrega)      rows.push('<div class="ast-v2-det-field"><span>Condicao</span><b>' + astEsc_(dados.condicaoEntrega) + '</b></div>');
+    if (dados.acessoriosDevolvidos) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Acessorios devolvidos</span><b>' + astEsc_(dados.acessoriosDevolvidos) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Atendimento finalizado</span><b style="color:' + (fin === "S" ? "#15803d" : "#dc2626") + ';">' + (fin === "S" ? "Sim" : "Nao") + '</b></div>');
+    if (dados.observacoes)          rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observacoes</span><b>' + astEsc_(dados.observacoes) + '</b></div>');
+    if (ultimo.EXECUTADO_EM)        rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
+    if (!rows.length) return "";
+    return [
+      '<div class="ast-v2-det-section" style="border-top:2px solid #15803d;">',
+        '<h4 style="color:#15803d;">&#128666; Entrega</h4>',
+        '<div class="ast-v2-det-grid2">',
+          rows.join(""),
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
     if (!diag || !diag.dados) {
@@ -1852,6 +1959,9 @@
     if (["EXECUCAO_CONCLUIDA", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarConclusaoCard_(\'' + id + '\')">&#10003; Registrar Conclusao Tecnica</button>');
     }
+    if (["CONCLUIDO_TECNICAMENTE", "AGUARDANDO_ENTREGA", "NAO_REPARADO"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarEntregaCard_(\'' + id + '\')">&#128666; Registrar Entrega</button>');
+    }
     acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidencia</button>');
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarStatusCard_(\'' + id + '\',\'' + status + '\')">&#128260; Atualizar Status</button>');
@@ -1868,6 +1978,7 @@
         '<div id="astV2ExecucaoCardContainer"></div>',
         '<div id="astV2TesteValidacaoCardContainer"></div>',
         '<div id="astV2ConclusaoCardContainer"></div>',
+        '<div id="astV2EntregaCardContainer"></div>',
       '</div>'
     ].join("");
   }
