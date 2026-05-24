@@ -4,3 +4,7 @@ UI_Scripts_BKP.html
 *.bak*
 *.zip
 *_BKP.html
+_tmp_check.js
+_tmp_*.js
+_PATCHES_LOCAL.bak/
+INVENTARIO_ASSISTENCIA_TECNICA.md

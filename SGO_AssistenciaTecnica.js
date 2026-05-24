@@ -3068,6 +3068,59 @@ const SGO_AST = (() => {
     return { success: true, data: SGO_DATA.getById(S.AST_SOLICITACOES, solicitacaoId, DB) };
   }
 
+  function atualizarSolicitacaoPecaV2(sessionId, solicitacaoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    const p = payload || {};
+    if (!p.STATUS) return erro_("STATUS obrigatorio");
+    const solicitacao = SGO_DATA.getById(S.AST_SOLICITACOES, solicitacaoId, DB);
+    if (!solicitacao) return erro_("Solicitacao nao encontrada: " + solicitacaoId);
+    if (upper_(solicitacao.TIPO) !== "PECA") return erro_("Solicitacao nao e do tipo PECA");
+    const atendimentoId = safe_(solicitacao.ATENDIMENTO_ID);
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const statusAnterior = safe_(solicitacao.STATUS);
+    const statusNovo = upper_(safe_(p.STATUS));
+    const patch = {
+      STATUS:         statusNovo,
+      OBSERVACAO:     safe_(p.OBSERVACAO || solicitacao.OBSERVACAO),
+      ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+      ATUALIZADO_EM:  now_()
+    };
+    if (p.FORNECEDOR_FINAL) patch.FORNECEDOR_NOME = safe_(p.FORNECEDOR_FINAL);
+    if (p.VALOR_FINAL !== undefined && p.VALOR_FINAL !== "") patch.VALOR_APROVADO = Number(p.VALOR_FINAL) || 0;
+    if (statusNovo === "COMPRADO")  patch.COMPRADO_EM  = now_();
+    if (statusNovo === "RECEBIDO")  patch.RECEBIDO_EM  = now_();
+    if (statusNovo === "INSTALADO") patch.INSTALADO_EM = now_();
+    SGO_DATA.update(S.AST_SOLICITACOES, solicitacaoId, patch, DB);
+    const descPeca = v2SolicitacaoDescricao_(solicitacao);
+    v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
+      "Peca " + statusNovo.toLowerCase() + ": " + descPeca,
+      sessao.userId, sessao.nome, "STATUS_PECA",
+      { solicitacaoId: solicitacaoId, statusAnterior: statusAnterior, statusNovo: statusNovo });
+    if (statusNovo === "INSTALADO") {
+      if (v2StatusValido_(atendimento.STATUS, STATUS_V2.LIBERADO_PARA_EXECUCAO)) {
+        try {
+          v2AtualizarStatus_(atendimentoId, STATUS_V2.LIBERADO_PARA_EXECUCAO,
+            "Peca instalada. Liberado para execucao.", sessao.userId, sessao.nome);
+        } catch (e) {}
+      } else {
+        SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+          PROXIMA_ACAO:   "Peca instalada. Prosseguir para teste e validacao.",
+          ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+          ATUALIZADO_EM:  now_()
+        }, DB);
+      }
+    }
+    return {
+      success:     true,
+      data:        v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      solicitacao: SGO_DATA.getById(S.AST_SOLICITACOES, solicitacaoId, DB),
+      historico:   SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
   function salvarExecucaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -3659,6 +3712,7 @@ const SGO_AST = (() => {
     salvarDiagnosticoV2: salvarDiagnosticoV2,
     salvarSolicitacaoV2: salvarSolicitacaoV2,
     atualizarSolicitacaoV2: atualizarSolicitacaoV2,
+    atualizarSolicitacaoPecaV2: atualizarSolicitacaoPecaV2,
     salvarExecucaoV2: salvarExecucaoV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
@@ -3767,6 +3821,7 @@ function astV2RegistrarEvidencia(sessionId, atendimentoId, payload) { return SGO
 function astV2SalvarDiagnostico(sessionId, atendimentoId, payload) { return SGO_AST.salvarDiagnosticoV2(sessionId, atendimentoId, payload); }
 function astV2SalvarSolicitacao(sessionId, atendimentoId, payload) { return SGO_AST.salvarSolicitacaoV2(sessionId, atendimentoId, payload); }
 function astV2AtualizarSolicitacao(sessionId, solicitacaoId, payload) { return SGO_AST.atualizarSolicitacaoV2(sessionId, solicitacaoId, payload); }
+function astV2AtualizarSolicitacaoPeca(sessionId, solicitacaoId, payload) { return SGO_AST.atualizarSolicitacaoPecaV2(sessionId, solicitacaoId, payload); }
 function astV2SalvarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.salvarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }

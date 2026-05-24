@@ -1374,10 +1374,15 @@
       if (p.OBSERVACAO) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observacoes</span><b style="font-weight:400;">' + astEsc_(p.OBSERVACAO) + '</b></div>');
       var data = astData_(p.SOLICITADO_EM || p.CRIADO_EM || "");
       var dataTag = (data && data !== "--") ? '<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px;">' + astEsc_(data) + '</span>' : "";
+      var solId = astEscAttr_(p.ID || "");
+      var btnAtualizar = (solId && ["CANCELADO", "RECUSADO", "INSTALADO"].indexOf(st) === -1)
+        ? '<button class="ast-v2-acao-btn" style="margin-top:8px;font-size:11px;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solId + '\')">&#128260; Atualizar Status da Peca</button>'
+        : '';
       cards.push([
         '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">',
           '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#475569;margin-bottom:6px;">Solicitacao ' + (j + 1) + dataTag + '</div>',
           '<div class="ast-v2-det-grid2">', campos.join(""), '</div>',
+          btnAtualizar,
         '</div>'
       ].join(""));
     }
@@ -1385,8 +1390,69 @@
       '<div class="ast-v2-det-section">',
         '<h4>Pecas Solicitadas</h4>',
         cards.join(""),
+        '<div id="astV2StatusPecaCardContainer"></div>',
       '</div>'
     ].join("");
+  }
+
+  function astV2MostrarStatusPecaCard_(solicitacaoId) {
+    var container = document.getElementById("astV2StatusPecaCardContainer");
+    if (!container) return;
+    var sidEsc = astEscAttr_(solicitacaoId || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128260; Atualizar Status da Peca</h5>',
+        '<label>Novo status *</label>',
+        '<select id="astV2PecaStNovo">',
+          '<option value="PENDENTE">Pendente</option>',
+          '<option value="EM_COTACAO">Em Cotacao</option>',
+          '<option value="AGUARDANDO_APROVACAO">Aguardando Aprovacao</option>',
+          '<option value="COMPRADO">Comprado</option>',
+          '<option value="RECEBIDO">Recebido</option>',
+          '<option value="INSTALADO">Instalado</option>',
+          '<option value="CANCELADO">Cancelado</option>',
+        '</select>',
+        '<label>Observacao</label>',
+        '<textarea id="astV2PecaStObs" rows="2" placeholder="Ex: Adquirido no fornecedor X, NF 123..."></textarea>',
+        '<label>Fornecedor final</label>',
+        '<input type="text" id="astV2PecaStFornecedor" placeholder="Nome do fornecedor">',
+        '<label>Valor final (R$)</label>',
+        '<input type="number" id="astV2PecaStValor" min="0" step="0.01" placeholder="0.00">',
+        '<label>Data prevista</label>',
+        '<input type="date" id="astV2PecaStDataPrevista">',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarStatusPeca_(\'' + sidEsc + '\')">Confirmar</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2StatusPecaCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function astV2ConfirmarStatusPeca_(solicitacaoId) {
+    var stEl      = document.getElementById("astV2PecaStNovo");
+    var obsEl     = document.getElementById("astV2PecaStObs");
+    var fornEl    = document.getElementById("astV2PecaStFornecedor");
+    var valEl     = document.getElementById("astV2PecaStValor");
+    var dataEl    = document.getElementById("astV2PecaStDataPrevista");
+    if (!stEl || !stEl.value) return astToast_("Selecione o novo status.");
+    var valorNum = valEl && valEl.value ? parseFloat(valEl.value) : "";
+    var payload = {
+      STATUS:           stEl.value,
+      OBSERVACAO:       obsEl  ? obsEl.value.trim()                         : "",
+      FORNECEDOR_FINAL: fornEl ? fornEl.value.trim()                        : "",
+      VALOR_FINAL:      (valorNum !== "" && !isNaN(valorNum)) ? valorNum    : "",
+      DATA_PREVISTA:    dataEl ? dataEl.value                               : ""
+    };
+    astSetContextStatus_("Atualizando status da peca...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel atualizar status da peca.");
+        astToast_("Status da peca atualizado.");
+        astAbrirDetalhe_(AST_STATE.selecionada, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2AtualizarSolicitacaoPeca(SESSION, solicitacaoId, payload);
   }
 
   function astDiagnosticoResumoHtml_(diag) {
