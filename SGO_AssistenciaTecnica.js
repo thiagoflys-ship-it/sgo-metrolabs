@@ -3246,6 +3246,80 @@ const SGO_AST = (() => {
     };
   }
 
+  function registrarConclusaoTecnicaV2(sessionId, atendimentoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    const p = payload || {};
+    if (!safe_(p.CONCLUSAO_TECNICA)) return erro_("CONCLUSAO_TECNICA obrigatoria");
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const conclusaoStates = [
+      STATUS_V2.EXECUCAO_CONCLUIDA,
+      STATUS_V2.AGUARDANDO_CALIBRACAO,
+      STATUS_V2.CONCLUIDO_TECNICAMENTE
+    ];
+    if (conclusaoStates.indexOf(atendimento.STATUS) === -1) {
+      return erro_("Status atual nao permite conclusao tecnica: " + atendimento.STATUS +
+        ". Requer: EXECUCAO_CONCLUIDA, AGUARDANDO_CALIBRACAO ou CONCLUIDO_TECNICAMENTE.");
+    }
+    const resultado = upper_(safe_(p.RESULTADO_FINAL || "REPARADO"));
+    const liberado  = upper_(safe_(p.LIBERADO_PARA_ENTREGA || "N")) === "S";
+    const semReparo = ["SEM_REPARO", "REPROVADO", "CANCELADO_TECNICAMENTE"].indexOf(resultado) !== -1;
+    const descricao = "Conclusao tecnica: " + safe_(p.CONCLUSAO_TECNICA).substring(0, 100);
+    v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
+      descricao,
+      sessao.userId, sessao.nome, "CONCLUSAO_TECNICA", {
+        conclusaoTecnica:    safe_(p.CONCLUSAO_TECNICA),
+        resultadoFinal:      resultado,
+        recomendacaoCliente: safe_(p.RECOMENDACAO_CLIENTE  || ""),
+        garantiaDias:        Number(p.GARANTIA_DIAS) || 0,
+        liberadoParaEntrega: liberado ? "S" : "N",
+        observacoes:         safe_(p.OBSERVACOES           || "")
+      });
+    var proximaAcao;
+    if (semReparo) {
+      proximaAcao = "Comunicar cliente e definir destinacao do equipamento.";
+    } else if (liberado) {
+      proximaAcao = "Aguardar entrega/devolucao ao cliente.";
+    } else {
+      proximaAcao = "Revisar pendencias antes da entrega.";
+    }
+    const statusAtual = atendimento.STATUS;
+    if (liberado || semReparo) {
+      if (v2StatusValido_(statusAtual, STATUS_V2.CONCLUIDO_TECNICAMENTE)) {
+        v2AtualizarStatus_(atendimentoId, STATUS_V2.CONCLUIDO_TECNICAMENTE,
+          descricao, sessao.userId, sessao.nome);
+        if (liberado && v2StatusValido_(STATUS_V2.CONCLUIDO_TECNICAMENTE, STATUS_V2.AGUARDANDO_ENTREGA)) {
+          v2AtualizarStatus_(atendimentoId, STATUS_V2.AGUARDANDO_ENTREGA,
+            "Equipamento liberado para entrega.", sessao.userId, sessao.nome);
+        }
+      } else if (statusAtual === STATUS_V2.CONCLUIDO_TECNICAMENTE && liberado) {
+        if (v2StatusValido_(statusAtual, STATUS_V2.AGUARDANDO_ENTREGA)) {
+          v2AtualizarStatus_(atendimentoId, STATUS_V2.AGUARDANDO_ENTREGA,
+            "Equipamento liberado para entrega.", sessao.userId, sessao.nome);
+        }
+      } else {
+        SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+          PROXIMA_ACAO:   proximaAcao,
+          ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+          ATUALIZADO_EM:  now_()
+        }, DB);
+      }
+    } else {
+      SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+        PROXIMA_ACAO:   proximaAcao,
+        ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+        ATUALIZADO_EM:  now_()
+      }, DB);
+    }
+    return {
+      success:   true,
+      data:      v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -3812,6 +3886,7 @@ const SGO_AST = (() => {
     salvarExecucaoV2: salvarExecucaoV2,
     registrarExecucaoV2: registrarExecucaoV2,
     registrarTesteValidacaoV2: registrarTesteValidacaoV2,
+    registrarConclusaoTecnicaV2: registrarConclusaoTecnicaV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -3923,6 +3998,7 @@ function astV2AtualizarSolicitacaoPeca(sessionId, solicitacaoId, payload) { retu
 function astV2SalvarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.salvarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.registrarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarTesteValidacao(sessionId, atendimentoId, payload) { return SGO_AST.registrarTesteValidacaoV2(sessionId, atendimentoId, payload); }
+function astV2RegistrarConclusaoTecnica(sessionId, atendimentoId, payload) { return SGO_AST.registrarConclusaoTecnicaV2(sessionId, atendimentoId, payload); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }

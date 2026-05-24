@@ -1178,6 +1178,7 @@
           astSolicitacoesPecaV2Html_(solicitacoes),
           astExecucaoResumoV2Html_(historico),
           astTesteValidacaoResumoV2Html_(historico),
+          astConclusaoResumoV2Html_(historico),
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
@@ -1650,6 +1651,99 @@
     ].join("");
   }
 
+  function astV2MostrarConclusaoCard_(id) {
+    var container = document.getElementById("astV2ConclusaoCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#10003; Registrar Conclusao Tecnica</h5>',
+        '<label>Conclusao tecnica *</label>',
+        '<textarea id="astV2ConcConclusao" rows="4" placeholder="Descreva a conclusao tecnica do atendimento..."></textarea>',
+        '<label>Resultado final *</label>',
+        '<select id="astV2ConcResultado">',
+          '<option value="REPARADO">Reparado</option>',
+          '<option value="REPARADO_COM_RESSALVA">Reparado com ressalva</option>',
+          '<option value="SEM_REPARO">Sem reparo</option>',
+          '<option value="REPROVADO">Reprovado</option>',
+          '<option value="CANCELADO_TECNICAMENTE">Cancelado tecnicamente</option>',
+        '</select>',
+        '<label>Recomendacao ao cliente</label>',
+        '<textarea id="astV2ConcRecomendacao" rows="2" placeholder="Cuidados, uso correto, proxima revisao..."></textarea>',
+        '<label>Garantia (dias)</label>',
+        '<input type="number" id="astV2ConcGarantiaDias" min="0" step="1" placeholder="90">',
+        '<label>Liberado para entrega</label>',
+        '<select id="astV2ConcLiberado"><option value="S">Sim</option><option value="N">Nao</option></select>',
+        '<label>Observacoes</label>',
+        '<textarea id="astV2ConcObs" rows="2" placeholder="Observacoes internas..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarConclusao_(\'' + idEsc + '\')">Confirmar</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2ConclusaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarConclusao_(id) {
+    var concEl  = document.getElementById("astV2ConcConclusao");
+    var resEl   = document.getElementById("astV2ConcResultado");
+    var recEl   = document.getElementById("astV2ConcRecomendacao");
+    var garEl   = document.getElementById("astV2ConcGarantiaDias");
+    var libEl   = document.getElementById("astV2ConcLiberado");
+    var obsEl   = document.getElementById("astV2ConcObs");
+    if (!concEl || !concEl.value.trim()) return astToast_("Conclusao tecnica e obrigatoria.");
+    if (!resEl  || !resEl.value)         return astToast_("Selecione o resultado final.");
+    var garantia = garEl && garEl.value ? parseInt(garEl.value, 10) : 0;
+    var payload = {
+      CONCLUSAO_TECNICA:    concEl.value.trim(),
+      RESULTADO_FINAL:      resEl.value,
+      RECOMENDACAO_CLIENTE: recEl  ? recEl.value.trim()               : "",
+      GARANTIA_DIAS:        (!isNaN(garantia) ? garantia              : 0),
+      LIBERADO_PARA_ENTREGA: libEl ? libEl.value                      : "N",
+      OBSERVACOES:          obsEl  ? obsEl.value.trim()               : ""
+    };
+    astSetContextStatus_("Registrando conclusao tecnica...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar conclusao tecnica.");
+        astToast_("Conclusao tecnica V2 registrada.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2RegistrarConclusaoTecnica(SESSION, id, payload);
+  }
+  function astConclusaoResumoV2Html_(historico) {
+    var ultimo = null;
+    if (Array.isArray(historico)) {
+      for (var i = historico.length - 1; i >= 0; i--) {
+        if ((historico[i].TIPO || "") === "CONCLUSAO_TECNICA") { ultimo = historico[i]; break; }
+      }
+    }
+    if (!ultimo) return "";
+    var dados = {};
+    try { dados = JSON.parse(ultimo.OBSERVACAO || "{}"); } catch (e_) {}
+    var res = dados.resultadoFinal || "";
+    var resColor = (res === "REPARADO" || res === "REPARADO_COM_RESSALVA") ? "#15803d" :
+                   (res === "SEM_REPARO" || res === "REPROVADO" || res === "CANCELADO_TECNICAMENTE") ? "#dc2626" : "#334155";
+    var lib = dados.liberadoParaEntrega || "N";
+    var rows = [];
+    if (dados.conclusaoTecnica)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Conclusao tecnica</span><b>' + astEsc_(dados.conclusaoTecnica) + '</b></div>');
+    if (dados.resultadoFinal)      rows.push('<div class="ast-v2-det-field"><span>Resultado final</span><b style="color:' + resColor + ';">' + astEsc_(dados.resultadoFinal) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Liberado para entrega</span><b style="color:' + (lib === "S" ? "#15803d" : "#dc2626") + ';">' + (lib === "S" ? "Sim" : "Nao") + '</b></div>');
+    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
+    if (dados.garantiaDias)        rows.push('<div class="ast-v2-det-field"><span>Garantia</span><b>' + astEsc_(String(dados.garantiaDias)) + ' dias</b></div>');
+    if (ultimo.EXECUTADO_EM)       rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
+    if (!rows.length) return "";
+    return [
+      '<div class="ast-v2-det-section" style="border-top:2px solid #1a56db;">',
+        '<h4 style="color:#1a56db;">&#10003; Conclusao Tecnica</h4>',
+        '<div class="ast-v2-det-grid2">',
+          rows.join(""),
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
     if (!diag || !diag.dados) {
@@ -1755,6 +1849,9 @@
     if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarTesteValidacaoCard_(\'' + id + '\')">&#9989; Registrar Teste / Validacao</button>');
     }
+    if (["EXECUCAO_CONCLUIDA", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarConclusaoCard_(\'' + id + '\')">&#10003; Registrar Conclusao Tecnica</button>');
+    }
     acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidencia</button>');
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarStatusCard_(\'' + id + '\',\'' + status + '\')">&#128260; Atualizar Status</button>');
@@ -1770,6 +1867,7 @@
         '<div id="astV2PecaCardContainer"></div>',
         '<div id="astV2ExecucaoCardContainer"></div>',
         '<div id="astV2TesteValidacaoCardContainer"></div>',
+        '<div id="astV2ConclusaoCardContainer"></div>',
       '</div>'
     ].join("");
   }
