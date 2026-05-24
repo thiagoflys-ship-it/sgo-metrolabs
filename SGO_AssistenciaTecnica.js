@@ -3150,6 +3150,56 @@ const SGO_AST = (() => {
     return { success: true, data: v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)) };
   }
 
+  function registrarExecucaoV2(sessionId, atendimentoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    const p = payload || {};
+    if (!safe_(p.SERVICO_REALIZADO)) return erro_("SERVICO_REALIZADO obrigatorio");
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const execStates = [STATUS_V2.LIBERADO_PARA_EXECUCAO, STATUS_V2.EXECUCAO_EM_ANDAMENTO];
+    if (execStates.indexOf(atendimento.STATUS) === -1) {
+      return erro_("Status atual nao permite execucao: " + atendimento.STATUS +
+        ". Requer: LIBERADO_PARA_EXECUCAO ou EXECUCAO_EM_ANDAMENTO.");
+    }
+    if (atendimento.STATUS === STATUS_V2.LIBERADO_PARA_EXECUCAO) {
+      v2AtualizarStatus_(atendimentoId, STATUS_V2.EXECUCAO_EM_ANDAMENTO,
+        "Execucao iniciada.", sessao.userId, sessao.nome);
+    }
+    const descricao = "Execucao: " + safe_(p.SERVICO_REALIZADO).substring(0, 100);
+    v2RegistrarHistorico_(atendimentoId, STATUS_V2.EXECUCAO_EM_ANDAMENTO, STATUS_V2.EXECUCAO_EM_ANDAMENTO,
+      descricao,
+      sessao.userId, sessao.nome, "EXECUCAO", {
+        servicoRealizado:    safe_(p.SERVICO_REALIZADO),
+        pecasAplicadas:      safe_(p.PECAS_APLICADAS      || ""),
+        ajustesRealizados:   safe_(p.AJUSTES_REALIZADOS   || ""),
+        limpezaRealizada:    upper_(safe_(p.LIMPEZA_REALIZADA    || "NAO")),
+        testesAposReparo:    safe_(p.TESTES_APOS_REPARO    || ""),
+        resultadoExecucao:   upper_(safe_(p.RESULTADO_EXECUCAO   || "REPARO_EXECUTADO")),
+        recomendacaoCliente: safe_(p.RECOMENDACAO_CLIENTE  || ""),
+        garantiaDias:        Number(p.GARANTIA_DIAS) || 0,
+        observacoes:         safe_(p.OBSERVACOES           || "")
+      });
+    const atualizado = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (v2StatusValido_(atualizado.STATUS, STATUS_V2.EXECUCAO_CONCLUIDA)) {
+      v2AtualizarStatus_(atendimentoId, STATUS_V2.EXECUCAO_CONCLUIDA,
+        "Execucao concluida. Prosseguir para conclusao tecnica.",
+        sessao.userId, sessao.nome);
+    } else {
+      SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+        PROXIMA_ACAO:   "Executar teste e validacao pos-reparo.",
+        ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+        ATUALIZADO_EM:  now_()
+      }, DB);
+    }
+    return {
+      success:   true,
+      data:      v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -3714,6 +3764,7 @@ const SGO_AST = (() => {
     atualizarSolicitacaoV2: atualizarSolicitacaoV2,
     atualizarSolicitacaoPecaV2: atualizarSolicitacaoPecaV2,
     salvarExecucaoV2: salvarExecucaoV2,
+    registrarExecucaoV2: registrarExecucaoV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -3823,6 +3874,7 @@ function astV2SalvarSolicitacao(sessionId, atendimentoId, payload) { return SGO_
 function astV2AtualizarSolicitacao(sessionId, solicitacaoId, payload) { return SGO_AST.atualizarSolicitacaoV2(sessionId, solicitacaoId, payload); }
 function astV2AtualizarSolicitacaoPeca(sessionId, solicitacaoId, payload) { return SGO_AST.atualizarSolicitacaoPecaV2(sessionId, solicitacaoId, payload); }
 function astV2SalvarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.salvarExecucaoV2(sessionId, atendimentoId, payload); }
+function astV2RegistrarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.registrarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }

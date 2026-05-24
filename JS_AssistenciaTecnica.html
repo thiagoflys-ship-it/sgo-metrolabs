@@ -1176,6 +1176,7 @@
           astEsteiraDetalheV2Html_(e),
           astResumoTecnicoV2Html_(e, acessorios, fotos, diag),
           astSolicitacoesPecaV2Html_(solicitacoes),
+          astExecucaoResumoV2Html_(historico),
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
@@ -1455,6 +1456,107 @@
       .astV2AtualizarSolicitacaoPeca(SESSION, solicitacaoId, payload);
   }
 
+  function astV2MostrarExecucaoCard_(id) {
+    var container = document.getElementById("astV2ExecucaoCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128295; Registrar Execucao</h5>',
+        '<label>Servico realizado *</label>',
+        '<textarea id="astV2ExecServico" rows="3" placeholder="Descreva o servico executado..."></textarea>',
+        '<label>Pecas aplicadas</label>',
+        '<textarea id="astV2ExecPecas" rows="2" placeholder="Ex: placa controladora, fusivel 5A..."></textarea>',
+        '<label>Ajustes realizados</label>',
+        '<textarea id="astV2ExecAjustes" rows="2" placeholder="Calibracoes, regulagens..."></textarea>',
+        '<label>Limpeza realizada</label>',
+        '<select id="astV2ExecLimpeza"><option value="SIM">Sim</option><option value="NAO">Nao</option></select>',
+        '<label>Testes apos reparo</label>',
+        '<textarea id="astV2ExecTestes" rows="2" placeholder="Descreva os testes realizados..."></textarea>',
+        '<label>Resultado *</label>',
+        '<select id="astV2ExecResultado">',
+          '<option value="REPARO_EXECUTADO">Reparo executado</option>',
+          '<option value="REPARO_PARCIAL">Reparo parcial</option>',
+          '<option value="AGUARDANDO_TESTE">Aguardando teste</option>',
+          '<option value="SEM_REPARO">Sem reparo</option>',
+        '</select>',
+        '<label>Recomendacao ao cliente</label>',
+        '<textarea id="astV2ExecRecomendacao" rows="2" placeholder="Cuidados, proximas revisoes..."></textarea>',
+        '<label>Garantia (dias)</label>',
+        '<input type="number" id="astV2ExecGarantiaDias" min="0" step="1" placeholder="90">',
+        '<label>Observacoes</label>',
+        '<textarea id="astV2ExecObs" rows="2" placeholder="Observacoes internas..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarExecucao_(\'' + idEsc + '\')">Confirmar</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2ExecucaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarExecucao_(id) {
+    var svcEl  = document.getElementById("astV2ExecServico");
+    var pecEl  = document.getElementById("astV2ExecPecas");
+    var ajEl   = document.getElementById("astV2ExecAjustes");
+    var limEl  = document.getElementById("astV2ExecLimpeza");
+    var tstEl  = document.getElementById("astV2ExecTestes");
+    var resEl  = document.getElementById("astV2ExecResultado");
+    var recEl  = document.getElementById("astV2ExecRecomendacao");
+    var garEl  = document.getElementById("astV2ExecGarantiaDias");
+    var obsEl  = document.getElementById("astV2ExecObs");
+    if (!svcEl || !svcEl.value.trim()) return astToast_("Servico realizado e obrigatorio.");
+    var garantia = garEl && garEl.value ? parseInt(garEl.value, 10) : 0;
+    var payload = {
+      SERVICO_REALIZADO:    svcEl.value.trim(),
+      PECAS_APLICADAS:      pecEl  ? pecEl.value.trim()                       : "",
+      AJUSTES_REALIZADOS:   ajEl   ? ajEl.value.trim()                        : "",
+      LIMPEZA_REALIZADA:    limEl  ? limEl.value                              : "NAO",
+      TESTES_APOS_REPARO:   tstEl  ? tstEl.value.trim()                       : "",
+      RESULTADO_EXECUCAO:   resEl  ? resEl.value                              : "REPARO_EXECUTADO",
+      RECOMENDACAO_CLIENTE: recEl  ? recEl.value.trim()                       : "",
+      GARANTIA_DIAS:        (!isNaN(garantia) ? garantia                      : 0),
+      OBSERVACOES:          obsEl  ? obsEl.value.trim()                       : ""
+    };
+    astSetContextStatus_("Registrando execucao...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar execucao.");
+        astToast_("Execucao V2 registrada.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2RegistrarExecucao(SESSION, id, payload);
+  }
+  function astExecucaoResumoV2Html_(historico) {
+    var ultimo = null;
+    if (Array.isArray(historico)) {
+      for (var i = historico.length - 1; i >= 0; i--) {
+        if ((historico[i].TIPO || "") === "EXECUCAO") { ultimo = historico[i]; break; }
+      }
+    }
+    if (!ultimo) return "";
+    var dados = {};
+    try { dados = JSON.parse(ultimo.OBSERVACAO || "{}"); } catch (e_) {}
+    var rows = [];
+    if (dados.servicoRealizado)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Servico realizado</span><b>' + astEsc_(dados.servicoRealizado) + '</b></div>');
+    if (dados.resultadoExecucao)   rows.push('<div class="ast-v2-det-field"><span>Resultado</span><b>' + astEsc_(dados.resultadoExecucao) + '</b></div>');
+    if (dados.limpezaRealizada)    rows.push('<div class="ast-v2-det-field"><span>Limpeza</span><b>' + astEsc_(dados.limpezaRealizada) + '</b></div>');
+    if (dados.pecasAplicadas)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Pecas aplicadas</span><b>' + astEsc_(dados.pecasAplicadas) + '</b></div>');
+    if (dados.testesAposReparo)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Testes realizados</span><b>' + astEsc_(dados.testesAposReparo) + '</b></div>');
+    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
+    if (dados.garantiaDias)        rows.push('<div class="ast-v2-det-field"><span>Garantia</span><b>' + astEsc_(String(dados.garantiaDias)) + ' dias</b></div>');
+    if (ultimo.EXECUTADO_EM)       rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
+    if (!rows.length) return "";
+    return [
+      '<div class="ast-v2-det-section" style="border-top:2px solid #15803d;">',
+        '<h4 style="color:#15803d;">&#128295; Execucao Tecnica</h4>',
+        '<div class="ast-v2-det-grid2">',
+          rows.join(""),
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
     if (!diag || !diag.dados) {
@@ -1555,7 +1657,7 @@
       acoes.push('<span class="ast-v2-acao-stub">Enviar Orcamento &mdash; em breve (C.4)</span>');
     }
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
-      acoes.push('<span class="ast-v2-acao-stub">Registrar Execucao &mdash; em breve (C.3)</span>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execucao</button>');
     }
     acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidencia</button>');
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
@@ -1570,6 +1672,7 @@
         '<div id="astV2StatusCardContainer"></div>',
         '<div id="astV2EvidCardContainer"></div>',
         '<div id="astV2PecaCardContainer"></div>',
+        '<div id="astV2ExecucaoCardContainer"></div>',
       '</div>'
     ].join("");
   }
