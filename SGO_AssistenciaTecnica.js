@@ -2160,6 +2160,29 @@ const SGO_AST = (() => {
   function limparBase64_(base64) { return safe_(base64).replace(/^data:[^;]+;base64,/, ""); }
   function sha256_(texto) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto, Utilities.Charset.UTF_8).map(function(b) { return ("0" + ((b < 0 ? b + 256 : b).toString(16))).slice(-2); }).join(""); }
   function esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  function imagemDriveBase64_(fileId) {
+    if (!fileId) return '';
+    try {
+      var file = DriveApp.getFileById(fileId);
+      var blob = file.getBlob();
+      var contentType = blob.getContentType() || 'image/png';
+      var base64 = Utilities.base64Encode(blob.getBytes());
+      return 'data:' + contentType + ';base64,' + base64;
+    } catch (e_) { return ''; }
+  }
+  function imagemUrlBase64_(url) {
+    if (!url) return '';
+    try {
+      var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      if (resp.getResponseCode() === 200) {
+        var blob = resp.getBlob();
+        var contentType = blob.getContentType() || 'image/png';
+        var base64 = Utilities.base64Encode(blob.getBytes());
+        return 'data:' + contentType + ';base64,' + base64;
+      }
+      return '';
+    } catch (e_) { return ''; }
+  }
   function erro_(msg) { return { success: false, message: msg }; }
   function log_(acao, usuario, detalhe) { if (SGO_DATA.log) SGO_DATA.log(acao, usuario, detalhe, "ASSISTENCIA_TECNICA"); }
 
@@ -3374,6 +3397,381 @@ const SGO_AST = (() => {
     };
   }
 
+  // ================================================================
+  // E.1 — DOCUMENTOS V2 — RELATORIO TECNICO FINAL
+  // ================================================================
+
+  function registrarDocumentoAtendimentoV2_(sessao, atendimentoId, tipo, titulo, file, token, validacaoUrl, qrValidacao, qrAcompanhamento, hash) {
+    const agora = now_();
+    return SGO_DATA.insert(S.AST_DOCUMENTOS, SGO_DATA.gerarRegistroBase({
+      ATENDIMENTO_ID:              safe_(atendimentoId),
+      TIPO_DOCUMENTO:              safe_(tipo),
+      NUMERO_DOCUMENTO:            safe_(token),
+      TITULO:                      safe_(titulo),
+      FILE_ID:                     file.getId(),
+      LINK_ARQUIVO:                file.getUrl(),
+      DOWNLOAD_URL:                downloadUrl_(file.getId()),
+      HASH_SHA256:                 safe_(hash),
+      TOKEN_VALIDACAO:             safe_(token),
+      URL_VALIDACAO:               safe_(validacaoUrl),
+      QR_CODE_VALIDACAO_LINK:      safe_(qrValidacao),
+      QR_CODE_ACOMPANHAMENTO_LINK: safe_(qrAcompanhamento || ""),
+      STATUS:                      "VALIDO",
+      GERADO_EM:                   agora,
+      GERADO_POR:                  safe_(sessao.userId || sessao.usuario || "")
+    }), DB);
+  }
+
+  function montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, meta) {
+    // CSS proprio AT V2 — nao usar factory (CSS dela sobrescreve layout premium)
+    var css =
+        '@page{size:A4;margin:14mm 13mm 17mm 13mm}' +
+        'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:10px;background:#fff;line-height:1.45}' +
+        'a{color:#1d4ed8;text-decoration:none}' +
+        '.brand{font-size:21px;font-weight:900;color:#0b3b78;letter-spacing:-0.5px;line-height:1}' +
+        '.brand-tagline{font-size:8px;color:#475467;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-top:1px}' +
+        '.brand-data{font-size:7.5px;color:#667085;margin-top:3px;line-height:1.55}' +
+        '.doc-tipo{font-size:10px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:0.04em}' +
+        '.doc-sub{font-size:8px;color:#475467;text-transform:uppercase;letter-spacing:0.04em}' +
+        '.doc-proto{font-size:12px;font-weight:800;color:#172033;margin-top:4px;word-break:break-all}' +
+        '.doc-emit{font-size:7.5px;color:#667085;margin-top:3px}' +
+        '.status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.03em;margin-top:3px}' +
+        '.alert-banner{background:#fef9c3;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:4px;padding:6px 10px;font-size:8.5px;font-weight:700;color:#92400e;margin:0 0 10px}' +
+        '.stitle{background:#0b3b78;color:#fff;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;padding:4px 9px;border-radius:3px;margin:12px 0 6px;page-break-after:avoid}' +
+        '.igrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px}' +
+        '.info{border:1px solid #e2e8f0;background:#f8fafc;border-radius:4px;padding:6px 8px}' +
+        '.lbl{font-size:7.5px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;margin-bottom:1px}' +
+        '.val{font-size:10px;font-weight:600;word-break:break-word;color:#172033}' +
+        '.sec{border:1px solid #e2e8f0;border-left:3px solid #0b3b78;background:#fff;border-radius:0 4px 4px 0;padding:9px 11px;margin-bottom:4px;page-break-inside:avoid}' +
+        '.sec p{margin:2px 0 4px}' +
+        '.sec-empty{border:1px solid #e2e8f0;border-left:3px solid #cbd5e1;background:#f8fafc;border-radius:0 4px 4px 0;padding:8px 11px;margin-bottom:4px;color:#94a3b8;font-size:9px;font-style:italic}' +
+        '.slbl{font-size:8px;font-weight:800;color:#475467;text-transform:uppercase;letter-spacing:0.03em;min-width:130px;display:inline-block}' +
+        '.sec-by{font-size:8px;color:#94a3b8;margin-top:5px;padding-top:5px;border-top:1px solid #f1f5f9}' +
+        '.res-ok{color:#065f46;font-weight:900}' +
+        '.res-ng{color:#991b1b;font-weight:900}' +
+        '.res-al{color:#92400e;font-weight:900}' +
+        'table{width:100%;border-collapse:collapse;font-size:8.5px;margin-bottom:4px}' +
+        'thead tr{background:#1e3a5f}' +
+        'th{color:#fff;text-align:left;padding:4px 6px;font-size:7.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em}' +
+        'tbody tr:nth-child(even){background:#f8fafc}' +
+        'td{border-bottom:1px solid #e2e8f0;padding:4px 6px;vertical-align:top;color:#172033}' +
+        '.tl-tipo{background:#e0e7ff;color:#3730a3;border-radius:2px;padding:1px 4px;font-size:7px;font-weight:800;text-transform:uppercase}' +
+        '.sig-line{border-bottom:1px solid #334155;margin:20px 0 5px}' +
+        '.sig-img{height:38px;max-width:180px;object-fit:contain;display:block;margin:4px 0 4px}' +
+        '.sig-nome{font-size:9px;font-weight:800;color:#172033}' +
+        '.sig-cargo{font-size:8px;color:#475467;line-height:1.45}' +
+        '.trace-box{border:1px solid #e2e8f0;border-radius:5px;padding:10px 12px;margin-top:10px;page-break-inside:avoid}' +
+        '.mono{font-family:Consolas,Monaco,monospace;font-size:8px;word-break:break-all;color:#334155}' +
+        '.trace-lbl{font-size:7.5px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.03em;min-width:80px;display:inline-block}' +
+        '.qrbox{text-align:center;padding:4px}' +
+        '.qrbox img{width:75px;height:75px;border:1px solid #e2e8f0;border-radius:2px}' +
+        '.qrlbl{font-size:6.5px;color:#667085;margin-top:2px;font-weight:700;text-transform:uppercase}' +
+        '.ftr{font-size:7.5px;color:#94a3b8;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:7px;line-height:1.6;text-align:center}' +
+        '.page{width:100%}';
+    function ult_(tipo) {
+      var r = null;
+      if (Array.isArray(historico)) {
+        for (var i = historico.length - 1; i >= 0; i--) {
+          if ((historico[i].TIPO || '') === tipo) { r = historico[i]; break; }
+        }
+      }
+      return r;
+    }
+    function pd_(entrada) {
+      if (!entrada) return {};
+      try { return JSON.parse(entrada.OBSERVACAO || '{}'); } catch (e_) { return {}; }
+    }
+    function kv_(label, val) {
+      return '<div class="info"><div class="lbl">' + esc_(label) + '</div><div class="val">' + esc_(val || '--') + '</div></div>';
+    }
+    function abrevId_(str) {
+      var s = safe_(str);
+      if (!s) return 'Sistema';
+      return s.length > 20 ? s.substring(0, 8) + '...' : s;
+    }
+    function corRes_(val) {
+      var v = (val || '').toUpperCase();
+      if (v === 'APROVADO' || v === 'REPARADO' || v === 'REPARADO_COM_RESSALVA') return 'res-ok';
+      if (v === 'REPROVADO' || v === 'NAO_REPARADO') return 'res-ng';
+      return 'res-al';
+    }
+    function badgeStatus_(s) {
+      var st = (s || '').toUpperCase();
+      var bg = '#e2e8f0'; var fg = '#334155';
+      if (st.indexOf('ENTREGUE') >= 0 || st.indexOf('CONCLUIDO') >= 0) { bg = '#dcfce7'; fg = '#065f46'; }
+      else if (st.indexOf('EXECUCAO') >= 0 || st.indexOf('AGUARDANDO') >= 0) { bg = '#fef9c3'; fg = '#92400e'; }
+      else if (st.indexOf('DIAGNOSTICO') >= 0 || st.indexOf('ABERTO') >= 0) { bg = '#dbeafe'; fg = '#1e40af'; }
+      else if (st.indexOf('NAO_REPARADO') >= 0) { bg = '#fee2e2'; fg = '#991b1b'; }
+      return '<span class="status-badge" style="background:' + bg + ';color:' + fg + ';">' + esc_(s || '--') + '</span>';
+    }
+    var e        = atendimento || {};
+    var diagH    = ult_('DIAGNOSTICO');
+    var execH    = ult_('EXECUCAO');
+    var testeH   = ult_('TESTE_VALIDACAO');
+    var concH    = ult_('CONCLUSAO_TECNICA');
+    var entgH    = ult_('ENTREGA');
+    var diag     = pd_(diagH);
+    var execDad  = pd_(execH);
+    var testeDad = pd_(testeH);
+    var concDad  = pd_(concH);
+    var entgDad  = pd_(entgH);
+    var statusAtual  = safe_(e.STATUS_V2 || e.STATUS || '');
+    var semConclusao = !concH;
+    function sigBlock_(dataUri) {
+      if (dataUri) {
+        return '<img class="sig-img" src="' + dataUri + '" alt="Assinatura">' +
+               '<div class="sig-line" style="margin-top:0"></div>';
+      }
+      return '<div class="sig-line"></div>';
+    }
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page">';
+    // ---- CABECALHO ----
+    html += '<table style="width:100%;border-collapse:collapse;border-bottom:3px solid #0b3b78;padding-bottom:11px;margin-bottom:13px"><tr>';
+    html += '<td style="vertical-align:top;width:58%">';
+    html += '<div class="brand">METROLABS</div>';
+    html += '<div class="brand-tagline">Soluções em Engenharia Clínica</div>';
+    html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>';
+    html += 'Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>';
+    html += '(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br &nbsp;&middot;&nbsp; www.metrolabs.com.br</div>';
+    html += '</td>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%">';
+    html += '<div class="doc-tipo">Relat&oacute;rio T&eacute;cnico Final</div>';
+    html += '<div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica</div>';
+    html += '<div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div>';
+    html += '<div>' + badgeStatus_(statusAtual) + '</div>';
+    html += '<div class="doc-emit">Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div>';
+    html += '</td></tr></table>';
+    // ---- ALERTA PRELIMINAR ----
+    if (semConclusao) {
+      html += '<div class="alert-banner">Relat&oacute;rio Preliminar &mdash; atendimento ainda sem conclus&atilde;o t&eacute;cnica registrada. Documento emitido para acompanhamento parcial do ciclo t&eacute;cnico.</div>';
+    }
+    // ---- DADOS DO ATENDIMENTO ----
+    html += '<div class="stitle">Dados do Atendimento</div><div class="igrid">';
+    html += kv_('Protocolo', e.PROTOCOLO);
+    html += kv_('Status atual', statusAtual);
+    html += kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO);
+    html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
+    html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
+    html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
+    html += kv_('Número de série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
+    html += kv_('Técnico responsável', e.TECNICO_NOME);
+    html += kv_('Condição de entrada', e.CONDICAO_FISICA);
+    html += kv_('Problema relatado', e.PROBLEMA_RELATADO);
+    html += kv_('Prioridade', e.PRIORIDADE);
+    html += kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '');
+    html += '</div>';
+    // ---- DIAGNOSTICO TECNICO ----
+    html += '<div class="stitle">Diagn&oacute;stico T&eacute;cnico</div>';
+    if (diagH) {
+      html += '<div class="sec">';
+      if (diag.defeito)      html += '<p><span class="slbl">Defeito confirmado</span> ' + esc_(diag.defeito) + '</p>';
+      if (diag.causa)        html += '<p><span class="slbl">Causa prov&aacute;vel</span> ' + esc_(diag.causa) + '</p>';
+      if (diag.recomendacao) html += '<p><span class="slbl">Recomenda&ccedil;&atilde;o t&eacute;cnica</span> ' + esc_(diag.recomendacao) + '</p>';
+      if (diag.observacoes)  html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(diag.observacoes) + '</p>';
+      if (diagH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(diagH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(diagH.EXECUTADO_POR)) + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="sec-empty">Etapa ainda n&atilde;o registrada neste atendimento.</div>';
+    }
+    // ---- SOLICITACOES DE PECA / SERVICO ----
+    if (Array.isArray(solicitacoes) && solicitacoes.length) {
+      html += '<div class="stitle">Solicita&ccedil;&otilde;es de Pe&ccedil;a / Servi&ccedil;o</div>';
+      html += '<table><thead><tr>';
+      html += '<th style="width:27%">Descrição</th><th style="width:7%">Qtd</th><th style="width:11%">Urgência</th>';
+      html += '<th style="width:16%">Fornecedor</th><th style="width:11%">Status</th><th style="width:28%">Justificativa / Obs.</th>';
+      html += '</tr></thead><tbody>';
+      for (var si = 0; si < solicitacoes.length; si++) {
+        var sol = solicitacoes[si];
+        var obsS = [safe_(sol.JUSTIFICATIVA_TECNICA), safe_(sol.OBSERVACAO)].filter(Boolean).join(' / ');
+        html += '<tr><td>' + esc_(sol.DESCRICAO || '--') + '</td>';
+        html += '<td style="text-align:center">' + esc_(String(sol.QUANTIDADE || '1')) + '</td>';
+        html += '<td>' + esc_(sol.URGENCIA || '--') + '</td>';
+        html += '<td>' + esc_(sol.FORNECEDOR_NOME || '--') + '</td>';
+        html += '<td>' + esc_(sol.STATUS || '--') + '</td>';
+        html += '<td>' + esc_(obsS || '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    // ---- EXECUCAO TECNICA ----
+    html += '<div class="stitle">Execu&ccedil;&atilde;o T&eacute;cnica</div>';
+    if (execH) {
+      html += '<div class="sec">';
+      if (execDad.servicoRealizado)    html += '<p><span class="slbl">Servi&ccedil;o realizado</span> ' + esc_(execDad.servicoRealizado) + '</p>';
+      if (execDad.pecasUtilizadas)     html += '<p><span class="slbl">Pe&ccedil;as utilizadas</span> ' + esc_(execDad.pecasUtilizadas) + '</p>';
+      if (execDad.procedimentoAdotado) html += '<p><span class="slbl">Procedimento</span> ' + esc_(execDad.procedimentoAdotado) + '</p>';
+      if (execDad.observacoes)         html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(execDad.observacoes) + '</p>';
+      if (execH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(execH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(execH.EXECUTADO_POR)) + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="sec-empty">Etapa ainda n&atilde;o registrada neste atendimento.</div>';
+    }
+    // ---- TESTE E VALIDACAO ----
+    html += '<div class="stitle">Teste e Valida&ccedil;&atilde;o</div>';
+    if (testeH) {
+      html += '<div class="sec">';
+      if (testeDad.resultadoTeste)   html += '<p><span class="slbl">Resultado</span> <span class="' + corRes_(testeDad.resultadoTeste) + '">' + esc_(testeDad.resultadoTeste) + '</span></p>';
+      if (testeDad.criterioAvaliado) html += '<p><span class="slbl">Crit&eacute;rio avaliado</span> ' + esc_(testeDad.criterioAvaliado) + '</p>';
+      if (testeDad.instrumento)      html += '<p><span class="slbl">Instrumento</span> ' + esc_(testeDad.instrumento) + '</p>';
+      if (testeDad.observacoes)      html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(testeDad.observacoes) + '</p>';
+      if (testeH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(testeH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(testeH.EXECUTADO_POR)) + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="sec-empty">Etapa ainda n&atilde;o registrada neste atendimento.</div>';
+    }
+    // ---- CONCLUSAO TECNICA ----
+    html += '<div class="stitle">Conclus&atilde;o T&eacute;cnica</div>';
+    if (concH) {
+      html += '<div class="sec">';
+      if (concDad.conclusaoTecnica)    html += '<p><span class="slbl">Conclus&atilde;o</span> ' + esc_(concDad.conclusaoTecnica) + '</p>';
+      if (concDad.resultadoFinal)      html += '<p><span class="slbl">Resultado final</span> <span class="' + corRes_(concDad.resultadoFinal) + '">' + esc_(concDad.resultadoFinal) + '</span></p>';
+      if (concDad.recomendacaoCliente) html += '<p><span class="slbl">Recomenda&ccedil;&atilde;o ao cliente</span> ' + esc_(concDad.recomendacaoCliente) + '</p>';
+      if (concDad.garantiaDias)        html += '<p><span class="slbl">Garantia</span> ' + esc_(String(concDad.garantiaDias)) + ' dias</p>';
+      if (concH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(concH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(concH.EXECUTADO_POR)) + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div class="sec-empty">' + (semConclusao ? 'Relat&oacute;rio gerado antes da conclus&atilde;o t&eacute;cnica completa.' : 'Etapa ainda n&atilde;o registrada neste atendimento.') + '</div>';
+    }
+    // ---- ENTREGA / DEVOLUCAO ----
+    if (entgH) {
+      html += '<div class="stitle">Entrega / Devolu&ccedil;&atilde;o</div><div class="sec">';
+      if (entgDad.entregueParaNome)     html += '<p><span class="slbl">Entregue para</span> ' + esc_(entgDad.entregueParaNome) + '</p>';
+      if (entgDad.entregueParaDoc)      html += '<p><span class="slbl">Documento / Matr&iacute;cula</span> ' + esc_(entgDad.entregueParaDoc) + '</p>';
+      if (entgDad.entregueParaCargo)    html += '<p><span class="slbl">Cargo</span> ' + esc_(entgDad.entregueParaCargo) + '</p>';
+      if (entgDad.dataEntrega)          html += '<p><span class="slbl">Data da entrega</span> ' + esc_(entgDad.dataEntrega) + '</p>';
+      if (entgDad.condicaoEntrega)      html += '<p><span class="slbl">Condi&ccedil;&atilde;o</span> ' + esc_(entgDad.condicaoEntrega) + '</p>';
+      if (entgDad.acessoriosDevolvidos) html += '<p><span class="slbl">Acess&oacute;rios devolvidos</span> ' + esc_(entgDad.acessoriosDevolvidos) + '</p>';
+      html += '</div>';
+    }
+    // ---- EVIDENCIAS FOTOGRAFICAS ----
+    if (Array.isArray(fotos) && fotos.length) {
+      html += '<div class="stitle">Evid&ecirc;ncias Fotogr&aacute;ficas (' + fotos.length + ')</div>';
+      html += '<table><thead><tr>';
+      html += '<th style="width:40%">Arquivo</th><th style="width:18%">Tipo</th><th style="width:18%">Etapa</th><th style="width:24%">Link</th>';
+      html += '</tr></thead><tbody>';
+      for (var fi = 0; fi < fotos.length; fi++) {
+        var ft = fotos[fi];
+        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || '--') + '</td>';
+        html += '<td>' + esc_(ft.TIPO_FOTO || '--') + '</td>';
+        html += '<td>' + esc_(ft.ETAPA || '--') + '</td>';
+        html += '<td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Ver evid&ecirc;ncia</a>' : '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    // ---- TIMELINE ----
+    var MAX_TL = 25;
+    var tl = Array.isArray(historico) ? historico.slice(-MAX_TL) : [];
+    if (tl.length) {
+      html += '<div class="stitle">Timeline &middot; &uacute;ltimas ' + tl.length + ' movimenta&ccedil;&otilde;es</div>';
+      html += '<table><thead><tr>';
+      html += '<th style="width:15%">Data / Hora</th><th style="width:17%">Tipo</th>';
+      html += '<th style="width:39%">Descri&ccedil;&atilde;o</th><th style="width:15%">Status</th><th style="width:14%">Por</th>';
+      html += '</tr></thead><tbody>';
+      for (var ti = 0; ti < tl.length; ti++) {
+        var tv = tl[ti];
+        html += '<tr>';
+        html += '<td>' + esc_(formatarDataBR_(tv.EXECUTADO_EM || tv.CRIADO_EM)) + '</td>';
+        html += '<td><span class="tl-tipo">' + esc_(safe_(tv.TIPO || '--')) + '</span></td>';
+        html += '<td>' + esc_(safe_((tv.DESCRICAO || '').substring(0, 90))) + '</td>';
+        html += '<td>' + esc_(safe_(tv.STATUS_NOVO || tv.STATUS_ANTERIOR || '')) + '</td>';
+        html += '<td>' + esc_(abrevId_(tv.EXECUTADO_POR)) + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+    // ---- RESPONSAVEIS TECNICOS ----
+    html += '<div class="stitle">Respons&aacute;veis T&eacute;cnicos</div>';
+    html += '<table style="width:100%;border-collapse:collapse;margin-top:4px"><tr>';
+    html += '<td style="width:50%;padding-right:10px;vertical-align:top">';
+    html += '<div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px">';
+    html += sigBlock_(meta.assinaturaDouglasBase64);
+    html += '<div class="sig-nome">Douglas Silva dos Santos Souza</div>';
+    html += '<div class="sig-cargo">Engenheiro Eletricista / Respons&aacute;vel T&eacute;cnico<br>CREA-RJ 2021431762</div>';
+    html += '</div></td>';
+    html += '<td style="width:50%;padding-left:10px;vertical-align:top">';
+    html += '<div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px">';
+    html += sigBlock_(meta.assinaturaCharlesBase64);
+    html += '<div class="sig-nome">Charles Hytley Santos Teixeira</div>';
+    html += '<div class="sig-cargo">Engenheiro Mec&acirc;nico / Representante Metrolabs<br>CREA-GO 101807399/D-GO</div>';
+    html += '</div></td>';
+    html += '</tr></table>';
+    // ---- RODAPE DE VALIDACAO ----
+    html += '<div class="trace-box">';
+    html += '<div class="lbl" style="margin-bottom:7px;">Rastreabilidade e Autenticidade Documental</div>';
+    html += '<table style="width:100%;border-collapse:collapse"><tr>';
+    html += '<td style="vertical-align:top;padding-right:10px">';
+    html += '<div style="margin-bottom:4px"><span class="trace-lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div>';
+    html += '<div style="margin-bottom:4px"><span class="trace-lbl">Hash SHA256:</span> <span class="mono" style="word-break:break-all;display:inline;">' + esc_(meta.hash || '--') + '</span></div>';
+    if (meta.validacaoUrl) html += '<div style="margin-bottom:4px"><span class="trace-lbl">URL Valida&ccedil;&atilde;o:</span> <span class="mono">' + esc_(meta.validacaoUrl) + '</span></div>';
+    html += '<div style="margin-top:7px;font-size:8px;color:#667085;line-height:1.5;">Este documento &eacute; parte integrante do sistema SGO+ Metrolabs. A autenticidade pode ser verificada pelo QR Code ao lado ou pela URL de valida&ccedil;&atilde;o acima.</div>';
+    html += '</td>';
+    html += '<td style="vertical-align:top;text-align:center;white-space:nowrap">';
+    if (meta.qrValidacaoBase64 || meta.qrValidacao)      html += '<div class="qrbox"><img src="' + (meta.qrValidacaoBase64 || esc_(meta.qrValidacao)) + '" alt="QR Validacao"><div class="qrlbl">Valida doc.</div></div>';
+    if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
+    html += '</td></tr></table>';
+    html += '</div>';
+    // ---- FOOTER ----
+    html += '<div class="ftr">';
+    html += 'Metrolabs Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica &nbsp;&middot;&nbsp; CNPJ 32.487.278/0001-21<br>';
+    html += 'SGO+ Sistema de Gest&atilde;o Operacional &mdash; Relat&oacute;rio T&eacute;cnico Final &mdash; Assist&ecirc;ncia T&eacute;cnica<br>';
+    html += 'Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Token: <span class="mono">' + esc_(meta.token || '') + '</span> &nbsp;&middot;&nbsp; Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm));
+    html += '<br><span style="font-size:7px;color:#cbd5e1;">LAYOUT PREMIUM AT V2 &mdash; E.1C</span>';
+    html += '</div>';
+    html += '</div></body></html>';
+    return html;
+  }
+
+  function gerarRelatorioTecnicoV2_(sessao, atendimentoId) {
+    const atendimento  = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
+    const historico    = SGO_DATA.getManyByField(S.AST_HISTORICO,    'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    const solicitacoes = SGO_DATA.getManyByField(S.AST_SOLICITACOES, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    var fotos = [];
+    try { fotos = SGO_DATA.getManyByField(S.AST_FOTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || []; } catch (e_) {}
+    const token            = gerarTokenDocumentoUnico_('REL-AT');
+    const validacaoUrl     = montarUrlValidacao_(token);
+    const qrValidacao      = validacaoUrl ? (QR_API + encodeURIComponent(validacaoUrl)) : '';
+    const qrAcompanhamento = safe_(atendimento.QR_URL_ACOMPANHAMENTO || '');
+    const emitidoEm        = now_();
+    // Pre-fetch imagens em base64 (motor PDF GAS nao renderiza URLs externas)
+    var assinaturaDouglasBase64 = imagemDriveBase64_('1N1CZOewFSvrSBWEPJ4Xu9Z3wVmbMbkHy');
+    var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
+    var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
+    var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
+    // Passo 1: HTML sem hash para calcular hash (two-pass approach)
+    const metaSemHash = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
+                          qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: '',
+                          assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
+                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+    const htmlParaHash = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaSemHash);
+    const hash = sha256_(htmlParaHash);
+    // Passo 2: HTML final com hash embutido no corpo do documento
+    const metaFinal = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
+                        qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: hash,
+                        assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
+                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+    const html    = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaFinal);
+    const nomeArq = nomeArquivoAst_('AT_RELATORIO_' + safe_(atendimento.PROTOCOLO) + '_' +
+                      Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
+    const file    = criarPdfAst_(html, nomeArq);
+    const titulo  = 'Relatorio Tecnico Final - ' + safe_(atendimento.PROTOCOLO);
+    const registro = registrarDocumentoAtendimentoV2_(sessao, atendimentoId,
+                       'AT_RELATORIO_TECNICO_V2', titulo, file,
+                       token, validacaoUrl, qrValidacao, qrAcompanhamento, hash);
+    return { success: true, documento: registro, pdfUrl: file.getUrl(),
+             downloadUrl: downloadUrl_(file.getId()), token: token, hash: hash };
+  }
+
+  function gerarRelatorioTecnicoV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    try {
+      return gerarRelatorioTecnicoV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar relatorio tecnico: " + e_.message);
+    }
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -3942,6 +4340,7 @@ const SGO_AST = (() => {
     registrarTesteValidacaoV2: registrarTesteValidacaoV2,
     registrarConclusaoTecnicaV2: registrarConclusaoTecnicaV2,
     registrarEntregaV2: registrarEntregaV2,
+    gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -4055,6 +4454,7 @@ function astV2RegistrarExecucao(sessionId, atendimentoId, payload) { return SGO_
 function astV2RegistrarTesteValidacao(sessionId, atendimentoId, payload) { return SGO_AST.registrarTesteValidacaoV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarConclusaoTecnica(sessionId, atendimentoId, payload) { return SGO_AST.registrarConclusaoTecnicaV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.registrarEntregaV2(sessionId, atendimentoId, payload); }
+function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }
