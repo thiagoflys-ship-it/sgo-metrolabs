@@ -1991,7 +1991,8 @@
         '<div style="display:flex;flex-direction:column;gap:8px;">',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
-          '<span class="ast-v2-acao-stub">Relatorio Final &mdash; em breve (C.4)</span>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relatorio Tecnico Final</button>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Saida</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
         '</div>',
       '</div>'
@@ -2964,6 +2965,30 @@
 
   function astBaixarEtiquetaPdf_(id) {
     google.script.run.withSuccessHandler(astAbrirDoc_).withFailureHandler(astFalhaToast_).astGerarEtiquetaPdf(SESSION, id, "PADRAO");
+  }
+
+  function astV2AbrirRelatorioTecnico_(id) {
+    astToast_("Gerando Relatorio Tecnico Final... aguarde.");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar relatorio."); return; }
+        astToast_("Relatorio Tecnico Final gerado com sucesso.");
+        if (res.pdfUrl) window.open(res.pdfUrl, "_blank", "noopener");
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2GerarRelatorioTecnico(SESSION, id);
+  }
+
+  function astV2AbrirProtocoloSaida_(id) {
+    astToast_("Gerando Protocolo de Saida... aguarde.");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar protocolo."); return; }
+        astToast_("Protocolo de Saida gerado com sucesso.");
+        if (res.pdfUrl) window.open(res.pdfUrl, "_blank", "noopener");
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2GerarProtocoloSaida(SESSION, id);
   }
 
   function astVerQR_(id) {
