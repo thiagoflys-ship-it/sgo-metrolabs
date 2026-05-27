@@ -3482,7 +3482,7 @@
       try { return JSON.parse(entrada.OBSERVACAO || '{}'); } catch (e_) { return {}; }
     }
     function kv_(label, val) {
-      return '<div class="info"><div class="lbl">' + esc_(label) + '</div><div class="val">' + esc_(val || '--') + '</div></div>';
+      return '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(val || '--') + '</div></div>';
     }
     function abrevId_(str) {
       var s = safe_(str);
@@ -3528,11 +3528,17 @@
     // ---- CABECALHO ----
     html += '<table style="width:100%;border-collapse:collapse;border-bottom:3px solid #0b3b78;padding-bottom:11px;margin-bottom:13px"><tr>';
     html += '<td style="vertical-align:top;width:58%">';
+    html += '<table style="border-collapse:collapse;width:100%"><tr>';
+    if (meta.logoBase64) {
+      html += '<td style="vertical-align:middle;padding-right:10px;width:1%"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    }
+    html += '<td style="vertical-align:top">';
     html += '<div class="brand">METROLABS</div>';
     html += '<div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
     html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>';
     html += 'Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>';
     html += '(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br &nbsp;&middot;&nbsp; www.metrolabs.com.br</div>';
+    html += '</td></tr></table>';
     html += '</td>';
     html += '<td style="vertical-align:top;text-align:right;width:42%">';
     html += '<div class="doc-tipo">Relat&oacute;rio T&eacute;cnico Final</div>';
@@ -3553,9 +3559,9 @@
     html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
     html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
     html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
-    html += kv_('N&uacute;mero de s&eacute;rie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
-    html += kv_('T&eacute;cnico respons&aacute;vel', e.TECNICO_NOME);
-    html += kv_('Condi&ccedil;&atilde;o de entrada', e.CONDICAO_FISICA);
+    html += kv_('Número de série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
+    html += kv_('Técnico responsável', e.TECNICO_NOME);
+    html += kv_('Condição de entrada', e.CONDICAO_FISICA);
     html += kv_('Problema relatado', e.PROBLEMA_RELATADO);
     html += kv_('Prioridade', e.PRIORIDADE);
     html += kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '');
@@ -3702,7 +3708,7 @@
     html += '<td style="vertical-align:top;padding-right:10px">';
     html += '<div style="margin-bottom:4px"><span class="trace-lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div>';
     html += '<div style="margin-bottom:4px"><span class="trace-lbl">Hash SHA256:</span> <span class="mono" style="word-break:break-all;display:inline;">' + esc_(meta.hash || '--') + '</span></div>';
-    if (meta.validacaoUrl) html += '<div style="margin-bottom:4px"><span class="trace-lbl">URL Valida&ccedil;&atilde;o:</span> <span class="mono">' + esc_(meta.validacaoUrl) + '</span></div>';
+    if (meta.validacaoUrl) html += '<div style="margin-bottom:4px"><span class="trace-lbl">URL Validação:</span> <span class="mono">' + esc_(meta.validacaoUrl) + '</span></div>';
     html += '<div style="margin-top:7px;font-size:8px;color:#667085;line-height:1.5;">Este documento &eacute; parte integrante do sistema SGO+ Metrolabs. A autenticidade pode ser verificada pelo QR Code ao lado ou pela URL de valida&ccedil;&atilde;o acima.</div>';
     html += '</td>';
     html += '<td style="vertical-align:top;text-align:center;white-space:nowrap">';
@@ -3738,18 +3744,21 @@
     var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
     var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
     var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
+    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
     // Passo 1: HTML sem hash para calcular hash (two-pass approach)
     const metaSemHash = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
                           qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: '',
                           assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
+                          logoBase64: logoBase64 };
     const htmlParaHash = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaSemHash);
     const hash = sha256_(htmlParaHash);
     // Passo 2: HTML final com hash embutido no corpo do documento
     const metaFinal = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
                         qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: hash,
                         assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
+                        logoBase64: logoBase64 };
     const html    = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaFinal);
     const nomeArq = nomeArquivoAst_('AT_RELATORIO_' + safe_(atendimento.PROTOCOLO) + '_' +
                       Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
@@ -3823,11 +3832,17 @@
     // ---- CABECALHO ----
     html += '<table style="width:100%;border-collapse:collapse;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:10px"><tr>';
     html += '<td style="vertical-align:top;width:58%">';
+    html += '<table style="border-collapse:collapse;width:100%"><tr>';
+    if (meta.logoBase64) {
+      html += '<td style="vertical-align:middle;padding-right:10px;width:1%"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    }
+    html += '<td style="vertical-align:top">';
     html += '<div class="brand">METROLABS</div>';
     html += '<div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
     html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>';
     html += 'Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>';
     html += '(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div>';
+    html += '</td></tr></table>';
     html += '</td>';
     html += '<td style="vertical-align:top;text-align:right;width:42%">';
     html += '<div class="doc-tipo">Protocolo de Sa&iacute;da</div>';
@@ -3850,34 +3865,34 @@
     html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
     html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
     html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
-    html += kv_('N&ordm; de S&eacute;rie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
-    html += kv_('T&eacute;cnico', e.TECNICO_NOME);
+    html += kv_('Nº de Série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
+    html += kv_('Técnico', e.TECNICO_NOME);
     html += '</div>';
     // ---- DADOS DA ENTREGA ----
     html += '<div class="stitle">Dados da Entrega</div><div class="igrid">';
     html += kv_('Entregue para', ent.entregueParaNome);
-    html += kv_('Documento / Matr&iacute;cula', ent.entregueParaDoc);
-    html += kv_('Cargo / Fun&ccedil;&atilde;o', ent.entregueParaCargo);
+    html += kv_('Documento / Matrícula', ent.entregueParaDoc);
+    html += kv_('Cargo / Função', ent.entregueParaCargo);
     html += kv_('Data da entrega', ent.dataEntrega ? formatarDataBR_(ent.dataEntrega) : '');
-    html += kv_('Condi&ccedil;&atilde;o de entrega', ent.condicaoEntrega);
-    html += kv_('Acess&oacute;rios devolvidos', ent.acessoriosDevolvidos);
+    html += kv_('Condição de entrega', ent.condicaoEntrega);
+    html += kv_('Acessórios devolvidos', ent.acessoriosDevolvidos);
     html += '</div>';
     if (ent.observacoes) {
-      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Observa&ccedil;&otilde;es da entrega</div>';
+      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Observações da entrega</div>';
       html += '<div class="sec">' + esc_(ent.observacoes) + '</div>';
     }
     // ---- CONCLUSAO TECNICA ----
     html += '<div class="stitle">Conclus&atilde;o T&eacute;cnica</div><div class="igrid">';
     html += kv_('Resultado final', conc.resultadoFinal);
     html += kv_('Garantia', conc.garantiaDias ? (conc.garantiaDias + ' dias') : '--');
-    html += kv_('Liberado p/ entrega', conc.liberadoParaEntrega === 'S' ? 'Sim' : (conc.liberadoParaEntrega === 'N' ? 'N&atilde;o' : '--'));
+    html += kv_('Liberado p/ entrega', conc.liberadoParaEntrega === 'S' ? 'Sim' : (conc.liberadoParaEntrega === 'N' ? 'Não' : '--'));
     html += '</div>';
     if (conc.conclusaoTecnica) {
-      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Conclus&atilde;o t&eacute;cnica</div>';
+      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Conclusão técnica</div>';
       html += '<div class="sec">' + esc_(conc.conclusaoTecnica) + '</div>';
     }
     if (conc.recomendacaoCliente) {
-      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Recomenda&ccedil;&atilde;o ao cliente</div>';
+      html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Recomendação ao cliente</div>';
       html += '<div class="sec">' + esc_(conc.recomendacaoCliente) + '</div>';
     }
     // ---- CIENCIA DE RECEBIMENTO ----
@@ -3923,7 +3938,7 @@
     html += '<td style="vertical-align:top;padding-right:10px">';
     html += '<div style="margin-bottom:3px"><span class="trace-lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div>';
     html += '<div style="margin-bottom:3px"><span class="trace-lbl">Hash SHA256:</span> <span class="mono" style="word-break:break-all;display:inline;">' + esc_(meta.hash || '--') + '</span></div>';
-    if (meta.validacaoUrl) html += '<div style="margin-bottom:3px"><span class="trace-lbl">URL Valida&ccedil;&atilde;o:</span> <span class="mono">' + esc_(meta.validacaoUrl) + '</span></div>';
+    if (meta.validacaoUrl) html += '<div style="margin-bottom:3px"><span class="trace-lbl">URL Validação:</span> <span class="mono">' + esc_(meta.validacaoUrl) + '</span></div>';
     html += '</td>';
     html += '<td style="vertical-align:top;text-align:center;white-space:nowrap">';
     if (meta.qrValidacaoBase64 || meta.qrValidacao)      html += '<div class="qrbox"><img src="' + (meta.qrValidacaoBase64 || esc_(meta.qrValidacao)) + '" alt="QR Validacao"><div class="qrlbl">Valida doc.</div></div>';
@@ -3967,17 +3982,20 @@
     var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
     var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
     var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
+    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
     // Two-pass hash
     const metaSemHash = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
                           qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: '',
                           assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
+                          logoBase64: logoBase64 };
     const htmlParaHash = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, metaSemHash);
     const hash = sha256_(htmlParaHash);
     const metaFinal = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
                         qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: hash,
                         assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64 };
+                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
+                        logoBase64: logoBase64 };
     const html    = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, metaFinal);
     const nomeArq = nomeArquivoAst_('AT_PROTOCOLO_SAIDA_' + safe_(atendimento.PROTOCOLO) + '_' +
                       Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
