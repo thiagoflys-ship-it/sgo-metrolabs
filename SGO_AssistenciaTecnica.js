@@ -1,4 +1,4 @@
-const SGO_AST = (() => {
+﻿const SGO_AST = (() => {
   const DB = "PRINCIPAL";
   const S = SGO_CFG.SHEETS;
   const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=";
@@ -2202,7 +2202,7 @@ const SGO_AST = (() => {
   const ai = { lapidarTexto: function(sessionId, texto) { return { success: true, texto: safe_(texto) }; } };
 
   // ============================================================
-  // V2 â€” NÃšCLEO RECONSTRUÃDO DA ASSISTÃŠNCIA TÃ‰CNICA
+  // V2  -  NÃšCLEO RECONSTRUÃDO DA ASSISTÃŠNCIA TÃ‰CNICA
   // Banco zerado. AST_ENTRADAS congelada como AST_ENTRADAS_LEGADO.
   // Terceiros e LaboratÃ³rio fora do escopo desta fase.
   // ============================================================
@@ -2275,7 +2275,7 @@ const SGO_AST = (() => {
     CONCLUIDO_TECNICAMENTE:      "Agendar entrega ao cliente",
     AGUARDANDO_ENTREGA:          "Realizar entrega com assinatura do cliente",
     ENTREGUE:                    "Atendimento encerrado",
-    CANCELADO:                   "Atendimento cancelado â€” nenhuma acao necessaria",
+    CANCELADO:                   "Atendimento cancelado  -  nenhuma acao necessaria",
     NAO_REPARADO:                "Informar cliente sobre impossibilidade de reparo"
   };
 
@@ -2378,7 +2378,7 @@ const SGO_AST = (() => {
       sheetEntradas.setName("AST_ENTRADAS_LEGADO");
       log.push("Renomeada: AST_ENTRADAS â†’ AST_ENTRADAS_LEGADO (congelada)");
     } else if (!sheetEntradas && !sheetLegado) {
-      log.push("AST_ENTRADAS nao encontrada â€” nenhuma renomeacao necessaria");
+      log.push("AST_ENTRADAS nao encontrada  -  nenhuma renomeacao necessaria");
     } else {
       log.push("OK legado: AST_ENTRADAS_LEGADO ja existe");
     }
@@ -2393,7 +2393,7 @@ const SGO_AST = (() => {
   }
 
   // ============================================================
-  // ETAPA 2 â€” BACKEND CORE V2
+  // ETAPA 2  -  BACKEND CORE V2
   // ============================================================
 
   const TRANSICOES_V2 = {
@@ -2540,7 +2540,7 @@ const SGO_AST = (() => {
         OS_ID: ""
       }), "OS");
       return missao && missao.ID ? missao.ID : "";
-    } catch (e) { log_("v2MissaoStub_: nao criada (nao bloqueante) â€” " + e.message); }
+    } catch (e) { log_("v2MissaoStub_: nao criada (nao bloqueante)  -  " + e.message); }
     log_("v2MissaoStub_", "SISTEMA", "Missao nao criada para atendimentoId=" + safe_(atendimentoId) + " tecnicoId=" + safe_(tecnicoId) + " (nao bloqueante).");
     return "";
   }
@@ -3529,7 +3529,7 @@ const SGO_AST = (() => {
     html += '<table style="width:100%;border-collapse:collapse;border-bottom:3px solid #0b3b78;padding-bottom:11px;margin-bottom:13px"><tr>';
     html += '<td style="vertical-align:top;width:58%">';
     html += '<div class="brand">METROLABS</div>';
-    html += '<div class="brand-tagline">Soluções em Engenharia Clínica</div>';
+    html += '<div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
     html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>';
     html += 'Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>';
     html += '(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br &nbsp;&middot;&nbsp; www.metrolabs.com.br</div>';
@@ -3553,9 +3553,9 @@ const SGO_AST = (() => {
     html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
     html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
     html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
-    html += kv_('Número de série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
-    html += kv_('Técnico responsável', e.TECNICO_NOME);
-    html += kv_('Condição de entrada', e.CONDICAO_FISICA);
+    html += kv_('N&uacute;mero de s&eacute;rie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
+    html += kv_('T&eacute;cnico respons&aacute;vel', e.TECNICO_NOME);
+    html += kv_('Condi&ccedil;&atilde;o de entrada', e.CONDICAO_FISICA);
     html += kv_('Problema relatado', e.PROBLEMA_RELATADO);
     html += kv_('Prioridade', e.PRIORIDADE);
     html += kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '');
@@ -3577,7 +3577,7 @@ const SGO_AST = (() => {
     if (Array.isArray(solicitacoes) && solicitacoes.length) {
       html += '<div class="stitle">Solicita&ccedil;&otilde;es de Pe&ccedil;a / Servi&ccedil;o</div>';
       html += '<table><thead><tr>';
-      html += '<th style="width:27%">Descrição</th><th style="width:7%">Qtd</th><th style="width:11%">Urgência</th>';
+      html += '<th style="width:27%">Descri&ccedil;&atilde;o</th><th style="width:7%">Qtd</th><th style="width:11%">Urg&ecirc;ncia</th>';
       html += '<th style="width:16%">Fornecedor</th><th style="width:11%">Status</th><th style="width:28%">Justificativa / Obs.</th>';
       html += '</tr></thead><tbody>';
       for (var si = 0; si < solicitacoes.length; si++) {
@@ -3596,10 +3596,11 @@ const SGO_AST = (() => {
     html += '<div class="stitle">Execu&ccedil;&atilde;o T&eacute;cnica</div>';
     if (execH) {
       html += '<div class="sec">';
-      if (execDad.servicoRealizado)    html += '<p><span class="slbl">Servi&ccedil;o realizado</span> ' + esc_(execDad.servicoRealizado) + '</p>';
-      if (execDad.pecasUtilizadas)     html += '<p><span class="slbl">Pe&ccedil;as utilizadas</span> ' + esc_(execDad.pecasUtilizadas) + '</p>';
-      if (execDad.procedimentoAdotado) html += '<p><span class="slbl">Procedimento</span> ' + esc_(execDad.procedimentoAdotado) + '</p>';
-      if (execDad.observacoes)         html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(execDad.observacoes) + '</p>';
+      if (execDad.servicoRealizado)  html += '<p><span class="slbl">Servi&ccedil;o realizado</span> ' + esc_(execDad.servicoRealizado) + '</p>';
+      if (execDad.pecasAplicadas)    html += '<p><span class="slbl">Pe&ccedil;as aplicadas</span> ' + esc_(execDad.pecasAplicadas) + '</p>';
+      if (execDad.ajustesRealizados) html += '<p><span class="slbl">Ajustes realizados</span> ' + esc_(execDad.ajustesRealizados) + '</p>';
+      if (execDad.testesAposReparo)  html += '<p><span class="slbl">Testes ap&oacute;s reparo</span> ' + esc_(execDad.testesAposReparo) + '</p>';
+      if (execDad.observacoes)       html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(execDad.observacoes) + '</p>';
       if (execH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(execH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(execH.EXECUTADO_POR)) + '</div>';
       html += '</div>';
     } else {
@@ -3609,10 +3610,10 @@ const SGO_AST = (() => {
     html += '<div class="stitle">Teste e Valida&ccedil;&atilde;o</div>';
     if (testeH) {
       html += '<div class="sec">';
-      if (testeDad.resultadoTeste)   html += '<p><span class="slbl">Resultado</span> <span class="' + corRes_(testeDad.resultadoTeste) + '">' + esc_(testeDad.resultadoTeste) + '</span></p>';
-      if (testeDad.criterioAvaliado) html += '<p><span class="slbl">Crit&eacute;rio avaliado</span> ' + esc_(testeDad.criterioAvaliado) + '</p>';
-      if (testeDad.instrumento)      html += '<p><span class="slbl">Instrumento</span> ' + esc_(testeDad.instrumento) + '</p>';
-      if (testeDad.observacoes)      html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(testeDad.observacoes) + '</p>';
+      if (testeDad.resultadoTeste)          html += '<p><span class="slbl">Resultado</span> <span class="' + corRes_(testeDad.resultadoTeste) + '">' + esc_(testeDad.resultadoTeste) + '</span></p>';
+      if (testeDad.parametrosObservados)    html += '<p><span class="slbl">Par&acirc;metros observados</span> ' + esc_(testeDad.parametrosObservados) + '</p>';
+      if (testeDad.procedimentoRealizado)   html += '<p><span class="slbl">Procedimento realizado</span> ' + esc_(testeDad.procedimentoRealizado) + '</p>';
+      if (testeDad.observacoes)             html += '<p><span class="slbl">Observa&ccedil;&otilde;es</span> ' + esc_(testeDad.observacoes) + '</p>';
       if (testeH.EXECUTADO_EM) html += '<div class="sec-by">Registrado em ' + esc_(formatarDataBR_(testeH.EXECUTADO_EM)) + ' &middot; por ' + esc_(abrevId_(testeH.EXECUTADO_POR)) + '</div>';
       html += '</div>';
     } else {
@@ -3768,7 +3769,7 @@ const SGO_AST = (() => {
     try {
       return gerarRelatorioTecnicoV2_(sessao, atendimentoId);
     } catch (e_) {
-      return erro_("Erro ao gerar relatorio tecnico: " + e_.message);
+      return erro_("Erro ao gerar relatório técnico: " + e_.message);
     }
   }
 
@@ -3996,7 +3997,7 @@ const SGO_AST = (() => {
     try {
       return gerarProtocoloSaidaV2_(sessao, atendimentoId);
     } catch (e_) {
-      return erro_("Erro ao gerar protocolo de saida: " + e_.message);
+      return erro_("Erro ao gerar protocolo de saída: " + e_.message);
     }
   }
 
@@ -4060,7 +4061,7 @@ const SGO_AST = (() => {
       assinaturaId = regAss.ID;
     }
     v2AtualizarStatus_(atendimentoId, STATUS_V2.ENTREGUE,
-      "Equipamento entregue ao cliente" + (p.SIGNATARIO_NOME ? " â€” ass.: " + safe_(p.SIGNATARIO_NOME) : ""),
+      "Equipamento entregue ao cliente" + (p.SIGNATARIO_NOME ? " - ass.: " + safe_(p.SIGNATARIO_NOME) : ""),
       sessao.userId, sessao.nome);
     if (assinaturaId) {
       v2RegistrarHistorico_(atendimentoId, STATUS_V2.AGUARDANDO_ENTREGA, STATUS_V2.ENTREGUE,
@@ -4133,7 +4134,7 @@ const SGO_AST = (() => {
         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         fileId = file.getId();
         urlArquivo = file.getDownloadUrl();
-      } catch (e) { log_("uploadFotoV2: Drive upload falhou â€” " + e.message); }
+      } catch (e) { log_("uploadFotoV2: Drive upload falhou  -  " + e.message); }
     }
     if (!urlArquivo && !fileId) {
       log_("AST_V2_UPLOAD_FOTO_FALHA", safe_(sessao.userId || sessao.usuario), "Foto nao registrada para atendimentoId=" + safe_(atendimentoId) + ": upload falhou e nao ha URL ou FILE_ID valido.");
@@ -4186,7 +4187,7 @@ const SGO_AST = (() => {
   }
 
   // ============================================================
-  // ETAPA 3 â€” FLUXO COMERCIAL V2
+  // ETAPA 3  -  FLUXO COMERCIAL V2
   // ============================================================
 
   function enviarOrcamentoV2(sessionId, atendimentoId, payload) {
@@ -4265,7 +4266,7 @@ const SGO_AST = (() => {
       }, DB);
     }
     v2AtualizarStatus_(atendimentoId, STATUS_V2.ORCAMENTO_APROVADO,
-      "Orcamento aprovado pelo cliente" + (p.APROVADO_POR ? " â€” por: " + safe_(p.APROVADO_POR) : ""),
+      "Orcamento aprovado pelo cliente" + (p.APROVADO_POR ? "  -  por: " + safe_(p.APROVADO_POR) : ""),
       sessao.userId, sessao.nome);
     return { success: true, data: v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)) };
   }
@@ -4297,12 +4298,12 @@ const SGO_AST = (() => {
       }, DB);
     }
     v2AtualizarStatus_(atendimentoId, STATUS_V2.ORCAMENTO_RECUSADO,
-      "Orcamento recusado pelo cliente" + (p.MOTIVO_RECUSA ? " â€” motivo: " + safe_(p.MOTIVO_RECUSA) : ""),
+      "Orcamento recusado pelo cliente" + (p.MOTIVO_RECUSA ? "  -  motivo: " + safe_(p.MOTIVO_RECUSA) : ""),
       sessao.userId, sessao.nome);
     v2CriarAlerta_("ORCAMENTO_RECUSADO", atendimentoId,
       "Orcamento recusado",
       "Protocolo " + safe_(atendimento.PROTOCOLO) + ": cliente recusou orcamento" +
-        (p.MOTIVO_RECUSA ? " â€” " + safe_(p.MOTIVO_RECUSA) : ""),
+        (p.MOTIVO_RECUSA ? "  -  " + safe_(p.MOTIVO_RECUSA) : ""),
       sessao.userId, "ALTA");
     return { success: true, data: v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)) };
   }
@@ -4424,7 +4425,7 @@ const SGO_AST = (() => {
     if (tecnicoId) {
       const descricaoPecaRecebida = v2SolicitacaoDescricao_(solicitacao);
       v2CriarAlerta_("PECA_RECEBIDA", atendimentoId,
-        "Peca recebida â€” pronta para execucao",
+        "Peca recebida  -  pronta para execucao",
         "Protocolo " + safe_(atendimento.PROTOCOLO) + ": peca recebida - " + descricaoPecaRecebida,
         tecnicoId, "ALTA");
     }

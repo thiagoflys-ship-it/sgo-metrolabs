@@ -205,14 +205,14 @@
   const AST_FASES = [
     { id: "entrada", label: "Entrada", status: ["ENTRADA"] },
     { id: "triagem", label: "Triagem", status: ["TRIAGEM"] },
-    { id: "diagnostico", label: "Diagnostico", status: ["DIAGNOSTICO"] },
-    { id: "decisao", label: "Decisao", status: ["AGUARDANDO_DECISAO"] },
-    { id: "pecas", label: "Pecas", status: ["AGUARDANDO_PECAS", "PECA_SOLICITADA", "PECA_EM_COTACAO", "PECA_AGUARDANDO_APROVACAO", "PECA_COMPRADA", "PECA_RECEBIDA", "PECA_INSTALADA"] },
+    { id: "diagnostico", label: "Diagnóstico", status: ["DIAGNOSTICO"] },
+    { id: "decisao", label: "Decisão", status: ["AGUARDANDO_DECISAO"] },
+    { id: "pecas", label: "Peças", status: ["AGUARDANDO_PECAS", "PECA_SOLICITADA", "PECA_EM_COTACAO", "PECA_AGUARDANDO_APROVACAO", "PECA_COMPRADA", "PECA_RECEBIDA", "PECA_INSTALADA"] },
     { id: "terceiros", label: "Terceiros", status: ["ENVIADO_PARA_TERCEIRO", "AGUARDANDO_TERCEIRO", "TERCEIRO_RECEBIDO_METROLABS", "TERCEIRO_INSPECAO_RETORNO"] },
-    { id: "laboratorio", label: "Laboratorio", status: ["LABORATORIO", "LAB_EM_ENSAIO"] },
-    { id: "execucao", label: "Execucao", status: ["MANUTENCAO"] },
+    { id: "laboratorio", label: "Laboratório", status: ["LABORATORIO", "LAB_EM_ENSAIO"] },
+    { id: "execucao", label: "Execução", status: ["MANUTENCAO"] },
     { id: "teste", label: "Teste", status: ["TESTE_VALIDACAO"] },
-    { id: "conclusao", label: "Conclusao", status: ["CONCLUSAO_TECNICA", "PRONTO_ENTREGA", "ENTREGUE", "FINALIZADO"] }
+    { id: "conclusao", label: "Conclusão", status: ["CONCLUSAO_TECNICA", "PRONTO_ENTREGA", "ENTREGUE", "FINALIZADO"] }
   ];
 
   const AST_STATE = {
@@ -352,7 +352,7 @@
         .withSuccessHandler(function(res) {
           AST_STATE.carregandoContexto = false;
           if (!astOk_(res)) {
-            astSetContextStatus_("Nao foi possivel carregar o contexto.");
+            astSetContextStatus_("Não foi possível carregar o contexto.");
             return astErroTabela_(res, 7);
           }
           AST_STATE.clientes = res.clientes || [];
@@ -522,10 +522,10 @@
     const d = AST_STATE.dashboard || {};
     const cards = [
       ["Entradas hoje", astNum_(d.entradasDia), "ast-muted"],
-      ["Aguardando diagnostico", astNum_(d.aguardandoDiagnostico), "ast-warn"],
+      ["Aguardando diagnóstico", astNum_(d.aguardandoDiagnostico), "ast-warn"],
       ["Em bancada", astNum_(d.emBancada || d.emManutencao || d.manutencao), "ast-info"],
-      ["Aguardando orcamento", astNum_(d.aguardandoOrcamento || d.aguardandoDecisao), "ast-warn"],
-      ["Aguardando pecas", astNum_(d.aguardandoPecas), "ast-warn"],
+      ["Aguardando orçamento", astNum_(d.aguardandoOrcamento || d.aguardandoDecisao), "ast-warn"],
+      ["Aguardando peças", astNum_(d.aguardandoPecas), "ast-warn"],
       ["Pronto entrega", astNum_(d.prontosEntrega), "ast-ok"],
       ["Atrasados", astNum_(d.atrasados), "ast-danger"]
     ];
@@ -579,7 +579,7 @@
       if (runner.astV2ListarAtendimentos) return runner.astV2ListarAtendimentos(SESSION, filtros);
       if (runner.listarAtendimentosV2) return runner.listarAtendimentosV2(SESSION, filtros);
       if (typeof fail === "function") {
-        fail({ message: "Listagem V2 ativa, mas funcao backend de listagem V2 nao esta disponivel." });
+        fail({ message: "Listagem V2 ativa, mas função backend de listagem V2 não está disponível." });
       }
       return null;
     }
@@ -820,7 +820,7 @@
         "        <div class=\"ast-entry-head\">\n",
         "          <div>\n",
         "            <h2>Nova Entrada V2</h2>\n",
-        "            <p>Recebimento tecnico, evidencias, acessorios e rastreabilidade inicial.</p>\n",
+        "            <p>Recebimento técnico, evidências, acessórios e rastreabilidade inicial.</p>\n",
         "          </div>\n",
         "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astMostrarLista_()\">Voltar ao painel</button>\n",
         "        </div>\n",
@@ -834,22 +834,22 @@
         "</select></div>\n",
         "              <div><label for=\"astNovoUnidade\">Unidade</label><select id=\"astNovoUnidade\" onchange=\"astUnidadeChange_()\"><option value=\"\">Selecione o cliente</option></select></div>\n",
         "              <div class=\"full\"><label for=\"astNovoEquipamento\">Equipamento</label><select id=\"astNovoEquipamento\"><option value=\"\">Selecione a unidade</option></select></div>\n",
-        "              <div><label class=\"ast-entry-check\"><input id=\"astNovoProvisorio\" type=\"checkbox\" onchange=\"astToggleProvisorio_()\"> Cadastro provisorio</label></div>\n",
-        "              <div><label for=\"astNovoSerie\">Serie informada</label><input id=\"astNovoSerie\" placeholder=\"Serie visivel no equipamento\"></div>\n",
+        "              <div><label class=\"ast-entry-check\"><input id=\"astNovoProvisorio\" type=\"checkbox\" onchange=\"astToggleProvisorio_()\"> Cadastro provisório</label></div>\n",
+        "              <div><label for=\"astNovoSerie\">Série informada</label><input id=\"astNovoSerie\" placeholder=\"Série visível no equipamento\"></div>\n",
         "            </div>\n",
         "            <div class=\"ast-entry-provisorio\" id=\"astNovoProvisorioBox\" style=\"display:none;\">\n",
         "              <div class=\"ast-form-grid\">\n",
-        "                <div><label for=\"astNovoClienteProv\">Cliente provisorio</label><input id=\"astNovoClienteProv\"></div>\n",
-        "                <div><label for=\"astNovoUnidadeProv\">Unidade provisoria</label><input id=\"astNovoUnidadeProv\"></div>\n",
-        "                <div class=\"full\"><label for=\"astNovoEquipProv\">Equipamento provisorio</label><input id=\"astNovoEquipProv\"></div>\n",
+        "                <div><label for=\"astNovoClienteProv\">Cliente provisório</label><input id=\"astNovoClienteProv\"></div>\n",
+        "                <div><label for=\"astNovoUnidadeProv\">Unidade provisória</label><input id=\"astNovoUnidadeProv\"></div>\n",
+        "                <div class=\"full\"><label for=\"astNovoEquipProv\">Equipamento provisório</label><input id=\"astNovoEquipProv\"></div>\n",
         "              </div>\n",
         "            </div>\n",
         "          </section>\n",
         "\n",
         "          <section class=\"ast-entry-card\">\n",
-        "            <h3>2. Recebimento tecnico</h3>\n",
+        "            <h3>2. Recebimento técnico</h3>\n",
         "            <div class=\"ast-form-grid\">\n",
-        "              <div><label for=\"astNovoTecnico\">Tecnico responsavel obrigatorio</label><select id=\"astNovoTecnico\"><option value=\"\">Selecione</option>",
+        "              <div><label for=\"astNovoTecnico\">Técnico responsável obrigatório</label><select id=\"astNovoTecnico\"><option value=\"\">Selecione</option>",
         (astOptionsTecnicos_()),
         "</select></div>\n",
         "              <div><label for=\"astNovoPrioridade\">Prioridade</label><select id=\"astNovoPrioridade\"><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>\n",
@@ -864,20 +864,20 @@
         "            <div class=\"ast-form-grid\">\n",
         "              <div><label for=\"astNovoProblema\">Problema relatado</label><textarea id=\"astNovoProblema\" rows=\"4\" placeholder=\"Descreva o relato do cliente de forma objetiva\"></textarea></div>\n",
         "              <div><label for=\"astNovoCondicao\">Condicao fisica inicial</label><textarea id=\"astNovoCondicao\" rows=\"4\" placeholder=\"Condicao fisica, lacres, avarias, sujidade, componentes aparentes\"></textarea></div>\n",
-        "              <div class=\"full\"><label for=\"astNovoObs\">Observacoes</label><textarea id=\"astNovoObs\" rows=\"2\"></textarea></div>\n",
+        "              <div class=\"full\"><label for=\"astNovoObs\">Observações</label><textarea id=\"astNovoObs\" rows=\"2\"></textarea></div>\n",
         "            </div>\n",
         "          </section>\n",
         "\n",
         "          <section class=\"ast-entry-card full\">\n",
         "            <div class=\"ast-accessory-tools\">\n",
         "              <div>\n",
-        "                <h3>4. Acessorios</h3>\n",
+        "                <h3>4. Acessórios</h3>\n",
         "                <div class=\"ast-muted\">Registre itens recebidos junto com o equipamento.</div>\n",
         "              </div>\n",
-        "              <label class=\"ast-entry-check\"><input id=\"astNovoSemAcessorios\" type=\"checkbox\" onchange=\"astToggleSemAcessorios_()\"> Sem acessorios</label>\n",
+        "              <label class=\"ast-entry-check\"><input id=\"astNovoSemAcessorios\" type=\"checkbox\" onchange=\"astToggleSemAcessorios_()\"> Sem acessórios</label>\n",
         "            </div>\n",
         "            <div id=\"astAcessoriosBox\"></div>\n",
-        "            <button id=\"astAddAcessorioBtn\" class=\"btn-secondary\" type=\"button\" onclick=\"astAddAcessorio_()\">Adicionar acessorio</button>\n",
+        "            <button id=\"astAddAcessorioBtn\" class=\"btn-secondary\" type=\"button\" onclick=\"astAddAcessorio_()\">Adicionar acessório</button>\n",
         "          </section>\n",
         "\n",
         "          <section class=\"ast-entry-card full\">\n",
@@ -886,7 +886,7 @@
         "              <div><label for=\"astNovoFoto\">Fotos/evidencias iniciais</label><input id=\"astNovoFoto\" type=\"file\" accept=\"image/*,.pdf\" capture=\"environment\" multiple onchange=\"astAtualizarEvidenciasEntradaPreview_()\"></div>\n",
         "              <div><label for=\"astNovoAssinatura\">Assinatura de recebimento opcional</label><textarea id=\"astNovoAssinatura\" rows=\"2\" placeholder=\"Base64 opcional quando houver captura digital\" oninput=\"astAtualizarEvidenciasEntradaPreview_()\"></textarea></div>\n",
         "            </div>\n",
-        "            <div id=\"astEvidenciasEntradaPreview\" class=\"ast-evidence-preview\">Nenhuma evidencia selecionada.</div>\n",
+        "            <div id=\"astEvidenciasEntradaPreview\" class=\"ast-evidence-preview\">Nenhuma evidência selecionada.</div>\n",
         "          </section>\n",
         "        </div>\n",
         "\n",
@@ -908,7 +908,7 @@
     const provisorio = astChecked_("astNovoProvisorio");
     const semAcessorios = astChecked_("astNovoSemAcessorios");
     const acessorios = astLerAcessorios_();
-    if (!semAcessorios && !acessorios.length) acessorios.push({ DESCRICAO: "Sem acessorios declarados", QUANTIDADE: "0", ESTADO: "Nao aplicavel", OBSERVACAO: "Entrada registrada sem acessorios." });
+    if (!semAcessorios && !acessorios.length) acessorios.push({ DESCRICAO: "Sem acessórios declarados", QUANTIDADE: "0", ESTADO: "Não aplicável", OBSERVACAO: "Entrada registrada sem acessórios." });
     const payload = {
       CLIENTE_ID: astVal_("astNovoCliente"),
       CLIENTE_NOME: astTextoSelect_("astNovoCliente"),
@@ -935,12 +935,12 @@
       ASSINATURA_RECEBIMENTO_BASE64: astVal_("astNovoAssinatura")
     };
     AST_STATE.entradaV2PayloadPreview = astPayloadEntradaV2_(payload);
-    if (!payload.TECNICO_ID) return astToast_("Informe o tecnico responsavel.");
-    if (!payload.PROBLEMA_RELATADO || !payload.CONDICAO_FISICA) return astToast_("Informe relato do problema e estado fisico.");
+    if (!payload.TECNICO_ID) return astToast_("Informe o técnico responsável.");
+    if (!payload.PROBLEMA_RELATADO || !payload.CONDICAO_FISICA) return astToast_("Informe relato do problema e estado físico.");
     astSetEntradaSalvando_(true);
     astEnviarEntradaBackend_(payload, AST_STATE.entradaV2PayloadPreview, function(res) {
         astSetEntradaSalvando_(false);
-        if (!astOk_(res)) return astToast_(res && res.message || "Nao foi possivel salvar a entrada.");
+        if (!astOk_(res)) return astToast_(res && res.message || "Não foi possível salvar a entrada.");
         const entrada = res.item || res.entrada || res.atendimento || res.data || {};
         if (AST_STATE.usarEntradaV2 === true) {
           astToast_("Entrada V2 registrada.");
@@ -1033,18 +1033,18 @@
     const evidencias = astEvidenciasEntradaPreview_("astNovoFoto");
     const assinatura = astVal_("astNovoAssinatura");
     if (!evidencias.length && !assinatura) {
-      box.innerHTML = "Nenhuma evidencia selecionada.";
+      box.innerHTML = "Nenhuma evidência selecionada.";
       return;
     }
     const totalBytes = evidencias.reduce(function(soma, item) { return soma + (Number(item.TAMANHO_BYTES) || 0); }, 0);
-    const nomes = evidencias.slice(0, 4).map(function(item) { return astEsc_(item.NOME_ARQUIVO || "Evidencia sem nome"); }).join(", ");
+    const nomes = evidencias.slice(0, 4).map(function(item) { return astEsc_(item.NOME_ARQUIVO || "Evidência sem nome"); }).join(", ");
     box.innerHTML = [
       "<b>Evidencias:</b> ",
       String(evidencias.length),
       " arquivo(s)",
       totalBytes ? " / " + Math.round(totalBytes / 1024) + " KB" : "",
       nomes ? "<br><b>Arquivos:</b> " + nomes : "",
-      assinatura ? "<br><b>Assinatura:</b> informada" : "<br><b>Assinatura:</b> opcional nao informada"
+      assinatura ? "<br><b>Assinatura:</b> informada" : "<br><b>Assinatura:</b> opcional não informada"
     ].join("");
   }
 
@@ -1057,7 +1057,7 @@
     else astSetContextStatus_("Atualizando detalhe em segundo plano...");
     var runner = google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astErroArea_(res, "Atendimento nao localizado.");
+        if (!astOk_(res)) return astErroArea_(res, "Atendimento não localizado.");
         AST_STATE.detalhe = res;
         AST_STATE.tab = AST_STATE.tab || "entrada";
         astRenderDetalhe_();
@@ -1067,7 +1067,7 @@
     if (AST_STATE.usarEntradaV2 === true) {
       if (runner.astV2ObterAtendimento) return runner.astV2ObterAtendimento(SESSION, id);
       if (runner.obterAtendimentoV2) return runner.obterAtendimentoV2(SESSION, id);
-      astErroArea_(null, "Detalhe V2 ativo, mas obterAtendimentoV2 nao esta disponivel no backend. Verifique o deploy.");
+      astErroArea_(null, "Detalhe V2 ativo, mas obterAtendimentoV2 não está disponível no backend. Verifique o deploy.");
       return;
     }
     runner.astObterEntrada(SESSION, id);
@@ -1135,13 +1135,13 @@
             '</div>',
           '</div>',
           '<div class="ast-side-card">',
-            '<h4>Acoes rapidas</h4>',
+            '<h4>Ações rápidas</h4>',
             '<div class="ast-actions">',
               '<button class="btn-secondary" type="button" onclick="astAtualizarStatus_(\'' + id + '\')">Status</button>',
-              '<button class="btn-secondary" type="button" onclick="astTrocarTecnico_(\'' + id + '\')">Tecnico</button>',
-              '<button class="btn-secondary" type="button" onclick="astAdicionarEvidencia_(\'' + id + '\')">Evidencia</button>',
+              '<button class="btn-secondary" type="button" onclick="astTrocarTecnico_(\'' + id + '\')">Técnico</button>',
+              '<button class="btn-secondary" type="button" onclick="astAdicionarEvidencia_(\'' + id + '\')">Evidência</button>',
               '<button class="btn-secondary" type="button" onclick="astEnviarTerceiro_(\'' + id + '\')">Terceiro</button>',
-              '<button class="btn-secondary" type="button" onclick="astRegistrarLab_(\'' + id + '\')">Laboratorio</button>',
+              '<button class="btn-secondary" type="button" onclick="astRegistrarLab_(\'' + id + '\')">Laboratório</button>',
             '</div>',
           '</div>',
           '<div class="ast-side-card">',
@@ -1150,8 +1150,8 @@
               '<button class="btn-secondary" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">Etiqueta</button>',
               '<button class="btn-secondary" type="button" onclick="astBaixarEtiquetaPdf_(\'' + id + '\')">Etiqueta PDF</button>',
               '<button class="btn-secondary" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">Protocolo</button>',
-              '<button class="btn-secondary" type="button" onclick="astGerarRelDiag_(\'' + id + '\')">Rel. Diagnostico</button>',
-              '<button class="btn-secondary" type="button" onclick="astGerarRelMan_(\'' + id + '\')">Rel. Manutencao</button>',
+              '<button class="btn-secondary" type="button" onclick="astGerarRelDiag_(\'' + id + '\')">Rel. Diagnóstico</button>',
+              '<button class="btn-secondary" type="button" onclick="astGerarRelMan_(\'' + id + '\')">Rel. Manutenção</button>',
               '<button class="btn-secondary" type="button" onclick="astResumoComercial_(\'' + id + '\')">Resumo</button>',
               '<button class="btn-secondary" type="button" onclick="astCopiarWhats_(\'' + id + '\')">Copiar WhatsApp</button>',
               '<button class="btn-secondary" type="button" onclick="astAbrirWhats_(\'' + id + '\')">Abrir WhatsApp</button>',
@@ -1233,12 +1233,12 @@
     var status = astStatusNorm_(e.STATUS || "");
     var etapas = [
       { label: "Entrada",    s: ["ENTRADA_REGISTRADA"] },
-      { label: "Avaliacao",  s: ["AGUARDANDO_DIAGNOSTICO", "EM_BANCADA"] },
-      { label: "Diagnostico",s: ["DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO"] },
-      { label: "Orcamento",  s: ["AGUARDANDO_ORCAMENTO", "ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE", "ORCAMENTO_APROVADO", "ORCAMENTO_RECUSADO", "AGUARDANDO_PECA"] },
-      { label: "Execucao",   s: ["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO", "EXECUCAO_CONCLUIDA"] },
-      { label: "Calibracao", s: ["AGUARDANDO_CALIBRACAO"] },
-      { label: "Conclusao",  s: ["CONCLUIDO_TECNICAMENTE"] },
+      { label: "Avaliação",  s: ["AGUARDANDO_DIAGNOSTICO", "EM_BANCADA"] },
+      { label: "Diagnóstico",s: ["DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO"] },
+      { label: "Orçamento",  s: ["AGUARDANDO_ORCAMENTO", "ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE", "ORCAMENTO_APROVADO", "ORCAMENTO_RECUSADO", "AGUARDANDO_PECA"] },
+      { label: "Execução",   s: ["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO", "EXECUCAO_CONCLUIDA"] },
+      { label: "Calibração", s: ["AGUARDANDO_CALIBRACAO"] },
+      { label: "Conclusão",  s: ["CONCLUIDO_TECNICAMENTE"] },
       { label: "Entrega",    s: ["AGUARDANDO_ENTREGA", "ENTREGUE"] }
     ];
     var currentIdx = -1;
@@ -1308,28 +1308,28 @@
       : '<span style="color:#94a3b8;font-size:12px;">Nenhuma foto registrada.</span>';
     return [
       '<div class="ast-v2-det-section">',
-        '<h4>Resumo Tecnico</h4>',
+        '<h4>Resumo Técnico</h4>',
         '<div class="ast-v2-det-grid2">',
           '<div class="ast-v2-det-field"><span>Problema relatado</span><b>' + astEsc_(e.PROBLEMA_RELATADO || "--") + '</b></div>',
-          '<div class="ast-v2-det-field"><span>Condicao fisica</span><b>'   + astEsc_(e.CONDICAO_FISICA   || "--") + '</b></div>',
+          '<div class="ast-v2-det-field"><span>Condição física</span><b>'   + astEsc_(e.CONDICAO_FISICA   || "--") + '</b></div>',
           '<div class="ast-v2-det-field"><span>Prioridade</span><b>'        + astEsc_(e.PRIORIDADE         || "NORMAL") + '</b></div>',
           '<div class="ast-v2-det-field"><span>Entrada em</span><b>'        + astEsc_(astData_(e.CRIADO_EM)) + '</b></div>',
           (e.PRAZO_PROMETIDO ? '<div class="ast-v2-det-field"><span>Prazo prometido</span><b>' + astEsc_(astData_(e.PRAZO_PROMETIDO)) + '</b></div>' : ''),
-          (e.TECNICO_NOME    ? '<div class="ast-v2-det-field"><span>Tecnico</span><b>'         + astEsc_(e.TECNICO_NOME)               + '</b></div>' : ''),
+          (e.TECNICO_NOME    ? '<div class="ast-v2-det-field"><span>Técnico</span><b>'         + astEsc_(e.TECNICO_NOME)               + '</b></div>' : ''),
         '</div>',
         (e.OBSERVACOES ? [
           '<div style="margin-top:12px;" class="ast-v2-det-field">',
-            '<span>Observacoes</span>',
+            '<span>Observações</span>',
             '<b style="font-weight:400;color:#334155;font-size:13px;">' + astEsc_(e.OBSERVACOES) + '</b>',
           '</div>'
         ].join("") : ''),
         astDiagnosticoResumoHtml_(diag),
         '<div style="margin-top:12px;">',
-          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Acessorios</div>',
+          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Acessórios</div>',
           acHtml,
         '</div>',
         '<div style="margin-top:12px;">',
-          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:4px;">Evidencias / Fotos</div>',
+          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:4px;">Evidências / Fotos</div>',
           fotosHtml,
         '</div>',
       '</div>'
@@ -1346,8 +1346,8 @@
     if (!pecas.length) {
       return [
         '<div class="ast-v2-det-section">',
-          '<h4>Pecas Solicitadas</h4>',
-          '<span style="color:#94a3b8;font-size:12px;">Nenhuma solicitacao de peca registrada ainda.</span>',
+          '<h4>Peças Solicitadas</h4>',
+          '<span style="color:#94a3b8;font-size:12px;">Nenhuma solicitação de peça registrada ainda.</span>',
         '</div>'
       ].join("");
     }
@@ -1365,26 +1365,26 @@
           ? "color:#dc2626;font-weight:700;"
           : "color:#0369a1;font-weight:700;";
       var campos = [];
-      campos.push('<div class="ast-v2-det-field"><span>Peca</span><b>' + astEsc_(p.DESCRICAO || "--") + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Peça</span><b>' + astEsc_(p.DESCRICAO || "--") + '</b></div>');
       campos.push('<div class="ast-v2-det-field"><span>Quantidade</span><b>' + astEsc_(String(p.QUANTIDADE || 1)) + '</b></div>');
-      campos.push('<div class="ast-v2-det-field"><span>Urgencia</span><b style="' + urgStyle + '">' + astEsc_(urg) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Urgência</span><b style="' + urgStyle + '">' + astEsc_(urg) + '</b></div>');
       campos.push('<div class="ast-v2-det-field"><span>Status</span><b style="' + stStyle + '">' + astEsc_(st.replace(/_/g, " ")) + '</b></div>');
-      if (p.JUSTIFICATIVA_TECNICA) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Justificativa tecnica</span><b style="font-weight:400;">' + astEsc_(p.JUSTIFICATIVA_TECNICA) + '</b></div>');
+      if (p.JUSTIFICATIVA_TECNICA) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Justificativa técnica</span><b style="font-weight:400;">' + astEsc_(p.JUSTIFICATIVA_TECNICA) + '</b></div>');
       if (p.FORNECEDOR_NOME) campos.push('<div class="ast-v2-det-field"><span>Fornecedor</span><b>' + astEsc_(p.FORNECEDOR_NOME) + '</b></div>');
       if (p.VALOR_ESTIMADO && parseFloat(p.VALOR_ESTIMADO) > 0) {
         var valStr = "R$ " + parseFloat(p.VALOR_ESTIMADO).toFixed(2).replace(".", ",");
         campos.push('<div class="ast-v2-det-field"><span>Valor est.</span><b>' + astEsc_(valStr) + '</b></div>');
       }
-      if (p.OBSERVACAO) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observacoes</span><b style="font-weight:400;">' + astEsc_(p.OBSERVACAO) + '</b></div>');
+      if (p.OBSERVACAO) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observações</span><b style="font-weight:400;">' + astEsc_(p.OBSERVACAO) + '</b></div>');
       var data = astData_(p.SOLICITADO_EM || p.CRIADO_EM || "");
       var dataTag = (data && data !== "--") ? '<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px;">' + astEsc_(data) + '</span>' : "";
       var solId = astEscAttr_(p.ID || "");
       var btnAtualizar = (solId && ["CANCELADO", "RECUSADO", "INSTALADO"].indexOf(st) === -1)
-        ? '<button class="ast-v2-acao-btn" style="margin-top:8px;font-size:11px;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solId + '\')">&#128260; Atualizar Status da Peca</button>'
+        ? '<button class="ast-v2-acao-btn" style="margin-top:8px;font-size:11px;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solId + '\')">&#128260; Atualizar Status da Peça</button>'
         : '';
       cards.push([
         '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">',
-          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#475569;margin-bottom:6px;">Solicitacao ' + (j + 1) + dataTag + '</div>',
+          '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#475569;margin-bottom:6px;">Solicitação ' + (j + 1) + dataTag + '</div>',
           '<div class="ast-v2-det-grid2">', campos.join(""), '</div>',
           btnAtualizar,
         '</div>'
@@ -1392,7 +1392,7 @@
     }
     return [
       '<div class="ast-v2-det-section">',
-        '<h4>Pecas Solicitadas</h4>',
+        '<h4>Peças Solicitadas</h4>',
         cards.join(""),
         '<div id="astV2StatusPecaCardContainer"></div>',
       '</div>'
@@ -1405,18 +1405,18 @@
     var sidEsc = astEscAttr_(solicitacaoId || "");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128260; Atualizar Status da Peca</h5>',
+        '<h5>&#128260; Atualizar Status da Peça</h5>',
         '<label>Novo status *</label>',
         '<select id="astV2PecaStNovo">',
           '<option value="PENDENTE">Pendente</option>',
-          '<option value="EM_COTACAO">Em Cotacao</option>',
-          '<option value="AGUARDANDO_APROVACAO">Aguardando Aprovacao</option>',
+          '<option value="EM_COTACAO">Em Cotação</option>',
+          '<option value="AGUARDANDO_APROVACAO">Aguardando Aprovação</option>',
           '<option value="COMPRADO">Comprado</option>',
           '<option value="RECEBIDO">Recebido</option>',
           '<option value="INSTALADO">Instalado</option>',
           '<option value="CANCELADO">Cancelado</option>',
         '</select>',
-        '<label>Observacao</label>',
+        '<label>Observação</label>',
         '<textarea id="astV2PecaStObs" rows="2" placeholder="Ex: Adquirido no fornecedor X, NF 123..."></textarea>',
         '<label>Fornecedor final</label>',
         '<input type="text" id="astV2PecaStFornecedor" placeholder="Nome do fornecedor">',
@@ -1451,8 +1451,8 @@
     astSetContextStatus_("Atualizando status da peca...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel atualizar status da peca.");
-        astToast_("Status da peca atualizado.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível atualizar status da peça.");
+        astToast_("Status da peça atualizado.");
         astAbrirDetalhe_(AST_STATE.selecionada, { preservar: true });
       })
       .withFailureHandler(astFalhaToast_)
@@ -1465,16 +1465,16 @@
     var idEsc = astEscAttr_(id || "");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128295; Registrar Execucao</h5>',
-        '<label>Servico realizado *</label>',
-        '<textarea id="astV2ExecServico" rows="3" placeholder="Descreva o servico executado..."></textarea>',
-        '<label>Pecas aplicadas</label>',
-        '<textarea id="astV2ExecPecas" rows="2" placeholder="Ex: placa controladora, fusivel 5A..."></textarea>',
+        '<h5>&#128295; Registrar Execução</h5>',
+        '<label>Serviço realizado *</label>',
+        '<textarea id="astV2ExecServico" rows="3" placeholder="Descreva o serviço executado..."></textarea>',
+        '<label>Peças aplicadas</label>',
+        '<textarea id="astV2ExecPecas" rows="2" placeholder="Ex: placa controladora, fusível 5A..."></textarea>',
         '<label>Ajustes realizados</label>',
-        '<textarea id="astV2ExecAjustes" rows="2" placeholder="Calibracoes, regulagens..."></textarea>',
+        '<textarea id="astV2ExecAjustes" rows="2" placeholder="Calibrações, regulagens..."></textarea>',
         '<label>Limpeza realizada</label>',
-        '<select id="astV2ExecLimpeza"><option value="SIM">Sim</option><option value="NAO">Nao</option></select>',
-        '<label>Testes apos reparo</label>',
+        '<select id="astV2ExecLimpeza"><option value="SIM">Sim</option><option value="NAO">Não</option></select>',
+        '<label>Testes após reparo</label>',
         '<textarea id="astV2ExecTestes" rows="2" placeholder="Descreva os testes realizados..."></textarea>',
         '<label>Resultado *</label>',
         '<select id="astV2ExecResultado">',
@@ -1483,12 +1483,12 @@
           '<option value="AGUARDANDO_TESTE">Aguardando teste</option>',
           '<option value="SEM_REPARO">Sem reparo</option>',
         '</select>',
-        '<label>Recomendacao ao cliente</label>',
-        '<textarea id="astV2ExecRecomendacao" rows="2" placeholder="Cuidados, proximas revisoes..."></textarea>',
+        '<label>Recomendação ao cliente</label>',
+        '<textarea id="astV2ExecRecomendacao" rows="2" placeholder="Cuidados, próximas revisões..."></textarea>',
         '<label>Garantia (dias)</label>',
         '<input type="number" id="astV2ExecGarantiaDias" min="0" step="1" placeholder="90">',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2ExecObs" rows="2" placeholder="Observacoes internas..."></textarea>',
+        '<label>Observações</label>',
+        '<textarea id="astV2ExecObs" rows="2" placeholder="Observações internas..."></textarea>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarExecucao_(\'' + idEsc + '\')">Confirmar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2ExecucaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
@@ -1507,7 +1507,7 @@
     var recEl  = document.getElementById("astV2ExecRecomendacao");
     var garEl  = document.getElementById("astV2ExecGarantiaDias");
     var obsEl  = document.getElementById("astV2ExecObs");
-    if (!svcEl || !svcEl.value.trim()) return astToast_("Servico realizado e obrigatorio.");
+    if (!svcEl || !svcEl.value.trim()) return astToast_("Serviço realizado é obrigatório.");
     var garantia = garEl && garEl.value ? parseInt(garEl.value, 10) : 0;
     var payload = {
       SERVICO_REALIZADO:    svcEl.value.trim(),
@@ -1520,11 +1520,11 @@
       GARANTIA_DIAS:        (!isNaN(garantia) ? garantia                      : 0),
       OBSERVACOES:          obsEl  ? obsEl.value.trim()                       : ""
     };
-    astSetContextStatus_("Registrando execucao...");
+    astSetContextStatus_("Registrando execução...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar execucao.");
-        astToast_("Execucao V2 registrada.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar execução.");
+        astToast_("Execução V2 registrada.");
         astAbrirDetalhe_(id, { preservar: true });
       })
       .withFailureHandler(astFalhaToast_)
@@ -1544,15 +1544,15 @@
     if (dados.servicoRealizado)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Servico realizado</span><b>' + astEsc_(dados.servicoRealizado) + '</b></div>');
     if (dados.resultadoExecucao)   rows.push('<div class="ast-v2-det-field"><span>Resultado</span><b>' + astEsc_(dados.resultadoExecucao) + '</b></div>');
     if (dados.limpezaRealizada)    rows.push('<div class="ast-v2-det-field"><span>Limpeza</span><b>' + astEsc_(dados.limpezaRealizada) + '</b></div>');
-    if (dados.pecasAplicadas)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Pecas aplicadas</span><b>' + astEsc_(dados.pecasAplicadas) + '</b></div>');
+    if (dados.pecasAplicadas)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Peças aplicadas</span><b>' + astEsc_(dados.pecasAplicadas) + '</b></div>');
     if (dados.testesAposReparo)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Testes realizados</span><b>' + astEsc_(dados.testesAposReparo) + '</b></div>');
-    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
+    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendação</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
     if (dados.garantiaDias)        rows.push('<div class="ast-v2-det-field"><span>Garantia</span><b>' + astEsc_(String(dados.garantiaDias)) + ' dias</b></div>');
     if (ultimo.EXECUTADO_EM)       rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
     if (!rows.length) return "";
     return [
       '<div class="ast-v2-det-section" style="border-top:2px solid #15803d;">',
-        '<h4 style="color:#15803d;">&#128295; Execucao Tecnica</h4>',
+        '<h4 style="color:#15803d;">&#128295; Execução Técnica</h4>',
         '<div class="ast-v2-det-grid2">',
           rows.join(""),
         '</div>',
@@ -1566,25 +1566,25 @@
     var idEsc = astEscAttr_(id || "");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#9989; Registrar Teste / Validacao</h5>',
+        '<h5>&#9989; Registrar Teste / Validação</h5>',
         '<label>Tipo de teste</label>',
-        '<input type="text" id="astV2TstTipo" placeholder="Ex: Funcional, eletrico, pressao...">',
+        '<input type="text" id="astV2TstTipo" placeholder="Ex: Funcional, elétrico, pressão...">',
         '<label>Procedimento realizado</label>',
         '<textarea id="astV2TstProcedimento" rows="3" placeholder="Descreva o procedimento de teste..."></textarea>',
-        '<label>Parametros observados</label>',
-        '<textarea id="astV2TstParametros" rows="2" placeholder="Ex: Tensao 220V, corrente 2A, pressao 4bar..."></textarea>',
+        '<label>Parâmetros observados</label>',
+        '<textarea id="astV2TstParametros" rows="2" placeholder="Ex: Tensão 220V, corrente 2A, pressão 4bar..."></textarea>',
         '<label>Resultado *</label>',
         '<select id="astV2TstResultado">',
           '<option value="APROVADO">Aprovado</option>',
           '<option value="REPROVADO">Reprovado</option>',
           '<option value="INCONCLUSIVO">Inconclusivo</option>',
         '</select>',
-        '<label>Evidencias</label>',
-        '<textarea id="astV2TstEvidencias" rows="2" placeholder="Descricao das evidencias coletadas..."></textarea>',
-        '<label>Recomendacao final</label>',
-        '<textarea id="astV2TstRecomendacao" rows="2" placeholder="Cuidados, proxima revisao..."></textarea>',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2TstObs" rows="2" placeholder="Observacoes tecnicas..."></textarea>',
+        '<label>Evidências</label>',
+        '<textarea id="astV2TstEvidencias" rows="2" placeholder="Descrição das evidências coletadas..."></textarea>',
+        '<label>Recomendação final</label>',
+        '<textarea id="astV2TstRecomendacao" rows="2" placeholder="Cuidados, próxima revisão..."></textarea>',
+        '<label>Observações</label>',
+        '<textarea id="astV2TstObs" rows="2" placeholder="Observações técnicas..."></textarea>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarTesteValidacao_(\'' + idEsc + '\')">Confirmar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2TesteValidacaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
@@ -1611,11 +1611,11 @@
       RECOMENDACAO_FINAL:     recEl  ? recEl.value.trim()  : "",
       OBSERVACOES:            obsEl  ? obsEl.value.trim()  : ""
     };
-    astSetContextStatus_("Registrando teste/validacao...");
+    astSetContextStatus_("Registrando teste/validação...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar teste/validacao.");
-        astToast_("Teste/Validacao V2 registrado.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar teste/validação.");
+        astToast_("Teste/Validação V2 registrado.");
         astAbrirDetalhe_(id, { preservar: true });
       })
       .withFailureHandler(astFalhaToast_)
@@ -1637,14 +1637,14 @@
     if (dados.resultadoTeste)         rows.push('<div class="ast-v2-det-field"><span>Resultado</span><b style="color:' + resColor + ';">' + astEsc_(dados.resultadoTeste) + '</b></div>');
     if (dados.tipoTeste)              rows.push('<div class="ast-v2-det-field"><span>Tipo de teste</span><b>' + astEsc_(dados.tipoTeste) + '</b></div>');
     if (dados.procedimentoRealizado)  rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Procedimento</span><b>' + astEsc_(dados.procedimentoRealizado) + '</b></div>');
-    if (dados.parametrosObservados)   rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Parametros</span><b>' + astEsc_(dados.parametrosObservados) + '</b></div>');
-    if (dados.evidencias)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Evidencias</span><b>' + astEsc_(dados.evidencias) + '</b></div>');
-    if (dados.recomendacaoFinal)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoFinal) + '</b></div>');
+    if (dados.parametrosObservados)   rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Parâmetros</span><b>' + astEsc_(dados.parametrosObservados) + '</b></div>');
+    if (dados.evidencias)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Evidências</span><b>' + astEsc_(dados.evidencias) + '</b></div>');
+    if (dados.recomendacaoFinal)      rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendação</span><b>' + astEsc_(dados.recomendacaoFinal) + '</b></div>');
     if (ultimo.EXECUTADO_EM)          rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
     if (!rows.length) return "";
     return [
       '<div class="ast-v2-det-section" style="border-top:2px solid #0891b2;">',
-        '<h4 style="color:#0891b2;">&#9989; Teste / Validacao</h4>',
+        '<h4 style="color:#0891b2;">&#9989; Teste / Validação</h4>',
         '<div class="ast-v2-det-grid2">',
           rows.join(""),
         '</div>',
@@ -1658,9 +1658,9 @@
     var idEsc = astEscAttr_(id || "");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#10003; Registrar Conclusao Tecnica</h5>',
-        '<label>Conclusao tecnica *</label>',
-        '<textarea id="astV2ConcConclusao" rows="4" placeholder="Descreva a conclusao tecnica do atendimento..."></textarea>',
+        '<h5>&#10003; Registrar Conclusão Técnica</h5>',
+        '<label>Conclusão técnica *</label>',
+        '<textarea id="astV2ConcConclusao" rows="4" placeholder="Descreva a conclusão técnica do atendimento..."></textarea>',
         '<label>Resultado final *</label>',
         '<select id="astV2ConcResultado">',
           '<option value="REPARADO">Reparado</option>',
@@ -1669,14 +1669,14 @@
           '<option value="REPROVADO">Reprovado</option>',
           '<option value="CANCELADO_TECNICAMENTE">Cancelado tecnicamente</option>',
         '</select>',
-        '<label>Recomendacao ao cliente</label>',
-        '<textarea id="astV2ConcRecomendacao" rows="2" placeholder="Cuidados, uso correto, proxima revisao..."></textarea>',
+        '<label>Recomendação ao cliente</label>',
+        '<textarea id="astV2ConcRecomendacao" rows="2" placeholder="Cuidados, uso correto, próxima revisão..."></textarea>',
         '<label>Garantia (dias)</label>',
         '<input type="number" id="astV2ConcGarantiaDias" min="0" step="1" placeholder="90">',
         '<label>Liberado para entrega</label>',
-        '<select id="astV2ConcLiberado"><option value="S">Sim</option><option value="N">Nao</option></select>',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2ConcObs" rows="2" placeholder="Observacoes internas..."></textarea>',
+        '<select id="astV2ConcLiberado"><option value="S">Sim</option><option value="N">Não</option></select>',
+        '<label>Observações</label>',
+        '<textarea id="astV2ConcObs" rows="2" placeholder="Observações internas..."></textarea>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarConclusao_(\'' + idEsc + '\')">Confirmar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2ConclusaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
@@ -1692,7 +1692,7 @@
     var garEl   = document.getElementById("astV2ConcGarantiaDias");
     var libEl   = document.getElementById("astV2ConcLiberado");
     var obsEl   = document.getElementById("astV2ConcObs");
-    if (!concEl || !concEl.value.trim()) return astToast_("Conclusao tecnica e obrigatoria.");
+    if (!concEl || !concEl.value.trim()) return astToast_("Conclusão técnica é obrigatória.");
     if (!resEl  || !resEl.value)         return astToast_("Selecione o resultado final.");
     var garantia = garEl && garEl.value ? parseInt(garEl.value, 10) : 0;
     var payload = {
@@ -1703,11 +1703,11 @@
       LIBERADO_PARA_ENTREGA: libEl ? libEl.value                      : "N",
       OBSERVACOES:          obsEl  ? obsEl.value.trim()               : ""
     };
-    astSetContextStatus_("Registrando conclusao tecnica...");
+    astSetContextStatus_("Registrando conclusão técnica...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar conclusao tecnica.");
-        astToast_("Conclusao tecnica V2 registrada.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar conclusão técnica.");
+        astToast_("Conclusão técnica V2 registrada.");
         astAbrirDetalhe_(id, { preservar: true });
       })
       .withFailureHandler(astFalhaToast_)
@@ -1728,16 +1728,16 @@
                    (res === "SEM_REPARO" || res === "REPROVADO" || res === "CANCELADO_TECNICAMENTE") ? "#dc2626" : "#334155";
     var lib = dados.liberadoParaEntrega || "N";
     var rows = [];
-    if (dados.conclusaoTecnica)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Conclusao tecnica</span><b>' + astEsc_(dados.conclusaoTecnica) + '</b></div>');
+    if (dados.conclusaoTecnica)    rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Conclusão técnica</span><b>' + astEsc_(dados.conclusaoTecnica) + '</b></div>');
     if (dados.resultadoFinal)      rows.push('<div class="ast-v2-det-field"><span>Resultado final</span><b style="color:' + resColor + ';">' + astEsc_(dados.resultadoFinal) + '</b></div>');
-    rows.push('<div class="ast-v2-det-field"><span>Liberado para entrega</span><b style="color:' + (lib === "S" ? "#15803d" : "#dc2626") + ';">' + (lib === "S" ? "Sim" : "Nao") + '</b></div>');
-    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendacao</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Liberado para entrega</span><b style="color:' + (lib === "S" ? "#15803d" : "#dc2626") + ';">' + (lib === "S" ? "Sim" : "Não") + '</b></div>');
+    if (dados.recomendacaoCliente) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Recomendação</span><b>' + astEsc_(dados.recomendacaoCliente) + '</b></div>');
     if (dados.garantiaDias)        rows.push('<div class="ast-v2-det-field"><span>Garantia</span><b>' + astEsc_(String(dados.garantiaDias)) + ' dias</b></div>');
     if (ultimo.EXECUTADO_EM)       rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
     if (!rows.length) return "";
     return [
       '<div class="ast-v2-det-section" style="border-top:2px solid #1a56db;">',
-        '<h4 style="color:#1a56db;">&#10003; Conclusao Tecnica</h4>',
+        '<h4 style="color:#1a56db;">&#10003; Conclusão Técnica</h4>',
         '<div class="ast-v2-det-grid2">',
           rows.join(""),
         '</div>',
@@ -1758,10 +1758,10 @@
       '<div class="ast-v2-card">',
         '<h5>&#128666; Registrar Entrega</h5>',
         '<label>Entregue para *</label>',
-        '<input type="text" id="astV2EntNome" placeholder="Nome do responsavel pela retirada">',
+        '<input type="text" id="astV2EntNome" placeholder="Nome do responsável pela retirada">',
         '<label>Documento / Matricula</label>',
         '<input type="text" id="astV2EntDoc" placeholder="CPF, RG ou matricula">',
-        '<label>Cargo / Funcao</label>',
+        '<label>Cargo / Função</label>',
         '<input type="text" id="astV2EntCargo" placeholder="Cargo ou funcao">',
         '<label>Data da entrega</label>',
         '<input type="date" id="astV2EntData" value="' + dataHoje + '">',
@@ -1771,14 +1771,14 @@
           '<option value="COM_RESSALVA">Com ressalva</option>',
           '<option value="SEM_REPARO">Sem reparo / devolvido como veio</option>',
         '</select>',
-        '<label>Acessorios devolvidos</label>',
-        '<textarea id="astV2EntAcessorios" rows="2" placeholder="Liste os acessorios entregues..."></textarea>',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2EntObs" rows="2" placeholder="Observacoes adicionais..."></textarea>',
+        '<label>Acessórios devolvidos</label>',
+        '<textarea id="astV2EntAcessorios" rows="2" placeholder="Liste os acessórios entregues..."></textarea>',
+        '<label>Observações</label>',
+        '<textarea id="astV2EntObs" rows="2" placeholder="Observações adicionais..."></textarea>',
         '<label>Finalizar atendimento?</label>',
         '<select id="astV2EntFinalizar">',
           '<option value="S">Sim - encerrar atendimento</option>',
-          '<option value="N">Nao - manter em acompanhamento</option>',
+          '<option value="N">Não - manter em acompanhamento</option>',
         '</select>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarEntrega_(\'' + idEsc + '\')">Confirmar Entrega</button>',
@@ -1797,7 +1797,7 @@
     var aceEl   = document.getElementById("astV2EntAcessorios");
     var obsEl   = document.getElementById("astV2EntObs");
     var finEl   = document.getElementById("astV2EntFinalizar");
-    if (!nomeEl || !nomeEl.value.trim()) return astToast_("Informe o nome do responsavel pela retirada.");
+    if (!nomeEl || !nomeEl.value.trim()) return astToast_("Informe o nome do responsável pela retirada.");
     var payload = {
       ENTREGUE_PARA_NOME:       nomeEl.value.trim(),
       ENTREGUE_PARA_DOC:        docEl   ? docEl.value.trim()   : "",
@@ -1812,7 +1812,7 @@
     astSetContextStatus_("Registrando entrega...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar entrega.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar entrega.");
         astToast_("Entrega V2 registrada.");
         astAbrirDetalhe_(id, { preservar: true });
       })
@@ -1836,9 +1836,9 @@
     if (dados.entregueParaCargo)    rows.push('<div class="ast-v2-det-field"><span>Cargo / Funcao</span><b>' + astEsc_(dados.entregueParaCargo) + '</b></div>');
     if (dados.dataEntrega)          rows.push('<div class="ast-v2-det-field"><span>Data da entrega</span><b>' + astEsc_(dados.dataEntrega) + '</b></div>');
     if (dados.condicaoEntrega)      rows.push('<div class="ast-v2-det-field"><span>Condicao</span><b>' + astEsc_(dados.condicaoEntrega) + '</b></div>');
-    if (dados.acessoriosDevolvidos) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Acessorios devolvidos</span><b>' + astEsc_(dados.acessoriosDevolvidos) + '</b></div>');
-    rows.push('<div class="ast-v2-det-field"><span>Atendimento finalizado</span><b style="color:' + (fin === "S" ? "#15803d" : "#dc2626") + ';">' + (fin === "S" ? "Sim" : "Nao") + '</b></div>');
-    if (dados.observacoes)          rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observacoes</span><b>' + astEsc_(dados.observacoes) + '</b></div>');
+    if (dados.acessoriosDevolvidos) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Acessórios devolvidos</span><b>' + astEsc_(dados.acessoriosDevolvidos) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Atendimento finalizado</span><b style="color:' + (fin === "S" ? "#15803d" : "#dc2626") + ';">' + (fin === "S" ? "Sim" : "Não") + '</b></div>');
+    if (dados.observacoes)          rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observações</span><b>' + astEsc_(dados.observacoes) + '</b></div>');
     if (ultimo.EXECUTADO_EM)        rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
     if (!rows.length) return "";
     return [
@@ -1852,12 +1852,12 @@
   }
 
   function astDiagnosticoResumoHtml_(diag) {
-    var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico</div>';
+    var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnóstico Técnico</div>';
     if (!diag || !diag.dados) {
       return [
         '<div style="margin-top:14px;">',
           label,
-          '<span style="color:#94a3b8;font-size:12px;">Nenhum diagnostico tecnico registrado ainda.</span>',
+          '<span style="color:#94a3b8;font-size:12px;">Nenhum diagnóstico técnico registrado ainda.</span>',
         '</div>'
       ].join("");
     }
@@ -1868,25 +1868,25 @@
       : "";
     var rows = [];
     if (d._texto) {
-      rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Diagnostico</span><b style="font-weight:400;">' + astEsc_(d._texto) + '</b></div>');
+      rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Diagnóstico</span><b style="font-weight:400;">' + astEsc_(d._texto) + '</b></div>');
     } else {
       if (d.defeito)       rows.push('<div class="ast-v2-det-field"><span>Defeito confirmado</span><b>' + astEsc_(d.defeito) + '</b></div>');
       if (d.causa)         rows.push('<div class="ast-v2-det-field"><span>Causa provavel</span><b>' + astEsc_(d.causa) + '</b></div>');
-      if (d.recomendacao)  rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Recomendacao tecnica</span><b style="font-weight:400;">' + astEsc_(d.recomendacao) + '</b></div>');
+      if (d.recomendacao)  rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Recomendação técnica</span><b style="font-weight:400;">' + astEsc_(d.recomendacao) + '</b></div>');
       var flags = [];
-      if (d.necessita_peca        === "S") flags.push("Peca");
+      if (d.necessita_peca        === "S") flags.push("Peça");
       if (d.necessita_terceiro    === "S") flags.push("Terceiro");
-      if (d.necessita_laboratorio === "S") flags.push("Laboratorio");
+      if (d.necessita_laboratorio === "S") flags.push("Laboratório");
       if (d.risco_critico         === "S") flags.push("RISCO CRITICO");
       if (flags.length) rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Flags</span><b style="color:#dc2626;">' + astEsc_(flags.join(" | ")) + '</b></div>');
-      if (d.observacoes)   rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observacoes (diagnostico)</span><b style="font-weight:400;">' + astEsc_(d.observacoes) + '</b></div>');
+      if (d.observacoes)   rows.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observações (diagnóstico)</span><b style="font-weight:400;">' + astEsc_(d.observacoes) + '</b></div>');
     }
     if (!rows.length) {
-      rows.push('<div style="grid-column:1/-1;"><span style="color:#94a3b8;font-size:12px;">Diagnostico registrado sem campos detalhados.</span></div>');
+      rows.push('<div style="grid-column:1/-1;"><span style="color:#94a3b8;font-size:12px;">Diagnóstico registrado sem campos detalhados.</span></div>');
     }
     return [
       '<div style="margin-top:14px;">',
-        '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnostico Tecnico' + dataTag + '</div>',
+        '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnóstico Técnico' + dataTag + '</div>',
         '<div class="ast-v2-det-grid2">', rows.join(""), '</div>',
       '</div>'
     ].join("");
@@ -1896,7 +1896,7 @@
     if (!Array.isArray(historico) || !historico.length) {
       return [
         '<div class="ast-v2-det-section">',
-          '<h4>Historico / Timeline</h4>',
+          '<h4>Histórico / Timeline</h4>',
           '<div class="ast-v2-tl-empty">Nenhuma movimentacao registrada ainda.</div>',
         '</div>'
       ].join("");
@@ -1928,7 +1928,7 @@
     }
     return [
       '<div class="ast-v2-det-section">',
-        '<h4>Historico / Timeline</h4>',
+        '<h4>Histórico / Timeline</h4>',
         '<div class="ast-v2-tl">', itens.join(""), '</div>',
       '</div>'
     ].join("");
@@ -1939,36 +1939,36 @@
     var status = astStatusNorm_(e.STATUS || "");
     var acoes = [];
     if (["ENTRADA_REGISTRADA", "AGUARDANDO_DIAGNOSTICO"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2IniciarAvaliacao_(\'' + id + '\')">&#9654; Iniciar Avaliacao</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2IniciarAvaliacao_(\'' + id + '\')">&#9654; Iniciar Avaliação</button>');
     }
     if (["EM_BANCADA", "DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarDiagnosticoCard_(\'' + id + '\',\'' + status + '\')">&#128203; Registrar Diagnostico</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarDiagnosticoCard_(\'' + id + '\',\'' + status + '\')">&#128203; Registrar Diagnóstico</button>');
     }
     if (["EM_BANCADA", "DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO", "AGUARDANDO_PECA"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarSolicitacaoPecaCard_(\'' + id + '\')">&#128230; Solicitar Peca</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarSolicitacaoPecaCard_(\'' + id + '\')">&#128230; Solicitar Peça</button>');
     }
     if (["AGUARDANDO_ORCAMENTO", "ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
-      acoes.push('<span class="ast-v2-acao-stub">Enviar Orcamento &mdash; em breve (C.4)</span>');
+      acoes.push('<span class="ast-v2-acao-stub">Enviar Orçamento &mdash; em breve (C.4)</span>');
     }
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execucao</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
     }
     if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarTesteValidacaoCard_(\'' + id + '\')">&#9989; Registrar Teste / Validacao</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarTesteValidacaoCard_(\'' + id + '\')">&#9989; Registrar Teste / Validação</button>');
     }
     if (["EXECUCAO_CONCLUIDA", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarConclusaoCard_(\'' + id + '\')">&#10003; Registrar Conclusao Tecnica</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarConclusaoCard_(\'' + id + '\')">&#10003; Registrar Conclusão Técnica</button>');
     }
     if (["CONCLUIDO_TECNICAMENTE", "AGUARDANDO_ENTREGA", "NAO_REPARADO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarEntregaCard_(\'' + id + '\')">&#128666; Registrar Entrega</button>');
     }
-    acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidencia</button>');
+    acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2RegistrarEvidencia_(\'' + id + '\')">&#128248; Registrar Evidência</button>');
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarStatusCard_(\'' + id + '\',\'' + status + '\')">&#128260; Atualizar Status</button>');
     }
     return [
       '<div class="ast-v2-det-section">',
-        '<h4>Acoes da Etapa</h4>',
+        '<h4>Ações da Etapa</h4>',
         '<div style="display:flex;flex-direction:column;gap:8px;">', acoes.join(""), '</div>',
         '<div id="astV2DiagCardContainer"></div>',
         '<div id="astV2StatusCardContainer"></div>',
@@ -1990,10 +1990,11 @@
         '<div style="display:flex;flex-direction:column;gap:8px;">',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relatorio Tecnico Final</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Saida</button>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
         '</div>',
+        '<div id="astV2DocLinkContainer" style="display:none;margin-top:8px;"></div>',
       '</div>'
     ].join("");
   }
@@ -2021,11 +2022,11 @@
 
   function astV2IniciarAvaliacao_(id) {
     if (!id) return;
-    astSetContextStatus_("Iniciando avaliacao...");
+    astSetContextStatus_("Iniciando avaliação...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel iniciar avaliacao.");
-        astToast_("Avaliacao iniciada.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível iniciar avaliação.");
+        astToast_("Avaliação iniciada.");
         astAbrirDetalhe_(id);
       })
       .withFailureHandler(astFalhaToast_)
@@ -2067,7 +2068,7 @@
     if (pc) pc.innerHTML = "";
     var proximos = AST_V2_TRANSICOES[statusAtual] || [];
     if (!proximos.length) {
-      astToast_("Nenhuma transicao disponivel a partir de: " + statusAtual.replace(/_/g, " "));
+      astToast_("Nenhuma transição disponível a partir de: " + statusAtual.replace(/_/g, " "));
       return;
     }
     var opts = proximos.map(function(s) {
@@ -2100,7 +2101,7 @@
     astSetContextStatus_("Atualizando status...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel atualizar status.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível atualizar status.");
         astToast_("Status atualizado.");
         astAbrirDetalhe_(id);
       })
@@ -2119,18 +2120,18 @@
     if (pc) pc.innerHTML = "";
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128248; Registrar Evidencia</h5>',
+        '<h5>&#128248; Registrar Evidência</h5>',
         '<label>Tipo</label>',
         '<select id="astV2EvidTipo">',
-          '<option value="EVIDENCIA_TECNICA">Evidencia Tecnica</option>',
+          '<option value="EVIDENCIA_TECNICA">Evidência Técnica</option>',
           '<option value="FOTO_ENTRADA">Foto de Entrada</option>',
           '<option value="FOTO_DEFEITO">Foto do Defeito</option>',
           '<option value="FOTO_REPARO">Foto do Reparo</option>',
           '<option value="FOTO_ENTREGA">Foto de Entrega</option>',
           '<option value="OUTRO">Outro</option>',
         '</select>',
-        '<label>Descricao</label>',
-        '<textarea id="astV2EvidDesc" rows="3" placeholder="Descreva a evidencia..."></textarea>',
+        '<label>Descrição</label>',
+        '<textarea id="astV2EvidDesc" rows="3" placeholder="Descreva a evidência..."></textarea>',
         '<label>Visibilidade</label>',
         '<select id="astV2EvidPublica"><option value="N">Somente interno</option><option value="S">Visivel ao cliente</option></select>',
         '<div class="ast-v2-card-btns">',
@@ -2147,17 +2148,17 @@
     var descEl = document.getElementById("astV2EvidDesc");
     var pubEl = document.getElementById("astV2EvidPublica");
     var descricao = descEl ? descEl.value.trim() : "";
-    if (!descricao) return astToast_("Informe a descricao da evidencia.");
+    if (!descricao) return astToast_("Informe a descrição da evidência.");
     var payload = {
       TIPO_FOTO: tipoEl ? tipoEl.value : "EVIDENCIA_TECNICA",
       DESCRICAO: descricao,
       VISIBILIDADE_PUBLICA: pubEl ? pubEl.value : "N"
     };
-    astSetContextStatus_("Registrando evidencia...");
+    astSetContextStatus_("Registrando evidência...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar evidencia.");
-        astToast_("Evidencia registrada.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar evidência.");
+        astToast_("Evidência registrada.");
         astAbrirDetalhe_(id);
       })
       .withFailureHandler(astFalhaToast_)
@@ -2180,37 +2181,37 @@
     optsStatus.unshift('<option value="">-- manter atual --</option>');
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128203; Registrar Diagnostico</h5>',
+        '<h5>&#128203; Registrar Diagnóstico</h5>',
         '<label>Defeito confirmado</label>',
         '<textarea id="astV2DiagDefeito" rows="2" placeholder="Descreva o defeito identificado..."></textarea>',
-        '<label>Causa provavel</label>',
-        '<textarea id="astV2DiagCausa" rows="2" placeholder="Causa provavel do defeito..."></textarea>',
-        '<label>Recomendacao tecnica</label>',
-        '<textarea id="astV2DiagRec" rows="2" placeholder="Recomendacao ou procedimento indicado..."></textarea>',
+        '<label>Causa provável</label>',
+        '<textarea id="astV2DiagCausa" rows="2" placeholder="Causa provável do defeito..."></textarea>',
+        '<label>Recomendação técnica</label>',
+        '<textarea id="astV2DiagRec" rows="2" placeholder="Recomendação ou procedimento indicado..."></textarea>',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">',
           '<div>',
-            '<label>Necessita peca?</label>',
-            '<select id="astV2DiagPeca"><option value="N">Nao</option><option value="S">Sim</option></select>',
+            '<label>Necessita peça?</label>',
+            '<select id="astV2DiagPeca"><option value="N">Não</option><option value="S">Sim</option></select>',
           '</div>',
           '<div>',
             '<label>Necessita terceiro?</label>',
-            '<select id="astV2DiagTerceiro"><option value="N">Nao</option><option value="S">Sim</option></select>',
+            '<select id="astV2DiagTerceiro"><option value="N">Não</option><option value="S">Sim</option></select>',
           '</div>',
           '<div>',
-            '<label>Necessita laboratorio?</label>',
-            '<select id="astV2DiagLab"><option value="N">Nao</option><option value="S">Sim</option></select>',
+            '<label>Necessita laboratório?</label>',
+            '<select id="astV2DiagLab"><option value="N">Não</option><option value="S">Sim</option></select>',
           '</div>',
           '<div>',
-            '<label>Risco critico?</label>',
-            '<select id="astV2DiagRisco"><option value="N">Nao</option><option value="S">Sim</option></select>',
+            '<label>Risco crítico?</label>',
+            '<select id="astV2DiagRisco"><option value="N">Não</option><option value="S">Sim</option></select>',
           '</div>',
         '</div>',
-        '<label>Status apos diagnostico</label>',
+        '<label>Status após diagnóstico</label>',
         '<select id="astV2DiagStatus">', optsStatus.join(""), '</select>',
-        '<label>Proxima acao</label>',
-        '<input type="text" id="astV2DiagProxima" placeholder="Ex: Aguardar aprovacao do cliente">',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2DiagObs" rows="2" placeholder="Observacoes adicionais..."></textarea>',
+        '<label>Próxima ação</label>',
+        '<input type="text" id="astV2DiagProxima" placeholder="Ex: Aguardar aprovação do cliente">',
+        '<label>Observações</label>',
+        '<textarea id="astV2DiagObs" rows="2" placeholder="Observações adicionais..."></textarea>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarDiagnostico_(\'' + id + '\')">Registrar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2DiagCardContainer\').innerHTML=\'\'">Cancelar</button>',
@@ -2233,7 +2234,7 @@
     var obs      = document.getElementById("astV2DiagObs");
     var defVal = defeito ? defeito.value.trim() : "";
     var cauVal = causa   ? causa.value.trim()   : "";
-    if (!defVal && !cauVal) return astToast_("Informe ao menos o defeito confirmado ou a causa provavel.");
+    if (!defVal && !cauVal) return astToast_("Informe ao menos o defeito confirmado ou a causa provável.");
     var payload = {
       DEFEITO_CONFIRMADO:    defVal,
       CAUSA_PROVAVEL:        cauVal,
@@ -2246,11 +2247,11 @@
       PROXIMA_ACAO:          proxima  ? proxima.value.trim()  : "",
       OBSERVACOES:           obs      ? obs.value.trim()      : ""
     };
-    astSetContextStatus_("Salvando diagnostico...");
+    astSetContextStatus_("Salvando diagnóstico...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel salvar diagnostico.");
-        astToast_("Diagnostico V2 registrado.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível salvar diagnóstico.");
+        astToast_("Diagnóstico V2 registrado.");
         astAbrirDetalhe_(id, { preservar: false });
       })
       .withFailureHandler(astFalhaToast_)
@@ -2268,34 +2269,34 @@
     if (dg) dg.innerHTML = "";
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128230; Solicitar Peca</h5>',
-        '<label>Nome da peca *</label>',
+        '<h5>&#128230; Solicitar Peça</h5>',
+        '<label>Nome da peça *</label>',
         '<input type="text" id="astV2PecaNome" placeholder="Ex: Capacitor 470uF 25V">',
-        '<label>Descricao / especificacao</label>',
-        '<textarea id="astV2PecaDesc" rows="2" placeholder="Referencia, modelo, especificacao tecnica..."></textarea>',
+        '<label>Descrição / especificação</label>',
+        '<textarea id="astV2PecaDesc" rows="2" placeholder="Referência, modelo, especificação técnica..."></textarea>',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">',
           '<div>',
             '<label>Quantidade</label>',
             '<input type="number" id="astV2PecaQtd" value="1" min="1">',
           '</div>',
           '<div>',
-            '<label>Urgencia</label>',
+            '<label>Urgência</label>',
             '<select id="astV2PecaUrgencia">',
               '<option value="NORMAL">Normal</option>',
               '<option value="BAIXA">Baixa</option>',
               '<option value="ALTA">Alta</option>',
-              '<option value="CRITICA">Critica</option>',
+              '<option value="CRITICA">Crítica</option>',
             '</select>',
           '</div>',
         '</div>',
-        '<label>Justificativa tecnica</label>',
-        '<textarea id="astV2PecaJustificativa" rows="2" placeholder="Por que esta peca e necessaria..."></textarea>',
+        '<label>Justificativa técnica</label>',
+        '<textarea id="astV2PecaJustificativa" rows="2" placeholder="Por que esta peça é necessária..."></textarea>',
         '<label>Fornecedor sugerido</label>',
         '<input type="text" id="astV2PecaFornecedor" placeholder="Nome do fornecedor sugerido">',
         '<label>Valor estimado (R$)</label>',
         '<input type="number" id="astV2PecaValor" min="0" step="0.01" placeholder="0.00">',
-        '<label>Observacoes</label>',
-        '<textarea id="astV2PecaObs" rows="2" placeholder="Observacoes adicionais..."></textarea>',
+        '<label>Observações</label>',
+        '<textarea id="astV2PecaObs" rows="2" placeholder="Observações adicionais..."></textarea>',
         '<div class="ast-v2-card-btns">',
           '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarSolicitacaoPeca_(\'' + id + '\')">Registrar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2PecaCardContainer\').innerHTML=\'\'">Cancelar</button>',
@@ -2315,7 +2316,7 @@
     var valorEl      = document.getElementById("astV2PecaValor");
     var obsEl        = document.getElementById("astV2PecaObs");
     var nomeVal = nomeEl ? nomeEl.value.trim() : "";
-    if (!nomeVal) return astToast_("Informe o nome da peca.");
+    if (!nomeVal) return astToast_("Informe o nome da peça.");
     var valorNum = valorEl && valorEl.value ? parseFloat(valorEl.value) : 0;
     var payload = {
       TITULO:                nomeVal,
@@ -2328,11 +2329,11 @@
       VALOR_ESTIMADO:        isNaN(valorNum) ? 0 : valorNum,
       OBSERVACOES:           obsEl        ? obsEl.value.trim()        : ""
     };
-    astSetContextStatus_("Registrando solicitacao de peca...");
+    astSetContextStatus_("Registrando solicitação de peça...");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_((res && res.message) || "Nao foi possivel registrar solicitacao de peca.");
-        astToast_("Solicitacao de peca registrada.");
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível registrar solicitação de peça.");
+        astToast_("Solicitação de peça registrada.");
         astAbrirDetalhe_(id, { preservar: true });
       })
       .withFailureHandler(astFalhaToast_)
@@ -2342,8 +2343,8 @@
   function astAtualizarStatus_(id) {
     const status = prompt("Novo status", (AST_STATE.detalhe && AST_STATE.detalhe.item && AST_STATE.detalhe.item.STATUS) || "TRIAGEM");
     if (!status) return;
-    const descricao = prompt("Descricao da movimentacao", "Status atualizado pela Assistencia Tecnica.") || "";
-    const proxima = prompt("Proxima acao", "") || "";
+    const descricao = prompt("Descrição da movimentação", "Status atualizado pela Assistência Técnica.") || "";
+    const proxima = prompt("Próxima ação", "") || "";
     google.script.run
       .withSuccessHandler(function(res) { astAfterAction_(res, id, "Status atualizado."); })
       .withFailureHandler(astFalhaToast_)
@@ -2351,11 +2352,11 @@
   }
 
   function astTrocarTecnico_(id) {
-    const tecnicoId = prompt("ID do tecnico responsavel");
+    const tecnicoId = prompt("ID do técnico responsável");
     if (!tecnicoId) return;
-    const motivo = prompt("Motivo da troca", "Redistribuicao tecnica") || "";
+    const motivo = prompt("Motivo da troca", "Redistribuição técnica") || "";
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Tecnico atualizado."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Técnico atualizado."); })
       .withFailureHandler(astFalhaToast_)
       .astTrocarTecnico(SESSION, id, tecnicoId, motivo);
   }
@@ -2380,7 +2381,7 @@
       RISCO_USO: astVal_("astDiagRisco") === "S" ? "ALTO" : "BAIXO"
     };
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Diagnostico salvo."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Diagnóstico salvo."); })
       .withFailureHandler(astFalhaToast_)
       .astSalvarDiagnostico(SESSION, id, payload);
   }
@@ -2396,7 +2397,7 @@
       STATUS: astVal_("astPecaStatus") || "PECA_SOLICITADA"
     };
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Peca registrada."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Peça registrada."); })
       .withFailureHandler(astFalhaToast_)
       .astSalvarPeca(SESSION, id, payload);
   }
@@ -2428,7 +2429,7 @@
       GARANTIA_SERVICO: astVal_("astExecGarantia")
     };
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Execucao registrada."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Execução registrada."); })
       .withFailureHandler(astFalhaToast_)
       .astRegistrarExecucao(SESSION, id, payload);
   }
@@ -2443,7 +2444,7 @@
       ENTREGA_AUTORIZADA: astChecked_("astConcEntrega") ? "S" : "N"
     };
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Conclusao tecnica registrada."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, id, "Conclusão técnica registrada."); })
       .withFailureHandler(astFalhaToast_)
       .astConcluirTecnica(SESSION, id, payload);
   }
@@ -2452,13 +2453,13 @@
     const input = document.getElementById("astEvidArquivo");
     if (input && input.files && input.files[0]) {
       return astUploadEntradaFotos_(id, "astEvidArquivo", function() {
-        astToast_("Evidencia anexada.");
+        astToast_("Evidência anexada.");
         astAbrirDetalhe_(id);
       });
     }
     const payload = {
       TIPO_FOTO: astVal_("astEvidTipo") || "EVIDENCIA_TECNICA",
-      DESCRICAO: astVal_("astEvidDesc") || prompt("Descricao da evidencia", "") || "",
+      DESCRICAO: astVal_("astEvidDesc") || prompt("Descrição da evidência", "") || "",
       VISIBILIDADE_PUBLICA: astVal_("astEvidPublica") || "N"
     };
     google.script.run
@@ -2478,7 +2479,7 @@
   function astResumoComercial_(id) {
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_(res && res.message || "Nao foi possivel gerar resumo.");
+        if (!astOk_(res)) return astToast_(res && res.message || "Não foi possível gerar resumo.");
         astCopiarTexto_(res.texto || res.resumo || "");
         astToast_("Resumo copiado.");
       })
@@ -2539,7 +2540,7 @@
         (astOptionsClientes_()),
         "</select></div>\n",
         "          <div><label>Unidade</label><select id=\"astGerUnidade\"><option value=\"\">Todas</option></select></div>\n",
-        "          <div><label>Tecnico</label><select id=\"astGerTecnico\"><option value=\"\">Todos</option>",
+        "          <div><label>Técnico</label><select id=\"astGerTecnico\"><option value=\"\">Todos</option>",
         (astOptionsTecnicos_()),
         "</select></div>\n",
         "          <div><label>Entrada ID</label><input id=\"astGerEntradaId\" placeholder=\"Para prontuario\"></div>\n",
@@ -2548,10 +2549,10 @@
         "          <div><button class=\"btn-primary\" type=\"button\" onclick=\"astAtualizarDashboardGerencial_()\">Atualizar</button></div>\n",
         "        </div>\n",
         "        <div class=\"ast-report-actions\">\n",
-        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('cliente')\">Relatorio por cliente</button>\n",
-        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('prontuario')\">Prontuario equipamento</button>\n",
+        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('cliente')\">Relatório por cliente</button>\n",
+        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('prontuario')\">Prontuário equipamento</button>\n",
         "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('executivo')\">Executivo geral</button>\n",
-        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('produtividade')\">Produtividade tecnico</button>\n",
+        "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('produtividade')\">Produtividade técnico</button>\n",
         "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('atrasados')\">Atrasados</button>\n",
         "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarPdfGerencial_('conformidade')\">Conformidade documental</button>\n",
         "          <button class=\"btn-secondary\" type=\"button\" onclick=\"astCopiarResumoExecutivo_()\">Resumo executivo</button>\n",
@@ -2581,7 +2582,7 @@
     const ok = function(res) { astAbrirDoc_(res); };
     const fail = astFalhaToast_;
     if (tipo === "prontuario") {
-      if (!filtros.ENTRADA_ID) return astToast_("Informe o ID da entrada para gerar o prontuario.");
+      if (!filtros.ENTRADA_ID) return astToast_("Informe o ID da entrada para gerar o prontuário.");
       return google.script.run.withSuccessHandler(ok).withFailureHandler(fail).astGerarProntuarioEquipamento(SESSION, filtros.ENTRADA_ID);
     }
     if (tipo === "cliente") return google.script.run.withSuccessHandler(ok).withFailureHandler(fail).astGerarRelatorioCliente(SESSION, filtros);
@@ -2651,7 +2652,7 @@
         "      <h3 class=\"ast-panel-title\">Triagem operacional</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
         "        <div><label>Status</label><select id=\"astTriagemStatus\"><option>TRIAGEM</option><option>DIAGNOSTICO</option><option>AGUARDANDO_DECISAO</option></select></div>\n",
-        "        <div><label>Proxima acao</label><input id=\"astTriagemProxima\" placeholder=\"Ex.: realizar diagnostico tecnico\"></div>\n",
+        "        <div><label>Próxima ação</label><input id=\"astTriagemProxima\" placeholder=\"Ex.: realizar diagnostico tecnico\"></div>\n",
         "        <div class=\"full\"><label>Descricao da triagem</label><textarea id=\"astTriagemDesc\" rows=\"4\"></textarea></div>\n",
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\">\n",
@@ -2667,35 +2668,35 @@
     const diag = (res.diagnosticos || [])[0] || {};
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Diagnostico tecnico</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Diagnóstico técnico</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
         "        <div class=\"full\"><label>Defeito confirmado</label><textarea id=\"astDiagDefeito\" rows=\"3\">",
         (astEsc_(diag.DEFEITO_CONFIRMADO || "")),
         "</textarea></div>\n",
-        "        <div class=\"full\"><label>Causa provavel</label><textarea id=\"astDiagCausa\" rows=\"3\">",
+        "        <div class=\"full\"><label>Causa provável</label><textarea id=\"astDiagCausa\" rows=\"3\">",
         (astEsc_(diag.CAUSA_PROVAVEL || "")),
         "</textarea></div>\n",
-        "        <div class=\"full\"><label>Recomendacao tecnica</label><textarea id=\"astDiagRecomendacao\" rows=\"3\">",
+        "        <div class=\"full\"><label>Recomendação técnica</label><textarea id=\"astDiagRecomendacao\" rows=\"3\">",
         (astEsc_(diag.RECOMENDACAO_TECNICA || "")),
         "</textarea></div>\n",
-        "        <div><label>Necessita peca</label><select id=\"astDiagPeca\"><option>N</option><option>S</option></select></div>\n",
+        "        <div><label>Necessita peça</label><select id=\"astDiagPeca\"><option>N</option><option>S</option></select></div>\n",
         "        <div><label>Necessita terceiro</label><select id=\"astDiagTerceiro\"><option>N</option><option>S</option></select></div>\n",
-        "        <div><label>Necessita laboratorio</label><select id=\"astDiagLab\"><option>N</option><option>S</option></select></div>\n",
-        "        <div><label>Risco critico</label><select id=\"astDiagRisco\"><option>N</option><option>S</option></select></div>\n",
-        "        <div><label>Status apos diagnostico</label><select id=\"astDiagStatus\">",
+        "        <div><label>Necessita laboratório</label><select id=\"astDiagLab\"><option>N</option><option>S</option></select></div>\n",
+        "        <div><label>Risco crítico</label><select id=\"astDiagRisco\"><option>N</option><option>S</option></select></div>\n",
+        "        <div><label>Status após diagnóstico</label><select id=\"astDiagStatus\">",
         (astOptionsStatus_("AGUARDANDO_DECISAO")),
         "</select></div>\n",
-        "        <div><label>Proxima acao</label><input id=\"astDiagProxima\" value=\"",
+        "        <div><label>Próxima ação</label><input id=\"astDiagProxima\" value=\"",
         (astEscAttr_(diag.PROXIMA_ACAO || "")),
         "\"></div>\n",
-        "        <div><label>Peca sugerida</label><input id=\"astDiagPecaDesc\"></div>\n",
+        "        <div><label>Peça sugerida</label><input id=\"astDiagPecaDesc\"></div>\n",
         "        <div><label>Qtd.</label><input id=\"astDiagPecaQtd\" type=\"number\" min=\"1\" value=\"1\"></div>\n",
-        "        <div class=\"full\"><label>Justificativa da peca</label><textarea id=\"astDiagPecaJust\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Justificativa da peça</label><textarea id=\"astDiagPecaJust\" rows=\"2\"></textarea></div>\n",
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\">\n",
         "        <button class=\"btn-primary\" type=\"button\" onclick=\"astSalvarDiagnostico_('",
         (id),
-        "')\">Salvar diagnostico</button>\n",
+        "')\">Salvar diagnóstico</button>\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarRelDiag_('",
         (id),
         "')\">Gerar relatorio</button>\n",
@@ -2726,14 +2727,14 @@
         "</select></td>\n",
         "      </tr>"
       ].join("");
-    }).join("") : '<tr><td colspan="4" class="ast-empty">Nenhuma peca registrada.</td></tr>';
+    }).join("") : '<tr><td colspan="4" class="ast-empty">Nenhuma peça registrada.</td></tr>';
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Pecas</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Peças</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
-        "        <div><label>Descricao da peca</label><input id=\"astPecaDesc\"></div>\n",
+        "        <div><label>Descrição da peça</label><input id=\"astPecaDesc\"></div>\n",
         "        <div><label>Quantidade</label><input id=\"astPecaQtd\" type=\"number\" min=\"1\" value=\"1\"></div>\n",
-        "        <div><label>Urgencia</label><select id=\"astPecaUrgencia\"><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>\n",
+        "        <div><label>Urgência</label><select id=\"astPecaUrgencia\"><option>NORMAL</option><option>BAIXA</option><option>ALTA</option><option>CRITICA</option></select></div>\n",
         "        <div><label>Status</label><select id=\"astPecaStatus\">",
         (astOptionsPecaStatus_("PECA_SOLICITADA")),
         "</select></div>\n",
@@ -2743,8 +2744,8 @@
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\"><button class=\"btn-primary\" type=\"button\" onclick=\"astSalvarPeca_('",
         (id),
-        "')\">Adicionar peca</button></div>\n",
-        "      <div class=\"table-wrap\" style=\"margin-top:14px;\"><table class=\"table\"><thead><tr><th>Peca</th><th>Qtd</th><th>Urgencia</th><th>Status</th></tr></thead><tbody>",
+        "')\">Adicionar peça</button></div>\n",
+        "      <div class=\"table-wrap\" style=\"margin-top:14px;\"><table class=\"table\"><thead><tr><th>Peça</th><th>Qtd</th><th>Urgência</th><th>Status</th></tr></thead><tbody>",
         (linhas),
         "</tbody></table></div>\n",
         "    "
@@ -2800,20 +2801,20 @@
   function astExecucaoHtml_(id) {
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Execucao / manutencao</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Execução / manutenção</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
         "        <div class=\"full\"><label>Servico realizado</label><textarea id=\"astExecServico\" rows=\"3\"></textarea></div>\n",
-        "        <div class=\"full\"><label>Pecas aplicadas</label><textarea id=\"astExecPecas\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Peças aplicadas</label><textarea id=\"astExecPecas\" rows=\"2\"></textarea></div>\n",
         "        <div class=\"full\"><label>Ajustes realizados</label><textarea id=\"astExecAjustes\" rows=\"2\"></textarea></div>\n",
         "        <div><label>Limpeza realizada</label><select id=\"astExecLimpeza\"><option>S</option><option>N</option></select></div>\n",
         "        <div><label>Garantia dias</label><input id=\"astExecGarantia\" type=\"number\" min=\"0\"></div>\n",
-        "        <div><label>Resultado final da execucao</label><select id=\"astExecResultado\"><option>AGUARDANDO_TESTE</option><option>REPARO_EXECUTADO</option><option>REPARO_PARCIAL</option><option>SEM_REPARO</option></select></div>\n",
-        "        <div class=\"full\"><label>Testes pos-reparo</label><textarea id=\"astExecTestes\" rows=\"2\"></textarea></div>\n",
-        "        <div class=\"full\"><label>Recomendacao final</label><textarea id=\"astExecRecomendacao\" rows=\"2\"></textarea></div>\n",
+        "        <div><label>Resultado final da execução</label><select id=\"astExecResultado\"><option>AGUARDANDO_TESTE</option><option>REPARO_EXECUTADO</option><option>REPARO_PARCIAL</option><option>SEM_REPARO</option></select></div>\n",
+        "        <div class=\"full\"><label>Testes pós-reparo</label><textarea id=\"astExecTestes\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Recomendação final</label><textarea id=\"astExecRecomendacao\" rows=\"2\"></textarea></div>\n",
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\"><button class=\"btn-primary\" type=\"button\" onclick=\"astSalvarExecucao_('",
         (id),
-        "')\">Salvar execucao</button></div>\n",
+        "')\">Salvar execução</button></div>\n",
         "    "
       ].join("");
   }
@@ -2821,14 +2822,14 @@
   function astTesteHtml_(id) {
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Teste / validacao</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Teste / validação</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
         "        <div><label>Tipo de teste</label><input id=\"astTesteTipo\"></div>\n",
         "        <div><label>Resultado</label><select id=\"astTesteResultado\"><option>APROVADO</option><option>REPROVADO</option><option>INCONCLUSIVO</option></select></div>\n",
         "        <div class=\"full\"><label>Procedimento realizado</label><textarea id=\"astTesteProcedimento\" rows=\"3\"></textarea></div>\n",
-        "        <div class=\"full\"><label>Parametros</label><textarea id=\"astTesteParametros\" rows=\"2\"></textarea></div>\n",
-        "        <div class=\"full\"><label>Evidencias</label><textarea id=\"astTesteEvidencias\" rows=\"2\"></textarea></div>\n",
-        "        <div class=\"full\"><label>Observacoes</label><textarea id=\"astTesteObs\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Parâmetros</label><textarea id=\"astTesteParametros\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Evidências</label><textarea id=\"astTesteEvidencias\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Observações</label><textarea id=\"astTesteObs\" rows=\"2\"></textarea></div>\n",
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\"><button class=\"btn-primary\" type=\"button\" onclick=\"astSalvarTeste_('",
         (id),
@@ -2840,18 +2841,18 @@
   function astConclusaoHtml_(id) {
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Conclusao tecnica</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Conclusão técnica</h3>\n",
         "      <div class=\"ast-form-grid\">\n",
-        "        <div class=\"full\"><label>Conclusao tecnica</label><textarea id=\"astConcTexto\" rows=\"4\"></textarea></div>\n",
+        "        <div class=\"full\"><label>Conclusão técnica</label><textarea id=\"astConcTexto\" rows=\"4\"></textarea></div>\n",
         "        <div><label>Resultado final</label><select id=\"astConcResultado\"><option>REPARADO</option><option>SEM_REPARO</option><option>APROVADO_COM_RESSALVA</option></select></div>\n",
         "        <div><label>Garantia dias</label><input id=\"astConcGarantia\" type=\"number\" min=\"0\"></div>\n",
-        "        <div class=\"full\"><label>Recomendacao ao cliente</label><textarea id=\"astConcRecomendacao\" rows=\"2\"></textarea></div>\n",
-        "        <div class=\"full\"><label><input id=\"astConcEntrega\" type=\"checkbox\" checked> Autorizar pronto entrega apos conclusao</label></div>\n",
+        "        <div class=\"full\"><label>Recomendação ao cliente</label><textarea id=\"astConcRecomendacao\" rows=\"2\"></textarea></div>\n",
+        "        <div class=\"full\"><label><input id=\"astConcEntrega\" type=\"checkbox\" checked> Autorizar pronto entrega após conclusão</label></div>\n",
         "      </div>\n",
         "      <div class=\"ast-actions\" style=\"margin-top:12px;\">\n",
         "        <button class=\"btn-primary\" type=\"button\" onclick=\"astConcluirTecnica_('",
         (id),
-        "')\">Concluir tecnica</button>\n",
+        "')\">Concluir técnica</button>\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarRelMan_('",
         (id),
         "')\">Gerar relatorio final</button>\n",
@@ -2903,29 +2904,29 @@
         "</td>\n",
         "        <td><div class=\"ast-actions\">",
         (d.DOWNLOAD_URL ? '<button class="btn-secondary" type="button" onclick="astOpen_(\'' + astEscAttr_(d.DOWNLOAD_URL) + '\')">Download</button>' : ""),
-        (d.URL_VALIDACAO ? '<button class="btn-secondary" type="button" onclick="astOpen_(\'' + astEscAttr_(d.URL_VALIDACAO) + '\')">Validacao</button>' : ""),
+        (d.URL_VALIDACAO ? '<button class="btn-secondary" type="button" onclick="astOpen_(\'' + astEscAttr_(d.URL_VALIDACAO) + '\')">Validação</button>' : ""),
         "</div></td>\n",
         "      </tr>"
       ].join("");
     }).join("") : '<tr><td colspan="4" class="ast-empty">Nenhum documento gerado.</td></tr>';
     return [
         "\n",
-        "      <h3 class=\"ast-panel-title\">Documentos tecnicos</h3>\n",
+        "      <h3 class=\"ast-panel-title\">Documentos técnicos</h3>\n",
         "      <div class=\"ast-actions\" style=\"margin-bottom:12px;\">\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarDocumentoEntrada_('",
         (id),
         "')\">Gerar protocolo</button>\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarRelDiag_('",
         (id),
-        "')\">Relatorio diagnostico</button>\n",
+        "')\">Relatório diagnóstico</button>\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astGerarRelMan_('",
         (id),
-        "')\">Relatorio manutencao</button>\n",
+        "')\">Relatório manutenção</button>\n",
         "        <button class=\"btn-secondary\" type=\"button\" onclick=\"astBaixarEtiquetaPdf_('",
         (id),
         "')\">Etiqueta PDF</button>\n",
         "      </div>\n",
-        "      <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Tipo</th><th>Titulo</th><th>Token</th><th>Acoes</th></tr></thead><tbody>",
+        "      <div class=\"table-wrap\"><table class=\"table\"><thead><tr><th>Tipo</th><th>Titulo</th><th>Token</th><th>Ações</th></tr></thead><tbody>",
         (rows),
         "</tbody></table></div>\n",
         "    "
@@ -2949,7 +2950,7 @@
 
   function astAtualizarPeca_(pecaId, status) {
     google.script.run
-      .withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Status da peca atualizado."); })
+      .withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Status da peça atualizado."); })
       .withFailureHandler(astFalhaToast_)
       .astAtualizarPeca(SESSION, pecaId, { STATUS: status });
   }
@@ -2967,24 +2968,24 @@
   }
 
   function astV2AbrirRelatorioTecnico_(id) {
-    astToast_("Gerando Relatorio Tecnico Final... aguarde.");
+    astToast_("Gerando Relatório Técnico Final... aguarde.");
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar relatorio."); return; }
-        astToast_("Relatorio Tecnico Final gerado com sucesso.");
-        if (res.pdfUrl) window.open(res.pdfUrl, "_blank", "noopener");
+        if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar relatório."); return; }
+        astToast_("Relatório Técnico Final gerado com sucesso.");
+        if (res.pdfUrl) astAbrirDocV2_(res.pdfUrl, "Relatório Técnico");
       })
       .withFailureHandler(astFalhaToast_)
       .astV2GerarRelatorioTecnico(SESSION, id);
   }
 
   function astV2AbrirProtocoloSaida_(id) {
-    astToast_("Gerando Protocolo de Saida... aguarde.");
+    astToast_("Gerando Protocolo de Saída... aguarde.");
     google.script.run
       .withSuccessHandler(function(res) {
         if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar protocolo."); return; }
-        astToast_("Protocolo de Saida gerado com sucesso.");
-        if (res.pdfUrl) window.open(res.pdfUrl, "_blank", "noopener");
+        astToast_("Protocolo de Saída gerado com sucesso.");
+        if (res.pdfUrl) astAbrirDocV2_(res.pdfUrl, "Protocolo de Saída");
       })
       .withFailureHandler(astFalhaToast_)
       .astV2GerarProtocoloSaida(SESSION, id);
@@ -3005,7 +3006,7 @@
   function astCopiarWhats_(id) {
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_(res && res.message || "Nao foi possivel gerar WhatsApp.");
+        if (!astOk_(res)) return astToast_(res && res.message || "Não foi possível gerar WhatsApp.");
         astCopiarTexto_(res.texto || "");
         astToast_("Mensagem copiada.");
       })
@@ -3016,7 +3017,7 @@
   function astAbrirWhats_(id) {
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!astOk_(res)) return astToast_(res && res.message || "Nao foi possivel abrir WhatsApp.");
+        if (!astOk_(res)) return astToast_(res && res.message || "Não foi possível abrir WhatsApp.");
         astOpen_(res.url || ("https://wa.me/?text=" + encodeURIComponent(res.texto || "")));
       })
       .withFailureHandler(astFalhaToast_)
@@ -3255,15 +3256,15 @@
 
   function astTerceirosListaHtml_(items) {
     if (!items || !items.length) return '<div class="ast-empty">Nenhum envio a terceiro registrado.</div>';
-    return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Fornecedor</th><th>Status</th><th>Prazo</th><th>Acoes</th></tr></thead><tbody>' + items.map(function(t) {
-      return '<tr><td>' + astEsc_(t.FORNECEDOR_NOME || t.FORNECEDOR_ID || "--") + '</td><td>' + astEsc_(t.STATUS_TERCEIRO || t.STATUS || "--") + '</td><td>' + astData_(t.PRAZO_PREVISTO || t.PRAZO_INFORMADO) + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astRegistrarAcessorioTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Acessorio</button><button class="btn-secondary" type="button" onclick="astAnexarTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Anexo</button><button class="btn-secondary" type="button" onclick="astAcompanharTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Follow-up</button><button class="btn-secondary" type="button" onclick="astRetornoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Retorno</button><button class="btn-secondary" type="button" onclick="astInspecaoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Inspecao</button><button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsTerceiro_(\'' + astEscAttr_(t.ID) + '\')">WhatsApp</button></div></td></tr>';
+    return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Fornecedor</th><th>Status</th><th>Prazo</th><th>Ações</th></tr></thead><tbody>' + items.map(function(t) {
+      return '<tr><td>' + astEsc_(t.FORNECEDOR_NOME || t.FORNECEDOR_ID || "--") + '</td><td>' + astEsc_(t.STATUS_TERCEIRO || t.STATUS || "--") + '</td><td>' + astData_(t.PRAZO_PREVISTO || t.PRAZO_INFORMADO) + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astRegistrarAcessorioTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Acessorio</button><button class="btn-secondary" type="button" onclick="astAnexarTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Anexo</button><button class="btn-secondary" type="button" onclick="astAcompanharTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Follow-up</button><button class="btn-secondary" type="button" onclick="astRetornoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Retorno</button><button class="btn-secondary" type="button" onclick="astInspecaoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Inspeção</button><button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsTerceiro_(\'' + astEscAttr_(t.ID) + '\')">WhatsApp</button></div></td></tr>';
     }).join("") + '</tbody></table></div>';
   }
 
   function astLabsListaHtml_(items) {
-    if (!items || !items.length) return '<div class="ast-empty">Nenhuma entrada em laboratorio registrada.</div>';
-    return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Servico</th><th>Status</th><th>Resultado</th><th>Acoes</th></tr></thead><tbody>' + items.map(function(l) {
-      return '<tr><td>' + astEsc_(l.TIPO_SERVICO || "--") + '</td><td>' + astEsc_(l.STATUS || "--") + '</td><td>' + astEsc_(l.RESULTADO_FINAL || l.CONFORMIDADE || "--") + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astAddPadraoLab_(\'' + astEscAttr_(l.ID) + '\')">Padrao</button><button class="btn-secondary" type="button" onclick="astRegistrarEnsaioLab_(\'' + astEscAttr_(l.ID) + '\')">Ensaio</button><button class="btn-secondary" type="button" onclick="astAnexarEvidLab_(\'' + astEscAttr_(l.ID) + '\')">Evidencia</button><button class="btn-secondary" type="button" onclick="astConsolidarLab_(\'' + astEscAttr_(l.ID) + '\')">Consolidar</button><button class="btn-secondary" type="button" onclick="astGerarDocLab_(\'' + astEscAttr_(l.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsLab_(\'' + astEscAttr_(l.ID) + '\')">WhatsApp</button></div></td></tr>';
+    if (!items || !items.length) return '<div class="ast-empty">Nenhuma entrada em laboratório registrada.</div>';
+    return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Servico</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead><tbody>' + items.map(function(l) {
+      return '<tr><td>' + astEsc_(l.TIPO_SERVICO || "--") + '</td><td>' + astEsc_(l.STATUS || "--") + '</td><td>' + astEsc_(l.RESULTADO_FINAL || l.CONFORMIDADE || "--") + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astAddPadraoLab_(\'' + astEscAttr_(l.ID) + '\')">Padrao</button><button class="btn-secondary" type="button" onclick="astRegistrarEnsaioLab_(\'' + astEscAttr_(l.ID) + '\')">Ensaio</button><button class="btn-secondary" type="button" onclick="astAnexarEvidLab_(\'' + astEscAttr_(l.ID) + '\')">Evidência</button><button class="btn-secondary" type="button" onclick="astConsolidarLab_(\'' + astEscAttr_(l.ID) + '\')">Consolidar</button><button class="btn-secondary" type="button" onclick="astGerarDocLab_(\'' + astEscAttr_(l.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsLab_(\'' + astEscAttr_(l.ID) + '\')">WhatsApp</button></div></td></tr>';
     }).join("") + '</tbody></table></div>';
   }
 
@@ -3293,7 +3294,7 @@
       CANAL: prompt("Canal", "WHATSAPP") || "WHATSAPP",
       STATUS_INFORMADO: prompt("Status informado pelo terceiro", "") || "",
       PRAZO_INFORMADO: prompt("Prazo informado", "") || "",
-      PROXIMA_ACAO: prompt("Proxima acao", "") || "",
+      PROXIMA_ACAO: prompt("Próxima ação", "") || "",
       INFORMACAO_RECEBIDA: prompt("Informacao recebida", "") || ""
     };
     google.script.run.withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Acompanhamento registrado."); }).withFailureHandler(astFalhaToast_).astRegistrarAcompanhamentoTerceiro(SESSION, terceiroId, payload);
@@ -3304,7 +3305,7 @@
       DATA_RETORNO: prompt("Data de retorno", astHoje_()) || astHoje_(),
       CONDICAO_RETORNO: prompt("Condicao de retorno", "Recebido para conferencia interna") || "Recebido para conferencia interna",
       SERVICO_TERCEIRO: prompt("Servico realizado pelo terceiro", "") || "",
-      CONCLUSAO_RETORNO: prompt("Conclusao do retorno", "Retorno registrado para inspecao interna") || "Retorno registrado para inspecao interna",
+      CONCLUSAO_RETORNO: prompt("Conclusão do retorno", "Retorno registrado para inspeção interna") || "Retorno registrado para inspeção interna",
       PRECISA_TESTE_INTERNO: prompt("Precisa teste interno? S/N", "S") || "S"
     };
     google.script.run.withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Retorno do terceiro registrado."); }).withFailureHandler(astFalhaToast_).astRegistrarRetornoTerceiro(SESSION, terceiroId, payload);
@@ -3314,7 +3315,7 @@
     const payload = {
       INSPECAO_RESULTADO: prompt("Resultado da inspecao", "APROVADO") || "APROVADO",
       INSPECAO_OBSERVACOES: prompt("Observacao da inspecao", "") || "",
-      INSPECAO_PROXIMA_ACAO: prompt("Proxima acao", "Prosseguir fluxo tecnico") || "Prosseguir fluxo tecnico"
+      INSPECAO_PROXIMA_ACAO: prompt("Próxima ação", "Prosseguir fluxo técnico") || "Prosseguir fluxo técnico"
     };
     google.script.run.withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Inspecao pos-retorno registrada."); }).withFailureHandler(astFalhaToast_).astRegistrarInspecaoRetornoTerceiro(SESSION, terceiroId, payload);
   }
@@ -3362,7 +3363,7 @@
       CONFORMIDADE: prompt("Conformidade", "CONFORME") || "CONFORME",
       RESUMO_TECNICO: prompt("Parecer tecnico", "") || "",
       NECESSITA_MANUTENCAO: prompt("Necessita manutencao? S/N", "N") || "N",
-      PROXIMA_ACAO: prompt("Proxima acao", "") || ""
+      PROXIMA_ACAO: prompt("Próxima ação", "") || ""
     };
     google.script.run.withSuccessHandler(function(res) { astAfterAction_(res, AST_STATE.selecionada, "Resultado laboratorial consolidado."); }).withFailureHandler(astFalhaToast_).astConsolidarResultadoLaboratorio(SESSION, labId, payload);
   }
@@ -3458,18 +3459,18 @@
   }
 
   function astAfterAction_(res, id, msg) {
-    if (!astOk_(res)) return astToast_(res && res.message || "Operacao nao concluida.");
-    astToast_(msg || "Operacao concluida.");
+    if (!astOk_(res)) return astToast_(res && res.message || "Operação não concluída.");
+    astToast_(msg || "Operação concluída.");
     if (id) astAbrirDetalhe_(id, { preservar: true });
   }
 
   function astAbrirDoc_(res) {
-    if (!astOk_(res)) return astToast_(res && res.message || "Documento nao gerado.");
+    if (!astOk_(res)) return astToast_(res && res.message || "Documento não gerado.");
     astOpen_(res.downloadUrl || res.pdfUrl || res.url || res.LINK_ARQUIVO || res.DOWNLOAD_URL);
   }
 
   function astAbrirEtiqueta_(res) {
-    if (!astOk_(res)) return astToast_(res && res.message || "Etiqueta nao gerada.");
+    if (!astOk_(res)) return astToast_(res && res.message || "Etiqueta não gerada.");
     const html = res.html || res.HTML || "";
     if (html) {
       const w = window.open("", "_blank");
@@ -3480,8 +3481,21 @@
   }
 
   function astOpen_(url) {
-    if (!url) return astToast_("Link indisponivel.");
+    if (!url) return astToast_("Link indisponível.");
     window.open(url, "_blank", "noopener");
+  }
+
+  function astAbrirDocV2_(url, label) {
+    if (!url) return astToast_("Link indisponível.");
+    var w = window.open(url, "_blank", "noopener");
+    if (!w) {
+      var c = document.getElementById("astV2DocLinkContainer");
+      if (c) {
+        c.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" style="display:inline-block;padding:6px 12px;background:#0ea5e9;color:#fff;border-radius:4px;text-decoration:none;font-size:13px;">Abrir ' + (label || "documento") + ' &rarr;</a>';
+        c.style.display = "block";
+      }
+      astToast_("Popup bloqueado. Use o link abaixo para abrir o documento.");
+    }
   }
 
   function astCopiarTexto_(texto) {
