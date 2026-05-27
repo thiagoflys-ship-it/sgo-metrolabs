@@ -1966,7 +1966,6 @@
     if (["CANCELADO", "ENTREGUE", "NAO_REPARADO"].indexOf(status) < 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarStatusCard_(\'' + id + '\',\'' + status + '\')">&#128260; Atualizar Status</button>');
     }
-    acoes.push('<span class="ast-v2-acao-stub">Gerar Relatorio Tecnico &mdash; em breve (C.4)</span>');
     return [
       '<div class="ast-v2-det-section">',
         '<h4>Acoes da Etapa</h4>',
