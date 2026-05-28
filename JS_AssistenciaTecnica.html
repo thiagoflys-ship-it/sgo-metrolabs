@@ -1991,8 +1991,8 @@
         '<div style="display:flex;flex-direction:column;gap:8px;">',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewRelatorioTecnico_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Relat&oacute;rio T&eacute;cnico</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewProtocoloSaida_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Protocolo de Sa&iacute;da</button>',
@@ -2995,6 +2995,83 @@
       })
       .withFailureHandler(astFalhaToast_)
       .astV2GerarProtocoloSaida(SESSION, id);
+  }
+
+  function astV2MostrarDuplicidadeDoc_(atendimentoId, rotulo, doc, gerarFn) {
+    var overlayId = "astV2DupDocOverlay";
+    var existing = document.getElementById(overlayId);
+    if (existing) existing.parentNode.removeChild(existing);
+    var dataExib   = doc.dataEmissao ? doc.dataEmissao.toString().slice(0, 10) : '--';
+    var tokenExib  = doc.token  ? doc.token.toString().slice(0, 24) : '--';
+    var hashExib   = doc.hash   ? doc.hash.toString().slice(0, 16) + '...' : '--';
+    var statusExib = doc.status || 'VALIDO';
+    var overlay = document.createElement("div");
+    overlay.id = overlayId;
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.70);z-index:99999;display:flex;align-items:center;justify-content:center;";
+    var card = document.createElement("div");
+    card.style.cssText = "background:#fff;border-radius:8px;padding:24px 28px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.22);font-family:Arial,sans-serif;";
+    card.innerHTML =
+      '<div style="font-size:14px;font-weight:900;color:#0b3b78;margin-bottom:8px;">Documento j&aacute; emitido</div>' +
+      '<div style="font-size:12px;color:#334155;margin-bottom:14px;">J&aacute; existe um <strong>' + rotulo + '</strong> v&aacute;lido para este atendimento.</div>' +
+      '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:#475569;">' +
+        '<div style="margin-bottom:3px;"><span style="font-weight:700;color:#64748b;">Emitido em:</span> ' + dataExib + '</div>' +
+        '<div style="margin-bottom:3px;"><span style="font-weight:700;color:#64748b;">Token:</span> ' + tokenExib + '</div>' +
+        '<div style="margin-bottom:3px;"><span style="font-weight:700;color:#64748b;">Status:</span> ' + statusExib + '</div>' +
+        '<div><span style="font-weight:700;color:#64748b;">Hash:</span> ' + hashExib + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button id="astDupCancelar_" style="padding:7px 14px;border:1px solid #e2e8f0;border-radius:5px;background:#fff;color:#64748b;font-size:12px;cursor:pointer;">Cancelar</button>' +
+        '<button id="astDupGerarNova_" style="padding:7px 14px;border:none;border-radius:5px;background:#b45309;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Gerar nova vers&atilde;o</button>' +
+        '<button id="astDupAbrirExist_" style="padding:7px 14px;border:none;border-radius:5px;background:#0369a1;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Abrir existente</button>' +
+      '</div>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    function fechar_() {
+      var el = document.getElementById(overlayId);
+      if (el) el.parentNode.removeChild(el);
+    }
+    document.getElementById("astDupCancelar_").onclick = function() { fechar_(); };
+    document.getElementById("astDupAbrirExist_").onclick = function() {
+      fechar_();
+      if (doc.pdfUrl) astAbrirDocV2_(doc.pdfUrl, rotulo);
+      else astToast_("Link indisponível para este documento.");
+    };
+    document.getElementById("astDupGerarNova_").onclick = function() { fechar_(); gerarFn(); };
+    overlay.onclick = function(e) { if (e.target === overlay) fechar_(); };
+  }
+
+  function astV2SolicitarRelatorioTecnico_(id) {
+    if (!id) return astToast_("ID do atendimento não disponível.");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_("Erro ao verificar documentos. Tente novamente."); return; }
+        if (res.existe && res.documento) {
+          astV2MostrarDuplicidadeDoc_(id, "Relatório Técnico Final", res.documento, function() {
+            astV2AbrirRelatorioTecnico_(id);
+          });
+        } else {
+          astV2AbrirRelatorioTecnico_(id);
+        }
+      })
+      .withFailureHandler(function() { astToast_("Erro ao verificar documentos. Tente novamente."); })
+      .astV2VerificarDocumentoExistente(SESSION, id, "AT_RELATORIO_TECNICO_V2");
+  }
+
+  function astV2SolicitarProtocoloSaida_(id) {
+    if (!id) return astToast_("ID do atendimento não disponível.");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_("Erro ao verificar documentos. Tente novamente."); return; }
+        if (res.existe && res.documento) {
+          astV2MostrarDuplicidadeDoc_(id, "Protocolo de Saída", res.documento, function() {
+            astV2AbrirProtocoloSaida_(id);
+          });
+        } else {
+          astV2AbrirProtocoloSaida_(id);
+        }
+      })
+      .withFailureHandler(function() { astToast_("Erro ao verificar documentos. Tente novamente."); })
+      .astV2VerificarDocumentoExistente(SESSION, id, "AT_PROTOCOLO_SAIDA_V2");
   }
 
   function astV2PreviewRelatorioTecnico_(atendimentoId) {
