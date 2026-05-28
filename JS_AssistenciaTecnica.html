@@ -1189,6 +1189,7 @@
         '</aside>',
       '</div>'
     ].join(""));
+    setTimeout(function() { astV2CarregarDocumentosEmitidos_(e.ID); }, 0);
   }
 
   function astDetalheV2HeroHtml_(e) {
@@ -1997,6 +1998,7 @@
           '<button class="ast-v2-acao-btn" type="button" onclick="astV2TestarVisualizadorDocumento_()" style="background:#7c3aed;border-color:#6d28d9;font-size:11px;opacity:0.85;">&#128295; Teste interno &mdash; Visualizador HTML</button>',
         '</div>',
         '<div id="astV2DocLinkContainer" style="display:none;margin-top:8px;"></div>',
+        '<div id="astV2DocsEmitidosList" style="margin-top:8px;"></div>',
       '</div>'
     ].join("");
   }
@@ -2976,6 +2978,7 @@
         if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar relatório."); return; }
         astToast_("Relatório Técnico Final gerado com sucesso.");
         if (res.pdfUrl) astAbrirDocV2_(res.pdfUrl, "Relatório Técnico");
+        astV2CarregarDocumentosEmitidos_(id);
       })
       .withFailureHandler(astFalhaToast_)
       .astV2GerarRelatorioTecnico(SESSION, id);
@@ -2988,9 +2991,108 @@
         if (!astOk_(res)) { astToast_(res && res.message || "Erro ao gerar protocolo."); return; }
         astToast_("Protocolo de Saída gerado com sucesso.");
         if (res.pdfUrl) astAbrirDocV2_(res.pdfUrl, "Protocolo de Saída");
+        astV2CarregarDocumentosEmitidos_(id);
       })
       .withFailureHandler(astFalhaToast_)
       .astV2GerarProtocoloSaida(SESSION, id);
+  }
+
+  function astV2CarregarDocumentosEmitidos_(atendimentoId) {
+    var c = document.getElementById("astV2DocsEmitidosList");
+    if (!c || !atendimentoId) return;
+    c.innerHTML = '<div style="font-size:11px;color:#94a3b8;padding:6px 0;">Carregando documentos...</div>';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { c.innerHTML = '<div style="font-size:11px;color:#ef4444;">Erro ao carregar documentos.</div>'; return; }
+        c.innerHTML = astV2RenderizarDocumentosEmitidos_(res.documentos || []);
+      })
+      .withFailureHandler(function() { c.innerHTML = '<div style="font-size:11px;color:#ef4444;">Falha ao carregar documentos.</div>'; })
+      .astV2ListarDocumentosEmitidos(SESSION, atendimentoId);
+  }
+
+  function astV2DocItemHtml_(d, destaque) {
+    var nome = astEsc_(d.nome || d.tipo || 'Documento');
+    var dataEmissao = astEsc_(d.dataEmissao || '--');
+    var status = astEsc_(d.status || '');
+    var token = astEsc_(d.token || '');
+    var hash = astEsc_((d.hash || '').substring(0, 12));
+    var pdfUrl = astEscAttr_(d.pdfUrl || '');
+    var downloadUrl = astEscAttr_(d.downloadUrl || '');
+    var bg = destaque ? '#f0f9ff' : '#f8fafc';
+    var borda = destaque ? '#bae6fd' : '#e2e8f0';
+    var h = '<div style="border:1px solid ' + borda + ';border-radius:4px;padding:7px 8px;background:' + bg + ';">';
+    h += '<div style="font-size:10px;font-weight:900;color:#0b3b78;margin-bottom:2px;">' + nome + '</div>';
+    if (d.dataEmissao) h += '<div style="font-size:9px;color:#64748b;">Emitido em: ' + dataEmissao + '</div>';
+    if (d.token) h += '<div style="font-size:9px;color:#64748b;font-family:monospace;">Token: ' + token + '</div>';
+    if (d.hash) h += '<div style="font-size:9px;color:#94a3b8;font-family:monospace;">Hash: ' + hash + '&#8230;</div>';
+    if (d.status) h += '<div style="font-size:9px;font-weight:700;color:' + (d.status === 'VALIDO' ? '#065f46' : '#92400e') + ';">' + status + '</div>';
+    h += '<div style="display:flex;gap:4px;margin-top:5px;">';
+    if (d.pdfUrl) h += '<button class="ast-v2-acao-btn" type="button" style="font-size:10px;padding:3px 7px;" onclick="astV2AbrirDocumentoEmitido_(\'' + pdfUrl + '\')">&#128196; Abrir PDF</button>';
+    if (d.downloadUrl) h += '<button class="ast-v2-acao-btn" type="button" style="font-size:10px;padding:3px 7px;" onclick="astV2BaixarDocumentoEmitido_(\'' + downloadUrl + '\')">&#11015; Download</button>';
+    h += '</div></div>';
+    return h;
+  }
+
+  function astV2RenderizarDocumentosEmitidos_(docs) {
+    if (!docs || !docs.length) return '<div style="font-size:11px;color:#94a3b8;padding:6px 0;text-align:center;">Nenhum documento emitido ainda.</div>';
+    var tipoLabel = {
+      'AT_RELATORIO_TECNICO_V2':       'Relat&oacute;rio T&eacute;cnico Final',
+      'AT_PROTOCOLO_SAIDA_V2':         'Protocolo de Sa&iacute;da',
+      'COMPROVANTE_ENTRADA_EQUIPAMENTO': 'Protocolo de Entrada'
+    };
+    var grupos = {};
+    var ordemTipos = [];
+    for (var i = 0; i < docs.length; i++) {
+      var tipo = docs[i].tipo || 'OUTROS';
+      if (!grupos[tipo]) { grupos[tipo] = []; ordemTipos.push(tipo); }
+      grupos[tipo].push(docs[i]);
+    }
+    var html = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;margin:6px 0 4px;letter-spacing:.4px;">Documentos emitidos</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    for (var t = 0; t < ordemTipos.length; t++) {
+      var grTipo = ordemTipos[t];
+      var grupo = grupos[grTipo];
+      var labelTipo = tipoLabel[grTipo] || astEsc_(grTipo);
+      var tipoKey = grTipo.replace(/[^A-Za-z0-9_]/g, '_');
+      html += '<div>';
+      html += '<div style="font-size:9px;font-weight:900;text-transform:uppercase;color:#475467;letter-spacing:.4px;margin-bottom:3px;">' + labelTipo + '</div>';
+      html += astV2DocItemHtml_(grupo[0], true);
+      if (grupo.length > 1) {
+        var nAntes = grupo.length - 1;
+        html += '<div style="margin-top:3px;">';
+        html += '<button type="button" id="astV2DocHistBtn_' + tipoKey + '" data-more="Ver anteriores (' + nAntes + ')" onclick="astV2ToggleDocHist_(\'' + tipoKey + '\')" style="background:none;border:none;color:#64748b;font-size:9px;font-weight:700;cursor:pointer;padding:2px 0;text-decoration:underline;">Ver anteriores (' + nAntes + ')</button>';
+        html += '<div id="astV2DocHist_' + tipoKey + '" style="display:none;margin-top:4px;"><div style="display:flex;flex-direction:column;gap:4px;">';
+        for (var j = 1; j < grupo.length; j++) html += astV2DocItemHtml_(grupo[j], false);
+        html += '</div></div></div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function astV2ToggleDocHist_(tipoKey) {
+    var el = document.getElementById("astV2DocHist_" + tipoKey);
+    if (!el) return;
+    var visible = el.style.display !== "none";
+    el.style.display = visible ? "none" : "block";
+    var btn = document.getElementById("astV2DocHistBtn_" + tipoKey);
+    if (!btn) return;
+    btn.textContent = visible ? btn.getAttribute("data-more") : "Ocultar anteriores";
+  }
+
+  function astV2AbrirDocumentoEmitido_(url) {
+    if (!url) return astToast_("Link indisponível.");
+    window.open(url, "_blank", "noopener");
+  }
+
+  function astV2BaixarDocumentoEmitido_(url) {
+    if (!url) return astToast_("Link indisponível.");
+    var a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.click();
   }
 
   function astVerQR_(id) {
