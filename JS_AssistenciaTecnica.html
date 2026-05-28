@@ -1993,6 +1993,8 @@
           '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astV2AbrirProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
           '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
+          '<hr style="margin:8px 0;border:none;border-top:1px dashed #cbd5e1;">',
+          '<button class="ast-v2-acao-btn" type="button" onclick="astV2TestarVisualizadorDocumento_()" style="background:#7c3aed;border-color:#6d28d9;font-size:11px;opacity:0.85;">&#128295; Teste interno &mdash; Visualizador HTML</button>',
         '</div>',
         '<div id="astV2DocLinkContainer" style="display:none;margin-top:8px;"></div>',
       '</div>'
@@ -3560,4 +3562,108 @@
     return String(v == null ? "" : v).replace(/[&<>"']/g, function(c) { return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c]; });
   }
   function astEscAttr_(v) { return astEsc_(v).replace(/\x60/g, "&#96;"); }
+
+  // E.7D.0 — Prova tecnica do visualizador HTML. Chamar via console: astV2TestarVisualizadorDocumento_()
+  function astV2TestarVisualizadorDocumento_() {
+    var existing = document.getElementById("astV2TestOverlay");
+    if (existing) { existing.parentNode.removeChild(existing); return; }
+
+    var overlay = document.createElement("div");
+    overlay.id = "astV2TestOverlay";
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;box-sizing:border-box;";
+
+    var bar = document.createElement("div");
+    bar.style.cssText = "width:100%;max-width:900px;background:#1a2a4a;color:#fff;padding:10px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;";
+    var titulo = document.createElement("span");
+    titulo.style.cssText = "font-weight:700;font-size:14px;";
+    titulo.textContent = "PRE-VISUALIZACAO DE DOCUMENTO (TESTE E.7D.0)";
+    var btnClose = document.createElement("button");
+    btnClose.textContent = "Fechar X";
+    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:13px;";
+    btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
+    bar.appendChild(titulo);
+    bar.appendChild(btnClose);
+
+    var iframeWrap = document.createElement("div");
+    iframeWrap.style.cssText = "width:100%;max-width:900px;flex:1;background:#fff;border-radius:0 0 6px 6px;overflow:hidden;min-height:0;";
+
+    var iframe = document.createElement("iframe");
+    iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
+
+    iframeWrap.appendChild(iframe);
+    overlay.appendChild(bar);
+    overlay.appendChild(iframeWrap);
+    document.body.appendChild(overlay);
+
+    var h = "";
+    h += "<!DOCTYPE html><html><head><meta charset='UTF-8'>";
+    h += "<style>";
+    h += "body{margin:0;padding:28px;font-family:Arial,sans-serif;font-size:12px;color:#222;background:#f5f5f5;}";
+    h += ".doc{max-width:740px;margin:0 auto;background:#fff;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,0.12);}";
+    h += ".header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a2a4a;padding-bottom:12px;margin-bottom:18px;}";
+    h += ".brand{font-size:20px;font-weight:700;color:#1a2a4a;letter-spacing:1px;}";
+    h += ".brand-sub{font-size:10px;color:#555;margin-top:2px;}";
+    h += ".doc-type{text-align:right;font-size:11px;color:#333;}";
+    h += ".doc-type strong{font-size:13px;display:block;margin-bottom:4px;}";
+    h += ".titulo{text-align:center;font-size:15px;font-weight:700;color:#1a2a4a;margin:0 0 18px;text-transform:uppercase;letter-spacing:0.5px;}";
+    h += ".secao{margin-bottom:14px;border:1px solid #dde;border-radius:4px;overflow:hidden;}";
+    h += ".secao-titulo{background:#1a2a4a;color:#fff;font-size:11px;font-weight:700;padding:6px 10px;letter-spacing:0.5px;text-transform:uppercase;}";
+    h += ".secao-corpo{padding:10px 12px;}";
+    h += ".kv{display:flex;margin-bottom:5px;line-height:1.4;}";
+    h += ".lbl{width:190px;font-weight:700;color:#444;flex-shrink:0;font-size:11px;}";
+    h += ".val{flex:1;font-size:12px;}";
+    h += ".assinaturas{display:flex;gap:40px;padding-top:20px;}";
+    h += ".assinatura{flex:1;border-top:1px solid #444;padding-top:6px;text-align:center;font-size:11px;color:#444;}";
+    h += ".footer{margin-top:24px;border-top:1px solid #ccc;padding-top:10px;font-size:10px;color:#888;text-align:center;line-height:1.6;}";
+    h += "</style></head><body>";
+    h += "<div class='doc'>";
+    h += "<div class='header'>";
+    h += "<div>";
+    h += "<div class='brand'>METROLABS</div>";
+    h += "<div class='brand-sub'>Solucoes em Engenharia Clinica</div>";
+    h += "<div class='brand-sub'>CNPJ: 99.999.999/0001-99</div>";
+    h += "<div class='brand-sub'>Tel: (11) 9999-9999 | contato@metrolabs.com.br</div>";
+    h += "</div>";
+    h += "<div class='doc-type'>";
+    h += "<strong>RELATORIO TECNICO FINAL</strong>";
+    h += "<div>Protocolo: AT-20260527-TESTE</div>";
+    h += "<div>Data: 27/05/2026</div>";
+    h += "</div>";
+    h += "</div>";
+    h += "<div class='titulo'>Pre-visualizacao de Documento</div>";
+    h += "<div class='secao'>";
+    h += "<div class='secao-titulo'>Dados do Equipamento</div>";
+    h += "<div class='secao-corpo'>";
+    h += "<div class='kv'><div class='lbl'>Equipamento:</div><div class='val'>Monitor Multiparametros</div></div>";
+    h += "<div class='kv'><div class='lbl'>Fabricante:</div><div class='val'>Marca Exemplo S.A.</div></div>";
+    h += "<div class='kv'><div class='lbl'>Modelo:</div><div class='val'>Modelo X100</div></div>";
+    h += "<div class='kv'><div class='lbl'>Numero de serie:</div><div class='val'>SN-2024-00001</div></div>";
+    h += "<div class='kv'><div class='lbl'>Patrimonio:</div><div class='val'>PAT-0099</div></div>";
+    h += "</div></div>";
+    h += "<div class='secao'>";
+    h += "<div class='secao-titulo'>Diagnostico e Procedimentos</div>";
+    h += "<div class='secao-corpo'>";
+    h += "<div class='kv'><div class='lbl'>Problema relatado:</div><div class='val'>Tela sem imagem apos queda de energia.</div></div>";
+    h += "<div class='kv'><div class='lbl'>Diagnostico:</div><div class='val'>Fonte interna com defeito identificado em vistoria tecnica.</div></div>";
+    h += "<div class='kv'><div class='lbl'>Procedimento:</div><div class='val'>Substituicao de componentes e teste funcional completo.</div></div>";
+    h += "<div class='kv'><div class='lbl'>Resultado:</div><div class='val'>Equipamento retorna operacional dentro das especificacoes.</div></div>";
+    h += "</div></div>";
+    h += "<div class='secao'>";
+    h += "<div class='secao-titulo'>Assinaturas</div>";
+    h += "<div class='secao-corpo'>";
+    h += "<div class='assinaturas'>";
+    h += "<div class='assinatura'>Tecnico Responsavel<br>Douglas Oliveira</div>";
+    h += "<div class='assinatura'>Responsavel pela Entrega<br>Charles Santos</div>";
+    h += "</div>";
+    h += "</div></div>";
+    h += "<div class='footer'>";
+    h += "Este documento e gerado eletronicamente pelo SGO+ Metrolabs.<br>";
+    h += "Token: TESTE-TOKEN-E7D0 | Hash SHA-256: ABCDE12345FGHIJ67890<br>";
+    h += "Validacao em: https://metrolabs.com.br/validar | TESTE E.7D.0";
+    h += "</div>";
+    h += "</div>";
+    h += "</body></html>";
+
+    iframe.srcdoc = h;
+  }
 </script>
