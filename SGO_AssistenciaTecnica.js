@@ -3438,8 +3438,7 @@
         '.status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.03em;margin-top:3px}' +
         '.alert-banner{background:#fef9c3;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:4px;padding:6px 10px;font-size:8.5px;font-weight:700;color:#92400e;margin:0 0 10px}' +
         '.stitle{background:#0b3b78;color:#fff;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;padding:4px 9px;border-radius:3px;margin:12px 0 6px;page-break-after:avoid}' +
-        '.igrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px}' +
-        '.info{border:1px solid #e2e8f0;background:#f8fafc;border-radius:4px;padding:6px 8px}' +
+        '.info{border:1px solid #e2e8f0;background:#f8fafc;border-radius:4px;padding:6px 8px;height:100%;box-sizing:border-box}' +
         '.lbl{font-size:7.5px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:0.03em;margin-bottom:1px}' +
         '.val{font-size:10px;font-weight:600;word-break:break-word;color:#172033}' +
         '.sec{border:1px solid #e2e8f0;border-left:3px solid #0b3b78;background:#fff;border-radius:0 4px 4px 0;padding:9px 11px;margin-bottom:4px;page-break-inside:avoid}' +
@@ -3482,7 +3481,8 @@
       try { return JSON.parse(entrada.OBSERVACAO || '{}'); } catch (e_) { return {}; }
     }
     function kv_(label, val) {
-      return '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(val || '--') + '</div></div>';
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(val || '--') + '</div></div></td>';
     }
     function abrevId_(str) {
       var s = safe_(str);
@@ -3552,20 +3552,15 @@
       html += '<div class="alert-banner">Relat&oacute;rio Preliminar &mdash; atendimento ainda sem conclus&atilde;o t&eacute;cnica registrada. Documento emitido para acompanhamento parcial do ciclo t&eacute;cnico.</div>';
     }
     // ---- DADOS DO ATENDIMENTO ----
-    html += '<div class="stitle">Dados do Atendimento</div><div class="igrid">';
-    html += kv_('Protocolo', e.PROTOCOLO);
-    html += kv_('Status atual', statusAtual);
-    html += kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO);
-    html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
-    html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
-    html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
-    html += kv_('Número de série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
-    html += kv_('Técnico responsável', e.TECNICO_NOME);
-    html += kv_('Condição de entrada', e.CONDICAO_FISICA);
-    html += kv_('Problema relatado', e.PROBLEMA_RELATADO);
-    html += kv_('Prioridade', e.PRIORIDADE);
-    html += kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '');
-    html += '</div>';
+    html += '<div class="stitle">Dados do Atendimento</div>';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status atual', statusAtual) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Número de série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Técnico responsável', e.TECNICO_NOME) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Condição de entrada', e.CONDICAO_FISICA) + kv_('Problema relatado', e.PROBLEMA_RELATADO) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Prioridade', e.PRIORIDADE) + kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '') + '</tr>';
+    html += '</tbody></table>';
     // ---- DIAGNOSTICO TECNICO ----
     html += '<div class="stitle">Diagn&oacute;stico T&eacute;cnico</div>';
     if (diagH) {
@@ -3721,7 +3716,7 @@
     html += 'Metrolabs Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica &nbsp;&middot;&nbsp; CNPJ 32.487.278/0001-21<br>';
     html += 'SGO+ Sistema de Gest&atilde;o Operacional &mdash; Relat&oacute;rio T&eacute;cnico Final &mdash; Assist&ecirc;ncia T&eacute;cnica<br>';
     html += 'Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Token: <span class="mono">' + esc_(meta.token || '') + '</span> &nbsp;&middot;&nbsp; Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm));
-    html += '<br><span style="font-size:7px;color:#cbd5e1;">LAYOUT PREMIUM AT V2 &mdash; E.1C</span>';
+    html += '<br><span style="font-size:7px;color:#cbd5e1;">LAYOUT PREMIUM AT V2 &mdash; E.7F.1</span>';
     html += '</div>';
     html += '</div></body></html>';
     return html;
