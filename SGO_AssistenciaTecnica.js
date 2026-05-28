@@ -3727,6 +3727,33 @@
     return html;
   }
 
+  function prepararMetaDocumental_(prefixo, qrAcompanhamento) {
+    var token                  = gerarTokenDocumentoUnico_(prefixo);
+    var validacaoUrl            = montarUrlValidacao_(token);
+    var qrValidacao             = validacaoUrl ? (QR_API + encodeURIComponent(validacaoUrl)) : '';
+    var emitidoEm               = now_();
+    var assinaturaDouglasBase64 = imagemDriveBase64_('1N1CZOewFSvrSBWEPJ4Xu9Z3wVmbMbkHy');
+    var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
+    var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
+    var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
+    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
+    return { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
+             qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm,
+             assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
+             qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
+             logoBase64: logoBase64 };
+  }
+
+  function emitirPdfComHash_(meta, montarHtmlFn, nomeArq) {
+    var metaSemHash  = Object.assign({}, meta, { hash: '' });
+    var htmlParaHash = montarHtmlFn(metaSemHash);
+    var hash         = sha256_(htmlParaHash);
+    var metaFinal    = Object.assign({}, meta, { hash: hash });
+    var html         = montarHtmlFn(metaFinal);
+    var file         = criarPdfAst_(html, nomeArq);
+    return { file: file, hash: hash };
+  }
+
   function gerarRelatorioTecnicoV2_(sessao, atendimentoId) {
     const atendimento  = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
     if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
@@ -3734,41 +3761,18 @@
     const solicitacoes = SGO_DATA.getManyByField(S.AST_SOLICITACOES, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
     var fotos = [];
     try { fotos = SGO_DATA.getManyByField(S.AST_FOTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || []; } catch (e_) {}
-    const token            = gerarTokenDocumentoUnico_('REL-AT');
-    const validacaoUrl     = montarUrlValidacao_(token);
-    const qrValidacao      = validacaoUrl ? (QR_API + encodeURIComponent(validacaoUrl)) : '';
-    const qrAcompanhamento = safe_(atendimento.QR_URL_ACOMPANHAMENTO || '');
-    const emitidoEm        = now_();
-    // Pre-fetch imagens em base64 (motor PDF GAS nao renderiza URLs externas)
-    var assinaturaDouglasBase64 = imagemDriveBase64_('1N1CZOewFSvrSBWEPJ4Xu9Z3wVmbMbkHy');
-    var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
-    var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
-    var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
-    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
-    // Passo 1: HTML sem hash para calcular hash (two-pass approach)
-    const metaSemHash = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
-                          qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: '',
-                          assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
-                          logoBase64: logoBase64 };
-    const htmlParaHash = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaSemHash);
-    const hash = sha256_(htmlParaHash);
-    // Passo 2: HTML final com hash embutido no corpo do documento
-    const metaFinal = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
-                        qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: hash,
-                        assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
-                        logoBase64: logoBase64 };
-    const html    = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, metaFinal);
+    const meta    = prepararMetaDocumental_('REL-AT', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
     const nomeArq = nomeArquivoAst_('AT_RELATORIO_' + safe_(atendimento.PROTOCOLO) + '_' +
-                      Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
-    const file    = criarPdfAst_(html, nomeArq);
-    const titulo  = 'Relatorio Tecnico Final - ' + safe_(atendimento.PROTOCOLO);
+                      Utilities.formatDate(new Date(meta.emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
+    const emissao = emitirPdfComHash_(meta, function(m) {
+      return montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, m);
+    }, nomeArq);
+    const titulo   = 'Relatorio Tecnico Final - ' + safe_(atendimento.PROTOCOLO);
     const registro = registrarDocumentoAtendimentoV2_(sessao, atendimentoId,
-                       'AT_RELATORIO_TECNICO_V2', titulo, file,
-                       token, validacaoUrl, qrValidacao, qrAcompanhamento, hash);
-    return { success: true, documento: registro, pdfUrl: file.getUrl(),
-             downloadUrl: downloadUrl_(file.getId()), token: token, hash: hash };
+                       'AT_RELATORIO_TECNICO_V2', titulo, emissao.file,
+                       meta.token, meta.validacaoUrl, meta.qrValidacao, meta.qrAcompanhamento, emissao.hash);
+    return { success: true, documento: registro, pdfUrl: emissao.file.getUrl(),
+             downloadUrl: downloadUrl_(emissao.file.getId()), token: meta.token, hash: emissao.hash };
   }
 
   function gerarRelatorioTecnicoV2(sessionId, atendimentoId) {
@@ -3972,40 +3976,18 @@
     var dadosConclusao = {};
     try { if (entradaEntrega   && entradaEntrega.OBSERVACAO)   dadosEntrega   = JSON.parse(entradaEntrega.OBSERVACAO)   || {}; } catch (e_) {}
     try { if (entradaConclusao && entradaConclusao.OBSERVACAO) dadosConclusao = JSON.parse(entradaConclusao.OBSERVACAO) || {}; } catch (e_) {}
-    const token            = gerarTokenDocumentoUnico_('PS-AT');
-    const validacaoUrl     = montarUrlValidacao_(token);
-    const qrValidacao      = validacaoUrl ? (QR_API + encodeURIComponent(validacaoUrl)) : '';
-    const qrAcompanhamento = safe_(atendimento.QR_URL_ACOMPANHAMENTO || '');
-    const emitidoEm        = now_();
-    // Pre-fetch imagens em base64 (reutiliza helpers existentes)
-    var assinaturaDouglasBase64 = imagemDriveBase64_('1N1CZOewFSvrSBWEPJ4Xu9Z3wVmbMbkHy');
-    var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
-    var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
-    var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
-    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
-    // Two-pass hash
-    const metaSemHash = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
-                          qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: '',
-                          assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                          qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
-                          logoBase64: logoBase64 };
-    const htmlParaHash = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, metaSemHash);
-    const hash = sha256_(htmlParaHash);
-    const metaFinal = { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
-                        qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm, hash: hash,
-                        assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
-                        qrValidacaoBase64: qrValidacaoBase64, qrAcompanhamentoBase64: qrAcompanhamentoBase64,
-                        logoBase64: logoBase64 };
-    const html    = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, metaFinal);
+    const meta    = prepararMetaDocumental_('PS-AT', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
     const nomeArq = nomeArquivoAst_('AT_PROTOCOLO_SAIDA_' + safe_(atendimento.PROTOCOLO) + '_' +
-                      Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
-    const file    = criarPdfAst_(html, nomeArq);
-    const titulo  = 'Protocolo de Saida - ' + safe_(atendimento.PROTOCOLO);
+                      Utilities.formatDate(new Date(meta.emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
+    const emissao = emitirPdfComHash_(meta, function(m) {
+      return montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, m);
+    }, nomeArq);
+    const titulo   = 'Protocolo de Saida - ' + safe_(atendimento.PROTOCOLO);
     const registro = registrarDocumentoAtendimentoV2_(sessao, atendimentoId,
-                       'AT_PROTOCOLO_SAIDA_V2', titulo, file,
-                       token, validacaoUrl, qrValidacao, qrAcompanhamento, hash);
-    return { success: true, documento: registro, pdfUrl: file.getUrl(),
-             downloadUrl: downloadUrl_(file.getId()), token: token, hash: hash };
+                       'AT_PROTOCOLO_SAIDA_V2', titulo, emissao.file,
+                       meta.token, meta.validacaoUrl, meta.qrValidacao, meta.qrAcompanhamento, emissao.hash);
+    return { success: true, documento: registro, pdfUrl: emissao.file.getUrl(),
+             downloadUrl: downloadUrl_(emissao.file.getId()), token: meta.token, hash: emissao.hash };
   }
 
   function gerarProtocoloSaidaV2(sessionId, atendimentoId) {
