@@ -4088,6 +4088,58 @@
     }
   }
 
+  function verificarDocumentoExistenteV2_(sessao, atendimentoId, tipoDocumento) {
+    if (!atendimentoId)  return erro_('atendimentoId obrigatorio.');
+    if (!tipoDocumento)  return erro_('tipoDocumento obrigatorio.');
+    var docs = SGO_DATA.getManyByField(S.AST_DOCUMENTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    var filtrados = docs.filter(function(d) {
+      return safe_(d.TIPO_DOCUMENTO) === tipoDocumento;
+    });
+    var validos = filtrados.filter(function(d) {
+      var st = safe_(d.STATUS);
+      return st === 'VALIDO' || st === '';
+    });
+    validos = validos.slice().sort(function(a, b) {
+      var ta = a.GERADO_EM || a.CRIADO_EM || '';
+      var tb = b.GERADO_EM || b.CRIADO_EM || '';
+      return ta < tb ? 1 : ta > tb ? -1 : 0;
+    });
+    var lista = validos.map(function(d) {
+      return {
+        id:            safe_(d.ID),
+        atendimentoId: safe_(d.ATENDIMENTO_ID),
+        tipo:          safe_(d.TIPO_DOCUMENTO),
+        nome:          safe_(d.TITULO),
+        pdfUrl:        safe_(d.LINK_ARQUIVO),
+        downloadUrl:   safe_(d.DOWNLOAD_URL),
+        token:         safe_(d.TOKEN_VALIDACAO),
+        hash:          safe_(d.HASH_SHA256),
+        dataEmissao:   safe_(d.GERADO_EM || d.CRIADO_EM || ''),
+        responsavel:   safe_(d.GERADO_POR || d.CRIADO_POR || ''),
+        status:        safe_(d.STATUS) || 'VALIDO'
+      };
+    });
+    var existe = lista.length > 0;
+    return {
+      success:    true,
+      existe:     existe,
+      total:      lista.length,
+      documento:  existe ? lista[0] : null,
+      documentos: lista
+    };
+  }
+
+  function verificarDocumentoExistenteV2(sessionId, atendimentoId, tipoDocumento) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return verificarDocumentoExistenteV2_(sessao, atendimentoId, tipoDocumento);
+    } catch (e_) {
+      return erro_("Erro ao verificar documento existente: " + e_.message);
+    }
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -4659,6 +4711,7 @@
     gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
     listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
+    verificarDocumentoExistenteV2: verificarDocumentoExistenteV2,
     previewRelatorioTecnicoV2: previewRelatorioTecnicoV2,
     previewProtocoloSaidaV2: previewProtocoloSaidaV2,
     salvarConclusaoV2: salvarConclusaoV2,
@@ -4777,6 +4830,7 @@ function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_A
 function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
+function astV2VerificarDocumentoExistente(sessionId, atendimentoId, tipoDocumento) { return SGO_AST.verificarDocumentoExistenteV2(sessionId, atendimentoId, tipoDocumento); }
 function astV2PreviewRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.previewRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2PreviewProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.previewProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
