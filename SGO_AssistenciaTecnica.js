@@ -4001,6 +4001,43 @@
     }
   }
 
+  function listarDocumentosEmitidosV2_(sessao, atendimentoId) {
+    if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
+    var docs = SGO_DATA.getManyByField(S.AST_DOCUMENTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    docs = docs.slice().sort(function(a, b) {
+      var ta = a.GERADO_EM || a.CRIADO_EM || '';
+      var tb = b.GERADO_EM || b.CRIADO_EM || '';
+      return ta < tb ? 1 : ta > tb ? -1 : 0;
+    });
+    var lista = docs.map(function(d) {
+      return {
+        id:            safe_(d.ID),
+        atendimentoId: safe_(d.ATENDIMENTO_ID),
+        tipo:          safe_(d.TIPO_DOCUMENTO),
+        nome:          safe_(d.TITULO),
+        pdfUrl:        safe_(d.LINK_ARQUIVO),
+        downloadUrl:   safe_(d.DOWNLOAD_URL),
+        token:         safe_(d.TOKEN_VALIDACAO),
+        hash:          safe_(d.HASH_SHA256),
+        dataEmissao:   safe_(d.GERADO_EM || d.CRIADO_EM || ''),
+        responsavel:   safe_(d.GERADO_POR || d.CRIADO_POR || ''),
+        status:        safe_(d.STATUS)
+      };
+    });
+    return { success: true, documentos: lista, total: lista.length };
+  }
+
+  function listarDocumentosEmitidosV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return listarDocumentosEmitidosV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao listar documentos: " + e_.message);
+    }
+  }
+
   function salvarConclusaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "TECNICO");
@@ -4571,6 +4608,7 @@
     registrarEntregaV2: registrarEntregaV2,
     gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
+    listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -4686,6 +4724,7 @@ function astV2RegistrarConclusaoTecnica(sessionId, atendimentoId, payload) { ret
 function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.registrarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
+function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }
