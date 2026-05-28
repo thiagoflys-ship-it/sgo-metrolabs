@@ -4026,6 +4026,40 @@
     }
   }
 
+  function previewProtocoloSaidaV2_(sessao, atendimentoId) {
+    if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
+    const historico = SGO_DATA.getManyByField(S.AST_HISTORICO, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    var entradaEntrega   = null;
+    var entradaConclusao = null;
+    for (var i = historico.length - 1; i >= 0; i--) {
+      var h = historico[i];
+      if (!entradaEntrega   && safe_(h.TIPO) === 'ENTREGA')           entradaEntrega   = h;
+      if (!entradaConclusao && safe_(h.TIPO) === 'CONCLUSAO_TECNICA') entradaConclusao = h;
+      if (entradaEntrega && entradaConclusao) break;
+    }
+    var dadosEntrega   = {};
+    var dadosConclusao = {};
+    try { if (entradaEntrega   && entradaEntrega.OBSERVACAO)   dadosEntrega   = JSON.parse(entradaEntrega.OBSERVACAO)   || {}; } catch (e_) {}
+    try { if (entradaConclusao && entradaConclusao.OBSERVACAO) dadosConclusao = JSON.parse(entradaConclusao.OBSERVACAO) || {}; } catch (e_) {}
+    var metaBase = prepararMetaDocumental_('PREVIEW', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
+    var meta = Object.assign({}, metaBase, { token: 'PREVIEW', hash: 'PREVIEW', validacaoUrl: '', qrValidacao: '', qrValidacaoBase64: '' });
+    var html = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, meta);
+    return { success: true, html: html };
+  }
+
+  function previewProtocoloSaidaV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return previewProtocoloSaidaV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar preview do protocolo de saida: " + e_.message);
+    }
+  }
+
   function listarDocumentosEmitidosV2_(sessao, atendimentoId) {
     if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
     var docs = SGO_DATA.getManyByField(S.AST_DOCUMENTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
@@ -4635,6 +4669,7 @@
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
     listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
     previewRelatorioTecnicoV2: previewRelatorioTecnicoV2,
+    previewProtocoloSaidaV2: previewProtocoloSaidaV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -4752,6 +4787,7 @@ function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.g
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
 function astV2PreviewRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.previewRelatorioTecnicoV2(sessionId, atendimentoId); }
+function astV2PreviewProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.previewProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }
