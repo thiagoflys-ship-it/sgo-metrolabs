@@ -3786,6 +3786,31 @@
     }
   }
 
+  function previewRelatorioTecnicoV2_(sessao, atendimentoId) {
+    if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
+    const atendimento  = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
+    const historico    = SGO_DATA.getManyByField(S.AST_HISTORICO,    'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    const solicitacoes = SGO_DATA.getManyByField(S.AST_SOLICITACOES, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
+    var fotos = [];
+    try { fotos = SGO_DATA.getManyByField(S.AST_FOTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || []; } catch (e_) {}
+    var metaBase = prepararMetaDocumental_('PREVIEW', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
+    var meta = Object.assign({}, metaBase, { token: 'PREVIEW', hash: 'PREVIEW', validacaoUrl: '', qrValidacao: '', qrValidacaoBase64: '' });
+    var html = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, meta);
+    return { success: true, html: html };
+  }
+
+  function previewRelatorioTecnicoV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return previewRelatorioTecnicoV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar preview do relatorio tecnico: " + e_.message);
+    }
+  }
+
   function montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, meta) {
     var e   = atendimento  || {};
     var ent = dadosEntrega || {};
@@ -4609,6 +4634,7 @@
     gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
     listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
+    previewRelatorioTecnicoV2: previewRelatorioTecnicoV2,
     salvarConclusaoV2: salvarConclusaoV2,
     confirmarEntregaV2: confirmarEntregaV2,
     dashboardV2: dashboardV2,
@@ -4725,6 +4751,7 @@ function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_A
 function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
+function astV2PreviewRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.previewRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }
 function astV2ConfirmarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.confirmarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2Dashboard(sessionId) { return SGO_AST.dashboardV2(sessionId); }
