@@ -3825,8 +3825,7 @@
       '.doc-emit{font-size:8px;color:#94a3b8;text-align:right;margin-top:2px}' +
       '.alert-banner{background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:5px 10px;font-size:8.5px;color:#92400e;margin:5px 0;font-weight:700}' +
       '.stitle{font-size:8.5px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
-      '.igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px}' +
-      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px}' +
+      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
       '.lbl{font-size:7.5px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.3px}' +
       '.val{font-size:9px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
       '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;font-size:9px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
@@ -3850,7 +3849,8 @@
       return '<div class="sig-line"></div>';
     }
     function kv_(label, valor) {
-      return '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div>';
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
     }
     var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page">';
     // ---- CABECALHO ----
@@ -3882,35 +3882,30 @@
       html += '<div class="alert-banner">Aten&ccedil;&atilde;o &mdash; conclus&atilde;o t&eacute;cnica n&atilde;o registrada.</div>';
     }
     // ---- DADOS DO ATENDIMENTO ----
-    html += '<div class="stitle">Dados do Atendimento</div><div class="igrid">';
-    html += kv_('Protocolo', e.PROTOCOLO);
-    html += kv_('Status', statusAtual);
-    html += kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO);
-    html += kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA);
-    html += kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO);
-    html += kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / '));
-    html += kv_('Nº de Série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO);
-    html += kv_('Técnico', e.TECNICO_NOME);
-    html += '</div>';
+    html += '<div class="stitle">Dados do Atendimento</div>';
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status', statusAtual) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Nº de Série', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Técnico', e.TECNICO_NOME) + '</tr>';
+    html += '</tbody></table>';
     // ---- DADOS DA ENTREGA ----
-    html += '<div class="stitle">Dados da Entrega</div><div class="igrid">';
-    html += kv_('Entregue para', ent.entregueParaNome);
-    html += kv_('Documento / Matrícula', ent.entregueParaDoc);
-    html += kv_('Cargo / Função', ent.entregueParaCargo);
-    html += kv_('Data da entrega', ent.dataEntrega ? formatarDataBR_(ent.dataEntrega) : '');
-    html += kv_('Condição de entrega', ent.condicaoEntrega);
-    html += kv_('Acessórios devolvidos', ent.acessoriosDevolvidos);
-    html += '</div>';
+    html += '<div class="stitle">Dados da Entrega</div>';
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Entregue para', ent.entregueParaNome) + kv_('Documento / Matrícula', ent.entregueParaDoc) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cargo / Função', ent.entregueParaCargo) + kv_('Data da entrega', ent.dataEntrega ? formatarDataBR_(ent.dataEntrega) : '') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Condição de entrega', ent.condicaoEntrega) + kv_('Acessórios devolvidos', ent.acessoriosDevolvidos) + '</tr>';
+    html += '</tbody></table>';
     if (ent.observacoes) {
       html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Observações da entrega</div>';
       html += '<div class="sec">' + esc_(ent.observacoes) + '</div>';
     }
     // ---- CONCLUSAO TECNICA ----
-    html += '<div class="stitle">Conclus&atilde;o T&eacute;cnica</div><div class="igrid">';
-    html += kv_('Resultado final', conc.resultadoFinal);
-    html += kv_('Garantia', conc.garantiaDias ? (conc.garantiaDias + ' dias') : '--');
-    html += kv_('Liberado p/ entrega', conc.liberadoParaEntrega === 'S' ? 'Sim' : (conc.liberadoParaEntrega === 'N' ? 'Não' : '--'));
-    html += '</div>';
+    html += '<div class="stitle">Conclus&atilde;o T&eacute;cnica</div>';
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Resultado final', conc.resultadoFinal) + kv_('Garantia', conc.garantiaDias ? (conc.garantiaDias + ' dias') : '--') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Liberado p/ entrega', conc.liberadoParaEntrega === 'S' ? 'Sim' : (conc.liberadoParaEntrega === 'N' ? 'Não' : '--')) + '<td style="width:50%;border:none"></td>' + '</tr>';
+    html += '</tbody></table>';
     if (conc.conclusaoTecnica) {
       html += '<div class="lbl" style="margin:3px 0 2px;padding-left:2px">Conclusão técnica</div>';
       html += '<div class="sec">' + esc_(conc.conclusaoTecnica) + '</div>';
@@ -3974,6 +3969,7 @@
     html += 'Metrolabs Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica &nbsp;&middot;&nbsp; CNPJ 32.487.278/0001-21<br>';
     html += 'SGO+ Sistema de Gest&atilde;o Operacional &mdash; Protocolo de Sa&iacute;da &mdash; Assist&ecirc;ncia T&eacute;cnica<br>';
     html += 'Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Token: <span class="mono">' + esc_(meta.token || '') + '</span> &nbsp;&middot;&nbsp; Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm));
+    html += '<br><span style="font-size:7px;color:#cbd5e1;">LAYOUT PREMIUM AT V2 &mdash; E.7F.2</span>';
     html += '</div>';
     html += '</div></body></html>';
     return html;
