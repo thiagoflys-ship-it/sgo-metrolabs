@@ -1,6 +1,6 @@
 # Inventário do Módulo Assistência Técnica — SGO+
 **Atualizado em:** 2026-06-01
-**Fase:** V2 — E.8 APROVADA PARA DEPLOY. Commit docs pendente (INVENTARIO). Deploy autorizado pelo usuário.
+**Fase:** V2 — Etapa Documental FECHADA (@178). E.8 + E.9 + E.10 em produção. Próxima frente: C.3 (Registrar Execução).
 **Arquivos ativos:** `SGO_AssistenciaTecnica.js` · `JS_AssistenciaTecnica.html`
 
 ---
@@ -33,6 +33,8 @@
 | `fc971f3` | style(AT): aprimorar layout PDF do protocolo de saída V2 |
 | `b9dc63c` | feat(AT): verificar documento existente V2 |
 | `9bc98f5` | feat(AT): adicionar anti-duplicidade documental V2 |
+| `457e5e1` | feat(AT): aprimorar preview A4 com impressao e WhatsApp |
+| `22db9af` | style(AT): reorganizar aba Documentos em 4 blocos premium |
 
 ---
 
@@ -475,6 +477,9 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | E.7 | Anti-duplicidade Documental V2 | ✅ commit 9bc98f5 |
 | E.8.3 | Validação completa (cancelar / abrir existente / gerar nova versão / sem registro em preview) | ✅ **2026-06-01** |
 | E.8.4 | Pente fino final — auditoria estática + node --check + 0 backticks + 0 novos prompt() + protegidos íntegros | ✅ **2026-06-01** |
+| E.9 | Preview A4 premium — botão Imprimir (iframe.print) + WhatsApp seguro via PDF oficial | ✅ commit 457e5e1 · deploy @177 |
+| E.10 | Aba Documentos reorganizada em 4 blocos (Pré-visualização / Emissão Oficial / Emitidos / Orientações) | ✅ commit 22db9af · deploy @178 |
+| **E.11** | **Teste pós-deploy em produção @178 — fechamento da etapa documental AT V2** | ✅ **2026-06-01** |
 
 ---
 
@@ -515,7 +520,7 @@ ATENDIMENTO_SEM_CONCLUSAO_TECNICA
 
 | Risco | Severidade | Situação |
 |-------|-----------|----------|
-| Deploy pendente — C.5/C.5B/C.6 no script mas sem deployment ativo | ALTO | Aguardando autorização |
+| C.5/C.5B/C.6/E.8/E.9/E.10 publicados — deployment @178 ativo | — | RESOLVIDO |
 | `DATA_PREVISTA` de peça não persiste no schema (coletada no form, salva só no historico) | BAIXO | Decisão consciente — C.6 |
 | Status `AGUARDANDO_PECAS` (legado) não exibe botão "Solicitar Peça" no V2 | BAIXO | Só afeta atendimentos migrados |
 | Terceiros/Lab ainda em caminho legado — transições podem conflitar com V2 | MÉDIO | Escopo fora do rebuild |
