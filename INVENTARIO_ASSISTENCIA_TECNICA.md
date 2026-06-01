@@ -1,6 +1,6 @@
 # Inventário do Módulo Assistência Técnica — SGO+
 **Atualizado em:** 2026-06-01
-**Fase:** V2 — Etapa Documental FECHADA (@178). E.8 + E.9 + E.10 em produção. Próxima frente: C.3 (Registrar Execução).
+**Fase:** V2 — C.5.1 Orçamento frontend em produção @180. C.3/C.4 fluxo pós-execução auditado e funcional. Próxima frente: a definir.
 **Arquivos ativos:** `SGO_AssistenciaTecnica.js` · `JS_AssistenciaTecnica.html`
 
 ---
@@ -35,6 +35,7 @@
 | `9bc98f5` | feat(AT): adicionar anti-duplicidade documental V2 |
 | `457e5e1` | feat(AT): aprimorar preview A4 com impressao e WhatsApp |
 | `22db9af` | style(AT): reorganizar aba Documentos em 4 blocos premium |
+| `2134d8e` | feat(AT): adicionar frontend de orcamento V2 |
 
 ---
 
@@ -419,10 +420,13 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | ENTRADA_REGISTRADA, AGUARDANDO_DIAGNOSTICO | Iniciar Avaliacao |
 | EM_BANCADA, DIAGNOSTICO_EM_ANDAMENTO, DIAGNOSTICO_CONCLUIDO | Registrar Diagnostico · Solicitar Peca |
 | AGUARDANDO_PECA | Solicitar Peca (adicional) |
-| AGUARDANDO_ORCAMENTO, ORCAMENTO_ENVIADO, AGUARDANDO_APROVACAO_CLIENTE | Enviar Orcamento (stub C.4) |
-| LIBERADO_PARA_EXECUCAO, EXECUCAO_EM_ANDAMENTO | Registrar Execucao (stub C.3) |
-| Todos (exceto terminais) | Registrar Evidencia · Atualizar Status |
-| Todos | Gerar Relatorio Tecnico (stub C.4) |
+| DIAGNOSTICO_CONCLUIDO, AGUARDANDO_ORCAMENTO | Enviar Orçamento V2 |
+| ORCAMENTO_ENVIADO, AGUARDANDO_APROVACAO_CLIENTE | Registrar Resposta do Cliente |
+| LIBERADO_PARA_EXECUCAO, EXECUCAO_EM_ANDAMENTO | Registrar Execução V2 |
+| EXECUCAO_CONCLUIDA, EXECUCAO_EM_ANDAMENTO | Registrar Teste / Validação V2 |
+| EXECUCAO_CONCLUIDA, AGUARDANDO_CALIBRACAO, CONCLUIDO_TECNICAMENTE | Registrar Conclusão Técnica V2 |
+| CONCLUIDO_TECNICAMENTE, AGUARDANDO_ENTREGA, NAO_REPARADO | Registrar Entrega V2 |
+| Todos (exceto terminais) | Registrar Evidência · Atualizar Status |
 
 ---
 
@@ -480,6 +484,10 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | E.9 | Preview A4 premium — botão Imprimir (iframe.print) + WhatsApp seguro via PDF oficial | ✅ commit 457e5e1 · deploy @177 |
 | E.10 | Aba Documentos reorganizada em 4 blocos (Pré-visualização / Emissão Oficial / Emitidos / Orientações) | ✅ commit 22db9af · deploy @178 |
 | **E.11** | **Teste pós-deploy em produção @178 — fechamento da etapa documental AT V2** | ✅ **2026-06-01** |
+| C.3 | Registrar Execução V2 — auditado e funcional (backend c99077b + frontend existente) | ✅ auditado 2026-06-01 |
+| C.4 (fluxo) | Fluxo pós-execução V2 auditado: Teste/Validação, Conclusão Técnica, Entrega — todos funcionais | ✅ auditado 2026-06-01 |
+| C.5.1 | Enviar Orçamento V2 frontend (cards + resumo + resposta do cliente) | ✅ commit 2134d8e · deploy @180 |
+| **C.5.2** | **Teste pós-deploy C.5.1 em produção @180 — C.5 Enviar Orçamento V2 fechado** | ✅ **2026-06-01** |
 
 ---
 
@@ -487,8 +495,7 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 
 | Etapa | Funcionalidade |
 |-------|---------------|
-| C.3 | Registrar Execução V2 (card inline) |
-| C.4 | Enviar Orçamento V2 + Gerar Relatório Técnico |
+| C.4 (ORC) | Integração ORC/Mini-CRM com orçamentos AT (requer setupOrcamentosV2 — planejamento separado) |
 | C.7 | Integração real com SGO_Missoes (remover stub) |
 | C.8 | Alertas automáticos (reimplementar `gerarAlertasEntrada_`) |
 | C.9 | Entrega com assinatura V2 |
