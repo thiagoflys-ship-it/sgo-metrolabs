@@ -1985,20 +1985,57 @@
 
   function astDocumentosV2Html_(e) {
     var id = astEscAttr_(e.ID || "");
+    var secLabel = 'font-size:9px;font-weight:900;text-transform:uppercase;color:#0b3b78;letter-spacing:.5px;border-left:3px solid #0b3b78;padding-left:6px;margin:10px 0 4px;';
     return [
       '<div class="ast-v2-det-section">',
         '<h4>Documentos</h4>',
-        '<div style="display:flex;flex-direction:column;gap:8px;">',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewRelatorioTecnico_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Relat&oacute;rio T&eacute;cnico</button>',
-          '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewProtocoloSaida_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Protocolo de Sa&iacute;da</button>',
+
+        // Bloco 1 — Pré-visualização
+        '<div style="' + secLabel + '">Pr&eacute;-visualiza&ccedil;&atilde;o</div>',
+        '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:7px 8px;margin-bottom:4px;">',
+          '<div style="font-size:10px;color:#475569;line-height:1.5;margin-bottom:6px;">',
+            'Veja o documento em formato A4 antes da emiss&atilde;o oficial. ',
+            'Esta pr&eacute;via n&atilde;o gera PDF, n&atilde;o cria arquivo no Drive e n&atilde;o registra documento.',
+          '</div>',
+          '<div style="display:flex;flex-direction:column;gap:6px;">',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewRelatorioTecnico_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Relat&oacute;rio T&eacute;cnico</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewProtocoloSaida_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Protocolo de Sa&iacute;da</button>',
+          '</div>',
         '</div>',
-        '<div id="astV2DocLinkContainer" style="display:none;margin-top:8px;"></div>',
-        '<div id="astV2DocsEmitidosList" style="margin-top:8px;"></div>',
+
+        // Bloco 2 — Emissão Oficial
+        '<div style="' + secLabel + '">Emiss&atilde;o Oficial</div>',
+        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:7px 8px;margin-bottom:4px;">',
+          '<div style="font-size:10px;color:#475569;line-height:1.5;margin-bottom:6px;">',
+            'Gera PDF oficial com token, hash SHA-256, QR Code, assinaturas e registro em AST_DOCUMENTOS.',
+          '</div>',
+          '<div style="display:flex;flex-direction:column;gap:6px;">',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
+          '</div>',
+          '<div style="font-size:9px;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:3px;padding:4px 6px;margin-top:6px;">',
+            'Se j&aacute; existir documento emitido, o sistema mostrar&aacute; op&ccedil;&otilde;es para abrir o existente ou gerar nova vers&atilde;o.',
+          '</div>',
+        '</div>',
+
+        // Bloco 3 — Documentos Emitidos
+        '<div style="' + secLabel + '">Documentos Emitidos</div>',
+        '<div id="astV2DocLinkContainer" style="display:none;margin-bottom:6px;"></div>',
+        '<div id="astV2DocsEmitidosList"></div>',
+
+        // Bloco 4 — Orientações
+        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;margin-top:8px;">',
+          '<div style="font-size:9px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.4px;margin-bottom:3px;">Orienta&ccedil;&otilde;es</div>',
+          '<ul style="margin:0;padding-left:14px;font-size:9px;color:#64748b;line-height:1.7;">',
+            '<li>O preview serve para confer&ecirc;ncia antes da emiss&atilde;o.</li>',
+            '<li>Para enviar por WhatsApp, gere primeiro a vers&atilde;o oficial em PDF.</li>',
+            '<li>A vers&atilde;o oficial possui token, hash e QR Code de valida&ccedil;&atilde;o.</li>',
+          '</ul>',
+        '</div>',
+
       '</div>'
     ].join("");
   }
