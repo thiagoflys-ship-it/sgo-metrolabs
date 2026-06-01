@@ -2163,6 +2163,59 @@
     ].join("");
   }
 
+  function astV2MostrarLiberarExecucaoCard_(id) {
+    var container = document.getElementById("astV2LiberarExecucaoCardContainer");
+    if (!container) return;
+    var ex = document.getElementById("astV2ExecucaoCardContainer");
+    if (ex) ex.innerHTML = "";
+    var st = document.getElementById("astV2StatusCardContainer");
+    if (st) st.innerHTML = "";
+    var ev = document.getElementById("astV2EvidCardContainer");
+    if (ev) ev.innerHTML = "";
+    var dg = document.getElementById("astV2DiagCardContainer");
+    if (dg) dg.innerHTML = "";
+    var pc = document.getElementById("astV2PecaCardContainer");
+    if (pc) pc.innerHTML = "";
+    var orc = document.getElementById("astV2OrcamentoCardContainer");
+    if (orc) orc.innerHTML = "";
+    var tst = document.getElementById("astV2TesteValidacaoCardContainer");
+    if (tst) tst.innerHTML = "";
+    var conc = document.getElementById("astV2ConclusaoCardContainer");
+    if (conc) conc.innerHTML = "";
+    var ent = document.getElementById("astV2EntregaCardContainer");
+    if (ent) ent.innerHTML = "";
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128640; Liberar Execução</h5>',
+        '<div style="font-size:12px;color:#475569;line-height:1.45;margin-bottom:8px;">Confirme que o atendimento está autorizado para execução técnica.</div>',
+        '<label>Observação</label>',
+        '<textarea id="astV2LibExecObs" rows="2" placeholder="Ex: aprovado pelo cliente, peça recebida, sem pendências..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarLiberarExecucao_(\'' + idEsc + '\')">Liberar Execução</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2LiberarExecucaoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function astV2ConfirmarLiberarExecucao_(id) {
+    var obsEl = document.getElementById("astV2LibExecObs");
+    var payload = {
+      OBSERVACAO: obsEl ? obsEl.value.trim() : ""
+    };
+    astSetContextStatus_("Liberando execução...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível liberar execução.");
+        astToast_("Execução liberada.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2LiberarExecucao(SESSION, id, payload);
+  }
+
   function astAcoesEtapaV2Html_(e) {
     var id = astEscAttr_(e.ID || "");
     var status = astStatusNorm_(e.STATUS || "");
@@ -2182,7 +2235,10 @@
     if (["ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarRespostaOrcamentoCard_(\'' + id + '\')">&#128203; Autorizar ou Recusar Or&ccedil;amento</button>');
     }
-    if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO", "EXECUCAO_CONCLUIDA"].indexOf(status) >= 0) {
+    if (["DIAGNOSTICO_CONCLUIDO", "ORCAMENTO_APROVADO", "AGUARDANDO_PECA", "AGUARDANDO_TERCEIRO"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarLiberarExecucaoCard_(\'' + id + '\')">&#128640; Liberar Execução</button>');
+    }
+    if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
     }
     if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
@@ -2207,6 +2263,7 @@
         '<div id="astV2EvidCardContainer"></div>',
         '<div id="astV2PecaCardContainer"></div>',
         '<div id="astV2OrcamentoCardContainer"></div>',
+        '<div id="astV2LiberarExecucaoCardContainer"></div>',
         '<div id="astV2ExecucaoCardContainer"></div>',
         '<div id="astV2TesteValidacaoCardContainer"></div>',
         '<div id="astV2ConclusaoCardContainer"></div>',
