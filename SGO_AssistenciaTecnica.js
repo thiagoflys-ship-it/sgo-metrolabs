@@ -2411,9 +2411,9 @@
     AGUARDANDO_TERCEIRO:          ["LIBERADO_PARA_EXECUCAO", "CANCELADO"],
     LIBERADO_PARA_EXECUCAO:       ["EXECUCAO_EM_ANDAMENTO", "CANCELADO"],
     EXECUCAO_EM_ANDAMENTO:        ["EXECUCAO_CONCLUIDA", "CANCELADO"],
-    EXECUCAO_CONCLUIDA:           ["AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE", "CANCELADO"],
-    AGUARDANDO_CALIBRACAO:        ["CONCLUIDO_TECNICAMENTE", "CANCELADO"],
-    CONCLUIDO_TECNICAMENTE:       ["AGUARDANDO_ENTREGA", "CANCELADO"],
+    EXECUCAO_CONCLUIDA:           ["EXECUCAO_EM_ANDAMENTO", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
+    AGUARDANDO_CALIBRACAO:        ["CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
+    CONCLUIDO_TECNICAMENTE:       ["AGUARDANDO_ENTREGA", "NAO_REPARADO", "CANCELADO"],
     AGUARDANDO_ENTREGA:           ["ENTREGUE", "CANCELADO"],
     ENTREGUE:                     [],
     CANCELADO:                    [],
@@ -3254,6 +3254,11 @@
       proximaAcao = "Registrar conclusao tecnica.";
     } else if (resultado === "REPROVADO") {
       proximaAcao = "Retornar para execucao tecnica. Verificar falhas e executar novo reparo.";
+      if (v2StatusValido_(atendimento.STATUS, STATUS_V2.EXECUCAO_EM_ANDAMENTO)) {
+        v2AtualizarStatus_(atendimentoId, STATUS_V2.EXECUCAO_EM_ANDAMENTO,
+          "Teste reprovado. Retornar para execucao tecnica.",
+          sessao.userId, sessao.nome);
+      }
     } else {
       proximaAcao = "Reavaliar teste e validacao pos-reparo.";
     }
@@ -3302,14 +3307,26 @@
       });
     var proximaAcao;
     if (semReparo) {
-      proximaAcao = "Comunicar cliente e definir destinacao do equipamento.";
+      proximaAcao = "Equipamento sem reparo. Prosseguir para devolucao/entrega ao cliente.";
     } else if (liberado) {
       proximaAcao = "Aguardar entrega/devolucao ao cliente.";
     } else {
       proximaAcao = "Revisar pendencias antes da entrega.";
     }
     const statusAtual = atendimento.STATUS;
-    if (liberado || semReparo) {
+    if (semReparo) {
+      if (v2StatusValido_(statusAtual, STATUS_V2.NAO_REPARADO)) {
+        v2AtualizarStatus_(atendimentoId, STATUS_V2.NAO_REPARADO,
+          "Conclusao sem reparo. Encaminhar para devolucao ao cliente.",
+          sessao.userId, sessao.nome);
+      } else {
+        SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+          PROXIMA_ACAO:   proximaAcao,
+          ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+          ATUALIZADO_EM:  now_()
+        }, DB);
+      }
+    } else if (liberado) {
       if (v2StatusValido_(statusAtual, STATUS_V2.CONCLUIDO_TECNICAMENTE)) {
         v2AtualizarStatus_(atendimentoId, STATUS_V2.CONCLUIDO_TECNICAMENTE,
           descricao, sessao.userId, sessao.nome);
@@ -3362,13 +3379,16 @@
     const nomeEntrega  = safe_(p.ENTREGUE_PARA_NOME || "");
     const descricao    = "Entrega registrada" + (nomeEntrega ? " para " + nomeEntrega.substring(0, 60) : "");
     const statusOrigem = atendimento.STATUS;
+    let statusAposPreparacao = statusOrigem;
     if (statusOrigem !== STATUS_V2.AGUARDANDO_ENTREGA) {
       if (v2StatusValido_(statusOrigem, STATUS_V2.AGUARDANDO_ENTREGA)) {
         v2AtualizarStatus_(atendimentoId, STATUS_V2.AGUARDANDO_ENTREGA,
           "Equipamento encaminhado para entrega.", sessao.userId, sessao.nome);
+        statusAposPreparacao = STATUS_V2.AGUARDANDO_ENTREGA;
       }
     }
-    v2RegistrarHistorico_(atendimentoId, statusOrigem, STATUS_V2.ENTREGUE,
+    const statusHistoricoNovo = finalizar ? STATUS_V2.ENTREGUE : statusAposPreparacao;
+    v2RegistrarHistorico_(atendimentoId, statusOrigem, statusHistoricoNovo,
       descricao, sessao.userId, sessao.nome, "ENTREGA", {
         entregueParaNome:     nomeEntrega,
         entregueParaDoc:      safe_(p.ENTREGUE_PARA_DOC     || ""),
@@ -3383,11 +3403,11 @@
       });
     const atualNow = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
     const statusParaEntrega = (atualNow && atualNow.STATUS) || STATUS_V2.AGUARDANDO_ENTREGA;
-    if (v2StatusValido_(statusParaEntrega, STATUS_V2.ENTREGUE)) {
+    if (finalizar && v2StatusValido_(statusParaEntrega, STATUS_V2.ENTREGUE)) {
       v2AtualizarStatus_(atendimentoId, STATUS_V2.ENTREGUE, descricao, sessao.userId, sessao.nome);
     }
     SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
-      PROXIMA_ACAO:   finalizar ? "Atendimento finalizado." : "Aguardar finalizacao administrativa.",
+      PROXIMA_ACAO:   finalizar ? "Atendimento finalizado." : "Entrega registrada sem finalizar atendimento. Concluir pendencias administrativas.",
       ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
       ATUALIZADO_EM:  now_()
     }, DB);

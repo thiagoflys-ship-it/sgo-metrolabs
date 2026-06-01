@@ -2182,7 +2182,7 @@
     if (["ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarRespostaOrcamentoCard_(\'' + id + '\')">&#128203; Autorizar ou Recusar Or&ccedil;amento</button>');
     }
-    if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
+    if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO", "EXECUCAO_CONCLUIDA"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
     }
     if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
@@ -2321,9 +2321,9 @@
     "AGUARDANDO_TERCEIRO":          ["LIBERADO_PARA_EXECUCAO", "CANCELADO"],
     "LIBERADO_PARA_EXECUCAO":       ["EXECUCAO_EM_ANDAMENTO", "CANCELADO"],
     "EXECUCAO_EM_ANDAMENTO":        ["EXECUCAO_CONCLUIDA", "CANCELADO"],
-    "EXECUCAO_CONCLUIDA":           ["AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE", "CANCELADO"],
-    "AGUARDANDO_CALIBRACAO":        ["CONCLUIDO_TECNICAMENTE", "CANCELADO"],
-    "CONCLUIDO_TECNICAMENTE":       ["AGUARDANDO_ENTREGA", "CANCELADO"],
+    "EXECUCAO_CONCLUIDA":           ["EXECUCAO_EM_ANDAMENTO", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
+    "AGUARDANDO_CALIBRACAO":        ["CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
+    "CONCLUIDO_TECNICAMENTE":       ["AGUARDANDO_ENTREGA", "NAO_REPARADO", "CANCELADO"],
     "AGUARDANDO_ENTREGA":           ["ENTREGUE", "CANCELADO"],
     "ENTREGUE":                     [],
     "CANCELADO":                    [],
