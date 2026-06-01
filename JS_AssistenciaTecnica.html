@@ -1981,7 +1981,8 @@
     var idEsc = astEscAttr_(id || "");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128203; Resposta do Cliente</h5>',
+        '<h5>&#128203; Resposta do cliente sobre o or&ccedil;amento</h5>',
+        '<p style="margin:0 0 10px;color:#475569;font-size:12px;line-height:1.45;">Registre se o cliente autorizou o reparo ou recusou o or&ccedil;amento.</p>',
         '<label>Resultado *</label>',
         '<select id="astV2OrcRespResultado">',
           '<option value="APROVADO">Aprovado</option>',
@@ -2046,11 +2047,18 @@
     var ultimo = orcs[orcs.length - 1];
     var status = (ultimo.STATUS || "ENVIADO").toUpperCase();
     var statusColor = status === "APROVADO" ? "#15803d" : status === "RECUSADO" ? "#dc2626" : "#d97706";
-    var statusMap = { APROVADO: "Aprovado", RECUSADO: "Recusado", ENVIADO: "Enviado" };
+    var statusMap = { APROVADO: "Or&ccedil;amento aprovado pelo cliente", RECUSADO: "Or&ccedil;amento recusado pelo cliente", ENVIADO: "Aguardando resposta do cliente" };
     var statusLabel = statusMap[status] || status;
+    var isPendente = status !== "APROVADO" && status !== "RECUSADO";
+    var resumoTitulo = isPendente ? "Or&ccedil;amento enviado &mdash; aguardando autoriza&ccedil;&atilde;o do cliente" : statusLabel;
+    var resumoTexto = isPendente
+      ? "O reparo s&oacute; deve prosseguir ap&oacute;s aprova&ccedil;&atilde;o do or&ccedil;amento pelo cliente."
+      : (status === "APROVADO" ? "O atendimento pode seguir para o pr&oacute;ximo passo operacional." : "O cliente recusou o or&ccedil;amento apresentado.");
+    var resumoBorda = status === "APROVADO" ? "#15803d" : status === "RECUSADO" ? "#dc2626" : "#d97706";
     var rows = [];
-    if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>T&iacute;tulo / Descri&ccedil;&atilde;o</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
-    rows.push('<div class="ast-v2-det-field"><span>Status</span><b style="color:' + statusColor + ';">' + astEsc_(statusLabel) + '</b></div>');
+    if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>T&iacute;tulo do or&ccedil;amento</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
+    if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Descri&ccedil;&atilde;o</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Status visual</span><b style="color:' + statusColor + ';">' + statusLabel + '</b></div>');
     if (ultimo.URGENCIA)              rows.push('<div class="ast-v2-det-field"><span>Urg&ecirc;ncia</span><b>' + astEsc_(ultimo.URGENCIA) + '</b></div>');
     if (ultimo.VALOR_ESTIMADO)        rows.push('<div class="ast-v2-det-field"><span>Valor estimado</span><b>R$ ' + astEsc_(Number(ultimo.VALOR_ESTIMADO || 0).toFixed(2)) + '</b></div>');
     if (status === "APROVADO" && ultimo.VALOR_APROVADO) rows.push('<div class="ast-v2-det-field"><span>Valor aprovado</span><b style="color:#15803d;">R$ ' + astEsc_(Number(ultimo.VALOR_APROVADO || 0).toFixed(2)) + '</b></div>');
@@ -2062,8 +2070,9 @@
     if (status === "RECUSADO" && ultimo.RECUSADO_EM)   rows.push('<div class="ast-v2-det-field"><span>Recusado em</span><b>' + astEsc_(astData_(ultimo.RECUSADO_EM)) + '</b></div>');
     if (!rows.length) return "";
     return [
-      '<div class="ast-v2-det-section" style="border-top:2px solid #d97706;">',
-        '<h4 style="color:#d97706;">&#128179; Or&ccedil;amento</h4>',
+      '<div class="ast-v2-det-section" style="border-top:2px solid ' + resumoBorda + ';">',
+        '<h4 style="color:' + resumoBorda + ';">&#128179; ' + resumoTitulo + '</h4>',
+        '<div style="margin:-4px 0 12px;padding:10px 12px;border:1px solid #fde68a;border-radius:6px;background:#fffbeb;color:#92400e;font-size:12px;line-height:1.45;font-weight:700;">' + resumoTexto + '</div>',
         '<div class="ast-v2-det-grid2">',
           rows.join(""),
         '</div>',
@@ -2171,7 +2180,7 @@
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarOrcamentoCard_(\'' + id + '\')">&#128179; Enviar Or&ccedil;amento</button>');
     }
     if (["ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
-      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarRespostaOrcamentoCard_(\'' + id + '\')">&#128203; Registrar Resposta do Cliente</button>');
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarRespostaOrcamentoCard_(\'' + id + '\')">&#128203; Autorizar ou Recusar Or&ccedil;amento</button>');
     }
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
