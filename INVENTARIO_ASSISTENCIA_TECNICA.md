@@ -1,6 +1,6 @@
 # Inventário do Módulo Assistência Técnica — SGO+
 **Atualizado em:** 2026-06-01
-**Fase:** V2 — Produção @182. C.9.1 assinatura opcional na entrega V2 e C.5.3 UX do orçamento aguardando autorização do cliente publicadas. Próxima frente: a definir.
+**Fase:** V2 — Produção @183. C.10.1 fluxo pós-execução V2 publicado: retorno após teste reprovado, sem reparo para devolução e entrega sem finalização. Próxima frente: a definir.
 **Arquivos ativos:** `SGO_AssistenciaTecnica.js` · `JS_AssistenciaTecnica.html`
 
 ---
@@ -38,6 +38,7 @@
 | `2134d8e` | feat(AT): adicionar frontend de orcamento V2 |
 | `c8ed48f` | feat(AT): adicionar assinatura opcional na entrega V2 |
 | `d681f40` | ux(AT): esclarecer autorizacao do cliente no orcamento V2 |
+| `6949c76` | fix(AT): corrigir retornos de fluxo pos-execucao V2 |
 
 ---
 
@@ -390,9 +391,9 @@ AGUARDANDO_PECA           → LIBERADO_PARA_EXECUCAO, CANCELADO
 AGUARDANDO_TERCEIRO       → LIBERADO_PARA_EXECUCAO, CANCELADO
 LIBERADO_PARA_EXECUCAO    → EXECUCAO_EM_ANDAMENTO, CANCELADO
 EXECUCAO_EM_ANDAMENTO     → EXECUCAO_CONCLUIDA, CANCELADO
-EXECUCAO_CONCLUIDA        → AGUARDANDO_CALIBRACAO, CONCLUIDO_TECNICAMENTE, CANCELADO
-AGUARDANDO_CALIBRACAO     → CONCLUIDO_TECNICAMENTE, CANCELADO
-CONCLUIDO_TECNICAMENTE    → AGUARDANDO_ENTREGA, CANCELADO
+EXECUCAO_CONCLUIDA        → EXECUCAO_EM_ANDAMENTO, AGUARDANDO_CALIBRACAO, CONCLUIDO_TECNICAMENTE, NAO_REPARADO, CANCELADO
+AGUARDANDO_CALIBRACAO     → CONCLUIDO_TECNICAMENTE, NAO_REPARADO, CANCELADO
+CONCLUIDO_TECNICAMENTE    → AGUARDANDO_ENTREGA, NAO_REPARADO, CANCELADO
 AGUARDANDO_ENTREGA        → ENTREGUE, CANCELADO
 ENTREGUE                  → (terminal)
 CANCELADO                 → (terminal)
@@ -424,7 +425,7 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | AGUARDANDO_PECA | Solicitar Peca (adicional) |
 | DIAGNOSTICO_CONCLUIDO, AGUARDANDO_ORCAMENTO | Enviar Orçamento V2 |
 | ORCAMENTO_ENVIADO, AGUARDANDO_APROVACAO_CLIENTE | Registrar Resposta do Cliente |
-| LIBERADO_PARA_EXECUCAO, EXECUCAO_EM_ANDAMENTO | Registrar Execução V2 |
+| LIBERADO_PARA_EXECUCAO, EXECUCAO_EM_ANDAMENTO, EXECUCAO_CONCLUIDA | Registrar Execução V2 |
 | EXECUCAO_CONCLUIDA, EXECUCAO_EM_ANDAMENTO | Registrar Teste / Validação V2 |
 | EXECUCAO_CONCLUIDA, AGUARDANDO_CALIBRACAO, CONCLUIDO_TECNICAMENTE | Registrar Conclusão Técnica V2 |
 | CONCLUIDO_TECNICAMENTE, AGUARDANDO_ENTREGA, NAO_REPARADO | Registrar Entrega V2 |
@@ -492,7 +493,9 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | **C.5.2** | **Teste pós-deploy C.5.1 em produção @180 — C.5 Enviar Orçamento V2 fechado** | ✅ **2026-06-01** |
 | C.9.1 | Assinatura opcional na entrega V2 | ✅ commit c8ed48f · deploy @182 |
 | C.5.3 | UX do orçamento aguardando autorização do cliente | ✅ commit d681f40 · deploy @182 |
-| **Deploy @182** | **Produção atual — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
+| **Deploy @182** | **C.9.1 assinatura opcional + C.5.3 UX orçamento — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
+| C.10.1 | Fluxo pós-execução V2: teste reprovado retorna para EXECUCAO_EM_ANDAMENTO; Registrar Execução aparece em EXECUCAO_CONCLUIDA; conclusão SEM_REPARO/REPROVADO avança para NAO_REPARADO; entrega com FINALIZAR_ATENDIMENTO=N não encerra como ENTREGUE | ✅ commit 6949c76 · deploy @183 |
+| **Deploy @183** | **Produção atual — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
 
 ---
 
@@ -533,6 +536,7 @@ ATENDIMENTO_SEM_CONCLUSAO_TECNICA
 |-------|-----------|----------|
 | C.5/C.5B/C.6/E.8/E.9/E.10 publicados — deployment @178 ativo | — | RESOLVIDO |
 | C.9.1/C.5.3 publicados — deployment @182 ativo | — | RESOLVIDO |
+| C.10.1 fluxo pós-execução publicado — deployment @183 ativo | — | RESOLVIDO |
 | `DATA_PREVISTA` de peça não persiste no schema (coletada no form, salva só no historico) | BAIXO | Decisão consciente — C.6 |
 | Status `AGUARDANDO_PECAS` (legado) não exibe botão "Solicitar Peça" no V2 | BAIXO | Só afeta atendimentos migrados |
 | Terceiros/Lab ainda em caminho legado — transições podem conflitar com V2 | MÉDIO | Escopo fora do rebuild |
