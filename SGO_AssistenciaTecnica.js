@@ -1115,6 +1115,8 @@
 
   function consultarPublico(token) {
     const busca = safe_(token);
+    const atendimentoV2 = consultarPublicoAtendimentoV2_(busca);
+    if (atendimentoV2) return atendimentoV2;
     const entrada = SGO_DATA.getByField(S.AST_ENTRADAS, "QR_TOKEN", busca) || SGO_DATA.getById(S.AST_ENTRADAS, busca);
     if (!entrada) return erro_("Entrada nao localizada.");
     const id = entrada.ID;
@@ -1126,6 +1128,31 @@
       fotos: SGO_DATA.getManyByField(S.AST_FOTOS, "ENTRADA_ID", id).filter(function(f) { return simNao_(f.VISIBILIDADE_PUBLICA) === "S"; }),
       terceiro: sanitizarTerceiroPublico_(terceiroAtual_(id)),
       laboratorio: sanitizarLaboratorioPublico_(labAtual_(id))
+    };
+  }
+
+  function consultarPublicoAtendimentoV2_(token) {
+    const busca = safe_(token);
+    if (!busca) return null;
+    let atendimento = null;
+    try {
+      const todos = SGO_DATA.getAll(S.AST_ATENDIMENTOS, DB) || [];
+      atendimento = todos.find(function(a) {
+        return safe_(a.QR_TOKEN_ACOMPANHAMENTO) === busca;
+      });
+    } catch (e) {
+      log_("consultarPublicoAtendimentoV2_: " + e.message);
+    }
+    if (!atendimento) return null;
+    const id = atendimento.ID;
+    return {
+      success: true,
+      item: sanitizarAtendimentoV2Publico_(v2EnriquecerAtendimento_(atendimento)),
+      movimentos: sanitizarHistoricoV2Publico_(SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", id, DB)),
+      documentos: sanitizarDocumentosPublicos_(SGO_DATA.getManyByField(S.AST_DOCUMENTOS, "ATENDIMENTO_ID", id, DB)),
+      fotos: sanitizarFotosPublicasV2_(SGO_DATA.getManyByField(S.AST_FOTOS, "ATENDIMENTO_ID", id, DB)),
+      terceiro: null,
+      laboratorio: null
     };
   }
 
@@ -1939,13 +1966,55 @@
   function sanitizarEntradaPublica_(entrada) {
     return { ID: entrada.ID, PROTOCOLO: entrada.PROTOCOLO, CLIENTE_NOME: entrada.CLIENTE_NOME, UNIDADE_NOME: entrada.UNIDADE_NOME, EQUIPAMENTO_NOME: entrada.EQUIPAMENTO_NOME, STATUS: entrada.STATUS, BANDEIRA: entrada.BANDEIRA, PROXIMA_ACAO: proximaAcaoPublica_(entrada.STATUS), URL_PUBLICA: entrada.URL_PUBLICA, QR_URL: entrada.QR_URL, CRIADO_EM: entrada.CRIADO_EM, ULTIMA_MOVIMENTACAO_EM: entrada.ULTIMA_MOVIMENTACAO_EM };
   }
+  function sanitizarAtendimentoV2Publico_(atendimento) {
+    atendimento = atendimento || {};
+    return {
+      ID: atendimento.ID,
+      PROTOCOLO: atendimento.PROTOCOLO,
+      CLIENTE_NOME: atendimento.CLIENTE_NOME,
+      UNIDADE_NOME: atendimento.UNIDADE_NOME,
+      EQUIPAMENTO_NOME: atendimento.EQUIPAMENTO_NOME,
+      EQUIPAMENTO_SERIE: atendimento.NUMERO_SERIE,
+      STATUS: atendimento.STATUS,
+      BANDEIRA: atendimento.BANDEIRA || atendimento._bandeira,
+      PROXIMA_ACAO: atendimento.PROXIMA_ACAO || atendimento._proxima_acao || v2ProximaAcao_(atendimento.STATUS),
+      LOCALIZACAO_ATUAL: atendimento.LOCALIZACAO_ATUAL,
+      URL_PUBLICA: atendimento._url_publico || atendimento.URL_PUBLICA,
+      QR_URL: atendimento.QR_URL_ACOMPANHAMENTO,
+      CRIADO_EM: atendimento.CRIADO_EM,
+      ULTIMA_MOVIMENTACAO_EM: atendimento.ULTIMA_MOVIMENTACAO_EM || atendimento.ATUALIZADO_EM,
+      ENTRADA_DATA_BR: atendimento.CRIADO_EM,
+      ULTIMA_MOVIMENTACAO_BR: atendimento.ULTIMA_MOVIMENTACAO_EM || atendimento.ATUALIZADO_EM
+    };
+  }
   function sanitizarTerceiroPublico_(terceiro) { return terceiro ? { STATUS_TERCEIRO: terceiro.STATUS_TERCEIRO, PRAZO_INFORMADO: terceiro.PRAZO_INFORMADO, PROXIMA_ACAO: terceiro.PROXIMA_ACAO, RETORNADO_EM: terceiro.RETORNADO_EM } : null; }
   function sanitizarLaboratorioPublico_(lab) { return lab ? { TIPO_SERVICO: lab.TIPO_SERVICO, STATUS: lab.STATUS, RESULTADO_FINAL: lab.RESULTADO_FINAL, CONFORMIDADE: lab.CONFORMIDADE } : null; }
   function sanitizarMovimentosPublicos_(movimentos) {
     return (movimentos || []).map(function(m) { return { TIPO: m.TIPO, STATUS_NOVO: m.STATUS_NOVO, DESCRICAO: descricaoPublicaMovimento_(m), PROXIMA_ACAO: m.PROXIMA_ACAO, CRIADO_EM: m.CRIADO_EM }; });
   }
+  function sanitizarHistoricoV2Publico_(historico) {
+    return (historico || []).map(function(h) {
+      return {
+        TIPO: h.TIPO,
+        STATUS_NOVO: h.STATUS_NOVO,
+        DESCRICAO: safe_(h.DESCRICAO || "Etapa tecnica atualizada."),
+        PROXIMA_ACAO: h.PROXIMA_ACAO,
+        CRIADO_EM: h.EXECUTADO_EM || h.CRIADO_EM
+      };
+    });
+  }
   function sanitizarDocumentosPublicos_(documentos) {
     return (documentos || []).filter(function(d) { return upper_(d.STATUS || "VALIDO") === "VALIDO"; }).map(function(d) { return { TIPO_DOCUMENTO: d.TIPO_DOCUMENTO, TITULO: d.TITULO, DOWNLOAD_URL: d.DOWNLOAD_URL, URL_VALIDACAO: d.URL_VALIDACAO, TOKEN_VALIDACAO: d.TOKEN_VALIDACAO, HASH_SHA256: d.HASH_SHA256 }; });
+  }
+  function sanitizarFotosPublicasV2_(fotos) {
+    return (fotos || []).filter(function(f) { return simNao_(f.VISIBILIDADE_PUBLICA) === "S"; }).map(function(f) {
+      return {
+        TIPO_FOTO: f.TIPO_FOTO,
+        LINK_DRIVE: f.LINK_DRIVE,
+        DESCRICAO_FOTO: f.DESCRICAO_FOTO,
+        UPLOAD_EM: f.UPLOAD_EM
+      };
+    });
   }
   function descricaoPublicaMovimento_(m) { return safe_(m.DESCRICAO || "Etapa tecnica atualizada."); }
   function proximaAcaoPublica_(status) { return proximaAcaoPorStatus_(status); }

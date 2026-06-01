@@ -3655,13 +3655,42 @@
 
   function astVerQR_(id) {
     const e = (AST_STATE.detalhe && (AST_STATE.detalhe.data || AST_STATE.detalhe.item)) || {};
-    astOpen_(e.QR_URL || e.URL_PUBLICA || "");
+    var token = e.QR_TOKEN_ACOMPANHAMENTO || e.QR_TOKEN || "";
+    var urlToken = token ? ("?ast=" + encodeURIComponent(token)) : "";
+    astOpen_(e.QR_URL_ACOMPANHAMENTO || e.URL_ACOMPANHAMENTO || urlToken || e.QR_URL || e.URL_PUBLICA || "");
     astRegistrarAcaoSilenciosa_(id, "QR_ABERTO", "QR/acompanhamento aberto.");
+  }
+
+  function astUrlPublicaDoQr_(qrUrl) {
+    var url = qrUrl || "";
+    var idx = url.indexOf("data=");
+    if (idx < 0) return "";
+    var data = url.substring(idx + 5);
+    var amp = data.indexOf("&");
+    if (amp >= 0) data = data.substring(0, amp);
+    try {
+      return decodeURIComponent(data);
+    } catch (e) {
+      return data;
+    }
+  }
+
+  function astUrlComTokenAcompanhamento_(baseUrl, token) {
+    var base = baseUrl || "";
+    var tk = token || "";
+    if (!base || !tk) return "";
+    var clean = base.split("#")[0].split("?")[0];
+    return clean + "?ast=" + encodeURIComponent(tk);
   }
 
   function astAbrirAcompanhamento_(id) {
     const e = (AST_STATE.detalhe && (AST_STATE.detalhe.data || AST_STATE.detalhe.item)) || {};
-    astOpen_(e.URL_PUBLICA || e.QR_URL || "");
+    var token = e.QR_TOKEN_ACOMPANHAMENTO || e.QR_TOKEN || "";
+    var urlQr = astUrlPublicaDoQr_(e.QR_URL_ACOMPANHAMENTO || e.QR_URL || "");
+    var urlToken = astUrlComTokenAcompanhamento_(urlQr || e.URL_ACOMPANHAMENTO || e._url_publico || e.URL_PUBLICA, token);
+    var url = urlQr || e.URL_ACOMPANHAMENTO || urlToken || e._url_publico || e.URL_PUBLICA || e.QR_URL || "";
+    if (!url) return astToast_("Link de acompanhamento não disponível para este atendimento.");
+    astOpen_(url);
     astRegistrarAcaoSilenciosa_(id, "ACOMPANHAMENTO_ABERTO", "Acompanhamento publico aberto.");
   }
 
