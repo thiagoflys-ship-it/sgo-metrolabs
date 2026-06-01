@@ -1747,6 +1747,53 @@
     ].join("");
   }
 
+  function astV2InitCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas || canvas.__astReady) return;
+    canvas.__astReady = true;
+    var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#1e293b";
+    var desenhando = false;
+    function pos_(evt) {
+      var rect = canvas.getBoundingClientRect();
+      var e = evt.touches && evt.touches.length ? evt.touches[0] : evt;
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top)  * (canvas.height / rect.height)
+      };
+    }
+    function iniciar_(evt) {
+      desenhando = true;
+      var p = pos_(evt);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      evt.preventDefault();
+      var hint = document.getElementById(hintId);
+      if (hint) hint.style.display = "none";
+    }
+    function mover_(evt) {
+      if (!desenhando) return;
+      var p = pos_(evt);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      evt.preventDefault();
+    }
+    function parar_() { desenhando = false; }
+    ["mousedown","touchstart"].forEach(function(ev) { canvas.addEventListener(ev, iniciar_, { passive: false }); });
+    ["mousemove","touchmove"].forEach(function(ev)  { canvas.addEventListener(ev, mover_,   { passive: false }); });
+    ["mouseup","mouseleave","touchend"].forEach(function(ev) { canvas.addEventListener(ev, parar_); });
+  }
+  function astV2LimparCanvas_(canvasId, hintId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    var hint = document.getElementById(hintId);
+    if (hint) hint.style.display = "";
+  }
+
   function astV2MostrarEntregaCard_(id) {
     var container = document.getElementById("astV2EntregaCardContainer");
     if (!container) return;
@@ -1775,8 +1822,16 @@
         '</select>',
         '<label>Acessórios devolvidos</label>',
         '<textarea id="astV2EntAcessorios" rows="2" placeholder="Liste os acessórios entregues..."></textarea>',
-        '<label>Observações</label>',
-        '<textarea id="astV2EntObs" rows="2" placeholder="Observações adicionais..."></textarea>',
+        '<label>Observa&ccedil;&otilde;es</label>',
+        '<textarea id="astV2EntObs" rows="2" placeholder="Observa&ccedil;&otilde;es adicionais..."></textarea>',
+        '<div style="margin-top:6px;">',
+          '<div style="font-size:10px;font-weight:700;color:#334155;margin-bottom:4px;">Assinatura do recebedor (opcional)</div>',
+          '<div style="border:1px solid #e2e8f0;border-radius:4px;position:relative;background:#f8fafc;overflow:hidden;">',
+            '<canvas id="ast_v2_entrega_ass_canvas" width="600" height="150" style="width:100%;height:110px;display:block;touch-action:none;cursor:crosshair;"></canvas>',
+            '<span id="ast_v2_entrega_ass_hint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#94a3b8;font-size:11px;pointer-events:none;white-space:nowrap;">Assine aqui</span>',
+          '</div>',
+          '<button type="button" onclick="astV2LimparCanvas_(\'ast_v2_entrega_ass_canvas\',\'ast_v2_entrega_ass_hint\')" style="font-size:10px;color:#64748b;background:none;border:1px solid #e2e8f0;border-radius:3px;padding:3px 8px;cursor:pointer;margin-top:3px;">Limpar assinatura</button>',
+        '</div>',
         '<label>Finalizar atendimento?</label>',
         '<select id="astV2EntFinalizar">',
           '<option value="S">Sim - encerrar atendimento</option>',
@@ -1788,6 +1843,7 @@
         '</div>',
       '</div>'
     ].join("");
+    astV2InitCanvas_("ast_v2_entrega_ass_canvas", "ast_v2_entrega_ass_hint");
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
   function astV2ConfirmarEntrega_(id) {
@@ -1800,16 +1856,22 @@
     var obsEl   = document.getElementById("astV2EntObs");
     var finEl   = document.getElementById("astV2EntFinalizar");
     if (!nomeEl || !nomeEl.value.trim()) return astToast_("Informe o nome do responsável pela retirada.");
+    var canvasAss = document.getElementById("ast_v2_entrega_ass_canvas");
+    var hintAss   = document.getElementById("ast_v2_entrega_ass_hint");
+    var assinatura = "";
+    if (canvasAss && hintAss && hintAss.style.display === "none") {
+      assinatura = canvasAss.toDataURL("image/png");
+    }
     var payload = {
-      ENTREGUE_PARA_NOME:       nomeEl.value.trim(),
-      ENTREGUE_PARA_DOC:        docEl   ? docEl.value.trim()   : "",
-      ENTREGUE_PARA_CARGO:      cargoEl ? cargoEl.value.trim() : "",
-      DATA_ENTREGA:             dataEl  ? dataEl.value         : "",
-      CONDICAO_ENTREGA:         condEl  ? condEl.value         : "BOM_ESTADO",
-      ACESSORIOS_DEVOLVIDOS:    aceEl   ? aceEl.value.trim()   : "",
-      OBSERVACOES:              obsEl   ? obsEl.value.trim()   : "",
-      ASSINATURA_ENTREGA_BASE64: "",
-      FINALIZAR_ATENDIMENTO:    finEl   ? finEl.value          : "N"
+      ENTREGUE_PARA_NOME:        nomeEl.value.trim(),
+      ENTREGUE_PARA_DOC:         docEl   ? docEl.value.trim()   : "",
+      ENTREGUE_PARA_CARGO:       cargoEl ? cargoEl.value.trim() : "",
+      DATA_ENTREGA:              dataEl  ? dataEl.value         : "",
+      CONDICAO_ENTREGA:          condEl  ? condEl.value         : "BOM_ESTADO",
+      ACESSORIOS_DEVOLVIDOS:     aceEl   ? aceEl.value.trim()   : "",
+      OBSERVACOES:               obsEl   ? obsEl.value.trim()   : "",
+      ASSINATURA_ENTREGA_BASE64: assinatura,
+      FINALIZAR_ATENDIMENTO:     finEl   ? finEl.value          : "N"
     };
     astSetContextStatus_("Registrando entrega...");
     google.script.run
@@ -1840,8 +1902,9 @@
     if (dados.condicaoEntrega)      rows.push('<div class="ast-v2-det-field"><span>Condicao</span><b>' + astEsc_(dados.condicaoEntrega) + '</b></div>');
     if (dados.acessoriosDevolvidos) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Acessórios devolvidos</span><b>' + astEsc_(dados.acessoriosDevolvidos) + '</b></div>');
     rows.push('<div class="ast-v2-det-field"><span>Atendimento finalizado</span><b style="color:' + (fin === "S" ? "#15803d" : "#dc2626") + ';">' + (fin === "S" ? "Sim" : "Não") + '</b></div>');
-    if (dados.observacoes)          rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observações</span><b>' + astEsc_(dados.observacoes) + '</b></div>');
+    if (dados.observacoes)          rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observa&ccedil;&otilde;es</span><b>' + astEsc_(dados.observacoes) + '</b></div>');
     if (ultimo.EXECUTADO_EM)        rows.push('<div class="ast-v2-det-field"><span>Registrado em</span><b>' + astEsc_(astData_(ultimo.EXECUTADO_EM)) + '</b></div>');
+    if (dados.assinaturaBase64)     rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Assinatura</span><div style="margin-top:4px;"><img src="' + dados.assinaturaBase64 + '" alt="Assinatura do recebedor" style="max-width:200px;height:auto;border:1px solid #e2e8f0;border-radius:4px;background:#fff;display:block;"></div></div>');
     if (!rows.length) return "";
     return [
       '<div class="ast-v2-det-section" style="border-top:2px solid #15803d;">',

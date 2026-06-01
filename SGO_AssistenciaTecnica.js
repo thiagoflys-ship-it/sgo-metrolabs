@@ -3377,6 +3377,7 @@
         condicaoEntrega:      safe_(p.CONDICAO_ENTREGA      || ""),
         acessoriosDevolvidos: safe_(p.ACESSORIOS_DEVOLVIDOS || ""),
         observacoes:          safe_(p.OBSERVACOES           || ""),
+        assinaturaBase64:     safe_(p.ASSINATURA_ENTREGA_BASE64 || ""),
         assinaturaRegistrada: p.ASSINATURA_ENTREGA_BASE64   ? "S" : "N",
         finalizado:           finalizar                     ? "S" : "N"
       });
