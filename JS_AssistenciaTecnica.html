@@ -1176,6 +1176,7 @@
           astEsteiraDetalheV2Html_(e),
           astResumoTecnicoV2Html_(e, acessorios, fotos, diag),
           astSolicitacoesPecaV2Html_(solicitacoes),
+          astOrcamentoResumoV2Html_(solicitacoes),
           astExecucaoResumoV2Html_(historico),
           astTesteValidacaoResumoV2Html_(historico),
           astConclusaoResumoV2Html_(historico),
@@ -1852,6 +1853,161 @@
     ].join("");
   }
 
+  function astV2MostrarOrcamentoCard_(id) {
+    var container = document.getElementById("astV2OrcamentoCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128179; Enviar Or&ccedil;amento</h5>',
+        '<label>T&iacute;tulo *</label>',
+        '<input type="text" id="astV2OrcTitulo" placeholder="Ex: Or&ccedil;amento reparo circuito principal">',
+        '<label>Descri&ccedil;&atilde;o</label>',
+        '<textarea id="astV2OrcDescricao" rows="3" placeholder="Descreva os servi&ccedil;os e materiais inclusos..."></textarea>',
+        '<label>Valor estimado (R$)</label>',
+        '<input type="number" id="astV2OrcValor" min="0" step="0.01" placeholder="0,00">',
+        '<label>Urg&ecirc;ncia</label>',
+        '<select id="astV2OrcUrgencia">',
+          '<option value="NORMAL">Normal</option>',
+          '<option value="ALTA">Alta</option>',
+          '<option value="CRITICA">Cr&iacute;tica</option>',
+        '</select>',
+        '<label>Justificativa t&eacute;cnica</label>',
+        '<textarea id="astV2OrcJustificativa" rows="2" placeholder="Explique a necessidade do servi&ccedil;o..."></textarea>',
+        '<label>Observa&ccedil;&otilde;es</label>',
+        '<textarea id="astV2OrcObs" rows="2" placeholder="Observa&ccedil;&otilde;es adicionais..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarOrcamento_(\'' + idEsc + '\')">Enviar Or&ccedil;amento</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2OrcamentoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarOrcamento_(id) {
+    var titEl  = document.getElementById("astV2OrcTitulo");
+    var descEl = document.getElementById("astV2OrcDescricao");
+    var valEl  = document.getElementById("astV2OrcValor");
+    var urgEl  = document.getElementById("astV2OrcUrgencia");
+    var justEl = document.getElementById("astV2OrcJustificativa");
+    var obsEl  = document.getElementById("astV2OrcObs");
+    if (!titEl || !titEl.value.trim()) return astToast_("T&iacute;tulo do or&ccedil;amento &eacute; obrigat&oacute;rio.");
+    var valor = valEl && valEl.value ? parseFloat(valEl.value) : 0;
+    if (isNaN(valor) || valor < 0) valor = 0;
+    var payload = {
+      TITULO:                titEl.value.trim(),
+      DESCRICAO:             descEl ? descEl.value.trim() : "",
+      VALOR_ESTIMADO:        valor,
+      URGENCIA:              urgEl  ? urgEl.value         : "NORMAL",
+      JUSTIFICATIVA_TECNICA: justEl ? justEl.value.trim() : "",
+      OBSERVACOES:           obsEl  ? obsEl.value.trim()  : ""
+    };
+    astSetContextStatus_("Enviando or&ccedil;amento...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_((res && res.message) || "N&atilde;o foi poss&iacute;vel enviar or&ccedil;amento.");
+        astToast_("Or&ccedil;amento enviado.");
+        astAbrirDetalhe_(id, { preservar: true });
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2EnviarOrcamento(SESSION, id, payload);
+  }
+  function astV2MostrarRespostaOrcamentoCard_(id) {
+    var container = document.getElementById("astV2OrcamentoCardContainer");
+    if (!container) return;
+    var idEsc = astEscAttr_(id || "");
+    container.innerHTML = [
+      '<div class="ast-v2-card">',
+        '<h5>&#128203; Resposta do Cliente</h5>',
+        '<label>Resultado *</label>',
+        '<select id="astV2OrcRespResultado">',
+          '<option value="APROVADO">Aprovado</option>',
+          '<option value="RECUSADO">Recusado</option>',
+        '</select>',
+        '<label>Valor aprovado (R$)</label>',
+        '<input type="number" id="astV2OrcRespValor" min="0" step="0.01" placeholder="Preencher se aprovado">',
+        '<label>Motivo da recusa</label>',
+        '<textarea id="astV2OrcRespMotivo" rows="2" placeholder="Obrigat&oacute;rio se recusado..."></textarea>',
+        '<label>Observa&ccedil;&otilde;es</label>',
+        '<textarea id="astV2OrcRespObs" rows="2" placeholder="Observa&ccedil;&otilde;es adicionais..."></textarea>',
+        '<div class="ast-v2-card-btns">',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarRespostaOrcamento_(\'' + idEsc + '\')">Confirmar Resposta</button>',
+          '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2OrcamentoCardContainer\').innerHTML=\'\'">Cancelar</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function astV2ConfirmarRespostaOrcamento_(id) {
+    var resEl  = document.getElementById("astV2OrcRespResultado");
+    var valEl  = document.getElementById("astV2OrcRespValor");
+    var motEl  = document.getElementById("astV2OrcRespMotivo");
+    var obsEl  = document.getElementById("astV2OrcRespObs");
+    if (!resEl) return;
+    var resultado = resEl.value;
+    if (resultado === "RECUSADO" && (!motEl || !motEl.value.trim())) {
+      return astToast_("Informe o motivo da recusa.");
+    }
+    var obs = obsEl ? obsEl.value.trim() : "";
+    if (resultado === "APROVADO") {
+      var valorAprovado = valEl && valEl.value ? parseFloat(valEl.value) : 0;
+      if (isNaN(valorAprovado) || valorAprovado < 0) valorAprovado = 0;
+      var payload = { VALOR_APROVADO: valorAprovado, OBSERVACAO: obs };
+      astSetContextStatus_("Registrando aprova&ccedil;&atilde;o...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!astOk_(res)) return astToast_((res && res.message) || "N&atilde;o foi poss&iacute;vel registrar aprova&ccedil;&atilde;o.");
+          astToast_("Or&ccedil;amento aprovado pelo cliente.");
+          astAbrirDetalhe_(id, { preservar: true });
+        })
+        .withFailureHandler(astFalhaToast_)
+        .astV2RegistrarAprovacaoCliente(SESSION, id, payload);
+    } else {
+      var motivoRecusa = motEl ? motEl.value.trim() : "";
+      var payloadRec = { MOTIVO_RECUSA: motivoRecusa, OBSERVACAO: obs };
+      astSetContextStatus_("Registrando recusa...");
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!astOk_(res)) return astToast_((res && res.message) || "N&atilde;o foi poss&iacute;vel registrar recusa.");
+          astToast_("Recusa do cliente registrada.");
+          astAbrirDetalhe_(id, { preservar: true });
+        })
+        .withFailureHandler(astFalhaToast_)
+        .astV2RegistrarRecusaCliente(SESSION, id, payloadRec);
+    }
+  }
+  function astOrcamentoResumoV2Html_(solicitacoes) {
+    if (!solicitacoes || !solicitacoes.length) return "";
+    var orcs = solicitacoes.filter(function(s) { return (s.CATEGORIA || "") === "ORCAMENTO"; });
+    if (!orcs.length) return "";
+    var ultimo = orcs[orcs.length - 1];
+    var status = (ultimo.STATUS || "ENVIADO").toUpperCase();
+    var statusColor = status === "APROVADO" ? "#15803d" : status === "RECUSADO" ? "#dc2626" : "#d97706";
+    var statusMap = { APROVADO: "Aprovado", RECUSADO: "Recusado", ENVIADO: "Enviado" };
+    var statusLabel = statusMap[status] || status;
+    var rows = [];
+    if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>T&iacute;tulo / Descri&ccedil;&atilde;o</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
+    rows.push('<div class="ast-v2-det-field"><span>Status</span><b style="color:' + statusColor + ';">' + astEsc_(statusLabel) + '</b></div>');
+    if (ultimo.URGENCIA)              rows.push('<div class="ast-v2-det-field"><span>Urg&ecirc;ncia</span><b>' + astEsc_(ultimo.URGENCIA) + '</b></div>');
+    if (ultimo.VALOR_ESTIMADO)        rows.push('<div class="ast-v2-det-field"><span>Valor estimado</span><b>R$ ' + astEsc_(Number(ultimo.VALOR_ESTIMADO || 0).toFixed(2)) + '</b></div>');
+    if (status === "APROVADO" && ultimo.VALOR_APROVADO) rows.push('<div class="ast-v2-det-field"><span>Valor aprovado</span><b style="color:#15803d;">R$ ' + astEsc_(Number(ultimo.VALOR_APROVADO || 0).toFixed(2)) + '</b></div>');
+    if (status === "RECUSADO" && ultimo.RECUSADO_MOTIVO) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Motivo da recusa</span><b style="color:#dc2626;">' + astEsc_(ultimo.RECUSADO_MOTIVO) + '</b></div>');
+    if (ultimo.JUSTIFICATIVA_TECNICA) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Justificativa</span><b>' + astEsc_(ultimo.JUSTIFICATIVA_TECNICA) + '</b></div>');
+    if (ultimo.OBSERVACAO)            rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Observa&ccedil;&otilde;es</span><b>' + astEsc_(ultimo.OBSERVACAO) + '</b></div>');
+    if (ultimo.SOLICITADO_EM)         rows.push('<div class="ast-v2-det-field"><span>Enviado em</span><b>' + astEsc_(astData_(ultimo.SOLICITADO_EM)) + '</b></div>');
+    if (status === "APROVADO" && ultimo.APROVADO_EM)   rows.push('<div class="ast-v2-det-field"><span>Aprovado em</span><b>' + astEsc_(astData_(ultimo.APROVADO_EM)) + '</b></div>');
+    if (status === "RECUSADO" && ultimo.RECUSADO_EM)   rows.push('<div class="ast-v2-det-field"><span>Recusado em</span><b>' + astEsc_(astData_(ultimo.RECUSADO_EM)) + '</b></div>');
+    if (!rows.length) return "";
+    return [
+      '<div class="ast-v2-det-section" style="border-top:2px solid #d97706;">',
+        '<h4 style="color:#d97706;">&#128179; Or&ccedil;amento</h4>',
+        '<div class="ast-v2-det-grid2">',
+          rows.join(""),
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
   function astDiagnosticoResumoHtml_(diag) {
     var label = '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b;letter-spacing:.04em;margin-bottom:6px;">Diagnóstico Técnico</div>';
     if (!diag || !diag.dados) {
@@ -1948,8 +2104,11 @@
     if (["EM_BANCADA", "DIAGNOSTICO_EM_ANDAMENTO", "DIAGNOSTICO_CONCLUIDO", "AGUARDANDO_PECA"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarSolicitacaoPecaCard_(\'' + id + '\')">&#128230; Solicitar Peça</button>');
     }
-    if (["AGUARDANDO_ORCAMENTO", "ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
-      acoes.push('<span class="ast-v2-acao-stub">Enviar Orçamento &mdash; em breve (C.4)</span>');
+    if (["DIAGNOSTICO_CONCLUIDO", "AGUARDANDO_ORCAMENTO"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarOrcamentoCard_(\'' + id + '\')">&#128179; Enviar Or&ccedil;amento</button>');
+    }
+    if (["ORCAMENTO_ENVIADO", "AGUARDANDO_APROVACAO_CLIENTE"].indexOf(status) >= 0) {
+      acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarRespostaOrcamentoCard_(\'' + id + '\')">&#128203; Registrar Resposta do Cliente</button>');
     }
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
@@ -1975,6 +2134,7 @@
         '<div id="astV2StatusCardContainer"></div>',
         '<div id="astV2EvidCardContainer"></div>',
         '<div id="astV2PecaCardContainer"></div>',
+        '<div id="astV2OrcamentoCardContainer"></div>',
         '<div id="astV2ExecucaoCardContainer"></div>',
         '<div id="astV2TesteValidacaoCardContainer"></div>',
         '<div id="astV2ConclusaoCardContainer"></div>',
