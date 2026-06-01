@@ -3074,6 +3074,47 @@
       .astV2VerificarDocumentoExistente(SESSION, id, "AT_PROTOCOLO_SAIDA_V2");
   }
 
+  function astV2InjetarCssPreview_(html) {
+    if (!html) return '';
+    var css = '<style>' +
+      '@media print{' +
+        'html{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        '.stitle,.sec,.trace-box,.qrbox,.ftr,.sig-line,.info,.alert-banner{break-inside:avoid;page-break-inside:avoid;}' +
+        'table{break-inside:avoid;page-break-inside:avoid;}' +
+        '.brand,.doc-tipo,.doc-sub,.doc-proto{break-after:avoid;page-break-after:avoid;}' +
+        'img{max-width:100%;height:auto;}' +
+      '}' +
+      '@media screen{' +
+        'html,body{max-width:100%;overflow-x:hidden;box-sizing:border-box;}' +
+      '}' +
+      '</style>';
+    var idx = html.indexOf('</head>');
+    return idx !== -1 ? html.slice(0, idx) + css + html.slice(idx) : html + css;
+  }
+
+  function astV2ImprimirPreview_(iframe) {
+    if (!iframe || !iframe.contentWindow) return astToast_("Aguarde o carregamento para imprimir.");
+    try { iframe.contentWindow.focus(); iframe.contentWindow.print(); }
+    catch(e_) { astToast_("Erro ao imprimir. Tente novamente."); }
+  }
+
+  function astV2WhatsAppPreview_(atendimentoId, tipoDocumento, rotuloDoc) {
+    if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
+    astToast_("Verificando documento oficial...");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_("Erro ao verificar documento. Tente novamente."); return; }
+        if (res.existe && res.documento && res.documento.pdfUrl) {
+          var msg = "[SGO+] " + rotuloDoc + "\nSegue o documento oficial:\n" + res.documento.pdfUrl;
+          window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener");
+        } else {
+          astToast_("Para enviar por WhatsApp, gere primeiro a versao oficial em PDF.");
+        }
+      })
+      .withFailureHandler(function() { astToast_("Nao foi possivel verificar o documento."); })
+      .astV2VerificarDocumentoExistente(SESSION, atendimentoId, tipoDocumento);
+  }
+
   function astV2PreviewRelatorioTecnico_(atendimentoId) {
     if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
     var overlayId = "astV2PreviewRelTecOverlay";
@@ -3081,23 +3122,36 @@
     if (existing) existing.parentNode.removeChild(existing);
     var overlay = document.createElement("div");
     overlay.id = overlayId;
-    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;box-sizing:border-box;";
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,18,40,0.93);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px;box-sizing:border-box;";
     var bar = document.createElement("div");
-    bar.style.cssText = "width:100%;max-width:900px;background:#1a2a4a;color:#fff;padding:10px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;";
+    bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:6px;";
     var titulo = document.createElement("span");
-    titulo.style.cssText = "font-weight:700;font-size:14px;";
+    titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
     titulo.textContent = "PRE-VISUALIZACAO — Relatorio Tecnico Final";
+    var btnBar = document.createElement("div");
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
+    var btnPrint = document.createElement("button");
+    btnPrint.textContent = "Imprimir";
+    btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    var btnWhats = document.createElement("button");
+    btnWhats.textContent = "WhatsApp";
+    btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnClose = document.createElement("button");
     btnClose.textContent = "Fechar X";
-    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:13px;";
+    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
+    btnBar.appendChild(btnPrint);
+    btnBar.appendChild(btnWhats);
+    btnBar.appendChild(btnClose);
     bar.appendChild(titulo);
-    bar.appendChild(btnClose);
+    bar.appendChild(btnBar);
     var iframeWrap = document.createElement("div");
-    iframeWrap.style.cssText = "width:100%;max-width:900px;flex:1;background:#fff;border-radius:0 0 6px 6px;overflow:hidden;min-height:0;";
+    iframeWrap.style.cssText = "width:100%;max-width:794px;flex:1;background:#fff;border-radius:0 0 4px 4px;overflow:hidden;min-height:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);";
     var iframe = document.createElement("iframe");
     iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
     iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#475467;font-size:13px;text-align:center;">Carregando pr&#233;-visualiza&#231;&#227;o...</div>';
+    btnPrint.onclick = function() { astV2ImprimirPreview_(iframe); };
+    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_RELATORIO_TECNICO_V2", "Relatorio Tecnico Final"); };
     iframeWrap.appendChild(iframe);
     overlay.appendChild(bar);
     overlay.appendChild(iframeWrap);
@@ -3109,7 +3163,7 @@
           astToast_(res && res.message || "Erro ao carregar preview.");
           return;
         }
-        iframe.srcdoc = res.html || '';
+        iframe.srcdoc = astV2InjetarCssPreview_(res.html || '');
       })
       .withFailureHandler(function() {
         iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Falha ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
@@ -3125,23 +3179,36 @@
     if (existing) existing.parentNode.removeChild(existing);
     var overlay = document.createElement("div");
     overlay.id = overlayId;
-    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.82);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;box-sizing:border-box;";
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,18,40,0.93);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px;box-sizing:border-box;";
     var bar = document.createElement("div");
-    bar.style.cssText = "width:100%;max-width:900px;background:#1a2a4a;color:#fff;padding:10px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;";
+    bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:6px;";
     var titulo = document.createElement("span");
-    titulo.style.cssText = "font-weight:700;font-size:14px;";
+    titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
     titulo.textContent = "PRE-VISUALIZACAO — Protocolo de Saida";
+    var btnBar = document.createElement("div");
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
+    var btnPrint = document.createElement("button");
+    btnPrint.textContent = "Imprimir";
+    btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    var btnWhats = document.createElement("button");
+    btnWhats.textContent = "WhatsApp";
+    btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnClose = document.createElement("button");
     btnClose.textContent = "Fechar X";
-    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:13px;";
+    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
+    btnBar.appendChild(btnPrint);
+    btnBar.appendChild(btnWhats);
+    btnBar.appendChild(btnClose);
     bar.appendChild(titulo);
-    bar.appendChild(btnClose);
+    bar.appendChild(btnBar);
     var iframeWrap = document.createElement("div");
-    iframeWrap.style.cssText = "width:100%;max-width:900px;flex:1;background:#fff;border-radius:0 0 6px 6px;overflow:hidden;min-height:0;";
+    iframeWrap.style.cssText = "width:100%;max-width:794px;flex:1;background:#fff;border-radius:0 0 4px 4px;overflow:hidden;min-height:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);";
     var iframe = document.createElement("iframe");
     iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
     iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#475467;font-size:13px;text-align:center;">Carregando pr&#233;-visualiza&#231;&#227;o...</div>';
+    btnPrint.onclick = function() { astV2ImprimirPreview_(iframe); };
+    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_SAIDA_V2", "Protocolo de Saida"); };
     iframeWrap.appendChild(iframe);
     overlay.appendChild(bar);
     overlay.appendChild(iframeWrap);
@@ -3153,7 +3220,7 @@
           astToast_(res && res.message || "Erro ao carregar preview.");
           return;
         }
-        iframe.srcdoc = res.html || '';
+        iframe.srcdoc = astV2InjetarCssPreview_(res.html || '');
       })
       .withFailureHandler(function() {
         iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Falha ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
