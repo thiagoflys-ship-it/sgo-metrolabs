@@ -1,6 +1,6 @@
 # Inventário do Módulo Assistência Técnica — SGO+
 **Atualizado em:** 2026-06-01
-**Fase:** V2 — C.5.1 Orçamento frontend em produção @180. C.3/C.4 fluxo pós-execução auditado e funcional. Próxima frente: a definir.
+**Fase:** V2 — Produção @182. C.9.1 assinatura opcional na entrega V2 e C.5.3 UX do orçamento aguardando autorização do cliente publicadas. Próxima frente: a definir.
 **Arquivos ativos:** `SGO_AssistenciaTecnica.js` · `JS_AssistenciaTecnica.html`
 
 ---
@@ -36,6 +36,8 @@
 | `457e5e1` | feat(AT): aprimorar preview A4 com impressao e WhatsApp |
 | `22db9af` | style(AT): reorganizar aba Documentos em 4 blocos premium |
 | `2134d8e` | feat(AT): adicionar frontend de orcamento V2 |
+| `c8ed48f` | feat(AT): adicionar assinatura opcional na entrega V2 |
+| `d681f40` | ux(AT): esclarecer autorizacao do cliente no orcamento V2 |
 
 ---
 
@@ -488,6 +490,9 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | C.4 (fluxo) | Fluxo pós-execução V2 auditado: Teste/Validação, Conclusão Técnica, Entrega — todos funcionais | ✅ auditado 2026-06-01 |
 | C.5.1 | Enviar Orçamento V2 frontend (cards + resumo + resposta do cliente) | ✅ commit 2134d8e · deploy @180 |
 | **C.5.2** | **Teste pós-deploy C.5.1 em produção @180 — C.5 Enviar Orçamento V2 fechado** | ✅ **2026-06-01** |
+| C.9.1 | Assinatura opcional na entrega V2 | ✅ commit c8ed48f · deploy @182 |
+| C.5.3 | UX do orçamento aguardando autorização do cliente | ✅ commit d681f40 · deploy @182 |
+| **Deploy @182** | **Produção atual — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
 
 ---
 
@@ -498,7 +503,6 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | C.4 (ORC) | Integração ORC/Mini-CRM com orçamentos AT (requer setupOrcamentosV2 — planejamento separado) |
 | C.7 | Integração real com SGO_Missoes (remover stub) |
 | C.8 | Alertas automáticos (reimplementar `gerarAlertasEntrada_`) |
-| C.9 | Entrega com assinatura V2 |
 | C.10 | Relatório Final V2 + Recibo de Devolução |
 | D | Deploy / ativação em produção |
 
@@ -528,6 +532,7 @@ ATENDIMENTO_SEM_CONCLUSAO_TECNICA
 | Risco | Severidade | Situação |
 |-------|-----------|----------|
 | C.5/C.5B/C.6/E.8/E.9/E.10 publicados — deployment @178 ativo | — | RESOLVIDO |
+| C.9.1/C.5.3 publicados — deployment @182 ativo | — | RESOLVIDO |
 | `DATA_PREVISTA` de peça não persiste no schema (coletada no form, salva só no historico) | BAIXO | Decisão consciente — C.6 |
 | Status `AGUARDANDO_PECAS` (legado) não exibe botão "Solicitar Peça" no V2 | BAIXO | Só afeta atendimentos migrados |
 | Terceiros/Lab ainda em caminho legado — transições podem conflitar com V2 | MÉDIO | Escopo fora do rebuild |
