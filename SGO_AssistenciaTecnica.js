@@ -2520,6 +2520,25 @@
     return ["CANCELADO", "RECUSADO", "RECEBIDO", "INSTALADO"].indexOf(upper_(solicitacao.STATUS)) === -1;
   }
 
+  function v2HistoricoRecenteExiste_(atendimentoId, tipoEvento, descricao, minutos, predicadoObs) {
+    const historico = SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId || "", DB) || [];
+    const limite = new Date(Date.now() - ((minutos || 10) * 60000));
+    return historico.some(function(h) {
+      if ((h.TIPO || "") !== (tipoEvento || "")) return false;
+      if (descricao && (h.DESCRICAO || "") !== descricao) return false;
+      if (h.EXECUTADO_EM) {
+        const quando = new Date(h.EXECUTADO_EM);
+        if (!isNaN(quando.getTime()) && quando < limite) return false;
+      }
+      if (typeof predicadoObs === "function") {
+        var obs = {};
+        try { obs = JSON.parse(h.OBSERVACAO || "{}"); } catch (e_) {}
+        return predicadoObs(obs);
+      }
+      return true;
+    });
+  }
+
   function v2RegistrarHistorico_(atendimentoId, statusAnterior, statusNovo, descricao, autorId, autorNome, tipoEvento, payload) {
     SGO_DATA.insert(S.AST_HISTORICO, SGO_DATA.gerarRegistroBase({
       ATENDIMENTO_ID: atendimentoId || "",
@@ -3182,6 +3201,14 @@
     };
     if (p.FORNECEDOR_FINAL) patch.FORNECEDOR_NOME = safe_(p.FORNECEDOR_FINAL);
     if (p.VALOR_FINAL !== undefined && p.VALOR_FINAL !== "") patch.VALOR_APROVADO = Number(p.VALOR_FINAL) || 0;
+    if (statusNovo === "APROVADO") {
+      patch.APROVADO_POR = safe_(sessao.userId || sessao.usuario);
+      patch.APROVADO_EM  = now_();
+    }
+    if (statusNovo === "RECUSADO") {
+      patch.RECUSADO_EM = now_();
+      patch.RECUSADO_MOTIVO = safe_(p.OBSERVACAO || solicitacao.RECUSADO_MOTIVO);
+    }
     if (statusNovo === "COMPRADO")  patch.COMPRADO_EM  = now_();
     if (statusNovo === "RECEBIDO")  patch.RECEBIDO_EM  = now_();
     if (statusNovo === "INSTALADO") patch.INSTALADO_EM = now_();
@@ -3307,20 +3334,29 @@
     }
     const resultado = upper_(safe_(p.RESULTADO_TESTE));
     const descricao = "Teste/validacao registrado. Resultado: " + resultado;
-    v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
-      descricao,
-      sessao.userId, sessao.nome, "TESTE_VALIDACAO", {
-        tipoTeste:              safe_(p.TIPO_TESTE              || ""),
-        procedimentoRealizado:  safe_(p.PROCEDIMENTO_REALIZADO  || ""),
-        parametrosObservados:   safe_(p.PARAMETROS_OBSERVADOS   || ""),
-        resultadoTeste:         resultado,
-        evidencias:             safe_(p.EVIDENCIAS              || ""),
-        recomendacaoFinal:      safe_(p.RECOMENDACAO_FINAL      || ""),
-        observacoes:            safe_(p.OBSERVACOES             || "")
-      });
+    const dadosTeste = {
+      tipoTeste:              safe_(p.TIPO_TESTE              || ""),
+      procedimentoRealizado:  safe_(p.PROCEDIMENTO_REALIZADO  || ""),
+      parametrosObservados:   safe_(p.PARAMETROS_OBSERVADOS   || ""),
+      resultadoTeste:         resultado,
+      evidencias:             safe_(p.EVIDENCIAS              || ""),
+      recomendacaoFinal:      safe_(p.RECOMENDACAO_FINAL      || ""),
+      observacoes:            safe_(p.OBSERVACOES             || "")
+    };
+    if (!v2HistoricoRecenteExiste_(atendimentoId, "TESTE_VALIDACAO", descricao, 10, function(obs) {
+      return safe_(obs.resultadoTeste) === resultado;
+    })) {
+      v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
+        descricao, sessao.userId, sessao.nome, "TESTE_VALIDACAO", dadosTeste);
+    }
     var proximaAcao;
     if (resultado === "APROVADO") {
       proximaAcao = "Registrar conclusao tecnica.";
+      if (v2StatusValido_(atendimento.STATUS, STATUS_V2.EXECUCAO_CONCLUIDA)) {
+        v2AtualizarStatus_(atendimentoId, STATUS_V2.EXECUCAO_CONCLUIDA,
+          "Teste aprovado. Prosseguir para conclusao tecnica.",
+          sessao.userId, sessao.nome);
+      }
     } else if (resultado === "REPROVADO") {
       proximaAcao = "Retornar para execucao tecnica. Verificar falhas e executar novo reparo.";
       if (v2StatusValido_(atendimento.STATUS, STATUS_V2.EXECUCAO_EM_ANDAMENTO)) {
@@ -3457,19 +3493,24 @@
       }
     }
     const statusHistoricoNovo = finalizar ? STATUS_V2.ENTREGUE : statusAposPreparacao;
-    v2RegistrarHistorico_(atendimentoId, statusOrigem, statusHistoricoNovo,
-      descricao, sessao.userId, sessao.nome, "ENTREGA", {
-        entregueParaNome:     nomeEntrega,
-        entregueParaDoc:      safe_(p.ENTREGUE_PARA_DOC     || ""),
-        entregueParaCargo:    safe_(p.ENTREGUE_PARA_CARGO   || ""),
-        dataEntrega:          safe_(p.DATA_ENTREGA          || ""),
-        condicaoEntrega:      safe_(p.CONDICAO_ENTREGA      || ""),
-        acessoriosDevolvidos: safe_(p.ACESSORIOS_DEVOLVIDOS || ""),
-        observacoes:          safe_(p.OBSERVACOES           || ""),
-        assinaturaBase64:     safe_(p.ASSINATURA_ENTREGA_BASE64 || ""),
-        assinaturaRegistrada: p.ASSINATURA_ENTREGA_BASE64   ? "S" : "N",
-        finalizado:           finalizar                     ? "S" : "N"
-      });
+    const dadosEntrega = {
+      entregueParaNome:     nomeEntrega,
+      entregueParaDoc:      safe_(p.ENTREGUE_PARA_DOC     || ""),
+      entregueParaCargo:    safe_(p.ENTREGUE_PARA_CARGO   || ""),
+      dataEntrega:          safe_(p.DATA_ENTREGA          || ""),
+      condicaoEntrega:      safe_(p.CONDICAO_ENTREGA      || ""),
+      acessoriosDevolvidos: safe_(p.ACESSORIOS_DEVOLVIDOS || ""),
+      observacoes:          safe_(p.OBSERVACOES           || ""),
+      assinaturaBase64:     safe_(p.ASSINATURA_ENTREGA_BASE64 || ""),
+      assinaturaRegistrada: p.ASSINATURA_ENTREGA_BASE64   ? "S" : "N",
+      finalizado:           finalizar                     ? "S" : "N"
+    };
+    if (!v2HistoricoRecenteExiste_(atendimentoId, "ENTREGA", descricao, 10, function(obs) {
+      return safe_(obs.finalizado) === dadosEntrega.finalizado && safe_(obs.entregueParaNome) === dadosEntrega.entregueParaNome;
+    })) {
+      v2RegistrarHistorico_(atendimentoId, statusOrigem, statusHistoricoNovo,
+        descricao, sessao.userId, sessao.nome, "ENTREGA", dadosEntrega);
+    }
     const atualNow = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
     const statusParaEntrega = (atualNow && atualNow.STATUS) || STATUS_V2.AGUARDANDO_ENTREGA;
     if (finalizar && v2StatusValido_(statusParaEntrega, STATUS_V2.ENTREGUE)) {
@@ -4141,6 +4182,124 @@
     }
   }
 
+  function montarHtmlProtocoloEntradaV2_(atendimento, meta) {
+    var e = atendimento || {};
+    var css =
+      '@page{size:A4;margin:14mm 13mm 17mm 13mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:10px;background:#fff;line-height:1.45}' +
+      '.brand{font-size:11px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
+      '.brand-tagline{font-size:9px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
+      '.brand-data{font-size:8px;color:#64748b;line-height:1.6}' +
+      '.doc-tipo{font-size:14px;font-weight:900;color:#0b3b78;text-align:right}' +
+      '.doc-sub{font-size:9px;color:#64748b;text-align:right;font-weight:700}' +
+      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:3px}' +
+      '.doc-emit{font-size:8px;color:#94a3b8;text-align:right;margin-top:2px}' +
+      '.stitle{font-size:8.5px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
+      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
+      '.lbl{font-size:7.5px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.3px}' +
+      '.val{font-size:9px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
+      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;font-size:9px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
+      '.trace-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px}' +
+      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.5px;word-break:break-all;color:#334155}' +
+      '.qrbox{text-align:center;padding:4px;display:inline-block}' +
+      '.qrbox img{width:70px;height:70px;border:1px solid #e2e8f0;border-radius:2px}' +
+      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:700;text-transform:uppercase}' +
+      '.sig-line{border-top:1px solid #334155;margin:24px 0 3px}' +
+      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.5px;color:#94a3b8;line-height:1.5}';
+    function kv_(label, valor) {
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
+    }
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>';
+    html += '<table style="width:100%;border-collapse:collapse;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:10px"><tr>';
+    html += '<td style="vertical-align:top;width:58%"><table style="border-collapse:collapse;width:100%"><tr>';
+    if (meta.logoBase64) html += '<td style="vertical-align:middle;padding-right:10px;width:1%"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    html += '<td style="vertical-align:top"><div class="brand">METROLABS</div><div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
+    html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div></td></tr></table></td>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%"><div class="doc-tipo">Protocolo de Entrada</div><div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica &mdash; Recebimento</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
+    html += '<div class="stitle">Dados do Atendimento</div><table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status', e.STATUS) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Modelo / Marca', [safe_(e.EQUIPAMENTO_MODELO), safe_(e.EQUIPAMENTO_MARCA)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Tecnico', e.TECNICO_NOME) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Prioridade', e.PRIORIDADE) + kv_('Prazo prometido', e.PRAZO_PROMETIDO ? formatarDataBR_(e.PRAZO_PROMETIDO) : '') + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Problema Relatado</div><div class="sec">' + esc_(e.PROBLEMA_RELATADO || '--') + '</div>';
+    html += '<div class="stitle">Condicao Fisica / Acessorios</div><div class="sec">' + esc_(e.CONDICAO_FISICA || '--') + '<br>Acessorios: ' + esc_(e.ACESSORIOS_CONFERIDOS || '--') + '</div>';
+    html += '<div class="stitle">Ciencia de Recebimento</div><table style="width:100%;border-collapse:collapse;margin-top:4px"><tr><td style="width:50%;padding-right:12px;vertical-align:top"><div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px"><div class="lbl">Responsavel Metrolabs</div><div class="sig-line"></div><div style="font-size:8px;color:#64748b">Nome / assinatura</div></div></td><td style="width:50%;padding-left:12px;vertical-align:top"><div style="border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px"><div class="lbl">Cliente / Entregador</div><div class="sig-line"></div><div style="font-size:8px;color:#64748b">Nome / documento / assinatura</div></div></td></tr></table>';
+    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade</div><table style="width:100%;border-collapse:collapse"><tr><td style="vertical-align:top;padding-right:10px"><div><span class="lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash SHA256:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div></td><td style="vertical-align:top;text-align:center;white-space:nowrap">';
+    if (meta.qrValidacaoBase64 || meta.qrValidacao) html += '<div class="qrbox"><img src="' + (meta.qrValidacaoBase64 || esc_(meta.qrValidacao)) + '" alt="QR Validacao"><div class="qrlbl">Valida doc.</div></div>';
+    if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
+    html += '</td></tr></table></div>';
+    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Protocolo de Entrada &mdash; Assist&ecirc;ncia T&eacute;cnica<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Emitido em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div>';
+    html += '</body></html>';
+    return html;
+  }
+
+  function gerarDocumentoEntradaV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+      if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+      const meta = prepararMetaDocumental_("PE-AT", safe_(atendimento.QR_URL_ACOMPANHAMENTO || ""));
+      const nomeArq = nomeArquivoAst_("AT_PROTOCOLO_ENTRADA_" + safe_(atendimento.PROTOCOLO) + ".pdf");
+      const emissao = emitirPdfComHash_(meta, function(m) { return montarHtmlProtocoloEntradaV2_(atendimento, m); }, nomeArq);
+      const registro = registrarDocumentoAtendimentoV2_(sessao, atendimentoId, "AT_PROTOCOLO_ENTRADA_V2", "Protocolo de Entrada - " + safe_(atendimento.PROTOCOLO), emissao.file, meta.token, meta.validacaoUrl, meta.qrValidacao, meta.qrAcompanhamento, emissao.hash);
+      if (!v2HistoricoRecenteExiste_(atendimentoId, "DOCUMENTO", "Protocolo de entrada V2 gerado.", 10, null)) {
+        v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS, "Protocolo de entrada V2 gerado.", sessao.userId, sessao.nome, "DOCUMENTO", { documentoId: registro.ID });
+      }
+      return { success: true, documento: registro, pdfUrl: emissao.file.getUrl(), downloadUrl: downloadUrl_(emissao.file.getId()), token: meta.token, hash: emissao.hash };
+    } catch (e_) {
+      return erro_("Erro ao gerar protocolo de entrada V2: " + e_.message);
+    }
+  }
+
+  function gerarEtiquetaV2(sessionId, atendimentoId, tamanho) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const classe = upper_(tamanho || "MEDIA");
+    const qr = safe_(atendimento.QR_URL_ACOMPANHAMENTO || atendimento.QR_URL || "");
+    const html = '<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;margin:0}.label{border:1px solid #111;padding:8px;width:' + (classe === "PEQUENA" ? "70mm" : "100mm") + ';min-height:' + (classe === "PEQUENA" ? "35mm" : "50mm") + '} .code{font-size:18px;font-weight:900;color:#0b7a3e}.muted{font-size:10px;color:#374151}.qr{width:72px;height:72px;float:right}</style></head><body><div class="label">' + (qr ? '<img class="qr" src="' + esc_(qr) + '">' : '') + '<div class="code">' + esc_(atendimento.PROTOCOLO) + '</div><div><b>Cliente:</b> ' + esc_(atendimento.CLIENTE_NOME || atendimento.CLIENTE_PROVISORIO) + '</div><div><b>Equip.:</b> ' + esc_(atendimento.EQUIPAMENTO_NOME || atendimento.EQUIPAMENTO_PROVISORIO) + '</div><div><b>Status:</b> ' + esc_(atendimento.STATUS) + '</div><div class="muted">Rastreabilidade SGO+ AT V2</div></div></body></html>';
+    return { success: true, html: html };
+  }
+
+  function obterWhatsappV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    let docs = SGO_DATA.getManyByField(S.AST_DOCUMENTOS, "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    docs = docs.slice().sort(function(a, b) {
+      var ta = a.GERADO_EM || a.CRIADO_EM || "";
+      var tb = b.GERADO_EM || b.CRIADO_EM || "";
+      return ta < tb ? 1 : ta > tb ? -1 : 0;
+    });
+    var docUrl = "";
+    for (var i = 0; i < docs.length; i++) {
+      if (safe_(docs[i].DOWNLOAD_URL || docs[i].LINK_ARQUIVO)) {
+        docUrl = safe_(docs[i].DOWNLOAD_URL || docs[i].LINK_ARQUIVO);
+        break;
+      }
+    }
+    const texto = [
+      "Assistencia Tecnica Metrolabs",
+      "Protocolo: " + safe_(atendimento.PROTOCOLO),
+      "Cliente: " + safe_(atendimento.CLIENTE_NOME || atendimento.CLIENTE_PROVISORIO),
+      "Equipamento: " + safe_(atendimento.EQUIPAMENTO_NOME || atendimento.EQUIPAMENTO_PROVISORIO),
+      "Status: " + safe_(atendimento.STATUS),
+      "Proxima acao: " + safe_(atendimento.PROXIMA_ACAO || ""),
+      atendimento.URL_PUBLICA ? ("Acompanhamento: " + safe_(atendimento.URL_PUBLICA)) : "",
+      docUrl ? ("Documento: " + docUrl) : ""
+    ].filter(function(x) { return safe_(x); }).join("\n");
+    return { success: true, texto: texto, url: "https://wa.me/?text=" + encodeURIComponent(texto) };
+  }
+
   function listarDocumentosEmitidosV2_(sessao, atendimentoId) {
     if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
     var docs = SGO_DATA.getManyByField(S.AST_DOCUMENTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
@@ -4309,18 +4468,33 @@
     Object.keys(STATUS_V2).forEach(function(s) { porStatus[s] = 0; });
     const porBandeira = { AZUL_CINZA: 0, AMARELO: 0, VERDE: 0, VERMELHO: 0 };
     const agora = new Date();
+    const hoje = Utilities.formatDate(agora, Session.getScriptTimeZone(), "yyyy-MM-dd");
     const fechados = [STATUS_V2.ENTREGUE, STATUS_V2.CANCELADO, STATUS_V2.NAO_REPARADO];
     let atrasados = 0;
+    let entradasDia = 0;
     todos.forEach(function(a) {
       if (porStatus[a.STATUS] !== undefined) porStatus[a.STATUS]++;
       if (porBandeira[a.BANDEIRA] !== undefined) porBandeira[a.BANDEIRA]++;
       if (a.PRAZO_ESTIMADO && fechados.indexOf(a.STATUS) === -1 && new Date(a.PRAZO_ESTIMADO) < agora) atrasados++;
+      if (a.CRIADO_EM) {
+        try {
+          if (Utilities.formatDate(new Date(a.CRIADO_EM), Session.getScriptTimeZone(), "yyyy-MM-dd") === hoje) entradasDia++;
+        } catch (e_) {}
+      }
     });
     const alertasPendentes = (SGO_DATA.getAll(S.AST_ALERTAS, DB) || [])
       .filter(function(al) { return al.STATUS === "PENDENTE"; }).length;
     return {
       success: true,
       data: { total: todos.length, por_status: porStatus, por_bandeira: porBandeira,
+              totalAtendimentos: todos.length,
+              entradasDia: entradasDia,
+              aguardandoDiagnostico: porStatus[STATUS_V2.AGUARDANDO_DIAGNOSTICO] || 0,
+              emBancada: (porStatus[STATUS_V2.EM_BANCADA] || 0) + (porStatus[STATUS_V2.DIAGNOSTICO_EM_ANDAMENTO] || 0),
+              emExecucao: (porStatus[STATUS_V2.LIBERADO_PARA_EXECUCAO] || 0) + (porStatus[STATUS_V2.EXECUCAO_EM_ANDAMENTO] || 0) + (porStatus[STATUS_V2.EXECUCAO_CONCLUIDA] || 0),
+              aguardandoOrcamento: (porStatus[STATUS_V2.AGUARDANDO_ORCAMENTO] || 0) + (porStatus[STATUS_V2.ORCAMENTO_ENVIADO] || 0) + (porStatus[STATUS_V2.AGUARDANDO_APROVACAO_CLIENTE] || 0),
+              aguardandoPecas: porStatus[STATUS_V2.AGUARDANDO_PECA] || 0,
+              prontosEntrega: (porStatus[STATUS_V2.EXECUCAO_CONCLUIDA] || 0) + (porStatus[STATUS_V2.CONCLUIDO_TECNICAMENTE] || 0) + (porStatus[STATUS_V2.AGUARDANDO_ENTREGA] || 0),
               atrasados: atrasados, alertas_pendentes: alertasPendentes }
     };
   }
@@ -4661,6 +4835,49 @@
     return { success: true, data: SGO_DATA.getById(S.AST_SOLICITACOES, p.SOLICITACAO_ID, DB) };
   }
 
+  function registrarInstalacaoPecaV2(sessionId, atendimentoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "TECNICO");
+    if (!perm.success) return perm;
+    const p = payload || {};
+    if (!p.SOLICITACAO_ID) return erro_("SOLICITACAO_ID obrigatorio");
+    const solicitacao = SGO_DATA.getById(S.AST_SOLICITACOES, p.SOLICITACAO_ID, DB);
+    if (!solicitacao) return erro_("Solicitacao nao encontrada: " + p.SOLICITACAO_ID);
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    if (safe_(solicitacao.ATENDIMENTO_ID) !== safe_(atendimentoId)) return erro_("Solicitacao nao pertence ao atendimento informado.");
+    if (solicitacao.TIPO !== "PECA") return erro_("Solicitacao nao e do tipo PECA");
+    if (!v2SolicitacaoAtiva_(solicitacao) || ["RECEBIDO", "COMPRADO", "APROVADO"].indexOf(upper_(solicitacao.STATUS)) === -1) {
+      return erro_("Status da solicitacao nao permite instalacao: " + solicitacao.STATUS);
+    }
+    SGO_DATA.update(S.AST_SOLICITACOES, p.SOLICITACAO_ID, {
+      STATUS:             "INSTALADO",
+      INSTALADO_EM:       now_(),
+      OBSERVACAO:         safe_(p.OBSERVACAO || solicitacao.OBSERVACAO),
+      ATUALIZADO_POR:     safe_(sessao.userId || sessao.usuario),
+      ATUALIZADO_EM:      now_()
+    }, DB);
+    v2RegistrarHistorico_(atendimentoId, atendimento.STATUS, atendimento.STATUS,
+      "Peca instalada: " + v2SolicitacaoDescricao_(solicitacao),
+      sessao.userId, sessao.nome, "STATUS_PECA", { solicitacaoId: p.SOLICITACAO_ID });
+    if (v2StatusValido_(atendimento.STATUS, STATUS_V2.LIBERADO_PARA_EXECUCAO)) {
+      v2AtualizarStatus_(atendimentoId, STATUS_V2.LIBERADO_PARA_EXECUCAO,
+        "Peca instalada. Liberado para execucao.", sessao.userId, sessao.nome);
+    } else {
+      SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+        PROXIMA_ACAO:   "Peca instalada. Concluir pendencias e liberar execucao.",
+        ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+        ATUALIZADO_EM:  now_()
+      }, DB);
+    }
+    return {
+      success:     true,
+      data:        v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      solicitacao: SGO_DATA.getById(S.AST_SOLICITACOES, p.SOLICITACAO_ID, DB),
+      historico:   SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
   function liberarExecucaoV2(sessionId, atendimentoId, payload) {
     const sessao = exigirSessao(sessionId);
     const perm = exigirAst_(sessao, "GERENCIAR_ENTRADAS");
@@ -4800,6 +5017,9 @@
     registrarEntregaV2: registrarEntregaV2,
     gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
+    gerarDocumentoEntradaV2: gerarDocumentoEntradaV2,
+    gerarEtiquetaV2: gerarEtiquetaV2,
+    obterWhatsappV2: obterWhatsappV2,
     listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
     verificarDocumentoExistenteV2: verificarDocumentoExistenteV2,
     previewRelatorioTecnicoV2: previewRelatorioTecnicoV2,
@@ -4816,6 +5036,7 @@
     solicitarPecaV2: solicitarPecaV2,
     registrarCompraPecaV2: registrarCompraPecaV2,
     registrarRecebimentoPecaV2: registrarRecebimentoPecaV2,
+    registrarInstalacaoPecaV2: registrarInstalacaoPecaV2,
     liberarExecucaoV2: liberarExecucaoV2,
     encaminharTerceiroStatusV2: encaminharTerceiroStatusV2,
     encaminharLaboratorioStatusV2: encaminharLaboratorioStatusV2,
@@ -4919,6 +5140,9 @@ function astV2RegistrarConclusaoTecnica(sessionId, atendimentoId, payload) { ret
 function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.registrarEntregaV2(sessionId, atendimentoId, payload); }
 function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
+function astV2GerarDocumentoEntrada(sessionId, atendimentoId) { return SGO_AST.gerarDocumentoEntradaV2(sessionId, atendimentoId); }
+function astV2GerarEtiqueta(sessionId, atendimentoId, tamanho) { return SGO_AST.gerarEtiquetaV2(sessionId, atendimentoId, tamanho); }
+function astV2ObterWhatsapp(sessionId, atendimentoId) { return SGO_AST.obterWhatsappV2(sessionId, atendimentoId); }
 function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
 function astV2VerificarDocumentoExistente(sessionId, atendimentoId, tipoDocumento) { return SGO_AST.verificarDocumentoExistenteV2(sessionId, atendimentoId, tipoDocumento); }
 function astV2PreviewRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.previewRelatorioTecnicoV2(sessionId, atendimentoId); }
@@ -4935,6 +5159,7 @@ function astV2RegistrarRecusaCliente(sessionId, atendimentoId, payload) { return
 function astV2SolicitarPeca(sessionId, atendimentoId, payload) { return SGO_AST.solicitarPecaV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarCompraPeca(sessionId, atendimentoId, payload) { return SGO_AST.registrarCompraPecaV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarRecebimentoPeca(sessionId, atendimentoId, payload) { return SGO_AST.registrarRecebimentoPecaV2(sessionId, atendimentoId, payload); }
+function astV2RegistrarInstalacaoPeca(sessionId, atendimentoId, payload) { return SGO_AST.registrarInstalacaoPecaV2(sessionId, atendimentoId, payload); }
 function astV2LiberarExecucao(sessionId, atendimentoId, payload) { return SGO_AST.liberarExecucaoV2(sessionId, atendimentoId, payload); }
 function astV2EncaminharTerceiroStatus(sessionId, atendimentoId, payload) { return SGO_AST.encaminharTerceiroStatusV2(sessionId, atendimentoId, payload); }
 function astV2EncaminharLaboratorioStatus(sessionId, atendimentoId, payload) { return SGO_AST.encaminharLaboratorioStatusV2(sessionId, atendimentoId, payload); }

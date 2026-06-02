@@ -359,7 +359,8 @@
           AST_STATE.tecnicos = res.tecnicos || [];
           AST_STATE.fornecedores = res.fornecedores || [];
           AST_STATE.dashboard = res.dashboard || {};
-          astRenderKpis_();
+          if (AST_STATE.usarEntradaV2 === true) astCarregarDashboardV2_();
+          else astRenderKpis_();
           astAtualizarFiltrosLista_();
           astSetContextStatus_("Painel atualizado.");
           astPesquisar_();
@@ -376,6 +377,39 @@
       astErroTabela_(err, 7);
       console.error("Falha ao chamar astContexto.", err);
     }
+  }
+
+  function astCarregarDashboardV2_() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) {
+          astSetContextStatus_("Painel atualizado. KPIs V2 indisponiveis.");
+          return;
+        }
+        AST_STATE.dashboard = astDashboardV2ParaKpis_(res.data || res.dashboard || {});
+        astRenderKpis_();
+      })
+      .withFailureHandler(function(err) {
+        astSetContextStatus_("Painel atualizado. Falha ao carregar KPIs V2.");
+        console.error("Falha ao chamar astV2Dashboard.", err);
+      })
+      .astV2Dashboard(SESSION);
+  }
+
+  function astDashboardV2ParaKpis_(data) {
+    var d = data || {};
+    var por = d.por_status || d.porStatus || {};
+    return {
+      totalAtendimentos: d.totalAtendimentos || d.total || 0,
+      entradasDia: d.entradasDia || 0,
+      aguardandoDiagnostico: d.aguardandoDiagnostico || por.AGUARDANDO_DIAGNOSTICO || 0,
+      emBancada: d.emBancada || ((por.EM_BANCADA || 0) + (por.DIAGNOSTICO_EM_ANDAMENTO || 0)),
+      emExecucao: d.emExecucao || ((por.LIBERADO_PARA_EXECUCAO || 0) + (por.EXECUCAO_EM_ANDAMENTO || 0) + (por.EXECUCAO_CONCLUIDA || 0)),
+      aguardandoOrcamento: d.aguardandoOrcamento || ((por.AGUARDANDO_ORCAMENTO || 0) + (por.ORCAMENTO_ENVIADO || 0) + (por.AGUARDANDO_APROVACAO_CLIENTE || 0)),
+      aguardandoPecas: d.aguardandoPecas || por.AGUARDANDO_PECA || 0,
+      prontosEntrega: d.prontosEntrega || ((por.EXECUCAO_CONCLUIDA || 0) + (por.CONCLUIDO_TECNICAMENTE || 0) + (por.AGUARDANDO_ENTREGA || 0)),
+      atrasados: d.atrasados || 0
+    };
   }
 
   function astKpisSkeletonHtml_() {
@@ -520,10 +554,13 @@
 
   function astRenderKpis_() {
     const d = AST_STATE.dashboard || {};
+    const primeiroLabel = d.totalAtendimentos !== undefined ? "Atendimentos V2" : "Entradas hoje";
+    const primeiroValor = d.totalAtendimentos !== undefined ? d.totalAtendimentos : d.entradasDia;
+    const execucaoValor = d.emExecucao !== undefined ? d.emExecucao : (d.emBancada || d.emManutencao || d.manutencao);
     const cards = [
-      ["Entradas hoje", astNum_(d.entradasDia), "ast-muted"],
+      [primeiroLabel, astNum_(primeiroValor), "ast-muted"],
       ["Aguardando diagnóstico", astNum_(d.aguardandoDiagnostico), "ast-warn"],
-      ["Em bancada", astNum_(d.emBancada || d.emManutencao || d.manutencao), "ast-info"],
+      [d.emExecucao !== undefined ? "Execucao" : "Em bancada", astNum_(execucaoValor), "ast-info"],
       ["Aguardando orçamento", astNum_(d.aguardandoOrcamento || d.aguardandoDecisao), "ast-warn"],
       ["Aguardando peças", astNum_(d.aguardandoPecas), "ast-warn"],
       ["Pronto entrega", astNum_(d.prontosEntrega), "ast-ok"],
@@ -1173,7 +1210,7 @@
       astDetalheV2HeroHtml_(e),
       '<div class="ast-v2-det-layout">',
         '<div class="ast-v2-det-main">',
-          astEsteiraDetalheV2Html_(e),
+          astEsteiraDetalheV2Html_(e, historico),
           astResumoTecnicoV2Html_(e, acessorios, fotos, diag),
           astSolicitacoesPecaV2Html_(solicitacoes),
           astOrcamentoResumoV2Html_(solicitacoes),
@@ -1184,7 +1221,7 @@
           astTimelineV2Html_(historico),
         '</div>',
         '<aside class="ast-v2-det-side">',
-          astAcoesEtapaV2Html_(e),
+          astAcoesEtapaV2Html_(e, historico),
           astDocumentosV2Html_(e),
           astRastreabilidadeV2Html_(e),
         '</aside>',
@@ -1231,8 +1268,25 @@
     ].join("");
   }
 
-  function astEsteiraDetalheV2Html_(e) {
+  function astV2UltimoTesteValidacao_(historico) {
+    var ultimo = null;
+    if (Array.isArray(historico)) {
+      for (var i = historico.length - 1; i >= 0; i--) {
+        if ((historico[i].TIPO || "") === "TESTE_VALIDACAO") { ultimo = historico[i]; break; }
+      }
+    }
+    if (!ultimo) return null;
+    var dados = {};
+    try { dados = JSON.parse(ultimo.OBSERVACAO || "{}"); } catch (e_) {}
+    ultimo._dadosTeste = dados;
+    ultimo._resultadoTeste = (dados.resultadoTeste || "").toUpperCase();
+    return ultimo;
+  }
+
+  function astEsteiraDetalheV2Html_(e, historico) {
     var status = astStatusNorm_(e.STATUS || "");
+    var teste = astV2UltimoTesteValidacao_(historico);
+    var testeAprovado = status === "EXECUCAO_CONCLUIDA" && teste && teste._resultadoTeste === "APROVADO";
     var etapas = [
       { label: "Entrada",    s: ["ENTRADA_REGISTRADA"] },
       { label: "Avaliação",  s: ["AGUARDANDO_DIAGNOSTICO", "EM_BANCADA"] },
@@ -1248,6 +1302,7 @@
     for (i = 0; i < etapas.length; i++) {
       if (etapas[i].s.indexOf(status) >= 0) { currentIdx = i; break; }
     }
+    if (testeAprovado) currentIdx = 6;
     var steps = [];
     for (i = 0; i < etapas.length; i++) {
       var done   = currentIdx > i;
@@ -1378,12 +1433,12 @@
         campos.push('<div class="ast-v2-det-field"><span>Valor est.</span><b>' + astEsc_(valStr) + '</b></div>');
       }
       if (p.OBSERVACAO) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Observações</span><b style="font-weight:400;">' + astEsc_(p.OBSERVACAO) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Próximo passo</span><b style="font-weight:500;color:#0f172a;">' + astEsc_(astV2ProximoPassoPeca_(st)) + '</b></div>');
       var data = astData_(p.SOLICITADO_EM || p.CRIADO_EM || "");
       var dataTag = (data && data !== "--") ? '<span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px;">' + astEsc_(data) + '</span>' : "";
       var solId = astEscAttr_(p.ID || "");
-      var btnAtualizar = (solId && ["CANCELADO", "RECUSADO", "INSTALADO"].indexOf(st) === -1)
-        ? '<button class="ast-v2-acao-btn" style="margin-top:8px;font-size:11px;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solId + '\')">&#128260; Atualizar Status da Peça</button>'
-        : '';
+      var atId = astEscAttr_(p.ATENDIMENTO_ID || "");
+      var btnAtualizar = astV2AcoesPecaHtml_(solId, atId, st);
       cards.push([
         '<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">',
           '<div style="font-size:10px;font-weight:900;text-transform:uppercase;color:#475569;margin-bottom:6px;">Solicitação ' + (j + 1) + dataTag + '</div>',
@@ -1401,22 +1456,69 @@
     ].join("");
   }
 
-  function astV2MostrarStatusPecaCard_(solicitacaoId) {
+  function astV2ProximoPassoPeca_(status) {
+    var mapa = {
+      PENDENTE: "Iniciar cotacao ou cancelar a solicitacao.",
+      EM_COTACAO: "Registrar cotacao e enviar para aprovacao interna.",
+      AGUARDANDO_APROVACAO: "Aprovar compra ou recusar a solicitacao.",
+      APROVADO: "Registrar compra da peca.",
+      COMPRADO: "Registrar recebimento fisico da peca.",
+      RECEBIDO: "Instalar peca no equipamento.",
+      INSTALADO: "Peca instalada. Prosseguir com liberacao/execucao.",
+      CANCELADO: "Solicitacao cancelada.",
+      RECUSADO: "Solicitacao recusada."
+    };
+    return mapa[(status || "").toUpperCase()] || "Acompanhar solicitacao de peca.";
+  }
+
+  function astV2AcoesPecaHtml_(solicitacaoId, atendimentoId, status) {
+    if (!solicitacaoId || ["CANCELADO", "RECUSADO", "INSTALADO"].indexOf(status) >= 0) return "";
+    var acoes = [];
+    function btn(label, st, titulo) {
+      acoes.push('<button class="ast-v2-acao-btn" style="font-size:11px;flex:1 1 150px;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solicitacaoId + '\',\'' + atendimentoId + '\',\'' + st + '\',\'' + astEscAttr_(titulo) + '\')">' + label + '</button>');
+    }
+    if (status === "PENDENTE") {
+      btn("Iniciar cotacao", "EM_COTACAO", "Iniciar Cotacao");
+    } else if (status === "EM_COTACAO") {
+      btn("Enviar para aprovacao", "AGUARDANDO_APROVACAO", "Enviar para Aprovacao");
+    } else if (status === "AGUARDANDO_APROVACAO") {
+      btn("Aprovar", "APROVADO", "Aprovar Peca");
+      btn("Recusar", "RECUSADO", "Recusar Peca");
+    } else if (status === "APROVADO") {
+      btn("Registrar compra", "COMPRADO", "Registrar Compra");
+    } else if (status === "COMPRADO") {
+      btn("Registrar recebimento", "RECEBIDO", "Registrar Recebimento");
+    } else if (status === "RECEBIDO") {
+      btn("Registrar instalacao", "INSTALADO", "Registrar Instalacao");
+    } else {
+      btn("Atualizar status", status, "Atualizar Status");
+    }
+    acoes.push('<button class="ast-v2-acao-btn" style="font-size:11px;flex:1 1 150px;background:#64748b;border-color:#64748b;" type="button" onclick="astV2MostrarStatusPecaCard_(\'' + solicitacaoId + '\',\'' + atendimentoId + '\',\'\',\'Atualizar Status\')">Outro status</button>');
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">' + acoes.join("") + '</div>';
+  }
+
+  function astV2MostrarStatusPecaCard_(solicitacaoId, atendimentoId, statusSugerido, titulo) {
     var container = document.getElementById("astV2StatusPecaCardContainer");
     if (!container) return;
     var sidEsc = astEscAttr_(solicitacaoId || "");
+    var atEsc = astEscAttr_(atendimentoId || "");
+    var stSug = astEscAttr_(statusSugerido || "");
+    var tituloCard = astEsc_(titulo || "Atualizar Status da Peca");
     container.innerHTML = [
       '<div class="ast-v2-card">',
-        '<h5>&#128260; Atualizar Status da Peça</h5>',
+        '<h5>&#128260; ' + tituloCard + '</h5>',
+        '<div style="font-size:11px;color:#475569;line-height:1.45;margin-bottom:8px;">' + astEsc_(astV2ProximoPassoPeca_(statusSugerido || "")) + '</div>',
         '<label>Novo status *</label>',
         '<select id="astV2PecaStNovo">',
-          '<option value="PENDENTE">Pendente</option>',
-          '<option value="EM_COTACAO">Em Cotação</option>',
-          '<option value="AGUARDANDO_APROVACAO">Aguardando Aprovação</option>',
-          '<option value="COMPRADO">Comprado</option>',
-          '<option value="RECEBIDO">Recebido</option>',
-          '<option value="INSTALADO">Instalado</option>',
-          '<option value="CANCELADO">Cancelado</option>',
+          '<option value="PENDENTE"' + (stSug === "PENDENTE" ? " selected" : "") + '>Pendente</option>',
+          '<option value="EM_COTACAO"' + (stSug === "EM_COTACAO" ? " selected" : "") + '>Em Cotacao</option>',
+          '<option value="AGUARDANDO_APROVACAO"' + (stSug === "AGUARDANDO_APROVACAO" ? " selected" : "") + '>Aguardando Aprovacao</option>',
+          '<option value="APROVADO"' + (stSug === "APROVADO" ? " selected" : "") + '>Aprovado</option>',
+          '<option value="COMPRADO"' + (stSug === "COMPRADO" ? " selected" : "") + '>Comprado</option>',
+          '<option value="RECEBIDO"' + (stSug === "RECEBIDO" ? " selected" : "") + '>Recebido</option>',
+          '<option value="INSTALADO"' + (stSug === "INSTALADO" ? " selected" : "") + '>Instalado</option>',
+          '<option value="RECUSADO"' + (stSug === "RECUSADO" ? " selected" : "") + '>Recusado</option>',
+          '<option value="CANCELADO"' + (stSug === "CANCELADO" ? " selected" : "") + '>Cancelado</option>',
         '</select>',
         '<label>Observação</label>',
         '<textarea id="astV2PecaStObs" rows="2" placeholder="Ex: Adquirido no fornecedor X, NF 123..."></textarea>',
@@ -1427,7 +1529,7 @@
         '<label>Data prevista</label>',
         '<input type="date" id="astV2PecaStDataPrevista">',
         '<div class="ast-v2-card-btns">',
-          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarStatusPeca_(\'' + sidEsc + '\')">Confirmar</button>',
+          '<button class="ast-v2-card-ok" type="button" onclick="astV2ConfirmarStatusPeca_(\'' + sidEsc + '\',\'' + atEsc + '\')">Confirmar</button>',
           '<button class="ast-v2-card-cancel" type="button" onclick="document.getElementById(\'astV2StatusPecaCardContainer\').innerHTML=\'\'">Cancelar</button>',
         '</div>',
       '</div>'
@@ -1435,7 +1537,7 @@
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
-  function astV2ConfirmarStatusPeca_(solicitacaoId) {
+  function astV2ConfirmarStatusPeca_(solicitacaoId, atendimentoId) {
     var stEl      = document.getElementById("astV2PecaStNovo");
     var obsEl     = document.getElementById("astV2PecaStObs");
     var fornEl    = document.getElementById("astV2PecaStFornecedor");
@@ -1451,14 +1553,35 @@
       DATA_PREVISTA:    dataEl ? dataEl.value                               : ""
     };
     astSetContextStatus_("Atualizando status da peca...");
-    google.script.run
+    var runner = google.script.run
       .withSuccessHandler(function(res) {
         if (!astOk_(res)) return astToast_((res && res.message) || "Não foi possível atualizar status da peça.");
         astToast_("Status da peça atualizado.");
         astAbrirDetalhe_(AST_STATE.selecionada, { preservar: true });
       })
-      .withFailureHandler(astFalhaToast_)
-      .astV2AtualizarSolicitacaoPeca(SESSION, solicitacaoId, payload);
+      .withFailureHandler(astFalhaToast_);
+    if (payload.STATUS === "COMPRADO" && atendimentoId) {
+      return runner.astV2RegistrarCompraPeca(SESSION, atendimentoId, {
+        SOLICITACAO_ID: solicitacaoId,
+        VALOR_COMPRA: payload.VALOR_FINAL,
+        FORNECEDOR: payload.FORNECEDOR_FINAL,
+        OBSERVACAO: payload.OBSERVACAO
+      });
+    }
+    if (payload.STATUS === "RECEBIDO" && atendimentoId) {
+      return runner.astV2RegistrarRecebimentoPeca(SESSION, atendimentoId, {
+        SOLICITACAO_ID: solicitacaoId,
+        DATA_RECEBIMENTO: payload.DATA_PREVISTA,
+        OBSERVACAO: payload.OBSERVACAO
+      });
+    }
+    if (payload.STATUS === "INSTALADO" && atendimentoId) {
+      return runner.astV2RegistrarInstalacaoPeca(SESSION, atendimentoId, {
+        SOLICITACAO_ID: solicitacaoId,
+        OBSERVACAO: payload.OBSERVACAO
+      });
+    }
+    runner.astV2AtualizarSolicitacaoPeca(SESSION, solicitacaoId, payload);
   }
 
   function astV2MostrarExecucaoCard_(id) {
@@ -2216,9 +2339,11 @@
       .astV2LiberarExecucao(SESSION, id, payload);
   }
 
-  function astAcoesEtapaV2Html_(e) {
+  function astAcoesEtapaV2Html_(e, historico) {
     var id = astEscAttr_(e.ID || "");
     var status = astStatusNorm_(e.STATUS || "");
+    var teste = astV2UltimoTesteValidacao_(historico);
+    var testeAprovado = status === "EXECUCAO_CONCLUIDA" && teste && teste._resultadoTeste === "APROVADO";
     var acoes = [];
     if (["ENTRADA_REGISTRADA", "AGUARDANDO_DIAGNOSTICO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2IniciarAvaliacao_(\'' + id + '\')">&#9654; Iniciar Avaliação</button>');
@@ -2241,7 +2366,7 @@
     if (["LIBERADO_PARA_EXECUCAO", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarExecucaoCard_(\'' + id + '\')">&#128295; Registrar Execução</button>');
     }
-    if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0) {
+    if (["EXECUCAO_CONCLUIDA", "EXECUCAO_EM_ANDAMENTO"].indexOf(status) >= 0 && !testeAprovado) {
       acoes.push('<button class="ast-v2-acao-btn" type="button" onclick="astV2MostrarTesteValidacaoCard_(\'' + id + '\')">&#9989; Registrar Teste / Validação</button>');
     }
     if (["EXECUCAO_CONCLUIDA", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE"].indexOf(status) >= 0) {
@@ -2301,9 +2426,9 @@
           '<div style="display:flex;flex-direction:column;gap:6px;">',
             '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarRelatorioTecnico_(\'' + id + '\')">&#128196; Gerar Relat&oacute;rio T&eacute;cnico Final</button>',
             '<button class="ast-v2-acao-btn" type="button" onclick="astV2SolicitarProtocoloSaida_(\'' + id + '\')">&#128196; Gerar Protocolo de Sa&iacute;da</button>',
-            '<button class="ast-v2-acao-btn" type="button" onclick="astGerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
-            '<button class="ast-v2-acao-btn" type="button" onclick="astGerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
-            '<button class="ast-v2-acao-btn" type="button" onclick="astCopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2GerarDocumentoEntrada_(\'' + id + '\')">&#128203; Protocolo de Entrada</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2GerarEtiquetaRapida_(\'' + id + '\')">&#127991; Etiqueta</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2CopiarWhats_(\'' + id + '\')">&#128172; WhatsApp</button>',
           '</div>',
           '<div style="font-size:9px;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:3px;padding:4px 6px;margin-top:6px;">',
             'Se j&aacute; existir documento emitido, o sistema mostrar&aacute; op&ccedil;&otilde;es para abrir o existente ou gerar nova vers&atilde;o.',
@@ -3293,6 +3418,14 @@
     google.script.run.withSuccessHandler(astAbrirEtiqueta_).withFailureHandler(astFalhaToast_).astGerarEtiqueta(SESSION, id, "PADRAO");
   }
 
+  function astV2GerarDocumentoEntrada_(id) {
+    google.script.run.withSuccessHandler(astAbrirDoc_).withFailureHandler(astFalhaToast_).astV2GerarDocumentoEntrada(SESSION, id);
+  }
+
+  function astV2GerarEtiquetaRapida_(id) {
+    google.script.run.withSuccessHandler(astAbrirEtiqueta_).withFailureHandler(astFalhaToast_).astV2GerarEtiqueta(SESSION, id, "PADRAO");
+  }
+
   function astBaixarEtiquetaPdf_(id) {
     google.script.run.withSuccessHandler(astAbrirDoc_).withFailureHandler(astFalhaToast_).astGerarEtiquetaPdf(SESSION, id, "PADRAO");
   }
@@ -3703,6 +3836,17 @@
       })
       .withFailureHandler(astFalhaToast_)
       .astObterWhatsapp(SESSION, id);
+  }
+
+  function astV2CopiarWhats_(id) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) return astToast_(res && res.message || "Não foi possível gerar WhatsApp.");
+        astCopiarTexto_(res.texto || "");
+        astToast_("Mensagem copiada.");
+      })
+      .withFailureHandler(astFalhaToast_)
+      .astV2ObterWhatsapp(SESSION, id);
   }
 
   function astAbrirWhats_(id) {
