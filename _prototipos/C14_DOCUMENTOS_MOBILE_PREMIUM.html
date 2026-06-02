@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C14 Prototipo - Documentos AT V2 e Mobile Campo</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #d9e2ec;
+      --blue: #0b3b78;
+      --green: #0b7a3e;
+      --paper: #ffffff;
+      --bg: #eef3f8;
+      --soft: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #ffffff;
+    }
+    .brand { font-weight: 900; color: var(--blue); letter-spacing: .5px; }
+    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--blue);
+      background: var(--blue);
+      color: #ffffff;
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: default;
+    }
+    button.secondary { background: #ffffff; color: var(--blue); }
+    main {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+    nav {
+      position: sticky;
+      top: 62px;
+      height: fit-content;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    nav a {
+      display: block;
+      text-decoration: none;
+      color: var(--ink);
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    nav a:hover { background: var(--soft); }
+    section { margin-bottom: 28px; }
+    h1, h2, h3 { margin: 0; }
+    .section-title { margin: 0 0 12px; color: var(--blue); }
+    .a4 {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 22px;
+      background: var(--paper);
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+      padding: 13mm;
+    }
+    .doc-head {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 12px;
+      border-bottom: 3px solid var(--blue);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      border: 2px solid var(--blue);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: var(--blue);
+      margin-right: 10px;
+    }
+    .brandline { display: flex; align-items: center; }
+    .company { font-size: 15px; font-weight: 900; color: var(--blue); }
+    .company small { display: block; color: var(--muted); font-size: 8px; margin-top: 2px; }
+    .doc-type { text-align: right; color: var(--blue); font-size: 18px; font-weight: 900; }
+    .doc-proto { text-align: right; font-size: 13px; font-weight: 900; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .field {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      padding: 6px;
+      min-height: 43px;
+      border-radius: 4px;
+    }
+    .label {
+      font-size: 7.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: .3px;
+    }
+    .value { font-size: 9px; font-weight: 800; margin-top: 2px; }
+    .block {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 8px;
+      margin-top: 7px;
+      font-size: 9px;
+      line-height: 1.45;
+    }
+    .block-title {
+      font-size: 8px;
+      text-transform: uppercase;
+      color: var(--blue);
+      font-weight: 900;
+      letter-spacing: .4px;
+      margin: 10px 0 5px;
+    }
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 7px; }
+    .photo {
+      height: 78px;
+      border: 1px dashed #94a3b8;
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 800;
+    }
+    .checklist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 8.5px; }
+    .check { border: 1px solid var(--line); padding: 5px; border-radius: 4px; }
+    .sig-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; }
+    .sig { border-top: 1px solid var(--ink); padding-top: 4px; font-size: 8px; color: var(--muted); text-align: center; }
+    .trace {
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      padding: 8px;
+      margin-top: 12px;
+      border-radius: 5px;
+    }
+    .qr {
+      width: 78px;
+      height: 78px;
+      border: 1px solid var(--ink);
+      background:
+        linear-gradient(90deg, #111 8px, transparent 8px) 0 0 / 18px 18px,
+        linear-gradient(#111 8px, transparent 8px) 0 0 / 18px 18px,
+        #fff;
+      margin-left: auto;
+    }
+    .mono { font-family: Consolas, Monaco, monospace; font-size: 8px; word-break: break-all; }
+    .report-cover {
+      display: grid;
+      place-items: center;
+      min-height: 80mm;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .report-title { font-size: 28px; color: var(--blue); font-weight: 900; }
+    .interpretation {
+      border-left: 4px solid var(--green);
+      background: #f0fdf4;
+      padding: 8px;
+      font-size: 9px;
+      line-height: 1.5;
+      margin-top: 7px;
+    }
+    .ai-box {
+      border: 1px solid #93c5fd;
+      background: #eff6ff;
+      padding: 8px;
+      margin-top: 8px;
+      font-size: 9px;
+      border-radius: 5px;
+    }
+    .mobile-shell {
+      width: 390px;
+      margin: 0 auto;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 26px;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .25);
+    }
+    .mobile-screen {
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      min-height: 720px;
+    }
+    .mobile-head {
+      background: var(--blue);
+      color: #fff;
+      padding: 16px;
+    }
+    .mobile-step { padding: 14px; border-bottom: 1px solid var(--line); }
+    .big-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 14px; }
+    .big-actions button { min-height: 56px; font-size: 13px; border-radius: 8px; }
+    .canvas {
+      margin-top: 8px;
+      height: 118px;
+      border: 2px dashed #94a3b8;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    @media (max-width: 980px) {
+      main { display: block; padding: 12px; }
+      nav { position: static; margin-bottom: 12px; }
+      .a4 { width: 100%; min-height: auto; padding: 16px; }
+      .doc-head, .grid, .grid.three, .sig-grid, .trace { grid-template-columns: 1fr; }
+      .doc-type, .doc-proto { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">C14 - Documentos Premium AT V2</div>
+    <div class="toolbar">
+      <button>Imprimir</button>
+      <button>Gerar PDF Oficial</button>
+      <button class="secondary">Baixar PDF</button>
+      <button class="secondary">WhatsApp</button>
+      <button class="secondary">Copiar link</button>
+      <button class="secondary">Voltar</button>
+    </div>
+  </div>
+  <main>
+    <nav>
+      <a href="#entrada">Termo de Entrada</a>
+      <a href="#entrega">Termo de Entrega</a>
+      <a href="#relatorio">Relatorio Tecnico</a>
+      <a href="#mobile">Mobile Campo</a>
+    </nav>
+    <div>
+      <section id="entrada">
+        <h2 class="section-title">Termo de Entrada V2</h2>
+        <article class="a4">
+          <div class="doc-head">
+            <div class="brandline"><div class="logo">ML</div><div class="company">METROLABS<small>Solucoes em Engenharia Clinica</small></div></div>
+            <div><div class="doc-type">Termo de Entrada</div><div class="doc-proto">AT-20260513-1352</div></div>
+          </div>
+          <div class="grid three">
+            <div class="field"><div class="label">Data/Hora</div><div class="value">13/05/2026 13:52</div></div>
+            <div class="field"><div class="label">Cliente</div><div class="value">Hospital Exemplo</div></div>
+            <div class="field"><div class="label">Unidade/Setor</div><div class="value">UTI Adulto</div></div>
+            <div class="field"><div class="label">Responsavel entrega</div><div class="value">Nome / documento</div></div>
+            <div class="field"><div class="label">Equipamento</div><div class="value">Monitor multiparametrico</div></div>
+            <div class="field"><div class="label">Marca / Modelo / Serie</div><div class="value">Marca X / Modelo Y / SN123</div></div>
+          </div>
+          <div class="block-title">Condicao fisica e relato</div>
+          <div class="block">Equipamento recebido com marcas de uso, tela integra, cabo de energia entregue. Relato: falha intermitente durante inicializacao.</div>
+          <div class="block-title">Acessorios recebidos</div>
+          <div class="checklist">
+            <div class="check">[x] Cabo de energia</div><div class="check">[ ] Sensor adicional</div>
+            <div class="check">[x] Bateria</div><div class="check">[x] Manual / etiqueta patrimonio</div>
+          </div>
+          <div class="block-title">Fotos de entrada</div>
+          <div class="photo-grid"><div class="photo">Foto frontal</div><div class="photo">Numero serie</div><div class="photo">Acessorios</div></div>
+          <div class="block-title">Termos de ciencia</div>
+          <div class="block">Declaro ciencia de que o equipamento foi recebido para avaliacao tecnica, podendo ser necessario orcamento, compra de pecas, terceiros ou laboratorio conforme diagnostico.</div>
+          <div class="sig-grid"><div class="sig">Cliente / Entregador</div><div class="sig">Funcionario Metrolabs</div></div>
+          <div class="trace"><div><div class="label">Rastreabilidade</div><div class="mono">Token: AT-V2-EXEMPLO-001<br>Hash: SHA256-EXEMPLO-PREVIEW<br>QR de acompanhamento separado do QR documental</div></div><div class="qr"></div></div>
+        </article>
+      </section>
+      <section id="entrega">
+        <h2 class="section-title">Termo de Entrega/Devolucao V2</h2>
+        <article class="a4">
+          <div class="doc-head">
+            <div class="brandline"><div class="logo">ML</div><div class="company">METROLABS<small>Entrega tecnica controlada</small></div></div>
+            <div><div class="doc-type">Termo de Entrega</div><div class="doc-proto">AT-20260513-1352</div></div>
+          </div>
+          <div class="grid"><div class="field"><div class="label">Cliente / Unidade</div><div class="value">Hospital Exemplo / UTI Adulto</div></div><div class="field"><div class="label">Equipamento</div><div class="value">Monitor multiparametrico SN123</div></div></div>
+          <div class="block-title">Servico executado</div><div class="block">Revisao de fonte, limpeza interna, ajuste de conexoes e validacao funcional pos-reparo.</div>
+          <div class="block-title">Pecas substituidas</div><div class="block">Fonte AC/DC, fusivel interno, cabo de alimentacao.</div>
+          <div class="block-title">Testes realizados</div><div class="block">Teste de energizacao, estabilidade em bancada, verificacao de alarmes e validacao de parametros basicos.</div>
+          <div class="block-title">Condicao de entrega e garantia</div><div class="block">Equipamento entregue em condicao operacional conforme testes descritos. Garantia tecnica conforme proposta aprovada e politicas comerciais vigentes.</div>
+          <div class="photo-grid"><div class="photo">Foto entrega</div><div class="photo">Tela ligada</div><div class="photo">Acessorios devolvidos</div></div>
+          <div class="sig-grid"><div class="sig">Cliente recebedor</div><div class="sig">Funcionario Metrolabs</div></div>
+          <div class="trace"><div><div class="label">Rastreabilidade</div><div class="mono">Token: AT-V2-EXEMPLO-002<br>Hash: SHA256-EXEMPLO-ENTREGA</div></div><div class="qr"></div></div>
+        </article>
+      </section>
+      <section id="relatorio">
+        <h2 class="section-title">Relatorio Tecnico Final V2</h2>
+        <article class="a4">
+          <div class="report-cover"><div><div class="report-title">Relatorio Tecnico Final</div><p>Assistencia Tecnica V2 - AT-20260513-1352</p></div></div>
+          <div class="grid"><div class="field"><div class="label">Cliente</div><div class="value">Hospital Exemplo</div></div><div class="field"><div class="label">Equipamento</div><div class="value">Monitor multiparametrico SN123</div></div></div>
+          <div class="block-title">Historico resumido</div><div class="block">Entrada registrada, diagnostico concluido, execucao realizada, teste aprovado e liberacao para conclusao tecnica.</div>
+          <div class="block-title">Diagnostico tecnico</div><div class="block">Foi identificada instabilidade na alimentacao do equipamento, com impacto direto no comportamento de inicializacao.</div>
+          <div class="block-title">Interpretacao tecnica</div><div class="interpretation">A falha observada e compativel com degradacao de componente de alimentacao e conexoes internas sujeitas a oxidacao/folga. A intervencao realizada restabeleceu a estabilidade operacional nos testes de bancada.</div>
+          <div class="block-title">Evidencias</div><div class="photo-grid"><div class="photo">Antes</div><div class="photo">Durante</div><div class="photo">Depois</div></div>
+          <div class="block-title">Conclusao e recomendacoes</div><div class="block">Equipamento apto para devolucao. Recomenda-se rotina preventiva e nova avaliacao em caso de reincidencia.</div>
+          <div class="ai-box"><b>Texto lapidado por IA:</b> campo de apoio editorial antes da geracao final. A publicacao exige aprovacao humana registrada.</div>
+          <div class="sig-grid"><div class="sig">Assinatura Douglas</div><div class="sig">Assinatura Charles</div></div>
+          <div class="trace"><div><div class="label">Rastreabilidade</div><div class="mono">Token: AT-V2-EXEMPLO-003<br>Hash: SHA256-EXEMPLO-RELATORIO</div></div><div class="qr"></div></div>
+        </article>
+      </section>
+      <section id="mobile">
+        <h2 class="section-title">Mobile de Campo Real</h2>
+        <div class="mobile-shell"><div class="mobile-screen">
+          <div class="mobile-head"><h3>AT-20260513-1352</h3><div>Etapa: Diagnostico em campo</div></div>
+          <div class="mobile-step"><div class="label">Proxima acao</div><h3>Registrar evidencias e validar checklist</h3></div>
+          <div class="big-actions"><button>Foto</button><button>Voz / Texto</button><button>Checklist</button><button>Assinar</button></div>
+          <div class="mobile-step"><div class="label">Texto tecnico</div><div class="block">Campo de ditado ou digitacao com rascunho salvo automaticamente.</div></div>
+          <div class="mobile-step"><div class="label">Assinatura</div><div class="canvas">Canvas para dedo/caneta</div></div>
+          <div class="big-actions"><button class="secondary">Salvar rascunho</button><button>Finalizar etapa</button><button class="secondary">WhatsApp</button><button class="secondary">Voltar</button></div>
+        </div></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
