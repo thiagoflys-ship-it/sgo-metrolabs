@@ -3880,6 +3880,234 @@
     return { file: file, hash: hash };
   }
 
+  function c14UltimoHistorico_(historico, tipo) {
+    if (!Array.isArray(historico)) return null;
+    for (var i = historico.length - 1; i >= 0; i--) {
+      if (safe_(historico[i].TIPO) === tipo) return historico[i];
+    }
+    return null;
+  }
+
+  function c14ObsJson_(entrada) {
+    if (!entrada || !entrada.OBSERVACAO) return {};
+    try { return JSON.parse(entrada.OBSERVACAO) || {}; } catch (e_) { return {}; }
+  }
+
+  function c14FotosPorEtapa_(fotos, etapa, tipo) {
+    var etapaUp = upper_(etapa || "");
+    var tipoUp = upper_(tipo || "");
+    return (Array.isArray(fotos) ? fotos : []).filter(function(f) {
+      var fEtapa = upper_(f.ETAPA || "");
+      var fTipo  = upper_(f.TIPO_FOTO || "");
+      if (tipoUp && fTipo.indexOf(tipoUp) >= 0) return true;
+      if (etapaUp && fEtapa.indexOf(etapaUp) >= 0) return true;
+      return false;
+    });
+  }
+
+  function c14MetaPreview_(atendimento) {
+    var metaBase = prepararMetaDocumental_("PREVIEW", safe_(atendimento.QR_URL_ACOMPANHAMENTO || ""));
+    return Object.assign({}, metaBase, {
+      token: "PREVIEW",
+      hash: "PREVIEW",
+      validacaoUrl: "",
+      qrValidacao: "",
+      qrValidacaoBase64: ""
+    });
+  }
+
+  function c14PayloadBaseV2_(sessao, atendimentoId) {
+    if (!atendimentoId) throw new Error("atendimentoId obrigatorio.");
+    var atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) throw new Error("Atendimento nao encontrado: " + atendimentoId);
+    var historico    = SGO_DATA.getManyByField(S.AST_HISTORICO,    "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    var fotos        = SGO_DATA.getManyByField(S.AST_FOTOS,        "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    var acessorios   = SGO_DATA.getManyByField(S.AST_ACESSORIOS,   "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    var assinaturas  = SGO_DATA.getManyByField(S.AST_ASSINATURAS,  "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    var solicitacoes = SGO_DATA.getManyByField(S.AST_SOLICITACOES, "ATENDIMENTO_ID", atendimentoId, DB) || [];
+    var diagH  = c14UltimoHistorico_(historico, "DIAGNOSTICO");
+    var execH  = c14UltimoHistorico_(historico, "EXECUCAO");
+    var testeH = c14UltimoHistorico_(historico, "TESTE_VALIDACAO");
+    var concH  = c14UltimoHistorico_(historico, "CONCLUSAO_TECNICA");
+    var entH   = c14UltimoHistorico_(historico, "ENTREGA");
+    var assReceb = null;
+    var assEntrega = null;
+    for (var i = assinaturas.length - 1; i >= 0; i--) {
+      var tipoAss = upper_(assinaturas[i].TIPO_ASSINATURA || "");
+      if (!assEntrega && tipoAss.indexOf("ENTREGA") >= 0) assEntrega = assinaturas[i];
+      if (!assReceb && (tipoAss.indexOf("RECEB") >= 0 || tipoAss.indexOf("ENTRADA") >= 0)) assReceb = assinaturas[i];
+    }
+    return {
+      atendimento: v2EnriquecerAtendimento_(atendimento),
+      historico: historico,
+      diagnostico: c14ObsJson_(diagH),
+      diagnosticoHistorico: diagH,
+      execucao: c14ObsJson_(execH),
+      execucaoHistorico: execH,
+      testeValidacao: c14ObsJson_(testeH),
+      testeValidacaoHistorico: testeH,
+      conclusaoTecnica: c14ObsJson_(concH),
+      conclusaoHistorico: concH,
+      entrega: c14ObsJson_(entH),
+      entregaHistorico: entH,
+      acessorios: acessorios,
+      fotos: fotos,
+      fotosEntrada: c14FotosPorEtapa_(fotos, "ENTRADA", "ENTRADA"),
+      fotosExecucao: c14FotosPorEtapa_(fotos, "EXECUCAO", "EXECUCAO"),
+      fotosEntrega: c14FotosPorEtapa_(fotos, "ENTREGA", "ENTREGA"),
+      solicitacoes: solicitacoes,
+      pecasUtilizadas: solicitacoes.filter(function(s) {
+        return upper_(s.TIPO) === "PECA" && upper_(s.STATUS) === "INSTALADO";
+      }),
+      assinaturas: assinaturas,
+      assinaturaRecebimento: assReceb,
+      assinaturaEntrega: assEntrega,
+      metaDocumental: c14MetaPreview_(atendimento),
+      textoIa: { status: "PENDENTE", conteudo: "" },
+      contexto: { geradoPor: safe_(sessao.userId || sessao.nome || ""), preview: "S", etapa: "C.14.2" }
+    };
+  }
+
+  function montarPayloadTermoEntradaV2_(sessao, atendimentoId) {
+    var payload = c14PayloadBaseV2_(sessao, atendimentoId);
+    payload.tipoDocumento = "TERMO_ENTRADA_V2";
+    return payload;
+  }
+
+  function montarPayloadTermoEntregaV2_(sessao, atendimentoId) {
+    var payload = c14PayloadBaseV2_(sessao, atendimentoId);
+    payload.tipoDocumento = "TERMO_ENTREGA_DEVOLUCAO_V2";
+    return payload;
+  }
+
+  function montarPayloadRelatorioFinalV2_(sessao, atendimentoId) {
+    var payload = c14PayloadBaseV2_(sessao, atendimentoId);
+    payload.tipoDocumento = "RELATORIO_TECNICO_FINAL_V2";
+    return payload;
+  }
+
+  function c14ResumoPayload_(payload) {
+    var p = payload || {};
+    return {
+      atendimentoId: safe_((p.atendimento || {}).ID),
+      protocolo: safe_((p.atendimento || {}).PROTOCOLO),
+      historico: (p.historico || []).length,
+      acessorios: (p.acessorios || []).length,
+      fotos: (p.fotos || []).length,
+      solicitacoes: (p.solicitacoes || []).length,
+      assinaturas: (p.assinaturas || []).length,
+      preview: "S"
+    };
+  }
+
+  function montarHtmlTermoEntradaPremiumV2_(payload) {
+    var p = payload || {};
+    var e = p.atendimento || {};
+    var meta = p.metaDocumental || {};
+    var acessorios = p.acessorios || [];
+    var fotos = p.fotosEntrada || [];
+    var assinatura = p.assinaturaRecebimento || {};
+    var css =
+      '@page{size:A4;margin:13mm 12mm 16mm 12mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:10px;background:#fff;line-height:1.45}' +
+      '.brand{font-size:11px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
+      '.brand-tagline{font-size:9px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
+      '.brand-data{font-size:8px;color:#64748b;line-height:1.55}' +
+      '.doc-tipo{font-size:15px;font-weight:900;color:#0b3b78;text-align:right}' +
+      '.doc-sub{font-size:9px;color:#64748b;text-align:right;font-weight:700}' +
+      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:3px}' +
+      '.doc-emit{font-size:8px;color:#94a3b8;text-align:right;margin-top:2px}' +
+      '.alert-banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:7px 9px;color:#1e40af;font-weight:700;font-size:8.5px;margin:7px 0}' +
+      '.stitle{font-size:8.5px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
+      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
+      '.lbl{font-size:7.5px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.3px}' +
+      '.val{font-size:9px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
+      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;font-size:9px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
+      'table{width:100%;border-collapse:collapse;font-size:9px}' +
+      'th{background:#f1f5f9;color:#334155;text-align:left;font-size:7.5px;text-transform:uppercase;letter-spacing:.25px;padding:5px;border:1px solid #e2e8f0}' +
+      'td{padding:5px;border:1px solid #e2e8f0;vertical-align:top}' +
+      '.trace-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px}' +
+      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.5px;word-break:break-all;color:#334155}' +
+      '.qrbox{text-align:center;padding:4px;display:inline-block}' +
+      '.qrbox img{width:70px;height:70px;border:1px solid #e2e8f0;border-radius:2px}' +
+      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:700;text-transform:uppercase}' +
+      '.sig-line{border-top:1px solid #334155;margin:28px 0 3px}' +
+      '.sig-img{max-height:62px;max-width:220px;display:block;margin:0 auto 2px}' +
+      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.5px;color:#94a3b8;line-height:1.5}';
+    function kv_(label, valor) {
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
+    }
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>';
+    html += '<table style="border:none;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:9px"><tr>';
+    html += '<td style="vertical-align:top;width:58%;border:none"><table style="border:none"><tr>';
+    if (meta.logoBase64) html += '<td style="vertical-align:middle;padding-right:10px;width:1%;border:none"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    html += '<td style="vertical-align:top;border:none"><div class="brand">METROLABS</div><div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
+    html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div></td></tr></table></td>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%;border:none"><div class="doc-tipo">Termo de Entrada</div><div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica &mdash; Recebimento V2</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Preview em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
+    html += '<div class="alert-banner">Pr&eacute;-visualiza&ccedil;&atilde;o C.14.2: n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS e n&atilde;o cria hist&oacute;rico.</div>';
+    html += '<div class="stitle">Identifica&ccedil;&atilde;o do Atendimento</div><table style="border:none;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Data / hora de entrada', formatarDataBR_(e.CRIADO_EM || e.ULTIMA_MOVIMENTACAO_EM || '')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Setor', e.SETOR || '--') + kv_('Responsavel pela entrega', e.DEIXOU_NOME || e.RECEBIDO_POR_NOME || '--') + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Equipamento Recebido</div><table style="border:none;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Marca / modelo', [safe_(e.EQUIPAMENTO_MARCA), safe_(e.EQUIPAMENTO_MODELO)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Patrimonio', e.PATRIMONIO || e.NUMERO_PATRIMONIO || '--') + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Condi&ccedil;&atilde;o F&iacute;sica e Problema Relatado</div>';
+    html += '<div class="sec"><b>Condi&ccedil;&atilde;o:</b> ' + esc_(e.CONDICAO_FISICA || '--') + '<br><b>Relato:</b> ' + esc_(e.PROBLEMA_RELATADO || '--') + '</div>';
+    html += '<div class="stitle">Acess&oacute;rios Recebidos</div>';
+    if (acessorios.length) {
+      html += '<table><thead><tr><th>Descri&ccedil;&atilde;o</th><th style="width:12%">Qtd</th><th style="width:20%">Estado</th><th>Observa&ccedil;&atilde;o</th></tr></thead><tbody>';
+      for (var ai = 0; ai < acessorios.length; ai++) {
+        var ac = acessorios[ai];
+        html += '<tr><td>' + esc_(ac.DESCRICAO || '--') + '</td><td>' + esc_(ac.QUANTIDADE || '1') + '</td><td>' + esc_(ac.ESTADO || '--') + '</td><td>' + esc_(ac.OBSERVACAO || '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="sec">Nenhum acess&oacute;rio registrado no atendimento.</div>';
+    }
+    html += '<div class="stitle">Fotos de Entrada</div>';
+    if (fotos.length) {
+      html += '<table><thead><tr><th>Arquivo</th><th style="width:22%">Tipo</th><th>Descri&ccedil;&atilde;o</th><th style="width:18%">Link</th></tr></thead><tbody>';
+      for (var fi = 0; fi < fotos.length; fi++) {
+        var ft = fotos[fi];
+        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || '--') + '</td><td>' + esc_(ft.TIPO_FOTO || '--') + '</td><td>' + esc_(ft.DESCRICAO_FOTO || '--') + '</td><td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Abrir</a>' : '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="sec">Nenhuma foto de entrada vinculada ao atendimento.</div>';
+    }
+    html += '<div class="stitle">Checklist de Recebimento</div>';
+    html += '<table><tbody><tr><td>Equipamento identificado</td><td style="width:16%;text-align:center">Sim</td><td>Condi&ccedil;&atilde;o f&iacute;sica registrada</td><td style="width:16%;text-align:center">' + (e.CONDICAO_FISICA ? 'Sim' : 'Pendente') + '</td></tr>';
+    html += '<tr><td>Acess&oacute;rios conferidos</td><td style="text-align:center">' + (acessorios.length ? 'Sim' : 'Pendente') + '</td><td>Evid&ecirc;ncias iniciais</td><td style="text-align:center">' + (fotos.length ? 'Sim' : 'Pendente') + '</td></tr></tbody></table>';
+    html += '<div class="stitle">Termos de Ci&ecirc;ncia</div><div class="sec">O cliente ou entregador declara que os dados acima representam a condi&ccedil;&atilde;o de recebimento do equipamento para avalia&ccedil;&atilde;o t&eacute;cnica. A libera&ccedil;&atilde;o, reparo, calibra&ccedil;&atilde;o ou devolu&ccedil;&atilde;o depender&aacute; das etapas t&eacute;cnicas registradas no atendimento.</div>';
+    html += '<div class="stitle">Assinaturas</div><table style="border:none"><tr>';
+    html += '<td style="width:50%;padding-right:10px;border:none"><div class="sec"><div class="lbl">Funcion&aacute;rio Metrolabs</div><div class="sig-line"></div><div style="font-size:8px;color:#64748b">Nome / assinatura</div></div></td>';
+    html += '<td style="width:50%;padding-left:10px;border:none"><div class="sec"><div class="lbl">Cliente / Entregador</div>';
+    if (assinatura.ASSINATURA_BASE64) html += '<img class="sig-img" src="' + assinatura.ASSINATURA_BASE64 + '" alt="Assinatura recebimento">';
+    else html += '<div class="sig-line"></div>';
+    html += '<div style="font-size:8px;color:#64748b">Nome: ' + esc_(assinatura.SIGNATARIO_NOME || e.DEIXOU_NOME || '--') + '<br>Doc.: ' + esc_(assinatura.SIGNATARIO_DOC || e.DEIXOU_DOC || '--') + '</div></div></td></tr></table>';
+    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade do Preview</div><table style="border:none"><tr><td style="vertical-align:top;padding-right:10px;border:none"><div><span class="lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div><div style="margin-top:5px;font-size:8px;color:#64748b">QR de acompanhamento preservado; valida&ccedil;&atilde;o documental oficial s&oacute; na emiss&atilde;o final.</div></td><td style="vertical-align:top;text-align:center;border:none;white-space:nowrap">';
+    if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
+    html += '</td></tr></table></div>';
+    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Termo de Entrada V2 &mdash; Preview C.14.2<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span></div>';
+    html += '</body></html>';
+    return html;
+  }
+
+  function montarHtmlTermoEntregaPremiumV2_(payload) {
+    var html = montarHtmlProtocoloSaidaV2_(payload.atendimento, payload.entrega, payload.conclusaoTecnica, payload.metaDocumental);
+    html = html.split('Protocolo de Sa&iacute;da').join('Termo de Entrega / Devolu&ccedil;&atilde;o');
+    html = html.split('LAYOUT PREMIUM AT V2 &mdash; E.7F.2').join('PREVIEW PREMIUM AT V2 &mdash; C.14.2');
+    return html;
+  }
+
+  function montarHtmlRelatorioFinalPremiumV2_(payload) {
+    return montarHtmlRelatorioTecnicoV2_(payload.atendimento, payload.historico, payload.solicitacoes, payload.fotos, payload.metaDocumental);
+  }
+
   function gerarRelatorioTecnicoV2_(sessao, atendimentoId) {
     const atendimento  = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
     if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
@@ -3913,17 +4141,7 @@
   }
 
   function previewRelatorioTecnicoV2_(sessao, atendimentoId) {
-    if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
-    const atendimento  = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
-    if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
-    const historico    = SGO_DATA.getManyByField(S.AST_HISTORICO,    'ATENDIMENTO_ID', atendimentoId, DB) || [];
-    const solicitacoes = SGO_DATA.getManyByField(S.AST_SOLICITACOES, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
-    var fotos = [];
-    try { fotos = SGO_DATA.getManyByField(S.AST_FOTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || []; } catch (e_) {}
-    var metaBase = prepararMetaDocumental_('PREVIEW', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
-    var meta = Object.assign({}, metaBase, { token: 'PREVIEW', hash: 'PREVIEW', validacaoUrl: '', qrValidacao: '', qrValidacaoBase64: '' });
-    var html = montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, meta);
-    return { success: true, html: html };
+    return previewRelatorioFinalPremiumV2_(sessao, atendimentoId);
   }
 
   function previewRelatorioTecnicoV2(sessionId, atendimentoId) {
@@ -4149,26 +4367,7 @@
   }
 
   function previewProtocoloSaidaV2_(sessao, atendimentoId) {
-    if (!atendimentoId) return erro_('atendimentoId obrigatorio.');
-    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
-    if (!atendimento) return erro_('Atendimento nao encontrado: ' + atendimentoId);
-    const historico = SGO_DATA.getManyByField(S.AST_HISTORICO, 'ATENDIMENTO_ID', atendimentoId, DB) || [];
-    var entradaEntrega   = null;
-    var entradaConclusao = null;
-    for (var i = historico.length - 1; i >= 0; i--) {
-      var h = historico[i];
-      if (!entradaEntrega   && safe_(h.TIPO) === 'ENTREGA')           entradaEntrega   = h;
-      if (!entradaConclusao && safe_(h.TIPO) === 'CONCLUSAO_TECNICA') entradaConclusao = h;
-      if (entradaEntrega && entradaConclusao) break;
-    }
-    var dadosEntrega   = {};
-    var dadosConclusao = {};
-    try { if (entradaEntrega   && entradaEntrega.OBSERVACAO)   dadosEntrega   = JSON.parse(entradaEntrega.OBSERVACAO)   || {}; } catch (e_) {}
-    try { if (entradaConclusao && entradaConclusao.OBSERVACAO) dadosConclusao = JSON.parse(entradaConclusao.OBSERVACAO) || {}; } catch (e_) {}
-    var metaBase = prepararMetaDocumental_('PREVIEW', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
-    var meta = Object.assign({}, metaBase, { token: 'PREVIEW', hash: 'PREVIEW', validacaoUrl: '', qrValidacao: '', qrValidacaoBase64: '' });
-    var html = montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, meta);
-    return { success: true, html: html };
+    return previewTermoEntregaV2_(sessao, atendimentoId);
   }
 
   function previewProtocoloSaidaV2(sessionId, atendimentoId) {
@@ -4179,6 +4378,57 @@
       return previewProtocoloSaidaV2_(sessao, atendimentoId);
     } catch (e_) {
       return erro_("Erro ao gerar preview do protocolo de saida: " + e_.message);
+    }
+  }
+
+  function previewTermoEntradaV2_(sessao, atendimentoId) {
+    var payload = montarPayloadTermoEntradaV2_(sessao, atendimentoId);
+    var html = montarHtmlTermoEntradaPremiumV2_(payload);
+    return { success: true, html: html, payloadResumo: c14ResumoPayload_(payload) };
+  }
+
+  function previewTermoEntradaV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return previewTermoEntradaV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar preview do termo de entrada: " + e_.message);
+    }
+  }
+
+  function previewTermoEntregaV2_(sessao, atendimentoId) {
+    var payload = montarPayloadTermoEntregaV2_(sessao, atendimentoId);
+    var html = montarHtmlTermoEntregaPremiumV2_(payload);
+    return { success: true, html: html, payloadResumo: c14ResumoPayload_(payload) };
+  }
+
+  function previewTermoEntregaV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return previewTermoEntregaV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar preview do termo de entrega: " + e_.message);
+    }
+  }
+
+  function previewRelatorioFinalPremiumV2_(sessao, atendimentoId) {
+    var payload = montarPayloadRelatorioFinalV2_(sessao, atendimentoId);
+    var html = montarHtmlRelatorioFinalPremiumV2_(payload);
+    return { success: true, html: html, payloadResumo: c14ResumoPayload_(payload) };
+  }
+
+  function previewRelatorioFinalPremiumV2(sessionId, atendimentoId) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "INTERNO");
+    if (!perm.success) return perm;
+    try {
+      return previewRelatorioFinalPremiumV2_(sessao, atendimentoId);
+    } catch (e_) {
+      return erro_("Erro ao gerar preview do relatorio final premium: " + e_.message);
     }
   }
 
@@ -5022,6 +5272,9 @@
     obterWhatsappV2: obterWhatsappV2,
     listarDocumentosEmitidosV2: listarDocumentosEmitidosV2,
     verificarDocumentoExistenteV2: verificarDocumentoExistenteV2,
+    previewTermoEntradaV2: previewTermoEntradaV2,
+    previewTermoEntregaV2: previewTermoEntregaV2,
+    previewRelatorioFinalPremiumV2: previewRelatorioFinalPremiumV2,
     previewRelatorioTecnicoV2: previewRelatorioTecnicoV2,
     previewProtocoloSaidaV2: previewProtocoloSaidaV2,
     salvarConclusaoV2: salvarConclusaoV2,
@@ -5145,6 +5398,9 @@ function astV2GerarEtiqueta(sessionId, atendimentoId, tamanho) { return SGO_AST.
 function astV2ObterWhatsapp(sessionId, atendimentoId) { return SGO_AST.obterWhatsappV2(sessionId, atendimentoId); }
 function astV2ListarDocumentosEmitidos(sessionId, atendimentoId) { return SGO_AST.listarDocumentosEmitidosV2(sessionId, atendimentoId); }
 function astV2VerificarDocumentoExistente(sessionId, atendimentoId, tipoDocumento) { return SGO_AST.verificarDocumentoExistenteV2(sessionId, atendimentoId, tipoDocumento); }
+function astV2PreviewTermoEntrada(sessionId, atendimentoId) { return SGO_AST.previewTermoEntradaV2(sessionId, atendimentoId); }
+function astV2PreviewTermoEntrega(sessionId, atendimentoId) { return SGO_AST.previewTermoEntregaV2(sessionId, atendimentoId); }
+function astV2PreviewRelatorioFinalPremium(sessionId, atendimentoId) { return SGO_AST.previewRelatorioFinalPremiumV2(sessionId, atendimentoId); }
 function astV2PreviewRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.previewRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2PreviewProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.previewProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2SalvarConclusao(sessionId, atendimentoId, payload) { return SGO_AST.salvarConclusaoV2(sessionId, atendimentoId, payload); }

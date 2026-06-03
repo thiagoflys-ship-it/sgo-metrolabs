@@ -2412,8 +2412,9 @@
             'Esta pr&eacute;via n&atilde;o gera PDF, n&atilde;o cria arquivo no Drive e n&atilde;o registra documento.',
           '</div>',
           '<div style="display:flex;flex-direction:column;gap:6px;">',
-            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewRelatorioTecnico_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Relat&oacute;rio T&eacute;cnico</button>',
-            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewProtocoloSaida_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Protocolo de Sa&iacute;da</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewTermoEntrada_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Termo de Entrada</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewRelatorioFinalPremium_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Relat&oacute;rio T&eacute;cnico</button>',
+            '<button class="ast-v2-acao-btn" type="button" onclick="astV2PreviewTermoEntrega_(\'' + id + '\')" style="background:#0369a1;border-color:#0284c7;">&#128270; Pr&eacute;-visualizar Termo de Entrega/Devolu&ccedil;&atilde;o</button>',
           '</div>',
         '</div>',
 
@@ -3574,7 +3575,64 @@
       .astV2VerificarDocumentoExistente(SESSION, atendimentoId, tipoDocumento);
   }
 
-  function astV2PreviewRelatorioTecnico_(atendimentoId) {
+  function astV2PreviewTermoEntrada_(atendimentoId) {
+    if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
+    var overlayId = "astV2PreviewTEOverlay";
+    var existing = document.getElementById(overlayId);
+    if (existing) existing.parentNode.removeChild(existing);
+    var overlay = document.createElement("div");
+    overlay.id = overlayId;
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,18,40,0.93);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px;box-sizing:border-box;";
+    var bar = document.createElement("div");
+    bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:6px;";
+    var titulo = document.createElement("span");
+    titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+    titulo.textContent = "PRE-VISUALIZACAO - Termo de Entrada V2";
+    var btnBar = document.createElement("div");
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
+    var btnPrint = document.createElement("button");
+    btnPrint.textContent = "Imprimir";
+    btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    var btnWhats = document.createElement("button");
+    btnWhats.textContent = "WhatsApp";
+    btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    var btnClose = document.createElement("button");
+    btnClose.textContent = "Fechar X";
+    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
+    btnBar.appendChild(btnPrint);
+    btnBar.appendChild(btnWhats);
+    btnBar.appendChild(btnClose);
+    bar.appendChild(titulo);
+    bar.appendChild(btnBar);
+    var iframeWrap = document.createElement("div");
+    iframeWrap.style.cssText = "width:100%;max-width:794px;flex:1;background:#fff;border-radius:0 0 4px 4px;overflow:hidden;min-height:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);";
+    var iframe = document.createElement("iframe");
+    iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
+    iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#475467;font-size:13px;text-align:center;">Carregando pr&#233;-visualiza&#231;&#227;o...</div>';
+    btnPrint.onclick = function() { astV2ImprimirPreview_(iframe); };
+    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_ENTRADA_V2", "Termo de Entrada V2"); };
+    iframeWrap.appendChild(iframe);
+    overlay.appendChild(bar);
+    overlay.appendChild(iframeWrap);
+    document.body.appendChild(overlay);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) {
+          iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Erro ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
+          astToast_(res && res.message || "Erro ao carregar preview.");
+          return;
+        }
+        iframe.srcdoc = astV2InjetarCssPreview_(res.html || '');
+      })
+      .withFailureHandler(function() {
+        iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Falha ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
+        astToast_("Falha ao carregar preview.");
+      })
+      .astV2PreviewTermoEntrada(SESSION, atendimentoId);
+  }
+
+  function astV2PreviewRelatorioFinalPremium_(atendimentoId) {
     if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
     var overlayId = "astV2PreviewRelTecOverlay";
     var existing = document.getElementById(overlayId);
@@ -3628,10 +3686,14 @@
         iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Falha ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
         astToast_("Falha ao carregar preview.");
       })
-      .astV2PreviewRelatorioTecnico(SESSION, atendimentoId);
+      .astV2PreviewRelatorioFinalPremium(SESSION, atendimentoId);
   }
 
-  function astV2PreviewProtocoloSaida_(atendimentoId) {
+  function astV2PreviewRelatorioTecnico_(atendimentoId) {
+    return astV2PreviewRelatorioFinalPremium_(atendimentoId);
+  }
+
+  function astV2PreviewTermoEntrega_(atendimentoId) {
     if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
     var overlayId = "astV2PreviewPSOverlay";
     var existing = document.getElementById(overlayId);
@@ -3643,7 +3705,7 @@
     bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:6px;";
     var titulo = document.createElement("span");
     titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
-    titulo.textContent = "PRE-VISUALIZACAO — Protocolo de Saida";
+    titulo.textContent = "PRE-VISUALIZACAO - Termo de Entrega/Devolucao V2";
     var btnBar = document.createElement("div");
     btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
     var btnPrint = document.createElement("button");
@@ -3667,7 +3729,7 @@
     iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
     iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#475467;font-size:13px;text-align:center;">Carregando pr&#233;-visualiza&#231;&#227;o...</div>';
     btnPrint.onclick = function() { astV2ImprimirPreview_(iframe); };
-    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_SAIDA_V2", "Protocolo de Saida"); };
+    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_SAIDA_V2", "Termo de Entrega/Devolucao V2"); };
     iframeWrap.appendChild(iframe);
     overlay.appendChild(bar);
     overlay.appendChild(iframeWrap);
@@ -3685,7 +3747,11 @@
         iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#ef4444;font-size:13px;">Falha ao carregar pr&#233;-visualiza&#231;&#227;o.</div>';
         astToast_("Falha ao carregar preview.");
       })
-      .astV2PreviewProtocoloSaida(SESSION, atendimentoId);
+      .astV2PreviewTermoEntrega(SESSION, atendimentoId);
+  }
+
+  function astV2PreviewProtocoloSaida_(atendimentoId) {
+    return astV2PreviewTermoEntrega_(atendimentoId);
   }
 
   function astV2CarregarDocumentosEmitidos_(atendimentoId) {
