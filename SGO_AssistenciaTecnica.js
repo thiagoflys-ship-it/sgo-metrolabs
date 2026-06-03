@@ -4118,9 +4118,126 @@
   }
 
   function montarHtmlTermoEntregaPremiumV2_(payload) {
-    var html = montarHtmlProtocoloSaidaV2_(payload.atendimento, payload.entrega, payload.conclusaoTecnica, payload.metaDocumental);
-    html = html.split('Protocolo de Sa&iacute;da').join('Termo de Entrega / Devolu&ccedil;&atilde;o');
-    html = html.split('LAYOUT PREMIUM AT V2 &mdash; E.7F.2').join('PREVIEW PREMIUM AT V2 &mdash; C.14.2');
+    var p = payload || {};
+    var e = p.atendimento || {};
+    var ent = p.entrega || {};
+    var conc = p.conclusaoTecnica || {};
+    var teste = p.testeValidacao || {};
+    var exec = p.execucao || {};
+    var entregaHist = p.entregaHistorico || {};
+    var meta = p.metaDocumental || {};
+    var pecas = p.pecasUtilizadas || [];
+    var fotos = p.fotosEntrega || [];
+    var assinatura = p.assinaturaEntrega || {};
+    var css =
+      '@page{size:A4;margin:12mm 12mm 15mm 12mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:9.4px;background:#fff;line-height:1.42}' +
+      '.page{position:relative;min-height:274mm}' +
+      '.topline{height:5px;background:#0b3b78;margin-bottom:9px}' +
+      '.brand{font-size:12px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
+      '.brand-tagline{font-size:8.5px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
+      '.brand-data{font-size:7.4px;color:#64748b;line-height:1.5}' +
+      '.doc-tipo{font-size:15px;font-weight:900;color:#0b3b78;text-align:right;line-height:1.08}' +
+      '.doc-sub{font-size:8px;color:#64748b;text-align:right;font-weight:800;margin-top:2px;text-transform:uppercase;letter-spacing:.35px}' +
+      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:4px}' +
+      '.doc-emit{font-size:7.3px;color:#94a3b8;text-align:right;margin-top:2px}' +
+      '.preview-ribbon{background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:6px 8px;color:#9a3412;font-weight:800;font-size:7.8px;margin:7px 0 8px;text-transform:uppercase;letter-spacing:.25px}' +
+      '.hero{background:#f8fafc;border:1px solid #dbe5f0;border-radius:5px;padding:8px 10px;margin-bottom:8px}' +
+      '.hero-title{font-size:9px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.35px;margin-bottom:5px}' +
+      '.hero-copy{font-size:8.6px;color:#334155;line-height:1.45}' +
+      '.stitle{font-size:8px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.55px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
+      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
+      '.lbl{font-size:7px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.35px}' +
+      '.val{font-size:8.6px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
+      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 9px;font-size:8.7px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
+      '.note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:8px;color:#475569;line-height:1.45}' +
+      'table{width:100%;border-collapse:collapse;font-size:8.6px}' +
+      'th{background:#f1f5f9;color:#334155;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.25px;padding:4px 5px;border:1px solid #e2e8f0}' +
+      'td{padding:4px 5px;border:1px solid #e2e8f0;vertical-align:top}' +
+      '.pill{display:inline-block;border-radius:999px;background:#eef6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.25px;padding:2px 6px}' +
+      '.check-ok{font-weight:900;color:#166534;text-align:center}' +
+      '.check-pend{font-weight:900;color:#92400e;text-align:center}' +
+      '.trace-box{background:#f8fafc;border:1px solid #dbe5f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px}' +
+      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.2px;word-break:break-all;color:#334155}' +
+      '.qrbox{text-align:center;padding:4px;display:inline-block}' +
+      '.qrbox img{width:70px;height:70px;border:1px solid #e2e8f0;border-radius:2px}' +
+      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:800;text-transform:uppercase}' +
+      '.sig-card{border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:90px}' +
+      '.sig-line{border-top:1px solid #334155;margin:32px 0 3px}' +
+      '.sig-img{max-height:58px;max-width:220px;display:block;margin:0 auto 2px}' +
+      '.sig-meta{font-size:7.8px;color:#64748b;line-height:1.45}' +
+      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.2px;color:#94a3b8;line-height:1.45}';
+    function kv_(label, valor) {
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
+    }
+    function simPendente_(ok) {
+      return ok ? '<span class="check-ok">Sim</span>' : '<span class="check-pend">Pendente</span>';
+    }
+    var funcionario = ent.entreguePorNome || ent.entreguePor || e.TECNICO_NOME || '--';
+    var recebedor = ent.recebidoPorNome || ent.recebedorNome || assinatura.SIGNATARIO_NOME || '--';
+    var condicaoEntrega = ent.condicaoEntrega || ent.condicao || conc.condicaoEntrega || '--';
+    var servicoExecutado = conc.servicoExecutado || conc.resumoExecucao || conc.conclusaoTecnica || exec.servicoExecutado || exec.descricao || '--';
+    var testesRealizados = teste.resultado || teste.descricao || conc.testesRealizados || '--';
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page"><div class="topline"></div>';
+    html += '<table style="border:none;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:9px"><tr>';
+    html += '<td style="vertical-align:top;width:58%;border:none"><table style="border:none"><tr>';
+    if (meta.logoBase64) html += '<td style="vertical-align:middle;padding-right:10px;width:1%;border:none"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    html += '<td style="vertical-align:top;border:none"><div class="brand">METROLABS</div><div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
+    html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div></td></tr></table></td>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%;border:none"><div class="doc-tipo">Termo de Entrega / Devolu&ccedil;&atilde;o V2</div><div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica &mdash; Sa&iacute;da do Equipamento</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Preview em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
+    html += '<div class="preview-ribbon">Preview C.14.4 &mdash; n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS, n&atilde;o cria hist&oacute;rico e n&atilde;o altera status.</div>';
+    html += '<div class="hero"><div class="hero-title">Resumo da entrega</div><div class="hero-copy">Este termo consolida a entrega ou devolu&ccedil;&atilde;o do equipamento ao cliente, com servi&ccedil;o executado, testes, pe&ccedil;as, condi&ccedil;&atilde;o de sa&iacute;da e ci&ecirc;ncia do recebedor. A pr&eacute;-visualiza&ccedil;&atilde;o serve para confer&ecirc;ncia antes da emiss&atilde;o oficial.</div></div>';
+    html += '<div class="stitle">Identifica&ccedil;&atilde;o do Atendimento</div><table style="border:none;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Data / hora da entrega', formatarDataBR_(ent.dataHora || ent.dataEntrega || entregaHist.EXECUTADO_EM || meta.emitidoEm)) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Recebedor', recebedor) + kv_('Funcion&aacute;rio Metrolabs', funcionario) + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Equipamento Entregue</div><table style="border:none;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Marca / modelo', [safe_(e.EQUIPAMENTO_MARCA), safe_(e.EQUIPAMENTO_MODELO)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Patrimonio', e.PATRIMONIO || e.NUMERO_PATRIMONIO || '--') + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Servi&ccedil;o Executado e Valida&ccedil;&atilde;o</div>';
+    html += '<table style="border:none;margin-bottom:5px"><tr style="background:transparent"><td style="width:50%;border:none;padding:0 4px 0 0"><div class="sec"><span class="pill">Servi&ccedil;o</span><br>' + esc_(servicoExecutado) + '</div></td><td style="width:50%;border:none;padding:0 0 0 4px"><div class="sec"><span class="pill">Testes realizados</span><br>' + esc_(testesRealizados) + '</div></td></tr></table>';
+    html += '<div class="stitle">Condi&ccedil;&atilde;o de Entrega</div><div class="sec">' + esc_(condicaoEntrega) + '</div>';
+    html += '<div class="stitle">Pe&ccedil;as Substitu&iacute;das / Utilizadas</div>';
+    if (pecas.length) {
+      html += '<table><thead><tr><th>Pe&ccedil;a</th><th style="width:12%">Qtd</th><th style="width:18%">Status</th><th>Justificativa / observa&ccedil;&atilde;o</th></tr></thead><tbody>';
+      for (var pi = 0; pi < pecas.length; pi++) {
+        var pc = pecas[pi];
+        html += '<tr><td>' + esc_(pc.DESCRICAO || '--') + '</td><td>' + esc_(pc.QUANTIDADE || '1') + '</td><td>' + esc_(pc.STATUS || '--') + '</td><td>' + esc_(pc.JUSTIFICATIVA_TECNICA || pc.OBSERVACAO || '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="note">Nenhuma pe&ccedil;a instalada registrada em AST_SOLICITACOES para este atendimento.</div>';
+    }
+    html += '<div class="stitle">Fotos de Entrega</div>';
+    if (fotos.length) {
+      html += '<table><thead><tr><th>Evid&ecirc;ncia</th><th style="width:20%">Tipo</th><th>Descri&ccedil;&atilde;o / legenda</th><th style="width:15%">Acesso</th></tr></thead><tbody>';
+      for (var fi = 0; fi < fotos.length; fi++) {
+        var ft = fotos[fi];
+        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || ft.ID || '--') + '</td><td>' + esc_(ft.TIPO_FOTO || '--') + '</td><td>' + esc_(ft.DESCRICAO_FOTO || 'Evidencia visual vinculada a entrega.') + '</td><td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Abrir</a>' : '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="note">Nenhuma foto de entrega vinculada. Recomenda-se registrar imagem do equipamento pronto para sa&iacute;da, etiqueta, acess&oacute;rios devolvidos e condi&ccedil;&atilde;o final antes da emiss&atilde;o oficial.</div>';
+    }
+    html += '<div class="stitle">Checklist de Sa&iacute;da</div>';
+    html += '<table><tbody><tr><td>Servi&ccedil;o ou motivo da devolu&ccedil;&atilde;o registrado</td><td style="width:16%">' + simPendente_(servicoExecutado && servicoExecutado !== '--') + '</td><td>Condi&ccedil;&atilde;o de entrega registrada</td><td style="width:16%">' + simPendente_(condicaoEntrega && condicaoEntrega !== '--') + '</td></tr>';
+    html += '<tr><td>Testes ou valida&ccedil;&atilde;o documentados</td><td>' + simPendente_(testesRealizados && testesRealizados !== '--') + '</td><td>Recebedor identificado</td><td>' + simPendente_(recebedor && recebedor !== '--') + '</td></tr>';
+    html += '<tr><td>Pe&ccedil;as instaladas conferidas</td><td>' + simPendente_(pecas.length) + '</td><td>Evid&ecirc;ncias visuais de entrega</td><td>' + simPendente_(fotos.length) + '</td></tr></tbody></table>';
+    html += '<div class="stitle">Ci&ecirc;ncia e Garantia</div><div class="sec">O cliente ou recebedor declara ci&ecirc;ncia da devolu&ccedil;&atilde;o do equipamento nas condi&ccedil;&otilde;es registradas neste termo. A garantia aplic&aacute;vel limita-se aos servi&ccedil;os e pe&ccedil;as efetivamente executados pela Metrolabs, salvo condi&ccedil;&otilde;es comerciais espec&iacute;ficas, mau uso, interven&ccedil;&atilde;o de terceiros, queda, umidade, sobrecarga ou danos n&atilde;o relacionados ao servi&ccedil;o realizado. Este preview n&atilde;o substitui a vers&atilde;o oficial emitida com token, hash e registro documental.</div>';
+    html += '<div class="stitle">Assinaturas</div><table style="border:none"><tr>';
+    html += '<td style="width:50%;padding-right:10px;border:none"><div class="sig-card"><div class="lbl">Funcion&aacute;rio Metrolabs</div><div class="sig-line"></div><div class="sig-meta">Nome: ' + esc_(funcionario) + '<br>Data/hora: ' + esc_(formatarDataBR_(ent.dataHora || ent.dataEntrega || meta.emitidoEm)) + '</div></div></td>';
+    html += '<td style="width:50%;padding-left:10px;border:none"><div class="sig-card"><div class="lbl">Cliente / Recebedor</div>';
+    if (assinatura.ASSINATURA_BASE64) html += '<img class="sig-img" src="' + assinatura.ASSINATURA_BASE64 + '" alt="Assinatura entrega">';
+    else html += '<div class="sig-line"></div>';
+    html += '<div class="sig-meta">Nome: ' + esc_(assinatura.SIGNATARIO_NOME || recebedor) + '<br>Doc.: ' + esc_(assinatura.SIGNATARIO_DOC || ent.recebedorDoc || '--') + '</div></div></td></tr></table>';
+    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade do Preview</div><table style="border:none"><tr><td style="vertical-align:top;padding-right:10px;border:none"><div><span class="lbl">Token documental:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash documental:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div><div style="margin-top:5px;font-size:8px;color:#64748b">Este preview usa apenas rastreabilidade visual. O token/hash oficial e QR de valida&ccedil;&atilde;o documental ser&atilde;o criados somente na emiss&atilde;o final.</div></td><td style="vertical-align:top;text-align:center;border:none;white-space:nowrap">';
+    if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
+    html += '</td></tr></table></div>';
+    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Termo de Entrega / Devolu&ccedil;&atilde;o V2 &mdash; Preview C.14.4<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Atendimento: <span class="mono">' + esc_(e.ID || '') + '</span></div>';
+    html += '</div></body></html>';
     return html;
   }
 
