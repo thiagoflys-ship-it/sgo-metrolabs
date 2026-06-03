@@ -4008,92 +4008,112 @@
     var fotos = p.fotosEntrada || [];
     var assinatura = p.assinaturaRecebimento || {};
     var css =
-      '@page{size:A4;margin:13mm 12mm 16mm 12mm}' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:10px;background:#fff;line-height:1.45}' +
-      '.brand{font-size:11px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
-      '.brand-tagline{font-size:9px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
-      '.brand-data{font-size:8px;color:#64748b;line-height:1.55}' +
-      '.doc-tipo{font-size:15px;font-weight:900;color:#0b3b78;text-align:right}' +
-      '.doc-sub{font-size:9px;color:#64748b;text-align:right;font-weight:700}' +
-      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:3px}' +
-      '.doc-emit{font-size:8px;color:#94a3b8;text-align:right;margin-top:2px}' +
-      '.alert-banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:7px 9px;color:#1e40af;font-weight:700;font-size:8.5px;margin:7px 0}' +
-      '.stitle{font-size:8.5px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
+      '@page{size:A4;margin:12mm 12mm 15mm 12mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:9.4px;background:#fff;line-height:1.42}' +
+      '.page{position:relative;min-height:274mm}' +
+      '.topline{height:5px;background:#0b3b78;margin-bottom:9px}' +
+      '.brand{font-size:12px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
+      '.brand-tagline{font-size:8.5px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
+      '.brand-data{font-size:7.4px;color:#64748b;line-height:1.5}' +
+      '.doc-tipo{font-size:16px;font-weight:900;color:#0b3b78;text-align:right;line-height:1.05}' +
+      '.doc-sub{font-size:8px;color:#64748b;text-align:right;font-weight:800;margin-top:2px;text-transform:uppercase;letter-spacing:.35px}' +
+      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:4px}' +
+      '.doc-emit{font-size:7.3px;color:#94a3b8;text-align:right;margin-top:2px}' +
+      '.preview-ribbon{background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:6px 8px;color:#9a3412;font-weight:800;font-size:7.8px;margin:7px 0 8px;text-transform:uppercase;letter-spacing:.25px}' +
+      '.hero{background:#f8fafc;border:1px solid #dbe5f0;border-radius:5px;padding:8px 10px;margin-bottom:8px}' +
+      '.hero-title{font-size:9px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.35px;margin-bottom:5px}' +
+      '.hero-copy{font-size:8.6px;color:#334155;line-height:1.45}' +
+      '.stitle{font-size:8px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.55px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px}' +
       '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
-      '.lbl{font-size:7.5px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.3px}' +
-      '.val{font-size:9px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
-      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 10px;font-size:9px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
-      'table{width:100%;border-collapse:collapse;font-size:9px}' +
-      'th{background:#f1f5f9;color:#334155;text-align:left;font-size:7.5px;text-transform:uppercase;letter-spacing:.25px;padding:5px;border:1px solid #e2e8f0}' +
-      'td{padding:5px;border:1px solid #e2e8f0;vertical-align:top}' +
-      '.trace-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px}' +
-      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.5px;word-break:break-all;color:#334155}' +
+      '.lbl{font-size:7px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.35px}' +
+      '.val{font-size:8.6px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
+      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 9px;font-size:8.7px;white-space:pre-line;color:#334155;margin-bottom:4px}' +
+      '.note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:8px;color:#475569;line-height:1.45}' +
+      'table{width:100%;border-collapse:collapse;font-size:8.6px}' +
+      'th{background:#f1f5f9;color:#334155;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.25px;padding:4px 5px;border:1px solid #e2e8f0}' +
+      'td{padding:4px 5px;border:1px solid #e2e8f0;vertical-align:top}' +
+      '.check-ok{font-weight:900;color:#166534;text-align:center}' +
+      '.check-pend{font-weight:900;color:#92400e;text-align:center}' +
+      '.photo-grid{width:100%;border:none;border-collapse:separate;border-spacing:0 5px}' +
+      '.photo-card{border:1px solid #e2e8f0;border-radius:4px;padding:6px;background:#fff}' +
+      '.trace-box{background:#f8fafc;border:1px solid #dbe5f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px}' +
+      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.2px;word-break:break-all;color:#334155}' +
       '.qrbox{text-align:center;padding:4px;display:inline-block}' +
       '.qrbox img{width:70px;height:70px;border:1px solid #e2e8f0;border-radius:2px}' +
-      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:700;text-transform:uppercase}' +
-      '.sig-line{border-top:1px solid #334155;margin:28px 0 3px}' +
-      '.sig-img{max-height:62px;max-width:220px;display:block;margin:0 auto 2px}' +
-      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.5px;color:#94a3b8;line-height:1.5}';
+      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:800;text-transform:uppercase}' +
+      '.sig-card{border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:86px}' +
+      '.sig-line{border-top:1px solid #334155;margin:32px 0 3px}' +
+      '.sig-img{max-height:58px;max-width:220px;display:block;margin:0 auto 2px}' +
+      '.sig-meta{font-size:7.8px;color:#64748b;line-height:1.45}' +
+      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.2px;color:#94a3b8;line-height:1.45}';
     function kv_(label, valor) {
       return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
              '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
     }
-    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>';
+    function simPendente_(ok) {
+      return ok ? '<span class="check-ok">Sim</span>' : '<span class="check-pend">Pendente</span>';
+    }
+    var funcionario = e.RECEBIDO_POR_NOME || e.CRIADO_POR_NOME || e.TECNICO_NOME || '--';
+    var localEntrada = e.UNIDADE_NOME || e.UNIDADE_PROVISORIA || e.CLIENTE_NOME || '--';
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page"><div class="topline"></div>';
     html += '<table style="border:none;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:9px"><tr>';
     html += '<td style="vertical-align:top;width:58%;border:none"><table style="border:none"><tr>';
     if (meta.logoBase64) html += '<td style="vertical-align:middle;padding-right:10px;width:1%;border:none"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
     html += '<td style="vertical-align:top;border:none"><div class="brand">METROLABS</div><div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
     html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div></td></tr></table></td>';
-    html += '<td style="vertical-align:top;text-align:right;width:42%;border:none"><div class="doc-tipo">Termo de Entrada</div><div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica &mdash; Recebimento V2</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Preview em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
-    html += '<div class="alert-banner">Pr&eacute;-visualiza&ccedil;&atilde;o C.14.2: n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS e n&atilde;o cria hist&oacute;rico.</div>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%;border:none"><div class="doc-tipo">Termo de Entrada V2</div><div class="doc-sub">Recebimento para Assist&ecirc;ncia T&eacute;cnica</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Preview em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
+    html += '<div class="preview-ribbon">Preview C.14.3 &mdash; n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS, n&atilde;o cria hist&oacute;rico e n&atilde;o altera status.</div>';
+    html += '<div class="hero"><div class="hero-title">Resumo do recebimento</div><div class="hero-copy">Este termo registra a condi&ccedil;&atilde;o declarada e observada no momento de entrada do equipamento na Metrolabs. O documento serve como confer&ecirc;ncia operacional antes da emiss&atilde;o oficial e mant&eacute;m separados o QR de acompanhamento e a valida&ccedil;&atilde;o documental.</div></div>';
     html += '<div class="stitle">Identifica&ccedil;&atilde;o do Atendimento</div><table style="border:none;margin-bottom:6px"><tbody>';
     html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Data / hora de entrada', formatarDataBR_(e.CRIADO_EM || e.ULTIMA_MOVIMENTACAO_EM || '')) + '</tr>';
     html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
-    html += '<tr style="background:transparent">' + kv_('Setor', e.SETOR || '--') + kv_('Responsavel pela entrega', e.DEIXOU_NOME || e.RECEBIDO_POR_NOME || '--') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Setor', e.SETOR || e.SETOR_NOME || '--') + kv_('Responsavel pela entrega', e.DEIXOU_NOME || e.RESPONSAVEL_ENTREGA || '--') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Funcion&aacute;rio Metrolabs', funcionario) + kv_('Local de recebimento', localEntrada) + '</tr>';
     html += '</tbody></table>';
     html += '<div class="stitle">Equipamento Recebido</div><table style="border:none;margin-bottom:6px"><tbody>';
     html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Marca / modelo', [safe_(e.EQUIPAMENTO_MARCA), safe_(e.EQUIPAMENTO_MODELO)].filter(Boolean).join(' / ')) + '</tr>';
     html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Patrimonio', e.PATRIMONIO || e.NUMERO_PATRIMONIO || '--') + '</tr>';
     html += '</tbody></table>';
-    html += '<div class="stitle">Condi&ccedil;&atilde;o F&iacute;sica e Problema Relatado</div>';
-    html += '<div class="sec"><b>Condi&ccedil;&atilde;o:</b> ' + esc_(e.CONDICAO_FISICA || '--') + '<br><b>Relato:</b> ' + esc_(e.PROBLEMA_RELATADO || '--') + '</div>';
+    html += '<div class="stitle">Condi&ccedil;&atilde;o F&iacute;sica e Relato Inicial</div>';
+    html += '<table style="border:none;margin-bottom:5px"><tr style="background:transparent"><td style="width:42%;border:none;padding:0 4px 0 0"><div class="sec"><b>Condi&ccedil;&atilde;o observada:</b><br>' + esc_(e.CONDICAO_FISICA || '--') + '</div></td><td style="width:58%;border:none;padding:0 0 0 4px"><div class="sec"><b>Problema relatado pelo cliente:</b><br>' + esc_(e.PROBLEMA_RELATADO || '--') + '</div></td></tr></table>';
     html += '<div class="stitle">Acess&oacute;rios Recebidos</div>';
     if (acessorios.length) {
-      html += '<table><thead><tr><th>Descri&ccedil;&atilde;o</th><th style="width:12%">Qtd</th><th style="width:20%">Estado</th><th>Observa&ccedil;&atilde;o</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Item recebido</th><th style="width:12%">Qtd</th><th style="width:20%">Estado</th><th>Observa&ccedil;&atilde;o</th></tr></thead><tbody>';
       for (var ai = 0; ai < acessorios.length; ai++) {
         var ac = acessorios[ai];
         html += '<tr><td>' + esc_(ac.DESCRICAO || '--') + '</td><td>' + esc_(ac.QUANTIDADE || '1') + '</td><td>' + esc_(ac.ESTADO || '--') + '</td><td>' + esc_(ac.OBSERVACAO || '--') + '</td></tr>';
       }
       html += '</tbody></table>';
     } else {
-      html += '<div class="sec">Nenhum acess&oacute;rio registrado no atendimento.</div>';
+      html += '<div class="note">Nenhum acess&oacute;rio registrado. Quando houver itens avulsos, cabos, sensores, cases ou fontes, eles devem ser vinculados ao atendimento antes da emiss&atilde;o oficial.</div>';
     }
     html += '<div class="stitle">Fotos de Entrada</div>';
     if (fotos.length) {
-      html += '<table><thead><tr><th>Arquivo</th><th style="width:22%">Tipo</th><th>Descri&ccedil;&atilde;o</th><th style="width:18%">Link</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Evid&ecirc;ncia</th><th style="width:20%">Tipo</th><th>Descri&ccedil;&atilde;o / legenda</th><th style="width:15%">Acesso</th></tr></thead><tbody>';
       for (var fi = 0; fi < fotos.length; fi++) {
         var ft = fotos[fi];
-        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || '--') + '</td><td>' + esc_(ft.TIPO_FOTO || '--') + '</td><td>' + esc_(ft.DESCRICAO_FOTO || '--') + '</td><td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Abrir</a>' : '--') + '</td></tr>';
+        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || ft.ID || '--') + '</td><td>' + esc_(ft.TIPO_FOTO || '--') + '</td><td>' + esc_(ft.DESCRICAO_FOTO || 'Evidencia visual vinculada a entrada.') + '</td><td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Abrir</a>' : '--') + '</td></tr>';
       }
       html += '</tbody></table>';
     } else {
-      html += '<div class="sec">Nenhuma foto de entrada vinculada ao atendimento.</div>';
+      html += '<div class="note">Nenhuma foto de entrada vinculada. Recomenda-se registrar fotos gerais do equipamento, etiqueta de identifica&ccedil;&atilde;o, avarias aparentes e acess&oacute;rios antes da emiss&atilde;o oficial.</div>';
     }
     html += '<div class="stitle">Checklist de Recebimento</div>';
-    html += '<table><tbody><tr><td>Equipamento identificado</td><td style="width:16%;text-align:center">Sim</td><td>Condi&ccedil;&atilde;o f&iacute;sica registrada</td><td style="width:16%;text-align:center">' + (e.CONDICAO_FISICA ? 'Sim' : 'Pendente') + '</td></tr>';
-    html += '<tr><td>Acess&oacute;rios conferidos</td><td style="text-align:center">' + (acessorios.length ? 'Sim' : 'Pendente') + '</td><td>Evid&ecirc;ncias iniciais</td><td style="text-align:center">' + (fotos.length ? 'Sim' : 'Pendente') + '</td></tr></tbody></table>';
-    html += '<div class="stitle">Termos de Ci&ecirc;ncia</div><div class="sec">O cliente ou entregador declara que os dados acima representam a condi&ccedil;&atilde;o de recebimento do equipamento para avalia&ccedil;&atilde;o t&eacute;cnica. A libera&ccedil;&atilde;o, reparo, calibra&ccedil;&atilde;o ou devolu&ccedil;&atilde;o depender&aacute; das etapas t&eacute;cnicas registradas no atendimento.</div>';
+    html += '<table><tbody><tr><td>Equipamento identificado no atendimento</td><td style="width:16%">' + simPendente_(e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + '</td><td>N&uacute;mero de s&eacute;rie / patrim&ocirc;nio conferido</td><td style="width:16%">' + simPendente_(e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO || e.PATRIMONIO || e.NUMERO_PATRIMONIO) + '</td></tr>';
+    html += '<tr><td>Condi&ccedil;&atilde;o f&iacute;sica registrada</td><td>' + simPendente_(e.CONDICAO_FISICA) + '</td><td>Problema relatado registrado</td><td>' + simPendente_(e.PROBLEMA_RELATADO) + '</td></tr>';
+    html += '<tr><td>Acess&oacute;rios conferidos</td><td>' + simPendente_(acessorios.length) + '</td><td>Evid&ecirc;ncias visuais de entrada</td><td>' + simPendente_(fotos.length) + '</td></tr></tbody></table>';
+    html += '<div class="stitle">Termos de Ci&ecirc;ncia</div><div class="sec">O cliente ou entregador declara ci&ecirc;ncia de que o equipamento foi recebido para triagem e avalia&ccedil;&atilde;o t&eacute;cnica, conforme os dados registrados neste termo. A exist&ecirc;ncia de problema interno, necessidade de pe&ccedil;as, reparo, calibra&ccedil;&atilde;o, reprova&ccedil;&atilde;o em teste ou devolu&ccedil;&atilde;o somente ser&aacute; definida ap&oacute;s as etapas t&eacute;cnicas do atendimento. Este preview n&atilde;o substitui a vers&atilde;o oficial emitida com token, hash e registro documental.</div>';
     html += '<div class="stitle">Assinaturas</div><table style="border:none"><tr>';
-    html += '<td style="width:50%;padding-right:10px;border:none"><div class="sec"><div class="lbl">Funcion&aacute;rio Metrolabs</div><div class="sig-line"></div><div style="font-size:8px;color:#64748b">Nome / assinatura</div></div></td>';
-    html += '<td style="width:50%;padding-left:10px;border:none"><div class="sec"><div class="lbl">Cliente / Entregador</div>';
+    html += '<td style="width:50%;padding-right:10px;border:none"><div class="sig-card"><div class="lbl">Funcion&aacute;rio Metrolabs</div><div class="sig-line"></div><div class="sig-meta">Nome: ' + esc_(funcionario) + '<br>Data/hora: ' + esc_(formatarDataBR_(e.CRIADO_EM || meta.emitidoEm)) + '</div></div></td>';
+    html += '<td style="width:50%;padding-left:10px;border:none"><div class="sig-card"><div class="lbl">Cliente / Entregador</div>';
     if (assinatura.ASSINATURA_BASE64) html += '<img class="sig-img" src="' + assinatura.ASSINATURA_BASE64 + '" alt="Assinatura recebimento">';
     else html += '<div class="sig-line"></div>';
-    html += '<div style="font-size:8px;color:#64748b">Nome: ' + esc_(assinatura.SIGNATARIO_NOME || e.DEIXOU_NOME || '--') + '<br>Doc.: ' + esc_(assinatura.SIGNATARIO_DOC || e.DEIXOU_DOC || '--') + '</div></div></td></tr></table>';
-    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade do Preview</div><table style="border:none"><tr><td style="vertical-align:top;padding-right:10px;border:none"><div><span class="lbl">Token:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div><div style="margin-top:5px;font-size:8px;color:#64748b">QR de acompanhamento preservado; valida&ccedil;&atilde;o documental oficial s&oacute; na emiss&atilde;o final.</div></td><td style="vertical-align:top;text-align:center;border:none;white-space:nowrap">';
+    html += '<div class="sig-meta">Nome: ' + esc_(assinatura.SIGNATARIO_NOME || e.DEIXOU_NOME || '--') + '<br>Doc.: ' + esc_(assinatura.SIGNATARIO_DOC || e.DEIXOU_DOC || '--') + '</div></div></td></tr></table>';
+    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade do Preview</div><table style="border:none"><tr><td style="vertical-align:top;padding-right:10px;border:none"><div><span class="lbl">Token documental:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash documental:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div><div style="margin-top:5px;font-size:8px;color:#64748b">Este preview usa apenas rastreabilidade visual. O token/hash oficial e QR de valida&ccedil;&atilde;o documental ser&atilde;o criados somente na emiss&atilde;o final.</div></td><td style="vertical-align:top;text-align:center;border:none;white-space:nowrap">';
     if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
     html += '</td></tr></table></div>';
-    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Termo de Entrada V2 &mdash; Preview C.14.2<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span></div>';
-    html += '</body></html>';
+    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Termo de Entrada V2 &mdash; Preview C.14.3<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Atendimento: <span class="mono">' + esc_(e.ID || '') + '</span></div>';
+    html += '</div></body></html>';
     return html;
   }
 
