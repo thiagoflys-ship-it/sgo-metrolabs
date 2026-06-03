@@ -1,6 +1,6 @@
 # Inventário do Módulo Assistência Técnica — SGO+
-**Atualizado em:** 2026-06-01
-**Fase:** V2 — Produção @183. C.10.1 fluxo pós-execução V2 publicado: retorno após teste reprovado, sem reparo para devolução e entrega sem finalização. Próxima frente: a definir.
+**Atualizado em:** 2026-06-03
+**Fase:** V2 — Produção @194. C.14.6A/C.14.6B publicadas: finalização da O.S V2, status FINALIZADO e ações nos previews premium. Próxima frente: a definir.
 **Arquivos ativos:** `SGO_AssistenciaTecnica.js` · `JS_AssistenciaTecnica.html`
 
 ---
@@ -39,6 +39,8 @@
 | `c8ed48f` | feat(AT): adicionar assinatura opcional na entrega V2 |
 | `d681f40` | ux(AT): esclarecer autorizacao do cliente no orcamento V2 |
 | `6949c76` | fix(AT): corrigir retornos de fluxo pos-execucao V2 |
+| `84bc4c2` | fix(AT): permitir finalizacao da OS V2 |
+| `6089df0` | feat(AT): adicionar acoes aos previews premium V2 |
 
 ---
 
@@ -495,7 +497,10 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | C.5.3 | UX do orçamento aguardando autorização do cliente | ✅ commit d681f40 · deploy @182 |
 | **Deploy @182** | **C.9.1 assinatura opcional + C.5.3 UX orçamento — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
 | C.10.1 | Fluxo pós-execução V2: teste reprovado retorna para EXECUCAO_EM_ANDAMENTO; Registrar Execução aparece em EXECUCAO_CONCLUIDA; conclusão SEM_REPARO/REPROVADO avança para NAO_REPARADO; entrega com FINALIZAR_ATENDIMENTO=N não encerra como ENTREGUE | ✅ commit 6949c76 · deploy @183 |
-| **Deploy @183** | **Produção atual — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
+| **Deploy @183** | **C.10.1 fluxo pós-execução V2 — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force** | ✅ **2026-06-01** |
+| C.14.6A | Finalização da O.S / atendimento V2: botão/card "Finalizar O.S", backend `finalizarAtendimentoV2`, wrapper `astV2FinalizarAtendimento`, wrapper frontend `astV2FinalizarAtendimento_`, status FINALIZADO e preview exibindo "O.S Finalizada" | ✅ commit 84bc4c2 · deploy @194 |
+| C.14.6B | Ações nos previews premium V2: Voltar, Imprimir, Gerar PDF Oficial, Baixar PDF, Enviar WhatsApp e Copiar Link; Baixar/WhatsApp/Copiar usam documento oficial existente; Voltar/Imprimir não gravam documento, histórico ou status; geração oficial mantém anti-duplicidade | ✅ commit 6089df0 · deploy @194 |
+| **Deploy @194** | **Produção atual — C.14.6A finalização da O.S + C.14.6B ações nos previews premium — deployment `AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ`; sem setup; sem setupOrcamentosV2; ORC intocado; sem --force; nenhum arquivo funcional alterado durante o deploy** | ✅ **2026-06-03** |
 
 ---
 
@@ -506,8 +511,7 @@ NAO_REPARADO              → AGUARDANDO_ENTREGA, CANCELADO
 | C.4 (ORC) | Integração ORC/Mini-CRM com orçamentos AT (requer setupOrcamentosV2 — planejamento separado) |
 | C.7 | Integração real com SGO_Missoes (remover stub) |
 | C.8 | Alertas automáticos (reimplementar `gerarAlertasEntrada_`) |
-| C.10 | Relatório Final V2 + Recibo de Devolução |
-| D | Deploy / ativação em produção |
+| C.14.6C.1 | Microcorreção visual futura: label `AT_PROTOCOLO_ENTRADA_V2` pode aparecer bruto em documentos emitidos; pendência visual não bloqueante |
 
 ---
 
@@ -537,6 +541,8 @@ ATENDIMENTO_SEM_CONCLUSAO_TECNICA
 | C.5/C.5B/C.6/E.8/E.9/E.10 publicados — deployment @178 ativo | — | RESOLVIDO |
 | C.9.1/C.5.3 publicados — deployment @182 ativo | — | RESOLVIDO |
 | C.10.1 fluxo pós-execução publicado — deployment @183 ativo | — | RESOLVIDO |
+| C.14.6A/C.14.6B publicados — deployment @194 ativo | — | RESOLVIDO |
+| Label `AT_PROTOCOLO_ENTRADA_V2` pode aparecer bruto em documentos emitidos | BAIXO | Pendência visual não bloqueante para microcorreção futura |
 | `DATA_PREVISTA` de peça não persiste no schema (coletada no form, salva só no historico) | BAIXO | Decisão consciente — C.6 |
 | Status `AGUARDANDO_PECAS` (legado) não exibe botão "Solicitar Peça" no V2 | BAIXO | Só afeta atendimentos migrados |
 | Terceiros/Lab ainda em caminho legado — transições podem conflitar com V2 | MÉDIO | Escopo fora do rebuild |
