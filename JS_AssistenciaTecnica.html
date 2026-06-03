@@ -3575,6 +3575,23 @@
       .astV2VerificarDocumentoExistente(SESSION, id, "AT_PROTOCOLO_SAIDA_V2");
   }
 
+  function astV2SolicitarTermoEntrada_(id) {
+    if (!id) return astToast_("ID do atendimento nao disponivel.");
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!astOk_(res)) { astToast_("Erro ao verificar documentos. Tente novamente."); return; }
+        if (res.existe && res.documento) {
+          astV2MostrarDuplicidadeDoc_(id, "Termo de Entrada V2", res.documento, function() {
+            astV2GerarDocumentoEntrada_(id);
+          });
+        } else {
+          astV2GerarDocumentoEntrada_(id);
+        }
+      })
+      .withFailureHandler(function() { astToast_("Erro ao verificar documentos. Tente novamente."); })
+      .astV2VerificarDocumentoExistente(SESSION, id, "AT_PROTOCOLO_ENTRADA_V2");
+  }
+
   function astV2InjetarCssPreview_(html) {
     if (!html) return '';
     var css = '<style>' +
@@ -3599,21 +3616,81 @@
     catch(e_) { astToast_("Erro ao imprimir. Tente novamente."); }
   }
 
-  function astV2WhatsAppPreview_(atendimentoId, tipoDocumento, rotuloDoc) {
+  function astV2BuscarDocumentoOficial_(atendimentoId, tipoDocumento, onOk) {
     if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
-    astToast_("Verificando documento oficial...");
     google.script.run
       .withSuccessHandler(function(res) {
         if (!astOk_(res)) { astToast_("Erro ao verificar documento. Tente novamente."); return; }
-        if (res.existe && res.documento && res.documento.pdfUrl) {
-          var msg = "[SGO+] " + rotuloDoc + "\nSegue o documento oficial:\n" + res.documento.pdfUrl;
-          window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener");
-        } else {
-          astToast_("Para enviar por WhatsApp, gere primeiro a versao oficial em PDF.");
+        if (!res.existe || !res.documento) {
+          astToast_("Gere primeiro o PDF oficial deste documento.");
+          return;
         }
+        onOk(res.documento);
       })
       .withFailureHandler(function() { astToast_("Nao foi possivel verificar o documento."); })
       .astV2VerificarDocumentoExistente(SESSION, atendimentoId, tipoDocumento);
+  }
+
+  function astV2DocUrlOficial_(doc, preferDownload) {
+    if (!doc) return "";
+    if (preferDownload) return doc.downloadUrl || doc.pdfUrl || "";
+    return doc.pdfUrl || doc.downloadUrl || "";
+  }
+
+  function astV2BaixarPdfPreview_(atendimentoId, tipoDocumento, rotuloDoc) {
+    astV2BuscarDocumentoOficial_(atendimentoId, tipoDocumento, function(doc) {
+      var url = astV2DocUrlOficial_(doc, true);
+      if (!url) return astToast_("Link oficial indisponivel. Gere uma nova versao oficial.");
+      astAbrirDocV2_(url, rotuloDoc || "documento");
+    });
+  }
+
+  function astV2CopiarLinkPreview_(atendimentoId, tipoDocumento) {
+    astV2BuscarDocumentoOficial_(atendimentoId, tipoDocumento, function(doc) {
+      var url = astV2DocUrlOficial_(doc, false);
+      if (!url) return astToast_("Link oficial indisponivel. Gere uma nova versao oficial.");
+      astCopiarTexto_(url);
+      astToast_("Link oficial copiado.");
+    });
+  }
+
+  function astV2WhatsAppPreview_(atendimentoId, tipoDocumento, rotuloDoc) {
+    if (!atendimentoId) return astToast_("ID do atendimento nao disponivel.");
+    astToast_("Verificando documento oficial...");
+    astV2BuscarDocumentoOficial_(atendimentoId, tipoDocumento, function(doc) {
+      var url = astV2DocUrlOficial_(doc, false);
+      if (!url) return astToast_("Link oficial indisponivel. Gere uma nova versao oficial.");
+      var msg = "[SGO+] " + rotuloDoc + "\nSegue o documento oficial:\n" + url;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener");
+    });
+  }
+
+  function astV2CriarBotaoPreview_(texto, cor, onClick) {
+    var btn = document.createElement("button");
+    btn.textContent = texto;
+    btn.style.cssText = "background:" + cor + ";color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  function astV2MontarToolbarPreview_(opcoes) {
+    var cfg = opcoes || {};
+    var bar = document.createElement("div");
+    bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:8px;box-sizing:border-box;";
+    var titulo = document.createElement("span");
+    titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+    titulo.textContent = cfg.titulo || "PRE-VISUALIZACAO";
+    var btnBar = document.createElement("div");
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;flex-shrink:1;";
+    btnBar.appendChild(astV2CriarBotaoPreview_("Voltar", "#475569", cfg.fechar));
+    btnBar.appendChild(astV2CriarBotaoPreview_("Imprimir", "#0ea5e9", cfg.imprimir));
+    btnBar.appendChild(astV2CriarBotaoPreview_("Gerar PDF Oficial", "#b45309", cfg.gerar));
+    btnBar.appendChild(astV2CriarBotaoPreview_("Baixar PDF", "#2563eb", cfg.baixar));
+    btnBar.appendChild(astV2CriarBotaoPreview_("Enviar WhatsApp", "#25d366", cfg.whats));
+    btnBar.appendChild(astV2CriarBotaoPreview_("Copiar Link", "#64748b", cfg.copiar));
+    bar.appendChild(titulo);
+    bar.appendChild(btnBar);
+    return bar;
   }
 
   function astV2PreviewTermoEntrada_(atendimentoId) {
@@ -3624,35 +3701,20 @@
     var overlay = document.createElement("div");
     overlay.id = overlayId;
     overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,18,40,0.93);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px;box-sizing:border-box;";
-    var bar = document.createElement("div");
-    bar.style.cssText = "width:100%;max-width:794px;background:#1a2a4a;color:#fff;padding:8px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:6px;";
-    var titulo = document.createElement("span");
-    titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
-    titulo.textContent = "PRE-VISUALIZACAO - Termo de Entrada V2";
-    var btnBar = document.createElement("div");
-    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
-    var btnPrint = document.createElement("button");
-    btnPrint.textContent = "Imprimir";
-    btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
-    var btnWhats = document.createElement("button");
-    btnWhats.textContent = "WhatsApp";
-    btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
-    var btnClose = document.createElement("button");
-    btnClose.textContent = "Fechar X";
-    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
-    btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
-    btnBar.appendChild(btnPrint);
-    btnBar.appendChild(btnWhats);
-    btnBar.appendChild(btnClose);
-    bar.appendChild(titulo);
-    bar.appendChild(btnBar);
     var iframeWrap = document.createElement("div");
     iframeWrap.style.cssText = "width:100%;max-width:794px;flex:1;background:#fff;border-radius:0 0 4px 4px;overflow:hidden;min-height:0;box-shadow:0 4px 24px rgba(0,0,0,0.4);";
     var iframe = document.createElement("iframe");
     iframe.style.cssText = "width:100%;height:100%;border:none;display:block;";
     iframe.srcdoc = '<div style="padding:24px;font-family:Arial,sans-serif;color:#475467;font-size:13px;text-align:center;">Carregando pr&#233;-visualiza&#231;&#227;o...</div>';
-    btnPrint.onclick = function() { astV2ImprimirPreview_(iframe); };
-    btnWhats.onclick = function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_ENTRADA_V2", "Termo de Entrada V2"); };
+    var bar = astV2MontarToolbarPreview_({
+      titulo: "PRE-VISUALIZACAO - Termo de Entrada V2",
+      fechar: function() { overlay.parentNode.removeChild(overlay); },
+      imprimir: function() { astV2ImprimirPreview_(iframe); },
+      gerar: function() { astV2SolicitarTermoEntrada_(atendimentoId); },
+      baixar: function() { astV2BaixarPdfPreview_(atendimentoId, "AT_PROTOCOLO_ENTRADA_V2", "Termo de Entrada V2"); },
+      whats: function() { astV2WhatsAppPreview_(atendimentoId, "AT_PROTOCOLO_ENTRADA_V2", "Termo de Entrada V2"); },
+      copiar: function() { astV2CopiarLinkPreview_(atendimentoId, "AT_PROTOCOLO_ENTRADA_V2"); }
+    });
     iframeWrap.appendChild(iframe);
     overlay.appendChild(bar);
     overlay.appendChild(iframeWrap);
@@ -3687,20 +3749,26 @@
     titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
     titulo.textContent = "PRE-VISUALIZACAO — Relatorio Tecnico Final";
     var btnBar = document.createElement("div");
-    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;flex-shrink:1;";
     var btnPrint = document.createElement("button");
     btnPrint.textContent = "Imprimir";
     btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnWhats = document.createElement("button");
-    btnWhats.textContent = "WhatsApp";
+    btnWhats.textContent = "Enviar WhatsApp";
     btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnClose = document.createElement("button");
-    btnClose.textContent = "Fechar X";
-    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    btnClose.textContent = "Voltar";
+    btnClose.style.cssText = "background:#475569;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
-    btnBar.appendChild(btnPrint);
-    btnBar.appendChild(btnWhats);
+    var btnGerar = astV2CriarBotaoPreview_("Gerar PDF Oficial", "#b45309", function() { astV2SolicitarRelatorioTecnico_(atendimentoId); });
+    var btnBaixar = astV2CriarBotaoPreview_("Baixar PDF", "#2563eb", function() { astV2BaixarPdfPreview_(atendimentoId, "AT_RELATORIO_TECNICO_V2", "Relatorio Tecnico Final"); });
+    var btnCopiar = astV2CriarBotaoPreview_("Copiar Link", "#64748b", function() { astV2CopiarLinkPreview_(atendimentoId, "AT_RELATORIO_TECNICO_V2"); });
     btnBar.appendChild(btnClose);
+    btnBar.appendChild(btnPrint);
+    btnBar.appendChild(btnGerar);
+    btnBar.appendChild(btnBaixar);
+    btnBar.appendChild(btnWhats);
+    btnBar.appendChild(btnCopiar);
     bar.appendChild(titulo);
     bar.appendChild(btnBar);
     var iframeWrap = document.createElement("div");
@@ -3748,20 +3816,26 @@
     titulo.style.cssText = "font-weight:700;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
     titulo.textContent = "PRE-VISUALIZACAO - Termo de Entrega/Devolucao V2";
     var btnBar = document.createElement("div");
-    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;flex-shrink:0;";
+    btnBar.style.cssText = "display:flex;gap:5px;align-items:center;justify-content:flex-end;flex-wrap:wrap;flex-shrink:1;";
     var btnPrint = document.createElement("button");
     btnPrint.textContent = "Imprimir";
     btnPrint.style.cssText = "background:#0ea5e9;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnWhats = document.createElement("button");
-    btnWhats.textContent = "WhatsApp";
+    btnWhats.textContent = "Enviar WhatsApp";
     btnWhats.style.cssText = "background:#25d366;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     var btnClose = document.createElement("button");
-    btnClose.textContent = "Fechar X";
-    btnClose.style.cssText = "background:#c0392b;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
+    btnClose.textContent = "Voltar";
+    btnClose.style.cssText = "background:#475569;color:#fff;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap;";
     btnClose.onclick = function() { overlay.parentNode.removeChild(overlay); };
-    btnBar.appendChild(btnPrint);
-    btnBar.appendChild(btnWhats);
+    var btnGerar = astV2CriarBotaoPreview_("Gerar PDF Oficial", "#b45309", function() { astV2SolicitarProtocoloSaida_(atendimentoId); });
+    var btnBaixar = astV2CriarBotaoPreview_("Baixar PDF", "#2563eb", function() { astV2BaixarPdfPreview_(atendimentoId, "AT_PROTOCOLO_SAIDA_V2", "Termo de Entrega/Devolucao V2"); });
+    var btnCopiar = astV2CriarBotaoPreview_("Copiar Link", "#64748b", function() { astV2CopiarLinkPreview_(atendimentoId, "AT_PROTOCOLO_SAIDA_V2"); });
     btnBar.appendChild(btnClose);
+    btnBar.appendChild(btnPrint);
+    btnBar.appendChild(btnGerar);
+    btnBar.appendChild(btnBaixar);
+    btnBar.appendChild(btnWhats);
+    btnBar.appendChild(btnCopiar);
     bar.appendChild(titulo);
     bar.appendChild(btnBar);
     var iframeWrap = document.createElement("div");
