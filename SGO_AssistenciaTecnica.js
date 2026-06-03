@@ -2296,6 +2296,7 @@
     CONCLUIDO_TECNICAMENTE:      "CONCLUIDO_TECNICAMENTE",
     AGUARDANDO_ENTREGA:          "AGUARDANDO_ENTREGA",
     ENTREGUE:                    "ENTREGUE",
+    FINALIZADO:                  "FINALIZADO",
     CANCELADO:                   "CANCELADO",
     NAO_REPARADO:                "NAO_REPARADO"
   };
@@ -2320,6 +2321,7 @@
     CONCLUIDO_TECNICAMENTE:      "VERDE",
     AGUARDANDO_ENTREGA:          "VERDE",
     ENTREGUE:                    "VERDE",
+    FINALIZADO:                  "VERDE",
     CANCELADO:                   "VERMELHO",
     NAO_REPARADO:                "VERMELHO"
   };
@@ -2343,7 +2345,8 @@
     AGUARDANDO_CALIBRACAO:       "Encaminhar para calibracao",
     CONCLUIDO_TECNICAMENTE:      "Agendar entrega ao cliente",
     AGUARDANDO_ENTREGA:          "Realizar entrega com assinatura do cliente",
-    ENTREGUE:                    "Atendimento encerrado",
+    ENTREGUE:                    "Finalizar atendimento",
+    FINALIZADO:                  "Atendimento finalizado",
     CANCELADO:                   "Atendimento cancelado  -  nenhuma acao necessaria",
     NAO_REPARADO:                "Informar cliente sobre impossibilidade de reparo"
   };
@@ -2483,10 +2486,11 @@
     EXECUCAO_CONCLUIDA:           ["EXECUCAO_EM_ANDAMENTO", "AGUARDANDO_CALIBRACAO", "CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
     AGUARDANDO_CALIBRACAO:        ["CONCLUIDO_TECNICAMENTE", "NAO_REPARADO", "CANCELADO"],
     CONCLUIDO_TECNICAMENTE:       ["AGUARDANDO_ENTREGA", "NAO_REPARADO", "CANCELADO"],
-    AGUARDANDO_ENTREGA:           ["ENTREGUE", "CANCELADO"],
-    ENTREGUE:                     [],
+    AGUARDANDO_ENTREGA:           ["ENTREGUE", "FINALIZADO", "CANCELADO"],
+    ENTREGUE:                     ["FINALIZADO"],
+    FINALIZADO:                   [],
     CANCELADO:                    [],
-    NAO_REPARADO:                 ["AGUARDANDO_ENTREGA", "CANCELADO"]
+    NAO_REPARADO:                 ["AGUARDANDO_ENTREGA", "FINALIZADO", "CANCELADO"]
   };
 
   function v2Protocolo_() {
@@ -3516,6 +3520,10 @@
     if (finalizar && v2StatusValido_(statusParaEntrega, STATUS_V2.ENTREGUE)) {
       v2AtualizarStatus_(atendimentoId, STATUS_V2.ENTREGUE, descricao, sessao.userId, sessao.nome);
     }
+    const aposEntrega = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (finalizar && aposEntrega && v2StatusValido_(aposEntrega.STATUS, STATUS_V2.FINALIZADO)) {
+      v2AtualizarStatus_(atendimentoId, STATUS_V2.FINALIZADO, "O.S finalizada", sessao.userId, sessao.nome);
+    }
     SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
       PROXIMA_ACAO:   finalizar ? "Atendimento finalizado." : "Entrega registrada sem finalizar atendimento. Concluir pendencias administrativas.",
       ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
@@ -3524,6 +3532,51 @@
     return {
       success:   true,
       data:      v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
+      historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+    };
+  }
+
+  function finalizarAtendimentoV2(sessionId, atendimentoId, payload) {
+    const sessao = exigirSessao(sessionId);
+    const perm = exigirAst_(sessao, "GERENCIAR_ENTRADAS");
+    if (!perm.success) return perm;
+    const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
+    if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
+    const statusAtual = safe_(atendimento.STATUS);
+    if (statusAtual === STATUS_V2.FINALIZADO) {
+      return {
+        success: true,
+        data: v2EnriquecerAtendimento_(atendimento),
+        historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
+      };
+    }
+    const permitidos = [
+      STATUS_V2.AGUARDANDO_ENTREGA,
+      STATUS_V2.ENTREGUE,
+      STATUS_V2.CONCLUIDO_TECNICAMENTE,
+      "CONCLUSAO_TECNICA",
+      "TESTE_VALIDACAO_CONCLUIDO",
+      STATUS_V2.NAO_REPARADO
+    ];
+    if (permitidos.indexOf(statusAtual) === -1) {
+      return erro_("Status atual nao permite finalizar atendimento: " + statusAtual);
+    }
+    const p = payload || {};
+    const obs = safe_(p.OBSERVACAO || "");
+    const descricao = "O.S finalizada" + (obs ? ": " + obs.substring(0, 120) : "");
+    SGO_DATA.update(S.AST_ATENDIMENTOS, atendimentoId, {
+      STATUS: STATUS_V2.FINALIZADO,
+      BANDEIRA: v2Bandeira_(STATUS_V2.FINALIZADO),
+      PROXIMA_ACAO: v2ProximaAcao_(STATUS_V2.FINALIZADO),
+      ULTIMA_MOVIMENTACAO_EM: now_(),
+      ATUALIZADO_POR: safe_(sessao.userId || sessao.usuario),
+      ATUALIZADO_EM: now_()
+    }, DB);
+    v2RegistrarHistorico_(atendimentoId, statusAtual, STATUS_V2.FINALIZADO,
+      descricao, sessao.userId, sessao.nome, "FINALIZACAO", { observacao: obs });
+    return {
+      success: true,
+      data: v2EnriquecerAtendimento_(SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB)),
       historico: SGO_DATA.getManyByField(S.AST_HISTORICO, "ATENDIMENTO_ID", atendimentoId, DB) || []
     };
   }
@@ -3986,6 +4039,36 @@
     return payload;
   }
 
+  function c14StatusAtendimentoLabel_(status) {
+    var s = upper_(status || "");
+    var mapa = {
+      FINALIZADO: "O.S Finalizada",
+      ENTREGUE: "O.S Entregue",
+      NAO_REPARADO: "O.S n\u00e3o reparada",
+      SEM_REPARO: "O.S n\u00e3o reparada",
+      AGUARDANDO_ENTREGA: "Aguardando entrega",
+      CONCLUIDO_TECNICAMENTE: "Concluido tecnicamente",
+      CONCLUSAO_TECNICA: "Conclusao tecnica",
+      TESTE_VALIDACAO_CONCLUIDO: "Teste e validacao concluidos",
+      EXECUCAO_CONCLUIDA: "Execucao concluida",
+      EXECUCAO_EM_ANDAMENTO: "Execucao em andamento",
+      AGUARDANDO_CALIBRACAO: "Aguardando calibracao",
+      AGUARDANDO_DIAGNOSTICO: "Aguardando diagnostico",
+      DIAGNOSTICO_EM_ANDAMENTO: "Diagnostico em andamento",
+      DIAGNOSTICO_CONCLUIDO: "Diagnostico concluido",
+      AGUARDANDO_ORCAMENTO: "Aguardando orcamento",
+      ORCAMENTO_ENVIADO: "Orcamento enviado",
+      AGUARDANDO_APROVACAO_CLIENTE: "Aguardando aprovacao",
+      ORCAMENTO_APROVADO: "Orcamento aprovado",
+      ORCAMENTO_RECUSADO: "Orcamento recusado",
+      AGUARDANDO_PECA: "Aguardando peca",
+      ENTRADA_REGISTRADA: "Entrada registrada",
+      EM_BANCADA: "Em bancada",
+      CANCELADO: "Cancelado"
+    };
+    return mapa[s] || (s ? s.replace(/_/g, " ") : "--");
+  }
+
   function c14ResumoPayload_(payload) {
     var p = payload || {};
     return {
@@ -4340,6 +4423,7 @@
     var recomendacao = val_(conc, ["recomendacoesTecnicas", "recomendacaoTecnica", "recomendacaoCliente", "recomendacao"]);
     var resultadoFinal = val_(conc, ["resultadoFinal", "resultado", "statusFinal"]);
     var statusIa = textoIa.status || "PENDENTE";
+    var statusAtualLabel = c14StatusAtendimentoLabel_(e.STATUS || e.STATUS_V2);
     var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page"><div class="topline"></div>';
     html += '<table style="border:none;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:9px"><tr>';
     html += '<td style="vertical-align:top;width:58%;border:none"><table style="border:none"><tr>';
@@ -4350,7 +4434,7 @@
     html += '<div class="preview-ribbon">Preview C.14.5 &mdash; n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS, n&atilde;o cria hist&oacute;rico, n&atilde;o altera status e exige aprova&ccedil;&atilde;o humana antes da emiss&atilde;o final.</div>';
     html += '<div class="hero"><div class="hero-title">S&iacute;ntese t&eacute;cnica do atendimento</div><div class="hero-copy">Relat&oacute;rio de confer&ecirc;ncia com problema relatado, diagn&oacute;stico, servi&ccedil;o executado, pe&ccedil;as, testes, conclus&atilde;o e recomenda&ccedil;&otilde;es. O texto pode ser lapidado antes da emiss&atilde;o oficial, mas esta etapa n&atilde;o chama IA real nem gera documento sem aprova&ccedil;&atilde;o humana.</div></div>';
     html += '<div class="stitle">Dados do Atendimento</div><table style="border:none;margin-bottom:6px"><tbody>';
-    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status atual', e.STATUS || e.STATUS_V2 || '--') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status atual', statusAtualLabel) + '</tr>';
     html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
     html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Marca / modelo', [safe_(e.EQUIPAMENTO_MARCA), safe_(e.EQUIPAMENTO_MODELO)].filter(Boolean).join(' / ')) + '</tr>';
     html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Patrimonio', e.PATRIMONIO || e.NUMERO_PATRIMONIO || '--') + '</tr>';
@@ -5041,7 +5125,7 @@
     const porBandeira = { AZUL_CINZA: 0, AMARELO: 0, VERDE: 0, VERMELHO: 0 };
     const agora = new Date();
     const hoje = Utilities.formatDate(agora, Session.getScriptTimeZone(), "yyyy-MM-dd");
-    const fechados = [STATUS_V2.ENTREGUE, STATUS_V2.CANCELADO, STATUS_V2.NAO_REPARADO];
+    const fechados = [STATUS_V2.ENTREGUE, STATUS_V2.FINALIZADO, STATUS_V2.CANCELADO, STATUS_V2.NAO_REPARADO];
     let atrasados = 0;
     let entradasDia = 0;
     todos.forEach(function(a) {
@@ -5291,7 +5375,7 @@
     if (!p.TITULO && !p.DESCRICAO_PECA) return erro_("TITULO ou DESCRICAO_PECA obrigatorio");
     const atendimento = SGO_DATA.getById(S.AST_ATENDIMENTOS, atendimentoId, DB);
     if (!atendimento) return erro_("Atendimento nao encontrado: " + atendimentoId);
-    const bloqueados = [STATUS_V2.CANCELADO, STATUS_V2.ENTREGUE, STATUS_V2.ORCAMENTO_RECUSADO, STATUS_V2.NAO_REPARADO];
+    const bloqueados = [STATUS_V2.CANCELADO, STATUS_V2.ENTREGUE, STATUS_V2.FINALIZADO, STATUS_V2.ORCAMENTO_RECUSADO, STATUS_V2.NAO_REPARADO];
     if (bloqueados.indexOf(atendimento.STATUS) !== -1) {
       return erro_("Status atual nao permite solicitacao de peca: " + atendimento.STATUS);
     }
@@ -5587,6 +5671,7 @@
     registrarTesteValidacaoV2: registrarTesteValidacaoV2,
     registrarConclusaoTecnicaV2: registrarConclusaoTecnicaV2,
     registrarEntregaV2: registrarEntregaV2,
+    finalizarAtendimentoV2: finalizarAtendimentoV2,
     gerarRelatorioTecnicoV2: gerarRelatorioTecnicoV2,
     gerarProtocoloSaidaV2: gerarProtocoloSaidaV2,
     gerarDocumentoEntradaV2: gerarDocumentoEntradaV2,
@@ -5713,6 +5798,7 @@ function astV2RegistrarExecucao(sessionId, atendimentoId, payload) { return SGO_
 function astV2RegistrarTesteValidacao(sessionId, atendimentoId, payload) { return SGO_AST.registrarTesteValidacaoV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarConclusaoTecnica(sessionId, atendimentoId, payload) { return SGO_AST.registrarConclusaoTecnicaV2(sessionId, atendimentoId, payload); }
 function astV2RegistrarEntrega(sessionId, atendimentoId, payload) { return SGO_AST.registrarEntregaV2(sessionId, atendimentoId, payload); }
+function astV2FinalizarAtendimento(sessionId, atendimentoId, payload) { return SGO_AST.finalizarAtendimentoV2(sessionId, atendimentoId, payload); }
 function astV2GerarRelatorioTecnico(sessionId, atendimentoId) { return SGO_AST.gerarRelatorioTecnicoV2(sessionId, atendimentoId); }
 function astV2GerarProtocoloSaida(sessionId, atendimentoId) { return SGO_AST.gerarProtocoloSaidaV2(sessionId, atendimentoId); }
 function astV2GerarDocumentoEntrada(sessionId, atendimentoId) { return SGO_AST.gerarDocumentoEntradaV2(sessionId, atendimentoId); }
