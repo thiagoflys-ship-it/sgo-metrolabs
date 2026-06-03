@@ -4242,7 +4242,192 @@
   }
 
   function montarHtmlRelatorioFinalPremiumV2_(payload) {
-    return montarHtmlRelatorioTecnicoV2_(payload.atendimento, payload.historico, payload.solicitacoes, payload.fotos, payload.metaDocumental);
+    var p = payload || {};
+    var e = p.atendimento || {};
+    var meta = p.metaDocumental || {};
+    var historico = p.historico || [];
+    var diag = p.diagnostico || {};
+    var exec = p.execucao || {};
+    var teste = p.testeValidacao || {};
+    var conc = p.conclusaoTecnica || {};
+    var pecas = p.pecasUtilizadas || [];
+    var solicitacoes = p.solicitacoes || [];
+    var fotos = p.fotos || [];
+    var textoIa = p.textoIa || {};
+    var css =
+      '@page{size:A4;margin:12mm 12mm 15mm 12mm}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:9.2px;background:#fff;line-height:1.42}' +
+      'a{color:#1d4ed8;text-decoration:none}' +
+      '.page{position:relative;min-height:274mm}' +
+      '.topline{height:5px;background:#0b3b78;margin-bottom:9px}' +
+      '.brand{font-size:12px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:1px}' +
+      '.brand-tagline{font-size:8.5px;color:#64748b;font-weight:700;margin:1px 0 3px}' +
+      '.brand-data{font-size:7.4px;color:#64748b;line-height:1.5}' +
+      '.doc-tipo{font-size:15px;font-weight:900;color:#0b3b78;text-align:right;line-height:1.08}' +
+      '.doc-sub{font-size:8px;color:#64748b;text-align:right;font-weight:800;margin-top:2px;text-transform:uppercase;letter-spacing:.35px}' +
+      '.doc-proto{font-size:13px;font-weight:900;color:#172033;text-align:right;margin-top:4px}' +
+      '.doc-emit{font-size:7.3px;color:#94a3b8;text-align:right;margin-top:2px}' +
+      '.preview-ribbon{background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:6px 8px;color:#9a3412;font-weight:800;font-size:7.8px;margin:7px 0 8px;text-transform:uppercase;letter-spacing:.25px}' +
+      '.hero{background:#f8fafc;border:1px solid #dbe5f0;border-radius:5px;padding:8px 10px;margin-bottom:8px}' +
+      '.hero-title{font-size:9px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.35px;margin-bottom:5px}' +
+      '.hero-copy{font-size:8.6px;color:#334155;line-height:1.45}' +
+      '.stitle{font-size:8px;font-weight:900;color:#0b3b78;text-transform:uppercase;letter-spacing:.55px;border-left:3px solid #0b3b78;padding-left:6px;margin:8px 0 5px;page-break-after:avoid}' +
+      '.info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:3px;padding:5px 7px;height:100%;box-sizing:border-box}' +
+      '.lbl{font-size:7px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.35px}' +
+      '.val{font-size:8.6px;font-weight:700;color:#172033;margin-top:1px;word-break:break-word}' +
+      '.sec{border:1px solid #e2e8f0;border-radius:4px;padding:7px 9px;font-size:8.7px;white-space:pre-line;color:#334155;margin-bottom:4px;page-break-inside:avoid}' +
+      '.sec-empty{border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;padding:7px 9px;color:#94a3b8;font-size:8.2px;font-style:italic}' +
+      '.slbl{font-size:7.3px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.3px;min-width:118px;display:inline-block}' +
+      '.note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:6px 8px;font-size:8px;color:#475569;line-height:1.45}' +
+      '.ia-box{border:1px dashed #94a3b8;background:#f8fafc;border-radius:5px;padding:8px 10px;font-size:8.4px;color:#334155;line-height:1.5}' +
+      '.ia-status{display:inline-block;border-radius:999px;background:#e0f2fe;color:#075985;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.25px;padding:2px 6px;margin-bottom:5px}' +
+      'table{width:100%;border-collapse:collapse;font-size:8.4px}' +
+      'th{background:#f1f5f9;color:#334155;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.25px;padding:4px 5px;border:1px solid #e2e8f0}' +
+      'td{padding:4px 5px;border:1px solid #e2e8f0;vertical-align:top}' +
+      '.tl-tipo{background:#e0e7ff;color:#3730a3;border-radius:2px;padding:1px 4px;font-size:6.7px;font-weight:800;text-transform:uppercase}' +
+      '.res-ok{color:#166534;font-weight:900}' +
+      '.res-ng{color:#991b1b;font-weight:900}' +
+      '.res-al{color:#92400e;font-weight:900}' +
+      '.trace-box{background:#f8fafc;border:1px solid #dbe5f0;border-radius:4px;padding:8px 10px;margin:8px 0 4px;page-break-inside:avoid}' +
+      '.mono{font-family:Consolas,Monaco,monospace;font-size:7.2px;word-break:break-all;color:#334155}' +
+      '.qrbox{text-align:center;padding:4px;display:inline-block}' +
+      '.qrbox img{width:70px;height:70px;border:1px solid #e2e8f0;border-radius:2px}' +
+      '.qrlbl{font-size:6px;color:#667085;margin-top:2px;font-weight:800;text-transform:uppercase}' +
+      '.sig-card{border:1px solid #e2e8f0;border-radius:4px;padding:8px 10px;min-height:94px}' +
+      '.sig-line{border-top:1px solid #334155;margin:14px 0 3px}' +
+      '.sig-img{height:38px;max-width:180px;object-fit:contain;display:block;margin:3px 0 3px}' +
+      '.sig-nome{font-size:8.5px;font-weight:900;color:#172033}' +
+      '.sig-cargo{font-size:7.5px;color:#64748b;line-height:1.4}' +
+      '.ftr{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:6px;font-size:7.2px;color:#94a3b8;line-height:1.45;text-align:center}';
+    function kv_(label, valor) {
+      return '<td style="width:50%;vertical-align:top;padding:3px;border:none">' +
+             '<div class="info"><div class="lbl">' + label + '</div><div class="val">' + esc_(valor || '--') + '</div></div></td>';
+    }
+    function val_(obj, campos) {
+      for (var i = 0; i < campos.length; i++) {
+        var v = obj[campos[i]];
+        if (v !== null && v !== undefined && safe_(v) !== "") return v;
+      }
+      return "";
+    }
+    function sec_(titulo, valor) {
+      if (!valor) return '<div class="sec-empty">Conte&uacute;do ainda n&atilde;o registrado.</div>';
+      return '<div class="sec"><span class="slbl">' + titulo + '</span><br>' + esc_(valor) + '</div>';
+    }
+    function classeResultado_(valor) {
+      var v = upper_(valor || "");
+      if (v.indexOf("APROV") >= 0 || v.indexOf("REPARADO") >= 0 || v.indexOf("CONCLUIDO") >= 0) return "res-ok";
+      if (v.indexOf("REPROV") >= 0 || v.indexOf("NAO") >= 0 || v.indexOf("RECUS") >= 0) return "res-ng";
+      return "res-al";
+    }
+    function sigBlock_(dataUri) {
+      if (dataUri) {
+        return '<img class="sig-img" src="' + dataUri + '" alt="Assinatura"><div class="sig-line" style="margin-top:0"></div>';
+      }
+      return '<div class="sig-line"></div>';
+    }
+    function abrevId_(str) {
+      var s = safe_(str);
+      if (!s) return 'Sistema';
+      return s.length > 20 ? s.substring(0, 8) + '...' : s;
+    }
+    var problema = e.PROBLEMA_RELATADO || '--';
+    var diagnostico = val_(diag, ["diagnostico", "defeito", "defeitoConfirmado", "descricao", "observacoes"]);
+    var causa = val_(diag, ["causaProvavel", "causa", "origemProvavel"]);
+    var servico = val_(exec, ["servicoExecutado", "servicoRealizado", "descricao", "resumoExecucao", "ajustesRealizados"]);
+    var testeTxt = val_(teste, ["resultado", "resultadoTeste", "procedimentoRealizado", "parametrosObservados", "observacoes"]);
+    var conclusao = val_(conc, ["conclusaoTecnica", "conclusao", "resultadoFinal"]);
+    var recomendacao = val_(conc, ["recomendacoesTecnicas", "recomendacaoTecnica", "recomendacaoCliente", "recomendacao"]);
+    var resultadoFinal = val_(conc, ["resultadoFinal", "resultado", "statusFinal"]);
+    var statusIa = textoIa.status || "PENDENTE";
+    var html = '<!doctype html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body><div class="page"><div class="topline"></div>';
+    html += '<table style="border:none;border-bottom:3px solid #0b3b78;padding-bottom:10px;margin-bottom:9px"><tr>';
+    html += '<td style="vertical-align:top;width:58%;border:none"><table style="border:none"><tr>';
+    if (meta.logoBase64) html += '<td style="vertical-align:middle;padding-right:10px;width:1%;border:none"><img src="' + meta.logoBase64 + '" alt="Metrolabs" style="height:50px;width:auto;display:block"></td>';
+    html += '<td style="vertical-align:top;border:none"><div class="brand">METROLABS</div><div class="brand-tagline">Solu&ccedil;&otilde;es em Engenharia Cl&iacute;nica</div>';
+    html += '<div class="brand-data">CNPJ: 32.487.278/0001-21<br>Rua C-155, n&ordm; 789, Jardim Am&eacute;rica, Goi&acirc;nia - GO<br>(62) 3123-1595 &nbsp;&middot;&nbsp; administrativo@metrolabs.com.br</div></td></tr></table></td>';
+    html += '<td style="vertical-align:top;text-align:right;width:42%;border:none"><div class="doc-tipo">Relat&oacute;rio T&eacute;cnico Final V2</div><div class="doc-sub">Assist&ecirc;ncia T&eacute;cnica Premium</div><div class="doc-proto">' + esc_(e.PROTOCOLO || '--') + '</div><div class="doc-emit">Preview em: ' + esc_(formatarDataBR_(meta.emitidoEm)) + '</div></td></tr></table>';
+    html += '<div class="preview-ribbon">Preview C.14.5 &mdash; n&atilde;o gera PDF oficial, n&atilde;o grava AST_DOCUMENTOS, n&atilde;o cria hist&oacute;rico, n&atilde;o altera status e exige aprova&ccedil;&atilde;o humana antes da emiss&atilde;o final.</div>';
+    html += '<div class="hero"><div class="hero-title">S&iacute;ntese t&eacute;cnica do atendimento</div><div class="hero-copy">Relat&oacute;rio de confer&ecirc;ncia com problema relatado, diagn&oacute;stico, servi&ccedil;o executado, pe&ccedil;as, testes, conclus&atilde;o e recomenda&ccedil;&otilde;es. O texto pode ser lapidado antes da emiss&atilde;o oficial, mas esta etapa n&atilde;o chama IA real nem gera documento sem aprova&ccedil;&atilde;o humana.</div></div>';
+    html += '<div class="stitle">Dados do Atendimento</div><table style="border:none;margin-bottom:6px"><tbody>';
+    html += '<tr style="background:transparent">' + kv_('Protocolo', e.PROTOCOLO) + kv_('Status atual', e.STATUS || e.STATUS_V2 || '--') + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Cliente', e.CLIENTE_NOME || e.CLIENTE_PROVISORIO) + kv_('Unidade', e.UNIDADE_NOME || e.UNIDADE_PROVISORIA) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Equipamento', e.EQUIPAMENTO_NOME || e.EQUIPAMENTO_PROVISORIO) + kv_('Marca / modelo', [safe_(e.EQUIPAMENTO_MARCA), safe_(e.EQUIPAMENTO_MODELO)].filter(Boolean).join(' / ')) + '</tr>';
+    html += '<tr style="background:transparent">' + kv_('Numero de serie', e.NUMERO_SERIE || e.NUMERO_SERIE_INFORMADO) + kv_('Patrimonio', e.PATRIMONIO || e.NUMERO_PATRIMONIO || '--') + '</tr>';
+    html += '</tbody></table>';
+    html += '<div class="stitle">Problema Relatado</div>' + sec_('Relato do cliente', problema);
+    html += '<div class="stitle">Diagn&oacute;stico T&eacute;cnico</div>' + sec_('Diagn&oacute;stico', diagnostico);
+    html += '<div class="stitle">Causa Prov&aacute;vel</div>' + sec_('Interpreta&ccedil;&atilde;o t&eacute;cnica', causa);
+    html += '<div class="stitle">Servi&ccedil;o Executado</div>' + sec_('Execu&ccedil;&atilde;o', servico);
+    html += '<div class="stitle">Pe&ccedil;as Utilizadas</div>';
+    if (pecas.length) {
+      html += '<table><thead><tr><th>Pe&ccedil;a</th><th style="width:12%">Qtd</th><th style="width:18%">Status</th><th>Justificativa / observa&ccedil;&atilde;o</th></tr></thead><tbody>';
+      for (var pi = 0; pi < pecas.length; pi++) {
+        var pc = pecas[pi];
+        html += '<tr><td>' + esc_(pc.DESCRICAO || '--') + '</td><td>' + esc_(pc.QUANTIDADE || '1') + '</td><td>' + esc_(pc.STATUS || '--') + '</td><td>' + esc_(pc.JUSTIFICATIVA_TECNICA || pc.OBSERVACAO || '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="sec-empty">Nenhuma pe&ccedil;a instalada registrada para compor o relat&oacute;rio final.</div>';
+    }
+    html += '<div class="stitle">Teste / Valida&ccedil;&atilde;o</div>';
+    if (testeTxt) {
+      html += '<div class="sec"><span class="slbl">Resultado / procedimento</span><br><span class="' + classeResultado_(testeTxt) + '">' + esc_(testeTxt) + '</span></div>';
+    } else {
+      html += '<div class="sec-empty">Teste ou valida&ccedil;&atilde;o ainda n&atilde;o registrado.</div>';
+    }
+    html += '<div class="stitle">Conclus&atilde;o T&eacute;cnica</div>';
+    html += sec_('Conclus&atilde;o', conclusao);
+    if (resultadoFinal) html += '<div class="sec"><span class="slbl">Resultado final</span><br><span class="' + classeResultado_(resultadoFinal) + '">' + esc_(resultadoFinal) + '</span></div>';
+    html += '<div class="stitle">Recomenda&ccedil;&otilde;es T&eacute;cnicas</div>' + sec_('Recomenda&ccedil;&atilde;o', recomendacao);
+    html += '<div class="stitle">Texto Lapidado por IA</div>';
+    html += '<div class="ia-box"><span class="ia-status">' + esc_(statusIa) + '</span><br>';
+    if (textoIa.conteudo) {
+      html += esc_(textoIa.conteudo);
+    } else {
+      html += 'Campo reservado para lapida&ccedil;&atilde;o textual antes da emiss&atilde;o oficial. Nesta etapa C.14.5 n&atilde;o h&aacute; chamada de IA real; o texto final dever&aacute; ser revisado e aprovado por humano respons&aacute;vel.';
+    }
+    html += '</div>';
+    if (fotos.length) {
+      html += '<div class="stitle">Fotos / Evid&ecirc;ncias com Legenda</div>';
+      html += '<table><thead><tr><th>Evid&ecirc;ncia</th><th style="width:18%">Tipo</th><th>Legenda</th><th style="width:15%">Acesso</th></tr></thead><tbody>';
+      for (var fi = 0; fi < fotos.length; fi++) {
+        var ft = fotos[fi];
+        html += '<tr><td>' + esc_(ft.NOME_ARQUIVO || ft.ID || '--') + '</td><td>' + esc_(ft.TIPO_FOTO || ft.ETAPA || '--') + '</td><td>' + esc_(ft.DESCRICAO_FOTO || 'Evidencia visual vinculada ao atendimento.') + '</td><td>' + (ft.LINK_DRIVE ? '<a href="' + esc_(ft.LINK_DRIVE) + '">Abrir</a>' : '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    var tl = Array.isArray(historico) ? historico.slice(-12) : [];
+    html += '<div class="stitle">Hist&oacute;rico Resumido do Atendimento</div>';
+    if (tl.length) {
+      html += '<table><thead><tr><th style="width:16%">Data</th><th style="width:18%">Tipo</th><th>Descri&ccedil;&atilde;o</th><th style="width:16%">Executado por</th></tr></thead><tbody>';
+      for (var ti = 0; ti < tl.length; ti++) {
+        var h = tl[ti];
+        html += '<tr><td>' + esc_(formatarDataBR_(h.EXECUTADO_EM || h.CRIADO_EM)) + '</td><td><span class="tl-tipo">' + esc_(h.TIPO || '--') + '</span></td><td>' + esc_(safe_(h.DESCRICAO || '').substring(0, 110)) + '</td><td>' + esc_(abrevId_(h.EXECUTADO_POR)) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="sec-empty">Nenhuma movimenta&ccedil;&atilde;o registrada para resumo.</div>';
+    }
+    if (solicitacoes.length && !pecas.length) {
+      html += '<div class="stitle">Solicita&ccedil;&otilde;es Relacionadas</div>';
+      html += '<table><thead><tr><th>Tipo</th><th>Descri&ccedil;&atilde;o</th><th style="width:18%">Status</th></tr></thead><tbody>';
+      for (var si = 0; si < solicitacoes.length; si++) {
+        var sol = solicitacoes[si];
+        html += '<tr><td>' + esc_(sol.TIPO || '--') + '</td><td>' + esc_(sol.DESCRICAO || '--') + '</td><td>' + esc_(sol.STATUS || '--') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    html += '<div class="stitle">Assinaturas T&eacute;cnicas</div><table style="border:none"><tr>';
+    html += '<td style="width:50%;padding-right:10px;border:none"><div class="sig-card">' + sigBlock_(meta.assinaturaDouglasBase64) + '<div class="sig-nome">Douglas Silva dos Santos Souza</div><div class="sig-cargo">Engenheiro Eletricista / Respons&aacute;vel T&eacute;cnico<br>CREA-RJ 2021431762</div></div></td>';
+    html += '<td style="width:50%;padding-left:10px;border:none"><div class="sig-card">' + sigBlock_(meta.assinaturaCharlesBase64) + '<div class="sig-nome">Charles Hytley Santos Teixeira</div><div class="sig-cargo">Engenheiro Mec&acirc;nico / Representante Metrolabs<br>CREA-GO 101807399/D-GO</div></div></td>';
+    html += '</tr></table>';
+    html += '<div class="trace-box"><div class="lbl" style="margin-bottom:5px">Rastreabilidade do Preview</div><table style="border:none"><tr><td style="vertical-align:top;padding-right:10px;border:none"><div><span class="lbl">Token documental:</span> <span class="mono">' + esc_(meta.token || '--') + '</span></div><div><span class="lbl">Hash documental:</span> <span class="mono">' + esc_(meta.hash || '--') + '</span></div><div style="margin-top:5px;font-size:8px;color:#64748b">Este preview usa apenas rastreabilidade visual. O token/hash oficial e QR de valida&ccedil;&atilde;o documental ser&atilde;o criados somente na emiss&atilde;o final.</div></td><td style="vertical-align:top;text-align:center;border:none;white-space:nowrap">';
+    if (meta.qrAcompanhamentoBase64 || meta.qrAcompanhamento) html += '<div class="qrbox"><img src="' + (meta.qrAcompanhamentoBase64 || esc_(meta.qrAcompanhamento)) + '" alt="QR Acompanhamento"><div class="qrlbl">Acompanhamento</div></div>';
+    html += '</td></tr></table></div>';
+    html += '<div class="ftr">SGO+ Sistema de Gest&atilde;o Operacional &mdash; Relat&oacute;rio T&eacute;cnico Final Premium V2 &mdash; Preview C.14.5<br>Protocolo: <span class="mono">' + esc_(e.PROTOCOLO || '') + '</span> &nbsp;&middot;&nbsp; Atendimento: <span class="mono">' + esc_(e.ID || '') + '</span></div>';
+    html += '</div></body></html>';
+    return html;
   }
 
   function gerarRelatorioTecnicoV2_(sessao, atendimentoId) {
