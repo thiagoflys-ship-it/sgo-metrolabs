@@ -769,36 +769,7 @@
 
   function astStatusV2Label_(status) {
     const s = astStatusNorm_(status);
-    const mapa = {
-      ENTRADA: "Entrada registrada",
-      ENTRADA_REGISTRADA: "Entrada registrada",
-      TRIAGEM: "Aguardando diagnóstico",
-      AGUARDANDO_DIAGNOSTICO: "Aguardando diagnóstico",
-      EM_BANCADA: "Em bancada",
-      DIAGNOSTICO: "Diagnóstico em andamento",
-      DIAGNOSTICO_EM_ANDAMENTO: "Diagnóstico em andamento",
-      DIAGNOSTICO_CONCLUIDO: "Diagnóstico concluído",
-      AGUARDANDO_DECISAO: "Aguardando orçamento",
-      AGUARDANDO_ORCAMENTO: "Aguardando orçamento",
-      ORCAMENTO_ENVIADO: "Orçamento enviado",
-      AGUARDANDO_APROVACAO_CLIENTE: "Aguardando aprovação",
-      ORCAMENTO_APROVADO: "Orçamento aprovado",
-      ORCAMENTO_RECUSADO: "Orçamento recusado",
-      AGUARDANDO_PECAS: "Aguardando peça",
-      AGUARDANDO_PECA: "Aguardando peça",
-      MANUTENCAO: "Execução em andamento",
-      EXECUCAO_EM_ANDAMENTO: "Execução em andamento",
-      EXECUCAO_CONCLUIDA: "Execução concluída",
-      CONCLUSAO_TECNICA: "Concluído tecnicamente",
-      CONCLUIDO_TECNICAMENTE: "Concluído tecnicamente",
-      PRONTO_ENTREGA: "Aguardando entrega",
-      AGUARDANDO_ENTREGA: "Aguardando entrega",
-      ENTREGUE: "O.S entregue",
-      FINALIZADO: "O.S finalizada",
-      SEM_REPARO: "Não reparado",
-      NAO_REPARADO: "Não reparado"
-    };
-    return astEsc_(mapa[s] || s.replace(/_/g, " "));
+    return astEsc_(astV2LabelStatusRaw_(s));
   }
 
   function astBandeiraVisualV2_(status) {
@@ -1428,8 +1399,8 @@
       var campos = [];
       campos.push('<div class="ast-v2-det-field"><span>Peça</span><b>' + astEsc_(p.DESCRICAO || "--") + '</b></div>');
       campos.push('<div class="ast-v2-det-field"><span>Quantidade</span><b>' + astEsc_(String(p.QUANTIDADE || 1)) + '</b></div>');
-      campos.push('<div class="ast-v2-det-field"><span>Urgência</span><b style="' + urgStyle + '">' + astEsc_(urg) + '</b></div>');
-      campos.push('<div class="ast-v2-det-field"><span>Status</span><b style="' + stStyle + '">' + astEsc_(st.replace(/_/g, " ")) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Urgência</span><b style="' + urgStyle + '">' + astEsc_(astV2LabelGenericoRaw_(urg)) + '</b></div>');
+      campos.push('<div class="ast-v2-det-field"><span>Status</span><b style="' + stStyle + '">' + astEsc_(astV2LabelStatusRaw_(st)) + '</b></div>');
       if (p.JUSTIFICATIVA_TECNICA) campos.push('<div class="ast-v2-det-field" style="grid-column:1/-1;"><span>Justificativa técnica</span><b style="font-weight:400;">' + astEsc_(p.JUSTIFICATIVA_TECNICA) + '</b></div>');
       if (p.FORNECEDOR_NOME) campos.push('<div class="ast-v2-det-field"><span>Fornecedor</span><b>' + astEsc_(p.FORNECEDOR_NOME) + '</b></div>');
       if (p.VALOR_ESTIMADO && parseFloat(p.VALOR_ESTIMADO) > 0) {
@@ -2208,7 +2179,7 @@
     var status = (ultimo.STATUS || "ENVIADO").toUpperCase();
     var statusColor = status === "APROVADO" ? "#15803d" : status === "RECUSADO" ? "#dc2626" : "#d97706";
     var statusMap = { APROVADO: "Or&ccedil;amento aprovado pelo cliente", RECUSADO: "Or&ccedil;amento recusado pelo cliente", ENVIADO: "Aguardando resposta do cliente" };
-    var statusLabel = statusMap[status] || status;
+    var statusLabel = statusMap[status] || astV2LabelStatusRaw_(status);
     var isPendente = status !== "APROVADO" && status !== "RECUSADO";
     var resumoTitulo = isPendente ? "Or&ccedil;amento enviado &mdash; aguardando autoriza&ccedil;&atilde;o do cliente" : statusLabel;
     var resumoTexto = isPendente
@@ -2219,7 +2190,7 @@
     if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>T&iacute;tulo do or&ccedil;amento</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
     if (ultimo.DESCRICAO)             rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Descri&ccedil;&atilde;o</span><b>' + astEsc_(ultimo.DESCRICAO) + '</b></div>');
     rows.push('<div class="ast-v2-det-field"><span>Status visual</span><b style="color:' + statusColor + ';">' + statusLabel + '</b></div>');
-    if (ultimo.URGENCIA)              rows.push('<div class="ast-v2-det-field"><span>Urg&ecirc;ncia</span><b>' + astEsc_(ultimo.URGENCIA) + '</b></div>');
+    if (ultimo.URGENCIA)              rows.push('<div class="ast-v2-det-field"><span>Urg&ecirc;ncia</span><b>' + astEsc_(astV2LabelGenericoRaw_(ultimo.URGENCIA)) + '</b></div>');
     if (ultimo.VALOR_ESTIMADO)        rows.push('<div class="ast-v2-det-field"><span>Valor estimado</span><b>R$ ' + astEsc_(Number(ultimo.VALOR_ESTIMADO || 0).toFixed(2)) + '</b></div>');
     if (status === "APROVADO" && ultimo.VALOR_APROVADO) rows.push('<div class="ast-v2-det-field"><span>Valor aprovado</span><b style="color:#15803d;">R$ ' + astEsc_(Number(ultimo.VALOR_APROVADO || 0).toFixed(2)) + '</b></div>');
     if (status === "RECUSADO" && ultimo.RECUSADO_MOTIVO) rows.push('<div class="ast-v2-det-field" style="grid-column:span 2;"><span>Motivo da recusa</span><b style="color:#dc2626;">' + astEsc_(ultimo.RECUSADO_MOTIVO) + '</b></div>');
@@ -2294,7 +2265,7 @@
     for (var i = 0; i < historico.length; i++) {
       var h = historico[i];
       var isLast = i === historico.length - 1;
-      var acaoLabel = (h.STATUS_NOVO || h.ACAO || h.TIPO || "Registro").replace(/_/g, " ");
+      var acaoLabel = h.STATUS_NOVO ? astV2LabelStatusRaw_(h.STATUS_NOVO) : astV2LabelEventoHistoricoRaw_(h.ACAO || h.TIPO || "Registro");
       var descricao = h.DESCRICAO || h.OBSERVACAO || "";
       var autor = h.EXECUTADO_POR || h.CRIADO_POR || "";
       var data = astData_(h.CRIADO_EM || h.EXECUTADO_EM || "");
@@ -2565,11 +2536,11 @@
     if (pc) pc.innerHTML = "";
     var proximos = AST_V2_TRANSICOES[statusAtual] || [];
     if (!proximos.length) {
-      astToast_("Nenhuma transição disponível a partir de: " + statusAtual.replace(/_/g, " "));
+      astToast_("Nenhuma transição disponível a partir de: " + astV2LabelStatusRaw_(statusAtual));
       return;
     }
     var opts = proximos.map(function(s) {
-      return '<option value="' + s + '">' + s.replace(/_/g, " ") + "</option>";
+      return '<option value="' + s + '">' + astEsc_(astV2LabelStatusRaw_(s)) + "</option>";
     });
     container.innerHTML = [
       '<div class="ast-v2-card">',
@@ -2673,7 +2644,7 @@
     if (pc) pc.innerHTML = "";
     var proximos = AST_V2_TRANSICOES[statusAtual] || [];
     var optsStatus = proximos.map(function(s) {
-      return '<option value="' + s + '">' + s.replace(/_/g, " ") + "</option>";
+      return '<option value="' + s + '">' + astEsc_(astV2LabelStatusRaw_(s)) + "</option>";
     });
     optsStatus.unshift('<option value="">-- manter atual --</option>');
     container.innerHTML = [
@@ -3213,7 +3184,7 @@
         (astEsc_(p.QUANTIDADE || "1")),
         "</td>\n",
         "        <td>",
-        (astEsc_(p.URGENCIA || "--")),
+        (astEsc_(astV2LabelGenericoRaw_(p.URGENCIA || "--"))),
         "</td>\n",
         "        <td><select id=\"astPecaStatus_",
         (astEscAttr_(p.ID)),
@@ -3391,7 +3362,7 @@
       return [
         "<tr>\n",
         "        <td>",
-        (astEsc_(d.TIPO_DOCUMENTO || "--")),
+        (astEsc_(astV2LabelTipoDocumentoRaw_(d.TIPO_DOCUMENTO || "--"))),
         "</td>\n",
         "        <td>",
         (astEsc_(d.TITULO || "--")),
@@ -3883,9 +3854,11 @@
   }
 
   function astV2DocItemHtml_(d, destaque) {
-    var nome = astEsc_(d.nome || d.tipo || 'Documento');
+    var tipoDoc = d.tipo || d.TIPO_DOCUMENTO || "";
+    var nomeBase = d.nome || d.titulo || d.TITULO || tipoDoc || "Documento";
+    var nome = astEsc_(astV2LabelTipoDocumentoRaw_(tipoDoc || nomeBase));
     var dataEmissao = astEsc_(d.dataEmissao || '--');
-    var status = astEsc_(d.status || '');
+    var status = astEsc_(astV2LabelStatusRaw_(d.status || ''));
     var token = astEsc_(d.token || '');
     var hash = astEsc_((d.hash || '').substring(0, 12));
     var pdfUrl = astEscAttr_(d.pdfUrl || '');
@@ -3907,11 +3880,6 @@
 
   function astV2RenderizarDocumentosEmitidos_(docs) {
     if (!docs || !docs.length) return '<div style="font-size:11px;color:#94a3b8;padding:6px 0;text-align:center;">Nenhum documento emitido ainda.</div>';
-    var tipoLabel = {
-      'AT_RELATORIO_TECNICO_V2':       'Relat&oacute;rio T&eacute;cnico Final',
-      'AT_PROTOCOLO_SAIDA_V2':         'Protocolo de Sa&iacute;da',
-      'COMPROVANTE_ENTRADA_EQUIPAMENTO': 'Protocolo de Entrada'
-    };
     var grupos = {};
     var ordemTipos = [];
     for (var i = 0; i < docs.length; i++) {
@@ -3924,7 +3892,7 @@
     for (var t = 0; t < ordemTipos.length; t++) {
       var grTipo = ordemTipos[t];
       var grupo = grupos[grTipo];
-      var labelTipo = tipoLabel[grTipo] || astEsc_(grTipo);
+      var labelTipo = astEsc_(astV2LabelTipoDocumentoRaw_(grTipo));
       var tipoKey = grTipo.replace(/[^A-Za-z0-9_]/g, '_');
       html += '<div>';
       html += '<div style="font-size:9px;font-weight:900;text-transform:uppercase;color:#475467;letter-spacing:.4px;margin-bottom:3px;">' + labelTipo + '</div>';
@@ -4273,14 +4241,14 @@
   function astTerceirosListaHtml_(items) {
     if (!items || !items.length) return '<div class="ast-empty">Nenhum envio a terceiro registrado.</div>';
     return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Fornecedor</th><th>Status</th><th>Prazo</th><th>Ações</th></tr></thead><tbody>' + items.map(function(t) {
-      return '<tr><td>' + astEsc_(t.FORNECEDOR_NOME || t.FORNECEDOR_ID || "--") + '</td><td>' + astEsc_(t.STATUS_TERCEIRO || t.STATUS || "--") + '</td><td>' + astData_(t.PRAZO_PREVISTO || t.PRAZO_INFORMADO) + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astRegistrarAcessorioTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Acessorio</button><button class="btn-secondary" type="button" onclick="astAnexarTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Anexo</button><button class="btn-secondary" type="button" onclick="astAcompanharTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Follow-up</button><button class="btn-secondary" type="button" onclick="astRetornoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Retorno</button><button class="btn-secondary" type="button" onclick="astInspecaoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Inspeção</button><button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsTerceiro_(\'' + astEscAttr_(t.ID) + '\')">WhatsApp</button></div></td></tr>';
+      return '<tr><td>' + astEsc_(t.FORNECEDOR_NOME || t.FORNECEDOR_ID || "--") + '</td><td>' + astEsc_(astV2LabelStatusRaw_(t.STATUS_TERCEIRO || t.STATUS || "--")) + '</td><td>' + astData_(t.PRAZO_PREVISTO || t.PRAZO_INFORMADO) + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astRegistrarAcessorioTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Acessorio</button><button class="btn-secondary" type="button" onclick="astAnexarTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Anexo</button><button class="btn-secondary" type="button" onclick="astAcompanharTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Follow-up</button><button class="btn-secondary" type="button" onclick="astRetornoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Retorno</button><button class="btn-secondary" type="button" onclick="astInspecaoTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Inspeção</button><button class="btn-secondary" type="button" onclick="astGerarDocTerceiro_(\'' + astEscAttr_(t.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsTerceiro_(\'' + astEscAttr_(t.ID) + '\')">WhatsApp</button></div></td></tr>';
     }).join("") + '</tbody></table></div>';
   }
 
   function astLabsListaHtml_(items) {
     if (!items || !items.length) return '<div class="ast-empty">Nenhuma entrada em laboratório registrada.</div>';
     return '<div class="table-wrap" style="margin-top:14px;"><table class="table"><thead><tr><th>Servico</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead><tbody>' + items.map(function(l) {
-      return '<tr><td>' + astEsc_(l.TIPO_SERVICO || "--") + '</td><td>' + astEsc_(l.STATUS || "--") + '</td><td>' + astEsc_(l.RESULTADO_FINAL || l.CONFORMIDADE || "--") + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astAddPadraoLab_(\'' + astEscAttr_(l.ID) + '\')">Padrao</button><button class="btn-secondary" type="button" onclick="astRegistrarEnsaioLab_(\'' + astEscAttr_(l.ID) + '\')">Ensaio</button><button class="btn-secondary" type="button" onclick="astAnexarEvidLab_(\'' + astEscAttr_(l.ID) + '\')">Evidência</button><button class="btn-secondary" type="button" onclick="astConsolidarLab_(\'' + astEscAttr_(l.ID) + '\')">Consolidar</button><button class="btn-secondary" type="button" onclick="astGerarDocLab_(\'' + astEscAttr_(l.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsLab_(\'' + astEscAttr_(l.ID) + '\')">WhatsApp</button></div></td></tr>';
+      return '<tr><td>' + astEsc_(astV2LabelGenericoRaw_(l.TIPO_SERVICO || "--")) + '</td><td>' + astEsc_(astV2LabelStatusRaw_(l.STATUS || "--")) + '</td><td>' + astEsc_(astV2LabelGenericoRaw_(l.RESULTADO_FINAL || l.CONFORMIDADE || "--")) + '</td><td><div class="ast-actions"><button class="btn-secondary" type="button" onclick="astAddPadraoLab_(\'' + astEscAttr_(l.ID) + '\')">Padrao</button><button class="btn-secondary" type="button" onclick="astRegistrarEnsaioLab_(\'' + astEscAttr_(l.ID) + '\')">Ensaio</button><button class="btn-secondary" type="button" onclick="astAnexarEvidLab_(\'' + astEscAttr_(l.ID) + '\')">Evidência</button><button class="btn-secondary" type="button" onclick="astConsolidarLab_(\'' + astEscAttr_(l.ID) + '\')">Consolidar</button><button class="btn-secondary" type="button" onclick="astGerarDocLab_(\'' + astEscAttr_(l.ID) + '\')">Doc</button><button class="btn-secondary" type="button" onclick="astWhatsLab_(\'' + astEscAttr_(l.ID) + '\')">WhatsApp</button></div></td></tr>';
     }).join("") + '</tbody></table></div>';
   }
 
@@ -4410,7 +4378,7 @@
   function astAlertasGerenciaisHtml_(items) {
     if (!items || !items.length) return '<div class="list-card"><div class="ast-toolbar"><h3 class="ast-toolbar-title">Alertas criticos</h3></div><div class="ast-empty">Nenhum alerta critico.</div></div>';
     return '<div class="list-card"><div class="ast-toolbar"><h3 class="ast-toolbar-title">Alertas criticos</h3></div><div class="ast-mini-list">' + items.map(function(a) {
-      return '<div class="ast-soft" style="margin:10px;"><b>' + astEsc_(a.TIPO_ALERTA || a.TIPO || "Alerta") + '</b><div class="ast-muted">' + astEsc_(a.DESCRICAO || a.MENSAGEM || "") + '</div></div>';
+      return '<div class="ast-soft" style="margin:10px;"><b>' + astEsc_(astV2LabelGenericoRaw_(a.TIPO_ALERTA || a.TIPO || "Alerta")) + '</b><div class="ast-muted">' + astEsc_(a.DESCRICAO || a.MENSAGEM || "") + '</div></div>';
     }).join("") + '</div></div>';
   }
 
@@ -4435,7 +4403,7 @@
   function astTimelineHtml_(items) {
     if (!items || !items.length) return '<div class="ast-empty">Nenhuma movimentacao registrada.</div>';
     return '<div class="ast-timeline">' + items.map(function(m) {
-      return '<div class="ast-time-item"><div class="ast-time-title">' + astEsc_(m.TIPO || "MOVIMENTACAO") + ' / ' + astStatusLabel_(m.STATUS_NOVO || "") + '</div><div class="ast-time-meta">' + astData_(m.CRIADO_EM) + ' - ' + astEsc_(m.CRIADO_POR || "") + '</div><div class="ast-time-desc">' + astEsc_(m.DESCRICAO || "") + '</div></div>';
+      return '<div class="ast-time-item"><div class="ast-time-title">' + astEsc_(astV2LabelEventoHistoricoRaw_(m.TIPO || "MOVIMENTACAO")) + ' / ' + astStatusLabel_(m.STATUS_NOVO || "") + '</div><div class="ast-time-meta">' + astData_(m.CRIADO_EM) + ' - ' + astEsc_(m.CRIADO_POR || "") + '</div><div class="ast-time-desc">' + astEsc_(m.DESCRICAO || "") + '</div></div>';
     }).join("") + '</div>';
   }
 
@@ -4566,7 +4534,124 @@
     const u = String(s || "ENTRADA").toUpperCase();
     return alias[u] || u;
   }
-  function astStatusLabel_(s) { return astEsc_(astStatusNorm_(s).replace(/_/g, " ")); }
+  function astV2LabelGenericoRaw_(valor) {
+    var s = String(valor == null ? "" : valor).trim();
+    if (!s) return "--";
+    s = s.replace(/^AST_/, "").replace(/^AT_/, "").replace(/_V2$/, "");
+    s = s.replace(/_/g, " ").toLowerCase();
+    return s.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  }
+  function astV2LabelStatusRaw_(status) {
+    var s = astStatusNorm_(status);
+    var mapa = {
+      ENTRADA: "Entrada registrada",
+      ENTRADA_REGISTRADA: "Entrada registrada",
+      TRIAGEM: "Aguardando diagnóstico",
+      AGUARDANDO_DIAGNOSTICO: "Aguardando diagnóstico",
+      EM_BANCADA: "Em bancada",
+      DIAGNOSTICO: "Diagnóstico em andamento",
+      DIAGNOSTICO_EM_ANDAMENTO: "Diagnóstico em andamento",
+      DIAGNOSTICO_CONCLUIDO: "Diagnóstico concluído",
+      AGUARDANDO_DECISAO: "Aguardando orçamento",
+      AGUARDANDO_ORCAMENTO: "Aguardando orçamento",
+      ORCAMENTO_ENVIADO: "Orçamento enviado",
+      AGUARDANDO_APROVACAO_CLIENTE: "Aguardando aprovação do cliente",
+      ORCAMENTO_APROVADO: "Orçamento aprovado",
+      ORCAMENTO_RECUSADO: "Orçamento recusado",
+      AGUARDANDO_PECAS: "Aguardando peça",
+      AGUARDANDO_PECA: "Aguardando peça",
+      LIBERADO_PARA_EXECUCAO: "Liberado para execução",
+      MANUTENCAO: "Execução em andamento",
+      EXECUCAO_EM_ANDAMENTO: "Execução em andamento",
+      EXECUCAO_CONCLUIDA: "Execução concluída",
+      TESTE_VALIDACAO: "Teste/validação",
+      TESTE_VALIDACAO_EM_ANDAMENTO: "Teste/validação em andamento",
+      TESTE_VALIDACAO_CONCLUIDO: "Teste/validação concluído",
+      AGUARDANDO_CALIBRACAO: "Aguardando calibração",
+      CONCLUSAO_TECNICA: "Conclusão técnica",
+      CONCLUIDO_TECNICAMENTE: "Concluído tecnicamente",
+      PRONTO_ENTREGA: "Aguardando entrega",
+      AGUARDANDO_ENTREGA: "Aguardando entrega",
+      ENTREGUE: "O.S entregue",
+      FINALIZADO: "O.S finalizada",
+      SEM_REPARO: "O.S não reparada",
+      NAO_REPARADO: "O.S não reparada",
+      CANCELADO: "Cancelado",
+      PENDENTE: "Pendente",
+      EM_COTACAO: "Em cotação",
+      AGUARDANDO_APROVACAO: "Aguardando aprovação",
+      APROVADO: "Aprovado",
+      COMPRADO: "Comprado",
+      RECEBIDO: "Recebido",
+      INSTALADO: "Instalado",
+      RECUSADO: "Recusado",
+      VALIDO: "Válido",
+      EXPIRADO: "Expirado",
+      SUBSTITUIDO: "Substituído"
+    };
+    return mapa[s] || astV2LabelGenericoRaw_(s);
+  }
+  function astV2LabelTipoDocumentoRaw_(tipo) {
+    var s = String(tipo || "").toUpperCase();
+    var mapa = {
+      AT_PROTOCOLO_ENTRADA_V2: "Termo de Entrada V2",
+      AT_TERMO_ENTRADA_V2: "Termo de Entrada V2",
+      AT_RELATORIO_TECNICO_V2: "Relatório Técnico Final V2",
+      AT_PROTOCOLO_SAIDA_V2: "Termo de Entrega/Devolução V2",
+      AT_TERMO_ENTREGA_V2: "Termo de Entrega/Devolução V2",
+      COMPROVANTE_ENTRADA_EQUIPAMENTO: "Termo de Entrada",
+      RELATORIO_TECNICO: "Relatório Técnico",
+      PROTOCOLO_SAIDA: "Termo de Entrega/Devolução"
+    };
+    return mapa[s] || astV2LabelGenericoRaw_(tipo || "Documento");
+  }
+  function astV2LabelTipoSolicitacaoRaw_(tipo) {
+    var s = String(tipo || "").toUpperCase();
+    var mapa = {
+      ORCAMENTO: "Orçamento",
+      PECA: "Peça",
+      SERVICO: "Serviço",
+      COMPRA: "Compra",
+      RECEBIMENTO: "Recebimento",
+      INSTALACAO: "Instalação",
+      TERCEIRO: "Terceiro",
+      LAB: "Laboratório"
+    };
+    return mapa[s] || astV2LabelGenericoRaw_(tipo);
+  }
+  function astV2LabelCategoriaSolicitacaoRaw_(categoria) {
+    var s = String(categoria || "").toUpperCase();
+    var mapa = {
+      ORCAMENTO: "Orçamento",
+      PECA: "Peça",
+      SERVICO: "Serviço",
+      COMPRA: "Compra",
+      RECEBIMENTO: "Recebimento",
+      INSTALACAO: "Instalação",
+      APROVACAO_CLIENTE: "Aprovação do cliente",
+      RECUSA_CLIENTE: "Recusa do cliente"
+    };
+    return mapa[s] || astV2LabelGenericoRaw_(categoria);
+  }
+  function astV2LabelEventoHistoricoRaw_(tipo) {
+    var s = String(tipo || "").toUpperCase();
+    var mapa = {
+      STATUS: "Atualização de status",
+      SOLICITACAO: "Solicitação",
+      STATUS_PECA: "Status da peça",
+      EVIDENCIA_TECNICA: "Evidência técnica",
+      DIAGNOSTICO: "Diagnóstico",
+      EXECUCAO: "Execução",
+      TESTE_VALIDACAO: "Teste/validação",
+      CONCLUSAO_TECNICA: "Conclusão técnica",
+      ENTREGA: "Entrega",
+      FINALIZACAO: "Finalização",
+      FOTO: "Foto",
+      TECNICO: "Técnico"
+    };
+    return mapa[s] || astV2LabelGenericoRaw_(tipo || "Registro");
+  }
+  function astStatusLabel_(s) { return astEsc_(astV2LabelStatusRaw_(s)); }
   function astAcessoriosTextoParaLista_(texto) {
     return String(texto || "").split(/\n|;/).map(function(item) {
       return { DESCRICAO: item.trim(), QUANTIDADE: "1", ESTADO: "Conferido" };
