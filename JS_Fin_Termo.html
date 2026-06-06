@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termo Online - Cartao Flash</title>
+  <style>
+    :root {
+      --fin-bg: #eef3f8;
+      --fin-ink: #172033;
+      --fin-muted: #667085;
+      --fin-line: #d0d5dd;
+      --fin-blue: #0b3b78;
+      --fin-blue-2: #1559a6;
+      --fin-green: #067647;
+      --fin-red: #b42318;
+      --fin-card: #ffffff;
+      --fin-soft: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--fin-bg);
+      color: var(--fin-ink);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .finTermoShell {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .finTermoHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0 20px;
+    }
+
+    .finTermoBrand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .finTermoMark {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      background: var(--fin-blue);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      letter-spacing: 0;
+      flex: 0 0 auto;
+    }
+
+    .finTermoBrandText {
+      min-width: 0;
+    }
+
+    .finTermoTitle {
+      margin: 0;
+      color: var(--fin-blue);
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .finTermoSub {
+      margin-top: 4px;
+      color: var(--fin-muted);
+      font-size: 13px;
+    }
+
+    .finTermoBadges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .finTermoBadge {
+      border: 1px solid var(--fin-line);
+      background: #ffffff;
+      color: var(--fin-blue);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .finTermoLayout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .finTermoPanel,
+    .finTermoActions {
+      background: var(--fin-card);
+      border: 1px solid var(--fin-line);
+      border-radius: 8px;
+      box-shadow: 0 16px 38px rgba(16, 24, 40, 0.08);
+    }
+
+    .finTermoPanel {
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .finTermoActions {
+      position: sticky;
+      top: 14px;
+      padding: 16px;
+    }
+
+    .finTermoState {
+      padding: 24px;
+      border: 1px solid var(--fin-line);
+      background: var(--fin-soft);
+      border-radius: 8px;
+    }
+
+    .finTermoState h2 {
+      margin: 0 0 8px;
+      color: var(--fin-blue);
+      font-size: 20px;
+    }
+
+    .finTermoState p {
+      margin: 0;
+      color: var(--fin-muted);
+    }
+
+    .finTermoError {
+      border-color: #fecdca;
+      background: #fffbfa;
+    }
+
+    .finTermoError h2,
+    .finTermoError p {
+      color: var(--fin-red);
+    }
+
+    .finTermoSuccess {
+      border-color: #abefc6;
+      background: #f6fef9;
+    }
+
+    .finTermoSuccess h2 {
+      color: var(--fin-green);
+    }
+
+    .finTermoDoc {
+      width: 100%;
+      max-width: 794px;
+      min-height: 1122px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #d9e2ec;
+      box-shadow: 0 10px 30px rgba(16, 24, 40, 0.12);
+      padding: 42px;
+      color: #182230;
+    }
+
+    .finTermoDocTop {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      border-bottom: 3px solid var(--fin-blue);
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+    }
+
+    .finTermoDocBrand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .finTermoDocMark {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      background: var(--fin-blue);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .finTermoDocTitle {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--fin-blue);
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .finTermoDocMeta {
+      color: var(--fin-muted);
+      font-size: 11px;
+      margin-top: 5px;
+    }
+
+    .finTermoQr {
+      width: 82px;
+      height: 82px;
+      border: 1px solid var(--fin-line);
+      background: #ffffff;
+      object-fit: contain;
+    }
+
+    .finTermoDocSection {
+      margin: 18px 0;
+    }
+
+    .finTermoDocSection h3 {
+      margin: 0 0 10px;
+      color: var(--fin-blue);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      border-bottom: 1px solid #eaecf0;
+      padding-bottom: 6px;
+    }
+
+    .finTermoGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+
+    .finTermoField {
+      border: 1px solid #eaecf0;
+      border-radius: 6px;
+      padding: 9px;
+      background: #fcfcfd;
+    }
+
+    .finTermoLabel {
+      color: var(--fin-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .finTermoValue {
+      font-size: 13px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .finTermoBody {
+      font-size: 12px;
+      text-align: justify;
+      color: #344054;
+    }
+
+    .finTermoTrace {
+      font-size: 10px;
+      color: var(--fin-muted);
+      border-top: 1px solid #eaecf0;
+      padding-top: 10px;
+      word-break: break-word;
+    }
+
+    .finTermoSignPreview {
+      min-height: 88px;
+      border-bottom: 1px solid #101828;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      color: var(--fin-muted);
+      font-size: 11px;
+      margin-top: 12px;
+    }
+
+    .finTermoActionTitle {
+      margin: 0 0 12px;
+      color: var(--fin-blue);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .finTermoHint {
+      color: var(--fin-muted);
+      font-size: 12px;
+      margin: 8px 0 12px;
+    }
+
+    .finTermoCanvasBox {
+      border: 1px solid var(--fin-line);
+      border-radius: 8px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    #finTermoCanvas {
+      width: 100%;
+      height: 170px;
+      display: block;
+      touch-action: none;
+      background: #ffffff;
+    }
+
+    .finTermoCheck {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 12px 0;
+      color: #344054;
+      font-size: 13px;
+    }
+
+    .finTermoCheck input {
+      margin-top: 3px;
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+    }
+
+    .finTermoButton {
+      width: 100%;
+      border: 0;
+      border-radius: 7px;
+      padding: 11px 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 8px;
+      background: var(--fin-blue);
+      color: #ffffff;
+    }
+
+    .finTermoButton:hover {
+      background: var(--fin-blue-2);
+    }
+
+    .finTermoButton:disabled {
+      background: #98a2b3;
+      cursor: not-allowed;
+    }
+
+    .finTermoButtonSecondary {
+      background: #ffffff;
+      color: var(--fin-blue);
+      border: 1px solid var(--fin-line);
+    }
+
+    .finTermoButtonSecondary:hover {
+      background: #f2f4f7;
+    }
+
+    .finTermoButtonSuccess {
+      background: var(--fin-green);
+    }
+
+    .finTermoButtonSuccess:hover {
+      background: #05603a;
+    }
+
+    .finTermoNotice {
+      display: none;
+      margin: 10px 0 0;
+      padding: 10px;
+      border-radius: 7px;
+      background: #eff8ff;
+      color: #1849a9;
+      font-size: 12px;
+      border: 1px solid #b2ddff;
+    }
+
+    .finTermoNotice.finTermoNoticeOn {
+      display: block;
+    }
+
+    .finTermoLoading {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      z-index: 30;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .finTermoLoading.finTermoLoadingOn {
+      display: flex;
+    }
+
+    @media (max-width: 920px) {
+      .finTermoLayout {
+        grid-template-columns: 1fr;
+      }
+
+      .finTermoActions {
+        position: static;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .finTermoShell {
+        padding: 12px;
+      }
+
+      .finTermoHeader {
+        display: block;
+      }
+
+      .finTermoBadges {
+        justify-content: flex-start;
+        margin-top: 12px;
+      }
+
+      .finTermoDoc {
+        min-height: auto;
+        padding: 22px;
+      }
+
+      .finTermoDocTop,
+      .finTermoGrid {
+        display: block;
+      }
+
+      .finTermoField {
+        margin-bottom: 8px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .finTermoHeader,
+      .finTermoActions,
+      .finTermoLoading,
+      .finTermoNotice {
+        display: none;
+      }
+
+      .finTermoShell {
+        max-width: none;
+        padding: 0;
+      }
+
+      .finTermoLayout {
+        display: block;
+      }
+
+      .finTermoPanel {
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .finTermoDoc {
+        width: 210mm;
+        min-height: 297mm;
+        border: 0;
+        box-shadow: none;
+        padding: 16mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <script>
+    var FIN_TERMO_TOKEN = "<?= TERMO_TOKEN ?>";
+  </script>
+
+  <div class="finTermoLoading" id="finTermoLoading">Processando...</div>
+
+  <main class="finTermoShell">
+    <header class="finTermoHeader">
+      <div class="finTermoBrand">
+        <div class="finTermoMark">ML</div>
+        <div class="finTermoBrandText">
+          <h1 class="finTermoTitle">Termo Online do Cartao Flash</h1>
+          <div class="finTermoSub">Metrolabs SGO+ | Modulo financeiro</div>
+        </div>
+      </div>
+      <div class="finTermoBadges">
+        <span class="finTermoBadge">Documento publico</span>
+        <span class="finTermoBadge">FIN.4.3</span>
+        <span class="finTermoBadge">Assinatura eletronica simples</span>
+      </div>
+    </header>
+
+    <section class="finTermoLayout">
+      <div class="finTermoPanel">
+        <div id="finTermoConteudo">
+          <div class="finTermoState">
+            <h2>Carregando termo</h2>
+            <p>Aguarde enquanto preparamos o documento para leitura e assinatura.</p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="finTermoActions" id="finTermoAcoes">
+        <h2 class="finTermoActionTitle">Assinatura</h2>
+        <p class="finTermoHint">Leia o termo completo, assine no quadro abaixo e marque o aceite para liberar o envio.</p>
+
+        <div class="finTermoCanvasBox">
+          <canvas id="finTermoCanvas"></canvas>
+        </div>
+        <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnLimpar">Limpar assinatura</button>
+
+        <label class="finTermoCheck">
+          <input type="checkbox" id="finTermoAceite">
+          <span>Li e aceito os termos de responsabilidade e a politica de uso do cartao corporativo.</span>
+        </label>
+
+        <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnLocalizacao">Permitir localizacao para reforcar a auditoria do aceite</button>
+        <p class="finTermoHint">A localizacao e opcional e usada apenas para auditoria do aceite.</p>
+
+        <button class="finTermoButton" type="button" id="finTermoBtnAssinar" disabled>Confirmar assinatura</button>
+
+        <div class="finTermoNotice" id="finTermoAviso"></div>
+
+        <div id="finTermoAcoesSucesso" style="display:none;">
+          <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnImprimir">Imprimir</button>
+          <button class="finTermoButton finTermoButtonSuccess" type="button" id="finTermoBtnPdf">Abrir PDF</button>
+          <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnWhats">Enviar WhatsApp</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    var finTermoEstado = {
+      token: "",
+      dados: null,
+      respostaAssinatura: null,
+      assinaturaAtiva: false,
+      assinaturaPreenchida: false,
+      canvas: null,
+      ctx: null,
+      localizacao: {
+        latitude: "",
+        longitude: "",
+        texto: ""
+      }
+    };
+
+    window.addEventListener("load", finTermoInit);
+
+    function finTermoInit() {
+      finTermoEstado.token = finTermoObterToken();
+      finTermoPrepararCanvas();
+      document.getElementById("finTermoBtnLimpar").addEventListener("click", finTermoLimparAssinatura);
+      document.getElementById("finTermoAceite").addEventListener("change", finTermoAtualizarBotaoAssinar);
+      document.getElementById("finTermoBtnLocalizacao").addEventListener("click", finTermoSolicitarLocalizacao);
+      document.getElementById("finTermoBtnAssinar").addEventListener("click", finTermoAssinar);
+      document.getElementById("finTermoBtnImprimir").addEventListener("click", finTermoImprimir);
+      document.getElementById("finTermoBtnPdf").addEventListener("click", finTermoAbrirPdf);
+      document.getElementById("finTermoBtnWhats").addEventListener("click", finTermoEnviarWhatsapp);
+
+      if (!finTermoEstado.token) {
+        finTermoRenderizarErro("Token do termo nao informado.");
+        return;
+      }
+      finTermoCarregar();
+    }
+
+    function finTermoObterToken() {
+      var candidatos = [];
+      try { candidatos.push(window.FIN_TERMO_TOKEN); } catch (e) {}
+      try { candidatos.push(FIN_TERMO_TOKEN); } catch (e2) {}
+      try {
+        var params = new URLSearchParams(window.location.search || "");
+        candidatos.push(params.get("fin_termo"));
+      } catch (e3) {}
+      for (var i = 0; i < candidatos.length; i++) {
+        var t = String(candidatos[i] == null ? "" : candidatos[i]).trim();
+        if (t && t.indexOf("<?") < 0 && t.indexOf("?>") < 0) return t;
+      }
+      return "";
+    }
+
+    function finTermoCarregar() {
+      if (!finTermoEstado.token) {
+        finTermoRenderizarErro("Token do termo nao informado.");
+        return;
+      }
+      if (!window.google || !google.script || !google.script.run) {
+        finTermoRenderizarErro("Ambiente do Apps Script indisponivel para carregar o termo.");
+        return;
+      }
+      finTermoSetLoading(true);
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          finTermoSetLoading(false);
+          if (!resp || (resp.ok !== true && resp.success !== true)) {
+            finTermoRenderizarErro(resp && resp.message ? resp.message : "Nao foi possivel carregar o termo.");
+            return;
+          }
+          finTermoRenderizar(resp);
+        })
+        .withFailureHandler(function(err) {
+          finTermoSetLoading(false);
+          finTermoRenderizarErro(err && err.message ? err.message : "Falha ao carregar o termo.");
+        })
+        .finObterTermoPublico(finTermoEstado.token);
+    }
+
+    function finTermoRenderizar(dados) {
+      finTermoEstado.dados = dados;
+      var termo = dados.termo || {};
+      var cartao = dados.cartao || {};
+      var colaborador = dados.colaborador || {};
+      var corpo = finTermoRenderConteudoSeguro(dados.textoTermo || dados.conteudoHtml || "");
+      var qr = dados.qrcodeLink ? "<img class=\"finTermoQr\" alt=\"QR Code do termo\" src=\"" + finTermoEH(dados.qrcodeLink) + "\">" : "";
+      var html = "";
+
+      html += "<article class=\"finTermoDoc\">";
+      html += "<div class=\"finTermoDocTop\">";
+      html += "<div class=\"finTermoDocBrand\"><div class=\"finTermoDocMark\">ML</div><div>";
+      html += "<h2 class=\"finTermoDocTitle\">Termo de Responsabilidade - Cartao Corporativo Flash</h2>";
+      html += "<div class=\"finTermoDocMeta\">Documento publico de aceite eletronico | Metrolabs</div>";
+      html += "</div></div>";
+      html += "<div>" + qr + "</div>";
+      html += "</div>";
+
+      html += "<section class=\"finTermoDocSection\"><h3>Colaborador</h3><div class=\"finTermoGrid\">";
+      html += finTermoCampo("Nome", colaborador.nome);
+      html += finTermoCampo("Funcionario ID", colaborador.funcionarioId);
+      html += finTermoCampo("E-mail", colaborador.email);
+      html += finTermoCampo("Versao da politica", dados.versaoPolitica);
+      html += "</div></section>";
+
+      html += "<section class=\"finTermoDocSection\"><h3>Cartao</h3><div class=\"finTermoGrid\">";
+      html += finTermoCampo("Cartao ID", cartao.cartaoId);
+      html += finTermoCampo("Final", cartao.final4 ? "**** **** **** " + cartao.final4 : "");
+      html += finTermoCampo("Apelido", cartao.apelido);
+      html += finTermoCampo("Operadora", cartao.operadora);
+      html += finTermoCampo("Bandeira", cartao.bandeira);
+      html += finTermoCampo("Identificador", cartao.identificador);
+      html += "</div></section>";
+
+      html += "<section class=\"finTermoDocSection\"><h3>Clausulas e responsabilidades</h3>";
+      html += "<div class=\"finTermoBody\">" + corpo + "</div></section>";
+
+      html += "<section class=\"finTermoDocSection\"><h3>Aceite e assinatura</h3>";
+      html += "<p class=\"finTermoBody\">O aceite sera registrado eletronicamente apos a assinatura abaixo, com rastreabilidade do token, horario, dispositivo e localizacao quando autorizada.</p>";
+      html += "<div class=\"finTermoSignPreview\" id=\"finTermoAssinaturaPreview\">Assinatura pendente</div>";
+      html += "</section>";
+
+      html += "<section class=\"finTermoDocSection\"><h3>Rastreabilidade</h3>";
+      html += "<div class=\"finTermoTrace\">";
+      html += "Token: " + finTermoEH(termo.tokenValidacao || "") + "<br>";
+      html += "Validade: " + finTermoEH(termo.dataExpiracaoToken || "") + "<br>";
+      html += "URL: " + finTermoEH(dados.urlValidacao || "") + "<br>";
+      html += "QR: " + finTermoEH(dados.qrcodeLink || "");
+      html += "</div></section>";
+
+      html += "</article>";
+      document.getElementById("finTermoConteudo").innerHTML = html;
+      finTermoMostrarAviso("Termo carregado. Leia o documento e assine para concluir.");
+      finTermoAtualizarBotaoAssinar();
+    }
+
+    function finTermoCampo(label, value) {
+      return "<div class=\"finTermoField\"><div class=\"finTermoLabel\">" + finTermoEH(label) + "</div><div class=\"finTermoValue\">" + finTermoEH(value || "-") + "</div></div>";
+    }
+
+    function finTermoRenderConteudoSeguro(texto) {
+      return finTermoEH(texto || "").replace(/\r\n|\r|\n/g, "<br>");
+    }
+
+    function finTermoRenderizarErro(msg) {
+      document.getElementById("finTermoConteudo").innerHTML =
+        "<div class=\"finTermoState finTermoError\"><h2>Nao foi possivel abrir o termo</h2><p>" + finTermoEH(msg) + "</p></div>";
+      document.getElementById("finTermoBtnAssinar").disabled = true;
+    }
+
+    function finTermoRenderizarSucesso(resp) {
+      finTermoEstado.respostaAssinatura = resp || {};
+      var html = "";
+      html += "<div class=\"finTermoState finTermoSuccess\">";
+      html += "<h2>Termo assinado com sucesso</h2>";
+      html += "<p>O aceite foi registrado com seguranca.</p>";
+      html += "<div class=\"finTermoDocSection\"><div class=\"finTermoGrid\">";
+      html += finTermoCampo("Termo ID", resp.termoId);
+      html += finTermoCampo("Token", resp.tokenValidacao);
+      html += finTermoCampo("Hash", resp.hashTermo);
+      html += finTermoCampo("PDF", resp.pdfUrl ? "Disponivel" : "Nao disponivel");
+      html += "</div></div>";
+      if (resp.qrcodeLink) {
+        html += "<img class=\"finTermoQr\" alt=\"QR Code do termo assinado\" src=\"" + finTermoEH(resp.qrcodeLink) + "\">";
+      }
+      if (!resp.pdfUrl) {
+        html += "<p class=\"finTermoHint\">PDF nao retornado pelo backend. O registro do aceite foi concluido.</p>";
+      }
+      html += "</div>";
+      document.getElementById("finTermoConteudo").innerHTML = html;
+      document.getElementById("finTermoAcoesSucesso").style.display = "block";
+      document.getElementById("finTermoBtnAssinar").disabled = true;
+      finTermoMostrarSucesso("Assinatura registrada.");
+    }
+
+    function finTermoPrepararCanvas() {
+      var canvas = document.getElementById("finTermoCanvas");
+      finTermoEstado.canvas = canvas;
+      finTermoEstado.ctx = canvas.getContext("2d");
+      finTermoAjustarCanvas();
+      window.addEventListener("resize", finTermoAjustarCanvas);
+      canvas.addEventListener("mousedown", finTermoCanvasStart);
+      canvas.addEventListener("mousemove", finTermoCanvasMove);
+      canvas.addEventListener("mouseup", finTermoCanvasEnd);
+      canvas.addEventListener("mouseleave", finTermoCanvasEnd);
+      canvas.addEventListener("touchstart", finTermoCanvasStart, { passive: false });
+      canvas.addEventListener("touchmove", finTermoCanvasMove, { passive: false });
+      canvas.addEventListener("touchend", finTermoCanvasEnd);
+    }
+
+    function finTermoAjustarCanvas() {
+      var canvas = finTermoEstado.canvas;
+      if (!canvas) return;
+      var rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(280, Math.floor(rect.width || 300));
+      canvas.height = 170;
+      finTermoLimparAssinatura();
+    }
+
+    function finTermoCanvasStart(ev) {
+      ev.preventDefault();
+      finTermoEstado.assinaturaAtiva = true;
+      var p = finTermoCanvasPonto(ev);
+      var ctx = finTermoEstado.ctx;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+
+    function finTermoCanvasMove(ev) {
+      if (!finTermoEstado.assinaturaAtiva) return;
+      ev.preventDefault();
+      var p = finTermoCanvasPonto(ev);
+      var ctx = finTermoEstado.ctx;
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#172033";
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      finTermoEstado.assinaturaPreenchida = true;
+      finTermoAtualizarBotaoAssinar();
+      finTermoAtualizarPreviewAssinatura();
+    }
+
+    function finTermoCanvasEnd() {
+      finTermoEstado.assinaturaAtiva = false;
+    }
+
+    function finTermoCanvasPonto(ev) {
+      var canvas = finTermoEstado.canvas;
+      var rect = canvas.getBoundingClientRect();
+      var origem = ev.touches && ev.touches.length ? ev.touches[0] : ev;
+      return {
+        x: origem.clientX - rect.left,
+        y: origem.clientY - rect.top
+      };
+    }
+
+    function finTermoLimparAssinatura() {
+      var canvas = finTermoEstado.canvas;
+      var ctx = finTermoEstado.ctx;
+      if (!canvas || !ctx) return;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#d0d5dd";
+      ctx.beginPath();
+      ctx.moveTo(16, canvas.height - 28);
+      ctx.lineTo(canvas.width - 16, canvas.height - 28);
+      ctx.stroke();
+      finTermoEstado.assinaturaPreenchida = false;
+      finTermoAtualizarBotaoAssinar();
+      finTermoAtualizarPreviewAssinatura();
+    }
+
+    function finTermoAtualizarPreviewAssinatura() {
+      var el = document.getElementById("finTermoAssinaturaPreview");
+      if (!el || !finTermoEstado.canvas) return;
+      if (!finTermoEstado.assinaturaPreenchida) {
+        el.innerHTML = "Assinatura pendente";
+        return;
+      }
+      el.innerHTML = "<img alt=\"Assinatura desenhada\" style=\"max-width:260px;max-height:80px;\" src=\"" + finTermoEstado.canvas.toDataURL("image/png") + "\">";
+    }
+
+    function finTermoAtualizarBotaoAssinar() {
+      var aceite = document.getElementById("finTermoAceite");
+      var btn = document.getElementById("finTermoBtnAssinar");
+      var ok = !!finTermoEstado.dados && finTermoEstado.assinaturaPreenchida && !!aceite.checked;
+      btn.disabled = !ok;
+    }
+
+    function finTermoSolicitarLocalizacao() {
+      if (!navigator.geolocation) {
+        finTermoMostrarAviso("Geolocalizacao nao disponivel neste navegador. A assinatura pode continuar sem localizacao.");
+        return;
+      }
+      finTermoMostrarAviso("Solicitando permissao de localizacao...");
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          finTermoEstado.localizacao.latitude = String(pos.coords.latitude || "");
+          finTermoEstado.localizacao.longitude = String(pos.coords.longitude || "");
+          finTermoEstado.localizacao.texto = "Localizacao capturada pelo navegador.";
+          finTermoMostrarSucesso("Localizacao registrada para auditoria do aceite.");
+        },
+        function() {
+          finTermoEstado.localizacao.latitude = "";
+          finTermoEstado.localizacao.longitude = "";
+          finTermoEstado.localizacao.texto = "Localizacao nao autorizada pelo usuario.";
+          finTermoMostrarAviso("Localizacao nao autorizada. A assinatura pode continuar normalmente.");
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+      );
+    }
+
+    function finTermoAssinar() {
+      if (!finTermoEstado.token) {
+        finTermoRenderizarErro("Token do termo nao informado.");
+        return;
+      }
+      if (!finTermoEstado.assinaturaPreenchida) {
+        finTermoMostrarAviso("Desenhe sua assinatura antes de enviar.");
+        return;
+      }
+      if (!document.getElementById("finTermoAceite").checked) {
+        finTermoMostrarAviso("Marque o aceite para continuar.");
+        return;
+      }
+      if (!window.google || !google.script || !google.script.run) {
+        finTermoRenderizarErro("Ambiente do Apps Script indisponivel para assinar o termo.");
+        return;
+      }
+      finTermoSetLoading(true);
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          finTermoSetLoading(false);
+          if (!resp || (resp.ok !== true && resp.success !== true)) {
+            finTermoMostrarAviso(resp && resp.message ? resp.message : "Nao foi possivel assinar o termo.");
+            return;
+          }
+          finTermoRenderizarSucesso(resp);
+        })
+        .withFailureHandler(function(err) {
+          finTermoSetLoading(false);
+          finTermoMostrarAviso(err && err.message ? err.message : "Falha ao assinar o termo.");
+        })
+        .finAssinarTermoPublico(finTermoEstado.token, finTermoMontarPayloadAssinatura());
+    }
+
+    function finTermoMontarPayloadAssinatura() {
+      var loc = finTermoEstado.localizacao || {};
+      return {
+        assinaturaDataUrl: finTermoEstado.canvas.toDataURL("image/png"),
+        aceitePolitica: "SIM",
+        userAgent: navigator.userAgent || "",
+        latitude: loc.latitude || "",
+        longitude: loc.longitude || "",
+        localizacaoTexto: loc.texto || "",
+        versaoPoliticaAceita: finTermoEstado.dados ? finTermoEstado.dados.versaoPolitica : "",
+        dataHoraCliente: new Date().toISOString()
+      };
+    }
+
+    function finTermoImprimir() {
+      window.print();
+    }
+
+    function finTermoAbrirPdf() {
+      var pdfUrl = finTermoEstado.respostaAssinatura && finTermoEstado.respostaAssinatura.pdfUrl;
+      if (!pdfUrl) {
+        finTermoMostrarAviso("PDF nao disponivel.");
+        return;
+      }
+      window.open(pdfUrl, "_blank");
+    }
+
+    function finTermoEnviarWhatsapp() {
+      var resp = finTermoEstado.respostaAssinatura || {};
+      var link = resp.pdfUrl || window.location.href;
+      var texto = "Termo do Cartao Flash assinado. " + link;
+      window.open("https://wa.me/?text=" + finTermoUrlEncode(texto), "_blank");
+    }
+
+    function finTermoEH(v) {
+      return String(v == null ? "" : v)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function finTermoUrlEncode(v) {
+      return encodeURIComponent(String(v == null ? "" : v));
+    }
+
+    function finTermoSetLoading(ativo) {
+      var el = document.getElementById("finTermoLoading");
+      if (!el) return;
+      if (ativo) el.classList.add("finTermoLoadingOn");
+      else el.classList.remove("finTermoLoadingOn");
+    }
+
+    function finTermoMostrarAviso(msg) {
+      var el = document.getElementById("finTermoAviso");
+      if (!el) return;
+      el.className = "finTermoNotice finTermoNoticeOn";
+      el.style.background = "#eff8ff";
+      el.style.borderColor = "#b2ddff";
+      el.style.color = "#1849a9";
+      el.textContent = msg || "";
+    }
+
+    function finTermoMostrarSucesso(msg) {
+      var el = document.getElementById("finTermoAviso");
+      if (!el) return;
+      el.className = "finTermoNotice finTermoNoticeOn";
+      el.style.background = "#f6fef9";
+      el.style.borderColor = "#abefc6";
+      el.style.color = "#067647";
+      el.textContent = msg || "";
+    }
+  </script>
+</body>
+</html>
