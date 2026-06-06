@@ -23,6 +23,10 @@ function doGet(e) {
         .addMetaTag("viewport", "width=device-width, initial-scale=1");
     }
 
+    if (params.fin_termo !== undefined) {
+      return renderPublicFinTermoV1_(params.fin_termo);
+    }
+
     if (params.os) {
       return renderPublicRouteV2_("Acompanhamento de OS", "OS", params.os);
     }
@@ -53,6 +57,16 @@ function doGet(e) {
       )
       .setTitle("Erro - METROLABS SGO+");
   }
+}
+
+function renderPublicFinTermoV1_(token) {
+  const template = HtmlService.createTemplateFromFile("JS_Fin_Termo");
+  template.TERMO_TOKEN = String(token || "").trim();
+  return template
+    .evaluate()
+    .setTitle("Termo Online - Cartao Flash")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 function renderPublicRouteV2_(titulo, tipo, valor) {
