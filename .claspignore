@@ -7,5 +7,6 @@ UI_Scripts_BKP.html
 _tmp_check.js
 _tmp_*.js
 _PATCHES_LOCAL.bak/
+_EVIDENCIAS_LOCAL/**
 INVENTARIO_ASSISTENCIA_TECNICA.md
 _prototipos/**
