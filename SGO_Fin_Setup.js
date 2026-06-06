@@ -66,12 +66,13 @@ const SGO_FIN_SETUP = (() => {
       "STATUS", "CRIADO_EM", "CRIADO_POR", "ATUALIZADO_EM", "ATUALIZADO_POR"
     ],
 
-    // 29 headers
+    // 33 headers
     "FIN_CARTOES_TERMOS": [
       "ID", "TERMO_ID", "CARTAO_ID",
       "FUNCIONARIO_ID", "FUNCIONARIO_NOME", "FUNCIONARIO_CPF",
       "VERSAO_TERMO", "HASH_TERMO",
       "TOKEN_VALIDACAO", "URL_VALIDACAO", "QRCODE_LINK",
+      "DATA_EXPIRACAO_TOKEN", "ENVIADO_WHATSAPP", "DATA_ENVIO_WHATSAPP", "NUMERO_WHATSAPP",
       "IP_DISPOSITIVO", "USER_AGENT",
       "LATITUDE", "LONGITUDE", "LOCALIZACAO_TEXTO",
       "DATA_ASSINATURA", "ASSINATURA_DATA_URL", "ASSINATURA_FILE_ID", "ASSINATURA_LINK",
@@ -388,11 +389,11 @@ const SGO_FIN_SETUP = (() => {
       Object.keys(ABAS).length === 12,
       Object.keys(ABAS).length + " abas definidas");
 
-    adicionarCheck_(checks, "Headers FIN carregados (296 total)",
+    adicionarCheck_(checks, "Headers FIN carregados (300 total)",
       (function() {
         var total = 0;
         Object.keys(HEADERS).forEach(function(k) { total += HEADERS[k].length; });
-        return total === 296;
+        return total === 300;
       })(),
       (function() {
         var total = 0;
