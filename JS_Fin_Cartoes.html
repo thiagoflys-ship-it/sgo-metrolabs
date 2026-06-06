@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartoes Corporativos - SGO+</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #333; font-size: 14px; }
+
+    .fin-header { background: linear-gradient(135deg, #0f2d52 0%, #1a4a80 100%); color: #fff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .fin-header-title h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .fin-header-title p { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 3px; }
+    .fin-badges { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+    .fin-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+    .fin-badge-version { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.28); }
+    .fin-badge-implantacao { background: #ffc107; color: #333; }
+    .fin-badge-db { background: rgba(220,53,69,0.85); color: #fff; transition: background 0.3s; }
+    .fin-badge-db.ok { background: rgba(40,167,69,0.85); }
+
+    .fin-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 14px 24px; }
+    @media (max-width: 1100px) { .fin-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 680px)  { .fin-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    .fin-kpi { background: #fff; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 3px solid #0366d6; }
+    .fin-kpi.kpi-ativo    { border-color: #28a745; }
+    .fin-kpi.kpi-bloq     { border-color: #ffc107; }
+    .fin-kpi.kpi-rec      { border-color: #17a2b8; }
+    .fin-kpi.kpi-lanc     { border-color: #6f42c1; }
+    .fin-kpi.kpi-pend     { border-color: #dc3545; }
+    .fin-kpi-label  { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .fin-kpi-value  { font-size: 22px; font-weight: 700; color: #0f2d52; margin-top: 5px; line-height: 1; }
+    .fin-kpi-sub    { font-size: 10px; color: #aaa; margin-top: 3px; }
+
+    .fin-tabs-bar { background: #fff; border-bottom: 2px solid #e9ecef; padding: 0 24px; display: flex; overflow-x: auto; }
+    .fin-tab-btn { padding: 11px 18px; font-size: 13px; font-weight: 500; color: #666; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
+    .fin-tab-btn:hover:not(.placeholder) { color: #0366d6; }
+    .fin-tab-btn.active { color: #0366d6; border-bottom-color: #0366d6; font-weight: 600; }
+    .fin-tab-btn.placeholder { color: #c0c0c0; cursor: default; }
+    .fin-tab-badge { display: inline-block; background: #dc3545; color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; margin-left: 4px; vertical-align: middle; }
+
+    .fin-tab-content { display: none; }
+    .fin-tab-content.active { display: block; }
+
+    .fin-split { display: flex; height: calc(100vh - 258px); min-height: 380px; }
+    .fin-split-left { width: 330px; min-width: 240px; background: #fff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; flex-shrink: 0; }
+    .fin-split-right { flex: 1; background: #f4f6f9; overflow-y: auto; padding: 20px; min-width: 0; }
+
+    .fin-list-head { padding: 11px 14px; border-bottom: 1px solid #f0f0f0; }
+    .fin-search { width: 100%; padding: 7px 10px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 13px; }
+    .fin-search:focus { outline: none; border-color: #0366d6; box-shadow: 0 0 0 2px rgba(3,102,214,0.14); }
+    .fin-filter-row { display: flex; gap: 6px; margin-top: 7px; }
+    .fin-filter-select { flex: 1; padding: 6px 8px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 12px; }
+    .fin-list-body { flex: 1; overflow-y: auto; }
+    .fin-list-item { padding: 11px 14px; border-bottom: 1px solid #f4f4f4; cursor: pointer; transition: background 0.12s; }
+    .fin-list-item:hover { background: #f8f9fa; }
+    .fin-list-item.selected { background: #e7f0ff; border-left: 3px solid #0366d6; padding-left: 11px; }
+    .fin-item-name { font-weight: 600; color: #0f2d52; font-size: 13px; }
+    .fin-item-sub  { font-size: 11px; color: #999; margin-top: 2px; }
+    .fin-sdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .fin-sdot.ativo    { background: #28a745; }
+    .fin-sdot.bloq     { background: #ffc107; }
+    .fin-sdot.cancelado{ background: #dc3545; }
+    .fin-sdot.pendente { background: #aaa; }
+    .fin-list-empty { padding: 36px 14px; text-align: center; color: #aaa; font-size: 13px; }
+    .fin-list-foot { padding: 7px 14px; border-top: 1px solid #f0f0f0; font-size: 11px; color: #aaa; }
+
+    .fin-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); padding: 18px 20px; margin-bottom: 14px; }
+    .fin-card h3 { font-size: 14px; color: #0f2d52; font-weight: 600; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+    .fin-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .fin-fg { display: flex; flex-direction: column; gap: 4px; }
+    .fin-fg.full { grid-column: 1 / -1; }
+    .fin-label { font-size: 10px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+    .fin-input, .fin-select, .fin-textarea { padding: 7px 9px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 13px; font-family: inherit; width: 100%; }
+    .fin-input:focus, .fin-select:focus, .fin-textarea:focus { outline: none; border-color: #0366d6; box-shadow: 0 0 0 2px rgba(3,102,214,0.14); }
+    .fin-input[readonly] { background: #f8f9fa; color: #777; }
+    .fin-textarea { resize: vertical; min-height: 65px; }
+
+    .fin-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 15px; border-radius: 6px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: background 0.13s, opacity 0.13s; }
+    .fin-btn:active { opacity: 0.85; }
+    .fin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .fin-btn-primary   { background: #0366d6; color: #fff; }
+    .fin-btn-primary:hover   { background: #0256b5; }
+    .fin-btn-success   { background: #28a745; color: #fff; }
+    .fin-btn-success:hover   { background: #218838; }
+    .fin-btn-warning   { background: #ffc107; color: #333; }
+    .fin-btn-warning:hover   { background: #e0a800; }
+    .fin-btn-danger    { background: #dc3545; color: #fff; }
+    .fin-btn-danger:hover    { background: #c82333; }
+    .fin-btn-secondary { background: #6c757d; color: #fff; }
+    .fin-btn-secondary:hover { background: #5a6268; }
+    .fin-btn-outline   { background: transparent; color: #0366d6; border: 1px solid #0366d6; }
+    .fin-btn-outline:hover   { background: #e7f0ff; }
+    .fin-btn-sm { padding: 5px 10px; font-size: 12px; }
+    .fin-btn-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+
+    .fin-empty-state { text-align: center; padding: 60px 20px; }
+    .fin-empty-state-icon { font-size: 40px; opacity: 0.25; margin-bottom: 10px; }
+    .fin-empty-state p { color: #aaa; font-size: 13px; }
+    .fin-empty-state small { color: #ccc; font-size: 11px; display: block; margin-top: 4px; }
+
+    .fin-table-wrap { overflow-x: auto; }
+    .fin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .fin-table th { background: #f8f9fa; color: #666; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; padding: 9px 11px; text-align: left; border-bottom: 2px solid #e9ecef; white-space: nowrap; }
+    .fin-table td { padding: 9px 11px; border-bottom: 1px solid #f3f3f3; vertical-align: middle; }
+    .fin-table tr:hover td { background: #fafbfc; }
+
+    .fin-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .fin-pill-green  { background: #d4edda; color: #155724; }
+    .fin-pill-yellow { background: #fff3cd; color: #856404; }
+    .fin-pill-red    { background: #f8d7da; color: #721c24; }
+    .fin-pill-gray   { background: #e9ecef; color: #495057; }
+    .fin-pill-blue   { background: #cce5ff; color: #004085; }
+    .fin-pill-purple { background: #e2d9f3; color: #4a235a; }
+
+    .fin-alert { padding: 9px 13px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
+    .fin-alert-info    { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+    .fin-alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .fin-alert-danger  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+    .fin-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.48); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .fin-modal-overlay.open { display: flex; }
+    .fin-modal { background: #fff; border-radius: 10px; padding: 22px 24px; width: 420px; max-width: 95vw; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .fin-modal h3 { font-size: 15px; color: #0f2d52; margin-bottom: 14px; }
+    .fin-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+    .fin-toast { position: fixed; bottom: 22px; right: 22px; padding: 11px 17px; border-radius: 8px; font-size: 13px; font-weight: 500; max-width: 360px; z-index: 2000; box-shadow: 0 4px 16px rgba(0,0,0,0.14); transform: translateY(80px); opacity: 0; transition: transform 0.28s, opacity 0.28s; pointer-events: none; }
+    .fin-toast.show { transform: translateY(0); opacity: 1; }
+    .fin-toast.success { background: #28a745; color: #fff; }
+    .fin-toast.error   { background: #dc3545; color: #fff; }
+
+    .fin-loading { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.65); align-items: center; justify-content: center; z-index: 900; }
+    .fin-loading.show { display: flex; }
+    .fin-spinner { width: 34px; height: 34px; border: 3px solid #e9ecef; border-top-color: #0366d6; border-radius: 50%; animation: finSpin 0.65s linear infinite; }
+    @keyframes finSpin { to { transform: rotate(360deg); } }
+
+    .fin-premium { text-align: center; padding: 60px 24px; }
+    .fin-premium-tag { display: inline-block; background: linear-gradient(135deg, #0f2d52, #0366d6); color: #fff; padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 600; margin-bottom: 14px; letter-spacing: 0.4px; }
+    .fin-premium h3 { color: #0f2d52; font-size: 17px; margin-bottom: 7px; }
+    .fin-premium p { color: #999; font-size: 13px; line-height: 1.6; }
+
+    .fin-tab-inner { padding: 18px 22px; }
+  </style>
+</head>
+<body>
+
+<div id="finLoading" class="fin-loading"><div class="fin-spinner"></div></div>
+<div id="finToast" class="fin-toast"></div>
+
+<!-- Header -->
+<div class="fin-header">
+  <div class="fin-header-title">
+    <h1>Cartoes Corporativos</h1>
+    <p>Controle e prestacao de contas do Cartao Flash</p>
+  </div>
+  <div class="fin-badges">
+    <span class="fin-badge fin-badge-version">FIN.3</span>
+    <span class="fin-badge fin-badge-implantacao">Modulo em implantacao</span>
+    <span id="finBadgeDb" class="fin-badge fin-badge-db">DB_FIN_ID necessario</span>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="fin-kpi-grid">
+  <div class="fin-kpi">
+    <div class="fin-kpi-label">Total Cartoes</div>
+    <div class="fin-kpi-value" id="kpiTotal">-</div>
+    <div class="fin-kpi-sub">cadastrados</div>
+  </div>
+  <div class="fin-kpi kpi-ativo">
+    <div class="fin-kpi-label">Ativos</div>
+    <div class="fin-kpi-value" id="kpiAtivos">-</div>
+    <div class="fin-kpi-sub">em uso</div>
+  </div>
+  <div class="fin-kpi kpi-bloq">
+    <div class="fin-kpi-label">Bloqueados</div>
+    <div class="fin-kpi-value" id="kpiBloqueados">-</div>
+    <div class="fin-kpi-sub">revisao necessaria</div>
+  </div>
+  <div class="fin-kpi kpi-rec">
+    <div class="fin-kpi-label">Total Recarregado</div>
+    <div class="fin-kpi-value" id="kpiRecargado">-</div>
+    <div class="fin-kpi-sub">no mes</div>
+  </div>
+  <div class="fin-kpi kpi-lanc">
+    <div class="fin-kpi-label">Total Lancado</div>
+    <div class="fin-kpi-value" id="kpiLancado">-</div>
+    <div class="fin-kpi-sub">prestacoes</div>
+  </div>
+  <div class="fin-kpi kpi-pend">
+    <div class="fin-kpi-label">Pendencias</div>
+    <div class="fin-kpi-value" id="kpiPendencias">-</div>
+    <div class="fin-kpi-sub">sem comprovante</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="fin-tabs-bar">
+  <button class="fin-tab-btn active" onclick="finMudarAba('cartoes')">Cartoes</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('recargas')">Recargas</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('lancamentos')">Lancamentos <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
+  <button class="fin-tab-btn placeholder" title="Disponivel em FIN.8 - Conciliacao Inteligente">Pendencias (FIN.8)</button>
+  <button class="fin-tab-btn placeholder" title="Disponivel em FIN.10 - Documentos Premium">Documentos (FIN.10)</button>
+</div>
+
+<!-- Tab: Cartoes -->
+<div id="tabCartoes" class="fin-tab-content active">
+  <div class="fin-split">
+    <div class="fin-split-left">
+      <div class="fin-list-head">
+        <input id="finBuscaCartao" class="fin-search" type="text" placeholder="Buscar por nome ou final..." oninput="finFiltrarCartoes()">
+        <div class="fin-filter-row">
+          <select id="finFiltroStatus" class="fin-filter-select" onchange="finFiltrarCartoes()">
+            <option value="">Todos os status</option>
+            <option value="ATIVO">Ativo</option>
+            <option value="BLOQUEADO_TEMPORARIO">Bloqueado</option>
+            <option value="PENDENTE_ATIVACAO">Pendente ativacao</option>
+            <option value="CANCELADO">Cancelado</option>
+            <option value="VENCIDO">Vencido</option>
+          </select>
+          <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finNovoCartao()">+ Novo</button>
+        </div>
+      </div>
+      <div id="finListaCartoes" class="fin-list-body">
+        <div class="fin-list-empty">Carregando...</div>
+      </div>
+      <div id="finListaRodape" class="fin-list-foot">0 cartoes</div>
+    </div>
+    <div id="finPainelDir" class="fin-split-right">
+      <div class="fin-empty-state">
+        <div class="fin-empty-state-icon">&#9646;</div>
+        <p>Selecione um cartao ou crie um novo</p>
+        <small>Use a lista ao lado para navegar</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Recargas -->
+<div id="tabRecargas" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <h3>Recargas do Cartao</h3>
+      <div style="margin-bottom:12px">
+        <label class="fin-label">Selecionar Cartao</label>
+        <select id="finSelCartaoRec" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoRecChange()">
+          <option value="">Selecione um cartao...</option>
+        </select>
+      </div>
+      <div id="finTblRecargas"><div class="fin-list-empty">Selecione um cartao acima.</div></div>
+    </div>
+    <div id="finFormRecCard" class="fin-card" style="display:none">
+      <h3>Nova Recarga</h3>
+      <input id="recCartaoId" type="hidden">
+      <div class="fin-grid2">
+        <div class="fin-fg">
+          <label class="fin-label">Cartao</label>
+          <input id="recCartaoNome" class="fin-input" type="text" readonly>
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Valor (R$) *</label>
+          <input id="recValor" class="fin-input" type="number" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Data da Recarga *</label>
+          <input id="recData" class="fin-input" type="date">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Tipo</label>
+          <select id="recTipo" class="fin-select">
+            <option value="CREDITO_MENSAL">Credito Mensal</option>
+            <option value="ADIANTAMENTO">Adiantamento</option>
+            <option value="REPOSICAO">Reposicao</option>
+            <option value="BONIFICACAO">Bonificacao</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+        </div>
+        <div class="fin-fg full">
+          <label class="fin-label">Observacoes</label>
+          <textarea id="recObs" class="fin-textarea" placeholder="Observacoes (opcional)"></textarea>
+        </div>
+      </div>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-success" onclick="finSalvarRecarga()">Registrar Recarga</button>
+        <button class="fin-btn fin-btn-secondary" onclick="finFecharFormRec()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Lancamentos -->
+<div id="tabLancamentos" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <h3>Lancamentos / Prestacao de Contas</h3>
+      <div style="margin-bottom:12px">
+        <label class="fin-label">Selecionar Cartao</label>
+        <select id="finSelCartaoLanc" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoLancChange()">
+          <option value="">Selecione um cartao...</option>
+        </select>
+      </div>
+      <div id="finTblLancamentos"><div class="fin-list-empty">Selecione um cartao acima.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Pendencias (placeholder) -->
+<div id="tabPendencias" class="fin-tab-content">
+  <div class="fin-premium">
+    <div class="fin-premium-tag">FIN.8 - Conciliacao Inteligente</div>
+    <h3>Pendencias de Comprovacao</h3>
+    <p>Gestao automatica de pendencias com alertas e cobrancas automaticas.<br>Disponivel na fase FIN.8 do roadmap SGO+.</p>
+  </div>
+</div>
+
+<!-- Tab: Documentos (placeholder) -->
+<div id="tabDocumentos" class="fin-tab-content">
+  <div class="fin-premium">
+    <div class="fin-premium-tag">FIN.10 - Documentos Premium</div>
+    <h3>Documentos e Relatorios</h3>
+    <p>Geracao automatica de relatorios de prestacao de contas, termos e extratos consolidados.<br>Disponivel na fase FIN.10 do roadmap SGO+.</p>
+  </div>
+</div>
+
+<!-- Modal: Bloqueio -->
+<div id="finModalBloqueio" class="fin-modal-overlay">
+  <div class="fin-modal">
+    <h3>Bloquear Cartao</h3>
+    <div class="fin-alert fin-alert-warning">O cartao sera bloqueado temporariamente. O titular nao podera realizar novos lancamentos ate o desbloqueio.</div>
+    <div class="fin-fg" style="margin-top:12px">
+      <label class="fin-label">Motivo do Bloqueio *</label>
+      <textarea id="finMotivoBloqueio" class="fin-textarea" placeholder="Descreva o motivo (obrigatorio)"></textarea>
+    </div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finFecharModalBloqueio()">Cancelar</button>
+      <button class="fin-btn fin-btn-warning" onclick="finConfirmarBloqueio()">Confirmar Bloqueio</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// FIN.3 - JS_Fin_Cartoes.html - Metrolabs SGO+
+
+var _finSessao = '';
+var _finCartoes = [];
+var _finFiltrados = [];
+var _finCartaoAtualId = '';
+
+// ---- init ----
+
+window.finCartoesInit = function(sessionId) {
+  finSetSession(sessionId);
+  finCarregarTudo();
+};
+
+function finSetSession(sid) {
+  _finSessao = sid || '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var sid = '';
+  if (window.SGO_SESSION_ID) { sid = window.SGO_SESSION_ID; }
+  else if (window.sessionId) { sid = window.sessionId; }
+  else if (window.sgoSessionId) { sid = window.sgoSessionId; }
+  if (sid) { finSetSession(sid); finCarregarTudo(); }
+});
+
+function finCarregarTudo() {
+  finCarregarContexto();
+  finCarregarCartoes();
+}
+
+// ---- contexto ----
+
+function finCarregarContexto() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r && r.ok && r.dbConfigurado) {
+        var b = document.getElementById('finBadgeDb');
+        b.textContent = 'DB Configurado';
+        b.classList.add('ok');
+        finCarregarDashboard();
+      }
+    })
+    .withFailureHandler(function(e) {
+      finMostrarErro('Erro ao verificar contexto: ' + (e.message || e));
+    })
+    .finObterContexto(_finSessao);
+}
+
+// ---- dashboard ----
+
+function finCarregarDashboard() {
+  google.script.run
+    .withSuccessHandler(finRenderDashboard)
+    .withFailureHandler(function(e) {
+      finMostrarErro('Erro no dashboard: ' + (e.message || e));
+    })
+    .finObterDashboardBasico(_finSessao, {});
+}
+
+function finRenderDashboard(r) {
+  if (!r || !r.ok) { return; }
+  var d = r || {};
+  finSetKpiVal('kpiTotal',      d.totalCartoes     != null ? d.totalCartoes                : '-');
+  finSetKpiVal('kpiAtivos',     d.cartoesAtivos    != null ? d.cartoesAtivos               : '-');
+  finSetKpiVal('kpiBloqueados', d.cartoesBloqueados != null ? d.cartoesBloqueados          : '-');
+  finSetKpiVal('kpiRecargado',  d.valorRecargas    != null ? finMoeda(d.valorRecargas)     : '-');
+  finSetKpiVal('kpiLancado',    d.valorLancamentos != null ? finMoeda(d.valorLancamentos)  : '-');
+  var totalPend = Number(d.pendentesComprovante || 0) + Number(d.pendentesJustificativa || 0);
+  finSetKpiVal('kpiPendencias', d.pendentesComprovante != null ? totalPend : '-');
+  if (totalPend > 0) {
+    var b = document.getElementById('tabBadgePend');
+    b.textContent = totalPend;
+    b.style.display = 'inline-block';
+  }
+}
+
+function finSetKpiVal(id, v) {
+  var el = document.getElementById(id);
+  if (el) { el.textContent = v; }
+}
+
+// ---- lista de cartoes ----
+
+function finCarregarCartoes() {
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        _finCartoes = r.items || [];
+        _finFiltrados = _finCartoes.slice();
+        finRenderCartoes(_finFiltrados);
+        finPopularSeletores(_finCartoes);
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao carregar cartoes.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao carregar cartoes: ' + (e.message || e));
+    })
+    .finListarCartoes(_finSessao, {});
+}
+
+function finRenderCartoes(lista) {
+  var el = document.getElementById('finListaCartoes');
+  var ft = document.getElementById('finListaRodape');
+  if (!lista || lista.length === 0) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum cartao encontrado.</div>';
+    if (ft) { ft.textContent = '0 cartoes'; }
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i];
+    var dotCls = finDotClass(c.STATUS_CARTAO);
+    var selCls = c.ID === _finCartaoAtualId ? ' selected' : '';
+    html += '<div class="fin-list-item' + selCls + '" onclick="finSelecionarCartao(\'' + finEA(c.ID) + '\')">';
+    html += '<div class="fin-item-name"><span class="fin-sdot ' + dotCls + '"></span>' + finEH(c.FUNCIONARIO_NOME || 'Sem nome') + '</div>';
+    html += '<div class="fin-item-sub">' + finEH(c.APELIDO_CARTAO || c.CARTAO_ID || '') + ' &bull; final ' + finEH(c.NUMERO_FINAL_4 || '????') + '</div>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+  if (ft) { ft.textContent = lista.length + (lista.length === 1 ? ' cartao' : ' cartoes'); }
+}
+
+function finSelecionarCartao(id) {
+  _finCartaoAtualId = id;
+  var cartao = finAcharCartao(id);
+  finRenderCartoes(_finFiltrados);
+  if (cartao) { finPreencherFormularioCartao(cartao); }
+}
+
+function finPreencherFormularioCartao(c) {
+  var statusPill = finPill(c.STATUS_CARTAO);
+  var podeBloquear   = c.STATUS_CARTAO === 'ATIVO';
+  var podeDesbloquear = c.STATUS_CARTAO === 'BLOQUEADO_TEMPORARIO';
+  var html = '';
+  html += '<div class="fin-card">';
+  html += '<h3>Dados do Cartao ' + statusPill + '</h3>';
+  html += '<div class="fin-grid2">';
+  html += finRoCampo('ID do Cartao', c.CARTAO_ID || '');
+  html += finRoCampo('Final do Cartao', c.NUMERO_FINAL_4 || '');
+  html += finRoCampo('Funcionario', c.FUNCIONARIO_NOME || '');
+  html += finRoCampo('ID Funcionario', c.FUNCIONARIO_ID || '');
+  html += finRoCampo('Apelido', c.APELIDO_CARTAO || '');
+  html += finRoCampo('Identificador', c.IDENTIFICADOR_CARTAO || '');
+  html += finRoCampo('Departamento', c.DEPARTAMENTO || '');
+  html += finRoCampo('Centro de Custo', c.CENTRO_CUSTO || '');
+  html += finRoCampo('Bandeira', c.BANDEIRA || '');
+  html += finRoCampo('Limite Operacional', c.LIMITE_OPERACIONAL ? finMoeda(c.LIMITE_OPERACIONAL) : '');
+  html += finRoCampo('Emissao', finDataBR(c.DATA_EMISSAO));
+  html += finRoCampo('Validade Cartao', finDataBR(c.DATA_VALIDADE_CARTAO));
+  html += '</div>';
+  if (podeDesbloquear && c.MOTIVO_BLOQUEIO) {
+    html += '<div class="fin-alert fin-alert-warning" style="margin-top:12px"><strong>Bloqueado:</strong> ' + finEH(c.MOTIVO_BLOQUEIO) + '</div>';
+  }
+  html += '<div class="fin-btn-row">';
+  html += '<button class="fin-btn fin-btn-primary" onclick="finAbrirEdicao()">Editar</button>';
+  if (podeBloquear) {
+    html += '<button class="fin-btn fin-btn-warning" onclick="finAbrirModalBloqueio()">Bloquear</button>';
+  }
+  if (podeDesbloquear) {
+    html += '<button class="fin-btn fin-btn-success" onclick="finDesbloquearCartaoSelecionado()">Desbloquear</button>';
+  }
+  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finVerRecargasCartao(\'' + finEA(c.ID) + '\',\'' + finEA(c.FUNCIONARIO_NOME || '') + '\')">Ver Recargas</button>';
+  html += '</div>';
+  html += '</div>';
+  document.getElementById('finPainelDir').innerHTML = html;
+}
+
+function finRoCampo(label, valor) {
+  return '<div class="fin-fg"><label class="fin-label">' + label + '</label>' +
+    '<input class="fin-input" type="text" value="' + finEA(valor) + '" readonly></div>';
+}
+
+// ---- novo cartao ----
+
+function finNovoCartao() {
+  _finCartaoAtualId = '';
+  finRenderCartoes(_finFiltrados);
+  var html = '';
+  html += '<div class="fin-card">';
+  html += '<h3>Novo Cartao Corporativo</h3>';
+  html += '<div class="fin-grid2">';
+  html += finEditCampo('FUNC_ID',    'ID Funcionario *',          'text',   '', 'ID do funcionario');
+  html += finEditCampo('FUNC_NOME',  'Nome Funcionario *',        'text',   '', 'Nome completo');
+  html += finEditCampo('NUM_FINAL4', 'Final do Cartao (4 dig.) *','text',   '', 'ex: 1234');
+  html += finEditCampo('APELIDO',    'Apelido do Cartao',         'text',   '', 'ex: Cartao Manutencao');
+  html += finEditCampo('IDENT',      'Identificador',             'text',   '', 'ex: 1234****5678');
+  html += finEditCampo('DEPTO',      'Departamento',              'text',   '', 'ex: Tecnico');
+  html += finEditCampo('CC',         'Centro de Custo',           'text',   '', 'ex: 001.MANUTENCAO');
+  html += finSelectBandeira('BANDEIRA');
+  html += finEditCampo('LIMITE',     'Limite Operacional (R$)',    'number', '', '0.00');
+  html += finEditCampo('DT_EMISSAO', 'Data Emissao',              'date',   '', '');
+  html += finEditCampo('DT_VENCTO',  'Data Validade Cartao',       'date',   '', '');
+  html += '<div class="fin-fg full"><label class="fin-label">Observacoes</label><textarea id="novo_OBS" class="fin-textarea" placeholder="Observacoes (opcional)"></textarea></div>';
+  html += '</div>';
+  html += '<div class="fin-btn-row">';
+  html += '<button class="fin-btn fin-btn-success" onclick="finSalvarCartao()">Criar Cartao</button>';
+  html += '<button class="fin-btn fin-btn-secondary" onclick="finCancelarPainel()">Cancelar</button>';
+  html += '</div>';
+  html += '</div>';
+  document.getElementById('finPainelDir').innerHTML = html;
+}
+
+function finEditCampo(id, label, tipo, valor, placeholder) {
+  return '<div class="fin-fg"><label class="fin-label">' + label + '</label>' +
+    '<input id="novo_' + id + '" class="fin-input" type="' + tipo + '" value="' + finEA(valor) + '" placeholder="' + finEA(placeholder) + '"></div>';
+}
+
+function finSelectBandeira(id) {
+  return '<div class="fin-fg"><label class="fin-label">Bandeira</label>' +
+    '<select id="novo_' + id + '" class="fin-select">' +
+    '<option value="">Selecione...</option>' +
+    '<option value="VISA">Visa</option>' +
+    '<option value="MASTERCARD">Mastercard</option>' +
+    '<option value="ELO">Elo</option>' +
+    '<option value="OUTRO">Outro</option>' +
+    '</select></div>';
+}
+
+function finSalvarCartao() {
+  var payload = {
+    FUNCIONARIO_ID:       finV('novo_FUNC_ID'),
+    FUNCIONARIO_NOME:     finV('novo_FUNC_NOME'),
+    NUMERO_FINAL_4:       finV('novo_NUM_FINAL4'),
+    APELIDO_CARTAO:       finV('novo_APELIDO'),
+    IDENTIFICADOR_CARTAO: finV('novo_IDENT'),
+    DEPARTAMENTO:         finV('novo_DEPTO'),
+    CENTRO_CUSTO:         finV('novo_CC'),
+    BANDEIRA:             finV('novo_BANDEIRA'),
+    LIMITE_OPERACIONAL:   parseFloat(finV('novo_LIMITE')) || 0,
+    DATA_EMISSAO:         finV('novo_DT_EMISSAO'),
+    DATA_VALIDADE_CARTAO: finV('novo_DT_VENCTO'),
+    OBSERVACOES:          finV('novo_OBS')
+  };
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Cartao criado com sucesso!');
+        finCarregarCartoes();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao criar cartao.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao criar cartao: ' + (e.message || e));
+    })
+    .finCriarCartao(_finSessao, payload);
+}
+
+// ---- edicao de cartao ----
+
+function finAbrirEdicao() {
+  var c = finAcharCartao(_finCartaoAtualId);
+  if (!c) { return; }
+  var html = '';
+  html += '<div class="fin-card">';
+  html += '<h3>Editar Cartao</h3>';
+  html += '<div class="fin-grid2">';
+  html += finRoCampo('ID do Cartao', c.CARTAO_ID || '');
+  html += finRoCampo('Final do Cartao', c.NUMERO_FINAL_4 || '');
+  html += '<div class="fin-fg"><label class="fin-label">Apelido do Cartao</label><input id="edit_APELIDO" class="fin-input" type="text" value="' + finEA(c.APELIDO_CARTAO || '') + '"></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Identificador</label><input id="edit_IDENT" class="fin-input" type="text" value="' + finEA(c.IDENTIFICADOR_CARTAO || '') + '"></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Departamento</label><input id="edit_DEPTO" class="fin-input" type="text" value="' + finEA(c.DEPARTAMENTO || '') + '"></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Centro de Custo</label><input id="edit_CC" class="fin-input" type="text" value="' + finEA(c.CENTRO_CUSTO || '') + '"></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Limite Operacional (R$)</label><input id="edit_LIMITE" class="fin-input" type="number" min="0" step="0.01" value="' + finEA(c.LIMITE_OPERACIONAL || '') + '"></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Data Validade Cartao</label><input id="edit_DT_VENCTO" class="fin-input" type="date" value="' + finEA(finDataInput(c.DATA_VALIDADE_CARTAO)) + '"></div>';
+  html += '<div class="fin-fg full"><label class="fin-label">Observacoes</label><textarea id="edit_OBS" class="fin-textarea">' + finEH(c.OBSERVACOES || '') + '</textarea></div>';
+  html += '</div>';
+  html += '<div class="fin-btn-row">';
+  html += '<button class="fin-btn fin-btn-primary" onclick="finAtualizarCartaoSelecionado()">Salvar Alteracoes</button>';
+  html += '<button class="fin-btn fin-btn-secondary" onclick="finSelecionarCartao(\'' + finEA(_finCartaoAtualId) + '\')">Cancelar</button>';
+  html += '</div>';
+  html += '</div>';
+  document.getElementById('finPainelDir').innerHTML = html;
+}
+
+function finAtualizarCartaoSelecionado() {
+  var patch = {
+    APELIDO_CARTAO:       finV('edit_APELIDO'),
+    IDENTIFICADOR_CARTAO: finV('edit_IDENT'),
+    DEPARTAMENTO:         finV('edit_DEPTO'),
+    CENTRO_CUSTO:         finV('edit_CC'),
+    LIMITE_OPERACIONAL:   parseFloat(finV('edit_LIMITE')) || 0,
+    DATA_VALIDADE_CARTAO: finV('edit_DT_VENCTO'),
+    OBSERVACOES:          finV('edit_OBS')
+  };
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Cartao atualizado!');
+        finCarregarCartoes();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao atualizar.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao atualizar: ' + (e.message || e));
+    })
+    .finAtualizarCartao(_finSessao, _finCartaoAtualId, patch);
+}
+
+function finCancelarPainel() {
+  _finCartaoAtualId = '';
+  document.getElementById('finPainelDir').innerHTML =
+    '<div class="fin-empty-state"><p>Selecione um cartao ou crie um novo.</p></div>';
+}
+
+// ---- bloqueio / desbloqueio ----
+
+function finAbrirModalBloqueio() {
+  document.getElementById('finMotivoBloqueio').value = '';
+  document.getElementById('finModalBloqueio').classList.add('open');
+}
+
+function finFecharModalBloqueio() {
+  document.getElementById('finModalBloqueio').classList.remove('open');
+}
+
+function finConfirmarBloqueio() {
+  var motivo = document.getElementById('finMotivoBloqueio').value.trim();
+  if (!motivo) { finMostrarErro('Informe o motivo do bloqueio.'); return; }
+  finFecharModalBloqueio();
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Cartao bloqueado.');
+        finCarregarCartoes();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao bloquear.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao bloquear: ' + (e.message || e));
+    })
+    .finBloquearCartao(_finSessao, _finCartaoAtualId, motivo);
+}
+
+function finDesbloquearCartaoSelecionado() {
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Cartao desbloqueado.');
+        finCarregarCartoes();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao desbloquear.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao desbloquear: ' + (e.message || e));
+    })
+    .finDesbloquearCartao(_finSessao, _finCartaoAtualId);
+}
+
+// ---- seletores de cartao (recargas / lancamentos) ----
+
+function finPopularSeletores(lista) {
+  var opts = '<option value="">Selecione um cartao...</option>';
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i];
+    opts += '<option value="' + finEA(c.ID) + '">' +
+      finEH(c.FUNCIONARIO_NOME || '') + ' - final ' + finEH(c.NUMERO_FINAL_4 || '????') +
+      '</option>';
+  }
+  var sr = document.getElementById('finSelCartaoRec');
+  var sl = document.getElementById('finSelCartaoLanc');
+  if (sr) { sr.innerHTML = opts; }
+  if (sl) { sl.innerHTML = opts; }
+}
+
+// ---- recargas ----
+
+function finVerRecargasCartao(id, nome) {
+  finMudarAba('recargas');
+  var sel = document.getElementById('finSelCartaoRec');
+  if (sel) { sel.value = id; }
+  var cartao = finAcharCartao(id);
+  finCarregarRecargas(id, cartao);
+}
+
+function finOnCartaoRecChange() {
+  var id = document.getElementById('finSelCartaoRec').value;
+  if (!id) {
+    document.getElementById('finTblRecargas').innerHTML = '<div class="fin-list-empty">Selecione um cartao acima.</div>';
+    document.getElementById('finFormRecCard').style.display = 'none';
+    return;
+  }
+  var cartao = finAcharCartao(id);
+  finCarregarRecargas(id, cartao);
+}
+
+function finCarregarRecargas(cartaoId, cartao) {
+  var tbl = document.getElementById('finTblRecargas');
+  var form = document.getElementById('finFormRecCard');
+  tbl.innerHTML = '<div class="fin-list-empty">Carregando recargas...</div>';
+  if (cartao && form) {
+    document.getElementById('recCartaoId').value = cartaoId;
+    document.getElementById('recCartaoNome').value = cartao.FUNCIONARIO_NOME || '';
+    form.style.display = 'block';
+  }
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        tbl.innerHTML = '<div class="fin-list-empty">Erro ao carregar recargas.</div>';
+        return;
+      }
+      var lista = r.items || [];
+      if (lista.length === 0) {
+        tbl.innerHTML = '<div class="fin-list-empty">Nenhuma recarga registrada para este cartao.</div>';
+        return;
+      }
+      var html = '<div class="fin-table-wrap"><table class="fin-table">';
+      html += '<thead><tr><th>ID Recarga</th><th>Data</th><th>Valor</th><th>Tipo</th><th>Status</th><th>Registrado por</th></tr></thead><tbody>';
+      for (var i = 0; i < lista.length; i++) {
+        var rec = lista[i];
+        html += '<tr>';
+        html += '<td>' + finEH(rec.RECARGA_ID || rec.ID || '') + '</td>';
+        html += '<td>' + finEH(finDataBR(rec.DATA_RECARGA)) + '</td>';
+        html += '<td><strong>' + finMoeda(rec.VALOR) + '</strong></td>';
+        html += '<td>' + finEH(rec.TIPO_RECARGA || '') + '</td>';
+        html += '<td>' + finPill(rec.STATUS_RECARGA) + '</td>';
+        html += '<td>' + finEH(rec.REGISTRADO_POR_NOME || '') + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+      tbl.innerHTML = html;
+    })
+    .withFailureHandler(function(e) {
+      tbl.innerHTML = '<div class="fin-list-empty">Falha: ' + finEH(e.message || '') + '</div>';
+    })
+    .finListarRecargas(_finSessao, { cartaoId: cartaoId });
+}
+
+function finSalvarRecarga() {
+  var cartaoId = document.getElementById('recCartaoId').value;
+  var valor = parseFloat(document.getElementById('recValor').value);
+  var data = document.getElementById('recData').value;
+  var tipo = document.getElementById('recTipo').value;
+  var obs  = document.getElementById('recObs').value;
+  if (!cartaoId || !valor || valor <= 0 || !data) {
+    finMostrarErro('Preencha: cartao, valor e data da recarga.');
+    return;
+  }
+  var payload = { CARTAO_ID: cartaoId, VALOR: valor, DATA_RECARGA: data, TIPO_RECARGA: tipo, OBSERVACOES: obs };
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Recarga registrada!');
+        document.getElementById('recValor').value = '';
+        document.getElementById('recData').value  = '';
+        document.getElementById('recObs').value   = '';
+        finCarregarRecargas(cartaoId, null);
+        finCarregarDashboard();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao registrar recarga.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao registrar recarga: ' + (e.message || e));
+    })
+    .finCriarRecarga(_finSessao, payload);
+}
+
+function finFecharFormRec() {
+  document.getElementById('finFormRecCard').style.display = 'none';
+  document.getElementById('finSelCartaoRec').value = '';
+  document.getElementById('finTblRecargas').innerHTML = '<div class="fin-list-empty">Selecione um cartao acima.</div>';
+}
+
+// ---- lancamentos ----
+
+function finOnCartaoLancChange() {
+  var id = document.getElementById('finSelCartaoLanc').value;
+  if (!id) {
+    document.getElementById('finTblLancamentos').innerHTML = '<div class="fin-list-empty">Selecione um cartao acima.</div>';
+    return;
+  }
+  finCarregarLancamentos(id);
+}
+
+function finCarregarLancamentos(cartaoId) {
+  var tbl = document.getElementById('finTblLancamentos');
+  tbl.innerHTML = '<div class="fin-list-empty">Carregando lancamentos...</div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        tbl.innerHTML = '<div class="fin-list-empty">Erro ao carregar lancamentos.</div>';
+        return;
+      }
+      var lista = r.items || [];
+      if (lista.length === 0) {
+        tbl.innerHTML = '<div class="fin-list-empty">Nenhum lancamento registrado para este cartao.</div>';
+        return;
+      }
+      var html = '<div class="fin-table-wrap"><table class="fin-table">';
+      html += '<thead><tr><th>ID</th><th>Data</th><th>Valor</th><th>Finalidade</th><th>OS</th><th>Comprovante</th><th>Prestacao</th></tr></thead><tbody>';
+      for (var i = 0; i < lista.length; i++) {
+        var l = lista[i];
+        html += '<tr>';
+        html += '<td>' + finEH(l.LANCAMENTO_ID || l.ID || '') + '</td>';
+        html += '<td>' + finEH(finDataBR(l.DATA_GASTO)) + '</td>';
+        html += '<td><strong>' + finMoeda(l.VALOR) + '</strong></td>';
+        html += '<td>' + finEH(l.FINALIDADE || l.DESCRICAO_GASTO || '') + '</td>';
+        html += '<td>' + finEH(l.NUMERO_OS || '-') + '</td>';
+        html += '<td>' + (l.COMPROVANTE_OK === 'SIM'
+          ? '<span class="fin-pill fin-pill-green">Sim</span>'
+          : '<span class="fin-pill fin-pill-red">Nao</span>') + '</td>';
+        html += '<td>' + finPillPrestacao(l.STATUS_PRESTACAO) + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+      tbl.innerHTML = html;
+    })
+    .withFailureHandler(function(e) {
+      tbl.innerHTML = '<div class="fin-list-empty">Falha: ' + finEH(e.message || '') + '</div>';
+    })
+    .finListarLancamentos(_finSessao, { cartaoId: cartaoId });
+}
+
+// ---- navegacao de abas ----
+
+function finMudarAba(aba) {
+  var mapa = ['cartoes', 'recargas', 'lancamentos', 'pendencias', 'documentos'];
+  var ids  = ['tabCartoes', 'tabRecargas', 'tabLancamentos', 'tabPendencias', 'tabDocumentos'];
+  for (var i = 0; i < ids.length; i++) {
+    var c = document.getElementById(ids[i]);
+    if (c) { c.classList.remove('active'); }
+  }
+  var idx = mapa.indexOf(aba);
+  if (idx >= 0) {
+    var alvo = document.getElementById(ids[idx]);
+    if (alvo) { alvo.classList.add('active'); }
+  }
+  var btns = document.querySelectorAll('.fin-tab-btn');
+  for (var j = 0; j < btns.length; j++) { btns[j].classList.remove('active'); }
+  if (idx >= 0 && btns[idx]) { btns[idx].classList.add('active'); }
+}
+
+// ---- filtro da lista ----
+
+function finFiltrarCartoes() {
+  var busca  = (document.getElementById('finBuscaCartao').value || '').toLowerCase();
+  var status = document.getElementById('finFiltroStatus').value;
+  _finFiltrados = _finCartoes.filter(function(c) {
+    var mB = !busca ||
+      (c.FUNCIONARIO_NOME && c.FUNCIONARIO_NOME.toLowerCase().indexOf(busca) >= 0) ||
+      (c.NUMERO_FINAL_4   && c.NUMERO_FINAL_4.indexOf(busca) >= 0) ||
+      (c.APELIDO_CARTAO   && c.APELIDO_CARTAO.toLowerCase().indexOf(busca) >= 0);
+    var mS = !status || c.STATUS_CARTAO === status;
+    return mB && mS;
+  });
+  finRenderCartoes(_finFiltrados);
+}
+
+// ---- toast / loading ----
+
+function finMostrarErro(msg) {
+  finToast(msg, 'error');
+}
+
+function finMostrarSucesso(msg) {
+  finToast(msg, 'success');
+}
+
+function finToast(msg, tipo) {
+  var el = document.getElementById('finToast');
+  el.textContent = msg;
+  el.className = 'fin-toast ' + tipo + ' show';
+  setTimeout(function() { el.classList.remove('show'); }, 4200);
+}
+
+function finSetLoading(show) {
+  var el = document.getElementById('finLoading');
+  if (show) { el.classList.add('show'); } else { el.classList.remove('show'); }
+}
+
+// ---- helpers internos ----
+
+function finAcharCartao(id) {
+  for (var i = 0; i < _finCartoes.length; i++) {
+    if (_finCartoes[i].ID === id) { return _finCartoes[i]; }
+  }
+  return null;
+}
+
+function finV(id) {
+  var el = document.getElementById(id);
+  if (!el) { return ''; }
+  return el.value ? el.value.trim() : '';
+}
+
+function finEH(s) {
+  if (s == null) { return ''; }
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function finEA(s) {
+  if (s == null) { return ''; }
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function finMoeda(v) {
+  var n = parseFloat(v);
+  if (isNaN(n)) { return 'R$ 0,00'; }
+  var parts = n.toFixed(2).split('.');
+  var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return 'R$ ' + intPart + ',' + parts[1];
+}
+
+function finDataBR(v) {
+  if (!v) { return ''; }
+  var s = String(v);
+  if (s.indexOf('T') >= 0) { s = s.split('T')[0]; }
+  var p = s.split('-');
+  if (p.length === 3) { return p[2] + '/' + p[1] + '/' + p[0]; }
+  return s;
+}
+
+function finDataInput(v) {
+  if (!v) { return ''; }
+  var s = String(v);
+  if (s.indexOf('T') >= 0) { s = s.split('T')[0]; }
+  return s;
+}
+
+function finDotClass(status) {
+  if (!status) { return 'pendente'; }
+  var s = status.toUpperCase();
+  if (s === 'ATIVO') { return 'ativo'; }
+  if (s === 'BLOQUEADO_TEMPORARIO') { return 'bloq'; }
+  if (s === 'CANCELADO' || s === 'VENCIDO') { return 'cancelado'; }
+  return 'pendente';
+}
+
+function finPill(status) {
+  if (!status) { return '<span class="fin-pill fin-pill-gray">-</span>'; }
+  var s = status.toUpperCase();
+  if (s === 'ATIVO' || s === 'PROCESSADA' || s === 'APROVADO') {
+    return '<span class="fin-pill fin-pill-green">' + finEH(status) + '</span>';
+  }
+  if (s === 'BLOQUEADO_TEMPORARIO' || s === 'PENDENTE' || s === 'PENDENTE_ATIVACAO') {
+    return '<span class="fin-pill fin-pill-yellow">' + finEH(status) + '</span>';
+  }
+  if (s === 'CANCELADO' || s === 'REPROVADO' || s === 'VENCIDO') {
+    return '<span class="fin-pill fin-pill-red">' + finEH(status) + '</span>';
+  }
+  return '<span class="fin-pill fin-pill-gray">' + finEH(status) + '</span>';
+}
+
+function finPillPrestacao(status) {
+  if (!status) { return '<span class="fin-pill fin-pill-gray">-</span>'; }
+  var s = status.toUpperCase();
+  if (s === 'APROVADO')              { return '<span class="fin-pill fin-pill-green">Aprovado</span>'; }
+  if (s === 'REPROVADO')             { return '<span class="fin-pill fin-pill-red">Reprovado</span>'; }
+  if (s === 'ENVIADO')               { return '<span class="fin-pill fin-pill-blue">Enviado</span>'; }
+  if (s === 'PENDENTE_COMPROVANTE')  { return '<span class="fin-pill fin-pill-yellow">Pend. Comprovante</span>'; }
+  if (s === 'PENDENTE_JUSTIFICATIVA'){ return '<span class="fin-pill fin-pill-yellow">Pend. Justificativa</span>'; }
+  return '<span class="fin-pill fin-pill-gray">' + finEH(status) + '</span>';
+}
+</script>
+</body>
+</html>
