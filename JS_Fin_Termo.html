@@ -489,7 +489,7 @@
 </head>
 <body>
   <script>
-    var FIN_TERMO_TOKEN = "<?= TERMO_TOKEN ?>";
+    var FIN_TERMO_TOKEN = <?!= TERMO_TOKEN_JSON ?> || "";
   </script>
 
   <div class="finTermoLoading" id="finTermoLoading">Processando...</div>
@@ -569,7 +569,6 @@
     window.addEventListener("load", finTermoInit);
 
     function finTermoInit() {
-      finTermoEstado.token = finTermoObterToken();
       finTermoPrepararCanvas();
       document.getElementById("finTermoBtnLimpar").addEventListener("click", finTermoLimparAssinatura);
       document.getElementById("finTermoAceite").addEventListener("change", finTermoAtualizarBotaoAssinar);
@@ -579,8 +578,16 @@
       document.getElementById("finTermoBtnPdf").addEventListener("click", finTermoAbrirPdf);
       document.getElementById("finTermoBtnWhats").addEventListener("click", finTermoEnviarWhatsapp);
 
+      finTermoEstado.token = finTermoObterToken();
       if (!finTermoEstado.token) {
-        finTermoRenderizarErro("Token do termo nao informado.");
+        finTermoObterTokenAppsScript_(function(token) {
+          finTermoEstado.token = String(token || "").trim();
+          if (!finTermoEstado.token) {
+            finTermoRenderizarErro("Token do termo nao informado. Verifique se a URL contem ?fin_termo=TOKEN.");
+            return;
+          }
+          finTermoCarregar();
+        });
         return;
       }
       finTermoCarregar();
@@ -594,6 +601,15 @@
         var params = new URLSearchParams(window.location.search || "");
         candidatos.push(params.get("fin_termo"));
       } catch (e3) {}
+      try {
+        candidatos.push(finTermoTokenPorBusca_(window.location.href || ""));
+      } catch (e4) {}
+      try {
+        candidatos.push(finTermoTokenPorBusca_(window.top.location.search || ""));
+      } catch (e5) {}
+      try {
+        candidatos.push(finTermoTokenPorBusca_(window.top.location.href || ""));
+      } catch (e6) {}
       for (var i = 0; i < candidatos.length; i++) {
         var t = String(candidatos[i] == null ? "" : candidatos[i]).trim();
         if (t && t.indexOf("<?") < 0 && t.indexOf("?>") < 0) return t;
@@ -601,9 +617,64 @@
       return "";
     }
 
+    function finTermoObterTokenAppsScript_(callback) {
+      if (!window.google || !google.script || !google.script.url || !google.script.url.getLocation) {
+        callback("");
+        return;
+      }
+      try {
+        google.script.url.getLocation(function(location) {
+          var token = "";
+          try {
+            if (location && location.parameter && location.parameter.fin_termo) {
+              token = location.parameter.fin_termo;
+            }
+          } catch (e) {}
+          try {
+            if (!token && location && location.parameters && location.parameters.fin_termo) {
+              var lista = location.parameters.fin_termo;
+              token = Array.isArray(lista) ? (lista[0] || "") : (lista || "");
+            }
+          } catch (e2) {}
+          try {
+            if (!token && location && location.hash) {
+              token = finTermoTokenPorBusca_(location.hash);
+            }
+          } catch (e3) {}
+          callback(token);
+        });
+      } catch (e4) {
+        callback("");
+      }
+    }
+
+    function finTermoTokenPorBusca_(valor) {
+      var texto = String(valor || "");
+      if (!texto) return "";
+      var busca = texto;
+      var idx = texto.indexOf("?");
+      if (idx >= 0) busca = texto.slice(idx + 1);
+      var hashIdx = busca.indexOf("#");
+      if (hashIdx >= 0) busca = busca.slice(0, hashIdx);
+      if (!busca) return "";
+      try {
+        var params = new URLSearchParams(busca);
+        return params.get("fin_termo") || "";
+      } catch (e) {
+        var partes = busca.split("&");
+        for (var i = 0; i < partes.length; i++) {
+          var par = partes[i].split("=");
+          if (decodeURIComponent(String(par[0] || "").replace(/\+/g, " ")) === "fin_termo") {
+            return decodeURIComponent(String(par.slice(1).join("=") || "").replace(/\+/g, " "));
+          }
+        }
+      }
+      return "";
+    }
+
     function finTermoCarregar() {
       if (!finTermoEstado.token) {
-        finTermoRenderizarErro("Token do termo nao informado.");
+        finTermoRenderizarErro("Token do termo nao informado. Verifique se a URL contem ?fin_termo=TOKEN.");
         return;
       }
       if (!window.google || !google.script || !google.script.run) {

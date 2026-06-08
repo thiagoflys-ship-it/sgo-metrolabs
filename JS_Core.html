@@ -638,7 +638,7 @@
       "documentos", "registros", "relatorios", "inventario", "importacao",
       "contratos", "os", "os_questionarios", "assistencia_tecnica", "missoes", "tecnicos", "pecas", "fornecedores",
       "estoque", "rastreabilidade", "frota", "admin", "autoclave",
-      "lavadora", "relatorio_conformidade", "planejamento_cme"
+      "lavadora", "relatorio_conformidade", "planejamento_cme", "fin_cartoes"
     ];
     if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) >= 0) return todos;
 
@@ -647,7 +647,7 @@
       TECNICO: ["dashboard", "equipamentos", "documentos", "registros", "os", "assistencia_tecnica", "missoes", "pecas", "rastreabilidade"],
       METROLOGIA: ["dashboard", "dashboard_bi", "equipamentos", "documentos", "registros", "relatorios", "os", "os_questionarios", "assistencia_tecnica", "missoes", "pecas", "rastreabilidade", "autoclave", "lavadora", "relatorio_conformidade"],
       COMERCIAL: ["dashboard", "clientes", "contratos", "relatorios", "dashboard_bi"],
-      FINANCEIRO: ["dashboard", "contratos", "os", "relatorios", "dashboard_bi"]
+      FINANCEIRO: ["dashboard", "contratos", "os", "relatorios", "dashboard_bi", "fin_cartoes"]
     };
     return mapa[perfil] || ["dashboard"];
   }
@@ -818,6 +818,12 @@
       return;
     }
 
+    if (mod === "fin_cartoes") {
+      renderFinCartoesModulo_();
+      atualizarBadgeModulo_("fin_cartoes");
+      return;
+    }
+
     if (mod === "documentos") {
       renderDocumentosModulo_();
       atualizarBadgeModulo_("documentos");
@@ -887,6 +893,30 @@
     }
 
     div.innerHTML = "<p>Módulo não encontrado.</p>";
+  }
+
+  function renderFinCartoesModulo_() {
+    const div = document.getElementById("conteudo");
+    const tpl = document.getElementById("tplFinCartoesModulo");
+    if (!div || !tpl) return;
+    const doc = new DOMParser().parseFromString(tpl.innerHTML || "", "text/html");
+    const scripts = Array.prototype.slice.call(doc.querySelectorAll("script"));
+    scripts.forEach(function(script) {
+      if (script.parentNode) script.parentNode.removeChild(script);
+    });
+    const estilos = Array.prototype.map.call(doc.querySelectorAll("style"), function(style) {
+      return style.outerHTML;
+    }).join("");
+    div.innerHTML = '<div class="module-shell fin-cartoes-shell">' + estilos + doc.body.innerHTML + '</div>';
+    scripts.forEach(function(script) {
+      const ativo = document.createElement("script");
+      ativo.text = script.textContent || "";
+      document.body.appendChild(ativo);
+      document.body.removeChild(ativo);
+    });
+    if (typeof finCartoesInit === "function") {
+      finCartoesInit(SESSION);
+    }
   }
 
   function obterBadgeStatusHtml_(statusString) {
@@ -1368,6 +1398,7 @@
       missoes: "menu-btn-missoes",
       frota: "menu-btn-frota",
       dashboard_bi: "menu-btn-dashboard-bi",
+      fin_cartoes: "menu-btn-fin_cartoes",
       documentos: "menu-btn-documentos",
       admin: "menu-btn-admin",
       inventario: "menu-btn-inventario",

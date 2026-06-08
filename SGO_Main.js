@@ -9,6 +9,7 @@ function include(file) {
 function doGet(e) {
   try {
     const params = (e && e.parameter) ? e.parameter : {};
+    const finTermoReq = obterTokenFinTermoPublicoV1_(e, params);
 
     // Rota pública de validação documental — ?validar=TOKEN
     if (params.validar) {
@@ -23,8 +24,8 @@ function doGet(e) {
         .addMetaTag("viewport", "width=device-width, initial-scale=1");
     }
 
-    if (params.fin_termo !== undefined) {
-      return renderPublicFinTermoV1_(params.fin_termo);
+    if (finTermoReq.presente) {
+      return renderPublicFinTermoV1_(finTermoReq.token);
     }
 
     if (params.os) {
@@ -59,9 +60,45 @@ function doGet(e) {
   }
 }
 
+function obterTokenFinTermoPublicoV1_(e, params) {
+  const resultado = { presente: false, token: "" };
+  const p = params || {};
+
+  if (p.fin_termo !== undefined) {
+    resultado.presente = true;
+    resultado.token = String(p.fin_termo || "").trim();
+    return resultado;
+  }
+
+  if (e && e.parameters && e.parameters.fin_termo !== undefined) {
+    resultado.presente = true;
+    const lista = e.parameters.fin_termo;
+    resultado.token = String(Array.isArray(lista) ? (lista[0] || "") : (lista || "")).trim();
+    return resultado;
+  }
+
+  const query = String((e && e.queryString) ? e.queryString : "");
+  if (query) {
+    const partes = query.split("&");
+    for (let i = 0; i < partes.length; i++) {
+      const par = partes[i].split("=");
+      const chave = decodeURIComponent(String(par[0] || "").replace(/\+/g, " "));
+      if (chave === "fin_termo") {
+        resultado.presente = true;
+        resultado.token = decodeURIComponent(String(par.slice(1).join("=") || "").replace(/\+/g, " ")).trim();
+        return resultado;
+      }
+    }
+  }
+
+  return resultado;
+}
+
 function renderPublicFinTermoV1_(token) {
   const template = HtmlService.createTemplateFromFile("JS_Fin_Termo");
-  template.TERMO_TOKEN = String(token || "").trim();
+  const tokenSeguro = String(token || "").trim();
+  template.TERMO_TOKEN = tokenSeguro;
+  template.TERMO_TOKEN_JSON = JSON.stringify(tokenSeguro);
   return template
     .evaluate()
     .setTitle("Termo Online - Cartao Flash")

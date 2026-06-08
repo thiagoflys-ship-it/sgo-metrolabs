@@ -173,6 +173,9 @@
         <!-- SUPRIMENTOS & LOGÍSTICA -->
         <div class="sidebar-section">
           <div class="sidebar-section-title">SUPRIMENTOS &amp; LOGÍSTICA</div>
+          <button type="button" class="menu-btn" id="menu-btn-fin_cartoes" onclick="abrir('fin_cartoes')">
+            <i class="fas fa-credit-card"></i><span>Financeiro / Cartoes</span>
+          </button>
           <button type="button" class="menu-btn" id="menu-btn-pecas" onclick="abrir('pecas')">
             <i class="fas fa-screwdriver-wrench"></i><span>Peças / Subconjuntos</span>
           </button>
@@ -241,6 +244,7 @@
 <?!= include('JS_Relatorios'); ?>
 <?!= include('JS_Tecnicos'); ?>
 <?!= include('JS_Importacao'); ?>
+<template id="tplFinCartoesModulo"><?!= include('JS_Fin_Cartoes'); ?></template>
 
   <script>
     // Atualização interna dos dados do SGO+

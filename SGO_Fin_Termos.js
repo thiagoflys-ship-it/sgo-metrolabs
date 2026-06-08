@@ -73,14 +73,80 @@ const SGO_FIN_TERMOS = (() => {
     return dbId;
   }
 
+  function finSheet_(aba) {
+    const nomeAba = finSafeText_(aba);
+    if (!nomeAba) throw new Error("Aba FIN nao informada.");
+    const ss = SpreadsheetApp.openById(finDbOk_());
+    const sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) throw new Error("Aba FIN nao encontrada: " + nomeAba + ".");
+    return sheet;
+  }
+
+  function finHeaders_(aba) {
+    const sheet = finSheet_(aba);
+    const lastCol = sheet.getLastColumn();
+    if (lastCol < 1) throw new Error("Aba FIN sem cabecalho: " + aba + ".");
+    return sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+      return finSafeText_(h);
+    });
+  }
+
+  function finValorSaida_(valor) {
+    if (valor instanceof Date) {
+      if (typeof SGO_DATA !== "undefined" && SGO_DATA.formatDateForOutput_) {
+        return SGO_DATA.formatDateForOutput_(valor);
+      }
+      return valor.toISOString();
+    }
+    return valor;
+  }
+
+  function finNormalizarParaHeaders_(aba, obj, preencherTodos) {
+    const headers = finHeaders_(aba);
+    const origem = obj || {};
+    const saida = {};
+    if (preencherTodos) headers.forEach(function(h) { saida[h] = ""; });
+    Object.keys(origem).forEach(function(k) {
+      const chave = (typeof SGO_DATA !== "undefined" && SGO_DATA.normalizarChave_)
+        ? SGO_DATA.normalizarChave_(k)
+        : finSafeUpper_(k);
+      const alvo = headers.find(function(h) {
+        const hNorm = (typeof SGO_DATA !== "undefined" && SGO_DATA.normalizarChave_)
+          ? SGO_DATA.normalizarChave_(h)
+          : finSafeUpper_(h);
+        return hNorm === chave;
+      });
+      if (alvo) saida[alvo] = origem[k];
+    });
+    return saida;
+  }
+
   function finAll_(aba) {
-    finDbOk_();
-    return SGO_DATA.getAll(aba, DB) || [];
+    const sheet = finSheet_(aba);
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return [];
+    const dados = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = dados[0].map(function(h) { return finSafeText_(h); });
+    const lista = [];
+    for (let i = 1; i < dados.length; i++) {
+      const row = {};
+      let vazia = true;
+      for (let j = 0; j < headers.length; j++) {
+        const valor = finValorSaida_(dados[i][j]);
+        row[headers[j]] = valor;
+        if (valor !== "" && valor !== null && valor !== undefined) vazia = false;
+      }
+      if (!vazia) lista.push(row);
+    }
+    return lista;
   }
 
   function finGetById_(aba, id) {
-    finDbOk_();
-    return SGO_DATA.getById(aba, finSafeText_(id), DB) || null;
+    const alvo = finSafeText_(id);
+    return finAll_(aba).find(function(r) {
+      return finSafeText_(r.ID) === alvo;
+    }) || null;
   }
 
   function finFindBy_(aba, campo, valor) {
@@ -92,15 +158,41 @@ const SGO_FIN_TERMOS = (() => {
   }
 
   function finInsert_(aba, obj) {
-    finDbOk_();
-    return SGO_DATA.insert(aba, obj || {}, DB);
+    const sheet = finSheet_(aba);
+    const registro = Object.assign({}, obj || {});
+    if (!registro.ID) registro.ID = finUuid_();
+    if (!registro.CRIADO_EM) registro.CRIADO_EM = finNow_();
+    const normalizado = finNormalizarParaHeaders_(aba, registro, true);
+    const headers = finHeaders_(aba);
+    const row = headers.map(function(h) { return normalizado[h]; });
+    sheet.appendRow(row);
+    return normalizado;
   }
 
   function finUpdate_(aba, id, patch) {
-    finDbOk_();
-    const ok = SGO_DATA.update(aba, finSafeText_(id), patch || {}, DB);
-    if (!ok) throw new Error("Registro nao encontrado para atualizacao: " + id);
-    return SGO_DATA.getById(aba, finSafeText_(id), DB);
+    const sheet = finSheet_(aba);
+    const headers = finHeaders_(aba);
+    const alvo = finSafeText_(id);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    let rowIndex = -1;
+    for (let i = 0; i < ids.length; i++) {
+      if (finSafeText_(ids[i][0]) === alvo) {
+        rowIndex = i + 2;
+        break;
+      }
+    }
+    if (rowIndex < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    const atual = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+    const normalizado = finNormalizarParaHeaders_(aba, patch || {}, false);
+    const row = headers.map(function(h, idx) {
+      return Object.prototype.hasOwnProperty.call(normalizado, h)
+        ? normalizado[h]
+        : atual[idx];
+    });
+    sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+    return finGetById_(aba, id);
   }
 
   function finSessao_(sessionId) {
