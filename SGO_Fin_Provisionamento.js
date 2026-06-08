@@ -15,9 +15,12 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
   const TEXTO_AUTORIZACAO_URL = "CONFIGURAR_URL_WEBAPP_FINANCEIRO_SGO_2026";
   const TEXTO_AUTORIZACAO_URL_AUTO = "ATUALIZAR_URL_WEBAPP_FINANCEIRO_SGO_2026";
   const TEXTO_AUTORIZACAO_TERMO_TESTE = "CRIAR_TERMO_FINANCEIRO_TESTE_SGO_2026";
+  const TEXTO_AUTORIZACAO_POLITICA_FLASH = "CADASTRAR_POLITICA_CARTAO_FLASH_SGO_2026";
   const MODO_CONFIGURAR_URL = "CONFIGURAR_URL_WEBAPP_FIN_V2";
   const MODO_ATUALIZAR_URL = "ATUALIZAR_URL_WEBAPP_FIN_V2";
   const MODO_TERMO_TESTE = "CRIAR_TERMO_FINANCEIRO_TESTE_V2";
+  const MODO_POLITICA_FLASH = "CADASTRAR_POLITICA_CARTAO_FLASH_V1";
+  const MODO_AUDITORIA_POLITICA_FLASH = "AUDITORIA_POLITICA_CARTAO_FLASH_V1";
   const DB_FIN_ID_ESPERADO = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
   const MODO_AUDITORIA_SETUP = "AUDITORIA_SETUP_FIN_V2";
   const MODO_AUDITORIA_ASSINATURA = "AUDITORIA_ASSINATURA_FIN_V2";
@@ -40,6 +43,25 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     FIN_CARTOES_POLITICA: 20,
     FIN_CARTOES_LOGS: 17,
     FIN_CARTOES_CONFIG: 11
+  };
+  const HEADERS_POLITICA_FLASH = [
+    "ID", "POLITICA_ID", "TIPO_DOCUMENTO", "VERSAO", "TITULO",
+    "CONTEUDO_HTML", "CONTEUDO_RESUMIDO",
+    "DATA_VIGENCIA_INICIO", "DATA_VIGENCIA_FIM",
+    "ELABORADO_POR", "APROVADO_POR", "DATA_APROVACAO",
+    "FILE_ID", "LINK_ARQUIVO", "TOKEN_VALIDACAO", "HASH_CONTEUDO",
+    "TOTAL_ACEITES",
+    "STATUS", "CRIADO_EM", "CRIADO_POR"
+  ];
+  const POLITICA_FLASH_PADRAO = {
+    TIPO_DOCUMENTO: "FIN_POLITICA_CARTAO_FLASH",
+    VERSAO: "FIN-POL-CARTAO-FLASH-2026-01",
+    TITULO: "Politica de Uso do Cartao Corporativo Flash - Metrolabs",
+    CONTEUDO_RESUMIDO: "O cartao corporativo Flash e instrumento de trabalho disponibilizado pela Metrolabs para despesas profissionais autorizadas. O colaborador deve utilizar o cartao exclusivamente para finalidades vinculadas as atividades da empresa, manter comprovantes legiveis, prestar contas nos prazos definidos, justificar despesas sem OS quando aplicavel e comunicar imediatamente perda, roubo, uso indevido ou inconsistencias. E proibido uso pessoal, saque nao autorizado, compartilhamento do cartao e qualquer despesa sem finalidade profissional comprovavel. Pendencias, ausencia de comprovacao, fraude ou uso indevido podem gerar bloqueio, apuracao interna, ressarcimento quando legalmente permitido e medidas disciplinares conforme politica interna e legislacao vigente.",
+    ELABORADO_POR: "Metrolabs",
+    APROVADO_POR: "Diretoria",
+    STATUS: "ATIVO",
+    CRIADO_POR: "SISTEMA_FIN_POLITICA_AUTORIZADA"
   };
 
   function texto_(v) {
@@ -494,6 +516,27 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     }) || null;
   }
 
+  function linhasAbaComNumero_(ss, nomeAba) {
+    const sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) return [];
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return [];
+    const valores = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = valores[0].map(function(h) {
+      return texto_(h);
+    });
+    const linhas = [];
+    for (let i = 1; i < valores.length; i++) {
+      const obj = { linha: i + 1 };
+      for (let j = 0; j < headers.length; j++) {
+        if (headers[j]) obj[headers[j]] = valores[i][j];
+      }
+      linhas.push(obj);
+    }
+    return linhas;
+  }
+
   function arquivoDriveResumo_(fileId) {
     const id = texto_(fileId);
     const r = {
@@ -517,6 +560,210 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
       r.erro = e.message;
     }
     return r;
+  }
+
+  function dataHojeScript_() {
+    const tz = Session.getScriptTimeZone() || "America/Sao_Paulo";
+    return Utilities.formatDate(new Date(), tz, "yyyy-MM-dd");
+  }
+
+  function agoraIso_() {
+    return new Date().toISOString();
+  }
+
+  function uuid_() {
+    return Utilities.getUuid();
+  }
+
+  function hashSha256Hex_(texto) {
+    const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, texto_(texto));
+    return bytes.map(function(b) {
+      const v = b < 0 ? b + 256 : b;
+      return ("0" + v.toString(16)).slice(-2);
+    }).join("");
+  }
+
+  function conteudoHtmlPoliticaFlash_(conteudoResumo) {
+    return "<h1>Politica de Uso do Cartao Corporativo Flash - Metrolabs</h1>" +
+      "<p>" + texto_(conteudoResumo) + "</p>";
+  }
+
+  function validarHeadersPolitica_(headers) {
+    const faltando = [];
+    HEADERS_POLITICA_FLASH.forEach(function(h) {
+      if (headers.indexOf(h) < 0) faltando.push(h);
+    });
+    return faltando;
+  }
+
+  function cadastrarPoliticaCartaoFlashV1_AUTORIZADO(payload) {
+    const bloqueios = [];
+    const avisos = [];
+    const p = payload || {};
+    const propriedades = lerPropriedades_();
+    let politicaId = "";
+    let linha = 0;
+    let hashConteudo = "";
+    let status = "";
+    let versao = POLITICA_FLASH_PADRAO.VERSAO;
+
+    if (p.executar !== true) {
+      bloqueios.push("Payload deve conter executar true.");
+    }
+    if (texto_(p.confirmacao) !== TEXTO_AUTORIZACAO_POLITICA_FLASH) {
+      bloqueios.push("Confirmacao invalida para cadastrar politica do Cartao Flash.");
+    }
+    if (!propriedades.DB_FIN_ID) {
+      bloqueios.push("DB_FIN_ID nao configurado.");
+    }
+
+    if (bloqueios.length === 0) {
+      try {
+        const ss = SpreadsheetApp.openById(propriedades.DB_FIN_ID);
+        const sheet = ss.getSheetByName("FIN_CARTOES_POLITICA");
+        if (!sheet) {
+          bloqueios.push("Aba FIN_CARTOES_POLITICA nao encontrada.");
+        } else {
+          const lastCol = sheet.getLastColumn();
+          const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+            return texto_(h);
+          }) : [];
+          const headersFaltando = validarHeadersPolitica_(headers);
+          if (headersFaltando.length > 0) {
+            bloqueios.push("Headers obrigatorios ausentes em FIN_CARTOES_POLITICA: " + headersFaltando.join(", "));
+          }
+
+          const linhas = linhasAba_(ss, "FIN_CARTOES_POLITICA");
+          const duplicada = linhas.some(function(item) {
+            return texto_(item.VERSAO) === POLITICA_FLASH_PADRAO.VERSAO &&
+              texto_(item.STATUS).toUpperCase() === "ATIVO";
+          });
+          if (duplicada) {
+            bloqueios.push("Ja existe politica ATIVO com a versao " + POLITICA_FLASH_PADRAO.VERSAO + ".");
+          }
+
+          if (bloqueios.length === 0) {
+            const dataHoje = dataHojeScript_();
+            const conteudoResumo = POLITICA_FLASH_PADRAO.CONTEUDO_RESUMIDO;
+            const conteudoHtml = conteudoHtmlPoliticaFlash_(conteudoResumo);
+            hashConteudo = hashSha256Hex_(conteudoResumo + POLITICA_FLASH_PADRAO.VERSAO + POLITICA_FLASH_PADRAO.TITULO);
+            politicaId = "POL-FLASH-" + dataHoje.replace(/-/g, "") + "-01";
+            status = POLITICA_FLASH_PADRAO.STATUS;
+            const registro = {
+              ID: uuid_(),
+              POLITICA_ID: politicaId,
+              TIPO_DOCUMENTO: POLITICA_FLASH_PADRAO.TIPO_DOCUMENTO,
+              VERSAO: POLITICA_FLASH_PADRAO.VERSAO,
+              TITULO: POLITICA_FLASH_PADRAO.TITULO,
+              CONTEUDO_HTML: conteudoHtml,
+              CONTEUDO_RESUMIDO: conteudoResumo,
+              DATA_VIGENCIA_INICIO: dataHoje,
+              DATA_VIGENCIA_FIM: "",
+              ELABORADO_POR: POLITICA_FLASH_PADRAO.ELABORADO_POR,
+              APROVADO_POR: POLITICA_FLASH_PADRAO.APROVADO_POR,
+              DATA_APROVACAO: dataHoje,
+              FILE_ID: "",
+              LINK_ARQUIVO: "",
+              TOKEN_VALIDACAO: "",
+              HASH_CONTEUDO: hashConteudo,
+              TOTAL_ACEITES: 0,
+              STATUS: status,
+              CRIADO_EM: agoraIso_(),
+              CRIADO_POR: POLITICA_FLASH_PADRAO.CRIADO_POR
+            };
+            const novaLinha = headers.map(function(h) {
+              return registro[h] !== undefined ? registro[h] : "";
+            });
+            sheet.appendRow(novaLinha);
+            linha = sheet.getLastRow();
+          }
+        }
+      } catch (e) {
+        bloqueios.push("Falha ao cadastrar politica do Cartao Flash: " + e.message);
+      }
+    }
+
+    const resultado = {
+      success: bloqueios.length === 0,
+      executado: bloqueios.length === 0,
+      modo: MODO_POLITICA_FLASH,
+      politicaId: politicaId,
+      versao: versao,
+      status: status,
+      linha: linha,
+      hashConteudo: hashConteudo,
+      bloqueios: bloqueios,
+      avisos: avisos
+    };
+    return resultado;
+  }
+
+  function resumoPolitica_(p) {
+    if (!p) return null;
+    return {
+      linha: p.linha || 0,
+      politicaId: texto_(p.POLITICA_ID),
+      versao: texto_(p.VERSAO),
+      titulo: texto_(p.TITULO),
+      status: texto_(p.STATUS),
+      dataVigenciaInicio: texto_(p.DATA_VIGENCIA_INICIO),
+      criadoEm: texto_(p.CRIADO_EM),
+      hashConteudo: texto_(p.HASH_CONTEUDO),
+      totalAceites: texto_(p.TOTAL_ACEITES)
+    };
+  }
+
+  function auditarPoliticaCartaoFlashV1() {
+    const bloqueios = [];
+    const avisos = [];
+    const propriedades = lerPropriedades_();
+    let politicasAtivas = [];
+    let politicaVigente = null;
+
+    if (!propriedades.DB_FIN_ID) {
+      bloqueios.push("DB_FIN_ID nao configurado.");
+    }
+
+    if (bloqueios.length === 0) {
+      try {
+        const ss = SpreadsheetApp.openById(propriedades.DB_FIN_ID);
+        const sheet = ss.getSheetByName("FIN_CARTOES_POLITICA");
+        if (!sheet) {
+          bloqueios.push("Aba FIN_CARTOES_POLITICA nao encontrada.");
+        } else {
+          const linhas = linhasAbaComNumero_(ss, "FIN_CARTOES_POLITICA");
+          politicasAtivas = linhas.filter(function(item) {
+            return texto_(item.STATUS).toUpperCase() === "ATIVO";
+          }).sort(function(a, b) {
+            return texto_(b.DATA_VIGENCIA_INICIO || b.CRIADO_EM).localeCompare(texto_(a.DATA_VIGENCIA_INICIO || a.CRIADO_EM));
+          });
+          politicaVigente = politicasAtivas.length ? politicasAtivas[0] : null;
+          if (!politicaVigente) {
+            avisos.push("Nenhuma politica ATIVO encontrada. O fallback PADRAO-FIN-4 ainda seria usado.");
+          }
+        }
+      } catch (e) {
+        bloqueios.push("Falha na auditoria da politica do Cartao Flash: " + e.message);
+      }
+    }
+
+    const resumoVigente = resumoPolitica_(politicaVigente);
+    const resultado = {
+      success: bloqueios.length === 0,
+      executado: false,
+      modo: MODO_AUDITORIA_POLITICA_FLASH,
+      politicasAtivas: politicasAtivas.map(resumoPolitica_),
+      politicaVigenteId: resumoVigente ? resumoVigente.politicaId : "",
+      versaoVigente: resumoVigente ? resumoVigente.versao : "",
+      statusVigente: resumoVigente ? resumoVigente.status : "",
+      linhaVigente: resumoVigente ? resumoVigente.linha : 0,
+      hashConteudo: resumoVigente ? resumoVigente.hashConteudo : "",
+      fallbackPadraoFin4SeraUsado: !resumoVigente,
+      bloqueios: bloqueios,
+      avisos: avisos
+    };
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
   }
 
   function auditarAssinaturaFinanceiraTesteV2() {
@@ -868,6 +1115,8 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     provisionarAmbienteFinanceiroV2_AUTORIZADO: provisionarAmbienteFinanceiroV2_AUTORIZADO,
     auditarSetupFinanceiroV2: auditarSetupFinanceiroV2,
     auditarAssinaturaFinanceiraTesteV2: auditarAssinaturaFinanceiraTesteV2,
+    auditarPoliticaCartaoFlashV1: auditarPoliticaCartaoFlashV1,
+    cadastrarPoliticaCartaoFlashV1_AUTORIZADO: cadastrarPoliticaCartaoFlashV1_AUTORIZADO,
     configurarUrlWebAppFinanceiroV2_AUTORIZADO: configurarUrlWebAppFinanceiroV2_AUTORIZADO,
     atualizarUrlWebAppFinanceiroV2_AUTORIZADO: atualizarUrlWebAppFinanceiroV2_AUTORIZADO,
     criarTermoFinanceiroTesteV2_AUTORIZADO: criarTermoFinanceiroTesteV2_AUTORIZADO,
@@ -899,6 +1148,23 @@ function auditarSetupFinanceiroV2() {
 
 function auditarAssinaturaFinanceiraTesteV2() {
   return SGO_FIN_PROVISIONAMENTO.auditarAssinaturaFinanceiraTesteV2();
+}
+
+function auditarPoliticaCartaoFlashV1() {
+  return SGO_FIN_PROVISIONAMENTO.auditarPoliticaCartaoFlashV1();
+}
+
+function cadastrarPoliticaCartaoFlashV1_AUTORIZADO(payload) {
+  return SGO_FIN_PROVISIONAMENTO.cadastrarPoliticaCartaoFlashV1_AUTORIZADO(payload);
+}
+
+function cadastrarPoliticaCartaoFlashV1_MANUAL_AUTORIZADO() {
+  var resultado = cadastrarPoliticaCartaoFlashV1_AUTORIZADO({
+    executar: true,
+    confirmacao: "CADASTRAR_POLITICA_CARTAO_FLASH_SGO_2026"
+  });
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
 }
 
 function configurarUrlWebAppFinanceiroV2_AUTORIZADO(payload) {
