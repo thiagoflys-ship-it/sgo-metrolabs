@@ -17,6 +17,8 @@
     .fin-badge-implantacao { background: #ffc107; color: #333; }
     .fin-badge-db { background: rgba(220,53,69,0.85); color: #fff; transition: background 0.3s; }
     .fin-badge-db.ok { background: rgba(40,167,69,0.85); }
+    .fin-btn-manual { background: rgba(255,255,255,0.13); color: #fff; border: 1px solid rgba(255,255,255,0.42); }
+    .fin-btn-manual:hover { background: rgba(255,255,255,0.24); }
 
     .fin-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 14px 24px; }
     @media (max-width: 1100px) { .fin-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -116,12 +118,44 @@
     .fin-alert-info    { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
     .fin-alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .fin-alert-danger  { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .fin-flash-upload-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .fin-flash-upload-head h3 { margin-bottom: 6px; }
+    .fin-flash-upload-head p { color: #666; font-size: 13px; line-height: 1.45; margin-bottom: 8px; }
+    .fin-flash-badge { display: inline-block; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 12px; padding: 3px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .fin-flash-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+    .fin-flash-file { max-width: 420px; }
+    .fin-flash-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+    .fin-flash-summary-card { border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 12px; background: #fafbfc; min-width: 0; }
+    .fin-flash-summary-card .label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+    .fin-flash-summary-card .value { margin-top: 4px; color: #0f2d52; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+    .fin-flash-preview-foot { color: #777; font-size: 12px; margin-top: 10px; line-height: 1.45; }
+    @media (max-width: 980px) { .fin-flash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) { .fin-flash-summary { grid-template-columns: 1fr; } .fin-flash-file { max-width: 100%; } }
 
     .fin-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.48); display: none; align-items: center; justify-content: center; z-index: 1000; }
     .fin-modal-overlay.open { display: flex; }
     .fin-modal { background: #fff; border-radius: 10px; padding: 22px 24px; width: 420px; max-width: 95vw; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
     .fin-modal h3 { font-size: 15px; color: #0f2d52; margin-bottom: 14px; }
     .fin-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+    .fin-manual-modal { width: 980px; max-height: 88vh; overflow: hidden; display: flex; flex-direction: column; padding: 0; }
+    .fin-manual-head { padding: 18px 22px; background: #0f2d52; color: #fff; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    .fin-manual-head h3 { color: #fff; margin: 0 0 4px; font-size: 18px; }
+    .fin-manual-head p { color: rgba(255,255,255,0.78); font-size: 13px; line-height: 1.45; }
+    .fin-manual-body { padding: 18px 22px; overflow-y: auto; }
+    .fin-manual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .fin-manual-section { border: 1px solid #e9ecef; border-radius: 8px; padding: 14px 16px; background: #fff; }
+    .fin-manual-section.full { grid-column: 1 / -1; }
+    .fin-manual-section h4 { color: #0f2d52; font-size: 14px; margin-bottom: 8px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+    .fin-manual-section p { color: #666; line-height: 1.5; margin-bottom: 8px; }
+    .fin-manual-section ul { margin-left: 18px; color: #555; line-height: 1.5; }
+    .fin-manual-section li { margin-bottom: 5px; }
+    .fin-manual-badge { display: inline-block; border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.2px; }
+    .fin-manual-badge.atual { background: #d4edda; color: #155724; }
+    .fin-manual-badge.futuro { background: #cce5ff; color: #004085; }
+    .fin-manual-badge.financeiro { background: #e2d9f3; color: #4a235a; }
+    .fin-manual-badge.funcionario { background: #fff3cd; color: #856404; }
+    .fin-manual-close { white-space: nowrap; }
+    @media (max-width: 780px) { .fin-manual-grid { grid-template-columns: 1fr; } .fin-manual-section.full { grid-column: auto; } .fin-manual-head { flex-direction: column; } }
 
     .fin-toast { position: fixed; bottom: 22px; right: 22px; padding: 11px 17px; border-radius: 8px; font-size: 13px; font-weight: 500; max-width: 360px; z-index: 2000; box-shadow: 0 4px 16px rgba(0,0,0,0.14); transform: translateY(80px); opacity: 0; transition: transform 0.28s, opacity 0.28s; pointer-events: none; }
     .fin-toast.show { transform: translateY(0); opacity: 1; }
@@ -153,6 +187,7 @@
     <p>Controle e prestacao de contas do Cartao Flash</p>
   </div>
   <div class="fin-badges">
+    <button class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finAbrirManual()">Manual / Como usar</button>
     <span class="fin-badge fin-badge-version">FIN.3</span>
     <span class="fin-badge fin-badge-implantacao">Modulo em implantacao</span>
     <span id="finBadgeDb" class="fin-badge fin-badge-db">DB_FIN_ID necessario</span>
@@ -291,6 +326,24 @@
 <div id="tabLancamentos" class="fin-tab-content">
   <div class="fin-tab-inner">
     <div class="fin-card">
+      <div class="fin-flash-upload-head">
+        <div>
+          <h3>Importar extrato Flash <span class="fin-flash-badge">SEM GRAVAÇÃO</span></h3>
+          <p>Selecione o XLSX exportado do aplicativo Cartão Flash. Esta etapa gera apenas preview e não grava dados.</p>
+          <div class="fin-alert fin-alert-info">A IA não aprova sozinha. O financeiro sempre confirma.</div>
+          <div class="fin-alert fin-alert-warning">Preview somente: não grava banco, não concilia ainda e não aprova nada. A próxima fase será lote/importação controlada.</div>
+        </div>
+      </div>
+      <div class="fin-flash-actions">
+        <input id="finFlashXlsxFile" class="fin-input fin-flash-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Gerar preview</button>
+        <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
+      </div>
+      <div id="finFlashPreviewStatus"></div>
+      <div id="finFlashPreviewResumo"></div>
+      <div id="finFlashPreviewTabela"></div>
+    </div>
+    <div class="fin-card">
       <h3>Lancamentos / Prestacao de Contas</h3>
       <div style="margin-bottom:12px">
         <label class="fin-label">Selecionar Cartao</label>
@@ -321,6 +374,96 @@
   </div>
 </div>
 
+<!-- Modal: Manual interno -->
+<div id="finManualOverlay" class="fin-modal-overlay" onclick="finFecharManualFundo(event)">
+  <div class="fin-modal fin-manual-modal">
+    <div class="fin-manual-head">
+      <div>
+        <h3>Manual / Como usar</h3>
+        <p>Guia interno do Cartao Flash para funcionario, financeiro e gestao. Este manual orienta o uso do modulo sem executar nenhuma acao automatica.</p>
+      </div>
+      <button class="fin-btn fin-btn-secondary fin-manual-close" type="button" onclick="finFecharManual()">Fechar</button>
+    </div>
+    <div class="fin-manual-body">
+      <div class="fin-manual-grid">
+        <section class="fin-manual-section full">
+          <h4>Visao geral <span class="fin-manual-badge atual">Atual</span></h4>
+          <ul>
+            <li>O modulo controla cartoes corporativos Flash.</li>
+            <li>Cada cartao deve ter um responsavel definido.</li>
+            <li>O termo online registra aceite e responsabilidade pelo uso.</li>
+            <li>O uso do cartao deve ser comprovado com informacoes e documento fiscal.</li>
+            <li>O financeiro fara conferencia, acompanhamento e conciliacao.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Funcionário / Campo <span class="fin-manual-badge funcionario">Funcionário</span> <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <ul>
+            <li>Futuramente havera versao mobile propria, nao adaptacao da tela desktop.</li>
+            <li>O funcionario devera registrar a despesa no momento do uso.</li>
+            <li>Campos esperados: valor, data, fornecedor/local, categoria, OS/cliente/unidade ou justificativa.</li>
+            <li>Deve anexar foto do comprovante.</li>
+            <li>Deve acompanhar pendencias e correcoes solicitadas.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Financeiro / Conciliação <span class="fin-manual-badge financeiro">Financeiro</span></h4>
+          <ul>
+            <li>Financeiro cadastra cartao, acompanha termos e controla status.</li>
+            <li>Futuramente importara extrato Flash em XLS, XLSX ou CSV.</li>
+            <li>O sistema cruzara extrato com lancamentos dos funcionarios.</li>
+            <li>IA podera sugerir conciliacao por valor, data, cartao, descricao, funcionario e comprovante.</li>
+            <li>IA não aprova sozinha; aprovacao final e do financeiro.</li>
+            <li>Status: aguardando comprovante, aguardando conciliacao, conciliado, divergente, recusado, pendente de correcao, finalizado.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Termo e documentos <span class="fin-manual-badge atual">Atual</span></h4>
+          <ul>
+            <li>Termo online gera aceite eletronico e registra responsabilidade.</li>
+            <li>Termo deve gerar documento ou PDF rastreavel.</li>
+            <li>Documento deve poder ser aberto, impresso ou baixado.</li>
+            <li>Relatorios futuros de conciliacao tambem devem poder ser impressos ou baixados.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Pendencias e comprovantes <span class="fin-manual-badge financeiro">Financeiro</span></h4>
+          <ul>
+            <li>Pendencias indicam falta de comprovante, justificativa incompleta ou divergencia.</li>
+            <li>O responsavel deve corrigir a informacao solicitada.</li>
+            <li>O financeiro acompanha prazos, evidencias e status de correcao.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Relatorios <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <ul>
+            <li>Relatorios deverao consolidar cartoes, termos, gastos, pendencias e conciliacoes.</li>
+            <li>Saidas esperadas: visualizacao, impressao e download.</li>
+            <li>Gestao podera acompanhar indicadores por funcionario, centro de custo e periodo.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>IA e extrato <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <ul>
+            <li>IA sera apoio para leitura, rastreio e conciliacao.</li>
+            <li>Importacao de extrato sera tratada em etapa propria.</li>
+            <li>IA devera apontar correspondencias provaveis e divergencias.</li>
+            <li>Financeiro confirma decisao final.</li>
+          </ul>
+        </section>
+        <section class="fin-manual-section">
+          <h4>Próximas evoluções <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <ul>
+            <li>FIN.9 Mobile do Funcionário</li>
+            <li>FIN.10 Documentos e Relatórios</li>
+            <li>FIN.11 Extrato e Conciliação com IA</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Bloqueio -->
 <div id="finModalBloqueio" class="fin-modal-overlay">
   <div class="fin-modal">
@@ -345,6 +488,7 @@ var _finPerfil = '';
 var _finCartoes = [];
 var _finFiltrados = [];
 var _finCartaoAtualId = '';
+var _finFlashPreviewTimer = null;
 
 // ---- init ----
 
@@ -368,6 +512,20 @@ document.addEventListener('DOMContentLoaded', function() {
 function finCarregarTudo() {
   finCarregarContexto();
   finCarregarCartoes();
+}
+
+function finAbrirManual() {
+  var el = document.getElementById('finManualOverlay');
+  if (el) { el.classList.add('open'); }
+}
+
+function finFecharManual() {
+  var el = document.getElementById('finManualOverlay');
+  if (el) { el.className = el.className.replace(/\s*open/g, ''); }
+}
+
+function finFecharManualFundo(ev) {
+  if (ev && ev.target && ev.target.id === 'finManualOverlay') { finFecharManual(); }
 }
 
 // ---- contexto ----
@@ -875,6 +1033,215 @@ function finCarregarLancamentos(cartaoId) {
       tbl.innerHTML = '<div class="fin-list-empty">Falha: ' + finEH(e.message || '') + '</div>';
     })
     .finListarLancamentos(_finSessao, { cartaoId: cartaoId });
+}
+
+function finGerarPreviewExtratoFlash() {
+  var input = document.getElementById('finFlashXlsxFile');
+  var status = document.getElementById('finFlashPreviewStatus');
+  var resumo = document.getElementById('finFlashPreviewResumo');
+  var tabela = document.getElementById('finFlashPreviewTabela');
+  var btn = document.getElementById('finFlashPreviewBtn');
+  var arquivo = input && input.files && input.files.length ? input.files[0] : null;
+
+  resumo.innerHTML = '';
+  tabela.innerHTML = '';
+
+  if (!arquivo) {
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um arquivo XLSX do extrato Flash.</div>';
+    return;
+  }
+
+  if (!/\.xlsx$/i.test(arquivo.name || '')) {
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartao Flash.</div>';
+    return;
+  }
+
+  status.innerHTML = '<div class="fin-alert fin-alert-info">Lendo arquivo e gerando preview sem gravacao...</div>';
+  btn.disabled = true;
+  finSetLoading(true);
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var dataUrl = String(ev.target && ev.target.result ? ev.target.result : '');
+    var partes = dataUrl.split(',');
+    var xlsxBase64 = partes.length > 1 ? partes[1] : dataUrl;
+    finEnviarPreviewExtratoFlash(xlsxBase64, arquivo.name);
+  };
+  reader.onerror = function() {
+    btn.disabled = false;
+    finSetLoading(false);
+    status.innerHTML = '<div class="fin-alert fin-alert-danger">Nao foi possivel ler o arquivo selecionado.</div>';
+  };
+  reader.readAsDataURL(arquivo);
+}
+
+function finEnviarPreviewExtratoFlash(xlsxBase64, nomeArquivo) {
+  finIniciarTimeoutPreviewExtratoFlash();
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finFinalizarPreviewExtratoFlash();
+      try {
+        finRenderPreviewExtratoFlash(r, nomeArquivo);
+      } catch (erroRender) {
+        document.getElementById('finFlashPreviewStatus').innerHTML =
+          '<div class="fin-alert fin-alert-danger">Preview retornou, mas houve erro ao montar a tela: ' +
+          finEH(erroRender && erroRender.message ? erroRender.message : erroRender) + '</div>';
+        document.getElementById('finFlashPreviewResumo').innerHTML = '';
+        document.getElementById('finFlashPreviewTabela').innerHTML = '';
+      }
+    })
+    .withFailureHandler(function(e) {
+      finFinalizarPreviewExtratoFlash();
+      document.getElementById('finFlashPreviewStatus').innerHTML =
+        '<div class="fin-alert fin-alert-danger">Falha ao gerar preview: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      document.getElementById('finFlashPreviewResumo').innerHTML = '';
+      document.getElementById('finFlashPreviewTabela').innerHTML = '';
+    })
+    .finPreviewExtratoFlashXlsxV1({
+      xlsxBase64: xlsxBase64,
+      nomeArquivo: nomeArquivo || ''
+    });
+}
+
+function finIniciarTimeoutPreviewExtratoFlash() {
+  if (_finFlashPreviewTimer) {
+    clearTimeout(_finFlashPreviewTimer);
+  }
+  _finFlashPreviewTimer = setTimeout(function() {
+    _finFlashPreviewTimer = null;
+    finFinalizarPreviewExtratoFlash();
+    document.getElementById('finFlashPreviewStatus').innerHTML =
+      '<div class="fin-alert fin-alert-warning">O preview demorou mais que o esperado. Tente novamente ou verifique o arquivo.</div>';
+  }, 45000);
+}
+
+function finFinalizarPreviewExtratoFlash() {
+  var btn = document.getElementById('finFlashPreviewBtn');
+  if (_finFlashPreviewTimer) {
+    clearTimeout(_finFlashPreviewTimer);
+    _finFlashPreviewTimer = null;
+  }
+  if (btn) {
+    btn.disabled = false;
+  }
+  finSetLoading(false);
+}
+
+function finRenderPreviewExtratoFlash(r, nomeArquivo) {
+  var status = document.getElementById('finFlashPreviewStatus');
+  var resumoEl = document.getElementById('finFlashPreviewResumo');
+  var tabelaEl = document.getElementById('finFlashPreviewTabela');
+  var avisos = r && r.avisos ? r.avisos : [];
+  var bloqueios = r && r.bloqueios ? r.bloqueios : [];
+  var lancamentos = r && r.lancamentosNormalizados ? r.lancamentosNormalizados : [];
+
+  if (!r) {
+    status.innerHTML = '<div class="fin-alert fin-alert-danger">Preview nao retornou resposta do servidor.</div>';
+    resumoEl.innerHTML = '';
+    tabelaEl.innerHTML = '';
+    return;
+  }
+
+  if (!r.success || !r.ok || bloqueios.length) {
+    status.innerHTML = finRenderPreviewMensagensFlash(avisos, bloqueios, 'danger') ||
+      '<div class="fin-alert fin-alert-danger">Preview nao aprovado. Verifique o arquivo XLSX.</div>';
+    resumoEl.innerHTML = '';
+    tabelaEl.innerHTML = '';
+    return;
+  }
+
+  if (!lancamentos.length) {
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Preview concluido, mas nenhum lancamento foi normalizado. Verifique o arquivo XLSX.</div>' +
+      finRenderPreviewMensagensFlash(avisos, bloqueios, 'warning');
+    resumoEl.innerHTML = finHtmlResumoExtratoFlash(r.resumo || {});
+    tabelaEl.innerHTML = '';
+    return;
+  }
+
+  status.innerHTML =
+    '<div class="fin-alert fin-alert-info">Preview gerado para ' + finEH(nomeArquivo || 'arquivo XLSX') +
+    '. Modo ' + finEH(r.modo || 'PREVIEW_EXTRATO_FLASH_XLSX_V1') +
+    ', executado:false. Nenhum dado foi gravado.</div>' +
+    finRenderPreviewMensagensFlash(avisos, bloqueios, 'warning');
+  resumoEl.innerHTML = finHtmlResumoExtratoFlash(r.resumo || {});
+  tabelaEl.innerHTML = finHtmlTabelaExtratoFlash(lancamentos);
+}
+
+function finRenderPreviewMensagensFlash(avisos, bloqueios, tipoPadrao) {
+  var html = '';
+  var i;
+  for (i = 0; i < bloqueios.length; i++) {
+    html += '<div class="fin-alert fin-alert-danger">' + finEH(bloqueios[i]) + '</div>';
+  }
+  for (i = 0; i < avisos.length; i++) {
+    html += '<div class="fin-alert fin-alert-' + finEH(tipoPadrao || 'info') + '">' + finEH(avisos[i]) + '</div>';
+  }
+  return html;
+}
+
+function finHtmlResumoExtratoFlash(resumo) {
+  var cards = [
+    ['Total de lancamentos', resumo.totalLancamentos],
+    ['Total de debitos', resumo.totalDebitos],
+    ['Total de creditos', resumo.totalCreditos],
+    ['Soma de debitos', finMoeda(resumo.somaDebitos || 0)],
+    ['Soma de creditos', finMoeda(resumo.somaCreditos || 0)],
+    ['Saldo liquido', finMoeda(resumo.saldoLiquido || 0)],
+    ['Pessoas encontradas', finListaPreviewFlash(resumo.pessoas)],
+    ['Finais de cartao', finListaPreviewFlash(resumo.finaisCartao)],
+    ['Categorias', finListaPreviewFlash(resumo.categorias)],
+    ['Status', finListaPreviewFlash(resumo.statusPrestacao || resumo.status)]
+  ];
+  var html = '<div class="fin-flash-summary">';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-summary-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1] == null ? '-' : cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '<div class="fin-flash-preview-foot">Preview somente. Nao grava banco, nao cria lote, nao cria lancamento real e nao concilia ainda. A IA não aprova sozinha; o financeiro sempre confirma.</div>';
+  return html;
+}
+
+function finHtmlTabelaExtratoFlash(lancamentos) {
+  if (!lancamentos.length) {
+    return '<div class="fin-list-empty">Nenhum lancamento normalizado no preview.</div>';
+  }
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>';
+  html += '<th>Data</th><th>Descricao</th><th>Categoria</th><th>Valor</th><th>Sinal</th><th>Pessoa</th><th>Pagamento</th><th>Final cartao</th><th>Status prestacao</th>';
+  html += '</tr></thead><tbody>';
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i];
+    html += '<tr>';
+    html += '<td>' + finEH(item.dataOriginal || item.dataIso || '') + '</td>';
+    html += '<td>' + finEH(item.descricaoLimpa || item.movimentacaoOriginal || '') + '</td>';
+    html += '<td>' + finEH(item.categoriaInferida || '') + '</td>';
+    html += '<td><strong>' + finMoeda(item.valorNumero || 0) + '</strong></td>';
+    html += '<td>' + finPillFlashSinal(item.sinal) + '</td>';
+    html += '<td>' + finEH(item.pessoa || '') + '</td>';
+    html += '<td>' + finEH(item.pagamentoOriginal || '') + '</td>';
+    html += '<td>' + finEH(item.finalCartao || '-') + '</td>';
+    html += '<td>' + finEH(item.statusPrestacaoNormalizado || item.statusPrestacaoOriginal || '') + '</td>';
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function finPillFlashSinal(sinal) {
+  if (sinal === 'CREDITO') { return '<span class="fin-pill fin-pill-green">CREDITO</span>'; }
+  if (sinal === 'DEBITO') { return '<span class="fin-pill fin-pill-yellow">DEBITO</span>'; }
+  return '<span class="fin-pill fin-pill-gray">' + finEH(sinal || '-') + '</span>';
+}
+
+function finListaPreviewFlash(lista) {
+  if (!lista || !lista.length) { return '-'; }
+  return lista.join(', ');
 }
 
 // ---- navegacao de abas ----
