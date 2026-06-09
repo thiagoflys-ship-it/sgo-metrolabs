@@ -204,14 +204,6 @@
 
 <!-- Tab: Cartoes -->
 <div id="tabCartoes" class="fin-tab-content active">
-  <div id="finTesteInternoCard" class="fin-card" style="display:none;margin:14px 22px 0;">
-    <h3>TESTE CONTROLADO FIN &mdash; nao usar como dado real</h3>
-    <div class="fin-alert fin-alert-warning">Teste interno temporario para gerar cartao e termo TESTE_FIN em /dev. Nao assina, nao envia WhatsApp e nao cria arquivo no Drive.</div>
-    <div class="fin-btn-row">
-      <button id="finBtnTesteTermo" class="fin-btn fin-btn-warning" type="button" onclick="finExecutarTesteTermoInterno()">Teste interno - gerar termo TESTE_FIN</button>
-    </div>
-    <div id="finTesteInternoResultado" style="margin-top:12px;"></div>
-  </div>
   <div class="fin-split">
     <div class="fin-split-left">
       <div class="fin-list-head">
@@ -353,8 +345,6 @@ var _finPerfil = '';
 var _finCartoes = [];
 var _finFiltrados = [];
 var _finCartaoAtualId = '';
-var _finTesteUrlValidacao = '';
-var _finTesteToken = '';
 
 // ---- init ----
 
@@ -365,7 +355,6 @@ window.finCartoesInit = function(sessionId) {
 
 function finSetSession(sid) {
   _finSessao = sid || '';
-  finAtualizarTesteInternoVisivel();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -387,7 +376,6 @@ function finCarregarContexto() {
   google.script.run
     .withSuccessHandler(function(r) {
       _finPerfil = (r && r.perfil) ? String(r.perfil).toUpperCase() : '';
-      finAtualizarTesteInternoVisivel();
       if (r && r.ok && r.dbConfigurado) {
         var b = document.getElementById('finBadgeDb');
         b.textContent = 'DB Configurado';
@@ -399,100 +387,6 @@ function finCarregarContexto() {
       finMostrarErro('Erro ao verificar contexto: ' + (e.message || e));
     })
     .finObterContexto(_finSessao);
-}
-
-function finPerfilPodeTesteInterno() {
-  var p = String(_finPerfil || '').toUpperCase();
-  return p === 'ADMIN' || p === 'DIRETORIA' || p === 'GESTOR' || p === 'FINANCEIRO';
-}
-
-function finAtualizarTesteInternoVisivel() {
-  var card = document.getElementById('finTesteInternoCard');
-  if (!card) return;
-  card.style.display = (_finSessao && finPerfilPodeTesteInterno()) ? 'block' : 'none';
-}
-
-function finExecutarTesteTermoInterno() {
-  if (!_finSessao || !finPerfilPodeTesteInterno()) {
-    finRenderTesteInternoResultado({
-      success: false,
-      bloqueios: ['Sessao ou perfil sem permissao para teste interno FIN.']
-    });
-    return;
-  }
-  var btn = document.getElementById('finBtnTesteTermo');
-  if (btn) btn.disabled = true;
-  finRenderTesteInternoResultado({ success: false, avisos: ['Executando teste controlado FIN...'] });
-  google.script.run
-    .withSuccessHandler(function(r) {
-      if (btn) btn.disabled = false;
-      finRenderTesteInternoResultado(r || {});
-      if (r && (r.ok === true || r.success === true)) {
-        finMostrarSucesso('Termo TESTE_FIN gerado.');
-        finCarregarCartoes();
-      }
-    })
-    .withFailureHandler(function(e) {
-      if (btn) btn.disabled = false;
-      finRenderTesteInternoResultado({
-        success: false,
-        bloqueios: ['Falha ao gerar termo de teste: ' + ((e && e.message) ? e.message : e)]
-      });
-    })
-    .criarTermoFinanceiroTesteV2_WEB_AUTORIZADO({
-      executar: true,
-      confirmacao: 'CRIAR_TERMO_FINANCEIRO_TESTE_SGO_2026',
-      sessionId: _finSessao
-    });
-}
-
-function finRenderTesteInternoResultado(r) {
-  var el = document.getElementById('finTesteInternoResultado');
-  if (!el) return;
-  var ok = r && (r.success === true || r.ok === true);
-  _finTesteUrlValidacao = (ok && r && r.urlValidacao) ? String(r.urlValidacao).trim() : '';
-  _finTesteToken = (ok && r && r.token) ? String(r.token).trim() : '';
-  var html = '<div class="fin-alert ' + (ok ? 'fin-alert-info' : 'fin-alert-warning') + '">';
-  html += '<strong>TESTE CONTROLADO FIN &mdash; nao usar como dado real</strong>';
-  html += '<div style="margin-top:8px">';
-  html += finCampoResultadoTeste('success', ok ? 'true' : 'false');
-  html += finCampoResultadoTeste('cartaoId', r && r.cartaoId);
-  html += finCampoResultadoTeste('termoId', r && r.termoId);
-  html += finCampoResultadoTeste('token', r && r.token);
-  html += finCampoResultadoTeste('urlValidacao', r && r.urlValidacao);
-  html += finCampoResultadoTeste('marcadorTeste', r && r.marcadorTeste);
-  html += finListaResultadoTeste('bloqueios', r && r.bloqueios);
-  html += finListaResultadoTeste('avisos', r && r.avisos);
-  html += '</div>';
-  if (ok && r && r.urlValidacao) {
-    html += '<div class="fin-btn-row"><button class="fin-btn fin-btn-primary" type="button" onclick="finAbrirUrlTesteTermo()">Abrir termo em /dev</button></div>';
-  }
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function finCampoResultadoTeste(label, valor) {
-  if (valor === undefined || valor === null || valor === '') return '';
-  return '<div><strong>' + finEH(label) + ':</strong> ' + finEH(valor) + '</div>';
-}
-
-function finListaResultadoTeste(label, lista) {
-  if (!lista || !lista.length) return '<div><strong>' + finEH(label) + ':</strong> []</div>';
-  return '<div><strong>' + finEH(label) + ':</strong><ul style="margin:4px 0 0 18px;">' +
-    lista.map(function(item) { return '<li>' + finEH(item) + '</li>'; }).join('') +
-    '</ul></div>';
-}
-
-function finAbrirUrlTesteTermo() {
-  var url = String(_finTesteUrlValidacao || '').trim();
-  if (url && _finTesteToken && url.indexOf('fin_termo=') < 0) {
-    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'fin_termo=' + encodeURIComponent(_finTesteToken);
-  }
-  if (!url) {
-    finMostrarErro('URL de validacao indisponivel.');
-    return;
-  }
-  window.open(url, '_blank', 'noopener');
 }
 
 // ---- dashboard ----

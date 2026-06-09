@@ -21,6 +21,7 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
   const MODO_TERMO_TESTE = "CRIAR_TERMO_FINANCEIRO_TESTE_V2";
   const MODO_POLITICA_FLASH = "CADASTRAR_POLITICA_CARTAO_FLASH_V1";
   const MODO_AUDITORIA_POLITICA_FLASH = "AUDITORIA_POLITICA_CARTAO_FLASH_V1";
+  const MODO_AUDITORIA_URL_WEBAPP = "AUDITORIA_URL_WEBAPP_FIN_V1";
   const DB_FIN_ID_ESPERADO = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
   const MODO_AUDITORIA_SETUP = "AUDITORIA_SETUP_FIN_V2";
   const MODO_AUDITORIA_ASSINATURA = "AUDITORIA_ASSINATURA_FIN_V2";
@@ -875,6 +876,69 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     return resultado;
   }
 
+  function auditarUrlWebAppFinanceiroV1() {
+    const propriedades = lerPropriedades_();
+    const bloqueios = [];
+    const avisos = [];
+    let sgoCfgWebAppUrl = "";
+
+    try {
+      if (typeof SGO_CFG !== "undefined" && SGO_CFG.WEBAPP_URL) {
+        sgoCfgWebAppUrl = texto_(SGO_CFG.WEBAPP_URL);
+      }
+    } catch (e) {
+      avisos.push("Nao foi possivel ler SGO_CFG.WEBAPP_URL: " + e.message);
+    }
+
+    const sgoWebAppUrlEhExec = propriedades.SGO_WEBAPP_URL.slice(-5) === "/exec";
+    const webAppUrlEhExec = propriedades.WEBAPP_URL.slice(-5) === "/exec";
+    const sgoCfgWebAppUrlEhExec = !sgoCfgWebAppUrl || sgoCfgWebAppUrl.slice(-5) === "/exec";
+    const algumaUrlDev =
+      propriedades.SGO_WEBAPP_URL.indexOf("/dev") >= 0 ||
+      propriedades.WEBAPP_URL.indexOf("/dev") >= 0 ||
+      sgoCfgWebAppUrl.indexOf("/dev") >= 0;
+    const urlEfetivaNovosTermos = sgoCfgWebAppUrl || propriedades.SGO_WEBAPP_URL || propriedades.WEBAPP_URL;
+    const urlEfetivaEhExec = urlEfetivaNovosTermos.slice(-5) === "/exec";
+    const dbFinIdPreenchido = !!propriedades.DB_FIN_ID;
+    const folderFinanceiroPreenchido = !!propriedades.FOLDER_FINANCEIRO;
+
+    if (!propriedades.SGO_WEBAPP_URL) bloqueios.push("SGO_WEBAPP_URL nao configurada.");
+    if (!propriedades.WEBAPP_URL) bloqueios.push("WEBAPP_URL nao configurada.");
+    if (propriedades.SGO_WEBAPP_URL && !sgoWebAppUrlEhExec) bloqueios.push("SGO_WEBAPP_URL nao termina com /exec.");
+    if (propriedades.WEBAPP_URL && !webAppUrlEhExec) bloqueios.push("WEBAPP_URL nao termina com /exec.");
+    if (sgoCfgWebAppUrl && !sgoCfgWebAppUrlEhExec) bloqueios.push("SGO_CFG.WEBAPP_URL nao termina com /exec e tem prioridade sobre ScriptProperties.");
+    if (algumaUrlDev) bloqueios.push("Alguma URL publica FIN ainda aponta para /dev.");
+    if (!dbFinIdPreenchido) bloqueios.push("DB_FIN_ID nao configurado.");
+    if (!folderFinanceiroPreenchido) bloqueios.push("FOLDER_FINANCEIRO nao configurado.");
+    if (!urlEfetivaEhExec) bloqueios.push("URL efetiva para novos termos nao termina com /exec.");
+
+    const resultado = {
+      success: bloqueios.length === 0,
+      executado: false,
+      modo: MODO_AUDITORIA_URL_WEBAPP,
+      SGO_WEBAPP_URL: propriedades.SGO_WEBAPP_URL,
+      WEBAPP_URL: propriedades.WEBAPP_URL,
+      SGO_CFG_WEBAPP_URL: sgoCfgWebAppUrl,
+      sgoWebAppUrlEhExec: sgoWebAppUrlEhExec,
+      webAppUrlEhExec: webAppUrlEhExec,
+      sgoCfgWebAppUrlEhExec: sgoCfgWebAppUrlEhExec,
+      algumaUrlDev: algumaUrlDev,
+      DB_FIN_ID: propriedades.DB_FIN_ID,
+      FOLDER_FINANCEIRO: propriedades.FOLDER_FINANCEIRO,
+      dbFinIdPreenchido: dbFinIdPreenchido,
+      folderFinanceiroPreenchido: folderFinanceiroPreenchido,
+      urlEfetivaNovosTermos: urlEfetivaNovosTermos,
+      urlEfetivaEhExec: urlEfetivaEhExec,
+      novosTermosApontaraoParaExec: bloqueios.length === 0,
+      origemUrlNovosTermos: sgoCfgWebAppUrl ? "SGO_CFG.WEBAPP_URL" : (propriedades.SGO_WEBAPP_URL ? "SGO_WEBAPP_URL" : "WEBAPP_URL"),
+      regraCodigo: "SGO_Fin_Termos.js: finObterUrlBase_ -> finMontarUrlTermo_ -> URL_VALIDACAO",
+      bloqueios: bloqueios,
+      avisos: avisos
+    };
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  }
+
   function configurarUrlWebAppFinanceiroV2_AUTORIZADO(payload) {
     const bloqueios = [];
     const avisos = [];
@@ -1116,6 +1180,7 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     auditarSetupFinanceiroV2: auditarSetupFinanceiroV2,
     auditarAssinaturaFinanceiraTesteV2: auditarAssinaturaFinanceiraTesteV2,
     auditarPoliticaCartaoFlashV1: auditarPoliticaCartaoFlashV1,
+    auditarUrlWebAppFinanceiroV1: auditarUrlWebAppFinanceiroV1,
     cadastrarPoliticaCartaoFlashV1_AUTORIZADO: cadastrarPoliticaCartaoFlashV1_AUTORIZADO,
     configurarUrlWebAppFinanceiroV2_AUTORIZADO: configurarUrlWebAppFinanceiroV2_AUTORIZADO,
     atualizarUrlWebAppFinanceiroV2_AUTORIZADO: atualizarUrlWebAppFinanceiroV2_AUTORIZADO,
@@ -1154,6 +1219,10 @@ function auditarPoliticaCartaoFlashV1() {
   return SGO_FIN_PROVISIONAMENTO.auditarPoliticaCartaoFlashV1();
 }
 
+function auditarUrlWebAppFinanceiroV1() {
+  return SGO_FIN_PROVISIONAMENTO.auditarUrlWebAppFinanceiroV1();
+}
+
 function cadastrarPoliticaCartaoFlashV1_AUTORIZADO(payload) {
   return SGO_FIN_PROVISIONAMENTO.cadastrarPoliticaCartaoFlashV1_AUTORIZADO(payload);
 }
@@ -1177,6 +1246,16 @@ function configurarUrlWebAppFinanceiroV2_MANUAL_AUTORIZADO() {
     executar: true,
     confirmacao: "CONFIGURAR_URL_WEBAPP_FINANCEIRO_SGO_2026",
     webAppUrl: ""
+  });
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function configurarUrlWebAppFinanceiroExecV1_MANUAL_AUTORIZADO() {
+  var resultado = configurarUrlWebAppFinanceiroV2_AUTORIZADO({
+    executar: true,
+    confirmacao: "CONFIGURAR_URL_WEBAPP_FINANCEIRO_SGO_2026",
+    webAppUrl: "https://script.google.com/macros/s/AKfycbyNnXLa3Bc4U2BkCnO7F_pScoJrLthlyDQ9oRKi6s1kk9oKOqPmDsuibRMO1iCDTTT4dQ/exec"
   });
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
