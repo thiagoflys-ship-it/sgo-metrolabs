@@ -148,8 +148,13 @@
     .fin-flash-dashboard-head h3 { margin: 0; }
     .fin-flash-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .fin-flash-relatorio { line-height: 1.55; }
+    .fin-flash-prod-note { margin-bottom: 12px; }
+    .fin-flash-checklist-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .fin-flash-checklist-item { border: 1px solid #e9ecef; border-radius: 8px; padding: 9px 10px; background: #fff; }
+    .fin-flash-checklist-item strong { display: block; color: #0f2d52; font-size: 12px; }
+    .fin-flash-checklist-item span { color: #777; font-size: 12px; }
     @media (max-width: 1180px) { .fin-flash-op-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 760px) { .fin-flash-op-grid, .fin-flash-op-panels, .fin-flash-action-grid, .fin-flash-dashboard-panels { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .fin-flash-op-grid, .fin-flash-op-panels, .fin-flash-action-grid, .fin-flash-dashboard-panels, .fin-flash-checklist-list { grid-template-columns: 1fr; } }
     @media (max-width: 980px) { .fin-flash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 560px) { .fin-flash-summary { grid-template-columns: 1fr; } .fin-flash-file { max-width: 100%; } }
 
@@ -381,11 +386,13 @@
 <!-- Tab: Extratos Flash -->
 <div id="tabFlash" class="fin-tab-content">
   <div class="fin-tab-inner">
-    <div id="finFlashTesteAviso" class="fin-alert fin-alert-warning fin-flash-op-note">Ambiente com dados de teste Flash detectados.</div>
+    <div id="finFlashTesteAviso" class="fin-alert fin-alert-warning fin-flash-op-note">Ambiente com dados de teste Flash detectados. Não usar estes registros para prestação real.</div>
+    <div class="fin-alert fin-alert-info fin-flash-prod-note">Produção: ações reais de importação/conciliação ainda bloqueadas. Use apenas leitura, prévias, dashboard e resolução de pendências já validadas.</div>
     <div class="fin-flash-op-actions">
       <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarResumo_()">Atualizar</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia conciliação</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashExecutarChecklistPreProducao_()">Checklist pré-produção</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
     </div>
@@ -1595,6 +1602,54 @@ function finFlashMostrarErroDashboard_(erro) {
     console.log('Erro Dashboard Flash: ' + erro.stack);
   }
   if (el) { el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>'; }
+}
+
+function finFlashExecutarChecklistPreProducao_() {
+  finFlashRenderPainelAcao_('Checklist pré-produção', '<div class="fin-alert fin-alert-info">Executando checklist pré-produção...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashRenderPainelAcao_('Checklist pré-produção', '<div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Erro ao executar checklist.') + '</div>');
+        return;
+      }
+      finFlashRenderChecklistPreProducao_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, 'finFlashChecklistPreProducao');
+    })
+    .finFlashChecklistPreProducao(_finSessao);
+}
+
+function finFlashRenderChecklistPreProducao_(dados) {
+  var itens = dados && dados.itens ? dados.itens : {};
+  var checks = [
+    ['Schema financeiro', itens.schemaFinanceiroOk, 'OK quando as abas críticas estão acessíveis.'],
+    ['Dados de teste', !itens.dadosTesteDetectados, itens.dadosTesteDetectados ? 'Alerta: dados de teste detectados.' : 'Sem dados de teste detectados.'],
+    ['Pendências abertas', Number(itens.pendenciasAbertas || 0) === 0, 'Abertas: ' + (itens.pendenciasAbertas || 0)],
+    ['Extratos importados', Number(itens.totalExtratos || 0) > 0, 'Total: ' + (itens.totalExtratos || 0)],
+    ['Conciliação', Number(itens.totalConciliado || 0) > 0, 'Percentual: ' + (itens.percentualConciliado || 0) + '%'],
+    ['Funções críticas', !!itens.funcoesCriticasDisponiveis, 'Disponibilidade dos endpoints Flash.'],
+    ['Ações reais bloqueadas', !!itens.acoesReaisBloqueadas, 'Importação/conciliação seguem controladas.'],
+    ['Duplicidade pendências', !!itens.semPendenciasDuplicadas, 'Sem duplicadas.'],
+    ['Referências pendências', !!itens.semPendenciasSemReferencia, 'Sem pendências sem referência.']
+  ];
+  var html = '<div class="fin-flash-checklist-list">';
+  for (var i = 0; i < checks.length; i++) {
+    var ok = checks[i][1];
+    html += '<div class="fin-flash-checklist-item">';
+    html += '<strong>' + finEH(checks[i][0]) + ' - ' + (ok ? 'OK' : 'Alerta/Bloqueio') + '</strong>';
+    html += '<span>' + finEH(checks[i][2]) + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  if (dados.bloqueios && dados.bloqueios.length) {
+    html += '<div class="fin-alert fin-alert-danger">' + finEH(dados.bloqueios.join(' ')) + '</div>';
+  }
+  if (dados.avisos && dados.avisos.length) {
+    html += '<div class="fin-alert fin-alert-warning">' + finEH(dados.avisos.join(' ')) + '</div>';
+  }
+  html += '<div class="fin-alert fin-alert-info">' + finEH(dados.recomendacaoFinal || '') + '</div>';
+  finFlashRenderPainelAcao_('Checklist pré-produção', html);
 }
 
 function finFlashVerPreviaConciliacao_() {

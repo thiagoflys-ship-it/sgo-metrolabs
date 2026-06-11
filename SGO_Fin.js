@@ -1832,6 +1832,71 @@ const SGO_FIN = (() => {
     }
   }
 
+  function finFlashChecklistPreProducao(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "executar checklist pre-producao Flash");
+      const dashboard = finFlashDashboardGerencialCore_({});
+      if (!dashboard || !dashboard.ok) return dashboard;
+      const auditoriaPendencias = finFlashAuditarPendenciasTelaCore_();
+      if (!auditoriaPendencias || !auditoriaPendencias.ok) return auditoriaPendencias;
+      const k = dashboard.kpis || {};
+      const funcoesCriticasDisponiveis = [
+        finFlashObterResumoOperacional,
+        finFlashObterResumoTela,
+        flashListarLotes,
+        flashListarExtratos,
+        flashListarPendencias,
+        flashListarConciliacoes,
+        finFlashPrevisualizarConciliacaoTela,
+        finFlashPrevisualizarPendenciasTela,
+        finFlashConciliarSelecionadosTela,
+        finFlashGerarPendenciasTela,
+        finFlashResolverPendenciaTela,
+        finFlashAuditarPendenciasTela,
+        finFlashObterDashboardGerencial,
+        finFlashGerarRelatorioSinteticoTela
+      ].every(function(fn) { return typeof fn === "function"; });
+      const dadosTeste = !!dashboard.dadosTesteDetectados;
+      const pendenciasAbertas = Number(k.totalPendenciasAbertas || 0);
+      const semDuplicadas = !(auditoriaPendencias.pendenciasDuplicadas || []).length;
+      const semSemReferencia = !(auditoriaPendencias.pendenciasSemReferencia || []).length;
+      const bloqueios = [];
+      const avisos = [];
+      if (dadosTeste) avisos.push("Ambiente com dados de teste Flash detectados.");
+      if (pendenciasAbertas > 0) bloqueios.push("Existem pendencias abertas antes da producao.");
+      if (!semDuplicadas) bloqueios.push("Existem pendencias duplicadas.");
+      if (!semSemReferencia) bloqueios.push("Existem pendencias sem referencia.");
+      let recomendacaoFinal = "Apto para checklist de publicacao controlada.";
+      if (dadosTeste && pendenciasAbertas > 0) {
+        recomendacaoFinal = "Nao publicar producao com dados de teste ativos sem limpeza controlada. Resolver pendencias antes da producao.";
+      } else if (dadosTeste) {
+        recomendacaoFinal = "Ambiente tecnicamente funcional, porem contem dados de teste.";
+      } else if (pendenciasAbertas > 0) {
+        recomendacaoFinal = "Resolver pendencias antes da producao.";
+      }
+      return finOk_({
+        itens: {
+          schemaFinanceiroOk: true,
+          dadosTesteDetectados: dadosTeste,
+          pendenciasAbertas: pendenciasAbertas,
+          totalExtratos: Number(k.totalExtratos || 0),
+          totalConciliado: Number(k.totalConciliado || 0),
+          percentualConciliado: Number(k.percentualConciliado || 0),
+          funcoesCriticasDisponiveis: funcoesCriticasDisponiveis,
+          acoesReaisBloqueadas: true,
+          semPendenciasDuplicadas: semDuplicadas,
+          semPendenciasSemReferencia: semSemReferencia
+        },
+        bloqueios: bloqueios,
+        avisos: avisos,
+        recomendacaoFinal: recomendacaoFinal
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -1950,6 +2015,7 @@ const SGO_FIN = (() => {
     finFlashAuditarPendenciasTelaCore_,
     finFlashObterDashboardGerencial,
     finFlashGerarRelatorioSinteticoTela,
+    finFlashChecklistPreProducao,
     finFlashConciliarSelecionadosTela,
     finFlashGerarPendenciasTela,
     finFlashObterResumoOperacionalCore_,
@@ -1992,6 +2058,7 @@ function finFlashAuditarPendenciasTela(sessionId)  { return SGO_FIN.finFlashAudi
 function finFlashAuditarPendenciasTelaCore_()      { return SGO_FIN.finFlashAuditarPendenciasTelaCore_(); }
 function finFlashObterDashboardGerencial(sessionId, filtros) { return SGO_FIN.finFlashObterDashboardGerencial(sessionId, filtros); }
 function finFlashGerarRelatorioSinteticoTela(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioSinteticoTela(sessionId, filtros); }
+function finFlashChecklistPreProducao(sessionId)   { return SGO_FIN.finFlashChecklistPreProducao(sessionId); }
 function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) { return SGO_FIN.finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao); }
 function finFlashGerarPendenciasTela(sessionId, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, confirmacao); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
