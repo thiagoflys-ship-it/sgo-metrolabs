@@ -173,6 +173,29 @@ function testarDryRunLoteExtratoFlashV1_SEM_GRAVAR() {
   return resultado;
 }
 
+function auditarDryRunLoteExtratoFlashV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var leitura = finExtratoFlashLerDadosDuplicidadeReais_(bloqueios);
+  var resultado = {
+    success: leitura.ok && bloqueios.length === 0,
+    ok: leitura.ok && bloqueios.length === 0,
+    executado: false,
+    modo: "AUDITORIA_DRY_RUN_LOTE_EXTRATO_FLASH_V1",
+    abasConsultadas: leitura.abas || {},
+    totalLotesLidos: leitura.lotes ? leitura.lotes.length : 0,
+    totalExtratosLidos: leitura.extratos ? leitura.extratos.length : 0,
+    headers: leitura.headers || {},
+    avisos: leitura.ok ? ["Auditoria somente leitura. Nenhuma gravacao foi realizada."] : [],
+    bloqueios: bloqueios
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado, null, 2));
+  }
+
+  return resultado;
+}
+
 function finDryRunLoteExtratoFlashV1(payload) {
   var entrada = payload || {};
   var avisos = [];
@@ -203,6 +226,7 @@ function finDryRunLoteExtratoFlashV1(payload) {
       bloqueios.push("Nao foi possivel identificar pessoa no extrato.");
     }
 
+    finExtratoFlashValidarLancamentosDryRun_(lancamentos, avisos, bloqueios);
     finExtratoFlashAvisosDryRun_(lancamentos, avisos);
     var loteProposto = finExtratoFlashMontarLoteProposto_(entrada, resumo, lancamentos);
     var duplicidades = finExtratoFlashDetectarDuplicidadesReais_(entrada, loteProposto, lancamentos, avisos, bloqueios);
@@ -726,6 +750,10 @@ function finExtratoFlashMontarLancamentosDryRun_(lancamentos, loteProposto, dupl
       status = "BLOQUEADO";
       motivos.push("Lancamento sem pessoa, dataIso ou valorNumero seguro.");
     }
+    if (item.sinal === "DEBITO" && !item.finalCartao) {
+      status = "BLOQUEADO";
+      motivos.push("Debito sem finalCartao identificado.");
+    }
 
     saida.push(finExtratoFlashAssign_({}, item, {
       chaveDuplicidade: chave,
@@ -736,6 +764,29 @@ function finExtratoFlashMontarLancamentosDryRun_(lancamentos, loteProposto, dupl
   }
 
   return saida;
+}
+
+function finExtratoFlashValidarLancamentosDryRun_(lancamentos, avisos, bloqueios) {
+  var semData = 0;
+  var semValor = 0;
+  var semPessoa = 0;
+  var debitoSemCartao = 0;
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i] || {};
+    if (!item.dataIso) semData++;
+    if (item.valorNumero === null || item.valorNumero === undefined) semValor++;
+    if (!item.pessoa) semPessoa++;
+    if (item.sinal === "DEBITO" && !item.finalCartao) debitoSemCartao++;
+  }
+
+  if (semData) bloqueios.push("Ha " + semData + " lancamento(s) sem data valida no dry-run.");
+  if (semValor) bloqueios.push("Ha " + semValor + " lancamento(s) sem valor numerico valido no dry-run.");
+  if (semPessoa) bloqueios.push("Ha " + semPessoa + " lancamento(s) sem pessoa identificada no dry-run.");
+  if (debitoSemCartao) bloqueios.push("Ha " + debitoSemCartao + " debito(s) sem final de cartao identificado.");
+  if (!semData && !semValor && !semPessoa && !debitoSemCartao) {
+    avisos.push("Validacao estrutural do dry-run aprovada: data, valor, pessoa e final de cartao conferidos quando aplicavel.");
+  }
 }
 
 function finExtratoFlashSimularDuplicidades_(payload, loteProposto, lancamentos, avisos) {
