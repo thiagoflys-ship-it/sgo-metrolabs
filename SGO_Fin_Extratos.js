@@ -4,6 +4,9 @@
 
 var FIN_EXTRATO_FLASH_MODO_PREVIEW_V1 = "PREVIEW_EXTRATO_FLASH_XLSX_V1";
 var FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1 = "DRY_RUN_LOTE_EXTRATO_FLASH_V1";
+var FIN_EXTRATO_FLASH_ABA_LOTES_V1 = "FIN_LOTES_EXTRATO_FLASH";
+var FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1 = "FIN_CARTOES_EXTRATOS";
+var FIN_EXTRATO_FLASH_DB_PROP_V1 = "DB_FIN_ID";
 
 function finPreviewExtratoFlashXlsxV1(payload) {
   var avisos = [];
@@ -202,7 +205,7 @@ function finDryRunLoteExtratoFlashV1(payload) {
 
     finExtratoFlashAvisosDryRun_(lancamentos, avisos);
     var loteProposto = finExtratoFlashMontarLoteProposto_(entrada, resumo, lancamentos);
-    var duplicidades = finExtratoFlashSimularDuplicidades_(entrada, loteProposto, lancamentos, avisos);
+    var duplicidades = finExtratoFlashDetectarDuplicidadesReais_(entrada, loteProposto, lancamentos, avisos, bloqueios);
     var lancamentosDryRun = finExtratoFlashMontarLancamentosDryRun_(lancamentos, loteProposto, duplicidades);
 
     if (lancamentosDryRun.length && duplicidades.totalPossiveisDuplicados === lancamentosDryRun.length) {
@@ -716,7 +719,7 @@ function finExtratoFlashMontarLancamentosDryRun_(lancamentos, loteProposto, dupl
 
     if (mapaDuplicados[chave]) {
       status = "POSSIVEL_DUPLICADO";
-      motivos.push("Chave de duplicidade encontrada em dados existentes simulados.");
+      motivos.push("Chave de duplicidade encontrada em dados existentes do dry-run.");
     }
     if (!item.pessoa || !item.dataIso || item.valorNumero === null || item.valorNumero === undefined) {
       status = "BLOQUEADO";
@@ -773,6 +776,277 @@ function finExtratoFlashSimularDuplicidades_(payload, loteProposto, lancamentos,
     criterioLote: "arquivoHash + pessoa + periodo + finalCartao + totalLancamentos + somaDebitos + somaCreditos",
     leituraAbasExecutada: false
   };
+}
+
+function finExtratoFlashDetectarDuplicidadesReais_(payload, loteProposto, lancamentos, avisos, bloqueios) {
+  var simuladas = finExtratoFlashSimularDuplicidades_(payload || {}, loteProposto, lancamentos, []);
+  var leitura = finExtratoFlashLerDadosDuplicidadeReais_(bloqueios);
+  var mapaChaves = {};
+  var possiveis = [];
+  var avisosLocais = [];
+  var loteDuplicado = false;
+
+  finExtratoFlashCopiarMapa_(mapaChaves, simuladas.mapaChaves || {});
+  possiveis = possiveis.concat(simuladas.lancamentosPossiveisDuplicados || []);
+  loteDuplicado = !!simuladas.lotePossivelmenteDuplicado;
+
+  if (!leitura.ok) {
+    avisos.push("Dry-run bloqueado antes da importacao definitiva: nao foi possivel ler duplicidades reais.");
+    return finExtratoFlashDuplicidadesMerge_(
+      loteDuplicado,
+      possiveis,
+      mapaChaves,
+      false,
+      leitura,
+      avisosLocais
+    );
+  }
+
+  if (!(leitura.lotes || []).length) {
+    avisosLocais.push("Aba real de lotes Flash sem registros existentes.");
+  }
+  if (!(leitura.extratos || []).length) {
+    avisosLocais.push("Aba real de extratos Flash sem registros existentes.");
+  }
+
+  loteDuplicado = loteDuplicado || finExtratoFlashLoteDuplicadoReal_(loteProposto, leitura.lotes || []);
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i];
+    var chave = item.chaveDuplicidade || finExtratoFlashChaveLancamento_(item);
+    var encontrado = finExtratoFlashEncontrarLancamentoReal_(item, leitura.extratos || []);
+    if (encontrado) {
+      mapaChaves[chave] = true;
+      possiveis.push({
+        linhaOrigem: item.linhaOrigem,
+        chaveDuplicidade: chave,
+        extratoId: finExtratoFlashTexto_(encontrado.EXTRATO_ID || encontrado.ID),
+        loteId: finExtratoFlashTexto_(encontrado.LOTE_ID),
+        motivo: encontrado.CHAVE_DUPLICIDADE
+          ? "CHAVE_DUPLICIDADE encontrada na aba FIN_CARTOES_EXTRATOS."
+          : "Chave estavel derivada encontrada na aba FIN_CARTOES_EXTRATOS."
+      });
+    }
+  }
+
+  for (var a = 0; a < avisosLocais.length; a++) {
+    avisos.push(avisosLocais[a]);
+  }
+
+  return finExtratoFlashDuplicidadesMerge_(
+    loteDuplicado,
+    possiveis,
+    mapaChaves,
+    true,
+    leitura,
+    avisosLocais
+  );
+}
+
+function finExtratoFlashLerDadosDuplicidadeReais_(bloqueios) {
+  var resultado = {
+    ok: false,
+    lotes: [],
+    extratos: [],
+    abas: {
+      lotes: FIN_EXTRATO_FLASH_ABA_LOTES_V1,
+      extratos: FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1
+    },
+    headers: {},
+    erro: ""
+  };
+
+  try {
+    var ss = finExtratoFlashAbrirDbFinReadOnly_();
+    var lotes = finExtratoFlashLerAbaReadOnly_(
+      ss,
+      FIN_EXTRATO_FLASH_ABA_LOTES_V1,
+      ["LOTE_ID", "ARQUIVO_HASH", "PERIODO_INICIO", "PERIODO_FIM", "PESSOA", "CARTAO_FINAL", "TOTAL_LANCAMENTOS", "SOMA_DEBITOS", "SOMA_CREDITOS", "CHAVE_LOTE"]
+    );
+    var extratos = finExtratoFlashLerAbaReadOnly_(
+      ss,
+      FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1,
+      ["EXTRATO_ID", "LOTE_ID", "DATA_TRANSACAO", "VALOR", "ESTABELECIMENTO_EXTRATO", "CARTAO_FINAL", "ARQUIVO_HASH", "CHAVE_DUPLICIDADE"]
+    );
+
+    resultado.ok = true;
+    resultado.lotes = lotes.items;
+    resultado.extratos = extratos.items;
+    resultado.headers[FIN_EXTRATO_FLASH_ABA_LOTES_V1] = lotes.headers;
+    resultado.headers[FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1] = extratos.headers;
+    return resultado;
+  } catch (erro) {
+    resultado.erro = erro && erro.message ? erro.message : String(erro);
+    bloqueios.push(resultado.erro);
+    return resultado;
+  }
+}
+
+function finExtratoFlashAbrirDbFinReadOnly_() {
+  if (typeof PropertiesService === "undefined" || typeof SpreadsheetApp === "undefined") {
+    throw new Error("Leitura real de duplicidades requer ambiente Apps Script com PropertiesService e SpreadsheetApp.");
+  }
+
+  var dbId = PropertiesService.getScriptProperties().getProperty(FIN_EXTRATO_FLASH_DB_PROP_V1);
+  dbId = finExtratoFlashTexto_(dbId);
+  if (!dbId) {
+    throw new Error("DB_FIN_ID nao configurado para leitura real de duplicidades Flash.");
+  }
+
+  return SpreadsheetApp.openById(dbId);
+}
+
+function finExtratoFlashLerAbaReadOnly_(ss, nomeAba, headersObrigatorios) {
+  var sheet = ss.getSheetByName(nomeAba);
+  if (!sheet) {
+    throw new Error("Aba FIN obrigatoria nao encontrada para dry-run Flash: " + nomeAba + ".");
+  }
+
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) {
+    throw new Error("Aba FIN sem cabecalho para dry-run Flash: " + nomeAba + ".");
+  }
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+    return finExtratoFlashTexto_(h);
+  });
+  finExtratoFlashValidarHeadersObrigatorios_(nomeAba, headers, headersObrigatorios);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return { headers: headers, items: [] };
+  }
+
+  var dados = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var items = [];
+  for (var i = 0; i < dados.length; i++) {
+    var row = {};
+    var vazia = true;
+    for (var j = 0; j < headers.length; j++) {
+      var valor = finExtratoFlashValorSaida_(dados[i][j]);
+      row[headers[j]] = valor;
+      if (valor !== "" && valor !== null && valor !== undefined) vazia = false;
+    }
+    if (!vazia) items.push(row);
+  }
+
+  return { headers: headers, items: items };
+}
+
+function finExtratoFlashValidarHeadersObrigatorios_(nomeAba, headers, obrigatorios) {
+  var mapa = {};
+  for (var i = 0; i < headers.length; i++) {
+    mapa[finExtratoFlashTexto_(headers[i]).toUpperCase()] = true;
+  }
+
+  for (var j = 0; j < obrigatorios.length; j++) {
+    var esperado = finExtratoFlashTexto_(obrigatorios[j]).toUpperCase();
+    if (!mapa[esperado]) {
+      throw new Error("Header obrigatorio ausente em " + nomeAba + ": " + obrigatorios[j] + ".");
+    }
+  }
+}
+
+function finExtratoFlashValorSaida_(valor) {
+  if (valor instanceof Date) {
+    return valor.toISOString();
+  }
+  return valor;
+}
+
+function finExtratoFlashLoteDuplicadoReal_(loteProposto, lotes) {
+  var chave = finExtratoFlashChaveLote_(loteProposto);
+  var hash = finExtratoFlashTexto_(loteProposto && loteProposto.arquivoHash);
+
+  for (var i = 0; i < lotes.length; i++) {
+    var lote = lotes[i] || {};
+    var chaveReal = finExtratoFlashTexto_(lote.CHAVE_LOTE);
+    if (!chaveReal) chaveReal = finExtratoFlashChaveLote_(lote);
+    if (chave && chaveReal && chave === chaveReal) return true;
+    if (hash && finExtratoFlashTexto_(lote.ARQUIVO_HASH) === hash) return true;
+  }
+
+  return false;
+}
+
+function finExtratoFlashEncontrarLancamentoReal_(item, extratos) {
+  var candidatos = finExtratoFlashChavesLancamentoPossiveis_(item);
+  for (var i = 0; i < extratos.length; i++) {
+    var extrato = extratos[i] || {};
+    var chaveReal = finExtratoFlashTexto_(extrato.CHAVE_DUPLICIDADE);
+    if (chaveReal && finExtratoFlashContemTexto_(candidatos, chaveReal)) return extrato;
+
+    if (!chaveReal) {
+      chaveReal = finExtratoFlashChaveLancamentoReal_(extrato);
+      if (chaveReal && finExtratoFlashContemTexto_(candidatos, chaveReal)) return extrato;
+    }
+  }
+
+  return null;
+}
+
+function finExtratoFlashChavesLancamentoPossiveis_(item) {
+  var lista = [
+    item.chaveDuplicidade,
+    finExtratoFlashChaveLancamento_(item),
+    finExtratoFlashChaveDuplicidade_([
+      item.dataIso || item.dataOriginal,
+      item.valorNumero,
+      item.descricaoLimpa || item.movimentacaoOriginal,
+      item.pessoa,
+      item.pagamentoOriginal
+    ])
+  ];
+  var saida = [];
+  for (var i = 0; i < lista.length; i++) {
+    var chave = finExtratoFlashTexto_(lista[i]);
+    if (chave && !finExtratoFlashContemTexto_(saida, chave)) saida.push(chave);
+  }
+  return saida;
+}
+
+function finExtratoFlashChaveLancamentoReal_(item) {
+  return finExtratoFlashChaveDuplicidade_([
+    item.PESSOA || item.FUNCIONARIO_NOME || item.PORTADOR,
+    item.DATA_ISO || item.DATA_TRANSACAO || item.DATA,
+    item.VALOR || item.VALOR_TRANSACAO,
+    item.ESTABELECIMENTO_EXTRATO || item.DESCRICAO || item.DESCRICAO_GASTO,
+    item.PAGAMENTO || item.MODALIDADE,
+    item.CARTAO_FINAL
+  ]);
+}
+
+function finExtratoFlashDuplicidadesMerge_(loteDuplicado, possiveis, mapaChaves, leituraExecutada, leitura, avisos) {
+  var lista = possiveis || [];
+  return {
+    lotePossivelmenteDuplicado: !!loteDuplicado,
+    totalPossiveisDuplicados: lista.length,
+    lancamentosPossiveisDuplicados: lista,
+    mapaChaves: mapaChaves || {},
+    criterioLancamento: "CHAVE_DUPLICIDADE real ou pessoa + dataIso + valorNumero + descricaoLimpa + pagamentoOriginal + finalCartao",
+    criterioLote: "CHAVE_LOTE real ou arquivoHash + pessoa + periodo + finalCartao + totalLancamentos + somaDebitos + somaCreditos",
+    leituraAbasExecutada: !!leituraExecutada,
+    fonte: leituraExecutada ? "ABAS_FIN_REAIS" : "PAYLOAD_SIMULADO",
+    abasConsultadas: leitura && leitura.abas ? leitura.abas : {},
+    totalLotesLidos: leitura && leitura.lotes ? leitura.lotes.length : 0,
+    totalExtratosLidos: leitura && leitura.extratos ? leitura.extratos.length : 0,
+    avisosLeitura: avisos || [],
+    erroLeitura: leitura && leitura.erro ? leitura.erro : ""
+  };
+}
+
+function finExtratoFlashCopiarMapa_(destino, origem) {
+  for (var chave in origem) {
+    if (Object.prototype.hasOwnProperty.call(origem, chave)) destino[chave] = origem[chave];
+  }
+}
+
+function finExtratoFlashContemTexto_(lista, valor) {
+  var alvo = finExtratoFlashTexto_(valor);
+  for (var i = 0; i < (lista || []).length; i++) {
+    if (finExtratoFlashTexto_(lista[i]) === alvo) return true;
+  }
+  return false;
 }
 
 function finExtratoFlashNormalizarExistentes_(lista) {
