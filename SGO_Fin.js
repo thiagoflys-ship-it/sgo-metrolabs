@@ -10,6 +10,10 @@ const SGO_FIN = (() => {
     CARTOES     : "FIN_CARTOES",
     RECARGAS    : "FIN_CARTOES_RECARGAS",
     LANCAMENTOS : "FIN_CARTOES_LANCAMENTOS",
+    EXTRATOS    : "FIN_CARTOES_EXTRATOS",
+    LOTES_EXTRATO_FLASH: "FIN_LOTES_EXTRATO_FLASH",
+    CONCILIACAO : "FIN_CARTOES_CONCILIACAO",
+    PENDENCIAS  : "FIN_CARTOES_PENDENCIAS",
     LOGS        : "FIN_CARTOES_LOGS"
   };
 
@@ -983,6 +987,676 @@ const SGO_FIN = (() => {
   }
 
   // ============================================================
+  // FUNCOES PUBLICAS - FLASH OPERACIONAL READ-ONLY
+  // ============================================================
+
+  function finFlashAplicarFiltros_(lista, filtros) {
+    const f = filtros || {};
+    var saida = (lista || []).slice();
+    if (finSafeText_(f.status)) {
+      saida = saida.filter(function(r) {
+        return finSafeUpper_(r.STATUS || r.STATUS_LOTE || r.STATUS_CONCILIACAO) === finSafeUpper_(f.status);
+      });
+    }
+    if (finSafeText_(f.loteId)) {
+      saida = saida.filter(function(r) {
+        return finSafeText_(r.LOTE_ID) === finSafeText_(f.loteId);
+      });
+    }
+    if (finSafeText_(f.conciliado)) {
+      saida = saida.filter(function(r) {
+        return finSafeUpper_(r.CONCILIADO) === finSafeUpper_(f.conciliado);
+      });
+    }
+    if (finSafeText_(f.tipoPendencia)) {
+      saida = saida.filter(function(r) {
+        return finSafeUpper_(r.TIPO_PENDENCIA) === finSafeUpper_(f.tipoPendencia);
+      });
+    }
+    if (finSafeText_(f.texto)) {
+      const texto = finSafeUpper_(f.texto);
+      saida = saida.filter(function(r) {
+        return JSON.stringify(r || {}).toUpperCase().indexOf(texto) >= 0;
+      });
+    }
+    return saida;
+  }
+
+  function finFlashLimite_(filtros) {
+    const n = Number(filtros && filtros.limite);
+    if (!isNaN(n) && n > 0) return Math.min(n, 500);
+    return 100;
+  }
+
+  function finFlashUltimos_(lista, limite) {
+    const base = (lista || []).slice();
+    return base.slice(Math.max(0, base.length - limite)).reverse();
+  }
+
+  function finFlashValorExtrato_(r) {
+    return Math.abs(finSafeNumber_(r.VALOR || r.VALOR_TRANSACAO));
+  }
+
+  function finFlashTemDadosTeste_(grupos) {
+    const texto = JSON.stringify(grupos || []);
+    return texto.indexOf("TESTE") >= 0 ||
+      texto.indexOf("LOTE-FLASH-20260611-143638") >= 0 ||
+      texto.indexOf("LANC-TESTE") >= 0 ||
+      texto.indexOf("PEND-FLASH-FIN132") >= 0;
+  }
+
+  function finFlashListar_(sessionId, aba, filtros) {
+    const sessao = finSessao_(sessionId);
+    finGarantirPerfil_(sessao, PERFIS_CONSULTA, "listar dados Flash");
+    finDbOk_();
+    const f = filtros || {};
+    const lista = finFlashAplicarFiltros_(finAll_(aba), f);
+    const limite = finFlashLimite_(f);
+    return finOk_({
+      items: lista.slice(0, limite),
+      total: lista.length,
+      limite: limite
+    });
+  }
+
+  function finFlashObterResumoOperacionalCore_() {
+    try {
+      finDbOk_();
+
+      const lotes = finAll_(ABAS.LOTES_EXTRATO_FLASH);
+      const extratos = finAll_(ABAS.EXTRATOS);
+      const lancamentos = finAll_(ABAS.LANCAMENTOS);
+      const conciliacoes = finAll_(ABAS.CONCILIACAO);
+      const pendencias = finAll_(ABAS.PENDENCIAS);
+      const extratosConciliados = extratos.filter(function(r) { return finSafeUpper_(r.CONCILIADO) === "SIM"; });
+      const lancamentosConciliados = lancamentos.filter(function(r) { return finSafeUpper_(r.CONCILIADO) === "SIM"; });
+      const pendenciasAbertas = pendencias.filter(function(r) {
+        const s = finSafeUpper_(r.STATUS);
+        return s !== "RESOLVIDA" && s !== "RESOLVIDO" && s !== "FECHADA" && s !== "CANCELADA";
+      });
+      const pendenciasResolvidas = pendencias.filter(function(r) {
+        const s = finSafeUpper_(r.STATUS);
+        return s === "RESOLVIDA" || s === "RESOLVIDO" || s === "FECHADA";
+      });
+      const valorTotalExtratos = extratos.reduce(function(acc, r) {
+        return acc + finFlashValorExtrato_(r);
+      }, 0);
+      const valorTotalPendenciasAbertas = pendenciasAbertas.reduce(function(acc, r) {
+        return acc + Math.abs(finSafeNumber_(r.VALOR_ENVOLVIDO));
+      }, 0);
+      const percentualConciliado = extratos.length
+        ? Number(((extratosConciliados.length / extratos.length) * 100).toFixed(2))
+        : 0;
+      const grupos = [lotes, extratos, lancamentos, conciliacoes, pendencias];
+
+      return finOk_({
+        resumo: {
+          totalLotes: lotes.length,
+          totalExtratos: extratos.length,
+          totalExtratosConciliados: extratosConciliados.length,
+          totalExtratosNaoConciliados: extratos.length - extratosConciliados.length,
+          totalLancamentos: lancamentos.length,
+          totalLancamentosConciliados: lancamentosConciliados.length,
+          totalLancamentosNaoConciliados: lancamentos.length - lancamentosConciliados.length,
+          totalConciliacoes: conciliacoes.length,
+          totalPendencias: pendencias.length,
+          totalPendenciasAbertas: pendenciasAbertas.length,
+          totalPendenciasResolvidas: pendenciasResolvidas.length,
+          valorTotalExtratos: valorTotalExtratos,
+          valorTotalPendenciasAbertas: valorTotalPendenciasAbertas,
+          percentualConciliado: percentualConciliado
+        },
+        ultimosLotes: finFlashUltimos_(lotes, 10),
+        ultimosExtratos: finFlashUltimos_(extratos, 20),
+        ultimasPendencias: finFlashUltimos_(pendencias, 20),
+        ultimasConciliacoes: finFlashUltimos_(conciliacoes, 10),
+        dadosTeste: finFlashTemDadosTeste_(grupos),
+        bloqueios: [],
+        avisos: finFlashTemDadosTeste_(grupos) ? ["Ambiente com dados de teste Flash detectados."] : []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashObterResumoOperacional(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter resumo operacional Flash");
+      return finFlashObterResumoOperacionalCore_();
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashTelaValor_(valor) {
+    if (valor instanceof Date) return valor.toISOString();
+    if (valor === null || valor === undefined) return "";
+    if (typeof valor === "string" || typeof valor === "number" || typeof valor === "boolean") return valor;
+    return String(valor);
+  }
+
+  function finFlashTelaLista_(lista, limite, campos) {
+    return (lista || []).slice(0, limite).map(function(item) {
+      const saida = {};
+      campos.forEach(function(campo) {
+        saida[campo] = finFlashTelaValor_(item && item[campo]);
+      });
+      return saida;
+    });
+  }
+
+  function finFlashObterResumoTela(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter resumo operacional Flash");
+      const base = finFlashObterResumoOperacionalCore_();
+      if (!base || !base.ok) return base;
+      return finOk_({
+        resumo: base.resumo || {},
+        ultimosLotes: finFlashTelaLista_(base.ultimosLotes, 5, [
+          "LOTE_ID", "STATUS_LOTE", "STATUS", "TOTAL_LANCAMENTOS", "SALDO_LIQUIDO"
+        ]),
+        ultimosExtratos: finFlashTelaLista_(base.ultimosExtratos, 10, [
+          "EXTRATO_ID", "LOTE_ID", "DATA_TRANSACAO", "DATA", "ESTABELECIMENTO_EXTRATO",
+          "DESCRICAO", "VALOR", "VALOR_TRANSACAO", "CONCILIADO", "STATUS"
+        ]),
+        ultimasPendencias: finFlashTelaLista_(base.ultimasPendencias, 10, [
+          "PENDENCIA_ID", "TIPO_PENDENCIA", "DESCRICAO_PENDENCIA", "VALOR_ENVOLVIDO", "STATUS"
+        ]),
+        ultimasConciliacoes: finFlashTelaLista_(base.ultimasConciliacoes, 5, [
+          "CONCILIACAO_ID", "ID", "DATA_CONCILIACAO", "TOTAL_CONCILIADO", "STATUS"
+        ]),
+        dadosTesteDetectados: !!base.dadosTeste,
+        dadosTeste: !!base.dadosTeste,
+        bloqueios: base.bloqueios || [],
+        avisos: base.avisos || []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashDataMs_(valor) {
+    if (!valor) return null;
+    if (valor instanceof Date) return new Date(valor.getFullYear(), valor.getMonth(), valor.getDate()).getTime();
+    const txt = finSafeText_(valor);
+    const iso = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])).getTime();
+    const br = txt.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (br) return new Date(Number(br[3]), Number(br[2]) - 1, Number(br[1])).getTime();
+    return null;
+  }
+
+  function finFlashDataProxima_(a, b) {
+    const ams = finFlashDataMs_(a);
+    const bms = finFlashDataMs_(b);
+    if (ams === null || bms === null) return false;
+    return Math.abs(ams - bms) <= 86400000;
+  }
+
+  function finFlashExtratoPendente_(r) {
+    const status = finSafeUpper_(r.STATUS);
+    const conciliado = finSafeUpper_(r.CONCILIADO);
+    return (!status || status === "IMPORTADO" || status === "ATIVO") && conciliado !== "SIM";
+  }
+
+  function finFlashLancamentoPendente_(r) {
+    const status = finSafeUpper_(r.STATUS);
+    const conciliado = finSafeUpper_(r.CONCILIADO);
+    return (!status || status === "ATIVO") && conciliado !== "SIM";
+  }
+
+  function finFlashMesmoCartao_(extrato, lancamento) {
+    const cartaoIdExtrato = finSafeText_(extrato.CARTAO_ID);
+    const cartaoIdLanc = finSafeText_(lancamento.CARTAO_ID);
+    if (cartaoIdExtrato && cartaoIdLanc) return cartaoIdExtrato === cartaoIdLanc;
+    const finalExtrato = finSafeText_(extrato.CARTAO_FINAL);
+    const finalLanc = finSafeText_(lancamento.CARTAO_FINAL);
+    if (finalExtrato && finalLanc) return finalExtrato === finalLanc;
+    return true;
+  }
+
+  function finFlashItemConciliacaoTela_(extrato, lancamento) {
+    return {
+      extratoId: finFlashTelaValor_(extrato.EXTRATO_ID || extrato.ID),
+      lancamentoId: lancamento ? finFlashTelaValor_(lancamento.LANCAMENTO_ID || lancamento.ID) : "",
+      dataExtrato: finFlashTelaValor_(extrato.DATA_TRANSACAO || extrato.DATA),
+      dataLancamento: lancamento ? finFlashTelaValor_(lancamento.DATA_GASTO || lancamento.DATA) : "",
+      descricaoExtrato: finFlashTelaValor_(extrato.ESTABELECIMENTO_EXTRATO || extrato.DESCRICAO),
+      descricaoLancamento: lancamento ? finFlashTelaValor_(lancamento.ESTABELECIMENTO || lancamento.DESCRICAO_GASTO) : "",
+      valorExtrato: finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO),
+      valorLancamento: lancamento ? finSafeNumber_(lancamento.VALOR) : 0,
+      cartaoId: finFlashTelaValor_(extrato.CARTAO_ID || (lancamento && lancamento.CARTAO_ID)),
+      cartaoFinal: finFlashTelaValor_(extrato.CARTAO_FINAL || (lancamento && lancamento.CARTAO_FINAL))
+    };
+  }
+
+  function finFlashPrevisualizarConciliacaoTela(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "previsualizar conciliacao Flash");
+      finDbOk_();
+
+      const extratos = finAll_(ABAS.EXTRATOS).filter(finFlashExtratoPendente_);
+      const lancamentos = finAll_(ABAS.LANCAMENTOS).filter(finFlashLancamentoPendente_);
+      const usados = {};
+      const conciliaveis = [];
+      const semPrestacao = [];
+
+      extratos.forEach(function(extrato) {
+        const valorExtrato = Math.abs(finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO));
+        const candidato = lancamentos.find(function(lancamento) {
+          const lancId = finSafeText_(lancamento.LANCAMENTO_ID || lancamento.ID);
+          if (usados[lancId]) return false;
+          const valorLanc = Math.abs(finSafeNumber_(lancamento.VALOR));
+          return Math.abs(valorExtrato - valorLanc) <= 0.01 &&
+            finFlashDataProxima_(extrato.DATA_TRANSACAO || extrato.DATA, lancamento.DATA_GASTO || lancamento.DATA) &&
+            finFlashMesmoCartao_(extrato, lancamento);
+        });
+        if (candidato) {
+          usados[finSafeText_(candidato.LANCAMENTO_ID || candidato.ID)] = true;
+          conciliaveis.push(finFlashItemConciliacaoTela_(extrato, candidato));
+        } else {
+          semPrestacao.push(finFlashItemConciliacaoTela_(extrato, null));
+        }
+      });
+
+      const semExtrato = lancamentos.filter(function(lancamento) {
+        return !usados[finSafeText_(lancamento.LANCAMENTO_ID || lancamento.ID)];
+      }).map(function(lancamento) {
+        return {
+          lancamentoId: finFlashTelaValor_(lancamento.LANCAMENTO_ID || lancamento.ID),
+          dataLancamento: finFlashTelaValor_(lancamento.DATA_GASTO || lancamento.DATA),
+          descricaoLancamento: finFlashTelaValor_(lancamento.ESTABELECIMENTO || lancamento.DESCRICAO_GASTO),
+          valorLancamento: finSafeNumber_(lancamento.VALOR),
+          cartaoId: finFlashTelaValor_(lancamento.CARTAO_ID),
+          cartaoFinal: finFlashTelaValor_(lancamento.CARTAO_FINAL)
+        };
+      });
+
+      return finOk_({
+        resumo: {
+          totalExtratosPendentes: extratos.length,
+          totalLancamentosPendentes: lancamentos.length,
+          totalConciliaveis: conciliaveis.length,
+          totalSemPrestacao: semPrestacao.length,
+          totalSemExtrato: semExtrato.length
+        },
+        conciliaveis: conciliaveis.slice(0, 20),
+        semPrestacao: semPrestacao.slice(0, 20),
+        semExtrato: semExtrato.slice(0, 20),
+        bloqueios: [],
+        avisos: []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashPrevisualizarPendenciasTela(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "previsualizar pendencias Flash");
+      finDbOk_();
+
+      const pendencias = finAll_(ABAS.PENDENCIAS);
+      const extratos = finAll_(ABAS.EXTRATOS);
+      const lancamentos = finAll_(ABAS.LANCAMENTOS);
+      const extratosIds = {};
+      const lancamentosIds = {};
+      extratos.forEach(function(r) { extratosIds[finSafeText_(r.EXTRATO_ID || r.ID)] = true; });
+      lancamentos.forEach(function(r) { lancamentosIds[finSafeText_(r.LANCAMENTO_ID || r.ID)] = true; });
+
+      const totalPorTipo = {};
+      const chaves = {};
+      const abertas = [];
+      const duplicadas = [];
+      const semReferencia = [];
+
+      pendencias.forEach(function(p) {
+        const tipo = finSafeText_(p.TIPO_PENDENCIA) || "INDEFINIDO";
+        totalPorTipo[tipo] = (totalPorTipo[tipo] || 0) + 1;
+        const status = finSafeUpper_(p.STATUS);
+        const item = {
+          pendenciaId: finFlashTelaValor_(p.PENDENCIA_ID || p.ID),
+          tipoPendencia: finFlashTelaValor_(p.TIPO_PENDENCIA),
+          descricaoPendencia: finFlashTelaValor_(p.DESCRICAO_PENDENCIA),
+          valorEnvolvido: finSafeNumber_(p.VALOR_ENVOLVIDO),
+          extratoId: finFlashTelaValor_(p.EXTRATO_ID),
+          lancamentoId: finFlashTelaValor_(p.LANCAMENTO_ID),
+          status: finFlashTelaValor_(p.STATUS)
+        };
+        if (status !== "RESOLVIDA" && status !== "RESOLVIDO" && status !== "FECHADA" && status !== "CANCELADA") {
+          abertas.push(item);
+        }
+        const chave = [
+          finSafeText_(p.TIPO_PENDENCIA),
+          finSafeText_(p.EXTRATO_ID),
+          finSafeText_(p.LANCAMENTO_ID),
+          finSafeText_(p.VALOR_ENVOLVIDO),
+          status
+        ].join("|");
+        if (chaves[chave]) duplicadas.push(item);
+        chaves[chave] = true;
+        const extratoId = finSafeText_(p.EXTRATO_ID);
+        const lancamentoId = finSafeText_(p.LANCAMENTO_ID);
+        if ((extratoId && !extratosIds[extratoId]) || (lancamentoId && !lancamentosIds[lancamentoId]) || (!extratoId && !lancamentoId)) {
+          semReferencia.push(item);
+        }
+      });
+
+      return finOk_({
+        resumo: {
+          totalPendencias: pendencias.length,
+          totalAbertas: abertas.length,
+          totalResolvidas: pendencias.length - abertas.length,
+          totalPorTipo: totalPorTipo
+        },
+        pendenciasAbertas: abertas.slice(0, 30),
+        pendenciasDuplicadas: duplicadas.slice(0, 20),
+        pendenciasSemReferencia: semReferencia.slice(0, 20),
+        bloqueios: [],
+        avisos: []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashLocalizarPendencia_(pendenciaId) {
+    const alvo = finSafeText_(pendenciaId);
+    const sheet = finSheet_(ABAS.PENDENCIAS);
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (!alvo || lastRow < 2 || lastCol < 1) return null;
+    const dados = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = dados[0].map(function(h) { return finSafeText_(h); });
+    const idxId = headers.indexOf("ID");
+    const idxPendenciaId = headers.indexOf("PENDENCIA_ID");
+    for (let i = 1; i < dados.length; i++) {
+      const row = dados[i];
+      if ((idxPendenciaId >= 0 && finSafeText_(row[idxPendenciaId]) === alvo) ||
+          (idxId >= 0 && finSafeText_(row[idxId]) === alvo)) {
+        const item = {};
+        headers.forEach(function(h, j) { item[h] = finValorSaida_(row[j]); });
+        return {
+          sheet: sheet,
+          headers: headers,
+          rowValues: row,
+          rowIndex: i + 1,
+          item: item
+        };
+      }
+    }
+    return null;
+  }
+
+  function finFlashAplicarPatchLinha_(local, patch) {
+    const row = local.rowValues.slice();
+    Object.keys(patch || {}).forEach(function(campo) {
+      const idx = local.headers.indexOf(campo);
+      if (idx >= 0) row[idx] = patch[campo];
+    });
+    local.sheet.getRange(local.rowIndex, 1, 1, local.headers.length).setValues([row]);
+  }
+
+  function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "resolver pendencia Flash pela tela");
+      const alvo = finSafeText_(pendenciaId);
+      const texto = finSafeText_(resolucaoTexto);
+      if (confirmacao !== "RESOLVER_PENDENCIA_FLASH_TELA_FIN_E") {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: false,
+          pendenciaId: alvo,
+          bloqueios: ["Confirmacao textual obrigatoria invalida ou ausente para resolver pendencia Flash pela tela."],
+          avisos: []
+        };
+      }
+      if (!alvo) {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: true,
+          pendenciaId: alvo,
+          bloqueios: ["Pendencia nao informada."],
+          avisos: []
+        };
+      }
+      if (texto.length < 10) {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: true,
+          pendenciaId: alvo,
+          bloqueios: ["Resolucao obrigatoria deve ter pelo menos 10 caracteres."],
+          avisos: []
+        };
+      }
+      finDbOk_();
+      const local = finFlashLocalizarPendencia_(alvo);
+      if (!local) {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: true,
+          pendenciaId: alvo,
+          bloqueios: ["Pendencia nao encontrada"],
+          avisos: []
+        };
+      }
+      const statusAnterior = finSafeUpper_(local.item.STATUS);
+      if (statusAnterior === "RESOLVIDA") {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: true,
+          pendenciaId: alvo,
+          statusAnterior: statusAnterior,
+          bloqueios: ["Pendencia ja resolvida. Nenhuma alteracao realizada."],
+          avisos: ["Idempotencia preservada: resolucao nao duplicada."]
+        };
+      }
+      const u = finUsuario_(sessao);
+      const agora = finNow_();
+      const resolvidoPor = u.nome || u.id || u.perfil || "";
+      finFlashAplicarPatchLinha_(local, {
+        STATUS: "RESOLVIDA",
+        RESOLUCAO_DESCRICAO: texto,
+        RESOLUCAO_EM: agora,
+        RESOLVIDO_POR: resolvidoPor,
+        ATUALIZADO_EM: agora,
+        ATUALIZADO_POR: resolvidoPor
+      });
+      return finOk_({
+        executado: true,
+        autorizado: true,
+        pendenciaId: alvo,
+        statusAnterior: statusAnterior,
+        statusNovo: "RESOLVIDA",
+        resolucaoDescricao: texto,
+        linha: local.rowIndex,
+        bloqueios: [],
+        avisos: []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashAuditarPendenciasTelaCore_() {
+    try {
+      finDbOk_();
+      const pendencias = finAll_(ABAS.PENDENCIAS);
+      const extratos = finAll_(ABAS.EXTRATOS);
+      const lancamentos = finAll_(ABAS.LANCAMENTOS);
+      const extratosIds = {};
+      const lancamentosIds = {};
+      extratos.forEach(function(r) { extratosIds[finSafeText_(r.EXTRATO_ID || r.ID)] = true; });
+      lancamentos.forEach(function(r) { lancamentosIds[finSafeText_(r.LANCAMENTO_ID || r.ID)] = true; });
+      const abertas = [];
+      const resolvidas = [];
+      const duplicadas = [];
+      const semReferencia = [];
+      const chaves = {};
+
+      pendencias.forEach(function(p) {
+        const status = finSafeUpper_(p.STATUS);
+        const item = {
+          pendenciaId: finFlashTelaValor_(p.PENDENCIA_ID || p.ID),
+          tipoPendencia: finFlashTelaValor_(p.TIPO_PENDENCIA),
+          descricaoPendencia: finFlashTelaValor_(p.DESCRICAO_PENDENCIA),
+          valorEnvolvido: finSafeNumber_(p.VALOR_ENVOLVIDO),
+          extratoId: finFlashTelaValor_(p.EXTRATO_ID),
+          lancamentoId: finFlashTelaValor_(p.LANCAMENTO_ID),
+          status: finFlashTelaValor_(p.STATUS),
+          resolucaoDescricao: finFlashTelaValor_(p.RESOLUCAO_DESCRICAO),
+          resolucaoEm: finFlashTelaValor_(p.RESOLUCAO_EM),
+          resolvidoPor: finFlashTelaValor_(p.RESOLVIDO_POR)
+        };
+        if (status === "RESOLVIDA" || status === "RESOLVIDO" || status === "FECHADA") {
+          resolvidas.push(item);
+        } else {
+          abertas.push(item);
+        }
+        const chave = [
+          finSafeText_(p.TIPO_PENDENCIA),
+          finSafeText_(p.EXTRATO_ID),
+          finSafeText_(p.LANCAMENTO_ID),
+          finSafeText_(p.VALOR_ENVOLVIDO),
+          status
+        ].join("|");
+        if (chaves[chave]) duplicadas.push(item);
+        chaves[chave] = true;
+        const extratoId = finSafeText_(p.EXTRATO_ID);
+        const lancamentoId = finSafeText_(p.LANCAMENTO_ID);
+        if ((extratoId && !extratosIds[extratoId]) || (lancamentoId && !lancamentosIds[lancamentoId]) || (!extratoId && !lancamentoId)) {
+          semReferencia.push(item);
+        }
+      });
+
+      return finOk_({
+        totalPendencias: pendencias.length,
+        totalAbertas: abertas.length,
+        totalResolvidas: resolvidas.length,
+        pendenciasAbertas: abertas.slice(0, 30),
+        pendenciasResolvidas: resolvidas.slice(0, 30),
+        pendenciasDuplicadas: duplicadas.slice(0, 20),
+        pendenciasSemReferencia: semReferencia.slice(0, 20),
+        bloqueios: [],
+        avisos: []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashAuditarPendenciasTela(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "auditar pendencias Flash pela tela");
+      return finFlashAuditarPendenciasTelaCore_();
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "conciliar Flash pela tela");
+      if (confirmacao !== "CONCILIAR_FLASH_TELA_FIN_D") {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: false,
+          bloqueios: ["Trava textual obrigatoria invalida ou ausente para conciliar Flash pela tela."],
+          avisos: []
+        };
+      }
+      return {
+        ok: false,
+        success: false,
+        executado: false,
+        autorizado: true,
+        bloqueios: [],
+        avisos: ["Acao real ainda nao habilitada neste pacote."]
+      };
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashGerarPendenciasTela(sessionId, confirmacao) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "gerar pendencias Flash pela tela");
+      if (confirmacao !== "GERAR_PENDENCIAS_FLASH_TELA_FIN_D") {
+        return {
+          ok: false,
+          success: false,
+          executado: false,
+          autorizado: false,
+          bloqueios: ["Trava textual obrigatoria invalida ou ausente para gerar pendencias Flash pela tela."],
+          avisos: []
+        };
+      }
+      return {
+        ok: false,
+        success: false,
+        executado: false,
+        autorizado: true,
+        bloqueios: [],
+        avisos: ["Acao real ainda nao habilitada neste pacote."]
+      };
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function flashListarLotes(sessionId, filtros) {
+    try {
+      return finFlashListar_(sessionId, ABAS.LOTES_EXTRATO_FLASH, filtros);
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function flashListarExtratos(sessionId, filtros) {
+    try {
+      return finFlashListar_(sessionId, ABAS.EXTRATOS, filtros);
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function flashListarPendencias(sessionId, filtros) {
+    try {
+      return finFlashListar_(sessionId, ABAS.PENDENCIAS, filtros);
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function flashListarConciliacoes(sessionId, filtros) {
+    try {
+      return finFlashListar_(sessionId, ABAS.CONCILIACAO, filtros);
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
   // INTERFACE PUBLICA
   // ============================================================
 
@@ -1004,7 +1678,21 @@ const SGO_FIN = (() => {
     atualizarLancamento,
     aprovarLancamento,
     rejeitarLancamento,
-    obterDashboardBasico
+    obterDashboardBasico,
+    finFlashObterResumoOperacional,
+    finFlashObterResumoTela,
+    finFlashPrevisualizarConciliacaoTela,
+    finFlashPrevisualizarPendenciasTela,
+    finFlashResolverPendenciaTela,
+    finFlashAuditarPendenciasTela,
+    finFlashAuditarPendenciasTelaCore_,
+    finFlashConciliarSelecionadosTela,
+    finFlashGerarPendenciasTela,
+    finFlashObterResumoOperacionalCore_,
+    flashListarLotes,
+    flashListarExtratos,
+    flashListarPendencias,
+    flashListarConciliacoes
   };
 })();
 
@@ -1031,3 +1719,35 @@ function finAtualizarLancamento(sId, id, payload) { return SGO_FIN.atualizarLanc
 function finAprovarLancamento(sId, id)            { return SGO_FIN.aprovarLancamento(sId, id); }
 function finRejeitarLancamento(sId, id, motivo)   { return SGO_FIN.rejeitarLancamento(sId, id, motivo); }
 function finObterDashboardBasico(sId, filtros)    { return SGO_FIN.obterDashboardBasico(sId, filtros); }
+function finFlashObterResumoOperacional(sessionId) { return SGO_FIN.finFlashObterResumoOperacional(sessionId); }
+function finFlashObterResumoTela(sessionId)        { return SGO_FIN.finFlashObterResumoTela(sessionId); }
+function finFlashPrevisualizarConciliacaoTela(sessionId) { return SGO_FIN.finFlashPrevisualizarConciliacaoTela(sessionId); }
+function finFlashPrevisualizarPendenciasTela(sessionId)  { return SGO_FIN.finFlashPrevisualizarPendenciasTela(sessionId); }
+function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao) { return SGO_FIN.finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao); }
+function finFlashAuditarPendenciasTela(sessionId)  { return SGO_FIN.finFlashAuditarPendenciasTela(sessionId); }
+function finFlashAuditarPendenciasTelaCore_()      { return SGO_FIN.finFlashAuditarPendenciasTelaCore_(); }
+function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) { return SGO_FIN.finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao); }
+function finFlashGerarPendenciasTela(sessionId, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, confirmacao); }
+function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
+function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
+function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
+function finFlashListarConciliacoes(sId, filtros)  { return SGO_FIN.flashListarConciliacoes(sId, filtros); }
+function finFlashObterResumoOperacionalCore_()     { return SGO_FIN.finFlashObterResumoOperacionalCore_(); }
+
+function testarFinFlashObterResumoOperacional_C1_SEM_GRAVAR() {
+  const resultado = finFlashObterResumoOperacionalCore_();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function testarBloqueioResolverPendenciaFlashTela_FIN_E() {
+  const resultado = finFlashResolverPendenciaTela("", "", "", "");
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function testarFinFlashAuditoriaPendenciasTela_FIN_E_SEM_GRAVAR() {
+  const resultado = finFlashAuditarPendenciasTelaCore_();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}

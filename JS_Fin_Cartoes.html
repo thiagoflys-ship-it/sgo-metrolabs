@@ -129,6 +129,22 @@
     .fin-flash-summary-card .label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
     .fin-flash-summary-card .value { margin-top: 4px; color: #0f2d52; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
     .fin-flash-preview-foot { color: #777; font-size: 12px; margin-top: 10px; line-height: 1.45; }
+    .fin-flash-op-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .fin-flash-op-card { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px 14px; min-width: 0; }
+    .fin-flash-op-card .label { color: #777; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+    .fin-flash-op-card .value { color: #0f2d52; font-size: 20px; font-weight: 800; margin-top: 5px; overflow-wrap: anywhere; }
+    .fin-flash-op-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .fin-flash-op-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .fin-flash-op-note { display: none; }
+    .fin-flash-op-note.show { display: block; }
+    .fin-flash-action-panel { margin-top: 14px; }
+    .fin-flash-action-panel h3 { margin-bottom: 10px; }
+    .fin-flash-action-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .fin-flash-action-kpi { background: #f8fafc; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 12px; }
+    .fin-flash-action-kpi .label { color: #777; font-size: 10px; text-transform: uppercase; font-weight: 700; }
+    .fin-flash-action-kpi .value { color: #0f2d52; font-size: 18px; font-weight: 800; margin-top: 4px; }
+    @media (max-width: 1180px) { .fin-flash-op-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 760px) { .fin-flash-op-grid, .fin-flash-op-panels, .fin-flash-action-grid { grid-template-columns: 1fr; } }
     @media (max-width: 980px) { .fin-flash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 560px) { .fin-flash-summary { grid-template-columns: 1fr; } .fin-flash-file { max-width: 100%; } }
 
@@ -233,6 +249,7 @@
   <button class="fin-tab-btn active" onclick="finMudarAba('cartoes')">Cartoes</button>
   <button class="fin-tab-btn" onclick="finMudarAba('recargas')">Recargas</button>
   <button class="fin-tab-btn" onclick="finMudarAba('lancamentos')">Lancamentos <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
+  <button class="fin-tab-btn" onclick="finMudarAba('flash')">Extratos Flash</button>
   <button class="fin-tab-btn placeholder" title="Disponivel em FIN.8 - Conciliacao Inteligente">Pendencias (FIN.8)</button>
   <button class="fin-tab-btn placeholder" title="Disponivel em FIN.10 - Documentos Premium">Documentos (FIN.10)</button>
 </div>
@@ -352,6 +369,48 @@
         </select>
       </div>
       <div id="finTblLancamentos"><div class="fin-list-empty">Selecione um cartao acima.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Extratos Flash -->
+<div id="tabFlash" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div id="finFlashTesteAviso" class="fin-alert fin-alert-warning fin-flash-op-note">Ambiente com dados de teste Flash detectados.</div>
+    <div class="fin-flash-op-actions">
+      <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarResumo_()">Atualizar</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia conciliação</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
+    </div>
+    <div id="finFlashErro"></div>
+    <div id="finFlashPainelAcao"></div>
+    <div id="finFlashResumoCards" class="fin-flash-op-grid">
+      <div class="fin-flash-op-card"><div class="label">Lotes</div><div class="value">-</div></div>
+      <div class="fin-flash-op-card"><div class="label">Extratos</div><div class="value">-</div></div>
+      <div class="fin-flash-op-card"><div class="label">Conciliados</div><div class="value">-</div></div>
+      <div class="fin-flash-op-card"><div class="label">Não conciliados</div><div class="value">-</div></div>
+      <div class="fin-flash-op-card"><div class="label">Pendências abertas</div><div class="value">-</div></div>
+      <div class="fin-flash-op-card"><div class="label">Valor pendente</div><div class="value">-</div></div>
+    </div>
+    <div class="fin-flash-op-panels">
+      <div class="fin-card">
+        <h3>Últimos lotes</h3>
+        <div id="finFlashLotes"><div class="fin-list-empty">Carregando...</div></div>
+      </div>
+      <div class="fin-card">
+        <h3>Extratos recentes</h3>
+        <div id="finFlashExtratos"><div class="fin-list-empty">Carregando...</div></div>
+      </div>
+      <div class="fin-card">
+        <h3>Pendências abertas</h3>
+        <div id="finFlashPendencias"><div class="fin-list-empty">Carregando...</div></div>
+      </div>
+      <div class="fin-card">
+        <h3>Últimas conciliações</h3>
+        <div id="finFlashConciliacoes"><div class="fin-list-empty">Carregando...</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -489,6 +548,8 @@ var _finCartoes = [];
 var _finFiltrados = [];
 var _finCartaoAtualId = '';
 var _finFlashPreviewTimer = null;
+var _finFlashOperacionalCarregado = false;
+var _finFlashPendenciasResolucao = {};
 
 // ---- init ----
 
@@ -1244,14 +1305,331 @@ function finListaPreviewFlash(lista) {
   return lista.join(', ');
 }
 
+// ---- Extratos Flash operacional ----
+
+function finFlashCarregarResumo_() {
+  var erro = document.getElementById('finFlashErro');
+  if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-info">Carregando dados Flash...</div>'; }
+  var funcaoFlash = 'finFlashObterResumoTela';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashMostrarErro_((r && r.message) ? r.message : 'Erro ao carregar resumo Flash.', funcaoFlash);
+        return;
+      }
+      _finFlashOperacionalCarregado = true;
+      finFlashRenderResumo_(r);
+      finFlashRenderLotes_(r.ultimosLotes || []);
+      finFlashRenderExtratos_(r.ultimosExtratos || []);
+      finFlashRenderPendencias_(r.ultimasPendencias || []);
+      finFlashRenderConciliacoes_(r.ultimasConciliacoes || []);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, funcaoFlash);
+    })
+    .finFlashObterResumoTela(_finSessao);
+}
+
+function finFlashRenderResumo_(dados) {
+  var erro = document.getElementById('finFlashErro');
+  if (erro) { erro.innerHTML = ''; }
+  var r = dados && dados.resumo ? dados.resumo : {};
+  var cards = [
+    ['Lotes', r.totalLotes],
+    ['Extratos', r.totalExtratos],
+    ['Conciliados', r.totalExtratosConciliados],
+    ['Não conciliados', r.totalExtratosNaoConciliados],
+    ['Pendências abertas', r.totalPendenciasAbertas],
+    ['Valor pendente', finMoeda(r.valorTotalPendenciasAbertas || 0)]
+  ];
+  var html = '';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-op-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1] == null ? '-' : cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  document.getElementById('finFlashResumoCards').innerHTML = html;
+  var aviso = document.getElementById('finFlashTesteAviso');
+  if (aviso) {
+    if (dados && (dados.dadosTeste || dados.dadosTesteDetectados)) { aviso.classList.add('show'); }
+    else { aviso.classList.toggle('show', false); }
+  }
+}
+
+function finFlashRenderLotes_(lotes) {
+  var el = document.getElementById('finFlashLotes');
+  if (!lotes || !lotes.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum lote Flash encontrado.</div>';
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Lote</th><th>Status</th><th>Total</th><th>Saldo</th></tr></thead><tbody>';
+  for (var i = 0; i < lotes.length; i++) {
+    var l = lotes[i];
+    html += '<tr><td>' + finEH(l.LOTE_ID || '') + '</td><td>' + finEH(l.STATUS_LOTE || l.STATUS || '') + '</td><td>' + finEH(l.TOTAL_LANCAMENTOS || 0) + '</td><td>' + finMoeda(l.SALDO_LIQUIDO || 0) + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function finFlashRenderExtratos_(extratos) {
+  var el = document.getElementById('finFlashExtratos');
+  if (!extratos || !extratos.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum extrato Flash encontrado.</div>';
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Conciliado</th></tr></thead><tbody>';
+  for (var i = 0; i < extratos.length; i++) {
+    var e = extratos[i];
+    html += '<tr><td>' + finEH(finDataBR(e.DATA_TRANSACAO || e.DATA)) + '</td><td>' + finEH(e.ESTABELECIMENTO_EXTRATO || e.DESCRICAO || '') + '</td><td>' + finMoeda(e.VALOR || e.VALOR_TRANSACAO || 0) + '</td><td>' + finPill(e.CONCILIADO || 'NAO') + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function finFlashRenderPendencias_(pendencias) {
+  var el = document.getElementById('finFlashPendencias');
+  if (!pendencias || !pendencias.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhuma pendência Flash encontrada.</div>';
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead><tbody>';
+  for (var i = 0; i < pendencias.length; i++) {
+    var p = pendencias[i];
+    html += '<tr><td>' + finEH(p.TIPO_PENDENCIA || '') + '</td><td>' + finEH(p.DESCRICAO_PENDENCIA || '') + '</td><td>' + finMoeda(p.VALOR_ENVOLVIDO || 0) + '</td><td>' + finPill(p.STATUS || '') + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function finFlashRenderConciliacoes_(conciliacoes) {
+  var el = document.getElementById('finFlashConciliacoes');
+  if (!el) { return; }
+  if (!conciliacoes || !conciliacoes.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhuma conciliação Flash encontrada.</div>';
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Conciliação</th><th>Data</th><th>Total</th><th>Status</th></tr></thead><tbody>';
+  for (var i = 0; i < conciliacoes.length; i++) {
+    var c = conciliacoes[i];
+    html += '<tr><td>' + finEH(c.CONCILIACAO_ID || c.ID || '') + '</td><td>' + finEH(finDataBR(c.DATA_CONCILIACAO || '')) + '</td><td>' + finEH(c.TOTAL_CONCILIADO || 0) + '</td><td>' + finPill(c.STATUS || '') + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function finFlashMostrarErro_(erro, funcao) {
+  var el = document.getElementById('finFlashErro');
+  var msg = erro && erro.message ? erro.message : (erro || 'Erro Flash.');
+  if (erro && erro.stack && window.console && console.log) {
+    console.log('Erro Flash em ' + (funcao || 'função não informada') + ': ' + erro.stack);
+  }
+  if (el) {
+    el.innerHTML = '<div class="fin-alert fin-alert-danger">' +
+      '<strong>Falha ao carregar Flash.</strong><br>' +
+      finEH(msg) + '<br>' +
+      '<small>Função: ' + finEH(funcao || 'não informada') + '. Verificar sessão/frontend.</small>' +
+      '</div>';
+  }
+}
+
+function finFlashVerPreviaConciliacao_() {
+  finFlashRenderPainelAcao_('Prévia de conciliação', '<div class="fin-alert fin-alert-info">Carregando prévia de conciliação...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashRenderPainelAcao_('Prévia de conciliação', '<div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Erro ao carregar prévia.') + '</div>');
+        return;
+      }
+      finFlashRenderPreviaConciliacao_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, 'finFlashPrevisualizarConciliacaoTela');
+    })
+    .finFlashPrevisualizarConciliacaoTela(_finSessao);
+}
+
+function finFlashRenderPreviaConciliacao_(dados) {
+  var r = dados && dados.resumo ? dados.resumo : {};
+  var html = '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Extratos pendentes', r.totalExtratosPendentes);
+  html += finFlashKpiAcao_('Lançamentos pendentes', r.totalLancamentosPendentes);
+  html += finFlashKpiAcao_('Conciliáveis', r.totalConciliaveis);
+  html += finFlashKpiAcao_('Sem prestação', r.totalSemPrestacao);
+  html += finFlashKpiAcao_('Sem extrato', r.totalSemExtrato);
+  html += '</div>';
+  html += '<h3>Conciliáveis</h3>' + finFlashTabelaConciliacao_(dados.conciliaveis || [], true);
+  html += '<h3>Sem prestação</h3>' + finFlashTabelaConciliacao_(dados.semPrestacao || [], false);
+  html += '<h3>Sem extrato</h3>' + finFlashTabelaSemExtrato_(dados.semExtrato || []);
+  finFlashRenderPainelAcao_('Prévia de conciliação', html);
+}
+
+function finFlashVerPendencias_() {
+  finFlashRenderPainelAcao_('Pendências Flash', '<div class="fin-alert fin-alert-info">Carregando pendências...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashRenderPainelAcao_('Pendências Flash', '<div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Erro ao carregar pendências.') + '</div>');
+        return;
+      }
+      finFlashRenderPendenciasDetalhe_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, 'finFlashPrevisualizarPendenciasTela');
+    })
+    .finFlashPrevisualizarPendenciasTela(_finSessao);
+}
+
+function finFlashRenderPendenciasDetalhe_(dados) {
+  var r = dados && dados.resumo ? dados.resumo : {};
+  var html = '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Total', r.totalPendencias);
+  html += finFlashKpiAcao_('Abertas', r.totalAbertas);
+  html += finFlashKpiAcao_('Resolvidas', r.totalResolvidas);
+  html += finFlashKpiAcao_('Duplicadas', (dados.pendenciasDuplicadas || []).length);
+  html += finFlashKpiAcao_('Sem referência', (dados.pendenciasSemReferencia || []).length);
+  html += '</div>';
+  html += finFlashRenderTiposPendencia_(r.totalPorTipo || {});
+  _finFlashPendenciasResolucao = {};
+  html += '<h3>Pendências abertas</h3>' + finFlashTabelaPendencias_(dados.pendenciasAbertas || [], true);
+  html += '<h3>Duplicadas</h3>' + finFlashTabelaPendencias_(dados.pendenciasDuplicadas || []);
+  html += '<h3>Sem referência</h3>' + finFlashTabelaPendencias_(dados.pendenciasSemReferencia || []);
+  finFlashRenderPainelAcao_('Pendências Flash', html);
+}
+
+function finFlashRenderPainelAcao_(titulo, html) {
+  var el = document.getElementById('finFlashPainelAcao');
+  if (!el) { return; }
+  el.innerHTML = '<div class="fin-card fin-flash-action-panel"><h3>' + finEH(titulo || 'Ação Flash') + '</h3>' + (html || '') + '</div>';
+}
+
+function finFlashAcaoRealNaoHabilitada_(acao) {
+  finFlashRenderPainelAcao_(acao || 'Ação Flash', '<div class="fin-alert fin-alert-warning">Ação real será habilitada em etapa controlada. Nenhum dado foi alterado.</div>');
+}
+
+function finFlashKpiAcao_(label, valor) {
+  return '<div class="fin-flash-action-kpi"><div class="label">' + finEH(label) + '</div><div class="value">' + finEH(valor == null ? 0 : valor) + '</div></div>';
+}
+
+function finFlashTabelaConciliacao_(lista, mostrarLancamento) {
+  if (!lista || !lista.length) return '<div class="fin-list-empty">Nenhum item encontrado.</div>';
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Extrato</th><th>Data</th><th>Descrição</th><th>Valor</th>';
+  if (mostrarLancamento) { html += '<th>Lançamento</th>'; }
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i];
+    html += '<tr><td>' + finEH(item.extratoId || '') + '</td><td>' + finEH(finDataBR(item.dataExtrato || '')) + '</td><td>' + finEH(item.descricaoExtrato || '') + '</td><td>' + finMoeda(item.valorExtrato || 0) + '</td>';
+    if (mostrarLancamento) { html += '<td>' + finEH(item.lancamentoId || '') + '</td>'; }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function finFlashTabelaSemExtrato_(lista) {
+  if (!lista || !lista.length) return '<div class="fin-list-empty">Nenhum item encontrado.</div>';
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Lançamento</th><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i];
+    html += '<tr><td>' + finEH(item.lancamentoId || '') + '</td><td>' + finEH(finDataBR(item.dataLancamento || '')) + '</td><td>' + finEH(item.descricaoLancamento || '') + '</td><td>' + finMoeda(item.valorLancamento || 0) + '</td></tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function finFlashRenderTiposPendencia_(tipos) {
+  var chaves = Object.keys(tipos || {});
+  if (!chaves.length) return '<div class="fin-list-empty">Nenhum tipo de pendência encontrado.</div>';
+  var html = '<div class="fin-flash-action-grid">';
+  for (var i = 0; i < chaves.length; i++) {
+    html += finFlashKpiAcao_(chaves[i], tipos[chaves[i]]);
+  }
+  html += '</div>';
+  return html;
+}
+
+function finFlashTabelaPendencias_(lista, permitirResolver) {
+  if (!lista || !lista.length) return '<div class="fin-list-empty">Nenhuma pendência encontrada.</div>';
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Status</th>';
+  if (permitirResolver) { html += '<th>Resolução</th>'; }
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < lista.length; i++) {
+    var p = lista[i];
+    html += '<tr><td>' + finEH(p.tipoPendencia || '') + '</td><td>' + finEH(p.descricaoPendencia || '') + '</td><td>' + finMoeda(p.valorEnvolvido || 0) + '</td><td>' + finPill(p.status || '') + '</td>';
+    if (permitirResolver) { html += '<td>' + finFlashRenderResolucaoPendencia_(p) + '</td>'; }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function finFlashIdSeguro_(valor) {
+  return String(valor || '').replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function finFlashRenderResolucaoPendencia_(pendencia) {
+  var pendenciaId = pendencia && pendencia.pendenciaId ? String(pendencia.pendenciaId) : '';
+  var seguro = finFlashIdSeguro_(pendenciaId);
+  _finFlashPendenciasResolucao[seguro] = pendenciaId;
+  var html = '<textarea id="finFlashResolucao_' + finEH(seguro) + '" class="fin-input" rows="2" placeholder="Justificativa da resolução"></textarea>';
+  html += '<div class="fin-muted" style="margin:6px 0">Resolver altera somente o status da pendência selecionada.</div>';
+  html += '<button class="fin-btn fin-btn-primary" type="button" onclick="finFlashResolverPendencia_(\'' + finEH(seguro) + '\')">Resolver pendência</button>';
+  return html;
+}
+
+function finFlashResolverPendencia_(pendenciaId) {
+  var seguro = finFlashIdSeguro_(pendenciaId);
+  var realId = _finFlashPendenciasResolucao[seguro] || pendenciaId;
+  var campo = document.getElementById('finFlashResolucao_' + seguro);
+  var texto = campo ? String(campo.value || '').trim() : '';
+  if (!realId) {
+    finFlashMostrarResultadoResolucao_({ ok: false, message: 'Pendência não informada.' });
+    return;
+  }
+  if (texto.length < 10) {
+    finFlashMostrarResultadoResolucao_({ ok: false, message: 'Informe uma justificativa com pelo menos 10 caracteres.' });
+    return;
+  }
+  finFlashRenderPainelAcao_('Resolução de pendência', '<div class="fin-alert fin-alert-info">Resolvendo pendência selecionada...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finFlashMostrarResultadoResolucao_(r);
+      if (r && r.ok && r.executado) {
+        finFlashVerPendencias_();
+        finFlashCarregarResumo_();
+      }
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, 'finFlashResolverPendenciaTela');
+    })
+    .finFlashResolverPendenciaTela(_finSessao, realId, texto, 'RESOLVER_PENDENCIA_FLASH_TELA_FIN_E');
+}
+
+function finFlashMostrarResultadoResolucao_(dados) {
+  var ok = dados && dados.ok && dados.executado;
+  var msg = ok
+    ? 'Pendência resolvida com sucesso.'
+    : ((dados && dados.message) || ((dados && dados.bloqueios && dados.bloqueios[0]) ? dados.bloqueios[0] : 'Não foi possível resolver a pendência.'));
+  var classe = ok ? 'fin-alert-success' : 'fin-alert-danger';
+  finFlashRenderPainelAcao_('Resolução de pendência', '<div class="fin-alert ' + classe + '">' + finEH(msg) + '</div>');
+}
+
+function finFlashAuditarPendenciasTela_() {
+  finFlashVerPendencias_();
+}
+
+function finFlashAcaoPreparacao_(msg) {
+  finMostrarSucesso(msg || 'Ação em preparação.');
+}
+
 // ---- navegacao de abas ----
 
 function finMudarAba(aba) {
-  var mapa = ['cartoes', 'recargas', 'lancamentos', 'pendencias', 'documentos'];
-  var ids  = ['tabCartoes', 'tabRecargas', 'tabLancamentos', 'tabPendencias', 'tabDocumentos'];
+  var mapa = ['cartoes', 'recargas', 'lancamentos', 'flash', 'pendencias', 'documentos'];
+  var ids  = ['tabCartoes', 'tabRecargas', 'tabLancamentos', 'tabFlash', 'tabPendencias', 'tabDocumentos'];
   for (var i = 0; i < ids.length; i++) {
     var c = document.getElementById(ids[i]);
-    if (c) { c.classList.remove('active'); }
+    if (c) { c.classList.toggle('active', false); }
   }
   var idx = mapa.indexOf(aba);
   if (idx >= 0) {
@@ -1259,8 +1637,11 @@ function finMudarAba(aba) {
     if (alvo) { alvo.classList.add('active'); }
   }
   var btns = document.querySelectorAll('.fin-tab-btn');
-  for (var j = 0; j < btns.length; j++) { btns[j].classList.remove('active'); }
+  for (var j = 0; j < btns.length; j++) { btns[j].classList.toggle('active', false); }
   if (idx >= 0 && btns[idx]) { btns[idx].classList.add('active'); }
+  if (aba === 'flash' && !_finFlashOperacionalCarregado) {
+    finFlashCarregarResumo_();
+  }
 }
 
 // ---- filtro da lista ----
