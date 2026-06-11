@@ -364,10 +364,12 @@
       <div class="fin-flash-actions">
         <input id="finFlashXlsxFile" class="fin-input fin-flash-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
         <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Gerar preview</button>
+        <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline" type="button" onclick="finGerarDryRunExtratoFlash()">Pre-validar lote</button>
         <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
       </div>
       <div id="finFlashPreviewStatus"></div>
       <div id="finFlashPreviewResumo"></div>
+      <div id="finFlashDryRunResumo"></div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
@@ -1143,6 +1145,7 @@ function finGerarPreviewExtratoFlash() {
 
   resumo.innerHTML = '';
   tabela.innerHTML = '';
+  document.getElementById('finFlashDryRunResumo').innerHTML = '';
 
   if (!arquivo) {
     status.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um arquivo XLSX do extrato Flash.</div>';
@@ -1171,6 +1174,75 @@ function finGerarPreviewExtratoFlash() {
     status.innerHTML = '<div class="fin-alert fin-alert-danger">Nao foi possivel ler o arquivo selecionado.</div>';
   };
   reader.readAsDataURL(arquivo);
+}
+
+function finGerarDryRunExtratoFlash() {
+  var input = document.getElementById('finFlashXlsxFile');
+  var status = document.getElementById('finFlashPreviewStatus');
+  var resumo = document.getElementById('finFlashPreviewResumo');
+  var dryRun = document.getElementById('finFlashDryRunResumo');
+  var tabela = document.getElementById('finFlashPreviewTabela');
+  var btn = document.getElementById('finFlashDryRunBtn');
+  var arquivo = input && input.files && input.files.length ? input.files[0] : null;
+
+  resumo.innerHTML = '';
+  dryRun.innerHTML = '';
+  tabela.innerHTML = '';
+
+  if (!arquivo) {
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um arquivo XLSX do extrato Flash para pre-validar o lote.</div>';
+    return;
+  }
+
+  if (!/\.xlsx$/i.test(arquivo.name || '')) {
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartao Flash.</div>';
+    return;
+  }
+
+  status.innerHTML = '<div class="fin-alert fin-alert-info">Executando dry-run seguro. Nenhuma gravacao sera realizada.</div>';
+  btn.disabled = true;
+  finSetLoading(true);
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var dataUrl = String(ev.target && ev.target.result ? ev.target.result : '');
+    var partes = dataUrl.split(',');
+    var xlsxBase64 = partes.length > 1 ? partes[1] : dataUrl;
+    finEnviarDryRunExtratoFlash(xlsxBase64, arquivo.name);
+  };
+  reader.onerror = function() {
+    btn.disabled = false;
+    finSetLoading(false);
+    status.innerHTML = '<div class="fin-alert fin-alert-danger">Nao foi possivel ler o arquivo selecionado.</div>';
+  };
+  reader.readAsDataURL(arquivo);
+}
+
+function finEnviarDryRunExtratoFlash(xlsxBase64, nomeArquivo) {
+  finIniciarTimeoutPreviewExtratoFlash();
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finFinalizarPreviewExtratoFlash();
+      try {
+        finRenderDryRunExtratoFlash(r, nomeArquivo);
+      } catch (erroRender) {
+        document.getElementById('finFlashPreviewStatus').innerHTML =
+          '<div class="fin-alert fin-alert-danger">Dry-run retornou, mas houve erro ao montar a tela: ' +
+          finEH(erroRender && erroRender.message ? erroRender.message : erroRender) + '</div>';
+        document.getElementById('finFlashDryRunResumo').innerHTML = '';
+      }
+    })
+    .withFailureHandler(function(e) {
+      finFinalizarPreviewExtratoFlash();
+      document.getElementById('finFlashPreviewStatus').innerHTML =
+        '<div class="fin-alert fin-alert-danger">Falha ao executar dry-run: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      document.getElementById('finFlashDryRunResumo').innerHTML = '';
+    })
+    .finDryRunLoteExtratoFlashV1({
+      xlsxBase64: xlsxBase64,
+      nomeArquivo: nomeArquivo || '',
+      origem: 'FLASH'
+    });
 }
 
 function finEnviarPreviewExtratoFlash(xlsxBase64, nomeArquivo) {
@@ -1222,6 +1294,10 @@ function finFinalizarPreviewExtratoFlash() {
   if (btn) {
     btn.disabled = false;
   }
+  var dryBtn = document.getElementById('finFlashDryRunBtn');
+  if (dryBtn) {
+    dryBtn.disabled = false;
+  }
   finSetLoading(false);
 }
 
@@ -1265,6 +1341,33 @@ function finRenderPreviewExtratoFlash(r, nomeArquivo) {
   tabelaEl.innerHTML = finHtmlTabelaExtratoFlash(lancamentos);
 }
 
+function finRenderDryRunExtratoFlash(r, nomeArquivo) {
+  var status = document.getElementById('finFlashPreviewStatus');
+  var resumoEl = document.getElementById('finFlashPreviewResumo');
+  var dryRunEl = document.getElementById('finFlashDryRunResumo');
+  var tabelaEl = document.getElementById('finFlashPreviewTabela');
+  var avisos = r && r.avisos ? r.avisos : [];
+  var bloqueios = r && r.bloqueios ? r.bloqueios : [];
+  var lancamentos = r && r.lancamentosDryRun ? r.lancamentosDryRun : [];
+
+  if (!r) {
+    status.innerHTML = '<div class="fin-alert fin-alert-danger">Dry-run nao retornou resposta do servidor.</div>';
+    resumoEl.innerHTML = '';
+    dryRunEl.innerHTML = '';
+    tabelaEl.innerHTML = '';
+    return;
+  }
+
+  status.innerHTML =
+    '<div class="fin-alert fin-alert-info">Dry-run gerado para ' + finEH(nomeArquivo || 'arquivo XLSX') +
+    '. Modo ' + finEH(r.modo || 'DRY_RUN_LOTE_EXTRATO_FLASH_V1') +
+    ', executado:false. Nenhuma gravacao foi realizada.</div>' +
+    finRenderPreviewMensagensFlash(avisos, bloqueios, bloqueios.length ? 'danger' : 'warning');
+  resumoEl.innerHTML = finHtmlResumoExtratoFlash(r.resumo || {});
+  dryRunEl.innerHTML = finHtmlResumoDryRunFlash(r.resumoGerencial || {}, r.duplicidades || {});
+  tabelaEl.innerHTML = finHtmlTabelaDryRunFlash(lancamentos);
+}
+
 function finRenderPreviewMensagensFlash(avisos, bloqueios, tipoPadrao) {
   var html = '';
   var i;
@@ -1274,6 +1377,49 @@ function finRenderPreviewMensagensFlash(avisos, bloqueios, tipoPadrao) {
   for (i = 0; i < avisos.length; i++) {
     html += '<div class="fin-alert fin-alert-' + finEH(tipoPadrao || 'info') + '">' + finEH(avisos[i]) + '</div>';
   }
+  return html;
+}
+
+function finHtmlResumoDryRunFlash(resumo, duplicidades) {
+  var cards = [
+    ['Status de seguranca', resumo.statusSeguranca || '-'],
+    ['Periodo', (resumo.periodoInicio || '-') + ' ate ' + (resumo.periodoFim || '-')],
+    ['Lancamentos', resumo.totalLancamentos],
+    ['Novos', resumo.totalNovos],
+    ['Bloqueados', resumo.totalBloqueados],
+    ['Duplicidades', resumo.totalPossiveisDuplicados],
+    ['Lote duplicado', resumo.lotePossivelmenteDuplicado ? 'SIM' : 'NAO'],
+    ['Fonte duplicidade', resumo.fonteDuplicidade || '-'],
+    ['Valor absoluto', finMoeda(resumo.valorAbsoluto || 0)]
+  ];
+  var html = '<div class="fin-flash-summary">';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-summary-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1] == null ? '-' : cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '<div class="fin-alert fin-alert-info">Pre-validacao visual somente. Nenhuma gravacao foi realizada, nenhum lote real foi confirmado e nenhuma importacao definitiva foi criada.</div>';
+  if (duplicidades && duplicidades.lancamentosPossiveisDuplicados && duplicidades.lancamentosPossiveisDuplicados.length) {
+    html += finHtmlDuplicidadesDryRunFlash(duplicidades.lancamentosPossiveisDuplicados);
+  }
+  return html;
+}
+
+function finHtmlDuplicidadesDryRunFlash(lista) {
+  var html = '<h3>Duplicidades encontradas no dry-run</h3>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Linha</th><th>Extrato</th><th>Lote</th><th>Motivo</th></tr></thead><tbody>';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i] || {};
+    html += '<tr>';
+    html += '<td>' + finEH(item.linhaOrigem || '-') + '</td>';
+    html += '<td>' + finEH(item.extratoId || '-') + '</td>';
+    html += '<td>' + finEH(item.loteId || '-') + '</td>';
+    html += '<td>' + finEH(item.motivo || item.chaveDuplicidade || '-') + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
   return html;
 }
 
@@ -1299,6 +1445,33 @@ function finHtmlResumoExtratoFlash(resumo) {
   }
   html += '</div>';
   html += '<div class="fin-flash-preview-foot">Preview somente. Nao grava banco, nao cria lote, nao cria lancamento real e nao concilia ainda. A IA não aprova sozinha; o financeiro sempre confirma.</div>';
+  return html;
+}
+
+function finHtmlTabelaDryRunFlash(lancamentos) {
+  if (!lancamentos.length) {
+    return '<div class="fin-list-empty">Nenhum lancamento retornado pelo dry-run.</div>';
+  }
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>';
+  html += '<th>Data</th><th>Descricao</th><th>Valor</th><th>Pessoa</th><th>Final cartao</th><th>Status dry-run</th><th>Motivos</th>';
+  html += '</tr></thead><tbody>';
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i] || {};
+    html += '<tr>';
+    html += '<td>' + finEH(item.dataOriginal || item.dataIso || '') + '</td>';
+    html += '<td>' + finEH(item.descricaoLimpa || item.movimentacaoOriginal || '') + '</td>';
+    html += '<td><strong>' + finMoeda(item.valorNumero || 0) + '</strong></td>';
+    html += '<td>' + finEH(item.pessoa || '') + '</td>';
+    html += '<td>' + finEH(item.finalCartao || '-') + '</td>';
+    html += '<td>' + finEH(item.statusDryRun || '-') + '</td>';
+    html += '<td>' + finEH((item.motivosDryRun || []).join(' | ') || '-') + '</td>';
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
   return html;
 }
 
