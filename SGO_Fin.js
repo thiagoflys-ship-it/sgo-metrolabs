@@ -1570,6 +1570,268 @@ const SGO_FIN = (() => {
     }
   }
 
+  function finFlashPeriodoFiltro_(valor, filtros) {
+    const f = filtros || {};
+    const data = finFlashDataMs_(valor);
+    const inicio = finFlashDataMs_(f.dataInicio);
+    const fim = finFlashDataMs_(f.dataFim);
+    if (inicio !== null && (data === null || data < inicio)) return false;
+    if (fim !== null && (data === null || data > fim)) return false;
+    return true;
+  }
+
+  function finFlashSomarGrupo_(mapa, chave, campo, valor) {
+    const k = finSafeText_(chave) || "NAO_INFORMADO";
+    if (!mapa[k]) mapa[k] = { chave: k, total: 0, valor: 0 };
+    mapa[k].total += 1;
+    mapa[k].valor += Math.abs(finSafeNumber_(valor));
+    if (campo) mapa[k][campo] = k;
+  }
+
+  function finFlashGrupoLista_(mapa, limite) {
+    return Object.keys(mapa || {}).map(function(k) {
+      const item = mapa[k];
+      return {
+        chave: finFlashTelaValor_(item.chave),
+        total: item.total,
+        valor: Number((item.valor || 0).toFixed(2))
+      };
+    }).sort(function(a, b) {
+      return b.valor - a.valor || b.total - a.total;
+    }).slice(0, limite || 20);
+  }
+
+  function finFlashPendenciaAberta_(p) {
+    const status = finSafeUpper_(p.STATUS);
+    return status !== "RESOLVIDA" && status !== "RESOLVIDO" && status !== "FECHADA" && status !== "CANCELADA";
+  }
+
+  function finFlashAplicarFiltrosDashboard_(base, filtros) {
+    const f = filtros || {};
+    const cartaoFinal = finSafeText_(f.cartaoFinal);
+    const funcionario = finSafeUpper_(f.funcionarioNome);
+    const statusPendencia = finSafeUpper_(f.statusPendencia);
+
+    const extratos = (base.extratos || []).filter(function(r) {
+      if (!finFlashPeriodoFiltro_(r.DATA_TRANSACAO || r.DATA, f)) return false;
+      if (cartaoFinal && finSafeText_(r.CARTAO_FINAL) !== cartaoFinal) return false;
+      if (funcionario && JSON.stringify(r || {}).toUpperCase().indexOf(funcionario) < 0) return false;
+      return true;
+    });
+    const lancamentos = (base.lancamentos || []).filter(function(r) {
+      if (!finFlashPeriodoFiltro_(r.DATA_GASTO || r.DATA, f)) return false;
+      if (cartaoFinal && finSafeText_(r.CARTAO_FINAL) !== cartaoFinal) return false;
+      if (funcionario && JSON.stringify(r || {}).toUpperCase().indexOf(funcionario) < 0) return false;
+      return true;
+    });
+    const conciliacoes = (base.conciliacoes || []).filter(function(r) {
+      return finFlashPeriodoFiltro_(r.DATA_CONCILIACAO || r.CRIADO_EM || r.DATA, f);
+    });
+    const pendencias = (base.pendencias || []).filter(function(r) {
+      if (!finFlashPeriodoFiltro_(r.CRIADO_EM || r.ATUALIZADO_EM || r.RESOLUCAO_EM, f)) return false;
+      if (cartaoFinal && finSafeText_(r.CARTAO_FINAL) !== cartaoFinal) return false;
+      if (funcionario && JSON.stringify(r || {}).toUpperCase().indexOf(funcionario) < 0) return false;
+      if (statusPendencia && finSafeUpper_(r.STATUS) !== statusPendencia) return false;
+      return true;
+    });
+    return {
+      lotes: base.lotes || [],
+      extratos: extratos,
+      lancamentos: lancamentos,
+      conciliacoes: conciliacoes,
+      pendencias: pendencias
+    };
+  }
+
+  function finFlashDashboardGerencialCore_(filtros) {
+    try {
+      finDbOk_();
+      const f = filtros || {};
+      const base = {
+        lotes: finAll_(ABAS.LOTES_EXTRATO_FLASH),
+        extratos: finAll_(ABAS.EXTRATOS),
+        lancamentos: finAll_(ABAS.LANCAMENTOS),
+        conciliacoes: finAll_(ABAS.CONCILIACAO),
+        pendencias: finAll_(ABAS.PENDENCIAS)
+      };
+      const dados = finFlashAplicarFiltrosDashboard_(base, f);
+      const porTipoTransacao = {};
+      const porStatusConciliacao = {};
+      const porTipoPendencia = {};
+      const porFuncionario = {};
+      const porCartaoFinal = {};
+      let totalDebitos = 0;
+      let totalCreditos = 0;
+      let valorDebitos = 0;
+      let valorCreditos = 0;
+      let totalConciliado = 0;
+      let totalNaoConciliado = 0;
+
+      dados.extratos.forEach(function(r) {
+        const valor = finSafeNumber_(r.VALOR || r.VALOR_TRANSACAO);
+        const tipo = finSafeUpper_(r.TIPO_TRANSACAO || r.TIPO) || (valor < 0 ? "DEBITO" : "CREDITO");
+        const absValor = Math.abs(valor);
+        if (tipo === "CREDITO" || valor > 0) {
+          totalCreditos += 1;
+          valorCreditos += absValor;
+        } else {
+          totalDebitos += 1;
+          valorDebitos += absValor;
+        }
+        const conciliado = finSafeUpper_(r.CONCILIADO) === "SIM" ? "CONCILIADO" : "NAO_CONCILIADO";
+        if (conciliado === "CONCILIADO") totalConciliado += 1;
+        else totalNaoConciliado += 1;
+        finFlashSomarGrupo_(porTipoTransacao, tipo || "INDEFINIDO", null, valor);
+        finFlashSomarGrupo_(porStatusConciliacao, conciliado, null, valor);
+        finFlashSomarGrupo_(porFuncionario, r.FUNCIONARIO_NOME || r.PESSOA || r.PORTADOR || r.CRIADO_POR, null, valor);
+        finFlashSomarGrupo_(porCartaoFinal, r.CARTAO_FINAL, null, valor);
+      });
+
+      let totalPendenciasAbertas = 0;
+      let totalPendenciasResolvidas = 0;
+      let valorPendenciasAbertas = 0;
+      let valorPendenciasResolvidas = 0;
+      dados.pendencias.forEach(function(p) {
+        const valor = finSafeNumber_(p.VALOR_ENVOLVIDO);
+        const aberta = finFlashPendenciaAberta_(p);
+        if (aberta) {
+          totalPendenciasAbertas += 1;
+          valorPendenciasAbertas += Math.abs(valor);
+        } else {
+          totalPendenciasResolvidas += 1;
+          valorPendenciasResolvidas += Math.abs(valor);
+        }
+        finFlashSomarGrupo_(porTipoPendencia, p.TIPO_PENDENCIA || "INDEFINIDO", null, valor);
+      });
+
+      const maioresValores = dados.extratos.slice().sort(function(a, b) {
+        return Math.abs(finSafeNumber_(b.VALOR || b.VALOR_TRANSACAO)) - Math.abs(finSafeNumber_(a.VALOR || a.VALOR_TRANSACAO));
+      }).slice(0, 10).map(function(r) {
+        return {
+          extratoId: finFlashTelaValor_(r.EXTRATO_ID || r.ID),
+          data: finFlashTelaValor_(r.DATA_TRANSACAO || r.DATA),
+          descricao: finFlashTelaValor_(r.ESTABELECIMENTO_EXTRATO || r.DESCRICAO),
+          valor: finSafeNumber_(r.VALOR || r.VALOR_TRANSACAO),
+          tipo: finFlashTelaValor_(r.TIPO_TRANSACAO || r.TIPO),
+          conciliado: finFlashTelaValor_(r.CONCILIADO),
+          cartaoFinal: finFlashTelaValor_(r.CARTAO_FINAL)
+        };
+      });
+      const pendenciasRecentes = dados.pendencias.slice().reverse().slice(0, 10).map(function(p) {
+        return {
+          pendenciaId: finFlashTelaValor_(p.PENDENCIA_ID || p.ID),
+          tipoPendencia: finFlashTelaValor_(p.TIPO_PENDENCIA),
+          descricaoPendencia: finFlashTelaValor_(p.DESCRICAO_PENDENCIA),
+          valorEnvolvido: finSafeNumber_(p.VALOR_ENVOLVIDO),
+          status: finFlashTelaValor_(p.STATUS)
+        };
+      });
+      const conciliacoesRecentes = dados.conciliacoes.slice().reverse().slice(0, 10).map(function(c) {
+        return {
+          conciliacaoId: finFlashTelaValor_(c.CONCILIACAO_ID || c.ID),
+          dataConciliacao: finFlashTelaValor_(c.DATA_CONCILIACAO),
+          totalConciliado: finSafeNumber_(c.TOTAL_CONCILIADO),
+          status: finFlashTelaValor_(c.STATUS)
+        };
+      });
+      const totalExtratos = dados.extratos.length;
+      const percentualConciliado = totalExtratos ? Number(((totalConciliado / totalExtratos) * 100).toFixed(2)) : 0;
+      const gruposTeste = [base.lotes, base.extratos, base.lancamentos, base.conciliacoes, base.pendencias];
+
+      return finOk_({
+        filtrosAplicados: {
+          dataInicio: finFlashTelaValor_(f.dataInicio),
+          dataFim: finFlashTelaValor_(f.dataFim),
+          cartaoFinal: finFlashTelaValor_(f.cartaoFinal),
+          funcionarioNome: finFlashTelaValor_(f.funcionarioNome),
+          statusPendencia: finFlashTelaValor_(f.statusPendencia)
+        },
+        kpis: {
+          totalLotes: dados.lotes.length,
+          totalExtratos: totalExtratos,
+          totalDebitos: totalDebitos,
+          totalCreditos: totalCreditos,
+          valorDebitos: Number(valorDebitos.toFixed(2)),
+          valorCreditos: Number(valorCreditos.toFixed(2)),
+          saldoLiquido: Number((valorCreditos - valorDebitos).toFixed(2)),
+          totalConciliado: totalConciliado,
+          totalNaoConciliado: totalNaoConciliado,
+          percentualConciliado: percentualConciliado,
+          totalPendencias: dados.pendencias.length,
+          totalPendenciasAbertas: totalPendenciasAbertas,
+          totalPendenciasResolvidas: totalPendenciasResolvidas,
+          valorPendenciasAbertas: Number(valorPendenciasAbertas.toFixed(2)),
+          valorPendenciasResolvidas: Number(valorPendenciasResolvidas.toFixed(2))
+        },
+        porTipoTransacao: finFlashGrupoLista_(porTipoTransacao, 20),
+        porStatusConciliacao: finFlashGrupoLista_(porStatusConciliacao, 20),
+        porTipoPendencia: finFlashGrupoLista_(porTipoPendencia, 20),
+        porFuncionario: finFlashGrupoLista_(porFuncionario, 20),
+        porCartaoFinal: finFlashGrupoLista_(porCartaoFinal, 20),
+        maioresValores: maioresValores,
+        pendenciasRecentes: pendenciasRecentes,
+        conciliacoesRecentes: conciliacoesRecentes,
+        dadosTesteDetectados: finFlashTemDadosTeste_(gruposTeste),
+        bloqueios: [],
+        avisos: finFlashTemDadosTeste_(gruposTeste) ? ["Ambiente contem dados de teste Flash."] : []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashObterDashboardGerencial(sessionId, filtros) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter dashboard gerencial Flash");
+      return finFlashDashboardGerencialCore_(filtros || {});
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashGerarRelatorioSinteticoTela(sessionId, filtros) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "gerar relatorio sintetico Flash");
+      const dashboard = finFlashDashboardGerencialCore_(filtros || {});
+      if (!dashboard || !dashboard.ok) return dashboard;
+      const k = dashboard.kpis || {};
+      const pontos = [];
+      const recomendacoes = [];
+      if (k.totalPendenciasAbertas > 0) {
+        pontos.push("Existem pendencias abertas no periodo.");
+        recomendacoes.push("Acompanhar pendencias abertas.");
+      }
+      if ((k.percentualConciliado || 0) < 90) {
+        pontos.push("Percentual conciliado abaixo de 90%.");
+        recomendacoes.push("Revisar lancamentos sem conciliacao.");
+      }
+      if (dashboard.dadosTesteDetectados) {
+        pontos.push("Ambiente contem dados de teste Flash.");
+        recomendacoes.push("Ambiente contem dados de teste Flash.");
+      }
+      if (!pontos.length) pontos.push("Sem pontos criticos identificados no painel Flash.");
+      if (!recomendacoes.length) recomendacoes.push("Manter rotina de acompanhamento operacional.");
+      return finOk_({
+        periodo: {
+          dataInicio: dashboard.filtrosAplicados.dataInicio || "",
+          dataFim: dashboard.filtrosAplicados.dataFim || ""
+        },
+        resumoExecutivo: "Dashboard Flash com " + k.totalExtratos + " extratos, " +
+          k.totalConciliado + " conciliados e " + k.totalPendenciasAbertas + " pendencias abertas.",
+        kpis: k,
+        pontosAtencao: pontos,
+        recomendacoesOperacionais: recomendacoes,
+        dadosTesteDetectados: !!dashboard.dadosTesteDetectados,
+        bloqueios: [],
+        avisos: dashboard.avisos || []
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -1686,6 +1948,8 @@ const SGO_FIN = (() => {
     finFlashResolverPendenciaTela,
     finFlashAuditarPendenciasTela,
     finFlashAuditarPendenciasTelaCore_,
+    finFlashObterDashboardGerencial,
+    finFlashGerarRelatorioSinteticoTela,
     finFlashConciliarSelecionadosTela,
     finFlashGerarPendenciasTela,
     finFlashObterResumoOperacionalCore_,
@@ -1726,6 +1990,8 @@ function finFlashPrevisualizarPendenciasTela(sessionId)  { return SGO_FIN.finFla
 function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao) { return SGO_FIN.finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao); }
 function finFlashAuditarPendenciasTela(sessionId)  { return SGO_FIN.finFlashAuditarPendenciasTela(sessionId); }
 function finFlashAuditarPendenciasTelaCore_()      { return SGO_FIN.finFlashAuditarPendenciasTelaCore_(); }
+function finFlashObterDashboardGerencial(sessionId, filtros) { return SGO_FIN.finFlashObterDashboardGerencial(sessionId, filtros); }
+function finFlashGerarRelatorioSinteticoTela(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioSinteticoTela(sessionId, filtros); }
 function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) { return SGO_FIN.finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao); }
 function finFlashGerarPendenciasTela(sessionId, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, confirmacao); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }

@@ -143,8 +143,13 @@
     .fin-flash-action-kpi { background: #f8fafc; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 12px; }
     .fin-flash-action-kpi .label { color: #777; font-size: 10px; text-transform: uppercase; font-weight: 700; }
     .fin-flash-action-kpi .value { color: #0f2d52; font-size: 18px; font-weight: 800; margin-top: 4px; }
+    .fin-flash-dashboard { margin: 16px 0; }
+    .fin-flash-dashboard-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .fin-flash-dashboard-head h3 { margin: 0; }
+    .fin-flash-dashboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .fin-flash-relatorio { line-height: 1.55; }
     @media (max-width: 1180px) { .fin-flash-op-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 760px) { .fin-flash-op-grid, .fin-flash-op-panels, .fin-flash-action-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .fin-flash-op-grid, .fin-flash-op-panels, .fin-flash-action-grid, .fin-flash-dashboard-panels { grid-template-columns: 1fr; } }
     @media (max-width: 980px) { .fin-flash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 560px) { .fin-flash-summary { grid-template-columns: 1fr; } .fin-flash-file { max-width: 100%; } }
 
@@ -393,6 +398,31 @@
       <div class="fin-flash-op-card"><div class="label">Não conciliados</div><div class="value">-</div></div>
       <div class="fin-flash-op-card"><div class="label">Pendências abertas</div><div class="value">-</div></div>
       <div class="fin-flash-op-card"><div class="label">Valor pendente</div><div class="value">-</div></div>
+    </div>
+    <div class="fin-card fin-flash-dashboard">
+      <div class="fin-flash-dashboard-head">
+        <h3>Dashboard Flash</h3>
+        <div class="fin-flash-op-actions" style="margin:0">
+          <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarDashboardGerencial_()">Atualizar dashboard</button>
+          <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRelatorioSintetico_()">Gerar relatório sintético</button>
+        </div>
+      </div>
+      <div id="finFlashDashboardErro"></div>
+      <div id="finFlashDashboardCards" class="fin-flash-op-grid">
+        <div class="fin-flash-op-card"><div class="label">Débitos</div><div class="value">-</div></div>
+        <div class="fin-flash-op-card"><div class="label">Créditos</div><div class="value">-</div></div>
+        <div class="fin-flash-op-card"><div class="label">Saldo líquido</div><div class="value">-</div></div>
+        <div class="fin-flash-op-card"><div class="label">% conciliado</div><div class="value">-</div></div>
+        <div class="fin-flash-op-card"><div class="label">Pendências abertas</div><div class="value">-</div></div>
+        <div class="fin-flash-op-card"><div class="label">Pendências resolvidas</div><div class="value">-</div></div>
+      </div>
+      <div class="fin-flash-dashboard-panels">
+        <div id="finFlashDashTipoTransacao"></div>
+        <div id="finFlashDashStatusConciliacao"></div>
+        <div id="finFlashDashTipoPendencia"></div>
+        <div id="finFlashDashMaioresValores"></div>
+      </div>
+      <div id="finFlashRelatorioSintetico"></div>
     </div>
     <div class="fin-flash-op-panels">
       <div class="fin-card">
@@ -1323,6 +1353,7 @@ function finFlashCarregarResumo_() {
       finFlashRenderExtratos_(r.ultimosExtratos || []);
       finFlashRenderPendencias_(r.ultimasPendencias || []);
       finFlashRenderConciliacoes_(r.ultimasConciliacoes || []);
+      finFlashCarregarDashboardGerencial_();
     })
     .withFailureHandler(function(e) {
       finFlashMostrarErro_(e, funcaoFlash);
@@ -1431,6 +1462,139 @@ function finFlashMostrarErro_(erro, funcao) {
       '<small>Função: ' + finEH(funcao || 'não informada') + '. Verificar sessão/frontend.</small>' +
       '</div>';
   }
+}
+
+function finFlashCarregarDashboardGerencial_() {
+  var erro = document.getElementById('finFlashDashboardErro');
+  if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-info">Carregando Dashboard Flash...</div>'; }
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashMostrarErroDashboard_((r && r.message) ? r.message : 'Erro ao carregar dashboard Flash.');
+        return;
+      }
+      finFlashRenderDashboardGerencial_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErroDashboard_(e);
+    })
+    .finFlashObterDashboardGerencial(_finSessao, {});
+}
+
+function finFlashRenderDashboardGerencial_(dados) {
+  var erro = document.getElementById('finFlashDashboardErro');
+  if (erro) { erro.innerHTML = ''; }
+  var k = dados && dados.kpis ? dados.kpis : {};
+  var cards = [
+    ['Débitos', finMoeda(k.valorDebitos || 0)],
+    ['Créditos', finMoeda(k.valorCreditos || 0)],
+    ['Saldo líquido', finMoeda(k.saldoLiquido || 0)],
+    ['% conciliado', (k.percentualConciliado == null ? 0 : k.percentualConciliado) + '%'],
+    ['Pendências abertas', k.totalPendenciasAbertas || 0],
+    ['Pendências resolvidas', k.totalPendenciasResolvidas || 0]
+  ];
+  var html = '';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-op-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  var cardsEl = document.getElementById('finFlashDashboardCards');
+  if (cardsEl) { cardsEl.innerHTML = html; }
+  document.getElementById('finFlashDashTipoTransacao').innerHTML =
+    finFlashRenderListaGerencial_('Por tipo de transação', dados.porTipoTransacao || [], [
+      { label: 'Tipo', key: 'chave' },
+      { label: 'Total', key: 'total' },
+      { label: 'Valor', key: 'valor', moeda: true }
+    ]);
+  document.getElementById('finFlashDashStatusConciliacao').innerHTML =
+    finFlashRenderListaGerencial_('Por status de conciliação', dados.porStatusConciliacao || [], [
+      { label: 'Status', key: 'chave' },
+      { label: 'Total', key: 'total' },
+      { label: 'Valor', key: 'valor', moeda: true }
+    ]);
+  document.getElementById('finFlashDashTipoPendencia').innerHTML =
+    finFlashRenderListaGerencial_('Por tipo de pendência', dados.porTipoPendencia || [], [
+      { label: 'Tipo', key: 'chave' },
+      { label: 'Total', key: 'total' },
+      { label: 'Valor', key: 'valor', moeda: true }
+    ]);
+  document.getElementById('finFlashDashMaioresValores').innerHTML =
+    finFlashRenderListaGerencial_('Maiores valores', dados.maioresValores || [], [
+      { label: 'Data', key: 'data', data: true },
+      { label: 'Descrição', key: 'descricao' },
+      { label: 'Valor', key: 'valor', moeda: true }
+    ]);
+  if (dados && dados.dadosTesteDetectados) {
+    var aviso = document.getElementById('finFlashTesteAviso');
+    if (aviso) { aviso.classList.add('show'); }
+  }
+}
+
+function finFlashGerarRelatorioSintetico_() {
+  var el = document.getElementById('finFlashRelatorioSintetico');
+  if (el) { el.innerHTML = '<div class="fin-alert fin-alert-info">Gerando relatório sintético...</div>'; }
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finFlashMostrarErroDashboard_((r && r.message) ? r.message : 'Erro ao gerar relatório sintético.');
+        return;
+      }
+      finFlashRenderRelatorioSintetico_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErroDashboard_(e);
+    })
+    .finFlashGerarRelatorioSinteticoTela(_finSessao, {});
+}
+
+function finFlashRenderRelatorioSintetico_(dados) {
+  var el = document.getElementById('finFlashRelatorioSintetico');
+  if (!el) { return; }
+  var html = '<div class="fin-card fin-flash-action-panel fin-flash-relatorio">';
+  html += '<h3>Relatório sintético</h3>';
+  html += '<p>' + finEH(dados.resumoExecutivo || '') + '</p>';
+  html += '<h3>Pontos de atenção</h3><ul>';
+  var pontos = dados.pontosAtencao || [];
+  for (var i = 0; i < pontos.length; i++) { html += '<li>' + finEH(pontos[i]) + '</li>'; }
+  html += '</ul><h3>Recomendações operacionais</h3><ul>';
+  var recs = dados.recomendacoesOperacionais || [];
+  for (var j = 0; j < recs.length; j++) { html += '<li>' + finEH(recs[j]) + '</li>'; }
+  html += '</ul></div>';
+  el.innerHTML = html;
+}
+
+function finFlashRenderListaGerencial_(titulo, itens, campos) {
+  var html = '<div class="fin-card"><h3>' + finEH(titulo || '') + '</h3>';
+  if (!itens || !itens.length) {
+    return html + '<div class="fin-list-empty">Sem dados para exibir.</div></div>';
+  }
+  html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
+  for (var i = 0; i < campos.length; i++) { html += '<th>' + finEH(campos[i].label) + '</th>'; }
+  html += '</tr></thead><tbody>';
+  for (var r = 0; r < itens.length; r++) {
+    html += '<tr>';
+    for (var c = 0; c < campos.length; c++) {
+      var cfg = campos[c];
+      var valor = itens[r][cfg.key];
+      if (cfg.moeda) { valor = finMoeda(valor || 0); }
+      else if (cfg.data) { valor = finDataBR(valor || ''); }
+      html += '<td>' + finEH(valor == null ? '' : valor) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+function finFlashMostrarErroDashboard_(erro) {
+  var el = document.getElementById('finFlashDashboardErro');
+  var msg = erro && erro.message ? erro.message : (erro || 'Erro no Dashboard Flash.');
+  if (erro && erro.stack && window.console && console.log) {
+    console.log('Erro Dashboard Flash: ' + erro.stack);
+  }
+  if (el) { el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>'; }
 }
 
 function finFlashVerPreviaConciliacao_() {
