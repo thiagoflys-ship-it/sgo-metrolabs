@@ -261,6 +261,7 @@ function finExtratoFlashDryRunRetorno_(success, loteProposto, resumo, lancamento
     resumo: resumo || finExtratoFlashResumo_([]),
     lancamentosDryRun: lancamentosDryRun || [],
     duplicidades: duplicidades || finExtratoFlashDuplicidadesVazias_(),
+    resumoGerencial: finExtratoFlashResumoGerencialDryRun_(loteProposto, resumo, lancamentosDryRun, duplicidades, avisos, bloqueios),
     avisos: avisos || [],
     bloqueios: bloqueios || []
   };
@@ -1165,6 +1166,53 @@ function finExtratoFlashDuplicidadesVazias_() {
     criterioLancamento: "pessoa + dataIso + valorNumero + descricaoLimpa + pagamentoOriginal + finalCartao",
     criterioLote: "arquivoHash + pessoa + periodo + finalCartao + totalLancamentos + somaDebitos + somaCreditos",
     leituraAbasExecutada: false
+  };
+}
+
+function finExtratoFlashResumoGerencialDryRun_(loteProposto, resumo, lancamentosDryRun, duplicidades, avisos, bloqueios) {
+  var lancamentos = lancamentosDryRun || [];
+  var dups = duplicidades || finExtratoFlashDuplicidadesVazias_();
+  var totalBloqueados = 0;
+  var totalNovos = 0;
+  var totalPossiveisDuplicados = Number(dups.totalPossiveisDuplicados || 0);
+  var valorAbsoluto = 0;
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i] || {};
+    if (item.statusDryRun === "BLOQUEADO") totalBloqueados++;
+    if (item.statusDryRun === "NOVO") totalNovos++;
+    valorAbsoluto += Math.abs(Number(item.valorNumero || 0));
+  }
+
+  var listaBloqueios = bloqueios || [];
+  var listaAvisos = avisos || [];
+  var statusSeguranca = "SEGURO_PARA_PREVIEW";
+  if (listaBloqueios.length) {
+    statusSeguranca = "BLOQUEADO";
+  } else if (totalPossiveisDuplicados || (dups.lotePossivelmenteDuplicado === true) || listaAvisos.length) {
+    statusSeguranca = "ATENCAO";
+  }
+
+  return {
+    statusSeguranca: statusSeguranca,
+    executado: false,
+    leituraAbasExecutada: !!dups.leituraAbasExecutada,
+    fonteDuplicidade: dups.fonte || (dups.leituraAbasExecutada ? "ABAS_FIN_REAIS" : "PAYLOAD_SIMULADO"),
+    periodoInicio: loteProposto ? loteProposto.periodoInicio : "",
+    periodoFim: loteProposto ? loteProposto.periodoFim : "",
+    totalLancamentos: resumo && resumo.totalLancamentos !== undefined ? resumo.totalLancamentos : lancamentos.length,
+    totalNovos: totalNovos,
+    totalBloqueados: totalBloqueados,
+    totalPossiveisDuplicados: totalPossiveisDuplicados,
+    lotePossivelmenteDuplicado: !!dups.lotePossivelmenteDuplicado,
+    totalAvisos: listaAvisos.length,
+    totalBloqueios: listaBloqueios.length,
+    valorAbsoluto: finExtratoFlashArredondar_(valorAbsoluto),
+    somaDebitos: resumo ? resumo.somaDebitos : 0,
+    somaCreditos: resumo ? resumo.somaCreditos : 0,
+    saldoLiquido: resumo ? resumo.saldoLiquido : 0,
+    bloqueiosResumo: listaBloqueios.slice(0, 5),
+    avisosResumo: listaAvisos.slice(0, 5)
   };
 }
 
