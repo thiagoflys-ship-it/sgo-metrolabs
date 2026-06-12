@@ -381,6 +381,22 @@
         Requisitos para liberar: dry-run aprovado, pre-confirmacao aprovada, payload preparado, autorizacao tecnica explicita, auditoria antes/depois, decisao para depositos/recargas e decisao para prestacao pendente.
         Producao nao foi alterada.
       </div>
+      <div class="fin-card fin-flash-action-panel">
+        <h3>Checklist de liberacao controlada</h3>
+        <div class="fin-flash-checklist-list">
+          <div class="fin-flash-checklist-item"><strong>Dry-run</strong><span>Aprovado antes de qualquer etapa real.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Pre-confirmacao</strong><span>Validacao segura do lote em /dev.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Payload</strong><span>Preparado e revisado sem gravacao.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Decisao operacional</strong><span>Depositos, recargas e prestacoes pendentes definidos.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Autorizacao tecnica</strong><span>Obrigatoria e explicita para etapa real futura.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Auditoria antes/depois</strong><span>Contagens registradas e comparadas.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Importacao real</strong><span>Continua bloqueada nesta tela.</span></div>
+          <div class="fin-flash-checklist-item"><strong>Producao</strong><span>Nao publicada nesta etapa.</span></div>
+        </div>
+        <div class="fin-btn-row" style="margin-top:12px">
+          <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Ver checklist de liberacao</button>
+        </div>
+      </div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
@@ -401,11 +417,16 @@
   <div class="fin-tab-inner">
     <div id="finFlashTesteAviso" class="fin-alert fin-alert-warning fin-flash-op-note">Ambiente com dados de teste Flash detectados. Não usar estes registros para prestação real.</div>
     <div class="fin-alert fin-alert-info fin-flash-prod-note">Produção: ações reais de importação/conciliação ainda bloqueadas. Use apenas leitura, prévias, dashboard e resolução de pendências já validadas.</div>
+    <div class="fin-alert fin-alert-warning fin-flash-prod-note">
+      <strong>Modulo Flash em homologacao /dev.</strong>
+      Importacao real protegida, producao nao publicada nesta etapa e aguardando liberacao FIN.M/producao. Nao ha botao de deploy nesta tela.
+    </div>
     <div class="fin-flash-op-actions">
       <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarResumo_()">Atualizar</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia conciliação</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashExecutarChecklistPreProducao_()">Checklist pré-produção</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Checklist liberacao Flash</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
     </div>
@@ -2084,6 +2105,47 @@ function finFlashRenderChecklistPreProducao_(dados) {
   }
   html += '<div class="fin-alert fin-alert-info">' + finEH(dados.recomendacaoFinal || '') + '</div>';
   finFlashRenderPainelAcao_('Checklist pré-produção', html);
+}
+
+function finFlashAbrirChecklistLiberacao_() {
+  finFlashRenderPainelAcao_('Checklist de liberacao controlada', '<div class="fin-alert fin-alert-info">Carregando checklist seguro...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finFlashRenderChecklistLiberacao_(r);
+    })
+    .withFailureHandler(function(e) {
+      finFlashMostrarErro_(e, 'gerarChecklistLiberacaoFlashV1_SEM_GRAVAR');
+    })
+    .gerarChecklistLiberacaoFlashV1_SEM_GRAVAR();
+}
+
+function finFlashRenderChecklistLiberacao_(dados) {
+  var r = dados || {};
+  var lista = r.checklist || [];
+  var classe = r.ok ? 'fin-alert-success' : (r.bloqueios && r.bloqueios.length ? 'fin-alert-danger' : 'fin-alert-warning');
+  var html = '<div class="fin-alert ' + classe + '">';
+  html += '<strong>Status: ' + finEH(r.status || 'PENDENTE') + '</strong><br>';
+  html += 'Somente leitura. Nenhuma gravacao foi realizada. Importacao real continua bloqueada.';
+  html += '</div>';
+  html += '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Lotes lidos', r.totalLotesLidos || 0);
+  html += finFlashKpiAcao_('Extratos lidos', r.totalExtratosLidos || 0);
+  html += finFlashKpiAcao_('Itens checklist', lista.length);
+  html += finFlashKpiAcao_('Gravacao real', r.gravacaoReal ? 'SIM' : 'NAO');
+  html += finFlashKpiAcao_('Executado', r.executado ? 'SIM' : 'NAO');
+  html += '</div>';
+  html += '<div class="fin-flash-checklist-list">';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i] || {};
+    html += '<div class="fin-flash-checklist-item">';
+    html += '<strong>' + finEH((item.ordem || (i + 1)) + '. ' + (item.requisito || 'Item')) + '</strong>';
+    html += '<span>' + finEH(item.status || (item.ok ? 'OK' : 'PENDENTE')) + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  finFlashRenderPainelAcao_('Checklist de liberacao controlada', html);
 }
 
 function finFlashVerPreviaConciliacao_() {
