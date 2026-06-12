@@ -366,12 +366,14 @@
         <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Gerar preview</button>
         <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline" type="button" onclick="finGerarDryRunExtratoFlash()">Pre-validar lote</button>
         <button id="finFlashPreConfirmacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPreConfirmarLoteFlashTela_()" disabled>Pre-confirmar lote</button>
+        <button id="finFlashPayloadBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPrepararPayloadImportacaoFlashTela_()" disabled>Preparar payload</button>
         <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
       </div>
       <div id="finFlashPreviewStatus"></div>
       <div id="finFlashPreviewResumo"></div>
       <div id="finFlashDryRunResumo"></div>
       <div id="finFlashPreConfirmacaoResumo"></div>
+      <div id="finFlashPayloadResumo"></div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
@@ -590,6 +592,8 @@ var _finFiltrados = [];
 var _finCartaoAtualId = '';
 var _finFlashPreviewTimer = null;
 var _finFlashUltimoDryRun = null;
+var _finFlashUltimaPreConfirmacao = null;
+var _finFlashUltimoPayloadPreparado = null;
 var _finFlashOperacionalCarregado = false;
 var _finFlashPendenciasResolucao = {};
 
@@ -1382,10 +1386,13 @@ function finRenderDryRunExtratoFlash(r, nomeArquivo) {
 
 function finFlashLimparPreConfirmacao_() {
   _finFlashUltimoDryRun = null;
+  _finFlashUltimaPreConfirmacao = null;
+  _finFlashUltimoPayloadPreparado = null;
   var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
   if (alvo) {
     alvo.innerHTML = '';
   }
+  finFlashLimparPayloadImportacao_();
   finFlashAtualizarPreConfirmacaoBtn_();
 }
 
@@ -1393,11 +1400,34 @@ function finFlashAtualizarPreConfirmacaoBtn_() {
   var btn = document.getElementById('finFlashPreConfirmacaoBtn');
   if (!btn) return;
   btn.disabled = !(_finFlashUltimoDryRun && _finFlashUltimoDryRun.executado === false && _finFlashUltimoDryRun.modo === 'DRY_RUN_LOTE_EXTRATO_FLASH_V1');
+  finFlashAtualizarPayloadBtn_();
+}
+
+function finFlashLimparPayloadImportacao_() {
+  _finFlashUltimoPayloadPreparado = null;
+  var alvo = document.getElementById('finFlashPayloadResumo');
+  if (alvo) {
+    alvo.innerHTML = '';
+  }
+  finFlashAtualizarPayloadBtn_();
+}
+
+function finFlashAtualizarPayloadBtn_() {
+  var btn = document.getElementById('finFlashPayloadBtn');
+  if (!btn) return;
+  btn.disabled = !(
+    _finFlashUltimoDryRun &&
+    _finFlashUltimoDryRun.executado === false &&
+    _finFlashUltimaPreConfirmacao &&
+    _finFlashUltimaPreConfirmacao.executado === false &&
+    _finFlashUltimaPreConfirmacao.modo === 'PRE_CONFIRMACAO_LOTE_EXTRATO_FLASH_V1'
+  );
 }
 
 function finPreConfirmarLoteFlashTela_() {
   var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
   var btn = document.getElementById('finFlashPreConfirmacaoBtn');
+  finFlashLimparPayloadImportacao_();
   if (!_finFlashUltimoDryRun) {
     if (alvo) {
       alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro o Pre-validar lote. Nenhuma gravacao foi realizada.</div>';
@@ -1416,11 +1446,13 @@ function finPreConfirmarLoteFlashTela_() {
   google.script.run
     .withSuccessHandler(function(r) {
       finSetLoading(false);
+      _finFlashUltimaPreConfirmacao = (r && r.executado === false && r.modo === 'PRE_CONFIRMACAO_LOTE_EXTRATO_FLASH_V1') ? r : null;
       finFlashAtualizarPreConfirmacaoBtn_();
       finRenderPreConfirmacaoFlash_(r);
     })
     .withFailureHandler(function(e) {
       finSetLoading(false);
+      _finFlashUltimaPreConfirmacao = null;
       finFlashAtualizarPreConfirmacaoBtn_();
       if (alvo) {
         alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha na pre-confirmacao segura: ' + finEH(e && e.message ? e.message : e) + '</div>';
@@ -1491,6 +1523,102 @@ function finHtmlListaPreConfirmacaoFlash_(titulo, lista) {
     html += '<li>' + finEH(lista[i]) + '</li>';
   }
   html += '</ul>';
+  return html;
+}
+
+function finPrepararPayloadImportacaoFlashTela_() {
+  var alvo = document.getElementById('finFlashPayloadResumo');
+  var btn = document.getElementById('finFlashPayloadBtn');
+  if (!_finFlashUltimoDryRun || !_finFlashUltimaPreConfirmacao) {
+    if (alvo) {
+      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro Pre-validar lote e Pre-confirmar lote. Nenhuma gravacao foi realizada.</div>';
+    }
+    return;
+  }
+
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Preparando payload seguro de importacao. Nenhuma gravacao sera realizada.</div>';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  finSetLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      _finFlashUltimoPayloadPreparado = (r && r.executado === false && r.modo === 'PREPARACAO_PAYLOAD_IMPORTACAO_FLASH_V1') ? r : null;
+      finFlashAtualizarPayloadBtn_();
+      finRenderPayloadImportacaoFlash_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      _finFlashUltimoPayloadPreparado = null;
+      finFlashAtualizarPayloadBtn_();
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha ao preparar payload seguro: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .finPrepararPayloadImportacaoFlashV1(_finFlashUltimaPreConfirmacao);
+}
+
+function finRenderPayloadImportacaoFlash_(r) {
+  var alvo = document.getElementById('finFlashPayloadResumo');
+  if (!alvo) return;
+  if (!r) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Preparacao de payload nao retornou resposta do servidor.</div>';
+    return;
+  }
+
+  var totais = r.totais || {};
+  var pendencias = r.pendenciasOperacionais || {};
+  var tipo = (r.decisao === 'APTO_TECNICAMENTE_BLOQUEADO_POR_CHAVE') ? 'success' : ((r.decisao === 'BLOQUEADO') ? 'danger' : 'warning');
+  var cards = [
+    ['Decisao', r.decisao || '-'],
+    ['Chave tecnica exigida', r.chaveTecnicaExigida ? 'SIM' : 'NAO'],
+    ['Autorizacao recebida', r.autorizacaoRecebida ? 'SIM' : 'NAO'],
+    ['Lotes que seriam gravados', totais.totalLotesQueSeriamGravados || 0],
+    ['Extratos que seriam gravados', totais.totalExtratosQueSeriamGravados || 0],
+    ['Total financeiro', finMoeda(totais.saldoLiquidoLote || totais.somaValores || 0)],
+    ['Depositos/recargas', pendencias.totalDepositosRecargas || 0],
+    ['Prestacao pendente', pendencias.totalPrestacaoPendente || 0]
+  ];
+
+  var html = '<div class="fin-alert fin-alert-' + tipo + '">' + finEH(r.mensagem || 'Preparacao somente leitura. Nenhuma gravacao foi realizada.') + '</div>';
+  html += '<div class="fin-alert fin-alert-warning">Importacao real bloqueada. Este painel mostra apenas dados que seriam gravados em etapa futura.</div>';
+  html += '<div class="fin-flash-summary">';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-summary-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1] == null ? '-' : cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if ((pendencias.totalDepositosRecargas || 0) > 0) {
+    html += '<div class="fin-alert fin-alert-warning">Deposito ou recarga detectado: precisa de decisao operacional antes de liberar importacao real.</div>';
+  }
+  if ((pendencias.totalPrestacaoPendente || 0) > 0) {
+    html += '<div class="fin-alert fin-alert-warning">Prestacao pendente detectada: precisa de decisao operacional antes de liberar importacao real.</div>';
+  }
+
+  html += finHtmlChecklistPreConfirmacaoFlash_(r.checklistSeguranca || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  html += finHtmlPlanoPayloadFlash_(r.auditoriaPrevia && r.auditoriaPrevia.planoGravacaoFuturo ? r.auditoriaPrevia.planoGravacaoFuturo : null);
+  alvo.innerHTML = html;
+}
+
+function finHtmlPlanoPayloadFlash_(plano) {
+  if (!plano) return '';
+  var html = '<h3>Plano de gravacao futura bloqueado</h3>';
+  html += '<div class="fin-alert fin-alert-info">Nenhuma gravacao foi realizada. A etapa real depende de chave tecnica, auditoria antes/depois e tratamento operacional.</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
+  html += '<tr><th>Abas destino</th><td>' + finEH((plano.abasDestino || []).join(' | ') || '-') + '</td></tr>';
+  html += '<tr><th>Operacoes planejadas</th><td>' + finEH((plano.operacoesPlanejadas || []).join(' | ') || '-') + '</td></tr>';
+  html += '<tr><th>Pendencias de decisao</th><td>' + finEH((plano.camposPendentesDeDecisao || []).join(' | ') || '-') + '</td></tr>';
+  html += '<tr><th>Travas obrigatorias</th><td>' + finEH((plano.travasObrigatorias || []).join(' | ') || '-') + '</td></tr>';
+  html += '</tbody></table></div>';
   return html;
 }
 
