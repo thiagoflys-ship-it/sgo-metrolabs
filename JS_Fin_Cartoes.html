@@ -367,6 +367,7 @@
         <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline" type="button" onclick="finGerarDryRunExtratoFlash()">Pre-validar lote</button>
         <button id="finFlashPreConfirmacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPreConfirmarLoteFlashTela_()" disabled>Pre-confirmar lote</button>
         <button id="finFlashPayloadBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPrepararPayloadImportacaoFlashTela_()" disabled>Preparar payload</button>
+        <button class="fin-btn fin-btn-secondary" type="button" disabled>Importacao real bloqueada</button>
         <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
       </div>
       <div id="finFlashPreviewStatus"></div>
@@ -374,6 +375,12 @@
       <div id="finFlashDryRunResumo"></div>
       <div id="finFlashPreConfirmacaoResumo"></div>
       <div id="finFlashPayloadResumo"></div>
+      <div id="finFlashImportacaoBloqueadaResumo" class="fin-alert fin-alert-warning">
+        <strong>Importacao real bloqueada.</strong>
+        Fluxo visual: 1. Gerar preview &gt; 2. Pre-validar lote &gt; 3. Pre-confirmar lote &gt; 4. Preparar payload &gt; 5. Importacao real bloqueada.
+        Requisitos para liberar: dry-run aprovado, pre-confirmacao aprovada, payload preparado, autorizacao tecnica explicita, auditoria antes/depois, decisao para depositos/recargas e decisao para prestacao pendente.
+        Producao nao foi alterada.
+      </div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
