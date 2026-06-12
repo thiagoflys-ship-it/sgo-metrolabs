@@ -435,6 +435,15 @@
         <div id="finFlashPacoteAutorizacaoResumo"></div>
       </div>
       <div class="fin-card fin-flash-action-panel">
+        <h3>Payload limpo e auditoria final antes da execucao real</h3>
+        <div class="fin-alert fin-alert-warning"><strong>A tela NAO executa a importacao real.</strong> Use os botoes abaixo para gerar o payload completo copiavel e para auditar o estado final antes de qualquer acao manual autorizada em /dev.</div>
+        <div class="fin-btn-row" style="margin-top:12px;gap:8px">
+          <button id="finFlashPayloadLimpoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarPayloadLimpo_()">Gerar payload limpo</button>
+          <button id="finFlashAuditarFinalBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashAuditarFinalAntesExecucao_()">Auditar final antes da execucao</button>
+        </div>
+        <div id="finFlashPayloadLimpoResumo"></div>
+      </div>
+      <div class="fin-card fin-flash-action-panel">
         <h3>Checklist pos-execucao</h3>
         <div class="fin-alert fin-alert-info">Roteiro somente leitura para conferir contagens, lote, duplicidade, dashboard, UI e evidencias depois de uma execucao manual autorizada em /dev.</div>
         <div class="fin-btn-row" style="margin-top:12px">
@@ -2324,6 +2333,116 @@ function finFlashRenderPacoteAutorizacao_(dados) {
   html += '<div class="fin-alert fin-alert-warning">Nao ha botao de executar importacao real nesta tela. O payload deve ser revisado fora da tela antes de qualquer acao manual autorizada em /dev.</div>';
   html += finHtmlChecklistAutorizacaoFlash_('Checklist antes da execucao', r.checklistAntesExecucao || []);
   html += finHtmlListaPreConfirmacaoFlash_('Checklist depois da execucao', r.checklistDepoisExecucao || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  alvo.innerHTML = html;
+}
+
+function finFlashGerarPayloadLimpo_() {
+  var alvo = document.getElementById('finFlashPayloadLimpoResumo');
+  var btn = document.getElementById('finFlashPayloadLimpoBtn');
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Gerando payload limpo em modo somente leitura. Nenhuma gravacao sera realizada.</div>';
+  }
+  if (btn) { btn.disabled = true; }
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (btn) { btn.disabled = false; }
+      finFlashRenderPayloadLimpo_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      if (btn) { btn.disabled = false; }
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha ao gerar payload limpo: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR();
+}
+
+function finFlashRenderPayloadLimpo_(dados) {
+  var alvo = document.getElementById('finFlashPayloadLimpoResumo');
+  if (!alvo) return;
+  var r = dados || {};
+  var resumo = r.resumoConferencia || {};
+  var payload = r.payloadAutorizacaoSugerido || {};
+  var classe = r.ok ? 'success' : ((r.bloqueios && r.bloqueios.length) ? 'danger' : 'warning');
+  var html = '<div class="fin-alert fin-alert-' + classe + '">';
+  html += '<strong>Status: ' + finEH(r.status || 'BLOQUEADO') + '</strong><br>';
+  html += 'Payload somente leitura. A tela NAO executa a importacao real.';
+  html += '</div>';
+  html += '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Baseline lotes', resumo.baselineLotes !== undefined ? resumo.baselineLotes : '-');
+  html += finFlashKpiAcao_('Baseline extratos', resumo.baselineExtratos !== undefined ? resumo.baselineExtratos : '-');
+  html += finFlashKpiAcao_('Esperado lotes', resumo.esperadoLotes !== undefined ? resumo.esperadoLotes : '-');
+  html += finFlashKpiAcao_('Esperado extratos', resumo.esperadoExtratos !== undefined ? resumo.esperadoExtratos : '-');
+  html += finFlashKpiAcao_('+Lotes', resumo.diferencaLotes !== undefined ? resumo.diferencaLotes : '-');
+  html += finFlashKpiAcao_('+Extratos', resumo.diferencaExtratos !== undefined ? resumo.diferencaExtratos : '-');
+  html += '</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
+  html += '<tr><th>Lote ID</th><td>' + finEH(resumo.loteId || '-') + '</td></tr>';
+  html += '<tr><th>Arquivo hash</th><td>' + finEH(resumo.arquivoHash || '-') + '</td></tr>';
+  html += '<tr><th>Frase obrigatoria</th><td><strong>' + finEH(resumo.fraseObrigatoria || '-') + '</strong></td></tr>';
+  html += '</tbody></table></div>';
+  html += '<h3>Payload completo para revisao manual</h3>';
+  html += '<textarea class="fin-textarea" rows="20" readonly style="font-family:monospace;font-size:12px">' + finEH(JSON.stringify(payload, null, 2)) + '</textarea>';
+  html += '<div class="fin-alert fin-alert-warning">Copie o payload acima e revise antes de qualquer execucao manual autorizada em /dev. A tela nao executa a importacao real.</div>';
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  alvo.innerHTML = html;
+}
+
+function finFlashAuditarFinalAntesExecucao_() {
+  var alvo = document.getElementById('finFlashPayloadLimpoResumo');
+  var btn = document.getElementById('finFlashAuditarFinalBtn');
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Executando auditoria final consolidada. Nenhuma gravacao sera realizada.</div>';
+  }
+  if (btn) { btn.disabled = true; }
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (btn) { btn.disabled = false; }
+      finFlashRenderAuditarFinal_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      if (btn) { btn.disabled = false; }
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha na auditoria final: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR();
+}
+
+function finFlashRenderAuditarFinal_(dados) {
+  var alvo = document.getElementById('finFlashPayloadLimpoResumo');
+  if (!alvo) return;
+  var r = dados || {};
+  var baseline = r.baselineAntes || {};
+  var esperado = r.esperadoDepois || {};
+  var classe = r.ok ? 'success' : ((r.bloqueios && r.bloqueios.length) ? 'danger' : 'warning');
+  var html = '<div class="fin-alert fin-alert-' + classe + '">';
+  html += '<strong>Auditoria final: ' + (r.ok ? 'OK' : 'BLOQUEADO') + '</strong><br>';
+  html += 'Modo: ' + finEH(r.modo || '-') + '. Nenhuma gravacao realizada.';
+  html += '</div>';
+  html += '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Baseline lotes', baseline.totalLotesLidos !== undefined ? baseline.totalLotesLidos : '-');
+  html += finFlashKpiAcao_('Baseline extratos', baseline.totalExtratosLidos !== undefined ? baseline.totalExtratosLidos : '-');
+  html += finFlashKpiAcao_('Esperado lotes', esperado.totalLotesEsperado !== undefined ? esperado.totalLotesEsperado : '-');
+  html += finFlashKpiAcao_('Esperado extratos', esperado.totalExtratosEsperado !== undefined ? esperado.totalExtratosEsperado : '-');
+  html += '</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
+  html += '<tr><th>Pronto para execucao manual /dev</th><td><strong>' + (r.prontoParaExecucaoManualDev ? 'SIM' : 'NAO') + '</strong></td></tr>';
+  html += '<tr><th>Pronto para producao</th><td>' + (r.prontoParaProducao ? 'SIM' : 'NAO - bloqueado') + '</td></tr>';
+  html += '<tr><th>Autorizacao manual obrigatoria</th><td>' + (r.autorizacaoManualObrigatoria ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '<tr><th>UI executa importacao real</th><td>' + (r.uiExecutaImportacaoReal ? 'ATENCAO - SIM' : 'NAO - correto') + '</td></tr>';
+  html += '<tr><th>Payload completo</th><td>' + (r.payloadCompleto ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '<tr><th>Checklist pos-execucao ok</th><td>' + (r.checklistPosExecucaoOk ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '</tbody></table></div>';
   html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
   html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
   alvo.innerHTML = html;
