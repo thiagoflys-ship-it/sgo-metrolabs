@@ -365,11 +365,13 @@
         <input id="finFlashXlsxFile" class="fin-input fin-flash-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
         <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Gerar preview</button>
         <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline" type="button" onclick="finGerarDryRunExtratoFlash()">Pre-validar lote</button>
+        <button id="finFlashPreConfirmacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPreConfirmarLoteFlashTela_()" disabled>Pre-confirmar lote</button>
         <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
       </div>
       <div id="finFlashPreviewStatus"></div>
       <div id="finFlashPreviewResumo"></div>
       <div id="finFlashDryRunResumo"></div>
+      <div id="finFlashPreConfirmacaoResumo"></div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
@@ -587,6 +589,7 @@ var _finCartoes = [];
 var _finFiltrados = [];
 var _finCartaoAtualId = '';
 var _finFlashPreviewTimer = null;
+var _finFlashUltimoDryRun = null;
 var _finFlashOperacionalCarregado = false;
 var _finFlashPendenciasResolucao = {};
 
@@ -1146,6 +1149,7 @@ function finGerarPreviewExtratoFlash() {
   resumo.innerHTML = '';
   tabela.innerHTML = '';
   document.getElementById('finFlashDryRunResumo').innerHTML = '';
+  finFlashLimparPreConfirmacao_();
 
   if (!arquivo) {
     status.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um arquivo XLSX do extrato Flash.</div>';
@@ -1188,6 +1192,7 @@ function finGerarDryRunExtratoFlash() {
   resumo.innerHTML = '';
   dryRun.innerHTML = '';
   tabela.innerHTML = '';
+  finFlashLimparPreConfirmacao_();
 
   if (!arquivo) {
     status.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um arquivo XLSX do extrato Flash para pre-validar o lote.</div>';
@@ -1230,6 +1235,7 @@ function finEnviarDryRunExtratoFlash(xlsxBase64, nomeArquivo) {
           '<div class="fin-alert fin-alert-danger">Dry-run retornou, mas houve erro ao montar a tela: ' +
           finEH(erroRender && erroRender.message ? erroRender.message : erroRender) + '</div>';
         document.getElementById('finFlashDryRunResumo').innerHTML = '';
+        finFlashLimparPreConfirmacao_();
       }
     })
     .withFailureHandler(function(e) {
@@ -1237,6 +1243,7 @@ function finEnviarDryRunExtratoFlash(xlsxBase64, nomeArquivo) {
       document.getElementById('finFlashPreviewStatus').innerHTML =
         '<div class="fin-alert fin-alert-danger">Falha ao executar dry-run: ' + finEH(e && e.message ? e.message : e) + '</div>';
       document.getElementById('finFlashDryRunResumo').innerHTML = '';
+      finFlashLimparPreConfirmacao_();
     })
     .finDryRunLoteExtratoFlashV1({
       xlsxBase64: xlsxBase64,
@@ -1298,6 +1305,7 @@ function finFinalizarPreviewExtratoFlash() {
   if (dryBtn) {
     dryBtn.disabled = false;
   }
+  finFlashAtualizarPreConfirmacaoBtn_();
   finSetLoading(false);
 }
 
@@ -1355,8 +1363,12 @@ function finRenderDryRunExtratoFlash(r, nomeArquivo) {
     resumoEl.innerHTML = '';
     dryRunEl.innerHTML = '';
     tabelaEl.innerHTML = '';
+    finFlashLimparPreConfirmacao_();
     return;
   }
+
+  _finFlashUltimoDryRun = (r && r.executado === false && r.modo === 'DRY_RUN_LOTE_EXTRATO_FLASH_V1') ? r : null;
+  finFlashAtualizarPreConfirmacaoBtn_();
 
   status.innerHTML =
     '<div class="fin-alert fin-alert-info">Dry-run gerado para ' + finEH(nomeArquivo || 'arquivo XLSX') +
@@ -1366,6 +1378,120 @@ function finRenderDryRunExtratoFlash(r, nomeArquivo) {
   resumoEl.innerHTML = finHtmlResumoExtratoFlash(r.resumo || {});
   dryRunEl.innerHTML = finHtmlResumoDryRunFlash(r.resumoGerencial || {}, r.duplicidades || {});
   tabelaEl.innerHTML = finHtmlTabelaDryRunFlash(lancamentos);
+}
+
+function finFlashLimparPreConfirmacao_() {
+  _finFlashUltimoDryRun = null;
+  var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
+  if (alvo) {
+    alvo.innerHTML = '';
+  }
+  finFlashAtualizarPreConfirmacaoBtn_();
+}
+
+function finFlashAtualizarPreConfirmacaoBtn_() {
+  var btn = document.getElementById('finFlashPreConfirmacaoBtn');
+  if (!btn) return;
+  btn.disabled = !(_finFlashUltimoDryRun && _finFlashUltimoDryRun.executado === false && _finFlashUltimoDryRun.modo === 'DRY_RUN_LOTE_EXTRATO_FLASH_V1');
+}
+
+function finPreConfirmarLoteFlashTela_() {
+  var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
+  var btn = document.getElementById('finFlashPreConfirmacaoBtn');
+  if (!_finFlashUltimoDryRun) {
+    if (alvo) {
+      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro o Pre-validar lote. Nenhuma gravacao foi realizada.</div>';
+    }
+    return;
+  }
+
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Validando aptidao para confirmacao futura. Nenhuma gravacao sera realizada.</div>';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  finSetLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      finFlashAtualizarPreConfirmacaoBtn_();
+      finRenderPreConfirmacaoFlash_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finFlashAtualizarPreConfirmacaoBtn_();
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha na pre-confirmacao segura: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .finPreConfirmarLoteExtratoFlashV1(_finFlashUltimoDryRun);
+}
+
+function finRenderPreConfirmacaoFlash_(r) {
+  var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
+  if (!alvo) return;
+  if (!r) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Pre-confirmacao nao retornou resposta do servidor.</div>';
+    return;
+  }
+
+  var resumo = r.resumoGerencial || {};
+  var duplicidades = r.duplicidades || {};
+  var cards = [
+    ['Decisao', r.decisao || '-'],
+    ['Status de seguranca', resumo.statusSeguranca || '-'],
+    ['Periodo', (resumo.periodoInicio || '-') + ' ate ' + (resumo.periodoFim || '-')],
+    ['Lancamentos', resumo.totalLancamentos],
+    ['Total financeiro', finMoeda(resumo.saldoLiquido || 0)],
+    ['Duplicidades', duplicidades.totalPossiveisDuplicados || 0],
+    ['Bloqueios', (r.bloqueios || []).length],
+    ['Avisos', (r.avisos || []).length]
+  ];
+  var tipo = (r.decisao === 'APTO_PARA_CONFIRMACAO_FUTURA') ? 'success' : ((r.decisao === 'BLOQUEADO') ? 'danger' : 'warning');
+  var html = '<div class="fin-alert fin-alert-' + tipo + '">' + finEH(r.mensagem || 'Nenhuma gravacao foi realizada.') + '</div>';
+  html += '<div class="fin-flash-summary">';
+  for (var i = 0; i < cards.length; i++) {
+    html += '<div class="fin-flash-summary-card">';
+    html += '<div class="label">' + finEH(cards[i][0]) + '</div>';
+    html += '<div class="value">' + finEH(cards[i][1] == null ? '-' : cards[i][1]) + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += finHtmlChecklistPreConfirmacaoFlash_(r.checklistSeguranca || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Motivos de revisao', r.motivos || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  alvo.innerHTML = html;
+}
+
+function finHtmlChecklistPreConfirmacaoFlash_(lista) {
+  if (!lista || !lista.length) {
+    return '<div class="fin-list-empty">Checklist de seguranca nao retornado.</div>';
+  }
+  var html = '<h3>Checklist de seguranca</h3>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Item</th><th>Status</th><th>Detalhe</th></tr></thead><tbody>';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i] || {};
+    html += '<tr>';
+    html += '<td>' + finEH(item.item || '-') + '</td>';
+    html += '<td>' + (item.ok ? '<span class="fin-pill fin-pill-green">OK</span>' : '<span class="fin-pill fin-pill-red">ATENCAO</span>') + '</td>';
+    html += '<td>' + finEH(item.detalhe || '-') + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function finHtmlListaPreConfirmacaoFlash_(titulo, lista) {
+  if (!lista || !lista.length) return '';
+  var html = '<h3>' + finEH(titulo) + '</h3><ul class="fin-flash-list">';
+  for (var i = 0; i < lista.length; i++) {
+    html += '<li>' + finEH(lista[i]) + '</li>';
+  }
+  html += '</ul>';
+  return html;
 }
 
 function finRenderPreviewMensagensFlash(avisos, bloqueios, tipoPadrao) {
