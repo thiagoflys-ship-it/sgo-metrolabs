@@ -381,17 +381,20 @@ function finConfirmarLoteExtratoFlashV1_BLOQUEADA(payload) {
 // Fluxo Flash: dry-run e pre-confirmacao apenas leem/simulam. Importacao real segue bloqueada.
 // Liberacao futura exige chave tecnica, auditoria antes/depois e bloqueio por duplicidade.
 function finPrepararPayloadImportacaoFlashV1(payload) {
+  var entrada = payload || {};
   var avisos = [];
   var bloqueios = [];
   var checklist = [];
 
   try {
-    var dryRun = finExtratoFlashObterDryRunPreparacao_(payload || {}, avisos, bloqueios);
-    var preConfirmacao = finExtratoFlashObterPreConfirmacaoPreparacao_(payload || {}, dryRun, avisos, bloqueios);
+    var dryRun = finExtratoFlashObterDryRunPreparacao_(entrada, avisos, bloqueios);
+    var preConfirmacao = finExtratoFlashObterPreConfirmacaoPreparacao_(entrada, dryRun, avisos, bloqueios);
     var pendencias = finExtratoFlashDetectarPendenciasOperacionais_(dryRun ? dryRun.lancamentosDryRun : []);
     var loteParaGravacao = finExtratoFlashMontarLoteParaGravacaoFutura_(dryRun);
     var extratosParaGravacao = finExtratoFlashMontarExtratosParaGravacaoFutura_(dryRun);
     var plano = finExtratoFlashPlanoGravacaoFuturo_();
+    var decisoes = finExtratoFlashNormalizarDecisoesOperacionais_(entrada.decisoesOperacionais);
+    var aplicacaoDecisoes = finExtratoFlashAplicarDecisoesOperacionais_(pendencias, extratosParaGravacao, decisoes, avisos, bloqueios);
 
     finExtratoFlashChecklistPreparacao_(dryRun, preConfirmacao, loteParaGravacao, extratosParaGravacao, pendencias, checklist, avisos, bloqueios);
     finExtratoFlashValidarPayloadPreparado_(loteParaGravacao, extratosParaGravacao, dryRun, preConfirmacao, pendencias, bloqueios, avisos);
@@ -407,6 +410,11 @@ function finPrepararPayloadImportacaoFlashV1(payload) {
       mensagem: "Preparacao somente leitura. Nenhuma gravacao foi realizada.",
       chaveTecnicaExigida: true,
       autorizacaoRecebida: false,
+      decisaoOperacionalExigida: pendencias.bloqueiaImportacaoRealFutura && !decisoes.explicitas,
+      decisoesOperacionaisAplicadas: aplicacaoDecisoes.aplicadas ? decisoes.valores : null,
+      pendenciasOperacionaisResolvidas: aplicacaoDecisoes.resolvidas,
+      itensTratadosPorDecisao: aplicacaoDecisoes.itensTratados,
+      avisosOperacionais: aplicacaoDecisoes.avisos,
       loteParaGravacao: loteParaGravacao,
       extratosParaGravacao: extratosParaGravacao,
       auditoriaPrevia: {
@@ -433,6 +441,11 @@ function finPrepararPayloadImportacaoFlashV1(payload) {
       mensagem: "Preparacao somente leitura. Nenhuma gravacao foi realizada.",
       chaveTecnicaExigida: true,
       autorizacaoRecebida: false,
+      decisaoOperacionalExigida: false,
+      decisoesOperacionaisAplicadas: null,
+      pendenciasOperacionaisResolvidas: false,
+      itensTratadosPorDecisao: [],
+      avisosOperacionais: [],
       loteParaGravacao: null,
       extratosParaGravacao: [],
       auditoriaPrevia: { planoGravacaoFuturo: finExtratoFlashPlanoGravacaoFuturo_() },
@@ -571,7 +584,9 @@ function finImportarLoteExtratoFlashV1(payload) {
 function simularImportacaoRealFlashV1_SEM_GRAVAR(payload) {
   var avisos = [];
   var bloqueios = [];
-  var preparado = finPrepararPayloadImportacaoFlashV1(payload || {});
+  var preparado = payload && payload.modo === "PREPARACAO_PAYLOAD_IMPORTACAO_FLASH_V1"
+    ? payload
+    : finPrepararPayloadImportacaoFlashV1(payload || {});
   var pacote = finExtratoFlashPrepararPacoteImportacaoReal_(payload || {}, preparado, avisos, bloqueios);
   var auditoriaAntes = null;
 
@@ -784,25 +799,31 @@ function gerarChecklistLiberacaoFlashV1_SEM_GRAVAR() {
     "Importacao real permanece bloqueada ate autorizacao tecnica explicita."
   ];
   var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  var decisoes = finExtratoFlashNormalizarDecisoesOperacionais_(null);
+  var auditoriaDecisoes = auditarDecisoesOperacionaisFlashV1_SEM_GRAVAR();
   if (!contagem || contagem.ok !== true) {
     bloqueios.push("Contagem Flash nao disponivel para checklist de liberacao.");
+  }
+  if (!auditoriaDecisoes || auditoriaDecisoes.ok !== true) {
+    bloqueios.push("Auditoria de decisoes operacionais nao retornou ok:true.");
   }
 
   var itens = [
     finExtratoFlashChecklistLiberacaoItem_(1, "Dry-run aprovado.", "PENDENTE_VALIDACAO_DEV", false),
     finExtratoFlashChecklistLiberacaoItem_(2, "Pre-confirmacao aprovada.", "PENDENTE_VALIDACAO_DEV", false),
-    finExtratoFlashChecklistLiberacaoItem_(3, "Payload preparado.", "PENDENTE_VALIDACAO_DEV", false),
-    finExtratoFlashChecklistLiberacaoItem_(4, "Decisao sobre depositos/recargas.", "PENDENTE_DECISAO_OPERACIONAL", false),
-    finExtratoFlashChecklistLiberacaoItem_(5, "Decisao sobre prestacoes pendentes.", "PENDENTE_DECISAO_OPERACIONAL", false),
+    finExtratoFlashChecklistLiberacaoItem_(3, "Payload preparado.", auditoriaDecisoes && auditoriaDecisoes.comDecisaoResolvePendencias ? "APTO_COM_DECISOES_PADRAO" : "PENDENTE_VALIDACAO_DEV", !!(auditoriaDecisoes && auditoriaDecisoes.comDecisaoResolvePendencias)),
+    finExtratoFlashChecklistLiberacaoItem_(4, "Decisao sobre depositos/recargas.", decisoes.valores.depositosRecargas, decisoes.validas),
+    finExtratoFlashChecklistLiberacaoItem_(5, "Decisao sobre prestacoes pendentes.", decisoes.valores.prestacaoPendente, decisoes.validas),
     finExtratoFlashChecklistLiberacaoItem_(6, "Contagem antes registrada.", contagem && contagem.ok ? "BASELINE_DISPONIVEL" : "BLOQUEADO", !!(contagem && contagem.ok)),
     finExtratoFlashChecklistLiberacaoItem_(7, "Duplicidade real zerada.", "PENDENTE_VALIDACAO_DO_LOTE", false),
     finExtratoFlashChecklistLiberacaoItem_(8, "Autorizacao tecnica preenchida.", "PENDENTE_AUTORIZACAO", false),
     finExtratoFlashChecklistLiberacaoItem_(9, "Usuario responsavel identificado.", "PENDENTE_AUTORIZACAO", false),
     finExtratoFlashChecklistLiberacaoItem_(10, "Auditoria depois obrigatoria.", "OBRIGATORIO_POS_EXECUCAO", false),
-    finExtratoFlashChecklistLiberacaoItem_(11, "Producao so apos validacao em /dev.", "BLOQUEADO_PARA_PRODUCAO", false)
+    finExtratoFlashChecklistLiberacaoItem_(11, "Producao so apos validacao em /dev.", "BLOQUEADO_PARA_PRODUCAO", false),
+    finExtratoFlashChecklistLiberacaoItem_(12, "Categoria nao inferida.", decisoes.valores.categoriaNaoInferida, decisoes.validas)
   ];
 
-  var status = bloqueios.length ? "BLOQUEADO" : "PENDENTE_DECISAO_OPERACIONAL";
+  var status = bloqueios.length ? "BLOQUEADO" : "PRONTO_PARA_TESTE_REAL_CONTROLADO_DEV";
   var resultado = {
     success: bloqueios.length === 0,
     ok: bloqueios.length === 0,
@@ -812,6 +833,11 @@ function gerarChecklistLiberacaoFlashV1_SEM_GRAVAR() {
     status: status,
     nenhumaGravacao: true,
     importacaoRealProtegida: true,
+    importacaoRealExigeAutorizacao: true,
+    prontoParaDeployDevParaProd: false,
+    decisoesOperacionaisPadrao: decisoes.valores,
+    decisoesOperacionaisOk: decisoes.validas,
+    pendenciasResolvidasPorPolitica: !!(auditoriaDecisoes && auditoriaDecisoes.comDecisaoResolvePendencias),
     totalLotesLidos: contagem ? contagem.totalLotesLidos : 0,
     totalExtratosLidos: contagem ? contagem.totalExtratosLidos : 0,
     checklist: itens,
@@ -888,12 +914,145 @@ function simularFluxoCompletoFlashInlineV1_SEM_GRAVAR() {
   return resultado;
 }
 
+function simularFluxoCompletoFlashComDecisoesV1_SEM_GRAVAR() {
+  var payload = finExtratoFlashPayloadInlineSeguro_();
+  payload.decisoesOperacionais = finExtratoFlashNormalizarDecisoesOperacionais_(null).valores;
+
+  var bloqueios = [];
+  var avisos = [];
+  var contagemAntes = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  var dryRun = finDryRunLoteExtratoFlashV1(payload);
+  var preConfirmacao = dryRun && dryRun.executado === false ? finPreConfirmarLoteExtratoFlashV1(dryRun) : null;
+  var payloadPreparacao = finExtratoFlashAssign_({}, preConfirmacao || {});
+  payloadPreparacao.decisoesOperacionais = payload.decisoesOperacionais;
+  var preparado = preConfirmacao && preConfirmacao.executado === false ? finPrepararPayloadImportacaoFlashV1(payloadPreparacao) : null;
+  var simulacao = preparado && preparado.executado === false ? simularImportacaoRealFlashV1_SEM_GRAVAR(preparado) : null;
+
+  if (!contagemAntes || contagemAntes.ok !== true) bloqueios.push("Contagem antes indisponivel.");
+  if (!dryRun || dryRun.executado !== false || dryRun.gravacaoReal === true) bloqueios.push("Dry-run com decisoes nao retornou executado:false.");
+  if (!preConfirmacao || preConfirmacao.executado !== false || preConfirmacao.gravacaoReal === true) bloqueios.push("Pre-confirmacao com decisoes nao retornou executado:false.");
+  if (!preparado || preparado.executado !== false || preparado.gravacaoReal === true) bloqueios.push("Payload com decisoes nao retornou executado:false.");
+  if (!simulacao || simulacao.executado !== false || simulacao.gravacaoReal === true) bloqueios.push("Simulacao com decisoes nao retornou executado:false.");
+
+  avisos = avisos
+    .concat(dryRun && dryRun.avisos ? dryRun.avisos : [])
+    .concat(preConfirmacao && preConfirmacao.avisos ? preConfirmacao.avisos : [])
+    .concat(preparado && preparado.avisos ? preparado.avisos : [])
+    .concat(preparado && preparado.avisosOperacionais ? preparado.avisosOperacionais : [])
+    .concat(simulacao && simulacao.avisos ? simulacao.avisos : []);
+
+  var totais = preparado && preparado.totais ? preparado.totais : {};
+  var totalLotesAntes = contagemAntes ? contagemAntes.totalLotesLidos : 0;
+  var totalExtratosAntes = contagemAntes ? contagemAntes.totalExtratosLidos : 0;
+  var qtdLotes = Number(totais.totalLotesQueSeriamGravados || 0);
+  var qtdExtratos = Number(totais.totalExtratosQueSeriamGravados || 0);
+  var resultado = {
+    success: bloqueios.length === 0 && !!(preparado && preparado.ok === true),
+    ok: bloqueios.length === 0 && !!(preparado && preparado.ok === true),
+    executado: false,
+    gravacaoReal: false,
+    modo: "SIMULACAO_FLUXO_FLASH_COM_DECISOES_V1",
+    decisaoPayload: preparado ? preparado.decisao : "BLOQUEADO",
+    pendenciasOperacionaisResolvidas: !!(preparado && preparado.pendenciasOperacionaisResolvidas),
+    decisoesOperacionaisAplicadas: preparado ? preparado.decisoesOperacionaisAplicadas : payload.decisoesOperacionais,
+    quantidadeLoteQueSeriaGravado: qtdLotes,
+    quantidadeExtratosQueSeriamGravados: qtdExtratos,
+    totalLotesAntes: totalLotesAntes,
+    totalExtratosAntes: totalExtratosAntes,
+    totalLotesDepoisSimulado: totalLotesAntes + qtdLotes,
+    totalExtratosDepoisSimulado: totalExtratosAntes + qtdExtratos,
+    bloqueios: bloqueios.concat(preparado && preparado.bloqueios ? preparado.bloqueios : []),
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      decisaoPayload: resultado.decisaoPayload,
+      pendenciasOperacionaisResolvidas: resultado.pendenciasOperacionaisResolvidas,
+      quantidadeLoteQueSeriaGravado: resultado.quantidadeLoteQueSeriaGravado,
+      quantidadeExtratosQueSeriamGravados: resultado.quantidadeExtratosQueSeriamGravados,
+      totalLotesAntes: resultado.totalLotesAntes,
+      totalExtratosAntes: resultado.totalExtratosAntes,
+      totalLotesDepoisSimulado: resultado.totalLotesDepoisSimulado,
+      totalExtratosDepoisSimulado: resultado.totalExtratosDepoisSimulado,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
+function auditarDecisoesOperacionaisFlashV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+  var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  var padrao = finExtratoFlashNormalizarDecisoesOperacionais_(null);
+  var payload = finExtratoFlashPayloadInlineSeguro_();
+  var dryRun = finDryRunLoteExtratoFlashV1(payload);
+  var preConfirmacao = dryRun && dryRun.executado === false ? finPreConfirmarLoteExtratoFlashV1(dryRun) : null;
+  var semDecisao = preConfirmacao && preConfirmacao.executado === false ? finPrepararPayloadImportacaoFlashV1(preConfirmacao) : null;
+  var comPayload = finExtratoFlashAssign_({}, preConfirmacao || {});
+  comPayload.decisoesOperacionais = padrao.valores;
+  var comDecisao = preConfirmacao && preConfirmacao.executado === false ? finPrepararPayloadImportacaoFlashV1(comPayload) : null;
+
+  if (!padrao.validas) bloqueios.push("Decisoes operacionais padrao invalidas.");
+  if (!contagem || contagem.ok !== true) bloqueios.push("Contagem Flash indisponivel para auditoria de decisoes.");
+  if (!semDecisao || semDecisao.executado !== false) bloqueios.push("Preparacao sem decisao nao retornou executado:false.");
+  if (!comDecisao || comDecisao.executado !== false) bloqueios.push("Preparacao com decisao nao retornou executado:false.");
+
+  var semDecisaoRequerRevisao = !!(semDecisao && semDecisao.decisao === "REQUER_REVISAO");
+  var comDecisaoResolvePendencias = !!(
+    comDecisao &&
+    comDecisao.pendenciasOperacionaisResolvidas === true &&
+    comDecisao.decisao === "APTO_TECNICAMENTE_BLOQUEADO_POR_CHAVE"
+  );
+
+  if (!semDecisaoRequerRevisao) bloqueios.push("Fluxo sem decisao nao manteve REQUER_REVISAO.");
+  if (!comDecisaoResolvePendencias) bloqueios.push("Fluxo com decisoes padrao nao resolveu pendencias operacionais.");
+
+  avisos = avisos
+    .concat(padrao.avisos || [])
+    .concat(semDecisao && semDecisao.avisos ? semDecisao.avisos : [])
+    .concat(comDecisao && comDecisao.avisosOperacionais ? comDecisao.avisosOperacionais : []);
+
+  var resultado = {
+    success: bloqueios.length === 0,
+    ok: bloqueios.length === 0,
+    executado: false,
+    gravacaoReal: false,
+    modo: "AUDITORIA_DECISOES_OPERACIONAIS_FLASH_V1",
+    decisoesPadraoOk: padrao.validas,
+    semDecisaoRequerRevisao: semDecisaoRequerRevisao,
+    comDecisaoResolvePendencias: comDecisaoResolvePendencias,
+    decisoesOperacionaisPadrao: padrao.valores,
+    decisaoSemDecisao: semDecisao ? semDecisao.decisao : "BLOQUEADO",
+    decisaoComDecisao: comDecisao ? comDecisao.decisao : "BLOQUEADO",
+    totalLotesLidos: contagem ? contagem.totalLotesLidos : 0,
+    totalExtratosLidos: contagem ? contagem.totalExtratosLidos : 0,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado));
+  }
+
+  return resultado;
+}
+
 function auditarPreProducaoFlashV1_SEM_GRAVAR() {
   var bloqueios = [];
   var avisos = [];
   var funcoes = finExtratoFlashFuncoesCriticas_();
   var checklist = gerarChecklistLiberacaoFlashV1_SEM_GRAVAR();
   var modulo = auditarModuloFlashCompletoV1_SEM_GRAVAR();
+  var auditoriaDecisoes = auditarDecisoesOperacionaisFlashV1_SEM_GRAVAR();
   var funcoesCriticasOk = true;
 
   for (var nome in funcoes) {
@@ -904,12 +1063,15 @@ function auditarPreProducaoFlashV1_SEM_GRAVAR() {
   }
   if (!checklist || checklist.executado !== false) bloqueios.push("Checklist de liberacao nao retornou executado:false.");
   if (!modulo || modulo.executado !== false) bloqueios.push("Auditoria completa do modulo nao retornou executado:false.");
+  if (!auditoriaDecisoes || auditoriaDecisoes.executado !== false) bloqueios.push("Auditoria de decisoes nao retornou executado:false.");
   if (modulo && modulo.bloqueios && modulo.bloqueios.length) bloqueios = bloqueios.concat(modulo.bloqueios);
+  if (auditoriaDecisoes && auditoriaDecisoes.bloqueios && auditoriaDecisoes.bloqueios.length) bloqueios = bloqueios.concat(auditoriaDecisoes.bloqueios);
 
   avisos.push("Git hash esperado deve ser confirmado externamente antes de deploy.");
   avisos.push("Producao nao pode ser confirmada por esta funcao local; sem deploy nesta etapa.");
 
   var ok = bloqueios.length === 0;
+  var decisoesOperacionaisOk = !!(auditoriaDecisoes && auditoriaDecisoes.ok === true && auditoriaDecisoes.comDecisaoResolvePendencias === true);
   var resultado = {
     success: ok,
     ok: ok,
@@ -919,12 +1081,15 @@ function auditarPreProducaoFlashV1_SEM_GRAVAR() {
     gitHashEsperado: "7902a035c9a166f6151b4896fb72942d93756085",
     funcoesCriticasOk: funcoesCriticasOk,
     uiSeguraOk: true,
-    auditoriasOk: !!(checklist && checklist.executado === false && modulo && modulo.executado === false),
+    auditoriasOk: !!(checklist && checklist.executado === false && modulo && modulo.executado === false && auditoriaDecisoes && auditoriaDecisoes.executado === false),
+    decisoesOperacionaisOk: decisoesOperacionaisOk,
     importacaoRealProtegida: true,
     producaoNaoAlterada: "desconhecido_sem_deploy_local",
+    prontoParaTesteRealControladoDev: ok && decisoesOperacionaisOk,
     prontoParaDeployDevParaProd: false,
-    status: ok ? "PRONTO_PARA_TESTE_CONTROLADO_DEV" : "BLOQUEADO",
+    status: ok && decisoesOperacionaisOk ? "PRONTO_PARA_TESTE_REAL_CONTROLADO_DEV" : "BLOQUEADO",
     funcoesDisponiveis: funcoes,
+    decisoesOperacionaisPadrao: auditoriaDecisoes ? auditoriaDecisoes.decisoesOperacionaisPadrao : {},
     bloqueios: bloqueios,
     avisos: avisos
   };
@@ -940,7 +1105,9 @@ function auditarPreProducaoFlashV1_SEM_GRAVAR() {
       funcoesCriticasOk: resultado.funcoesCriticasOk,
       uiSeguraOk: resultado.uiSeguraOk,
       auditoriasOk: resultado.auditoriasOk,
+      decisoesOperacionaisOk: resultado.decisoesOperacionaisOk,
       importacaoRealProtegida: resultado.importacaoRealProtegida,
+      prontoParaTesteRealControladoDev: resultado.prontoParaTesteRealControladoDev,
       prontoParaDeployDevParaProd: resultado.prontoParaDeployDevParaProd,
       bloqueios: resultado.bloqueios,
       avisos: resultado.avisos
@@ -1340,7 +1507,8 @@ function finExtratoFlashResumoPayloadPreparado_(lote, extratos, pendencias) {
     somaValores: finExtratoFlashArredondar_(soma),
     saldoLiquidoLote: lote ? lote.saldoLiquido : 0,
     totalDepositosRecargas: pendencias ? pendencias.totalDepositosRecargas : 0,
-    totalPrestacaoPendente: pendencias ? pendencias.totalPrestacaoPendente : 0
+    totalPrestacaoPendente: pendencias ? pendencias.totalPrestacaoPendente : 0,
+    totalCategoriaNaoInferida: pendencias ? pendencias.totalCategoriaNaoInferida : 0
   };
 }
 
@@ -1348,23 +1516,30 @@ function finExtratoFlashDetectarPendenciasOperacionais_(lancamentos) {
   var lista = lancamentos || [];
   var depositos = [];
   var pendentes = [];
+  var categorias = [];
   for (var i = 0; i < lista.length; i++) {
     var item = lista[i] || {};
     var descricao = finExtratoFlashTexto_(item.descricaoLimpa || item.movimentacaoOriginal).toUpperCase();
     var status = finExtratoFlashTexto_(item.statusPrestacaoNormalizado || item.statusPrestacaoOriginal).toUpperCase();
+    var categoria = finExtratoFlashTexto_(item.categoriaInferida).toUpperCase();
     if (item.sinal === "CREDITO" || descricao.indexOf("DEPOSITO") >= 0 || descricao.indexOf("DEPÓSITO") >= 0 || descricao.indexOf("RECARGA") >= 0) {
       depositos.push({ linhaOrigem: item.linhaOrigem || "", descricao: item.descricaoLimpa || item.movimentacaoOriginal || "", valorNumero: item.valorNumero });
     }
     if (status.indexOf("PENDENTE") >= 0) {
       pendentes.push({ linhaOrigem: item.linhaOrigem || "", descricao: item.descricaoLimpa || item.movimentacaoOriginal || "", statusPrestacao: status });
     }
+    if (categoria === "OUTRO" || categoria === "OUTROS" || categoria === "NAO_INFERIDA") {
+      categorias.push({ linhaOrigem: item.linhaOrigem || "", descricao: item.descricaoLimpa || item.movimentacaoOriginal || "", categoriaInferida: item.categoriaInferida || "" });
+    }
   }
   return {
     totalDepositosRecargas: depositos.length,
     totalPrestacaoPendente: pendentes.length,
+    totalCategoriaNaoInferida: categorias.length,
     depositosRecargas: depositos,
     prestacoesPendentes: pendentes,
-    bloqueiaImportacaoRealFutura: !!(depositos.length || pendentes.length)
+    categoriasNaoInferidas: categorias,
+    bloqueiaImportacaoRealFutura: !!(depositos.length || pendentes.length || categorias.length)
   };
 }
 
@@ -1372,10 +1547,117 @@ function finExtratoFlashPendenciasOperacionaisVazias_() {
   return {
     totalDepositosRecargas: 0,
     totalPrestacaoPendente: 0,
+    totalCategoriaNaoInferida: 0,
     depositosRecargas: [],
     prestacoesPendentes: [],
+    categoriasNaoInferidas: [],
     bloqueiaImportacaoRealFutura: false
   };
+}
+
+function finExtratoFlashNormalizarDecisoesOperacionais_(decisoes) {
+  var entrada = decisoes || {};
+  var explicitas = !!decisoes;
+  var valores = {
+    depositosRecargas: finExtratoFlashTexto_(entrada.depositosRecargas || entrada.depositoRecarga || "IMPORTAR_CREDITO_COMO_EXTRATO"),
+    prestacaoPendente: finExtratoFlashTexto_(entrada.prestacaoPendente || "IMPORTAR_COM_STATUS_PENDENTE"),
+    categoriaNaoInferida: finExtratoFlashTexto_(entrada.categoriaNaoInferida || "IMPORTAR_COM_CATEGORIA_OUTROS")
+  };
+  var mapaDepositos = {
+    IMPORTAR_CREDITO_COMO_EXTRATO: true,
+    IGNORAR_CREDITO_USAR_RECARGAS: true,
+    BLOQUEAR_CREDITOS: true,
+    OPCAO_A_IMPORTAR_CREDITO_COMO_EXTRATO: "IMPORTAR_CREDITO_COMO_EXTRATO",
+    OPCAO_B_IGNORAR_CREDITO_E_USAR_RECARGAS: "IGNORAR_CREDITO_USAR_RECARGAS",
+    OPCAO_C_BLOQUEAR_ENQUANTO_NAO_CLASSIFICAR: "BLOQUEAR_CREDITOS"
+  };
+  var mapaPrestacao = {
+    IMPORTAR_COM_STATUS_PENDENTE: true,
+    BLOQUEAR_ATE_PRESTACAO: true,
+    IMPORTAR_E_GERAR_PENDENCIA_FUTURA: true,
+    IMPORTAR_E_GERAR_PENDENCIA: "IMPORTAR_E_GERAR_PENDENCIA_FUTURA"
+  };
+  var mapaCategoria = {
+    IMPORTAR_COM_CATEGORIA_OUTROS: true,
+    BLOQUEAR_ATE_CLASSIFICAR: true
+  };
+  var bloqueios = [];
+  var avisos = [];
+
+  valores.depositosRecargas = mapaDepositos[valores.depositosRecargas] === true ? valores.depositosRecargas : (mapaDepositos[valores.depositosRecargas] || valores.depositosRecargas);
+  valores.prestacaoPendente = mapaPrestacao[valores.prestacaoPendente] === true ? valores.prestacaoPendente : (mapaPrestacao[valores.prestacaoPendente] || valores.prestacaoPendente);
+
+  if (!mapaDepositos[valores.depositosRecargas]) bloqueios.push("Decisao invalida para depositos/recargas: " + valores.depositosRecargas + ".");
+  if (!mapaPrestacao[valores.prestacaoPendente]) bloqueios.push("Decisao invalida para prestacao pendente: " + valores.prestacaoPendente + ".");
+  if (!mapaCategoria[valores.categoriaNaoInferida]) bloqueios.push("Decisao invalida para categoria nao inferida: " + valores.categoriaNaoInferida + ".");
+  if (!explicitas) avisos.push("Decisoes operacionais padrao carregadas para auditoria; preparacao sem payload explicito continua requerendo revisao.");
+
+  return {
+    validas: bloqueios.length === 0,
+    explicitas: explicitas,
+    valores: valores,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+}
+
+function finExtratoFlashAplicarDecisoesOperacionais_(pendencias, extratos, decisoes, avisos, bloqueios) {
+  var p = pendencias || finExtratoFlashPendenciasOperacionaisVazias_();
+  var d = decisoes || finExtratoFlashNormalizarDecisoesOperacionais_(null);
+  var lista = extratos || [];
+  var tratados = [];
+  var avisosOperacionais = [];
+
+  if (d.bloqueios && d.bloqueios.length) {
+    for (var iBloq = 0; iBloq < d.bloqueios.length; iBloq++) bloqueios.push(d.bloqueios[iBloq]);
+  }
+
+  if (!d.explicitas) {
+    if (p.bloqueiaImportacaoRealFutura) avisosOperacionais.push("Pendencias operacionais exigem decisoes explicitas para liberar payload tecnico.");
+    return { aplicadas: false, resolvidas: false, itensTratados: tratados, avisos: avisosOperacionais };
+  }
+
+  if (p.totalDepositosRecargas > 0) {
+    if (d.valores.depositosRecargas === "BLOQUEAR_CREDITOS") {
+      bloqueios.push("Decisao operacional escolhida bloqueia creditos/depositos/recargas.");
+    } else {
+      tratados.push({ tipo: "DEPOSITOS_RECARGAS", decisao: d.valores.depositosRecargas, quantidade: p.totalDepositosRecargas });
+      avisosOperacionais.push("Depositos/recargas tratados por decisao: " + d.valores.depositosRecargas + ".");
+    }
+  }
+
+  if (p.totalPrestacaoPendente > 0) {
+    if (d.valores.prestacaoPendente === "BLOQUEAR_ATE_PRESTACAO") {
+      bloqueios.push("Decisao operacional escolhida bloqueia prestacao pendente.");
+    } else {
+      tratados.push({ tipo: "PRESTACAO_PENDENTE", decisao: d.valores.prestacaoPendente, quantidade: p.totalPrestacaoPendente });
+      avisosOperacionais.push("Prestacoes pendentes tratadas por decisao: " + d.valores.prestacaoPendente + ".");
+    }
+  }
+
+  if (p.totalCategoriaNaoInferida > 0) {
+    if (d.valores.categoriaNaoInferida === "BLOQUEAR_ATE_CLASSIFICAR") {
+      bloqueios.push("Decisao operacional escolhida bloqueia categoria nao inferida.");
+    } else {
+      for (var i = 0; i < lista.length; i++) {
+        var item = lista[i] || {};
+        if (finExtratoFlashTexto_(item.categoriaInferida).toUpperCase() === "OUTRO") {
+          item.categoriaInferida = "OUTROS_REVISAR";
+        }
+      }
+      tratados.push({ tipo: "CATEGORIA_NAO_INFERIDA", decisao: d.valores.categoriaNaoInferida, quantidade: p.totalCategoriaNaoInferida });
+      avisosOperacionais.push("Categorias nao inferidas tratadas como OUTROS_REVISAR.");
+    }
+  }
+
+  var resolvidas = d.validas && bloqueios.length === 0 && (
+    p.bloqueiaImportacaoRealFutura ? tratados.length > 0 : true
+  );
+  if (resolvidas) {
+    p.bloqueiaImportacaoRealFutura = false;
+  }
+  for (var j = 0; j < avisosOperacionais.length; j++) avisos.push(avisosOperacionais[j]);
+  return { aplicadas: d.validas, resolvidas: resolvidas, itensTratados: tratados, avisos: avisosOperacionais };
 }
 
 function finExtratoFlashDecisaoPayloadPreparado_(bloqueios, pendencias) {
@@ -1471,37 +1753,40 @@ function finExtratoFlashValidarAutorizacaoTecnicaFlash_(autorizacao, preparado, 
 }
 
 function finExtratoFlashValidarDecisoesOperacionaisFlash_(decisoes, pendencias, bloqueios, avisos) {
-  var d = decisoes || {};
+  var d = finExtratoFlashNormalizarDecisoesOperacionais_(decisoes);
   var p = pendencias || finExtratoFlashPendenciasOperacionaisVazias_();
-  var opcoesDeposito = {
-    OPCAO_A_IMPORTAR_CREDITO_COMO_EXTRATO: true,
-    OPCAO_B_IGNORAR_CREDITO_E_USAR_RECARGAS: true,
-    OPCAO_C_BLOQUEAR_ENQUANTO_NAO_CLASSIFICAR: true
-  };
-  var opcoesPrestacao = {
-    IMPORTAR_COM_STATUS_PENDENTE: true,
-    BLOQUEAR_ATE_PRESTACAO: true,
-    IMPORTAR_E_GERAR_PENDENCIA: true
-  };
+  if (d.bloqueios && d.bloqueios.length) {
+    for (var i = 0; i < d.bloqueios.length; i++) bloqueios.push(d.bloqueios[i]);
+  }
 
   if (p.totalDepositosRecargas > 0) {
-    if (!opcoesDeposito[finExtratoFlashTexto_(d.depositoRecarga)]) {
+    if (!d.explicitas) {
       bloqueios.push("Decisao operacional obrigatoria para deposito/recarga ausente ou invalida.");
     }
-    if (d.depositoRecarga === "OPCAO_C_BLOQUEAR_ENQUANTO_NAO_CLASSIFICAR") {
+    if (d.valores.depositosRecargas === "BLOQUEAR_CREDITOS") {
       bloqueios.push("Decisao operacional escolhida bloqueia deposito/recarga.");
     }
-    avisos.push("Deposito/recarga possui decisao operacional: " + finExtratoFlashTexto_(d.depositoRecarga || "AUSENTE") + ".");
+    avisos.push("Deposito/recarga possui decisao operacional: " + finExtratoFlashTexto_(d.valores.depositosRecargas || "AUSENTE") + ".");
   }
 
   if (p.totalPrestacaoPendente > 0) {
-    if (!opcoesPrestacao[finExtratoFlashTexto_(d.prestacaoPendente)]) {
+    if (!d.explicitas) {
       bloqueios.push("Decisao operacional obrigatoria para prestacao pendente ausente ou invalida.");
     }
-    if (d.prestacaoPendente === "BLOQUEAR_ATE_PRESTACAO") {
+    if (d.valores.prestacaoPendente === "BLOQUEAR_ATE_PRESTACAO") {
       bloqueios.push("Decisao operacional escolhida bloqueia prestacao pendente.");
     }
-    avisos.push("Prestacao pendente possui decisao operacional: " + finExtratoFlashTexto_(d.prestacaoPendente || "AUSENTE") + ".");
+    avisos.push("Prestacao pendente possui decisao operacional: " + finExtratoFlashTexto_(d.valores.prestacaoPendente || "AUSENTE") + ".");
+  }
+
+  if (p.totalCategoriaNaoInferida > 0) {
+    if (!d.explicitas) {
+      bloqueios.push("Decisao operacional obrigatoria para categoria nao inferida ausente ou invalida.");
+    }
+    if (d.valores.categoriaNaoInferida === "BLOQUEAR_ATE_CLASSIFICAR") {
+      bloqueios.push("Decisao operacional escolhida bloqueia categoria nao inferida.");
+    }
+    avisos.push("Categoria nao inferida possui decisao operacional: " + finExtratoFlashTexto_(d.valores.categoriaNaoInferida || "AUSENTE") + ".");
   }
 }
 
@@ -2381,7 +2666,9 @@ function finExtratoFlashFuncoesCriticas_() {
     finImportarLoteExtratoFlashV1: typeof finImportarLoteExtratoFlashV1 === "function",
     finImportarLoteExtratoFlashV1_BLOQUEADA: typeof finImportarLoteExtratoFlashV1_BLOQUEADA === "function",
     simularImportacaoRealFlashV1_SEM_GRAVAR: typeof simularImportacaoRealFlashV1_SEM_GRAVAR === "function",
+    simularFluxoCompletoFlashComDecisoesV1_SEM_GRAVAR: typeof simularFluxoCompletoFlashComDecisoesV1_SEM_GRAVAR === "function",
     auditarContagemExtratoFlashV1_SEM_GRAVAR: typeof auditarContagemExtratoFlashV1_SEM_GRAVAR === "function",
+    auditarDecisoesOperacionaisFlashV1_SEM_GRAVAR: typeof auditarDecisoesOperacionaisFlashV1_SEM_GRAVAR === "function",
     TESTE_FLASH_CONTAGEM_SEM_GRAVAR: typeof TESTE_FLASH_CONTAGEM_SEM_GRAVAR === "function"
   };
 }
@@ -2410,26 +2697,34 @@ function finExtratoFlashPayloadInlineSeguro_() {
     ],
     linhas: [
       [
-        "09/06/2026 07:08",
-        "PADARIA DO CAMPAO RIO DE JANEIR BRA Alimentacao",
+        "11/06/2026 07:08",
+        "SIMULACAO PADARIA FIN NO Alimentação",
         "- R$ 5,04",
-        "RAFAEL FAY MARQUES",
-        "Cartao fisico - Conta final 908",
+        "USUARIO TESTE FLASH",
+        "Cartao fisico - Conta final 777",
         "Pendente"
       ],
       [
-        "03/06/2026 15:39",
-        "VICTORIA PARK RIO DE JANEIR BRA Estacionamento",
+        "11/06/2026 15:39",
+        "SIMULACAO ESTACIONAMENTO FIN NO Estacionamento",
         "- R$ 19,00",
-        "RAFAEL FAY MARQUES",
-        "Cartao fisico - Conta final 908",
+        "USUARIO TESTE FLASH",
+        "Cartao fisico - Conta final 777",
         "Pendente"
       ],
       [
-        "27/05/2026 17:17",
+        "11/06/2026 17:34",
+        "SIMULACAO SERVICO SEM CATEGORIA",
+        "- R$ 33,30",
+        "USUARIO TESTE FLASH",
+        "Cartao fisico - Conta final 777",
+        "Pendente"
+      ],
+      [
+        "11/06/2026 18:17",
         "Deposito",
         "+ R$ 1.000,00",
-        "RAFAEL FAY MARQUES",
+        "USUARIO TESTE FLASH",
         "Carteira corporativa - Agendado por FINANCEIRO",
         "-"
       ]
