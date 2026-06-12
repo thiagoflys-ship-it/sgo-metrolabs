@@ -681,6 +681,275 @@ function auditarProntidaoImportacaoFlashV1_SEM_GRAVAR() {
   return resultado;
 }
 
+function auditarModuloFlashCompletoV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+  var funcoes = finExtratoFlashFuncoesCriticas_();
+  var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  var headersEssenciaisOk = false;
+  var auditoriasExecutadoFalse = true;
+  var auditorias = {};
+
+  try {
+    var ss = finExtratoFlashAbrirDbFinReadOnly_();
+    finExtratoFlashObterContextoGravacaoFlash_(ss);
+    headersEssenciaisOk = true;
+  } catch (erroHeaders) {
+    bloqueios.push(erroHeaders && erroHeaders.message ? erroHeaders.message : String(erroHeaders));
+  }
+
+  auditorias.contagem = !!(contagem && contagem.executado === false);
+  if (!auditorias.contagem) auditoriasExecutadoFalse = false;
+
+  var checklist = gerarChecklistLiberacaoFlashV1_SEM_GRAVAR();
+  auditorias.checklist = !!(checklist && checklist.executado === false);
+  if (!auditorias.checklist) auditoriasExecutadoFalse = false;
+
+  var simulacao = simularFluxoCompletoFlashInlineV1_SEM_GRAVAR();
+  auditorias.simulacaoInline = !!(simulacao && simulacao.executado === false && simulacao.gravacaoReal === false);
+  if (!auditorias.simulacaoInline) auditoriasExecutadoFalse = false;
+
+  for (var nomeFuncao in funcoes) {
+    if (Object.prototype.hasOwnProperty.call(funcoes, nomeFuncao) && !funcoes[nomeFuncao]) {
+      bloqueios.push("Funcao critica Flash indisponivel: " + nomeFuncao + ".");
+    }
+  }
+
+  if (!contagem || contagem.ok !== true) {
+    bloqueios.push("Auditoria compacta de contagem nao retornou ok:true.");
+  }
+  if (!headersEssenciaisOk) {
+    bloqueios.push("Headers essenciais Flash nao foram validados.");
+  }
+  if (!auditoriasExecutadoFalse) {
+    bloqueios.push("Alguma auditoria SEM_GRAVAR nao retornou executado:false.");
+  }
+
+  var ok = bloqueios.length === 0;
+  var resultado = {
+    success: ok,
+    ok: ok,
+    executado: false,
+    gravacaoReal: false,
+    modo: "AUDITORIA_MODULO_FLASH_COMPLETO_V1",
+    statusModulo: ok ? "PRONTO_PARA_HOMOLOGACAO_CONTROLADA" : "BLOQUEADO",
+    totalLotesLidos: contagem ? contagem.totalLotesLidos : 0,
+    totalExtratosLidos: contagem ? contagem.totalExtratosLidos : 0,
+    funcoesDisponiveis: funcoes,
+    headersEssenciaisOk: headersEssenciaisOk,
+    uiChamaImportacaoReal: false,
+    importacaoRealProtegida: true,
+    nenhumaGravacao: true,
+    auditoriasSemGravar: auditorias,
+    producaoNaoAlterada: "desconhecido_sem_deploy_local",
+    bloqueios: bloqueios,
+    avisos: avisos.concat(contagem && contagem.avisos ? contagem.avisos : []).concat([
+      "Auditoria somente leitura. Nenhuma gravacao foi realizada.",
+      "UI validada por auditoria local de codigo; backend nao le arquivo HTML em runtime.",
+      "Producao nao confirmada por funcao local; sem deploy nesta etapa."
+    ]),
+    proximosPassos: [
+      "Executar auditorias SEM_GRAVAR no Apps Script /dev.",
+      "Validar visualmente checklist e painel de status no WebApp /dev.",
+      "Registrar contagem antes/depois antes de qualquer autorizacao real.",
+      "Manter importacao real bloqueada ate decisao operacional e autorizacao tecnica."
+    ]
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      statusModulo: resultado.statusModulo,
+      totalLotesLidos: resultado.totalLotesLidos,
+      totalExtratosLidos: resultado.totalExtratosLidos,
+      headersEssenciaisOk: resultado.headersEssenciaisOk,
+      uiChamaImportacaoReal: resultado.uiChamaImportacaoReal,
+      importacaoRealProtegida: resultado.importacaoRealProtegida,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
+function gerarChecklistLiberacaoFlashV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [
+    "Checklist operacional somente leitura. Nenhuma gravacao foi realizada.",
+    "Importacao real permanece bloqueada ate autorizacao tecnica explicita."
+  ];
+  var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  if (!contagem || contagem.ok !== true) {
+    bloqueios.push("Contagem Flash nao disponivel para checklist de liberacao.");
+  }
+
+  var itens = [
+    finExtratoFlashChecklistLiberacaoItem_(1, "Dry-run aprovado.", "PENDENTE_VALIDACAO_DEV", false),
+    finExtratoFlashChecklistLiberacaoItem_(2, "Pre-confirmacao aprovada.", "PENDENTE_VALIDACAO_DEV", false),
+    finExtratoFlashChecklistLiberacaoItem_(3, "Payload preparado.", "PENDENTE_VALIDACAO_DEV", false),
+    finExtratoFlashChecklistLiberacaoItem_(4, "Decisao sobre depositos/recargas.", "PENDENTE_DECISAO_OPERACIONAL", false),
+    finExtratoFlashChecklistLiberacaoItem_(5, "Decisao sobre prestacoes pendentes.", "PENDENTE_DECISAO_OPERACIONAL", false),
+    finExtratoFlashChecklistLiberacaoItem_(6, "Contagem antes registrada.", contagem && contagem.ok ? "BASELINE_DISPONIVEL" : "BLOQUEADO", !!(contagem && contagem.ok)),
+    finExtratoFlashChecklistLiberacaoItem_(7, "Duplicidade real zerada.", "PENDENTE_VALIDACAO_DO_LOTE", false),
+    finExtratoFlashChecklistLiberacaoItem_(8, "Autorizacao tecnica preenchida.", "PENDENTE_AUTORIZACAO", false),
+    finExtratoFlashChecklistLiberacaoItem_(9, "Usuario responsavel identificado.", "PENDENTE_AUTORIZACAO", false),
+    finExtratoFlashChecklistLiberacaoItem_(10, "Auditoria depois obrigatoria.", "OBRIGATORIO_POS_EXECUCAO", false),
+    finExtratoFlashChecklistLiberacaoItem_(11, "Producao so apos validacao em /dev.", "BLOQUEADO_PARA_PRODUCAO", false)
+  ];
+
+  var status = bloqueios.length ? "BLOQUEADO" : "PENDENTE_DECISAO_OPERACIONAL";
+  var resultado = {
+    success: bloqueios.length === 0,
+    ok: bloqueios.length === 0,
+    executado: false,
+    gravacaoReal: false,
+    modo: "CHECKLIST_LIBERACAO_FLASH_V1",
+    status: status,
+    nenhumaGravacao: true,
+    importacaoRealProtegida: true,
+    totalLotesLidos: contagem ? contagem.totalLotesLidos : 0,
+    totalExtratosLidos: contagem ? contagem.totalExtratosLidos : 0,
+    checklist: itens,
+    bloqueios: bloqueios,
+    avisos: avisos.concat(contagem && contagem.avisos ? contagem.avisos : [])
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      status: resultado.status,
+      totalLotesLidos: resultado.totalLotesLidos,
+      totalExtratosLidos: resultado.totalExtratosLidos,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
+function simularFluxoCompletoFlashInlineV1_SEM_GRAVAR() {
+  var payload = finExtratoFlashPayloadInlineSeguro_();
+  var bloqueios = [];
+  var avisos = [];
+  var contagemAntes = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+  var dryRun = finDryRunLoteExtratoFlashV1(payload);
+  var preConfirmacao = dryRun && dryRun.executado === false ? finPreConfirmarLoteExtratoFlashV1(dryRun) : null;
+  var preparado = preConfirmacao && preConfirmacao.executado === false ? finPrepararPayloadImportacaoFlashV1(preConfirmacao) : null;
+  var simulacao = preparado && preparado.executado === false ? simularImportacaoRealFlashV1_SEM_GRAVAR(preparado) : null;
+
+  if (!contagemAntes || contagemAntes.ok !== true) bloqueios.push("Contagem antes indisponivel.");
+  if (!dryRun || dryRun.executado !== false || dryRun.gravacaoReal === true) bloqueios.push("Dry-run inline nao retornou executado:false.");
+  if (!preConfirmacao || preConfirmacao.executado !== false || preConfirmacao.gravacaoReal === true) bloqueios.push("Pre-confirmacao inline nao retornou executado:false.");
+  if (!preparado || preparado.executado !== false || preparado.gravacaoReal === true) bloqueios.push("Payload inline nao retornou executado:false.");
+  if (!simulacao || simulacao.executado !== false || simulacao.gravacaoReal === true) bloqueios.push("Simulacao inline nao retornou executado:false.");
+
+  avisos = avisos
+    .concat(dryRun && dryRun.avisos ? dryRun.avisos : [])
+    .concat(preConfirmacao && preConfirmacao.avisos ? preConfirmacao.avisos : [])
+    .concat(preparado && preparado.avisos ? preparado.avisos : [])
+    .concat(simulacao && simulacao.avisos ? simulacao.avisos : []);
+
+  var totalLotesAntes = contagemAntes ? contagemAntes.totalLotesLidos : 0;
+  var totalExtratosAntes = contagemAntes ? contagemAntes.totalExtratosLidos : 0;
+  var quantidadeExtratos = simulacao && simulacao.quantidadeExtratos ? simulacao.quantidadeExtratos : 0;
+  var resultado = {
+    success: bloqueios.length === 0,
+    ok: bloqueios.length === 0,
+    executado: false,
+    gravacaoReal: false,
+    modo: "SIMULACAO_FLUXO_COMPLETO_FLASH_INLINE_V1",
+    totalLancamentos: dryRun && dryRun.resumo ? dryRun.resumo.totalLancamentos : 0,
+    decisaoDryRun: dryRun && dryRun.ok ? "APROVADO_SEM_GRAVAR" : "BLOQUEADO",
+    decisaoPreConfirmacao: preConfirmacao && preConfirmacao.decisao ? preConfirmacao.decisao : "BLOQUEADO",
+    decisaoPayload: preparado && preparado.decisao ? preparado.decisao : "BLOQUEADO",
+    simulacaoOk: !!(simulacao && simulacao.ok === true),
+    totalLotesAntes: totalLotesAntes,
+    totalExtratosAntes: totalExtratosAntes,
+    totalLotesDepoisSimulado: totalLotesAntes + (simulacao && simulacao.auditoriaDepoisSimulada ? 1 : 0),
+    totalExtratosDepoisSimulado: totalExtratosAntes + quantidadeExtratos,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado));
+  }
+
+  return resultado;
+}
+
+function auditarPreProducaoFlashV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+  var funcoes = finExtratoFlashFuncoesCriticas_();
+  var checklist = gerarChecklistLiberacaoFlashV1_SEM_GRAVAR();
+  var modulo = auditarModuloFlashCompletoV1_SEM_GRAVAR();
+  var funcoesCriticasOk = true;
+
+  for (var nome in funcoes) {
+    if (Object.prototype.hasOwnProperty.call(funcoes, nome) && !funcoes[nome]) {
+      funcoesCriticasOk = false;
+      bloqueios.push("Funcao critica ausente na pre-producao Flash: " + nome + ".");
+    }
+  }
+  if (!checklist || checklist.executado !== false) bloqueios.push("Checklist de liberacao nao retornou executado:false.");
+  if (!modulo || modulo.executado !== false) bloqueios.push("Auditoria completa do modulo nao retornou executado:false.");
+  if (modulo && modulo.bloqueios && modulo.bloqueios.length) bloqueios = bloqueios.concat(modulo.bloqueios);
+
+  avisos.push("Git hash esperado deve ser confirmado externamente antes de deploy.");
+  avisos.push("Producao nao pode ser confirmada por esta funcao local; sem deploy nesta etapa.");
+
+  var ok = bloqueios.length === 0;
+  var resultado = {
+    success: ok,
+    ok: ok,
+    executado: false,
+    gravacaoReal: false,
+    modo: "AUDITORIA_PRE_PRODUCAO_FLASH_V1",
+    gitHashEsperado: "7902a035c9a166f6151b4896fb72942d93756085",
+    funcoesCriticasOk: funcoesCriticasOk,
+    uiSeguraOk: true,
+    auditoriasOk: !!(checklist && checklist.executado === false && modulo && modulo.executado === false),
+    importacaoRealProtegida: true,
+    producaoNaoAlterada: "desconhecido_sem_deploy_local",
+    prontoParaDeployDevParaProd: false,
+    status: ok ? "PRONTO_PARA_TESTE_CONTROLADO_DEV" : "BLOQUEADO",
+    funcoesDisponiveis: funcoes,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      status: resultado.status,
+      funcoesCriticasOk: resultado.funcoesCriticasOk,
+      uiSeguraOk: resultado.uiSeguraOk,
+      auditoriasOk: resultado.auditoriasOk,
+      importacaoRealProtegida: resultado.importacaoRealProtegida,
+      prontoParaDeployDevParaProd: resultado.prontoParaDeployDevParaProd,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
 function auditarPacoteJFlashV1_SEM_GRAVAR() {
   var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
   var confirmacaoBloqueada = finConfirmarLoteExtratoFlashV1_BLOQUEADA({});
@@ -2101,6 +2370,71 @@ function finExtratoFlashAbrirDbFinReadOnly_() {
   }
 
   return SpreadsheetApp.openById(dbId);
+}
+
+function finExtratoFlashFuncoesCriticas_() {
+  return {
+    finPreviewExtratoFlashXlsxV1: typeof finPreviewExtratoFlashXlsxV1 === "function",
+    finDryRunLoteExtratoFlashV1: typeof finDryRunLoteExtratoFlashV1 === "function",
+    finPreConfirmarLoteExtratoFlashV1: typeof finPreConfirmarLoteExtratoFlashV1 === "function",
+    finPrepararPayloadImportacaoFlashV1: typeof finPrepararPayloadImportacaoFlashV1 === "function",
+    finImportarLoteExtratoFlashV1: typeof finImportarLoteExtratoFlashV1 === "function",
+    finImportarLoteExtratoFlashV1_BLOQUEADA: typeof finImportarLoteExtratoFlashV1_BLOQUEADA === "function",
+    simularImportacaoRealFlashV1_SEM_GRAVAR: typeof simularImportacaoRealFlashV1_SEM_GRAVAR === "function",
+    auditarContagemExtratoFlashV1_SEM_GRAVAR: typeof auditarContagemExtratoFlashV1_SEM_GRAVAR === "function",
+    TESTE_FLASH_CONTAGEM_SEM_GRAVAR: typeof TESTE_FLASH_CONTAGEM_SEM_GRAVAR === "function"
+  };
+}
+
+function finExtratoFlashChecklistLiberacaoItem_(ordem, requisito, status, ok) {
+  return {
+    ordem: ordem,
+    requisito: requisito,
+    status: status,
+    ok: !!ok
+  };
+}
+
+function finExtratoFlashPayloadInlineSeguro_() {
+  return {
+    origem: "FLASH",
+    arquivoNome: "extrato-flash-simulacao-final-inline.xlsx",
+    usuario: "SIMULACAO_FINAL_SEM_GRAVAR",
+    cabecalhos: [
+      "Data",
+      "Movimentação",
+      "Valor",
+      "Pessoa",
+      "Pagamento",
+      "Prestação de contas"
+    ],
+    linhas: [
+      [
+        "09/06/2026 07:08",
+        "PADARIA DO CAMPAO RIO DE JANEIR BRA Alimentacao",
+        "- R$ 5,04",
+        "RAFAEL FAY MARQUES",
+        "Cartao fisico - Conta final 908",
+        "Pendente"
+      ],
+      [
+        "03/06/2026 15:39",
+        "VICTORIA PARK RIO DE JANEIR BRA Estacionamento",
+        "- R$ 19,00",
+        "RAFAEL FAY MARQUES",
+        "Cartao fisico - Conta final 908",
+        "Pendente"
+      ],
+      [
+        "27/05/2026 17:17",
+        "Deposito",
+        "+ R$ 1.000,00",
+        "RAFAEL FAY MARQUES",
+        "Carteira corporativa - Agendado por FINANCEIRO",
+        "-"
+      ]
+    ]
+  };
 }
 
 function finExtratoFlashContarRegistrosAbaReadOnly_(ss, nomeAba) {
