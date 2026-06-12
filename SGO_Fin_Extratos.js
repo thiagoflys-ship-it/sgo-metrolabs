@@ -3458,6 +3458,16 @@ function finExtratoFlashAssign_(alvo) {
   return destino;
 }
 
+function AUDITAR_PAYLOAD_FLASH_DEV_ATUAL_SEM_GRAVAR() {
+  var pacote = gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR();
+  var payload = pacote && pacote.payloadAutorizacaoSugerido ? pacote.payloadAutorizacaoSugerido : null;
+  var resultado = auditarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR(payload);
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado));
+  }
+  return resultado;
+}
+
 // FIN.R.1 — Gera payload de autorizacao limpo, copiavel e auditavel sem truncar
 function gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR() {
   var bloqueios = [];
