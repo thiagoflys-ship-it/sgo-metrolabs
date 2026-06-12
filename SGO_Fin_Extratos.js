@@ -198,6 +198,46 @@ function auditarDryRunLoteExtratoFlashV1_SEM_GRAVAR() {
   return resultado;
 }
 
+function auditarContagemExtratoFlashV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+  var totalLotes = 0;
+  var totalExtratos = 0;
+
+  try {
+    var ss = finExtratoFlashAbrirDbFinReadOnly_();
+    totalLotes = finExtratoFlashContarRegistrosAbaReadOnly_(ss, FIN_EXTRATO_FLASH_ABA_LOTES_V1);
+    totalExtratos = finExtratoFlashContarRegistrosAbaReadOnly_(ss, FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1);
+  } catch (erro) {
+    bloqueios.push(erro && erro.message ? erro.message : String(erro));
+  }
+
+  var ok = bloqueios.length === 0;
+  var resultado = {
+    success: ok,
+    ok: ok,
+    executado: false,
+    modo: "AUDITORIA_CONTAGEM_EXTRATO_FLASH_V1",
+    nenhumaGravacao: true,
+    mensagem: "Auditoria compacta somente leitura. Nenhuma gravacao foi realizada.",
+    timestamp: finExtratoFlashAgoraIso_(),
+    abasConsultadas: {
+      lotes: FIN_EXTRATO_FLASH_ABA_LOTES_V1,
+      extratos: FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1
+    },
+    totalLotesLidos: totalLotes,
+    totalExtratosLidos: totalExtratos,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado));
+  }
+
+  return resultado;
+}
+
 function finDryRunLoteExtratoFlashV1(payload) {
   var entrada = payload || {};
   var avisos = [];
@@ -1212,6 +1252,21 @@ function finExtratoFlashAbrirDbFinReadOnly_() {
   }
 
   return SpreadsheetApp.openById(dbId);
+}
+
+function finExtratoFlashContarRegistrosAbaReadOnly_(ss, nomeAba) {
+  var sheet = ss.getSheetByName(nomeAba);
+  if (!sheet) {
+    throw new Error("Aba obrigatoria nao encontrada para auditoria compacta Flash: " + nomeAba + ".");
+  }
+
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) {
+    throw new Error("Aba obrigatoria sem cabecalho para auditoria compacta Flash: " + nomeAba + ".");
+  }
+
+  var lastRow = sheet.getLastRow();
+  return Math.max(0, lastRow - 1);
 }
 
 function finExtratoFlashLerAbaReadOnly_(ss, nomeAba, headersObrigatorios) {
