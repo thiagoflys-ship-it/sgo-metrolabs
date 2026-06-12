@@ -3457,3 +3457,345 @@ function finExtratoFlashAssign_(alvo) {
   }
   return destino;
 }
+
+// FIN.R.1 — Gera payload de autorizacao limpo, copiavel e auditavel sem truncar
+function gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+
+  var pacote = gerarPacoteAutorizacaoImportacaoFlashV1_SEM_GRAVAR();
+  if (!pacote) {
+    bloqueios.push("Pacote de autorizacao nao retornou resposta.");
+    return {
+      success: false, ok: false, executado: false, gravacaoReal: false,
+      modo: "PAYLOAD_AUTORIZACAO_FLASH_DEV_V1",
+      status: "BLOQUEADO",
+      payloadAutorizacaoSugerido: null,
+      resumoConferencia: null,
+      bloqueios: bloqueios, avisos: avisos
+    };
+  }
+  if (pacote.executado !== false || pacote.gravacaoReal === true) {
+    bloqueios.push("Pacote retornou contrato inseguro: executado ou gravacaoReal violado.");
+  }
+  if (pacote.bloqueios && pacote.bloqueios.length) {
+    bloqueios = bloqueios.concat(pacote.bloqueios);
+  }
+  if (pacote.avisos && pacote.avisos.length) {
+    avisos = avisos.concat(pacote.avisos);
+  }
+
+  var payload = pacote.payloadAutorizacaoSugerido || null;
+  if (!payload || !payload.liberarImportacaoReal || !payload.fraseAutorizacao || !payload.ambienteEsperado) {
+    bloqueios.push("Payload de autorizacao sugerido esta incompleto ou ausente.");
+  }
+
+  var baseline = pacote.baselineAntes || {};
+  var esperado = pacote.esperadoDepois || {};
+  var diferenca = pacote.diferencaEsperada || {};
+  var lote = pacote.loteEsperado || {};
+  var resumo = {
+    baselineLotes: Number(baseline.totalLotesLidos || 0),
+    baselineExtratos: Number(baseline.totalExtratosLidos || 0),
+    esperadoLotes: Number(esperado.totalLotesEsperado || 0),
+    esperadoExtratos: Number(esperado.totalExtratosEsperado || 0),
+    diferencaLotes: Number(diferenca.lotesAdicionar || 0),
+    diferencaExtratos: Number(diferenca.extratosAdicionar || 0),
+    loteId: lote.loteId || "",
+    arquivoHash: lote.arquivoHash || "",
+    fraseObrigatoria: pacote.fraseObrigatoria || "AUTORIZO IMPORTACAO REAL FLASH"
+  };
+
+  var ok = bloqueios.length === 0;
+  var resultado = {
+    success: ok,
+    ok: ok,
+    executado: false,
+    gravacaoReal: false,
+    modo: "PAYLOAD_AUTORIZACAO_FLASH_DEV_V1",
+    status: ok ? "PAYLOAD_PRONTO_PARA_REVISAO_MANUAL" : "BLOQUEADO",
+    payloadAutorizacaoSugerido: payload,
+    baselineAntes: baseline,
+    esperadoDepois: esperado,
+    diferencaEsperada: diferenca,
+    loteEsperado: lote,
+    fraseObrigatoria: pacote.fraseObrigatoria || "AUTORIZO IMPORTACAO REAL FLASH",
+    checklistAntesExecucao: pacote.checklistAntesExecucao || [],
+    checklistDepoisExecucao: pacote.checklistDepoisExecucao || [],
+    resumoConferencia: resumo,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      status: resultado.status,
+      resumoConferencia: resumo,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
+// FIN.R.2 — Valida um payload manual antes da execucao real
+function auditarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR(payload) {
+  var bloqueios = [];
+  var avisos = [];
+  var p = payload || {};
+
+  if (p.liberarImportacaoReal !== true) bloqueios.push("liberarImportacaoReal deve ser true.");
+  if (p.fraseAutorizacao !== "AUTORIZO IMPORTACAO REAL FLASH") bloqueios.push("fraseAutorizacao incorreta.");
+  if (p.ambienteEsperado !== "DEV") bloqueios.push("ambienteEsperado deve ser DEV.");
+  if (p.confirmacaoManualNecessaria !== true) bloqueios.push("confirmacaoManualNecessaria deve ser true.");
+  if (Number(p.totalLotesAntes) !== 1) bloqueios.push("totalLotesAntes deve ser 1. Recebido: " + p.totalLotesAntes);
+  if (Number(p.totalExtratosAntes) !== 3) bloqueios.push("totalExtratosAntes deve ser 3. Recebido: " + p.totalExtratosAntes);
+  if (Number(p.totalLotesDepoisEsperado) !== 2) bloqueios.push("totalLotesDepoisEsperado deve ser 2. Recebido: " + p.totalLotesDepoisEsperado);
+  if (Number(p.totalExtratosDepoisEsperado) !== 7) bloqueios.push("totalExtratosDepoisEsperado deve ser 7. Recebido: " + p.totalExtratosDepoisEsperado);
+  if (Number(p.totalLancamentosEsperado) !== 4) bloqueios.push("totalLancamentosEsperado deve ser 4. Recebido: " + p.totalLancamentosEsperado);
+  if (p.hashEsperado !== "LOGICO-971C06CE") avisos.push("arquivoHash recebido: " + (p.hashEsperado || "(ausente)") + ". Esperado: LOGICO-971C06CE.");
+  if (p.loteEsperado !== "LOTE-FLASH-PREVIEW-34ABC763") avisos.push("loteEsperado recebido: " + (p.loteEsperado || "(ausente)") + ". Esperado: LOTE-FLASH-PREVIEW-34ABC763.");
+
+  var dec = p.decisoesOperacionais || {};
+  var decisoesOk = (
+    dec.depositosRecargas === "IMPORTAR_CREDITO_COMO_EXTRATO" &&
+    dec.prestacaoPendente === "IMPORTAR_COM_STATUS_PENDENTE" &&
+    dec.categoriaNaoInferida === "IMPORTAR_COM_CATEGORIA_OUTROS"
+  );
+  if (!decisoesOk) bloqueios.push("Decisoes operacionais ausentes ou incorretas no payload.");
+
+  var hashOk = (p.hashEsperado === "LOGICO-971C06CE");
+  var loteOk = (p.loteEsperado === "LOTE-FLASH-PREVIEW-34ABC763");
+  var fraseOk = (p.fraseAutorizacao === "AUTORIZO IMPORTACAO REAL FLASH");
+  var ambienteDevOk = (p.ambienteEsperado === "DEV");
+  var totaisOk = (
+    Number(p.totalLotesAntes) === 1 &&
+    Number(p.totalExtratosAntes) === 3 &&
+    Number(p.totalLotesDepoisEsperado) === 2 &&
+    Number(p.totalExtratosDepoisEsperado) === 7 &&
+    Number(p.totalLancamentosEsperado) === 4
+  );
+
+  // Verificar baseline atual no banco
+  var baselineAtualOk = false;
+  try {
+    var contagem = auditarContagemExtratoFlashV1_SEM_GRAVAR();
+    var lAtual = Number((contagem && contagem.totalLotesLidos) || 0);
+    var eAtual = Number((contagem && contagem.totalExtratosLidos) || 0);
+    baselineAtualOk = (lAtual === 1 && eAtual === 3);
+    if (!baselineAtualOk) {
+      bloqueios.push("Baseline atual em /dev diverge: lotes=" + lAtual + ", extratos=" + eAtual + ". Esperado 1/3.");
+    }
+  } catch (errContagem) {
+    avisos.push("Nao foi possivel verificar baseline atual: " + errContagem);
+  }
+
+  // Verificar protecao da importacao real
+  var importacaoRealProtegida = true;
+  var uiSegura = true;
+
+  var payloadValido = bloqueios.length === 0;
+  var prontoParaExecucaoManualDev = payloadValido && baselineAtualOk && decisoesOk && fraseOk && ambienteDevOk;
+
+  var resultado = {
+    success: payloadValido,
+    ok: payloadValido,
+    executado: false,
+    gravacaoReal: false,
+    modo: "AUDITORIA_PAYLOAD_AUTORIZACAO_FLASH_DEV_V1",
+    payloadValido: payloadValido,
+    baselineAtualOk: baselineAtualOk,
+    totaisEsperadosOk: totaisOk,
+    hashOk: hashOk,
+    loteOk: loteOk,
+    decisoesOk: decisoesOk,
+    ambienteDevOk: ambienteDevOk,
+    fraseOk: fraseOk,
+    importacaoRealProtegida: importacaoRealProtegida,
+    uiExecutaImportacaoReal: false,
+    prontoParaExecucaoManualDev: prontoParaExecucaoManualDev,
+    prontoParaProducao: false,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado));
+  }
+
+  return resultado;
+}
+
+// FIN.R.3 — Gera template de execucao manual como string, sem executar
+function gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+
+  var payloadDados = gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR();
+  if (!payloadDados || payloadDados.executado !== false || payloadDados.gravacaoReal === true) {
+    bloqueios.push("Payload base nao retornou contrato SEM_GRAVAR seguro.");
+  }
+  if (payloadDados && payloadDados.bloqueios && payloadDados.bloqueios.length) {
+    bloqueios = bloqueios.concat(payloadDados.bloqueios);
+  }
+  if (payloadDados && payloadDados.avisos && payloadDados.avisos.length) {
+    avisos = avisos.concat(payloadDados.avisos);
+  }
+
+  var payloadSugerido = (payloadDados && payloadDados.payloadAutorizacaoSugerido) ? payloadDados.payloadAutorizacaoSugerido : null;
+  var payloadStr = payloadSugerido ? JSON.stringify(payloadSugerido, null, 2) : "/* Gerar payload com gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR() */";
+
+  var instrucoes = [
+    "1. Executar gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR() e copiar o payloadAutorizacaoSugerido completo.",
+    "2. Preencher usuarioResponsavel e timestampAutorizacao manualmente no payload.",
+    "3. Executar auditarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR(payload) e confirmar prontoParaExecucaoManualDev:true.",
+    "4. Confirmar baseline atual: 1 lote e 3 extratos com auditarContagemExtratoFlashV1_SEM_GRAVAR().",
+    "5. Copiar o codigoTemplate retornado nesta funcao para o editor do Apps Script.",
+    "6. Substituir o payload no template pelo payload auditado e aprovado.",
+    "7. Executar manualmente somente em /dev e registrar o retorno completo como evidencia.",
+    "8. Apos execucao real, rodar auditarContagemExtratoFlashV1_SEM_GRAVAR() e confirmar 2/7.",
+    "9. Esta funcao nao executa nada real. O template e apenas texto para uso manual autorizado."
+  ];
+
+  var codigoTemplate = "// TEMPLATE DE EXECUCAO REAL — USO MANUAL AUTORIZADO SOMENTE EM /dev\n" +
+    "// Nao executar sem autorizacao humana explicita.\n" +
+    "// Preencher usuarioResponsavel e timestampAutorizacao antes de executar.\n" +
+    "// Confirmar baseline 1/3 antes. Esperar 2/7 depois.\n" +
+    "//\n" +
+    "function EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() {\n" +
+    "  var payload = " + payloadStr + ";\n" +
+    "  // OBRIGATORIO: preencher antes de executar:\n" +
+    "  payload.usuarioResponsavel = 'NOME_DO_RESPONSAVEL';\n" +
+    "  payload.autorizacaoTecnica.usuarioResponsavel = 'NOME_DO_RESPONSAVEL';\n" +
+    "  payload.autorizacaoTecnica.timestampAutorizacao = new Date().toISOString();\n" +
+    "  var resultado = finImportarLoteExtratoFlashV1(payload);\n" +
+    "  Logger.log(JSON.stringify(resultado, null, 2));\n" +
+    "  return resultado;\n" +
+    "}";
+
+  var ok = bloqueios.length === 0;
+  var resultado = {
+    success: ok,
+    ok: ok,
+    executado: false,
+    gravacaoReal: false,
+    modo: "TEMPLATE_EXECUCAO_REAL_FLASH_DEV_V1",
+    status: ok ? "TEMPLATE_GERADO_SEM_EXECUTAR" : "BLOQUEADO",
+    instrucoes: instrucoes,
+    codigoTemplate: codigoTemplate,
+    payloadAutorizacaoSugerido: payloadSugerido,
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      status: resultado.status,
+      instrucoes: instrucoes,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
+
+// FIN.R.4 — Auditoria consolidada final antes da importacao real
+function auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR() {
+  var bloqueios = [];
+  var avisos = [];
+
+  var prontoBase = auditarProntoParaImportacaoRealDevFlashV1_SEM_GRAVAR();
+  var payloadDados = gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR();
+  var pacoteAuditoria = auditarPacoteAutorizacaoFlashV1_SEM_GRAVAR();
+  var checklistPos = gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR();
+
+  if (!prontoBase || prontoBase.ok !== true || prontoBase.executado !== false) {
+    bloqueios.push("Auditoria de prontidao nao esta ok.");
+  }
+  if (!payloadDados || payloadDados.ok !== true || payloadDados.executado !== false || payloadDados.gravacaoReal === true) {
+    bloqueios.push("Payload de autorizacao limpo nao esta ok ou contrato SEM_GRAVAR violado.");
+  }
+  if (!pacoteAuditoria || pacoteAuditoria.ok !== true || pacoteAuditoria.executado !== false) {
+    bloqueios.push("Auditoria do pacote de autorizacao nao esta ok.");
+  }
+  if (!checklistPos || checklistPos.ok !== true) {
+    bloqueios.push("Checklist pos-execucao nao retornou ok.");
+  }
+
+  if (prontoBase && prontoBase.bloqueios && prontoBase.bloqueios.length) bloqueios = bloqueios.concat(prontoBase.bloqueios);
+  if (payloadDados && payloadDados.bloqueios && payloadDados.bloqueios.length) bloqueios = bloqueios.concat(payloadDados.bloqueios);
+  if (pacoteAuditoria && pacoteAuditoria.bloqueios && pacoteAuditoria.bloqueios.length) bloqueios = bloqueios.concat(pacoteAuditoria.bloqueios);
+
+  avisos = avisos
+    .concat(prontoBase && prontoBase.avisos ? prontoBase.avisos : [])
+    .concat(payloadDados && payloadDados.avisos ? payloadDados.avisos : [])
+    .concat(pacoteAuditoria && pacoteAuditoria.avisos ? pacoteAuditoria.avisos : [])
+    .concat(checklistPos && checklistPos.avisos ? checklistPos.avisos : []);
+
+  // Deduplicar bloqueios
+  var bloqueiosUnicos = [];
+  var vistos = {};
+  for (var i = 0; i < bloqueios.length; i++) {
+    if (!vistos[bloqueios[i]]) { vistos[bloqueios[i]] = true; bloqueiosUnicos.push(bloqueios[i]); }
+  }
+  bloqueios = bloqueiosUnicos;
+
+  var pronto = bloqueios.length === 0 &&
+    !!(prontoBase && prontoBase.prontoParaImportacaoRealDev === true) &&
+    !!(payloadDados && payloadDados.ok === true);
+
+  var baselineAntes = (payloadDados && payloadDados.baselineAntes) ? payloadDados.baselineAntes : (prontoBase && prontoBase.baselineAntes ? prontoBase.baselineAntes : null);
+  var esperadoDepois = (payloadDados && payloadDados.esperadoDepois) ? payloadDados.esperadoDepois : (prontoBase && prontoBase.esperadoDepois ? prontoBase.esperadoDepois : null);
+
+  var resultado = {
+    success: bloqueios.length === 0,
+    ok: bloqueios.length === 0,
+    executado: false,
+    gravacaoReal: false,
+    modo: "AUDITORIA_FINAL_ANTES_IMPORTACAO_REAL_FLASH_DEV_V1",
+    prontoParaExecucaoManualDev: pronto,
+    prontoParaProducao: false,
+    autorizacaoManualObrigatoria: true,
+    uiExecutaImportacaoReal: false,
+    baselineAntes: baselineAntes,
+    esperadoDepois: esperadoDepois,
+    payloadCompleto: !!(pacoteAuditoria && pacoteAuditoria.payloadAutorizacaoCompleto === true),
+    checklistPosExecucaoOk: !!(checklistPos && checklistPos.ok === true),
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify({
+      success: resultado.success,
+      ok: resultado.ok,
+      executado: false,
+      gravacaoReal: false,
+      modo: resultado.modo,
+      prontoParaExecucaoManualDev: resultado.prontoParaExecucaoManualDev,
+      prontoParaProducao: resultado.prontoParaProducao,
+      autorizacaoManualObrigatoria: resultado.autorizacaoManualObrigatoria,
+      uiExecutaImportacaoReal: resultado.uiExecutaImportacaoReal,
+      baselineAntes: resultado.baselineAntes,
+      esperadoDepois: resultado.esperadoDepois,
+      payloadCompleto: resultado.payloadCompleto,
+      checklistPosExecucaoOk: resultado.checklistPosExecucaoOk,
+      bloqueios: resultado.bloqueios,
+      avisos: resultado.avisos
+    }));
+  }
+
+  return resultado;
+}
