@@ -382,6 +382,35 @@
         Producao nao foi alterada.
       </div>
       <div class="fin-card fin-flash-action-panel">
+        <h3>Decisoes operacionais da importacao Flash</h3>
+        <div class="fin-grid-3">
+          <div class="fin-fg">
+            <label class="fin-label">Depositos/recargas</label>
+            <select id="finFlashDecisaoDepositos" class="fin-select">
+              <option value="IMPORTAR_CREDITO_COMO_EXTRATO" selected>Importar credito como extrato</option>
+              <option value="IGNORAR_CREDITO_USAR_RECARGAS">Ignorar credito e usar recargas</option>
+              <option value="BLOQUEAR_CREDITOS">Bloquear creditos</option>
+            </select>
+          </div>
+          <div class="fin-fg">
+            <label class="fin-label">Prestacao pendente</label>
+            <select id="finFlashDecisaoPrestacao" class="fin-select">
+              <option value="IMPORTAR_COM_STATUS_PENDENTE" selected>Importar com status pendente</option>
+              <option value="BLOQUEAR_ATE_PRESTACAO">Bloquear ate prestacao</option>
+              <option value="IMPORTAR_E_GERAR_PENDENCIA_FUTURA">Importar e gerar pendencia futura</option>
+            </select>
+          </div>
+          <div class="fin-fg">
+            <label class="fin-label">Categoria nao inferida</label>
+            <select id="finFlashDecisaoCategoria" class="fin-select">
+              <option value="IMPORTAR_COM_CATEGORIA_OUTROS" selected>Importar como OUTROS_REVISAR</option>
+              <option value="BLOQUEAR_ATE_CLASSIFICAR">Bloquear ate classificar</option>
+            </select>
+          </div>
+        </div>
+        <div class="fin-alert fin-alert-info" style="margin-top:10px">Padroes seguros selecionados. Eles liberam apenas a preparacao tecnica do payload; importacao real segue bloqueada e exige autorizacao tecnica.</div>
+      </div>
+      <div class="fin-card fin-flash-action-panel">
         <h3>Checklist de liberacao controlada</h3>
         <div class="fin-flash-checklist-list">
           <div class="fin-flash-checklist-item"><strong>Dry-run</strong><span>Aprovado antes de qualquer etapa real.</span></div>
@@ -1572,6 +1601,7 @@ function finPrepararPayloadImportacaoFlashTela_() {
   }
   finSetLoading(true);
 
+  var payloadPreConfirmacao = finFlashMontarPayloadPreConfirmacaoComDecisoes_();
   google.script.run
     .withSuccessHandler(function(r) {
       finSetLoading(false);
@@ -1587,7 +1617,29 @@ function finPrepararPayloadImportacaoFlashTela_() {
         alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha ao preparar payload seguro: ' + finEH(e && e.message ? e.message : e) + '</div>';
       }
     })
-    .finPrepararPayloadImportacaoFlashV1(_finFlashUltimaPreConfirmacao);
+    .finPrepararPayloadImportacaoFlashV1(payloadPreConfirmacao);
+}
+
+function finFlashMontarPayloadPreConfirmacaoComDecisoes_() {
+  var payload = {};
+  for (var k in (_finFlashUltimaPreConfirmacao || {})) {
+    if (Object.prototype.hasOwnProperty.call(_finFlashUltimaPreConfirmacao, k)) {
+      payload[k] = _finFlashUltimaPreConfirmacao[k];
+    }
+  }
+  payload.decisoesOperacionais = finFlashObterDecisoesOperacionais_();
+  return payload;
+}
+
+function finFlashObterDecisoesOperacionais_() {
+  var depositos = document.getElementById('finFlashDecisaoDepositos');
+  var prestacao = document.getElementById('finFlashDecisaoPrestacao');
+  var categoria = document.getElementById('finFlashDecisaoCategoria');
+  return {
+    depositosRecargas: depositos ? depositos.value : 'IMPORTAR_CREDITO_COMO_EXTRATO',
+    prestacaoPendente: prestacao ? prestacao.value : 'IMPORTAR_COM_STATUS_PENDENTE',
+    categoriaNaoInferida: categoria ? categoria.value : 'IMPORTAR_COM_CATEGORIA_OUTROS'
+  };
 }
 
 function finRenderPayloadImportacaoFlash_(r) {
@@ -1609,7 +1661,9 @@ function finRenderPayloadImportacaoFlash_(r) {
     ['Extratos que seriam gravados', totais.totalExtratosQueSeriamGravados || 0],
     ['Total financeiro', finMoeda(totais.saldoLiquidoLote || totais.somaValores || 0)],
     ['Depositos/recargas', pendencias.totalDepositosRecargas || 0],
-    ['Prestacao pendente', pendencias.totalPrestacaoPendente || 0]
+    ['Prestacao pendente', pendencias.totalPrestacaoPendente || 0],
+    ['Categoria nao inferida', pendencias.totalCategoriaNaoInferida || 0],
+    ['Pendencias resolvidas', r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO']
   ];
 
   var html = '<div class="fin-alert fin-alert-' + tipo + '">' + finEH(r.mensagem || 'Preparacao somente leitura. Nenhuma gravacao foi realizada.') + '</div>';
@@ -1623,11 +1677,18 @@ function finRenderPayloadImportacaoFlash_(r) {
   }
   html += '</div>';
 
-  if ((pendencias.totalDepositosRecargas || 0) > 0) {
+  if ((pendencias.totalDepositosRecargas || 0) > 0 && !r.pendenciasOperacionaisResolvidas) {
     html += '<div class="fin-alert fin-alert-warning">Deposito ou recarga detectado: precisa de decisao operacional antes de liberar importacao real.</div>';
   }
-  if ((pendencias.totalPrestacaoPendente || 0) > 0) {
+  if ((pendencias.totalPrestacaoPendente || 0) > 0 && !r.pendenciasOperacionaisResolvidas) {
     html += '<div class="fin-alert fin-alert-warning">Prestacao pendente detectada: precisa de decisao operacional antes de liberar importacao real.</div>';
+  }
+  if ((pendencias.totalCategoriaNaoInferida || 0) > 0 && !r.pendenciasOperacionaisResolvidas) {
+    html += '<div class="fin-alert fin-alert-warning">Categoria nao inferida detectada: sera tratada conforme decisao operacional.</div>';
+  }
+  html += finHtmlDecisoesOperacionaisFlash_(r);
+  if (r.decisao === 'APTO_TECNICAMENTE_BLOQUEADO_POR_CHAVE' && r.pendenciasOperacionaisResolvidas) {
+    html += '<div class="fin-alert fin-alert-success"><strong>Pronto para teste real controlado em /dev.</strong><br>Payload apto tecnicamente com decisoes operacionais aplicadas. Producao ainda nao esta pronta e importacao real exige autorizacao tecnica fora da tela.</div>';
   }
 
   html += finHtmlChecklistPreConfirmacaoFlash_(r.checklistSeguranca || []);
@@ -1635,6 +1696,31 @@ function finRenderPayloadImportacaoFlash_(r) {
   html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
   html += finHtmlPlanoPayloadFlash_(r.auditoriaPrevia && r.auditoriaPrevia.planoGravacaoFuturo ? r.auditoriaPrevia.planoGravacaoFuturo : null);
   alvo.innerHTML = html;
+}
+
+function finHtmlDecisoesOperacionaisFlash_(r) {
+  var decisoes = r && r.decisoesOperacionaisAplicadas ? r.decisoesOperacionaisAplicadas : {};
+  var tratados = r && r.itensTratadosPorDecisao ? r.itensTratadosPorDecisao : [];
+  var html = '<h3>Decisoes operacionais aplicadas</h3>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
+  html += '<tr><th>Depositos/recargas</th><td>' + finEH(decisoes.depositosRecargas || '-') + '</td></tr>';
+  html += '<tr><th>Prestacao pendente</th><td>' + finEH(decisoes.prestacaoPendente || '-') + '</td></tr>';
+  html += '<tr><th>Categoria nao inferida</th><td>' + finEH(decisoes.categoriaNaoInferida || '-') + '</td></tr>';
+  html += '<tr><th>Pendencias resolvidas por politica</th><td>' + finEH(r && r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '</tbody></table></div>';
+  if (tratados.length) {
+    html += '<div class="fin-flash-checklist-list">';
+    for (var i = 0; i < tratados.length; i++) {
+      var item = tratados[i] || {};
+      html += '<div class="fin-flash-checklist-item">';
+      html += '<strong>' + finEH(item.tipo || 'DECISAO') + '</strong>';
+      html += '<span>' + finEH((item.decisao || '-') + ' | qtd: ' + (item.quantidade || 0)) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos operacionais', r && r.avisosOperacionais ? r.avisosOperacionais : []);
+  return html;
 }
 
 function finHtmlPlanoPayloadFlash_(plano) {
