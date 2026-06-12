@@ -4,6 +4,8 @@
 
 var FIN_EXTRATO_FLASH_MODO_PREVIEW_V1 = "PREVIEW_EXTRATO_FLASH_XLSX_V1";
 var FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1 = "DRY_RUN_LOTE_EXTRATO_FLASH_V1";
+var FIN_EXTRATO_FLASH_MODO_PRE_CONFIRMACAO_V1 = "PRE_CONFIRMACAO_LOTE_EXTRATO_FLASH_V1";
+var FIN_EXTRATO_FLASH_MODO_CONFIRMACAO_BLOQUEADA_V1 = "CONFIRMACAO_LOTE_EXTRATO_FLASH_BLOQUEADA_V1";
 var FIN_EXTRATO_FLASH_ABA_LOTES_V1 = "FIN_LOTES_EXTRATO_FLASH";
 var FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1 = "FIN_CARTOES_EXTRATOS";
 var FIN_EXTRATO_FLASH_DB_PROP_V1 = "DB_FIN_ID";
@@ -260,6 +262,270 @@ function finDryRunLoteExtratoFlashV1(payload) {
       bloqueios
     );
   }
+}
+
+function finPreConfirmarLoteExtratoFlashV1(payload) {
+  var avisos = [];
+  var bloqueios = [];
+  var motivos = [];
+  var checklist = [];
+
+  try {
+    var dryRun = finExtratoFlashObterDryRunPreConfirmacao_(payload || {}, avisos, bloqueios);
+    finExtratoFlashAvaliarPreConfirmacao_(dryRun, checklist, motivos, avisos, bloqueios);
+
+    var decisao = finExtratoFlashDecisaoPreConfirmacao_(motivos, bloqueios);
+    return {
+      success: bloqueios.length === 0,
+      ok: bloqueios.length === 0,
+      executado: false,
+      gravacaoReal: false,
+      modo: FIN_EXTRATO_FLASH_MODO_PRE_CONFIRMACAO_V1,
+      decisao: decisao,
+      mensagem: "Pre-confirmacao somente leitura. Nenhuma gravacao foi realizada.",
+      loteProposto: dryRun ? dryRun.loteProposto : null,
+      resumoGerencial: dryRun ? dryRun.resumoGerencial : null,
+      duplicidades: dryRun && dryRun.duplicidades ? dryRun.duplicidades : finExtratoFlashDuplicidadesVazias_(),
+      checklistSeguranca: checklist,
+      motivos: motivos,
+      avisos: avisos,
+      bloqueios: bloqueios,
+      dryRun: dryRun || null
+    };
+  } catch (erro) {
+    bloqueios.push(erro && erro.message ? erro.message : String(erro));
+    return {
+      success: false,
+      ok: false,
+      executado: false,
+      gravacaoReal: false,
+      modo: FIN_EXTRATO_FLASH_MODO_PRE_CONFIRMACAO_V1,
+      decisao: "BLOQUEADO",
+      mensagem: "Pre-confirmacao somente leitura. Nenhuma gravacao foi realizada.",
+      loteProposto: null,
+      resumoGerencial: null,
+      duplicidades: finExtratoFlashDuplicidadesVazias_(),
+      checklistSeguranca: checklist,
+      motivos: motivos,
+      avisos: avisos,
+      bloqueios: bloqueios,
+      dryRun: null
+    };
+  }
+}
+
+function finConfirmarLoteExtratoFlashV1_BLOQUEADA(payload) {
+  return {
+    success: false,
+    ok: false,
+    executado: false,
+    gravacaoReal: false,
+    autorizado: false,
+    modo: FIN_EXTRATO_FLASH_MODO_CONFIRMACAO_BLOQUEADA_V1,
+    mensagem: "Confirmacao real de lote Flash ainda nao esta liberada.",
+    bloqueios: [
+      "Funcao de confirmacao real permanece bloqueada por seguranca.",
+      "Liberacao futura exigira autorizacao tecnica explicita e validacao separada."
+    ],
+    avisos: [
+      "Nenhuma gravacao foi realizada.",
+      "Payload recebido apenas para retorno bloqueado seguro."
+    ]
+  };
+}
+
+function auditarPreConfirmacaoLoteExtratoFlashV1_SEM_GRAVAR() {
+  var bloqueiosAmbiente = [];
+  var leitura = finExtratoFlashLerDadosDuplicidadeReais_(bloqueiosAmbiente);
+  var dryRun = testarDryRunLoteExtratoFlashV1_SEM_GRAVAR();
+  var preConfirmacao = finPreConfirmarLoteExtratoFlashV1(dryRun);
+  var confirmacaoBloqueada = finConfirmarLoteExtratoFlashV1_BLOQUEADA({});
+  var resultado = {
+    success: !!(
+      preConfirmacao &&
+      preConfirmacao.executado === false &&
+      preConfirmacao.gravacaoReal === false &&
+      confirmacaoBloqueada &&
+      confirmacaoBloqueada.executado === false &&
+      confirmacaoBloqueada.gravacaoReal === false &&
+      confirmacaoBloqueada.ok === false
+    ),
+    ok: !!(
+      preConfirmacao &&
+      preConfirmacao.executado === false &&
+      preConfirmacao.gravacaoReal === false &&
+      confirmacaoBloqueada &&
+      confirmacaoBloqueada.executado === false &&
+      confirmacaoBloqueada.gravacaoReal === false &&
+      confirmacaoBloqueada.ok === false
+    ),
+    executado: false,
+    modo: "AUDITORIA_PRE_CONFIRMACAO_LOTE_EXTRATO_FLASH_V1",
+    mensagem: "Auditoria somente leitura. Nenhuma gravacao foi realizada.",
+    ambiente: {
+      abasConsultadas: leitura.abas || {},
+      totalLotesLidos: leitura.lotes ? leitura.lotes.length : 0,
+      totalExtratosLidos: leitura.extratos ? leitura.extratos.length : 0,
+      headers: leitura.headers || {},
+      bloqueios: bloqueiosAmbiente
+    },
+    funcoesDisponiveis: {
+      dryRun: typeof finDryRunLoteExtratoFlashV1 === "function",
+      preConfirmacao: typeof finPreConfirmarLoteExtratoFlashV1 === "function",
+      confirmacaoRealBloqueada: typeof finConfirmarLoteExtratoFlashV1_BLOQUEADA === "function"
+    },
+    preConfirmacao: preConfirmacao,
+    confirmacaoBloqueada: confirmacaoBloqueada,
+    avisos: [
+      "Pre-confirmacao validada em modo seguro.",
+      "Confirmacao real permanece bloqueada."
+    ],
+    bloqueios: []
+  };
+
+  if (!resultado.success) {
+    resultado.bloqueios.push("Auditoria de pre-confirmacao nao comprovou retorno seguro.");
+  }
+  if (typeof Logger !== "undefined" && Logger && Logger.log) {
+    Logger.log(JSON.stringify(resultado, null, 2));
+  }
+
+  return resultado;
+}
+
+function finExtratoFlashObterDryRunPreConfirmacao_(payload, avisos, bloqueios) {
+  var entrada = payload || {};
+  if (
+    entrada.modo === FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1 &&
+    entrada.executado === false &&
+    entrada.loteProposto
+  ) {
+    return entrada;
+  }
+
+  avisos.push("Pre-confirmacao gerou dry-run em memoria antes da avaliacao. Nenhuma gravacao foi realizada.");
+  var dryRun = finDryRunLoteExtratoFlashV1(entrada);
+  if (!dryRun || dryRun.modo !== FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1) {
+    bloqueios.push("Nao foi possivel obter dry-run valido para pre-confirmacao.");
+    return null;
+  }
+  return dryRun;
+}
+
+function finExtratoFlashAvaliarPreConfirmacao_(dryRun, checklist, motivos, avisos, bloqueios) {
+  if (!dryRun) {
+    checklist.push(finExtratoFlashItemChecklistPreConfirmacao_("Dry-run disponivel", false, "Sem dry-run valido."));
+    return;
+  }
+
+  var lote = dryRun.loteProposto || null;
+  var resumo = dryRun.resumoGerencial || {};
+  var duplicidades = dryRun.duplicidades || finExtratoFlashDuplicidadesVazias_();
+  var lancamentos = dryRun.lancamentosDryRun || [];
+  var bloqueiosDryRun = dryRun.bloqueios || [];
+  var avisosDryRun = dryRun.avisos || [];
+
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Dry-run seguro", dryRun.executado === false, "Dry-run retornou executado:false.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Modo correto", dryRun.modo === FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1, "Modo do dry-run confere.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Sem gravacao real", dryRun.gravacaoReal !== true, "Nenhuma flag de gravacao real encontrada.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Lote proposto presente", !!lote, "Lote proposto disponivel para avaliacao.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Lancamentos presentes", lancamentos.length > 0, "Ha lancamentos para avaliar.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Sem bloqueios de dry-run", bloqueiosDryRun.length === 0, "Dry-run nao retornou bloqueios.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Leitura de duplicidades executada", !!duplicidades.leituraAbasExecutada, "Duplicidades reais foram consultadas quando ambiente permitiu.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Lote nao duplicado", duplicidades.lotePossivelmenteDuplicado !== true, "Lote nao encontrado como duplicado.");
+  finExtratoFlashChecklistPreConfirmacao_(checklist, "Lancamentos nao duplicados", Number(duplicidades.totalPossiveisDuplicados || 0) === 0, "Nenhum lancamento duplicado encontrado.");
+
+  if (dryRun.executado !== false) bloqueios.push("Dry-run nao retornou executado:false.");
+  if (dryRun.modo !== FIN_EXTRATO_FLASH_MODO_DRY_RUN_LOTE_V1) bloqueios.push("Modo do dry-run invalido para pre-confirmacao.");
+  if (dryRun.gravacaoReal === true) bloqueios.push("Dry-run indicou gravacaoReal:true, pre-confirmacao bloqueada.");
+  if (!lote) bloqueios.push("Lote proposto ausente.");
+  if (!lancamentos.length) bloqueios.push("Nenhum lancamento disponivel para pre-confirmacao.");
+  for (var b = 0; b < bloqueiosDryRun.length; b++) {
+    bloqueios.push("Bloqueio do dry-run: " + bloqueiosDryRun[b]);
+  }
+
+  finExtratoFlashAvaliarLotePreConfirmacao_(lote, resumo, motivos, bloqueios);
+  finExtratoFlashAvaliarLancamentosPreConfirmacao_(lancamentos, motivos, bloqueios);
+  finExtratoFlashAvaliarDuplicidadesPreConfirmacao_(duplicidades, motivos, bloqueios);
+
+  if (avisosDryRun.length) {
+    motivos.push("Dry-run possui " + avisosDryRun.length + " aviso(s) que exigem revisao visual antes de confirmacao futura.");
+  }
+  for (var a = 0; a < avisosDryRun.length; a++) {
+    avisos.push("Aviso do dry-run: " + avisosDryRun[a]);
+  }
+}
+
+function finExtratoFlashAvaliarLotePreConfirmacao_(lote, resumo, motivos, bloqueios) {
+  if (!lote) return;
+  if (!lote.arquivoHash) bloqueios.push("Lote sem arquivoHash seguro.");
+  if (!lote.periodoInicio || !lote.periodoFim) bloqueios.push("Lote sem periodo completo.");
+  if (!lote.totalLancamentos || Number(lote.totalLancamentos) <= 0) bloqueios.push("Lote sem totalLancamentos positivo.");
+  if (!lote.pessoa) motivos.push("Lote sem pessoa unica definida.");
+  if (!lote.finalCartao) motivos.push("Lote sem finalCartao unico definido.");
+
+  var saldoCalculado = finExtratoFlashArredondar_(Number(lote.somaDebitos || 0) + Number(lote.somaCreditos || 0));
+  if (saldoCalculado !== Number(lote.saldoLiquido || 0)) {
+    bloqueios.push("Lote com saldoLiquido divergente de somaDebitos + somaCreditos.");
+  }
+  if (resumo && resumo.totalLancamentos !== undefined && Number(resumo.totalLancamentos || 0) !== Number(lote.totalLancamentos || 0)) {
+    bloqueios.push("Resumo gerencial diverge do total de lancamentos do lote.");
+  }
+}
+
+function finExtratoFlashAvaliarLancamentosPreConfirmacao_(lancamentos, motivos, bloqueios) {
+  var bloqueados = 0;
+  var duplicados = 0;
+  var semCartao = 0;
+  var valorSomado = 0;
+
+  for (var i = 0; i < lancamentos.length; i++) {
+    var item = lancamentos[i] || {};
+    if (item.statusDryRun === "BLOQUEADO") bloqueados++;
+    if (item.statusDryRun === "POSSIVEL_DUPLICADO") duplicados++;
+    if (!item.dataIso || item.valorNumero === null || item.valorNumero === undefined || !item.pessoa) {
+      bloqueios.push("Lancamento linha " + (item.linhaOrigem || "?") + " sem data, valor ou pessoa.");
+    }
+    if (item.sinal === "DEBITO" && !item.finalCartao) semCartao++;
+    valorSomado += Number(item.valorNumero || 0);
+  }
+
+  if (bloqueados) bloqueios.push("Ha " + bloqueados + " lancamento(s) bloqueado(s) no dry-run.");
+  if (duplicados) bloqueios.push("Ha " + duplicados + " lancamento(s) com possivel duplicidade.");
+  if (semCartao) motivos.push("Ha " + semCartao + " debito(s) sem final de cartao unico.");
+  if (!lancamentos.length) bloqueios.push("Lista de lancamentos vazia.");
+  motivos.push("Saldo calculado dos lancamentos: " + finExtratoFlashArredondar_(valorSomado));
+}
+
+function finExtratoFlashAvaliarDuplicidadesPreConfirmacao_(duplicidades, motivos, bloqueios) {
+  var dups = duplicidades || finExtratoFlashDuplicidadesVazias_();
+  if (dups.lotePossivelmenteDuplicado === true) {
+    bloqueios.push("Lote possivelmente duplicado em dados existentes.");
+  }
+  if (Number(dups.totalPossiveisDuplicados || 0) > 0) {
+    bloqueios.push("Ha " + Number(dups.totalPossiveisDuplicados || 0) + " lancamento(s) possivelmente duplicado(s).");
+  }
+  if (!dups.leituraAbasExecutada) {
+    motivos.push("Duplicidade real nao foi confirmada por leitura de abas; revisar ambiente antes de confirmacao futura.");
+  }
+}
+
+function finExtratoFlashDecisaoPreConfirmacao_(motivos, bloqueios) {
+  if (bloqueios && bloqueios.length) return "BLOQUEADO";
+  if (motivos && motivos.length) return "REQUER_REVISAO";
+  return "APTO_PARA_CONFIRMACAO_FUTURA";
+}
+
+function finExtratoFlashChecklistPreConfirmacao_(checklist, nome, ok, detalhe) {
+  checklist.push(finExtratoFlashItemChecklistPreConfirmacao_(nome, ok, detalhe));
+}
+
+function finExtratoFlashItemChecklistPreConfirmacao_(nome, ok, detalhe) {
+  return {
+    item: nome,
+    ok: !!ok,
+    detalhe: detalhe || ""
+  };
 }
 
 function finExtratoFlashRetorno_(success, resumo, lancamentos, avisos, bloqueios) {
