@@ -238,6 +238,10 @@ function auditarContagemExtratoFlashV1_SEM_GRAVAR() {
   return resultado;
 }
 
+function TESTE_FLASH_CONTAGEM_SEM_GRAVAR() {
+  return auditarContagemExtratoFlashV1_SEM_GRAVAR();
+}
+
 function finDryRunLoteExtratoFlashV1(payload) {
   var entrada = payload || {};
   var avisos = [];
