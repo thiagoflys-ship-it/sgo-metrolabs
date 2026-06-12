@@ -426,6 +426,22 @@
           <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Ver checklist de liberacao</button>
         </div>
       </div>
+      <div class="fin-card fin-flash-action-panel">
+        <h3>Autorizacao manual para teste real controlado em /dev</h3>
+        <div class="fin-alert fin-alert-warning"><strong>A tela NAO executa a importacao real.</strong> Este painel gera apenas o pacote tecnico para revisao manual, com baseline, hash, totais, frase obrigatoria e payload sugerido.</div>
+        <div class="fin-btn-row" style="margin-top:12px">
+          <button id="finFlashPacoteAutorizacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarPacoteAutorizacao_()">Gerar pacote de autorizacao</button>
+        </div>
+        <div id="finFlashPacoteAutorizacaoResumo"></div>
+      </div>
+      <div class="fin-card fin-flash-action-panel">
+        <h3>Checklist pos-execucao</h3>
+        <div class="fin-alert fin-alert-info">Roteiro somente leitura para conferir contagens, lote, duplicidade, dashboard, UI e evidencias depois de uma execucao manual autorizada em /dev.</div>
+        <div class="fin-btn-row" style="margin-top:12px">
+          <button id="finFlashChecklistPosBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistPosImportacao_()">Gerar checklist pos-execucao</button>
+        </div>
+        <div id="finFlashChecklistPosResumo"></div>
+      </div>
       <div id="finFlashPreviewTabela"></div>
     </div>
     <div class="fin-card">
@@ -2232,6 +2248,154 @@ function finFlashRenderChecklistLiberacao_(dados) {
   html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
   html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
   finFlashRenderPainelAcao_('Checklist de liberacao controlada', html);
+}
+
+function finFlashGerarPacoteAutorizacao_() {
+  var alvo = document.getElementById('finFlashPacoteAutorizacaoResumo');
+  var btn = document.getElementById('finFlashPacoteAutorizacaoBtn');
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Gerando pacote de autorizacao em modo somente leitura. Nenhuma gravacao sera realizada.</div>';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  finSetLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (btn) {
+        btn.disabled = false;
+      }
+      finFlashRenderPacoteAutorizacao_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      if (btn) {
+        btn.disabled = false;
+      }
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha ao gerar pacote de autorizacao: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .gerarPacoteAutorizacaoImportacaoFlashV1_SEM_GRAVAR();
+}
+
+function finFlashRenderPacoteAutorizacao_(dados) {
+  var alvo = document.getElementById('finFlashPacoteAutorizacaoResumo');
+  if (!alvo) return;
+  var r = dados || {};
+  var baseline = r.baselineAntes || {};
+  var esperado = r.esperadoDepois || {};
+  var diff = r.diferencaEsperada || {};
+  var lote = r.loteEsperado || {};
+  var payload = r.payloadAutorizacaoSugerido || {};
+  var classe = r.ok ? 'success' : ((r.bloqueios && r.bloqueios.length) ? 'danger' : 'warning');
+  var html = '<div class="fin-alert fin-alert-' + classe + '">';
+  html += '<strong>Status: ' + finEH(r.status || 'BLOQUEADO') + '</strong><br>';
+  html += 'Pacote somente leitura. A tela NAO executa a importacao real.';
+  html += '</div>';
+  html += '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Baseline lotes', baseline.totalLotesLidos || 0);
+  html += finFlashKpiAcao_('Baseline extratos', baseline.totalExtratosLidos || 0);
+  html += finFlashKpiAcao_('Lotes esperados', esperado.totalLotesEsperado || 0);
+  html += finFlashKpiAcao_('Extratos esperados', esperado.totalExtratosEsperado || 0);
+  html += finFlashKpiAcao_('Lotes a adicionar', diff.lotesAdicionar || 0);
+  html += finFlashKpiAcao_('Extratos a adicionar', diff.extratosAdicionar || 0);
+  html += '</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
+  html += '<tr><th>Lote esperado</th><td>' + finEH(lote.loteId || '-') + '</td></tr>';
+  html += '<tr><th>Arquivo hash</th><td>' + finEH(lote.arquivoHash || '-') + '</td></tr>';
+  html += '<tr><th>Chave lote</th><td>' + finEH(lote.chaveLote || '-') + '</td></tr>';
+  html += '<tr><th>Periodo</th><td>' + finEH((lote.primeiraData || '-') + ' ate ' + (lote.ultimaData || '-')) + '</td></tr>';
+  html += '<tr><th>Total lancamentos</th><td>' + finEH(lote.totalLancamentos || 0) + '</td></tr>';
+  html += '<tr><th>Total financeiro</th><td>' + finEH(finMoeda(lote.saldoLiquido || 0)) + '</td></tr>';
+  html += '<tr><th>Pessoa</th><td>' + finEH(lote.pessoa || '-') + '</td></tr>';
+  html += '<tr><th>Final cartao</th><td>' + finEH(lote.finalCartao || '-') + '</td></tr>';
+  html += '<tr><th>Frase obrigatoria</th><td><strong>' + finEH(r.fraseObrigatoria || '-') + '</strong></td></tr>';
+  html += '</tbody></table></div>';
+  html += finHtmlDecisoesOperacionaisFlash_({
+    decisoesOperacionaisAplicadas: r.decisoesOperacionaisAplicadas || {},
+    pendenciasOperacionaisResolvidas: true,
+    itensTratadosPorDecisao: []
+  });
+  html += '<h3>Payload sugerido para revisao manual</h3>';
+  html += '<textarea class="fin-textarea" rows="14" readonly>' + finEH(JSON.stringify(payload, null, 2)) + '</textarea>';
+  html += '<div class="fin-alert fin-alert-warning">Nao ha botao de executar importacao real nesta tela. O payload deve ser revisado fora da tela antes de qualquer acao manual autorizada em /dev.</div>';
+  html += finHtmlChecklistAutorizacaoFlash_('Checklist antes da execucao', r.checklistAntesExecucao || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Checklist depois da execucao', r.checklistDepoisExecucao || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  alvo.innerHTML = html;
+}
+
+function finHtmlChecklistAutorizacaoFlash_(titulo, lista) {
+  if (!lista || !lista.length) return '';
+  var html = '<h3>' + finEH(titulo || 'Checklist') + '</h3>';
+  html += '<div class="fin-flash-checklist-list">';
+  for (var i = 0; i < lista.length; i++) {
+    var item = lista[i] || {};
+    html += '<div class="fin-flash-checklist-item">';
+    html += '<strong>' + finEH((item.ordem || (i + 1)) + '. ' + (item.requisito || 'Item')) + '</strong>';
+    html += '<span>' + finEH(item.status || (item.ok ? 'OK' : 'PENDENTE')) + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function finFlashGerarChecklistPosImportacao_() {
+  var alvo = document.getElementById('finFlashChecklistPosResumo');
+  var btn = document.getElementById('finFlashChecklistPosBtn');
+  if (alvo) {
+    alvo.innerHTML = '<div class="fin-alert fin-alert-info">Gerando checklist pos-execucao em modo somente leitura.</div>';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  finSetLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (btn) {
+        btn.disabled = false;
+      }
+      finFlashRenderChecklistPosImportacao_(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      if (btn) {
+        btn.disabled = false;
+      }
+      if (alvo) {
+        alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha ao gerar checklist pos-execucao: ' + finEH(e && e.message ? e.message : e) + '</div>';
+      }
+    })
+    .gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR();
+}
+
+function finFlashRenderChecklistPosImportacao_(dados) {
+  var alvo = document.getElementById('finFlashChecklistPosResumo');
+  if (!alvo) return;
+  var r = dados || {};
+  var classe = r.ok ? 'success' : 'warning';
+  var roteiro = r.roteiro || [];
+  var html = '<div class="fin-alert fin-alert-' + classe + '">';
+  html += '<strong>Status: ' + finEH(r.status || 'ROTEIRO_POS_EXECUCAO_GERADO') + '</strong><br>';
+  html += 'Checklist somente leitura. Nenhuma gravacao foi realizada.';
+  html += '</div>';
+  html += '<div class="fin-flash-checklist-list">';
+  for (var i = 0; i < roteiro.length; i++) {
+    html += '<div class="fin-flash-checklist-item">';
+    html += '<strong>' + finEH((i + 1) + '. Conferencia') + '</strong>';
+    html += '<span>' + finEH(roteiro[i]) + '</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  alvo.innerHTML = html;
 }
 
 function finFlashVerPreviaConciliacao_() {
