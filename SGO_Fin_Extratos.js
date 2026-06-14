@@ -4332,3 +4332,194 @@ function AUDITAR_POS_IMPORTACAO_FLASH_DEV_PACOTE_U_SEM_GRAVAR() {
   Logger.log("PACOTE_U_RESULTADO_FINAL: " + JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+// FIN.W0 — Auditoria pos-importacao Flash em PRODUCAO — SEM GRAVACAO
+// Usar DEPOIS de uma importacao real autorizada em producao (Pacote W).
+// Nao assume baseline DEV (1/3 → 2/7). Nao valida loteId ou hash DEV.
+// Retorna o estado atual do banco e orienta a validacao visual pos-producao.
+function AUDITAR_POS_IMPORTACAO_FLASH_PRODUCAO_SEM_GRAVAR() {
+  var timestamp = new Date().toISOString();
+  var bloqueios = [];
+  var avisos = [];
+
+  var resultado = {
+    success: false,
+    ok: false,
+    executado: false,
+    gravacaoReal: false,
+    nenhumaGravacao: true,
+    modo: "AUDITORIA_POS_IMPORTACAO_FLASH_PRODUCAO_SEM_GRAVAR",
+    timestamp: timestamp,
+    ambienteAlvo: "PRODUCAO",
+    baselineAtual: null,
+    validacao: {
+      contagemSegura: false,
+      moduloFlashOk: null,
+      checklistPosOk: null,
+      importacaoRealProtegida: null,
+      uiChamaImportacaoReal: null,
+      prontoParaValidacaoVisualProducao: false
+    },
+    auditorias: {
+      contagem: null,
+      checklistPos: null,
+      modulo: null
+    },
+    bloqueios: null,
+    avisos: null,
+    proximasAcoes: []
+  };
+
+  avisos.push("AVISO: Esta funcao e somente leitura. Nenhuma gravacao foi realizada.");
+  avisos.push("AVISO: Executar esta funcao SOMENTE APOS importacao real autorizada em producao (Pacote W).");
+  avisos.push("AVISO: Comparar totalLotesLidos e totalExtratosLidos com snapshot registrado antes do Pacote W.");
+  avisos.push("AVISO: Se nao houver snapshot de antes, o baseline atual serve apenas como estado corrente.");
+  avisos.push("AVISO: Validacao visual em producao e obrigatoria. Auditoria automatica nao substitui verificacao humana.");
+
+  try {
+    // PASSO 1 — Contagem atual (somente leitura)
+    var contagem = TESTE_FLASH_CONTAGEM_SEM_GRAVAR();
+    resultado.auditorias.contagem = contagem;
+    Logger.log("W0_CONTAGEM_ATUAL: " + JSON.stringify(contagem));
+
+    var contagemNaoGrava = contagem &&
+      (contagem.nenhumaGravacao === true || contagem.gravacaoReal === false);
+    var contagemSegura = !!contagem &&
+      contagem.success === true &&
+      contagem.ok === true &&
+      contagem.executado === false &&
+      !!contagemNaoGrava &&
+      !isNaN(Number(contagem.totalLotesLidos)) &&
+      !isNaN(Number(contagem.totalExtratosLidos)) &&
+      (!contagem.bloqueios || contagem.bloqueios.length === 0);
+
+    resultado.validacao.contagemSegura = contagemSegura;
+
+    if (!contagemSegura) {
+      bloqueios.push("CONTAGEM_CONTRATO_INSEGURO: TESTE_FLASH_CONTAGEM_SEM_GRAVAR retornou contrato inseguro. " +
+        "success=" + (contagem ? String(contagem.success) : "null") +
+        " ok=" + (contagem ? String(contagem.ok) : "null") +
+        " executado=" + (contagem ? String(contagem.executado) : "null") +
+        " nenhumaGravacao=" + (contagem ? String(contagem.nenhumaGravacao) : "null") +
+        " gravacaoReal=" + (contagem ? String(contagem.gravacaoReal) : "null"));
+      resultado.bloqueios = bloqueios;
+      resultado.avisos = avisos;
+      Logger.log("W0_BLOQUEADO_CONTAGEM: " + JSON.stringify(resultado));
+      return resultado;
+    }
+
+    var lotesAtual = Number(contagem.totalLotesLidos);
+    var extratosAtual = Number(contagem.totalExtratosLidos);
+
+    resultado.baselineAtual = {
+      totalLotesLidos: lotesAtual,
+      totalExtratosLidos: extratosAtual
+    };
+
+    avisos.push("Baseline atual lido: " + lotesAtual + " lotes, " + extratosAtual + " extratos. " +
+      "Comparar manualmente com snapshot registrado antes do Pacote W.");
+
+    if (lotesAtual === 0) {
+      bloqueios.push("PRODUCAO_SEM_LOTES: Nenhum lote encontrado. Se importacao foi executada, investigar DB_FIN producao.");
+    }
+    if (extratosAtual === 0) {
+      bloqueios.push("PRODUCAO_SEM_EXTRATOS: Nenhum extrato encontrado. Se importacao foi executada, investigar DB_FIN producao.");
+    }
+
+    // PASSO 2 — Checklist pos-importacao (orientativo, somente leitura)
+    try {
+      var checklistPos = gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR();
+      resultado.auditorias.checklistPos = checklistPos;
+      Logger.log("W0_CHECKLIST_POS: " + JSON.stringify(checklistPos));
+
+      if (!checklistPos || checklistPos.executado !== false) {
+        avisos.push("gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR retornou contrato inesperado.");
+        resultado.validacao.checklistPosOk = false;
+      } else {
+        resultado.validacao.checklistPosOk = true;
+      }
+      if (checklistPos && checklistPos.avisos && checklistPos.avisos.length) {
+        for (var a = 0; a < checklistPos.avisos.length; a++) {
+          avisos.push(checklistPos.avisos[a]);
+        }
+      }
+    } catch (erroChecklist) {
+      avisos.push("gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR falhou: " +
+        String(erroChecklist && erroChecklist.message ? erroChecklist.message : erroChecklist));
+      resultado.validacao.checklistPosOk = null;
+    }
+
+    // PASSO 3 — Auditoria do modulo completo (somente leitura)
+    try {
+      var auditoria = auditarModuloFlashCompletoV1_SEM_GRAVAR();
+      resultado.auditorias.modulo = auditoria;
+      Logger.log("W0_AUDITORIA_MODULO: " + JSON.stringify(auditoria));
+
+      var moduloOk = !!(auditoria && auditoria.ok === true);
+      resultado.validacao.moduloFlashOk = moduloOk;
+
+      var importacaoProtegida = auditoria ? auditoria.importacaoRealProtegida : null;
+      resultado.validacao.importacaoRealProtegida = importacaoProtegida;
+
+      var uiChama = auditoria ? auditoria.uiChamaImportacaoReal : null;
+      resultado.validacao.uiChamaImportacaoReal = uiChama;
+
+      if (!moduloOk) {
+        bloqueios.push("MODULO_FLASH_NAO_OK: auditarModuloFlashCompletoV1_SEM_GRAVAR retornou ok:false. " +
+          "Bloqueios do modulo: " + JSON.stringify(auditoria && auditoria.bloqueios ? auditoria.bloqueios : []));
+      }
+      if (importacaoProtegida === false) {
+        bloqueios.push("IMPORTACAO_NAO_PROTEGIDA: importacaoRealProtegida veio false. Revisar antes de executar nova importacao.");
+      }
+      if (uiChama === true) {
+        bloqueios.push("UI_CHAMA_IMPORTACAO_REAL: uiChamaImportacaoReal veio true. Verificar se botao de importacao foi exposto na UI.");
+      }
+      if (auditoria && auditoria.bloqueios && auditoria.bloqueios.length) {
+        for (var b = 0; b < auditoria.bloqueios.length; b++) {
+          avisos.push("MODULO_BLOQUEIO: " + auditoria.bloqueios[b]);
+        }
+      }
+    } catch (erroModulo) {
+      bloqueios.push("ERRO_AUDITORIA_MODULO: auditarModuloFlashCompletoV1_SEM_GRAVAR falhou: " +
+        String(erroModulo && erroModulo.message ? erroModulo.message : erroModulo));
+      resultado.validacao.moduloFlashOk = false;
+      resultado.validacao.importacaoRealProtegida = null;
+      resultado.validacao.uiChamaImportacaoReal = null;
+    }
+
+    // PASSO 4 — Consolidar estado final
+    resultado.validacao.prontoParaValidacaoVisualProducao =
+      resultado.validacao.contagemSegura === true &&
+      bloqueios.length === 0;
+
+    resultado.success = true;
+    resultado.ok = resultado.validacao.prontoParaValidacaoVisualProducao;
+
+    if (resultado.validacao.prontoParaValidacaoVisualProducao) {
+      resultado.proximasAcoes.push("1. Comparar totalLotesLidos (" + lotesAtual + ") com o snapshot registrado antes do Pacote W.");
+      resultado.proximasAcoes.push("2. Comparar totalExtratosLidos (" + extratosAtual + ") com o snapshot registrado antes do Pacote W.");
+      resultado.proximasAcoes.push("3. Confirmar loteId e arquivoHash reais na aba FIN_LOTES_EXTRATO_FLASH de producao.");
+      resultado.proximasAcoes.push("4. Validar dashboard producao: KPIs, debitos, creditos, saldo.");
+      resultado.proximasAcoes.push("5. Validar pendencias e conciliacao em producao.");
+      resultado.proximasAcoes.push("6. Registrar prints e logs como evidencia do Pacote W concluido.");
+      resultado.proximasAcoes.push("7. Nao executar nova importacao em producao sem novo Pacote e nova autorizacao explicita.");
+    } else {
+      resultado.proximasAcoes.push("URGENTE: Nao avançar sem resolver os bloqueios listados.");
+      resultado.proximasAcoes.push("Exportar este log completo e revisar os bloqueios antes de qualquer acao.");
+      resultado.proximasAcoes.push("Nao executar nova importacao em producao enquanto houver bloqueios.");
+      resultado.proximasAcoes.push("Acionar responsavel tecnico para investigar DB_FIN producao se necessario.");
+    }
+
+  } catch (erro) {
+    resultado.success = false;
+    resultado.ok = false;
+    bloqueios.push("ERRO_CRITICO: " + String(erro && erro.message ? erro.message : erro));
+    resultado.stack = erro && erro.stack ? String(erro.stack) : null;
+  }
+
+  resultado.bloqueios = bloqueios;
+  resultado.avisos = avisos;
+
+  Logger.log("W0_RESULTADO_FINAL: " + JSON.stringify(resultado, null, 2));
+  return resultado;
+}

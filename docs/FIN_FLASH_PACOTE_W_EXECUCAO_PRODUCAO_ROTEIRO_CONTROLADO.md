@@ -218,6 +218,72 @@ A funcao de importacao usa `setValues` — nao ha rollback automatico.
 
 ---
 
+## Auditoria pos-producao SEM_GRAVAR
+
+**Nome da funcao:** `AUDITAR_POS_IMPORTACAO_FLASH_PRODUCAO_SEM_GRAVAR()`
+
+**Arquivo:** `SGO_Fin_Extratos.js` (ao final do arquivo, apos a funcao do Pacote U.1)
+
+**Quando usar:** Imediatamente apos `EXECUTAR_IMPORTACAO_FLASH_PRODUCAO_AUTORIZADA_MANUALMENTE()` ser executada manualmente no editor do Apps Script producao.
+
+**O que valida:**
+
+| Passo | Funcao chamada | O que verifica |
+|-------|---------------|----------------|
+| 1 | `TESTE_FLASH_CONTAGEM_SEM_GRAVAR` | Contrato seguro + baseline atual (sem hardcode) |
+| 2 | `gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR` | Roteiro pos-importacao |
+| 3 | `auditarModuloFlashCompletoV1_SEM_GRAVAR` | importacaoRealProtegida, uiChamaImportacaoReal |
+
+**O que NAO valida automaticamente:**
+
+- Nao valida se o loteId real confere com o esperado (humano deve conferir na aba).
+- Nao valida se o hash real confere (humano deve conferir no retorno do Pacote W).
+- Nao calcula delta de lotes/extratos automaticamente — requer snapshot anterior registrado antes do Pacote W.
+- Nao faz rollback em caso de bloqueio.
+
+**Limitacoes:**
+
+- Se produção ainda nao foi executada, a funcao roda e mostra o baseline atual sem bloqueio adicional.
+- Nao distingue dados de teste de dados reais — humano deve confirmar que os dados lidos sao da execucao real.
+- O campo `prontoParaValidacaoVisualProducao:true` significa apenas que as auditorias de codigo passaram — nao confirma que os dados estao corretos.
+
+**Campos esperados no retorno:**
+
+```
+success: true/false
+ok: true/false
+executado: false
+gravacaoReal: false
+nenhumaGravacao: true
+modo: "AUDITORIA_POS_IMPORTACAO_FLASH_PRODUCAO_SEM_GRAVAR"
+ambienteAlvo: "PRODUCAO"
+baselineAtual: { totalLotesLidos: N, totalExtratosLidos: M }
+validacao: {
+  contagemSegura: true/false,
+  moduloFlashOk: true/false/null,
+  checklistPosOk: true/false/null,
+  importacaoRealProtegida: true/false/null,
+  uiChamaImportacaoReal: true/false/null,
+  prontoParaValidacaoVisualProducao: true/false
+}
+bloqueios: []
+avisos: [...]
+proximasAcoes: [...]
+```
+
+**Bloqueadores (interrompem a funcao ou retornam ok:false):**
+
+1. `CONTAGEM_CONTRATO_INSEGURO` — contagem retornou contrato invalido.
+2. `PRODUCAO_SEM_LOTES` — nenhum lote encontrado (se importacao ja foi executada).
+3. `PRODUCAO_SEM_EXTRATOS` — nenhum extrato encontrado.
+4. `MODULO_FLASH_NAO_OK` — auditoria de modulo retornou ok:false.
+5. `IMPORTACAO_NAO_PROTEGIDA` — importacaoRealProtegida veio false.
+6. `UI_CHAMA_IMPORTACAO_REAL` — uiChamaImportacaoReal veio true.
+7. `ERRO_AUDITORIA_MODULO` — auditoria de modulo lancou excecao.
+8. `ERRO_CRITICO` — excecao fatal na funcao principal.
+
+---
+
 ## Relatorio final esperado de producao
 
 Ao final do Pacote W, registrar:
