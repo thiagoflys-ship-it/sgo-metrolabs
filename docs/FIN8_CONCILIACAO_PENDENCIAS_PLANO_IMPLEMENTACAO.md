@@ -106,15 +106,26 @@
 - Botao de atualizar.
 - Sem acoes reais nesta etapa.
 
-**Arquivos a alterar:**
-- `JS_Fin_Cartoes.html` — ativar aba, criar conteudo da aba FIN.8
+**Arquivos alterados:**
+- `JS_Fin_Cartoes.html` — aba ativada, painel FIN.8B criado
 
-**Restricoes:**
-- Nenhuma acao real habilitada nesta etapa.
+**Restricoes aplicadas:**
+- Nenhuma acao real habilitada.
 - Preview apenas.
-- Requer autorizacao de alterar HTML antes de iniciar.
+- Todos os botoes reais com `disabled`.
 
-**Estimativa:** 1-2 sessoes de implementacao.
+**Status: CONCLUIDO e HOMOLOGADO.**
+
+#### FIN.8B — Homologacao visual /dev
+
+- Commit: `b1b9cdb`
+- clasp push /dev: 2026-06-14 as 19:25:41, 75 arquivos, sem --force, sem deploy
+- Resultado: **APROVADO**
+- KPIs /dev observados: Total 2 | Abertas 0 | Resolvidas 2 | Tipos 2
+- Previa conciliacao /dev: Extratos pendentes 1 | Lancamentos pendentes 1 | Conciliaveis 0
+- Acoes reais confirmadas blocked: Conciliar selecionados, Gerar pendencias, Resolver (massa e individual)
+- Producao intocada
+- Documento completo: `docs/FIN8B_HOMOLOGACAO_VISUAL_DEV.md`
 
 ### FIN.8C — Resolucao controlada de pendencias
 
