@@ -4523,3 +4523,253 @@ function AUDITAR_POS_IMPORTACAO_FLASH_PRODUCAO_SEM_GRAVAR() {
   Logger.log("W0_RESULTADO_FINAL: " + JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+// FIN.B3 — Auditoria de ambiente DB_FIN: detecta base DEV/teste vs base limpa vs producao possivel.
+// Somente leitura. Nenhuma gravacao. Seguro para executar em qualquer ambiente.
+function AUDITAR_AMBIENTE_DB_FIN_SEM_GRAVAR() {
+  var timestamp = new Date().toISOString();
+  var bloqueios = [];
+  var avisos = [];
+
+  var STRINGS_DEV = [
+    "TESTE_FIN_CARTAO_FLASH",
+    "TESTE_FIN_FUNCIONARIO",
+    "TESTE_FIN_FUNC_001",
+    "TESTE_FIN_",
+    "USUARIO TESTE FLASH",
+    "SIMULACAO PADARIA",
+    "SIMULACAO ESTACIONAMENTO",
+    "LOTE-FLASH-PREVIEW-34ABC763",
+    "LOGICO-971C06CE"
+  ];
+
+  var resultado = {
+    success: false,
+    ok: false,
+    executado: false,
+    nenhumaGravacao: true,
+    gravacaoReal: false,
+    modo: "AUDITAR_AMBIENTE_DB_FIN_SEM_GRAVAR",
+    timestamp: timestamp,
+    scriptIdAtual: null,
+    dbFinIdConfigurado: null,
+    dbFinIdAberto: null,
+    dbFinUrlAberta: null,
+    dbFinNome: null,
+    abasConsultadas: {},
+    totalCartoesLidos: 0,
+    totalLotesLidos: 0,
+    totalExtratosLidos: 0,
+    primeirosCartoes: [],
+    primeirosLotes: [],
+    primeirosExtratos: [],
+    deteccaoDev: {
+      testeFinCartao: false,
+      testeFinFuncionario: false,
+      usuarioTesteFlash: false,
+      simulacaoPadaria: false,
+      simulacaoEstacionamento: false,
+      lotePreviewDev: false,
+      hashLogicoDev: false
+    },
+    ambienteInferido: "INCONCLUSIVO",
+    bloqueios: bloqueios,
+    avisos: avisos
+  };
+
+  function lerAba_(ss, nomeAba, maxLinhas) {
+    var r = { existe: false, totalRegistros: 0, registros: [], headers: [] };
+    var sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) return r;
+    r.existe = true;
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 1 || lastCol < 1) return r;
+    var headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    r.headers = headerRow.map(function(h) { return String(h == null ? "" : h).trim(); });
+    r.totalRegistros = Math.max(0, lastRow - 1);
+    if (lastRow < 2) return r;
+    var n = Math.min(lastRow - 1, maxLinhas);
+    var data = sheet.getRange(2, 1, n, lastCol).getValues();
+    r.registros = data.map(function(row) {
+      var obj = {};
+      for (var i = 0; i < r.headers.length; i++) {
+        if (r.headers[i]) obj[r.headers[i]] = (row[i] == null ? "" : row[i]);
+      }
+      return obj;
+    });
+    return r;
+  }
+
+  function temStringDev_(val) {
+    var s = String(val == null ? "" : val).toUpperCase();
+    for (var i = 0; i < STRINGS_DEV.length; i++) {
+      if (s.indexOf(STRINGS_DEV[i].toUpperCase()) >= 0) return true;
+    }
+    return false;
+  }
+
+  function registroTemDev_(obj) {
+    var keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+      if (temStringDev_(obj[keys[i]])) return true;
+    }
+    return false;
+  }
+
+  try {
+    resultado.scriptIdAtual = ScriptApp.getScriptId();
+  } catch (e) {
+    avisos.push("ScriptApp.getScriptId indisponivel: " + e.message);
+  }
+
+  var dbFinId = "";
+  try {
+    dbFinId = finExtratoFlashTexto_(PropertiesService.getScriptProperties().getProperty(FIN_EXTRATO_FLASH_DB_PROP_V1));
+    resultado.dbFinIdConfigurado = dbFinId || null;
+  } catch (e) {
+    bloqueios.push("DB_FIN_ID_PROPERTIES_ERRO: " + e.message);
+    resultado.bloqueios = bloqueios;
+    resultado.avisos = avisos;
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  }
+
+  if (!dbFinId) {
+    bloqueios.push("DB_FIN_ID_NAO_CONFIGURADO");
+    resultado.bloqueios = bloqueios;
+    resultado.avisos = avisos;
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  }
+
+  var ss;
+  try {
+    ss = SpreadsheetApp.openById(dbFinId);
+    resultado.dbFinIdAberto = ss.getId();
+    resultado.dbFinUrlAberta = ss.getUrl();
+    resultado.dbFinNome = ss.getName();
+  } catch (e) {
+    bloqueios.push("DB_FIN_ID_INACESSIVEL: " + e.message);
+    resultado.bloqueios = bloqueios;
+    resultado.avisos = avisos;
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  }
+
+  var devDetectado = false;
+
+  try {
+    var abaCartoes = "FIN_CARTOES";
+    resultado.abasConsultadas.cartoes = abaCartoes;
+    var leituraCartoes = lerAba_(ss, abaCartoes, 5);
+    resultado.totalCartoesLidos = leituraCartoes.totalRegistros;
+    resultado.primeirosCartoes = leituraCartoes.registros.map(function(r) {
+      return {
+        NUMERO_FINAL: r["NUMERO_FINAL"] || r["CARTAO_FINAL"] || r["FINAL_CARTAO"] || "",
+        APELIDO: r["APELIDO_CARTAO_OPERADORA"] || r["APELIDO_CARTAO"] || r["APELIDO"] || "",
+        FUNCIONARIO_ID: r["FUNCIONARIO_ID"] || "",
+        FUNCIONARIO_NOME: r["FUNCIONARIO_NOME"] || r["NOME_FUNCIONARIO"] || ""
+      };
+    });
+    leituraCartoes.registros.forEach(function(reg) {
+      if (registroTemDev_(reg)) devDetectado = true;
+      var apelido = String(reg["APELIDO_CARTAO_OPERADORA"] || reg["APELIDO_CARTAO"] || "").toUpperCase();
+      if (apelido.indexOf("TESTE_FIN_CARTAO_FLASH") >= 0) resultado.deteccaoDev.testeFinCartao = true;
+      var funcId = String(reg["FUNCIONARIO_ID"] || "").toUpperCase();
+      var funcNome = String(reg["FUNCIONARIO_NOME"] || reg["NOME_FUNCIONARIO"] || "").toUpperCase();
+      if (funcId.indexOf("TESTE_FIN") >= 0 || funcNome.indexOf("TESTE FINANCEIRO") >= 0) {
+        resultado.deteccaoDev.testeFinFuncionario = true;
+      }
+    });
+    if (!leituraCartoes.existe) avisos.push("Aba FIN_CARTOES nao encontrada.");
+  } catch (e) {
+    avisos.push("Erro ao ler FIN_CARTOES: " + e.message);
+  }
+
+  try {
+    var abaLotes = FIN_EXTRATO_FLASH_ABA_LOTES_V1;
+    resultado.abasConsultadas.lotes = abaLotes;
+    var leituraLotes = lerAba_(ss, abaLotes, 5);
+    resultado.totalLotesLidos = leituraLotes.totalRegistros;
+    resultado.primeirosLotes = leituraLotes.registros.map(function(r) {
+      return {
+        LOTE_ID: r["LOTE_ID"] || "",
+        STATUS: r["STATUS"] || "",
+        TOTAL_LANCAMENTOS: r["TOTAL_LANCAMENTOS"] || "",
+        ARQUIVO_HASH: r["ARQUIVO_HASH"] || ""
+      };
+    });
+    leituraLotes.registros.forEach(function(reg) {
+      if (registroTemDev_(reg)) devDetectado = true;
+      if (String(reg["LOTE_ID"] || "").toUpperCase().indexOf("LOTE-FLASH-PREVIEW") >= 0) {
+        resultado.deteccaoDev.lotePreviewDev = true;
+      }
+      if (String(reg["ARQUIVO_HASH"] || "").toUpperCase().indexOf("LOGICO-971C06CE") >= 0) {
+        resultado.deteccaoDev.hashLogicoDev = true;
+      }
+    });
+    if (!leituraLotes.existe) avisos.push("Aba " + abaLotes + " nao encontrada.");
+  } catch (e) {
+    avisos.push("Erro ao ler " + FIN_EXTRATO_FLASH_ABA_LOTES_V1 + ": " + e.message);
+  }
+
+  try {
+    var abaExtratos = FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1;
+    resultado.abasConsultadas.extratos = abaExtratos;
+    var leituraExtratos = lerAba_(ss, abaExtratos, 8);
+    resultado.totalExtratosLidos = leituraExtratos.totalRegistros;
+    resultado.primeirosExtratos = leituraExtratos.registros.map(function(r) {
+      return {
+        EXTRATO_ID: r["EXTRATO_ID"] || "",
+        LOTE_ID: r["LOTE_ID"] || "",
+        DATA_TRANSACAO: r["DATA_TRANSACAO"] || "",
+        VALOR: r["VALOR"] || "",
+        DESCRICAO: r["ESTABELECIMENTO_EXTRATO"] || r["DESCRICAO"] || "",
+        PORTADOR: r["PORTADOR"] || r["PESSOA"] || "",
+        CARTAO_FINAL: r["CARTAO_FINAL"] || r["FINAL_CARTAO"] || ""
+      };
+    });
+    leituraExtratos.registros.forEach(function(reg) {
+      if (registroTemDev_(reg)) devDetectado = true;
+      if (String(reg["PORTADOR"] || reg["PESSOA"] || "").toUpperCase().indexOf("USUARIO TESTE FLASH") >= 0) {
+        resultado.deteccaoDev.usuarioTesteFlash = true;
+      }
+      var desc = String(reg["ESTABELECIMENTO_EXTRATO"] || reg["DESCRICAO"] || "").toUpperCase();
+      if (desc.indexOf("SIMULACAO PADARIA") >= 0) resultado.deteccaoDev.simulacaoPadaria = true;
+      if (desc.indexOf("SIMULACAO ESTACIONAMENTO") >= 0) resultado.deteccaoDev.simulacaoEstacionamento = true;
+    });
+    if (!leituraExtratos.existe) avisos.push("Aba " + abaExtratos + " nao encontrada.");
+  } catch (e) {
+    avisos.push("Erro ao ler " + FIN_EXTRATO_FLASH_ABA_EXTRATOS_V1 + ": " + e.message);
+  }
+
+  var devFlag = devDetectado ||
+    resultado.deteccaoDev.testeFinCartao || resultado.deteccaoDev.testeFinFuncionario ||
+    resultado.deteccaoDev.usuarioTesteFlash || resultado.deteccaoDev.simulacaoPadaria ||
+    resultado.deteccaoDev.lotePreviewDev || resultado.deteccaoDev.hashLogicoDev;
+
+  if (devFlag) {
+    resultado.ambienteInferido = "BASE_TESTE_DEV";
+    bloqueios.push("DB_FIN_CONTEM_DADOS_DEV_TESTE_IMPORTACAO_REAL_BLOQUEADA");
+    avisos.push("Dados de desenvolvimento detectados. Nao importar XLSX real nesta base.");
+  } else if (resultado.totalCartoesLidos === 0 && resultado.totalLotesLidos === 0 && resultado.totalExtratosLidos === 0) {
+    resultado.ambienteInferido = "BASE_LIMPA";
+    avisos.push("Base sem registros confirmada. Pronta para provisionamento de producao.");
+  } else if (resultado.totalCartoesLidos > 0 && !devFlag) {
+    resultado.ambienteInferido = "BASE_PRODUCAO_POSSIVEL";
+    avisos.push("Cartoes presentes sem strings DEV detectadas. Confirmar manualmente antes de importacao real.");
+  } else {
+    resultado.ambienteInferido = "INCONCLUSIVO";
+    avisos.push("Nao foi possivel inferir o ambiente. Inspecionar manualmente.");
+  }
+
+  var ok = bloqueios.length === 0;
+  resultado.success = ok;
+  resultado.ok = ok;
+  resultado.bloqueios = bloqueios;
+  resultado.avisos = avisos;
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}

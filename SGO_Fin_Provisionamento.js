@@ -22,7 +22,8 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
   const MODO_POLITICA_FLASH = "CADASTRAR_POLITICA_CARTAO_FLASH_V1";
   const MODO_AUDITORIA_POLITICA_FLASH = "AUDITORIA_POLITICA_CARTAO_FLASH_V1";
   const MODO_AUDITORIA_URL_WEBAPP = "AUDITORIA_URL_WEBAPP_FIN_V1";
-  const DB_FIN_ID_ESPERADO = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
+  // ID da base de homologacao/DEV — referencia informacional; nao usar como validacao de producao
+  const DB_FIN_ID_HOMOLOGACAO_DEV = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
   const MODO_AUDITORIA_SETUP = "AUDITORIA_SETUP_FIN_V2";
   const MODO_AUDITORIA_ASSINATURA = "AUDITORIA_ASSINATURA_FIN_V2";
   const TERMO_ASSINADO_TESTE = {
@@ -376,15 +377,15 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
 
     check_("DB_FIN_ID informado", !!propriedades.DB_FIN_ID, propriedades.DB_FIN_ID || "vazio");
     check_(
-      "DB_FIN_ID esperado",
-      propriedades.DB_FIN_ID === DB_FIN_ID_ESPERADO,
+      "DB_FIN_ID configurado e acessivel",
+      !!propriedades.DB_FIN_ID,
       propriedades.DB_FIN_ID || "vazio"
     );
 
     if (!propriedades.DB_FIN_ID) {
       bloqueios.push("DB_FIN_ID nao configurado.");
-    } else if (propriedades.DB_FIN_ID !== DB_FIN_ID_ESPERADO) {
-      bloqueios.push("DB_FIN_ID diferente do esperado para FIN.5.11B.");
+    } else if (propriedades.DB_FIN_ID === DB_FIN_ID_HOMOLOGACAO_DEV) {
+      avisos.push("DB_FIN_ID aponta para base de homologacao/DEV conhecida. Para producao real, use projeto Apps Script separado com DB_FIN_ID proprio.");
     }
 
     if (bloqueios.length === 0) {

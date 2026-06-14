@@ -16,3 +16,7 @@ _PATCHES_LOCAL.bak/
 _test_template.html.bak
 _tmp_*.js
 _tmp_*.png
+
+# Configuracao real do projeto Apps Script producao — contem scriptId sensivel
+# Versionar apenas .clasp-prod.example.json (template sem dados reais)
+.clasp-prod.json
