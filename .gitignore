@@ -1,1 +1,18 @@
 _EVIDENCIAS_LOCAL/
+
+# Evidencias locais e arquivos reais/sensiveis — nunca versionar
+_evidencias/
+_evidencias/**
+
+# Planilhas e documentos reais (XLSX/PDF podem conter dados pessoais)
+*.xlsx
+*.xls
+*.pdf
+
+# Temporarios e backups locais
+*.bak
+*.bak*
+_PATCHES_LOCAL.bak/
+_test_template.html.bak
+_tmp_*.js
+_tmp_*.png
