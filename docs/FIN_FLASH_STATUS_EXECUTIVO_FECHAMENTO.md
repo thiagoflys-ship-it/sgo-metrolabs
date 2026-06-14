@@ -11,8 +11,13 @@ no ambiente de desenvolvimento (/dev). A importacao real controlada executou e g
 4 lancamentos reais no banco FIN de /dev, elevando o total de 1 lote/3 extratos para
 2 lotes/7 extratos. Todas as auditorias pre e pos-importacao passaram sem bloqueios.
 
-O proximo passo e a validacao visual no WebApp /dev (Pacote V) e, apos isso, a
-preparacao para a importacao real em producao (Pacote W) com arquivo Flash real.
+A validacao visual do WebApp /dev (Pacote V) foi concluida e classificada como
+**APROVADO COM OBSERVACAO** — dados corretos, travas de seguranca ativas, nenhum
+botao de importacao real exposto. Observacao nao bloqueante: aba de navegacao com
+label "Lancamentos" exibe conteudo de "Importar extrato Flash" — item de UX futuro.
+
+O proximo passo e a preparacao para a importacao real em producao (Pacote W)
+com arquivo Flash real, em nova sessao e com nova autorizacao explicita.
 
 ---
 
@@ -85,14 +90,37 @@ Recomendada verificacao manual da aba `FIN_LOTES_EXTRATO_FLASH` no DB_FIN /dev p
 
 ---
 
+## 5a. Pacote V — Homologacao visual /dev
+
+> Data: 2026-06-14 | Classificacao: **APROVADO COM OBSERVACAO**
+
+| Criterio | Resultado |
+|----------|-----------|
+| Lotes visiveis na UI | 2 (correto) |
+| Extratos visiveis na UI | 7 (correto) |
+| Lote LOTE-FLASH-PREVIEW-34ABC763 aparece | Confirmado — status IMPORTADO |
+| 4 lancamentos do lote visiveis | Confirmado — valores e datas corretos |
+| Botao de importacao real exposto | Nao — botao disabled "FIN.11.4" |
+| Avisos de seguranca na tela | Visiveis — dados de teste, prod nao publicada |
+| Checklist de liberacao e pos-execucao | Visiveis |
+| Decisoes operacionais | Visiveis |
+| Duplicidade visual | Nao detectada |
+| Observacao nao bloqueante | Aba "Lancamentos" exibe painel de extrato Flash |
+
+**Decisao:** FIN FLASH DEV HOMOLOGADO — APROVADO COM OBSERVACAO
+
+---
+
 ## 6. O que falta para fechar DEV completamente
 
 | Item | Status | Responsavel |
 |------|--------|-------------|
-| Validacao visual da tela FIN /dev (Pacote V) | **Pendente** | Thiago |
-| Confirmar loteId/hash na aba FIN_LOTES_EXTRATO_FLASH do DB_FIN /dev | **Pendente** | Thiago |
-| Confirmar 4 extratos na aba FIN_CARTOES_EXTRATOS do DB_FIN /dev | **Pendente** | Thiago |
-| Salvar prints como evidencia final | **Pendente** | Thiago |
+| Validacao visual da tela FIN /dev (Pacote V) | **CONCLUIDO** | Thiago |
+| Confirmar loteId/hash na aba FIN_LOTES_EXTRATO_FLASH do DB_FIN /dev | **CONCLUIDO** via UI (lote visto com ID correto) | Thiago |
+| Confirmar 4 extratos na aba FIN_CARTOES_EXTRATOS do DB_FIN /dev | **CONCLUIDO** via UI (4 lancamentos visiveis) | Thiago |
+| Salvar prints como evidencia final | **CONCLUIDO** | Thiago |
+
+**DEV completamente fechado. Proximo passo: Pacote W (producao).**
 
 ---
 
@@ -128,26 +156,31 @@ Recomendada verificacao manual da aba `FIN_LOTES_EXTRATO_FLASH` no DB_FIN /dev p
 
 ## 9. Decisao recomendada
 
-**RECOMENDACAO: CONTINUAR**
+**RECOMENDACAO: PACOTE W — PRODUCAO COM ARQUIVO REAL**
 
-O ciclo de validacao /dev esta tecnicamente completo. O proximo passo imediato e:
+O ciclo DEV esta completo e homologado (Pacotes T, U.1 e V aprovados).
+O proximo passo e iniciar o Pacote W em nova sessao, somente com:
 
-1. Executar validacao visual no WebApp /dev (Pacote V) — acao do usuario.
-2. Se aprovado: discutir producao em nova sessao com arquivo real.
-3. Nao executar nada em producao hoje sem arquivo real e autorizacao separada.
+1. Arquivo XLSX Flash real obtido da operadora.
+2. Novo payload gerado a partir do arquivo real (novo hash, novo loteId).
+3. Nova autorizacao explicita de producao em sessao separada.
+4. Deploy de producao autorizado separadamente.
+5. Nao reutilizar nenhum dado do payload DEV.
 
 ---
 
-## 10. Proximos passos de hoje
+## 10. Proximos passos
 
-| # | Acao | Quem | Quando |
+| # | Acao | Quem | Status |
 |---|------|------|--------|
-| 1 | Abrir WebApp /dev e validar tela FIN → Extratos Flash | Thiago | Agora |
-| 2 | Verificar aba FIN_LOTES_EXTRATO_FLASH no DB_FIN /dev | Thiago | Agora |
-| 3 | Salvar prints como evidencia do Pacote V | Thiago | Agora |
-| 4 | Decidir: ha arquivo Flash real disponivel para teste de producao? | Thiago | Hoje |
-| 5 | Se sim: iniciar Pacote W com arquivo real em nova sessao | Thiago + Claude | Hoje |
-| 6 | Se nao: encerrar ciclo DEV e planejar data de producao | Thiago | Hoje |
+| 1 | Abrir WebApp /dev e validar tela FIN (Pacote V) | Thiago | **CONCLUIDO** |
+| 2 | Verificar lote e extratos visualmente | Thiago | **CONCLUIDO** |
+| 3 | Salvar prints como evidencia do Pacote V | Thiago | **CONCLUIDO** |
+| 4 | Obter arquivo XLSX Flash real da operadora | Thiago | Pendente |
+| 5 | Iniciar Pacote W em nova sessao com arquivo real | Thiago + Claude | Pendente |
+| 6 | Deploy de producao autorizado separadamente | Thiago | Pendente |
+| 7 | Execucao real em producao com arquivo real | Thiago | Pendente |
+| 8 | Validacao visual producao (equivalente ao Pacote V) | Thiago | Pendente |
 
 ---
 
