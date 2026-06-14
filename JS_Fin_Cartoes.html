@@ -199,6 +199,8 @@
     .fin-premium p { color: #999; font-size: 13px; line-height: 1.6; }
 
     .fin-tab-inner { padding: 18px 22px; }
+    .fin8b-bloqueado-info { opacity: 0.55; }
+    .fin8b-rodape { font-size: 11px; color: #aaa; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -260,7 +262,7 @@
   <button class="fin-tab-btn" onclick="finMudarAba('recargas')">Recargas</button>
   <button class="fin-tab-btn" onclick="finMudarAba('lancamentos')">Lancamentos <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
   <button class="fin-tab-btn" onclick="finMudarAba('flash')">Extratos Flash</button>
-  <button class="fin-tab-btn placeholder" title="Disponivel em FIN.8 - Conciliacao Inteligente">Pendencias (FIN.8)</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('pendencias'); finPend8BAbrirAba_()">Pendencias Flash</button>
   <button class="fin-tab-btn placeholder" title="Disponivel em FIN.10 - Documentos Premium">Documentos (FIN.10)</button>
 </div>
 
@@ -540,12 +542,80 @@
   </div>
 </div>
 
-<!-- Tab: Pendencias (placeholder) -->
+<!-- Tab: Pendencias Flash (FIN.8B — leitura) -->
 <div id="tabPendencias" class="fin-tab-content">
-  <div class="fin-premium">
-    <div class="fin-premium-tag">FIN.8 - Conciliacao Inteligente</div>
-    <h3>Pendencias de Comprovacao</h3>
-    <p>Gestao automatica de pendencias com alertas e cobrancas automaticas.<br>Disponivel na fase FIN.8 do roadmap SGO+.</p>
+  <div class="fin-tab-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Pendencias Flash</h2>
+        <p style="color:#666;font-size:12px;margin:3px 0 0">Leitura e auditoria de pendencias de conciliacao e prestacao Flash</p>
+      </div>
+      <span class="fin-pill fin-pill-yellow" style="font-size:11px;padding:4px 10px">MODO LEITURA — acoes reais bloqueadas</span>
+    </div>
+    <div class="fin-alert fin-alert-warning">
+      <strong>FIN.8B — Somente leitura.</strong>
+      Visualizacao e auditoria de pendencias e conciliacao. Acoes reais (gerar, conciliar, resolver em massa) permanecem bloqueadas ate FIN.8C.
+    </div>
+    <div class="fin-flash-action-grid" style="margin-top:14px;margin-bottom:4px">
+      <div class="fin-flash-action-kpi"><div class="label">Total</div><div class="value" id="finPend8BKpiTotal">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Abertas</div><div class="value" id="finPend8BKpiAbertas">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Resolvidas</div><div class="value" id="finPend8BKpiResolvidas">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Por tipo</div><div class="value" id="finPend8BKpiTipos">-</div></div>
+      <div class="fin-flash-action-kpi fin8b-bloqueado-info"><div class="label">Conciliacao</div><div class="value">FIN.8C</div></div>
+    </div>
+    <div class="fin-card" style="margin-top:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:10px">
+        <div>
+          <div class="fin-label">Status</div>
+          <select id="finPend8BFiltroStatus" class="fin-filter-select" onchange="finPend8BFiltrar_()">
+            <option value="">Todos</option>
+            <option value="ABERTO">Aberto</option>
+            <option value="RESOLVIDO">Resolvido</option>
+            <option value="EM_REVISAO">Em revisao</option>
+            <option value="CANCELADO">Cancelado</option>
+            <option value="DIVERGENTE">Divergente</option>
+          </select>
+        </div>
+        <div>
+          <div class="fin-label">Tipo</div>
+          <select id="finPend8BFiltroTipo" class="fin-filter-select" onchange="finPend8BFiltrar_()">
+            <option value="">Todos</option>
+            <option value="PRESTACAO_PENDENTE">Prestacao pendente</option>
+            <option value="CATEGORIA_NAO_INFERIDA">Categoria nao inferida</option>
+            <option value="DEPOSITO_RECARGA">Deposito/recarga</option>
+            <option value="SEM_CONCILIACAO">Sem conciliacao</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div class="fin-label">Busca</div>
+          <input id="finPend8BBusca" class="fin-search" type="text" placeholder="Descricao, ID, portador..." oninput="finPend8BFiltrar_()">
+        </div>
+      </div>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-primary" type="button" onclick="finPend8BCarregar_()">Atualizar pendencias</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BVerPreviaConciliacao_()">Ver previa conciliacao</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BLimparFiltros_()">Limpar filtros</button>
+        <button class="fin-btn fin-btn-outline" type="button" disabled title="Acao real bloqueada — disponivel em FIN.8C">Conciliar selecionados</button>
+        <button class="fin-btn fin-btn-outline" type="button" disabled title="Acao real bloqueada — disponivel em FIN.8C">Gerar pendencias</button>
+      </div>
+    </div>
+    <div id="finPend8BErro" style="display:none;margin-top:10px"></div>
+    <div id="finPend8BDetalhe" class="fin-card" style="display:none;margin-top:14px;border-left:4px solid #0366d6"></div>
+    <div id="finPend8BConciliacao" style="display:none;margin-top:14px"></div>
+    <div class="fin-card" style="margin-top:14px">
+      <h3>Pendencias</h3>
+      <div id="finPend8BTabela"><div class="fin-list-empty">Clique em "Atualizar pendencias" para carregar.</div></div>
+      <div id="finPend8BRodape" class="fin8b-rodape"></div>
+    </div>
+    <div class="fin-card" style="margin-top:14px">
+      <h3>Acoes bloqueadas nesta etapa (FIN.8B)</h3>
+      <div class="fin-flash-checklist-list">
+        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Conciliar selecionados</strong><span>Disponivel em FIN.8C — requer dados reais em producao.</span></div>
+        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Gerar pendencias</strong><span>Disponivel em FIN.8C — somente com dados reais validados.</span></div>
+        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Resolver em massa</strong><span>Disponivel em FIN.8C — resolucao individual sera habilitada controladamente.</span></div>
+        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Resolver pendencia individual</strong><span>Disponivel em FIN.8C — bloqueado preventivamente nesta rodada.</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2856,6 +2926,252 @@ function finPillPrestacao(status) {
   if (s === 'PENDENTE_COMPROVANTE')  { return '<span class="fin-pill fin-pill-yellow">Pend. Comprovante</span>'; }
   if (s === 'PENDENTE_JUSTIFICATIVA'){ return '<span class="fin-pill fin-pill-yellow">Pend. Justificativa</span>'; }
   return '<span class="fin-pill fin-pill-gray">' + finEH(status) + '</span>';
+}
+
+// ---- FIN.8B — Pendencias Flash (leitura) ----
+
+var _finPend8BDados = null;
+var _finPend8BCarregado = false;
+var _finPend8BFiltradas = [];
+
+function finPend8BAbrirAba_() {
+  if (!_finPend8BCarregado) {
+    finPend8BCarregar_();
+  }
+}
+
+function finPend8BCarregar_() {
+  _finPend8BCarregado = false;
+  var tbl = document.getElementById('finPend8BTabela');
+  if (tbl) { tbl.innerHTML = '<div class="fin-list-empty">Carregando pendencias...</div>'; }
+  finPend8BRenderKpis_(null);
+  finPend8BEsconderErro_();
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _finPend8BDados = r;
+      _finPend8BCarregado = true;
+      if (!r || !r.ok) {
+        finPend8BMostrarErro_((r && r.message) || 'Erro ao carregar pendencias. Tente novamente.');
+        return;
+      }
+      finPend8BRenderDados_(r);
+    })
+    .withFailureHandler(function(e) {
+      _finPend8BCarregado = false;
+      finPend8BMostrarErro_(e && e.message ? e.message : String(e || 'Falha na comunicacao.'));
+    })
+    .finFlashPrevisualizarPendenciasTela(_finSessao);
+}
+
+function finPend8BMostrarErro_(msg) {
+  var el = document.getElementById('finPend8BErro');
+  if (el) {
+    el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg || 'Erro desconhecido.') + '</div>';
+    el.style.display = 'block';
+  }
+  var tbl = document.getElementById('finPend8BTabela');
+  if (tbl) { tbl.innerHTML = ''; }
+}
+
+function finPend8BEsconderErro_() {
+  var el = document.getElementById('finPend8BErro');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function finPend8BRenderKpis_(r) {
+  var res = (r && r.resumo) ? r.resumo : {};
+  var elTotal   = document.getElementById('finPend8BKpiTotal');
+  var elAbertas = document.getElementById('finPend8BKpiAbertas');
+  var elResol   = document.getElementById('finPend8BKpiResolvidas');
+  var elTipos   = document.getElementById('finPend8BKpiTipos');
+  if (elTotal)   { elTotal.textContent   = r ? (res.totalPendencias  || 0) : '-'; }
+  if (elAbertas) { elAbertas.textContent = r ? (res.totalAbertas     || 0) : '-'; }
+  if (elResol)   { elResol.textContent   = r ? (res.totalResolvidas   || 0) : '-'; }
+  if (elTipos)   { elTipos.textContent   = r ? Object.keys(res.totalPorTipo || {}).length : '-'; }
+}
+
+function finPend8BRenderDados_(dados) {
+  finPend8BEsconderErro_();
+  finPend8BRenderKpis_(dados);
+  finPend8BFiltrarEExibir_(dados);
+}
+
+function finPend8BFiltrar_() {
+  if (_finPend8BDados) {
+    finPend8BFiltrarEExibir_(_finPend8BDados);
+  }
+}
+
+function finPend8BLimparFiltros_() {
+  var s = document.getElementById('finPend8BFiltroStatus');
+  var t = document.getElementById('finPend8BFiltroTipo');
+  var b = document.getElementById('finPend8BBusca');
+  if (s) { s.value = ''; }
+  if (t) { t.value = ''; }
+  if (b) { b.value = ''; }
+  finPend8BFiltrar_();
+}
+
+function finPend8BFiltrarEExibir_(dados) {
+  var tbl = document.getElementById('finPend8BTabela');
+  if (!tbl) { return; }
+  var elS = document.getElementById('finPend8BFiltroStatus');
+  var elT = document.getElementById('finPend8BFiltroTipo');
+  var elB = document.getElementById('finPend8BBusca');
+  var filtroStatus = elS ? elS.value : '';
+  var filtroTipo   = elT ? elT.value : '';
+  var busca        = elB ? (elB.value || '').toLowerCase() : '';
+  var abertas = dados.pendenciasAbertas       || [];
+  var duplic  = dados.pendenciasDuplicadas    || [];
+  var semRef  = dados.pendenciasSemReferencia || [];
+  var todas   = abertas.concat(duplic).concat(semRef);
+  var filtradas = [];
+  for (var i = 0; i < todas.length; i++) {
+    var p = todas[i];
+    var mS = !filtroStatus || (p.status        || '').toUpperCase() === filtroStatus;
+    var mT = !filtroTipo   || (p.tipoPendencia || '').toUpperCase() === filtroTipo;
+    var mB = !busca ||
+      (p.descricaoPendencia || '').toLowerCase().indexOf(busca) >= 0 ||
+      (p.pendenciaId        || '').toLowerCase().indexOf(busca) >= 0 ||
+      (p.tipoPendencia      || '').toLowerCase().indexOf(busca) >= 0 ||
+      (p.portador           || '').toLowerCase().indexOf(busca) >= 0;
+    if (mS && mT && mB) { filtradas.push(p); }
+  }
+  _finPend8BFiltradas = filtradas;
+  if (!filtradas.length) {
+    if (!todas.length) {
+      tbl.innerHTML = '<div class="fin-list-empty">Nenhuma pendencia encontrada. Pode nao haver pendencias abertas no momento.</div>';
+    } else {
+      tbl.innerHTML = '<div class="fin-list-empty">Nenhuma pendencia corresponde aos filtros selecionados.</div>';
+    }
+    var rod = document.getElementById('finPend8BRodape');
+    if (rod) { rod.textContent = ''; }
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
+  html += '<th>Status</th><th>Tipo</th><th>Descricao</th><th>Valor</th><th>Extrato</th><th>Acao</th>';
+  html += '</tr></thead><tbody>';
+  for (var j = 0; j < filtradas.length; j++) {
+    var item = filtradas[j];
+    html += '<tr>';
+    html += '<td>' + finPend8BPill_(item.status) + '</td>';
+    html += '<td>' + finEH(item.tipoPendencia     || '-') + '</td>';
+    html += '<td>' + finEH(item.descricaoPendencia || '-') + '</td>';
+    html += '<td>' + finMoeda(item.valorEnvolvido  || 0)  + '</td>';
+    html += '<td>' + finEH(item.extratoId          || '-') + '</td>';
+    html += '<td><button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finPend8BVerDetalhe_(' + j + ')">Ver</button></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  tbl.innerHTML = html;
+  var rodape = document.getElementById('finPend8BRodape');
+  if (rodape) {
+    rodape.textContent = filtradas.length + ' pendencia(s) exibida(s) de ' + todas.length + ' total';
+  }
+}
+
+function finPend8BPill_(status) {
+  if (!status) { return '<span class="fin-pill fin-pill-gray">-</span>'; }
+  var s = status.toUpperCase();
+  if (s === 'RESOLVIDO')  { return '<span class="fin-pill fin-pill-green">'  + finEH(status) + '</span>'; }
+  if (s === 'ABERTO')     { return '<span class="fin-pill fin-pill-yellow">' + finEH(status) + '</span>'; }
+  if (s === 'EM_REVISAO') { return '<span class="fin-pill fin-pill-blue">'   + finEH(status) + '</span>'; }
+  if (s === 'DIVERGENTE') { return '<span class="fin-pill fin-pill-red">'    + finEH(status) + '</span>'; }
+  if (s === 'CANCELADO')  { return '<span class="fin-pill fin-pill-gray">'   + finEH(status) + '</span>'; }
+  return '<span class="fin-pill fin-pill-gray">' + finEH(status) + '</span>';
+}
+
+function finPend8BVerDetalhe_(idx) {
+  var el = document.getElementById('finPend8BDetalhe');
+  if (!el) { return; }
+  var lista = _finPend8BFiltradas || [];
+  var p = (idx >= 0 && idx < lista.length) ? lista[idx] : null;
+  if (!p) { el.style.display = 'none'; return; }
+  var campos = [
+    ['ID',           p.pendenciaId        || '-'],
+    ['Tipo',         p.tipoPendencia       || '-'],
+    ['Status',       p.status              || '-'],
+    ['Descricao',    p.descricaoPendencia  || '-'],
+    ['Valor',        finMoeda(p.valorEnvolvido || 0)],
+    ['Extrato ID',   p.extratoId           || '-'],
+    ['Cartao',       p.cartaoFinal ? ('*' + p.cartaoFinal) : '-'],
+    ['Portador',     p.portador            || '-'],
+    ['Lote ID',      p.loteId              || '-'],
+    ['Origem',       p.origem              || '-'],
+    ['Data criacao', finDataBR(p.dataCriacao || '')]
+  ];
+  var html = '<h3>Detalhe da pendencia</h3>';
+  html += '<div class="fin-alert fin-alert-warning">Somente leitura. Resolucao real bloqueada nesta etapa FIN.8B.</div>';
+  html += '<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:10px 0">';
+  for (var i = 0; i < campos.length; i++) {
+    html += '<dt style="color:#666;font-weight:600;padding:3px 0;white-space:nowrap">' + finEH(campos[i][0]) + '</dt>';
+    html += '<dd style="color:#0f2d52;padding:3px 0;margin:0">' + finEH(String(campos[i][1])) + '</dd>';
+  }
+  html += '</dl>';
+  html += '<div class="fin-btn-row">';
+  html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharDetalhe_()">Fechar detalhe</button>';
+  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Disponivel em FIN.8C">Resolver pendencia (FIN.8C)</button>';
+  html += '</div>';
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function finPend8BFecharDetalhe_() {
+  var el = document.getElementById('finPend8BDetalhe');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function finPend8BVerPreviaConciliacao_() {
+  var el = document.getElementById('finPend8BConciliacao');
+  if (!el) { return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div class="fin-card"><div class="fin-alert fin-alert-info">Carregando previa de conciliacao...</div></div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        el.innerHTML = '<div class="fin-card"><div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Erro ao carregar previa.') + '</div></div>';
+        return;
+      }
+      finPend8BRenderPreviaConciliacao_(el, r);
+    })
+    .withFailureHandler(function(e) {
+      el.innerHTML = '<div class="fin-card"><div class="fin-alert fin-alert-danger">' + finEH(e && e.message ? e.message : String(e || 'Falha.')) + '</div></div>';
+    })
+    .finFlashPrevisualizarConciliacaoTela(_finSessao);
+}
+
+function finPend8BRenderPreviaConciliacao_(el, dados) {
+  var r = dados && dados.resumo ? dados.resumo : {};
+  var html = '<div class="fin-card">';
+  html += '<h3>Previa de Conciliacao <span class="fin-pill fin-pill-yellow" style="font-size:11px">Leitura</span></h3>';
+  html += '<div class="fin-flash-action-grid">';
+  html += finFlashKpiAcao_('Extratos pendentes',    r.totalExtratosPendentes    || 0);
+  html += finFlashKpiAcao_('Lancamentos pendentes', r.totalLancamentosPendentes || 0);
+  html += finFlashKpiAcao_('Conciliaveis',          r.totalConciliaveis         || 0);
+  html += finFlashKpiAcao_('Sem prestacao',         r.totalSemPrestacao         || 0);
+  html += finFlashKpiAcao_('Sem extrato',           r.totalSemExtrato           || 0);
+  html += '</div>';
+  html += '<div class="fin-alert fin-alert-info" style="margin-top:10px">Acao de conciliar continua bloqueada. Esta e apenas uma previa de leitura.</div>';
+  html += '<div class="fin-btn-row">';
+  html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharConciliacao_()">Fechar previa</button>';
+  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Disponivel em FIN.8C">Conciliar selecionados (FIN.8C)</button>';
+  html += '</div>';
+  if ((dados.conciliaveis || []).length) {
+    html += '<h3 style="margin-top:14px">Conciliaveis</h3>' + finFlashTabelaConciliacao_(dados.conciliaveis, true);
+  }
+  if ((dados.semPrestacao || []).length) {
+    html += '<h3 style="margin-top:14px">Sem prestacao</h3>' + finFlashTabelaConciliacao_(dados.semPrestacao, false);
+  }
+  if ((dados.semExtrato || []).length) {
+    html += '<h3 style="margin-top:14px">Sem extrato</h3>' + finFlashTabelaSemExtrato_(dados.semExtrato);
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function finPend8BFecharConciliacao_() {
+  var el = document.getElementById('finPend8BConciliacao');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
 }
 </script>
 </body>
