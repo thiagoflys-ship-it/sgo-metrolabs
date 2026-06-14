@@ -3809,3 +3809,526 @@ function auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR() {
 
   return resultado;
 }
+
+// FIN.S — Orquestrador Pacote S pre-real Flash — sem gravacao
+function SETUP_PACOTE_S_FLASH_PRE_REAL_SEM_GRAVAR() {
+  var inicio = new Date();
+
+  var resultado = {
+    success: false,
+    ok: false,
+    executado: false,
+    gravacaoReal: false,
+    tipo: "SETUP_PACOTE_S_FLASH_PRE_REAL_SEM_GRAVAR",
+    ambienteEsperado: "DEV",
+    inicio: inicio.toISOString(),
+    fim: null,
+    duracaoMs: null,
+    seguranca: {
+      executaImportacaoReal: false,
+      alteraGoogleSheets: false,
+      executaSetupReal: false,
+      executaDeploy: false,
+      executaPush: false,
+      usaForce: false,
+      alteraProducao: false,
+      observacao: "Esta funcao apenas chama auditorias SEM_GRAVAR ja existentes."
+    },
+    funcoesObrigatorias: {},
+    etapas: {
+      s1_contagem: null,
+      s2_auditoriaFinal: null,
+      s3_template: null
+    },
+    validacaoFinal: {
+      baselineOk: false,
+      auditoriaFinalOk: false,
+      templateGeradoOk: false,
+      prontoParaPacoteT: false
+    },
+    bloqueios: [],
+    avisos: [],
+    proximasAcoes: []
+  };
+
+  try {
+    resultado.funcoesObrigatorias = {
+      TESTE_FLASH_CONTAGEM_SEM_GRAVAR: typeof TESTE_FLASH_CONTAGEM_SEM_GRAVAR,
+      auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR: typeof auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR,
+      gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR: typeof gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR
+    };
+
+    if (typeof TESTE_FLASH_CONTAGEM_SEM_GRAVAR !== "function") {
+      resultado.bloqueios.push("Funcao TESTE_FLASH_CONTAGEM_SEM_GRAVAR nao encontrada.");
+    }
+
+    if (typeof auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR !== "function") {
+      resultado.bloqueios.push("Funcao auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR nao encontrada.");
+    }
+
+    if (typeof gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR !== "function") {
+      resultado.bloqueios.push("Funcao gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR nao encontrada.");
+    }
+
+    if (resultado.bloqueios.length) {
+      resultado.fim = new Date().toISOString();
+      resultado.duracaoMs = new Date().getTime() - inicio.getTime();
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+
+    resultado.etapas.s1_contagem = TESTE_FLASH_CONTAGEM_SEM_GRAVAR();
+
+    resultado.validacaoFinal.baselineOk =
+      !!resultado.etapas.s1_contagem &&
+      (resultado.etapas.s1_contagem.success === true || resultado.etapas.s1_contagem.ok === true) &&
+      resultado.etapas.s1_contagem.executado === false &&
+      Number(resultado.etapas.s1_contagem.totalLotesLidos) === 1 &&
+      Number(resultado.etapas.s1_contagem.totalExtratosLidos) === 3;
+
+    if (!resultado.validacaoFinal.baselineOk) {
+      resultado.bloqueios.push("Baseline diferente do esperado. Esperado: totalLotesLidos=1 e totalExtratosLidos=3.");
+    }
+
+    resultado.etapas.s2_auditoriaFinal = auditarFinalAntesImportacaoRealFlashDevV1_SEM_GRAVAR();
+
+    resultado.validacaoFinal.auditoriaFinalOk =
+      !!resultado.etapas.s2_auditoriaFinal &&
+      resultado.etapas.s2_auditoriaFinal.success === true &&
+      resultado.etapas.s2_auditoriaFinal.ok === true &&
+      resultado.etapas.s2_auditoriaFinal.executado === false &&
+      resultado.etapas.s2_auditoriaFinal.prontoParaExecucaoManualDev === true &&
+      resultado.etapas.s2_auditoriaFinal.uiExecutaImportacaoReal === false;
+
+    if (!resultado.validacaoFinal.auditoriaFinalOk) {
+      resultado.bloqueios.push("Auditoria final pre-real nao confirmou prontoParaExecucaoManualDev=true e uiExecutaImportacaoReal=false.");
+    }
+
+    resultado.etapas.s3_template = gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR();
+
+    resultado.validacaoFinal.templateGeradoOk =
+      !!resultado.etapas.s3_template &&
+      resultado.etapas.s3_template.success === true &&
+      resultado.etapas.s3_template.ok === true &&
+      resultado.etapas.s3_template.executado === false &&
+      typeof resultado.etapas.s3_template.codigoTemplate === "string" &&
+      resultado.etapas.s3_template.codigoTemplate.length > 100;
+
+    if (!resultado.validacaoFinal.templateGeradoOk) {
+      resultado.bloqueios.push("Template de execucao real nao foi gerado corretamente.");
+    }
+
+    resultado.validacaoFinal.prontoParaPacoteT =
+      resultado.validacaoFinal.baselineOk === true &&
+      resultado.validacaoFinal.auditoriaFinalOk === true &&
+      resultado.validacaoFinal.templateGeradoOk === true &&
+      resultado.bloqueios.length === 0;
+
+    resultado.ok = resultado.validacaoFinal.prontoParaPacoteT;
+    resultado.success = true;
+
+    if (resultado.validacaoFinal.prontoParaPacoteT) {
+      resultado.proximasAcoes.push("Trazer este log completo para validacao antes do Pacote T.");
+      resultado.proximasAcoes.push("Nao executar o codigoTemplate ainda.");
+      resultado.proximasAcoes.push("Aguardar autorizacao expressa antes de qualquer importacao real.");
+    } else {
+      resultado.proximasAcoes.push("Nao seguir para o Pacote T.");
+      resultado.proximasAcoes.push("Analisar bloqueios e divergencias do log.");
+    }
+
+    resultado.fim = new Date().toISOString();
+    resultado.duracaoMs = new Date().getTime() - inicio.getTime();
+
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+
+  } catch (erro) {
+    resultado.success = false;
+    resultado.ok = false;
+    resultado.executado = false;
+    resultado.gravacaoReal = false;
+    resultado.bloqueios.push("Erro durante auditoria Pacote S: " + String(erro && erro.message ? erro.message : erro));
+    resultado.stack = erro && erro.stack ? String(erro.stack) : null;
+    resultado.fim = new Date().toISOString();
+    resultado.duracaoMs = new Date().getTime() - inicio.getTime();
+
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  }
+}
+
+// FIN.S.1 — Extrator compacto do codigoTemplate — sem gravacao
+function SETUP_PACOTE_S_TEMPLATE_COMPACTO_SEM_GRAVAR() {
+  var r = gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR();
+
+  var resumo = {
+    success: r && r.success === true,
+    ok: r && r.ok === true,
+    executado: r ? r.executado : null,
+    gravacaoReal: r ? r.gravacaoReal : null,
+    modo: r ? r.modo : null,
+    status: r ? r.status : null,
+    bloqueios: r && r.bloqueios ? r.bloqueios : [],
+    avisosQuantidade: r && r.avisos ? r.avisos.length : 0,
+    temCodigoTemplate: !!(r && typeof r.codigoTemplate === "string" && r.codigoTemplate.length > 100),
+    tamanhoCodigoTemplate: r && r.codigoTemplate ? r.codigoTemplate.length : 0,
+    codigoTemplate: r && r.codigoTemplate ? r.codigoTemplate : null
+  };
+
+  Logger.log(JSON.stringify(resumo, null, 2));
+  return resumo;
+}
+
+// FIN.T — Execucao real controlada Flash em /dev — GRAVA DADOS REAIS NO DB_FIN /dev
+// ATENCAO: Esta funcao GRAVA DADOS REAIS no banco FIN do ambiente /dev.
+// Executar somente manualmente no editor Apps Script /dev, com autorizacao explicita.
+// Nao executar pelo terminal. Nao executar pelo Claude. Nao executar em producao.
+// Responsavel: Thiago Gonzales
+function EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() {
+  var USUARIO_RESPONSAVEL = "Thiago Gonzales";
+  var bloqueios = [];
+  var avisos = [];
+
+  // PASSO 1 — Verificar baseline antes da execucao
+  var antes = TESTE_FLASH_CONTAGEM_SEM_GRAVAR();
+  Logger.log("FLASH_EXEC_ANTES: " + JSON.stringify(antes, null, 2));
+
+  if (!antes || antes.executado !== false) {
+    bloqueios.push("Contagem antes retornou contrato inseguro. Execucao cancelada.");
+    Logger.log("FLASH_EXEC_BLOQUEADA: " + JSON.stringify({ bloqueios: bloqueios }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+
+  var lotesBefore = Number(antes.totalLotesLidos);
+  var extratosBefore = Number(antes.totalExtratosLidos);
+
+  if (lotesBefore !== 1 || extratosBefore !== 3) {
+    bloqueios.push("Baseline antes divergente. Esperado 1 lote e 3 extratos. Encontrado: " + lotesBefore + " lotes e " + extratosBefore + " extratos. Execucao cancelada.");
+    Logger.log("FLASH_EXEC_BLOQUEADA: " + JSON.stringify({ bloqueios: bloqueios, antes: antes }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+
+  // PASSO 2 — Obter payload fresco do modulo
+  var payloadDados = gerarPayloadAutorizacaoFlashDevV1_SEM_GRAVAR();
+  if (!payloadDados || payloadDados.executado !== false || payloadDados.gravacaoReal === true) {
+    bloqueios.push("Payload de autorizacao retornou contrato inseguro. Execucao cancelada.");
+    Logger.log("FLASH_EXEC_BLOQUEADA: " + JSON.stringify({ bloqueios: bloqueios }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+  if (payloadDados.bloqueios && payloadDados.bloqueios.length) {
+    bloqueios = bloqueios.concat(payloadDados.bloqueios);
+  }
+  if (payloadDados.avisos && payloadDados.avisos.length) {
+    avisos = avisos.concat(payloadDados.avisos);
+  }
+  if (bloqueios.length) {
+    Logger.log("FLASH_EXEC_BLOQUEADA: " + JSON.stringify({ bloqueios: bloqueios }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+
+  var payload = payloadDados.payloadAutorizacaoSugerido;
+  if (!payload || !payload.autorizacaoTecnica) {
+    bloqueios.push("payloadAutorizacaoSugerido ou autorizacaoTecnica ausente. Execucao cancelada.");
+    Logger.log("FLASH_EXEC_BLOQUEADA: " + JSON.stringify({ bloqueios: bloqueios }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+
+  // PASSO 3 — Preencher campos manuais obrigatorios
+  payload.usuarioResponsavel = USUARIO_RESPONSAVEL;
+  payload.autorizacaoTecnica.usuarioResponsavel = USUARIO_RESPONSAVEL;
+  payload.autorizacaoTecnica.timestampAutorizacao = new Date().toISOString();
+
+  // PASSO 4 — Validar campos criticos contra valores esperados conhecidos
+  if (String(payload.autorizacaoTecnica.loteIdEsperado || "") !== "LOTE-FLASH-PREVIEW-34ABC763") {
+    bloqueios.push("loteIdEsperado divergente do esperado LOTE-FLASH-PREVIEW-34ABC763. Execucao cancelada.");
+  }
+  if (String(payload.autorizacaoTecnica.arquivoHashEsperado || "") !== "LOGICO-971C06CE") {
+    bloqueios.push("arquivoHashEsperado divergente do esperado LOGICO-971C06CE. Execucao cancelada.");
+  }
+  if (Number(payload.autorizacaoTecnica.totalLancamentosEsperado || 0) !== 4) {
+    bloqueios.push("totalLancamentosEsperado divergente. Esperado 4. Execucao cancelada.");
+  }
+  if (finExtratoFlashArredondar_(Number(payload.autorizacaoTecnica.somaDebitosEsperada || 0)) !== finExtratoFlashArredondar_(-57.34)) {
+    bloqueios.push("somaDebitosEsperada divergente. Esperado -57.34. Execucao cancelada.");
+  }
+  if (finExtratoFlashArredondar_(Number(payload.autorizacaoTecnica.somaCreditosEsperada || 0)) !== finExtratoFlashArredondar_(1000)) {
+    bloqueios.push("somaCreditosEsperada divergente. Esperado 1000. Execucao cancelada.");
+  }
+  if (String(payload.ambienteEsperado || "") !== "DEV") {
+    bloqueios.push("ambienteEsperado nao e DEV. Execucao cancelada.");
+  }
+  if (String(payload.autorizacaoTecnica.frase || "") !== "AUTORIZO IMPORTACAO REAL FLASH") {
+    bloqueios.push("Frase de autorizacao tecnica invalida. Execucao cancelada.");
+  }
+
+  if (bloqueios.length) {
+    Logger.log("FLASH_EXEC_BLOQUEADA_PRE_CRITICOS: " + JSON.stringify({ bloqueios: bloqueios }));
+    return { success: false, ok: false, executado: false, gravacaoReal: false, bloqueios: bloqueios, avisos: avisos, antes: antes, resultadoImportacao: null, depois: null, validacaoDepois: null };
+  }
+
+  // PASSO 5 — Executar importacao real em /dev
+  Logger.log("FLASH_EXEC_REAL_INICIANDO: usuario=" + USUARIO_RESPONSAVEL + " timestamp=" + payload.autorizacaoTecnica.timestampAutorizacao);
+  var resultadoImportacao = finImportarLoteExtratoFlashV1(payload);
+  Logger.log("FLASH_EXEC_REAL_RESULTADO: " + JSON.stringify(resultadoImportacao, null, 2));
+
+  // PASSO 6 — Verificar baseline depois
+  var depois = TESTE_FLASH_CONTAGEM_SEM_GRAVAR();
+  Logger.log("FLASH_EXEC_DEPOIS: " + JSON.stringify(depois, null, 2));
+
+  var lotesAfter = depois ? Number(depois.totalLotesLidos) : -1;
+  var extratosAfter = depois ? Number(depois.totalExtratosLidos) : -1;
+
+  var validacaoDepois = {
+    lotesBefore: lotesBefore,
+    extratosBefore: extratosBefore,
+    lotesAfter: lotesAfter,
+    extratosAfter: extratosAfter,
+    baselineAntesOk: lotesBefore === 1 && extratosBefore === 3,
+    posExecucaoOk: lotesAfter === 2 && extratosAfter === 7,
+    diferencaLotes: lotesAfter - lotesBefore,
+    diferencaExtratos: extratosAfter - extratosBefore
+  };
+
+  if (!validacaoDepois.posExecucaoOk) {
+    avisos.push("Baseline apos execucao divergente. Esperado 2 lotes e 7 extratos. Encontrado: " + lotesAfter + " lotes e " + extratosAfter + " extratos. Auditoria manual obrigatoria.");
+  }
+
+  var resultado = {
+    success: !!(resultadoImportacao && resultadoImportacao.ok === true && validacaoDepois.posExecucaoOk),
+    ok: !!(resultadoImportacao && resultadoImportacao.ok === true && validacaoDepois.posExecucaoOk),
+    antes: antes,
+    resultadoImportacao: resultadoImportacao,
+    depois: depois,
+    validacaoDepois: validacaoDepois,
+    bloqueios: bloqueios.concat(resultadoImportacao && resultadoImportacao.bloqueios ? resultadoImportacao.bloqueios : []),
+    avisos: avisos.concat(resultadoImportacao && resultadoImportacao.avisos ? resultadoImportacao.avisos : [])
+  };
+
+  Logger.log("FLASH_EXEC_CONSOLIDADO: " + JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+// FIN.S.2 — Extrator de codigoTemplate em chunks — sem gravacao
+function SETUP_PACOTE_S_TEMPLATE_CHUNKS_SEM_GRAVAR() {
+  var r = gerarTemplateExecucaoRealFlashDevV1_SEM_GRAVAR();
+  var codigo = r && r.codigoTemplate ? String(r.codigoTemplate) : "";
+  var tamanhoChunk = 1800;
+  var totalChunks = codigo ? Math.ceil(codigo.length / tamanhoChunk) : 0;
+
+  var resumo = {
+    success: r && r.success === true,
+    ok: r && r.ok === true,
+    executado: r ? r.executado : null,
+    gravacaoReal: r ? r.gravacaoReal : null,
+    modo: r ? r.modo : null,
+    status: r ? r.status : null,
+    bloqueios: r && r.bloqueios ? r.bloqueios : [],
+    tamanhoCodigoTemplate: codigo.length,
+    totalChunks: totalChunks,
+    instrucoesReconstrucao: "Copiar os conteudos entre START e END em ordem numerica, concatenar sem linhas dos marcadores e revisar antes de executar."
+  };
+
+  Logger.log("TEMPLATE_FLASH_CHUNKS_RESUMO_START");
+  Logger.log(JSON.stringify(resumo, null, 2));
+  Logger.log("TEMPLATE_FLASH_CHUNKS_RESUMO_END");
+
+  for (var i = 0; i < totalChunks; i++) {
+    var n = i + 1;
+    var numero = String(n);
+    while (numero.length < 3) {
+      numero = "0" + numero;
+    }
+
+    var total = String(totalChunks);
+    while (total.length < 3) {
+      total = "0" + total;
+    }
+
+    var parte = codigo.substring(i * tamanhoChunk, (i + 1) * tamanhoChunk);
+
+    Logger.log("TEMPLATE_FLASH_CHUNK_" + numero + "_DE_" + total + "_START");
+    Logger.log(parte);
+    Logger.log("TEMPLATE_FLASH_CHUNK_" + numero + "_DE_" + total + "_END");
+  }
+
+  return resumo;
+}
+
+// FIN.U — Auditoria pos-importacao Flash em /dev — SEM GRAVACAO
+// Confirmar que Pacote T executou com sucesso: baseline 2/7, sem duplicacao.
+// Executar manualmente no editor /dev APOS EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE().
+function AUDITAR_POS_IMPORTACAO_FLASH_DEV_PACOTE_U_SEM_GRAVAR() {
+  var timestamp = new Date().toISOString();
+  var bloqueios = [];
+  var avisos = [];
+  var LOTE_ID_ESPERADO = "LOTE-FLASH-PREVIEW-34ABC763";
+  var ARQUIVO_HASH_ESPERADO = "LOGICO-971C06CE";
+  var LOTES_ANTES = 1;
+  var EXTRATOS_ANTES = 3;
+  var LOTES_DEPOIS = 2;
+  var EXTRATOS_DEPOIS = 7;
+
+  var resultado = {
+    success: false,
+    ok: false,
+    executado: false,
+    gravacaoReal: false,
+    tipo: "AUDITORIA_POS_IMPORTACAO_FLASH_DEV_PACOTE_U_SEM_GRAVAR",
+    timestamp: timestamp,
+    baselineAtual: null,
+    esperado: {
+      totalLotesLidos: LOTES_DEPOIS,
+      totalExtratosLidos: EXTRATOS_DEPOIS,
+      deltaLotes: LOTES_DEPOIS - LOTES_ANTES,
+      deltaExtratos: EXTRATOS_DEPOIS - EXTRATOS_ANTES,
+      loteId: LOTE_ID_ESPERADO,
+      arquivoHash: ARQUIVO_HASH_ESPERADO
+    },
+    validacao: {
+      importacaoOcorreu: false,
+      quantidadeEsperadaOk: false,
+      naoDuplicou: false,
+      loteEncontrado: null,
+      hashConfirmado: null,
+      checklistPosOk: null,
+      prontoParaFechamentoDev: false
+    },
+    checklistPos: null,
+    bloqueios: null,
+    avisos: null,
+    proximasAcoes: []
+  };
+
+  try {
+    // PASSO 1 — Contagem pos-importacao
+    var contagem = TESTE_FLASH_CONTAGEM_SEM_GRAVAR();
+    Logger.log("PACOTE_U_CONTAGEM_ATUAL: " + JSON.stringify(contagem));
+
+    var contagemNaoGrava = contagem &&
+      (contagem.nenhumaGravacao === true || contagem.gravacaoReal === false);
+    var contagemSegura = !!contagem &&
+      contagem.success === true &&
+      contagem.ok === true &&
+      contagem.executado === false &&
+      !!contagemNaoGrava &&
+      !isNaN(Number(contagem.totalLotesLidos)) &&
+      !isNaN(Number(contagem.totalExtratosLidos)) &&
+      (!contagem.bloqueios || contagem.bloqueios.length === 0);
+    if (!contagemSegura) {
+      bloqueios.push("CONTAGEM_CONTRATO_INSEGURO: TESTE_FLASH_CONTAGEM_SEM_GRAVAR retornou contrato inseguro. success=" + (contagem ? String(contagem.success) : "null") + " ok=" + (contagem ? String(contagem.ok) : "null") + " executado=" + (contagem ? String(contagem.executado) : "null") + " nenhumaGravacao=" + (contagem ? String(contagem.nenhumaGravacao) : "null") + " gravacaoReal=" + (contagem ? String(contagem.gravacaoReal) : "null"));
+      resultado.bloqueios = bloqueios;
+      resultado.avisos = avisos;
+      Logger.log("PACOTE_U_BLOQUEADO: " + JSON.stringify(resultado));
+      return resultado;
+    }
+
+    var lotesAtual = contagem.totalLotesLidos !== undefined ? Number(contagem.totalLotesLidos) : -1;
+    var extratosAtual = contagem.totalExtratosLidos !== undefined ? Number(contagem.totalExtratosLidos) : -1;
+
+    resultado.baselineAtual = {
+      totalLotesLidos: lotesAtual,
+      totalExtratosLidos: extratosAtual
+    };
+
+    // PASSO 2 — Diagnosticar cenario com base na contagem
+    if (lotesAtual === LOTES_ANTES && extratosAtual === EXTRATOS_ANTES) {
+      bloqueios.push("IMPORTACAO_NAO_EXECUTADA: Baseline ainda em " + LOTES_ANTES + "/" + EXTRATOS_ANTES + ". Executar EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() no editor /dev antes de rodar esta auditoria.");
+      resultado.validacao.importacaoOcorreu = false;
+      resultado.proximasAcoes.push("Executar EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() no editor Apps Script /dev.");
+      resultado.proximasAcoes.push("Executar esta auditoria novamente apos a importacao.");
+    } else if (lotesAtual === LOTES_DEPOIS && extratosAtual === EXTRATOS_DEPOIS) {
+      resultado.validacao.importacaoOcorreu = true;
+      resultado.validacao.quantidadeEsperadaOk = true;
+      resultado.validacao.naoDuplicou = true;
+      avisos.push("Baseline pos-execucao correto: " + lotesAtual + " lotes, " + extratosAtual + " extratos.");
+    } else if (lotesAtual > LOTES_DEPOIS || extratosAtual > EXTRATOS_DEPOIS) {
+      bloqueios.push("POSSIVEL_DUPLICACAO: Lotes=" + lotesAtual + " Extratos=" + extratosAtual + ". Acima do esperado " + LOTES_DEPOIS + "/" + EXTRATOS_DEPOIS + ". Auditoria manual obrigatoria no DB_FIN /dev.");
+      resultado.validacao.importacaoOcorreu = true;
+      resultado.validacao.naoDuplicou = false;
+      resultado.proximasAcoes.push("URGENTE: Verificar abas FIN_LOTES_EXTRATO_FLASH e FIN_CARTOES_EXTRATOS no DB_FIN /dev manualmente.");
+    } else {
+      bloqueios.push("BASELINE_INESPERADO: Lotes=" + lotesAtual + " Extratos=" + extratosAtual + ". Investigar estado do DB_FIN /dev antes de continuar.");
+      resultado.proximasAcoes.push("Verificar manualmente o estado do DB_FIN /dev.");
+    }
+
+    // PASSO 3 — Checklist pos-importacao (somente se importou sem duplicar)
+    if (resultado.validacao.importacaoOcorreu && resultado.validacao.naoDuplicou) {
+      var checklistPos = gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR();
+      resultado.checklistPos = checklistPos;
+      Logger.log("PACOTE_U_CHECKLIST_POS: " + JSON.stringify(checklistPos));
+      if (!checklistPos || checklistPos.executado !== false) {
+        avisos.push("gerarChecklistPosImportacaoFlashV1_SEM_GRAVAR retornou contrato inesperado.");
+        resultado.validacao.checklistPosOk = false;
+      } else {
+        resultado.validacao.checklistPosOk = true;
+      }
+      if (checklistPos && checklistPos.avisos && checklistPos.avisos.length) {
+        for (var a = 0; a < checklistPos.avisos.length; a++) {
+          avisos.push(checklistPos.avisos[a]);
+        }
+      }
+    }
+
+    // PASSO 4 — Tentar confirmar loteId e hash via auditoria modulo completo
+    if (resultado.validacao.importacaoOcorreu && resultado.validacao.naoDuplicou) {
+      try {
+        var auditoria = auditarModuloFlashCompletoV1_SEM_GRAVAR();
+        Logger.log("PACOTE_U_AUDITORIA_MODULO: " + JSON.stringify(auditoria));
+        if (auditoria && auditoria.loteAtual) {
+          var loteIdLido = String(auditoria.loteAtual.loteId || auditoria.loteAtual.LOTE_ID || "");
+          var hashLido = String(auditoria.loteAtual.arquivoHash || auditoria.loteAtual.ARQUIVO_HASH || "");
+          resultado.validacao.loteEncontrado = loteIdLido === LOTE_ID_ESPERADO;
+          resultado.validacao.hashConfirmado = hashLido === ARQUIVO_HASH_ESPERADO;
+          if (!resultado.validacao.loteEncontrado) {
+            avisos.push("LoteId nao confirmado automaticamente via auditoria. Esperado: " + LOTE_ID_ESPERADO + " Lido: " + loteIdLido + ". Verificar aba FIN_LOTES_EXTRATO_FLASH manualmente.");
+          }
+          if (!resultado.validacao.hashConfirmado) {
+            avisos.push("ArquivoHash nao confirmado automaticamente. Esperado: " + ARQUIVO_HASH_ESPERADO + " Lido: " + hashLido + ". Verificar manualmente.");
+          }
+        } else {
+          avisos.push("auditarModuloFlashCompletoV1_SEM_GRAVAR nao retornou loteAtual. Verificar aba FIN_LOTES_EXTRATO_FLASH manualmente no DB_FIN /dev.");
+          resultado.validacao.loteEncontrado = null;
+          resultado.validacao.hashConfirmado = null;
+        }
+      } catch (erroAuditoria) {
+        avisos.push("Auditoria de modulo completo falhou: " + String(erroAuditoria && erroAuditoria.message ? erroAuditoria.message : erroAuditoria));
+        resultado.validacao.loteEncontrado = null;
+        resultado.validacao.hashConfirmado = null;
+      }
+    }
+
+    // PASSO 5 — Consolidar estado final
+    resultado.validacao.prontoParaFechamentoDev =
+      resultado.validacao.importacaoOcorreu === true &&
+      resultado.validacao.quantidadeEsperadaOk === true &&
+      resultado.validacao.naoDuplicou === true &&
+      bloqueios.length === 0;
+
+    resultado.success = true;
+    resultado.ok = resultado.validacao.prontoParaFechamentoDev;
+
+    if (resultado.validacao.prontoParaFechamentoDev) {
+      resultado.proximasAcoes.push("Exportar este log como evidencia do Pacote T concluido em /dev.");
+      resultado.proximasAcoes.push("Confirmar loteId e hash na aba FIN_LOTES_EXTRATO_FLASH do DB_FIN /dev se loteEncontrado=null.");
+      resultado.proximasAcoes.push("Fazer commit dos pacotes S/T/U no repositorio local com nova autorizacao.");
+      resultado.proximasAcoes.push("Discutir Pacote W (procedimento para producao) em sessao separada.");
+      resultado.proximasAcoes.push("Nao executar em producao sem pacote separado e nova autorizacao explicita.");
+    } else if (!resultado.validacao.importacaoOcorreu) {
+      resultado.proximasAcoes.push("Executar EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() no editor /dev.");
+    } else {
+      resultado.proximasAcoes.push("Analisar bloqueios listados antes de continuar.");
+    }
+
+  } catch (erro) {
+    resultado.success = false;
+    resultado.ok = false;
+    bloqueios.push("ERRO_CRITICO: " + String(erro && erro.message ? erro.message : erro));
+    resultado.stack = erro && erro.stack ? String(erro.stack) : null;
+  }
+
+  resultado.bloqueios = bloqueios;
+  resultado.avisos = avisos;
+
+  Logger.log("PACOTE_U_RESULTADO_FINAL: " + JSON.stringify(resultado, null, 2));
+  return resultado;
+}
