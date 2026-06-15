@@ -11,6 +11,8 @@ Pre-requisitos:
 - `FOLDER_FINANCEIRO` deve estar configurado.
 - A base FIN producao limpa deve estar aprovada.
 - A entrada Flash deve estar configurada de forma segura em `TMP_IMPORT_EXTRATO_FLASH`.
+- Se a aba temporaria ainda nao existir, executar primeiro
+  `PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO`.
 
 Execucao manual:
 
@@ -26,6 +28,8 @@ Bloqueios esperados se a entrada ainda nao existir:
 
 - `ENTRADA_FLASH_AUSENTE`
 - `CAMPO_VALOR_FLASH_AUSENTE`
+
+Etapa preparatoria: ver `docs/FIN_FLASH_B36A_ENTRADA_TEMPORARIA_FLASH.md`.
 
 Proximo passo: se aprovado, executar `PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR`.
 

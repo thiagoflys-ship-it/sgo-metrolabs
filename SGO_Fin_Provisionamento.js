@@ -1931,6 +1931,94 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return ["FLASH", arquivoNome, periodoInicial, periodoFinal, total, valor].join("|").toUpperCase();
   }
 
+  function headersEntradaFlash_() {
+    return ["DATA", "DESCRICAO", "VALOR", "TIPO", "PESSOA", "CARTAO_FINAL"];
+  }
+
+  function auditarEntradaFlash_() {
+    var r = validarProd_("AUDITORIA_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR", true);
+    var esperados = headersEntradaFlash_();
+    r.abaTemporaria = ABA_TMP_FLASH;
+    r.headersEsperados = esperados;
+    r.headersEncontrados = [];
+    r.headersFaltantes = esperados.slice();
+    r.headersExtras = [];
+    r.linhasDados = 0;
+    r.existe = false;
+    r.proximaEtapa = "Preparar ou colar dados na TMP_IMPORT_EXTRATO_FLASH e executar DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var sh = ss.getSheetByName(ABA_TMP_FLASH);
+      r.existe = !!sh;
+      if (!sh) {
+        r.bloqueios.push("TMP_IMPORT_EXTRATO_FLASH_AUSENTE");
+      } else {
+        var hs = headers_(sh).filter(function(h) { return !!h; });
+        var mapa = {};
+        var mapaEsperados = {};
+        hs.forEach(function(h) { mapa[h] = true; });
+        esperados.forEach(function(h) { mapaEsperados[h] = true; });
+        r.headersEncontrados = hs;
+        r.headersFaltantes = esperados.filter(function(h) { return !mapa[h]; });
+        r.headersExtras = hs.filter(function(h) { return !mapaEsperados[h]; });
+        r.linhasDados = Math.max(0, sh.getLastRow() - 1);
+        if (r.headersFaltantes.length) r.bloqueios.push("HEADERS_TMP_FLASH_FALTANTES");
+        if (r.headersExtras.length) r.avisos.push("HEADERS_TMP_FLASH_EXTRAS");
+        if (r.linhasDados < 1) r.bloqueios.push("ENTRADA_FLASH_AUSENTE");
+      }
+    }
+    r.instrucaoColagemManual = {
+      aba: ABA_TMP_FLASH,
+      linha1Headers: esperados,
+      dadosApartirDaLinha: 2,
+      observacao: "Colar apenas dados revisados do extrato Flash real. Nao colar formulas, totais soltos ou linhas em branco no meio da base."
+    };
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return r;
+  }
+
+  function PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO() {
+    var r = validarProd_("PREPARACAO_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO", false);
+    var esperados = headersEntradaFlash_();
+    r.abaTemporaria = ABA_TMP_FLASH;
+    r.criada = false;
+    r.limpouDados = false;
+    r.linhasPreparadas = 0;
+    r.headers = esperados;
+    r.proximaEtapa = "Colar dados reais revisados em TMP_IMPORT_EXTRATO_FLASH e executar DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var sh = ss.getSheetByName(ABA_TMP_FLASH);
+      if (!sh) {
+        sh = ss.insertSheet(ABA_TMP_FLASH);
+        r.criada = true;
+      }
+      var linhasDados = Math.max(0, sh.getLastRow() - 1);
+      var hs = headers_(sh).filter(function(h) { return !!h; });
+      if (hs.length === 0 && linhasDados === 0) {
+        sh.getRange(1, 1, 1, esperados.length).setValues([esperados]);
+        r.linhasPreparadas = 1;
+      } else {
+        var mapa = {};
+        hs.forEach(function(h) { mapa[h] = true; });
+        var faltantes = esperados.filter(function(h) { return !mapa[h]; });
+        if (faltantes.length) r.bloqueios.push("HEADERS_TMP_FLASH_FALTANTES");
+        if (linhasDados > 0) r.avisos.push("TMP_IMPORT_EXTRATO_FLASH_JA_POSSUI_DADOS_NAO_LIMPOS_AUTOMATICAMENTE");
+      }
+      r.bloqueios.push("FONTE_FLASH_NAO_CONFIGURADA");
+      r.avisos.push("A funcao preparou somente a aba temporaria e headers; dados Flash reais devem ser colados ou carregados por fonte autorizada em etapa separada.");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    r.executado = r.criada || r.linhasPreparadas > 0;
+    return log_(r);
+  }
+
+  function AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR() {
+    return log_(auditarEntradaFlash_());
+  }
+
   function lerEntradaFlash_(ss, base) {
     var sh = ss ? ss.getSheetByName(ABA_TMP_FLASH) : null;
     var entrada = {
@@ -2302,6 +2390,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   }
 
   return {
+    PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO: PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO,
+    AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR: AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR,
     DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR: DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR,
     PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR: PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR,
     IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO: IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO,
@@ -2314,6 +2404,14 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR: AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR
   };
 })();
+
+function PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO();
+}
+
+function AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR();
+}
 
 function DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR();
