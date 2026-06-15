@@ -1817,6 +1817,14 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   var ABA_LANCAMENTOS = "FIN_CARTOES_LANCAMENTOS";
   var ABA_CONCILIACAO = "FIN_CARTOES_CONCILIACAO";
   var ABA_PENDENCIAS = "FIN_CARTOES_PENDENCIAS";
+  var PROP_FONTE_TIPO = "FIN_FLASH_FONTE_TIPO";
+  var PROP_XLSX_FILE_ID = "FIN_FLASH_XLSX_FILE_ID";
+  var PROP_XLSX_NOME_ESPERADO = "FIN_FLASH_XLSX_NOME_ESPERADO";
+  var PROP_IMPORTACAO_MODO = "FIN_FLASH_IMPORTACAO_MODO";
+  var PROP_ABA_TMP = "FIN_FLASH_ABA_TMP";
+  var PROP_PROD_DB_CONFIRMADO = "FIN_FLASH_PROD_DB_CONFIRMADO";
+  var PROP_SOURCE_SPREADSHEET_ID = "FIN_FLASH_SOURCE_SPREADSHEET_ID";
+  var PROP_SOURCE_SHEET_NAME = "FIN_FLASH_SOURCE_SHEET_NAME";
 
   function txt_(v) {
     return String(v === null || v === undefined ? "" : v).trim();
@@ -1935,6 +1943,32 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return ["DATA", "DESCRICAO", "VALOR", "TIPO", "PESSOA", "CARTAO_FINAL"];
   }
 
+  function configFonteFlash_() {
+    var p = PropertiesService.getScriptProperties();
+    return {
+      fonteTipo: txt_(p.getProperty(PROP_FONTE_TIPO)),
+      xlsxFileId: txt_(p.getProperty(PROP_XLSX_FILE_ID)),
+      xlsxNomeEsperado: txt_(p.getProperty(PROP_XLSX_NOME_ESPERADO)),
+      modo: txt_(p.getProperty(PROP_IMPORTACAO_MODO)) || "TMP_ONLY",
+      abaTmp: txt_(p.getProperty(PROP_ABA_TMP)) || ABA_TMP_FLASH,
+      prodDbConfirmado: txt_(p.getProperty(PROP_PROD_DB_CONFIRMADO)),
+      sourceSpreadsheetId: txt_(p.getProperty(PROP_SOURCE_SPREADSHEET_ID)),
+      sourceSheetName: txt_(p.getProperty(PROP_SOURCE_SHEET_NAME))
+    };
+  }
+
+  function configFonteFlashSaida_(cfg) {
+    return {
+      fonteTipo: cfg.fonteTipo,
+      xlsxFileIdConfigurado: !!cfg.xlsxFileId,
+      nomeEsperado: cfg.xlsxNomeEsperado,
+      modo: cfg.modo,
+      abaTmp: cfg.abaTmp,
+      sourceSpreadsheetIdConfigurado: !!cfg.sourceSpreadsheetId,
+      sourceSheetName: cfg.sourceSheetName
+    };
+  }
+
   function auditarEntradaFlash_() {
     var r = validarProd_("AUDITORIA_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR", true);
     var esperados = headersEntradaFlash_();
@@ -2019,6 +2053,257 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(auditarEntradaFlash_());
   }
 
+  function CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO() {
+    var r = validarProd_("CONFIGURACAO_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO", false);
+    var CONFIG = {
+      FIN_FLASH_FONTE_TIPO: "",
+      FIN_FLASH_XLSX_FILE_ID: "",
+      FIN_FLASH_XLSX_NOME_ESPERADO: "",
+      FIN_FLASH_IMPORTACAO_MODO: "TMP_ONLY",
+      FIN_FLASH_ABA_TMP: ABA_TMP_FLASH,
+      FIN_FLASH_SOURCE_SPREADSHEET_ID: "",
+      FIN_FLASH_SOURCE_SHEET_NAME: ""
+    };
+    var cfg = {
+      fonteTipo: txt_(CONFIG.FIN_FLASH_FONTE_TIPO).toUpperCase(),
+      xlsxFileId: txt_(CONFIG.FIN_FLASH_XLSX_FILE_ID),
+      xlsxNomeEsperado: txt_(CONFIG.FIN_FLASH_XLSX_NOME_ESPERADO),
+      modo: txt_(CONFIG.FIN_FLASH_IMPORTACAO_MODO) || "TMP_ONLY",
+      abaTmp: txt_(CONFIG.FIN_FLASH_ABA_TMP) || ABA_TMP_FLASH,
+      sourceSpreadsheetId: txt_(CONFIG.FIN_FLASH_SOURCE_SPREADSHEET_ID),
+      sourceSheetName: txt_(CONFIG.FIN_FLASH_SOURCE_SHEET_NAME)
+    };
+    r.config = configFonteFlashSaida_(cfg);
+    r.proximaEtapa = "Configurar ID do arquivo Flash real e executar novamente.";
+
+    if (!cfg.fonteTipo) {
+      r.bloqueios.push("FONTE_TIPO_NAO_CONFIGURADO");
+    } else if (cfg.fonteTipo !== "XLSX" && cfg.fonteTipo !== "GOOGLE_SHEETS") {
+      r.bloqueios.push("FONTE_TIPO_INVALIDO");
+    }
+    if (cfg.fonteTipo === "XLSX" && !cfg.xlsxFileId) {
+      r.bloqueios.push("XLSX_FILE_ID_NAO_CONFIGURADO");
+      r.avisos.push("Preencher FIN_FLASH_XLSX_FILE_ID com o ID do XLSX real antes de configurar a fonte.");
+    }
+    if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSpreadsheetId) {
+      r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
+      r.avisos.push("Converter o XLSX Flash real para Google Sheets e preencher FIN_FLASH_SOURCE_SPREADSHEET_ID.");
+    }
+    if (cfg.modo !== "TMP_ONLY") {
+      r.bloqueios.push("MODO_IMPORTACAO_DEVE_SER_TMP_ONLY");
+    }
+    if (cfg.abaTmp !== ABA_TMP_FLASH) {
+      r.bloqueios.push("ABA_TMP_DIFERENTE_DO_PADRAO_SEGURO");
+    }
+
+    if (r.bloqueios.length === 0) {
+      try {
+        if (cfg.fonteTipo === "XLSX") {
+          var file = DriveApp.getFileById(cfg.xlsxFileId);
+          var nome = file.getName();
+          var mime = file.getMimeType();
+          r.fonte = { tipo: "XLSX", fileId: cfg.xlsxFileId, nomeArquivo: nome, mimeType: mime };
+          if (cfg.xlsxNomeEsperado && nome !== cfg.xlsxNomeEsperado) r.bloqueios.push("NOME_XLSX_DIFERENTE_DO_ESPERADO");
+        } else {
+          var ssFonte = SpreadsheetApp.openById(cfg.sourceSpreadsheetId);
+          var sheetFonte = cfg.sourceSheetName ? ssFonte.getSheetByName(cfg.sourceSheetName) : ssFonte.getSheets()[0];
+          r.fonte = {
+            tipo: "GOOGLE_SHEETS",
+            spreadsheetId: ssFonte.getId(),
+            nomeArquivo: ssFonte.getName(),
+            sheetName: sheetFonte ? sheetFonte.getName() : ""
+          };
+          if (!sheetFonte) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
+        }
+      } catch (e) {
+        r.bloqueios.push("FALHA_VALIDAR_FONTE_FLASH: " + (e && e.message ? e.message : String(e)));
+      }
+    }
+
+    if (r.bloqueios.length === 0) {
+      var p = PropertiesService.getScriptProperties();
+      p.setProperty(PROP_FONTE_TIPO, cfg.fonteTipo);
+      p.setProperty(PROP_IMPORTACAO_MODO, cfg.modo);
+      p.setProperty(PROP_ABA_TMP, cfg.abaTmp);
+      p.setProperty(PROP_PROD_DB_CONFIRMADO, DB_FIN_ID_PROD_ESPERADO);
+      if (cfg.xlsxFileId) p.setProperty(PROP_XLSX_FILE_ID, cfg.xlsxFileId);
+      if (cfg.xlsxNomeEsperado) p.setProperty(PROP_XLSX_NOME_ESPERADO, cfg.xlsxNomeEsperado);
+      if (cfg.sourceSpreadsheetId) p.setProperty(PROP_SOURCE_SPREADSHEET_ID, cfg.sourceSpreadsheetId);
+      if (cfg.sourceSheetName) p.setProperty(PROP_SOURCE_SHEET_NAME, cfg.sourceSheetName);
+      r.executado = true;
+      r.proximaEtapa = "Executar CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO.";
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function normalizarLinhaFonteFlash_(headers, linha) {
+    var idxData = localizar_(headers, ["DATA", "DATA_TRANSACAO", "Data", "Data da transacao"]);
+    var idxDescricao = localizar_(headers, ["DESCRICAO", "ESTABELECIMENTO", "ESTABELECIMENTO_EXTRATO", "Descricao"]);
+    var idxValor = localizar_(headers, ["VALOR", "VALOR_TRANSACAO", "Valor", "Valor da transacao"]);
+    var idxTipo = localizar_(headers, ["TIPO", "TIPO_TRANSACAO", "DEBITO_CREDITO", "Tipo"]);
+    var idxPessoa = localizar_(headers, ["PESSOA", "PORTADOR", "COLABORADOR", "Pessoa"]);
+    var idxCartao = localizar_(headers, ["CARTAO_FINAL", "Final Cartao", "Final do cartao", "CARTAO"]);
+    return {
+      valores: [
+        idxData >= 0 ? linha[idxData] : "",
+        idxDescricao >= 0 ? linha[idxDescricao] : "",
+        idxValor >= 0 ? linha[idxValor] : "",
+        idxTipo >= 0 ? linha[idxTipo] : "",
+        idxPessoa >= 0 ? linha[idxPessoa] : "",
+        idxCartao >= 0 ? linha[idxCartao] : ""
+      ],
+      indices: {
+        data: idxData,
+        descricao: idxDescricao,
+        valor: idxValor,
+        tipo: idxTipo,
+        pessoa: idxPessoa,
+        cartaoFinal: idxCartao
+      }
+    };
+  }
+
+  function lerFonteGoogleSheetsFlash_(cfg, r) {
+    var ssFonte = SpreadsheetApp.openById(cfg.sourceSpreadsheetId);
+    var sheet = cfg.sourceSheetName ? ssFonte.getSheetByName(cfg.sourceSheetName) : ssFonte.getSheets()[0];
+    if (!sheet) {
+      r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+    }
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) {
+      r.bloqueios.push("FONTE_FLASH_SEM_DADOS");
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+    }
+    var dados = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    var headersFonte = dados[0].map(function(h) { return txt_(h); });
+    var linhas = [];
+    var datas = [];
+    var valorTotal = 0;
+    var validos = 0;
+    var invalidos = 0;
+    for (var i = 1; i < dados.length; i++) {
+      var linha = dados[i];
+      var preenchida = linha.some(function(c) { return txt_(c) !== ""; });
+      if (!preenchida) continue;
+      var n = normalizarLinhaFonteFlash_(headersFonte, linha);
+      var valor = num_(n.valores[2]);
+      if (n.indices.valor < 0 || valor === 0) invalidos++; else validos++;
+      if (n.valores[0]) datas.push(txt_(n.valores[0]));
+      valorTotal += valor;
+      linhas.push(n.valores);
+    }
+    datas.sort();
+    return {
+      linhas: linhas,
+      leitura: {
+        registrosLidos: linhas.length,
+        registrosValidos: validos,
+        registrosInvalidos: invalidos,
+        periodoInicial: datas[0] || "",
+        periodoFinal: datas[datas.length - 1] || "",
+        valorTotal: Math.round(valorTotal * 100) / 100
+      }
+    };
+  }
+
+  function CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO() {
+    var r = validarProd_("CARGA_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO", false);
+    var cfg = configFonteFlash_();
+    var esperados = headersEntradaFlash_();
+    r.fonte = { tipo: cfg.fonteTipo, fileId: cfg.xlsxFileId, nomeArquivo: "", mimeType: "" };
+    r.abaTemporaria = { nome: ABA_TMP_FLASH, criada: false, headersOk: false, linhasAntes: 0, linhasGravadas: 0, linhasDepois: 0 };
+    r.leitura = { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 };
+    r.seguranca = { gravouSomenteTmp: false, gravouAbasOficiais: false, limpouDadosExistentes: false };
+    r.proximaEtapa = "Executar AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR e depois DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
+
+    if (!cfg.fonteTipo) r.bloqueios.push("FONTE_FLASH_NAO_CONFIGURADA");
+    if (cfg.fonteTipo === "XLSX") r.bloqueios.push("LEITOR_XLSX_NAO_IMPLEMENTADO_COM_SEGURANCA");
+    if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSpreadsheetId) r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
+    if (cfg.abaTmp !== ABA_TMP_FLASH) r.bloqueios.push("ABA_TMP_DIFERENTE_DO_PADRAO_SEGURO");
+
+    var ss = abrirPlanilha_(r);
+    if (ss && r.bloqueios.length === 0) {
+      var sh = ss.getSheetByName(ABA_TMP_FLASH);
+      if (!sh) {
+        sh = ss.insertSheet(ABA_TMP_FLASH);
+        r.abaTemporaria.criada = true;
+      }
+      r.abaTemporaria.linhasAntes = Math.max(0, sh.getLastRow() - 1);
+      if (r.abaTemporaria.linhasAntes > 0) {
+        r.bloqueios.push("TMP_IMPORT_EXTRATO_FLASH_JA_POSSUI_DADOS");
+      }
+      var hs = headers_(sh).filter(function(h) { return !!h; });
+      if (hs.length === 0 && r.bloqueios.length === 0) {
+        sh.getRange(1, 1, 1, esperados.length).setValues([esperados]);
+        hs = esperados.slice();
+      }
+      r.abaTemporaria.headersOk = esperados.every(function(h) { return hs.indexOf(h) >= 0; });
+      if (!r.abaTemporaria.headersOk) r.bloqueios.push("HEADERS_TMP_FLASH_INVALIDOS");
+
+      if (r.bloqueios.length === 0 && cfg.fonteTipo === "GOOGLE_SHEETS") {
+        var carga = lerFonteGoogleSheetsFlash_(cfg, r);
+        r.leitura = carga.leitura;
+        if (r.leitura.registrosValidos < 1) r.bloqueios.push("REGISTROS_VALIDOS_ZERO");
+        if (r.bloqueios.length === 0) {
+          sh.getRange(2, 1, carga.linhas.length, esperados.length).setValues(carga.linhas);
+          r.abaTemporaria.linhasGravadas = carga.linhas.length;
+          r.abaTemporaria.linhasDepois = Math.max(0, sh.getLastRow() - 1);
+          r.seguranca.gravouSomenteTmp = true;
+          r.executado = true;
+        }
+      }
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR", true);
+    var esperados = headersEntradaFlash_();
+    r.abaTemporaria = { existe: false, headersOk: false, linhasDados: 0 };
+    r.leitura = { registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, cartoesDetectados: 0, pessoasDetectadas: 0 };
+    r.oficiais = { FIN_LOTES_EXTRATO_FLASH: 0, FIN_CARTOES_EXTRATOS: 0, FIN_CARTOES_CONCILIACAO: 0, FIN_CARTOES_PENDENCIAS: 0 };
+    r.amostra = [];
+    r.proximaEtapa = "Executar DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var sh = ss.getSheetByName(ABA_TMP_FLASH);
+      r.abaTemporaria.existe = !!sh;
+      if (!sh) {
+        r.bloqueios.push("TMP_IMPORT_EXTRATO_FLASH_AUSENTE");
+      } else {
+        var hs = headers_(sh);
+        r.abaTemporaria.headersOk = esperados.every(function(h) { return hs.indexOf(h) >= 0; });
+        r.abaTemporaria.linhasDados = Math.max(0, sh.getLastRow() - 1);
+        if (!r.abaTemporaria.headersOk) r.bloqueios.push("HEADERS_TMP_FLASH_INVALIDOS");
+        var pacote = lerEntradaFlash_(ss, r);
+        r.leitura.registrosValidos = pacote.leitura.totalRegistrosValidos;
+        r.leitura.registrosInvalidos = pacote.leitura.totalRegistrosInvalidos;
+        r.leitura.periodoInicial = pacote.leitura.periodoInicial;
+        r.leitura.periodoFinal = pacote.leitura.periodoFinal;
+        r.leitura.valorTotal = pacote.leitura.valorTotal;
+        r.leitura.cartoesDetectados = pacote.leitura.cartoesDetectados;
+        r.leitura.pessoasDetectadas = pacote.leitura.pessoasDetectadas;
+        r.amostra = pacote.amostra.primeirasLinhas.slice(0, 5);
+      }
+      r.oficiais.FIN_LOTES_EXTRATO_FLASH = contarAba_(ss, ABA_LOTES).linhasDados;
+      r.oficiais.FIN_CARTOES_EXTRATOS = contarAba_(ss, ABA_EXTRATOS).linhasDados;
+      r.oficiais.FIN_CARTOES_CONCILIACAO = contarAba_(ss, ABA_CONCILIACAO).linhasDados;
+      r.oficiais.FIN_CARTOES_PENDENCIAS = contarAba_(ss, ABA_PENDENCIAS).linhasDados;
+      Object.keys(r.oficiais).forEach(function(k) {
+        if (r.oficiais[k] !== 0) r.bloqueios.push("ABA_OFICIAL_NAO_ESTA_ZERADA_" + k);
+      });
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
   function lerEntradaFlash_(ss, base) {
     var sh = ss ? ss.getSheetByName(ABA_TMP_FLASH) : null;
     var entrada = {
@@ -2037,7 +2322,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       valorTotal: 0,
       moeda: "BRL",
       cartoesDetectados: 0,
-      estabelecimentosDetectados: 0
+      estabelecimentosDetectados: 0,
+      pessoasDetectadas: 0
     };
     var amostra = { primeirasLinhas: [] };
     if (!sh || sh.getLastRow() < 2 || sh.getLastColumn() < 1) {
@@ -2051,12 +2337,14 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var idxData = localizar_(hs, ["DATA", "DATA_TRANSACAO", "Data", "Data da transacao"]);
     var idxValor = localizar_(hs, ["VALOR", "VALOR_TRANSACAO", "Valor", "Valor da transacao"]);
     var idxDescricao = localizar_(hs, ["DESCRICAO", "ESTABELECIMENTO", "ESTABELECIMENTO_EXTRATO", "Descricao"]);
+    var idxPessoa = localizar_(hs, ["PESSOA", "PORTADOR", "COLABORADOR", "Pessoa"]);
     var idxCartao = localizar_(hs, ["CARTAO_FINAL", "Final Cartao", "Final do cartao", "CARTAO"]);
     if (idxValor < 0) base.bloqueios.push("CAMPO_VALOR_FLASH_AUSENTE");
 
     var datas = [];
     var cartoes = {};
     var estabs = {};
+    var pessoas = {};
     var registros = [];
     for (var i = 1; i < dados.length; i++) {
       var linha = dados[i];
@@ -2065,6 +2353,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       var data = idxData >= 0 ? txt_(linha[idxData]) : "";
       var valor = idxValor >= 0 ? num_(linha[idxValor]) : 0;
       var desc = idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "";
+      var pessoa = idxPessoa >= 0 ? txt_(linha[idxPessoa]) : "";
       var cartao = idxCartao >= 0 ? txt_(linha[idxCartao]) : "";
       leitura.totalRegistrosLidos++;
       if (idxValor >= 0) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
@@ -2072,7 +2361,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       if (data) datas.push(data);
       if (cartao) cartoes[cartao] = true;
       if (desc) estabs[desc] = true;
-      var reg = { linha: i + 1, data: data, valor: valor, cartaoFinal: cartao, estabelecimento: desc };
+      if (pessoa) pessoas[pessoa] = true;
+      var reg = { linha: i + 1, data: data, valor: valor, pessoa: pessoa, cartaoFinal: cartao, estabelecimento: desc };
       registros.push(reg);
       if (amostra.primeirasLinhas.length < 3) amostra.primeirasLinhas.push(reg);
     }
@@ -2082,6 +2372,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     leitura.valorTotal = Math.round(leitura.valorTotal * 100) / 100;
     leitura.cartoesDetectados = Object.keys(cartoes).length;
     leitura.estabelecimentosDetectados = Object.keys(estabs).length;
+    leitura.pessoasDetectadas = Object.keys(pessoas).length;
     var chave = chaveLote_(entrada.arquivoNome, leitura.periodoInicial, leitura.periodoFinal, leitura.totalRegistrosValidos, leitura.valorTotal);
     return { entrada: entrada, leitura: leitura, amostra: amostra, registros: registros, chaveLote: chave };
   }
@@ -2392,6 +2683,9 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   return {
     PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO: PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO,
     AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR: AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR,
+    CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO: CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO,
+    CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO: CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO,
+    AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR: AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR,
     DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR: DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR,
     PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR: PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR,
     IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO: IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO,
@@ -2411,6 +2705,18 @@ function PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO() {
 
 function AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR();
+}
+
+function CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO();
+}
+
+function CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO();
+}
+
+function AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR();
 }
 
 function DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR() {

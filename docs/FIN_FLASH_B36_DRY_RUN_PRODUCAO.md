@@ -13,6 +13,8 @@ Pre-requisitos:
 - A entrada Flash deve estar configurada de forma segura em `TMP_IMPORT_EXTRATO_FLASH`.
 - Se a aba temporaria ainda nao existir, executar primeiro
   `PREPARAR_ENTRADA_FLASH_PRODUCAO_B36A_AUTORIZADO`.
+- Para carga automatica da entrada real, usar o fluxo B.3.6B em
+  `docs/FIN_FLASH_B36B_SETUP_AUTOMATICO_ENTRADA_FLASH.md`.
 
 Execucao manual:
 
@@ -29,7 +31,10 @@ Bloqueios esperados se a entrada ainda nao existir:
 - `ENTRADA_FLASH_AUSENTE`
 - `CAMPO_VALOR_FLASH_AUSENTE`
 
-Etapa preparatoria: ver `docs/FIN_FLASH_B36A_ENTRADA_TEMPORARIA_FLASH.md`.
+Etapas preparatorias:
+
+- `docs/FIN_FLASH_B36A_ENTRADA_TEMPORARIA_FLASH.md`
+- `docs/FIN_FLASH_B36B_SETUP_AUTOMATICO_ENTRADA_FLASH.md`
 
 Proximo passo: se aprovado, executar `PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR`.
 
