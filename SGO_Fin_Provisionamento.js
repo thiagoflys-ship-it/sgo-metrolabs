@@ -3711,6 +3711,195 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR", true);
+    r.incidente = "B38";
+    r.db = { DB_FIN_ID: r.DB_FIN_ID, dbFinIdDiferenteDev: r.dbFinIdDiferenteDev };
+    r.resumoFinal = {
+      tmpTotal: 0,
+      despesasValidas: 0,
+      despesasValidasComAvisoCartao3Digitos: 0,
+      invalidasReais: 0,
+      depositosCreditos: 0,
+      extratosGravados: 0,
+      valorDespesasValidas: 0,
+      valorDepositosCreditos: 0,
+      saldoLiquidoTmp: 0,
+      saldoLiquidoGravado: 0,
+      duplicidades: 0,
+      datasTmpOk: false,
+      datasGravadasCorrompidas: false
+    };
+    r.evidenciaInvalidasReais = [];
+    r.evidenciaValidasComAviso = {
+      total: 0,
+      aviso: "CARTAO_FINAL_COM_3_DIGITOS",
+      explicacao: "Aviso nao bloqueante conforme cartaoFlash_; nao isolar estes extratos.",
+      amostraMaxima: []
+    };
+    r.loteB38 = {
+      loteId: "LOTE-FLASH-20260615-163548",
+      statusAtual: "",
+      totalLancamentosAtual: 0,
+      saldoLiquidoAtual: 0,
+      periodoInicioBruto: "",
+      periodoFimBruto: "",
+      periodoCorrompido: false,
+      correcaoSugeridaPeriodoInicio: "",
+      correcaoSugeridaPeriodoFim: ""
+    };
+    r.decisao = {
+      podeProsseguirB40: false,
+      tipoB40Sugerido: "NAO_DECIDIDO",
+      naoFazer: ["NAO_ISOLAR_46_DESPESAS_VALIDAS", "NAO_APAGAR_LOTE", "NAO_REIMPORTAR", "NAO_CONCILIAR_AINDA"]
+    };
+    r.proximaEtapa = "Criar B40 controlada para corrigir datas/metadados e tratar 3 creditos/depositos, sem apagar lote/extratos e sem reimportar.";
+
+    try {
+      var ss = abrirPlanilha_(r);
+      if (!ss) {
+        r.success = false;
+        r.ok = false;
+        return log_(r);
+      }
+      var shTmp = ss.getSheetByName(ABA_TMP_FLASH);
+      var shLotes = ss.getSheetByName(ABA_LOTES);
+      var shExtratos = ss.getSheetByName(ABA_EXTRATOS);
+      if (!shTmp) r.bloqueios.push("ABA_TMP_IMPORT_EXTRATO_FLASH_AUSENTE");
+      if (!shLotes) r.bloqueios.push("ABA_FIN_LOTES_EXTRATO_FLASH_AUSENTE");
+      if (!shExtratos) r.bloqueios.push("ABA_FIN_CARTOES_EXTRATOS_AUSENTE");
+      if (r.bloqueios.length) {
+        r.success = false;
+        r.ok = false;
+        return log_(r);
+      }
+
+      var baseRegra = validarProd_("EVIDENCIA_FINAL_B39_4_REGRA_B36_B37_SEM_GRAVAR", true);
+      baseRegra.bloqueios = [];
+      baseRegra.avisos = [];
+      var rec = reclassificarRegraB36B37_(ss, baseRegra);
+      var registros = rec.pacote.registros || [];
+      var tmpPorLinha = {};
+      registros.forEach(function(reg) {
+        tmpPorLinha[reg.linha] = reg;
+      });
+
+      var extratos = anexarLinhasB39_(objetos_(shExtratos).items).filter(function(e) {
+        return txt_(e.LOTE_ID || e.IMPORTACAO_ID) === "LOTE-FLASH-20260615-163548";
+      });
+      var indiceExtratos = indiceExtratosB392_(extratos);
+      var chavesExtrato = mapaContagemB39_(extratos, function(e) { return e.CHAVE_DUPLICIDADE || e.EXTRATO_ID || e.ID; });
+      r.resumoFinal.duplicidades = repetidosB39_(chavesExtrato).length;
+      r.resumoFinal.extratosGravados = extratos.length;
+
+      var dataExResumo = resumoDatasB392_();
+      extratos.forEach(function(e) {
+        var infoEx = dataInfoB392_(e.DATA_TRANSACAO || e.DATA, e.DATA_TRANSACAO || e.DATA);
+        var valorEx = valorMonetarioB392_(e.VALOR !== undefined && e.VALOR !== "" ? e.VALOR : e.VALOR_TRANSACAO).valor;
+        r.resumoFinal.saldoLiquidoGravado += valorEx;
+        acumularDataB392_(dataExResumo, infoEx);
+      });
+      r.resumoFinal.saldoLiquidoGravado = Math.round(r.resumoFinal.saldoLiquidoGravado * 100) / 100;
+
+      var lote = null;
+      anexarLinhasB39_(objetos_(shLotes).items).forEach(function(l) {
+        if (txt_(l.LOTE_ID) === "LOTE-FLASH-20260615-163548") lote = l;
+      });
+      var loteInicio = lote ? dataInfoB392_(lote.PERIODO_INICIO, lote.PERIODO_INICIO) : dataInfoB392_("", "");
+      var loteFim = lote ? dataInfoB392_(lote.PERIODO_FIM, lote.PERIODO_FIM) : dataInfoB392_("", "");
+      if (lote) {
+        r.loteB38.statusAtual = txt_(lote.STATUS_LOTE || lote.STATUS);
+        r.loteB38.totalLancamentosAtual = Number(lote.TOTAL_LANCAMENTOS || 0);
+        r.loteB38.saldoLiquidoAtual = Math.round(num_(lote.SALDO_LIQUIDO) * 100) / 100;
+        r.loteB38.periodoInicioBruto = txt_(lote.PERIODO_INICIO);
+        r.loteB38.periodoFimBruto = txt_(lote.PERIODO_FIM);
+      }
+      r.loteB38.correcaoSugeridaPeriodoInicio = rec.pacote.leitura.periodoInicial;
+      r.loteB38.correcaoSugeridaPeriodoFim = rec.pacote.leitura.periodoFinal;
+      r.loteB38.periodoCorrompido = loteInicio.statusData !== "VALIDA" || loteFim.statusData !== "VALIDA";
+
+      registros.forEach(function(reg) {
+        var cartaoInfo = cartaoFlash_(reg.cartaoFinal);
+        var dataOk = !!reg.dataNormalizada;
+        var valor = Math.round(num_(reg.valor) * 100) / 100;
+        var valorOk = valor !== 0;
+        var validoDespesa = dataOk && valorOk && valor < 0 && cartaoInfo.valido;
+        var depositoCredito = valor > 0 || /DEPOSITO|DEP[OÓ]SITO|CREDITO|CR[EÉ]DITO/i.test(txt_(reg.descricao) + " " + txt_(reg.tipo));
+        var chave = chaveComparacaoB392_(txt_(reg.dataNormalizada).slice(0, 10), valor, reg.descricao, reg.cartaoFinal);
+        var match = indiceExtratos.porLinhaOrigem[reg.linha] || indiceExtratos.porChave[chave] || null;
+        r.resumoFinal.tmpTotal++;
+        r.resumoFinal.saldoLiquidoTmp += valor;
+        if (validoDespesa) {
+          r.resumoFinal.despesasValidas++;
+          r.resumoFinal.valorDespesasValidas += valor;
+          if (cartaoInfo.com3Digitos) {
+            r.resumoFinal.despesasValidasComAvisoCartao3Digitos++;
+            if (r.evidenciaValidasComAviso.amostraMaxima.length < 10) {
+              r.evidenciaValidasComAviso.amostraMaxima.push({
+                linhaTmp: reg.linha,
+                linhaExtrato: match ? match.linhaExtrato : null,
+                dataTmpNormalizada: reg.dataNormalizada,
+                descricao: reg.descricao,
+                valor: valor,
+                colaborador: reg.pessoa,
+                cartaoFinal: reg.cartaoFinal,
+                encontradaNoExtrato: !!match
+              });
+            }
+          }
+        } else {
+          r.resumoFinal.invalidasReais++;
+          if (depositoCredito) r.resumoFinal.depositosCreditos++;
+          r.resumoFinal.valorDepositosCreditos += depositoCredito ? valor : 0;
+          if (r.evidenciaInvalidasReais.length < 10) {
+            var dataEx = match ? match.dataInfo : dataInfoB392_("", "");
+            r.evidenciaInvalidasReais.push({
+              linhaTmp: reg.linha,
+              linhaExtrato: match ? match.linhaExtrato : null,
+              encontradaNoExtrato: !!match,
+              tipo: depositoCredito ? "DEPOSITO_OU_CREDITO" : "INVALIDA_REGRA_B36_B37",
+              dataTmpNormalizada: reg.dataNormalizada,
+              dataExtratoGravadaBruta: match ? dataEx.dataBruta : "",
+              dataExtratoGravadaNormalizada: match ? dataEx.dataNormalizada : "",
+              descricao: reg.descricao,
+              valor: valor,
+              colaborador: reg.pessoa,
+              cartaoFinal: reg.cartaoFinal,
+              motivo: depositoCredito ? "CREDITO_NAO_E_DESPESA_FLASH" : "NAO_ATENDE_REGRA_B36_B37",
+              sugestaoB40: depositoCredito ? "TRATAR_COMO_CREDITO_DEPOSITO_NAO_CONCILIAVEL_COM_DESPESA" : "REVISAR_CLASSIFICACAO"
+            });
+          }
+        }
+      });
+      r.resumoFinal.saldoLiquidoTmp = Math.round(r.resumoFinal.saldoLiquidoTmp * 100) / 100;
+      r.resumoFinal.valorDespesasValidas = Math.round(r.resumoFinal.valorDespesasValidas * 100) / 100;
+      r.resumoFinal.valorDepositosCreditos = Math.round(r.resumoFinal.valorDepositosCreditos * 100) / 100;
+      r.evidenciaValidasComAviso.total = r.resumoFinal.despesasValidasComAvisoCartao3Digitos;
+      r.resumoFinal.datasTmpOk = rec.pacote.leitura.datasForaPeriodoEsperado === 0 && !!rec.pacote.leitura.periodoInicial && !!rec.pacote.leitura.periodoFinal;
+      r.resumoFinal.datasGravadasCorrompidas = dataExResumo.datasInvalidasOuAmbiguas > 0 || r.loteB38.periodoCorrompido;
+
+      var invalidasGravadas = r.evidenciaInvalidasReais.filter(function(item) { return item.encontradaNoExtrato; }).length;
+      var criteriosB40 = r.resumoFinal.despesasValidas === 46 &&
+        r.resumoFinal.depositosCreditos === 3 &&
+        invalidasGravadas === 3 &&
+        r.resumoFinal.duplicidades === 0 &&
+        r.resumoFinal.datasTmpOk === true &&
+        r.resumoFinal.datasGravadasCorrompidas === true;
+      if (r.resumoFinal.datasGravadasCorrompidas) r.bloqueios.push("B38_DATAS_METADADOS_CORROMPIDOS");
+      if (r.resumoFinal.depositosCreditos > 0 && invalidasGravadas > 0) r.bloqueios.push("B38_GRAVOU_CREDITOS_DEPOSITOS_NO_EXTRATO");
+      if (r.resumoFinal.despesasValidasComAvisoCartao3Digitos > 0) r.avisos.push("46_DESPESAS_VALIDAS_COM_CARTAO_FINAL_3_DIGITOS");
+      r.decisao.podeProsseguirB40 = criteriosB40;
+      r.decisao.tipoB40Sugerido = criteriosB40 ? "CORRIGIR_DATAS_METADADOS_E_CLASSIFICACAO_CREDITOS_DEPOSITOS" : "INVESTIGAR_MAIS";
+      r.success = true;
+      r.ok = false;
+    } catch (e) {
+      r.bloqueios.push("ERRO_TECNICO_B39_4: " + (e && e.message ? e.message : String(e)));
+      r.success = false;
+      r.ok = false;
+    }
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -3863,6 +4052,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR,
     AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR,
     AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR,
+    AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -3922,6 +4112,10 @@ function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR() {
 
 function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR();
+}
+
+function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {

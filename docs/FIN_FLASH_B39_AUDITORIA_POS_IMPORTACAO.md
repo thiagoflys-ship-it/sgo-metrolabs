@@ -226,3 +226,94 @@ Checklist de execucao manual:
 - Copiar JSON completo do log.
 - Nao executar nenhuma funcao de importacao, conciliacao, limpeza ou correcao.
 - Enviar resultado para decisao B40.
+
+## B39.4 - Evidencia final para decisao B40
+
+Funcao: `AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR`
+
+Motivo: a B39.3 localizou a regra B36/B37 e confirmou que `CARTAO_FINAL` com 3
+digitos e aviso nao bloqueante. Portanto, as 46 despesas com aviso
+`CARTAO_FINAL_COM_3_DIGITOS` nao devem ser tratadas como 46 invalidas e nao
+devem ser isoladas.
+
+Resultado B39.3 resumido:
+
+- `tmpTotal: 49`;
+- `validas: 46`;
+- `avisos: 46`;
+- `invalidas: 3`;
+- `valorValidas: -2079.21`;
+- `valorInvalidas: 2800`;
+- `valorTotal: 720.79`;
+- aviso: `CARTAO_FINAL_COM_3_DIGITOS`;
+- bloqueio operacional: regra atual nao reproduziu sozinha a memoria 46/3 sem
+  registrar a diferenca entre aviso e invalidez real.
+
+Interpretacao operacional:
+
+- as 46 linhas negativas sao despesas validas com aviso;
+- cartao final com 3 digitos e aviso nao bloqueante conforme `cartaoFlash_`;
+- as 3 invalidas reais sao depositos/creditos positivos;
+- B38 gravou tambem os 3 creditos/depositos;
+- B38 gravou datas/metadados corrompidos;
+- B40 devera corrigir datas/metadados e tratar os 3 creditos/depositos;
+- nao isolar as 46 despesas validas.
+
+A B39.4 le somente:
+
+- `TMP_IMPORT_EXTRATO_FLASH`;
+- `FIN_LOTES_EXTRATO_FLASH`;
+- `FIN_CARTOES_EXTRATOS`;
+- tabelas auxiliares somente se a regra B36/B37 passar a depender delas.
+
+A B39.4 nao faz:
+
+- importacao;
+- conciliacao;
+- correcao;
+- limpeza;
+- reimportacao;
+- alteracao de status;
+- criacao de lote;
+- criacao de log;
+- alteracao de headers;
+- qualquer gravacao em planilha, Drive ou Script Properties.
+
+Execucao manual:
+
+```text
+AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR
+```
+
+Copiar do log:
+
+- JSON completo retornado pela funcao;
+- `resumoFinal`;
+- `evidenciaInvalidasReais`;
+- `evidenciaValidasComAviso`;
+- `loteB38`;
+- `decisao`;
+- `bloqueios`;
+- `avisos`;
+- `proximaEtapa`.
+
+Criterios para liberar desenho da B40:
+
+- confirmar 46 despesas validas;
+- confirmar 46 despesas validas com aviso de cartao final 3 digitos;
+- confirmar 3 depositos/creditos;
+- confirmar que os 3 foram gravados pela B38;
+- confirmar ausencia de duplicidade;
+- confirmar datas TMP corretas;
+- confirmar datas/metadados B38 corrompidos.
+
+Checklist de execucao manual:
+
+- Abrir Apps Script producao.
+- Selecionar `AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_4_EVIDENCIA_FINAL_SEM_GRAVAR`.
+- Executar.
+- Confirmar autorizacao se necessario.
+- Copiar JSON completo do log.
+- Nao executar B40 ainda.
+- Nao executar importacao, conciliacao, limpeza ou correcao.
+- Enviar resultado para desenho da B40 controlada.
