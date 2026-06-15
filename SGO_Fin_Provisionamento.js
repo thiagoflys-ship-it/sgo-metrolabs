@@ -1623,6 +1623,191 @@ function AUDITAR_FIN_PRODUCAO_LIMPA_B35_SEM_GRAVAR() {
   return resultado;
 }
 
+function AUDITAR_FIN_PRODUCAO_LIMPA_B35_RESUMO_SEM_GRAVAR() {
+  var dbFinIdProdEsperado = "1A3rjluetfMYfSwwpcGbbnfpkPdgR7R9iiwDVWvyp4Zw";
+  var dbFinIdDevBloqueado = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
+  var props = PropertiesService.getScriptProperties();
+  var dbFinId = props.getProperty("DB_FIN_ID");
+  var dbFinUrl = props.getProperty("DB_FIN_URL");
+  var folderFinanceiro = props.getProperty("FOLDER_FINANCEIRO");
+  var bloqueios = [];
+  var avisos = [];
+  var abasResumo = [];
+  var resumo = {
+    abasEsperadas: 13,
+    abasEncontradas: 0,
+    headersEsperados: 330,
+    headersEncontrados: 0,
+    totalLinhasDados: 0,
+    baseSemDadosOperacionais: true
+  };
+  var planilha = {
+    nome: "",
+    id: dbFinId || "",
+    url: dbFinUrl || ""
+  };
+
+  function resultadoCompacto_() {
+    return {
+      success: bloqueios.length === 0,
+      ok: bloqueios.length === 0,
+      executado: false,
+      somenteLeitura: true,
+      modo: "AUDITORIA_FIN_PRODUCAO_LIMPA_B35_RESUMO_SEM_GRAVAR",
+      DB_FIN_ID: dbFinId,
+      DB_FIN_URL: dbFinUrl,
+      FOLDER_FINANCEIRO: folderFinanceiro,
+      DB_FIN_ID_PROD_ESPERADO: dbFinIdProdEsperado,
+      DB_FIN_ID_DEV_BLOQUEADO: dbFinIdDevBloqueado,
+      dbFinIdDiferenteDev: dbFinId !== dbFinIdDevBloqueado,
+      planilha: planilha,
+      resumo: resumo,
+      abasResumo: abasResumo,
+      bloqueios: bloqueios,
+      avisos: avisos
+    };
+  }
+
+  if (!dbFinId) {
+    bloqueios.push("DB_FIN_ID_AUSENTE");
+  }
+  if (dbFinId === dbFinIdDevBloqueado) {
+    bloqueios.push("DB_FIN_ID_DEV_DETECTADO_PRODUCAO_BLOQUEADA");
+  }
+  if (dbFinId !== dbFinIdProdEsperado) {
+    bloqueios.push("DB_FIN_ID_DIFERENTE_DO_PROD_ESPERADO");
+  }
+  if (!folderFinanceiro) {
+    bloqueios.push("FOLDER_FINANCEIRO_AUSENTE");
+  }
+
+  if (bloqueios.length === 0) {
+    try {
+      var ss = SpreadsheetApp.openById(dbFinId);
+      planilha = {
+        nome: ss.getName(),
+        id: ss.getId(),
+        url: ss.getUrl()
+      };
+      if (planilha.id !== dbFinIdProdEsperado) {
+        bloqueios.push("PLANILHA_ABERTA_DIFERENTE_DO_PROD_ESPERADO");
+      }
+      if (dbFinUrl && planilha.url !== dbFinUrl) {
+        avisos.push("DB_FIN_URL_DIVERGE_DA_URL_ABERTA");
+      }
+
+      var schema = obterSchemaFinanceiroV2();
+      var abasSchema = schema && schema.abas ? schema.abas : [];
+      var abasOperacionais = {
+        FIN_CARTOES: true,
+        FIN_CARTOES_TERMOS: true,
+        FIN_CARTOES_RECARGAS: true,
+        FIN_CARTOES_LANCAMENTOS: true,
+        FIN_CARTOES_ANEXOS: true,
+        FIN_CARTOES_EXTRATOS: true,
+        FIN_LOTES_EXTRATO_FLASH: true,
+        FIN_CARTOES_CONCILIACAO: true,
+        FIN_CARTOES_PENDENCIAS: true,
+        FIN_CARTOES_DOCUMENTOS: true
+      };
+      var abasComDadosPermitidos = {
+        FIN_CARTOES_POLITICA: true,
+        FIN_CARTOES_LOGS: true,
+        FIN_CARTOES_CONFIG: true
+      };
+
+      resumo.abasEsperadas = abasSchema.length;
+      resumo.headersEsperados = schema && schema.totalHeaders ? schema.totalHeaders : 0;
+
+      abasSchema.forEach(function(def) {
+        var nomeAba = def.nomeAba;
+        var headersEsperadosLista = def.headers || [];
+        var sheet = ss.getSheetByName(nomeAba);
+        var existe = !!sheet;
+        var ultimaLinha = existe ? sheet.getLastRow() : 0;
+        var ultimaColuna = existe ? sheet.getLastColumn() : 0;
+        var headersEncontradosLista = [];
+        if (existe) {
+          resumo.abasEncontradas++;
+          if (ultimaColuna > 0) {
+            headersEncontradosLista = sheet.getRange(1, 1, 1, ultimaColuna).getValues()[0].map(function(h) {
+              return String(h == null ? "" : h).trim();
+            });
+          }
+        }
+
+        var mapaEncontrados = {};
+        headersEncontradosLista.forEach(function(h) {
+          if (h) mapaEncontrados[h] = true;
+        });
+        var mapaEsperados = {};
+        headersEsperadosLista.forEach(function(h) {
+          mapaEsperados[h] = true;
+        });
+        var headersFaltantes = headersEsperadosLista.filter(function(h) {
+          return !mapaEncontrados[h];
+        });
+        var headersExtras = headersEncontradosLista.filter(function(h) {
+          return h && !mapaEsperados[h];
+        });
+        var totalHeadersEncontrados = headersEncontradosLista.filter(function(h) { return !!h; }).length;
+        var linhasDados = Math.max(ultimaLinha - 1, 0);
+        var item = {
+          nomeAba: nomeAba,
+          existe: existe,
+          ultimaLinha: ultimaLinha,
+          ultimaColuna: ultimaColuna,
+          totalHeadersEncontrados: totalHeadersEncontrados,
+          totalHeadersEsperados: headersEsperadosLista.length,
+          totalHeadersFaltantes: headersFaltantes.length,
+          totalHeadersExtras: headersExtras.length,
+          linhasDados: linhasDados,
+          ok: existe && headersFaltantes.length === 0
+        };
+
+        resumo.headersEncontrados += totalHeadersEncontrados;
+        resumo.totalLinhasDados += linhasDados;
+
+        if (!existe) {
+          bloqueios.push("ABA_AUSENTE_" + nomeAba);
+        }
+        if (headersFaltantes.length > 0) {
+          bloqueios.push("HEADERS_FALTANTES_" + nomeAba);
+          item.headersFaltantes = headersFaltantes.slice(0, 20);
+        }
+        if (headersExtras.length > 0) {
+          avisos.push("HEADERS_EXTRAS_" + nomeAba);
+          item.headersExtras = headersExtras.slice(0, 20);
+        }
+        if (linhasDados > 0 && abasOperacionais[nomeAba]) {
+          resumo.baseSemDadosOperacionais = false;
+          bloqueios.push("DADOS_OPERACIONAIS_ENCONTRADOS_" + nomeAba);
+        } else if (linhasDados > 0 && abasComDadosPermitidos[nomeAba]) {
+          avisos.push("DADOS_NAO_OPERACIONAIS_ENCONTRADOS_" + nomeAba + "_" + linhasDados + "_LINHAS");
+        }
+
+        abasResumo.push(item);
+      });
+
+      if (resumo.abasEncontradas !== resumo.abasEsperadas) {
+        bloqueios.push("TOTAL_ABAS_DIVERGENTE");
+      }
+      if (resumo.headersEsperados !== 330) {
+        bloqueios.push("TOTAL_HEADERS_ESPERADOS_DIFERENTE_DE_330");
+      }
+      if (resumo.headersEncontrados !== resumo.headersEsperados) {
+        bloqueios.push("TOTAL_HEADERS_ENCONTRADOS_DIVERGENTE");
+      }
+    } catch (e) {
+      bloqueios.push("FALHA_AUDITORIA_FIN_PRODUCAO_LIMPA_B35_RESUMO: " + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  var resultado = resultadoCompacto_();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
 function auditarSetupFinanceiroV2() {
   return SGO_FIN_PROVISIONAMENTO.auditarSetupFinanceiroV2();
 }
