@@ -317,3 +317,5 @@ Checklist de execucao manual:
 - Nao executar B40 ainda.
 - Nao executar importacao, conciliacao, limpeza ou correcao.
 - Enviar resultado para desenho da B40 controlada.
+
+Proximo documento operacional: `docs/FIN_FLASH_B40_CORRECAO_CONTROLADA.md`.
