@@ -1970,6 +1970,108 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return digitos.slice(digitos.length - 4);
   }
 
+  function cartaoFlash_(v) {
+    var digitos = txt_(v).replace(/\D/g, "");
+    var finalCartao = digitos.length > 4 ? digitos.slice(digitos.length - 4) : digitos;
+    return {
+      finalCartao: finalCartao,
+      valido: finalCartao.length >= 3 && finalCartao.length <= 4,
+      com3Digitos: finalCartao.length === 3
+    };
+  }
+
+  function pad2_(n) {
+    return String(n < 10 ? "0" + n : n);
+  }
+
+  function formatarDataFlash_(d) {
+    return Utilities.formatDate(d, "America/Sao_Paulo", "yyyy-MM-dd HH:mm:ss");
+  }
+
+  function dataUtcFlash_(ano, mes, dia, hora, minuto, segundo) {
+    return new Date(Date.UTC(ano, mes - 1, dia, hora || 0, minuto || 0, segundo || 0));
+  }
+
+  function periodoEsperadoFlash_(nome) {
+    var m = /(\d{4})-(\d{2})-(\d{2})-ate-(\d{4})-(\d{2})-(\d{2})/i.exec(txt_(nome));
+    if (!m) return { encontrado: false, inicio: "", fim: "", inicioTs: null, fimTs: null };
+    var ini = dataUtcFlash_(Number(m[1]), Number(m[2]), Number(m[3]), 0, 0, 0);
+    var fim = dataUtcFlash_(Number(m[4]), Number(m[5]), Number(m[6]), 23, 59, 59);
+    return {
+      encontrado: true,
+      inicio: m[1] + "-" + m[2] + "-" + m[3],
+      fim: m[4] + "-" + m[5] + "-" + m[6],
+      inicioTs: ini.getTime(),
+      fimTs: fim.getTime()
+    };
+  }
+
+  function dataDentroPeriodo_(ts, periodo) {
+    if (!periodo || !periodo.encontrado || ts === null || ts === undefined) return true;
+    return ts >= periodo.inicioTs && ts <= periodo.fimTs;
+  }
+
+  function serialDataFlash_(n) {
+    var base = Date.UTC(1899, 11, 30);
+    return new Date(base + Number(n) * 24 * 60 * 60 * 1000);
+  }
+
+  function montarDataFlash_(ano, mes, dia, hora, minuto, segundo) {
+    if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+    var d = new Date(ano, mes - 1, dia, hora || 0, minuto || 0, segundo || 0);
+    if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
+    return d;
+  }
+
+  function normalizarDataFlash_(valor, display, periodo) {
+    var bruto = valor;
+    var exibido = txt_(display);
+    var texto = txt_(valor);
+    var origem = "";
+    var data = null;
+    var corrigidaPorInversao = false;
+
+    function escolher(d, o) {
+      if (!d) return false;
+      data = d;
+      origem = o;
+      return true;
+    }
+
+    var br = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(exibido || texto);
+    if (br) {
+      escolher(montarDataFlash_(Number(br[3]), Number(br[2]), Number(br[1]), Number(br[4] || 0), Number(br[5] || 0), Number(br[6] || 0)), "STRING_BR");
+    } else if (Object.prototype.toString.call(valor) === "[object Date]" && !isNaN(valor.getTime())) {
+      escolher(valor, "DATE_OBJECT");
+    } else if (typeof valor === "number" && isFinite(valor)) {
+      escolher(serialDataFlash_(valor), "SERIAL");
+    } else {
+      var iso = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(texto);
+      if (iso) escolher(montarDataFlash_(Number(iso[1]), Number(iso[2]), Number(iso[3]), Number(iso[4] || 0), Number(iso[5] || 0), Number(iso[6] || 0)), "STRING_ISO");
+    }
+
+    if (data && !dataDentroPeriodo_(data.getTime(), periodo)) {
+      var tentativa = montarDataFlash_(data.getFullYear(), data.getDate(), data.getMonth() + 1, data.getHours(), data.getMinutes(), data.getSeconds());
+      if (tentativa && dataDentroPeriodo_(tentativa.getTime(), periodo)) {
+        data = tentativa;
+        origem += "_DIA_MES_CORRIGIDO";
+        corrigidaPorInversao = true;
+      }
+    }
+
+    return {
+      valorBruto: bruto,
+      display: exibido,
+      tipo: Object.prototype.toString.call(valor) === "[object Date]" ? "Date" : typeof valor,
+      origem: origem || "INVALIDA",
+      ok: !!data,
+      normalizada: data ? formatarDataFlash_(data) : "",
+      timestamp: data ? data.getTime() : null,
+      foraPeriodoEsperado: data ? !dataDentroPeriodo_(data.getTime(), periodo) : false,
+      corrigidaPorInversao: corrigidaPorInversao
+    };
+  }
+
   function chaveLote_(arquivoNome, periodoInicial, periodoFinal, total, valor) {
     return ["FLASH", arquivoNome, periodoInicial, periodoFinal, total, valor].join("|").toUpperCase();
   }
@@ -2175,7 +2277,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
-  function normalizarLinhaFonteFlash_(headers, linha) {
+  function normalizarLinhaFonteFlash_(headers, linha, displayLinha, periodo) {
     var aliases = aliasesFonteFlash_();
     var idxData = localizar_(headers, aliases.DATA);
     var idxDescricao = localizar_(headers, aliases.DESCRICAO);
@@ -2183,14 +2285,16 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var idxTipo = localizar_(headers, aliases.TIPO);
     var idxPessoa = localizar_(headers, aliases.PESSOA);
     var idxCartao = localizar_(headers, aliases.CARTAO_FINAL);
+    var dataInfo = idxData >= 0 ? normalizarDataFlash_(linha[idxData], displayLinha ? displayLinha[idxData] : "", periodo) : normalizarDataFlash_("", "", periodo);
+    var cartaoInfo = idxCartao >= 0 ? cartaoFlash_(linha[idxCartao]) : cartaoFlash_("");
     return {
       valores: [
-        idxData >= 0 ? txt_(linha[idxData]) : "",
+        dataInfo.normalizada,
         idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "",
         idxValor >= 0 ? num_(linha[idxValor]) : "",
         idxTipo >= 0 ? txt_(linha[idxTipo]) : "",
         idxPessoa >= 0 ? txt_(linha[idxPessoa]) : "",
-        idxCartao >= 0 ? ultimosDigitosCartao_(linha[idxCartao]) : ""
+        cartaoInfo.finalCartao
       ],
       indices: {
         data: idxData,
@@ -2199,7 +2303,9 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
         tipo: idxTipo,
         pessoa: idxPessoa,
         cartaoFinal: idxCartao
-      }
+      },
+      dataInfo: dataInfo,
+      cartaoInfo: cartaoInfo
     };
   }
 
@@ -2208,17 +2314,19 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var sheet = cfg.sourceSheetName ? ssFonte.getSheetByName(cfg.sourceSheetName) : ssFonte.getSheets()[0];
     if (!sheet) {
       r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
-      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, datasForaPeriodoEsperado: 0 }, cartoes: { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 } };
     }
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
     if (lastRow < 2 || lastCol < 1) {
       r.bloqueios.push("FONTE_FLASH_SEM_DADOS");
-      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, datasForaPeriodoEsperado: 0 }, cartoes: { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 } };
     }
     var dados = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    var displays = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
     var headersFonte = dados[0].map(function(h) { return txt_(h); });
-    var probe = normalizarLinhaFonteFlash_(headersFonte, []);
+    var periodo = periodoEsperadoFlash_(cfg.xlsxNomeEsperado);
+    var probe = normalizarLinhaFonteFlash_(headersFonte, [], [], periodo);
     var camposObrigatorios = ["data", "descricao", "valor", "tipo", "pessoa", "cartaoFinal"];
     var faltantes = camposObrigatorios.filter(function(c) { return probe.indices[c] < 0; });
     r.mapeamento = {
@@ -2228,35 +2336,56 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     };
     if (faltantes.length) {
       r.bloqueios.push("MAPEAMENTO_COLUNAS_FLASH_INSUFICIENTE");
-      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, datasForaPeriodoEsperado: 0 }, cartoes: { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 } };
     }
     var linhas = [];
     var datas = [];
     var valorTotal = 0;
     var validos = 0;
     var invalidos = 0;
+    var datasForaPeriodo = 0;
+    var datasCorrigidas = 0;
+    var cartoes = {};
+    var cartoesCom3 = {};
+    var cartoesInvalidos = 0;
     for (var i = 1; i < dados.length; i++) {
       var linha = dados[i];
       var preenchida = linha.some(function(c) { return txt_(c) !== ""; });
       if (!preenchida) continue;
-      var n = normalizarLinhaFonteFlash_(headersFonte, linha);
+      var n = normalizarLinhaFonteFlash_(headersFonte, linha, displays[i], periodo);
       var valor = num_(n.valores[2]);
-      var data = txt_(n.valores[0]);
-      if (!data || valor === 0) invalidos++; else validos++;
-      if (n.valores[0]) datas.push(txt_(n.valores[0]));
+      if (!n.dataInfo.ok || n.dataInfo.foraPeriodoEsperado) datasForaPeriodo++;
+      if (n.dataInfo.corrigidaPorInversao) datasCorrigidas++;
+      if (n.cartaoInfo.finalCartao) cartoes[n.cartaoInfo.finalCartao] = true;
+      if (n.cartaoInfo.com3Digitos) cartoesCom3[n.cartaoInfo.finalCartao] = true;
+      if (!n.cartaoInfo.valido) cartoesInvalidos++;
+      if (!n.dataInfo.ok || n.dataInfo.foraPeriodoEsperado || valor === 0 || !n.cartaoInfo.valido) invalidos++; else validos++;
+      if (n.dataInfo.ok) datas.push({ ts: n.dataInfo.timestamp, valor: n.dataInfo.normalizada });
       valorTotal += valor;
       linhas.push(n.valores);
     }
-    datas.sort();
+    datas.sort(function(a, b) { return a.ts - b.ts; });
+    if (datasForaPeriodo > 0) r.avisos.push("DATA_FORA_DO_PERIODO_ESPERADO");
+    if (datasForaPeriodo > 3) r.bloqueios.push("DATAS_NORMALIZADAS_INCONSISTENTES");
+    if (Object.keys(cartoesCom3).length > 0) r.avisos.push("CARTAO_FINAL_COM_3_DIGITOS");
     return {
       linhas: linhas,
       leitura: {
         registrosLidos: linhas.length,
         registrosValidos: validos,
         registrosInvalidos: invalidos,
-        periodoInicial: datas[0] || "",
-        periodoFinal: datas[datas.length - 1] || "",
-        valorTotal: Math.round(valorTotal * 100) / 100
+        periodoInicial: datas[0] ? datas[0].valor : "",
+        periodoFinal: datas[datas.length - 1] ? datas[datas.length - 1].valor : "",
+        valorTotal: Math.round(valorTotal * 100) / 100,
+        periodoEsperadoInicial: periodo.inicio,
+        periodoEsperadoFinal: periodo.fim,
+        datasForaPeriodoEsperado: datasForaPeriodo,
+        datasCorrigidasPorInversaoDiaMes: datasCorrigidas
+      },
+      cartoes: {
+        cartoesDetectados: Object.keys(cartoes).length,
+        cartoesCom3Digitos: Object.keys(cartoesCom3).length,
+        cartoesInvalidos: cartoesInvalidos
       }
     };
   }
@@ -2267,7 +2396,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var esperados = headersEntradaFlash_();
     r.fonte = { tipo: cfg.fonteTipo, fileId: cfg.xlsxFileId, nomeArquivo: "", mimeType: "" };
     r.abaTemporaria = { nome: ABA_TMP_FLASH, criada: false, headersOk: false, linhasAntes: 0, linhasGravadas: 0, linhasDepois: 0 };
-    r.leitura = { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 };
+    r.leitura = { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, datasForaPeriodoEsperado: 0 };
+    r.cartoes = { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 };
     r.seguranca = { gravouSomenteTmp: false, gravouAbasOficiais: false, limpouDadosExistentes: false };
     r.proximaEtapa = "Executar AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR e depois DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
 
@@ -2299,6 +2429,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       if (r.bloqueios.length === 0 && cfg.fonteTipo === "GOOGLE_SHEETS") {
         var carga = lerFonteGoogleSheetsFlash_(cfg, r);
         r.leitura = carga.leitura;
+        r.cartoes = carga.cartoes;
         if (r.leitura.registrosValidos < 1) r.bloqueios.push("REGISTROS_VALIDOS_ZERO");
         if (r.bloqueios.length === 0) {
           sh.getRange(2, 1, carga.linhas.length, esperados.length).setValues(carga.linhas);
@@ -2314,11 +2445,114 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function oficiaisFlash_(ss) {
+    return {
+      FIN_LOTES_EXTRATO_FLASH: contarAba_(ss, ABA_LOTES).linhasDados,
+      FIN_CARTOES_EXTRATOS: contarAba_(ss, ABA_EXTRATOS).linhasDados,
+      FIN_CARTOES_CONCILIACAO: contarAba_(ss, ABA_CONCILIACAO).linhasDados,
+      FIN_CARTOES_PENDENCIAS: contarAba_(ss, ABA_PENDENCIAS).linhasDados
+    };
+  }
+
+  function DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {
+    var r = validarProd_("DIAGNOSTICO_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR", true);
+    var cfg = configFonteFlash_();
+    r.fonte = { tipo: cfg.fonteTipo, spreadsheetId: cfg.sourceSpreadsheetId, sheetName: cfg.sourceSheetName };
+    r.periodoEsperado = periodoEsperadoFlash_(cfg.xlsxNomeEsperado);
+    r.amostraDatas = [];
+    if (!cfg.sourceSpreadsheetId) r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
+    if (!cfg.sourceSheetName) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_CONFIGURADO");
+    if (cfg.fonteTipo !== "GOOGLE_SHEETS") r.bloqueios.push("FONTE_FLASH_GOOGLE_SHEETS_NAO_CONFIGURADA");
+    if (r.bloqueios.length === 0) {
+      try {
+        var ssFonte = SpreadsheetApp.openById(cfg.sourceSpreadsheetId);
+        var sh = ssFonte.getSheetByName(cfg.sourceSheetName);
+        if (!sh) {
+          r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
+        } else {
+          var maxRows = Math.min(sh.getLastRow(), 11);
+          var maxCols = sh.getLastColumn();
+          var valores = sh.getRange(1, 1, maxRows, maxCols).getValues();
+          var displays = sh.getRange(1, 1, maxRows, maxCols).getDisplayValues();
+          var headersFonte = valores[0].map(function(h) { return txt_(h); });
+          var idxData = localizar_(headersFonte, aliasesFonteFlash_().DATA);
+          r.headers = headersFonte;
+          r.idxData = idxData;
+          if (idxData < 0) {
+            r.bloqueios.push("CAMPO_DATA_FLASH_AUSENTE");
+          } else {
+            for (var i = 1; i < valores.length; i++) {
+              var info = normalizarDataFlash_(valores[i][idxData], displays[i][idxData], r.periodoEsperado);
+              r.amostraDatas.push({
+                linha: i + 1,
+                valorBruto: info.tipo === "Date" ? formatarDataFlash_(valores[i][idxData]) : txt_(valores[i][idxData]),
+                tipoJS: info.tipo,
+                displayValue: info.display,
+                origemParse: info.origem,
+                dataNormalizada: info.normalizada,
+                foraPeriodoEsperado: info.foraPeriodoEsperado,
+                corrigidaPorInversaoDiaMes: info.corrigidaPorInversao
+              });
+            }
+          }
+        }
+      } catch (e) {
+        r.bloqueios.push("FALHA_DIAGNOSTICAR_FONTE_FLASH: " + (e && e.message ? e.message : String(e)));
+      }
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO() {
+    var r = validarProd_("RECARREGAMENTO_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO", false);
+    var cfg = configFonteFlash_();
+    var esperados = headersEntradaFlash_();
+    r.abaTemporaria = { nome: ABA_TMP_FLASH, linhasAntes: 0, limpouDadosExistentes: false, linhasGravadas: 0, linhasDepois: 0 };
+    r.leitura = { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, datasForaPeriodoEsperado: 0 };
+    r.cartoes = { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 };
+    r.oficiais = { FIN_LOTES_EXTRATO_FLASH: 0, FIN_CARTOES_EXTRATOS: 0, FIN_CARTOES_CONCILIACAO: 0, FIN_CARTOES_PENDENCIAS: 0 };
+    if (!cfg.sourceSpreadsheetId) r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
+    if (!cfg.sourceSheetName) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_CONFIGURADO");
+    if (cfg.fonteTipo !== "GOOGLE_SHEETS") r.bloqueios.push("FONTE_FLASH_GOOGLE_SHEETS_NAO_CONFIGURADA");
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      r.oficiais = oficiaisFlash_(ss);
+      var oficiaisComDados = Object.keys(r.oficiais).filter(function(k) { return r.oficiais[k] > 0; });
+      if (oficiaisComDados.length) r.bloqueios.push("ABAS_OFICIAIS_NAO_ESTAO_ZERADAS_RECARREGAMENTO_BLOQUEADO");
+      var sh = ss.getSheetByName(ABA_TMP_FLASH);
+      if (!sh) {
+        sh = ss.insertSheet(ABA_TMP_FLASH);
+      }
+      r.abaTemporaria.linhasAntes = Math.max(0, sh.getLastRow() - 1);
+      if (r.bloqueios.length === 0) {
+        var carga = lerFonteGoogleSheetsFlash_(cfg, r);
+        r.leitura = carga.leitura;
+        r.cartoes = carga.cartoes;
+        if (r.leitura.registrosValidos < 1) r.bloqueios.push("REGISTROS_VALIDOS_ZERO");
+        if (r.bloqueios.length === 0) {
+          sh.clearContents();
+          r.abaTemporaria.limpouDadosExistentes = true;
+          sh.getRange(1, 1, 1, esperados.length).setValues([esperados]);
+          sh.getRange(2, 1, carga.linhas.length, esperados.length).setValues(carga.linhas);
+          r.abaTemporaria.linhasGravadas = carga.linhas.length;
+          r.abaTemporaria.linhasDepois = Math.max(0, sh.getLastRow() - 1);
+          r.executado = true;
+        }
+      }
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
   function AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {
     var r = validarProd_("AUDITORIA_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR", true);
     var esperados = headersEntradaFlash_();
     r.abaTemporaria = { existe: false, headersOk: false, linhasDados: 0 };
-    r.leitura = { registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, cartoesDetectados: 0, pessoasDetectadas: 0 };
+    r.leitura = { registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0, cartoesDetectados: 0, pessoasDetectadas: 0, datasForaPeriodoEsperado: 0 };
+    r.cartoes = { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 };
     r.oficiais = { FIN_LOTES_EXTRATO_FLASH: 0, FIN_CARTOES_EXTRATOS: 0, FIN_CARTOES_CONCILIACAO: 0, FIN_CARTOES_PENDENCIAS: 0 };
     r.amostra = [];
     r.proximaEtapa = "Executar DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR";
@@ -2341,12 +2575,11 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
         r.leitura.valorTotal = pacote.leitura.valorTotal;
         r.leitura.cartoesDetectados = pacote.leitura.cartoesDetectados;
         r.leitura.pessoasDetectadas = pacote.leitura.pessoasDetectadas;
+        r.leitura.datasForaPeriodoEsperado = pacote.leitura.datasForaPeriodoEsperado;
+        r.cartoes = pacote.cartoes;
         r.amostra = pacote.amostra.primeirasLinhas.slice(0, 5);
       }
-      r.oficiais.FIN_LOTES_EXTRATO_FLASH = contarAba_(ss, ABA_LOTES).linhasDados;
-      r.oficiais.FIN_CARTOES_EXTRATOS = contarAba_(ss, ABA_EXTRATOS).linhasDados;
-      r.oficiais.FIN_CARTOES_CONCILIACAO = contarAba_(ss, ABA_CONCILIACAO).linhasDados;
-      r.oficiais.FIN_CARTOES_PENDENCIAS = contarAba_(ss, ABA_PENDENCIAS).linhasDados;
+      r.oficiais = oficiaisFlash_(ss);
       Object.keys(r.oficiais).forEach(function(k) {
         if (r.oficiais[k] !== 0) r.bloqueios.push("ABA_OFICIAL_NAO_ESTA_ZERADA_" + k);
       });
@@ -2375,16 +2608,22 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       moeda: "BRL",
       cartoesDetectados: 0,
       estabelecimentosDetectados: 0,
-      pessoasDetectadas: 0
+      pessoasDetectadas: 0,
+      datasForaPeriodoEsperado: 0,
+      datasCorrigidasPorInversaoDiaMes: 0
     };
+    var cartoesResumo = { cartoesDetectados: 0, cartoesCom3Digitos: 0, cartoesInvalidos: 0 };
     var amostra = { primeirasLinhas: [] };
     if (!sh || sh.getLastRow() < 2 || sh.getLastColumn() < 1) {
       base.bloqueios.push("ENTRADA_FLASH_AUSENTE");
       base.avisos.push("Configurar entrada segura em " + ABA_TMP_FLASH + " antes do dry-run.");
-      return { entrada: entrada, leitura: leitura, amostra: amostra, registros: [], chaveLote: "" };
+      return { entrada: entrada, leitura: leitura, cartoes: cartoesResumo, amostra: amostra, registros: [], chaveLote: "" };
     }
 
+    var cfg = configFonteFlash_();
+    var periodo = periodoEsperadoFlash_(cfg.xlsxNomeEsperado);
     var dados = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+    var displays = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getDisplayValues();
     var hs = dados[0].map(function(h) { return txt_(h); });
     var aliases = aliasesFonteFlash_();
     var idxData = localizar_(hs, aliases.DATA);
@@ -2398,6 +2637,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
 
     var datas = [];
     var cartoes = {};
+    var cartoesCom3 = {};
+    var cartoesInvalidos = 0;
     var estabs = {};
     var pessoas = {};
     var registros = [];
@@ -2405,32 +2646,46 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       var linha = dados[i];
       var preenchida = linha.some(function(c) { return txt_(c) !== ""; });
       if (!preenchida) continue;
-      var data = idxData >= 0 ? txt_(linha[idxData]) : "";
+      var dataInfo = idxData >= 0 ? normalizarDataFlash_(linha[idxData], displays[i][idxData], periodo) : normalizarDataFlash_("", "", periodo);
+      var data = dataInfo.normalizada;
       var valor = idxValor >= 0 ? num_(linha[idxValor]) : 0;
       var desc = idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "";
       var pessoa = idxPessoa >= 0 ? txt_(linha[idxPessoa]) : "";
-      var cartao = idxCartao >= 0 ? txt_(linha[idxCartao]) : "";
+      var cartaoInfo = idxCartao >= 0 ? cartaoFlash_(linha[idxCartao]) : cartaoFlash_("");
+      var cartao = cartaoInfo.finalCartao;
       var tipo = idxTipo >= 0 ? txt_(linha[idxTipo]) : "";
       leitura.totalRegistrosLidos++;
-      if (idxData >= 0 && data && idxValor >= 0 && valor !== 0) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
+      if (dataInfo.foraPeriodoEsperado) leitura.datasForaPeriodoEsperado++;
+      if (dataInfo.corrigidaPorInversao) leitura.datasCorrigidasPorInversaoDiaMes++;
+      if (cartaoInfo.com3Digitos) cartoesCom3[cartao] = true;
+      if (!cartaoInfo.valido) cartoesInvalidos++;
+      if (idxData >= 0 && dataInfo.ok && !dataInfo.foraPeriodoEsperado && idxValor >= 0 && valor !== 0 && cartaoInfo.valido) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
       leitura.valorTotal += valor;
-      if (data) datas.push(data);
+      if (dataInfo.ok) datas.push({ ts: dataInfo.timestamp, valor: dataInfo.normalizada });
       if (cartao) cartoes[cartao] = true;
       if (desc) estabs[desc] = true;
       if (pessoa) pessoas[pessoa] = true;
-      var reg = { linha: i + 1, data: data, descricao: desc, valor: valor, tipo: tipo, pessoa: pessoa, cartaoFinal: cartao, estabelecimento: desc };
+      var reg = { linha: i + 1, dataNormalizada: data, descricao: desc, valor: valor, tipo: tipo, pessoa: pessoa, cartaoFinal: cartao, estabelecimento: desc };
       registros.push(reg);
       if (amostra.primeirasLinhas.length < 3) amostra.primeirasLinhas.push(reg);
     }
-    datas.sort();
-    leitura.periodoInicial = datas[0] || "";
-    leitura.periodoFinal = datas[datas.length - 1] || "";
+    datas.sort(function(a, b) { return a.ts - b.ts; });
+    leitura.periodoInicial = datas[0] ? datas[0].valor : "";
+    leitura.periodoFinal = datas[datas.length - 1] ? datas[datas.length - 1].valor : "";
     leitura.valorTotal = Math.round(leitura.valorTotal * 100) / 100;
     leitura.cartoesDetectados = Object.keys(cartoes).length;
     leitura.estabelecimentosDetectados = Object.keys(estabs).length;
     leitura.pessoasDetectadas = Object.keys(pessoas).length;
+    cartoesResumo = {
+      cartoesDetectados: Object.keys(cartoes).length,
+      cartoesCom3Digitos: Object.keys(cartoesCom3).length,
+      cartoesInvalidos: cartoesInvalidos
+    };
+    if (leitura.datasForaPeriodoEsperado > 0) base.avisos.push("DATA_FORA_DO_PERIODO_ESPERADO");
+    if (leitura.datasForaPeriodoEsperado > 3) base.bloqueios.push("DATAS_NORMALIZADAS_INCONSISTENTES");
+    if (cartoesResumo.cartoesCom3Digitos > 0) base.avisos.push("CARTAO_FINAL_COM_3_DIGITOS");
     var chave = chaveLote_(entrada.arquivoNome, leitura.periodoInicial, leitura.periodoFinal, leitura.totalRegistrosValidos, leitura.valorTotal);
-    return { entrada: entrada, leitura: leitura, amostra: amostra, registros: registros, chaveLote: chave };
+    return { entrada: entrada, leitura: leitura, cartoes: cartoesResumo, amostra: amostra, registros: registros, chaveLote: chave };
   }
 
   function duplicidade_(ss, chave) {
@@ -2454,6 +2709,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var r = validarProd_("DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR", true);
     r.entrada = { tipo: "CONFIG", origem: "Aba " + ABA_TMP_FLASH, possuiEntrada: false };
     r.leitura = {};
+    r.cartoes = {};
     r.duplicidade = {};
     r.seguranca = { gravou: false, linhasCriadas: 0, arquivosCriados: 0 };
     r.amostra = { primeirasLinhas: [] };
@@ -2467,6 +2723,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       var pacote = lerEntradaFlash_(ss, r);
       r.entrada = pacote.entrada;
       r.leitura = pacote.leitura;
+      r.cartoes = pacote.cartoes;
       r.duplicidade = duplicidade_(ss, pacote.chaveLote);
       r.amostra = pacote.amostra;
       if (r.duplicidade.jaExisteLote) r.bloqueios.push("LOTE_FLASH_DUPLICADO");
@@ -2741,6 +2998,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR: AUDITAR_ENTRADA_FLASH_PRODUCAO_B36A_SEM_GRAVAR,
     CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO: CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO,
     CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO: CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO,
+    DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR: DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR,
+    RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO: RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO,
     AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR: AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR,
     DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR: DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR,
     PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR: PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR,
@@ -2769,6 +3028,14 @@ function CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO() {
 
 function CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO() {
   return SGO_FIN_FLASH_PROD_B3.CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO();
+}
+
+function DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR();
+}
+
+function RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO();
 }
 
 function AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR() {

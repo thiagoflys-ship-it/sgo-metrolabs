@@ -7,6 +7,8 @@ Funcoes publicas:
 
 - `CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO`
 - `CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO`
+- `DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR`
+- `RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO`
 - `AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR`
 
 Fluxo recomendado:
@@ -60,6 +62,16 @@ PENDENTE DE INFORMACAO REAL
 
 Execucao manual apos publicacao:
 
+1. Se necessario, executar manualmente
+   `DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR`.
+2. Como a TMP ja foi carregada antes da correcao de datas, executar manualmente
+   `RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO`.
+3. Executar manualmente
+   `AUDITAR_CARGA_ENTRADA_FLASH_PRODUCAO_B36B_SEM_GRAVAR`.
+4. Se aprovado, executar manualmente `DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR`.
+
+Execucao inicial, quando a TMP ainda estiver vazia:
+
 1. Executar manualmente
    `CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO`.
 2. Executar manualmente
@@ -105,6 +117,14 @@ Bloqueios comuns:
 - `MAPEAMENTO_COLUNAS_FLASH_INSUFICIENTE`: headers da fonte nao puderam ser
   mapeados para `DATA`, `DESCRICAO`, `VALOR`, `TIPO`, `PESSOA`,
   `CARTAO_FINAL`.
+- `DATA_FORA_DO_PERIODO_ESPERADO`: alguma data normalizada ficou fora do
+  periodo extraido do nome do arquivo.
+- `DATAS_NORMALIZADAS_INCONSISTENTES`: quantidade de datas fora do periodo
+  esperado indica risco de parse incorreto.
+- `CARTAO_FINAL_COM_3_DIGITOS`: final do cartao veio com 3 digitos em campo
+  `Conta final`; aceito com aviso, sem inventar zero a esquerda.
+- `ABAS_OFICIAIS_NAO_ESTAO_ZERADAS_RECARREGAMENTO_BLOQUEADO`: a recarga
+  segura da TMP foi bloqueada porque alguma aba oficial ja tem dados.
 - `TMP_IMPORT_EXTRATO_FLASH_JA_POSSUI_DADOS`: a aba temporaria ja tem dados e
   nao sera limpa automaticamente.
 - `HEADERS_TMP_FLASH_INVALIDOS`: headers da aba temporaria nao conferem com
@@ -137,10 +157,46 @@ Normalizacoes aplicadas na carga:
 
 - Headers sao comparados sem acento, em maiusculo e sem espacos extras.
 - `VALOR` aceita numero ou texto com `R$`, ponto e virgula brasileira.
-- `CARTAO_FINAL` extrai os ultimos 4 digitos se a origem vier com texto maior.
-- `DATA` e preservada como veio da fonte; se estiver vazia, a linha entra como
-  invalida.
+- `DATA` e gravada na TMP como `yyyy-MM-dd HH:mm:ss`.
+- Datas em string brasileira (`dd/MM/yyyy HH:mm`, `dd/MM/yyyy`,
+  `dd-MM-yyyy`) sao parseadas sem `new Date(string)`.
+- Strings ISO sao aceitas quando inequívocas.
+- Date object e serial numerico sao aceitos, mas validados contra o periodo
+  esperado extraido do nome do arquivo.
+- Se a conversao do XLSX inverter dia/mes e a data resultante ficar fora do
+  periodo esperado, a rotina tenta a inversao segura dia/mes e so aceita se o
+  resultado voltar para o intervalo esperado.
+- `CARTAO_FINAL` extrai os ultimos 4 digitos se houver 4 ou mais; se vier com
+  3 digitos em texto `Conta final`, aceita com aviso
+  `CARTAO_FINAL_COM_3_DIGITOS`.
 - `PESSOA` nao e mascarada nem inventada.
+
+Periodo esperado:
+
+- O periodo e extraido do nome do arquivo
+  `extrato-do-colaborador-2026-05-10-ate-2026-06-10.xlsx`.
+- Inicio esperado: `2026-05-10`.
+- Fim esperado: `2026-06-10`.
+- A auditoria e o dry-run calculam `periodoInicial` e `periodoFinal` pela menor
+  e maior data normalizada, nao pela ordem das linhas.
+
+Recarregamento seguro da TMP:
+
+- `RECARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_CORRIGIR_DATAS_AUTORIZADO` existe
+  apenas para corrigir a TMP ja carregada com normalizacao antiga.
+- Ela valida DB PROD, bloqueia DEV e confere que as abas oficiais continuam
+  zeradas.
+- Se qualquer aba oficial tiver dados, bloqueia antes de limpar a TMP.
+- Quando permitido, limpa somente `TMP_IMPORT_EXTRATO_FLASH`, reescreve headers
+  e recarrega a fonte Google Sheets configurada.
+
+Diagnostico read-only:
+
+- `DIAGNOSTICAR_DATAS_FONTE_FLASH_PRODUCAO_B36B_SEM_GRAVAR` le no maximo 10
+  linhas da fonte.
+- Retorna valor bruto, tipo JS, display value, origem do parse e data
+  normalizada proposta.
+- Nao grava nada.
 
 Proibido nesta etapa: importacao real, conciliacao real, geracao real de
 pendencias, deploy WebApp, `clasp push --force`, limpeza automatica da TMP e
