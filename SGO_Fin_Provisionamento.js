@@ -1363,6 +1363,83 @@ function PROVISIONAR_AMBIENTE_FINANCEIRO_PRODUCAO_LIMPA_B34_AUTORIZADO() {
   return resultado;
 }
 
+function SETUP_FINANCEIRO_PRODUCAO_LIMPA_B34_LOG_AUTORIZADO() {
+  var props = PropertiesService.getScriptProperties();
+  var dbFinId = props.getProperty("DB_FIN_ID");
+  var dbFinUrl = props.getProperty("DB_FIN_URL");
+  var folderFinanceiro = props.getProperty("FOLDER_FINANCEIRO");
+  var dbFinIdProdEsperado = "1A3rjluetfMYfSwwpcGbbnfpkPdgR7R9iiwDVWvyp4Zw";
+  var dbFinIdDevBloqueado = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
+  var bloqueios = [];
+
+  if (!dbFinId) {
+    bloqueios.push("DB_FIN_ID_AUSENTE");
+  }
+  if (dbFinId === dbFinIdDevBloqueado) {
+    bloqueios.push("DB_FIN_ID_DEV_DETECTADO_PRODUCAO_BLOQUEADA");
+  }
+  if (dbFinId !== dbFinIdProdEsperado) {
+    bloqueios.push("DB_FIN_ID_DIFERENTE_DO_PROD_ESPERADO");
+  }
+  if (!folderFinanceiro) {
+    bloqueios.push("FOLDER_FINANCEIRO_AUSENTE");
+  }
+
+  if (bloqueios.length > 0) {
+    var bloqueado = {
+      success: false,
+      ok: false,
+      executado: false,
+      modo: "SETUP_FINANCEIRO_PRODUCAO_LIMPA_B34",
+      DB_FIN_ID: dbFinId,
+      DB_FIN_URL: dbFinUrl,
+      FOLDER_FINANCEIRO: folderFinanceiro,
+      DB_FIN_ID_PROD_ESPERADO: dbFinIdProdEsperado,
+      DB_FIN_ID_DEV_BLOQUEADO: dbFinIdDevBloqueado,
+      bloqueios: bloqueios
+    };
+    Logger.log(JSON.stringify(bloqueado, null, 2));
+    return bloqueado;
+  }
+
+  try {
+    var resultadoSetup = setupFinanceiroV2();
+    var resultado = {
+      success: true,
+      ok: true,
+      executado: true,
+      modo: "SETUP_FINANCEIRO_PRODUCAO_LIMPA_B34",
+      DB_FIN_ID: dbFinId,
+      DB_FIN_URL: dbFinUrl,
+      FOLDER_FINANCEIRO: folderFinanceiro,
+      DB_FIN_ID_PROD_ESPERADO: dbFinIdProdEsperado,
+      DB_FIN_ID_DEV_BLOQUEADO: dbFinIdDevBloqueado,
+      dbFinIdDiferenteDev: dbFinId !== dbFinIdDevBloqueado,
+      resultadoSetup: resultadoSetup,
+      bloqueios: []
+    };
+    Logger.log(JSON.stringify(resultado, null, 2));
+    return resultado;
+  } catch (e) {
+    var falha = {
+      success: false,
+      ok: false,
+      executado: true,
+      modo: "SETUP_FINANCEIRO_PRODUCAO_LIMPA_B34",
+      DB_FIN_ID: dbFinId,
+      DB_FIN_URL: dbFinUrl,
+      FOLDER_FINANCEIRO: folderFinanceiro,
+      DB_FIN_ID_PROD_ESPERADO: dbFinIdProdEsperado,
+      DB_FIN_ID_DEV_BLOQUEADO: dbFinIdDevBloqueado,
+      dbFinIdDiferenteDev: dbFinId !== dbFinIdDevBloqueado,
+      erro: e && e.message ? e.message : String(e),
+      bloqueios: ["SETUP_FINANCEIRO_V2_FALHOU"]
+    };
+    Logger.log(JSON.stringify(falha, null, 2));
+    return falha;
+  }
+}
+
 function auditarSetupFinanceiroV2() {
   return SGO_FIN_PROVISIONAMENTO.auditarSetupFinanceiroV2();
 }
