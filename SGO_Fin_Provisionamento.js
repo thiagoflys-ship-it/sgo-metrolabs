@@ -1832,7 +1832,13 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
 
   function num_(v) {
     if (typeof v === "number") return v;
-    var s = txt_(v).replace(/\./g, "").replace(",", ".");
+    var s = txt_(v)
+      .replace(/R\$/gi, "")
+      .replace(/\s/g, "")
+      .replace(/[^\d,.-]/g, "");
+    if (s.indexOf(",") >= 0) {
+      s = s.replace(/\./g, "").replace(",", ".");
+    }
     var n = Number(s);
     return isNaN(n) ? 0 : n;
   }
@@ -1927,12 +1933,39 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
 
   function localizar_(headers, nomes) {
     for (var i = 0; i < nomes.length; i++) {
-      var alvo = txt_(nomes[i]).toUpperCase();
+      var alvo = normalizarHeaderFlash_(nomes[i]);
       for (var j = 0; j < headers.length; j++) {
-        if (txt_(headers[j]).toUpperCase() === alvo) return j;
+        if (normalizarHeaderFlash_(headers[j]) === alvo) return j;
       }
     }
     return -1;
+  }
+
+  function normalizarHeaderFlash_(v) {
+    return txt_(v)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function aliasesFonteFlash_() {
+    return {
+      DATA: ["DATA", "DATA DA TRANSACAO", "DATA_TRANSACAO", "DATA TRANSACAO", "DATA/HORA", "DATA E HORA"],
+      DESCRICAO: ["DESCRICAO", "DESCRICAO DA TRANSACAO", "ESTABELECIMENTO", "HISTORICO", "MERCHANT"],
+      VALOR: ["VALOR", "VALOR R$", "VALOR_TRANSACAO", "VALOR DA TRANSACAO", "AMOUNT"],
+      TIPO: ["TIPO", "TIPO TRANSACAO", "TIPO DA TRANSACAO", "CATEGORIA", "OPERACAO"],
+      PESSOA: ["PESSOA", "PORTADOR", "USUARIO", "FUNCIONARIO", "NOME"],
+      CARTAO_FINAL: ["CARTAO_FINAL", "CARTAO FINAL", "FINAL CARTAO", "FINAL DO CARTAO", "ULTIMOS 4", "CARTAO"]
+    };
+  }
+
+  function ultimosDigitosCartao_(v) {
+    var digitos = txt_(v).replace(/\D/g, "");
+    if (digitos.length <= 4) return digitos;
+    return digitos.slice(digitos.length - 4);
   }
 
   function chaveLote_(arquivoNome, periodoInicial, periodoFinal, total, valor) {
@@ -2057,16 +2090,15 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     var r = validarProd_("CONFIGURACAO_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO", false);
     var CONFIG = {
       FIN_FLASH_FONTE_TIPO: "",
-      FIN_FLASH_XLSX_FILE_ID: "",
+      FIN_FLASH_SOURCE_SPREADSHEET_ID: "",
+      FIN_FLASH_SOURCE_SHEET_NAME: "",
       FIN_FLASH_XLSX_NOME_ESPERADO: "",
       FIN_FLASH_IMPORTACAO_MODO: "TMP_ONLY",
-      FIN_FLASH_ABA_TMP: ABA_TMP_FLASH,
-      FIN_FLASH_SOURCE_SPREADSHEET_ID: "",
-      FIN_FLASH_SOURCE_SHEET_NAME: ""
+      FIN_FLASH_ABA_TMP: "TMP_IMPORT_EXTRATO_FLASH"
     };
     var cfg = {
       fonteTipo: txt_(CONFIG.FIN_FLASH_FONTE_TIPO).toUpperCase(),
-      xlsxFileId: txt_(CONFIG.FIN_FLASH_XLSX_FILE_ID),
+      xlsxFileId: "",
       xlsxNomeEsperado: txt_(CONFIG.FIN_FLASH_XLSX_NOME_ESPERADO),
       modo: txt_(CONFIG.FIN_FLASH_IMPORTACAO_MODO) || "TMP_ONLY",
       abaTmp: txt_(CONFIG.FIN_FLASH_ABA_TMP) || ABA_TMP_FLASH,
@@ -2081,13 +2113,21 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     } else if (cfg.fonteTipo !== "XLSX" && cfg.fonteTipo !== "GOOGLE_SHEETS") {
       r.bloqueios.push("FONTE_TIPO_INVALIDO");
     }
-    if (cfg.fonteTipo === "XLSX" && !cfg.xlsxFileId) {
-      r.bloqueios.push("XLSX_FILE_ID_NAO_CONFIGURADO");
-      r.avisos.push("Preencher FIN_FLASH_XLSX_FILE_ID com o ID do XLSX real antes de configurar a fonte.");
+    if (cfg.fonteTipo === "XLSX") {
+      r.bloqueios.push("LEITOR_XLSX_NAO_IMPLEMENTADO_COM_SEGURANCA");
+      r.avisos.push("Converter o XLSX Flash real para Google Sheets e configurar FIN_FLASH_SOURCE_SPREADSHEET_ID.");
     }
     if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSpreadsheetId) {
       r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
       r.avisos.push("Converter o XLSX Flash real para Google Sheets e preencher FIN_FLASH_SOURCE_SPREADSHEET_ID.");
+    }
+    if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSheetName) {
+      r.bloqueios.push("SOURCE_SHEET_NAME_NAO_CONFIGURADO");
+      r.avisos.push("Informar o nome exato da aba fonte convertida antes de configurar.");
+    }
+    if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.xlsxNomeEsperado) {
+      r.bloqueios.push("XLSX_NOME_ESPERADO_NAO_CONFIGURADO");
+      r.avisos.push("Informar o nome do arquivo XLSX real usado para gerar a planilha convertida.");
     }
     if (cfg.modo !== "TMP_ONLY") {
       r.bloqueios.push("MODO_IMPORTACAO_DEVE_SER_TMP_ONLY");
@@ -2098,23 +2138,20 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
 
     if (r.bloqueios.length === 0) {
       try {
-        if (cfg.fonteTipo === "XLSX") {
-          var file = DriveApp.getFileById(cfg.xlsxFileId);
-          var nome = file.getName();
-          var mime = file.getMimeType();
-          r.fonte = { tipo: "XLSX", fileId: cfg.xlsxFileId, nomeArquivo: nome, mimeType: mime };
-          if (cfg.xlsxNomeEsperado && nome !== cfg.xlsxNomeEsperado) r.bloqueios.push("NOME_XLSX_DIFERENTE_DO_ESPERADO");
-        } else {
-          var ssFonte = SpreadsheetApp.openById(cfg.sourceSpreadsheetId);
-          var sheetFonte = cfg.sourceSheetName ? ssFonte.getSheetByName(cfg.sourceSheetName) : ssFonte.getSheets()[0];
-          r.fonte = {
-            tipo: "GOOGLE_SHEETS",
-            spreadsheetId: ssFonte.getId(),
-            nomeArquivo: ssFonte.getName(),
-            sheetName: sheetFonte ? sheetFonte.getName() : ""
-          };
-          if (!sheetFonte) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
-        }
+        var ssFonte = SpreadsheetApp.openById(cfg.sourceSpreadsheetId);
+        var sheetFonte = ssFonte.getSheetByName(cfg.sourceSheetName);
+        r.fonte = {
+          tipo: "GOOGLE_SHEETS",
+          spreadsheetId: ssFonte.getId(),
+          nomeArquivo: ssFonte.getName(),
+          sheetName: sheetFonte ? sheetFonte.getName() : "",
+          ultimaLinha: sheetFonte ? sheetFonte.getLastRow() : 0,
+          ultimaColuna: sheetFonte ? sheetFonte.getLastColumn() : 0,
+          linhasDados: sheetFonte ? Math.max(0, sheetFonte.getLastRow() - 1) : 0
+        };
+        if (!sheetFonte) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_ENCONTRADA");
+        if (sheetFonte && sheetFonte.getLastRow() < 2) r.bloqueios.push("FONTE_FLASH_SEM_DADOS");
+        if (sheetFonte && sheetFonte.getLastColumn() < 1) r.bloqueios.push("FONTE_FLASH_SEM_HEADERS");
       } catch (e) {
         r.bloqueios.push("FALHA_VALIDAR_FONTE_FLASH: " + (e && e.message ? e.message : String(e)));
       }
@@ -2125,11 +2162,9 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       p.setProperty(PROP_FONTE_TIPO, cfg.fonteTipo);
       p.setProperty(PROP_IMPORTACAO_MODO, cfg.modo);
       p.setProperty(PROP_ABA_TMP, cfg.abaTmp);
-      p.setProperty(PROP_PROD_DB_CONFIRMADO, DB_FIN_ID_PROD_ESPERADO);
-      if (cfg.xlsxFileId) p.setProperty(PROP_XLSX_FILE_ID, cfg.xlsxFileId);
-      if (cfg.xlsxNomeEsperado) p.setProperty(PROP_XLSX_NOME_ESPERADO, cfg.xlsxNomeEsperado);
-      if (cfg.sourceSpreadsheetId) p.setProperty(PROP_SOURCE_SPREADSHEET_ID, cfg.sourceSpreadsheetId);
-      if (cfg.sourceSheetName) p.setProperty(PROP_SOURCE_SHEET_NAME, cfg.sourceSheetName);
+      p.setProperty(PROP_XLSX_NOME_ESPERADO, cfg.xlsxNomeEsperado);
+      p.setProperty(PROP_SOURCE_SPREADSHEET_ID, cfg.sourceSpreadsheetId);
+      p.setProperty(PROP_SOURCE_SHEET_NAME, cfg.sourceSheetName);
       r.executado = true;
       r.proximaEtapa = "Executar CARREGAR_ENTRADA_FLASH_PRODUCAO_B36B_AUTORIZADO.";
     }
@@ -2139,20 +2174,21 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   }
 
   function normalizarLinhaFonteFlash_(headers, linha) {
-    var idxData = localizar_(headers, ["DATA", "DATA_TRANSACAO", "Data", "Data da transacao"]);
-    var idxDescricao = localizar_(headers, ["DESCRICAO", "ESTABELECIMENTO", "ESTABELECIMENTO_EXTRATO", "Descricao"]);
-    var idxValor = localizar_(headers, ["VALOR", "VALOR_TRANSACAO", "Valor", "Valor da transacao"]);
-    var idxTipo = localizar_(headers, ["TIPO", "TIPO_TRANSACAO", "DEBITO_CREDITO", "Tipo"]);
-    var idxPessoa = localizar_(headers, ["PESSOA", "PORTADOR", "COLABORADOR", "Pessoa"]);
-    var idxCartao = localizar_(headers, ["CARTAO_FINAL", "Final Cartao", "Final do cartao", "CARTAO"]);
+    var aliases = aliasesFonteFlash_();
+    var idxData = localizar_(headers, aliases.DATA);
+    var idxDescricao = localizar_(headers, aliases.DESCRICAO);
+    var idxValor = localizar_(headers, aliases.VALOR);
+    var idxTipo = localizar_(headers, aliases.TIPO);
+    var idxPessoa = localizar_(headers, aliases.PESSOA);
+    var idxCartao = localizar_(headers, aliases.CARTAO_FINAL);
     return {
       valores: [
-        idxData >= 0 ? linha[idxData] : "",
-        idxDescricao >= 0 ? linha[idxDescricao] : "",
-        idxValor >= 0 ? linha[idxValor] : "",
-        idxTipo >= 0 ? linha[idxTipo] : "",
-        idxPessoa >= 0 ? linha[idxPessoa] : "",
-        idxCartao >= 0 ? linha[idxCartao] : ""
+        idxData >= 0 ? txt_(linha[idxData]) : "",
+        idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "",
+        idxValor >= 0 ? num_(linha[idxValor]) : "",
+        idxTipo >= 0 ? txt_(linha[idxTipo]) : "",
+        idxPessoa >= 0 ? txt_(linha[idxPessoa]) : "",
+        idxCartao >= 0 ? ultimosDigitosCartao_(linha[idxCartao]) : ""
       ],
       indices: {
         data: idxData,
@@ -2180,6 +2216,18 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     }
     var dados = sheet.getRange(1, 1, lastRow, lastCol).getValues();
     var headersFonte = dados[0].map(function(h) { return txt_(h); });
+    var probe = normalizarLinhaFonteFlash_(headersFonte, []);
+    var camposObrigatorios = ["data", "descricao", "valor", "tipo", "pessoa", "cartaoFinal"];
+    var faltantes = camposObrigatorios.filter(function(c) { return probe.indices[c] < 0; });
+    r.mapeamento = {
+      headersFonteTotal: headersFonte.filter(function(h) { return !!h; }).length,
+      camposMapeados: camposObrigatorios.length - faltantes.length,
+      camposFaltantes: faltantes
+    };
+    if (faltantes.length) {
+      r.bloqueios.push("MAPEAMENTO_COLUNAS_FLASH_INSUFICIENTE");
+      return { linhas: [], leitura: { registrosLidos: 0, registrosValidos: 0, registrosInvalidos: 0, periodoInicial: "", periodoFinal: "", valorTotal: 0 } };
+    }
     var linhas = [];
     var datas = [];
     var valorTotal = 0;
@@ -2191,7 +2239,8 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       if (!preenchida) continue;
       var n = normalizarLinhaFonteFlash_(headersFonte, linha);
       var valor = num_(n.valores[2]);
-      if (n.indices.valor < 0 || valor === 0) invalidos++; else validos++;
+      var data = txt_(n.valores[0]);
+      if (!data || valor === 0) invalidos++; else validos++;
       if (n.valores[0]) datas.push(txt_(n.valores[0]));
       valorTotal += valor;
       linhas.push(n.valores);
@@ -2223,6 +2272,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     if (!cfg.fonteTipo) r.bloqueios.push("FONTE_FLASH_NAO_CONFIGURADA");
     if (cfg.fonteTipo === "XLSX") r.bloqueios.push("LEITOR_XLSX_NAO_IMPLEMENTADO_COM_SEGURANCA");
     if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSpreadsheetId) r.bloqueios.push("SOURCE_SPREADSHEET_ID_NAO_CONFIGURADO");
+    if (cfg.fonteTipo === "GOOGLE_SHEETS" && !cfg.sourceSheetName) r.bloqueios.push("SOURCE_SHEET_NAME_NAO_CONFIGURADO");
     if (cfg.abaTmp !== ABA_TMP_FLASH) r.bloqueios.push("ABA_TMP_DIFERENTE_DO_PADRAO_SEGURO");
 
     var ss = abrirPlanilha_(r);
@@ -2334,11 +2384,14 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
 
     var dados = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
     var hs = dados[0].map(function(h) { return txt_(h); });
-    var idxData = localizar_(hs, ["DATA", "DATA_TRANSACAO", "Data", "Data da transacao"]);
-    var idxValor = localizar_(hs, ["VALOR", "VALOR_TRANSACAO", "Valor", "Valor da transacao"]);
-    var idxDescricao = localizar_(hs, ["DESCRICAO", "ESTABELECIMENTO", "ESTABELECIMENTO_EXTRATO", "Descricao"]);
-    var idxPessoa = localizar_(hs, ["PESSOA", "PORTADOR", "COLABORADOR", "Pessoa"]);
-    var idxCartao = localizar_(hs, ["CARTAO_FINAL", "Final Cartao", "Final do cartao", "CARTAO"]);
+    var aliases = aliasesFonteFlash_();
+    var idxData = localizar_(hs, aliases.DATA);
+    var idxValor = localizar_(hs, aliases.VALOR);
+    var idxDescricao = localizar_(hs, aliases.DESCRICAO);
+    var idxPessoa = localizar_(hs, aliases.PESSOA);
+    var idxCartao = localizar_(hs, aliases.CARTAO_FINAL);
+    var idxTipo = localizar_(hs, aliases.TIPO);
+    if (idxData < 0) base.bloqueios.push("CAMPO_DATA_FLASH_AUSENTE");
     if (idxValor < 0) base.bloqueios.push("CAMPO_VALOR_FLASH_AUSENTE");
 
     var datas = [];
@@ -2355,14 +2408,15 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
       var desc = idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "";
       var pessoa = idxPessoa >= 0 ? txt_(linha[idxPessoa]) : "";
       var cartao = idxCartao >= 0 ? txt_(linha[idxCartao]) : "";
+      var tipo = idxTipo >= 0 ? txt_(linha[idxTipo]) : "";
       leitura.totalRegistrosLidos++;
-      if (idxValor >= 0) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
+      if (idxData >= 0 && data && idxValor >= 0 && valor !== 0) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
       leitura.valorTotal += valor;
       if (data) datas.push(data);
       if (cartao) cartoes[cartao] = true;
       if (desc) estabs[desc] = true;
       if (pessoa) pessoas[pessoa] = true;
-      var reg = { linha: i + 1, data: data, valor: valor, pessoa: pessoa, cartaoFinal: cartao, estabelecimento: desc };
+      var reg = { linha: i + 1, data: data, descricao: desc, valor: valor, tipo: tipo, pessoa: pessoa, cartaoFinal: cartao, estabelecimento: desc };
       registros.push(reg);
       if (amostra.primeirasLinhas.length < 3) amostra.primeirasLinhas.push(reg);
     }
