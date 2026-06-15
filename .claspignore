@@ -12,3 +12,6 @@ _PATCHES_LOCAL.bak/
 _EVIDENCIAS_LOCAL/**
 INVENTARIO_ASSISTENCIA_TECNICA.md
 _prototipos/**
+.clasp-prod*.json
+.clasp-prod.example.json
+docs/**
