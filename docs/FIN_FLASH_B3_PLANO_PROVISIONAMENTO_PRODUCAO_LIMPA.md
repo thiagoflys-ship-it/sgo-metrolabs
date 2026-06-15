@@ -26,38 +26,40 @@
 
 **Funcao:**
 ```
-provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO
+PROVISIONAR_AMBIENTE_FINANCEIRO_PRODUCAO_LIMPA_B34_AUTORIZADO
 ```
 
-**Payload interno do wrapper:**
-```javascript
-{
-  executar: true,
-  confirmacao: "CRIAR_AMBIENTE_FINANCEIRO_SGO_2026",
-  webAppUrl: ""  // deixar vazio por enquanto, preencher apos B.3.11
-}
-```
+**Observacao B.3.4C:** nao usar `provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO`.
+Ela reutilizou o DB_FIN DEV/homologacao por nome no Drive. A funcao nova cria DB_FIN
+com nome de producao e bloqueia o ID DEV conhecido.
 
 **Resultado esperado:**
 ```json
 {
   "success": true,
+  "ok": true,
   "executado": true,
   "planilhaCriada": true,
+  "planilhaReutilizada": false,
   "pastaCriada": true,
   "DB_FIN_ID": "<novo ID da planilha criada>",
+  "DB_FIN_URL": "<URL da nova planilha>",
   "FOLDER_FINANCEIRO": "<ID da nova pasta>",
+  "dbFinIdDiferenteDev": true,
   "bloqueios": []
 }
 ```
 
 **Anotar obrigatoriamente:**
 - Novo DB_FIN_ID (ID da planilha criada)
+- DB_FIN_URL
 - FOLDER_FINANCEIRO (ID da pasta criada)
+- Confirmar que DB_FIN_ID != 1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0
 
 **Bloqueadores:**
-- Ja existe DB_FIN_ID configurado: o provisionamento vai reutilizar — confirmar se e o certo
-- Mais de uma planilha com nome SGO_FIN_CARTAO_FLASH_DB no Drive: precisa remover duplicidade
+- DB_FIN_ID retornado igual ao ID DEV/homologacao conhecido
+- dbFinIdDiferenteDev false
+- Funcao antiga `provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO` executada por engano
 
 ---
 

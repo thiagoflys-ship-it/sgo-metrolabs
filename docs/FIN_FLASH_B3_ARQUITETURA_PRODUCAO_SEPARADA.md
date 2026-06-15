@@ -153,3 +153,14 @@ Criar um novo projeto Google Apps Script exclusivamente para producao:
 > Um novo projeto Apps Script sera criado para producao, com PropertiesService
 > propria e DB_FIN_ID proprio apontando para planilha limpa.
 > Nenhuma importacao real sera executada antes de B.3.7 (baseline 0/0 confirmado).
+
+## 8. Nota B.3.4C - Recursos Drive com nomes iguais
+
+Mesmo com Apps Script separado, funcoes que procuram arquivos por nome no Drive podem
+reutilizar recursos DEV quando a conta Google e a mesma. Isso ocorreu quando o
+provisionamento antigo encontrou `SGO_FIN_CARTAO_FLASH_DB` e reutilizou o DB_FIN
+DEV/homologacao `1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0`.
+
+Para producao real, o provisionamento deve usar nomes proprios de producao, como
+`SGO_FIN_CARTAO_FLASH_DB_PROD` e `SGO_FINANCEIRO_DOCUMENTOS_PROD`, e bloquear
+explicitamente qualquer retorno com o ID DEV conhecido.

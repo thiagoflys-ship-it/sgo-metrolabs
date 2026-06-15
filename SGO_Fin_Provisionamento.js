@@ -5,9 +5,13 @@
 const SGO_FIN_PROVISIONAMENTO = (() => {
   const MODO_DIAGNOSTICO = "DIAGNOSTICO_AMBIENTE_FIN_V2";
   const MODO_PROVISIONAMENTO = "PROVISIONAMENTO_AMBIENTE_FIN_V2";
+  const MODO_PROVISIONAMENTO_PROD_B34 = "PROVISIONAMENTO_FIN_PRODUCAO_LIMPA_B34";
   const NOME_PLANILHA_FIN = "SGO_FIN_CARTAO_FLASH_DB";
   const NOME_PASTA_FIN = "SGO_FINANCEIRO_DOCUMENTOS";
+  const NOME_PLANILHA_FIN_PROD = "SGO_FIN_CARTAO_FLASH_DB_PROD";
+  const NOME_PASTA_FIN_PROD = "SGO_FINANCEIRO_DOCUMENTOS_PROD";
   const CHAVE_DB_FIN = "DB_FIN_ID";
+  const CHAVE_DB_FIN_URL = "DB_FIN_URL";
   const CHAVE_PASTA_FIN = "FOLDER_FINANCEIRO";
   const CHAVE_WEBAPP_SGO = "SGO_WEBAPP_URL";
   const CHAVE_WEBAPP_LEGADO = "WEBAPP_URL";
@@ -78,6 +82,7 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     const p = props_();
     return {
       DB_FIN_ID: texto_(p.getProperty(CHAVE_DB_FIN)),
+      DB_FIN_URL: texto_(p.getProperty(CHAVE_DB_FIN_URL)),
       FOLDER_FINANCEIRO: texto_(p.getProperty(CHAVE_PASTA_FIN)),
       SGO_WEBAPP_URL: texto_(p.getProperty(CHAVE_WEBAPP_SGO)),
       WEBAPP_URL: texto_(p.getProperty(CHAVE_WEBAPP_LEGADO))
@@ -205,6 +210,146 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
       bloqueios.push("Confirmacao invalida para provisionamento FIN.");
     }
     return bloqueios;
+  }
+
+  function nomeProducaoUnico_(nomeBase, listarPorNome) {
+    const encontrados = listarPorNome(nomeBase);
+    if (encontrados.length === 0) return nomeBase;
+
+    const timezone = Session.getScriptTimeZone() || "America/Sao_Paulo";
+    const sufixo = Utilities.formatDate(new Date(), timezone, "yyyyMMdd_HHmmss");
+    return nomeBase + "_" + sufixo;
+  }
+
+  function criarPlanilhaProducaoLimpaB34_() {
+    const nome = nomeProducaoUnico_(NOME_PLANILHA_FIN_PROD, listarPlanilhasPorNome_);
+    const ss = SpreadsheetApp.create(nome);
+    return {
+      id: ss.getId(),
+      url: ss.getUrl(),
+      nome: ss.getName(),
+      criada: true,
+      reutilizada: false,
+      origem: "SpreadsheetApp.create"
+    };
+  }
+
+  function obterOuCriarPastaProducaoLimpaB34_() {
+    const encontradasProd = listarPastasPorNome_(NOME_PASTA_FIN_PROD);
+    if (encontradasProd.length === 1) {
+      return {
+        id: encontradasProd[0].id,
+        url: encontradasProd[0].url,
+        nome: encontradasProd[0].nome,
+        criada: false,
+        reutilizada: true,
+        origem: "Drive.nome.PROD"
+      };
+    }
+
+    const nome = encontradasProd.length === 0
+      ? NOME_PASTA_FIN_PROD
+      : nomeProducaoUnico_(NOME_PASTA_FIN_PROD, listarPastasPorNome_);
+    const pasta = DriveApp.createFolder(nome);
+    return {
+      id: pasta.getId(),
+      url: pasta.getUrl(),
+      nome: pasta.getName(),
+      criada: true,
+      reutilizada: false,
+      origem: "DriveApp.createFolder"
+    };
+  }
+
+  function montarRetornoProducaoLimpaB34_(bloqueios, avisos) {
+    const propriedades = lerPropriedades_();
+    return {
+      success: false,
+      ok: false,
+      executado: false,
+      modo: MODO_PROVISIONAMENTO_PROD_B34,
+      planilhaCriada: false,
+      planilhaReutilizada: false,
+      pastaCriada: false,
+      pastaReutilizada: false,
+      DB_FIN_ID: propriedades.DB_FIN_ID,
+      DB_FIN_URL: propriedades.DB_FIN_URL,
+      FOLDER_FINANCEIRO: propriedades.FOLDER_FINANCEIRO,
+      dbFinIdDevBloqueado: DB_FIN_ID_HOMOLOGACAO_DEV,
+      dbFinIdDiferenteDev: propriedades.DB_FIN_ID !== DB_FIN_ID_HOMOLOGACAO_DEV,
+      SGO_WEBAPP_URL: propriedades.SGO_WEBAPP_URL,
+      WEBAPP_URL: propriedades.WEBAPP_URL,
+      bloqueios: bloqueios,
+      avisos: avisos,
+      proximaEtapa: "Provisionamento bloqueado; nao executar setupFinanceiroV2."
+    };
+  }
+
+  function provisionarAmbienteFinanceiroProducaoLimpaB34_AUTORIZADO(payload) {
+    const bloqueios = validarPayload_(payload);
+    const avisos = [];
+    if (bloqueios.length > 0) {
+      return montarRetornoProducaoLimpaB34_(bloqueios, avisos);
+    }
+
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) {
+      bloqueios.push("Nao foi possivel obter lock de provisionamento FIN producao B.3.4.");
+      return montarRetornoProducaoLimpaB34_(bloqueios, avisos);
+    }
+
+    try {
+      const propriedadesAntes = lerPropriedades_();
+      if (propriedadesAntes.DB_FIN_ID === DB_FIN_ID_HOMOLOGACAO_DEV) {
+        avisos.push("DB_FIN_ID atual aponta para DEV/homologacao e sera substituido por DB_FIN PROD limpo.");
+      }
+
+      const planilha = criarPlanilhaProducaoLimpaB34_();
+      if (planilha.id === DB_FIN_ID_HOMOLOGACAO_DEV) {
+        bloqueios.push("DB_FIN_ID_DEV_DETECTADO_PRODUCAO_BLOQUEADA");
+        return montarRetornoProducaoLimpaB34_(bloqueios, avisos);
+      }
+
+      const pasta = obterOuCriarPastaProducaoLimpaB34_();
+      const p = props_();
+      p.setProperty(CHAVE_DB_FIN, planilha.id);
+      p.setProperty(CHAVE_DB_FIN_URL, planilha.url);
+      p.setProperty(CHAVE_PASTA_FIN, pasta.id);
+      avisos.push("WEBAPP_URL nao configurada porque ainda nao ha deploy de producao.");
+
+      const propriedades = lerPropriedades_();
+      if (propriedades.DB_FIN_ID === DB_FIN_ID_HOMOLOGACAO_DEV) {
+        bloqueios.push("DB_FIN_ID_DEV_DETECTADO_PRODUCAO_BLOQUEADA");
+      }
+
+      return {
+        success: bloqueios.length === 0,
+        ok: bloqueios.length === 0,
+        executado: bloqueios.length === 0,
+        modo: MODO_PROVISIONAMENTO_PROD_B34,
+        planilhaCriada: planilha.criada,
+        planilhaReutilizada: planilha.reutilizada,
+        planilhaNome: planilha.nome,
+        pastaCriada: pasta.criada,
+        pastaReutilizada: pasta.reutilizada,
+        pastaNome: pasta.nome,
+        DB_FIN_ID: propriedades.DB_FIN_ID,
+        DB_FIN_URL: propriedades.DB_FIN_URL,
+        FOLDER_FINANCEIRO: propriedades.FOLDER_FINANCEIRO,
+        dbFinIdDevBloqueado: DB_FIN_ID_HOMOLOGACAO_DEV,
+        dbFinIdDiferenteDev: propriedades.DB_FIN_ID !== DB_FIN_ID_HOMOLOGACAO_DEV,
+        SGO_WEBAPP_URL: propriedades.SGO_WEBAPP_URL,
+        WEBAPP_URL: propriedades.WEBAPP_URL,
+        bloqueios: bloqueios,
+        avisos: avisos,
+        proximaEtapa: "Executar setupFinanceiroV2 em etapa separada"
+      };
+    } catch (e) {
+      bloqueios.push("Falha no provisionamento FIN producao B.3.4: " + e.message);
+      return montarRetornoProducaoLimpaB34_(bloqueios, avisos);
+    } finally {
+      lock.releaseLock();
+    }
   }
 
   function obterOuCriarPlanilha_(bloqueios) {
@@ -1178,6 +1323,7 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
   return {
     diagnosticarAmbienteFinanceiroV2: diagnosticarAmbienteFinanceiroV2,
     provisionarAmbienteFinanceiroV2_AUTORIZADO: provisionarAmbienteFinanceiroV2_AUTORIZADO,
+    provisionarAmbienteFinanceiroProducaoLimpaB34_AUTORIZADO: provisionarAmbienteFinanceiroProducaoLimpaB34_AUTORIZADO,
     auditarSetupFinanceiroV2: auditarSetupFinanceiroV2,
     auditarAssinaturaFinanceiraTesteV2: auditarAssinaturaFinanceiraTesteV2,
     auditarPoliticaCartaoFlashV1: auditarPoliticaCartaoFlashV1,
@@ -1203,6 +1349,15 @@ function provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO() {
     executar: true,
     confirmacao: "CRIAR_AMBIENTE_FINANCEIRO_SGO_2026",
     webAppUrl: ""
+  });
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function PROVISIONAR_AMBIENTE_FINANCEIRO_PRODUCAO_LIMPA_B34_AUTORIZADO() {
+  var resultado = SGO_FIN_PROVISIONAMENTO.provisionarAmbienteFinanceiroProducaoLimpaB34_AUTORIZADO({
+    executar: true,
+    confirmacao: "CRIAR_AMBIENTE_FINANCEIRO_SGO_2026"
   });
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;

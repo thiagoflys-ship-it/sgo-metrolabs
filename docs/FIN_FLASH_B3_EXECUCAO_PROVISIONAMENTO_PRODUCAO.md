@@ -29,23 +29,45 @@ B.3.4 cria ou reutiliza somente os recursos basicos do modulo FIN:
 - Nao alterar `PropertiesService` manualmente.
 - Nao criar planilha ou pasta manualmente.
 
+## B.3.4C - Correcao: provisionamento anterior reutilizou DB_FIN DEV
+
+O primeiro provisionamento manual executado no `SGO_PLUS_PRODUCAO` retornou:
+
+```json
+{
+  "success": true,
+  "executado": true,
+  "planilhaCriada": false,
+  "planilhaReutilizada": true,
+  "pastaCriada": false,
+  "pastaReutilizada": true,
+  "DB_FIN_ID": "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0",
+  "FOLDER_FINANCEIRO": "1Gt4MBCEy-O0100h-VKn-z9gp0_l4ZD6g",
+  "bloqueios": []
+}
+```
+
+Esse resultado esta bloqueado: `1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0` e o DB_FIN DEV/homologacao. A causa foi a reutilizacao por nome no Drive (`SGO_FIN_CARTAO_FLASH_DB` e `SGO_FINANCEIRO_DOCUMENTOS`) dentro da funcao antiga.
+
+Nao executar `setupFinanceiroV2` enquanto o `DB_FIN_ID` estiver apontando para esse ID.
+
 ## Funcao a Executar
 
 Executar pelo seletor do Apps Script:
 
 ```text
-provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO
+PROVISIONAR_AMBIENTE_FINANCEIRO_PRODUCAO_LIMPA_B34_AUTORIZADO
 ```
 
-Esse wrapper chama internamente:
+Esse wrapper chama internamente uma rotina especifica de producao limpa. Ela nao usa a busca por nome antiga e cria uma planilha com nome de producao:
 
-```javascript
-provisionarAmbienteFinanceiroV2_AUTORIZADO({
-  executar: true,
-  confirmacao: "CRIAR_AMBIENTE_FINANCEIRO_SGO_2026",
-  webAppUrl: ""
-});
-```
+- `SGO_FIN_CARTAO_FLASH_DB_PROD`;
+- ou `SGO_FIN_CARTAO_FLASH_DB_PROD_YYYYMMDD_HHMMSS`, se o nome base ja existir.
+
+Para a pasta, usa somente nome de producao:
+
+- `SGO_FINANCEIRO_DOCUMENTOS_PROD`;
+- ou `SGO_FINANCEIRO_DOCUMENTOS_PROD_YYYYMMDD_HHMMSS`, se houver duplicidade.
 
 O wrapper registra `Logger.log(JSON.stringify(resultado, null, 2))` e retorna o JSON.
 
@@ -54,20 +76,27 @@ O wrapper registra `Logger.log(JSON.stringify(resultado, null, 2))` e retorna o 
 O Logger deve trazer um JSON com:
 
 - `success: true`;
+- `ok: true`;
 - `executado: true`;
-- `planilhaCriada: true` ou `planilhaReutilizada: true`;
+- `planilhaCriada: true`;
+- `planilhaReutilizada: false`;
 - `pastaCriada: true` ou `pastaReutilizada: true`;
 - `DB_FIN_ID` preenchido;
+- `DB_FIN_URL` preenchido;
 - `FOLDER_FINANCEIRO` preenchido;
+- `dbFinIdDiferenteDev: true`;
 - `bloqueios: []`;
-- aviso esperado sobre `webAppUrl` vazio, caso nenhuma URL publica tenha sido configurada.
+- aviso esperado sobre `WEBAPP_URL` nao configurada, porque ainda nao ha deploy de producao.
 
 Copiar o JSON completo do Logger, incluindo:
 
 - `success`;
 - `executado`;
 - `DB_FIN_ID`;
+- `DB_FIN_URL`;
 - `FOLDER_FINANCEIRO`;
+- `dbFinIdDevBloqueado`;
+- `dbFinIdDiferenteDev`;
 - `SGO_WEBAPP_URL`;
 - `bloqueios`;
 - `avisos`;
@@ -78,15 +107,12 @@ Copiar o JSON completo do Logger, incluindo:
 - Valida `executar: true`.
 - Valida a confirmacao textual `CRIAR_AMBIENTE_FINANCEIRO_SGO_2026`.
 - Obtem lock de script.
-- Reutiliza `DB_FIN_ID` existente se estiver configurado e acessivel.
-- Caso nao exista `DB_FIN_ID`, procura uma planilha com nome `SGO_FIN_CARTAO_FLASH_DB`.
-- Se houver exatamente uma planilha com esse nome, reutiliza.
-- Se nao houver planilha, cria uma nova via `SpreadsheetApp.create`.
-- Reutiliza `FOLDER_FINANCEIRO` existente se estiver configurado e acessivel.
-- Caso nao exista `FOLDER_FINANCEIRO`, procura uma pasta com nome `SGO_FINANCEIRO_DOCUMENTOS`.
-- Se houver exatamente uma pasta com esse nome, reutiliza.
-- Se nao houver pasta, cria uma nova via `DriveApp.createFolder`.
-- Grava `DB_FIN_ID` e `FOLDER_FINANCEIRO` em `PropertiesService`.
+- Ignora o `DB_FIN_ID` DEV anterior para fins de reutilizacao.
+- Cria nova planilha de producao via `SpreadsheetApp.create`.
+- Reutiliza apenas pasta com nome `SGO_FINANCEIRO_DOCUMENTOS_PROD`, se existir exatamente uma.
+- Se nao houver pasta PROD, cria uma nova via `DriveApp.createFolder`.
+- Grava `DB_FIN_ID`, `DB_FIN_URL` e `FOLDER_FINANCEIRO` em `PropertiesService`.
+- Bloqueia se o `DB_FIN_ID` final for igual ao ID DEV/homologacao.
 
 ## O Que a Funcao Nao Faz
 
@@ -97,13 +123,14 @@ Copiar o JSON completo do Logger, incluindo:
 - Nao importa XLSX.
 - Nao cria deploy.
 - Nao mexe no projeto DEV.
+- Nao reutiliza `SGO_FIN_CARTAO_FLASH_DB` DEV/homologacao.
 
 ## Bloqueadores
 
 - Erro OAuth: autorizar no fluxo do Apps Script e executar novamente apenas a mesma funcao.
-- `DB_FIN_ID` ja preenchido apontando para base antiga ou DEV: parar e revisar antes de seguir.
-- Mais de uma planilha `SGO_FIN_CARTAO_FLASH_DB` encontrada no Drive: parar e revisar duplicidade.
-- Mais de uma pasta `SGO_FINANCEIRO_DOCUMENTOS` encontrada no Drive: parar e revisar duplicidade.
+- `DB_FIN_ID` retornado igual a `1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0`: parar, bloqueado.
+- `dbFinIdDiferenteDev: false`: parar, bloqueado.
+- Mais de uma pasta `SGO_FINANCEIRO_DOCUMENTOS_PROD` encontrada no Drive: a funcao cria nome com timestamp; conferir o JSON antes de seguir.
 - Funcao nao aparece no seletor: confirmar que o codigo enviado ao projeto de producao esta atualizado.
 - Erro de permissao em Drive ou Sheets: parar e copiar o JSON/erro completo.
 
