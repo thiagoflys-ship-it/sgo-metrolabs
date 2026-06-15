@@ -1808,6 +1808,553 @@ function AUDITAR_FIN_PRODUCAO_LIMPA_B35_RESUMO_SEM_GRAVAR() {
   return resultado;
 }
 
+const SGO_FIN_FLASH_PROD_B3 = (() => {
+  var DB_FIN_ID_PROD_ESPERADO = "1A3rjluetfMYfSwwpcGbbnfpkPdgR7R9iiwDVWvyp4Zw";
+  var DB_FIN_ID_DEV_BLOQUEADO = "1Q7zvZvtzrYUVGk8oMoOCmTYoE0A7lxP6zbd4GfojuZ0";
+  var ABA_TMP_FLASH = "TMP_IMPORT_EXTRATO_FLASH";
+  var ABA_LOTES = "FIN_LOTES_EXTRATO_FLASH";
+  var ABA_EXTRATOS = "FIN_CARTOES_EXTRATOS";
+  var ABA_LANCAMENTOS = "FIN_CARTOES_LANCAMENTOS";
+  var ABA_CONCILIACAO = "FIN_CARTOES_CONCILIACAO";
+  var ABA_PENDENCIAS = "FIN_CARTOES_PENDENCIAS";
+
+  function txt_(v) {
+    return String(v === null || v === undefined ? "" : v).trim();
+  }
+
+  function num_(v) {
+    if (typeof v === "number") return v;
+    var s = txt_(v).replace(/\./g, "").replace(",", ".");
+    var n = Number(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function props_() {
+    var p = PropertiesService.getScriptProperties();
+    return {
+      DB_FIN_ID: txt_(p.getProperty("DB_FIN_ID")),
+      DB_FIN_URL: txt_(p.getProperty("DB_FIN_URL")),
+      FOLDER_FINANCEIRO: txt_(p.getProperty("FOLDER_FINANCEIRO"))
+    };
+  }
+
+  function validarProd_(modo, somenteLeitura) {
+    var pr = props_();
+    var bloqueios = [];
+    var avisos = [];
+    if (!pr.DB_FIN_ID) bloqueios.push("DB_FIN_ID_AUSENTE");
+    if (pr.DB_FIN_ID === DB_FIN_ID_DEV_BLOQUEADO) bloqueios.push("DB_FIN_ID_DEV_DETECTADO_PRODUCAO_BLOQUEADA");
+    if (pr.DB_FIN_ID !== DB_FIN_ID_PROD_ESPERADO) bloqueios.push("DB_FIN_ID_DIFERENTE_DO_PROD_ESPERADO");
+    if (!pr.FOLDER_FINANCEIRO) bloqueios.push("FOLDER_FINANCEIRO_AUSENTE");
+    return {
+      success: false,
+      ok: false,
+      executado: false,
+      somenteLeitura: !!somenteLeitura,
+      modo: modo,
+      DB_FIN_ID: pr.DB_FIN_ID,
+      DB_FIN_URL: pr.DB_FIN_URL,
+      FOLDER_FINANCEIRO: pr.FOLDER_FINANCEIRO,
+      DB_FIN_ID_PROD_ESPERADO: DB_FIN_ID_PROD_ESPERADO,
+      DB_FIN_ID_DEV_BLOQUEADO: DB_FIN_ID_DEV_BLOQUEADO,
+      dbFinIdDiferenteDev: pr.DB_FIN_ID !== DB_FIN_ID_DEV_BLOQUEADO,
+      bloqueios: bloqueios,
+      avisos: avisos,
+      proximaEtapa: ""
+    };
+  }
+
+  function abrirPlanilha_(base) {
+    if (base.bloqueios.length) return null;
+    try {
+      var ss = SpreadsheetApp.openById(base.DB_FIN_ID);
+      base.planilha = {
+        nome: ss.getName(),
+        id: ss.getId(),
+        url: ss.getUrl()
+      };
+      if (base.planilha.id !== DB_FIN_ID_PROD_ESPERADO) {
+        base.bloqueios.push("PLANILHA_ABERTA_DIFERENTE_DO_PROD_ESPERADO");
+        return null;
+      }
+      return ss;
+    } catch (e) {
+      base.bloqueios.push("FALHA_ABRIR_DB_FIN_PROD: " + (e && e.message ? e.message : String(e)));
+      return null;
+    }
+  }
+
+  function headers_(sheet) {
+    if (!sheet || sheet.getLastColumn() < 1) return [];
+    return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function(h) {
+      return txt_(h);
+    });
+  }
+
+  function objetos_(sheet) {
+    if (!sheet) return { headers: [], items: [] };
+    var hs = headers_(sheet);
+    if (sheet.getLastRow() < 2 || hs.length < 1) return { headers: hs, items: [] };
+    var vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+    var items = vals.map(function(linha) {
+      var o = {};
+      hs.forEach(function(h, i) {
+        if (h) o[h] = linha[i];
+      });
+      return o;
+    });
+    return { headers: hs, items: items };
+  }
+
+  function contarAba_(ss, nome) {
+    var sh = ss ? ss.getSheetByName(nome) : null;
+    return {
+      nomeAba: nome,
+      existe: !!sh,
+      linhasDados: sh ? Math.max(0, sh.getLastRow() - 1) : 0,
+      ultimaLinha: sh ? sh.getLastRow() : 0,
+      ultimaColuna: sh ? sh.getLastColumn() : 0
+    };
+  }
+
+  function localizar_(headers, nomes) {
+    for (var i = 0; i < nomes.length; i++) {
+      var alvo = txt_(nomes[i]).toUpperCase();
+      for (var j = 0; j < headers.length; j++) {
+        if (txt_(headers[j]).toUpperCase() === alvo) return j;
+      }
+    }
+    return -1;
+  }
+
+  function chaveLote_(arquivoNome, periodoInicial, periodoFinal, total, valor) {
+    return ["FLASH", arquivoNome, periodoInicial, periodoFinal, total, valor].join("|").toUpperCase();
+  }
+
+  function lerEntradaFlash_(ss, base) {
+    var sh = ss ? ss.getSheetByName(ABA_TMP_FLASH) : null;
+    var entrada = {
+      tipo: "CONFIG",
+      origem: "Aba " + ABA_TMP_FLASH,
+      arquivoNome: ABA_TMP_FLASH,
+      arquivoId: "",
+      possuiEntrada: !!sh
+    };
+    var leitura = {
+      totalRegistrosLidos: 0,
+      totalRegistrosValidos: 0,
+      totalRegistrosInvalidos: 0,
+      periodoInicial: "",
+      periodoFinal: "",
+      valorTotal: 0,
+      moeda: "BRL",
+      cartoesDetectados: 0,
+      estabelecimentosDetectados: 0
+    };
+    var amostra = { primeirasLinhas: [] };
+    if (!sh || sh.getLastRow() < 2 || sh.getLastColumn() < 1) {
+      base.bloqueios.push("ENTRADA_FLASH_AUSENTE");
+      base.avisos.push("Configurar entrada segura em " + ABA_TMP_FLASH + " antes do dry-run.");
+      return { entrada: entrada, leitura: leitura, amostra: amostra, registros: [], chaveLote: "" };
+    }
+
+    var dados = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+    var hs = dados[0].map(function(h) { return txt_(h); });
+    var idxData = localizar_(hs, ["DATA", "DATA_TRANSACAO", "Data", "Data da transacao"]);
+    var idxValor = localizar_(hs, ["VALOR", "VALOR_TRANSACAO", "Valor", "Valor da transacao"]);
+    var idxDescricao = localizar_(hs, ["DESCRICAO", "ESTABELECIMENTO", "ESTABELECIMENTO_EXTRATO", "Descricao"]);
+    var idxCartao = localizar_(hs, ["CARTAO_FINAL", "Final Cartao", "Final do cartao", "CARTAO"]);
+    if (idxValor < 0) base.bloqueios.push("CAMPO_VALOR_FLASH_AUSENTE");
+
+    var datas = [];
+    var cartoes = {};
+    var estabs = {};
+    var registros = [];
+    for (var i = 1; i < dados.length; i++) {
+      var linha = dados[i];
+      var preenchida = linha.some(function(c) { return txt_(c) !== ""; });
+      if (!preenchida) continue;
+      var data = idxData >= 0 ? txt_(linha[idxData]) : "";
+      var valor = idxValor >= 0 ? num_(linha[idxValor]) : 0;
+      var desc = idxDescricao >= 0 ? txt_(linha[idxDescricao]) : "";
+      var cartao = idxCartao >= 0 ? txt_(linha[idxCartao]) : "";
+      leitura.totalRegistrosLidos++;
+      if (idxValor >= 0) leitura.totalRegistrosValidos++; else leitura.totalRegistrosInvalidos++;
+      leitura.valorTotal += valor;
+      if (data) datas.push(data);
+      if (cartao) cartoes[cartao] = true;
+      if (desc) estabs[desc] = true;
+      var reg = { linha: i + 1, data: data, valor: valor, cartaoFinal: cartao, estabelecimento: desc };
+      registros.push(reg);
+      if (amostra.primeirasLinhas.length < 3) amostra.primeirasLinhas.push(reg);
+    }
+    datas.sort();
+    leitura.periodoInicial = datas[0] || "";
+    leitura.periodoFinal = datas[datas.length - 1] || "";
+    leitura.valorTotal = Math.round(leitura.valorTotal * 100) / 100;
+    leitura.cartoesDetectados = Object.keys(cartoes).length;
+    leitura.estabelecimentosDetectados = Object.keys(estabs).length;
+    var chave = chaveLote_(entrada.arquivoNome, leitura.periodoInicial, leitura.periodoFinal, leitura.totalRegistrosValidos, leitura.valorTotal);
+    return { entrada: entrada, leitura: leitura, amostra: amostra, registros: registros, chaveLote: chave };
+  }
+
+  function duplicidade_(ss, chave) {
+    var sh = ss ? ss.getSheetByName(ABA_LOTES) : null;
+    var total = 0;
+    if (sh && sh.getLastRow() > 1) {
+      var dados = objetos_(sh).items;
+      dados.forEach(function(l) {
+        var c = txt_(l.CHAVE_LOTE) || chaveLote_(txt_(l.ARQUIVO_NOME), txt_(l.PERIODO_INICIO), txt_(l.PERIODO_FIM), txt_(l.TOTAL_LANCAMENTOS), txt_(l.SOMA_DEBITOS || l.SALDO_LIQUIDO));
+        if (chave && c === chave) total++;
+      });
+    }
+    return {
+      chaveLote: chave,
+      jaExisteLote: total > 0,
+      lotesEncontrados: total
+    };
+  }
+
+  function dryRun_() {
+    var r = validarProd_("DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR", true);
+    r.entrada = { tipo: "CONFIG", origem: "Aba " + ABA_TMP_FLASH, possuiEntrada: false };
+    r.leitura = {};
+    r.duplicidade = {};
+    r.seguranca = { gravou: false, linhasCriadas: 0, arquivosCriados: 0 };
+    r.amostra = { primeirasLinhas: [] };
+    r.proximaEtapa = "Se aprovado, executar PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      [ABA_LOTES, ABA_EXTRATOS].forEach(function(nome) {
+        var c = contarAba_(ss, nome);
+        if (!c.existe) r.bloqueios.push("ABA_AUSENTE_" + nome);
+      });
+      var pacote = lerEntradaFlash_(ss, r);
+      r.entrada = pacote.entrada;
+      r.leitura = pacote.leitura;
+      r.duplicidade = duplicidade_(ss, pacote.chaveLote);
+      r.amostra = pacote.amostra;
+      if (r.duplicidade.jaExisteLote) r.bloqueios.push("LOTE_FLASH_DUPLICADO");
+      if (r.leitura.totalRegistrosValidos < 1) r.bloqueios.push("TOTAL_REGISTROS_VALIDOS_ZERO");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return r;
+  }
+
+  function log_(r) {
+    Logger.log(JSON.stringify(r, null, 2));
+    return r;
+  }
+
+  function DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR() {
+    return log_(dryRun_());
+  }
+
+  function PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR() {
+    var d = dryRun_();
+    d.modo = "PRE_CONFIRMACAO_FLASH_PRODUCAO_B37_SEM_GRAVAR";
+    d.lote = {
+      chaveLote: d.duplicidade ? d.duplicidade.chaveLote : "",
+      periodoInicial: d.leitura ? d.leitura.periodoInicial : "",
+      periodoFinal: d.leitura ? d.leitura.periodoFinal : "",
+      totalTransacoes: d.leitura ? d.leitura.totalRegistrosValidos : 0,
+      valorTotal: d.leitura ? d.leitura.valorTotal : 0
+    };
+    d.impactoPrevisto = {
+      criarLote: d.bloqueios.length === 0,
+      linhasLote: d.bloqueios.length === 0 ? 1 : 0,
+      linhasExtratos: d.bloqueios.length === 0 && d.leitura ? d.leitura.totalRegistrosValidos : 0
+    };
+    d.checklist = [
+      { item: "DB_FIN_ID_PROD", ok: d.DB_FIN_ID === DB_FIN_ID_PROD_ESPERADO },
+      { item: "SEM_DUPLICIDADE_LOTE", ok: !(d.duplicidade && d.duplicidade.jaExisteLote) },
+      { item: "TOTAL_TRANSACOES_VALIDO", ok: d.leitura && d.leitura.totalRegistrosValidos > 0 },
+      { item: "VALOR_TOTAL_VALIDO", ok: d.leitura && d.leitura.valorTotal !== 0 }
+    ];
+    d.proximaEtapa = "Se aprovado manualmente, executar IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO";
+    return log_(d);
+  }
+
+  function IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO() {
+    var d = dryRun_();
+    d.modo = "IMPORTACAO_FLASH_PRODUCAO_B38_AUTORIZADO";
+    d.somenteLeitura = false;
+    d.executado = false;
+    d.gravacao = { loteCriado: false, linhasLoteCriadas: 0, extratosCriados: 0, linhasCriadasTotal: 0 };
+    d.seguranca = { lock: false, duplicidadeBloqueada: !!(d.duplicidade && d.duplicidade.jaExisteLote) };
+    d.proximaEtapa = "Executar AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR";
+    if (typeof importarExtratoFlashReal_FIN1117 !== "function") {
+      d.bloqueios.push("ROTINA_IMPORTACAO_REAL_FLASH_NAO_LOCALIZADA");
+    }
+    if (d.bloqueios.length === 0) {
+      var lock = LockService.getScriptLock();
+      d.seguranca.lock = lock.tryLock(30000);
+      if (!d.seguranca.lock) {
+        d.bloqueios.push("LOCK_IMPORTACAO_FLASH_NAO_OBTIDO");
+      } else {
+        try {
+          var imp = importarExtratoFlashReal_FIN1117("IMPORTAR_EXTRATO_FLASH_REAL_FIN1117");
+          d.resultadoImportacao = {
+            success: !!(imp && imp.success),
+            executado: !!(imp && imp.executado),
+            loteId: imp ? imp.loteId : "",
+            linhasEntrada: imp ? imp.linhasEntrada : 0,
+            linhasValidas: imp ? imp.linhasValidas : 0,
+            linhasGravadasExtrato: imp ? imp.linhasGravadasExtrato : 0,
+            loteGravado: !!(imp && imp.loteGravado),
+            bloqueios: imp && imp.bloqueios ? imp.bloqueios : []
+          };
+          d.executado = !!(imp && imp.executado);
+          d.success = !!(imp && imp.success);
+          d.ok = d.success;
+          d.gravacao.loteCriado = !!(imp && imp.loteGravado);
+          d.gravacao.linhasLoteCriadas = d.gravacao.loteCriado ? 1 : 0;
+          d.gravacao.extratosCriados = imp ? Number(imp.linhasGravadasExtrato || 0) : 0;
+          d.gravacao.linhasCriadasTotal = d.gravacao.linhasLoteCriadas + d.gravacao.extratosCriados;
+          if (!d.success) d.bloqueios = d.bloqueios.concat(d.resultadoImportacao.bloqueios || []);
+        } finally {
+          lock.releaseLock();
+        }
+      }
+    }
+    d.success = d.bloqueios.length === 0 && d.executado === true;
+    d.ok = d.success;
+    return log_(d);
+  }
+
+  function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR", true);
+    r.resumo = { lotes: 0, extratos: 0, valorTotal: 0, periodoInicial: "", periodoFinal: "", duplicidadesLote: 0, duplicidadesExtrato: 0 };
+    r.lotesResumo = [];
+    r.proximaEtapa = "Se aprovado, executar PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var lotes = objetos_(ss.getSheetByName(ABA_LOTES)).items;
+      var extratos = objetos_(ss.getSheetByName(ABA_EXTRATOS)).items;
+      var chavesLote = {};
+      var chavesExtrato = {};
+      var datas = [];
+      r.resumo.lotes = lotes.length;
+      r.resumo.extratos = extratos.length;
+      lotes.forEach(function(l) {
+        var chave = txt_(l.CHAVE_LOTE || l.LOTE_ID);
+        if (chave) chavesLote[chave] = (chavesLote[chave] || 0) + 1;
+        r.lotesResumo.push({ loteId: txt_(l.LOTE_ID), chaveLote: txt_(l.CHAVE_LOTE), totalLancamentos: Number(l.TOTAL_LANCAMENTOS || 0), periodoInicial: txt_(l.PERIODO_INICIO), periodoFinal: txt_(l.PERIODO_FIM) });
+      });
+      extratos.forEach(function(e) {
+        r.resumo.valorTotal += num_(e.VALOR);
+        if (e.DATA_TRANSACAO) datas.push(txt_(e.DATA_TRANSACAO));
+        var chaveE = txt_(e.CHAVE_DUPLICIDADE || e.EXTRATO_ID);
+        if (chaveE) chavesExtrato[chaveE] = (chavesExtrato[chaveE] || 0) + 1;
+      });
+      Object.keys(chavesLote).forEach(function(k) { if (chavesLote[k] > 1) r.resumo.duplicidadesLote++; });
+      Object.keys(chavesExtrato).forEach(function(k) { if (chavesExtrato[k] > 1) r.resumo.duplicidadesExtrato++; });
+      datas.sort();
+      r.resumo.periodoInicial = datas[0] || "";
+      r.resumo.periodoFinal = datas[datas.length - 1] || "";
+      r.resumo.valorTotal = Math.round(r.resumo.valorTotal * 100) / 100;
+      if (r.resumo.lotes < 1 || r.resumo.extratos < 1) r.bloqueios.push("IMPORTACAO_FLASH_AINDA_NAO_ENCONTRADA");
+      if (r.resumo.duplicidadesLote > 0) r.bloqueios.push("DUPLICIDADE_LOTE_FLASH");
+      if (r.resumo.duplicidadesExtrato > 0) r.bloqueios.push("DUPLICIDADE_EXTRATO_FLASH");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function previaConciliacao_() {
+    var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
+    r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
+    r.amostras = { matches: [], semPrestacao: [], divergencias: [] };
+    r.proximaEtapa = "Se aprovado, executar CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var extratos = objetos_(ss.getSheetByName(ABA_EXTRATOS)).items;
+      var lancamentos = objetos_(ss.getSheetByName(ABA_LANCAMENTOS)).items;
+      r.resumo.extratosLidos = extratos.length;
+      r.resumo.lancamentosLidos = lancamentos.length;
+      extratos.forEach(function(e) {
+        var match = null;
+        for (var i = 0; i < lancamentos.length; i++) {
+          if (txt_(e.CARTAO_ID) && txt_(e.CARTAO_ID) === txt_(lancamentos[i].CARTAO_ID) && num_(e.VALOR) === num_(lancamentos[i].VALOR)) {
+            match = lancamentos[i];
+            break;
+          }
+        }
+        if (match) {
+          r.resumo.matchesProvaveis++;
+          if (r.amostras.matches.length < 5) r.amostras.matches.push({ extratoId: txt_(e.EXTRATO_ID), lancamentoId: txt_(match.LANCAMENTO_ID || match.ID), valor: num_(e.VALOR) });
+        } else {
+          r.resumo.semPrestacao++;
+          if (r.amostras.semPrestacao.length < 5) r.amostras.semPrestacao.push({ extratoId: txt_(e.EXTRATO_ID), valor: num_(e.VALOR), cartaoFinal: txt_(e.CARTAO_FINAL) });
+        }
+      });
+      if (r.resumo.extratosLidos < 1) r.bloqueios.push("SEM_EXTRATOS_PARA_CONCILIAR");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return r;
+  }
+
+  function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
+    return log_(previaConciliacao_());
+  }
+
+  function CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO() {
+    var r = previaConciliacao_();
+    r.modo = "CONCILIACAO_FLASH_PRODUCAO_B311_AUTORIZADO";
+    r.somenteLeitura = false;
+    r.executado = false;
+    r.gravacao = { conciliacoesGravadas: 0 };
+    r.proximaEtapa = "Executar AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR";
+    if (typeof conciliarExtratoFlashTeste_FIN125 !== "function") r.bloqueios.push("ROTINA_CONCILIACAO_REAL_NAO_LOCALIZADA");
+    r.bloqueios.push("ROTINA_CONCILIACAO_REAL_PRODUCAO_NAO_HOMOLOGADA");
+    r.success = false;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR", true);
+    r.resumo = { conciliacoes: 0, divergencias: 0, naoConciliados: 0, extratos: 0, lancamentos: 0 };
+    r.proximaEtapa = "Se aprovado, executar PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      r.resumo.conciliacoes = objetos_(ss.getSheetByName(ABA_CONCILIACAO)).items.length;
+      var extratos = objetos_(ss.getSheetByName(ABA_EXTRATOS)).items;
+      var lanc = objetos_(ss.getSheetByName(ABA_LANCAMENTOS)).items;
+      r.resumo.extratos = extratos.length;
+      r.resumo.lancamentos = lanc.length;
+      extratos.forEach(function(e) { if (txt_(e.CONCILIADO).toUpperCase() !== "SIM") r.resumo.naoConciliados++; });
+      if (r.resumo.conciliacoes < 1 && r.resumo.extratos > 0) r.avisos.push("SEM_REGISTRO_CONCILIACAO");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function previaPendencias_() {
+    var r = validarProd_("PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR", true);
+    r.resumo = { pendenciasPrevistas: 0, semComprovante: 0, semOS: 0, semPrestacao: 0, divergenciaValor: 0 };
+    r.amostras = [];
+    r.proximaEtapa = "Se aprovado, executar GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      var extratos = objetos_(ss.getSheetByName(ABA_EXTRATOS)).items;
+      extratos.forEach(function(e) {
+        if (txt_(e.CONCILIADO).toUpperCase() !== "SIM") {
+          r.resumo.semPrestacao++;
+          r.resumo.pendenciasPrevistas++;
+          if (r.amostras.length < 10) r.amostras.push({ tipo: "SEM_PRESTACAO", extratoId: txt_(e.EXTRATO_ID), valor: num_(e.VALOR) });
+        }
+      });
+      if (extratos.length < 1) r.bloqueios.push("SEM_EXTRATOS_PARA_PREVER_PENDENCIAS");
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return r;
+  }
+
+  function PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR() {
+    return log_(previaPendencias_());
+  }
+
+  function GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO() {
+    var r = previaPendencias_();
+    r.modo = "GERACAO_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO";
+    r.somenteLeitura = false;
+    r.executado = false;
+    r.gravacao = { pendenciasGravadas: 0 };
+    r.proximaEtapa = "Executar AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR";
+    if (typeof gerarPendenciasFlash_FIN132 !== "function") r.bloqueios.push("ROTINA_GERACAO_PENDENCIAS_NAO_LOCALIZADA");
+    r.bloqueios.push("ROTINA_GERACAO_PENDENCIAS_PRODUCAO_NAO_HOMOLOGADA");
+    r.success = false;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR", true);
+    r.statusFinal = "BLOQUEADO_COM_PENDENCIAS";
+    r.resumo = { abas: {}, lotes: 0, extratos: 0, conciliacoes: 0, pendencias: 0, logs: 0, documentos: 0, headersEsperados: 330 };
+    r.proximaEtapa = "Deploy WebApp producao somente apos aprovacao manual";
+    var ss = abrirPlanilha_(r);
+    if (ss) {
+      [ABA_LOTES, ABA_EXTRATOS, ABA_CONCILIACAO, ABA_PENDENCIAS, "FIN_CARTOES_LOGS", "FIN_CARTOES_DOCUMENTOS"].forEach(function(nome) {
+        r.resumo.abas[nome] = contarAba_(ss, nome);
+      });
+      r.resumo.lotes = r.resumo.abas[ABA_LOTES].linhasDados;
+      r.resumo.extratos = r.resumo.abas[ABA_EXTRATOS].linhasDados;
+      r.resumo.conciliacoes = r.resumo.abas[ABA_CONCILIACAO].linhasDados;
+      r.resumo.pendencias = r.resumo.abas[ABA_PENDENCIAS].linhasDados;
+      r.resumo.logs = r.resumo.abas.FIN_CARTOES_LOGS.linhasDados;
+      r.resumo.documentos = r.resumo.abas.FIN_CARTOES_DOCUMENTOS.linhasDados;
+      if (r.resumo.lotes > 0 && r.resumo.extratos > 0 && r.resumo.pendencias === 0) {
+        r.statusFinal = "PRONTO_PARA_DEPLOY";
+      } else {
+        r.bloqueios.push("CADEIA_FLASH_PRODUCAO_INCOMPLETA");
+      }
+    }
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  return {
+    DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR: DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR,
+    PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR: PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR,
+    IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO: IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO,
+    AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR,
+    PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
+    CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
+    AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
+    PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR: PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR,
+    GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO: GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO,
+    AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR: AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR
+  };
+})();
+
+function DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR();
+}
+
+function PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR();
+}
+
+function IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO();
+}
+
+function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR();
+}
+
+function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR();
+}
+
+function CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO();
+}
+
+function AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR();
+}
+
+function PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PREVIA_PENDENCIAS_FLASH_PRODUCAO_B313_SEM_GRAVAR();
+}
+
+function GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO() {
+  return SGO_FIN_FLASH_PROD_B3.GERAR_PENDENCIAS_FLASH_PRODUCAO_B314_AUTORIZADO();
+}
+
+function AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_FIN_FLASH_PRODUCAO_FINAL_B315_SEM_GRAVAR();
+}
+
 function auditarSetupFinanceiroV2() {
   return SGO_FIN_PROVISIONAMENTO.auditarSetupFinanceiroV2();
 }
