@@ -26,10 +26,10 @@
 
 **Funcao:**
 ```
-provisionarAmbienteFinanceiroV2_AUTORIZADO
+provisionarAmbienteFinanceiroV2_MANUAL_AUTORIZADO
 ```
 
-**Payload obrigatorio:**
+**Payload interno do wrapper:**
 ```javascript
 {
   executar: true,
