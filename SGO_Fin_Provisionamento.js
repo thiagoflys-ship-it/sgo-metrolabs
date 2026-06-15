@@ -1935,7 +1935,9 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     for (var i = 0; i < nomes.length; i++) {
       var alvo = normalizarHeaderFlash_(nomes[i]);
       for (var j = 0; j < headers.length; j++) {
-        if (normalizarHeaderFlash_(headers[j]) === alvo) return j;
+        var atual = normalizarHeaderFlash_(headers[j]);
+        if (!atual || !alvo) continue;
+        if (atual === alvo || atual.indexOf(alvo) >= 0 || alvo.indexOf(atual) >= 0) return j;
       }
     }
     return -1;
@@ -1954,11 +1956,11 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   function aliasesFonteFlash_() {
     return {
       DATA: ["DATA", "DATA DA TRANSACAO", "DATA_TRANSACAO", "DATA TRANSACAO", "DATA/HORA", "DATA E HORA"],
-      DESCRICAO: ["DESCRICAO", "DESCRICAO DA TRANSACAO", "ESTABELECIMENTO", "HISTORICO", "MERCHANT"],
+      DESCRICAO: ["DESCRICAO", "DESCRICAO DA TRANSACAO", "ESTABELECIMENTO", "HISTORICO", "MOVIMENTACAO", "MERCHANT"],
       VALOR: ["VALOR", "VALOR R$", "VALOR_TRANSACAO", "VALOR DA TRANSACAO", "AMOUNT"],
-      TIPO: ["TIPO", "TIPO TRANSACAO", "TIPO DA TRANSACAO", "CATEGORIA", "OPERACAO"],
+      TIPO: ["TIPO", "TIPO TRANSACAO", "TIPO DA TRANSACAO", "CATEGORIA", "OPERACAO", "PAGAMENTO", "PRESTACAO DE CONTAS"],
       PESSOA: ["PESSOA", "PORTADOR", "USUARIO", "FUNCIONARIO", "NOME"],
-      CARTAO_FINAL: ["CARTAO_FINAL", "CARTAO FINAL", "FINAL CARTAO", "FINAL DO CARTAO", "ULTIMOS 4", "CARTAO"]
+      CARTAO_FINAL: ["CARTAO_FINAL", "CARTAO FINAL", "FINAL CARTAO", "FINAL DO CARTAO", "ULTIMOS 4", "PAGAMENTO", "CARTAO"]
     };
   }
 
@@ -2089,12 +2091,12 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
   function CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO() {
     var r = validarProd_("CONFIGURACAO_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO", false);
     var CONFIG = {
-      FIN_FLASH_FONTE_TIPO: "",
-      FIN_FLASH_SOURCE_SPREADSHEET_ID: "",
-      FIN_FLASH_SOURCE_SHEET_NAME: "",
-      FIN_FLASH_XLSX_NOME_ESPERADO: "",
-      FIN_FLASH_IMPORTACAO_MODO: "TMP_ONLY",
-      FIN_FLASH_ABA_TMP: "TMP_IMPORT_EXTRATO_FLASH"
+      FIN_FLASH_FONTE_TIPO: 'GOOGLE_SHEETS',
+      FIN_FLASH_SOURCE_SPREADSHEET_ID: '1aJGp7AM0PR5ry8CPONcsRhqXg0_ZZKvHbq6irwHU1GU',
+      FIN_FLASH_SOURCE_SHEET_NAME: 'Sheet1',
+      FIN_FLASH_XLSX_NOME_ESPERADO: 'extrato-do-colaborador-2026-05-10-ate-2026-06-10.xlsx',
+      FIN_FLASH_IMPORTACAO_MODO: 'TMP_ONLY',
+      FIN_FLASH_ABA_TMP: 'TMP_IMPORT_EXTRATO_FLASH'
     };
     var cfg = {
       fonteTipo: txt_(CONFIG.FIN_FLASH_FONTE_TIPO).toUpperCase(),

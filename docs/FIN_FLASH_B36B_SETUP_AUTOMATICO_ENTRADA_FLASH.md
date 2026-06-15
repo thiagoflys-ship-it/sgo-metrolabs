@@ -28,6 +28,19 @@ var CONFIG = {
 };
 ```
 
+Configuracao atual da fonte real:
+
+- XLSX local: `_evidencias/FIN11/extrato_flash_modelo/extrato-do-colaborador-2026-05-10-ate-2026-06-10.xlsx`
+- Pasta Drive fonte: `SGO_FIN_FLASH_FONTES_PROD`
+- ID da pasta Drive fonte: `1syoQZ0F-2H6ubB3fAuajugZqwzNNAoRi`
+- Planilha Google Sheets convertida:
+  `1aJGp7AM0PR5ry8CPONcsRhqXg0_ZZKvHbq6irwHU1GU`
+- Nome da planilha convertida:
+  `FONTE_FLASH_PROD_extrato-do-colaborador-2026-05-10-ate-2026-06-10`
+- Aba fonte: `Sheet1`
+- Nome esperado do XLSX:
+  `extrato-do-colaborador-2026-05-10-ate-2026-06-10.xlsx`
+
 5. Publicar no Apps Script producao com `clasp push`, sem `--force`.
 6. Executar manualmente
    `CONFIGURAR_FONTE_FLASH_PRODUCAO_B36B_AUTORIZADO`.
@@ -39,10 +52,11 @@ var CONFIG = {
 
 PENDENTE DE INFORMACAO REAL
 
-- `FIN_FLASH_SOURCE_SPREADSHEET_ID` ainda precisa ser preenchido.
-- `FIN_FLASH_SOURCE_SHEET_NAME` ainda precisa ser preenchido.
-- `FIN_FLASH_XLSX_NOME_ESPERADO` ainda precisa ser preenchido.
-- Enquanto isso estiver vazio, a configuracao deve bloquear com seguranca.
+- `FIN_FLASH_SOURCE_SPREADSHEET_ID` preenchido com a planilha convertida.
+- `FIN_FLASH_SOURCE_SHEET_NAME` preenchido com `Sheet1`.
+- `FIN_FLASH_XLSX_NOME_ESPERADO` preenchido com o nome real do XLSX.
+- Se algum desses valores for removido ou ficar vazio, a configuracao deve
+  bloquear com seguranca.
 
 Execucao manual apos publicacao:
 
@@ -101,14 +115,23 @@ Mapeamento tolerante de headers:
 - `DATA`: `DATA`, `DATA DA TRANSACAO`, `DATA_TRANSACAO`, `DATA TRANSACAO`,
   `DATA/HORA`, `DATA E HORA`.
 - `DESCRICAO`: `DESCRICAO`, `DESCRICAO DA TRANSACAO`, `ESTABELECIMENTO`,
-  `HISTORICO`, `MERCHANT`.
+  `HISTORICO`, `MOVIMENTACAO`, `MERCHANT`.
 - `VALOR`: `VALOR`, `VALOR R$`, `VALOR_TRANSACAO`,
   `VALOR DA TRANSACAO`, `AMOUNT`.
 - `TIPO`: `TIPO`, `TIPO TRANSACAO`, `TIPO DA TRANSACAO`, `CATEGORIA`,
-  `OPERACAO`.
+  `OPERACAO`, `PAGAMENTO`, `PRESTACAO DE CONTAS`.
 - `PESSOA`: `PESSOA`, `PORTADOR`, `USUARIO`, `FUNCIONARIO`, `NOME`.
 - `CARTAO_FINAL`: `CARTAO_FINAL`, `CARTAO FINAL`, `FINAL CARTAO`,
-  `FINAL DO CARTAO`, `ULTIMOS 4`, `CARTAO`.
+  `FINAL DO CARTAO`, `ULTIMOS 4`, `PAGAMENTO`, `CARTAO`.
+
+Headers detectados na fonte convertida:
+
+- `Data` -> `DATA`
+- `Movimentacao` -> `DESCRICAO`
+- `Valor` -> `VALOR`
+- `Pessoa` -> `PESSOA`
+- `Pagamento` -> `TIPO` e extracao de `CARTAO_FINAL`
+- `Prestacao de contas` -> alias aceito para `TIPO`, se necessario
 
 Normalizacoes aplicadas na carga:
 
