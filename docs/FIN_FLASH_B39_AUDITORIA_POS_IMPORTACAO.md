@@ -135,3 +135,94 @@ Checklist de execucao manual:
 - Copiar JSON completo do log.
 - Nao executar nenhuma funcao de importacao, conciliacao, limpeza ou correcao.
 - Enviar resultado para decisao B40.
+
+## B39.3 - Auditoria da regra B36/B37 sem gravacao
+
+Funcao: `AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR`
+
+Motivo: a B39.2 executou corretamente em modo somente leitura, mas classificou
+`0/49` linhas como validas e `49/49` como invalidas por `CARTAO_FINAL` com 3
+digitos (`908`). Isso conflita com a memoria operacional de B36/B37, que
+aprovou 46 registros validos e tratou 3 registros como invalidos/avisos.
+
+Conclusao antes da B39.3:
+
+- nao isolar 49 extratos;
+- nao corrigir datas ainda;
+- nao alterar lote;
+- nao apagar nada;
+- nao executar conciliacao;
+- nao executar nova importacao.
+
+A B39.3 existe para localizar e reproduzir a regra real usada por B36/B37. No
+codigo atual, as referencias principais sao:
+
+- `DRY_RUN_FLASH_PRODUCAO_B36_SEM_GRAVAR`;
+- `PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR`;
+- `dryRun_`;
+- `lerEntradaFlash_`;
+- `cartaoFlash_`;
+- `normalizarDataFlash_`.
+
+A regra atual encontrada no codigo considera `CARTAO_FINAL` com 3 digitos como
+cartao valido com aviso `CARTAO_FINAL_COM_3_DIGITOS`, nao como bloqueio
+automatico. A B39.3 retorna se essa regra atual reproduz ou nao o esperado
+`46/3`.
+
+A B39.3 le somente:
+
+- `TMP_IMPORT_EXTRATO_FLASH`;
+- `FIN_LOTES_EXTRATO_FLASH`;
+- `FIN_CARTOES_EXTRATOS`;
+- tabelas auxiliares apenas se a regra rastreada passar a depender delas;
+- logs somente se necessario e em resumo.
+
+A B39.3 nao faz:
+
+- importacao;
+- conciliacao;
+- correcao;
+- limpeza;
+- reimportacao;
+- alteracao de status;
+- criacao de lote;
+- criacao de log;
+- alteracao de headers;
+- qualquer gravacao em planilha, Drive ou Script Properties.
+
+Execucao manual:
+
+```text
+AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR
+```
+
+Copiar do log:
+
+- JSON completo retornado pela funcao;
+- `regraB36B37`;
+- `reclassificacaoB36B37`;
+- `comparacaoComEsperado`;
+- `grupos`;
+- `extratosGravados`;
+- `conclusao`;
+- `bloqueios`;
+- `proximaEtapa`.
+
+Criterios para avancar para B40:
+
+- Se `comparacaoComEsperado.bateComB36B37:true`, criar B40 de correcao
+  controlada conforme `conclusao.tipoB40Sugerido`.
+- Se a regra atual tambem nao reproduzir `46/3`, nao criar correcao ainda;
+  rastrear logs/evidencias da execucao B36/B37 que gerou o numero original.
+- Se `REGRA_B36_B37_NAO_ENCONTRADA` ou
+  `REGRA_B36_B37_ATUAL_NAO_REPRODUZ_MEMORIA_46_3`, manter B40 bloqueada.
+
+Checklist de execucao manual:
+
+- Abrir Apps Script producao.
+- Selecionar `AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_3_REGRA_B36_B37_SEM_GRAVAR`.
+- Executar.
+- Confirmar autorizacao se necessario.
+- Copiar JSON completo do log.
+- Nao executar nenhuma funcao de importacao, conciliacao, limpeza ou correcao.
+- Enviar resultado para decisao B40.
