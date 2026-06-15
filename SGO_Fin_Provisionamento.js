@@ -2815,43 +2815,695 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(d);
   }
 
+  function mapaContagemB39_(itens, chaveFn) {
+    var mapa = {};
+    itens.forEach(function(item) {
+      var chave = txt_(chaveFn(item));
+      if (!chave) return;
+      if (!mapa[chave]) mapa[chave] = { chave: chave, quantidade: 0, linhas: [] };
+      mapa[chave].quantidade++;
+      if (mapa[chave].linhas.length < 20) mapa[chave].linhas.push(item.__linha || "");
+    });
+    return mapa;
+  }
+
+  function repetidosB39_(mapa) {
+    return Object.keys(mapa).filter(function(k) {
+      return mapa[k].quantidade > 1;
+    }).map(function(k) {
+      return mapa[k];
+    });
+  }
+
+  function valorLinhaExtratoB39_(e) {
+    return num_(e.VALOR !== undefined && e.VALOR !== "" ? e.VALOR : e.VALOR_TRANSACAO);
+  }
+
+  function dataLinhaExtratoB39_(e) {
+    return txt_(e.DATA_TRANSACAO || e.DATA);
+  }
+
+  function resumirExtratosPorLoteB39_(extratos) {
+    var porLote = {};
+    extratos.forEach(function(e) {
+      var loteId = txt_(e.LOTE_ID || e.IMPORTACAO_ID);
+      if (!loteId) loteId = "__SEM_LOTE_ID__";
+      if (!porLote[loteId]) {
+        porLote[loteId] = {
+          loteId: loteId,
+          quantidade: 0,
+          valorTotal: 0,
+          periodoInicial: "",
+          periodoFinal: "",
+          chavesDuplicidade: [],
+          extratos: []
+        };
+      }
+      var grupo = porLote[loteId];
+      var valor = valorLinhaExtratoB39_(e);
+      var data = dataLinhaExtratoB39_(e);
+      grupo.quantidade++;
+      grupo.valorTotal += valor;
+      if (data && (!grupo.periodoInicial || data < grupo.periodoInicial)) grupo.periodoInicial = data;
+      if (data && (!grupo.periodoFinal || data > grupo.periodoFinal)) grupo.periodoFinal = data;
+      if (txt_(e.CHAVE_DUPLICIDADE) && grupo.chavesDuplicidade.length < 200) grupo.chavesDuplicidade.push(txt_(e.CHAVE_DUPLICIDADE));
+      if (grupo.extratos.length < 200) {
+        grupo.extratos.push({
+          linha: e.__linha,
+          extratoId: txt_(e.EXTRATO_ID || e.ID),
+          loteId: loteId,
+          data: data,
+          valor: valor,
+          cartaoFinal: txt_(e.CARTAO_FINAL || e.CARTAO_ID),
+          pessoa: txt_(e.PESSOA || e.PORTADOR),
+          chaveDuplicidade: txt_(e.CHAVE_DUPLICIDADE),
+          status: txt_(e.STATUS)
+        });
+      }
+    });
+    Object.keys(porLote).forEach(function(loteId) {
+      porLote[loteId].valorTotal = Math.round(porLote[loteId].valorTotal * 100) / 100;
+    });
+    return porLote;
+  }
+
+  function anexarLinhasB39_(items) {
+    return items.map(function(item, idx) {
+      item.__linha = idx + 2;
+      return item;
+    });
+  }
+
+  function logsRelacionadosB39_(ss) {
+    var sh = ss ? ss.getSheetByName("FIN_CARTOES_LOGS") : null;
+    var out = { existe: !!sh, totalLinhas: 0, encontrados: [] };
+    if (!sh) return out;
+    var obj = objetos_(sh);
+    var itens = anexarLinhasB39_(obj.items);
+    out.totalLinhas = itens.length;
+    var padrao = /(FLASH|FIN1117|B38|B39|IMPORTACAO_EXTRATO|IMPORTAR_FLASH|EXTRATO_FLASH)/i;
+    itens.forEach(function(item) {
+      var texto = JSON.stringify(item);
+      if (padrao.test(texto)) {
+        out.encontrados.push({
+          linha: item.__linha,
+          dataHora: txt_(item.DATA_HORA || item.DATA || item.CRIADO_EM),
+          acao: txt_(item.ACAO || item.EVENTO || item.MODO),
+          usuario: txt_(item.USUARIO_EMAIL || item.USUARIO || item.CRIADO_POR),
+          resumo: texto.slice(0, 500)
+        });
+      }
+    });
+    out.encontrados = out.encontrados.slice(-30);
+    return out;
+  }
+
+  function compararPayloadB39_(payload, lotes, porLote) {
+    var comparacoes = [];
+    var divergencias = [];
+    var esperado = {
+      totalTransacoes: payload.leitura ? Number(payload.leitura.totalRegistrosValidos || 0) : 0,
+      periodoInicial: payload.leitura ? txt_(payload.leitura.periodoInicial) : "",
+      periodoFinal: payload.leitura ? txt_(payload.leitura.periodoFinal) : "",
+      valorTotal: payload.leitura ? Math.round(num_(payload.leitura.valorTotal) * 100) / 100 : 0,
+      chaveLoteB36B37: txt_(payload.chaveLote)
+    };
+    lotes.forEach(function(lote) {
+      var loteId = txt_(lote.LOTE_ID);
+      var gravado = porLote[loteId] || { quantidade: 0, valorTotal: 0, periodoInicial: "", periodoFinal: "" };
+      var item = {
+        loteId: loteId,
+        chaveLoteGravada: txt_(lote.CHAVE_LOTE),
+        esperado: esperado,
+        gravado: {
+          totalLancamentosLote: Number(lote.TOTAL_LANCAMENTOS || 0),
+          totalExtratos: gravado.quantidade,
+          periodoInicioLote: txt_(lote.PERIODO_INICIO),
+          periodoFimLote: txt_(lote.PERIODO_FIM),
+          periodoInicioExtratos: gravado.periodoInicial,
+          periodoFimExtratos: gravado.periodoFinal,
+          valorTotalExtratos: gravado.valorTotal,
+          somaDebitosLote: Math.round(num_(lote.SOMA_DEBITOS) * 100) / 100,
+          somaCreditosLote: Math.round(num_(lote.SOMA_CREDITOS) * 100) / 100,
+          saldoLiquidoLote: Math.round(num_(lote.SALDO_LIQUIDO) * 100) / 100
+        },
+        divergencias: []
+      };
+      if (item.gravado.totalLancamentosLote !== esperado.totalTransacoes) item.divergencias.push("TOTAL_LANCAMENTOS_DIVERGE_PAYLOAD");
+      if (item.gravado.totalExtratos !== esperado.totalTransacoes) item.divergencias.push("QTD_EXTRATOS_DIVERGE_PAYLOAD");
+      if (item.gravado.periodoInicioLote !== esperado.periodoInicial) item.divergencias.push("PERIODO_INICIO_LOTE_DIVERGE_PAYLOAD");
+      if (item.gravado.periodoFimLote !== esperado.periodoFinal) item.divergencias.push("PERIODO_FIM_LOTE_DIVERGE_PAYLOAD");
+      if (item.gravado.periodoInicioExtratos !== esperado.periodoInicial) item.divergencias.push("PERIODO_INICIO_EXTRATOS_DIVERGE_PAYLOAD");
+      if (item.gravado.periodoFimExtratos !== esperado.periodoFinal) item.divergencias.push("PERIODO_FIM_EXTRATOS_DIVERGE_PAYLOAD");
+      if (item.gravado.valorTotalExtratos !== esperado.valorTotal) item.divergencias.push("VALOR_TOTAL_EXTRATOS_DIVERGE_PAYLOAD");
+      if (item.chaveLoteGravada && esperado.chaveLoteB36B37 && item.chaveLoteGravada !== esperado.chaveLoteB36B37) item.divergencias.push("CHAVE_LOTE_GRAVADA_DIFERE_CHAVE_B36_B37");
+      if (item.divergencias.length) {
+        divergencias.push({ loteId: loteId, divergencias: item.divergencias });
+      }
+      comparacoes.push(item);
+    });
+    return { esperado: esperado, comparacoes: comparacoes, divergencias: divergencias };
+  }
+
   function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR() {
     var r = validarProd_("AUDITORIA_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR", true);
-    r.resumo = { lotes: 0, extratos: 0, valorTotal: 0, periodoInicial: "", periodoFinal: "", duplicidadesLote: 0, duplicidadesExtrato: 0 };
-    r.lotesResumo = [];
-    r.proximaEtapa = "Se aprovado, executar PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR";
+    r.incidente = "B38";
+    r.rotinaAntigaAuditada = "IMPORTACAO_EXTRATO_FLASH_REAL_FIN1117";
+    r.proibicoes = ["NAO_IMPORTAR", "NAO_CORRIGIR_PLANILHA_MANUALMENTE", "NAO_APAGAR_LOTES_OU_EXTRATOS"];
+    r.resumo = {
+      lotesExistentes: 0,
+      extratosExistentes: 0,
+      lotesFin1117: 0,
+      extratosFin1117: 0,
+      valorTotalGravado: 0,
+      periodoInicialGravado: "",
+      periodoFinalGravado: "",
+      duplicidadesLoteId: 0,
+      duplicidadesChaveLote: 0,
+      duplicidadesExtrato: 0,
+      divergenciasPayloadVsGravacao: 0
+    };
+    r.abas = {};
+    r.lotesExistentes = [];
+    r.extratosPorLote = {};
+    r.chaves = { lotes: [], chavesLoteRepetidas: [], loteIdRepetidos: [], chavesExtratoRepetidas: [] };
+    r.payloadAprovadoB36B37 = {};
+    r.comparacaoPayloadVsB38 = {};
+    r.logsRelacionados = {};
+    r.decisaoPendente = ["A_APROVEITAR_LOTE_GRAVADO", "B_BLOQUEAR_LOTE_E_CORRECAO_CONTROLADA", "C_REVERTER_COM_ROTINA_ESPECIFICA", "D_RECRIAR_IMPORTACAO_SEGURA_COM_ROTINA_NOVA"];
+    r.proximaEtapa = "Decidir A/B/C/D apos revisar esta auditoria. Nao executar conciliacao nem nova importacao.";
     var ss = abrirPlanilha_(r);
     if (ss) {
-      var lotes = objetos_(ss.getSheetByName(ABA_LOTES)).items;
-      var extratos = objetos_(ss.getSheetByName(ABA_EXTRATOS)).items;
-      var chavesLote = {};
-      var chavesExtrato = {};
+      r.abas[ABA_LOTES] = contarAba_(ss, ABA_LOTES);
+      r.abas[ABA_EXTRATOS] = contarAba_(ss, ABA_EXTRATOS);
+      r.abas[ABA_TMP_FLASH] = contarAba_(ss, ABA_TMP_FLASH);
+      r.abas.FIN_CARTOES_LOGS = contarAba_(ss, "FIN_CARTOES_LOGS");
+
+      var lotes = anexarLinhasB39_(objetos_(ss.getSheetByName(ABA_LOTES)).items);
+      var extratos = anexarLinhasB39_(objetos_(ss.getSheetByName(ABA_EXTRATOS)).items);
+      var lotesFin1117 = lotes.filter(function(l) {
+        var obs = txt_(l.OBSERVACOES);
+        var origem = txt_(l.ORIGEM);
+        var arq = txt_(l.ARQUIVO_NOME);
+        return origem === "FLASH" || arq === ABA_TMP_FLASH || /FIN\.?11\.?17|TMP_IMPORT_EXTRATO_FLASH/i.test(obs);
+      });
+      var loteIdsFin1117 = {};
+      lotesFin1117.forEach(function(l) {
+        if (txt_(l.LOTE_ID)) loteIdsFin1117[txt_(l.LOTE_ID)] = true;
+      });
+      var extratosFin1117 = extratos.filter(function(e) {
+        return !!loteIdsFin1117[txt_(e.LOTE_ID || e.IMPORTACAO_ID)] || txt_(e.ORIGEM) === "FLASH";
+      });
+
+      r.resumo.lotesExistentes = lotes.length;
+      r.resumo.extratosExistentes = extratos.length;
+      r.resumo.lotesFin1117 = lotesFin1117.length;
+      r.resumo.extratosFin1117 = extratosFin1117.length;
+
+      var porLote = resumirExtratosPorLoteB39_(extratosFin1117);
       var datas = [];
-      r.resumo.lotes = lotes.length;
-      r.resumo.extratos = extratos.length;
-      lotes.forEach(function(l) {
-        var chave = txt_(l.CHAVE_LOTE || l.LOTE_ID);
-        if (chave) chavesLote[chave] = (chavesLote[chave] || 0) + 1;
-        r.lotesResumo.push({ loteId: txt_(l.LOTE_ID), chaveLote: txt_(l.CHAVE_LOTE), totalLancamentos: Number(l.TOTAL_LANCAMENTOS || 0), periodoInicial: txt_(l.PERIODO_INICIO), periodoFinal: txt_(l.PERIODO_FIM) });
+      extratosFin1117.forEach(function(e) {
+        r.resumo.valorTotalGravado += valorLinhaExtratoB39_(e);
+        var data = dataLinhaExtratoB39_(e);
+        if (data) datas.push(data);
       });
-      extratos.forEach(function(e) {
-        r.resumo.valorTotal += num_(e.VALOR);
-        if (e.DATA_TRANSACAO) datas.push(txt_(e.DATA_TRANSACAO));
-        var chaveE = txt_(e.CHAVE_DUPLICIDADE || e.EXTRATO_ID);
-        if (chaveE) chavesExtrato[chaveE] = (chavesExtrato[chaveE] || 0) + 1;
-      });
-      Object.keys(chavesLote).forEach(function(k) { if (chavesLote[k] > 1) r.resumo.duplicidadesLote++; });
-      Object.keys(chavesExtrato).forEach(function(k) { if (chavesExtrato[k] > 1) r.resumo.duplicidadesExtrato++; });
       datas.sort();
-      r.resumo.periodoInicial = datas[0] || "";
-      r.resumo.periodoFinal = datas[datas.length - 1] || "";
-      r.resumo.valorTotal = Math.round(r.resumo.valorTotal * 100) / 100;
-      if (r.resumo.lotes < 1 || r.resumo.extratos < 1) r.bloqueios.push("IMPORTACAO_FLASH_AINDA_NAO_ENCONTRADA");
-      if (r.resumo.duplicidadesLote > 0) r.bloqueios.push("DUPLICIDADE_LOTE_FLASH");
-      if (r.resumo.duplicidadesExtrato > 0) r.bloqueios.push("DUPLICIDADE_EXTRATO_FLASH");
+      r.resumo.valorTotalGravado = Math.round(r.resumo.valorTotalGravado * 100) / 100;
+      r.resumo.periodoInicialGravado = datas[0] || "";
+      r.resumo.periodoFinalGravado = datas[datas.length - 1] || "";
+
+      r.lotesExistentes = lotesFin1117.map(function(l) {
+        return {
+          linha: l.__linha,
+          loteId: txt_(l.LOTE_ID),
+          origem: txt_(l.ORIGEM),
+          arquivoNome: txt_(l.ARQUIVO_NOME),
+          arquivoHash: txt_(l.ARQUIVO_HASH),
+          chaveLote: txt_(l.CHAVE_LOTE),
+          periodoInicio: txt_(l.PERIODO_INICIO),
+          periodoFim: txt_(l.PERIODO_FIM),
+          totalLancamentos: Number(l.TOTAL_LANCAMENTOS || 0),
+          somaDebitos: Math.round(num_(l.SOMA_DEBITOS) * 100) / 100,
+          somaCreditos: Math.round(num_(l.SOMA_CREDITOS) * 100) / 100,
+          saldoLiquido: Math.round(num_(l.SALDO_LIQUIDO) * 100) / 100,
+          status: txt_(l.STATUS_LOTE || l.STATUS),
+          importadoEm: txt_(l.IMPORTADO_EM || l.CRIADO_EM),
+          observacoes: txt_(l.OBSERVACOES)
+        };
+      });
+      r.extratosPorLote = porLote;
+
+      var mapaLoteId = mapaContagemB39_(lotesFin1117, function(l) { return l.LOTE_ID; });
+      var mapaChaveLote = mapaContagemB39_(lotesFin1117, function(l) { return l.CHAVE_LOTE || l.ARQUIVO_HASH; });
+      var mapaChaveExtrato = mapaContagemB39_(extratos, function(e) { return e.CHAVE_DUPLICIDADE; });
+      r.chaves.lotes = r.lotesExistentes.map(function(l) {
+        return { loteId: l.loteId, chaveLote: l.chaveLote, arquivoHash: l.arquivoHash };
+      });
+      r.chaves.loteIdRepetidos = repetidosB39_(mapaLoteId);
+      r.chaves.chavesLoteRepetidas = repetidosB39_(mapaChaveLote);
+      r.chaves.chavesExtratoRepetidas = repetidosB39_(mapaChaveExtrato);
+      r.resumo.duplicidadesLoteId = r.chaves.loteIdRepetidos.length;
+      r.resumo.duplicidadesChaveLote = r.chaves.chavesLoteRepetidas.length;
+      r.resumo.duplicidadesExtrato = r.chaves.chavesExtratoRepetidas.length;
+
+      var basePayload = validarProd_("RECONSTRUCAO_PAYLOAD_APROVADO_B36_B37_PARA_B39_SEM_GRAVAR", true);
+      basePayload.bloqueios = [];
+      basePayload.avisos = [];
+      var pacote = lerEntradaFlash_(ss, basePayload);
+      r.payloadAprovadoB36B37 = {
+        entrada: pacote.entrada,
+        leitura: pacote.leitura,
+        cartoes: pacote.cartoes,
+        chaveLote: pacote.chaveLote,
+        bloqueiosReconstrucao: basePayload.bloqueios,
+        avisosReconstrucao: basePayload.avisos,
+        amostra: pacote.amostra
+      };
+      r.comparacaoPayloadVsB38 = compararPayloadB39_(pacote, lotesFin1117, porLote);
+      r.resumo.divergenciasPayloadVsGravacao = r.comparacaoPayloadVsB38.divergencias.length;
+      r.logsRelacionados = logsRelacionadosB39_(ss);
+
+      if (r.resumo.lotesFin1117 < 1 || r.resumo.extratosFin1117 < 1) r.bloqueios.push("IMPORTACAO_B38_FIN1117_NAO_ENCONTRADA");
+      if (r.resumo.duplicidadesLoteId > 0) r.bloqueios.push("DUPLICIDADE_LOTE_ID_FLASH");
+      if (r.resumo.duplicidadesChaveLote > 0) r.bloqueios.push("DUPLICIDADE_CHAVE_LOTE_FLASH");
+      if (r.resumo.duplicidadesExtrato > 0) r.bloqueios.push("DUPLICIDADE_CHAVE_EXTRATO_FLASH");
+      if (r.resumo.divergenciasPayloadVsGravacao > 0) r.bloqueios.push("DIVERGENCIA_PAYLOAD_B36_B37_VS_GRAVACAO_B38");
+      if (basePayload.bloqueios.length) r.avisos.push("PAYLOAD_B36_B37_RECONSTRUIDO_COM_BLOQUEIOS: " + basePayload.bloqueios.join("|"));
     }
     r.success = r.bloqueios.length === 0;
     r.ok = r.success;
+    return log_(r);
+  }
+
+  function normalizarHeaderB392_(v) {
+    return txt_(v)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function localizarColunaB392_(headers, aliases) {
+    var normalizados = headers.map(function(h) { return normalizarHeaderB392_(h); });
+    for (var i = 0; i < aliases.length; i++) {
+      var alvo = normalizarHeaderB392_(aliases[i]);
+      for (var j = 0; j < normalizados.length; j++) {
+        var atual = normalizados[j];
+        if (!atual || !alvo) continue;
+        if (atual === alvo || atual.indexOf(alvo) >= 0 || alvo.indexOf(atual) >= 0) return j;
+      }
+    }
+    return -1;
+  }
+
+  function valorMonetarioB392_(v) {
+    if (typeof v === "number") return { ok: !isNaN(v), valor: isNaN(v) ? 0 : Math.round(v * 100) / 100, motivo: isNaN(v) ? "VALOR_INVALIDO" : "" };
+    var s = txt_(v).replace(/R\$/gi, "").replace(/\s/g, "").replace(/[^\d,.-]/g, "");
+    if (!s) return { ok: false, valor: 0, motivo: "VALOR_VAZIO" };
+    var negativo = s.charAt(0) === "-";
+    s = s.replace(/-/g, "");
+    var temVirgula = s.indexOf(",") >= 0;
+    var temPonto = s.indexOf(".") >= 0;
+    if (temVirgula && temPonto) {
+      if (s.lastIndexOf(",") > s.lastIndexOf(".")) {
+        s = s.replace(/\./g, "").replace(",", ".");
+      } else {
+        s = s.replace(/,/g, "");
+      }
+    } else if (temVirgula) {
+      s = s.replace(/\./g, "").replace(",", ".");
+    }
+    var n = Number(s);
+    if (isNaN(n)) return { ok: false, valor: 0, motivo: "VALOR_INVALIDO" };
+    if (negativo) n = n * -1;
+    return { ok: true, valor: Math.round(n * 100) / 100, motivo: "" };
+  }
+
+  function pad2B392_(n) {
+    return ("0" + n).slice(-2);
+  }
+
+  function dataSerialB392_(n) {
+    var base = new Date(Date.UTC(1899, 11, 30));
+    var d = new Date(base.getTime() + Math.round(Number(n) * 86400000));
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+
+  function dataInfoB392_(valor, display) {
+    var bruto = txt_(display || valor);
+    var d = null;
+    var status = "INVALIDA";
+    var motivo = "DATA_VAZIA";
+    if (Object.prototype.toString.call(valor) === "[object Date]" && !isNaN(valor.getTime())) {
+      d = valor;
+      status = "VALIDA";
+      motivo = "DATE_OBJECT";
+    } else if (typeof valor === "number" && valor > 20000 && valor < 80000) {
+      d = dataSerialB392_(valor);
+      status = "VALIDA";
+      motivo = "SERIAL_PLANILHA";
+    } else {
+      var s = txt_(display || valor);
+      if (s) {
+        var mBr = s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+        var mIso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2}))?/);
+        if (mBr) {
+          var dia = Number(mBr[1]);
+          var mes = Number(mBr[2]);
+          var ano = Number(mBr[3]);
+          if (ano < 100) ano += 2000;
+          if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12) {
+            d = new Date(ano, mes - 1, dia, Number(mBr[4] || 0), Number(mBr[5] || 0), 0);
+            if (d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia) {
+              status = "VALIDA";
+              motivo = "BR_DD_MM_YYYY";
+            } else {
+              motivo = "DATA_BR_INEXISTENTE";
+            }
+          } else {
+            motivo = "DATA_BR_FORA_DE_FAIXA";
+          }
+        } else if (mIso) {
+          var anoIso = Number(mIso[1]);
+          var mesIso = Number(mIso[2]);
+          var diaIso = Number(mIso[3]);
+          if (mesIso >= 1 && mesIso <= 12 && diaIso >= 1 && diaIso <= 31) {
+            d = new Date(anoIso, mesIso - 1, diaIso, Number(mIso[4] || 0), Number(mIso[5] || 0), 0);
+            if (d.getFullYear() === anoIso && d.getMonth() === mesIso - 1 && d.getDate() === diaIso) {
+              status = "VALIDA";
+              motivo = "ISO_YYYY_MM_DD";
+            } else {
+              motivo = "DATA_ISO_INEXISTENTE";
+            }
+          } else {
+            motivo = "DATA_ISO_FORA_DE_FAIXA";
+          }
+        } else if (/^[A-Z][a-z]{2}\s[A-Z][a-z]{2}\s\d{1,2}\s\d{4}/.test(s)) {
+          var js = new Date(s);
+          if (!isNaN(js.getTime())) {
+            d = js;
+            status = "VALIDA";
+            motivo = "JS_DATE_STRING";
+          } else {
+            motivo = "JS_DATE_STRING_INVALIDA";
+          }
+        } else {
+          motivo = "FORMATO_DATA_NAO_RECONHECIDO";
+        }
+      }
+    }
+    return {
+      dataBruta: bruto,
+      dataNormalizada: d ? Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm") : "",
+      dataDia: d ? Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+      timestamp: d ? d.getTime() : null,
+      statusData: status,
+      motivo: motivo
+    };
+  }
+
+  function resumoDatasB392_() {
+    return { menorDataNormalizada: "", maiorDataNormalizada: "", datasValidas: 0, datasInvalidasOuAmbiguas: 0 };
+  }
+
+  function acumularDataB392_(resumo, info) {
+    if (info && info.statusData === "VALIDA" && info.dataNormalizada) {
+      resumo.datasValidas++;
+      if (!resumo.menorDataNormalizada || info.dataNormalizada < resumo.menorDataNormalizada) resumo.menorDataNormalizada = info.dataNormalizada;
+      if (!resumo.maiorDataNormalizada || info.dataNormalizada > resumo.maiorDataNormalizada) resumo.maiorDataNormalizada = info.dataNormalizada;
+    } else {
+      resumo.datasInvalidasOuAmbiguas++;
+    }
+  }
+
+  function cartaoInfoB392_(v) {
+    var bruto = txt_(v);
+    var digitos = bruto.replace(/\D/g, "");
+    return {
+      bruto: bruto,
+      finalCartao: digitos,
+      possui3Digitos: digitos.length === 3,
+      valido: digitos.length === 4
+    };
+  }
+
+  function simplificarTextoB392_(v) {
+    return normalizarHeaderB392_(v).replace(/\s/g, "");
+  }
+
+  function chaveComparacaoB392_(dataDia, valor, descricao, cartaoFinal) {
+    return [txt_(dataDia), String(Math.round(num_(valor) * 100)), simplificarTextoB392_(descricao), txt_(cartaoFinal)].join("|");
+  }
+
+  function classificarTmpB392_(linha, displays, idx, linhaTmp) {
+    var data = idx.data >= 0 ? dataInfoB392_(linha[idx.data], displays[idx.data]) : dataInfoB392_("", "");
+    var valorInfo = idx.valor >= 0 ? valorMonetarioB392_(linha[idx.valor]) : { ok: false, valor: 0, motivo: "COLUNA_VALOR_AUSENTE" };
+    var descricao = idx.descricao >= 0 ? txt_(linha[idx.descricao]) : "";
+    var colaborador = idx.pessoa >= 0 ? txt_(linha[idx.pessoa]) : "";
+    var cartao = idx.cartao >= 0 ? cartaoInfoB392_(linha[idx.cartao]) : cartaoInfoB392_("");
+    var motivos = [];
+    var classe = "VALIDA";
+    if (idx.data < 0 || idx.valor < 0 || idx.cartao < 0) motivos.push("INVALIDA_COLUNA_OBRIGATORIA");
+    if (cartao.possui3Digitos) motivos.push("INVALIDA_CARTAO_FINAL_3_DIGITOS");
+    if (!cartao.valido && !cartao.possui3Digitos) motivos.push("INVALIDA_COLUNA_OBRIGATORIA");
+    if (data.statusData !== "VALIDA") motivos.push("INVALIDA_DATA");
+    if (!valorInfo.ok || valorInfo.valor === 0) motivos.push("INVALIDA_VALOR");
+    if (motivos.length) classe = motivos[0];
+    return {
+      linhaTmp: linhaTmp,
+      classe: classe,
+      motivos: motivos,
+      dataBruta: data.dataBruta,
+      dataNormalizada: data.dataNormalizada,
+      dataDia: data.dataDia,
+      statusData: data.statusData,
+      motivoData: data.motivo,
+      descricao: descricao,
+      valor: valorInfo.valor,
+      colaborador: colaborador,
+      cartaoFinal: cartao.finalCartao,
+      cartaoBruto: cartao.bruto,
+      chaveComparacao: chaveComparacaoB392_(data.dataDia, valorInfo.valor, descricao, cartao.finalCartao)
+    };
+  }
+
+  function indiceExtratosB392_(extratos) {
+    var porLinhaOrigem = {};
+    var porChave = {};
+    extratos.forEach(function(e) {
+      var linhaOrigem = Number(e.LINHA_ORIGEM || 0);
+      var data = dataInfoB392_(e.DATA_TRANSACAO || e.DATA, e.DATA_TRANSACAO || e.DATA);
+      var valor = valorMonetarioB392_(e.VALOR !== undefined && e.VALOR !== "" ? e.VALOR : e.VALOR_TRANSACAO).valor;
+      var desc = txt_(e.ESTABELECIMENTO_EXTRATO || e.ESTABELECIMENTO || e.DESCRICAO);
+      var cartao = cartaoInfoB392_(e.CARTAO_FINAL || e.CARTAO_ID);
+      var chave = chaveComparacaoB392_(data.dataDia, valor, desc, cartao.finalCartao);
+      var resumo = {
+        linhaExtrato: e.__linha,
+        loteId: txt_(e.LOTE_ID || e.IMPORTACAO_ID),
+        dataInfo: data,
+        valor: valor,
+        descricao: desc,
+        colaborador: txt_(e.PESSOA || e.PORTADOR),
+        cartaoFinal: cartao.finalCartao,
+        chaveComparacao: chave
+      };
+      if (linhaOrigem) porLinhaOrigem[linhaOrigem] = resumo;
+      if (chave && !porChave[chave]) porChave[chave] = resumo;
+    });
+    return { porLinhaOrigem: porLinhaOrigem, porChave: porChave };
+  }
+
+  function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR() {
+    var r = validarProd_("AUDITORIA_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR", true);
+    r.incidente = "B38";
+    r.db = { DB_FIN_ID: r.DB_FIN_ID, dbFinIdDiferenteDev: r.dbFinIdDiferenteDev };
+    r.proibicoes = ["NAO_IMPORTAR", "NAO_CONCILIAR", "NAO_CORRIGIR", "NAO_APAGAR", "NAO_REIMPORTAR"];
+    r.resumo = {
+      tmpTotal: 0,
+      tmpValidas: 0,
+      tmpInvalidas: 0,
+      extratosGravados: 0,
+      valorTmpTotal: 0,
+      valorTmpValidas: 0,
+      valorTmpInvalidas: 0,
+      valorGravado: 0,
+      invalidasEncontradasNosExtratos: 0,
+      divergenciasCriticas: 0
+    };
+    r.loteB38 = {
+      encontrado: false,
+      loteId: "LOTE-FLASH-20260615-163548",
+      status: "",
+      totalLancamentos: 0,
+      saldoLiquido: 0,
+      periodoInicioBruto: "",
+      periodoFimBruto: "",
+      periodoInicioNormalizado: "",
+      periodoFimNormalizado: "",
+      statusPeriodo: "NAO_AVALIADO"
+    };
+    r.datas = { tmp: resumoDatasB392_(), extratos: resumoDatasB392_(), lote: {} };
+    r.invalidas = [];
+    r.totalInvalidas = 0;
+    r.divergencias = [];
+    r.totalDivergencias = 0;
+    r.amostrasDivergencias = [];
+    r.logsRelacionados = { existe: false, linhasDados: 0 };
+    r.decisaoSugerida = "D_INVESTIGACAO_COMPLEMENTAR";
+    r.proximaEtapa = "Nao executar conciliacao nem nova importacao. Criar B40 conforme resultado.";
+
+    try {
+      var ss = abrirPlanilha_(r);
+      if (!ss) {
+        r.success = false;
+        r.ok = false;
+        return log_(r);
+      }
+
+      var shTmp = ss.getSheetByName(ABA_TMP_FLASH);
+      var shLotes = ss.getSheetByName(ABA_LOTES);
+      var shExtratos = ss.getSheetByName(ABA_EXTRATOS);
+      var shLogs = ss.getSheetByName("FIN_CARTOES_LOGS");
+      if (!shTmp) r.bloqueios.push("ABA_TMP_IMPORT_EXTRATO_FLASH_AUSENTE");
+      if (!shLotes) r.bloqueios.push("ABA_FIN_LOTES_EXTRATO_FLASH_AUSENTE");
+      if (!shExtratos) r.bloqueios.push("ABA_FIN_CARTOES_EXTRATOS_AUSENTE");
+      if (r.bloqueios.length) {
+        r.success = false;
+        r.ok = false;
+        return log_(r);
+      }
+      r.logsRelacionados = { existe: !!shLogs, linhasDados: shLogs ? Math.max(0, shLogs.getLastRow() - 1) : 0 };
+
+      var tmpValores = shTmp.getLastRow() > 0 && shTmp.getLastColumn() > 0
+        ? shTmp.getRange(1, 1, shTmp.getLastRow(), shTmp.getLastColumn()).getValues()
+        : [];
+      var tmpDisplays = shTmp.getLastRow() > 0 && shTmp.getLastColumn() > 0
+        ? shTmp.getRange(1, 1, shTmp.getLastRow(), shTmp.getLastColumn()).getDisplayValues()
+        : [];
+      var headersTmp = tmpValores.length ? tmpValores[0].map(function(h) { return txt_(h); }) : [];
+      var idxTmp = {
+        data: localizarColunaB392_(headersTmp, ["DATA", "DATA_TRANSACAO", "DATA DA TRANSACAO", "DATA/HORA"]),
+        descricao: localizarColunaB392_(headersTmp, ["DESCRICAO", "ESTABELECIMENTO", "HISTORICO", "MOVIMENTACAO"]),
+        valor: localizarColunaB392_(headersTmp, ["VALOR", "VALOR_TRANSACAO", "VALOR R$"]),
+        pessoa: localizarColunaB392_(headersTmp, ["PESSOA", "COLABORADOR", "PORTADOR", "NOME"]),
+        cartao: localizarColunaB392_(headersTmp, ["CARTAO_FINAL", "FINAL CARTAO", "FINAL DO CARTAO", "CARTAO"])
+      };
+
+      var tmpClassificada = [];
+      for (var i = 1; i < tmpValores.length; i++) {
+        var preenchida = tmpValores[i].some(function(c) { return txt_(c) !== ""; });
+        if (!preenchida) continue;
+        var itemTmp = classificarTmpB392_(tmpValores[i], tmpDisplays[i], idxTmp, i + 1);
+        tmpClassificada.push(itemTmp);
+        r.resumo.tmpTotal++;
+        r.resumo.valorTmpTotal += itemTmp.valor;
+        acumularDataB392_(r.datas.tmp, { statusData: itemTmp.statusData, dataNormalizada: itemTmp.dataNormalizada });
+        if (itemTmp.classe === "VALIDA") {
+          r.resumo.tmpValidas++;
+          r.resumo.valorTmpValidas += itemTmp.valor;
+        } else {
+          r.resumo.tmpInvalidas++;
+          r.resumo.valorTmpInvalidas += itemTmp.valor;
+        }
+      }
+      r.resumo.valorTmpTotal = Math.round(r.resumo.valorTmpTotal * 100) / 100;
+      r.resumo.valorTmpValidas = Math.round(r.resumo.valorTmpValidas * 100) / 100;
+      r.resumo.valorTmpInvalidas = Math.round(r.resumo.valorTmpInvalidas * 100) / 100;
+
+      var lotes = anexarLinhasB39_(objetos_(shLotes).items);
+      var lote = null;
+      for (var l = 0; l < lotes.length; l++) {
+        if (txt_(lotes[l].LOTE_ID) === "LOTE-FLASH-20260615-163548") {
+          lote = lotes[l];
+          break;
+        }
+      }
+      if (lote) {
+        var periodoInicioInfo = dataInfoB392_(lote.PERIODO_INICIO, lote.PERIODO_INICIO);
+        var periodoFimInfo = dataInfoB392_(lote.PERIODO_FIM, lote.PERIODO_FIM);
+        r.loteB38.encontrado = true;
+        r.loteB38.status = txt_(lote.STATUS_LOTE || lote.STATUS);
+        r.loteB38.totalLancamentos = Number(lote.TOTAL_LANCAMENTOS || 0);
+        r.loteB38.saldoLiquido = Math.round(num_(lote.SALDO_LIQUIDO) * 100) / 100;
+        r.loteB38.periodoInicioBruto = txt_(lote.PERIODO_INICIO);
+        r.loteB38.periodoFimBruto = txt_(lote.PERIODO_FIM);
+        r.loteB38.periodoInicioNormalizado = periodoInicioInfo.dataNormalizada;
+        r.loteB38.periodoFimNormalizado = periodoFimInfo.dataNormalizada;
+        r.loteB38.statusPeriodo = (periodoInicioInfo.statusData === "VALIDA" && periodoFimInfo.statusData === "VALIDA") ? "LEGIVEL" : "DIVERGENTE_OU_CORROMPIDO";
+        r.datas.lote = {
+          periodoInicioBruto: r.loteB38.periodoInicioBruto,
+          periodoFimBruto: r.loteB38.periodoFimBruto,
+          periodoInicioNormalizado: r.loteB38.periodoInicioNormalizado,
+          periodoFimNormalizado: r.loteB38.periodoFimNormalizado,
+          statusInicio: periodoInicioInfo.statusData,
+          statusFim: periodoFimInfo.statusData,
+          motivoInicio: periodoInicioInfo.motivo,
+          motivoFim: periodoFimInfo.motivo,
+          statusPeriodo: r.loteB38.statusPeriodo
+        };
+      } else {
+        r.divergencias.push({ tipo: "LOTE_B38_NAO_ENCONTRADO", severidade: "ALTA", detalhe: "Lote LOTE-FLASH-20260615-163548 nao localizado em FIN_LOTES_EXTRATO_FLASH." });
+      }
+
+      var extratos = anexarLinhasB39_(objetos_(shExtratos).items).filter(function(e) {
+        return txt_(e.LOTE_ID || e.IMPORTACAO_ID) === "LOTE-FLASH-20260615-163548";
+      });
+      var indiceExtratos = indiceExtratosB392_(extratos);
+      r.resumo.extratosGravados = extratos.length;
+      extratos.forEach(function(e) {
+        var dataEx = dataInfoB392_(e.DATA_TRANSACAO || e.DATA, e.DATA_TRANSACAO || e.DATA);
+        var valorEx = valorMonetarioB392_(e.VALOR !== undefined && e.VALOR !== "" ? e.VALOR : e.VALOR_TRANSACAO).valor;
+        r.resumo.valorGravado += valorEx;
+        acumularDataB392_(r.datas.extratos, dataEx);
+      });
+      r.resumo.valorGravado = Math.round(r.resumo.valorGravado * 100) / 100;
+
+      tmpClassificada.forEach(function(item) {
+        if (item.classe === "VALIDA") return;
+        r.totalInvalidas++;
+        var match = indiceExtratos.porLinhaOrigem[item.linhaTmp] || indiceExtratos.porChave[item.chaveComparacao] || null;
+        if (match) r.resumo.invalidasEncontradasNosExtratos++;
+        if (r.invalidas.length < 10) {
+          r.invalidas.push({
+            linhaTmp: item.linhaTmp,
+            linhaExtrato: match ? match.linhaExtrato : null,
+            encontradaNoExtrato: !!match,
+            motivo: item.motivos.join("|") || item.classe,
+            dataBruta: item.dataBruta,
+            dataNormalizada: item.dataNormalizada,
+            statusData: item.statusData,
+            descricao: item.descricao,
+            valor: item.valor,
+            colaborador: item.colaborador,
+            cartaoFinal: item.cartaoFinal,
+            chaveComparacao: item.chaveComparacao,
+            sugestao: match ? "ISOLAR_EXTRATO_INVALIDO" : "RECLASSIFICAR_SE_VALIDACAO_ESTAVA_ERRADA"
+          });
+        }
+      });
+
+      if (r.resumo.tmpTotal !== 49) r.divergencias.push({ tipo: "TMP_TOTAL_DIFERENTE_DO_ESPERADO_B39", severidade: "MEDIA", detalhe: "TMP possui " + r.resumo.tmpTotal + " linhas preenchidas." });
+      if (r.resumo.tmpValidas !== 46) r.divergencias.push({ tipo: "TMP_VALIDAS_DIFERENTE_B36_B37", severidade: "ALTA", detalhe: "B36/B37 esperavam 46 validas; B39.2 classificou " + r.resumo.tmpValidas + "." });
+      if (r.resumo.extratosGravados !== r.resumo.tmpValidas) r.divergencias.push({ tipo: "B38_GRAVOU_QUANTIDADE_DIFERENTE_DAS_VALIDAS", severidade: "ALTA", detalhe: "Extratos gravados: " + r.resumo.extratosGravados + "; validas esperadas: " + r.resumo.tmpValidas + "." });
+      if (r.resumo.invalidasEncontradasNosExtratos > 0) r.divergencias.push({ tipo: "INVALIDAS_FORAM_GRAVADAS", severidade: "ALTA", detalhe: r.resumo.invalidasEncontradasNosExtratos + " linhas invalidas da TMP aparecem nos extratos gravados." });
+      if (r.datas.extratos.datasInvalidasOuAmbiguas > 0 || r.loteB38.statusPeriodo !== "LEGIVEL") r.divergencias.push({ tipo: "DATAS_GRAVADAS_DIVERGENTES_OU_CORROMPIDAS", severidade: "ALTA", detalhe: "Ha datas invalidas/ambiguas nos extratos ou periodo do lote." });
+      if (Math.round(r.resumo.valorGravado * 100) !== Math.round(720.79 * 100)) r.divergencias.push({ tipo: "VALOR_GRAVADO_DIFERE_B39", severidade: "ALTA", detalhe: "Valor gravado calculado: " + r.resumo.valorGravado + "." });
+      if (!r.loteB38.encontrado) r.bloqueios.push("LOTE_B38_NAO_ENCONTRADO");
+
+      r.totalDivergencias = r.divergencias.length;
+      r.amostrasDivergencias = r.divergencias.slice(0, 10);
+      r.resumo.divergenciasCriticas = r.divergencias.filter(function(d) { return d.severidade === "ALTA"; }).length;
+      r.decisaoSugerida = r.resumo.divergenciasCriticas > 0 ? "B_CORRECAO_CONTROLADA" : "D_INVESTIGACAO_COMPLEMENTAR";
+      r.bloqueios = r.bloqueios.concat(r.divergencias.filter(function(d) { return d.severidade === "ALTA"; }).map(function(d) { return d.tipo; }));
+      r.success = true;
+      r.ok = r.bloqueios.length === 0 && r.resumo.divergenciasCriticas === 0;
+    } catch (e) {
+      r.bloqueios.push("ERRO_TECNICO_B39_2: " + (e && e.message ? e.message : String(e)));
+      r.success = false;
+      r.ok = false;
+    }
     return log_(r);
   }
 
@@ -3005,6 +3657,7 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR: PRE_CONFIRMAR_FLASH_PRODUCAO_B37_SEM_GRAVAR,
     IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO: IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO,
     AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR,
+    AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR: AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -3056,6 +3709,10 @@ function IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO() {
 
 function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_SEM_GRAVAR();
+}
+
+function AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_IMPORTACAO_FLASH_PRODUCAO_B39_2_RESUMO_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
