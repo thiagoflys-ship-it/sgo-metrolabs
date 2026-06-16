@@ -84,8 +84,13 @@ assinatura e confirma o aceite.
 
 ## 9. Como o colaborador lanca uma prestacao
 
-Ponto pendente de go-live: o fluxo mobile completo de prestacao ainda precisa
-ser finalizado/validado em B45.
+Na B45 o colaborador pode usar a rota publica de prestacao:
+
+`?fin_prestacao=TOKEN`
+
+Tambem e aceita a rota:
+
+`?page=fin_prestacao&token=TOKEN`
 
 Campos esperados:
 
@@ -98,10 +103,14 @@ Campos esperados:
 - observacao;
 - localizacao, se aplicavel.
 
+Ao enviar, o sistema registra a prestacao em `FIN_CARTOES_LANCAMENTOS` com
+status `ENVIADO` e mantem o comprovante vinculado ao lancamento.
+
 ## 10. Como anexar comprovante
 
-O colaborador deve anexar foto ou arquivo do comprovante. Esse fluxo precisa
-validacao final mobile antes do uso real.
+O colaborador anexa foto ou arquivo do comprovante na tela mobile de prestacao.
+O arquivo e salvo na pasta financeira configurada e referenciado em
+`FIN_CARTOES_ANEXOS`.
 
 ## 11. Como importar extrato Flash
 
@@ -162,12 +171,20 @@ pendencias e o que precisa ser enviado.
 
 ## 20. Como imprimir relatorio
 
-Relatorios A4 finais ainda precisam ser completados/validados antes do go-live.
+Os relatorios A4 B45 retornam HTML imprimivel para conferencia:
+
+- comprovante de entrega do cartao;
+- prestacao por colaborador;
+- pendencias por colaborador;
+- conciliacao por periodo;
+- extrato importado;
+- relatorio gerencial.
 
 ## 21. Dashboard
 
 O dashboard deve separar massa modelo de operacao real para nao confundir
-indicadores.
+indicadores. O lote Rafael permanece identificado como massa modelo de
+homologacao e nao deve ser tratado como cobranca real.
 
 ## 22. Creditos/depositos
 
@@ -215,8 +232,9 @@ Nao.
 Nao. Rafael e massa modelo.
 
 **O modulo esta pronto para go-live?**
-Tecnicamente a importacao/classificacao/preview estao homologados. O go-live
-operacional ainda depende de B45 para prestacao mobile e relatorios.
+B45 finaliza a base operacional de prestacao mobile, comprovante, historico,
+regularizacao de pendencias e relatorios A4. Antes de uso real, executar as
+auditorias B45 e validar a tela em celular real.
 
 ## 28. Glossario
 

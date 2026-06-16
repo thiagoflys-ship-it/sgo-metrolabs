@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#5c667a;--line:#d9e0ea;--brand:#1458d4;--ok:#167a3a;--warn:#a15c00;--err:#b42318}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:760px;margin:0 auto;padding:18px}
+    header{padding:10px 0 16px}
+    h1{font-size:22px;margin:0 0 4px}
+    h2{font-size:17px;margin:0 0 10px}
+    p{margin:4px 0;color:var(--muted);line-height:1.4}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin:12px 0}
+    label{display:block;font-size:12px;font-weight:bold;margin:10px 0 5px;color:#263244}
+    input,select,textarea,button{width:100%;font:inherit;border-radius:6px}
+    input,select,textarea{border:1px solid var(--line);padding:10px;background:#fff}
+    textarea{min-height:86px;resize:vertical}
+    button{border:0;background:var(--brand);color:#fff;padding:12px;font-weight:bold;margin-top:12px}
+    button.secondary{background:#eef3ff;color:#173b8f}
+    button:disabled{opacity:.55}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .status{padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
+    .ok{background:#eaf8ef;color:var(--ok)}
+    .warn{background:#fff5e5;color:var(--warn)}
+    .err{background:#fdeceb;color:var(--err)}
+    .item{border-top:1px solid var(--line);padding:10px 0}
+    .item:first-child{border-top:0}
+    .pill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;background:#eef2f7;color:#344054}
+    .money{font-weight:bold}
+    @media(max-width:560px){.wrap{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:20px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Prestacao de contas Flash</h1>
+      <p id="finPrestacaoPessoa">Carregando dados do cartao...</p>
+    </header>
+
+    <section id="finPrestacaoStatus"></section>
+
+    <section class="card">
+      <h2>Enviar prestacao</h2>
+      <div class="grid">
+        <div><label>Data do gasto</label><input id="fpData" type="date"></div>
+        <div><label>Valor</label><input id="fpValor" type="number" step="0.01" min="0"></div>
+      </div>
+      <label>Estabelecimento</label><input id="fpEstabelecimento" type="text" autocomplete="off">
+      <label>Finalidade</label><textarea id="fpFinalidade" placeholder="Explique o motivo da despesa"></textarea>
+      <div class="grid">
+        <div><label>Tem OS?</label><select id="fpTemOs"><option value="SIM">Sim</option><option value="NAO">Nao</option></select></div>
+        <div><label>Numero da OS</label><input id="fpOsNumero" type="text" autocomplete="off"></div>
+      </div>
+      <label>Justificativa quando nao houver OS</label><textarea id="fpJustificativa"></textarea>
+      <label>Comprovante / foto</label><input id="fpArquivo" type="file" accept="image/*,.pdf" capture="environment">
+      <label>Observacoes</label><textarea id="fpObs"></textarea>
+      <button id="fpEnviar" type="button" onclick="finPrestacaoEnviar_()">Enviar prestacao</button>
+    </section>
+
+    <section class="card">
+      <h2>Pendencias</h2>
+      <div id="fpPendencias"><p>Nenhuma pendencia carregada.</p></div>
+    </section>
+
+    <section class="card">
+      <h2>Historico de prestacoes</h2>
+      <div id="fpHistorico"><p>Nenhuma prestacao carregada.</p></div>
+    </section>
+  </main>
+
+  <script>
+    var FIN_PRESTACAO_TOKEN = <?!= PRESTACAO_TOKEN_JSON ?>;
+
+    function fpEl(id){ return document.getElementById(id); }
+    function fpText(v){ return String(v == null ? '' : v); }
+    function fpHtml(v){ return fpText(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fpMoeda(v){ return Number(v || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    function fpStatus(msg, cls){ fpEl('finPrestacaoStatus').innerHTML = '<div class="status '+(cls||'warn')+'">'+fpHtml(msg)+'</div>'; }
+
+    function finPrestacaoCarregar_(){
+      if(!FIN_PRESTACAO_TOKEN){ fpStatus('Token de prestacao nao informado.', 'err'); return; }
+      google.script.run
+        .withSuccessHandler(finPrestacaoRender_)
+        .withFailureHandler(function(e){ fpStatus(e && e.message ? e.message : e, 'err'); })
+        .finFlashObterPrestacaoPublicaPorTokenV1(FIN_PRESTACAO_TOKEN);
+    }
+
+    function finPrestacaoRender_(r){
+      if(!r || !r.ok){ fpStatus((r && r.message) || 'Nao foi possivel carregar a prestacao.', 'err'); return; }
+      var c = r.colaborador || {};
+      fpEl('finPrestacaoPessoa').textContent = (c.funcionarioNome || 'Colaborador') + ' - Cartao ' + (c.cartaoFinal || c.cartaoId || '');
+      fpStatus('Ambiente pronto para envio de prestacao com comprovante.', 'ok');
+      finPrestacaoRenderLista_(r.prestacoes || [], 'fpHistorico', false);
+      finPrestacaoRenderLista_(r.pendencias || [], 'fpPendencias', true);
+    }
+
+    function finPrestacaoRenderLista_(items, alvo, pendencia){
+      if(!items.length){ fpEl(alvo).innerHTML = '<p>Nenhum registro encontrado.</p>'; return; }
+      fpEl(alvo).innerHTML = items.map(function(x){
+        if(pendencia){
+          return '<div class="item"><span class="pill">'+fpHtml(x.status)+'</span><p>'+fpHtml(x.descricaoPendencia)+'</p><p class="money">'+fpMoeda(x.valorEnvolvido)+'</p>' +
+            '<textarea id="esc_'+fpHtml(x.pendenciaId || x.id)+'" placeholder="Escreva o esclarecimento"></textarea>' +
+            '<button class="secondary" type="button" onclick="finPrestacaoRegularizar_(\''+fpHtml(x.pendenciaId || x.id)+'\')">Enviar esclarecimento</button></div>';
+        }
+        return '<div class="item"><span class="pill">'+fpHtml(x.statusPrestacao)+'</span><p>'+fpHtml(x.dataGasto)+' - '+fpHtml(x.estabelecimento)+'</p><p class="money">'+fpMoeda(x.valor)+'</p><p>'+fpHtml(x.descricaoGasto)+'</p></div>';
+      }).join('');
+    }
+
+    function finPrestacaoArquivo_(cb){
+      var f = fpEl('fpArquivo').files[0];
+      if(!f){ cb(null); return; }
+      var reader = new FileReader();
+      reader.onload = function(){ cb({nomeArquivo:f.name,mimeType:f.type,dataUrl:reader.result}); };
+      reader.onerror = function(){ fpStatus('Nao foi possivel ler o comprovante.', 'err'); };
+      reader.readAsDataURL(f);
+    }
+
+    function finPrestacaoEnviar_(){
+      fpEl('fpEnviar').disabled = true;
+      finPrestacaoArquivo_(function(arquivo){
+        var payload = {
+          token: FIN_PRESTACAO_TOKEN,
+          dataGasto: fpEl('fpData').value,
+          valor: fpEl('fpValor').value,
+          estabelecimento: fpEl('fpEstabelecimento').value,
+          finalidade: fpEl('fpFinalidade').value,
+          temOs: fpEl('fpTemOs').value,
+          osNumero: fpEl('fpOsNumero').value,
+          justificativaSemOs: fpEl('fpJustificativa').value,
+          observacoes: fpEl('fpObs').value,
+          arquivo: arquivo
+        };
+        google.script.run
+          .withSuccessHandler(function(r){
+            fpEl('fpEnviar').disabled = false;
+            if(!r || !r.ok){ fpStatus((r && r.message) || 'Prestacao nao enviada.', 'err'); return; }
+            fpStatus('Prestacao enviada com sucesso.', 'ok');
+            fpEl('fpArquivo').value = '';
+            finPrestacaoCarregar_();
+          })
+          .withFailureHandler(function(e){ fpEl('fpEnviar').disabled = false; fpStatus(e && e.message ? e.message : e, 'err'); })
+          .finFlashEnviarPrestacaoPublicaV1(payload);
+      });
+    }
+
+    function finPrestacaoRegularizar_(id){
+      var texto = fpEl('esc_'+id) ? fpEl('esc_'+id).value : '';
+      google.script.run
+        .withSuccessHandler(function(r){
+          if(!r || !r.ok){ fpStatus((r && r.message) || 'Esclarecimento nao enviado.', 'err'); return; }
+          fpStatus('Esclarecimento enviado.', 'ok');
+          finPrestacaoCarregar_();
+        })
+        .withFailureHandler(function(e){ fpStatus(e && e.message ? e.message : e, 'err'); })
+        .finFlashRegularizarPendenciaPublicaV1({token:FIN_PRESTACAO_TOKEN,pendenciaId:id,esclarecimentoTexto:texto});
+    }
+
+    finPrestacaoCarregar_();
+  </script>
+</body>
+</html>

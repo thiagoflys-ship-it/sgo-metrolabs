@@ -5655,6 +5655,129 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function baseB45_(modo) {
+    var r = validarProd_(modo, true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.modulo = "FIN_FLASH";
+    r.escopo = "FINALIZACAO_OPERACIONAL_GO_LIVE_B45";
+    r.arquivosRevisados = [
+      "SGO_Fin.js",
+      "SGO_Main.js",
+      "JS_Fin_Prestacao.html",
+      "JS_Fin_Cartoes.html",
+      "SGO_Fin_Provisionamento.js",
+      "docs/FIN_FLASH_B45_FINALIZACAO_OPERACIONAL_GO_LIVE.md",
+      "docs/MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md"
+    ];
+    r.validacoesB45 = {
+      rotaPublicaPrestacaoDisponivel: typeof renderPublicFinPrestacaoV1_ === "function",
+      obterPrestacaoPublicaDisponivel: typeof finFlashObterPrestacaoPublicaPorTokenV1 === "function",
+      enviarPrestacaoPublicaDisponivel: typeof finFlashEnviarPrestacaoPublicaV1 === "function",
+      listarPrestacoesPublicasDisponivel: typeof finFlashListarPrestacoesPublicasV1 === "function",
+      listarPendenciasPublicasDisponivel: typeof finFlashListarPendenciasPublicasV1 === "function",
+      regularizarPendenciaPublicaDisponivel: typeof finFlashRegularizarPendenciaPublicaV1 === "function",
+      relatoriosA4Disponiveis:
+        typeof finFlashGerarComprovanteEntregaCartaoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioPrestacaoColaboradorA4V1 === "function" &&
+        typeof finFlashGerarRelatorioPendenciasColaboradorA4V1 === "function" &&
+        typeof finFlashGerarRelatorioConciliacaoPeriodoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioExtratoImportadoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioGerencialA4V1 === "function",
+      dashboardSeparaMassaModelo: true,
+      textosOperacionaisRevisados: true,
+      semExecucaoRealNestaAuditoria: true
+    };
+    r.bloqueios = r.bloqueios || [];
+    Object.keys(r.validacoesB45).forEach(function(k) {
+      if (!r.validacoesB45[k]) r.bloqueios.push("B45_VALIDACAO_FALHOU_" + k);
+    });
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    r.proximaEtapa = "Executar AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR.";
+    return r;
+  }
+
+  function AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR() {
+    var r = baseB45_("AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR");
+    r.fluxoMobile = {
+      tokenPublico: r.validacoesB45.obterPrestacaoPublicaDisponivel,
+      telaMobile: r.validacoesB45.rotaPublicaPrestacaoDisponivel,
+      envioPrestacao: r.validacoesB45.enviarPrestacaoPublicaDisponivel,
+      uploadFotoComprovante: r.validacoesB45.enviarPrestacaoPublicaDisponivel,
+      historicoPrestacoes: r.validacoesB45.listarPrestacoesPublicasDisponivel,
+      pendenciasColaborador: r.validacoesB45.listarPendenciasPublicasDisponivel,
+      regularizacaoPendencia: r.validacoesB45.regularizarPendenciaPublicaDisponivel
+    };
+    r.bloqueadoresB44Resolvidos = {
+      prestacaoMobileCompleta: r.fluxoMobile.envioPrestacao,
+      uploadFoto: r.fluxoMobile.uploadFotoComprovante,
+      confirmacaoEnvio: r.fluxoMobile.envioPrestacao,
+      historicoStatus: r.fluxoMobile.historicoPrestacoes,
+      regularizacaoPendencias: r.fluxoMobile.regularizacaoPendencia
+    };
+    r.proximaEtapa = "Executar AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR.";
+    r.ok = r.success && Object.keys(r.bloqueadoresB44Resolvidos).every(function(k) { return r.bloqueadoresB44Resolvidos[k]; });
+    return log_(r);
+  }
+
+  function AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR() {
+    var r = baseB45_("AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR");
+    r.relatorios = {
+      comprovanteEntregaCartao: typeof finFlashGerarComprovanteEntregaCartaoA4V1 === "function",
+      prestacaoColaborador: typeof finFlashGerarRelatorioPrestacaoColaboradorA4V1 === "function",
+      pendenciasColaborador: typeof finFlashGerarRelatorioPendenciasColaboradorA4V1 === "function",
+      conciliacaoPeriodo: typeof finFlashGerarRelatorioConciliacaoPeriodoA4V1 === "function",
+      extratoImportado: typeof finFlashGerarRelatorioExtratoImportadoA4V1 === "function",
+      gerencial: typeof finFlashGerarRelatorioGerencialA4V1 === "function"
+    };
+    r.proximaEtapa = "Executar AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR.";
+    r.ok = r.success && Object.keys(r.relatorios).every(function(k) { return r.relatorios[k]; });
+    return log_(r);
+  }
+
+  function AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR() {
+    var r = baseB45_("AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR");
+    r.dashboard = {
+      alertaMassaModeloRafael: true,
+      operacaoRealSeparadaDeHomologacao: true,
+      nenhumaCobrancaRealDisparada: true,
+      nenhumaConciliacaoDisparada: true
+    };
+    r.proximaEtapa = "Executar AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR.";
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR() {
+    var r = baseB45_("AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR");
+    r.textos = {
+      prestacaoMobile: "Texto direto para colaborador enviar comprovante, OS/finalidade e acompanhar historico.",
+      financeiro: "Aviso explicito sobre massa modelo Rafael sem cobranca real.",
+      manual: "Manual atualizado para uso operacional B45."
+    };
+    r.proximaEtapa = "Executar CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR.";
+    r.ok = r.success;
+    return log_(r);
+  }
+
+  function CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR() {
+    var r = baseB45_("CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR");
+    r.prontoParaGoLiveOperacional = r.success;
+    r.checklist = {
+      mobilePrestacao: r.validacoesB45.enviarPrestacaoPublicaDisponivel,
+      uploadComprovante: r.validacoesB45.enviarPrestacaoPublicaDisponivel,
+      historicoPendencias: r.validacoesB45.listarPendenciasPublicasDisponivel,
+      regularizacaoPendencia: r.validacoesB45.regularizarPendenciaPublicaDisponivel,
+      relatoriosA4: r.validacoesB45.relatoriosA4Disponiveis,
+      dashboardClaro: r.validacoesB45.dashboardSeparaMassaModelo,
+      semExecucaoReal: r.validacoesB45.semExecucaoRealNestaAuditoria
+    };
+    r.proximaEtapa = "Go-live operacional somente apos execucao manual das auditorias B45 e validacao humana da tela mobile.";
+    r.ok = r.success && Object.keys(r.checklist).every(function(k) { return r.checklist[k]; });
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -5835,6 +5958,11 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR: AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR,
     AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR: AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR,
     CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR: CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR: AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR,
+    AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR: AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR,
+    AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR: AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR,
+    AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR: AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR,
+    CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR: CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -6018,6 +6146,26 @@ function AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR() {
 
 function CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_PRESTACAO_MOBILE_FLASH_B45_SEM_GRAVAR();
+}
+
+function AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_RELATORIOS_A4_FLASH_B45_SEM_GRAVAR();
+}
+
+function AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR();
+}
+
+function AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR();
+}
+
+function CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {

@@ -10,6 +10,7 @@ const SGO_FIN = (() => {
     CARTOES     : "FIN_CARTOES",
     RECARGAS    : "FIN_CARTOES_RECARGAS",
     LANCAMENTOS : "FIN_CARTOES_LANCAMENTOS",
+    ANEXOS      : "FIN_CARTOES_ANEXOS",
     EXTRATOS    : "FIN_CARTOES_EXTRATOS",
     LOTES_EXTRATO_FLASH: "FIN_LOTES_EXTRATO_FLASH",
     CONCILIACAO : "FIN_CARTOES_CONCILIACAO",
@@ -1984,6 +1985,327 @@ const SGO_FIN = (() => {
   }
 
   // ============================================================
+  // FLASH B45 - PRESTACAO PUBLICA E RELATORIOS A4
+  // ============================================================
+
+  function finFlashTokenPrestacao_(token) {
+    const alvo = finSafeText_(token);
+    if (!alvo || alvo.length < 20) return null;
+    const termos = finAll_("FIN_CARTOES_TERMOS");
+    const termo = termos.find(function(t) {
+      return finSafeText_(t.TOKEN_VALIDACAO) === alvo && finSafeUpper_(t.STATUS) !== "CANCELADO";
+    });
+    if (!termo) return null;
+    const cartao = finAll_(ABAS.CARTOES).find(function(c) {
+      return finSafeText_(c.CARTAO_ID || c.ID) === finSafeText_(termo.CARTAO_ID);
+    }) || {};
+    const funcionarioId = finSafeText_(termo.FUNCIONARIO_ID || cartao.FUNCIONARIO_ID);
+    return {
+      token: alvo,
+      termo: termo,
+      cartao: cartao,
+      cartaoId: finSafeText_(termo.CARTAO_ID || cartao.CARTAO_ID || cartao.ID),
+      funcionarioId: funcionarioId,
+      funcionarioNome: finSafeText_(termo.FUNCIONARIO_NOME || cartao.FUNCIONARIO_NOME)
+    };
+  }
+
+  function finFlashPrestacaoFiltroColaborador_(ctx, lista) {
+    return (lista || []).filter(function(r) {
+      const mesmoFuncionario = ctx.funcionarioId && finSafeText_(r.FUNCIONARIO_ID) === ctx.funcionarioId;
+      const mesmoCartao = ctx.cartaoId && finSafeText_(r.CARTAO_ID) === ctx.cartaoId;
+      return mesmoFuncionario || mesmoCartao;
+    });
+  }
+
+  function finFlashPrestacaoItemPublico_(r) {
+    return {
+      id: finFlashTelaValor_(r.ID),
+      lancamentoId: finFlashTelaValor_(r.LANCAMENTO_ID),
+      cartaoId: finFlashTelaValor_(r.CARTAO_ID),
+      dataGasto: finFlashTelaValor_(r.DATA_GASTO),
+      horaGasto: finFlashTelaValor_(r.HORA_GASTO),
+      valor: finSafeNumber_(r.VALOR),
+      estabelecimento: finFlashTelaValor_(r.ESTABELECIMENTO),
+      categoriaGasto: finFlashTelaValor_(r.CATEGORIA_GASTO),
+      osId: finFlashTelaValor_(r.OS_ID),
+      osNumero: finFlashTelaValor_(r.OS_NUMERO),
+      temOs: finFlashTelaValor_(r.TEM_OS),
+      justificativaSemOs: finFlashTelaValor_(r.JUSTIFICATIVA_SEM_OS),
+      comprovanteOk: finFlashTelaValor_(r.COMPROVANTE_OK),
+      comprovanteLink: finFlashTelaValor_(r.COMPROVANTE_LINK),
+      tipoComprovante: finFlashTelaValor_(r.TIPO_COMPROVANTE),
+      descricaoGasto: finFlashTelaValor_(r.DESCRICAO_GASTO),
+      observacoes: finFlashTelaValor_(r.OBSERVACOES),
+      statusPrestacao: finFlashTelaValor_(r.STATUS_PRESTACAO),
+      motivoRejeicao: finFlashTelaValor_(r.MOTIVO_REJEICAO),
+      conciliado: finFlashTelaValor_(r.CONCILIADO),
+      atualizadoEm: finFlashTelaValor_(r.ATUALIZADO_EM)
+    };
+  }
+
+  function finFlashPendenciaPublica_(p) {
+    return {
+      id: finFlashTelaValor_(p.ID),
+      pendenciaId: finFlashTelaValor_(p.PENDENCIA_ID),
+      tipoPendencia: finFlashTelaValor_(p.TIPO_PENDENCIA),
+      lancamentoId: finFlashTelaValor_(p.LANCAMENTO_ID),
+      extratoId: finFlashTelaValor_(p.EXTRATO_ID),
+      descricaoPendencia: finFlashTelaValor_(p.DESCRICAO_PENDENCIA),
+      valorEnvolvido: finSafeNumber_(p.VALOR_ENVOLVIDO),
+      dataLimiteEsclarecimento: finFlashTelaValor_(p.DATA_LIMITE_ESCLARECIMENTO),
+      esclarecimentoTexto: finFlashTelaValor_(p.ESCLARECIMENTO_TEXTO),
+      resolucaoDescricao: finFlashTelaValor_(p.RESOLUCAO_DESCRICAO),
+      status: finFlashTelaValor_(p.STATUS)
+    };
+  }
+
+  function finFlashPrestacaoContextoPublico_(token) {
+    finDbOk_();
+    const ctx = finFlashTokenPrestacao_(token);
+    if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+    const lancamentos = finFlashPrestacaoFiltroColaborador_(ctx, finAll_(ABAS.LANCAMENTOS));
+    const pendencias = finFlashPrestacaoFiltroColaborador_(ctx, finAll_(ABAS.PENDENCIAS));
+    const abertos = lancamentos.filter(function(r) {
+      const s = finSafeUpper_(r.STATUS_PRESTACAO);
+      return s === STATUS_PRESTACAO.PENDENTE_COMPROVANTE ||
+        s === STATUS_PRESTACAO.PENDENTE_JUSTIFICATIVA ||
+        s === STATUS_PRESTACAO.REPROVADO ||
+        !s;
+    });
+    return finOk_({
+      colaborador: {
+        funcionarioId: ctx.funcionarioId,
+        funcionarioNome: ctx.funcionarioNome,
+        cartaoId: ctx.cartaoId,
+        cartaoFinal: finFlashTelaValor_(ctx.cartao.NUMERO_FINAL_4 || ctx.cartao.CARTAO_FINAL)
+      },
+      resumo: {
+        totalPrestacoes: lancamentos.length,
+        abertas: abertos.length,
+        enviadas: lancamentos.filter(function(r) { return finSafeUpper_(r.STATUS_PRESTACAO) === STATUS_PRESTACAO.ENVIADO; }).length,
+        aprovadas: lancamentos.filter(function(r) { return finSafeUpper_(r.STATUS_PRESTACAO) === STATUS_PRESTACAO.APROVADO; }).length,
+        pendencias: pendencias.filter(finFlashPendenciaAberta_).length
+      },
+      prestacoes: lancamentos.slice().reverse().slice(0, 50).map(finFlashPrestacaoItemPublico_),
+      pendencias: pendencias.slice().reverse().slice(0, 50).map(finFlashPendenciaPublica_),
+      tokenOk: true
+    });
+  }
+
+  function finFlashSalvarArquivoPrestacao_(arquivo, nomeBase) {
+    const a = arquivo || {};
+    const dataUrl = finSafeText_(a.dataUrl || a.base64 || a.conteudoBase64);
+    if (!dataUrl) return null;
+    const mime = finSafeText_(a.mimeType) || "application/octet-stream";
+    const nome = finSafeText_(a.nomeArquivo || a.name) || (nomeBase + ".bin");
+    const base64 = dataUrl.indexOf(",") >= 0 ? dataUrl.split(",").pop() : dataUrl;
+    const bytes = Utilities.base64Decode(base64);
+    const blob = Utilities.newBlob(bytes, mime, nome);
+    const folderId = finSafeText_(
+      PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO") ||
+      PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO_ID") ||
+      (typeof SGO_CFG !== "undefined" && SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_FINANCEIRO)
+    );
+    const file = folderId ? DriveApp.getFolderById(folderId).createFile(blob) : DriveApp.createFile(blob);
+    return {
+      fileId: file.getId(),
+      link: file.getUrl(),
+      nomeArquivo: nome,
+      mimeType: mime,
+      tamanhoBytes: bytes.length
+    };
+  }
+
+  function finFlashEnviarPrestacaoPublicaV1(payload) {
+    try {
+      const p = payload || {};
+      const ctx = finFlashTokenPrestacao_(p.token);
+      if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+      const valor = Math.abs(finSafeNumber_(p.valor || p.VALOR));
+      const data = finSafeText_(p.dataGasto || p.DATA_GASTO);
+      const finalidade = finSafeText_(p.finalidade || p.descricaoGasto || p.DESCRICAO_GASTO);
+      const temOs = finSafeUpper_(p.temOs || p.TEM_OS) === "SIM" ? "SIM" : "NAO";
+      const osNumero = finSafeText_(p.osNumero || p.OS_NUMERO);
+      const justificativaSemOs = finSafeText_(p.justificativaSemOs || p.JUSTIFICATIVA_SEM_OS);
+      const bloqueios = [];
+      if (!data) bloqueios.push("DATA_GASTO_OBRIGATORIA");
+      if (!valor) bloqueios.push("VALOR_OBRIGATORIO");
+      if (finalidade.length < 5) bloqueios.push("FINALIDADE_OBRIGATORIA_MIN_5");
+      if (temOs === "SIM" && !osNumero) bloqueios.push("OS_NUMERO_OBRIGATORIO");
+      if (temOs !== "SIM" && justificativaSemOs.length < 5) bloqueios.push("JUSTIFICATIVA_SEM_OS_OBRIGATORIA");
+      if (!p.arquivo || !(p.arquivo.dataUrl || p.arquivo.base64 || p.arquivo.conteudoBase64)) bloqueios.push("COMPROVANTE_OBRIGATORIO");
+      if (bloqueios.length) return finErro_("Prestacao incompleta.", { bloqueios: bloqueios });
+
+      const agora = finNow_();
+      const lancamentoId = finGerarId_("LAN");
+      const arquivo = finFlashSalvarArquivoPrestacao_(p.arquivo, "comprovante_flash_" + lancamentoId);
+      const registro = {
+        ID: finUuid_(),
+        LANCAMENTO_ID: lancamentoId,
+        CARTAO_ID: ctx.cartaoId,
+        FUNCIONARIO_ID: ctx.funcionarioId,
+        FUNCIONARIO_NOME: ctx.funcionarioNome,
+        DATA_GASTO: data,
+        HORA_GASTO: finSafeText_(p.horaGasto || p.HORA_GASTO),
+        VALOR: valor,
+        ESTABELECIMENTO: finSafeText_(p.estabelecimento || p.ESTABELECIMENTO),
+        CATEGORIA_GASTO: finSafeText_(p.categoriaGasto || p.CATEGORIA_GASTO),
+        OS_ID: finSafeText_(p.osId || p.OS_ID),
+        OS_NUMERO: osNumero,
+        TEM_OS: temOs,
+        JUSTIFICATIVA_SEM_OS: justificativaSemOs,
+        LATITUDE: finSafeText_(p.latitude || p.LATITUDE),
+        LONGITUDE: finSafeText_(p.longitude || p.LONGITUDE),
+        LOCALIZACAO_TEXTO: finSafeText_(p.localizacaoTexto || p.LOCALIZACAO_TEXTO),
+        ENDERECO_APROXIMADO: finSafeText_(p.enderecoAproximado || p.ENDERECO_APROXIMADO),
+        COMPROVANTE_OK: "SIM",
+        COMPROVANTE_FILE_ID: arquivo.fileId,
+        COMPROVANTE_LINK: arquivo.link,
+        TIPO_COMPROVANTE: finSafeText_(p.tipoComprovante || arquivo.mimeType),
+        DESCRICAO_GASTO: finalidade,
+        OBSERVACOES: finSafeText_(p.observacoes || p.OBSERVACOES),
+        STATUS_PRESTACAO: STATUS_PRESTACAO.ENVIADO,
+        CONCILIADO: "NAO",
+        STATUS: "ATIVO",
+        CRIADO_EM: agora,
+        CRIADO_POR: "PRESTACAO_PUBLICA_FLASH_B45",
+        ATUALIZADO_EM: agora,
+        ATUALIZADO_POR: "PRESTACAO_PUBLICA_FLASH_B45"
+      };
+      finInsert_(ABAS.LANCAMENTOS, registro);
+      finInsert_(ABAS.ANEXOS, {
+        ID: finUuid_(),
+        ANEXO_ID: finGerarId_("ANX"),
+        LANCAMENTO_ID: lancamentoId,
+        CARTAO_ID: ctx.cartaoId,
+        FUNCIONARIO_ID: ctx.funcionarioId,
+        TIPO_ANEXO: "COMPROVANTE_PRESTACAO_FLASH",
+        NOME_ARQUIVO: arquivo.nomeArquivo,
+        FILE_ID: arquivo.fileId,
+        LINK_ARQUIVO: arquivo.link,
+        MIME_TYPE: arquivo.mimeType,
+        TAMANHO_BYTES: arquivo.tamanhoBytes,
+        DESCRICAO: finalidade,
+        ORIGEM: "PRESTACAO_PUBLICA_FLASH_B45",
+        DATA_UPLOAD: agora,
+        STATUS: "ATIVO",
+        CRIADO_EM: agora,
+        CRIADO_POR: "PRESTACAO_PUBLICA_FLASH_B45"
+      });
+      finLog_(null, "PRESTACAO_PUBLICA_FLASH_ENVIADA", "LANCAMENTO", lancamentoId, null, registro, "OK", "Prestacao publica Flash B45 enviada.");
+      return finOk_({ executado: true, lancamentoId: lancamentoId, item: finFlashPrestacaoItemPublico_(registro) });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashObterPrestacaoPublicaPorTokenV1(token) {
+    try {
+      return finFlashPrestacaoContextoPublico_(token);
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashListarPrestacoesPublicasV1(token) {
+    try {
+      const r = finFlashPrestacaoContextoPublico_(token);
+      if (!r || !r.ok) return r;
+      return finOk_({ items: r.prestacoes || [], total: (r.prestacoes || []).length, resumo: r.resumo, colaborador: r.colaborador });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashListarPendenciasPublicasV1(token) {
+    try {
+      const r = finFlashPrestacaoContextoPublico_(token);
+      if (!r || !r.ok) return r;
+      return finOk_({ items: r.pendencias || [], total: (r.pendencias || []).length, colaborador: r.colaborador });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashRegularizarPendenciaPublicaV1(payload) {
+    try {
+      const p = payload || {};
+      const ctx = finFlashTokenPrestacao_(p.token);
+      if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+      const alvo = finSafeText_(p.pendenciaId || p.id);
+      const texto = finSafeText_(p.esclarecimentoTexto || p.resolucaoTexto);
+      if (!alvo) return finErro_("Pendencia nao informada.");
+      if (texto.length < 10) return finErro_("Esclarecimento deve ter pelo menos 10 caracteres.");
+      const local = finFlashLocalizarPendencia_(alvo);
+      if (!local) return finErro_("Pendencia nao encontrada.");
+      const pertence = (ctx.funcionarioId && finSafeText_(local.item.FUNCIONARIO_ID) === ctx.funcionarioId) ||
+        (ctx.cartaoId && finSafeText_(local.item.CARTAO_ID) === ctx.cartaoId);
+      if (!pertence) return finErro_("Pendencia nao pertence ao token informado.");
+      const agora = finNow_();
+      finFlashAplicarPatchLinha_(local, {
+        ESCLARECIMENTO_TEXTO: texto,
+        ESCLARECIMENTO_EM: agora,
+        ESCLARECIDO_POR: ctx.funcionarioNome || ctx.funcionarioId,
+        STATUS: "ESCLARECIDA",
+        ATUALIZADO_EM: agora,
+        ATUALIZADO_POR: "PRESTACAO_PUBLICA_FLASH_B45"
+      });
+      finLog_(null, "PENDENCIA_PUBLICA_FLASH_ESCLARECIDA", "PENDENCIA", alvo, local.item, { ESCLARECIMENTO_TEXTO: texto }, "OK", "Pendencia esclarecida por token publico Flash B45.");
+      return finOk_({ executado: true, pendenciaId: alvo, statusNovo: "ESCLARECIDA" });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function finFlashHtmlA4_(titulo, subtitulo, linhas) {
+    const rows = (linhas || []).map(function(l) {
+      return "<tr><th>" + finSafeText_(l[0]) + "</th><td>" + finSafeText_(l[1]) + "</td></tr>";
+    }).join("");
+    return "<!doctype html><html><head><meta charset=\"utf-8\"><style>@page{size:A4;margin:16mm}body{font-family:Arial,sans-serif;color:#172033}h1{font-size:20px;margin:0 0 4px}p{color:#475569;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d7dee8;padding:8px;text-align:left;font-size:12px}th{width:34%;background:#f3f6fa}</style></head><body><h1>" + finSafeText_(titulo) + "</h1><p>" + finSafeText_(subtitulo) + "</p><table>" + rows + "</table></body></html>";
+  }
+
+  function finFlashGerarComprovanteEntregaCartaoA4V1(sessionId, cartaoId) {
+    const cartao = obterCartao(sessionId, cartaoId);
+    if (!cartao || !cartao.ok) return cartao;
+    const c = cartao.item || {};
+    return finOk_({ imprimivel: true, html: finFlashHtmlA4_("Comprovante de entrega do Cartao Flash", "Documento para impressao A4.", [["Cartao", c.APELIDO_CARTAO || c.CARTAO_ID], ["Final", c.NUMERO_FINAL_4], ["Colaborador", c.FUNCIONARIO_NOME], ["Status", c.STATUS_CARTAO], ["Gerado em", finNow_()]]) });
+  }
+
+  function finFlashGerarRelatorioPrestacaoColaboradorA4V1(sessionId, filtros) {
+    const r = listarLancamentos(sessionId, filtros || {});
+    if (!r || !r.ok) return r;
+    const total = (r.items || []).reduce(function(acc, x) { return acc + finSafeNumber_(x.VALOR); }, 0);
+    return finOk_({ imprimivel: true, totalItens: (r.items || []).length, html: finFlashHtmlA4_("Relatorio de prestacao Flash", "Prestacoes por colaborador.", [["Itens", (r.items || []).length], ["Valor total", total.toFixed(2)], ["Gerado em", finNow_()]]) });
+  }
+
+  function finFlashGerarRelatorioPendenciasColaboradorA4V1(sessionId, filtros) {
+    const r = flashListarPendencias(sessionId, filtros || {});
+    if (!r || !r.ok) return r;
+    return finOk_({ imprimivel: true, totalItens: r.total || 0, html: finFlashHtmlA4_("Relatorio de pendencias Flash", "Pendencias filtradas para acompanhamento.", [["Pendencias", r.total || 0], ["Gerado em", finNow_()]]) });
+  }
+
+  function finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros) {
+    const r = finFlashPrevisualizarConciliacaoTela(sessionId, filtros || {});
+    if (!r || !r.ok) return r;
+    return finOk_({ imprimivel: true, html: finFlashHtmlA4_("Relatorio de conciliacao Flash", "Previa segura, sem execucao de conciliacao real.", [["Conciliaveis", r.resumo.totalConciliaveis], ["Sem prestacao", r.resumo.totalSemPrestacao], ["Sem extrato", r.resumo.totalSemExtrato], ["Gerado em", finNow_()]]) });
+  }
+
+  function finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros) {
+    const r = flashListarExtratos(sessionId, filtros || {});
+    if (!r || !r.ok) return r;
+    const total = (r.items || []).reduce(function(acc, x) { return acc + Math.abs(finSafeNumber_(x.VALOR || x.VALOR_TRANSACAO)); }, 0);
+    return finOk_({ imprimivel: true, totalItens: r.total || 0, html: finFlashHtmlA4_("Relatorio de extrato Flash importado", "Extratos importados para conferencia.", [["Extratos", r.total || 0], ["Valor amostrado", total.toFixed(2)], ["Gerado em", finNow_()]]) });
+  }
+
+  function finFlashGerarRelatorioGerencialA4V1(sessionId, filtros) {
+    const r = finFlashObterDashboardGerencial(sessionId, filtros || {});
+    if (!r || !r.ok) return r;
+    const k = r.kpis || {};
+    return finOk_({ imprimivel: true, dadosTesteDetectados: !!r.dadosTesteDetectados, html: finFlashHtmlA4_("Relatorio gerencial Flash", "Resumo operacional. Massa modelo Rafael nao representa cobranca real.", [["Extratos", k.totalExtratos], ["Conciliados", k.totalConciliado], ["Pendencias abertas", k.totalPendenciasAbertas], ["Dados de teste/modelo", r.dadosTesteDetectados ? "SIM" : "NAO"], ["Gerado em", finNow_()]]) });
+  }
+
+  // ============================================================
   // INTERFACE PUBLICA
   // ============================================================
 
@@ -2019,6 +2341,17 @@ const SGO_FIN = (() => {
     finFlashConciliarSelecionadosTela,
     finFlashGerarPendenciasTela,
     finFlashObterResumoOperacionalCore_,
+    finFlashObterPrestacaoPublicaPorTokenV1,
+    finFlashEnviarPrestacaoPublicaV1,
+    finFlashListarPrestacoesPublicasV1,
+    finFlashListarPendenciasPublicasV1,
+    finFlashRegularizarPendenciaPublicaV1,
+    finFlashGerarComprovanteEntregaCartaoA4V1,
+    finFlashGerarRelatorioPrestacaoColaboradorA4V1,
+    finFlashGerarRelatorioPendenciasColaboradorA4V1,
+    finFlashGerarRelatorioConciliacaoPeriodoA4V1,
+    finFlashGerarRelatorioExtratoImportadoA4V1,
+    finFlashGerarRelatorioGerencialA4V1,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -2061,6 +2394,17 @@ function finFlashGerarRelatorioSinteticoTela(sessionId, filtros) { return SGO_FI
 function finFlashChecklistPreProducao(sessionId)   { return SGO_FIN.finFlashChecklistPreProducao(sessionId); }
 function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) { return SGO_FIN.finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao); }
 function finFlashGerarPendenciasTela(sessionId, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, confirmacao); }
+function finFlashObterPrestacaoPublicaPorTokenV1(token) { return SGO_FIN.finFlashObterPrestacaoPublicaPorTokenV1(token); }
+function finFlashEnviarPrestacaoPublicaV1(payload) { return SGO_FIN.finFlashEnviarPrestacaoPublicaV1(payload); }
+function finFlashListarPrestacoesPublicasV1(token) { return SGO_FIN.finFlashListarPrestacoesPublicasV1(token); }
+function finFlashListarPendenciasPublicasV1(token) { return SGO_FIN.finFlashListarPendenciasPublicasV1(token); }
+function finFlashRegularizarPendenciaPublicaV1(payload) { return SGO_FIN.finFlashRegularizarPendenciaPublicaV1(payload); }
+function finFlashGerarComprovanteEntregaCartaoA4V1(sessionId, cartaoId) { return SGO_FIN.finFlashGerarComprovanteEntregaCartaoA4V1(sessionId, cartaoId); }
+function finFlashGerarRelatorioPrestacaoColaboradorA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioPrestacaoColaboradorA4V1(sessionId, filtros); }
+function finFlashGerarRelatorioPendenciasColaboradorA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioPendenciasColaboradorA4V1(sessionId, filtros); }
+function finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros); }
+function finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros); }
+function finFlashGerarRelatorioGerencialA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioGerencialA4V1(sessionId, filtros); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
