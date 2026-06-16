@@ -48,19 +48,29 @@ reimportar, conciliar ou isolar despesas validas.
 1. `PREVIEW_CORRIGIR_IMPORTACAO_FLASH_PRODUCAO_B40_SEM_GRAVAR`
 2. `CORRIGIR_IMPORTACAO_FLASH_PRODUCAO_B40_AUTORIZADO`
 3. `AUDITAR_CORRECAO_FLASH_PRODUCAO_B40_POS_SEM_GRAVAR`
+4. `EXECUTAR_CORRECAO_FLASH_B40_PRODUCAO_TOKEN_CONFIRMADO`
 
 ## Ordem segura de execucao
 
 1. Executar `PREVIEW_CORRIGIR_IMPORTACAO_FLASH_PRODUCAO_B40_SEM_GRAVAR`.
 2. Revisar o JSON completo.
-3. Se aprovado, executar:
+3. Se aprovado, executar pelo Apps Script editor:
 
 ```text
-CORRIGIR_IMPORTACAO_FLASH_PRODUCAO_B40_AUTORIZADO("CONFIRMO_CORRECAO_B40_FLASH_PRODUCAO")
+EXECUTAR_CORRECAO_FLASH_B40_PRODUCAO_TOKEN_CONFIRMADO
 ```
 
 4. Executar `AUDITAR_CORRECAO_FLASH_PRODUCAO_B40_POS_SEM_GRAVAR`.
 5. Somente liberar B41 se a auditoria pos-B40 retornar `ok:true`.
+
+Observacao operacional:
+
+- A execucao direta de `CORRIGIR_IMPORTACAO_FLASH_PRODUCAO_B40_AUTORIZADO`
+  pelo seletor do Apps Script editor nao passa parametro e bloqueou corretamente
+  com `TOKEN_CONFIRMACAO_B40_INVALIDO_OU_AUSENTE`, sem gravar.
+- O wrapper `EXECUTAR_CORRECAO_FLASH_B40_PRODUCAO_TOKEN_CONFIRMADO` existe
+  apenas para chamar a funcao real com o token exato
+  `CONFIRMO_CORRECAO_B40_FLASH_PRODUCAO`.
 
 ## Checklist manual
 
