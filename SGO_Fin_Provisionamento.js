@@ -5466,6 +5466,195 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function baseB44_(modo) {
+    var r = validarProd_(modo, true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.modulo = "FIN_FLASH";
+    r.escopo = "PENTE_FINO_GO_LIVE_OPERACIONAL";
+    r.arquivosRevisados = [
+      "SGO_Fin.js",
+      "SGO_Fin_Setup.js",
+      "SGO_Fin_Termos.js",
+      "SGO_Fin_Extratos.js",
+      "SGO_Fin_Provisionamento.js",
+      "JS_Fin_Cartoes.html",
+      "JS_Fin_Termo.html",
+      "SGO_Main.js"
+    ];
+    r.bloqueios = r.bloqueios || [];
+    r.avisos = r.avisos || [];
+    r.inventario = {
+      backend: [
+        { item: "Cadastro e schema FIN", arquivo: "SGO_Fin_Setup.js", usuario: "Financeiro/Admin", status: "EXISTE", risco: "MEDIO", precisaAjuste: false },
+        { item: "Cartoes e tela operacional", arquivo: "SGO_Fin.js / JS_Fin_Cartoes.html", usuario: "Financeiro", status: "EXISTE", risco: "MEDIO", precisaAjuste: true },
+        { item: "Termo publico online", arquivo: "SGO_Fin_Termos.js / JS_Fin_Termo.html", usuario: "Colaborador", status: "EXISTE", risco: "BAIXO", precisaAjuste: true },
+        { item: "Preview/importacao extrato Flash", arquivo: "SGO_Fin_Extratos.js / SGO_Fin_Provisionamento.js", usuario: "Financeiro", status: "HOMOLOGADO_COM_MASSA_MODELO", risco: "BAIXO", precisaAjuste: false },
+        { item: "Conciliacao segura", arquivo: "SGO_Fin_Provisionamento.js", usuario: "Financeiro", status: "PRONTA_COM_TOKEN_E_PREVIEW", risco: "MEDIO", precisaAjuste: false },
+        { item: "Pendencias futuras", arquivo: "SGO_Fin_Provisionamento.js", usuario: "Financeiro", status: "FERRAMENTA_FUTURA", risco: "MEDIO", precisaAjuste: false },
+        { item: "Homologacao/go-live", arquivo: "SGO_Fin_Provisionamento.js", usuario: "Gestor/Financeiro", status: "EXISTE", risco: "BAIXO", precisaAjuste: false }
+      ],
+      telas: [
+        { item: "Financeiro / Cartoes", arquivo: "JS_Fin_Cartoes.html", usuario: "Financeiro", status: "EXISTE", risco: "MEDIO", precisaAjuste: true },
+        { item: "Termo Online Flash", arquivo: "JS_Fin_Termo.html", usuario: "Colaborador", status: "EXISTE_MOBILE", risco: "BAIXO", precisaAjuste: true },
+        { item: "Prestacao mobile do colaborador", arquivo: "NAO_LOCALIZADO_COMPLETO", usuario: "Colaborador", status: "INCOMPLETO", risco: "ALTO", precisaAjuste: true },
+        { item: "Pendencias Flash", arquivo: "JS_Fin_Cartoes.html", usuario: "Financeiro", status: "LEITURA/RESOLUCAO_CONTROLADA", risco: "MEDIO", precisaAjuste: true }
+      ],
+      rotas: [
+        { item: "Rota publica fin_termo", arquivo: "SGO_Main.js", usuario: "Colaborador", status: "EXISTE", risco: "BAIXO", precisaAjuste: false },
+        { item: "Menu Financeiro / Cartoes", arquivo: "Index.html", usuario: "Financeiro", status: "EXISTE", risco: "BAIXO", precisaAjuste: false }
+      ]
+    };
+    r.pendenciasFuturas = [];
+    r.proximasEtapas = [];
+    r.success = r.bloqueios.length === 0;
+    r.ok = false;
+    return r;
+  }
+
+  function AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR");
+    r.statusGeral = "HOMOLOGADO_TECNICAMENTE_COM_PENDENCIAS_OPERACIONAIS_GO_LIVE";
+    r.funcoesPerigosas = [
+      "CONCILIAR_FLASH_PRODUCAO_B41_AUTORIZADO",
+      "REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO",
+      "IMPORTAR_FLASH_PRODUCAO_B38_AUTORIZADO"
+    ];
+    r.botoesSomenteLeitura = ["Previa de conciliacao", "Pendencias Flash", "Checklist pre-producao", "Termo online"];
+    r.botoesReais = ["Resolver pendencia controlada", "Assinar termo"];
+    r.pendenciasFuturas = [
+      "B45_CONSTRUIR_PRESTACAO_MOBILE_COLABORADOR_COMPLETA",
+      "B45_RELATORIOS_A4_FLASH_COMPLETOS",
+      "B45_DASHBOARD_GO_LIVE_SEM_MASSA_MODELO"
+    ];
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_COLABORADOR_PRESTACAO_INCOMPLETA");
+    r.avisos.push("MASSA_MODELO_RAFAEL_NAO_DEVE_SER_TRATADA_COMO_COBRANCA_REAL");
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR");
+    r.fluxo = {
+      receberCartao: "PROCESSO_PREVISTO",
+      termoOnline: "EXISTE",
+      assinaturaTermoMobile: "EXISTE",
+      statusCartaoTermo: "PARCIAL",
+      lancarDespesaPrestacao: "NAO_LOCALIZADO_COMPLETO",
+      anexarComprovanteFoto: "NAO_LOCALIZADO_COMPLETO",
+      confirmarEnvio: "NAO_LOCALIZADO_COMPLETO",
+      acompanharPendencias: "PARCIAL_FINANCEIRO",
+      regularizarPendencia: "PARCIAL"
+    };
+    r.camposObrigatoriosEsperados = ["valor", "data", "finalidade", "OS quando aplicavel", "comprovante", "observacao"];
+    r.mobile = { termoResponsivo: true, assinaturaCanvas: true, prestacaoCampoCompleta: false, uploadFotoCompleto: false };
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_COLABORADOR_PRESTACAO_INCOMPLETA");
+    r.proximasEtapas.push("B45: construir ou finalizar tela mobile de prestacao do colaborador com comprovante/foto.");
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR");
+    r.fluxo = {
+      cadastrarFuncionarioPortador: "SCHEMA_EXISTE_INTEGRACAO_A_VALIDAR",
+      cadastrarCartao: "EXISTE",
+      vincularCartaoFuncionario: "EXISTE_NO_SCHEMA",
+      gerarTermo: "EXISTE",
+      enviarTermoWhatsapp: "PARCIAL",
+      verStatusTermo: "EXISTE",
+      registrarRecarga: "SCHEMA_EXISTE",
+      verPrestacoes: "PARCIAL",
+      importarExtratoFlash: "HOMOLOGADO_COM_PREVIEW",
+      confirmarImportacao: "TOKENIZADO",
+      previewConciliacao: "EXISTE",
+      executarConciliacao: "TOKENIZADO",
+      verPendencias: "EXISTE",
+      gerarCobranca: "B42_FERRAMENTA_FUTURA",
+      imprimirRelatorio: "PARCIAL",
+      dashboardGerencial: "PARCIAL"
+    };
+    r.avisos.push("B42_REAL_NAO_DEVE_APARECER_COMO_ACAO_FACIL_PARA_MASSA_MODELO");
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_RELATORIOS_A4_DASHBOARD_A_VALIDAR");
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR");
+    r.documentos = [
+      { nome: "Termo de responsabilidade do cartao", existe: true, imprimivel: true, status: "OK_COM_AJUSTES_TEXTO" },
+      { nome: "Comprovante de entrega do cartao", existe: false, status: "DOC_FLASH_COMPROVANTE_ENTREGA_A_CRIAR" },
+      { nome: "Relatorio de prestacao por colaborador", existe: false, status: "DOC_FLASH_PRESTACAO_COLABORADOR_A_CRIAR" },
+      { nome: "Relatorio de pendencias por colaborador", existe: true, status: "PARCIAL" },
+      { nome: "Relatorio de conciliacao por periodo", existe: true, status: "PARCIAL" },
+      { nome: "Relatorio de extrato importado", existe: true, status: "PARCIAL" },
+      { nome: "Relatorio A4 gerencial", existe: false, status: "DOC_FLASH_RELATORIO_A4_GERENCIAL_A_CRIAR" }
+    ];
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_DOCUMENTOS_RELATORIOS_A4_INCOMPLETOS");
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR");
+    r.mobile = {
+      termoMobile: "OK",
+      assinaturaMobile: "OK",
+      prestacaoMobile: "INCOMPLETA",
+      uploadFoto: "INCOMPLETO",
+      botoesTamanho: "A_VALIDAR_EM_DISPOSITIVO_REAL",
+      riscosUsabilidade: ["Uso em campo com pressa exige fluxo de prestacao mais direto", "Upload/foto precisa validacao real em celular"]
+    };
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_MOBILE_PRESTACAO_COMPROVANTE_INCOMPLETO");
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
+  function AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR");
+    r.arquivosRevisados = ["JS_Fin_Cartoes.html", "JS_Fin_Termo.html", "docs/FIN_FLASH_B42_PENDENCIAS_COBRANCA.md", "docs/FIN_FLASH_B43_HOMOLOGACAO_GO_LIVE.md"];
+    r.termosPadronizados = [
+      { tecnico: "cartao", interface: "cartao/cartao Flash com acento quando texto final permitir" },
+      { tecnico: "conciliacao", interface: "conciliacao" },
+      { tecnico: "pendencia", interface: "pendencia" },
+      { tecnico: "prestacao", interface: "prestacao de contas" }
+    ];
+    r.alertasInterface = [
+      "JS_Fin_Termo.html ainda possui textos sem acento em titulo e mensagens; manter para etapa de ajuste visual controlado.",
+      "JS_Fin_Cartoes.html mistura textos tecnicos e finais; revisar em B45 antes do go-live publico."
+    ];
+    r.correcoesFeitas = ["Manual operacional B44 criado com linguagem de uso.", "Documento B44 criado com status e bloqueios claros."];
+    r.success = true;
+    r.ok = true;
+    return log_(r);
+  }
+
+  function CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR() {
+    var r = baseB44_("CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR");
+    r.prontoParaGoLive = false;
+    r.prontoParaCadastroInicial = true;
+    r.prontoParaUsoColaborador = false;
+    r.prontoParaUsoFinanceiro = false;
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_COLABORADOR_PRESTACAO_INCOMPLETA");
+    r.bloqueios.push("BLOQUEIO_GO_LIVE_DOCUMENTOS_RELATORIOS_A4_INCOMPLETOS");
+    r.avisos.push("Cadastro inicial e homologacao tecnica podem avancar, mas uso real exige B45.");
+    r.proximasEtapas = [
+      "B45: finalizar prestacao mobile do colaborador",
+      "B45: completar relatorios/impressao A4",
+      "B45: ajustar textos finais da interface",
+      "B45: validar dashboard sem confundir massa modelo com operacao real"
+    ];
+    r.success = true;
+    r.ok = false;
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -5639,6 +5828,13 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR: SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR,
     VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR: VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR,
     RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR: RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR,
+    AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR: AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR: AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR: AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR: AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR: AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR,
+    AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR: AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR,
+    CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR: CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -5794,6 +5990,34 @@ function VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR() {
 
 function RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR();
+}
+
+function AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_MODULO_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_FLUXO_COLABORADOR_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_FLUXO_FINANCEIRO_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_DOCUMENTOS_RELATORIOS_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_MOBILE_FLASH_B44_SEM_GRAVAR();
+}
+
+function AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_TEXTOS_ORTOGRAFIA_FLASH_B44_SEM_GRAVAR();
+}
+
+function CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_GO_LIVE_FLASH_B44_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
