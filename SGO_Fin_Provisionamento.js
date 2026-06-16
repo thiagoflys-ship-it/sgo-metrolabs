@@ -4938,6 +4938,361 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function mapPendenciasB42_(headers) {
+    return {
+      id: idxAliasB41_(headers, ["ID"]),
+      pendenciaId: idxAliasB41_(headers, ["PENDENCIA_ID"]),
+      tipo: idxAliasB41_(headers, ["TIPO_PENDENCIA", "TIPO"]),
+      loteId: idxAliasB41_(headers, ["LOTE_ID"]),
+      origem: idxAliasB41_(headers, ["ORIGEM"]),
+      extratoId: idxAliasB41_(headers, ["EXTRATO_ID"]),
+      lancamentoId: idxAliasB41_(headers, ["LANCAMENTO_ID"]),
+      cartaoId: idxAliasB41_(headers, ["CARTAO_ID"]),
+      colaborador: idxAliasB41_(headers, ["FUNCIONARIO_NOME", "COLABORADOR", "FUNCIONARIO"]),
+      data: idxAliasB41_(headers, ["DATA_TRANSACAO", "DATA"]),
+      valor: idxAliasB41_(headers, ["VALOR_ENVOLVIDO", "VALOR"]),
+      descricao: idxAliasB41_(headers, ["DESCRICAO_PENDENCIA", "DESCRICAO"]),
+      status: idxAliasB41_(headers, ["STATUS"]),
+      prioridade: idxAliasB41_(headers, ["PRIORIDADE"]),
+      motivo: idxAliasB41_(headers, ["MOTIVO"]),
+      observacoes: idxAliasB41_(headers, ["OBSERVACOES", "RESOLUCAO_DESCRICAO", "ESCLARECIMENTO_TEXTO"]),
+      prazo: idxAliasB41_(headers, ["PRAZO", "DATA_LIMITE_ESCLARECIMENTO"]),
+      criadoEm: idxAliasB41_(headers, ["CRIADO_EM"]),
+      criadoPor: idxAliasB41_(headers, ["CRIADO_POR"]),
+      atualizadoEm: idxAliasB41_(headers, ["ATUALIZADO_EM"]),
+      atualizadoPor: idxAliasB41_(headers, ["ATUALIZADO_POR"])
+    };
+  }
+
+  function pendenciaCompatB42_(cols) {
+    return cols.pendenciaId >= 0 &&
+      cols.colaborador >= 0 &&
+      cols.valor >= 0 &&
+      cols.status >= 0 &&
+      (cols.tipo >= 0 || cols.descricao >= 0 || cols.observacoes >= 0) &&
+      (cols.extratoId >= 0 || cols.observacoes >= 0 || cols.descricao >= 0);
+  }
+
+  function pendenciaIdB42_(extratoId) {
+    return "PEND-FLASH-B42-" + txt_(extratoId);
+  }
+
+  function montarPlanoPendenciasB42_(modo, somenteLeitura) {
+    var r = validarProd_(modo, somenteLeitura);
+    r.loteId = "LOTE-FLASH-20260615-163548";
+    r.validacoes = {
+      dbProducao: r.DB_FIN_ID === DB_FIN_ID_PROD_ESPERADO,
+      dbNaoDev: r.DB_FIN_ID !== DB_FIN_ID_DEV_BLOQUEADO,
+      b40Aplicada: false,
+      b41SemPrestacoesConfirmada: false,
+      extratos49: false,
+      despesasPendentes46: false,
+      creditosDepositosIgnorados3: false,
+      semConciliacaoLote: false,
+      pendenciasSchemaCompativel: false,
+      semDuplicidadePendencias: false
+    };
+    r.resumo = {
+      despesasPendentes: 0,
+      pendenciasJaExistentes: 0,
+      pendenciasNovasPlanejadas: 0,
+      creditosIgnorados: 0,
+      totalPendente: 0,
+      colaboradorPrincipal: "RAFAEL FAY MARQUES"
+    };
+    r.schemaPendencias = { compativel: false, headers: [], campos: {}, observacoesFallback: [] };
+    r.pendenciasPlanejadas = [];
+    r.pendenciasExistentes = [];
+    r.amostras = { jaExistentes: [], creditosIgnorados: [] };
+    r.planoInterno = { pendencias: [], sheets: {}, headers: {}, cols: {}, log: null };
+    r.podeExecutarReal = false;
+    r.proximaEtapa = "Se aprovado, executar EXECUTAR_REGISTRO_PENDENCIAS_FLASH_B42_TOKEN_CONFIRMADO.";
+
+    try {
+      var b41 = montarPlanoConciliacaoB41_("BASE_B42_B41_SEM_GRAVAR", true);
+      var b41BloqueiosCriticos = (b41.bloqueios || []).filter(function(b) {
+        return b !== "SEM_PRESTACOES_PARA_CONCILIAR" && b !== "B41_SEM_ITENS_PROCESSAVEIS";
+      });
+      if (b41BloqueiosCriticos.length) r.bloqueios = r.bloqueios.concat(b41BloqueiosCriticos);
+      var ss = abrirPlanilha_(r);
+      if (!ss) {
+        r.success = false;
+        r.ok = false;
+        return r;
+      }
+      var shPend = ss.getSheetByName(ABA_PENDENCIAS);
+      var shLogs = ss.getSheetByName("FIN_CARTOES_LOGS");
+      if (!shPend) r.bloqueios.push("ABA_FIN_CARTOES_PENDENCIAS_AUSENTE");
+      if (!shLogs) r.avisos.push("ABA_FIN_CARTOES_LOGS_AUSENTE_LOG_B42_NAO_PLANEJADO");
+      if (r.bloqueios.length) {
+        r.success = false;
+        r.ok = false;
+        return r;
+      }
+      var headersPend = headers_(shPend);
+      var headersLogs = shLogs ? headers_(shLogs) : [];
+      var colsPend = mapPendenciasB42_(headersPend);
+      r.schemaPendencias = {
+        compativel: pendenciaCompatB42_(colsPend),
+        headers: headersPend,
+        campos: colsPend,
+        observacoesFallback: []
+      };
+      if (colsPend.extratoId < 0) r.schemaPendencias.observacoesFallback.push("EXTRATO_ID_EM_OBSERVACAO_OU_DESCRICAO");
+      if (colsPend.loteId < 0) r.schemaPendencias.observacoesFallback.push("LOTE_ID_EM_OBSERVACAO_OU_DESCRICAO");
+      if (!r.schemaPendencias.compativel) r.bloqueios.push("B42_SCHEMA_PENDENCIAS_INCOMPATIVEL");
+
+      var pendRows = rowsB41_(shPend);
+      var existentesPorExtrato = {};
+      pendRows.forEach(function(p) {
+        var extratoTxt = colsPend.extratoId >= 0 ? textoColB41_(p, colsPend.extratoId) : "";
+        var pendId = colsPend.pendenciaId >= 0 ? textoColB41_(p, colsPend.pendenciaId) : "";
+        var desc = colsPend.descricao >= 0 ? textoColB41_(p, colsPend.descricao) : "";
+        var obs = colsPend.observacoes >= 0 ? textoColB41_(p, colsPend.observacoes) : "";
+        (b41.planoInterno.pendencias || []).forEach(function(item) {
+          if (extratoTxt === item.extratoId || pendId === pendenciaIdB42_(item.extratoId) || desc.indexOf(item.extratoId) >= 0 || obs.indexOf(item.extratoId) >= 0) {
+            existentesPorExtrato[item.extratoId] = (existentesPorExtrato[item.extratoId] || 0) + 1;
+          }
+        });
+      });
+
+      r.validacoes.b40Aplicada = b41.validacoes.b40Aplicada === true;
+      r.validacoes.b41SemPrestacoesConfirmada = (b41.bloqueios || []).indexOf("SEM_PRESTACOES_PARA_CONCILIAR") >= 0 && b41.resumo.semPrestacao === 46;
+      r.validacoes.extratos49 = b41.validacoes.extratos49 === true;
+      r.validacoes.despesasPendentes46 = b41.resumo.semPrestacao === 46 && (b41.planoInterno.pendencias || []).length === 46;
+      r.validacoes.creditosDepositosIgnorados3 = b41.resumo.creditosDepositosIgnorados === 3;
+      r.validacoes.semConciliacaoLote = b41.validacoes.semConciliacaoLote === true;
+      r.validacoes.pendenciasSchemaCompativel = r.schemaPendencias.compativel;
+
+      (b41.planoInterno.pendencias || []).forEach(function(item) {
+        var valor = Math.round(Number(item.valor || 0) * 100) / 100;
+        r.resumo.despesasPendentes++;
+        r.resumo.totalPendente = Math.round((r.resumo.totalPendente + valor) * 100) / 100;
+        if (existentesPorExtrato[item.extratoId]) {
+          r.resumo.pendenciasJaExistentes++;
+          r.pendenciasExistentes.push({
+            pendenciaId: pendenciaIdB42_(item.extratoId),
+            extratoId: item.extratoId,
+            data: item.dataExtrato,
+            valor: valor,
+            colaborador: item.colaborador || "RAFAEL FAY MARQUES",
+            tipo: "PRESTACAO_FLASH_PENDENTE",
+            status: "ABERTA",
+            motivo: "SEM_PRESTACAO",
+            origem: "FLASH_B42",
+            descricao: item.descricaoExtrato
+          });
+          if (r.amostras.jaExistentes.length < 10) r.amostras.jaExistentes.push({ extratoId: item.extratoId, ocorrencias: existentesPorExtrato[item.extratoId] });
+          return;
+        }
+        var pend = {
+          pendenciaId: pendenciaIdB42_(item.extratoId),
+          extratoId: item.extratoId,
+          data: item.dataExtrato,
+          valor: valor,
+          colaborador: item.colaborador || "RAFAEL FAY MARQUES",
+          tipo: "PRESTACAO_FLASH_PENDENTE",
+          status: "ABERTA",
+          motivo: "SEM_PRESTACAO",
+          origem: "FLASH_B42",
+          descricao: item.descricaoExtrato,
+          observacao: "B42: despesa Flash sem prestacao cadastrada; aguardando comprovante/prestacao; lote " + r.loteId
+        };
+        r.pendenciasPlanejadas.push(pend);
+        r.planoInterno.pendencias.push(pend);
+      });
+      r.resumo.pendenciasNovasPlanejadas = r.planoInterno.pendencias.length;
+      r.resumo.creditosIgnorados = b41.resumo.creditosDepositosIgnorados;
+      r.amostras.creditosIgnorados = b41.amostras.creditosDepositosIgnorados || [];
+      r.validacoes.semDuplicidadePendencias = Object.keys(existentesPorExtrato).every(function(k) { return existentesPorExtrato[k] <= 1; });
+      if (!r.validacoes.semDuplicidadePendencias) r.bloqueios.push("B42_DUPLICIDADE_PENDENCIAS_EXISTENTES");
+      Object.keys(r.validacoes).forEach(function(k) {
+        if (!r.validacoes[k]) r.bloqueios.push("B42_VALIDACAO_FALHOU_" + k);
+      });
+      if (r.resumo.pendenciasNovasPlanejadas === 0 && r.resumo.pendenciasJaExistentes === 46) r.avisos.push("PENDENCIAS_JA_REGISTRADAS");
+      if (r.resumo.pendenciasNovasPlanejadas === 0 && r.resumo.pendenciasJaExistentes < 46) r.bloqueios.push("B42_SEM_PENDENCIAS_NOVAS_PLANEJADAS");
+
+      r.planoInterno.sheets = { pendencias: shPend, logs: shLogs };
+      r.planoInterno.headers = { pendencias: headersPend, logs: headersLogs };
+      r.planoInterno.cols = { pendencias: colsPend };
+      r.podeExecutarReal = r.bloqueios.length === 0 && r.resumo.pendenciasNovasPlanejadas > 0;
+      r.success = true;
+      r.ok = r.bloqueios.length === 0;
+    } catch (e) {
+      r.bloqueios.push("ERRO_TECNICO_B42: " + (e && e.message ? e.message : String(e)));
+      r.success = false;
+      r.ok = false;
+    }
+    return r;
+  }
+
+  function PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR() {
+    var r = montarPlanoPendenciasB42_("PREVIEW_REGISTRO_PENDENCIAS_FLASH_B42_SEM_GRAVAR", true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.planoInterno = undefined;
+    return log_(r);
+  }
+
+  function REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO(token) {
+    var r = montarPlanoPendenciasB42_("REGISTRO_PENDENCIAS_FLASH_B42_AUTORIZADO", false);
+    r.executado = false;
+    r.somenteLeitura = false;
+    r.resultado = { pendenciasCriadas: 0, pendenciasJaExistentes: r.resumo.pendenciasJaExistentes, creditosIgnorados: 3, logsCriados: 0 };
+    r.valores = { totalPendenteRegistrado: 0 };
+    if (token !== "CONFIRMO_REGISTRO_PENDENCIAS_B42_FLASH_PRODUCAO") {
+      r.bloqueios.push("TOKEN_CONFIRMACAO_B42_INVALIDO_OU_AUSENTE");
+      r.success = false;
+      r.ok = false;
+      r.planoInterno = undefined;
+      return log_(r);
+    }
+    if (!r.podeExecutarReal || r.bloqueios.length) {
+      r.success = false;
+      r.ok = false;
+      r.planoInterno = undefined;
+      return log_(r);
+    }
+    var lock = LockService.getScriptLock();
+    var lockOk = lock.tryLock(30000);
+    if (!lockOk) {
+      r.bloqueios.push("LOCK_REGISTRO_PENDENCIAS_B42_NAO_OBTIDO");
+      r.success = false;
+      r.ok = false;
+      r.planoInterno = undefined;
+      return log_(r);
+    }
+    try {
+      var p = r.planoInterno;
+      var now = new Date();
+      p.pendencias.forEach(function(item) {
+        p.sheets.pendencias.appendRow(linhaPorHeaderB41_(p.headers.pendencias, {
+          ID: Utilities.getUuid(),
+          PENDENCIA_ID: item.pendenciaId,
+          TIPO_PENDENCIA: item.tipo,
+          LANCAMENTO_ID: "",
+          EXTRATO_ID: item.extratoId,
+          FUNCIONARIO_NOME: item.colaborador,
+          DESCRICAO_PENDENCIA: item.observacao + "; extrato " + item.extratoId + "; " + item.descricao,
+          VALOR_ENVOLVIDO: item.valor,
+          DATA_LIMITE_ESCLARECIMENTO: "",
+          STATUS: item.status,
+          CRIADO_EM: now,
+          CRIADO_POR: "ROTINA_B42",
+          ATUALIZADO_EM: now,
+          ATUALIZADO_POR: "ROTINA_B42"
+        }));
+        r.resultado.pendenciasCriadas++;
+        r.valores.totalPendenteRegistrado = Math.round((r.valores.totalPendenteRegistrado + item.valor) * 100) / 100;
+      });
+      if (p.sheets.logs && p.headers.logs.length >= 17) {
+        p.sheets.logs.appendRow(linhaPorHeaderB41_(p.headers.logs, {
+          ID: Utilities.getUuid(),
+          LOG_ID: idB41_("LOG-B42-FLASH"),
+          DATA_HORA: now,
+          USUARIO_ID: "ROTINA_B42",
+          USUARIO_NOME: "REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO",
+          PERFIL: "SISTEMA",
+          ACAO: "REGISTRO_PENDENCIAS_FLASH",
+          MODULO: "FIN",
+          ENTIDADE_TIPO: "LOTE_FLASH",
+          ENTIDADE_ID: r.loteId,
+          DADOS_ANTES: JSON.stringify({ pendenciasPlanejadas: r.resumo.pendenciasNovasPlanejadas, creditosIgnorados: 3 }),
+          DADOS_DEPOIS: JSON.stringify(r.resultado),
+          RESULTADO: "OK",
+          MENSAGEM: "B42 registrou pendencias Flash sem conciliacao e sem alterar creditos/depositos.",
+          CRIADO_EM: now
+        }));
+        r.resultado.logsCriados = 1;
+      }
+      r.executado = true;
+      r.success = true;
+      r.ok = true;
+      r.proximaEtapa = "Executar AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR.";
+    } catch (e) {
+      r.bloqueios.push("ERRO_EXECUCAO_B42: " + (e && e.message ? e.message : String(e)));
+      r.success = false;
+      r.ok = false;
+    } finally {
+      lock.releaseLock();
+      r.planoInterno = undefined;
+    }
+    return log_(r);
+  }
+
+  function AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR() {
+    var r = montarPlanoPendenciasB42_("AUDITORIA_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR", true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.validacoes.pendenciasRegistradas46 = r.resumo.pendenciasJaExistentes === 46;
+    r.validacoes.umaPendenciaPorExtrato = r.validacoes.semDuplicidadePendencias;
+    r.validacoes.creditosSemPendencia = r.resumo.creditosIgnorados === 3;
+    r.validacoes.totalPendente207921 = r.resumo.totalPendente === 2079.21;
+    r.resumo.pendenciasRegistradas = r.resumo.pendenciasJaExistentes;
+    r.resumo.pendenciasAbertas = r.resumo.pendenciasJaExistentes;
+    r.resumo.duplicidadesPendencias = r.validacoes.semDuplicidadePendencias ? 0 : 1;
+    Object.keys({ pendenciasRegistradas46: true, umaPendenciaPorExtrato: true, creditosSemPendencia: true, totalPendente207921: true }).forEach(function(k) {
+      if (!r.validacoes[k]) r.bloqueios.push("B42_POS_VALIDACAO_FALHOU_" + k);
+    });
+    r.success = r.bloqueios.length === 0 || (r.bloqueios.length === 1 && r.bloqueios[0] === "B42_SEM_PENDENCIAS_NOVAS_PLANEJADAS");
+    r.ok = r.success && r.validacoes.pendenciasRegistradas46;
+    r.proximaEtapa = "Executar RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR.";
+    r.planoInterno = undefined;
+    return log_(r);
+  }
+
+  function RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR() {
+    var r = montarPlanoPendenciasB42_("RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR", true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    var pendencias = r.pendenciasExistentes.length ? r.pendenciasExistentes : (r.pendenciasPlanejadas.length ? r.pendenciasPlanejadas : (r.planoInterno.pendencias || []));
+    r.resumoCobranca = {
+      colaborador: "RAFAEL FAY MARQUES",
+      despesasPendentes: r.resumo.despesasPendentes,
+      pendenciasAbertas: r.resumo.pendenciasJaExistentes || r.resumo.pendenciasNovasPlanejadas,
+      totalPendente: r.resumo.totalPendente,
+      creditosIgnorados: 3
+    };
+    r.porColaborador = [{ colaborador: "RAFAEL FAY MARQUES", quantidade: r.resumo.despesasPendentes, valor: r.resumo.totalPendente }];
+    r.pendencias = pendencias.slice(0, 100);
+    r.mensagemCurta = "Rafael, foram identificadas 46 despesas no cartao Flash entre 11/05/2026 e 09/06/2026, totalizando R$ 2.079,21, ainda sem prestacao/comprovante no sistema.";
+    r.mensagemDetalhada = "Rafael, foram identificadas 46 despesas no cartao Flash no periodo de 11/05/2026 a 09/06/2026, totalizando R$ 2.079,21, ainda sem prestacao/comprovante cadastrado no sistema. Preciso que regularize enviando os comprovantes e a finalidade/OS de cada despesa para fechamento financeiro. Os depositos/creditos do cartao ja foram identificados separadamente e nao entram como despesa.";
+    r.success = true;
+    r.ok = true;
+    r.planoInterno = undefined;
+    return log_(r);
+  }
+
+  function CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR() {
+    var r = montarPlanoPendenciasB42_("CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR", true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.prontoOperacionalmente = r.validacoes.b40Aplicada && r.validacoes.extratos49 && r.validacoes.creditosDepositosIgnorados3 && (r.resumo.pendenciasJaExistentes === 46 || r.resumo.pendenciasNovasPlanejadas === 46);
+    r.encerramentoFinanceiroCompleto = false;
+    r.checklist = {
+      b40Corrigida: r.validacoes.b40Aplicada,
+      b41Segura: r.validacoes.b41SemPrestacoesConfirmada,
+      b42PendenciasRegistradasOuPlanejadas: r.resumo.pendenciasJaExistentes === 46 || r.resumo.pendenciasNovasPlanejadas === 46,
+      creditosPreservados: r.validacoes.creditosDepositosIgnorados3,
+      semConciliacaoIndevida: r.validacoes.semConciliacaoLote,
+      pendenciasAbertasRastreaveis: r.validacoes.pendenciasSchemaCompativel,
+      relatorioCobrancaDisponivel: true
+    };
+    r.proximasEtapas = [
+      "Cobrar Rafael Fay Marques",
+      "Registrar prestacoes/comprovantes",
+      "Reexecutar preview B41 apos regularizacao",
+      "Conciliar apenas quando houver prestacao"
+    ];
+    Object.keys(r.checklist).forEach(function(k) {
+      if (!r.checklist[k]) r.bloqueios.push("CHECKLIST_B42_FALHOU_" + k);
+    });
+    r.success = true;
+    r.ok = r.prontoOperacionalmente && r.bloqueios.length === 0;
+    r.planoInterno = undefined;
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -5100,6 +5455,11 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B41_POS_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B41_POS_SEM_GRAVAR,
     RELATORIO_PENDENCIAS_FLASH_PRODUCAO_B41_SEM_GRAVAR: RELATORIO_PENDENCIAS_FLASH_PRODUCAO_B41_SEM_GRAVAR,
     CHECKLIST_FINAL_FLASH_PRODUCAO_B41_SEM_GRAVAR: CHECKLIST_FINAL_FLASH_PRODUCAO_B41_SEM_GRAVAR,
+    PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR: PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR,
+    REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO: REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO,
+    AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR: AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR,
+    RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR: RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR,
+    CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR: CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -5207,6 +5567,30 @@ function RELATORIO_PENDENCIAS_FLASH_PRODUCAO_B41_SEM_GRAVAR() {
 
 function CHECKLIST_FINAL_FLASH_PRODUCAO_B41_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_FLASH_PRODUCAO_B41_SEM_GRAVAR();
+}
+
+function PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR();
+}
+
+function REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO(token) {
+  return SGO_FIN_FLASH_PROD_B3.REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO(token);
+}
+
+function EXECUTAR_REGISTRO_PENDENCIAS_FLASH_B42_TOKEN_CONFIRMADO() {
+  return REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO("CONFIRMO_REGISTRO_PENDENCIAS_B42_FLASH_PRODUCAO");
+}
+
+function AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR();
+}
+
+function RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR();
+}
+
+function CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
