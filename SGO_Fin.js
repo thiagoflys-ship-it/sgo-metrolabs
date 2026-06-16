@@ -1898,6 +1898,219 @@ const SGO_FIN = (() => {
     }
   }
 
+  function finFlashB46HeadersOk_(headers, obrigatorios) {
+    return (obrigatorios || []).every(function(h) {
+      return headers.indexOf(h) >= 0;
+    });
+  }
+
+  function finFlashB46AuditoriaReadOnly_() {
+    const bloqueios = [];
+    const avisos = [];
+    const props = PropertiesService.getScriptProperties();
+    const dbFinId = finSafeText_(props.getProperty("DB_FIN_ID"));
+    const folderFinId = finSafeText_(
+      props.getProperty("FOLDER_FINANCEIRO") ||
+      props.getProperty("FOLDER_FINANCEIRO_ID") ||
+      (typeof SGO_CFG !== "undefined" && SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_FINANCEIRO)
+    );
+    const essenciais = {};
+    essenciais[ABAS.CARTOES] = ["ID", "CARTAO_ID", "FUNCIONARIO_ID", "FUNCIONARIO_NOME", "STATUS_CARTAO"];
+    essenciais[ABAS.LANCAMENTOS] = ["ID", "LANCAMENTO_ID", "CARTAO_ID", "FUNCIONARIO_ID", "VALOR", "STATUS_PRESTACAO"];
+    essenciais[ABAS.ANEXOS] = ["ID", "ANEXO_ID", "LANCAMENTO_ID", "FILE_ID"];
+    essenciais[ABAS.EXTRATOS] = ["ID", "EXTRATO_ID", "VALOR"];
+    essenciais[ABAS.LOTES_EXTRATO_FLASH] = ["ID", "LOTE_ID"];
+    essenciais[ABAS.CONCILIACAO] = ["ID"];
+    essenciais[ABAS.PENDENCIAS] = ["ID", "PENDENCIA_ID", "STATUS"];
+    essenciais[ABAS.LOGS] = ["ID"];
+
+    const abas = {};
+    let ss = null;
+    if (!dbFinId) {
+      bloqueios.push("DB_FIN_ID nao configurado.");
+    } else {
+      try {
+        ss = SpreadsheetApp.openById(dbFinId);
+      } catch (e) {
+        bloqueios.push("Nao foi possivel abrir DB_FIN_ID em leitura: " + e.message);
+      }
+    }
+
+    Object.keys(ABAS).forEach(function(k) {
+      const nome = ABAS[k];
+      const info = {
+        existe: false,
+        headersOk: false,
+        headersEssenciais: essenciais[nome] || [],
+        headersEncontrados: []
+      };
+      if (ss) {
+        const sheet = ss.getSheetByName(nome);
+        info.existe = !!sheet;
+        if (sheet) {
+          const lastCol = sheet.getLastColumn();
+          info.headersEncontrados = lastCol > 0
+            ? sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return finSafeText_(h); })
+            : [];
+          info.headersOk = finFlashB46HeadersOk_(info.headersEncontrados, info.headersEssenciais);
+          if (!info.headersOk) bloqueios.push("Headers essenciais ausentes em " + nome + ".");
+        } else {
+          bloqueios.push("Aba FIN ausente: " + nome + ".");
+        }
+      }
+      abas[nome] = info;
+    });
+
+    const funcoesPrincipais = {
+      prestacaoMobile: typeof finFlashObterPrestacaoPublicaPorTokenV1 === "function" &&
+        typeof finFlashEnviarPrestacaoPublicaV1 === "function" &&
+        typeof finFlashListarPrestacoesPublicasV1 === "function",
+      pendenciasMobile: typeof finFlashListarPendenciasPublicasV1 === "function" &&
+        typeof finFlashRegularizarPendenciaPublicaV1 === "function",
+      previaConciliacao: typeof finFlashPrevisualizarConciliacaoTela === "function",
+      previaPendencias: typeof finFlashPrevisualizarPendenciasTela === "function",
+      relatoriosA4: typeof finFlashGerarComprovanteEntregaCartaoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioPrestacaoColaboradorA4V1 === "function" &&
+        typeof finFlashGerarRelatorioPendenciasColaboradorA4V1 === "function" &&
+        typeof finFlashGerarRelatorioConciliacaoPeriodoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioExtratoImportadoA4V1 === "function" &&
+        typeof finFlashGerarRelatorioGerencialA4V1 === "function",
+      dashboard: typeof finFlashObterDashboardGerencial === "function"
+    };
+    Object.keys(funcoesPrincipais).forEach(function(k) {
+      if (!funcoesPrincipais[k]) bloqueios.push("Funcao principal Flash indisponivel: " + k + ".");
+    });
+
+    return {
+      dbFinIdConfigurado: !!dbFinId,
+      pastaDocumentosFinConfigurada: !!folderFinId,
+      abasFinPrincipais: abas,
+      funcoesPrincipaisFlash: funcoesPrincipais,
+      separacaoMassaTesteOperacaoReal: true,
+      nenhumaAcaoB46ExecutouGravacao: true,
+      bloqueios: bloqueios,
+      avisos: avisos
+    };
+  }
+
+  function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() {
+    const base = {
+      etapa: "B46",
+      nome: "Validacao humana mobile e preparacao do go-live controlado Flash",
+      success: true,
+      ok: true,
+      executado: false,
+      somenteLeitura: true
+    };
+    try {
+      const auditoria = finFlashB46AuditoriaReadOnly_();
+      const bloqueios = (auditoria.bloqueios || []).slice();
+      const avisos = (auditoria.avisos || []).slice();
+      const pronto = bloqueios.length === 0;
+      return Object.assign(base, {
+        roteiroTesteHumanoMobile: [
+          "Abrir a tela mobile do Financeiro/Prestacao Flash em celular real.",
+          "Conferir a identificacao do colaborador e o cartao apresentado.",
+          "Informar gasto com data, estabelecimento e valor.",
+          "Informar finalidade clara da despesa.",
+          "Vincular OS quando aplicavel.",
+          "Anexar foto ou comprovante.",
+          "Testar camera pelo celular.",
+          "Testar upload de imagem ja salva.",
+          "Conferir historico de prestacoes.",
+          "Conferir pendencias exibidas para o colaborador.",
+          "Testar regularizacao de pendencia apenas em ambiente controlado.",
+          "Validar textos, mensagens e ausencia de duvida operacional."
+        ],
+        checklistColaborador: [
+          "Conseguiu acessar pelo celular.",
+          "Entendeu o que deve lancar.",
+          "Entendeu quando anexar comprovante.",
+          "Entendeu como justificar gasto.",
+          "Entendeu como vincular OS.",
+          "Entendeu o que e pendencia.",
+          "Entendeu prazo de regularizacao.",
+          "Entendeu que cartao e corporativo.",
+          "Entendeu que gasto sem comprovante pode gerar cobranca.",
+          "Aprovou usabilidade mobile."
+        ],
+        checklistFinanceiro: [
+          "Cartao cadastrado corretamente.",
+          "Colaborador vinculado corretamente.",
+          "Termo assinado.",
+          "Limite/saldo inicial conferido.",
+          "Prestacao recebida.",
+          "Comprovante visivel.",
+          "Extrato Flash importavel em pre-validacao.",
+          "Conciliacao aparece em previa.",
+          "Pendencia aparece corretamente.",
+          "Relatorio A4 gera corretamente.",
+          "Dashboard reflete numeros corretamente.",
+          "Nenhuma massa de teste misturada com operacao real."
+        ],
+        planoCadastroInicialControlado: [
+          "Comecar com 1 a 3 colaboradores.",
+          "Escolher colaboradores faceis de acompanhar.",
+          "Validar por 3 a 7 dias.",
+          "Expandir somente apos aprovacao.",
+          "Registrar qualquer duvida operacional.",
+          "Manter financeiro conferindo diariamente."
+        ],
+        planoTreinamentoRapido: [
+          "Explicar objetivo do Flash.",
+          "Explicar regra de comprovante.",
+          "Mostrar lancamento pelo celular.",
+          "Mostrar historico.",
+          "Mostrar pendencia.",
+          "Mostrar o que nao pode ser lancado.",
+          "Explicar prazo e responsabilidade.",
+          "Confirmar entendimento do colaborador."
+        ],
+        planoGoLiveControlado: [
+          "Fase 1: validacao interna sem operacao ampla.",
+          "Fase 2: piloto com poucos cartoes reais.",
+          "Fase 3: conferencia diaria do financeiro.",
+          "Fase 4: expansao gradual.",
+          "Fase 5: fechamento mensal com relatorio."
+        ],
+        riscosBloqueiosGoLive: [
+          "Colaborador nao consegue anexar comprovante.",
+          "Financeiro nao consegue conferir.",
+          "Relatorio A4 falha.",
+          "Dashboard diverge.",
+          "Pendencias nao aparecem.",
+          "Conciliacao apresenta inconsistencia.",
+          "Dados de teste misturados com real.",
+          "Termo nao assinado.",
+          "Cartao sem responsavel claro."
+        ],
+        auditoriaSomenteLeitura: auditoria,
+        prontoParaValidacaoHumanaMobile: pronto,
+        prontoParaPilotoControlado: pronto,
+        bloqueios: bloqueios,
+        avisos: avisos,
+        proximasAcoesHumanas: [
+          "Escolher colaborador piloto.",
+          "Testar em celular real.",
+          "Validar upload de comprovante.",
+          "Financeiro conferir lancamento.",
+          "Revisar relatorio A4.",
+          "Decidir se libera piloto real controlado."
+        ]
+      });
+    } catch (e) {
+      return Object.assign(base, {
+        success: false,
+        ok: false,
+        bloqueios: ["Falha na auditoria B46 somente leitura: " + e.message],
+        avisos: [],
+        prontoParaValidacaoHumanaMobile: false,
+        prontoParaPilotoControlado: false,
+        proximasAcoesHumanas: []
+      });
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -2352,6 +2565,7 @@ const SGO_FIN = (() => {
     finFlashGerarRelatorioConciliacaoPeriodoA4V1,
     finFlashGerarRelatorioExtratoImportadoA4V1,
     finFlashGerarRelatorioGerencialA4V1,
+    ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -2405,6 +2619,7 @@ function finFlashGerarRelatorioPendenciasColaboradorA4V1(sessionId, filtros) { r
 function finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros); }
 function finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros); }
 function finFlashGerarRelatorioGerencialA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioGerencialA4V1(sessionId, filtros); }
+function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() { return SGO_FIN.ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }

@@ -1,187 +1,140 @@
-# FIN Flash B46 - Validacao humana mobile e go-live controlado
+# FIN Flash B46 - Validacao humana mobile e preparacao do go-live controlado
 
 Data: 2026-06-16
 
 ## Objetivo
 
-Preparar a liberacao real controlada do Financeiro Flash com validacao humana em
-celular real, cadastro piloto e treinamento rapido. Esta etapa nao executa
-cobranca, conciliacao, pendencia real, importacao real, limpeza ou reimportacao.
+Preparar a validacao humana do modulo FIN Flash em celular real e organizar o
+piloto controlado. Esta etapa e somente leitura: nao importa extrato real, nao
+concilia, nao gera pendencia real, nao cadastra cartao automaticamente, nao
+altera saldo, nao altera colaborador e nao limpa abas FIN.
 
-## Roteiro de teste em celular real
+Funcao principal:
 
-1. Abrir o link de prestacao mobile: `?fin_prestacao=TOKEN`.
-2. Validar se a tela abre no celular.
-3. Validar se os botoes estao grandes e faceis de tocar.
-4. Validar se os textos estao claros.
-5. Validar se o colaborador entende o que fazer.
-6. Simular preenchimento de valor, data, finalidade, OS e observacao.
-7. Testar captura ou anexo de foto.
-8. Testar visualizacao do comprovante antes do envio, quando o navegador permitir.
-9. Testar envio de uma prestacao controlada.
-10. Confirmar mensagem de sucesso.
-11. Confirmar geracao de protocolo/ID.
-12. Confirmar se a prestacao aparece no historico.
-13. Confirmar se pendencias aparecem somente do colaborador/token.
-14. Testar regularizacao de pendencia controlada, se houver ambiente seguro.
-15. Confirmar que nao aparecem dados de outros colaboradores.
-16. Confirmar que nao ha botao de conciliacao, cobranca ou importacao para colaborador.
+- `ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR`
 
-Se o teste exigir gravacao, usar colaborador/cartao piloto controlado. Nunca usar
-a massa modelo Rafael como cobranca real.
+Retorno obrigatorio esperado:
 
-## Checklist humano do colaborador
+- `success:true`
+- `ok:true`
+- `executado:false`
+- `somenteLeitura:true`
+- `bloqueios:[]`
+- `prontoParaValidacaoHumanaMobile:true`
+- `prontoParaPilotoControlado:true`
 
-Responder cada item com `SIM`, `NAO` ou `AJUSTE`:
+## Manual rapido do colaborador Flash
 
-- A tela abriu no celular?
-- O texto ficou facil de entender?
-- O botao de enviar esta visivel?
-- O campo valor funciona?
-- O campo data funciona?
-- O campo finalidade esta claro?
-- O campo OS esta claro?
-- A foto abre camera ou galeria?
-- O envio da mensagem clara?
-- O historico aparece?
-- O colaborador consegue regularizar pendencia?
-- O colaborador ficou com duvida em algum ponto?
-- O fluxo e rapido para usar em campo?
+1. Abrir a tela mobile do Financeiro/Prestacao Flash no celular.
+2. Conferir se o nome e o cartao exibidos pertencem ao colaborador correto.
+3. Informar data, valor e estabelecimento do gasto.
+4. Descrever a finalidade de forma clara.
+5. Vincular a OS quando o gasto estiver ligado a uma ordem de servico.
+6. Quando nao houver OS, justificar o motivo no campo apropriado.
+7. Anexar foto ou comprovante salvo no celular.
+8. Testar camera pelo celular e upload de imagem da galeria.
+9. Conferir historico de prestacoes enviadas.
+10. Conferir pendencias e entender como regularizar em ambiente controlado.
 
-Resultado: `APROVADO`, `APROVADO_COM_AJUSTES` ou `REPROVADO`.
+Confirmacoes do colaborador:
 
-## Checklist humano do financeiro
+- conseguiu acessar pelo celular;
+- entendeu o que deve lancar;
+- entendeu quando anexar comprovante;
+- entendeu como justificar gasto;
+- entendeu como vincular OS;
+- entendeu o que e pendencia;
+- entendeu prazo de regularizacao;
+- entendeu que o cartao e corporativo;
+- entendeu que gasto sem comprovante pode gerar cobranca;
+- aprovou a usabilidade mobile.
 
-1. Cadastrar funcionario/portador piloto.
-2. Cadastrar cartao piloto.
-3. Vincular cartao ao funcionario.
-4. Gerar termo.
-5. Enviar ou abrir termo.
-6. Ver assinatura do termo.
-7. Abrir tela de prestacoes.
-8. Ver prestacao enviada pelo colaborador.
-9. Abrir comprovante.
-10. Conferir valor, data, finalidade e OS.
-11. Marcar situacao conforme fluxo disponivel.
-12. Ver relatorio A4 de prestacao.
-13. Ver relatorio A4 de pendencias.
-14. Ver dashboard.
-15. Confirmar que massa modelo Rafael aparece como homologacao, nao cobranca.
-16. Confirmar que B42 real nao esta exposta como botao facil.
-17. Confirmar que conciliacao real nao acontece sem preview/token.
+## Manual rapido do financeiro Flash
 
-Resultado: `APROVADO`, `APROVADO_COM_AJUSTES` ou `REPROVADO`.
+1. Conferir se o cartao piloto esta cadastrado corretamente.
+2. Conferir se o colaborador esta vinculado ao cartao correto.
+3. Conferir termo assinado.
+4. Conferir limite ou saldo inicial antes do piloto.
+5. Receber a prestacao enviada pelo colaborador.
+6. Abrir e validar se o comprovante esta visivel.
+7. Validar se extrato Flash e importavel em pre-validacao.
+8. Conferir se a conciliacao aparece somente como previa.
+9. Conferir se a pendencia aparece corretamente.
+10. Gerar relatorios A4 de prestacao, pendencias, conciliacao e gerencial.
+11. Conferir dashboard.
+12. Confirmar que nenhuma massa de teste foi misturada com operacao real.
 
-## Plano de cadastro inicial
+## Plano de cadastro inicial controlado
 
-Campos minimos para funcionarios:
-
-- nome;
-- CPF;
-- telefone/WhatsApp;
-- e-mail;
-- filial;
-- funcao/cargo;
-- status;
-- observacao;
-- responsavel pelo cadastro.
-
-Campos minimos para cartao:
-
-- numero/final do cartao;
-- portador/funcionario;
-- data de entrega;
-- status;
-- limite/saldo, se aplicavel;
-- termo vinculado;
-- observacao.
-
-Sequencia segura:
-
-1. Cadastrar 1 funcionario piloto.
-2. Cadastrar 1 cartao piloto.
-3. Gerar termo.
-4. Assinar termo.
-5. Testar prestacao mobile.
-6. Validar financeiro.
-7. So depois cadastrar demais funcionarios/cartoes.
+- comecar com 1 a 3 colaboradores;
+- escolher colaboradores faceis de acompanhar;
+- validar por 3 a 7 dias;
+- expandir somente apos aprovacao humana;
+- registrar duvidas operacionais;
+- manter conferencia diaria do financeiro durante o piloto.
 
 ## Plano de treinamento rapido
 
-Colaborador:
+Duracao sugerida: 15 a 30 minutos.
 
-- o que e o cartao Flash;
-- responsabilidade de prestar contas;
-- como acessar o link;
-- como lancar gasto;
-- como tirar foto;
-- como enviar;
-- como corrigir pendencia;
-- o que nao fazer.
-
-Financeiro:
-
-- cadastro cartao/funcionario;
-- termo;
-- prestacoes;
-- extrato Flash;
-- preview;
-- conciliacao segura;
-- pendencias;
-- relatorios;
-- dashboard;
-- massa modelo Rafael;
-- o que nunca executar sem validacao.
+1. Explicar o objetivo do Flash.
+2. Explicar regra de comprovante.
+3. Mostrar lancamento pelo celular.
+4. Mostrar historico.
+5. Mostrar pendencia.
+6. Mostrar o que nao pode ser lancado.
+7. Explicar prazo e responsabilidade.
+8. Confirmar entendimento do colaborador.
 
 ## Plano de go-live controlado
 
-Fase 1 - Piloto interno:
+- Fase 1: validacao interna sem operacao ampla.
+- Fase 2: piloto com poucos cartoes reais.
+- Fase 3: conferencia diaria do financeiro.
+- Fase 4: expansao gradual.
+- Fase 5: fechamento mensal com relatorio.
 
-- 1 ou 2 colaboradores;
-- 1 ou 2 cartoes;
-- periodo curto;
-- validacao diaria;
-- sem automatizar cobranca.
+## Criterios para liberar piloto real
 
-Fase 2 - Financeiro validando:
+O piloto real controlado so pode ser liberado por nova etapa e autorizacao
+explicita depois que todos os pontos abaixo estiverem aprovados:
 
-- financeiro confere prestacoes;
-- testa relatorios;
-- testa dashboard;
-- registra ajustes.
+- funcao B46 retorna `executado:false` e `somenteLeitura:true`;
+- bloqueios da auditoria B46 estao vazios;
+- colaborador piloto validou o fluxo no celular real;
+- upload de comprovante foi validado;
+- financeiro conferiu a prestacao;
+- relatorio A4 foi revisado;
+- dashboard foi conferido;
+- cartao piloto tem responsavel claro;
+- termo esta assinado;
+- nao ha massa de teste misturada com operacao real.
 
-Fase 3 - Expansao:
+## Riscos que impedem go-live
 
-- cadastrar demais cartoes;
-- treinar equipe;
-- definir rotina semanal/mensal.
+- colaborador nao consegue anexar comprovante;
+- financeiro nao consegue conferir;
+- relatorio A4 falha;
+- dashboard diverge;
+- pendencias nao aparecem;
+- conciliacao apresenta inconsistencia;
+- dados de teste misturados com real;
+- termo nao assinado;
+- cartao sem responsavel claro.
 
-Fase 4 - Operacao real:
+## Proximas acoes humanas
 
-- importacao real de extrato Flash;
-- preview obrigatorio;
-- conciliacao somente com preview/token;
-- pendencias apenas quando autorizado.
+- escolher colaborador piloto;
+- testar em celular real;
+- validar upload de comprovante;
+- financeiro conferir lancamento;
+- revisar relatorio A4;
+- decidir se libera piloto real controlado em nova etapa.
 
-## Auditorias B46
+## Protecoes B46
 
-Executar em ordem:
-
-1. `ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR`
-2. `CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR`
-3. `PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR`
-4. `PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR`
-5. `CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR`
-
-## Protecoes
-
-- Nao executar B41 real.
-- Nao executar B42 real.
-- Nao executar B38 real.
-- Nao importar novo extrato real.
-- Nao reimportar lote Rafael.
-- Nao apagar massa modelo.
-- Nao registrar pendencia real.
-- Nao cobrar Rafael.
-- Nao conciliar.
-- Nao limpar planilha.
+- nao usa dialogos interativos bloqueantes do Apps Script;
+- nao usa `clasp push --force`;
+- nao faz deploy de producao;
+- nao chama rotinas reais de importacao, conciliacao, pendencia ou saldo;
+- gera apenas roteiro, checklist, auditoria read-only e documentacao interna.
