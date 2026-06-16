@@ -1919,7 +1919,7 @@ const SGO_FIN = (() => {
     essenciais[ABAS.LANCAMENTOS] = ["ID", "LANCAMENTO_ID", "CARTAO_ID", "FUNCIONARIO_ID", "VALOR", "STATUS_PRESTACAO"];
     essenciais[ABAS.ANEXOS] = ["ID", "ANEXO_ID", "LANCAMENTO_ID", "FILE_ID"];
     essenciais[ABAS.EXTRATOS] = ["ID", "EXTRATO_ID", "VALOR"];
-    essenciais[ABAS.LOTES_EXTRATO_FLASH] = ["ID", "LOTE_ID"];
+    essenciais[ABAS.LOTES_EXTRATO_FLASH] = ["LOTE_ID"];
     essenciais[ABAS.CONCILIACAO] = ["ID"];
     essenciais[ABAS.PENDENCIAS] = ["ID", "PENDENCIA_ID", "STATUS"];
     essenciais[ABAS.LOGS] = ["ID"];
