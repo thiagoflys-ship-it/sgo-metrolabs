@@ -1,5 +1,10 @@
 # FIN Flash B42 - Pendencias e cobranca
 
+Nota de homologacao: B42 e ferramenta futura de registro/cobranca de
+pendencias. No momento atual, o lote Rafael e massa modelo/homologacao e nao
+deve ser usado para cobranca real nem registro de pendencia real, salvo
+autorizacao expressa futura.
+
 ## Contexto
 
 A B40 corrigiu o incidente B38 no lote `LOTE-FLASH-20260615-163548`.

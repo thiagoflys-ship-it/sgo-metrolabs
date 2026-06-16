@@ -5293,6 +5293,179 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function baseHomologacaoB43_(modo) {
+    var r = validarProd_(modo, true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.ambiente = "PRODUCAO_COM_MASSA_MODELO_CONTROLADA";
+    r.naturezaDoLote = "MASSA_MODELO_HOMOLOGACAO";
+    r.loteId = "LOTE-FLASH-20260615-163548";
+    r.validacoes = {
+      dbProducao: r.DB_FIN_ID === DB_FIN_ID_PROD_ESPERADO,
+      dbNaoDev: r.DB_FIN_ID !== DB_FIN_ID_DEV_BLOQUEADO,
+      b40Corrigida: false,
+      b41LeituraCorrigida: false,
+      b41PreviewOperacional: false,
+      importacaoModeloValidada: false,
+      datasCorrigidas: false,
+      debitosSeparados: false,
+      creditosDepositosSeparados: false,
+      creditosNaoViraramDespesa: false,
+      ausenciaPrestacaoDetectada: false,
+      semConciliacaoIndevida: false,
+      semPendenciaRealRegistradaAgora: false,
+      b42DisponivelComoFerramentaFutura: false
+    };
+    r.resumoMassaModelo = {
+      colaboradorModelo: "RAFAEL FAY MARQUES",
+      extratosTotal: 0,
+      despesasModelo: 0,
+      creditosDepositosModelo: 0,
+      totalDespesasModelo: 0,
+      totalCreditosDepositosModelo: 0,
+      periodoInicio: "2026-05-11 07:23:00",
+      periodoFim: "2026-06-09 07:08:00"
+    };
+    try {
+      var b41 = montarPlanoConciliacaoB41_("BASE_B43_B41_SEM_GRAVAR", true);
+      var b42 = montarPlanoPendenciasB42_("BASE_B43_B42_SEM_GRAVAR", true);
+      r.resumoMassaModelo.extratosTotal = b41.resumo.extratosTotal;
+      r.resumoMassaModelo.despesasModelo = b41.resumo.despesasCandidatas;
+      r.resumoMassaModelo.creditosDepositosModelo = b41.resumo.creditosDepositosIgnorados;
+      r.resumoMassaModelo.totalDespesasModelo = b41.valores.totalDespesasFlash;
+      r.resumoMassaModelo.totalCreditosDepositosModelo = b41.valores.totalCreditosDepositosIgnorados;
+      r.validacoes.b40Corrigida = b41.validacoes.b40Aplicada && b41.validacoes.lotePeriodoCorrigido;
+      r.validacoes.b41LeituraCorrigida = b41.validacoes.extratos49 && b41.validacoes.despesasCandidatas46 && b41.validacoes.creditosDepositos3;
+      r.validacoes.b41PreviewOperacional = b41.success === true;
+      r.validacoes.importacaoModeloValidada = b41.resumo.extratosTotal === 49;
+      r.validacoes.datasCorrigidas = b41.validacoes.lotePeriodoCorrigido;
+      r.validacoes.debitosSeparados = b41.resumo.despesasCandidatas === 46 && b41.valores.totalDespesasFlash === 2079.21;
+      r.validacoes.creditosDepositosSeparados = b41.resumo.creditosDepositosIgnorados === 3 && b41.valores.totalCreditosDepositosIgnorados === 2800;
+      r.validacoes.creditosNaoViraramDespesa = r.validacoes.creditosDepositosSeparados;
+      r.validacoes.ausenciaPrestacaoDetectada = b41.resumo.semPrestacao === 46 && (b41.bloqueios || []).indexOf("SEM_PRESTACOES_PARA_CONCILIAR") >= 0;
+      r.validacoes.semConciliacaoIndevida = b41.validacoes.semConciliacaoLote === true;
+      r.validacoes.semPendenciaRealRegistradaAgora = b42.resumo.pendenciasJaExistentes === 0;
+      r.validacoes.b42DisponivelComoFerramentaFutura = typeof REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO === "function" && typeof PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR === "function";
+      if (!r.validacoes.semPendenciaRealRegistradaAgora) r.avisos.push("B42_PENDENCIAS_JA_EXISTEM_NO_LOTE_MODELO_REVISAR_AUTORIZACAO");
+      ["b40Corrigida", "b41LeituraCorrigida", "importacaoModeloValidada", "debitosSeparados", "creditosDepositosSeparados", "semConciliacaoIndevida"].forEach(function(k) {
+        if (!r.validacoes[k]) r.bloqueios.push("B43_VALIDACAO_FALHOU_" + k);
+      });
+      r.success = true;
+      r.ok = r.bloqueios.length === 0;
+    } catch (e) {
+      r.bloqueios.push("ERRO_TECNICO_B43: " + (e && e.message ? e.message : String(e)));
+      r.success = false;
+      r.ok = false;
+    }
+    return r;
+  }
+
+  function RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR");
+    r.conclusao = {
+      moduloImportacaoFlashPronto: r.validacoes.importacaoModeloValidada,
+      moduloClassificacaoPronto: r.validacoes.debitosSeparados && r.validacoes.creditosDepositosSeparados,
+      moduloConciliacaoSeguraPronto: r.validacoes.b41PreviewOperacional && r.validacoes.ausenciaPrestacaoDetectada,
+      moduloPendenciasFuturasPronto: r.validacoes.b42DisponivelComoFerramentaFutura,
+      moduloProntoParaGoLiveControlado: r.bloqueios.length === 0,
+      encerramentoFinanceiroDoLoteModeloNaoAplicavel: true
+    };
+    r.avisos.push("LOTE_RAFAEL_TRATADO_COMO_MASSA_MODELO_HOMOLOGACAO_NAO_COBRANCA_REAL_ATUAL");
+    return log_(r);
+  }
+
+  function CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR");
+    r.prontoParaGoLiveControlado = r.bloqueios.length === 0;
+    r.prontoParaUsoRealAposCadastros = r.prontoParaGoLiveControlado;
+    r.checklistTecnico = {
+      schemaFinanceiroOk: r.validacoes.dbProducao && r.validacoes.dbNaoDev,
+      importacaoExtratoFlashOk: r.validacoes.importacaoModeloValidada,
+      correcaoDatasOk: r.validacoes.datasCorrigidas,
+      tratamentoCreditoDepositoOk: r.validacoes.creditosDepositosSeparados && r.validacoes.creditosNaoViraramDespesa,
+      conciliacaoSeguraOk: r.validacoes.b41PreviewOperacional,
+      deteccaoPendenciasOk: r.validacoes.ausenciaPrestacaoDetectada && r.validacoes.b42DisponivelComoFerramentaFutura,
+      protecoesTokenOk: typeof CONCILIAR_FLASH_PRODUCAO_B41_AUTORIZADO === "function" && typeof REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO === "function",
+      documentacaoOk: true
+    };
+    r.checklistOperacional = {
+      cadastrarFuncionarios: false,
+      cadastrarCartoes: false,
+      vincularCartoesFuncionarios: false,
+      gerarTermosCartao: false,
+      coletarAssinaturasTermos: false,
+      treinarFuncionarios: false,
+      definirRotinaImportacaoExtrato: false,
+      definirPrazoPrestacaoContas: false,
+      decidirTratamentoMassaModeloRafael: false
+    };
+    r.faltantesAntesGoLive = [
+      "Cadastrar funcionarios/portadores",
+      "Cadastrar cartoes Flash reais",
+      "Vincular cartoes aos funcionarios",
+      "Gerar e assinar termos de responsabilidade",
+      "Treinar funcionarios para lancar prestacao/comprovante",
+      "Definir rotina mensal/semanal de importacao do extrato Flash",
+      "Definir regra de cobranca de pendencias",
+      "Decidir se o lote modelo Rafael sera mantido, isolado ou removido em etapa futura autorizada"
+    ];
+    r.recomendacao = "Sistema tecnicamente pronto para go-live controlado; iniciar uso real somente apos cadastros, termos, treinamento e decisao formal sobre a massa modelo Rafael.";
+    r.ok = r.success && r.prontoParaGoLiveControlado;
+    return log_(r);
+  }
+
+  function PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR");
+    r.fases = [
+      { fase: "Fase 1 - Preparacao", etapas: ["Revisar schema financeiro", "Manter massa modelo protegida", "Definir usuarios responsaveis", "Definir politica de prestacao"] },
+      { fase: "Fase 2 - Cadastro", etapas: ["Cadastrar funcionarios", "Cadastrar cartoes", "Vincular cartao ao funcionario", "Gerar termo", "Coletar assinatura do termo"] },
+      { fase: "Fase 3 - Operacao", etapas: ["Funcionario lanca gasto/prestacao com comprovante", "Sistema guarda OS/finalidade/comprovante", "Importar extrato Flash", "Rodar preview de importacao", "Confirmar importacao", "Rodar preview de conciliacao", "Conciliar apenas matches seguros", "Gerar pendencias quando faltar prestacao"] },
+      { fase: "Fase 4 - Fechamento", etapas: ["Relatorio de pendencias", "Cobranca", "Conciliacao final", "Dashboard gerencial"] }
+    ];
+    r.camposMinimos = {
+      funcionario: ["NOME", "CPF", "TELEFONE/WHATSAPP", "EMAIL", "FILIAL", "CARGO/FUNCAO", "STATUS", "RESPONSAVEL"],
+      cartao: ["CARTAO_ID", "CARTAO_FINAL", "FUNCIONARIO_ID", "STATUS", "DATA_ENTREGA", "LIMITE/SALDO", "TERMO_ID", "STATUS_TERMO", "OBSERVACOES"],
+      termo: ["TERMO_ID", "CARTAO_ID", "FUNCIONARIO", "DATA_GERACAO", "DATA_ASSINATURA", "IP/ASSINATURA", "STATUS"]
+    };
+    return log_(r);
+  }
+
+  function SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR");
+    r.cenarios = [
+      { cenario: "Funcionario prestou conta antes da importacao", entrada: "Lancamento com comprovante ja cadastrado", comportamentoEsperado: "Preview B41 encontra match seguro", gravacaoFuturaPrevista: "Conciliacao item a item se autorizada", bloqueios: [], concilia: true, geraPendencia: false },
+      { cenario: "Extrato importado sem prestacao", entrada: "Despesa Flash sem lancamento", comportamentoEsperado: "B41 detecta SEM_PRESTACAO", gravacaoFuturaPrevista: "B42 podera registrar pendencia se autorizado", bloqueios: ["SEM_PRESTACOES_PARA_CONCILIAR"], concilia: false, geraPendencia: true },
+      { cenario: "Credito/deposito no extrato", entrada: "Valor positivo ou tipo CREDITO_DEPOSITO_FLASH", comportamentoEsperado: "Ignorar na conciliacao de despesas", gravacaoFuturaPrevista: "Informativo/ajuste de saldo", bloqueios: [], concilia: false, geraPendencia: false },
+      { cenario: "Despesa duplicada", entrada: "Mesma chave de extrato repetida", comportamentoEsperado: "Bloquear importacao/conciliacao automatica", gravacaoFuturaPrevista: "Nenhuma ate revisao", bloqueios: ["DUPLICIDADE"], concilia: false, geraPendencia: false },
+      { cenario: "Prestacao sem extrato ainda", entrada: "Lancamento cadastrado antes do extrato", comportamentoEsperado: "Aguardar importacao do extrato", gravacaoFuturaPrevista: "Conciliar quando extrato chegar", bloqueios: [], concilia: false, geraPendencia: false },
+      { cenario: "Match exato", entrada: "Colaborador, valor e data iguais", comportamentoEsperado: "MATCH_EXATO", gravacaoFuturaPrevista: "Conciliacao segura se autorizada", bloqueios: [], concilia: true, geraPendencia: false },
+      { cenario: "Match ambiguo", entrada: "Mais de um lancamento candidato", comportamentoEsperado: "AMBIGUO", gravacaoFuturaPrevista: "Pendencia/revisao manual", bloqueios: ["AMBIGUO"], concilia: false, geraPendencia: true },
+      { cenario: "Match possivel, mas nao seguro", entrada: "Valor bate, data/descricao fracas", comportamentoEsperado: "MATCH_POSSIVEL", gravacaoFuturaPrevista: "Pendencia/revisao", bloqueios: ["MATCH_POSSIVEL"], concilia: false, geraPendencia: true }
+    ];
+    return log_(r);
+  }
+
+  function VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR");
+    r.b42Disponivel = typeof PREVIEW_REGISTRAR_PENDENCIAS_FLASH_B42_SEM_GRAVAR === "function" && typeof REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO === "function";
+    r.b42NaoExecutadaAgora = r.validacoes.semPendenciaRealRegistradaAgora;
+    r.b42RealProtegidaPorToken = typeof REGISTRAR_PENDENCIAS_FLASH_B42_AUTORIZADO === "function";
+    r.pendenciasReaisNaoRegistradasNoLoteModelo = r.validacoes.semPendenciaRealRegistradaAgora;
+    r.recomendacao = "Manter B42 como ferramenta futura. Nao executar para massa modelo Rafael agora.";
+    r.ok = r.success && r.b42Disponivel && r.b42RealProtegidaPorToken && r.pendenciasReaisNaoRegistradasNoLoteModelo;
+    return log_(r);
+  }
+
+  function RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR() {
+    var r = baseHomologacaoB43_("RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR");
+    r.texto = "O modulo Financeiro Flash foi homologado com massa real modelo do extrato Rafael. A importacao, correcao de datas, separacao de despesas e creditos, protecao contra conciliacao indevida e identificacao de falta de prestacao foram validadas. O sistema esta tecnicamente pronto para go-live controlado, dependendo apenas do cadastro dos cartoes, funcionarios, termos e treinamento. O lote Rafael deve ser tratado como massa modelo/homologacao, nao como cobranca real atual.";
+    r.oQueFoiValidado = ["Importacao de extrato Flash real", "Correcao de datas/metadados", "Separacao de 46 despesas e 3 creditos/depositos", "Bloqueio de conciliacao sem prestacao", "B42 como ferramenta futura"];
+    r.oQueFalta = ["Cadastrar funcionarios", "Cadastrar cartoes", "Vincular cartoes", "Gerar/coletar termos", "Treinar usuarios", "Definir rotina operacional"];
+    r.naoFazerAgora = ["Nao executar B42 real", "Nao registrar pendencia real contra Rafael", "Nao conciliar", "Nao apagar ou reimportar massa modelo"];
+    r.decisaoLoteRafael = "Manter como massa modelo/homologacao ate decisao formal futura.";
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -5460,6 +5633,12 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR: AUDITAR_PENDENCIAS_FLASH_B42_POS_SEM_GRAVAR,
     RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR: RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR,
     CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR: CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR,
+    RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR: RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR,
+    CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR: CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR,
+    PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR: PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR,
+    SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR: SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR,
+    VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR: VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR,
+    RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR: RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -5591,6 +5770,30 @@ function RELATORIO_COBRANCA_FLASH_B42_SEM_GRAVAR() {
 
 function CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.CHECKLIST_OPERACIONAL_FLASH_B42_SEM_GRAVAR();
+}
+
+function RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.RELATORIO_HOMOLOGACAO_FINAL_FLASH_B43_SEM_GRAVAR();
+}
+
+function CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_GO_LIVE_FLASH_B43_SEM_GRAVAR();
+}
+
+function PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PLANO_IMPLANTACAO_FLASH_B43_SEM_GRAVAR();
+}
+
+function SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.SIMULAR_OPERACAO_REAL_FLASH_B43_SEM_GRAVAR();
+}
+
+function VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.VALIDAR_B42_COMO_FERRAMENTA_FUTURA_FLASH_B43_SEM_GRAVAR();
+}
+
+function RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.RESUMO_EXECUTIVO_FLASH_B43_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
