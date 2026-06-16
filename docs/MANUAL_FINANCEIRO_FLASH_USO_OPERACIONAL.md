@@ -236,7 +236,71 @@ B45 finaliza a base operacional de prestacao mobile, comprovante, historico,
 regularizacao de pendencias e relatorios A4. Antes de uso real, executar as
 auditorias B45 e validar a tela em celular real.
 
-## 28. Glossario
+## 28. Validacao humana e go-live controlado
+
+Antes do go-live geral, executar a B46 como teste humano e piloto controlado.
+
+### Teste no celular
+
+1. Abrir `?fin_prestacao=TOKEN` em celular real.
+2. Validar abertura da tela, tamanho dos botoes e clareza dos textos.
+3. Preencher valor, data, finalidade, OS e observacao.
+4. Testar foto ou anexo do comprovante.
+5. Enviar uma prestacao controlada usando colaborador/cartao piloto.
+6. Confirmar mensagem de sucesso e protocolo/ID.
+7. Confirmar historico e pendencias do mesmo token.
+8. Confirmar que nao aparece dado de outro colaborador.
+9. Confirmar que nao ha botao de cobranca, importacao ou conciliacao para o colaborador.
+
+### Cadastro piloto
+
+1. Cadastrar 1 funcionario piloto.
+2. Cadastrar 1 cartao piloto.
+3. Vincular cartao ao funcionario.
+4. Gerar e assinar termo.
+5. Testar prestacao mobile.
+6. Validar comprovante, relatorios e dashboard no financeiro.
+7. So depois expandir para demais funcionarios/cartoes.
+
+### Treinamento rapido
+
+Colaborador: explicar responsabilidade de prestar contas, link mobile, campos
+obrigatorios, foto do comprovante, envio, historico, pendencias e o que nao fazer.
+
+Financeiro: revisar cadastro, termo, prestacoes, extrato Flash, preview,
+conciliacao segura, pendencias, relatorios, dashboard e protecoes B41/B42/B38.
+
+### Go-live controlado
+
+- Fase 1: piloto interno com 1 ou 2 colaboradores e validacao diaria.
+- Fase 2: financeiro confere prestacoes, relatorios e dashboard.
+- Fase 3: expansao para demais cartoes apos treinamento.
+- Fase 4: operacao real com preview obrigatorio, token e autorizacao.
+
+### Se der erro
+
+- Parar expansao.
+- Registrar o problema com print, horario, token usado e aparelho.
+- Nao improvisar cobranca, conciliacao ou importacao.
+- Corrigir em etapa controlada e repetir o teste humano.
+
+### O que nunca fazer na B46
+
+- Nao executar B41 real.
+- Nao executar B42 real.
+- Nao executar B38 real.
+- Nao importar extrato real novo.
+- Nao apagar ou reimportar lote Rafael.
+- Nao cobrar Rafael.
+- Nao conciliar.
+- Nao limpar planilha.
+
+### Massa modelo Rafael
+
+Rafael continua sendo massa modelo de homologacao. Ela serve para validar
+separacao tecnica e comunicacao visual, nao para cobranca real.
+
+## 29. Glossario
 
 - Extrato Flash: arquivo ou dados importados da operadora Flash.
 - Prestacao: registro do colaborador justificando a despesa.

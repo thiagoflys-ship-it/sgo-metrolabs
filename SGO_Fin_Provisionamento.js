@@ -5778,6 +5778,199 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     return log_(r);
   }
 
+  function baseB46_(modo) {
+    var r = validarProd_(modo, true);
+    r.executado = false;
+    r.somenteLeitura = true;
+    r.modulo = "FIN_FLASH";
+    r.escopo = "VALIDACAO_HUMANA_MOBILE_GO_LIVE_CONTROLADO_B46";
+    r.arquivosRevisados = [
+      "SGO_Fin_Provisionamento.js",
+      "docs/FIN_FLASH_B46_VALIDACAO_HUMANA_GO_LIVE.md",
+      "docs/MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md"
+    ];
+    r.protecoes = {
+      semB41Real: true,
+      semB42Real: true,
+      semB38Real: true,
+      semCobrancaReal: true,
+      semConciliacao: true,
+      semImportacao: true,
+      semLimpeza: true,
+      massaModeloRafaelSeparada: true
+    };
+    r.bloqueios = r.bloqueios || [];
+    r.avisos = r.avisos || [];
+    r.success = r.bloqueios.length === 0;
+    r.ok = r.success;
+    return r;
+  }
+
+  function passosMobileB46_() {
+    return [
+      "Abrir link de prestacao mobile ?fin_prestacao=TOKEN em celular real.",
+      "Validar abertura da tela, tamanho dos botoes e clareza dos textos.",
+      "Simular preenchimento de valor, data, finalidade, OS e observacao.",
+      "Testar captura ou anexo de foto do comprovante.",
+      "Testar visualizacao do arquivo selecionado antes do envio, quando o navegador permitir.",
+      "Enviar uma prestacao controlada usando colaborador/cartao piloto de teste.",
+      "Validar mensagem de sucesso e protocolo/ID retornado.",
+      "Validar que a prestacao aparece no historico do mesmo token.",
+      "Validar que pendencias listadas pertencem somente ao colaborador/token.",
+      "Regularizar pendencia controlada apenas em ambiente seguro.",
+      "Validar que nao ha botao de conciliacao, cobranca, importacao ou B42 para colaborador.",
+      "Validar que Rafael/massa modelo nao e usado como cobranca real."
+    ];
+  }
+
+  function checklistColaboradorB46_() {
+    return [
+      "A tela abriu no celular?",
+      "O texto ficou facil de entender?",
+      "O botao de enviar esta visivel?",
+      "O campo valor funciona?",
+      "O campo data funciona?",
+      "O campo finalidade esta claro?",
+      "O campo OS esta claro?",
+      "A foto abre camera ou galeria?",
+      "O envio da mensagem clara?",
+      "O historico aparece?",
+      "O colaborador consegue regularizar pendencia?",
+      "O colaborador ficou com duvida em algum ponto?",
+      "O fluxo e rapido para usar em campo?"
+    ];
+  }
+
+  function checklistFinanceiroB46_() {
+    return [
+      "Cadastrar funcionario/portador piloto.",
+      "Cadastrar cartao piloto.",
+      "Vincular cartao ao funcionario.",
+      "Gerar termo.",
+      "Enviar ou abrir termo.",
+      "Ver assinatura do termo.",
+      "Abrir tela de prestacoes.",
+      "Ver prestacao enviada pelo colaborador.",
+      "Abrir comprovante.",
+      "Conferir valor, data, finalidade e OS.",
+      "Marcar situacao conforme fluxo disponivel.",
+      "Ver relatorio A4 de prestacao.",
+      "Ver relatorio A4 de pendencias.",
+      "Ver dashboard.",
+      "Validar Rafael como homologacao, nao cobranca.",
+      "Validar que B42 real nao esta exposta como botao facil.",
+      "Validar que conciliacao real nao acontece sem preview/token."
+    ];
+  }
+
+  function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() {
+    var r = baseB46_("ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR");
+    r.roteiroCelular = passosMobileB46_();
+    r.checklistColaborador = checklistColaboradorB46_();
+    r.checklistFinanceiro = checklistFinanceiroB46_();
+    r.criteriosAprovacao = ["APROVADO", "APROVADO_COM_AJUSTES", "REPROVADO"];
+    r.bloqueiosPossiveis = [
+      "Tela nao abre no celular",
+      "Upload/foto nao funciona",
+      "Colaborador visualiza dados de outro token",
+      "Mensagem de sucesso ausente",
+      "Historico nao atualiza",
+      "Botao perigoso aparece para colaborador"
+    ];
+    r.instrucaoSeguranca = "Se o teste gravar prestacao, usar cartao/colaborador piloto controlado; nunca usar massa modelo Rafael como cobranca real.";
+    r.proximaEtapa = "Executar CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR.";
+    return log_(r);
+  }
+
+  function CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR() {
+    var r = baseB46_("CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR");
+    r.camposMinimosFuncionario = ["nome", "CPF", "telefone/WhatsApp", "e-mail", "filial", "funcao/cargo", "status", "observacao", "responsavel pelo cadastro"];
+    r.camposMinimosCartao = ["numero/final do cartao", "portador/funcionario", "data de entrega", "status", "limite/saldo se aplicavel", "termo vinculado", "observacao"];
+    r.sequenciaSegura = [
+      "Cadastrar 1 funcionario piloto.",
+      "Cadastrar 1 cartao piloto.",
+      "Gerar termo.",
+      "Assinar termo.",
+      "Testar prestacao mobile.",
+      "Validar financeiro.",
+      "Cadastrar demais funcionarios/cartoes somente depois do piloto aprovado."
+    ];
+    r.pilotoRecomendado = { colaboradores: "1 ou 2", cartoes: "1 ou 2", periodo: "curto", acompanhamento: "diario" };
+    r.riscos = ["Cadastro incompleto", "Cartao vinculado ao colaborador errado", "Termo nao assinado", "Prestacao teste misturada com massa modelo Rafael"];
+    r.proximaEtapa = "Executar PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR.";
+    return log_(r);
+  }
+
+  function PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR() {
+    var r = baseB46_("PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR");
+    r.treinamentoColaborador = [
+      "O que e o cartao Flash e responsabilidade de prestar contas.",
+      "Como acessar o link mobile.",
+      "Como lancar gasto com valor, data, finalidade e OS.",
+      "Como tirar foto/anexar comprovante.",
+      "Como enviar e conferir historico.",
+      "Como corrigir pendencia.",
+      "O que nao fazer: nao compartilhar link/token, nao enviar comprovante ilegivel, nao misturar despesas pessoais."
+    ];
+    r.treinamentoFinanceiro = [
+      "Cadastro de cartao e funcionario.",
+      "Geracao e assinatura de termo.",
+      "Conferencia de prestacoes e comprovantes.",
+      "Uso de extrato Flash sempre por preview.",
+      "Conciliacao segura somente com preview/token.",
+      "Pendencias apenas quando autorizado.",
+      "Relatorios A4 e dashboard.",
+      "Massa modelo Rafael nao e cobranca real.",
+      "Nunca executar B41/B42/B38 real sem validacao e autorizacao."
+    ];
+    r.mensagensCurtas = [
+      "Prestou, anexou, enviou.",
+      "Sem comprovante, nao fecha.",
+      "Credito/deposito nao e despesa.",
+      "Rafael e homologacao, nao cobranca real."
+    ];
+    r.pontosAtencao = ["Teste em celular real", "Camera/galeria", "Token individual", "Comprovante legivel", "Sem automacao de cobranca no piloto"];
+    r.proximaEtapa = "Executar PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR.";
+    return log_(r);
+  }
+
+  function PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR() {
+    var r = baseB46_("PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR");
+    r.fases = [
+      { fase: "Fase 1 - Piloto interno", escopo: "1 ou 2 colaboradores e 1 ou 2 cartoes", criterioAvancar: "prestacao mobile e conferencia financeira aprovadas", criterioParar: "erro de token, upload ou privacidade" },
+      { fase: "Fase 2 - Financeiro validando", escopo: "conferir prestacoes, relatorios e dashboard", criterioAvancar: "sem ajustes criticos", criterioParar: "relatorio inconsistente ou massa modelo confundida" },
+      { fase: "Fase 3 - Expansao", escopo: "demais cartoes apos treinamento", criterioAvancar: "rotina semanal/mensal definida", criterioParar: "equipe sem treinamento" },
+      { fase: "Fase 4 - Operacao real", escopo: "importacao real com preview obrigatorio", criterioAvancar: "autorizacao formal", criterioParar: "preview com bloqueios" }
+    ];
+    r.responsabilidades = {
+      colaborador: "prestar contas com comprovante legivel",
+      financeiro: "validar cadastro, termo, prestacoes e relatorios",
+      gestor: "aprovar expansao e regras de operacao",
+      tecnologia: "monitorar erros e publicar ajustes controlados"
+    };
+    r.cuidadosMassaModelo = ["Rafael permanece homologacao", "Nao cobrar Rafael", "Nao apagar/reimportar lote Rafael nesta etapa"];
+    r.cuidadosB41B42 = ["B41 real somente com preview/token em etapa autorizada", "B42 real nao exposta como botao facil", "B38 real proibida nesta etapa"];
+    r.proximaEtapa = "Executar CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR.";
+    return log_(r);
+  }
+
+  function CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR() {
+    var r = baseB46_("CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR");
+    r.prontoParaTesteHumano = true;
+    r.prontoParaCadastroPiloto = true;
+    r.prontoParaGoLiveGeral = false;
+    r.proximasEtapas = [
+      "Executar roteiro humano em celular real.",
+      "Cadastrar funcionario/cartao piloto.",
+      "Validar prestacao mobile com comprovante controlado.",
+      "Validar financeiro, relatorios e dashboard.",
+      "Registrar resultado APROVADO, APROVADO_COM_AJUSTES ou REPROVADO.",
+      "Somente depois decidir expansao do go-live."
+    ];
+    r.ok = r.success && r.prontoParaTesteHumano && r.prontoParaCadastroPiloto && r.prontoParaGoLiveGeral === false;
+    return log_(r);
+  }
+
   function previaConciliacao_() {
     var r = validarProd_("PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR", true);
     r.resumo = { extratosLidos: 0, lancamentosLidos: 0, matchesProvaveis: 0, semPrestacao: 0, divergencias: 0 };
@@ -5963,6 +6156,11 @@ const SGO_FIN_FLASH_PROD_B3 = (() => {
     AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR: AUDITAR_DASHBOARD_FLASH_B45_SEM_GRAVAR,
     AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR: AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR,
     CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR: CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR,
+    ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR: ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR,
+    CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR: CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR,
+    PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR: PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR,
+    PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR: PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR,
+    CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR: CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR,
     PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR: PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR,
     CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO: CONCILIAR_FLASH_PRODUCAO_B311_AUTORIZADO,
     AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR: AUDITAR_CONCILIACAO_FLASH_PRODUCAO_B312_SEM_GRAVAR,
@@ -6166,6 +6364,26 @@ function AUDITAR_TEXTOS_INTERFACE_FLASH_B45_SEM_GRAVAR() {
 
 function CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR() {
   return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_GO_LIVE_FLASH_B45_SEM_GRAVAR();
+}
+
+function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR();
+}
+
+function CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_CADASTRO_INICIAL_FLASH_B46_SEM_GRAVAR();
+}
+
+function PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PLANO_TREINAMENTO_FLASH_B46_SEM_GRAVAR();
+}
+
+function PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.PLANO_GO_LIVE_CONTROLADO_FLASH_B46_SEM_GRAVAR();
+}
+
+function CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR() {
+  return SGO_FIN_FLASH_PROD_B3.CHECKLIST_FINAL_PRE_GO_LIVE_FLASH_B46_SEM_GRAVAR();
 }
 
 function PREVIA_CONCILIACAO_FLASH_PRODUCAO_B310_SEM_GRAVAR() {
