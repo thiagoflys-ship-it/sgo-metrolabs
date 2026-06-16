@@ -90,6 +90,49 @@ EXECUTAR_CONCILIACAO_FLASH_B41_PRODUCAO_TOKEN_CONFIRMADO
 - Confirmar que a real foi executada somente pelo wrapper com token.
 - Confirmar auditoria pos-B41 antes de qualquer publicacao final.
 
+## B41.1 - Correcao do preview apos leitura zerada
+
+O primeiro preview B41 retornou `extratosTotal:0`, mesmo apos a auditoria
+pos-B40 confirmar 49 extratos no lote. A execucao foi somente leitura e nao
+gravou nada.
+
+Causa encontrada:
+
+- o resolvedor de aliases da B41 aceitava correspondencia parcial nos dois
+  sentidos;
+- ao procurar `LOTE_ID`, podia selecionar a coluna `ID`, porque `LOTE ID`
+  contem `ID`;
+- com isso, o filtro por lote comparava o ID do extrato com
+  `LOTE-FLASH-20260615-163548` e encontrava 0 linhas.
+
+Ajuste feito:
+
+- o resolvedor B41 agora tenta primeiro correspondencia normalizada exata;
+- so depois usa a busca flexivel antiga;
+- a B41 passa a encontrar `LOTE_ID` antes de qualquer alias parcial;
+- a validacao de B40 aplicada nao depende da existencia de prestacoes.
+
+Funcao de diagnostico criada:
+
+```text
+DIAGNOSTICAR_B41_LEITURA_EXTRATOS_FLASH_SEM_GRAVAR
+```
+
+Comportamento correto quando nao houver prestacoes:
+
+- `extratosTotal:49`;
+- `despesasCandidatas:46`;
+- `creditosDepositosIgnorados:3`;
+- `b40Aplicada:true`;
+- `podeExecutarReal:false`;
+- bloqueio principal: `SEM_PRESTACOES_PARA_CONCILIAR`;
+- nao retornar `B41_SEM_ITENS_PROCESSAVEIS` se ha 46 despesas candidatas.
+
+Proxima execucao manual:
+
+1. `DIAGNOSTICAR_B41_LEITURA_EXTRATOS_FLASH_SEM_GRAVAR`
+2. `PREVIEW_CONCILIAR_FLASH_PRODUCAO_B41_SEM_GRAVAR`
+
 ## Publicacao final
 
 So avancar para publicacao/encerramento depois de:
