@@ -2111,6 +2111,141 @@ const SGO_FIN = (() => {
     }
   }
 
+  function VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() {
+    const base = {
+      etapa: "B47",
+      nome: "Validacao humana real em celular e liberacao tecnica para piloto Flash",
+      success: true,
+      ok: true,
+      executado: false,
+      somenteLeitura: true
+    };
+    try {
+      const bloqueios = [];
+      const avisos = [];
+      const b46Implementada = typeof ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR === "function";
+      const auditoriaB46 = b46Implementada ? ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() : null;
+      const auditoriaFin = finFlashB46AuditoriaReadOnly_();
+      const funcoes = (auditoriaFin && auditoriaFin.funcoesPrincipaisFlash) || {};
+
+      if (!b46Implementada) bloqueios.push("B46 nao implementada.");
+      if (!auditoriaB46 || auditoriaB46.executado !== false || auditoriaB46.somenteLeitura !== true) {
+        bloqueios.push("B46 nao retornou executado:false e somenteLeitura:true.");
+      }
+      if (auditoriaB46 && auditoriaB46.bloqueios && auditoriaB46.bloqueios.length) {
+        bloqueios.push("B46 possui bloqueios pendentes: " + auditoriaB46.bloqueios.join(" "));
+      }
+      if (!funcoes.prestacaoMobile) bloqueios.push("Funcoes de prestacao mobile Flash indisponiveis.");
+      if (!funcoes.pendenciasMobile) bloqueios.push("Funcoes de pendencia mobile Flash indisponiveis.");
+      if (!funcoes.relatoriosA4) bloqueios.push("Relatorios A4 Flash indisponiveis.");
+      if (!funcoes.dashboard) bloqueios.push("Dashboard Flash indisponivel.");
+      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
+      if (!auditoriaFin.pastaDocumentosFinConfigurada) bloqueios.push("Pasta FIN nao configurada.");
+      if (auditoriaFin.bloqueios && auditoriaFin.bloqueios.length) {
+        bloqueios.push("Auditoria FIN possui bloqueios: " + auditoriaFin.bloqueios.join(" "));
+      }
+      if (!auditoriaFin.separacaoMassaTesteOperacaoReal) {
+        bloqueios.push("Separacao entre massa de teste e operacao real nao validada.");
+      }
+      if (auditoriaB46 && auditoriaB46.avisos && auditoriaB46.avisos.length) {
+        avisos.push.apply(avisos, auditoriaB46.avisos);
+      }
+      if (auditoriaFin && auditoriaFin.avisos && auditoriaFin.avisos.length) {
+        avisos.push.apply(avisos, auditoriaFin.avisos);
+      }
+
+      const pronto = bloqueios.length === 0;
+      return Object.assign(base, {
+        prontoParaTesteHumanoReal: pronto,
+        prontoParaPilotoFinanceiroControlado: pronto,
+        auditoriaSomenteLeitura: {
+          b46Implementada: b46Implementada,
+          funcaoB46Existe: b46Implementada,
+          b46ExecutadoFalse: !!(auditoriaB46 && auditoriaB46.executado === false),
+          b46SomenteLeituraTrue: !!(auditoriaB46 && auditoriaB46.somenteLeitura === true),
+          prestacaoMobileOk: !!funcoes.prestacaoMobile,
+          pendenciaMobileOk: !!funcoes.pendenciasMobile,
+          relatorioA4Ok: !!funcoes.relatoriosA4,
+          dashboardFlashOk: !!funcoes.dashboard,
+          dbFinIdConfigurado: !!auditoriaFin.dbFinIdConfigurado,
+          pastaFinConfigurada: !!auditoriaFin.pastaDocumentosFinConfigurada,
+          semBloqueiosConhecidos: pronto,
+          separacaoMassaTesteOperacaoReal: !!auditoriaFin.separacaoMassaTesteOperacaoReal,
+          nenhumaAcaoB47ExecutouGravacao: true
+        },
+        roteiroTesteHumanoReal: [
+          "Abrir WebApp /dev no celular.",
+          "Entrar no Financeiro / Prestacao Flash.",
+          "Conferir se a tela abre corretamente em rede movel e Wi-Fi.",
+          "Conferir se o colaborador piloto aparece corretamente.",
+          "Fazer lancamento controlado de teste somente se houver ambiente seguro.",
+          "Anexar foto tirada na hora.",
+          "Anexar imagem existente da galeria.",
+          "Conferir pre-visualizacao do comprovante.",
+          "Conferir historico do lancamento.",
+          "Conferir pendencias.",
+          "Conferir regularizacao de pendencia somente se existir massa controlada.",
+          "Validar mensagens de erro.",
+          "Validar se o colaborador entende o que fazer sem ajuda."
+        ],
+        checklistColaborador: [
+          "Conseguiu acessar pelo celular.",
+          "Entendeu o botao correto para lancar gasto.",
+          "Entendeu valor, finalidade e OS.",
+          "Entendeu comprovante obrigatorio.",
+          "Conseguiu anexar foto.",
+          "Conseguiu ver historico.",
+          "Entendeu pendencias.",
+          "Entendeu que gasto sem comprovacao pode ser cobrado.",
+          "Confirmou que a tela e facil de usar."
+        ],
+        checklistFinanceiro: [
+          "Conseguiu localizar o lancamento.",
+          "Comprovante abriu corretamente.",
+          "Valor ficou claro.",
+          "Colaborador ficou claro.",
+          "OS ficou clara quando informada.",
+          "Historico ficou rastreavel.",
+          "Pendencia ficou compreensivel.",
+          "Relatorio A4 ficou legivel.",
+          "Dashboard nao apresentou divergencia.",
+          "Massa de teste nao misturou com operacao real."
+        ],
+        criteriosAprovacaoB47: [
+          "success:true.",
+          "ok:true.",
+          "executado:false.",
+          "somenteLeitura:true.",
+          "bloqueios:[]",
+          "prontoParaTesteHumanoReal:true.",
+          "prontoParaPilotoFinanceiroControlado:true."
+        ],
+        riscosQueImpedemAvanco: [
+          "Tela mobile nao abre no celular real.",
+          "Colaborador piloto nao entende o fluxo sem ajuda.",
+          "Comprovante nao anexa pela camera.",
+          "Imagem da galeria nao faz upload.",
+          "Financeiro nao localiza o lancamento.",
+          "Relatorio A4 fica ilegivel.",
+          "Dashboard apresenta divergencia.",
+          "Massa de teste se mistura com operacao real.",
+          "Qualquer bloqueio B46 volta a aparecer."
+        ],
+        bloqueios: bloqueios,
+        avisos: avisos
+      });
+    } catch (e) {
+      return Object.assign(base, {
+        success: false,
+        ok: false,
+        prontoParaTesteHumanoReal: false,
+        prontoParaPilotoFinanceiroControlado: false,
+        bloqueios: ["Falha na validacao B47 somente leitura: " + e.message],
+        avisos: []
+      });
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -2566,6 +2701,7 @@ const SGO_FIN = (() => {
     finFlashGerarRelatorioExtratoImportadoA4V1,
     finFlashGerarRelatorioGerencialA4V1,
     ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR,
+    VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -2620,6 +2756,7 @@ function finFlashGerarRelatorioConciliacaoPeriodoA4V1(sessionId, filtros) { retu
 function finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros); }
 function finFlashGerarRelatorioGerencialA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioGerencialA4V1(sessionId, filtros); }
 function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() { return SGO_FIN.ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR(); }
+function VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() { return SGO_FIN.VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }

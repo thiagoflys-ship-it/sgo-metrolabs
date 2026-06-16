@@ -484,6 +484,7 @@
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashExecutarChecklistPreProducao_()">Checklist pré-produção</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Checklist liberacao Flash</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRoteiroB46_()">Gerar roteiro B46</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
     </div>
@@ -496,6 +497,14 @@
         <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRoteiroB46_()">Gerar roteiro B46</button>
       </div>
       <div id="finFlashB46Resultado"></div>
+    </div>
+    <div class="fin-card fin-flash-action-panel">
+      <h3>Validacao B47 - Teste humano real</h3>
+      <div class="fin-alert fin-alert-info">Checklist somente leitura para teste em celular real e liberacao tecnica de piloto financeiro controlado. Nao executa acao financeira real.</div>
+      <div class="fin-btn-row" style="margin-top:12px">
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
+      </div>
+      <div id="finFlashB47Resultado"></div>
     </div>
     <div id="finFlashResumoCards" class="fin-flash-op-grid">
       <div class="fin-flash-op-card"><div class="label">Lotes</div><div class="value">-</div></div>
@@ -2351,6 +2360,49 @@ function finFlashRenderRoteiroB46_(dados) {
   if (alvo) { alvo.innerHTML = html; }
   var painel = document.getElementById('finFlashPainelAcao');
   if (painel) { finFlashRenderPainelAcao_('Validacao humana B46', html); }
+}
+
+function finFlashGerarChecklistB47_() {
+  var alvo = document.getElementById('finFlashB47Resultado');
+  if (alvo) { alvo.innerHTML = '<div class="fin-alert fin-alert-info">Gerando checklist B47 somente leitura...</div>'; }
+  finFlashRenderPainelAcao_('Validacao B47', '<div class="fin-alert fin-alert-info">Carregando checklist B47...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finFlashRenderChecklistB47_(r);
+    })
+    .withFailureHandler(function(e) {
+      var msg = e && e.message ? e.message : String(e || 'Falha ao gerar checklist B47.');
+      if (alvo) { alvo.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>'; }
+      finFlashMostrarErro_(e, 'VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR');
+    })
+    .VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR();
+}
+
+function finFlashRenderChecklistB47_(dados) {
+  var r = dados || {};
+  var classe = r.ok && r.executado === false && r.somenteLeitura === true ? 'fin-alert-success' : 'fin-alert-danger';
+  var html = '<div class="fin-alert ' + classe + '">';
+  html += '<strong>Status B47: ' + (r.ok ? 'OK' : 'BLOQUEADO') + '</strong><br>';
+  html += 'Executado: ' + finEH(String(r.executado)) + ' | Somente leitura: ' + finEH(String(r.somenteLeitura)) + '<br>';
+  html += 'Teste humano real: ' + (r.prontoParaTesteHumanoReal ? 'SIM' : 'NAO') + ' | Piloto financeiro controlado: ' + (r.prontoParaPilotoFinanceiroControlado ? 'SIM' : 'NAO');
+  html += '</div>';
+  if (r.bloqueios && r.bloqueios.length) {
+    html += '<div class="fin-alert fin-alert-danger">' + finEH(r.bloqueios.join(' ')) + '</div>';
+  }
+  if (r.avisos && r.avisos.length) {
+    html += '<div class="fin-alert fin-alert-warning">' + finEH(r.avisos.join(' ')) + '</div>';
+  }
+  html += '<div class="fin-flash-dashboard-panels">';
+  html += finFlashHtmlListaB46_('Roteiro do teste', r.roteiroTesteHumanoReal || []);
+  html += finFlashHtmlListaB46_('Checklist colaborador', r.checklistColaborador || []);
+  html += finFlashHtmlListaB46_('Checklist financeiro', r.checklistFinanceiro || []);
+  html += finFlashHtmlListaB46_('Criterios de aprovacao', r.criteriosAprovacaoB47 || []);
+  html += finFlashHtmlListaB46_('Riscos que impedem avanco', r.riscosQueImpedemAvanco || []);
+  html += '</div>';
+  var alvo = document.getElementById('finFlashB47Resultado');
+  if (alvo) { alvo.innerHTML = html; }
+  var painel = document.getElementById('finFlashPainelAcao');
+  if (painel) { finFlashRenderPainelAcao_('Validacao B47', html); }
 }
 
 function finFlashAbrirChecklistLiberacao_() {
