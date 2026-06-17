@@ -267,7 +267,7 @@
       "minhas-os": mc_renderMinhasOS, "detalhe-os": mc_renderDetalheOS, "checklist": mc_renderChecklist,
       "fotos": mc_renderFotos, "materiais": mc_renderMateriais, "relato": mc_renderRelato,
       "assinatura": mc_renderAssinatura, "finalizar": mc_renderFinalizar, "historico": mc_renderHistorico,
-      "minhas-missoes": mc_renderMinhasMissoes
+      "minhas-missoes": mc_renderMinhasMissoes, "cartao-flash": mc_renderCartaoFlash
     };
     (m[MC.tela] || mc_renderHome)();
   }
@@ -304,6 +304,7 @@
       _navCard("📋","Minhas O.S.","Ordens atribuídas a você","mc_iniciarMinhasOS()") +
       _navCard("🗓️","Minhas Missões","Agenda e missões do dia","mc_iniciarMinhasMissoes()") +
       _navCard("➕","Nova O.S.","Criar tarefa em campo","mc_iniciarNovaOS()") +
+      _navCard("💳","Cartão Flash","Prestar conta de gasto","mc_iniciarCartaoFlash()") +
       _navCard("🏢","Cadastrar Cliente","Entrada rápida de cliente","mc_iniciarCliente()") +
       _navCard("📍","Cadastrar Unidade","Unidade com GPS e endereço","mc_iniciarUnidade()") +
       _navCard("🔬","Cadastrar Equipamento","Equipamento vinculado à unidade","mc_iniciarEquipamento()") +
@@ -1482,6 +1483,116 @@
       cards + '<div class="mc2-gap20"></div></div></div>';
   }
 
+  // ── CARTÃO FLASH — PRESTAÇÃO MOBILE ──────────────────────────
+  function mc_iniciarCartaoFlash() {
+    mc_ir("cartao-flash");
+  }
+
+  function mc_renderCartaoFlash() {
+    var div = mc_div(); if (!div) return;
+    var hoje = new Date().toISOString().substring(0, 10);
+    div.innerHTML = '<div class="mc2">' + mc_topbar("Cartão Flash", "mc_ir(\'home\')") +
+      '<div class="mc2-body">' +
+      '<div class="mc2-alrt mc2-awarn" style="margin-bottom:12px;">⚠️ Ambiente DEV — Piloto controlado. O envio real está bloqueado nesta etapa. Preencha e revise o formulário.</div>' +
+      '<div class="mc2-sec">Prestar conta de gasto</div>' +
+      '<div class="mc2-card">' +
+        '<div class="mc2-lbl">Valor do gasto *</div>' +
+        '<input id="mcf-valor" class="mc2-input" type="number" inputmode="decimal" placeholder="0,00" step="0.01" min="0">' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Data do gasto *</div>' +
+        '<input id="mcf-data" class="mc2-input" type="date" value="' + mc_esc(hoje) + '">' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Finalidade / Descrição *</div>' +
+        '<textarea id="mcf-finalidade" class="mc2-ta" style="min-height:90px;" placeholder="Ex: Combustível rota atendimento, Alimentação campo, Material emergência..."></textarea>' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Tipo de gasto</div>' +
+        '<select id="mcf-tipo" class="mc2-sel">' +
+          '<option value="">Selecione</option>' +
+          '<option value="COMBUSTIVEL">Combustível</option>' +
+          '<option value="ALIMENTACAO">Alimentação</option>' +
+          '<option value="MATERIAL">Material / Insumo</option>' +
+          '<option value="PEDAGIO">Pedágio</option>' +
+          '<option value="ESTACIONAMENTO">Estacionamento</option>' +
+          '<option value="HOSPEDAGEM">Hospedagem</option>' +
+          '<option value="TRANSPORTE">Transporte / Uber / Táxi</option>' +
+          '<option value="OUTROS">Outros</option>' +
+        '</select>' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Vincular O.S. (opcional)</div>' +
+        '<input id="mcf-os" class="mc2-input" placeholder="Número ou ID da O.S., se houver">' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Cliente / Unidade (opcional)</div>' +
+        '<input id="mcf-local" class="mc2-input" placeholder="Cliente ou unidade atendida, se houver">' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Foto do comprovante</div>' +
+        '<div style="margin-bottom:8px;display:flex;gap:8px;">' +
+          '<label class="mc2-btn mc2-ghost mc2-sm" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;">' +
+            '📂 Galeria' +
+            '<input type="file" id="mcf-foto-file" accept="image/*" style="display:none;" onchange="mc_previewComprovante_(this)">' +
+          '</label>' +
+          '<label class="mc2-btn mc2-ghost mc2-sm" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;">' +
+            '📷 Câmera' +
+            '<input type="file" id="mcf-foto-cam" accept="image/*" capture="environment" style="display:none;" onchange="mc_previewComprovante_(this)">' +
+          '</label>' +
+        '</div>' +
+        '<div id="mcf-foto-preview" style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:4px;">Nenhum comprovante selecionado.</div>' +
+        '<div class="mc2-gap8"></div>' +
+        '<div class="mc2-lbl">Observação livre</div>' +
+        '<textarea id="mcf-obs" class="mc2-ta" style="min-height:70px;" placeholder="Qualquer observação adicional..."></textarea>' +
+      '</div>' +
+      '<div class="mc2-alrt mc2-info" style="margin-bottom:10px;">💡 Piloto controlado: 1 colaborador, acompanhamento diário pelo financeiro. O envio real será habilitado após validação e deploy em produção (B52).</div>' +
+      '<button id="mcf-btn-enviar" class="mc2-btn mc2-warn" onclick="mc_enviarPrestacaoFlash_()">💳 Preparar prestação (DEV — validar sem gravar)</button>' +
+      '<div id="mcf-resultado"></div>' +
+      '<div class="mc2-gap8"></div>' +
+      '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button>' +
+      '<div class="mc2-gap20"></div>' +
+      '</div></div>';
+  }
+
+  function mc_previewComprovante_(input) {
+    var prev = document.getElementById("mcf-foto-preview"); if (!prev) return;
+    if (!input || !input.files || !input.files.length) { prev.textContent = "Nenhum comprovante selecionado."; return; }
+    var f = input.files[0];
+    prev.innerHTML = '✅ Comprovante selecionado: <strong>' + mc_esc(f.name) + '</strong> (' + mc_tamanhoLegivel_(f.size) + ') — <em>envio real bloqueado nesta etapa.</em>';
+    prev.style.color = "#057a55";
+  }
+
+  function mc_enviarPrestacaoFlash_() {
+    var valor = ((document.getElementById("mcf-valor") || {}).value || "").trim();
+    var data = ((document.getElementById("mcf-data") || {}).value || "").trim();
+    var finalidade = ((document.getElementById("mcf-finalidade") || {}).value || "").trim();
+    if (!valor || parseFloat(valor) <= 0) { mc_toast("Informe o valor do gasto."); return; }
+    if (!data) { mc_toast("Informe a data do gasto."); return; }
+    if (!finalidade) { mc_toast("Informe a finalidade ou descrição do gasto."); return; }
+    var tipo = ((document.getElementById("mcf-tipo") || {}).value || "");
+    var os = ((document.getElementById("mcf-os") || {}).value || "").trim();
+    var local = ((document.getElementById("mcf-local") || {}).value || "").trim();
+    var obs = ((document.getElementById("mcf-obs") || {}).value || "").trim();
+    var fotoOk = !!(
+      (document.getElementById("mcf-foto-preview") || {}).style &&
+      ((document.getElementById("mcf-foto-preview") || {}).style.color === "rgb(5, 122, 85)")
+    );
+    var btn = document.getElementById("mcf-btn-enviar");
+    if (btn) { btn.disabled = true; btn.style.background = "#92400e"; btn.textContent = "✅ Validado — envio bloqueado (DEV)"; }
+    var resultado = document.getElementById("mcf-resultado");
+    if (resultado) {
+      resultado.innerHTML =
+        '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
+        '<strong>✅ Prestação revisada — somente leitura DEV</strong><br>' +
+        'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
+        'Data: <strong>' + mc_esc(data) + '</strong><br>' +
+        'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
+        (tipo ? 'Tipo: <strong>' + mc_esc(tipo) + '</strong><br>' : '') +
+        (os ? 'O.S.: <strong>' + mc_esc(os) + '</strong><br>' : '') +
+        (local ? 'Local: <strong>' + mc_esc(local) + '</strong><br>' : '') +
+        (obs ? 'Obs: ' + mc_esc(obs) + '<br>' : '') +
+        (fotoOk ? '📎 Comprovante: selecionado (não enviado nesta etapa)<br>' : '⚠️ Comprovante: não selecionado<br>') +
+        '<br><em>Nenhum dado foi gravado. O envio real exige autorização B52 (deploy em produção).</em>' +
+        '</div>';
+    }
+    mc_toast("Formulário validado. Nenhum dado gravado.", 3500);
+  }
+
   // ── ERRO DE SESSÃO ────────────────────────
   function mc_erroSessao() {
     var div = mc_div(); if (!div) return;
@@ -1590,5 +1701,9 @@
   window.mc_renderDocumentos = mc_renderDocumentos;
   window.mc_abrirGestaoCompleta = mc_abrirGestaoCompleta;
   window.mc_salvarRascunhoChecklist_ = mc_salvarRascunhoChecklist_;
+  window.mc_iniciarCartaoFlash = mc_iniciarCartaoFlash;
+  window.mc_renderCartaoFlash = mc_renderCartaoFlash;
+  window.mc_previewComprovante_ = mc_previewComprovante_;
+  window.mc_enviarPrestacaoFlash_ = mc_enviarPrestacaoFlash_;
 })();
 </script>
