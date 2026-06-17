@@ -1493,7 +1493,7 @@
     var hoje = new Date().toISOString().substring(0, 10);
     div.innerHTML = '<div class="mc2">' + mc_topbar("Cartão Flash", "mc_ir(\'home\')") +
       '<div class="mc2-body">' +
-      '<div class="mc2-alrt mc2-awarn" style="margin-bottom:12px;">⚠️ Ambiente DEV — Piloto controlado. O envio real está bloqueado nesta etapa. Preencha e revise o formulário.</div>' +
+      '<div class="mc2-alrt mc2-awarn" style="margin-bottom:12px;">⚠️ Piloto controlado Flash — 1 colaborador. O envio real será habilitado após autorização financeira. Preencha e revise o formulário.</div>' +
       '<div class="mc2-sec">Prestar conta de gasto</div>' +
       '<div class="mc2-card">' +
         '<div class="mc2-lbl">Valor do gasto *</div>' +
@@ -1541,7 +1541,7 @@
         '<textarea id="mcf-obs" class="mc2-ta" style="min-height:70px;" placeholder="Qualquer observação adicional..."></textarea>' +
       '</div>' +
       '<div class="mc2-alrt mc2-info" style="margin-bottom:10px;">💡 Piloto controlado: 1 colaborador, acompanhamento diário pelo financeiro. O envio real será habilitado após validação e deploy em produção (B52).</div>' +
-      '<button id="mcf-btn-enviar" class="mc2-btn mc2-warn" onclick="mc_enviarPrestacaoFlash_()">💳 Preparar prestação (DEV — validar sem gravar)</button>' +
+      '<button id="mcf-btn-enviar" class="mc2-btn mc2-warn" onclick="mc_enviarPrestacaoFlash_()">💳 Preparar prestação — revisar antes de enviar</button>' +
       '<div id="mcf-resultado"></div>' +
       '<div class="mc2-gap8"></div>' +
       '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button>' +
@@ -1573,12 +1573,12 @@
       ((document.getElementById("mcf-foto-preview") || {}).style.color === "rgb(5, 122, 85)")
     );
     var btn = document.getElementById("mcf-btn-enviar");
-    if (btn) { btn.disabled = true; btn.style.background = "#92400e"; btn.textContent = "✅ Validado — envio bloqueado (DEV)"; }
+    if (btn) { btn.disabled = true; btn.style.background = "#92400e"; btn.textContent = "✅ Revisado — aguardando autorização financeira"; }
     var resultado = document.getElementById("mcf-resultado");
     if (resultado) {
       resultado.innerHTML =
         '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
-        '<strong>✅ Prestação revisada — somente leitura DEV</strong><br>' +
+        '<strong>✅ Prestação revisada — aguardando autorização financeira</strong><br>' +
         'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
         'Data: <strong>' + mc_esc(data) + '</strong><br>' +
         'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
@@ -1587,7 +1587,7 @@
         (local ? 'Local: <strong>' + mc_esc(local) + '</strong><br>' : '') +
         (obs ? 'Obs: ' + mc_esc(obs) + '<br>' : '') +
         (fotoOk ? '📎 Comprovante: selecionado (não enviado nesta etapa)<br>' : '⚠️ Comprovante: não selecionado<br>') +
-        '<br><em>Nenhum dado foi gravado. O envio real exige autorização B52 (deploy em produção).</em>' +
+        '<br><em>Nenhum dado foi gravado. O envio real será habilitado após autorização do financeiro responsável.</em>' +
         '</div>';
     }
     mc_toast("Formulário validado. Nenhum dado gravado.", 3500);
