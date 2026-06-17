@@ -1558,39 +1558,64 @@
   }
 
   function mc_enviarPrestacaoFlash_() {
+    var ses = mc_ses();
+    if (!ses) { mc_toast("Sessão inválida. Recarregue e tente novamente."); return; }
     var valor = ((document.getElementById("mcf-valor") || {}).value || "").trim();
     var data = ((document.getElementById("mcf-data") || {}).value || "").trim();
     var finalidade = ((document.getElementById("mcf-finalidade") || {}).value || "").trim();
     if (!valor || parseFloat(valor) <= 0) { mc_toast("Informe o valor do gasto."); return; }
     if (!data) { mc_toast("Informe a data do gasto."); return; }
-    if (!finalidade) { mc_toast("Informe a finalidade ou descrição do gasto."); return; }
+    if (finalidade.length < 5) { mc_toast("Descreva a finalidade (mínimo 5 caracteres)."); return; }
     var tipo = ((document.getElementById("mcf-tipo") || {}).value || "");
     var os = ((document.getElementById("mcf-os") || {}).value || "").trim();
     var local = ((document.getElementById("mcf-local") || {}).value || "").trim();
     var obs = ((document.getElementById("mcf-obs") || {}).value || "").trim();
-    var fotoOk = !!(
-      (document.getElementById("mcf-foto-preview") || {}).style &&
-      ((document.getElementById("mcf-foto-preview") || {}).style.color === "rgb(5, 122, 85)")
-    );
     var btn = document.getElementById("mcf-btn-enviar");
-    if (btn) { btn.disabled = true; btn.style.background = "#92400e"; btn.textContent = "✅ Revisado — aguardando autorização financeira"; }
     var resultado = document.getElementById("mcf-resultado");
-    if (resultado) {
-      resultado.innerHTML =
-        '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
-        '<strong>✅ Prestação revisada — aguardando autorização financeira</strong><br>' +
-        'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
-        'Data: <strong>' + mc_esc(data) + '</strong><br>' +
-        'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
-        (tipo ? 'Tipo: <strong>' + mc_esc(tipo) + '</strong><br>' : '') +
-        (os ? 'O.S.: <strong>' + mc_esc(os) + '</strong><br>' : '') +
-        (local ? 'Local: <strong>' + mc_esc(local) + '</strong><br>' : '') +
-        (obs ? 'Obs: ' + mc_esc(obs) + '<br>' : '') +
-        (fotoOk ? '📎 Comprovante: selecionado (não enviado nesta etapa)<br>' : '⚠️ Comprovante: não selecionado<br>') +
-        '<br><em>Nenhum dado foi gravado. O envio real será habilitado após autorização do financeiro responsável.</em>' +
-        '</div>';
-    }
-    mc_toast("Formulário validado. Nenhum dado gravado.", 3500);
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Enviando..."; btn.style.background = "#92400e"; }
+    if (resultado) { resultado.innerHTML = ""; }
+    var payload = {
+      valor: parseFloat(valor),
+      dataGasto: data,
+      finalidade: finalidade,
+      tipoGasto: tipo,
+      osNumero: os,
+      local: local,
+      observacoes: obs
+    };
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (!r || !r.success) {
+          if (btn) { btn.disabled = false; btn.textContent = "💳 Preparar prestação — revisar antes de enviar"; btn.style.background = ""; }
+          if (resultado) {
+            resultado.innerHTML = '<div class="mc2-alrt mc2-aerr" style="margin-top:12px;">❌ ' + mc_esc((r && r.message) || "Erro ao registrar prestação.") + '</div>';
+          }
+          return;
+        }
+        if (btn) { btn.textContent = "✅ Prestação enviada — aguardando comprovante"; }
+        if (resultado) {
+          resultado.innerHTML =
+            '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
+            '<strong>✅ Prestação registrada no piloto Flash</strong><br>' +
+            'ID: <strong>' + mc_esc(r.lancamentoId || "") + '</strong><br>' +
+            'Status: <strong>' + mc_esc(r.statusPrestacao || "PENDENTE_COMPROVANTE") + '</strong><br>' +
+            'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
+            'Data: <strong>' + mc_esc(data) + '</strong><br>' +
+            'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
+            (os ? 'O.S.: <strong>' + mc_esc(os) + '</strong><br>' : '') +
+            '<br><em>⚠️ Piloto controlado. Comprovante pendente — anexar na próxima etapa.</em>' +
+            '</div>';
+        }
+        mc_toast("Prestação registrada. Aguardando comprovante.", 3500);
+      })
+      .withFailureHandler(function() {
+        if (btn) { btn.disabled = false; btn.textContent = "💳 Preparar prestação — revisar antes de enviar"; btn.style.background = ""; }
+        if (resultado) {
+          resultado.innerHTML = '<div class="mc2-alrt mc2-aerr" style="margin-top:12px;">❌ Falha de conexão. Tente novamente quando houver sinal.</div>';
+        }
+        mc_toast("Sem conexão. Tente novamente.", 3000);
+      })
+      .finFlashRegistrarPrestacaoMobilePilotoV1(ses, payload);
   }
 
   // ── ERRO DE SESSÃO ────────────────────────

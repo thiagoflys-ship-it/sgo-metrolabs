@@ -2445,6 +2445,222 @@ const SGO_FIN = (() => {
     };
   }
 
+  // ============================================================
+  // B54 — GRAVACAO REAL CONTROLADA — PILOTO FLASH MOBILE
+  // ============================================================
+
+  function finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "registrar prestacao Flash piloto mobile");
+      finDbOk_();
+
+      const props = PropertiesService.getScriptProperties();
+      const pilotoEmail = finSafeText_(props.getProperty("FIN_PILOTO_FLASH_EMAIL"));
+      if (!pilotoEmail) {
+        return finErro_("Envio de prestacao Flash nao habilitado. Configure FIN_PILOTO_FLASH_EMAIL.");
+      }
+      const emailsPermitidos = pilotoEmail.split(",").map(function(e) { return e.trim().toLowerCase(); });
+      const emailUsuario = finSafeText_(sessao.usuario || sessao.email || sessao.userId || "").toLowerCase();
+      if (!emailUsuario || emailsPermitidos.indexOf(emailUsuario) < 0) {
+        return finErro_("Envio de prestacao Flash restrito ao piloto autorizado. Aguarde habilitacao.");
+      }
+
+      const p = payload || {};
+      const valor = Math.abs(finSafeNumber_(p.valor || p.VALOR));
+      const dataGasto = finSafeText_(p.dataGasto || p.DATA_GASTO);
+      const finalidade = finSafeText_(p.finalidade || p.DESCRICAO_GASTO);
+      const tipoGasto = finSafeText_(p.tipoGasto || p.CATEGORIA_GASTO);
+      const osNumero = finSafeText_(p.osNumero || p.OS_NUMERO);
+      const local = finSafeText_(p.local || p.ESTABELECIMENTO);
+      const observacoes = finSafeText_(p.observacoes || p.OBSERVACOES);
+
+      const erros = [];
+      if (valor <= 0) erros.push("Valor obrigatorio e deve ser maior que zero.");
+      if (!dataGasto) erros.push("Data do gasto obrigatoria.");
+      if (finalidade.length < 5) erros.push("Finalidade/descricao obrigatoria (minimo 5 caracteres).");
+      if (erros.length) return finErro_(erros.join(" "));
+
+      const u = finUsuario_(sessao);
+      const cartao = finAll_(ABAS.CARTOES).find(function(c) {
+        return finSafeText_(c.FUNCIONARIO_ID) === u.id &&
+               finSafeUpper_(c.STATUS_CARTAO) === "ATIVO";
+      }) || null;
+      const cartaoId = cartao ? finSafeText_(cartao.CARTAO_ID || cartao.ID) : "";
+      if (!cartaoId) {
+        return finErro_("Nenhum cartao Flash ativo encontrado para este colaborador. Contate o financeiro.");
+      }
+
+      const umaHoraAtras = new Date(Date.now() - 3600000).toISOString();
+      const duplicata = finAll_(ABAS.LANCAMENTOS).find(function(r) {
+        return finSafeText_(r.FUNCIONARIO_ID) === u.id &&
+               finSafeText_(r.DATA_GASTO) === dataGasto &&
+               Math.abs(finSafeNumber_(r.VALOR) - valor) < 0.01 &&
+               finSafeText_(r.DESCRICAO_GASTO) === finalidade &&
+               finSafeText_(r.CRIADO_EM) >= umaHoraAtras;
+      });
+      if (duplicata) {
+        return finErro_("Possivel envio duplicado detectado. Verifique seus lancamentos antes de reenviar.");
+      }
+
+      const temOs = osNumero ? "SIM" : "NAO";
+      const agora = finNow_();
+      const lancamentoId = finGerarId_("LAN");
+
+      const registro = {
+        ID                   : finUuid_(),
+        LANCAMENTO_ID        : lancamentoId,
+        CARTAO_ID            : cartaoId,
+        FUNCIONARIO_ID       : u.id,
+        FUNCIONARIO_NOME     : u.nome,
+        DATA_GASTO           : dataGasto,
+        HORA_GASTO           : "",
+        VALOR                : valor,
+        ESTABELECIMENTO      : local,
+        CATEGORIA_GASTO      : tipoGasto,
+        OS_ID                : "",
+        OS_NUMERO            : osNumero,
+        TEM_OS               : temOs,
+        JUSTIFICATIVA_SEM_OS : osNumero ? "" : finalidade,
+        LATITUDE             : "",
+        LONGITUDE            : "",
+        LOCALIZACAO_TEXTO    : local,
+        ENDERECO_APROXIMADO  : "",
+        COMPROVANTE_OK       : "NAO",
+        COMPROVANTE_FILE_ID  : "",
+        COMPROVANTE_LINK     : "",
+        TIPO_COMPROVANTE     : "",
+        DESCRICAO_GASTO      : finalidade,
+        OBSERVACOES          : observacoes,
+        STATUS_PRESTACAO     : STATUS_PRESTACAO.PENDENTE_COMPROVANTE,
+        DATA_APROVACAO       : "",
+        APROVADO_POR         : "",
+        MOTIVO_REJEICAO      : "",
+        CONCILIADO           : "NAO",
+        LANCAMENTO_EXTRATO_ID: "",
+        DIVERGENCIA_TIPO     : "",
+        DIVERGENCIA_VALOR    : "",
+        STATUS               : "ATIVO",
+        CRIADO_EM            : agora,
+        CRIADO_POR           : "MOBILE_CAMPO_PILOTO_B54",
+        ATUALIZADO_EM        : agora,
+        ATUALIZADO_POR       : "MOBILE_CAMPO_PILOTO_B54"
+      };
+
+      finInsert_(ABAS.LANCAMENTOS, registro);
+      finLog_(sessao, "PRESTACAO_FLASH_MOBILE_PILOTO_B54", "LANCAMENTO", lancamentoId, null, registro, "OK",
+        "Prestacao Flash mobile piloto B54. R$ " + valor + " em " + dataGasto + ".");
+
+      return finOk_({
+        executado      : true,
+        lancamentoId   : lancamentoId,
+        id             : registro.ID,
+        statusPrestacao: registro.STATUS_PRESTACAO,
+        valor          : valor,
+        dataGasto      : dataGasto,
+        finalidade     : finalidade,
+        colaborador    : u.nome,
+        cartaoId       : cartaoId,
+        avisos         : ["Comprovante pendente — anexar na proxima etapa."],
+        origem         : "MOBILE_CAMPO_PILOTO_B54"
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  function AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR() {
+    const base = {
+      etapa: "B54",
+      nome: "Auditoria pre-gravacao real da prestacao Flash mobile piloto",
+      executado: false,
+      somenteLeitura: true,
+      success: true,
+      ok: true
+    };
+    try {
+      const bloqueios = [];
+      const avisos = [];
+
+      const funcaoExiste = typeof finFlashRegistrarPrestacaoMobilePilotoV1 === "function";
+      if (!funcaoExiste) bloqueios.push("finFlashRegistrarPrestacaoMobilePilotoV1 nao encontrada.");
+
+      let dbConfigurado = false;
+      try {
+        const dbId = finSafeText_(PropertiesService.getScriptProperties().getProperty("DB_FIN_ID"));
+        dbConfigurado = !!dbId;
+        if (!dbConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
+      } catch (eDb) {
+        bloqueios.push("Erro ao verificar DB_FIN_ID: " + eDb.message);
+      }
+
+      let pilotoConfigurado = false;
+      let pilotoEmail = "";
+      try {
+        pilotoEmail = finSafeText_(PropertiesService.getScriptProperties().getProperty("FIN_PILOTO_FLASH_EMAIL"));
+        pilotoConfigurado = !!pilotoEmail;
+        if (!pilotoConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL nao configurado — funcao bloqueara ate configurar.");
+        else avisos.push("Piloto configurado: " + pilotoEmail);
+      } catch (ePiloto) {
+        bloqueios.push("Erro ao verificar FIN_PILOTO_FLASH_EMAIL: " + ePiloto.message);
+      }
+
+      let abaDestinoOk = false;
+      let headersEssenciaisOk = false;
+      const headersEsperados = ["ID", "LANCAMENTO_ID", "CARTAO_ID", "FUNCIONARIO_ID", "FUNCIONARIO_NOME",
+        "DATA_GASTO", "VALOR", "DESCRICAO_GASTO", "STATUS_PRESTACAO", "CRIADO_EM", "CRIADO_POR"];
+      let headersAusentes = [];
+      if (dbConfigurado) {
+        try {
+          const hdrs = finHeaders_(ABAS.LANCAMENTOS);
+          abaDestinoOk = true;
+          headersAusentes = headersEsperados.filter(function(h) { return hdrs.indexOf(h) < 0; });
+          headersEssenciaisOk = headersAusentes.length === 0;
+          if (!headersEssenciaisOk) {
+            bloqueios.push("Headers ausentes em FIN_CARTOES_LANCAMENTOS: " + headersAusentes.join(", "));
+          }
+        } catch (eAba) {
+          bloqueios.push("Erro ao verificar FIN_CARTOES_LANCAMENTOS: " + eAba.message);
+        }
+      }
+
+      const liberarTeste = typeof LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA === "function"
+        ? LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA() : null;
+      const liberarBloqueada = !liberarTeste || liberarTeste.bloqueado === true;
+      if (!liberarBloqueada) bloqueios.push("LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA retornou estado inesperado.");
+
+      const pronto = bloqueios.length === 0;
+      return Object.assign(base, {
+        prontoParaGravacaoRealPiloto: pronto,
+        verificacoes: {
+          funcaoBackendExiste   : funcaoExiste,
+          dbConfigurado         : dbConfigurado,
+          pilotoConfigurado     : pilotoConfigurado,
+          pilotoEmail           : pilotoEmail,
+          abaDestino            : ABAS.LANCAMENTOS,
+          abaDestinoOk          : abaDestinoOk,
+          headersEssenciaisOk   : headersEssenciaisOk,
+          headersAusentes       : headersAusentes,
+          liberarPilotoBloqueada: liberarBloqueada,
+          conciliacaoHabilitada : false,
+          pendenciasHabilitadas : false,
+          importacaoHabilitada  : false,
+          whatsappHabilitado    : false
+        },
+        bloqueios: bloqueios,
+        avisos: avisos
+      });
+    } catch (e) {
+      return Object.assign(base, {
+        success: false,
+        ok: false,
+        prontoParaGravacaoRealPiloto: false,
+        bloqueios: ["Falha na auditoria B54: " + e.message],
+        avisos: []
+      });
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -2903,6 +3119,8 @@ const SGO_FIN = (() => {
     VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR,
     PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR,
     LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA,
+    finFlashRegistrarPrestacaoMobilePilotoV1,
+    AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -2960,6 +3178,8 @@ function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() { return SGO_FIN.ROTEIR
 function VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() { return SGO_FIN.VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR(); }
 function PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR() { return SGO_FIN.PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR(); }
 function LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA()   { return SGO_FIN.LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA(); }
+function finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload) { return SGO_FIN.finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload); }
+function AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR() { return SGO_FIN.AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
