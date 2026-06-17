@@ -485,6 +485,7 @@
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Checklist liberacao Flash</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRoteiroB46_()">Gerar roteiro B46</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashPrepararPilotoB48_()">Preparar piloto B48</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
     </div>
@@ -505,6 +506,14 @@
         <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
       </div>
       <div id="finFlashB47Resultado"></div>
+    </div>
+    <div class="fin-card fin-flash-action-panel">
+      <h3>Piloto real controlado B48</h3>
+      <div class="fin-alert fin-alert-info">Preparacao somente leitura do piloto real controlado com 1 colaborador. Nao executa acao financeira real, cadastro amplo nem importacao.</div>
+      <div class="fin-btn-row" style="margin-top:12px">
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashPrepararPilotoB48_()">Preparar piloto B48</button>
+      </div>
+      <div id="finFlashB48Resultado"></div>
     </div>
     <div id="finFlashResumoCards" class="fin-flash-op-grid">
       <div class="fin-flash-op-card"><div class="label">Lotes</div><div class="value">-</div></div>
@@ -3289,6 +3298,71 @@ function finPend8BRenderPreviaConciliacao_(el, dados) {
 function finPend8BFecharConciliacao_() {
   var el = document.getElementById('finPend8BConciliacao');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function finFlashPrepararPilotoB48_() {
+  var alvo = document.getElementById('finFlashB48Resultado');
+  if (alvo) { alvo.innerHTML = '<div class="fin-alert fin-alert-info">Preparando piloto B48 somente leitura...</div>'; }
+  finFlashRenderPainelAcao_('Piloto real controlado B48', '<div class="fin-alert fin-alert-info">Carregando preparacao B48...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) { finFlashRenderPilotoB48_(r); })
+    .withFailureHandler(function(e) {
+      var msg = e && e.message ? e.message : String(e || 'Falha ao preparar piloto B48.');
+      if (alvo) { alvo.innerHTML = '<div class="fin-alert fin-alert-danger">' + msg + '</div>'; }
+      finFlashMostrarErro_(e, 'PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR');
+    })
+    .PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR();
+}
+
+function finFlashRenderPilotoB48_(dados) {
+  var r = dados || {};
+  var ok = r.ok && r.success && !r.bloqueios.length;
+  var html = '<div class="fin-alert ' + (ok ? 'fin-alert-success' : 'fin-alert-danger') + '">';
+  html += '<strong>Status B48: ' + (ok ? 'PRONTO' : 'BLOQUEADO') + '</strong><br>';
+  html += 'executado: ' + r.executado + ' | somenteLeitura: ' + r.somenteLeitura;
+  html += '<br>prontoParaLiberacaoPilotoReal: ' + r.prontoParaLiberacaoPilotoReal;
+  html += '</div>';
+  if (r.bloqueios && r.bloqueios.length) {
+    html += '<div class="fin-alert fin-alert-danger"><strong>Bloqueios:</strong><ul>';
+    r.bloqueios.forEach(function(b) { html += '<li>' + b + '</li>'; });
+    html += '</ul></div>';
+  }
+  if (r.avisos && r.avisos.length) {
+    html += '<div class="fin-alert fin-alert-warning"><strong>Avisos:</strong><ul>';
+    r.avisos.forEach(function(a) { html += '<li>' + a + '</li>'; });
+    html += '</ul></div>';
+  }
+  html += '<div class="fin-flash-dashboard-panels">';
+  html += finFlashHtmlListaB46_('Plano piloto — escopo permitido', (r.planoPilotoControlado || {}).escopoPermitido || []);
+  html += finFlashHtmlListaB46_('Plano piloto — escopo proibido', (r.planoPilotoControlado || {}).escopoProibido || []);
+  html += finFlashHtmlListaB46_('Criterios para escolher colaborador piloto', r.criteriosParaEscolherColaboradorPiloto || []);
+  html += finFlashHtmlListaB46_('Checklist antes do piloto real', r.checklistAntesDoPilotoReal || []);
+  html += finFlashHtmlListaB46_('Plano de reversao', r.planoReversao || []);
+  if (r.auditoriaSomenteLeitura) {
+    var a = r.auditoriaSomenteLeitura;
+    html += '<div class="fin-flash-dashboard-panel"><h4>Auditoria somente leitura</h4><ul style="font-size:12px">';
+    html += '<li>B46: ' + (a.b46Implementada ? 'implementada' : 'ausente') + ' | executado:false=' + a.b46ExecutadoFalse + ' | somenteLeitura:true=' + a.b46SomenteLeituraTrue + '</li>';
+    html += '<li>B47: ' + (a.b47Implementada ? 'implementada' : 'ausente') + ' | executado:false=' + a.b47ExecutadoFalse + ' | somenteLeitura:true=' + a.b47SomenteLeituraTrue + '</li>';
+    html += '<li>DB_FIN_ID: ' + a.dbFinIdConfigurado + ' | Pasta FIN: ' + a.pastaFinConfigurada + '</li>';
+    html += '<li>prestacaoMobile: ' + a.prestacaoMobileOk + ' | pendenciaMobile: ' + a.pendenciaMobileOk + '</li>';
+    html += '<li>preValidacaoExtrato: ' + a.preValidacaoExtratoOk + ' | previaConciliacao: ' + a.previaConciliacaoOk + '</li>';
+    html += '<li>relatorioA4: ' + a.relatorioA4Ok + ' | dashboard: ' + a.dashboardFlashOk + '</li>';
+    html += '<li>separacaoMassaTesteOperacaoReal: ' + a.separacaoMassaTesteOperacaoReal + '</li>';
+    html += '<li>nenhumaAcaoB48ExecutouGravacao: ' + a.nenhumaAcaoB48ExecutouGravacao + '</li>';
+    if (a.headersEssenciaisAbas) {
+      html += '<li>Headers: ';
+      Object.keys(a.headersEssenciaisAbas).forEach(function(k) {
+        html += k + '=' + a.headersEssenciaisAbas[k] + ' ';
+      });
+      html += '</li>';
+    }
+    html += '</ul></div>';
+  }
+  html += '</div>';
+  var alvo = document.getElementById('finFlashB48Resultado');
+  if (alvo) { alvo.innerHTML = html; }
+  var painel = document.getElementById('finFlashPainelAcao');
+  if (painel) { finFlashRenderPainelAcao_('Piloto real controlado B48', html); }
 }
 </script>
 </body>

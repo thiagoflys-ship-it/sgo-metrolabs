@@ -2246,6 +2246,205 @@ const SGO_FIN = (() => {
     }
   }
 
+  function PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR() {
+    const base = {
+      etapa: "B48",
+      nome: "Preparacao do piloto real controlado Flash com 1 colaborador",
+      success: true,
+      ok: true,
+      executado: false,
+      somenteLeitura: true
+    };
+    try {
+      const bloqueios = [];
+      const avisos = [];
+
+      const b46Implementada = typeof ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR === "function";
+      const b47Implementada = typeof VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR === "function";
+      const auditoriaB46 = b46Implementada ? ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() : null;
+      const auditoriaB47 = b47Implementada ? VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() : null;
+      const auditoriaFin = finFlashB46AuditoriaReadOnly_();
+      const funcoes = (auditoriaFin && auditoriaFin.funcoesPrincipaisFlash) || {};
+
+      if (!b46Implementada) bloqueios.push("B46 nao implementada.");
+      if (!auditoriaB46 || auditoriaB46.executado !== false || auditoriaB46.somenteLeitura !== true) {
+        bloqueios.push("B46 nao retornou executado:false e somenteLeitura:true.");
+      }
+      if (auditoriaB46 && auditoriaB46.bloqueios && auditoriaB46.bloqueios.length) {
+        bloqueios.push("B46 possui bloqueios: " + auditoriaB46.bloqueios.join(" "));
+      }
+
+      if (!b47Implementada) bloqueios.push("B47 nao implementada.");
+      if (!auditoriaB47 || auditoriaB47.executado !== false || auditoriaB47.somenteLeitura !== true) {
+        bloqueios.push("B47 nao retornou executado:false e somenteLeitura:true.");
+      }
+      if (auditoriaB47 && auditoriaB47.bloqueios && auditoriaB47.bloqueios.length) {
+        bloqueios.push("B47 possui bloqueios: " + auditoriaB47.bloqueios.join(" "));
+      }
+
+      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
+      if (!auditoriaFin.pastaDocumentosFinConfigurada) avisos.push("Pasta FIN nao configurada.");
+      if (auditoriaFin.bloqueios && auditoriaFin.bloqueios.length) {
+        bloqueios.push.apply(bloqueios, auditoriaFin.bloqueios);
+      }
+      if (auditoriaFin.avisos && auditoriaFin.avisos.length) {
+        avisos.push.apply(avisos, auditoriaFin.avisos);
+      }
+
+      let termosAbaOk = false;
+      let termosHeadersOk = false;
+      const props = PropertiesService.getScriptProperties();
+      const dbFinId = finSafeText_(props.getProperty("DB_FIN_ID"));
+      if (dbFinId) {
+        try {
+          const ssTermos = SpreadsheetApp.openById(dbFinId);
+          const shTermos = ssTermos.getSheetByName("FIN_CARTOES_TERMOS");
+          termosAbaOk = !!shTermos;
+          if (shTermos) {
+            const lastCol = shTermos.getLastColumn();
+            const hdrs = lastCol > 0
+              ? shTermos.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return finSafeText_(h); })
+              : [];
+            const hEss = ["ID", "TERMO_ID", "CARTAO_ID", "STATUS"];
+            termosHeadersOk = hEss.every(function(h) { return hdrs.indexOf(h) >= 0; });
+            if (!termosHeadersOk) bloqueios.push("Headers essenciais ausentes em FIN_CARTOES_TERMOS.");
+          } else {
+            bloqueios.push("Aba FIN ausente: FIN_CARTOES_TERMOS.");
+          }
+        } catch (eT) {
+          bloqueios.push("Erro ao verificar FIN_CARTOES_TERMOS: " + eT.message);
+        }
+      }
+
+      if (!funcoes.prestacaoMobile) bloqueios.push("Funcoes de prestacao mobile indisponiveis.");
+      if (!funcoes.pendenciasMobile) bloqueios.push("Funcoes de pendencia mobile indisponiveis.");
+
+      const preValidacaoExtratoOk = typeof finPreviewExtratoFlashXlsxV1 === "function" &&
+        typeof finDryRunLoteExtratoFlashV1 === "function" &&
+        typeof finPreConfirmarLoteExtratoFlashV1 === "function";
+      if (!preValidacaoExtratoOk) bloqueios.push("Funcoes de pre-validacao de extrato Flash indisponiveis.");
+
+      if (!funcoes.previaConciliacao) bloqueios.push("Funcao de previa de conciliacao indisponivel.");
+      if (!funcoes.relatoriosA4) bloqueios.push("Relatorios A4 indisponiveis.");
+      if (!funcoes.dashboard) bloqueios.push("Dashboard Flash indisponivel.");
+      if (!auditoriaFin.separacaoMassaTesteOperacaoReal) {
+        bloqueios.push("Separacao entre massa de teste e operacao real nao validada.");
+      }
+
+      const abasInfo = auditoriaFin.abasFinPrincipais || {};
+      function hOk_(nome) { return !!(abasInfo[nome] && abasInfo[nome].headersOk); }
+
+      const pronto = bloqueios.length === 0;
+      return Object.assign(base, {
+        prontoParaSelecionarColaboradorPiloto: pronto,
+        prontoParaCadastroControladoCartao: pronto,
+        prontoParaTestePrestacaoRealControlada: pronto,
+        prontoParaLiberacaoPilotoReal: false,
+        auditoriaSomenteLeitura: {
+          b46Implementada: b46Implementada,
+          b47Implementada: b47Implementada,
+          funcaoB46Existe: b46Implementada,
+          funcaoB47Existe: b47Implementada,
+          b46ExecutadoFalse: !!(auditoriaB46 && auditoriaB46.executado === false),
+          b46SomenteLeituraTrue: !!(auditoriaB46 && auditoriaB46.somenteLeitura === true),
+          b47ExecutadoFalse: !!(auditoriaB47 && auditoriaB47.executado === false),
+          b47SomenteLeituraTrue: !!(auditoriaB47 && auditoriaB47.somenteLeitura === true),
+          dbFinIdConfigurado: !!auditoriaFin.dbFinIdConfigurado,
+          pastaFinConfigurada: !!auditoriaFin.pastaDocumentosFinConfigurada,
+          headersEssenciaisAbas: {
+            FIN_CARTOES: hOk_(ABAS.CARTOES),
+            FIN_CARTOES_TERMOS: termosHeadersOk,
+            FIN_CARTOES_LANCAMENTOS: hOk_(ABAS.LANCAMENTOS),
+            FIN_CARTOES_PENDENCIAS: hOk_(ABAS.PENDENCIAS),
+            FIN_CARTOES_EXTRATOS: hOk_(ABAS.EXTRATOS),
+            FIN_LOTES_EXTRATO_FLASH: hOk_(ABAS.LOTES_EXTRATO_FLASH),
+            FIN_CARTOES_CONCILIACAO: hOk_(ABAS.CONCILIACAO)
+          },
+          prestacaoMobileOk: !!funcoes.prestacaoMobile,
+          pendenciaMobileOk: !!funcoes.pendenciasMobile,
+          preValidacaoExtratoOk: preValidacaoExtratoOk,
+          previaConciliacaoOk: !!funcoes.previaConciliacao,
+          relatorioA4Ok: !!funcoes.relatoriosA4,
+          dashboardFlashOk: !!funcoes.dashboard,
+          separacaoMassaTesteOperacaoReal: !!auditoriaFin.separacaoMassaTesteOperacaoReal,
+          nenhumaAcaoB48ExecutouGravacao: true
+        },
+        planoPilotoControlado: {
+          quantidadeMaximaColaboradores: 1,
+          duracaoSugeridaDias: "3 a 7",
+          acompanhamentoFinanceiro: "diario",
+          escopoPermitido: [
+            "Cadastro controlado de 1 cartao",
+            "Termo assinado",
+            "1 a 5 lancamentos reais acompanhados",
+            "Conferencia diaria pelo financeiro",
+            "Relatorio A4 de conferencia"
+          ],
+          escopoProibido: [
+            "Expansao para varios colaboradores",
+            "Importacao em massa sem autorizacao",
+            "Conciliacao em massa sem autorizacao",
+            "Geracao de pendencias em massa sem autorizacao",
+            "Alteracao automatica de saldo"
+          ]
+        },
+        criteriosParaEscolherColaboradorPiloto: [
+          "Colaborador com boa comunicacao",
+          "Usa celular com camera funcionando",
+          "Consegue acessar o WebApp",
+          "Entende regra de comprovante",
+          "Aceita testar com acompanhamento",
+          "Financeiro consegue acompanhar diariamente",
+          "Nao comecar com colaborador de alto volume de gasto"
+        ],
+        checklistAntesDoPilotoReal: [
+          "Colaborador piloto definido",
+          "Cartao real identificado",
+          "Termo assinado",
+          "Financeiro responsavel definido",
+          "Saldo/limite conferido fora do sistema",
+          "Canal de suporte definido",
+          "Primeiro lancamento acompanhado",
+          "Relatorio A4 revisado",
+          "Dashboard conferido",
+          "Plano de reversao definido"
+        ],
+        planoReversao: [
+          "Pausar piloto",
+          "Bloquear novos lancamentos do piloto, se necessario",
+          "Conferir manualmente gastos ja feitos",
+          "Exportar relatorio A4",
+          "Registrar divergencias",
+          "Nao expandir para outros colaboradores ate correcao"
+        ],
+        bloqueios: bloqueios,
+        avisos: avisos
+      });
+    } catch (e) {
+      return Object.assign(base, {
+        success: false,
+        ok: false,
+        prontoParaSelecionarColaboradorPiloto: false,
+        prontoParaCadastroControladoCartao: false,
+        prontoParaTestePrestacaoRealControlada: false,
+        prontoParaLiberacaoPilotoReal: false,
+        bloqueios: ["Falha na preparacao do piloto B48 somente leitura: " + e.message],
+        avisos: []
+      });
+    }
+  }
+
+  function LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA() {
+    return {
+      etapa: "B48",
+      success: false,
+      ok: false,
+      executado: false,
+      bloqueado: true,
+      motivo: "Liberacao real do piloto exige etapa posterior com autorizacao explicita."
+    };
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -2702,6 +2901,8 @@ const SGO_FIN = (() => {
     finFlashGerarRelatorioGerencialA4V1,
     ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR,
     VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR,
+    PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR,
+    LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -2757,6 +2958,8 @@ function finFlashGerarRelatorioExtratoImportadoA4V1(sessionId, filtros) { return
 function finFlashGerarRelatorioGerencialA4V1(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioGerencialA4V1(sessionId, filtros); }
 function ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR() { return SGO_FIN.ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR(); }
 function VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() { return SGO_FIN.VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR(); }
+function PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR() { return SGO_FIN.PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR(); }
+function LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA()   { return SGO_FIN.LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
