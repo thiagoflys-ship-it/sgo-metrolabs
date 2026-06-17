@@ -3203,3 +3203,9 @@ function testarFinFlashAuditoriaPendenciasTela_FIN_E_SEM_GRAVAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+function testarAuditoriaFlashMobileB54_SEM_GRAVAR() {
+  const resultado = AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
