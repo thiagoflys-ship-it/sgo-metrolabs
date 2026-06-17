@@ -2661,6 +2661,160 @@ const SGO_FIN = (() => {
     }
   }
 
+  function CONFIGURAR_E_AUDITAR_PILOTO_B54_1() {
+    const base = {
+      etapa: "B54.1",
+      nome: "Configurar piloto Flash DEV e auditar sem gravar",
+      executado: false,
+      somenteLeitura: false,
+      success: true,
+      ok: true
+    };
+    try {
+      const bloqueios = [];
+      const avisos = [];
+      const props = PropertiesService.getScriptProperties();
+
+      // 1. Banco principal
+      const dbPrincipalId = finSafeText_(props.getProperty("DB_ID"));
+      if (!dbPrincipalId) {
+        bloqueios.push("DB_ID (banco principal) nao configurado.");
+        return Object.assign(base, { prontoParaGravacaoRealPiloto: false, bloqueios: bloqueios, avisos: avisos });
+      }
+
+      // 2. Ler CAD_USUARIOS — buscar "thiago" por nome ou login
+      const candidatos = [];
+      try {
+        const ssPrincipal = SpreadsheetApp.openById(dbPrincipalId);
+        const shUsers = ssPrincipal.getSheetByName("CAD_USUARIOS");
+        if (!shUsers) {
+          bloqueios.push("Aba CAD_USUARIOS nao encontrada no banco principal.");
+        } else {
+          const lastRow = shUsers.getLastRow();
+          const lastCol = shUsers.getLastColumn();
+          if (lastRow >= 2 && lastCol >= 1) {
+            const dados = shUsers.getRange(1, 1, lastRow, lastCol).getValues();
+            const hdrs = dados[0].map(function(h) { return finSafeText_(h).toUpperCase(); });
+            const iID     = hdrs.indexOf("ID");
+            const iUSU    = hdrs.indexOf("USUARIO");
+            const iNOME   = hdrs.indexOf("NOME");
+            const iPERFIL = hdrs.indexOf("PERFIL");
+            const iSTATUS = hdrs.indexOf("STATUS");
+            for (let i = 1; i < dados.length; i++) {
+              const row = dados[i];
+              const nome  = finSafeText_(iNOME   >= 0 ? row[iNOME]   : "").toUpperCase();
+              const login = finSafeText_(iUSU    >= 0 ? row[iUSU]    : "").toLowerCase();
+              if (nome.indexOf("THIAGO") >= 0 || login.indexOf("thiago") >= 0) {
+                candidatos.push({
+                  id    : finSafeText_(iID     >= 0 ? row[iID]     : ""),
+                  login : login,
+                  nome  : nome,
+                  perfil: finSafeText_(iPERFIL >= 0 ? row[iPERFIL] : ""),
+                  status: finSafeText_(iSTATUS >= 0 ? row[iSTATUS] : "")
+                });
+              }
+            }
+          }
+          if (candidatos.length === 0) {
+            bloqueios.push("Nenhum usuario com NOME ou LOGIN contendo 'thiago' encontrado em CAD_USUARIOS.");
+          }
+        }
+      } catch (eUsers) {
+        bloqueios.push("Erro ao ler CAD_USUARIOS: " + eUsers.message);
+      }
+
+      // 3. Verificar cartao ativo em FIN_CARTOES para cada candidato
+      const cartoesInfo = [];
+      if (candidatos.length > 0) {
+        try {
+          const cartoes = finAll_(ABAS.CARTOES);
+          candidatos.forEach(function(c) {
+            const cartaoAtivo = cartoes.find(function(cartao) {
+              return finSafeText_(cartao.FUNCIONARIO_ID) === c.id &&
+                     finSafeUpper_(cartao.STATUS_CARTAO) === "ATIVO";
+            }) || null;
+            cartoesInfo.push({
+              userId           : c.id,
+              userLogin        : c.login,
+              userNome         : c.nome,
+              userPerfil       : c.perfil,
+              userStatus       : c.status,
+              temCartaoAtivo   : !!cartaoAtivo,
+              cartaoId         : cartaoAtivo ? finSafeText_(cartaoAtivo.CARTAO_ID || cartaoAtivo.ID) : "",
+              funcionarioEmail : cartaoAtivo ? finSafeText_(cartaoAtivo.FUNCIONARIO_EMAIL) : ""
+            });
+          });
+        } catch (eFin) {
+          bloqueios.push("Erro ao verificar FIN_CARTOES: " + eFin.message);
+        }
+      }
+
+      // 4. Selecionar piloto
+      const candidatosComCartao = cartoesInfo.filter(function(c) { return c.temCartaoAtivo; });
+      let piloto = null;
+      if (candidatosComCartao.length === 0 && bloqueios.length === 0) {
+        bloqueios.push("Nenhum usuario Thiago possui cartao Flash ATIVO em FIN_CARTOES. Cadastre o cartao antes de continuar.");
+      } else if (candidatosComCartao.length > 1) {
+        avisos.push("Mais de um candidato com cartao ativo. Usando o primeiro encontrado.");
+        piloto = candidatosComCartao[0];
+      } else if (candidatosComCartao.length === 1) {
+        piloto = candidatosComCartao[0];
+      }
+
+      // 5. Configurar FIN_PILOTO_FLASH_EMAIL
+      let propertyConfigurada = false;
+      let pilotoLoginConfigurado = "";
+      if (piloto && bloqueios.length === 0) {
+        pilotoLoginConfigurado = piloto.userLogin;
+        props.setProperty("FIN_PILOTO_FLASH_EMAIL", pilotoLoginConfigurado);
+        propertyConfigurada = true;
+        avisos.push("FIN_PILOTO_FLASH_EMAIL configurado como: " + pilotoLoginConfigurado);
+      } else {
+        pilotoLoginConfigurado = finSafeText_(props.getProperty("FIN_PILOTO_FLASH_EMAIL"));
+        if (pilotoLoginConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL ja existia: " + pilotoLoginConfigurado);
+      }
+
+      // 6. Rodar auditoria
+      const auditoria = AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR();
+      if (auditoria.bloqueios && auditoria.bloqueios.length) {
+        bloqueios.push.apply(bloqueios, auditoria.bloqueios);
+      }
+
+      const pronto = bloqueios.length === 0 && auditoria.prontoParaGravacaoRealPiloto === true;
+
+      return Object.assign(base, {
+        prontoParaGravacaoRealPiloto: pronto,
+        piloto: piloto ? {
+          login                   : piloto.userLogin,
+          nome                    : piloto.userNome,
+          perfil                  : piloto.userPerfil,
+          status                  : piloto.userStatus,
+          userIdMascarado         : piloto.userId.length > 8 ? piloto.userId.substring(0, 8) + "..." : piloto.userId,
+          cartaoAtivoEncontrado   : piloto.temCartaoAtivo,
+          cartaoIdMascarado       : piloto.cartaoId.length > 8 ? piloto.cartaoId.substring(0, 8) + "..." : piloto.cartaoId,
+          funcionarioEmailPreenchido: !!(piloto.funcionarioEmail),
+          funcionarioEmail        : piloto.funcionarioEmail ? piloto.funcionarioEmail.substring(0, 4) + "***" : ""
+        } : null,
+        todosCandidatos: cartoesInfo.map(function(c) {
+          return { login: c.userLogin, nome: c.userNome, perfil: c.userPerfil, status: c.userStatus, temCartaoAtivo: c.temCartaoAtivo };
+        }),
+        propertyConfigurada      : propertyConfigurada,
+        pilotoLoginConfigurado   : pilotoLoginConfigurado,
+        auditoria                : auditoria,
+        bloqueios                : bloqueios,
+        avisos                   : avisos
+      });
+    } catch (e) {
+      return Object.assign(base, {
+        success: false,
+        ok: false,
+        prontoParaGravacaoRealPiloto: false,
+        bloqueios: ["Falha em CONFIGURAR_E_AUDITAR_PILOTO_B54_1: " + e.message],
+        avisos: []
+      });
+    }
+  }
+
   function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
@@ -3121,6 +3275,7 @@ const SGO_FIN = (() => {
     LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA,
     finFlashRegistrarPrestacaoMobilePilotoV1,
     AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR,
+    CONFIGURAR_E_AUDITAR_PILOTO_B54_1,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
@@ -3180,6 +3335,7 @@ function PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR() { return SGO_FIN.PREPARAR_P
 function LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA()   { return SGO_FIN.LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA(); }
 function finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload) { return SGO_FIN.finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload); }
 function AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR() { return SGO_FIN.AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR(); }
+function CONFIGURAR_E_AUDITAR_PILOTO_B54_1() { return SGO_FIN.CONFIGURAR_E_AUDITAR_PILOTO_B54_1(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
@@ -3206,6 +3362,12 @@ function testarFinFlashAuditoriaPendenciasTela_FIN_E_SEM_GRAVAR() {
 
 function testarAuditoriaFlashMobileB54_SEM_GRAVAR() {
   const resultado = AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function testarConfigurarAuditarPilotoB54_1() {
+  const resultado = CONFIGURAR_E_AUDITAR_PILOTO_B54_1();
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
