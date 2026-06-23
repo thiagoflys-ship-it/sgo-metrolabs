@@ -1,7 +1,7 @@
 // SGO_Fin.js — METROLABS SGO+
-// Modulo: FIN — Cartao Flash, Prestacao de Contas e Conciliacao Inteligente
+// Modulo: FIN — Cartão Flash, Prestacao de Contas e Conciliacao Inteligente
 // Versao: FIN.2
-// REGRA: nao executa nada automaticamente.
+// REGRA: não executa nada automaticamente.
 
 const SGO_FIN = (() => {
   const DB = "FIN";
@@ -117,7 +117,7 @@ const SGO_FIN = (() => {
     const p = finPerfil_(sessao);
     if (perfis.indexOf(p) < 0) {
       throw new Error(
-        "Acesso negado: perfil " + p + " nao tem permissao para " + (acao || "esta acao") + "."
+        "Acesso negado: perfil " + p + " não tem permissão para " + (acao || "esta acao") + "."
       );
     }
   }
@@ -126,7 +126,7 @@ const SGO_FIN = (() => {
     const dbId = PropertiesService.getScriptProperties().getProperty("DB_FIN_ID");
     if (!dbId) {
       throw new Error(
-        "Banco FIN nao configurado. Configure DB_FIN_ID antes de usar o modulo financeiro."
+        "Banco FIN não configurado. Configure DB_FIN_ID antes de usar o modulo financeiro."
       );
     }
     return dbId;
@@ -134,17 +134,17 @@ const SGO_FIN = (() => {
 
   function finSheet_(aba) {
     const nomeAba = finSafeText_(aba);
-    if (!nomeAba) throw new Error("Aba FIN nao informada.");
+    if (!nomeAba) throw new Error("Aba FIN não informada.");
     const ss = SpreadsheetApp.openById(finDbOk_());
     const sheet = ss.getSheetByName(nomeAba);
-    if (!sheet) throw new Error("Aba FIN nao encontrada: " + nomeAba + ".");
+    if (!sheet) throw new Error("Aba FIN não encontrada: " + nomeAba + ".");
     return sheet;
   }
 
   function finHeaders_(aba) {
     const sheet = finSheet_(aba);
     const lastCol = sheet.getLastColumn();
-    if (lastCol < 1) throw new Error("Aba FIN sem cabecalho: " + aba + ".");
+    if (lastCol < 1) throw new Error("Aba FIN sem cabeçalho: " + aba + ".");
     return sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
       return finSafeText_(h);
     });
@@ -225,7 +225,7 @@ const SGO_FIN = (() => {
     const headers = finHeaders_(aba);
     const alvo = finSafeText_(id);
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (lastRow < 2) throw new Error("Registro não encontrado para atualização: " + id);
     const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
     let rowIndex = -1;
     for (let i = 0; i < ids.length; i++) {
@@ -234,7 +234,7 @@ const SGO_FIN = (() => {
         break;
       }
     }
-    if (rowIndex < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (rowIndex < 2) throw new Error("Registro não encontrado para atualização: " + id);
     const atual = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
     const normalizado = finNormalizarParaHeaders_(aba, patch || {}, false);
     const row = headers.map(function(h, idx) {
@@ -244,7 +244,7 @@ const SGO_FIN = (() => {
     });
     sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
     const ok = true;
-    if (!ok) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (!ok) throw new Error("Registro não encontrado para atualização: " + id);
     return finGetById_(aba, id);
   }
 
@@ -285,40 +285,40 @@ const SGO_FIN = (() => {
 
   function finValidarCartaoPayload_(payload) {
     var erros = [];
-    if (!payload) { erros.push("Payload nao informado."); return erros; }
+    if (!payload) { erros.push("Payload não informado."); return erros; }
     if (payload.NUMERO_CARTAO) {
-      erros.push("Numero completo do cartao nao e permitido. Use apenas NUMERO_FINAL_4.");
+      erros.push("Número completo do cartão não é permitido. Use apenas os 4 últimos dígitos.");
     }
-    if (!finSafeText_(payload.FUNCIONARIO_ID))   erros.push("FUNCIONARIO_ID e obrigatorio.");
-    if (!finSafeText_(payload.FUNCIONARIO_NOME))  erros.push("FUNCIONARIO_NOME e obrigatorio.");
+    if (!finSafeText_(payload.FUNCIONARIO_ID))   erros.push("FUNCIONARIO_ID é obrigatório.");
+    if (!finSafeText_(payload.FUNCIONARIO_NOME))  erros.push("FUNCIONARIO_NOME é obrigatório.");
     if (!finSafeText_(payload.NUMERO_FINAL_4)) {
-      erros.push("NUMERO_FINAL_4 e obrigatorio.");
+      erros.push("NUMERO_FINAL_4 é obrigatório.");
     } else if (finSafeText_(payload.NUMERO_FINAL_4).replace(/\D/g, "").length !== 4) {
-      erros.push("NUMERO_FINAL_4 deve conter exatamente 4 digitos.");
+      erros.push("NUMERO_FINAL_4 deve conter exatamente 4 dígitos.");
     }
     return erros;
   }
 
   function finValidarRecargaPayload_(payload) {
     var erros = [];
-    if (!payload) { erros.push("Payload nao informado."); return erros; }
-    if (!finSafeText_(payload.CARTAO_ID))        erros.push("CARTAO_ID e obrigatorio.");
+    if (!payload) { erros.push("Payload não informado."); return erros; }
+    if (!finSafeText_(payload.CARTAO_ID))        erros.push("CARTAO_ID é obrigatório.");
     if (finSafeNumber_(payload.VALOR) <= 0)       erros.push("VALOR deve ser maior que zero.");
-    if (!finSafeText_(payload.DATA_RECARGA))      erros.push("DATA_RECARGA e obrigatoria.");
+    if (!finSafeText_(payload.DATA_RECARGA))      erros.push("DATA_RECARGA é obrigatória.");
     return erros;
   }
 
   function finValidarLancamentoPayload_(payload) {
     var erros = [];
-    if (!payload) { erros.push("Payload nao informado."); return erros; }
-    if (!finSafeText_(payload.CARTAO_ID))         erros.push("CARTAO_ID e obrigatorio.");
+    if (!payload) { erros.push("Payload não informado."); return erros; }
+    if (!finSafeText_(payload.CARTAO_ID))         erros.push("CARTAO_ID é obrigatório.");
     if (finSafeNumber_(payload.VALOR) <= 0)        erros.push("VALOR deve ser maior que zero.");
-    if (!finSafeText_(payload.DATA_GASTO))         erros.push("DATA_GASTO e obrigatoria.");
+    if (!finSafeText_(payload.DATA_GASTO))         erros.push("DATA_GASTO é obrigatória.");
     if (!finSafeText_(payload.FINALIDADE || payload.DESCRICAO_GASTO)) {
-      erros.push("FINALIDADE ou DESCRICAO_GASTO e obrigatorio.");
+      erros.push("FINALIDADE ou DESCRICAO_GASTO é obrigatório.");
     }
     if (finSafeUpper_(payload.TEM_OS) !== "SIM" && !finSafeText_(payload.JUSTIFICATIVA_SEM_OS)) {
-      erros.push("JUSTIFICATIVA_SEM_OS e obrigatoria quando TEM_OS nao for SIM.");
+      erros.push("JUSTIFICATIVA_SEM_OS é obrigatória quando TEM_OS não for SIM.");
     }
     return erros;
   }
@@ -335,7 +335,7 @@ const SGO_FIN = (() => {
       return finOk_({
         modulo       : "FIN",
         versao       : "FIN.2",
-        descricao    : "Cartao Flash, Prestacao de Contas e Conciliacao Inteligente",
+        descricao    : "Cartão Flash, Prestacao de Contas e Conciliacao Inteligente",
         dbConfigurado: !!dbId,
         abas         : Object.keys(ABAS).map(function(k) { return ABAS[k]; }),
         perfil       : finPerfil_(sessao),
@@ -386,13 +386,13 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter cartao");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do cartao nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do cartão não informado.");
       const item = finGetById_(ABAS.CARTOES, id);
-      if (!item) return finErro_("Cartao nao encontrado.");
+      if (!item) return finErro_("Cartão não encontrado.");
       if (finPerfil_(sessao) === "TECNICO") {
         const u = finUsuario_(sessao);
         if (finSafeText_(item.FUNCIONARIO_ID) !== u.id) {
-          return finErro_("Acesso negado: voce so pode visualizar dados do seu proprio cartao.");
+          return finErro_("Acesso negado: voce so pode visualizar dados do seu proprio cartão.");
         }
       }
       return finOk_({ item: item });
@@ -404,10 +404,31 @@ const SGO_FIN = (() => {
   function criarCartao(sessionId, payload) {
     try {
       const sessao = finSessao_(sessionId);
-      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "criar cartao");
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "criar cartão");
       finDbOk_();
       const erros = finValidarCartaoPayload_(payload);
       if (erros.length) return finErro_(erros.join(" "));
+
+      // Validar duplicidade: mesma final4 + mesmo responsavel + nao inativo/cancelado
+      const final4norm   = finSafeText_(payload.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+      const funcIdNorm   = finSafeUpper_(payload.FUNCIONARIO_ID || "");
+      const funcEmailNorm = finSafeText_(payload.FUNCIONARIO_EMAIL || "").toLowerCase();
+      const todosCartoes = finAll_(ABAS.CARTOES);
+      const duplicado = todosCartoes.find(function(c) {
+        const sc = finSafeUpper_(c.STATUS_CARTAO || "");
+        if (sc === "INATIVO" || sc === "CANCELADO" || sc === "DEVOLVIDO") return false;
+        const cf = finSafeText_(c.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+        if (cf !== final4norm) return false;
+        const cId    = finSafeUpper_(c.FUNCIONARIO_ID || "");
+        const cEmail = finSafeText_(c.FUNCIONARIO_EMAIL || "").toLowerCase();
+        if (funcIdNorm    && cId)    return funcIdNorm    === cId;
+        if (funcEmailNorm && cEmail) return funcEmailNorm === cEmail;
+        return false;
+      });
+      if (duplicado) {
+        return finErro_("Ja existe cartao ativo com este final para este responsavel.");
+      }
+
       const u = finUsuario_(sessao);
       const agora = finNow_();
       const cartaoId = finGerarId_("CAR");
@@ -445,8 +466,8 @@ const SGO_FIN = (() => {
         ATUALIZADO_POR       : u.nome
       };
       finInsert_(ABAS.CARTOES, registro);
-      finLog_(sessao, "CARTAO_CRIADO", "CARTAO", cartaoId, null, registro, "OK", "Cartao criado.");
-      return finOk_({ message: "Cartao criado com sucesso.", id: registro.ID, cartaoId: cartaoId, item: registro });
+      finLog_(sessao, "CARTAO_CRIADO", "CARTAO", cartaoId, null, registro, "OK", "Cartão criado.");
+      return finOk_({ message: "Cartão criado com sucesso.", id: registro.ID, cartaoId: cartaoId, item: registro });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -457,13 +478,13 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "atualizar cartao");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do cartao nao informado.");
-      if (!payload)           return finErro_("Payload nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do cartão não informado.");
+      if (!payload)           return finErro_("Payload não informado.");
       if (payload.NUMERO_CARTAO) {
-        return finErro_("Numero completo do cartao nao e permitido.");
+        return finErro_("Numero completo do cartão não e permitido.");
       }
       const antes = finGetById_(ABAS.CARTOES, id);
-      if (!antes) return finErro_("Cartao nao encontrado.");
+      if (!antes) return finErro_("Cartão não encontrado.");
       const u = finUsuario_(sessao);
       const agora = finNow_();
       const camposProibidos = ["ID", "CARTAO_ID", "NUMERO_CARTAO", "CRIADO_EM", "CRIADO_POR"];
@@ -474,8 +495,8 @@ const SGO_FIN = (() => {
       patch.ATUALIZADO_EM  = agora;
       patch.ATUALIZADO_POR = u.nome;
       const depois = finUpdate_(ABAS.CARTOES, antes.ID, patch);
-      finLog_(sessao, "CARTAO_ATUALIZADO", "CARTAO", finSafeText_(antes.CARTAO_ID), antes, depois, "OK", "Cartao atualizado.");
-      return finOk_({ message: "Cartao atualizado com sucesso.", item: depois });
+      finLog_(sessao, "CARTAO_ATUALIZADO", "CARTAO", finSafeText_(antes.CARTAO_ID), antes, depois, "OK", "Cartão atualizado.");
+      return finOk_({ message: "Cartão atualizado com sucesso.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -486,13 +507,13 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_GESTOR, "bloquear cartao");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do cartao nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do cartão não informado.");
       const antes = finGetById_(ABAS.CARTOES, id);
-      if (!antes) return finErro_("Cartao nao encontrado.");
+      if (!antes) return finErro_("Cartão não encontrado.");
       if (finSafeUpper_(antes.STATUS_CARTAO) === STATUS_CARTAO.BLOQUEADO_TEMPORARIO) {
-        return finErro_("Cartao ja esta bloqueado.");
+        return finErro_("Cartão já está bloqueado.");
       }
-      if (!finSafeText_(motivo)) return finErro_("Motivo do bloqueio e obrigatorio.");
+      if (!finSafeText_(motivo)) return finErro_("Motivo do bloqueio é obrigatório.");
       const u = finUsuario_(sessao);
       const agora = finNow_();
       const patch = {
@@ -505,8 +526,8 @@ const SGO_FIN = (() => {
       };
       const depois = finUpdate_(ABAS.CARTOES, antes.ID, patch);
       finLog_(sessao, "CARTAO_BLOQUEADO", "CARTAO", finSafeText_(antes.CARTAO_ID), antes, depois, "OK",
-        "Cartao bloqueado: " + finSafeText_(motivo));
-      return finOk_({ message: "Cartao bloqueado com sucesso.", item: depois });
+        "Cartão bloqueado: " + finSafeText_(motivo));
+      return finOk_({ message: "Cartão bloqueado com sucesso.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -517,11 +538,11 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_GESTOR, "desbloquear cartao");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do cartao nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do cartão não informado.");
       const antes = finGetById_(ABAS.CARTOES, id);
-      if (!antes) return finErro_("Cartao nao encontrado.");
+      if (!antes) return finErro_("Cartão não encontrado.");
       if (finSafeUpper_(antes.STATUS_CARTAO) !== STATUS_CARTAO.BLOQUEADO_TEMPORARIO) {
-        return finErro_("Cartao nao esta bloqueado.");
+        return finErro_("Cartão não está bloqueado.");
       }
       const u = finUsuario_(sessao);
       const agora = finNow_();
@@ -534,8 +555,8 @@ const SGO_FIN = (() => {
         ATUALIZADO_POR : u.nome
       };
       const depois = finUpdate_(ABAS.CARTOES, antes.ID, patch);
-      finLog_(sessao, "CARTAO_DESBLOQUEADO", "CARTAO", finSafeText_(antes.CARTAO_ID), antes, depois, "OK", "Cartao desbloqueado.");
-      return finOk_({ message: "Cartao desbloqueado com sucesso.", item: depois });
+      finLog_(sessao, "CARTAO_DESBLOQUEADO", "CARTAO", finSafeText_(antes.CARTAO_ID), antes, depois, "OK", "Cartão desbloqueado.");
+      return finOk_({ message: "Cartão desbloqueado com sucesso.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -579,13 +600,13 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter recarga");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID da recarga nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID da recarga não informado.");
       const item = finGetById_(ABAS.RECARGAS, id);
-      if (!item) return finErro_("Recarga nao encontrada.");
+      if (!item) return finErro_("Recarga não encontrada.");
       if (finPerfil_(sessao) === "TECNICO") {
         const u = finUsuario_(sessao);
         if (finSafeText_(item.FUNCIONARIO_ID) !== u.id) {
-          return finErro_("Acesso negado: voce so pode visualizar recargas do seu proprio cartao.");
+          return finErro_("Acesso negado: voce so pode visualizar recargas do seu proprio cartão.");
         }
       }
       return finOk_({ item: item });
@@ -602,13 +623,35 @@ const SGO_FIN = (() => {
       const erros = finValidarRecargaPayload_(payload);
       if (erros.length) return finErro_(erros.join(" "));
       const cartao = finGetById_(ABAS.CARTOES, payload.CARTAO_ID);
-      if (!cartao) return finErro_("Cartao nao encontrado: " + payload.CARTAO_ID);
+      if (!cartao) return finErro_("Cartão não encontrado: " + payload.CARTAO_ID);
+      // STATUS_CARTAO_ATIVO_CHECK_FLASH42
+      var statusCartao = finSafeUpper_(cartao.STATUS_CARTAO);
+      if (statusCartao !== "ATIVO") {
+        return finErro_("Recarga rejeitada: cartão " + finSafeText_(payload.CARTAO_ID) +
+          " está " + statusCartao + ". Somente cartões com STATUS_CARTAO=ATIVO aceitam recarga.");
+      }
       const u = finUsuario_(sessao);
       const agora = finNow_();
       const recargaId = finGerarId_("REC");
+      const chaveIdem = finSafeText_(payload.CHAVE_IDEMPOTENCIA) ||
+        [finSafeText_(payload.CARTAO_ID),
+         String(finSafeNumber_(payload.VALOR)),
+         finSafeText_(payload.DATA_RECARGA),
+         finSafeText_(cartao.FUNCIONARIO_ID)].join("|");
+      const todasRecargas = finAll_(ABAS.RECARGAS);
+      const recargaDuplicada = todasRecargas.find(function(r) {
+        return finSafeText_(r.CHAVE_IDEMPOTENCIA) === chaveIdem &&
+               finSafeUpper_(r.STATUS) !== STATUS_RECARGA.CANCELADA;
+      });
+      if (recargaDuplicada) {
+        return finErro_("Recarga duplicada detectada. Chave de idempotência já registrada em " +
+          finSafeText_(recargaDuplicada.RECARGA_ID) +
+          ". Revise o formulário ou use uma chave diferente.");
+      }
       const registro = {
         ID                       : finUuid_(),
         RECARGA_ID               : recargaId,
+        CHAVE_IDEMPOTENCIA       : chaveIdem,
         CARTAO_ID                : finSafeText_(payload.CARTAO_ID),
         FUNCIONARIO_ID           : finSafeText_(cartao.FUNCIONARIO_ID),
         FUNCIONARIO_NOME         : finSafeText_(cartao.FUNCIONARIO_NOME),
@@ -645,12 +688,12 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "cancelar recarga");
       finDbOk_();
-      if (!finSafeText_(id))     return finErro_("ID da recarga nao informado.");
-      if (!finSafeText_(motivo)) return finErro_("Motivo do cancelamento e obrigatorio.");
+      if (!finSafeText_(id))     return finErro_("ID da recarga não informado.");
+      if (!finSafeText_(motivo)) return finErro_("Motivo do cancelamento é obrigatório.");
       const antes = finGetById_(ABAS.RECARGAS, id);
-      if (!antes) return finErro_("Recarga nao encontrada.");
+      if (!antes) return finErro_("Recarga não encontrada.");
       if (finSafeUpper_(antes.STATUS) === STATUS_RECARGA.CANCELADA) {
-        return finErro_("Recarga ja esta cancelada.");
+        return finErro_("Recarga já está cancelada.");
       }
       const u = finUsuario_(sessao);
       const agora = finNow_();
@@ -711,13 +754,13 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_CONSULTA, "obter lancamento");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do lancamento nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do lançamento não informado.");
       const item = finGetById_(ABAS.LANCAMENTOS, id);
-      if (!item) return finErro_("Lancamento nao encontrado.");
+      if (!item) return finErro_("Lançamento não encontrado.");
       if (finPerfil_(sessao) === "TECNICO") {
         const u = finUsuario_(sessao);
         if (finSafeText_(item.FUNCIONARIO_ID) !== u.id) {
-          return finErro_("Acesso negado: voce so pode visualizar seus proprios lancamentos.");
+          return finErro_("Acesso negado: voce so pode visualizar seus proprios lançamentos.");
         }
       }
       return finOk_({ item: item });
@@ -737,7 +780,7 @@ const SGO_FIN = (() => {
       if (finPerfil_(sessao) === "TECNICO") {
         const funcId = finSafeText_(payload.FUNCIONARIO_ID);
         if (funcId && funcId !== u.id) {
-          return finErro_("Acesso negado: voce so pode criar lancamentos para si mesmo.");
+          return finErro_("Acesso negado: voce so pode criar lançamentos para si mesmo.");
         }
       }
       const agora = finNow_();
@@ -790,8 +833,8 @@ const SGO_FIN = (() => {
       };
       finInsert_(ABAS.LANCAMENTOS, registro);
       finLog_(sessao, "LANCAMENTO_CRIADO", "LANCAMENTO", lancamentoId, null, registro, "OK",
-        "Lancamento de R$ " + registro.VALOR + " criado.");
-      return finOk_({ message: "Lancamento registrado com sucesso.", id: registro.ID, lancamentoId: lancamentoId, item: registro });
+        "Lançamento de R$ " + registro.VALOR + " criado.");
+      return finOk_({ message: "Lançamento registrado com sucesso.", id: registro.ID, lancamentoId: lancamentoId, item: registro });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -802,10 +845,10 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_CONSULTA, "atualizar lancamento");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do lancamento nao informado.");
-      if (!payload)           return finErro_("Payload nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do lançamento não informado.");
+      if (!payload)           return finErro_("Payload não informado.");
       const antes = finGetById_(ABAS.LANCAMENTOS, id);
-      if (!antes) return finErro_("Lancamento nao encontrado.");
+      if (!antes) return finErro_("Lançamento não encontrado.");
       const statusAtual = finSafeUpper_(antes.STATUS_PRESTACAO);
       const statusEditaveis = [
         STATUS_PRESTACAO.PENDENTE_COMPROVANTE,
@@ -816,15 +859,15 @@ const SGO_FIN = (() => {
       if (finPerfil_(sessao) === "TECNICO") {
         const u = finUsuario_(sessao);
         if (finSafeText_(antes.FUNCIONARIO_ID) !== u.id) {
-          return finErro_("Acesso negado: voce so pode editar seus proprios lancamentos.");
+          return finErro_("Acesso negado: voce so pode editar seus proprios lançamentos.");
         }
         if (statusEditaveis.indexOf(statusAtual) < 0) {
-          return finErro_("Lancamento nao pode ser editado no status atual: " + statusAtual);
+          return finErro_("Lançamento não pode ser editado no status atual: " + statusAtual);
         }
       } else {
-        finGarantirPerfil_(sessao, PERFIS_OPERADOR, "atualizar lancamento de terceiro");
+        finGarantirPerfil_(sessao, PERFIS_OPERADOR, "atualizar lançamento de terceiro");
         if (statusBloqueados.indexOf(statusAtual) >= 0) {
-          return finErro_("Lancamento ja finalizado nao pode ser editado. Status: " + statusAtual);
+          return finErro_("Lançamento já finalizado não pode ser editado. Status: " + statusAtual);
         }
       }
       const u = finUsuario_(sessao);
@@ -844,8 +887,8 @@ const SGO_FIN = (() => {
       patch.ATUALIZADO_POR = u.nome;
       const depois = finUpdate_(ABAS.LANCAMENTOS, antes.ID, patch);
       finLog_(sessao, "LANCAMENTO_ATUALIZADO", "LANCAMENTO", finSafeText_(antes.LANCAMENTO_ID), antes, depois, "OK",
-        "Lancamento atualizado.");
-      return finOk_({ message: "Lancamento atualizado com sucesso.", item: depois });
+        "Lançamento atualizado.");
+      return finOk_({ message: "Lançamento atualizado com sucesso.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -856,18 +899,18 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_GESTOR, "aprovar lancamento");
       finDbOk_();
-      if (!finSafeText_(id)) return finErro_("ID do lancamento nao informado.");
+      if (!finSafeText_(id)) return finErro_("ID do lançamento não informado.");
       const antes = finGetById_(ABAS.LANCAMENTOS, id);
-      if (!antes) return finErro_("Lancamento nao encontrado.");
+      if (!antes) return finErro_("Lançamento não encontrado.");
       const statusAtual = finSafeUpper_(antes.STATUS_PRESTACAO);
       if (statusAtual === STATUS_PRESTACAO.APROVADO) {
-        return finErro_("Lancamento ja aprovado.");
+        return finErro_("Lançamento já aprovado.");
       }
       if (statusAtual === STATUS_PRESTACAO.REPROVADO) {
-        return finErro_("Lancamento reprovado nao pode ser aprovado diretamente. Edite e reenvie.");
+        return finErro_("Lançamento reprovado não pode ser aprovado diretamente. Edite e reenvie.");
       }
       if (statusAtual === STATUS_PRESTACAO.PENDENTE_COMPROVANTE) {
-        return finErro_("Lancamento pendente de comprovante nao pode ser aprovado.");
+        return finErro_("Lançamento pendente de comprovante não pode ser aprovado.");
       }
       const u = finUsuario_(sessao);
       const agora = finNow_();
@@ -881,8 +924,8 @@ const SGO_FIN = (() => {
       };
       const depois = finUpdate_(ABAS.LANCAMENTOS, antes.ID, patch);
       finLog_(sessao, "LANCAMENTO_APROVADO", "LANCAMENTO", finSafeText_(antes.LANCAMENTO_ID), antes, depois, "OK",
-        "Lancamento aprovado por " + u.nome + ".");
-      return finOk_({ message: "Lancamento aprovado com sucesso.", item: depois });
+        "Lançamento aprovado por " + u.nome + ".");
+      return finOk_({ message: "Lançamento aprovado com sucesso.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -893,16 +936,16 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_GESTOR, "rejeitar lancamento");
       finDbOk_();
-      if (!finSafeText_(id))     return finErro_("ID do lancamento nao informado.");
-      if (!finSafeText_(motivo)) return finErro_("Motivo da rejeicao e obrigatorio.");
+      if (!finSafeText_(id))     return finErro_("ID do lançamento não informado.");
+      if (!finSafeText_(motivo)) return finErro_("Motivo da rejeição é obrigatório.");
       const antes = finGetById_(ABAS.LANCAMENTOS, id);
-      if (!antes) return finErro_("Lancamento nao encontrado.");
+      if (!antes) return finErro_("Lançamento não encontrado.");
       const statusAtual = finSafeUpper_(antes.STATUS_PRESTACAO);
       if (statusAtual === STATUS_PRESTACAO.REPROVADO) {
-        return finErro_("Lancamento ja reprovado.");
+        return finErro_("Lançamento já reprovado.");
       }
       if (statusAtual === STATUS_PRESTACAO.APROVADO) {
-        return finErro_("Lancamento ja aprovado nao pode ser reprovado diretamente.");
+        return finErro_("Lançamento já aprovado não pode ser reprovado diretamente.");
       }
       const u = finUsuario_(sessao);
       const agora = finNow_();
@@ -916,8 +959,8 @@ const SGO_FIN = (() => {
       };
       const depois = finUpdate_(ABAS.LANCAMENTOS, antes.ID, patch);
       finLog_(sessao, "LANCAMENTO_REPROVADO", "LANCAMENTO", finSafeText_(antes.LANCAMENTO_ID), antes, depois, "OK",
-        "Lancamento reprovado: " + finSafeText_(motivo));
-      return finOk_({ message: "Lancamento reprovado.", item: depois });
+        "Lançamento reprovado: " + finSafeText_(motivo));
+      return finOk_({ message: "Lançamento reprovado.", item: depois });
     } catch (e) {
       return finErro_(e.message);
     }
@@ -1415,7 +1458,7 @@ const SGO_FIN = (() => {
           executado: false,
           autorizado: false,
           pendenciaId: alvo,
-          bloqueios: ["Confirmacao textual obrigatoria invalida ou ausente para resolver pendencia Flash pela tela."],
+          bloqueios: ["Confirmação textual obrigatória invalida ou ausente para resolver pendencia Flash pela tela."],
           avisos: []
         };
       }
@@ -1426,7 +1469,7 @@ const SGO_FIN = (() => {
           executado: false,
           autorizado: true,
           pendenciaId: alvo,
-          bloqueios: ["Pendencia nao informada."],
+          bloqueios: ["Pendencia não informada."],
           avisos: []
         };
       }
@@ -1450,7 +1493,7 @@ const SGO_FIN = (() => {
           executado: false,
           autorizado: true,
           pendenciaId: alvo,
-          bloqueios: ["Pendencia nao encontrada"],
+          bloqueios: ["Pendencia não encontrada"],
           avisos: []
         };
       }
@@ -1463,8 +1506,8 @@ const SGO_FIN = (() => {
           autorizado: true,
           pendenciaId: alvo,
           statusAnterior: statusAnterior,
-          bloqueios: ["Pendencia ja resolvida. Nenhuma alteracao realizada."],
-          avisos: ["Idempotencia preservada: resolucao nao duplicada."]
+          bloqueios: ["Pendencia já resolvida. Nenhuma alteracao realizada."],
+          avisos: ["Idempotencia preservada: resolucao não duplicada."]
         };
       }
       const u = finUsuario_(sessao);
@@ -1806,7 +1849,7 @@ const SGO_FIN = (() => {
       }
       if ((k.percentualConciliado || 0) < 90) {
         pontos.push("Percentual conciliado abaixo de 90%.");
-        recomendacoes.push("Revisar lancamentos sem conciliacao.");
+        recomendacoes.push("Revisar lançamentos sem conciliacao.");
       }
       if (dashboard.dadosTesteDetectados) {
         pontos.push("Ambiente contem dados de teste Flash.");
@@ -1912,7 +1955,7 @@ const SGO_FIN = (() => {
     const folderFinId = finSafeText_(
       props.getProperty("FOLDER_FINANCEIRO") ||
       props.getProperty("FOLDER_FINANCEIRO_ID") ||
-      (typeof SGO_CFG !== "undefined" && SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_FINANCEIRO)
+      (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_FINANCEIRO)
     );
     const essenciais = {};
     essenciais[ABAS.CARTOES] = ["ID", "CARTAO_ID", "FUNCIONARIO_ID", "FUNCIONARIO_NOME", "STATUS_CARTAO"];
@@ -1927,7 +1970,7 @@ const SGO_FIN = (() => {
     const abas = {};
     let ss = null;
     if (!dbFinId) {
-      bloqueios.push("DB_FIN_ID nao configurado.");
+      bloqueios.push("DB_FIN_ID não configurado.");
     } else {
       try {
         ss = SpreadsheetApp.openById(dbFinId);
@@ -2010,17 +2053,17 @@ const SGO_FIN = (() => {
       return Object.assign(base, {
         roteiroTesteHumanoMobile: [
           "Abrir a tela mobile do Financeiro/Prestacao Flash em celular real.",
-          "Conferir a identificacao do colaborador e o cartao apresentado.",
+          "Conferir a identificacao do colaborador e o cartão apresentado.",
           "Informar gasto com data, estabelecimento e valor.",
           "Informar finalidade clara da despesa.",
           "Vincular OS quando aplicavel.",
           "Anexar foto ou comprovante.",
           "Testar camera pelo celular.",
-          "Testar upload de imagem ja salva.",
+          "Testar upload de imagem já salva.",
           "Conferir historico de prestacoes.",
           "Conferir pendencias exibidas para o colaborador.",
           "Testar regularizacao de pendencia apenas em ambiente controlado.",
-          "Validar textos, mensagens e ausencia de duvida operacional."
+          "Validar textos, mensagens e ausência de duvida operacional."
         ],
         checklistColaborador: [
           "Conseguiu acessar pelo celular.",
@@ -2030,18 +2073,18 @@ const SGO_FIN = (() => {
           "Entendeu como vincular OS.",
           "Entendeu o que e pendencia.",
           "Entendeu prazo de regularizacao.",
-          "Entendeu que cartao e corporativo.",
+          "Entendeu que cartão e corporativo.",
           "Entendeu que gasto sem comprovante pode gerar cobranca.",
           "Aprovou usabilidade mobile."
         ],
         checklistFinanceiro: [
-          "Cartao cadastrado corretamente.",
+          "Cartão cadastrado corretamente.",
           "Colaborador vinculado corretamente.",
           "Termo assinado.",
           "Limite/saldo inicial conferido.",
           "Prestacao recebida.",
           "Comprovante visivel.",
-          "Extrato Flash importavel em pre-validacao.",
+          "Extrato Flash importavel em pre-validação.",
           "Conciliacao aparece em previa.",
           "Pendencia aparece corretamente.",
           "Relatorio A4 gera corretamente.",
@@ -2059,30 +2102,30 @@ const SGO_FIN = (() => {
         planoTreinamentoRapido: [
           "Explicar objetivo do Flash.",
           "Explicar regra de comprovante.",
-          "Mostrar lancamento pelo celular.",
+          "Mostrar lançamento pelo celular.",
           "Mostrar historico.",
           "Mostrar pendencia.",
-          "Mostrar o que nao pode ser lancado.",
+          "Mostrar o que não pode ser lancado.",
           "Explicar prazo e responsabilidade.",
           "Confirmar entendimento do colaborador."
         ],
         planoGoLiveControlado: [
-          "Fase 1: validacao interna sem operacao ampla.",
+          "Fase 1: validação interna sem operacao ampla.",
           "Fase 2: piloto com poucos cartoes reais.",
           "Fase 3: conferencia diaria do financeiro.",
           "Fase 4: expansao gradual.",
           "Fase 5: fechamento mensal com relatorio."
         ],
         riscosBloqueiosGoLive: [
-          "Colaborador nao consegue anexar comprovante.",
-          "Financeiro nao consegue conferir.",
+          "Colaborador não consegue anexar comprovante.",
+          "Financeiro não consegue conferir.",
           "Relatorio A4 falha.",
           "Dashboard diverge.",
-          "Pendencias nao aparecem.",
+          "Pendencias não aparecem.",
           "Conciliacao apresenta inconsistencia.",
           "Dados de teste misturados com real.",
-          "Termo nao assinado.",
-          "Cartao sem responsavel claro."
+          "Termo não assinado.",
+          "Cartão sem responsavel claro."
         ],
         auditoriaSomenteLeitura: auditoria,
         prontoParaValidacaoHumanaMobile: pronto,
@@ -2093,7 +2136,7 @@ const SGO_FIN = (() => {
           "Escolher colaborador piloto.",
           "Testar em celular real.",
           "Validar upload de comprovante.",
-          "Financeiro conferir lancamento.",
+          "Financeiro conferir lançamento.",
           "Revisar relatorio A4.",
           "Decidir se libera piloto real controlado."
         ]
@@ -2128,9 +2171,9 @@ const SGO_FIN = (() => {
       const auditoriaFin = finFlashB46AuditoriaReadOnly_();
       const funcoes = (auditoriaFin && auditoriaFin.funcoesPrincipaisFlash) || {};
 
-      if (!b46Implementada) bloqueios.push("B46 nao implementada.");
+      if (!b46Implementada) bloqueios.push("B46 não implementada.");
       if (!auditoriaB46 || auditoriaB46.executado !== false || auditoriaB46.somenteLeitura !== true) {
-        bloqueios.push("B46 nao retornou executado:false e somenteLeitura:true.");
+        bloqueios.push("B46 não retornou executado:false e somenteLeitura:true.");
       }
       if (auditoriaB46 && auditoriaB46.bloqueios && auditoriaB46.bloqueios.length) {
         bloqueios.push("B46 possui bloqueios pendentes: " + auditoriaB46.bloqueios.join(" "));
@@ -2139,13 +2182,13 @@ const SGO_FIN = (() => {
       if (!funcoes.pendenciasMobile) bloqueios.push("Funcoes de pendencia mobile Flash indisponiveis.");
       if (!funcoes.relatoriosA4) bloqueios.push("Relatorios A4 Flash indisponiveis.");
       if (!funcoes.dashboard) bloqueios.push("Dashboard Flash indisponivel.");
-      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
-      if (!auditoriaFin.pastaDocumentosFinConfigurada) bloqueios.push("Pasta FIN nao configurada.");
+      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID não configurado.");
+      if (!auditoriaFin.pastaDocumentosFinConfigurada) bloqueios.push("Pasta FIN não configurada.");
       if (auditoriaFin.bloqueios && auditoriaFin.bloqueios.length) {
         bloqueios.push("Auditoria FIN possui bloqueios: " + auditoriaFin.bloqueios.join(" "));
       }
       if (!auditoriaFin.separacaoMassaTesteOperacaoReal) {
-        bloqueios.push("Separacao entre massa de teste e operacao real nao validada.");
+        bloqueios.push("Separacao entre massa de teste e operacao real não validada.");
       }
       if (auditoriaB46 && auditoriaB46.avisos && auditoriaB46.avisos.length) {
         avisos.push.apply(avisos, auditoriaB46.avisos);
@@ -2178,11 +2221,11 @@ const SGO_FIN = (() => {
           "Entrar no Financeiro / Prestacao Flash.",
           "Conferir se a tela abre corretamente em rede movel e Wi-Fi.",
           "Conferir se o colaborador piloto aparece corretamente.",
-          "Fazer lancamento controlado de teste somente se houver ambiente seguro.",
+          "Fazer lançamento controlado de teste somente se houver ambiente seguro.",
           "Anexar foto tirada na hora.",
           "Anexar imagem existente da galeria.",
           "Conferir pre-visualizacao do comprovante.",
-          "Conferir historico do lancamento.",
+          "Conferir historico do lançamento.",
           "Conferir pendencias.",
           "Conferir regularizacao de pendencia somente se existir massa controlada.",
           "Validar mensagens de erro.",
@@ -2196,11 +2239,11 @@ const SGO_FIN = (() => {
           "Conseguiu anexar foto.",
           "Conseguiu ver historico.",
           "Entendeu pendencias.",
-          "Entendeu que gasto sem comprovacao pode ser cobrado.",
+          "Entendeu que gasto sem comprovação pode ser cobrado.",
           "Confirmou que a tela e facil de usar."
         ],
         checklistFinanceiro: [
-          "Conseguiu localizar o lancamento.",
+          "Conseguiu localizar o lançamento.",
           "Comprovante abriu corretamente.",
           "Valor ficou claro.",
           "Colaborador ficou claro.",
@@ -2208,8 +2251,8 @@ const SGO_FIN = (() => {
           "Historico ficou rastreavel.",
           "Pendencia ficou compreensivel.",
           "Relatorio A4 ficou legivel.",
-          "Dashboard nao apresentou divergencia.",
-          "Massa de teste nao misturou com operacao real."
+          "Dashboard não apresentou divergencia.",
+          "Massa de teste não misturou com operacao real."
         ],
         criteriosAprovacaoB47: [
           "success:true.",
@@ -2221,11 +2264,11 @@ const SGO_FIN = (() => {
           "prontoParaPilotoFinanceiroControlado:true."
         ],
         riscosQueImpedemAvanco: [
-          "Tela mobile nao abre no celular real.",
-          "Colaborador piloto nao entende o fluxo sem ajuda.",
-          "Comprovante nao anexa pela camera.",
-          "Imagem da galeria nao faz upload.",
-          "Financeiro nao localiza o lancamento.",
+          "Tela mobile não abre no celular real.",
+          "Colaborador piloto não entende o fluxo sem ajuda.",
+          "Comprovante não anexa pela camera.",
+          "Imagem da galeria não faz upload.",
+          "Financeiro não localiza o lançamento.",
           "Relatorio A4 fica ilegivel.",
           "Dashboard apresenta divergencia.",
           "Massa de teste se mistura com operacao real.",
@@ -2240,7 +2283,7 @@ const SGO_FIN = (() => {
         ok: false,
         prontoParaTesteHumanoReal: false,
         prontoParaPilotoFinanceiroControlado: false,
-        bloqueios: ["Falha na validacao B47 somente leitura: " + e.message],
+        bloqueios: ["Falha na validação B47 somente leitura: " + e.message],
         avisos: []
       });
     }
@@ -2266,24 +2309,24 @@ const SGO_FIN = (() => {
       const auditoriaFin = finFlashB46AuditoriaReadOnly_();
       const funcoes = (auditoriaFin && auditoriaFin.funcoesPrincipaisFlash) || {};
 
-      if (!b46Implementada) bloqueios.push("B46 nao implementada.");
+      if (!b46Implementada) bloqueios.push("B46 não implementada.");
       if (!auditoriaB46 || auditoriaB46.executado !== false || auditoriaB46.somenteLeitura !== true) {
-        bloqueios.push("B46 nao retornou executado:false e somenteLeitura:true.");
+        bloqueios.push("B46 não retornou executado:false e somenteLeitura:true.");
       }
       if (auditoriaB46 && auditoriaB46.bloqueios && auditoriaB46.bloqueios.length) {
         bloqueios.push("B46 possui bloqueios: " + auditoriaB46.bloqueios.join(" "));
       }
 
-      if (!b47Implementada) bloqueios.push("B47 nao implementada.");
+      if (!b47Implementada) bloqueios.push("B47 não implementada.");
       if (!auditoriaB47 || auditoriaB47.executado !== false || auditoriaB47.somenteLeitura !== true) {
-        bloqueios.push("B47 nao retornou executado:false e somenteLeitura:true.");
+        bloqueios.push("B47 não retornou executado:false e somenteLeitura:true.");
       }
       if (auditoriaB47 && auditoriaB47.bloqueios && auditoriaB47.bloqueios.length) {
         bloqueios.push("B47 possui bloqueios: " + auditoriaB47.bloqueios.join(" "));
       }
 
-      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
-      if (!auditoriaFin.pastaDocumentosFinConfigurada) avisos.push("Pasta FIN nao configurada.");
+      if (!auditoriaFin.dbFinIdConfigurado) bloqueios.push("DB_FIN_ID não configurado.");
+      if (!auditoriaFin.pastaDocumentosFinConfigurada) avisos.push("Pasta FIN não configurada.");
       if (auditoriaFin.bloqueios && auditoriaFin.bloqueios.length) {
         bloqueios.push.apply(bloqueios, auditoriaFin.bloqueios);
       }
@@ -2322,13 +2365,13 @@ const SGO_FIN = (() => {
       const preValidacaoExtratoOk = typeof finPreviewExtratoFlashXlsxV1 === "function" &&
         typeof finDryRunLoteExtratoFlashV1 === "function" &&
         typeof finPreConfirmarLoteExtratoFlashV1 === "function";
-      if (!preValidacaoExtratoOk) bloqueios.push("Funcoes de pre-validacao de extrato Flash indisponiveis.");
+      if (!preValidacaoExtratoOk) bloqueios.push("Funcoes de pre-validação de extrato Flash indisponiveis.");
 
       if (!funcoes.previaConciliacao) bloqueios.push("Funcao de previa de conciliacao indisponivel.");
       if (!funcoes.relatoriosA4) bloqueios.push("Relatorios A4 indisponiveis.");
       if (!funcoes.dashboard) bloqueios.push("Dashboard Flash indisponivel.");
       if (!auditoriaFin.separacaoMassaTesteOperacaoReal) {
-        bloqueios.push("Separacao entre massa de teste e operacao real nao validada.");
+        bloqueios.push("Separacao entre massa de teste e operacao real não validada.");
       }
 
       const abasInfo = auditoriaFin.abasFinPrincipais || {};
@@ -2376,7 +2419,7 @@ const SGO_FIN = (() => {
           escopoPermitido: [
             "Cadastro controlado de 1 cartao",
             "Termo assinado",
-            "1 a 5 lancamentos reais acompanhados",
+            "1 a 5 lançamentos reais acompanhados",
             "Conferencia diaria pelo financeiro",
             "Relatorio A4 de conferencia"
           ],
@@ -2399,20 +2442,20 @@ const SGO_FIN = (() => {
         ],
         checklistAntesDoPilotoReal: [
           "Colaborador piloto definido",
-          "Cartao real identificado",
+          "Cartão real identificado",
           "Termo assinado",
           "Financeiro responsavel definido",
           "Saldo/limite conferido fora do sistema",
           "Canal de suporte definido",
-          "Primeiro lancamento acompanhado",
+          "Primeiro lançamento acompanhado",
           "Relatorio A4 revisado",
           "Dashboard conferido",
           "Plano de reversao definido"
         ],
         planoReversao: [
           "Pausar piloto",
-          "Bloquear novos lancamentos do piloto, se necessario",
-          "Conferir manualmente gastos ja feitos",
+          "Bloquear novos lançamentos do piloto, se necessario",
+          "Conferir manualmente gastos já feitos",
           "Exportar relatorio A4",
           "Registrar divergencias",
           "Nao expandir para outros colaboradores ate correcao"
@@ -2458,7 +2501,7 @@ const SGO_FIN = (() => {
       const props = PropertiesService.getScriptProperties();
       const pilotoEmail = finSafeText_(props.getProperty("FIN_PILOTO_FLASH_EMAIL"));
       if (!pilotoEmail) {
-        return finErro_("Envio de prestacao Flash nao habilitado. Configure FIN_PILOTO_FLASH_EMAIL.");
+        return finErro_("Envio de prestacao Flash não habilitado. Configure FIN_PILOTO_FLASH_EMAIL.");
       }
       const emailsPermitidos = pilotoEmail.split(",").map(function(e) { return e.trim().toLowerCase(); });
       const emailUsuario = finSafeText_(sessao.usuario || sessao.email || sessao.userId || "").toLowerCase();
@@ -2488,7 +2531,7 @@ const SGO_FIN = (() => {
       }) || null;
       const cartaoId = cartao ? finSafeText_(cartao.CARTAO_ID || cartao.ID) : "";
       if (!cartaoId) {
-        return finErro_("Nenhum cartao Flash ativo encontrado para este colaborador. Contate o financeiro.");
+        return finErro_("Nenhum cartão Flash ativo encontrado para este colaborador. Contate o financeiro.");
       }
 
       const umaHoraAtras = new Date(Date.now() - 3600000).toISOString();
@@ -2500,7 +2543,7 @@ const SGO_FIN = (() => {
                finSafeText_(r.CRIADO_EM) >= umaHoraAtras;
       });
       if (duplicata) {
-        return finErro_("Possivel envio duplicado detectado. Verifique seus lancamentos antes de reenviar.");
+        return finErro_("Possivel envio duplicado detectado. Verifique seus lançamentos antes de reenviar.");
       }
 
       const temOs = osNumero ? "SIM" : "NAO";
@@ -2583,13 +2626,13 @@ const SGO_FIN = (() => {
       const avisos = [];
 
       const funcaoExiste = typeof finFlashRegistrarPrestacaoMobilePilotoV1 === "function";
-      if (!funcaoExiste) bloqueios.push("finFlashRegistrarPrestacaoMobilePilotoV1 nao encontrada.");
+      if (!funcaoExiste) bloqueios.push("finFlashRegistrarPrestacaoMobilePilotoV1 não encontrada.");
 
       let dbConfigurado = false;
       try {
         const dbId = finSafeText_(PropertiesService.getScriptProperties().getProperty("DB_FIN_ID"));
         dbConfigurado = !!dbId;
-        if (!dbConfigurado) bloqueios.push("DB_FIN_ID nao configurado.");
+        if (!dbConfigurado) bloqueios.push("DB_FIN_ID não configurado.");
       } catch (eDb) {
         bloqueios.push("Erro ao verificar DB_FIN_ID: " + eDb.message);
       }
@@ -2599,7 +2642,7 @@ const SGO_FIN = (() => {
       try {
         pilotoEmail = finSafeText_(PropertiesService.getScriptProperties().getProperty("FIN_PILOTO_FLASH_EMAIL"));
         pilotoConfigurado = !!pilotoEmail;
-        if (!pilotoConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL nao configurado — funcao bloqueara ate configurar.");
+        if (!pilotoConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL não configurado — funcao bloqueara ate configurar.");
         else avisos.push("Piloto configurado: " + pilotoEmail);
       } catch (ePiloto) {
         bloqueios.push("Erro ao verificar FIN_PILOTO_FLASH_EMAIL: " + ePiloto.message);
@@ -2678,7 +2721,7 @@ const SGO_FIN = (() => {
       // 1. Banco principal
       const dbPrincipalId = finSafeText_(props.getProperty("DB_ID"));
       if (!dbPrincipalId) {
-        bloqueios.push("DB_ID (banco principal) nao configurado.");
+        bloqueios.push("DB_ID (banco principal) não configurado.");
         return Object.assign(base, { prontoParaGravacaoRealPiloto: false, bloqueios: bloqueios, avisos: avisos });
       }
 
@@ -2688,7 +2731,7 @@ const SGO_FIN = (() => {
         const ssPrincipal = SpreadsheetApp.openById(dbPrincipalId);
         const shUsers = ssPrincipal.getSheetByName("CAD_USUARIOS");
         if (!shUsers) {
-          bloqueios.push("Aba CAD_USUARIOS nao encontrada no banco principal.");
+          bloqueios.push("Aba CAD_USUARIOS não encontrada no banco principal.");
         } else {
           const lastRow = shUsers.getLastRow();
           const lastCol = shUsers.getLastColumn();
@@ -2723,7 +2766,7 @@ const SGO_FIN = (() => {
         bloqueios.push("Erro ao ler CAD_USUARIOS: " + eUsers.message);
       }
 
-      // 3. Verificar cartao ativo em FIN_CARTOES para cada candidato
+      // 3. Verificar cartão ativo em FIN_CARTOES para cada candidato
       const cartoesInfo = [];
       if (candidatos.length > 0) {
         try {
@@ -2753,9 +2796,9 @@ const SGO_FIN = (() => {
       const candidatosComCartao = cartoesInfo.filter(function(c) { return c.temCartaoAtivo; });
       let piloto = null;
       if (candidatosComCartao.length === 0 && bloqueios.length === 0) {
-        bloqueios.push("Nenhum usuario Thiago possui cartao Flash ATIVO em FIN_CARTOES. Cadastre o cartao antes de continuar.");
+        bloqueios.push("Nenhum usuario Thiago possui cartão Flash ATIVO em FIN_CARTOES. Cadastre o cartão antes de continuar.");
       } else if (candidatosComCartao.length > 1) {
-        avisos.push("Mais de um candidato com cartao ativo. Usando o primeiro encontrado.");
+        avisos.push("Mais de um candidato com cartão ativo. Usando o primeiro encontrado.");
         piloto = candidatosComCartao[0];
       } else if (candidatosComCartao.length === 1) {
         piloto = candidatosComCartao[0];
@@ -2771,7 +2814,7 @@ const SGO_FIN = (() => {
         avisos.push("FIN_PILOTO_FLASH_EMAIL configurado como: " + pilotoLoginConfigurado);
       } else {
         pilotoLoginConfigurado = finSafeText_(props.getProperty("FIN_PILOTO_FLASH_EMAIL"));
-        if (pilotoLoginConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL ja existia: " + pilotoLoginConfigurado);
+        if (pilotoLoginConfigurado) avisos.push("FIN_PILOTO_FLASH_EMAIL já existia: " + pilotoLoginConfigurado);
       }
 
       // 6. Rodar auditoria
@@ -2835,7 +2878,7 @@ const SGO_FIN = (() => {
         executado: false,
         autorizado: true,
         bloqueios: [],
-        avisos: ["Acao real ainda nao habilitada neste pacote."]
+        avisos: ["Acao real ainda não habilitada neste pacote."]
       };
     } catch (e) {
       return finErro_(e.message);
@@ -2862,7 +2905,7 @@ const SGO_FIN = (() => {
         executado: false,
         autorizado: true,
         bloqueios: [],
-        avisos: ["Acao real ainda nao habilitada neste pacote."]
+        avisos: ["Acao real ainda não habilitada neste pacote."]
       };
     } catch (e) {
       return finErro_(e.message);
@@ -2980,7 +3023,7 @@ const SGO_FIN = (() => {
   function finFlashPrestacaoContextoPublico_(token) {
     finDbOk_();
     const ctx = finFlashTokenPrestacao_(token);
-    if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+    if (!ctx) return finErro_("Token de prestacao Flash invalido ou não localizado.");
     const lancamentos = finFlashPrestacaoFiltroColaborador_(ctx, finAll_(ABAS.LANCAMENTOS));
     const pendencias = finFlashPrestacaoFiltroColaborador_(ctx, finAll_(ABAS.PENDENCIAS));
     const abertos = lancamentos.filter(function(r) {
@@ -3022,7 +3065,7 @@ const SGO_FIN = (() => {
     const folderId = finSafeText_(
       PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO") ||
       PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO_ID") ||
-      (typeof SGO_CFG !== "undefined" && SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_FINANCEIRO)
+      (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_FINANCEIRO)
     );
     const file = folderId ? DriveApp.getFolderById(folderId).createFile(blob) : DriveApp.createFile(blob);
     return {
@@ -3038,7 +3081,7 @@ const SGO_FIN = (() => {
     try {
       const p = payload || {};
       const ctx = finFlashTokenPrestacao_(p.token);
-      if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+      if (!ctx) return finErro_("Token de prestacao Flash invalido ou não localizado.");
       const valor = Math.abs(finSafeNumber_(p.valor || p.VALOR));
       const data = finSafeText_(p.dataGasto || p.DATA_GASTO);
       const finalidade = finSafeText_(p.finalidade || p.descricaoGasto || p.DESCRICAO_GASTO);
@@ -3149,16 +3192,16 @@ const SGO_FIN = (() => {
     try {
       const p = payload || {};
       const ctx = finFlashTokenPrestacao_(p.token);
-      if (!ctx) return finErro_("Token de prestacao Flash invalido ou nao localizado.");
+      if (!ctx) return finErro_("Token de prestacao Flash invalido ou não localizado.");
       const alvo = finSafeText_(p.pendenciaId || p.id);
       const texto = finSafeText_(p.esclarecimentoTexto || p.resolucaoTexto);
-      if (!alvo) return finErro_("Pendencia nao informada.");
+      if (!alvo) return finErro_("Pendencia não informada.");
       if (texto.length < 10) return finErro_("Esclarecimento deve ter pelo menos 10 caracteres.");
       const local = finFlashLocalizarPendencia_(alvo);
-      if (!local) return finErro_("Pendencia nao encontrada.");
+      if (!local) return finErro_("Pendencia não encontrada.");
       const pertence = (ctx.funcionarioId && finSafeText_(local.item.FUNCIONARIO_ID) === ctx.funcionarioId) ||
         (ctx.cartaoId && finSafeText_(local.item.CARTAO_ID) === ctx.cartaoId);
-      if (!pertence) return finErro_("Pendencia nao pertence ao token informado.");
+      if (!pertence) return finErro_("Pendencia não pertence ao token informado.");
       const agora = finNow_();
       finFlashAplicarPatchLinha_(local, {
         ESCLARECIMENTO_TEXTO: texto,
@@ -3186,7 +3229,7 @@ const SGO_FIN = (() => {
     const cartao = obterCartao(sessionId, cartaoId);
     if (!cartao || !cartao.ok) return cartao;
     const c = cartao.item || {};
-    return finOk_({ imprimivel: true, html: finFlashHtmlA4_("Comprovante de entrega do Cartao Flash", "Documento para impressao A4.", [["Cartao", c.APELIDO_CARTAO || c.CARTAO_ID], ["Final", c.NUMERO_FINAL_4], ["Colaborador", c.FUNCIONARIO_NOME], ["Status", c.STATUS_CARTAO], ["Gerado em", finNow_()]]) });
+    return finOk_({ imprimivel: true, html: finFlashHtmlA4_("Comprovante de entrega do Cartão Flash", "Documento para impressao A4.", [["Cartao", c.APELIDO_CARTAO || c.CARTAO_ID], ["Final", c.NUMERO_FINAL_4], ["Colaborador", c.FUNCIONARIO_NOME], ["Status", c.STATUS_CARTAO], ["Gerado em", finNow_()]]) });
   }
 
   function finFlashGerarRelatorioPrestacaoColaboradorA4V1(sessionId, filtros) {
@@ -3219,7 +3262,640 @@ const SGO_FIN = (() => {
     const r = finFlashObterDashboardGerencial(sessionId, filtros || {});
     if (!r || !r.ok) return r;
     const k = r.kpis || {};
-    return finOk_({ imprimivel: true, dadosTesteDetectados: !!r.dadosTesteDetectados, html: finFlashHtmlA4_("Relatorio gerencial Flash", "Resumo operacional. Massa modelo Rafael nao representa cobranca real.", [["Extratos", k.totalExtratos], ["Conciliados", k.totalConciliado], ["Pendencias abertas", k.totalPendenciasAbertas], ["Dados de teste/modelo", r.dadosTesteDetectados ? "SIM" : "NAO"], ["Gerado em", finNow_()]]) });
+    return finOk_({ imprimivel: true, dadosTesteDetectados: !!r.dadosTesteDetectados, html: finFlashHtmlA4_("Relatorio gerencial Flash", "Resumo operacional. Massa modelo Rafael não representa cobranca real.", [["Extratos", k.totalExtratos], ["Conciliados", k.totalConciliado], ["Pendencias abertas", k.totalPendenciasAbertas], ["Dados de teste/modelo", r.dadosTesteDetectados ? "SIM" : "NAO"], ["Gerado em", finNow_()]]) });
+  }
+
+  // ============================================================
+  // B54.4 — CONFERÊNCIA FINANCEIRA DA PRESTAÇÃO FLASH MOBILE
+  // ============================================================
+
+  function finFlashConferirPrestacaoMobilePilotoV1(sessionId, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "conferir prestacao Flash piloto");
+      finDbOk_();
+
+      const p = payload || {};
+      const lancamentoId = finSafeText_(p.lancamentoId || p.LANCAMENTO_ID);
+      const decisao      = finSafeUpper_(p.decisao     || p.DECISAO || "");
+      const motivo       = finSafeText_(p.motivo       || p.MOTIVO  || p.observacao || "");
+
+      const erros = [];
+      if (!lancamentoId) erros.push("lancamentoId obrigatorio.");
+      if (decisao !== "APROVAR" && decisao !== "REPROVAR")
+        erros.push("decisao invalida: use APROVAR ou REPROVAR.");
+      if (decisao === "REPROVAR" && motivo.length < 5)
+        erros.push("Reprovacao exige motivo (minimo 5 caracteres).");
+      if (erros.length) return finErro_(erros.join(" "));
+
+      const lanc = finAll_(ABAS.LANCAMENTOS).find(function(r) {
+        return finSafeText_(r.LANCAMENTO_ID) === lancamentoId;
+      }) || null;
+      if (!lanc) return finErro_("Lançamento não encontrado: " + lancamentoId);
+
+      if (finSafeUpper_(lanc.COMPROVANTE_OK) !== "SIM") {
+        return finErro_("Lançamento sem comprovante. Conferencia bloqueada ate o tecnico enviar o comprovante.");
+      }
+      const statusAtual = finSafeUpper_(lanc.STATUS_PRESTACAO);
+      if (statusAtual !== "ENVIADO") {
+        return finErro_("Status não permite conferencia: " + statusAtual + ". Esperado: ENVIADO.");
+      }
+
+      const u       = finUsuario_(sessao);
+      const agora   = finNow_();
+      const novoStatus = decisao === "APROVAR" ? "APROVADO_FINANCEIRO" : "REPROVADO_FINANCEIRO";
+
+      const patch = {
+        STATUS_PRESTACAO : novoStatus,
+        DATA_APROVACAO   : agora,
+        APROVADO_POR     : u.nome || u.id,
+        MOTIVO_REJEICAO  : decisao === "REPROVAR" ? motivo : "",
+        ATUALIZADO_EM    : agora,
+        ATUALIZADO_POR   : "CONFERENCIA_FINANCEIRA_B54_4"
+      };
+      finUpdate_(ABAS.LANCAMENTOS, lanc.ID, patch);
+
+      finLog_(sessao, "CONFERENCIA_FINANCEIRA_FLASH_B54_4", "LANCAMENTO", lancamentoId,
+        { STATUS_PRESTACAO: statusAtual },
+        { STATUS_PRESTACAO: novoStatus, APROVADO_POR: patch.APROVADO_POR },
+        "OK",
+        "Prestacao Flash " + decisao + ". Lancamento: " + lancamentoId +
+          (motivo ? " | Motivo: " + motivo : ""));
+
+      return finOk_({
+        executado         : true,
+        lancamentoId      : lancamentoId,
+        decisao           : decisao,
+        statusAnterior    : statusAtual,
+        statusAtualizado  : novoStatus,
+        conferidoEm       : agora,
+        conferidoPor      : patch.APROVADO_POR,
+        motivo            : motivo || null,
+        avisos            : decisao === "APROVAR"
+          ? ["Prestacao aprovada pelo financeiro. Aguardando conciliacao."]
+          : ["Prestacao reprovada. Tecnico sera notificado na proxima etapa."],
+        origem            : "CONFERENCIA_FINANCEIRA_B54_4"
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
+  // B54.5 — LISTAR PRESTAÇÕES FLASH MOBILE (READ-ONLY FINANCEIRO)
+  // ============================================================
+
+  function finFlashListarPrestacoesMobileFinanceiroV1(sessionId, filtros) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "listar prestacoes Flash mobile");
+      finDbOk_();
+
+      const f            = filtros || {};
+      const statusFiltro = finSafeUpper_(f.status || f.STATUS || "");
+
+      const todos  = finAll_(ABAS.LANCAMENTOS);
+      const mobile = todos.filter(function(r) {
+        return finSafeText_(r.CRIADO_POR).indexOf("MOBILE_CAMPO_PILOTO") >= 0;
+      });
+
+      var kpis = {
+        total                : mobile.length,
+        pendenteComprovante  : 0,
+        aguardandoConferencia: 0,
+        aprovadas            : 0,
+        reprovadas           : 0,
+        totalValor           : 0
+      };
+      mobile.forEach(function(r) {
+        var s = finSafeUpper_(r.STATUS_PRESTACAO);
+        kpis.totalValor += finSafeNumber_(r.VALOR);
+        if (s === "PENDENTE_COMPROVANTE")                        kpis.pendenteComprovante++;
+        if (s === "ENVIADO")                                     kpis.aguardandoConferencia++;
+        if (s === "APROVADO_FINANCEIRO" || s === "APROVADO")     kpis.aprovadas++;
+        if (s === "REPROVADO_FINANCEIRO" || s === "REPROVADO")   kpis.reprovadas++;
+      });
+
+      const lista = statusFiltro
+        ? mobile.filter(function(r) { return finSafeUpper_(r.STATUS_PRESTACAO) === statusFiltro; })
+        : mobile;
+
+      const itens = lista.map(function(r) {
+        return {
+          lancamentoId      : finSafeText_(r.LANCAMENTO_ID),
+          id                : finSafeText_(r.ID),
+          funcionarioNome   : finSafeText_(r.FUNCIONARIO_NOME),
+          funcionarioId     : finSafeText_(r.FUNCIONARIO_ID),
+          cartaoId          : finSafeText_(r.CARTAO_ID),
+          valor             : finSafeNumber_(r.VALOR),
+          dataGasto         : finSafeText_(r.DATA_GASTO),
+          descricaoGasto    : finSafeText_(r.DESCRICAO_GASTO || r.FINALIDADE),
+          osNumero          : finSafeText_(r.OS_NUMERO),
+          observacao        : finSafeText_(r.OBSERVACAO),
+          statusPrestacao   : finSafeText_(r.STATUS_PRESTACAO),
+          comprovanteOk     : finSafeUpper_(r.COMPROVANTE_OK),
+          comprovanteFileId : finSafeText_(r.COMPROVANTE_FILE_ID),
+          comprovanteLink   : finSafeText_(r.COMPROVANTE_LINK),
+          tipoComprovante   : finSafeText_(r.TIPO_COMPROVANTE),
+          dataAprovacao     : finSafeText_(r.DATA_APROVACAO),
+          aprovadoPor       : finSafeText_(r.APROVADO_POR),
+          motivoRejeicao    : finSafeText_(r.MOTIVO_REJEICAO),
+          criadoEm          : finSafeText_(r.CRIADO_EM),
+          criadoPor         : finSafeText_(r.CRIADO_POR),
+          atualizadoPor     : finSafeText_(r.ATUALIZADO_POR)
+        };
+      });
+
+      return finOk_({
+        kpis   : kpis,
+        total  : itens.length,
+        filtro : statusFiltro || "TODOS",
+        itens  : itens,
+        origem : "B54_5_VISAO_FINANCEIRA"
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
+  // B54.3 — ANEXAR COMPROVANTE FLASH MOBILE PILOTO
+  // ============================================================
+
+  function finFlashAnexarComprovanteMobilePilotoV1(sessionId, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "anexar comprovante Flash piloto mobile");
+      finDbOk_();
+
+      const props = PropertiesService.getScriptProperties();
+      const pilotoEmail = finSafeText_(props.getProperty("FIN_PILOTO_FLASH_EMAIL"));
+      if (!pilotoEmail) {
+        return finErro_("Envio de comprovante Flash não habilitado. Configure FIN_PILOTO_FLASH_EMAIL.");
+      }
+      const emailsPermitidos = pilotoEmail.split(",").map(function(e) { return e.trim().toLowerCase(); });
+      const emailUsuario = finSafeText_(sessao.usuario || sessao.email || sessao.userId || "").toLowerCase();
+      if (!emailUsuario || emailsPermitidos.indexOf(emailUsuario) < 0) {
+        return finErro_("Anexar comprovante Flash restrito ao piloto autorizado.");
+      }
+
+      const p = payload || {};
+      const lancamentoId = finSafeText_(p.lancamentoId || p.LANCAMENTO_ID);
+      const mimeType     = finSafeText_(p.mimeType     || p.MIME_TYPE    || "application/octet-stream");
+      const base64Raw    = finSafeText_(p.base64       || p.BASE64       || p.dataUrl || "");
+
+      const erros = [];
+      if (!lancamentoId) erros.push("lancamentoId obrigatorio.");
+      if (!base64Raw)    erros.push("base64 do arquivo obrigatorio.");
+      const mimesPermitidos = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+      if (mimeType && mimesPermitidos.indexOf(mimeType.toLowerCase()) < 0) {
+        erros.push("Tipo não permitido: " + mimeType + ". Permitidos: JPEG, PNG, PDF.");
+      }
+      if (erros.length) return finErro_(erros.join(" "));
+
+      const base64Clean = base64Raw.indexOf(",") >= 0 ? base64Raw.split(",").pop() : base64Raw;
+      let bytes;
+      try {
+        bytes = Utilities.base64Decode(base64Clean);
+      } catch (eB) {
+        return finErro_("Arquivo invalido: falha ao decodificar base64. " + eB.message);
+      }
+      const LIMITE_BYTES = 5 * 1024 * 1024;
+      if (bytes.length > LIMITE_BYTES) {
+        return finErro_("Arquivo muito grande: " + Math.round(bytes.length / 1024) + " KB. Limite: 5120 KB.");
+      }
+
+      const u = finUsuario_(sessao);
+      const lanc = finAll_(ABAS.LANCAMENTOS).find(function(r) {
+        return finSafeText_(r.LANCAMENTO_ID) === lancamentoId;
+      }) || null;
+      if (!lanc) return finErro_("Lançamento não encontrado: " + lancamentoId);
+      if (finSafeText_(lanc.FUNCIONARIO_ID) !== u.id) {
+        return finErro_("Lançamento não pertence ao colaborador autenticado.");
+      }
+
+      const cartaoPiloto = finAll_(ABAS.CARTOES).find(function(c) {
+        return finSafeText_(c.FUNCIONARIO_ID) === u.id && finSafeUpper_(c.STATUS_CARTAO) === "ATIVO";
+      });
+      const cartaoPilotoId = cartaoPiloto ? finSafeText_(cartaoPiloto.CARTAO_ID || cartaoPiloto.ID) : "";
+      if (!cartaoPilotoId || finSafeText_(lanc.CARTAO_ID) !== cartaoPilotoId) {
+        return finErro_("Lançamento não pertence ao cartão Flash ativo do colaborador.");
+      }
+
+      const statusAtual = finSafeUpper_(lanc.STATUS_PRESTACAO);
+      if (statusAtual !== "PENDENTE_COMPROVANTE" && statusAtual !== "REPROVADO") {
+        return finErro_("Status não permite anexar comprovante: " + statusAtual + ". Esperado: PENDENTE_COMPROVANTE.");
+      }
+
+      const folderId = finSafeText_(
+        props.getProperty("FOLDER_FINANCEIRO") ||
+        props.getProperty("FOLDER_FINANCEIRO_ID") ||
+        (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_FINANCEIRO)
+      );
+      if (!folderId) {
+        return finErro_(
+          "Pasta do Financeiro não configurada. Configure FOLDER_FINANCEIRO em ScriptProperties. " +
+          "Execute o provisionamento financeiro para criar a pasta."
+        );
+      }
+
+      const extMap = { "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "application/pdf": "pdf" };
+      const ext = extMap[mimeType.toLowerCase()] || "bin";
+      const stamp = Utilities.formatDate(new Date(), "America/Sao_Paulo", "yyyyMMdd_HHmmss");
+      const loginSafe = emailUsuario.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 20);
+      const nomeArquivoFinal = "FLASH_" + lancamentoId + "_" + stamp + "_" + loginSafe + "." + ext;
+
+      const blob = Utilities.newBlob(bytes, mimeType, nomeArquivoFinal);
+      let driveFile;
+      try {
+        driveFile = DriveApp.getFolderById(folderId).createFile(blob);
+      } catch (eDrive) {
+        return finErro_("Falha ao salvar no Drive. Verifique permissoes de FOLDER_FINANCEIRO. Erro: " + eDrive.message);
+      }
+      const fileId   = driveFile.getId();
+      const fileLink = driveFile.getUrl();
+
+      const agora = finNow_();
+      finUpdate_(ABAS.LANCAMENTOS, lanc.ID, {
+        COMPROVANTE_OK      : "SIM",
+        COMPROVANTE_FILE_ID : fileId,
+        COMPROVANTE_LINK    : fileLink,
+        TIPO_COMPROVANTE    : mimeType,
+        STATUS_PRESTACAO    : STATUS_PRESTACAO.ENVIADO,
+        ATUALIZADO_EM       : agora,
+        ATUALIZADO_POR      : "MOBILE_CAMPO_PILOTO_B54_3"
+      });
+
+      finInsert_(ABAS.ANEXOS, {
+        ID            : finUuid_(),
+        ANEXO_ID      : finGerarId_("ANX"),
+        LANCAMENTO_ID : lancamentoId,
+        CARTAO_ID     : cartaoPilotoId,
+        FUNCIONARIO_ID: u.id,
+        TIPO_ANEXO    : "COMPROVANTE_PRESTACAO",
+        NOME_ARQUIVO  : nomeArquivoFinal,
+        FILE_ID       : fileId,
+        LINK_ARQUIVO  : fileLink,
+        MIME_TYPE     : mimeType,
+        TAMANHO_BYTES : bytes.length,
+        DESCRICAO     : "Comprovante Flash piloto B54.3. Lancamento: " + lancamentoId,
+        ORIGEM        : "MOBILE_CAMPO_PILOTO_B54_3",
+        DATA_UPLOAD   : agora,
+        STATUS        : "ATIVO",
+        CRIADO_EM     : agora,
+        CRIADO_POR    : "MOBILE_CAMPO_PILOTO_B54_3"
+      });
+
+      finLog_(sessao, "COMPROVANTE_FLASH_MOBILE_PILOTO_B54_3", "LANCAMENTO", lancamentoId,
+        { STATUS_PRESTACAO: statusAtual },
+        { STATUS_PRESTACAO: "ENVIADO", COMPROVANTE_FILE_ID: fileId },
+        "OK", "Comprovante anexado: " + nomeArquivoFinal + " (" + bytes.length + " bytes).");
+
+      return finOk_({
+        executado         : true,
+        lancamentoId      : lancamentoId,
+        comprovanteFileId : fileId,
+        comprovanteLink   : fileLink,
+        nomeArquivo       : nomeArquivoFinal,
+        tamanhoBytes      : bytes.length,
+        mimeType          : mimeType,
+        statusAnterior    : statusAtual,
+        statusAtualizado  : STATUS_PRESTACAO.ENVIADO,
+        avisos            : ["Comprovante recebido. Prestacao aguardando conferencia financeira."],
+        origem            : "MOBILE_CAMPO_PILOTO_B54_3"
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
+  // FLASH.3 — Cartoes Profissional (metodos internos do IIFE)
+  // ============================================================
+
+  function inativarCartao(sessionId, id, motivo) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, ['ADMIN', 'DIRETORIA', 'GESTOR', 'FINANCEIRO'], 'inativar cartao');
+      if (!id) return finErro_('ID do cartao nao informado.');
+      if (!motivo || !String(motivo).trim()) return finErro_('Motivo da inativacao e obrigatorio.');
+      const antes = finGetById_(ABAS.CARTOES, id);
+      if (!antes) return finErro_('Cartao nao encontrado.');
+      const sc = (antes.STATUS_CARTAO || '').toUpperCase();
+      if (sc === 'INATIVO' || sc === 'CANCELADO') return finErro_('Cartao ja esta inativo.');
+      const u = finUsuario_(sessao);
+      const agora = finNow_();
+      const patch = {
+        STATUS_CARTAO  : 'INATIVO',
+        MOTIVO_BLOQUEIO: String(motivo).trim(),
+        BLOQUEADO_POR  : u.nome,
+        DATA_BLOQUEIO  : agora,
+        ATUALIZADO_EM  : agora,
+        ATUALIZADO_POR : u.nome
+      };
+      const depois = finUpdate_(ABAS.CARTOES, id, patch);
+      finLog_(sessao, 'CARTAO_INATIVADO', 'CARTAO', antes.CARTAO_ID || id, antes, depois, 'OK',
+        'Cartao inativado: ' + String(motivo).trim());
+      return finOk_({
+        message             : 'Cartao inativado com sucesso. Historico preservado.',
+        cartaoInativado     : true,
+        historicoPreservado : true,
+        logRegistrado       : true
+      });
+    } catch (e) { return finErro_(e.message); }
+  }
+
+  function alterarResponsavelCartao(sessionId, id, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, ['ADMIN', 'DIRETORIA', 'GESTOR', 'FINANCEIRO'], 'alterar responsavel cartao');
+      if (!id) return finErro_('ID do cartao nao informado.');
+      if (!payload || !payload.FUNCIONARIO_NOME) return finErro_('Nome do novo responsavel e obrigatorio.');
+      const antes = finGetById_(ABAS.CARTOES, id);
+      if (!antes) return finErro_('Cartao nao encontrado.');
+      const sc = (antes.STATUS_CARTAO || '').toUpperCase();
+      if (sc === 'INATIVO' || sc === 'CANCELADO') {
+        return finErro_('Nao e possivel alterar responsavel de cartao inativo.');
+      }
+      const u = finUsuario_(sessao);
+      const agora = finNow_();
+      const patch = {
+        FUNCIONARIO_ID       : String(payload.FUNCIONARIO_ID       || '').trim(),
+        FUNCIONARIO_NOME     : String(payload.FUNCIONARIO_NOME     || '').trim(),
+        FUNCIONARIO_EMAIL    : String(payload.FUNCIONARIO_EMAIL    || '').trim(),
+        FUNCIONARIO_TELEFONE : String(payload.FUNCIONARIO_TELEFONE || '').trim(),
+        ATUALIZADO_EM        : agora,
+        ATUALIZADO_POR       : u.nome
+      };
+      let termoMarcadoPendente = false;
+      if (antes.TERMO_ASSINADO === 'SIM' &&
+          (antes.FUNCIONARIO_ID || '') !== (patch.FUNCIONARIO_ID || '')) {
+        patch.TERMO_ASSINADO = 'NAO';
+        patch.TERMO_ID = '';
+        termoMarcadoPendente = true;
+      }
+      const depois = finUpdate_(ABAS.CARTOES, id, patch);
+      finLog_(sessao, 'CARTAO_RESPONSAVEL_ALTERADO', 'CARTAO', antes.CARTAO_ID || id, antes, depois, 'OK',
+        'Responsavel alterado de ' + (antes.FUNCIONARIO_NOME || '-') + ' para ' + patch.FUNCIONARIO_NOME);
+      return finOk_({
+        message              : 'Responsavel alterado. Log registrado.',
+        logRegistrado        : true,
+        termoMarcadoPendente : termoMarcadoPendente
+      });
+    } catch (e) { return finErro_(e.message); }
+  }
+
+  function obterHistoricoCartao(sessionId, cartaoRowId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, ['ADMIN', 'DIRETORIA', 'GESTOR', 'FINANCEIRO'], 'obter historico cartao');
+      if (!cartaoRowId) return finErro_('ID do cartao nao informado.');
+      const cartao = finGetById_(ABAS.CARTOES, cartaoRowId);
+      const cartaoIdReal = (cartao && cartao.CARTAO_ID) ? cartao.CARTAO_ID : cartaoRowId;
+      const todos = finAll_(ABAS.LOGS);
+      const logs = todos.filter(function(l) {
+        return l.ENTIDADE_ID === cartaoIdReal || l.ENTIDADE_ID === cartaoRowId;
+      });
+      logs.sort(function(a, b) {
+        const da = String(a.DATA_HORA || a.CRIADO_EM || '');
+        const db = String(b.DATA_HORA || b.CRIADO_EM || '');
+        return db < da ? -1 : db > da ? 1 : 0;
+      });
+      return finOk_({ items: logs.slice(0, 100), total: logs.length, cartaoId: cartaoIdReal });
+    } catch (e) { return finErro_(e.message); }
+  }
+
+  function obterPendenciasCartao(sessionId, cartaoRowId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, ['ADMIN', 'DIRETORIA', 'GESTOR', 'FINANCEIRO'], 'obter pendencias cartao');
+      if (!cartaoRowId) return finErro_('ID do cartao nao informado.');
+      const cartao = finGetById_(ABAS.CARTOES, cartaoRowId);
+      const cartaoIdReal = (cartao && cartao.CARTAO_ID) ? cartao.CARTAO_ID : cartaoRowId;
+      const pend = finAll_(ABAS.PENDENCIAS).filter(function(p) {
+        return p.CARTAO_ID === cartaoIdReal || p.CARTAO_ID === cartaoRowId;
+      });
+      pend.sort(function(a, b) {
+        const sa = (a.STATUS || '').toUpperCase();
+        const sb = (b.STATUS || '').toUpperCase();
+        if (sa === 'ATIVO' && sb !== 'ATIVO') return -1;
+        if (sb === 'ATIVO' && sa !== 'ATIVO') return 1;
+        return 0;
+      });
+      return finOk_({ items: pend, total: pend.length, cartaoId: cartaoIdReal });
+    } catch (e) { return finErro_(e.message); }
+  }
+
+  // FLASH.4.3 — Backend read-only para tela de Recargas
+  function listarRecargasV1(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "listar recargas v1");
+      finDbOk_();
+      const todosCartoes  = finAll_(ABAS.CARTOES);
+      const todasRecargas = finAll_(ABAS.RECARGAS);
+      var ativos    = 0, inativos = 0, pendentes = 0;
+      var cartoesElegiveis = [];
+      todosCartoes.forEach(function(c) {
+        var st = finSafeUpper_(c.STATUS_CARTAO);
+        if      (st === 'ATIVO')              { ativos++;    cartoesElegiveis.push(c); }
+        else if (st === 'INATIVO'   || st === 'CANCELADO' || st === 'DEVOLVIDO') { inativos++; }
+        else                                  { pendentes++; }
+      });
+      var totalValor = 0;
+      todasRecargas.forEach(function(r) {
+        if (finSafeUpper_(r.STATUS) !== STATUS_RECARGA.CANCELADA) {
+          totalValor += finSafeNumber_(r.VALOR);
+        }
+      });
+      var bloqueada  = ativos === 0;
+      var motivoBloq = bloqueada
+        ? 'Nenhum cartão ativo cadastrado. Cadastre manualmente um cartão real antes de registrar recargas.'
+        : '';
+      var listaOrdenada = todasRecargas.slice().sort(function(a, b) {
+        return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || ''));
+      });
+      return finOk_({
+        kpis: {
+          totalRecargas      : todasRecargas.length,
+          totalValorRecargas : totalValor,
+          totalCartoesAtivos : ativos,
+          totalCartoesInativos: inativos,
+          totalCartoesPendentes: pendentes,
+          recargaRealBloqueada: bloqueada,
+          motivoBloqueio     : motivoBloq
+        },
+        recargas         : listaOrdenada,
+        cartoesElegiveis : cartoesElegiveis,
+        recargaRealBloqueada: bloqueada,
+        motivoBloqueio   : motivoBloq
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
+  // FLASH.4.6B — Cadastro Operacional via Interface
+  // ============================================================
+
+  function flash46PrepararCartaoRealUI(sessionId, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "preparar cadastro cartao real");
+      finDbOk_();
+
+      const p        = payload || {};
+      var bloqueios  = [], avisos = [];
+      const funcId   = finSafeText_(p.FUNCIONARIO_ID);
+      const funcNome = finSafeText_(p.FUNCIONARIO_NOME);
+      const final4   = finSafeText_(p.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+      const apelido  = finSafeText_(p.APELIDO_CARTAO);
+      const status   = finSafeUpper_(p.STATUS_CARTAO || "ATIVO");
+
+      // Campos obrigatórios
+      if (!funcId)   bloqueios.push("Funcionário (ID) obrigatório.");
+      if (!funcNome) bloqueios.push("Nome do funcionário obrigatório.");
+      if (!/^\d{4}$/.test(final4)) {
+        bloqueios.push("Final do cartão deve ter exatamente 4 dígitos numéricos. Informado: \"" + (p.NUMERO_FINAL_4 || "") + "\".");
+      }
+      if (!apelido)  bloqueios.push("Apelido do cartão obrigatório.");
+      if ([STATUS_CARTAO.ATIVO, STATUS_CARTAO.PENDENTE_ATIVACAO].indexOf(status) < 0) {
+        bloqueios.push("Status inválido: \"" + status + "\". Use ATIVO ou PENDENTE_ATIVACAO.");
+      }
+
+      // Proteger piloto FLASH44
+      if (funcId === "PILOTO_FLASH44") {
+        bloqueios.push("FUNCIONARIO_ID \"PILOTO_FLASH44\" reservado para o cartão piloto. Use um ID real.");
+      }
+      if (apelido.indexOf("PILOTO_FLASH44_RECARGA_CONTROLADA") >= 0) {
+        bloqueios.push("Apelido não pode coincidir com o cartão piloto FLASH44.");
+      }
+      if (final4 === "4400") {
+        bloqueios.push("Final 4400 pertence ao cartão piloto FLASH44. Use um final diferente.");
+      }
+
+      // Verificar duplicidade ao vivo
+      var dupFunc = false, dupFinal4 = false;
+      var dupFuncCartaoId = "", dupFinal4CartaoId = "";
+      const inativados = ["INATIVO", "CANCELADO", "DEVOLVIDO"];
+      if (bloqueios.length === 0 && (funcId || final4)) {
+        const todosCartoes = finAll_(ABAS.CARTOES);
+        if (funcId) {
+          const dF = todosCartoes.find(function(c) {
+            return finSafeText_(c.FUNCIONARIO_ID) === funcId &&
+                   inativados.indexOf(finSafeUpper_(c.STATUS_CARTAO)) < 0;
+          });
+          if (dF) { dupFunc = true; dupFuncCartaoId = finSafeText_(dF.CARTAO_ID); }
+        }
+        if (final4) {
+          const dN = todosCartoes.find(function(c) {
+            return finSafeText_(c.NUMERO_FINAL_4 || "").replace(/\D/g, "") === final4 &&
+                   inativados.indexOf(finSafeUpper_(c.STATUS_CARTAO)) < 0;
+          });
+          if (dN) { dupFinal4 = true; dupFinal4CartaoId = finSafeText_(dN.CARTAO_ID); }
+        }
+        if (dupFunc)   bloqueios.push("Funcionário \"" + funcId + "\" já possui cartão ativo: " + dupFuncCartaoId + ".");
+        if (dupFinal4) bloqueios.push("Final \"" + final4 + "\" já em uso no cartão: " + dupFinal4CartaoId + ".");
+      }
+
+      if (bloqueios.length === 0) {
+        avisos.push("Payload válido. Nenhum dado alterado. Confirme para criar o cartão.");
+      }
+      return finOk_({
+        success                : bloqueios.length === 0,
+        ok                     : bloqueios.length === 0,
+        somenteLeitura         : true,
+        dadosAlterados         : false,
+        setupExecutado         : false,
+        prodAntigoAlterado     : false,
+        payloadValido          : bloqueios.length === 0,
+        funcionarioOk          : !!funcId && !!funcNome && !dupFunc,
+        final4Ok               : /^\d{4}$/.test(final4) && !dupFinal4,
+        duplicidadeFuncionario : dupFunc,
+        duplicidadeFinal4      : dupFinal4,
+        naoConfundePiloto      : funcId !== "PILOTO_FLASH44" && final4 !== "4400",
+        podeCriarCartaoReal    : bloqueios.length === 0,
+        bloqueios              : bloqueios,
+        avisos                 : avisos
+      });
+    } catch(e) { return finErro_(e.message); }
+  }
+
+  function flash46ExecutarCartaoRealUI(sessionId, payload) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "criar cartao real FLASH46");
+      finDbOk_();
+      if (!payload) return finErro_("Payload não informado.");
+
+      // Prévia interna obrigatória
+      const previa = flash46PrepararCartaoRealUI(sessionId, payload);
+      if (!previa.ok || !previa.podeCriarCartaoReal) {
+        return finErro_("Cadastro bloqueado: " + ((previa.bloqueios || []).join(" | ") || previa.message || ""));
+      }
+
+      // LockService — exatamente 1 cartão por execução
+      const lock = LockService.getScriptLock();
+      try { lock.waitLock(15000); }
+      catch(eLock) { return finErro_("Não foi possível obter lock: " + eLock.message); }
+
+      try {
+        // Re-validar ao vivo (dentro do lock)
+        const previaVivo = flash46PrepararCartaoRealUI(sessionId, payload);
+        if (!previaVivo.ok || !previaVivo.podeCriarCartaoReal) {
+          return finErro_("Bloqueado ao vivo: " + (previaVivo.bloqueios || []).join(" | "));
+        }
+
+        const u       = finUsuario_(sessao);
+        const agora   = finNow_();
+        const cartaoId = finGerarId_("REAL");
+        const final4  = finSafeText_(payload.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+        const obs     = (finSafeText_(payload.OBSERVACOES || "") || "Cadastro operacional FLASH.4.6") + " [FLASH46_OPERACIONAL]";
+
+        const registro = {
+          ID                   : finUuid_(),
+          CARTAO_ID            : cartaoId,
+          NUMERO_FINAL_4       : final4,
+          APELIDO_CARTAO       : finSafeText_(payload.APELIDO_CARTAO),
+          BANDEIRA             : finSafeText_(payload.BANDEIRA || "MASTERCARD").toUpperCase(),
+          TIPO_CARTAO          : finSafeText_(payload.TIPO_CARTAO || "CORPORATIVO").toUpperCase(),
+          FUNCIONARIO_ID       : finSafeText_(payload.FUNCIONARIO_ID),
+          FUNCIONARIO_NOME     : finSafeText_(payload.FUNCIONARIO_NOME),
+          FUNCIONARIO_EMAIL    : finSafeText_(payload.FUNCIONARIO_EMAIL || ""),
+          FUNCIONARIO_TELEFONE : finSafeText_(payload.FUNCIONARIO_TELEFONE || ""),
+          LIMITE_OPERACIONAL   : finSafeNumber_(payload.LIMITE_MENSAL),
+          LIMITE_TOTAL         : finSafeNumber_(payload.LIMITE_MENSAL),
+          STATUS_CARTAO        : finSafeText_(payload.STATUS_CARTAO || "ATIVO").toUpperCase(),
+          STATUS               : "ATIVO",
+          DATA_BLOQUEIO        : "",
+          MOTIVO_BLOQUEIO      : "",
+          BLOQUEADO_POR        : "",
+          TERMO_ASSINADO       : "NAO",
+          TERMO_ID             : "",
+          OBSERVACOES          : obs,
+          CRIADO_EM            : agora,
+          CRIADO_POR           : u.nome || u.email || "SISTEMA",
+          ATUALIZADO_EM        : agora,
+          ATUALIZADO_POR       : u.nome || u.email || "SISTEMA"
+        };
+
+        finInsert_(ABAS.CARTOES, registro);
+        finLog_(sessao, "CARTAO_CRIADO_FLASH46", "CARTAO", cartaoId, null, registro, "OK",
+          "Cartão real cadastrado via interface FLASH.4.6. Funcionário: " + registro.FUNCIONARIO_ID);
+
+        return finOk_({
+          cartaoRealCriado : true,
+          cartaoId         : cartaoId,
+          statusCartao     : registro.STATUS_CARTAO,
+          recargaCriada    : false,
+          liberacaoGeral   : false,
+          message          : "Cartão cadastrado com sucesso."
+        });
+      } finally {
+        try { lock.releaseLock(); } catch(_) {}
+      }
+    } catch(e) { return finErro_(e.message); }
   }
 
   // ============================================================
@@ -3274,18 +3950,31 @@ const SGO_FIN = (() => {
     PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR,
     LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA,
     finFlashRegistrarPrestacaoMobilePilotoV1,
+    finFlashAnexarComprovanteMobilePilotoV1,
+    finFlashConferirPrestacaoMobilePilotoV1,
+    finFlashListarPrestacoesMobileFinanceiroV1,
     AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR,
     CONFIGURAR_E_AUDITAR_PILOTO_B54_1,
     flashListarLotes,
     flashListarExtratos,
     flashListarPendencias,
-    flashListarConciliacoes
+    flashListarConciliacoes,
+    inativarCartao,
+    alterarResponsavelCartao,
+    obterHistoricoCartao,
+    obterPendenciasCartao,
+    listarRecargasV1,
+    flash46PrepararCartaoRealUI,
+    flash46ExecutarCartaoRealUI
   };
 })();
 
+// FLASH.4.2 — Sentinela de patches aplicados (lido por AUDITAR_FLASH42)
+var SGO_FIN_FLASH42_PATCHES = { validaStatusCartao: true, chaveIdempotencia: true };
+
 // ============================================================
 // WRAPPERS GLOBAIS
-// Definicoes apenas — nao executam automaticamente.
+// Definicoes apenas — não executam automaticamente.
 // ============================================================
 
 function finObterContexto(sId)                   { return SGO_FIN.obterContexto(sId); }
@@ -3334,11 +4023,15 @@ function VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR() { return SGO_FIN.VALIDACAO_HUMA
 function PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR() { return SGO_FIN.PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR(); }
 function LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA()   { return SGO_FIN.LIBERAR_PILOTO_REAL_FLASH_B48_BLOQUEADA(); }
 function finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload) { return SGO_FIN.finFlashRegistrarPrestacaoMobilePilotoV1(sessionId, payload); }
+function finFlashAnexarComprovanteMobilePilotoV1(sessionId, payload)  { return SGO_FIN.finFlashAnexarComprovanteMobilePilotoV1(sessionId, payload); }
+function finFlashConferirPrestacaoMobilePilotoV1(sessionId, payload)  { return SGO_FIN.finFlashConferirPrestacaoMobilePilotoV1(sessionId, payload); }
+function finFlashListarPrestacoesMobileFinanceiroV1(sessionId, filtros) { return SGO_FIN.finFlashListarPrestacoesMobileFinanceiroV1(sessionId, filtros); }
 function AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR() { return SGO_FIN.AUDITAR_PRESTACAO_FLASH_MOBILE_B54_SEM_GRAVAR(); }
 function CONFIGURAR_E_AUDITAR_PILOTO_B54_1() { return SGO_FIN.CONFIGURAR_E_AUDITAR_PILOTO_B54_1(); }
 function finFlashListarLotes(sId, filtros)         { return SGO_FIN.flashListarLotes(sId, filtros); }
 function finFlashListarExtratos(sId, filtros)      { return SGO_FIN.flashListarExtratos(sId, filtros); }
 function finFlashListarPendencias(sId, filtros)    { return SGO_FIN.flashListarPendencias(sId, filtros); }
+function flashListarPendencias(sId, filtros)       { return SGO_FIN.flashListarPendencias(sId, filtros); }
 function finFlashListarConciliacoes(sId, filtros)  { return SGO_FIN.flashListarConciliacoes(sId, filtros); }
 function finFlashObterResumoOperacionalCore_()     { return SGO_FIN.finFlashObterResumoOperacionalCore_(); }
 
@@ -3366,8 +4059,20 @@ function testarAuditoriaFlashMobileB54_SEM_GRAVAR() {
   return resultado;
 }
 
-function testarConfigurarAuditarPilotoB54_1() {
-  const resultado = CONFIGURAR_E_AUDITAR_PILOTO_B54_1();
-  Logger.log(JSON.stringify(resultado, null, 2));
-  return resultado;
-}
+// testarConfigurarAuditarPilotoB54_1 migrada para SGO_Fin_Setup.js (versao standalone B54.1_FIX)
+
+
+// ============================================================
+// FLASH.3 — Wrappers globais (delegam ao SGO_FIN IIFE)
+// ============================================================
+
+function finFlashListarRecargasV1(sId)                      { return SGO_FIN.listarRecargasV1(sId); }
+
+function finFlashInativarCartao(sId, id, motivo)           { return SGO_FIN.inativarCartao(sId, id, motivo); }
+function finFlashAlterarResponsavelCartao(sId, id, payload) { return SGO_FIN.alterarResponsavelCartao(sId, id, payload); }
+function finFlashObterHistoricoCartao(sId, cartaoRowId)    { return SGO_FIN.obterHistoricoCartao(sId, cartaoRowId); }
+function finFlashObterPendenciasCartao(sId, cartaoRowId)   { return SGO_FIN.obterPendenciasCartao(sId, cartaoRowId); }
+
+// FLASH.4.6B — Cadastro operacional via interface
+function FLASH46_PREPARAR_CADASTRO_CARTAO_REAL_UI_SEM_GRAVAR(sId, payload) { return SGO_FIN.flash46PrepararCartaoRealUI(sId, payload); }
+function FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO(sId, payload)  { return SGO_FIN.flash46ExecutarCartaoRealUI(sId, payload); }

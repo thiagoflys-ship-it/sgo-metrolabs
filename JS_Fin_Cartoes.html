@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cartoes Corporativos - SGO+</title>
+  <title>Cartões Corporativos - SGO+</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f4f6f9; color: #333; font-size: 14px; }
@@ -42,6 +42,14 @@
 
     .fin-tab-content { display: none; }
     .fin-tab-content.active { display: block; }
+
+    /* FLASH.4.3 — Recargas */
+    .fin-input-sm { padding: 6px 8px; font-size: 12px; }
+    .fin-rec-situacao { font-size: 14px; }
+    .fin-alert-warning { background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; padding: 10px 14px; border-radius: 6px; font-size: 13px; }
+    .fin-pill-processada { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .fin-pill-pendente   { background: #fff3cd; color: #856404; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .fin-pill-cancelada  { background: #f8d7da; color: #721c24; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 
     .fin-split { display: flex; height: calc(100vh - 258px); min-height: 380px; }
     .fin-split-left { width: 330px; min-width: 240px; background: #fff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; flex-shrink: 0; }
@@ -201,6 +209,27 @@
     .fin-tab-inner { padding: 18px 22px; }
     .fin8b-bloqueado-info { opacity: 0.55; }
     .fin8b-rodape { font-size: 11px; color: #aaa; margin-top: 8px; }
+
+    .fin-tab-admin { color: #b45309 !important; }
+    .fin-tab-admin.active { color: #92400e !important; border-bottom-color: #b45309 !important; }
+    .fin-tab-admin-sep { width: 1px; background: #dee2e6; margin: 8px 4px; flex-shrink: 0; display: inline-block; }
+    .fin-visao-atalhos { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 12px; }
+    .fin-visao-atalho { padding: 14px; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: border-color .15s,background .15s; text-align: center; font-family: inherit; }
+    .fin-visao-atalho:hover { border-color: #0366d6; background: #f0f5ff; }
+    .fin-visao-atalho .atalho-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+    .fin-visao-atalho strong { display: block; font-size: 12px; color: #0f2d52; }
+    .fin-placeholder-card { text-align: center; padding: 50px 24px; }
+    .fin-placeholder-card h3 { color: #0f2d52; font-size: 17px; margin-bottom: 8px; }
+    .fin-placeholder-card p { color: #666; font-size: 13px; line-height: 1.6; max-width: 500px; margin: 0 auto 14px; }
+    .fin-placeholder-status { display: inline-block; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 12px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+    .fin-placeholder-list { list-style: none; margin: 0; padding: 0; display: inline-flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+    .fin-placeholder-list li { background: #e7f0ff; color: #0366d6; border-radius: 12px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+    .fin-admin-header-box { background: rgba(180,83,9,0.08); border: 1px solid rgba(180,83,9,0.25); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; }
+    .fin-admin-header-box h2 { color: #92400e; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .fin-admin-header-box p { color: #78350f; font-size: 12px; line-height: 1.5; margin: 0; }
+    .fin-admin-panel { border: 1px solid rgba(180,83,9,0.25); background: rgba(255,252,248,1); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+    .fin-admin-panel h3 { color: #92400e; font-size: 14px; font-weight: 600; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(180,83,9,0.15); }
+    @media (max-width: 680px) { .fin-visao-atalhos { grid-template-columns: repeat(2,1fr); } }
   </style>
 </head>
 <body>
@@ -211,21 +240,22 @@
 <!-- Header -->
 <div class="fin-header">
   <div class="fin-header-title">
-    <h1>Cartoes Corporativos</h1>
-    <p>Controle e prestacao de contas do Cartao Flash</p>
+    <h1>Cartão Flash Corporativo</h1>
+    <p>Controle de cartões, despesas, recargas, prestações de contas e conciliações.</p>
   </div>
   <div class="fin-badges">
+    <button class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finCarregarTudo()">Atualizar</button>
     <button class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finAbrirManual()">Manual / Como usar</button>
-    <span class="fin-badge fin-badge-version">FIN.3</span>
-    <span class="fin-badge fin-badge-implantacao">Modulo em implantacao</span>
-    <span id="finBadgeDb" class="fin-badge fin-badge-db">DB_FIN_ID necessario</span>
+    <span id="finBadgeDb" class="fin-badge fin-badge-db">DB Verificando...</span>
+    <span class="fin-badge" style="background:rgba(40,167,69,0.18);color:#d4edda;border:1px solid rgba(40,167,69,0.3)">Operacional</span>
+    <button id="finBtnAdminTec" class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finMudarAba('admintec')" style="display:none;border-color:rgba(255,200,100,0.5);color:#f0c040">Admin técnico</button>
   </div>
 </div>
 
 <!-- KPIs -->
 <div class="fin-kpi-grid">
   <div class="fin-kpi">
-    <div class="fin-kpi-label">Total Cartoes</div>
+    <div class="fin-kpi-label">Total Cartões</div>
     <div class="fin-kpi-value" id="kpiTotal">-</div>
     <div class="fin-kpi-sub">cadastrados</div>
   </div>
@@ -237,282 +267,247 @@
   <div class="fin-kpi kpi-bloq">
     <div class="fin-kpi-label">Bloqueados</div>
     <div class="fin-kpi-value" id="kpiBloqueados">-</div>
-    <div class="fin-kpi-sub">revisao necessaria</div>
+    <div class="fin-kpi-sub">revisão necessária</div>
   </div>
   <div class="fin-kpi kpi-rec">
-    <div class="fin-kpi-label">Total Recarregado</div>
+    <div class="fin-kpi-label">Total em Recargas</div>
     <div class="fin-kpi-value" id="kpiRecargado">-</div>
-    <div class="fin-kpi-sub">no mes</div>
+    <div class="fin-kpi-sub">no mês</div>
   </div>
   <div class="fin-kpi kpi-lanc">
-    <div class="fin-kpi-label">Total Lancado</div>
+    <div class="fin-kpi-label">Total Lançado</div>
     <div class="fin-kpi-value" id="kpiLancado">-</div>
-    <div class="fin-kpi-sub">prestacoes</div>
+    <div class="fin-kpi-sub">prestações</div>
   </div>
   <div class="fin-kpi kpi-pend">
-    <div class="fin-kpi-label">Pendencias</div>
+    <div class="fin-kpi-label">Pendências</div>
     <div class="fin-kpi-value" id="kpiPendencias">-</div>
     <div class="fin-kpi-sub">sem comprovante</div>
   </div>
 </div>
 
 <!-- Tabs -->
-<div class="fin-tabs-bar">
-  <button class="fin-tab-btn active" onclick="finMudarAba('cartoes')">Cartoes</button>
+<div class="fin-tabs-bar" id="finTabsBar">
+  <button class="fin-tab-btn" onclick="finMudarAba('visaogeral')">Visão Geral</button>
+  <button class="fin-tab-btn active" onclick="finMudarAba('cartoes')">Cartões</button>
   <button class="fin-tab-btn" onclick="finMudarAba('recargas')">Recargas</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('lancamentos')">Lancamentos <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
-  <button class="fin-tab-btn" onclick="finMudarAba('flash')">Extratos Flash</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('pendencias'); finPend8BAbrirAba_()">Pendencias Flash</button>
-  <button class="fin-tab-btn placeholder" title="Disponivel em FIN.10 - Documentos Premium">Documentos (FIN.10)</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('despesas')">Despesas <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
+  <button class="fin-tab-btn" onclick="finMudarAba('extratos')">Extratos</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('conciliacao')">Conciliação</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('pendencias')">Pendências</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('prestacoes')">Prestações <span id="tabBadgePM" class="fin-tab-badge" style="display:none">0</span></button>
+  <button class="fin-tab-btn" onclick="finMudarAba('termos')">Termos e Documentos</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('relatorios')">Relatórios</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')">Cobranças e Alertas</button>
+  <span class="fin-tab-admin-sep"></span>
+  <button id="finTabBtnAdmin" class="fin-tab-btn fin-tab-admin" onclick="finMudarAba('admintec')" style="display:none" title="Área restrita — ADMIN/DIRETORIA">Admin técnico</button>
 </div>
 
 <!-- Tab: Cartoes -->
 <div id="tabCartoes" class="fin-tab-content active">
-  <div class="fin-split">
-    <div class="fin-split-left">
-      <div class="fin-list-head">
-        <input id="finBuscaCartao" class="fin-search" type="text" placeholder="Buscar por nome ou final..." oninput="finFiltrarCartoes()">
-        <div class="fin-filter-row">
-          <select id="finFiltroStatus" class="fin-filter-select" onchange="finFiltrarCartoes()">
-            <option value="">Todos os status</option>
-            <option value="ATIVO">Ativo</option>
-            <option value="BLOQUEADO_TEMPORARIO">Bloqueado</option>
-            <option value="PENDENTE_ATIVACAO">Pendente ativacao</option>
-            <option value="CANCELADO">Cancelado</option>
-            <option value="VENCIDO">Vencido</option>
-          </select>
-          <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finNovoCartao()">+ Novo</button>
-        </div>
-      </div>
-      <div id="finListaCartoes" class="fin-list-body">
-        <div class="fin-list-empty">Carregando...</div>
-      </div>
-      <div id="finListaRodape" class="fin-list-foot">0 cartoes</div>
-    </div>
-    <div id="finPainelDir" class="fin-split-right">
-      <div class="fin-empty-state">
-        <div class="fin-empty-state-icon">&#9646;</div>
-        <p>Selecione um cartao ou crie um novo</p>
-        <small>Use a lista ao lado para navegar</small>
-      </div>
-    </div>
-  </div>
-</div>
+  <div class="fin-tab-inner" style="padding:16px 24px">
 
-<!-- Tab: Recargas -->
-<div id="tabRecargas" class="fin-tab-content">
-  <div class="fin-tab-inner">
-    <div class="fin-card">
-      <h3>Recargas do Cartao</h3>
-      <div style="margin-bottom:12px">
-        <label class="fin-label">Selecionar Cartao</label>
-        <select id="finSelCartaoRec" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoRecChange()">
-          <option value="">Selecione um cartao...</option>
+    <!-- KPIs -->
+    <div id="finCartoesKPIs" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px">
+      <div class="fin-kpi"><div class="fin-kpi-label">Carregando...</div><div class="fin-kpi-value">—</div></div>
+    </div>
+
+    <!-- Alertas -->
+    <div id="finCartoesAlertas" style="display:none;margin-bottom:12px"></div>
+
+    <!-- Barra superior: filtros + ações -->
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="finBuscaCartao" class="fin-search" type="text" placeholder="Buscar por nome, final ou apelido..." oninput="finFiltrarCartoes()" style="width:230px">
+        <select id="finFiltroStatus" class="fin-filter-select" onchange="finFiltrarCartoes()">
+          <option value="">Todos os status</option>
+          <option value="ATIVO">Ativo</option>
+          <option value="BLOQUEADO_TEMPORARIO">Bloqueado</option>
+          <option value="PENDENTE_ATIVACAO">Aguardando ativação</option>
+          <option value="INATIVO">Inativo</option>
+          <option value="CANCELADO">Cancelado</option>
+        </select>
+        <select id="finFiltroTermo" class="fin-filter-select" onchange="finFiltrarCartoes()">
+          <option value="">Qualquer termo</option>
+          <option value="SIM">Termo assinado</option>
+          <option value="NAO">Termo pendente</option>
         </select>
       </div>
-      <div id="finTblRecargas"><div class="fin-list-empty">Selecione um cartao acima.</div></div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finNovoCartao()">+ Novo cartão</button>
+        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirCadastrarCartaoReal()" title="Cadastro controlado com validação prévia — FLASH.4.6">+ Cadastrar Cartão Real</button>
+        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarCartoes()">Atualizar</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finAbrirManual()">Ajuda</button>
+      </div>
     </div>
-    <div id="finFormRecCard" class="fin-card" style="display:none">
-      <h3>Nova Recarga</h3>
-      <input id="recCartaoId" type="hidden">
-      <div class="fin-grid2">
-        <div class="fin-fg">
-          <label class="fin-label">Cartao</label>
-          <input id="recCartaoNome" class="fin-input" type="text" readonly>
-        </div>
-        <div class="fin-fg">
-          <label class="fin-label">Valor (R$) *</label>
-          <input id="recValor" class="fin-input" type="number" min="0.01" step="0.01" placeholder="0.00">
-        </div>
-        <div class="fin-fg">
-          <label class="fin-label">Data da Recarga *</label>
-          <input id="recData" class="fin-input" type="date">
-        </div>
-        <div class="fin-fg">
-          <label class="fin-label">Tipo</label>
-          <select id="recTipo" class="fin-select">
-            <option value="CREDITO_MENSAL">Credito Mensal</option>
-            <option value="ADIANTAMENTO">Adiantamento</option>
-            <option value="REPOSICAO">Reposicao</option>
-            <option value="BONIFICACAO">Bonificacao</option>
-            <option value="OUTRO">Outro</option>
-          </select>
-        </div>
-        <div class="fin-fg full">
-          <label class="fin-label">Observacoes</label>
-          <textarea id="recObs" class="fin-textarea" placeholder="Observacoes (opcional)"></textarea>
-        </div>
-      </div>
-      <div class="fin-btn-row">
-        <button class="fin-btn fin-btn-success" onclick="finSalvarRecarga()">Registrar Recarga</button>
-        <button class="fin-btn fin-btn-secondary" onclick="finFecharFormRec()">Cancelar</button>
-      </div>
+
+    <!-- Tabela profissional -->
+    <div class="fin-table-wrap">
+      <table class="fin-table">
+        <thead>
+          <tr>
+            <th>Cartão</th>
+            <th>Final</th>
+            <th>Responsável</th>
+            <th>E-mail</th>
+            <th>Status</th>
+            <th>Termo</th>
+            <th>Pendências</th>
+            <th>Atualizado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="finCartoesTabela">
+          <tr><td colspan="9" style="text-align:center;color:#999;padding:32px">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="finCartoesRodape" style="font-size:12px;color:#999;padding:6px 2px">0 cartões</div>
+
+    <!-- Containers ocultos para compatibilidade com JS antigo -->
+    <div style="display:none" aria-hidden="true">
+      <div id="finListaCartoes"></div>
+      <div id="finListaRodape"></div>
+      <div id="finPainelDir"></div>
     </div>
   </div>
 </div>
 
-<!-- Tab: Lancamentos -->
+<!-- Tab: Recargas — FLASH.4.3 -->
+<div id="tabRecargas" class="fin-tab-content">
+  <div class="fin-tab-inner" style="padding:16px 24px">
+
+    <!-- Bloqueio: nenhum cartão ativo -->
+    <div id="finRecBloqueioAviso" class="fin-alert fin-alert-warning" style="display:none;margin-bottom:16px">
+      <strong>Nenhum cartão ativo cadastrado.</strong>
+      Cadastre manualmente um cartão real antes de registrar recargas.
+      Nova Recarga está bloqueada até que exista pelo menos um cartão com STATUS_CARTAO=ATIVO.
+    </div>
+
+    <!-- KPIs de Recargas -->
+    <div id="finRecKPIs" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      <div class="fin-kpi"><div class="fin-kpi-label">Total Recargas</div><div class="fin-kpi-value" id="finRecKpiTotal">-</div><div class="fin-kpi-sub">registros</div></div>
+      <div class="fin-kpi kpi-rec"><div class="fin-kpi-label">Valor Total</div><div class="fin-kpi-value" id="finRecKpiValor">-</div><div class="fin-kpi-sub">R$ acumulado</div></div>
+      <div class="fin-kpi kpi-ativo"><div class="fin-kpi-label">Cartões Ativos</div><div class="fin-kpi-value" id="finRecKpiAtivos">-</div><div class="fin-kpi-sub">disponíveis</div></div>
+      <div class="fin-kpi kpi-pend"><div class="fin-kpi-label">Situação</div><div class="fin-kpi-value fin-rec-situacao" id="finRecKpiSituacao">-</div><div class="fin-kpi-sub" id="finRecKpiSituacaoSub"></div></div>
+    </div>
+
+    <!-- Barra: filtros + ações -->
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="finRecBusca" class="fin-search" type="text" placeholder="Buscar por funcionário, ID recarga..." oninput="finFiltrarRecargasV43()" style="width:230px">
+        <select id="finRecFiltroStatus" class="fin-filter-select" onchange="finFiltrarRecargasV43()">
+          <option value="">Todos os status</option>
+          <option value="PROCESSADA">Processada</option>
+          <option value="PENDENTE">Pendente</option>
+          <option value="CANCELADA">Cancelada</option>
+        </select>
+        <input id="finRecFiltroDe" class="fin-input fin-input-sm" type="date" title="Data de" onchange="finFiltrarRecargasV43()" style="width:140px">
+        <span style="font-size:12px;color:#999">até</span>
+        <input id="finRecFiltroAte" class="fin-input fin-input-sm" type="date" title="Data até" onchange="finFiltrarRecargasV43()" style="width:140px">
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button id="finBtnNovaRecarga" class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirNovaRecarga()" disabled title="Bloqueado: nenhum cartão ativo">+ Nova Recarga</button>
+        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarRecargasV43()">Atualizar</button>
+      </div>
+    </div>
+
+    <!-- Tabela de Recargas -->
+    <div class="fin-table-wrap">
+      <table class="fin-table">
+        <thead>
+          <tr>
+            <th>ID Recarga</th>
+            <th>Cartão</th>
+            <th>Funcionário</th>
+            <th>Valor</th>
+            <th>Data</th>
+            <th>Origem</th>
+            <th>Status</th>
+            <th>Registrado por</th>
+          </tr>
+        </thead>
+        <tbody id="finRecTabela">
+          <tr><td colspan="8" style="text-align:center;color:#999;padding:32px">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="finRecRodape" style="font-size:12px;color:#999;padding:6px 2px">0 recargas</div>
+
+    <!-- Containers ocultos para compatibilidade -->
+    <div style="display:none" aria-hidden="true">
+      <div id="finSelCartaoRec"></div>
+      <div id="finTblRecargas"></div>
+      <div id="finFormRecCard"></div>
+      <input id="recCartaoId" type="hidden">
+      <input id="recCartaoNome" type="hidden">
+      <input id="recValor" type="hidden">
+      <input id="recData" type="hidden">
+      <select id="recTipo"></select>
+      <textarea id="recObs"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Despesas -->
 <div id="tabLancamentos" class="fin-tab-content">
   <div class="fin-tab-inner">
     <div class="fin-card">
+      <h3>Despesas por Cartão</h3>
+      <div style="margin-bottom:12px">
+        <label class="fin-label">Selecionar Cartão</label>
+        <select id="finSelCartaoLanc" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoLancChange()">
+          <option value="">Selecione um cartão...</option>
+        </select>
+      </div>
+      <div id="finTblLancamentos"><div class="fin-list-empty">Selecione um cartão para ver as despesas registradas.</div></div>
+    </div>
+    <div class="fin-card" style="margin-top:14px">
       <div class="fin-flash-upload-head">
         <div>
-          <h3>Importar extrato Flash <span class="fin-flash-badge">SEM GRAVAÇÃO</span></h3>
-          <p>Selecione o XLSX exportado do aplicativo Cartão Flash. Esta etapa gera apenas preview e não grava dados.</p>
-          <div class="fin-alert fin-alert-info">A IA não aprova sozinha. O financeiro sempre confirma.</div>
-          <div class="fin-alert fin-alert-warning">Preview somente: não grava banco, não concilia ainda e não aprova nada. A próxima fase será lote/importação controlada.</div>
+          <h3>Importar Extrato Flash</h3>
+          <p>Selecione o arquivo XLSX exportado do aplicativo Cartão Flash. O sistema gerará uma prévia sem alterar dados.</p>
+          <div class="fin-alert fin-alert-info" style="margin-top:8px">A importação real está disponível apenas para perfil autorizado após validação prévia do arquivo. A IA não decide sozinha — o financeiro sempre confirma.</div>
         </div>
       </div>
-      <div class="fin-flash-actions">
+      <div class="fin-flash-actions" style="margin-top:12px">
         <input id="finFlashXlsxFile" class="fin-input fin-flash-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Gerar preview</button>
-        <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline" type="button" onclick="finGerarDryRunExtratoFlash()">Pre-validar lote</button>
-        <button id="finFlashPreConfirmacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPreConfirmarLoteFlashTela_()" disabled>Pre-confirmar lote</button>
-        <button id="finFlashPayloadBtn" class="fin-btn fin-btn-outline" type="button" onclick="finPrepararPayloadImportacaoFlashTela_()" disabled>Preparar payload</button>
-        <button class="fin-btn fin-btn-secondary" type="button" disabled>Importacao real bloqueada</button>
-        <button class="fin-btn fin-btn-secondary" type="button" disabled>Importação definitiva será liberada na FIN.11.4</button>
+        <button id="finFlashPreviewBtn" class="fin-btn fin-btn-primary" type="button" onclick="finGerarPreviewExtratoFlash()">Pré-visualizar extrato</button>
+        <button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" disabled title="Importação real disponível apenas para perfil autorizado após validação do arquivo.">Confirmar importação</button>
       </div>
       <div id="finFlashPreviewStatus"></div>
       <div id="finFlashPreviewResumo"></div>
+      <div id="finFlashImportacaoBloqueadaResumo"></div>
+      <div id="finFlashPreviewTabela"></div>
+    </div>
+    <!-- Containers técnicos ocultos — usados pelo JS de validação (visíveis no Admin técnico) -->
+    <div style="display:none" aria-hidden="true">
       <div id="finFlashDryRunResumo"></div>
       <div id="finFlashPreConfirmacaoResumo"></div>
       <div id="finFlashPayloadResumo"></div>
-      <div id="finFlashImportacaoBloqueadaResumo" class="fin-alert fin-alert-warning">
-        <strong>Importacao real bloqueada.</strong>
-        Fluxo visual: 1. Gerar preview &gt; 2. Pre-validar lote &gt; 3. Pre-confirmar lote &gt; 4. Preparar payload &gt; 5. Importacao real bloqueada.
-        Requisitos para liberar: dry-run aprovado, pre-confirmacao aprovada, payload preparado, autorizacao tecnica explicita, auditoria antes/depois, decisao para depositos/recargas e decisao para prestacao pendente.
-        Producao nao foi alterada.
-      </div>
-      <div class="fin-card fin-flash-action-panel">
-        <h3>Decisoes operacionais da importacao Flash</h3>
-        <div class="fin-grid-3">
-          <div class="fin-fg">
-            <label class="fin-label">Depositos/recargas</label>
-            <select id="finFlashDecisaoDepositos" class="fin-select">
-              <option value="IMPORTAR_CREDITO_COMO_EXTRATO" selected>Importar credito como extrato</option>
-              <option value="IGNORAR_CREDITO_USAR_RECARGAS">Ignorar credito e usar recargas</option>
-              <option value="BLOQUEAR_CREDITOS">Bloquear creditos</option>
-            </select>
-          </div>
-          <div class="fin-fg">
-            <label class="fin-label">Prestacao pendente</label>
-            <select id="finFlashDecisaoPrestacao" class="fin-select">
-              <option value="IMPORTAR_COM_STATUS_PENDENTE" selected>Importar com status pendente</option>
-              <option value="BLOQUEAR_ATE_PRESTACAO">Bloquear ate prestacao</option>
-              <option value="IMPORTAR_E_GERAR_PENDENCIA_FUTURA">Importar e gerar pendencia futura</option>
-            </select>
-          </div>
-          <div class="fin-fg">
-            <label class="fin-label">Categoria nao inferida</label>
-            <select id="finFlashDecisaoCategoria" class="fin-select">
-              <option value="IMPORTAR_COM_CATEGORIA_OUTROS" selected>Importar como OUTROS_REVISAR</option>
-              <option value="BLOQUEAR_ATE_CLASSIFICAR">Bloquear ate classificar</option>
-            </select>
-          </div>
-        </div>
-        <div class="fin-alert fin-alert-info" style="margin-top:10px">Padroes seguros selecionados. Eles liberam apenas a preparacao tecnica do payload; importacao real segue bloqueada e exige autorizacao tecnica.</div>
-      </div>
-      <div class="fin-card fin-flash-action-panel">
-        <h3>Checklist de liberacao controlada</h3>
-        <div class="fin-flash-checklist-list">
-          <div class="fin-flash-checklist-item"><strong>Dry-run</strong><span>Aprovado antes de qualquer etapa real.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Pre-confirmacao</strong><span>Validacao segura do lote em /dev.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Payload</strong><span>Preparado e revisado sem gravacao.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Decisao operacional</strong><span>Depositos, recargas e prestacoes pendentes definidos.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Autorizacao tecnica</strong><span>Obrigatoria e explicita para etapa real futura.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Auditoria antes/depois</strong><span>Contagens registradas e comparadas.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Importacao real</strong><span>Continua bloqueada nesta tela.</span></div>
-          <div class="fin-flash-checklist-item"><strong>Producao</strong><span>Nao publicada nesta etapa.</span></div>
-        </div>
-        <div class="fin-btn-row" style="margin-top:12px">
-          <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Ver checklist de liberacao</button>
-        </div>
-      </div>
-      <div class="fin-card fin-flash-action-panel">
-        <h3>Autorizacao manual para teste real controlado em /dev</h3>
-        <div class="fin-alert fin-alert-warning"><strong>A tela NAO executa a importacao real.</strong> Este painel gera apenas o pacote tecnico para revisao manual, com baseline, hash, totais, frase obrigatoria e payload sugerido.</div>
-        <div class="fin-btn-row" style="margin-top:12px">
-          <button id="finFlashPacoteAutorizacaoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarPacoteAutorizacao_()">Gerar pacote de autorizacao</button>
-        </div>
-        <div id="finFlashPacoteAutorizacaoResumo"></div>
-      </div>
-      <div class="fin-card fin-flash-action-panel">
-        <h3>Payload limpo e auditoria final antes da execucao real</h3>
-        <div class="fin-alert fin-alert-warning"><strong>A tela NAO executa a importacao real.</strong> Use os botoes abaixo para gerar o payload completo copiavel e para auditar o estado final antes de qualquer acao manual autorizada em /dev.</div>
-        <div class="fin-btn-row" style="margin-top:12px;gap:8px">
-          <button id="finFlashPayloadLimpoBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarPayloadLimpo_()">Gerar payload limpo</button>
-          <button id="finFlashAuditarFinalBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashAuditarFinalAntesExecucao_()">Auditar final antes da execucao</button>
-        </div>
-        <div id="finFlashPayloadLimpoResumo"></div>
-      </div>
-      <div class="fin-card fin-flash-action-panel">
-        <h3>Checklist pos-execucao</h3>
-        <div class="fin-alert fin-alert-info">Roteiro somente leitura para conferir contagens, lote, duplicidade, dashboard, UI e evidencias depois de uma execucao manual autorizada em /dev.</div>
-        <div class="fin-btn-row" style="margin-top:12px">
-          <button id="finFlashChecklistPosBtn" class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistPosImportacao_()">Gerar checklist pos-execucao</button>
-        </div>
-        <div id="finFlashChecklistPosResumo"></div>
-      </div>
-      <div id="finFlashPreviewTabela"></div>
-    </div>
-    <div class="fin-card">
-      <h3>Lancamentos / Prestacao de Contas</h3>
-      <div style="margin-bottom:12px">
-        <label class="fin-label">Selecionar Cartao</label>
-        <select id="finSelCartaoLanc" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoLancChange()">
-          <option value="">Selecione um cartao...</option>
-        </select>
-      </div>
-      <div id="finTblLancamentos"><div class="fin-list-empty">Selecione um cartao acima.</div></div>
+      <div id="finFlashPayloadLimpoResumo"></div>
+      <div id="finFlashPacoteAutorizacaoResumo"></div>
+      <div id="finFlashChecklistPosResumo"></div>
     </div>
   </div>
 </div>
 
-<!-- Tab: Extratos Flash -->
+<!-- Tab: Extratos -->
 <div id="tabFlash" class="fin-tab-content">
   <div class="fin-tab-inner">
-    <div id="finFlashTesteAviso" class="fin-alert fin-alert-warning fin-flash-op-note">Ambiente com dados de teste/modelo Flash detectados. O lote Rafael é massa modelo de homologação e não deve ser tratado como cobrança real sem nova autorização.</div>
-    <div class="fin-alert fin-alert-info fin-flash-prod-note">Produção: ações reais de importação/conciliação ainda bloqueadas. Use apenas leitura, prévias, dashboard e resolução de pendências já validadas.</div>
-    <div class="fin-alert fin-alert-warning fin-flash-prod-note">
-      <strong>Modulo Flash em homologacao /dev.</strong>
-      Importacao real protegida, producao nao publicada nesta etapa e aguardando liberacao FIN.M/producao. Nao ha botao de deploy nesta tela.
-    </div>
     <div class="fin-flash-op-actions">
       <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarResumo_()">Atualizar</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia conciliação</button>
       <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashExecutarChecklistPreProducao_()">Checklist pré-produção</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Checklist liberacao Flash</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRoteiroB46_()">Gerar roteiro B46</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashPrepararPilotoB48_()">Preparar piloto B48</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Conciliar selecionados')">Conciliar selecionados</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashAcaoRealNaoHabilitada_('Gerar pendências')">Gerar pendências</button>
+      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Conciliar selecionados</button>
+      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Gerar pendências</button>
     </div>
     <div id="finFlashErro"></div>
     <div id="finFlashPainelAcao"></div>
-    <div class="fin-card fin-flash-action-panel">
-      <h3>Validacao humana B46</h3>
-      <div class="fin-alert fin-alert-info">Roteiro somente leitura para validacao mobile e piloto controlado. Nao executa importacao, conciliacao, pendencia, cadastro ou alteracao de saldo.</div>
-      <div class="fin-btn-row" style="margin-top:12px">
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarRoteiroB46_()">Gerar roteiro B46</button>
-      </div>
+    <!-- Containers técnicos ocultos — usados pelo JS no Admin técnico -->
+    <div style="display:none" aria-hidden="true">
       <div id="finFlashB46Resultado"></div>
-    </div>
-    <div class="fin-card fin-flash-action-panel">
-      <h3>Validacao B47 - Teste humano real</h3>
-      <div class="fin-alert fin-alert-info">Checklist somente leitura para teste em celular real e liberacao tecnica de piloto financeiro controlado. Nao executa acao financeira real.</div>
-      <div class="fin-btn-row" style="margin-top:12px">
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarChecklistB47_()">Gerar checklist B47</button>
-      </div>
       <div id="finFlashB47Resultado"></div>
-    </div>
-    <div class="fin-card fin-flash-action-panel">
-      <h3>Piloto real controlado B48</h3>
-      <div class="fin-alert fin-alert-info">Preparacao somente leitura do piloto real controlado com 1 colaborador. Nao executa acao financeira real, cadastro amplo nem importacao.</div>
-      <div class="fin-btn-row" style="margin-top:12px">
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashPrepararPilotoB48_()">Preparar piloto B48</button>
-      </div>
       <div id="finFlashB48Resultado"></div>
     </div>
     <div id="finFlashResumoCards" class="fin-flash-op-grid">
@@ -569,26 +564,22 @@
   </div>
 </div>
 
-<!-- Tab: Pendencias Flash (FIN.8B — leitura) -->
+<!-- Tab: Pendências -->
 <div id="tabPendencias" class="fin-tab-content">
   <div class="fin-tab-inner">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
       <div>
-        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Pendencias Flash</h2>
-        <p style="color:#666;font-size:12px;margin:3px 0 0">Leitura e auditoria de pendencias de conciliacao e prestacao Flash</p>
+        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Pendências de Conta</h2>
+        <p style="color:#666;font-size:12px;margin:3px 0 0">Gestão de pendências financeiras dos cartões Flash.</p>
       </div>
-      <span class="fin-pill fin-pill-yellow" style="font-size:11px;padding:4px 10px">MODO LEITURA — acoes reais bloqueadas</span>
-    </div>
-    <div class="fin-alert fin-alert-warning">
-      <strong>FIN.8B — Somente leitura.</strong>
-      Visualizacao e auditoria de pendencias e conciliacao. Acoes reais (gerar, conciliar, resolver em massa) permanecem bloqueadas ate FIN.8C.
+      <span class="fin-pill fin-pill-blue" style="font-size:11px;padding:4px 10px">Conferência financeira</span>
     </div>
     <div class="fin-flash-action-grid" style="margin-top:14px;margin-bottom:4px">
       <div class="fin-flash-action-kpi"><div class="label">Total</div><div class="value" id="finPend8BKpiTotal">-</div></div>
       <div class="fin-flash-action-kpi"><div class="label">Abertas</div><div class="value" id="finPend8BKpiAbertas">-</div></div>
       <div class="fin-flash-action-kpi"><div class="label">Resolvidas</div><div class="value" id="finPend8BKpiResolvidas">-</div></div>
       <div class="fin-flash-action-kpi"><div class="label">Por tipo</div><div class="value" id="finPend8BKpiTipos">-</div></div>
-      <div class="fin-flash-action-kpi fin8b-bloqueado-info"><div class="label">Conciliacao</div><div class="value">FIN.8C</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Conciliação</div><div class="value" id="finPend8BKpiConcil">-</div></div>
     </div>
     <div class="fin-card" style="margin-top:14px">
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:10px">
@@ -607,10 +598,10 @@
           <div class="fin-label">Tipo</div>
           <select id="finPend8BFiltroTipo" class="fin-filter-select" onchange="finPend8BFiltrar_()">
             <option value="">Todos</option>
-            <option value="PRESTACAO_PENDENTE">Prestacao pendente</option>
-            <option value="CATEGORIA_NAO_INFERIDA">Categoria nao inferida</option>
-            <option value="DEPOSITO_RECARGA">Deposito/recarga</option>
-            <option value="SEM_CONCILIACAO">Sem conciliacao</option>
+            <option value="PRESTACAO_PENDENTE">Prestação pendente</option>
+            <option value="CATEGORIA_NAO_INFERIDA">Categoria não inferida</option>
+            <option value="DEPOSITO_RECARGA">Depósito/recarga</option>
+            <option value="SEM_CONCILIACAO">Sem conciliação</option>
           </select>
         </div>
         <div style="flex:1;min-width:140px">
@@ -620,38 +611,309 @@
       </div>
       <div class="fin-btn-row">
         <button class="fin-btn fin-btn-primary" type="button" onclick="finPend8BCarregar_()">Atualizar pendencias</button>
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BVerPreviaConciliacao_()">Ver previa conciliacao</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BVerPreviaConciliacao_()">Ver prévia conciliação</button>
         <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BLimparFiltros_()">Limpar filtros</button>
-        <button class="fin-btn fin-btn-outline" type="button" disabled title="Acao real bloqueada — disponivel em FIN.8C">Conciliar selecionados</button>
-        <button class="fin-btn fin-btn-outline" type="button" disabled title="Acao real bloqueada — disponivel em FIN.8C">Gerar pendencias</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Conciliar selecionados</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Gerar pendências</button>
       </div>
     </div>
     <div id="finPend8BErro" style="display:none;margin-top:10px"></div>
     <div id="finPend8BDetalhe" class="fin-card" style="display:none;margin-top:14px;border-left:4px solid #0366d6"></div>
     <div id="finPend8BConciliacao" style="display:none;margin-top:14px"></div>
     <div class="fin-card" style="margin-top:14px">
-      <h3>Pendencias</h3>
+      <h3>Pendências</h3>
       <div id="finPend8BTabela"><div class="fin-list-empty">Clique em "Atualizar pendencias" para carregar.</div></div>
       <div id="finPend8BRodape" class="fin8b-rodape"></div>
     </div>
     <div class="fin-card" style="margin-top:14px">
-      <h3>Acoes bloqueadas nesta etapa (FIN.8B)</h3>
+      <h3>Próximas ações disponíveis</h3>
+      <p style="color:#666;font-size:13px;margin-bottom:10px">As ações abaixo serão habilitadas após validação operacional e conciliação dos extratos.</p>
       <div class="fin-flash-checklist-list">
-        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Conciliar selecionados</strong><span>Disponivel em FIN.8C — requer dados reais em producao.</span></div>
-        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Gerar pendencias</strong><span>Disponivel em FIN.8C — somente com dados reais validados.</span></div>
-        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Resolver em massa</strong><span>Disponivel em FIN.8C — resolucao individual sera habilitada controladamente.</span></div>
-        <div class="fin-flash-checklist-item fin8b-bloqueado-info"><strong>Resolver pendencia individual</strong><span>Disponivel em FIN.8C — bloqueado preventivamente nesta rodada.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Conciliar selecionados</strong><span>Em preparação — disponível após validação dos extratos importados.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Gerar pendências</strong><span>Em preparação — será habilitado com dados reais validados.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Resolver em massa</strong><span>Em preparação — resolução individual será habilitada controladamente.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Cobrança por e-mail/WhatsApp</strong><span>Em preparação — disponível na próxima versão do módulo.</span></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Tab: Documentos (placeholder) -->
-<div id="tabDocumentos" class="fin-tab-content">
-  <div class="fin-premium">
-    <div class="fin-premium-tag">FIN.10 - Documentos Premium</div>
-    <h3>Documentos e Relatorios</h3>
-    <p>Geracao automatica de relatorios de prestacao de contas, termos e extratos consolidados.<br>Disponivel na fase FIN.10 do roadmap SGO+.</p>
+<!-- Tab: Prestações -->
+<div id="tabPrestacoesMobile" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Prestações de Conta</h2>
+        <p style="color:#666;font-size:12px;margin:3px 0 0">Conferência financeira das prestações enviadas pelos colaboradores de campo.</p>
+      </div>
+      <button class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finPMCarregar_()">Atualizar</button>
+    </div>
+    <div class="fin-flash-action-grid" style="margin-bottom:14px">
+      <div class="fin-flash-action-kpi"><div class="label">Pend. Comprovante</div><div class="value" id="finPMKpiPend">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Aguard. Conf.</div><div class="value" id="finPMKpiEnviado">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Aprovadas</div><div class="value" id="finPMKpiAprov">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Reprovadas</div><div class="value" id="finPMKpiReprov">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Total R$</div><div class="value" id="finPMKpiValor">-</div></div>
+    </div>
+    <div class="fin-card" style="margin-bottom:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div>
+          <div class="fin-label">Status</div>
+          <select id="finPMFiltroStatus" class="fin-filter-select" style="min-width:210px" onchange="finPMFiltrar_()">
+            <option value="">Todos</option>
+            <option value="PENDENTE_COMPROVANTE">Pendente comprovante</option>
+            <option value="ENVIADO">Aguardando conferência</option>
+            <option value="APROVADO_FINANCEIRO">Aprovado financeiro</option>
+            <option value="REPROVADO_FINANCEIRO">Reprovado financeiro</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <div class="fin-label">Busca</div>
+          <input id="finPMBusca" class="fin-search" type="text" placeholder="Funcionario, OS, descricao, ID..." oninput="finPMFiltrar_()">
+        </div>
+        <button class="fin-btn fin-btn-primary" type="button" onclick="finPMCarregar_()">Atualizar</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finPMLimparFiltros_()">Limpar filtros</button>
+      </div>
+    </div>
+    <div id="finPMErro" style="display:none;margin-bottom:10px"></div>
+    <div class="fin-card">
+      <h3>Prestações de Conta</h3>
+      <div class="fin-table-wrap" id="finPMTabela">
+        <div class="fin-list-empty">Clique em "Atualizar" para carregar as prestações.</div>
+      </div>
+      <div id="finPMRodape" style="font-size:11px;color:#aaa;margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Termos e Documentos -->
+<div id="tabTermos" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <div class="fin-placeholder-card">
+        <div class="fin-placeholder-status">Em preparação</div>
+        <h3>Termos e Documentos</h3>
+        <p>Área para gestão de termos de responsabilidade, documentos assinados, comprovantes de entrega e relatórios do colaborador.</p>
+        <ul class="fin-placeholder-list">
+          <li>Termo de responsabilidade</li>
+          <li>Termo assinado eletronicamente</li>
+          <li>Comprovante de entrega do cartão</li>
+          <li>Relatório de despesas por colaborador</li>
+          <li>Histórico de documentos</li>
+          <li>Download e impressão</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fin-card" style="margin-top:14px">
+      <h3>Ações disponíveis agora</h3>
+      <p style="color:#666;font-size:13px;margin-bottom:12px">O sistema já suporta termos eletrônicos. Acesse via link direto pelo cadastro do cartão ou solicite ao financeiro.</p>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('cartoes')">Ir para Cartões</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Ver todos os termos</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Reemitir termo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Visão Geral -->
+<div id="tabVisaoGeral" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card" style="margin-bottom:14px">
+      <h3>Atalhos rápidos</h3>
+      <div class="fin-visao-atalhos">
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('cartoes');finNovoCartao()">
+          <span class="atalho-icon">💳</span><strong>Novo cartão</strong>
+        </button>
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('recargas')">
+          <span class="atalho-icon">💰</span><strong>Registrar recarga</strong>
+        </button>
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('despesas')">
+          <span class="atalho-icon">📂</span><strong>Importar extrato</strong>
+        </button>
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('pendencias')">
+          <span class="atalho-icon">⚠️</span><strong>Ver pendências</strong>
+        </button>
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('prestacoes')">
+          <span class="atalho-icon">✅</span><strong>Conferir prestações</strong>
+        </button>
+        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('termos')">
+          <span class="atalho-icon">📋</span><strong>Termos e documentos</strong>
+        </button>
+      </div>
+    </div>
+    <div class="fin-card" style="margin-bottom:14px">
+      <h3>Como usar este módulo</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Cartões</strong>
+          <p style="color:#666;font-size:12px;margin:0">Cadastre cartões, vincule responsáveis, bloqueie, inative e acompanhe termos, histórico e pendências.</p>
+        </div>
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Despesas e Extratos</strong>
+          <p style="color:#666;font-size:12px;margin:0">Registre despesas e importe extratos do app Flash para conferência.</p>
+        </div>
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Pendências e Prestações</strong>
+          <p style="color:#666;font-size:12px;margin:0">Acompanhe comprovantes e confira prestações enviadas do campo.</p>
+        </div>
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Conciliação</strong>
+          <p style="color:#666;font-size:12px;margin:0">Cruze extratos com despesas declaradas. Em preparação.</p>
+        </div>
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Termos e Documentos</strong>
+          <p style="color:#666;font-size:12px;margin:0">Gere e gerencie termos de responsabilidade dos cartões.</p>
+        </div>
+        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
+          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Relatórios e Cobranças</strong>
+          <p style="color:#666;font-size:12px;margin:0">Em preparação para a próxima versão do módulo.</p>
+        </div>
+      </div>
+    </div>
+    <div class="fin-card">
+      <h3>Ações rápidas</h3>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-primary" type="button" onclick="finCarregarTudo()">Atualizar todos os dados</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('cartoes')">Ver cartões</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('pendencias')">Ver pendências</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('prestacoes')">Ver prestações</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finAbrirManual()">Manual / Como usar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Conciliação (placeholder profissional) -->
+<div id="tabConciliacao" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <div class="fin-placeholder-card">
+        <div class="fin-placeholder-status">Em preparação</div>
+        <h3>Conciliação de Extratos</h3>
+        <p>Cruze automaticamente os extratos importados com as despesas declaradas pelos colaboradores. A IA sugerirá correspondências — o financeiro decide e confirma.</p>
+        <ul class="fin-placeholder-list">
+          <li>Cruzamento automático</li>
+          <li>Sugestão por IA</li>
+          <li>Revisão humana obrigatória</li>
+          <li>Detecção de duplicidades</li>
+          <li>Relatório de divergências</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fin-card" style="margin-top:14px">
+      <h3>Ações disponíveis agora</h3>
+      <p style="color:#666;font-size:13px;margin-bottom:12px">Você pode pré-visualizar a conciliação com os dados atuais. A conciliação real será habilitada após validação dos extratos.</p>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia de conciliação</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('extratos')">Ir para Extratos</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível após validação dos extratos">Conciliar extrato</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Relatórios (placeholder profissional) -->
+<div id="tabRelatorios" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <div class="fin-placeholder-card">
+        <div class="fin-placeholder-status">Em preparação</div>
+        <h3>Relatórios Financeiros Flash</h3>
+        <p>Área para gerar relatórios por período, cartão, colaborador, pendências e conciliação. Exportação em PDF e Excel com gráficos e conclusões.</p>
+        <ul class="fin-placeholder-list">
+          <li>Relatório mensal</li>
+          <li>Relatório por colaborador</li>
+          <li>Relatório por cartão</li>
+          <li>Relatório de pendências</li>
+          <li>Exportação PDF/Excel</li>
+          <li>Gráficos e indicadores</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Cobranças e Alertas (placeholder profissional) -->
+<div id="tabCobrancas" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-card">
+      <div class="fin-placeholder-card">
+        <div class="fin-placeholder-status">Em preparação</div>
+        <h3>Cobranças e Alertas</h3>
+        <p>Área para acompanhar pendências, cobranças enviadas, notificações e advertências financeiras. Comunicação por e-mail e WhatsApp com histórico completo.</p>
+        <ul class="fin-placeholder-list">
+          <li>Cobrança por e-mail</li>
+          <li>Cobrança por WhatsApp</li>
+          <li>Advertência financeira</li>
+          <li>Timeline da pendência</li>
+          <li>Histórico de notificações</li>
+          <li>Alertas críticos</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Admin técnico / Auditoria Flash (restrito — ADMIN/DIRETORIA) -->
+<div id="tabAdminTec" class="fin-tab-content">
+  <div class="fin-tab-inner">
+    <div class="fin-admin-header-box">
+      <h2>Admin técnico / Auditoria Flash</h2>
+      <p>Área restrita para ADMIN e DIRETORIA. Contém ferramentas de validação técnica, roteiros de homologação e auditoria controlada da importação de extratos. Nenhuma ação real é executada por estas ferramentas sem autorização explícita e registro.</p>
+    </div>
+    <div class="fin-admin-panel">
+      <h3>Ferramentas de validação do extrato</h3>
+      <p style="color:#78350f;font-size:12px;margin-bottom:10px">Estas ferramentas validam o arquivo antes da importação real. Não gravam dados.</p>
+      <div class="fin-btn-row" style="margin-bottom:10px">
+        <button id="finFlashDryRunBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finGerarDryRunExtratoFlash()">Validar lote (dry-run)</button>
+        <button id="finFlashPreConfirmacaoBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finPreConfirmarLoteFlashTela_()" disabled>Pré-confirmar lote</button>
+        <button id="finFlashPayloadBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finPrepararPayloadImportacaoFlashTela_()" disabled>Preparar payload técnico</button>
+      </div>
+      <div class="fin-fg" style="margin-bottom:8px">
+        <label class="fin-label">Depósitos/recargas</label>
+        <select id="finFlashDecisaoDepositos" class="fin-select" style="max-width:340px">
+          <option value="IMPORTAR_CREDITO_COMO_EXTRATO" selected>Importar crédito como extrato</option>
+          <option value="IGNORAR_CREDITO_USAR_RECARGAS">Ignorar crédito e usar recargas</option>
+          <option value="BLOQUEAR_CREDITOS">Bloquear créditos</option>
+        </select>
+      </div>
+      <div class="fin-fg" style="margin-bottom:8px">
+        <label class="fin-label">Prestação pendente</label>
+        <select id="finFlashDecisaoPrestacao" class="fin-select" style="max-width:340px">
+          <option value="IMPORTAR_COM_STATUS_PENDENTE" selected>Importar com status pendente</option>
+          <option value="BLOQUEAR_ATE_PRESTACAO">Bloquear até prestação</option>
+          <option value="IMPORTAR_E_GERAR_PENDENCIA_FUTURA">Importar e gerar pendência futura</option>
+        </select>
+      </div>
+      <div class="fin-fg" style="margin-bottom:8px">
+        <label class="fin-label">Categoria não inferida</label>
+        <select id="finFlashDecisaoCategoria" class="fin-select" style="max-width:340px">
+          <option value="IMPORTAR_COM_CATEGORIA_OUTROS" selected>Importar como OUTROS_REVISAR</option>
+          <option value="BLOQUEAR_ATE_CLASSIFICAR">Bloquear até classificar</option>
+        </select>
+      </div>
+    </div>
+    <div class="fin-admin-panel">
+      <h3>Pacote de autorização e payload técnico</h3>
+      <div class="fin-btn-row">
+        <button id="finFlashPacoteAutorizacaoBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarPacoteAutorizacao_()">Gerar pacote de autorização</button>
+        <button id="finFlashPayloadLimpoBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarPayloadLimpo_()">Gerar payload limpo</button>
+        <button id="finFlashAuditarFinalBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashAuditarFinalAntesExecucao_()">Auditar estado final</button>
+      </div>
+    </div>
+    <div class="fin-admin-panel">
+      <h3>Checklist pós-execução e roteiros de validação</h3>
+      <div class="fin-btn-row">
+        <button id="finFlashChecklistPosBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarChecklistPosImportacao_()">Checklist pós-execução</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashExecutarChecklistPreProducao_()">Checklist pré-validação</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashAbrirChecklistLiberacao_()">Checklist de liberação</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarRoteiroB46_()">Roteiro B46</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarChecklistB47_()">Checklist B47</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashPrepararPilotoB48_()">Piloto B48</button>
+      </div>
+      <div id="finAdminTecResultado" style="margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
@@ -661,83 +923,82 @@
     <div class="fin-manual-head">
       <div>
         <h3>Manual / Como usar</h3>
-        <p>Guia interno do Cartao Flash para funcionario, financeiro e gestao. Este manual orienta o uso do modulo sem executar nenhuma acao automatica.</p>
+        <p>Guia interno do Cartão Flash para funcionario, financeiro e gestao. Este manual orienta o uso do modulo sem executar nenhuma acao automatica.</p>
       </div>
       <button class="fin-btn fin-btn-secondary fin-manual-close" type="button" onclick="finFecharManual()">Fechar</button>
     </div>
     <div class="fin-manual-body">
       <div class="fin-manual-grid">
         <section class="fin-manual-section full">
-          <h4>Visao geral <span class="fin-manual-badge atual">Atual</span></h4>
+          <h4>Visão geral <span class="fin-manual-badge atual">Atual</span></h4>
           <ul>
-            <li>O modulo controla cartoes corporativos Flash.</li>
-            <li>Cada cartao deve ter um responsavel definido.</li>
-            <li>O termo online registra aceite e responsabilidade pelo uso.</li>
-            <li>O uso do cartao deve ser comprovado com informacoes e documento fiscal.</li>
-            <li>O financeiro fara conferencia, acompanhamento e conciliacao.</li>
+            <li>O módulo controla cartões corporativos Flash com fluxo completo de gestão.</li>
+            <li>Cada cartão deve ter um responsável definido e um termo assinado.</li>
+            <li>O uso do cartão deve ser comprovado com informações e documento fiscal.</li>
+            <li>O financeiro faz conferência, acompanhamento e conciliação dos extratos.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Funcionário / Campo <span class="fin-manual-badge funcionario">Funcionário</span> <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <h4>Cartões e Recargas <span class="fin-manual-badge atual">Atual</span></h4>
           <ul>
-            <li>Futuramente havera versao mobile propria, nao adaptacao da tela desktop.</li>
-            <li>O funcionario devera registrar a despesa no momento do uso.</li>
-            <li>Campos esperados: valor, data, fornecedor/local, categoria, OS/cliente/unidade ou justificativa.</li>
-            <li>Deve anexar foto do comprovante.</li>
-            <li>Deve acompanhar pendencias e correcoes solicitadas.</li>
+            <li>Cadastre cartões com responsável, departamento e centro de custo.</li>
+            <li>Bloqueie e desbloqueie cartões quando necessário.</li>
+            <li>Registre recargas mensais com data, valor e tipo.</li>
+            <li>Acompanhe o histórico de recargas por cartão.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Financeiro / Conciliação <span class="fin-manual-badge financeiro">Financeiro</span></h4>
+          <h4>Despesas e Extratos <span class="fin-manual-badge atual">Atual</span> <span class="fin-manual-badge financeiro">Financeiro</span></h4>
           <ul>
-            <li>Financeiro cadastra cartao, acompanha termos e controla status.</li>
-            <li>Futuramente importara extrato Flash em XLS, XLSX ou CSV.</li>
-            <li>O sistema cruzara extrato com lancamentos dos funcionarios.</li>
-            <li>IA podera sugerir conciliacao por valor, data, cartao, descricao, funcionario e comprovante.</li>
-            <li>IA não aprova sozinha; aprovacao final e do financeiro.</li>
-            <li>Status: aguardando comprovante, aguardando conciliacao, conciliado, divergente, recusado, pendente de correcao, finalizado.</li>
+            <li>Importe o extrato XLSX do aplicativo Cartão Flash.</li>
+            <li>O sistema gera prévia das transações sem alterar dados.</li>
+            <li>Acompanhe despesas declaradas por cartão e colaborador.</li>
+            <li>Importação real disponível após validação prévia pelo financeiro.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Termo e documentos <span class="fin-manual-badge atual">Atual</span></h4>
+          <h4>Pendências e Prestações <span class="fin-manual-badge financeiro">Financeiro</span></h4>
           <ul>
-            <li>Termo online gera aceite eletronico e registra responsabilidade.</li>
-            <li>Termo deve gerar documento ou PDF rastreavel.</li>
-            <li>Documento deve poder ser aberto, impresso ou baixado.</li>
-            <li>Relatorios futuros de conciliacao tambem devem poder ser impressos ou baixados.</li>
+            <li>Pendências indicam falta de comprovante ou divergência no extrato.</li>
+            <li>O colaborador deve registrar a prestação pelo app mobile.</li>
+            <li>O financeiro confere e aprova ou rejeita com motivo.</li>
+            <li>Cobranças e advertências serão habilitadas na próxima versão.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Pendencias e comprovantes <span class="fin-manual-badge financeiro">Financeiro</span></h4>
+          <h4>Termos e Documentos <span class="fin-manual-badge atual">Atual</span></h4>
           <ul>
-            <li>Pendencias indicam falta de comprovante, justificativa incompleta ou divergencia.</li>
-            <li>O responsavel deve corrigir a informacao solicitada.</li>
-            <li>O financeiro acompanha prazos, evidencias e status de correcao.</li>
+            <li>Termo online gera aceite eletrônico e registra responsabilidade.</li>
+            <li>Termo gera documento PDF rastreável.</li>
+            <li>Documentos podem ser abertos, impressos ou baixados.</li>
+            <li>Reemissão e histórico disponíveis para o financeiro.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Relatorios <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <h4>Conciliação <span class="fin-manual-badge financeiro">Financeiro</span></h4>
           <ul>
-            <li>Relatorios deverao consolidar cartoes, termos, gastos, pendencias e conciliacoes.</li>
-            <li>Saidas esperadas: visualizacao, impressao e download.</li>
-            <li>Gestao podera acompanhar indicadores por funcionario, centro de custo e periodo.</li>
+            <li>Cruzamento automático entre extrato importado e despesas declaradas.</li>
+            <li>A IA sugere correspondências — o financeiro decide e confirma.</li>
+            <li>Detecção de duplicidades e divergências.</li>
+            <li>Em preparação para a próxima versão.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>IA e extrato <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <h4>Relatórios e Cobranças <span class="fin-manual-badge futuro">Em preparação</span></h4>
           <ul>
-            <li>IA sera apoio para leitura, rastreio e conciliacao.</li>
-            <li>Importacao de extrato sera tratada em etapa propria.</li>
-            <li>IA devera apontar correspondencias provaveis e divergencias.</li>
-            <li>Financeiro confirma decisao final.</li>
+            <li>Relatórios por colaborador, cartão e período.</li>
+            <li>Exportação em PDF e Excel.</li>
+            <li>Cobranças por e-mail e WhatsApp com histórico.</li>
+            <li>Advertências financeiras formais.</li>
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Próximas evoluções <span class="fin-manual-badge futuro">Futuro</span></h4>
+          <h4>Funcionário / Campo <span class="fin-manual-badge funcionario">Funcionário</span></h4>
           <ul>
-            <li>FIN.9 Mobile do Funcionário</li>
-            <li>FIN.10 Documentos e Relatórios</li>
-            <li>FIN.11 Extrato e Conciliação com IA</li>
+            <li>O colaborador registra despesas pelo app mobile SGO+ Campo.</li>
+            <li>Campos: valor, data, fornecedor/local, categoria, OS/justificativa.</li>
+            <li>Deve anexar foto do comprovante fiscal.</li>
+            <li>Acompanha pendências e correções solicitadas pelo financeiro.</li>
           </ul>
         </section>
       </div>
@@ -748,8 +1009,8 @@
 <!-- Modal: Bloqueio -->
 <div id="finModalBloqueio" class="fin-modal-overlay">
   <div class="fin-modal">
-    <h3>Bloquear Cartao</h3>
-    <div class="fin-alert fin-alert-warning">O cartao sera bloqueado temporariamente. O titular nao podera realizar novos lancamentos ate o desbloqueio.</div>
+    <h3>Bloquear Cartão</h3>
+    <div class="fin-alert fin-alert-warning">O cartao sera bloqueado temporariamente. O titular não podera realizar novos lancamentos ate o desbloqueio.</div>
     <div class="fin-fg" style="margin-top:12px">
       <label class="fin-label">Motivo do Bloqueio *</label>
       <textarea id="finMotivoBloqueio" class="fin-textarea" placeholder="Descreva o motivo (obrigatorio)"></textarea>
@@ -761,8 +1022,251 @@
   </div>
 </div>
 
+<!-- Modal: Novo/Editar Cartão -->
+<div id="finModalCartao" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:540px">
+    <h3 id="finModalCartaoTitulo">Novo Cartão</h3>
+    <div id="finMC_ROLine" style="display:none;margin-bottom:10px">
+      <span id="finMC_ROInfo" style="font-size:12px;color:#666;display:block"></span>
+    </div>
+    <div class="fin-grid2">
+      <div class="fin-fg full">
+        <label class="fin-label">Responsável (Nome) *</label>
+        <input id="finMC_FUNC_NOME" class="fin-input" type="text" placeholder="Nome completo do colaborador">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">ID do Colaborador</label>
+        <input id="finMC_FUNC_ID" class="fin-input" type="text" placeholder="ID interno">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">E-mail</label>
+        <input id="finMC_FUNC_EMAIL" class="fin-input" type="email" placeholder="email@empresa.com">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Final do Cartão (4 dígitos) *</label>
+        <input id="finMC_NUM_FINAL4" class="fin-input" type="text" maxlength="4" placeholder="ex: 1234">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Apelido do Cartão</label>
+        <input id="finMC_APELIDO" class="fin-input" type="text" placeholder="ex: Cartão Manutenção">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Centro de Custo</label>
+        <input id="finMC_CC" class="fin-input" type="text" placeholder="ex: 001.MANUTENCAO">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Observações</label>
+        <textarea id="finMC_OBS" class="fin-textarea" placeholder="Observações opcionais" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finCartoes3FecharModal()">Cancelar</button>
+      <button class="fin-btn fin-btn-primary" onclick="finCartoes3SalvarModal()">Salvar cartão</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Inativar Cartão -->
+<div id="finModalInativar" class="fin-modal-overlay">
+  <div class="fin-modal">
+    <h3>Inativar Cartão</h3>
+    <div class="fin-alert fin-alert-warning">
+      Este cartão será inativado e não poderá receber novas recargas. O histórico será preservado.
+    </div>
+    <div id="finModalInativarInfo" style="font-size:13px;color:#0f2d52;margin:10px 0;font-weight:600"></div>
+    <div class="fin-fg" style="margin-top:8px">
+      <label class="fin-label">Motivo da inativação *</label>
+      <textarea id="finMotivoInativar" class="fin-textarea" placeholder="Descreva o motivo (obrigatório)"></textarea>
+    </div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finCartoes3FecharInativar()">Cancelar</button>
+      <button class="fin-btn fin-btn-danger" onclick="finCartoes3ConfirmarInativar()">Confirmar inativação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cadastrar Cartão Real — FLASH.4.6B -->
+<div id="finModalCadastrarCartaoReal" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:560px">
+    <h3>Cadastrar Cartão Real</h3>
+    <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
+      <strong>Operação controlada (FLASH.4.6):</strong> Cada execução cria exatamente 1 cartão real.
+      Duplicidade por funcionário ou final do cartão será bloqueada automaticamente.
+      Não serão criadas recargas. Piloto FLASH44 permanece isolado.
+    </div>
+    <div class="fin-grid2">
+      <div class="fin-fg">
+        <label class="fin-label">ID do Funcionário *</label>
+        <input id="finF46_FUNC_ID" class="fin-input" type="text" placeholder="ex: FUNC-001" oninput="finF46ResetPreview()">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Nome do Funcionário *</label>
+        <input id="finF46_FUNC_NOME" class="fin-input" type="text" placeholder="Nome completo" oninput="finF46ResetPreview()">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">E-mail</label>
+        <input id="finF46_FUNC_EMAIL" class="fin-input" type="email" placeholder="email@empresa.com">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Telefone</label>
+        <input id="finF46_FUNC_TEL" class="fin-input" type="text" placeholder="11999990000">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Final do Cartão (4 dígitos) *</label>
+        <input id="finF46_NUM4" class="fin-input" type="text" maxlength="4" placeholder="ex: 1234" oninput="this.value=this.value.replace(/\D/g,'');finF46ResetPreview()">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Apelido do Cartão *</label>
+        <input id="finF46_APELIDO" class="fin-input" type="text" placeholder="ex: Cartão Manutenção" oninput="finF46ResetPreview()">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Bandeira *</label>
+        <select id="finF46_BANDEIRA" class="fin-filter-select" style="width:100%">
+          <option value="MASTERCARD">Mastercard</option>
+          <option value="VISA">Visa</option>
+          <option value="ELO">Elo</option>
+          <option value="HIPERCARD">Hipercard</option>
+        </select>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Tipo *</label>
+        <select id="finF46_TIPO" class="fin-filter-select" style="width:100%">
+          <option value="CORPORATIVO">Corporativo</option>
+        </select>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Status *</label>
+        <select id="finF46_STATUS" class="fin-filter-select" style="width:100%">
+          <option value="ATIVO">Ativo</option>
+          <option value="PENDENTE_ATIVACAO">Aguardando ativação</option>
+        </select>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Limite Mensal (R$)</label>
+        <input id="finF46_LIMITE" class="fin-input" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Observações</label>
+        <textarea id="finF46_OBS" class="fin-textarea" rows="2" placeholder="Observações opcionais"></textarea>
+      </div>
+    </div>
+    <div id="finF46Preview" style="display:none;margin:10px 0;padding:10px 12px;border-radius:6px;font-size:12.5px;line-height:1.5"></div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finFecharCadastroCartaoReal()">Cancelar</button>
+      <button class="fin-btn fin-btn-outline" onclick="finPrevisualizarCadastroCartaoReal()">Verificar duplicidade</button>
+      <button id="finF46BtnConfirmar" class="fin-btn fin-btn-primary" onclick="finConfirmarCadastroCartaoReal()" disabled>Confirmar cadastro</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Alterar Responsável -->
+<div id="finModalResponsavel" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:480px">
+    <h3>Alterar Responsável</h3>
+    <div style="font-size:13px;color:#666;margin-bottom:8px">Cartão: <strong id="finMR_CartaoInfo"></strong></div>
+    <div class="fin-alert fin-alert-info" style="margin-bottom:10px">Responsável atual: <strong id="finMR_AtualNome"></strong></div>
+    <div class="fin-grid2">
+      <div class="fin-fg full">
+        <label class="fin-label">Novo Responsável (Nome) *</label>
+        <input id="finMR_NovoNome" class="fin-input" type="text" placeholder="Nome completo">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">ID do Colaborador</label>
+        <input id="finMR_NovoId" class="fin-input" type="text" placeholder="ID interno">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">E-mail</label>
+        <input id="finMR_NovoEmail" class="fin-input" type="email" placeholder="email@empresa.com">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Telefone</label>
+        <input id="finMR_NovoTel" class="fin-input" type="text" placeholder="(00) 00000-0000">
+      </div>
+    </div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finCartoes3FecharResponsavel()">Cancelar</button>
+      <button class="fin-btn fin-btn-primary" onclick="finCartoes3SalvarResponsavel()">Confirmar alteração</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Recarga — FLASH.4.3 -->
+<div id="finModalNovaRecarga" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:520px">
+    <h3>Nova Recarga</h3>
+    <div id="finModalRecBloqueio" class="fin-alert fin-alert-warning" style="display:none;margin-bottom:10px">
+      Nenhum cartão ativo. Cadastre um cartão real antes de registrar recargas.
+    </div>
+    <div class="fin-grid2">
+      <div class="fin-fg full">
+        <label class="fin-label">Cartão *</label>
+        <select id="finModalRecCartaoId" class="fin-select" onchange="finModalRecOnCartaoChange()">
+          <option value="">Selecione o cartão...</option>
+        </select>
+        <span id="finModalRecCartaoStatus" style="font-size:11px;color:#28a745;margin-top:3px;display:block"></span>
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Funcionário / Responsável</label>
+        <input id="finModalRecFuncionario" class="fin-input" type="text" readonly placeholder="Preenchido automaticamente ao selecionar o cartão">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Valor (R$) *</label>
+        <input id="finModalRecValor" class="fin-input" type="number" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Data da Recarga *</label>
+        <input id="finModalRecData" class="fin-input" type="date">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Origem</label>
+        <select id="finModalRecOrigem" class="fin-select">
+          <option value="CREDITO_MENSAL">Crédito Mensal</option>
+          <option value="ADIANTAMENTO">Adiantamento</option>
+          <option value="REPOSICAO">Reposição</option>
+          <option value="BONIFICACAO">Bonificação</option>
+          <option value="OUTRO">Outro</option>
+        </select>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Nº Transferência</label>
+        <input id="finModalRecNumTrans" class="fin-input" type="text" placeholder="(opcional)">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Observação / Motivo</label>
+        <textarea id="finModalRecObs" class="fin-textarea" rows="2" placeholder="Motivo, período de referência ou observação..."></textarea>
+      </div>
+    </div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finFecharNovaRecarga()">Cancelar</button>
+      <button id="finModalRecBtnSalvar" class="fin-btn fin-btn-success" onclick="finSalvarRecargaV43()">Registrar Recarga</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Histórico do Cartão -->
+<div id="finModalHistorico" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:820px;max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
+      <h3 style="margin:0" id="finModalHistoricoTitulo">Histórico</h3>
+      <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCartoes3FecharHistorico()">Fechar</button>
+    </div>
+    <div id="finModalHistoricoCorpo" class="fin-table-wrap" style="overflow-y:auto;flex:1;min-height:0"></div>
+  </div>
+</div>
+
+<!-- Modal: Pendências do Cartão -->
+<div id="finModalPendCartao" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:720px;max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
+      <h3 style="margin:0" id="finModalPendCartaoTitulo">Pendências do Cartão</h3>
+      <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCartoes3FecharPendCartao()">Fechar</button>
+    </div>
+    <div id="finModalPendCartaoCorpo" class="fin-table-wrap" style="overflow-y:auto;flex:1;min-height:0"></div>
+  </div>
+</div>
+
 <script>
-// FIN.3 - JS_Fin_Cartoes.html - Metrolabs SGO+
+// JS_Fin_Cartoes.html - Metrolabs SGO+ — Cartão Flash Corporativo
 
 var _finSessao = '';
 var _finPerfil = '';
@@ -775,6 +1279,12 @@ var _finFlashUltimaPreConfirmacao = null;
 var _finFlashUltimoPayloadPreparado = null;
 var _finFlashOperacionalCarregado = false;
 var _finFlashPendenciasResolucao = {};
+
+// ---- FLASH.3 globals ----
+var _finCartaoEditandoId = '';
+var _finBloqueioCartaoId = '';
+var _finInativarId       = '';
+var _finResponsavelId    = '';
 
 // ---- init ----
 
@@ -826,6 +1336,12 @@ function finCarregarContexto() {
         b.classList.add('ok');
         finCarregarDashboard();
       }
+      if (_finPerfil === 'ADMIN' || _finPerfil === 'DIRETORIA') {
+        var btnAdm = document.getElementById('finBtnAdminTec');
+        if (btnAdm) { btnAdm.style.display = 'inline-flex'; }
+        var tabAdm = document.getElementById('finTabBtnAdmin');
+        if (tabAdm) { tabAdm.style.display = 'inline-block'; }
+      }
     })
     .withFailureHandler(function(e) {
       finMostrarErro('Erro ao verificar contexto: ' + (e.message || e));
@@ -876,10 +1392,12 @@ function finCarregarCartoes() {
       if (r && r.ok) {
         _finCartoes = r.items || [];
         _finFiltrados = _finCartoes.slice();
-        finRenderCartoes(_finFiltrados);
+        finCartoes3RenderTabela(_finFiltrados);
+        finCartoes3RenderKPIs(_finCartoes);
+        finCartoes3RenderAlertas(_finCartoes);
         finPopularSeletores(_finCartoes);
       } else {
-        finMostrarErro((r && r.message) ? r.message : 'Erro ao carregar cartoes.');
+        finMostrarErro((r && r.message) || 'Erro ao carregar cartoes.');
       }
     })
     .withFailureHandler(function(e) {
@@ -894,7 +1412,7 @@ function finRenderCartoes(lista) {
   var ft = document.getElementById('finListaRodape');
   if (!lista || lista.length === 0) {
     el.innerHTML = '<div class="fin-list-empty">Nenhum cartao encontrado.</div>';
-    if (ft) { ft.textContent = '0 cartoes'; }
+    if (ft) { ft.textContent = '0 cartões'; }
     return;
   }
   var html = '';
@@ -924,10 +1442,10 @@ function finPreencherFormularioCartao(c) {
   var podeDesbloquear = c.STATUS_CARTAO === 'BLOQUEADO_TEMPORARIO';
   var html = '';
   html += '<div class="fin-card">';
-  html += '<h3>Dados do Cartao ' + statusPill + '</h3>';
+  html += '<h3>Dados do Cartão ' + statusPill + '</h3>';
   html += '<div class="fin-grid2">';
-  html += finRoCampo('ID do Cartao', c.CARTAO_ID || '');
-  html += finRoCampo('Final do Cartao', c.NUMERO_FINAL_4 || '');
+  html += finRoCampo('ID do Cartão', c.CARTAO_ID || '');
+  html += finRoCampo('Final do Cartão', c.NUMERO_FINAL_4 || '');
   html += finRoCampo('Funcionario', c.FUNCIONARIO_NOME || '');
   html += finRoCampo('ID Funcionario', c.FUNCIONARIO_ID || '');
   html += finRoCampo('Apelido', c.APELIDO_CARTAO || '');
@@ -937,7 +1455,7 @@ function finPreencherFormularioCartao(c) {
   html += finRoCampo('Bandeira', c.BANDEIRA || '');
   html += finRoCampo('Limite Operacional', c.LIMITE_OPERACIONAL ? finMoeda(c.LIMITE_OPERACIONAL) : '');
   html += finRoCampo('Emissao', finDataBR(c.DATA_EMISSAO));
-  html += finRoCampo('Validade Cartao', finDataBR(c.DATA_VALIDADE_CARTAO));
+  html += finRoCampo('Validade Cartão', finDataBR(c.DATA_VALIDADE_CARTAO));
   html += '</div>';
   if (podeDesbloquear && c.MOTIVO_BLOQUEIO) {
     html += '<div class="fin-alert fin-alert-warning" style="margin-top:12px"><strong>Bloqueado:</strong> ' + finEH(c.MOTIVO_BLOQUEIO) + '</div>';
@@ -964,31 +1482,7 @@ function finRoCampo(label, valor) {
 // ---- novo cartao ----
 
 function finNovoCartao() {
-  _finCartaoAtualId = '';
-  finRenderCartoes(_finFiltrados);
-  var html = '';
-  html += '<div class="fin-card">';
-  html += '<h3>Novo Cartao Corporativo</h3>';
-  html += '<div class="fin-grid2">';
-  html += finEditCampo('FUNC_ID',    'ID Funcionario *',          'text',   '', 'ID do funcionario');
-  html += finEditCampo('FUNC_NOME',  'Nome Funcionario *',        'text',   '', 'Nome completo');
-  html += finEditCampo('NUM_FINAL4', 'Final do Cartao (4 dig.) *','text',   '', 'ex: 1234');
-  html += finEditCampo('APELIDO',    'Apelido do Cartao',         'text',   '', 'ex: Cartao Manutencao');
-  html += finEditCampo('IDENT',      'Identificador',             'text',   '', 'ex: 1234****5678');
-  html += finEditCampo('DEPTO',      'Departamento',              'text',   '', 'ex: Tecnico');
-  html += finEditCampo('CC',         'Centro de Custo',           'text',   '', 'ex: 001.MANUTENCAO');
-  html += finSelectBandeira('BANDEIRA');
-  html += finEditCampo('LIMITE',     'Limite Operacional (R$)',    'number', '', '0.00');
-  html += finEditCampo('DT_EMISSAO', 'Data Emissao',              'date',   '', '');
-  html += finEditCampo('DT_VENCTO',  'Data Validade Cartao',       'date',   '', '');
-  html += '<div class="fin-fg full"><label class="fin-label">Observacoes</label><textarea id="novo_OBS" class="fin-textarea" placeholder="Observacoes (opcional)"></textarea></div>';
-  html += '</div>';
-  html += '<div class="fin-btn-row">';
-  html += '<button class="fin-btn fin-btn-success" onclick="finSalvarCartao()">Criar Cartao</button>';
-  html += '<button class="fin-btn fin-btn-secondary" onclick="finCancelarPainel()">Cancelar</button>';
-  html += '</div>';
-  html += '</div>';
-  document.getElementById('finPainelDir').innerHTML = html;
+  finCartoes3AbrirModal('');
 }
 
 function finEditCampo(id, label, tipo, valor, placeholder) {
@@ -1027,7 +1521,7 @@ function finSalvarCartao() {
     .withSuccessHandler(function(r) {
       finSetLoading(false);
       if (r && r.ok) {
-        finMostrarSucesso('Cartao criado com sucesso!');
+        finMostrarSucesso('Cartão criado com sucesso!');
         finCarregarCartoes();
       } else {
         finMostrarErro((r && r.message) ? r.message : 'Erro ao criar cartao.');
@@ -1047,17 +1541,17 @@ function finAbrirEdicao() {
   if (!c) { return; }
   var html = '';
   html += '<div class="fin-card">';
-  html += '<h3>Editar Cartao</h3>';
+  html += '<h3>Editar Cartão</h3>';
   html += '<div class="fin-grid2">';
-  html += finRoCampo('ID do Cartao', c.CARTAO_ID || '');
-  html += finRoCampo('Final do Cartao', c.NUMERO_FINAL_4 || '');
-  html += '<div class="fin-fg"><label class="fin-label">Apelido do Cartao</label><input id="edit_APELIDO" class="fin-input" type="text" value="' + finEA(c.APELIDO_CARTAO || '') + '"></div>';
+  html += finRoCampo('ID do Cartão', c.CARTAO_ID || '');
+  html += finRoCampo('Final do Cartão', c.NUMERO_FINAL_4 || '');
+  html += '<div class="fin-fg"><label class="fin-label">Apelido do Cartão</label><input id="edit_APELIDO" class="fin-input" type="text" value="' + finEA(c.APELIDO_CARTAO || '') + '"></div>';
   html += '<div class="fin-fg"><label class="fin-label">Identificador</label><input id="edit_IDENT" class="fin-input" type="text" value="' + finEA(c.IDENTIFICADOR_CARTAO || '') + '"></div>';
   html += '<div class="fin-fg"><label class="fin-label">Departamento</label><input id="edit_DEPTO" class="fin-input" type="text" value="' + finEA(c.DEPARTAMENTO || '') + '"></div>';
   html += '<div class="fin-fg"><label class="fin-label">Centro de Custo</label><input id="edit_CC" class="fin-input" type="text" value="' + finEA(c.CENTRO_CUSTO || '') + '"></div>';
   html += '<div class="fin-fg"><label class="fin-label">Limite Operacional (R$)</label><input id="edit_LIMITE" class="fin-input" type="number" min="0" step="0.01" value="' + finEA(c.LIMITE_OPERACIONAL || '') + '"></div>';
-  html += '<div class="fin-fg"><label class="fin-label">Data Validade Cartao</label><input id="edit_DT_VENCTO" class="fin-input" type="date" value="' + finEA(finDataInput(c.DATA_VALIDADE_CARTAO)) + '"></div>';
-  html += '<div class="fin-fg full"><label class="fin-label">Observacoes</label><textarea id="edit_OBS" class="fin-textarea">' + finEH(c.OBSERVACOES || '') + '</textarea></div>';
+  html += '<div class="fin-fg"><label class="fin-label">Data Validade Cartão</label><input id="edit_DT_VENCTO" class="fin-input" type="date" value="' + finEA(finDataInput(c.DATA_VALIDADE_CARTAO)) + '"></div>';
+  html += '<div class="fin-fg full"><label class="fin-label">Observações</label><textarea id="edit_OBS" class="fin-textarea">' + finEH(c.OBSERVACOES || '') + '</textarea></div>';
   html += '</div>';
   html += '<div class="fin-btn-row">';
   html += '<button class="fin-btn fin-btn-primary" onclick="finAtualizarCartaoSelecionado()">Salvar Alteracoes</button>';
@@ -1082,7 +1576,7 @@ function finAtualizarCartaoSelecionado() {
     .withSuccessHandler(function(r) {
       finSetLoading(false);
       if (r && r.ok) {
-        finMostrarSucesso('Cartao atualizado!');
+        finMostrarSucesso('Cartão atualizado!');
         finCarregarCartoes();
       } else {
         finMostrarErro((r && r.message) ? r.message : 'Erro ao atualizar.');
@@ -1098,7 +1592,7 @@ function finAtualizarCartaoSelecionado() {
 function finCancelarPainel() {
   _finCartaoAtualId = '';
   document.getElementById('finPainelDir').innerHTML =
-    '<div class="fin-empty-state"><p>Selecione um cartao ou crie um novo.</p></div>';
+    '<div class="fin-empty-state"><p>Selecione um cartão ou crie um novo.</p></div>';
 }
 
 // ---- bloqueio / desbloqueio ----
@@ -1116,22 +1610,19 @@ function finConfirmarBloqueio() {
   var motivo = document.getElementById('finMotivoBloqueio').value.trim();
   if (!motivo) { finMostrarErro('Informe o motivo do bloqueio.'); return; }
   finFecharModalBloqueio();
+  var id = _finBloqueioCartaoId || _finCartaoAtualId;
   finSetLoading(true);
   google.script.run
     .withSuccessHandler(function(r) {
       finSetLoading(false);
-      if (r && r.ok) {
-        finMostrarSucesso('Cartao bloqueado.');
-        finCarregarCartoes();
-      } else {
-        finMostrarErro((r && r.message) ? r.message : 'Erro ao bloquear.');
-      }
+      if (r && r.ok) { finMostrarSucesso('Cartão bloqueado.'); finCarregarCartoes(); }
+      else { finMostrarErro((r && r.message) || 'Erro ao bloquear.'); }
     })
     .withFailureHandler(function(e) {
       finSetLoading(false);
       finMostrarErro('Falha ao bloquear: ' + (e.message || e));
     })
-    .finBloquearCartao(_finSessao, _finCartaoAtualId, motivo);
+    .finBloquearCartao(_finSessao, id, motivo);
 }
 
 function finDesbloquearCartaoSelecionado() {
@@ -1140,7 +1631,7 @@ function finDesbloquearCartaoSelecionado() {
     .withSuccessHandler(function(r) {
       finSetLoading(false);
       if (r && r.ok) {
-        finMostrarSucesso('Cartao desbloqueado.');
+        finMostrarSucesso('Cartão desbloqueado.');
         finCarregarCartoes();
       } else {
         finMostrarErro((r && r.message) ? r.message : 'Erro ao desbloquear.');
@@ -1340,7 +1831,7 @@ function finGerarPreviewExtratoFlash() {
   }
 
   if (!/\.xlsx$/i.test(arquivo.name || '')) {
-    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartao Flash.</div>';
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartão Flash.</div>';
     return;
   }
 
@@ -1383,7 +1874,7 @@ function finGerarDryRunExtratoFlash() {
   }
 
   if (!/\.xlsx$/i.test(arquivo.name || '')) {
-    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartao Flash.</div>';
+    status.innerHTML = '<div class="fin-alert fin-alert-warning">Arquivo invalido. Selecione um XLSX exportado do Cartão Flash.</div>';
     return;
   }
 
@@ -1609,7 +2100,7 @@ function finPreConfirmarLoteFlashTela_() {
   finFlashLimparPayloadImportacao_();
   if (!_finFlashUltimoDryRun) {
     if (alvo) {
-      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro o Pre-validar lote. Nenhuma gravacao foi realizada.</div>';
+      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro o Pré-validar lote. Nenhuma gravacao foi realizada.</div>';
     }
     return;
   }
@@ -1644,14 +2135,14 @@ function finRenderPreConfirmacaoFlash_(r) {
   var alvo = document.getElementById('finFlashPreConfirmacaoResumo');
   if (!alvo) return;
   if (!r) {
-    alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Pre-confirmacao nao retornou resposta do servidor.</div>';
+    alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Pré-confirmação nao retornou resposta do servidor.</div>';
     return;
   }
 
   var resumo = r.resumoGerencial || {};
   var duplicidades = r.duplicidades || {};
   var cards = [
-    ['Decisao', r.decisao || '-'],
+    ['Decisão', r.decisao || '-'],
     ['Status de seguranca', resumo.statusSeguranca || '-'],
     ['Periodo', (resumo.periodoInicio || '-') + ' ate ' + (resumo.periodoFim || '-')],
     ['Lancamentos', resumo.totalLancamentos],
@@ -1710,7 +2201,7 @@ function finPrepararPayloadImportacaoFlashTela_() {
   var btn = document.getElementById('finFlashPayloadBtn');
   if (!_finFlashUltimoDryRun || !_finFlashUltimaPreConfirmacao) {
     if (alvo) {
-      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro Pre-validar lote e Pre-confirmar lote. Nenhuma gravacao foi realizada.</div>';
+      alvo.innerHTML = '<div class="fin-alert fin-alert-warning">Execute primeiro Pré-validar lote e Pré-confirmar lote. Nenhuma gravacao foi realizada.</div>';
     }
     return;
   }
@@ -1776,20 +2267,20 @@ function finRenderPayloadImportacaoFlash_(r) {
   var pendencias = r.pendenciasOperacionais || {};
   var tipo = (r.decisao === 'APTO_TECNICAMENTE_BLOQUEADO_POR_CHAVE') ? 'success' : ((r.decisao === 'BLOQUEADO') ? 'danger' : 'warning');
   var cards = [
-    ['Decisao', r.decisao || '-'],
+    ['Decisão', r.decisao || '-'],
     ['Chave tecnica exigida', r.chaveTecnicaExigida ? 'SIM' : 'NAO'],
-    ['Autorizacao recebida', r.autorizacaoRecebida ? 'SIM' : 'NAO'],
+    ['Autorização recebida', r.autorizacaoRecebida ? 'SIM' : 'NAO'],
     ['Lotes que seriam gravados', totais.totalLotesQueSeriamGravados || 0],
     ['Extratos que seriam gravados', totais.totalExtratosQueSeriamGravados || 0],
     ['Total financeiro', finMoeda(totais.saldoLiquidoLote || totais.somaValores || 0)],
     ['Depositos/recargas', pendencias.totalDepositosRecargas || 0],
-    ['Prestacao pendente', pendencias.totalPrestacaoPendente || 0],
-    ['Categoria nao inferida', pendencias.totalCategoriaNaoInferida || 0],
-    ['Pendencias resolvidas', r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO']
+    ['Prestação pendente', pendencias.totalPrestacaoPendente || 0],
+    ['Categoria não inferida', pendencias.totalCategoriaNaoInferida || 0],
+    ['Pendências resolvidas', r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO']
   ];
 
   var html = '<div class="fin-alert fin-alert-' + tipo + '">' + finEH(r.mensagem || 'Preparacao somente leitura. Nenhuma gravacao foi realizada.') + '</div>';
-  html += '<div class="fin-alert fin-alert-warning">Importacao real bloqueada. Este painel mostra apenas dados que seriam gravados em etapa futura.</div>';
+  html += '<div class="fin-alert fin-alert-warning">Importação real bloqueada. Este painel mostra apenas dados que seriam gravados em etapa futura.</div>';
   html += '<div class="fin-flash-summary">';
   for (var i = 0; i < cards.length; i++) {
     html += '<div class="fin-flash-summary-card">';
@@ -1803,14 +2294,14 @@ function finRenderPayloadImportacaoFlash_(r) {
     html += '<div class="fin-alert fin-alert-warning">Deposito ou recarga detectado: precisa de decisao operacional antes de liberar importacao real.</div>';
   }
   if ((pendencias.totalPrestacaoPendente || 0) > 0 && !r.pendenciasOperacionaisResolvidas) {
-    html += '<div class="fin-alert fin-alert-warning">Prestacao pendente detectada: precisa de decisao operacional antes de liberar importacao real.</div>';
+    html += '<div class="fin-alert fin-alert-warning">Prestação pendente detectada: precisa de decisao operacional antes de liberar importacao real.</div>';
   }
   if ((pendencias.totalCategoriaNaoInferida || 0) > 0 && !r.pendenciasOperacionaisResolvidas) {
-    html += '<div class="fin-alert fin-alert-warning">Categoria nao inferida detectada: sera tratada conforme decisao operacional.</div>';
+    html += '<div class="fin-alert fin-alert-warning">Categoria não inferida detectada: sera tratada conforme decisao operacional.</div>';
   }
   html += finHtmlDecisoesOperacionaisFlash_(r);
   if (r.decisao === 'APTO_TECNICAMENTE_BLOQUEADO_POR_CHAVE' && r.pendenciasOperacionaisResolvidas) {
-    html += '<div class="fin-alert fin-alert-success"><strong>Pronto para teste real controlado em /dev.</strong><br>Payload apto tecnicamente com decisoes operacionais aplicadas. Producao ainda nao esta pronta e importacao real exige autorizacao tecnica fora da tela.</div>';
+    html += '<div class="fin-alert fin-alert-success"><strong>Pronto para teste real controlado em /dev.</strong><br>Payload apto tecnicamente com decisoes operacionais aplicadas. Produção ainda não está pronta e importacao real exige autorizacao tecnica fora da tela.</div>';
   }
 
   html += finHtmlChecklistPreConfirmacaoFlash_(r.checklistSeguranca || []);
@@ -1823,12 +2314,12 @@ function finRenderPayloadImportacaoFlash_(r) {
 function finHtmlDecisoesOperacionaisFlash_(r) {
   var decisoes = r && r.decisoesOperacionaisAplicadas ? r.decisoesOperacionaisAplicadas : {};
   var tratados = r && r.itensTratadosPorDecisao ? r.itensTratadosPorDecisao : [];
-  var html = '<h3>Decisoes operacionais aplicadas</h3>';
+  var html = '<h3>Decisões operacionais aplicadas</h3>';
   html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
   html += '<tr><th>Depositos/recargas</th><td>' + finEH(decisoes.depositosRecargas || '-') + '</td></tr>';
-  html += '<tr><th>Prestacao pendente</th><td>' + finEH(decisoes.prestacaoPendente || '-') + '</td></tr>';
-  html += '<tr><th>Categoria nao inferida</th><td>' + finEH(decisoes.categoriaNaoInferida || '-') + '</td></tr>';
-  html += '<tr><th>Pendencias resolvidas por politica</th><td>' + finEH(r && r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '<tr><th>Prestação pendente</th><td>' + finEH(decisoes.prestacaoPendente || '-') + '</td></tr>';
+  html += '<tr><th>Categoria não inferida</th><td>' + finEH(decisoes.categoriaNaoInferida || '-') + '</td></tr>';
+  html += '<tr><th>Pendências resolvidas por politica</th><td>' + finEH(r && r.pendenciasOperacionaisResolvidas ? 'SIM' : 'NAO') + '</td></tr>';
   html += '</tbody></table></div>';
   if (tratados.length) {
     html += '<div class="fin-flash-checklist-list">';
@@ -1852,7 +2343,7 @@ function finHtmlPlanoPayloadFlash_(plano) {
   html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
   html += '<tr><th>Abas destino</th><td>' + finEH((plano.abasDestino || []).join(' | ') || '-') + '</td></tr>';
   html += '<tr><th>Operacoes planejadas</th><td>' + finEH((plano.operacoesPlanejadas || []).join(' | ') || '-') + '</td></tr>';
-  html += '<tr><th>Pendencias de decisao</th><td>' + finEH((plano.camposPendentesDeDecisao || []).join(' | ') || '-') + '</td></tr>';
+  html += '<tr><th>Pendências de decisao</th><td>' + finEH((plano.camposPendentesDeDecisao || []).join(' | ') || '-') + '</td></tr>';
   html += '<tr><th>Travas obrigatorias</th><td>' + finEH((plano.travasObrigatorias || []).join(' | ') || '-') + '</td></tr>';
   html += '</tbody></table></div>';
   return html;
@@ -2415,7 +2906,7 @@ function finFlashRenderChecklistB47_(dados) {
 }
 
 function finFlashAbrirChecklistLiberacao_() {
-  finFlashRenderPainelAcao_('Checklist de liberacao controlada', '<div class="fin-alert fin-alert-info">Carregando checklist seguro...</div>');
+  finFlashRenderPainelAcao_('Checklist de liberação controlada', '<div class="fin-alert fin-alert-info">Carregando checklist seguro...</div>');
   google.script.run
     .withSuccessHandler(function(r) {
       finFlashRenderChecklistLiberacao_(r);
@@ -2452,7 +2943,7 @@ function finFlashRenderChecklistLiberacao_(dados) {
   html += '</div>';
   html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
   html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
-  finFlashRenderPainelAcao_('Checklist de liberacao controlada', html);
+  finFlashRenderPainelAcao_('Checklist de liberação controlada', html);
 }
 
 function finFlashGerarPacoteAutorizacao_() {
@@ -2634,7 +3125,7 @@ function finFlashRenderAuditarFinal_(dados) {
   html += '<div class="fin-table-wrap"><table class="fin-table"><tbody>';
   html += '<tr><th>Pronto para execucao manual /dev</th><td><strong>' + (r.prontoParaExecucaoManualDev ? 'SIM' : 'NAO') + '</strong></td></tr>';
   html += '<tr><th>Pronto para producao</th><td>' + (r.prontoParaProducao ? 'SIM' : 'NAO - bloqueado') + '</td></tr>';
-  html += '<tr><th>Autorizacao manual obrigatoria</th><td>' + (r.autorizacaoManualObrigatoria ? 'SIM' : 'NAO') + '</td></tr>';
+  html += '<tr><th>Autorização manual obrigatoria</th><td>' + (r.autorizacaoManualObrigatoria ? 'SIM' : 'NAO') + '</td></tr>';
   html += '<tr><th>UI executa importacao real</th><td>' + (r.uiExecutaImportacaoReal ? 'ATENCAO - SIM' : 'NAO - correto') + '</td></tr>';
   html += '<tr><th>Payload completo</th><td>' + (r.payloadCompleto ? 'SIM' : 'NAO') + '</td></tr>';
   html += '<tr><th>Checklist pos-execucao ok</th><td>' + (r.checklistPosExecucaoOk ? 'SIM' : 'NAO') + '</td></tr>';
@@ -2905,8 +3396,8 @@ function finFlashAcaoPreparacao_(msg) {
 // ---- navegacao de abas ----
 
 function finMudarAba(aba) {
-  var mapa = ['cartoes', 'recargas', 'lancamentos', 'flash', 'pendencias', 'documentos'];
-  var ids  = ['tabCartoes', 'tabRecargas', 'tabLancamentos', 'tabFlash', 'tabPendencias', 'tabDocumentos'];
+  var mapa = ['visaogeral','cartoes','recargas','despesas','extratos','conciliacao','pendencias','prestacoes','termos','relatorios','cobrancas','admintec'];
+  var ids  = ['tabVisaoGeral','tabCartoes','tabRecargas','tabLancamentos','tabFlash','tabConciliacao','tabPendencias','tabPrestacoesMobile','tabTermos','tabRelatorios','tabCobrancas','tabAdminTec'];
   for (var i = 0; i < ids.length; i++) {
     var c = document.getElementById(ids[i]);
     if (c) { c.classList.toggle('active', false); }
@@ -2919,25 +3410,32 @@ function finMudarAba(aba) {
   var btns = document.querySelectorAll('.fin-tab-btn');
   for (var j = 0; j < btns.length; j++) { btns[j].classList.toggle('active', false); }
   if (idx >= 0 && btns[idx]) { btns[idx].classList.add('active'); }
-  if (aba === 'flash' && !_finFlashOperacionalCarregado) {
-    finFlashCarregarResumo_();
-  }
+  if (aba === 'recargas' && !_finRecCarregado) { finCarregarRecargasV43(); }
+  if (aba === 'extratos' && !_finFlashOperacionalCarregado) { finFlashCarregarResumo_(); }
+  if (aba === 'pendencias' && !_finPend8BCarregado) { finPend8BAbrirAba_(); }
+  if (aba === 'prestacoes' && !_finPMCarregado) { finPMAbrirAba_(); }
 }
 
 // ---- filtro da lista ----
 
 function finFiltrarCartoes() {
   var busca  = (document.getElementById('finBuscaCartao').value || '').toLowerCase();
-  var status = document.getElementById('finFiltroStatus').value;
+  var status = (document.getElementById('finFiltroStatus') || {}).value || '';
+  var termo  = (document.getElementById('finFiltroTermo')  || {}).value || '';
   _finFiltrados = _finCartoes.filter(function(c) {
-    var mB = !busca ||
-      (c.FUNCIONARIO_NOME && c.FUNCIONARIO_NOME.toLowerCase().indexOf(busca) >= 0) ||
-      (c.NUMERO_FINAL_4   && c.NUMERO_FINAL_4.indexOf(busca) >= 0) ||
-      (c.APELIDO_CARTAO   && c.APELIDO_CARTAO.toLowerCase().indexOf(busca) >= 0);
-    var mS = !status || c.STATUS_CARTAO === status;
-    return mB && mS;
+    if (status && c.STATUS_CARTAO !== status) { return false; }
+    if (termo  && c.TERMO_ASSINADO !== termo) { return false; }
+    if (busca) {
+      var nome   = (c.FUNCIONARIO_NOME || '').toLowerCase();
+      var apelido = (c.APELIDO_CARTAO  || '').toLowerCase();
+      var final4 = (c.NUMERO_FINAL_4   || '').toLowerCase();
+      var email  = (c.FUNCIONARIO_EMAIL || '').toLowerCase();
+      if (nome.indexOf(busca) < 0 && apelido.indexOf(busca) < 0 &&
+          final4.indexOf(busca) < 0 && email.indexOf(busca) < 0) { return false; }
+    }
+    return true;
   });
-  finRenderCartoes(_finFiltrados);
+  finCartoes3RenderTabela(_finFiltrados);
 }
 
 // ---- toast / loading ----
@@ -2960,6 +3458,406 @@ function finToast(msg, tipo) {
 function finSetLoading(show) {
   var el = document.getElementById('finLoading');
   if (show) { el.classList.add('show'); } else { el.classList.remove('show'); }
+}
+
+// ---- FLASH.3 — Cartões Profissional ----
+
+function finCartoes3PillStatus(s) {
+  if (!s) { return '<span class="fin-pill fin-pill-gray">-</span>'; }
+  var u = s.toUpperCase();
+  if (u === 'ATIVO')               { return '<span class="fin-pill fin-pill-green">Ativo</span>'; }
+  if (u === 'BLOQUEADO_TEMPORARIO') { return '<span class="fin-pill fin-pill-yellow">Bloqueado</span>'; }
+  if (u === 'PENDENTE_ATIVACAO')    { return '<span class="fin-pill fin-pill-blue">Ag. ativação</span>'; }
+  if (u === 'INATIVO')             { return '<span class="fin-pill fin-pill-gray">Inativo</span>'; }
+  if (u === 'CANCELADO')           { return '<span class="fin-pill fin-pill-red">Cancelado</span>'; }
+  if (u === 'VENCIDO')             { return '<span class="fin-pill fin-pill-red">Vencido</span>'; }
+  return '<span class="fin-pill fin-pill-gray">' + finEH(s) + '</span>';
+}
+
+function finCartoes3RenderKPIs(lista) {
+  var el = document.getElementById('finCartoesKPIs');
+  if (!el) { return; }
+  var ativos = 0, bloqueados = 0, semResp = 0, termoPend = 0;
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i];
+    var sc = (c.STATUS_CARTAO || '').toUpperCase();
+    if (sc === 'ATIVO') { ativos++; }
+    if (sc === 'BLOQUEADO_TEMPORARIO') { bloqueados++; }
+    if (sc === 'ATIVO' && !c.FUNCIONARIO_ID && !c.FUNCIONARIO_NOME) { semResp++; }
+    if (sc === 'ATIVO' && c.TERMO_ASSINADO !== 'SIM') { termoPend++; }
+  }
+  var corSR = semResp > 0 ? '#dc3545' : '#0f2d52';
+  var corTP = termoPend > 0 ? '#856404' : '#0f2d52';
+  el.innerHTML =
+    '<div class="fin-kpi kpi-ativo"><div class="fin-kpi-label">Ativos</div><div class="fin-kpi-value">' + ativos + '</div><div class="fin-kpi-sub">cartões</div></div>' +
+    '<div class="fin-kpi kpi-bloq"><div class="fin-kpi-label">Bloqueados</div><div class="fin-kpi-value">' + bloqueados + '</div><div class="fin-kpi-sub">cartões</div></div>' +
+    '<div class="fin-kpi" style="border-left-color:' + corSR + '"><div class="fin-kpi-label">Sem responsável</div><div class="fin-kpi-value" style="color:' + corSR + '">' + semResp + '</div><div class="fin-kpi-sub">ativos</div></div>' +
+    '<div class="fin-kpi" style="border-left-color:' + (termoPend > 0 ? '#ffc107' : '#0366d6') + '"><div class="fin-kpi-label">Termos pendentes</div><div class="fin-kpi-value" style="color:' + corTP + '">' + termoPend + '</div><div class="fin-kpi-sub">ativos</div></div>' +
+    '<div class="fin-kpi"><div class="fin-kpi-label">Total cadastrados</div><div class="fin-kpi-value">' + lista.length + '</div><div class="fin-kpi-sub">cartões</div></div>';
+}
+
+function finCartoes3RenderAlertas(lista) {
+  var el = document.getElementById('finCartoesAlertas');
+  if (!el) { return; }
+  var alertas = [];
+  var semResp = lista.filter(function(c) { return c.STATUS_CARTAO === 'ATIVO' && !c.FUNCIONARIO_ID && !c.FUNCIONARIO_NOME; });
+  if (semResp.length) { alertas.push('<div class="fin-alert fin-alert-warning">Existem ' + semResp.length + ' cartão(ões) ativo(s) sem responsável definido.</div>'); }
+  var termoPend = lista.filter(function(c) { return c.STATUS_CARTAO === 'ATIVO' && c.TERMO_ASSINADO !== 'SIM'; });
+  if (termoPend.length) { alertas.push('<div class="fin-alert fin-alert-info">Existem ' + termoPend.length + ' cartão(ões) com termo pendente.</div>'); }
+  var dupl = {};
+  lista.forEach(function(c) {
+    if (c.STATUS_CARTAO !== 'ATIVO') { return; }
+    var k = (c.NUMERO_FINAL_4 || '') + '|' + (c.FUNCIONARIO_ID || c.FUNCIONARIO_NOME || '');
+    if (k !== '|') { dupl[k] = (dupl[k] || 0) + 1; }
+  });
+  var hasDupl = Object.keys(dupl).some(function(k) { return dupl[k] > 1; });
+  if (hasDupl) { alertas.push('<div class="fin-alert fin-alert-danger">Possíveis cartões duplicados detectados. Verifique os finais repetidos.</div>'); }
+  if (alertas.length) { el.innerHTML = alertas.join(''); el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+
+function finCartoes3RenderTabela(lista) {
+  var tbody = document.getElementById('finCartoesTabela');
+  var rodape = document.getElementById('finCartoesRodape');
+  if (!tbody) { return; }
+  if (!lista || lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;padding:32px">Nenhum cartão encontrado com os filtros atuais.</td></tr>';
+    if (rodape) { rodape.textContent = '0 cartões'; }
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < lista.length; i++) {
+    var c = lista[i];
+    var sc = (c.STATUS_CARTAO || '').toUpperCase();
+    var podeBloquear    = sc === 'ATIVO';
+    var podeDesbloquear = sc === 'BLOQUEADO_TEMPORARIO';
+    var podeInativar    = sc !== 'INATIVO' && sc !== 'CANCELADO';
+    var termoPill = c.TERMO_ASSINADO === 'SIM'
+      ? '<span class="fin-pill fin-pill-green">Assinado</span>'
+      : '<span class="fin-pill fin-pill-yellow">Pendente</span>';
+    var rowId = finEA(c.ID);
+    html += '<tr>';
+    html += '<td><strong>' + finEH(c.APELIDO_CARTAO || c.CARTAO_ID || '-') + '</strong>' +
+            (c.CARTAO_ID ? '<br><span style="font-size:11px;color:#aaa">' + finEH(c.CARTAO_ID) + '</span>' : '') + '</td>';
+    html += '<td><strong>' + finEH(c.NUMERO_FINAL_4 || '????') + '</strong></td>';
+    html += '<td>' + finEH(c.FUNCIONARIO_NOME || '') + '</td>';
+    html += '<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + finEH(c.FUNCIONARIO_EMAIL || '') + '</td>';
+    html += '<td>' + finCartoes3PillStatus(c.STATUS_CARTAO) + '</td>';
+    html += '<td>' + termoPill + '</td>';
+    html += '<td><button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerPendencias(\'' + rowId + '\')">Ver</button></td>';
+    html += '<td style="white-space:nowrap;font-size:12px;color:#888">' + finEH(finDataBR(c.ATUALIZADO_EM || c.CRIADO_EM)) + '</td>';
+    html += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3AbrirModal(\'' + rowId + '\')" title="Editar">Editar</button>';
+    if (podeBloquear)    { html += '<button class="fin-btn fin-btn-warning fin-btn-sm" onclick="finCartoes3AbrirBloqueio(\'' + rowId + '\')">Bloquear</button>'; }
+    if (podeDesbloquear) { html += '<button class="fin-btn fin-btn-success fin-btn-sm" onclick="finCartoes3Desbloquear(\'' + rowId + '\')">Desbloquear</button>'; }
+    if (podeInativar)    { html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCartoes3AbrirInativar(\'' + rowId + '\')">Inativar</button>'; }
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerTermo(\'' + rowId + '\')">Termo</button>';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerHistorico(\'' + rowId + '\')">Histórico</button>';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3AbrirResponsavel(\'' + rowId + '\')">Responsável</button>';
+    html += '</div></td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+  if (rodape) { rodape.textContent = lista.length + (lista.length === 1 ? ' cartão' : ' cartões'); }
+}
+
+// ---- Modal Novo/Editar ----
+
+function finCartoes3AbrirModal(id) {
+  _finCartaoEditandoId = id || '';
+  var isEdit = !!id;
+  var c = isEdit ? finAcharCartao(id) : null;
+  var titulo = document.getElementById('finModalCartaoTitulo');
+  if (titulo) { titulo.textContent = isEdit ? 'Editar Cartão' : 'Novo Cartão'; }
+  var setV = function(elId, val) { var el = document.getElementById(elId); if (el) { el.value = val || ''; } };
+  setV('finMC_FUNC_NOME',   c ? (c.FUNCIONARIO_NOME  || '') : '');
+  setV('finMC_FUNC_ID',     c ? (c.FUNCIONARIO_ID    || '') : '');
+  setV('finMC_FUNC_EMAIL',  c ? (c.FUNCIONARIO_EMAIL || '') : '');
+  setV('finMC_NUM_FINAL4',  c ? (c.NUMERO_FINAL_4    || '') : '');
+  setV('finMC_APELIDO',     c ? (c.APELIDO_CARTAO    || '') : '');
+  setV('finMC_CC',          c ? (c.CENTRO_CUSTO      || '') : '');
+  setV('finMC_OBS',         c ? (c.OBSERVACOES       || '') : '');
+  var roLine = document.getElementById('finMC_ROLine');
+  var roInfo = document.getElementById('finMC_ROInfo');
+  if (roLine) { roLine.style.display = isEdit ? 'block' : 'none'; }
+  if (roInfo && isEdit && c) {
+    roInfo.textContent = 'Criado em ' + finDataBR(c.CRIADO_EM) + ' por ' + (c.CRIADO_POR || '-') + ' | Atualizado: ' + finDataBR(c.ATUALIZADO_EM);
+  }
+  var numFinal = document.getElementById('finMC_NUM_FINAL4');
+  if (numFinal) { numFinal.readOnly = isEdit; numFinal.style.background = isEdit ? '#f8f9fa' : ''; }
+  document.getElementById('finModalCartao').classList.add('open');
+  var fnome = document.getElementById('finMC_FUNC_NOME');
+  if (fnome) { setTimeout(function() { fnome.focus(); }, 80); }
+}
+
+function finCartoes3FecharModal() {
+  document.getElementById('finModalCartao').classList.remove('open');
+}
+
+function finCartoes3SalvarModal() {
+  var nome   = finV('finMC_FUNC_NOME');
+  var final4 = finV('finMC_NUM_FINAL4');
+  var email  = finV('finMC_FUNC_EMAIL');
+  var isEdit = !!_finCartaoEditandoId;
+  if (!nome) { finMostrarErro('Informe o nome do responsável.'); return; }
+  if (!isEdit && !final4) { finMostrarErro('Informe o final do cartão.'); return; }
+  if (final4 && !/^\d{1,4}$/.test(final4)) { finMostrarErro('Final do cartão deve conter apenas dígitos (máx. 4).'); return; }
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { finMostrarErro('E-mail inválido.'); return; }
+  if (!isEdit && final4) {
+    var funcId32    = finV('finMC_FUNC_ID').trim().toLowerCase();
+    var funcEmail32 = email.trim().toLowerCase();
+    var final4n32   = final4.replace(/\D/g, '').slice(-4);
+    var dupl32 = _finCartoes.filter(function(c) {
+      var sc = (c.STATUS_CARTAO || '').toUpperCase();
+      if (sc === 'INATIVO' || sc === 'CANCELADO' || sc === 'DEVOLVIDO') { return false; }
+      var cf = (c.NUMERO_FINAL_4 || '').replace(/\D/g, '').slice(-4);
+      if (cf !== final4n32) { return false; }
+      var cId    = (c.FUNCIONARIO_ID    || '').toLowerCase();
+      var cEmail = (c.FUNCIONARIO_EMAIL || '').toLowerCase();
+      if (funcId32    && cId)    { return funcId32    === cId; }
+      if (funcEmail32 && cEmail) { return funcEmail32 === cEmail; }
+      return false;
+    });
+    if (dupl32.length) {
+      finMostrarErro('Já existe um cartão ativo com este final vinculado a este responsável. Revise o cadastro antes de salvar.');
+      return;
+    }
+  }
+  finCartoes3FecharModal();
+  finSetLoading(true);
+  if (isEdit) {
+    var patch = {
+      APELIDO_CARTAO: finV('finMC_APELIDO'),
+      CENTRO_CUSTO  : finV('finMC_CC'),
+      OBSERVACOES   : finV('finMC_OBS'),
+      FUNCIONARIO_EMAIL: email
+    };
+    google.script.run
+      .withSuccessHandler(function(r) {
+        finSetLoading(false);
+        if (r && r.ok) { finMostrarSucesso('Cartão atualizado.'); finCarregarCartoes(); }
+        else { finMostrarErro((r && r.message) || 'Erro ao atualizar.'); }
+      })
+      .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+      .finAtualizarCartao(_finSessao, _finCartaoEditandoId, patch);
+  } else {
+    var payload = {
+      FUNCIONARIO_ID   : finV('finMC_FUNC_ID'),
+      FUNCIONARIO_NOME : nome,
+      FUNCIONARIO_EMAIL: email,
+      NUMERO_FINAL_4   : final4,
+      APELIDO_CARTAO   : finV('finMC_APELIDO'),
+      CENTRO_CUSTO     : finV('finMC_CC'),
+      OBSERVACOES      : finV('finMC_OBS')
+    };
+    google.script.run
+      .withSuccessHandler(function(r) {
+        finSetLoading(false);
+        if (r && r.ok) { finMostrarSucesso('Cartão criado com sucesso.'); finCarregarCartoes(); }
+        else { finMostrarErro((r && r.message) || 'Erro ao criar cartão.'); }
+      })
+      .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+      .finCriarCartao(_finSessao, payload);
+  }
+}
+
+// ---- Inativar ----
+
+function finCartoes3AbrirInativar(id) {
+  _finInativarId = id;
+  var c = finAcharCartao(id);
+  var info = document.getElementById('finModalInativarInfo');
+  if (info && c) { info.textContent = (c.APELIDO_CARTAO || c.CARTAO_ID) + ' — ' + (c.FUNCIONARIO_NOME || 'sem responsável'); }
+  document.getElementById('finMotivoInativar').value = '';
+  document.getElementById('finModalInativar').classList.add('open');
+}
+
+function finCartoes3FecharInativar() {
+  document.getElementById('finModalInativar').classList.remove('open');
+  _finInativarId = '';
+}
+
+function finCartoes3ConfirmarInativar() {
+  var motivo = finV('finMotivoInativar');
+  if (!motivo) { finMostrarErro('Informe o motivo da inativação.'); return; }
+  var id = _finInativarId;
+  finCartoes3FecharInativar();
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) { finMostrarSucesso('Cartão inativado. Histórico preservado.'); finCarregarCartoes(); }
+      else { finMostrarErro((r && r.message) || 'Erro ao inativar.'); }
+    })
+    .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+    .finFlashInativarCartao(_finSessao, id, motivo);
+}
+
+// ---- Bloquear ----
+
+function finCartoes3AbrirBloqueio(id) {
+  _finBloqueioCartaoId = id;
+  _finCartaoAtualId = id;
+  document.getElementById('finMotivoBloqueio').value = '';
+  document.getElementById('finModalBloqueio').classList.add('open');
+}
+
+function finCartoes3Desbloquear(id) {
+  if (!confirm('Desbloquear este cartão?')) { return; }
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) { finMostrarSucesso('Cartão desbloqueado.'); finCarregarCartoes(); }
+      else { finMostrarErro((r && r.message) || 'Erro.'); }
+    })
+    .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+    .finDesbloquearCartao(_finSessao, id);
+}
+
+// ---- Alterar responsável ----
+
+function finCartoes3AbrirResponsavel(id) {
+  _finResponsavelId = id;
+  var c = finAcharCartao(id);
+  var info = document.getElementById('finMR_CartaoInfo');
+  var atual = document.getElementById('finMR_AtualNome');
+  if (info && c) { info.textContent = (c.APELIDO_CARTAO || c.CARTAO_ID) + ' — final ' + (c.NUMERO_FINAL_4 || '????'); }
+  if (atual && c) { atual.textContent = c.FUNCIONARIO_NOME || '(sem responsável)'; }
+  ['finMR_NovoNome','finMR_NovoId','finMR_NovoEmail','finMR_NovoTel'].forEach(function(eid) {
+    var el = document.getElementById(eid); if (el) { el.value = ''; }
+  });
+  document.getElementById('finModalResponsavel').classList.add('open');
+}
+
+function finCartoes3FecharResponsavel() {
+  document.getElementById('finModalResponsavel').classList.remove('open');
+  _finResponsavelId = '';
+}
+
+function finCartoes3SalvarResponsavel() {
+  var nome  = finV('finMR_NovoNome');
+  var email = finV('finMR_NovoEmail');
+  if (!nome) { finMostrarErro('Informe o nome do novo responsável.'); return; }
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { finMostrarErro('E-mail inválido.'); return; }
+  var id = _finResponsavelId;
+  finCartoes3FecharResponsavel();
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        var msg = 'Responsável alterado. Log registrado.';
+        if (r.termoMarcadoPendente) { msg += ' Termo marcado como pendente para o novo responsável.'; }
+        finMostrarSucesso(msg);
+        finCarregarCartoes();
+      } else { finMostrarErro((r && r.message) || 'Erro ao alterar responsável.'); }
+    })
+    .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+    .finFlashAlterarResponsavelCartao(_finSessao, id, {
+      FUNCIONARIO_NOME    : nome,
+      FUNCIONARIO_ID      : finV('finMR_NovoId'),
+      FUNCIONARIO_EMAIL   : email,
+      FUNCIONARIO_TELEFONE: finV('finMR_NovoTel')
+    });
+}
+
+// ---- Histórico ----
+
+function finCartoes3VerHistorico(id) {
+  var c = finAcharCartao(id);
+  var titulo = document.getElementById('finModalHistoricoTitulo');
+  var corpo  = document.getElementById('finModalHistoricoCorpo');
+  if (titulo) { titulo.textContent = 'Histórico — ' + (c ? (c.APELIDO_CARTAO || c.CARTAO_ID) : id); }
+  if (corpo)  { corpo.innerHTML = '<p style="color:#999;font-size:13px;padding:16px">Carregando...</p>'; }
+  document.getElementById('finModalHistorico').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!corpo) { return; }
+      if (!r || !r.ok) { corpo.innerHTML = '<div class="fin-alert fin-alert-warning">' + finEH((r && r.message) || 'Sem histórico.') + '</div>'; return; }
+      var logs = r.items || [];
+      if (!logs.length) { corpo.innerHTML = '<p style="color:#999;text-align:center;padding:32px">Nenhum registro de histórico para este cartão.</p>'; return; }
+      var h = '<table class="fin-table"><thead><tr><th>Data/Hora</th><th>Ação</th><th>Usuário</th><th>Resultado</th><th>Observação</th></tr></thead><tbody>';
+      for (var i = 0; i < logs.length; i++) {
+        var l = logs[i];
+        h += '<tr>';
+        h += '<td style="white-space:nowrap">' + finEH(finDataBR(l.DATA_HORA || l.CRIADO_EM)) + '</td>';
+        h += '<td>' + finEH(l.ACAO || '') + '</td>';
+        h += '<td>' + finEH(l.USUARIO_NOME || '') + '</td>';
+        h += '<td>' + finEH(l.RESULTADO || '') + '</td>';
+        h += '<td style="max-width:220px">' + finEH(l.MENSAGEM || '') + '</td>';
+        h += '</tr>';
+      }
+      h += '</tbody></table>';
+      corpo.innerHTML = h;
+    })
+    .withFailureHandler(function(e) {
+      if (corpo) { corpo.innerHTML = '<div class="fin-alert fin-alert-danger">Erro: ' + finEH(e.message || String(e)) + '</div>'; }
+    })
+    .finFlashObterHistoricoCartao(_finSessao, id);
+}
+
+function finCartoes3FecharHistorico() {
+  document.getElementById('finModalHistorico').classList.remove('open');
+}
+
+// ---- Pendências do cartão ----
+
+function finCartoes3VerPendencias(id) {
+  var c = finAcharCartao(id);
+  var titulo = document.getElementById('finModalPendCartaoTitulo');
+  var corpo  = document.getElementById('finModalPendCartaoCorpo');
+  if (titulo) { titulo.textContent = 'Pendências — ' + (c ? (c.APELIDO_CARTAO || c.CARTAO_ID) : id); }
+  if (corpo)  { corpo.innerHTML = '<p style="color:#999;font-size:13px;padding:16px">Carregando...</p>'; }
+  document.getElementById('finModalPendCartao').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!corpo) { return; }
+      if (!r || !r.ok) { corpo.innerHTML = '<div class="fin-alert fin-alert-warning">' + finEH((r && r.message) || 'Erro.') + '</div>'; return; }
+      var pend = r.items || [];
+      if (!pend.length) { corpo.innerHTML = '<p style="color:#999;text-align:center;padding:32px">Nenhuma pendência para este cartão.</p>'; return; }
+      var h = '<table class="fin-table"><thead><tr><th>ID</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Data limite</th></tr></thead><tbody>';
+      for (var i = 0; i < pend.length; i++) {
+        var p = pend[i];
+        h += '<tr>';
+        h += '<td style="font-size:11px;color:#888">' + finEH(p.PENDENCIA_ID || p.ID) + '</td>';
+        h += '<td>' + finEH(p.TIPO_PENDENCIA || '') + '</td>';
+        h += '<td style="max-width:180px">' + finEH(p.DESCRICAO_PENDENCIA || '') + '</td>';
+        h += '<td>' + (p.VALOR_ENVOLVIDO ? finMoeda(p.VALOR_ENVOLVIDO) : '-') + '</td>';
+        h += '<td>' + finPill(p.STATUS || '') + '</td>';
+        h += '<td>' + finEH(finDataBR(p.DATA_LIMITE_ESCLARECIMENTO)) + '</td>';
+        h += '</tr>';
+      }
+      h += '</tbody></table>';
+      corpo.innerHTML = h;
+    })
+    .withFailureHandler(function(e) {
+      if (corpo) { corpo.innerHTML = '<div class="fin-alert fin-alert-danger">Erro: ' + finEH(e.message || String(e)) + '</div>'; }
+    })
+    .finFlashObterPendenciasCartao(_finSessao, id);
+}
+
+function finCartoes3FecharPendCartao() {
+  document.getElementById('finModalPendCartao').classList.remove('open');
+}
+
+// ---- Ver termo ----
+
+function finCartoes3VerTermo(id) {
+  var c = finAcharCartao(id);
+  if (!c || !c.CARTAO_ID) { finMostrarErro('Cartão não encontrado ou sem ID.'); return; }
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (!r || !r.ok) { finMostrarErro((r && r.message) || 'Nenhum termo encontrado.'); return; }
+      var item = r.item || {};
+      var url = item.URL_VALIDACAO || item.PDF_URL || '';
+      if (url) { window.open(url, '_blank'); }
+      else { finMostrarErro('Termo sem link de visualização. Gere ou reemita o termo.'); }
+    })
+    .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
+    .finObterStatusTermo(_finSessao, c.CARTAO_ID);
 }
 
 // ---- helpers internos ----
@@ -3046,15 +3944,17 @@ function finPill(status) {
 function finPillPrestacao(status) {
   if (!status) { return '<span class="fin-pill fin-pill-gray">-</span>'; }
   var s = status.toUpperCase();
+  if (s === 'APROVADO_FINANCEIRO')   { return '<span class="fin-pill fin-pill-green">Aprov. Financeiro</span>'; }
+  if (s === 'REPROVADO_FINANCEIRO')  { return '<span class="fin-pill fin-pill-red">Reprov. Financeiro</span>'; }
   if (s === 'APROVADO')              { return '<span class="fin-pill fin-pill-green">Aprovado</span>'; }
   if (s === 'REPROVADO')             { return '<span class="fin-pill fin-pill-red">Reprovado</span>'; }
-  if (s === 'ENVIADO')               { return '<span class="fin-pill fin-pill-blue">Enviado</span>'; }
+  if (s === 'ENVIADO')               { return '<span class="fin-pill fin-pill-blue">Aguard. Conf.</span>'; }
   if (s === 'PENDENTE_COMPROVANTE')  { return '<span class="fin-pill fin-pill-yellow">Pend. Comprovante</span>'; }
   if (s === 'PENDENTE_JUSTIFICATIVA'){ return '<span class="fin-pill fin-pill-yellow">Pend. Justificativa</span>'; }
   return '<span class="fin-pill fin-pill-gray">' + finEH(status) + '</span>';
 }
 
-// ---- FIN.8B — Pendencias Flash (leitura) ----
+// ---- Pendências Flash ----
 
 var _finPend8BDados = null;
 var _finPend8BCarregado = false;
@@ -3227,7 +4127,7 @@ function finPend8BVerDetalhe_(idx) {
     ['Data criacao', finDataBR(p.dataCriacao || '')]
   ];
   var html = '<h3>Detalhe da pendencia</h3>';
-  html += '<div class="fin-alert fin-alert-warning">Somente leitura. Resolucao real bloqueada nesta etapa FIN.8B.</div>';
+  html += '<div class="fin-alert fin-alert-info">Detalhes da pendência. Resolução individual disponível na próxima versão.</div>';
   html += '<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:10px 0">';
   for (var i = 0; i < campos.length; i++) {
     html += '<dt style="color:#666;font-weight:600;padding:3px 0;white-space:nowrap">' + finEH(campos[i][0]) + '</dt>';
@@ -3236,7 +4136,7 @@ function finPend8BVerDetalhe_(idx) {
   html += '</dl>';
   html += '<div class="fin-btn-row">';
   html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharDetalhe_()">Fechar detalhe</button>';
-  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Disponivel em FIN.8C">Resolver pendencia (FIN.8C)</button>';
+  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Resolver pendência</button>';
   html += '</div>';
   el.innerHTML = html;
   el.style.display = 'block';
@@ -3280,7 +4180,7 @@ function finPend8BRenderPreviaConciliacao_(el, dados) {
   html += '<div class="fin-alert fin-alert-info" style="margin-top:10px">Acao de conciliar continua bloqueada. Esta e apenas uma previa de leitura.</div>';
   html += '<div class="fin-btn-row">';
   html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharConciliacao_()">Fechar previa</button>';
-  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Disponivel em FIN.8C">Conciliar selecionados (FIN.8C)</button>';
+  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Conciliar selecionados</button>';
   html += '</div>';
   if ((dados.conciliaveis || []).length) {
     html += '<h3 style="margin-top:14px">Conciliaveis</h3>' + finFlashTabelaConciliacao_(dados.conciliaveis, true);
@@ -3364,6 +4264,503 @@ function finFlashRenderPilotoB48_(dados) {
   var painel = document.getElementById('finFlashPainelAcao');
   if (painel) { finFlashRenderPainelAcao_('Piloto real controlado B48', html); }
 }
+
+// ---- B54.5 — Prestações Flash Mobile (leitura financeiro) ----
+
+var _finPMDados     = null;
+var _finPMCarregado = false;
+
+function finPMAbrirAba_() {
+  if (!_finPMCarregado) { finPMCarregar_(); }
+}
+
+function finPMCarregar_() {
+  _finPMCarregado = false;
+  var tbl = document.getElementById('finPMTabela');
+  if (tbl) { tbl.innerHTML = '<div class="fin-list-empty">Carregando...</div>'; }
+  finPMEsconderErro_();
+  var statusFiltro = document.getElementById('finPMFiltroStatus');
+  var filtros = { status: statusFiltro ? statusFiltro.value : '' };
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _finPMDados     = r;
+      _finPMCarregado = true;
+      if (!r || !r.ok) {
+        finPMMostrarErro_((r && r.message) || 'Erro ao carregar prestacoes.');
+        return;
+      }
+      finPMRenderKpis_(r.kpis);
+      finPMRenderTabela_(r.itens || []);
+    })
+    .withFailureHandler(function(e) {
+      _finPMCarregado = false;
+      finPMMostrarErro_(e && e.message ? e.message : String(e || 'Falha na comunicacao.'));
+    })
+    .finFlashListarPrestacoesMobileFinanceiroV1(_finSessao, filtros);
+}
+
+function finPMFiltrar_() {
+  if (!_finPMDados || !_finPMDados.itens) { finPMCarregar_(); return; }
+  var status = (document.getElementById('finPMFiltroStatus').value || '').toUpperCase();
+  var busca  = (document.getElementById('finPMBusca').value || '').toLowerCase();
+  var lista  = _finPMDados.itens.filter(function(r) {
+    var mS = !status || (r.statusPrestacao || '').toUpperCase() === status;
+    var mB = !busca ||
+      (r.funcionarioNome || '').toLowerCase().indexOf(busca) >= 0 ||
+      (r.descricaoGasto  || '').toLowerCase().indexOf(busca) >= 0 ||
+      (r.osNumero        || '').toLowerCase().indexOf(busca) >= 0 ||
+      (r.lancamentoId    || '').toLowerCase().indexOf(busca) >= 0;
+    return mS && mB;
+  });
+  finPMRenderTabela_(lista);
+}
+
+function finPMLimparFiltros_() {
+  var s = document.getElementById('finPMFiltroStatus');
+  var b = document.getElementById('finPMBusca');
+  if (s) { s.value = ''; }
+  if (b) { b.value = ''; }
+  if (_finPMDados && _finPMDados.itens) { finPMRenderTabela_(_finPMDados.itens); }
+}
+
+function finPMRenderKpis_(k) {
+  if (!k) { return; }
+  finSetKpiVal('finPMKpiPend',    k.pendenteComprovante   != null ? k.pendenteComprovante   : '-');
+  finSetKpiVal('finPMKpiEnviado', k.aguardandoConferencia != null ? k.aguardandoConferencia : '-');
+  finSetKpiVal('finPMKpiAprov',   k.aprovadas             != null ? k.aprovadas             : '-');
+  finSetKpiVal('finPMKpiReprov',  k.reprovadas            != null ? k.reprovadas            : '-');
+  finSetKpiVal('finPMKpiValor',   k.totalValor            != null ? finMoeda(k.totalValor)  : '-');
+  var badge = document.getElementById('tabBadgePM');
+  if (badge && k.aguardandoConferencia > 0) {
+    badge.textContent   = k.aguardandoConferencia;
+    badge.style.display = 'inline-block';
+  }
+}
+
+function finPMRenderTabela_(itens) {
+  var tbl = document.getElementById('finPMTabela');
+  var rod = document.getElementById('finPMRodape');
+  if (!tbl) { return; }
+  if (!itens || !itens.length) {
+    tbl.innerHTML = '<div class="fin-list-empty">Nenhuma prestacao encontrada.</div>';
+    if (rod) { rod.textContent = '0 registros'; }
+    return;
+  }
+  var html =
+    '<table class="fin-table"><thead><tr>' +
+    '<th>Lancamento</th><th>Funcionario</th><th>Valor</th><th>Data</th>' +
+    '<th>OS</th><th>Descricao</th><th>Status</th><th>Comprovante</th>' +
+    '<th>Conferido por</th><th>Data conf.</th><th>Motivo rejeicao</th>' +
+    '</tr></thead><tbody>';
+  itens.forEach(function(r) {
+    var comp = '';
+    if (r.comprovanteLink) {
+      comp = '<a href="' + finEA(r.comprovanteLink) + '" target="_blank" class="fin-btn fin-btn-outline fin-btn-sm">Abrir</a>';
+    } else if (r.comprovanteFileId) {
+      comp = '<a href="https://drive.google.com/file/d/' + finEA(r.comprovanteFileId) + '/view" target="_blank" class="fin-btn fin-btn-outline fin-btn-sm">Drive</a>';
+    } else {
+      comp = '<span class="fin-pill fin-pill-gray">Sem comprovante</span>';
+    }
+    var desc = r.descricaoGasto || '-';
+    html +=
+      '<tr>' +
+      '<td><small style="font-family:monospace;font-size:11px">' + finEH(r.lancamentoId) + '</small></td>' +
+      '<td>' + finEH(r.funcionarioNome || '-') + '</td>' +
+      '<td><strong>' + finMoeda(r.valor) + '</strong></td>' +
+      '<td>' + finEH(finDataBR(r.dataGasto)) + '</td>' +
+      '<td>' + finEH(r.osNumero || '-') + '</td>' +
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + finEA(desc) + '">' + finEH(desc.length > 38 ? desc.slice(0, 38) + '...' : desc) + '</td>' +
+      '<td>' + finPillPrestacao(r.statusPrestacao) + '</td>' +
+      '<td>' + comp + '</td>' +
+      '<td>' + finEH(r.aprovadoPor || '-') + '</td>' +
+      '<td>' + finEH(finDataBR(r.dataAprovacao)) + '</td>' +
+      '<td>' + finEH(r.motivoRejeicao || '') + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  tbl.innerHTML = html;
+  if (rod) { rod.textContent = itens.length + ' registro(s)'; }
+}
+
+function finPMMostrarErro_(msg) {
+  var el = document.getElementById('finPMErro');
+  if (!el) { return; }
+  el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>';
+  el.style.display = 'block';
+}
+
+function finPMEsconderErro_() {
+  var el = document.getElementById('finPMErro');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+// ============================================================
+// FLASH.4.3 — Interface de Recargas
+// ============================================================
+
+var _finRecDados        = null;
+var _finRecCarregado    = false;
+var _finRecFiltradas    = [];
+var _finRecCartoesAtivos = [];
+
+function finCarregarRecargasV43() {
+  _finRecCarregado = false;
+  var tbody = document.getElementById('finRecTabela');
+  if (tbody) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999;padding:32px">Carregando...</td></tr>'; }
+  google.script.run
+    .withSuccessHandler(finRecRenderTudo)
+    .withFailureHandler(function(e) {
+      var tb = document.getElementById('finRecTabela');
+      if (tb) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc3545;padding:20px">Erro: ' + finEH(e.message || '') + '</td></tr>'; }
+      finMostrarErro('Falha ao carregar recargas: ' + (e.message || e));
+    })
+    .finFlashListarRecargasV1(_finSessao);
+}
+
+function finRecRenderTudo(r) {
+  if (!r || !r.ok) {
+    var tb = document.getElementById('finRecTabela');
+    if (tb) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc3545;padding:20px">Sem acesso ou erro de sessão.</td></tr>'; }
+    return;
+  }
+  _finRecCarregado    = true;
+  _finRecDados        = r;
+  _finRecCartoesAtivos = r.cartoesElegiveis || [];
+  _finRecFiltradas    = r.recargas || [];
+  finRecRenderKPIs(r.kpis || {});
+  finRecRenderBloqueio(r.recargaRealBloqueada, r.motivoBloqueio);
+  finRecPopularDropdownCartoes(_finRecCartoesAtivos);
+  finFiltrarRecargasV43();
+}
+
+function finRecRenderKPIs(kpis) {
+  var el;
+  el = document.getElementById('finRecKpiTotal');
+  if (el) { el.textContent = kpis.totalRecargas != null ? kpis.totalRecargas : '-'; }
+  el = document.getElementById('finRecKpiValor');
+  if (el) { el.textContent = kpis.totalValorRecargas != null ? finMoeda(kpis.totalValorRecargas) : '-'; }
+  el = document.getElementById('finRecKpiAtivos');
+  if (el) { el.textContent = kpis.totalCartoesAtivos != null ? kpis.totalCartoesAtivos : '-'; }
+  el = document.getElementById('finRecKpiSituacao');
+  var sub = document.getElementById('finRecKpiSituacaoSub');
+  if (el) {
+    if (kpis.recargaRealBloqueada) {
+      el.textContent = 'Bloqueada';
+      el.style.color = '#dc3545';
+      if (sub) { sub.textContent = 'nenhum cartão ativo'; }
+    } else {
+      el.textContent = 'Liberada';
+      el.style.color = '#28a745';
+      if (sub) { sub.textContent = kpis.totalCartoesAtivos + ' cartão(s) ativo(s)'; }
+    }
+  }
+}
+
+function finRecRenderBloqueio(bloqueada, motivo) {
+  var aviso = document.getElementById('finRecBloqueioAviso');
+  var btn   = document.getElementById('finBtnNovaRecarga');
+  if (aviso) { aviso.style.display = bloqueada ? 'block' : 'none'; }
+  if (btn) {
+    btn.disabled = bloqueada;
+    btn.title    = bloqueada ? (motivo || 'Nenhum cartão ativo') : 'Nova Recarga';
+  }
+}
+
+function finRecPopularDropdownCartoes(ativos) {
+  var sel = document.getElementById('finModalRecCartaoId');
+  if (!sel) { return; }
+  sel.innerHTML = '<option value="">Selecione o cartão...</option>';
+  ativos.forEach(function(c) {
+    var label = (c.APELIDO_CARTAO || c.NUMERO_FINAL_4 || c.CARTAO_ID || '') +
+      ' — ' + (c.FUNCIONARIO_NOME || 'Funcionário') +
+      ' (' + (c.NUMERO_FINAL_4 || '') + ')';
+    var opt = document.createElement('option');
+    opt.value       = c.CARTAO_ID || c.ID || '';
+    opt.textContent = label;
+    opt.setAttribute('data-nome', c.FUNCIONARIO_NOME || '');
+    opt.setAttribute('data-status', c.STATUS_CARTAO  || '');
+    sel.appendChild(opt);
+  });
+}
+
+function finFiltrarRecargasV43() {
+  if (!_finRecDados) { return; }
+  var busca  = (document.getElementById('finRecBusca')        || {}).value || '';
+  var status = (document.getElementById('finRecFiltroStatus') || {}).value || '';
+  var de     = (document.getElementById('finRecFiltroDe')     || {}).value || '';
+  var ate    = (document.getElementById('finRecFiltroAte')    || {}).value || '';
+  busca = busca.toLowerCase();
+  _finRecFiltradas = (_finRecDados.recargas || []).filter(function(r) {
+    if (status && (r.STATUS || '').toUpperCase() !== status) { return false; }
+    if (de  && String(r.DATA_RECARGA || '') < de)            { return false; }
+    if (ate && String(r.DATA_RECARGA || '') > ate)           { return false; }
+    if (busca) {
+      var hay = [(r.RECARGA_ID || ''), (r.FUNCIONARIO_NOME || ''), (r.CARTAO_ID || ''), (r.RESPONSAVEL_NOME || '')].join(' ').toLowerCase();
+      if (hay.indexOf(busca) < 0) { return false; }
+    }
+    return true;
+  });
+  finRecRenderTabela(_finRecFiltradas);
+}
+
+function finRecRenderTabela(lista) {
+  var tbody = document.getElementById('finRecTabela');
+  var rod   = document.getElementById('finRecRodape');
+  if (!tbody) { return; }
+  if (!lista || lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:36px">Nenhuma recarga encontrada.</td></tr>';
+    if (rod) { rod.textContent = '0 recargas'; }
+    return;
+  }
+  var html = '';
+  lista.forEach(function(r) {
+    var statusPill = '';
+    var st = (r.STATUS || '').toUpperCase();
+    if      (st === 'PROCESSADA') { statusPill = '<span class="fin-pill-processada">Processada</span>'; }
+    else if (st === 'PENDENTE'  ) { statusPill = '<span class="fin-pill-pendente">Pendente</span>';    }
+    else if (st === 'CANCELADA' ) { statusPill = '<span class="fin-pill-cancelada">Cancelada</span>'; }
+    else                          { statusPill = '<span class="fin-pill-gray">' + finEH(r.STATUS || '-') + '</span>'; }
+    html +=
+      '<tr>' +
+      '<td><small style="font-family:monospace;font-size:11px">' + finEH(r.RECARGA_ID || '') + '</small></td>' +
+      '<td><span style="font-size:11px;color:#666">' + finEH(r.CARTAO_ID ? r.CARTAO_ID.slice(0,8) + '...' : '-') + '</span></td>' +
+      '<td>' + finEH(r.FUNCIONARIO_NOME || '-') + '</td>' +
+      '<td><strong>' + finMoeda(r.VALOR) + '</strong></td>' +
+      '<td>' + finEH(finDataBR(r.DATA_RECARGA)) + '</td>' +
+      '<td>' + finEH(r.FORMA_RECARGA || '-') + '</td>' +
+      '<td>' + statusPill + '</td>' +
+      '<td>' + finEH(r.RESPONSAVEL_NOME || '-') + '</td>' +
+      '</tr>';
+  });
+  tbody.innerHTML = html;
+  if (rod) { rod.textContent = lista.length + ' recarga(s)'; }
+}
+
+function finAbrirNovaRecarga() {
+  if (!_finRecDados || _finRecDados.recargaRealBloqueada) {
+    finMostrarErro('Nenhum cartão ativo. Cadastre um cartão real antes de registrar recargas.');
+    return;
+  }
+  if (_finRecCartoesAtivos.length === 0) {
+    finMostrarErro('Sem cartões ativos disponíveis.');
+    return;
+  }
+  var bl  = document.getElementById('finModalRecBloqueio');
+  var btn = document.getElementById('finModalRecBtnSalvar');
+  if (bl)  { bl.style.display = 'none'; }
+  if (btn) { btn.disabled = false; }
+  // Limpar campos
+  var campos = ['finModalRecCartaoId','finModalRecValor','finModalRecData','finModalRecNumTrans','finModalRecObs'];
+  campos.forEach(function(id) { var el = document.getElementById(id); if (el) { el.value = ''; } });
+  var fn = document.getElementById('finModalRecFuncionario');
+  if (fn) { fn.value = ''; }
+  var st = document.getElementById('finModalRecCartaoStatus');
+  if (st) { st.textContent = ''; }
+  document.getElementById('finModalNovaRecarga').classList.add('open');
+}
+
+function finFecharNovaRecarga() {
+  var m = document.getElementById('finModalNovaRecarga');
+  if (m) { m.className = m.className.replace(/s*open/g, ''); }
+}
+
+function finModalRecOnCartaoChange() {
+  var sel = document.getElementById('finModalRecCartaoId');
+  var fn  = document.getElementById('finModalRecFuncionario');
+  var st  = document.getElementById('finModalRecCartaoStatus');
+  if (!sel) { return; }
+  var opt = sel.options[sel.selectedIndex];
+  if (fn)  { fn.value = opt ? (opt.getAttribute('data-nome') || '') : ''; }
+  var status = opt ? (opt.getAttribute('data-status') || '') : '';
+  if (st)  {
+    st.textContent = status ? ('STATUS: ' + status) : '';
+    st.style.color = status === 'ATIVO' ? '#28a745' : '#dc3545';
+  }
+}
+
+function finSalvarRecargaV43() {
+  var cartaoId = (document.getElementById('finModalRecCartaoId') || {}).value || '';
+  var valorStr = (document.getElementById('finModalRecValor')     || {}).value || '';
+  var data     = (document.getElementById('finModalRecData')      || {}).value || '';
+  var origem   = (document.getElementById('finModalRecOrigem')    || {}).value || '';
+  var numTrans = (document.getElementById('finModalRecNumTrans')  || {}).value || '';
+  var obs      = (document.getElementById('finModalRecObs')       || {}).value || '';
+  var valor    = parseFloat(valorStr);
+
+  if (!cartaoId) { finMostrarErro('Selecione um cartão.'); return; }
+  if (!data)     { finMostrarErro('Informe a data da recarga.'); return; }
+  if (isNaN(valor) || valor <= 0) { finMostrarErro('Informe um valor maior que zero.'); return; }
+
+  // Verificar bloqueio
+  if (!_finRecDados || _finRecDados.recargaRealBloqueada) {
+    finMostrarErro('Recarga bloqueada. Nenhum cartão ativo.');
+    return;
+  }
+
+  // Verificar que o cartão selecionado está na lista de elegíveis
+  var elegivel = _finRecCartoesAtivos.filter(function(c) { return (c.CARTAO_ID || c.ID) === cartaoId; });
+  if (elegivel.length === 0) {
+    finMostrarErro('Cartão selecionado não está ATIVO. Operação bloqueada.');
+    return;
+  }
+
+  var payload = {
+    CARTAO_ID          : cartaoId,
+    VALOR              : valor,
+    DATA_RECARGA       : data,
+    FORMA_RECARGA      : origem,
+    NUMERO_TRANSFERENCIA: numTrans,
+    OBSERVACOES        : obs
+  };
+
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso('Recarga registrada com sucesso.');
+        finFecharNovaRecarga();
+        finCarregarRecargasV43();
+        finCarregarDashboard();
+      } else {
+        finMostrarErro((r && r.message) ? r.message : 'Erro ao registrar recarga.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha ao registrar recarga: ' + (e.message || e));
+    })
+    .finCriarRecarga(_finSessao, payload);
+}
+
+// ── FLASH.4.6B — Cadastro Operacional Controlado via Interface ────────────────
+var _finF46PreviewOk  = false;
+var _finF46Executando = false;
+
+function finF46LerPayload() {
+  return {
+    FUNCIONARIO_ID      : (document.getElementById('finF46_FUNC_ID')    || {}).value || '',
+    FUNCIONARIO_NOME    : (document.getElementById('finF46_FUNC_NOME')   || {}).value || '',
+    FUNCIONARIO_EMAIL   : (document.getElementById('finF46_FUNC_EMAIL')  || {}).value || '',
+    FUNCIONARIO_TELEFONE: (document.getElementById('finF46_FUNC_TEL')    || {}).value || '',
+    NUMERO_FINAL_4      : (document.getElementById('finF46_NUM4')        || {}).value || '',
+    APELIDO_CARTAO      : (document.getElementById('finF46_APELIDO')     || {}).value || '',
+    BANDEIRA            : (document.getElementById('finF46_BANDEIRA')    || {}).value || 'MASTERCARD',
+    TIPO_CARTAO         : (document.getElementById('finF46_TIPO')        || {}).value || 'CORPORATIVO',
+    STATUS_CARTAO       : (document.getElementById('finF46_STATUS')      || {}).value || 'ATIVO',
+    LIMITE_MENSAL       : parseFloat((document.getElementById('finF46_LIMITE') || {}).value || '0') || 0,
+    OBSERVACOES         : (document.getElementById('finF46_OBS')         || {}).value || ''
+  };
+}
+
+function finF46ResetPreview() {
+  _finF46PreviewOk = false;
+  var btn = document.getElementById('finF46BtnConfirmar');
+  if (btn) btn.disabled = true;
+  var prev = document.getElementById('finF46Preview');
+  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+}
+
+function finAbrirCadastrarCartaoReal() {
+  _finF46PreviewOk  = false;
+  _finF46Executando = false;
+  var m = document.getElementById('finModalCadastrarCartaoReal');
+  if (m) m.classList.add('open');
+  var btn = document.getElementById('finF46BtnConfirmar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirmar cadastro'; }
+  var prev = document.getElementById('finF46Preview');
+  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+  ['finF46_FUNC_ID','finF46_FUNC_NOME','finF46_FUNC_EMAIL','finF46_FUNC_TEL',
+   'finF46_NUM4','finF46_APELIDO','finF46_OBS'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var lim = document.getElementById('finF46_LIMITE'); if (lim) lim.value = '0';
+}
+
+function finFecharCadastroCartaoReal() {
+  var m = document.getElementById('finModalCadastrarCartaoReal');
+  if (m) m.classList.remove('open');
+  _finF46PreviewOk  = false;
+  _finF46Executando = false;
+}
+
+function finPrevisualizarCadastroCartaoReal() {
+  _finF46PreviewOk = false;
+  var btn  = document.getElementById('finF46BtnConfirmar');
+  var prev = document.getElementById('finF46Preview');
+  if (btn)  btn.disabled = true;
+  if (prev) { prev.style.display = 'block'; prev.style.background = '#f0f0f0'; prev.innerHTML = 'Verificando...'; }
+
+  var p = finF46LerPayload();
+
+  // Validação client-side rápida
+  if (!p.FUNCIONARIO_ID.trim())  { if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> ID do Funcionário obrigatório.';} return; }
+  if (!p.FUNCIONARIO_NOME.trim()){ if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Nome do Funcionário obrigatório.';} return; }
+  if (!/^\d{4}$/.test(p.NUMERO_FINAL_4.trim())){ if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Final do cartão deve ter exatamente 4 dígitos numéricos.';} return; }
+  if (!p.APELIDO_CARTAO.trim()) { if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Apelido do cartão obrigatório.';} return; }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!prev) return;
+      if (r && r.podeCriarCartaoReal) {
+        _finF46PreviewOk = true;
+        prev.style.background = '#e8f5e9';
+        prev.innerHTML = '<strong style="color:#1a7c3e">✓ Verificação aprovada.</strong> Nenhuma duplicidade encontrada. Clique em <em>Confirmar cadastro</em> para prosseguir.';
+        if (btn) btn.disabled = false;
+      } else {
+        _finF46PreviewOk = false;
+        var msgs = (r && r.bloqueios && r.bloqueios.length ? r.bloqueios.join('<br>• ') : (r && r.message) || 'Erro desconhecido.');
+        prev.style.background = '#fff3f3';
+        prev.innerHTML = '<strong style="color:#b91c1c">Bloqueios:</strong><br>• ' + msgs;
+        if (btn) btn.disabled = true;
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (prev) { prev.style.background = '#fff3f3'; prev.innerHTML = '<strong>Erro de comunicação:</strong> ' + (e.message || e); }
+      if (btn) btn.disabled = true;
+    })
+    .FLASH46_PREPARAR_CADASTRO_CARTAO_REAL_UI_SEM_GRAVAR(_finSessao, p);
+}
+
+function finConfirmarCadastroCartaoReal() {
+  if (!_finF46PreviewOk || _finF46Executando) return;
+  _finF46Executando = true;
+  var btn  = document.getElementById('finF46BtnConfirmar');
+  var prev = document.getElementById('finF46Preview');
+  if (btn)  { btn.disabled = true; btn.textContent = 'Cadastrando...'; }
+  if (prev) { prev.style.background = '#f0f0f0'; prev.innerHTML = 'Cadastrando cartão real...'; }
+
+  var p = finF46LerPayload();
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r && r.cartaoRealCriado) {
+        if (prev) {
+          prev.style.background = '#e8f5e9';
+          prev.innerHTML = '<strong style="color:#1a7c3e">✓ Cartão cadastrado com sucesso!</strong><br>ID: <strong>' +
+            (r.cartaoId || '-') + '</strong> | Status: ' + (r.statusCartao || '-');
+        }
+        setTimeout(function() { finFecharCadastroCartaoReal(); finCarregarCartoes(); }, 2000);
+      } else {
+        _finF46Executando = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar cadastro'; }
+        var msg = (r && r.message) || 'Erro desconhecido.';
+        if (prev) { prev.style.background = '#fff3f3'; prev.innerHTML = '<strong style="color:#b91c1c">Erro:</strong> ' + msg; }
+      }
+    })
+    .withFailureHandler(function(e) {
+      _finF46Executando = false;
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirmar cadastro'; }
+      if (prev) { prev.style.background = '#fff3f3'; prev.innerHTML = '<strong>Erro de comunicação:</strong> ' + (e.message || e); }
+    })
+    .FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO(_finSessao, p);
+}
+
+// Compatibilidade: manter funções antigas como no-op
+function finOnCartaoRecChange() {}
+function finSalvarRecarga() { finMostrarErro('Use o botão "Nova Recarga" na aba Recargas.'); }
+function finFecharFormRec() {}
+
 </script>
 </body>
 </html>
