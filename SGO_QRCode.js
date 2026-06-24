@@ -16,8 +16,8 @@ const SGO_QRCODE = (() => {
    */
   function obterBaseWebApp_() {
     try {
-      if (typeof SGO_CFG !== "undefined" && SGO_CFG && SGO_CFG.WEBAPP_URL) {
-        const urlCfg = SGO_UTILS.safe(SGO_CFG.WEBAPP_URL);
+      if (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_() && sgoGetCfgSafe_().WEBAPP_URL) {
+        const urlCfg = SGO_UTILS.safe(sgoGetCfgSafe_().WEBAPP_URL);
         if (urlCfg) return urlCfg;
       }
     } catch (e) {}
@@ -49,10 +49,10 @@ const SGO_QRCODE = (() => {
    */
   function obterLinkPastaEquipamento_(eqp) {
     // Alinhado com a nomenclatura nova do Drive em SGO_Config.gs
-    const rootId = SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_DOCUMENTOS 
-                 ? SGO_CFG.DRIVE.FOLDER_DOCUMENTOS 
+    const rootId = sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_DOCUMENTOS
+                 ? sgoGetCfgSafe_().DRIVE.FOLDER_DOCUMENTOS
                  : PropertiesService.getScriptProperties().getProperty("FOLDER_DOCUMENTOS");
-                 
+
     if (!rootId) {
       throw new Error("Estrutura de pastas não configurada. Execute a função setupDrive() no script SGO_DriverSetup.gs.");
     }
@@ -157,9 +157,9 @@ const SGO_QRCODE = (() => {
 
     // Segunda blindagem de segurança para garantir o "Isolamento de Dados"
     if (!isStaffAutorizado && perfil === "CLIENTE") {
-      
+
       // OTIMIZAÇÃO: Busca o clienteId direto da sessão, sem gastar cota do banco de dados (SGO_DATA)
-      const clienteIdUsuario = SGO_UTILS.safe(sessao.clienteId); 
+      const clienteIdUsuario = SGO_UTILS.safe(sessao.clienteId);
       const clienteIdEquip = SGO_UTILS.safe(eqp.CLIENTE_ID);
 
       if (!clienteIdUsuario || clienteIdUsuario !== clienteIdEquip) {

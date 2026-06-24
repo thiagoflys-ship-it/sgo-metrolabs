@@ -1,7 +1,7 @@
 // Caminho: Backend/SGO_DocumentFactory.js
 
 const SGO_DOCUMENT_FACTORY = (() => {
-  const SHEET = SGO_CFG.SHEETS.DOC_DOCUMENTOS;
+  const SHEET = sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS;
   const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=";
 
   const TIPOS_SUPORTADOS = {
@@ -230,13 +230,13 @@ const SGO_DOCUMENT_FACTORY = (() => {
 
   function montarContexto_(dados) {
     return {
-      cliente: obterSeguro_(SGO_CFG.SHEETS.CAD_CLIENTES, dados.CLIENTE_ID),
-      unidade: obterSeguro_(SGO_CFG.SHEETS.CAD_UNIDADES, dados.UNIDADE_ID),
-      equipamento: obterSeguro_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, dados.EQUIPAMENTO_ID),
-      peca: obterSeguro_(SGO_CFG.SHEETS.CAD_PECAS, dados.PECA_ID),
-      fornecedor: obterSeguro_(SGO_CFG.SHEETS.CAD_FORNECEDORES, dados.FORNECEDOR_ID, "ESTOQUE"),
-      veiculo: obterSeguro_(SGO_CFG.SHEETS.FRT_VEICULOS, dados.VEICULO_ID, "FROTA"),
-      os: obterSeguro_(SGO_CFG.SHEETS.OS_ORDENS, dados.OS_ID, "OS")
+      cliente: obterSeguro_(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, dados.CLIENTE_ID),
+      unidade: obterSeguro_(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, dados.UNIDADE_ID),
+      equipamento: obterSeguro_(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, dados.EQUIPAMENTO_ID),
+      peca: obterSeguro_(sgoGetCfgSafe_().SHEETS.CAD_PECAS, dados.PECA_ID),
+      fornecedor: obterSeguro_(sgoGetCfgSafe_().SHEETS.CAD_FORNECEDORES, dados.FORNECEDOR_ID, "ESTOQUE"),
+      veiculo: obterSeguro_(sgoGetCfgSafe_().SHEETS.FRT_VEICULOS, dados.VEICULO_ID, "FROTA"),
+      os: obterSeguro_(sgoGetCfgSafe_().SHEETS.OS_ORDENS, dados.OS_ID, "OS")
     };
   }
 
@@ -331,14 +331,14 @@ const SGO_DOCUMENT_FACTORY = (() => {
 
   function logoMetrolabsHtml_() {
     try {
-      const fileId = SGO_UTILS.safe(SGO_CFG.LOGO_FILE_ID);
+      const fileId = SGO_UTILS.safe(sgoGetCfgSafe_().LOGO_FILE_ID);
       if (fileId) {
         const dataUrl = imagemDriveDataUrl_(fileId);
         if (dataUrl) return '<img src="' + escAttr_(dataUrl) + '" alt="Metrolabs">';
       }
     } catch (e) {}
     try {
-      const logoUrl = SGO_UTILS.safe(SGO_CFG.LOGO_URL);
+      const logoUrl = SGO_UTILS.safe(sgoGetCfgSafe_().LOGO_URL);
       if (logoUrl) return '<img src="' + escAttr_(logoUrl) + '" alt="Metrolabs">';
     } catch (e2) {}
     return '<div class="frota-pdf-logo-fallback">METROLABS</div>';
@@ -461,7 +461,7 @@ const SGO_DOCUMENT_FACTORY = (() => {
   }
 
   function obterPastaDestino_(dados) {
-    const drive = SGO_CFG.DRIVE || {};
+    const drive = sgoGetCfgSafe_().DRIVE || {};
     const modulo = SGO_UTILS.safeUpper(dados.MODULO_ORIGEM);
     let folderId = "";
     if (modulo === "OS") folderId = drive.FOLDER_OS;
@@ -503,7 +503,7 @@ const SGO_DOCUMENT_FACTORY = (() => {
   function gerarCodigoDocumental_(tipo) {
     const curto = TIPOS_SUPORTADOS[tipo] || tipo.substring(0, 6);
     const agora = new Date();
-    const stamp = Utilities.formatDate(agora, SGO_CFG.SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
+    const stamp = Utilities.formatDate(agora, sgoGetCfgSafe_().SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
     return "SGO-" + curto + "-" + stamp + "-" + Utilities.getUuid().substring(0, 4).toUpperCase();
   }
 
@@ -520,7 +520,7 @@ const SGO_DOCUMENT_FACTORY = (() => {
     if (dados.NOME_ARQUIVO) {
       return sanitizarNomeArquivo_(dados.NOME_ARQUIVO.replace(/\.pdf$/i, "") + ".pdf");
     }
-    const stamp = Utilities.formatDate(new Date(emitidoEm), SGO_CFG.SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd_HHmmss");
+    const stamp = Utilities.formatDate(new Date(emitidoEm), sgoGetCfgSafe_().SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd_HHmmss");
     return sanitizarNomeArquivo_("SGO_" + dados.TIPO_DOCUMENTO + "_" + codigo + "_" + stamp + ".pdf");
   }
 
@@ -580,7 +580,7 @@ const SGO_DOCUMENT_FACTORY = (() => {
     try {
       const data = new Date(raw);
       if (isNaN(data.getTime()) || data.getFullYear() < 2000) return "--";
-      return Utilities.formatDate(data, SGO_CFG.SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
+      return Utilities.formatDate(data, sgoGetCfgSafe_().SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
     } catch (e) {
       return raw;
     }
@@ -690,7 +690,7 @@ const SGO_DOCUMENT_FACTORY = (() => {
 
   function logoHtml_() {
     try {
-      const fileId = SGO_UTILS.safe(SGO_CFG.LOGO_FILE_ID);
+      const fileId = SGO_UTILS.safe(sgoGetCfgSafe_().LOGO_FILE_ID);
       if (fileId) {
         const dataUrl = imagemDriveDataUrl_(fileId);
         if (dataUrl) return "<img src=\"" + escAttr_(dataUrl) + "\" alt=\"Metrolabs\">";

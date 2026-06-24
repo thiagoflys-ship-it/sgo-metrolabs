@@ -1,10 +1,10 @@
 const SGO_CONTRATOS = (() => {
-  const SHEET = SGO_CFG.SHEETS.CAD_CONTRATOS;
-  const SHEET_EQP_REL = SGO_CFG.SHEETS.CAD_CONTRATOS_EQP;
-  const SHEET_CLI = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const SHEET_EQP = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
+  const SHEET = sgoGetCfgSafe_().SHEETS.CAD_CONTRATOS;
+  const SHEET_EQP_REL = sgoGetCfgSafe_().SHEETS.CAD_CONTRATOS_EQP;
+  const SHEET_CLI = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const SHEET_EQP = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
 
   function podeEditar_(sessao) {
     const p = SGO_UTILS.safeUpper(sessao && sessao.perfil);

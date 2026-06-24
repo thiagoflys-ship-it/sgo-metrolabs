@@ -22,11 +22,11 @@
 
       <div class="login-form">
         <div class="form-group">
-          <label for="usuario"><i class="fas fa-user" style="margin-right:6px;color:var(--metro-green);"></i>Usuário</label>
+          <label for="usuario"><i class="fas fa-user" style="margin-right:6px;color:var(--metro-green);"></i>Usuário ou e-mail</label>
           <input
             id="usuario"
             type="text"
-            placeholder="Digite seu usuário"
+            placeholder="Digite seu usuário ou e-mail"
             autocomplete="username"
             onkeydown="if(event.key === 'Enter') document.getElementById('senha').focus()"
           >
@@ -47,6 +47,12 @@
           <button id="btnLogin" type="button" onclick="fazerLogin()">
             <i class="fas fa-right-to-bracket" style="margin-right:8px;"></i>Entrar
           </button>
+        </div>
+        <div style="text-align:center;margin-top:14px;">
+          <a href="javascript:void(0)" onclick="esqueceuSenha_()"
+             style="font-size:12px;color:var(--metro-green);text-decoration:none;font-weight:600;opacity:0.85;">
+            <i class="fas fa-key" style="margin-right:4px;"></i>Esqueci minha senha
+          </a>
         </div>
       </div>
       <p style="text-align:center;margin:20px 0 0;font-size:11px;color:#94a3b8;font-weight:500;">
@@ -245,6 +251,7 @@
 <?!= include('JS_Tecnicos'); ?>
 <?!= include('JS_Importacao'); ?>
 <template id="tplFinCartoesModulo"><?!= include('JS_Fin_Cartoes'); ?></template>
+<?!= include('JS_Manual'); ?>
 
   <script>
     // Atualização interna dos dados do SGO+
@@ -518,5 +525,136 @@
       setTimeout(sgoQrBootstrap_, 300);
     });
   </script>
+
+  <!-- Modal primeiro acesso AUTH.4C -->
+  <div id="modal-primeiro-acesso"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);
+              z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:14px;padding:32px 28px;width:100%;
+                max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.28);">
+      <div style="text-align:center;margin-bottom:22px;">
+        <i class="fas fa-shield-halved" style="font-size:34px;color:var(--metro-green);"></i>
+        <h2 style="margin:12px 0 4px;font-size:18px;font-weight:700;color:#1e293b;">Primeiro Acesso</h2>
+        <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">
+          Você está usando uma senha temporária.<br>Defina uma nova senha para continuar.
+        </p>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label for="pa-nova-senha">
+          <i class="fas fa-lock" style="margin-right:5px;color:var(--metro-green);"></i>Nova senha
+        </label>
+        <input id="pa-nova-senha" type="password" placeholder="Mínimo 8 caracteres"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter') document.getElementById('pa-confirmar-senha').focus()">
+      </div>
+      <div class="form-group" style="margin-bottom:6px;">
+        <label for="pa-confirmar-senha">
+          <i class="fas fa-lock-open" style="margin-right:5px;color:var(--metro-green);"></i>Confirmar nova senha
+        </label>
+        <input id="pa-confirmar-senha" type="password" placeholder="Repita a nova senha"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter') confirmarPrimeiroAcesso_()">
+      </div>
+      <div id="pa-erro"
+           style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin:10px 0;
+                  text-align:center;padding:8px 12px;background:#fef2f2;border-radius:6px;"></div>
+      <button id="pa-btn-confirmar" type="button" onclick="confirmarPrimeiroAcesso_()"
+              style="width:100%;padding:13px;background:var(--metro-green);color:#fff;border:none;
+                     border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">
+        <i class="fas fa-check" style="margin-right:8px;"></i>Definir nova senha
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal esqueci minha senha AUTH.4D — passo 1: solicitar -->
+  <div id="modal-esqueci-senha"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);
+              z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:14px;padding:32px 28px;width:100%;
+                max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.28);">
+      <div style="text-align:center;margin-bottom:22px;">
+        <i class="fas fa-envelope-open-text" style="font-size:34px;color:var(--metro-green);"></i>
+        <h2 style="margin:12px 0 4px;font-size:18px;font-weight:700;color:#1e293b;">Recuperar senha</h2>
+        <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">
+          Informe seu usuário ou e-mail cadastrado.
+        </p>
+      </div>
+      <div class="form-group" style="margin-bottom:6px;">
+        <label for="es-login-email">
+          <i class="fas fa-user" style="margin-right:5px;color:var(--metro-green);"></i>Usuário ou e-mail
+        </label>
+        <input id="es-login-email" type="text" placeholder="Digite seu usuário ou e-mail"
+               autocomplete="off"
+               onkeydown="if(event.key==='Enter') confirmarSolicitacaoRecuperacao_()">
+      </div>
+      <div id="es-erro"
+           style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin:10px 0;
+                  text-align:center;padding:8px 12px;background:#fef2f2;border-radius:6px;"></div>
+      <button id="es-btn-solicitar" type="button" onclick="confirmarSolicitacaoRecuperacao_()"
+              style="width:100%;padding:13px;background:var(--metro-green);color:#fff;border:none;
+                     border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">
+        <i class="fas fa-paper-plane" style="margin-right:8px;"></i>Solicitar recuperação
+      </button>
+      <button type="button" onclick="fecharModalEsqueciSenha_()"
+              style="width:100%;padding:10px;background:transparent;color:#64748b;border:none;
+                     border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal esqueci minha senha AUTH.4D — passo 2: redefinir -->
+  <div id="modal-redefinir-senha"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);
+              z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:14px;padding:32px 28px;width:100%;
+                max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.28);">
+      <div style="text-align:center;margin-bottom:22px;">
+        <i class="fas fa-key" style="font-size:34px;color:var(--metro-green);"></i>
+        <h2 style="margin:12px 0 4px;font-size:18px;font-weight:700;color:#1e293b;">Redefinir senha</h2>
+        <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">
+          Informe o token recebido e defina uma nova senha.
+        </p>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="rd-token">
+          <i class="fas fa-hashtag" style="margin-right:5px;color:var(--metro-green);"></i>Token de recuperação
+        </label>
+        <input id="rd-token" type="text" placeholder="Cole o token recebido"
+               autocomplete="off"
+               onkeydown="if(event.key==='Enter') document.getElementById('rd-nova-senha').focus()">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="rd-nova-senha">
+          <i class="fas fa-lock" style="margin-right:5px;color:var(--metro-green);"></i>Nova senha
+        </label>
+        <input id="rd-nova-senha" type="password" placeholder="Mínimo 8 caracteres"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter') document.getElementById('rd-confirmar').focus()">
+      </div>
+      <div class="form-group" style="margin-bottom:6px;">
+        <label for="rd-confirmar">
+          <i class="fas fa-lock-open" style="margin-right:5px;color:var(--metro-green);"></i>Confirmar nova senha
+        </label>
+        <input id="rd-confirmar" type="password" placeholder="Repita a nova senha"
+               autocomplete="new-password"
+               onkeydown="if(event.key==='Enter') confirmarRedefinicaoSenha_()">
+      </div>
+      <div id="rd-erro"
+           style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin:10px 0;
+                  text-align:center;padding:8px 12px;background:#fef2f2;border-radius:6px;"></div>
+      <button id="rd-btn-redefinir" type="button" onclick="confirmarRedefinicaoSenha_()"
+              style="width:100%;padding:13px;background:var(--metro-green);color:#fff;border:none;
+                     border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;">
+        <i class="fas fa-key" style="margin-right:8px;"></i>Redefinir senha
+      </button>
+      <button type="button" onclick="fecharModalRedefinirSenha_()"
+              style="width:100%;padding:10px;background:transparent;color:#64748b;border:none;
+                     border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
 </body>
 </html>

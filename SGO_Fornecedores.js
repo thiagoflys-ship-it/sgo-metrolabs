@@ -1,6 +1,6 @@
-const SGO_FORNECEDORES = (() => {
+﻿const SGO_FORNECEDORES = (() => {
   const DB = "ESTOQUE";
-  const SHEETS = SGO_CFG.SHEETS;
+  const SHEETS = sgoGetCfgSafe_().SHEETS;
 
   function listar(sessionId, filtros) {
     exigirSessao(sessionId);
@@ -136,7 +136,7 @@ const SGO_FORNECEDORES = (() => {
     if (!fornecedor) return null;
 
     const docs = listarDocumentosFornecedor_(fornecedorId);
-    const obrigatorios = SGO_CFG.FORNECEDORES.DOCUMENTOS_OBRIGATORIOS || [];
+    const obrigatorios = sgoGetCfgSafe_().FORNECEDORES.DOCUMENTOS_OBRIGATORIOS || [];
     const porTipo = {};
     docs.forEach(function(doc) {
       const tipo = SGO_UTILS.safeUpper(doc.TIPO_DOCUMENTO);
@@ -224,8 +224,9 @@ const SGO_FORNECEDORES = (() => {
   };
 })();
 
-function fornecedoresListar(sessionId, filtros) { try { return JSON.parse(JSON.stringify(SGO_FORNECEDORES.listar(sessionId, filtros))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function fornecedoresObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_FORNECEDORES.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function fornecedoresSalvar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_FORNECEDORES.salvar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function fornecedoresSalvarDocumento(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_FORNECEDORES.salvarDocumento(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function fornecedoresReavaliarQualificacoes(sessionId) { try { return JSON.parse(JSON.stringify(SGO_FORNECEDORES.reavaliarQualificacoes(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function fornecedoresListar(sessionId, filtros) { try { pilotoGuardBloqueado_("FORNECEDORES"); return JSON.parse(JSON.stringify(SGO_FORNECEDORES.listar(sessionId, filtros))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function fornecedoresObter(sessionId, id) { try { pilotoGuardBloqueado_("FORNECEDORES"); return JSON.parse(JSON.stringify(SGO_FORNECEDORES.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function fornecedoresSalvar(sessionId, payload) { try { pilotoGuardBloqueado_("FORNECEDORES"); return JSON.parse(JSON.stringify(SGO_FORNECEDORES.salvar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function fornecedoresSalvarDocumento(sessionId, payload) { try { pilotoGuardBloqueado_("FORNECEDORES"); return JSON.parse(JSON.stringify(SGO_FORNECEDORES.salvarDocumento(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function fornecedoresReavaliarQualificacoes(sessionId) { try { pilotoGuardBloqueado_("FORNECEDORES"); return JSON.parse(JSON.stringify(SGO_FORNECEDORES.reavaliarQualificacoes(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+

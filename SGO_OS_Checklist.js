@@ -1,10 +1,10 @@
 const SGO_OS_CHECKLIST = (() => {
   const DB_OS = "OS";
-  const MODELOS = SGO_CFG.SHEETS.OS_CHECKLIST_MODELOS || "OS_CHECKLIST_MODELOS";
-  const PERGUNTAS = SGO_CFG.SHEETS.OS_CHECKLIST_PERGUNTAS || "OS_CHECKLIST_PERGUNTAS";
-  const RESP = SGO_CFG.SHEETS.OS_CHECKLIST_RESPOSTAS;
-  const TPL_LEGADO = SGO_CFG.SHEETS.OS_CHECKLIST_TEMPLATE;
-  const SHEET_OS = SGO_CFG.SHEETS.OS_ORDENS;
+  const MODELOS = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_MODELOS || "OS_CHECKLIST_MODELOS";
+  const PERGUNTAS = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_PERGUNTAS || "OS_CHECKLIST_PERGUNTAS";
+  const RESP = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_RESPOSTAS;
+  const TPL_LEGADO = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_TEMPLATE;
+  const SHEET_OS = sgoGetCfgSafe_().SHEETS.OS_ORDENS;
 
   const TIPOS_RESPOSTA = [
     "TEXTO_CURTO", "TEXTO_LONGO", "SIM_NAO", "CONFORME_NAO_CONFORME_NA",
@@ -32,7 +32,7 @@ const SGO_OS_CHECKLIST = (() => {
     if (SGO_UTILS.safe(os.TECNICO_USUARIO_ID) === userId) return true;
     if (SGO_UTILS.safe(os.TECNICO_ID) === userId) return true;
     try {
-      const tecnico = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_TECNICOS, os.TECNICO_ID);
+      const tecnico = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_TECNICOS, os.TECNICO_ID);
       return !!(tecnico && SGO_UTILS.safe(tecnico.USUARIO_ID) === userId);
     } catch (e) {
       return false;
@@ -229,7 +229,7 @@ const SGO_OS_CHECKLIST = (() => {
   }
 
   function validarObrigatoriosInterno(osOuId) {
-    const os = typeof osOuId === "object" ? osOuId : SGO_DATA.getById(SGO_CFG.SHEETS.OS_ORDENS, SGO_UTILS.safe(osOuId), DB_OS);
+    const os = typeof osOuId === "object" ? osOuId : SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.OS_ORDENS, SGO_UTILS.safe(osOuId), DB_OS);
     const pendencias = [];
     if (!os) return { ok: false, pendencias: ["OS nao encontrada."] };
     const modelo = escolherModelo_(os.TIPO_OS, os.EQUIPAMENTO_TIPO || tipoEquipamentoPorId_(os.EQUIPAMENTO_ID));
@@ -261,7 +261,7 @@ const SGO_OS_CHECKLIST = (() => {
     });
 
     if (snBool_(modelo.EXIGE_FOTO)) {
-      const fotos = SGO_DATA.getManyByField(SGO_CFG.SHEETS.OS_FOTOS, "OS_ID", os.ID, DB_OS)
+      const fotos = SGO_DATA.getManyByField(sgoGetCfgSafe_().SHEETS.OS_FOTOS, "OS_ID", os.ID, DB_OS)
         .filter(function(f) {
           const st = SGO_UTILS.safeUpper(f.STATUS);
           return !st || st === "ATIVA" || st === "ATIVO";
@@ -270,7 +270,7 @@ const SGO_OS_CHECKLIST = (() => {
     }
 
     if (snBool_(modelo.EXIGE_ASSINATURA)) {
-      const assinaturas = SGO_DATA.getManyByField(SGO_CFG.SHEETS.SYS_ASSINATURAS, "OS_ID", os.ID)
+      const assinaturas = SGO_DATA.getManyByField(sgoGetCfgSafe_().SHEETS.SYS_ASSINATURAS, "OS_ID", os.ID)
         .filter(function(a) {
           const st = SGO_UTILS.safeUpper(a.STATUS);
           return !st || st === "ATIVA" || st === "ATIVO";
@@ -341,7 +341,7 @@ const SGO_OS_CHECKLIST = (() => {
     const id = SGO_UTILS.safe(equipamentoId);
     if (!id) return "";
     try {
-      const eqp = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, id);
+      const eqp = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, id);
       return eqp ? SGO_UTILS.safe(eqp.TIPO) : "";
     } catch (e) {
       return "";

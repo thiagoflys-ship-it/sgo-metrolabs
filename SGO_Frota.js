@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SGO_FROTA_NOVA
  * Versao interna: 2026-05-08.1
  *
@@ -8,7 +8,7 @@
 
 const SGO_FROTA_NOVA = (() => {
   const DB = "FROTA";
-  const SHEETS = SGO_CFG.SHEETS;
+  const SHEETS = sgoGetCfgSafe_().SHEETS;
 
   const FROTA_ABAS = {
     VEICULOS: SHEETS.FROTA_VEICULOS,
@@ -457,7 +457,7 @@ const SGO_FROTA_NOVA = (() => {
     const nomeArquivo = SGO_UTILS.safe(dados.nomeArquivo || dados.NOME_ARQUIVO || ("frota_" + frotaUUID_() + ".jpg"));
     const conteudo = base64.indexOf(",") >= 0 ? base64.split(",").pop() : base64;
     const blob = Utilities.newBlob(Utilities.base64Decode(conteudo), mimeType, nomeArquivo);
-    const folderId = SGO_CFG.DRIVE.FOLDER_FROTA || SGO_CFG.DRIVE.FOLDER_DOCUMENTOS || SGO_CFG.DRIVE.FOLDER_BASE;
+    const folderId = sgoGetCfgSafe_().DRIVE.FOLDER_FROTA || sgoGetCfgSafe_().DRIVE.FOLDER_DOCUMENTOS || sgoGetCfgSafe_().DRIVE.FOLDER_BASE;
     const file = folderId ? DriveApp.getFolderById(folderId).createFile(blob) : DriveApp.createFile(blob);
     try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
     const user = frotaUser_(session);
@@ -488,7 +488,7 @@ const SGO_FROTA_NOVA = (() => {
   }
 
   function frotaDataArquivo_() {
-    return Utilities.formatDate(new Date(), SGO_CFG.SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd_HHmmss");
+    return Utilities.formatDate(new Date(), sgoGetCfgSafe_().SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "yyyyMMdd_HHmmss");
   }
 
   function frotaSanitizarNomeArquivo_(valor) {
@@ -523,7 +523,7 @@ const SGO_FROTA_NOVA = (() => {
     try {
       const data = new Date(raw);
       if (!isNaN(data.getTime()) && data.getFullYear() >= 2000) {
-        return Utilities.formatDate(data, SGO_CFG.SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "dd/MM/yyyy");
+        return Utilities.formatDate(data, sgoGetCfgSafe_().SISTEMA.TIMEZONE || Session.getScriptTimeZone(), "dd/MM/yyyy");
       }
     } catch (e) {}
     return raw;
@@ -1845,30 +1845,31 @@ const SGO_FROTA_NOVA = (() => {
   };
 })();
 
-function frotaListarVeiculos(sessionId, filtro) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarVeiculos(sessionId, filtro))); }
+function frotaListarVeiculos(sessionId, filtro) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarVeiculos(sessionId, filtro))); }
 function frotaPesquisarVeiculos(sessionId, filtro) { return frotaListarVeiculos(sessionId, filtro); }
-function frotaSalvarVeiculo(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarVeiculo(sessionId, payload))); }
-function frotaObterVeiculo(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.obterVeiculo(sessionId, payload))); }
-function frotaListarReservas(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarReservas(sessionId, filtros))); }
-function frotaSalvarReserva(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarReserva(sessionId, payload))); }
-function frotaVerificarDisponibilidade(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.verificarDisponibilidade(sessionId, payload))); }
-function frotaRealizarCheckin(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.realizarCheckin(sessionId, payload))); }
-function frotaRealizarCheckout(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.realizarCheckout(sessionId, payload))); }
-function frotaListarMovimentos(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarMovimentos(sessionId, filtros))); }
-function frotaListarVistorias(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarVistorias(sessionId, filtros))); }
-function frotaSalvarVistoria(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarVistoria(sessionId, payload))); }
-function frotaListarAbastecimentos(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarAbastecimentos(sessionId, filtros))); }
-function frotaSalvarAbastecimento(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarAbastecimento(sessionId, payload))); }
-function frotaListarManutencoes(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarManutencoes(sessionId, filtros))); }
-function frotaSalvarManutencao(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarManutencao(sessionId, payload))); }
-function frotaListarLavagens(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarLavagens(sessionId, filtros))); }
-function frotaSalvarLavagem(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarLavagem(sessionId, payload))); }
-function frotaListarMultas(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarMultas(sessionId, filtros))); }
-function frotaSalvarMulta(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarMulta(sessionId, payload))); }
-function frotaListarAlertas(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarAlertas(sessionId, filtros))); }
-function frotaResolverAlerta(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.resolverAlerta(sessionId, payload))); }
-function frotaDashboard(sessionId, filtros) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.dashboard(sessionId, filtros))); }
-function frotaGerarRelatorioVeiculo(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarRelatorioVeiculo(sessionId, payload))); }
-function frotaGerarRelatorioGeral(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarRelatorioGeral(sessionId, payload))); }
-function frotaGerarTermoMulta(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarTermoMulta(sessionId, payload))); }
-function frotaUploadArquivo(sessionId, payload) { return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.uploadArquivo(sessionId, payload))); }
+function frotaSalvarVeiculo(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarVeiculo(sessionId, payload))); }
+function frotaObterVeiculo(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.obterVeiculo(sessionId, payload))); }
+function frotaListarReservas(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarReservas(sessionId, filtros))); }
+function frotaSalvarReserva(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarReserva(sessionId, payload))); }
+function frotaVerificarDisponibilidade(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.verificarDisponibilidade(sessionId, payload))); }
+function frotaRealizarCheckin(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.realizarCheckin(sessionId, payload))); }
+function frotaRealizarCheckout(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.realizarCheckout(sessionId, payload))); }
+function frotaListarMovimentos(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarMovimentos(sessionId, filtros))); }
+function frotaListarVistorias(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarVistorias(sessionId, filtros))); }
+function frotaSalvarVistoria(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarVistoria(sessionId, payload))); }
+function frotaListarAbastecimentos(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarAbastecimentos(sessionId, filtros))); }
+function frotaSalvarAbastecimento(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarAbastecimento(sessionId, payload))); }
+function frotaListarManutencoes(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarManutencoes(sessionId, filtros))); }
+function frotaSalvarManutencao(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarManutencao(sessionId, payload))); }
+function frotaListarLavagens(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarLavagens(sessionId, filtros))); }
+function frotaSalvarLavagem(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarLavagem(sessionId, payload))); }
+function frotaListarMultas(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarMultas(sessionId, filtros))); }
+function frotaSalvarMulta(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.salvarMulta(sessionId, payload))); }
+function frotaListarAlertas(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.listarAlertas(sessionId, filtros))); }
+function frotaResolverAlerta(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.resolverAlerta(sessionId, payload))); }
+function frotaDashboard(sessionId, filtros) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.dashboard(sessionId, filtros))); }
+function frotaGerarRelatorioVeiculo(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarRelatorioVeiculo(sessionId, payload))); }
+function frotaGerarRelatorioGeral(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarRelatorioGeral(sessionId, payload))); }
+function frotaGerarTermoMulta(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.gerarTermoMulta(sessionId, payload))); }
+function frotaUploadArquivo(sessionId, payload) { pilotoGuardBloqueado_("FROTA"); return JSON.parse(JSON.stringify(SGO_FROTA_NOVA.uploadArquivo(sessionId, payload))); }
+

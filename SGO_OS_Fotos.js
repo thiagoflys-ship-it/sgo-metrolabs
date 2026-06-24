@@ -2,9 +2,9 @@
 
 const SGO_OS_FOTOS = (() => {
   const DB_OS = "OS";
-  const SHEET = SGO_CFG.SHEETS.OS_FOTOS;
-  const SHEET_OS = SGO_CFG.SHEETS.OS_ORDENS;
-  const SHEET_CHECK_RESP = SGO_CFG.SHEETS.OS_CHECKLIST_RESPOSTAS;
+  const SHEET = sgoGetCfgSafe_().SHEETS.OS_FOTOS;
+  const SHEET_OS = sgoGetCfgSafe_().SHEETS.OS_ORDENS;
+  const SHEET_CHECK_RESP = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_RESPOSTAS;
   const STATUS_ATIVA = "ATIVA";
   const STATUS_REMOVIDA_EXECUCAO = "REMOVIDA_EXECUCAO";
   const STATUS_REMOVIDA_ADMIN = "REMOVIDA_ADMIN";
@@ -44,7 +44,7 @@ const SGO_OS_FOTOS = (() => {
     if (SGO_UTILS.safe(os.TECNICO_ID) === userId) return true;
     
     try {
-      const tecnico = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_TECNICOS, os.TECNICO_ID);
+      const tecnico = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_TECNICOS, os.TECNICO_ID);
       return !!(tecnico && SGO_UTILS.safe(tecnico.USUARIO_ID) === userId);
     } catch (e) {
       return false;
@@ -136,7 +136,7 @@ const SGO_OS_FOTOS = (() => {
     let fileId = "", linkDrive = "";
     try {
       const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, nome);
-      const folderId = SGO_CFG.DRIVE.FOLDER_OS;
+      const folderId = sgoGetCfgSafe_().DRIVE.FOLDER_OS;
       const file = folderId ? DriveApp.getFolderById(folderId).createFile(blob) : DriveApp.createFile(blob);
       
       fileId = file.getId();

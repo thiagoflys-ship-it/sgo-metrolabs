@@ -74,7 +74,7 @@ const SGO_UTILS = {
   isCnpj(v) {
     const cnpj = SGO_UTILS.onlyDigits(v);
     if (cnpj.length !== 14) return false;
-    
+
     // Elimina CNPJs inválidos conhecidos (ex: 00000000000000)
     if (/^(\d)\1+$/.test(cnpj)) return false;
 
@@ -153,8 +153,8 @@ const SGO_UTILS = {
       if (!date) return "";
       const d = new Date(date);
       // Busca o timezone configurado em SGO_CFG (se existir), senão usa o padrão do script
-      const tz = (typeof SGO_CFG !== "undefined" && SGO_CFG.SISTEMA && SGO_CFG.SISTEMA.TIMEZONE) 
-                 ? SGO_CFG.SISTEMA.TIMEZONE 
+      const tz = (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().SISTEMA && sgoGetCfgSafe_().SISTEMA.TIMEZONE)
+                 ? sgoGetCfgSafe_().SISTEMA.TIMEZONE
                  : Session.getScriptTimeZone();
       return Utilities.formatDate(d, tz, "dd/MM/yyyy HH:mm");
     } catch (e) {

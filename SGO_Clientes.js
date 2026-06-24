@@ -1,7 +1,7 @@
 const SGO_CLIENTES = (() => {
-  const SHEET_NAME = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
+  const SHEET_NAME = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
 
   function listar(sessionId) {
     const sessao = exigirSessao(sessionId);

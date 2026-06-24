@@ -35,7 +35,7 @@ function criarNovasAbas() {
 }
 
 function garantirBancoPrincipalSeguro_(log) {
-  const dbId = SGO_CFG.DB_ID;
+  const dbId = sgoGetCfgSafe_().DB_ID;
 
   if (dbId) {
     try {
@@ -47,55 +47,55 @@ function garantirBancoPrincipalSeguro_(log) {
     }
   }
 
-  const ssNovo = SpreadsheetApp.create(SGO_CFG.SISTEMA.NOME_EXIBICAO + "_DB");
-  SGO_CFG.DB_ID = ssNovo.getId();
+  const ssNovo = SpreadsheetApp.create(sgoGetCfgSafe_().SISTEMA.NOME_EXIBICAO + "_DB");
+  sgoGetCfgSafe_().DB_ID = ssNovo.getId();
   log.push("DB_ID: novo banco principal criado e salvo.");
   return ssNovo;
 }
 
 function criarEstruturaPrincipalSegura_(ss, log) {
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.CFG_SISTEMA, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.CFG_SISTEMA, [
     "CHAVE", "VALOR"
   ], log);
 
-  garantirCfgSistemaSeguro_(ss.getSheetByName(SGO_CFG.SHEETS.CFG_SISTEMA), ss, log);
+  garantirCfgSistemaSeguro_(ss.getSheetByName(sgoGetCfgSafe_().SHEETS.CFG_SISTEMA), ss, log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.CAD_USUARIOS, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.CAD_USUARIOS, [
     "ID", "USUARIO", "SENHA", "NOME", "PERFIL", "STATUS", "CRIADO_EM", "CLIENTE_ID"
   ], log);
-  garantirUsuarioAdminSeguro_(ss.getSheetByName(SGO_CFG.SHEETS.CAD_USUARIOS), log);
+  garantirUsuarioAdminSeguro_(ss.getSheetByName(sgoGetCfgSafe_().SHEETS.CAD_USUARIOS), log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.CAD_CLIENTES, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, [
     "ID", "RAZAO_SOCIAL", "NOME_FANTASIA", "CNPJ", "ENDERECO", "CONTATO", "EMAIL", "TELEFONE", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.CAD_UNIDADES, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, [
     "ID", "CLIENTE_ID", "NOME_UNIDADE", "CNPJ_UNIDADE", "ENDERECO", "CIDADE", "UF", "RESPONSAVEL", "TELEFONE", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, [
     "ID", "CLIENTE_ID", "UNIDADE_ID", "TIPO", "FABRICANTE", "MODELO", "SERIE", "TAG", "SETOR",
     "TIPO_POSSE", "PROPRIETARIO", "CLASSE_ANVISA", "NUMERO_ANVISA", "RISCO", "VIDA_UTIL",
     "DATA_AQUISICAO", "PERIODICIDADE_MANUTENCAO", "APLICA_CALIBRACAO", "APLICA_QUALIFICACAO",
     "APLICA_ENSAIO_ELETRICO", "APLICA_MANUTENCAO_PREV", "QR_TOKEN", "QRCODE_LINK", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.REG_TECNICO, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.REG_TECNICO, [
     "ID", "EQUIPAMENTO_ID", "CLIENTE_ID", "UNIDADE_ID", "TIPO_SERVICO", "DATA_REALIZADO",
     "DATA_VALIDADE", "NUMERO_CERTIFICADO", "EMPRESA_RESPONSAVEL", "TECNICO", "RESULTADO",
     "OBSERVACOES", "LINK_DOCUMENTO", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.DOC_DOCUMENTOS, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS, [
     "ID", "CLIENTE_ID", "UNIDADE_ID", "EQUIPAMENTO_ID", "TIPO_DOCUMENTO", "NOME_ARQUIVO",
     "LINK_ARQUIVO", "DATA_EMISSAO", "DATA_VENCIMENTO", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.SYS_ALERTAS, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.SYS_ALERTAS, [
     "ID", "TIPO", "REFERENCIA_ID", "DESCRICAO", "DATA_LIMITE", "STATUS", "CRIADO_EM"
   ], log);
 
-  garantirAbaSetupSeguro_(ss, SGO_CFG.SHEETS.SYS_LOGS, [
+  garantirAbaSetupSeguro_(ss, sgoGetCfgSafe_().SHEETS.SYS_LOGS, [
     "ID", "DATA_HORA", "USUARIO", "ACAO", "MODULO", "DETALHES"
   ], log);
 }
@@ -158,18 +158,18 @@ function garantirCfgSistemaSeguro_(sheet, ss, log) {
   }
 
   const defaults = [
-    ["APP_NAME", SGO_CFG.APP_NAME],
-    ["VERSION", SGO_CFG.VERSION],
+    ["APP_NAME", sgoGetCfgSafe_().APP_NAME],
+    ["VERSION", sgoGetCfgSafe_().VERSION],
     ["DB_ID", ss.getId()],
     ["CRIADO_EM", SGO_UTILS.nowIso()],
-    ["LOGO_URL", SGO_CFG.LOGO_URL],
-    ["OCIOSIDADE_SEGUNDOS", SGO_CFG.OCIOSIDADE.TEMPO_LIMITE_SEGUNDOS],
-    ["OCIOSIDADE_SOM_PADRAO", SGO_CFG.OCIOSIDADE.SOM_ATIVO_PADRAO],
-    ["ALERTA_VISUAL_OCIOSIDADE", SGO_CFG.OCIOSIDADE.ALERTA_VISUAL],
-    ["ALERTA_DIAS_PADRAO", SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO],
-    ["MOSTRAR_ALERTAS_DASHBOARD", SGO_CFG.ALERTAS.MOSTRAR_NO_DASHBOARD],
-    ["MODO_DEBUG", SGO_CFG.SISTEMA.MODO_DEBUG],
-    ["NOME_EXIBICAO", SGO_CFG.SISTEMA.NOME_EXIBICAO]
+    ["LOGO_URL", sgoGetCfgSafe_().LOGO_URL],
+    ["OCIOSIDADE_SEGUNDOS", sgoGetCfgSafe_().OCIOSIDADE.TEMPO_LIMITE_SEGUNDOS],
+    ["OCIOSIDADE_SOM_PADRAO", sgoGetCfgSafe_().OCIOSIDADE.SOM_ATIVO_PADRAO],
+    ["ALERTA_VISUAL_OCIOSIDADE", sgoGetCfgSafe_().OCIOSIDADE.ALERTA_VISUAL],
+    ["ALERTA_DIAS_PADRAO", sgoGetCfgSafe_().ALERTAS.DIAS_ANTECEDENCIA_PADRAO],
+    ["MOSTRAR_ALERTAS_DASHBOARD", sgoGetCfgSafe_().ALERTAS.MOSTRAR_NO_DASHBOARD],
+    ["MODO_DEBUG", sgoGetCfgSafe_().SISTEMA.MODO_DEBUG],
+    ["NOME_EXIBICAO", sgoGetCfgSafe_().SISTEMA.NOME_EXIBICAO]
   ];
 
   defaults.forEach(function(row) {
@@ -193,7 +193,7 @@ function garantirUsuarioAdminSeguro_(sheet, log) {
     "123456",
     "Administrador",
     "ADMIN",
-    SGO_CFG.STATUS.ATIVO,
+    sgoGetCfgSafe_().STATUS.ATIVO,
     SGO_UTILS.nowIso(),
     ""
   ]);

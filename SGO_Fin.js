@@ -630,6 +630,18 @@ const SGO_FIN = (() => {
         return finErro_("Recarga rejeitada: cartão " + finSafeText_(payload.CARTAO_ID) +
           " está " + statusCartao + ". Somente cartões com STATUS_CARTAO=ATIVO aceitam recarga.");
       }
+      // FLASH413_CPF_GUARD: operacao controlada por CPF autorizado
+      var _f413Ativa = String(PropertiesService.getScriptProperties().getProperty("FLASH_OPERACAO_CONTROLADA_ATIVA") || "false").trim().toLowerCase();
+      if (_f413Ativa === "true") {
+        var _f413LibGeral = String(PropertiesService.getScriptProperties().getProperty("FLASH_LIBERACAO_GERAL") || "false").trim().toLowerCase();
+        if (_f413LibGeral !== "true") {
+          var _f413CPFCartao     = finSafeText_(cartao.CPF_COLABORADOR || payload.CPF_COLABORADOR).replace(/\D/g, "");
+          var _f413Autorizados   = String(PropertiesService.getScriptProperties().getProperty("FLASH_CPFS_AUTORIZADOS") || "").split(",").map(function(c) { return c.trim().replace(/\D/g, ""); });
+          if (!_f413CPFCartao || _f413Autorizados.indexOf(_f413CPFCartao) < 0) {
+            return finErro_("CPF " + (_f413CPFCartao || "?") + " nao autorizado para operacao Flash controlada. Contate o responsavel financeiro. [FLASH.4.13]");
+          }
+        }
+      }
       const u = finUsuario_(sessao);
       const agora = finNow_();
       const recargaId = finGerarId_("REC");
@@ -655,6 +667,7 @@ const SGO_FIN = (() => {
         CARTAO_ID                : finSafeText_(payload.CARTAO_ID),
         FUNCIONARIO_ID           : finSafeText_(cartao.FUNCIONARIO_ID),
         FUNCIONARIO_NOME         : finSafeText_(cartao.FUNCIONARIO_NOME),
+        CPF_COLABORADOR          : finSafeText_(cartao.CPF_COLABORADOR || payload.CPF_COLABORADOR || ""),
         VALOR                    : finSafeNumber_(payload.VALOR),
         DATA_RECARGA             : finSafeText_(payload.DATA_RECARGA),
         PERIODO_REFERENCIA       : finSafeText_(payload.PERIODO_REFERENCIA),
@@ -3739,27 +3752,48 @@ const SGO_FIN = (() => {
   // FLASH.4.6B — Cadastro Operacional via Interface
   // ============================================================
 
+  // FLASH.4.7 — Multicartão por colaborador
+  // Regra de duplicidade: CPF_NORMALIZADO + TIPO_CARTAO (FISICO|VIRTUAL) + NUMERO_FINAL_4
+  // Um colaborador pode ter múltiplos cartões desde que tipo+final difiram.
   function flash46PrepararCartaoRealUI(sessionId, payload) {
     try {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "preparar cadastro cartao real");
       finDbOk_();
 
-      const p        = payload || {};
-      var bloqueios  = [], avisos = [];
-      const funcId   = finSafeText_(p.FUNCIONARIO_ID);
-      const funcNome = finSafeText_(p.FUNCIONARIO_NOME);
-      const final4   = finSafeText_(p.NUMERO_FINAL_4 || "").replace(/\D/g, "");
-      const apelido  = finSafeText_(p.APELIDO_CARTAO);
-      const status   = finSafeUpper_(p.STATUS_CARTAO || "ATIVO");
+      const p         = payload || {};
+      var bloqueios   = [], avisos = [];
+      const funcId    = finSafeText_(p.FUNCIONARIO_ID);
+      const funcNome  = finSafeText_(p.FUNCIONARIO_NOME);
+      const cpfBruto  = finSafeText_(p.CPF_COLABORADOR || "");
+      const cpfNorm   = cpfBruto.replace(/\D/g, "");
+      const tipoFlash = finSafeUpper_(p.TIPO_CARTAO_FLASH || "VIRTUAL"); // FISICO ou VIRTUAL
+      const finalRaw  = finSafeText_(p.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+      const apelido   = finSafeText_(p.APELIDO_CARTAO);
+      const status    = finSafeUpper_(p.STATUS_CARTAO || "ATIVO");
 
       // Campos obrigatórios
       if (!funcId)   bloqueios.push("Funcionário (ID) obrigatório.");
       if (!funcNome) bloqueios.push("Nome do funcionário obrigatório.");
-      if (!/^\d{4}$/.test(final4)) {
-        bloqueios.push("Final do cartão deve ter exatamente 4 dígitos numéricos. Informado: \"" + (p.NUMERO_FINAL_4 || "") + "\".");
+      if (!cpfNorm || cpfNorm.length !== 11) {
+        bloqueios.push("CPF do colaborador obrigatório (11 dígitos). Informado: \"" + cpfBruto + "\".");
       }
-      if (!apelido)  bloqueios.push("Apelido do cartão obrigatório.");
+      if (["FISICO", "VIRTUAL"].indexOf(tipoFlash) < 0) {
+        bloqueios.push("Tipo deve ser FISICO ou VIRTUAL. Informado: \"" + tipoFlash + "\".");
+      }
+
+      // Validar final por tipo: FISICO aceita 3 ou 4 dígitos; VIRTUAL exige 4
+      if (tipoFlash === "FISICO") {
+        if (!/^\d{3,4}$/.test(finalRaw)) {
+          bloqueios.push("Cartão FISICO: final deve ter 3 ou 4 dígitos. Informado: \"" + (p.NUMERO_FINAL_4 || "") + "\".");
+        }
+      } else {
+        if (!/^\d{4}$/.test(finalRaw)) {
+          bloqueios.push("Cartão VIRTUAL: final deve ter exatamente 4 dígitos. Informado: \"" + (p.NUMERO_FINAL_4 || "") + "\".");
+        }
+      }
+
+      if (!apelido) bloqueios.push("Apelido do cartão obrigatório.");
       if ([STATUS_CARTAO.ATIVO, STATUS_CARTAO.PENDENTE_ATIVACAO].indexOf(status) < 0) {
         bloqueios.push("Status inválido: \"" + status + "\". Use ATIVO ou PENDENTE_ATIVACAO.");
       }
@@ -3771,53 +3805,62 @@ const SGO_FIN = (() => {
       if (apelido.indexOf("PILOTO_FLASH44_RECARGA_CONTROLADA") >= 0) {
         bloqueios.push("Apelido não pode coincidir com o cartão piloto FLASH44.");
       }
-      if (final4 === "4400") {
+      if (finalRaw === "4400") {
         bloqueios.push("Final 4400 pertence ao cartão piloto FLASH44. Use um final diferente.");
       }
 
-      // Verificar duplicidade ao vivo
-      var dupFunc = false, dupFinal4 = false;
-      var dupFuncCartaoId = "", dupFinal4CartaoId = "";
-      const inativados = ["INATIVO", "CANCELADO", "DEVOLVIDO"];
-      if (bloqueios.length === 0 && (funcId || final4)) {
+      // Verificar duplicidade exata: CPF_NORM + TIPO + FINAL (FLASH.4.7)
+      // Múltiplos cartões por mesmo CPF são permitidos quando tipo ou final diferirem.
+      var chaveDup = "", dupExato = false, dupCartaoId = "";
+      if (bloqueios.length === 0 && cpfNorm && finalRaw) {
+        chaveDup = cpfNorm + "_" + tipoFlash + "_" + finalRaw;
         const todosCartoes = finAll_(ABAS.CARTOES);
-        if (funcId) {
-          const dF = todosCartoes.find(function(c) {
-            return finSafeText_(c.FUNCIONARIO_ID) === funcId &&
-                   inativados.indexOf(finSafeUpper_(c.STATUS_CARTAO)) < 0;
-          });
-          if (dF) { dupFunc = true; dupFuncCartaoId = finSafeText_(dF.CARTAO_ID); }
+        const inativados   = ["INATIVO", "CANCELADO", "DEVOLVIDO"];
+        const dDup = todosCartoes.find(function(c) {
+          if (inativados.indexOf(finSafeUpper_(c.STATUS_CARTAO)) >= 0) return false;
+          // Preferir CHAVE_MULTICARTAO gravada; senão recalcular
+          const chaveGravada = finSafeText_(c.CHAVE_MULTICARTAO || "");
+          if (chaveGravada) return chaveGravada === chaveDup;
+          const cCpf   = finSafeText_(c.CPF_COLABORADOR || "").replace(/\D/g, "");
+          const cTipo  = finSafeUpper_(c.TIPO_CARTAO || "");
+          const cFinal = finSafeText_(c.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+          if (!cCpf || !cTipo || !cFinal) return false;
+          return (cCpf + "_" + cTipo + "_" + cFinal) === chaveDup;
+        });
+        if (dDup) {
+          dupExato     = true;
+          dupCartaoId  = finSafeText_(dDup.CARTAO_ID);
+          bloqueios.push(
+            "Cartão com CPF " + cpfNorm + ", tipo " + tipoFlash +
+            " e final " + finalRaw + " já cadastrado: " + dupCartaoId + "."
+          );
         }
-        if (final4) {
-          const dN = todosCartoes.find(function(c) {
-            return finSafeText_(c.NUMERO_FINAL_4 || "").replace(/\D/g, "") === final4 &&
-                   inativados.indexOf(finSafeUpper_(c.STATUS_CARTAO)) < 0;
-          });
-          if (dN) { dupFinal4 = true; dupFinal4CartaoId = finSafeText_(dN.CARTAO_ID); }
-        }
-        if (dupFunc)   bloqueios.push("Funcionário \"" + funcId + "\" já possui cartão ativo: " + dupFuncCartaoId + ".");
-        if (dupFinal4) bloqueios.push("Final \"" + final4 + "\" já em uso no cartão: " + dupFinal4CartaoId + ".");
       }
 
       if (bloqueios.length === 0) {
         avisos.push("Payload válido. Nenhum dado alterado. Confirme para criar o cartão.");
+        avisos.push("Multicartão FLASH.4.7: múltiplos cartões por CPF permitidos quando tipo ou final diferirem.");
       }
       return finOk_({
-        success                : bloqueios.length === 0,
-        ok                     : bloqueios.length === 0,
-        somenteLeitura         : true,
-        dadosAlterados         : false,
-        setupExecutado         : false,
-        prodAntigoAlterado     : false,
-        payloadValido          : bloqueios.length === 0,
-        funcionarioOk          : !!funcId && !!funcNome && !dupFunc,
-        final4Ok               : /^\d{4}$/.test(final4) && !dupFinal4,
-        duplicidadeFuncionario : dupFunc,
-        duplicidadeFinal4      : dupFinal4,
-        naoConfundePiloto      : funcId !== "PILOTO_FLASH44" && final4 !== "4400",
-        podeCriarCartaoReal    : bloqueios.length === 0,
-        bloqueios              : bloqueios,
-        avisos                 : avisos
+        success               : bloqueios.length === 0,
+        ok                    : bloqueios.length === 0,
+        somenteLeitura        : true,
+        dadosAlterados        : false,
+        setupExecutado        : false,
+        prodAntigoAlterado    : false,
+        payloadValido         : bloqueios.length === 0,
+        funcionarioOk         : !!funcId && !!funcNome,
+        cpfOk                 : cpfNorm.length === 11,
+        tipoFlash             : tipoFlash,
+        finalOk               : bloqueios.length === 0 || !bloqueios.some(function(b) {
+          return b.toLowerCase().indexOf("final") >= 0 || b.toLowerCase().indexOf("dígito") >= 0;
+        }),
+        chaveDuplicidade      : chaveDup,
+        duplicidadeExata      : dupExato,
+        naoConfundePiloto     : funcId !== "PILOTO_FLASH44" && finalRaw !== "4400",
+        podeCriarCartaoReal   : bloqueios.length === 0,
+        bloqueios             : bloqueios,
+        avisos                : avisos
       });
     } catch(e) { return finErro_(e.message); }
   }
@@ -3847,11 +3890,14 @@ const SGO_FIN = (() => {
           return finErro_("Bloqueado ao vivo: " + (previaVivo.bloqueios || []).join(" | "));
         }
 
-        const u       = finUsuario_(sessao);
-        const agora   = finNow_();
-        const cartaoId = finGerarId_("REAL");
-        const final4  = finSafeText_(payload.NUMERO_FINAL_4 || "").replace(/\D/g, "");
-        const obs     = (finSafeText_(payload.OBSERVACOES || "") || "Cadastro operacional FLASH.4.6") + " [FLASH46_OPERACIONAL]";
+        const u          = finUsuario_(sessao);
+        const agora      = finNow_();
+        const cartaoId   = finGerarId_("REAL");
+        const cpfNorm    = finSafeText_(payload.CPF_COLABORADOR || "").replace(/\D/g, "");
+        const tipoFlash  = finSafeUpper_(payload.TIPO_CARTAO_FLASH || "VIRTUAL"); // FISICO ou VIRTUAL
+        const final4     = finSafeText_(payload.NUMERO_FINAL_4 || "").replace(/\D/g, "");
+        const chaveMult  = cpfNorm + "_" + tipoFlash + "_" + final4;
+        const obs        = (finSafeText_(payload.OBSERVACOES || "") || "Cadastro operacional FLASH.4.7") + " [FLASH47_MULTICARTAO]";
 
         const registro = {
           ID                   : finUuid_(),
@@ -3859,14 +3905,17 @@ const SGO_FIN = (() => {
           NUMERO_FINAL_4       : final4,
           APELIDO_CARTAO       : finSafeText_(payload.APELIDO_CARTAO),
           BANDEIRA             : finSafeText_(payload.BANDEIRA || "MASTERCARD").toUpperCase(),
-          TIPO_CARTAO          : finSafeText_(payload.TIPO_CARTAO || "CORPORATIVO").toUpperCase(),
+          TIPO_CARTAO          : tipoFlash,          // FISICO ou VIRTUAL
           FUNCIONARIO_ID       : finSafeText_(payload.FUNCIONARIO_ID),
           FUNCIONARIO_NOME     : finSafeText_(payload.FUNCIONARIO_NOME),
           FUNCIONARIO_EMAIL    : finSafeText_(payload.FUNCIONARIO_EMAIL || ""),
           FUNCIONARIO_TELEFONE : finSafeText_(payload.FUNCIONARIO_TELEFONE || ""),
+          CPF_COLABORADOR      : cpfNorm,            // 11 dígitos normalizados
+          ORIGEM_CARTAO        : "MANUAL",
+          CHAVE_MULTICARTAO    : chaveMult,          // CPF_NORM_TIPO_FINAL
           LIMITE_OPERACIONAL   : finSafeNumber_(payload.LIMITE_MENSAL),
           LIMITE_TOTAL         : finSafeNumber_(payload.LIMITE_MENSAL),
-          STATUS_CARTAO        : finSafeText_(payload.STATUS_CARTAO || "ATIVO").toUpperCase(),
+          STATUS_CARTAO        : finSafeUpper_(payload.STATUS_CARTAO || "ATIVO"),
           STATUS               : "ATIVO",
           DATA_BLOQUEIO        : "",
           MOTIVO_BLOQUEIO      : "",
@@ -3881,21 +3930,83 @@ const SGO_FIN = (() => {
         };
 
         finInsert_(ABAS.CARTOES, registro);
-        finLog_(sessao, "CARTAO_CRIADO_FLASH46", "CARTAO", cartaoId, null, registro, "OK",
-          "Cartão real cadastrado via interface FLASH.4.6. Funcionário: " + registro.FUNCIONARIO_ID);
+        finLog_(sessao, "CARTAO_CRIADO_FLASH47", "CARTAO", cartaoId, null, registro, "OK",
+          "Cartão real cadastrado via interface FLASH.4.7 multicartão. Funcionário: " + registro.FUNCIONARIO_ID +
+          " | Tipo: " + tipoFlash + " | Final: " + final4 + " | Chave: " + chaveMult);
 
         return finOk_({
-          cartaoRealCriado : true,
-          cartaoId         : cartaoId,
-          statusCartao     : registro.STATUS_CARTAO,
-          recargaCriada    : false,
-          liberacaoGeral   : false,
-          message          : "Cartão cadastrado com sucesso."
+          cartaoRealCriado  : true,
+          cartaoId          : cartaoId,
+          statusCartao      : registro.STATUS_CARTAO,
+          tipoFlash         : tipoFlash,
+          chaveMulticartao  : chaveMult,
+          recargaCriada     : false,
+          liberacaoGeral    : false,
+          message           : "Cartão cadastrado com sucesso (FLASH.4.7 multicartão)."
         });
       } finally {
         try { lock.releaseLock(); } catch(_) {}
       }
     } catch(e) { return finErro_(e.message); }
+  }
+
+  // ============================================================
+  // FLASH.4.8 — Agrupa cartões ativos por CPF_COLABORADOR (conta/carteira)
+  // ============================================================
+  function listarCartoesPorCPF48(sessionId) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_CONSULTA, "listar contas Flash por CPF FLASH.4.8");
+      finDbOk_();
+      const todosCartoes  = finAll_(ABAS.CARTOES);
+      const todasRecargas = finAll_(ABAS.RECARGAS);
+
+      var mapaCPF = {};
+      todosCartoes.forEach(function(c) {
+        var cpf   = finSafeText_(c.CPF_COLABORADOR).replace(/\D/g, "") || "__SEM_CPF_" + finSafeText_(c.CARTAO_ID || c.ID);
+        var nome  = finSafeText_(c.FUNCIONARIO_NOME);
+        var email = finSafeText_(c.FUNCIONARIO_EMAIL);
+        var st    = finSafeUpper_(c.STATUS_CARTAO);
+        if (!mapaCPF[cpf]) mapaCPF[cpf] = { cpf: cpf, nome: nome, email: email, cartoes: [], totalAtivos: 0, totalRecargas: 0, valorRecargas: 0 };
+        mapaCPF[cpf].cartoes.push({
+          cartaoId    : finSafeText_(c.CARTAO_ID || c.ID),
+          apelido     : finSafeText_(c.APELIDO_CARTAO),
+          tipo        : finSafeText_(c.TIPO_CARTAO),
+          final       : finSafeText_(c.NUMERO_FINAL_4),
+          statusCartao: st,
+          chaveMulti  : finSafeText_(c.CHAVE_MULTICARTAO)
+        });
+        if (st === "ATIVO") mapaCPF[cpf].totalAtivos++;
+      });
+
+      todasRecargas.forEach(function(r) {
+        if (finSafeUpper_(r.STATUS) === "CANCELADA") return;
+        var cpfRec = finSafeText_(r.CPF_COLABORADOR).replace(/\D/g, "");
+        if (!cpfRec) {
+          var cartaoRec = todosCartoes.find(function(c) { return c.CARTAO_ID === r.CARTAO_ID || c.ID === r.CARTAO_ID; });
+          if (cartaoRec) cpfRec = finSafeText_(cartaoRec.CPF_COLABORADOR).replace(/\D/g, "");
+        }
+        if (cpfRec && mapaCPF[cpfRec]) {
+          mapaCPF[cpfRec].totalRecargas++;
+          mapaCPF[cpfRec].valorRecargas += finSafeNumber_(r.VALOR);
+        }
+      });
+
+      var contas = Object.keys(mapaCPF).map(function(k) {
+        var c = mapaCPF[k];
+        c.podeRecarregar = c.totalAtivos > 0;
+        return c;
+      }).sort(function(a, b) { return a.nome.localeCompare(b.nome); });
+
+      return finOk_({
+        contas           : contas,
+        totalContas      : contas.length,
+        totalComAtivos   : contas.filter(function(c) { return c.totalAtivos > 0; }).length,
+        totalSemCPF      : contas.filter(function(c) { return c.cpf.indexOf("__SEM_CPF_") >= 0; }).length
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
   }
 
   // ============================================================
@@ -3965,7 +4076,8 @@ const SGO_FIN = (() => {
     obterPendenciasCartao,
     listarRecargasV1,
     flash46PrepararCartaoRealUI,
-    flash46ExecutarCartaoRealUI
+    flash46ExecutarCartaoRealUI,
+    listarCartoesPorCPF48
   };
 })();
 
@@ -4067,6 +4179,7 @@ function testarAuditoriaFlashMobileB54_SEM_GRAVAR() {
 // ============================================================
 
 function finFlashListarRecargasV1(sId)                      { return SGO_FIN.listarRecargasV1(sId); }
+function finFlashListarCartoesPorCPF48(sId)                 { return SGO_FIN.listarCartoesPorCPF48(sId); }
 
 function finFlashInativarCartao(sId, id, motivo)           { return SGO_FIN.inativarCartao(sId, id, motivo); }
 function finFlashAlterarResponsavelCartao(sId, id, payload) { return SGO_FIN.alterarResponsavelCartao(sId, id, payload); }

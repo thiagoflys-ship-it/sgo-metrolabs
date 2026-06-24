@@ -1,8 +1,8 @@
-const SGO_ESTOQUE = (() => {
+﻿const SGO_ESTOQUE = (() => {
   const DB = "ESTOQUE";
   const DB_OS = "OS";
   const DB_MAIN = "PRINCIPAL";
-  const SHEETS = SGO_CFG.SHEETS;
+  const SHEETS = sgoGetCfgSafe_().SHEETS;
 
   function listarItens(sessionId, filtros) {
     exigirSessao(sessionId);
@@ -402,8 +402,9 @@ const SGO_ESTOQUE = (() => {
   };
 })();
 
-function estoqueListarItens(sessionId, filtros) { try { return JSON.parse(JSON.stringify(SGO_ESTOQUE.listarItens(sessionId, filtros))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function estoqueSalvarItem(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_ESTOQUE.salvarItem(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function estoqueRegistrarNotaFiscal(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_ESTOQUE.registrarNotaFiscal(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function estoqueRegistrarEntrada(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_ESTOQUE.registrarEntrada(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function estoqueConsumirItemEmOS(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_ESTOQUE.consumirItemEmOS(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function estoqueListarItens(sessionId, filtros) { try { pilotoGuardBloqueado_("ESTOQUE"); return JSON.parse(JSON.stringify(SGO_ESTOQUE.listarItens(sessionId, filtros))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function estoqueSalvarItem(sessionId, payload) { try { pilotoGuardBloqueado_("ESTOQUE"); return JSON.parse(JSON.stringify(SGO_ESTOQUE.salvarItem(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function estoqueRegistrarNotaFiscal(sessionId, payload) { try { pilotoGuardBloqueado_("ESTOQUE"); return JSON.parse(JSON.stringify(SGO_ESTOQUE.registrarNotaFiscal(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function estoqueRegistrarEntrada(sessionId, payload) { try { pilotoGuardBloqueado_("ESTOQUE"); return JSON.parse(JSON.stringify(SGO_ESTOQUE.registrarEntrada(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function estoqueConsumirItemEmOS(sessionId, payload) { try { pilotoGuardBloqueado_("ESTOQUE"); return JSON.parse(JSON.stringify(SGO_ESTOQUE.consumirItemEmOS(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+

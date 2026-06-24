@@ -1,10 +1,10 @@
-const SGO_PECAS = (() => {
-  const SHEET = SGO_CFG.SHEETS.CAD_PECAS;
-  const SHEET_EQP = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const SHEET_CLI = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const SHEET_UNI = SGO_CFG.SHEETS.CAD_UNIDADES;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
+﻿const SGO_PECAS = (() => {
+  const SHEET = sgoGetCfgSafe_().SHEETS.CAD_PECAS;
+  const SHEET_EQP = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const SHEET_CLI = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const SHEET_UNI = sgoGetCfgSafe_().SHEETS.CAD_UNIDADES;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
 
   function podeEditar_(sessao) {
     const p = SGO_UTILS.safeUpper(sessao && sessao.perfil);
@@ -201,12 +201,13 @@ const SGO_PECAS = (() => {
   return { listar, pesquisar, obter, criar, atualizar, inativar, reativar, excluir, listarEquipamentosAtivos };
 })();
 
-function pecasListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_PECAS.listar(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_PECAS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PECAS.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_PECAS.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_PECAS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PECAS.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PECAS.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PECAS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function pecasListarEquipamentosAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_PECAS.listarEquipamentosAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasListar(sessionId) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.listar(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasPesquisar(sessionId, termo) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasObter(sessionId, id) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasCriar(sessionId, payload) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasAtualizar(sessionId, id, payload) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasInativar(sessionId, id) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasReativar(sessionId, id) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasExcluir(sessionId, id) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function pecasListarEquipamentosAtivos(sessionId) { try { pilotoGuardBloqueado_("PECAS"); return JSON.parse(JSON.stringify(SGO_PECAS.listarEquipamentosAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+

@@ -116,20 +116,20 @@ const SGO_EMAIL_ALERTAS = (() => {
     // Mapa de clientes e equipamentos para enriquecimento
     let mapaClientes = {}, mapaEqp = {};
     try {
-      SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function(c) {
+      SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES).forEach(function(c) {
         mapaClientes[SGO_UTILS.safe(c.ID)] = c;
       });
     } catch(e) {}
     try {
-      SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function(e) {
+      SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS).forEach(function(e) {
         mapaEqp[SGO_UTILS.safe(e.ID)] = e;
       });
     } catch(e) {}
 
     // REG_TECNICO
     try {
-      SGO_DATA.getAll(SGO_CFG.SHEETS.REG_TECNICO)
-        .filter(function(r) { return SGO_UTILS.safeUpper(r.STATUS) === SGO_CFG.STATUS.ATIVO && r.DATA_VALIDADE; })
+      SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.REG_TECNICO)
+        .filter(function(r) { return SGO_UTILS.safeUpper(r.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO && r.DATA_VALIDADE; })
         .forEach(function(r) {
           const dataV = _parseDate(r.DATA_VALIDADE);
           if (!dataV) return;
@@ -153,8 +153,8 @@ const SGO_EMAIL_ALERTAS = (() => {
 
     // DOC_DOCUMENTOS
     try {
-      SGO_DATA.getAll(SGO_CFG.SHEETS.DOC_DOCUMENTOS)
-        .filter(function(r) { return SGO_UTILS.safeUpper(r.STATUS) === SGO_CFG.STATUS.ATIVO && r.DATA_VENCIMENTO; })
+      SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS)
+        .filter(function(r) { return SGO_UTILS.safeUpper(r.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO && r.DATA_VENCIMENTO; })
         .forEach(function(r) {
           const dataV = _parseDate(r.DATA_VENCIMENTO);
           if (!dataV) return;
@@ -277,7 +277,7 @@ const SGO_EMAIL_ALERTAS = (() => {
 
     if (!destinatarios.length) return { success: false, message: "Nenhum destinatário configurado." };
 
-    const diasAviso = (SGO_CFG.ALERTAS && SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
+    const diasAviso = (sgoGetCfgSafe_().ALERTAS && sgoGetCfgSafe_().ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
     const alertas = _coletarAlertas(diasAviso);
     const geradoEm = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
     const html = _buildEmailHtml(alertas, geradoEm);

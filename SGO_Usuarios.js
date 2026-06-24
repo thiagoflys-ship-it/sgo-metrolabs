@@ -1,7 +1,7 @@
 const SGO_USUARIOS = (() => {
-  const SHEET_NAME = SGO_CFG.SHEETS.CAD_USUARIOS;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
+  const SHEET_NAME = sgoGetCfgSafe_().SHEETS.CAD_USUARIOS;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
 
   function verificarPermissaoAdmin_(sessao) {
     const perfil = SGO_UTILS.safeUpper(sessao.perfil);
@@ -101,6 +101,7 @@ const SGO_USUARIOS = (() => {
         NOME: dados.NOME,
         PERFIL: dados.PERFIL,
         CLIENTE_ID: dados.CLIENTE_ID,
+        EMAIL: dados.EMAIL,
         STATUS: STATUS_ATIVO
       })
     );
@@ -144,10 +145,11 @@ const SGO_USUARIOS = (() => {
     const novosDados = SGO_DATA.normalizarObjetoParaSheet(SHEET_NAME, {
       ID: usuarioId,
       USUARIO: dados.USUARIO,
-      SENHA: dados.SENHA ? dados.SENHA : atual.SENHA, 
+      SENHA: dados.SENHA ? dados.SENHA : atual.SENHA,
       NOME: dados.NOME,
       PERFIL: dados.PERFIL,
       CLIENTE_ID: dados.CLIENTE_ID,
+      EMAIL: dados.EMAIL || atual.EMAIL || "",
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
@@ -236,9 +238,9 @@ const SGO_USUARIOS = (() => {
 
   function listarClientesAtivos(sessionId) {
     exigirSessao(sessionId);
-    const clientes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES);
+    const clientes = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
     const itens = clientes
-      .filter(c => SGO_UTILS.safeUpper(c.STATUS) === SGO_CFG.STATUS.ATIVO)
+      .filter(c => SGO_UTILS.safeUpper(c.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO)
       .map(c => ({
         ID: SGO_UTILS.safe(c.ID),
         NOME: SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL)
@@ -251,10 +253,11 @@ const SGO_USUARIOS = (() => {
     payload = payload || {};
     return {
       USUARIO: SGO_UTILS.safeLower(payload.USUARIO),
-      SENHA: SGO_UTILS.safe(payload.SENHA), // Removido o Trim da senha para permitir espaços, se o usuário quiser.
-      NOME: SGO_UTILS.safeUpper(payload.NOME), // Força o nome completo para maiúsculo
+      SENHA: SGO_UTILS.safe(payload.SENHA),
+      NOME: SGO_UTILS.safeUpper(payload.NOME),
       PERFIL: SGO_UTILS.safeUpper(payload.PERFIL),
-      CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID)
+      CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
+      EMAIL: String(payload.EMAIL || "").trim().toLowerCase()
     };
   }
 
@@ -265,10 +268,12 @@ const SGO_USUARIOS = (() => {
     if (!isEdicao && !dados.SENHA) erros.push("Senha é obrigatória para novos usuários.");
     if (!dados.PERFIL) {
       erros.push("Perfil de acesso é obrigatório.");
-    } else if (SGO_CFG.PROFILES.indexOf(dados.PERFIL) === -1) {
+    } else if (sgoGetCfgSafe_().PROFILES.indexOf(dados.PERFIL) === -1) {
       erros.push("Perfil de acesso inválido.");
     }
     if (dados.PERFIL === "CLIENTE" && !dados.CLIENTE_ID) erros.push("Vínculo de cliente é obrigatório para este perfil.");
+    if (!dados.EMAIL) erros.push("E-mail é obrigatório.");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.EMAIL)) erros.push("Formato de e-mail inválido.");
     return erros;
   }
 
@@ -279,7 +284,13 @@ const SGO_USUARIOS = (() => {
     return registros.some(r => SGO_UTILS.safeLower(r.USUARIO) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado));
   }
 
-  return { listar, obter, criar, atualizar, inativar, reativar, excluir, pesquisar, listarClientesAtivos };
+  // Auditoria: testa normalização + validação sem sessão nem gravação
+  function testarValidacao(payload, isEdicao) {
+    const dados = normalizarPayload_(payload);
+    return { normalizado: dados, erros: validarPayload_(dados, !!isEdicao) };
+  }
+
+  return { listar, obter, criar, atualizar, inativar, reativar, excluir, pesquisar, listarClientesAtivos, testarValidacao };
 })();
 
 /* =========================
@@ -294,3 +305,4 @@ function usuariosReativar(sessionId, id) { try { return JSON.parse(JSON.stringif
 function usuariosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
 function usuariosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
 function usuariosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function usuariosTestarValidacaoSemGravar(payload, isEdicao) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.testarValidacao(payload, !!isEdicao))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }

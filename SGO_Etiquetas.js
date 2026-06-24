@@ -1,6 +1,6 @@
 const SGO_ETIQUETAS = (() => {
   const DB = "ESTOQUE";
-  const SHEET = SGO_CFG.SHEETS.SYS_ETIQUETAS;
+  const SHEET = sgoGetCfgSafe_().SHEETS.SYS_ETIQUETAS;
   const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=";
 
   function gerarToken(tipoEntidade, referenciaId) {

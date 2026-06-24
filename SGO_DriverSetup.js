@@ -4,8 +4,8 @@ function configurarPastasSGO() {
 
 function configurarPastasSGOV2() {
   try {
-    const rootName = (typeof SGO_CFG !== "undefined" && SGO_CFG.SISTEMA && SGO_CFG.SISTEMA.NOME_EXIBICAO)
-                     ? SGO_CFG.SISTEMA.NOME_EXIBICAO + " - ARQUIVOS"
+    const rootName = (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().SISTEMA && sgoGetCfgSafe_().SISTEMA.NOME_EXIBICAO)
+                     ? sgoGetCfgSafe_().SISTEMA.NOME_EXIBICAO + " - ARQUIVOS"
                      : "METROLABS_SGO_BASE";
 
     let folders = DriveApp.getFoldersByName(rootName);

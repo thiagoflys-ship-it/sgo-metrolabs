@@ -17,7 +17,7 @@
  */
 function login(usuario, senha) {
   try {
-    const dbId = SGO_CFG.DB_ID;
+    const dbId = sgoGetCfgSafe_().DB_ID;
     if (!dbId) {
       return {
         success: false,
@@ -36,7 +36,7 @@ function login(usuario, senha) {
     }
 
     const ss = SpreadsheetApp.openById(dbId);
-    const sheet = ss.getSheetByName(SGO_CFG.SHEETS.CAD_USUARIOS);
+    const sheet = ss.getSheetByName(sgoGetCfgSafe_().SHEETS.CAD_USUARIOS);
 
     if (!sheet) {
       return {
@@ -71,7 +71,7 @@ function login(usuario, senha) {
       ) {
         
         // Verifica se o usuário está bloqueado ou inativo antes de liberar acesso
-        if (statusDb !== SGO_CFG.STATUS.ATIVO) {
+        if (statusDb !== sgoGetCfgSafe_().STATUS.ATIVO) {
            registrarLogAuth_("LOGIN_NEGADO", {
             usuario: usuarioInformado,
             perfil: perfilDb,
@@ -400,7 +400,7 @@ function sessaoExpiradaAuth_(data) {
  * Usa SGO_CFG.SESSION_TTL se existir, senão assume 21600 (6 horas).
  */
 function getSessionTtlSecondsAuth_() {
-  const ttl = Number(SGO_CFG && SGO_CFG.SESSION_TTL);
+  const ttl = Number(sgoGetCfgSafe_() && sgoGetCfgSafe_().SESSION_TTL);
   if (!isNaN(ttl) && ttl > 0) return ttl;
   return 21600; 
 }
@@ -431,11 +431,11 @@ function getErrorMessageAuth_(err) {
  */
 function registrarLogAuth_(acao, ctx) {
   try {
-    const dbId = SGO_CFG.DB_ID;
+    const dbId = sgoGetCfgSafe_().DB_ID;
     if (!dbId) return;
 
     const ss = SpreadsheetApp.openById(dbId);
-    const sheet = ss.getSheetByName(SGO_CFG.SHEETS.SYS_LOGS);
+    const sheet = ss.getSheetByName(sgoGetCfgSafe_().SHEETS.SYS_LOGS);
     if (!sheet) return;
 
     const usuario = SGO_UTILS.safe(ctx && ctx.usuario);

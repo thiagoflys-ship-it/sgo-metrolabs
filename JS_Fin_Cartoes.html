@@ -172,6 +172,12 @@
     .fin-modal h3 { font-size: 15px; color: #0f2d52; margin-bottom: 14px; }
     .fin-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
     .fin-manual-modal { width: 980px; max-height: 88vh; overflow: hidden; display: flex; flex-direction: column; padding: 0; }
+    /* FLASH.4.7C — modal cadastro cartão real com scroll interno */
+    #finModalCadastrarCartaoReal { overflow-y: auto; align-items: flex-start; padding: 5vh 0; }
+    #finModalCadastrarCartaoReal .fin-modal { max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; padding: 0; margin: 0 auto; }
+    #finModalCadastrarCartaoReal .fin-modal > h3 { flex-shrink: 0; padding: 18px 24px 12px; margin-bottom: 0; border-bottom: 1px solid #e5e7eb; }
+    .flash47-modal-body { overflow-y: auto; padding: 14px 24px 4px; max-height: calc(90vh - 140px); }
+    #finModalCadastrarCartaoReal .fin-modal-footer { flex-shrink: 0; position: sticky; bottom: 0; background: #fff; z-index: 10; border-top: 1px solid #e5e7eb; padding: 12px 24px; margin-top: 0; }
     .fin-manual-head { padding: 18px 22px; background: #0f2d52; color: #fff; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
     .fin-manual-head h3 { color: #fff; margin: 0 0 4px; font-size: 18px; }
     .fin-manual-head p { color: rgba(255,255,255,0.78); font-size: 13px; line-height: 1.45; }
@@ -214,6 +220,45 @@
     .fin-tab-admin.active { color: #92400e !important; border-bottom-color: #b45309 !important; }
     .fin-tab-admin-sep { width: 1px; background: #dee2e6; margin: 8px 4px; flex-shrink: 0; display: inline-block; }
     .fin-visao-atalhos { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 12px; }
+
+    /* FLASH.5.0 — toggle inativos / técnicos */
+    .fin-toggle-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #666; cursor: pointer; padding: 5px 8px; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; white-space: nowrap; user-select: none; }
+    .fin-toggle-label input { cursor: pointer; accent-color: #0366d6; }
+    .fin-toggle-label:hover { background: #f8f9fa; border-color: #adb5bd; }
+
+    /* FLASH.5.0 — ações dropdown */
+    .fin-actions-drop { position: relative; display: inline-block; }
+    .fin-actions-drop-menu { display: none; position: absolute; right: 0; top: 100%; background: #fff; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 200; min-width: 140px; padding: 4px 0; white-space: nowrap; }
+    .fin-actions-drop-menu a { display: block; padding: 7px 14px; font-size: 12px; color: #333; cursor: pointer; text-decoration: none; }
+    .fin-actions-drop-menu a:hover { background: #f8f9fa; color: #0366d6; }
+    .fin-actions-drop.open .fin-actions-drop-menu { display: block; }
+
+    /* FLASH.5.0 — status chip melhorado */
+    .fin-pill-teste { background: #e9ecef; color: #6c757d; font-style: italic; }
+    .fin-pill-operacional { background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+
+    /* FLASH.5.0 — visão geral redesenhada */
+    .fin50-vg-hero { background: linear-gradient(135deg, #0f2d52 0%, #1a5276 100%); border-radius: 10px; padding: 22px 24px; color: #fff; margin-bottom: 16px; }
+    .fin50-vg-hero h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .fin50-vg-hero p { font-size: 13px; color: rgba(255,255,255,0.78); line-height: 1.5; margin-bottom: 14px; }
+    .fin50-vg-atalhos { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    @media (max-width: 720px) { .fin50-vg-atalhos { grid-template-columns: repeat(2,1fr); } }
+    .fin50-vg-atalho { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 12px 14px; cursor: pointer; text-align: center; font-family: inherit; transition: background 0.15s; color: #fff; }
+    .fin50-vg-atalho:hover { background: rgba(255,255,255,0.22); }
+    .fin50-vg-atalho .ai { font-size: 20px; display: block; margin-bottom: 5px; }
+    .fin50-vg-atalho strong { display: block; font-size: 12px; font-weight: 600; }
+    .fin50-vg-atalho small { display: block; font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+    .fin50-vg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 700px) { .fin50-vg-grid { grid-template-columns: 1fr; } }
+
+    /* FLASH.5.0 — recarga "teste" banner */
+    .fin50-teste-banner { background: #fffbeb; border: 1px dashed #d97706; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .fin50-toggle-teste { margin-left: auto; font-size: 11px; color: #0366d6; cursor: pointer; text-decoration: underline; }
+
+    /* FLASH.5.0 — badge operacional no header */
+    .fin-badge-operacional { background: rgba(40,167,69,0.2); color: #d4edda; border: 1px solid rgba(40,167,69,0.35); }
+
+    @media (max-width: 680px) { .fin-visao-atalhos { grid-template-columns: repeat(2,1fr); } }
     .fin-visao-atalho { padding: 14px; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: border-color .15s,background .15s; text-align: center; font-family: inherit; }
     .fin-visao-atalho:hover { border-color: #0366d6; background: #f0f5ff; }
     .fin-visao-atalho .atalho-icon { font-size: 22px; margin-bottom: 6px; display: block; }
@@ -247,7 +292,7 @@
     <button class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finCarregarTudo()">Atualizar</button>
     <button class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finAbrirManual()">Manual / Como usar</button>
     <span id="finBadgeDb" class="fin-badge fin-badge-db">DB Verificando...</span>
-    <span class="fin-badge" style="background:rgba(40,167,69,0.18);color:#d4edda;border:1px solid rgba(40,167,69,0.3)">Operacional</span>
+    <span class="fin-badge fin-badge-operacional">Operacional</span>
     <button id="finBtnAdminTec" class="fin-btn fin-btn-manual fin-btn-sm" type="button" onclick="finMudarAba('admintec')" style="display:none;border-color:rgba(255,200,100,0.5);color:#f0c040">Admin técnico</button>
   </div>
 </div>
@@ -270,19 +315,19 @@
     <div class="fin-kpi-sub">revisão necessária</div>
   </div>
   <div class="fin-kpi kpi-rec">
-    <div class="fin-kpi-label">Total em Recargas</div>
+    <div class="fin-kpi-label">Recargas no Mês</div>
     <div class="fin-kpi-value" id="kpiRecargado">-</div>
-    <div class="fin-kpi-sub">no mês</div>
+    <div class="fin-kpi-sub">valor total R$</div>
   </div>
   <div class="fin-kpi kpi-lanc">
-    <div class="fin-kpi-label">Total Lançado</div>
+    <div class="fin-kpi-label">Despesas Declaradas</div>
     <div class="fin-kpi-value" id="kpiLancado">-</div>
-    <div class="fin-kpi-sub">prestações</div>
+    <div class="fin-kpi-sub">prestações registradas</div>
   </div>
   <div class="fin-kpi kpi-pend">
-    <div class="fin-kpi-label">Pendências</div>
+    <div class="fin-kpi-label">Aguardando Conf.</div>
     <div class="fin-kpi-value" id="kpiPendencias">-</div>
-    <div class="fin-kpi-sub">sem comprovante</div>
+    <div class="fin-kpi-sub">comprovantes pendentes</div>
   </div>
 </div>
 
@@ -293,12 +338,12 @@
   <button class="fin-tab-btn" onclick="finMudarAba('recargas')">Recargas</button>
   <button class="fin-tab-btn" onclick="finMudarAba('despesas')">Despesas <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
   <button class="fin-tab-btn" onclick="finMudarAba('extratos')">Extratos</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('conciliacao')">Conciliação</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('conciliacao')" style="display:none" data-admin="1">Conciliação</button>
   <button class="fin-tab-btn" onclick="finMudarAba('pendencias')">Pendências</button>
   <button class="fin-tab-btn" onclick="finMudarAba('prestacoes')">Prestações <span id="tabBadgePM" class="fin-tab-badge" style="display:none">0</span></button>
-  <button class="fin-tab-btn" onclick="finMudarAba('termos')">Termos e Documentos</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('relatorios')">Relatórios</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')">Cobranças e Alertas</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('termos')" style="display:none" data-admin="1">Termos e Docs</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('relatorios')" style="display:none" data-admin="1">Relatórios</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')" style="display:none" data-admin="1">Cobranças</button>
   <span class="fin-tab-admin-sep"></span>
   <button id="finTabBtnAdmin" class="fin-tab-btn fin-tab-admin" onclick="finMudarAba('admintec')" style="display:none" title="Área restrita — ADMIN/DIRETORIA">Admin técnico</button>
 </div>
@@ -321,23 +366,27 @@
         <input id="finBuscaCartao" class="fin-search" type="text" placeholder="Buscar por nome, final ou apelido..." oninput="finFiltrarCartoes()" style="width:230px">
         <select id="finFiltroStatus" class="fin-filter-select" onchange="finFiltrarCartoes()">
           <option value="">Todos os status</option>
-          <option value="ATIVO">Ativo</option>
+          <option value="ATIVO" selected>Ativo</option>
           <option value="BLOQUEADO_TEMPORARIO">Bloqueado</option>
-          <option value="PENDENTE_ATIVACAO">Aguardando ativação</option>
+          <option value="PENDENTE_ATIVACAO">Ag. ativação</option>
           <option value="INATIVO">Inativo</option>
           <option value="CANCELADO">Cancelado</option>
         </select>
-        <select id="finFiltroTermo" class="fin-filter-select" onchange="finFiltrarCartoes()">
+        <select id="finFiltroTermo" class="fin-filter-select" onchange="finFiltrarCartoes()" style="display:none" aria-hidden="true">
           <option value="">Qualquer termo</option>
           <option value="SIM">Termo assinado</option>
           <option value="NAO">Termo pendente</option>
         </select>
+        <select id="finFiltroCPF48" class="fin-filter-select" onchange="finFiltrarCartoes()" title="Filtrar por colaborador / CPF">
+          <option value="">Todos os colaboradores</option>
+        </select>
       </div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
-        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finNovoCartao()">+ Novo cartão</button>
-        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirCadastrarCartaoReal()" title="Cadastro controlado com validação prévia — FLASH.4.6">+ Cadastrar Cartão Real</button>
-        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarCartoes()">Atualizar</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finAbrirManual()">Ajuda</button>
+      <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirCadastrarCartaoReal()">+ Novo Cartão Flash</button>
+        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarCartoes()">↺ Atualizar</button>
+        <label class="fin-toggle-label" title="Exibir cartões cancelados e inativos">
+          <input type="checkbox" id="finToggleInativos" onchange="finFiltrarCartoes()"> Mostrar inativos
+        </label>
       </div>
     </div>
 
@@ -406,9 +455,12 @@
         <span style="font-size:12px;color:#999">até</span>
         <input id="finRecFiltroAte" class="fin-input fin-input-sm" type="date" title="Data até" onchange="finFiltrarRecargasV43()" style="width:140px">
       </div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
+      <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
         <button id="finBtnNovaRecarga" class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirNovaRecarga()" disabled title="Bloqueado: nenhum cartão ativo">+ Nova Recarga</button>
-        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarRecargasV43()">Atualizar</button>
+        <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarRecargasV43()">↺ Atualizar</button>
+        <label class="fin-toggle-label" title="Exibir recargas de teste (TESTE_CONTROLADO)">
+          <input type="checkbox" id="finToggleMostrarTeste" onchange="finFiltrarRecargasV43()"> Mostrar testes
+        </label>
       </div>
     </div>
 
@@ -716,69 +768,63 @@
   </div>
 </div>
 
-<!-- Tab: Visão Geral -->
+<!-- Tab: Visão Geral — FLASH.5.0 redesenhado -->
 <div id="tabVisaoGeral" class="fin-tab-content">
   <div class="fin-tab-inner">
-    <div class="fin-card" style="margin-bottom:14px">
-      <h3>Atalhos rápidos</h3>
-      <div class="fin-visao-atalhos">
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('cartoes');finNovoCartao()">
-          <span class="atalho-icon">💳</span><strong>Novo cartão</strong>
+
+    <!-- Hero com atalhos principais -->
+    <div class="fin50-vg-hero">
+      <h2>Cartão Flash Corporativo</h2>
+      <p>Gerencie contas por colaborador, registre recargas, acompanhe despesas e confira prestações de campo.</p>
+      <div class="fin50-vg-atalhos">
+        <button class="fin50-vg-atalho" type="button" onclick="finMudarAba('cartoes');setTimeout(finAbrirCadastrarCartaoReal,100)">
+          <span class="ai">💳</span><strong>Novo Cartão</strong><small>Cadastrar colaborador</small>
         </button>
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('recargas')">
-          <span class="atalho-icon">💰</span><strong>Registrar recarga</strong>
+        <button class="fin50-vg-atalho" type="button" onclick="finMudarAba('recargas')">
+          <span class="ai">💰</span><strong>Registrar Recarga</strong><small>Por colaborador / CPF</small>
         </button>
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('despesas')">
-          <span class="atalho-icon">📂</span><strong>Importar extrato</strong>
+        <button class="fin50-vg-atalho" type="button" onclick="finMudarAba('pendencias')">
+          <span class="ai">⚠️</span><strong>Pendências</strong><small>Comprovantes em aberto</small>
         </button>
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('pendencias')">
-          <span class="atalho-icon">⚠️</span><strong>Ver pendências</strong>
-        </button>
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('prestacoes')">
-          <span class="atalho-icon">✅</span><strong>Conferir prestações</strong>
-        </button>
-        <button class="fin-visao-atalho" type="button" onclick="finMudarAba('termos')">
-          <span class="atalho-icon">📋</span><strong>Termos e documentos</strong>
+        <button class="fin50-vg-atalho" type="button" onclick="finMudarAba('prestacoes')">
+          <span class="ai">✅</span><strong>Prestações</strong><small>Conferir do campo</small>
         </button>
       </div>
     </div>
-    <div class="fin-card" style="margin-bottom:14px">
-      <h3>Como usar este módulo</h3>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Cartões</strong>
-          <p style="color:#666;font-size:12px;margin:0">Cadastre cartões, vincule responsáveis, bloqueie, inative e acompanhe termos, histórico e pendências.</p>
-        </div>
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Despesas e Extratos</strong>
-          <p style="color:#666;font-size:12px;margin:0">Registre despesas e importe extratos do app Flash para conferência.</p>
-        </div>
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Pendências e Prestações</strong>
-          <p style="color:#666;font-size:12px;margin:0">Acompanhe comprovantes e confira prestações enviadas do campo.</p>
-        </div>
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Conciliação</strong>
-          <p style="color:#666;font-size:12px;margin:0">Cruze extratos com despesas declaradas. Em preparação.</p>
-        </div>
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Termos e Documentos</strong>
-          <p style="color:#666;font-size:12px;margin:0">Gere e gerencie termos de responsabilidade dos cartões.</p>
-        </div>
-        <div style="padding:12px;border:1px solid #e9ecef;border-radius:6px">
-          <strong style="color:#0f2d52;font-size:12px;display:block;margin-bottom:4px">Relatórios e Cobranças</strong>
-          <p style="color:#666;font-size:12px;margin:0">Em preparação para a próxima versão do módulo.</p>
-        </div>
+
+    <!-- Grade informativa -->
+    <div class="fin50-vg-grid">
+      <div class="fin-card" style="margin:0">
+        <h3>Fluxo operacional</h3>
+        <ol style="margin-left:18px;color:#555;font-size:13px;line-height:1.8">
+          <li>Cadastre o cartão vinculando ao colaborador/CPF</li>
+          <li>Registre a recarga pelo colaborador (conta principal)</li>
+          <li>Colaborador usa o cartão no campo e faz prestação pelo app</li>
+          <li>Financeiro confere prestações e comprovantes aqui</li>
+          <li>Concilie com extrato quando disponível</li>
+        </ol>
+      </div>
+      <div class="fin-card" style="margin:0">
+        <h3>Status do módulo</h3>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f0f0f0;color:#555">Operação controlada por CPF</td><td style="text-align:right"><span class="fin-pill fin-pill-green">Ativa</span></td></tr>
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f0f0f0;color:#555">Liberação geral</td><td style="text-align:right"><span class="fin-pill fin-pill-yellow">Controlada</span></td></tr>
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f0f0f0;color:#555">Cartões</td><td style="text-align:right"><span id="vgKpiAtivos" class="fin-pill fin-pill-blue">—</span></td></tr>
+          <tr><td style="padding:6px 0;border-bottom:1px solid #f0f0f0;color:#555">Pendências abertas</td><td style="text-align:right"><span id="vgKpiPend" class="fin-pill fin-pill-gray">—</span></td></tr>
+          <tr><td style="padding:6px 0;color:#555">Ambiente</td><td style="text-align:right"><span class="fin-pill fin-pill-green">PRODUCAO_V2</span></td></tr>
+        </table>
       </div>
     </div>
-    <div class="fin-card">
-      <h3>Ações rápidas</h3>
+
+    <!-- Ações rápidas -->
+    <div class="fin-card" style="margin-top:14px">
       <div class="fin-btn-row">
-        <button class="fin-btn fin-btn-primary" type="button" onclick="finCarregarTudo()">Atualizar todos os dados</button>
+        <button class="fin-btn fin-btn-primary" type="button" onclick="finCarregarTudo()">↺ Atualizar todos os dados</button>
         <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('cartoes')">Ver cartões</button>
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('pendencias')">Ver pendências</button>
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('prestacoes')">Ver prestações</button>
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finAbrirManual()">Manual / Como usar</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('extratos')">Extratos</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('pendencias')">Pendências</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('prestacoes')">Prestações</button>
+        <button class="fin-btn fin-btn-outline" type="button" onclick="finAbrirManual()">Manual</button>
       </div>
     </div>
   </div>
@@ -1089,9 +1135,11 @@
 <div id="finModalCadastrarCartaoReal" class="fin-modal-overlay">
   <div class="fin-modal" style="width:560px">
     <h3>Cadastrar Cartão Real</h3>
+    <div class="flash47-modal-body">
     <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
-      <strong>Operação controlada (FLASH.4.6):</strong> Cada execução cria exatamente 1 cartão real.
-      Duplicidade por funcionário ou final do cartão será bloqueada automaticamente.
+      <strong>Operação controlada (FLASH.4.7 Multicartão):</strong> Cada execução cria exatamente 1 cartão real.
+      Um colaborador pode ter múltiplos cartões (físico + virtual) desde que o tipo e o final difiram.
+      Duplicidade bloqueada somente quando CPF + tipo + final forem iguais.
       Não serão criadas recargas. Piloto FLASH44 permanece isolado.
     </div>
     <div class="fin-grid2">
@@ -1104,6 +1152,10 @@
         <input id="finF46_FUNC_NOME" class="fin-input" type="text" placeholder="Nome completo" oninput="finF46ResetPreview()">
       </div>
       <div class="fin-fg">
+        <label class="fin-label">CPF do Colaborador * (11 dígitos)</label>
+        <input id="finF46_CPF" class="fin-input" type="text" maxlength="14" placeholder="ex: 123.456.789-01" oninput="finF46ResetPreview()">
+      </div>
+      <div class="fin-fg">
         <label class="fin-label">E-mail</label>
         <input id="finF46_FUNC_EMAIL" class="fin-input" type="email" placeholder="email@empresa.com">
       </div>
@@ -1112,8 +1164,8 @@
         <input id="finF46_FUNC_TEL" class="fin-input" type="text" placeholder="11999990000">
       </div>
       <div class="fin-fg">
-        <label class="fin-label">Final do Cartão (4 dígitos) *</label>
-        <input id="finF46_NUM4" class="fin-input" type="text" maxlength="4" placeholder="ex: 1234" oninput="this.value=this.value.replace(/\D/g,'');finF46ResetPreview()">
+        <label class="fin-label">Final do Cartão * (3 dígitos=Físico | 4 dígitos=Virtual)</label>
+        <input id="finF46_NUM4" class="fin-input" type="text" maxlength="4" placeholder="ex: 881 (físico) ou 0546 (virtual)" oninput="this.value=this.value.replace(/\D/g,'');finF46ResetPreview()">
       </div>
       <div class="fin-fg">
         <label class="fin-label">Apelido do Cartão *</label>
@@ -1129,9 +1181,10 @@
         </select>
       </div>
       <div class="fin-fg">
-        <label class="fin-label">Tipo *</label>
-        <select id="finF46_TIPO" class="fin-filter-select" style="width:100%">
-          <option value="CORPORATIVO">Corporativo</option>
+        <label class="fin-label">Tipo do Cartão Flash *</label>
+        <select id="finF46_TIPO" class="fin-filter-select" style="width:100%" onchange="finF46ResetPreview()">
+          <option value="VIRTUAL">Virtual (4 dígitos)</option>
+          <option value="FISICO">Físico (3 dígitos)</option>
         </select>
       </div>
       <div class="fin-fg">
@@ -1151,6 +1204,7 @@
       </div>
     </div>
     <div id="finF46Preview" style="display:none;margin:10px 0;padding:10px 12px;border-radius:6px;font-size:12.5px;line-height:1.5"></div>
+    </div><!-- /.flash47-modal-body -->
     <div class="fin-modal-footer">
       <button class="fin-btn fin-btn-secondary" onclick="finFecharCadastroCartaoReal()">Cancelar</button>
       <button class="fin-btn fin-btn-outline" onclick="finPrevisualizarCadastroCartaoReal()">Verificar duplicidade</button>
@@ -1199,15 +1253,15 @@
     </div>
     <div class="fin-grid2">
       <div class="fin-fg full">
-        <label class="fin-label">Cartão *</label>
-        <select id="finModalRecCartaoId" class="fin-select" onchange="finModalRecOnCartaoChange()">
-          <option value="">Selecione o cartão...</option>
+        <label class="fin-label">Colaborador / Conta Flash * (FLASH.4.8)</label>
+        <select id="finModalRecContaId" class="fin-select" onchange="finModalRecOnContaChange48()">
+          <option value="">Selecione o colaborador...</option>
         </select>
-        <span id="finModalRecCartaoStatus" style="font-size:11px;color:#28a745;margin-top:3px;display:block"></span>
+        <div id="finModalRecCartoesInfo" style="display:none;margin-top:6px;font-size:12px;color:#444;background:#f0f4ff;border-radius:5px;padding:6px 10px;line-height:1.6"></div>
       </div>
       <div class="fin-fg full">
         <label class="fin-label">Funcionário / Responsável</label>
-        <input id="finModalRecFuncionario" class="fin-input" type="text" readonly placeholder="Preenchido automaticamente ao selecionar o cartão">
+        <input id="finModalRecFuncionario" class="fin-input" type="text" readonly placeholder="Preenchido automaticamente ao selecionar o colaborador">
       </div>
       <div class="fin-fg">
         <label class="fin-label">Valor (R$) *</label>
@@ -1396,6 +1450,7 @@ function finCarregarCartoes() {
         finCartoes3RenderKPIs(_finCartoes);
         finCartoes3RenderAlertas(_finCartoes);
         finPopularSeletores(_finCartoes);
+        finPopularFiltroCPF48_(_finCartoes);
       } else {
         finMostrarErro((r && r.message) || 'Erro ao carregar cartoes.');
       }
@@ -3419,23 +3474,57 @@ function finMudarAba(aba) {
 // ---- filtro da lista ----
 
 function finFiltrarCartoes() {
-  var busca  = (document.getElementById('finBuscaCartao').value || '').toLowerCase();
-  var status = (document.getElementById('finFiltroStatus') || {}).value || '';
-  var termo  = (document.getElementById('finFiltroTermo')  || {}).value || '';
+  var busca         = (document.getElementById('finBuscaCartao').value || '').toLowerCase();
+  var status        = (document.getElementById('finFiltroStatus') || {}).value || '';
+  var termo         = (document.getElementById('finFiltroTermo')  || {}).value || '';
+  var cpfF          = ((document.getElementById('finFiltroCPF48') || {}).value || '').replace(/\D/g, '');
+  var togInat       = document.getElementById('finToggleInativos');
+  var mostrarInat   = togInat && togInat.checked;
+  var _INAT = ['INATIVO', 'CANCELADO', 'DEVOLVIDO'];
   _finFiltrados = _finCartoes.filter(function(c) {
-    if (status && c.STATUS_CARTAO !== status) { return false; }
+    var sc = (c.STATUS_CARTAO || '').toUpperCase();
+    // se toggle inativos desligado e status filter vazio, oculta inativo/cancelado
+    if (!mostrarInat && !status && _INAT.indexOf(sc) >= 0) { return false; }
+    if (status && sc !== status) { return false; }
     if (termo  && c.TERMO_ASSINADO !== termo) { return false; }
+    if (cpfF) {
+      var cpfCard = (c.CPF_COLABORADOR || '').replace(/\D/g, '');
+      if (cpfCard !== cpfF) { return false; }
+    }
     if (busca) {
-      var nome   = (c.FUNCIONARIO_NOME || '').toLowerCase();
+      var nome    = (c.FUNCIONARIO_NOME || '').toLowerCase();
       var apelido = (c.APELIDO_CARTAO  || '').toLowerCase();
-      var final4 = (c.NUMERO_FINAL_4   || '').toLowerCase();
-      var email  = (c.FUNCIONARIO_EMAIL || '').toLowerCase();
+      var final4  = (c.NUMERO_FINAL_4   || '').toLowerCase();
+      var email   = (c.FUNCIONARIO_EMAIL || '').toLowerCase();
       if (nome.indexOf(busca) < 0 && apelido.indexOf(busca) < 0 &&
           final4.indexOf(busca) < 0 && email.indexOf(busca) < 0) { return false; }
     }
     return true;
   });
   finCartoes3RenderTabela(_finFiltrados);
+  // rodapé com contagem real vs. filtrada
+  var rod = document.getElementById('finCartoesRodape');
+  if (rod) {
+    var txt = _finFiltrados.length + ((_finFiltrados.length === 1) ? ' cartão' : ' cartões');
+    if (!mostrarInat) { txt += ' — <a href="#" style="font-size:11px;color:#999" onclick="document.getElementById(\'finToggleInativos\').checked=true;finFiltrarCartoes();return false">+ mostrar inativos</a>'; }
+    rod.innerHTML = txt;
+  }
+}
+
+function finPopularFiltroCPF48_(cartoes) {
+  var sel = document.getElementById('finFiltroCPF48');
+  if (!sel) return;
+  var mapa = {};
+  (cartoes || []).forEach(function(c) {
+    var cpf  = (c.CPF_COLABORADOR || '').replace(/\D/g, '');
+    var nome = c.FUNCIONARIO_NOME || '';
+    if (cpf && !mapa[cpf]) mapa[cpf] = nome;
+  });
+  var opcoes = '<option value="">Todos os colaboradores</option>';
+  Object.keys(mapa).sort(function(a, b) { return mapa[a].localeCompare(mapa[b]); }).forEach(function(cpf) {
+    opcoes += '<option value="' + cpf + '">' + mapa[cpf] + '</option>';
+  });
+  sel.innerHTML = opcoes;
 }
 
 // ---- toast / loading ----
@@ -3490,10 +3579,13 @@ function finCartoes3RenderKPIs(lista) {
   var corTP = termoPend > 0 ? '#856404' : '#0f2d52';
   el.innerHTML =
     '<div class="fin-kpi kpi-ativo"><div class="fin-kpi-label">Ativos</div><div class="fin-kpi-value">' + ativos + '</div><div class="fin-kpi-sub">cartões</div></div>' +
-    '<div class="fin-kpi kpi-bloq"><div class="fin-kpi-label">Bloqueados</div><div class="fin-kpi-value">' + bloqueados + '</div><div class="fin-kpi-sub">cartões</div></div>' +
+    '<div class="fin-kpi kpi-bloq"><div class="fin-kpi-label">Bloqueados</div><div class="fin-kpi-value">' + bloqueados + '</div><div class="fin-kpi-sub">revisão</div></div>' +
     '<div class="fin-kpi" style="border-left-color:' + corSR + '"><div class="fin-kpi-label">Sem responsável</div><div class="fin-kpi-value" style="color:' + corSR + '">' + semResp + '</div><div class="fin-kpi-sub">ativos</div></div>' +
     '<div class="fin-kpi" style="border-left-color:' + (termoPend > 0 ? '#ffc107' : '#0366d6') + '"><div class="fin-kpi-label">Termos pendentes</div><div class="fin-kpi-value" style="color:' + corTP + '">' + termoPend + '</div><div class="fin-kpi-sub">ativos</div></div>' +
-    '<div class="fin-kpi"><div class="fin-kpi-label">Total cadastrados</div><div class="fin-kpi-value">' + lista.length + '</div><div class="fin-kpi-sub">cartões</div></div>';
+    '<div class="fin-kpi"><div class="fin-kpi-label">Total cadastrados</div><div class="fin-kpi-value">' + lista.length + '</div><div class="fin-kpi-sub">incluindo inativos</div></div>';
+  // atualizar KPI da Visão Geral
+  var vgAt = document.getElementById('vgKpiAtivos');
+  if (vgAt) { vgAt.textContent = ativos + ' ativo' + (ativos === 1 ? '' : 's'); vgAt.className = ativos > 0 ? 'fin-pill fin-pill-green' : 'fin-pill fin-pill-gray'; }
 }
 
 function finCartoes3RenderAlertas(lista) {
@@ -3544,16 +3636,22 @@ function finCartoes3RenderTabela(lista) {
     html += '<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + finEH(c.FUNCIONARIO_EMAIL || '') + '</td>';
     html += '<td>' + finCartoes3PillStatus(c.STATUS_CARTAO) + '</td>';
     html += '<td>' + termoPill + '</td>';
-    html += '<td><button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerPendencias(\'' + rowId + '\')">Ver</button></td>';
+    html += '<td style="color:#aaa;font-size:12px">—</td>';
     html += '<td style="white-space:nowrap;font-size:12px;color:#888">' + finEH(finDataBR(c.ATUALIZADO_EM || c.CRIADO_EM)) + '</td>';
-    html += '<td><div style="display:flex;gap:3px;flex-wrap:wrap">';
-    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3AbrirModal(\'' + rowId + '\')" title="Editar">Editar</button>';
+    var dropId = 'drop_' + rowId.replace(/[^a-z0-9]/gi,'');
+    html += '<td><div style="display:flex;gap:4px;align-items:center">';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3AbrirModal(\'' + rowId + '\')" title="Editar dados do cartão">Editar</button>';
     if (podeBloquear)    { html += '<button class="fin-btn fin-btn-warning fin-btn-sm" onclick="finCartoes3AbrirBloqueio(\'' + rowId + '\')">Bloquear</button>'; }
-    if (podeDesbloquear) { html += '<button class="fin-btn fin-btn-success fin-btn-sm" onclick="finCartoes3Desbloquear(\'' + rowId + '\')">Desbloquear</button>'; }
-    if (podeInativar)    { html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCartoes3AbrirInativar(\'' + rowId + '\')">Inativar</button>'; }
-    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerTermo(\'' + rowId + '\')">Termo</button>';
-    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3VerHistorico(\'' + rowId + '\')">Histórico</button>';
-    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finCartoes3AbrirResponsavel(\'' + rowId + '\')">Responsável</button>';
+    if (podeDesbloquear) { html += '<button class="fin-btn fin-btn-success fin-btn-sm" onclick="finCartoes3Desbloquear(\'' + rowId + '\')">Desbl.</button>'; }
+    html += '<div class="fin-actions-drop" id="' + dropId + '">';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finToggleDrop_(\'' + dropId + '\')" title="Mais ações">⋯</button>';
+    html += '<div class="fin-actions-drop-menu">';
+    if (podeInativar) { html += '<a onclick="finCartoes3AbrirInativar(\'' + rowId + '\');finFecharDrops_()">Inativar cartão</a>'; }
+    html += '<a onclick="finCartoes3VerTermo(\'' + rowId + '\');finFecharDrops_()">Ver termo</a>';
+    html += '<a onclick="finCartoes3VerHistorico(\'' + rowId + '\');finFecharDrops_()">Histórico</a>';
+    html += '<a onclick="finCartoes3AbrirResponsavel(\'' + rowId + '\');finFecharDrops_()">Responsável</a>';
+    html += '<a onclick="finCartoes3VerPendencias(\'' + rowId + '\');finFecharDrops_()">Pendências</a>';
+    html += '</div></div>';
     html += '</div></td>';
     html += '</tr>';
   }
@@ -3562,6 +3660,22 @@ function finCartoes3RenderTabela(lista) {
 }
 
 // ---- Modal Novo/Editar ----
+
+// FLASH.5.0 — dropdown de ações
+function finToggleDrop_(id) {
+  var el = document.getElementById(id);
+  if (!el) { return; }
+  var aberto = el.classList.contains('open');
+  finFecharDrops_();
+  if (!aberto) { el.classList.add('open'); }
+}
+function finFecharDrops_() {
+  var drops = document.querySelectorAll('.fin-actions-drop.open');
+  for (var i = 0; i < drops.length; i++) { drops[i].classList.remove('open'); }
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest || !e.target.closest('.fin-actions-drop')) { finFecharDrops_(); }
+});
 
 function finCartoes3AbrirModal(id) {
   _finCartaoEditandoId = id || '';
@@ -4399,6 +4513,7 @@ function finPMEsconderErro_() {
 // ============================================================
 
 var _finRecDados        = null;
+var _finRec48Contas     = [];  // FLASH.4.8: contas agrupadas por CPF
 var _finRecCarregado    = false;
 var _finRecFiltradas    = [];
 var _finRecCartoesAtivos = [];
@@ -4415,6 +4530,16 @@ function finCarregarRecargasV43() {
       finMostrarErro('Falha ao carregar recargas: ' + (e.message || e));
     })
     .finFlashListarRecargasV1(_finSessao);
+  // FLASH.4.8: carregar contas por CPF em paralelo para o modal de recarga
+  google.script.run
+    .withSuccessHandler(function(r48) {
+      if (r48 && r48.ok) {
+        _finRec48Contas = r48.contas || [];
+        finRecPopularDropdownContas48_(_finRec48Contas);
+      }
+    })
+    .withFailureHandler(function() {}) // silencioso — fallback para modelo cartão legado
+    .finFlashListarCartoesPorCPF48(_finSessao);
 }
 
 function finRecRenderTudo(r) {
@@ -4466,6 +4591,37 @@ function finRecRenderBloqueio(bloqueada, motivo) {
   }
 }
 
+function finRecPopularDropdownContas48_(contas) {
+  var sel = document.getElementById('finModalRecContaId');
+  if (!sel) return;
+  var opts = '<option value="">Selecione o colaborador...</option>';
+  (contas || []).forEach(function(c) {
+    var label = c.nome + ' (' + (c.cartoes.length) + ' cartão' + (c.cartoes.length !== 1 ? 'ões' : '') + ')';
+    opts += '<option value="' + finEH(c.cpf) + '" data-nome="' + finEH(c.nome) + '" data-email="' + finEH(c.email || '') + '">' + finEH(label) + '</option>';
+  });
+  sel.innerHTML = opts;
+}
+
+function finModalRecOnContaChange48() {
+  var sel   = document.getElementById('finModalRecContaId');
+  var fn    = document.getElementById('finModalRecFuncionario');
+  var info  = document.getElementById('finModalRecCartoesInfo');
+  if (!sel) return;
+  var opt   = sel.options[sel.selectedIndex];
+  var cpf   = (sel.value || '').replace(/\D/g, '');
+  if (fn)   fn.value = opt ? (opt.getAttribute('data-nome') || '') : '';
+  if (!cpf || !info) { if (info) info.style.display = 'none'; return; }
+  var conta = (_finRec48Contas || []).find(function(c) { return c.cpf === cpf; });
+  if (!conta) { info.style.display = 'none'; return; }
+  var linhas = (conta.cartoes || []).map(function(c) {
+    return '<span style="display:inline-block;background:#e8f0fe;border-radius:3px;padding:1px 7px;margin:2px 4px 2px 0;font-size:11px">' +
+      finEH(c.tipo || '') + ' •' + finEH(c.final || '????') + ' — ' + finEH(c.apelido || c.cartaoId || '') +
+      ' <em style="color:' + (c.statusCartao === 'ATIVO' ? '#1a7c3e' : '#b91c1c') + '">' + finEH(c.statusCartao) + '</em></span>';
+  }).join('');
+  info.innerHTML = '<strong>Cartões vinculados:</strong> ' + (linhas || '<em>nenhum</em>');
+  info.style.display = 'block';
+}
+
 function finRecPopularDropdownCartoes(ativos) {
   var sel = document.getElementById('finModalRecCartaoId');
   if (!sel) { return; }
@@ -4485,17 +4641,22 @@ function finRecPopularDropdownCartoes(ativos) {
 
 function finFiltrarRecargasV43() {
   if (!_finRecDados) { return; }
-  var busca  = (document.getElementById('finRecBusca')        || {}).value || '';
-  var status = (document.getElementById('finRecFiltroStatus') || {}).value || '';
-  var de     = (document.getElementById('finRecFiltroDe')     || {}).value || '';
-  var ate    = (document.getElementById('finRecFiltroAte')    || {}).value || '';
+  var busca       = (document.getElementById('finRecBusca')           || {}).value || '';
+  var status      = (document.getElementById('finRecFiltroStatus')    || {}).value || '';
+  var de          = (document.getElementById('finRecFiltroDe')        || {}).value || '';
+  var ate         = (document.getElementById('finRecFiltroAte')       || {}).value || '';
+  var togTeste    = document.getElementById('finToggleMostrarTeste');
+  var mostrarTest = togTeste && togTeste.checked;
   busca = busca.toLowerCase();
   _finRecFiltradas = (_finRecDados.recargas || []).filter(function(r) {
-    if (status && (r.STATUS || '').toUpperCase() !== status) { return false; }
-    if (de  && String(r.DATA_RECARGA || '') < de)            { return false; }
-    if (ate && String(r.DATA_RECARGA || '') > ate)           { return false; }
+    var st = (r.STATUS || '').toUpperCase();
+    // ocultar registros de teste por padrão
+    if (!mostrarTest && st === 'TESTE_CONTROLADO') { return false; }
+    if (status && st !== status) { return false; }
+    if (de  && String(r.DATA_RECARGA || '') < de) { return false; }
+    if (ate && String(r.DATA_RECARGA || '') > ate) { return false; }
     if (busca) {
-      var hay = [(r.RECARGA_ID || ''), (r.FUNCIONARIO_NOME || ''), (r.CARTAO_ID || ''), (r.RESPONSAVEL_NOME || '')].join(' ').toLowerCase();
+      var hay = [(r.RECARGA_ID || ''), (r.FUNCIONARIO_NOME || ''), (r.CARTAO_ID || ''), (r.RESPONSAVEL_NOME || ''), (r.CPF_COLABORADOR || '')].join(' ').toLowerCase();
       if (hay.indexOf(busca) < 0) { return false; }
     }
     return true;
@@ -4550,12 +4711,12 @@ function finAbrirNovaRecarga() {
   if (bl)  { bl.style.display = 'none'; }
   if (btn) { btn.disabled = false; }
   // Limpar campos
-  var campos = ['finModalRecCartaoId','finModalRecValor','finModalRecData','finModalRecNumTrans','finModalRecObs'];
+  var campos = ['finModalRecContaId','finModalRecValor','finModalRecData','finModalRecNumTrans','finModalRecObs'];
   campos.forEach(function(id) { var el = document.getElementById(id); if (el) { el.value = ''; } });
   var fn = document.getElementById('finModalRecFuncionario');
   if (fn) { fn.value = ''; }
-  var st = document.getElementById('finModalRecCartaoStatus');
-  if (st) { st.textContent = ''; }
+  var info = document.getElementById('finModalRecCartoesInfo');
+  if (info) { info.style.display = 'none'; info.innerHTML = ''; }
   document.getElementById('finModalNovaRecarga').classList.add('open');
 }
 
@@ -4579,16 +4740,16 @@ function finModalRecOnCartaoChange() {
 }
 
 function finSalvarRecargaV43() {
-  var cartaoId = (document.getElementById('finModalRecCartaoId') || {}).value || '';
-  var valorStr = (document.getElementById('finModalRecValor')     || {}).value || '';
-  var data     = (document.getElementById('finModalRecData')      || {}).value || '';
-  var origem   = (document.getElementById('finModalRecOrigem')    || {}).value || '';
-  var numTrans = (document.getElementById('finModalRecNumTrans')  || {}).value || '';
-  var obs      = (document.getElementById('finModalRecObs')       || {}).value || '';
+  var cpfSel   = ((document.getElementById('finModalRecContaId') || {}).value || '').replace(/\D/g, '');
+  var valorStr = (document.getElementById('finModalRecValor')    || {}).value || '';
+  var data     = (document.getElementById('finModalRecData')     || {}).value || '';
+  var origem   = (document.getElementById('finModalRecOrigem')   || {}).value || '';
+  var numTrans = (document.getElementById('finModalRecNumTrans') || {}).value || '';
+  var obs      = (document.getElementById('finModalRecObs')      || {}).value || '';
   var valor    = parseFloat(valorStr);
 
-  if (!cartaoId) { finMostrarErro('Selecione um cartão.'); return; }
-  if (!data)     { finMostrarErro('Informe a data da recarga.'); return; }
+  if (!cpfSel) { finMostrarErro('Selecione um colaborador/conta Flash.'); return; }
+  if (!data)   { finMostrarErro('Informe a data da recarga.'); return; }
   if (isNaN(valor) || valor <= 0) { finMostrarErro('Informe um valor maior que zero.'); return; }
 
   // Verificar bloqueio
@@ -4597,14 +4758,20 @@ function finSalvarRecargaV43() {
     return;
   }
 
-  // Verificar que o cartão selecionado está na lista de elegíveis
-  var elegivel = _finRecCartoesAtivos.filter(function(c) { return (c.CARTAO_ID || c.ID) === cartaoId; });
-  if (elegivel.length === 0) {
-    finMostrarErro('Cartão selecionado não está ATIVO. Operação bloqueada.');
+  // FLASH.4.8: localizar o primeiro cartão ATIVO do CPF para o backend (CARTAO_ID obrigatório na validação atual)
+  var conta    = (_finRec48Contas || []).find(function(c) { return c.cpf === cpfSel; });
+  var cartaoId = '';
+  if (conta) {
+    var cartaoAtivo = (conta.cartoes || []).find(function(c) { return c.statusCartao === 'ATIVO'; });
+    if (cartaoAtivo) cartaoId = cartaoAtivo.cartaoId;
+  }
+  if (!cartaoId) {
+    finMostrarErro('Colaborador não tem cartão ATIVO. Não é possível registrar recarga.');
     return;
   }
 
   var payload = {
+    CPF_COLABORADOR    : cpfSel,
     CARTAO_ID          : cartaoId,
     VALOR              : valor,
     DATA_RECARGA       : data,
@@ -4641,12 +4808,13 @@ function finF46LerPayload() {
   return {
     FUNCIONARIO_ID      : (document.getElementById('finF46_FUNC_ID')    || {}).value || '',
     FUNCIONARIO_NOME    : (document.getElementById('finF46_FUNC_NOME')   || {}).value || '',
+    CPF_COLABORADOR     : (document.getElementById('finF46_CPF')         || {}).value || '',
     FUNCIONARIO_EMAIL   : (document.getElementById('finF46_FUNC_EMAIL')  || {}).value || '',
     FUNCIONARIO_TELEFONE: (document.getElementById('finF46_FUNC_TEL')    || {}).value || '',
     NUMERO_FINAL_4      : (document.getElementById('finF46_NUM4')        || {}).value || '',
     APELIDO_CARTAO      : (document.getElementById('finF46_APELIDO')     || {}).value || '',
     BANDEIRA            : (document.getElementById('finF46_BANDEIRA')    || {}).value || 'MASTERCARD',
-    TIPO_CARTAO         : (document.getElementById('finF46_TIPO')        || {}).value || 'CORPORATIVO',
+    TIPO_CARTAO_FLASH   : (document.getElementById('finF46_TIPO')        || {}).value || 'VIRTUAL',
     STATUS_CARTAO       : (document.getElementById('finF46_STATUS')      || {}).value || 'ATIVO',
     LIMITE_MENSAL       : parseFloat((document.getElementById('finF46_LIMITE') || {}).value || '0') || 0,
     OBSERVACOES         : (document.getElementById('finF46_OBS')         || {}).value || ''
@@ -4661,20 +4829,29 @@ function finF46ResetPreview() {
   if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
 }
 
+function finAjustarAlturaModalCartao_() {
+  var body = document.querySelector('.flash47-modal-body');
+  if (!body) return;
+  var px = Math.max(200, Math.floor(window.innerHeight * 0.9) - 140);
+  body.style.maxHeight = px + 'px';
+}
+
 function finAbrirCadastrarCartaoReal() {
   _finF46PreviewOk  = false;
   _finF46Executando = false;
   var m = document.getElementById('finModalCadastrarCartaoReal');
   if (m) m.classList.add('open');
+  finAjustarAlturaModalCartao_();
   var btn = document.getElementById('finF46BtnConfirmar');
   if (btn) { btn.disabled = true; btn.textContent = 'Confirmar cadastro'; }
   var prev = document.getElementById('finF46Preview');
   if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
-  ['finF46_FUNC_ID','finF46_FUNC_NOME','finF46_FUNC_EMAIL','finF46_FUNC_TEL',
+  ['finF46_FUNC_ID','finF46_FUNC_NOME','finF46_CPF','finF46_FUNC_EMAIL','finF46_FUNC_TEL',
    'finF46_NUM4','finF46_APELIDO','finF46_OBS'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var lim = document.getElementById('finF46_LIMITE'); if (lim) lim.value = '0';
+  var tp = document.getElementById('finF46_TIPO'); if (tp) tp.value = 'VIRTUAL';
 }
 
 function finFecharCadastroCartaoReal() {
@@ -4696,7 +4873,13 @@ function finPrevisualizarCadastroCartaoReal() {
   // Validação client-side rápida
   if (!p.FUNCIONARIO_ID.trim())  { if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> ID do Funcionário obrigatório.';} return; }
   if (!p.FUNCIONARIO_NOME.trim()){ if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Nome do Funcionário obrigatório.';} return; }
-  if (!/^\d{4}$/.test(p.NUMERO_FINAL_4.trim())){ if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Final do cartão deve ter exatamente 4 dígitos numéricos.';} return; }
+  var _f47Final = p.NUMERO_FINAL_4.trim();
+  var _f47Tipo  = (p.TIPO_CARTAO_FLASH || 'VIRTUAL').toUpperCase();
+  var _f47FinalOk  = _f47Tipo === 'FISICO' ? /^\d{3}$/.test(_f47Final) : /^\d{4}$/.test(_f47Final);
+  var _f47FinalMsg = _f47Tipo === 'FISICO'
+    ? 'Final do cartão físico deve ter exatamente 3 dígitos numéricos.'
+    : 'Final do cartão virtual deve ter exatamente 4 dígitos numéricos.';
+  if (!_f47FinalOk) { if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> ' + _f47FinalMsg;} return; }
   if (!p.APELIDO_CARTAO.trim()) { if(prev){prev.style.background='#fff3f3';prev.innerHTML='<strong>Erro:</strong> Apelido do cartão obrigatório.';} return; }
 
   google.script.run

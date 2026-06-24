@@ -1,5 +1,8 @@
+function alertasGetCfg_() {
+  return sgoGetCfgSafe_();
+}
+
 const SGO_ALERTAS = (() => {
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
 
   const LABEL_SERVICO = {
     CALIBRACAO: "Calibracao",
@@ -26,7 +29,8 @@ const SGO_ALERTAS = (() => {
   }
 
   function getDiasAviso_() {
-    return (SGO_CFG.ALERTAS && SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
+    const cfg = alertasGetCfg_();
+    return (cfg.ALERTAS && cfg.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
   }
 
   function safeAll_(sheet, dbKey) {
@@ -68,12 +72,19 @@ const SGO_ALERTAS = (() => {
     opts = opts || {};
     diasAviso = Number(diasAviso || getDiasAviso_());
 
+    const cfgSistema = alertasGetCfg_();
+    const sheets = cfgSistema.SHEETS || {};
+    const statusCfg = cfgSistema.STATUS || {};
+    const osStatus = (cfgSistema.OS && cfgSistema.OS.STATUS) || {};
+    const alertasV2 = cfgSistema.ALERTAS_V2 || {};
+    const statusAtivo = statusCfg.ATIVO || "ATIVO";
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
     const alertas = [];
-    const clientes = mapaPorId_(safeAll_(SGO_CFG.SHEETS.CAD_CLIENTES));
-    const equipamentos = mapaPorId_(safeAll_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS));
+    const clientes = mapaPorId_(safeAll_(sheets.CAD_CLIENTES));
+    const equipamentos = mapaPorId_(safeAll_(sheets.CAD_EQUIPAMENTOS));
     const clienteIdFiltro = SGO_UTILS.safe(opts.clienteId);
 
     function nomeCliente_(id) {
@@ -86,8 +97,8 @@ const SGO_ALERTAS = (() => {
       return SGO_UTILS.safe(e.TAG || e.TIPO) || "Equipamento nao identificado";
     }
 
-    safeAll_(SGO_CFG.SHEETS.DOC_DOCUMENTOS).forEach(function(doc) {
-      if (SGO_UTILS.safeUpper(doc.STATUS) !== STATUS_ATIVO) return;
+    safeAll_(sheets.DOC_DOCUMENTOS).forEach(function(doc) {
+      if (SGO_UTILS.safeUpper(doc.STATUS) !== statusAtivo) return;
       if (clienteIdFiltro && SGO_UTILS.safe(doc.CLIENTE_ID) !== clienteIdFiltro) return;
       pushVencimento_(alertas, {
         hoje: hoje,
@@ -107,8 +118,8 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.REG_TECNICO).forEach(function(reg) {
-      if (SGO_UTILS.safeUpper(reg.STATUS) !== STATUS_ATIVO) return;
+    safeAll_(sheets.REG_TECNICO).forEach(function(reg) {
+      if (SGO_UTILS.safeUpper(reg.STATUS) !== statusAtivo) return;
       if (clienteIdFiltro && SGO_UTILS.safe(reg.CLIENTE_ID) !== clienteIdFiltro) return;
       const tipo = LABEL_SERVICO[SGO_UTILS.safeUpper(reg.TIPO_SERVICO)] || SGO_UTILS.safe(reg.TIPO_SERVICO || "Registro tecnico");
       pushVencimento_(alertas, {
@@ -129,11 +140,11 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.CAD_CONTRATOS).forEach(function(c) {
+    safeAll_(sheets.CAD_CONTRATOS).forEach(function(c) {
       if (clienteIdFiltro && SGO_UTILS.safe(c.CLIENTE_ID) !== clienteIdFiltro) return;
       pushVencimento_(alertas, {
         hoje: hoje,
-        diasAviso: (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_CONTRATO) || 60,
+        diasAviso: alertasV2.DIAS_CONTRATO || 60,
         categoria: "CONTRATO",
         referenciaId: c.ID,
         data: c.DATA_FIM,
@@ -148,7 +159,7 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.CAD_PECAS).forEach(function(p) {
+    safeAll_(sheets.CAD_PECAS).forEach(function(p) {
       if (clienteIdFiltro && SGO_UTILS.safe(p.CLIENTE_ID) !== clienteIdFiltro) return;
       if (SGO_UTILS.safeUpper(p.APLICA_CALIBRACAO) !== "S") return;
       pushVencimento_(alertas, {
@@ -169,7 +180,7 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.FORN_DOCUMENTOS, "ESTOQUE").forEach(function(doc) {
+    safeAll_(sheets.FORN_DOCUMENTOS, "ESTOQUE").forEach(function(doc) {
       pushVencimento_(alertas, {
         hoje: hoje,
         diasAviso: diasAviso,
@@ -185,7 +196,7 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.EST_LOTES, "ESTOQUE").forEach(function(lote) {
+    safeAll_(sheets.EST_LOTES, "ESTOQUE").forEach(function(lote) {
       pushVencimento_(alertas, {
         hoje: hoje,
         diasAviso: diasAviso,
@@ -202,8 +213,8 @@ const SGO_ALERTAS = (() => {
       });
     });
 
-    safeAll_(SGO_CFG.SHEETS.EST_ITENS, "ESTOQUE").forEach(function(item) {
-      const lotes = safeAll_(SGO_CFG.SHEETS.EST_LOTES, "ESTOQUE").filter(function(lote) {
+    safeAll_(sheets.EST_ITENS, "ESTOQUE").forEach(function(item) {
+      const lotes = safeAll_(sheets.EST_LOTES, "ESTOQUE").filter(function(lote) {
         return SGO_UTILS.safe(lote.ITEM_ID) === SGO_UTILS.safe(item.ID)
           && SGO_UTILS.safeUpper(lote.BLOQUEADO) !== "S"
           && SGO_UTILS.safeUpper(lote.STATUS) !== "VENCIDO";
@@ -226,14 +237,14 @@ const SGO_ALERTAS = (() => {
       }
     });
 
-    safeAll_(SGO_CFG.SHEETS.OS_ORDENS, "OS").forEach(function(os) {
+    safeAll_(sheets.OS_ORDENS, "OS").forEach(function(os) {
       if (clienteIdFiltro && SGO_UTILS.safe(os.CLIENTE_ID) !== clienteIdFiltro) return;
       const status = SGO_UTILS.safeUpper(os.STATUS);
       const statusFinal = [
-        SGO_CFG.OS.STATUS.CONCLUIDA,
-        SGO_CFG.OS.STATUS.APROVADA,
-        SGO_CFG.OS.STATUS.FATURADA,
-        SGO_CFG.OS.STATUS.CANCELADA
+        osStatus.CONCLUIDA,
+        osStatus.APROVADA,
+        osStatus.FATURADA,
+        osStatus.CANCELADA
       ].indexOf(status) >= 0;
       const prazo = parseDate_(os.SLA_PRAZO);
       if (prazo && !statusFinal && prazo < hoje) {
@@ -251,8 +262,8 @@ const SGO_ALERTAS = (() => {
           mensagem: "OS " + SGO_UTILS.safe(os.NUMERO_OS) + " esta atrasada ha " + Math.abs(dias) + " dia(s)."
         });
       }
-      const abertaSemTecnicoHoras = (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.OS_SEM_TECNICO_HORAS) || 24;
-      if (status === SGO_CFG.OS.STATUS.ABERTA && !SGO_UTILS.safe(os.TECNICO_ID) && os.DATA_ABERTURA) {
+      const abertaSemTecnicoHoras = alertasV2.OS_SEM_TECNICO_HORAS || 24;
+      if (status === osStatus.ABERTA && !SGO_UTILS.safe(os.TECNICO_ID) && os.DATA_ABERTURA) {
         const abertaEm = new Date(os.DATA_ABERTURA);
         const horas = (new Date().getTime() - abertaEm.getTime()) / 3600000;
         if (!isNaN(horas) && horas >= abertaSemTecnicoHoras) {
@@ -272,12 +283,12 @@ const SGO_ALERTAS = (() => {
       }
     });
 
-    safeAll_(SGO_CFG.SHEETS.FRT_VEICULOS, "FROTA").forEach(function(v) {
+    safeAll_(sheets.FRT_VEICULOS, "FROTA").forEach(function(v) {
       [
-        ["FROTA_SEGURO", "seguro", v.DATA_VENCIMENTO_SEGURO, (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_FROTA_DOCUMENTO) || 30],
-        ["FROTA_IPVA", "IPVA", v.DATA_VENCIMENTO_IPVA, (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_FROTA_DOCUMENTO) || 30],
-        ["FROTA_LICENCIAMENTO", "licenciamento", v.DATA_VENCIMENTO_LICENCIAMENTO, (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_FROTA_DOCUMENTO) || 30],
-        ["FROTA_MANUTENCAO", "manutencao", v.DATA_PROXIMA_MANUT, (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_FROTA_MANUTENCAO) || 15]
+        ["FROTA_SEGURO", "seguro", v.DATA_VENCIMENTO_SEGURO, alertasV2.DIAS_FROTA_DOCUMENTO || 30],
+        ["FROTA_IPVA", "IPVA", v.DATA_VENCIMENTO_IPVA, alertasV2.DIAS_FROTA_DOCUMENTO || 30],
+        ["FROTA_LICENCIAMENTO", "licenciamento", v.DATA_VENCIMENTO_LICENCIAMENTO, alertasV2.DIAS_FROTA_DOCUMENTO || 30],
+        ["FROTA_MANUTENCAO", "manutencao", v.DATA_PROXIMA_MANUT, alertasV2.DIAS_FROTA_MANUTENCAO || 15]
       ].forEach(function(cfg) {
         pushVencimento_(alertas, {
           hoje: hoje,
@@ -297,7 +308,7 @@ const SGO_ALERTAS = (() => {
 
       const kmProx = SGO_UTILS.toNumber(v.KM_PROXIMA_MANUT, 0);
       const kmAtual = SGO_UTILS.toNumber(v.KM_ATUAL, 0);
-      const limiteKm = (SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.KM_FROTA_MANUTENCAO) || 500;
+      const limiteKm = alertasV2.KM_FROTA_MANUTENCAO || 500;
       if (kmProx > 0 && kmAtual > 0 && (kmProx - kmAtual) <= limiteKm) {
         alertas.push({
           tipo: kmAtual >= kmProx ? "CRITICO" : "ATENCAO",
@@ -313,8 +324,8 @@ const SGO_ALERTAS = (() => {
       }
     });
 
-    const veiculos = mapaPorId_(safeAll_(SGO_CFG.SHEETS.FRT_VEICULOS, "FROTA"));
-    safeAll_(SGO_CFG.SHEETS.FRT_AGENDAMENTOS, "FROTA").forEach(function(a) {
+    const veiculos = mapaPorId_(safeAll_(sheets.FRT_VEICULOS, "FROTA"));
+    safeAll_(sheets.FRT_AGENDAMENTOS, "FROTA").forEach(function(a) {
       const v = veiculos[SGO_UTILS.safe(a.VEICULO_ID)] || {};
       if (SGO_UTILS.safeUpper(v.BLOQUEADO) === "S" || SGO_UTILS.safeUpper(v.STATUS) === "BLOQUEADO") {
         alertas.push({

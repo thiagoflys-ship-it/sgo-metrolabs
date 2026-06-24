@@ -23,7 +23,7 @@ const SGO_VALIDACAO = (() => {
       if (prop && String(prop).trim()) return String(prop).trim();
     } catch(e) {}
     try {
-      const cfgUrl = SGO_CFG.WEBAPP_URL;
+      const cfgUrl = sgoGetCfgSafe_().WEBAPP_URL;
       if (cfgUrl && String(cfgUrl).trim()) return String(cfgUrl).trim();
     } catch(e) {}
     try {
@@ -168,16 +168,16 @@ const SGO_VALIDACAO = (() => {
 
   function buscarDocumentoControlado_(codigoBusca) {
     try {
-      const docs = SGO_DATA.getAll(SGO_CFG.SHEETS.DOC_DOCUMENTOS);
+      const docs = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS);
       const doc = docs.find(function(d) {
         return String(d.TOKEN_VALIDACAO || "").trim().toUpperCase() === codigoBusca;
       });
       if (!doc) return null;
 
-      const cliente = doc.CLIENTE_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, doc.CLIENTE_ID) : null;
-      const unidade = doc.UNIDADE_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, doc.UNIDADE_ID) : null;
-      const equipamento = doc.EQUIPAMENTO_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, doc.EQUIPAMENTO_ID) : null;
-      const os = doc.OS_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.OS_ORDENS, doc.OS_ID, "OS") : null;
+      const cliente = doc.CLIENTE_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, doc.CLIENTE_ID) : null;
+      const unidade = doc.UNIDADE_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, doc.UNIDADE_ID) : null;
+      const equipamento = doc.EQUIPAMENTO_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, doc.EQUIPAMENTO_ID) : null;
+      const os = doc.OS_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.OS_ORDENS, doc.OS_ID, "OS") : null;
       const tipoRaw = String(doc.TIPO_DOCUMENTO || "Documento Tecnico");
       const frotaMeta = montarMetaFrotaValidacao_(doc, tipoRaw);
 
@@ -244,17 +244,17 @@ const SGO_VALIDACAO = (() => {
 
   function buscarDocumentoAssistenciaTecnica_(codigoBusca) {
     try {
-      if (!SGO_CFG.SHEETS.AST_DOCUMENTOS) return null;
-      const docs = SGO_DATA.getAll(SGO_CFG.SHEETS.AST_DOCUMENTOS);
+      if (!sgoGetCfgSafe_().SHEETS.AST_DOCUMENTOS) return null;
+      const docs = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.AST_DOCUMENTOS);
       const doc = docs.find(function(d) {
         return String(d.TOKEN_VALIDACAO || "").trim().toUpperCase() === codigoBusca;
       });
       if (!doc) return null;
 
-      const entrada = doc.ENTRADA_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.AST_ENTRADAS, doc.ENTRADA_ID) : null;
-      const cliente = entrada && entrada.CLIENTE_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, entrada.CLIENTE_ID) : null;
-      const unidade = entrada && entrada.UNIDADE_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, entrada.UNIDADE_ID) : null;
-      const equipamento = entrada && entrada.EQUIPAMENTO_ID ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, entrada.EQUIPAMENTO_ID) : null;
+      const entrada = doc.ENTRADA_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.AST_ENTRADAS, doc.ENTRADA_ID) : null;
+      const cliente = entrada && entrada.CLIENTE_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, entrada.CLIENTE_ID) : null;
+      const unidade = entrada && entrada.UNIDADE_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, entrada.UNIDADE_ID) : null;
+      const equipamento = entrada && entrada.EQUIPAMENTO_ID ? SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, entrada.EQUIPAMENTO_ID) : null;
       const equipamentoLabel = equipamento
         ? String([equipamento.TIPO, equipamento.TAG, equipamento.FABRICANTE, equipamento.MODELO].filter(Boolean).join(" - "))
         : String((entrada && entrada.EQUIPAMENTO_PROVISORIO) || "");
@@ -322,7 +322,7 @@ const SGO_VALIDACAO = (() => {
     if (!isFrota) return out;
     try {
       let veiculo = null;
-      if (doc.VEICULO_ID) veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.FROTA_VEICULOS, doc.VEICULO_ID, "FROTA");
+      if (doc.VEICULO_ID) veiculo = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.FROTA_VEICULOS, doc.VEICULO_ID, "FROTA");
       if (veiculo) {
         out.placa = String(veiculo.PLACA || "");
         out.veiculo = String([veiculo.MARCA, veiculo.MODELO, veiculo.ANO].filter(Boolean).join(" "));
@@ -330,7 +330,7 @@ const SGO_VALIDACAO = (() => {
     } catch (e) {}
     try {
       if (tipoUp === "FROTA_TERMO_MULTA" && doc.ENTIDADE_ID) {
-        const multa = SGO_DATA.getById(SGO_CFG.SHEETS.FROTA_MULTAS, doc.ENTIDADE_ID, "FROTA");
+        const multa = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.FROTA_MULTAS, doc.ENTIDADE_ID, "FROTA");
         if (multa) {
           out.placa = String(multa.PLACA || out.placa || "");
           out.condutor = String(multa.CONDUTOR_NOME || "");

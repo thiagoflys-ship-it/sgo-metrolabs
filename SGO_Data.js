@@ -435,7 +435,7 @@ const SGO_DATA = {
   ========================== */
   log(acao, usuario, detalhe, modulo = "SISTEMA") {
     try {
-      const sheet = SGO_DATA.getSheet(SGO_CFG.SHEETS.SYS_LOGS);
+      const sheet = SGO_DATA.getSheet(sgoGetCfgSafe_().SHEETS.SYS_LOGS);
       sheet.appendRow([
         SGO_UTILS.uuid(),
         SGO_UTILS.nowIso(),
@@ -464,11 +464,11 @@ const SGO_DATA = {
 
   getDbIdByKey_(dbKey) {
     const chave = SGO_DATA.resolveDbKey_(dbKey);
-    if (chave === "PRINCIPAL") return SGO_UTILS.safe(SGO_CFG.DB_ID);
-    if (chave === "OS") return SGO_UTILS.safe(SGO_CFG.DB_OS_ID);
-    if (chave === "FROTA") return SGO_UTILS.safe(SGO_CFG.DB_FROTA_ID);
-    if (chave === "ESTOQUE") return SGO_UTILS.safe(SGO_CFG.DB_ESTOQUE_ID);
-    if (chave === "COMERCIAL") return SGO_UTILS.safe(SGO_CFG.DB_COMERCIAL_ID);
+    if (chave === "PRINCIPAL") return SGO_UTILS.safe(sgoGetCfgSafe_().DB_ID);
+    if (chave === "OS") return SGO_UTILS.safe(sgoGetCfgSafe_().DB_OS_ID);
+    if (chave === "FROTA") return SGO_UTILS.safe(sgoGetCfgSafe_().DB_FROTA_ID);
+    if (chave === "ESTOQUE") return SGO_UTILS.safe(sgoGetCfgSafe_().DB_ESTOQUE_ID);
+    if (chave === "COMERCIAL") return SGO_UTILS.safe(sgoGetCfgSafe_().DB_COMERCIAL_ID);
     throw new Error("Chave de banco desconhecida: " + chave);
   },
 
@@ -558,8 +558,8 @@ const SGO_DATA = {
 
   formatDateForOutput_(dateValue) {
     try {
-      const tz = (typeof SGO_CFG !== "undefined" && SGO_CFG.SISTEMA && SGO_CFG.SISTEMA.TIMEZONE)
-                 ? SGO_CFG.SISTEMA.TIMEZONE
+      const tz = (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().SISTEMA && sgoGetCfgSafe_().SISTEMA.TIMEZONE)
+                 ? sgoGetCfgSafe_().SISTEMA.TIMEZONE
                  : Session.getScriptTimeZone();
 
       return Utilities.formatDate(

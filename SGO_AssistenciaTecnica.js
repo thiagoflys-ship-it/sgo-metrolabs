@@ -1,6 +1,10 @@
-﻿const SGO_AST = (() => {
+function assistenciaGetCfg_() {
+  return sgoGetCfgSafe_();
+}
+
+const SGO_AST = (() => {
   const DB = "PRINCIPAL";
-  const S = SGO_CFG.SHEETS;
+  const S = assistenciaGetCfg_().SHEETS;
   const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=";
 
   const STATUS = {
@@ -229,7 +233,7 @@
       success: true,
       status: STATUS,
       prioridades: ["BAIXA", "NORMAL", "ALTA", "CRITICA"],
-      tiposFoto: (SGO_CFG.ASSISTENCIA_TECNICA && SGO_CFG.ASSISTENCIA_TECNICA.TIPOS_FOTO) || [],
+      tiposFoto: (sgoGetCfgSafe_().ASSISTENCIA_TECNICA && sgoGetCfgSafe_().ASSISTENCIA_TECNICA.TIPOS_FOTO) || [],
       clientes: filtrarClienteSessao_(SGO_DATA.getAll(S.CAD_CLIENTES), sessao),
       tecnicos: listarTecnicos_(),
       fornecedores: listarFornecedoresTerceiro_(),
@@ -1421,7 +1425,7 @@
     const validacaoUrl = montarUrlValidacao_(token);
     const qrCode = QR_API + encodeURIComponent(validacaoUrl);
     const html = relatorioGerencialHtml_(tipo, dados, dashboardData, token, validacaoUrl, qrCode);
-    const file = criarPdfAst_(html, nomeArquivoAst_(tipo + "_" + Utilities.formatDate(new Date(), SGO_CFG.SISTEMA.TIMEZONE, "yyyyMMdd_HHmmss") + ".pdf"));
+    const file = criarPdfAst_(html, nomeArquivoAst_(tipo + "_" + Utilities.formatDate(new Date(), sgoGetCfgSafe_().SISTEMA.TIMEZONE, "yyyyMMdd_HHmmss") + ".pdf"));
     const hash = sha256_(html);
     const entrada = dados.entradas[0] || {};
     const registro = SGO_DATA.insert(S.AST_RELATORIOS_GERADOS, SGO_DATA.gerarRegistroBase({
@@ -1877,7 +1881,7 @@
   }
 
   function documentoBaseHtml_(titulo, token, validacaoUrl, qrCode, corpo) {
-    return '<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:13mm}body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:11px}.head{display:grid;grid-template-columns:1fr 120px;gap:18px;border-bottom:4px solid #0b7a3e;padding-bottom:14px;margin-bottom:16px}.logo{max-width:220px;max-height:80px}.brand{font-size:10px;text-transform:uppercase;color:#64748b;font-weight:800}.title{font-size:24px;color:#0b3b78;margin:10px 0 4px}.qr{width:110px;height:110px}.section-title{font-size:9px;text-transform:uppercase;color:#0b3b78;font-weight:900;border-left:4px solid #0b7a3e;padding-left:7px;margin:15px 0 7px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.box{border:1px solid #dfe6ee;border-radius:6px;background:#f8fafc;padding:8px}.lab{font-size:8px;text-transform:uppercase;color:#64748b;font-weight:900}.val{font-weight:800;word-break:break-word}.note{border:1px solid #dfe6ee;border-radius:6px;padding:10px;white-space:pre-line}.table{width:100%;border-collapse:collapse}.table th{background:#0b3b78;color:#fff;text-align:left;padding:6px;font-size:8px;text-transform:uppercase}.table td{border-bottom:1px solid #dfe6ee;padding:6px;vertical-align:top}.footer{border-top:1px solid #dfe6ee;margin-top:18px;padding-top:9px;color:#64748b;font-size:9px;line-height:1.45}.mono{font-family:Consolas,monospace;word-break:break-all}</style></head><body><header class="head"><div><img class="logo" src="' + esc_(SGO_CFG.LOGO_URL || "") + '"><div class="brand">Metrolabs SGO+ Assistencia Tecnica</div><h1 class="title">' + esc_(titulo) + '</h1></div><div><img class="qr" src="' + esc_(qrCode) + '"></div></header>' + corpo + '<footer class="footer">Documento emitido com token, hash e QR Code de validacao publica.<br>Token: <span class="mono">' + esc_(token) + '</span><br>Validacao: <span class="mono">' + esc_(validacaoUrl) + '</span></footer></body></html>';
+    return '<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4;margin:13mm}body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:0;font-size:11px}.head{display:grid;grid-template-columns:1fr 120px;gap:18px;border-bottom:4px solid #0b7a3e;padding-bottom:14px;margin-bottom:16px}.logo{max-width:220px;max-height:80px}.brand{font-size:10px;text-transform:uppercase;color:#64748b;font-weight:800}.title{font-size:24px;color:#0b3b78;margin:10px 0 4px}.qr{width:110px;height:110px}.section-title{font-size:9px;text-transform:uppercase;color:#0b3b78;font-weight:900;border-left:4px solid #0b7a3e;padding-left:7px;margin:15px 0 7px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.box{border:1px solid #dfe6ee;border-radius:6px;background:#f8fafc;padding:8px}.lab{font-size:8px;text-transform:uppercase;color:#64748b;font-weight:900}.val{font-weight:800;word-break:break-word}.note{border:1px solid #dfe6ee;border-radius:6px;padding:10px;white-space:pre-line}.table{width:100%;border-collapse:collapse}.table th{background:#0b3b78;color:#fff;text-align:left;padding:6px;font-size:8px;text-transform:uppercase}.table td{border-bottom:1px solid #dfe6ee;padding:6px;vertical-align:top}.footer{border-top:1px solid #dfe6ee;margin-top:18px;padding-top:9px;color:#64748b;font-size:9px;line-height:1.45}.mono{font-family:Consolas,monospace;word-break:break-all}</style></head><body><header class="head"><div><img class="logo" src="' + esc_(sgoGetCfgSafe_().LOGO_URL || "") + '"><div class="brand">Metrolabs SGO+ Assistencia Tecnica</div><h1 class="title">' + esc_(titulo) + '</h1></div><div><img class="qr" src="' + esc_(qrCode) + '"></div></header>' + corpo + '<footer class="footer">Documento emitido com token, hash e QR Code de validacao publica.<br>Token: <span class="mono">' + esc_(token) + '</span><br>Validacao: <span class="mono">' + esc_(validacaoUrl) + '</span></footer></body></html>';
   }
 
   function secaoGrid_(titulo, pares) {
@@ -2107,7 +2111,7 @@
   }
 
   function pastaAst_() {
-    const id = SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_ASSISTENCIA_TECNICA;
+    const id = sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_ASSISTENCIA_TECNICA;
     if (id) {
       try { return DriveApp.getFolderById(id); } catch (e) {}
     }
@@ -2115,7 +2119,7 @@
   }
   function montarUrlPublica_(token) { return ScriptApp.getService().getUrl() + "?ast=" + encodeURIComponent(token); }
   function montarUrlValidacao_(token) { return ScriptApp.getService().getUrl() + "?validar=" + encodeURIComponent(token); }
-  function gerarProtocolo_() { return "AST-" + Utilities.formatDate(new Date(), SGO_CFG.SISTEMA.TIMEZONE, "yyyyMMdd-HHmmss") + "-" + Math.floor(Math.random() * 900 + 100); }
+  function gerarProtocolo_() { return "AST-" + Utilities.formatDate(new Date(), sgoGetCfgSafe_().SISTEMA.TIMEZONE, "yyyyMMdd-HHmmss") + "-" + Math.floor(Math.random() * 900 + 100); }
   function gerarTokenEntradaUnico_() {
     for (let i = 0; i < 10; i++) {
       const token = "AST-" + Utilities.getUuid().replace(/-/g, "").slice(0, 18).toUpperCase();
@@ -2222,8 +2226,8 @@
   function upper_(v) { return safe_(v).toUpperCase(); }
   function simNao_(v) { const s = upper_(v); return ["S", "SIM", "TRUE", "1", "YES"].indexOf(s) >= 0 ? "S" : "N"; }
   function now_() { return SGO_UTILS && SGO_UTILS.nowIso ? SGO_UTILS.nowIso() : new Date().toISOString(); }
-  function dataHoje_() { return Utilities.formatDate(new Date(), SGO_CFG.SISTEMA.TIMEZONE, "yyyy-MM-dd"); }
-  function formatarDataBR_(valor) { if (!valor) return ""; try { return Utilities.formatDate(new Date(valor), SGO_CFG.SISTEMA.TIMEZONE, "dd/MM/yyyy HH:mm"); } catch (e) { return safe_(valor); } }
+  function dataHoje_() { return Utilities.formatDate(new Date(), sgoGetCfgSafe_().SISTEMA.TIMEZONE, "yyyy-MM-dd"); }
+  function formatarDataBR_(valor) { if (!valor) return ""; try { return Utilities.formatDate(new Date(valor), sgoGetCfgSafe_().SISTEMA.TIMEZONE, "dd/MM/yyyy HH:mm"); } catch (e) { return safe_(valor); } }
   function nomeArquivoAst_(nome) { return safe_(nome || "arquivo_ast.pdf").replace(/[\\/:*?"<>|]+/g, "_"); }
   function downloadUrl_(fileId) { return "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(fileId); }
   function limparBase64_(base64) { return safe_(base64).replace(/^data:[^;]+;base64,/, ""); }
@@ -2441,7 +2445,7 @@
   function setupV2() {
     const ss = SGO_DATA.getDB(DB);
     const log = [];
-    const SV2 = SGO_CFG.SHEETS;
+    const SV2 = sgoGetCfgSafe_().SHEETS;
 
     // Congela AST_ENTRADAS como AST_ENTRADAS_LEGADO (apenas renomeia, sem apagar)
     const sheetEntradas = ss.getSheetByName("AST_ENTRADAS");
@@ -3915,7 +3919,7 @@
     var assinaturaCharlesBase64 = imagemDriveBase64_('13k2XmjdI7iE9CUrDnOqm-k0mTyl6F4j9');
     var qrValidacaoBase64       = imagemUrlBase64_(qrValidacao);
     var qrAcompanhamentoBase64  = imagemUrlBase64_(qrAcompanhamento);
-    var logoBase64              = imagemDriveBase64_(SGO_CFG.LOGO_FILE_ID) || imagemUrlBase64_(SGO_CFG.LOGO_URL || '');
+    var logoBase64              = imagemDriveBase64_(sgoGetCfgSafe_().LOGO_FILE_ID) || imagemUrlBase64_(sgoGetCfgSafe_().LOGO_URL || '');
     return { token: token, validacaoUrl: validacaoUrl, qrValidacao: qrValidacao,
              qrAcompanhamento: qrAcompanhamento, emitidoEm: emitidoEm,
              assinaturaDouglasBase64: assinaturaDouglasBase64, assinaturaCharlesBase64: assinaturaCharlesBase64,
@@ -4523,7 +4527,7 @@
     try { fotos = SGO_DATA.getManyByField(S.AST_FOTOS, 'ATENDIMENTO_ID', atendimentoId, DB) || []; } catch (e_) {}
     const meta    = prepararMetaDocumental_('REL-AT', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
     const nomeArq = nomeArquivoAst_('AT_RELATORIO_' + safe_(atendimento.PROTOCOLO) + '_' +
-                      Utilities.formatDate(new Date(meta.emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
+                      Utilities.formatDate(new Date(meta.emitidoEm), sgoGetCfgSafe_().SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
     const emissao = emitirPdfComHash_(meta, function(m) {
       return montarHtmlRelatorioTecnicoV2_(atendimento, historico, solicitacoes, fotos, m);
     }, nomeArq);
@@ -4749,7 +4753,7 @@
     try { if (entradaConclusao && entradaConclusao.OBSERVACAO) dadosConclusao = JSON.parse(entradaConclusao.OBSERVACAO) || {}; } catch (e_) {}
     const meta    = prepararMetaDocumental_('PS-AT', safe_(atendimento.QR_URL_ACOMPANHAMENTO || ''));
     const nomeArq = nomeArquivoAst_('AT_PROTOCOLO_SAIDA_' + safe_(atendimento.PROTOCOLO) + '_' +
-                      Utilities.formatDate(new Date(meta.emitidoEm), SGO_CFG.SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
+                      Utilities.formatDate(new Date(meta.emitidoEm), sgoGetCfgSafe_().SISTEMA.TIMEZONE, 'yyyyMMdd') + '.pdf');
     const emissao = emitirPdfComHash_(meta, function(m) {
       return montarHtmlProtocoloSaidaV2_(atendimento, dadosEntrega, dadosConclusao, m);
     }, nomeArq);

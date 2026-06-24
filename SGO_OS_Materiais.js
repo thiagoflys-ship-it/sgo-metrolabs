@@ -1,6 +1,6 @@
 const SGO_OS_MATERIAIS = (() => {
   const DB_OS = "OS";
-  const SHEET = SGO_CFG.SHEETS.OS_MATERIAIS;
+  const SHEET = sgoGetCfgSafe_().SHEETS.OS_MATERIAIS;
 
   function listar(sessionId, osId) {
     exigirSessao(sessionId);
@@ -67,9 +67,9 @@ const SGO_OS_MATERIAIS = (() => {
       const custoPecas = itens.reduce(function(total, item) {
         return total + SGO_UTILS.toNumber(item.CUSTO_TOTAL, 0);
       }, 0);
-      const os = SGO_DATA.getById(SGO_CFG.SHEETS.OS_ORDENS, SGO_UTILS.safe(osId), DB_OS) || {};
+      const os = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.OS_ORDENS, SGO_UTILS.safe(osId), DB_OS) || {};
       const custoTotal = custoPecas + SGO_UTILS.toNumber(os.CUSTO_HORA, 0) + SGO_UTILS.toNumber(os.CUSTO_DESLOCAMENTO, 0);
-      SGO_DATA.update(SGO_CFG.SHEETS.OS_ORDENS, SGO_UTILS.safe(osId), {
+      SGO_DATA.update(sgoGetCfgSafe_().SHEETS.OS_ORDENS, SGO_UTILS.safe(osId), {
         CUSTO_PECAS: custoPecas,
         CUSTO_TOTAL: custoTotal,
         ATUALIZADO_EM: SGO_UTILS.nowIso()

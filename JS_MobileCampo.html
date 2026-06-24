@@ -304,7 +304,7 @@
       _navCard("📋","Minhas O.S.","Ordens atribuídas a você","mc_iniciarMinhasOS()") +
       _navCard("🗓️","Minhas Missões","Agenda e missões do dia","mc_iniciarMinhasMissoes()") +
       _navCard("➕","Nova O.S.","Criar tarefa em campo","mc_iniciarNovaOS()") +
-      _navCard("💳","Cartão Flash","Prestar conta de gasto","mc_iniciarCartaoFlash()") +
+      _navCard("💳","Cartão Flash","Fazer prestação de contas","mc_iniciarCartaoFlash()") +
       _navCard("🏢","Cadastrar Cliente","Entrada rápida de cliente","mc_iniciarCliente()") +
       _navCard("📍","Cadastrar Unidade","Unidade com GPS e endereço","mc_iniciarUnidade()") +
       _navCard("🔬","Cadastrar Equipamento","Equipamento vinculado à unidade","mc_iniciarEquipamento()") +
@@ -1493,8 +1493,7 @@
     var hoje = new Date().toISOString().substring(0, 10);
     div.innerHTML = '<div class="mc2">' + mc_topbar("Cartão Flash", "mc_ir(\'home\')") +
       '<div class="mc2-body">' +
-      '<div class="mc2-alrt mc2-awarn" style="margin-bottom:12px;">⚠️ Piloto controlado Flash — 1 colaborador. O envio real será habilitado após autorização financeira. Preencha e revise o formulário.</div>' +
-      '<div class="mc2-sec">Prestar conta de gasto</div>' +
+      '<div class="mc2-sec">Prestação de contas — Cartão Flash</div>' +
       '<div class="mc2-card">' +
         '<div class="mc2-lbl">Valor do gasto *</div>' +
         '<input id="mcf-valor" class="mc2-input" type="number" inputmode="decimal" placeholder="0,00" step="0.01" min="0">' +
@@ -1540,8 +1539,8 @@
         '<div class="mc2-lbl">Observação livre</div>' +
         '<textarea id="mcf-obs" class="mc2-ta" style="min-height:70px;" placeholder="Qualquer observação adicional..."></textarea>' +
       '</div>' +
-      '<div class="mc2-alrt mc2-info" style="margin-bottom:10px;">💡 Piloto controlado: 1 colaborador, acompanhamento diário pelo financeiro. O envio real será habilitado após validação e deploy em produção (B52).</div>' +
-      '<button id="mcf-btn-enviar" class="mc2-btn mc2-warn" onclick="mc_enviarPrestacaoFlash_()">💳 Preparar prestação — revisar antes de enviar</button>' +
+      '<div class="mc2-alrt mc2-info" style="margin-bottom:10px;">💡 Após o registro, o financeiro receberá a prestação para conferência. Anexe o comprovante para aprovação mais rápida.</div>' +
+      '<button id="mcf-btn-enviar" class="mc2-btn mc2-ok" onclick="mc_enviarPrestacaoFlash_()">💳 Registrar prestação de contas</button>' +
       '<div id="mcf-resultado"></div>' +
       '<div class="mc2-gap8"></div>' +
       '<button class="mc2-btn mc2-ghost" onclick="mc_ir(\'home\')">← Voltar</button>' +
@@ -1553,8 +1552,72 @@
     var prev = document.getElementById("mcf-foto-preview"); if (!prev) return;
     if (!input || !input.files || !input.files.length) { prev.textContent = "Nenhum comprovante selecionado."; return; }
     var f = input.files[0];
-    prev.innerHTML = '✅ Comprovante selecionado: <strong>' + mc_esc(f.name) + '</strong> (' + mc_tamanhoLegivel_(f.size) + ') — <em>envio real bloqueado nesta etapa.</em>';
+    prev.innerHTML = '✅ <strong>' + mc_esc(f.name) + '</strong> (' + mc_tamanhoLegivel_(f.size) + ') — pronto para envio.';
     prev.style.color = "#057a55";
+  }
+
+  function mc_previewCompResult_(input) {
+    var prev = document.getElementById("mcf-comp-preview"); if (!prev) return;
+    if (!input || !input.files || !input.files.length) { prev.textContent = "Nenhum arquivo selecionado."; return; }
+    var f = input.files[0];
+    prev.innerHTML = '✅ <strong>' + mc_esc(f.name) + '</strong> (' + mc_tamanhoLegivel_(f.size) + ')';
+    prev.style.color = "#057a55";
+  }
+
+  function mc_anexarComprovanteFlash_(lancamentoId) {
+    var ses = mc_ses();
+    if (!ses) { mc_toast("Sessão inválida."); return; }
+    var fileEl = document.getElementById("mcf-comp-file") || document.getElementById("mcf-comp-cam");
+    if (!fileEl || !fileEl.files || !fileEl.files.length) {
+      mc_toast("Selecione um arquivo antes de enviar.");
+      return;
+    }
+    var f = fileEl.files[0];
+    if (f.size > 5 * 1024 * 1024) { mc_toast("Arquivo muito grande. Limite: 5 MB."); return; }
+    var btn = document.getElementById("mcf-btn-comp");
+    var res = document.getElementById("mcf-comp-resultado");
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Enviando comprovante..."; }
+    if (res) { res.innerHTML = ""; }
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var dataUrl = ev.target.result;
+      var payload = {
+        lancamentoId : lancamentoId,
+        nomeArquivo  : f.name,
+        mimeType     : f.type || "application/octet-stream",
+        base64       : dataUrl
+      };
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (!r || !r.success) {
+            if (btn) { btn.disabled = false; btn.textContent = "📎 Enviar comprovante"; }
+            if (res) { res.innerHTML = '<div class="mc2-alrt mc2-aerr" style="margin-top:8px;">❌ ' + mc_esc((r && r.message) || "Erro ao enviar comprovante.") + '</div>'; }
+            return;
+          }
+          if (btn) { btn.textContent = "✅ Comprovante enviado"; btn.style.background = "#065f46"; }
+          if (res) {
+            res.innerHTML =
+              '<div class="mc2-alrt mc2-aok" style="margin-top:8px;">' +
+              '<strong>✅ Comprovante recebido</strong><br>' +
+              'Arquivo: <strong>' + mc_esc(r.nomeArquivo || "") + '</strong><br>' +
+              'Status: <strong>' + mc_esc(r.statusAtualizado || "ENVIADO") + '</strong><br>' +
+              '<em>⚠️ Prestação aguardando conferência financeira.</em>' +
+              '</div>';
+          }
+          mc_toast("Comprovante enviado com sucesso.", 3500);
+        })
+        .withFailureHandler(function(err) {
+          if (btn) { btn.disabled = false; btn.textContent = "📎 Enviar comprovante"; }
+          if (res) { res.innerHTML = '<div class="mc2-alrt mc2-aerr" style="margin-top:8px;">❌ Falha de conexão. Tente novamente.</div>'; }
+          mc_toast("Sem conexão. Tente novamente.", 3000);
+        })
+        .finFlashAnexarComprovanteMobilePilotoV1(ses, payload);
+    };
+    reader.onerror = function() {
+      if (btn) { btn.disabled = false; btn.textContent = "📎 Enviar comprovante"; }
+      mc_toast("Erro ao ler o arquivo. Tente outro.");
+    };
+    reader.readAsDataURL(f);
   }
 
   function mc_enviarPrestacaoFlash_() {
@@ -1592,21 +1655,39 @@
           }
           return;
         }
-        if (btn) { btn.textContent = "✅ Prestação enviada — aguardando comprovante"; }
-        if (resultado) {
-          resultado.innerHTML =
-            '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
-            '<strong>✅ Prestação registrada no piloto Flash</strong><br>' +
-            'ID: <strong>' + mc_esc(r.lancamentoId || "") + '</strong><br>' +
-            'Status: <strong>' + mc_esc(r.statusPrestacao || "PENDENTE_COMPROVANTE") + '</strong><br>' +
-            'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
-            'Data: <strong>' + mc_esc(data) + '</strong><br>' +
-            'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
-            (os ? 'O.S.: <strong>' + mc_esc(os) + '</strong><br>' : '') +
-            '<br><em>⚠️ Piloto controlado. Comprovante pendente — anexar na próxima etapa.</em>' +
-            '</div>';
-        }
-        mc_toast("Prestação registrada. Aguardando comprovante.", 3500);
+        if (btn) { btn.textContent = "✅ Prestação enviada"; btn.disabled = true; }
+        var lancId = r.lancamentoId || "";
+        var lancIdEsc = mc_esc(lancId);
+        var resumo =
+          '<div class="mc2-alrt mc2-aok" style="margin-top:12px;">' +
+          '<strong>✅ Prestação registrada com sucesso</strong><br>' +
+          'ID: <strong>' + lancIdEsc + '</strong><br>' +
+          'Status: <strong>' + mc_esc(r.statusPrestacao || "PENDENTE_COMPROVANTE") + '</strong><br>' +
+          'Valor: <strong>R$ ' + mc_esc(parseFloat(valor).toFixed(2).replace(".", ",")) + '</strong><br>' +
+          'Data: <strong>' + mc_esc(data) + '</strong><br>' +
+          'Finalidade: <strong>' + mc_esc(finalidade) + '</strong><br>' +
+          (os ? 'O.S.: <strong>' + mc_esc(os) + '</strong><br>' : '') +
+          '</div>';
+        var compSection =
+          '<div class="mc2-sec" style="margin-top:16px;">Enviar comprovante</div>' +
+          '<div class="mc2-card" style="margin-top:8px;">' +
+          '<div class="mc2-lbl">Selecione o comprovante (JPEG, PNG ou PDF)</div>' +
+          '<div style="margin-bottom:8px;display:flex;gap:8px;">' +
+          '<label class="mc2-btn mc2-ghost mc2-sm" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;">' +
+          '📂 Galeria' +
+          '<input type="file" id="mcf-comp-file" accept="image/jpeg,image/png,application/pdf" style="display:none;" onchange="mc_previewCompResult_(this)">' +
+          '</label>' +
+          '<label class="mc2-btn mc2-ghost mc2-sm" style="flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;">' +
+          '📷 Câmera' +
+          '<input type="file" id="mcf-comp-cam" accept="image/jpeg,image/png" capture="environment" style="display:none;" onchange="mc_previewCompResult_(this)">' +
+          '</label>' +
+          '</div>' +
+          '<div id="mcf-comp-preview" style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:8px;">Nenhum arquivo selecionado.</div>' +
+          '<button id="mcf-btn-comp" class="mc2-btn mc2-ok" onclick="mc_anexarComprovanteFlash_(\'' + lancIdEsc + '\')">📎 Enviar comprovante</button>' +
+          '<div id="mcf-comp-resultado"></div>' +
+          '</div>';
+        if (resultado) { resultado.innerHTML = resumo + compSection; }
+        mc_toast("Prestação registrada. Envie o comprovante.", 3500);
       })
       .withFailureHandler(function() {
         if (btn) { btn.disabled = false; btn.textContent = "💳 Preparar prestação — revisar antes de enviar"; btn.style.background = ""; }
@@ -1729,6 +1810,8 @@
   window.mc_iniciarCartaoFlash = mc_iniciarCartaoFlash;
   window.mc_renderCartaoFlash = mc_renderCartaoFlash;
   window.mc_previewComprovante_ = mc_previewComprovante_;
+  window.mc_previewCompResult_ = mc_previewCompResult_;
+  window.mc_anexarComprovanteFlash_ = mc_anexarComprovanteFlash_;
   window.mc_enviarPrestacaoFlash_ = mc_enviarPrestacaoFlash_;
 })();
 </script>

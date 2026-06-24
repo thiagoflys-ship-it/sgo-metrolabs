@@ -1,10 +1,10 @@
 const SGO_EQUIPAMENTOS = (() => {
-  const SHEET_NAME = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const SHEET_CLIENTES = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const SHEET_UNIDADES = SGO_CFG.SHEETS.CAD_UNIDADES;
-  const SHEET_USUARIOS = SGO_CFG.SHEETS.CAD_USUARIOS;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
+  const SHEET_NAME = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const SHEET_CLIENTES = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const SHEET_UNIDADES = sgoGetCfgSafe_().SHEETS.CAD_UNIDADES;
+  const SHEET_USUARIOS = sgoGetCfgSafe_().SHEETS.CAD_USUARIOS;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
 
   // =========================
   // 🔒 VALIDAÇÃO CENTRAL (OTIMIZADA)
@@ -330,7 +330,7 @@ const SGO_EQUIPAMENTOS = (() => {
     let fileId = "", linkDrive = "";
     try {
       const blob     = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, nome);
-      const folderId = SGO_CFG.DRIVE.FOLDER_OS;
+      const folderId = sgoGetCfgSafe_().DRIVE.FOLDER_OS;
       const file     = folderId
         ? DriveApp.getFolderById(folderId).createFile(blob)
         : DriveApp.createFile(blob);
@@ -357,7 +357,7 @@ const SGO_EQUIPAMENTOS = (() => {
       ENVIADO_EM:     SGO_UTILS.nowIso()
     };
 
-    SGO_DATA.insert(SGO_CFG.SHEETS.OS_FOTOS, SGO_DATA.gerarRegistroBase(dadosFoto), "OS");
+    SGO_DATA.insert(sgoGetCfgSafe_().SHEETS.OS_FOTOS, SGO_DATA.gerarRegistroBase(dadosFoto), "OS");
     SGO_DATA.log("EQUIP_FOTO_UPLOAD", sessao.usuario, "Foto de equipamento enviada equip=" + equipId + " file=" + fileId, "EQUIPAMENTOS");
 
     return { success: true, message: "Foto enviada.", item: { FILE_ID: fileId, LINK_DRIVE: linkDrive, NOME_ARQUIVO: nome } };

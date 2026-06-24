@@ -1,11 +1,11 @@
 const SGO_DOCUMENTOS = (() => {
-  const SHEET_NAME = SGO_CFG.SHEETS.DOC_DOCUMENTOS;
-  const SHEET_CLIENTES = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const SHEET_UNIDADES = SGO_CFG.SHEETS.CAD_UNIDADES;
-  const SHEET_EQUIPA = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
-  const STATUS_INATIVO = SGO_CFG.STATUS.INATIVO;
-  const STATUS_PENDENTE = SGO_CFG.STATUS.PENDENTE;
+  const SHEET_NAME = sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS;
+  const SHEET_CLIENTES = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const SHEET_UNIDADES = sgoGetCfgSafe_().SHEETS.CAD_UNIDADES;
+  const SHEET_EQUIPA = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
+  const STATUS_INATIVO = sgoGetCfgSafe_().STATUS.INATIVO;
+  const STATUS_PENDENTE = sgoGetCfgSafe_().STATUS.PENDENTE;
   const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=";
 
   function listar(sessionId) {
@@ -92,11 +92,11 @@ const SGO_DOCUMENTOS = (() => {
     if (item.CRIADO_EM && typeof item.CRIADO_EM.toISOString === "function") {
       item.CRIADO_EM = item.CRIADO_EM.toISOString();
     }
-    
+
     if (item.DATA_EMISSAO && typeof item.DATA_EMISSAO.toISOString === "function") {
       item.DATA_EMISSAO = item.DATA_EMISSAO.toISOString();
     }
-    
+
     if (item.DATA_VENCIMENTO && typeof item.DATA_VENCIMENTO.toISOString === "function") {
       item.DATA_VENCIMENTO = item.DATA_VENCIMENTO.toISOString();
     }
@@ -109,7 +109,7 @@ const SGO_DOCUMENTOS = (() => {
 
   // --- MOTOR DE PASTAS NBR 15943 ---
   function obterOuCriarPasta_(pastaPai, nomePasta) {
-    const nomeLimpo = String(nomePasta).replace(/[\\/:*?"<>|]/g, "_"); 
+    const nomeLimpo = String(nomePasta).replace(/[\\/:*?"<>|]/g, "_");
     const pastas = pastaPai.getFoldersByName(nomeLimpo);
     if (pastas.hasNext()) return pastas.next();
     return pastaPai.createFolder(nomeLimpo);
@@ -120,8 +120,8 @@ const SGO_DOCUMENTOS = (() => {
    * Organiza em Cliente > Unidade > Equipamento (TAG) > Categoria Selecionada
    */
   function uploadInteligente_(sessao, payload, cliente, unidade, equipamento) {
-    const rootId = SGO_CFG.DRIVE && SGO_CFG.DRIVE.FOLDER_DOCUMENTOS 
-                 ? SGO_CFG.DRIVE.FOLDER_DOCUMENTOS 
+    const rootId = sgoGetCfgSafe_().DRIVE && sgoGetCfgSafe_().DRIVE.FOLDER_DOCUMENTOS
+                 ? sgoGetCfgSafe_().DRIVE.FOLDER_DOCUMENTOS
                  : PropertiesService.getScriptProperties().getProperty("FOLDER_DOCUMENTOS");
 
     if (!rootId) {
@@ -170,7 +170,7 @@ const SGO_DOCUMENTOS = (() => {
     const base64Data = payload.ARQUIVO_BASE64.split(",")[1] || payload.ARQUIVO_BASE64;
     const bytes = Utilities.base64Decode(base64Data);
     const blob = Utilities.newBlob(bytes, payload.ARQUIVO_MIME, payload.ARQUIVO_NOME);
-    
+
     const file = pastaDestino.createFile(blob);
     // IMPORTANTE: Mantém a liberação também no arquivo físico individual
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -244,7 +244,7 @@ const SGO_DOCUMENTOS = (() => {
         TOKEN_VALIDACAO: token,
         URL_VALIDACAO: urlValidacao,
         QR_CODE_LINK: urlValidacao ? QR_API + encodeURIComponent(urlValidacao) : "",
-        DATA_EMISSAO: SGO_UTILS.nowIso(), 
+        DATA_EMISSAO: SGO_UTILS.nowIso(),
         DATA_VENCIMENTO: dados.DATA_VENCIMENTO,
         STATUS: dados.STATUS || STATUS_ATIVO
       })
@@ -266,7 +266,7 @@ const SGO_DOCUMENTOS = (() => {
     if (!atual) return { success: false, message: "Não encontrado." };
 
     const dados = normalizarPayload_(payload);
-    
+
     if (payload.ARQUIVO_BASE64) {
       try {
         const cli = SGO_DATA.getById(SHEET_CLIENTES, dados.CLIENTE_ID);
@@ -284,7 +284,7 @@ const SGO_DOCUMENTOS = (() => {
       dados.LINK_ARQUIVO = atual.LINK_ARQUIVO;
       dados.FILE_ID = atual.FILE_ID;
       dados.HASH_SHA256 = atual.HASH_SHA256;
-      dados.STATUS = atual.STATUS; 
+      dados.STATUS = atual.STATUS;
     }
 
     const tokenAtual = SGO_UTILS.safe(atual.TOKEN_VALIDACAO) || gerarTokenDocumento_(dados);
@@ -303,56 +303,56 @@ const SGO_DOCUMENTOS = (() => {
       TOKEN_VALIDACAO: tokenAtual,
       URL_VALIDACAO: urlValidacao,
       QR_CODE_LINK: urlValidacao ? QR_API + encodeURIComponent(urlValidacao) : "",
-      DATA_EMISSAO: atual.DATA_EMISSAO, 
+      DATA_EMISSAO: atual.DATA_EMISSAO,
       DATA_VENCIMENTO: dados.DATA_VENCIMENTO,
       STATUS: dados.STATUS,
       CRIADO_EM: atual.CRIADO_EM
     });
 
     SGO_DATA.update(SHEET_NAME, docId, novosDados);
-    
+
     SGO_DATA.log("DOCUMENTOS_ATUALIZAR", sessao.usuario, "Documento atualizado ID=" + docId, "DOCUMENTOS");
-    
+
     return { success: true, message: "Documento atualizado com sucesso." };
   }
 
-  function inativar(sessionId, id) { 
+  function inativar(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_INATIVO }); return { success: true }; 
+    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_INATIVO }); return { success: true };
   }
-  function reativar(sessionId, id) { 
+  function reativar(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_ATIVO }); return { success: true }; 
+    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_ATIVO }); return { success: true };
   }
-  function excluir(sessionId, id) { 
+  function excluir(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    
+
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir documento ID=" + id, "DOCUMENTOS");
       return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
     }
-    
-    SGO_DATA.remove(SHEET_NAME, SGO_UTILS.safe(id)); 
-    return { success: true }; 
+
+    SGO_DATA.remove(SHEET_NAME, SGO_UTILS.safe(id));
+    return { success: true };
   }
 
   function pesquisar(sessionId, termo) {
     const sessao = exigirSessao(sessionId);
     const q = SGO_UTILS.safeLower(termo);
     let registros = SGO_DATA.getAll(SHEET_NAME);
-    
+
     // Trava de Segurança Definitiva
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
       const idClienteReal = SGO_UTILS.safe(sessao.clienteId);
       registros = registros.filter(r => SGO_UTILS.safe(r.CLIENTE_ID) === idClienteReal);
     }
-    
+
     const mapaClientes = montarMapa_(SGO_DATA.getAll(SHEET_CLIENTES));
     const base = registros.map(d => enriquecerDocumento_(d, mapaClientes, montarMapa_(SGO_DATA.getAll(SHEET_UNIDADES)), montarMapa_(SGO_DATA.getAll(SHEET_EQUIPA))));
-    
+
     if (!q) return { success: true, items: base };
     const filtrados = base.filter(r => [r.TIPO_DOCUMENTO, r.NOME_ARQUIVO, r.CLIENTE_NOME].some(v => SGO_UTILS.safeLower(v).includes(q)));
     return { success: true, items: filtrados };
@@ -362,7 +362,7 @@ const SGO_DOCUMENTOS = (() => {
     const sessao = exigirSessao(sessionId);
     const uid = SGO_UTILS.safe(unidadeId);
     let equipamentos = SGO_DATA.getAll(SHEET_EQUIPA);
-    
+
     // Trava de Segurança Definitiva
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
       const idClienteReal = SGO_UTILS.safe(sessao.clienteId);
@@ -379,9 +379,9 @@ const SGO_DOCUMENTOS = (() => {
     return {
       CLIENTE_ID: SGO_UTILS.safe(p.CLIENTE_ID),
       UNIDADE_ID: SGO_UTILS.safe(p.UNIDADE_ID),
-      EQUIPAMENTO_ID: SGO_UTILS.safe(p.EQUIPAMENTO_ID), 
-      TIPO_DOCUMENTO: SGO_UTILS.safeUpper(p.TIPO_DOCUMENTO), 
-      NOME_ARQUIVO: SGO_UTILS.safeUpper(p.NOME_ARQUIVO), 
+      EQUIPAMENTO_ID: SGO_UTILS.safe(p.EQUIPAMENTO_ID),
+      TIPO_DOCUMENTO: SGO_UTILS.safeUpper(p.TIPO_DOCUMENTO),
+      NOME_ARQUIVO: SGO_UTILS.safeUpper(p.NOME_ARQUIVO),
       LINK_ARQUIVO: SGO_UTILS.safe(p.LINK_ARQUIVO),
       FILE_ID: SGO_UTILS.safe(p.FILE_ID),
       HASH_SHA256: SGO_UTILS.safe(p.HASH_SHA256),

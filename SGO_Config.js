@@ -1,4 +1,4 @@
-const SGO_CFG = (() => {
+function sgoBuildCfg_() {
   const props = PropertiesService.getScriptProperties();
 
 
@@ -629,4 +629,32 @@ const SGO_CFG = (() => {
     }
 
   };
-})();
+}
+
+var SGO_CFG_FALLBACK_CACHE_ = null;
+
+function sgoGetCfgSafe_() {
+  if (SGO_CFG) return SGO_CFG;
+  if (!SGO_CFG_FALLBACK_CACHE_) SGO_CFG_FALLBACK_CACHE_ = sgoBuildCfg_();
+  return SGO_CFG_FALLBACK_CACHE_;
+}
+
+var SGO_CFG = sgoBuildCfg_();
+
+// ── Piloto operacional PRODUCAO_V2 ────────────────────────────────────────────
+// Módulos temporariamente bloqueados para colaboradores no piloto v1.
+// Alterar aqui desbloqueia backend E deve sincronizar com JS_Core.html.
+var MODULOS_BLOQUEADOS_PILOTO_V1 = [
+  "PECAS","ESTOQUE","RASTREABILIDADE","FORNECEDORES","FROTA"
+];
+var PILOTO_OPERACIONAL_V2 = true;
+
+function pilotoGuardBloqueado_(modulo) {
+  var mod = String(modulo || "").toUpperCase();
+  if (MODULOS_BLOQUEADOS_PILOTO_V1.indexOf(mod) >= 0) {
+    throw new Error(
+      "Módulo " + modulo + " está temporariamente bloqueado no piloto operacional. " +
+      "Contate o administrador do sistema."
+    );
+  }
+}

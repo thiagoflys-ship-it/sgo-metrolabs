@@ -254,7 +254,7 @@ const SGO_IMPORTACAO = (() => {
     const sessao = exigirSessao(sessionId);
     const opts   = opcoes || {};
 
-    const existentes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES);
+    const existentes = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
     const mapCnpj    = {};
     const mapNome    = {};
     existentes.forEach(c => {
@@ -288,14 +288,14 @@ const SGO_IMPORTACAO = (() => {
           UF:            String(reg.UF || "").toUpperCase().substring(0, 2),
           CEP:           SGO_UTILS.safe(reg.CEP),
           RESPONSAVEL:   SGO_UTILS.safe(reg.RESPONSAVEL),
-          STATUS:        SGO_CFG.STATUS.ATIVO
+          STATUS:        sgoGetCfgSafe_().STATUS.ATIVO
         };
 
         if (existente && opts.atualizarExistentes) {
-          SGO_DATA.update(SGO_CFG.SHEETS.CAD_CLIENTES, existente.ID, dados);
+          SGO_DATA.update(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, existente.ID, dados);
           atualizados++;
         } else {
-          SGO_DATA.insert(SGO_CFG.SHEETS.CAD_CLIENTES, dados);
+          SGO_DATA.insert(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES, dados);
           importados++;
         }
       } catch(e) { erros.push({ linha: idx + 2, msg: e.message }); ignorados++; }
@@ -316,8 +316,8 @@ const SGO_IMPORTACAO = (() => {
     const clienteIdFixo  = SGO_UTILS.safe(opts.clienteId || "");
 
     // Carrega clientes para auto-resolução quando o arquivo tem coluna "cliente"
-    const todosClientes  = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES);
-    const todasUnidades  = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES);
+    const todosClientes  = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
+    const todasUnidades  = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES);
 
     const temClienteNoArq = registros.some(r => SGO_UTILS.safe(r.CLIENTE_NOME));
     if (!clienteIdFixo && !temClienteNoArq) {
@@ -364,14 +364,14 @@ const SGO_IMPORTACAO = (() => {
           ENDERECO:     endParts.join(", "),
           RESPONSAVEL:  SGO_UTILS.safe(reg.RESPONSAVEL),
           TELEFONE:     SGO_UTILS.safe(reg.TELEFONE),
-          STATUS:       SGO_CFG.STATUS.ATIVO
+          STATUS:       sgoGetCfgSafe_().STATUS.ATIVO
         };
 
         if (existente && opts.atualizarExistentes) {
-          SGO_DATA.update(SGO_CFG.SHEETS.CAD_UNIDADES, existente.ID, dados);
+          SGO_DATA.update(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, existente.ID, dados);
           atualizados++;
         } else {
-          SGO_DATA.insert(SGO_CFG.SHEETS.CAD_UNIDADES, dados);
+          SGO_DATA.insert(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, dados);
           importados++;
         }
       } catch(e) { erros.push({ linha: idx + 2, msg: e.message }); ignorados++; }
@@ -392,10 +392,10 @@ const SGO_IMPORTACAO = (() => {
     const clienteId = SGO_UTILS.safe(opts.clienteId || "");
     const unidadeId = SGO_UTILS.safe(opts.unidadeId || "");
 
-    const todosClientes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES);
-    const todasUnidades = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES);
+    const todosClientes = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
+    const todasUnidades = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES);
 
-    const existentes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS);
+    const existentes = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS);
     const mapTag     = {};
     existentes.forEach(e => { const t = norm_(e.TAG); if (t) mapTag[t] = e; });
 
@@ -455,14 +455,14 @@ const SGO_IMPORTACAO = (() => {
           PROPRIETARIO: SGO_UTILS.safe(reg.PROPRIETARIO),
           CLIENTE_ID:   cliId,
           UNIDADE_ID:   uniId,
-          STATUS:       SGO_CFG.STATUS.ATIVO
+          STATUS:       sgoGetCfgSafe_().STATUS.ATIVO
         };
 
         if (existente && opts.atualizarExistentes) {
-          SGO_DATA.update(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, existente.ID, dados);
+          SGO_DATA.update(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, existente.ID, dados);
           atualizados++;
         } else {
-          SGO_DATA.insert(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, dados);
+          SGO_DATA.insert(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS, dados);
           importados++;
         }
       } catch(e) { erros.push({ linha: idx + 2, msg: e.message }); ignorados++; }
@@ -481,8 +481,8 @@ const SGO_IMPORTACAO = (() => {
     exigirSessao(sessionId);
     return {
       success: true,
-      items: SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES)
-        .filter(c => SGO_UTILS.safeUpper(c.STATUS) === SGO_CFG.STATUS.ATIVO)
+      items: SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES)
+        .filter(c => SGO_UTILS.safeUpper(c.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO)
         .map(c => ({ ID: SGO_UTILS.safe(c.ID), NOME: SGO_UTILS.safe(c.NOME_FANTASIA || c.RAZAO_SOCIAL) }))
         .sort((a, b) => a.NOME.localeCompare(b.NOME))
     };
@@ -492,8 +492,8 @@ const SGO_IMPORTACAO = (() => {
     exigirSessao(sessionId);
     return {
       success: true,
-      items: SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES)
-        .filter(u => SGO_UTILS.safeUpper(u.STATUS) === SGO_CFG.STATUS.ATIVO &&
+      items: SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES)
+        .filter(u => SGO_UTILS.safeUpper(u.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO &&
                      SGO_UTILS.safe(u.CLIENTE_ID) === SGO_UTILS.safe(clienteId))
         .map(u => ({ ID: SGO_UTILS.safe(u.ID), NOME: SGO_UTILS.safe(u.NOME_UNIDADE) }))
         .sort((a, b) => a.NOME.localeCompare(b.NOME))
@@ -509,9 +509,9 @@ const SGO_IMPORTACAO = (() => {
       return { success: false, message: "Apenas ADMIN pode executar limpeza." };
     }
     const MAPA = {
-      EQUIPAMENTOS: SGO_CFG.SHEETS.CAD_EQUIPAMENTOS,
-      CLIENTES:     SGO_CFG.SHEETS.CAD_CLIENTES,
-      UNIDADES:     SGO_CFG.SHEETS.CAD_UNIDADES
+      EQUIPAMENTOS: sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS,
+      CLIENTES:     sgoGetCfgSafe_().SHEETS.CAD_CLIENTES,
+      UNIDADES:     sgoGetCfgSafe_().SHEETS.CAD_UNIDADES
     };
     const nomePlanilha = MAPA[SGO_UTILS.safeUpper(tipo)];
     if (!nomePlanilha) return { success: false, message: "Tipo inválido: " + tipo };

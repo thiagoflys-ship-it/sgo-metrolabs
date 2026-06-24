@@ -1,5 +1,5 @@
 // SGO_Fin_Termos.js - METROLABS SGO+
-// Modulo FIN - Termo Online do Cartao Flash
+// Modulo FIN - Termo Online do Cartão Flash
 // FIN.4.2 - backend isolado. Nao executa nada automaticamente.
 
 const SGO_FIN_TERMOS = (() => {
@@ -68,24 +68,24 @@ const SGO_FIN_TERMOS = (() => {
   function finDbOk_() {
     const dbId = PropertiesService.getScriptProperties().getProperty("DB_FIN_ID");
     if (!dbId) {
-      throw new Error("Banco FIN nao configurado. Configure DB_FIN_ID antes de usar o modulo financeiro.");
+      throw new Error("Banco FIN não configurado. Configure DB_FIN_ID antes de usar o modulo financeiro.");
     }
     return dbId;
   }
 
   function finSheet_(aba) {
     const nomeAba = finSafeText_(aba);
-    if (!nomeAba) throw new Error("Aba FIN nao informada.");
+    if (!nomeAba) throw new Error("Aba FIN não informada.");
     const ss = SpreadsheetApp.openById(finDbOk_());
     const sheet = ss.getSheetByName(nomeAba);
-    if (!sheet) throw new Error("Aba FIN nao encontrada: " + nomeAba + ".");
+    if (!sheet) throw new Error("Aba FIN não encontrada: " + nomeAba + ".");
     return sheet;
   }
 
   function finHeaders_(aba) {
     const sheet = finSheet_(aba);
     const lastCol = sheet.getLastColumn();
-    if (lastCol < 1) throw new Error("Aba FIN sem cabecalho: " + aba + ".");
+    if (lastCol < 1) throw new Error("Aba FIN sem cabeçalho: " + aba + ".");
     return sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
       return finSafeText_(h);
     });
@@ -174,7 +174,7 @@ const SGO_FIN_TERMOS = (() => {
     const headers = finHeaders_(aba);
     const alvo = finSafeText_(id);
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (lastRow < 2) throw new Error("Registro não encontrado para atualização: " + id);
     const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
     let rowIndex = -1;
     for (let i = 0; i < ids.length; i++) {
@@ -183,7 +183,7 @@ const SGO_FIN_TERMOS = (() => {
         break;
       }
     }
-    if (rowIndex < 2) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (rowIndex < 2) throw new Error("Registro não encontrado para atualização: " + id);
     const atual = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
     const normalizado = finNormalizarParaHeaders_(aba, patch || {}, false);
     const row = headers.map(function(h, idx) {
@@ -210,7 +210,7 @@ const SGO_FIN_TERMOS = (() => {
   function finGarantirPerfil_(sessao, perfis, acao) {
     const perfil = finSafeUpper_(sessao && sessao.perfil);
     if (perfis.indexOf(perfil) < 0) {
-      throw new Error("Acesso negado: perfil " + perfil + " nao tem permissao para " + (acao || "esta acao") + ".");
+      throw new Error("Acesso negado: perfil " + perfil + " não tem permissão para " + (acao || "esta acao") + ".");
     }
   }
 
@@ -258,7 +258,7 @@ const SGO_FIN_TERMOS = (() => {
 
   function finObterUrlBase_() {
     try {
-      if (typeof SGO_CFG !== "undefined" && SGO_CFG.WEBAPP_URL) return finSafeText_(SGO_CFG.WEBAPP_URL);
+      if (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().WEBAPP_URL) return finSafeText_(sgoGetCfgSafe_().WEBAPP_URL);
     } catch (e) {}
     try {
       const p1 = PropertiesService.getScriptProperties().getProperty("SGO_WEBAPP_URL");
@@ -293,7 +293,7 @@ const SGO_FIN_TERMOS = (() => {
   function finObterPastaFinanceiro_() {
     const folderId = PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO");
     if (!folderId) {
-      throw new Error("Pasta financeira nao configurada. Configure FOLDER_FINANCEIRO antes de gerar PDF do termo.");
+      throw new Error("Pasta financeira não configurada. Configure FOLDER_FINANCEIRO antes de gerar PDF do termo.");
     }
     return DriveApp.getFolderById(folderId);
   }
@@ -302,7 +302,7 @@ const SGO_FIN_TERMOS = (() => {
     const pasta = finObterPastaFinanceiro_();
     const partes = finSafeText_(dataUrl).split(",");
     if (partes.length < 2 || partes[0].indexOf("data:image/png;base64") !== 0) {
-      throw new Error("Assinatura invalida. Envie imagem PNG em data URL.");
+      throw new Error("Assinatura inválida. Envie imagem PNG em data URL.");
     }
     const blob = Utilities.newBlob(Utilities.base64Decode(partes[1]), "image/png", nomeArquivo);
     const file = pasta.createFile(blob);
@@ -322,19 +322,19 @@ const SGO_FIN_TERMOS = (() => {
     const final4 = finMascaraFinal4_(cartao);
     const textoPolitica = politica && politica.CONTEUDO_RESUMIDO ? finSafeText_(politica.CONTEUDO_RESUMIDO) : "";
     return [
-      "TERMO DE RESPONSABILIDADE PELO USO DO CARTAO CORPORATIVO FLASH",
+      "TERMO DE RESPONSABILIDADE PELO USO DO CARTÃO CORPORATIVO FLASH",
       "",
-      "Eu, " + nome + ", declaro ciencia de que o cartao corporativo Flash identificado por final " + final4 + " e instrumento de trabalho disponibilizado pela Metrolabs.",
-      "Os valores carregados no cartao pertencem a empresa e devem ser utilizados exclusivamente para despesas profissionais autorizadas.",
-      "E proibido o uso pessoal, o saque nao autorizado, o compartilhamento do cartao e qualquer utilizacao sem finalidade profissional comprovavel.",
-      "Cada despesa deve possuir finalidade profissional, comprovante valido e vinculacao a ordem de servico quando houver. Na ausencia de OS, a justificativa e obrigatoria.",
-      "A prestacao de contas deve ser realizada nos prazos e formatos definidos pela empresa, com foto ou arquivo de comprovante legivel.",
-      "Quando aplicavel ao lancamento da despesa, dados de localizacao podem ser coletados para fins de auditoria, seguranca e conciliacao.",
-      "Pendencias, inconsistencias ou ausencia de comprovacao podem gerar bloqueio temporario do cartao e apuracao interna.",
-      "Descontos ou ressarcimentos somente ocorrerao quando legalmente permitidos e apos apuracao, contraditorio e validacao pela gestao responsavel.",
-      "Medidas disciplinares poderao ser aplicadas conforme legislacao vigente, politica interna e gravidade do caso.",
-      "Indicios de desvio, fraude ou uso indevido poderao ser encaminhados para gestao, diretoria ou juridico.",
-      textoPolitica ? "Resumo da politica vigente: " + textoPolitica : ""
+      "Eu, " + nome + ", declaro ciencia de que o cartão corporativo Flash identificado por final " + final4 + " é instrumento de trabalho disponibilizado pela Metrolabs.",
+      "Os valores carregados no cartão pertencem a empresa e devem ser utilizados exclusivamente para despesas profissionais autorizadas.",
+      "É proibido o uso pessoal, o saque não autorizado, o compartilhamento do cartão e qualquer utilizacao sem finalidade profissional comprovavel.",
+      "Cada despesa deve possuir finalidade profissional, comprovante válido e vinculacao a ordem de servico quando houver. Na ausência de O.S., a justificativa é obrigatória.",
+      "A prestacao de contas deve ser realizada nos prazos e formatos definidos pela empresa, com foto ou arquivo de comprovante legível.",
+      "Quando aplicável ao lançamento da despesa, dados de localização serão coletados para auditoria para fins de auditoria, seguranca e conciliacao.",
+      "Pendências, inconsistências ou ausência de comprovação podem gerar bloqueio temporário do cartão e apuracao interna.",
+      "Descontos ou ressarcimentos somente ocorrerão quando legalmente permitidos e após apuração e validação pela gestao responsavel.",
+      "Medidas disciplinares poderão ser aplicadas conforme legislação vigente e política interna e gravidade do caso.",
+      "Indícios de desvio, fraude ou uso indevido poderão ser encaminhados para gestao, diretoria ou juridico.",
+      textoPolitica ? "Resumo da política vigente: " + textoPolitica : ""
     ].filter(function(linha) { return linha !== ""; }).join("\n");
   }
 
@@ -354,11 +354,11 @@ const SGO_FIN_TERMOS = (() => {
       ".sign img{max-height:80px;max-width:260px;}.foot{margin-top:20px;font-size:10px;color:#667085;border-top:1px solid #eaecf0;padding-top:10px;}" +
       "</style></head><body>" +
       "<div class=\"top\">" + (logo ? "<img class=\"logo\" src=\"" + finEH_(logo) + "\">" : "") +
-      "<div><div class=\"brand\">Metrolabs - Termo Online do Cartao Flash</div><div class=\"sub\">Documento institucional FIN</div></div></div>" +
+      "<div><div class=\"brand\">Metrolabs - Termo Online do Cartão Flash</div><div class=\"sub\">Documento institucional FIN</div></div></div>" +
       "<div class=\"box\"><div class=\"grid\">" +
       finCampoHtml_("Colaborador", cartao.FUNCIONARIO_NOME) +
       finCampoHtml_("Funcionario ID", cartao.FUNCIONARIO_ID) +
-      finCampoHtml_("Cartao", finMascaraFinal4_(cartao)) +
+      finCampoHtml_("Cartão", finMascaraFinal4_(cartao)) +
       finCampoHtml_("Centro de custo", cartao.CENTRO_CUSTO) +
       finCampoHtml_("Termo", termo.TERMO_ID) +
       finCampoHtml_("Versao", termo.VERSAO_TERMO) +
@@ -379,7 +379,7 @@ const SGO_FIN_TERMOS = (() => {
   function finMontarWhatsappTermo_(termo, cartao) {
     const nome = finSafeText_(cartao && cartao.FUNCIONARIO_NOME) || "colaborador";
     const url = finSafeText_(termo && termo.URL_VALIDACAO);
-    const texto = "Ola, " + nome + ". A Metrolabs enviou o termo online de responsabilidade do Cartao Flash. Acesse para leitura e assinatura: " + url;
+    const texto = "Olá, " + nome + ". A Metrolabs enviou o termo online de responsabilidade do Cartão Flash. Acesse para leitura e assinatura: " + url;
     const numero = finNormalizarTelefone_(cartao && cartao.FUNCIONARIO_TELEFONE);
     return {
       texto: texto,
@@ -438,9 +438,9 @@ const SGO_FIN_TERMOS = (() => {
   }
 
   function finMontarRegistroTermo_(sessao, cartao, politica, permitirAssinado) {
-    if (!cartao) throw new Error("Cartao nao encontrado.");
-    if (!permitirAssinado && finSafeUpper_(cartao.TERMO_ASSINADO) === "SIM") {
-      throw new Error("Cartao ja possui termo assinado.");
+    if (!cartao) throw new Error("Cartão não encontrado.");
+    if (!permitirAssinado && finSafeUpper_(cartão.TERMO_ASSINADO) === "SIM") {
+      throw new Error("Cartão já possui termo assinado.");
     }
     const u = finUsuario_(sessao);
     const agora = finNow_();
@@ -491,13 +491,13 @@ const SGO_FIN_TERMOS = (() => {
       textoTermo: textoTermo,
       urlPublica: urlPublica,
       qrcodeLink: qrcodeLink,
-      avisos: politica ? [] : ["Politica vigente nao encontrada. Texto padrao interno aplicado."]
+      avisos: politica ? [] : ["Politica vigente não encontrada. Texto padrao interno aplicado."]
     };
   }
 
   function finValidarTermoPendente_(termo) {
-    if (!termo) throw new Error("Termo nao encontrado.");
-    if (finSafeUpper_(termo.STATUS) !== "PENDENTE") throw new Error("Termo nao esta pendente.");
+    if (!termo) throw new Error("Termo não encontrado.");
+    if (finSafeUpper_(termo.STATUS) !== "PENDENTE") throw new Error("Termo não está pendente.");
     if (finDataVencida_(termo.DATA_EXPIRACAO_TOKEN)) throw new Error("Token do termo expirado.");
   }
 
@@ -516,13 +516,13 @@ const SGO_FIN_TERMOS = (() => {
 
   function finMascaraFinal4_(cartao) {
     const final4 = finSafeText_(cartao && cartao.NUMERO_FINAL_4).replace(/\D/g, "").slice(-4);
-    return final4 ? "**** **** **** " + final4 : "Cartao sem final informado";
+    return final4 ? "**** **** **** " + final4 : "Cartão sem final informado";
   }
 
   function finObterLogoUrl_() {
     try {
-      if (typeof SGO_CFG !== "undefined" && SGO_CFG.LOGO_URL) return finSafeText_(SGO_CFG.LOGO_URL);
-      if (typeof SGO_CFG !== "undefined" && SGO_CFG.SISTEMA && SGO_CFG.SISTEMA.LOGO_URL) return finSafeText_(SGO_CFG.SISTEMA.LOGO_URL);
+      if (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().LOGO_URL) return finSafeText_(sgoGetCfgSafe_().LOGO_URL);
+      if (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().SISTEMA && sgoGetCfgSafe_().SISTEMA.LOGO_URL) return finSafeText_(sgoGetCfgSafe_().SISTEMA.LOGO_URL);
     } catch (e) {}
     return "";
   }
@@ -540,7 +540,7 @@ const SGO_FIN_TERMOS = (() => {
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "gerar termo do cartao");
       finDbOk_();
       const cartao = finObterCartao_(cartaoId);
-      if (!cartao) return finErro_("Cartao nao encontrado.");
+      if (!cartao) return finErro_("Cartão não encontrado.");
       const politica = finObterPoliticaVigente_();
       const dados = finMontarRegistroTermo_(sessao, cartao, politica, false);
       const item = finInsert_(ABAS.TERMOS, dados.registro);
@@ -549,7 +549,7 @@ const SGO_FIN_TERMOS = (() => {
       if (!PropertiesService.getScriptProperties().getProperty("FOLDER_FINANCEIRO")) {
         avisos.push("Assinatura e PDF exigirao FOLDER_FINANCEIRO configurado.");
       }
-      if (!finObterUrlBase_()) avisos.push("URL base do WebApp nao configurada. URL relativa gerada.");
+      if (!finObterUrlBase_()) avisos.push("URL base do WebApp não configurada. URL relativa gerada.");
       finLog_(sessao, "TERMO_GERADO", "TERMO_CARTAO", item.TERMO_ID, null, item, "OK", "Termo gerado.");
       return finOk_({
         termoId: item.TERMO_ID,
@@ -569,11 +569,11 @@ const SGO_FIN_TERMOS = (() => {
     try {
       finDbOk_();
       const tokenSeguro = finSafeText_(token);
-      if (!tokenSeguro) return finErro_("Token do termo nao informado.");
+      if (!tokenSeguro) return finErro_("Token do termo não informado.");
       const termo = finObterTermoPorToken_(tokenSeguro);
       finValidarTermoPendente_(termo);
       const cartao = finObterCartao_(termo.CARTAO_ID);
-      if (!cartao) return finErro_("Cartao vinculado ao termo nao encontrado.");
+      if (!cartao) return finErro_("Cartão vinculado ao termo não encontrado.");
       const politica = finObterPoliticaVigente_();
       const textoTermo = finMontarTextoPadraoTermo_(cartao, politica);
       return finOk_({
@@ -615,19 +615,19 @@ const SGO_FIN_TERMOS = (() => {
     try {
       finDbOk_();
       const tokenSeguro = finSafeText_(token);
-      if (!tokenSeguro) return finErro_("Token do termo nao informado.");
+      if (!tokenSeguro) return finErro_("Token do termo não informado.");
       lock = LockService.getScriptLock();
       lockObtido = lock.tryLock(10000);
       if (!lockObtido) return finErro_("Assinatura em processamento. Tente novamente em instantes.");
       const termo = finObterTermoPorToken_(tokenSeguro);
       finValidarTermoPendente_(termo);
-      if (!finPayloadAceiteSim_(payload)) return finErro_("Aceite da politica e obrigatorio.");
+      if (!finPayloadAceiteSim_(payload)) return finErro_("Aceite da politica é obrigatório.");
       const assinaturaDataUrl = finAssinaturaDataUrl_(payload);
       if (!assinaturaDataUrl || assinaturaDataUrl.indexOf("data:image/png;base64,") !== 0) {
-        return finErro_("Assinatura invalida. Envie imagem PNG em data URL.");
+        return finErro_("Assinatura inválida. Envie imagem PNG em data URL.");
       }
       const cartao = finObterCartao_(termo.CARTAO_ID);
-      if (!cartao) return finErro_("Cartao vinculado ao termo nao encontrado.");
+      if (!cartao) return finErro_("Cartão vinculado ao termo não encontrado.");
       const assinatura = finSalvarDataUrlDrive_(assinaturaDataUrl, termo.TERMO_ID + "_assinatura.png");
       assinaturaFileIdCriado = assinatura.fileId;
       const politica = finObterPoliticaVigente_();
@@ -669,7 +669,7 @@ const SGO_FIN_TERMOS = (() => {
         FUNCIONARIO_NOME: finSafeText_(cartao.FUNCIONARIO_NOME),
         PERIODO_REFERENCIA: "",
         NUMERO_DOCUMENTO: termo.TERMO_ID,
-        TITULO: "Termo de Responsabilidade do Cartao Flash",
+        TITULO: "Termo de Responsabilidade do Cartão Flash",
         NOME_ARQUIVO: pdf.nomeArquivo,
         FILE_ID: pdf.fileId,
         LINK_ARQUIVO: pdf.url,
@@ -708,7 +708,7 @@ const SGO_FIN_TERMOS = (() => {
       });
     } catch (e) {
       const msg = assinaturaFileIdCriado
-        ? e.message + " Assinatura ja salva no Drive com FILE_ID " + assinaturaFileIdCriado + ". Verificar arquivo orfao antes de nova tentativa."
+        ? e.message + " Assinatura já salva no Drive com FILE_ID " + assinaturaFileIdCriado + ". Verificar arquivo orfao antes de nova tentativa."
         : e.message;
       if (assinaturaFileIdCriado) {
         finLog_(null, "TERMO_ASSINATURA_FALHA_APOS_UPLOAD", "TERMO_CARTAO", finSafeText_(token), null, { assinaturaFileId: assinaturaFileIdCriado }, "ERRO", msg);
@@ -729,12 +729,12 @@ const SGO_FIN_TERMOS = (() => {
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "reemitir termo do cartao");
       finDbOk_();
       const cartao = finObterCartao_(cartaoId);
-      if (!cartao) return finErro_("Cartao nao encontrado.");
+      if (!cartao) return finErro_("Cartão não encontrado.");
       const termos = finAll_(ABAS.TERMOS).filter(function(t) {
         return finSafeText_(t.CARTAO_ID) === finSafeText_(cartao.CARTAO_ID || cartao.ID);
       });
       const assinado = termos.some(function(t) { return finSafeUpper_(t.STATUS) === "ASSINADO"; });
-      if (assinado) return finErro_("Cartao ja possui termo assinado. Nova versao exige regra futura explicita.");
+      if (assinado) return finErro_("Cartão já possui termo assinado. Nova versao exige regra futura explicita.");
       const novo = gerarTermoCartao(sessionId, cartaoId);
       if (!novo || novo.ok !== true) return novo;
       const novoTermoId = finSafeText_(novo.termoId);
@@ -757,9 +757,9 @@ const SGO_FIN_TERMOS = (() => {
       finGarantirPerfil_(sessao, PERFIS_CONSULTA, "consultar status do termo");
       finDbOk_();
       const cartao = finObterCartao_(cartaoId);
-      if (!cartao) return finErro_("Cartao nao encontrado.");
+      if (!cartao) return finErro_("Cartão não encontrado.");
       if (finSafeUpper_(sessao && sessao.perfil) === "TECNICO" && !finCartaoPertenceUsuario_(cartao, sessao)) {
-        return finErro_("Acesso negado: tecnico so pode consultar o proprio cartao.");
+        return finErro_("Acesso negado: tecnico só pode consultar o proprio cartão.");
       }
       const termos = finAll_(ABAS.TERMOS).filter(function(t) {
         return finSafeText_(t.CARTAO_ID) === finSafeText_(cartao.CARTAO_ID || cartao.ID);
@@ -790,9 +790,9 @@ const SGO_FIN_TERMOS = (() => {
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "enviar termo por WhatsApp");
       finDbOk_();
       const termo = finObterTermoPorId_(termoId);
-      if (!termo) return finErro_("Termo nao encontrado.");
+      if (!termo) return finErro_("Termo não encontrado.");
       const cartao = finObterCartao_(termo.CARTAO_ID);
-      if (!cartao) return finErro_("Cartao vinculado ao termo nao encontrado.");
+      if (!cartao) return finErro_("Cartão vinculado ao termo não encontrado.");
       const w = finMontarWhatsappTermo_(termo, cartao);
       const depois = finUpdate_(ABAS.TERMOS, termo.ID, {
         ENVIADO_WHATSAPP: "SIM",

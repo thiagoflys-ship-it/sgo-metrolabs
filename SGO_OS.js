@@ -2,20 +2,20 @@
 
 const SGO_OS = (() => {
   const DB_OS = "OS";
-  const SHEET = SGO_CFG.SHEETS.OS_ORDENS;
-  const SHEET_CLI = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const SHEET_UNI = SGO_CFG.SHEETS.CAD_UNIDADES;
-  const SHEET_EQP = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const SHEET_PECAS = SGO_CFG.SHEETS.CAD_PECAS;
-  const SHEET_CONTRATOS = SGO_CFG.SHEETS.CAD_CONTRATOS;
-  const SHEET_USUARIOS = SGO_CFG.SHEETS.CAD_USUARIOS;
-  const SHEET_TECNICOS = SGO_CFG.SHEETS.CAD_TECNICOS;
-  const SHEET_MISSOES = SGO_CFG.SHEETS.AGD_MISSOES;
-  const SHEET_CHECK_TPL = SGO_CFG.SHEETS.OS_CHECKLIST_TEMPLATE;
-  const SHEET_CHECK_RESP = SGO_CFG.SHEETS.OS_CHECKLIST_RESPOSTAS;
-  const SHEET_FOTOS = SGO_CFG.SHEETS.OS_FOTOS;
-  const SHEET_MATERIAIS = SGO_CFG.SHEETS.OS_MATERIAIS;
-  const SHEET_ASSINATURAS = SGO_CFG.SHEETS.SYS_ASSINATURAS;
+  const SHEET = sgoGetCfgSafe_().SHEETS.OS_ORDENS;
+  const SHEET_CLI = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const SHEET_UNI = sgoGetCfgSafe_().SHEETS.CAD_UNIDADES;
+  const SHEET_EQP = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const SHEET_PECAS = sgoGetCfgSafe_().SHEETS.CAD_PECAS;
+  const SHEET_CONTRATOS = sgoGetCfgSafe_().SHEETS.CAD_CONTRATOS;
+  const SHEET_USUARIOS = sgoGetCfgSafe_().SHEETS.CAD_USUARIOS;
+  const SHEET_TECNICOS = sgoGetCfgSafe_().SHEETS.CAD_TECNICOS;
+  const SHEET_MISSOES = sgoGetCfgSafe_().SHEETS.AGD_MISSOES;
+  const SHEET_CHECK_TPL = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_TEMPLATE;
+  const SHEET_CHECK_RESP = sgoGetCfgSafe_().SHEETS.OS_CHECKLIST_RESPOSTAS;
+  const SHEET_FOTOS = sgoGetCfgSafe_().SHEETS.OS_FOTOS;
+  const SHEET_MATERIAIS = sgoGetCfgSafe_().SHEETS.OS_MATERIAIS;
+  const SHEET_ASSINATURAS = sgoGetCfgSafe_().SHEETS.SYS_ASSINATURAS;
 
   function podeCriar_(sessao) {
     const p = perfil_(sessao);
@@ -24,7 +24,7 @@ const SGO_OS = (() => {
 
   function podeEditar_(sessao, os) {
     const p = perfil_(sessao);
-    if (status_(os) === SGO_CFG.OS.STATUS.APROVADA) return false;
+    if (status_(os) === sgoGetCfgSafe_().OS.STATUS.APROVADA) return false;
     return ["ADMIN", "GESTOR", "METROLOGIA", "COMERCIAL"].indexOf(p) >= 0;
   }
 
@@ -55,7 +55,7 @@ const SGO_OS = (() => {
     const p = perfil_(sessao);
     if (p === "CLIENTE") return SGO_UTILS.safe(os.CLIENTE_ID) === SGO_UTILS.safe(sessao.clienteId);
     if (p === "TECNICO") return tecnicoVinculadoSessao_(os, sessao);
-    if (p === "FINANCEIRO") return [SGO_CFG.OS.STATUS.APROVADA, SGO_CFG.OS.STATUS.FATURADA].indexOf(status_(os)) >= 0;
+    if (p === "FINANCEIRO") return [sgoGetCfgSafe_().OS.STATUS.APROVADA, sgoGetCfgSafe_().OS.STATUS.FATURADA].indexOf(status_(os)) >= 0;
     return true;
   }
 
@@ -69,7 +69,7 @@ const SGO_OS = (() => {
     } else if (p === "TECNICO") {
       itens = itens.filter(o => tecnicoVinculadoSessao_(o, sessao));
     } else if (p === "FINANCEIRO") {
-      itens = itens.filter(o => [SGO_CFG.OS.STATUS.APROVADA, SGO_CFG.OS.STATUS.FATURADA].indexOf(status_(o)) >= 0);
+      itens = itens.filter(o => [sgoGetCfgSafe_().OS.STATUS.APROVADA, sgoGetCfgSafe_().OS.STATUS.FATURADA].indexOf(status_(o)) >= 0);
     }
 
     const mapas = getMapas_();
@@ -117,9 +117,9 @@ const SGO_OS = (() => {
       NUMERO_OS: gerarNumeroOS_(),
       SLA_HORAS: slaHoras,
       SLA_PRAZO: calcularPrazoSla_(agora, slaHoras),
-      STATUS: SGO_CFG.OS.STATUS.ABERTA,
-      STATUS_FATURAMENTO: SGO_CFG.OS.STATUS_FATURAMENTO.NAO_LIBERADO,
-      FATURAMENTO_STATUS: SGO_CFG.OS.STATUS_FATURAMENTO.NAO_LIBERADO,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.ABERTA,
+      STATUS_FATURAMENTO: sgoGetCfgSafe_().OS.STATUS_FATURAMENTO.NAO_LIBERADO,
+      FATURAMENTO_STATUS: sgoGetCfgSafe_().OS.STATUS_FATURAMENTO.NAO_LIBERADO,
       DATA_ABERTURA: agora,
       CRIADO_POR: sessao.usuario,
       CRIADO_EM: agora,
@@ -140,7 +140,7 @@ const SGO_OS = (() => {
       success: true,
       message: missao ? "OS criada e missao vinculada." : "OS criada com sucesso.",
       warning: missao && !missao.TECNICO_USUARIO_ID ? "Tecnico sem usuario vinculado. Vincule um usuario para liberar visualizacao pelo perfil TECNICO." : "",
-      item: Object.assign({}, registro, missao ? { MISSAO_ID: missao.ID, STATUS: SGO_CFG.OS.STATUS.AGENDADA } : {})
+      item: Object.assign({}, registro, missao ? { MISSAO_ID: missao.ID, STATUS: sgoGetCfgSafe_().OS.STATUS.AGENDADA } : {})
     };
   }
 
@@ -157,7 +157,7 @@ const SGO_OS = (() => {
     const dados = normalizarPayload_(payload);
     const update = Object.assign({}, dados, {
       NUMERO_OS: atual.NUMERO_OS,
-      STATUS: dados.STATUS || atual.STATUS || SGO_CFG.OS.STATUS.ABERTA,
+      STATUS: dados.STATUS || atual.STATUS || sgoGetCfgSafe_().OS.STATUS.ABERTA,
       STATUS_FATURAMENTO: atual.STATUS_FATURAMENTO,
       FATURAMENTO_STATUS: atual.FATURAMENTO_STATUS || atual.STATUS_FATURAMENTO,
       DATA_ABERTURA: atual.DATA_ABERTURA,
@@ -184,18 +184,18 @@ const SGO_OS = (() => {
     const os = SGO_DATA.getById(SHEET, SGO_UTILS.safe(id), DB_OS);
     if (!os) return { success: false, message: "OS nao encontrada." };
     if (!SGO_UTILS.safe(motivo)) return { success: false, message: "Informe o motivo do cancelamento." };
-    if (status_(os) === SGO_CFG.OS.STATUS.APROVADA || status_(os) === SGO_CFG.OS.STATUS.FATURADA) {
+    if (status_(os) === sgoGetCfgSafe_().OS.STATUS.APROVADA || status_(os) === sgoGetCfgSafe_().OS.STATUS.FATURADA) {
       return { success: false, message: "OS aprovada/faturada nao pode ser cancelada sem reversao administrativa." };
     }
     const ok = SGO_DATA.update(SHEET, os.ID, {
-      STATUS: SGO_CFG.OS.STATUS.CANCELADA,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.CANCELADA,
       MOTIVO_CANCELAMENTO: SGO_UTILS.safe(motivo),
       CANCELADO_POR: sessao.usuario,
       CANCELADO_EM: SGO_UTILS.nowIso(),
       ATUALIZADO_EM: SGO_UTILS.nowIso()
     }, DB_OS);
     if (ok && os.MISSAO_ID) {
-      SGO_DATA.update(SHEET_MISSOES, os.MISSAO_ID, { STATUS: SGO_CFG.MISSOES.STATUS.CANCELADA }, DB_OS);
+      SGO_DATA.update(SHEET_MISSOES, os.MISSAO_ID, { STATUS: sgoGetCfgSafe_().MISSOES.STATUS.CANCELADA }, DB_OS);
     }
     SGO_DATA.log("OS_CANCELAR", sessao.usuario, "OS cancelada: " + os.ID, "OS");
     return ok ? { success: true, message: "OS cancelada." } : { success: false, message: "Erro ao cancelar OS." };
@@ -224,12 +224,12 @@ const SGO_OS = (() => {
 
     const agora = SGO_UTILS.nowIso();
     const ok = SGO_DATA.update(SHEET, os.ID, {
-      STATUS: SGO_CFG.OS.STATUS.EM_EXECUCAO,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.EM_EXECUCAO,
       DATA_INICIO: os.DATA_INICIO || agora,
       ATUALIZADO_EM: agora
     }, DB_OS);
     if (ok && os.MISSAO_ID) {
-      SGO_DATA.update(SHEET_MISSOES, os.MISSAO_ID, { STATUS: SGO_CFG.MISSOES.STATUS.EM_EXECUCAO, CHECKIN_EM: os.DATA_INICIO || agora }, DB_OS);
+      SGO_DATA.update(SHEET_MISSOES, os.MISSAO_ID, { STATUS: sgoGetCfgSafe_().MISSOES.STATUS.EM_EXECUCAO, CHECKIN_EM: os.DATA_INICIO || agora }, DB_OS);
     }
     SGO_DATA.log("OS_INICIAR", sessao.usuario, "Execucao iniciada: " + os.ID, "OS");
     return ok ? { success: true, message: "OS marcada em execucao." } : { success: false, message: "Erro ao iniciar execucao." };
@@ -245,7 +245,7 @@ const SGO_OS = (() => {
     const lng = SGO_UTILS.safe(payload && payload.LNG);
     const endereco = SGO_UTILS.safe(payload && payload.ENDERECO);
     const ok = SGO_DATA.update(SHEET, os.ID, {
-      STATUS: SGO_CFG.OS.STATUS.EM_EXECUCAO,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.EM_EXECUCAO,
       DATA_INICIO: os.DATA_INICIO || agora,
       CHECKIN_EM: os.CHECKIN_EM || agora,
       CHECKIN_LAT: lat,
@@ -255,7 +255,7 @@ const SGO_OS = (() => {
     }, DB_OS);
     if (ok && os.MISSAO_ID) {
       SGO_DATA.update(SHEET_MISSOES, os.MISSAO_ID, {
-        STATUS: SGO_CFG.MISSOES.STATUS.EM_EXECUCAO,
+        STATUS: sgoGetCfgSafe_().MISSOES.STATUS.EM_EXECUCAO,
         CHECKIN_EM: agora,
         CHECKIN_LAT: lat,
         CHECKIN_LNG: lng,
@@ -343,7 +343,7 @@ const SGO_OS = (() => {
     }
 
     const agora = SGO_UTILS.nowIso();
-    const novoStatus = SGO_CFG.OS.STATUS.CONCLUIDA_TECNICAMENTE || SGO_CFG.OS.STATUS.CONCLUIDA;
+    const novoStatus = sgoGetCfgSafe_().OS.STATUS.CONCLUIDA_TECNICAMENTE || sgoGetCfgSafe_().OS.STATUS.CONCLUIDA;
     const ok = SGO_DATA.update(SHEET, os.ID, {
       STATUS: novoStatus,
       DATA_CONCLUSAO: atualizada.DATA_CONCLUSAO || agora,
@@ -353,7 +353,7 @@ const SGO_OS = (() => {
     }, DB_OS);
     if (ok && atualizada.MISSAO_ID) {
       SGO_DATA.update(SHEET_MISSOES, atualizada.MISSAO_ID, {
-        STATUS: SGO_CFG.MISSOES.STATUS.CONCLUIDA,
+        STATUS: sgoGetCfgSafe_().MISSOES.STATUS.CONCLUIDA,
         CHECKOUT_EM: agora,
         CONCLUSAO_TECNICA: atualizada.ENCERRAMENTO_TECNICO
       }, DB_OS);
@@ -366,8 +366,8 @@ const SGO_OS = (() => {
 
   function alterarStatus(sessionId, id, status) {
     const novoStatus = SGO_UTILS.safeUpper(status);
-    if (novoStatus === SGO_CFG.OS.STATUS.EM_EXECUCAO) return iniciarExecucao(sessionId, id);
-    if (novoStatus === SGO_CFG.OS.STATUS.CONCLUIDA || novoStatus === (SGO_CFG.OS.STATUS.CONCLUIDA_TECNICAMENTE || "")) {
+    if (novoStatus === sgoGetCfgSafe_().OS.STATUS.EM_EXECUCAO) return iniciarExecucao(sessionId, id);
+    if (novoStatus === sgoGetCfgSafe_().OS.STATUS.CONCLUIDA || novoStatus === (sgoGetCfgSafe_().OS.STATUS.CONCLUIDA_TECNICAMENTE || "")) {
       return concluirTecnica(sessionId, id, {});
     }
 
@@ -375,10 +375,10 @@ const SGO_OS = (() => {
     const os = SGO_DATA.getById(SHEET, SGO_UTILS.safe(id), DB_OS);
     if (!os) return { success: false, message: "OS nao encontrada." };
     if (!podeEditar_(sessao, os) && !podeAprovar_(sessao)) return { success: false, message: "Acesso negado." };
-    if (status_(os) === SGO_CFG.OS.STATUS.APROVADA) return { success: false, message: "OS aprovada nao pode ter status alterado por fluxo simples." };
+    if (status_(os) === sgoGetCfgSafe_().OS.STATUS.APROVADA) return { success: false, message: "OS aprovada nao pode ter status alterado por fluxo simples." };
 
     const update = { STATUS: novoStatus, ATUALIZADO_EM: SGO_UTILS.nowIso() };
-    if (novoStatus === SGO_CFG.OS.STATUS.AGUARDANDO_ASSINATURA && !os.DATA_CONCLUSAO) update.DATA_CONCLUSAO = SGO_UTILS.nowIso();
+    if (novoStatus === sgoGetCfgSafe_().OS.STATUS.AGUARDANDO_ASSINATURA && !os.DATA_CONCLUSAO) update.DATA_CONCLUSAO = SGO_UTILS.nowIso();
     const ok = SGO_DATA.update(SHEET, os.ID, update, DB_OS);
     return ok ? { success: true, message: "Status atualizado." } : { success: false, message: "Erro ao alterar status." };
   }
@@ -388,23 +388,23 @@ const SGO_OS = (() => {
     if (!podeAprovar_(sessao)) return { success: false, message: "Acesso negado." };
     const os = SGO_DATA.getById(SHEET, SGO_UTILS.safe(id), DB_OS);
     if (!os) return { success: false, message: "OS nao encontrada." };
-    if (status_(os) === SGO_CFG.OS.STATUS.CANCELADA) return { success: false, message: "OS cancelada nao pode ser aprovada." };
+    if (status_(os) === sgoGetCfgSafe_().OS.STATUS.CANCELADA) return { success: false, message: "OS cancelada nao pode ser aprovada." };
 
     const statusAtual = status_(os);
-    const statusConcluida = SGO_CFG.OS.STATUS.CONCLUIDA_TECNICAMENTE || SGO_CFG.OS.STATUS.CONCLUIDA;
-    if ([statusConcluida, SGO_CFG.OS.STATUS.CONCLUIDA, SGO_CFG.OS.STATUS.APROVADA].indexOf(statusAtual) < 0) {
+    const statusConcluida = sgoGetCfgSafe_().OS.STATUS.CONCLUIDA_TECNICAMENTE || sgoGetCfgSafe_().OS.STATUS.CONCLUIDA;
+    if ([statusConcluida, sgoGetCfgSafe_().OS.STATUS.CONCLUIDA, sgoGetCfgSafe_().OS.STATUS.APROVADA].indexOf(statusAtual) < 0) {
       return { success: false, message: "A OS precisa estar concluida tecnicamente antes da aprovacao administrativa." };
     }
     const validacao = validarConclusaoInterna_(os);
-    if (statusAtual !== SGO_CFG.OS.STATUS.APROVADA && statusAtual !== SGO_CFG.OS.STATUS.FATURADA && !validacao.ok) {
+    if (statusAtual !== sgoGetCfgSafe_().OS.STATUS.APROVADA && statusAtual !== sgoGetCfgSafe_().OS.STATUS.FATURADA && !validacao.ok) {
       return { success: false, message: "OS ainda nao esta apta para aprovacao.", pendencias: validacao.pendencias };
     }
 
     const agora = SGO_UTILS.nowIso();
     const ok = SGO_DATA.update(SHEET, os.ID, {
-      STATUS: SGO_CFG.OS.STATUS.APROVADA,
-      STATUS_FATURAMENTO: SGO_CFG.OS.STATUS_FATURAMENTO.LIBERADO,
-      FATURAMENTO_STATUS: SGO_CFG.OS.STATUS_FATURAMENTO.LIBERADO,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.APROVADA,
+      STATUS_FATURAMENTO: sgoGetCfgSafe_().OS.STATUS_FATURAMENTO.LIBERADO,
+      FATURAMENTO_STATUS: sgoGetCfgSafe_().OS.STATUS_FATURAMENTO.LIBERADO,
       APROVACAO_ADMIN: "APROVADA",
       APROVADOR_ID: sessao.userId,
       DATA_APROVACAO: agora,
@@ -413,7 +413,7 @@ const SGO_OS = (() => {
       ATUALIZADO_EM: agora
     }, DB_OS);
     if (ok) {
-      registrarHistoricoEquipamento_(Object.assign({}, os, { STATUS: SGO_CFG.OS.STATUS.APROVADA }), { statusTecnico: SGO_CFG.OS.STATUS.APROVADA });
+      registrarHistoricoEquipamento_(Object.assign({}, os, { STATUS: sgoGetCfgSafe_().OS.STATUS.APROVADA }), { statusTecnico: sgoGetCfgSafe_().OS.STATUS.APROVADA });
       SGO_DATA.log("OS_APROVAR", sessao.usuario, "OS aprovada: " + os.ID, "OS");
     }
     return ok ? { success: true, message: "OS aprovada e liberada para faturamento." } : { success: false, message: "Erro ao aprovar OS." };
@@ -484,9 +484,9 @@ const SGO_OS = (() => {
     }
     return {
       success: true,
-      tipos: SGO_CFG.OS.TIPOS || [],
-      prioridades: SGO_CFG.OS.PRIORIDADES || [],
-      status: SGO_CFG.OS.STATUS || {},
+      tipos: sgoGetCfgSafe_().OS.TIPOS || [],
+      prioridades: sgoGetCfgSafe_().OS.PRIORIDADES || [],
+      status: sgoGetCfgSafe_().OS.STATUS || {},
       clientes: clientes.map(c => ({ ID: c.ID, NOME: c.NOME_FANTASIA || c.RAZAO_SOCIAL || "" })),
       unidades: SGO_DATA.getAll(SHEET_UNI).map(u => ({ ID: u.ID, CLIENTE_ID: u.CLIENTE_ID, NOME: u.NOME_UNIDADE || "" })),
       equipamentos: SGO_DATA.getAll(SHEET_EQP).map(e => ({ ID: e.ID, CLIENTE_ID: e.CLIENTE_ID, UNIDADE_ID: e.UNIDADE_ID, TIPO: e.TIPO || "", TAG: e.TAG || "", FABRICANTE: e.FABRICANTE || "", MODELO: e.MODELO || "", SERIE: e.SERIE || "", SETOR: e.SETOR || "", LABEL: [e.TAG, e.TIPO, e.MODELO, e.SERIE].filter(Boolean).join(" - ") })),
@@ -545,7 +545,7 @@ const SGO_OS = (() => {
       HORA_FIM_PREV: SGO_UTILS.safe(payload.HORA_FIM_PREV || payload.HORA_FIM_PREVISTA || ""),
       HORA_FIM_PREVISTA: SGO_UTILS.safe(payload.HORA_FIM_PREV || payload.HORA_FIM_PREVISTA || ""),
       SLA_HORAS: os.SLA_HORAS || getSlaDefault_(os.TIPO_OS),
-      STATUS: SGO_CFG.MISSOES.STATUS.AGENDADA,
+      STATUS: sgoGetCfgSafe_().MISSOES.STATUS.AGENDADA,
       HORAS_PREVISTAS: SGO_UTILS.safe(payload.HORAS_PREVISTAS || ""),
       VEICULO_ID: SGO_UTILS.safe(payload.VEICULO_ID || os.VEICULO_ID),
       OBSERVACOES: SGO_UTILS.safe(payload.OBSERVACOES || ""),
@@ -566,7 +566,7 @@ const SGO_OS = (() => {
       MISSAO_ID: missao.ID,
       DATA_AGENDADA: dataAgendada,
       MISSAO_TECNICA: missaoTecnica,
-      STATUS: SGO_CFG.OS.STATUS.AGENDADA,
+      STATUS: sgoGetCfgSafe_().OS.STATUS.AGENDADA,
       ATUALIZADO_EM: SGO_UTILS.nowIso()
     }, DB_OS);
 
@@ -831,7 +831,7 @@ const SGO_OS = (() => {
   function registrarHistoricoEquipamento_(os, meta) {
     if (!os || !os.EQUIPAMENTO_ID) return;
     try {
-      const sheet = SGO_CFG.SHEETS.REG_TECNICO;
+      const sheet = sgoGetCfgSafe_().SHEETS.REG_TECNICO;
       const registro = {
         EQUIPAMENTO_ID: os.EQUIPAMENTO_ID,
         CLIENTE_ID: os.CLIENTE_ID,
@@ -939,7 +939,7 @@ const SGO_OS = (() => {
 
   function listarTecnicos_() {
     const tecnicos = safeGetAll_(SHEET_TECNICOS)
-      .filter(t => !t.STATUS || SGO_UTILS.safeUpper(t.STATUS) === SGO_CFG.STATUS.ATIVO)
+      .filter(t => !t.STATUS || SGO_UTILS.safeUpper(t.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO)
       .map(function(t) {
         const nome = SGO_UTILS.safe(t.NOME);
         const disponibilidade = SGO_UTILS.safeUpper(t.DISPONIBILIDADE);
@@ -956,7 +956,7 @@ const SGO_OS = (() => {
     if (tecnicos.length) return tecnicos;
     return safeGetAll_(SHEET_USUARIOS)
       .filter(u => ["TECNICO", "METROLOGIA"].indexOf(SGO_UTILS.safeUpper(u.PERFIL)) >= 0)
-      .filter(u => !u.STATUS || SGO_UTILS.safeUpper(u.STATUS) === SGO_CFG.STATUS.ATIVO)
+      .filter(u => !u.STATUS || SGO_UTILS.safeUpper(u.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO)
       .map(u => ({ ID: u.ID, USUARIO_ID: u.ID, NOME: u.NOME || u.USUARIO || u.EMAIL || u.ID, LABEL: [u.NOME || u.USUARIO || u.EMAIL || u.ID, "USUARIO LEGADO"].filter(Boolean).join(" | "), DISPONIBILIDADE: "", ESPECIALIDADES: "" }));
   }
 
@@ -1019,7 +1019,7 @@ const SGO_OS = (() => {
   }
 
   function getSlaDefault_(tipo) {
-    const mapa = (SGO_CFG.OS && SGO_CFG.OS.SLA_DEFAULTS_HORAS) || {};
+    const mapa = (sgoGetCfgSafe_().OS && sgoGetCfgSafe_().OS.SLA_DEFAULTS_HORAS) || {};
     return mapa[SGO_UTILS.safeUpper(tipo)] || 24;
   }
 

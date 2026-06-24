@@ -1,8 +1,8 @@
 const SGO_REGISTROS = (() => {
-  const SHEET = SGO_CFG.SHEETS.REG_TECNICO;
-  const SHEET_EQP = SGO_CFG.SHEETS.CAD_EQUIPAMENTOS;
-  const SHEET_CLI = SGO_CFG.SHEETS.CAD_CLIENTES;
-  const STATUS_ATIVO = SGO_CFG.STATUS.ATIVO;
+  const SHEET = sgoGetCfgSafe_().SHEETS.REG_TECNICO;
+  const SHEET_EQP = sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS;
+  const SHEET_CLI = sgoGetCfgSafe_().SHEETS.CAD_CLIENTES;
+  const STATUS_ATIVO = sgoGetCfgSafe_().STATUS.ATIVO;
 
   const TIPOS_SERVICO = [
     "CALIBRACAO",
@@ -121,7 +121,7 @@ const SGO_REGISTROS = (() => {
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const diasAviso = (SGO_CFG.ALERTAS && SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
+    const diasAviso = (sgoGetCfgSafe_().ALERTAS && sgoGetCfgSafe_().ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
 
     const registros = SGO_DATA.getAll(SHEET).filter(r =>
       SGO_UTILS.safeUpper(r.STATUS) === STATUS_ATIVO
@@ -254,7 +254,7 @@ const SGO_REGISTROS = (() => {
 
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-      const diasAviso = (SGO_CFG.ALERTAS && SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
+      const diasAviso = (sgoGetCfgSafe_().ALERTAS && sgoGetCfgSafe_().ALERTAS.DIAS_ANTECEDENCIA_PADRAO) || 30;
 
       const registros = SGO_DATA.getAll(SHEET).filter(r =>
         SGO_UTILS.safeUpper(r.STATUS) === STATUS_ATIVO &&
@@ -303,7 +303,7 @@ const SGO_REGISTROS = (() => {
     try { cliente = SGO_DATA.getById(SHEET_CLI, SGO_UTILS.safe(eqp.CLIENTE_ID)) || {}; } catch(e) {}
 
     let unidade = {};
-    try { unidade = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, SGO_UTILS.safe(eqp.UNIDADE_ID)) || {}; } catch(e) {}
+    try { unidade = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES, SGO_UTILS.safe(eqp.UNIDADE_ID)) || {}; } catch(e) {}
 
     const historico = SGO_DATA.getAll(SHEET)
       .filter(r =>

@@ -4,7 +4,7 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termo Online - Cartao Flash</title>
+  <title>Termo Online - Cartão Flash</title>
   <style>
     :root {
       --fin-bg: #eef3f8;
@@ -499,8 +499,8 @@
       <div class="finTermoBrand">
         <div class="finTermoMark">ML</div>
         <div class="finTermoBrandText">
-          <h1 class="finTermoTitle">Termo Online do Cartao Flash</h1>
-          <div class="finTermoSub">Metrolabs SGO+ | Modulo financeiro</div>
+          <h1 class="finTermoTitle">Termo Online do Cartão Flash</h1>
+          <div class="finTermoSub">Metrolabs SGO+ | Módulo Financeiro</div>
         </div>
       </div>
       <div class="finTermoBadges">
@@ -531,11 +531,11 @@
 
         <label class="finTermoCheck">
           <input type="checkbox" id="finTermoAceite">
-          <span>Li e aceito os termos de responsabilidade e a politica de uso do cartao corporativo.</span>
+          <span>Li e aceito os termos de responsabilidade e a política de uso do cartão corporativo.</span>
         </label>
 
-        <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnLocalizacao">Permitir localizacao para reforcar a auditoria do aceite</button>
-        <p class="finTermoHint">A localizacao e opcional e usada apenas para auditoria do aceite.</p>
+        <button class="finTermoButton finTermoButtonSecondary" type="button" id="finTermoBtnLocalizacao">Permitir localização para reforçar a auditoria do aceite</button>
+        <p class="finTermoHint">A localização é opcional e usada apenas para auditoria do aceite.</p>
 
         <button class="finTermoButton" type="button" id="finTermoBtnAssinar" disabled>Confirmar assinatura</button>
 
@@ -583,7 +583,7 @@
         finTermoObterTokenAppsScript_(function(token) {
           finTermoEstado.token = String(token || "").trim();
           if (!finTermoEstado.token) {
-            finTermoRenderizarErro("Token do termo nao informado. Verifique se a URL contem ?fin_termo=TOKEN.");
+            finTermoRenderizarErro("Token do termo não informado. Verifique se a URL contem ?fin_termo=TOKEN.");
             return;
           }
           finTermoCarregar();
@@ -674,11 +674,11 @@
 
     function finTermoCarregar() {
       if (!finTermoEstado.token) {
-        finTermoRenderizarErro("Token do termo nao informado. Verifique se a URL contem ?fin_termo=TOKEN.");
+        finTermoRenderizarErro("Token do termo não informado. Verifique se a URL contem ?fin_termo=TOKEN.");
         return;
       }
       if (!window.google || !google.script || !google.script.run) {
-        finTermoRenderizarErro("Ambiente do Apps Script indisponivel para carregar o termo.");
+        finTermoRenderizarErro("Ambiente do Apps Script indisponível para carregar o termo.");
         return;
       }
       finTermoSetLoading(true);
@@ -686,7 +686,7 @@
         .withSuccessHandler(function(resp) {
           finTermoSetLoading(false);
           if (!resp || (resp.ok !== true && resp.success !== true)) {
-            finTermoRenderizarErro(resp && resp.message ? resp.message : "Nao foi possivel carregar o termo.");
+            finTermoRenderizarErro(resp && resp.message ? resp.message : "Não foi possível carregar o termo.");
             return;
           }
           finTermoRenderizar(resp);
@@ -710,21 +710,21 @@
       html += "<article class=\"finTermoDoc\">";
       html += "<div class=\"finTermoDocTop\">";
       html += "<div class=\"finTermoDocBrand\"><div class=\"finTermoDocMark\">ML</div><div>";
-      html += "<h2 class=\"finTermoDocTitle\">Termo de Responsabilidade - Cartao Corporativo Flash</h2>";
-      html += "<div class=\"finTermoDocMeta\">Documento publico de aceite eletronico | Metrolabs</div>";
+      html += "<h2 class=\"finTermoDocTitle\">Termo de Responsabilidade - Cartão Corporativo Flash</h2>";
+      html += "<div class=\"finTermoDocMeta\">Documento público de aceite eletrônico | Metrolabs</div>";
       html += "</div></div>";
       html += "<div>" + qr + "</div>";
       html += "</div>";
 
       html += "<section class=\"finTermoDocSection\"><h3>Colaborador</h3><div class=\"finTermoGrid\">";
       html += finTermoCampo("Nome", colaborador.nome);
-      html += finTermoCampo("Funcionario ID", colaborador.funcionarioId);
+      html += finTermoCampo("Funcionário ID", colaborador.funcionarioId);
       html += finTermoCampo("E-mail", colaborador.email);
       html += finTermoCampo("Versao da politica", dados.versaoPolitica);
       html += "</div></section>";
 
-      html += "<section class=\"finTermoDocSection\"><h3>Cartao</h3><div class=\"finTermoGrid\">";
-      html += finTermoCampo("Cartao ID", cartao.cartaoId);
+      html += "<section class=\"finTermoDocSection\"><h3>Cartão</h3><div class=\"finTermoGrid\">";
+      html += finTermoCampo("Cartão ID", cartao.cartaoId);
       html += finTermoCampo("Final", cartao.final4 ? "**** **** **** " + cartao.final4 : "");
       html += finTermoCampo("Apelido", cartao.apelido);
       html += finTermoCampo("Operadora", cartao.operadora);
@@ -732,11 +732,11 @@
       html += finTermoCampo("Identificador", cartao.identificador);
       html += "</div></section>";
 
-      html += "<section class=\"finTermoDocSection\"><h3>Clausulas e responsabilidades</h3>";
+      html += "<section class=\"finTermoDocSection\"><h3>Cláusulas e responsabilidades</h3>";
       html += "<div class=\"finTermoBody\">" + corpo + "</div></section>";
 
       html += "<section class=\"finTermoDocSection\"><h3>Aceite e assinatura</h3>";
-      html += "<p class=\"finTermoBody\">O aceite sera registrado eletronicamente apos a assinatura abaixo, com rastreabilidade do token, horario, dispositivo e localizacao quando autorizada.</p>";
+      html += "<p class=\"finTermoBody\">O aceite será registrado eletronicamente apos a assinatura abaixo, com rastreabilidade do token, horário, dispositivo e localizacao quando autorizada.</p>";
       html += "<div class=\"finTermoSignPreview\" id=\"finTermoAssinaturaPreview\">Assinatura pendente</div>";
       html += "</section>";
 
@@ -764,7 +764,7 @@
 
     function finTermoRenderizarErro(msg) {
       document.getElementById("finTermoConteudo").innerHTML =
-        "<div class=\"finTermoState finTermoError\"><h2>Nao foi possivel abrir o termo</h2><p>" + finTermoEH(msg) + "</p></div>";
+        "<div class=\"finTermoState finTermoError\"><h2>Não foi possível abrir o termo</h2><p>" + finTermoEH(msg) + "</p></div>";
       document.getElementById("finTermoBtnAssinar").disabled = true;
     }
 
@@ -773,18 +773,18 @@
       var html = "";
       html += "<div class=\"finTermoState finTermoSuccess\">";
       html += "<h2>Termo assinado com sucesso</h2>";
-      html += "<p>O aceite foi registrado com seguranca.</p>";
+      html += "<p>O aceite foi registrado com segurança.</p>";
       html += "<div class=\"finTermoDocSection\"><div class=\"finTermoGrid\">";
       html += finTermoCampo("Termo ID", resp.termoId);
       html += finTermoCampo("Token", resp.tokenValidacao);
       html += finTermoCampo("Hash", resp.hashTermo);
-      html += finTermoCampo("PDF", resp.pdfUrl ? "Disponivel" : "Nao disponivel");
+      html += finTermoCampo("PDF", resp.pdfUrl ? "Disponivel" : "Não disponível");
       html += "</div></div>";
       if (resp.qrcodeLink) {
         html += "<img class=\"finTermoQr\" alt=\"QR Code do termo assinado\" src=\"" + finTermoEH(resp.qrcodeLink) + "\">";
       }
       if (!resp.pdfUrl) {
-        html += "<p class=\"finTermoHint\">PDF nao retornado pelo backend. O registro do aceite foi concluido.</p>";
+        html += "<p class=\"finTermoHint\">PDF não retornado pelo backend. O registro do aceite foi concluido.</p>";
       }
       html += "</div>";
       document.getElementById("finTermoConteudo").innerHTML = html;
@@ -890,22 +890,22 @@
 
     function finTermoSolicitarLocalizacao() {
       if (!navigator.geolocation) {
-        finTermoMostrarAviso("Geolocalizacao nao disponivel neste navegador. A assinatura pode continuar sem localizacao.");
+        finTermoMostrarAviso("Geolocalização não disponível neste navegador. A assinatura pode continuar sem localizacao.");
         return;
       }
-      finTermoMostrarAviso("Solicitando permissao de localizacao...");
+      finTermoMostrarAviso("Solicitando permissão de localização...");
       navigator.geolocation.getCurrentPosition(
         function(pos) {
           finTermoEstado.localizacao.latitude = String(pos.coords.latitude || "");
           finTermoEstado.localizacao.longitude = String(pos.coords.longitude || "");
-          finTermoEstado.localizacao.texto = "Localizacao capturada pelo navegador.";
-          finTermoMostrarSucesso("Localizacao registrada para auditoria do aceite.");
+          finTermoEstado.localizacao.texto = "Localização capturada pelo navegador.";
+          finTermoMostrarSucesso("Localização registrada para auditoria do aceite.");
         },
         function() {
           finTermoEstado.localizacao.latitude = "";
           finTermoEstado.localizacao.longitude = "";
-          finTermoEstado.localizacao.texto = "Localizacao nao autorizada pelo usuario.";
-          finTermoMostrarAviso("Localizacao nao autorizada. A assinatura pode continuar normalmente.");
+          finTermoEstado.localizacao.texto = "Localização não autorizada pelo usuario.";
+          finTermoMostrarAviso("Localização não autorizada. A assinatura pode continuar normalmente.");
         },
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
       );
@@ -913,7 +913,7 @@
 
     function finTermoAssinar() {
       if (!finTermoEstado.token) {
-        finTermoRenderizarErro("Token do termo nao informado.");
+        finTermoRenderizarErro("Token do termo não informado.");
         return;
       }
       if (!finTermoEstado.assinaturaPreenchida) {
@@ -925,7 +925,7 @@
         return;
       }
       if (!window.google || !google.script || !google.script.run) {
-        finTermoRenderizarErro("Ambiente do Apps Script indisponivel para assinar o termo.");
+        finTermoRenderizarErro("Ambiente do Apps Script indisponível para assinar o termo.");
         return;
       }
       finTermoSetLoading(true);
@@ -933,7 +933,7 @@
         .withSuccessHandler(function(resp) {
           finTermoSetLoading(false);
           if (!resp || (resp.ok !== true && resp.success !== true)) {
-            finTermoMostrarAviso(resp && resp.message ? resp.message : "Nao foi possivel assinar o termo.");
+            finTermoMostrarAviso(resp && resp.message ? resp.message : "Não foi possível assinar o termo.");
             return;
           }
           finTermoRenderizarSucesso(resp);
@@ -966,7 +966,7 @@
     function finTermoAbrirPdf() {
       var pdfUrl = finTermoEstado.respostaAssinatura && finTermoEstado.respostaAssinatura.pdfUrl;
       if (!pdfUrl) {
-        finTermoMostrarAviso("PDF nao disponivel.");
+        finTermoMostrarAviso("PDF não disponível.");
         return;
       }
       window.open(pdfUrl, "_blank");
@@ -975,7 +975,7 @@
     function finTermoEnviarWhatsapp() {
       var resp = finTermoEstado.respostaAssinatura || {};
       var link = resp.pdfUrl || window.location.href;
-      var texto = "Termo do Cartao Flash assinado. " + link;
+      var texto = "Termo do Cartão Flash assinado. " + link;
       window.open("https://wa.me/?text=" + finTermoUrlEncode(texto), "_blank");
     }
 

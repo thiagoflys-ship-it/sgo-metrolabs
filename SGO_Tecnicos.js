@@ -4,9 +4,9 @@
    ============================================================ */
 const SGO_TECNICOS = (() => {
 
-  const SHEET    = SGO_CFG.SHEETS.CAD_TECNICOS;
-  const DB       = SGO_CFG.DB_KEYS.PRINCIPAL;
-  const DB_OS    = SGO_CFG.DB_KEYS.OS;
+  const SHEET    = sgoGetCfgSafe_().SHEETS.CAD_TECNICOS;
+  const DB       = sgoGetCfgSafe_().DB_KEYS.PRINCIPAL;
+  const DB_OS    = sgoGetCfgSafe_().DB_KEYS.OS;
 
   const ESPECIALIDADES_VALIDAS = [
     "AUTOCLAVE", "LAVADORA", "CALIBRACAO", "QUALIFICACAO",
@@ -27,7 +27,7 @@ const SGO_TECNICOS = (() => {
     const resultado = { totalMissoes: 0, concluidas: 0, horasApontadas: 0 };
     try {
       const missoes = SGO_DATA.getManyByField(
-        SGO_CFG.SHEETS.AGD_MISSOES, "TECNICO_ID", tecId, DB_OS
+        sgoGetCfgSafe_().SHEETS.AGD_MISSOES, "TECNICO_ID", tecId, DB_OS
       );
       resultado.totalMissoes  = missoes.length;
       resultado.concluidas    = missoes.filter(m => SGO_UTILS.safeUpper(m.STATUS) === "CONCLUIDA").length;
@@ -201,7 +201,7 @@ const SGO_TECNICOS = (() => {
 
     const base   = SGO_DATA.gerarRegistroBase();
     const campos = _montar_(dados);
-    campos.STATUS = SGO_CFG.STATUS.ATIVO;
+    campos.STATUS = sgoGetCfgSafe_().STATUS.ATIVO;
 
     const registro = Object.assign({}, base, campos);
     SGO_DATA.insert(SHEET, registro, DB);
@@ -250,7 +250,7 @@ const SGO_TECNICOS = (() => {
     // Verifica se há missão ativa vinculada
     try {
       const missoes = SGO_DATA.getManyByField(
-        SGO_CFG.SHEETS.AGD_MISSOES, "TECNICO_ID", id, DB_OS
+        sgoGetCfgSafe_().SHEETS.AGD_MISSOES, "TECNICO_ID", id, DB_OS
       );
       const ativas = missoes.filter(function(m) {
         const st = SGO_UTILS.safeUpper(m.STATUS);
@@ -266,7 +266,7 @@ const SGO_TECNICOS = (() => {
       if (e.message.indexOf("missão") >= 0) throw e;
     }
 
-    SGO_DATA.update(SHEET, id, { STATUS: SGO_CFG.STATUS.INATIVO }, DB);
+    SGO_DATA.update(SHEET, id, { STATUS: sgoGetCfgSafe_().STATUS.INATIVO }, DB);
     SGO_DATA.log(sessao.usuario, "INATIVAR_TECNICO", "TECNICOS", "Técnico inativado: " + SGO_UTILS.safe(tec.NOME));
     return { success: true };
   }
@@ -279,7 +279,7 @@ const SGO_TECNICOS = (() => {
     if (!tec) throw new Error("Técnico não encontrado.");
 
     SGO_DATA.update(SHEET, id, {
-      STATUS: SGO_CFG.STATUS.ATIVO,
+      STATUS: sgoGetCfgSafe_().STATUS.ATIVO,
       DISPONIBILIDADE: "DISPONIVEL"
     }, DB);
     SGO_DATA.log(sessao.usuario, "REATIVAR_TECNICO", "TECNICOS", "Técnico reativado: " + SGO_UTILS.safe(tec.NOME));
@@ -297,7 +297,7 @@ const SGO_TECNICOS = (() => {
     _perm_(sessao, false);
 
     return SGO_DATA.getAll(SHEET, DB)
-      .filter(t => SGO_UTILS.safeUpper(t.STATUS) === SGO_CFG.STATUS.ATIVO)
+      .filter(t => SGO_UTILS.safeUpper(t.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO)
       .map(function(t) {
         const nome = SGO_UTILS.safe(t.NOME);
         const especialidades = SGO_UTILS.safe(t.ESPECIALIDADES);
@@ -348,7 +348,7 @@ const SGO_TECNICOS = (() => {
     if (!tec) throw new Error("Técnico não encontrado.");
 
     if (usuarioId) {
-      const usuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, usuarioId, DB);
+      const usuario = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.CAD_USUARIOS, usuarioId, DB);
       if (!usuario) throw new Error("Usuário não encontrado.");
       if (SGO_UTILS.safeUpper(usuario.PERFIL) !== "TECNICO") {
         throw new Error("Usuário selecionado não tem perfil TECNICO.");
@@ -375,7 +375,7 @@ const SGO_TECNICOS = (() => {
 
     try {
       const missoes = SGO_DATA.getManyByField(
-        SGO_CFG.SHEETS.AGD_MISSOES, "TECNICO_ID", id, DB_OS
+        sgoGetCfgSafe_().SHEETS.AGD_MISSOES, "TECNICO_ID", id, DB_OS
       );
       const lim = parseInt(limite) || 50;
       return missoes

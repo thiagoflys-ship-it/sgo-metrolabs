@@ -35,14 +35,14 @@
 <body>
   <main class="wrap">
     <header>
-      <h1>Prestacao de contas Flash</h1>
-      <p id="finPrestacaoPessoa">Carregando dados do cartao...</p>
+      <h1>Prestação de contas Flash</h1>
+      <p id="finPrestacaoPessoa">Carregando dados do cartão...</p>
     </header>
 
     <section id="finPrestacaoStatus"></section>
 
     <section class="card">
-      <h2>Enviar prestacao</h2>
+      <h2>Enviar prestação</h2>
       <div class="grid">
         <div><label>Data do gasto</label><input id="fpData" type="date"></div>
         <div><label>Valor</label><input id="fpValor" type="number" step="0.01" min="0"></div>
@@ -50,22 +50,22 @@
       <label>Estabelecimento</label><input id="fpEstabelecimento" type="text" autocomplete="off">
       <label>Finalidade</label><textarea id="fpFinalidade" placeholder="Explique o motivo da despesa"></textarea>
       <div class="grid">
-        <div><label>Tem OS?</label><select id="fpTemOs"><option value="SIM">Sim</option><option value="NAO">Nao</option></select></div>
+        <div><label>Existe O.S.?</label><select id="fpTemOs"><option value="SIM">Sim</option><option value="NAO">Nao</option></select></div>
         <div><label>Numero da OS</label><input id="fpOsNumero" type="text" autocomplete="off"></div>
       </div>
-      <label>Justificativa quando nao houver OS</label><textarea id="fpJustificativa"></textarea>
+      <label>Justificativa quando não houver O.S.</label><textarea id="fpJustificativa"></textarea>
       <label>Comprovante / foto</label><input id="fpArquivo" type="file" accept="image/*,.pdf" capture="environment">
-      <label>Observacoes</label><textarea id="fpObs"></textarea>
-      <button id="fpEnviar" type="button" onclick="finPrestacaoEnviar_()">Enviar prestacao</button>
+      <label>Observações</label><textarea id="fpObs"></textarea>
+      <button id="fpEnviar" type="button" onclick="finPrestacaoEnviar_()">Enviar prestação</button>
     </section>
 
     <section class="card">
-      <h2>Pendencias</h2>
+      <h2>Pendências</h2>
       <div id="fpPendencias"><p>Nenhuma pendencia carregada.</p></div>
     </section>
 
     <section class="card">
-      <h2>Historico de prestacoes</h2>
+      <h2>Historico de prestações</h2>
       <div id="fpHistorico"><p>Nenhuma prestacao carregada.</p></div>
     </section>
   </main>
@@ -80,7 +80,7 @@
     function fpStatus(msg, cls){ fpEl('finPrestacaoStatus').innerHTML = '<div class="status '+(cls||'warn')+'">'+fpHtml(msg)+'</div>'; }
 
     function finPrestacaoCarregar_(){
-      if(!FIN_PRESTACAO_TOKEN){ fpStatus('Token de prestacao nao informado.', 'err'); return; }
+      if(!FIN_PRESTACAO_TOKEN){ fpStatus('Token de prestação não informado.', 'err'); return; }
       google.script.run
         .withSuccessHandler(finPrestacaoRender_)
         .withFailureHandler(function(e){ fpStatus(e && e.message ? e.message : e, 'err'); })
@@ -88,11 +88,11 @@
     }
 
     function finPrestacaoRender_(r){
-      if(!r || !r.ok){ fpStatus((r && r.message) || 'Nao foi possivel carregar a prestacao.', 'err'); return; }
+      if(!r || !r.ok){ fpStatus((r && r.message) || 'Não foi possível carregar a prestação.', 'err'); return; }
       var c = r.colaborador || {};
-      fpEl('finPrestacaoPessoa').textContent = (c.funcionarioNome || 'Colaborador') + ' - Cartao ' + (c.cartaoFinal || c.cartaoId || '');
+      fpEl('finPrestacaoPessoa').textContent = (c.funcionarioNome || 'Colaborador') + ' - Cartão ' + (c.cartaoFinal || c.cartaoId || '');
       fpStatus('Ambiente pronto para envio de prestacao com comprovante.', 'ok');
-      finPrestacaoRenderLista_(r.prestacoes || [], 'fpHistorico', false);
+      finPrestacaoRenderLista_(r.prestações || [], 'fpHistorico', false);
       finPrestacaoRenderLista_(r.pendencias || [], 'fpPendencias', true);
     }
 
@@ -113,7 +113,7 @@
       if(!f){ cb(null); return; }
       var reader = new FileReader();
       reader.onload = function(){ cb({nomeArquivo:f.name,mimeType:f.type,dataUrl:reader.result}); };
-      reader.onerror = function(){ fpStatus('Nao foi possivel ler o comprovante.', 'err'); };
+      reader.onerror = function(){ fpStatus('Não foi possível ler o comprovante.', 'err'); };
       reader.readAsDataURL(f);
     }
 
@@ -135,8 +135,8 @@
         google.script.run
           .withSuccessHandler(function(r){
             fpEl('fpEnviar').disabled = false;
-            if(!r || !r.ok){ fpStatus((r && r.message) || 'Prestacao nao enviada.', 'err'); return; }
-            fpStatus('Prestacao enviada com sucesso.', 'ok');
+            if(!r || !r.ok){ fpStatus((r && r.message) || 'Prestação não enviada.', 'err'); return; }
+            fpStatus('Prestação enviada com sucesso.', 'ok');
             fpEl('fpArquivo').value = '';
             finPrestacaoCarregar_();
           })
@@ -149,7 +149,7 @@
       var texto = fpEl('esc_'+id) ? fpEl('esc_'+id).value : '';
       google.script.run
         .withSuccessHandler(function(r){
-          if(!r || !r.ok){ fpStatus((r && r.message) || 'Esclarecimento nao enviado.', 'err'); return; }
+          if(!r || !r.ok){ fpStatus((r && r.message) || 'Esclarecimento não enviado.', 'err'); return; }
           fpStatus('Esclarecimento enviado.', 'ok');
           finPrestacaoCarregar_();
         })

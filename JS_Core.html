@@ -34,6 +34,8 @@
   let MOTORES = {};
   let LOGIN_EM_ANDAMENTO = false;
   let PUBLIC_CONFIG = {};
+  let _PRIMEIRO_ACESSO_ = null;
+  let PERMISSOES_CONTEXT = null;
 
   let IDLE_SECONDS = 0;
   let IDLE_LIMIT = 300; // Tempo para alertas de ociosidade (5 min)
@@ -64,6 +66,9 @@
     SOM_OCIOSIDADE: "SGO_SOM_OCIOSIDADE",
     MSG_MOTIVACIONAL_IDX: "SGO_MSG_MOTIVACIONAL_IDX"
   };
+  // Módulos bloqueados no piloto v1 — sincronizar com MODULOS_BLOQUEADOS_PILOTO_V1 no backend
+  // "subconjuntos" é alias de "pecas" (mesmo módulo, protege chamada direta por URL)
+  const MODULOS_BLOQUEADOS_PILOTO_V1 = ["pecas","subconjuntos","estoque","rastreabilidade","fornecedores","frota"];
   const MENSAGENS_FALLBACK = [
     "Disciplina vence talento todos os dias.",
     "Qualidade não é opção, é padrão.",
@@ -220,18 +225,22 @@
   }
 
   function fazerLogin() {
+    fazerLoginV2ComFallback_();
+  }
+
+  function fazerLoginV2ComFallback_() {
     if (LOGIN_EM_ANDAMENTO) return;
 
-    const usuarioEl = document.getElementById("usuario");
-    const senhaEl = document.getElementById("senha");
-    const usuario = usuarioEl ? String(usuarioEl.value || "").trim() : "";
-    const senha = senhaEl ? String(senhaEl.value || "").trim() : "";
-    if (!usuario) {
-      alert("Informe o usuário.");
+    const usuarioEl   = document.getElementById("usuario");
+    const senhaEl     = document.getElementById("senha");
+    const loginOuEmail = usuarioEl ? String(usuarioEl.value || "").trim() : "";
+    const senha        = senhaEl   ? String(senhaEl.value   || "").trim() : "";
+
+    if (!loginOuEmail) {
+      alert("Informe o usuário ou e-mail.");
       if (usuarioEl) usuarioEl.focus();
       return;
     }
-
     if (!senha) {
       alert("Informe a senha.");
       if (senhaEl) senhaEl.focus();
@@ -241,37 +250,320 @@
     LOGIN_EM_ANDAMENTO = true;
     setBotaoLoginEstado_(true);
 
+    // Tentar login V2 primeiro
     google.script.run
-      .withSuccessHandler(function (res) {
-        LOGIN_EM_ANDAMENTO = false;
-        setBotaoLoginEstado_(false);
+      .withSuccessHandler(function (resV2) {
+        if (resV2 && resV2.success) {
+          LOGIN_EM_ANDAMENTO = false;
+          setBotaoLoginEstado_(false);
 
-        if (!res || !res.success) {
-          alert((res && res.message) ? res.message : "Falha no login.");
+          SESSION      = resV2.sessionId || null;
+          USER_CONTEXT = resV2.user      || null;
+
+          if (SESSION) setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+
+          if (resV2.user && resV2.user.senhaTemporaria) {
+            SESSION      = resV2.sessionId || null;
+            USER_CONTEXT = resV2.user      || null;
+            if (SESSION) setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+            _PRIMEIRO_ACESSO_ = { sessionId: resV2.sessionId, senhaAtual: senha };
+            abrirModalPrimeiroAcesso_();
+            return;
+          }
+
+          exibirAppLogado_();
+          aplicarContextoUsuario_();
+          resetarOciosidade_();
+          iniciarMonitorOciosidade_();
+          aplicarMensagemMotivacional_();
+          verificarRedirecionamentoQR_();
           return;
         }
 
-        SESSION = res.sessionId || null;
-        USER_CONTEXT = res.user || null;
+        // V2 não encontrou o usuário ou senha inválida — fallback legado (somente DEV)
+        var codigo   = resV2 && resV2.code ? String(resV2.code) : "";
+        var fallback = !codigo ||
+                       codigo === "USUARIO_NAO_ENCONTRADO" ||
+                       codigo === "USUARIO_NAO_MIGRADO"    ||
+                       codigo === "SENHA_INVALIDA";
 
-        if (SESSION) {
-          setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+        if (fallback) {
+          google.script.run
+            .withSuccessHandler(function (resLeg) {
+              LOGIN_EM_ANDAMENTO = false;
+              setBotaoLoginEstado_(false);
+
+              if (!resLeg || !resLeg.success) {
+                alert((resLeg && resLeg.message) ? resLeg.message : "Usuário ou senha inválidos.");
+                return;
+              }
+
+              SESSION      = resLeg.sessionId || null;
+              USER_CONTEXT = resLeg.user      || null;
+
+              if (SESSION) setSessionStorageItem_(STORAGE_KEYS.SESSION, SESSION);
+
+              exibirAppLogado_();
+              aplicarContextoUsuario_();
+              resetarOciosidade_();
+              iniciarMonitorOciosidade_();
+              aplicarMensagemMotivacional_();
+              verificarRedirecionamentoQR_();
+            })
+            .withFailureHandler(function () {
+              LOGIN_EM_ANDAMENTO = false;
+              setBotaoLoginEstado_(false);
+              alert("Erro ao processar o login. Tente novamente.");
+            })
+            .login(loginOuEmail, senha);
+          return;
         }
 
+        // Erro definitivo (bloqueado, expirado, etc.)
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        alert((resV2 && resV2.message) ? resV2.message : "Falha no login.");
+      })
+      .withFailureHandler(function () {
+        LOGIN_EM_ANDAMENTO = false;
+        setBotaoLoginEstado_(false);
+        alert("Erro ao processar o login. Tente novamente.");
+      })
+      .loginV2_DEV(loginOuEmail, senha);
+  }
+
+  function esqueceuSenha_() {
+    abrirModalEsqueciSenha_();
+  }
+
+  // ── Fluxo "Esqueci minha senha" (AUTH.4D) ──────────────────
+
+  function abrirModalEsqueciSenha_() {
+    var modal = document.getElementById("modal-esqueci-senha");
+    if (!modal) return;
+    var inp  = document.getElementById("es-login-email");
+    var erro = document.getElementById("es-erro");
+    var btn  = document.getElementById("es-btn-solicitar");
+    if (inp)  inp.value = "";
+    if (erro) { erro.style.display = "none"; erro.textContent = ""; }
+    if (btn)  { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Solicitar recuperação'; }
+    modal.style.display = "flex";
+    setTimeout(function () { if (inp) inp.focus(); }, 100);
+  }
+
+  function fecharModalEsqueciSenha_() {
+    var modal = document.getElementById("modal-esqueci-senha");
+    if (modal) modal.style.display = "none";
+  }
+
+  function confirmarSolicitacaoRecuperacao_() {
+    var inp  = document.getElementById("es-login-email");
+    var btn  = document.getElementById("es-btn-solicitar");
+    var erro = document.getElementById("es-erro");
+    var loginOuEmail = inp ? String(inp.value || "").trim() : "";
+
+    function mostrarErro_(msg) {
+      if (erro) { erro.textContent = msg; erro.style.display = "block"; }
+    }
+
+    if (!loginOuEmail) {
+      mostrarErro_("Informe o usuário ou e-mail.");
+      if (inp) inp.focus();
+      return;
+    }
+    if (erro) erro.style.display = "none";
+    if (btn) { btn.disabled = true; btn.textContent = "Aguarde..."; }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Solicitar recuperação'; }
+        if (!res || !res.success) {
+          mostrarErro_((res && res.message) ? res.message : "Usuário ou e-mail não encontrado.");
+          return;
+        }
+        fecharModalEsqueciSenha_();
+        // Em DEV, dry-run retorna tokenParaTeste para pré-preencher o campo
+        var tokenTemp = res.tokenParaTeste ? String(res.tokenParaTeste) : null;
+        abrirModalRedefinirSenha_(tokenTemp);
+        tokenTemp = null;
+      })
+      .withFailureHandler(function () {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Solicitar recuperação'; }
+        mostrarErro_("Erro de comunicação. Tente novamente.");
+      })
+      .solicitarRecuperacaoSenhaV2_DEV(loginOuEmail, true); // true = dry-run DEV
+  }
+
+  function abrirModalRedefinirSenha_(tokenPreenchido) {
+    var modal    = document.getElementById("modal-redefinir-senha");
+    if (!modal) return;
+    var inpToken = document.getElementById("rd-token");
+    var inpNova  = document.getElementById("rd-nova-senha");
+    var inpConf  = document.getElementById("rd-confirmar");
+    var erro     = document.getElementById("rd-erro");
+    var btn      = document.getElementById("rd-btn-redefinir");
+    if (inpToken) inpToken.value = tokenPreenchido || "";
+    if (inpNova)  inpNova.value  = "";
+    if (inpConf)  inpConf.value  = "";
+    if (erro)     { erro.style.display = "none"; erro.textContent = ""; }
+    if (!tokenPreenchido && erro) {
+      erro.textContent = "Token DEV não retornado. Consulte o log da função de recuperação.";
+      erro.style.display = "block";
+    }
+    if (btn)      { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key" style="margin-right:8px;"></i>Redefinir senha'; }
+    modal.style.display = "flex";
+    setTimeout(function () {
+      var next = (inpToken && inpToken.value) ? inpNova : inpToken;
+      if (next) next.focus();
+    }, 100);
+  }
+
+  function fecharModalRedefinirSenha_() {
+    var modal = document.getElementById("modal-redefinir-senha");
+    if (modal) modal.style.display = "none";
+  }
+
+  function confirmarRedefinicaoSenha_() {
+    var inpToken = document.getElementById("rd-token");
+    var inpNova  = document.getElementById("rd-nova-senha");
+    var inpConf  = document.getElementById("rd-confirmar");
+    var btn      = document.getElementById("rd-btn-redefinir");
+    var erro     = document.getElementById("rd-erro");
+
+    var token     = inpToken ? String(inpToken.value || "").trim() : "";
+    var novaSenha = inpNova  ? String(inpNova.value  || "")        : "";
+    var confirmar = inpConf  ? String(inpConf.value  || "")        : "";
+
+    function mostrarErro_(msg) {
+      if (erro) { erro.textContent = msg; erro.style.display = "block"; }
+    }
+
+    if (!token) {
+      mostrarErro_("Informe o token de recuperação.");
+      if (inpToken) inpToken.focus();
+      return;
+    }
+    if (novaSenha.length < 8) {
+      mostrarErro_("A nova senha deve ter pelo menos 8 caracteres.");
+      if (inpNova) inpNova.focus();
+      return;
+    }
+    if (novaSenha !== confirmar) {
+      mostrarErro_("As senhas não coincidem. Tente novamente.");
+      if (inpConf) inpConf.focus();
+      return;
+    }
+    if (erro) erro.style.display = "none";
+    if (btn) { btn.disabled = true; btn.textContent = "Aguarde..."; }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        novaSenha = null;
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key" style="margin-right:8px;"></i>Redefinir senha'; }
+        if (!res || !res.success) {
+          mostrarErro_((res && res.message) ? res.message : "Token inválido ou expirado. Solicite novamente.");
+          return;
+        }
+        fecharModalRedefinirSenha_();
+        alert("Senha redefinida com sucesso! Faça login com a nova senha.");
+      })
+      .withFailureHandler(function () {
+        novaSenha = null;
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key" style="margin-right:8px;"></i>Redefinir senha'; }
+        mostrarErro_("Erro de comunicação. Tente novamente.");
+      })
+      .redefinirSenhaPorTokenV2_DEV(token, novaSenha);
+  }
+
+  function abrirModalPrimeiroAcesso_() {
+    var modal = document.getElementById("modal-primeiro-acesso");
+    if (!modal) return;
+    var inpNova = document.getElementById("pa-nova-senha");
+    var inpConf = document.getElementById("pa-confirmar-senha");
+    var erro    = document.getElementById("pa-erro");
+    var btnConf = document.getElementById("pa-btn-confirmar");
+    if (inpNova) inpNova.value = "";
+    if (inpConf) inpConf.value = "";
+    if (erro)    { erro.style.display = "none"; erro.textContent = ""; }
+    if (btnConf) { btnConf.disabled = false; btnConf.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i>Definir nova senha'; }
+    modal.style.display = "flex";
+    setTimeout(function () { if (inpNova) inpNova.focus(); }, 100);
+  }
+
+  function fecharModalPrimeiroAcesso_() {
+    var modal = document.getElementById("modal-primeiro-acesso");
+    if (modal) modal.style.display = "none";
+    _PRIMEIRO_ACESSO_ = null;
+  }
+
+  function confirmarPrimeiroAcesso_() {
+    var inpNova = document.getElementById("pa-nova-senha");
+    var inpConf = document.getElementById("pa-confirmar-senha");
+    var btnConf = document.getElementById("pa-btn-confirmar");
+    var erro    = document.getElementById("pa-erro");
+
+    var novaSenha = inpNova ? String(inpNova.value || "") : "";
+    var confirmar = inpConf ? String(inpConf.value || "") : "";
+
+    function mostrarErro_(msg) {
+      if (erro) { erro.textContent = msg; erro.style.display = "block"; }
+    }
+
+    if (novaSenha.length < 8) {
+      mostrarErro_("A senha deve ter pelo menos 8 caracteres.");
+      if (inpNova) inpNova.focus();
+      return;
+    }
+    if (novaSenha !== confirmar) {
+      mostrarErro_("As senhas não coincidem. Tente novamente.");
+      if (inpConf) inpConf.focus();
+      return;
+    }
+    if (erro) erro.style.display = "none";
+
+    if (!_PRIMEIRO_ACESSO_ || !_PRIMEIRO_ACESSO_.sessionId) {
+      mostrarErro_("Sessão inválida. Faça login novamente.");
+      return;
+    }
+
+    if (btnConf) { btnConf.disabled = true; btnConf.textContent = "Aguarde..."; }
+
+    var sessionId  = _PRIMEIRO_ACESSO_.sessionId;
+    var senhaAtual = _PRIMEIRO_ACESSO_.senhaAtual;
+    _PRIMEIRO_ACESSO_ = null;
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        senhaAtual = null;
+        novaSenha  = null;
+        if (btnConf) {
+          btnConf.disabled = false;
+          btnConf.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i>Definir nova senha';
+        }
+        if (!res || !res.success) {
+          mostrarErro_((res && res.message) ? res.message : "Erro ao trocar a senha. Tente novamente.");
+          return;
+        }
+        fecharModalPrimeiroAcesso_();
+        if (USER_CONTEXT) USER_CONTEXT.senhaTemporaria = false;
         exibirAppLogado_();
         aplicarContextoUsuario_();
         resetarOciosidade_();
         iniciarMonitorOciosidade_();
         aplicarMensagemMotivacional_();
         verificarRedirecionamentoQR_();
+        setTimeout(function () { alert("Senha definida com sucesso! Bem-vindo ao SGO+."); }, 300);
       })
-      .withFailureHandler(function (err) {
-        LOGIN_EM_ANDAMENTO = false;
-        setBotaoLoginEstado_(false);
-        /* Falha controlada no login. */
-        alert("Erro ao processar o login. Tente novamente.");
+      .withFailureHandler(function () {
+        senhaAtual = null;
+        novaSenha  = null;
+        if (btnConf) {
+          btnConf.disabled = false;
+          btnConf.innerHTML = '<i class="fas fa-check" style="margin-right:8px;"></i>Definir nova senha';
+        }
+        mostrarErro_("Erro de comunicação. Tente novamente.");
       })
-      .login(usuario, senha);
+      .trocarSenhaPrimeiroAcessoV2_DEV(sessionId, senhaAtual, novaSenha);
   }
 
   function exibirAppLogado_() {
@@ -290,6 +582,52 @@
     if (inputSenha) inputSenha.value = "";
   }
 
+  function exibirBannerPiloto_() {
+    // Remover banner laranja antigo (fixo, empurrava página) se ainda existir
+    var bannerAntigo = document.getElementById("sgoBannerPiloto");
+    if (bannerAntigo) bannerAntigo.remove();
+
+    // Remover selo anterior para evitar duplicata ao relogar
+    var seloAntigo = document.getElementById("sgoSeloPiloto");
+    if (seloAntigo) seloAntigo.remove();
+
+    const perfil = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    const isAdmin = ["ADMIN","GESTOR","DIRETORIA"].indexOf(perfil) >= 0;
+    if (!isAdmin) return;
+
+    // Selo discreto — inline no topbar, sem posição fixa, sem empurrar layout
+    const selo = document.createElement("span");
+    selo.id = "sgoSeloPiloto";
+    selo.textContent = "PV2 Piloto";
+    selo.title = "PRODUCAO_V2 — Piloto operacional controlado";
+    selo.style.cssText = [
+      "display:inline-block",
+      "background:rgba(217,119,6,0.12)",
+      "color:#b45309",
+      "border:1px solid rgba(217,119,6,0.3)",
+      "border-radius:4px",
+      "font-size:10px",
+      "font-weight:700",
+      "padding:2px 7px",
+      "letter-spacing:0.6px",
+      "text-transform:uppercase",
+      "cursor:default",
+      "white-space:nowrap",
+      "vertical-align:middle",
+      "margin-top:3px"
+    ].join(";");
+
+    // Inserir no bloco de info do topo (após relógio e status)
+    const infoBlock = document.querySelector(".topbar-info-block");
+    if (infoBlock) {
+      infoBlock.appendChild(selo);
+    } else {
+      // Fallback: adicionar no topbar-right sem posição fixa
+      const topoRight = document.querySelector(".topbar-right");
+      if (topoRight) topoRight.insertBefore(selo, topoRight.firstChild);
+    }
+  }
+
   function aplicarContextoUsuario_() {
     const userInfo = document.getElementById("userInfo");
     if (userInfo && USER_CONTEXT) {
@@ -303,6 +641,8 @@
     }
 
     aplicarRegrasDeAcesso_();
+    exibirBannerPiloto_();
+    carregarPermissoesAuth5_();
 
     // MOBILE TEM PRIORIDADE ABSOLUTA:
     // se for celular/tablet, prepara o shell e renderiza a tela de campo imediatamente.
@@ -321,6 +661,7 @@
     limparSessoesLegacy_();
     SESSION = null;
     USER_CONTEXT = null;
+    PERMISSOES_CONTEXT = null;
   }
 
   function verificarRedirecionamentoQR_() {
@@ -612,13 +953,23 @@
     if (!USER_CONTEXT) return;
 
     const perfil = String(USER_CONTEXT.perfil || "").toUpperCase();
-    const modulos = obterModulosPermitidosPorPerfil_(perfil);
+    let modulos;
+    if (PERMISSOES_CONTEXT && PERMISSOES_CONTEXT.success && Array.isArray(PERMISSOES_CONTEXT.permissoes)) {
+      modulos = PERMISSOES_CONTEXT.permissoes;
+    } else {
+      modulos = obterModulosPermitidosPorPerfil_(perfil);
+    }
 
     document.querySelectorAll(".sidebar .menu-btn").forEach(function(btn) {
       const onclick = btn.getAttribute("onclick") || "";
       const match = onclick.match(/abrir\(['"]([^'"]+)['"]\)/);
       if (!match) return;
       const modulo = match[1];
+      const bloqueadoPiloto = MODULOS_BLOQUEADOS_PILOTO_V1.indexOf(modulo) >= 0;
+      if (bloqueadoPiloto) {
+        btn.style.opacity = "0.4";
+        btn.title = "Em implantação";
+      }
       btn.style.display = modulos.indexOf(modulo) >= 0 ? "" : "none";
     });
 
@@ -654,7 +1005,33 @@
 
   function usuarioPodeAbrirModulo_(mod) {
     if (!USER_CONTEXT) return false;
+    if (PERMISSOES_CONTEXT && PERMISSOES_CONTEXT.success && Array.isArray(PERMISSOES_CONTEXT.permissoes)) {
+      return PERMISSOES_CONTEXT.isAdmin || PERMISSOES_CONTEXT.permissoes.indexOf(mod) >= 0;
+    }
     return obterModulosPermitidosPorPerfil_(String(USER_CONTEXT.perfil || "").toUpperCase()).indexOf(mod) >= 0;
+  }
+
+  function carregarPermissoesAuth5_() {
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function(ctx) {
+        if (ctx && ctx.success) {
+          PERMISSOES_CONTEXT = ctx;
+          aplicarRegrasDeAcesso_();
+        } else if (ctx && !ctx.success) {
+          var msg = String(ctx.message || "").toLowerCase();
+          var sessaoInvalida = msg.indexOf("expirada")      >= 0 ||
+                               msg.indexOf("nao encontrada") >= 0 ||
+                               msg.indexOf("invalida")       >= 0;
+          if (sessaoInvalida) {
+            limparSessaoFront_();
+            exibirTelaLogin_();
+            alert("Sua sessão expirou. Por favor, faça login novamente.");
+          }
+        }
+      })
+      .withFailureHandler(function() { /* silent — mantém controle visual pelo perfil local */ })
+      .authV2ObterContextoUsuario(SESSION);
   }
 
   // ==========================================
@@ -678,6 +1055,18 @@
     }
 
     limparAlertasTemporarios_();
+
+    if (MODULOS_BLOQUEADOS_PILOTO_V1.indexOf(mod) >= 0) {
+      div.innerHTML = `
+        <div class="module-shell">
+          <div class="avisos-wrap" style="display:block;text-align:center;padding:2rem;">
+            <strong>Módulo em implantação</strong><br>
+            Este módulo está temporariamente desabilitado no piloto operacional.<br>
+            <small>Entre em contato com o administrador do sistema.</small>
+          </div>
+        </div>`;
+      return;
+    }
 
     if (!usuarioPodeAbrirModulo_(mod)) {
       div.innerHTML = `
@@ -1453,6 +1842,38 @@
 
     areaAvisos.style.display = "block";
     areaAvisos.innerHTML = `Módulo atual: <strong>${nomes[mod] || mod}</strong>`;
+
+    if (typeof injetarBotaoAjuda_ === 'function') injetarBotaoAjuda_(mod);
+  }
+
+  function injetarBotaoAjuda_(mod) {
+    var el = document.getElementById('sgo-btn-ajuda-flutuante');
+    if (el) el.remove();
+    var MODULOS_COM_MANUAL = [
+      'dashboard','clientes','equipamentos','os','assistencia_tecnica',
+      'fin_cartoes','admin','documentos','registros','relatorios',
+      'tecnicos','contratos','missoes','mobile_campo','unidades'
+    ];
+    if (MODULOS_COM_MANUAL.indexOf(mod) < 0) return;
+    var btn = document.createElement('button');
+    btn.id = 'sgo-btn-ajuda-flutuante';
+    btn.textContent = '? Ajuda';
+    btn.title = 'Abrir manual operacional deste módulo';
+    btn.style.cssText = [
+      'position:fixed', 'bottom:22px', 'right:22px',
+      'background:#0f2d52', 'color:#fff', 'border:none',
+      'border-radius:50px', 'padding:10px 20px',
+      'font-size:13px', 'font-weight:600', 'cursor:pointer',
+      'z-index:9000', 'box-shadow:0 2px 10px rgba(0,0,0,0.28)',
+      'transition:background 0.15s', 'letter-spacing:0.3px'
+    ].join(';');
+    btn.onmouseenter = function() { this.style.background = '#1a4a80'; };
+    btn.onmouseleave = function() { this.style.background = '#0f2d52'; };
+    btn.onclick = function() {
+      if (typeof abrirManualModulo_ === 'function') abrirManualModulo_(mod);
+      else alert('Manual: atualize a página e tente novamente.');
+    };
+    document.body.appendChild(btn);
   }
 
   function limparAlertasTemporarios_() {

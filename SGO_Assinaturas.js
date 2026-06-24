@@ -1,10 +1,32 @@
+function assinaturasGetCfg_() {
+  return sgoGetCfgSafe_();
+}
+
 const SGO_ASSINATURAS = (() => {
-  const SHEET = SGO_CFG.SHEETS.SYS_ASSINATURAS;
   const DB_OS = "OS";
-  const SHEET_OS = SGO_CFG.SHEETS.OS_ORDENS;
   const STATUS_ATIVA = "ATIVA";
   const STATUS_REMOVIDA_ADMIN = "REMOVIDA_ADMIN";
   const STATUS_REMOVIDA_EXECUCAO = "REMOVIDA_EXECUCAO";
+
+  function getSheetAssinaturas_() {
+    const cfg = assinaturasGetCfg_();
+    return (cfg.SHEETS && cfg.SHEETS.SYS_ASSINATURAS) || "";
+  }
+
+  function getSheetOs_() {
+    const cfg = assinaturasGetCfg_();
+    return (cfg.SHEETS && cfg.SHEETS.OS_ORDENS) || "";
+  }
+
+  function getSheetTecnicos_() {
+    const cfg = assinaturasGetCfg_();
+    return (cfg.SHEETS && cfg.SHEETS.CAD_TECNICOS) || "";
+  }
+
+  function getFolderOs_() {
+    const cfg = assinaturasGetCfg_();
+    return (cfg.DRIVE && cfg.DRIVE.FOLDER_OS) || "";
+  }
 
   function colunasAssinaturas_() {
     return [
@@ -18,10 +40,10 @@ const SGO_ASSINATURAS = (() => {
 
   function garantirAbaAssinaturasOS_() {
     const ss = SGO_DATA.getDB(DB_OS);
-    let sheet = ss.getSheetByName(SHEET);
+    let sheet = ss.getSheetByName(getSheetAssinaturas_());
     const headersObrigatorios = colunasAssinaturas_();
     if (!sheet) {
-      sheet = ss.insertSheet(SHEET);
+      sheet = ss.insertSheet(getSheetAssinaturas_());
       sheet.getRange(1, 1, 1, headersObrigatorios.length).setValues([headersObrigatorios]);
       SGO_DATA.clearCache();
       try {
@@ -73,7 +95,7 @@ const SGO_ASSINATURAS = (() => {
     if (SGO_UTILS.safe(os.TECNICO_USUARIO_ID) === userId) return true;
     if (SGO_UTILS.safe(os.TECNICO_ID) === userId) return true;
     try {
-      const tecnico = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_TECNICOS, os.TECNICO_ID);
+      const tecnico = SGO_DATA.getById(getSheetTecnicos_(), os.TECNICO_ID);
       return !!(tecnico && SGO_UTILS.safe(tecnico.USUARIO_ID) === userId);
     } catch (e) {
       return false;
@@ -101,7 +123,7 @@ const SGO_ASSINATURAS = (() => {
     payload = payload || {};
     const osId = SGO_UTILS.safe(payload.OS_ID);
     if (!osId) return { success: false, message: "OS nao informada." };
-    const os = SGO_DATA.getById(SHEET_OS, osId, DB_OS);
+    const os = SGO_DATA.getById(getSheetOs_(), osId, DB_OS);
     if (!podeRemoverAssinatura_(sessao, os)) {
       return { success: false, message: "Acesso negado para assinar esta OS." };
     }
@@ -118,7 +140,7 @@ const SGO_ASSINATURAS = (() => {
           "image/png",
           "assinatura_" + tipoAss + "_" + osId + "_" + new Date().getTime() + ".png"
         );
-        const folderId = SGO_CFG.DRIVE.FOLDER_OS;
+        const folderId = getFolderOs_();
         const file = folderId
           ? DriveApp.getFolderById(folderId).createFile(blob)
           : DriveApp.createFile(blob);
@@ -147,10 +169,10 @@ const SGO_ASSINATURAS = (() => {
       STATUS: STATUS_ATIVA
     });
 
-    SGO_DATA.insert(SHEET, dados, DB_OS);
+    SGO_DATA.insert(getSheetAssinaturas_(), dados, DB_OS);
 
     if (tipoAss !== "TECNICO") {
-      SGO_DATA.update(SHEET_OS, osId, {
+      SGO_DATA.update(getSheetOs_(), osId, {
         ASSINATURA_ID: dados.ID,
         ASSINATURA_FILE_ID: fileId || "",
         ASSINATURA_LINK: linkDrive || "",
@@ -166,7 +188,7 @@ const SGO_ASSINATURAS = (() => {
   function listarPorOS(sessionId, osId) {
     exigirSessao(sessionId);
     garantirColunasGovernanca_();
-    const items = SGO_DATA.getManyByField(SHEET, "OS_ID", SGO_UTILS.safe(osId), DB_OS)
+    const items = SGO_DATA.getManyByField(getSheetAssinaturas_(), "OS_ID", SGO_UTILS.safe(osId), DB_OS)
       .filter(assinaturaAtiva_);
     return { success: true, items: items };
   }
@@ -175,11 +197,11 @@ const SGO_ASSINATURAS = (() => {
     const sessao = exigirSessao(sessionId);
     garantirColunasGovernanca_();
     const id = SGO_UTILS.safe(assinaturaId);
-    const assinatura = SGO_DATA.getById(SHEET, id, DB_OS);
+    const assinatura = SGO_DATA.getById(getSheetAssinaturas_(), id, DB_OS);
     if (!assinatura) return { success: false, message: "Assinatura nao encontrada." };
     if (!assinaturaAtiva_(assinatura)) return { success: true, message: "Assinatura ja estava removida." };
     const osId = SGO_UTILS.safe(assinatura.OS_ID);
-    const os = osId ? SGO_DATA.getById(SHEET_OS, osId, DB_OS) : null;
+    const os = osId ? SGO_DATA.getById(getSheetOs_(), osId, DB_OS) : null;
     if (!podeRemoverAssinatura_(sessao, os)) {
       return { success: false, message: "Acesso negado para remover assinatura." };
     }
@@ -189,7 +211,7 @@ const SGO_ASSINATURAS = (() => {
 
     const agora = SGO_UTILS.nowIso();
     const statusRemocao = statusPermiteEdicaoExecucao_(os) ? STATUS_REMOVIDA_EXECUCAO : STATUS_REMOVIDA_ADMIN;
-    const ok = SGO_DATA.update(SHEET, id, {
+    const ok = SGO_DATA.update(getSheetAssinaturas_(), id, {
       STATUS: statusRemocao,
       REMOVIDA_POR: sessao.usuario,
       REMOVIDA_EM: agora,
@@ -199,7 +221,7 @@ const SGO_ASSINATURAS = (() => {
     if (!ok) return { success: false, message: "Erro ao remover assinatura." };
 
     if (os && SGO_UTILS.safe(os.ASSINATURA_ID) === id) {
-      SGO_DATA.update(SHEET_OS, osId, {
+      SGO_DATA.update(getSheetOs_(), osId, {
         ASSINATURA_ID: "",
         ASSINATURA_FILE_ID: "",
         ASSINATURA_LINK: "",

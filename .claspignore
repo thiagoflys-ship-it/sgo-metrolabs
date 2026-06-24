@@ -6,6 +6,9 @@ UI_Scripts_BKP.html
 *_BKP.html
 _tmp_check.js
 _tmp_*.js
+AUTH10C_*_TEMP.js
+AUTH10G_*_TEMP.js
+AUTH10I_*_TEMP.js
 _tools/**
 _evidencias/**
 _PATCHES_LOCAL.bak/
@@ -15,3 +18,4 @@ _prototipos/**
 .clasp-prod*.json
 .clasp-prod.example.json
 docs/**
+backups/**

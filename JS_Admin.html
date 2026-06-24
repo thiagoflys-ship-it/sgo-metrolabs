@@ -147,6 +147,10 @@
                 <input id="usr_nome" type="text" placeholder="Nome completo do colaborador">
               </div>
               <div class="full">
+                <label for="usr_email">E-mail</label>
+                <input id="usr_email" type="email" placeholder="email@empresa.com">
+              </div>
+              <div class="full">
                 <label for="usr_senha">Senha</label>
                 <input id="usr_senha" type="password" placeholder="Digite a senha (ou deixe vazio p/ manter a atual)">
               </div>
@@ -177,13 +181,14 @@
                   <tr>
                     <th>Login</th>
                     <th>Nome Completo</th>
+                    <th>E-mail</th>
                     <th>Perfil</th>
                     <th>Status</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="usuariosTabelaBody">
-                  <tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>
+                  <tr><td colspan="6" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -426,23 +431,23 @@
     if (!tbody) return;
     
     if (!USUARIOS_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Buscando na base...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Buscando na base...</td></tr>';
     
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Falha ao buscar usuários.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Falha ao buscar usuários.</td></tr>';
           return;
         }
         renderTabelaUsuarios_(Array.isArray(res.items) ? res.items : []);
       })
       .withFailureHandler(function (err) {
         console.error("Falha ao pesquisar usuários:", err);
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Erro de comunicação ao buscar usuários.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Erro de comunicação ao buscar usuários.</td></tr>';
       })
       .usuariosPesquisar(SESSION, USUARIOS_STATE.filtro);
   }
@@ -454,7 +459,7 @@
     const items = Array.isArray(itemsOverride) ? itemsOverride : USUARIOS_STATE.items;
 
     if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum usuário encontrado para esta busca.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum usuário encontrado para esta busca.</td></tr>';
       return;
     }
 
@@ -466,6 +471,7 @@
         <tr>
           <td style="font-weight:700;">${escapeHtml_(item.USUARIO)}</td>
           <td>${escapeHtml_(item.NOME)}</td>
+          <td>${escapeHtml_(item.EMAIL || "")}</td>
           <td>${escapeHtml_(item.PERFIL)}</td>
           <td>${obterBadgeStatusHtml_(status)}</td>
           <td>
@@ -496,6 +502,7 @@
   function usuariosLimparFormulario_() {
     setValue_("usr_usuario", "");
     setValue_("usr_nome", "");
+    setValue_("usr_email", "");
     setValue_("usr_senha", "");
     setSelectValueSafe_("usr_perfil", "");
     setSelectValueSafe_("usr_cliente_id", "");
@@ -507,6 +514,7 @@
     return {
       USUARIO: getValue_("usr_usuario"),
       NOME: getValue_("usr_nome"),
+      EMAIL: getValue_("usr_email"),
       SENHA: getValue_("usr_senha"),
       PERFIL: getValue_("usr_perfil"),
       CLIENTE_ID: getValue_("usr_cliente_id")
@@ -520,6 +528,7 @@
     
     if (!payload.USUARIO) return alert("O Login é obrigatório.");
     if (!payload.NOME) return alert("O Nome Completo é obrigatório.");
+    if (!payload.EMAIL) return alert("O E-mail é obrigatório.");
     if (!payload.PERFIL) return alert("Selecione o perfil de acesso.");
     if (payload.PERFIL === "CLIENTE" && !payload.CLIENTE_ID) return alert("Para perfil CLIENTE, é obrigatório vincular a empresa.");
     
@@ -566,6 +575,7 @@
 
         setValue_("usr_usuario", item.USUARIO || "");
         setValue_("usr_nome", item.NOME || "");
+        setValue_("usr_email", item.EMAIL || "");
         setValue_("usr_senha", "");
         setSelectValueSafe_("usr_perfil", item.PERFIL || "");
         setSelectValueSafe_("usr_cliente_id", item.CLIENTE_ID || "");

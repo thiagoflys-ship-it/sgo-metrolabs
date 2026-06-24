@@ -9,6 +9,7 @@ function include(file) {
 function doGet(e) {
   try {
     const params = (e && e.parameter) ? e.parameter : {};
+
     const finTermoReq = obterTokenFinTermoPublicoV1_(e, params);
     const finPrestacaoReq = obterTokenFinPrestacaoPublicaV1_(e, params);
 
@@ -16,11 +17,11 @@ function doGet(e) {
     if (params.validar) {
       const codigo   = String(params.validar).trim();
       const template = HtmlService.createTemplateFromFile("Validacao_Documento");
-      template.APP_NOME          = SGO_CFG.APP_NAME || "METROLABS SGO+";
+      template.APP_NOME          = sgoGetCfgSafe_().APP_NAME || "METROLABS SGO+";
       template.CODIGO_VALIDACAO  = codigo;
       return template
         .evaluate()
-        .setTitle("Validação de Documento — " + (SGO_CFG.APP_NAME || "METROLABS SGO+"))
+        .setTitle("Validação de Documento — " + (sgoGetCfgSafe_().APP_NAME || "METROLABS SGO+"))
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
         .addMetaTag("viewport", "width=device-width, initial-scale=1");
     }
@@ -52,7 +53,7 @@ function doGet(e) {
     const template = HtmlService.createTemplateFromFile("Index");
     return template
       .evaluate()
-      .setTitle(SGO_CFG.APP_NAME)
+      .setTitle(sgoGetCfgSafe_().APP_NAME)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   } catch (err) {
@@ -170,7 +171,7 @@ function renderPublicRouteV2_(titulo, tipo, valor) {
   if (tipoSeguro === "MISSAO") return renderPublicMissaoV2_(valor);
   if (tipoSeguro === "AST") return renderPublicASTV2_(valor);
 
-  const appName = SGO_CFG.APP_NAME || "METROLABS SGO+";
+  const appName = sgoGetCfgSafe_().APP_NAME || "METROLABS SGO+";
   const safeTitulo = escapeHtmlSGO_(titulo);
   const safeTipo = escapeHtmlSGO_(tipo);
   const safeValor = escapeHtmlSGO_(String(valor || "").trim());
@@ -203,7 +204,7 @@ function renderPublicRouteV2_(titulo, tipo, valor) {
 }
 
 function renderPublicQRV2_(codigo) {
-  const appName = SGO_CFG.APP_NAME || "METROLABS SGO+";
+  const appName = sgoGetCfgSafe_().APP_NAME || "METROLABS SGO+";
   const res = (typeof SGO_RASTREABILIDADE !== "undefined")
     ? SGO_RASTREABILIDADE.consultarPublico(codigo)
     : { success: false, message: "Modulo de rastreabilidade indisponivel." };
@@ -260,7 +261,7 @@ function renderPublicQRV2_(codigo) {
 
 function renderPublicOSV2_(osId) {
   let os = null;
-  try { os = SGO_DATA.getById(SGO_CFG.SHEETS.OS_ORDENS, osId, "OS"); } catch (e) {}
+  try { os = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.OS_ORDENS, osId, "OS"); } catch (e) {}
   const body = os
     ? publicStatusBox_("Ordem de Servico localizada", "Acompanhamento publico da OS.", "ok") + publicGrid_([
         ["Numero", os.NUMERO_OS],
@@ -274,15 +275,15 @@ function renderPublicOSV2_(osId) {
       ])
     : publicStatusBox_("OS nao localizada", "Confira o codigo informado.", "erro");
 
-  return HtmlService.createHtmlOutput(publicPageHtml_("Acompanhamento de OS", SGO_CFG.APP_NAME, body, osId))
-    .setTitle("OS - " + SGO_CFG.APP_NAME)
+  return HtmlService.createHtmlOutput(publicPageHtml_("Acompanhamento de OS", sgoGetCfgSafe_().APP_NAME, body, osId))
+    .setTitle("OS - " + sgoGetCfgSafe_().APP_NAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 function renderPublicMissaoV2_(missaoId) {
   let missao = null;
-  try { missao = SGO_DATA.getById(SGO_CFG.SHEETS.AGD_MISSOES, missaoId, "OS"); } catch (e) {}
+  try { missao = SGO_DATA.getById(sgoGetCfgSafe_().SHEETS.AGD_MISSOES, missaoId, "OS"); } catch (e) {}
   const body = missao
     ? publicStatusBox_("Missao localizada", "Acompanhamento publico da missao tecnica.", "ok") + publicGrid_([
         ["Titulo", missao.TITULO],
@@ -295,14 +296,14 @@ function renderPublicMissaoV2_(missaoId) {
       ])
     : publicStatusBox_("Missao nao localizada", "Confira o codigo informado.", "erro");
 
-  return HtmlService.createHtmlOutput(publicPageHtml_("Acompanhamento de Missao", SGO_CFG.APP_NAME, body, missaoId))
-    .setTitle("Missao - " + SGO_CFG.APP_NAME)
+  return HtmlService.createHtmlOutput(publicPageHtml_("Acompanhamento de Missao", sgoGetCfgSafe_().APP_NAME, body, missaoId))
+    .setTitle("Missao - " + sgoGetCfgSafe_().APP_NAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 function renderPublicASTV2_(token) {
-  const appName = SGO_CFG.APP_NAME || "METROLABS SGO+";
+  const appName = sgoGetCfgSafe_().APP_NAME || "METROLABS SGO+";
   const res = (typeof SGO_AST !== "undefined")
     ? SGO_AST.consultarPublico(token)
     : { success: false, message: "Modulo de assistencia tecnica indisponivel." };
@@ -349,7 +350,7 @@ function publicASTPageHtml_(appName, res, token) {
     ':root{--green:#0b7a3e;--blue:#0b3b78;--bg:#eef3f8;--text:#172033;--muted:#667085;--line:#dbe4ef;--card:#fff}' +
     '*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}.wrap{max-width:920px;margin:0 auto;padding:14px 12px 28px}.hero{background:var(--card);border:1px solid var(--line);border-top:5px solid var(--green);border-radius:14px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.10)}' +
     '.head{padding:20px 18px;background:#f8fafc;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand img{max-width:190px;max-height:58px;object-fit:contain}.pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:#e9f7ef;color:#14532d;font-size:11px;font-weight:900;text-transform:uppercase}.head h1{font-size:22px;color:var(--blue);margin:16px 0 4px}.head p{margin:0;color:var(--muted);font-size:13px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:16px}.status strong{font-size:24px;color:var(--green)}.token{font-family:Consolas,monospace;font-size:11px;background:#edf2f7;border-radius:8px;padding:8px;word-break:break-all}.content{padding:16px 18px 20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.info{border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px}.info.full{grid-column:1/-1}.label{font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:900;margin-bottom:6px}.value{font-weight:800;line-height:1.35;word-break:break-word}.section{margin-top:18px}.section h2{font-size:13px;text-transform:uppercase;color:var(--blue);letter-spacing:.04em;margin:0 0 10px;border-bottom:2px solid #edf4ff;padding-bottom:7px}.timeline{list-style:none;margin:0;padding:0}.timeline li{position:relative;border-left:3px solid var(--green);padding:0 0 14px 12px}.timeline strong{display:block;font-size:13px}.timeline span{display:block;font-size:11px;color:var(--muted);margin:3px 0}.timeline p{margin:0;color:#344054;font-size:13px;line-height:1.4}.doc{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px;text-decoration:none;color:var(--text);margin-bottom:8px}.doc small{display:block;color:var(--muted);font-size:11px;margin-top:3px}.doc em{font-style:normal;font-size:12px;font-weight:900;color:var(--green)}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.btn{border:none;border-radius:10px;padding:12px;background:var(--blue);color:#fff;font-weight:900;text-align:center;text-decoration:none;cursor:pointer}.btn.green{background:var(--green)}.empty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--muted);font-size:13px}@media(max-width:640px){.wrap{padding:0}.hero{border-radius:0;border-left:0;border-right:0}.grid{grid-template-columns:1fr}.status{grid-template-columns:1fr}.actions{grid-template-columns:1fr}.brand img{max-width:150px}.content,.head{padding-left:14px;padding-right:14px}}@media print{body{background:#fff}.wrap{max-width:none;padding:0}.hero{box-shadow:none;border-radius:0}.actions{display:none}}' +
-    '</style></head><body><main class="wrap"><section class="hero"><header class="head"><div class="brand"><img src="' + escapeHtmlSGO_(SGO_CFG.LOGO_URL || "") + '" alt="Metrolabs"><span class="pill">Rastreabilidade SGO+</span></div><h1>Assistencia Tecnica</h1><p>Consulta publica mobile de rastreabilidade do equipamento.</p><div class="status"><div><div class="label">Status atual</div><strong>' + escapeHtmlSGO_(e.STATUS || "--") + '</strong></div><div class="token">' + escapeHtmlSGO_(token || "") + '</div></div></header><section class="content"><div class="grid">' +
+    '</style></head><body><main class="wrap"><section class="hero"><header class="head"><div class="brand"><img src="' + escapeHtmlSGO_(sgoGetCfgSafe_().LOGO_URL || "") + '" alt="Metrolabs"><span class="pill">Rastreabilidade SGO+</span></div><h1>Assistencia Tecnica</h1><p>Consulta publica mobile de rastreabilidade do equipamento.</p><div class="status"><div><div class="label">Status atual</div><strong>' + escapeHtmlSGO_(e.STATUS || "--") + '</strong></div><div class="token">' + escapeHtmlSGO_(token || "") + '</div></div></header><section class="content"><div class="grid">' +
     publicInfoBox_("Cliente", e.CLIENTE_NOME) + publicInfoBox_("Unidade", e.UNIDADE_NOME) + publicInfoBox_("Equipamento", e.EQUIPAMENTO_NOME, true) + publicInfoBox_("Numero de serie", e.EQUIPAMENTO_SERIE) + publicInfoBox_("Localizacao atual", e.LOCALIZACAO_ATUAL) + publicInfoBox_("Data de entrada", e.ENTRADA_DATA_BR || e.CRIADO_EM) + publicInfoBox_("Ultima movimentacao", e.ULTIMA_MOVIMENTACAO_BR || ultimoMov.CRIADO_EM || e.CRIADO_EM) + publicInfoBox_("Proxima acao", e.PROXIMA_ACAO, true) + (terceiro ? publicInfoBox_("Empresa terceira", terceiro.EMPRESA_NOME) + publicInfoBox_("Status do terceiro", terceiro.STATUS_TERCEIRO) + publicInfoBox_("Envio/prazo", [terceiro.ENVIADO_EM, terceiro.PRAZO_INFORMADO].filter(Boolean).join(" / ")) + publicInfoBox_("Ultima atualizacao terceiro", terceiro.ULTIMA_ATUALIZACAO || "") : "") + (laboratorio ? publicInfoBox_("Status laboratorio", laboratorio.STATUS) + publicInfoBox_("Servico laboratorio", laboratorio.TIPO_SERVICO) + publicInfoBox_("Entrada laboratorio", laboratorio.ENTRADA_EM) + publicInfoBox_("Resultado liberado", [laboratorio.CONFORMIDADE, laboratorio.RESULTADO_FINAL].filter(Boolean).join(" - ")) : "") +
     '</div><div class="section"><h2>Linha do tempo</h2><ul class="timeline">' + timelineHtml + '</ul></div><div class="section"><h2>Documentos disponiveis</h2>' + docsHtml + '</div><div class="actions"><button class="btn green" onclick="window.print()">Imprimir consulta</button><a class="btn" href="' + escapeHtmlSGO_(e.URL_PUBLICA || "") + '" download>Baixar link</a></div></section></section></main></body></html>';
 }
@@ -422,20 +423,20 @@ function escapeHtmlSGO_(valor) {
 
 function getPublicConfig() {
   return {
-    appName: SGO_CFG.APP_NAME,
-    version: SGO_CFG.VERSION,
-    logo: SGO_CFG.LOGO_URL,
-    motores: SGO_CFG.MOTORES || {},
-    idleSecondsDefault: (SGO_CFG.OCIOSIDADE && SGO_CFG.OCIOSIDADE.TEMPO_LIMITE_SEGUNDOS) || 300,
-    idleSoundDefault: (SGO_CFG.OCIOSIDADE && SGO_CFG.OCIOSIDADE.SOM_ATIVO_PADRAO) !== false,
-    mensagensMotivacionais: (SGO_CFG.MENSAGENS_MOTIVACIONAIS || []).slice(),
-    profiles: SGO_CFG.PROFILES || [],
-    sistema: SGO_CFG.SISTEMA || {},
-    status: SGO_CFG.STATUS || {}, // <- Adicionado para o frontend conhecer os status (PENDENTE, BLOQUEADO, etc)
-    modulos: SGO_CFG.MODULOS || {},
-    os: SGO_CFG.OS || {},
-    missoes: SGO_CFG.MISSOES || {},
-    frota: SGO_CFG.FROTA || {}
+    appName: sgoGetCfgSafe_().APP_NAME,
+    version: sgoGetCfgSafe_().VERSION,
+    logo: sgoGetCfgSafe_().LOGO_URL,
+    motores: sgoGetCfgSafe_().MOTORES || {},
+    idleSecondsDefault: (sgoGetCfgSafe_().OCIOSIDADE && sgoGetCfgSafe_().OCIOSIDADE.TEMPO_LIMITE_SEGUNDOS) || 300,
+    idleSoundDefault: (sgoGetCfgSafe_().OCIOSIDADE && sgoGetCfgSafe_().OCIOSIDADE.SOM_ATIVO_PADRAO) !== false,
+    mensagensMotivacionais: (sgoGetCfgSafe_().MENSAGENS_MOTIVACIONAIS || []).slice(),
+    profiles: sgoGetCfgSafe_().PROFILES || [],
+    sistema: sgoGetCfgSafe_().SISTEMA || {},
+    status: sgoGetCfgSafe_().STATUS || {}, // <- Adicionado para o frontend conhecer os status (PENDENTE, BLOQUEADO, etc)
+    modulos: sgoGetCfgSafe_().MODULOS || {},
+    os: sgoGetCfgSafe_().OS || {},
+    missoes: sgoGetCfgSafe_().MISSOES || {},
+    frota: sgoGetCfgSafe_().FROTA || {}
   };
 }
 
@@ -461,16 +462,16 @@ function obterTotaisDashboard(sessionId) {
     }
 
     // Busca todas as bases
-    const todosClientes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES);
-    const todasUnidades = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES);
-    const todosEquipamentos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS);
-    const todosDocumentos = SGO_DATA.getAll(SGO_CFG.SHEETS.DOC_DOCUMENTOS);
+    const todosClientes = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
+    const todasUnidades = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_UNIDADES);
+    const todosEquipamentos = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS);
+    const todosDocumentos = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.DOC_DOCUMENTOS);
 
     // Filtra apenas os registros ATIVOS
-    let ativosClientes = todosClientes.filter(c => SGO_UTILS.safeUpper(c.STATUS) === SGO_CFG.STATUS.ATIVO);
-    let ativosUnidades = todasUnidades.filter(u => SGO_UTILS.safeUpper(u.STATUS) === SGO_CFG.STATUS.ATIVO);
-    let ativosEquipamentos = todosEquipamentos.filter(e => SGO_UTILS.safeUpper(e.STATUS) === SGO_CFG.STATUS.ATIVO);
-    let ativosDocumentos = todosDocumentos.filter(d => SGO_UTILS.safeUpper(d.STATUS) === SGO_CFG.STATUS.ATIVO);
+    let ativosClientes = todosClientes.filter(c => SGO_UTILS.safeUpper(c.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO);
+    let ativosUnidades = todasUnidades.filter(u => SGO_UTILS.safeUpper(u.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO);
+    let ativosEquipamentos = todosEquipamentos.filter(e => SGO_UTILS.safeUpper(e.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO);
+    let ativosDocumentos = todosDocumentos.filter(d => SGO_UTILS.safeUpper(d.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO);
 
     // Aplica Trava de Cliente (Isolamento de Dados)
     if (isCliente) {
@@ -553,9 +554,9 @@ function obterTotaisDashboard(sessionId) {
     // ── Estatísticas de Registros Técnicos ────────────────────────────────
     let regTecStats = { total: 0, ok: 0, vencendo: 0, vencidos: 0, semValidade: 0 };
     try {
-      const todosRegistros = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_TECNICO);
+      const todosRegistros = SGO_DATA.getAll(sgoGetCfgSafe_().SHEETS.REG_TECNICO);
       const regAtivos = todosRegistros.filter(r =>
-        SGO_UTILS.safeUpper(r.STATUS) === SGO_CFG.STATUS.ATIVO &&
+        SGO_UTILS.safeUpper(r.STATUS) === sgoGetCfgSafe_().STATUS.ATIVO &&
         (!isCliente || SGO_UTILS.safe(r.CLIENTE_ID) === idClienteReal)
       );
       regTecStats.total = regAtivos.length;
@@ -596,5 +597,22 @@ function obterTotaisDashboard(sessionId) {
 
   } catch (e) {
     return { success: false, message: "Erro ao buscar totais: " + e.message };
+  }
+}
+
+// ── Logging de erros do frontend (piloto operacional) ───────────────────────
+function registrarErroPiloto(sessionId, modulo, mensagem) {
+  try {
+    var usuario = "ANONIMO";
+    try {
+      var sessao = validarSessao(sessionId);
+      if (sessao && sessao.valido) usuario = String(sessao.usuario || "ANONIMO");
+    } catch (_) {}
+    var entrada = "[PILOTO_ERRO][" + String(modulo || "?").toUpperCase() + "] " +
+                  String(mensagem || "").substring(0, 500);
+    SGO_DATA.log("PILOTO_ERRO_FRONTEND", usuario, entrada, "SISTEMA");
+    return { success: true };
+  } catch (e) {
+    return { success: false };
   }
 }

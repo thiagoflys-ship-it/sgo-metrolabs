@@ -1029,8 +1029,8 @@ const SGO_FIN_PROVISIONAMENTO = (() => {
     let sgoCfgWebAppUrl = "";
 
     try {
-      if (typeof SGO_CFG !== "undefined" && SGO_CFG.WEBAPP_URL) {
-        sgoCfgWebAppUrl = texto_(SGO_CFG.WEBAPP_URL);
+      if (typeof sgoGetCfgSafe_() !== "undefined" && sgoGetCfgSafe_().WEBAPP_URL) {
+        sgoCfgWebAppUrl = texto_(sgoGetCfgSafe_().WEBAPP_URL);
       }
     } catch (e) {
       avisos.push("Nao foi possivel ler SGO_CFG.WEBAPP_URL: " + e.message);

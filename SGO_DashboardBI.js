@@ -42,17 +42,17 @@ const SGO_DASHBOARD_BI = (() => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
-    const clientes = safeAll_(SGO_CFG.SHEETS.CAD_CLIENTES);
-    const equipamentos = safeAll_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS);
-    const pecas = safeAll_(SGO_CFG.SHEETS.CAD_PECAS);
-    const contratos = safeAll_(SGO_CFG.SHEETS.CAD_CONTRATOS);
-    const os = safeAll_(SGO_CFG.SHEETS.OS_ORDENS, "OS");
-    const missoes = safeAll_(SGO_CFG.SHEETS.AGD_MISSOES, "OS");
-    const apontamentos = safeAll_(SGO_CFG.SHEETS.AGD_APONTAMENTOS, "OS");
-    const materiais = safeAll_(SGO_CFG.SHEETS.OS_MATERIAIS, "OS");
-    const veiculos = safeAll_(SGO_CFG.SHEETS.FRT_VEICULOS, "FROTA");
-    const abastecimentos = safeAll_(SGO_CFG.SHEETS.FRT_ABASTECIMENTOS, "FROTA");
-    const manutencoes = safeAll_(SGO_CFG.SHEETS.FRT_MANUTENCAO, "FROTA");
+    const clientes = safeAll_(sgoGetCfgSafe_().SHEETS.CAD_CLIENTES);
+    const equipamentos = safeAll_(sgoGetCfgSafe_().SHEETS.CAD_EQUIPAMENTOS);
+    const pecas = safeAll_(sgoGetCfgSafe_().SHEETS.CAD_PECAS);
+    const contratos = safeAll_(sgoGetCfgSafe_().SHEETS.CAD_CONTRATOS);
+    const os = safeAll_(sgoGetCfgSafe_().SHEETS.OS_ORDENS, "OS");
+    const missoes = safeAll_(sgoGetCfgSafe_().SHEETS.AGD_MISSOES, "OS");
+    const apontamentos = safeAll_(sgoGetCfgSafe_().SHEETS.AGD_APONTAMENTOS, "OS");
+    const materiais = safeAll_(sgoGetCfgSafe_().SHEETS.OS_MATERIAIS, "OS");
+    const veiculos = safeAll_(sgoGetCfgSafe_().SHEETS.FRT_VEICULOS, "FROTA");
+    const abastecimentos = safeAll_(sgoGetCfgSafe_().SHEETS.FRT_ABASTECIMENTOS, "FROTA");
+    const manutencoes = safeAll_(sgoGetCfgSafe_().SHEETS.FRT_MANUTENCAO, "FROTA");
 
     const osFinalizadas = os.filter(function(o) {
       const st = SGO_UTILS.safeUpper(o.STATUS);
@@ -87,7 +87,7 @@ const SGO_DASHBOARD_BI = (() => {
       const d = parseDate_(c.DATA_FIM);
       if (!d) return false;
       const dias = Math.ceil((d - hoje) / 86400000);
-      return dias >= 0 && dias <= ((SGO_CFG.ALERTAS_V2 && SGO_CFG.ALERTAS_V2.DIAS_CONTRATO) || 60);
+      return dias >= 0 && dias <= ((sgoGetCfgSafe_().ALERTAS_V2 && sgoGetCfgSafe_().ALERTAS_V2.DIAS_CONTRATO) || 60);
     }).length;
 
     const pecasVencidas = pecas.filter(function(p) {

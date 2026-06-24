@@ -1,8 +1,8 @@
-const SGO_RASTREABILIDADE = (() => {
+﻿const SGO_RASTREABILIDADE = (() => {
   const DB = "ESTOQUE";
   const DB_OS = "OS";
   const DB_MAIN = "PRINCIPAL";
-  const SHEETS = SGO_CFG.SHEETS;
+  const SHEETS = sgoGetCfgSafe_().SHEETS;
 
   function consultar(sessionId, filtros) {
     exigirSessao(sessionId);
@@ -121,7 +121,7 @@ const SGO_RASTREABILIDADE = (() => {
 
 function rastreabilidadeConsultar(sessionId, filtros) {
   try {
-    return JSON.parse(JSON.stringify(SGO_RASTREABILIDADE.consultar(sessionId, filtros)));
+    pilotoGuardBloqueado_("RASTREABILIDADE"); return JSON.parse(JSON.stringify(SGO_RASTREABILIDADE.consultar(sessionId, filtros)));
   } catch (e) {
     return { success: false, message: "Erro: " + e.message };
   }
@@ -134,3 +134,4 @@ function rastreabilidadeConsultarPublico(codigo) {
     return { success: false, message: "Erro: " + e.message };
   }
 }
+
