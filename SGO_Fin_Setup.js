@@ -9372,3 +9372,138 @@ function AUDITAR_FLASH66_FECHAMENTO_ACEITE_VISUAL_SEM_GRAVAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+
+// FLASH.6.7 — preparacao de piloto operacional controlado da Bruna. Somente leitura.
+function AUDITAR_FLASH67_PREPARACAO_PILOTO_BRUNA_SEM_EXECUTAR() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.6.7',
+    ambiente: null, bloqueios: [], avisos: [],
+    flash66Aprovada: false,
+    piloto: 'BRUNA', cpfPiloto: '5553116198',
+    operacaoControladaAtiva: false,
+    liberacaoGeralFlash: false,
+    brunaAutorizada: false,
+    cpfNaoAutorizadoBloqueado: false,
+    flash44Intacto: false,
+    gravacaoReal: false,
+    roteiroPilotoControlado: [
+      '1. Abrir WebApp PRODUCAO_V2 v32 na URL oficial',
+      '2. Acessar Financeiro > Cartoes Flash',
+      '3. Localizar ou confirmar cadastro operacional da Bruna',
+      '4. Confirmar CPF 5553116198 vinculado ao cartao',
+      '5. Confirmar cartao vinculado, se existir',
+      '6. NAO criar recarga nesta etapa',
+      '7. NAO criar lancamento nesta etapa',
+      '8. NAO enviar comunicacao',
+      '9. Testar apenas telas, previas ou dry-run sem gravar',
+      '10. Se qualquer botao indicar gravacao real, PARAR',
+      '11. Se qualquer outro CPF for aceito sem bloqueio, PARAR',
+      '12. Se liberacao geral aparecer ativa, PARAR'
+    ],
+    checklistGoNoGoPiloto: {
+      ambientePRODUCAO_V2Confirmado: false,
+      webappV32Confirmado: true,
+      flash66Aprovado: false,
+      cpfBrunaConfirmado: false,
+      liberacaoGeralFalse: false,
+      operacaoControladaAtiva: false,
+      cpfNaoAutorizadoBloqueado: false,
+      semEfeitoReal: true,
+      prontoParaPilotoOperacionalControlado: false
+    },
+    confirmacoes: {
+      recargaAutomaticaCriada: false,
+      lancamentoAutomaticoCriado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      operacaoRealExecutada: false
+    }
+  };
+
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    resultado.checklistGoNoGoPiloto.ambientePRODUCAO_V2Confirmado = true;
+
+    var a66 = AUDITAR_FLASH66_FECHAMENTO_ACEITE_VISUAL_SEM_GRAVAR();
+    resultado.flash66Aprovada         = !!(a66 && a66.ok === true);
+    resultado.operacaoControladaAtiva = !!(a66 && a66.operacaoControladaAtiva);
+    resultado.liberacaoGeralFlash     = !!(a66 && a66.liberacaoGeralFlash);
+    resultado.brunaAutorizada         = !!(a66 && a66.brunaAutorizada);
+    resultado.flash44Intacto          = !!(a66 && a66.flash44Intacto);
+
+    resultado.cpfNaoAutorizadoBloqueado = resultado.operacaoControladaAtiva &&
+      !resultado.liberacaoGeralFlash &&
+      !_f413CPFAutorizado_('00000000000');
+
+    resultado.checklistGoNoGoPiloto.flash66Aprovado          = resultado.flash66Aprovada;
+    resultado.checklistGoNoGoPiloto.cpfBrunaConfirmado       = resultado.brunaAutorizada;
+    resultado.checklistGoNoGoPiloto.liberacaoGeralFalse      = !resultado.liberacaoGeralFlash;
+    resultado.checklistGoNoGoPiloto.operacaoControladaAtiva  = resultado.operacaoControladaAtiva;
+    resultado.checklistGoNoGoPiloto.cpfNaoAutorizadoBloqueado = resultado.cpfNaoAutorizadoBloqueado;
+    resultado.checklistGoNoGoPiloto.prontoParaPilotoOperacionalControlado =
+      resultado.flash66Aprovada && resultado.brunaAutorizada &&
+      !resultado.liberacaoGeralFlash && resultado.cpfNaoAutorizadoBloqueado;
+
+    if (!resultado.flash66Aprovada) {
+      resultado.bloqueios.push('AUDITAR_FLASH66 nao ok — piloto nao pode prosseguir sem aceite visual confirmado.');
+    }
+    if (resultado.liberacaoGeralFlash) {
+      resultado.bloqueios.push('REGRESSAO: FLASH_LIBERACAO_GERAL esta true — deve permanecer false.');
+    }
+    if (!resultado.brunaAutorizada) {
+      resultado.bloqueios.push('REGRESSAO: CPF da Bruna (' + resultado.cpfPiloto + ') nao autorizado no guard.');
+    }
+    if (!resultado.cpfNaoAutorizadoBloqueado) {
+      resultado.bloqueios.push('Guard de CPF nao autorizado com falha — CPF 00000000000 nao foi bloqueado corretamente.');
+    }
+
+    resultado.success = resultado.bloqueios.length === 0;
+    resultado.ok      = resultado.success && !resultado.liberacaoGeralFlash && resultado.brunaAutorizada;
+
+    if (resultado.ok) {
+      resultado.avisos.push('FLASH.6.7 preparacao OK: piloto controlado da Bruna tecnicamente apto. Aguardar autorizacao humana para executar operacao real.');
+    }
+  } catch (e67) {
+    resultado.bloqueios.push('Erro FLASH.6.7: ' + (e67 && e67.message ? e67.message : String(e67)));
+  }
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+// FLASH.6.7 — decisao GO/NO-GO para piloto operacional controlado da Bruna.
+function RESUMIR_FLASH67_GO_NOGO_PILOTO_BRUNA_SEM_EXECUTAR() {
+  var auditoria = AUDITAR_FLASH67_PREPARACAO_PILOTO_BRUNA_SEM_EXECUTAR();
+  var go = auditoria.ok === true &&
+           auditoria.success === true &&
+           auditoria.gravacaoReal === false &&
+           auditoria.confirmacoes.operacaoRealExecutada === false;
+  var resultado = {
+    success: true, ok: go,
+    fase: 'FLASH.6.7',
+    ambiente: auditoria.ambiente || 'PRODUCAO_V2',
+    decisao: go ? 'GO' : 'NO-GO',
+    resumo: go
+      ? 'GO tecnico: piloto controlado da Bruna apto. Aguarda autorizacao humana explicita para operacao real.'
+      : 'NO-GO: existem bloqueios que devem ser resolvidos antes do piloto.',
+    bloqueios: auditoria.bloqueios || [],
+    avisos: auditoria.avisos || [],
+    cpfPiloto: auditoria.cpfPiloto,
+    liberacaoGeralFlash: auditoria.liberacaoGeralFlash,
+    brunaAutorizada: auditoria.brunaAutorizada,
+    cpfNaoAutorizadoBloqueado: auditoria.cpfNaoAutorizadoBloqueado,
+    checklistGoNoGoPiloto: auditoria.checklistGoNoGoPiloto,
+    operacaoRealExecutada: false,
+    gravacaoReal: false
+  };
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
