@@ -457,6 +457,7 @@
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
         <button id="finBtnNovaRecarga" class="fin-btn fin-btn-primary fin-btn-sm" onclick="finAbrirNovaRecarga()" disabled title="Bloqueado: nenhum cartão ativo">+ Nova Recarga</button>
+        <button id="finBtnRecargaControlada" class="fin-btn fin-btn-warning fin-btn-sm" onclick="finAbrirRecargaControlada()" style="display:none" title="Recarga piloto controlada FLASH.6.8 — Bruna (5553116198)">⚡ Rec. Controlada</button>
         <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finCarregarRecargasV43()">↺ Atualizar</button>
         <label class="fin-toggle-label" title="Exibir recargas de teste (TESTE_CONTROLADO)">
           <input type="checkbox" id="finToggleMostrarTeste" onchange="finFiltrarRecargasV43()"> Mostrar testes
@@ -1293,6 +1294,51 @@
     <div class="fin-modal-footer">
       <button class="fin-btn fin-btn-secondary" onclick="finFecharNovaRecarga()">Cancelar</button>
       <button id="finModalRecBtnSalvar" class="fin-btn fin-btn-success" onclick="finSalvarRecargaV43()">Registrar Recarga</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Recarga Controlada FLASH.6.8 — apenas CPF 5553116198 nesta fase -->
+<div id="finModalRecargaControlada" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:480px">
+    <h3>⚡ Recarga Controlada — Piloto</h3>
+    <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
+      <strong>Fase piloto FLASH.6.8</strong> — apenas CPF 5553116198 autorizado. Primeira confirme o dry-run antes de registrar.
+    </div>
+    <div id="finF68Step1">
+      <div class="fin-fg">
+        <label class="fin-label">CPF</label>
+        <input id="finF68Cpf" class="fin-input" type="text" value="5553116198" readonly>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Cartão</label>
+        <input id="finF68CartaoId" class="fin-input" type="text" value="REAL-65BC435CB7E1" readonly>
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Valor (R$) *</label>
+        <input id="finF68Valor" class="fin-input" type="number" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Finalidade *</label>
+        <input id="finF68Finalidade" class="fin-input" type="text" placeholder="Ex: Crédito mensal junho/2026">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Observação</label>
+        <textarea id="finF68Obs" class="fin-textarea" rows="2" placeholder="Informações adicionais..."></textarea>
+      </div>
+    </div>
+    <div id="finF68Step2" style="display:none">
+      <div id="finF68Preview" style="background:#f0f9ff;border-radius:6px;padding:10px;font-size:12px;margin-bottom:10px;line-height:1.6"></div>
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;margin-top:4px">
+        <input type="checkbox" id="finF68ConfCheck" onchange="finF68OnConfCheck()" style="margin-top:2px">
+        <span>Confirmo que valor e finalidade estão corretos e autorizo o registro da recarga.</span>
+      </label>
+    </div>
+    <div id="finF68Status" style="min-height:22px;margin-top:8px;font-size:12px"></div>
+    <div class="fin-modal-footer" style="margin-top:12px">
+      <button class="fin-btn fin-btn-secondary" onclick="finFecharRecargaControlada()">Cancelar</button>
+      <button id="finF68BtnPrevia" class="fin-btn fin-btn-outline" onclick="finF68PreviaRecarga()">Pré-visualizar</button>
+      <button id="finF68BtnConfirmar" class="fin-btn fin-btn-success" onclick="finF68ConfirmarRecarga()" disabled>Confirmar e Registrar</button>
     </div>
   </div>
 </div>
@@ -4556,6 +4602,7 @@ function finRecRenderTudo(r) {
   finRecRenderBloqueio(r.recargaRealBloqueada, r.motivoBloqueio);
   finRecPopularDropdownCartoes(_finRecCartoesAtivos);
   finFiltrarRecargasV43();
+  finF68AtualizarBotao();
 }
 
 function finRecRenderKPIs(kpis) {
@@ -4937,6 +4984,140 @@ function finConfirmarCadastroCartaoReal() {
       if (prev) { prev.style.background = '#fff3f3'; prev.innerHTML = '<strong>Erro de comunicação:</strong> ' + (e.message || e); }
     })
     .FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO(_finSessao, p);
+}
+
+// ── FLASH.6.8 — Recarga Controlada Piloto Bruna (5553116198) ─────────────────
+var _finF68PreviewOk  = false;
+var _finF68Executando = false;
+
+function finF68AtualizarBotao() {
+  var btn = document.getElementById('finBtnRecargaControlada');
+  if (!btn) return;
+  var brunaAtiva = (_finRecCartoesAtivos || []).some(function(c) {
+    return String(c.CPF_COLABORADOR || c.cpf || '').replace(/\D/g, '') === '5553116198';
+  });
+  btn.style.display = brunaAtiva ? '' : 'none';
+}
+
+function finAbrirRecargaControlada() {
+  _finF68PreviewOk = false;
+  _finF68Executando = false;
+  ['finF68Valor','finF68Finalidade','finF68Obs'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var chk = document.getElementById('finF68ConfCheck'); if (chk) chk.checked = false;
+  var conf = document.getElementById('finF68BtnConfirmar'); if (conf) conf.disabled = true;
+  var st = document.getElementById('finF68Status'); if (st) st.innerHTML = '';
+  finF68ShowStep(1);
+  document.getElementById('finModalRecargaControlada').classList.add('open');
+}
+
+function finFecharRecargaControlada() {
+  var m = document.getElementById('finModalRecargaControlada');
+  if (m) m.className = m.className.replace(/\s*open/g, '');
+  _finF68PreviewOk = false;
+  _finF68Executando = false;
+}
+
+function finF68ShowStep(n) {
+  var s1 = document.getElementById('finF68Step1');
+  var s2 = document.getElementById('finF68Step2');
+  var btnPrev = document.getElementById('finF68BtnPrevia');
+  if (s1) s1.style.display = n === 1 ? 'block' : 'none';
+  if (s2) s2.style.display = n === 2 ? 'block' : 'none';
+  if (btnPrev) btnPrev.style.display = n === 1 ? '' : 'none';
+}
+
+function finF68OnConfCheck() {
+  var chk = document.getElementById('finF68ConfCheck');
+  var btn = document.getElementById('finF68BtnConfirmar');
+  if (btn) btn.disabled = !(_finF68PreviewOk && chk && chk.checked);
+}
+
+function finF68LerPayload() {
+  return {
+    cpf: '5553116198',
+    cartaoId: 'REAL-65BC435CB7E1',
+    valor: parseFloat(((document.getElementById('finF68Valor') || {}).value || '0')) || 0,
+    finalidade: ((document.getElementById('finF68Finalidade') || {}).value || '').trim(),
+    observacao: ((document.getElementById('finF68Obs') || {}).value || '').trim(),
+    confirmarFinanceiro: true
+  };
+}
+
+function finF68PreviaRecarga() {
+  var payload = finF68LerPayload();
+  if (!payload.valor || payload.valor <= 0) { finF68SetStatus('Informe um valor maior que zero.', 'error'); return; }
+  if (!payload.finalidade) { finF68SetStatus('Finalidade é obrigatória.', 'error'); return; }
+  var btnPrev = document.getElementById('finF68BtnPrevia');
+  if (btnPrev) { btnPrev.disabled = true; btnPrev.textContent = 'Validando...'; }
+  finF68SetStatus('Executando dry-run...', 'info');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (btnPrev) { btnPrev.disabled = false; btnPrev.textContent = 'Pré-visualizar'; }
+      if (!r || !r.ok) {
+        finF68SetStatus('Bloqueado: ' + ((r && r.bloqueios || []).join('; ') || 'Erro desconhecido.'), 'error');
+        return;
+      }
+      _finF68PreviewOk = true;
+      finF68ShowStep(2);
+      var prev = document.getElementById('finF68Preview');
+      if (prev && r.payloadNormalizado) {
+        var n = r.payloadNormalizado;
+        prev.innerHTML =
+          '<strong style="color:#0f2d52">Pré-visualização aprovada</strong><br>' +
+          'CPF: ' + finEH(n.cpf) + '<br>' +
+          'Cartão: ' + finEH(n.cartaoId) + '<br>' +
+          'Valor: <strong>R$ ' + (n.valor || 0).toFixed(2) + '</strong><br>' +
+          'Finalidade: ' + finEH(n.finalidade) + '<br>' +
+          'Protocolo: <code style="font-size:11px">' + finEH(r.chaveIdempotencia || '') + '</code><br>' +
+          '<span style="color:#28a745;font-size:11px">Sem bloqueios. Confirme para registrar.</span>';
+      }
+      finF68SetStatus('', '');
+    })
+    .withFailureHandler(function(e) {
+      if (btnPrev) { btnPrev.disabled = false; btnPrev.textContent = 'Pré-visualizar'; }
+      finF68SetStatus('Falha: ' + finEH(e.message || ''), 'error');
+    })
+    .PREVER_RECARGA_FLASH_CONTROLADA_FINANCEIRO_SEM_GRAVAR(payload);
+}
+
+function finF68ConfirmarRecarga() {
+  if (!_finF68PreviewOk || _finF68Executando) return;
+  var chk = document.getElementById('finF68ConfCheck');
+  if (!chk || !chk.checked) { finF68SetStatus('Marque a confirmação antes de prosseguir.', 'error'); return; }
+  _finF68Executando = true;
+  var btn = document.getElementById('finF68BtnConfirmar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrando...'; }
+  finF68SetStatus('Registrando recarga controlada...', 'info');
+  var payload = finF68LerPayload();
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _finF68Executando = false;
+      if (btn) btn.textContent = 'Confirmar e Registrar';
+      if (!r || !r.ok) {
+        if (btn) btn.disabled = false;
+        finF68SetStatus('Falha: ' + ((r && r.bloqueios || []).join('; ') || 'Erro.'), 'error');
+        return;
+      }
+      finF68SetStatus('✔ Recarga registrada! Protocolo: ' + finEH(r.chaveIdempotencia || r.recargaId || ''), 'success');
+      finCarregarRecargasV43();
+      finCarregarDashboard();
+    })
+    .withFailureHandler(function(e) {
+      _finF68Executando = false;
+      if (btn) { btn.disabled = false; btn.textContent = 'Confirmar e Registrar'; }
+      finF68SetStatus('Falha: ' + finEH(e.message || ''), 'error');
+    })
+    .EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO(payload);
+}
+
+function finF68SetStatus(msg, type) {
+  var el = document.getElementById('finF68Status');
+  if (!el) return;
+  if (!msg) { el.innerHTML = ''; return; }
+  var cor = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#0366d6';
+  el.innerHTML = '<span style="color:' + cor + '">' + finEH(msg) + '</span>';
 }
 
 // Compatibilidade: manter funções antigas como no-op
