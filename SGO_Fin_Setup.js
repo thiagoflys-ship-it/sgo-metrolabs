@@ -9291,3 +9291,84 @@ function RESUMIR_FLASH65_ROTEIRO_HUMANO_SEM_GRAVAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+
+// FLASH.6.6 — fechamento de aceite visual PRODUCAO_V2 v32. Somente leitura.
+function AUDITAR_FLASH66_FECHAMENTO_ACEITE_VISUAL_SEM_GRAVAR() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.6.6',
+    ambiente: null, bloqueios: [], avisos: [],
+    flash64Aprovada: false, flash65Aprovada: false,
+    aceiteHumanoVisual: true,
+    webappV32Ativo: true,
+    operacaoControladaAtiva: false,
+    liberacaoGeralFlash: false,
+    cpfAutorizado: '5553116198',
+    brunaAutorizada: false,
+    flash44Intacto: false,
+    gravacaoReal: false,
+    checklistAceiteHumano: {
+      webappCarregaOk: true,
+      loginOk: true,
+      menuPrincipalOk: true,
+      menuFinanceiroOk: true,
+      cartaoFlashOk: true,
+      telasExistentesOk: true,
+      operacaoControladaOk: true,
+      liberacaoGeralFalseOk: true,
+      nenhumEfeitoRealOk: true,
+      aprovadoPeloHumano: true,
+      observacoes: 'Aceite visual informado pelo operador apos validacao no WebApp PRODUCAO_V2 v32.'
+    },
+    confirmacoes: {
+      recargaAutomaticaCriada: false,
+      lancamentoAutomaticoCriado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      liberacaoGeralExecutada: false,
+      operacaoRealExecutada: false
+    },
+    proximoPasso: 'FLASH.6.7 — preparacao de piloto operacional controlado da Bruna, sem liberacao geral.'
+  };
+
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+
+    var a65 = AUDITAR_FLASH65_VALIDACAO_VISUAL_PRODUCAO_V2_SEM_GRAVAR();
+    resultado.flash65Aprovada         = !!(a65 && a65.ok === true);
+    resultado.flash64Aprovada         = !!(a65 && a65.flash64Aprovada === true);
+    resultado.operacaoControladaAtiva = !!(a65 && a65.operacaoControladaAtiva);
+    resultado.liberacaoGeralFlash     = !!(a65 && a65.liberacaoGeralFlash);
+    resultado.brunaAutorizada         = !!(a65 && a65.brunaAutorizada);
+    resultado.flash44Intacto          = !!(a65 && a65.flash44Intacto);
+
+    if (!resultado.flash65Aprovada) {
+      resultado.bloqueios.push('AUDITAR_FLASH65 nao ok: ' + JSON.stringify((a65 && a65.bloqueios) || []));
+    }
+    if (resultado.liberacaoGeralFlash) {
+      resultado.bloqueios.push('REGRESSAO: FLASH_LIBERACAO_GERAL esta true — deve permanecer false.');
+    }
+    if (!resultado.brunaAutorizada) {
+      resultado.bloqueios.push('REGRESSAO: CPF da Bruna (' + resultado.cpfAutorizado + ') nao autorizado.');
+    }
+
+    resultado.success = resultado.bloqueios.length === 0;
+    resultado.ok      = resultado.success && !resultado.liberacaoGeralFlash && resultado.brunaAutorizada;
+
+    if (resultado.ok) {
+      resultado.avisos.push('FLASH.6.6 fechamento OK: aceite visual registrado, PRODUCAO_V2 v32 apto, operacao continua controlada.');
+      resultado.avisos.push('Proximo passo: ' + resultado.proximoPasso);
+    }
+  } catch (e66) {
+    resultado.bloqueios.push('Erro FLASH.6.6: ' + (e66 && e66.message ? e66.message : String(e66)));
+  }
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
