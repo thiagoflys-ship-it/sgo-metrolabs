@@ -9507,3 +9507,359 @@ function RESUMIR_FLASH67_GO_NOGO_PILOTO_BRUNA_SEM_EXECUTAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+
+// FLASH.FINAL — fechamento operacional do modulo Flash. Todas as funcoes sao somente leitura.
+
+function FINALIZAR_FLASH_DOCUMENTOS_BRUNA_SEM_ENVIAR() {
+  var CPF_BRUNA = '5553116198';
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.FINAL.DOCUMENTOS',
+    ambiente: null, cpf: CPF_BRUNA,
+    termoResponsabilidadeOk: false,
+    relatorioMensalOk: false,
+    notificacaoPendenciaOk: false,
+    advertenciaOk: false,
+    htmlsGerados: {},
+    envioReal: false, gravacaoReal: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    try {
+      var h1 = GERAR_HTML_TERMO_RESPONSABILIDADE_FLASH_SEM_GRAVAR(CPF_BRUNA);
+      resultado.termoResponsabilidadeOk = typeof h1 === 'string' && h1.indexOf('<!doctype html') >= 0;
+      resultado.htmlsGerados.termoResponsabilidade = resultado.termoResponsabilidadeOk
+        ? '[HTML OK, ' + h1.length + ' chars]' : '[falhou]';
+    } catch (e1) { resultado.bloqueios.push('Termo: ' + (e1.message || String(e1))); }
+    try {
+      var h2 = GERAR_HTML_RELATORIO_MENSAL_COLABORADOR_FLASH_SEM_GRAVAR(CPF_BRUNA, '');
+      resultado.relatorioMensalOk = typeof h2 === 'string' && h2.indexOf('<!doctype html') >= 0;
+      resultado.htmlsGerados.relatorioMensal = resultado.relatorioMensalOk
+        ? '[HTML OK, ' + h2.length + ' chars]' : '[falhou]';
+    } catch (e2) { resultado.bloqueios.push('Relatorio: ' + (e2.message || String(e2))); }
+    try {
+      var h3 = GERAR_HTML_NOTIFICACAO_PENDENCIA_FLASH_SEM_GRAVAR(CPF_BRUNA);
+      resultado.notificacaoPendenciaOk = typeof h3 === 'string' && h3.indexOf('<!doctype html') >= 0;
+      resultado.htmlsGerados.notificacaoPendencia = resultado.notificacaoPendenciaOk
+        ? '[HTML OK, ' + h3.length + ' chars]' : '[falhou]';
+    } catch (e3) { resultado.bloqueios.push('Notificacao: ' + (e3.message || String(e3))); }
+    try {
+      var h4 = GERAR_HTML_ADVERTENCIA_FLASH_SEM_GRAVAR(CPF_BRUNA);
+      resultado.advertenciaOk = typeof h4 === 'string' && h4.indexOf('<!doctype html') >= 0;
+      resultado.htmlsGerados.advertencia = resultado.advertenciaOk
+        ? '[HTML OK, ' + h4.length + ' chars]' : '[falhou]';
+    } catch (e4) { resultado.bloqueios.push('Advertencia: ' + (e4.message || String(e4))); }
+    resultado.success = resultado.bloqueios.length === 0;
+    resultado.ok = resultado.success;
+    if (resultado.ok) {
+      resultado.avisos.push('Todos os HTMLs gerados. Nenhum envio ou gravacao executado.');
+    }
+  } catch (ef) {
+    resultado.bloqueios.push('Erro FLASH.FINAL.DOCUMENTOS: ' + (ef.message || String(ef)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function FINALIZAR_FLASH_CONCILIACAO_IA_SEM_GRAVAR() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.FINAL.CONCILIACAO_IA',
+    ambiente: null,
+    conciliacaoIaDisponivel: false,
+    dadosSuficientes: false,
+    totalExtratosLidos: 0,
+    totalPrestacoesLidas: 0,
+    totalPossiveisMatches: 0,
+    totalDivergencias: 0,
+    resumoIA: null,
+    gravacaoReal: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    resultado.conciliacaoIaDisponivel = true;
+    var pre = PRE_CONCILIAR_FLASH_IA_SEM_GRAVAR();
+    var sugestoes = pre.sugestoes || [];
+    resultado.totalExtratosLidos   = pre.total || 0;
+    resultado.totalPrestacoesLidas = sugestoes.filter(function(s) {
+      return s.prestacaoId && s.prestacaoId !== '';
+    }).length;
+    resultado.totalPossiveisMatches = sugestoes.filter(function(s) {
+      return s.classificacao === 'MATCH_EXATO' || s.classificacao === 'PROVAVEL_MATCH';
+    }).length;
+    resultado.totalDivergencias = sugestoes.filter(function(s) {
+      return s.classificacao === 'DIVERGENCIA_VALOR' || s.classificacao === 'SEM_PRESTACAO' ||
+             s.classificacao === 'SEM_COMPROVANTE' || s.classificacao === 'CARTAO_NAO_CADASTRADO';
+    }).length;
+    resultado.resumoIA = pre.resumo || {};
+    resultado.dadosSuficientes = resultado.totalExtratosLidos > 0;
+    if (!resultado.dadosSuficientes) {
+      resultado.avisos.push('FIN_CARTOES_EXTRATOS vazia ou sem registros. Importe extratos reais para conciliar.');
+    }
+    resultado.success = true;
+    resultado.ok = resultado.conciliacaoIaDisponivel;
+    if (resultado.ok) {
+      resultado.avisos.push('Conciliacao IA executada sem gravar. Total extratos: ' + resultado.totalExtratosLidos + '. Matches: ' + resultado.totalPossiveisMatches + '. Divergencias: ' + resultado.totalDivergencias + '.');
+    }
+  } catch (ec) {
+    resultado.bloqueios.push('Erro FLASH.FINAL.CONCILIACAO_IA: ' + (ec.message || String(ec)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function FINALIZAR_FLASH_BRUNA_PRONTA_PARA_PILOTO_SEM_EXECUTAR() {
+  var CPF_BRUNA = '5553116198';
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.FINAL.BRUNA',
+    ambiente: null, cpf: CPF_BRUNA,
+    brunaAutorizada: false,
+    cpfNaoAutorizadoBloqueado: false,
+    liberacaoGeralFalse: false,
+    operacaoControladaAtiva: false,
+    cartaoEncontrado: false,
+    cartaoId: null,
+    finalCartao: null,
+    prontoParaPiloto: false,
+    gravacaoReal: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    var props = PropertiesService.getScriptProperties();
+    resultado.brunaAutorizada         = !!_f413CPFAutorizado_(CPF_BRUNA);
+    resultado.cpfNaoAutorizadoBloqueado = !_f413CPFAutorizado_('00000000000');
+    resultado.liberacaoGeralFalse     = props.getProperty('FLASH_LIBERACAO_GERAL') !== 'true';
+    resultado.operacaoControladaAtiva = props.getProperty('FLASH_OPERACAO_CONTROLADA_ATIVA') === 'true';
+    if (!resultado.brunaAutorizada) {
+      resultado.bloqueios.push('CPF da Bruna (' + CPF_BRUNA + ') nao autorizado no guard FLASH.4.13.');
+    }
+    if (!resultado.liberacaoGeralFalse) {
+      resultado.bloqueios.push('REGRESSAO: FLASH_LIBERACAO_GERAL esta true — deve permanecer false.');
+    }
+    if (!resultado.operacaoControladaAtiva) {
+      resultado.bloqueios.push('FLASH_OPERACAO_CONTROLADA_ATIVA esta false — operacao bloqueada.');
+    }
+    if (!resultado.cpfNaoAutorizadoBloqueado) {
+      resultado.bloqueios.push('Guard de CPF nao autorizado com falha — CPF 00000000000 nao foi bloqueado.');
+    }
+    try {
+      var dbId = props.getProperty('DB_FIN_ID');
+      if (dbId) {
+        var sheet = SpreadsheetApp.openById(dbId).getSheetByName('FIN_CARTOES');
+        if (sheet && sheet.getLastRow() >= 2) {
+          var data = sheet.getDataRange().getValues();
+          var H = data[0].map(function(h) { return String(h == null ? '' : h).trim(); });
+          var iCpf = H.indexOf('CPF_COLABORADOR');
+          var iId  = H.indexOf('CARTAO_ID');
+          var iFin = H.indexOf('FINAL_CARTAO');
+          var iSt  = H.indexOf('STATUS');
+          for (var i = 1; i < data.length; i++) {
+            var rowCpf = String(data[i][iCpf] == null ? '' : data[i][iCpf]).replace(/\D/g, '');
+            if (rowCpf !== CPF_BRUNA) continue;
+            var st = iSt >= 0 ? String(data[i][iSt]).trim().toUpperCase() : '';
+            if (st === 'INATIVO' || st === 'CANCELADO') continue;
+            resultado.cartaoEncontrado = true;
+            resultado.cartaoId   = iId  >= 0 ? String(data[i][iId]  == null ? '' : data[i][iId]).trim()   : null;
+            resultado.finalCartao = iFin >= 0 ? String(data[i][iFin] == null ? '' : data[i][iFin]).slice(-4) : null;
+            break;
+          }
+        }
+      }
+    } catch (el) {
+      resultado.avisos.push('Erro ao consultar FIN_CARTOES: ' + (el.message || String(el)));
+    }
+    if (!resultado.cartaoEncontrado) {
+      resultado.bloqueios.push('Cartao da Bruna nao localizado/cadastrado em FIN_CARTOES com CPF ' + CPF_BRUNA + ' e status ativo.');
+    }
+    resultado.success = resultado.bloqueios.length === 0;
+    resultado.prontoParaPiloto = resultado.success;
+    resultado.ok = resultado.prontoParaPiloto;
+    if (resultado.ok) {
+      resultado.avisos.push('Bruna autorizada e cartao localizado (id:' + resultado.cartaoId + ', final:' + resultado.finalCartao + '). Piloto pronto para autorizacao humana de execucao real.');
+    }
+  } catch (eb) {
+    resultado.bloqueios.push('Erro FLASH.FINAL.BRUNA: ' + (eb.message || String(eb)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function PREPARAR_FLASH_EXECUCAO_REAL_BRUNA_COM_VALOR_CONTROLADO(payload) {
+  var CPF_BRUNA = '5553116198';
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.EXECUCAO_REAL',
+    ambiente: null, cpf: CPF_BRUNA,
+    payloadRecebido: payload || null,
+    cpfValido: false,
+    valorValido: false,
+    finalidadeValida: false,
+    confirmarValido: false,
+    liberacaoGeralFalse: false,
+    brunaAutorizada: false,
+    validacoesPassaram: false,
+    prontoParaExecucaoManual: false,
+    recargaCriada: false,
+    gravacaoReal: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    if (!payload || typeof payload !== 'object') {
+      resultado.bloqueios.push('Payload ausente ou invalido. Esperado: {cpf, valor, finalidade, observacao, confirmarExecucaoReal:true}');
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    var cpfPayload   = String(payload.cpf  || '').replace(/\D/g, '');
+    var valor        = Number(payload.valor);
+    var finalidade   = String(payload.finalidade   || '').trim();
+    var confirmar    = payload.confirmarExecucaoReal === true;
+    resultado.cpfValido        = cpfPayload === CPF_BRUNA;
+    resultado.valorValido      = !isNaN(valor) && valor > 0;
+    resultado.finalidadeValida = finalidade.length > 0;
+    resultado.confirmarValido  = confirmar;
+    if (!resultado.cpfValido) {
+      resultado.bloqueios.push('CPF do payload (' + cpfPayload + ') nao e o CPF piloto autorizado (' + CPF_BRUNA + ').');
+    }
+    if (!resultado.confirmarValido) {
+      resultado.bloqueios.push('confirmarExecucaoReal deve ser explicitamente true no payload.');
+    }
+    if (!resultado.valorValido) {
+      resultado.bloqueios.push('Valor invalido: deve ser numero positivo. Recebido: ' + payload.valor);
+    }
+    if (!resultado.finalidadeValida) {
+      resultado.bloqueios.push('finalidade nao pode estar vazia.');
+    }
+    var props = PropertiesService.getScriptProperties();
+    resultado.liberacaoGeralFalse = props.getProperty('FLASH_LIBERACAO_GERAL') !== 'true';
+    resultado.brunaAutorizada     = !!_f413CPFAutorizado_(CPF_BRUNA);
+    if (!resultado.liberacaoGeralFalse) {
+      resultado.bloqueios.push('REGRESSAO: FLASH_LIBERACAO_GERAL esta true — execucao bloqueada.');
+    }
+    if (!resultado.brunaAutorizada) {
+      resultado.bloqueios.push('CPF da Bruna nao autorizado no guard FLASH.4.13.');
+    }
+    resultado.validacoesPassaram = resultado.bloqueios.length === 0;
+    if (resultado.validacoesPassaram) {
+      resultado.prontoParaExecucaoManual = true;
+      resultado.success = true;
+      resultado.ok = true;
+      resultado.avisos.push('Fluxo preparado, mas execucao real exige rotina segura confirmada.');
+      resultado.avisos.push('Para executar: implemente EXECUTAR_RECARGA_FLASH_CONTROLADA baseada no padrao FLASH.4.10 com payload dinamico, aprovada por revisao humana, e chame manualmente apos aceite.');
+    }
+  } catch (er) {
+    resultado.bloqueios.push('Erro FLASH.EXECUCAO_REAL: ' + (er.message || String(er)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function FINALIZAR_FLASH_MODULO_OPERACIONAL_COMPLETO() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.FINAL',
+    ambiente: null,
+    documentosOk: false,
+    conciliacaoIaOk: false,
+    brunaOk: false,
+    pilotoPreparadoOk: false,
+    liberacaoGeralFlash: false,
+    cpfPiloto: '5553116198',
+    flash44Intacto: false,
+    operacaoRealExecutada: false,
+    recargaCriada: false,
+    lancamentoCriado: false,
+    emailOuWhatsappEnviado: false,
+    extratoImportado: false,
+    prontoParaUsoOperacional: false,
+    bloqueios: [], avisos: [],
+    proximasAcoesObjetivas: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+
+    var docs = FINALIZAR_FLASH_DOCUMENTOS_BRUNA_SEM_ENVIAR();
+    resultado.documentosOk = !!(docs && docs.ok);
+    if (!resultado.documentosOk) {
+      resultado.bloqueios.push('Documentos: ' + JSON.stringify((docs && docs.bloqueios) || []));
+    }
+
+    var ia = FINALIZAR_FLASH_CONCILIACAO_IA_SEM_GRAVAR();
+    resultado.conciliacaoIaOk = !!(ia && ia.ok);
+    if (!resultado.conciliacaoIaOk) {
+      resultado.avisos.push('ConciliacaoIA nao disponivel — ' + JSON.stringify((ia && ia.avisos) || []));
+    } else if (ia && !ia.dadosSuficientes) {
+      resultado.avisos.push('ConciliacaoIA: disponivel mas sem extratos para conciliar ainda.');
+    }
+
+    var bruna = FINALIZAR_FLASH_BRUNA_PRONTA_PARA_PILOTO_SEM_EXECUTAR();
+    resultado.brunaOk = !!(bruna && bruna.ok);
+    if (!resultado.brunaOk) {
+      resultado.bloqueios.push('Bruna: ' + JSON.stringify((bruna && bruna.bloqueios) || []));
+    }
+
+    var a67 = AUDITAR_FLASH67_PREPARACAO_PILOTO_BRUNA_SEM_EXECUTAR();
+    resultado.pilotoPreparadoOk   = !!(a67 && a67.ok);
+    resultado.liberacaoGeralFlash = !!(a67 && a67.liberacaoGeralFlash);
+    resultado.flash44Intacto      = !!(a67 && a67.flash44Intacto);
+    if (!resultado.pilotoPreparadoOk) {
+      resultado.bloqueios.push('Piloto FLASH.6.7: ' + JSON.stringify((a67 && a67.bloqueios) || []));
+    }
+    if (resultado.liberacaoGeralFlash) {
+      resultado.bloqueios.push('REGRESSAO CRITICA: liberacaoGeralFlash esta true.');
+    }
+
+    resultado.prontoParaUsoOperacional =
+      resultado.pilotoPreparadoOk && resultado.brunaOk && !resultado.liberacaoGeralFlash;
+    resultado.success = resultado.bloqueios.length === 0;
+    resultado.ok = resultado.success;
+
+    if (resultado.ok) {
+      resultado.proximasAcoesObjetivas = [
+        '1. Aprovar e implementar EXECUTAR_RECARGA_FLASH_CONTROLADA com payload dinamico (padrao FLASH.4.10).',
+        '2. Chamar PREPARAR_FLASH_EXECUCAO_REAL_BRUNA_COM_VALOR_CONTROLADO({cpf:"5553116198",valor:<N>,finalidade:"<texto>",observacao:"<texto>",confirmarExecucaoReal:true}) apos rotina aprovada.',
+        '3. Se conciliacaoIa sem dados: importar extratos reais em FIN_CARTOES_EXTRATOS antes da conciliacao.',
+        '4. Documentos HTMLs disponiveis via GERAR_HTML_* — exibir ou salvar via UI apos operacao real.'
+      ];
+    } else {
+      resultado.proximasAcoesObjetivas = [
+        '1. Resolver bloqueios listados em bloqueios[].',
+        '2. Reexecutar FINALIZAR_FLASH_MODULO_OPERACIONAL_COMPLETO().'
+      ];
+    }
+  } catch (em) {
+    resultado.bloqueios.push('Erro FLASH.FINAL: ' + (em.message || String(em)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
