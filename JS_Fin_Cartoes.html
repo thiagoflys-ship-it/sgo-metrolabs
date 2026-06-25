@@ -1629,6 +1629,28 @@
   </div>
 </div>
 
+<!-- Modal: Reprovar Prestação — FLASH.10.1 -->
+<div id="finModalReprovar" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:480px">
+    <h3>Reprovar Prestação</h3>
+    <div class="fin-alert fin-alert-warning" style="margin-bottom:12px">
+      Informe o motivo da reprovação. O colaborador poderá visualizá-lo no aplicativo.
+    </div>
+    <div style="font-size:13px;color:#0f2d52;margin-bottom:10px;font-weight:600">
+      Colaborador: <span id="finPMReprovarInfo"></span>
+    </div>
+    <div class="fin-fg full">
+      <label class="fin-label">Motivo da reprovação *</label>
+      <textarea id="finPMReprovarMotivo" class="fin-textarea" rows="3" placeholder="Descreva o motivo (obrigatório, mínimo 5 caracteres)"></textarea>
+    </div>
+    <div id="finPMReprovarErro" style="display:none;margin-top:8px"></div>
+    <div class="fin-modal-footer">
+      <button class="fin-btn fin-btn-secondary" onclick="finPMReprovarFechar_()">Cancelar</button>
+      <button class="fin-btn fin-btn-danger" onclick="finPMReprovarConfirmar_()">Confirmar Reprovação</button>
+    </div>
+  </div>
+</div>
+
 <style>
 @media print {
   .fin-flash-op-actions, button, .fin-tab-nav, .fin-sidebar { display: none !important; }
@@ -5723,6 +5745,7 @@ function finPMRenderTabela_(itens) {
     '<th>Lancamento</th><th>Funcionario</th><th>Valor</th><th>Data</th>' +
     '<th>OS</th><th>Descricao</th><th>Status</th><th>Comprovante</th>' +
     '<th>Conferido por</th><th>Data conf.</th><th>Motivo rejeicao</th>' +
+    '<th style="min-width:160px">Ações</th>' +
     '</tr></thead><tbody>';
   itens.forEach(function(r) {
     var comp = '';
@@ -5734,6 +5757,18 @@ function finPMRenderTabela_(itens) {
       comp = '<span class="fin-pill fin-pill-gray">Sem comprovante</span>';
     }
     var desc = r.descricaoGasto || '-';
+    var acoes = '';
+    if (r.statusPrestacao === 'ENVIADO') {
+      var lid = finEA(r.lancamentoId);
+      var nom = finEA(r.funcionarioNome || '');
+      acoes =
+        '<button class="fin-btn fin-btn-primary fin-btn-sm" style="background:#198754;border-color:#198754" ' +
+        'onclick="finPMAprovarConfirmar_(\'' + lid + '\',\'' + nom + '\')" title="Aprovar prestação">✔ Aprovar</button> ' +
+        '<button class="fin-btn fin-btn-danger fin-btn-sm" ' +
+        'onclick="finPMReprovarAbrir_(\'' + lid + '\',\'' + nom + '\')" title="Reprovar prestação">✗ Reprovar</button>';
+    } else {
+      acoes = '<span style="color:#aaa;font-size:11px">—</span>';
+    }
     html +=
       '<tr>' +
       '<td><small style="font-family:monospace;font-size:11px">' + finEH(r.lancamentoId) + '</small></td>' +
@@ -5747,6 +5782,7 @@ function finPMRenderTabela_(itens) {
       '<td>' + finEH(r.aprovadoPor || '-') + '</td>' +
       '<td>' + finEH(finDataBR(r.dataAprovacao)) + '</td>' +
       '<td>' + finEH(r.motivoRejeicao || '') + '</td>' +
+      '<td>' + acoes + '</td>' +
       '</tr>';
   });
   html += '</tbody></table>';
@@ -5764,6 +5800,71 @@ function finPMMostrarErro_(msg) {
 function finPMEsconderErro_() {
   var el = document.getElementById('finPMErro');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+// ============================================================
+// FLASH.10.1 — Conferência Financeira de Prestações (APROVAR/REPROVAR)
+// ============================================================
+
+var _finPMConferindoId_ = null;
+
+function finPMAprovarConfirmar_(lancamentoId, nomeFuncionario) {
+  var msg = 'Aprovar a prestação de ' + (nomeFuncionario || lancamentoId) + '?\nEsta ação registrará a aprovação financeira.';
+  if (!confirm(msg)) { return; }
+  finPMConferir_(lancamentoId, 'APROVAR', '');
+}
+
+function finPMReprovarAbrir_(lancamentoId, nomeFuncionario) {
+  _finPMConferindoId_ = lancamentoId;
+  var infoEl = document.getElementById('finPMReprovarInfo');
+  var motivoEl = document.getElementById('finPMReprovarMotivo');
+  var erroEl = document.getElementById('finPMReprovarErro');
+  if (infoEl) { infoEl.textContent = nomeFuncionario || lancamentoId; }
+  if (motivoEl) { motivoEl.value = ''; }
+  if (erroEl) { erroEl.style.display = 'none'; erroEl.innerHTML = ''; }
+  var ov = document.getElementById('finModalReprovar');
+  if (ov) { ov.classList.add('open'); }
+}
+
+function finPMReprovarFechar_() {
+  var ov = document.getElementById('finModalReprovar');
+  if (ov) { ov.classList.remove('open'); }
+  _finPMConferindoId_ = null;
+}
+
+function finPMReprovarConfirmar_() {
+  var motivoEl = document.getElementById('finPMReprovarMotivo');
+  var erroEl   = document.getElementById('finPMReprovarErro');
+  var motivo   = motivoEl ? motivoEl.value.trim() : '';
+  if (motivo.length < 5) {
+    if (erroEl) { erroEl.innerHTML = '<div class="fin-alert fin-alert-danger">Informe o motivo (mínimo 5 caracteres).</div>'; erroEl.style.display = 'block'; }
+    return;
+  }
+  finPMReprovarFechar_();
+  finPMConferir_(_finPMConferindoId_, 'REPROVAR', motivo);
+}
+
+function finPMConferir_(lancamentoId, decisao, motivo) {
+  finPMMostrarErro_('');
+  finPMEsconderErro_();
+  var btnSel = 'button[onclick*="' + lancamentoId + '"]';
+  document.querySelectorAll(btnSel).forEach(function(b) { b.disabled = true; });
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finPMMostrarErro_((r && r.message) || 'Erro ao registrar conferência.');
+        return;
+      }
+      finPMCarregar_();
+    })
+    .withFailureHandler(function(e) {
+      finPMMostrarErro_('Falha: ' + (e.message || String(e)));
+    })
+    .finFlashConferirPrestacaoMobilePilotoV1(_finSessao, {
+      lancamentoId: lancamentoId,
+      decisao:      decisao,
+      motivo:       motivo
+    });
 }
 
 // ============================================================
