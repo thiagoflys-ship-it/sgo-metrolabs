@@ -1331,8 +1331,11 @@
         <input id="finF68Cpf" class="fin-input" type="text" value="5553116198" readonly>
       </div>
       <div class="fin-fg">
-        <label class="fin-label">Cartão</label>
-        <input id="finF68CartaoId" class="fin-input" type="text" value="REAL-65BC435CB7E1" readonly>
+        <label class="fin-label">Cartão *</label>
+        <select id="finF68CartaoSel" class="fin-input">
+          <option value="">-- Selecione um cartão ativo --</option>
+        </select>
+        <div id="finF68CartaoInfo" style="font-size:11px;color:#666;margin-top:2px"></div>
       </div>
       <div class="fin-fg">
         <label class="fin-label">Valor (R$) *</label>
@@ -5029,6 +5032,42 @@ function finAbrirRecargaControlada() {
   var chk = document.getElementById('finF68ConfCheck'); if (chk) chk.checked = false;
   var conf = document.getElementById('finF68BtnConfirmar'); if (conf) conf.disabled = true;
   var st = document.getElementById('finF68Status'); if (st) st.innerHTML = '';
+  // Popular seletor com cartões ativos da Bruna (CPF 5553116198)
+  var sel = document.getElementById('finF68CartaoSel');
+  if (sel) {
+    sel.innerHTML = '<option value="">-- Selecione um cartão ativo --</option>';
+    var brunaCards = (_finRecCartoesAtivos || []).filter(function(c) {
+      var cpf = String(c.CPF_COLABORADOR || c.cpf || '').replace(/\D/g, '');
+      var st2 = String(c.STATUS_CARTAO || c.STATUS || '').toUpperCase();
+      return cpf === '5553116198' && st2 !== 'INATIVO' && st2 !== 'CANCELADO';
+    });
+    brunaCards.forEach(function(c) {
+      var opt   = document.createElement('option');
+      opt.value = c.CARTAO_ID || '';
+      var tipo  = String(c.TIPO_CARTAO || '').toUpperCase() || 'CARTAO';
+      var f4    = c.NUMERO_FINAL_4 || '????';
+      var apel  = c.APELIDO_CARTAO || '';
+      var stat  = String(c.STATUS_CARTAO || 'ATIVO').toUpperCase();
+      opt.textContent = tipo + ' final ' + f4 + (apel ? ' — ' + apel : '') + ' [' + stat + ']';
+      sel.appendChild(opt);
+    });
+    // Pré-selecionar cartão físico ativo, se único; senão primeiro da lista
+    var fisicos = brunaCards.filter(function(c) {
+      return String(c.TIPO_CARTAO || '').toUpperCase() === 'FISICO';
+    });
+    var alvo = (fisicos.length === 1) ? fisicos[0] : (brunaCards.length === 1 ? brunaCards[0] : null);
+    if (alvo) {
+      for (var i = 1; i < sel.options.length; i++) {
+        if (sel.options[i].value === alvo.CARTAO_ID) { sel.selectedIndex = i; break; }
+      }
+    }
+    var info = document.getElementById('finF68CartaoInfo');
+    if (info) {
+      info.textContent = brunaCards.length
+        ? brunaCards.length + ' cartão(ões) ativo(s) disponível(eis).'
+        : 'Nenhum cartão ativo encontrado para CPF 5553116198.';
+    }
+  }
   finF68ShowStep(1);
   document.getElementById('finModalRecargaControlada').classList.add('open');
 }
@@ -5056,9 +5095,10 @@ function finF68OnConfCheck() {
 }
 
 function finF68LerPayload() {
+  var sel = document.getElementById('finF68CartaoSel');
   return {
     cpf: '5553116198',
-    cartaoId: 'REAL-65BC435CB7E1',
+    cartaoId: sel ? (sel.value || '') : '',
     valor: parseFloat(((document.getElementById('finF68Valor') || {}).value || '0')) || 0,
     finalidade: ((document.getElementById('finF68Finalidade') || {}).value || '').trim(),
     observacao: ((document.getElementById('finF68Obs') || {}).value || '').trim(),
@@ -5068,6 +5108,7 @@ function finF68LerPayload() {
 
 function finF68PreviaRecarga() {
   var payload = finF68LerPayload();
+  if (!payload.cartaoId) { finF68SetStatus('Selecione um cartão ativo da Bruna.', 'error'); return; }
   if (!payload.valor || payload.valor <= 0) { finF68SetStatus('Informe um valor maior que zero.', 'error'); return; }
   if (!payload.finalidade) { finF68SetStatus('Finalidade é obrigatória.', 'error'); return; }
   var btnPrev = document.getElementById('finF68BtnPrevia');

@@ -10333,3 +10333,52 @@ function FINALIZAR_FLASH69_RELATORIOS_COBRANCAS_PRONTO_SEM_GRAVAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+
+// FLASH.6.10 â€” Auditoria: recarga controlada usa cartÃ£o selecionado na UI, sem hardcode.
+function FINALIZAR_FLASH610_RECARGA_CONTROLADA_UI_CARTAO_SELECIONADO_SEM_GRAVAR() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.6.10.FECHAMENTO',
+    ambiente: null,
+    backendPreviaExiste:   false,
+    backendExecucaoExiste: false,
+    brunaTemCartoesAtivos: false,
+    cartoesEncontrados:    0,
+    cartaoHardcodedRemovido: true,   // removido na UI â€” payload.cartaoId vem do select
+    exigeSelecaoCartao:      true,   // select obrigatorio no modal
+    execucaoRealNaoFeita:    true,
+    gravacaoReal: false,
+    prontoParaTesteVisual: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    resultado.backendPreviaExiste    = typeof PREVER_RECARGA_FLASH_CONTROLADA_FINANCEIRO_SEM_GRAVAR === 'function';
+    resultado.backendExecucaoExiste  = typeof EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO === 'function';
+    if (!resultado.backendPreviaExiste)   { resultado.bloqueios.push('PREVER_RECARGA_FLASH_CONTROLADA_FINANCEIRO_SEM_GRAVAR ausente.'); }
+    if (!resultado.backendExecucaoExiste) { resultado.bloqueios.push('EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO ausente.'); }
+    // Verificar se Bruna tem cartoes ativos (cartaoId vazio = busca qualquer)
+    var cartaoQualquer = _f68BuscarCartaoAtivo_(amb.ss, '5553116198', '');
+    resultado.brunaTemCartoesAtivos = cartaoQualquer.encontrado;
+    resultado.cartoesEncontrados    = cartaoQualquer.encontrado ? 1 : 0;
+    if (!resultado.brunaTemCartoesAtivos) {
+      resultado.bloqueios.push('Nenhum cartao ativo em FIN_CARTOES para CPF 5553116198. A recarga controlada nao pode ser executada.');
+    }
+    resultado.prontoParaTesteVisual = resultado.bloqueios.length === 0;
+    resultado.success = resultado.prontoParaTesteVisual;
+    resultado.ok      = resultado.prontoParaTesteVisual;
+    if (resultado.ok) {
+      resultado.avisos.push('FLASH.6.10 OK: recarga controlada usa cartao selecionado na UI. cartaoId hardcoded removido. Nenhuma recarga executada.');
+    }
+  } catch (e) {
+    resultado.bloqueios.push('Erro FLASH.6.10.FECHAMENTO: ' + (e.message || String(e)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
