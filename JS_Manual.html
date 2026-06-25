@@ -1,0 +1,619 @@
+<script>
+// ============================================================
+// SGO+ MANUAL OPERACIONAL — PILOTO.1
+// Estrutura reutilizável de ajuda/manual por módulo.
+// Funções públicas:
+//   abrirManualModulo_(modulo)  — abre modal do manual
+//   fecharManualModulo_()       — fecha o modal
+//   finAbrirManual()            — alias para fin_cartoes
+// ============================================================
+
+var SGO_MANUAIS = {
+
+  dashboard: {
+    titulo: 'Dashboard — Painel Principal',
+    icone: '📊',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'O Dashboard é a tela inicial do SGO+. Ele exibe indicadores operacionais (KPIs) que resumem o estado atual do sistema: ordens de serviço, assistências técnicas, clientes e alertas.'
+      },
+      {
+        titulo: 'Como interpretar os indicadores',
+        conteudo: [
+          'Cada card colorido representa um conjunto de dados do sistema.',
+          'Números em vermelho indicam pendências que precisam de atenção.',
+          'Módulos bloqueados no piloto (Peças, Estoque, etc.) podem não aparecer nos totais — isso é normal.',
+          'Divergências nos números devem ser reportadas ao administrador durante o piloto.'
+        ]
+      },
+      {
+        titulo: 'Alertas',
+        conteudo: [
+          'Alertas aparecem abaixo dos KPIs quando há situações críticas.',
+          'Clique no alerta para ir diretamente ao módulo relacionado.',
+          'Durante o piloto, alguns alertas de módulos bloqueados podem não aparecer.'
+        ]
+      },
+      {
+        titulo: 'Observações do piloto',
+        conteudo: 'Se algum número parecer incorreto ou muito diferente do esperado, anote e informe ao responsável pelo piloto com um print da tela.'
+      }
+    ]
+  },
+
+  clientes: {
+    titulo: 'Clientes e Unidades',
+    icone: '🏢',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de cadastro e consulta de clientes, unidades e seus dados cadastrais. Usado para vincular equipamentos, O.S., contratos e documentos.'
+      },
+      {
+        titulo: 'Como buscar um cliente',
+        conteudo: [
+          '1. Acesse o módulo Clientes pelo menu lateral.',
+          '2. Use o campo de busca para digitar nome, CNPJ ou código.',
+          '3. Clique no cliente para ver suas unidades e equipamentos vinculados.',
+          '4. Verifique os dados antes de usar em documentos ou O.S.'
+        ]
+      },
+      {
+        titulo: 'Como evitar cadastro duplicado',
+        conteudo: [
+          'Antes de criar um novo cliente, sempre busque pelo CNPJ.',
+          'Clientes similares pelo nome podem ser a mesma empresa com razão social diferente.',
+          'Em dúvida, consulte o gestor antes de criar.'
+        ]
+      },
+      {
+        titulo: 'Consultar histórico',
+        conteudo: 'Na tela do cliente, acesse a aba "Histórico" para ver todas as O.S. e atendimentos anteriores.'
+      },
+      {
+        titulo: 'O que não fazer',
+        conteudo: [
+          'Não criar cliente sem confirmar que não existe no sistema.',
+          'Não alterar dados cadastrais de clientes ativos sem autorização do gestor.'
+        ]
+      }
+    ]
+  },
+
+  equipamentos: {
+    titulo: 'Equipamentos',
+    icone: '⚙️',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Cadastro de equipamentos dos clientes, com identificação por TAG, modelo, série e histórico de atendimentos.'
+      },
+      {
+        titulo: 'Como consultar um equipamento',
+        conteudo: [
+          '1. Acesse Equipamentos pelo menu.',
+          '2. Filtre por cliente ou unidade.',
+          '3. Use a busca por TAG ou modelo.',
+          '4. Verifique dados técnicos antes de abrir O.S.'
+        ]
+      },
+      {
+        titulo: 'Campos obrigatórios no cadastro',
+        conteudo: ['TAG (identificador único)', 'Modelo', 'Número de série (quando disponível)', 'Cliente e Unidade vinculados']
+      },
+      {
+        titulo: 'O que não fazer',
+        conteudo: [
+          'Não criar equipamento sem TAG definida.',
+          'Não vincular ao cliente errado — verificar unidade antes de salvar.'
+        ]
+      }
+    ]
+  },
+
+  os: {
+    titulo: 'Ordens de Serviço (O.S.)',
+    icone: '📋',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de criação e acompanhamento de Ordens de Serviço. Cada O.S. representa um atendimento técnico: preventivo, corretivo ou instalação.'
+      },
+      {
+        titulo: 'Como criar uma O.S.',
+        conteudo: [
+          '1. Acesse O.S. pelo menu.',
+          '2. Clique em "Nova O.S.".',
+          '3. Selecione o cliente e equipamento.',
+          '4. Descreva o problema ou solicitação.',
+          '5. Defina o tipo e prioridade.',
+          '6. Salve — o número da O.S. será gerado automaticamente.'
+        ]
+      },
+      {
+        titulo: 'O que cada status significa',
+        conteudo: [
+          'Aberta — criada, aguardando técnico',
+          'Em andamento — técnico está atendendo',
+          'Aguardando peças — parado por falta de componente (módulo bloqueado no piloto)',
+          'Concluída — atendimento finalizado',
+          'Cancelada — O.S. cancelada por algum motivo'
+        ]
+      },
+      {
+        titulo: 'Erros comuns',
+        conteudo: [
+          'O.S. sem equipamento vinculado: volte e selecione o equipamento correto.',
+          'Não consegue salvar: verifique se todos os campos obrigatórios (*) estão preenchidos.'
+        ]
+      }
+    ]
+  },
+
+  assistencia_tecnica: {
+    titulo: 'Assistência Técnica',
+    icone: '🔧',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de gestão completa da Assistência Técnica. Controla todo o ciclo do atendimento desde a entrada do equipamento até a entrega ao cliente.'
+      },
+      {
+        titulo: 'Fluxo completo',
+        conteudo: [
+          '1. Entrada — registro de chegada do equipamento',
+          '2. Avaliação — diagnóstico inicial e verificação',
+          '3. Diagnóstico — identificação do problema técnico',
+          '4. Orçamento — elaboração e envio ao cliente',
+          '5. Aprovação — cliente aprova ou recusa o orçamento',
+          '6. Execução — realização do serviço aprovado',
+          '7. Teste/Validação — verificação do funcionamento',
+          '8. Conclusão técnica — registro do que foi feito',
+          '9. Entrega — devolução ao cliente',
+          '10. Finalização — encerramento e documentação'
+        ]
+      },
+      {
+        titulo: 'Documentos e assinaturas',
+        conteudo: [
+          'Documentos premium são gerados automaticamente ao concluir.',
+          'Assinatura digital pode ser coletada diretamente no sistema.',
+          'Todo histórico fica registrado e acessível.'
+        ]
+      },
+      {
+        titulo: 'Sobre Peças',
+        conteudo: 'O módulo de Peças/Subconjuntos está em implantação e será habilitado em etapa futura. Durante o piloto, registre a necessidade de peças na observação da O.S.'
+      },
+      {
+        titulo: 'O que não fazer',
+        conteudo: [
+          'Não pular etapas do fluxo sem justificativa.',
+          'Não fechar O.S. sem registro de teste/validação.',
+          'Não alterar dados de O.S. concluídas sem autorização.'
+        ]
+      }
+    ]
+  },
+
+  tecnicos: {
+    titulo: 'Técnicos',
+    icone: '👷',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Cadastro e consulta de técnicos ativos. Vinculado às O.S. e missões para rastreabilidade de atendimentos.'
+      },
+      {
+        titulo: 'Como usar',
+        conteudo: [
+          '1. Acesse Técnicos pelo menu.',
+          '2. Busque por nome ou código.',
+          '3. Visualize O.S. e histórico do técnico.'
+        ]
+      }
+    ]
+  },
+
+  missoes: {
+    titulo: 'Missões',
+    icone: '🗺️',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de planejamento e acompanhamento de missões de campo: rotas, atendimentos programados e deslocamentos.'
+      },
+      {
+        titulo: 'Como usar',
+        conteudo: [
+          '1. Acesse Missões pelo menu.',
+          '2. Veja as missões do dia ou da semana.',
+          '3. Clique em uma missão para ver os atendimentos.',
+          '4. Atualize o status conforme o atendimento avança.'
+        ]
+      }
+    ]
+  },
+
+  contratos: {
+    titulo: 'Contratos',
+    icone: '📄',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Registro e controle de contratos de manutenção e serviços com clientes.'
+      },
+      {
+        titulo: 'Como usar',
+        conteudo: [
+          '1. Acesse Contratos pelo menu.',
+          '2. Busque por cliente ou número do contrato.',
+          '3. Verifique datas de vigência antes de usar em documentos.',
+          '4. Consulte o gestor antes de alterar qualquer contrato ativo.'
+        ]
+      }
+    ]
+  },
+
+  documentos: {
+    titulo: 'Documentos',
+    icone: '🗂️',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Repositório de documentos vinculados a clientes, equipamentos e O.S.: laudos, relatórios, certificados e comprovantes.'
+      },
+      {
+        titulo: 'Como usar',
+        conteudo: [
+          '1. Acesse Documentos pelo menu.',
+          '2. Filtre por cliente, tipo ou data.',
+          '3. Clique para visualizar ou baixar.',
+          '4. Para vincular um documento a uma O.S., use o campo de vínculo ao criar.'
+        ]
+      }
+    ]
+  },
+
+  registros: {
+    titulo: 'Registros',
+    icone: '📝',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Log de atividades e registros operacionais do sistema. Permite rastrear ações de usuários e eventos relevantes.'
+      },
+      {
+        titulo: 'Como usar',
+        conteudo: [
+          '1. Acesse Registros pelo menu.',
+          '2. Use os filtros de data, módulo e usuário.',
+          '3. Clique em um registro para ver detalhes.'
+        ]
+      },
+      {
+        titulo: 'Quem deve usar',
+        conteudo: 'Principalmente administradores e gestores para auditoria e rastreabilidade.'
+      }
+    ]
+  },
+
+  relatorios: {
+    titulo: 'Relatórios',
+    icone: '📈',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Geração de relatórios operacionais e gerenciais do SGO+: O.S. por período, técnicos, equipamentos atendidos e outros.'
+      },
+      {
+        titulo: 'Como gerar um relatório',
+        conteudo: [
+          '1. Acesse Relatórios pelo menu.',
+          '2. Selecione o tipo de relatório.',
+          '3. Defina o período e filtros.',
+          '4. Clique em "Gerar".',
+          '5. Aguarde o processamento e faça download ou imprima.'
+        ]
+      },
+      {
+        titulo: 'Observações do piloto',
+        conteudo: 'Relatórios de módulos bloqueados (Peças, Estoque etc.) podem retornar vazio ou dados incompletos durante o piloto. Isso é esperado.'
+      }
+    ]
+  },
+
+  fin_cartoes: {
+    titulo: 'Financeiro — Cartão Flash',
+    icone: '💳',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de controle do cartão corporativo Flash. Gerencia cartões, recargas, lançamentos de despesas, prestações de contas e aprovação financeira.'
+      },
+      {
+        titulo: 'Quem deve usar',
+        conteudo: [
+          'Técnico/Colaborador — registrar gastos e fazer prestação de contas',
+          'Financeiro — aprovar ou reprovar lançamentos',
+          'Gestor/Admin — visão geral, histórico e configuração'
+        ]
+      },
+      {
+        titulo: 'Passo a passo — Técnico (prestar conta)',
+        conteudo: [
+          '1. Acesse Financeiro > Cartão Flash pelo menu.',
+          '2. Selecione seu cartão na lista à esquerda.',
+          '3. Clique na aba "Lançamentos".',
+          '4. Clique em "Novo Lançamento".',
+          '5. Preencha: data, valor, estabelecimento e finalidade.',
+          '6. Anexe o comprovante (foto ou arquivo).',
+          '7. Clique em "Enviar".',
+          '8. Aguarde a conferência do financeiro.'
+        ]
+      },
+      {
+        titulo: 'Passo a passo — Financeiro (conferir)',
+        conteudo: [
+          '1. Acesse Cartão Flash > aba "Prestações Mobile".',
+          '2. Veja os lançamentos com status "Aguardando Conferência".',
+          '3. Clique em cada lançamento para revisar comprovante e dados.',
+          '4. Aprove se estiver correto, ou reprove com justificativa.',
+          '5. O técnico será notificado do resultado.'
+        ]
+      },
+      {
+        titulo: 'O que cada status significa',
+        conteudo: [
+          'Pendente Comprovante — lançamento sem comprovante anexado',
+          'Aguardando Conferência — comprovante enviado, aguardando aprovação financeira',
+          'Aprovado — lançamento conferido e aprovado pelo financeiro',
+          'Reprovado — lançamento recusado (ver justificativa)',
+          'Bloqueado — cartão temporariamente bloqueado para uso'
+        ]
+      },
+      {
+        titulo: 'O que fazer se o cartão não aparecer',
+        conteudo: [
+          'Verifique com o financeiro se o cartão foi cadastrado em seu nome.',
+          'Confirme que está logado com o usuário correto.',
+          'Se o problema persistir, informe o administrador com print da tela.'
+        ]
+      },
+      {
+        titulo: 'O que fazer se o comprovante não sobe',
+        conteudo: [
+          'O arquivo deve ser imagem (JPG, PNG) ou PDF.',
+          'Tamanho máximo recomendado: 5 MB.',
+          'Verifique a conexão com a internet.',
+          'Tente tirar a foto novamente com melhor iluminação.',
+          'Se continuar com erro, informe o administrador.'
+        ]
+      },
+      {
+        titulo: 'O que fazer se a prestação foi enviada errada',
+        conteudo: [
+          'Entre em contato com o financeiro imediatamente.',
+          'Não tente enviar novamente o mesmo lançamento.',
+          'O financeiro poderá reprovar o lançamento incorreto para que você faça novo envio correto.'
+        ]
+      },
+      {
+        titulo: 'O que não fazer',
+        conteudo: [
+          'Não usar o cartão corporativo para despesas pessoais.',
+          'Não duplicar lançamentos.',
+          'Não omitir informações no comprovante.',
+          'Não enviar comprovante de outra pessoa em seu nome.',
+          'Não sacar dinheiro com o cartão sem autorização.'
+        ]
+      }
+    ]
+  },
+
+  admin: {
+    titulo: 'Administração — Usuários e Sistema',
+    icone: '🔑',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Módulo de gestão de usuários do SGO+. Permite criar, editar, ativar e inativar usuários, além de configurar perfis de acesso.'
+      },
+      {
+        titulo: 'Como criar um usuário',
+        conteudo: [
+          '1. Acesse Admin > Usuários.',
+          '2. Clique em "Novo Usuário".',
+          '3. Preencha todos os campos: login, nome, e-mail, perfil e senha.',
+          '4. O e-mail é obrigatório — será usado para notificações e recuperação de acesso.',
+          '5. Clique em "Salvar".'
+        ]
+      },
+      {
+        titulo: 'Por que o e-mail é obrigatório',
+        conteudo: 'O e-mail é necessário para futuras notificações do sistema, recuperação de senha e auditoria de acesso. Sempre use o e-mail profissional do colaborador.'
+      },
+      {
+        titulo: 'Perfis de acesso',
+        conteudo: [
+          'ADMIN — acesso total ao sistema',
+          'GESTOR — gerência operacional, relatórios e usuários',
+          'DIRETORIA — visão gerencial e aprovações',
+          'FINANCEIRO — módulo financeiro e aprovações de lançamentos',
+          'TECNICO — O.S., assistência técnica e prestação de contas',
+          'CLIENTE — acesso restrito ao portal do cliente'
+        ]
+      },
+      {
+        titulo: 'Como editar ou inativar',
+        conteudo: [
+          '1. Encontre o usuário na lista.',
+          '2. Clique em "Editar".',
+          '3. Altere os campos necessários.',
+          '4. Para inativar, clique em "Inativar" — o usuário perderá acesso mas os dados serão preservados.'
+        ]
+      },
+      {
+        titulo: 'Cuidados importantes',
+        conteudo: [
+          'Não inative o usuário ADMIN principal do sistema.',
+          'Não compartilhe senhas entre usuários.',
+          'Ao demitir um colaborador, inative o usuário imediatamente.',
+          'Não crie usuários genéricos (ex: "tecnico01") — cada pessoa deve ter login próprio.'
+        ]
+      }
+    ]
+  },
+
+  mobile_campo: {
+    titulo: 'Mobile Campo — Uso no Celular',
+    icone: '📱',
+    secoes: [
+      {
+        titulo: 'O que é',
+        conteudo: 'Interface simplificada do SGO+ para uso no celular em campo. Permite acessar O.S., fazer prestação de contas do Cartão Flash, cadastrar clientes e equipamentos rapidamente.'
+      },
+      {
+        titulo: 'Como acessar pelo celular',
+        conteudo: [
+          '1. Abra o link do SGO+ no navegador do celular.',
+          '2. Faça login normalmente com seu usuário e senha.',
+          '3. O sistema detecta automaticamente que é um celular e exibe a interface mobile.',
+          '4. Salve o link como atalho na tela inicial do celular para acesso rápido.'
+        ]
+      },
+      {
+        titulo: 'Prestação de contas Flash pelo celular',
+        conteudo: [
+          '1. No menu mobile, toque em "💳 Cartão Flash".',
+          '2. Selecione o período e seu cartão.',
+          '3. Toque em "Nova Prestação".',
+          '4. Preencha: valor, data, estabelecimento e finalidade do gasto.',
+          '5. Indique se há O.S. vinculada (Existe O.S.?).',
+          '6. Se não houver O.S., preencha a justificativa.',
+          '7. Toque em "Comprovante" e tire uma foto clara do recibo.',
+          '8. Toque em "Enviar Prestação".',
+          '9. Aguarde a confirmação de envio.'
+        ]
+      },
+      {
+        titulo: 'Como confirmar que foi enviado',
+        conteudo: [
+          'Após o envio, aparece a mensagem "Prestação enviada com sucesso."',
+          'O lançamento aparece na aba "Prestações Mobile" do módulo Financeiro com status "Aguardando Conferência".',
+          'Em caso de dúvida, mostre o status para o financeiro antes de sair do local.'
+        ]
+      },
+      {
+        titulo: 'O que fazer em caso de erro',
+        conteudo: [
+          'Verifique a conexão com a internet (Wi-Fi ou dados móveis).',
+          'Tente novamente após alguns segundos.',
+          'Se o erro persistir, anote o valor, data e estabelecimento para fazer a prestação depois pelo computador.',
+          'Informe o administrador com print do erro.'
+        ]
+      },
+      {
+        titulo: 'Regras básicas',
+        conteudo: [
+          'Envie o comprovante no mesmo dia do gasto.',
+          'Não envie comprovante rasurado, dobrado ou ilegível.',
+          'Não duplique a prestação — verifique se já enviou antes de tentar novamente.',
+          'Informe todos os dados corretamente — valores e datas errados causam pendência.'
+        ]
+      }
+    ]
+  }
+
+};
+
+// ============================================================
+// RENDERIZADOR DO MANUAL
+// ============================================================
+
+function abrirManualModulo_(modulo) {
+  var manual = SGO_MANUAIS[modulo];
+  if (!manual) {
+    alert('Manual não disponível para este módulo.');
+    return;
+  }
+
+  var existente = document.getElementById('sgo-modal-manual');
+  if (existente) existente.remove();
+
+  var html = '<div id="sgo-modal-manual" style="'
+    + 'position:fixed;top:0;left:0;right:0;bottom:0;'
+    + 'background:rgba(0,0,0,0.55);z-index:99000;'
+    + 'display:flex;align-items:center;justify-content:center;'
+    + 'padding:16px;box-sizing:border-box;" '
+    + 'onclick="if(event.target===this)fecharManualModulo_()">'
+    + '<div style="'
+    + 'background:#fff;border-radius:12px;width:100%;max-width:680px;'
+    + 'max-height:88vh;display:flex;flex-direction:column;'
+    + 'box-shadow:0 8px 40px rgba(0,0,0,0.3);overflow:hidden;">'
+
+    // Cabeçalho
+    + '<div style="background:linear-gradient(135deg,#0f2d52,#1a4a80);color:#fff;'
+    + 'padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">'
+    + '<div><div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Manual Operacional — SGO+</div>'
+    + '<div style="font-size:18px;font-weight:700;">' + (manual.icone || '📖') + ' ' + manual.titulo + '</div></div>'
+    + '<button onclick="fecharManualModulo_()" style="'
+    + 'background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);'
+    + 'color:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:14px;font-weight:600;"'
+    + '>✕ Fechar</button>'
+    + '</div>'
+
+    // Conteúdo
+    + '<div style="overflow-y:auto;padding:22px;flex:1;">';
+
+  for (var i = 0; i < manual.secoes.length; i++) {
+    var sec = manual.secoes[i];
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="font-size:13px;font-weight:700;color:#0f2d52;text-transform:uppercase;'
+          + 'letter-spacing:0.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e9ecef;">'
+          + escapeHtml_(sec.titulo) + '</div>';
+
+    if (Array.isArray(sec.conteudo)) {
+      html += '<ul style="margin:0;padding-left:18px;">';
+      for (var j = 0; j < sec.conteudo.length; j++) {
+        html += '<li style="margin-bottom:5px;font-size:14px;color:#333;line-height:1.5;">'
+              + escapeHtml_(sec.conteudo[j]) + '</li>';
+      }
+      html += '</ul>';
+    } else {
+      html += '<p style="font-size:14px;color:#333;line-height:1.6;margin:0;">'
+            + escapeHtml_(sec.conteudo) + '</p>';
+    }
+
+    html += '</div>';
+  }
+
+  // Rodapé
+  html += '<div style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:8px;'
+        + 'font-size:11px;color:#999;text-align:center;">'
+        + 'SGO+ METROLABS &nbsp;·&nbsp; Manual Operacional — Piloto v1 &nbsp;·&nbsp; '
+        + 'Dúvidas? Informe ao administrador.'
+        + '</div>';
+
+  html += '</div></div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  // Fechar com ESC
+  document.addEventListener('keydown', _manualEscHandler_);
+}
+
+function _manualEscHandler_(e) {
+  if (e.key === 'Escape') { fecharManualModulo_(); }
+}
+
+function fecharManualModulo_() {
+  var el = document.getElementById('sgo-modal-manual');
+  if (el) el.remove();
+  document.removeEventListener('keydown', _manualEscHandler_);
+}
+
+// Alias para o botão existente no JS_Fin_Cartoes.html
+function finAbrirManual() { abrirManualModulo_('fin_cartoes'); }
+</script>
