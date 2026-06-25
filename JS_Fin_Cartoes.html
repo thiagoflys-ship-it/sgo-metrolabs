@@ -1140,76 +1140,82 @@
 <!-- Modal: Cadastrar Cartão Real — FLASH.4.6B -->
 <div id="finModalCadastrarCartaoReal" class="fin-modal-overlay">
   <div class="fin-modal" style="width:560px">
-    <h3>Cadastrar Cartão Real</h3>
+    <h3>Cadastrar Colaborador / Cartão</h3>
     <div class="flash47-modal-body">
-    <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
-      <strong>Operação controlada (FLASH.4.7 Multicartão):</strong> Cada execução cria exatamente 1 cartão real.
-      Um colaborador pode ter múltiplos cartões (físico + virtual) desde que o tipo e o final difiram.
-      Duplicidade bloqueada somente quando CPF + tipo + final forem iguais.
-      Não serão criadas recargas. Piloto FLASH44 permanece isolado.
-    </div>
-    <div class="fin-grid2">
-      <div class="fin-fg">
-        <label class="fin-label">ID do Funcionário *</label>
-        <input id="finF46_FUNC_ID" class="fin-input" type="text" placeholder="ex: FUNC-001" oninput="finF46ResetPreview()">
+      <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
+        <strong>Fluxo User-Centric (Pivot por CPF):</strong> Insira o CPF primeiro. Se o colaborador já possuir cadastro no sistema, o nome, e-mail, telefone e ID serão preenchidos automaticamente para a vinculação do novo cartão.
       </div>
-      <div class="fin-fg">
-        <label class="fin-label">Nome do Funcionário *</label>
-        <input id="finF46_FUNC_NOME" class="fin-input" type="text" placeholder="Nome completo" oninput="finF46ResetPreview()">
+
+      <div class="fin-grid2">
+        <!-- CPF Promovido ao Topo como Chave Master -->
+        <div class="fin-fg full" style="background:#f1f5f9;padding:10px;border-radius:6px;margin-bottom:8px;border:1px solid #cbd5e1;">
+          <label class="fin-label" style="color:#0f2d52;font-weight:bold;">CPF do Colaborador * (Apenas números)</label>
+          <input id="finF46_CPF" class="fin-input" type="text" maxlength="14" placeholder="ex: 123.456.789-01" oninput="finF46VerificarCPFExistente(this)" style="border-color:#0f2d52;font-weight:bold;font-size:14px;">
+        </div>
+
+        <div class="fin-fg">
+          <label class="fin-label">Nome do Funcionário *</label>
+          <input id="finF46_FUNC_NOME" class="fin-input" type="text" placeholder="Nome completo" oninput="finF46ResetPreview()">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">ID do Funcionário *</label>
+          <input id="finF46_FUNC_ID" class="fin-input" type="text" placeholder="ex: FUNC-001" oninput="finF46ResetPreview()">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">E-mail</label>
+          <input id="finF46_FUNC_EMAIL" class="fin-input" type="email" placeholder="email@empresa.com" oninput="finF46ResetPreview()">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Telefone</label>
+          <input id="finF46_FUNC_TEL" class="fin-input" type="text" placeholder="11999990000" oninput="finF46ResetPreview()">
+        </div>
+
+        <!-- Divisor de Dados do Cartão -->
+        <div class="full" style="margin:8px 0 4px 0;border-top:1px dashed #e2e8f0;padding-top:8px;">
+          <strong style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">Dados do Cartão Flash</strong>
+        </div>
+
+        <div class="fin-fg">
+          <label class="fin-label">Tipo do Cartão Flash *</label>
+          <select id="finF46_TIPO" class="fin-filter-select" style="width:100%" onchange="finF46ResetPreview()">
+            <option value="VIRTUAL">Virtual (4 dígitos)</option>
+            <option value="FISICO">Físico (3 dígitos)</option>
+          </select>
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Final do Cartão *</label>
+          <input id="finF46_NUM4" class="fin-input" type="text" maxlength="4" placeholder="ex: 881 ou 0546" oninput="this.value=this.value.replace(/\D/g,'');finF46ResetPreview()">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Apelido do Cartão *</label>
+          <input id="finF46_APELIDO" class="fin-input" type="text" placeholder="ex: Cartão Manutenção" oninput="finF46ResetPreview()">
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Bandeira *</label>
+          <select id="finF46_BANDEIRA" class="fin-filter-select" style="width:100%">
+            <option value="MASTERCARD">Mastercard</option>
+            <option value="VISA">Visa</option>
+            <option value="ELO">Elo</option>
+            <option value="HIPERCARD">Hipercard</option>
+          </select>
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Status *</label>
+          <select id="finF46_STATUS" class="fin-filter-select" style="width:100%">
+            <option value="ATIVO">Ativo</option>
+            <option value="PENDENTE_ATIVACAO">Aguardando ativação</option>
+          </select>
+        </div>
+        <div class="fin-fg">
+          <label class="fin-label">Limite Mensal (R$)</label>
+          <input id="finF46_LIMITE" class="fin-input" type="number" min="0" step="0.01" placeholder="0.00" value="0">
+        </div>
+        <div class="fin-fg full">
+          <label class="fin-label">Observações</label>
+          <textarea id="finF46_OBS" class="fin-textarea" rows="2" placeholder="Observações opcionais"></textarea>
+        </div>
       </div>
-      <div class="fin-fg">
-        <label class="fin-label">CPF do Colaborador * (11 dígitos)</label>
-        <input id="finF46_CPF" class="fin-input" type="text" maxlength="14" placeholder="ex: 123.456.789-01" oninput="finF46ResetPreview()">
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">E-mail</label>
-        <input id="finF46_FUNC_EMAIL" class="fin-input" type="email" placeholder="email@empresa.com">
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Telefone</label>
-        <input id="finF46_FUNC_TEL" class="fin-input" type="text" placeholder="11999990000">
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Final do Cartão * (3 dígitos=Físico | 4 dígitos=Virtual)</label>
-        <input id="finF46_NUM4" class="fin-input" type="text" maxlength="4" placeholder="ex: 881 (físico) ou 0546 (virtual)" oninput="this.value=this.value.replace(/\D/g,'');finF46ResetPreview()">
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Apelido do Cartão *</label>
-        <input id="finF46_APELIDO" class="fin-input" type="text" placeholder="ex: Cartão Manutenção" oninput="finF46ResetPreview()">
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Bandeira *</label>
-        <select id="finF46_BANDEIRA" class="fin-filter-select" style="width:100%">
-          <option value="MASTERCARD">Mastercard</option>
-          <option value="VISA">Visa</option>
-          <option value="ELO">Elo</option>
-          <option value="HIPERCARD">Hipercard</option>
-        </select>
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Tipo do Cartão Flash *</label>
-        <select id="finF46_TIPO" class="fin-filter-select" style="width:100%" onchange="finF46ResetPreview()">
-          <option value="VIRTUAL">Virtual (4 dígitos)</option>
-          <option value="FISICO">Físico (3 dígitos)</option>
-        </select>
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Status *</label>
-        <select id="finF46_STATUS" class="fin-filter-select" style="width:100%">
-          <option value="ATIVO">Ativo</option>
-          <option value="PENDENTE_ATIVACAO">Aguardando ativação</option>
-        </select>
-      </div>
-      <div class="fin-fg">
-        <label class="fin-label">Limite Mensal (R$)</label>
-        <input id="finF46_LIMITE" class="fin-input" type="number" min="0" step="0.01" placeholder="0.00" value="0">
-      </div>
-      <div class="fin-fg full">
-        <label class="fin-label">Observações</label>
-        <textarea id="finF46_OBS" class="fin-textarea" rows="2" placeholder="Observações opcionais"></textarea>
-      </div>
-    </div>
-    <div id="finF46Preview" style="display:none;margin:10px 0;padding:10px 12px;border-radius:6px;font-size:12.5px;line-height:1.5"></div>
+      <div id="finF46Preview" style="display:none;margin:10px 0;padding:10px 12px;border-radius:6px;font-size:12.5px;line-height:1.5"></div>
     </div><!-- /.flash47-modal-body -->
     <div class="fin-modal-footer">
       <button class="fin-btn fin-btn-secondary" onclick="finFecharCadastroCartaoReal()">Cancelar</button>
@@ -4914,6 +4920,66 @@ function finSalvarRecargaV43() {
 var _finF46PreviewOk  = false;
 var _finF46Executando = false;
 
+function finAbrirCadastrarCartaoReal() {
+  _finF46PreviewOk  = false;
+  _finF46Executando = false;
+  var m = document.getElementById('finModalCadastrarCartaoReal');
+  if (m) m.classList.add('open');
+  finAjustarAlturaModalCartao_();
+  var btn = document.getElementById('finF46BtnConfirmar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirmar cadastro'; }
+  var prev = document.getElementById('finF46Preview');
+  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+  ['finF46_FUNC_ID','finF46_FUNC_NOME','finF46_CPF','finF46_FUNC_EMAIL','finF46_FUNC_TEL',
+   'finF46_NUM4','finF46_APELIDO','finF46_OBS'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var lim = document.getElementById('finF46_LIMITE'); if (lim) lim.value = '0';
+  var tp = document.getElementById('finF46_TIPO'); if (tp) tp.value = 'VIRTUAL';
+}
+
+function finF46VerificarCPFExistente(input) {
+  finF46ResetPreview();
+  var cpfDigitado = input.value.replace(/\D/g, '');
+
+  if (cpfDigitado.length > 0) {
+    var m = cpfDigitado;
+    if (m.length > 3)  { m = m.slice(0,3) + '.' + m.slice(3); }
+    if (m.length > 7)  { m = m.slice(0,7) + '.' + m.slice(7); }
+    if (m.length > 11) { m = m.slice(0,11) + '-' + m.slice(11,13); }
+    input.value = m;
+  }
+
+  if (cpfDigitado.length === 11) {
+    if (typeof _finCartoes !== 'undefined' && Array.isArray(_finCartoes)) {
+      var colaborador = _finCartoes.find(function(c) {
+        return (c.CPF_COLABORADOR || '').replace(/\D/g, '') === cpfDigitado;
+      });
+
+      if (colaborador) {
+        var elNome  = document.getElementById('finF46_FUNC_NOME');
+        var elEmail = document.getElementById('finF46_FUNC_EMAIL');
+        var elTel   = document.getElementById('finF46_FUNC_TEL');
+        var elId    = document.getElementById('finF46_FUNC_ID');
+
+        if (elNome)  { elNome.value  = colaborador.FUNCIONARIO_NOME || ''; }
+        if (elEmail) { elEmail.value = colaborador.FUNCIONARIO_EMAIL || ''; }
+        if (elTel)   { elTel.value   = colaborador.FUNCIONARIO_TELEFONE || ''; }
+        if (elId)    { elId.value    = colaborador.FUNCIONARIO_ID || ''; }
+
+        var prev = document.getElementById('finF46Preview');
+        if (prev) {
+          prev.style.display    = 'block';
+          prev.style.background = '#dcfce7';
+          prev.style.color      = '#15803d';
+          prev.style.borderLeft = '4px solid #16a34a';
+          prev.innerHTML = '✨ <strong>Colaborador cadastrado encontrado!</strong> Os dados de perfil foram importados automaticamente. Prossiga preenchendo as informações do novo cartão abaixo.';
+        }
+      }
+    }
+  }
+}
+
 function finF46LerPayload() {
   return {
     FUNCIONARIO_ID      : (document.getElementById('finF46_FUNC_ID')    || {}).value || '',
@@ -4934,9 +5000,12 @@ function finF46LerPayload() {
 function finF46ResetPreview() {
   _finF46PreviewOk = false;
   var btn = document.getElementById('finF46BtnConfirmar');
-  if (btn) btn.disabled = true;
+  if (btn) { btn.disabled = true; }
   var prev = document.getElementById('finF46Preview');
-  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+  if (prev && prev.style.background !== 'rgb(220, 252, 231)') {
+    prev.style.display = 'none';
+    prev.innerHTML = '';
+  }
 }
 
 function finAjustarAlturaModalCartao_() {
@@ -4944,24 +5013,6 @@ function finAjustarAlturaModalCartao_() {
   if (!body) return;
   var px = Math.max(200, Math.floor(window.innerHeight * 0.9) - 140);
   body.style.maxHeight = px + 'px';
-}
-
-function finAbrirCadastrarCartaoReal() {
-  _finF46PreviewOk  = false;
-  _finF46Executando = false;
-  var m = document.getElementById('finModalCadastrarCartaoReal');
-  if (m) m.classList.add('open');
-  finAjustarAlturaModalCartao_();
-  var btn = document.getElementById('finF46BtnConfirmar');
-  if (btn) { btn.disabled = true; btn.textContent = 'Confirmar cadastro'; }
-  var prev = document.getElementById('finF46Preview');
-  if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
-  ['finF46_FUNC_ID','finF46_FUNC_NOME','finF46_CPF','finF46_FUNC_EMAIL','finF46_FUNC_TEL',
-   'finF46_NUM4','finF46_APELIDO','finF46_OBS'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  var lim = document.getElementById('finF46_LIMITE'); if (lim) lim.value = '0';
-  var tp = document.getElementById('finF46_TIPO'); if (tp) tp.value = 'VIRTUAL';
 }
 
 function finFecharCadastroCartaoReal() {
