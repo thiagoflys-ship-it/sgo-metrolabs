@@ -540,12 +540,22 @@
 <!-- Tab: Extratos -->
 <div id="tabFlash" class="fin-tab-content">
   <div class="fin-tab-inner">
-    <div class="fin-flash-op-actions">
-      <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarResumo_()">Atualizar</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia conciliação</button>
-      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
-      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Conciliar selecionados</button>
-      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Gerar pendências</button>
+    <!-- Barra User-Centric: seletor de colaborador + exportação -->
+    <div class="fin-flash-op-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f1f5f9;padding:15px;border-radius:8px;margin-bottom:8px;">
+      <select id="finSelColaboradorFlash" class="fin-filter-select"
+              style="min-width:280px;flex:1;border-color:#0f2d52;"
+              onchange="finFlashCarregarPorColaborador_()">
+        <option value="">Selecione um colaborador para auditar...</option>
+      </select>
+      <button class="fin-btn fin-btn-primary" type="button" onclick="finFlashCarregarPorColaborador_()">Carregar extrato</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashGerarPDF_()">Relatório A4 (PDF)</button>
+      <button class="fin-btn fin-btn-outline" type="button" onclick="window.print()">Imprimir Dashboard</button>
+    </div>
+    <!-- Visão Global — fallback admin -->
+    <div class="fin-flash-op-actions" style="gap:8px;margin-bottom:4px;">
+      <button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finFlashCarregarResumo_()">Resumo Global</button>
+      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashVerPreviaConciliacao_()">Prévia conciliação</button>
+      <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashVerPendencias_()">Ver pendências</button>
     </div>
     <div id="finFlashErro"></div>
     <div id="finFlashPainelAcao"></div>
@@ -1433,6 +1443,15 @@
     </div>
   </div>
 </div>
+
+<style>
+@media print {
+  .fin-flash-op-actions, button, .fin-tab-nav, .fin-sidebar { display: none !important; }
+  .fin-card { border: none !important; box-shadow: none !important; }
+  .fin-modal-overlay { display: none !important; }
+  body { padding: 20px; }
+}
+</style>
 
 <script>
 // JS_Fin_Cartoes.html - Metrolabs SGO+ — Cartão Flash Corporativo
@@ -2759,11 +2778,58 @@ function finFlashCarregarResumo_() {
       finFlashRenderPendencias_(r.ultimasPendencias || []);
       finFlashRenderConciliacoes_(r.ultimasConciliacoes || []);
       finFlashCarregarDashboardGerencial_();
+      finFlashPopularSeletorColaboradorFlash_();
     })
     .withFailureHandler(function(e) {
       finFlashMostrarErro_(e, funcaoFlash);
     })
     .finFlashObterResumoTela(_finSessao);
+}
+
+function finFlashPopularSeletorColaboradorFlash_() {
+  var sl = document.getElementById('finSelColaboradorFlash');
+  if (!sl || typeof _finCartoes === 'undefined') { return; }
+  var mapa = {};
+  (_finCartoes || []).forEach(function(c) {
+    var cpf = (c.CPF_COLABORADOR || '').replace(/\D/g, '');
+    var nome = c.FUNCIONARIO_NOME || 'Colaborador Não Identificado';
+    if (cpf && !mapa[cpf]) { mapa[cpf] = nome; }
+  });
+  var opts = '<option value="">Selecione um colaborador para auditar...</option>';
+  Object.keys(mapa).sort(function(a, b) { return mapa[a].localeCompare(mapa[b]); })
+    .forEach(function(cpf) {
+      var fmt = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      opts += '<option value="' + cpf + '">' + finEH(mapa[cpf]) + ' (CPF: ' + fmt + ')</option>';
+    });
+  sl.innerHTML = opts;
+}
+
+function finFlashCarregarPorColaborador_() {
+  var sl = document.getElementById('finSelColaboradorFlash');
+  var cpf = sl ? sl.value : '';
+  var erro = document.getElementById('finFlashErro');
+  if (!cpf) {
+    if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-warning">Selecione um colaborador para auditar.</div>'; }
+    return;
+  }
+  if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-info">Carregando extrato do colaborador...</div>'; }
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Erro ao carregar dados do colaborador.') + '</div>'; }
+        return;
+      }
+      if (erro) { erro.innerHTML = ''; }
+      finFlashRenderResumo_(r);
+      finFlashRenderLotes_(r.ultimosLotes || []);
+      finFlashRenderExtratos_(r.ultimosExtratos || []);
+      finFlashRenderPendencias_(r.ultimasPendencias || []);
+      finFlashRenderConciliacoes_(r.ultimasConciliacoes || []);
+    })
+    .withFailureHandler(function(e) {
+      if (erro) { erro.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(e.message || 'Falha ao carregar extrato.') + '</div>'; }
+    })
+    .finFlashObterResumoPorCPF(_finSessao, cpf);
 }
 
 function finFlashRenderResumo_(dados) {
