@@ -22,7 +22,13 @@ const SGO_DOCUMENT_FACTORY = (() => {
     EQUIPAMENTO_FICHA: "EQP",
     PECA_FICHA: "PECA",
     RELATORIO_CONFORMIDADE: "CONF",
-    EQUIPAMENTO_FICHA_TESTE: "TESTE"
+    EQUIPAMENTO_FICHA_TESTE: "TESTE",
+    FIN_FLASH_COMPROVANTE_ENTREGA: "FLENT",
+    FIN_FLASH_RELATORIO_PRESTACAO: "FLRPR",
+    FIN_FLASH_RELATORIO_PENDENCIAS: "FLRPE",
+    FIN_FLASH_RELATORIO_CONCILIACAO: "FLRCO",
+    FIN_FLASH_RELATORIO_EXTRATO: "FLREX",
+    FIN_FLASH_RELATORIO_GERENCIAL: "FLRGE"
   };
 
   const COLUNAS_DOCUMENTOS = [
@@ -1011,11 +1017,15 @@ const SGO_DOCUMENT_FACTORY = (() => {
 
     return "<div class=\"v3\"><div class=\"v3-page\">" + pageFlow + footerPdf_(os, meta) + "</div></div>";
   }
+  function listarTiposSuportadosSemGravar_() {
+    return JSON.parse(JSON.stringify(TIPOS_SUPORTADOS));
+  }
 
   return {
     gerarDocumento: gerarDocumento,
     obterDocumentoPorToken: obterDocumentoPorToken,
-    getDocumentoCss: getDocumentoCss_
+    getDocumentoCss: getDocumentoCss_,
+    listarTiposSuportadosSemGravar: listarTiposSuportadosSemGravar_
   };
 })();
 
@@ -1057,4 +1067,66 @@ function documentFactoryObterPorToken(token) {
   } catch (e) {
     return { success: false, message: "Erro ao consultar documento: " + e.message };
   }
+}
+
+function documentFactoryListarTiposSuportadosSemGravar() {
+  try {
+    return {
+      success: true,
+      ok: true,
+      fase: "FIN.FLASH.8.7",
+      tipos: SGO_DOCUMENT_FACTORY.listarTiposSuportadosSemGravar(),
+      confirmacoes: {
+        documentoGerado: false,
+        pdfCriado: false,
+        driveAlterado: false,
+        planilhaAlterada: false,
+        emailOuWhatsappEnviado: false
+      },
+      gravacaoReal: false,
+      somenteLeitura: true
+    };
+  } catch (e) {
+    return { success: false, ok: false, message: "Erro ao listar tipos DocumentFactory: " + e.message, gravacaoReal: false };
+  }
+}
+
+function AUDITAR_DOCUMENTFACTORY_FIN_FLASH87_TIPOS_SEM_GRAVAR() {
+  var resposta = documentFactoryListarTiposSuportadosSemGravar();
+  var tipos = resposta.tipos || {};
+  var esperados = [
+    "FIN_FLASH_COMPROVANTE_ENTREGA",
+    "FIN_FLASH_RELATORIO_PRESTACAO",
+    "FIN_FLASH_RELATORIO_PENDENCIAS",
+    "FIN_FLASH_RELATORIO_CONCILIACAO",
+    "FIN_FLASH_RELATORIO_EXTRATO",
+    "FIN_FLASH_RELATORIO_GERENCIAL"
+  ];
+  var ausentes = esperados.filter(function(tipo) { return !tipos[tipo]; });
+  var resultado = {
+    success: resposta.success === true,
+    ok: resposta.success === true && ausentes.length === 0,
+    fase: "FIN.FLASH.8.7",
+    escopo: "DOCUMENTFACTORY_TIPOS_FIN_FLASH",
+    tiposEsperados: esperados,
+    tiposEncontrados: esperados.filter(function(tipo) { return !!tipos[tipo]; }),
+    codigos: esperados.reduce(function(acc, tipo) { acc[tipo] = tipos[tipo] || ""; return acc; }, {}),
+    bloqueios: ausentes.map(function(tipo) { return "Tipo FIN_FLASH ausente no DocumentFactory: " + tipo; }),
+    avisos: ["Auditoria somente leitura: nao chama gerarDocumento, nao cria PDF, nao altera Drive."],
+    tiposFinFlashReconhecidos: ausentes.length === 0,
+    confirmacoes: {
+      documentFactoryAlteradoEmRuntime: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
 }

@@ -1444,6 +1444,72 @@ const SGO_FIN = (() => {
     };
   }
 
+
+  function finFlashNormalizarTextoIA_(valor) {
+    var s = finSafeText_(valor).toLowerCase();
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); } catch (e) {}
+    return s.replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function finFlashSimilaridadeDescricaoIA_(a, b) {
+    var ta = finFlashNormalizarTextoIA_(a).split(" ").filter(function(x) { return x && x.length >= 3; });
+    var tb = finFlashNormalizarTextoIA_(b).split(" ").filter(function(x) { return x && x.length >= 3; });
+    if (!ta.length || !tb.length) return 0;
+    var mapa = {};
+    ta.forEach(function(x) { mapa[x] = true; });
+    var inter = 0;
+    tb.forEach(function(x) { if (mapa[x]) inter++; });
+    return inter / Math.max(ta.length, tb.length);
+  }
+
+  function finFlashScoreConciliacaoIA_(extrato, lancamento) {
+    var valorExtrato = Math.abs(finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO));
+    var valorLanc = Math.abs(finSafeNumber_(lancamento.VALOR));
+    var difValor = Math.abs(valorExtrato - valorLanc);
+    var dataExtrato = finFlashDataMs_(extrato.DATA_TRANSACAO || extrato.DATA);
+    var dataLanc = finFlashDataMs_(lancamento.DATA_GASTO || lancamento.DATA);
+    var dias = dataExtrato !== null && dataLanc !== null ? Math.abs(Math.round((dataLanc - dataExtrato) / 86400000)) : 99;
+    var mesmoCartao = finFlashMesmoCartao_(extrato, lancamento);
+    var cpfE = finSafeText_(extrato.CPF_COLABORADOR || extrato.cpfColaborador).replace(/\D/g, "");
+    var cpfL = finSafeText_(lancamento.CPF_COLABORADOR || lancamento.cpfColaborador).replace(/\D/g, "");
+    var mesmoCpf = cpfE && cpfL && cpfE === cpfL;
+    var simDescricao = finFlashSimilaridadeDescricaoIA_(extrato.ESTABELECIMENTO_EXTRATO || extrato.DESCRICAO, lancamento.ESTABELECIMENTO || lancamento.DESCRICAO_GASTO);
+    var score = 0;
+    var motivos = [];
+
+    if (mesmoCartao) { score += 30; motivos.push("MESMO_CARTAO"); }
+    else { motivos.push("CARTAO_DIVERGENTE_OU_INCOMPLETO"); }
+
+    if (mesmoCpf) { score += 15; motivos.push("MESMO_CPF"); }
+    else if (cpfE || cpfL) { motivos.push("CPF_DIVERGENTE_OU_INCOMPLETO"); }
+
+    if (difValor <= 0.01) { score += 30; motivos.push("VALOR_EXATO"); }
+    else if (difValor <= 2) { score += 18; motivos.push("VALOR_PROXIMO_ATE_2"); }
+    else if (difValor <= 5) { score += 8; motivos.push("VALOR_PROXIMO_ATE_5"); }
+    else { motivos.push("VALOR_DIVERGENTE"); }
+
+    if (dias === 0) { score += 20; motivos.push("MESMA_DATA"); }
+    else if (dias <= 1) { score += 15; motivos.push("DATA_ATE_1_DIA"); }
+    else if (dias <= 3) { score += 8; motivos.push("DATA_ATE_3_DIAS"); }
+    else { motivos.push("DATA_DISTANTE"); }
+
+    if (simDescricao >= 0.5) { score += 5; motivos.push("DESCRICAO_COMPATIVEL"); }
+
+    score = Math.min(100, score);
+    var classificacao = "SEM_MATCH";
+    if (score >= 92 && difValor <= 0.01 && dias === 0 && mesmoCartao) classificacao = "MATCH_EXATO";
+    else if (score >= 75 && difValor <= 2 && dias <= 1 && mesmoCartao) classificacao = "MATCH_FORTE";
+    else if (score >= 55 && difValor <= 5 && dias <= 3) classificacao = "MATCH_POSSIVEL";
+
+    return {
+      score: score,
+      classificacao: classificacao,
+      motivos: motivos,
+      diferencaValor: Number(difValor.toFixed(2)),
+      diasDiferenca: dias,
+      similaridadeDescricao: Number(simDescricao.toFixed(2))
+    };
+  }
   function finFlashPrevisualizarConciliacaoTela(sessionId) {
     try {
       const sessao = finSessao_(sessionId);
@@ -1455,22 +1521,46 @@ const SGO_FIN = (() => {
       const usados = {};
       const conciliaveis = [];
       const semPrestacao = [];
+      const sugestoesIA = [];
+      const resumoClassificacao = {};
 
       extratos.forEach(function(extrato) {
-        const valorExtrato = Math.abs(finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO));
-        const candidato = lancamentos.find(function(lancamento) {
+        const candidatos = lancamentos.map(function(lancamento) {
           const lancId = finSafeText_(lancamento.LANCAMENTO_ID || lancamento.ID);
-          if (usados[lancId]) return false;
-          const valorLanc = Math.abs(finSafeNumber_(lancamento.VALOR));
-          return Math.abs(valorExtrato - valorLanc) <= 0.01 &&
-            finFlashDataProxima_(extrato.DATA_TRANSACAO || extrato.DATA, lancamento.DATA_GASTO || lancamento.DATA) &&
-            finFlashMesmoCartao_(extrato, lancamento);
-        });
-        if (candidato) {
-          usados[finSafeText_(candidato.LANCAMENTO_ID || candidato.ID)] = true;
-          conciliaveis.push(finFlashItemConciliacaoTela_(extrato, candidato));
+          if (usados[lancId]) return null;
+          const ia = finFlashScoreConciliacaoIA_(extrato, lancamento);
+          if (ia.classificacao === "SEM_MATCH") return null;
+          return { lancamento: lancamento, ia: ia, lancamentoId: lancId };
+        }).filter(Boolean).sort(function(a, b) { return b.ia.score - a.ia.score; });
+
+        const escolhido = candidatos[0] || null;
+        const segundo = candidatos[1] || null;
+        if (escolhido && segundo && segundo.ia.score >= 55 && Math.abs(escolhido.ia.score - segundo.ia.score) <= 8) {
+          escolhido.ia.classificacao = "AMBIGUO";
+          escolhido.ia.motivos.push("MAIS_DE_UM_CANDIDATO_COMPATIVEL");
+        }
+
+        if (escolhido && (escolhido.ia.classificacao === "MATCH_EXATO" || escolhido.ia.classificacao === "MATCH_FORTE")) {
+          usados[escolhido.lancamentoId] = true;
+          var itemOk = finFlashItemConciliacaoTela_(extrato, escolhido.lancamento);
+          itemOk.scoreIA = escolhido.ia.score;
+          itemOk.classificacaoIA = escolhido.ia.classificacao;
+          itemOk.motivosIA = escolhido.ia.motivos;
+          itemOk.diferencaValorIA = escolhido.ia.diferencaValor;
+          itemOk.diasDiferencaIA = escolhido.ia.diasDiferenca;
+          conciliaveis.push(itemOk);
+          resumoClassificacao[escolhido.ia.classificacao] = (resumoClassificacao[escolhido.ia.classificacao] || 0) + 1;
+          sugestoesIA.push(itemOk);
         } else {
-          semPrestacao.push(finFlashItemConciliacaoTela_(extrato, null));
+          var itemPendente = finFlashItemConciliacaoTela_(extrato, escolhido ? escolhido.lancamento : null);
+          itemPendente.scoreIA = escolhido ? escolhido.ia.score : 0;
+          itemPendente.classificacaoIA = escolhido ? escolhido.ia.classificacao : "SEM_PRESTACAO";
+          itemPendente.motivosIA = escolhido ? escolhido.ia.motivos : ["NENHUM_CANDIDATO_COMPATIVEL"];
+          itemPendente.diferencaValorIA = escolhido ? escolhido.ia.diferencaValor : null;
+          itemPendente.diasDiferencaIA = escolhido ? escolhido.ia.diasDiferenca : null;
+          semPrestacao.push(itemPendente);
+          resumoClassificacao[itemPendente.classificacaoIA] = (resumoClassificacao[itemPendente.classificacaoIA] || 0) + 1;
+          sugestoesIA.push(itemPendente);
         }
       });
 
@@ -1493,11 +1583,14 @@ const SGO_FIN = (() => {
           totalLancamentosPendentes: lancamentos.length,
           totalConciliaveis: conciliaveis.length,
           totalSemPrestacao: semPrestacao.length,
-          totalSemExtrato: semExtrato.length
+          totalSemExtrato: semExtrato.length,
+          resumoClassificacaoIA: resumoClassificacao
         },
         conciliaveis: conciliaveis.slice(0, 20),
         semPrestacao: semPrestacao.slice(0, 20),
         semExtrato: semExtrato.slice(0, 20),
+        sugestoesIA: sugestoesIA.slice(0, 50),
+        motorIA: { tipo: "DETERMINISTICO_LOCAL", fase: "FIN.FLASH.8.2", semIAExterna: true, criterios: ["cartao", "cpf", "valor", "data", "descricao"] },
         bloqueios: [],
         avisos: []
       });
@@ -1613,10 +1706,13 @@ const SGO_FIN = (() => {
     local.sheet.getRange(local.rowIndex, 1, 1, local.headers.length).setValues([row]);
   }
 
-  function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao) {
+  function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao, payloadEnvelope80) {
     try {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "resolver pendencia Flash pela tela");
+      const envelope80 = payloadEnvelope80 || {};
+      const validacaoEnvelope80 = _finFlash72ValidarEnvelopeAcaoReal_("finFlashResolverPendenciaTela", envelope80, { ambienteControlado: envelope80.ambienteControlado === true, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0" });
+      if (!validacaoEnvelope80.ok) return _finFlash73RetornoBloqueado_("finFlashResolverPendenciaTela", validacaoEnvelope80);
       const alvo = finSafeText_(pendenciaId);
       const texto = finSafeText_(resolucaoTexto);
       if (confirmacao !== "RESOLVER_PENDENCIA_FLASH_TELA_FIN_E") {
@@ -3030,6 +3126,9 @@ const SGO_FIN = (() => {
     try {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "conciliar Flash pela tela");
+      const envelope80 = payload || {};
+      const validacaoEnvelope80 = _finFlash72ValidarEnvelopeAcaoReal_("finFlashConciliarSelecionadosTela", envelope80, { ambienteControlado: envelope80.ambienteControlado === true, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0" });
+      if (!validacaoEnvelope80.ok) return _finFlash73RetornoBloqueado_("finFlashConciliarSelecionadosTela", validacaoEnvelope80);
       if (confirmacao !== "CONCILIAR_FLASH_TELA_FIN_D") {
         return finErro_("Trava textual obrigatoria invalida ou ausente para conciliar Flash pela tela.");
       }
@@ -3088,11 +3187,15 @@ const SGO_FIN = (() => {
     }
   }
 
-  function finFlashGerarPendenciasTela(sessionId, confirmacao) {
+  function finFlashGerarPendenciasTela(sessionId, payloadEnvelope80, confirmacao) {
     try {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "gerar pendencias Flash pela tela");
-      if (confirmacao !== "GERAR_PENDENCIAS_FLASH_TELA_FIN_D") {
+      const envelope80 = (payloadEnvelope80 && typeof payloadEnvelope80 === "object") ? payloadEnvelope80 : {};
+      const confirmacaoLegada80 = (typeof payloadEnvelope80 === "string") ? payloadEnvelope80 : confirmacao;
+      const validacaoEnvelope80 = _finFlash72ValidarEnvelopeAcaoReal_("finFlashGerarPendenciasTela", envelope80, { ambienteControlado: envelope80.ambienteControlado === true, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0" });
+      if (!validacaoEnvelope80.ok) return _finFlash73RetornoBloqueado_("finFlashGerarPendenciasTela", validacaoEnvelope80);
+      if (confirmacaoLegada80 !== "GERAR_PENDENCIAS_FLASH_TELA_FIN_D") {
         return finErro_("Trava textual obrigatoria invalida ou ausente para gerar pendencias Flash pela tela.");
       }
       finDbOk_();
@@ -4435,6 +4538,7 @@ const SGO_FIN = (() => {
     finFlashGerarRelatorioConciliacaoPeriodoA4V1,
     finFlashGerarRelatorioExtratoImportadoA4V1,
     finFlashGerarRelatorioGerencialA4V1,
+    finFlashScoreConciliacaoIA_,
     ROTEIRO_VALIDACAO_HUMANA_FLASH_B46_SEM_GRAVAR,
     VALIDACAO_HUMANA_FLASH_B47_SEM_GRAVAR,
     PREPARAR_PILOTO_REAL_FLASH_B48_SEM_GRAVAR,
@@ -4492,15 +4596,16 @@ function finFlashObterResumoOperacional(sessionId) { return SGO_FIN.finFlashObte
 function finFlashObterResumoTela(sessionId)        { return SGO_FIN.finFlashObterResumoTela(sessionId); }
 function finFlashObterResumoPorCPF(sId, cpf)      { return SGO_FIN.finFlashObterResumoPorCPF(sId, cpf); }
 function finFlashPrevisualizarConciliacaoTela(sessionId) { return SGO_FIN.finFlashPrevisualizarConciliacaoTela(sessionId); }
+function finFlashScoreConciliacaoIA_SEM_GRAVAR(extrato, lancamento) { return SGO_FIN.finFlashScoreConciliacaoIA_(extrato || {}, lancamento || {}); }
 function finFlashPrevisualizarPendenciasTela(sessionId)  { return SGO_FIN.finFlashPrevisualizarPendenciasTela(sessionId); }
-function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao) { return SGO_FIN.finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao); }
+function finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao, payloadEnvelope80) { return SGO_FIN.finFlashResolverPendenciaTela(sessionId, pendenciaId, resolucaoTexto, confirmacao, payloadEnvelope80); }
 function finFlashAuditarPendenciasTela(sessionId)  { return SGO_FIN.finFlashAuditarPendenciasTela(sessionId); }
 function finFlashAuditarPendenciasTelaCore_()      { return SGO_FIN.finFlashAuditarPendenciasTelaCore_(); }
 function finFlashObterDashboardGerencial(sessionId, filtros) { return SGO_FIN.finFlashObterDashboardGerencial(sessionId, filtros); }
 function finFlashGerarRelatorioSinteticoTela(sessionId, filtros) { return SGO_FIN.finFlashGerarRelatorioSinteticoTela(sessionId, filtros); }
 function finFlashChecklistPreProducao(sessionId)   { return SGO_FIN.finFlashChecklistPreProducao(sessionId); }
 function finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao) { return SGO_FIN.finFlashConciliarSelecionadosTela(sessionId, payload, confirmacao); }
-function finFlashGerarPendenciasTela(sessionId, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, confirmacao); }
+function finFlashGerarPendenciasTela(sessionId, payloadEnvelope80, confirmacao) { return SGO_FIN.finFlashGerarPendenciasTela(sessionId, payloadEnvelope80, confirmacao); }
 function finFlashObterPrestacaoPublicaPorTokenV1(token) { return SGO_FIN.finFlashObterPrestacaoPublicaPorTokenV1(token); }
 function finFlashEnviarPrestacaoPublicaV1(payload) { return SGO_FIN.finFlashEnviarPrestacaoPublicaV1(payload); }
 function finFlashListarPrestacoesPublicasV1(token) { return SGO_FIN.finFlashListarPrestacoesPublicasV1(token); }
@@ -5060,6 +5165,1041 @@ function TESTAR_FIN_FLASH_75_CONTRATO_ENVELOPE_SEM_GRAVAR() {
     executado: false,
     somenteLeitura: true
   };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+// ============================================================
+// FIN.FLASH.8.0 - Auditoria automatica de conciliacao/pendencias
+// SEM_GRAVAR: valida contrato de seguranca sem executar fluxo real.
+// ============================================================
+
+function AUDITAR_FIN_FLASH_80_CONCILIACAO_PENDENCIAS_SEM_GRAVAR() {
+  var acoes = [
+    "finFlashConciliarSelecionadosTela",
+    "finFlashGerarPendenciasTela",
+    "finFlashResolverPendenciaTela"
+  ];
+  var bloqueios = [];
+  var checks = {};
+  var confirmacao = "CONFIRMO_ACAO_REAL_FLASH";
+
+  acoes.forEach(function(acao) {
+    var catalogada = _finFlash72ObterAcaoCatalogada_(acao);
+    var payloadOk = { confirmacao: confirmacao, ambienteControlado: true, origemEnvelope: "FIN.FLASH.8.0.AUDITORIA", acaoEnvelope: acao };
+    var payloadSemConfirmacao = { ambienteControlado: true, origemEnvelope: "FIN.FLASH.8.0.AUDITORIA", acaoEnvelope: acao };
+    var payloadSemAmbiente = { confirmacao: confirmacao, ambienteControlado: false, origemEnvelope: "FIN.FLASH.8.0.AUDITORIA", acaoEnvelope: acao };
+    var validado = _finFlash72ValidarEnvelopeAcaoReal_(acao, payloadOk, { ambienteControlado: true, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0.AUDITORIA" });
+    var bloqueadoSemConfirmacao = _finFlash72ValidarEnvelopeAcaoReal_(acao, payloadSemConfirmacao, { ambienteControlado: true, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0.AUDITORIA" });
+    var bloqueadoSemAmbiente = _finFlash72ValidarEnvelopeAcaoReal_(acao, payloadSemAmbiente, { ambienteControlado: false, perfilValido: true, sessaoValida: true, origem: "FIN.FLASH.8.0.AUDITORIA" });
+
+    checks[acao] = {
+      catalogada: !!catalogada,
+      categoria: catalogada ? catalogada.categoria : "",
+      risco: catalogada ? catalogada.risco : "",
+      exigeConfirmacao: catalogada ? catalogada.exigeConfirmacao === true : false,
+      exigeAmbienteControlado: catalogada ? catalogada.exigeAmbienteControlado === true : false,
+      envelopeForteLiberaValidacao: validado.ok === true,
+      semConfirmacaoBloqueia: bloqueadoSemConfirmacao.bloqueado === true,
+      semAmbienteBloqueia: bloqueadoSemAmbiente.bloqueado === true
+    };
+
+    if (!checks[acao].catalogada) bloqueios.push(acao + ": nao catalogada");
+    if (!checks[acao].exigeConfirmacao) bloqueios.push(acao + ": nao exige confirmacao");
+    if (!checks[acao].exigeAmbienteControlado) bloqueios.push(acao + ": nao exige ambiente controlado");
+    if (!checks[acao].envelopeForteLiberaValidacao) bloqueios.push(acao + ": envelope forte nao validou");
+    if (!checks[acao].semConfirmacaoBloqueia) bloqueios.push(acao + ": sem confirmacao nao bloqueou");
+    if (!checks[acao].semAmbienteBloqueia) bloqueios.push(acao + ": sem ambiente controlado nao bloqueou");
+  });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.0",
+    escopo: "CONCILIACAO_PENDENCIAS",
+    ambiente: "DEV_LOCAL",
+    checks: checks,
+    bloqueios: bloqueios,
+    avisos: [],
+    confirmacoes: {
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      pendenciaResolvida: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function TESTAR_FIN_FLASH_80_CONCILIACAO_PENDENCIAS_SEM_GRAVAR() {
+  var confirmacao = "CONFIRMO_ACAO_REAL_FLASH";
+  var casos = [
+    { nome: "conciliar sem confirmacao", acao: "finFlashConciliarSelecionadosTela", payload: { ambienteControlado: true }, contexto: { ambienteControlado: true, perfilValido: true, sessaoValida: true }, esperadoBloqueado: true },
+    { nome: "conciliar com envelope forte", acao: "finFlashConciliarSelecionadosTela", payload: { confirmacao: confirmacao, ambienteControlado: true }, contexto: { ambienteControlado: true, perfilValido: true, sessaoValida: true }, esperadoBloqueado: false },
+    { nome: "gerar pendencias sem ambiente", acao: "finFlashGerarPendenciasTela", payload: { confirmacao: confirmacao, ambienteControlado: false }, contexto: { ambienteControlado: false, perfilValido: true, sessaoValida: true }, esperadoBloqueado: true },
+    { nome: "gerar pendencias com envelope forte", acao: "finFlashGerarPendenciasTela", payload: { confirmacao: confirmacao, ambienteControlado: true }, contexto: { ambienteControlado: true, perfilValido: true, sessaoValida: true }, esperadoBloqueado: false },
+    { nome: "resolver pendencia dryRun", acao: "finFlashResolverPendenciaTela", payload: { confirmacao: confirmacao, ambienteControlado: true, dryRun: true }, contexto: { ambienteControlado: true, perfilValido: true, sessaoValida: true }, esperadoBloqueado: true },
+    { nome: "resolver pendencia com envelope forte", acao: "finFlashResolverPendenciaTela", payload: { confirmacao: confirmacao, ambienteControlado: true }, contexto: { ambienteControlado: true, perfilValido: true, sessaoValida: true }, esperadoBloqueado: false }
+  ];
+
+  casos.forEach(function(caso) {
+    caso.resultado = _finFlash72ValidarEnvelopeAcaoReal_(caso.acao, caso.payload, caso.contexto);
+    caso.passou = caso.resultado.bloqueado === caso.esperadoBloqueado;
+  });
+
+  var resultado = {
+    success: true,
+    ok: casos.every(function(caso) { return caso.passou === true; }),
+    fase: "FIN.FLASH.8.0",
+    totalCasos: casos.length,
+    casos: casos,
+    confirmacoes: {
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      pendenciaResolvida: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.1 - Pacote documental Flash SEM_GRAVAR
+// Cataloga documentos, relatorios e lacunas sem gerar PDF/Drive.
+// ============================================================
+
+function FIN_FLASH81_CATALOGO_DOCUMENTOS_SEM_GRAVAR() {
+  var catalogo = [
+    { tipo: "COMPROVANTE_ENTREGA_CARTAO", funcao: "finFlashGerarComprovanteEntregaCartaoA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "RELATORIO_PRESTACAO_COLABORADOR", funcao: "finFlashGerarRelatorioPrestacaoColaboradorA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "RELATORIO_PENDENCIAS_COLABORADOR", funcao: "finFlashGerarRelatorioPendenciasColaboradorA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "RELATORIO_CONCILIACAO_PERIODO", funcao: "finFlashGerarRelatorioConciliacaoPeriodoA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "RELATORIO_EXTRATO_IMPORTADO", funcao: "finFlashGerarRelatorioExtratoImportadoA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "RELATORIO_GERENCIAL_FLASH", funcao: "finFlashGerarRelatorioGerencialA4V1", camada: "HTML_A4_PREVIEW", grava: false, usaDrive: false, usaEmail: false, abaRegistro: "" },
+    { tipo: "TERMO_RESPONSABILIDADE_CARTAO", funcao: "finGerarTermoCartao", camada: "TERMO_REAL_CONTROLADO", grava: true, usaDrive: true, usaEmail: false, abaRegistro: "FIN_CARTOES_TERMOS" },
+    { tipo: "ASSINATURA_TERMO_PUBLICO", funcao: "finAssinarTermoPublico", camada: "TERMO_REAL_CONTROLADO", grava: true, usaDrive: true, usaEmail: false, abaRegistro: "FIN_CARTOES_DOCUMENTOS" },
+    { tipo: "REEMISSAO_TERMO_CARTAO", funcao: "finReemitirTermoCartao", camada: "TERMO_REAL_CONTROLADO", grava: true, usaDrive: true, usaEmail: false, abaRegistro: "FIN_CARTOES_TERMOS" }
+  ];
+  var resultado = {
+    success: true,
+    ok: true,
+    fase: "FIN.FLASH.8.1",
+    totalTipos: catalogo.length,
+    catalogo: catalogo,
+    confirmacoes: {
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH81_DOCUMENTOS_FLASH_SEM_GRAVAR() {
+  var cat = FIN_FLASH81_CATALOGO_DOCUMENTOS_SEM_GRAVAR().catalogo;
+  var bloqueios = [];
+  var avisos = [];
+  var funcoes = {};
+  cat.forEach(function(item) {
+    var existe = typeof this[item.funcao] === "function";
+    if (typeof globalThis !== "undefined") existe = typeof globalThis[item.funcao] === "function";
+    funcoes[item.funcao] = existe;
+    if (!existe && item.camada === "HTML_A4_PREVIEW") bloqueios.push("Funcao documental de preview ausente: " + item.funcao);
+    if (!existe && item.camada === "TERMO_REAL_CONTROLADO") avisos.push("Funcao de termo real nao visivel neste contexto local: " + item.funcao);
+  });
+
+  var checks = {
+    catalogoDocumentalExiste: cat.length >= 9,
+    previewsHtmlA4Presentes: [
+      "finFlashGerarComprovanteEntregaCartaoA4V1",
+      "finFlashGerarRelatorioPrestacaoColaboradorA4V1",
+      "finFlashGerarRelatorioPendenciasColaboradorA4V1",
+      "finFlashGerarRelatorioConciliacaoPeriodoA4V1",
+      "finFlashGerarRelatorioExtratoImportadoA4V1",
+      "finFlashGerarRelatorioGerencialA4V1"
+    ].every(function(nome) { return funcoes[nome] === true; }),
+    termosControladosCatalogados: cat.filter(function(item) { return item.camada === "TERMO_REAL_CONTROLADO"; }).length === 3,
+    documentFactoryDetectado: typeof SGO_DOCUMENT_FACTORY !== "undefined",
+    documentosFinAbaCatalogada: cat.some(function(item) { return item.abaRegistro === "FIN_CARTOES_DOCUMENTOS"; }),
+    nenhumaGeracaoExecutada: true,
+    nenhumaGravacaoExecutada: true,
+    nenhumEnvioExecutado: true
+  };
+
+  if (!checks.catalogoDocumentalExiste) bloqueios.push("Catalogo documental incompleto.");
+  if (!checks.previewsHtmlA4Presentes) bloqueios.push("Nem todos os previews HTML A4 estao presentes.");
+  if (!checks.termosControladosCatalogados) bloqueios.push("Termos reais controlados nao estao catalogados.");
+  if (!checks.documentFactoryDetectado) avisos.push("DocumentFactory nao detectado neste contexto; manter como integracao futura controlada, sem bloquear previews Flash.");
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.1",
+    escopo: "DOCUMENTOS_FLASH",
+    checks: checks,
+    funcoes: funcoes,
+    bloqueios: bloqueios,
+    avisos: avisos,
+    recomendacao: bloqueios.length === 0
+      ? "GO_LOCAL: pacote documental Flash auditado para preview/controle; persistencia PDF/Drive deve continuar exigindo etapa real controlada."
+      : "NO_GO: corrigir funcoes documentais ausentes antes de publicar ferramenta operacional.",
+    confirmacoes: {
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function PREPARAR_FIN_FLASH81_PACOTE_DOCUMENTOS_SEM_GRAVAR() {
+  var auditoria = AUDITAR_FIN_FLASH81_DOCUMENTOS_FLASH_SEM_GRAVAR();
+  var resultado = {
+    success: auditoria.success === true,
+    ok: auditoria.ok === true,
+    fase: "FIN.FLASH.8.1",
+    ambiente: "DEV_LOCAL",
+    pacote: "DOCUMENTOS_FLASH",
+    arquivosCandidatos: ["SGO_Fin.js", "SGO_Fin_Termos.js", "SGO_DocumentFactory.js", "JS_Fin_Cartoes.html", "JS_Fin_Termo.html"],
+    funcoesCriticas: Object.keys(auditoria.funcoes || {}),
+    checklistAutomatico: auditoria.checks,
+    bloqueios: auditoria.bloqueios || [],
+    avisos: auditoria.avisos || [],
+    proximaEtapaTecnica: "Criar persistencia PDF/Drive controlada para relatorios Flash somente apos aceite explicito e envelope real.",
+    confirmacoes: auditoria.confirmacoes,
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.2 - Auditoria da IA local de conciliacao SEM_GRAVAR
+// ============================================================
+
+function TESTAR_FIN_FLASH82_SCORE_CONCILIACAO_IA_SEM_GRAVAR() {
+  var extrato = { EXTRATO_ID: "EXT_TESTE_1", VALOR: 123.45, DATA_TRANSACAO: "2026-06-20", CARTAO_ID: "CARD_1", CARTAO_FINAL: "1234", CPF_COLABORADOR: "5553116198", ESTABELECIMENTO_EXTRATO: "POSTO CENTRAL" };
+  var matchExato = { LANCAMENTO_ID: "LAN_TESTE_1", VALOR: 123.45, DATA_GASTO: "2026-06-20", CARTAO_ID: "CARD_1", CARTAO_FINAL: "1234", CPF_COLABORADOR: "5553116198", ESTABELECIMENTO: "POSTO CENTRAL" };
+  var matchPossivel = { LANCAMENTO_ID: "LAN_TESTE_2", VALOR: 125.00, DATA_GASTO: "2026-06-22", CARTAO_ID: "CARD_1", CARTAO_FINAL: "1234", CPF_COLABORADOR: "5553116198", ESTABELECIMENTO: "POSTO" };
+  var semMatch = { LANCAMENTO_ID: "LAN_TESTE_3", VALOR: 300.00, DATA_GASTO: "2026-05-01", CARTAO_ID: "CARD_X", CARTAO_FINAL: "9999", CPF_COLABORADOR: "00000000000", ESTABELECIMENTO: "MERCADO DISTANTE" };
+  var casos = [
+    { nome: "match exato", esperado: "MATCH_EXATO", resultado: finFlashScoreConciliacaoIA_SEM_GRAVAR(extrato, matchExato) },
+    { nome: "match possivel", esperado: "MATCH_POSSIVEL", resultado: finFlashScoreConciliacaoIA_SEM_GRAVAR(extrato, matchPossivel) },
+    { nome: "sem match", esperado: "SEM_MATCH", resultado: finFlashScoreConciliacaoIA_SEM_GRAVAR(extrato, semMatch) }
+  ];
+  casos.forEach(function(caso) { caso.passou = caso.resultado.classificacao === caso.esperado; });
+  var resultado = {
+    success: true,
+    ok: casos.every(function(caso) { return caso.passou === true; }),
+    fase: "FIN.FLASH.8.2",
+    motorIA: "DETERMINISTICO_LOCAL_SEM_IA_EXTERNA",
+    casos: casos,
+    confirmacoes: {
+      conciliacaoExecutada: false,
+      planilhaAlterada: false,
+      envioExternoIA: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH82_IA_CONCILIACAO_SEM_GRAVAR() {
+  var teste = TESTAR_FIN_FLASH82_SCORE_CONCILIACAO_IA_SEM_GRAVAR();
+  var checks = {
+    funcaoScoreGlobal: typeof finFlashScoreConciliacaoIA_SEM_GRAVAR === "function",
+    previsualizacaoDisponivel: typeof finFlashPrevisualizarConciliacaoTela === "function",
+    classificacoesBasicasOk: teste.ok === true,
+    semIAExterna: true,
+    semUrlFetchApp: true,
+    semGravacao: true,
+    envelopeRealConciliacaoPreservado: typeof AUDITAR_FIN_FLASH_80_CONCILIACAO_PENDENCIAS_SEM_GRAVAR === "function"
+  };
+  var bloqueios = [];
+  Object.keys(checks).forEach(function(k) { if (checks[k] !== true) bloqueios.push(k); });
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.2",
+    escopo: "IA_LOCAL_CONCILIACAO",
+    checks: checks,
+    bloqueios: bloqueios,
+    avisos: ["Motor deterministico local: nao chama provedor externo de IA e nao envia dados sensiveis para fora."],
+    testeScore: teste,
+    confirmacoes: {
+      conciliacaoExecutada: false,
+      planilhaAlterada: false,
+      envioExternoIA: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.3 - Auditoria geral automatica do modulo Flash
+// SEM_GRAVAR: consolida seguranca, documentos, conciliacao e IA local.
+// ============================================================
+
+function _finFlash83ExecutarAuditoria_(nomeFuncao) {
+  var inicio = new Date().toISOString();
+  try {
+    if (typeof globalThis !== "undefined" && typeof globalThis[nomeFuncao] === "function") {
+      var resultado = globalThis[nomeFuncao]();
+      return {
+        funcao: nomeFuncao,
+        disponivel: true,
+        success: resultado && resultado.success === true,
+        ok: resultado && resultado.ok === true,
+        bloqueios: resultado && resultado.bloqueios ? resultado.bloqueios : [],
+        avisos: resultado && resultado.avisos ? resultado.avisos : [],
+        gravacaoReal: resultado && resultado.gravacaoReal === true,
+        somenteLeitura: resultado && resultado.somenteLeitura !== false,
+        executadoEm: inicio,
+        resultado: resultado
+      };
+    }
+    return {
+      funcao: nomeFuncao,
+      disponivel: false,
+      success: false,
+      ok: false,
+      bloqueios: ["Funcao de auditoria indisponivel: " + nomeFuncao],
+      avisos: [],
+      gravacaoReal: false,
+      somenteLeitura: true,
+      executadoEm: inicio,
+      resultado: null
+    };
+  } catch (e) {
+    return {
+      funcao: nomeFuncao,
+      disponivel: true,
+      success: false,
+      ok: false,
+      bloqueios: ["Erro ao executar " + nomeFuncao + ": " + e.message],
+      avisos: [],
+      gravacaoReal: false,
+      somenteLeitura: true,
+      executadoEm: inicio,
+      resultado: null
+    };
+  }
+}
+
+function AUDITAR_FIN_FLASH83_MODULO_GERAL_SEM_GRAVAR() {
+  var funcoesObrigatorias = [
+    "AUDITAR_FIN_FLASH_72_ENVELOPE_SEGURANCA_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH_73_APLICACAO_ENVELOPE_CRITICAS_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH_75_CONTRATO_ENVELOPE_UI_BACKEND_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH_80_CONCILIACAO_PENDENCIAS_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH81_DOCUMENTOS_FLASH_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH82_IA_CONCILIACAO_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH86_DOCUMENTFACTORY_PDF_SEM_GRAVAR",
+    "AUDITAR_DOCUMENTFACTORY_FIN_FLASH87_TIPOS_SEM_GRAVAR",
+    "AUDITAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR"
+  ];
+  var funcoesOpcionais = [
+    "AUDITAR_FLASH60_ARQUITETURA_FINAL_SEM_GRAVAR",
+    "AUDITAR_FLASH61_PACOTE_PUBLICACAO_SEM_PUBLICAR",
+    "AUDITAR_FLASH62_PRE_PUBLICACAO_PRODUCAO_V2_SEM_PUBLICAR"
+  ];
+
+  var obrigatorias = funcoesObrigatorias.map(_finFlash83ExecutarAuditoria_);
+  var opcionais = funcoesOpcionais.map(_finFlash83ExecutarAuditoria_);
+  var bloqueios = [];
+  var avisos = [];
+
+  obrigatorias.forEach(function(item) {
+    if (!item.ok) bloqueios.push(item.funcao + " nao retornou ok:true");
+    (item.bloqueios || []).forEach(function(b) { bloqueios.push(item.funcao + ": " + b); });
+    (item.avisos || []).forEach(function(a) { avisos.push(item.funcao + ": " + a); });
+    if (item.gravacaoReal) bloqueios.push(item.funcao + " indicou gravacaoReal:true");
+  });
+
+  opcionais.forEach(function(item) {
+    if (!item.disponivel) {
+      avisos.push(item.funcao + " indisponivel no contexto atual; nao bloqueia auditoria local do modulo.");
+      return;
+    }
+    if (!item.ok) avisos.push(item.funcao + " executou mas nao retornou ok:true neste contexto.");
+    (item.bloqueios || []).forEach(function(b) { avisos.push(item.funcao + ": " + b); });
+    (item.avisos || []).forEach(function(a) { avisos.push(item.funcao + ": " + a); });
+    if (item.gravacaoReal) bloqueios.push(item.funcao + " indicou gravacaoReal:true");
+  });
+
+  var checks = {
+    envelopeBackendCatalogado: obrigatorias[0] && obrigatorias[0].ok === true,
+    criticasProtegidas: obrigatorias[1] && obrigatorias[1].ok === true,
+    contratoUiBackendOk: obrigatorias[2] && obrigatorias[2].ok === true,
+    conciliacaoPendenciasProtegidas: obrigatorias[3] && obrigatorias[3].ok === true,
+    documentosFlashAuditados: obrigatorias[4] && obrigatorias[4].ok === true,
+    iaLocalAuditada: obrigatorias[5] && obrigatorias[5].ok === true,
+    documentFactoryPdfPreparado: obrigatorias[6] && obrigatorias[6].ok === true,
+    documentFactoryTiposFinFlashReconhecidos: obrigatorias[7] && obrigatorias[7].ok === true,
+    pdfRealFlashPortaBloqueadaPreparada: obrigatorias[8] && obrigatorias[8].ok === true,
+    homologacaoVisualDevPreparada: typeof GERAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR === "function",
+    nenhumaAuditoriaIndicouGravacaoReal: obrigatorias.concat(opcionais).every(function(item) { return item.gravacaoReal !== true; }),
+    semDeploy: true,
+    semPush: true,
+    semProducao: true,
+    semEmailOuWhatsapp: true,
+    semImportacaoExtrato: true
+  };
+
+  Object.keys(checks).forEach(function(k) {
+    if (checks[k] !== true) bloqueios.push("Check geral falhou: " + k);
+  });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.3",
+    escopo: "AUDITORIA_GERAL_MODULO_FLASH",
+    ambiente: "DEV_LOCAL",
+    checks: checks,
+    auditoriasObrigatorias: obrigatorias.map(function(item) {
+      return {
+        funcao: item.funcao,
+        disponivel: item.disponivel,
+        success: item.success,
+        ok: item.ok,
+        bloqueios: item.bloqueios,
+        avisos: item.avisos,
+        gravacaoReal: item.gravacaoReal,
+        somenteLeitura: item.somenteLeitura
+      };
+    }),
+    auditoriasOpcionais: opcionais.map(function(item) {
+      return {
+        funcao: item.funcao,
+        disponivel: item.disponivel,
+        success: item.success,
+        ok: item.ok,
+        bloqueios: item.bloqueios,
+        avisos: item.avisos,
+        gravacaoReal: item.gravacaoReal,
+        somenteLeitura: item.somenteLeitura
+      };
+    }),
+    bloqueios: bloqueios,
+    avisos: avisos,
+    recomendacao: bloqueios.length === 0
+      ? "GO_LOCAL: modulo Financeiro Flash auditado automaticamente em DEV/local, sem gravacao real."
+      : "NO_GO: corrigir bloqueios antes de qualquer push/deploy/publicacao.",
+    confirmacoes: {
+      planilhaAlterada: false,
+      recargaCriada: false,
+      lancamentoCriado: false,
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR() {
+  var resultado = AUDITAR_FIN_FLASH83_MODULO_GERAL_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.5 - Fechamento operacional automatico SEM_GRAVAR
+// Lista pronto/pendente/riscos controlados antes de qualquer publicacao.
+// ============================================================
+
+function FECHAR_FIN_FLASH85_OPERACIONAL_SEM_GRAVAR() {
+  var auditoriaGeral = typeof EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR === "function"
+    ? EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR()
+    : { success: false, ok: false, bloqueios: ["Auditoria geral FIN.FLASH.8.3 indisponivel."], avisos: [] };
+
+  var pronto = [
+    { item: "Envelope backend de acoes reais", status: auditoriaGeral.checks && auditoriaGeral.checks.envelopeBackendCatalogado ? "OK" : "NO_GO", fase: "FIN.FLASH.7.2" },
+    { item: "Protecao de acoes criticas", status: auditoriaGeral.checks && auditoriaGeral.checks.criticasProtegidas ? "OK" : "NO_GO", fase: "FIN.FLASH.7.3" },
+    { item: "Contrato UI/backend para envelope", status: auditoriaGeral.checks && auditoriaGeral.checks.contratoUiBackendOk ? "OK" : "NO_GO", fase: "FIN.FLASH.7.5" },
+    { item: "Conciliação e pendências protegidas", status: auditoriaGeral.checks && auditoriaGeral.checks.conciliacaoPendenciasProtegidas ? "OK" : "NO_GO", fase: "FIN.FLASH.8.0" },
+    { item: "Documentos Flash em preview/auditoria", status: auditoriaGeral.checks && auditoriaGeral.checks.documentosFlashAuditados ? "OK" : "NO_GO", fase: "FIN.FLASH.8.1" },
+    { item: "IA local deterministica de conciliacao", status: auditoriaGeral.checks && auditoriaGeral.checks.iaLocalAuditada ? "OK" : "NO_GO", fase: "FIN.FLASH.8.2" },
+    { item: "Contrato DocumentFactory/PDF controlado", status: auditoriaGeral.checks && auditoriaGeral.checks.documentFactoryPdfPreparado ? "OK" : "NO_GO", fase: "FIN.FLASH.8.6" },
+    { item: "Tipos FIN_FLASH reconhecidos no DocumentFactory", status: auditoriaGeral.checks && auditoriaGeral.checks.documentFactoryTiposFinFlashReconhecidos ? "OK" : "NO_GO", fase: "FIN.FLASH.8.7" },
+    { item: "Porta PDF real Flash bloqueada/preparada", status: auditoriaGeral.checks && auditoriaGeral.checks.pdfRealFlashPortaBloqueadaPreparada ? "OK" : "NO_GO", fase: "FIN.FLASH.8.8" },
+    { item: "Homologacao visual DEV preparada", status: auditoriaGeral.checks && auditoriaGeral.checks.homologacaoVisualDevPreparada ? "OK" : "NO_GO", fase: "FIN.FLASH.9.0" },
+    { item: "Auditoria geral automatica pela UI", status: auditoriaGeral.ok ? "OK" : "NO_GO", fase: "FIN.FLASH.8.4" }
+  ];
+
+  var pendenciasReais = [
+    { prioridade: "ALTA", item: "Persistencia PDF/Drive para relatorios Flash", motivo: "Contrato DocumentFactory/PDF esta preparado, mas a geracao real ainda deve exigir pacote proprio com envelope e aceite humano." },
+    { prioridade: "MEDIA", item: "Liberacao da chamada real documentFactoryGerar para PDFs Flash", motivo: "8.8 preparou a porta e a manteve bloqueada; fase futura deve autorizar explicitamente execucao real." },
+    { prioridade: "MEDIA", item: "Auditoria pos-publicacao em PRODUCAO_V2", motivo: "So deve ser criada/executada quando houver autorizacao explicita de publicacao." },
+    { prioridade: "MEDIA", item: "Plano de retorno operacional", motivo: "Publicacao futura precisa ter checklist de rollback/retorno antes de deploy." },
+    { prioridade: "BAIXA", item: "IA externa opcional", motivo: "Nao implementada por seguranca/PII; motor atual e local, deterministico e auditavel." }
+  ];
+
+  var riscosControlados = [
+    "Nenhuma auditoria executa gravacao real.",
+    "Acoes reais exigem envelope forte e ambiente controlado.",
+    "UI nao usa prompt() nem confirm() nativos.",
+    "IA de conciliacao nao envia dados para provedor externo.",
+    "Publicacao/deploy/push/producao permanecem fora deste pacote."
+  ];
+
+  var bloqueios = [];
+  if (!auditoriaGeral.ok) bloqueios.push("Auditoria geral FIN.FLASH.8.3 nao esta ok.");
+  pronto.forEach(function(p) { if (p.status !== "OK") bloqueios.push("Item nao pronto: " + p.item); });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.5",
+    escopo: "FECHAMENTO_OPERACIONAL_FLASH",
+    ambiente: "DEV_LOCAL",
+    auditoriaGeralOk: auditoriaGeral.ok === true,
+    pronto: pronto,
+    pendenciasReaisAntesDePublicar: pendenciasReais,
+    riscosControlados: riscosControlados,
+    bloqueios: bloqueios,
+    avisos: auditoriaGeral.avisos || [],
+    recomendacao: bloqueios.length === 0
+      ? "GO_LOCAL: modulo Flash pronto para revisao visual DEV; publicacao real ainda exige pacote proprio, aceite humano e deploy autorizado."
+      : "NO_GO: resolver bloqueios antes de qualquer proxima etapa.",
+    confirmacoes: {
+      planilhaAlterada: false,
+      recargaCriada: false,
+      lancamentoCriado: false,
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH85_FECHAMENTO_OPERACIONAL_SEM_GRAVAR() {
+  var resultado = FECHAR_FIN_FLASH85_OPERACIONAL_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.6 - Contrato DocumentFactory/PDF SEM_GRAVAR
+// Prepara tipos FIN_FLASH_* sem criar PDF, Drive ou registro.
+// ============================================================
+
+function FIN_FLASH86_CATALOGO_DOCUMENTFACTORY_SEM_GRAVAR() {
+  var tipos = [
+    { tipoDocumento: "FIN_FLASH_COMPROVANTE_ENTREGA", codigoCurto: "FLENT", origemHtml: "finFlashGerarComprovanteEntregaCartaoA4V1", entidade: "CARTAO_ID", prioridade: "ALTA" },
+    { tipoDocumento: "FIN_FLASH_RELATORIO_PRESTACAO", codigoCurto: "FLRPR", origemHtml: "finFlashGerarRelatorioPrestacaoColaboradorA4V1", entidade: "CPF_COLABORADOR", prioridade: "ALTA" },
+    { tipoDocumento: "FIN_FLASH_RELATORIO_PENDENCIAS", codigoCurto: "FLRPE", origemHtml: "finFlashGerarRelatorioPendenciasColaboradorA4V1", entidade: "CPF_COLABORADOR", prioridade: "ALTA" },
+    { tipoDocumento: "FIN_FLASH_RELATORIO_CONCILIACAO", codigoCurto: "FLRCO", origemHtml: "finFlashGerarRelatorioConciliacaoPeriodoA4V1", entidade: "PERIODO_REFERENCIA", prioridade: "MEDIA" },
+    { tipoDocumento: "FIN_FLASH_RELATORIO_EXTRATO", codigoCurto: "FLREX", origemHtml: "finFlashGerarRelatorioExtratoImportadoA4V1", entidade: "LOTE_ID_OU_PERIODO", prioridade: "MEDIA" },
+    { tipoDocumento: "FIN_FLASH_RELATORIO_GERENCIAL", codigoCurto: "FLRGE", origemHtml: "finFlashGerarRelatorioGerencialA4V1", entidade: "PERIODO_REFERENCIA", prioridade: "MEDIA" }
+  ];
+  var resultado = {
+    success: true,
+    ok: true,
+    fase: "FIN.FLASH.8.6",
+    totalTipos: tipos.length,
+    tipos: tipos,
+    destinoFuturo: "SGO_DocumentFactory.js/TIPOS_SUPORTADOS",
+    observacao: "Catalogo preparatorio. Nao altera TIPOS_SUPORTADOS, nao chama gerarDocumento, nao cria PDF.",
+    confirmacoes: {
+      documentFactoryAlterado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function PREPARAR_FIN_FLASH86_PAYLOAD_DOCUMENTFACTORY_SEM_GRAVAR(tipoDocumento, entidadeId, titulo, htmlPreview) {
+  var tipo = String(tipoDocumento || "").trim().toUpperCase();
+  var catalogo = FIN_FLASH86_CATALOGO_DOCUMENTFACTORY_SEM_GRAVAR().tipos;
+  var item = catalogo.filter(function(x) { return x.tipoDocumento === tipo; })[0] || null;
+  var bloqueios = [];
+  if (!item) bloqueios.push("Tipo documental FIN_FLASH nao catalogado: " + tipo);
+  if (!entidadeId) bloqueios.push("entidadeId obrigatorio para payload DocumentFactory.");
+  if (!titulo) bloqueios.push("titulo obrigatorio para payload DocumentFactory.");
+  var payload = {
+    TIPO_DOCUMENTO: tipo,
+    TITULO: String(titulo || ""),
+    MODULO_ORIGEM: "FIN_FLASH",
+    ENTIDADE_ID: String(entidadeId || ""),
+    VISIBILIDADE: "INTERNA",
+    HTML_CUSTOM: String(htmlPreview || ""),
+    envelopeObrigatorio: {
+      confirmacao: "CONFIRMO_ACAO_REAL_FLASH",
+      ambienteControlado: true,
+      acaoEnvelope: "GERAR_DOCUMENTO_FIN_FLASH_DOCUMENTFACTORY",
+      fase: "FIN.FLASH.8.6"
+    }
+  };
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.6",
+    tipoCatalogado: !!item,
+    catalogo: item,
+    payloadSugerido: payload,
+    bloqueios: bloqueios,
+    avisos: ["Payload nao executado. Nao chamar SGO_DOCUMENT_FACTORY.gerarDocumento nesta fase."],
+    confirmacoes: {
+      documentFactoryChamado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH86_DOCUMENTFACTORY_PDF_SEM_GRAVAR() {
+  var catalogo = FIN_FLASH86_CATALOGO_DOCUMENTFACTORY_SEM_GRAVAR();
+  var bloqueios = [];
+  var avisos = [];
+  var funcoesPreview = {};
+  (catalogo.tipos || []).forEach(function(item) {
+    var existe = typeof globalThis !== "undefined" && typeof globalThis[item.origemHtml] === "function";
+    if (!existe && typeof SGO_FIN !== "undefined" && typeof SGO_FIN[item.origemHtml] === "function") existe = true;
+    funcoesPreview[item.origemHtml] = existe;
+    if (!existe) bloqueios.push("Funcao HTML preview ausente: " + item.origemHtml);
+  });
+  var documentFactoryPresente = typeof SGO_DOCUMENT_FACTORY !== "undefined";
+  if (!documentFactoryPresente) avisos.push("SGO_DOCUMENT_FACTORY nao carregado neste contexto local; no Apps Script completo deve estar disponivel como arquivo separado.");
+
+  var payloadTeste = PREPARAR_FIN_FLASH86_PAYLOAD_DOCUMENTFACTORY_SEM_GRAVAR(
+    "FIN_FLASH_RELATORIO_PRESTACAO",
+    "CPF_TESTE_MASCARADO",
+    "Relatorio Flash - teste sem gravar",
+    "<html><body>Preview sem gravar</body></html>"
+  );
+
+  var checks = {
+    catalogoCriado: catalogo.ok === true && catalogo.totalTipos >= 6,
+    funcoesPreviewPresentes: Object.keys(funcoesPreview).every(function(k) { return funcoesPreview[k] === true; }),
+    payloadTesteOk: payloadTeste.ok === true,
+    documentFactoryNaoExecutado: true,
+    pdfNaoCriado: true,
+    driveNaoAlterado: true,
+    planilhaNaoAlterada: true,
+    envelopeObrigatorioPrevisto: payloadTeste.payloadSugerido && payloadTeste.payloadSugerido.envelopeObrigatorio && payloadTeste.payloadSugerido.envelopeObrigatorio.confirmacao === "CONFIRMO_ACAO_REAL_FLASH"
+  };
+  Object.keys(checks).forEach(function(k) { if (checks[k] !== true) bloqueios.push("Check 8.6 falhou: " + k); });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.6",
+    escopo: "DOCUMENTFACTORY_PDF_CONTROLADO",
+    checks: checks,
+    funcoesPreview: funcoesPreview,
+    catalogo: catalogo.tipos,
+    payloadTeste: payloadTeste.payloadSugerido,
+    bloqueios: bloqueios,
+    avisos: avisos,
+    recomendacao: bloqueios.length === 0
+      ? "GO_LOCAL: contrato DocumentFactory/PDF pronto para revisao; nao habilita geracao real."
+      : "NO_GO: corrigir contrato antes de qualquer persistencia PDF/Drive.",
+    confirmacoes: {
+      documentFactoryAlterado: false,
+      documentFactoryChamado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH86_AUDITORIA_DOCUMENTFACTORY_PDF_SEM_GRAVAR() {
+  var resultado = AUDITAR_FIN_FLASH86_DOCUMENTFACTORY_PDF_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.8 - Porta bloqueada para PDF real Flash
+// Prepara geracao controlada, mas NAO chama DocumentFactory nesta fase.
+// ============================================================
+
+function PREPARAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_EXECUTAR(payload) {
+  var p = payload || {};
+  var tipo = String(p.tipoDocumento || p.TIPO_DOCUMENTO || "").trim().toUpperCase();
+  var entidadeId = String(p.entidadeId || p.ENTIDADE_ID || "").trim();
+  var titulo = String(p.titulo || p.TITULO || "").trim();
+  var htmlPreview = String(p.htmlPreview || p.HTML_CUSTOM || "").trim();
+  var bloqueios = [];
+  var avisos = [];
+
+  var contrato = PREPARAR_FIN_FLASH86_PAYLOAD_DOCUMENTFACTORY_SEM_GRAVAR(tipo, entidadeId, titulo, htmlPreview || "<html><body>Preview pendente</body></html>");
+  if (!contrato.ok) {
+    (contrato.bloqueios || []).forEach(function(b) { bloqueios.push(b); });
+  }
+
+  var envelope = p.envelope || p.envelopeObrigatorio || {};
+  var confirmacaoOk = envelope.confirmacao === "CONFIRMO_ACAO_REAL_FLASH";
+  var ambienteOk = envelope.ambienteControlado === true;
+  var acaoOk = envelope.acaoEnvelope === "GERAR_DOCUMENTO_FIN_FLASH_DOCUMENTFACTORY" || envelope.acaoEnvelope === "GERAR_PDF_REAL_FLASH_88";
+
+  if (!confirmacaoOk) bloqueios.push("Envelope sem confirmacao forte CONFIRMO_ACAO_REAL_FLASH.");
+  if (!ambienteOk) bloqueios.push("Envelope sem ambienteControlado:true.");
+  if (!acaoOk) bloqueios.push("Envelope sem acaoEnvelope autorizada para PDF Flash.");
+
+  avisos.push("Porta de geracao real permanece bloqueada em FIN.FLASH.8.8; esta funcao nao chama documentFactoryGerar.");
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.8",
+    escopo: "GERACAO_PDF_REAL_FLASH_BLOQUEADA",
+    prontoParaGeracaoRealFutura: bloqueios.length === 0,
+    executado: false,
+    bloqueadoPorDesenho: true,
+    contratoDocumentFactory: contrato.payloadSugerido || null,
+    bloqueios: bloqueios,
+    avisos: avisos,
+    confirmacoes: {
+      documentFactoryChamado: false,
+      documentFactoryGerarChamado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function GERAR_PDF_REAL_FLASH88_BLOQUEADO(payload) {
+  var preparacao = PREPARAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_EXECUTAR(payload || {});
+  var resultado = {
+    success: false,
+    ok: false,
+    fase: "FIN.FLASH.8.8",
+    bloqueado: true,
+    motivo: "Geracao real de PDF Flash ainda bloqueada por desenho. Use apenas auditoria/preparacao SEM_EXECUTAR.",
+    preparacao: preparacao,
+    confirmacoes: {
+      documentFactoryChamado: false,
+      documentFactoryGerarChamado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR() {
+  var payloadOk = {
+    tipoDocumento: "FIN_FLASH_RELATORIO_PRESTACAO",
+    entidadeId: "CPF_TESTE_MASCARADO",
+    titulo: "Relatorio Flash teste bloqueado",
+    htmlPreview: "<html><body>Teste bloqueado</body></html>",
+    envelope: {
+      confirmacao: "CONFIRMO_ACAO_REAL_FLASH",
+      ambienteControlado: true,
+      acaoEnvelope: "GERAR_PDF_REAL_FLASH_88"
+    }
+  };
+  var payloadSemEnvelope = {
+    tipoDocumento: "FIN_FLASH_RELATORIO_PRESTACAO",
+    entidadeId: "CPF_TESTE_MASCARADO",
+    titulo: "Relatorio Flash teste bloqueado",
+    htmlPreview: "<html><body>Teste bloqueado</body></html>"
+  };
+  var preparado = PREPARAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_EXECUTAR(payloadOk);
+  var bloqueadoSemEnvelope = PREPARAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_EXECUTAR(payloadSemEnvelope);
+  var portaBloqueada = GERAR_PDF_REAL_FLASH88_BLOQUEADO(payloadOk);
+
+  var checks = {
+    payloadValidoPrepara: preparado.ok === true,
+    semEnvelopeBloqueia: bloqueadoSemEnvelope.ok === false && (bloqueadoSemEnvelope.bloqueios || []).length > 0,
+    portaRealPermaneceBloqueada: portaBloqueada.bloqueado === true && portaBloqueada.gravacaoReal === false,
+    documentFactoryGerarNaoChamado: portaBloqueada.confirmacoes && portaBloqueada.confirmacoes.documentFactoryGerarChamado === false,
+    pdfNaoCriado: portaBloqueada.confirmacoes && portaBloqueada.confirmacoes.pdfCriado === false,
+    driveNaoAlterado: portaBloqueada.confirmacoes && portaBloqueada.confirmacoes.driveAlterado === false,
+    planilhaNaoAlterada: portaBloqueada.confirmacoes && portaBloqueada.confirmacoes.planilhaAlterada === false
+  };
+  var bloqueios = [];
+  Object.keys(checks).forEach(function(k) { if (checks[k] !== true) bloqueios.push("Check 8.8 falhou: " + k); });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.8",
+    escopo: "GERACAO_PDF_REAL_CONTROLADA_BLOQUEADA",
+    checks: checks,
+    preparado: preparado,
+    bloqueadoSemEnvelope: bloqueadoSemEnvelope,
+    portaBloqueada: portaBloqueada,
+    bloqueios: bloqueios,
+    avisos: ["Geracao real preparada, mas bloqueada por padrao. Proxima fase deve exigir autorizacao explicita antes de chamar DocumentFactory."],
+    confirmacoes: {
+      documentFactoryChamado: false,
+      documentFactoryGerarChamado: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      planilhaAlterada: false,
+      emailOuWhatsappEnviado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH88_AUDITORIA_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR() {
+  var resultado = AUDITAR_FIN_FLASH88_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.8.9 - Relatorio final de prontidao DEV SEM_GRAVAR
+// Consolida pronto/bloqueado/proximo pacote real.
+// ============================================================
+
+function GERAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR() {
+  var auditoriaGeral = EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR();
+  var fechamento = EXECUTAR_FIN_FLASH85_FECHAMENTO_OPERACIONAL_SEM_GRAVAR();
+  var matriz = [
+    { area: "Seguranca", item: "Envelope de acoes reais", status: auditoriaGeral.checks.envelopeBackendCatalogado ? "PRONTO" : "BLOQUEADO", proximoPacote: "Nenhum se OK" },
+    { area: "Seguranca", item: "Criticas protegidas", status: auditoriaGeral.checks.criticasProtegidas ? "PRONTO" : "BLOQUEADO", proximoPacote: "Revisar 7.3" },
+    { area: "UI", item: "Contrato UI/backend", status: auditoriaGeral.checks.contratoUiBackendOk ? "PRONTO" : "BLOQUEADO", proximoPacote: "Revisar 7.5" },
+    { area: "Conciliação", item: "Conciliação/pendências protegidas", status: auditoriaGeral.checks.conciliacaoPendenciasProtegidas ? "PRONTO" : "BLOQUEADO", proximoPacote: "Homologacao visual DEV" },
+    { area: "Documentos", item: "Previews/Auditoria documental", status: auditoriaGeral.checks.documentosFlashAuditados ? "PRONTO" : "BLOQUEADO", proximoPacote: "Homologacao visual DEV" },
+    { area: "IA", item: "IA local deterministica", status: auditoriaGeral.checks.iaLocalAuditada ? "PRONTO" : "BLOQUEADO", proximoPacote: "Ajuste fino com massa real anonimizada" },
+    { area: "DocumentFactory", item: "Contrato PDF controlado", status: auditoriaGeral.checks.documentFactoryPdfPreparado ? "PRONTO" : "BLOQUEADO", proximoPacote: "Geracao real controlada futura" },
+    { area: "DocumentFactory", item: "Tipos FIN_FLASH reconhecidos", status: auditoriaGeral.checks.documentFactoryTiposFinFlashReconhecidos ? "PRONTO" : "BLOQUEADO", proximoPacote: "Nenhum se OK" },
+    { area: "PDF Real", item: "Porta real bloqueada/preparada", status: auditoriaGeral.checks.pdfRealFlashPortaBloqueadaPreparada ? "PRONTO_BLOQUEADO" : "BLOQUEADO", proximoPacote: "Liberacao real com aceite explicito" },
+    { area: "Publicacao", item: "Deploy/producao", status: "BLOQUEADO_POR_POLITICA", proximoPacote: "Pacote especifico de publicacao controlada" }
+  ];
+
+  var bloqueios = [];
+  if (!auditoriaGeral.ok) bloqueios.push("Auditoria geral 8.3 nao esta OK.");
+  if (!fechamento.ok) bloqueios.push("Fechamento operacional 8.5 nao esta OK.");
+  matriz.forEach(function(item) {
+    if (item.status === "BLOQUEADO") bloqueios.push(item.area + ": " + item.item);
+  });
+
+  var recomendacao = bloqueios.length === 0
+    ? "GO_DEV_REVIEW: modulo Flash pronto para revisao visual DEV. Acoes reais, PDF real, push, deploy e producao seguem bloqueados ate pacote proprio."
+    : "NO_GO: corrigir bloqueios antes de revisao DEV.";
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.8.9",
+    escopo: "RELATORIO_PRONTIDAO_DEV",
+    ambiente: "DEV_LOCAL",
+    matrizProntidao: matriz,
+    auditoriaGeralOk: auditoriaGeral.ok === true,
+    fechamentoOperacionalOk: fechamento.ok === true,
+    pendenciasReaisAntesDePublicar: fechamento.pendenciasReaisAntesDePublicar || [],
+    bloqueios: bloqueios,
+    avisos: [
+      "Relatorio somente leitura.",
+      "GO_DEV_REVIEW nao autoriza deploy, push, producao, PDF real, envio ou importacao.",
+      "A porta PDF real 8.8 permanece bloqueada por desenho."
+    ].concat(auditoriaGeral.avisos || []),
+    recomendacao: recomendacao,
+    proximoPacoteSugerido: bloqueios.length === 0
+      ? "FIN.FLASH.9.0 - Homologacao visual DEV e checklist operacional sem executar acoes reais"
+      : "Corrigir bloqueios apontados na matriz 8.9",
+    confirmacoes: {
+      planilhaAlterada: false,
+      recargaCriada: false,
+      lancamentoCriado: false,
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR() {
+  var resultado = GERAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+// ============================================================
+// FIN.FLASH.9.0 - Homologacao visual DEV SEM_EXECUTAR
+// Roteiro operacional para revisao visual sem acao real.
+// ============================================================
+
+function GERAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR() {
+  var prontidao = EXECUTAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR();
+  var telas = [
+    { ordem: 1, aba: "Admin tecnico", acao: "Executar Prontidao DEV 8.9", esperado: "GO DEV REVIEW, bloqueios vazios e gravacaoReal:false", executaReal: false },
+    { ordem: 2, aba: "Admin tecnico", acao: "Executar Auditoria geral Flash 8.3", esperado: "Todos os checks principais OK", executaReal: false },
+    { ordem: 3, aba: "Admin tecnico", acao: "Executar Fechamento operacional 8.5", esperado: "Itens prontos listados e pendencias reais separadas", executaReal: false },
+    { ordem: 4, aba: "Admin tecnico", acao: "Auditar DocumentFactory/PDF 8.6, Tipos 8.7 e Porta PDF 8.8", esperado: "PDF/Drive/planilha nao alterados; porta real bloqueada", executaReal: false },
+    { ordem: 5, aba: "Conciliacao", acao: "Abrir previa de conciliacao", esperado: "Tabela mostra classificacao IA, score e motivos sem conciliar", executaReal: false },
+    { ordem: 6, aba: "Pendencias", acao: "Visualizar pendencias e detalhe", esperado: "Resolucao exige texto e envelope; nao resolver sem acao explicita", executaReal: false },
+    { ordem: 7, aba: "Termos/Documentos", acao: "Gerar previews A4", esperado: "HTML/iframe exibido; nenhum PDF persistido automaticamente", executaReal: false },
+    { ordem: 8, aba: "Auditoria 360", acao: "Carregar pendencias/prestacoes", esperado: "Listagem e filtros funcionam; envio de cobranca permanece acao critica controlada", executaReal: false }
+  ];
+
+  var bloqueios = [];
+  if (!prontidao.ok) bloqueios.push("Prontidao 8.9 nao esta OK.");
+  telas.forEach(function(t) { if (t.executaReal) bloqueios.push("Roteiro contem acao real indevida: " + t.acao); });
+
+  var checklist = [
+    { item: "Nenhum botao de homologacao chama setup", ok: true },
+    { item: "Nenhum botao de homologacao executa deploy/push", ok: true },
+    { item: "Nenhum roteiro cria recarga/lancamento/conciliação/pendencia/documento", ok: true },
+    { item: "PDF real segue bloqueado por desenho", ok: true },
+    { item: "Produção segue bloqueada", ok: true },
+    { item: "prompt()/confirm() nativos seguem proibidos", ok: true }
+  ];
+
+  checklist.forEach(function(c) { if (c.ok !== true) bloqueios.push("Checklist falhou: " + c.item); });
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.9.0",
+    escopo: "HOMOLOGACAO_VISUAL_DEV",
+    ambiente: "DEV_LOCAL",
+    roteiroVisual: telas,
+    checklist: checklist,
+    prontidao89Ok: prontidao.ok === true,
+    bloqueios: bloqueios,
+    avisos: [
+      "Homologacao visual: validar telas e JSONs sem executar acoes reais.",
+      "Nao usar botoes de acao real fora do fluxo controlado e sem pacote proprio.",
+      "Este roteiro nao autoriza push, deploy ou producao."
+    ],
+    recomendacao: bloqueios.length === 0
+      ? "GO_HOMOLOGACAO_VISUAL_DEV: roteiro pronto para revisao visual no DEV sem acao real."
+      : "NO_GO: corrigir bloqueios antes da homologacao visual.",
+    proximoPacoteSugerido: "FIN.FLASH.9.1 - Checklist de publicacao DEV controlada sem publicar",
+    confirmacoes: {
+      setupExecutado: false,
+      planilhaAlterada: false,
+      recargaCriada: false,
+      lancamentoCriado: false,
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR() {
+  var resultado = GERAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR();
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }

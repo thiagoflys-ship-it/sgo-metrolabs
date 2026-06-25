@@ -1091,6 +1091,13 @@
         <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarRoteiroB46_()">Roteiro B46</button>
         <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashGerarChecklistB47_()">Checklist B47</button>
         <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlashPrepararPilotoB48_()">Piloto B48</button>
+        <button id="finFlash84AuditoriaGeralBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash84ExecutarAuditoriaGeral_()">Auditoria geral Flash 8.3</button>
+        <button id="finFlash85FechamentoBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlash85ExecutarFechamento_()">Fechamento operacional 8.5</button>
+        <button id="finFlash86DocFactoryBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlash86ExecutarDocFactory_()">Auditar DocumentFactory/PDF 8.6</button>
+        <button id="finFlash87TiposDocFactoryBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlash87AuditarTiposDocFactory_()">Tipos FIN_FLASH 8.7</button>
+        <button id="finFlash88PdfRealBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlash88AuditarPdfReal_()">Porta PDF real 8.8</button>
+        <button id="finFlash89ProntidaoBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash89GerarProntidao_()">Prontidao DEV 8.9</button>
+        <button id="finFlash90HomologacaoBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash90GerarHomologacao_()">Homologacao visual 9.0</button>
       </div>
       <div id="finAdminTecResultado" style="margin-top:10px"></div>
     </div>
@@ -4254,6 +4261,45 @@ function finFlashRenderAuditarFinal_(dados) {
   alvo.innerHTML = html;
 }
 
+function finFlashAdminTecExecutarAuditoria_(btnId, mensagem, metodo, renderFn) {
+  var alvo = document.getElementById('finAdminTecResultado');
+  var btn = document.getElementById(btnId);
+  if (alvo) alvo.innerHTML = '<div class="fin-alert fin-alert-info">' + finEH(mensagem) + '</div>';
+  if (btn) btn.disabled = true;
+  finSetLoading(true);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (btn) btn.disabled = false;
+      renderFn(r);
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      if (btn) btn.disabled = false;
+      if (alvo) alvo.innerHTML = '<div class="fin-alert fin-alert-danger">Falha: ' + finEH(e && e.message ? e.message : String(e || 'Erro')) + '</div>';
+    })[metodo]();
+}
+
+function finFlashAdminTecRenderJson_(titulo, dados) {
+  var alvo = document.getElementById('finAdminTecResultado');
+  if (!alvo) return;
+  var r = dados || {};
+  var classe = r.ok ? 'success' : ((r.bloqueios && r.bloqueios.length) ? 'danger' : 'warning');
+  var html = '<div class="fin-alert fin-alert-' + classe + '"><strong>' + finEH(titulo) + ' - ' + (r.ok ? 'OK' : 'NO-GO') + '</strong><br>' + finEH(r.recomendacao || r.escopo || 'Auditoria somente leitura.') + '</div>';
+  html += finHtmlListaPreConfirmacaoFlash_('Bloqueios', r.bloqueios || []);
+  html += finHtmlListaPreConfirmacaoFlash_('Avisos', r.avisos || []);
+  html += '<h3>JSON completo</h3>';
+  html += '<textarea class="fin-textarea" rows="18" readonly style="font-family:monospace;font-size:12px">' + finEH(JSON.stringify(r, null, 2)) + '</textarea>';
+  alvo.innerHTML = html;
+}
+
+function finFlash84ExecutarAuditoriaGeral_() { finFlashAdminTecExecutarAuditoria_('finFlash84AuditoriaGeralBtn', 'Executando auditoria geral Flash 8.3 em modo somente leitura...', 'EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.3', r); }); }
+function finFlash85ExecutarFechamento_() { finFlashAdminTecExecutarAuditoria_('finFlash85FechamentoBtn', 'Gerando fechamento operacional 8.5 sem gravar...', 'EXECUTAR_FIN_FLASH85_FECHAMENTO_OPERACIONAL_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.5', r); }); }
+function finFlash86ExecutarDocFactory_() { finFlashAdminTecExecutarAuditoria_('finFlash86DocFactoryBtn', 'Auditando DocumentFactory/PDF 8.6 sem gerar arquivo...', 'EXECUTAR_FIN_FLASH86_AUDITORIA_DOCUMENTFACTORY_PDF_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.6', r); }); }
+function finFlash87AuditarTiposDocFactory_() { finFlashAdminTecExecutarAuditoria_('finFlash87TiposDocFactoryBtn', 'Auditando tipos FIN_FLASH no DocumentFactory...', 'AUDITAR_DOCUMENTFACTORY_FIN_FLASH87_TIPOS_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.7', r); }); }
+function finFlash88AuditarPdfReal_() { finFlashAdminTecExecutarAuditoria_('finFlash88PdfRealBtn', 'Auditando porta PDF real Flash 8.8 sem executar geracao...', 'EXECUTAR_FIN_FLASH88_AUDITORIA_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.8', r); }); }
+function finFlash89GerarProntidao_() { finFlashAdminTecExecutarAuditoria_('finFlash89ProntidaoBtn', 'Gerando prontidao DEV 8.9 sem gravar...', 'EXECUTAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.9', r); }); }
+function finFlash90GerarHomologacao_() { finFlashAdminTecExecutarAuditoria_('finFlash90HomologacaoBtn', 'Gerando homologacao visual 9.0 sem executar acoes reais...', 'EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.9.0', r); }); }
 function finHtmlChecklistAutorizacaoFlash_(titulo, lista) {
   if (!lista || !lista.length) return '';
   var html = '<h3>' + finEH(titulo || 'Checklist') + '</h3>';
@@ -4563,7 +4609,7 @@ function finFlashResolverPendencia_(pendenciaId) {
     .withFailureHandler(function(e) {
       finFlashMostrarErro_(e, 'finFlashResolverPendenciaTela');
     })
-    .finFlashResolverPendenciaTela(_finSessao, realId, texto, 'RESOLVER_PENDENCIA_FLASH_TELA_FIN_E');
+    .finFlashResolverPendenciaTela(_finSessao, realId, texto, 'RESOLVER_PENDENCIA_FLASH_TELA_FIN_E', finFlash74AplicarEnvelopeCritico_({}, 'finFlashResolverPendenciaTela'));
 }
 
 function finFlashMostrarResultadoResolucao_(dados) {
@@ -5532,17 +5578,25 @@ function finPend8BVerDetalhe_(idx) {
     ['Origem',       p.origem              || '-'],
     ['Data criacao', finDataBR(p.dataCriacao || '')]
   ];
+  var podResolver = p.status === 'ABERTO' || p.status === 'EM_REVISAO';
+  var pid = finEA(p.pendenciaId || '');
   var html = '<h3>Detalhe da pendencia</h3>';
-  html += '<div class="fin-alert fin-alert-info">Detalhes da pendência. Resolução individual disponível na próxima versão.</div>';
   html += '<dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin:10px 0">';
   for (var i = 0; i < campos.length; i++) {
     html += '<dt style="color:#666;font-weight:600;padding:3px 0;white-space:nowrap">' + finEH(campos[i][0]) + '</dt>';
     html += '<dd style="color:#0f2d52;padding:3px 0;margin:0">' + finEH(String(campos[i][1])) + '</dd>';
   }
   html += '</dl>';
-  html += '<div class="fin-btn-row">';
-  html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharDetalhe_()">Fechar detalhe</button>';
-  html += '<button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Resolver pendência</button>';
+  if (podResolver) {
+    html += '<div class="fin-fg full" style="margin-top:8px">';
+    html += '<label class="fin-label">Resolucao / Justificativa *</label>';
+    html += '<textarea id="finPend8BResolucaoTexto" class="fin-textarea" rows="2" placeholder="Descreva a resolucao (minimo 10 caracteres)"></textarea>';
+    html += '</div>';
+    html += '<div id="finPend8BResolucaoErro" style="display:none;margin-top:4px"></div>';
+  }
+  html += '<div class="fin-btn-row" style="margin-top:10px">';
+  html += '<button class="fin-btn fin-btn-secondary fin-btn-sm" type="button" onclick="finPend8BFecharDetalhe_()">Fechar</button>';
+  if (podResolver) html += '<button class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finPend8BConfirmarResolver_(\'' + pid + '\')">Resolver pendencia</button>';
   html += '</div>';
   el.innerHTML = html;
   el.style.display = 'block';
@@ -5551,6 +5605,45 @@ function finPend8BVerDetalhe_(idx) {
 function finPend8BFecharDetalhe_() {
   var el = document.getElementById('finPend8BDetalhe');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function finPend8BConfirmarResolver_(pendenciaId) {
+  var realId = String(pendenciaId || '').trim();
+  var txtEl = document.getElementById('finPend8BResolucaoTexto');
+  var errEl = document.getElementById('finPend8BResolucaoErro');
+  var texto = txtEl ? String(txtEl.value || '').trim() : '';
+  if (errEl) { errEl.style.display = 'none'; errEl.innerHTML = ''; }
+  if (!realId) {
+    if (errEl) { errEl.style.display = 'block'; errEl.innerHTML = '<div class="fin-alert fin-alert-danger">Pendencia nao informada.</div>'; }
+    return;
+  }
+  if (texto.length < 10) {
+    if (errEl) { errEl.style.display = 'block'; errEl.innerHTML = '<div class="fin-alert fin-alert-danger">Informe uma resolucao com pelo menos 10 caracteres.</div>'; }
+    return;
+  }
+  finFlash70ConfirmarAcaoLocal_(
+    'Resolver pendencia financeira',
+    'Esta acao registrara a resolucao da pendencia no banco em ambiente controlado.',
+    'Resolver pendencia',
+    function() {
+      finSetLoading(true);
+      google.script.run
+        .withSuccessHandler(function(r) {
+          finSetLoading(false);
+          if (!r || !r.ok) {
+            if (errEl) { errEl.style.display = 'block'; errEl.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH((r && r.message) || 'Nao foi possivel resolver a pendencia.') + '</div>'; }
+            return;
+          }
+          finPend8BFecharDetalhe_();
+          finPend8BCarregar_();
+        })
+        .withFailureHandler(function(e) {
+          finSetLoading(false);
+          if (errEl) { errEl.style.display = 'block'; errEl.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(e && e.message ? e.message : String(e || 'Falha ao resolver pendencia.')) + '</div>'; }
+        })
+        .finFlashResolverPendenciaTela(_finSessao, realId, texto, 'RESOLVER_PENDENCIA_FLASH_TELA_FIN_E', finFlash74AplicarEnvelopeCritico_({}, 'finFlashResolverPendenciaTela'));
+    }
+  );
 }
 
 function finPend8BVerPreviaConciliacao_() {
@@ -5975,9 +6068,13 @@ function finTermosGerarRelExtrato_() {
 var _finPMConferindoId_ = null;
 
 function finPMAprovarConfirmar_(lancamentoId, nomeFuncionario) {
-  var msg = 'Aprovar a prestação de ' + (nomeFuncionario || lancamentoId) + '?\nEsta ação registrará a aprovação financeira.';
-  if (!confirm(msg)) { return; }
-  finPMConferir_(lancamentoId, 'APROVAR', '');
+  var msg = 'Aprovar a prestacao de ' + (nomeFuncionario || lancamentoId) + '?\nEsta acao registrara a aprovacao financeira.';
+  finFlash70ConfirmarAcaoLocal_(
+    'Confirmar aprovacao financeira',
+    msg,
+    'Aprovar prestacao',
+    function() { finPMConferir_(lancamentoId, 'APROVAR', ''); }
+  );
 }
 
 function finPMReprovarAbrir_(lancamentoId, nomeFuncionario) {
@@ -7029,10 +7126,10 @@ function finConcilExecutar_() {
   if (!pares.length) { finConcilMostrarErro_('Selecione ao menos um par para conciliar.'); return; }
   finFlash70ConfirmarAcaoLocal_(
     'Conciliar extratos',
-    'Você está prestes a conciliar ' + pares.length + ' par(es) extrato ↔ lançamento. Esta ação é real e registrará a conciliação no banco.\n\nDigite a trava textual abaixo para confirmar:',
+    'Você está prestes a conciliar ' + pares.length + ' par(es) extrato ↔ lançamento. Esta ação é real e registrará a conciliação no banco em ambiente controlado.',
     'Confirmar conciliação',
     function() {
-      var payload = { pares: pares.map(function(p) { return { extratoId: p.extratoId, lancamentoId: p.lancamentoId }; }) };
+      var payload = finFlash74AplicarEnvelopeCritico_({ pares: pares.map(function(p) { return { extratoId: p.extratoId, lancamentoId: p.lancamentoId }; }) }, 'finFlashConciliarSelecionadosTela');
       var btn = document.getElementById('finConcilBtnExecutar');
       if (btn) { btn.disabled = true; btn.textContent = 'Conciliando...'; }
       var resEl = document.getElementById('finConcilResultado');
@@ -7083,7 +7180,7 @@ function finConcilGerarPendencias_() {
             resEl.style.display = 'block';
           }
         })
-        .finFlashGerarPendenciasTela(_finSessao, 'GERAR_PENDENCIAS_FLASH_TELA_FIN_D');
+        .finFlashGerarPendenciasTela(_finSessao, finFlash74AplicarEnvelopeCritico_({}, 'finFlashGerarPendenciasTela'), 'GERAR_PENDENCIAS_FLASH_TELA_FIN_D');
     }
   );
 }
