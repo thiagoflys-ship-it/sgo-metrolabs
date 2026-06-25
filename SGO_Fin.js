@@ -3031,23 +3031,58 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "conciliar Flash pela tela");
       if (confirmacao !== "CONCILIAR_FLASH_TELA_FIN_D") {
-        return {
-          ok: false,
-          success: false,
-          executado: false,
-          autorizado: false,
-          bloqueios: ["Trava textual obrigatoria invalida ou ausente para conciliar Flash pela tela."],
-          avisos: []
-        };
+        return finErro_("Trava textual obrigatoria invalida ou ausente para conciliar Flash pela tela.");
       }
-      return {
-        ok: false,
-        success: false,
-        executado: false,
-        autorizado: true,
-        bloqueios: [],
-        avisos: ["Acao real ainda não habilitada neste pacote."]
-      };
+      const pares = (payload && Array.isArray(payload.pares)) ? payload.pares : [];
+      if (!pares.length) return finErro_("Nenhum par informado para conciliacao.");
+
+      const lock = LockService.getScriptLock();
+      lock.waitLock(15000);
+      try {
+        finDbOk_();
+        const todosExtratos    = finAll_(ABAS.EXTRATOS);
+        const todosLancamentos = finAll_(ABAS.LANCAMENTOS);
+        const u = finUsuario_(sessao);
+        let conciliados = 0;
+        const erros = [];
+
+        pares.forEach(function(par) {
+          const eId = finSafeText_(par.extratoId);
+          const lId = finSafeText_(par.lancamentoId);
+          const extrato    = todosExtratos.find(function(r) { return finSafeText_(r.EXTRATO_ID) === eId || finSafeText_(r.ID) === eId; });
+          const lancamento = todosLancamentos.find(function(r) { return finSafeText_(r.LANCAMENTO_ID) === lId || finSafeText_(r.ID) === lId; });
+          if (!extrato)    { erros.push("Extrato nao encontrado: " + eId);    return; }
+          if (!lancamento) { erros.push("Lancamento nao encontrado: " + lId); return; }
+          if (finSafeUpper_(extrato.CONCILIADO) === "SIM" || finSafeUpper_(lancamento.CONCILIADO) === "SIM") {
+            erros.push("Par ja conciliado: " + eId + " / " + lId); return;
+          }
+          const concilId = finGerarId_("CONC");
+          finInsert_(ABAS.CONCILIACAO, {
+            CONCILIACAO_ID    : concilId,
+            EXTRATO_ID        : finSafeText_(extrato.EXTRATO_ID || extrato.ID),
+            LANCAMENTO_ID     : finSafeText_(lancamento.LANCAMENTO_ID || lancamento.ID),
+            CARTAO_ID         : finSafeText_(extrato.CARTAO_ID || lancamento.CARTAO_ID),
+            CARTAO_FINAL      : finSafeText_(extrato.CARTAO_FINAL || lancamento.CARTAO_FINAL),
+            CPF_COLABORADOR   : finSafeText_(extrato.CPF_COLABORADOR || lancamento.CPF_COLABORADOR).replace(/\D/g,""),
+            FUNCIONARIO_ID    : finSafeText_(extrato.FUNCIONARIO_ID || lancamento.FUNCIONARIO_ID),
+            DATA_CONCILIACAO  : finNow_(),
+            VALOR_EXTRATO     : finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO),
+            VALOR_LANCAMENTO  : finSafeNumber_(lancamento.VALOR),
+            TOTAL_CONCILIADO  : 1,
+            STATUS            : "CONCILIADO",
+            CONCILIADO_POR    : u.nome || u.id,
+            ORIGEM            : "TELA_FIN"
+          });
+          finUpdate_(ABAS.EXTRATOS,    extrato.ID,    { CONCILIADO: "SIM", STATUS_CONCILIACAO: "CONCILIADO", CONCILIACAO_ID: concilId });
+          finUpdate_(ABAS.LANCAMENTOS, lancamento.ID, { CONCILIADO: "SIM", STATUS_CONCILIACAO: "CONCILIADO", CONCILIACAO_ID: concilId });
+          finLog_(sessao, "EXTRATO_CONCILIADO_FLASH91", "CONCILIACAO", concilId, null, { extratoId: eId, lancamentoId: lId }, "OK", "Par conciliado pela tela FIN.");
+          conciliados++;
+        });
+
+        return finOk_({ conciliados: conciliados, erros: erros, executado: true, gravado: true });
+      } finally {
+        lock.releaseLock();
+      }
     } catch (e) {
       return finErro_(e.message);
     }
@@ -3058,23 +3093,74 @@ const SGO_FIN = (() => {
       const sessao = finSessao_(sessionId);
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "gerar pendencias Flash pela tela");
       if (confirmacao !== "GERAR_PENDENCIAS_FLASH_TELA_FIN_D") {
-        return {
-          ok: false,
-          success: false,
-          executado: false,
-          autorizado: false,
-          bloqueios: ["Trava textual obrigatoria invalida ou ausente para gerar pendencias Flash pela tela."],
-          avisos: []
-        };
+        return finErro_("Trava textual obrigatoria invalida ou ausente para gerar pendencias Flash pela tela.");
       }
-      return {
-        ok: false,
-        success: false,
-        executado: false,
-        autorizado: true,
-        bloqueios: [],
-        avisos: ["Acao real ainda não habilitada neste pacote."]
-      };
+      finDbOk_();
+      const lock = LockService.getScriptLock();
+      lock.waitLock(15000);
+      try {
+        const extratos    = finAll_(ABAS.EXTRATOS).filter(finFlashExtratoPendente_);
+        const lancamentos = finAll_(ABAS.LANCAMENTOS).filter(finFlashLancamentoPendente_);
+        const pendenciasExistentes = finAll_(ABAS.PENDENCIAS);
+        const idsExistentes = {};
+        pendenciasExistentes.forEach(function(p) {
+          const st = finSafeUpper_(p.STATUS);
+          if (st === "CANCELADO" || st === "RESOLVIDO") return;
+          if (p.EXTRATO_ID)    idsExistentes["E_" + finSafeText_(p.EXTRATO_ID)]    = true;
+          if (p.LANCAMENTO_ID) idsExistentes["L_" + finSafeText_(p.LANCAMENTO_ID)] = true;
+        });
+
+        let criadas = 0;
+        let duplicadas = 0;
+        const u = finUsuario_(sessao);
+
+        extratos.forEach(function(e) {
+          const eIdKey = "E_" + finSafeText_(e.EXTRATO_ID || e.ID);
+          if (idsExistentes[eIdKey]) { duplicadas++; return; }
+          finInsert_(ABAS.PENDENCIAS, {
+            PENDENCIA_ID        : finGerarId_("PEND"),
+            TIPO_PENDENCIA      : "PRESTACAO_PENDENTE",
+            DESCRICAO_PENDENCIA : "Extrato sem prestacao de conta: " + finSafeText_(e.ESTABELECIMENTO_EXTRATO || e.DESCRICAO || e.EXTRATO_ID || e.ID),
+            EXTRATO_ID          : finSafeText_(e.EXTRATO_ID || e.ID),
+            LANCAMENTO_ID       : "",
+            CARTAO_ID           : finSafeText_(e.CARTAO_ID),
+            CPF_COLABORADOR     : finSafeText_(e.CPF_COLABORADOR).replace(/\D/g,""),
+            FUNCIONARIO_ID      : finSafeText_(e.FUNCIONARIO_ID),
+            VALOR_ENVOLVIDO     : finSafeNumber_(e.VALOR || e.VALOR_TRANSACAO),
+            STATUS              : "ABERTO",
+            ORIGEM              : "GERACAO_AUTOMATICA_FLASH91",
+            CRIADO_POR          : u.nome || u.id
+          });
+          idsExistentes[eIdKey] = true;
+          criadas++;
+        });
+
+        lancamentos.forEach(function(l) {
+          const lIdKey = "L_" + finSafeText_(l.LANCAMENTO_ID || l.ID);
+          if (idsExistentes[lIdKey]) { duplicadas++; return; }
+          finInsert_(ABAS.PENDENCIAS, {
+            PENDENCIA_ID        : finGerarId_("PEND"),
+            TIPO_PENDENCIA      : "SEM_EXTRATO",
+            DESCRICAO_PENDENCIA : "Lancamento sem extrato correspondente: " + finSafeText_(l.ESTABELECIMENTO || l.DESCRICAO_GASTO || l.LANCAMENTO_ID || l.ID),
+            EXTRATO_ID          : "",
+            LANCAMENTO_ID       : finSafeText_(l.LANCAMENTO_ID || l.ID),
+            CARTAO_ID           : finSafeText_(l.CARTAO_ID),
+            CPF_COLABORADOR     : finSafeText_(l.CPF_COLABORADOR).replace(/\D/g,""),
+            FUNCIONARIO_ID      : finSafeText_(l.FUNCIONARIO_ID),
+            VALOR_ENVOLVIDO     : finSafeNumber_(l.VALOR),
+            STATUS              : "ABERTO",
+            ORIGEM              : "GERACAO_AUTOMATICA_FLASH91",
+            CRIADO_POR          : u.nome || u.id
+          });
+          idsExistentes[lIdKey] = true;
+          criadas++;
+        });
+
+        finLog_(sessao, "PENDENCIAS_GERADAS_FLASH91", "PENDENCIAS", "LOTE", null, { criadas: criadas, duplicadas: duplicadas }, "OK", "Geracao automatica de pendencias pela tela FIN.");
+        return finOk_({ criadas: criadas, duplicadas: duplicadas, executado: true, gravado: true });
+      } finally {
+        lock.releaseLock();
+      }
     } catch (e) {
       return finErro_(e.message);
     }

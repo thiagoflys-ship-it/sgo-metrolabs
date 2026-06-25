@@ -355,11 +355,11 @@
   <button class="fin-tab-btn" onclick="finMudarAba('despesas')">Despesas <span id="tabBadgePend" class="fin-tab-badge" style="display:none">0</span></button>
   <button class="fin-tab-btn" onclick="finMudarAba('extratos')">Extratos</button>
   <button class="fin-tab-btn" onclick="finMudarAba('conciliacao')" style="display:none" data-admin="1">Conciliação</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('pendencias')" style="display:none">Pendências</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('prestacoes')" style="display:none">Prestações <span id="tabBadgePM" class="fin-tab-badge" style="display:none">0</span></button>
+  <button class="fin-tab-btn" onclick="finMudarAba('pendencias')" style="display:none" data-fin="1">Pendências</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('prestacoes')" style="display:none" data-fin="1">Prestações <span id="tabBadgePM" class="fin-tab-badge" style="display:none">0</span></button>
   <button class="fin-tab-btn" onclick="finMudarAba('termos')" style="display:none" data-admin="1">Termos e Docs</button>
   <button class="fin-tab-btn" onclick="finMudarAba('relatorios')">Relatórios</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')" style="display:none">Cobranças</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')" style="display:none" data-fin="1">Cobranças</button>
   <button class="fin-tab-btn fin-tab-admin" onclick="finMudarAba('auditoria')" style="display:none;font-weight:700;color:#92400e" data-admin="1" data-flash70-area="tecnica">Auditoria 360</button>
   <span class="fin-tab-admin-sep"></span>
   <button id="finTabBtnAdmin" class="fin-tab-btn fin-tab-admin" onclick="finMudarAba('admintec')" style="display:none" title="Área restrita — ADMIN/DIRETORIA" data-flash70-area="tecnica">Admin técnico</button>
@@ -690,8 +690,8 @@
         <button class="fin-btn fin-btn-primary" type="button" onclick="finPend8BCarregar_()">Atualizar pendencias</button>
         <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BVerPreviaConciliacao_()">Ver prévia conciliação</button>
         <button class="fin-btn fin-btn-outline" type="button" onclick="finPend8BLimparFiltros_()">Limpar filtros</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Conciliar selecionados</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Gerar pendências</button>
+        <button class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finMudarAba('conciliacao')" data-risk="real">Conciliar extratos</button>
+        <button class="fin-btn fin-btn-warning fin-btn-sm" type="button" onclick="finConcilGerarPendencias_()">Gerar pendências</button>
       </div>
     </div>
     <div id="finPend8BErro" style="display:none;margin-top:10px"></div>
@@ -703,13 +703,13 @@
       <div id="finPend8BRodape" class="fin8b-rodape"></div>
     </div>
     <div class="fin-card" style="margin-top:14px">
-      <h3>Próximas ações disponíveis</h3>
-      <p style="color:#666;font-size:13px;margin-bottom:10px">As ações abaixo serão habilitadas após validação operacional e conciliação dos extratos.</p>
+      <h3>Ações disponíveis</h3>
+      <p style="color:#666;font-size:13px;margin-bottom:10px">Use a aba Conciliação para cruzar extratos com lançamentos. As demais ações serão habilitadas progressivamente.</p>
       <div class="fin-flash-checklist-list">
-        <div class="fin-flash-checklist-item"><strong>Conciliar selecionados</strong><span>Em preparação — disponível após validação dos extratos importados.</span></div>
-        <div class="fin-flash-checklist-item"><strong>Gerar pendências</strong><span>Em preparação — será habilitado com dados reais validados.</span></div>
-        <div class="fin-flash-checklist-item"><strong>Resolver em massa</strong><span>Em preparação — resolução individual será habilitada controladamente.</span></div>
-        <div class="fin-flash-checklist-item"><strong>Cobrança por e-mail/WhatsApp</strong><span>Em preparação — disponível na próxima versão do módulo.</span></div>
+        <div class="fin-flash-checklist-item fin-flash-checklist-ok"><strong>Conciliar extratos</strong><span>Disponível — use o botão acima ou acesse a aba Conciliação.</span></div>
+        <div class="fin-flash-checklist-item fin-flash-checklist-ok"><strong>Gerar pendências</strong><span>Disponível — detecta extratos sem prestação e lançamentos sem extrato.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Resolver em massa</strong><span>Em preparação — resolução individual habilitada controladamente.</span></div>
+        <div class="fin-flash-checklist-item"><strong>Cobrança por e-mail/WhatsApp</strong><span>Disponível na aba Cobranças.</span></div>
       </div>
     </div>
   </div>
@@ -858,29 +858,48 @@
 <!-- Tab: Conciliação (placeholder profissional) -->
 <div id="tabConciliacao" class="fin-tab-content">
   <div class="fin-tab-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Conciliação de Extratos</h2>
+        <p style="color:#666;font-size:12px;margin:3px 0 0">Cruzamento automático entre extratos importados e despesas declaradas pelos colaboradores.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finConcilCarregar_()">↺ Carregar conciliação</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finMudarAba('extratos')">Ir para Extratos</button>
+      </div>
+    </div>
+    <div class="fin-flash-action-grid" style="margin-bottom:14px">
+      <div class="fin-flash-action-kpi"><div class="label">Para conciliar</div><div class="value" id="finConcilKpiPares">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Sem prestação</div><div class="value" id="finConcilKpiSemPrest">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Sem extrato</div><div class="value" id="finConcilKpiSemExtrato">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Extratos pendentes</div><div class="value" id="finConcilKpiExtPend">-</div></div>
+      <div class="fin-flash-action-kpi"><div class="label">Lançamentos pend.</div><div class="value" id="finConcilKpiLancPend">-</div></div>
+    </div>
+    <div id="finConcilErro" style="display:none;margin-bottom:10px"></div>
+    <div id="finConcilAlerta" style="display:none;margin-bottom:10px"></div>
+    <div class="fin-card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin:0">Pares para conciliar <span id="finConcilContSel" style="font-size:12px;color:#0366d6;font-weight:400"></span></h3>
+        <div style="display:flex;gap:8px">
+          <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finConcilSelecionarTodos_()">Selecionar todos</button>
+          <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finConcilLimparSelecao_()">Limpar seleção</button>
+        </div>
+      </div>
+      <div id="finConcilPares"><div class="fin-list-empty">Clique em "Carregar conciliação" para ver os pares disponíveis.</div></div>
+    </div>
+    <div class="fin-btn-row" style="margin-bottom:16px">
+      <button class="fin-btn fin-btn-primary" type="button" onclick="finConcilExecutar_()" id="finConcilBtnExecutar" disabled data-risk="real">Conciliar selecionados</button>
+      <button class="fin-btn fin-btn-warning" type="button" onclick="finConcilGerarPendencias_()">Gerar pendências</button>
+    </div>
+    <div class="fin-card" style="margin-bottom:14px">
+      <h3>Extratos sem prestação <span style="font-size:12px;font-weight:400;color:#666">(extrato sem lançamento correspondente)</span></h3>
+      <div id="finConcilSemPrestacao"><div class="fin-list-empty">Carregue a conciliação para ver.</div></div>
+    </div>
     <div class="fin-card">
-      <div class="fin-placeholder-card">
-        <div class="fin-placeholder-status">Em preparação</div>
-        <h3>Conciliação de Extratos</h3>
-        <p>Cruze automaticamente os extratos importados com as despesas declaradas pelos colaboradores. A IA sugerirá correspondências — o financeiro decide e confirma.</p>
-        <ul class="fin-placeholder-list">
-          <li>Cruzamento automático</li>
-          <li>Sugestão por IA</li>
-          <li>Revisão humana obrigatória</li>
-          <li>Detecção de duplicidades</li>
-          <li>Relatório de divergências</li>
-        </ul>
-      </div>
+      <h3>Lançamentos sem extrato <span style="font-size:12px;font-weight:400;color:#666">(despesa declarada sem extrato da operadora)</span></h3>
+      <div id="finConcilSemExtrato"><div class="fin-list-empty">Carregue a conciliação para ver.</div></div>
     </div>
-    <div class="fin-card" style="margin-top:14px">
-      <h3>Ações disponíveis agora</h3>
-      <p style="color:#666;font-size:13px;margin-bottom:12px">Você pode pré-visualizar a conciliação com os dados atuais. A conciliação real será habilitada após validação dos extratos.</p>
-      <div class="fin-btn-row">
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finFlashVerPreviaConciliacao_()">Ver prévia de conciliação</button>
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('extratos')">Ir para Extratos</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível após validação dos extratos">Conciliar extrato</button>
-      </div>
-    </div>
+    <div id="finConcilResultado" style="display:none;margin-top:14px"></div>
   </div>
 </div>
 
@@ -1561,6 +1580,24 @@
         <label class="fin-label">Descrição / Finalidade</label>
         <textarea id="flnvFinalidade" class="fin-textarea" rows="2" placeholder="Motivo do gasto..."></textarea>
       </div>
+      <div class="fin-fg full">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <label class="fin-label" style="margin:0">Categoria do Gasto</label>
+          <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="flnvSugerirCategoria_()" id="flnvBtnIA" title="Usar IA para sugerir a categoria com base no estabelecimento" style="font-size:11px;padding:2px 8px">IA Sugerir</button>
+          <span id="flnvIAStatus" style="font-size:11px;color:#0369a1"></span>
+        </div>
+        <select id="flnvCategoria" class="fin-filter-select" style="width:100%">
+          <option value="">Selecione ou use IA para sugerir...</option>
+          <option value="ALIMENTACAO">Alimentação</option>
+          <option value="TRANSPORTE">Transporte</option>
+          <option value="HOSPEDAGEM">Hospedagem</option>
+          <option value="MATERIAL_ESCRITORIO">Material de escritório</option>
+          <option value="EQUIPAMENTO_MATERIAL">Equipamento / Material de campo</option>
+          <option value="TELECOM">Telecom / Telefone / Internet</option>
+          <option value="SERVICOS_TECNICOS">Serviços técnicos</option>
+          <option value="OUTROS_REVISAR">Outros / Revisar</option>
+        </select>
+      </div>
       <div class="fin-fg">
         <label class="fin-label">Tem O.S.?</label>
         <select id="flnvTemOs" class="fin-filter-select" style="width:100%">
@@ -1840,6 +1877,12 @@ function finCarregarContexto() {
         b.textContent = 'DB Configurado';
         b.classList.add('ok');
         finCarregarDashboard();
+      }
+      var PERFIS_FIN = ['FINANCEIRO', 'GESTOR', 'ADMIN', 'DIRETORIA'];
+      if (PERFIS_FIN.indexOf(_finPerfil) >= 0) {
+        document.querySelectorAll('[data-fin="1"]').forEach(function(el) {
+          el.style.display = 'inline-block';
+        });
       }
       if (_finPerfil === 'ADMIN' || _finPerfil === 'DIRETORIA') {
         var btnAdm = document.getElementById('finBtnAdminTec');
@@ -2453,6 +2496,7 @@ function flnvEnviar() {
   }
   if (btn) { btn.disabled = true; }
 
+  var catEl = document.getElementById('flnvCategoria');
   var payload = {
     CARTAO_ID:           cartaoId,
     CPF_COLABORADOR:     cpf,
@@ -2460,6 +2504,7 @@ function flnvEnviar() {
     VALOR:               parseFloat(valor) || 0,
     ESTABELECIMENTO:     estab,
     DESCRICAO_GASTO:     document.getElementById('flnvFinalidade').value,
+    CATEGORIA_GASTO:     catEl ? catEl.value : '',
     TEM_OS:              document.getElementById('flnvTemOs').value,
     OS_NUMERO:           document.getElementById('flnvOsNumero').value,
     JUSTIFICATIVA_SEM_OS: document.getElementById('flnvJustificativa').value,
@@ -6541,6 +6586,283 @@ function finF69PreviaCobrTipo_(cpf, tipo) {
 function finF69FecharCobrPreview() {
   var el = document.getElementById('finF69CobrPreview');
   if (el) { el.style.display = 'none'; }
+}
+
+// ============================================================
+// FLASH.9.1 — Conciliação de Extratos
+// ============================================================
+
+var _finConcilDados = null;
+var _finConcilSelecionados = {};
+
+function finConcilCarregar_() {
+  _finConcilSelecionados = {};
+  var el = document.getElementById('finConcilPares');
+  if (el) { el.innerHTML = '<div class="fin-list-empty">Carregando...</div>'; }
+  finConcilEsconderErro_();
+  document.getElementById('finConcilBtnExecutar').disabled = true;
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _finConcilDados = r;
+      if (!r || !r.ok) {
+        finConcilMostrarErro_((r && r.message) || 'Erro ao carregar conciliação.');
+        return;
+      }
+      finConcilRenderKpis_(r.resumo);
+      finConcilRenderPares_(r.conciliaveis || []);
+      finConcilRenderSemPrestacao_(r.semPrestacao || []);
+      finConcilRenderSemExtrato_(r.semExtrato || []);
+    })
+    .withFailureHandler(function(e) {
+      finConcilMostrarErro_(e && e.message ? e.message : String(e || 'Falha na comunicação.'));
+    })
+    .finFlashPrevisualizarConciliacaoTela(_finSessao);
+}
+
+function finConcilRenderKpis_(res) {
+  var r = res || {};
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v != null ? v : '-'; };
+  set('finConcilKpiPares',     r.totalConciliaveis);
+  set('finConcilKpiSemPrest',  r.totalSemPrestacao);
+  set('finConcilKpiSemExtrato',r.totalSemExtrato);
+  set('finConcilKpiExtPend',   r.totalExtratosPendentes);
+  set('finConcilKpiLancPend',  r.totalLancamentosPendentes);
+}
+
+function finConcilRenderPares_(itens) {
+  var el = document.getElementById('finConcilPares');
+  if (!itens || !itens.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum par para conciliar encontrado. Importe extratos e registre lançamentos primeiro.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+  html += '<thead><tr style="background:#f1f5f9;border-bottom:2px solid #e2e8f0">';
+  html += '<th style="padding:8px;text-align:center;width:36px"><input type="checkbox" id="finConcilChkAll" onchange="finConcilToggleTodos_(this.checked)" title="Selecionar todos"></th>';
+  html += '<th style="padding:8px;text-align:left">Data Extrato</th>';
+  html += '<th style="padding:8px;text-align:left">Descrição Extrato</th>';
+  html += '<th style="padding:8px;text-align:right">Valor Extrato</th>';
+  html += '<th style="padding:8px;text-align:left">Data Lançamento</th>';
+  html += '<th style="padding:8px;text-align:left">Descrição Lançamento</th>';
+  html += '<th style="padding:8px;text-align:right">Valor Lançamento</th>';
+  html += '<th style="padding:8px;text-align:left">Colaborador</th>';
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < itens.length; i++) {
+    var it = itens[i];
+    var chk = _finConcilSelecionados[it.extratoId] ? ' checked' : '';
+    html += '<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer" onclick="finConcilToggle_(\''+finEA(it.extratoId)+'\')">';
+    html += '<td style="padding:8px;text-align:center"><input type="checkbox" id="finConcilChk_'+finEA(it.extratoId)+'"' + chk + ' onclick="event.stopPropagation();finConcilToggle_(\''+finEA(it.extratoId)+'\')"></td>';
+    html += '<td style="padding:8px">' + finEH(it.dataExtrato) + '</td>';
+    html += '<td style="padding:8px">' + finEH(it.descricaoExtrato) + '</td>';
+    html += '<td style="padding:8px;text-align:right;font-weight:600">' + finMoeda(it.valorExtrato) + '</td>';
+    html += '<td style="padding:8px">' + finEH(it.dataLancamento) + '</td>';
+    html += '<td style="padding:8px">' + finEH(it.descricaoLancamento) + '</td>';
+    html += '<td style="padding:8px;text-align:right;color:#0369a1">' + finMoeda(it.valorLancamento) + '</td>';
+    html += '<td style="padding:8px;color:#666">' + finEH(it.nomeColaborador || it.cpfColaborador || '') + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+  finConcilAtualizarContSel_();
+}
+
+function finConcilRenderSemPrestacao_(itens) {
+  var el = document.getElementById('finConcilSemPrestacao');
+  if (!itens || !itens.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum extrato sem prestação correspondente.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="background:#fff7ed;border-bottom:1px solid #fed7aa"><th style="padding:6px 8px;text-align:left">Data</th><th style="padding:6px 8px;text-align:left">Descrição</th><th style="padding:6px 8px;text-align:right">Valor</th><th style="padding:6px 8px;text-align:left">Cartão</th><th style="padding:6px 8px;text-align:left">Colaborador</th></tr></thead><tbody>';
+  for (var i = 0; i < itens.length; i++) {
+    var it = itens[i];
+    html += '<tr style="border-bottom:1px solid #f9f4ef"><td style="padding:6px 8px">' + finEH(it.dataExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.descricaoExtrato) + '</td><td style="padding:6px 8px;text-align:right;color:#b45309">' + finMoeda(it.valorExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.cartaoFinal ? 'final '+it.cartaoFinal : '') + '</td><td style="padding:6px 8px">' + finEH(it.nomeColaborador || it.cpfColaborador || '') + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function finConcilRenderSemExtrato_(itens) {
+  var el = document.getElementById('finConcilSemExtrato');
+  if (!itens || !itens.length) {
+    el.innerHTML = '<div class="fin-list-empty">Nenhum lançamento sem extrato correspondente.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="background:#f0f9ff;border-bottom:1px solid #bae6fd"><th style="padding:6px 8px;text-align:left">Data</th><th style="padding:6px 8px;text-align:left">Descrição</th><th style="padding:6px 8px;text-align:right">Valor</th><th style="padding:6px 8px;text-align:left">Cartão</th></tr></thead><tbody>';
+  for (var i = 0; i < itens.length; i++) {
+    var it = itens[i];
+    html += '<tr style="border-bottom:1px solid #f0f9ff"><td style="padding:6px 8px">' + finEH(it.dataLancamento) + '</td><td style="padding:6px 8px">' + finEH(it.descricaoLancamento) + '</td><td style="padding:6px 8px;text-align:right;color:#0369a1">' + finMoeda(it.valorLancamento) + '</td><td style="padding:6px 8px">' + finEH(it.cartaoFinal ? 'final '+it.cartaoFinal : '') + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function finConcilToggle_(extratoId) {
+  if (_finConcilSelecionados[extratoId]) {
+    delete _finConcilSelecionados[extratoId];
+  } else {
+    var dados = _finConcilDados && _finConcilDados.conciliaveis;
+    if (!dados) return;
+    var item = null;
+    for (var i = 0; i < dados.length; i++) {
+      if (dados[i].extratoId === extratoId) { item = dados[i]; break; }
+    }
+    if (item) { _finConcilSelecionados[extratoId] = item; }
+  }
+  var chk = document.getElementById('finConcilChk_' + extratoId);
+  if (chk) { chk.checked = !!_finConcilSelecionados[extratoId]; }
+  finConcilAtualizarContSel_();
+}
+
+function finConcilToggleTodos_(ligar) {
+  var dados = (_finConcilDados && _finConcilDados.conciliaveis) || [];
+  _finConcilSelecionados = {};
+  if (ligar) {
+    for (var i = 0; i < dados.length; i++) {
+      _finConcilSelecionados[dados[i].extratoId] = dados[i];
+    }
+  }
+  finConcilRenderPares_(dados);
+}
+
+function finConcilSelecionarTodos_() {
+  var chkAll = document.getElementById('finConcilChkAll');
+  if (chkAll) { chkAll.checked = true; }
+  finConcilToggleTodos_(true);
+}
+
+function finConcilLimparSelecao_() {
+  _finConcilSelecionados = {};
+  var chkAll = document.getElementById('finConcilChkAll');
+  if (chkAll) { chkAll.checked = false; }
+  var dados = (_finConcilDados && _finConcilDados.conciliaveis) || [];
+  finConcilRenderPares_(dados);
+}
+
+function finConcilAtualizarContSel_() {
+  var n = Object.keys(_finConcilSelecionados).length;
+  var el = document.getElementById('finConcilContSel');
+  if (el) { el.textContent = n > 0 ? ('— ' + n + ' selecionado' + (n > 1 ? 's' : '')) : ''; }
+  var btn = document.getElementById('finConcilBtnExecutar');
+  if (btn) { btn.disabled = (n === 0); }
+}
+
+function finConcilMostrarErro_(msg) {
+  var el = document.getElementById('finConcilErro');
+  if (el) { el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>'; el.style.display = 'block'; }
+}
+
+function finConcilEsconderErro_() {
+  var el = document.getElementById('finConcilErro');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+function finConcilExecutar_() {
+  var pares = Object.values(_finConcilSelecionados);
+  if (!pares.length) { finConcilMostrarErro_('Selecione ao menos um par para conciliar.'); return; }
+  finFlash70ConfirmarAcaoLocal_(
+    'Conciliar extratos',
+    'Você está prestes a conciliar ' + pares.length + ' par(es) extrato ↔ lançamento. Esta ação é real e registrará a conciliação no banco.\n\nDigite a trava textual abaixo para confirmar:',
+    'Confirmar conciliação',
+    function() {
+      var payload = { pares: pares.map(function(p) { return { extratoId: p.extratoId, lancamentoId: p.lancamentoId }; }) };
+      var btn = document.getElementById('finConcilBtnExecutar');
+      if (btn) { btn.disabled = true; btn.textContent = 'Conciliando...'; }
+      var resEl = document.getElementById('finConcilResultado');
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Conciliar selecionados'; }
+          if (resEl) {
+            var cor = (r && r.ok) ? '#16a34a' : '#b91c1c';
+            var msg = (r && r.ok) ? ('Conciliação concluída: ' + (r.conciliados || 0) + ' par(es) conciliado(s).') : ((r && r.message) || 'Erro desconhecido.');
+            resEl.innerHTML = '<div class="fin-alert" style="border-left:4px solid '+cor+';background:'+((r&&r.ok)?'#f0fdf4':'#fef2f2')+'"><strong>' + finEH(msg) + '</strong></div>';
+            resEl.style.display = 'block';
+          }
+          if (r && r.ok) { _finConcilSelecionados = {}; setTimeout(finConcilCarregar_, 1000); }
+        })
+        .withFailureHandler(function(e) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Conciliar selecionados'; }
+          finConcilMostrarErro_('Falha: ' + finEH((e && e.message) || String(e)));
+        })
+        .finFlashConciliarSelecionadosTela(_finSessao, payload, 'CONCILIAR_FLASH_TELA_FIN_D');
+    }
+  );
+}
+
+function finConcilGerarPendencias_() {
+  finFlash70ConfirmarAcaoLocal_(
+    'Gerar pendências',
+    'Esta ação irá escanear extratos e lançamentos pendentes e criar registros de pendência para todos os itens sem correspondência.\n\nAs pendências existentes não serão duplicadas.',
+    'Gerar pendências agora',
+    function() {
+      var resEl = document.getElementById('finConcilResultado');
+      var alerta = document.getElementById('finConcilAlerta');
+      if (alerta) { alerta.innerHTML = '<div class="fin-alert fin-alert-info">Gerando pendências...</div>'; alerta.style.display = 'block'; }
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (alerta) { alerta.style.display = 'none'; }
+          var cor = (r && r.ok) ? '#0369a1' : '#b91c1c';
+          var msg = (r && r.ok) ? ('Pendências geradas: ' + (r.criadas || 0) + ' nova(s), ' + (r.duplicadas || 0) + ' já existiam.') : ((r && r.message) || 'Erro desconhecido.');
+          if (resEl) {
+            resEl.innerHTML = '<div class="fin-alert" style="border-left:4px solid '+cor+';background:'+((r&&r.ok)?'#eff6ff':'#fef2f2')+'"><strong>' + finEH(msg) + '</strong></div>';
+            resEl.style.display = 'block';
+          }
+          if (r && r.ok) { setTimeout(function() { finPend8BCarregar_(); finMudarAba('pendencias'); }, 1500); }
+        })
+        .withFailureHandler(function(e) {
+          if (alerta) { alerta.style.display = 'none'; }
+          if (resEl) {
+            resEl.innerHTML = '<div class="fin-alert fin-alert-danger">Falha: ' + finEH((e && e.message) || String(e)) + '</div>';
+            resEl.style.display = 'block';
+          }
+        })
+        .finFlashGerarPendenciasTela(_finSessao, 'GERAR_PENDENCIAS_FLASH_TELA_FIN_D');
+    }
+  );
+}
+
+function finFlashGerarPDF_() {
+  finMudarAba('relatorios');
+}
+
+// ============================================================
+// FLASH.9.3 — IA: Sugestão de categoria de gasto
+// ============================================================
+
+function flnvSugerirCategoria_() {
+  var estab    = (document.getElementById('flnvEstabelecimento') || {}).value || '';
+  var finalid  = (document.getElementById('flnvFinalidade')      || {}).value || '';
+  var valor    = (document.getElementById('flnvValor')           || {}).value || '';
+  var descricao = (estab + ' ' + finalid).trim();
+  if (!descricao) {
+    finMostrarErro('Preencha o Estabelecimento antes de usar a IA.');
+    return;
+  }
+  var btn = document.getElementById('flnvBtnIA');
+  var status = document.getElementById('flnvIAStatus');
+  if (btn) { btn.disabled = true; btn.textContent = 'Consultando...'; }
+  if (status) { status.textContent = 'Consultando IA...'; }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (btn) { btn.disabled = false; btn.textContent = 'IA Sugerir'; }
+      if (!r || !r.ok) {
+        if (status) { status.textContent = 'Erro: ' + finEH((r && r.message) || 'falha'); status.style.color = '#b91c1c'; }
+        return;
+      }
+      var cat = document.getElementById('flnvCategoria');
+      if (cat) { cat.value = r.categoria || 'OUTROS_REVISAR'; }
+      var conf = r.confianca === 'ALTA' ? '✓ Alta confiança' : r.confianca === 'MEDIA' ? '~ Média confiança' : '? Baixa confiança';
+      if (status) {
+        status.textContent = conf + (r.justificativa ? ' — ' + r.justificativa : '');
+        status.style.color = r.confianca === 'ALTA' ? '#16a34a' : r.confianca === 'MEDIA' ? '#d97706' : '#b91c1c';
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'IA Sugerir'; }
+      if (status) { status.textContent = 'Falha IA: ' + finEH((e && e.message) || ''); status.style.color = '#b91c1c'; }
+    })
+    .iaSugerirCategoriaGastoFlash(_finSessao, { descricaoGasto: descricao, valor: parseFloat(valor) || 0 });
 }
 
 // Compatibilidade: manter funções antigas como no-op

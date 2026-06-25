@@ -362,6 +362,39 @@ var SGO_IA = (function() {
     return res;
   }
 
+  var CATEGORIAS_FLASH = [
+    "ALIMENTACAO", "TRANSPORTE", "HOSPEDAGEM",
+    "MATERIAL_ESCRITORIO", "EQUIPAMENTO_MATERIAL",
+    "TELECOM", "SERVICOS_TECNICOS", "OUTROS_REVISAR"
+  ];
+
+  function sugerirCategoriaGastoFlash(sessionId, payload) {
+    exigirSessao(sessionId);
+    payload = payload || {};
+    var descricao = (payload.descricaoGasto || payload.estabelecimento || "").trim();
+    if (!descricao) throw new Error("Informe a descricao do gasto para categorizar.");
+    var valor = payload.valor ? " Valor: R$" + payload.valor + "." : "";
+    var prompt =
+      "Categorize o gasto corporativo abaixo em exatamente UMA das categorias da lista.\n" +
+      "Categorias disponíveis: " + CATEGORIAS_FLASH.join(", ") + ".\n" +
+      "Gasto: " + descricao + valor + "\n\n" +
+      "Responda em JSON puro (sem markdown, sem aspas externas), exatamente no formato:\n" +
+      '{"categoria":"CATEGORIA_ESCOLHIDA","confianca":"ALTA","justificativa":"motivo breve"}';
+    var cfg = obterConfig_();
+    var resposta = chamarApi_(prompt, 200);
+    try {
+      var texto = resposta && resposta.texto ? resposta.texto.trim() : "";
+      var json = JSON.parse(texto.replace(/^```json\s*/i,"").replace(/```$/,"").trim());
+      if (!json.categoria || CATEGORIAS_FLASH.indexOf(json.categoria) < 0) {
+        json.categoria = "OUTROS_REVISAR";
+        json.confianca = "BAIXA";
+      }
+      return { ok: true, success: true, categoria: json.categoria, confianca: json.confianca || "MEDIA", justificativa: json.justificativa || "", descricaoOriginal: descricao };
+    } catch (e) {
+      return { ok: false, success: false, categoria: "OUTROS_REVISAR", confianca: "BAIXA", justificativa: "Erro ao interpretar resposta da IA: " + e.message, descricaoOriginal: descricao };
+    }
+  }
+
   return {
     lapidarTexto: lapidarTexto,
     gerarTextoTecnicoOS: gerarTextoTecnicoOS,
@@ -369,6 +402,7 @@ var SGO_IA = (function() {
     criarResumoExecutivoOS: criarResumoExecutivoOS,
     criarConclusaoTecnicaOS: criarConclusaoTecnicaOS,
     criarRecomendacaoTecnicaOS: criarRecomendacaoTecnicaOS,
+    sugerirCategoriaGastoFlash: sugerirCategoriaGastoFlash,
     normalizarRespostaIA_: normalizarRespostaIA_,
     validarTextoIACompleto_: validarTextoIACompleto_
   };
@@ -402,6 +436,11 @@ function iaCriarConclusaoTecnicaOS(sessionId, payload) {
 function iaCriarRecomendacaoTecnicaOS(sessionId, payload) {
   try { return JSON.parse(JSON.stringify(SGO_IA.criarRecomendacaoTecnicaOS(sessionId, payload))); }
   catch (e) { return { success: false, ok: false, message: e.message, avisos: [e.message] }; }
+}
+
+function iaSugerirCategoriaGastoFlash(sessionId, payload) {
+  try { return JSON.parse(JSON.stringify(SGO_IA.sugerirCategoriaGastoFlash(sessionId, payload))); }
+  catch (e) { return { ok: false, success: false, message: e.message, categoria: "OUTROS_REVISAR", confianca: "BAIXA" }; }
 }
 
 function normalizarRespostaIA_(resposta, contexto) {
