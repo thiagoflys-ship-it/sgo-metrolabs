@@ -763,31 +763,42 @@
   </div>
 </div>
 
-<!-- Tab: Termos e Documentos -->
+<!-- Tab: Termos e Documentos — FLASH.10.2 -->
 <div id="tabTermos" class="fin-tab-content">
   <div class="fin-tab-inner">
-    <div class="fin-card">
-      <div class="fin-placeholder-card">
-        <div class="fin-placeholder-status">Em preparação</div>
-        <h3>Termos e Documentos</h3>
-        <p>Área para gestão de termos de responsabilidade, documentos assinados, comprovantes de entrega e relatórios do colaborador.</p>
-        <ul class="fin-placeholder-list">
-          <li>Termo de responsabilidade</li>
-          <li>Termo assinado eletronicamente</li>
-          <li>Comprovante de entrega do cartão</li>
-          <li>Relatório de despesas por colaborador</li>
-          <li>Histórico de documentos</li>
-          <li>Download e impressão</li>
-        </ul>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <h2 style="font-size:16px;color:#0f2d52;font-weight:700;margin:0">Termos e Documentos</h2>
+        <p style="color:#666;font-size:12px;margin:3px 0 0">Gere comprovantes e relatórios A4 por colaborador ou período.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finTermosGerarRelGerencial_()">Relatório Gerencial</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finTermosGerarRelConciliacao_()">Relatório Conciliação</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finTermosGerarRelExtrato_()">Relatório Extratos</button>
       </div>
     </div>
-    <div class="fin-card" style="margin-top:14px">
-      <h3>Ações disponíveis agora</h3>
-      <p style="color:#666;font-size:13px;margin-bottom:12px">O sistema já suporta termos eletrônicos. Acesse via link direto pelo cadastro do cartão ou solicite ao financeiro.</p>
-      <div class="fin-btn-row">
-        <button class="fin-btn fin-btn-outline" type="button" onclick="finMudarAba('cartoes')">Ir para Cartões</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Ver todos os termos</button>
-        <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" disabled title="Em preparação — disponível na próxima versão">Reemitir termo</button>
+
+    <div id="finTermosErro" style="display:none;margin-bottom:10px"></div>
+
+    <!-- Preview do documento gerado -->
+    <div id="finTermosPreviewArea" style="display:none;margin-bottom:14px">
+      <div class="fin-card" style="padding:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <strong id="finTermosPreviewTitulo" style="font-size:13px;color:#0f2d52"></strong>
+          <div style="display:flex;gap:6px">
+            <button class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finTermosImprimir_()">Imprimir / Salvar PDF</button>
+            <button class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finTermosFecharPreview_()">✕ Fechar</button>
+          </div>
+        </div>
+        <iframe id="finTermosIframe" style="width:100%;height:520px;border:1px solid #d7dee8;border-radius:4px;background:#fff" sandbox="allow-same-origin allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <!-- Tabela de cartões -->
+    <div class="fin-card">
+      <h3>Cartões e Colaboradores</h3>
+      <div id="finTermosTabela">
+        <div class="fin-list-empty">Abra esta aba para carregar automaticamente os cartões.</div>
       </div>
     </div>
   </div>
@@ -4594,6 +4605,7 @@ function finMudarAba(aba) {
   if (aba === 'pendencias' && !_finPend8BCarregado) { finPend8BAbrirAba_(); }
   if (aba === 'prestacoes' && !_finPMCarregado) { finPMAbrirAba_(); }
   if (aba === 'cobrancas'  && !_finF69CobrancasCarregadas.length) { finF69CarregarCobrancas(); }
+  if (aba === 'termos'    && !_finTermosCarregado_) { finTermosCarregar_(); }
   if (aba === 'auditoria' && !_finAuditoriaCarregado) { finAuditoriaCarregar_(); }
   setTimeout(finFlash70AplicarBlindagemInicial_, 50);
 }
@@ -5800,6 +5812,160 @@ function finPMMostrarErro_(msg) {
 function finPMEsconderErro_() {
   var el = document.getElementById('finPMErro');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+// ============================================================
+// FLASH.10.2 — Termos e Documentos A4
+// ============================================================
+
+var _finTermosCarregado_ = false;
+
+function finTermosCarregar_() {
+  if (_finTermosCarregado_) { return; }
+  var tbl = document.getElementById('finTermosTabela');
+  if (tbl) { tbl.innerHTML = '<div class="fin-list-empty">Carregando cartões...</div>'; }
+  // reutiliza os cartões já carregados pelo módulo
+  var cartoes = _finCartoes || [];
+  if (cartoes.length) {
+    finTermosRenderTabela_(cartoes);
+    _finTermosCarregado_ = true;
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r && r.ok) {
+        finTermosRenderTabela_(r.cartoes || []);
+        _finTermosCarregado_ = true;
+      } else {
+        if (tbl) { tbl.innerHTML = '<div class="fin-list-empty">Sem cartões cadastrados.</div>'; }
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (tbl) { tbl.innerHTML = '<div class="fin-list-empty" style="color:#dc3545">Erro: ' + finEH(e.message || '') + '</div>'; }
+    })
+    .finFlashListarCartoesV1(_finSessao);
+}
+
+function finTermosRenderTabela_(cartoes) {
+  var tbl = document.getElementById('finTermosTabela');
+  if (!tbl) { return; }
+  if (!cartoes || !cartoes.length) {
+    tbl.innerHTML = '<div class="fin-list-empty">Nenhum cartão cadastrado.</div>';
+    return;
+  }
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
+    '<th>Cartão / Apelido</th><th>Final</th><th>Colaborador</th><th>CPF</th><th>Status</th><th>Documentos</th>' +
+    '</tr></thead><tbody>';
+  cartoes.forEach(function(c) {
+    var cid = finEA(c.cartaoId || c.CARTAO_ID || '');
+    var cpf = finEA(c.cpfColaborador || c.CPF_COLABORADOR || '');
+    var ape = finEH(c.apelidoCartao || c.APELIDO_CARTAO || c.cartaoId || '');
+    html +=
+      '<tr>' +
+      '<td><strong>' + ape + '</strong></td>' +
+      '<td>' + finEH(c.numeroFinal4 || c.NUMERO_FINAL_4 || '—') + '</td>' +
+      '<td>' + finEH(c.funcionarioNome || c.FUNCIONARIO_NOME || '—') + '</td>' +
+      '<td><small style="font-family:monospace">' + finEH(c.cpfColaborador || c.CPF_COLABORADOR || '—') + '</small></td>' +
+      '<td>' + finEH(c.statusCartao || c.STATUS_CARTAO || '—') + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finTermosGerarComprovante_(\'' + cid + '\')" title="Comprovante de entrega">Comprovante</button> ' +
+        '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finTermosGerarRelPrestacao_(\'' + cpf + '\')" title="Relatório de prestações">Prestações</button> ' +
+        '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finTermosGerarRelPendencias_(\'' + cpf + '\')" title="Relatório de pendências">Pendências</button>' +
+      '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  tbl.innerHTML = html;
+}
+
+function finTermosMostrarDoc_(titulo, html) {
+  var area  = document.getElementById('finTermosPreviewArea');
+  var tit   = document.getElementById('finTermosPreviewTitulo');
+  var iframe = document.getElementById('finTermosIframe');
+  if (!area || !iframe) { return; }
+  tit.textContent = titulo;
+  iframe.srcdoc = html;
+  area.style.display = 'block';
+  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function finTermosFecharPreview_() {
+  var area = document.getElementById('finTermosPreviewArea');
+  if (area) { area.style.display = 'none'; }
+}
+
+function finTermosImprimir_() {
+  var iframe = document.getElementById('finTermosIframe');
+  if (iframe && iframe.contentWindow) { iframe.contentWindow.print(); }
+}
+
+function finTermosMostrarErro_(msg) {
+  var el = document.getElementById('finTermosErro');
+  if (!el) { return; }
+  el.innerHTML = '<div class="fin-alert fin-alert-danger">' + finEH(msg) + '</div>';
+  el.style.display = 'block';
+}
+
+function finTermosGerarComprovante_(cartaoId) {
+  finTermosMostrarErro_('');
+  document.getElementById('finTermosErro').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro ao gerar comprovante.'); return; }
+      finTermosMostrarDoc_('Comprovante de Entrega — ' + cartaoId, r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarComprovanteEntregaCartaoA4V1(_finSessao, cartaoId);
+}
+
+function finTermosGerarRelPrestacao_(cpf) {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro.'); return; }
+      finTermosMostrarDoc_('Relatório de Prestações — CPF ' + cpf, r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarRelatorioPrestacaoColaboradorA4V1(_finSessao, { cpf: cpf });
+}
+
+function finTermosGerarRelPendencias_(cpf) {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro.'); return; }
+      finTermosMostrarDoc_('Relatório de Pendências — CPF ' + cpf, r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarRelatorioPendenciasColaboradorA4V1(_finSessao, { cpf: cpf });
+}
+
+function finTermosGerarRelGerencial_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro.'); return; }
+      finTermosMostrarDoc_('Relatório Gerencial Flash', r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarRelatorioGerencialA4V1(_finSessao, {});
+}
+
+function finTermosGerarRelConciliacao_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro.'); return; }
+      finTermosMostrarDoc_('Relatório de Conciliação Flash', r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarRelatorioConciliacaoPeriodoA4V1(_finSessao, {});
+}
+
+function finTermosGerarRelExtrato_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) { finTermosMostrarErro_((r && r.message) || 'Erro.'); return; }
+      finTermosMostrarDoc_('Relatório de Extratos Importados', r.html);
+    })
+    .withFailureHandler(function(e) { finTermosMostrarErro_('Falha: ' + (e.message || String(e))); })
+    .finFlashGerarRelatorioExtratoImportadoA4V1(_finSessao, {});
 }
 
 // ============================================================
