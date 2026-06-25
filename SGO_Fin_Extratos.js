@@ -477,6 +477,13 @@ function finPrepararPayloadImportacaoFlashV1(payload) {
 }
 
 function finImportarLoteExtratoFlashV1_BLOQUEADA(payload) {
+  payload = payload || {};
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("finImportarLoteExtratoFlashV1_BLOQUEADA", payload, {
+    ambienteControlado: payload && payload.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("finImportarLoteExtratoFlashV1_BLOQUEADA", envelope73);
   return {
     success: false,
     ok: false,
@@ -508,6 +515,12 @@ function finImportarLoteExtratoFlashV1_BLOQUEADA(payload) {
 
 function finImportarLoteExtratoFlashV1(payload) {
   var entrada = payload || {};
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("finImportarLoteExtratoFlashV1", entrada, {
+    ambienteControlado: entrada && entrada.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("finImportarLoteExtratoFlashV1", envelope73);
   var avisos = [];
   var bloqueios = [];
   var lock = null;
@@ -4028,7 +4041,14 @@ function SETUP_PACOTE_S_TEMPLATE_COMPACTO_SEM_GRAVAR() {
 // Executar somente manualmente no editor Apps Script /dev, com autorizacao explicita.
 // Nao executar pelo terminal. Nao executar pelo Claude. Nao executar em producao.
 // Responsavel: Thiago Gonzales
-function EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE() {
+function EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE(payloadEnvelope73) {
+  payloadEnvelope73 = payloadEnvelope73 || {};
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE", payloadEnvelope73, {
+    ambienteControlado: payloadEnvelope73 && payloadEnvelope73.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE", envelope73);
   var USUARIO_RESPONSAVEL = "Thiago Gonzales";
   var bloqueios = [];
   var avisos = [];

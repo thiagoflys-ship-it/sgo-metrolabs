@@ -207,6 +207,13 @@ function PREVER_RECARGA_FLASH_CONTROLADA_FINANCEIRO_SEM_GRAVAR(payload) {
 }
 
 function EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO(payload) {
+  payload = payload || {};
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", payload, {
+    ambienteControlado: payload && payload.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", envelope73);
   var resultado  = {
     success: false, ok: false, fase: 'FLASH.6.8.EXECUCAO',
     ambiente: null, recargaCriada: false,

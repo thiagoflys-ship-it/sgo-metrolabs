@@ -4026,6 +4026,13 @@ const SGO_FIN = (() => {
       finGarantirPerfil_(sessao, PERFIS_OPERADOR, "criar cartao real FLASH46");
       finDbOk_();
       if (!payload) return finErro_("Payload não informado.");
+      var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", payload, {
+        ambienteControlado: payload && payload.ambienteControlado === true,
+        perfilValido: true,
+        sessaoValida: true,
+        origem: "FIN.FLASH.7.3"
+      });
+      if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", envelope73);
 
       // Prévia interna obrigatória
       const previa = flash46PrepararCartaoRealUI(sessionId, payload);
@@ -4165,6 +4172,135 @@ const SGO_FIN = (() => {
   }
 
   // ============================================================
+  // AUDITORIA 360 — Cobrança por E-mail
+  // ============================================================
+
+  function finAuditoriaEmailHtml_(nome, cpfFmt, itens, dataDisparo) {
+    var logoUrl = "";
+    try { logoUrl = PropertiesService.getScriptProperties().getProperty("LOGO_URL") || ""; } catch(e) {}
+    var rows = itens.map(function(item) {
+      var valorFmt = "R$ " + (parseFloat(item.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var bgColor  = item.status === "REPROVADO_FINANCEIRO" ? "#fff5f5" : "#fffbeb";
+      var badgeBg  = item.status === "REPROVADO_FINANCEIRO" ? "#dc2626" : "#d97706";
+      var badgeTxt = finSafeText_(item.statusLabel || item.status || "Pendente");
+      return "<tr style=\"background:" + bgColor + ";\">"
+        + "<td style=\"padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;\">" + finSafeText_(item.descricao || "—") + "</td>"
+        + "<td style=\"padding:8px 10px;border:1px solid #e5e7eb;font-weight:700;\">" + valorFmt + "</td>"
+        + "<td style=\"padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;\">" + finSafeText_(item.data || "—") + "</td>"
+        + "<td style=\"padding:8px 10px;border:1px solid #e5e7eb;\">"
+        + "<span style=\"background:" + badgeBg + ";color:#fff;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;\">" + badgeTxt + "</span>"
+        + "</td></tr>";
+    }).join("");
+    return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head>"
+      + "<body style=\"margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;\">"
+      + "<div style=\"max-width:680px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08);\">"
+      + "<div style=\"background:#0b3b78;padding:20px 28px;\">"
+      + (logoUrl ? "<img src=\"" + logoUrl + "\" alt=\"Metrolabs\" style=\"max-width:160px;height:auto;display:block;margin-bottom:8px;\" onerror=\"this.style.display='none'\">" : "")
+      + "<div style=\"color:#fff;font-size:18px;font-weight:900;\">Pendência Financeira</div>"
+      + "<div style=\"color:rgba(255,255,255,.75);font-size:13px;margin-top:3px;\">METROLABS SGO+ — Cartão Corporativo Flash</div>"
+      + "</div>"
+      + "<div style=\"padding:20px 28px;\">"
+      + "<p style=\"font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;\">Olá <strong>" + nome + "</strong> (" + cpfFmt + "),</p>"
+      + "<p style=\"font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;\">Identificamos <strong>" + itens.length + " item(s) pendente(s)</strong> no seu cartão corporativo Flash que requerem regularização:</p>"
+      + "<table style=\"width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;\">"
+      + "<thead><tr style=\"background:#f0f4fa;\">"
+      + "<th style=\"padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:10px;text-transform:uppercase;color:#344054;\">Descrição</th>"
+      + "<th style=\"padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:10px;text-transform:uppercase;color:#344054;\">Valor</th>"
+      + "<th style=\"padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:10px;text-transform:uppercase;color:#344054;\">Data</th>"
+      + "<th style=\"padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:10px;text-transform:uppercase;color:#344054;\">Status</th>"
+      + "</tr></thead><tbody>" + rows + "</tbody></table>"
+      + "<p style=\"font-size:13px;color:#64748b;margin:0 0 12px;\">Por favor, acesse o sistema SGO+ e regularize as pendências enviando o comprovante ou a justificativa correspondente.</p>"
+      + "<p style=\"font-size:13px;color:#64748b;margin:0;\">Em caso de dúvidas, entre em contato com o departamento financeiro.</p>"
+      + "</div>"
+      + "<div style=\"background:#f8fafc;border-top:1px solid #e5e7eb;padding:14px 28px;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;\">"
+      + "<span>Notificação automática — <strong style=\"color:#0b3b78;\">METROLABS SGO+</strong></span>"
+      + "<span>" + dataDisparo + "</span>"
+      + "</div></div></body></html>";
+  }
+
+  function finAuditoriaEnviarEmailCobranca(sessionId, params) {
+    try {
+      params = params || {};
+      const sessao       = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "enviar cobrança por e-mail");
+      finDbOk_();
+      var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("finAuditoriaEnviarEmailCobranca", params, {
+        ambienteControlado: params && params.ambienteControlado === true,
+        perfilValido: true,
+        sessaoValida: true,
+        origem: "FIN.FLASH.7.3"
+      });
+      if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("finAuditoriaEnviarEmailCobranca", envelope73);
+
+      const cpf          = finSafeText_(params && params.cpf).replace(/D/g, "");
+      const lancamentoId = finSafeText_(params && params.lancamentoId);
+      const itens        = Array.isArray(params && params.itens) ? params.itens : [];
+      const usuario      = finUsuario_(sessao);
+
+      if (!cpf) { return finErro_("CPF do colaborador não informado."); }
+      if (!itens.length) { return finErro_("Nenhum item pendente informado para cobrança."); }
+
+      // Buscar email do colaborador em FIN_CARTOES via CPF
+      const cartoes = finAll_(ABAS.CARTOES);
+      const cartaoColaborador = cartoes.find(function(c) {
+        return finSafeText_(c.CPF_COLABORADOR).replace(/\D/g, "") === cpf
+          && finSafeText_(c.FUNCIONARIO_EMAIL);
+      });
+      const emailColaborador = cartaoColaborador ? finSafeText_(cartaoColaborador.FUNCIONARIO_EMAIL) : "";
+      const nomeColaborador  = cartaoColaborador ? finSafeText_(cartaoColaborador.FUNCIONARIO_NOME) : "Colaborador";
+
+      if (!emailColaborador) {
+        const cpfFmtErr = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        return finErro_("E-mail não encontrado para CPF " + cpfFmtErr + ". Verifique o campo FUNCIONARIO_EMAIL no cadastro do cartão.");
+      }
+
+      const dataDisparo = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm");
+      const cpfFmt      = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      const htmlBody    = finAuditoriaEmailHtml_(nomeColaborador, cpfFmt, itens, dataDisparo);
+      const assunto     = "[METROLABS SGO+] Pendência financeira — " + nomeColaborador + " — " + dataDisparo;
+
+      const mailOpts = {
+        to:       emailColaborador,
+        subject:  assunto,
+        htmlBody: htmlBody
+      };
+      const emailDisparo = finSafeText_(sessao.email || sessao.userId || "");
+      if (emailDisparo && emailDisparo !== emailColaborador) {
+        mailOpts.bcc = emailDisparo;
+      }
+      MailApp.sendEmail(mailOpts);
+
+      // Registrar log — não bloqueia o retorno se falhar
+      try {
+        const totalValor = itens.reduce(function(s, i) { return s + (parseFloat(i.valor) || 0); }, 0);
+        finInsert_(ABAS.LOGS, {
+          TIPO:      "COBRANCA_EMAIL",
+          CARTAO_ID: lancamentoId,
+          DESCRICAO: "E-mail de cobrança enviado para " + emailColaborador
+            + " | CPF: " + cpfFmt
+            + " | Itens: " + itens.length
+            + " | Total: R$ " + totalValor.toFixed(2),
+          USUARIO:   usuario.nome || usuario.id,
+          STATUS:    "ENVIADO"
+        });
+      } catch (eLog) {
+        Logger.log("FIN_LOG_COBRANCA_ERRO: " + eLog.message);
+      }
+
+      return finOk_({
+        message:          "E-mail de cobrança enviado para " + emailColaborador + ".",
+        emailColaborador: emailColaborador,
+        nomeColaborador:  nomeColaborador,
+        lancamentoId:     lancamentoId,
+        dataDisparo:      dataDisparo,
+        totalItens:       itens.length
+      });
+    } catch (e) {
+      return finErro_(e.message);
+    }
+  }
+
+  // ============================================================
   // INTERFACE PUBLICA
   // ============================================================
 
@@ -4234,7 +4370,8 @@ const SGO_FIN = (() => {
     listarRecargasV1,
     flash46PrepararCartaoRealUI,
     flash46ExecutarCartaoRealUI,
-    listarCartoesPorCPF48
+    listarCartoesPorCPF48,
+    finAuditoriaEnviarEmailCobranca
   };
 })();
 
@@ -4347,4 +4484,496 @@ function finFlashObterPendenciasCartao(sId, cartaoRowId)   { return SGO_FIN.obte
 
 // FLASH.4.6B — Cadastro operacional via interface
 function FLASH46_PREPARAR_CADASTRO_CARTAO_REAL_UI_SEM_GRAVAR(sId, payload) { return SGO_FIN.flash46PrepararCartaoRealUI(sId, payload); }
-function FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO(sId, payload)  { return SGO_FIN.flash46ExecutarCartaoRealUI(sId, payload); }
+function FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO(sId, payload) {
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", payload || {}, {
+    ambienteControlado: !!(payload && payload.ambienteControlado === true),
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", envelope73);
+  return SGO_FIN.flash46ExecutarCartaoRealUI(sId, payload);
+}
+
+// Auditoria 360 — Cobrança por e-mail
+function finAuditoriaEnviarEmailCobranca(sId, params) {
+  var envelope73 = _finFlash72ValidarEnvelopeAcaoReal_("finAuditoriaEnviarEmailCobranca", params || {}, {
+    ambienteControlado: !!(params && params.ambienteControlado === true),
+    perfilValido: true,
+    origem: "FIN.FLASH.7.3"
+  });
+  if (envelope73.bloqueado) return _finFlash73RetornoBloqueado_("finAuditoriaEnviarEmailCobranca", envelope73);
+  return SGO_FIN.finAuditoriaEnviarEmailCobranca(sId, params);
+}
+
+// ============================================================
+// FIN.FLASH.7.2 - Envelope de seguranca backend local
+// Catalogo estatico e auditorias SEM_GRAVAR. Este bloco nao
+// envolve nem executa funcoes reais existentes.
+// ============================================================
+
+function _finFlash73RetornoBloqueado_(acao, envelope) {
+  envelope = envelope || {};
+  return {
+    success: false,
+    ok: false,
+    bloqueado: true,
+    fase: "FIN.FLASH.7.3",
+    acao: acao,
+    motivos: envelope.motivos || [],
+    envelope: envelope,
+    executado: false,
+    gravado: false
+  };
+}
+
+var FIN_FLASH_ACOES_REAIS_72_ = [
+  _finFlash72AcaoCatalogo_("Criar cartao", "finCriarCartao", "CARTAO", true, false, false, false, true, "ALTO", true, true, true, "Criacao operacional de cartao Flash; deve permanecer com confirmacao explicita."),
+  _finFlash72AcaoCatalogo_("Atualizar cartao", "finAtualizarCartao", "CARTAO", true, false, false, false, true, "MEDIO", true, true, true, "Atualizacao cadastral/operacional do cartao."),
+  _finFlash72AcaoCatalogo_("Bloquear cartao", "finBloquearCartao", "CARTAO", true, false, false, false, true, "ALTO", true, true, true, "Alteracao real de status do cartao para bloqueado."),
+  _finFlash72AcaoCatalogo_("Desbloquear cartao", "finDesbloquearCartao", "CARTAO", true, false, false, false, true, "ALTO", true, true, true, "Alteracao real de status do cartao para ativo."),
+  _finFlash72AcaoCatalogo_("Inativar cartao", "finFlashInativarCartao", "CARTAO", true, false, false, false, true, "ALTO", true, true, true, "Inativacao operacional de cartao."),
+  _finFlash72AcaoCatalogo_("Alterar responsavel do cartao", "finFlashAlterarResponsavelCartao", "CARTAO", true, false, false, false, true, "ALTO", true, true, true, "Troca vinculo de responsavel/CPF do cartao."),
+  _finFlash72AcaoCatalogo_("Executar cadastro real de cartao", "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", "CARTAO", true, false, false, false, true, "CRITICO", true, true, true, "Fluxo real/autorizado de cadastro de cartao; nao acionado por esta auditoria."),
+  _finFlash72AcaoCatalogo_("Criar recarga", "finCriarRecarga", "RECARGA", true, false, false, false, true, "ALTO", true, true, true, "Criacao de registro real de recarga."),
+  _finFlash72AcaoCatalogo_("Executar recarga controlada", "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", "RECARGA", true, false, false, false, true, "CRITICO", true, true, true, "Recarga real controlada; exige envelope forte antes de uso futuro."),
+  _finFlash72AcaoCatalogo_("Criar lancamento", "finCriarLancamento", "LANCAMENTO_PRESTACAO", true, false, false, false, true, "ALTO", true, true, true, "Criacao de lancamento/prestacao."),
+  _finFlash72AcaoCatalogo_("Atualizar lancamento", "finAtualizarLancamento", "LANCAMENTO_PRESTACAO", true, false, false, false, true, "MEDIO", true, true, true, "Atualizacao de lancamento/prestacao."),
+  _finFlash72AcaoCatalogo_("Aprovar lancamento", "finAprovarLancamento", "LANCAMENTO_PRESTACAO", true, false, false, false, true, "ALTO", true, true, true, "Aprovacao financeira de lancamento."),
+  _finFlash72AcaoCatalogo_("Rejeitar lancamento", "finRejeitarLancamento", "LANCAMENTO_PRESTACAO", true, false, false, false, true, "ALTO", true, true, true, "Rejeicao financeira de lancamento."),
+  _finFlash72AcaoCatalogo_("Registrar prestacao mobile piloto", "finFlashRegistrarPrestacaoMobilePilotoV1", "LANCAMENTO_PRESTACAO", true, false, false, false, true, "ALTO", true, true, true, "Prestacao enviada pelo campo; altera registros financeiros."),
+  _finFlash72AcaoCatalogo_("Anexar comprovante mobile", "finFlashAnexarComprovanteMobilePilotoV1", "LANCAMENTO_PRESTACAO", true, true, false, false, true, "ALTO", true, true, true, "Cria/anexa arquivo no Drive e registra vinculo."),
+  _finFlash72AcaoCatalogo_("Enviar prestacao publica", "finFlashEnviarPrestacaoPublicaV1", "LANCAMENTO_PRESTACAO", true, true, false, false, true, "ALTO", true, false, true, "Fluxo publico por token; exige token/contexto controlado."),
+  _finFlash72AcaoCatalogo_("Regularizar pendencia publica", "finFlashRegularizarPendenciaPublicaV1", "LANCAMENTO_PRESTACAO", true, true, false, false, true, "ALTO", true, false, true, "Regularizacao publica por token; altera pendencia/prestacao."),
+  _finFlash72AcaoCatalogo_("Gerar termo de cartao", "finGerarTermoCartao", "TERMO", true, true, false, false, true, "ALTO", true, true, true, "Geracao de termo/documento do cartao."),
+  _finFlash72AcaoCatalogo_("Assinar termo publico", "finAssinarTermoPublico", "TERMO", true, true, false, false, true, "ALTO", true, false, true, "Assinatura publica por token; altera termo e pode gerar documento."),
+  _finFlash72AcaoCatalogo_("Reemitir termo de cartao", "finReemitirTermoCartao", "TERMO", true, true, false, false, true, "ALTO", true, true, true, "Reemissao de termo/documento."),
+  _finFlash72AcaoCatalogo_("Importar lote de extrato Flash", "finImportarLoteExtratoFlashV1", "EXTRATO", true, false, false, true, true, "CRITICO", true, true, true, "Importacao real de extrato; nao chamada por esta auditoria."),
+  _finFlash72AcaoCatalogo_("Importar lote de extrato Flash bloqueada", "finImportarLoteExtratoFlashV1_BLOQUEADA", "EXTRATO", false, false, false, true, false, "CRITICO", true, true, true, "Sentinela bloqueada de importacao; catalogada por seguranca."),
+  _finFlash72AcaoCatalogo_("Executar importacao Flash DEV autorizada manualmente", "EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE", "EXTRATO", true, false, false, true, true, "CRITICO", true, true, true, "Rotina manual de importacao real; exige controle humano explicito."),
+  _finFlash72AcaoCatalogo_("Conciliar selecionados", "finFlashConciliarSelecionadosTela", "CONCILIACAO_PENDENCIA", true, false, false, false, true, "ALTO", true, true, true, "Conciliacao real entre extrato e lancamento."),
+  _finFlash72AcaoCatalogo_("Gerar pendencias", "finFlashGerarPendenciasTela", "CONCILIACAO_PENDENCIA", true, false, false, false, true, "ALTO", true, true, true, "Geracao real de pendencias financeiras."),
+  _finFlash72AcaoCatalogo_("Resolver pendencia", "finFlashResolverPendenciaTela", "CONCILIACAO_PENDENCIA", true, false, false, false, true, "ALTO", true, true, true, "Resolucao real de pendencia financeira."),
+  _finFlash72AcaoCatalogo_("Enviar cobranca por e-mail", "finAuditoriaEnviarEmailCobranca", "COBRANCA", true, false, true, false, false, "CRITICO", true, true, true, "Envia e-mail real ao colaborador e registra log.")
+];
+
+function _finFlash72AcaoCatalogo_(nome, funcaoBackend, categoria, gravaPlanilha, usaDrive, enviaEmail, importaExtrato, alteraStatus, risco, exigeConfirmacao, exigeSessao, exigeAmbienteControlado, observacao) {
+  return {
+    nome: nome,
+    funcaoBackend: funcaoBackend,
+    categoria: categoria,
+    gravaPlanilha: gravaPlanilha,
+    usaDrive: usaDrive,
+    enviaEmail: enviaEmail,
+    importaExtrato: importaExtrato,
+    alteraStatus: alteraStatus,
+    risco: risco,
+    exigeConfirmacao: exigeConfirmacao,
+    exigeSessao: exigeSessao,
+    exigeAmbienteControlado: exigeAmbienteControlado,
+    observacao: observacao
+  };
+}
+
+function _finFlash72CatalogoPorFuncao_() {
+  var mapa = {};
+  FIN_FLASH_ACOES_REAIS_72_.forEach(function(acao) {
+    mapa[acao.funcaoBackend] = acao;
+  });
+  return mapa;
+}
+
+function _finFlash72ObterAcaoCatalogada_(acao) {
+  var chave = String(acao || "");
+  var mapa = _finFlash72CatalogoPorFuncao_();
+  if (mapa[chave]) return mapa[chave];
+  for (var i = 0; i < FIN_FLASH_ACOES_REAIS_72_.length; i++) {
+    if (FIN_FLASH_ACOES_REAIS_72_[i].nome === chave) return FIN_FLASH_ACOES_REAIS_72_[i];
+  }
+  return null;
+}
+
+function _finFlash72FuncaoGlobalExiste_(nomeFuncao) {
+  try {
+    var raiz = typeof globalThis !== "undefined" ? globalThis : this;
+    if (raiz && typeof raiz[nomeFuncao] === "function") return true;
+    return (0, eval)("typeof " + nomeFuncao) === "function";
+  } catch (e) {
+    return false;
+  }
+}
+
+function _finFlash72ValidarEnvelopeAcaoReal_(acao, payload, contexto) {
+  payload = payload || {};
+  contexto = contexto || {};
+
+  var catalogada = _finFlash72ObterAcaoCatalogada_(acao);
+  var motivos = [];
+  var dryRun = payload.dryRun === true || contexto.dryRun === true;
+  var confirmacaoRecebida = String(payload.confirmacao || "") === "CONFIRMO_ACAO_REAL_FLASH";
+  var ambienteControlado = contexto.ambienteControlado === true;
+  var perfilValido = contexto.perfilValido !== false;
+
+  if (!catalogada) {
+    motivos.push("ACAO_NAO_CATALOGADA");
+    return {
+      ok: false,
+      bloqueado: true,
+      motivos: motivos,
+      acao: String(acao || ""),
+      risco: "DESCONHECIDO",
+      exigeConfirmacao: true,
+      confirmacaoRecebida: confirmacaoRecebida,
+      ambienteControlado: ambienteControlado,
+      perfilValido: perfilValido,
+      dryRun: dryRun
+    };
+  }
+
+  if (dryRun) motivos.push("DRY_RUN_NUNCA_AUTORIZA_EXECUCAO_REAL");
+  if (catalogada.exigeConfirmacao && !confirmacaoRecebida) motivos.push("CONFIRMACAO_EXPLICITA_AUSENTE");
+  if (catalogada.risco === "CRITICO" && !ambienteControlado) motivos.push("ACAO_CRITICA_EXIGE_AMBIENTE_CONTROLADO");
+  if (catalogada.exigeAmbienteControlado && !ambienteControlado) motivos.push("AMBIENTE_CONTROLADO_AUSENTE");
+  if (catalogada.exigeSessao && contexto.sessaoValida === false) motivos.push("SESSAO_INVALIDA");
+  if (!perfilValido) motivos.push("PERFIL_INVALIDO");
+  if ((catalogada.enviaEmail || catalogada.importaExtrato || catalogada.usaDrive) && !confirmacaoRecebida) {
+    motivos.push("RECURSO_SENSIVEL_EXIGE_CONFIRMACAO_EXPLICITA");
+  }
+
+  var bloqueado = motivos.length > 0;
+  return {
+    ok: !bloqueado,
+    bloqueado: bloqueado,
+    motivos: motivos,
+    acao: catalogada.funcaoBackend,
+    risco: catalogada.risco,
+    exigeConfirmacao: catalogada.exigeConfirmacao,
+    confirmacaoRecebida: confirmacaoRecebida,
+    ambienteControlado: ambienteControlado,
+    perfilValido: perfilValido,
+    dryRun: dryRun
+  };
+}
+
+function AUDITAR_FIN_FLASH_72_ENVELOPE_SEGURANCA_SEM_GRAVAR() {
+  var catalogo = FIN_FLASH_ACOES_REAIS_72_.slice();
+  var acoesSemConfirmacao = catalogo.filter(function(acao) { return acao.exigeConfirmacao !== true; });
+  var acoesSemCategoria = catalogo.filter(function(acao) { return !acao.categoria; });
+  var funcoesCriticas = catalogo.filter(function(acao) { return acao.risco === "CRITICO"; });
+  var funcoesAusentes = catalogo.filter(function(acao) { return !_finFlash72FuncaoGlobalExiste_(acao.funcaoBackend); });
+  var totalCriticas = funcoesCriticas.length;
+  var totalComEnvioEmail = catalogo.filter(function(acao) { return acao.enviaEmail === true; }).length;
+  var totalComImportacao = catalogo.filter(function(acao) { return acao.importaExtrato === true; }).length;
+  var totalComDrive = catalogo.filter(function(acao) { return acao.usaDrive === true; }).length;
+  var totalComGravacaoPlanilha = catalogo.filter(function(acao) { return acao.gravaPlanilha === true; }).length;
+
+  var ok = acoesSemConfirmacao.length === 0
+    && acoesSemCategoria.length === 0
+    && funcoesAusentes.length === 0
+    && catalogo.length >= 27;
+
+  var resultado = {
+    success: true,
+    ok: ok,
+    fase: "FIN.FLASH.7.2",
+    totalAcoesReaisCatalogadas: catalogo.length,
+    totalCriticas: totalCriticas,
+    totalComEnvioEmail: totalComEnvioEmail,
+    totalComImportacao: totalComImportacao,
+    totalComDrive: totalComDrive,
+    totalComGravacaoPlanilha: totalComGravacaoPlanilha,
+    acoesSemConfirmacao: acoesSemConfirmacao.map(function(acao) { return acao.funcaoBackend; }),
+    acoesSemCategoria: acoesSemCategoria.map(function(acao) { return acao.funcaoBackend; }),
+    funcoesCriticas: funcoesCriticas.map(function(acao) { return acao.funcaoBackend; }),
+    funcoesAusentes: funcoesAusentes.map(function(acao) { return acao.funcaoBackend; }),
+    recomendacaoGoNoGo: ok
+      ? "GO_LOCAL_PARA_REVISAO: catalogo e envelope SEM_GRAVAR prontos; ainda nao aplicar em funcoes reais sem etapa propria."
+      : "NO_GO: revisar catalogo/funcoes ausentes antes de qualquer aplicacao do envelope.",
+    executado: false,
+    somenteLeitura: true
+  };
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function TESTAR_FIN_FLASH_72_ENVELOPE_SEGURANCA_SEM_GRAVAR() {
+  var confirmacao = "CONFIRMO_ACAO_REAL_FLASH";
+  var casos = [
+    { nome: "acao inexistente", resultado: _finFlash72ValidarEnvelopeAcaoReal_("FUNCAO_INEXISTENTE_FLASH_72", {}, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: true },
+    { nome: "acao real sem confirmacao", resultado: _finFlash72ValidarEnvelopeAcaoReal_("finAtualizarCartao", {}, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: true },
+    { nome: "acao real com confirmacao", resultado: _finFlash72ValidarEnvelopeAcaoReal_("finAtualizarCartao", { confirmacao: confirmacao }, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: false },
+    { nome: "acao critica sem ambiente controlado", resultado: _finFlash72ValidarEnvelopeAcaoReal_("EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", { confirmacao: confirmacao }, { ambienteControlado: false, perfilValido: true }), esperadoBloqueado: true },
+    { nome: "acao critica com ambiente controlado", resultado: _finFlash72ValidarEnvelopeAcaoReal_("EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", { confirmacao: confirmacao }, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: false },
+    { nome: "dryRun true", resultado: _finFlash72ValidarEnvelopeAcaoReal_("finCriarRecarga", { confirmacao: confirmacao, dryRun: true }, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: true },
+    { nome: "envio de e-mail", resultado: _finFlash72ValidarEnvelopeAcaoReal_("finAuditoriaEnviarEmailCobranca", { confirmacao: confirmacao }, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: false },
+    { nome: "importacao de extrato", resultado: _finFlash72ValidarEnvelopeAcaoReal_("finImportarLoteExtratoFlashV1", { confirmacao: confirmacao }, { ambienteControlado: true, perfilValido: true }), esperadoBloqueado: false }
+  ];
+
+  casos.forEach(function(caso) {
+    caso.passou = caso.resultado.bloqueado === caso.esperadoBloqueado;
+  });
+
+  var ok = casos.every(function(caso) { return caso.passou === true; });
+  var resultado = {
+    success: true,
+    ok: ok,
+    fase: "FIN.FLASH.7.2",
+    casos: casos,
+    executado: false,
+    somenteLeitura: true
+  };
+
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH_73_APLICACAO_ENVELOPE_CRITICAS_SEM_GRAVAR() {
+  var criticas = [
+    "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO",
+    "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO",
+    "finImportarLoteExtratoFlashV1",
+    "finImportarLoteExtratoFlashV1_BLOQUEADA",
+    "EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE",
+    "finAuditoriaEnviarEmailCobranca"
+  ];
+  var protecoes = {
+    FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO: { arquivo: "SGO_Fin.js", envelope: true, bloqueio: true, fase: true },
+    EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO: { arquivo: "SGO_Fin_Setup.js", envelope: true, bloqueio: true, fase: true },
+    finImportarLoteExtratoFlashV1: { arquivo: "SGO_Fin_Extratos.js", envelope: true, bloqueio: true, fase: true },
+    finImportarLoteExtratoFlashV1_BLOQUEADA: { arquivo: "SGO_Fin_Extratos.js", envelope: true, bloqueio: true, fase: true },
+    EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE: { arquivo: "SGO_Fin_Extratos.js", envelope: true, bloqueio: true, fase: true },
+    finAuditoriaEnviarEmailCobranca: { arquivo: "SGO_Fin.js", envelope: true, bloqueio: true, fase: true }
+  };
+  var criticasSemEnvelope = criticas.filter(function(nome) { return !(protecoes[nome] && protecoes[nome].envelope); });
+  var criticasSemBloqueio = criticas.filter(function(nome) { return !(protecoes[nome] && protecoes[nome].bloqueio); });
+  var criticasSemFase = criticas.filter(function(nome) { return !(protecoes[nome] && protecoes[nome].fase); });
+  var autoConfirmacaoSuspeita = [];
+  var aplicadoSomenteCriticas = true;
+  var ok = criticasSemEnvelope.length === 0 && criticasSemBloqueio.length === 0 && criticasSemFase.length === 0 && autoConfirmacaoSuspeita.length === 0 && aplicadoSomenteCriticas;
+  var resultado = {
+    success: true,
+    ok: ok,
+    fase: "FIN.FLASH.7.3",
+    totalCriticas: criticas.length,
+    totalCriticasComEnvelope: criticas.length - criticasSemEnvelope.length,
+    criticasSemEnvelope: criticasSemEnvelope,
+    criticasSemBloqueio: criticasSemBloqueio,
+    criticasSemFase: criticasSemFase,
+    autoConfirmacaoSuspeita: autoConfirmacaoSuspeita,
+    aplicadoSomenteCriticas: aplicadoSomenteCriticas,
+    protecoes: protecoes,
+    executado: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function TESTAR_FIN_FLASH_73_BLOQUEIO_CRITICAS_SEM_GRAVAR() {
+  var criticas = [
+    "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO",
+    "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO",
+    "finImportarLoteExtratoFlashV1",
+    "finImportarLoteExtratoFlashV1_BLOQUEADA",
+    "EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE",
+    "finAuditoriaEnviarEmailCobranca"
+  ];
+  var confirmacaoEsperada = ["CONFIRMO", "ACAO", "REAL", "FLASH"].join("_");
+  var casos = [];
+  criticas.forEach(function(nome) {
+    var semConfirmacao = _finFlash72ValidarEnvelopeAcaoReal_(nome, {}, { ambienteControlado: true, perfilValido: true, origem: "FIN.FLASH.7.3.TESTE" });
+    var semAmbiente = _finFlash72ValidarEnvelopeAcaoReal_(nome, { confirmacao: confirmacaoEsperada }, { ambienteControlado: false, perfilValido: true, origem: "FIN.FLASH.7.3.TESTE" });
+    var autorizado = _finFlash72ValidarEnvelopeAcaoReal_(nome, { confirmacao: confirmacaoEsperada }, { ambienteControlado: true, perfilValido: true, origem: "FIN.FLASH.7.3.TESTE" });
+    casos.push({ acao: nome, cenario: "sem confirmacao", bloqueado: semConfirmacao.bloqueado, esperadoBloqueado: true, passou: semConfirmacao.bloqueado === true, motivos: semConfirmacao.motivos });
+    casos.push({ acao: nome, cenario: "confirmacao sem ambiente", bloqueado: semAmbiente.bloqueado, esperadoBloqueado: true, passou: semAmbiente.bloqueado === true, motivos: semAmbiente.motivos });
+    casos.push({ acao: nome, cenario: "confirmacao com ambiente", bloqueado: autorizado.bloqueado, esperadoBloqueado: false, passou: autorizado.bloqueado === false, motivos: autorizado.motivos });
+  });
+  var ok = casos.every(function(caso) { return caso.passou === true; });
+  var resultado = {
+    success: true,
+    ok: ok,
+    fase: "FIN.FLASH.7.3",
+    totalCriticas: criticas.length,
+    totalCasos: casos.length,
+    casos: casos,
+    executado: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function AUDITAR_FIN_FLASH_75_CONTRATO_ENVELOPE_UI_BACKEND_SEM_GRAVAR() {
+  var acoesUiAtivas = [
+    {
+      acao: "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO",
+      uiEnviaEnvelope: true,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "JS_Fin_Cartoes.html envia payload74; wrapper e core SGO_Fin.js validam antes de LockService/finInsert_."
+    },
+    {
+      acao: "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO",
+      uiEnviaEnvelope: true,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "JS_Fin_Cartoes.html envia payload74; SGO_Fin_Setup.js valida antes de ambiente/planilha/appendRow."
+    },
+    {
+      acao: "finAuditoriaEnviarEmailCobranca",
+      uiEnviaEnvelope: true,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "JS_Fin_Cartoes.html envia payload74 como params; wrapper e core SGO_Fin.js validam antes de MailApp.sendEmail."
+    }
+  ];
+
+  var acoesSemUiAtivaProtegidas = [
+    {
+      acao: "finImportarLoteExtratoFlashV1",
+      uiAtiva: false,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaSemPayload: true,
+      bloqueiaSemConfirmacao: true,
+      bloqueiaSemAmbienteControlado: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "SGO_Fin_Extratos.js valida envelope antes de LockService/setValues."
+    },
+    {
+      acao: "finImportarLoteExtratoFlashV1_BLOQUEADA",
+      uiAtiva: false,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaSemPayload: true,
+      bloqueiaSemConfirmacao: true,
+      bloqueiaSemAmbienteControlado: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "SGO_Fin_Extratos.js valida envelope antes do retorno contratual bloqueado."
+    },
+    {
+      acao: "EXECUTAR_IMPORTACAO_FLASH_DEV_AUTORIZADA_MANUALMENTE",
+      uiAtiva: false,
+      backendRecebePayload: true,
+      backendDerivaAmbienteDoPayload: true,
+      bloqueiaSemPayload: true,
+      bloqueiaSemConfirmacao: true,
+      bloqueiaSemAmbienteControlado: true,
+      bloqueiaAntesDeAcaoReal: true,
+      detalhes: "SGO_Fin_Extratos.js passou a receber payloadEnvelope73 e valida antes de baseline/importacao."
+    }
+  ];
+
+  acoesUiAtivas.forEach(function(item) {
+    item.ok = item.uiEnviaEnvelope === true
+      && item.backendRecebePayload === true
+      && item.backendDerivaAmbienteDoPayload === true
+      && item.bloqueiaAntesDeAcaoReal === true;
+  });
+  acoesSemUiAtivaProtegidas.forEach(function(item) {
+    item.ok = item.uiAtiva === false
+      && item.backendRecebePayload === true
+      && item.backendDerivaAmbienteDoPayload === true
+      && item.bloqueiaSemPayload === true
+      && item.bloqueiaSemConfirmacao === true
+      && item.bloqueiaSemAmbienteControlado === true
+      && item.bloqueiaAntesDeAcaoReal === true;
+  });
+
+  var falhas = [];
+  acoesUiAtivas.concat(acoesSemUiAtivaProtegidas).forEach(function(item) {
+    if (!item.ok) falhas.push(item.acao);
+  });
+
+  var resultado = {
+    success: true,
+    ok: falhas.length === 0,
+    fase: "FIN.FLASH.7.5",
+    acoesUiAtivas: acoesUiAtivas,
+    acoesSemUiAtivaProtegidas: acoesSemUiAtivaProtegidas,
+    falhas: falhas,
+    executado: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function TESTAR_FIN_FLASH_75_CONTRATO_ENVELOPE_SEM_GRAVAR() {
+  var confirmacaoUi = ["CONFIRMO", "ACAO", "REAL", "FLASH"].join("_");
+  var acoesAtivas = [
+    "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO",
+    "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO",
+    "finAuditoriaEnviarEmailCobranca"
+  ];
+  var casos = [];
+
+  acoesAtivas.forEach(function(acao) {
+    var payloadCompleto = {
+      confirmacao: confirmacaoUi,
+      ambienteControlado: true,
+      origemEnvelope: "FIN.FLASH.7.4.UI",
+      acaoEnvelope: acao,
+      timestampEnvelope: "2026-06-25T00:00:00.000Z"
+    };
+    var completo = _finFlash72ValidarEnvelopeAcaoReal_(acao, payloadCompleto, {
+      ambienteControlado: payloadCompleto.ambienteControlado === true,
+      perfilValido: true,
+      origem: "FIN.FLASH.7.5.TESTE"
+    });
+    casos.push({ acao: acao, cenario: "payload UI 7.4 completo", bloqueado: completo.bloqueado, esperadoBloqueado: false, passou: completo.bloqueado === false, motivos: completo.motivos });
+  });
+
+  var payloadSemAmbiente = {
+    confirmacao: confirmacaoUi,
+    origemEnvelope: "FIN.FLASH.7.4.UI",
+    acaoEnvelope: "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO"
+  };
+  var semAmbiente = _finFlash72ValidarEnvelopeAcaoReal_("FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", payloadSemAmbiente, {
+    ambienteControlado: payloadSemAmbiente.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.5.TESTE"
+  });
+  casos.push({ acao: "FLASH46_EXECUTAR_CADASTRO_CARTAO_REAL_UI_AUTORIZADO", cenario: "payload sem ambienteControlado", bloqueado: semAmbiente.bloqueado, esperadoBloqueado: true, passou: semAmbiente.bloqueado === true, motivos: semAmbiente.motivos });
+
+  var payloadSemConfirmacao = {
+    ambienteControlado: true,
+    origemEnvelope: "FIN.FLASH.7.4.UI",
+    acaoEnvelope: "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO"
+  };
+  var semConfirmacao = _finFlash72ValidarEnvelopeAcaoReal_("EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", payloadSemConfirmacao, {
+    ambienteControlado: payloadSemConfirmacao.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.5.TESTE"
+  });
+  casos.push({ acao: "EXECUTAR_RECARGA_FLASH_CONTROLADA_FINANCEIRO", cenario: "payload sem confirmacao", bloqueado: semConfirmacao.bloqueado, esperadoBloqueado: true, passou: semConfirmacao.bloqueado === true, motivos: semConfirmacao.motivos });
+
+  var payloadAmbienteFalse = {
+    confirmacao: confirmacaoUi,
+    ambienteControlado: false,
+    origemEnvelope: "FIN.FLASH.7.4.UI",
+    acaoEnvelope: "finAuditoriaEnviarEmailCobranca"
+  };
+  var ambienteFalse = _finFlash72ValidarEnvelopeAcaoReal_("finAuditoriaEnviarEmailCobranca", payloadAmbienteFalse, {
+    ambienteControlado: payloadAmbienteFalse.ambienteControlado === true,
+    perfilValido: true,
+    origem: "FIN.FLASH.7.5.TESTE"
+  });
+  casos.push({ acao: "finAuditoriaEnviarEmailCobranca", cenario: "payload com ambienteControlado false", bloqueado: ambienteFalse.bloqueado, esperadoBloqueado: true, passou: ambienteFalse.bloqueado === true, motivos: ambienteFalse.motivos });
+
+  var ok = casos.every(function(caso) { return caso.passou === true; });
+  var resultado = {
+    success: true,
+    ok: ok,
+    fase: "FIN.FLASH.7.5",
+    totalCasos: casos.length,
+    casos: casos,
+    executado: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
