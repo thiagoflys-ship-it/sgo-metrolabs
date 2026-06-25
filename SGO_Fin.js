@@ -1321,13 +1321,23 @@ const SGO_FIN = (() => {
   }
 
   function finFlashMesmoCartao_(extrato, lancamento) {
+    // 1. Prioridade Máxima: Conta Master (CPF)
+    const cpfExtrato = finSafeText_(extrato.CPF_COLABORADOR || extrato.cpfColaborador).replace(/\D/g, '');
+    const cpfLanc = finSafeText_(lancamento.CPF_COLABORADOR).replace(/\D/g, '');
+    if (cpfExtrato && cpfLanc && cpfExtrato === cpfLanc) return true;
+
+    // 2. Prioridade Secundária: ID Único do Cartão
     const cartaoIdExtrato = finSafeText_(extrato.CARTAO_ID);
     const cartaoIdLanc = finSafeText_(lancamento.CARTAO_ID);
-    if (cartaoIdExtrato && cartaoIdLanc) return cartaoIdExtrato === cartaoIdLanc;
-    const finalExtrato = finSafeText_(extrato.CARTAO_FINAL);
-    const finalLanc = finSafeText_(lancamento.CARTAO_FINAL);
-    if (finalExtrato && finalLanc) return finalExtrato === finalLanc;
-    return true;
+    if (cartaoIdExtrato && cartaoIdLanc && cartaoIdExtrato === cartaoIdLanc) return true;
+
+    // 3. Prioridade Terciária: Final do Cartão (retrocompatibilidade legado)
+    const finalExtrato = finSafeText_(extrato.CARTAO_FINAL || extrato.finalCartao);
+    const finalLanc = finSafeText_(lancamento.CARTAO_FINAL || lancamento.NUMERO_FINAL_4);
+    if (finalExtrato && finalLanc && finalExtrato === finalLanc) return true;
+
+    // 4. Bloqueio absoluto: sem fallback cego
+    return false;
   }
 
   function finFlashItemConciliacaoTela_(extrato, lancamento) {

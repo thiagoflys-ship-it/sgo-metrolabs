@@ -41,6 +41,24 @@ function finPreviewExtratoFlashXlsxV1(payload) {
       return finExtratoFlashRetorno_(false, null, [], avisos, bloqueios);
     }
 
+    // CPF Resolver — enriquece cada lançamento com o CPF da Conta Master
+    try {
+      var ssEnriq = finExtratoFlashAbrirDbFinReadOnly_();
+      var shCartoes = ssEnriq.getSheetByName("FIN_CARTOES");
+      if (shCartoes && shCartoes.getLastRow() > 1) {
+        var dadosCartoes = shCartoes.getDataRange().getValues();
+        var hdrsCartoes = dadosCartoes[0];
+        var cartoesBase = dadosCartoes.slice(1).map(function(row) {
+          var obj = {};
+          hdrsCartoes.forEach(function(h, idx) { obj[String(h)] = row[idx]; });
+          return obj;
+        });
+        lancamentos = finExtratoFlashEnriquecerComCPF_(lancamentos, cartoesBase);
+      }
+    } catch (erroEnriq) {
+      avisos.push("CPF Resolver indisponivel (modo offline ou DB ausente): " + (erroEnriq.message || String(erroEnriq)));
+    }
+
     var resumo = finExtratoFlashResumo_(lancamentos);
     return finExtratoFlashRetorno_(true, resumo, lancamentos, avisos, bloqueios);
   } catch (erro) {
@@ -2591,6 +2609,32 @@ function finExtratoFlashNormalizarLinha_(linha, linhaOrigem) {
       pagamentoOriginal
     ])
   };
+}
+
+function finExtratoFlashEnriquecerComCPF_(linhasNormalizadas, cartoesBase) {
+  var mapaCpfs = {};
+
+  // Índice de resolução: "NOME_UPPER|FINAL4" → CPF
+  (cartoesBase || []).forEach(function(c) {
+    var nome = finExtratoFlashTexto_(c.FUNCIONARIO_NOME).toUpperCase().trim();
+    var final4 = finExtratoFlashTexto_(c.NUMERO_FINAL_4).replace(/\D/g, '');
+    var cpf = finExtratoFlashTexto_(c.CPF_COLABORADOR).replace(/\D/g, '');
+    if (nome && final4 && cpf) {
+      mapaCpfs[nome + '|' + final4] = cpf;
+    }
+  });
+
+  linhasNormalizadas.forEach(function(linha) {
+    var nomeExtrato = finExtratoFlashTexto_(linha.pessoa).toUpperCase().trim();
+    var finalExtrato = finExtratoFlashTexto_(linha.finalCartao).replace(/\D/g, '');
+    var cpfResolvido = (nomeExtrato && finalExtrato) ? (mapaCpfs[nomeExtrato + '|' + finalExtrato] || '') : '';
+    if (cpfResolvido) {
+      linha.cpfColaborador = cpfResolvido;
+      linha.CPF_COLABORADOR = cpfResolvido;
+    }
+  });
+
+  return linhasNormalizadas;
 }
 
 function finExtratoFlashNormalizarData_(valor) {
