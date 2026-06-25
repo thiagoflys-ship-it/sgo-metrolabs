@@ -342,8 +342,8 @@
   <button class="fin-tab-btn" onclick="finMudarAba('pendencias')">Pendências</button>
   <button class="fin-tab-btn" onclick="finMudarAba('prestacoes')">Prestações <span id="tabBadgePM" class="fin-tab-badge" style="display:none">0</span></button>
   <button class="fin-tab-btn" onclick="finMudarAba('termos')" style="display:none" data-admin="1">Termos e Docs</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('relatorios')" style="display:none" data-admin="1">Relatórios</button>
-  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')" style="display:none" data-admin="1">Cobranças</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('relatorios')">Relatórios</button>
+  <button class="fin-tab-btn" onclick="finMudarAba('cobrancas')">Cobranças</button>
   <span class="fin-tab-admin-sep"></span>
   <button id="finTabBtnAdmin" class="fin-tab-btn fin-tab-admin" onclick="finMudarAba('admintec')" style="display:none" title="Área restrita — ADMIN/DIRETORIA">Admin técnico</button>
 </div>
@@ -860,43 +860,63 @@
   </div>
 </div>
 
-<!-- Tab: Relatórios (placeholder profissional) -->
+<!-- Tab: Relatórios Flash (FLASH.6.9) -->
 <div id="tabRelatorios" class="fin-tab-content">
-  <div class="fin-tab-inner">
+  <div class="fin-tab-inner" style="padding:16px 24px">
     <div class="fin-card">
-      <div class="fin-placeholder-card">
-        <div class="fin-placeholder-status">Em preparação</div>
-        <h3>Relatórios Financeiros Flash</h3>
-        <p>Área para gerar relatórios por período, cartão, colaborador, pendências e conciliação. Exportação em PDF e Excel com gráficos e conclusões.</p>
-        <ul class="fin-placeholder-list">
-          <li>Relatório mensal</li>
-          <li>Relatório por colaborador</li>
-          <li>Relatório por cartão</li>
-          <li>Relatório de pendências</li>
-          <li>Exportação PDF/Excel</li>
-          <li>Gráficos e indicadores</li>
-        </ul>
+      <h3 style="margin-top:0">Relatórios Financeiros Flash</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="fin-fg" style="min-width:200px;flex:1">
+          <label class="fin-label">CPF do colaborador</label>
+          <input id="finF69Cpf" class="fin-input" type="text" placeholder="Somente dígitos — ex: 5553116198">
+        </div>
+        <div class="fin-fg" style="min-width:160px">
+          <label class="fin-label">Período (mês)</label>
+          <input id="finF69Periodo" class="fin-input" type="month">
+        </div>
+      </div>
+      <div class="fin-btn-row">
+        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finF69GerarRelatorio()">📄 Relatório Mensal</button>
+        <button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finF69PreviaNotificacao()">🔔 Pré-visualizar Notificação</button>
+        <button class="fin-btn fin-btn-warning fin-btn-sm" onclick="finF69PreviaAdvertencia()">⚠ Pré-visualizar Advertência</button>
+      </div>
+      <div id="finF69Status" style="margin-top:10px;font-size:12px;min-height:18px"></div>
+    </div>
+    <div id="finF69Preview" style="margin-top:12px;display:none">
+      <div class="fin-card" style="padding:0;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #e9ecef">
+          <strong id="finF69PreviewTitulo" style="font-size:13px">Pré-visualização</strong>
+          <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finF69FecharPreview()">Fechar</button>
+        </div>
+        <iframe id="finF69Iframe" srcdoc="" style="width:100%;height:540px;border:none"></iframe>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Tab: Cobranças e Alertas (placeholder profissional) -->
+<!-- Tab: Cobranças Flash (FLASH.6.9) -->
 <div id="tabCobrancas" class="fin-tab-content">
-  <div class="fin-tab-inner">
+  <div class="fin-tab-inner" style="padding:16px 24px">
     <div class="fin-card">
-      <div class="fin-placeholder-card">
-        <div class="fin-placeholder-status">Em preparação</div>
-        <h3>Cobranças e Alertas</h3>
-        <p>Área para acompanhar pendências, cobranças enviadas, notificações e advertências financeiras. Comunicação por e-mail e WhatsApp com histórico completo.</p>
-        <ul class="fin-placeholder-list">
-          <li>Cobrança por e-mail</li>
-          <li>Cobrança por WhatsApp</li>
-          <li>Advertência financeira</li>
-          <li>Timeline da pendência</li>
-          <li>Histórico de notificações</li>
-          <li>Alertas críticos</li>
-        </ul>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">Cobranças e Pendências Flash</h3>
+        <button class="fin-btn fin-btn-primary fin-btn-sm" onclick="finF69CarregarCobrancas()">↺ Atualizar</button>
+      </div>
+      <div class="fin-alert fin-alert-info" style="font-size:12px;margin-bottom:10px">
+        Pré-visualização de cobranças — nenhuma notificação é enviada automaticamente. Envio real será habilitado em versão futura.
+      </div>
+      <div id="finF69CobrStatus" style="font-size:12px;margin-bottom:8px"></div>
+      <div id="finF69CobrTabela">
+        <div style="text-align:center;color:#999;padding:24px;font-size:13px">Clique em "Atualizar" para carregar cobranças pendentes.</div>
+      </div>
+    </div>
+    <div id="finF69CobrPreview" style="margin-top:12px;display:none">
+      <div class="fin-card" style="padding:0;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #e9ecef">
+          <strong id="finF69CobrPreviewTitulo" style="font-size:13px">Pré-visualização Cobrança</strong>
+          <button class="fin-btn fin-btn-secondary fin-btn-sm" onclick="finF69FecharCobrPreview()">Fechar</button>
+        </div>
+        <iframe id="finF69CobrIframe" srcdoc="" style="width:100%;height:480px;border:none"></iframe>
       </div>
     </div>
   </div>
@@ -1031,7 +1051,7 @@
           </ul>
         </section>
         <section class="fin-manual-section">
-          <h4>Relatórios e Cobranças <span class="fin-manual-badge futuro">Em preparação</span></h4>
+          <h4>Relatórios e Cobranças <span class="fin-manual-badge atual">Ativo</span></h4>
           <ul>
             <li>Relatórios por colaborador, cartão e período.</li>
             <li>Exportação em PDF e Excel.</li>
@@ -3515,6 +3535,7 @@ function finMudarAba(aba) {
   if (aba === 'extratos' && !_finFlashOperacionalCarregado) { finFlashCarregarResumo_(); }
   if (aba === 'pendencias' && !_finPend8BCarregado) { finPend8BAbrirAba_(); }
   if (aba === 'prestacoes' && !_finPMCarregado) { finPMAbrirAba_(); }
+  if (aba === 'cobrancas'  && !_finF69CobrancasCarregadas.length) { finF69CarregarCobrancas(); }
 }
 
 // ---- filtro da lista ----
@@ -5118,6 +5139,160 @@ function finF68SetStatus(msg, type) {
   if (!msg) { el.innerHTML = ''; return; }
   var cor = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#0366d6';
   el.innerHTML = '<span style="color:' + cor + '">' + finEH(msg) + '</span>';
+}
+
+// ── FLASH.6.9 — Relatórios e Cobranças Flash ────────────────────────────────
+
+var _finF69CobrancasCarregadas = [];
+
+function finF69SetStatus_(elId, msg, tipo) {
+  var el = document.getElementById(elId);
+  if (!el) { return; }
+  if (!msg) { el.innerHTML = ''; return; }
+  var cor = tipo === 'error' ? '#dc3545' : tipo === 'success' ? '#28a745' : '#0366d6';
+  el.innerHTML = '<span style="color:' + cor + '">' + finEH(msg) + '</span>';
+}
+
+function finF69MostrarHtml_(iframe, tituloEl, htmlStr, titulo) {
+  if (tituloEl) { tituloEl.textContent = titulo || 'Pré-visualização'; }
+  if (iframe)   { iframe.srcdoc = htmlStr || '<p>Sem conteúdo.</p>'; }
+}
+
+function finF69LerFiltros_() {
+  return {
+    cpf:     ((document.getElementById('finF69Cpf')     || {}).value || '').replace(/\D/g, ''),
+    periodo: ((document.getElementById('finF69Periodo') || {}).value || '').trim()
+  };
+}
+
+function finF69Previa_(tipo) {
+  var f = finF69LerFiltros_();
+  if (!f.cpf) {
+    finF69SetStatus_('finF69Status', 'Informe o CPF do colaborador.', 'error');
+    return;
+  }
+  var payload = {
+    cpf:           f.cpf,
+    periodoInicio: f.periodo ? f.periodo + '-01' : '',
+    periodoFim:    f.periodo ? f.periodo + '-28' : '',
+    tipo:          tipo
+  };
+  finF69SetStatus_('finF69Status', 'Gerando prévia…', 'info');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finF69SetStatus_('finF69Status', 'Erro: ' + ((r && r.bloqueios && r.bloqueios[0]) || 'falha'), 'error');
+        return;
+      }
+      finF69SetStatus_('finF69Status', '', '');
+      var tits = { RELATORIO: 'Relatório Mensal', NOTIFICACAO: 'Notificação de Pendência', ADVERTENCIA: 'Advertência Flash' };
+      var prev = document.getElementById('finF69Preview');
+      finF69MostrarHtml_(
+        document.getElementById('finF69Iframe'),
+        document.getElementById('finF69PreviewTitulo'),
+        r.htmlPreview,
+        tits[tipo] || tipo
+      );
+      if (prev) { prev.style.display = 'block'; }
+    })
+    .withFailureHandler(function(e) {
+      finF69SetStatus_('finF69Status', 'Falha: ' + finEH((e && e.message) || ''), 'error');
+    })
+    .FIN_FLASH_RELATORIOS_COBRANCAS_PREVIEW_SEM_GRAVAR(payload);
+}
+
+function finF69GerarRelatorio()   { finF69Previa_('RELATORIO');   }
+function finF69PreviaNotificacao(){ finF69Previa_('NOTIFICACAO'); }
+function finF69PreviaAdvertencia(){ finF69Previa_('ADVERTENCIA'); }
+
+function finF69FecharPreview() {
+  var el = document.getElementById('finF69Preview');
+  if (el) { el.style.display = 'none'; }
+}
+
+function finF69CarregarCobrancas() {
+  finF69SetStatus_('finF69CobrStatus', 'Carregando cobranças…', 'info');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finF69SetStatus_('finF69CobrStatus', 'Erro ao carregar cobranças.', 'error');
+        return;
+      }
+      _finF69CobrancasCarregadas = Array.isArray(r.cobrancas) ? r.cobrancas : [];
+      finF69RenderCobrancas_();
+      finF69SetStatus_('finF69CobrStatus',
+        _finF69CobrancasCarregadas.length + ' registro(s) encontrado(s).', 'success');
+    })
+    .withFailureHandler(function(e) {
+      finF69SetStatus_('finF69CobrStatus', 'Falha: ' + finEH((e && e.message) || ''), 'error');
+    })
+    .PREPARAR_COBRANCAS_FLASH_SEM_ENVIAR();
+}
+
+function finF69RenderCobrancas_() {
+  var el = document.getElementById('finF69CobrTabela');
+  if (!el) { return; }
+  if (!_finF69CobrancasCarregadas.length) {
+    el.innerHTML = '<div style="text-align:center;color:#999;padding:24px;font-size:13px">Nenhuma cobrança pendente encontrada.</div>';
+    return;
+  }
+  var rows = _finF69CobrancasCarregadas.map(function(c) {
+    var nivel = String(c.nivelCobranca || c.NIVEL_COBRANCA || '-');
+    var cor   = nivel === 'ADVERTENCIA' ? '#dc3545' : nivel === 'ESCALONADA' ? '#c05600' : nivel === 'VENCIDA' ? '#e67e22' : '#0366d6';
+    var cpf   = String(c.cpf || c.CPF || '');
+    var nome  = finEH(String(c.colaborador || c.COLABORADOR || c.FUNCIONARIO_NOME || cpf));
+    var valor = parseFloat(c.valorPendente || c.VALOR_PENDENTE || 0).toFixed(2);
+    var dias  = parseInt(c.diasAtraso || c.DIAS_ATRASO || 0, 10);
+    var btnAdv = nivel === 'ADVERTENCIA'
+      ? '<button class="fin-btn fin-btn-warning fin-btn-sm" onclick="finF69PreviaCobrTipo_(\'' + finEH(cpf) + '\',\'ADVERTENCIA\')">Advertência</button>'
+      : '';
+    return '<tr>' +
+      '<td>' + nome + '</td>' +
+      '<td style="font-family:monospace">' + finEH(cpf) + '</td>' +
+      '<td>R$ ' + valor + '</td>' +
+      '<td>' + dias + ' dias</td>' +
+      '<td><span style="color:' + cor + ';font-weight:600">' + finEH(nivel) + '</span></td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finF69PreviaCobrTipo_(\'' + finEH(cpf) + '\',\'NOTIFICACAO\')">Notificação</button> ' +
+        btnAdv +
+      '</td>' +
+      '</tr>';
+  }).join('');
+  el.innerHTML =
+    '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
+    '<th>Colaborador</th><th>CPF</th><th>Valor</th><th>Atraso</th><th>Nível</th><th>Ações</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function finF69PreviaCobrTipo_(cpf, tipo) {
+  var payload = { cpf: cpf, periodoInicio: '', periodoFim: '', tipo: tipo };
+  finF69SetStatus_('finF69CobrStatus', 'Gerando prévia…', 'info');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r || !r.ok) {
+        finF69SetStatus_('finF69CobrStatus', 'Erro: ' + ((r && r.bloqueios && r.bloqueios[0]) || ''), 'error');
+        return;
+      }
+      finF69SetStatus_('finF69CobrStatus', '', '');
+      var tit = tipo === 'ADVERTENCIA' ? 'Advertência Flash' : 'Notificação de Pendência';
+      var prev = document.getElementById('finF69CobrPreview');
+      finF69MostrarHtml_(
+        document.getElementById('finF69CobrIframe'),
+        document.getElementById('finF69CobrPreviewTitulo'),
+        r.htmlPreview,
+        tit + ' — ' + cpf
+      );
+      if (prev) { prev.style.display = 'block'; }
+    })
+    .withFailureHandler(function(e) {
+      finF69SetStatus_('finF69CobrStatus', 'Falha: ' + finEH((e && e.message) || ''), 'error');
+    })
+    .FIN_FLASH_RELATORIOS_COBRANCAS_PREVIEW_SEM_GRAVAR(payload);
+}
+
+function finF69FecharCobrPreview() {
+  var el = document.getElementById('finF69CobrPreview');
+  if (el) { el.style.display = 'none'; }
 }
 
 // Compatibilidade: manter funções antigas como no-op

@@ -10234,3 +10234,102 @@ function FINALIZAR_FLASH68_RECARGA_FINANCEIRO_PRONTA_SEM_EXECUTAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+
+// FLASH.6.9 â€” Preview de RelatÃ³rios e CobranÃ§as Flash. Somente leitura, sem envio real.
+function FIN_FLASH_RELATORIOS_COBRANCAS_PREVIEW_SEM_GRAVAR(payload) {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.6.9.PREVIEW',
+    ambiente: 'PRODUCAO_V2', tipo: null, cpf: null, periodo: null,
+    htmlPreview: null,
+    envioReal: false, gravacaoReal: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    if (!payload || typeof payload !== 'object') {
+      resultado.bloqueios.push('Payload ausente ou invalido.');
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    var tipo = String(payload.tipo || '').trim().toUpperCase();
+    var cpf  = String(payload.cpf  || '').replace(/\D/g, '');
+    resultado.tipo   = tipo;
+    resultado.cpf    = cpf;
+    resultado.periodo = (payload.periodoInicio || '') + (payload.periodoFim ? '/' + payload.periodoFim : '');
+    if (!tipo) { resultado.bloqueios.push('tipo obrigatorio: RELATORIO, NOTIFICACAO ou ADVERTENCIA.'); }
+    if (!cpf)  { resultado.bloqueios.push('cpf obrigatorio.'); }
+    if (resultado.bloqueios.length > 0) {
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    var periodo = String(payload.periodoInicio || '').slice(0, 7); // YYYY-MM
+    var html = null;
+    if (tipo === 'RELATORIO') {
+      html = GERAR_HTML_RELATORIO_MENSAL_COLABORADOR_FLASH_SEM_GRAVAR(cpf, periodo);
+    } else if (tipo === 'NOTIFICACAO') {
+      html = GERAR_HTML_NOTIFICACAO_PENDENCIA_FLASH_SEM_GRAVAR(cpf);
+    } else if (tipo === 'ADVERTENCIA') {
+      html = GERAR_HTML_ADVERTENCIA_FLASH_SEM_GRAVAR(cpf);
+    } else {
+      resultado.bloqueios.push('tipo invalido: ' + tipo + '. Use RELATORIO, NOTIFICACAO ou ADVERTENCIA.');
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    if (typeof html !== 'string' || html.length < 10) {
+      resultado.bloqueios.push('Funcao HTML retornou conteudo vazio. CPF pode nao estar cadastrado ou sem dados no periodo.');
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    resultado.htmlPreview = html;
+    resultado.success = true;
+    resultado.ok = true;
+    resultado.avisos.push('Preview ' + tipo + ' gerado para CPF ' + cpf + '. Nenhum envio ou gravacao executado.');
+  } catch (e) {
+    resultado.bloqueios.push('Erro FLASH.6.9.PREVIEW: ' + (e.message || String(e)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+// FLASH.6.9 â€” Fechamento: valida que backend e funcoes HTML existem. Nenhuma gravacao.
+function FINALIZAR_FLASH69_RELATORIOS_COBRANCAS_PRONTO_SEM_GRAVAR() {
+  var resultado = {
+    success: false, ok: false, fase: 'FLASH.6.9.FECHAMENTO',
+    ambiente: null,
+    backendWrapperExiste: false,
+    funcoesHTMLExistem: false,
+    preparaCobrancasExiste: false,
+    envioRealBloqueado: true,
+    gravacaoReal: false,
+    prontoParaUso: false,
+    bloqueios: [], avisos: []
+  };
+  try {
+    var amb = _f410ValidarAmbientePV2_();
+    resultado.ambiente = amb.ok ? 'PRODUCAO_V2' : 'NAO_AUTORIZADO';
+    if (!amb.ok) {
+      resultado.bloqueios.push('Ambiente nao e PRODUCAO_V2: ' + amb.bloqueio);
+      Logger.log(JSON.stringify(resultado, null, 2));
+      return resultado;
+    }
+    resultado.backendWrapperExiste   = typeof FIN_FLASH_RELATORIOS_COBRANCAS_PREVIEW_SEM_GRAVAR === 'function';
+    resultado.funcoesHTMLExistem     =
+      typeof GERAR_HTML_RELATORIO_MENSAL_COLABORADOR_FLASH_SEM_GRAVAR === 'function' &&
+      typeof GERAR_HTML_NOTIFICACAO_PENDENCIA_FLASH_SEM_GRAVAR === 'function' &&
+      typeof GERAR_HTML_ADVERTENCIA_FLASH_SEM_GRAVAR === 'function';
+    resultado.preparaCobrancasExiste = typeof PREPARAR_COBRANCAS_FLASH_SEM_ENVIAR === 'function';
+    if (!resultado.backendWrapperExiste)   { resultado.bloqueios.push('FIN_FLASH_RELATORIOS_COBRANCAS_PREVIEW_SEM_GRAVAR ausente.'); }
+    if (!resultado.funcoesHTMLExistem)     { resultado.bloqueios.push('Funcoes GERAR_HTML_* ausentes.'); }
+    if (!resultado.preparaCobrancasExiste) { resultado.bloqueios.push('PREPARAR_COBRANCAS_FLASH_SEM_ENVIAR ausente.'); }
+    resultado.prontoParaUso = resultado.bloqueios.length === 0;
+    resultado.success = resultado.prontoParaUso;
+    resultado.ok      = resultado.prontoParaUso;
+    if (resultado.ok) {
+      resultado.avisos.push('FLASH.6.9 OK: tela Relatorios e Cobrancas pronta. Nenhum envio real habilitado.');
+    }
+  } catch (e) {
+    resultado.bloqueios.push('Erro FLASH.6.9.FECHAMENTO: ' + (e.message || String(e)));
+  }
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
