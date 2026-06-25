@@ -1351,7 +1351,9 @@ const SGO_FIN = (() => {
       valorExtrato: finSafeNumber_(extrato.VALOR || extrato.VALOR_TRANSACAO),
       valorLancamento: lancamento ? finSafeNumber_(lancamento.VALOR) : 0,
       cartaoId: finFlashTelaValor_(extrato.CARTAO_ID || (lancamento && lancamento.CARTAO_ID)),
-      cartaoFinal: finFlashTelaValor_(extrato.CARTAO_FINAL || (lancamento && lancamento.CARTAO_FINAL))
+      cartaoFinal: finFlashTelaValor_(extrato.CARTAO_FINAL || (lancamento && lancamento.CARTAO_FINAL)),
+      cpfColaborador: finSafeText_(extrato.CPF_COLABORADOR || extrato.cpfColaborador).replace(/\D/g, ''),
+      nomeColaborador: finSafeText_(extrato.FUNCIONARIO_NOME || extrato.pessoa)
     };
   }
 

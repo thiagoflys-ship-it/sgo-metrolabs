@@ -3447,14 +3447,45 @@ function finFlashKpiAcao_(label, valor) {
 }
 
 function finFlashTabelaConciliacao_(lista, mostrarLancamento) {
-  if (!lista || !lista.length) return '<div class="fin-list-empty">Nenhum item encontrado.</div>';
-  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Extrato</th><th>Data</th><th>Descrição</th><th>Valor</th>';
-  if (mostrarLancamento) { html += '<th>Lançamento</th>'; }
+  if (!lista || !lista.length)
+    return '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Nenhum item encontrado.</div>';
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>'
+           + '<th>Conta Master (Colaborador)</th>'
+           + '<th>Extrato (Cartão / Data)</th>'
+           + '<th>Descrição do Gasto</th>'
+           + '<th>Valor</th>';
+  if (mostrarLancamento) { html += '<th>Status / Lançamento</th>'; }
   html += '</tr></thead><tbody>';
+
   for (var i = 0; i < lista.length; i++) {
     var item = lista[i];
-    html += '<tr><td>' + finEH(item.extratoId || '') + '</td><td>' + finEH(finDataBR(item.dataExtrato || '')) + '</td><td>' + finEH(item.descricaoExtrato || '') + '</td><td>' + finMoeda(item.valorExtrato || 0) + '</td>';
-    if (mostrarLancamento) { html += '<td>' + finEH(item.lancamentoId || '') + '</td>'; }
+
+    var cpfFormatado = (item.cpfColaborador || '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    var nomeColab = item.nomeColaborador || 'Colaborador Não Identificado';
+    var inicial = nomeColab !== 'Colaborador Não Identificado' ? nomeColab.charAt(0).toUpperCase() : '?';
+
+    var divColaborador =
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<div style="width:32px;height:32px;background:#0f2d52;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0">' + inicial + '</div>' +
+      '<div>' +
+      '<div style="font-weight:600;color:#0f2d52;">' + finEH(nomeColab) + '</div>' +
+      '<div style="font-size:11px;color:#64748b;">CPF: ' + (cpfFormatado || 'Não informado') + '</div>' +
+      '</div></div>';
+
+    var dadosCartao = '<strong style="color:#475569;">Final ' + finEH(item.cartaoFinal || '????') + '</strong><br>' +
+                      '<span style="color:#888;font-size:12px">' + finEH(finDataBR(item.dataExtrato || '')) + '</span>';
+
+    var pillMatch = mostrarLancamento
+      ? '<span class="fin-pill fin-pill-green">Match OK</span><br><span style="font-size:11px;color:#aaa;">ID: ' + finEH(item.lancamentoId || '') + '</span>'
+      : '';
+
+    html += '<tr>'
+          + '<td>' + divColaborador + '</td>'
+          + '<td>' + dadosCartao + '</td>'
+          + '<td style="max-width:200px;white-space:normal;">' + finEH(item.descricaoExtrato || '') + '</td>'
+          + '<td><strong style="color:#15803d;">' + finMoeda(item.valorExtrato || 0) + '</strong></td>';
+    if (mostrarLancamento) { html += '<td>' + pillMatch + '</td>'; }
     html += '</tr>';
   }
   html += '</tbody></table></div>';
@@ -3462,11 +3493,51 @@ function finFlashTabelaConciliacao_(lista, mostrarLancamento) {
 }
 
 function finFlashTabelaSemExtrato_(lista) {
-  if (!lista || !lista.length) return '<div class="fin-list-empty">Nenhum item encontrado.</div>';
-  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr><th>Lançamento</th><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>';
+  if (!lista || !lista.length)
+    return '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Nenhum item encontrado.</div>';
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>'
+           + '<th>Conta Master (Colaborador)</th>'
+           + '<th>Lançamento (Cartão / Data)</th>'
+           + '<th>Descrição do Gasto</th>'
+           + '<th>Valor</th>'
+           + '</tr></thead><tbody>';
+
   for (var i = 0; i < lista.length; i++) {
     var item = lista[i];
-    html += '<tr><td>' + finEH(item.lancamentoId || '') + '</td><td>' + finEH(finDataBR(item.dataLancamento || '')) + '</td><td>' + finEH(item.descricaoLancamento || '') + '</td><td>' + finMoeda(item.valorLancamento || 0) + '</td></tr>';
+
+    var nomeColab = 'Colaborador Não Identificado';
+    var cpfFormatado = 'Não informado';
+    if (typeof _finCartoes !== 'undefined' && Array.isArray(_finCartoes)) {
+      var cartaoMatch = _finCartoes.find(function(c) {
+        return (item.cartaoId && c.CARTAO_ID === item.cartaoId) ||
+               (item.cartaoFinal && c.NUMERO_FINAL_4 === item.cartaoFinal);
+      });
+      if (cartaoMatch) {
+        nomeColab = cartaoMatch.FUNCIONARIO_NOME || nomeColab;
+        cpfFormatado = (cartaoMatch.CPF_COLABORADOR || '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') || cpfFormatado;
+      }
+    }
+
+    var inicial = nomeColab !== 'Colaborador Não Identificado' ? nomeColab.charAt(0).toUpperCase() : '?';
+
+    var divColaborador =
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<div style="width:32px;height:32px;background:#0f2d52;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0">' + inicial + '</div>' +
+      '<div>' +
+      '<div style="font-weight:600;color:#0f2d52;">' + finEH(nomeColab) + '</div>' +
+      '<div style="font-size:11px;color:#64748b;">CPF: ' + cpfFormatado + '</div>' +
+      '</div></div>';
+
+    var dadosCartao = '<strong style="color:#475569;">Final ' + finEH(item.cartaoFinal || '????') + '</strong><br>' +
+                      '<span style="color:#888;font-size:12px">' + finEH(finDataBR(item.dataLancamento || '')) + '</span>';
+
+    html += '<tr>'
+          + '<td>' + divColaborador + '</td>'
+          + '<td>' + dadosCartao + '</td>'
+          + '<td style="max-width:200px;white-space:normal;">' + finEH(item.descricaoLancamento || '') + '</td>'
+          + '<td><strong style="color:#15803d;">' + finMoeda(item.valorLancamento || 0) + '</strong></td>'
+          + '</tr>';
   }
   html += '</tbody></table></div>';
   return html;
