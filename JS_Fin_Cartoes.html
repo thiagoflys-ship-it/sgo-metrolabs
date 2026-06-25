@@ -1379,6 +1379,51 @@
   </div>
 </div>
 
+<!-- Modal: Editar Perfil Master (User-Centric) -->
+<div id="finModalEditarPerfilMaster" class="fin-modal-overlay">
+  <div class="fin-modal" style="width:500px">
+    <h3>Gerenciar Conta Master (Colaborador)</h3>
+    <div class="fin-alert fin-alert-warning" style="margin-bottom:12px;font-size:12px">
+      <strong>Atenção:</strong> Qualquer alteração feita aqui, incluindo bloqueio e inativação, será aplicada instantaneamente a <strong>TODOS</strong> os cartões vinculados a este CPF.
+    </div>
+    <div class="fin-grid2">
+      <div class="fin-fg full">
+        <label class="fin-label">CPF (Chave Master - Protegido)</label>
+        <input id="finMP_CPF" class="fin-input" type="text" disabled style="background:#f1f5f9;font-weight:bold;color:#64748b;border-color:#cbd5e1;">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">Nome do Colaborador *</label>
+        <input id="finMP_NOME" class="fin-input" type="text">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">ID do Colaborador</label>
+        <input id="finMP_ID" class="fin-input" type="text">
+      </div>
+      <div class="fin-fg">
+        <label class="fin-label">Telefone</label>
+        <input id="finMP_TEL" class="fin-input" type="text">
+      </div>
+      <div class="fin-fg full">
+        <label class="fin-label">E-mail</label>
+        <input id="finMP_EMAIL" class="fin-input" type="email">
+      </div>
+    </div>
+
+    <div style="margin-top:20px;border-top:1px dashed #e2e8f0;padding-top:15px;">
+      <strong style="font-size:12px;color:#b91c1c;text-transform:uppercase;">Ações em Cascata (Danger Zone)</strong>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="fin-btn fin-btn-warning" onclick="finBloquearPerfilMaster()">Bloquear Todos os Cartões</button>
+        <button class="fin-btn fin-btn-danger" onclick="finInativarPerfilMaster()">Inativar Perfil Completo</button>
+      </div>
+    </div>
+
+    <div class="fin-modal-footer" style="margin-top:20px;">
+      <button class="fin-btn fin-btn-secondary" onclick="finFecharEditarPerfilMaster()">Cancelar</button>
+      <button class="fin-btn fin-btn-primary" onclick="finSalvarPerfilMaster()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // JS_Fin_Cartoes.html - Metrolabs SGO+ — Cartão Flash Corporativo
 
@@ -3720,7 +3765,7 @@ function finCartoes3RenderTabela(lista) {
     html += '<div style="font-size:12px;color:#64748b;margin-top:4px;"><strong>CPF:</strong> ' + finEH(u.cpfFormatado) + (u.email ? ' &nbsp;|&nbsp; <strong>E-mail:</strong> ' + finEH(u.email) : '') + '</div>';
     html += '</div></div>';
     html += '<div style="display:flex;gap:8px;">';
-    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="alert(\'Editar Perfil em construção...\')" title="Editar dados da conta">Editar Perfil</button>';
+    html += '<button class="fin-btn fin-btn-outline fin-btn-sm" onclick="finAbrirEditarPerfilMaster(\'' + u.cpf + '\')" title="Gerenciar Conta Master">Editar Perfil</button>';
     html += '</div></div>';
 
     // Lista aninhada de Cartões
@@ -3888,6 +3933,90 @@ function finCartoes3SalvarModal() {
       .withFailureHandler(function(e) { finSetLoading(false); finMostrarErro('Falha: ' + (e.message || e)); })
       .finCriarCartao(_finSessao, payload);
   }
+}
+
+// ---- Perfil Master (User-Centric) ----
+
+var _finMasterIdsEditando = [];
+var _finMasterCpfEditando = '';
+
+function finAbrirEditarPerfilMaster(cpfRaw) {
+  if (!cpfRaw || cpfRaw === 'SEM_CPF') {
+    finMostrarErro('Colaborador sem CPF válido não pode ser gerenciado em lote.');
+    return;
+  }
+
+  var cartoesDoCpf = _finCartoes.filter(function(c) {
+    return (c.CPF_COLABORADOR || '').replace(/\D/g, '') === cpfRaw;
+  });
+
+  if (cartoesDoCpf.length === 0) { return; }
+
+  _finMasterIdsEditando = cartoesDoCpf.map(function(c) { return c.ID; });
+  _finMasterCpfEditando = cpfRaw;
+
+  var base = cartoesDoCpf[0];
+
+  document.getElementById('finMP_CPF').value   = cpfRaw.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  document.getElementById('finMP_NOME').value  = base.FUNCIONARIO_NOME || '';
+  document.getElementById('finMP_ID').value    = base.FUNCIONARIO_ID || '';
+  document.getElementById('finMP_TEL').value   = base.FUNCIONARIO_TELEFONE || '';
+  document.getElementById('finMP_EMAIL').value = base.FUNCIONARIO_EMAIL || '';
+
+  document.getElementById('finModalEditarPerfilMaster').classList.add('open');
+}
+
+function finFecharEditarPerfilMaster() {
+  document.getElementById('finModalEditarPerfilMaster').classList.remove('open');
+  _finMasterIdsEditando = [];
+}
+
+function _executarBatchMaster(patch, sucessoMsg) {
+  if (_finMasterIdsEditando.length === 0) { return; }
+  finFecharEditarPerfilMaster();
+  finSetLoading(true);
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      finSetLoading(false);
+      if (r && r.ok) {
+        finMostrarSucesso(sucessoMsg);
+        finCarregarCartoes();
+      } else {
+        finMostrarErro((r && r.message) || 'Erro no processamento em lote.');
+      }
+    })
+    .withFailureHandler(function(e) {
+      finSetLoading(false);
+      finMostrarErro('Falha de conexão: ' + (e.message || e));
+    })
+    .finAtualizarPerfilMaster(_finSessao, _finMasterIdsEditando, patch);
+}
+
+function finSalvarPerfilMaster() {
+  var nome = finV('finMP_NOME');
+  if (!nome) { finMostrarErro('O Nome do Colaborador é obrigatório.'); return; }
+
+  var patch = {
+    FUNCIONARIO_NOME    : nome,
+    FUNCIONARIO_ID      : finV('finMP_ID'),
+    FUNCIONARIO_TELEFONE: finV('finMP_TEL'),
+    FUNCIONARIO_EMAIL   : finV('finMP_EMAIL')
+  };
+
+  _executarBatchMaster(patch, 'Perfil atualizado e sincronizado para ' + _finMasterIdsEditando.length + ' cartão(ões).');
+}
+
+function finBloquearPerfilMaster() {
+  if (!confirm('TEM CERTEZA?\n\nIsso bloqueará IMEDIATAMENTE todos os ' + _finMasterIdsEditando.length + ' cartões vinculados a este CPF.')) { return; }
+  var msg = 'Conta bloqueada por decisão administrativa.';
+  _executarBatchMaster({ STATUS_CARTAO: 'BLOQUEADO_TEMPORARIO', OBSERVACOES: msg }, 'Bloqueio aplicado a todos os cartões do colaborador.');
+}
+
+function finInativarPerfilMaster() {
+  if (!confirm('AÇÃO IRREVERSÍVEL NA INTERFACE!\n\nIsso INATIVARÁ a conta e todos os ' + _finMasterIdsEditando.length + ' cartões do colaborador. Você confirma essa operação?')) { return; }
+  var msg = 'Conta inativada por decisão administrativa.';
+  _executarBatchMaster({ STATUS_CARTAO: 'INATIVO', OBSERVACOES: msg }, 'Perfil e cartões totalmente inativados.');
 }
 
 // ---- Inativar ----
