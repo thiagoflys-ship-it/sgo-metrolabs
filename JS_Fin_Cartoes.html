@@ -489,14 +489,23 @@
 <div id="tabLancamentos" class="fin-tab-content">
   <div class="fin-tab-inner">
     <div class="fin-card">
-      <h3>Despesas por Cartão</h3>
+      <h3>Despesas do Colaborador (Conta Master)</h3>
+      <div class="fin-alert fin-alert-info" style="margin-bottom:12px;font-size:12px;background:#e0f2fe;color:#0369a1;border-left:4px solid #0284c7;">
+        <strong>Visão Centralizada:</strong> Selecione o colaborador para visualizar todo o histórico cronológico de despesas, independentemente de qual cartão (físico ou virtual) foi utilizado.
+      </div>
       <div style="margin-bottom:12px">
-        <label class="fin-label">Selecionar Cartão</label>
-        <select id="finSelCartaoLanc" class="fin-select" style="width:320px;margin-top:4px" onchange="finOnCartaoLancChange()">
-          <option value="">Selecione um cartão...</option>
+        <label class="fin-label" style="color:#0f2d52;font-weight:bold;">Selecionar Colaborador (CPF)</label>
+        <select id="finSelColaboradorLanc" class="fin-filter-select"
+                style="width:360px;margin-top:4px;border-color:#0f2d52;"
+                onchange="finOnColaboradorLancChange()">
+          <option value="">Selecione um colaborador...</option>
         </select>
       </div>
-      <div id="finTblLancamentos"><div class="fin-list-empty">Selecione um cartão para ver as despesas registradas.</div></div>
+      <div id="finTblLancamentos">
+        <div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">
+          Selecione um colaborador para ver o histórico consolidado.
+        </div>
+      </div>
     </div>
     <div class="fin-card" style="margin-top:14px">
       <div class="fin-flash-upload-head">
@@ -1811,17 +1820,37 @@ function finDesbloquearCartaoSelecionado() {
 // ---- seletores de cartao (recargas / lancamentos) ----
 
 function finPopularSeletores(lista) {
-  var opts = '<option value="">Selecione um cartao...</option>';
-  for (var i = 0; i < lista.length; i++) {
-    var c = lista[i];
-    opts += '<option value="' + finEA(c.ID) + '">' +
-      finEH(c.FUNCIONARIO_NOME || '') + ' - final ' + finEH(c.NUMERO_FINAL_4 || '????') +
-      '</option>';
-  }
+  // Select de Recargas — mantido por cartão individual (retrocompatibilidade)
   var sr = document.getElementById('finSelCartaoRec');
-  var sl = document.getElementById('finSelCartaoLanc');
-  if (sr) { sr.innerHTML = opts; }
-  if (sl) { sl.innerHTML = opts; }
+  if (sr) {
+    var opts = '<option value="">Selecione um cartao...</option>';
+    for (var i = 0; i < lista.length; i++) {
+      opts += '<option value="' + finEA(lista[i].ID) + '">'
+            + finEH(lista[i].FUNCIONARIO_NOME || '') + ' - final '
+            + finEH(lista[i].NUMERO_FINAL_4 || '????') + '</option>';
+    }
+    sr.innerHTML = opts;
+  }
+
+  // Select de Despesas — User-Centric por CPF
+  var sl = document.getElementById('finSelColaboradorLanc');
+  if (sl) {
+    var mapa = {};
+    (lista || []).forEach(function(c) {
+      var cpf = (c.CPF_COLABORADOR || '').replace(/\D/g, '');
+      var nome = c.FUNCIONARIO_NOME || 'Colaborador Não Identificado';
+      if (cpf && !mapa[cpf]) { mapa[cpf] = nome; }
+    });
+    var optsCpf = '<option value="">Selecione um colaborador...</option>';
+    Object.keys(mapa).sort(function(a, b) {
+      return mapa[a].localeCompare(mapa[b]);
+    }).forEach(function(cpf) {
+      var cpfFormatado = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      optsCpf += '<option value="' + cpf + '">'
+               + finEH(mapa[cpf]) + ' (CPF: ' + cpfFormatado + ')</option>';
+    });
+    sl.innerHTML = optsCpf;
+  }
 }
 
 // ---- recargas ----
@@ -1928,52 +1957,103 @@ function finFecharFormRec() {
 
 // ---- lancamentos ----
 
-function finOnCartaoLancChange() {
-  var id = document.getElementById('finSelCartaoLanc').value;
-  if (!id) {
-    document.getElementById('finTblLancamentos').innerHTML = '<div class="fin-list-empty">Selecione um cartao acima.</div>';
+function finOnColaboradorLancChange() {
+  var cpf = document.getElementById('finSelColaboradorLanc').value;
+  var tbl = document.getElementById('finTblLancamentos');
+  if (!cpf) {
+    tbl.innerHTML = '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Selecione um colaborador acima.</div>';
     return;
   }
-  finCarregarLancamentos(id);
+  finCarregarLancamentosPorCPF(cpf);
 }
 
-function finCarregarLancamentos(cartaoId) {
+function finCarregarLancamentosPorCPF(cpf) {
   var tbl = document.getElementById('finTblLancamentos');
-  tbl.innerHTML = '<div class="fin-list-empty">Carregando lancamentos...</div>';
-  google.script.run
-    .withSuccessHandler(function(r) {
-      if (!r || !r.ok) {
-        tbl.innerHTML = '<div class="fin-list-empty">Erro ao carregar lancamentos.</div>';
+  tbl.innerHTML = '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;">Consolidando histórico da conta master...</div>';
+
+  var cartoesDoCpf = _finCartoes.filter(function(c) {
+    return (c.CPF_COLABORADOR || '').replace(/\D/g, '') === cpf;
+  });
+
+  if (cartoesDoCpf.length === 0) {
+    tbl.innerHTML = '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Nenhum cartão vinculado a este CPF.</div>';
+    return;
+  }
+
+  var ids = cartoesDoCpf.map(function(c) { return c.ID; });
+  var resultadosGlobais = [];
+  var chamadasConcluidas = 0;
+  var ocorreuErro = false;
+
+  function _checarFimBatch() {
+    if (chamadasConcluidas === ids.length) {
+      if (ocorreuErro && resultadosGlobais.length === 0) {
+        tbl.innerHTML = '<div class="fin-list-empty" style="text-align:center;color:#b91c1c;padding:32px;">Ocorreu um erro ao consultar algumas despesas.</div>';
         return;
       }
-      var lista = r.items || [];
-      if (lista.length === 0) {
-        tbl.innerHTML = '<div class="fin-list-empty">Nenhum lancamento registrado para este cartao.</div>';
-        return;
-      }
-      var html = '<div class="fin-table-wrap"><table class="fin-table">';
-      html += '<thead><tr><th>ID</th><th>Data</th><th>Valor</th><th>Finalidade</th><th>OS</th><th>Comprovante</th><th>Prestacao</th></tr></thead><tbody>';
-      for (var i = 0; i < lista.length; i++) {
-        var l = lista[i];
-        html += '<tr>';
-        html += '<td>' + finEH(l.LANCAMENTO_ID || l.ID || '') + '</td>';
-        html += '<td>' + finEH(finDataBR(l.DATA_GASTO)) + '</td>';
-        html += '<td><strong>' + finMoeda(l.VALOR) + '</strong></td>';
-        html += '<td>' + finEH(l.FINALIDADE || l.DESCRICAO_GASTO || '') + '</td>';
-        html += '<td>' + finEH(l.NUMERO_OS || '-') + '</td>';
-        html += '<td>' + (l.COMPROVANTE_OK === 'SIM'
-          ? '<span class="fin-pill fin-pill-green">Sim</span>'
-          : '<span class="fin-pill fin-pill-red">Nao</span>') + '</td>';
-        html += '<td>' + finPillPrestacao(l.STATUS_PRESTACAO) + '</td>';
-        html += '</tr>';
-      }
-      html += '</tbody></table></div>';
-      tbl.innerHTML = html;
-    })
-    .withFailureHandler(function(e) {
-      tbl.innerHTML = '<div class="fin-list-empty">Falha: ' + finEH(e.message || '') + '</div>';
-    })
-    .finListarLancamentos(_finSessao, { cartaoId: cartaoId });
+      finRenderTabelaDespesasCPF_(resultadosGlobais);
+    }
+  }
+
+  ids.forEach(function(cartaoId) {
+    google.script.run
+      .withSuccessHandler(function(r) {
+        chamadasConcluidas++;
+        if (r && r.ok && r.items) {
+          var cartaoRef = cartoesDoCpf.find(function(c) { return c.ID === cartaoId; });
+          var final4 = cartaoRef ? (cartaoRef.NUMERO_FINAL_4 || '????') : '????';
+          r.items.forEach(function(item) {
+            item._FINAL_CARTAO = final4;
+            resultadosGlobais.push(item);
+          });
+        }
+        _checarFimBatch();
+      })
+      .withFailureHandler(function() {
+        chamadasConcluidas++;
+        ocorreuErro = true;
+        _checarFimBatch();
+      })
+      .finListarLancamentos(_finSessao, { cartaoId: cartaoId });
+  });
+}
+
+function finRenderTabelaDespesasCPF_(lista) {
+  var tbl = document.getElementById('finTblLancamentos');
+  if (!lista || lista.length === 0) {
+    tbl.innerHTML = '<div class="fin-list-empty" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Nenhuma despesa registrada no histórico deste colaborador.</div>';
+    return;
+  }
+
+  lista.sort(function(a, b) {
+    var da = new Date(a.DATA_GASTO || 0).getTime();
+    var db = new Date(b.DATA_GASTO || 0).getTime();
+    return db - da;
+  });
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>'
+        + '<th>Data / Origem</th><th>Valor</th><th>Descrição do Gasto</th>'
+        + '<th>O.S.</th><th>Comprovante</th><th>Prestação</th>'
+        + '</tr></thead><tbody>';
+
+  for (var i = 0; i < lista.length; i++) {
+    var l = lista[i];
+    var cartaoBadge = '<span style="font-size:11px;background:#e2e8f0;padding:2px 6px;border-radius:4px;color:#475569;font-weight:bold;">Final '
+                    + finEH(l._FINAL_CARTAO || '????') + '</span>';
+    html += '<tr>';
+    html += '<td><span style="color:#888;font-size:12px">' + finEH(finDataBR(l.DATA_GASTO)) + '</span><br>' + cartaoBadge + '</td>';
+    html += '<td><strong style="color:#15803d;">' + finMoeda(l.VALOR) + '</strong></td>';
+    html += '<td style="max-width:200px;white-space:normal;">' + finEH(l.FINALIDADE || l.DESCRICAO_GASTO || '') + '</td>';
+    html += '<td>' + finEH(l.NUMERO_OS || '-') + '</td>';
+    html += '<td>' + (l.COMPROVANTE_OK === 'SIM'
+      ? '<span class="fin-pill fin-pill-green">Sim</span>'
+      : '<span class="fin-pill fin-pill-red">Não</span>') + '</td>';
+    html += '<td>' + finPillPrestacao(l.STATUS_PRESTACAO) + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  tbl.innerHTML = html;
 }
 
 function finGerarPreviewExtratoFlash() {
