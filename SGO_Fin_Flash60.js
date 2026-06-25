@@ -16,7 +16,58 @@ var FLASH60 = (function () {
   function esc(v){return t(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function head(title,c){return'<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px Arial;max-width:820px;margin:32px auto;color:#1f2937}h1{color:#0f2d52}.alerta{background:#fff7ed;border-left:4px solid #f59e0b;padding:12px}.ass{display:flex;gap:60px;margin-top:70px}.ass div{flex:1;border-top:1px solid;text-align:center;padding:8px}</style></head><body><h1>'+esc(title)+'</h1><p><b>Colaborador:</b> '+esc(c.nome)+'<br><b>CPF:</b> '+esc(c.cpf)+'</p>';}
   function termo(cp){var c=col(cp);return head('Termo de Responsabilidade — Cartao Flash',c)+'<p>Os recursos pertencem a empresa e devem ser usados apenas em despesas autorizadas. O colaborador deve prestar contas pelo cartao usado, anexar comprovante legivel e cumprir o prazo de 3 dias, salvo politica vigente.</p><div class="alerta">Pendencia vencida pode bloquear recargas, gerar advertencia e medidas administrativas cabiveis, sempre com revisao humana.</div><div class="ass"><div>Assinatura do colaborador</div><div>Ciencia da empresa</div></div></body></html>';}
-  function report(cp,periodo){var c=col(cp),cx=context(),pfx=t(periodo),ps=rows(A.prestacoes).filter(function(p){return cpfRow(p,cx)===c.cpf&&(!pfx||t(p.DATA_GASTO).indexOf(pfx)>=0);});return head('Relatorio Mensal Flash — '+(pfx||'todos os periodos'),c)+'<p>Total de prestacoes: <b>'+ps.length+'</b>. Valor: <b>R$ '+ps.reduce(function(s,p){return s+Math.abs(n(p.VALOR));},0).toFixed(2)+'</b>.</p></body></html>';}
+  function report(cp,periodo){
+    var c=col(cp),cx=context(),pfx=t(periodo);
+    var ps=rows(A.prestacoes).filter(function(p){return cpfRow(p,cx)===c.cpf&&(!pfx||t(p.DATA_GASTO).indexOf(pfx)>=0);});
+    var totalValor=ps.reduce(function(s,p){return s+Math.abs(n(p.VALOR));},0);
+    var html=head('Relatório Mensal Flash — '+(pfx||'Todos os períodos'),c);
+    html+='<div style="margin-bottom:20px;padding:15px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;font-size:14px;">'
+        +'<span style="margin-right:25px;">Total de Prestações: <b style="color:#0f2d52;">'+ps.length+'</b></span>'
+        +'<span>Valor Total Consolidado: <b style="color:#0f2d52;">R$ '+totalValor.toFixed(2)+'</b></span>'
+        +'</div>';
+    if(ps.length===0){
+      html+='<p style="color:#64748b;font-style:italic;padding:10px 0;">Nenhum lançamento de despesa encontrado para o período selecionado.</p>';
+    }else{
+      html+='<style>'
+          +'.tab-flash-report{width:100%;border-collapse:collapse;margin-top:15px;margin-bottom:30px;font-family:Arial,sans-serif}'
+          +'.tab-flash-report th{background-color:#0f2d52;color:#fff;text-align:left;padding:10px;font-size:13px;font-weight:bold}'
+          +'.tab-flash-report td{padding:10px;border-bottom:1px solid #e2e8f0;font-size:13px;vertical-align:middle;color:#374151}'
+          +'.tab-flash-report tr:nth-child(even){background-color:#f8fafc}'
+          +'.badge-flash{padding:4px 8px;border-radius:4px;font-size:11px;font-weight:bold;text-transform:uppercase;display:inline-block}'
+          +'.badge-flash-aprovado{background-color:#dcfce7;color:#15803d}'
+          +'.badge-flash-pendente{background-color:#fef9c3;color:#a16207}'
+          +'.badge-flash-rejeitado{background-color:#fee2e2;color:#b91c1c}'
+          +'.lnk-comp-flash{display:inline-block;padding:3px 8px;background-color:#e2e8f0;color:#334155;text-decoration:none;border-radius:4px;font-size:11px;font-weight:bold}'
+          +'</style>';
+      html+='<table class="tab-flash-report"><thead><tr>'
+          +'<th>Data</th><th>Categoria / Descrição</th><th>Valor</th><th>Status</th><th>Comprovante</th>'
+          +'</tr></thead><tbody>';
+      ps.forEach(function(p){
+        var dtGasto=t(p.DATA_GASTO).slice(0,10);
+        var catTxt=t(p.CATEGORIA||p.DESCRICAO||'Não Informada');
+        var descTxt=t(p.DESCRICAO);
+        var subDesc=(descTxt&&descTxt!==catTxt)?(' <br><small style="color:#64748b;font-size:11px;">'+esc(descTxt)+'</small>'):'';
+        var vlrForm='R$ '+Math.abs(n(p.VALOR)).toFixed(2);
+        var stRaw=t(p.STATUS).toUpperCase()||'PENDENTE';
+        var badgeCls='badge-flash-pendente';
+        if(stRaw==='APROVADO')badgeCls='badge-flash-aprovado';
+        if(stRaw==='REJEITADO'||stRaw==='CANCELADO')badgeCls='badge-flash-rejeitado';
+        var urlComp=t(p.COMPROVANTE_LINK);
+        var compHtml=urlComp?('<a href="'+urlComp+'" target="_blank" class="lnk-comp-flash">Visualizar</a>')
+                            :'<span style="color:#94a3b8;font-size:11px;font-style:italic;">Ausente</span>';
+        html+='<tr>'
+            +'<td>'+esc(dtGasto)+'</td>'
+            +'<td><b>'+esc(catTxt)+'</b>'+subDesc+'</td>'
+            +'<td style="font-weight:bold;color:#111827;">'+vlrForm+'</td>'
+            +'<td><span class="badge-flash '+badgeCls+'">'+esc(stRaw)+'</span></td>'
+            +'<td>'+compHtml+'</td>'
+            +'</tr>';
+      });
+      html+='</tbody></table>';
+    }
+    html+='</body></html>';
+    return html;
+  }
   function charges(){var c=context(),today=new Date();today.setHours(0,0,0,0);var out=rows(A.pendencias).filter(function(p){return['RESOLVIDO','CANCELADO','INATIVO'].indexOf(up(p.STATUS))<0;}).map(function(p){var cp=cpfRow(p,c),card=c.cards.filter(function(x){return cpf(x.CPF_COLABORADOR)===cp;})[0]||{},lim=d(p.DATA_LIMITE_ESCLARECIMENTO),days=lim?Math.max(0,Math.floor((today-lim)/86400000)):0,value=Math.abs(n(p.VALOR_ENVOLVIDO)),name=t(card.FUNCIONARIO_NOME||p.FUNCIONARIO_NOME);return{cpf:cp,colaborador:name,pendenciaId:t(p.PENDENCIA_ID||p.ID),valorPendente:value,diasAtraso:days,canalSugerido:t(card.FUNCIONARIO_EMAIL)?'EMAIL':t(card.FUNCIONARIO_TELEFONE)?'WHATSAPP':'CONTATO_MANUAL',nivelCobranca:days>=15?'ADVERTENCIA':days>=7?'ESCALONADA':days>0?'VENCIDA':'LEMBRETE',mensagemSugerida:'Ola, '+name+'. Ha uma pendencia Flash de R$ '+value.toFixed(2)+'. Regularize a prestacao e o comprovante.',semEnviar:true};});return{ok:true,semEnviar:true,total:out.length,cobrancas:out};}
   function notice(cp,adv){var c=col(cp),list=charges().cobrancas.filter(function(x){return x.cpf===c.cpf;}),value=list.reduce(function(s,x){return s+x.valorPendente;},0);return head(adv?'Advertencia Flash':'Notificacao de Pendencia Flash',c)+'<p>Existem <b>'+list.length+' pendencia(s)</b>, total de <b>R$ '+value.toFixed(2)+'</b>.</p><div class="alerta">Regularize a prestacao e envie comprovante legivel. A avaliacao final e humana.</div></body></html>';}
   function blockAudit(){var m={};charges().cobrancas.forEach(function(x){if(x.diasAtraso>0){if(!m[x.cpf])m[x.cpf]={cpf:x.cpf,colaborador:x.colaborador,pendenciasVencidas:0,valorPendente:0,bloqueioSugerido:true};m[x.cpf].pendenciasVencidas++;m[x.cpf].valorPendente+=x.valorPendente;}});return{ok:true,semGravar:true,regra:'Pendencia vencida bloqueia recarga; desbloqueio manual exige motivo.',colaboradores:Object.keys(m).map(function(k){return m[k];})};}

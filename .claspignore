@@ -19,3 +19,4 @@ _prototipos/**
 .clasp-prod.example.json
 docs/**
 backups/**
+*_DEV.js

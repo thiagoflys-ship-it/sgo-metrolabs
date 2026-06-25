@@ -1464,6 +1464,9 @@ function finCarregarContexto() {
         if (btnAdm) { btnAdm.style.display = 'inline-flex'; }
         var tabAdm = document.getElementById('finTabBtnAdmin');
         if (tabAdm) { tabAdm.style.display = 'inline-block'; }
+        document.querySelectorAll('[data-admin="1"]').forEach(function(el) {
+          el.style.display = 'inline-block';
+        });
       }
     })
     .withFailureHandler(function(e) {
