@@ -450,27 +450,25 @@
       </div>
     </div>
 
-    <!-- Tabela de Recargas -->
+    <!-- Tabela de Recargas User-Centric -->
     <div class="fin-table-wrap">
       <table class="fin-table">
         <thead>
           <tr>
-            <th>ID Recarga</th>
-            <th>Cartão</th>
-            <th>Funcionário</th>
-            <th>Valor</th>
-            <th>Data</th>
+            <th>ID / Data</th>
+            <th>Conta Master (Colaborador)</th>
+            <th>Valor creditado</th>
             <th>Origem</th>
             <th>Status</th>
             <th>Registrado por</th>
           </tr>
         </thead>
         <tbody id="finRecTabela">
-          <tr><td colspan="8" style="text-align:center;color:#999;padding:32px">Carregando...</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:#999;padding:32px">Carregando recargas...</td></tr>
         </tbody>
       </table>
     </div>
-    <div id="finRecRodape" style="font-size:12px;color:#999;padding:6px 2px">0 recargas</div>
+    <div id="finRecRodape" style="font-size:12px;color:#999;padding:12px 2px">0 recargas</div>
 
     <!-- Containers ocultos para compatibilidade -->
     <div style="display:none" aria-hidden="true">
@@ -1256,36 +1254,39 @@
   </div>
 </div>
 
-<!-- Modal: Nova Recarga — FLASH.4.3 -->
+<!-- Modal: Nova Recarga — User-Centric Conta Master -->
 <div id="finModalNovaRecarga" class="fin-modal-overlay">
   <div class="fin-modal" style="width:520px">
-    <h3>Nova Recarga</h3>
+    <h3>Nova Recarga na Conta Master</h3>
+    <div class="fin-alert fin-alert-info" style="margin-bottom:12px;font-size:12px;background:#e0f2fe;color:#0369a1;border-left:4px solid #0284c7;">
+      <strong>Conta Centralizada:</strong> Selecione o colaborador. O valor será creditado na conta principal vinculada ao CPF e o saldo poderá ser consumido por qualquer cartão ativo em posse do usuário.
+    </div>
     <div id="finModalRecBloqueio" class="fin-alert fin-alert-warning" style="display:none;margin-bottom:10px">
       Nenhum cartão ativo. Cadastre um cartão real antes de registrar recargas.
     </div>
     <div class="fin-grid2">
       <div class="fin-fg full">
-        <label class="fin-label">Colaborador / Conta Flash * (FLASH.4.8)</label>
-        <select id="finModalRecContaId" class="fin-select" onchange="finModalRecOnContaChange48()">
+        <label class="fin-label" style="color:#0f2d52;font-weight:bold;">Colaborador / CPF *</label>
+        <select id="finModalRecContaId" class="fin-filter-select" style="width:100%;border-color:#0f2d52;" onchange="finModalRecOnContaChange48()">
           <option value="">Selecione o colaborador...</option>
         </select>
-        <div id="finModalRecCartoesInfo" style="display:none;margin-top:6px;font-size:12px;color:#444;background:#f0f4ff;border-radius:5px;padding:6px 10px;line-height:1.6"></div>
+        <div id="finModalRecCartoesInfo" style="display:none;margin-top:8px;font-size:12px;padding:8px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;color:#475569;"></div>
       </div>
       <div class="fin-fg full">
-        <label class="fin-label">Funcionário / Responsável</label>
-        <input id="finModalRecFuncionario" class="fin-input" type="text" readonly placeholder="Preenchido automaticamente ao selecionar o colaborador">
+        <label class="fin-label">Nome do Responsável</label>
+        <input id="finModalRecFuncionario" class="fin-input" type="text" readonly style="background:#f1f5f9;cursor:not-allowed;">
       </div>
       <div class="fin-fg">
         <label class="fin-label">Valor (R$) *</label>
-        <input id="finModalRecValor" class="fin-input" type="number" min="0.01" step="0.01" placeholder="0.00">
+        <input id="finModalRecValor" class="fin-input" type="number" step="0.01" min="0" placeholder="0.00" style="font-weight:bold;color:#15803d;">
       </div>
       <div class="fin-fg">
         <label class="fin-label">Data da Recarga *</label>
         <input id="finModalRecData" class="fin-input" type="date">
       </div>
       <div class="fin-fg">
-        <label class="fin-label">Origem</label>
-        <select id="finModalRecOrigem" class="fin-select">
+        <label class="fin-label">Origem do Saldo *</label>
+        <select id="finModalRecOrigem" class="fin-filter-select" style="width:100%">
           <option value="CREDITO_MENSAL">Crédito Mensal</option>
           <option value="ADIANTAMENTO">Adiantamento</option>
           <option value="REPOSICAO">Reposição</option>
@@ -1294,17 +1295,17 @@
         </select>
       </div>
       <div class="fin-fg">
-        <label class="fin-label">Nº Transferência</label>
+        <label class="fin-label">Nº Transferência / NSU</label>
         <input id="finModalRecNumTrans" class="fin-input" type="text" placeholder="(opcional)">
       </div>
       <div class="fin-fg full">
-        <label class="fin-label">Observação / Motivo</label>
-        <textarea id="finModalRecObs" class="fin-textarea" rows="2" placeholder="Motivo, período de referência ou observação..."></textarea>
+        <label class="fin-label">Observações</label>
+        <textarea id="finModalRecObs" class="fin-textarea" rows="2"></textarea>
       </div>
     </div>
-    <div class="fin-modal-footer">
-      <button class="fin-btn fin-btn-secondary" onclick="finFecharNovaRecarga()">Cancelar</button>
-      <button id="finModalRecBtnSalvar" class="fin-btn fin-btn-success" onclick="finSalvarRecargaV43()">Registrar Recarga</button>
+    <div class="fin-modal-footer" style="margin-top:20px;">
+      <button class="fin-btn fin-btn-secondary" onclick="document.getElementById('finModalNovaRecarga').classList.remove('open')">Cancelar</button>
+      <button id="finModalRecBtnSalvar" class="fin-btn fin-btn-primary" onclick="finSalvarRecargaV43()">Confirmar Recarga na Conta</button>
     </div>
   </div>
 </div>
@@ -4913,33 +4914,47 @@ function finRecRenderTabela(lista) {
   var tbody = document.getElementById('finRecTabela');
   var rod   = document.getElementById('finRecRodape');
   if (!tbody) { return; }
+
   if (!lista || lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:36px">Nenhuma recarga encontrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:32px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;">Nenhuma recarga encontrada com os filtros atuais.</td></tr>';
     if (rod) { rod.textContent = '0 recargas'; }
     return;
   }
+
   var html = '';
   lista.forEach(function(r) {
+    var status = (r.STATUS || r.STATUS_RECARGA || '').toUpperCase();
     var statusPill = '';
-    var st = (r.STATUS || '').toUpperCase();
-    if      (st === 'PROCESSADA') { statusPill = '<span class="fin-pill-processada">Processada</span>'; }
-    else if (st === 'PENDENTE'  ) { statusPill = '<span class="fin-pill-pendente">Pendente</span>';    }
-    else if (st === 'CANCELADA' ) { statusPill = '<span class="fin-pill-cancelada">Cancelada</span>'; }
-    else                          { statusPill = '<span class="fin-pill-gray">' + finEH(r.STATUS || '-') + '</span>'; }
-    html +=
-      '<tr>' +
-      '<td><small style="font-family:monospace;font-size:11px">' + finEH(r.RECARGA_ID || '') + '</small></td>' +
-      '<td><span style="font-size:11px;color:#666">' + finEH(r.CARTAO_ID ? r.CARTAO_ID.slice(0,8) + '...' : '-') + '</span></td>' +
-      '<td>' + finEH(r.FUNCIONARIO_NOME || '-') + '</td>' +
-      '<td><strong>' + finMoeda(r.VALOR) + '</strong></td>' +
-      '<td>' + finEH(finDataBR(r.DATA_RECARGA)) + '</td>' +
-      '<td>' + finEH(r.FORMA_RECARGA || '-') + '</td>' +
-      '<td>' + statusPill + '</td>' +
-      '<td>' + finEH(r.RESPONSAVEL_NOME || '-') + '</td>' +
-      '</tr>';
+    if (status === 'PROCESSADA' || status === 'CONCLUIDA' || status === 'EFETIVADA') {
+      statusPill = '<span class="fin-pill fin-pill-green">Processada</span>';
+    } else if (status === 'CANCELADA') {
+      statusPill = '<span class="fin-pill fin-pill-red">Cancelada</span>';
+    } else {
+      statusPill = '<span class="fin-pill fin-pill-yellow">Pendente</span>';
+    }
+
+    var cpfRaw       = (r.CPF_COLABORADOR || '').replace(/\D/g, '');
+    var cpfFormatado = cpfRaw ? cpfRaw.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'Não informado';
+    var inicial      = r.FUNCIONARIO_NOME ? r.FUNCIONARIO_NOME.charAt(0).toUpperCase() : '?';
+
+    html += '<tr>';
+    html += '<td><strong>' + finEH(r.RECARGA_ID || '-') + '</strong><br>' +
+            '<span style="color:#888;font-size:12px">' + finEH(finDataBR(r.DATA_RECARGA)) + '</span></td>';
+    html += '<td><div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:32px;height:32px;background:#0f2d52;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0">' + inicial + '</div>' +
+            '<div>' +
+            '<div style="font-weight:600;color:#0f2d52;">' + finEH(r.FUNCIONARIO_NOME || 'Colaborador Não Identificado') + '</div>' +
+            '<div style="font-size:11px;color:#64748b;">CPF: ' + finEH(cpfFormatado) + '</div>' +
+            '</div></div></td>';
+    html += '<td><strong style="color:#15803d;font-size:14px;">' + finEH(finMoeda(r.VALOR)) + '</strong></td>';
+    html += '<td>' + finEH(r.FORMA_RECARGA || '-') + '</td>';
+    html += '<td>' + statusPill + '</td>';
+    html += '<td style="font-size:12px;color:#666;">' + finEH(r.RESPONSAVEL_NOME || '-') + '</td>';
+    html += '</tr>';
   });
+
   tbody.innerHTML = html;
-  if (rod) { rod.textContent = lista.length + ' recarga(s)'; }
+  if (rod) { rod.textContent = lista.length + (lista.length === 1 ? ' recarga registrada' : ' recargas registradas'); }
 }
 
 function finAbrirNovaRecarga() {
