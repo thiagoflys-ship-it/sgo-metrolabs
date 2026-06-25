@@ -1098,6 +1098,7 @@
         <button id="finFlash88PdfRealBtn" class="fin-btn fin-btn-outline fin-btn-sm" type="button" onclick="finFlash88AuditarPdfReal_()">Porta PDF real 8.8</button>
         <button id="finFlash89ProntidaoBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash89GerarProntidao_()">Prontidao DEV 8.9</button>
         <button id="finFlash90HomologacaoBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash90GerarHomologacao_()">Homologacao visual 9.0</button>
+        <button id="finFlash91PublicacaoBtn" class="fin-btn fin-btn-primary fin-btn-sm" type="button" onclick="finFlash91GerarChecklistPublicacao_()">Checklist publicacao 9.1</button>
       </div>
       <div id="finAdminTecResultado" style="margin-top:10px"></div>
     </div>
@@ -4300,6 +4301,7 @@ function finFlash87AuditarTiposDocFactory_() { finFlashAdminTecExecutarAuditoria
 function finFlash88AuditarPdfReal_() { finFlashAdminTecExecutarAuditoria_('finFlash88PdfRealBtn', 'Auditando porta PDF real Flash 8.8 sem executar geracao...', 'EXECUTAR_FIN_FLASH88_AUDITORIA_GERACAO_PDF_REAL_CONTROLADA_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.8', r); }); }
 function finFlash89GerarProntidao_() { finFlashAdminTecExecutarAuditoria_('finFlash89ProntidaoBtn', 'Gerando prontidao DEV 8.9 sem gravar...', 'EXECUTAR_FIN_FLASH89_RELATORIO_PRONTIDAO_DEV_SEM_GRAVAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.8.9', r); }); }
 function finFlash90GerarHomologacao_() { finFlashAdminTecExecutarAuditoria_('finFlash90HomologacaoBtn', 'Gerando homologacao visual 9.0 sem executar acoes reais...', 'EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.9.0', r); }); }
+function finFlash91GerarChecklistPublicacao_() { finFlashAdminTecExecutarAuditoria_('finFlash91PublicacaoBtn', 'Gerando checklist de publicacao DEV 9.1 sem publicar...', 'EXECUTAR_FIN_FLASH91_CHECKLIST_PUBLICACAO_DEV_SEM_PUBLICAR', function(r) { finFlashAdminTecRenderJson_('FIN.FLASH.9.1', r); }); }
 function finHtmlChecklistAutorizacaoFlash_(titulo, lista) {
   if (!lista || !lista.length) return '';
   var html = '<h3>' + finEH(titulo || 'Checklist') + '</h3>';

@@ -6203,3 +6203,81 @@ function EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+// ============================================================
+// FIN.FLASH.9.1 - Checklist de publicacao DEV controlada
+// SEM_PUBLICAR: nao executa push, deploy, producao, PDF real ou envio.
+// ============================================================
+
+function GERAR_FIN_FLASH91_CHECKLIST_PUBLICACAO_DEV_SEM_PUBLICAR() {
+  var homologacao = EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR();
+  var bloqueios = [];
+  var checklist = [
+    { ordem: 1, area: "Codigo", item: "Auditorias 8.3 a 9.0 disponiveis", ok: typeof EXECUTAR_FIN_FLASH_AUDITORIA_GERAL_AUTOMATICA_SEM_GRAVAR === "function" && typeof EXECUTAR_FIN_FLASH90_HOMOLOGACAO_VISUAL_DEV_SEM_EXECUTAR === "function", executaReal: false },
+    { ordem: 2, area: "Homologacao", item: "Roteiro visual DEV gerado", ok: homologacao.success === true, executaReal: false },
+    { ordem: 3, area: "Homologacao", item: "Roteiro visual DEV sem acoes reais", ok: (homologacao.roteiroVisual || []).every(function(t) { return t.executaReal !== true; }), executaReal: false },
+    { ordem: 4, area: "Seguranca", item: "Deploy nao autorizado por este pacote", ok: true, executaReal: false },
+    { ordem: 5, area: "Seguranca", item: "Push nao autorizado por este checklist", ok: true, executaReal: false },
+    { ordem: 6, area: "Seguranca", item: "PDF real permanece bloqueado", ok: true, executaReal: false },
+    { ordem: 7, area: "Seguranca", item: "Envio de e-mail/WhatsApp permanece fora deste pacote", ok: true, executaReal: false },
+    { ordem: 8, area: "Operacao", item: "Publicacao futura exige aceite humano explicito", ok: true, executaReal: false }
+  ];
+
+  checklist.forEach(function(item) {
+    if (item.ok !== true) bloqueios.push(item.area + ": " + item.item);
+    if (item.executaReal === true) bloqueios.push("Checklist contem acao real indevida: " + item.item);
+  });
+  if (!homologacao.ok) bloqueios.push("Homologacao 9.0 ainda nao esta GO neste contexto.");
+
+  var resultado = {
+    success: true,
+    ok: bloqueios.length === 0,
+    fase: "FIN.FLASH.9.1",
+    escopo: "CHECKLIST_PUBLICACAO_DEV_SEM_PUBLICAR",
+    ambiente: "DEV_LOCAL",
+    checklistPublicacao: checklist,
+    homologacao90Ok: homologacao.ok === true,
+    publicacaoAutorizada: false,
+    deployAutorizado: false,
+    pushAutorizado: false,
+    producaoAutorizada: false,
+    bloqueios: bloqueios,
+    avisos: [
+      "Checklist somente leitura.",
+      "Este pacote nao publica, nao cria versao e nao executa deploy.",
+      "Qualquer publicacao futura exige comando e aceite explicito em pacote separado."
+    ].concat(homologacao.avisos || []),
+    recomendacao: bloqueios.length === 0
+      ? "GO_CHECKLIST: pre-condicoes de publicacao DEV revisadas; publicacao segue bloqueada ate autorizacao explicita."
+      : "NO_GO: corrigir bloqueios antes de qualquer pacote de publicacao.",
+    proximoPacoteSugerido: bloqueios.length === 0
+      ? "FIN.FLASH.9.2 - Publicacao DEV controlada com aceite explicito"
+      : "Corrigir bloqueios do checklist 9.1",
+    confirmacoes: {
+      setupExecutado: false,
+      planilhaAlterada: false,
+      recargaCriada: false,
+      lancamentoCriado: false,
+      conciliacaoExecutada: false,
+      pendenciaCriada: false,
+      documentoGerado: false,
+      pdfCriado: false,
+      driveAlterado: false,
+      emailOuWhatsappEnviado: false,
+      extratoImportado: false,
+      pushExecutado: false,
+      deployExecutado: false,
+      versaoCriada: false,
+      producaoAlterada: false
+    },
+    gravacaoReal: false,
+    somenteLeitura: true
+  };
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
+
+function EXECUTAR_FIN_FLASH91_CHECKLIST_PUBLICACAO_DEV_SEM_PUBLICAR() {
+  var resultado = GERAR_FIN_FLASH91_CHECKLIST_PUBLICACAO_DEV_SEM_PUBLICAR();
+  Logger.log(JSON.stringify(resultado, null, 2));
+  return resultado;
+}
