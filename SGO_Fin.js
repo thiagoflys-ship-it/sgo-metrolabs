@@ -502,6 +502,62 @@ const SGO_FIN = (() => {
     }
   }
 
+  function atualizarPerfilMaster(sessionId, ids, patch) {
+    try {
+      const sessao = finSessao_(sessionId);
+      finGarantirPerfil_(sessao, PERFIS_OPERADOR, "atualizar perfil master");
+      finDbOk_();
+      if (!ids || !Array.isArray(ids) || ids.length === 0) { return finErro_('Nenhum ID fornecido.'); }
+      if (!patch || typeof patch !== 'object') { return finErro_('Patch inválido.'); }
+
+      var dbId = String(PropertiesService.getScriptProperties().getProperty('DB_FIN_ID') || '').trim();
+      if (!dbId) { throw new Error('DB_FIN_ID não configurado.'); }
+      var ss = SpreadsheetApp.openById(dbId);
+      var sheet = ss.getSheetByName('FIN_CARTOES');
+      if (!sheet || sheet.getLastRow() < 2) { throw new Error('Aba FIN_CARTOES vazia ou inexistente.'); }
+
+      var range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
+      var values = range.getValues();
+      var headers = values[0].map(function(h) { return String(h || '').trim().toUpperCase().replace(/\s/g, '_'); });
+
+      var colID            = headers.indexOf('ID');
+      var colAtualizadoEm  = headers.indexOf('ATUALIZADO_EM');
+      var colAtualizadoPor = headers.indexOf('ATUALIZADO_POR');
+      if (colID === -1) { throw new Error('Coluna ID não encontrada no schema.'); }
+
+      const u       = finUsuario_(sessao);
+      var agora     = finNow_();
+      var emailUser = u.nome || 'API';
+      var idsSet    = {};
+      ids.forEach(function(i) { idsSet[i] = true; });
+
+      var atualizados    = 0;
+      var updatesBuffer  = [];
+
+      for (var r = 1; r < values.length; r++) {
+        var rowId = String(values[r][colID] || '').trim();
+        if (idsSet[rowId]) {
+          Object.keys(patch).forEach(function(key) {
+            var colIdx = headers.indexOf(key);
+            if (colIdx !== -1) { values[r][colIdx] = patch[key]; }
+          });
+          if (colAtualizadoEm  !== -1) { values[r][colAtualizadoEm]  = agora; }
+          if (colAtualizadoPor !== -1) { values[r][colAtualizadoPor] = emailUser; }
+          updatesBuffer.push({ row: r + 1, data: values[r] });
+          atualizados++;
+        }
+      }
+
+      updatesBuffer.forEach(function(update) {
+        sheet.getRange(update.row, 1, 1, headers.length).setValues([update.data]);
+      });
+
+      return { ok: true, atualizados: atualizados, message: atualizados + ' registro(s) sincronizado(s) no Perfil Master.' };
+    } catch (e) {
+      return { ok: false, message: 'Erro no Batch Update: ' + e.message };
+    }
+  }
+
   function bloquearCartao(sessionId, id, motivo) {
     try {
       const sessao = finSessao_(sessionId);
@@ -4019,6 +4075,7 @@ const SGO_FIN = (() => {
     obterCartao,
     criarCartao,
     atualizarCartao,
+    atualizarPerfilMaster,
     bloquearCartao,
     desbloquearCartao,
     listarRecargas,
@@ -4093,8 +4150,9 @@ function finObterContexto(sId)                   { return SGO_FIN.obterContexto(
 function finListarCartoes(sId, filtros)           { return SGO_FIN.listarCartoes(sId, filtros); }
 function finObterCartao(sId, id)                  { return SGO_FIN.obterCartao(sId, id); }
 function finCriarCartao(sId, payload)             { return SGO_FIN.criarCartao(sId, payload); }
-function finAtualizarCartao(sId, id, payload)     { return SGO_FIN.atualizarCartao(sId, id, payload); }
-function finBloquearCartao(sId, id, motivo)       { return SGO_FIN.bloquearCartao(sId, id, motivo); }
+function finAtualizarCartao(sId, id, payload)          { return SGO_FIN.atualizarCartao(sId, id, payload); }
+function finAtualizarPerfilMaster(sId, ids, patch)    { return SGO_FIN.atualizarPerfilMaster(sId, ids, patch); }
+function finBloquearCartao(sId, id, motivo)            { return SGO_FIN.bloquearCartao(sId, id, motivo); }
 function finDesbloquearCartao(sId, id)            { return SGO_FIN.desbloquearCartao(sId, id); }
 function finListarRecargas(sId, filtros)          { return SGO_FIN.listarRecargas(sId, filtros); }
 function finObterRecarga(sId, id)                 { return SGO_FIN.obterRecarga(sId, id); }
