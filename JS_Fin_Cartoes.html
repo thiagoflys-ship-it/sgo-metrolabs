@@ -7011,6 +7011,8 @@ function finConcilRenderPares_(itens) {
   html += '<th style="padding:8px;text-align:left">Descrição Lançamento</th>';
   html += '<th style="padding:8px;text-align:right">Valor Lançamento</th>';
   html += '<th style="padding:8px;text-align:left">Colaborador</th>';
+  html += '<th style="padding:8px;text-align:center">IA</th>';
+  html += '<th style="padding:8px;text-align:center">Score</th>';
   html += '</tr></thead><tbody>';
   for (var i = 0; i < itens.length; i++) {
     var it = itens[i];
@@ -7024,6 +7026,8 @@ function finConcilRenderPares_(itens) {
     html += '<td style="padding:8px">' + finEH(it.descricaoLancamento) + '</td>';
     html += '<td style="padding:8px;text-align:right;color:#0369a1">' + finMoeda(it.valorLancamento) + '</td>';
     html += '<td style="padding:8px;color:#666">' + finEH(it.nomeColaborador || it.cpfColaborador || '') + '</td>';
+    html += '<td style="padding:8px;text-align:center;font-size:11px;color:#0f766e;font-weight:700" title="' + finEH((it.motivosIA || []).join(', ')) + '">' + finEH(it.classificacaoIA || 'MATCH') + '</td>';
+    html += '<td style="padding:8px;text-align:center;font-weight:700">' + finEH(it.scoreIA == null ? '-' : String(it.scoreIA)) + '</td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -7038,10 +7042,10 @@ function finConcilRenderSemPrestacao_(itens) {
     return;
   }
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<thead><tr style="background:#fff7ed;border-bottom:1px solid #fed7aa"><th style="padding:6px 8px;text-align:left">Data</th><th style="padding:6px 8px;text-align:left">Descrição</th><th style="padding:6px 8px;text-align:right">Valor</th><th style="padding:6px 8px;text-align:left">Cartão</th><th style="padding:6px 8px;text-align:left">Colaborador</th></tr></thead><tbody>';
+  html += '<thead><tr style="background:#fff7ed;border-bottom:1px solid #fed7aa"><th style="padding:6px 8px;text-align:left">Data</th><th style="padding:6px 8px;text-align:left">Descrição</th><th style="padding:6px 8px;text-align:right">Valor</th><th style="padding:6px 8px;text-align:left">Cartão</th><th style="padding:6px 8px;text-align:left">Colaborador</th><th style="padding:6px 8px;text-align:center">IA</th><th style="padding:6px 8px;text-align:center">Score</th></tr></thead><tbody>';
   for (var i = 0; i < itens.length; i++) {
     var it = itens[i];
-    html += '<tr style="border-bottom:1px solid #f9f4ef"><td style="padding:6px 8px">' + finEH(it.dataExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.descricaoExtrato) + '</td><td style="padding:6px 8px;text-align:right;color:#b45309">' + finMoeda(it.valorExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.cartaoFinal ? 'final '+it.cartaoFinal : '') + '</td><td style="padding:6px 8px">' + finEH(it.nomeColaborador || it.cpfColaborador || '') + '</td></tr>';
+    html += '<tr style="border-bottom:1px solid #f9f4ef"><td style="padding:6px 8px">' + finEH(it.dataExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.descricaoExtrato) + '</td><td style="padding:6px 8px;text-align:right;color:#b45309">' + finMoeda(it.valorExtrato) + '</td><td style="padding:6px 8px">' + finEH(it.cartaoFinal ? 'final '+it.cartaoFinal : '') + '</td><td style="padding:6px 8px">' + finEH(it.nomeColaborador || it.cpfColaborador || '') + '</td><td style="padding:6px 8px;text-align:center;font-size:11px;color:#b45309;font-weight:700" title="' + finEH((it.motivosIA || []).join(', ')) + '">' + finEH(it.classificacaoIA || 'SEM_PRESTACAO') + '</td><td style="padding:6px 8px;text-align:center;font-weight:700">' + finEH(it.scoreIA == null ? '-' : String(it.scoreIA)) + '</td></tr>';
   }
   html += '</tbody></table>';
   el.innerHTML = html;
