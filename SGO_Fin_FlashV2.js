@@ -6831,3 +6831,337 @@ function AUDITAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR() {
 function TESTAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR();
 }
+
+// ── V2.15H-PREP — TESTE CONTROLADO DE AÇÃO REAL: PREPARO SOMENTE LEITURA ────
+// A funcao EXECUTAR_* abaixo contem a acao real (Solicitar Correcao numa unica
+// linha de teste), mas SO roda se receber exatamente o token de autorizacao.
+// Nesta fase ela NUNCA e chamada com o token valido — apenas testamos o bloqueio.
+
+function EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO(autorizacao) {
+  var TOKEN_ESPERADO = 'AUTORIZO_V215H_SOLICITAR_CORRECAO_LINHA_BRUNA_DEV';
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CONCILIACAO_ID = 'FIN_FLASH_V2_CONC_5a5087d00f904264bf44';
+  var MOTIVO_CONTROLADO = 'TESTE DEV V2.15H - validação de ação por linha';
+  var r = {
+    success: true, ok: false, executado: false, bloqueado: true,
+    motivo: 'AUTORIZACAO_TEXTUAL_INVALIDA_OU_AUSENTE',
+    ambiente: ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO',
+    conciliacaoId: CONCILIACAO_ID,
+    snapshotAntes: null, snapshotDepois: null, resultadoAcao: null,
+    bloqueios: [], avisos: []
+  };
+
+  if (String(autorizacao) !== TOKEN_ESPERADO) {
+    return r;
+  }
+
+  // ── A partir daqui só roda com o token exato — bloco de execução real ────
+  r.bloqueado = false;
+  r.motivo = '';
+  if (r.ambiente !== 'DEV') { r.success = false; r.bloqueios.push('Execução bloqueada fora do DEV.'); return r; }
+
+  try {
+    var concAntes = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    if (!concAntes) { r.bloqueios.push('Conciliação de teste não encontrada (' + CONCILIACAO_ID + ') — abortando execução real.'); return r; }
+    r.snapshotAntes = {
+      id: concAntes.ID, status: concAntes.STATUS, valorExtrato: concAntes.VALOR_EXTRATO, valorPrestacao: concAntes.VALOR_PRESTACAO,
+      divergenciaValor: concAntes.DIVERGENCIA_VALOR, extratoId: concAntes.EXTRATO_ID, prestacaoId: concAntes.PRESTACAO_ID
+    };
+
+    var resultado = FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV({ conciliacaoId: CONCILIACAO_ID, motivo: MOTIVO_CONTROLADO });
+    r.resultadoAcao = resultado;
+    if (!resultado.ok) { r.bloqueios = r.bloqueios.concat(resultado.bloqueios || []); return r; }
+
+    var concDepois = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    r.snapshotDepois = concDepois ? {
+      id: concDepois.ID, status: concDepois.STATUS, valorExtrato: concDepois.VALOR_EXTRATO, valorPrestacao: concDepois.VALOR_PRESTACAO,
+      divergenciaValor: concDepois.DIVERGENCIA_VALOR, extratoId: concDepois.EXTRATO_ID, prestacaoId: concDepois.PRESTACAO_ID
+    } : null;
+
+    r.ok = true; r.executado = true;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function AUDITAR_FIN_FLASH_V215H_PREP_TESTE_ACAO_REAL_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    linhaTeste: null,
+    dadosAntesConciliacao: null,
+    dadosAntesPrestacao: null,
+    dadosAntesPendencia: null,
+    logsRelacionadosAntes: [],
+    acaoRecomendada: 'SOLICITAR_CORRECAO',
+    motivoTesteSugerido: 'TESTE DEV V2.15H - validação de ação por linha',
+    funcaoBackendAcao: 'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV',
+    parametrosQueSeraoUsados: null,
+    impactoEsperado: '',
+    camposQueDevemMudar: [],
+    camposQueNaoDevemMudar: [],
+    riscoDaAcao: '',
+    reversibilidade: '',
+    podeExecutarComAutorizacao: false,
+    comandoExatoExecucaoFutura: '',
+    bloqueios: [], avisos: [],
+    recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CONCILIACAO_ID = 'FIN_FLASH_V2_CONC_5a5087d00f904264bf44';
+  var PRESTACAO_ID   = 'FIN_FLASH_V2_PREST_34f58bdc233d44f9ad03';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+    r.linhaTeste = {
+      conciliacaoId: CONCILIACAO_ID, prestacaoId: PRESTACAO_ID, colaborador: 'BRUNA OLIVEIRA DOS SANTOS',
+      cpf: CPF_BRUNA, data: '2026-06-08 00:00:00', estabelecimento: 'Alimentação', valor: 50, statusAtual: 'CONCILIADO'
+    };
+
+    // ── Snapshot ao vivo (somente leitura) ────────────────────────────────────
+    var conc = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
+    var concLinha = conc.data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    if (!concLinha) {
+      r.bloqueios.push('Conciliação de teste não encontrada ao vivo (' + CONCILIACAO_ID + ') — não é seguro preparar execução.');
+      return r;
+    }
+    r.dadosAntesConciliacao = {
+      id: concLinha.ID, status: concLinha.STATUS, valorExtrato: concLinha.VALOR_EXTRATO, valorPrestacao: concLinha.VALOR_PRESTACAO,
+      divergenciaValor: concLinha.DIVERGENCIA_VALOR, analiseIA: concLinha.ANALISE_IA, aprovadoPor: concLinha.APROVADO_POR,
+      extratoId: concLinha.EXTRATO_ID, prestacaoId: concLinha.PRESTACAO_ID, criadoEm: concLinha.CRIADO_EM
+    };
+
+    var prest = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    var prestLinha = prest.data.filter(function(p){ return p.ID === PRESTACAO_ID; })[0];
+    r.dadosAntesPrestacao = prestLinha ? {
+      id: prestLinha.ID, status: prestLinha.STATUS, valor: prestLinha.VALOR, dataGasto: prestLinha.DATA_GASTO,
+      estabelecimento: prestLinha.ESTABELECIMENTO, comprovanteId: prestLinha.COMPROVANTE_ID, justificativa: prestLinha.JUSTIFICATIVA
+    } : null;
+    if (!prestLinha) r.avisos.push('Prestação de teste não encontrada ao vivo — a execução real ainda tentaria prosseguir, mas o "antes" da prestação fica nulo.');
+
+    var pend = FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
+    var pendLinhas = pend.data.filter(function(p){ return (concLinha.EXTRATO_ID && p.EXTRATO_ID === concLinha.EXTRATO_ID) || (concLinha.PRESTACAO_ID && p.PRESTACAO_ID === concLinha.PRESTACAO_ID); });
+    r.dadosAntesPendencia = pendLinhas.map(function(p){ return { id: p.ID, status: p.STATUS, tipo: p.TIPO }; });
+
+    var logs = FIN_FLASH_V2_sheetCtx10_('LOGS');
+    r.logsRelacionadosAntes = logs.data.filter(function(l){
+      return l.ENTIDADE_ID === CONCILIACAO_ID || (l.DETALHE_JSON && String(l.DETALHE_JSON).indexOf(CONCILIACAO_ID) >= 0);
+    }).map(function(l){ return { id: l.ID, acao: l.ACAO, entidade: l.ENTIDADE, criadoEm: l.CRIADO_EM }; });
+
+    // ── Parâmetros e impacto esperado (baseado no código real, não suposição) ──
+    r.parametrosQueSeraoUsados = { conciliacaoId: CONCILIACAO_ID, motivo: r.motivoTesteSugerido };
+    r.impactoEsperado = 'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV grava STATUS="AGUARDANDO_CORRECAO" na linha ' + CONCILIACAO_ID + ' de FIN_FLASH_V2_CONCILIACOES (via FIN_FLASH_V2_setByHeaders_) e cria 1 entrada em FIN_FLASH_V2_LOGS. O motivo digitado NÃO é gravado na linha da conciliação (só no DETALHE_JSON do log) — FIN_FLASH_V2_CONCILIACOES não tem coluna MOTIVO_CORRECAO.';
+    r.camposQueDevemMudar = ['FIN_FLASH_V2_CONCILIACOES.STATUS (de "CONCILIADO" para "AGUARDANDO_CORRECAO")', '+1 linha em FIN_FLASH_V2_LOGS (ACAO=SOLICITAR_CORRECAO_COMPROVANTE)'];
+    r.camposQueNaoDevemMudar = [
+      'EXTRATO_ID, PRESTACAO_ID, VALOR_EXTRATO, VALOR_PRESTACAO, DIVERGENCIA_VALOR, ANALISE_IA, APROVADO_POR, CRIADO_EM da mesma linha',
+      'Qualquer campo em FIN_FLASH_V2_PRESTACOES (a prestação não é alterada por esta ação)',
+      'Qualquer outra linha de FIN_FLASH_V2_CONCILIACOES',
+      'FIN_FLASH_V2_PENDENCIAS e FIN_FLASH_V2_DOCUMENTOS (não tocados por esta ação)'
+    ];
+    r.riscoDaAcao = 'Baixo e conhecido: muda apenas STATUS de 1 linha de teste da Bruna (dado de massa de validação, não produção). Não há “desfazer” automático — reverter exige rodar FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV na mesma linha depois, ou editar STATUS manualmente na planilha.';
+    r.reversibilidade = 'Reversível manualmente: chamar FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV({conciliacaoId:"' + CONCILIACAO_ID + '", motivo:"Reversão pós-teste V2.15H"}) devolve STATUS para "CONCILIADO". Nenhuma linha é apagada em nenhum cenário.';
+
+    // ── Confirmar que a função real existe e está corretamente bloqueada ────
+    var funcaoRealExiste = typeof EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO === 'function';
+    var srcReal = funcaoRealExiste ? EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO.toString() : '';
+    var exigeToken = srcReal.indexOf('AUTORIZO_V215H_SOLICITAR_CORRECAO_LINHA_BRUNA_DEV') >= 0 && srcReal.indexOf('String(autorizacao) !== TOKEN_ESPERADO') >= 0;
+    var semDelete = srcReal.indexOf('deleteRow') < 0 && srcReal.indexOf('.clear(') < 0 && srcReal.indexOf('copyTo') < 0;
+    var chamaSoSolicitarCorrecao = srcReal.indexOf('FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV') >= 0 &&
+      srcReal.indexOf('FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV') < 0 && srcReal.indexOf('FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(') < 0;
+
+    var testeBloqueio = EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO('TOKEN_QUALQUER_INVALIDO');
+    var testeBloqueioSemParametro = EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO();
+    var bloqueioOk = testeBloqueio.bloqueado === true && testeBloqueio.executado === false && testeBloqueio.ok === false && testeBloqueio.success === true &&
+      testeBloqueioSemParametro.bloqueado === true && testeBloqueioSemParametro.executado === false;
+
+    r.podeExecutarComAutorizacao = funcaoRealExiste && exigeToken && semDelete && chamaSoSolicitarCorrecao && bloqueioOk;
+    r.comandoExatoExecucaoFutura = 'clasp --user fin_flash_v2_dev --json run EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO -p \'["AUTORIZO_V215H_SOLICITAR_CORRECAO_LINHA_BRUNA_DEV"]\'';
+
+    if (!funcaoRealExiste) r.bloqueios.push('Função real EXECUTAR_FIN_FLASH_V215H_SOLICITAR_CORRECAO_TESTE_AUTORIZADO não encontrada.');
+    if (!exigeToken) r.bloqueios.push('Função real não exige o token de autorização esperado.');
+    if (!semDelete) r.bloqueios.push('Função real contém deleteRow/clear/copyTo — não deveria.');
+    if (!chamaSoSolicitarCorrecao) r.bloqueios.push('Função real chama outra ação além de Solicitar Correção.');
+    if (!bloqueioOk) r.bloqueios.push('Bloqueio sem autorização não se comportou como esperado.');
+
+    r.recomendacoesProximaFase = [
+      'Só depois de nova aprovação explícita, rodar: ' + r.comandoExatoExecucaoFutura,
+      'Após a execução real, reauditar com AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR e comparar snapshotAntes/snapshotDepois retornados pela própria função de execução.',
+      'Se aprovado, considerar reverter a linha de teste para CONCILIADO depois (ver campo reversibilidade) para manter a massa de validação da Bruna em estado conhecido.'
+    ];
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215H_PREP_TESTE_ACAO_REAL_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215H_PREP_TESTE_ACAO_REAL_SEM_GRAVAR();
+}
+
+// ── V2.15I-PREP — REVERSÃO CONTROLADA DA LINHA DE TESTE: PREPARO SOMENTE LEITURA ──
+// A funcao EXECUTAR_* abaixo contem a reversao real (Conciliar Manualmente na
+// mesma linha de teste), mas SO roda se receber exatamente o token de
+// autorizacao. Nesta fase ela NUNCA e chamada com o token valido.
+
+function EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO(autorizacao) {
+  var TOKEN_ESPERADO = 'AUTORIZO_V215I_REVERTER_LINHA_BRUNA_PARA_CONCILIADO_DEV';
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CONCILIACAO_ID = 'FIN_FLASH_V2_CONC_5a5087d00f904264bf44';
+  var MOTIVO_CONTROLADO = 'TESTE DEV V2.15I - reversao controlada apos validar solicitar correcao';
+  var r = {
+    success: true, ok: false, executado: false, bloqueado: true,
+    motivo: 'AUTORIZACAO_TEXTUAL_INVALIDA_OU_AUSENTE',
+    ambiente: ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO',
+    conciliacaoId: CONCILIACAO_ID,
+    snapshotAntes: null, snapshotDepois: null, resultadoAcao: null,
+    bloqueios: [], avisos: []
+  };
+
+  if (String(autorizacao) !== TOKEN_ESPERADO) {
+    return r;
+  }
+
+  // ── A partir daqui só roda com o token exato — bloco de reversão real ────
+  r.bloqueado = false;
+  r.motivo = '';
+  if (r.ambiente !== 'DEV') { r.success = false; r.bloqueios.push('Execução bloqueada fora do DEV.'); return r; }
+
+  try {
+    var concAntes = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    if (!concAntes) { r.bloqueios.push('Conciliação de teste não encontrada (' + CONCILIACAO_ID + ') — abortando reversão.'); return r; }
+    r.snapshotAntes = {
+      id: concAntes.ID, status: concAntes.STATUS, valorExtrato: concAntes.VALOR_EXTRATO, valorPrestacao: concAntes.VALOR_PRESTACAO,
+      divergenciaValor: concAntes.DIVERGENCIA_VALOR, extratoId: concAntes.EXTRATO_ID, prestacaoId: concAntes.PRESTACAO_ID
+    };
+    if (concAntes.STATUS !== 'AGUARDANDO_CORRECAO') {
+      r.avisos.push('Linha não está em AGUARDANDO_CORRECAO no momento da execução (status atual: ' + concAntes.STATUS + ') — revertendo mesmo assim para CONCILIADO, conforme autorizado.');
+    }
+
+    var resultado = FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV({ conciliacaoId: CONCILIACAO_ID, motivo: MOTIVO_CONTROLADO });
+    r.resultadoAcao = resultado;
+    if (!resultado.ok) { r.bloqueios = r.bloqueios.concat(resultado.bloqueios || []); return r; }
+
+    var concDepois = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    r.snapshotDepois = concDepois ? {
+      id: concDepois.ID, status: concDepois.STATUS, valorExtrato: concDepois.VALOR_EXTRATO, valorPrestacao: concDepois.VALOR_PRESTACAO,
+      divergenciaValor: concDepois.DIVERGENCIA_VALOR, extratoId: concDepois.EXTRATO_ID, prestacaoId: concDepois.PRESTACAO_ID
+    } : null;
+    if (!concDepois || concDepois.STATUS !== 'CONCILIADO') { r.avisos.push('Status final não confirmado como CONCILIADO — verificar manualmente.'); }
+
+    r.ok = true; r.executado = true;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function AUDITAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    linhaTeste: null,
+    dadosAntesConciliacao: null,
+    logsRelacionadosAntes: [],
+    acaoReversaoPlanejada: 'CONCILIAR_MANUALMENTE',
+    funcaoBackendReversao: 'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV',
+    parametrosQueSeraoUsados: null,
+    impactoEsperado: '',
+    camposQueDevemMudar: [],
+    camposQueNaoDevemMudar: [],
+    podeExecutarComAutorizacao: false,
+    testeBloqueioSemAutorizacao: null,
+    comandoExatoExecucaoFutura: '',
+    bloqueios: [], avisos: [],
+    recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CONCILIACAO_ID = 'FIN_FLASH_V2_CONC_5a5087d00f904264bf44';
+  var PRESTACAO_ID   = 'FIN_FLASH_V2_PREST_34f58bdc233d44f9ad03';
+  var MOTIVO = 'TESTE DEV V2.15I - reversao controlada apos validar solicitar correcao';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+    r.linhaTeste = {
+      conciliacaoId: CONCILIACAO_ID, prestacaoId: PRESTACAO_ID, colaborador: 'BRUNA OLIVEIRA DOS SANTOS',
+      statusEsperadoAntes: 'AGUARDANDO_CORRECAO', statusAlvoDepois: 'CONCILIADO'
+    };
+
+    // ── Snapshot ao vivo (somente leitura) ────────────────────────────────────
+    var conc = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
+    var concLinha = conc.data.filter(function(c){ return c.ID === CONCILIACAO_ID; })[0];
+    if (!concLinha) {
+      r.bloqueios.push('Conciliação de teste não encontrada ao vivo (' + CONCILIACAO_ID + ') — não é seguro preparar reversão.');
+      return r;
+    }
+    r.dadosAntesConciliacao = {
+      id: concLinha.ID, status: concLinha.STATUS, valorExtrato: concLinha.VALOR_EXTRATO, valorPrestacao: concLinha.VALOR_PRESTACAO,
+      divergenciaValor: concLinha.DIVERGENCIA_VALOR, extratoId: concLinha.EXTRATO_ID, prestacaoId: concLinha.PRESTACAO_ID, criadoEm: concLinha.CRIADO_EM
+    };
+    if (concLinha.STATUS !== 'AGUARDANDO_CORRECAO') {
+      r.avisos.push('Atenção: status atual ao vivo é "' + concLinha.STATUS + '", não "AGUARDANDO_CORRECAO" como esperado pela V2.15H — confirmar antes de autorizar a reversão.');
+    }
+
+    var logs = FIN_FLASH_V2_sheetCtx10_('LOGS');
+    r.logsRelacionadosAntes = logs.data.filter(function(l){
+      return l.ENTIDADE_ID === CONCILIACAO_ID || (l.DETALHE_JSON && String(l.DETALHE_JSON).indexOf(CONCILIACAO_ID) >= 0);
+    }).map(function(l){ return { id: l.ID, acao: l.ACAO, entidade: l.ENTIDADE, criadoEm: l.CRIADO_EM }; });
+
+    // ── Parâmetros e impacto esperado (baseado no código real) ───────────────
+    r.parametrosQueSeraoUsados = { conciliacaoId: CONCILIACAO_ID, motivo: MOTIVO };
+    r.impactoEsperado = 'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV grava STATUS="CONCILIADO" e SCORE=100 na linha ' + CONCILIACAO_ID + ' de FIN_FLASH_V2_CONCILIACOES (via FIN_FLASH_V2_setByHeaders_) e cria 1 entrada em FIN_FLASH_V2_LOGS. Assim como no teste anterior, SCORE e o motivo não são persistidos na linha (colunas inexistentes) — só STATUS muda de fato, o motivo fica no log.';
+    r.camposQueDevemMudar = ['FIN_FLASH_V2_CONCILIACOES.STATUS (de "AGUARDANDO_CORRECAO" para "CONCILIADO")', '+1 linha em FIN_FLASH_V2_LOGS (ACAO=CONCILIAR_MANUALMENTE)'];
+    r.camposQueNaoDevemMudar = [
+      'EXTRATO_ID, PRESTACAO_ID, VALOR_EXTRATO, VALOR_PRESTACAO, DIVERGENCIA_VALOR, ANALISE_IA, APROVADO_POR, CRIADO_EM da mesma linha',
+      'Qualquer campo em FIN_FLASH_V2_PRESTACOES',
+      'Qualquer outra linha de FIN_FLASH_V2_CONCILIACOES',
+      'FIN_FLASH_V2_PENDENCIAS e FIN_FLASH_V2_DOCUMENTOS',
+      'O log criado na V2.15H-EXEC (SOLICITAR_CORRECAO_COMPROVANTE) — permanece como histórico, não é apagado nem alterado'
+    ];
+
+    // ── Confirmar que a função real existe e está corretamente bloqueada ────
+    var funcaoRealExiste = typeof EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO === 'function';
+    var srcReal = funcaoRealExiste ? EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO.toString() : '';
+    var exigeToken = srcReal.indexOf('AUTORIZO_V215I_REVERTER_LINHA_BRUNA_PARA_CONCILIADO_DEV') >= 0 && srcReal.indexOf('String(autorizacao) !== TOKEN_ESPERADO') >= 0;
+    var semDelete = srcReal.indexOf('deleteRow') < 0 && srcReal.indexOf('.clear(') < 0 && srcReal.indexOf('copyTo') < 0;
+    var chamaSoConciliar = srcReal.indexOf('FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(') >= 0 &&
+      srcReal.indexOf('FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV') < 0 && srcReal.indexOf('FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(') < 0;
+
+    var testeBloqueio = EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO('TOKEN_QUALQUER_INVALIDO');
+    var testeBloqueioSemParametro = EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO();
+    var bloqueioOk = testeBloqueio.bloqueado === true && testeBloqueio.executado === false && testeBloqueio.ok === false && testeBloqueio.success === true &&
+      testeBloqueioSemParametro.bloqueado === true && testeBloqueioSemParametro.executado === false;
+
+    r.testeBloqueioSemAutorizacao = {
+      semParametro: testeBloqueioSemParametro,
+      comTokenInvalido: testeBloqueio,
+      bloqueadoCorretamente: bloqueioOk
+    };
+    r.podeExecutarComAutorizacao = funcaoRealExiste && exigeToken && semDelete && chamaSoConciliar && bloqueioOk;
+    r.comandoExatoExecucaoFutura = 'clasp --user fin_flash_v2_dev --json run EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO -p \'["AUTORIZO_V215I_REVERTER_LINHA_BRUNA_PARA_CONCILIADO_DEV"]\'';
+
+    if (!funcaoRealExiste) r.bloqueios.push('Função real EXECUTAR_FIN_FLASH_V215I_REVERTER_CONCILIACAO_TESTE_AUTORIZADO não encontrada.');
+    if (!exigeToken) r.bloqueios.push('Função real não exige o token de autorização esperado.');
+    if (!semDelete) r.bloqueios.push('Função real contém deleteRow/clear/copyTo — não deveria.');
+    if (!chamaSoConciliar) r.bloqueios.push('Função real chama outra ação além de Conciliar Manualmente.');
+    if (!bloqueioOk) r.bloqueios.push('Bloqueio sem autorização não se comportou como esperado.');
+
+    r.recomendacoesProximaFase = [
+      'Só depois de nova aprovação explícita, rodar: ' + r.comandoExatoExecucaoFutura,
+      'Após a reversão real, reauditar com AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR e confirmar STATUS=CONCILIADO e nenhuma outra linha afetada.',
+      'Com a linha de teste de volta a CONCILIADO, a massa de validação da Bruna volta ao estado conhecido original para futuros testes.'
+    ];
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR();
+}
