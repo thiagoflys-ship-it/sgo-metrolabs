@@ -1,0 +1,1651 @@
+<!-- FIN_FLASH_V2: componente isolado — V2.10 Pente Fino Funcional. -->
+<script>
+// ══ UTILITÁRIOS ═══════════════════════════════════════════════════════════════
+
+function ffv2St_() {
+  if (!window.__ffv2) window.__ffv2 = {
+    perfil: null, ctx: null, abaC: 'registrar', abaF: 'dashboard',
+    dados: {}, acoes: false, carregado: {}, portalCarregado: false,
+    dashboardLeve: null, dashboardTs: null
+  };
+  return window.__ffv2;
+}
+
+function finFlashV2Escape_(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function finFlashV2FmtMoeda_(v) {
+  return 'R$ ' + Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+}
+function finFlashV2Tabela_(cols, rows, msg) { return ffv2Tabela_(cols, rows, msg); }
+function finFlashV2AuditarEstrutura_() { return {ok:true}; }
+
+function ffv2Badge_(status) {
+  var m = {
+    'PENDENTE':'#ef4444','CONCILIADO':'#22c55e','AGUARDANDO':'#f59e0b',
+    'AGUARDANDO_CORRECAO':'#f59e0b','REPROVADO':'#ef4444','ENVIADO_SIMULADO':'#3b82f6',
+    'IMPORTADO':'#6366f1','PREPARADO':'#f97316','ATIVO':'#22c55e','ATIVA':'#22c55e',
+    'BLOQUEADO':'#ef4444','INATIVO':'#94a3b8','VIRTUAL':'#8b5cf6','FISICO':'#0ea5e9',
+    'ALTO':'#ef4444','MÉDIO':'#f59e0b','BAIXO':'#22c55e','GERADO':'#22c55e'
+  };
+  var cor = m[String(status||'').toUpperCase()] || '#94a3b8';
+  return '<span style="background:'+cor+'20;color:'+cor+';border:1px solid '+cor+'50;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap;">'+finFlashV2Escape_(status||'—')+'</span>';
+}
+
+function ffv2Tabela_(cols, rows, emptyMsg) {
+  if (!rows || !rows.length) return '<p style="color:#94a3b8;font-size:12px;padding:16px 0;">'+(emptyMsg||'Nenhum registro.')+'</p>';
+  var h = '<div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#f8fafc;">';
+  cols.forEach(function(c){ h += '<th style="padding:8px 10px;text-align:left;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'+finFlashV2Escape_(c)+'</th>'; });
+  h += '</tr></thead><tbody>';
+  rows.forEach(function(row, i) {
+    h += '<tr style="background:'+(i%2===0?'#fff':'#f8fafc')+';border-bottom:1px solid #f1f5f9;">';
+    cols.forEach(function(c) { h += '<td style="padding:7px 10px;color:#334155;">'+( row['_html_'+c] || finFlashV2Escape_(row[c]||'—') )+'</td>'; });
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function ffv2Skel_(n) {
+  var h = '';
+  for (var i=0; i<(n||3); i++) h += '<div style="background:#f1f5f9;border-radius:8px;height:64px;animation:ffv2sk 1.4s ease-in-out infinite;margin-bottom:8px;"></div>';
+  return h;
+}
+
+function ffv2KpiCard_(titulo, valor, cor) {
+  cor = cor||'#3b82f6';
+  return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;min-width:120px;">'+
+    '<p style="margin:0 0 4px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">'+finFlashV2Escape_(titulo)+'</p>'+
+    '<p style="margin:0;font-size:18px;font-weight:800;color:'+cor+';">'+finFlashV2Escape_(String(valor))+'</p>'+
+    '</div>';
+}
+
+function ffv2Modal_(titulo, html) {
+  var el = document.getElementById('ffv2-modal');
+  if (!el) { el = document.createElement('div'); el.id='ffv2-modal'; document.body.appendChild(el); }
+  el.innerHTML = '<div style="position:fixed;inset:0;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)ffv2FecharModal_()">'+
+    '<div style="background:#fff;border-radius:12px;width:100%;max-width:900px;max-height:90vh;overflow:auto;box-shadow:0 24px 80px #0004;">'+
+    '<div style="position:sticky;top:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">'+
+    '<h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">'+finFlashV2Escape_(titulo)+'</h3>'+
+    '<div style="display:flex;gap:8px;">'+
+    '<button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">&#128438; Imprimir</button>'+
+    '<button onclick="ffv2FecharModal_()" style="background:#f1f5f9;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;color:#475569;">&#x2715; Fechar</button></div></div>'+
+    '<div style="padding:18px;">'+html+'</div></div></div>';
+}
+function ffv2FecharModal_() {
+  var el=document.getElementById('ffv2-modal'); if(el) el.innerHTML='';
+}
+
+// ══ CSS ═══════════════════════════════════════════════════════════════════════
+
+function ffv2Css_() {
+  return '<style>'+
+    '.fin-flash-v2-dev-shell{padding:0!important;max-width:none!important;width:100%!important;}'+
+    '.ffv2-wrap{width:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1e293b;box-sizing:border-box;}'+
+    '.ffv2-hdr{background:linear-gradient(135deg,#0f2d52 0%,#1e4a8a 100%);color:#fff;padding:16px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}'+
+    '.ffv2-hdr h2{margin:0;font-size:17px;font-weight:800;}'+
+    '.ffv2-hdr-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}'+
+    '.ffv2-badge-p{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;}'+
+    '.ffv2-kpi-row{display:flex;gap:10px;padding:14px 16px;overflow-x:auto;background:#f8fafc;border-bottom:1px solid #e2e8f0;}'+
+    '.ffv2-nav{display:flex;overflow-x:auto;background:#f1f5f9;border-bottom:2px solid #e2e8f0;padding:0 8px;}'+
+    '.ffv2-nav button{background:none;border:none;padding:10px 14px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;}'+
+    '.ffv2-nav button.ativa{color:#2563eb;border-bottom-color:#2563eb;background:#fff;}'+
+    '.ffv2-nav button:hover:not(.ativa){background:#e2e8f0;color:#334155;}'+
+    '.ffv2-pane{padding:16px;background:#fff;min-height:200px;}'+
+    '.ffv2-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;}'+
+    '.ffv2-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}'+
+    '@media(max-width:600px){.ffv2-row2{grid-template-columns:1fr;}}'+
+    '.ffv2-lbl{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;}'+
+    '.ffv2-inp{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;background:#fff;}'+
+    '.ffv2-inp:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 2px #2563eb30;}'+
+    '.ffv2-btn{padding:9px 18px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}'+
+    '.ffv2-btn:hover{opacity:.85;}'+
+    '.ffv2-btn-p{background:#2563eb;color:#fff;}'+
+    '.ffv2-btn-g{background:#16a34a;color:#fff;}'+
+    '.ffv2-btn-r{background:#dc2626;color:#fff;}'+
+    '.ffv2-btn-o{background:#ea580c;color:#fff;}'+
+    '.ffv2-btn-s{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}'+
+    '.ffv2-sep{height:1px;background:#f1f5f9;margin:14px 0;}'+
+    '.ffv2-msg{padding:10px 14px;border-radius:8px;font-size:12px;margin:8px 0;}'+
+    '.ffv2-msg-ok{background:#f0fdf4;color:#166534;border:1px solid #86efac;}'+
+    '.ffv2-msg-er{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}'+
+    '.ffv2-msg-av{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}'+
+    '.ffv2-msg-in{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}'+
+    '.ffv2-dev-bar{background:#dc2626;color:#fff;padding:4px 12px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}'+
+    '.ffv2-section-title{font-size:13px;font-weight:700;color:#334155;margin:0 0 10px;}'+
+    '.ffv2-filtro-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;}'+
+    '.ffv2-filtro-bar label{font-size:11px;font-weight:700;color:#64748b;}'+
+    '.ffv2-filtro-bar input,.ffv2-filtro-bar select{padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;}'+
+    '.ffv2-a4-preview{background:#f8fafc;border:2px dashed #e2e8f0;border-radius:10px;padding:20px;margin-top:12px;}'+
+    '@keyframes ffv2sk{0%,100%{opacity:1}50%{opacity:.4}}'+
+    '.ffv2-sit-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}'+
+    '.ffv2-sit-card h4{margin:0;font-size:13px;font-weight:700;color:#1e293b;}'+
+    '.ffv2-sit-card .ffv2-sit-meta{font-size:11px;color:#64748b;}'+
+    '.ffv2-colaboradores-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px;}'+
+    '@media print{body>*:not(#ffv2-modal){display:none!important;}.ffv2-wrap{display:none!important;}#ffv2-modal>div{position:static!important;background:transparent!important;padding:0!important;}#ffv2-modal>div>div{box-shadow:none!important;max-height:none!important;max-width:none!important;border-radius:0!important;}#ffv2-modal>div>div>div:first-child{display:none!important;}}'+
+    '</style>';
+}
+
+// ══ ENTRY POINTS ══════════════════════════════════════════════════════════════
+
+function finFlashV2Html_() {
+  // Abas financeiro renderizadas IMEDIATAMENTE — sem esperar backend.
+  // Isso garante que as abas apareçam independente do estado do servidor.
+  var abasF = [
+    {id:'dashboard',     label:'Dashboard'},
+    {id:'colaboradores', label:'Colaboradores e Cartões'},
+    {id:'importar',      label:'Importar Extrato Flash'},
+    {id:'conferencia',   label:'Conferência de Gastos'},
+    {id:'extrato_cpf',   label:'Extrato por Colaborador'},
+    {id:'pendencias',    label:'Pendências'},
+    {id:'alertas',       label:'Alertas e Cobranças'},
+    {id:'documentos',    label:'Documentos e Relatórios'},
+    {id:'termos',        label:'Termos de Uso'},
+    {id:'auditoria',     label:'Auditoria'},
+    {id:'manual',        label:'Manual de Uso'}
+  ];
+  var navH = '<div class="ffv2-nav">';
+  abasF.forEach(function(a) {
+    navH += '<button onclick="ffv2NavF_(\''+a.id+'\')" id="ffv2-nf-'+a.id+'" class="'+(a.id==='dashboard'?'ativa':'')+'">'+a.label+'</button>';
+  });
+  navH += '</div>';
+  // Fallback de 8 segundos: se o portal ainda não carregou, mostra erro.
+  setTimeout(function(){ ffv2TimeoutFallback_(); }, 8000);
+  return ffv2Css_() +
+    '<div id="ffv2-wrap" class="ffv2-wrap">' +
+      '<div class="ffv2-dev-bar">&#9888; DEV EXCLUSIVO — V2.13 Validação Operacional Bruna &nbsp;' +
+        '<button onclick="ffv2DevParaC_()" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:2px 8px;">[DEV] Colaborador</button>' +
+        '<button onclick="ffv2DevParaF_()" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:2px 8px;">[DEV] Financeiro</button>' +
+      '</div>' +
+      '<div id="ffv2-hdr-box"><div class="ffv2-hdr"><h2>&#9654; Carregando FIN Flash V2&hellip;</h2><p style="margin:2px 0 0;font-size:11px;opacity:.7;">Verificando perfil&hellip;</p></div></div>' +
+      '<div id="ffv2-kpi-box" style="display:none;"></div>' +
+      '<div id="ffv2-nav-box">' + navH + '</div>' +
+      '<div id="ffv2-pane" class="ffv2-pane"><div class="ffv2-msg ffv2-msg-in" style="margin-top:8px;">Carregando dados&hellip;</div></div>' +
+    '</div>';
+}
+
+function ffv2TimeoutFallback_() {
+  if (ffv2St_().portalCarregado) return;
+  var pane = document.getElementById('ffv2-pane');
+  if (!pane) return;
+  pane.innerHTML =
+    '<div class="ffv2-msg ffv2-msg-er">&#9888; Não foi possível carregar os dados do FIN Flash V2 no DEV.<br>' +
+    '<small style="color:#64748b;display:block;margin-top:4px;">O servidor demorou demais para responder ou há um erro de permissão.</small></div>' +
+    '<button onclick="finFlashV2CarregarDesktop_()" class="ffv2-btn ffv2-btn-p" style="margin-top:10px;">&#8635; Tentar novamente</button>';
+}
+
+function ffv2ErroRender_(msg) {
+  ffv2St_().portalCarregado = true;
+  var hdrBox = document.getElementById('ffv2-hdr-box');
+  if (hdrBox) hdrBox.innerHTML =
+    '<div class="ffv2-hdr" style="background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 100%);">' +
+    '<div><h2>&#9888; Erro ao carregar FIN Flash V2</h2>' +
+    '<p style="margin:2px 0 0;font-size:11px;opacity:.7;">DEV — verifique permissões e ambiente</p></div></div>';
+  var pane = document.getElementById('ffv2-pane');
+  if (pane) pane.innerHTML =
+    '<div class="ffv2-msg ffv2-msg-er">Não foi possível carregar os dados do FIN Flash V2 no DEV.<br>' +
+    '<code style="font-size:10px;color:#64748b;word-break:break-all;display:block;margin-top:4px;">' +
+    finFlashV2Escape_(msg||'Erro desconhecido') + '</code></div>' +
+    '<button onclick="finFlashV2CarregarDesktop_()" class="ffv2-btn ffv2-btn-p" style="margin-top:10px;">&#8635; Tentar novamente</button>';
+}
+
+function finFlashV2CarregarDesktop_() {
+  ffv2St_().portalCarregado = false;
+  google.script.run
+    .withSuccessHandler(function(ctx) {
+      try { ffv2RotearPortal_(ctx); }
+      catch(ex) { ffv2ErroRender_(ex.message || String(ex)); }
+    })
+    .withFailureHandler(function(e) {
+      ffv2ErroRender_(e.message || String(e));
+    })
+    .FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV();
+}
+
+function ffv2RotearPortal_(ctx) {
+  ffv2St_().ctx = ctx;
+  ffv2St_().portalCarregado = true;
+  try {
+    if (!ctx || !ctx.ok) {
+      ffv2St_().perfil = 'FINANCEIRO';
+      ffv2RenderPortalF_({perfil:'FINANCEIRO', email:'', ok:true});
+      return;
+    }
+    ffv2St_().perfil = ctx.perfil;
+    if (ctx.perfil === 'COLABORADOR') ffv2RenderPortalC_(ctx);
+    else ffv2RenderPortalF_(ctx);
+  } catch(ex) {
+    ffv2ErroRender_(ex.message || String(ex));
+  }
+}
+
+function ffv2DevParaC_() {
+  ffv2St_().carregado = {};
+  ffv2St_().portalCarregado = true;
+  ffv2RenderPortalC_({perfil:'COLABORADOR', ok:true, email:'dev@teste.local', nomeColaborador:'Colaborador DEV', cpf:'00000000000', isColaborador:true, isFinanceiro:false});
+}
+function ffv2DevParaF_() {
+  // Restaura nav financeiro (pode ter sido trocado por portal colaborador)
+  ffv2St_().carregado = {};
+  ffv2St_().portalCarregado = true;
+  var abasF = [
+    {id:'dashboard',label:'Dashboard'},{id:'colaboradores',label:'Colaboradores e Cartões'},
+    {id:'importar',label:'Importar Extrato Flash'},{id:'conferencia',label:'Conferência de Gastos'},
+    {id:'extrato_cpf',label:'Extrato por Colaborador'},{id:'pendencias',label:'Pendências'},
+    {id:'alertas',label:'Alertas e Cobranças'},{id:'documentos',label:'Documentos e Relatórios'},
+    {id:'termos',label:'Termos de Uso'},{id:'auditoria',label:'Auditoria'},{id:'manual',label:'Manual de Uso'}
+  ];
+  var navH = '<div class="ffv2-nav">';
+  abasF.forEach(function(a){ navH += '<button onclick="ffv2NavF_(\''+a.id+'\')" id="ffv2-nf-'+a.id+'" class="">'+a.label+'</button>'; });
+  navH += '</div>';
+  document.getElementById('ffv2-nav-box').innerHTML = navH;
+  ffv2RenderPortalF_({perfil:'FINANCEIRO', ok:true, email:'dev@teste.local', isColaborador:false, isFinanceiro:true});
+}
+
+// ══ PORTAL COLABORADOR (5 abas) ═══════════════════════════════════════════════
+
+function ffv2RenderPortalC_(ctx) {
+  try {
+    ffv2St_().perfil = 'COLABORADOR';
+    var abas = [
+      {id:'registrar',   label:'Registrar Gasto'},
+      {id:'pendencias',  label:'Minhas Pendências'},
+      {id:'comprovantes',label:'Meus Comprovantes'},
+      {id:'termo',       label:'Termo de Uso'},
+      {id:'manual',      label:'Manual Rápido'}
+    ];
+    var hdrBox = document.getElementById('ffv2-hdr-box');
+    if (hdrBox) hdrBox.innerHTML =
+      '<div class="ffv2-hdr">' +
+        '<div><h2>&#129718; Presta&#231;&#227;o de Contas &#8212; Cart&#227;o Flash</h2>' +
+          '<p style="margin:2px 0 0;font-size:11px;opacity:.7;">Ol&#225;, '+finFlashV2Escape_(ctx.nomeColaborador||ctx.email||'Colaborador')+'</p></div>' +
+        '<span class="ffv2-badge-p" style="background:#bbf7d0;color:#166534;border-color:#86efac;">&#9679; Colaborador</span>' +
+      '</div>';
+    var kpiBox = document.getElementById('ffv2-kpi-box');
+    if (kpiBox) kpiBox.style.display = 'none';
+    ffv2RenderNavC_(abas, ffv2St_().abaC || 'registrar');
+    ffv2NavC_(ffv2St_().abaC || 'registrar');
+  } catch(ex) {
+    ffv2ErroRender_(ex.message || String(ex));
+  }
+}
+
+function ffv2RenderNavC_(abas, abaAtiva) {
+  var h = '<div class="ffv2-nav">';
+  abas.forEach(function(a) {
+    h += '<button onclick="ffv2NavC_(\''+a.id+'\')" id="ffv2-nc-'+a.id+'" class="'+(a.id===abaAtiva?'ativa':'')+'">'+a.label+'</button>';
+  });
+  h += '</div>';
+  document.getElementById('ffv2-nav-box').innerHTML = h;
+}
+
+function ffv2NavC_(aba) {
+  ffv2St_().abaC = aba;
+  ['registrar','pendencias','comprovantes','termo','manual'].forEach(function(a) {
+    var el = document.getElementById('ffv2-nc-'+a);
+    if (el) el.className = a===aba?'ativa':'';
+  });
+  var pane = document.getElementById('ffv2-pane');
+  if (ffv2St_().carregado['c_'+aba]) { pane.innerHTML = ffv2St_().carregado['c_'+aba]; return; }
+  pane.innerHTML = ffv2Skel_(2);
+  ffv2LoadC_(aba);
+}
+
+function ffv2LoadC_(aba) {
+  if (aba === 'registrar') {
+    var h = '<div class="ffv2-card">' +
+      '<p class="ffv2-section-title">&#128276; Registrar Gasto — Cartão Flash</p>' +
+      '<div class="ffv2-row2">' +
+        '<div><label class="ffv2-lbl">Valor (R$)</label><input id="ffv2c-valor" class="ffv2-inp" type="number" step="0.01" min="0" placeholder="0,00"></div>' +
+        '<div><label class="ffv2-lbl">Data do Gasto</label><input id="ffv2c-data" class="ffv2-inp" type="date"></div>' +
+        '<div><label class="ffv2-lbl">Categoria</label><select id="ffv2c-cat" class="ffv2-inp">' +
+          '<option value="ALIMENTACAO">Alimentação</option><option value="TRANSPORTE">Transporte</option>' +
+          '<option value="HOSPEDAGEM">Hospedagem</option><option value="MATERIAL">Material</option>' +
+          '<option value="OUTROS">Outros</option></select></div>' +
+        '<div><label class="ffv2-lbl">Comprovante (obrigatório)</label><input id="ffv2c-comp" class="ffv2-inp" type="file" accept="image/*,application/pdf"></div>' +
+      '</div>' +
+      '<div><label class="ffv2-lbl">Justificativa</label><textarea id="ffv2c-just" class="ffv2-inp" rows="3" placeholder="Descreva o motivo do gasto..."></textarea></div>' +
+      '<div style="margin-top:12px;"><button onclick="ffv2EnviarPrestacao_()" class="ffv2-btn ffv2-btn-g">&#128228; Enviar Prestação</button></div>' +
+      '<div id="ffv2c-res" style="margin-top:8px;"></div>' +
+    '</div>';
+    document.getElementById('ffv2-pane').innerHTML = h;
+    ffv2St_().carregado['c_registrar'] = h;
+
+  } else if (aba === 'pendencias') {
+    document.getElementById('ffv2-pane').innerHTML = ffv2Skel_(2);
+    var cpfPend = (ffv2St_().ctx||{}).cpf||'';
+    google.script.run
+      .withSuccessHandler(function(r) {
+        var itens = r.itens||[];
+        var rows = itens.map(function(p){
+          return {Data:p.criadoEm||'',Valor:finFlashV2FmtMoeda_(p.VALOR||p.valor),Tipo:p.tipo||'',Severidade:p.SEVERIDADE||p.severidade||'',Status:p.status,
+            '_html_Status':ffv2Badge_(p.status),'_html_Severidade':ffv2Badge_(p.SEVERIDADE||p.severidade)};
+        });
+        var alerta = rows.length
+          ? '<div class="ffv2-msg ffv2-msg-er">&#9888; Você possui <strong>'+rows.length+'</strong> pendência(s) em aberto. Regularize enviando o comprovante ou justificativa.</div>'
+          : '<div class="ffv2-msg ffv2-msg-ok">&#10003; Nenhuma pendência em aberto!</div>';
+        var h = '<p class="ffv2-section-title">&#9888; Minhas Pendências</p>'+alerta+
+          ffv2Tabela_(['Data','Valor','Tipo','Severidade','Status'],rows,'Você não possui pendências no momento.');
+        document.getElementById('ffv2-pane').innerHTML = h;
+        ffv2St_().carregado['c_pendencias'] = h;
+      })
+      .withFailureHandler(function(e){ document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>'; })
+      .FIN_FLASH_V2_BUSCAR_PENDENCIAS_DEV({cpf:cpfPend,limite:30});
+
+  } else if (aba === 'comprovantes') {
+    document.getElementById('ffv2-pane').innerHTML = ffv2Skel_(3);
+    var cpfComp = (ffv2St_().ctx||{}).cpf||'';
+    google.script.run
+      .withSuccessHandler(function(r) {
+        var movs = (r.movimentacoes||[]);
+        var rows = movs.map(function(m){
+          return {Data:m.data,Valor:finFlashV2FmtMoeda_(m.valor),Categoria:m.categoria||'—',
+            Comprovante:m.comprovante?'&#10003; Enviado':'&#10007; Ausente',
+            Status:m.status,'_html_Status':ffv2Badge_(m.status),
+            '_html_Comprovante':m.comprovante?'<span style="color:#16a34a;font-weight:700;">&#10003; Enviado</span>':'<span style="color:#dc2626;font-weight:700;">&#10007; Ausente</span>'};
+        });
+        var h = '<p class="ffv2-section-title">&#128248; Meus Comprovantes ('+rows.length+')</p>'+
+          '<div class="ffv2-msg ffv2-msg-in">Comprovantes dos seus gastos registrados no Cartão Flash.</div>'+
+          ffv2Tabela_(['Data','Valor','Categoria','Comprovante','Status'],rows,'Nenhum gasto registrado ainda.');
+        document.getElementById('ffv2-pane').innerHTML = h;
+        ffv2St_().carregado['c_comprovantes'] = h;
+      })
+      .withFailureHandler(function(e){ document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>'; })
+      .FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV({cpf:cpfComp,tipo:'gastos',limite:50});
+
+  } else if (aba === 'termo') {
+    var h = '<div class="ffv2-card">' +
+      '<p class="ffv2-section-title">&#128220; Termo de Uso — Cartão Flash</p>' +
+      '<div class="ffv2-msg ffv2-msg-in">Para utilizar o Cartão Flash é necessário ler e aceitar os termos de uso. O aceite fica registrado com data e CPF para fins de auditoria.</div>' +
+      '<div id="finFlashV2TermoTexto" style="margin:12px 0;"></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
+        '<button onclick="finFlashV2CarregarTermo_()" class="ffv2-btn ffv2-btn-p">&#128065; Ver Termo de Uso</button>' +
+        '<button onclick="finFlashV2AceitarTermo_()" class="ffv2-btn ffv2-btn-g">&#10003; Li e Aceito o Termo</button>' +
+      '</div>' +
+      '<div id="finFlashV2TermoResultado" style="margin-top:8px;"></div>' +
+    '</div>';
+    document.getElementById('ffv2-pane').innerHTML = h;
+    ffv2St_().carregado['c_termo'] = h;
+
+  } else if (aba === 'manual') {
+    document.getElementById('ffv2-pane').innerHTML = ffv2Skel_(2);
+    ffv2FetchManual_('COLABORADOR');
+  }
+}
+
+// ══ PORTAL FINANCEIRO (11 abas) ═══════════════════════════════════════════════
+
+function ffv2RenderPortalF_(ctx) {
+  try {
+    ffv2St_().perfil = 'FINANCEIRO';
+    var hdrBox = document.getElementById('ffv2-hdr-box');
+    if (hdrBox) hdrBox.innerHTML =
+      '<div class="ffv2-hdr">' +
+        '<div><h2>&#128188; Painel Financeiro &#8212; Cart&#227;o Flash</h2>' +
+          '<p style="margin:2px 0 0;font-size:11px;opacity:.7;">&#193;rea restrita &#8212; perfil Financeiro</p></div>' +
+        '<span class="ffv2-badge-p" style="background:#bfdbfe;color:#1e40af;border-color:#93c5fd;">&#9679; Financeiro</span>' +
+      '</div>';
+    var kpiBox = document.getElementById('ffv2-kpi-box');
+    if (kpiBox) {
+      kpiBox.style.display = 'block';
+      kpiBox.innerHTML = '<div class="ffv2-kpi-row" id="ffv2-kpis">'+ffv2Skel_(1)+'</div>';
+    }
+    // CHAMADA ÚNICA: lê 3 abas (CONTAS, PENDENCIAS, CARTOES) e entrega KPIs + cards.
+    // Substitui as duas chamadas pesadas anteriores (7 abas + 5 abas) por uma leve.
+    var t0 = Date.now();
+    google.script.run
+      .withSuccessHandler(function(r) {
+        window.__ffv2PerfDash = Date.now() - t0;
+        var kpiEl = document.getElementById('ffv2-kpis');
+        if (kpiEl) {
+          var d = r.dados || {};
+          kpiEl.innerHTML =
+            ffv2KpiCard_('Pendências', d.totalPendencias||0, '#ef4444') +
+            ffv2KpiCard_('Colaboradores', d.totalColaboradores||0, '#22c55e') +
+            ffv2KpiCard_('Cartões Ativos', d.totalCartoes||0, '#3b82f6') +
+            ffv2KpiCard_('Alertas Críticos', d.alertasCriticos||0, '#f59e0b');
+        }
+        ffv2St_().dashboardLeve = r;
+        ffv2St_().dashboardTs   = Date.now();
+        ffv2NavF_(ffv2St_().abaF || 'dashboard');
+      })
+      .withFailureHandler(function(e) {
+        var kpiEl = document.getElementById('ffv2-kpis');
+        if (kpiEl) kpiEl.innerHTML = '<span style="font-size:11px;color:#ef4444;">Erro ao carregar KPIs</span>';
+        ffv2NavF_(ffv2St_().abaF || 'dashboard');
+      })
+      .FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV();
+  } catch(ex) {
+    ffv2ErroRender_(ex.message || String(ex));
+  }
+}
+
+function ffv2CarregarKpis_() {
+  // Mantido por compatibilidade — use FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV via ffv2RenderPortalF_.
+  var kpiEl = document.getElementById('ffv2-kpis');
+  if (!kpiEl) return;
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var d = r.dados||{};
+      kpiEl.innerHTML =
+        ffv2KpiCard_('Pendências', d.totalPendencias||0, '#ef4444') +
+        ffv2KpiCard_('Colaboradores', d.totalColaboradores||0, '#22c55e') +
+        ffv2KpiCard_('Cartões Ativos', d.totalCartoes||0, '#3b82f6') +
+        ffv2KpiCard_('Alertas Críticos', d.alertasCriticos||0, '#f59e0b');
+    })
+    .withFailureHandler(function(){ kpiEl.innerHTML='<span style="font-size:11px;color:#ef4444;">Erro ao carregar KPIs</span>'; })
+    .FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV();
+}
+
+function ffv2NavF_(aba) {
+  ffv2St_().abaF = aba;
+  var todas = ['dashboard','colaboradores','importar','conferencia','extrato_cpf','pendencias','alertas','documentos','termos','auditoria','manual'];
+  todas.forEach(function(a) {
+    var el = document.getElementById('ffv2-nf-'+a);
+    if (el) el.className = a===aba?'ativa':'';
+  });
+  var pane = document.getElementById('ffv2-pane');
+  if (ffv2St_().carregado['f_'+aba]) { pane.innerHTML = ffv2St_().carregado['f_'+aba]; return; }
+  pane.innerHTML = ffv2Skel_(3);
+  ffv2LoadF_(aba);
+}
+
+function ffv2LoadF_(aba) {
+  if (aba === 'dashboard')     ffv2LoadDashboard_();
+  else if (aba === 'colaboradores') ffv2LoadColaboradores_();
+  else if (aba === 'importar') ffv2LoadImportar_();
+  else if (aba === 'conferencia') ffv2LoadConferencia_();
+  else if (aba === 'extrato_cpf') ffv2LoadExtratoCpf_();
+  else if (aba === 'pendencias') ffv2LoadPendenciasF_();
+  else if (aba === 'alertas')  ffv2LoadAlertas_();
+  else if (aba === 'documentos') ffv2LoadDocumentos_();
+  else if (aba === 'termos')   ffv2LoadTermos_();
+  else if (aba === 'auditoria') ffv2LoadAuditoria_();
+  else if (aba === 'manual')   ffv2FetchManual_('FINANCEIRO');
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+function ffv2LoadDashboard_() {
+  var st = ffv2St_();
+  // Usa dados já carregados durante ffv2RenderPortalF_ (cache 3 min).
+  if (st.dashboardLeve && st.dashboardTs && (Date.now() - st.dashboardTs < 180000)) {
+    ffv2RenderDashboardCards_(st.dashboardLeve);
+    return;
+  }
+  // Recarrega se cache expirado ou ausente.
+  var pane = document.getElementById('ffv2-pane');
+  if (pane) pane.innerHTML = ffv2Skel_(3);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      ffv2St_().dashboardLeve = r;
+      ffv2St_().dashboardTs   = Date.now();
+      ffv2RenderDashboardCards_(r);
+    })
+    .withFailureHandler(function(e) {
+      if (pane) pane.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';
+    })
+    .FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV();
+}
+
+function ffv2RenderDashboardCards_(r) {
+  var cols = (r.colaboradores||[]);
+  var sitCor = {
+    'JUSTIFICADO':'#22c55e','BLOQUEADO_POR_PENDENCIA':'#dc2626',
+    'VALOR_DIVERGENTE':'#ea580c','PENDENTE_DE_COMPROVANTE':'#f59e0b',
+    'PENDENTE_DE_JUSTIFICATIVA':'#3b82f6'
+  };
+  var cardsH = '';
+  if (!cols.length) {
+    cardsH = '<div class="ffv2-msg ffv2-msg-in">Nenhum colaborador cadastrado ou com movimentação registrada.</div>';
+  } else {
+    cardsH = '<div class="ffv2-colaboradores-grid">';
+    cols.forEach(function(c) {
+      var cor = sitCor[c.situacao] || '#94a3b8';
+      cardsH += '<div class="ffv2-sit-card" style="border-left:4px solid '+cor+';">'+
+        '<h4>'+finFlashV2Escape_(c.nome||c.cpf||'—')+'</h4>'+
+        '<span class="ffv2-sit-meta">CPF: '+finFlashV2Escape_(c.cpf||'—')+'</span>'+
+        '<span class="ffv2-sit-meta">Pendências: <strong style="color:#ef4444;">'+(c.qtdPendencias||0)+'</strong></span>'+
+        ffv2Badge_(c.situacao||'—')+
+        '</div>';
+    });
+    cardsH += '</div>';
+  }
+  var h =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
+      '<p class="ffv2-section-title" style="margin:0;">&#128200; Dashboard &#8212; Situação dos Colaboradores</p>' +
+      '<button onclick="ffv2AtualizarDashboard_()" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#8635; Atualizar</button>' +
+    '</div>' +
+    '<div class="ffv2-msg ffv2-msg-in" style="margin-bottom:10px;">DEV — AMBIENTE_TESTE=SIM. Resumo rápido. Para saldo completo, use a aba Extrato por Colaborador.</div>' +
+    cardsH;
+  var pane = document.getElementById('ffv2-pane');
+  if (pane) pane.innerHTML = h;
+  ffv2St_().carregado['f_dashboard'] = h;
+}
+
+function ffv2AtualizarDashboard_() {
+  var st = ffv2St_();
+  delete st.carregado['f_dashboard'];
+  st.dashboardLeve = null;
+  st.dashboardTs   = null;
+  var kpiEl = document.getElementById('ffv2-kpis');
+  if (kpiEl) kpiEl.innerHTML = ffv2Skel_(1);
+  ffv2LoadDashboard_();
+}
+
+// ── Colaboradores e Cartões ───────────────────────────────────────────────────
+
+function ffv2LoadColaboradores_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var itens = r.itens||[];
+      var rows = itens.map(function(c) {
+        return {
+          Nome:c.nome, CPF:c.cpf, Email:c.email||'—', Perfil:c.perfil, Status:c.status,
+          Cartões:c.totalCartoes||0,
+          '_html_Status':ffv2Badge_(c.status),
+          '_html_Ações':'<button onclick="ffv2AbrirGerenciarCartoes_(\''+finFlashV2Escape_(c.cpf)+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 7px;margin-right:4px;">&#128179; Cartões</button>'+
+            '<button onclick="ffv2InativarColaborador_(\''+finFlashV2Escape_(c.id||c.cpf)+'\')" class="ffv2-btn ffv2-btn-r" style="font-size:10px;padding:3px 7px;">&#10007; Inativar</button>'
+        };
+      });
+      var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+        '<p class="ffv2-section-title" style="margin:0;">&#128101; Colaboradores e Cartões ('+rows.length+')</p>' +
+        '<button onclick="ffv2AbrirCadastro_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">+ Cadastrar</button>' +
+      '</div>' +
+      ffv2Tabela_(['Nome','CPF','Email','Perfil','Status','Cartões','Ações'],rows,'Nenhum colaborador cadastrado.') +
+      '<div id="ffv2-cadastro-form" style="margin-top:14px;display:none;">' +
+        '<div class="ffv2-card"><p class="ffv2-section-title">Novo Colaborador</p>' +
+        '<div class="ffv2-row2">' +
+          '<div><label class="ffv2-lbl">Nome completo</label><input id="ffv2f-nome" class="ffv2-inp" placeholder="Nome"></div>' +
+          '<div><label class="ffv2-lbl">CPF</label><input id="ffv2f-cpf" class="ffv2-inp" placeholder="00000000000"></div>' +
+          '<div><label class="ffv2-lbl">E-mail</label><input id="ffv2f-email" class="ffv2-inp" type="email" placeholder="email@empresa.com"></div>' +
+          '<div><label class="ffv2-lbl">WhatsApp</label><input id="ffv2f-wa" class="ffv2-inp" placeholder="11999999999"></div>' +
+          '<div><label class="ffv2-lbl">Perfil</label><select id="ffv2f-perfil" class="ffv2-inp"><option value="COLABORADOR">Colaborador</option><option value="FINANCEIRO">Financeiro</option></select></div>' +
+        '</div>' +
+        '<div style="margin-top:10px;display:flex;gap:8px;">' +
+          '<button onclick="ffv2SalvarColaborador_()" class="ffv2-btn ffv2-btn-g">&#10003; Salvar</button>' +
+          '<button onclick="document.getElementById(\'ffv2-cadastro-form\').style.display=\'none\'" class="ffv2-btn ffv2-btn-s">Cancelar</button>' +
+        '</div>' +
+        '<div id="ffv2f-res" style="margin-top:8px;"></div></div>' +
+      '</div>' +
+      '<div id="ffv2-cartoes-panel" style="margin-top:14px;display:none;"></div>';
+      document.getElementById('ffv2-pane').innerHTML = h;
+      ffv2St_().carregado['f_colaboradores'] = h;
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_COLABORADORES_CARTOES_DEV({});
+}
+
+function ffv2AbrirCadastro_() {
+  var el = document.getElementById('ffv2-cadastro-form');
+  if (el) el.style.display = el.style.display==='none'?'block':'none';
+}
+
+function ffv2SalvarColaborador_() {
+  var payload = {
+    nome: document.getElementById('ffv2f-nome').value,
+    cpf:  document.getElementById('ffv2f-cpf').value,
+    email:document.getElementById('ffv2f-email').value,
+    whatsapp:document.getElementById('ffv2f-wa').value,
+    perfil:document.getElementById('ffv2f-perfil').value
+  };
+  if (!payload.nome || !payload.cpf) { document.getElementById('ffv2f-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">Nome e CPF são obrigatórios.</div>'; return; }
+  document.getElementById('ffv2f-res').innerHTML='<div class="ffv2-msg ffv2-msg-in">Salvando...</div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r.ok) {
+        document.getElementById('ffv2f-res').innerHTML='<div class="ffv2-msg ffv2-msg-ok">&#10003; Colaborador cadastrado! ID: '+finFlashV2Escape_(r.id||'')+'</div>';
+        delete ffv2St_().carregado['f_colaboradores'];
+      } else {
+        document.getElementById('ffv2f-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      }
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2f-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_CADASTRAR_COLABORADOR_DEV(payload);
+}
+
+// ── Importar Extrato Flash — V2.11.1 HOTFIX UPLOAD ────────────────────────────
+
+function ffv2LoadImportar_() {
+  window.__ffv2Extrato = null;
+  var h = '<p class="ffv2-section-title">&#128229; Importar Extrato Flash</p>' +
+    '<div class="ffv2-msg ffv2-msg-in" style="margin-bottom:10px;"><strong>Instruções:</strong> Acesse a plataforma Flash &gt; Relatórios &gt; Extrato por período, faça download em CSV/XLSX e siga as etapas abaixo.</div>' +
+
+    // ETAPA 0 — Colaborador
+    '<div class="ffv2-card">' +
+      '<p class="ffv2-section-title">&#128100; Etapa 0 &mdash; Selecionar colaborador *</p>' +
+      '<div class="ffv2-msg ffv2-msg-av" style="margin-bottom:8px;font-size:11px;">Selecione o colaborador antes de escolher o arquivo. O CPF será vinculado a todas as linhas importadas.</div>' +
+      '<div id="ffv2i-colab-sel"><div class="ffv2-msg ffv2-msg-in" style="font-size:11px;">Carregando colaboradores...</div></div>' +
+    '</div>' +
+
+    // ETAPA 1 — Período
+    '<div class="ffv2-card" style="margin-top:10px;">' +
+      '<p class="ffv2-section-title">&#128197; Etapa 1 &mdash; Selecionar período</p>' +
+      '<div class="ffv2-row2">' +
+        '<div><label class="ffv2-lbl">Período início *</label><input id="ffv2i-ini" class="ffv2-inp" type="date"></div>' +
+        '<div><label class="ffv2-lbl">Período fim *</label><input id="ffv2i-fim" class="ffv2-inp" type="date"></div>' +
+      '</div>' +
+    '</div>' +
+
+    // ETAPA 2 — Arquivo
+    '<div class="ffv2-card" style="margin-top:10px;">' +
+      '<p class="ffv2-section-title">&#128196; Etapa 2 &mdash; Selecionar arquivo do extrato Flash *</p>' +
+      '<div class="ffv2-msg ffv2-msg-av" style="margin-bottom:10px;">Baixe o extrato na plataforma Flash e envie aqui antes de pré-visualizar. Formatos aceitos: <strong>.xlsx, .xls, .csv</strong></div>' +
+      '<input type="file" id="ffv2i-arquivo" accept=".xlsx,.xls,.csv" style="display:none;" onchange="ffv2ArquivoExtratoSelecionado_()">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+        '<button onclick="document.getElementById(\'ffv2i-arquivo\').click()" class="ffv2-btn ffv2-btn-p">&#128196; Selecionar Arquivo</button>' +
+        '<button onclick="ffv2LimparArquivoExtrato_()" class="ffv2-btn ffv2-btn-s">&#10007; Limpar</button>' +
+      '</div>' +
+      '<div id="ffv2i-arquivo-info" style="display:none;" class="ffv2-msg ffv2-msg-ok"></div>' +
+    '</div>' +
+
+    // ETAPA 3 — Pré-visualizar
+    '<div class="ffv2-card" style="margin-top:10px;">' +
+      '<p class="ffv2-section-title">&#128269; Etapa 3 &mdash; Pré-visualizar extrato</p>' +
+      '<button onclick="ffv2PreviaExtrato_()" class="ffv2-btn ffv2-btn-p">&#128269; Pré-visualizar Extrato</button>' +
+      '<div id="ffv2i-preview" style="margin-top:10px;"></div>' +
+    '</div>' +
+
+    // Lotes importados (carregado sob demanda)
+    '<div class="ffv2-card" style="margin-top:12px;">' +
+      '<p class="ffv2-section-title">&#128195; Lotes importados</p>' +
+      '<div id="ffv2i-lotes"><div class="ffv2-msg ffv2-msg-in" style="font-size:11px;">Clique em <strong>Ver Lotes</strong> para listar importações anteriores.</div></div>' +
+      '<button onclick="ffv2CarregarLotes_()" class="ffv2-btn ffv2-btn-s" style="font-size:11px;margin-top:6px;">&#128195; Ver Lotes Importados</button>' +
+    '</div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+  ffv2LoadImportarColaboradores_();
+}
+
+function ffv2LoadImportarColaboradores_() {
+  var el = document.getElementById('ffv2i-colab-sel');
+  if (!el) return;
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r.ok || !r.colaboradores || !r.colaboradores.length) {
+        el.innerHTML = '<div class="ffv2-msg ffv2-msg-er">Nenhum colaborador ativo cadastrado. Cadastre na aba Colaboradores antes de importar.</div>';
+        return;
+      }
+      var opts = '<option value="">-- Selecione o colaborador --</option>';
+      r.colaboradores.forEach(function(c) {
+        var cartStr = (c.cartoes||[]).map(function(k){ return k.tipo+' Final '+k.final; }).join(', ');
+        opts += '<option value="'+finFlashV2Escape_(c.cpf)+'">'+finFlashV2Escape_(c.nome)+
+          ' ('+finFlashV2Escape_(c.cpf)+')'+(cartStr?' — '+finFlashV2Escape_(cartStr):'')+'</option>';
+      });
+      el.innerHTML = '<select id="ffv2i-colabCpf" class="ffv2-inp" style="margin-bottom:6px;" onchange="ffv2OnColabSelecionado_(this)">'+opts+'</select>'+
+        '<div id="ffv2i-colab-info" style="font-size:11px;color:#475569;min-height:16px;"></div>';
+    })
+    .withFailureHandler(function(e) {
+      var el2 = document.getElementById('ffv2i-colab-sel');
+      if (el2) el2.innerHTML = '<div class="ffv2-msg ffv2-msg-er">Erro ao carregar colaboradores: '+finFlashV2Escape_(e.message||String(e))+'</div>';
+    })
+    .FIN_FLASH_V2_LISTAR_COLABORADORES_PARA_IMPORTACAO_DEV();
+}
+
+function ffv2OnColabSelecionado_(sel) {
+  var info = document.getElementById('ffv2i-colab-info');
+  if (!info) return;
+  if (!sel || !sel.value) { info.textContent = ''; return; }
+  var opt = sel.options[sel.selectedIndex];
+  info.innerHTML = '&#10003; Selecionado: <strong>'+finFlashV2Escape_(opt.text)+'</strong>';
+}
+
+function ffv2ArquivoExtratoSelecionado_() {
+  var inp = document.getElementById('ffv2i-arquivo');
+  var info = document.getElementById('ffv2i-arquivo-info');
+  if (!inp || !inp.files || !inp.files[0]) { if (info) info.style.display = 'none'; return; }
+  var f = inp.files[0];
+  var kb = f.size > 1048576 ? (f.size/1048576).toFixed(2)+' MB' : (f.size/1024).toFixed(1)+' KB';
+  if (info) {
+    info.style.display = 'block';
+    info.innerHTML = '&#10003; <strong>'+finFlashV2Escape_(f.name)+'</strong> &nbsp;|&nbsp; '+finFlashV2Escape_(kb);
+  }
+}
+
+function ffv2LimparArquivoExtrato_() {
+  var inp = document.getElementById('ffv2i-arquivo');
+  if (inp) inp.value = '';
+  window.__ffv2Extrato = null;
+  var info = document.getElementById('ffv2i-arquivo-info');
+  if (info) info.style.display = 'none';
+  var prev = document.getElementById('ffv2i-preview');
+  if (prev) prev.innerHTML = '';
+}
+
+function ffv2PreviaExtrato_() {
+  var ini = (document.getElementById('ffv2i-ini')||{}).value||'';
+  var fim = (document.getElementById('ffv2i-fim')||{}).value||'';
+  var cpfColaborador = (document.getElementById('ffv2i-colabCpf')||{}).value||'';
+  var inp = document.getElementById('ffv2i-arquivo');
+  var prevEl = document.getElementById('ffv2i-preview');
+
+  if (!cpfColaborador) {
+    if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">&#9888; Selecione o colaborador na Etapa 0 antes de pré-visualizar.</div>';
+    return;
+  }
+  if (!ini || !fim) {
+    if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">&#9888; Preencha o período início e fim antes de pré-visualizar.</div>';
+    return;
+  }
+  if (!inp || !inp.files || !inp.files[0]) {
+    if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">&#9888; Selecione o arquivo do extrato Flash antes de pré-visualizar.</div>';
+    return;
+  }
+  if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-in">Lendo arquivo e enviando para validação...</div>';
+  var f = inp.files[0];
+  finFlashV2ArquivoParaBase64_(f, function(b64) {
+    if (!b64) {
+      if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">Erro ao ler o arquivo. Tente novamente.</div>';
+      return;
+    }
+    var payload = { periodoInicio:ini, periodoFim:fim, cpfColaborador:cpfColaborador, arquivo:{ nome:f.name, tamanho:f.size, base64:b64 } };
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (!r.ok) {
+          if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+          return;
+        }
+        var p = r.preview || {};
+        window.__ffv2Extrato = { chavePrevia:r.chavePrevia, nome:f.name, ini:ini, fim:fim, linhasReais:p.linhasReais||[] };
+        var colunas = (p.colunasIdentificadas||[]).join(', ');
+        var statusObj = p.status || {};
+        var statusLinhas = Object.keys(statusObj).map(function(k){ return k+': '+statusObj[k]; }).join(' | ');
+        var pessoasStr = (p.pessoasNomes||[]).join(', ');
+        var cartoesStr = (p.cartoes||[]).map(function(c){ return 'Final '+c; }).join(', ');
+        var h = '<div class="ffv2-card" style="background:#f0fdf4;border:1px solid #86efac;">' +
+          '<div class="ffv2-msg ffv2-msg-ok" style="margin-bottom:10px;font-size:11px;">&#9989; Prévia calculada diretamente do arquivo enviado.</div>' +
+          '<p class="ffv2-section-title" style="color:#166534;">&#128202; Prévia do Arquivo &mdash; Etapa 3</p>' +
+          '<div class="ffv2-row2">' +
+            '<div><span class="ffv2-lbl">Arquivo</span>'+finFlashV2Escape_(p.nomeArquivo||f.name)+'</div>' +
+            '<div><span class="ffv2-lbl">Período</span>'+finFlashV2Escape_(ini)+' a '+finFlashV2Escape_(fim)+'</div>' +
+            '<div><span class="ffv2-lbl">Total de linhas</span>'+finFlashV2Escape_(String(p.totalLinhas||0))+'</div>' +
+            '<div><span class="ffv2-lbl">Gastos identificados</span>'+finFlashV2Escape_(String(p.totalGastos||0))+'</div>' +
+            '<div><span class="ffv2-lbl">Recargas</span>'+finFlashV2Escape_(String(p.totalRecargas||0))+'</div>' +
+            '<div><span class="ffv2-lbl">Valor total gasto</span>'+finFlashV2FmtMoeda_(p.valorTotalGasto||0)+'</div>' +
+            '<div><span class="ffv2-lbl">Valor total recarregado</span>'+finFlashV2FmtMoeda_(p.valorTotalRecarregado||0)+'</div>' +
+            '<div><span class="ffv2-lbl">Colaboradores</span>'+finFlashV2Escape_(String(p.colaboradoresEncontrados||0))+
+              (pessoasStr ? ' <span style="font-size:10px;color:#475569;">('+finFlashV2Escape_(pessoasStr)+')</span>' : '')+'</div>' +
+            '<div><span class="ffv2-lbl">Cartões</span>'+finFlashV2Escape_(String(p.cartoesEncontrados||0))+
+              (cartoesStr ? ' <span style="font-size:10px;color:#475569;">('+finFlashV2Escape_(cartoesStr)+')</span>' : '')+'</div>' +
+            '<div><span class="ffv2-lbl">Linhas inválidas</span>'+finFlashV2Escape_(String(p.linhasInvalidas||0))+'</div>' +
+          '</div>' +
+          (colunas ? '<p style="font-size:11px;color:#475569;margin:8px 0 2px;">Colunas identificadas: <strong>'+finFlashV2Escape_(colunas)+'</strong></p>' : '') +
+          (statusLinhas ? '<p style="font-size:11px;color:#475569;margin:2px 0 8px;">Status encontrados: <strong>'+finFlashV2Escape_(statusLinhas)+'</strong></p>' : '') +
+          '<div class="ffv2-msg ffv2-msg-av" style="margin-top:8px;">'+finFlashV2Escape_(p.aviso||'Prévia validada. Confirme para importar.')+'</div>' +
+          '<input type="hidden" id="ffv2i-chave" value="'+finFlashV2Escape_(r.chavePrevia||'')+'">'+
+          '<div style="margin-top:12px;">' +
+            '<p class="ffv2-section-title">&#10003; Etapa 4 &mdash; Confirmar importação</p>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+              '<button onclick="ffv2ConfirmarImportacao_()" class="ffv2-btn ffv2-btn-g">&#10003; Confirmar Importação</button>' +
+              '<button onclick="ffv2LimparArquivoExtrato_();document.getElementById(\'ffv2i-preview\').innerHTML=\'\';" class="ffv2-btn ffv2-btn-s">Cancelar</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="ffv2i-conf-res" style="margin-top:8px;"></div>' +
+        '</div>';
+        if (prevEl) prevEl.innerHTML = h;
+      })
+      .withFailureHandler(function(e) {
+        if (prevEl) prevEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message||String(e))+'</div>';
+      })
+      .FIN_FLASH_V2_PREVISUALIZAR_ARQUIVO_EXTRATO_FLASH_DEV(payload);
+  });
+}
+
+function ffv2ConfirmarImportacao_() {
+  var ini            = (document.getElementById('ffv2i-ini')||{}).value||'';
+  var fim            = (document.getElementById('ffv2i-fim')||{}).value||'';
+  var chave          = (document.getElementById('ffv2i-chave')||{}).value||'';
+  var cpfColaborador = (document.getElementById('ffv2i-colabCpf')||{}).value||'';
+  var resEl = document.getElementById('ffv2i-conf-res');
+
+  if (!chave) {
+    if (resEl) resEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">Pré-visualize o arquivo antes de confirmar a importação.</div>';
+    return;
+  }
+  var extData = window.__ffv2Extrato || {};
+  var linhasReais = extData.linhasReais || [];
+  if (!linhasReais.length) {
+    if (resEl) resEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">&#9888; Pré-visualize o arquivo antes de confirmar. Linhas reais não encontradas.</div>';
+    return;
+  }
+  if (resEl) resEl.innerHTML = '<div class="ffv2-msg ffv2-msg-in">Importando lote ('+linhasReais.length+' linhas)...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r.ok) {
+        var loteIdSafe = finFlashV2Escape_(r.loteId||'');
+        if (resEl) resEl.innerHTML =
+          '<div class="ffv2-msg ffv2-msg-ok">&#10003; Importado! Lote: '+loteIdSafe+' &mdash; '+finFlashV2Escape_(String(r.totalImportado))+' linha(s).</div>' +
+          '<div style="margin-top:10px;">' +
+            '<p class="ffv2-section-title">&#9881; Etapa 5 &mdash; Conciliar Agora</p>' +
+            '<button onclick="ffv2ConciliarLote_(\''+loteIdSafe+'\')" class="ffv2-btn ffv2-btn-p">&#9881; Conciliar Agora</button>' +
+            '<div id="ffv2i-conc-res" style="margin-top:8px;"></div>' +
+          '</div>';
+        window.__ffv2Extrato = null;
+        ffv2CarregarLotes_();
+      } else {
+        if (resEl) resEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (resEl) resEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message||String(e))+'</div>';
+    })
+    .FIN_FLASH_V2_CONFIRMAR_IMPORTACAO_EXTRATO_FLASH_DEV({periodoInicio:ini, periodoFim:fim, chavePrevia:chave, cpfColaborador:cpfColaborador, linhas:linhasReais});
+}
+
+function ffv2ConciliarLote_(loteId) {
+  var concEl = document.getElementById('ffv2i-conc-res') || document.getElementById('ffv2-pane');
+  if (concEl) concEl.innerHTML = '<div class="ffv2-msg ffv2-msg-in">Conciliando lote...</div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var html = r.ok
+        ? '<div class="ffv2-msg ffv2-msg-ok">&#10003; Conciliação concluída: '+finFlashV2Escape_(String(r.conciliacoesCriadas))+' registro(s), '+finFlashV2Escape_(String(r.pendenciasCriadas))+' pendência(s) gerada(s).</div>'
+        : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if (r.ok) {
+        // Prévia inline da conciliação (ETAPA 5)
+        html +=
+          '<div class="ffv2-card" style="margin-top:10px;">' +
+            '<p class="ffv2-section-title">&#128202; Prévia da Conciliação</p>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' +
+              ffv2KpiCard_('Conciliados', r.conciliacoesCriadas||0, '#22c55e') +
+              ffv2KpiCard_('Pendências', r.pendenciasCriadas||0, '#ef4444') +
+            '</div>' +
+          '</div>' +
+          // ETAPA 6
+          '<div style="margin-top:10px;">' +
+            '<p class="ffv2-section-title">&#128196; Etapa 6 &mdash; Documento de Conciliação</p>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+              '<button onclick="ffv2GerarDocConciliacao_(\''+finFlashV2Escape_(loteId)+'\')" class="ffv2-btn ffv2-btn-p">&#128196; Gerar Relatório da Conciliação</button>' +
+            '</div>' +
+            '<div id="ffv2i-doc-res" style="margin-top:8px;"></div>' +
+          '</div>';
+      }
+      if (concEl) concEl.innerHTML = html;
+    })
+    .withFailureHandler(function(e) {
+      if (concEl) concEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';
+    })
+    .FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV({loteId:loteId});
+}
+
+function ffv2GerarDocConciliacao_(loteId) {
+  var docEl = document.getElementById('ffv2i-doc-res');
+  if (docEl) docEl.innerHTML = '<span style="font-size:11px;color:#3b82f6;">Gerando relatório...</span>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r.ok) {
+        if (docEl) docEl.innerHTML =
+          '<div class="ffv2-msg ffv2-msg-ok" style="font-size:11px;">&#10003; '+finFlashV2Escape_(r.documentoId||'')+'</div>' +
+          '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">' +
+            '<button onclick="ffv2VerPreviewA4Conc_(\''+finFlashV2Escape_(loteId)+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#128065; Visualizar A4</button>' +
+          '</div>';
+        ffv2Modal_('Relatório de Conciliação &mdash; Lote', r.htmlA4||'<p>Sem conteúdo.</p>');
+      } else {
+        if (docEl) docEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (docEl) docEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';
+    })
+    .FIN_FLASH_V2_GERAR_DOCUMENTO_CONCILIACAO_LOTE_DEV({loteId:loteId});
+}
+
+function ffv2VerPreviewA4Conc_(loteId) {
+  ffv2Modal_('Relatório de Conciliação &mdash; carregando&hellip;', '<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>');
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r.ok) {
+        var modal = document.getElementById('ffv2-modal');
+        if (modal) {
+          var bodyEl = modal.querySelector('div>div>div:last-child');
+          if (bodyEl) bodyEl.innerHTML = r.htmlA4||'<p>Sem conteúdo.</p>';
+        }
+      }
+    })
+    .withFailureHandler(function(e) { ffv2Modal_('Erro', finFlashV2Escape_(e.message)); })
+    .FIN_FLASH_V2_GERAR_DOCUMENTO_CONCILIACAO_LOTE_DEV({loteId:loteId});
+}
+
+function ffv2CarregarLotes_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var rows = (r.lotes||[]).map(function(l){
+        return {LoteID:l.loteId||'',ChaveLote:l.chaveLote||'',Linhas:l.totalLinhas,'Criado em':l.criadoEm||''};
+      });
+      var el=document.getElementById('ffv2i-lotes');
+      if(el) el.innerHTML=ffv2Tabela_(['LoteID','ChaveLote','Linhas','Criado em'],rows,'Nenhum lote importado ainda.');
+    })
+    .withFailureHandler(function(){})
+    .FIN_FLASH_V2_LISTAR_LOTES_IMPORTACAO_DEV({});
+}
+
+// ── Conferência de Gastos — V2.15C: linha a linha, sem ID manual ──────────────
+
+function ffv2LoadConferencia_() {
+  var h = '<p class="ffv2-section-title">&#128269; Conferência de Gastos</p>' +
+    '<p style="font-size:11px;color:#64748b;margin:0 0 8px;">Colaborador → CPF → Período → gastos listados linha a linha. Ações ficam na própria linha, sem digitar ID.</p>' +
+    '<div class="ffv2-filtro-bar">' +
+      '<label>CPF <input id="ffv2g-cpf" style="width:130px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;" placeholder="00000000000"></label>' +
+      '<label>Status <select id="ffv2g-status" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"><option value="">Todos</option><option>PENDENTE</option><option>CONCILIADO</option><option>AGUARDANDO</option><option>REPROVADO</option></select></label>' +
+      '<label>De <input id="ffv2g-ini" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
+      '<label>Até <input id="ffv2g-fim" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
+      '<button onclick="ffv2FiltrarConferencia_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">Filtrar</button>' +
+    '</div>' +
+    '<div id="ffv2g-res"><div class="ffv2-msg ffv2-msg-in">Preencha os filtros acima e clique em <strong>Filtrar</strong> para buscar registros.</div></div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+  // Não filtra automaticamente — usuário usa o botão Filtrar para buscar sob demanda.
+}
+
+function ffv2FiltrarConferencia_() {
+  var filtros = {
+    cpf:    (document.getElementById('ffv2g-cpf')||{}).value||'',
+    status: (document.getElementById('ffv2g-status')||{}).value||'',
+    periodoInicio: (document.getElementById('ffv2g-ini')||{}).value||'',
+    periodoFim:    (document.getElementById('ffv2g-fim')||{}).value||'',
+    limite: 100
+  };
+  if(!filtros.cpf) delete filtros.cpf; if(!filtros.status) delete filtros.status;
+  if(!filtros.periodoInicio) delete filtros.periodoInicio; if(!filtros.periodoFim) delete filtros.periodoFim;
+  var el = document.getElementById('ffv2g-res'); if(el) el.innerHTML=ffv2Skel_(2);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var porId = {};
+      (r.itens||[]).forEach(function(it){ porId[it.conciliacaoId] = it; });
+      ffv2St_().dados.conferenciaPorId = porId;
+      var rows = (r.itens||[]).map(function(it){
+        var acoes = (it.acoesLinha||[]).map(function(a){
+          if (a==='CONCILIAR_MANUALMENTE') return '<button class="ffv2-btn ffv2-btn-g" style="font-size:10px;padding:4px 8px;" onclick="ffv2AbrirAcaoLinha_(\''+it.conciliacaoId+'\',\'manual\')">Conciliar</button>';
+          if (a==='REPROVAR_COMPROVANTE')  return '<button class="ffv2-btn ffv2-btn-r" style="font-size:10px;padding:4px 8px;" onclick="ffv2AbrirAcaoLinha_(\''+it.conciliacaoId+'\',\'reprovar\')">Reprovar</button>';
+          if (a==='SOLICITAR_CORRECAO')    return '<button class="ffv2-btn ffv2-btn-o" style="font-size:10px;padding:4px 8px;" onclick="ffv2AbrirAcaoLinha_(\''+it.conciliacaoId+'\',\'correcao\')">Correção</button>';
+          if (a==='VER_COMPROVANTE')       return '<button class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:4px 8px;" onclick="ffv2VerComprovanteLinha_(\''+it.conciliacaoId+'\')">Comprovante</button>';
+          return '';
+        }).join(' ');
+        return {
+          Data: it.data||'—', Colaborador: it.colaboradorNome||it.cpfExibicao||'—', CPF: it.cpfExibicao||'—',
+          'Cartão': it.finalCartao ? ('final '+it.finalCartao) : '—',
+          Estabelecimento: it.estabelecimento||'—',
+          Valor: finFlashV2FmtMoeda_(it.valor),
+          'Conciliação': it.statusConciliacao, 'Prestação': it.statusPrestacao||'—', 'Pendência': it.statusPendencia||'—',
+          Comprovante: it.comprovanteId ? 'Sim' : 'Não',
+          'Ações': '',
+          '_html_Conciliação': ffv2Badge_(it.statusConciliacao),
+          '_html_Prestação': it.statusPrestacao ? ffv2Badge_(it.statusPrestacao) : '—',
+          '_html_Pendência': it.statusPendencia ? ffv2Badge_(it.statusPendencia) : '—',
+          '_html_Ações': acoes || '<span style="color:#94a3b8;font-size:10px;">—</span>'
+        };
+      });
+      var h = '<p style="font-size:11px;color:#64748b;margin-bottom:6px;">'+r.total+' registro(s) encontrado(s)</p>'+
+        ffv2Tabela_(['Data','Colaborador','CPF','Cartão','Estabelecimento','Valor','Conciliação','Prestação','Pendência','Comprovante','Ações'],rows,'Nenhum gasto encontrado com esses filtros.');
+      var el=document.getElementById('ffv2g-res'); if(el) el.innerHTML=h;
+    })
+    .withFailureHandler(function(e){var el=document.getElementById('ffv2g-res');if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros);
+}
+
+function ffv2AbrirAcaoLinha_(conciliacaoId, tipo) {
+  var item = (ffv2St_().dados.conferenciaPorId||{})[conciliacaoId];
+  if (!item) return;
+  var labels = { manual:'Conciliar Manualmente', reprovar:'Reprovar Comprovante', correcao:'Solicitar Correção' };
+  var html = '<p style="font-size:12px;color:#64748b;margin:0 0 10px;">Conciliação: '+finFlashV2Escape_(conciliacaoId)+' — '+finFlashV2Escape_(item.colaboradorNome||item.cpfExibicao||'')+'</p>'+
+    '<label class="ffv2-lbl">Motivo / Observação</label>'+
+    '<textarea id="ffv2gl-mot" class="ffv2-inp" rows="3" placeholder="Descreva o motivo..."></textarea>'+
+    '<div style="margin-top:10px;"><button class="ffv2-btn ffv2-btn-p" onclick="ffv2ConfirmarAcaoLinha_(\''+conciliacaoId+'\',\''+tipo+'\')">Confirmar</button></div>'+
+    '<div id="ffv2gl-res" style="margin-top:8px;"></div>';
+  ffv2Modal_(labels[tipo]||'Ação Financeira', html);
+}
+
+function ffv2ConfirmarAcaoLinha_(conciliacaoId, tipo) {
+  var mot = (document.getElementById('ffv2gl-mot')||{}).value||'';
+  var resEl = document.getElementById('ffv2gl-res');
+  if (!mot) { if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Preencha o motivo.</div>'; return; }
+  var fn = tipo==='manual'?'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV':
+           tipo==='reprovar'?'FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV':'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV';
+  if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Processando...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if (resEl) resEl.innerHTML = r.ok
+        ? '<div class="ffv2-msg ffv2-msg-ok">&#10003; Ação executada com sucesso.</div>'
+        : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if (r.ok) { ffv2FecharModal_(); ffv2FiltrarConferencia_(); }
+    })
+    .withFailureHandler(function(e){ if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>'; })
+    [fn]({conciliacaoId: conciliacaoId, motivo: mot});
+}
+
+function ffv2VerComprovanteLinha_(conciliacaoId) {
+  var item = (ffv2St_().dados.conferenciaPorId||{})[conciliacaoId];
+  if (!item) return;
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r.ok) { ffv2Modal_('Comprovante', '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>'); return; }
+      var p = r.preview;
+      var conteudo = '';
+      if (p.statusDisponibilidade==='ARQUIVO_DISPONIVEL' && p.tipo==='IMAGEM' && p.base64) {
+        conteudo = '<img src="data:'+p.mimeType+';base64,'+p.base64+'" style="max-width:100%;border-radius:8px;">';
+      } else if (p.statusDisponibilidade==='ARQUIVO_DISPONIVEL' && p.tipo==='PDF' && p.urlDrive) {
+        conteudo = '<a href="'+p.urlDrive+'" target="_blank" class="ffv2-btn ffv2-btn-p">&#128196; Abrir PDF no Drive</a>';
+      } else if (p.statusDisponibilidade==='MARCADOR_SEM_ARQUIVO') {
+        conteudo = '<div class="ffv2-msg ffv2-msg-av">&#128203; Comprovante registrado (ID: '+finFlashV2Escape_(p.comprovanteId||'—')+'), mas sem arquivo visual disponível.<br>'+finFlashV2Escape_(p.motivoIndisponivel||'')+'</div>';
+      } else {
+        conteudo = '<div class="ffv2-msg ffv2-msg-av">'+finFlashV2Escape_(p.motivoIndisponivel||'Nenhum comprovante enviado pelo colaborador para este gasto.')+'</div>';
+      }
+      if (p.prestacao) conteudo += '<div class="ffv2-sep"></div>'+
+        '<p class="ffv2-section-title">Dados da Prestação</p>'+
+        '<p style="font-size:12px;">Valor: '+finFlashV2FmtMoeda_(p.prestacao.valor)+'  |  Data: '+finFlashV2Escape_(p.prestacao.dataGasto||'—')+'  |  Categoria: '+finFlashV2Escape_(p.prestacao.categoria||'—')+'  |  Status: '+ffv2Badge_(p.prestacao.status)+'</p>'+
+        (p.prestacao.justificativa?'<p style="font-size:12px;color:#475569;">Justificativa: '+finFlashV2Escape_(p.prestacao.justificativa)+'</p>':'');
+      ffv2Modal_('Comprovante — '+finFlashV2Escape_(p.tipo), conteudo);
+    })
+    .withFailureHandler(function(e){ffv2Modal_('Erro',finFlashV2Escape_(e.message));})
+    .FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV({ prestacaoId: item.prestacaoId || '' });
+}
+
+// ── Extrato por Colaborador ───────────────────────────────────────────────────
+
+function ffv2LoadExtratoCpf_() {
+  var h = '<p class="ffv2-section-title">&#128196; Extrato por Colaborador</p>' +
+    '<div class="ffv2-filtro-bar">' +
+      '<label>CPF <input id="ffv2e-cpf" style="width:130px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;" placeholder="00000000000"></label>' +
+      '<label>De <input id="ffv2e-ini" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
+      '<label>Até <input id="ffv2e-fim" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
+      '<label>Tipo <select id="ffv2e-tipo" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"><option value="todos">Todos</option><option value="gastos">Gastos</option><option value="recargas">Recargas</option></select></label>' +
+      '<button onclick="ffv2BuscarExtratoCpf_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">Buscar</button>' +
+    '</div>' +
+    '<div id="ffv2e-res">'+ffv2Skel_(2)+'</div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+}
+
+function ffv2BuscarExtratoCpf_() {
+  var payload = {
+    cpf: (document.getElementById('ffv2e-cpf')||{}).value||'',
+    periodoInicio: (document.getElementById('ffv2e-ini')||{}).value||'',
+    periodoFim: (document.getElementById('ffv2e-fim')||{}).value||'',
+    tipo: (document.getElementById('ffv2e-tipo')||{}).value||'todos',
+    limite: 50
+  };
+  if (!payload.cpf) { document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o CPF.</div>'; return; }
+  document.getElementById('ffv2e-res').innerHTML=ffv2Skel_(2);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (!r.ok) { document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>'; return; }
+      var sum = r.resumo||{};
+      var kpis = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'+
+        ffv2KpiCard_('Recarregado',finFlashV2FmtMoeda_(sum.totalRecarregado||0),'#22c55e')+
+        ffv2KpiCard_('Gasto',finFlashV2FmtMoeda_(sum.totalGasto||0),'#ef4444')+
+        ffv2KpiCard_('Pendente',finFlashV2FmtMoeda_(sum.totalPendente||0),'#f59e0b')+
+        ffv2KpiCard_('Saldo Estimado',finFlashV2FmtMoeda_(sum.saldoEstimado||0),'#3b82f6')+
+        '</div>';
+      var rows = (r.movimentacoes||[]).map(function(m){
+        return {Tipo:m.tipo,Data:m.data,Valor:finFlashV2FmtMoeda_(m.valor),Categoria:m.categoria,Status:m.status,Comprovante:m.comprovante?'Sim':'—','_html_Status':ffv2Badge_(m.status)};
+      });
+      var gerarBtn = '<div style="margin-top:10px;"><button onclick="ffv2GerarExtratoCpfA4_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">&#128196; Gerar Extrato A4</button> <span id="ffv2e-a4-res"></span></div>';
+      document.getElementById('ffv2e-res').innerHTML = kpis+ffv2Tabela_(['Tipo','Data','Valor','Categoria','Status','Comprovante'],rows,'Nenhuma movimentação encontrada.')+gerarBtn;
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV(payload);
+}
+
+function ffv2GerarExtratoCpfA4_() {
+  var payload = {
+    cpf: (document.getElementById('ffv2e-cpf')||{}).value||'',
+    periodoInicio: (document.getElementById('ffv2e-ini')||{}).value||'',
+    periodoFim: (document.getElementById('ffv2e-fim')||{}).value||''
+  };
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var el=document.getElementById('ffv2e-a4-res');
+      if(r.ok) {
+        if(el) el.innerHTML='<span class="ffv2-msg ffv2-msg-ok" style="display:inline-block;">&#10003; Gerado!</span>';
+        ffv2Modal_('Extrato A4 — Preview',r.htmlA4||'<p>HTML não disponível.</p>');
+      } else {
+        if(el) el.innerHTML='<span class="ffv2-msg ffv2-msg-er" style="display:inline-block;">'+(r.bloqueios||[]).join(' ')+'</span>';
+      }
+    })
+    .withFailureHandler(function(e){var el=document.getElementById('ffv2e-a4-res');if(el)el.innerHTML='<span class="ffv2-msg ffv2-msg-er" style="display:inline-block;">'+finFlashV2Escape_(e.message)+'</span>';})
+    .FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV(payload);
+}
+
+// ── Pendências ────────────────────────────────────────────────────────────────
+
+function ffv2LoadPendenciasF_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var cols = r.colaboradores||[];
+      var sitCor={'BLOQUEADO_POR_PENDENCIA':'#dc2626','VALOR_DIVERGENTE':'#ea580c','PENDENTE_DE_COMPROVANTE':'#f59e0b','PENDENTE_DE_JUSTIFICATIVA':'#3b82f6','JUSTIFICADO':'#22c55e'};
+      var resumoH = '<div class="ffv2-colaboradores-grid" style="margin-bottom:14px;">';
+      if (!cols.length) {
+        resumoH = '<div class="ffv2-msg ffv2-msg-ok">&#10003; Nenhuma pendência em aberto para colaboradores.</div>';
+      } else {
+        cols.forEach(function(c) {
+          var cor = sitCor[c.situacao]||'#94a3b8';
+          resumoH += '<div class="ffv2-sit-card" style="border-left:4px solid '+cor+';">'+
+            '<h4>'+finFlashV2Escape_(c.nome||c.cpf||'—')+'</h4>'+
+            '<span class="ffv2-sit-meta">CPF: '+finFlashV2Escape_(c.cpf||'—')+'</span>'+
+            '<span class="ffv2-sit-meta">Pendências: <strong style="color:#ef4444;">'+c.qtdPendencias+'</strong> | Valor: <strong>'+finFlashV2FmtMoeda_(c.totalValor||0)+'</strong></span>'+
+            '<span class="ffv2-sit-meta">Mais antiga: '+finFlashV2Escape_(c.pendenciaMaisAntiga||'—')+'</span>'+
+            ffv2Badge_(c.situacao||'—')+
+            '<p style="font-size:10px;color:#64748b;margin:4px 0 0;">'+finFlashV2Escape_(c.acaoRecomendada||'')+'</p>'+
+            '</div>';
+        });
+        resumoH += '</div>';
+      }
+      var detalheRows = cols.reduce(function(acc,c){
+        (c.pendencias||[]).forEach(function(p){
+          acc.push({CPF:c.cpf,Colaborador:c.nome||c.cpf,Valor:finFlashV2FmtMoeda_(p.VALOR||0),Tipo:p.TIPO||'',Severidade:p.SEVERIDADE||'',Status:p.STATUS||'','_html_Severidade':ffv2Badge_(p.SEVERIDADE),'_html_Status':ffv2Badge_(p.STATUS)});
+        }); return acc;
+      },[]);
+      var h = '<p class="ffv2-section-title">&#9888; Pendências — Resumo por Colaborador ('+cols.length+' colaborador(es), '+r.totalGeral+' total)</p>'+
+        resumoH+
+        (detalheRows.length?'<p class="ffv2-section-title">Lista de pendências</p>'+ffv2Tabela_(['CPF','Colaborador','Valor','Tipo','Severidade','Status'],detalheRows,'Sem detalhes.'):'');
+      document.getElementById('ffv2-pane').innerHTML = h;
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV({});
+}
+
+// ── Alertas e Cobranças ───────────────────────────────────────────────────────
+
+function ffv2LoadAlertas_() {
+  var h = '<p class="ffv2-section-title">&#128276; Alertas e Cobranças</p>' +
+    '<div class="ffv2-msg ffv2-msg-av">&#9888; Envio real BLOQUEADO nesta etapa. Apenas simulação autorizada.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">' +
+      '<button onclick="ffv2PrepararCobrancas_()" class="ffv2-btn ffv2-btn-o">&#128228; Preparar Cobranças do Dia</button>' +
+      '<button onclick="ffv2SimularEnvio_()" class="ffv2-btn ffv2-btn-s">&#127921; Simular Envio</button>' +
+      '<button onclick="ffv2AbrirConfigCobranca_()" class="ffv2-btn ffv2-btn-s">&#9881; Configurar Cobrança Diária</button>' +
+    '</div>' +
+    '<div id="ffv2a-config" style="display:none;margin-bottom:12px;"></div>' +
+    '<div id="ffv2a-res" style="margin-bottom:12px;"></div>' +
+    '<p class="ffv2-section-title">Alertas ativos</p>' +
+    '<div id="ffv2a-lista">'+ffv2Skel_(2)+'</div>' +
+    '<p class="ffv2-section-title" style="margin-top:14px;">Histórico de cobranças <button onclick="ffv2CarregarHistoricoCobrancas_()" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 8px;margin-left:8px;">Carregar</button></p>' +
+    '<div id="ffv2a-hist"></div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+  ffv2CarregarAlertas_();
+}
+
+function ffv2AbrirConfigCobranca_() {
+  var el = document.getElementById('ffv2a-config');
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  el.innerHTML = '<div class="ffv2-card"><p class="ffv2-section-title">&#9881; Configuração de Cobrança Diária</p>'+
+    '<div class="ffv2-row2">'+
+    '<div><label class="ffv2-lbl">Hora de envio (simulado)</label><input id="ffv2a-hora" class="ffv2-inp" type="time" value="09:00"></div>'+
+    '<div><label class="ffv2-lbl">Severidade mínima</label><select id="ffv2a-sev" class="ffv2-inp"><option value="NORMAL">Normal</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></div>'+
+    '</div>'+
+    '<div class="ffv2-msg ffv2-msg-av" style="margin-top:8px;">&#9888; Envio real de e-mail/WhatsApp permanece BLOQUEADO. Esta configuração é apenas para simulação.</div>'+
+    '<div style="margin-top:8px;display:flex;gap:8px;">'+
+    '<button onclick="ffv2SalvarConfigCobranca_()" class="ffv2-btn ffv2-btn-g">&#10003; Salvar Configuração</button>'+
+    '<button onclick="document.getElementById(\'ffv2a-config\').style.display=\'none\'" class="ffv2-btn ffv2-btn-s">Cancelar</button>'+
+    '</div><div id="ffv2a-config-res" style="margin-top:8px;"></div></div>';
+  el.style.display = 'block';
+}
+
+function ffv2SalvarConfigCobranca_() {
+  var hora = (document.getElementById('ffv2a-hora')||{}).value||'09:00';
+  var sev  = (document.getElementById('ffv2a-sev')||{}).value||'NORMAL';
+  var resEl = document.getElementById('ffv2a-config-res');
+  if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Salvando configuração...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(resEl) resEl.innerHTML=r.ok
+        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; Configuração salva.</div>'
+        :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+    })
+    .withFailureHandler(function(e){if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_CONFIGURAR_COBRANCA_DIARIA_DEV({horaEnvio:hora,severidadeMinima:sev,ambienteTeste:'SIM'});
+}
+
+function ffv2CarregarHistoricoCobrancas_() {
+  var el = document.getElementById('ffv2a-hist');
+  if(el) el.innerHTML=ffv2Skel_(2);
+  google.script.run
+    .withSuccessHandler(function(r){
+      var rows=(r.itens||[]).map(function(a){
+        return {CPF:a.cpf||'',Tipo:a.tipo||'',Status:a.status||'',Mensagem:(a.mensagem||'').substr(0,60),'Criado em':a.criadoEm||'','Envio Real':a.envioReal||'NAO','_html_Status':ffv2Badge_(a.status),'_html_Envio Real':ffv2Badge_(a.envioReal||'NAO')};
+      });
+      if(el) el.innerHTML=ffv2Tabela_(['CPF','Tipo','Status','Mensagem','Criado em','Envio Real'],rows,'Nenhum histórico de cobrança registrado.');
+    })
+    .withFailureHandler(function(e){if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_HISTORICO_COBRANCAS_DEV({limite:30});
+}
+
+function ffv2CarregarAlertas_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var rows=(r.itens||[]).map(function(a){
+        return {ID:a.id,CPF:a.cpf,Tipo:a.tipo,Severidade:a.severidade,Status:a.status,'Envio Real':a.envioReal||'NAO','E-mail':a.canalEmail?'Sim':'Não','WhatsApp':a.canalWhatsapp?'Sim':'Não','Criado em':a.criadoEm||'','_html_Status':ffv2Badge_(a.status),'_html_Envio Real':ffv2Badge_(a.envioReal||'NAO')};
+      });
+      var el=document.getElementById('ffv2a-lista');
+      if(el) el.innerHTML=ffv2Tabela_(['CPF','Tipo','Severidade','Status','Envio Real','E-mail','WhatsApp','Criado em'],rows,'Nenhum alerta registrado.');
+    })
+    .withFailureHandler(function(){})
+    .FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV({});
+}
+
+function ffv2PrepararCobrancas_() {
+  document.getElementById('ffv2a-res').innerHTML='<div class="ffv2-msg ffv2-msg-in">Preparando cobranças...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      document.getElementById('ffv2a-res').innerHTML=r.ok
+        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; '+r.totalPreparado+' cobrança(s) preparada(s). '+finFlashV2Escape_((r.avisos||[]).join(' '))+'</div>'
+        :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if(r.ok) ffv2CarregarAlertas_();
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2a-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_PREPARAR_COBRANCAS_DIARIAS_DEV({});
+}
+
+function ffv2SimularEnvio_() {
+  document.getElementById('ffv2a-res').innerHTML='<div class="ffv2-msg ffv2-msg-in">Simulando envio...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      document.getElementById('ffv2a-res').innerHTML=r.ok
+        ?'<div class="ffv2-msg ffv2-msg-av">&#9888; Simulação: '+r.enviados+' mensagem(ns). '+finFlashV2Escape_((r.avisos||[]).join(' '))+'</div>'
+        :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2a-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_SIMULAR_ENVIO_COBRANCAS_DEV({});
+}
+
+// ── Documentos e Relatórios ───────────────────────────────────────────────────
+
+function ffv2LoadDocumentos_() {
+  var h = '<p class="ffv2-section-title">&#128196; Documentos e Relatórios</p>' +
+    '<div class="ffv2-row2" style="margin-bottom:14px;">' +
+      '<div class="ffv2-card"><p class="ffv2-section-title">Relatório Positivo</p><p style="font-size:12px;color:#475569;">Colaboradores sem pendências no período.</p>' +
+        '<button onclick="ffv2PreviewRel_(\'positivo\')" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#128065; Pré-visualizar</button> '+
+        '<button onclick="ffv2GerarRel_(\'positivo\')" class="ffv2-btn ffv2-btn-g" style="font-size:11px;">&#10003; Gerar</button>' +
+        '<div id="ffv2d-res-pos" style="margin-top:6px;"></div></div>' +
+      '<div class="ffv2-card"><p class="ffv2-section-title">Relatório Negativo</p><p style="font-size:12px;color:#475569;">Colaboradores com pendências identificadas.</p>' +
+        '<button onclick="ffv2PreviewRel_(\'negativo\')" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#128065; Pré-visualizar</button> '+
+        '<button onclick="ffv2GerarRel_(\'negativo\')" class="ffv2-btn ffv2-btn-r" style="font-size:11px;">&#10007; Gerar</button>' +
+        '<div id="ffv2d-res-neg" style="margin-top:6px;"></div></div>' +
+      '<div class="ffv2-card"><p class="ffv2-section-title">Relatório de Pendências</p><p style="font-size:12px;color:#475569;">Lista completa de pendências por colaborador.</p>' +
+        '<button onclick="ffv2PreviewRel_(\'pendencias\')" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#128065; Pré-visualizar</button> '+
+        '<button onclick="ffv2GerarRel_(\'pendencias\')" class="ffv2-btn ffv2-btn-o" style="font-size:11px;">&#128228; Gerar</button>' +
+        '<div id="ffv2d-res-pend" style="margin-top:6px;"></div></div>' +
+    '</div>' +
+    '<p class="ffv2-section-title">Documentos registrados por tipo</p>' +
+    '<div id="ffv2d-lista">'+ffv2Skel_(2)+'</div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+  ffv2CarregarListaDocs_();
+}
+
+function ffv2PreviewRel_(tipo) {
+  var idRes = 'ffv2d-res-'+tipo;
+  var el = document.getElementById(idRes); if(el) el.innerHTML='<span style="font-size:11px;color:#3b82f6;">Carregando...</span>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(el) el.innerHTML='';
+      if(r.ok) ffv2Modal_('Preview A4 — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>');
+      else if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+    })
+    .withFailureHandler(function(e){if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_PREVIEW_RELATORIO_DEV({tipo:tipo});
+}
+
+function ffv2GerarRel_(tipo) {
+  var idRes = 'ffv2d-res-'+tipo;
+  var el = document.getElementById(idRes); if(el) el.innerHTML='<span style="font-size:11px;color:#3b82f6;">Gerando...</span>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(r.ok) {
+        if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-ok" style="font-size:11px;">&#10003; '+finFlashV2Escape_(r.documentoId||'')+'</div>';
+        ffv2Modal_('Relatório A4 gerado — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>');
+        ffv2CarregarListaDocs_();
+      } else {
+        if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er" style="font-size:11px;">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      }
+    })
+    .withFailureHandler(function(e){if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV({tipo:tipo});
+}
+
+function ffv2CarregarListaDocs_() {
+  google.script.run
+    .withSuccessHandler(function(r){
+      var grupos = r.grupos||{};
+      var nomes = {'RELATORIO_POSITIVO':'Relatórios Positivos','RELATORIO_NEGATIVO':'Relatórios Negativos',
+        'RELATORIO_PENDENCIAS':'Relatórios de Pendências','EXTRATO_COLABORADOR_A4':'Extratos por Colaborador',
+        'TERMO':'Termos de Uso','COMPROVANTE':'Comprovantes','OUTROS':'Outros'};
+      var el = document.getElementById('ffv2d-lista');
+      if (!el) return;
+      var html = '';
+      Object.keys(grupos).forEach(function(k){
+        var itens = grupos[k]||[];
+        if (!itens.length) return;
+        var rows = itens.map(function(d){
+          return {ID:d.id,Status:d.status,'Criado em':d.criadoEm||'',Colaborador:d.colaborador||'—',
+            '_html_Status':ffv2Badge_(d.status),
+            '_html_Ações':'<button onclick="ffv2PreviewDocA4_(\''+finFlashV2Escape_(d.tipo)+'\',\''+finFlashV2Escape_(d.id)+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 7px;">&#128065; Preview A4</button>'
+          };
+        });
+        html += '<p class="ffv2-section-title" style="margin-top:12px;">'+finFlashV2Escape_(nomes[k]||k)+' ('+itens.length+')</p>'+
+          ffv2Tabela_(['ID','Status','Criado em','Colaborador','Ações'],rows,'');
+      });
+      if (!html) html = '<div class="ffv2-msg ffv2-msg-in">Nenhum documento gerado ainda.</div>';
+      el.innerHTML = html;
+    })
+    .withFailureHandler(function(){})
+    .FIN_FLASH_V2_LISTAR_DOCUMENTOS_ORGANIZADOS_DEV({});
+}
+
+function ffv2PreviewDocA4_(tipo, id) {
+  var tipoMap={'RELATORIO_A4_POSITIVO':'positivo','RELATORIO_A4_NEGATIVO':'negativo','EXTRATO_COLABORADOR_A4':'extrato','TERMO_USO_CARTAO_FLASH':'termo'};
+  var tipoBase = tipoMap[tipo]||'positivo';
+  ffv2Modal_('Preview A4 — carregando…','<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>');
+  google.script.run
+    .withSuccessHandler(function(r){
+      var modal=document.getElementById('ffv2-modal');
+      if(r.ok && modal) {
+        var bodyEl=modal.querySelector('div>div>div:last-child');
+        if(bodyEl) bodyEl.innerHTML=r.htmlA4||'<p>Sem conteúdo.</p>';
+      }
+    })
+    .withFailureHandler(function(e){ffv2Modal_('Erro',finFlashV2Escape_(e.message));})
+    .FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV({tipo:tipoBase,id:id});
+}
+
+// ── Termos de Uso ─────────────────────────────────────────────────────────────
+
+function ffv2LoadTermos_() {
+  var h = '<p class="ffv2-section-title">&#128220; Termos de Uso — Cartão Flash</p>' +
+    '<div class="ffv2-row2" style="margin-bottom:14px;">' +
+      '<div class="ffv2-card"><p class="ffv2-section-title">Termo Vigente</p>' +
+        '<div id="finFlashV2TermoTexto"></div>' +
+        '<button onclick="finFlashV2CarregarTermo_()" class="ffv2-btn ffv2-btn-p" style="margin-top:8px;font-size:11px;">&#128065; Ver Termo</button>' +
+      '</div>' +
+      '<div class="ffv2-card"><p class="ffv2-section-title">Registrar Aceite</p>' +
+        '<div class="ffv2-msg ffv2-msg-in" style="font-size:11px;">Para registrar aceite de um colaborador, informe o CPF e e-mail abaixo.</div>' +
+        '<div style="margin-top:8px;"><label class="ffv2-lbl">CPF</label><input id="ffv2t-cpf" class="ffv2-inp" placeholder="00000000000"></div>' +
+        '<div style="margin-top:6px;"><label class="ffv2-lbl">E-mail</label><input id="ffv2t-email" class="ffv2-inp" type="email" placeholder="email@empresa.com"></div>' +
+        '<button onclick="finFlashV2AceitarTermo_()" class="ffv2-btn ffv2-btn-g" style="margin-top:8px;font-size:11px;">&#10003; Registrar Aceite</button>' +
+        '<div id="finFlashV2TermoResultado" style="margin-top:8px;"></div>' +
+      '</div>' +
+    '</div>' +
+    '<p class="ffv2-section-title">Situação dos colaboradores <button onclick="ffv2CarregarTermosColaboradores_()" class="ffv2-btn ffv2-btn-p" style="font-size:10px;padding:3px 8px;margin-left:8px;">Carregar</button></p>' +
+    '<div id="ffv2t-cols"></div>';
+  document.getElementById('ffv2-pane').innerHTML = h;
+}
+
+function ffv2CarregarTermosColaboradores_() {
+  var el = document.getElementById('ffv2t-cols');
+  if(el) el.innerHTML = ffv2Skel_(2);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var pendentes = (r.termoPendentes||[]).map(function(c){
+        return {Nome:c.nome||c.cpf,CPF:c.cpf,Status:'PENDENTE DE ACEITE','_html_Status':ffv2Badge_('PENDENTE'),'_html_Ações':'—'};
+      });
+      var aceitaram = (r.termoAceitaram||[]).map(function(c){
+        return {Nome:c.nome||c.cpf,CPF:c.cpf,Status:'ACEITO','Versão':c.versaoTermo||'','Aceite em':c.aceiteEm||'',
+          '_html_Status':ffv2Badge_('CONCILIADO'),
+          '_html_Ações':'<button onclick="ffv2PreviewTermoColaborador_(\''+finFlashV2Escape_(c.cpf)+'\',\''+finFlashV2Escape_(c.aceiteId||'')+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 7px;">&#128196; Preview A4</button>'
+        };
+      });
+      var todos = pendentes.concat(aceitaram);
+      var resumo = '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
+        ffv2KpiCard_('Pendentes',r.totalPendente||0,'#f59e0b')+
+        ffv2KpiCard_('Aceitaram',(r.termoAceitaram||[]).length,'#22c55e')+
+        '</div>';
+      if(el) el.innerHTML = resumo + ffv2Tabela_(['Nome','CPF','Status','Versão','Aceite em','Ações'],todos,'Nenhum colaborador encontrado.');
+    })
+    .withFailureHandler(function(e){if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_TERMOS_COLABORADORES_DEV({});
+}
+
+function ffv2PreviewTermoColaborador_(cpf, aceiteId) {
+  ffv2Modal_('Termo Assinado — carregando…','<div class="ffv2-msg ffv2-msg-in">Gerando preview A4...</div>');
+  google.script.run
+    .withSuccessHandler(function(r){
+      var modal=document.getElementById('ffv2-modal');
+      if(r.ok && modal) {
+        var bodyEl=modal.querySelector('div>div>div:last-child');
+        if(bodyEl) bodyEl.innerHTML=r.htmlA4||'<p>Sem conteúdo.</p>';
+      } else {
+        ffv2Modal_('Erro',finFlashV2Escape_((r.bloqueios||[]).join(' ')));
+      }
+    })
+    .withFailureHandler(function(e){ffv2Modal_('Erro',finFlashV2Escape_(e.message));})
+    .FIN_FLASH_V2_PREVIEW_TERMO_ASSINADO_DEV({cpf:cpf,aceiteId:aceiteId});
+}
+
+// ── Auditoria ─────────────────────────────────────────────────────────────────
+
+function ffv2LoadAuditoria_() {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var itens = r.itens||[];
+      var rows = itens.map(function(l){
+        var det = l.detalhe && typeof l.detalhe==='object' ? JSON.stringify(l.detalhe).substr(0,60) : '';
+        return {'Data/Hora':l.criadoEm||'','Ação':l.acao||'','Entidade':l.entidade||'','ID':l.entidadeId||'','Executado por':l.executadoPor||'','Detalhe':det,'Teste':l.ambienteTeste||''};
+      });
+      var h = '<p class="ffv2-section-title">&#128203; Auditoria Operacional &mdash; últimas '+rows.length+' ações</p>'+
+        '<div class="ffv2-msg ffv2-msg-in" style="margin-bottom:8px;">Exibe apenas ações operacionais. Logs técnicos internos são filtrados.</div>'+
+        ffv2Tabela_(['Data/Hora','Ação','Entidade','ID','Executado por','Detalhe'],rows,'Sem registros de auditoria operacional.');
+      document.getElementById('ffv2-pane').innerHTML = h;
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_AUDITORIA_OPERACIONAL_DEV({limite:80});
+}
+
+// ══ MANUAL ════════════════════════════════════════════════════════════════════
+
+function ffv2FetchManual_(perfil) {
+  google.script.run
+    .withSuccessHandler(function(r) {
+      var h = '';
+      if (r.ok && r.manual) {
+        var sec = perfil==='COLABORADOR' ? r.manual.colaborador : r.manual.financeiro;
+        if (sec) {
+          Object.keys(sec).forEach(function(k) {
+            var s = sec[k]; if (!s) return;
+            h += '<div class="ffv2-card" style="margin-bottom:10px;"><p class="ffv2-section-title">'+finFlashV2Escape_(s.titulo||k)+'</p>';
+            if (s.descricao) h += '<p style="font-size:12px;color:#475569;margin:0 0 6px;">'+finFlashV2Escape_(s.descricao)+'</p>';
+            if (s.passos && s.passos.length) {
+              h += '<ol style="font-size:12px;color:#334155;margin:0;padding-left:18px;">';
+              s.passos.forEach(function(p){ h += '<li>'+finFlashV2Escape_(p)+'</li>'; });
+              h += '</ol>';
+            }
+            if (s.dicas && s.dicas.length) {
+              h += '<p class="ffv2-lbl" style="margin-top:8px;">Dicas</p><ul style="font-size:12px;color:#475569;margin:0;padding-left:18px;">';
+              s.dicas.forEach(function(d){ h += '<li>'+finFlashV2Escape_(d)+'</li>'; });
+              h += '</ul>';
+            }
+            h += '</div>';
+          });
+        }
+        if (r.manual.status) {
+          h += '<div class="ffv2-card"><p class="ffv2-section-title">Status — Guia Rápido</p>';
+          var st = r.manual.status;
+          Object.keys(st).forEach(function(k){ h+='<p style="font-size:12px;margin:4px 0;">'+ffv2Badge_(k)+' — <span style="color:#475569;">'+finFlashV2Escape_(st[k])+'</span></p>'; });
+          h += '</div>';
+        }
+      } else {
+        h = '<div class="ffv2-msg ffv2-msg-av">Manual não disponível no momento.</div>';
+      }
+      document.getElementById('ffv2-pane').innerHTML = '<p class="ffv2-section-title">&#128216; Manual de Uso — '+perfil+'</p>'+h;
+    })
+    .withFailureHandler(function(e){document.getElementById('ffv2-pane').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_OBTER_MANUAL_USO_DEV();
+}
+
+// ══ AÇÕES FINANCEIRAS (COMPATIBILIDADE) ═══════════════════════════════════════
+
+function ffv2AcoesHtml_() { return ''; }
+function ffv2ShowAcoes_(show) {}
+
+// ══ TERMO (COMPATIBILIDADE) ═══════════════════════════════════════════════════
+
+function finFlashV2CarregarTermo_() {
+  var el = document.getElementById('finFlashV2TermoTexto');
+  if (el) el.innerHTML = '<div class="ffv2-msg ffv2-msg-in">Carregando termo...</div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (el) el.innerHTML = r.ok && r.termo
+        ? '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-size:12px;max-height:240px;overflow-y:auto;">'+
+          '<strong>'+finFlashV2Escape_(r.termo.titulo||'Termo de Uso')+'</strong><br>'+
+          '<small>Versão: '+finFlashV2Escape_(r.termo.versao||'')+'</small>'+
+          '<div style="margin-top:8px;white-space:pre-wrap;color:#334155;">'+finFlashV2Escape_((r.termo.corpo||'').substr(0,600))+'...</div></div>'
+        : '<div class="ffv2-msg ffv2-msg-av">Termo não encontrado. Execute a orquestradora de setup para gerar.</div>';
+    })
+    .withFailureHandler(function(e){ if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message||String(e))+'</div>'; })
+    .FIN_FLASH_V2_OBTER_TERMO_ATUAL_DEV();
+}
+
+function finFlashV2AceitarTermo_() {
+  var cpfEl   = document.getElementById('ffv2t-cpf')   || {value:''};
+  var emailEl = document.getElementById('ffv2t-email') || {value:''};
+  var resEl   = document.getElementById('finFlashV2TermoResultado');
+  if (!cpfEl.value || !emailEl.value) {
+    if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe CPF e e-mail para registrar aceite.</div>'; return;
+  }
+  if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Registrando aceite...</div>';
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (resEl) resEl.innerHTML = r.ok
+        ? '<div class="ffv2-msg ffv2-msg-ok">&#10003; Aceite registrado! ID: '+finFlashV2Escape_(r.aceiteId||'')+'</div>'
+        : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+    })
+    .withFailureHandler(function(e){ if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message||String(e))+'</div>'; })
+    .FIN_FLASH_V2_REGISTRAR_ACEITE_TERMO_DEV({cpf:cpfEl.value, email:emailEl.value});
+}
+
+function finFlashV2ArquivoParaBase64_(file, cb) {
+  var reader = new FileReader();
+  reader.onload = function(ev) { cb(ev.target.result.split(',')[1]||''); };
+  reader.onerror = function() { cb(''); };
+  reader.readAsDataURL(file);
+}
+
+// ══ ENVIAR PRESTAÇÃO (COLABORADOR) ════════════════════════════════════════════
+
+function ffv2EnviarPrestacao_() {
+  var valor = parseFloat((document.getElementById('ffv2c-valor')||{}).value||'0');
+  var data  = (document.getElementById('ffv2c-data')||{}).value||'';
+  var cat   = (document.getElementById('ffv2c-cat')||{}).value||'';
+  var just  = (document.getElementById('ffv2c-just')||{}).value||'';
+  var compEl= document.getElementById('ffv2c-comp');
+  var resEl = document.getElementById('ffv2c-res');
+  if (!valor || valor<=0) { if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o valor do gasto.</div>'; return; }
+  if (!data)  { if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe a data do gasto.</div>'; return; }
+  if (!compEl || !compEl.files || !compEl.files[0]) { if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Comprovante é obrigatório.</div>'; return; }
+  if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Enviando...</div>';
+  finFlashV2ArquivoParaBase64_(compEl.files[0], function(b64) {
+    var payload = {
+      valor:valor, dataGasto:data, categoria:cat, justificativa:just,
+      comprovante: { nome:compEl.files[0].name, tipo:compEl.files[0].type, base64:b64 }
+    };
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if(resEl) resEl.innerHTML = r.ok
+          ? '<div class="ffv2-msg ffv2-msg-ok">&#10003; Prestação enviada! ID: '+finFlashV2Escape_(r.prestacaoId||'')+'</div>'
+          : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+        if(r.ok) { delete ffv2St_().carregado['c_comprovantes']; delete ffv2St_().carregado['c_pendencias']; }
+      })
+      .withFailureHandler(function(e){ if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>'; })
+      .FIN_FLASH_V2_REGISTRAR_PRESTACAO_MOBILE_DEV(payload);
+  });
+}
+
+// ── Inativar colaborador ──────────────────────────────────────────────────────
+
+function ffv2InativarColaborador_(idOuCpf) {
+  var resEl = document.getElementById('ffv2-pane');
+  if (!idOuCpf) return;
+  var conf = 'Inativar o colaborador ' + idOuCpf + '? Esta ação pode ser revertida pelo financeiro.';
+  document.getElementById('ffv2-pane').insertAdjacentHTML('afterbegin',
+    '<div class="ffv2-msg ffv2-msg-av" id="ffv2-inativ-conf">'+finFlashV2Escape_(conf)+
+    ' <button onclick="ffv2ConfirmarInativar_(\''+finFlashV2Escape_(idOuCpf)+'\')" class="ffv2-btn ffv2-btn-r" style="font-size:10px;padding:3px 8px;margin-left:8px;">Confirmar</button>'+
+    ' <button onclick="document.getElementById(\'ffv2-inativ-conf\').remove()" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 8px;">Cancelar</button>'+
+    '</div>');
+}
+
+function ffv2ConfirmarInativar_(idOuCpf) {
+  var confEl = document.getElementById('ffv2-inativ-conf');
+  if(confEl) confEl.innerHTML = '<span style="font-size:12px;color:#64748b;">Processando...</span>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(confEl) confEl.innerHTML = r.ok
+        ? '<div class="ffv2-msg ffv2-msg-ok">&#10003; Colaborador inativado.</div>'
+        : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if(r.ok) { delete ffv2St_().carregado['f_colaboradores']; }
+    })
+    .withFailureHandler(function(e){if(confEl) confEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_INATIVAR_COLABORADOR_DEV({id:idOuCpf,motivo:'Inativado pelo financeiro via painel DEV'});
+}
+
+// ── Gerenciar cartões por CPF ─────────────────────────────────────────────────
+
+function ffv2AbrirGerenciarCartoes_(cpf) {
+  var painel = document.getElementById('ffv2-cartoes-panel');
+  if (!painel) return;
+  if (painel.style.display !== 'none' && painel.dataset.cpf === cpf) {
+    painel.style.display = 'none'; return;
+  }
+  painel.dataset.cpf = cpf;
+  painel.style.display = 'block';
+  painel.innerHTML = '<div class="ffv2-card"><p class="ffv2-section-title">&#128179; Cartões — CPF: '+finFlashV2Escape_(cpf)+'</p><div id="ffv2-cartoes-lista">'+ffv2Skel_(1)+'</div>'+
+    '<div class="ffv2-sep"></div>'+
+    '<p class="ffv2-section-title">Adicionar cartão</p>'+
+    '<div class="ffv2-row2">'+
+    '<div><label class="ffv2-lbl">Final do cartão (4 dígitos)</label><input id="ffv2c-final" class="ffv2-inp" placeholder="9999" maxlength="4"></div>'+
+    '<div><label class="ffv2-lbl">Tipo</label><select id="ffv2c-tipo" class="ffv2-inp"><option value="FISICO">Físico</option><option value="VIRTUAL">Virtual</option></select></div>'+
+    '</div>'+
+    '<input type="hidden" id="ffv2c-cpf-ativo" value="'+finFlashV2Escape_(cpf)+'">'+
+    '<div style="margin-top:8px;display:flex;gap:8px;">'+
+    '<button onclick="ffv2SalvarCartao_()" class="ffv2-btn ffv2-btn-g">+ Adicionar</button>'+
+    '<button onclick="document.getElementById(\'ffv2-cartoes-panel\').style.display=\'none\'" class="ffv2-btn ffv2-btn-s">Fechar</button>'+
+    '</div><div id="ffv2c-cartao-res" style="margin-top:8px;"></div></div>';
+  ffv2CarregarCartoesCpf_(cpf);
+}
+
+function ffv2CarregarCartoesCpf_(cpf) {
+  google.script.run
+    .withSuccessHandler(function(r){
+      var rows=(r.cartoes||[]).map(function(c){
+        return {ID:c.id||'',Final:c.finalCartao||'',Tipo:c.tipo||'',Status:c.status||'',
+          '_html_Status':ffv2Badge_(c.status),'_html_Tipo':ffv2Badge_(c.tipo),
+          '_html_Ações':'<button onclick="ffv2InativarCartao_(\''+finFlashV2Escape_(c.id||'')+'\',\''+finFlashV2Escape_(cpf)+'\')" class="ffv2-btn ffv2-btn-r" style="font-size:10px;padding:3px 7px;">Inativar</button>'
+        };
+      });
+      var el=document.getElementById('ffv2-cartoes-lista');
+      if(el) el.innerHTML=ffv2Tabela_(['Final','Tipo','Status','Ações'],rows,'Nenhum cartão vinculado.');
+    })
+    .withFailureHandler(function(e){var el=document.getElementById('ffv2-cartoes-lista');if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV({cpf:cpf});
+}
+
+function ffv2SalvarCartao_() {
+  var cpf   = (document.getElementById('ffv2c-cpf-ativo')||{}).value||'';
+  var final = (document.getElementById('ffv2c-final')||{}).value||'';
+  var tipo  = (document.getElementById('ffv2c-tipo')||{}).value||'FISICO';
+  var resEl = document.getElementById('ffv2c-cartao-res');
+  if (!cpf || !final || final.length!==4) {
+    if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">CPF e final (4 dígitos) são obrigatórios.</div>'; return;
+  }
+  if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Adicionando cartão...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(resEl) resEl.innerHTML=r.ok
+        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; Cartão adicionado! ID: '+finFlashV2Escape_(r.cartaoId||'')+'</div>'
+        :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if(r.ok) { ffv2CarregarCartoesCpf_(cpf); delete ffv2St_().carregado['f_colaboradores']; }
+    })
+    .withFailureHandler(function(e){if(resEl)resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_CADASTRAR_CARTAO_COLABORADOR_DEV({cpf:cpf,finalCartao:final,tipo:tipo,ambienteTeste:'SIM'});
+}
+
+function ffv2InativarCartao_(cartaoId, cpf) {
+  var resEl = document.getElementById('ffv2c-cartao-res');
+  if(resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-in">Inativando cartão...</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(resEl) resEl.innerHTML=r.ok
+        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; Cartão inativado.</div>'
+        :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
+      if(r.ok) { ffv2CarregarCartoesCpf_(cpf); delete ffv2St_().carregado['f_colaboradores']; }
+    })
+    .withFailureHandler(function(e){if(resEl)resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
+    .FIN_FLASH_V2_INATIVAR_CARTAO_COLABORADOR_DEV({cartaoId:cartaoId,motivo:'Inativado pelo financeiro via painel DEV'});
+}
+
+// (Inicialização feita explicitamente por renderFinFlashV2DevModulo_ em JS_Core.html)
+</script>

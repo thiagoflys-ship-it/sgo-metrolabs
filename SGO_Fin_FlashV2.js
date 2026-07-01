@@ -2474,24 +2474,66 @@ function FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV(payload) {
+  // V2.15F: corrigido bug "hit = prest.row || prest" (hit virava o número da linha).
+  // Agora usa FIN_FLASH_V2_sheetCtx10_ + filtro por ID, como o resto da base faz.
   var r = { ok: false, preview: null, avisos: [], bloqueios: [] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
-    var prest = payload.prestacaoId ? FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.PRESTACOES, payload.prestacaoId) : null;
-    if (!prest) {
-      r.avisos.push('Sem comprovante vinculado a esta conciliação.');
-      r.preview = { tipo:'AUSENTE', mensagem:'Nenhum comprovante enviado pelo colaborador para este gasto.' };
+    if (!payload.prestacaoId) {
+      r.preview = {
+        tipo: 'AUSENTE', prestacaoId: '', comprovanteId: '', mimeType: '', nome: '', base64: '', urlDrive: '',
+        statusDisponibilidade: 'SEM_PRESTACAO',
+        motivoIndisponivel: 'Nenhuma prestação vinculada a esta linha.',
+        prestacao: null
+      };
       r.ok = true; return r;
     }
-    var hit = prest.row || prest;
+
+    var prest = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    var hit = prest.data.filter(function(p){ return p.ID === payload.prestacaoId; })[0];
+    if (!hit) {
+      r.avisos.push('Prestação não encontrada: ' + payload.prestacaoId);
+      r.preview = {
+        tipo: 'AUSENTE', prestacaoId: payload.prestacaoId, comprovanteId: '', mimeType: '', nome: '', base64: '', urlDrive: '',
+        statusDisponibilidade: 'PRESTACAO_NAO_ENCONTRADA',
+        motivoIndisponivel: 'Nenhum comprovante enviado pelo colaborador para este gasto.',
+        prestacao: null
+      };
+      r.ok = true; return r;
+    }
+
+    // Junta com FIN_FLASH_V2_DOCUMENTOS (ARQUIVO_ID/LINK) — onde um arquivo real, se existir, estaria vinculado.
+    var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+    var doc = docs.data.filter(function(d){ return d.PRESTACAO_ID === hit.ID; })[0] || null;
+
+    var comprovanteId = hit.COMPROVANTE_ID || '';
+    var urlDrive = doc ? (doc.LINK || '') : '';
+    var mimeType = urlDrive && String(urlDrive).toLowerCase().indexOf('.pdf') >= 0 ? 'application/pdf' : 'image/jpeg';
+    var tipo = mimeType.indexOf('pdf') >= 0 ? 'PDF' : 'IMAGEM';
+
+    var statusDisponibilidade, motivoIndisponivel;
+    if (!comprovanteId) {
+      statusDisponibilidade = 'SEM_COMPROVANTE';
+      motivoIndisponivel = 'Nenhum comprovante registrado para esta prestação.';
+    } else if (urlDrive) {
+      statusDisponibilidade = 'ARQUIVO_DISPONIVEL';
+      motivoIndisponivel = '';
+    } else {
+      statusDisponibilidade = 'MARCADOR_SEM_ARQUIVO';
+      motivoIndisponivel = 'Comprovante registrado como marcador DEV (' + comprovanteId + '), mas sem arquivo visual/base64/url vinculado.';
+    }
+
     r.preview = {
-      tipo: hit.COMPROVANTE_MIME && hit.COMPROVANTE_MIME.indexOf('pdf')>=0 ? 'PDF' : 'IMAGEM',
-      mimeType: hit.COMPROVANTE_MIME||'image/jpeg', nome: hit.COMPROVANTE_NOME||'comprovante.jpg',
-      comprovanteId: hit.COMPROVANTE_ID||'', base64: hit.COMPROVANTE_BASE64||'',
-      urlDrive: hit.COMPROVANTE_URL||'',
-      prestacao: { valor:hit.VALOR, dataGasto:hit.DATA_GASTO, categoria:hit.CATEGORIA,
-                   justificativa:hit.JUSTIFICATIVA, status:hit.STATUS }
+      tipo: tipo, prestacaoId: hit.ID, comprovanteId: comprovanteId,
+      mimeType: mimeType, nome: doc ? (doc.TIPO || 'comprovante') : 'comprovante.jpg',
+      base64: '', urlDrive: urlDrive,
+      statusDisponibilidade: statusDisponibilidade, motivoIndisponivel: motivoIndisponivel,
+      prestacao: {
+        valor: hit.VALOR, dataGasto: hit.DATA_GASTO,
+        categoria: hit.ESTABELECIMENTO || hit.FINALIDADE || '',
+        justificativa: hit.JUSTIFICATIVA, status: hit.STATUS
+      }
     };
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
@@ -5874,4 +5916,918 @@ function AUDITAR_FIN_FLASH_V214F_NORMALIZACAO_CPF_RESTANTES_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V214F_NORMALIZACAO_CPF_RESTANTES_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V214F_NORMALIZACAO_CPF_RESTANTES_SEM_GRAVAR();
+}
+
+// ── V2.15 — CONFERÊNCIA DE GASTOS LINHA A LINHA: AUDITORIA SOMENTE LEITURA ──
+// Nao grava nada, nao remove o campo manual, nao altera tela. Inspeciona o
+// backend real (toString) e o HTML real (HtmlService.createHtmlOutputFromFile)
+// para mapear exatamente onde o ID manual e exigido e de onde vem cada dado.
+
+function AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    arquivosInspecionados: [],
+    funcoesBackendConferencia: [],
+    elementosFrontendConferencia: [],
+    campoManualIdDetectado: false,
+    idCampoManual: null,
+    botoesQueDependemDeIdManual: [],
+    origemDosDadosConferencia: null,
+    abasUsadas: [],
+    headersPorAba: {},
+    cpfNormalizadoAplicado: {},
+    gastosMapeaveisPorColaboradorPeriodo: null,
+    exemploBruna: null,
+    conciliacoesSemCpf: 0,
+    conciliacoesSemPrestacao: 0,
+    conciliacoesSemExtrato: 0,
+    pendenciasVinculaveis: 0,
+    documentosVinculaveis: 0,
+    riscos: [],
+    planoV215B: [],
+    recomendacoesProximaFase: [],
+    bloqueios: [], avisos: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+    r.arquivosInspecionados = ['SGO_Fin_FlashV2.js', 'JS_Fin_FlashV2.html'];
+
+    // ── Backend: funções envolvidas na Conferência de Gastos ──────────────────
+    var funcoesBackend = {
+      FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV: FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV,
+      FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV: FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV,
+      FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV: FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV,
+      FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV: FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV,
+      FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV: FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV
+    };
+    r.funcoesBackendConferencia = Object.keys(funcoesBackend);
+    Object.keys(funcoesBackend).forEach(function(nome) {
+      r.cpfNormalizadoAplicado[nome] = funcoesBackend[nome].toString().indexOf('FIN_FLASH_V2_normCpf_') >= 0;
+    });
+
+    // ── Frontend: inspeção real do HTML (não suposição) ───────────────────────
+    var html = '';
+    try { html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent(); }
+    catch (eHtml) { r.avisos.push('Não foi possível ler JS_Fin_FlashV2.html: ' + (eHtml.message || String(eHtml))); }
+
+    var elementosEsperados = ['ffv2g-cpf','ffv2g-status','ffv2g-ini','ffv2g-fim','ffv2g-res','ffv2g-acoes','ffv2g-id','ffv2g-mot','ffv2g-acao-res'];
+    elementosEsperados.forEach(function(idEl) {
+      if (html.indexOf('id="'+idEl+'"') >= 0 || html.indexOf("id='"+idEl+"'") >= 0) r.elementosFrontendConferencia.push(idEl);
+    });
+    r.campoManualIdDetectado = html.indexOf('ffv2g-id') >= 0;
+    r.idCampoManual = r.campoManualIdDetectado ? {
+      id: 'ffv2g-id', label: 'ID da Conciliação', placeholder: 'FIN_FLASH_V2_CONC_...',
+      localizacao: 'JS_Fin_FlashV2.html, função ffv2LoadConferencia_(), painel "Ações Financeiras"'
+    } : null;
+
+    if (html.indexOf('ffv2AcaoConc_') >= 0) {
+      if (html.indexOf('manual') >= 0) r.botoesQueDependemDeIdManual.push({ botao: 'Conciliar Manualmente', dependeDe: ['ffv2g-id','ffv2g-mot'], funcaoBackend: 'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV' });
+      if (html.indexOf('reprovar') >= 0) r.botoesQueDependemDeIdManual.push({ botao: 'Reprovar', dependeDe: ['ffv2g-id','ffv2g-mot'], funcaoBackend: 'FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV' });
+      if (html.indexOf('correcao') >= 0) r.botoesQueDependemDeIdManual.push({ botao: 'Solicitar Correção', dependeDe: ['ffv2g-id','ffv2g-mot'], funcaoBackend: 'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV' });
+    }
+    if (html.indexOf('ffv2PreviewComprovante_') >= 0) {
+      var bugPreview = html.indexOf('prestacaoId:id') >= 0
+        ? 'Campo é rotulado "ID da Conciliação" mas é enviado como prestacaoId — namespaces de ID incompatíveis (FIN_FLASH_V2_CONC_... vs FIN_FLASH_V2_PREST_...), a busca sempre falha.'
+        : null;
+      r.botoesQueDependemDeIdManual.push({ botao: 'Ver Comprovante', dependeDe: ['ffv2g-id'], funcaoBackend: 'FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV', bugDetectado: bugPreview });
+    }
+
+    // ── Origem dos dados + headers reais das abas envolvidas ──────────────────
+    r.origemDosDadosConferencia = {
+      listagem: 'FIN_FLASH_V2_CONCILIACOES + FIN_FLASH_V2_CONTAS (nome do colaborador via CPF)',
+      previewComprovante: 'FIN_FLASH_V2_PRESTACOES (mas recebe o ID errado — ver bug acima)',
+      acoesFinanceiras: 'FIN_FLASH_V2_CONCILIACOES, localizado por FIN_FLASH_V2_findRowById_ (ID exato digitado)'
+    };
+    r.abasUsadas = ['FIN_FLASH_V2_CONCILIACOES','FIN_FLASH_V2_CONTAS','FIN_FLASH_V2_PRESTACOES','FIN_FLASH_V2_EXTRATOS','FIN_FLASH_V2_PENDENCIAS','FIN_FLASH_V2_DOCUMENTOS'];
+    var ctxPorAba = {};
+    r.abasUsadas.forEach(function(nomeCompleto) {
+      var abaCurta = nomeCompleto.replace('FIN_FLASH_V2_', '');
+      var ctx = FIN_FLASH_V2_sheetCtx10_(abaCurta);
+      ctxPorAba[abaCurta] = ctx;
+      r.headersPorAba[nomeCompleto] = ctx.headers || [];
+    });
+
+    // ── Teste vivo: filtro atual por CPF da Bruna (função de leitura, sem escrita) ──
+    var filtroAtual = FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV({ cpf: CPF_BRUNA });
+
+    // ── Join manual EXTRATO_ID/PRESTACAO_ID → CPF: prova que o dado existe e é ligável ──
+    var conc = ctxPorAba.CONCILIACOES, extratos = ctxPorAba.EXTRATOS, prest = ctxPorAba.PRESTACOES,
+        pend = ctxPorAba.PENDENCIAS, docs = ctxPorAba.DOCUMENTOS;
+    var extPorId = {}; extratos.data.forEach(function(e){ extPorId[e.ID] = e; });
+    var prestPorId = {}; prest.data.forEach(function(p){ prestPorId[p.ID] = p; });
+
+    var semCpf = 0, semPrest = 0, semExt = 0, joinBruna = [];
+    conc.data.forEach(function(c) {
+      if (c.CPF === undefined || c.CPF === null || c.CPF === '') semCpf++;
+      if (!c.PRESTACAO_ID) semPrest++;
+      if (!c.EXTRATO_ID) semExt++;
+      var cpfViaExtrato = c.EXTRATO_ID && extPorId[c.EXTRATO_ID] ? FIN_FLASH_V2_normCpf_(extPorId[c.EXTRATO_ID].CPF) : '';
+      var cpfViaPrest   = c.PRESTACAO_ID && prestPorId[c.PRESTACAO_ID] ? FIN_FLASH_V2_normCpf_(prestPorId[c.PRESTACAO_ID].CPF) : '';
+      if (cpfViaExtrato === CPF_BRUNA || cpfViaPrest === CPF_BRUNA) {
+        joinBruna.push({
+          id: c.ID, status: c.STATUS, cpfViaExtrato: cpfViaExtrato, cpfViaPrestacao: cpfViaPrest,
+          estabelecimentoViaPrestacao: (prestPorId[c.PRESTACAO_ID]||{}).ESTABELECIMENTO || '',
+          dataViaExtrato: (extPorId[c.EXTRATO_ID]||{}).DATA || ''
+        });
+      }
+    });
+    r.conciliacoesSemCpf = semCpf;
+    r.conciliacoesSemPrestacao = semPrest;
+    r.conciliacoesSemExtrato = semExt;
+
+    r.gastosMapeaveisPorColaboradorPeriodo = {
+      viaFuncaoAtual: { total: filtroAtual.total, funcionaHoje: filtroAtual.total > 0 },
+      viaJoinExtratoOuPrestacao: { total: joinBruna.length, funcionaHoje: true },
+      conclusao: (filtroAtual.total === 0 && joinBruna.length > 0)
+        ? 'FIN_FLASH_V2_CONCILIACOES não possui coluna CPF (ver headersPorAba) — filtrar por colaborador hoje sempre retorna 0 pela função atual. O join via EXTRATO_ID/PRESTACAO_ID já localiza os registros corretamente; é esse join que a V2.15B precisa expor na função de listagem.'
+        : 'Resultado fora do esperado — revisar manualmente antes de prosseguir para V2.15B.'
+    };
+    r.exemploBruna = { cpf: CPF_BRUNA, viaFiltroAtual: filtroAtual.total, viaJoin: joinBruna.length, registros: joinBruna };
+
+    // ── Pendências e documentos já vinculáveis via IDs presentes em CONCILIACOES ──
+    var idsExtratoEmConc = {}, idsPrestEmConc = {};
+    conc.data.forEach(function(c){ if (c.EXTRATO_ID) idsExtratoEmConc[c.EXTRATO_ID]=true; if (c.PRESTACAO_ID) idsPrestEmConc[c.PRESTACAO_ID]=true; });
+    r.pendenciasVinculaveis = pend.data.filter(function(p){ return (p.EXTRATO_ID && idsExtratoEmConc[p.EXTRATO_ID]) || (p.PRESTACAO_ID && idsPrestEmConc[p.PRESTACAO_ID]); }).length;
+    r.documentosVinculaveis = docs.data.filter(function(d){ return d.PRESTACAO_ID && idsPrestEmConc[d.PRESTACAO_ID]; }).length;
+
+    // ── Riscos, com evidência ──────────────────────────────────────────────────
+    r.riscos.push({
+      risco: 'FIN_FLASH_V2_CONCILIACOES não tem coluna CPF',
+      evidencia: 'headersPorAba["FIN_FLASH_V2_CONCILIACOES"] = ' + JSON.stringify(r.headersPorAba.FIN_FLASH_V2_CONCILIACOES),
+      impacto: 'Filtro por colaborador na Conferência de Gastos sempre retorna 0 registros hoje, mesmo com CPF normalizado (confirmado no teste vivo com Bruna).'
+    });
+    r.riscos.push({
+      risco: 'FIN_FLASH_V2_setByHeaders_ descarta silenciosamente campos sem coluna real',
+      evidencia: 'FIN_FLASH_V2_setByHeaders_ só grava chaves presentes em ctx.map (headers reais da aba)',
+      impacto: 'CONCILIAR_MANUALMENTE_DEV/REPROVAR_COMPROVANTE_DEV/SOLICITAR_CORRECAO_COMPROVANTE_DEV só alteram STATUS de fato — SCORE, MOTIVO_MANUAL, MOTIVO_REPROVACAO, MOTIVO_CORRECAO e ATUALIZADO_EM são descartados porque essas colunas não existem em FIN_FLASH_V2_CONCILIACOES.'
+    });
+    if (r.botoesQueDependemDeIdManual.some(function(b){ return b.bugDetectado; })) {
+      r.riscos.push({
+        risco: '"Ver Comprovante" usa o tipo de ID errado',
+        evidencia: 'ffv2PreviewComprovante_ envia {prestacaoId:id} usando o valor do campo "ID da Conciliação" (ffv2g-id)',
+        impacto: 'Busca em FIN_FLASH_V2_PRESTACOES por um ID de FIN_FLASH_V2_CONCILIACOES nunca casa — botão sempre mostra "sem comprovante", mesmo quando existe.'
+      });
+    }
+    r.riscos.push({
+      risco: 'Colaborador/Estabelecimento/Data/Score aparecem vazios ou zerados na tabela',
+      evidencia: 'c.ESTABELECIMENTO, c.DATA, c.SCORE, c.COMPROVANTE não existem como colunas em FIN_FLASH_V2_CONCILIACOES',
+      impacto: 'A tabela de Conferência de Gastos mostra "—"/0 nessas colunas para praticamente todas as linhas — mesma raiz da reclamação original de "relatório pobre".'
+    });
+
+    // ── Plano V2.15B (documentado, não executado nesta fase) ───────────────────
+    r.planoV215B = [
+      { passo: 1, acao: 'REESCREVER_FILTRAR_CONFERENCIA', descricao: 'Reescrever FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV para fazer join CONCILIACOES → EXTRATO_ID/PRESTACAO_ID → CPF normalizado, trazendo estabelecimento/data reais da prestação/extrato em vez de campos inexistentes.', executadoNestaFase: false },
+      { passo: 2, acao: 'REMOVER_CAMPO_ID_MANUAL', descricao: 'Remover ffv2g-id/ffv2g-mot fixos do painel; ação financeira passa a usar o ID da linha clicada na tabela em vez de digitação manual.', executadoNestaFase: false },
+      { passo: 3, acao: 'CORRIGIR_VER_COMPROVANTE', descricao: 'Corrigir ffv2PreviewComprovante_ para usar o PRESTACAO_ID real do item selecionado (já disponível após o join do passo 1), não o valor do campo de ID da conciliação.', executadoNestaFase: false },
+      { passo: 4, acao: 'DECIDIR_GRAVACAO_DE_MOTIVO_E_SCORE', descricao: 'Avaliar com o usuário se SCORE/MOTIVO_MANUAL/MOTIVO_REPROVACAO/MOTIVO_CORRECAO precisam virar colunas reais em FIN_FLASH_V2_CONCILIACOES (hoje só ficam no log de auditoria) — decisão de produto, não técnica.', executadoNestaFase: false },
+      { passo: 5, acao: 'INCLUIR_PENDENCIAS_DOCUMENTOS_INLINE', descricao: 'Exibir pendências/documentos vinculados na mesma linha — dados já são joináveis hoje (ver pendenciasVinculaveis/documentosVinculaveis desta auditoria).', executadoNestaFase: false }
+    ];
+
+    r.recomendacoesProximaFase = [
+      'V2.15B: implementar o join CONCILIACOES→EXTRATO/PRESTACAO→CPF na função de listagem antes de qualquer mudança visual — hoje o filtro por colaborador não funciona de verdade (0 resultados sempre).',
+      'V2.15C: só depois do backend corrigido, redesenhar a tela (remover ID manual, ação direta na linha, corrigir Ver Comprovante).',
+      'Não redesenhar o visual antes do join funcionar, senão a tela "linha a linha" continuará vazia para qualquer filtro por colaborador.'
+    ];
+
+    r.ok = true;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR();
+}
+
+// ── V2.15B — BACKEND DA CONFERÊNCIA POR JOIN CPF NORMALIZADO ────────────────
+// Nova função de leitura, não substitui FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV
+// (mantida intacta para compatibilidade com o frontend atual). Resolve CPF via
+// join CONCILIACOES.EXTRATO_ID/PRESTACAO_ID -> EXTRATOS.CPF/PRESTACOES.CPF,
+// já que FIN_FLASH_V2_CONCILIACOES não possui coluna CPF própria.
+
+var FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_ = 120;
+
+function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
+  var r = { ok: false, itens: [], total: 0, bloqueios: [], avisos: [] };
+  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  filtros = filtros || {};
+
+  // ── Cache curto (leitura), chaveado pelos filtros relevantes ────────────────
+  var cache = null, cacheKey = null;
+  try {
+    cache = CacheService.getScriptCache();
+    cacheKey = 'FFV2_CONF_L2L_' + JSON.stringify({
+      cpf: filtros.cpf || '', colaboradorId: filtros.colaboradorId || '', status: filtros.status || '',
+      dataInicio: filtros.dataInicio || filtros.periodoInicio || '', dataFim: filtros.dataFim || filtros.periodoFim || '',
+      periodo: filtros.periodo || '', limite: filtros.limite || 50
+    });
+    var cached = cache.get(cacheKey);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      parsed.avisos = (parsed.avisos || []).concat(['CACHE_HIT_' + FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_ + 'S']);
+      return parsed;
+    }
+  } catch (eCache) { cache = null; } // cache indisponível ou corrompido — segue sem cache, nunca bloqueia a função
+
+  try {
+    var conc     = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
+    var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS');
+    var prest    = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    var contas   = FIN_FLASH_V2_sheetCtx10_('CONTAS');
+    var cartoes  = FIN_FLASH_V2_sheetCtx10_('CARTOES');
+    var pend     = FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
+    var docs     = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+
+    var extPorId = {}; extratos.data.forEach(function(e){ extPorId[e.ID] = e; });
+    var prestPorId = {}; prest.data.forEach(function(p){ prestPorId[p.ID] = p; });
+    var contaPorCpf = {}; contas.data.forEach(function(c){ contaPorCpf[FIN_FLASH_V2_normCpf_(c.CPF)] = c; });
+    var cartaoPorId = {}; cartoes.data.forEach(function(k){ cartaoPorId[k.ID] = k; });
+    var pendPorExtrato = {}, pendPorPrestacao = {};
+    pend.data.forEach(function(p){
+      if (p.EXTRATO_ID) { if (!pendPorExtrato[p.EXTRATO_ID]) pendPorExtrato[p.EXTRATO_ID] = []; pendPorExtrato[p.EXTRATO_ID].push(p); }
+      if (p.PRESTACAO_ID) { if (!pendPorPrestacao[p.PRESTACAO_ID]) pendPorPrestacao[p.PRESTACAO_ID] = []; pendPorPrestacao[p.PRESTACAO_ID].push(p); }
+    });
+    var docPorPrestacao = {};
+    docs.data.forEach(function(d){ if (d.PRESTACAO_ID) { if (!docPorPrestacao[d.PRESTACAO_ID]) docPorPrestacao[d.PRESTACAO_ID] = []; docPorPrestacao[d.PRESTACAO_ID].push(d); } });
+
+    var filtroCpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
+    if (!filtroCpfNorm && filtros.colaboradorId) {
+      var contaAlvo = contas.data.filter(function(c){ return c.ID === filtros.colaboradorId; })[0];
+      if (contaAlvo) filtroCpfNorm = FIN_FLASH_V2_normCpf_(contaAlvo.CPF);
+    }
+    var dataInicio = filtros.dataInicio || filtros.periodoInicio || '';
+    var dataFim = filtros.dataFim || filtros.periodoFim || '';
+
+    var linhas = [];
+    conc.data.forEach(function(c) {
+      var ext = c.EXTRATO_ID ? extPorId[c.EXTRATO_ID] : null;
+      var pr  = c.PRESTACAO_ID ? prestPorId[c.PRESTACAO_ID] : null;
+
+      var cpfExtrato    = ext ? FIN_FLASH_V2_normCpf_(ext.CPF) : '';
+      var cpfPrestacao  = pr  ? FIN_FLASH_V2_normCpf_(pr.CPF)  : '';
+      var cpfNorm = cpfExtrato || cpfPrestacao || '';
+      var origemCpf = cpfExtrato ? 'EXTRATO' : (cpfPrestacao ? 'PRESTACAO' : 'INFERIDO');
+
+      if (filtroCpfNorm && cpfNorm !== filtroCpfNorm) return;
+
+      var data = (ext && ext.DATA) || (pr && pr.DATA_GASTO) || c.CRIADO_EM || '';
+      if (dataInicio && data && String(data) < String(dataInicio)) return;
+      if (dataFim && data && String(data) > String(dataFim)) return;
+      if (filtros.status && c.STATUS !== filtros.status) return;
+      if (filtros.periodo && data && String(data).indexOf(filtros.periodo) !== 0) return;
+
+      var conta = contaPorCpf[cpfNorm] || null;
+      var cartaoId = (pr && pr.CARTAO_ID) || (ext && ext.CARTAO_ID) || '';
+      var cartao = cartaoId ? cartaoPorId[cartaoId] : null;
+      var pendencias = (c.EXTRATO_ID && pendPorExtrato[c.EXTRATO_ID]) || (c.PRESTACAO_ID && pendPorPrestacao[c.PRESTACAO_ID]) || [];
+      var documentos = (c.PRESTACAO_ID && docPorPrestacao[c.PRESTACAO_ID]) || [];
+
+      var statusConc = c.STATUS || '';
+      var temComprovante = !!(pr && pr.COMPROVANTE_ID);
+      var acoesLinha = [];
+      if (statusConc !== 'CONCILIADO') acoesLinha.push('CONCILIAR_MANUALMENTE');
+      if (pr) acoesLinha.push('SOLICITAR_CORRECAO');
+      if (temComprovante) { acoesLinha.push('REPROVAR_COMPROVANTE'); acoesLinha.push('VER_COMPROVANTE'); }
+
+      linhas.push({
+        conciliacaoId: c.ID,
+        cpfNormalizado: cpfNorm, cpfExibicao: cpfNorm,
+        colaboradorId: conta ? conta.ID : '', colaboradorNome: conta ? conta.NOME : ((ext && ext.PESSOA) || ''),
+        extratoId: c.EXTRATO_ID || '', prestacaoId: c.PRESTACAO_ID || '',
+        pendenciaId: pendencias.length ? pendencias[0].ID : '',
+        documentoId: documentos.length ? documentos[0].ID : '',
+        comprovanteId: pr ? (pr.COMPROVANTE_ID || '') : '',
+        data: data,
+        estabelecimento: (pr && pr.ESTABELECIMENTO) || (ext && ext.MOVIMENTACAO) || '',
+        valor: c.VALOR_EXTRATO || c.VALOR_PRESTACAO || (ext && ext.VALOR) || (pr && pr.VALOR) || 0,
+        statusConciliacao: statusConc,
+        statusPrestacao: pr ? (pr.STATUS || '') : '',
+        statusPendencia: pendencias.length ? (pendencias[0].STATUS || '') : '',
+        cartaoId: cartaoId,
+        finalCartao: cartao ? FIN_FLASH_V2_getFinalCartao_(cartao) : '',
+        origemCpf: origemCpf,
+        podeConciliar: statusConc !== 'CONCILIADO',
+        podeReprovar: temComprovante,
+        podeSolicitarCorrecao: !!pr,
+        podeVerComprovante: temComprovante,
+        acoesLinha: acoesLinha
+      });
+    });
+
+    r.total = linhas.length;
+    r.itens = linhas.slice(0, filtros.limite || 50);
+    r.ok = true;
+    if (cache && cacheKey) {
+      try { cache.put(cacheKey, JSON.stringify(r), FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_); }
+      catch (eCachePut) { r.avisos.push('NAO_CACHEADO: ' + (eCachePut.message || String(eCachePut))); }
+    }
+  } catch(e) { r.bloqueios.push(e.message || String(e)); }
+  return r;
+}
+
+function AUDITAR_FIN_FLASH_V215B_BACKEND_CONFERENCIA_JOIN_CPF_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    funcaoListagemExiste: false,
+    usaJoinExtrato: false,
+    usaJoinPrestacao: false,
+    usaCpfNormalizado: false,
+    preservaCompatibilidadeFuncaoAntiga: false,
+    exemploBruna: null,
+    totalLinhasBruna: 0,
+    linhasExemploBruna: [],
+    conciliacoesSemCpfResolvidasPorJoin: 0,
+    conciliacoesAindaNaoMapeaveis: 0,
+    camposLinhaDisponiveis: [],
+    acoesLinhaPreparadas: false,
+    riscos: [],
+    planoV215C: [],
+    recomendacoesProximaFase: [],
+    bloqueios: [], avisos: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+
+    r.funcaoListagemExiste = typeof FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV === 'function';
+    var src = r.funcaoListagemExiste ? FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV.toString() : '';
+    r.usaJoinExtrato = src.indexOf('extPorId') >= 0 && src.indexOf('EXTRATO_ID') >= 0;
+    r.usaJoinPrestacao = src.indexOf('prestPorId') >= 0 && src.indexOf('PRESTACAO_ID') >= 0;
+    r.usaCpfNormalizado = src.indexOf('FIN_FLASH_V2_normCpf_') >= 0;
+
+    // ── Compatibilidade: função antiga não foi alterada e continua funcionando ──
+    var antigaExiste = typeof FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV === 'function';
+    var antigaResp = antigaExiste ? FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV({}) : null;
+    r.preservaCompatibilidadeFuncaoAntiga = antigaExiste && !!antigaResp && antigaResp.ok === true;
+
+    // ── Teste vivo real: Bruna via nova função (leitura, sem gravar) ─────────
+    var resBruna = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ cpf: CPF_BRUNA, limite: 1000 });
+    r.totalLinhasBruna = resBruna.total || 0;
+    r.linhasExemploBruna = (resBruna.itens || []).slice(0, 5);
+    r.exemploBruna = { cpf: CPF_BRUNA, ok: resBruna.ok, total: resBruna.total, bloqueios: resBruna.bloqueios || [] };
+    if (r.linhasExemploBruna.length) r.camposLinhaDisponiveis = Object.keys(r.linhasExemploBruna[0]);
+    r.acoesLinhaPreparadas = r.linhasExemploBruna.length > 0 && r.linhasExemploBruna.every(function(l){ return Array.isArray(l.acoesLinha); });
+
+    // ── Cobertura geral: quantas conciliações ganham CPF via join × quantas seguem sem CPF ──
+    var todas = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ limite: 100000 });
+    r.conciliacoesSemCpfResolvidasPorJoin = (todas.itens || []).filter(function(l){ return !!l.cpfNormalizado; }).length;
+    r.conciliacoesAindaNaoMapeaveis = (todas.itens || []).filter(function(l){ return !l.cpfNormalizado; }).length;
+
+    // ── Riscos remanescentes (não resolvidos nesta fase, por escopo) ──────────
+    if (r.conciliacoesAindaNaoMapeaveis > 0) {
+      r.riscos.push({
+        risco: r.conciliacoesAindaNaoMapeaveis + ' conciliação(ões) sem CPF localizável nem via EXTRATO_ID nem via PRESTACAO_ID',
+        evidencia: 'EXTRATO_ID/PRESTACAO_ID vazios ou apontando para registro inexistente',
+        impacto: 'Essas linhas continuam invisíveis em qualquer filtro por colaborador, mesmo após o join — candidatas a correção de dados, não de código.'
+      });
+    }
+    r.riscos.push({
+      risco: 'Frontend ainda chama a função antiga',
+      evidencia: 'JS_Fin_FlashV2.html (ffv2FiltrarConferencia_) continua chamando FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV, não a nova função',
+      impacto: 'A tela ainda mostra 0 resultados ao filtrar por CPF até a V2.15C trocar a chamada no frontend — por design, não mexemos na tela nesta fase.'
+    });
+    r.riscos.push({
+      risco: '"Ver Comprovante" ainda não corrigido',
+      evidencia: 'ffv2PreviewComprovante_ continua enviando o valor de ffv2g-id como prestacaoId',
+      impacto: 'Bug mapeado na V2.15 segue presente até a V2.15C atualizar o frontend para usar prestacaoId real da linha.'
+    });
+    r.riscos.push({
+      risco: 'SCORE/MOTIVO_* continuam sem coluna em FIN_FLASH_V2_CONCILIACOES',
+      evidencia: 'FIN_FLASH_V2_setByHeaders_ descarta esses campos ao gravar (mapeado na V2.15)',
+      impacto: 'Decisão de produto pendente: criar as colunas ou aceitar que o motivo só fique no log de auditoria.'
+    });
+
+    // ── Plano V2.15C (documentado, não executado nesta fase) ───────────────────
+    r.planoV215C = [
+      { passo: 1, acao: 'TROCAR_CHAMADA_FRONTEND', descricao: 'Trocar ffv2FiltrarConferencia_ para chamar FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV e exibir colaboradorNome/estabelecimento/cartão reais.', executadoNestaFase: false },
+      { passo: 2, acao: 'REMOVER_CAMPO_ID_MANUAL', descricao: 'Remover ffv2g-id/ffv2g-mot fixos; ação por linha usa conciliacaoId/prestacaoId já retornados por item.', executadoNestaFase: false },
+      { passo: 3, acao: 'CORRIGIR_VER_COMPROVANTE', descricao: 'Usar prestacaoId real da linha selecionada em vez do campo de texto.', executadoNestaFase: false },
+      { passo: 4, acao: 'DECIDIR_COLUNAS_SCORE_MOTIVO', descricao: 'Decisão de produto sobre criar colunas SCORE/MOTIVO_* em FIN_FLASH_V2_CONCILIACOES.', executadoNestaFase: false },
+      { passo: 5, acao: 'REAUDITAR', descricao: 'Rodar AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR novamente após a V2.15C para confirmar 0 dependência de ID manual.', executadoNestaFase: false }
+    ];
+
+    r.recomendacoesProximaFase = [
+      'V2.15C: trocar o frontend para a nova função e remover o campo de ID manual, só depois de validar esta auditoria.',
+      'Investigar as ' + r.conciliacoesAindaNaoMapeaveis + ' conciliação(ões) ainda não mapeáveis (dado, não código) antes de assumir cobertura 100%.'
+    ];
+
+    if (!r.funcaoListagemExiste) r.bloqueios.push('FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV não encontrada.');
+    if (!r.usaJoinExtrato || !r.usaJoinPrestacao || !r.usaCpfNormalizado) r.bloqueios.push('Função nova não usa join completo (extrato+prestação+CPF normalizado).');
+    if (!r.preservaCompatibilidadeFuncaoAntiga) r.bloqueios.push('Função antiga FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV parou de funcionar.');
+    if (r.totalLinhasBruna < 30) r.bloqueios.push('Regressão: Bruna retornou menos de 30 linhas (esperado próximo de 37).');
+    if (!r.acoesLinhaPreparadas) r.bloqueios.push('Linhas retornadas não trazem acoesLinha como array.');
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215B_BACKEND_CONFERENCIA_JOIN_CPF_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215B_BACKEND_CONFERENCIA_JOIN_CPF_SEM_GRAVAR();
+}
+
+// ── V2.15C — FRONTEND DA CONFERÊNCIA LINHA A LINHA: AUDITORIA SOMENTE LEITURA ──
+// Nao grava nada, nao executa Conciliar/Reprovar/Solicitar Correcao. Inspeciona
+// o HTML real (HtmlService.createHtmlOutputFromFile) e chama a funcao de
+// listagem (leitura) para confirmar que Bruna continua renderizavel.
+
+function AUDITAR_FIN_FLASH_V215C_FRONTEND_CONFERENCIA_LINHA_A_LINHA_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    arquivosAlterados: ['JS_Fin_FlashV2.html'],
+    frontendUsaNovaFuncao: false,
+    campoManualIdAindaExiste: false,
+    campoManualIdAindaUsadoOperacionalmente: false,
+    botoesUsamIdDaLinha: false,
+    verComprovanteUsaPrestacaoOuComprovanteDaLinha: false,
+    tabelaLinhaALinhaDetectada: false,
+    brunaRenderizavelCom37Linhas: null,
+    funcoesFrontendAlteradas: { adicionadas: [], removidas: [], alteradas: [] },
+    riscos: [],
+    planoV215D: [],
+    recomendacoesProximaFase: [],
+    bloqueios: [], avisos: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+
+    var html = '';
+    try { html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent(); }
+    catch (eHtml) { r.avisos.push('Não foi possível ler JS_Fin_FlashV2.html: ' + (eHtml.message || String(eHtml))); }
+
+    r.frontendUsaNovaFuncao = html.indexOf('FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV') >= 0;
+    r.campoManualIdAindaExiste = html.indexOf('ffv2g-id') >= 0;
+    r.campoManualIdAindaUsadoOperacionalmente = r.campoManualIdAindaExiste &&
+      (html.indexOf("getElementById('ffv2g-id')") >= 0 || html.indexOf('ffv2AcaoConc_') >= 0 || html.indexOf('ffv2PreviewComprovante_') >= 0);
+    r.botoesUsamIdDaLinha = html.indexOf('ffv2AbrirAcaoLinha_') >= 0 && html.indexOf('it.conciliacaoId') >= 0 &&
+      html.indexOf('conciliacaoId: conciliacaoId') >= 0;
+    r.verComprovanteUsaPrestacaoOuComprovanteDaLinha = html.indexOf('ffv2VerComprovanteLinha_') >= 0 &&
+      html.indexOf('prestacaoId: item.prestacaoId') >= 0;
+    r.tabelaLinhaALinhaDetectada = html.indexOf("'Ações'") >= 0 && html.indexOf('acoesLinha') >= 0 &&
+      html.indexOf("'Conciliação'") >= 0 && html.indexOf("'Prestação'") >= 0 && html.indexOf("'Pendência'") >= 0;
+
+    var funcoesEsperadasAdicionadas = ['ffv2AbrirAcaoLinha_','ffv2ConfirmarAcaoLinha_','ffv2VerComprovanteLinha_'];
+    var funcoesEsperadasRemovidas   = ['ffv2ToggleAcoesConf_','ffv2AcaoConc_','ffv2PreviewComprovante_'];
+    funcoesEsperadasAdicionadas.forEach(function(nome){ if (html.indexOf('function '+nome) >= 0) r.funcoesFrontendAlteradas.adicionadas.push(nome); });
+    funcoesEsperadasRemovidas.forEach(function(nome){ if (html.indexOf('function '+nome) < 0) r.funcoesFrontendAlteradas.removidas.push(nome); });
+    r.funcoesFrontendAlteradas.alteradas = ['ffv2LoadConferencia_','ffv2FiltrarConferencia_'];
+
+    // ── Teste vivo real: Bruna via nova função (leitura, sem gravar) ─────────
+    var resBruna = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ cpf: CPF_BRUNA, limite: 1000 });
+    r.brunaRenderizavelCom37Linhas = {
+      ok: resBruna.ok, total: resBruna.total,
+      igualA37: resBruna.total === 37,
+      camposPrimeiraLinha: (resBruna.itens && resBruna.itens[0]) ? Object.keys(resBruna.itens[0]) : []
+    };
+
+    // ── Riscos ────────────────────────────────────────────────────────────────
+    if (r.campoManualIdAindaExiste) {
+      r.riscos.push({ risco: 'Campo ffv2g-id ainda presente no HTML', evidencia: 'html contém "ffv2g-id"', impacto: 'Verificar se é resquício morto ou se ainda é lido por alguma função.' });
+    }
+    r.riscos.push({
+      risco: 'Ações de gravação (Conciliar/Reprovar/Solicitar Correção) não foram executadas nesta fase',
+      evidencia: 'Auditoria só chamou a função de leitura FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV',
+      impacto: 'Falta validação humana clicando de verdade nos botões da linha, com autorização explícita, antes de considerar o fluxo 100% fechado.'
+    });
+    r.riscos.push({
+      risco: 'SCORE/MOTIVO_* continuam sem coluna em FIN_FLASH_V2_CONCILIACOES',
+      evidencia: 'Herdado da V2.15/V2.15B — FIN_FLASH_V2_setByHeaders_ descarta esses campos ao gravar',
+      impacto: 'Decisão de produto pendente: criar as colunas ou aceitar que o motivo só fique no log de auditoria.'
+    });
+    r.riscos.push({
+      risco: '55 conciliações ainda não mapeáveis (herdado da V2.15B)',
+      evidencia: 'Nem EXTRATO_ID nem PRESTACAO_ID resolvem CPF para esses registros',
+      impacto: 'Continuam invisíveis na tabela linha a linha — problema de dado, não de tela.'
+    });
+
+    // ── Plano V2.15D (documentado, não executado nesta fase) ───────────────────
+    r.planoV215D = [
+      { passo: 1, acao: 'VALIDACAO_HUMANA_ACOES_REAIS', descricao: 'Com aprovação explícita, clicar de verdade em Conciliar/Reprovar/Solicitar Correção numa linha de teste (ex.: Bruna) e confirmar granularmente o resultado na planilha.', executadoNestaFase: false },
+      { passo: 2, acao: 'INVESTIGAR_55_NAO_MAPEAVEIS', descricao: 'Investigar as conciliações sem EXTRATO_ID/PRESTACAO_ID válido — corrigir dado, não código.', executadoNestaFase: false },
+      { passo: 3, acao: 'DECIDIR_COLUNAS_SCORE_MOTIVO', descricao: 'Decisão de produto sobre criar colunas SCORE/MOTIVO_* em FIN_FLASH_V2_CONCILIACOES.', executadoNestaFase: false },
+      { passo: 4, acao: 'REVISAR_IMPORTACAO_E_RELATORIOS', descricao: 'Estender a mesma lógica de join/normalização de CPF para Importação de Extrato e Relatórios (fora de escopo desde a V2.14).', executadoNestaFase: false }
+    ];
+
+    r.recomendacoesProximaFase = [
+      'V2.15D: validação humana das ações reais (Conciliar/Reprovar/Solicitar Correção/Ver Comprovante) numa linha de teste, com aprovação explícita antes de qualquer clique real.',
+      'Investigar as conciliações ainda não mapeáveis antes de assumir cobertura 100% da tela linha a linha.'
+    ];
+
+    if (!r.frontendUsaNovaFuncao) r.bloqueios.push('Frontend não chama FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV.');
+    if (r.campoManualIdAindaUsadoOperacionalmente) r.bloqueios.push('Campo ffv2g-id ainda é usado operacionalmente por alguma ação.');
+    if (!r.botoesUsamIdDaLinha) r.bloqueios.push('Botões de ação não usam o ID da própria linha.');
+    if (!r.verComprovanteUsaPrestacaoOuComprovanteDaLinha) r.bloqueios.push('Ver Comprovante não usa prestacaoId da linha selecionada.');
+    if (!r.tabelaLinhaALinhaDetectada) r.bloqueios.push('Tabela linha a linha com colunas esperadas não detectada.');
+    if (!r.brunaRenderizavelCom37Linhas.ok || !r.brunaRenderizavelCom37Linhas.igualA37) r.bloqueios.push('Regressão: Bruna não retornou 37 linhas via nova função.');
+    if (r.funcoesFrontendAlteradas.adicionadas.length !== 3) r.bloqueios.push('Nem todas as funções novas do frontend foram encontradas.');
+    if (r.funcoesFrontendAlteradas.removidas.length !== 3) r.bloqueios.push('Nem todas as funções antigas do frontend foram removidas.');
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215C_FRONTEND_CONFERENCIA_LINHA_A_LINHA_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215C_FRONTEND_CONFERENCIA_LINHA_A_LINHA_SEM_GRAVAR();
+}
+
+// ── V2.15D — VALIDAÇÃO HUMANA SEGURA DA CONFERÊNCIA: SOMENTE LEITURA ────────
+// Nao executa Conciliar/Reprovar/Solicitar Correcao. Apenas escolhe, com base
+// em dados reais da Bruna, a linha mais segura para o humano testar na tela,
+// e monta um roteiro de teste + criterios de aprovacao.
+
+function AUDITAR_FIN_FLASH_V215D_VALIDACAO_HUMANA_CONFERENCIA_DEV_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    telaProntaParaTesteHumano: false,
+    brunaTotalLinhas: 0,
+    linhasCandidatasTeste: [],
+    linhaMaisSeguraParaTeste: null,
+    acoesDisponiveisNaLinha: [],
+    impactoEsperadoPorAcao: {},
+    riscosAntesDeClicar: [],
+    dadosAntesDaLinhaTeste: null,
+    comprovanteDisponivelParaTeste: false,
+    roteiroTesteHumano: [],
+    criteriosAprovacao: [],
+    bloqueios: [], avisos: [],
+    recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+
+    // ── Pré-requisitos herdados da V2.15C, revalidados ao vivo ────────────────
+    var auditoriaFrontend = AUDITAR_FIN_FLASH_V215C_FRONTEND_CONFERENCIA_LINHA_A_LINHA_SEM_GRAVAR();
+    r.telaProntaParaTesteHumano = !!auditoriaFrontend.ok;
+    if (!r.telaProntaParaTesteHumano) {
+      r.bloqueios.push('Pré-requisito V2.15C não confirmado ao vivo — não é seguro preparar teste humano ainda.');
+      r.bloqueios = r.bloqueios.concat(auditoriaFrontend.bloqueios || []);
+      return r;
+    }
+
+    // ── Linhas reais da Bruna (leitura, sem gravar) ───────────────────────────
+    var resBruna = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ cpf: CPF_BRUNA, limite: 1000 });
+    if (!resBruna.ok) { r.bloqueios = r.bloqueios.concat(resBruna.bloqueios || []); return r; }
+    r.brunaTotalLinhas = resBruna.total;
+
+    var itens = resBruna.itens || [];
+    // Candidatas: têm ao menos 1 ação disponível e, de preferência, comprovante real (Ver Comprovante = zero risco de gravação)
+    var comComprovante = itens.filter(function(it){ return it.podeVerComprovante && it.comprovanteId; });
+    var comAcaoQualquer = itens.filter(function(it){ return (it.acoesLinha||[]).length > 0; });
+    var poolCandidatas = comComprovante.length ? comComprovante : comAcaoQualquer;
+    r.linhasCandidatasTeste = poolCandidatas.slice(0, 5).map(function(it){
+      return {
+        conciliacaoId: it.conciliacaoId, colaboradorNome: it.colaboradorNome, data: it.data,
+        estabelecimento: it.estabelecimento, statusConciliacao: it.statusConciliacao,
+        comprovanteId: it.comprovanteId || '', acoesLinha: it.acoesLinha || []
+      };
+    });
+
+    // ── Escolha da linha mais segura: tem comprovante real E mais de 1 ação disponível (dá para testar Ver Comprovante sem risco, e mostra as demais ações sem clicar nelas) ──
+    var escolhida = comComprovante.filter(function(it){ return (it.acoesLinha||[]).length > 1; })[0] || comComprovante[0] || itens[0] || null;
+    if (!escolhida) {
+      r.avisos.push('Nenhuma linha da Bruna encontrada para sugerir teste — verifique se a massa de validação ainda existe.');
+    } else {
+      r.linhaMaisSeguraParaTeste = escolhida;
+      r.acoesDisponiveisNaLinha = escolhida.acoesLinha || [];
+      r.comprovanteDisponivelParaTeste = !!(escolhida.podeVerComprovante && escolhida.comprovanteId);
+      r.dadosAntesDaLinhaTeste = {
+        conciliacaoId: escolhida.conciliacaoId, prestacaoId: escolhida.prestacaoId, extratoId: escolhida.extratoId,
+        statusConciliacao: escolhida.statusConciliacao, statusPrestacao: escolhida.statusPrestacao,
+        statusPendencia: escolhida.statusPendencia, valor: escolhida.valor, data: escolhida.data,
+        comprovanteId: escolhida.comprovanteId, capturadoEm: FIN_FLASH_V2_now10_()
+      };
+    }
+
+    // ── Impacto esperado por ação, baseado no código real (não suposição) ─────
+    r.impactoEsperadoPorAcao = {
+      VER_COMPROVANTE: 'Somente leitura. Chama FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV com o prestacaoId da linha — não grava nada, apenas exibe o comprovante em modal.',
+      CONCILIAR_MANUALMENTE: 'Grava STATUS="CONCILIADO" na linha de FIN_FLASH_V2_CONCILIACOES (via FIN_FLASH_V2_setByHeaders_) e cria 1 entrada em FIN_FLASH_V2_LOGS. SCORE e o motivo digitado NÃO são gravados na linha — FIN_FLASH_V2_CONCILIACOES não tem essas colunas (só ficam no DETALHE_JSON do log).',
+      REPROVAR_COMPROVANTE: 'Grava STATUS="REPROVADO" na linha de FIN_FLASH_V2_CONCILIACOES e cria 1 entrada em FIN_FLASH_V2_LOGS. MOTIVO_REPROVACAO digitado não é gravado na linha (mesma limitação de schema).',
+      SOLICITAR_CORRECAO: 'Grava STATUS="AGUARDANDO_CORRECAO" na linha de FIN_FLASH_V2_CONCILIACOES e cria 1 entrada em FIN_FLASH_V2_LOGS. MOTIVO_CORRECAO digitado não é gravado na linha (mesma limitação de schema).'
+    };
+
+    // ── Riscos antes de clicar ────────────────────────────────────────────────
+    r.riscosAntesDeClicar = [
+      'Qualquer clique em Conciliar/Reprovar/Solicitar Correção altera STATUS de forma real na planilha DEV — não há "desfazer" automático; reverter exige nova ação manual ou correção direta na planilha.',
+      'O motivo digitado no modal não fica visível na linha da planilha (só no log de auditoria) — não esperar ver o texto na aba FIN_FLASH_V2_CONCILIACOES.',
+      'Testar em uma linha que já está CONCILIADO pode mascarar se o botão realmente muda o status — prefira uma linha com status diferente de CONCILIADO para esse teste específico, se for testar gravação.',
+      'Ver Comprovante é a única ação 100% sem risco de gravação e pode ser testada livremente.'
+    ];
+
+    // ── Roteiro de teste humano ──────────────────────────────────────────────
+    var idLinha = escolhida ? escolhida.conciliacaoId : '(nenhuma linha disponível)';
+    r.roteiroTesteHumano = [
+      '1. Abrir o módulo FIN Flash V2 — DEV no SGO+ e ir para a aba "Conferência de Gastos".',
+      '2. Preencher o filtro CPF com 05553116198 (Bruna) e clicar em "Filtrar".',
+      '3. Confirmar que a tabela mostra aproximadamente 37 linhas, com Colaborador="BRUNA OLIVEIRA DOS SANTOS", Estabelecimento e Data preenchidos (não mais "—").',
+      '4. Localizar a linha com Conciliação ID ' + idLinha + ' (data ' + (escolhida ? escolhida.data : '—') + ', estabelecimento "' + (escolhida ? escolhida.estabelecimento : '—') + '").',
+      '5. Clicar no botão "Comprovante" dessa linha — confirmar que abre um modal mostrando o comprovante (ou aviso de comprovante não disponível para preview, mas SEM erro). Isso NÃO grava nada.',
+      '6. (Opcional, só com autorização explícita separada) Clicar em "Conciliar"/"Reprovar"/"Correção", preencher um motivo de teste, confirmar, e depois verificar na planilha FIN_FLASH_V2_CONCILIACOES que apenas a coluna STATUS mudou.',
+      '7. Reportar o resultado de cada passo (funcionou / erro / comportamento inesperado).'
+    ];
+
+    // ── Critérios de aprovação ────────────────────────────────────────────────
+    r.criteriosAprovacao = [
+      'Filtro por CPF da Bruna mostra ~37 linhas sem erro.',
+      'Colaborador, Estabelecimento e Data aparecem preenchidos (não "—") nas linhas com prestação/extrato vinculado.',
+      '"Ver Comprovante" abre modal sem erro e sem exigir digitação de ID.',
+      'Nenhum botão pede para digitar um ID manualmente.',
+      'Se uma ação de gravação for testada (com autorização à parte): só a coluna STATUS muda na linha correspondente de FIN_FLASH_V2_CONCILIACOES, e um novo log aparece em FIN_FLASH_V2_LOGS.'
+    ];
+
+    r.recomendacoesProximaFase = [
+      'Depois da aprovação humana do roteiro acima, pedir autorização explícita separada para clicar em uma ação de gravação (Conciliar/Reprovar/Solicitar Correção) numa linha de teste específica.',
+      'Após esse teste de gravação, reauditar com AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR e comparar dadosAntesDaLinhaTeste com o estado real pós-clique.'
+    ];
+
+    if (!escolhida) r.bloqueios.push('Nenhuma linha candidata encontrada para teste humano.');
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215D_VALIDACAO_HUMANA_CONFERENCIA_DEV_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215D_VALIDACAO_HUMANA_CONFERENCIA_DEV_SEM_GRAVAR();
+}
+
+// ── V2.15E-DIAG — COMPROVANTE E PERFORMANCE: DIAGNÓSTICO SOMENTE LEITURA ────
+// Nao corrige nada. Nao executa Reprovar/Solicitar Correcao/Conciliar. Apenas
+// inspeciona dados reais + codigo real (toString) para explicar por que o
+// preview do comprovante falha e por que a tela demora a carregar.
+
+function AUDITAR_FIN_FLASH_V215E_DIAG_COMPROVANTE_PERFORMANCE_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    linhaTeste: null,
+    prestacaoEncontrada: false,
+    comprovanteIdNaPrestacao: '',
+    camposComprovanteDisponiveis: {},
+    urlComprovante: '',
+    driveFileId: '',
+    arquivoDriveExiste: false,
+    arquivoDriveAcessivel: null,
+    motivoPreviewIndisponivel: '',
+    funcaoPreviewInspecionada: 'FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV',
+    previewUsaPrestacaoId: false,
+    previewUsaComprovanteId: false,
+    previewRetornoAtual: null,
+    diagnosticoPreview: [],
+    performanceListagem: {},
+    totalConciliaçõesLidas: 0,
+    totalExtratosLidos: 0,
+    totalPrestacoesLidas: 0,
+    gargalosProvaveis: [],
+    recomendacoesV215F: [],
+    bloqueios: [], avisos: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CONCILIACAO_ID = 'FIN_FLASH_V2_CONC_5a5087d00f904264bf44';
+  var PRESTACAO_ID   = 'FIN_FLASH_V2_PREST_34f58bdc233d44f9ad03';
+  var COMPROVANTE_ID = 'COMP_A_DEV_V213';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+    r.linhaTeste = { conciliacaoId: CONCILIACAO_ID, prestacaoId: PRESTACAO_ID, comprovanteId: COMPROVANTE_ID, colaborador: 'BRUNA OLIVEIRA DOS SANTOS' };
+
+    // ── Verificar a prestação real e as colunas de comprovante que ela de fato tem ──
+    var prest = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    r.totalPrestacoesLidas = prest.data.length;
+    var camposEsperados = ['COMPROVANTE_ID','COMPROVANTE_TIPO','COMPROVANTE_MIME','COMPROVANTE_BASE64','COMPROVANTE_URL','COMPROVANTE_NOME'];
+    camposEsperados.forEach(function(campo){ r.camposComprovanteDisponiveis[campo] = prest.headers.indexOf(campo) >= 0; });
+
+    var prestLinha = prest.data.filter(function(p){ return p.ID === PRESTACAO_ID; })[0];
+    r.prestacaoEncontrada = !!prestLinha;
+    if (prestLinha) {
+      r.comprovanteIdNaPrestacao = prestLinha.COMPROVANTE_ID || '';
+      r.urlComprovante = prestLinha.COMPROVANTE_URL || '';
+    } else {
+      r.avisos.push('Prestação ' + PRESTACAO_ID + ' não encontrada — verificar se a massa de validação da Bruna ainda existe.');
+    }
+
+    // ── Verificar se existe documento (Drive) vinculado a essa prestação/comprovante ──
+    var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+    var docVinculado = docs.data.filter(function(d){ return d.PRESTACAO_ID === PRESTACAO_ID; })[0];
+    r.driveFileId = docVinculado ? (docVinculado.ARQUIVO_ID || '') : '';
+    if (r.driveFileId) {
+      try {
+        var f = DriveApp.getFileById(r.driveFileId);
+        r.arquivoDriveExiste = true;
+        r.arquivoDriveAcessivel = true;
+        r.avisos.push('Arquivo encontrado no Drive: ' + f.getName());
+      } catch (eDrive) {
+        r.arquivoDriveExiste = false;
+        r.arquivoDriveAcessivel = false;
+        r.avisos.push('ID de arquivo encontrado em FIN_FLASH_V2_DOCUMENTOS mas Drive não conseguiu abri-lo: ' + eDrive.message);
+      }
+    } else {
+      r.arquivoDriveExiste = false;
+      r.arquivoDriveAcessivel = null;
+      r.avisos.push('Nenhum registro em FIN_FLASH_V2_DOCUMENTOS aponta PRESTACAO_ID=' + PRESTACAO_ID + ' — o comprovante desta linha é só um ID de teste (' + COMPROVANTE_ID + '), sem arquivo real no Drive.');
+    }
+
+    // ── Inspeção real do código de FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV ──
+    var srcPreview = FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV.toString();
+    r.previewUsaPrestacaoId = srcPreview.indexOf('payload.prestacaoId') >= 0;
+    r.previewUsaComprovanteId = srcPreview.indexOf('COMPROVANTE_ID') >= 0 && srcPreview.indexOf('FIN_FLASH_V2_ABAS.DOCUMENTOS') >= 0;
+    var bugHitEhRowNumero = srcPreview.indexOf('var hit = prest.row || prest;') >= 0;
+
+    // ── Chamada real (leitura) da função para a prestação de teste ──────────
+    r.previewRetornoAtual = FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV({ prestacaoId: PRESTACAO_ID });
+
+    // ── Diagnóstico consolidado do preview ────────────────────────────────────
+    if (bugHitEhRowNumero) {
+      r.motivoPreviewIndisponivel = 'FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV faz "var hit = prest.row || prest;" — prest.row é o NÚMERO da linha na planilha (ex.: 74), não os valores da linha. Como esse número é truthy, "hit" vira um número, e qualquer hit.CAMPO (COMPROVANTE_MIME, COMPROVANTE_BASE64, COMPROVANTE_URL, VALOR, DATA_GASTO, CATEGORIA, JUSTIFICATIVA, STATUS) retorna undefined, não importa o que exista na planilha. Essa é a causa raiz de "registrado mas não disponível para visualização" — e também explica por que os dados da prestação no mesmo modal (Valor/Data/Categoria/Status/Justificativa) também aparecem vazios.';
+      r.diagnosticoPreview.push('Causa raiz confirmada por inspeção de código: bug em "hit = prest.row || prest" (deveria mapear prest.values usando prest.ctx.map, como feito em outras funções desta base).');
+    } else {
+      r.motivoPreviewIndisponivel = 'Não foi possível confirmar o padrão "prest.row || prest" no código atual — revisar manualmente.';
+    }
+    if (!r.camposComprovanteDisponiveis.COMPROVANTE_BASE64 && !r.camposComprovanteDisponiveis.COMPROVANTE_URL) {
+      r.diagnosticoPreview.push('Além do bug de código, FIN_FLASH_V2_PRESTACOES nunca teve colunas COMPROVANTE_BASE64/COMPROVANTE_URL/COMPROVANTE_MIME/COMPROVANTE_NOME — mesmo corrigindo o bug do "hit", ainda não há onde ler um arquivo real a partir da prestação.');
+    }
+    if (!r.arquivoDriveExiste) {
+      r.diagnosticoPreview.push('Para esta linha de teste específica (Bruna, COMP_A_DEV_V213), o comprovante é apenas um ID de string criado por FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV — nunca houve upload real via FIN_FLASH_V2_UPLOAD_COMPROVANTE_SEGURO_DEV_, então não existe arquivo no Drive nem em FIN_FLASH_V2_DOCUMENTOS para esta prestação.');
+    }
+
+    // ── Performance: medir tempo real de leitura de cada aba usada pela listagem ──
+    var t0 = new Date().getTime();
+    var conc = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES'); var t1 = new Date().getTime();
+    var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS'); var t2 = new Date().getTime();
+    var prest2 = FIN_FLASH_V2_sheetCtx10_('PRESTACOES'); var t3 = new Date().getTime();
+    var contas = FIN_FLASH_V2_sheetCtx10_('CONTAS'); var t4 = new Date().getTime();
+    var cartoes = FIN_FLASH_V2_sheetCtx10_('CARTOES'); var t5 = new Date().getTime();
+    var pend = FIN_FLASH_V2_sheetCtx10_('PENDENCIAS'); var t6 = new Date().getTime();
+    var docs2 = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS'); var t7 = new Date().getTime();
+    var tListaCompleta0 = new Date().getTime();
+    var listaCompleta = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ limite: 100000 });
+    var tListaCompleta1 = new Date().getTime();
+
+    r.totalConciliaçõesLidas = conc.data.length;
+    r.totalExtratosLidos = extratos.data.length;
+    r.totalPrestacoesLidas = prest2.data.length;
+
+    r.performanceListagem = {
+      leituraConciliacoesMs: t1 - t0,
+      leituraExtratosMs: t2 - t1,
+      leituraPrestacoesMs: t3 - t2,
+      leituraContasMs: t4 - t3,
+      leituraCartoesMs: t5 - t4,
+      leituraPendenciasMs: t6 - t5,
+      leituraDocumentosMs: t7 - t6,
+      somaLeiturasIndividuaisMs: t7 - t0,
+      chamadaCompletaListarConferenciaMs: tListaCompleta1 - tListaCompleta0,
+      totalItensRetornadosSemFiltro: listaCompleta.total
+    };
+
+    if (r.performanceListagem.chamadaCompletaListarConferenciaMs > 3000) {
+      r.gargalosProvaveis.push('Chamada completa de FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV levou ' + r.performanceListagem.chamadaCompletaListarConferenciaMs + 'ms — acima do aceitável para uma tela interativa.');
+    }
+    r.gargalosProvaveis.push('FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV lê 7 abas inteiras (getDataRange().getValues()) a cada chamada, sem cache — diferente do padrão de cache de 3 minutos já usado no Dashboard (V2.12). Cada clique em "Filtrar" refaz a leitura completa de CONCILIACOES(' + conc.data.length + '), EXTRATOS(' + extratos.data.length + '), PRESTACOES(' + prest2.data.length + '), PENDENCIAS(' + pend.data.length + ') e DOCUMENTOS(' + docs2.data.length + ').');
+    r.gargalosProvaveis.push('Nenhum índice persistente entre chamadas — os mapas extPorId/prestPorId/contaPorCpf/cartaoPorId são reconstruídos do zero a cada execução.');
+
+    r.recomendacoesV215F = [
+      'Corrigir FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV: trocar "var hit = prest.row || prest;" por um mapeamento real de prest.values usando prest.ctx.map (ou reescrever para usar FIN_FLASH_V2_sheetCtx10_ + filtro por ID, como já é feito em FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV).',
+      'Depois de corrigir o "hit", decidir se o comprovante real deve vir de FIN_FLASH_V2_DOCUMENTOS (ARQUIVO_ID/LINK) via join por PRESTACAO_ID, já que FIN_FLASH_V2_PRESTACOES nunca teve colunas de arquivo (BASE64/URL/MIME/NOME).',
+      'Para performance: aplicar cache (semelhante ao FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV, ~3min) em FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV, ou paginar a leitura em vez de carregar as 7 abas inteiras a cada filtro.',
+      'Revalidar com AUDITAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR e um novo teste humano depois da correção.'
+    ];
+
+    r.ok = true;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215E_DIAG_COMPROVANTE_PERFORMANCE_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215E_DIAG_COMPROVANTE_PERFORMANCE_SEM_GRAVAR();
+}
+
+// ── V2.15F — PREVIEW CORRIGIDO + PERFORMANCE: AUDITORIA SOMENTE LEITURA ─────
+// Nao executa Conciliar/Reprovar/Solicitar Correcao. Confirma via codigo real
+// e chamadas de leitura que o bug do preview foi corrigido e que o cache
+// funciona, sem gravar nada em planilha.
+
+function AUDITAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    previewBugCorrigido: false,
+    prestacaoTeste: null,
+    previewAntes: null,
+    previewDepois: null,
+    comprovanteIdRetornado: '',
+    statusDisponibilidade: '',
+    motivoIndisponivel: '',
+    dadosPrestacaoRetornados: null,
+    arquivoRealDisponivel: false,
+    mensagemEsperadaFrontend: '',
+    cacheImplementado: false,
+    cacheDuracaoSegundos: 0,
+    performanceAntesMs: null,
+    performanceDepoisPrimeiraChamadaMs: null,
+    performanceDepoisCacheMs: null,
+    brunaTotalLinhas: 0,
+    riscos: [],
+    bloqueios: [], avisos: [],
+    recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  var PRESTACAO_ID = 'FIN_FLASH_V2_PREST_34f58bdc233d44f9ad03';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+    r.prestacaoTeste = PRESTACAO_ID;
+
+    // Referência real capturada na auditoria V2.15E-DIAG (antes da correção) — não recalculada, pois o bug já foi corrigido no código atual.
+    r.previewAntes = {
+      origem: 'Capturado em AUDITAR_FIN_FLASH_V215E_DIAG_COMPROVANTE_PERFORMANCE_SEM_GRAVAR (sessão anterior, aprovada)',
+      preview: { tipo:'IMAGEM', comprovanteId:'', base64:'', urlDrive:'', nome:'comprovante.jpg', mimeType:'image/jpeg', prestacao:{} }
+    };
+    r.performanceAntesMs = 3197; // capturado na V2.15E-DIAG; código antigo não existe mais para remedir
+
+    // ── Preview corrigido: chamada real de leitura ──────────────────────────
+    var previewDepois = FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV({ prestacaoId: PRESTACAO_ID });
+    r.previewDepois = previewDepois;
+    var p = (previewDepois && previewDepois.preview) || {};
+    r.comprovanteIdRetornado = p.comprovanteId || '';
+    r.statusDisponibilidade = p.statusDisponibilidade || '';
+    r.motivoIndisponivel = p.motivoIndisponivel || '';
+    r.dadosPrestacaoRetornados = p.prestacao || null;
+    r.arquivoRealDisponivel = r.statusDisponibilidade === 'ARQUIVO_DISPONIVEL';
+    r.mensagemEsperadaFrontend = r.statusDisponibilidade === 'MARCADOR_SEM_ARQUIVO'
+      ? 'Comprovante registrado (ID: ' + r.comprovanteIdRetornado + '), mas sem arquivo visual disponível. ' + r.motivoIndisponivel
+      : (r.motivoIndisponivel || 'Arquivo disponível para visualização.');
+
+    r.previewBugCorrigido = previewDepois.ok === true &&
+      r.comprovanteIdRetornado === 'COMP_A_DEV_V213' &&
+      !!r.dadosPrestacaoRetornados && Number(r.dadosPrestacaoRetornados.valor) === 50 &&
+      r.statusDisponibilidade === 'MARCADOR_SEM_ARQUIVO';
+
+    // ── Confirmar por código real que o bug antigo sumiu e que o cache existe ──
+    var srcPreview = FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV.toString();
+    if (srcPreview.indexOf('var hit = prest.row || prest;') >= 0) {
+      r.bloqueios.push('Padrão antigo "var hit = prest.row || prest;" ainda presente no código — bug não foi corrigido de verdade.');
+    }
+    var srcListagem = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV.toString();
+    r.cacheImplementado = srcListagem.indexOf('CacheService') >= 0 && srcListagem.indexOf('cache.put') >= 0;
+    r.cacheDuracaoSegundos = FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_;
+
+    // ── Performance: 1ª chamada (fria, cache removido antes) × 2ª chamada (mesmo filtro, deve vir do cache) ──
+    var filtroPerf = { cpf: CPF_BRUNA, limite: 1000 };
+    var cacheKeyPerf = 'FFV2_CONF_L2L_' + JSON.stringify({ cpf: CPF_BRUNA, colaboradorId:'', status:'', dataInicio:'', dataFim:'', periodo:'', limite:1000 });
+    try { CacheService.getScriptCache().remove(cacheKeyPerf); } catch (eRm) {}
+    var t0 = new Date().getTime();
+    var lista1 = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtroPerf);
+    var t1 = new Date().getTime();
+    var lista2 = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtroPerf);
+    var t2 = new Date().getTime();
+    r.performanceDepoisPrimeiraChamadaMs = t1 - t0;
+    r.performanceDepoisCacheMs = t2 - t1;
+    r.avisos.push('1a chamada avisos: ' + JSON.stringify(lista1.avisos || []));
+    r.avisos.push('2a chamada avisos: ' + JSON.stringify(lista2.avisos || []));
+    r.brunaTotalLinhas = lista2.total || lista1.total || 0;
+
+    // ── Riscos ────────────────────────────────────────────────────────────────
+    r.riscos.push({ risco: 'Cache pode mostrar dado levemente desatualizado por até ' + r.cacheDuracaoSegundos + 's', impacto: 'Ação feita em outra aba pode não refletir imediatamente na listagem — aceitável para leitura; as funções de gravação sempre revalidam ao vivo antes de escrever.' });
+    r.riscos.push({ risco: 'Resultado muito grande pode exceder o limite de 100KB do CacheService', impacto: 'Nesse caso a função simplesmente não cacheia (fallback seguro, sem quebrar a listagem) — aviso NAO_CACHEADO aparece quando ocorrer.' });
+    r.riscos.push({ risco: 'Comprovante da Bruna continua sem arquivo real', impacto: 'Correto e esperado — é dado de teste (marcador DEV), não um bug. Corrigir isso exigiria um upload real, fora de escopo desta fase.' });
+
+    r.recomendacoesProximaFase = [
+      'Pedir para o usuário clicar novamente em "Ver Comprovante" na linha de teste e confirmar que a mensagem agora é clara (marcador DEV, não erro/vazio).',
+      'Medir a performance percebida na tela real (não só via clasp run) antes de considerar a V2.15F fechada.',
+      'Só depois disso, avançar para uma ação de gravação controlada (Reprovar/Solicitar Correção) com autorização explícita separada.'
+    ];
+
+    if (!r.previewBugCorrigido) r.bloqueios.push('Preview corrigido não retornou os dados esperados para a prestação de teste.');
+    if (!r.cacheImplementado) r.bloqueios.push('Cache não detectado no código da função de listagem.');
+    if (r.brunaTotalLinhas !== 37) r.bloqueios.push('Regressão: Bruna não retornou 37 linhas (retornou ' + r.brunaTotalLinhas + ').');
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR();
 }
