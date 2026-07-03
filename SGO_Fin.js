@@ -2392,6 +2392,7 @@ const SGO_FIN = (() => {
           "Cartão sem responsavel claro."
         ],
         auditoriaSomenteLeitura: auditoria,
+        ok: pronto,
         prontoParaValidacaoHumanaMobile: pronto,
         prontoParaPilotoControlado: pronto,
         bloqueios: bloqueios,
@@ -2463,6 +2464,7 @@ const SGO_FIN = (() => {
 
       const pronto = bloqueios.length === 0;
       return Object.assign(base, {
+        ok: pronto,
         prontoParaTesteHumanoReal: pronto,
         prontoParaPilotoFinanceiroControlado: pronto,
         auditoriaSomenteLeitura: {
@@ -2643,6 +2645,7 @@ const SGO_FIN = (() => {
 
       const pronto = bloqueios.length === 0;
       return Object.assign(base, {
+        ok: pronto,
         prontoParaSelecionarColaboradorPiloto: pronto,
         prontoParaCadastroControladoCartao: pronto,
         prontoParaTestePrestacaoRealControlada: pronto,
