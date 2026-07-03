@@ -38,3 +38,6 @@ _tools/
 
 # Scripts temporarios de fases concluidas
 AUTH10*_TEMP.js
+
+# Configuracao local do Claude Code — permissoes/allowlist pessoais
+.claude/settings.local.json
