@@ -20,3 +20,21 @@ _tmp_*.png
 # Configuracao real do projeto Apps Script producao — contem scriptId sensivel
 # Versionar apenas .clasp-prod.example.json (template sem dados reais)
 .clasp-prod.json
+
+# OAuth Desktop Client local - nunca versionar
+client_secret*.json
+*_client_secret*.json
+.oauth-local/
+.oauth-local/**
+
+# Configuracoes clasp locais alternativas — contem scriptId sensivel
+.clasp-dev.json
+.clasp-producaov2.json
+
+# Ferramentas e importacoes locais — nao versionar
+apps-script-imports/
+backups/
+_tools/
+
+# Scripts temporarios de fases concluidas
+AUTH10*_TEMP.js
