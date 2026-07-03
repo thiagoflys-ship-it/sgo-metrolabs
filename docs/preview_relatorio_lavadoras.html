@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prévia - Relatório Lavadoras</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #4b5563;
+      --line: #cbd5e1;
+      --head: #374151;
+      --page: #ffffff;
+      --bg: #0f172a;
+      --soft: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 28px;
+    }
+    .stage {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    .page {
+      background: var(--page);
+      width: 100%;
+      aspect-ratio: 1.414 / 1;
+      padding: 30px 34px;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, .35);
+      overflow: hidden;
+    }
+    .title {
+      background: var(--head);
+      color: #fff;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 10px 12px;
+      border: 1px solid var(--head);
+      margin-bottom: 14px;
+      letter-spacing: 0;
+    }
+    .internal {
+      background: #111827;
+      color: #e5e7eb;
+      text-align: center;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 8px 10px;
+      border: 1px solid #111827;
+      margin-bottom: 16px;
+    }
+    .box {
+      border: 1px solid var(--line);
+      padding: 15px 17px;
+      font-size: 13px;
+      line-height: 1.48;
+      color: var(--ink);
+      min-height: 320px;
+      white-space: normal;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    .box p { margin: 0 0 13px; }
+    .box ul {
+      margin: 8px 0 0 0;
+      padding-left: 0;
+      list-style: none;
+      text-align: left;
+    }
+    .box li { margin: 5px 0; }
+    .box li::before {
+      content: "- ";
+      font-weight: 700;
+    }
+    .label {
+      font-weight: 700;
+      margin-top: 2px;
+      text-align: left;
+    }
+    .obs-title {
+      background: #e5e7eb;
+      border: 1px solid var(--line);
+      font-weight: 700;
+      padding: 7px 10px;
+      margin-top: 14px;
+      font-size: 12px;
+    }
+    .signature {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .signature .line {
+      font-weight: 400;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="page">
+      <div class="title">CONCLUSÃO DO CICLO</div>
+      <div class="internal">RELATÓRIO INTERNO - ANÁLISE MANUAL DO LABORATÓRIO DE METROLOGIA</div>
+      <div class="box">
+        <p>Com base nos ensaios de qualificação de desempenho (LAVAGEM ULTRASSÔNICA), os dados coletados foram processados em conformidade com as exigências do MANUAL DO FABRICANTE E RDC 15/2012 (ANVISA) e diretrizes de acreditação ONA.</p>
+        <p>A análise térmica e de exposição confirmou estabilidade operacional, com duração de cavitação efetiva de 18,00 MIN, atendendo integralmente ao critério configurado do processo.</p>
+        <p>A avaliação considerou a evolução térmica do banho, o tempo efetivo de cavitação, a estabilidade do sinal analógico e o pior ponto monitorado.</p>
+        <p class="label">O mapeamento operacional identificado foi:</p>
+        <ul>
+          <li>Lavagem / aquecimento do banho: 01/07/2026 08:00:00 a 01/07/2026 08:12:30</li>
+          <li>Enxágue intermediário: 01/07/2026 08:13:00 a 01/07/2026 08:19:00</li>
+          <li>Desgaseificação / preparo do banho: 01/07/2026 08:19:30 a 01/07/2026 08:32:00</li>
+          <li>Cavitação ultrassônica: 01/07/2026 08:32:30 a 01/07/2026 08:50:30</li>
+          <li>Enxágue final: 01/07/2026 08:51:00 a 01/07/2026 08:55:00</li>
+          <li>Drenagem / final de ciclo: 01/07/2026 08:55:30 a 01/07/2026 09:00:00</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="title">PARECER DE ENGENHARIA</div>
+      <div class="internal">RELATÓRIO INTERNO - ANÁLISE MANUAL DO LABORATÓRIO DE METROLOGIA</div>
+      <div class="box">
+        <p><strong>Parecer final da engenharia clínica: APROVADO.</strong></p>
+        <p>Todos os critérios configurados para os sensores ativos foram atendidos. O processo demonstrou desempenho compatível com o nível de eficácia requerido e com a integridade operacional do ciclo.</p>
+        <p>Equipamento liberado para processamento dentro dos critérios avaliados.</p>
+        <p><strong>Interpretação operacional:</strong> em lavadoras ultrassônicas, a aprovação depende de banho aquecido, desgaseificação compatível, cavitação sustentada pelo tempo configurado e finalização coerente do ciclo. Oscilações excessivas indicam necessidade de verificação de carga, solução, transdutores ou programação.</p>
+      </div>
+      <div class="obs-title">OBSERVAÇÕES DE ANÁLISE</div>
+      <div class="box" style="min-height: 56px; padding: 10px 14px; font-size: 12px; text-align: left;">
+        1. RELATÓRIO INTERNO - ANÁLISE MANUAL DO LABORATÓRIO DE METROLOGIA
+      </div>
+      <div class="signature">
+        <div class="line">______________________________________________________________</div>
+        RESPONSÁVEL TÉCNICO - RESPONSÁVEL TÉCNICO / ENGENHARIA CLÍNICA
+      </div>
+    </section>
+  </main>
+</body>
+</html>
