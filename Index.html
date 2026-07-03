@@ -216,6 +216,14 @@
           </button>
         </div>
 
+        <!-- DEV EXCLUSIVO: FIN Flash V2 — visivel somente no DEV, protegido por FIN_FLASH_V2_VERIFICAR_ACESSO_DEV -->
+        <div class="sidebar-section" id="menu-secao-dev-fin-flash-v2" style="display:none;">
+          <div class="sidebar-section-title" style="color:#b91c1c;letter-spacing:.06em;font-size:10px;">DEV EXCLUSIVO</div>
+          <button type="button" class="menu-btn" id="menu-btn-fin_flash_v2_dev" onclick="abrir('fin_flash_v2_dev')" style="border-left:3px solid #b91c1c;">
+            <i class="fas fa-flask"></i><span>FIN Flash V2 — DEV</span>
+          </button>
+        </div>
+
       </aside>
 
       <main class="content-area">
@@ -252,6 +260,7 @@
 <?!= include('JS_Importacao'); ?>
 <template id="tplFinCartoesModulo"><?!= include('JS_Fin_Cartoes'); ?></template>
 <?!= include('JS_Manual'); ?>
+<template id="tplFinFlashV2DevModulo"><?!= include('JS_Fin_FlashV2'); ?></template>
 
   <script>
     // Atualização interna dos dados do SGO+

@@ -1018,6 +1018,7 @@
         if (ctx && ctx.success) {
           PERMISSOES_CONTEXT = ctx;
           aplicarRegrasDeAcesso_();
+          inicializarMenuDevFinFlashV2_();
         } else if (ctx && !ctx.success) {
           var msg = String(ctx.message || "").toLowerCase();
           var sessaoInvalida = msg.indexOf("expirada")      >= 0 ||
@@ -1213,6 +1214,12 @@
       return;
     }
 
+    if (mod === "fin_flash_v2_dev") {
+      renderFinFlashV2DevModulo_();
+      atualizarBadgeModulo_("fin_flash_v2_dev");
+      return;
+    }
+
     if (mod === "documentos") {
       renderDocumentosModulo_();
       atualizarBadgeModulo_("documentos");
@@ -1306,6 +1313,56 @@
     if (typeof finCartoesInit === "function") {
       finCartoesInit(SESSION);
     }
+  }
+
+  function inicializarMenuDevFinFlashV2_() {
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (r && r.ok) {
+          var sec = document.getElementById('menu-secao-dev-fin-flash-v2');
+          if (sec) sec.style.display = '';
+          var btn = document.getElementById('menu-btn-fin_flash_v2_dev');
+          if (btn) btn.style.display = '';
+        }
+      })
+      .withFailureHandler(function() {})
+      .FIN_FLASH_V2_VERIFICAR_ACESSO_DEV();
+  }
+
+  function renderFinFlashV2DevModulo_() {
+    var div = document.getElementById('conteudo');
+    if (!div) return;
+    div.innerHTML = '<div class="module-shell"><p style="padding:1rem;color:#64748b;">Verificando acesso DEV para FIN Flash V2...</p></div>';
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (!r || !r.ok) {
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;"><b>FIN_FLASH_V2_BLOQUEADO_FORA_DEV</b><br>' + escapeHtml_((r && r.motivo) || 'Acesso bloqueado: ambiente nao e DEV.') + '</div></div>';
+          return;
+        }
+        var tpl = document.getElementById('tplFinFlashV2DevModulo');
+        if (!tpl) {
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">Template tplFinFlashV2DevModulo nao encontrado no Index.html.</div></div>';
+          return;
+        }
+        var doc = new DOMParser().parseFromString(tpl.innerHTML || '', 'text/html');
+        var scripts = Array.prototype.slice.call(doc.querySelectorAll('script'));
+        scripts.forEach(function(s) {
+          var a = document.createElement('script');
+          a.text = s.textContent || '';
+          document.body.appendChild(a);
+          document.body.removeChild(a);
+        });
+        if (typeof finFlashV2Html_ === 'function') {
+          div.innerHTML = '<div class="module-shell fin-flash-v2-dev-shell">' + finFlashV2Html_() + '</div>';
+          if (typeof finFlashV2CarregarDesktop_ === 'function') finFlashV2CarregarDesktop_();
+        } else {
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">finFlashV2Html_ nao disponivel apos execucao do template JS_Fin_FlashV2.</div></div>';
+        }
+      })
+      .withFailureHandler(function(e) {
+        div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">Falha ao verificar acesso DEV: ' + escapeHtml_((e && e.message) || String(e)) + '</div></div>';
+      })
+      .FIN_FLASH_V2_VERIFICAR_ACESSO_DEV();
   }
 
   function obterBadgeStatusHtml_(statusString) {
@@ -1788,6 +1845,7 @@
       frota: "menu-btn-frota",
       dashboard_bi: "menu-btn-dashboard-bi",
       fin_cartoes: "menu-btn-fin_cartoes",
+      fin_flash_v2_dev: "menu-btn-fin_flash_v2_dev",
       documentos: "menu-btn-documentos",
       admin: "menu-btn-admin",
       inventario: "menu-btn-inventario",
@@ -1837,7 +1895,8 @@
       registros: "Registros Técnicos",
       relatorios: "Relatório de Conformidade",
       tecnicos: "Técnicos de Campo",
-      importacao: "Importação de Dados"
+      importacao: "Importação de Dados",
+      fin_flash_v2_dev: "FIN Flash V2 — DEV"
     };
 
     areaAvisos.style.display = "block";
