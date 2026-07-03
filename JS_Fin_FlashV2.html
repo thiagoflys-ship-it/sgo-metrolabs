@@ -1041,46 +1041,166 @@ function ffv2VerComprovanteLinha_(conciliacaoId) {
 // ── Extrato por Colaborador ───────────────────────────────────────────────────
 
 function ffv2LoadExtratoCpf_() {
-  var h = '<p class="ffv2-section-title">&#128196; Extrato por Colaborador</p>' +
+  var hoje = new Date();
+  var anoAtual = String(hoje.getFullYear());
+  var mesAtual = String(hoje.getMonth()+1);
+  if (mesAtual.length<2) mesAtual='0'+mesAtual;
+  var opcoesMes = '<option value="">Todos</option>';
+  for (var mm=1; mm<=12; mm++) {
+    var v = mm<10?('0'+mm):String(mm);
+    opcoesMes += '<option value="'+v+'"'+(v===mesAtual?' selected':'')+'>'+v+'</option>';
+  }
+  var h = '<p class="ffv2-section-title">&#128196; Extrato por Colaborador — vida financeira mês a mês</p>' +
+    '<p style="font-size:11px;color:#64748b;margin:0 0 8px;">Colaborador → CPF → Cartões → Extratos → Prestações → Conciliações → Pendências → Cobranças → Documentos → Auditoria. Prefira filtrar por mês/ano — o histórico completo sem período pode demorar mais e não é cacheado.</p>' +
     '<div class="ffv2-filtro-bar">' +
       '<label>CPF <input id="ffv2e-cpf" style="width:130px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;" placeholder="00000000000"></label>' +
+      '<label>Ano <input id="ffv2e-ano" style="width:64px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;" value="'+anoAtual+'" placeholder="AAAA"></label>' +
+      '<label>Mês <select id="ffv2e-mes" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;">'+opcoesMes+'</select></label>' +
       '<label>De <input id="ffv2e-ini" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
       '<label>Até <input id="ffv2e-fim" type="date" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"></label>' +
-      '<label>Tipo <select id="ffv2e-tipo" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"><option value="todos">Todos</option><option value="gastos">Gastos</option><option value="recargas">Recargas</option></select></label>' +
+      '<label>Tipo <select id="ffv2e-tipo" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;"><option value="todos">Todos</option><option value="gastos">Gastos</option><option value="recargas">Recargas</option><option value="extratos">Extratos</option></select></label>' +
       '<button onclick="ffv2BuscarExtratoCpf_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">Buscar</button>' +
+      '<button onclick="ffv2BuscarExtratoCpfCompleto_()" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#9888; Ver histórico completo</button>' +
     '</div>' +
-    '<div id="ffv2e-res">'+ffv2Skel_(2)+'</div>';
+    '<div id="ffv2e-res"><div class="ffv2-msg ffv2-msg-in">Preencha o CPF e clique em <strong>Buscar</strong> (ano/mês atual já vem pré-selecionado).</div></div>';
   document.getElementById('ffv2-pane').innerHTML = h;
 }
 
-function ffv2BuscarExtratoCpf_() {
-  var payload = {
-    cpf: (document.getElementById('ffv2e-cpf')||{}).value||'',
-    periodoInicio: (document.getElementById('ffv2e-ini')||{}).value||'',
-    periodoFim: (document.getElementById('ffv2e-fim')||{}).value||'',
-    tipo: (document.getElementById('ffv2e-tipo')||{}).value||'todos',
-    limite: 50
-  };
-  if (!payload.cpf) { document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o CPF.</div>'; return; }
-  document.getElementById('ffv2e-res').innerHTML=ffv2Skel_(2);
+function ffv2BuscarExtratoCpfCompleto_() {
+  ffv2BuscarExtratoCpf_(true);
+}
+
+function ffv2BuscarExtratoCpf_(forcarCompleto) {
+  var cpf = (document.getElementById('ffv2e-cpf')||{}).value||'';
+  var ano = (document.getElementById('ffv2e-ano')||{}).value||'';
+  var mes = (document.getElementById('ffv2e-mes')||{}).value||'';
+  var ini = (document.getElementById('ffv2e-ini')||{}).value||'';
+  var fim = (document.getElementById('ffv2e-fim')||{}).value||'';
+  var resEl = document.getElementById('ffv2e-res');
+  if (!cpf) { if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o CPF.</div>'; return; }
+
+  var payload = { cpf: cpf, tipo: (document.getElementById('ffv2e-tipo')||{}).value||'todos', limite: 2000 };
+  var avisoPerf = '';
+  if (forcarCompleto) {
+    avisoPerf = '<div class="ffv2-msg ffv2-msg-av" style="margin-bottom:8px;">&#9888; Buscando o histórico completo — pode demorar mais e não é cacheado.</div>';
+  } else if (ano && mes) {
+    payload.ano = ano; payload.mes = mes;
+  } else if (ini || fim) {
+    payload.dataInicio = ini; payload.dataFim = fim;
+  } else {
+    // DEFAULT_MES_ATUAL_V216C — sem período informado, evita carregar o histórico completo por padrão
+    var hoje = new Date();
+    var mesPad = String(hoje.getMonth()+1); if (mesPad.length<2) mesPad='0'+mesPad;
+    payload.ano = String(hoje.getFullYear()); payload.mes = mesPad;
+    avisoPerf = '<div class="ffv2-msg ffv2-msg-in" style="margin-bottom:8px;">Nenhum período informado — carregando o mês atual ('+payload.ano+'-'+payload.mes+') por padrão. Use "Ver histórico completo" para tudo (pode demorar mais).</div>';
+  }
+
+  if (resEl) resEl.innerHTML = avisoPerf + ffv2Skel_(3);
   google.script.run
     .withSuccessHandler(function(r) {
-      if (!r.ok) { document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>'; return; }
-      var sum = r.resumo||{};
-      var kpis = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'+
-        ffv2KpiCard_('Recarregado',finFlashV2FmtMoeda_(sum.totalRecarregado||0),'#22c55e')+
-        ffv2KpiCard_('Gasto',finFlashV2FmtMoeda_(sum.totalGasto||0),'#ef4444')+
-        ffv2KpiCard_('Pendente',finFlashV2FmtMoeda_(sum.totalPendente||0),'#f59e0b')+
-        ffv2KpiCard_('Saldo Estimado',finFlashV2FmtMoeda_(sum.saldoEstimado||0),'#3b82f6')+
-        '</div>';
-      var rows = (r.movimentacoes||[]).map(function(m){
-        return {Tipo:m.tipo,Data:m.data,Valor:finFlashV2FmtMoeda_(m.valor),Categoria:m.categoria,Status:m.status,Comprovante:m.comprovante?'Sim':'—','_html_Status':ffv2Badge_(m.status)};
-      });
-      var gerarBtn = '<div style="margin-top:10px;"><button onclick="ffv2GerarExtratoCpfA4_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">&#128196; Gerar Extrato A4</button> <span id="ffv2e-a4-res"></span></div>';
-      document.getElementById('ffv2e-res').innerHTML = kpis+ffv2Tabela_(['Tipo','Data','Valor','Categoria','Status','Comprovante'],rows,'Nenhuma movimentação encontrada.')+gerarBtn;
+      if (!r.ok) { if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>'; return; }
+      ffv2St_().dados.extratoCompletoAtual = r;
+      if (resEl) resEl.innerHTML = avisoPerf + ffv2RenderExtratoCompleto_(r);
     })
-    .withFailureHandler(function(e){document.getElementById('ffv2e-res').innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
-    .FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV(payload);
+    .withFailureHandler(function(e){ if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>'; })
+    .FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(payload);
+}
+
+function ffv2RenderExtratoCompleto_(r) {
+  var c = r.colaborador || {};
+  var g = r.resumoGeral || {};
+  var h = '';
+
+  // ── Dados do colaborador ──────────────────────────────────────────────────
+  h += '<div class="ffv2-card">' +
+    '<p class="ffv2-section-title">&#128100; '+finFlashV2Escape_(c.nome||c.cpfExibicao||'—')+'</p>' +
+    '<p style="font-size:12px;color:#475569;">CPF: '+finFlashV2Escape_(c.cpfExibicao||'—')+' &nbsp;|&nbsp; Status: '+ffv2Badge_(c.status||'—')+'</p>' +
+    '</div>';
+
+  // ── Resumo geral ──────────────────────────────────────────────────────────
+  h += '<p class="ffv2-section-title">Resumo Geral</p>' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">' +
+      ffv2KpiCard_('Cartões', g.totalCartoes||0, '#3b82f6') +
+      ffv2KpiCard_('Extratos', g.totalExtratos||0, '#6366f1') +
+      ffv2KpiCard_('Prestações', g.totalPrestacoes||0, '#0ea5e9') +
+      ffv2KpiCard_('Conciliações', g.totalConciliacoes||0, '#22c55e') +
+      ffv2KpiCard_('Pendências', g.totalPendencias||0, '#ef4444') +
+      ffv2KpiCard_('Cobranças', g.totalCobrancas||0, '#f59e0b') +
+      ffv2KpiCard_('Documentos', g.totalDocumentos||0, '#8b5cf6') +
+      ffv2KpiCard_('Logs', g.totalLogs||0, '#64748b') +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">' +
+      ffv2KpiCard_('Total Extratos', finFlashV2FmtMoeda_(g.valorTotalExtratos||0), '#6366f1') +
+      ffv2KpiCard_('Total Prestações', finFlashV2FmtMoeda_(g.valorTotalPrestacoes||0), '#0ea5e9') +
+      ffv2KpiCard_('Pendente', finFlashV2FmtMoeda_(g.valorPendente||0), '#ef4444') +
+      ffv2KpiCard_('Conciliado', finFlashV2FmtMoeda_(g.valorConciliado||0), '#22c55e') +
+    '</div>';
+
+  // ── Cartões ───────────────────────────────────────────────────────────────
+  var cartoesRows = (r.cartoes||[]).map(function(k){ return {ID:k.id,Tipo:k.tipo,Final:k.final,Status:k.status,'_html_Status':ffv2Badge_(k.status)}; });
+  h += '<p class="ffv2-section-title">&#128179; Cartões</p>' + ffv2Tabela_(['ID','Tipo','Final','Status'],cartoesRows,'Nenhum cartão.');
+
+  // ── Resumo por mês ────────────────────────────────────────────────────────
+  h += '<p class="ffv2-section-title">&#128197; Resumo por Mês</p>';
+  if (!(r.meses||[]).length) {
+    h += '<p style="color:#94a3b8;font-size:12px;">Nenhum mês com movimentação no período.</p>';
+  } else {
+    (r.meses||[]).forEach(function(m){
+      var rm = m.resumoMes||{};
+      h += '<div class="ffv2-card" style="margin-bottom:10px;">' +
+        '<p style="font-weight:700;font-size:13px;margin:0 0 6px;">'+finFlashV2Escape_(m.mesAno)+'</p>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:#475569;">' +
+          '<span>Cartões: <strong>'+(rm.totalCartoes||0)+'</strong></span>' +
+          '<span>Extratos: <strong>'+(rm.totalExtratos||0)+'</strong></span>' +
+          '<span>Prestações: <strong>'+(rm.totalPrestacoes||0)+'</strong></span>' +
+          '<span>Conciliações: <strong>'+(rm.totalConciliacoes||0)+'</strong></span>' +
+          '<span>Pendências: <strong>'+(rm.totalPendencias||0)+'</strong></span>' +
+          '<span>Cobranças: <strong>'+(rm.totalCobrancas||0)+'</strong></span>' +
+          '<span>Documentos: <strong>'+(rm.totalDocumentos||0)+'</strong></span>' +
+          '<span>Logs: <strong>'+(rm.totalLogs||0)+'</strong></span>' +
+          '<span>Gasto no mês: <strong>'+finFlashV2FmtMoeda_(rm.valorGastoMes||0)+'</strong></span>' +
+        '</div></div>';
+    });
+  }
+
+  // ── Timeline unificada ────────────────────────────────────────────────────
+  var timelineRows = (r.timelineUnificada||[]).map(function(t){
+    return {Tipo:t.tipo,Data:t.data,Descrição:t.descricao||'—',Valor:finFlashV2FmtMoeda_(t.valor||0)};
+  });
+  h += '<p class="ffv2-section-title">&#128338; Timeline Unificada</p>' + ffv2Tabela_(['Tipo','Data','Descrição','Valor'],timelineRows,'Sem movimentações no período.');
+
+  // ── Extratos importados ───────────────────────────────────────────────────
+  var extRows = (r.extratosImportados||[]).map(function(e){ return {Data:e.data,Movimentação:e.movimentacao,Valor:finFlashV2FmtMoeda_(e.valor),Status:e.statusImportacao,'_html_Status':ffv2Badge_(e.statusImportacao)}; });
+  h += '<p class="ffv2-section-title">&#128203; Extratos Importados</p>' + ffv2Tabela_(['Data','Movimentação','Valor','Status'],extRows,'Nenhum extrato no período.');
+
+  // ── Prestações ────────────────────────────────────────────────────────────
+  var prestRows = (r.prestacoes||[]).map(function(p){ return {Data:p.dataGasto,Estabelecimento:p.estabelecimento||p.finalidade,Valor:finFlashV2FmtMoeda_(p.valor),Status:p.status,Comprovante:p.comprovanteId?'Sim':'Não','_html_Status':ffv2Badge_(p.status)}; });
+  h += '<p class="ffv2-section-title">&#128179; Prestações</p>' + ffv2Tabela_(['Data','Estabelecimento','Valor','Status','Comprovante'],prestRows,'Nenhuma prestação no período.');
+
+  // ── Conciliações ──────────────────────────────────────────────────────────
+  var concRows = (r.conciliacoes||[]).map(function(cc){ return {Data:cc.data,Estabelecimento:cc.estabelecimento,Valor:finFlashV2FmtMoeda_(cc.valor),'Status Conc.':cc.statusConciliacao,'Status Prest.':cc.statusPrestacao||'—','_html_Status Conc.':ffv2Badge_(cc.statusConciliacao),'_html_Status Prest.':cc.statusPrestacao?ffv2Badge_(cc.statusPrestacao):'—'}; });
+  h += '<p class="ffv2-section-title">&#128269; Conciliações</p>' + ffv2Tabela_(['Data','Estabelecimento','Valor','Status Conc.','Status Prest.'],concRows,'Nenhuma conciliação no período.');
+
+  // ── Pendências ────────────────────────────────────────────────────────────
+  var pendRows = (r.pendencias||[]).map(function(p){ return {Data:p.criadoEm,Tipo:p.tipo,Severidade:p.severidade,Valor:finFlashV2FmtMoeda_(p.valor),Status:p.status,'_html_Severidade':ffv2Badge_(p.severidade),'_html_Status':ffv2Badge_(p.status)}; });
+  h += '<p class="ffv2-section-title">&#9888; Pendências</p>' + ffv2Tabela_(['Data','Tipo','Severidade','Valor','Status'],pendRows,'Nenhuma pendência no período.');
+
+  // ── Cobranças ─────────────────────────────────────────────────────────────
+  var cobRows = (r.cobrancas||[]).map(function(a){ return {Data:a.criadoEm,Tipo:a.tipo,Severidade:a.severidade,Status:a.status,'_html_Severidade':ffv2Badge_(a.severidade),'_html_Status':ffv2Badge_(a.status)}; });
+  h += '<p class="ffv2-section-title">&#128276; Cobranças</p>' + ffv2Tabela_(['Data','Tipo','Severidade','Status'],cobRows,'Nenhuma cobrança no período.');
+
+  // ── Documentos ────────────────────────────────────────────────────────────
+  var docRows = (r.documentos||[]).map(function(d){ return {Data:d.criadoEm,Tipo:d.tipo,Status:d.status,'_html_Status':ffv2Badge_(d.status)}; });
+  h += '<p class="ffv2-section-title">&#128193; Documentos</p>' + ffv2Tabela_(['Data','Tipo','Status'],docRows,'Nenhum documento no período.');
+
+  // ── Logs / Auditoria ──────────────────────────────────────────────────────
+  var logRows = (r.logsAuditoria||[]).map(function(l){ return {Data:l.criadoEm,'Ação':l.acao,Entidade:l.entidade}; });
+  h += '<p class="ffv2-section-title">&#128203; Logs / Auditoria</p>' + ffv2Tabela_(['Data','Ação','Entidade'],logRows,'Nenhum log no período.');
+
+  // ── Gerar Extrato A4 (botão preservado, sem alteração de comportamento) ──
+  h += '<div style="margin-top:14px;"><button onclick="ffv2GerarExtratoCpfA4_()" class="ffv2-btn ffv2-btn-p" style="font-size:11px;">&#128196; Gerar Extrato A4</button> <span id="ffv2e-a4-res"></span></div>';
+
+  return h;
 }
 
 function ffv2GerarExtratoCpfA4_() {

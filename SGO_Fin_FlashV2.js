@@ -2879,17 +2879,20 @@ function FIN_FLASH_V2_SIMULAR_ENVIO_COBRANCAS_DEV(payload) {
 }
 
 function FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV(filtros) {
+  // V2.16B: corrigido para comparar CPF normalizado (era comparação bruta).
   var r = { ok:false, itens:[], bloqueios:[] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros=filtros||{};
+    var filtroCpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
     var alertas=FIN_FLASH_V2_sheetCtx10_('ALERTAS');
     r.itens=alertas.data.filter(function(a){
-      if (filtros.cpf    && a.CPF!==filtros.cpf)       return false;
+      if (filtroCpfNorm && FIN_FLASH_V2_normCpf_(a.CPF)!==filtroCpfNorm) return false;
       if (filtros.status && a.STATUS!==filtros.status) return false;
       return true;
     }).slice(0,filtros.limite||50).map(function(a){
-      return {id:a.ID,cpf:a.CPF,tipo:a.TIPO,severidade:a.SEVERIDADE,
+      var cpfNorm = FIN_FLASH_V2_normCpf_(a.CPF);
+      return {id:a.ID,cpf:cpfNorm,cpfNormalizado:cpfNorm,cpfExibicao:cpfNorm,tipo:a.TIPO,severidade:a.SEVERIDADE,
         status:a.STATUS,envioReal:a.ENVIADO_REAL||'NAO',
         canalEmail:!!a.EMAIL_DESTINO,canalWhatsapp:!!a.WHATSAPP_DESTINO,criadoEm:a.CRIADO_EM};
     });
@@ -3489,22 +3492,24 @@ function FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV(payload) {
 // ── 6. PENDÊNCIAS ─────────────────────────────────────────────────────────────
 
 function FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV(filtros) {
+  // V2.16B: corrigido para comparar CPF normalizado (era comparação bruta).
   var r = { ok:false, colaboradores:[], totalGeral:0, bloqueios:[] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
+    var filtroCpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
     var pend   = FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
     var contas = FIN_FLASH_V2_sheetCtx10_('CONTAS');
-    var nmap = {}; contas.data.forEach(function(c){ nmap[c.CPF]=c; });
+    var nmap = {}; contas.data.forEach(function(c){ nmap[FIN_FLASH_V2_normCpf_(c.CPF)]=c; });
     var ativos = pend.data.filter(function(p){
       if (FIN_FLASH_V2_text_(p.STATUS)!=='PENDENTE') return false;
-      if (filtros.cpf && p.CPF!==filtros.cpf) return false;
+      if (filtroCpfNorm && FIN_FLASH_V2_normCpf_(p.CPF)!==filtroCpfNorm) return false;
       if (filtros.severidade && FIN_FLASH_V2_text_(p.SEVERIDADE)!==filtros.severidade) return false;
       return true;
     });
     var byCpf = {};
     ativos.forEach(function(p){
-      var cpf = p.CPF||'';
+      var cpf = FIN_FLASH_V2_normCpf_(p.CPF);
       if (!byCpf[cpf]) byCpf[cpf]={cpf:cpf,nome:(nmap[cpf]&&nmap[cpf].NOME)||cpf,pendencias:[],totalValor:0,maisAntiga:''};
       byCpf[cpf].pendencias.push(p);
       byCpf[cpf].totalValor+=Math.abs(Number(p.VALOR||0));
@@ -7164,4 +7169,553 @@ function AUDITAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V215I_PREP_REVERSAO_TESTE_SEM_GRAVAR();
+}
+
+// ── V2.16 — EXTRATO POR COLABORADOR COMPLETO: AUDITORIA SOMENTE LEITURA ─────
+// Nao grava nada, nao altera a tela. Mapeia a funcao/tela atuais e quanto da
+// vida financeira do colaborador (cartoes/extratos/prestacoes/conciliacoes/
+// pendencias/cobrancas/documentos/relatorios/logs) ja e ou nao mostrado hoje.
+
+function AUDITAR_FIN_FLASH_V216_EXTRATO_COLABORADOR_COMPLETO_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    funcaoAtualExtratoColaborador: 'FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV',
+    funcaoGerarExtratoA4: 'FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV',
+    frontendAtual: null,
+    filtrosDisponiveisHoje: [],
+    usaCpfNormalizado: false,
+    abasUsadasHoje: [],
+    abasFaltamIntegrar: [],
+    cartoesDoColaborador: null,
+    extratosImportados: null,
+    prestacoes: null,
+    conciliacoes: null,
+    pendencias: null,
+    cobrancas: null,
+    documentos: null,
+    relatorios: null,
+    logsAuditoria: null,
+    exemploCompletoBruna: null,
+    lacunasAtuais: [],
+    riscos: [],
+    planoV216B: [],
+    bloqueios: [], avisos: [],
+    recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+
+    // ── Frontend real: inspeção do HTML atual ────────────────────────────────
+    var html = '';
+    try { html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent(); }
+    catch (eHtml) { r.avisos.push('Não foi possível ler JS_Fin_FlashV2.html: ' + (eHtml.message || String(eHtml))); }
+    var funcoesFrontend = ['ffv2LoadExtratoCpf_','ffv2BuscarExtratoCpf_','ffv2GerarExtratoCpfA4_'];
+    r.frontendAtual = {
+      arquivo: 'JS_Fin_FlashV2.html',
+      funcoesEncontradas: funcoesFrontend.filter(function(f){ return html.indexOf('function ' + f) >= 0; }),
+      selectTipoSuportaExtratos: html.indexOf('<option value="extratos">') >= 0
+    };
+    r.filtrosDisponiveisHoje = ['cpf (input texto)', 'periodoInicio (data)', 'periodoFim (data)', 'tipo (select: todos/gastos/recargas — "extratos" existe no backend mas NÃO aparece no <select> do frontend)', 'limite (fixo em 50, não exposto na UI)'];
+
+    // ── Código real da função atual ───────────────────────────────────────────
+    var srcAtual = FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV.toString();
+    r.usaCpfNormalizado = srcAtual.indexOf('FIN_FLASH_V2_normCpf_') >= 0;
+    r.abasUsadasHoje = ['FIN_FLASH_V2_CONTAS', 'FIN_FLASH_V2_PRESTACOES', 'FIN_FLASH_V2_RECARGAS', 'FIN_FLASH_V2_PENDENCIAS (só soma total, não linha a linha)', 'FIN_FLASH_V2_EXTRATOS'];
+    r.abasFaltamIntegrar = ['FIN_FLASH_V2_CARTOES', 'FIN_FLASH_V2_CONCILIACOES', 'FIN_FLASH_V2_DOCUMENTOS', 'FIN_FLASH_V2_ALERTAS (cobranças)', 'FIN_FLASH_V2_LOGS (auditoria)'];
+
+    // ── Dados reais da Bruna, um bloco por fonte, cruzando com o que já existe na base ──
+    r.cartoesDoColaborador = FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV({ cpf: CPF_BRUNA });
+
+    var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS');
+    var extratosBruna = extratos.data.filter(function(e){ return FIN_FLASH_V2_normCpf_(e.CPF) === CPF_BRUNA; });
+    r.extratosImportados = { total: extratosBruna.length, exibidosHojeNoExtratoColaborador: r.usaCpfNormalizado };
+
+    var prest = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    var prestBruna = prest.data.filter(function(p){ return FIN_FLASH_V2_normCpf_(p.CPF) === CPF_BRUNA; });
+    r.prestacoes = { total: prestBruna.length, exibidasHojeNoExtratoColaborador: true };
+
+    // Conciliações: já existe join pronto na V2.15B, mas não integrado ao Extrato por Colaborador
+    var conciliacoesBruna = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ cpf: CPF_BRUNA, limite: 1000 });
+    r.conciliacoes = { total: conciliacoesBruna.total || 0, funcaoJaExiste: 'FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV (V2.15B)', exibidasHojeNoExtratoColaborador: false };
+
+    var pendResumo = FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV({ cpf: CPF_BRUNA });
+    var pendBruna = (pendResumo.colaboradores || []).filter(function(c){ return FIN_FLASH_V2_normCpf_(c.cpf) === CPF_BRUNA; })[0] || null;
+    var srcPend = FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV.toString();
+    r.pendencias = {
+      totalViaResumoPorColaborador: pendBruna ? pendBruna.qtdPendencias : 0,
+      funcaoJaExiste: 'FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV',
+      usaCpfNormalizado: srcPend.indexOf('FIN_FLASH_V2_normCpf_') >= 0,
+      obs: 'Compara p.CPF bruto (não normCpf_) — só funciona hoje porque a V2.14E já sanitizou fisicamente o CPF em FIN_FLASH_V2_PENDENCIAS para texto; é o mesmo padrão de risco latente de FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV. Só conta pendências com STATUS=PENDENTE (não mostra resolvidas).',
+      exibidasHojeNoExtratoColaboradorItemizadas: false
+    };
+
+    // Cobranças: função já aceita filtro CPF, mas compara bruto (não normalizado) — testar com CPF exato como guardado e com normalizado
+    var alertasComCpfBruto = FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV({ cpf: CPF_BRUNA });
+    var srcAlertas = FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV.toString();
+    r.cobrancas = {
+      totalComFiltroCpfNormalizado: (alertasComCpfBruto.itens || []).length,
+      funcaoJaExiste: 'FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV',
+      usaCpfNormalizado: srcAlertas.indexOf('FIN_FLASH_V2_normCpf_') >= 0,
+      exibidasHojeNoExtratoColaborador: false
+    };
+
+    var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+    var contaBruna = (FIN_FLASH_V2_sheetCtx10_('CONTAS').data.filter(function(c){ return FIN_FLASH_V2_normCpf_(c.CPF) === CPF_BRUNA; })[0]) || null;
+    var docsBruna = contaBruna ? docs.data.filter(function(d){ return d.CONTA_ID === contaBruna.ID; }) : [];
+    r.documentos = { total: docsBruna.length, obs: 'FIN_FLASH_V2_DOCUMENTOS não tem coluna CPF — só é ligável via CONTA_ID/PRESTACAO_ID.', exibidosHojeNoExtratoColaborador: false };
+
+    var relatorios = FIN_FLASH_V2_LISTAR_RELATORIOS_DEV({});
+    r.relatorios = { totalGeralSemFiltroPorColaborador: (relatorios.itens || []).length, obs: 'FIN_FLASH_V2_LISTAR_RELATORIOS_DEV não aceita filtro por CPF/colaborador hoje.', exibidosHojeNoExtratoColaborador: false };
+
+    var logsAuditoria = FIN_FLASH_V2_LISTAR_AUDITORIA_OPERACIONAL_DEV({ colaborador: contaBruna ? contaBruna.NOME : CPF_BRUNA, limite: 200 });
+    r.logsAuditoria = { totalEncontradosPorNomeOuEntidadeId: logsAuditoria.total || 0, obs: 'FIN_FLASH_V2_LISTAR_AUDITORIA_OPERACIONAL_DEV filtra por texto (nome) ou ENTIDADE_ID exato — não faz join estruturado CPF→conciliação/prestação→log.', exibidosHojeNoExtratoColaborador: false };
+
+    // ── Exemplo completo consolidado da Bruna ─────────────────────────────────
+    r.exemploCompletoBruna = {
+      cpf: CPF_BRUNA,
+      nome: contaBruna ? contaBruna.NOME : '',
+      cartoes: (r.cartoesDoColaborador.cartoes || []).length,
+      extratosImportados: r.extratosImportados.total,
+      prestacoes: r.prestacoes.total,
+      conciliacoes: r.conciliacoes.total,
+      pendencias: r.pendencias.totalViaResumoPorColaborador,
+      cobrancas: r.cobrancas.totalComFiltroCpfNormalizado,
+      documentos: r.documentos.total,
+      relatorios: 'não filtrável por colaborador hoje',
+      logs: r.logsAuditoria.totalEncontradosPorNomeOuEntidadeId
+    };
+
+    // ── Lacunas atuais ────────────────────────────────────────────────────────
+    r.lacunasAtuais = [
+      'Extrato por Colaborador não mostra cartões (FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV já existe e funciona, só não é chamado aqui).',
+      'Não mostra conciliações — a função de join CPF→conciliação já existe (V2.15B) mas não é reaproveitada nesta tela.',
+      'Pendências entram só como soma total (totalPendente), não como lista item a item nem com status.',
+      'Não mostra cobranças/alertas do colaborador.',
+      'Não mostra documentos/relatórios gerados para o colaborador.',
+      'Não mostra trilha de auditoria (logs) do colaborador.',
+      'Filtro "tipo=extratos" existe no backend mas não está disponível no <select> do frontend.',
+      'FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV compara CPF bruto, não normalizado — mesma classe de bug já corrigida em outras funções na V2.14F.',
+      'FIN_FLASH_V2_LISTAR_RELATORIOS_DEV não aceita filtro por colaborador/CPF — não dá para listar "relatórios deste colaborador" sem trazer todos e filtrar manualmente.',
+      'Visão não é organizada por mês — é uma lista plana ordenada por data, sem agrupamento "Extrato por Colaborador mês a mês" como pedido originalmente.'
+    ];
+
+    // ── Riscos ────────────────────────────────────────────────────────────────
+    r.riscos.push({ risco: 'Reaproveitar FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV para conciliações pode duplicar leitura das mesmas 7 abas já lidas por outras partes da tela', impacto: 'Sem cuidado, o Extrato por Colaborador pode ficar tão lento quanto a Conferência era antes do cache da V2.15F — replicar o mesmo padrão de cache curto.' });
+    r.riscos.push({ risco: 'FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV e FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV comparam CPF bruto, não normalizado', impacto: 'Funcionam hoje só porque a V2.14E já sanitizou fisicamente o CPF nas abas envolvidas — se qualquer registro futuro for gravado sem passar pelas rotinas já blindadas na V2.14C, essas duas funções voltam a falhar silenciosamente. Normalizar antes de integrar ao extrato completo.' });
+    r.riscos.push({ risco: 'Agrupar por mês exige decidir a chave de agrupamento (DATA do extrato? DATA_GASTO da prestação? CRIADO_EM da conciliação?)', impacto: 'Decisão de produto, não só técnica — inconsistências de data já mapeadas em pacotes anteriores (algumas datas em formato DD/MM/YYYY HH:mm, outras YYYY-MM-DD).' });
+
+    // ── Plano V2.16B (documentado, não executado nesta fase) ───────────────────
+    r.planoV216B = [
+      { passo: 1, acao: 'CRIAR_FUNCAO_EXTRATO_COMPLETO', descricao: 'Criar FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) reaproveitando: LISTAR_CARTOES_DO_COLABORADOR_DEV (cartões), LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV (extratos+prestações+conciliações+pendências vinculadas), RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV (pendências agregadas), LISTAR_ALERTAS_COBRANCA_DEV corrigido (cobranças), DOCUMENTOS por CONTA_ID (documentos/relatórios), LISTAR_AUDITORIA_OPERACIONAL_DEV (logs).', executadoNestaFase: false },
+      { passo: 2, acao: 'AGRUPAR_POR_MES', descricao: 'Agrupar o resultado por AAAA-MM (normalizando as datas heterogêneas encontradas), preservando os itens de cada bloco (cartões/extratos/prestações/conciliações/pendências/cobranças/documentos) dentro do mês correspondente.', executadoNestaFase: false },
+      { passo: 3, acao: 'CORRIGIR_CPF_BRUTO_COBRANCAS_E_PENDENCIAS', descricao: 'Normalizar a comparação de CPF em FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV e FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV antes de integrá-las ao extrato completo.', executadoNestaFase: false },
+      { passo: 4, acao: 'ADICIONAR_FILTRO_COLABORADOR_EM_RELATORIOS', descricao: 'Adicionar filtro por CONTA_ID/CPF em FIN_FLASH_V2_LISTAR_RELATORIOS_DEV (hoje não existe).', executadoNestaFase: false },
+      { passo: 5, acao: 'CACHE_CURTO', descricao: 'Aplicar cache curto (padrão já usado na V2.15F) na nova função consolidada, já que ela vai ler mais abas que a Conferência.', executadoNestaFase: false },
+      { passo: 6, acao: 'REDESENHAR_FRONTEND', descricao: 'Só depois do backend pronto, redesenhar ffv2LoadExtratoCpf_/ffv2BuscarExtratoCpf_ para exibir os blocos por mês, incluindo o filtro "extratos" que já existe no backend.', executadoNestaFase: false }
+    ];
+
+    r.recomendacoesProximaFase = [
+      'V2.16B: implementar o backend consolidado (passo 1-4 do plano) antes de tocar em qualquer coisa visual.',
+      'V2.16C: só depois, redesenhar a tela para agrupar por mês e mostrar os 10 blocos (cartões, extratos, prestações, conciliações, pendências, cobranças, documentos, relatórios, logs, auditoria).',
+      'Reaproveitar o máximo possível das funções já existentes e validadas (V2.14/V2.15) em vez de reimplementar leitura de abas do zero.'
+    ];
+
+    r.ok = true;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216_EXTRATO_COLABORADOR_COMPLETO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216_EXTRATO_COLABORADOR_COMPLETO_SEM_GRAVAR();
+}
+
+// ── V2.16B — BACKEND CONSOLIDADO DO EXTRATO POR COLABORADOR ─────────────────
+// Reaproveita as bases já corrigidas da V2.14 (CPF normalizado) e V2.15B
+// (join CONCILIACOES->EXTRATO/PRESTACAO). Somente leitura, com cache curto.
+
+function FIN_FLASH_V2_v216MesAno_(dataStr) {
+  if (!dataStr) return 'SEM_DATA';
+  var s = String(dataStr).trim();
+  var m1 = s.match(/^(\d{4})-(\d{2})-\d{2}/);
+  if (m1) return m1[1] + '-' + m1[2];
+  var m2 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m2) return m2[3] + '-' + m2[2];
+  return 'FORMATO_DESCONHECIDO';
+}
+
+function FIN_FLASH_V2_v216TimestampOrdenar_(dataStr) {
+  if (!dataStr) return 0;
+  var s = String(dataStr).trim();
+  var d = new Date(s.replace(' ', 'T'));
+  if (!isNaN(d.getTime())) return d.getTime();
+  var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T]?(\d{2}:\d{2})?/);
+  if (m) {
+    var iso = m[3] + '-' + m[2] + '-' + m[1] + 'T' + (m[4] || '00:00') + ':00';
+    var d2 = new Date(iso);
+    if (!isNaN(d2.getTime())) return d2.getTime();
+  }
+  return 0;
+}
+
+var FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ = 120;
+
+function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
+  var r = {
+    ok: false, colaborador: null, periodo: null, resumoGeral: null,
+    cartoes: [], extratosImportados: [], prestacoes: [], conciliacoes: [], pendencias: [],
+    cobrancas: [], documentos: [], logsAuditoria: [], meses: [], timelineUnificada: [],
+    riscos: [], avisos: [], bloqueios: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  filtros = filtros || {};
+
+  var cache = null, cacheKey = null;
+  try {
+    cache = CacheService.getScriptCache();
+    cacheKey = 'FFV2_EXT_COMPLETO_' + JSON.stringify({
+      cpf: filtros.cpf || '', colaboradorId: filtros.colaboradorId || '',
+      dataInicio: filtros.dataInicio || '', dataFim: filtros.dataFim || '',
+      mes: filtros.mes || '', ano: filtros.ano || '', tipo: filtros.tipo || '', status: filtros.status || '',
+      limite: filtros.limite || 500
+    });
+    var cached = cache.get(cacheKey);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      parsed.avisos = (parsed.avisos || []).concat(['CACHE_HIT_' + FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ + 'S']);
+      return parsed;
+    }
+  } catch (eCache) { cache = null; }
+
+  try {
+    var limite = filtros.limite || 500;
+
+    // ── Resolver colaborador por CPF ou colaboradorId ────────────────────────
+    var contas = FIN_FLASH_V2_sheetCtx10_('CONTAS');
+    var cpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
+    if (!cpfNorm && filtros.colaboradorId) {
+      var contaAlvo = contas.data.filter(function(c){ return c.ID === filtros.colaboradorId; })[0];
+      if (contaAlvo) cpfNorm = FIN_FLASH_V2_normCpf_(contaAlvo.CPF);
+    }
+    if (!cpfNorm) { r.bloqueios.push('CPF ou colaboradorId obrigatório.'); return r; }
+
+    var contaH = contas.data.filter(function(c){ return FIN_FLASH_V2_normCpf_(c.CPF) === cpfNorm; })[0];
+    r.colaborador = contaH ? {
+      id: contaH.ID, nome: contaH.NOME, cpfNormalizado: cpfNorm, cpfExibicao: cpfNorm, status: contaH.STATUS
+    } : { id: '', nome: '', cpfNormalizado: cpfNorm, cpfExibicao: cpfNorm, status: '' };
+    if (!contaH) r.avisos.push('Conta não encontrada para o CPF informado — resultado pode ficar vazio.');
+
+    var dataInicio = filtros.dataInicio || '';
+    var dataFim = filtros.dataFim || '';
+    var mesAnoFiltro = (filtros.ano && filtros.mes) ? (String(filtros.ano) + '-' + String(filtros.mes).padStart(2, '0')) : '';
+    r.periodo = { dataInicio: dataInicio, dataFim: dataFim, mesAnoFiltro: mesAnoFiltro || null };
+
+    var dentroDoPeriodo = function(dataStr) {
+      if (dataInicio && dataStr && String(dataStr) < String(dataInicio)) return false;
+      if (dataFim && dataStr && String(dataStr) > String(dataFim)) return false;
+      if (mesAnoFiltro && FIN_FLASH_V2_v216MesAno_(dataStr) !== mesAnoFiltro) return false;
+      return true;
+    };
+
+    // ── 1. Cartões (reaproveita V2.14F) ───────────────────────────────────────
+    var resCartoes = FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV({ cpf: cpfNorm });
+    r.cartoes = (resCartoes.cartoes || []).filter(function(k){ return dentroDoPeriodo(k.criadoEm); }).slice(0, limite);
+
+    // ── 2. Extratos importados (direto de FIN_FLASH_V2_EXTRATOS) ─────────────
+    var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS');
+    r.extratosImportados = extratos.data.filter(function(e){
+      return FIN_FLASH_V2_normCpf_(e.CPF) === cpfNorm && dentroDoPeriodo(e.DATA || e.CRIADO_EM);
+    }).map(function(e){
+      return { id: e.ID, data: e.DATA || e.CRIADO_EM, movimentacao: e.MOVIMENTACAO || '', valor: Number(e.VALOR || 0),
+        pagamento: e.PAGAMENTO || '', statusImportacao: e.STATUS_IMPORTACAO || '', loteId: e.LOTE_ID || '' };
+    }).slice(0, limite);
+
+    // ── 3. Prestações (direto de FIN_FLASH_V2_PRESTACOES) ────────────────────
+    var prest = FIN_FLASH_V2_sheetCtx10_('PRESTACOES');
+    r.prestacoes = prest.data.filter(function(p){
+      return FIN_FLASH_V2_normCpf_(p.CPF) === cpfNorm && dentroDoPeriodo(p.DATA_GASTO || p.CRIADO_EM);
+    }).map(function(p){
+      return { id: p.ID, dataGasto: p.DATA_GASTO || p.CRIADO_EM, valor: Number(p.VALOR || 0),
+        estabelecimento: p.ESTABELECIMENTO || '', finalidade: p.FINALIDADE || '', justificativa: p.JUSTIFICATIVA || '',
+        comprovanteId: p.COMPROVANTE_ID || '', status: p.STATUS || '', cartaoId: p.CARTAO_ID || '' };
+    }).slice(0, limite);
+
+    // ── 4. Conciliações (reaproveita o join da V2.15B) ───────────────────────
+    var resConc = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ cpf: cpfNorm, limite: 100000 });
+    r.conciliacoes = (resConc.itens || []).filter(function(c){ return dentroDoPeriodo(c.data); }).slice(0, limite);
+
+    // ── 5. Pendências linha a linha (direto de FIN_FLASH_V2_PENDENCIAS, todos os status) ──
+    var pend = FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
+    r.pendencias = pend.data.filter(function(p){
+      return FIN_FLASH_V2_normCpf_(p.CPF) === cpfNorm && dentroDoPeriodo(p.CRIADO_EM);
+    }).map(function(p){
+      return { id: p.ID, tipo: p.TIPO || '', severidade: p.SEVERIDADE || '', status: p.STATUS || '',
+        descricao: p.DESCRICAO || '', extratoId: p.EXTRATO_ID || '', prestacaoId: p.PRESTACAO_ID || '',
+        valor: Number(p.VALOR || 0), criadoEm: p.CRIADO_EM || '', resolvidoEm: p.RESOLVIDO_EM || '' };
+    }).slice(0, limite);
+
+    // ── 6. Cobranças/Alertas (reaproveita a função já corrigida acima) ───────
+    var resCobrancas = FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV({ cpf: cpfNorm, limite: limite });
+    r.cobrancas = (resCobrancas.itens || []).filter(function(a){ return dentroDoPeriodo(a.criadoEm); });
+
+    // ── 7. Documentos (ligados por CONTA_ID ou PRESTACAO_ID do colaborador) ──
+    var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+    var idsPrestacao = {}; r.prestacoes.forEach(function(p){ idsPrestacao[p.id] = true; });
+    r.documentos = docs.data.filter(function(d){
+      var pertence = (contaH && d.CONTA_ID === contaH.ID) || (d.PRESTACAO_ID && idsPrestacao[d.PRESTACAO_ID]);
+      return pertence && dentroDoPeriodo(d.CRIADO_EM);
+    }).map(function(d){
+      return { id: d.ID, tipo: d.TIPO || '', status: d.STATUS || '', criadoEm: d.CRIADO_EM || '', prestacaoId: d.PRESTACAO_ID || '' };
+    }).slice(0, limite);
+
+    // ── 8. Logs/Auditoria (ligados por CONTA_ID, cartão, prestação, conciliação, extrato ou pendência) ──
+    var idsRelacionados = {};
+    if (contaH) idsRelacionados[contaH.ID] = true;
+    r.cartoes.forEach(function(k){ idsRelacionados[k.id] = true; });
+    r.prestacoes.forEach(function(p){ idsRelacionados[p.id] = true; });
+    r.conciliacoes.forEach(function(c){ idsRelacionados[c.conciliacaoId] = true; if (c.extratoId) idsRelacionados[c.extratoId] = true; });
+    r.pendencias.forEach(function(p){ idsRelacionados[p.id] = true; });
+    var logs = FIN_FLASH_V2_sheetCtx10_('LOGS');
+    r.logsAuditoria = logs.data.filter(function(l){
+      var ligado = idsRelacionados[l.ENTIDADE_ID] || (l.DETALHE_JSON && String(l.DETALHE_JSON).indexOf(cpfNorm) >= 0);
+      return ligado && dentroDoPeriodo(l.CRIADO_EM);
+    }).map(function(l){
+      return { id: l.ID, acao: l.ACAO || '', entidade: l.ENTIDADE || '', entidadeId: l.ENTIDADE_ID || '', criadoEm: l.CRIADO_EM || '' };
+    }).slice(0, limite);
+
+    // ── Resumo geral ──────────────────────────────────────────────────────────
+    var valorTotalExtratos = r.extratosImportados.reduce(function(s, e){ return s + Number(e.valor || 0); }, 0);
+    var valorTotalPrestacoes = r.prestacoes.reduce(function(s, p){ return s + Number(p.valor || 0); }, 0);
+    var valorPendente = r.pendencias.filter(function(p){ return p.status === 'PENDENTE'; }).reduce(function(s, p){ return s + Math.abs(Number(p.valor || 0)); }, 0);
+    var valorConciliado = r.conciliacoes.filter(function(c){ return c.statusConciliacao === 'CONCILIADO'; }).reduce(function(s, c){ return s + Number(c.valor || 0); }, 0);
+    r.resumoGeral = {
+      totalCartoes: r.cartoes.length, totalExtratos: r.extratosImportados.length, totalPrestacoes: r.prestacoes.length,
+      totalConciliacoes: r.conciliacoes.length, totalPendencias: r.pendencias.length, totalCobrancas: r.cobrancas.length,
+      totalDocumentos: r.documentos.length, totalLogs: r.logsAuditoria.length,
+      valorTotalExtratos: valorTotalExtratos, valorTotalPrestacoes: valorTotalPrestacoes,
+      valorPendente: valorPendente, valorConciliado: valorConciliado
+    };
+
+    // ── Agrupamento por mês ────────────────────────────────────────────────────
+    var mesesMap = {};
+    var registrar = function(mesAno, categoria, item) {
+      if (!mesesMap[mesAno]) mesesMap[mesAno] = { cartoes: [], extratos: [], prestacoes: [], conciliacoes: [], pendencias: [], cobrancas: [], documentos: [], logs: [] };
+      mesesMap[mesAno][categoria].push(item);
+    };
+    r.cartoes.forEach(function(k){ registrar(FIN_FLASH_V2_v216MesAno_(k.criadoEm), 'cartoes', k); });
+    r.extratosImportados.forEach(function(e){ registrar(FIN_FLASH_V2_v216MesAno_(e.data), 'extratos', e); });
+    r.prestacoes.forEach(function(p){ registrar(FIN_FLASH_V2_v216MesAno_(p.dataGasto), 'prestacoes', p); });
+    r.conciliacoes.forEach(function(c){ registrar(FIN_FLASH_V2_v216MesAno_(c.data), 'conciliacoes', c); });
+    r.pendencias.forEach(function(p){ registrar(FIN_FLASH_V2_v216MesAno_(p.criadoEm), 'pendencias', p); });
+    r.cobrancas.forEach(function(a){ registrar(FIN_FLASH_V2_v216MesAno_(a.criadoEm), 'cobrancas', a); });
+    r.documentos.forEach(function(d){ registrar(FIN_FLASH_V2_v216MesAno_(d.criadoEm), 'documentos', d); });
+    r.logsAuditoria.forEach(function(l){ registrar(FIN_FLASH_V2_v216MesAno_(l.criadoEm), 'logs', l); });
+
+    r.meses = Object.keys(mesesMap).sort().reverse().map(function(mesAno){
+      var itens = mesesMap[mesAno];
+      return {
+        mesAno: mesAno,
+        resumoMes: {
+          totalCartoes: itens.cartoes.length, totalExtratos: itens.extratos.length, totalPrestacoes: itens.prestacoes.length,
+          totalConciliacoes: itens.conciliacoes.length, totalPendencias: itens.pendencias.length, totalCobrancas: itens.cobrancas.length,
+          totalDocumentos: itens.documentos.length, totalLogs: itens.logs.length,
+          valorGastoMes: itens.prestacoes.reduce(function(s, p){ return s + Number(p.valor || 0); }, 0)
+        },
+        itensMes: itens
+      };
+    });
+
+    // ── Timeline unificada ────────────────────────────────────────────────────
+    var timeline = [];
+    r.cartoes.forEach(function(k){ timeline.push({ tipo: 'CARTAO', data: k.criadoEm, id: k.id, descricao: 'Cartão ' + k.tipo + ' final ' + k.final, valor: 0 }); });
+    r.extratosImportados.forEach(function(e){ timeline.push({ tipo: 'EXTRATO', data: e.data, id: e.id, descricao: e.movimentacao, valor: e.valor }); });
+    r.prestacoes.forEach(function(p){ timeline.push({ tipo: 'PRESTACAO', data: p.dataGasto, id: p.id, descricao: p.estabelecimento || p.finalidade, valor: p.valor }); });
+    r.conciliacoes.forEach(function(c){ timeline.push({ tipo: 'CONCILIACAO', data: c.data, id: c.conciliacaoId, descricao: c.estabelecimento + ' (' + c.statusConciliacao + ')', valor: c.valor }); });
+    r.pendencias.forEach(function(p){ timeline.push({ tipo: 'PENDENCIA', data: p.criadoEm, id: p.id, descricao: p.descricao || p.tipo, valor: p.valor }); });
+    r.cobrancas.forEach(function(a){ timeline.push({ tipo: 'COBRANCA', data: a.criadoEm, id: a.id, descricao: a.tipo, valor: 0 }); });
+    r.documentos.forEach(function(d){ timeline.push({ tipo: 'DOCUMENTO', data: d.criadoEm, id: d.id, descricao: d.tipo, valor: 0 }); });
+    r.logsAuditoria.forEach(function(l){ timeline.push({ tipo: 'LOG', data: l.criadoEm, id: l.id, descricao: l.acao, valor: 0 }); });
+    timeline.sort(function(a, b){ return FIN_FLASH_V2_v216TimestampOrdenar_(b.data) - FIN_FLASH_V2_v216TimestampOrdenar_(a.data); });
+    r.timelineUnificada = timeline.slice(0, limite);
+
+    r.riscos.push('Cartões são entidades estáticas (não eventos mensais) — agrupados pelo mês de CRIADO_EM, não por um "mês de uso".');
+    r.riscos.push('Datas em formatos heterogêneos (YYYY-MM-DD, DD/MM/YYYY) foram normalizadas por regex — casos fora desses 2 padrões caem em "FORMATO_DESCONHECIDO".');
+    r.riscos.push('Cache de ' + FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ + 's pode mostrar dado levemente desatualizado após uma ação de gravação recente.');
+
+    r.ok = true;
+    if (cache && cacheKey) {
+      try { cache.put(cacheKey, JSON.stringify(r), FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_); }
+      catch (eCachePut) { r.avisos.push('NAO_CACHEADO: ' + (eCachePut.message || String(eCachePut))); }
+    }
+  } catch (e) { r.bloqueios.push(e.message || String(e)); }
+  return r;
+}
+
+function AUDITAR_FIN_FLASH_V216B_BACKEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DESCONHECIDO',
+    funcaoConsolidadaExiste: false,
+    funcoesCpfBrutoCorrigidas: [],
+    usaCpfNormalizado: false,
+    usaJoinConferenciasV215: false,
+    incluiCartoes: false, incluiExtratos: false, incluiPrestacoes: false, incluiConciliacoes: false,
+    incluiPendenciasLinhaALinha: false, incluiCobrancas: false, incluiDocumentos: false, incluiLogs: false,
+    agrupaPorMes: false, timelineUnificada: false, cacheImplementado: false,
+    exemploBruna: null, totaisBruna: null, mesesBruna: null,
+    riscos: [], bloqueios: [], avisos: [],
+    planoV216C: [], recomendacoesProximaFase: []
+  };
+  var DEV_SCRIPT_ID = '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  var CPF_BRUNA = '05553116198';
+  try {
+    r.ambiente = ScriptApp.getScriptId() === DEV_SCRIPT_ID ? 'DEV' : 'DESCONHECIDO';
+
+    r.funcaoConsolidadaExiste = typeof FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV === 'function';
+    var srcConsolidada = r.funcaoConsolidadaExiste ? FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV.toString() : '';
+    r.usaCpfNormalizado = srcConsolidada.indexOf('FIN_FLASH_V2_normCpf_') >= 0;
+    r.usaJoinConferenciasV215 = srcConsolidada.indexOf('FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV') >= 0;
+    r.incluiCartoes = srcConsolidada.indexOf('FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV') >= 0;
+    r.incluiExtratos = srcConsolidada.indexOf('r.extratosImportados') >= 0;
+    r.incluiPrestacoes = srcConsolidada.indexOf('r.prestacoes') >= 0;
+    r.incluiConciliacoes = srcConsolidada.indexOf('r.conciliacoes') >= 0;
+    r.incluiPendenciasLinhaALinha = srcConsolidada.indexOf('r.pendencias') >= 0 && srcConsolidada.indexOf('pend.data.filter') >= 0;
+    r.incluiCobrancas = srcConsolidada.indexOf('FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV') >= 0;
+    r.incluiDocumentos = srcConsolidada.indexOf('r.documentos') >= 0;
+    r.incluiLogs = srcConsolidada.indexOf('r.logsAuditoria') >= 0;
+    r.agrupaPorMes = srcConsolidada.indexOf('r.meses') >= 0 && srcConsolidada.indexOf('FIN_FLASH_V2_v216MesAno_') >= 0;
+    r.timelineUnificada = srcConsolidada.indexOf('r.timelineUnificada') >= 0 && srcConsolidada.indexOf('FIN_FLASH_V2_v216TimestampOrdenar_') >= 0;
+    r.cacheImplementado = srcConsolidada.indexOf('CacheService') >= 0 && srcConsolidada.indexOf('cache.put') >= 0;
+
+    // ── Confirmar que os 2 bugs de CPF bruto foram corrigidos (código real) ──
+    var srcCobrancas = FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV.toString();
+    var srcPendResumo = FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV.toString();
+    var cobrancasCorrigida = srcCobrancas.indexOf('FIN_FLASH_V2_normCpf_') >= 0 && srcCobrancas.indexOf('a.CPF!==filtros.cpf') < 0;
+    var pendResumoCorrigida = srcPendResumo.indexOf('FIN_FLASH_V2_normCpf_') >= 0 && srcPendResumo.indexOf('p.CPF!==filtros.cpf') < 0 && srcPendResumo.indexOf('p.CPF||\'\'') < 0;
+    if (cobrancasCorrigida) r.funcoesCpfBrutoCorrigidas.push('FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV');
+    if (pendResumoCorrigida) r.funcoesCpfBrutoCorrigidas.push('FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV');
+
+    // ── Teste vivo real: Bruna (leitura, sem gravar) ─────────────────────────
+    var resBruna = FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV({ cpf: CPF_BRUNA });
+    r.exemploBruna = resBruna;
+    r.totaisBruna = resBruna.resumoGeral;
+    r.mesesBruna = (resBruna.meses || []).map(function(m){ return { mesAno: m.mesAno, resumoMes: m.resumoMes }; });
+
+    r.recomendacoesProximaFase = [
+      'V2.16C: só depois de aprovado o backend, redesenhar o frontend para exibir os blocos por mês e a timeline unificada.',
+      'Reaproveitar os componentes visuais já criados na V2.15C (tabela linha a linha, modal de comprovante) para manter consistência visual.'
+    ];
+    r.planoV216C = [
+      { passo: 1, acao: 'REDESENHAR_TELA_EXTRATO', descricao: 'Trocar ffv2BuscarExtratoCpf_ para chamar FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV e renderizar por mês (accordion ou abas por mesAno).', executadoNestaFase: false },
+      { passo: 2, acao: 'EXIBIR_TIMELINE', descricao: 'Exibir timelineUnificada como uma visão alternativa "tudo junto, ordenado por data".', executadoNestaFase: false },
+      { passo: 3, acao: 'EXIBIR_RESUMO_GERAL', descricao: 'Exibir resumoGeral como KPIs no topo da tela (cartões, extratos, prestações, conciliações, pendências, cobranças, documentos, logs).', executadoNestaFase: false }
+    ];
+
+    if (!r.funcaoConsolidadaExiste) r.bloqueios.push('FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV não encontrada.');
+    if (!r.usaCpfNormalizado) r.bloqueios.push('Função consolidada não usa CPF normalizado.');
+    if (!r.usaJoinConferenciasV215) r.bloqueios.push('Função consolidada não reaproveita o join da V2.15B.');
+    if (r.funcoesCpfBrutoCorrigidas.length !== 2) r.bloqueios.push('Nem os 2 bugs de CPF bruto foram confirmados corrigidos.');
+    if (!resBruna.ok) r.bloqueios = r.bloqueios.concat(resBruna.bloqueios || []);
+    if (resBruna.ok && (!resBruna.resumoGeral || resBruna.resumoGeral.totalCartoes !== 2)) r.bloqueios.push('Regressão: Bruna não retornou 2 cartões no extrato completo.');
+    if (resBruna.ok && resBruna.resumoGeral && resBruna.resumoGeral.totalConciliacoes !== 37) r.bloqueios.push('Regressão: Bruna não retornou 37 conciliações no extrato completo.');
+    if (!r.agrupaPorMes) r.bloqueios.push('Função não agrupa por mês.');
+    if (!r.timelineUnificada) r.bloqueios.push('Função não gera timeline unificada.');
+    if (!r.cacheImplementado) r.bloqueios.push('Cache não detectado.');
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216B_BACKEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216B_BACKEND_EXTRATO_COMPLETO_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.16C — Frontend do Extrato por Colaborador completo mês a mês
+// Auditoria somente leitura: inspeciona o HTML do frontend (via HtmlService)
+// e faz 1 chamada real (com período) ao backend consolidado da V2.16B.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
+  var r = {
+    success: true, ok: false, executado: false, somenteLeitura: true, ambiente: 'DEV',
+    frontendUsaBackendConsolidado: false,
+    filtrosMesAnoPeriodoDetectados: false,
+    evitaHistoricoCompletoComoPadrao: false,
+    exibeColaborador: false, exibeCartoes: false, exibeResumoGeral: false, exibeResumoMes: false, exibeTimeline: false,
+    exibeExtratos: false, exibePrestacoes: false, exibeConciliacoes: false, exibePendencias: false, exibeCobrancas: false,
+    exibeDocumentos: false, exibeLogs: false,
+    brunaRenderizavel: false, brunaMesesDetectados: 0, alertaPerformanceDetectado: false,
+    riscos: [], bloqueios: [],
+    planoV216D: [
+      'V2.16D — Validação humana da tela no DEV (Bruna e/ou operador), coletando feedback visual/UX antes de qualquer commit.',
+      'Avaliar se algum bloco (ex.: Logs/Auditoria) deve ficar recolhido por padrão para reduzir poluição visual.',
+      'Considerar paginação ou "carregar mais" na Timeline Unificada quando o volume por mês for muito grande.'
+    ],
+    recomendacoesProximaFase: [
+      'Somente após validação humana da V2.16D: checkpoint git (apenas JS_Fin_FlashV2.html e SGO_Fin_FlashV2.js) e depois push GitHub, como nas fases anteriores.',
+      'Não remover FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV do backend ainda — pode estar em uso por outro fluxo; reavaliar depreciação em fase futura.'
+    ]
+  };
+
+  try {
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+
+    r.frontendUsaBackendConsolidado = html.indexOf('FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV') >= 0;
+    r.filtrosMesAnoPeriodoDetectados = html.indexOf('ffv2e-ano') >= 0 && html.indexOf('ffv2e-mes') >= 0 &&
+      html.indexOf('ffv2e-ini') >= 0 && html.indexOf('ffv2e-fim') >= 0;
+    r.evitaHistoricoCompletoComoPadrao = html.indexOf('payload.ano = String(hoje.getFullYear()); payload.mes = mesPad;') >= 0;
+    r.alertaPerformanceDetectado = html.indexOf('pode demorar') >= 0 && html.indexOf('ffv2BuscarExtratoCpfCompleto_') >= 0;
+
+    r.exibeColaborador = html.indexOf('r.colaborador') >= 0;
+    r.exibeCartoes = html.indexOf('r.cartoes') >= 0;
+    r.exibeResumoGeral = html.indexOf('r.resumoGeral') >= 0;
+    r.exibeResumoMes = html.indexOf('m.resumoMes') >= 0 && html.indexOf('r.meses') >= 0;
+    r.exibeTimeline = html.indexOf('r.timelineUnificada') >= 0;
+    r.exibeExtratos = html.indexOf('r.extratosImportados') >= 0;
+    r.exibePrestacoes = html.indexOf('r.prestacoes') >= 0;
+    r.exibeConciliacoes = html.indexOf('r.conciliacoes') >= 0;
+    r.exibePendencias = html.indexOf('r.pendencias') >= 0;
+    r.exibeCobrancas = html.indexOf('r.cobrancas') >= 0;
+    r.exibeDocumentos = html.indexOf('r.documentos') >= 0;
+    r.exibeLogs = html.indexOf('r.logsAuditoria') >= 0;
+
+    if (html.indexOf('ffv2GerarExtratoCpfA4_') < 0) r.bloqueios.push('Botão/função de Gerar Extrato A4 não foi preservado.');
+
+    // Chamada real, filtrada por período (mês/ano), para não repetir o estouro de cache do histórico completo.
+    var resBruna = FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV({ cpf: '05553116198', ano: '2026', mes: '06' });
+    if (resBruna && resBruna.ok) {
+      r.brunaRenderizavel = true;
+      r.brunaMesesDetectados = (resBruna.meses || []).length;
+    } else {
+      r.bloqueios.push('Chamada real ao backend consolidado (Bruna, 2026-06) falhou: ' + JSON.stringify((resBruna || {}).bloqueios || resBruna));
+    }
+
+    r.riscos.push('A tela depende integralmente dos nomes de campo retornados por FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV; qualquer mudança de schema nesse backend exige atualização manual do frontend.');
+    r.riscos.push('O botão "Ver histórico completo" reproduz o cenário que excedeu o CacheService (>100KB); é esperado que apareça sem cache em CPFs com histórico longo, mas não deve travar a tela.');
+    r.riscos.push('Blocos vazios (ex.: Documentos, quando total é 0) exibem apenas a mensagem de tabela vazia — comportamento intencional, não é bug.');
+
+    var camposObrigatorios = ['frontendUsaBackendConsolidado','filtrosMesAnoPeriodoDetectados','evitaHistoricoCompletoComoPadrao',
+      'exibeColaborador','exibeCartoes','exibeResumoGeral','exibeResumoMes','exibeTimeline','exibeExtratos','exibePrestacoes',
+      'exibeConciliacoes','exibePendencias','exibeCobrancas','exibeDocumentos','exibeLogs','alertaPerformanceDetectado'];
+    camposObrigatorios.forEach(function(campo) {
+      if (!r[campo]) r.bloqueios.push('Campo obrigatório não confirmado: ' + campo);
+    });
+
+    r.ok = r.bloqueios.length === 0;
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR();
 }
