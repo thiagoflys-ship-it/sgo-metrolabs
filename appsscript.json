@@ -14,5 +14,8 @@
     "https://mail.google.com/",
     "https://www.googleapis.com/auth/script.scriptapp",
     "https://www.googleapis.com/auth/script.projects"
-  ]
+  ],
+  "executionApi": {
+    "access": "MYSELF"
+  }
 }

@@ -1,9 +1,16 @@
 {
   "scriptId": "12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG",
   "rootDir": "",
-  "scriptExtensions": [".js", ".gs"],
-  "htmlExtensions": [".html"],
-  "jsonExtensions": [".json"],
+  "scriptExtensions": [
+    ".js",
+    ".gs"
+  ],
+  "htmlExtensions": [
+    ".html"
+  ],
+  "jsonExtensions": [
+    ".json"
+  ],
   "filePushOrder": [
     "appsscript.json",
     "SGO_Config.js",
@@ -85,5 +92,6 @@
     "Validacao_Documento.html",
     "UI_Scripts_BKP.html"
   ],
-  "skipSubdirectories": false
+  "skipSubdirectories": false,
+  "projectId": "sgo-fin-flash-v2-dev"
 }
