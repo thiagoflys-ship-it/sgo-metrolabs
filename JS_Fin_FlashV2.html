@@ -1070,16 +1070,16 @@ function ffv2BuscarExtratoCpfCompleto_() {
   ffv2BuscarExtratoCpf_(true);
 }
 
-function ffv2BuscarExtratoCpf_(forcarCompleto) {
+// V2.16E — resolve os filtros atuais da tela (CPF/Ano/Mês/De/Até/Tipo) uma única vez,
+// para que a busca principal e o botão "Gerar Extrato A4" usem sempre os mesmos filtros.
+function ffv2ResolverFiltrosExtrato_(forcarCompleto) {
   var cpf = (document.getElementById('ffv2e-cpf')||{}).value||'';
   var ano = (document.getElementById('ffv2e-ano')||{}).value||'';
   var mes = (document.getElementById('ffv2e-mes')||{}).value||'';
   var ini = (document.getElementById('ffv2e-ini')||{}).value||'';
   var fim = (document.getElementById('ffv2e-fim')||{}).value||'';
-  var resEl = document.getElementById('ffv2e-res');
-  if (!cpf) { if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o CPF.</div>'; return; }
-
-  var payload = { cpf: cpf, tipo: (document.getElementById('ffv2e-tipo')||{}).value||'todos', limite: 2000 };
+  var tipo = (document.getElementById('ffv2e-tipo')||{}).value||'todos';
+  var payload = { cpf: cpf, tipo: tipo };
   var avisoPerf = '';
   if (forcarCompleto) {
     avisoPerf = '<div class="ffv2-msg ffv2-msg-av" style="margin-bottom:8px;">&#9888; Buscando o histórico completo — pode demorar mais e não é cacheado.</div>';
@@ -1094,6 +1094,16 @@ function ffv2BuscarExtratoCpf_(forcarCompleto) {
     payload.ano = String(hoje.getFullYear()); payload.mes = mesPad;
     avisoPerf = '<div class="ffv2-msg ffv2-msg-in" style="margin-bottom:8px;">Nenhum período informado — carregando o mês atual ('+payload.ano+'-'+payload.mes+') por padrão. Use "Ver histórico completo" para tudo (pode demorar mais).</div>';
   }
+  return { cpf: cpf, payload: payload, avisoPerf: avisoPerf };
+}
+
+function ffv2BuscarExtratoCpf_(forcarCompleto) {
+  var resEl = document.getElementById('ffv2e-res');
+  var resolvido = ffv2ResolverFiltrosExtrato_(forcarCompleto);
+  if (!resolvido.cpf) { if (resEl) resEl.innerHTML='<div class="ffv2-msg ffv2-msg-er">Informe o CPF.</div>'; return; }
+
+  var payload = resolvido.payload; payload.limite = 2000;
+  var avisoPerf = resolvido.avisoPerf;
 
   if (resEl) resEl.innerHTML = avisoPerf + ffv2Skel_(3);
   google.script.run
@@ -1204,14 +1214,14 @@ function ffv2RenderExtratoCompleto_(r) {
 }
 
 function ffv2GerarExtratoCpfA4_() {
-  var payload = {
-    cpf: (document.getElementById('ffv2e-cpf')||{}).value||'',
-    periodoInicio: (document.getElementById('ffv2e-ini')||{}).value||'',
-    periodoFim: (document.getElementById('ffv2e-fim')||{}).value||''
-  };
+  // V2.16E — usa o mesmo resolvedor de filtros da busca principal (CPF/Ano/Mês/De/Até/Tipo),
+  // para o A4 sempre bater com o que está sendo exibido na tela.
+  var el = document.getElementById('ffv2e-a4-res');
+  var resolvido = ffv2ResolverFiltrosExtrato_(false);
+  if (!resolvido.cpf) { if (el) el.innerHTML='<span class="ffv2-msg ffv2-msg-er" style="display:inline-block;">Informe o CPF.</span>'; return; }
+  var payload = resolvido.payload;
   google.script.run
     .withSuccessHandler(function(r) {
-      var el=document.getElementById('ffv2e-a4-res');
       if(r.ok) {
         if(el) el.innerHTML='<span class="ffv2-msg ffv2-msg-ok" style="display:inline-block;">&#10003; Gerado!</span>';
         ffv2Modal_('Extrato A4 — Preview',r.htmlA4||'<p>HTML não disponível.</p>');
