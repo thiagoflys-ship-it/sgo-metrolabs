@@ -2802,6 +2802,11 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
     payload=payload||{};
     var tipo=(payload.tipo||'positivo').toLowerCase();
     r.tipo=tipo;
+    // V2.16G — reaproveita o helper da V2.16E: exibe período real quando ano/mês ou
+    // datas são conhecidos, nunca "— a —". Relatório é agregado (todos os colaboradores),
+    // então o campo "CPF" também recebe texto claro em vez de "—".
+    var mesAnoFiltro=(payload.ano&&payload.mes)?(String(payload.ano)+'-'+String(payload.mes).padStart(2,'0')):'';
+    var periodoBr=FIN_FLASH_V2_resolverPeriodoExibicaoBr_({dataInicio:payload.dataInicio||'',dataFim:payload.dataFim||'',mesAnoFiltro:mesAnoFiltro});
     var conc=FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
     var pend=FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
     var contas=FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -2828,8 +2833,8 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
       resumo={totalRecarregado:0,totalGasto:0,
         totalPendente:itens.reduce(function(s,i){return s+Number(i.VALOR||0);},0)};
     }
-    r.htmlA4=FIN_FLASH_V2_htmlA4Base_(titulo,'Todos os colaboradores','—',
-      payload.periodoInicio||'',payload.periodoFim||'',resumo,itens,tipo);
+    r.htmlA4=FIN_FLASH_V2_htmlA4Base_(titulo,'Todos os colaboradores','Todos os colaboradores',
+      periodoBr.inicio,periodoBr.fim,resumo,itens,tipo);
     r.ok=true;
   } catch(e) { r.bloqueios.push(e.message||String(e)); }
   return r;
@@ -2849,7 +2854,7 @@ function FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV(payload) {
     nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_HTML_RELATORIO_A4','DOCUMENTO',id,
-      JSON.stringify({tipo:payload.tipo}),'SIM');
+      JSON.stringify({tipo:payload.tipo,ano:payload.ano||'',mes:payload.mes||'',dataInicio:payload.dataInicio||'',dataFim:payload.dataFim||''}),'SIM');
     r.ok=true; r.documentoId=id; r.htmlA4=prev.htmlA4;
   } catch(e) { r.bloqueios.push(e.message||String(e)); }
   return r;
@@ -7487,8 +7492,10 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
     };
 
     // ── 1. Cartões (reaproveita V2.14F) ───────────────────────────────────────
+    // V2.16G — cartão é entidade estática (conta/cartão), não um evento do mês: nunca filtrar
+    // por período. O colaborador tem os mesmos cartões independente do ano/mês selecionado na tela.
     var resCartoes = FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV({ cpf: cpfNorm });
-    r.cartoes = (resCartoes.cartoes || []).filter(function(k){ return dentroDoPeriodo(k.criadoEm); }).slice(0, limite);
+    r.cartoes = (resCartoes.cartoes || []).slice(0, limite);
 
     // ── 2. Extratos importados (direto de FIN_FLASH_V2_EXTRATOS) ─────────────
     var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS');
@@ -7571,7 +7578,8 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
       if (!mesesMap[mesAno]) mesesMap[mesAno] = { cartoes: [], extratos: [], prestacoes: [], conciliacoes: [], pendencias: [], cobrancas: [], documentos: [], logs: [] };
       mesesMap[mesAno][categoria].push(item);
     };
-    r.cartoes.forEach(function(k){ registrar(FIN_FLASH_V2_v216MesAno_(k.criadoEm), 'cartoes', k); });
+    // V2.16G — cartões não entram no agrupamento por mês: são estáticos, não eventos do
+    // mês, e o mês de criação pode cair fora do período filtrado (criaria um mês "fantasma").
     r.extratosImportados.forEach(function(e){ registrar(FIN_FLASH_V2_v216MesAno_(e.data), 'extratos', e); });
     r.prestacoes.forEach(function(p){ registrar(FIN_FLASH_V2_v216MesAno_(p.dataGasto), 'prestacoes', p); });
     r.conciliacoes.forEach(function(c){ registrar(FIN_FLASH_V2_v216MesAno_(c.data), 'conciliacoes', c); });
@@ -7607,7 +7615,6 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
     timeline.sort(function(a, b){ return FIN_FLASH_V2_v216TimestampOrdenar_(b.data) - FIN_FLASH_V2_v216TimestampOrdenar_(a.data); });
     r.timelineUnificada = timeline.slice(0, limite);
 
-    r.riscos.push('Cartões são entidades estáticas (não eventos mensais) — agrupados pelo mês de CRIADO_EM, não por um "mês de uso".');
     r.riscos.push('Datas em formatos heterogêneos (YYYY-MM-DD, DD/MM/YYYY) foram normalizadas por regex — casos fora desses 2 padrões caem em "FORMATO_DESCONHECIDO".');
     r.riscos.push('Cache de ' + FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ + 's pode mostrar dado levemente desatualizado após uma ação de gravação recente.');
 

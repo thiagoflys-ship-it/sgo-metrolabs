@@ -1399,6 +1399,15 @@ function ffv2LoadDocumentos_() {
   ffv2CarregarListaDocs_();
 }
 
+// V2.16G — esta aba não tem filtro de período próprio (é um relatório agregado, todos os
+// colaboradores), então usamos o mesmo padrão já adotado no Extrato por Colaborador: sem
+// filtro informado, assume o mês/ano atual, para o período do A4 nunca ficar desconhecido.
+function ffv2PayloadRelAtual_(tipo) {
+  var hoje = new Date();
+  var mesPad = String(hoje.getMonth()+1); if (mesPad.length<2) mesPad='0'+mesPad;
+  return { tipo: tipo, ano: String(hoje.getFullYear()), mes: mesPad };
+}
+
 function ffv2PreviewRel_(tipo) {
   var idRes = 'ffv2d-res-'+tipo;
   var el = document.getElementById(idRes); if(el) el.innerHTML='<span style="font-size:11px;color:#3b82f6;">Carregando...</span>';
@@ -1409,7 +1418,7 @@ function ffv2PreviewRel_(tipo) {
       else if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
     })
     .withFailureHandler(function(e){if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
-    .FIN_FLASH_V2_PREVIEW_RELATORIO_DEV({tipo:tipo});
+    .FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(ffv2PayloadRelAtual_(tipo));
 }
 
 function ffv2GerarRel_(tipo) {
@@ -1426,7 +1435,7 @@ function ffv2GerarRel_(tipo) {
       }
     })
     .withFailureHandler(function(e){if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
-    .FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV({tipo:tipo});
+    .FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV(ffv2PayloadRelAtual_(tipo));
 }
 
 function ffv2CarregarListaDocs_() {
