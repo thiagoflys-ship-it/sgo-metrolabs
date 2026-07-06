@@ -8424,3 +8424,92 @@ function AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR() {
 function TESTAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.17 — Plano de migração aditiva (SCORE, MOTIVO_DECISAO,
+// ATUALIZADO_POR, ATUALIZADO_EM em FIN_FLASH_V2_CONCILIACOES). Auditoria
+// somente leitura: NÃO adiciona coluna nenhuma, NÃO grava nada — só confere
+// se a migração proposta é segura antes de implementar a V2.17A.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.17', somenteLeitura: true, executado: false,
+    migracaoAditivaSegura: false,
+    headersNovosPropostos: ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'],
+    escritaPosicionalEncontrada: [],
+    funcoesQueTentamGravarMotivoScore: [],
+    funcoesQuePrecisamAjuste: [],
+    uiPrecisaAjuste: false,
+    funcaoOrfaMarcacaoConferida: { encontrada: false, recomendacao: 'manter como legado por enquanto' },
+    riscos: [], bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    var jaExistentes = r.headersNovosPropostos.filter(function(h){ return concHeaders.indexOf(h) >= 0; });
+
+    // ── 1. Escrita posicional fixa em FIN_FLASH_V2_CONCILIACOES ────────────────
+    // Achado por leitura de código (não há como um GAS ler seu próprio .js fonte
+    // em runtime): FIN_FLASH_V2_appendConciliacao_ usa sh.appendRow([...11 valores
+    // fixos...]) sem nomear colunas — é o motor automático de conciliação na
+    // importação. FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV (fluxo de lote mais
+    // antigo) já usa o padrão seguro (nc[h] via headers.map), inclusive já tenta
+    // gravar SCORE hoje (silenciosamente descartado, pois a coluna não existe).
+    r.escritaPosicionalEncontrada.push({
+      funcao: 'FIN_FLASH_V2_appendConciliacao_',
+      padrao: 'sh.appendRow([...11 valores fixos, sem nome de coluna...])',
+      impacto: 'Adicionar colunas ao FINAL não quebra esta função — o Sheets deixa as 4 células novas em branco na linha criada (sem desalinhar as 11 colunas existentes). Mas esta função continuará SEM popular SCORE/MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM em conciliações automáticas até ser atualizada — fora do escopo aprovado da V2.17A (que só ajusta as 3 funções manuais).'
+    });
+
+    // ── 2. Segurança estrutural de adicionar colunas ao final ──────────────────
+    // FIN_FLASH_V2_headersOk_(sh, schema) faz schema.every(x => headers.indexOf(x) >= 0):
+    // checa que os headers DECLARADOS existem, nunca rejeita headers EXTRAS.
+    // FIN_FLASH_V2_getHeaderMap_(sh) le sh.getRange(1,1,1,sh.getLastColumn()) a cada
+    // chamada — headers novos entram no mapa automaticamente, sem cache/schema fixo.
+    // FIN_FLASH_V2_setByHeaders_/sheetCtx10_ dependem só desse mapa dinâmico.
+    // Logo: adicionar colunas ao final é aditivo e seguro para essas 4 funções base.
+    r.migracaoAditivaSegura = true;
+    if (jaExistentes.length) {
+      r.avisos.push('Headers já presentes na aba (migração deve ser idempotente, não duplicar): ' + jaExistentes.join(', '));
+    }
+
+    // ── 3. Funções que já tentam gravar SCORE/MOTIVO_*/ATUALIZADO_EM ───────────
+    r.funcoesQueTentamGravarMotivoScore = [
+      { funcao: 'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV', tentaGravar: ['STATUS', 'SCORE', 'MOTIVO_MANUAL', 'ATUALIZADO_EM'] },
+      { funcao: 'FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV', tentaGravar: ['STATUS', 'MOTIVO_REPROVACAO', 'ATUALIZADO_EM'] },
+      { funcao: 'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV', tentaGravar: ['STATUS', 'MOTIVO_CORRECAO', 'ATUALIZADO_EM'] },
+      { funcao: 'FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV', tentaGravar: ['SCORE'], observacao: 'também tenta CPF, mas essa coluna não faz parte do escopo aprovado da V2.17' }
+    ];
+
+    // ── 4. Funções que precisam ajuste para o novo padrão (MOTIVO_DECISAO/ATUALIZADO_POR) ──
+    r.funcoesQuePrecisamAjuste = [
+      'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV',
+      'FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV',
+      'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV',
+      'FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV (leitura — hoje não expõe score/motivo/responsável/atualizado em)'
+    ];
+
+    // ── 5/6. Leitura consegue expor os novos campos? UI precisa mostrar? ───────
+    r.avisos.push('FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV monta cada item lendo campos da linha de CONCILIACOES diretamente (c.STATUS, c.VALOR_EXTRATO etc.) — expor c.SCORE/c.MOTIVO_DECISAO/c.ATUALIZADO_POR/c.ATUALIZADO_EM é a mesma técnica já usada, sem mudança estrutural.');
+    r.uiPrecisaAjuste = true; // tabela hoje não tem nenhuma coluna para isso; o motivo digitado nunca reaparece após o envio.
+
+    // ── 7. Função órfã FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV ───────────
+    r.funcaoOrfaMarcacaoConferida.encontrada = (typeof FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV === 'function');
+    // recomendacao já default: 'manter como legado por enquanto' (não remover nesta fase)
+
+    // ── Riscos gerais ────────────────────────────────────────────────────────
+    r.riscos.push('FIN_FLASH_V2_appendConciliacao_ (motor automático) não populará os 4 campos novos em conciliações recém-importadas até ser atualizada separadamente — fora do escopo aprovado da V2.17A.');
+    r.riscos.push('FIN_FLASH_V2_SCHEMAS.FIN_FLASH_V2_CONCILIACOES (em SGO_Fin_FlashV2_Setup.js) precisa ser atualizado para documentação/validação consistentes — não é tecnicamente obrigatório (FIN_FLASH_V2_headersOk_ não rejeita headers extras), mas evita divergência entre o schema declarado e a aba real.');
+    r.riscos.push('Sem backfill histórico: linhas de CONCILIACOES já existentes ficam com os 4 campos novos vazios até uma ação manual futura (esperado, não é um bug).');
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR();
+}
