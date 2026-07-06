@@ -17,6 +17,16 @@ function finFlashV2Escape_(s) {
 function finFlashV2FmtMoeda_(v) {
   return 'R$ ' + Number(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 }
+// V2.16I — rótulo operacional do cartão para telas (nunca o ID técnico FIN_FLASH_V2_CARTAO_...
+// como texto principal). Usa apelido quando existir, senão "Flash Físico/Virtual".
+function finFlashV2LabelCartao_(k) {
+  k = k || {};
+  var tipoNorm = String(k.tipo||'').toUpperCase();
+  var tipoLabel = tipoNorm === 'VIRTUAL' ? 'Flash Virtual' : (tipoNorm === 'FISICO' ? 'Flash Físico' : (k.tipo || 'Cartão Flash'));
+  var base = (k.apelido && String(k.apelido).trim()) ? String(k.apelido).trim() : tipoLabel;
+  var final = (k.final !== undefined && k.final !== null && String(k.final) !== '') ? String(k.final) : '----';
+  return base + ' • final ' + final;
+}
 function finFlashV2Tabela_(cols, rows, msg) { return ffv2Tabela_(cols, rows, msg); }
 function finFlashV2AuditarEstrutura_() { return {ok:true}; }
 
@@ -1147,8 +1157,16 @@ function ffv2RenderExtratoCompleto_(r) {
     '</div>';
 
   // ── Cartões ───────────────────────────────────────────────────────────────
-  var cartoesRows = (r.cartoes||[]).map(function(k){ return {ID:k.id,Tipo:k.tipo,Final:k.final,Status:k.status,'_html_Status':ffv2Badge_(k.status)}; });
-  h += '<p class="ffv2-section-title">&#128179; Cartões</p>' + ffv2Tabela_(['ID','Tipo','Final','Status'],cartoesRows,'Nenhum cartão.');
+  // V2.16I — coluna principal é o rótulo operacional (ex.: "Flash Físico • final 881"),
+  // nunca o ID técnico; o ID interno fica preservado só em data-cartao-id (auditoria/DOM).
+  var cartoesRows = (r.cartoes||[]).map(function(k){
+    return {
+      Cartão: finFlashV2LabelCartao_(k), Tipo:k.tipo, Final:k.final, Status:k.status,
+      '_html_Cartão': '<span data-cartao-id="'+finFlashV2Escape_(k.id||'')+'">'+finFlashV2Escape_(finFlashV2LabelCartao_(k))+'</span>',
+      '_html_Status':ffv2Badge_(k.status)
+    };
+  });
+  h += '<p class="ffv2-section-title">&#128179; Cartões</p>' + ffv2Tabela_(['Cartão','Tipo','Final','Status'],cartoesRows,'Nenhum cartão.');
 
   // ── Resumo por mês ────────────────────────────────────────────────────────
   h += '<p class="ffv2-section-title">&#128197; Resumo por Mês</p>';
@@ -1764,7 +1782,7 @@ function ffv2SalvarCartao_() {
   google.script.run
     .withSuccessHandler(function(r){
       if(resEl) resEl.innerHTML=r.ok
-        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; Cartão adicionado! ID: '+finFlashV2Escape_(r.cartaoId||'')+'</div>'
+        ?'<div class="ffv2-msg ffv2-msg-ok">&#10003; Cartão adicionado! '+finFlashV2Escape_(finFlashV2LabelCartao_({tipo:tipo,final:final}))+'</div>'
         :'<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
       if(r.ok) { ffv2CarregarCartoesCpf_(cpf); delete ffv2St_().carregado['f_colaboradores']; }
     })

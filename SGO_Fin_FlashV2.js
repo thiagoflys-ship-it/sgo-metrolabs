@@ -7925,3 +7925,109 @@ function AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR() {
 function TESTAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
 }
+
+// V2.16I — duplicata intencional (backend não pode chamar JS do HtmlService) da mesma
+// lógica de rótulo usada no frontend (finFlashV2LabelCartao_ em JS_Fin_FlashV2.html).
+// Qualquer mudança em um dos dois lados deve ser replicada no outro.
+function FIN_FLASH_V2_v216iLabelCartao_(k) {
+  k = k || {};
+  var tipoNorm = String(k.tipo || '').toUpperCase();
+  var tipoLabel = tipoNorm === 'VIRTUAL' ? 'Flash Virtual' : (tipoNorm === 'FISICO' ? 'Flash Físico' : (k.tipo || 'Cartão Flash'));
+  var base = (k.apelido && String(k.apelido).trim()) ? String(k.apelido).trim() : tipoLabel;
+  var final = (k.final !== undefined && k.final !== null && String(k.final) !== '') ? String(k.final) : '----';
+  return base + ' • final ' + final;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.16I — Ocultar IDs técnicos de cartão da interface operacional,
+// substituindo por rótulo legível (Flash Físico/Virtual • final XXX ou apelido).
+// Auditoria somente leitura: inspeciona o HTML servido (tokens de código reais,
+// nunca comentários — HtmlService remove comentários JS) e confere com dados reais.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.16I', somenteLeitura: true, executado: false,
+    idsTecnicosExpostosNaUI: [],
+    pontosRenderizacaoCorrigidos: [],
+    cartoesTeste: [],
+    ok: false, bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+
+    // ── 1. Extrato por Colaborador: tabela de Cartões usa rótulo, não ID ──────
+    var tabelaCartoesUsaLabel = html.indexOf("['Cartão','Tipo','Final','Status']") >= 0;
+    var tabelaCartoesAindaExpoeId = html.indexOf("['ID','Tipo','Final','Status']") >= 0;
+    var helperDefinido = html.indexOf('function finFlashV2LabelCartao_') >= 0;
+    var helperUsadoNaTabela = html.indexOf('finFlashV2LabelCartao_(k)') >= 0;
+    var idPreservadoNoDataset = html.indexOf('data-cartao-id') >= 0;
+
+    if (tabelaCartoesUsaLabel && !tabelaCartoesAindaExpoeId && helperDefinido && helperUsadoNaTabela) {
+      r.pontosRenderizacaoCorrigidos.push('Extrato por Colaborador — tabela de Cartões (coluna ID técnico substituída por Cartão/rótulo operacional)');
+    } else {
+      r.idsTecnicosExpostosNaUI.push('Extrato por Colaborador — tabela de Cartões ainda usa ID técnico como coluna principal ou helper não aplicado.');
+    }
+    if (!idPreservadoNoDataset) r.avisos.push('data-cartao-id não encontrado — ID técnico pode ter deixado de ser preservado no DOM.');
+
+    // ── 2. Cadastro de cartão: mensagem de confirmação sem ID bruto ───────────
+    var toastAntigoComId = html.indexOf('Cartão adicionado! ID: ') >= 0;
+    var toastNovoComLabel = html.indexOf('Cartão adicionado! ') >= 0 && html.indexOf('finFlashV2LabelCartao_({tipo:tipo,final:final})') >= 0;
+    if (!toastAntigoComId && toastNovoComLabel) {
+      r.pontosRenderizacaoCorrigidos.push('Cadastro de cartão — mensagem de confirmação (ID bruto substituído por rótulo operacional)');
+    } else {
+      r.idsTecnicosExpostosNaUI.push('Mensagem de confirmação de cadastro de cartão ainda expõe ID técnico bruto.');
+    }
+
+    // ── 3. Gerenciar Cartões (Colaboradores e Cartões) e Registrar Gasto:
+    // já não exibiam ID como coluna/rótulo antes da V2.16I — confirmado por inspeção,
+    // registrado aqui para não repetir a investigação em auditorias futuras.
+    r.avisos.push('Tabela "Gerenciar Cartões" (Colaboradores e Cartões) e o <select> de "Registrar Gasto" já usavam apenas Tipo/Final/Status — não precisaram de alteração nesta fase.');
+    r.avisos.push('A lista de Documentos e Relatórios continua mostrando o ID do documento gerado (ex.: FIN_FLASH_V2_REL_A4_...) — fora de escopo da V2.16I, que trata só de IDs de CARTÃO; documento é um registro rastreável por natureza.');
+
+    // ── 4. Cartões reais da Bruna: rótulo operacional + ID interno preservado ──
+    var CPF_BRUNA = '05553116198';
+    var resCartoes = FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV({ cpf: CPF_BRUNA });
+    if (!resCartoes.ok) {
+      r.bloqueios.push('LISTAR_CARTOES_DO_COLABORADOR_DEV falhou: ' + JSON.stringify(resCartoes.bloqueios || resCartoes));
+    } else {
+      r.cartoesTeste = (resCartoes.cartoes || []).map(function(k) {
+        return {
+          cpf: CPF_BRUNA, tipo: k.tipo, final: k.final,
+          labelOperacional: FIN_FLASH_V2_v216iLabelCartao_(k),
+          idInternoPreservado: !!k.id
+        };
+      });
+      if (r.cartoesTeste.length !== 2) {
+        r.bloqueios.push('Critério de aceite: CPF de teste da Bruna deveria ter 2 cartões, encontrado ' + r.cartoesTeste.length + '.');
+      }
+      r.cartoesTeste.forEach(function(c) {
+        if (c.labelOperacional.indexOf('FIN_FLASH_V2_CARTAO_') >= 0) {
+          r.bloqueios.push('Rótulo operacional vazou ID técnico: ' + c.labelOperacional);
+        }
+        if (!c.idInternoPreservado) {
+          r.bloqueios.push('ID interno não preservado para o cartão final ' + c.final + ' (necessário para ações/rastreabilidade).');
+        }
+      });
+    }
+
+    // ── 5. Regressão: V2.16H não pode ter sido quebrada por este patch ────────
+    var v216h = AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
+    if (!v216h.ok) {
+      r.bloqueios.push('Regressão detectada: AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR não retornou ok:true — ' + JSON.stringify({ resumoMesOk: v216h.resumoMes && v216h.resumoMes.ok, relatoriosA4: v216h.relatoriosA4, bloqueios: v216h.bloqueios }));
+    } else {
+      r.avisos.push('Regressão V2.16H confirmada OK: Resumo por Mês (Cartões: ' + v216h.resumoMes.cartoesEncontrados + ') e os 3 relatórios A4 seguem corretos.');
+    }
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  r.success = r.bloqueios.length === 0;
+  r.ok = r.success && r.idsTecnicosExpostosNaUI.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
+}
