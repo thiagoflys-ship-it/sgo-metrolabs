@@ -8031,3 +8031,164 @@ function AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
 function TESTAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
 }
+
+function AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.16J', somenteLeitura: true, executado: false,
+    achadosCriticos: [], achadosMedios: [], achadosVisuais: [],
+    idsTecnicosExpostos: [], inconsistenciasDeContadores: [], fluxosConfusos: [],
+    recomendacoesPatch: [], prontoParaPatch: false,
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    var docsHeaders = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS').headers || [];
+    var cartoesHeaders = FIN_FLASH_V2_sheetCtx10_('CARTOES').headers || [];
+    var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    var docsData = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS').data || [];
+
+    // ── 1. Mismatch de TIPO no Extrato por Colaborador A4 (ativo vs. grouping/preview) ──
+    var TIPO_MAP_PREVIEW = { 'RELATORIO_A4_POSITIVO': 'positivo', 'RELATORIO_A4_NEGATIVO': 'negativo', 'EXTRATO_COLABORADOR_A4': 'extrato', 'TERMO_USO_CARTAO_FLASH': 'termo' };
+    var docsExtratoCpfReal = docsData.filter(function(d){ return d.TIPO === 'EXTRATO_CPF'; });
+    var docsExtratoEsperado = docsData.filter(function(d){ return d.TIPO === 'EXTRATO_COLABORADOR_A4'; });
+    if (docsExtratoCpfReal.length > 0 && !TIPO_MAP_PREVIEW['EXTRATO_CPF']) {
+      r.achadosCriticos.push({
+        id: 'TIPO_EXTRATO_MISMATCH',
+        titulo: 'Extrato por Colaborador A4 grava TIPO diferente do que a tela espera',
+        detalhe: 'O botão ativo "Gerar Extrato A4" (FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV) grava TIPO=\'EXTRATO_CPF\' na aba DOCUMENTOS. A tela "Documentos e Relatórios" só agrupa e o mapa de preview (tipoMap) só reconhece \'EXTRATO_COLABORADOR_A4\'. Consequência dupla: (a) o extrato aparece na categoria "Outros" em vez de "Extratos por Colaborador"; (b) ao clicar "Preview A4" nesse documento, o sistema cai no fallback \'positivo\' e mostra o Relatório de Conciliação Positiva agregado do mês atual — conteúdo errado, sem qualquer aviso ao financeiro.',
+        evidencia: docsExtratoCpfReal.length + ' documento(s) reais com TIPO=EXTRATO_CPF encontrados na base; ' + docsExtratoEsperado.length + ' com o TIPO esperado pela tela (EXTRATO_COLABORADOR_A4).'
+      });
+    } else if (docsExtratoCpfReal.length > 0) {
+      r.avisos.push('TIPO_EXTRATO_MISMATCH não reproduzido com os dados atuais (verificar manualmente).');
+    }
+
+    // ── 2. Coluna "Colaborador" em Documentos e Relatórios sempre vazia ─────────
+    var docsComContaId = docsData.filter(function(d){ return d.CONTA_ID && String(d.CONTA_ID).trim() !== ''; });
+    if (docsHeaders.indexOf('CONTA_ID') >= 0 && docsData.length > 0 && docsComContaId.length === 0) {
+      r.achadosCriticos.push({
+        id: 'DOC_COLABORADOR_SEMPRE_VAZIO',
+        titulo: 'Coluna "Colaborador" na tela Documentos e Relatórios nunca é preenchida',
+        detalhe: 'FIN_FLASH_V2_DOCUMENTOS tem a coluna CONTA_ID (existe no schema), mas nenhuma das funções que geram documentos (extrato, termo, relatórios agregados) grava esse campo. A UI sempre mostra "—" nessa coluna, para qualquer tipo de documento, incluindo os que são específicos de um colaborador (extrato, termo).',
+        evidencia: docsData.length + ' documento(s) na base, 0 com CONTA_ID preenchido.'
+      });
+    }
+
+    // ── 3. Relatório de Conciliação Positiva A4: "Colaborador" indefinido por linha ──
+    if (concHeaders.indexOf('CPF') < 0) {
+      r.achadosCriticos.push({
+        id: 'REL_POSITIVO_COLABORADOR_INDEFINIDO',
+        titulo: 'Relatório de Conciliação Positiva A4 não consegue mostrar o nome do colaborador por linha',
+        detalhe: 'FIN_FLASH_V2_PREVIEW_RELATORIO_DEV (tipo positivo) lê CPF diretamente da linha crua de FIN_FLASH_V2_CONCILIACOES para montar a coluna Colaborador — mas essa aba não tem coluna CPF (só EXTRATO_ID/PRESTACAO_ID). O join correto (CPF via EXTRATO_ID/PRESTACAO_ID) já existe em FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV, mas o relatório positivo não o reaproveita. Resultado: toda linha do relatório positivo mostra a coluna Colaborador em branco.',
+        evidencia: 'Headers reais de FIN_FLASH_V2_CONCILIACOES: ' + JSON.stringify(concHeaders)
+      });
+    }
+
+    // ── 4. Motivo/Score digitados pelo financeiro somem sem aviso ──────────────
+    var camposConciliacaoAusentes = ['SCORE', 'MOTIVO_MANUAL', 'MOTIVO_REPROVACAO', 'MOTIVO_CORRECAO'].filter(function(c){ return concHeaders.indexOf(c) < 0; });
+    if (camposConciliacaoAusentes.length > 0) {
+      r.achadosCriticos.push({
+        id: 'MOTIVO_SCORE_DESCARTADOS',
+        titulo: 'Motivo/Score digitados em Conciliar/Reprovar/Solicitar Correção não são salvos',
+        detalhe: 'FIN_FLASH_V2_setByHeaders_ descarta silenciosamente qualquer chave de patch que não seja um header real de FIN_FLASH_V2_CONCILIACOES. O financeiro digita um motivo na tela de Conferência, a ação parece ter sucesso, mas o texto só sobrevive no DETALHE_JSON do log de auditoria — nenhuma tela mostra esse motivo depois. Este achado já era conhecido internamente (documentado na V2.15) como decisão de produto pendente, não corrigido até hoje.',
+        evidencia: 'Colunas ausentes em FIN_FLASH_V2_CONCILIACOES: ' + camposConciliacaoAusentes.join(', ')
+      });
+    }
+
+    // ── 5. Dashboard por Colaborador (V2.11) órfão + bug de nome de campo ───────
+    var htmlServido = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+    var dashboardColabChamadoNaTela = htmlServido.indexOf('OBTER_DASHBOARD_COLABORADORES_DEV') >= 0;
+    var camposCartaoCorretos = ['TIPO_CARTAO', 'FINAL_CARTAO'].every(function(c){ return cartoesHeaders.indexOf(c) >= 0; });
+    if (!dashboardColabChamadoNaTela) {
+      var CPF_BRUNA_V216J = '05553116198';
+      var dashColab = FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV({ cpf: CPF_BRUNA_V216J });
+      var brunaDash = dashColab.ok ? (dashColab.colaboradores || [])[0] : null;
+      var cartaoComCampoQuebrado = camposCartaoCorretos && !!brunaDash && (brunaDash.cartoes || []).some(function(k){
+        return k.final === undefined || k.tipo === undefined;
+      });
+      r.achadosMedios.push({
+        id: 'DASHBOARD_COLABORADOR_ORFAO',
+        titulo: 'FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV está órfã e com bug latente de nome de campo',
+        detalhe: 'Não é chamada por nenhuma tela do frontend hoje (confirmado por busca no HTML servido), então não afeta o usuário atualmente. Mas se for reativada sem correção, quebra: ela lê k.FINAL/k.TIPO da aba CARTOES, enquanto o schema real usa TIPO_CARTAO/FINAL_CARTAO — todo cartão apareceria com final/tipo vazios.',
+        evidencia: 'Chamada de teste com CPF da Bruna: cartaoComCampoQuebrado=' + cartaoComCampoQuebrado + ' (headers reais de CARTOES: ' + JSON.stringify(cartoesHeaders) + ')'
+      });
+    }
+
+    // ── 6. Backend morto do Extrato A4 (pré-V2.16E) ─────────────────────────────
+    var backendMortoChamado = htmlServido.indexOf('GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV') >= 0 ||
+      htmlServido.indexOf('PREVIEW_EXTRATO_COLABORADOR_DEV') >= 0;
+    if (!backendMortoChamado) {
+      r.achadosMedios.push({
+        id: 'BACKEND_EXTRATO_MORTO',
+        titulo: 'Trio de funções do Extrato A4 pré-V2.16E ficou órfão',
+        detalhe: 'FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV / FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV / FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV não são chamadas pelo frontend (confirmado por busca no HTML servido). É esse trio que originalmente gravava TIPO=\'EXTRATO_COLABORADOR_A4\' — hoje inatingível, o que agrava o achado TIPO_EXTRATO_MISMATCH (não há mais nenhum caminho vivo que grave o TIPO que a tela espera).',
+        evidencia: 'Nenhuma ocorrência dessas 3 funções no HTML servido do módulo.'
+      });
+    }
+
+    // ── 7. Campo "apelido" de cartão nunca é exercitado ─────────────────────────
+    if (cartoesHeaders.indexOf('APELIDO') < 0) {
+      r.achadosMedios.push({
+        id: 'CARTAO_APELIDO_MORTO',
+        titulo: 'Campo "apelido" de cartão é lido/gravado no código mas não existe na aba real',
+        detalhe: 'FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV lê k.APELIDO e FIN_FLASH_V2_CADASTRAR_CARTAO_COLABORADOR_DEV grava nr.APELIDO, mas a aba FIN_FLASH_V2_CARTOES não tem essa coluna no schema oficial — o valor é sempre descartado no appendRow. Também não há campo de apelido no formulário "Adicionar cartão" da tela Gerenciar Cartões. O rótulo operacional novo da V2.16I (finFlashV2LabelCartao_) sempre cai no fallback "Flash Físico/Virtual", nunca usa apelido — não é um bug da V2.16I, é uma funcionalidade que nunca existiu de ponta a ponta.',
+        evidencia: 'Headers reais de CARTOES: ' + JSON.stringify(cartoesHeaders)
+      });
+    }
+
+    // ── 8. IDs técnicos ainda expostos fora do escopo da V2.16I ─────────────────
+    if (htmlServido.indexOf("['ID','Status','Criado em','Colaborador','Ações']") >= 0) {
+      r.idsTecnicosExpostos.push({
+        tela: 'Documentos e Relatórios',
+        coluna: 'ID (primeira coluna da tabela)',
+        exemplo: 'FIN_FLASH_V2_REL_A4_..., FIN_FLASH_V2_DOC_..., FIN_FLASH_V2_EXT_CPF_...',
+        observacao: 'Mesma classe de problema corrigida para cartões na V2.16I; esta tela ficou fora daquele escopo (era específico de cartão).'
+      });
+    }
+
+    // ── 9. Badges mostram o enum técnico cru, sem tradução ──────────────────────
+    r.achadosVisuais.push({
+      id: 'BADGE_ENUM_CRU',
+      titulo: 'Badges de status mostram o valor técnico do enum sem tradução',
+      detalhe: 'ffv2Badge_() aplica cor e escapa o texto, mas exibe o enum como está gravado na planilha (ex.: "AGUARDANDO_CORRECAO", "CONCILIADO_AUTOMATICO", "PENDENTE_SEM_COMPROVANTE"). Funcional, mas com underscore e caixa alta — não é "linguagem operacional simples" no sentido pedido pela V2.16I/J.'
+    });
+    r.achadosVisuais.push({
+      id: 'ERRO_TECNICO_CRU_NO_FAILUREHANDLER',
+      titulo: 'Mensagens de erro de rede mostram e.message bruto do Apps Script',
+      detalhe: 'Vários withFailureHandler(function(e){...finFlashV2Escape_(e.message)...}) exibem a mensagem técnica original do erro (stack/exception do GAS) direto na tela. Aceitável para depuração, mas pode confundir um usuário financeiro não técnico em produção.'
+    });
+
+    // ── 10. Contadores: nenhuma nova inconsistência encontrada além da já corrigida ──
+    r.avisos.push('Contador de Cartões no Resumo por Mês (bug corrigido na V2.16H) foi a única inconsistência de contagem encontrada até agora; esta auditoria não encontrou novos contadores contraditórios nas demais categorias (Extratos/Prestações/Conciliações/Pendências/Cobranças/Documentos/Logs), que já são registradas corretamente por mês.');
+
+    // ── 11. Fluxos em que o financeiro precisa adivinhar ────────────────────────
+    r.fluxosConfusos.push({
+      fluxo: 'Preview A4 de um documento já gerado (Documentos e Relatórios)',
+      problema: 'Se o documento for um Extrato por Colaborador (TIPO=EXTRATO_CPF), o preview mostra silenciosamente o Relatório de Conciliação Positiva agregado do mês atual em vez do extrato salvo — o financeiro não tem nenhum sinal de que está vendo o conteúdo errado (acompanha achado TIPO_EXTRATO_MISMATCH).'
+    });
+    r.fluxosConfusos.push({
+      fluxo: 'Conciliar manualmente / Reprovar / Solicitar Correção (Conferência de Gastos)',
+      problema: 'A tela pede um motivo, o financeiro digita, a ação retorna sucesso — mas o motivo nunca aparece em nenhuma tela depois (acompanha achado MOTIVO_SCORE_DESCARTADOS). Não há indicação de que aquele campo é "somente para log".'
+    });
+
+    // ── Recomendações de patch (ordem sugerida, nenhuma aplicada nesta fase) ────
+    r.recomendacoesPatch = [
+      { prioridade: 1, pacote: 'V2.16K', acao: 'Resolver TIPO_EXTRATO_MISMATCH: padronizar em um único TIPO (\'EXTRATO_COLABORADOR_A4\') gravado por FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV, e atualizar tipoMap/grouping se necessário. Maior prioridade — hoje mostra conteúdo errado ao usuário.' },
+      { prioridade: 2, pacote: 'V2.16L', acao: 'Preencher CONTA_ID ao gravar documentos por colaborador (extrato, termo) para a coluna Colaborador funcionar em Documentos e Relatórios.' },
+      { prioridade: 3, pacote: 'V2.16M', acao: 'Corrigir Relatório de Conciliação Positiva A4 para resolver o Colaborador via join EXTRATO_ID/PRESTACAO_ID (reaproveitando a lógica de FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV), em vez de ler CPF direto da linha crua.' },
+      { prioridade: 4, pacote: 'decisão de produto (não técnica)', acao: 'Definir se SCORE/MOTIVO_MANUAL/MOTIVO_REPROVACAO/MOTIVO_CORRECAO viram colunas reais em CONCILIACOES, ou se a tela deixa de aceitar esse texto como se fosse salvo.' },
+      { prioridade: 5, pacote: 'limpeza técnica', acao: 'Remover ou corrigir FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV e o trio morto do Extrato A4 pré-V2.16E; remover ou implementar de ponta a ponta o campo apelido de cartão (schema + UI).' },
+      { prioridade: 6, pacote: 'V2.16N', acao: 'Estender o padrão de rótulo operacional da V2.16I (ocultar ID técnico) para a tela Documentos e Relatórios.' }
+    ];
+    r.prontoParaPatch = true;
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR();
+}
