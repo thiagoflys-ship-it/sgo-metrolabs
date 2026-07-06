@@ -1,7 +1,7 @@
 # Inventario — FIN Flash V2
 
-**Atualizado em:** 2026-06-26  
-**Fase:** Fundacao limpa local criada; nada foi conectado ao menu, publicado ou executado no banco.
+**Atualizado em:** 2026-07-06  
+**Fase:** V2.19B concluído (checklist de infraestrutura da PRODUCAO_V2 documentado, nenhuma ação real executada lá). Módulo aprovado end-to-end no DEV: motivo/score/responsável/data na Conferência de Gastos, schema automático, cache sem dado desatualizado, IDs técnicos ocultos, preview A4 sem fallback errado, ambientes DEV+PRODUCAO_V2 reconhecidos no código. Nenhuma ação real foi executada em PRODUCAO_V2 até este ponto — só planejamento e preparação de código no DEV. Sessão pausada por pedido do usuário ("salva, retomamos amanhã").
 
 ## Regras preservadas
 
@@ -436,3 +436,197 @@
 - Produção e Flash antigo intocados; menu produção desligado; sem deploy webapp; sem `--force`; sem envio real.
 - Documento do pacote: `docs/FIN_FLASH_V2_13_VALIDACAO_OPERACIONAL_BRUNA_DEV.md`.
 - FIN_FLASH_V2.13 **CONCLUÍDO**.
+
+## 2026-06-30 — FIN_FLASH_V2.14 Auditoria e correção estrutural de CPF/Cartões aprovada
+
+- **Causa raiz confirmada:** `FIN_FLASH_V2_sheetCtx10_` preserva o tipo nativo da célula (number vs string); funções de listagem comparavam CPF com `===` bruto, então uma aba com CPF `number` (zero inicial perdido) e outra com CPF `string` nunca batiam.
+- Sub-pacotes: V2.14 (auditoria `AUDITAR_FIN_FLASH_V214_BASE_UNICA_SEM_GRAVAR`, somente leitura) → V2.14B (corrigiu `LISTAR_COLABORADORES_CARTOES_DEV`/`OBTER_CONTA_COLABORADOR_DEV` para `normCpf_`/`getCpfCartao_`) → V2.14C (blindou `CADASTRAR_COLABORADOR_DEV`/`ATUALIZAR_COLABORADOR_DEV`/`VINCULAR_CARTAO_COLABORADOR_DEV`/`CADASTRAR_CARTAO_COLABORADOR_DEV` para gravar CPF como texto com `setNumberFormat('@')`) → V2.14D (dry-run: 326 linhas com CPF a corrigir em 7 abas) → V2.14E-PLAN/PREP/EXEC (execução real autorizada por token: inativou conta de teste duplicada secundária, manteve a canônica, corrigiu fisicamente 326/326 linhas de CPF) → V2.14F (normalizou os 5 pontos restantes: `LISTAR_CARTOES_DO_COLABORADOR_DEV`, `VALIDAR_CARTAO_VINCULADO_A_CPF_DEV_`, `FILTRAR_CONFERENCIA_GASTOS_DEV`, `LISTAR_MOVIMENTACOES_CPF_DEV`, `PREPARAR_COBRANCAS_DIARIAS_DEV`) → V2.14G (checkpoint git).
+- Estado final: Bruna CPF `05553116198` como string (antes number), 2 cartões (FISICO 881, VIRTUAL 546), lista e detalhe concordam. `linhasCpfNumerico:0`, `duplicidadesOperacionaisAtivas:0`.
+- **Commit `78f3443`** "fix(FIN): normalizar CPF e cartões Flash V2.14" — só `SGO_Fin_FlashV2.js` (primeiro commit desse arquivo). Push para GitHub feito em seguida.
+- **Deferido para depois:** redesenho de Conferência de Gastos (ID manual em vez de ação na linha), Extrato por Colaborador incompleto, template A4 ainda com `&mdash;`/campos vazios como fallback — todos endereçados nos pacotes seguintes.
+- FIN_FLASH_V2.14 **CONCLUÍDO**.
+
+## 2026-07-01 — FIN_FLASH_V2.15 Conferência de Gastos linha a linha aprovada
+
+- Substituiu a Conferência baseada em ID manual por join CPF-normalizado com ações diretas na linha.
+- V2.15B: `FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros)` — join `CONCILIACOES.EXTRATO_ID/PRESTACAO_ID → EXTRATOS.CPF/PRESTACOES.CPF`, cache 120s.
+- V2.15C: frontend redesenhado com ações por linha (Conciliar/Reprovar/Solicitar Correção/Ver Comprovante), sem campo de ID manual.
+- V2.15D: validação humana no DEV aprovada.
+- V2.15E-DIAG → V2.15F: bug real encontrado e corrigido em `FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV` (`hit` virava o número da linha em vez dos dados).
+- **Commit** (V2.15G, só `SGO_Fin_FlashV2.js`) + push GitHub.
+- V2.15H/I: ciclo real de teste ponta a ponta (Solicitar Correção → Reverter Conciliação) gated por token, sem deixar dado sujo.
+- **Commit** (V2.15J, checkpoint final) + push GitHub.
+- **Achado estrutural:** `FIN_FLASH_V2_setByHeaders_` descarta silenciosamente qualquer chave de patch que não seja header real da aba — `SCORE`/`MOTIVO_MANUAL`/`MOTIVO_REPROVACAO`/`MOTIVO_CORRECAO` nunca são persistidos em `CONCILIACOES`, só aparecem no `DETALHE_JSON` de `LOGS`.
+- FIN_FLASH_V2.15 **CONCLUÍDO**.
+
+## 2026-07-01 — FIN_FLASH_V2.16/V2.16B/V2.16C Extrato por Colaborador completo aprovado
+
+- V2.16 (auditoria): mapeou tudo que faltava no Extrato por Colaborador (cartões, conciliações, pendências, documentos, logs não apareciam).
+- V2.16B (backend): `FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros)` — aceita `cpf/colaboradorId/dataInicio/dataFim/mes/ano/tipo/status/limite`, cache 120s, agrega cartões/extratos/prestações/conciliações/pendências/cobranças/documentos/logs, agrupa por mês, gera timeline unificada. 2 bugs adicionais de CPF bruto encontrados e corrigidos: `FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV` e `FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV`.
+- V2.16C (frontend): `JS_Fin_FlashV2.html` redesenhado — filtros CPF/Ano/Mês/De-Até/Tipo, mês atual pré-selecionado por padrão, botão "Ver histórico completo" separado, botão "Gerar Extrato A4" preservado (viria a ter bug próprio, corrigido na V2.16E).
+- Descobertas de infraestrutura: `.claspignore` precisou excluir `apps-script-imports/**` (travava `clasp push` silenciosamente); `HtmlService...getContent()` remove comentários JS — auditorias não podem usar comentário como marcador.
+- **Commit `bd5b8d8`** "feat(FIN): consolidar extrato por colaborador mes a mes V2.16C".
+- FIN_FLASH_V2.16/V2.16B/V2.16C **CONCLUÍDO**.
+
+## 2026-07-03 — FIN_FLASH_V2.16D Validação humana — reprovada parcialmente
+
+- Tela "Extrato por Colaborador" abriu corretamente no DEV: CPF `05553116198` reconheceu Bruna, filtros Ano 2026/Mês 07/Tipo Todos, tela principal corretamente zerada (sem dados em julho).
+- **Bug encontrado:** botão "Gerar Extrato A4" ignorava o filtro da tela — preview mostrou Período "— a —", R$950 recarregado / R$183 gasto, linhas de 22/06/2026 (mês errado).
+- Veredito: V2.16D não aprovada; V2.17 não aberta; corrigir o A4 antes de prosseguir.
+
+## 2026-07-03 — FIN_FLASH_V2.16E Correção do Extrato A4 aprovada
+
+- **Causa raiz:** a tela usava o backend consolidado V2.16B; o botão A4 chamava `FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV` → `FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV`, função legada da V2.10 que só entendia `payload.periodoInicio`/`payload.periodoFim` (nunca migrada para `ano`/`mes`) — filtro de período era ignorado silenciosamente.
+- Frontend: `ffv2ResolverFiltrosExtrato_(forcarCompleto)` extraído como resolvedor único de filtros (CPF/Ano/Mês/De/Até/Tipo); `ffv2BuscarExtratoCpf_` e `ffv2GerarExtratoCpfA4_` passaram a usar o mesmo payload resolvido.
+- Backend: `FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV` reescrita para chamar diretamente `FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV` (mesma função da tela). Novo helper `FIN_FLASH_V2_resolverPeriodoExibicaoBr_(periodo)` converte `dataInicio/dataFim`/`mesAnoFiltro` em datas BR (`01/07/2026 a 31/07/2026`), nunca "— a —" quando ano/mês/datas são conhecidos. `FIN_FLASH_V2_htmlA4Base_` ganhou mensagem "Nenhuma movimentação no período selecionado." para tabela vazia.
+- Validações: `node --check` OK, grep `prompt()/confirm()` limpo, teste unitário isolado do helper de período (5 casos) todos aprovados.
+- **Commit `1793aba`** "fix(FIN): alinhar Extrato A4 aos filtros da tela V2.16E" — só `JS_Fin_FlashV2.html`/`SGO_Fin_FlashV2.js`. Pushed ao DEV.
+- FIN_FLASH_V2.16E **CONCLUÍDO**.
+
+## 2026-07-03 — FIN_FLASH_V2.16F Sentinela / Auditoria Sistêmica (somente leitura)
+
+- Motivação: bug do A4 (V2.16D) revelou padrão maior — cartões inconsistentes entre telas, caminhos de dados paralelos, textos ruins com `&mdash;`/`—`, ausência de uma sentinela de integridade do módulo. **Nenhum arquivo alterado, nenhum commit/push/deploy.**
+- **Achados principais:**
+  - **Causa raiz "Bruna tem 2 cartões mas tela diz nenhum":** `FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV` filtrava `r.cartoes` por `dentroDoPeriodo(k.criadoEm)` — cartão é entidade estática, não evento do mês; ao filtrar um mês sem cartão criado, a lista ficava vazia mesmo com cartões ativos. O próprio código já documentava o risco (nunca virou correção). Tela "Colaboradores e Cartões" (`LISTAR_COLABORADORES_CARTOES_DEV`) não tinha esse filtro e por isso sempre mostrou os cartões certos.
+  - `FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV` (V2.11): CPF bruto (não normalizado) + campos inexistentes (`k.FINAL`/`k.TIPO` em vez de `FINAL_CARTAO`/`TIPO_CARTAO`) — hoje órfã da tela, viva só em 2 orquestradoras de teste que nunca detectaram o bug.
+  - "Período: — a —" **sempre** presente (100% reprodutível) nos 3 relatórios A4 de Documentos/Relatórios (Conciliação Positiva/Negativa/Pendências) — frontend nunca enviava período, mesma classe de bug da V2.16D nunca corrigida ali.
+  - Múltiplos backends paralelos por domínio: Extrato (4 gerações, 1 delas — `GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV` — código morto absoluto), Dashboard (4 gerações), Conferência (3 gerações), Pendências (4 implementações sem base comum).
+  - Recarga: **não existe fluxo real de criação** no V2 — a única escrita em `RECARGAS` é o gerador de massa de teste da Bruna.
+  - FIN_FLASH_V2 confirmado isolado do resto do SGO+ (sem contaminação com produção) — a fragmentação é toda interna ao módulo.
+- Proposta de pacotes: V2.16G (P0: cartões + período relatórios) → V2.16H (decisão de produto sobre Recarga) → V2.16I (consolidação de backends) → V2.16J (remoção de código morto) → V2.16K (UX/texto).
+- 10 regras inegociáveis propostas para a sentinela (CPF sempre normalizado, entidade estática nunca filtrada por período, uma função por domínio, período real nunca "— a —", etc.).
+
+## 2026-07-03 — FIN_FLASH_V2.16G Correção P0 da Sentinela aprovada
+
+- **Correção 1:** `FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV` — removido o filtro de período em `r.cartoes` (agora só `.slice(0, limite)`); cartões também removidos do agrupamento por mês (`mesesMap`), evitando "mês fantasma"; removido o `r.riscos.push(...)` que documentava o problema como conhecido-não-corrigido.
+- **Correção 2:** `FIN_FLASH_V2_PREVIEW_RELATORIO_DEV` (usada também por `GERAR_HTML_RELATORIO_A4_DEV` por delegação) passou a resolver `ano`/`mes`/`dataInicio`/`dataFim` do payload via `FIN_FLASH_V2_resolverPeriodoExibicaoBr_` (reaproveitado da V2.16E); campo "CPF" do relatório agregado mudou de `'—'` para `'Todos os colaboradores'`. Frontend: nova `ffv2PayloadRelAtual_(tipo)` em `JS_Fin_FlashV2.html`, usada por `ffv2PreviewRel_`/`ffv2GerarRel_`, assume mês/ano atual por padrão (mesmo padrão já usado no Extrato por Colaborador desde a V2.16C).
+- Recarga não foi tocada (decisão de produto adiada para V2.16H), conforme escopo autorizado.
+- Validações: `node --check` OK, grep `prompt()/confirm()` limpo, grep `&mdash;/— a —/Período: —` sem ocorrência na saída real corrigida, testes lógicos isolados (cartões de Bruna somem no código antigo e aparecem no novo; período julho/2026 resolve para `01/07/2026 a 31/07/2026`).
+- **Commit `d27f049`** "fix(FIN): parar de filtrar cartões por período e corrigir período nos relatórios A4 V2.16G" — só `SGO_Fin_FlashV2.js`/`JS_Fin_FlashV2.html`. Pushed ao DEV (84 arquivos).
+- **Pendente:** validação humana no navegador (Bruna CPF `05553116198`, Ano 2026, Mês 07 — cartões devem aparecer; relatórios A4 devem mostrar período real).
+- FIN_FLASH_V2.16G **PUSHED AO DEV, AGUARDANDO VALIDAÇÃO HUMANA**.
+
+## 2026-07-06 — FIN_FLASH_V2.16G validado + V2.16H Resumo por Mês e filtros A4 aprovado
+
+- Validação humana da V2.16G: cartões da Bruna aparecem no Extrato por Colaborador mesmo com julho zerado; relatórios A4 mostram período real (`01/07/2026 a 31/07/2026`, "Todos os colaboradores") — porém **2 novos bugs** encontrados: Resumo por Mês mostrava `Cartões: 0` (contradizendo o Extrato, que mostrava 2); e as tabelas internas dos relatórios A4 ainda misturavam linhas de junho com o período de julho, apesar do cabeçalho estar correto.
+- **Causa raiz 1:** o agrupamento por mês (`mesesMap`) nunca registra cartões (estáticos, corretamente excluídos desde a V2.16G) — mas `resumoMes.totalCartoes` lia esse balde sempre vazio. Corrigido para usar `r.cartoes.length` (total real do colaborador).
+- **Causa raiz 2:** `FIN_FLASH_V2_PREVIEW_RELATORIO_DEV` calculava o período só para o cabeçalho, nunca filtrava o dataset (`conc.data`/`pend.data`) por data. Criados `FIN_FLASH_V2_v216NormalizarDataIso_`, `FIN_FLASH_V2_v216ResolverPeriodoIso_`, `FIN_FLASH_V2_v216DentroDoPeriodoIso_` (normalização ISO/BR + comparação inclusiva); aplicados aos 3 relatórios (positivo/negativo/pendências) por `CRIADO_EM`.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR()`.
+- Testes isolados: 16/16 aprovados (normalização de data, comparação inclusiva, contador de cartões, filtro real do dataset).
+- **Commit `b160394`** "fix(FIN): corrigir resumo mensal e filtros A4 Flash V2.16H" — só `SGO_Fin_FlashV2.js`. Pushed ao DEV.
+- FIN_FLASH_V2.16H **CONCLUÍDO E VALIDADO**.
+
+## 2026-07-06 — FIN_FLASH_V2.16I Ocultar IDs técnicos de cartão aprovado
+
+- **Problema:** tabela de Cartões do Extrato por Colaborador mostrava `FIN_FLASH_V2_CARTAO_...` como coluna principal — inaceitável para uso operacional.
+- Novo helper `finFlashV2LabelCartao_(k)` (frontend) — retorna `"Flash Físico • final 881"`/`"Flash Virtual • final 546"` (ou `"<apelido> • final XXX"` se houver apelido). Aplicado na tabela de Cartões (coluna `ID` → `Cartão`, ID técnico preservado só em `data-cartao-id`) e na mensagem de confirmação de cadastro de cartão.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR()`.
+- Testes isolados: 4/4 aprovados.
+- **Commit `64a17a8`** "fix(FIN): ocultar ids tecnicos de cartoes Flash V2.16I" — `SGO_Fin_FlashV2.js`/`JS_Fin_FlashV2.html`. Pushed ao DEV.
+- **Incidente à parte:** um restyle de tema escuro (feito por outra ferramenta/"codex", por engano — deveria ter sido em outro projeto) apareceu em `JS_Fin_FlashV2.html` no working tree, não commitado. Identificado, confirmado pelo usuário como erro, e revertido via `git checkout` sem afetar os commits já feitos; re-pushado ao DEV no estado correto (tema claro original).
+- FIN_FLASH_V2.16I **CONCLUÍDO E VALIDADO**.
+
+## 2026-07-06 — FIN_FLASH_V2.16J Auditoria geral de coerência operacional (somente leitura)
+
+- Pente-fino solicitado antes de pensar em produção: IDs técnicos expostos, campos técnicos sem sentido, mensagens ruins, contadores contraditórios, telas duplicadas, relatórios com informação inútil, fluxos confusos, funções órfãs perigosas.
+- **Achados críticos:** `TIPO_EXTRATO_MISMATCH` (botão ativo grava `EXTRATO_CPF`, tela só reconhece `EXTRATO_COLABORADOR_A4` — extrato cai em "Outros" e o preview mostra o Relatório Positivo agregado por engano); `DOC_COLABORADOR_SEMPRE_VAZIO` (nenhuma função preenche `CONTA_ID` em `DOCUMENTOS`); `REL_POSITIVO_COLABORADOR_INDEFINIDO` (Relatório Positivo lê CPF direto de `CONCILIACOES`, que não tem essa coluna); `MOTIVO_SCORE_DESCARTADOS` (já conhecido desde a V2.15, `SCORE`/`MOTIVO_*` nunca persistem).
+- **Achados médios/baixos:** `OBTER_DASHBOARD_COLABORADORES_DEV` órfã com bug latente de campo; trio pré-V2.16E do extrato órfão; `MARCAR_CONCILIACAO_CONFERIDA_DEV` órfã (padrão ANALISE_IA em vez de colunas); família V2.6 de relatórios não usada pelo frontend; IDs técnicos de documento visíveis em Documentos e Relatórios.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR()`.
+- **Commit `401dba8`** "chore(FIN): adicionar auditoria operacional Flash V2.16J" — só `SGO_Fin_FlashV2.js` (pura adição, sem correção). Pushed ao DEV.
+- Recomendação: nenhum bloqueio crítico impedindo continuar, mas TIPO_EXTRATO_MISMATCH é prioridade máxima para a próxima fase corretiva.
+- FIN_FLASH_V2.16J **CONCLUÍDO (diagnóstico)**.
+
+## 2026-07-06 — FIN_FLASH_V2.16K Correção dos achados críticos aprovado
+
+- **Corrigido TIPO_EXTRATO_MISMATCH:** novo classificador central `FIN_FLASH_V2_v216kCategoriaDocumento_()` reconhece `EXTRATO_CPF` e `EXTRATO_COLABORADOR_A4` como a mesma categoria. `PREVIEW_DOCUMENTO_A4_DEV` nunca mais cai em fallback silencioso — tipo desconhecido retorna erro explícito. Para extratos salvos, resolve CPF/período originais via `LOGS.DETALHE_JSON` (metadado já existente, sem schema novo).
+- **Corrigido DOC_COLABORADOR_SEMPRE_VAZIO:** `GERAR_EXTRATO_CONTA_CPF_DEV` preenche `CONTA_ID`; listagem resolve colaborador em cascata (CONTA_ID → "Todos os colaboradores" para tipos agregados → vínculo por PRESTACAO_ID → CPF do log → "Não identificado", nunca célula vazia).
+- **Corrigido REL_POSITIVO_COLABORADOR_INDEFINIDO:** resolvido por vínculo real `EXTRATO_ID`/`PRESTACAO_ID` → CPF (mesmo join da V2.15B).
+- **Segurança visual:** tabela de Documentos e Relatórios trocou `ID | Status | Criado em | Colaborador | Ações` por `Tipo | Colaborador | Criado em | Status | Ações`.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR()`.
+- Testes: `node --check` OK, 13/13 testes isolados aprovados.
+- **Commit `6af42a9`** "fix(FIN): corrigir preview e colaboradores em documentos Flash V2.16K" — `SGO_Fin_FlashV2.js`/`JS_Fin_FlashV2.html`. Pushed ao DEV.
+- FIN_FLASH_V2.16K **CONCLUÍDO E VALIDADO**.
+
+## 2026-07-06 — FIN_FLASH_V217 Plano de migração Motivo/Score (somente leitura) + decisão de produto
+
+- Investigação: `FIN_FLASH_V2_setByHeaders_` grava por nome de coluna lido dinamicamente da planilha — adicionar colunas novas não exige mudança nas 3 funções de escrita (já tentam gravar `SCORE`/`MOTIVO_*`/`ATUALIZADO_EM`, só falham por a coluna não existir). Achada função órfã `MARCAR_CONCILIACAO_CONFERIDA_DEV` com padrão alternativo (JSON em `ANALISE_IA`).
+- **Decisão de produto (Opção A):** colunas reais em `CONCILIACOES` — `SCORE`, `MOTIVO_DECISAO` (única, sem separar por ação), `ATUALIZADO_POR` (novo), `ATUALIZADO_EM`. `APROVADO_POR` mantido como legado/automático.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR()`.
+- **Commit `551d1fa`** "chore(FIN): auditar plano motivo score Flash V2.17". Pushed ao DEV.
+
+## 2026-07-06 — FIN_FLASH_V217A Implementação Motivo/Score aprovada
+
+- Schema atualizado em `SGO_Fin_FlashV2_Setup.js`: `SCORE`/`MOTIVO_DECISAO`/`ATUALIZADO_POR`/`ATUALIZADO_EM` adicionados ao final de `FIN_FLASH_V2_CONCILIACOES`.
+- Nova função `MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV()` — aditiva, idempotente, só adiciona headers ausentes ao final.
+- As 3 ações (`CONCILIAR_MANUALMENTE_DEV`/`REPROVAR_COMPROVANTE_DEV`/`SOLICITAR_CORRECAO_COMPROVANTE_DEV`) passaram a gravar `MOTIVO_DECISAO`/`ATUALIZADO_POR` (via novo `FIN_FLASH_V2_v217UsuarioResponsavel_()`, e-mail real com fallback)/`ATUALIZADO_EM`. Listagem e frontend passaram a expor/exibir os 4 campos.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR()`.
+- **Commit `2e05187`** "fix(FIN): salvar motivo e score da conferencia Flash V2.17A" — `SGO_Fin_FlashV2.js`/`SGO_Fin_FlashV2_Setup.js`/`JS_Fin_FlashV2.html`. Pushed ao DEV.
+- **Pendência identificada:** migração de schema ainda dependia de execução manual (`clasp run` bloqueado por Execution API) — resolvida na V2.17B.
+
+## 2026-07-06 — FIN_FLASH_V217B Automatizar migração de schema aprovado
+
+- Novo helper `FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_()` — idempotente, chamado automaticamente pela listagem e pelas 3 ações, garante as 4 colunas sem exigir execução manual. `MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV` virou fallback/admin, delega ao mesmo helper.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR()` — prova idempotência ao vivo chamando o helper 2x seguidas.
+- Testes: 11/11 isolados aprovados.
+- **Commit `f4a0740`** "fix(FIN): automatizar schema motivo score Flash V2.17B" — só `SGO_Fin_FlashV2.js`. Pushed ao DEV.
+- FIN_FLASH_V217B **CONCLUÍDO E VALIDADO** (usuário confirmou: abrir a tela já cria as colunas, sem rodar nada manualmente).
+
+## 2026-07-06 — FIN_FLASH_V217C Corrigir SCORE não gravado em Reprovar/Solicitar Correção (2 rodadas)
+
+- **Rodada 1:** validação humana mostrou Motivo/Responsável/Data persistindo, mas Score sempre vazio em Reprovar/Solicitar Correção. Causa: só `CONCILIAR_MANUALMENTE_DEV` gravava `SCORE:100`; as outras 2 nunca incluíam a chave no patch. Corrigido nas 3. Auditoria `AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR()` criada. **Commit `8e576ea`.**
+- **Rodada 2 (reprovação humana):** usuário reportou Score ainda vazio — investigação confirmou que a linha mostrada era a MESMA testada antes do fix (mesmo motivo/timestamp), não um teste novo; comportamento correto (sem backfill). Reforçada a auditoria com inspeção real via `.toString()` (Function.prototype.toString funciona no V8 do Apps Script) em vez de "confirmado por construção". Também corrigido um achado extra: cache de `LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV` nunca invalidava após uma ação — criado contador de geração (`FIN_FLASH_V2_confL2LCacheGeracao_`/`InvalidarCache_`) embutido na chave, incrementado pelas 3 ações. **Commit `98c37a2`** "fix(FIN): corrigir score manual da conferencia Flash V2.17C".
+- Testes: 26 + 11 = 37 casos isolados aprovados nas 2 rodadas.
+- Pushed ao DEV em ambas as rodadas.
+- FIN_FLASH_V217C **CONCLUÍDO E VALIDADO** (segunda rodada, com teste novo controlado).
+
+## 2026-07-06 — FIN_FLASH_V2.18 Auditoria geral final pré-produção (somente leitura)
+
+- Auditou o fluxo completo: Colaborador→CPF→Cartões→Extratos→Prestações→Conciliações→Pendências→Cobranças→Documentos→Auditoria/Logs.
+- **Nenhum bloqueio de produção encontrado.** 3 riscos médios: cache do Extrato por Colaborador nunca invalidado após ações (mesma classe de bug já corrigido na Conferência); `EXECUTAR_POR` sempre `'FINANCEIRO_DEV'` nos Logs (perda de rastreabilidade real, mesmo já existindo e-mail real em `CONCILIACOES.ATUALIZADO_POR`); botão "Imprimir" sempre presente no modal genérico, inclusive em formulário/erro. 1 pendência baixa: ID técnico da conciliação visível no modal de Ação Financeira. Funções órfãs consolidadas na mesma auditoria.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR()`.
+- **Commit `544d48a`** "chore(FIN): auditar pre-producao Flash V2.18" (separado da correção). Pushed ao DEV.
+- Recomendação: sem bloqueios técnicos; abrir V2.18A para os riscos médios antes de piloto amplo.
+
+## 2026-07-06 — FIN_FLASH_V2.18A Corrigir riscos médios pré-produção aprovado
+
+- Cache do Extrato por Colaborador ganhou o mesmo padrão de geração da Conferência (`FIN_FLASH_V2_extCompletoCacheGeracao_`/`InvalidarCache_`), invalidado pelas 3 ações.
+- `FIN_FLASH_V2_registrarLogAcao_` passou a gravar `EXECUTADO_POR` via `FIN_FLASH_V2_v217UsuarioResponsavel_()` (e-mail real, fallback seguro) — logs antigos preservados sem backfill.
+- `ffv2Modal_` ganhou parâmetro `mostrarImprimir` (padrão oculto); só os 8 modais de documento/relatório A4 (extrato, positivo, negativo, pendências, termo, comprovante, lote) passam `true`.
+- Modal de Ação Financeira: ID técnico da conciliação trocado por informação humana (colaborador/CPF/data/estabelecimento/valor/cartão); ID preservado em `data-conciliacao-id` e no payload da ação.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR()`.
+- Testes: 12/12 isolados aprovados.
+- **Commit `7cb5717`** "fix(FIN): corrigir riscos medios pre-producao Flash V2.18A" — `SGO_Fin_FlashV2.js`/`JS_Fin_FlashV2.html`. Pushed ao DEV.
+- FIN_FLASH_V2.18A **CONCLUÍDO E VALIDADO** (score/motivo/responsável/data persistindo, cache sem dado velho, modais limpos, preview A4 com Imprimir, Auditoria/Logs com e-mail real).
+
+## 2026-07-06 — FIN_FLASH_V2.19 Plano de piloto controlado em PRODUCAO_V2 (planejamento)
+
+- Decisão confirmada com o usuário: **coexistência** — FIN_FLASH_V2 entra como módulo novo/adicional em PRODUCAO_V2 (scriptId `1iKgbkoBgRuethKuFhQM1H1W9vRvuBM1tT21-cYizkusfT_YrgHbIbZ1y`); FIN_CARTOES (Flash V1, já liberado no piloto AUTH.10O) permanece intocado.
+- **3 bloqueadores técnicos identificados:** B1 (`FIN_FLASH_V2_dev_()` só reconhece o scriptId do DEV — módulo ficaria mudo em produção); B2 (banco dedicado — resolvido pela arquitetura já separada, só falta configurar `DB_FIN_ID` numa planilha nova); B3 (`AMBIENTE_TESTE` hardcoded `'SIM'` em ~47 pontos, incluindo o frontend).
+- Checklist completo: publicação em 5 fases, validação pós-publicação, rollback lógico (módulo aditivo — esconder menu já é suficiente), critério de aprovação do piloto com 1 colaborador real.
+- Plano salvo em `docs/FIN_FLASH_V2_V219_PLANO_PILOTO_PRODUCAO.md`.
+- **Commit `c703e1a`** "docs(FIN): registrar plano piloto producao Flash V2.19" (só documentação, sem código).
+- FIN_FLASH_V2.19 **CONCLUÍDO (planejamento)**.
+
+## 2026-07-06 — FIN_FLASH_V2.19A Resolver bloqueadores B1 e B3 no código (DEV) aprovado
+
+- **B1 resolvido:** allowlist nova (`FIN_FLASH_V2_AMBIENTES_`, `FIN_FLASH_V2_ambienteAtual_`, `FIN_FLASH_V2_ambientePermitido_`, `FIN_FLASH_V2_permitido_`). `FIN_FLASH_V2_dev_()` preservada com o significado literal original (só o uso legítimo de simulação de e-mail em DEV continua chamando ela). **114 guards** convertidos de `!FIN_FLASH_V2_dev_()` para `!FIN_FLASH_V2_permitido_()`; **44 labels cosméticos** de `ambiente` convertidos para `FIN_FLASH_V2_ambienteAtual_()`.
+- **B3 resolvido:** `FIN_FLASH_V2_ambienteTesteAtual_()` novo (DEV→SIM, PRODUCAO_V2→NAO). **24 pontos de escrita real** corrigidos (15 hardcodes diretos + 4 helpers de escrita centrais + 5 variáveis locais) — backend passou a ser autoridade final, ignorando qualquer valor vindo do chamador.
+- Auditoria criada: `AUDITAR_FIN_FLASH_V219A_AMBIENTE_PRODUCAO_SEM_GRAVAR()`.
+- Testes: 13/13 isolados dos helpers aprovados + 14/14 verificações extras confirmando os checks da auditoria contra o código real.
+- **Commit `ae72adf`** "fix(FIN): preparar ambientes DEV e PRODUCAO_V2 Flash V2.19A" — só `SGO_Fin_FlashV2.js`. Pushed ao DEV.
+- FIN_FLASH_V2.19A **CONCLUÍDO E VALIDADO** (módulo continua funcionando normalmente no DEV após a troca dos guards; PRODUCAO_V2 preparada só no código, nunca tocada).
+
+## 2026-07-06 — FIN_FLASH_V2.19B Checklist operacional de infraestrutura da PRODUCAO_V2 (documentação)
+
+- Achado que define a ordem rígida: `SETUP_FIN_FLASH_V2_MANUAL_AUTORIZADO` e `AUDITAR_FIN_FLASH_V2_ESTRUTURA_SEM_GRAVAR` não têm guard de ambiente — `DB_FIN_ID` é a única trava de segurança do setup.
+- Checklist em 7 passos: dependência de ordem (código antes do setup) → criar planilha nova `SGO_FIN_FLASH_V2_DB_PROD` → configurar `DB_FIN_ID` em PRODUCAO_V2 → `clasp push` do código com `.clasp` correto (nunca o do DEV) → rodar `SETUP_FIN_FLASH_V2_MANUAL_AUTORIZADO('AUTORIZO_SETUP_FIN_FLASH_V2')` → auditorias pós-setup → critério de aprovação → rollback específico (apagar `DB_FIN_ID` e/ou a planilha nova, sem afetar FIN_CARTOES).
+- Plano salvo em `docs/FIN_FLASH_V2_V219B_CHECKLIST_INFRA_PRODUCAO.md`.
+- **Commit `e3d844f`** "docs(FIN): registrar checklist infra producao Flash V2.19B" (só documentação).
+- **`git push origin master` realizado** (`298c589..e3d844f`) — primeira vez nesta sessão que os commits acumulados (V2.16H em diante) foram enviados ao GitHub.
+- FIN_FLASH_V2.19B **CONCLUÍDO** — nenhuma ação real executada em PRODUCAO_V2.
+
+## Estado ao final da sessão (2026-07-06)
+
+- **DEV:** módulo completo, validado ponta a ponta pelo usuário — Conferência de Gastos com motivo/score/responsável/data persistindo e sem cache velho, Extrato por Colaborador com múltiplos cartões e rótulos legíveis, Resumo por Mês correto, Relatórios A4 sem misturar período, Documentos e Relatórios com preview correto e sem ID técnico como coluna principal, modais operacionais limpos (sem ID técnico, sem Imprimir indevido), ambientes DEV/PRODUCAO_V2 reconhecidos no código.
+- **PRODUCAO_V2:** só recebeu planejamento e preparação de código (via DEV/git) — nenhuma planilha criada, nenhum `DB_FIN_ID` configurado, nenhum código pushado lá, nenhum setup rodado, nenhum deploy.
+- **Próximo passo ao retomar:** iniciar a execução real do checklist V2.19B (Passo 1 — criar a planilha `SGO_FIN_FLASH_V2_DB_PROD`), sempre com confirmação explícita antes de cada ação em PRODUCAO_V2.
