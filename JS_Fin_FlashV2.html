@@ -969,6 +969,8 @@ function ffv2FiltrarConferencia_() {
           if (a==='VER_COMPROVANTE')       return '<button class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:4px 8px;" onclick="ffv2VerComprovanteLinha_(\''+it.conciliacaoId+'\')">Comprovante</button>';
           return '';
         }).join(' ');
+        // V2.17A — score/motivo/responsável/atualizado em, para o motivo digitado
+        // pelo financeiro parar de desaparecer depois de Conciliar/Reprovar/Corrigir.
         return {
           Data: it.data||'—', Colaborador: it.colaboradorNome||it.cpfExibicao||'—', CPF: it.cpfExibicao||'—',
           'Cartão': it.finalCartao ? ('final '+it.finalCartao) : '—',
@@ -976,6 +978,10 @@ function ffv2FiltrarConferencia_() {
           Valor: finFlashV2FmtMoeda_(it.valor),
           'Conciliação': it.statusConciliacao, 'Prestação': it.statusPrestacao||'—', 'Pendência': it.statusPendencia||'—',
           Comprovante: it.comprovanteId ? 'Sim' : 'Não',
+          Score: (it.score===null||it.score===undefined||it.score==='') ? '—' : String(it.score),
+          'Motivo/Decisão': it.motivoDecisao || 'Sem motivo registrado',
+          'Responsável': it.atualizadoPor || '—',
+          'Atualizado em': it.atualizadoEm || '—',
           'Ações': '',
           '_html_Conciliação': ffv2Badge_(it.statusConciliacao),
           '_html_Prestação': it.statusPrestacao ? ffv2Badge_(it.statusPrestacao) : '—',
@@ -984,7 +990,7 @@ function ffv2FiltrarConferencia_() {
         };
       });
       var h = '<p style="font-size:11px;color:#64748b;margin-bottom:6px;">'+r.total+' registro(s) encontrado(s)</p>'+
-        ffv2Tabela_(['Data','Colaborador','CPF','Cartão','Estabelecimento','Valor','Conciliação','Prestação','Pendência','Comprovante','Ações'],rows,'Nenhum gasto encontrado com esses filtros.');
+        ffv2Tabela_(['Data','Colaborador','CPF','Cartão','Estabelecimento','Valor','Conciliação','Prestação','Pendência','Comprovante','Score','Motivo/Decisão','Responsável','Atualizado em','Ações'],rows,'Nenhum gasto encontrado com esses filtros.');
       var el=document.getElementById('ffv2g-res'); if(el) el.innerHTML=h;
     })
     .withFailureHandler(function(e){var el=document.getElementById('ffv2g-res');if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})

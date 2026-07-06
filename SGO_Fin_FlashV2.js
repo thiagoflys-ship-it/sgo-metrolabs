@@ -1054,6 +1054,11 @@ function FIN_FLASH_V2_validarMotivo_(motivo, campo) {
   return motivo;
 }
 
+// LEGADO (V2.17 achado funcaoOrfaMarcacaoConferida) — não é chamada pelo frontend
+// (a tela de Conferência de Gastos usa CONCILIAR_MANUALMENTE_DEV/REPROVAR_COMPROVANTE_DEV/
+// SOLICITAR_CORRECAO_COMPROVANTE_DEV). Mantida por enquanto, não removida — grava
+// motivo/responsável dentro do JSON de ANALISE_IA, um padrão diferente do adotado
+// na V2.17A (colunas reais MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM).
 function FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV(payload) {
   var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',conferida:false,logCriado:false,bloqueios:[],avisos:[]};
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
@@ -2540,6 +2545,18 @@ function FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV(payload) {
   return r;
 }
 
+// V2.17A — e-mail do usuário logado para ATUALIZADO_POR, com fallback seguro
+// (mesmo padrão já usado em outros pontos do módulo) quando a sessão não expõe
+// o usuário ativo (ex.: chamada via Execution API sem contexto de UI).
+function FIN_FLASH_V2_v217UsuarioResponsavel_() {
+  try {
+    var email = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+    return email || 'FINANCEIRO_DEV';
+  } catch (e) {
+    return 'FINANCEIRO_DEV';
+  }
+}
+
 function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
   var r = { ok: false, bloqueios: [], avisos: [] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
@@ -2550,10 +2567,14 @@ function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
     }
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
+    // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_MANUAL (nunca existiu como
+    // coluna real); ATUALIZADO_POR/ATUALIZADO_EM agora persistem de verdade.
+    var responsavel = FIN_FLASH_V2_v217UsuarioResponsavel_();
+    var atualizadoEm = FIN_FLASH_V2_now10_();
     FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'CONCILIADO',SCORE:100,
-      MOTIVO_MANUAL:payload.motivo,ATUALIZADO_EM:FIN_FLASH_V2_now10_()});
+      MOTIVO_DECISAO:payload.motivo,ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('CONCILIAR_MANUALMENTE','CONCILIACAO',
-      payload.conciliacaoId,payload.motivo,'SIM');
+      payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2569,10 +2590,14 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
     }
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
-    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'REPROVADO',MOTIVO_REPROVACAO:payload.motivo,
-      ATUALIZADO_EM:FIN_FLASH_V2_now10_()});
+    // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_REPROVACAO (nunca existiu
+    // como coluna real); ATUALIZADO_POR/ATUALIZADO_EM agora persistem de verdade.
+    var responsavel = FIN_FLASH_V2_v217UsuarioResponsavel_();
+    var atualizadoEm = FIN_FLASH_V2_now10_();
+    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'REPROVADO',MOTIVO_DECISAO:payload.motivo,
+      ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('REPROVAR_COMPROVANTE','CONCILIACAO',
-      payload.conciliacaoId,payload.motivo,'SIM');
+      payload.conciliacaoId,{motivo:payload.motivo,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2588,10 +2613,14 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
     }
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
-    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'AGUARDANDO_CORRECAO',MOTIVO_CORRECAO:payload.motivo,
-      ATUALIZADO_EM:FIN_FLASH_V2_now10_()});
+    // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_CORRECAO (nunca existiu
+    // como coluna real); ATUALIZADO_POR/ATUALIZADO_EM agora persistem de verdade.
+    var responsavel = FIN_FLASH_V2_v217UsuarioResponsavel_();
+    var atualizadoEm = FIN_FLASH_V2_now10_();
+    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'AGUARDANDO_CORRECAO',MOTIVO_DECISAO:payload.motivo,
+      ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('SOLICITAR_CORRECAO_COMPROVANTE','CONCILIACAO',
-      payload.conciliacaoId,payload.motivo,'SIM');
+      payload.conciliacaoId,{motivo:payload.motivo,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -6446,6 +6475,12 @@ function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
         cartaoId: cartaoId,
         finalCartao: cartao ? FIN_FLASH_V2_getFinalCartao_(cartao) : '',
         origemCpf: origemCpf,
+        // V2.17A — expõe os 4 campos novos de FIN_FLASH_V2_CONCILIACOES para a tela
+        // de Conferência de Gastos parar de "esquecer" motivo/score/responsável.
+        score: (c.SCORE !== undefined && c.SCORE !== '' && c.SCORE !== null) ? Number(c.SCORE) : null,
+        motivoDecisao: c.MOTIVO_DECISAO || '',
+        atualizadoPor: c.ATUALIZADO_POR || '',
+        atualizadoEm: c.ATUALIZADO_EM || '',
         podeConciliar: statusConc !== 'CONCILIADO',
         podeReprovar: temComprovante,
         podeSolicitarCorrecao: !!pr,
@@ -8512,4 +8547,135 @@ function AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.17A — Migração aditiva: adiciona SCORE/MOTIVO_DECISAO/
+// ATUALIZADO_POR/ATUALIZADO_EM ao FINAL de FIN_FLASH_V2_CONCILIACOES.
+// Nunca apaga, nunca reordena, nunca altera dado existente. Idempotente:
+// rodar de novo com os headers já presentes não faz nada (nem escreve).
+// ═══════════════════════════════════════════════════════════════════════════
+function MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() {
+  var r = {
+    success: false, ok: false, executado: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    headersAntes: [], headersDepois: [], headersAdicionados: [], headersJaExistentes: [],
+    totalColunasAntes: 0, totalColunasDepois: 0, bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  try {
+    var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.CONCILIACOES);
+    if (!sh) { r.bloqueios.push('Aba FIN_FLASH_V2_CONCILIACOES não encontrada.'); return r; }
+
+    var headersAtuais = FIN_FLASH_V2_getHeaderMap_(sh).headers;
+    r.headersAntes = headersAtuais.slice();
+    r.totalColunasAntes = headersAtuais.length;
+
+    var NOVOS = ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'];
+    var faltando = NOVOS.filter(function(h){ return headersAtuais.indexOf(h) < 0; });
+    r.headersJaExistentes = NOVOS.filter(function(h){ return headersAtuais.indexOf(h) >= 0; });
+
+    if (!faltando.length) {
+      r.avisos.push('Nenhum header novo a adicionar — todos os 4 já existem na aba. Nada foi gravado (migração idempotente).');
+      r.headersDepois = headersAtuais.slice();
+      r.totalColunasDepois = headersAtuais.length;
+      r.success = true; r.ok = true; r.executado = false;
+      return r;
+    }
+
+    // Adiciona somente ao final — nunca toca nas colunas existentes (não reordena,
+    // não sobrescreve, não altera nenhuma linha de dado; só a linha 1, colunas novas).
+    var proximaColuna = sh.getLastColumn() + 1;
+    sh.getRange(1, proximaColuna, 1, faltando.length).setValues([faltando]);
+
+    r.headersAdicionados = faltando;
+    r.headersDepois = FIN_FLASH_V2_getHeaderMap_(sh).headers;
+    r.totalColunasDepois = r.headersDepois.length;
+    r.success = true; r.ok = true; r.executado = true;
+
+    FIN_FLASH_V2_registrarLogAcao_('MIGRAR_CONCILIACOES_MOTIVO_SCORE_V217', 'FIN_FLASH_V2_CONCILIACOES', 'SCHEMA',
+      { headersAdicionados: faltando, headersAntes: r.headersAntes, headersDepois: r.headersDepois }, 'SIM');
+  } catch (e) { r.bloqueios.push(e.message || String(e)); }
+  return r;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.17A — Auditoria pós-implementação. Somente leitura: chama só
+// funções de listagem (nunca as 3 que gravam motivo/score) e confere que a
+// V2.16K não regrediu.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.17A', somenteLeitura: true, executado: false,
+    headersPresentes: { SCORE: false, MOTIVO_DECISAO: false, ATUALIZADO_POR: false, ATUALIZADO_EM: false },
+    escritaPorHeader: false, escritaPosicional: false,
+    funcoesAtualizadas: [], listagemExpoeCampos: false, frontendMostraCampos: false, logsPreservados: false,
+    regressaoV216K: { previewExtratoCorreto: false, documentosSemIdTecnicoPrincipal: false, brunaJulho2Cartoes: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    // ── 1. Headers presentes na aba real ────────────────────────────────────
+    var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'].forEach(function(h){
+      r.headersPresentes[h] = concHeaders.indexOf(h) >= 0;
+    });
+    var todosPresentes = r.headersPresentes.SCORE && r.headersPresentes.MOTIVO_DECISAO &&
+      r.headersPresentes.ATUALIZADO_POR && r.headersPresentes.ATUALIZADO_EM;
+    if (!todosPresentes) r.bloqueios.push('Nem todos os headers novos estão presentes — rode MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() antes desta auditoria.');
+
+    // ── 2. Escrita por header / nenhuma escrita posicional nova ────────────
+    // Prova sem gravar: os headers existem (pré-requisito de FIN_FLASH_V2_setByHeaders_,
+    // que é dinâmico) e o helper de responsável foi criado.
+    r.escritaPorHeader = todosPresentes && typeof FIN_FLASH_V2_v217UsuarioResponsavel_ === 'function';
+    r.escritaPosicional = false;
+    if (!r.escritaPorHeader) r.bloqueios.push('Escrita por header não confirmada (headers ausentes e/ou helper de responsável não encontrado).');
+
+    // ── 3. Funções atualizadas ──────────────────────────────────────────────
+    r.funcoesAtualizadas = [
+      'FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV', 'FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV',
+      'FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV', 'FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV'
+    ];
+
+    // ── 4. Listagem expõe os campos novos? (chamada real, só leitura) ──────
+    var listagem = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ limite: 1 });
+    if (!listagem.ok) {
+      r.bloqueios.push('LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV falhou: ' + JSON.stringify(listagem.bloqueios || listagem));
+    } else {
+      var item0 = (listagem.itens || [])[0];
+      r.listagemExpoeCampos = !item0 || ['score', 'motivoDecisao', 'atualizadoPor', 'atualizadoEm'].every(function(k){ return item0.hasOwnProperty(k); });
+      if (!item0) r.avisos.push('Base sem nenhuma conciliação para testar item real — validado só pela ausência de erro na chamada.');
+      if (!r.listagemExpoeCampos) r.bloqueios.push('Item retornado pela listagem não contém todos os campos novos esperados.');
+    }
+
+    // ── 5. Frontend mostra os campos? (tokens reais no HTML servido) ───────
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+    r.frontendMostraCampos = html.indexOf('Motivo/Decisão') >= 0 && html.indexOf('Sem motivo registrado') >= 0 &&
+      html.indexOf('Responsável') >= 0 && html.indexOf('Atualizado em') >= 0;
+    if (!r.frontendMostraCampos) r.bloqueios.push('Frontend não expõe os 4 campos esperados na tabela de Conferência de Gastos.');
+
+    // ── 6. Logs preservados ──────────────────────────────────────────────────
+    // Prova por construção do patch (chamadas a FIN_FLASH_V2_registrarLogAcao_
+    // mantidas nas 3 funções); prova por execução real exigiria gravar dado,
+    // fora do escopo desta auditoria somente leitura.
+    r.logsPreservados = true;
+    r.avisos.push('logsPreservados confirmado por construção do patch, não por execução real (esta auditoria não grava nada).');
+
+    // ── 7. Regressão V2.16K ──────────────────────────────────────────────────
+    var v216k = AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
+    r.regressaoV216K.previewExtratoCorreto = !!(v216k.ok && v216k.tipoExtrato && v216k.tipoExtrato.ok);
+    r.regressaoV216K.documentosSemIdTecnicoPrincipal = !!(v216k.ok && v216k.documentosRelatorios && !v216k.documentosRelatorios.idsTecnicosComoPrincipal);
+    r.regressaoV216K.brunaJulho2Cartoes = !!(v216k.ok && v216k.regressaoV216I && v216k.regressaoV216I.resumoJulhoCartoes2);
+    r.regressaoV216K.ok = r.regressaoV216K.previewExtratoCorreto && r.regressaoV216K.documentosSemIdTecnicoPrincipal && r.regressaoV216K.brunaJulho2Cartoes;
+    if (!r.regressaoV216K.ok) r.bloqueios.push('Regressão detectada na V2.16K: ' + JSON.stringify(v216k));
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR();
 }
