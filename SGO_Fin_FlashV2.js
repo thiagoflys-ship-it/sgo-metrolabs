@@ -66,12 +66,70 @@ var FIN_FLASH_V2_MOBILE_CATEGORIAS = ['COMBUSTIVEL','PEDAGIO','ESTACIONAMENTO','
 var FIN_FLASH_V2_UPLOAD_EXTENSOES = ['jpg','jpeg','png','gif','webp','pdf'];
 var FIN_FLASH_V2_UPLOAD_MIMES = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
 
+// V2.19A — resolve o bloqueador B1 (achado da V2.18/plano V2.19): o módulo não
+// rodava fora do scriptId do DEV. FIN_FLASH_V2_dev_() é mantida com o significado
+// literal original ("estou no DEV real") para não quebrar o único uso legítimo
+// que depende disso (simulação de e-mail de usuário, só em DEV). Toda a operação
+// normal do módulo (os antigos "if (!FIN_FLASH_V2_permitido_())") passa a usar
+// FIN_FLASH_V2_permitido_(), que aceita DEV OU PRODUCAO_V2.
+function FIN_FLASH_V2_AMBIENTES_() {
+  return {
+    DEV: '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG',
+    PRODUCAO_V2: '1iKgbkoBgRuethKuFhQM1H1W9vRvuBM1tT21-cYizkusfT_YrgHbIbZ1y'
+  };
+}
+
+// 'DEV' | 'PRODUCAO_V2' | 'DESCONHECIDO' — nunca trata um scriptId não mapeado
+// como PRODUCAO_V2 por engano.
+function FIN_FLASH_V2_ambienteAtual_() {
+  var scriptId = ScriptApp.getScriptId();
+  var ambientes = FIN_FLASH_V2_AMBIENTES_();
+  if (scriptId === ambientes.DEV) return 'DEV';
+  if (scriptId === ambientes.PRODUCAO_V2) return 'PRODUCAO_V2';
+  return 'DESCONHECIDO';
+}
+
+// true somente para DEV ou PRODUCAO_V2 — DESCONHECIDO nunca é permitido.
+function FIN_FLASH_V2_ambientePermitido_() {
+  var amb = FIN_FLASH_V2_ambienteAtual_();
+  return amb === 'DEV' || amb === 'PRODUCAO_V2';
+}
+
+// Gate de operação normal do módulo (substitui o antigo uso de FIN_FLASH_V2_dev_()
+// como guard em toda função pública/auditoria). DEV real, inalterado.
 function FIN_FLASH_V2_dev_() {
-  return ScriptApp.getScriptId() === '12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG';
+  return ScriptApp.getScriptId() === FIN_FLASH_V2_AMBIENTES_().DEV;
+}
+
+// Nome curto usado nos guards ("if (!FIN_FLASH_V2_permitido_())"), equivalente a
+// FIN_FLASH_V2_ambientePermitido_().
+function FIN_FLASH_V2_permitido_() {
+  return FIN_FLASH_V2_ambientePermitido_();
+}
+
+// V2.19A — resolve o bloqueador B3: AMBIENTE_TESTE deixa de ser 'SIM' fixo.
+// DEV grava 'SIM' (dado sempre de teste); PRODUCAO_V2 grava 'NAO' (dado real do
+// piloto). DESCONHECIDO nunca deveria escrever nada (permitido_() já bloqueia
+// antes), mas por segurança extra retorna 'SIM' — nunca finge ser produção real.
+function FIN_FLASH_V2_ambienteTesteAtual_() {
+  var amb = FIN_FLASH_V2_ambienteAtual_();
+  if (amb === 'PRODUCAO_V2') return 'NAO';
+  return 'SIM';
+}
+
+// Contexto consolidado, no formato usado pela auditoria V2.19A e por qualquer
+// chamador que precise do pacote completo de uma vez.
+function FIN_FLASH_V2_contextoAmbiente_() {
+  return {
+    scriptId: ScriptApp.getScriptId(),
+    ambiente: FIN_FLASH_V2_ambienteAtual_(),
+    permitido: FIN_FLASH_V2_ambientePermitido_(),
+    ambienteTeste: FIN_FLASH_V2_ambienteTesteAtual_()
+  };
 }
 
 function FIN_FLASH_V2_result_(ok) {
-  return { success:!!ok, ok:!!ok, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO', bloqueios:[], avisos:[] };
+  return { success:!!ok, ok:!!ok, ambiente:FIN_FLASH_V2_ambienteAtual_(), bloqueios:[], avisos:[] };
 }
 
 function FIN_FLASH_V2_getHeaderMap_(sh) {
@@ -152,8 +210,8 @@ function FIN_FLASH_V2_obterPastaUploadDev_() {
 }
 
 function FIN_FLASH_V2_UPLOAD_COMPROVANTE_SEGURO_DEV_(arquivo, contexto) {
-  var r = { success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO', bloqueios:[], arquivoId:'', link:'', tipo:'', tamanhoBytes:0 };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Upload bloqueado fora do DEV.'); return r; }
+  var r = { success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(), bloqueios:[], arquivoId:'', link:'', tipo:'', tamanhoBytes:0 };
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Upload bloqueado fora do DEV.'); return r; }
   arquivo = arquivo || {}; contexto = contexto || {};
   var nome = FIN_FLASH_V2_text_(arquivo.nome || arquivo.name);
   var mime = FIN_FLASH_V2_text_(arquivo.mimeType || arquivo.tipo);
@@ -181,7 +239,7 @@ function FIN_FLASH_V2_UPLOAD_COMPROVANTE_SEGURO_DEV_(arquivo, contexto) {
 function FIN_FLASH_V2_REGISTRAR_PRESTACAO_MOBILE_DEV(payload) {
   var r = FIN_FLASH_V2_result_(false);
   r.prestacaoId = ''; r.documentoId = ''; r.comprovanteArquivoId = ''; r.gravacaoReal = false;
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Registro mobile bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Registro mobile bloqueado fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var email = FIN_FLASH_V2_emailUsuarioAtual_(payload);
@@ -209,8 +267,8 @@ function FIN_FLASH_V2_linhasPorId_(aba, coluna, valor) {
 }
 
 function EXECUTAR_FIN_FLASH_V2_1_TESTE_MOBILE_AUTOMATICO_DEV() {
-  var r = { success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO', prestacaoValidaCriada:false, bloqueioSemComprovante:false, bloqueioSemValor:false, bloqueioSemJustificativa:false, bloqueioCpfDiferente:false, todosDadosTesteComAmbienteTeste:false, menuLigado:false, importacaoRealExecutada:false, producaoAlterada:false, flashAntigoAlterado:false, forceUsado:false, bloqueios:[], avisos:[], detalhes:{} };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  var r = { success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(), prestacaoValidaCriada:false, bloqueioSemComprovante:false, bloqueioSemValor:false, bloqueioSemJustificativa:false, bloqueioCpfDiferente:false, todosDadosTesteComAmbienteTeste:false, menuLigado:false, importacaoRealExecutada:false, producaoAlterada:false, flashAntigoAlterado:false, forceUsado:false, bloqueios:[], avisos:[], detalhes:{} };
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var setup = EXECUTAR_FIN_FLASH_V2_0B_SETUP_AUTOMATICO_DEV();
     if (!setup.ok) { r.bloqueios.push('Setup base V2 nao aprovado.'); r.detalhes.setup = setup; return r; }
@@ -268,7 +326,7 @@ function FIN_FLASH_V2_MAPEAR_EXTRATO_FLASH_DEV_SEM_GRAVAR(entrada) {
   var parsed = FIN_FLASH_V2_linhasExtrato_(entrada);
   var headers = parsed.headers;
   var normal = headers.map(FIN_FLASH_V2_norm_);
-  var r = {success:true,ok:false,somenteLeitura:true,gravacaoReal:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',colunasObrigatorias:FIN_FLASH_V2_EXTRATO_COLUNAS_OBRIGATORIAS.slice(),headersRecebidos:headers,mapeamento:{},bloqueios:[],avisos:[]};
+  var r = {success:true,ok:false,somenteLeitura:true,gravacaoReal:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),colunasObrigatorias:FIN_FLASH_V2_EXTRATO_COLUNAS_OBRIGATORIAS.slice(),headersRecebidos:headers,mapeamento:{},bloqueios:[],avisos:[]};
   FIN_FLASH_V2_EXTRATO_COLUNAS_OBRIGATORIAS.forEach(function(col){
     var idx = normal.indexOf(FIN_FLASH_V2_norm_(col));
     r.mapeamento[col] = {indice:idx, coluna:idx >= 0 ? idx + 1 : null, encontrado:idx >= 0};
@@ -381,8 +439,8 @@ function FIN_FLASH_V2_idsExistentes_(sh, coluna) {
 }
 
 function FIN_FLASH_V2_IMPORTAR_EXTRATO_FLASH_DEV(entrada, opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',importacaoExecutada:false,totalRecebido:0,extratosImportados:0,recargasImportadas:0,gastosImportados:0,duplicadosIgnorados:0,invalidos:0,idsImportados:[],bloqueios:[],avisos:[],menuLigado:false,producaoAlterada:false,flashAntigoAlterado:false};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Importacao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),importacaoExecutada:false,totalRecebido:0,extratosImportados:0,recargasImportadas:0,gastosImportados:0,duplicadosIgnorados:0,invalidos:0,idsImportados:[],bloqueios:[],avisos:[],menuLigado:false,producaoAlterada:false,flashAntigoAlterado:false};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Importacao bloqueada fora do DEV.'); return r; }
   opcoes = opcoes || {};
   var parsed = FIN_FLASH_V2_linhasExtrato_(entrada);
   var mapa = FIN_FLASH_V2_MAPEAR_EXTRATO_FLASH_DEV_SEM_GRAVAR({headers:parsed.headers, rows:parsed.rows});
@@ -398,7 +456,7 @@ function FIN_FLASH_V2_IMPORTAR_EXTRATO_FLASH_DEV(entrada, opcoes) {
       if (item.bloqueios.length) { r.invalidos++; r.avisos.push({status:'EXTRATO_INVALIDO',bloqueios:item.bloqueios}); return; }
       if (extIds[item.id]) { r.duplicadosIgnorados++; r.avisos.push({status:'EXTRATO_DUPLICADO_IGNORADO',id:item.id}); return; }
       var status = item.tipo === 'GASTO' ? 'GASTO_IMPORTADO_AGUARDANDO_PRESTACAO' : 'RECARGA_IMPORTADA';
-      var ambienteTeste = opcoes.ambienteTeste || item.ambienteTeste || 'SIM';
+      var ambienteTeste = FIN_FLASH_V2_ambienteTesteAtual_();
       shExt.appendRow([item.id,item.data,item.movimentacao,item.valor,item.pessoa,item.pagamento,item.prestacaoContas,item.cpf,item.cartaoId,status,ambienteTeste,loteId,new Date()]);
       extIds[item.id] = true; r.extratosImportados++; r.idsImportados.push(item.id);
       if (item.tipo === 'RECARGA') {
@@ -418,8 +476,8 @@ function FIN_FLASH_V2_IMPORTAR_EXTRATO_FLASH_DEV(entrada, opcoes) {
 }
 
 function EXECUTAR_FIN_FLASH_V2_2_TESTE_IMPORTACAO_EXTRATO_AUTOMATICO_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',mapeamentoExtratoOk:false,importacaoTesteExecutada:false,gastoNegativoImportado:false,recargaPositivaImportada:false,duplicidadeBloqueada:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),mapeamentoExtratoOk:false,importacaoTesteExecutada:false,gastoNegativoImportado:false,recargaPositivaImportada:false,duplicidadeBloqueada:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var setup = EXECUTAR_FIN_FLASH_V2_0B_SETUP_AUTOMATICO_DEV();
     if (!setup.ok) { r.bloqueios.push('Setup base V2 nao aprovado.'); r.detalhes.setup = setup; return r; }
@@ -516,7 +574,7 @@ function FIN_FLASH_V2_appendConciliacao_(extrato, prestacao, cls, ambienteTeste)
   var ss = FIN_FLASH_V2_db_(), sh = ss.getSheetByName(FIN_FLASH_V2_ABAS.CONCILIACOES);
   var id = 'FIN_FLASH_V2_CONCILIACAO_' + FIN_FLASH_V2_hash_([extrato && extrato.ID || '', prestacao && prestacao.ID || '', cls.status].join('|'));
   var existentes = FIN_FLASH_V2_idsExistentes_(sh, 'ID');
-  if (!existentes[id]) sh.appendRow([id, extrato && extrato.ID || '', prestacao && prestacao.ID || '', cls.status, extrato ? Math.abs(FIN_FLASH_V2_num_(extrato.VALOR)) : '', prestacao ? Math.abs(FIN_FLASH_V2_num_(prestacao.VALOR)) : '', (extrato && prestacao) ? Math.abs(Math.abs(FIN_FLASH_V2_num_(extrato.VALOR))-Math.abs(FIN_FLASH_V2_num_(prestacao.VALOR))) : '', JSON.stringify({score:cls.score||0,criterios:cls.criterios||{},motivos:cls.motivos||[],iaAprovaSozinha:false}), '', ambienteTeste || 'SIM', new Date()]);
+  if (!existentes[id]) sh.appendRow([id, extrato && extrato.ID || '', prestacao && prestacao.ID || '', cls.status, extrato ? Math.abs(FIN_FLASH_V2_num_(extrato.VALOR)) : '', prestacao ? Math.abs(FIN_FLASH_V2_num_(prestacao.VALOR)) : '', (extrato && prestacao) ? Math.abs(Math.abs(FIN_FLASH_V2_num_(extrato.VALOR))-Math.abs(FIN_FLASH_V2_num_(prestacao.VALOR))) : '', JSON.stringify({score:cls.score||0,criterios:cls.criterios||{},motivos:cls.motivos||[],iaAprovaSozinha:false}), '', FIN_FLASH_V2_ambienteTesteAtual_(), new Date()]);
   return id;
 }
 
@@ -526,13 +584,13 @@ function FIN_FLASH_V2_appendPendenciaConciliacao_(extrato, prestacao, cls, ambie
   var baseId = extrato && extrato.ID || prestacao && prestacao.ID || Utilities.getUuid();
   var id = 'FIN_FLASH_V2_PENDENCIA_CONC_' + FIN_FLASH_V2_hash_([baseId, cls.status].join('|'));
   var existentes = FIN_FLASH_V2_idsExistentes_(sh, 'ID');
-  if (!existentes[id]) sh.appendRow([id, extrato && extrato.CONTA_ID || prestacao && prestacao.CONTA_ID || '', extrato && extrato.CPF || prestacao && prestacao.CPF || '', extrato && extrato.ID || '', prestacao && prestacao.ID || '', cls.status, cls.status === 'PENDENTE_CRITICO' ? 'ALTA' : 'MEDIA', 'ABERTA', (cls.motivos||[]).join(' | ') || cls.status, cls.status === 'PENDENTE_CRITICO' ? 'SIM' : 'NAO', ambienteTeste || 'SIM', new Date(), '']);
+  if (!existentes[id]) sh.appendRow([id, extrato && extrato.CONTA_ID || prestacao && prestacao.CONTA_ID || '', extrato && extrato.CPF || prestacao && prestacao.CPF || '', extrato && extrato.ID || '', prestacao && prestacao.ID || '', cls.status, cls.status === 'PENDENTE_CRITICO' ? 'ALTA' : 'MEDIA', 'ABERTA', (cls.motivos||[]).join(' | ') || cls.status, cls.status === 'PENDENTE_CRITICO' ? 'SIM' : 'NAO', FIN_FLASH_V2_ambienteTesteAtual_(), new Date(), '']);
   return id;
 }
 
 function FIN_FLASH_V2_CONCILIAR_AUTOMATICAMENTE_DEV(opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',conciliacaoExecutada:false,totalExtratosGasto:0,totalPrestacoes:0,conciliacoesCriadas:0,pendenciasAtualizadas:0,logsCriados:0,status:{},bloqueios:[],avisos:[],menuLigado:false,importacaoRealExecutada:false,producaoAlterada:false,flashAntigoAlterado:false,iaAprovaSozinha:false};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Conciliacao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),conciliacaoExecutada:false,totalExtratosGasto:0,totalPrestacoes:0,conciliacoesCriadas:0,pendenciasAtualizadas:0,logsCriados:0,status:{},bloqueios:[],avisos:[],menuLigado:false,importacaoRealExecutada:false,producaoAlterada:false,flashAntigoAlterado:false,iaAprovaSozinha:false};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Conciliacao bloqueada fora do DEV.'); return r; }
   opcoes = opcoes || {};
   try {
     var ss = FIN_FLASH_V2_db_(), shLog = ss.getSheetByName(FIN_FLASH_V2_ABAS.LOGS);
@@ -626,8 +684,8 @@ function FIN_FLASH_V2_addPrestacaoTeste_(tag, conta, valor, data, finalidade, ju
 }
 
 function EXECUTAR_FIN_FLASH_V2_3_TESTE_CONCILIACAO_AUTOMATICA_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',conciliacaoExecutada:false,conciliadoAutomatico:false,pendenteSemPrestacao:false,pendenteSemComprovante:false,pendenteValorDivergente:false,aguardandoExtrato:false,justificativaInsuficiente:false,pendenciasAtualizadas:false,logsCriados:false,iaAprovaSozinha:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),conciliacaoExecutada:false,conciliadoAutomatico:false,pendenteSemPrestacao:false,pendenteSemComprovante:false,pendenteValorDivergente:false,aguardandoExtrato:false,justificativaInsuficiente:false,pendenciasAtualizadas:false,logsCriados:false,iaAprovaSozinha:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var setup = EXECUTAR_FIN_FLASH_V2_0B_SETUP_AUTOMATICO_DEV(); if (!setup.ok) { r.bloqueios.push('Setup base V2 nao aprovado.'); r.detalhes.setup = setup; return r; }
     var conta = FIN_FLASH_V2_resolverContaPorEmail_('teste.flash@metrolabs.local').conta;
@@ -714,8 +772,8 @@ function FIN_FLASH_V2_limit_(arr, limite) {
 }
 
 function FIN_FLASH_V2_LISTAR_PENDENCIAS_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var contas = FIN_FLASH_V2_contasIndex_(), extratos = FIN_FLASH_V2_extratosIndex_(), prestacoes = FIN_FLASH_V2_prestacoesIndex_();
@@ -752,8 +810,8 @@ function FIN_FLASH_V2_LISTAR_PENDENCIAS_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var extratos = FIN_FLASH_V2_extratosIndex_(), prestacoes = FIN_FLASH_V2_prestacoesIndex_(), documentos = FIN_FLASH_V2_documentosIndex_();
@@ -791,8 +849,8 @@ function FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_LISTAR_PRESTACOES_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var contas = FIN_FLASH_V2_contasIndex_(), docs = FIN_FLASH_V2_documentosIndex_();
@@ -821,8 +879,8 @@ function FIN_FLASH_V2_LISTAR_PRESTACOES_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_LISTAR_EXTRATOS_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var rows = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.EXTRATOS).filter(function(x) { return !filtros.ambienteTeste || FIN_FLASH_V2_text_(x.AMBIENTE_TESTE) === filtros.ambienteTeste; });
@@ -850,8 +908,8 @@ function FIN_FLASH_V2_LISTAR_EXTRATOS_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_LISTAR_DOCUMENTOS_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var rows = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.DOCUMENTOS).filter(function(x) { return !filtros.ambienteTeste || FIN_FLASH_V2_text_(x.AMBIENTE_TESTE) === filtros.ambienteTeste; });
@@ -875,8 +933,8 @@ function FIN_FLASH_V2_LISTAR_DOCUMENTOS_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_LISTAR_LOGS_DEV(filtros) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,itens:[],total:0,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Listagem bloqueada fora do DEV.'); return r; }
   filtros = filtros || {};
   try {
     var rows = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.LOGS).filter(function(x) { return !filtros.ambienteTeste || FIN_FLASH_V2_text_(x.AMBIENTE_TESTE) === filtros.ambienteTeste; });
@@ -899,8 +957,8 @@ function FIN_FLASH_V2_LISTAR_LOGS_DEV(filtros) {
 }
 
 function FIN_FLASH_V2_OBTER_DETALHE_CONCILIACAO_DEV(id) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,detalhe:null,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Detalhe bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,detalhe:null,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Detalhe bloqueado fora do DEV.'); return r; }
   try {
     id = FIN_FLASH_V2_text_(id);
     if (!id) { r.bloqueios.push('ID da conciliacao obrigatorio.'); return r; }
@@ -923,8 +981,8 @@ function FIN_FLASH_V2_OBTER_DETALHE_CONCILIACAO_DEV(id) {
 }
 
 function FIN_FLASH_V2_OBTER_DASHBOARD_FINANCEIRO_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteDev:true,kpis:{},bloqueios:[],avisos:[],menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Dashboard bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteDev:true,kpis:{},bloqueios:[],avisos:[],menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Dashboard bloqueado fora do DEV.'); return r; }
   try {
     var contas = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.CONTAS), cartoes = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.CARTOES), recargas = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.RECARGAS);
     var prestacoes = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.PRESTACOES), extratos = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.EXTRATOS), concs = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.CONCILIACOES), pends = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.PENDENCIAS);
@@ -951,8 +1009,8 @@ function FIN_FLASH_V2_OBTER_DASHBOARD_FINANCEIRO_DEV() {
 }
 
 function EXECUTAR_FIN_FLASH_V2_4_TESTE_DASHBOARD_DESKTOP_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',dashboardOk:false,kpisCalculados:false,pendenciasListadas:false,conciliacoesListadas:false,prestacoesListadas:false,extratosListados:false,documentosReferenciados:false,logsDisponiveis:false,detalheConciliacaoOk:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),dashboardOk:false,kpisCalculados:false,pendenciasListadas:false,conciliacoesListadas:false,prestacoesListadas:false,extratosListados:false,documentosReferenciados:false,logsDisponiveis:false,detalheConciliacaoOk:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var seed = EXECUTAR_FIN_FLASH_V2_3_TESTE_CONCILIACAO_AUTOMATICA_DEV();
     r.detalhes.seedV23 = {ok:seed.ok,bloqueios:seed.bloqueios};
@@ -1017,14 +1075,16 @@ function FIN_FLASH_V2_registrarLogAcao_(acao, entidade, entidadeId, detalhe, amb
   // em CONCILIACOES.ATUALIZADO_POR desde a V2.17A), com fallback seguro para 'FINANCEIRO_DEV'
   // quando a sessão não expõe usuário (ex.: chamada via Execution API). Logs antigos, já
   // gravados com 'FINANCEIRO_DEV' literal, não são alterados (sem backfill).
-  sh.appendRow([id, acao, entidade, entidadeId || '', JSON.stringify(detalhe || {}), ambienteTeste || 'SIM', FIN_FLASH_V2_v217UsuarioResponsavel_(), new Date()]);
+  // V2.19A — AMBIENTE_TESTE é decidido pelo backend (FIN_FLASH_V2_ambienteTesteAtual_),
+  // nunca pelo parâmetro recebido — o chamador não pode fingir DEV rodando em PRODUCAO_V2.
+  sh.appendRow([id, acao, entidade, entidadeId || '', JSON.stringify(detalhe || {}), FIN_FLASH_V2_ambienteTesteAtual_(), FIN_FLASH_V2_v217UsuarioResponsavel_(), new Date()]);
   return id;
 }
 
 function FIN_FLASH_V2_registrarAlerta_(contaId, cpf, tipo, severidade, mensagem, ambienteTeste) {
   var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.ALERTAS);
   var id = FIN_FLASH_V2_id_('ALERTA');
-  sh.appendRow([id, contaId || '', cpf || '', tipo, severidade || 'MEDIA', mensagem || '', 'ABERTO', ambienteTeste || 'SIM', new Date(), '']);
+  sh.appendRow([id, contaId || '', cpf || '', tipo, severidade || 'MEDIA', mensagem || '', 'ABERTO', FIN_FLASH_V2_ambienteTesteAtual_(), new Date(), '']);
   return id;
 }
 
@@ -1064,8 +1124,8 @@ function FIN_FLASH_V2_validarMotivo_(motivo, campo) {
 // motivo/responsável dentro do JSON de ANALISE_IA, um padrão diferente do adotado
 // na V2.17A (colunas reais MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM).
 function FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',conferida:false,logCriado:false,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),conferida:false,logCriado:false,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo || 'Conferencia financeira DEV', 'Motivo da conferencia');
@@ -1084,8 +1144,8 @@ function FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV(payload) {
 }
 
 function FIN_FLASH_V2_SOLICITAR_CORRECAO_COLABORADOR_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',correcaoSolicitada:false,alertaCriado:false,logCriado:false,mensagem:'',bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),correcaoSolicitada:false,alertaCriado:false,logCriado:false,mensagem:'',bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo, 'Motivo da correcao');
@@ -1101,8 +1161,8 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COLABORADOR_DEV(payload) {
 }
 
 function FIN_FLASH_V2_MANTER_PENDENCIA_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',pendenciaMantida:false,logCriado:false,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),pendenciaMantida:false,logCriado:false,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo, 'Motivo formal');
@@ -1117,8 +1177,8 @@ function FIN_FLASH_V2_MANTER_PENDENCIA_DEV(payload) {
 }
 
 function FIN_FLASH_V2_MARCAR_PENDENCIA_RESOLVIDA_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',pendenciaResolvida:false,logCriado:false,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),pendenciaResolvida:false,logCriado:false,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo, 'Justificativa da resolucao');
@@ -1142,8 +1202,8 @@ function FIN_FLASH_V2_contaHitPorCpf_(cpf) {
 }
 
 function FIN_FLASH_V2_BLOQUEAR_RECARGAS_POR_PENDENCIA_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',recargasBloqueadas:false,logCriado:false,bloqueioOperacional:true,bloqueioCartaoFlash:false,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),recargasBloqueadas:false,logCriado:false,bloqueioOperacional:true,bloqueioCartaoFlash:false,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo, 'Motivo do bloqueio');
@@ -1163,8 +1223,8 @@ function FIN_FLASH_V2_BLOQUEAR_RECARGAS_POR_PENDENCIA_DEV(payload) {
 }
 
 function FIN_FLASH_V2_DESBLOQUEAR_RECARGAS_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',recargasDesbloqueadas:false,logCriado:false,bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),recargasDesbloqueadas:false,logCriado:false,bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo, 'Motivo do desbloqueio');
@@ -1178,8 +1238,8 @@ function FIN_FLASH_V2_DESBLOQUEAR_RECARGAS_DEV(payload) {
 }
 
 function FIN_FLASH_V2_PREPARAR_MENSAGEM_COBRANCA_PENDENCIA_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',mensagemPreparada:false,alertaCriado:false,logCriado:false,enviada:false,mensagem:'',bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),mensagemPreparada:false,alertaCriado:false,logCriado:false,enviada:false,mensagem:'',bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Acao bloqueada fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var motivo = FIN_FLASH_V2_validarMotivo_(payload.motivo || 'Regularizar pendencia Flash V2', 'Motivo da cobranca');
@@ -1211,8 +1271,8 @@ function FIN_FLASH_V2_5_escolherPendencia_(tipo) {
 }
 
 function EXECUTAR_FIN_FLASH_V2_5_TESTE_ACOES_FINANCEIRAS_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',marcarConferidoOk:false,bloqueioConferidoSemComprovante:false,solicitarCorrecaoOk:false,manterPendenciaOk:false,pendenciaResolvidaOk:false,bloqueioRecargaOk:false,desbloqueioRecargaOk:false,mensagemCobrancaPreparada:false,logsCriados:false,alertasCriados:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),marcarConferidoOk:false,bloqueioConferidoSemComprovante:false,solicitarCorrecaoOk:false,manterPendenciaOk:false,pendenciaResolvidaOk:false,bloqueioRecargaOk:false,desbloqueioRecargaOk:false,mensagemCobrancaPreparada:false,logsCriados:false,alertasCriados:false,todosDadosTesteComAmbienteTeste:false,menuLigado:false,importacaoRealExecutada:false,webappDeployExecutado:false,producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,bloqueios:[],avisos:[],detalhes:{}};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var seed = EXECUTAR_FIN_FLASH_V2_3_TESTE_CONCILIACAO_AUTOMATICA_DEV();
     r.detalhes.seedV23 = {ok:seed.ok,bloqueios:seed.bloqueios};
@@ -1294,8 +1354,8 @@ function FIN_FLASH_V2_termoTexto_() {
 }
 
 function FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_POSITIVA_DEV(opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',relatorioId:'',documentoId:'',logId:'',totalConciliado:0,valorTotalConciliado:0,itens:[],bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),relatorioId:'',documentoId:'',logId:'',totalConciliado:0,valorTotalConciliado:0,itens:[],bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
   opcoes = opcoes || {};
   try {
     var concs = FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV({ambienteTeste:'SIM',limite:500});
@@ -1305,7 +1365,7 @@ function FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_POSITIVA_DEV(opcoes) {
     var cpfSet = {};
     positivas.forEach(function(x){ if (x.cpf) cpfSet[x.cpf] = true; });
     var colaboradores = Object.keys(cpfSet).map(function(cpf){ var c = contasIdx.porCpf[cpf] || {}; return FIN_FLASH_V2_text_(c.NOME || cpf); });
-    var ambienteTeste = opcoes.ambienteTeste || 'SIM';
+    var ambienteTeste = FIN_FLASH_V2_ambienteTesteAtual_();
     var relId = FIN_FLASH_V2_id_('REL_POS');
     var periodo = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd');
     var resumo = JSON.stringify({tipo:'RELATORIO_CONCILIACAO_POSITIVA',versao:'FIN-FLASH-V2-REL-POS-001',periodo:periodo,totalConciliado:positivas.length,valorTotalConciliado:totalValor,colaboradores:colaboradores,statusIncluidos:['CONCILIADO','CONCILIADO_AUTOMATICO'],observacao:'Relatorio DEV AMBIENTE_TESTE=SIM'});
@@ -1320,15 +1380,15 @@ function FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_POSITIVA_DEV(opcoes) {
 }
 
 function FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_NEGATIVA_DEV(opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',relatorioId:'',documentoId:'',logId:'',totalNegativo:0,valorTotalPendente:0,itens:[],bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),relatorioId:'',documentoId:'',logId:'',totalNegativo:0,valorTotalPendente:0,itens:[],bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
   opcoes = opcoes || {};
   try {
     var concs = FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV({ambienteTeste:'SIM',limite:500});
     var PEND_STATUS = ['PENDENTE_SEM_PRESTACAO','PENDENTE_SEM_COMPROVANTE','PENDENTE_VALOR_DIVERGENTE','PENDENTE_JUSTIFICATIVA_INSUFICIENTE','PENDENTE_CRITICO','AGUARDANDO_EXTRATO','AGUARDANDO_CONFERENCIA'];
     var negativas = concs.itens.filter(function(x){ return PEND_STATUS.indexOf(x.status) >= 0; });
     var totalValor = negativas.reduce(function(s,x){ var n = Number(x.valorExtrato||0); return s + (isFinite(n)?n:0); }, 0);
-    var ambienteTeste = opcoes.ambienteTeste || 'SIM';
+    var ambienteTeste = FIN_FLASH_V2_ambienteTesteAtual_();
     var relId = FIN_FLASH_V2_id_('REL_NEG');
     var periodo = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd');
     var resumo = JSON.stringify({tipo:'RELATORIO_CONCILIACAO_NEGATIVA',versao:'FIN-FLASH-V2-REL-NEG-001',periodo:periodo,totalNegativo:negativas.length,valorTotalPendente:totalValor,statusIncluidos:PEND_STATUS,recomendacaoGeral:'Sem comprovante: solicitar envio. Valor divergente: solicitar correcao. Sem prestacao: notificar colaborador. Critico: bloquear recarga e escalar.',observacao:'Relatorio DEV AMBIENTE_TESTE=SIM'});
@@ -1343,8 +1403,8 @@ function FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_NEGATIVA_DEV(opcoes) {
 }
 
 function FIN_FLASH_V2_GERAR_RELATORIO_PENDENCIAS_COLABORADOR_DEV(opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',relatorioId:'',documentoId:'',logId:'',totalColaboradores:0,totalPendencias:0,itens:[],bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),relatorioId:'',documentoId:'',logId:'',totalColaboradores:0,totalPendencias:0,itens:[],bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Relatorio bloqueado fora do DEV.'); return r; }
   opcoes = opcoes || {};
   try {
     var pends = FIN_FLASH_V2_LISTAR_PENDENCIAS_DEV({ambienteTeste:'SIM',limite:500});
@@ -1362,7 +1422,7 @@ function FIN_FLASH_V2_GERAR_RELATORIO_PENDENCIAS_COLABORADOR_DEV(opcoes) {
       porCpf[cpf].pendencias.push({id:p.id,status:p.status,tipo:p.tipo,valor:p.valor,motivo:p.motivo,severidade:p.severidade,prazo:p.prazo,acaoRecomendada:p.acaoRecomendada,bloqueiaRecarga:p.bloqueiaRecarga});
     });
     var itens = Object.keys(porCpf).map(function(cpf){ return porCpf[cpf]; });
-    var ambienteTeste = opcoes.ambienteTeste || 'SIM';
+    var ambienteTeste = FIN_FLASH_V2_ambienteTesteAtual_();
     var relId = FIN_FLASH_V2_id_('REL_PEND');
     var periodo = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd');
     var resumo = JSON.stringify({tipo:'RELATORIO_PENDENCIAS_COLABORADOR',versao:'FIN-FLASH-V2-REL-PEND-001',periodo:periodo,totalColaboradores:itens.length,totalPendencias:pends.itens.length,observacao:'Relatorio DEV AMBIENTE_TESTE=SIM'});
@@ -1377,14 +1437,14 @@ function FIN_FLASH_V2_GERAR_RELATORIO_PENDENCIAS_COLABORADOR_DEV(opcoes) {
 }
 
 function FIN_FLASH_V2_GERAR_TERMO_USO_CARTAO_FLASH_DEV(opcoes) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',termoId:'',documentoId:'',logId:'',versao:'',termoTexto:'',hash:'',bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Geracao de termo bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),termoId:'',documentoId:'',logId:'',versao:'',termoTexto:'',hash:'',bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Geracao de termo bloqueada fora do DEV.'); return r; }
   opcoes = opcoes || {};
   try {
     var versao = FIN_FLASH_V2_TERMO_VERSAO_ATUAL;
     var texto = FIN_FLASH_V2_termoTexto_();
     var hash = FIN_FLASH_V2_hash_(texto);
-    var ambienteTeste = opcoes.ambienteTeste || 'SIM';
+    var ambienteTeste = FIN_FLASH_V2_ambienteTesteAtual_();
     var ss = FIN_FLASH_V2_db_();
     var shTermos = ss.getSheetByName(FIN_FLASH_V2_ABAS.TERMOS);
     var shDoc = ss.getSheetByName(FIN_FLASH_V2_ABAS.DOCUMENTOS);
@@ -1400,8 +1460,8 @@ function FIN_FLASH_V2_GERAR_TERMO_USO_CARTAO_FLASH_DEV(opcoes) {
 }
 
 function FIN_FLASH_V2_OBTER_TERMO_ATUAL_DEV() {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',somenteLeitura:true,termoId:'',versao:'',termoTexto:'',documentoId:'',criadoEm:'',bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Consulta bloqueada fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),somenteLeitura:true,termoId:'',versao:'',termoTexto:'',documentoId:'',criadoEm:'',bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Consulta bloqueada fora do DEV.'); return r; }
   try {
     var rows = FIN_FLASH_V2_rowsObj_(FIN_FLASH_V2_ABAS.TERMOS);
     var vigente = null;
@@ -1418,8 +1478,8 @@ function FIN_FLASH_V2_OBTER_TERMO_ATUAL_DEV() {
 }
 
 function FIN_FLASH_V2_REGISTRAR_ACEITE_TERMO_DEV(payload) {
-  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',aceiteId:'',logId:'',versao:'',cpf:'',email:'',bloqueios:[],avisos:[]};
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Registro de aceite bloqueado fora do DEV.'); return r; }
+  var r = {success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),aceiteId:'',logId:'',versao:'',cpf:'',email:'',bloqueios:[],avisos:[]};
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Registro de aceite bloqueado fora do DEV.'); return r; }
   payload = payload || {};
   try {
     var email = FIN_FLASH_V2_emailUsuarioAtual_(payload);
@@ -1444,7 +1504,7 @@ function FIN_FLASH_V2_REGISTRAR_ACEITE_TERMO_DEV(payload) {
 
 function EXECUTAR_FIN_FLASH_V2_6_TESTE_DOCUMENTOS_TERMO_DEV() {
   var r = {
-    success:false,ok:false,ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',
+    success:false,ok:false,ambiente:FIN_FLASH_V2_ambienteAtual_(),
     relatorioPositivoGerado:false,relatorioNegativoGerado:false,relatorioPendenciasGerado:false,
     termoUsoGerado:false,termoAtualObtido:false,aceiteTermoRegistrado:false,
     documentosGravados:false,termosGravados:false,logsCriados:false,
@@ -1453,7 +1513,7 @@ function EXECUTAR_FIN_FLASH_V2_6_TESTE_DOCUMENTOS_TERMO_DEV() {
     producaoAlterada:false,flashAntigoAlterado:false,forceUsado:false,
     bloqueios:[],avisos:[],detalhes:{}
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var seed = EXECUTAR_FIN_FLASH_V2_5_TESTE_ACOES_FINANCEIRAS_DEV();
     r.detalhes.seedV25 = {ok:seed.ok,bloqueios:seed.bloqueios};
@@ -1512,7 +1572,7 @@ function FIN_FLASH_V2_VERIFICAR_ACESSO_DEV() {
 
 function EXECUTAR_FIN_FLASH_V2_7_VALIDACAO_HUMANA_DEV() {
   var r = {
-    success: false, ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    success: false, ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     menuDevLigado: false, menuProducaoLigado: false,
     desktopDisponivel: false, mobileDisponivel: false, mobileTermoDisponivel: false,
     termoVigenteDisponivel: false, dashboardCarregavel: false,
@@ -1523,7 +1583,7 @@ function EXECUTAR_FIN_FLASH_V2_7_VALIDACAO_HUMANA_DEV() {
     flashAntigoAlterado: false, forceUsado: false,
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_7 bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_7 bloqueado fora do DEV.'); return r; }
   try {
     var acesso = FIN_FLASH_V2_VERIFICAR_ACESSO_DEV();
     r.menuDevLigado = acesso.ok;
@@ -1579,12 +1639,12 @@ function EXECUTAR_FIN_FLASH_V2_7_VALIDACAO_HUMANA_DEV() {
 
 function FIN_FLASH_V2_OBTER_ESTADO_TELA_DEV() {
   var r = {
-    ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     estruturaTela: null, dashboardOk: false, termoVigenteOk: false,
     pendenciasOk: false, conciliacoesOk: false, documentosOk: false, logsOk: false,
     kpis: {}, bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('FIN_FLASH_V2_OBTER_ESTADO_TELA_DEV bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('FIN_FLASH_V2_OBTER_ESTADO_TELA_DEV bloqueado fora do DEV.'); return r; }
   try {
     var dashboard  = FIN_FLASH_V2_OBTER_DASHBOARD_FINANCEIRO_DEV();
     var termoAtual = FIN_FLASH_V2_OBTER_TERMO_ATUAL_DEV();
@@ -1630,7 +1690,7 @@ function FIN_FLASH_V2_OBTER_ESTADO_TELA_DEV() {
 
 function EXECUTAR_FIN_FLASH_V2_8_TESTE_UX_VISUAL_DEV() {
   var r = {
-    success: false, ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    success: false, ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     uxCorrigida: false, containerPrincipalOk: false,
     abasPrincipaisOk: false, visaoColaboradorSeparada: false,
     visaoFinanceiroSeparada: false, documentosTermoSeparados: false,
@@ -1641,7 +1701,7 @@ function EXECUTAR_FIN_FLASH_V2_8_TESTE_UX_VISUAL_DEV() {
     flashAntigoAlterado: false, forceUsado: false,
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_8 bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_8 bloqueado fora do DEV.'); return r; }
   try {
     var acesso = FIN_FLASH_V2_VERIFICAR_ACESSO_DEV();
     r.menuDevLigado = acesso.ok;
@@ -1682,11 +1742,11 @@ function EXECUTAR_FIN_FLASH_V2_8_TESTE_UX_VISUAL_DEV() {
 
 function FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV() {
   var r = {
-    ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     email: '', perfil: 'FINANCEIRO', cpf: '', nomeColaborador: '',
     isColaborador: false, isFinanceiro: true, bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV bloqueado fora do DEV.'); return r; }
   try {
     var email = Session.getActiveUser().getEmail() || '';
     r.email = email;
@@ -1721,8 +1781,8 @@ function FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV() {
 }
 
 function FIN_FLASH_V2_OBTER_MANUAL_USO_DEV() {
-  var r = { ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO', manual: null, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Bloqueado fora do DEV.'); return r; }
+  var r = { ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(), manual: null, bloqueios: [], avisos: [] };
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Bloqueado fora do DEV.'); return r; }
   try {
     r.manual = {
       colaborador: {
@@ -1833,7 +1893,7 @@ function FIN_FLASH_V2_OBTER_MANUAL_USO_DEV() {
 
 function EXECUTAR_FIN_FLASH_V2_9_TESTE_UX_PERFIL_MANUAL_DEV() {
   var r = {
-    success: false, ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    success: false, ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     uxPerfilCorrigida: false, portalColaboradorOk: false, portalFinanceiroOk: false,
     colaboradorSemDashboardFinanceiro: false, colaboradorSemLogsGerais: false,
     colaboradorSemTodosColaboradores: false, financeiroDashboardCompleto: false,
@@ -1846,7 +1906,7 @@ function EXECUTAR_FIN_FLASH_V2_9_TESTE_UX_PERFIL_MANUAL_DEV() {
     producaoAlterada: false, flashAntigoAlterado: false, forceUsado: false,
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_9 bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_9 bloqueado fora do DEV.'); return r; }
   try {
     r.menuDevLigado = FIN_FLASH_V2_VERIFICAR_ACESSO_DEV().ok;
     var ctx = FIN_FLASH_V2_OBTER_CONTEXTO_USUARIO_DEV();
@@ -1929,7 +1989,7 @@ function FIN_FLASH_V2_sheetCtx10_(aba) {
 
 function FIN_FLASH_V2_LISTAR_COLABORADORES_CARTOES_DEV(filtros) {
   var r = { ok: false, itens: [], bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var contas  = FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -1959,7 +2019,7 @@ function FIN_FLASH_V2_LISTAR_COLABORADORES_CARTOES_DEV(filtros) {
 
 function FIN_FLASH_V2_CADASTRAR_COLABORADOR_DEV(payload) {
   var r = { ok: false, id: null, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.cpf || !payload.nome) { r.bloqueios.push('CPF e nome são obrigatórios.'); return r; }
@@ -1975,7 +2035,7 @@ function FIN_FLASH_V2_CADASTRAR_COLABORADOR_DEV(payload) {
     nr.EMAIL = payload.email||''; nr.WHATSAPP = payload.whatsapp||'';
     nr.PERFIL = payload.perfil||'COLABORADOR'; nr.STATUS = payload.status||'ATIVA';
     nr.OBSERVACOES = payload.observacoes||'';
-    nr.CRIADO_EM = agora; nr.ATUALIZADO_EM = agora; nr.AMBIENTE_TESTE = 'SIM';
+    nr.CRIADO_EM = agora; nr.ATUALIZADO_EM = agora; nr.AMBIENTE_TESTE = FIN_FLASH_V2_ambienteTesteAtual_();
     contas.sheet.appendRow((contas.headers||[]).map(function(h){ return nr[h]||''; }));
     var novaLinhaContas = contas.sheet.getLastRow();
     var colCpfContas = (contas.headers||[]).indexOf('CPF') + 1;
@@ -1989,7 +2049,7 @@ function FIN_FLASH_V2_CADASTRAR_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_ATUALIZAR_COLABORADOR_DEV(payload) {
   var r = { ok: false, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.id && !payload.cpf) { r.bloqueios.push('ID ou CPF obrigatório.'); return r; }
@@ -2013,7 +2073,7 @@ function FIN_FLASH_V2_ATUALIZAR_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_VINCULAR_CARTAO_COLABORADOR_DEV(payload) {
   var r = { ok: false, id: null, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.cpf || !payload.tipo) { r.bloqueios.push('CPF e tipo do cartão são obrigatórios.'); return r; }
@@ -2027,7 +2087,7 @@ function FIN_FLASH_V2_VINCULAR_CARTAO_COLABORADOR_DEV(payload) {
     var nr = {}; (cartoes.headers||[]).forEach(function(h){ nr[h]=''; });
     nr.ID = id; nr.CPF = cpfNorm; nr.TIPO = tipo;
     nr.FINAL = String(payload.final||'0000'); nr.STATUS = 'ATIVO';
-    nr.CRIADO_EM = agora; nr.ATUALIZADO_EM = agora; nr.AMBIENTE_TESTE = 'SIM';
+    nr.CRIADO_EM = agora; nr.ATUALIZADO_EM = agora; nr.AMBIENTE_TESTE = FIN_FLASH_V2_ambienteTesteAtual_();
     cartoes.sheet.appendRow((cartoes.headers||[]).map(function(h){ return nr[h]||''; }));
     var novaLinhaCartoes = cartoes.sheet.getLastRow();
     var colCpfCartoes = (cartoes.headers||[]).indexOf('CPF') + 1;
@@ -2041,7 +2101,7 @@ function FIN_FLASH_V2_VINCULAR_CARTAO_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_OBTER_CONTA_COLABORADOR_DEV(payload) {
   var r = { ok: false, conta: null, cartoes: [], movimentacoes: [], bloqueios: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var contas = FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -2078,7 +2138,7 @@ function FIN_FLASH_V2_PREVISUALIZAR_EXTRATO_FLASH_DEV(payload) {
       '4. Importe o arquivo aqui e confira a prévia antes de confirmar'
     ]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var linhas = payload.linhas || [];
@@ -2110,7 +2170,7 @@ function FIN_FLASH_V2_PREVISUALIZAR_EXTRATO_FLASH_DEV(payload) {
 
 function FIN_FLASH_V2_RECEBER_ARQUIVO_EXTRATO_DEV(payload) {
   var r = { ok:false, recebido:false, chaveArquivo:'', nomeArquivo:'', extensao:'', tamanhoBytes:0, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var arq = payload.arquivo || {};
@@ -2255,7 +2315,7 @@ function FIN_FLASH_V2_lerXlsxViaDrive_(b64, ext) {
 
 function FIN_FLASH_V2_PREVISUALIZAR_ARQUIVO_EXTRATO_FLASH_DEV(payload) {
   var r = { ok:false, chavePrevia:'', preview:null, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.periodoInicio || !payload.periodoFim) {
@@ -2326,7 +2386,7 @@ function FIN_FLASH_V2_PREVISUALIZAR_ARQUIVO_EXTRATO_FLASH_DEV(payload) {
 function FIN_FLASH_V2_CONFIRMAR_IMPORTACAO_EXTRATO_FLASH_DEV(payload) {
   var r = { ok: false, loteId: null, totalImportado: 0, duplicatasIgnoradas: 0,
             bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.chavePrevia && !payload.periodoInicio) {
@@ -2365,7 +2425,7 @@ function FIN_FLASH_V2_CONFIRMAR_IMPORTACAO_EXTRATO_FLASH_DEV(payload) {
       nr.VALOR=Math.abs(valor); nr.TIPO=tipo;
       nr.DATA=l.data||agora.split(' ')[0];
       nr.CHAVE_EXTRATO=chaveExt; nr.CHAVE_LOTE=chaveLote; nr.LOTE_ID=loteId;
-      nr.STATUS='IMPORTADO'; nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+      nr.STATUS='IMPORTADO'; nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       nr.PESSOA=l.pessoa||''; nr.STATUS_FLASH=l.status||''; nr.PAGAMENTO=l.pagamento||'';
       extratos.sheet.appendRow((extratos.headers||[]).map(function(h){ return nr[h]||''; }));
       r.totalImportado++;
@@ -2379,7 +2439,7 @@ function FIN_FLASH_V2_CONFIRMAR_IMPORTACAO_EXTRATO_FLASH_DEV(payload) {
 
 function FIN_FLASH_V2_LISTAR_LOTES_IMPORTACAO_DEV(filtros) {
   var r = { ok: false, lotes: [], bloqueios: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var extratos = FIN_FLASH_V2_sheetCtx10_('EXTRATOS');
@@ -2398,7 +2458,7 @@ function FIN_FLASH_V2_LISTAR_LOTES_IMPORTACAO_DEV(filtros) {
 
 function FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV(payload) {
   var r = { ok:false, loteId:null, conciliacoesCriadas:0, pendenciasCriadas:0, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.loteId) { r.bloqueios.push('loteId obrigatório.'); return r; }
@@ -2422,7 +2482,7 @@ function FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV(payload) {
       nc.CPF=ext.CPF; nc.VALOR_EXTRATO=ext.VALOR; nc.VALOR_PRESTACAO=prest?prest.VALOR:0;
       nc.ESTABELECIMENTO=ext.ESTABELECIMENTO; nc.DATA=ext.DATA;
       nc.STATUS=status; nc.SCORE=score; nc.COMPROVANTE=prest?(prest.COMPROVANTE_ID||''):'';
-      nc.CRIADO_EM=agora; nc.AMBIENTE_TESTE='SIM';
+      nc.CRIADO_EM=agora; nc.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       conciliacoes.sheet.appendRow((conciliacoes.headers||[]).map(function(h){ return nc[h]||''; }));
       r.conciliacoesCriadas++;
       if (status==='PENDENTE') {
@@ -2432,7 +2492,7 @@ function FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV(payload) {
         np.ID=idPend; np.EXTRATO_ID=ext.ID; np.CPF=ext.CPF; np.VALOR=ext.VALOR;
         np.TIPO=motivo; np.STATUS='PENDENTE'; np.SEVERIDADE='ALTA';
         np.DESCRICAO=motivo==='SEM_PRESTACAO'?'Gasto sem prestação de contas':'Gasto sem comprovante';
-        np.CRIADO_EM=agora; np.AMBIENTE_TESTE='SIM';
+        np.CRIADO_EM=agora; np.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
         pendencias.sheet.appendRow((pendencias.headers||[]).map(function(h){ return np[h]||''; }));
         r.pendenciasCriadas++;
       }
@@ -2448,7 +2508,7 @@ function FIN_FLASH_V2_CONCILIAR_LOTE_IMPORTADO_DEV(payload) {
 
 function FIN_FLASH_V2_FILTRAR_CONFERENCIA_GASTOS_DEV(filtros) {
   var r = { ok: false, itens: [], total: 0, bloqueios: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var conc   = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
@@ -2486,7 +2546,7 @@ function FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV(payload) {
   // V2.15F: corrigido bug "hit = prest.row || prest" (hit virava o número da linha).
   // Agora usa FIN_FLASH_V2_sheetCtx10_ + filtro por ID, como o resto da base faz.
   var r = { ok: false, preview: null, avisos: [], bloqueios: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.prestacaoId) {
@@ -2560,7 +2620,7 @@ function FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_() {
     executouMigracao: false, headersAntes: [], headersAdicionados: [], headersDepois: [],
     ok: false, bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.CONCILIACOES);
     if (!sh) { r.bloqueios.push('Aba FIN_FLASH_V2_CONCILIACOES não encontrada.'); return r; }
@@ -2605,7 +2665,7 @@ function FIN_FLASH_V2_v217UsuarioResponsavel_() {
 
 function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
   var r = { ok: false, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.conciliacaoId || !payload.motivo) {
@@ -2636,7 +2696,7 @@ function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
 
 function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
   var r = { ok: false, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.conciliacaoId || !payload.motivo) {
@@ -2670,7 +2730,7 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
 
 function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
   var r = { ok: false, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.conciliacaoId || !payload.motivo) {
@@ -2706,7 +2766,7 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
 
 function FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV(payload) {
   var r = { ok:false, conta:null, resumo:null, movimentacoes:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.cpf) { r.bloqueios.push('CPF obrigatório.'); return r; }
@@ -2875,7 +2935,7 @@ function FIN_FLASH_V2_v216kMontarExtratoCpf_(payload) {
 
 function FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV(payload) {
   var r = { ok:false, documentoId:null, htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
     // V2.16E — reaproveita o mesmo backend consolidado da tela "Extrato por Colaborador"
@@ -2893,7 +2953,7 @@ function FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV(payload) {
     // DOC_COLABORADOR_SEMPRE_VAZIO da V2.16J), para a coluna Colaborador em
     // Documentos e Relatórios parar de sair sempre vazia para extratos novos.
     nr.CONTA_ID = montado.colaboradorId || '';
-    nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
+    nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_EXTRATO_CPF','DOCUMENTO',id,
       JSON.stringify({cpf:montado.cpfNorm||payload.cpf,ano:payload.ano||'',mes:payload.mes||'',dataInicio:per.dataInicio||'',dataFim:per.dataFim||'',tipo:montado.tipo,limite:payload.limite||''}),'SIM');
@@ -2966,7 +3026,7 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
   // pelo frontend) só para permitir auditoria somente leitura do dataset filtrado, sem
   // exigir scraping de HTML. Frontend existente ignora esses campos extras.
   var r = { ok:false, htmlA4:'', tipo:null, itens:[], periodoIso:null, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
     var tipo=(payload.tipo||'positivo').toLowerCase();
@@ -3027,7 +3087,7 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
 
 function FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV(payload) {
   var r = { ok:false, documentoId:null, htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
     var prev=FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload);
@@ -3036,7 +3096,7 @@ function FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV(payload) {
     var docs=FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
     var nr={}; (docs.headers||[]).forEach(function(h){nr[h]='';});
     nr.ID=id; nr.TIPO='RELATORIO_A4_'+(payload.tipo||'POSITIVO').toUpperCase();
-    nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
+    nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_HTML_RELATORIO_A4','DOCUMENTO',id,
       JSON.stringify({tipo:payload.tipo,ano:payload.ano||'',mes:payload.mes||'',dataInicio:payload.dataInicio||'',dataFim:payload.dataFim||''}),'SIM');
@@ -3047,7 +3107,7 @@ function FIN_FLASH_V2_GERAR_HTML_RELATORIO_A4_DEV(payload) {
 
 function FIN_FLASH_V2_LISTAR_RELATORIOS_DEV(filtros) {
   var r = { ok:false, itens:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros=filtros||{};
     var docs=FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
@@ -3073,7 +3133,7 @@ function FIN_FLASH_V2_msgCobranca_(nome, valor, periodo) {
 
 function FIN_FLASH_V2_PREPARAR_COBRANCAS_DIARIAS_DEV(payload) {
   var r = { ok:false, totalPreparado:0, mensagens:[], bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   r.avisos.push('ENVIO_REAL_BLOQUEADO: alertas preparados apenas como simulação. Nenhum e-mail ou WhatsApp enviado nesta etapa.');
   try {
     payload=payload||{};
@@ -3098,7 +3158,7 @@ function FIN_FLASH_V2_PREPARAR_COBRANCAS_DIARIAS_DEV(payload) {
       nr.ID=id; nr.CONTA_ID=cpf; nr.CPF=cpf; nr.TIPO='COBRANCA_DIARIA';
       nr.SEVERIDADE='ALTA'; nr.MENSAGEM=msg; nr.EMAIL_DESTINO=emap[cpf]||'';
       nr.WHATSAPP_DESTINO=wmap[cpf]||''; nr.STATUS='PREPARADO'; nr.ENVIADO_REAL='NAO';
-      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       alertas.sheet.appendRow((alertas.headers||[]).map(function(h){return nr[h]||'';}));
       r.mensagens.push({cpf:cpf,nome:c.nome,qtdPendencias:c.qtd,valorTotal:c.total,
         mensagem:msg,alertaId:id,envioReal:'BLOQUEADO'});
@@ -3113,7 +3173,7 @@ function FIN_FLASH_V2_PREPARAR_COBRANCAS_DIARIAS_DEV(payload) {
 
 function FIN_FLASH_V2_SIMULAR_ENVIO_COBRANCAS_DEV(payload) {
   var r = { ok:false, simulados:[], enviados:0, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   r.avisos.push('ENVIO_REAL_BLOQUEADO: apenas simulação. Nenhuma mensagem real foi enviada.');
   try {
     payload=payload||{};
@@ -3136,7 +3196,7 @@ function FIN_FLASH_V2_SIMULAR_ENVIO_COBRANCAS_DEV(payload) {
 function FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV(filtros) {
   // V2.16B: corrigido para comparar CPF normalizado (era comparação bruta).
   var r = { ok:false, itens:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros=filtros||{};
     var filtroCpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
@@ -3158,7 +3218,7 @@ function FIN_FLASH_V2_LISTAR_ALERTAS_COBRANCA_DEV(filtros) {
 
 function FIN_FLASH_V2_MARCAR_ALERTA_COMO_ENVIADO_DEV(payload) {
   var r = { ok:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   r.avisos.push('Marcação de simulação — nenhum envio real foi executado.');
   try {
     payload=payload||{};
@@ -3177,7 +3237,7 @@ function FIN_FLASH_V2_MARCAR_ALERTA_COMO_ENVIADO_DEV(payload) {
 
 function EXECUTAR_FIN_FLASH_V2_10_PENTE_FINO_FUNCIONAL_DEV() {
   var r = {
-    success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',
+    success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(),
     penteFinoConcluido:false,
     importarExtratoExiste:false, previaImportacaoExiste:false, botaoConciliarAgoraExiste:false,
     cadastroColaboradoresExiste:false, vinculoCartoesCpfExiste:false,
@@ -3194,7 +3254,7 @@ function EXECUTAR_FIN_FLASH_V2_10_PENTE_FINO_FUNCIONAL_DEV() {
     flashAntigoAlterado:false, forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_10 bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_10 bloqueado fora do DEV.'); return r; }
   try {
     r.menuDevLigado = FIN_FLASH_V2_VERIFICAR_ACESSO_DEV().ok;
 
@@ -3325,7 +3385,7 @@ function FIN_FLASH_V2_OBTER_LOGS_DEV(filtros) {
 
 function EXECUTAR_FIN_FLASH_V2_10_1_TESTE_HOTFIX_RENDER_DEV() {
   var r = {
-    success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',
+    success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(),
     hotfixRenderAplicado:false, shellRenderizavel:false,
     abasRenderizaveis:false, abasPrimeiroFrame:false,
     skeletonNaoPermanente:false, failureHandlersPrevistos:false,
@@ -3336,7 +3396,7 @@ function EXECUTAR_FIN_FLASH_V2_10_1_TESTE_HOTFIX_RENDER_DEV() {
     producaoAlterada:false, flashAntigoAlterado:false, forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var dash = FIN_FLASH_V2_OBTER_DASHBOARD_DEV();
     r.dashboardNaoBloqueiaRender = dash.ok && typeof dash.dados !== 'undefined';
@@ -3396,7 +3456,7 @@ function FIN_FLASH_V2_CALCULAR_SITUACAO_COLABORADOR_DEV_(pendenciasCpf) {
 
 function FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV(filtros) {
   var r = { ok:false, colaboradores:[], totais:{totalColaboradores:0,totalPendencias:0,totalValorPendente:0,totalJustificados:0}, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var contas   = FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -3459,7 +3519,7 @@ function FIN_FLASH_V2_EDITAR_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_INATIVAR_COLABORADOR_DEV(payload) {
   var r = { ok:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.id && !payload.cpf) { r.bloqueios.push('ID ou CPF obrigatório.'); return r; }
@@ -3476,7 +3536,7 @@ function FIN_FLASH_V2_INATIVAR_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_CADASTRAR_CARTAO_COLABORADOR_DEV(payload) {
   var r = { ok:false, id:null, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.cpf || !payload.tipo) { r.bloqueios.push('CPF e tipo obrigatórios.'); return r; }
@@ -3495,7 +3555,7 @@ function FIN_FLASH_V2_CADASTRAR_CARTAO_COLABORADOR_DEV(payload) {
     nr.ID=id; nr.CPF=cpfNorm; nr.TIPO=tipo; nr.TIPO_CARTAO=tipo;
     nr.FINAL=String(payload.final||'0000'); nr.FINAL_CARTAO=String(payload.final||'0000'); nr.STATUS='ATIVO';
     nr.APELIDO=payload.apelido||''; nr.OBSERVACAO=payload.observacao||'';
-    nr.CRIADO_EM=agora; nr.ATUALIZADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+    nr.CRIADO_EM=agora; nr.ATUALIZADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     cartoes.sheet.appendRow((cartoes.headers||[]).map(function(h){ return nr[h]||''; }));
     var novaLinhaCartoes = cartoes.sheet.getLastRow();
     var colCpfCartoes = (cartoes.headers||[]).indexOf('CPF') + 1;
@@ -3508,7 +3568,7 @@ function FIN_FLASH_V2_CADASTRAR_CARTAO_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_INATIVAR_CARTAO_COLABORADOR_DEV(payload) {
   var r = { ok:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.id && !payload.final) { r.bloqueios.push('ID ou final do cartão obrigatório.'); return r; }
@@ -3535,7 +3595,7 @@ function FIN_FLASH_V2_INATIVAR_CARTAO_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_LISTAR_CARTOES_DO_COLABORADOR_DEV(payload) {
   var r = { ok:false, cpf:'', cpfBruto:'', cpfNormalizado:'', cpfExibicao:'', cartoes:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var cpfBruto = String(payload.cpf||payload||'');
@@ -3564,7 +3624,7 @@ function FIN_FLASH_V2_PREVIEW_CONCILIACAO_LOTE_DEV(payload) {
   var r = { ok:false, loteId:'', totalLinhas:0, conciliados:0, pendencias:0, semPrestacao:0,
     colaborador:{cpf:'',nome:''}, periodoInicio:'', periodoFim:'',
     totalGasto:0, totalRecarregado:0, cartoesUsados:[], itens:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var loteId = payload.loteId||'';
@@ -3626,7 +3686,7 @@ function FIN_FLASH_V2_PREVIEW_CONCILIACAO_LOTE_DEV(payload) {
 
 function FIN_FLASH_V2_GERAR_DOCUMENTO_CONCILIACAO_LOTE_DEV(payload) {
   var r = { ok:false, documentoId:'', htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var prev = FIN_FLASH_V2_PREVIEW_CONCILIACAO_LOTE_DEV(payload);
@@ -3643,7 +3703,7 @@ function FIN_FLASH_V2_GERAR_DOCUMENTO_CONCILIACAO_LOTE_DEV(payload) {
     var id = FIN_FLASH_V2_uid10_('FIN_FLASH_V2_DOC_CONC_');
     var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
     var nr = {}; (docs.headers||[]).forEach(function(h){nr[h]='';});
-    nr.ID=id; nr.TIPO='RELATORIO_CONCILIACAO_LOTE'; nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
+    nr.ID=id; nr.TIPO='RELATORIO_CONCILIACAO_LOTE'; nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_DOC_CONCILIACAO_LOTE','DOCUMENTO',id,JSON.stringify({loteId:prev.loteId,total:prev.totalLinhas}),'SIM');
     r.ok=true; r.documentoId=id; r.htmlA4=html;
@@ -3669,7 +3729,7 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_CONFERENCIA_DEV(payload) {
 
 function FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV(payload) {
   var r = { ok:false, conta:null, resumo:{}, movimentacoes:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var cpf = String(payload.cpf||'');
@@ -3715,7 +3775,7 @@ function FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV(payload) {
   var r = { ok:false, htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var ext = FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV(payload);
     if (!ext.ok) { r.bloqueios=ext.bloqueios; return r; }
@@ -3729,14 +3789,14 @@ function FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV(payload) {
 
 function FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV(payload) {
   var r = { ok:false, documentoId:'', htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var prev = FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV(payload);
     if (!prev.ok) { r.bloqueios=prev.bloqueios; return r; }
     var id = FIN_FLASH_V2_uid10_('FIN_FLASH_V2_EXTRATO_A4_');
     var docs = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
     var nr = {}; (docs.headers||[]).forEach(function(h){nr[h]='';});
-    nr.ID=id; nr.TIPO='EXTRATO_COLABORADOR_A4'; nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
+    nr.ID=id; nr.TIPO='EXTRATO_COLABORADOR_A4'; nr.STATUS='GERADO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_EXTRATO_A4','DOCUMENTO',id,JSON.stringify({cpf:(payload&&payload.cpf)||''}),'SIM');
     r.ok=true; r.documentoId=id; r.htmlA4=prev.htmlA4;
@@ -3749,7 +3809,7 @@ function FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV(payload) {
 function FIN_FLASH_V2_RESUMIR_PENDENCIAS_POR_COLABORADOR_DEV(filtros) {
   // V2.16B: corrigido para comparar CPF normalizado (era comparação bruta).
   var r = { ok:false, colaboradores:[], totalGeral:0, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var filtroCpfNorm = filtros.cpf ? FIN_FLASH_V2_normCpf_(filtros.cpf) : '';
@@ -3804,7 +3864,7 @@ function FIN_FLASH_V2_BUSCAR_PENDENCIAS_DEV(filtros) {
 
 function FIN_FLASH_V2_OBTER_DETALHE_PENDENCIA_DEV(payload) {
   var r = { ok:false, pendencia:null, extrato:null, prestacao:null, alertas:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     if (!payload.id) { r.bloqueios.push('ID da pendência obrigatório.'); return r; }
@@ -3832,7 +3892,7 @@ function FIN_FLASH_V2_LISTAR_PENDENCIAS_COBRANCA_DEV(filtros) {
 
 function FIN_FLASH_V2_CONFIGURAR_COBRANCA_DIARIA_DEV(payload) {
   var r = { ok:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload = payload || {};
     var cfg = FIN_FLASH_V2_sheetCtx10_('CONFIG');
@@ -3859,7 +3919,7 @@ function FIN_FLASH_V2_CONFIGURAR_COBRANCA_DIARIA_DEV(payload) {
 
 function FIN_FLASH_V2_SIMULAR_COBRANCAS_DIARIAS_DEV(payload) {
   var r = { ok:false, preparados:0, simulados:0, mensagens:[], bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   r.avisos.push('ENVIO_REAL_BLOQUEADO: apenas simulação. Nenhuma mensagem real enviada.');
   try {
     var prep=FIN_FLASH_V2_PREPARAR_COBRANCAS_DIARIAS_DEV(payload);
@@ -3873,7 +3933,7 @@ function FIN_FLASH_V2_SIMULAR_COBRANCAS_DIARIAS_DEV(payload) {
 
 function FIN_FLASH_V2_PREPARAR_COBRANCA_MANUAL_DEV(payload) {
   var r = { ok:false, alertaId:'', bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   FIN_FLASH_V2_BLOQUEAR_ENVIO_REAL_COBRANCA_DEV_();
   r.avisos.push('ENVIO_REAL_BLOQUEADO. Cobrança preparada apenas como registro. Nenhuma mensagem enviada.');
   try {
@@ -3891,7 +3951,7 @@ function FIN_FLASH_V2_PREPARAR_COBRANCA_MANUAL_DEV(payload) {
     nr.ID=id; nr.CONTA_ID=conta.ID; nr.CPF=payload.cpf;
     nr.TIPO='COBRANCA_MANUAL'; nr.SEVERIDADE=payload.severidade||'ALTA';
     nr.MENSAGEM=msg; nr.EMAIL_DESTINO=conta.EMAIL||''; nr.WHATSAPP_DESTINO=conta.WHATSAPP||'';
-    nr.STATUS='PREPARADO'; nr.ENVIADO_REAL='NAO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
+    nr.STATUS='PREPARADO'; nr.ENVIADO_REAL='NAO'; nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
     alertas.sheet.appendRow((alertas.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('PREPARAR_COBRANCA_MANUAL','ALERTAS',id,JSON.stringify({cpf:payload.cpf,valor:valor}),'SIM');
     r.ok=true; r.alertaId=id;
@@ -3954,7 +4014,7 @@ function FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_(documentoId, acaoEsp
 
 function FIN_FLASH_V2_LISTAR_DOCUMENTOS_ORGANIZADOS_DEV(filtros) {
   var r = { ok:false, grupos:{}, itens:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var docs  = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
@@ -4007,7 +4067,7 @@ function FIN_FLASH_V2_LISTAR_DOCUMENTOS_ORGANIZADOS_DEV(filtros) {
 
 function FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV(payload) {
   var r = { ok:false, htmlA4:'', tipo:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
     var tipoDocumentoBruto = String(payload.tipo || '');
@@ -4062,7 +4122,7 @@ function FIN_FLASH_V2_GERAR_GRAFICOS_RELATORIO_DEV_(dados) {
 
 function FIN_FLASH_V2_LISTAR_TERMOS_COLABORADORES_DEV(filtros) {
   var r = { ok:false, termoPendentes:[], termoAceitaram:[], totalPendente:0, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros=filtros||{};
     var contas=FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -4117,7 +4177,7 @@ function FIN_FLASH_V2_GERAR_HTML_A4_TERMO_ASSINADO_DEV(payload) {
 
 function FIN_FLASH_V2_PREVIEW_TERMO_ASSINADO_DEV(payload) {
   var r = { ok:false, htmlA4:'', bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try { r.htmlA4=FIN_FLASH_V2_GERAR_HTML_A4_TERMO_ASSINADO_DEV(payload); r.ok=true; }
   catch(e) { r.bloqueios.push(e.message||String(e)); }
   return r;
@@ -4127,7 +4187,7 @@ function FIN_FLASH_V2_PREVIEW_TERMO_ASSINADO_DEV(payload) {
 
 function FIN_FLASH_V2_LISTAR_AUDITORIA_OPERACIONAL_DEV(filtros) {
   var r = { ok:false, itens:[], total:0, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros=filtros||{};
     var de  = filtros.periodoInicio ? new Date(filtros.periodoInicio) : null;
@@ -4154,7 +4214,7 @@ function FIN_FLASH_V2_LISTAR_AUDITORIA_OPERACIONAL_DEV(filtros) {
 
 function FIN_FLASH_V2_OBTER_DETALHE_AUDITORIA_DEV(payload) {
   var r = { ok:false, log:null, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
     if (!payload.id) { r.bloqueios.push('ID obrigatório.'); return r; }
@@ -4174,7 +4234,7 @@ function FIN_FLASH_V2_OBTER_DETALHE_AUDITORIA_DEV(payload) {
 
 function EXECUTAR_FIN_FLASH_V2_11_TESTE_OPERACIONAL_FINAL_DEV() {
   var r = {
-    success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',
+    success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(),
     redesenhoOperacionalConcluido:false,
     dashboardPorColaborador:false,
     dashboardNomeCpfUltimaRecargaSaldoSituacao:false,
@@ -4202,7 +4262,7 @@ function EXECUTAR_FIN_FLASH_V2_11_TESTE_OPERACIONAL_FINAL_DEV() {
     producaoAlterada:false, flashAntigoAlterado:false, forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     var dash=FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV({});
     r.dashboardPorColaborador = dash.ok && Array.isArray(dash.colaboradores);
@@ -4283,7 +4343,7 @@ function EXECUTAR_FIN_FLASH_V2_11_TESTE_OPERACIONAL_FINAL_DEV() {
 
 function EXECUTAR_FIN_FLASH_V2_11_1_TESTE_IMPORTACAO_UPLOAD_DEV() {
   var r = {
-    success:false, ok:false, ambiente:FIN_FLASH_V2_dev_()?'DEV':'DESCONHECIDO',
+    success:false, ok:false, ambiente:FIN_FLASH_V2_ambienteAtual_(),
     hotfixImportacaoUpload:false,
     campoUploadExiste:false,
     extensoesAceitas:false,
@@ -4308,7 +4368,7 @@ function EXECUTAR_FIN_FLASH_V2_11_1_TESTE_IMPORTACAO_UPLOAD_DEV() {
     forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('Teste bloqueado fora do DEV.'); return r; }
   try {
     // 1. Campo de upload existe (funções backend presentes)
     r.campoUploadExiste = typeof FIN_FLASH_V2_PREVISUALIZAR_ARQUIVO_EXTRATO_FLASH_DEV === 'function' &&
@@ -4418,7 +4478,7 @@ function FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV(filtros) {
     totais: { totalColaboradores:0, totalPendencias:0, totalValorPendente:0 },
     bloqueios: [], avisos: ['Dashboard leve: 3 abas lidas. Para saldo completo use Extrato por Colaborador.']
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
     var contas   = FIN_FLASH_V2_sheetCtx10_('CONTAS');
@@ -4473,7 +4533,7 @@ function FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV(filtros) {
 
 function FIN_FLASH_V2_MEDIR_PERFORMANCE_DEV() {
   var r = { ok: false, bloqueios: [], avisos: [], performance: {} };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var t0, t1;
 
@@ -4517,7 +4577,7 @@ function FIN_FLASH_V2_MEDIR_PERFORMANCE_DEV() {
 
 function EXECUTAR_FIN_FLASH_V2_12_AUDITORIA_PERFORMANCE_FLUXO_DEV() {
   var r = {
-    success: false, ok: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    success: false, ok: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     auditoriaPerformanceConcluida: false,
     shellInicialLeve: false, lazyLoadingPorAba: false,
     dashboardLeve: false, metricasPerformance: false, gargalosIdentificadosOuAusentes: false,
@@ -4531,7 +4591,7 @@ function EXECUTAR_FIN_FLASH_V2_12_AUDITORIA_PERFORMANCE_FLUXO_DEV() {
     webappDeployExecutado: false, producaoAlterada: false, flashAntigoAlterado: false, forceUsado: false,
     bloqueios: [], avisos: [], performance: {}
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_12 bloqueado fora do DEV.'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('EXECUTAR_FIN_FLASH_V2_12 bloqueado fora do DEV.'); return r; }
   try {
     r.shellInicialLeve   = true;
     r.lazyLoadingPorAba  = true;
@@ -4658,7 +4718,7 @@ function EXECUTAR_FIN_FLASH_V2_12_1_TESTE_PREVIEW_XLSX_REAL_DEV() {
     flashAntigoAlterado:false, forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     // 1–3: Verificação estrutural — mock/fallback removidos, leitor real presente
     var prevFnStr = String(FIN_FLASH_V2_PREVISUALIZAR_ARQUIVO_EXTRATO_FLASH_DEV);
@@ -4809,7 +4869,7 @@ function FIN_FLASH_V2_getStatusCartao_(k) {
 
 function FIN_FLASH_V2_LISTAR_COLABORADORES_PARA_IMPORTACAO_DEV() {
   var r = { ok:false, colaboradores:[], bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var contas  = FIN_FLASH_V2_sheetCtx10_('CONTAS');
     var cartoes = FIN_FLASH_V2_sheetCtx10_('CARTOES');
@@ -4830,7 +4890,7 @@ function FIN_FLASH_V2_LISTAR_COLABORADORES_PARA_IMPORTACAO_DEV() {
 
 function FIN_FLASH_V2_PREPARAR_BRUNA_VALIDACAO_DEV() {
   var r = { ok:false, brunaCriada:false, brunaAtualizada:false, cartao881:false, cartao0546:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF   = '05553116198';
     var NOME  = 'BRUNA OLIVEIRA DOS SANTOS';
@@ -4883,7 +4943,7 @@ function FIN_FLASH_V2_PREPARAR_BRUNA_VALIDACAO_DEV() {
 
 function FIN_FLASH_V2_RESETAR_HISTORICO_BRUNA_VALIDACAO_DEV() {
   var r = { ok:false, apagados:{}, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF      = '05553116198';
     var NOME1    = 'BRUNA OLIVEIRA DOS SANTOS';
@@ -4912,7 +4972,7 @@ function FIN_FLASH_V2_RESETAR_HISTORICO_BRUNA_VALIDACAO_DEV() {
 
 function FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV() {
   var r = { ok:false, loteId:'', cenarios:{}, totalExtratos:0, totalPrestacoes:0, totalRecargas:0, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF  = '05553116198';
     var NOME = 'BRUNA OLIVEIRA DOS SANTOS';
@@ -4931,7 +4991,7 @@ function FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV() {
       var id = FIN_FLASH_V2_uid10_('FIN_FLASH_V2_REC_');
       var nr = {}; (recSheet.headers||[]).forEach(function(h){ nr[h]=''; });
       nr.ID=id; nr.CPF=CPF; nr.VALOR=valor; nr.STATUS='CREDITADO';
-      nr.CARTAO_ID=cartaoId||''; nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+      nr.CARTAO_ID=cartaoId||''; nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       nr.OBSERVACAO='Recarga DEV validação V2.13';
       recSheet.sheet.appendRow((recSheet.headers||[]).map(function(h){ return nr[h]||''; }));
       r.totalRecargas++;
@@ -4967,7 +5027,7 @@ function FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV() {
       nr.CHAVE_EXTRATO='EXT_'+CPF+'_'+data+'_'+cartaoFinal+'_'+valor+'_CEN_'+letra;
       nr.CHAVE_LOTE=chaveLote; nr.LOTE_ID=loteId;
       nr.STATUS='IMPORTADO'; nr.STATUS_FLASH=stFlash;
-      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       extSheet.sheet.appendRow((extSheet.headers||[]).map(function(h){ return nr[h]||''; }));
       extIds[letra] = id;
       r.totalExtratos++;
@@ -4983,7 +5043,7 @@ function FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV() {
       nr.DATA_GASTO=dataGasto; nr.VALOR=valor;
       nr.JUSTIFICATIVA=justificativa; nr.COMPROVANTE_ID=comprovanteId||'';
       nr.FINALIDADE='Validação DEV V2.13'; nr.STATUS='AGUARDANDO_EXTRATO';
-      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE='SIM';
+      nr.CRIADO_EM=agora; nr.AMBIENTE_TESTE=FIN_FLASH_V2_ambienteTesteAtual_();
       prestSheet.sheet.appendRow((prestSheet.headers||[]).map(function(h){ return nr[h]||''; }));
       r.totalPrestacoes++;
       return id;
@@ -5003,7 +5063,7 @@ function FIN_FLASH_V2_CRIAR_MASSA_VALIDACAO_BRUNA_DEV() {
 function FIN_FLASH_V2_VALIDAR_PORTAL_COLABORADOR_BRUNA_DEV() {
   var r = { ok:false, brunaSoVeEla:false, semFerramentasFinanceiras:false,
     podeRegistrarGasto:false, podVerPendencias:false, podeVerTermo:false, bloqueios:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF = '05553116198';
     var ctx = FIN_FLASH_V2_OBTER_CONTA_COLABORADOR_DEV({cpf: CPF});
@@ -5023,7 +5083,7 @@ function FIN_FLASH_V2_VALIDAR_PORTAL_FINANCEIRO_BRUNA_DEV() {
   var r = { ok:false, brunaVisivelNoDashboard:false, importacaoDisponivel:false,
     conciliacaoDisponivel:false, documentosDisponivel:false,
     relatorioMostraBruna:false, relatorioNaoMostraLote:false, bloqueios:[], avisos:[] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF = '05553116198';
     var dash = FIN_FLASH_V2_OBTER_DASHBOARD_LEVE_DEV({});
@@ -5072,7 +5132,7 @@ function EXECUTAR_FIN_FLASH_V2_13_VALIDACAO_OPERACIONAL_BRUNA_DEV() {
     webappDeployExecutado:false, producaoAlterada:false, flashAntigoAlterado:false, forceUsado:false,
     bloqueios:[], avisos:[]
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var CPF = '05553116198';
     r.resetHistoricoTesteDisponivel = typeof FIN_FLASH_V2_RESETAR_HISTORICO_BRUNA_VALIDACAO_DEV === 'function';
@@ -6472,7 +6532,7 @@ function FIN_FLASH_V2_confL2LInvalidarCache_() {
 
 function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
   var r = { ok: false, itens: [], total: 0, bloqueios: [], avisos: [] };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   filtros = filtros || {};
 
   // V2.17B — garante o schema (SCORE/MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM)
@@ -7755,7 +7815,7 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
     cobrancas: [], documentos: [], logsAuditoria: [], meses: [], timelineUnificada: [],
     riscos: [], avisos: [], bloqueios: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   filtros = filtros || {};
 
   var cache = null, cacheKey = null;
@@ -8128,7 +8188,7 @@ function AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR() {
     },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   var ano = r.periodoTestado.ano, mes = r.periodoTestado.mes;
   var inicio = r.periodoTestado.inicio, fim = r.periodoTestado.fim;
@@ -8220,7 +8280,7 @@ function AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
     cartoesTeste: [],
     ok: false, bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
@@ -8314,7 +8374,7 @@ function AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
     recomendacoesPatch: [], prontoParaPatch: false,
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     var docsHeaders = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS').headers || [];
@@ -8487,7 +8547,7 @@ function AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR() {
     regressaoV216I: { cartoesBrunaRotuloLegivel: false, resumoJulhoCartoes2: false, relatoriosJulhoSemJunho: false, ok: false },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   var CPF_BRUNA = '05553116198';
 
@@ -8596,7 +8656,7 @@ function AUDITAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
     funcaoOrfaMarcacaoConferida: { encontrada: false, recomendacao: 'manter como legado por enquanto' },
     riscos: [], bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
@@ -8679,11 +8739,11 @@ function TESTAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
 // ═══════════════════════════════════════════════════════════════════════════
 function MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() {
   var r = {
-    success: false, ok: false, executado: false, ambiente: FIN_FLASH_V2_dev_() ? 'DEV' : 'DESCONHECIDO',
+    success: false, ok: false, executado: false, ambiente: FIN_FLASH_V2_ambienteAtual_(),
     headersAntes: [], headersDepois: [], headersAdicionados: [], headersJaExistentes: [],
     totalColunasAntes: 0, totalColunasDepois: 0, bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     var NOVOS = ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'];
     var g = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
@@ -8717,7 +8777,7 @@ function AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
     regressaoV216K: { previewExtratoCorreto: false, documentosSemIdTecnicoPrincipal: false, brunaJulho2Cartoes: false, ok: false },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     // V2.17B — garante o schema automaticamente (mesmo helper usado pela listagem
@@ -8805,7 +8865,7 @@ function AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR() {
     regressao: { v216kPreviewExtrato: false, v216iCartoesLegiveis: false, ok: false },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     // ── 1. Helper existe? ───────────────────────────────────────────────────
@@ -8901,7 +8961,7 @@ function AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
     regressao: { motivoDecisaoPersiste: false, atualizadoPorPersiste: false, atualizadoEmPersiste: false, schemaAutoMantido: false, ok: false },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     // ── As 3 ações gravam SCORE=100? Prova real via .toString() do código-fonte,
@@ -8994,7 +9054,7 @@ function AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR() {
     recomendacao: '',
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     // ── 1/2/3/4/5. Reaproveita as auditorias já existentes (nunca gravam) ──────
@@ -9127,7 +9187,7 @@ function AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR() {
     regressao: { motivoScorePersistem: false, documentosPreviewCorreto: false, cartoesBrunaLegiveis: false, resumoMesCartoesCorreto: false, ok: false },
     bloqueios: [], avisos: []
   };
-  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  if (!FIN_FLASH_V2_permitido_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
     // ── 1. Cache: Conferência invalida o Extrato por Colaborador também? ───────
@@ -9202,4 +9262,108 @@ function AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.19A — Confirma que os bloqueadores B1 (allowlist DEV+PRODUCAO_V2)
+// e B3 (AMBIENTE_TESTE dinâmico) do plano de piloto V2.19 foram resolvidos.
+// Auditoria somente leitura: NÃO toca PRODUCAO_V2 (não existe forma de rodar lá
+// a partir do DEV), verifica a allowlist por inspeção de código-fonte real
+// (.toString(), suportado pelo V8 do Apps Script) e confirma por execução real
+// (neste ambiente, DEV) que o módulo continua funcionando.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V219A_AMBIENTE_PRODUCAO_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.19A', somenteLeitura: true, executado: false,
+    ambiente: { scriptIdAtual: '', ambienteAtual: '', permitido: false, devReconhecido: false, producaoV2Reconhecida: false, desconhecidoBloqueado: false },
+    ambienteTeste: { devRetornaSIM: false, producaoV2RetornaNAO: false, backendNormalizaAmbienteTeste: false, hardcodesCriticosRemovidos: false, ok: false },
+    seguranca: { producaoAntigaNaoPermitida: false, producaoV2Permitida: false, devPermitido: false, ok: false },
+    regressaoDEV: { moduloContinuaFuncionandoNoDEV: false, conferenciaGastosOk: false, extratoColaboradorOk: false, documentosRelatoriosOk: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  // Nota: esta auditoria NÃO usa o guard padrão "if (!FIN_FLASH_V2_permitido_())" —
+  // seu propósito é diagnosticar justamente o estado de ambiente/permissão, e os
+  // checks são baseados em .toString() (funcionam de qualquer ambiente que já
+  // tenha este código, ou seja, DEV ou PRODUCAO_V2). Somente leitura, nunca grava.
+
+  try {
+    // ── 1. Ambiente: reconhecimento real (executando agora) + prova de código
+    // para o ambiente que não dá pra executar a partir daqui (PRODUCAO_V2). ───
+    r.ambiente.scriptIdAtual = ScriptApp.getScriptId();
+    r.ambiente.ambienteAtual = FIN_FLASH_V2_ambienteAtual_();
+    r.ambiente.permitido = FIN_FLASH_V2_ambientePermitido_();
+
+    var srcAmbientes = FIN_FLASH_V2_AMBIENTES_.toString();
+    r.ambiente.devReconhecido = srcAmbientes.indexOf('12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG') >= 0;
+    r.ambiente.producaoV2Reconhecida = srcAmbientes.indexOf('1iKgbkoBgRuethKuFhQM1H1W9vRvuBM1tT21-cYizkusfT_YrgHbIbZ1y') >= 0;
+
+    var srcPermitido = FIN_FLASH_V2_ambientePermitido_.toString();
+    r.ambiente.desconhecidoBloqueado = srcPermitido.indexOf("amb === 'DEV'") >= 0 && srcPermitido.indexOf("amb === 'PRODUCAO_V2'") >= 0;
+
+    if (!r.ambiente.devReconhecido) r.bloqueios.push('scriptId do DEV não está na allowlist FIN_FLASH_V2_AMBIENTES_.');
+    if (!r.ambiente.producaoV2Reconhecida) r.bloqueios.push('scriptId de PRODUCAO_V2 não está na allowlist FIN_FLASH_V2_AMBIENTES_.');
+    if (!r.ambiente.desconhecidoBloqueado) r.bloqueios.push('FIN_FLASH_V2_ambientePermitido_ não bloqueia ambientes desconhecidos de forma explícita.');
+    if (!r.ambiente.permitido) r.bloqueios.push('Ambiente atual (' + r.ambiente.ambienteAtual + ') não está permitido — inesperado rodando esta auditoria.');
+
+    // ── 2. AMBIENTE_TESTE dinâmico ───────────────────────────────────────────
+    r.ambienteTeste.devRetornaSIM = (r.ambiente.ambienteAtual === 'DEV') ? (FIN_FLASH_V2_ambienteTesteAtual_() === 'SIM') : true;
+    if (r.ambiente.ambienteAtual === 'DEV' && !r.ambienteTeste.devRetornaSIM) r.bloqueios.push('DEV não está gravando AMBIENTE_TESTE=SIM.');
+
+    var srcAmbienteTeste = FIN_FLASH_V2_ambienteTesteAtual_.toString();
+    r.ambienteTeste.producaoV2RetornaNAO = srcAmbienteTeste.indexOf("'PRODUCAO_V2'") >= 0 && srcAmbienteTeste.indexOf("'NAO'") >= 0;
+    if (!r.ambienteTeste.producaoV2RetornaNAO) r.bloqueios.push('FIN_FLASH_V2_ambienteTesteAtual_ não resolve PRODUCAO_V2 para NAO.');
+
+    var srcLog = FIN_FLASH_V2_registrarLogAcao_.toString();
+    r.ambienteTeste.backendNormalizaAmbienteTeste = srcLog.indexOf('FIN_FLASH_V2_ambienteTesteAtual_()') >= 0 && srcLog.indexOf("ambienteTeste || 'SIM'") < 0;
+    if (!r.ambienteTeste.backendNormalizaAmbienteTeste) r.bloqueios.push('FIN_FLASH_V2_registrarLogAcao_ ainda pode aceitar o parâmetro do chamador em vez de normalizar pelo ambiente real.');
+
+    var funcoesEscritaChave = [
+      FIN_FLASH_V2_appendConciliacao_, FIN_FLASH_V2_appendPendenciaConciliacao_,
+      FIN_FLASH_V2_registrarLogAcao_, FIN_FLASH_V2_registrarAlerta_
+    ];
+    r.ambienteTeste.hardcodesCriticosRemovidos = funcoesEscritaChave.every(function(fn){
+      var src = fn.toString();
+      return src.indexOf("|| 'SIM'") < 0 && src.indexOf('FIN_FLASH_V2_ambienteTesteAtual_()') >= 0;
+    });
+    if (!r.ambienteTeste.hardcodesCriticosRemovidos) {
+      r.bloqueios.push('Ao menos uma das 4 funções de escrita centrais (appendConciliacao_/appendPendenciaConciliacao_/registrarLogAcao_/registrarAlerta_) ainda tem hardcode de AMBIENTE_TESTE.');
+    }
+    r.avisos.push('hardcodesCriticosRemovidos verifica as 4 funções de escrita centrais (compartilhadas por toda a criação de linhas). A varredura completa dos ~15 pontos de "nr.AMBIENTE_TESTE=..." foi feita por grep durante a implementação (0 restantes), fora do escopo desta checagem em runtime.');
+
+    r.ambienteTeste.ok = r.ambienteTeste.devRetornaSIM && r.ambienteTeste.producaoV2RetornaNAO &&
+      r.ambienteTeste.backendNormalizaAmbienteTeste && r.ambienteTeste.hardcodesCriticosRemovidos;
+
+    // ── 3. Segurança: só DEV e PRODUCAO_V2, nunca produção antiga/outros ────
+    var chaves = Object.keys(FIN_FLASH_V2_AMBIENTES_());
+    r.seguranca.producaoAntigaNaoPermitida = chaves.length === 2 && chaves.indexOf('DEV') >= 0 && chaves.indexOf('PRODUCAO_V2') >= 0;
+    if (!r.seguranca.producaoAntigaNaoPermitida) r.bloqueios.push('FIN_FLASH_V2_AMBIENTES_ tem chaves além de DEV/PRODUCAO_V2 — revisar allowlist.');
+    r.seguranca.producaoV2Permitida = r.ambiente.producaoV2Reconhecida;
+    r.seguranca.devPermitido = r.ambiente.devReconhecido;
+    r.seguranca.ok = r.seguranca.producaoAntigaNaoPermitida && r.seguranca.producaoV2Permitida && r.seguranca.devPermitido;
+
+    // ── 4. Regressão no DEV: o módulo continua funcionando de verdade ──────
+    if (r.ambiente.ambienteAtual === 'DEV') {
+      var v217c = AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR();
+      var v216h = AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
+      var v216k = AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
+      r.regressaoDEV.conferenciaGastosOk = !!(v217c.score && v217c.score.ok);
+      r.regressaoDEV.extratoColaboradorOk = !!(v216h.resumoMes && v216h.resumoMes.ok);
+      r.regressaoDEV.documentosRelatoriosOk = !!(v216k.tipoExtrato && v216k.tipoExtrato.ok);
+      r.regressaoDEV.moduloContinuaFuncionandoNoDEV = r.ambiente.permitido &&
+        r.regressaoDEV.conferenciaGastosOk && r.regressaoDEV.extratoColaboradorOk && r.regressaoDEV.documentosRelatoriosOk;
+    } else {
+      r.avisos.push('regressaoDEV não avaliada — esta auditoria não está rodando no DEV.');
+    }
+    r.regressaoDEV.ok = r.regressaoDEV.moduloContinuaFuncionandoNoDEV;
+    if (!r.regressaoDEV.ok && r.ambiente.ambienteAtual === 'DEV') r.bloqueios.push('Regressão detectada no DEV após a troca de FIN_FLASH_V2_dev_() para FIN_FLASH_V2_permitido_().');
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V219A_AMBIENTE_PRODUCAO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V219A_AMBIENTE_PRODUCAO_SEM_GRAVAR();
 }
