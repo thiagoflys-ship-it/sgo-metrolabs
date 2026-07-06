@@ -8941,3 +8941,142 @@ function AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
 function TESTAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.18 — Auditoria geral final pré-produção. Somente leitura: não
+// corrige nada, só lista bloqueios/riscos. Reaproveita as auditorias V2.16H/
+// V2.16I/V2.16K/V2.17B/V2.17C (nunca chama funções que gravam) e acrescenta
+// checagens novas (modais, cache do Extrato por Colaborador, rastreabilidade
+// de responsável nos logs, funções órfãs) usando .toString() para inspecionar
+// o código-fonte real das funções (suportado pelo V8 do Apps Script).
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.18', somenteLeitura: true, executado: false,
+    prontoParaProducao: false,
+    bloqueiosProducao: [], riscosMedios: [], pendenciasBaixas: [],
+    validacoes: {
+      conferenciaGastosMotivoScore: false, schemaAutoMotivoScore: false, cacheConferenciaInvalidado: false,
+      extratoColaboradorMultiplosCartoes: false, resumoMesCartoesCorreto: false, relatoriosA4PeriodoCorreto: false,
+      documentosPreviewCorreto: false, documentosSemIdTecnicoPrincipal: false, idsTecnicosOcultos: false,
+      modaisOperacionaisLimpos: false
+    },
+    funcoesOrfasOuLegadas: [],
+    recomendacao: '',
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    // ── 1/2/3/4/5. Reaproveita as auditorias já existentes (nunca gravam) ──────
+    var v216h = AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
+    var v216i = AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
+    var v216k = AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
+    var v217b = AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR();
+    var v217c = AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR();
+
+    r.validacoes.conferenciaGastosMotivoScore = !!(v217c.score && v217c.score.ok && v217c.regressao && v217c.regressao.ok);
+    if (!r.validacoes.conferenciaGastosMotivoScore) r.bloqueiosProducao.push('Motivo/Score da Conferência de Gastos não passou na auditoria V2.17C: ' + JSON.stringify(v217c.bloqueios));
+
+    r.validacoes.schemaAutoMotivoScore = !!(v217b.migracao && v217b.migracao.automatica && v217b.schemaAuto && v217b.schemaAuto.idempotente);
+    if (!r.validacoes.schemaAutoMotivoScore) r.bloqueiosProducao.push('Schema automático (V2.17B) não confirmado como automático/idempotente: ' + JSON.stringify(v217b.bloqueios));
+
+    r.validacoes.resumoMesCartoesCorreto = !!(v216h.resumoMes && v216h.resumoMes.ok);
+    r.validacoes.extratoColaboradorMultiplosCartoes = r.validacoes.resumoMesCartoesCorreto && (v216h.resumoMes.cartoesEncontrados === 2);
+    if (!r.validacoes.extratoColaboradorMultiplosCartoes) r.bloqueiosProducao.push('Extrato por Colaborador (Bruna, 2 cartões) não confirmado: ' + JSON.stringify(v216h.resumoMes));
+
+    r.validacoes.relatoriosA4PeriodoCorreto = !!(v216h.relatoriosA4 && v216h.relatoriosA4.pendencias.ok && v216h.relatoriosA4.negativo.ok && v216h.relatoriosA4.positivo.ok);
+    if (!r.validacoes.relatoriosA4PeriodoCorreto) r.bloqueiosProducao.push('Relatórios A4 (período sem misturar meses) não confirmados: ' + JSON.stringify(v216h.relatoriosA4));
+
+    r.validacoes.documentosPreviewCorreto = !!(v216k.tipoExtrato && v216k.tipoExtrato.ok);
+    if (!r.validacoes.documentosPreviewCorreto) r.bloqueiosProducao.push('Preview A4 de Documentos e Relatórios (sem fallback errado) não confirmado: ' + JSON.stringify(v216k.tipoExtrato));
+
+    r.validacoes.documentosSemIdTecnicoPrincipal = !!(v216k.documentosRelatorios && v216k.documentosRelatorios.ok);
+    if (!r.validacoes.documentosSemIdTecnicoPrincipal) r.bloqueiosProducao.push('Documentos e Relatórios ainda pode expor ID técnico como coluna principal: ' + JSON.stringify(v216k.documentosRelatorios));
+
+    var idsCartoesOk = !!(v216i.ok && (v216i.cartoesTeste || []).length === 2 &&
+      v216i.cartoesTeste.every(function(c){ return c.labelOperacional && c.labelOperacional.indexOf('FIN_FLASH_V2_CARTAO_') < 0; }));
+
+    // ── 6. Cache invalidando corretamente após ações? (2 pontos: Conferência já
+    // corrigida na V2.17C; Extrato por Colaborador NUNCA foi corrigido) ────────
+    var srcManual = FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV.toString();
+    var srcReprovar = FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV.toString();
+    var srcCorrecao = FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV.toString();
+    r.validacoes.cacheConferenciaInvalidado = [srcManual, srcReprovar, srcCorrecao].every(function(s){ return s.indexOf('FIN_FLASH_V2_confL2LInvalidarCache_()') >= 0; });
+    if (!r.validacoes.cacheConferenciaInvalidado) r.bloqueiosProducao.push('Nem todas as 3 ações da Conferência de Gastos invalidam o cache da listagem.');
+
+    var extratoCompletoTemCache = typeof FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV === 'function' &&
+      FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV.toString().indexOf('FFV2_EXT_COMPLETO_') >= 0;
+    var extratoCompletoInvalidaAposAcao = [srcManual, srcReprovar, srcCorrecao].some(function(s){ return s.indexOf('FFV2_EXT_COMPLETO') >= 0; });
+    if (extratoCompletoTemCache && !extratoCompletoInvalidaAposAcao) {
+      r.riscosMedios.push('FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV tem cache de ' + FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ + 's que NUNCA é invalidado por nenhuma das 3 ações da Conferência de Gastos — se o financeiro reprovar um gasto e for direto para o Extrato por Colaborador do mesmo CPF, pode ver dado desatualizado por até esse tempo.');
+    }
+
+    // ── 7. Modais: ID técnico visível e botão Imprimir indevido ────────────────
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+    var modalAcaoLinhaExpoeId = html.indexOf("Conciliação: '+finFlashV2Escape_(conciliacaoId)") >= 0;
+    if (modalAcaoLinhaExpoeId) r.pendenciasBaixas.push('Modal "Ação Financeira" (Conciliar/Reprovar/Solicitar Correção) mostra o ID técnico da conciliação como texto principal, ao lado do nome do colaborador.');
+
+    var modalGenericoSempreTemImprimir = html.indexOf("onclick=\"window.print()\"") >= 0 && html.indexOf('function ffv2Modal_(titulo, html)') >= 0;
+    // ffv2Modal_ não recebe parâmetro para suprimir o botão Imprimir — é sempre exibido,
+    // inclusive no modal de formulário (motivo) e em modais de erro, onde não faz sentido.
+    if (modalGenericoSempreTemImprimir) r.riscosMedios.push('O componente genérico de modal (ffv2Modal_) sempre mostra o botão "Imprimir", inclusive no modal de Ação Financeira (formulário de motivo) e em modais de erro — não faz sentido imprimir esse conteúdo.');
+
+    r.validacoes.idsTecnicosOcultos = idsCartoesOk && r.validacoes.documentosSemIdTecnicoPrincipal && !modalAcaoLinhaExpoeId;
+    r.validacoes.modaisOperacionaisLimpos = !modalAcaoLinhaExpoeId && !modalGenericoSempreTemImprimir;
+
+    // ── 8. Auditoria/Logs: rastreabilidade real do responsável ────────────────
+    var srcLog = FIN_FLASH_V2_registrarLogAcao_.toString();
+    var executadoPorSempreGenerico = srcLog.indexOf("'FINANCEIRO_DEV'") >= 0 && srcLog.indexOf('responsavel') < 0 && srcLog.indexOf('atualizadoPor') < 0;
+    if (executadoPorSempreGenerico) {
+      r.riscosMedios.push('FIN_FLASH_V2_registrarLogAcao_ grava EXECUTADO_POR sempre como "FINANCEIRO_DEV", nunca o e-mail real do responsável — mesmo já existindo FIN_FLASH_V2_v217UsuarioResponsavel_() usado em CONCILIACOES.ATUALIZADO_POR. A tela de Auditoria/Logs perde rastreabilidade de quem realmente executou cada ação.');
+    }
+
+    // ── Funções órfãs ou legadas conhecidas (não removidas, só documentadas) ──
+    // Referência direta por nome (evita lookup dinâmico this[nome], frágil em GAS).
+    var htmlRef = html; // já carregado acima
+    var candidatosOrfaos = [
+      { fn: 'FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV', existe: typeof FIN_FLASH_V2_OBTER_DASHBOARD_COLABORADORES_DEV === 'function',
+        motivo: 'Órfã (não chamada pelo frontend) e com bug latente: lê k.FINAL/k.TIPO em vez de k.FINAL_CARTAO/k.TIPO_CARTAO — cartões sempre viriam vazios se reativada sem correção.' },
+      { fn: 'FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV', existe: typeof FIN_FLASH_V2_GERAR_HTML_A4_EXTRATO_COLABORADOR_DEV === 'function',
+        motivo: 'Órfã, pré-V2.16E — trio (com PREVIEW_EXTRATO_COLABORADOR_DEV e BUSCAR_EXTRATO_COLABORADOR_DEV) superado pelo fluxo consolidado.' },
+      { fn: 'FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV', existe: typeof FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV === 'function',
+        motivo: 'Órfã, pré-V2.16E — mesmo trio acima.' },
+      { fn: 'FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV', existe: typeof FIN_FLASH_V2_BUSCAR_EXTRATO_COLABORADOR_DEV === 'function',
+        motivo: 'Órfã, pré-V2.16E — mesmo trio acima.' },
+      { fn: 'FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV', existe: typeof FIN_FLASH_V2_MARCAR_CONCILIACAO_CONFERIDA_DEV === 'function',
+        motivo: 'Órfã e marcada como legado desde a V2.17A — persiste motivo/responsável dentro do JSON de ANALISE_IA, padrão diferente das colunas reais adotadas na V2.17A/C.' },
+      { fn: 'FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_POSITIVA_DEV', existe: typeof FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_POSITIVA_DEV === 'function',
+        motivo: 'Família antiga de relatórios (V2.6), não chamada pelo frontend — a tela usa GERAR_HTML_RELATORIO_A4_DEV/PREVIEW_RELATORIO_DEV.' },
+      { fn: 'FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_NEGATIVA_DEV', existe: typeof FIN_FLASH_V2_GERAR_RELATORIO_CONCILIACAO_NEGATIVA_DEV === 'function',
+        motivo: 'Mesma família antiga (V2.6) acima.' },
+      { fn: 'FIN_FLASH_V2_GERAR_RELATORIO_PENDENCIAS_COLABORADOR_DEV', existe: typeof FIN_FLASH_V2_GERAR_RELATORIO_PENDENCIAS_COLABORADOR_DEV === 'function',
+        motivo: 'Mesma família antiga (V2.6) acima.' }
+    ];
+    candidatosOrfaos.forEach(function(c){
+      var chamadaNoFrontend = htmlRef.indexOf(c.fn) >= 0;
+      if (c.existe && !chamadaNoFrontend) r.funcoesOrfasOuLegadas.push({ funcao: c.fn, motivo: c.motivo });
+    });
+
+    // ── Consolidação final ────────────────────────────────────────────────────
+    r.bloqueios = r.bloqueiosProducao.slice();
+    r.prontoParaProducao = r.bloqueiosProducao.length === 0;
+    if (r.prontoParaProducao && r.riscosMedios.length) {
+      r.recomendacao = 'Sem bloqueios técnicos para um piloto controlado. Recomendo abrir V2.18A antes de uma virada definitiva/ampla para produção, para tratar os riscos médios: cache do Extrato por Colaborador não invalidado após ações, EXECUTADO_POR genérico nos Logs (perda de rastreabilidade real), e botão Imprimir indevido no modal de formulário.';
+    } else if (r.prontoParaProducao) {
+      r.recomendacao = 'Sem bloqueios nem riscos médios encontrados nesta auditoria. Pronto para avançar.';
+    } else {
+      r.recomendacao = 'Não recomendado avançar para produção agora. Abrir V2.18A para resolver os bloqueios listados antes de qualquer publicação.';
+    }
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+    r.prontoParaProducao = false;
+  }
+
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR();
+}
