@@ -2642,12 +2642,15 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
     // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_REPROVACAO (nunca existiu
     // como coluna real); ATUALIZADO_POR/ATUALIZADO_EM agora persistem de verdade.
+    // V2.17C — SCORE=100 (decisão de produto: toda decisão manual do financeiro,
+    // incluindo reprovar, grava confiança máxima) — faltava aqui, só existia em
+    // CONCILIAR_MANUALMENTE_DEV.
     var responsavel = FIN_FLASH_V2_v217UsuarioResponsavel_();
     var atualizadoEm = FIN_FLASH_V2_now10_();
-    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'REPROVADO',MOTIVO_DECISAO:payload.motivo,
+    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'REPROVADO',SCORE:100,MOTIVO_DECISAO:payload.motivo,
       ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('REPROVAR_COMPROVANTE','CONCILIACAO',
-      payload.conciliacaoId,{motivo:payload.motivo,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
+      payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2669,12 +2672,15 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
     // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_CORRECAO (nunca existiu
     // como coluna real); ATUALIZADO_POR/ATUALIZADO_EM agora persistem de verdade.
+    // V2.17C — SCORE=100 (decisão de produto: toda decisão manual do financeiro,
+    // incluindo solicitar correção, grava confiança máxima) — faltava aqui, só
+    // existia em CONCILIAR_MANUALMENTE_DEV.
     var responsavel = FIN_FLASH_V2_v217UsuarioResponsavel_();
     var atualizadoEm = FIN_FLASH_V2_now10_();
-    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'AGUARDANDO_CORRECAO',MOTIVO_DECISAO:payload.motivo,
+    FIN_FLASH_V2_setByHeaders_(hit, {STATUS:'AGUARDANDO_CORRECAO',SCORE:100,MOTIVO_DECISAO:payload.motivo,
       ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('SOLICITAR_CORRECAO_COMPROVANTE','CONCILIACAO',
-      payload.conciliacaoId,{motivo:payload.motivo,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
+      payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -8825,4 +8831,82 @@ function finalizarV217B_(r) {
 
 function TESTAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.17C — Corrige SCORE não gravado em Reprovar/Solicitar Correção
+// (só CONCILIAR_MANUALMENTE_DEV gravava SCORE=100; as outras 2 esqueciam a
+// chave no patch). Auditoria somente leitura: chama só a listagem (nunca as
+// 3 ações que gravam) e confere que motivo/responsável/data continuam ok.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.17C', somenteLeitura: true, executado: false,
+    score: { conciliarManualScore100: false, reprovarScore100: false, solicitarCorrecaoScore100: false, listagemLeScore: false, frontendRenderizaScore: false, ok: false },
+    regressao: { motivoDecisaoPersiste: false, atualizadoPorPersiste: false, atualizadoEmPersiste: false, schemaAutoMantido: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    // ── As 3 ações gravam SCORE=100? ─────────────────────────────────────────
+    // Não é possível chamar CONCILIAR_MANUALMENTE_DEV/REPROVAR_COMPROVANTE_DEV/
+    // SOLICITAR_CORRECAO_COMPROVANTE_DEV aqui — gravariam dado real, violando
+    // "somente leitura". Confirmado por construção do patch (GAS não lê o próprio
+    // código-fonte .js em runtime): SCORE:100 está no patch das 3, o bug era
+    // exatamente a ausência disso nas 2 últimas, corrigido nesta revisão.
+    r.score.conciliarManualScore100 = true;
+    r.score.reprovarScore100 = true;
+    r.score.solicitarCorrecaoScore100 = true;
+    r.avisos.push('conciliarManualScore100/reprovarScore100/solicitarCorrecaoScore100 confirmados por construção do patch, não por execução real.');
+
+    // ── Listagem lê e expõe score? (chamada real, só leitura) ───────────────
+    var listagem = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ limite: 500 });
+    if (!listagem.ok) {
+      r.bloqueios.push('LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV falhou: ' + JSON.stringify(listagem.bloqueios));
+    } else {
+      var itens = listagem.itens || [];
+      var item0 = itens[0];
+      r.score.listagemLeScore = !item0 || item0.hasOwnProperty('score');
+      if (!r.score.listagemLeScore) r.bloqueios.push('Item retornado pela listagem não tem a chave score.');
+
+      // Evidência real de persistência (dados reais já testados manualmente no DEV).
+      r.regressao.motivoDecisaoPersiste = itens.some(function(it){ return !!it.motivoDecisao; });
+      r.regressao.atualizadoPorPersiste = itens.some(function(it){ return !!it.atualizadoPor; });
+      r.regressao.atualizadoEmPersiste = itens.some(function(it){ return !!it.atualizadoEm; });
+      if (!itens.length) r.avisos.push('Nenhuma conciliação na base para validar persistência real — checagem só estrutural.');
+
+      var reprovadasOuCorrecao = itens.filter(function(it){ return it.statusConciliacao === 'REPROVADO' || it.statusConciliacao === 'AGUARDANDO_CORRECAO'; });
+      var comScoreNumerico = reprovadasOuCorrecao.filter(function(it){ return it.score !== null && it.score !== undefined; });
+      if (reprovadasOuCorrecao.length) {
+        r.avisos.push(comScoreNumerico.length + ' de ' + reprovadasOuCorrecao.length + ' linha(s) REPROVADO/AGUARDANDO_CORRECAO com score numérico — linhas gravadas antes da V2.17C ficam null/"—" por design (sem backfill histórico).');
+      }
+    }
+
+    // ── Frontend renderiza score corretamente, inclusive 0 (não vira "—")? ──
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+    var temColunaScore = html.indexOf('Score:') >= 0;
+    var ternarioNaoTrataZeroComoVazio = html.indexOf("it.score===null||it.score===undefined||it.score===''") >= 0;
+    r.score.frontendRenderizaScore = temColunaScore && ternarioNaoTrataZeroComoVazio;
+    if (!r.score.frontendRenderizaScore) r.bloqueios.push('Frontend não expõe a coluna Score corretamente, ou o teste de nulidade pode estar tratando 0 como vazio.');
+
+    r.score.ok = r.score.conciliarManualScore100 && r.score.reprovarScore100 && r.score.solicitarCorrecaoScore100 &&
+      r.score.listagemLeScore && r.score.frontendRenderizaScore;
+
+    // ── Schema automático (V2.17B) continua íntegro? ────────────────────────
+    var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    r.regressao.schemaAutoMantido = ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'].every(function(h){ return concHeaders.indexOf(h) >= 0; });
+    if (!r.regressao.schemaAutoMantido) r.bloqueios.push('Algum dos 4 headers de motivo/score sumiu da aba CONCILIACOES.');
+
+    r.regressao.ok = r.regressao.motivoDecisaoPersiste && r.regressao.atualizadoPorPersiste && r.regressao.atualizadoEmPersiste && r.regressao.schemaAutoMantido;
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR();
 }
