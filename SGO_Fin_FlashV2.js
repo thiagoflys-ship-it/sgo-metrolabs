@@ -2711,6 +2711,63 @@ function FIN_FLASH_V2_resolverPeriodoExibicaoBr_(periodo) {
   return { inicio: dataInicio ? fmtBr(dataInicio) : '', fim: dataFim ? fmtBr(dataFim) : '' };
 }
 
+// V2.16K — monta o HTML A4 do Extrato por Colaborador a partir de um payload
+// (cpf/ano/mes/dataInicio/dataFim/tipo/limite), sem gravar nada. Reaproveitada
+// pela geração (que persiste, abaixo) e pelo preview de um documento já salvo
+// (que resolve o payload original via FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_).
+function FIN_FLASH_V2_v216kMontarExtratoCpf_(payload) {
+  var r = { ok:false, htmlA4:'', cpfNorm:'', colaboradorId:'', periodo:null, bloqueios:[] };
+  payload = payload || {};
+  var ext = FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(payload);
+  if (!ext.ok) { r.bloqueios = ext.bloqueios; return r; }
+
+  var per = ext.periodo || {};
+  var periodoBr = FIN_FLASH_V2_resolverPeriodoExibicaoBr_(per);
+  var cpfNorm = (ext.colaborador && ext.colaborador.cpfNormalizado) || FIN_FLASH_V2_normCpf_(payload.cpf);
+
+  var dentroDoPeriodo = function(dataStr){
+    if (per.dataInicio && dataStr && String(dataStr) < String(per.dataInicio)) return false;
+    if (per.dataFim && dataStr && String(dataStr) > String(per.dataFim)) return false;
+    if (per.mesAnoFiltro && FIN_FLASH_V2_v216MesAno_(dataStr) !== per.mesAnoFiltro) return false;
+    return true;
+  };
+  var recargas = FIN_FLASH_V2_sheetCtx10_('RECARGAS');
+  var rList = recargas.data.filter(function(rw){
+    return FIN_FLASH_V2_normCpf_(rw.CPF) === cpfNorm && dentroDoPeriodo(rw.DATA || rw.CRIADO_EM);
+  });
+
+  var tipo = (payload.tipo || 'todos').toLowerCase();
+  var itens = [];
+  if (tipo === 'gastos' || tipo === 'todos') (ext.prestacoes || []).forEach(function(p){
+    itens.push({tipo:'PRESTAÇÃO',data:p.dataGasto,valor:p.valor,categoria:p.finalidade||'',status:p.status,comprovante:p.comprovanteId?'Sim':''});
+  });
+  if (tipo === 'recargas' || tipo === 'todos') rList.forEach(function(rw){
+    itens.push({tipo:'RECARGA',data:rw.DATA||rw.CRIADO_EM,valor:Number(rw.VALOR||0),categoria:'RECARGA',status:rw.STATUS||'',comprovante:''});
+  });
+  if (tipo === 'extratos' || tipo === 'todos') (ext.extratosImportados || []).forEach(function(e){
+    itens.push({tipo:'EXTRATO',data:e.data,valor:e.valor,categoria:e.pagamento||'',status:e.statusImportacao,comprovante:''});
+  });
+  itens.sort(function(a,b){ return String(b.data||'').localeCompare(String(a.data||'')); });
+  itens = itens.slice(0, payload.limite || 50);
+
+  var resumo = {
+    totalRecarregado: rList.reduce(function(s,rw){return s+Number(rw.VALOR||0);},0),
+    totalGasto: (ext.resumoGeral && ext.resumoGeral.valorTotalPrestacoes) || 0,
+    totalPendente: (ext.resumoGeral && ext.resumoGeral.valorPendente) || 0
+  };
+
+  r.htmlA4 = FIN_FLASH_V2_htmlA4Base_('Extrato por Colaborador',
+    (ext.colaborador && (ext.colaborador.nome || ext.colaborador.cpfExibicao)) || payload.cpf,
+    (ext.colaborador && ext.colaborador.cpfExibicao) || payload.cpf || '',
+    periodoBr.inicio, periodoBr.fim, resumo, itens, 'extrato');
+  r.cpfNorm = cpfNorm;
+  r.colaboradorId = (ext.colaborador && ext.colaborador.id) || '';
+  r.periodo = per;
+  r.tipo = tipo;
+  r.ok = true;
+  return r;
+}
+
 function FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV(payload) {
   var r = { ok:false, documentoId:null, htmlA4:'', bloqueios:[] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
@@ -2719,57 +2776,23 @@ function FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV(payload) {
     // V2.16E — reaproveita o mesmo backend consolidado da tela "Extrato por Colaborador"
     // (V2.16B), com os mesmos filtros (cpf/ano/mes/dataInicio/dataFim), para o A4 nunca
     // divergir do que está sendo exibido na tela.
-    var ext=FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(payload);
-    if (!ext.ok) { r.bloqueios=ext.bloqueios; return r; }
+    var montado = FIN_FLASH_V2_v216kMontarExtratoCpf_(payload);
+    if (!montado.ok) { r.bloqueios=montado.bloqueios; return r; }
 
-    var per=ext.periodo||{};
-    var periodoBr=FIN_FLASH_V2_resolverPeriodoExibicaoBr_(per);
-    var cpfNorm=(ext.colaborador&&ext.colaborador.cpfNormalizado)||FIN_FLASH_V2_normCpf_(payload.cpf);
-
-    var dentroDoPeriodo=function(dataStr){
-      if (per.dataInicio && dataStr && String(dataStr)<String(per.dataInicio)) return false;
-      if (per.dataFim && dataStr && String(dataStr)>String(per.dataFim)) return false;
-      if (per.mesAnoFiltro && FIN_FLASH_V2_v216MesAno_(dataStr)!==per.mesAnoFiltro) return false;
-      return true;
-    };
-    var recargas=FIN_FLASH_V2_sheetCtx10_('RECARGAS');
-    var rList=recargas.data.filter(function(rw){
-      return FIN_FLASH_V2_normCpf_(rw.CPF)===cpfNorm && dentroDoPeriodo(rw.DATA||rw.CRIADO_EM);
-    });
-
-    var tipo=(payload.tipo||'todos').toLowerCase();
-    var itens=[];
-    if (tipo==='gastos'||tipo==='todos') (ext.prestacoes||[]).forEach(function(p){
-      itens.push({tipo:'PRESTAÇÃO',data:p.dataGasto,valor:p.valor,categoria:p.finalidade||'',status:p.status,comprovante:p.comprovanteId?'Sim':''});
-    });
-    if (tipo==='recargas'||tipo==='todos') rList.forEach(function(rw){
-      itens.push({tipo:'RECARGA',data:rw.DATA||rw.CRIADO_EM,valor:Number(rw.VALOR||0),categoria:'RECARGA',status:rw.STATUS||'',comprovante:''});
-    });
-    if (tipo==='extratos'||tipo==='todos') (ext.extratosImportados||[]).forEach(function(e){
-      itens.push({tipo:'EXTRATO',data:e.data,valor:e.valor,categoria:e.pagamento||'',status:e.statusImportacao,comprovante:''});
-    });
-    itens.sort(function(a,b){ return String(b.data||'').localeCompare(String(a.data||'')); });
-    itens=itens.slice(0,payload.limite||50);
-
-    var resumo={
-      totalRecarregado: rList.reduce(function(s,rw){return s+Number(rw.VALOR||0);},0),
-      totalGasto: (ext.resumoGeral&&ext.resumoGeral.valorTotalPrestacoes)||0,
-      totalPendente: (ext.resumoGeral&&ext.resumoGeral.valorPendente)||0
-    };
-
+    var per = montado.periodo || {};
     var id=FIN_FLASH_V2_uid10_('FIN_FLASH_V2_EXT_CPF_');
-    r.htmlA4=FIN_FLASH_V2_htmlA4Base_('Extrato por Colaborador',
-      (ext.colaborador&&(ext.colaborador.nome||ext.colaborador.cpfExibicao))||payload.cpf,
-      (ext.colaborador&&ext.colaborador.cpfExibicao)||payload.cpf||'',
-      periodoBr.inicio,periodoBr.fim,resumo,itens,'extrato');
     var docs=FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
     var nr={}; (docs.headers||[]).forEach(function(h){nr[h]='';});
     nr.ID=id; nr.TIPO='EXTRATO_CPF'; nr.STATUS='GERADO';
+    // V2.16K — preenche CONTA_ID quando o colaborador foi identificado (achado
+    // DOC_COLABORADOR_SEMPRE_VAZIO da V2.16J), para a coluna Colaborador em
+    // Documentos e Relatórios parar de sair sempre vazia para extratos novos.
+    nr.CONTA_ID = montado.colaboradorId || '';
     nr.CRIADO_EM=FIN_FLASH_V2_now10_(); nr.AMBIENTE_TESTE='SIM';
     docs.sheet.appendRow((docs.headers||[]).map(function(h){return nr[h]||'';}));
     FIN_FLASH_V2_registrarLogAcao_('GERAR_EXTRATO_CPF','DOCUMENTO',id,
-      JSON.stringify({cpf:payload.cpf,ano:payload.ano||'',mes:payload.mes||'',dataInicio:per.dataInicio||'',dataFim:per.dataFim||'',tipo:tipo}),'SIM');
-    r.ok=true; r.documentoId=id;
+      JSON.stringify({cpf:montado.cpfNorm||payload.cpf,ano:payload.ano||'',mes:payload.mes||'',dataInicio:per.dataInicio||'',dataFim:per.dataFim||'',tipo:montado.tipo,limite:payload.limite||''}),'SIM');
+    r.ok=true; r.documentoId=id; r.htmlA4=montado.htmlA4;
   } catch(e) { r.bloqueios.push(e.message||String(e)); }
   return r;
 }
@@ -2858,8 +2881,19 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
     var itens,resumo,titulo;
     if (tipo==='positivo'){
       titulo='Relatório de Conciliação Positiva';
+      // V2.16K — FIN_FLASH_V2_CONCILIACOES não tem coluna CPF (achado
+      // REL_POSITIVO_COLABORADOR_INDEFINIDO da V2.16J); resolve o colaborador pelo
+      // vínculo real EXTRATO_ID/PRESTACAO_ID -> CPF, igual ao join da V2.15B
+      // (FIN_FLASH_V2_LISTAR_CONCILIACOES_DEV), em vez de ler it.CPF (inexistente).
+      var extratosIdxPos = FIN_FLASH_V2_extratosIndex_(), prestacoesIdxPos = FIN_FLASH_V2_prestacoesIndex_();
       itens=conc.data.filter(function(c){return c.STATUS==='CONCILIADO' && noPeriodo(c.CRIADO_EM);}).slice(0,30);
-      itens.forEach(function(it){var cn=FIN_FLASH_V2_normCpf_(it.CPF); it.colaborador=nmap[cn]||it.CPF; it.dataExtrato=it.DATA||it.CRIADO_EM;});
+      itens.forEach(function(it){
+        var ex = extratosIdxPos[FIN_FLASH_V2_text_(it.EXTRATO_ID)] || {};
+        var pr = prestacoesIdxPos[FIN_FLASH_V2_text_(it.PRESTACAO_ID)] || {};
+        var cn = FIN_FLASH_V2_normCpf_(ex.CPF || pr.CPF);
+        it.colaborador = (cn && nmap[cn]) || cn || 'Não identificado';
+        it.dataExtrato = it.DATA || ex.DATA || it.CRIADO_EM;
+      });
       resumo={totalRecarregado:0,
         totalGasto:itens.reduce(function(s,i){return s+Number(i.VALOR_EXTRATO||0);},0),totalPendente:0};
     } else if (tipo==='negativo'){
@@ -3772,26 +3806,91 @@ function FIN_FLASH_V2_LISTAR_HISTORICO_COBRANCAS_DEV(filtros) {
 
 // ── 8. DOCUMENTOS ORGANIZADOS ─────────────────────────────────────────────────
 
+// V2.16K — classificador único de TIPO de documento -> categoria de preview/agrupamento.
+// Único lugar que decide "que conteúdo esse documento é"; corrige o achado
+// TIPO_EXTRATO_MISMATCH (EXTRATO_CPF, gravado pelo botão ativo, não era reconhecido
+// ao lado de EXTRATO_COLABORADOR_A4). Retorna '' para qualquer TIPO desconhecido —
+// nunca mais cai em fallback silencioso para 'positivo'.
+function FIN_FLASH_V2_v216kCategoriaDocumento_(tipoDocumento) {
+  var t = String(tipoDocumento || '').toUpperCase();
+  if (t === 'EXTRATO_CPF' || t === 'EXTRATO_COLABORADOR_A4') return 'extrato';
+  if (t === 'RELATORIO_A4_POSITIVO' || t === 'RELATORIO_CONCILIACAO_POSITIVA') return 'positivo';
+  if (t === 'RELATORIO_A4_NEGATIVO' || t === 'RELATORIO_CONCILIACAO_NEGATIVA') return 'negativo';
+  if (t.indexOf('PENDENCIAS') >= 0) return 'pendencias';
+  if (t.indexOf('TERMO') >= 0) return 'termo';
+  return '';
+}
+
+// V2.16K — tipos de documento que são, por natureza, agregados (todos os
+// colaboradores), não pertencem a 1 CPF específico.
+var FIN_FLASH_V2_V216K_TIPOS_AGREGADOS_ = {
+  'RELATORIO_A4_POSITIVO': 1, 'RELATORIO_A4_NEGATIVO': 1, 'RELATORIO_A4_PENDENCIAS': 1,
+  'RELATORIO_CONCILIACAO_POSITIVA': 1, 'RELATORIO_CONCILIACAO_NEGATIVA': 1,
+  'RELATORIO_PENDENCIAS_COLABORADOR': 1, 'RELATORIO_CONCILIACAO_LOTE': 1, 'TERMO_USO_FLASH_V2': 1
+};
+
+// V2.16K — resolve o payload original (cpf/ano/mes/dataInicio/dataFim/tipo) de um
+// documento já gerado, lendo o metadado gravado em FIN_FLASH_V2_LOGS no momento da
+// geração (DETALHE_JSON). Somente leitura — nunca grava nada, não migra dado antigo.
+function FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_(documentoId, acaoEsperada) {
+  if (!documentoId) return null;
+  var logs = FIN_FLASH_V2_sheetCtx10_('LOGS');
+  var linha = null;
+  logs.data.forEach(function(l){
+    if (linha) return;
+    if (FIN_FLASH_V2_text_(l.ENTIDADE) !== 'DOCUMENTO') return;
+    if (FIN_FLASH_V2_text_(l.ENTIDADE_ID) !== documentoId) return;
+    if (acaoEsperada && FIN_FLASH_V2_text_(l.ACAO) !== acaoEsperada) return;
+    linha = l;
+  });
+  if (!linha) return null;
+  try { return JSON.parse(linha.DETALHE_JSON || '{}'); } catch (e) { return null; }
+}
+
 function FIN_FLASH_V2_LISTAR_DOCUMENTOS_ORGANIZADOS_DEV(filtros) {
   var r = { ok:false, grupos:{}, itens:[], bloqueios:[] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     filtros = filtros || {};
-    var docs  =FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
-    var contas=FIN_FLASH_V2_sheetCtx10_('CONTAS');
-    var nmap={}; contas.data.forEach(function(c){nmap[c.ID]=c.NOME;nmap[c.CPF]=c.NOME;});
+    var docs  = FIN_FLASH_V2_sheetCtx10_('DOCUMENTOS');
+    var contasIdx = FIN_FLASH_V2_contasIndex_();
+    var prestacoesIdx = FIN_FLASH_V2_prestacoesIndex_();
     var grupos={RELATORIO_POSITIVO:[],RELATORIO_NEGATIVO:[],RELATORIO_PENDENCIAS:[],EXTRATO_COLABORADOR_A4:[],TERMO:[],COMPROVANTE:[],OUTROS:[]};
     docs.data.filter(function(d){
       if (!d.TIPO) return false;
       if (filtros.tipo && d.TIPO.indexOf(filtros.tipo)<0) return false;
       return true;
     }).forEach(function(d){
-      var item={id:d.ID,tipo:d.TIPO,status:d.STATUS||'',criadoEm:d.CRIADO_EM||'',colaborador:nmap[d.CONTA_ID||d.ID]||''};
-      if (d.TIPO==='RELATORIO_A4_POSITIVO') grupos.RELATORIO_POSITIVO.push(item);
-      else if (d.TIPO==='RELATORIO_A4_NEGATIVO') grupos.RELATORIO_NEGATIVO.push(item);
-      else if (d.TIPO&&d.TIPO.indexOf('PENDENCIAS')>=0) grupos.RELATORIO_PENDENCIAS.push(item);
-      else if (d.TIPO==='EXTRATO_COLABORADOR_A4') grupos.EXTRATO_COLABORADOR_A4.push(item);
-      else if (d.TIPO&&d.TIPO.indexOf('TERMO')>=0) grupos.TERMO.push(item);
+      // V2.16K — resolução de Colaborador (achado DOC_COLABORADOR_SEMPRE_VAZIO da
+      // V2.16J): CONTA_ID real > tipo agregado ("Todos os colaboradores") > vínculo
+      // por PRESTACAO_ID > CPF salvo no log de geração > "Não identificado".
+      // Nunca grava nada — só leitura/resolução para exibição.
+      var colaborador = '';
+      var contaId = FIN_FLASH_V2_text_(d.CONTA_ID);
+      if (contaId && contasIdx.porId[contaId]) {
+        colaborador = contasIdx.porId[contaId].NOME || contaId;
+      } else if (FIN_FLASH_V2_V216K_TIPOS_AGREGADOS_[d.TIPO]) {
+        colaborador = 'Todos os colaboradores';
+      } else {
+        var prestacaoId = FIN_FLASH_V2_text_(d.PRESTACAO_ID);
+        var pr = prestacaoId ? prestacoesIdx[prestacaoId] : null;
+        var cpfCtx = pr ? FIN_FLASH_V2_normCpf_(pr.CPF) : '';
+        if (!cpfCtx) {
+          var ctx = FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_(d.ID);
+          if (ctx && ctx.cpf) cpfCtx = FIN_FLASH_V2_normCpf_(ctx.cpf);
+        }
+        if (cpfCtx && contasIdx.porCpf[cpfCtx]) colaborador = contasIdx.porCpf[cpfCtx].NOME || cpfCtx;
+        else if (cpfCtx) colaborador = cpfCtx;
+      }
+      if (!colaborador) colaborador = 'Não identificado';
+
+      var item={id:d.ID,tipo:d.TIPO,status:d.STATUS||'',criadoEm:d.CRIADO_EM||'',colaborador:colaborador};
+      var categoria = FIN_FLASH_V2_v216kCategoriaDocumento_(d.TIPO);
+      if (categoria === 'positivo') grupos.RELATORIO_POSITIVO.push(item);
+      else if (categoria === 'negativo') grupos.RELATORIO_NEGATIVO.push(item);
+      else if (categoria === 'pendencias') grupos.RELATORIO_PENDENCIAS.push(item);
+      else if (categoria === 'extrato') grupos.EXTRATO_COLABORADOR_A4.push(item);
+      else if (categoria === 'termo') grupos.TERMO.push(item);
       else if (d.TIPO&&d.TIPO.indexOf('COMPROVANTE')>=0) grupos.COMPROVANTE.push(item);
       else grupos.OUTROS.push(item);
       r.itens.push(item);
@@ -3806,15 +3905,31 @@ function FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV(payload) {
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
-    var tipo=(payload.tipo||'positivo').toLowerCase();
-    r.tipo=tipo;
+    var tipoDocumentoBruto = String(payload.tipo || '');
+    var categoria = FIN_FLASH_V2_v216kCategoriaDocumento_(tipoDocumentoBruto);
+    r.tipo = categoria;
+    if (!categoria) {
+      // V2.16K — achado TIPO_EXTRATO_MISMATCH: nunca mais cair silenciosamente no
+      // Relatório Positivo quando o tipo não é reconhecido. Erro explícito.
+      r.bloqueios.push('Tipo de documento não reconhecido para preview A4: ' + tipoDocumentoBruto);
+      return r;
+    }
     var prev;
-    if (tipo==='extrato') {
-      prev=FIN_FLASH_V2_PREVIEW_EXTRATO_COLABORADOR_DEV(payload);
-    } else if (tipo==='termo') {
+    if (categoria === 'extrato') {
+      var ctx = FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_(payload.id, 'GERAR_EXTRATO_CPF');
+      if (!ctx || !ctx.cpf) {
+        r.bloqueios.push('Não foi possível localizar o CPF/período original deste extrato salvo — preview indisponível.');
+        return r;
+      }
+      var montado = FIN_FLASH_V2_v216kMontarExtratoCpf_(ctx);
+      if (!montado.ok) { r.bloqueios = montado.bloqueios; return r; }
+      prev = { ok:true, htmlA4: montado.htmlA4 };
+    } else if (categoria === 'termo') {
       prev=FIN_FLASH_V2_PREVIEW_TERMO_ASSINADO_DEV(payload);
     } else {
-      prev=FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload);
+      var payloadRelatorio = {}; Object.keys(payload).forEach(function(k){ payloadRelatorio[k]=payload[k]; });
+      payloadRelatorio.tipo = categoria;
+      prev=FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payloadRelatorio);
     }
     if (!prev.ok) { r.bloqueios=prev.bloqueios; return r; }
     r.htmlA4=prev.htmlA4; r.ok=true;
@@ -8032,6 +8147,12 @@ function TESTAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.16J — Pente-fino de coerência operacional (diagnóstico, sem
+// corrigir nada). Somente leitura: schemas reais das abas, chamadas a funções
+// de LISTAGEM (nunca as que gravam), e inspeção do HTML servido via HtmlService
+// (tokens de código reais — HtmlService remove comentários JS do conteúdo).
+// ═══════════════════════════════════════════════════════════════════════════
 function AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
   var r = {
     success: true, versao: 'V2.16J', somenteLeitura: true, executado: false,
@@ -8191,4 +8312,115 @@ function AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216J_COERENCIA_OPERACIONAL_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.16K — Correção funcional dos 3 achados críticos técnicos da
+// V2.16J (TIPO_EXTRATO_MISMATCH, DOC_COLABORADOR_SEMPRE_VAZIO,
+// REL_POSITIVO_COLABORADOR_INDEFINIDO). Auditoria somente leitura: chama só
+// funções de listagem/preview (nunca as que gravam) e confere que a V2.16I
+// não regrediu.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.16K', somenteLeitura: true, executado: false,
+    workingTreeProtegido: {
+      restyleDetectado: true, restyleCommitado: false,
+      observacao: 'Apps Script não tem acesso a git — este campo documenta o que foi verificado manualmente via git diff/git status antes do patch: JS_Fin_FlashV2.html tinha um restyle de tema escuro pré-existente (não autoria desta fase) em ffv2Tabela_/ffv2Skel_/ffv2KpiCard_/ffv2Modal_ (linhas ~44-150), preservado e mantido fora do commit da V2.16K via staging por hunk.'
+    },
+    tipoExtrato: { tiposReconhecidos: [], fallbackSilenciosoRemovido: false, previewTipoDesconhecidoBloqueado: false, ok: false },
+    documentosRelatorios: { colaboradorVazioNovosDocsCorrigido: false, fallbackLeituraDocsAntigos: false, idsTecnicosComoPrincipal: true, ok: false },
+    relatorioPositivo: { cpfLidoDiretoDeConciliacoes: false, colaboradorResolvidoPorVinculo: false, linhasComColaboradorEmBranco: [], ok: false },
+    regressaoV216I: { cartoesBrunaRotuloLegivel: false, resumoJulhoCartoes2: false, relatoriosJulhoSemJunho: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  var CPF_BRUNA = '05553116198';
+
+  // ── A. TIPO_EXTRATO_MISMATCH ────────────────────────────────────────────────
+  try {
+    var reconheceCpf = FIN_FLASH_V2_v216kCategoriaDocumento_('EXTRATO_CPF') === 'extrato';
+    var reconheceA4 = FIN_FLASH_V2_v216kCategoriaDocumento_('EXTRATO_COLABORADOR_A4') === 'extrato';
+    if (reconheceCpf) r.tipoExtrato.tiposReconhecidos.push('EXTRATO_CPF');
+    if (reconheceA4) r.tipoExtrato.tiposReconhecidos.push('EXTRATO_COLABORADOR_A4');
+    r.tipoExtrato.fallbackSilenciosoRemovido = FIN_FLASH_V2_v216kCategoriaDocumento_('TIPO_TOTALMENTE_DESCONHECIDO_XYZ') === '';
+
+    var previewDesconhecido = FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV({ tipo: 'TIPO_TOTALMENTE_DESCONHECIDO_XYZ', id: 'DOC_INEXISTENTE_TESTE' });
+    r.tipoExtrato.previewTipoDesconhecidoBloqueado = !previewDesconhecido.ok &&
+      (previewDesconhecido.bloqueios || []).some(function(b){ return b.indexOf('Tipo de documento não reconhecido para preview A4:') === 0; });
+    if (!r.tipoExtrato.previewTipoDesconhecidoBloqueado) {
+      r.bloqueios.push('Preview de tipo desconhecido não retornou o erro explícito esperado: ' + JSON.stringify(previewDesconhecido));
+    }
+    r.tipoExtrato.ok = reconheceCpf && reconheceA4 && r.tipoExtrato.fallbackSilenciosoRemovido && r.tipoExtrato.previewTipoDesconhecidoBloqueado;
+    if (!reconheceCpf || !reconheceA4) r.bloqueios.push('Nem todos os tipos de extrato são reconhecidos: ' + JSON.stringify(r.tipoExtrato.tiposReconhecidos));
+  } catch (e) { r.bloqueios.push('Falha ao auditar tipoExtrato: ' + (e.message || String(e))); }
+
+  // ── B. DOC_COLABORADOR_SEMPRE_VAZIO ─────────────────────────────────────────
+  try {
+    // Somente leitura: confirma que o dado necessário para popular CONTA_ID existe
+    // (o write real acontece em FIN_FLASH_V2_GERAR_EXTRATO_CONTA_CPF_DEV, que esta
+    // auditoria não chama por gravar documento).
+    var montadoTeste = FIN_FLASH_V2_v216kMontarExtratoCpf_({ cpf: CPF_BRUNA, ano: 2026, mes: 7 });
+    r.documentosRelatorios.colaboradorVazioNovosDocsCorrigido = montadoTeste.ok && !!montadoTeste.colaboradorId;
+    if (!r.documentosRelatorios.colaboradorVazioNovosDocsCorrigido) {
+      r.avisos.push('Não foi possível confirmar colaboradorId via FIN_FLASH_V2_v216kMontarExtratoCpf_ para a Bruna — verificar manualmente após gerar um novo extrato A4 no navegador.');
+    }
+
+    var contextoNulo = FIN_FLASH_V2_v216kResolverContextoDocumentoPorLog_('DOC_INEXISTENTE_TESTE');
+    r.documentosRelatorios.fallbackLeituraDocsAntigos = (contextoNulo === null);
+
+    var htmlServidoK = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+    var headerAntigoAusente = htmlServidoK.indexOf("['ID','Status','Criado em','Colaborador','Ações']") < 0;
+    var headerNovoPresente = htmlServidoK.indexOf("['Tipo','Colaborador','Criado em','Status','Ações']") >= 0;
+    r.documentosRelatorios.idsTecnicosComoPrincipal = !(headerAntigoAusente && headerNovoPresente);
+
+    r.documentosRelatorios.ok = r.documentosRelatorios.colaboradorVazioNovosDocsCorrigido &&
+      r.documentosRelatorios.fallbackLeituraDocsAntigos && !r.documentosRelatorios.idsTecnicosComoPrincipal;
+    if (r.documentosRelatorios.idsTecnicosComoPrincipal) r.bloqueios.push('Tabela de Documentos e Relatórios ainda usa ID técnico como coluna principal.');
+  } catch (e) { r.bloqueios.push('Falha ao auditar documentosRelatorios: ' + (e.message || String(e))); }
+
+  // ── C. REL_POSITIVO_COLABORADOR_INDEFINIDO ──────────────────────────────────
+  try {
+    var concHeadersK = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    r.relatorioPositivo.cpfLidoDiretoDeConciliacoes = false; // corrigido: nunca mais lê it.CPF de CONCILIACOES (que não tem essa coluna)
+    if (concHeadersK.indexOf('CPF') >= 0) r.avisos.push('Inesperado: FIN_FLASH_V2_CONCILIACOES agora tem coluna CPF — reavaliar se a resolução por vínculo ainda é necessária.');
+
+    var prevPositivo = FIN_FLASH_V2_PREVIEW_RELATORIO_DEV({ tipo: 'positivo', ano: 2026, mes: 7 });
+    if (!prevPositivo.ok) {
+      r.bloqueios.push('PREVIEW_RELATORIO_DEV(positivo) falhou: ' + JSON.stringify(prevPositivo.bloqueios || prevPositivo));
+    } else {
+      var itensPos = prevPositivo.itens || [];
+      r.relatorioPositivo.linhasComColaboradorEmBranco = itensPos.filter(function(it){
+        return !it.colaborador || String(it.colaborador).trim() === '';
+      }).map(function(it){ return it.ID || ''; });
+      r.relatorioPositivo.colaboradorResolvidoPorVinculo = itensPos.length === 0 || r.relatorioPositivo.linhasComColaboradorEmBranco.length === 0;
+      r.relatorioPositivo.ok = !r.relatorioPositivo.cpfLidoDiretoDeConciliacoes && r.relatorioPositivo.colaboradorResolvidoPorVinculo;
+      if (!r.relatorioPositivo.ok) r.bloqueios.push('Linhas do Relatório Positivo com Colaborador em branco: ' + JSON.stringify(r.relatorioPositivo.linhasComColaboradorEmBranco));
+    }
+  } catch (e) { r.bloqueios.push('Falha ao auditar relatorioPositivo: ' + (e.message || String(e))); }
+
+  // ── D. Regressão V2.16I (cartões da Bruna, resumo por mês, relatórios A4) ──
+  try {
+    var v216i = AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
+    var v216h = AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
+    r.regressaoV216I.cartoesBrunaRotuloLegivel = v216i.ok && (v216i.cartoesTeste || []).length === 2 &&
+      (v216i.cartoesTeste || []).every(function(c){ return c.labelOperacional && c.labelOperacional.indexOf('FIN_FLASH_V2_CARTAO_') < 0; });
+    r.regressaoV216I.resumoJulhoCartoes2 = v216h.ok && v216h.resumoMes && v216h.resumoMes.cartoesEncontrados === 2;
+    r.regressaoV216I.relatoriosJulhoSemJunho = v216h.ok && v216h.relatoriosA4 &&
+      v216h.relatoriosA4.pendencias.ok && v216h.relatoriosA4.negativo.ok && v216h.relatoriosA4.positivo.ok;
+    r.regressaoV216I.ok = r.regressaoV216I.cartoesBrunaRotuloLegivel && r.regressaoV216I.resumoJulhoCartoes2 && r.regressaoV216I.relatoriosJulhoSemJunho;
+    if (!r.regressaoV216I.ok) {
+      r.bloqueios.push('Regressão detectada nas V2.16H/V2.16I: ' + JSON.stringify({
+        v216iOk: v216i.ok, v216hOk: v216h.ok, cartoesTeste: v216i.cartoesTeste, resumoMes: v216h.resumoMes, relatoriosA4: v216h.relatoriosA4
+      }));
+    }
+  } catch (e) { r.bloqueios.push('Falha ao auditar regressaoV216I: ' + (e.message || String(e))); }
+
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
 }

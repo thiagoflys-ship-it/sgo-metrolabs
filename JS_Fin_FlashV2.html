@@ -1469,14 +1469,18 @@ function ffv2CarregarListaDocs_() {
       Object.keys(grupos).forEach(function(k){
         var itens = grupos[k]||[];
         if (!itens.length) return;
+        // V2.16K — coluna principal deixa de ser o ID técnico (achado da V2.16J);
+        // o ID interno fica só em data-doc-id, igual ao padrão data-cartao-id da V2.16I.
         var rows = itens.map(function(d){
-          return {ID:d.id,Status:d.status,'Criado em':d.criadoEm||'',Colaborador:d.colaborador||'—',
+          var tipoLabel = nomes[k]||d.tipo;
+          return {Tipo:tipoLabel,Colaborador:d.colaborador||'Não identificado','Criado em':d.criadoEm||'',Status:d.status,
+            '_html_Tipo':'<span data-doc-id="'+finFlashV2Escape_(d.id)+'">'+finFlashV2Escape_(tipoLabel)+'</span>',
             '_html_Status':ffv2Badge_(d.status),
             '_html_Ações':'<button onclick="ffv2PreviewDocA4_(\''+finFlashV2Escape_(d.tipo)+'\',\''+finFlashV2Escape_(d.id)+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:10px;padding:3px 7px;">&#128065; Preview A4</button>'
           };
         });
         html += '<p class="ffv2-section-title" style="margin-top:12px;">'+finFlashV2Escape_(nomes[k]||k)+' ('+itens.length+')</p>'+
-          ffv2Tabela_(['ID','Status','Criado em','Colaborador','Ações'],rows,'');
+          ffv2Tabela_(['Tipo','Colaborador','Criado em','Status','Ações'],rows,'');
       });
       if (!html) html = '<div class="ffv2-msg ffv2-msg-in">Nenhum documento gerado ainda.</div>';
       el.innerHTML = html;
@@ -1486,19 +1490,21 @@ function ffv2CarregarListaDocs_() {
 }
 
 function ffv2PreviewDocA4_(tipo, id) {
-  var tipoMap={'RELATORIO_A4_POSITIVO':'positivo','RELATORIO_A4_NEGATIVO':'negativo','EXTRATO_COLABORADOR_A4':'extrato','TERMO_USO_CARTAO_FLASH':'termo'};
-  var tipoBase = tipoMap[tipo]||'positivo';
+  // V2.16K — o TIPO real do documento é enviado como está, sem tradução local; o
+  // backend decide a categoria e nunca cai silenciosamente no Relatório Positivo
+  // quando não reconhece o tipo (ver FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV).
   ffv2Modal_('Preview A4 — carregando…','<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>');
   google.script.run
     .withSuccessHandler(function(r){
       var modal=document.getElementById('ffv2-modal');
-      if(r.ok && modal) {
-        var bodyEl=modal.querySelector('div>div>div:last-child');
-        if(bodyEl) bodyEl.innerHTML=r.htmlA4||'<p>Sem conteúdo.</p>';
-      }
+      if (!modal) return;
+      var bodyEl=modal.querySelector('div>div>div:last-child');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = r.ok ? (r.htmlA4||'<p>Sem conteúdo.</p>')
+        : '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
     })
     .withFailureHandler(function(e){ffv2Modal_('Erro',finFlashV2Escape_(e.message));})
-    .FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV({tipo:tipoBase,id:id});
+    .FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV({tipo:tipo,id:id});
 }
 
 // ── Termos de Uso ─────────────────────────────────────────────────────────────
