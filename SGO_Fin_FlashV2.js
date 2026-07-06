@@ -2621,6 +2621,7 @@ function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
       MOTIVO_DECISAO:payload.motivo,ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('CONCILIAR_MANUALMENTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
+    FIN_FLASH_V2_confL2LInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2651,6 +2652,7 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
       ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('REPROVAR_COMPROVANTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
+    FIN_FLASH_V2_confL2LInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2681,6 +2683,7 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
       ATUALIZADO_POR:responsavel,ATUALIZADO_EM:atualizadoEm});
     FIN_FLASH_V2_registrarLogAcao_('SOLICITAR_CORRECAO_COMPROVANTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
+    FIN_FLASH_V2_confL2LInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -6436,6 +6439,24 @@ function TESTAR_FIN_FLASH_V215_CONFERENCIA_GASTOS_LINHA_A_LINHA_SEM_GRAVAR() {
 
 var FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_ = 120;
 
+// V2.17C — invalidação de cache por geração: a chave do cache da listagem inclui um
+// contador salvo em PropertiesService. As 3 ações (Conciliar/Reprovar/Solicitar
+// Correção) incrementam esse contador ao gravar, o que muda a chave e força um
+// cache-miss garantido na próxima listagem — sem precisar saber os filtros exatos
+// que a tela usava. Achado ao investigar por que um teste rápido logo após uma ação
+// poderia continuar mostrando dado antigo por até FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_.
+function FIN_FLASH_V2_confL2LCacheGeracao_() {
+  try { return PropertiesService.getScriptProperties().getProperty('FFV2_CONF_L2L_GERACAO') || '0'; }
+  catch (e) { return '0'; }
+}
+function FIN_FLASH_V2_confL2LInvalidarCache_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var atual = Number(props.getProperty('FFV2_CONF_L2L_GERACAO') || '0');
+    props.setProperty('FFV2_CONF_L2L_GERACAO', String(atual + 1));
+  } catch (e) { /* nunca bloqueia a ação por falha de cache */ }
+}
+
 function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
   var r = { ok: false, itens: [], total: 0, bloqueios: [], avisos: [] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
@@ -6447,11 +6468,11 @@ function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
   var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
   if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
 
-  // ── Cache curto (leitura), chaveado pelos filtros relevantes ────────────────
+  // ── Cache curto (leitura), chaveado pelos filtros relevantes + geração ──────
   var cache = null, cacheKey = null;
   try {
     cache = CacheService.getScriptCache();
-    cacheKey = 'FFV2_CONF_L2L_' + JSON.stringify({
+    cacheKey = 'FFV2_CONF_L2L_G' + FIN_FLASH_V2_confL2LCacheGeracao_() + '_' + JSON.stringify({
       cpf: filtros.cpf || '', colaboradorId: filtros.colaboradorId || '', status: filtros.status || '',
       dataInicio: filtros.dataInicio || filtros.periodoInicio || '', dataFim: filtros.dataFim || filtros.periodoFim || '',
       periodo: filtros.periodo || '', limite: filtros.limite || 50
@@ -7129,7 +7150,9 @@ function AUDITAR_FIN_FLASH_V215F_PREVIEW_PERFORMANCE_CORRIGIDOS_SEM_GRAVAR() {
 
     // ── Performance: 1ª chamada (fria, cache removido antes) × 2ª chamada (mesmo filtro, deve vir do cache) ──
     var filtroPerf = { cpf: CPF_BRUNA, limite: 1000 };
-    var cacheKeyPerf = 'FFV2_CONF_L2L_' + JSON.stringify({ cpf: CPF_BRUNA, colaboradorId:'', status:'', dataInicio:'', dataFim:'', periodo:'', limite:1000 });
+    // V2.17C — chave de cache agora inclui geração (FIN_FLASH_V2_confL2LCacheGeracao_),
+    // para as 3 ações de Conferência invalidarem o cache automaticamente ao gravar.
+    var cacheKeyPerf = 'FFV2_CONF_L2L_G' + FIN_FLASH_V2_confL2LCacheGeracao_() + '_' + JSON.stringify({ cpf: CPF_BRUNA, colaboradorId:'', status:'', dataInicio:'', dataFim:'', periodo:'', limite:1000 });
     try { CacheService.getScriptCache().remove(cacheKeyPerf); } catch (eRm) {}
     var t0 = new Date().getTime();
     var lista1 = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtroPerf);
@@ -8836,29 +8859,37 @@ function TESTAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR() {
 // ═══════════════════════════════════════════════════════════════════════════
 // FIN_FLASH_V2.17C — Corrige SCORE não gravado em Reprovar/Solicitar Correção
 // (só CONCILIAR_MANUALMENTE_DEV gravava SCORE=100; as outras 2 esqueciam a
-// chave no patch). Auditoria somente leitura: chama só a listagem (nunca as
-// 3 ações que gravam) e confere que motivo/responsável/data continuam ok.
+// chave no patch) e o cache da listagem não invalidar após uma ação (podia
+// mostrar dado antigo por até 120s de qualquer campo, não só score). Auditoria
+// somente leitura: nunca chama as 3 ações que gravam — usa Function.prototype
+// .toString() (suportado pelo V8 do Apps Script) para inspecionar de verdade
+// o código-fonte das 3 funções, em vez de apenas assumir por construção.
 // ═══════════════════════════════════════════════════════════════════════════
 function AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
   var r = {
-    success: true, versao: 'V2.17C', somenteLeitura: true, executado: false,
-    score: { conciliarManualScore100: false, reprovarScore100: false, solicitarCorrecaoScore100: false, listagemLeScore: false, frontendRenderizaScore: false, ok: false },
+    success: true, versao: 'V2.17C',
+    score: { conciliarManualScore100: false, reprovarScore100: false, solicitarCorrecaoScore100: false, listagemLeScore: false, frontendRenderizaScore100: false, ok: false },
     regressao: { motivoDecisaoPersiste: false, atualizadoPorPersiste: false, atualizadoEmPersiste: false, schemaAutoMantido: false, ok: false },
     bloqueios: [], avisos: []
   };
   if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
-    // ── As 3 ações gravam SCORE=100? ─────────────────────────────────────────
-    // Não é possível chamar CONCILIAR_MANUALMENTE_DEV/REPROVAR_COMPROVANTE_DEV/
-    // SOLICITAR_CORRECAO_COMPROVANTE_DEV aqui — gravariam dado real, violando
-    // "somente leitura". Confirmado por construção do patch (GAS não lê o próprio
-    // código-fonte .js em runtime): SCORE:100 está no patch das 3, o bug era
-    // exatamente a ausência disso nas 2 últimas, corrigido nesta revisão.
-    r.score.conciliarManualScore100 = true;
-    r.score.reprovarScore100 = true;
-    r.score.solicitarCorrecaoScore100 = true;
-    r.avisos.push('conciliarManualScore100/reprovarScore100/solicitarCorrecaoScore100 confirmados por construção do patch, não por execução real.');
+    // ── As 3 ações gravam SCORE=100? Prova real via .toString() do código-fonte,
+    // não apenas "confirmado por construção" — sem precisar chamar (e gravar). ──
+    var srcManual = FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV.toString();
+    var srcReprovar = FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV.toString();
+    var srcCorrecao = FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV.toString();
+    r.score.conciliarManualScore100 = srcManual.indexOf('SCORE:100') >= 0;
+    r.score.reprovarScore100 = srcReprovar.indexOf('SCORE:100') >= 0;
+    r.score.solicitarCorrecaoScore100 = srcCorrecao.indexOf('SCORE:100') >= 0;
+    if (!r.score.conciliarManualScore100) r.bloqueios.push('FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV não grava SCORE:100.');
+    if (!r.score.reprovarScore100) r.bloqueios.push('FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV não grava SCORE:100.');
+    if (!r.score.solicitarCorrecaoScore100) r.bloqueios.push('FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV não grava SCORE:100.');
+
+    // Confirma também (mesma técnica) que as 3 invalidam o cache da listagem ao gravar.
+    var invalidaCacheNasTres = [srcManual, srcReprovar, srcCorrecao].every(function(s){ return s.indexOf('FIN_FLASH_V2_confL2LInvalidarCache_()') >= 0; });
+    if (!invalidaCacheNasTres) r.avisos.push('Nem todas as 3 ações invalidam o cache da listagem após gravar — um teste rápido logo após a ação pode mostrar dado desatualizado por até ' + FIN_FLASH_V2_CACHE_CONF_L2L_SEGUNDOS_ + 's.');
 
     // ── Listagem lê e expõe score? (chamada real, só leitura) ───────────────
     var listagem = FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV({ limite: 500 });
@@ -8879,19 +8910,19 @@ function AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR() {
       var reprovadasOuCorrecao = itens.filter(function(it){ return it.statusConciliacao === 'REPROVADO' || it.statusConciliacao === 'AGUARDANDO_CORRECAO'; });
       var comScoreNumerico = reprovadasOuCorrecao.filter(function(it){ return it.score !== null && it.score !== undefined; });
       if (reprovadasOuCorrecao.length) {
-        r.avisos.push(comScoreNumerico.length + ' de ' + reprovadasOuCorrecao.length + ' linha(s) REPROVADO/AGUARDANDO_CORRECAO com score numérico — linhas gravadas antes da V2.17C ficam null/"—" por design (sem backfill histórico).');
+        r.avisos.push(comScoreNumerico.length + ' de ' + reprovadasOuCorrecao.length + ' linha(s) REPROVADO/AGUARDANDO_CORRECAO com score numérico — linhas gravadas antes da V2.17C ficam null/"—" por design (sem backfill histórico). Se você está testando uma linha e ela mostra score vazio, confirme que é uma ação NOVA (feita após este patch), não uma reabertura de uma linha já decidida antes.');
       }
     }
 
     // ── Frontend renderiza score corretamente, inclusive 0 (não vira "—")? ──
     var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
     var temColunaScore = html.indexOf('Score:') >= 0;
-    var ternarioNaoTrataZeroComoVazio = html.indexOf("it.score===null||it.score===undefined||it.score===''") >= 0;
-    r.score.frontendRenderizaScore = temColunaScore && ternarioNaoTrataZeroComoVazio;
-    if (!r.score.frontendRenderizaScore) r.bloqueios.push('Frontend não expõe a coluna Score corretamente, ou o teste de nulidade pode estar tratando 0 como vazio.');
+    var ternarioExplicitoSemOu = html.indexOf("it.score===null||it.score===undefined||it.score===''") >= 0 && html.indexOf('it.score||') < 0;
+    r.score.frontendRenderizaScore100 = temColunaScore && ternarioExplicitoSemOu;
+    if (!r.score.frontendRenderizaScore100) r.bloqueios.push('Frontend não expõe a coluna Score com validação explícita (ou usa "||", que trataria 0 como vazio).');
 
     r.score.ok = r.score.conciliarManualScore100 && r.score.reprovarScore100 && r.score.solicitarCorrecaoScore100 &&
-      r.score.listagemLeScore && r.score.frontendRenderizaScore;
+      r.score.listagemLeScore && r.score.frontendRenderizaScore100;
 
     // ── Schema automático (V2.17B) continua íntegro? ────────────────────────
     var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
