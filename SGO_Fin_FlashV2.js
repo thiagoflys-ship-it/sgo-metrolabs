@@ -2651,6 +2651,44 @@ function FIN_FLASH_V2_LISTAR_MOVIMENTACOES_CPF_DEV(payload) {
   return r;
 }
 
+// V2.16H — normaliza uma data heterogênea (YYYY-MM-DD[ HH:mm:ss] ou DD/MM/YYYY) para
+// 'YYYY-MM-DD' comparável lexicograficamente. Retorna '' se o formato não for reconhecido.
+function FIN_FLASH_V2_v216NormalizarDataIso_(dataStr) {
+  if (!dataStr) return '';
+  var s = String(dataStr).trim();
+  var m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m1) return m1[1] + '-' + m1[2] + '-' + m1[3];
+  var m2 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m2) return m2[3] + '-' + m2[2] + '-' + m2[1];
+  return '';
+}
+
+// V2.16H — resolve dataInicio/dataFim ISO ('YYYY-MM-DD') a partir de payload.dataInicio/
+// dataFim explícitos ou de payload.ano/mes (primeiro ao último dia do mês).
+function FIN_FLASH_V2_v216ResolverPeriodoIso_(payload) {
+  payload = payload || {};
+  var pad2 = function(n){ n = String(n); return n.length < 2 ? ('0' + n) : n; };
+  var dataInicio = payload.dataInicio || '';
+  var dataFim = payload.dataFim || '';
+  if (!dataInicio && !dataFim && payload.ano && payload.mes) {
+    var ano = Number(payload.ano), mes = Number(payload.mes);
+    var ultimoDia = new Date(ano, mes, 0).getDate();
+    dataInicio = ano + '-' + pad2(mes) + '-01';
+    dataFim = ano + '-' + pad2(mes) + '-' + pad2(ultimoDia);
+  }
+  return { dataInicio: dataInicio, dataFim: dataFim };
+}
+
+// V2.16H — comparação inclusiva (data >= inicio && data <= fim) após normalizar para ISO.
+// Datas sem formato reconhecível são bloqueadas (não entram no relatório do período).
+function FIN_FLASH_V2_v216DentroDoPeriodoIso_(dataStr, dataInicio, dataFim) {
+  var iso = FIN_FLASH_V2_v216NormalizarDataIso_(dataStr);
+  if (!iso) return false;
+  if (dataInicio && iso < dataInicio) return false;
+  if (dataFim && iso > dataFim) return false;
+  return true;
+}
+
 // V2.16E — converte o período resolvido pelo backend consolidado (dataInicio/dataFim ISO
 // ou mesAnoFiltro 'YYYY-MM') em datas BR de exibição, sem nunca cair em "— a —" quando
 // ano/mês ou datas já são conhecidos.
@@ -2796,7 +2834,10 @@ function FIN_FLASH_V2_htmlA4Base_(titulo, nome, cpf, inicio, fim, resumo, itens,
 }
 
 function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
-  var r = { ok:false, htmlA4:'', tipo:null, bloqueios:[] };
+  // V2.16H — "itens" e "periodoIso" ficam expostos no retorno (além do htmlA4 já usado
+  // pelo frontend) só para permitir auditoria somente leitura do dataset filtrado, sem
+  // exigir scraping de HTML. Frontend existente ignora esses campos extras.
+  var r = { ok:false, htmlA4:'', tipo:null, itens:[], periodoIso:null, bloqueios:[] };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
     payload=payload||{};
@@ -2805,36 +2846,41 @@ function FIN_FLASH_V2_PREVIEW_RELATORIO_DEV(payload) {
     // V2.16G — reaproveita o helper da V2.16E: exibe período real quando ano/mês ou
     // datas são conhecidos, nunca "— a —". Relatório é agregado (todos os colaboradores),
     // então o campo "CPF" também recebe texto claro em vez de "—".
-    var mesAnoFiltro=(payload.ano&&payload.mes)?(String(payload.ano)+'-'+String(payload.mes).padStart(2,'0')):'';
-    var periodoBr=FIN_FLASH_V2_resolverPeriodoExibicaoBr_({dataInicio:payload.dataInicio||'',dataFim:payload.dataFim||'',mesAnoFiltro:mesAnoFiltro});
+    // V2.16H — o mesmo intervalo agora também é aplicado ao dataset (antes só ao cabeçalho):
+    // cada linha é filtrada por CRIADO_EM normalizado para ISO, comparação inclusiva.
+    var periodoIso=FIN_FLASH_V2_v216ResolverPeriodoIso_(payload);
+    var periodoBr=FIN_FLASH_V2_resolverPeriodoExibicaoBr_({dataInicio:periodoIso.dataInicio,dataFim:periodoIso.dataFim});
     var conc=FIN_FLASH_V2_sheetCtx10_('CONCILIACOES');
     var pend=FIN_FLASH_V2_sheetCtx10_('PENDENCIAS');
     var contas=FIN_FLASH_V2_sheetCtx10_('CONTAS');
-    var nmap={}; contas.data.forEach(function(c){nmap[c.CPF]=c.NOME;});
+    var nmap={}; contas.data.forEach(function(c){nmap[FIN_FLASH_V2_normCpf_(c.CPF)]=c.NOME;});
+    var noPeriodo=function(dataStr){return FIN_FLASH_V2_v216DentroDoPeriodoIso_(dataStr,periodoIso.dataInicio,periodoIso.dataFim);};
     var itens,resumo,titulo;
     if (tipo==='positivo'){
       titulo='Relatório de Conciliação Positiva';
-      itens=conc.data.filter(function(c){return c.STATUS==='CONCILIADO';}).slice(0,30);
-      itens.forEach(function(it){it.colaborador=nmap[it.CPF]||it.CPF; it.dataExtrato=it.DATA;});
+      itens=conc.data.filter(function(c){return c.STATUS==='CONCILIADO' && noPeriodo(c.CRIADO_EM);}).slice(0,30);
+      itens.forEach(function(it){var cn=FIN_FLASH_V2_normCpf_(it.CPF); it.colaborador=nmap[cn]||it.CPF; it.dataExtrato=it.DATA||it.CRIADO_EM;});
       resumo={totalRecarregado:0,
         totalGasto:itens.reduce(function(s,i){return s+Number(i.VALOR_EXTRATO||0);},0),totalPendente:0};
     } else if (tipo==='negativo'){
       titulo='Relatório de Conciliação Negativa';
-      itens=pend.data.filter(function(p){return p.STATUS==='PENDENTE';}).slice(0,30);
-      itens.forEach(function(it){it.colaborador=nmap[it.CPF]||it.CPF;
+      itens=pend.data.filter(function(p){return p.STATUS==='PENDENTE' && noPeriodo(p.CRIADO_EM);}).slice(0,30);
+      itens.forEach(function(it){var cn=FIN_FLASH_V2_normCpf_(it.CPF); it.colaborador=nmap[cn]||it.CPF;
         it.dataExtrato=it.CRIADO_EM; it.valorExtrato=it.VALOR;});
       resumo={totalRecarregado:0,totalGasto:0,
         totalPendente:itens.reduce(function(s,i){return s+Number(i.VALOR||0);},0)};
     } else {
       titulo='Relatório de Pendências por Colaborador';
-      itens=pend.data.filter(function(p){return p.STATUS==='PENDENTE';}).slice(0,30);
-      itens.forEach(function(it){it.colaborador=nmap[it.CPF]||it.CPF;
+      itens=pend.data.filter(function(p){return p.STATUS==='PENDENTE' && noPeriodo(p.CRIADO_EM);}).slice(0,30);
+      itens.forEach(function(it){var cn=FIN_FLASH_V2_normCpf_(it.CPF); it.colaborador=nmap[cn]||it.CPF;
         it.dataExtrato=it.CRIADO_EM; it.valorExtrato=it.VALOR;});
       resumo={totalRecarregado:0,totalGasto:0,
         totalPendente:itens.reduce(function(s,i){return s+Number(i.VALOR||0);},0)};
     }
     r.htmlA4=FIN_FLASH_V2_htmlA4Base_(titulo,'Todos os colaboradores','Todos os colaboradores',
       periodoBr.inicio,periodoBr.fim,resumo,itens,tipo);
+    r.itens=itens;
+    r.periodoIso=periodoIso;
     r.ok=true;
   } catch(e) { r.bloqueios.push(e.message||String(e)); }
   return r;
@@ -7593,7 +7639,10 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
       return {
         mesAno: mesAno,
         resumoMes: {
-          totalCartoes: itens.cartoes.length, totalExtratos: itens.extratos.length, totalPrestacoes: itens.prestacoes.length,
+          // V2.16H — cartão é estático (não é evento do mês, ver V2.16G acima), então
+          // itens.cartoes está sempre vazio (nunca é registrado em mesesMap). O contador
+          // correto é o total de cartões do colaborador no CPF filtrado, igual em todo mês.
+          totalCartoes: r.cartoes.length, totalExtratos: itens.extratos.length, totalPrestacoes: itens.prestacoes.length,
           totalConciliacoes: itens.conciliacoes.length, totalPendencias: itens.pendencias.length, totalCobrancas: itens.cobrancas.length,
           totalDocumentos: itens.documentos.length, totalLogs: itens.logs.length,
           valorGastoMes: itens.prestacoes.reduce(function(s, p){ return s + Number(p.valor || 0); }, 0)
@@ -7790,4 +7839,89 @@ function AUDITAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V216C_FRONTEND_EXTRATO_COMPLETO_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.16H — Contador de Cartões no Resumo por Mês + filtro real de
+// período nos relatórios A4 (Pendências/Negativo/Positivo).
+// Auditoria somente leitura: NÃO grava nada em nenhuma aba, apenas lê e confere
+// (usa CPF de teste fixo da Bruna, já existente na base de validação da V2.13).
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.16H', somenteLeitura: true, executado: false,
+    periodoTestado: { ano: 2026, mes: 7, inicio: '2026-07-01', fim: '2026-07-31' },
+    cpfTeste: '05553116198',
+    resumoMes: { cartoesEncontrados: 0, finais: [], tipos: [], ok: false },
+    relatoriosA4: {
+      pendencias: { totalLinhas: 0, linhasForaDoPeriodo: [], ok: false },
+      negativo:   { totalLinhas: 0, linhasForaDoPeriodo: [], ok: false },
+      positivo:   { totalLinhas: 0, linhasForaDoPeriodo: [], ok: false }
+    },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  var ano = r.periodoTestado.ano, mes = r.periodoTestado.mes;
+  var inicio = r.periodoTestado.inicio, fim = r.periodoTestado.fim;
+  var mesAnoAlvo = ano + '-0' + mes;
+
+  // ── 1. Resumo por Mês: contador de Cartões da Bruna em julho/2026 ──────────
+  try {
+    var ext = FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV({ cpf: r.cpfTeste, ano: ano, mes: mes });
+    if (!ext.ok) {
+      r.bloqueios.push('OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV falhou: ' + JSON.stringify(ext.bloqueios || ext));
+    } else {
+      var totalCartoesColaborador = (ext.cartoes || []).length;
+      var mesAlvo = (ext.meses || []).filter(function(m){ return m.mesAno === mesAnoAlvo; })[0];
+      var cartoesEncontrados = mesAlvo ? (mesAlvo.resumoMes.totalCartoes || 0) : totalCartoesColaborador;
+      r.resumoMes.cartoesEncontrados = cartoesEncontrados;
+      r.resumoMes.finais = (ext.cartoes || []).map(function(k){ return k.final; });
+      r.resumoMes.tipos = (ext.cartoes || []).map(function(k){ return k.tipo; });
+      r.resumoMes.ok = cartoesEncontrados === totalCartoesColaborador;
+      if (!mesAlvo) r.avisos.push('Mês ' + mesAnoAlvo + ' não apareceu em ext.meses (sem outros eventos no período) — cartoesEncontrados assumido igual ao total de cartões do colaborador.');
+      if (r.cpfTeste === '05553116198' && totalCartoesColaborador !== 2) {
+        r.bloqueios.push('Critério de aceite: CPF de teste da Bruna deveria ter 2 cartões (FÍSICO 881 + VIRTUAL 546), encontrado ' + totalCartoesColaborador + '.');
+      }
+    }
+  } catch (e) { r.bloqueios.push('Falha ao auditar resumoMes: ' + (e.message || String(e))); }
+
+  // ── 2. Relatórios A4: nenhuma linha fora do período 01/07 a 31/07/2026 ─────
+  [
+    { chave: 'pendencias', tipo: 'pendencias' },
+    { chave: 'negativo', tipo: 'negativo' },
+    { chave: 'positivo', tipo: 'positivo' }
+  ].forEach(function(t) {
+    var alvo = r.relatoriosA4[t.chave];
+    try {
+      var prev = FIN_FLASH_V2_PREVIEW_RELATORIO_DEV({ tipo: t.tipo, ano: ano, mes: mes });
+      if (!prev.ok) {
+        r.bloqueios.push('PREVIEW_RELATORIO_DEV(' + t.tipo + ') falhou: ' + JSON.stringify(prev.bloqueios || prev));
+        return;
+      }
+      var itensRel = prev.itens || [];
+      var pIso = prev.periodoIso || {};
+      var fora = itensRel.filter(function(it){
+        var iso = FIN_FLASH_V2_v216NormalizarDataIso_(it.dataExtrato || it.CRIADO_EM);
+        return !iso || iso < inicio || iso > fim;
+      }).map(function(it){ return { id: it.ID || '', dataExtrato: it.dataExtrato || it.CRIADO_EM || '' }; });
+      alvo.totalLinhas = itensRel.length;
+      alvo.linhasForaDoPeriodo = fora;
+      alvo.ok = fora.length === 0 && pIso.dataInicio === inicio && pIso.dataFim === fim;
+      if (pIso.dataInicio !== inicio || pIso.dataFim !== fim) {
+        r.bloqueios.push('Relatório ' + t.tipo + ' resolveu período ISO diferente do esperado: ' + JSON.stringify(pIso));
+      }
+    } catch (e) {
+      r.bloqueios.push('Falha ao auditar relatório ' + t.tipo + ': ' + (e.message || String(e)));
+    }
+  });
+
+  var relOk = r.relatoriosA4.pendencias.ok && r.relatoriosA4.negativo.ok && r.relatoriosA4.positivo.ok;
+  r.success = r.bloqueios.length === 0;
+  r.ok = r.success && r.resumoMes.ok && relOk;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
 }
