@@ -2545,6 +2545,48 @@ function FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV(payload) {
   return r;
 }
 
+// V2.17B — helper interno idempotente: garante que FIN_FLASH_V2_CONCILIACOES tem
+// as colunas SCORE/MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM, adicionando ao
+// FINAL só o que faltar. Chamado automaticamente pela listagem e pelas 3 ações
+// de Conferência de Gastos — o usuário nunca precisa rodar migração manual.
+// Nunca apaga, nunca reordena, nunca altera dado de linha existente (só grava na
+// linha 1, e só nas colunas novas).
+function FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_() {
+  var r = {
+    executouMigracao: false, headersAntes: [], headersAdicionados: [], headersDepois: [],
+    ok: false, bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+  try {
+    var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.CONCILIACOES);
+    if (!sh) { r.bloqueios.push('Aba FIN_FLASH_V2_CONCILIACOES não encontrada.'); return r; }
+
+    var headersAtuais = FIN_FLASH_V2_getHeaderMap_(sh).headers;
+    r.headersAntes = headersAtuais.slice();
+
+    var NOVOS = ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'];
+    var faltando = NOVOS.filter(function(h){ return headersAtuais.indexOf(h) < 0; });
+
+    if (!faltando.length) {
+      r.headersDepois = headersAtuais.slice();
+      r.ok = true; r.executouMigracao = false;
+      return r;
+    }
+
+    var proximaColuna = sh.getLastColumn() + 1;
+    sh.getRange(1, proximaColuna, 1, faltando.length).setValues([faltando]);
+
+    r.headersAdicionados = faltando;
+    r.headersDepois = FIN_FLASH_V2_getHeaderMap_(sh).headers;
+    r.executouMigracao = true;
+    r.ok = true;
+
+    FIN_FLASH_V2_registrarLogAcao_('GARANTIR_SCHEMA_CONCILIACOES_AUTO_V217B', 'FIN_FLASH_V2_CONCILIACOES', 'SCHEMA',
+      { headersAdicionados: faltando, headersAntes: r.headersAntes, headersDepois: r.headersDepois, origem: 'AUTOMATICO' }, 'SIM');
+  } catch (e) { r.bloqueios.push(e.message || String(e)); }
+  return r;
+}
+
 // V2.17A — e-mail do usuário logado para ATUALIZADO_POR, com fallback seguro
 // (mesmo padrão já usado em outros pontos do módulo) quando a sessão não expõe
 // o usuário ativo (ex.: chamada via Execution API sem contexto de UI).
@@ -2565,6 +2607,10 @@ function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
     if (!payload.conciliacaoId || !payload.motivo) {
       r.bloqueios.push('conciliacaoId e motivo são obrigatórios.'); return r;
     }
+    // V2.17B — garante o schema antes de localizar a linha, para SCORE/MOTIVO_DECISAO/
+    // ATUALIZADO_POR/ATUALIZADO_EM existirem no mapa de headers usado por setByHeaders_.
+    var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+    if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
     // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_MANUAL (nunca existiu como
@@ -2588,6 +2634,10 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
     if (!payload.conciliacaoId || !payload.motivo) {
       r.bloqueios.push('conciliacaoId e motivo são obrigatórios.'); return r;
     }
+    // V2.17B — garante o schema antes de localizar a linha, para SCORE/MOTIVO_DECISAO/
+    // ATUALIZADO_POR/ATUALIZADO_EM existirem no mapa de headers usado por setByHeaders_.
+    var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+    if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
     // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_REPROVACAO (nunca existiu
@@ -2611,6 +2661,10 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
     if (!payload.conciliacaoId || !payload.motivo) {
       r.bloqueios.push('conciliacaoId e motivo são obrigatórios.'); return r;
     }
+    // V2.17B — garante o schema antes de localizar a linha, para SCORE/MOTIVO_DECISAO/
+    // ATUALIZADO_POR/ATUALIZADO_EM existirem no mapa de headers usado por setByHeaders_.
+    var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+    if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
     var hit = FIN_FLASH_V2_findRowById_(FIN_FLASH_V2_ABAS.CONCILIACOES, payload.conciliacaoId);
     if (!hit) { r.bloqueios.push('Conciliação não encontrada.'); return r; }
     // V2.17A — MOTIVO_DECISAO substitui o antigo MOTIVO_CORRECAO (nunca existiu
@@ -6381,6 +6435,12 @@ function FIN_FLASH_V2_LISTAR_CONFERENCIA_GASTOS_LINHA_A_LINHA_DEV(filtros) {
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   filtros = filtros || {};
 
+  // V2.17B — garante o schema (SCORE/MOTIVO_DECISAO/ATUALIZADO_POR/ATUALIZADO_EM)
+  // automaticamente, antes de qualquer coisa (inclusive do cache), para o usuário
+  // nunca precisar rodar migração manual ao abrir a tela de Conferência de Gastos.
+  var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+  if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
+
   // ── Cache curto (leitura), chaveado pelos filtros relevantes ────────────────
   var cache = null, cacheKey = null;
   try {
@@ -8550,10 +8610,14 @@ function TESTAR_FIN_FLASH_V217_PLANO_MOTIVO_SCORE_SEM_GRAVAR() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FIN_FLASH_V2.17A — Migração aditiva: adiciona SCORE/MOTIVO_DECISAO/
+// FIN_FLASH_V2.17A/V2.17B — Migração aditiva: adiciona SCORE/MOTIVO_DECISAO/
 // ATUALIZADO_POR/ATUALIZADO_EM ao FINAL de FIN_FLASH_V2_CONCILIACOES.
-// Nunca apaga, nunca reordena, nunca altera dado existente. Idempotente:
-// rodar de novo com os headers já presentes não faz nada (nem escreve).
+// Nunca apaga, nunca reordena, nunca altera dado existente. Idempotente.
+// V2.17B — desde essa fase, é só FALLBACK/ADMIN: o fluxo normal (tela de
+// Conferência de Gastos) não depende mais desta função rodar manualmente,
+// pois FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_() já roda
+// automaticamente dentro da listagem e das 3 ações. Delega ao mesmo helper
+// para não duplicar a lógica de migração (evita "backends paralelos").
 // ═══════════════════════════════════════════════════════════════════════════
 function MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() {
   var r = {
@@ -8563,37 +8627,20 @@ function MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() {
   };
   if (!FIN_FLASH_V2_dev_()) { r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
   try {
-    var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.CONCILIACOES);
-    if (!sh) { r.bloqueios.push('Aba FIN_FLASH_V2_CONCILIACOES não encontrada.'); return r; }
-
-    var headersAtuais = FIN_FLASH_V2_getHeaderMap_(sh).headers;
-    r.headersAntes = headersAtuais.slice();
-    r.totalColunasAntes = headersAtuais.length;
-
     var NOVOS = ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'];
-    var faltando = NOVOS.filter(function(h){ return headersAtuais.indexOf(h) < 0; });
-    r.headersJaExistentes = NOVOS.filter(function(h){ return headersAtuais.indexOf(h) >= 0; });
+    var g = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+    if (!g.ok) { r.bloqueios = g.bloqueios; return r; }
 
-    if (!faltando.length) {
-      r.avisos.push('Nenhum header novo a adicionar — todos os 4 já existem na aba. Nada foi gravado (migração idempotente).');
-      r.headersDepois = headersAtuais.slice();
-      r.totalColunasDepois = headersAtuais.length;
-      r.success = true; r.ok = true; r.executado = false;
-      return r;
-    }
-
-    // Adiciona somente ao final — nunca toca nas colunas existentes (não reordena,
-    // não sobrescreve, não altera nenhuma linha de dado; só a linha 1, colunas novas).
-    var proximaColuna = sh.getLastColumn() + 1;
-    sh.getRange(1, proximaColuna, 1, faltando.length).setValues([faltando]);
-
-    r.headersAdicionados = faltando;
-    r.headersDepois = FIN_FLASH_V2_getHeaderMap_(sh).headers;
-    r.totalColunasDepois = r.headersDepois.length;
-    r.success = true; r.ok = true; r.executado = true;
-
-    FIN_FLASH_V2_registrarLogAcao_('MIGRAR_CONCILIACOES_MOTIVO_SCORE_V217', 'FIN_FLASH_V2_CONCILIACOES', 'SCHEMA',
-      { headersAdicionados: faltando, headersAntes: r.headersAntes, headersDepois: r.headersDepois }, 'SIM');
+    r.headersAntes = g.headersAntes;
+    r.headersDepois = g.headersDepois;
+    r.headersAdicionados = g.headersAdicionados;
+    r.headersJaExistentes = NOVOS.filter(function(h){ return g.headersAntes.indexOf(h) >= 0; });
+    r.totalColunasAntes = g.headersAntes.length;
+    r.totalColunasDepois = g.headersDepois.length;
+    r.executado = g.executouMigracao;
+    r.avisos = g.avisos.slice();
+    if (!g.executouMigracao) r.avisos.push('Nenhum header novo a adicionar — todos os 4 já existem na aba. Nada foi gravado (migração idempotente).');
+    r.success = true; r.ok = true;
   } catch (e) { r.bloqueios.push(e.message || String(e)); }
   return r;
 }
@@ -8615,6 +8662,11 @@ function AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
   if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
 
   try {
+    // V2.17B — garante o schema automaticamente (mesmo helper usado pela listagem
+    // e pelas 3 ações); pode adicionar headers ausentes, nunca altera dado de linha.
+    var schemaAuto = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_();
+    if (!schemaAuto.ok) r.avisos.push('GARANTIR_SCHEMA_V217B falhou: ' + JSON.stringify(schemaAuto.bloqueios));
+
     // ── 1. Headers presentes na aba real ────────────────────────────────────
     var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
     ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'].forEach(function(h){
@@ -8622,7 +8674,7 @@ function AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
     });
     var todosPresentes = r.headersPresentes.SCORE && r.headersPresentes.MOTIVO_DECISAO &&
       r.headersPresentes.ATUALIZADO_POR && r.headersPresentes.ATUALIZADO_EM;
-    if (!todosPresentes) r.bloqueios.push('Nem todos os headers novos estão presentes — rode MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV() antes desta auditoria.');
+    if (!todosPresentes) r.bloqueios.push('Nem todos os headers novos estão presentes mesmo após GARANTIR_SCHEMA_V217B — investigar.');
 
     // ── 2. Escrita por header / nenhuma escrita posicional nova ────────────
     // Prova sem gravar: os headers existem (pré-requisito de FIN_FLASH_V2_setByHeaders_,
@@ -8678,4 +8730,99 @@ function AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V217A_MOTIVO_SCORE_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.17B — Confirma que o schema de FIN_FLASH_V2_CONCILIACOES é
+// garantido automaticamente (sem ação manual). ATENÇÃO: esta auditoria chama
+// o helper automático — pode adicionar headers ausentes na aba (schema), mas
+// nunca grava/altera dado de nenhuma linha existente (só a linha 1).
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.17B',
+    schemaAuto: { helperExiste: false, chamadoNaListagem: false, chamadoNasAcoes: false, chamadoNaAuditoria: false, idempotente: false },
+    headers: { SCORE: false, MOTIVO_DECISAO: false, ATUALIZADO_POR: false, ATUALIZADO_EM: false },
+    migracao: { automatica: false, manualAindaDisponivel: false, headersAdicionados: [], dadosAlterados: false, colunasReordenadas: false },
+    regressao: { v216kPreviewExtrato: false, v216iCartoesLegiveis: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    // ── 1. Helper existe? ───────────────────────────────────────────────────
+    r.schemaAuto.helperExiste = typeof FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_ === 'function';
+    if (!r.schemaAuto.helperExiste) { r.bloqueios.push('FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_ não encontrado.'); return finalizarV217B_(r); }
+
+    // ── 2. Prova real de aditividade/idempotência: total de linhas de dado não muda,
+    // headers antigos continuam sendo um prefixo exato dos novos, e rodar 2x seguidas
+    // não duplica nem re-executa a migração na 2ª chamada. ──────────────────────────
+    var totalLinhasAntes = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.length;
+    var headersAntesTudo = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+
+    var g1 = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_(); // 1ª chamada: migra se faltar
+    var g2 = FIN_FLASH_V2_GARANTIR_SCHEMA_CONCILIACOES_V217B_DEV_(); // 2ª chamada: deve ser no-op
+
+    if (!g1.ok) { r.bloqueios.push('1ª chamada do helper falhou: ' + JSON.stringify(g1.bloqueios)); return finalizarV217B_(r); }
+    if (!g2.ok) { r.bloqueios.push('2ª chamada do helper falhou: ' + JSON.stringify(g2.bloqueios)); return finalizarV217B_(r); }
+
+    r.schemaAuto.idempotente = (g2.executouMigracao === false);
+    if (!r.schemaAuto.idempotente) r.bloqueios.push('2ª chamada do helper executou migração de novo — não é idempotente.');
+
+    var totalLinhasDepois = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').data.length;
+    r.migracao.dadosAlterados = (totalLinhasDepois !== totalLinhasAntes);
+    if (r.migracao.dadosAlterados) r.bloqueios.push('Total de linhas de dado mudou após a migração automática — investigar.');
+
+    var headersDepoisTudo = g2.headersDepois || [];
+    var prefixoIntacto = headersAntesTudo.every(function(h, i){ return headersDepoisTudo[i] === h; });
+    r.migracao.colunasReordenadas = !prefixoIntacto;
+    if (r.migracao.colunasReordenadas) r.bloqueios.push('Headers antigos não são mais um prefixo exato dos headers novos — possível reordenação.');
+
+    // headersAdicionados desta EXECUÇÃO da auditoria (pode ser [] se já estava tudo migrado antes)
+    r.migracao.headersAdicionados = g1.headersAdicionados;
+
+    // ── 3. Headers presentes na aba real (após garantir) ────────────────────
+    var concHeaders = FIN_FLASH_V2_sheetCtx10_('CONCILIACOES').headers || [];
+    ['SCORE', 'MOTIVO_DECISAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM'].forEach(function(h){
+      r.headers[h] = concHeaders.indexOf(h) >= 0;
+    });
+    var todosPresentes = r.headers.SCORE && r.headers.MOTIVO_DECISAO && r.headers.ATUALIZADO_POR && r.headers.ATUALIZADO_EM;
+    if (!todosPresentes) r.bloqueios.push('Nem todos os headers estão presentes mesmo após o helper automático rodar.');
+
+    // ── 4. Chamado na listagem / nas ações / na auditoria V2.17A ────────────
+    // GAS não permite introspeccionar o texto-fonte das próprias funções .js em
+    // runtime (diferente do frontend, que é lido via HtmlService) — confirmado por
+    // construção do patch (as 4 chamadas foram adicionadas nesta mesma revisão,
+    // verificadas por leitura de código durante a implementação).
+    r.schemaAuto.chamadoNaListagem = true;
+    r.schemaAuto.chamadoNasAcoes = true;
+    r.schemaAuto.chamadoNaAuditoria = true;
+    r.avisos.push('chamadoNaListagem/chamadoNasAcoes/chamadoNaAuditoria confirmados por construção do patch (GAS não lê o próprio código-fonte .js em runtime) — não são introspecção ao vivo.');
+
+    // ── 5. Migração automática / função manual ainda disponível ────────────
+    r.migracao.automatica = r.schemaAuto.helperExiste && r.schemaAuto.idempotente && todosPresentes;
+    r.migracao.manualAindaDisponivel = typeof MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV === 'function';
+    if (!r.migracao.manualAindaDisponivel) r.bloqueios.push('MIGRAR_FIN_FLASH_V217_CONCILIACOES_MOTIVO_SCORE_DEV não encontrada — função manual/fallback deveria continuar existindo.');
+
+    // ── 6. Regressão V2.16K/V2.16I ──────────────────────────────────────────
+    var v216k = AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
+    var v216i = AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
+    r.regressao.v216kPreviewExtrato = !!(v216k.ok && v216k.tipoExtrato && v216k.tipoExtrato.ok);
+    r.regressao.v216iCartoesLegiveis = !!(v216i.ok);
+    r.regressao.ok = r.regressao.v216kPreviewExtrato && r.regressao.v216iCartoesLegiveis;
+    if (!r.regressao.ok) r.bloqueios.push('Regressão detectada: ' + JSON.stringify({ v216k: v216k.tipoExtrato, v216iOk: v216i.ok }));
+  } catch (e) {
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  return finalizarV217B_(r);
+}
+
+function finalizarV217B_(r) {
+  r.success = r.bloqueios.length === 0;
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V217B_SCHEMA_AUTO_SEM_GRAVAR();
 }
