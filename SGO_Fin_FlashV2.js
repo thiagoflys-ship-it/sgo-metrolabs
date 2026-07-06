@@ -1013,7 +1013,11 @@ function FIN_FLASH_V2_setByHeaders_(hit, patch) {
 function FIN_FLASH_V2_registrarLogAcao_(acao, entidade, entidadeId, detalhe, ambienteTeste) {
   var sh = FIN_FLASH_V2_db_().getSheetByName(FIN_FLASH_V2_ABAS.LOGS);
   var id = FIN_FLASH_V2_id_('LOG');
-  sh.appendRow([id, acao, entidade, entidadeId || '', JSON.stringify(detalhe || {}), ambienteTeste || 'SIM', 'FINANCEIRO_DEV', new Date()]);
+  // V2.18A — EXECUTADO_POR usa o e-mail real do usuário logado (mesmo helper já usado
+  // em CONCILIACOES.ATUALIZADO_POR desde a V2.17A), com fallback seguro para 'FINANCEIRO_DEV'
+  // quando a sessão não expõe usuário (ex.: chamada via Execution API). Logs antigos, já
+  // gravados com 'FINANCEIRO_DEV' literal, não são alterados (sem backfill).
+  sh.appendRow([id, acao, entidade, entidadeId || '', JSON.stringify(detalhe || {}), ambienteTeste || 'SIM', FIN_FLASH_V2_v217UsuarioResponsavel_(), new Date()]);
   return id;
 }
 
@@ -2622,6 +2626,9 @@ function FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV(payload) {
     FIN_FLASH_V2_registrarLogAcao_('CONCILIAR_MANUALMENTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     FIN_FLASH_V2_confL2LInvalidarCache_();
+    // V2.18A — invalida também o cache do Extrato por Colaborador, para o
+    // financeiro nunca ver dado desatualizado ao sair da Conferência direto pro Extrato.
+    FIN_FLASH_V2_extCompletoInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2653,6 +2660,9 @@ function FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV(payload) {
     FIN_FLASH_V2_registrarLogAcao_('REPROVAR_COMPROVANTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     FIN_FLASH_V2_confL2LInvalidarCache_();
+    // V2.18A — invalida também o cache do Extrato por Colaborador, para o
+    // financeiro nunca ver dado desatualizado ao sair da Conferência direto pro Extrato.
+    FIN_FLASH_V2_extCompletoInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -2684,6 +2694,9 @@ function FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV(payload) {
     FIN_FLASH_V2_registrarLogAcao_('SOLICITAR_CORRECAO_COMPROVANTE','CONCILIACAO',
       payload.conciliacaoId,{motivo:payload.motivo,score:100,atualizadoPor:responsavel,atualizadoEm:atualizadoEm},'SIM');
     FIN_FLASH_V2_confL2LInvalidarCache_();
+    // V2.18A — invalida também o cache do Extrato por Colaborador, para o
+    // financeiro nunca ver dado desatualizado ao sair da Conferência direto pro Extrato.
+    FIN_FLASH_V2_extCompletoInvalidarCache_();
     r.ok = true;
   } catch(e) { r.bloqueios.push(e.message || String(e)); }
   return r;
@@ -7719,6 +7732,22 @@ function FIN_FLASH_V2_v216TimestampOrdenar_(dataStr) {
 
 var FIN_FLASH_V2_CACHE_EXTRATO_COMPLETO_SEGUNDOS_ = 120;
 
+// V2.18A — mesmo padrão de invalidação por geração já usado na Conferência de
+// Gastos (V2.17C): as 3 ações incrementam este contador ao gravar, mudando a
+// chave do cache do Extrato por Colaborador e forçando cache-miss garantido —
+// sem precisar saber os filtros exatos que a tela usava.
+function FIN_FLASH_V2_extCompletoCacheGeracao_() {
+  try { return PropertiesService.getScriptProperties().getProperty('FFV2_EXT_COMPLETO_GERACAO') || '0'; }
+  catch (e) { return '0'; }
+}
+function FIN_FLASH_V2_extCompletoInvalidarCache_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var atual = Number(props.getProperty('FFV2_EXT_COMPLETO_GERACAO') || '0');
+    props.setProperty('FFV2_EXT_COMPLETO_GERACAO', String(atual + 1));
+  } catch (e) { /* nunca bloqueia a ação por falha de cache */ }
+}
+
 function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
   var r = {
     ok: false, colaborador: null, periodo: null, resumoGeral: null,
@@ -7732,7 +7761,7 @@ function FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV(filtros) {
   var cache = null, cacheKey = null;
   try {
     cache = CacheService.getScriptCache();
-    cacheKey = 'FFV2_EXT_COMPLETO_' + JSON.stringify({
+    cacheKey = 'FFV2_EXT_COMPLETO_G' + FIN_FLASH_V2_extCompletoCacheGeracao_() + '_' + JSON.stringify({
       cpf: filtros.cpf || '', colaboradorId: filtros.colaboradorId || '',
       dataInicio: filtros.dataInicio || '', dataFim: filtros.dataFim || '',
       mes: filtros.mes || '', ano: filtros.ano || '', tipo: filtros.tipo || '', status: filtros.status || '',
@@ -9079,4 +9108,98 @@ function AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR() {
 
 function TESTAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR() {
   return AUDITAR_FIN_FLASH_V218_PRE_PRODUCAO_SEM_GRAVAR();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIN_FLASH_V2.18A — Corrige os 3 riscos médios + 1 pendência visual da V2.18:
+// cache do Extrato por Colaborador não invalidado, EXECUTADO_POR genérico nos
+// Logs, botão Imprimir indevido em modais operacionais/erro, e ID técnico da
+// conciliação visível no modal de Ação Financeira. Auditoria somente leitura:
+// nunca chama as 3 ações que gravam — usa .toString() (V8/Apps Script) para
+// inspecionar de verdade o código-fonte, e HtmlService para o frontend.
+// ═══════════════════════════════════════════════════════════════════════════
+function AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR() {
+  var r = {
+    success: true, versao: 'V2.18A', somenteLeitura: true, executado: false,
+    cache: { conferenciaInvalidaExtrato: false, extratoUsaGeracaoCache: false, ok: false },
+    logs: { executadoPorUsaUsuarioReal: false, fallbackSeguro: false, ok: false },
+    modais: { imprimirOcultoEmAcoes: false, imprimirDisponivelEmDocumentosA4: false, idTecnicoConciliacaoOculto: false, idInternoPreservadoPayload: false, ok: false },
+    regressao: { motivoScorePersistem: false, documentosPreviewCorreto: false, cartoesBrunaLegiveis: false, resumoMesCartoesCorreto: false, ok: false },
+    bloqueios: [], avisos: []
+  };
+  if (!FIN_FLASH_V2_dev_()) { r.success = false; r.bloqueios.push('BLOQUEADO_FORA_DEV'); return r; }
+
+  try {
+    // ── 1. Cache: Conferência invalida o Extrato por Colaborador também? ───────
+    var srcManual = FIN_FLASH_V2_CONCILIAR_MANUALMENTE_DEV.toString();
+    var srcReprovar = FIN_FLASH_V2_REPROVAR_COMPROVANTE_DEV.toString();
+    var srcCorrecao = FIN_FLASH_V2_SOLICITAR_CORRECAO_COMPROVANTE_DEV.toString();
+    r.cache.conferenciaInvalidaExtrato = [srcManual, srcReprovar, srcCorrecao].every(function(s){ return s.indexOf('FIN_FLASH_V2_extCompletoInvalidarCache_()') >= 0; });
+    if (!r.cache.conferenciaInvalidaExtrato) r.bloqueios.push('Nem todas as 3 ações invalidam o cache do Extrato por Colaborador.');
+
+    r.cache.extratoUsaGeracaoCache = typeof FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV === 'function' &&
+      FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV.toString().indexOf('FIN_FLASH_V2_extCompletoCacheGeracao_()') >= 0;
+    if (!r.cache.extratoUsaGeracaoCache) r.bloqueios.push('FIN_FLASH_V2_OBTER_EXTRATO_COLABORADOR_COMPLETO_DEV não usa a geração de cache na chave.');
+
+    r.cache.ok = r.cache.conferenciaInvalidaExtrato && r.cache.extratoUsaGeracaoCache;
+
+    // ── 2. Logs: EXECUTADO_POR usa usuário real, com fallback seguro? ──────────
+    var srcLog = FIN_FLASH_V2_registrarLogAcao_.toString();
+    r.logs.executadoPorUsaUsuarioReal = srcLog.indexOf('FIN_FLASH_V2_v217UsuarioResponsavel_()') >= 0 && srcLog.indexOf("'FINANCEIRO_DEV'") < 0;
+    if (!r.logs.executadoPorUsaUsuarioReal) r.bloqueios.push('FIN_FLASH_V2_registrarLogAcao_ não usa FIN_FLASH_V2_v217UsuarioResponsavel_() (ou ainda grava FINANCEIRO_DEV literal).');
+
+    var srcResponsavel = FIN_FLASH_V2_v217UsuarioResponsavel_.toString();
+    r.logs.fallbackSeguro = srcResponsavel.indexOf('catch') >= 0 && srcResponsavel.indexOf("'FINANCEIRO_DEV'") >= 0;
+    if (!r.logs.fallbackSeguro) r.bloqueios.push('FIN_FLASH_V2_v217UsuarioResponsavel_ não tem fallback seguro (try/catch + valor padrão) confirmado.');
+
+    r.logs.ok = r.logs.executadoPorUsaUsuarioReal && r.logs.fallbackSeguro;
+    r.avisos.push('Logs antigos (gravados antes da V2.18A) continuam com EXECUTADO_POR="FINANCEIRO_DEV" literal — sem backfill, como pedido.');
+
+    // ── 3/4. Modais: Imprimir oculto em ações/erro, disponível em documentos A4,
+    // ID técnico oculto no modal de Ação Financeira, preservado só no payload ───
+    var html = HtmlService.createHtmlOutputFromFile('JS_Fin_FlashV2').getContent();
+
+    r.modais.imprimirOcultoEmAcoes = html.indexOf("ffv2Modal_(labels[tipo]||'Ação Financeira', html);") >= 0;
+    if (!r.modais.imprimirOcultoEmAcoes) r.bloqueios.push('Modal de Ação Financeira (Conciliar/Reprovar/Solicitar Correção) pode estar mostrando Imprimir.');
+
+    // Contagem simples por substring (não regex): títulos com entidades HTML como
+    // &mdash;/&hellip; têm ';' literal, o que quebraria uma regex baseada em [^;]*.
+    var qtdComImprimir = html.split(', true);').length - 1;
+    r.modais.imprimirDisponivelEmDocumentosA4 = qtdComImprimir >= 8; // extrato, positivo, negativo, pendências, termo, comprovante, lote (resultado+carregando)
+    if (!r.modais.imprimirDisponivelEmDocumentosA4) r.bloqueios.push('Menos modais de documento/relatório A4 com Imprimir do que o esperado (encontrado ' + qtdComImprimir + ').');
+
+    r.modais.idTecnicoConciliacaoOculto = html.indexOf("Conciliação: '+finFlashV2Escape_(conciliacaoId)") < 0;
+    if (!r.modais.idTecnicoConciliacaoOculto) r.bloqueios.push('Modal de Ação Financeira ainda mostra o ID técnico da conciliação como texto.');
+
+    var temDataAttribute = html.indexOf('data-conciliacao-id') >= 0;
+    var temIdNoOnclickDaAcao = html.indexOf("ffv2ConfirmarAcaoLinha_(\\''+conciliacaoId") >= 0;
+    r.modais.idInternoPreservadoPayload = temDataAttribute && temIdNoOnclickDaAcao;
+    if (!r.modais.idInternoPreservadoPayload) r.bloqueios.push('ID técnico da conciliação não está preservado em data-conciliacao-id e/ou no onclick da ação (payload).');
+
+    r.modais.ok = r.modais.imprimirOcultoEmAcoes && r.modais.imprimirDisponivelEmDocumentosA4 &&
+      r.modais.idTecnicoConciliacaoOculto && r.modais.idInternoPreservadoPayload;
+
+    // ── Regressão: V2.17C (motivo/score) e V2.16K/V2.16I/V2.16H continuam ok? ──
+    var v217c = AUDITAR_FIN_FLASH_V217C_SCORE_DECISAO_SEM_GRAVAR();
+    var v216k = AUDITAR_FIN_FLASH_V216K_FIX_CRITICOS_SEM_GRAVAR();
+    var v216i = AUDITAR_FIN_FLASH_V216I_IDS_VISUAIS_SEM_GRAVAR();
+    var v216h = AUDITAR_FIN_FLASH_V216H_RESUMO_RELATORIOS_SEM_GRAVAR();
+
+    r.regressao.motivoScorePersistem = !!(v217c.score && v217c.score.ok && v217c.regressao && v217c.regressao.ok);
+    r.regressao.documentosPreviewCorreto = !!(v216k.tipoExtrato && v216k.tipoExtrato.ok);
+    r.regressao.cartoesBrunaLegiveis = !!(v216i.ok);
+    r.regressao.resumoMesCartoesCorreto = !!(v216h.resumoMes && v216h.resumoMes.ok);
+    r.regressao.ok = r.regressao.motivoScorePersistem && r.regressao.documentosPreviewCorreto &&
+      r.regressao.cartoesBrunaLegiveis && r.regressao.resumoMesCartoesCorreto;
+    if (!r.regressao.ok) r.bloqueios.push('Regressão detectada: ' + JSON.stringify({ v217cOk: v217c.score, v216kOk: v216k.tipoExtrato, v216iOk: v216i.ok, v216hOk: v216h.resumoMes }));
+  } catch (e) {
+    r.success = false;
+    r.bloqueios.push(e.message || String(e));
+  }
+
+  return r;
+}
+
+function TESTAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR() {
+  return AUDITAR_FIN_FLASH_V218A_RISCOS_MEDIOS_SEM_GRAVAR();
 }

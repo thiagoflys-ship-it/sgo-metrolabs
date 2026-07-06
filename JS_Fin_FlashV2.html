@@ -70,15 +70,22 @@ function ffv2KpiCard_(titulo, valor, cor) {
     '</div>';
 }
 
-function ffv2Modal_(titulo, html) {
+// V2.18A — mostrarImprimir é false por padrão: só telas de documento/relatório A4
+// (preview de extrato, relatórios positivo/negativo/pendências, termo, comprovante,
+// relatório de lote) passam true explicitamente. Modais operacionais (formulário de
+// Conciliar/Reprovar/Solicitar Correção) e de erro nunca mostram Imprimir.
+function ffv2Modal_(titulo, html, mostrarImprimir) {
   var el = document.getElementById('ffv2-modal');
   if (!el) { el = document.createElement('div'); el.id='ffv2-modal'; document.body.appendChild(el); }
+  var botaoImprimir = mostrarImprimir
+    ? '<button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">&#128438; Imprimir</button>'
+    : '';
   el.innerHTML = '<div style="position:fixed;inset:0;background:#0008;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)ffv2FecharModal_()">'+
     '<div style="background:#fff;border-radius:12px;width:100%;max-width:900px;max-height:90vh;overflow:auto;box-shadow:0 24px 80px #0004;">'+
     '<div style="position:sticky;top:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">'+
     '<h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">'+finFlashV2Escape_(titulo)+'</h3>'+
     '<div style="display:flex;gap:8px;">'+
-    '<button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;">&#128438; Imprimir</button>'+
+    botaoImprimir+
     '<button onclick="ffv2FecharModal_()" style="background:#f1f5f9;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;color:#475569;">&#x2715; Fechar</button></div></div>'+
     '<div style="padding:18px;">'+html+'</div></div></div>';
 }
@@ -888,7 +895,7 @@ function ffv2GerarDocConciliacao_(loteId) {
           '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">' +
             '<button onclick="ffv2VerPreviewA4Conc_(\''+finFlashV2Escape_(loteId)+'\')" class="ffv2-btn ffv2-btn-s" style="font-size:11px;">&#128065; Visualizar A4</button>' +
           '</div>';
-        ffv2Modal_('Relatório de Conciliação &mdash; Lote', r.htmlA4||'<p>Sem conteúdo.</p>');
+        ffv2Modal_('Relatório de Conciliação &mdash; Lote', r.htmlA4||'<p>Sem conteúdo.</p>', true);
       } else {
         if (docEl) docEl.innerHTML = '<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
       }
@@ -900,7 +907,7 @@ function ffv2GerarDocConciliacao_(loteId) {
 }
 
 function ffv2VerPreviewA4Conc_(loteId) {
-  ffv2Modal_('Relatório de Conciliação &mdash; carregando&hellip;', '<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>');
+  ffv2Modal_('Relatório de Conciliação &mdash; carregando&hellip;', '<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>', true);
   google.script.run
     .withSuccessHandler(function(r) {
       if (r.ok) {
@@ -1001,7 +1008,17 @@ function ffv2AbrirAcaoLinha_(conciliacaoId, tipo) {
   var item = (ffv2St_().dados.conferenciaPorId||{})[conciliacaoId];
   if (!item) return;
   var labels = { manual:'Conciliar Manualmente', reprovar:'Reprovar Comprovante', correcao:'Solicitar Correção' };
-  var html = '<p style="font-size:12px;color:#64748b;margin:0 0 10px;">Conciliação: '+finFlashV2Escape_(conciliacaoId)+' — '+finFlashV2Escape_(item.colaboradorNome||item.cpfExibicao||'')+'</p>'+
+  // V2.18A — ID técnico da conciliação nunca aparece como texto principal; fica só
+  // em data-conciliacao-id (auditoria/DOM) e como argumento do onclick (payload da
+  // ação). O texto visível mostra só informação humana: colaborador, CPF, data,
+  // estabelecimento, valor e cartão.
+  var infoHtml = '<div data-conciliacao-id="'+finFlashV2Escape_(conciliacaoId)+'" style="font-size:12px;color:#64748b;margin:0 0 10px;line-height:1.7;">'+
+    '<strong style="color:#1e293b;">'+finFlashV2Escape_(item.colaboradorNome||item.cpfExibicao||'Não identificado')+'</strong><br>'+
+    'CPF: '+finFlashV2Escape_(item.cpfExibicao||'—')+' &nbsp;|&nbsp; Data: '+finFlashV2Escape_(item.data||'—')+'<br>'+
+    'Estabelecimento: '+finFlashV2Escape_(item.estabelecimento||'—')+' &nbsp;|&nbsp; Valor: '+finFlashV2FmtMoeda_(item.valor||0)+
+    (item.finalCartao ? (' &nbsp;|&nbsp; Cartão: final '+finFlashV2Escape_(item.finalCartao)) : '')+
+    '</div>';
+  var html = infoHtml+
     '<label class="ffv2-lbl">Motivo / Observação</label>'+
     '<textarea id="ffv2gl-mot" class="ffv2-inp" rows="3" placeholder="Descreva o motivo..."></textarea>'+
     '<div style="margin-top:10px;"><button class="ffv2-btn ffv2-btn-p" onclick="ffv2ConfirmarAcaoLinha_(\''+conciliacaoId+'\',\''+tipo+'\')">Confirmar</button></div>'+
@@ -1048,7 +1065,7 @@ function ffv2VerComprovanteLinha_(conciliacaoId) {
         '<p class="ffv2-section-title">Dados da Prestação</p>'+
         '<p style="font-size:12px;">Valor: '+finFlashV2FmtMoeda_(p.prestacao.valor)+'  |  Data: '+finFlashV2Escape_(p.prestacao.dataGasto||'—')+'  |  Categoria: '+finFlashV2Escape_(p.prestacao.categoria||'—')+'  |  Status: '+ffv2Badge_(p.prestacao.status)+'</p>'+
         (p.prestacao.justificativa?'<p style="font-size:12px;color:#475569;">Justificativa: '+finFlashV2Escape_(p.prestacao.justificativa)+'</p>':'');
-      ffv2Modal_('Comprovante — '+finFlashV2Escape_(p.tipo), conteudo);
+      ffv2Modal_('Comprovante — '+finFlashV2Escape_(p.tipo), conteudo, true);
     })
     .withFailureHandler(function(e){ffv2Modal_('Erro',finFlashV2Escape_(e.message));})
     .FIN_FLASH_V2_OBTER_PREVIEW_COMPROVANTE_DEV({ prestacaoId: item.prestacaoId || '' });
@@ -1248,7 +1265,7 @@ function ffv2GerarExtratoCpfA4_() {
     .withSuccessHandler(function(r) {
       if(r.ok) {
         if(el) el.innerHTML='<span class="ffv2-msg ffv2-msg-ok" style="display:inline-block;">&#10003; Gerado!</span>';
-        ffv2Modal_('Extrato A4 — Preview',r.htmlA4||'<p>HTML não disponível.</p>');
+        ffv2Modal_('Extrato A4 — Preview',r.htmlA4||'<p>HTML não disponível.</p>', true);
       } else {
         if(el) el.innerHTML='<span class="ffv2-msg ffv2-msg-er" style="display:inline-block;">'+(r.bloqueios||[]).join(' ')+'</span>';
       }
@@ -1438,7 +1455,7 @@ function ffv2PreviewRel_(tipo) {
   google.script.run
     .withSuccessHandler(function(r){
       if(el) el.innerHTML='';
-      if(r.ok) ffv2Modal_('Preview A4 — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>');
+      if(r.ok) ffv2Modal_('Preview A4 — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>', true);
       else if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+(r.bloqueios||[]).join('<br>')+'</div>';
     })
     .withFailureHandler(function(e){if(el)el.innerHTML='<div class="ffv2-msg ffv2-msg-er">'+finFlashV2Escape_(e.message)+'</div>';})
@@ -1452,7 +1469,7 @@ function ffv2GerarRel_(tipo) {
     .withSuccessHandler(function(r){
       if(r.ok) {
         if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-ok" style="font-size:11px;">&#10003; '+finFlashV2Escape_(r.documentoId||'')+'</div>';
-        ffv2Modal_('Relatório A4 gerado — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>');
+        ffv2Modal_('Relatório A4 gerado — '+tipo, r.htmlA4||'<p>Sem conteúdo.</p>', true);
         ffv2CarregarListaDocs_();
       } else {
         if(el) el.innerHTML='<div class="ffv2-msg ffv2-msg-er" style="font-size:11px;">'+(r.bloqueios||[]).join('<br>')+'</div>';
@@ -1499,7 +1516,7 @@ function ffv2PreviewDocA4_(tipo, id) {
   // V2.16K — o TIPO real do documento é enviado como está, sem tradução local; o
   // backend decide a categoria e nunca cai silenciosamente no Relatório Positivo
   // quando não reconhece o tipo (ver FIN_FLASH_V2_PREVIEW_DOCUMENTO_A4_DEV).
-  ffv2Modal_('Preview A4 — carregando…','<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>');
+  ffv2Modal_('Preview A4 — carregando…','<div class="ffv2-msg ffv2-msg-in">Aguarde...</div>', true);
   google.script.run
     .withSuccessHandler(function(r){
       var modal=document.getElementById('ffv2-modal');
@@ -1561,7 +1578,7 @@ function ffv2CarregarTermosColaboradores_() {
 }
 
 function ffv2PreviewTermoColaborador_(cpf, aceiteId) {
-  ffv2Modal_('Termo Assinado — carregando…','<div class="ffv2-msg ffv2-msg-in">Gerando preview A4...</div>');
+  ffv2Modal_('Termo Assinado — carregando…','<div class="ffv2-msg ffv2-msg-in">Gerando preview A4...</div>', true);
   google.script.run
     .withSuccessHandler(function(r){
       var modal=document.getElementById('ffv2-modal');
