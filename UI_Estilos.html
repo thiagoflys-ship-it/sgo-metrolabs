@@ -1107,6 +1107,1018 @@
   }
 
   /* ============================================================
+     METROLABS DARK COMPACT - DESKTOP PORTAL ONLY
+  ============================================================ */
+  .app-shell {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --card: #161b22;
+    --card-soft: #0f172a;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --text-light: #64748b;
+    --border: #30363d;
+    --border-strong: #475569;
+    --shadow: 0 10px 28px rgba(0,0,0,.24);
+    --shadow-md: 0 14px 34px rgba(0,0,0,.28);
+    --shadow-hover: 0 18px 42px rgba(0,0,0,.34);
+    --shadow-lg: 0 22px 60px rgba(0,0,0,.42);
+    --metro-green: #22c55e;
+    --metro-green-dark: #16a34a;
+    --metro-green-light: rgba(34,197,94,.18);
+    --metro-green-xlight: rgba(34,197,94,.10);
+    --metro-blue: #38bdf8;
+    --metro-blue-dark: #0ea5e9;
+    --metro-blue-light: rgba(56,189,248,.16);
+    --metro-gold: #f59e0b;
+    --metro-gold-dark: #d97706;
+    --danger-bg: rgba(239,68,68,.12);
+    --warning-bg: rgba(245,158,11,.12);
+    --success-bg: rgba(34,197,94,.12);
+    --info-bg: rgba(56,189,248,.12);
+    --pending-bg: rgba(249,115,22,.12);
+    --sb-bg: #0b1220;
+    --sb-bg-hover: rgba(255,255,255,.06);
+    --sb-bg-active: rgba(34,197,94,.14);
+    --sb-text: #94a3b8;
+    --sb-section: rgba(148,163,184,.58);
+    --sb-border: rgba(148,163,184,.16);
+    --sb-accent: #22c55e;
+    --radius: 8px;
+    --radius-sm: 6px;
+    --input-h: 42px;
+    background:
+      radial-gradient(circle at 18% 0%, rgba(56,189,248,.10), transparent 26rem),
+      radial-gradient(circle at 88% 8%, rgba(34,197,94,.08), transparent 24rem),
+      linear-gradient(180deg, #0d1117 0%, #0b1020 100%);
+    color: var(--text);
+  }
+
+  .app-shell input,
+  .app-shell select,
+  .app-shell textarea {
+    min-height: var(--input-h);
+    background: #0b1220;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+
+  .app-shell input::placeholder,
+  .app-shell textarea::placeholder {
+    color: #64748b;
+  }
+
+  .app-shell input:hover,
+  .app-shell select:hover,
+  .app-shell textarea:hover {
+    border-color: var(--border-strong);
+    background: #111827;
+  }
+
+  .app-shell input:focus,
+  .app-shell select:focus,
+  .app-shell textarea:focus {
+    border-color: var(--metro-blue);
+    box-shadow: 0 0 0 .2rem rgba(56,189,248,.12), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  .app-shell label {
+    color: #f8fafc;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .app-shell .topbar {
+    height: 68px;
+    background: rgba(13,17,23,.94);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-shell .topbar-logo-block {
+    height: 50px;
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: none;
+  }
+
+  .app-shell .brand-sgo,
+  .app-shell .topbar-title {
+    color: #f8fafc;
+  }
+
+  .app-shell .brand-plus,
+  .app-shell .topbar-subtitle {
+    color: var(--metro-green);
+  }
+
+  .app-shell .mensagem-motivacional {
+    background: rgba(15,23,42,.74);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 12px;
+    font-style: normal;
+  }
+
+  .app-shell .status-produtivo {
+    background: rgba(34,197,94,.12);
+    color: #86efac;
+    border: 1px solid rgba(34,197,94,.28);
+    box-shadow: none;
+  }
+
+  .app-shell .sidebar {
+    background: #0b1220;
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+  }
+
+  .app-shell .menu-btn {
+    min-height: 38px;
+    border-radius: var(--radius-sm);
+  }
+
+  .app-shell .menu-btn.active,
+  .app-shell .menu-btn[data-active="true"] {
+    border: 1px solid rgba(34,197,94,.20);
+  }
+
+  .app-shell .content-area {
+    background:
+      radial-gradient(circle at 16% 0%, rgba(56,189,248,.08), transparent 24rem),
+      linear-gradient(180deg, #0d1117 0%, #0b1020 100%);
+    padding: 18px;
+  }
+
+  .app-shell .content-panel,
+  .app-shell .module-shell {
+    min-height: 0;
+  }
+
+  .app-shell .content-title {
+    color: #f8fafc;
+    font-size: 20px;
+    letter-spacing: 0;
+  }
+
+  .app-shell .content-subtitle,
+  .app-shell .helper-text,
+  .app-shell .empty-state {
+    color: var(--muted);
+  }
+
+  .app-shell .module-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin-bottom: 0;
+    padding: 14px 18px;
+    background: rgba(13,17,23,.92);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-shell .module-header::before {
+    content: "";
+    width: 4px;
+    min-height: 42px;
+    background: linear-gradient(180deg, var(--metro-blue), var(--metro-green));
+    border-radius: 999px;
+    align-self: stretch;
+  }
+
+  .app-shell .dashboard-grid {
+    gap: 12px;
+  }
+
+  .app-shell .card-kpi,
+  .app-shell .dashboard-alertas-container,
+  .app-shell .form-card,
+  .app-shell .list-card,
+  .app-shell .modal-card,
+  .app-shell .iframe-container {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    color: var(--text);
+  }
+
+  .app-shell .form-card,
+  .app-shell .dashboard-alertas-container {
+    padding: 20px;
+  }
+
+  .app-shell .form-card {
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .app-shell .form-card::before,
+  .app-shell .list-card::before,
+  .app-shell .dashboard-alertas-container::before {
+    content: "";
+    display: block;
+    height: 3px;
+    margin: -20px -20px 16px;
+    background: linear-gradient(90deg, var(--metro-blue), var(--metro-green));
+  }
+
+  .app-shell .list-card::before {
+    margin: 0;
+  }
+
+  .app-shell .card-kpi-value {
+    color: var(--metro-green);
+  }
+
+  .app-shell .card-kpi-title,
+  .app-shell .card-kpi-sub,
+  .app-shell .table thead th {
+    color: var(--muted);
+  }
+
+  .app-shell .section-card-title {
+    color: #f8fafc;
+    border-bottom-color: var(--border);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+
+  .app-shell .section-card-title::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--metro-green);
+    box-shadow: 0 0 16px rgba(34,197,94,.65);
+  }
+
+  .app-shell .btn-primary,
+  .app-shell .btn-success {
+    min-height: 42px;
+    height: 42px;
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #052e16;
+    border: 1px solid rgba(134,239,172,.34);
+    box-shadow: 0 10px 24px rgba(34,197,94,.20);
+  }
+
+  .app-shell .btn-secondary,
+  .app-shell .btn-info {
+    min-height: 42px;
+    height: 42px;
+    background: #111827;
+    color: #dbeafe;
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .app-shell .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+  }
+
+  .app-shell .table thead th {
+    background: #0f172a;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-shell .table tbody td {
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-shell .table tbody tr:nth-child(even) td {
+    background: rgba(255,255,255,.015);
+  }
+
+  .app-shell .table tbody tr:hover td {
+    background: rgba(56,189,248,.08);
+  }
+
+  .app-shell .modal-overlay {
+    background: rgba(0,0,0,.68);
+    backdrop-filter: blur(6px);
+  }
+
+  .app-shell .modal-header,
+  .app-shell .modal-footer {
+    background: #0f172a;
+    border-color: var(--border);
+  }
+
+  .app-shell .modal-title {
+    color: #f8fafc;
+  }
+
+  .app-shell .motores-tab-btn {
+    background: #111827;
+    color: var(--muted);
+    border-color: var(--border);
+  }
+
+  .app-shell .motores-tab-btn.active {
+    background: linear-gradient(180deg, #22c55e, #16a34a);
+    color: #052e16;
+  }
+
+
+  /* DARK COMPACT - INLINE NEUTRAL FIXES
+     Escopo limitado a telas operacionais renderizadas dentro do portal. */
+  .app-shell .content-area [style*="background:#f8fafc"],
+  .app-shell .content-area [style*="background: #f8fafc"],
+  .app-shell .content-area [style*="background:#f0f4fa"],
+  .app-shell .content-area [style*="background: #f0f4fa"],
+  .app-shell .content-area [style*="background:#fafafa"],
+  .app-shell .content-area [style*="background: #fafafa"],
+  .app-shell .content-area [style*="background:#f1f5f9"],
+  .app-shell .content-area [style*="background: #f1f5f9"],
+  .app-shell .content-area [style*="background:#eff6ff"],
+  .app-shell .content-area [style*="background: #eff6ff"] {
+    background: #0f172a !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area [style*="background:#fff;"],
+  .app-shell .content-area [style*="background: #fff;"],
+  .app-shell .content-area [style*="background:#ffffff"],
+  .app-shell .content-area [style*="background: #ffffff"] {
+    background: #161b22 !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area [style*="color:#344054"],
+  .app-shell .content-area [style*="color: #344054"],
+  .app-shell .content-area [style*="color:#475569"],
+  .app-shell .content-area [style*="color: #475569"] {
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area [style*="color:#64748b"],
+  .app-shell .content-area [style*="color: #64748b"] {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area hr {
+    border-top-color: var(--border) !important;
+  }
+
+  /* DARK COMPACT - MODULE SPECIFIC LOW RISK
+     Ajustes apenas de UI operacional para Importacao e Frota. */
+  .app-shell .imp-dropzone,
+  .app-shell .imp-tipo-card,
+  .app-shell .imp-options-panel,
+  .app-shell .imp-result-card,
+  .app-shell .frota-card,
+  .app-shell .frota-checkitem,
+  .app-shell .frota-info,
+  .app-shell .frota-result,
+  .app-shell .frota-preview figure {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow) !important;
+  }
+
+  .app-shell .imp-dropzone:hover,
+  .app-shell .imp-dropzone.drag-over,
+  .app-shell .imp-tipo-card:hover,
+  .app-shell .imp-tipo-card.selected {
+    background: rgba(56,189,248,.10) !important;
+    border-color: var(--metro-blue) !important;
+    box-shadow: 0 0 0 3px rgba(56,189,248,.12) !important;
+  }
+
+  .app-shell .imp-map-select,
+  .app-shell .frota-field input,
+  .app-shell .frota-field select,
+  .app-shell .frota-field textarea {
+    background: #0b1220 !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .imp-map-table td,
+  .app-shell .imp-preview-table td,
+  .app-shell .frota-table td {
+    color: var(--text) !important;
+    border-bottom-color: var(--border) !important;
+  }
+
+  .app-shell .imp-map-table tbody tr:hover td,
+  .app-shell .imp-preview-table tbody tr:nth-child(even) td,
+  .app-shell .frota-table tbody tr:hover td {
+    background: rgba(56,189,248,.08) !important;
+  }
+
+  .app-shell .frota-title h2,
+  .app-shell .frota-card h3,
+  .app-shell .frota-kpi strong,
+  .app-shell .frota-checkitem-title,
+  .app-shell .frota-info strong,
+  .app-shell .imp-drop-title,
+  .app-shell .imp-tipo-label,
+  .app-shell .imp-options-title {
+    color: #f8fafc !important;
+  }
+
+  .app-shell .frota-title p,
+  .app-shell .frota-field label,
+  .app-shell .frota-info small,
+  .app-shell .frota-preview figcaption,
+  .app-shell .frota-empty,
+  .app-shell .imp-step-label,
+  .app-shell .imp-drop-sub,
+  .app-shell .imp-tipo-sub,
+  .app-shell .imp-progress-label {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .frota-tabs {
+    border-bottom-color: var(--border) !important;
+  }
+
+  .app-shell .frota-tab,
+  .app-shell .frota-btn.secondary,
+  .app-shell .frota-check-options label {
+    background: #111827 !important;
+    color: #dbeafe !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .frota-tab.active,
+  .app-shell .frota-btn.primary {
+    background: linear-gradient(180deg, #22c55e, #16a34a) !important;
+    color: #052e16 !important;
+    border-color: rgba(134,239,172,.34) !important;
+  }
+
+  .app-shell .frota-table-wrap,
+  .app-shell .frota-table th {
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .frota-table th {
+    background: #0f172a !important;
+    color: var(--muted) !important;
+  }
+
+  .app-shell .imp-info-bar,
+  .app-shell .imp-alert.info {
+    background: rgba(56,189,248,.10) !important;
+    border-color: rgba(56,189,248,.26) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .imp-alert.warn,
+  .app-shell .frota-result.warn {
+    background: rgba(245,158,11,.12) !important;
+    border-color: rgba(245,158,11,.30) !important;
+    color: #fde68a !important;
+  }
+
+  .app-shell .imp-alert.ok,
+  .app-shell .frota-result.ok {
+    background: rgba(34,197,94,.12) !important;
+    border-color: rgba(34,197,94,.30) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .frota-result.bad,
+  .app-shell .imp-errors-list {
+    background: rgba(239,68,68,.12) !important;
+    border-color: rgba(239,68,68,.30) !important;
+    color: #fecaca !important;
+  }
+
+  .app-shell .imp-toggle-slider {
+    background: #334155 !important;
+  }
+
+  .app-shell .imp-toggle-slider:before {
+    background: #e5e7eb !important;
+  }
+
+  /* DARK COMPACT - MODULE SPECIFIC 2C
+     Cadastros, Missoes e Dashboard BI usam classes globais; aqui ficam apenas sobras inline. */
+  .app-shell .content-area [style*="background:#eef2f7"],
+  .app-shell .content-area [style*="background: #eef2f7"],
+  .app-shell .content-area [style*="background:#f8faff"],
+  .app-shell .content-area [style*="background: #f8faff"] {
+    background: #0b1220 !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area [style*="background:var(--metro-green)"],
+  .app-shell .content-area [style*="background: var(--metro-green)"] {
+    background: linear-gradient(90deg, var(--metro-blue), var(--metro-green)) !important;
+  }
+
+  .app-shell .content-area [style*="color:var(--text)"],
+  .app-shell .content-area [style*="color: var(--text)"] {
+    color: var(--text) !important;
+  }
+
+  /* DARK COMPACT - MIXED MODULES 3A
+     Estoque, Registros e Tecnicos: apenas UI do portal; prints/prontuarios ficam fora do escopo. */
+  .app-shell .content-area [style*="background:#f0faf4"],
+  .app-shell .content-area [style*="background: #f0faf4"],
+  .app-shell .content-area [style*="background:#e0f2fe"],
+  .app-shell .content-area [style*="background: #e0f2fe"] {
+    background: rgba(56,189,248,.10) !important;
+    color: #bae6fd !important;
+    border-color: rgba(56,189,248,.28) !important;
+  }
+
+  .app-shell .content-area [style*="background:#fef2f2"],
+  .app-shell .content-area [style*="background: #fef2f2"] {
+    background: rgba(239,68,68,.13) !important;
+    color: #fecaca !important;
+    border-color: rgba(239,68,68,.32) !important;
+  }
+
+  .app-shell .content-area [style*="background:#fff7ed"],
+  .app-shell .content-area [style*="background: #fff7ed"] {
+    background: rgba(249,115,22,.13) !important;
+    color: #fed7aa !important;
+    border-color: rgba(249,115,22,.32) !important;
+  }
+
+  .app-shell .content-area [style*="background:#f0fdf4"],
+  .app-shell .content-area [style*="background: #f0fdf4"] {
+    background: rgba(34,197,94,.13) !important;
+    color: #86efac !important;
+    border-color: rgba(34,197,94,.32) !important;
+  }
+
+  .app-shell .content-area [style*="color:#dc2626"],
+  .app-shell .content-area [style*="color: #dc2626"] {
+    color: #fca5a5 !important;
+  }
+
+  .app-shell .content-area [style*="color:#ea580c"],
+  .app-shell .content-area [style*="color: #ea580c"] {
+    color: #fdba74 !important;
+  }
+
+  .app-shell .content-area [style*="color:#16a34a"],
+  .app-shell .content-area [style*="color: #16a34a"] {
+    color: #86efac !important;
+  }
+
+  .app-shell .btn-icon {
+    min-width: 30px;
+    min-height: 30px;
+    border-radius: var(--radius-sm);
+    background: #111827 !important;
+    color: #dbeafe !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .btn-icon:hover {
+    border-color: var(--metro-blue) !important;
+    color: #bae6fd !important;
+    background: rgba(56,189,248,.10) !important;
+  }
+
+  .app-shell .btn-icon-danger {
+    color: #fca5a5 !important;
+    border-color: rgba(239,68,68,.28) !important;
+  }
+
+  .app-shell .btn-icon-success {
+    color: #86efac !important;
+    border-color: rgba(34,197,94,.28) !important;
+  }
+
+  .app-shell #est_tab_itens,
+  .app-shell #est_tab_entradas,
+  .app-shell #est_tab_movimentacoes {
+    color: var(--muted);
+  }
+
+  /* DARK COMPACT - MIXED MODULES 3B
+     Fornecedores e Contratos: tela de cadastro/listagem; nao altera arquivos, links ou documentos emitidos. */
+  .app-shell #forn_docs_card,
+  .app-shell #ctr_form_card {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell #forn_qual_status {
+    background: rgba(56,189,248,.10) !important;
+    border: 1px solid rgba(56,189,248,.26) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell #ctr_eqp_lista label,
+  .app-shell #forn_docs_card label {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell #ctr_eqp_lista label:hover,
+  .app-shell #forn_docs_card label:hover {
+    border-color: var(--metro-blue) !important;
+    background: rgba(56,189,248,.10) !important;
+  }
+
+  .app-shell #forn_docs_tbody a,
+  .app-shell #ctr_tbody a {
+    color: #7dd3fc !important;
+    text-decoration: none;
+  }
+
+  .app-shell #forn_docs_tbody a:hover,
+  .app-shell #ctr_tbody a:hover {
+    color: #bae6fd !important;
+    text-decoration: underline;
+  }
+
+  .app-shell #forn_doc_helper,
+  .app-shell #forn_helper,
+  .app-shell #ctr_helper,
+  .app-shell #ctr_eqp_aviso {
+    color: var(--muted) !important;
+  }
+
+  .app-shell #forn_docs_card .table-wrap,
+  .app-shell #ctr_form_card + .list-card .table-wrap {
+    border-color: var(--border) !important;
+  }
+
+  /* DARK COMPACT - MIXED MODULES 3C
+     Rastreabilidade, Inventario e Relatorios: somente tela operacional do portal.
+     Nao atinge .inv-print-*, #inv-print-overlay, .prt-* nem janelas HTML de impressao. */
+  .app-shell .content-area #rastResultado,
+  .app-shell .content-area #inv-resultados,
+  .app-shell .content-area #relKpis,
+  .app-shell .content-area #relTabelaWrap {
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .inv-filters-card,
+  .app-shell .content-area .inv-kpi {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .inv-filters-grid label,
+  .app-shell .content-area .inv-kpi-label,
+  .app-shell .content-area .inv-kpi-sub,
+  .app-shell .content-area .inv-action-bar-right,
+  .app-shell .content-area #inv-loading,
+  .app-shell .content-area #inv-empty {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .inv-kpi-value {
+    color: #e5e7eb !important;
+  }
+
+  .app-shell .content-area .inv-filters-grid select,
+  .app-shell .content-area .inv-filters-grid input {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .inv-btn-gerar {
+    background: linear-gradient(135deg, var(--metro-green), var(--metro-blue)) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 24px rgba(0,0,0,.22) !important;
+  }
+
+  .app-shell .content-area .inv-action-bar {
+    background: rgba(56,189,248,.08) !important;
+    border-color: rgba(56,189,248,.22) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .inv-row-vencido td {
+    background: rgba(239,68,68,.12) !important;
+  }
+
+  .app-shell .content-area .inv-row-vencendo td {
+    background: rgba(245,158,11,.12) !important;
+  }
+
+  .app-shell .content-area .inv-row-semdoc td {
+    background: rgba(148,163,184,.08) !important;
+  }
+
+  .app-shell .content-area .inv-badge {
+    border: 1px solid rgba(255,255,255,.10) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+  }
+
+  .app-shell .content-area .inv-badge-ok,
+  .app-shell .content-area .inv-badge-proprio {
+    background: rgba(34,197,94,.14) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area .inv-badge-vencendo,
+  .app-shell .content-area .inv-badge-comodato {
+    background: rgba(245,158,11,.16) !important;
+    color: #fcd34d !important;
+  }
+
+  .app-shell .content-area .inv-badge-vencido {
+    background: rgba(239,68,68,.15) !important;
+    color: #fca5a5 !important;
+  }
+
+  .app-shell .content-area .inv-badge-semdoc {
+    background: rgba(148,163,184,.14) !important;
+    color: #cbd5e1 !important;
+  }
+
+  .app-shell .content-area .inv-badge-locado {
+    background: rgba(59,130,246,.15) !important;
+    color: #93c5fd !important;
+  }
+
+  .app-shell .content-area .inv-badge-terceiro {
+    background: rgba(168,85,247,.15) !important;
+    color: #d8b4fe !important;
+  }
+
+  .app-shell .content-area #rastResultado .section-card,
+  .app-shell .content-area #rastResultado .full {
+    background: #0f172a !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area #rastResultado .section-card-title {
+    color: #e5e7eb !important;
+  }
+
+  .app-shell .content-area #rastResultado table,
+  .app-shell .content-area #rastResultado td {
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area #rastResultado b,
+  .app-shell .content-area #rastResultado strong {
+    color: #f8fafc !important;
+  }
+
+  .app-shell .content-area #relFiltroClienteWrap,
+  .app-shell .content-area #relResumo,
+  .app-shell .content-area #relTabelaContainer {
+    color: var(--text) !important;
+  }
+
+  /* DARK COMPACT - ASSISTENCIA TECNICA 3D
+     Apenas telas operacionais AST dentro do portal. Nao estiliza iframes,
+     srcdoc, previews A4, documentos oficiais, validacao, QR ou impressoes. */
+  .app-shell .content-area .ast-shell,
+  .app-shell .content-area #astArea {
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ast-kpi,
+  .app-shell .content-area .ast-filters-card,
+  .app-shell .content-area .ast-v2-filterbar,
+  .app-shell .content-area .ast-v2-card,
+  .app-shell .content-area .ast-entry-card,
+  .app-shell .content-area .ast-v2-det-section,
+  .app-shell .content-area .ast-side-card,
+  .app-shell .content-area .ast-soft {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .ast-v2-card:hover,
+  .app-shell .content-area .ast-v2-det-section:hover,
+  .app-shell .content-area .ast-side-card:hover {
+    border-color: rgba(56,189,248,.30) !important;
+  }
+
+  .app-shell .content-area .ast-v2-filterbar h3,
+  .app-shell .content-area .ast-v2-list-title,
+  .app-shell .content-area .ast-toolbar-title,
+  .app-shell .content-area .ast-panel-title,
+  .app-shell .content-area .ast-detail-title,
+  .app-shell .content-area .ast-entry-card h3,
+  .app-shell .content-area .ast-side-card h4,
+  .app-shell .content-area .ast-v2-card h5,
+  .app-shell .content-area .ast-v2-protocol,
+  .app-shell .content-area .ast-row-main,
+  .app-shell .content-area .ast-v2-tl-acao,
+  .app-shell .content-area .ast-v2-det-field b,
+  .app-shell .content-area .ast-v2-meta b {
+    color: #f8fafc !important;
+  }
+
+  .app-shell .content-area .ast-kpi-label,
+  .app-shell .content-area .ast-toolbar-sub,
+  .app-shell .content-area .ast-detail-sub,
+  .app-shell .content-area .ast-muted,
+  .app-shell .content-area .ast-empty,
+  .app-shell .content-area .ast-inline-status,
+  .app-shell .content-area .ast-row-sub,
+  .app-shell .content-area .ast-v2-client,
+  .app-shell .content-area .ast-v2-next,
+  .app-shell .content-area .ast-v2-dense summary,
+  .app-shell .content-area .ast-v2-det-field span,
+  .app-shell .content-area .ast-v2-meta span,
+  .app-shell .content-area .ast-v2-tl-date,
+  .app-shell .content-area .ast-v2-tl-user,
+  .app-shell .content-area .ast-v2-tl-desc,
+  .app-shell .content-area .ast-time-meta,
+  .app-shell .content-area .ast-time-desc,
+  .app-shell .content-area .ast-entry-save-status,
+  .app-shell .content-area .ast-evidence-preview {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .ast-kpi-value {
+    color: #e5e7eb !important;
+  }
+
+  .app-shell .content-area .ast-v2-rail .ast-v2-step,
+  .app-shell .content-area .ast-stage,
+  .app-shell .content-area .ast-entry-check,
+  .app-shell .content-area .ast-entry-provisorio,
+  .app-shell .content-area .ast-evidence-preview,
+  .app-shell .content-area .ast-accessory-row,
+  .app-shell .content-area .ast-v2-equipment,
+  .app-shell .content-area .ast-v2-acao-stub,
+  .app-shell .content-area .ast-v2-tl-empty {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ast-v2-step-index {
+    background: rgba(56,189,248,.14) !important;
+    color: #7dd3fc !important;
+  }
+
+  .app-shell .content-area .ast-v2-step-label {
+    color: #e5e7eb !important;
+  }
+
+  .app-shell .content-area .ast-tabs,
+  .app-shell .content-area .ast-entry-actions,
+  .app-shell .content-area .ast-toolbar {
+    background: rgba(15,23,42,.84) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .ast-tab {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ast-tab.active,
+  .app-shell .content-area .ast-tab:hover {
+    background: rgba(56,189,248,.14) !important;
+    border-color: rgba(56,189,248,.35) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .ast-v2-acao-btn {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ast-v2-acao-btn:hover {
+    background: rgba(56,189,248,.12) !important;
+    border-color: rgba(56,189,248,.34) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .ast-form-grid label,
+  .app-shell .content-area .ast-entry-card label,
+  .app-shell .content-area .ast-v2-filterbar label,
+  .app-shell .content-area .ast-v2-card label {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .ast-form-grid input,
+  .app-shell .content-area .ast-form-grid select,
+  .app-shell .content-area .ast-form-grid textarea,
+  .app-shell .content-area .ast-v2-filterbar input,
+  .app-shell .content-area .ast-v2-filterbar select,
+  .app-shell .content-area .ast-v2-card input[type=text],
+  .app-shell .content-area .ast-v2-card input[type=number],
+  .app-shell .content-area .ast-v2-card input[type=date],
+  .app-shell .content-area .ast-v2-card input[type=file],
+  .app-shell .content-area .ast-v2-card select,
+  .app-shell .content-area .ast-v2-card textarea,
+  .app-shell .content-area .ast-entry-card input,
+  .app-shell .content-area .ast-entry-card select,
+  .app-shell .content-area .ast-entry-card textarea {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ast-skeleton {
+    background: #1f2937 !important;
+  }
+
+  .app-shell .content-area .ast-skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(148,163,184,.22), transparent) !important;
+  }
+
+  .app-shell .content-area .ast-badge,
+  .app-shell .content-area .ast-v2-pill {
+    border: 1px solid rgba(255,255,255,.10) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+  }
+
+  .app-shell .content-area .ast-badge.verde,
+  .app-shell .content-area .ast-badge.VERDE,
+  .app-shell .content-area .ast-badge.prio-BAIXA,
+  .app-shell .content-area .ast-stage.done {
+    background: rgba(34,197,94,.14) !important;
+    border-color: rgba(34,197,94,.28) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area .ast-badge.amarelo,
+  .app-shell .content-area .ast-badge.AMARELO,
+  .app-shell .content-area .ast-badge.prio-ALTA,
+  .app-shell .content-area .ast-badge.prio-NORMAL,
+  .app-shell .content-area .ast-stage.active {
+    background: rgba(245,158,11,.16) !important;
+    border-color: rgba(245,158,11,.30) !important;
+    color: #fcd34d !important;
+  }
+
+  .app-shell .content-area .ast-badge.vermelho,
+  .app-shell .content-area .ast-badge.VERMELHO,
+  .app-shell .content-area .ast-badge.prio-CRITICA {
+    background: rgba(239,68,68,.15) !important;
+    border-color: rgba(239,68,68,.30) !important;
+    color: #fca5a5 !important;
+  }
+
+  .app-shell .content-area .ast-badge.azul_cinza,
+  .app-shell .content-area .ast-badge.AZUL_CINZA {
+    background: rgba(148,163,184,.14) !important;
+    color: #cbd5e1 !important;
+  }
+
+  .app-shell .content-area .ast-link {
+    color: #7dd3fc !important;
+  }
+
+  .app-shell .content-area .ast-time-item,
+  .app-shell .content-area .ast-v2-tl-dot {
+    border-color: #38bdf8 !important;
+  }
+
+  .app-shell .content-area .ast-v2-tl-line {
+    background: var(--border) !important;
+  }
+  .mobile-shell {
+    color-scheme: light;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --card-soft: #f8fafc;
+    --text: #1a202c;
+    --muted: #64748b;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --metro-green: #059669;
+    --metro-green-dark: #047857;
+    --metro-green-light: #d1fae5;
+    --metro-green-xlight: #ecfdf5;
+    --metro-blue: #2563eb;
+    --metro-blue-dark: #1d4ed8;
+    --metro-blue-light: #dbeafe;
+  }
+  /* ============================================================
      SCROLL GLOBAL
   ============================================================ */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -1122,6 +2134,44 @@
     .module-grid { grid-template-columns: minmax(320px, 36%) minmax(0, 1fr); }
   }
 
+
+  .app-shell .content-area .db-kpi,
+  .app-shell .content-area .db-card,
+  .app-shell .content-area .db-top-item,
+  .app-shell .content-area .db-alert-filter,
+  .app-shell .content-area .ia-sug-panel,
+  .app-shell .content-area .ia-sug-texto,
+  .app-shell .content-area .ia-sug-aviso,
+  .app-shell .content-area .qc-card,
+  .app-shell .content-area .qc-kpi,
+  .app-shell .content-area [class*="qc-"] {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .db-act-btn,
+  .app-shell .content-area .qc-action,
+  .app-shell .content-area [class*="qc-"] button {
+    background: var(--panel-soft) !important;
+    border-color: var(--border) !important;
+    color: var(--text-strong) !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .content-area .db-act-btn:hover,
+  .app-shell .content-area .qc-action:hover,
+  .app-shell .content-area [class*="qc-"] button:hover {
+    background: rgba(122,167,199,.12) !important;
+    border-color: rgba(122,167,199,.34) !important;
+  }
+
+  .app-shell .content-area .db-bar-track,
+  .app-shell .content-area .db-posse-track {
+    background: var(--panel-2) !important;
+    border: 1px solid var(--border) !important;
+  }
   @media (max-width: 900px) {
     .sidebar { display: none; }
     .content-area { padding: 16px; }
@@ -1566,6 +2616,478 @@
     .os-exec-step-btn { min-width: 56px; padding: 6px 8px; font-size: 10px; }
     .os-exec-step-num { width: 22px; height: 22px; font-size: 11px; }
     .os-ass-canvas-wrap canvas { height: 140px; }
+  }
+
+  /* DARK COMPACT - OS OPERACIONAL 3E
+     OS, Execucao e Questionarios: telas do portal apenas. Nao altera
+     geradores PDF, QR, validacao, iframes, srcdoc ou impressoes. */
+  .app-shell .content-area .os-kpi-card,
+  .app-shell .content-area .os-form-bloco,
+  .app-shell .content-area .os-filter-bar,
+  .app-shell .content-area .os-dropdown,
+  .app-shell .content-area .os-tecnico-drop,
+  .app-shell .content-area .os-tecnico-tag,
+  .app-shell .content-area .os-exec-step-btn,
+  .app-shell .content-area .os-foto-item,
+  .app-shell .content-area .os-ass-canvas-wrap,
+  .app-shell .content-area .os-check-pergunta,
+  .app-shell .content-area .ia-sug-panel,
+  .app-shell .content-area #qc_kpis > div {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .os-kpi-value,
+  .app-shell .content-area .os-form-bloco-titulo,
+  .app-shell .content-area .os-check-label,
+  .app-shell .content-area .ia-sug-header,
+  .app-shell .content-area #qc_kpis > div div[style*="font-size:22"],
+  .app-shell .content-area #qc_kpis > div div[style*="font-size:14"] {
+    color: #f8fafc !important;
+  }
+
+  .app-shell .content-area .os-kpi-label,
+  .app-shell .content-area .os-foto-status-wait,
+  .app-shell .content-area .os-ass-hint,
+  .app-shell .content-area #qc_kpis > div div[style*="text-transform:uppercase"] {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .os-filter-bar select,
+  .app-shell .content-area .os-filter-bar input,
+  .app-shell .content-area .os-check-resp,
+  .app-shell .content-area .os-check-obs,
+  .app-shell .content-area #qc_busca,
+  .app-shell .content-area #qc_filtro_tipo,
+  .app-shell .content-area #qc_filtro_status,
+  .app-shell .content-area input[id^="qc_"],
+  .app-shell .content-area select[id^="qc_"],
+  .app-shell .content-area textarea[id^="qc_"],
+  .app-shell .content-area [id^="qc_"] input,
+  .app-shell .content-area [id^="qc_"] select,
+  .app-shell .content-area [id^="qc_"] textarea {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .os-tab-btn,
+  .app-shell .content-area .os-exec-tab,
+  .app-shell .content-area .btn-ia-sm,
+  .app-shell .content-area .os-dropdown button,
+  .app-shell .content-area .os-tecnico-item {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .os-tab-btn:hover,
+  .app-shell .content-area .os-tab-btn-ativo,
+  .app-shell .content-area .os-exec-tab:hover,
+  .app-shell .content-area .os-exec-tab.active,
+  .app-shell .content-area .os-exec-step-btn:hover,
+  .app-shell .content-area .os-exec-step-ativo,
+  .app-shell .content-area .os-dropdown button:hover,
+  .app-shell .content-area .os-tecnico-item:hover,
+  .app-shell .content-area .btn-ia-sm:hover {
+    background: rgba(56,189,248,.13) !important;
+    border-color: rgba(56,189,248,.34) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .os-exec-step-num,
+  .app-shell .content-area .os-tab-badge,
+  .app-shell .content-area .os-journey-dot {
+    background: rgba(56,189,248,.14) !important;
+    color: #7dd3fc !important;
+  }
+
+  .app-shell .content-area .os-exec-step-ativo .os-exec-step-num,
+  .app-shell .content-area .os-journey-step.current .os-journey-dot {
+    background: #38bdf8 !important;
+    color: #082f49 !important;
+    box-shadow: 0 0 0 3px rgba(56,189,248,.20) !important;
+  }
+
+  .app-shell .content-area .os-exec-step-done,
+  .app-shell .content-area .os-journey-step.done {
+    border-color: rgba(34,197,94,.28) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area .os-exec-step-done .os-exec-step-num,
+  .app-shell .content-area .os-journey-step.done .os-journey-dot {
+    background: rgba(34,197,94,.16) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area tr.os-row-sla-late td {
+    background: rgba(239,68,68,.12) !important;
+  }
+
+  .app-shell .content-area tr.os-row-sla-late:hover td {
+    background: rgba(239,68,68,.18) !important;
+  }
+
+  .app-shell .content-area .os-check-secao {
+    background: rgba(56,189,248,.10) !important;
+    border-color: rgba(56,189,248,.24) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .ia-sug-texto {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .ia-sug-aviso {
+    background: rgba(245,158,11,.14) !important;
+    border-color: rgba(245,158,11,.28) !important;
+    color: #fcd34d !important;
+  }
+
+  .app-shell .content-area .badge-ativo {
+    background: rgba(34,197,94,.14) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area .badge-inativo,
+  .app-shell .content-area .badge-bloqueado {
+    background: rgba(148,163,184,.14) !important;
+    color: #cbd5e1 !important;
+  }
+
+  .app-shell .content-area .badge-pendente {
+    background: rgba(245,158,11,.16) !important;
+    color: #fcd34d !important;
+  }
+
+  .app-shell .content-area .os-ass-canvas-wrap canvas {
+    background: #fff !important;
+  }
+
+  /* DARK COMPACT - FINANCEIRO OPERACIONAL 3F
+     Painel financeiro interno e FIN Flash V2 operacional. Nao altera
+     termo publico, prestacao publica, iframes, srcdoc, previews A4 ou impressao. */
+  .app-shell .content-area .fin-kpi,
+  .app-shell .content-area .fin-tabs-bar,
+  .app-shell .content-area .fin-split-left,
+  .app-shell .content-area .fin-split-right,
+  .app-shell .content-area .fin-card,
+  .app-shell .content-area .fin-modal,
+  .app-shell .content-area .fin-manual-section,
+  .app-shell .content-area .fin-visao-atalho,
+  .app-shell .content-area .fin-flash-summary-card,
+  .app-shell .content-area .fin-flash-op-card,
+  .app-shell .content-area .fin-flash-action-kpi,
+  .app-shell .content-area .fin-flash-checklist-item,
+  .app-shell .content-area .fin-admin-panel,
+  .app-shell .content-area .fin-admin-header-box,
+  .app-shell .content-area .fin-flash70-shell,
+  .app-shell .content-area .fin-actions-drop-menu,
+  .app-shell .content-area .fin-toggle-label,
+  .app-shell .content-area .fin-list-empty,
+  .app-shell .content-area .fin-empty-state,
+  .app-shell .content-area .fin-placeholder-card,
+  .app-shell .content-area #ffv2-wrap .ffv2-kpi-row,
+  .app-shell .content-area #ffv2-wrap .ffv2-nav,
+  .app-shell .content-area #ffv2-wrap .ffv2-pane,
+  .app-shell .content-area #ffv2-wrap .ffv2-card,
+  .app-shell .content-area #ffv2-wrap .ffv2-sit-card,
+  .app-shell .content-area #ffv2-wrap .ffv2-msg {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .fin-header,
+  .app-shell .content-area #ffv2-wrap .ffv2-hdr {
+    background: linear-gradient(135deg, #0b1220 0%, #123447 100%) !important;
+    border: 1px solid var(--border) !important;
+    color: #f8fafc !important;
+  }
+
+  .app-shell .content-area .fin-kpi-value,
+  .app-shell .content-area .fin-item-name,
+  .app-shell .content-area .fin-card h3,
+  .app-shell .content-area .fin-modal h3,
+  .app-shell .content-area .fin-manual-section h4,
+  .app-shell .content-area .fin-premium h3,
+  .app-shell .content-area .fin-placeholder-card h3,
+  .app-shell .content-area .fin-flash-summary-card .value,
+  .app-shell .content-area .fin-flash-op-card .value,
+  .app-shell .content-area .fin-flash-action-kpi .value,
+  .app-shell .content-area .fin-flash-checklist-item strong,
+  .app-shell .content-area .fin50-vg-atalho strong,
+  .app-shell .content-area .fin-visao-atalho strong,
+  .app-shell .content-area .fin-flash70-shell strong,
+  .app-shell .content-area #ffv2-wrap .ffv2-section-title,
+  .app-shell .content-area #ffv2-wrap .ffv2-sit-card h4 {
+    color: #f8fafc !important;
+  }
+
+  .app-shell .content-area .fin-kpi-label,
+  .app-shell .content-area .fin-kpi-sub,
+  .app-shell .content-area .fin-item-sub,
+  .app-shell .content-area .fin-list-foot,
+  .app-shell .content-area .fin-label,
+  .app-shell .content-area .fin-empty-state p,
+  .app-shell .content-area .fin-empty-state small,
+  .app-shell .content-area .fin-card p,
+  .app-shell .content-area .fin-manual-section p,
+  .app-shell .content-area .fin-manual-section ul,
+  .app-shell .content-area .fin-manual-section li,
+  .app-shell .content-area .fin-flash-upload-head p,
+  .app-shell .content-area .fin-flash-summary-card .label,
+  .app-shell .content-area .fin-flash-preview-foot,
+  .app-shell .content-area .fin-flash-op-card .label,
+  .app-shell .content-area .fin-flash-action-kpi .label,
+  .app-shell .content-area .fin-flash-checklist-item span,
+  .app-shell .content-area .fin-flash70-shell span,
+  .app-shell .content-area #ffv2-wrap .ffv2-lbl,
+  .app-shell .content-area #ffv2-wrap .ffv2-filtro-bar label,
+  .app-shell .content-area #ffv2-wrap .ffv2-sit-card .ffv2-sit-meta {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .fin-search,
+  .app-shell .content-area .fin-filter-select,
+  .app-shell .content-area .fin-input,
+  .app-shell .content-area .fin-select,
+  .app-shell .content-area .fin-textarea,
+  .app-shell .content-area .fin-input-sm,
+  .app-shell .content-area #ffv2-wrap .ffv2-inp,
+  .app-shell .content-area #ffv2-wrap .ffv2-filtro-bar input,
+  .app-shell .content-area #ffv2-wrap .ffv2-filtro-bar select {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .fin-list-head,
+  .app-shell .content-area .fin-list-foot,
+  .app-shell .content-area .fin-list-item,
+  .app-shell .content-area .fin-table-wrap,
+  .app-shell .content-area .fin-modal-footer,
+  .app-shell .content-area #finModalCadastrarCartaoReal .fin-modal-footer {
+    background: rgba(15,23,42,.84) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area .fin-list-item:hover,
+  .app-shell .content-area .fin-list-item.selected,
+  .app-shell .content-area .fin-visao-atalho:hover,
+  .app-shell .content-area .fin50-vg-atalho:hover,
+  .app-shell .content-area .fin-actions-drop-menu a:hover,
+  .app-shell .content-area .fin-toggle-label:hover,
+  .app-shell .content-area #ffv2-wrap .ffv2-nav button.ativa,
+  .app-shell .content-area #ffv2-wrap .ffv2-nav button:hover:not(.ativa) {
+    background: rgba(56,189,248,.12) !important;
+    border-color: rgba(56,189,248,.34) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .fin-tab-btn {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .fin-tab-btn.active,
+  .app-shell .content-area .fin-tab-btn:hover:not(.placeholder),
+  .app-shell .content-area .fin-actions-drop-menu a,
+  .app-shell .content-area #ffv2-wrap .ffv2-nav button {
+    color: #7dd3fc !important;
+  }
+
+  .app-shell .content-area .fin-tab-btn.active,
+  .app-shell .content-area #ffv2-wrap .ffv2-nav button.ativa {
+    border-bottom-color: #38bdf8 !important;
+  }
+
+  .app-shell .content-area .fin-table th,
+  .app-shell .content-area .fin-table thead tr,
+  .app-shell .content-area #ffv2-wrap table thead tr,
+  .app-shell .content-area #ffv2-wrap th {
+    background: #0f172a !important;
+    color: var(--muted) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .fin-table td,
+  .app-shell .content-area #ffv2-wrap td {
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .fin-table tr:hover td,
+  .app-shell .content-area #ffv2-wrap tbody tr:hover td {
+    background: rgba(56,189,248,.08) !important;
+  }
+
+  .app-shell .content-area .fin-btn-outline,
+  .app-shell .content-area .fin-btn-secondary,
+  .app-shell .content-area #ffv2-wrap .ffv2-btn-s {
+    background: #0f172a !important;
+    border-color: var(--border) !important;
+    color: #dbeafe !important;
+  }
+
+  .app-shell .content-area .fin-pill,
+  .app-shell .content-area .fin-flash-badge,
+  .app-shell .content-area .fin-placeholder-status,
+  .app-shell .content-area .fin-manual-badge {
+    border: 1px solid rgba(255,255,255,.10) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05) !important;
+  }
+
+  .app-shell .content-area .fin-pill-green,
+  .app-shell .content-area .fin-pill-processada,
+  .app-shell .content-area .fin-pill-operacional,
+  .app-shell .content-area .fin-alert-success,
+  .app-shell .content-area #ffv2-wrap .ffv2-msg-ok {
+    background: rgba(34,197,94,.14) !important;
+    border-color: rgba(34,197,94,.28) !important;
+    color: #86efac !important;
+  }
+
+  .app-shell .content-area .fin-pill-yellow,
+  .app-shell .content-area .fin-pill-pendente,
+  .app-shell .content-area .fin-alert-warning,
+  .app-shell .content-area .fin50-teste-banner,
+  .app-shell .content-area .fin-flash70-admin-note,
+  .app-shell .content-area #ffv2-wrap .ffv2-msg-av {
+    background: rgba(245,158,11,.16) !important;
+    border-color: rgba(245,158,11,.30) !important;
+    color: #fcd34d !important;
+  }
+
+  .app-shell .content-area .fin-pill-red,
+  .app-shell .content-area .fin-pill-cancelada,
+  .app-shell .content-area .fin-alert-danger,
+  .app-shell .content-area #ffv2-wrap .ffv2-msg-er {
+    background: rgba(239,68,68,.15) !important;
+    border-color: rgba(239,68,68,.30) !important;
+    color: #fca5a5 !important;
+  }
+
+  .app-shell .content-area .fin-pill-blue,
+  .app-shell .content-area .fin-alert-info,
+  .app-shell .content-area #ffv2-wrap .ffv2-msg-in {
+    background: rgba(56,189,248,.12) !important;
+    border-color: rgba(56,189,248,.28) !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell .content-area .fin-pill-gray,
+  .app-shell .content-area .fin-pill-teste,
+  .app-shell .content-area .fin-pill-purple {
+    background: rgba(148,163,184,.14) !important;
+    color: #cbd5e1 !important;
+  }
+
+  .app-shell .content-area .fin-modal-overlay.open {
+    background: rgba(0,0,0,.68) !important;
+    backdrop-filter: blur(6px);
+  }
+
+  .app-shell .content-area .fin-loading.show {
+    background: rgba(13,17,23,.72) !important;
+  }
+
+  .app-shell .content-area .fin-spinner {
+    border-color: rgba(148,163,184,.24) !important;
+    border-top-color: #38bdf8 !important;
+  }
+
+  /* DARK COMPACT - INDEX, DOCUMENTOS E MANUAL 3G
+     Repositorio de documentos, modais de auth e manual operacional.
+     Nao altera Validacao_Documento, QR publico, geradores ou layouts A4. */
+  .app-shell .content-area #documentosTabelaBody,
+  .app-shell .content-area #documentosPesquisa,
+  .app-shell .content-area #doc_arquivo_preview {
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area #doc_arquivo_preview {
+    background: rgba(56,189,248,.10) !important;
+    border: 1px solid rgba(56,189,248,.24) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 8px 10px !important;
+    color: #bae6fd !important;
+  }
+
+  .app-shell #modal-primeiro-acesso,
+  .app-shell #modal-esqueci-senha,
+  .app-shell #modal-redefinir-senha {
+    background: rgba(0,0,0,.72) !important;
+    backdrop-filter: blur(6px);
+  }
+
+  .app-shell #modal-primeiro-acesso > div,
+  .app-shell #modal-esqueci-senha > div,
+  .app-shell #modal-redefinir-senha > div {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-lg) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell #modal-primeiro-acesso h2,
+  .app-shell #modal-esqueci-senha h2,
+  .app-shell #modal-redefinir-senha h2 {
+    color: #f8fafc !important;
+  }
+
+  .app-shell #modal-primeiro-acesso p,
+  .app-shell #modal-esqueci-senha p,
+  .app-shell #modal-redefinir-senha p {
+    color: var(--muted) !important;
+  }
+
+  .app-shell #pa-erro,
+  .app-shell #es-erro,
+  .app-shell #rd-erro {
+    background: rgba(239,68,68,.15) !important;
+    color: #fca5a5 !important;
+    border: 1px solid rgba(239,68,68,.30) !important;
+  }
+
+  #sgo-modal-manual {
+    background: rgba(0,0,0,.72) !important;
+    backdrop-filter: blur(6px);
+  }
+
+  #sgo-modal-manual > div {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border: 1px solid #30363d !important;
+    box-shadow: 0 22px 60px rgba(0,0,0,.42) !important;
+    color: #e5e7eb !important;
+  }
+
+  #sgo-modal-manual > div > div:first-child {
+    background: linear-gradient(135deg, #0b1220 0%, #123447 100%) !important;
+    border-bottom: 1px solid #30363d !important;
+  }
+
+  #sgo-modal-manual [style*="color:#0f2d52"],
+  #sgo-modal-manual [style*="color: #0f2d52"],
+  #sgo-modal-manual [style*="color:#333"],
+  #sgo-modal-manual [style*="color: #333"] {
+    color: #f8fafc !important;
+  }
+
+  #sgo-modal-manual [style*="color:#999"],
+  #sgo-modal-manual [style*="color: #999"] {
+    color: #94a3b8 !important;
+  }
+
+  #sgo-modal-manual [style*="border-bottom:2px solid #e9ecef"],
+  #sgo-modal-manual [style*="border-top:1px solid #f0f0f0"] {
+    border-color: #30363d !important;
   }
 
   /* ============================================================
@@ -2120,4 +3642,1171 @@
     border-top: 1px solid var(--border);
     background: #fafafa;
   }
-</style>
+
+  /* DARK COMPACT - MOBILE OPERACIONAL 3H
+     Apenas casca e componentes operacionais mobile (.mobile-* e .mc2-*).
+     Nao altera QR, validacao publica, uploads, assinatura/canvas, geradores ou documentos. */
+  .mobile-shell,
+  .mobile-shell .mobile-pane-container,
+  .mc2 {
+    color-scheme: dark !important;
+    background: #0d1117 !important;
+    color: #e5e7eb !important;
+  }
+
+  .mobile-top,
+  .mobile-bottom-nav,
+  .mc2-top {
+    background: #161b22 !important;
+    border-color: #30363d !important;
+    color: #f8fafc !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,.28) !important;
+  }
+
+  .mobile-bottom-nav {
+    border-top: 1px solid #30363d !important;
+  }
+
+  .mobile-saudacao,
+  .mobile-pane-title,
+  .mobile-card-label,
+  .mobile-label,
+  .mobile-user-card strong,
+  .mobile-os-numero,
+  .mobile-equip-dialog-title,
+  .mc2-top-title,
+  .mc2-nav-title,
+  .mc2-val,
+  .mc2-q-txt,
+  .mc2-tl-ac,
+  .mc2-card strong,
+  .mc2 [style*="color:#0f172a"],
+  .mc2 [style*="color: #0f172a"],
+  .mc2 [style*="color:#111827"],
+  .mc2 [style*="color: #111827"],
+  .mc2 [style*="color:#334155"],
+  .mc2 [style*="color: #334155"] {
+    color: #f8fafc !important;
+  }
+
+  .mobile-saudacao-sub,
+  .mobile-pane-sub,
+  .mobile-nav-btn,
+  .mobile-foto-area-title,
+  .mobile-foto-slot-label,
+  .mobile-gps-status,
+  .mobile-os-row,
+  .mobile-os-row i,
+  .mobile-equip-dialog-sub,
+  .mc2-top-sub,
+  .mc2-nav-sub,
+  .mc2-lbl,
+  .mc2-tl-dt,
+  .mc2-tl-us,
+  .mc2-empty,
+  .mc2 [style*="color:#64748b"],
+  .mc2 [style*="color: #64748b"] {
+    color: #94a3b8 !important;
+  }
+
+  .mobile-card,
+  .mobile-user-card,
+  .mobile-menu-action,
+  .mobile-placeholder-box,
+  .mobile-foto-area,
+  .mobile-os-card,
+  .mobile-equip-dialog-box,
+  .mc2-card,
+  .mc2-nav,
+  .mc2-q-card,
+  .mc2-foto-item,
+  .mc2-mat-item,
+  .mc2 [style*="background:#fff"],
+  .mc2 [style*="background: #fff"],
+  .mc2 [style*="background:#f8fafc"],
+  .mc2 [style*="background: #f8fafc"],
+  .mc2 [style*="background:#eff6ff"],
+  .mc2 [style*="background:#f0fdf4"],
+  .mc2 [style*="background:#fff7ed"] {
+    background: linear-gradient(180deg, rgba(22,27,34,.98), rgba(15,23,42,.98)) !important;
+    border-color: #30363d !important;
+    color: #e5e7eb !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,.24) !important;
+  }
+
+  .mobile-card,
+  .mobile-placeholder-box,
+  .mc2-card,
+  .mc2-nav,
+  .mc2-q-card {
+    border-radius: 10px !important;
+  }
+
+  .mobile-card:active,
+  .mobile-menu-action:active,
+  .mc2-nav:active {
+    background: rgba(56,189,248,.12) !important;
+    border-color: rgba(56,189,248,.34) !important;
+  }
+
+  .mobile-nav-btn.mobile-nav-ativo,
+  .mobile-back,
+  .mobile-foto-btn,
+  .mc2-btn-top,
+  .mc2-pri,
+  .mc2 [style*="color:#1a56db"],
+  .mc2 [style*="color: #1a56db"] {
+    color: #7dd3fc !important;
+  }
+
+  .mobile-nav-btn.mobile-nav-ativo,
+  .mobile-btn-primary,
+  .mc2-pri,
+  .mc2-ok {
+    background: linear-gradient(135deg, #0e7490, #0369a1) !important;
+    color: #fff !important;
+    border-color: rgba(125,211,252,.36) !important;
+  }
+
+  .mobile-btn-secondary,
+  .mobile-btn-gps,
+  .mobile-foto-btn,
+  .mobile-os-filtro-btn,
+  .mc2-ghost,
+  .mc2-qb,
+  .mc2-btn-top {
+    background: #0f172a !important;
+    border: 1px solid #30363d !important;
+    color: #dbeafe !important;
+  }
+
+  .mobile-os-filtro-btn.mobile-os-filtro-ativo,
+  .mc2-qb.mc2-sim {
+    background: rgba(34,197,94,.16) !important;
+    border-color: rgba(34,197,94,.34) !important;
+    color: #86efac !important;
+  }
+
+  .mc2-qb.mc2-nao,
+  .mobile-menu-danger,
+  .mc2-red,
+  .mc2-btn-top-red {
+    background: rgba(239,68,68,.16) !important;
+    border-color: rgba(239,68,68,.34) !important;
+    color: #fca5a5 !important;
+  }
+
+  .mc2-qb.mc2-na,
+  .mc2-warn {
+    background: rgba(245,158,11,.16) !important;
+    border-color: rgba(245,158,11,.34) !important;
+    color: #fcd34d !important;
+  }
+
+  .mobile-input,
+  .mobile-select,
+  .mobile-textarea,
+  .mc2-input,
+  .mc2-sel,
+  .mc2-ta {
+    background: #0f172a !important;
+    border-color: #30363d !important;
+    color: #e5e7eb !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-input:focus,
+  .mobile-select:focus,
+  .mobile-textarea:focus,
+  .mc2-input:focus,
+  .mc2-sel:focus,
+  .mc2-ta:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56,189,248,.16) !important;
+  }
+
+  .mobile-input::placeholder,
+  .mc2-input::placeholder,
+  .mc2-ta::placeholder {
+    color: #64748b !important;
+  }
+
+  .mobile-os-card-header,
+  .mobile-os-card-footer,
+  .mc2-hr {
+    background: rgba(15,23,42,.86) !important;
+    border-color: #30363d !important;
+  }
+
+  .mobile-toast-ok,
+  .mc2-aok {
+    background: rgba(34,197,94,.16) !important;
+    border-color: rgba(34,197,94,.34) !important;
+    color: #86efac !important;
+  }
+
+  .mobile-toast-erro,
+  .mc2-aerr {
+    background: rgba(239,68,68,.16) !important;
+    border-color: rgba(239,68,68,.34) !important;
+    color: #fca5a5 !important;
+  }
+
+  .mobile-toast-aviso,
+  .mc2-awarn {
+    background: rgba(245,158,11,.16) !important;
+    border-color: rgba(245,158,11,.34) !important;
+    color: #fcd34d !important;
+  }
+
+  .mc2-info {
+    background: rgba(56,189,248,.12) !important;
+    border-color: rgba(56,189,248,.30) !important;
+    color: #bae6fd !important;
+  }
+
+  .mc2-spin {
+    border-color: rgba(148,163,184,.24) !important;
+    border-top-color: #38bdf8 !important;
+  }
+
+  .mc2-tl::before {
+    background: #30363d !important;
+  }
+
+  .mc2-tl-dot {
+    background: #38bdf8 !important;
+    border-color: #0d1117 !important;
+    box-shadow: 0 0 0 2px #38bdf8 !important;
+  }
+
+  .mc2-canvas,
+  .mobile-foto-thumb,
+  .mc2-thumb {
+    background: #fff !important;
+    border-color: #475569 !important;
+  }
+
+  /* METROLABS COMFORT DARK - PORTAL OPERACIONAL CORRETIVO 4A
+     Correcao ergonomica baseada no projeto modelo aprovado.
+     Escopo: portal operacional, mobile operacional e mc2. Nao altera documentos,
+     PDF, QR publico, validacao publica, iframes/srcdoc, A4, impressoes ou canvas. */
+  .app-shell,
+  .mobile-shell,
+  .mc2 {
+    color-scheme: dark !important;
+    --bg: #111827;
+    --bg-2: #172033;
+    --card: #1f2937;
+    --card-soft: #273244;
+    --panel: #1f2937;
+    --panel-2: #172033;
+    --panel-soft: #273244;
+    --surface: #1f2937;
+    --surface-2: #172033;
+    --surface-3: #273244;
+    --input: #172033;
+    --input-hover: #1d293a;
+    --text: #d9e2ec;
+    --text-strong: #eef3f8;
+    --muted: #9aa8b8;
+    --muted-2: #7f8da0;
+    --text-light: #7f8da0;
+    --border: #3a4657;
+    --border-strong: #4a5870;
+    --accent: #6fbf8f;
+    --accent-2: #7aa7c7;
+    --metrolabs: #6fbf8f;
+    --metrolabs-dark: #4f9f75;
+    --metro-green: #6fbf8f;
+    --metro-green-dark: #4f9f75;
+    --metro-green-light: rgba(111,191,143,.18);
+    --metro-green-xlight: rgba(111,191,143,.10);
+    --metro-blue: #7aa7c7;
+    --metro-blue-dark: #9bbad2;
+    --metro-blue-light: rgba(122,167,199,.16);
+    --metro-gold: #d6a94f;
+    --metro-gold-dark: #bf9340;
+    --success: #6fbf8f;
+    --info: #7aa7c7;
+    --warning: #d6a94f;
+    --danger: #e08a8a;
+    --danger-bg: rgba(224,138,138,.13);
+    --warning-bg: rgba(214,169,79,.14);
+    --success-bg: rgba(111,191,143,.14);
+    --info-bg: rgba(122,167,199,.14);
+    --pending-bg: rgba(214,169,79,.14);
+    --pending: #d6a94f;
+    --sb-bg: #172033;
+    --sb-bg-hover: rgba(255,255,255,.055);
+    --sb-bg-active: rgba(111,191,143,.14);
+    --sb-text: #9aa8b8;
+    --sb-text-hover: #eef3f8;
+    --sb-text-active: #eef3f8;
+    --sb-section: rgba(154,168,184,.58);
+    --sb-border: rgba(154,168,184,.16);
+    --sb-accent: #6fbf8f;
+    --shadow: 0 10px 28px rgba(0,0,0,.22);
+    --shadow-sm: 0 8px 22px rgba(0,0,0,.18);
+    --shadow-md: 0 10px 28px rgba(0,0,0,.22);
+    --shadow-hover: 0 12px 30px rgba(0,0,0,.24);
+    --shadow-lg: 0 14px 36px rgba(0,0,0,.28);
+  }
+
+  .app-shell,
+  .app-shell .content-area,
+  .mobile-shell,
+  .mobile-shell .mobile-pane-container,
+  .mc2 {
+    background: #111827 !important;
+    background-image: none !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .topbar,
+  .app-shell .sidebar,
+  .app-shell .header-card,
+  .app-shell .content-area .form-card,
+  .app-shell .content-area .list-card,
+  .app-shell .content-area .card-kpi,
+  .app-shell .content-area .dashboard-card,
+  .app-shell .content-area .section-card,
+  .app-shell .content-area .modal-card,
+  .app-shell .content-area .modal-content,
+  .app-shell .content-area .item-card,
+  .app-shell .content-area .metric-card,
+  .app-shell .content-area .stats-card,
+  .app-shell .content-area .kpi-card,
+  .app-shell .content-area .ast-card,
+  .app-shell .content-area .fin-card,
+  .app-shell .content-area .fin-modal,
+  .app-shell .content-area .fin-kpi,
+  .app-shell .content-area .os-kpi-card,
+  .app-shell .content-area .os-exec-card,
+  .mobile-card,
+  .mobile-user-card,
+  .mobile-menu-action,
+  .mobile-placeholder-box,
+  .mobile-foto-area,
+  .mobile-os-card,
+  .mobile-equip-dialog-box,
+  .mc2-card,
+  .mc2-nav,
+  .mc2-q-card,
+  .mc2-foto-item,
+  .mc2-mat-item {
+    background: #1f2937 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .topbar,
+  .mobile-top,
+  .mobile-bottom-nav,
+  .mc2-top {
+    background: #172033 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .modal-header,
+  .app-shell .content-area .modal-footer,
+  .app-shell .content-area .card-header,
+  .app-shell .content-area .card-body,
+  .app-shell .content-area .table-wrap,
+  .app-shell .content-area .table thead th,
+  .app-shell .content-area .fin-list-head,
+  .app-shell .content-area .fin-list-foot,
+  .app-shell .content-area .fin-modal-footer,
+  .mobile-os-card-header,
+  .mobile-os-card-footer,
+  .mc2-hr {
+    background: #172033 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  .app-shell .content-area h1,
+  .app-shell .content-area h2,
+  .app-shell .content-area h3,
+  .app-shell .content-area h4,
+  .app-shell .content-area h5,
+  .app-shell .content-area h6,
+  .app-shell .content-title,
+  .app-shell .section-card-title,
+  .app-shell .modal-title,
+  .app-shell label,
+  .app-shell strong,
+  .mobile-saudacao,
+  .mobile-pane-title,
+  .mobile-card-label,
+  .mobile-label,
+  .mobile-os-numero,
+  .mobile-equip-dialog-title,
+  .mc2-top-title,
+  .mc2-nav-title,
+  .mc2-val,
+  .mc2-q-txt,
+  .mc2-tl-ac,
+  .mc2-card strong {
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .content-area p,
+  .app-shell .content-area small,
+  .app-shell .content-area .help,
+  .app-shell .content-area .field-help,
+  .app-shell .content-area .text-muted,
+  .app-shell .content-area .empty-state,
+  .mobile-saudacao-sub,
+  .mobile-pane-sub,
+  .mobile-nav-btn,
+  .mobile-foto-area-title,
+  .mobile-foto-slot-label,
+  .mobile-gps-status,
+  .mobile-os-row,
+  .mobile-os-row i,
+  .mobile-equip-dialog-sub,
+  .mc2-top-sub,
+  .mc2-nav-sub,
+  .mc2-lbl,
+  .mc2-tl-dt,
+  .mc2-tl-us,
+  .mc2-empty {
+    color: var(--muted) !important;
+    opacity: 1 !important;
+  }
+
+  .app-shell input,
+  .app-shell select,
+  .app-shell textarea,
+  .app-shell .form-control,
+  .app-shell .form-select,
+  .app-shell .toolbar-search,
+  .mobile-input,
+  .mobile-select,
+  .mobile-textarea,
+  .mc2-input,
+  .mc2-sel,
+  .mc2-ta {
+    background: var(--input) !important;
+    color: var(--text-strong) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell input:hover,
+  .app-shell select:hover,
+  .app-shell textarea:hover,
+  .mobile-input:hover,
+  .mc2-input:hover,
+  .mc2-sel:hover,
+  .mc2-ta:hover {
+    background: var(--input-hover) !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  .app-shell input:focus,
+  .app-shell select:focus,
+  .app-shell textarea:focus,
+  .app-shell .form-control:focus,
+  .app-shell .form-select:focus,
+  .app-shell .toolbar-search:focus,
+  .mobile-input:focus,
+  .mobile-select:focus,
+  .mobile-textarea:focus,
+  .mc2-input:focus,
+  .mc2-sel:focus,
+  .mc2-ta:focus {
+    border-color: var(--accent-2) !important;
+    box-shadow: 0 0 0 3px rgba(122,167,199,.16) !important;
+    outline: none !important;
+  }
+
+  .app-shell input::placeholder,
+  .app-shell textarea::placeholder,
+  .mobile-input::placeholder,
+  .mc2-input::placeholder,
+  .mc2-ta::placeholder {
+    color: var(--muted-2) !important;
+  }
+
+  .app-shell .btn-primary,
+  .app-shell .btn-success,
+  .app-shell .menu-btn.active,
+  .app-shell #btnSyncOS,
+  .app-shell .content-area .btn-primary,
+  .app-shell .content-area .btn-success,
+  .mobile-btn-primary,
+  .mobile-os-filtro-btn.mobile-os-filtro-ativo,
+  .mc2-pri,
+  .mc2-ok {
+    background: #6fbf8f !important;
+    background-image: none !important;
+    border-color: #5aa87b !important;
+    color: #102016 !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .btn-secondary,
+  .app-shell .btn-dark,
+  .app-shell .btn-light,
+  .app-shell .btn-outline-secondary,
+  .app-shell .btn-outline-success,
+  .app-shell .menu-btn,
+  .app-shell .content-area .btn-secondary,
+  .app-shell .content-area .btn-dark,
+  .app-shell .content-area .btn-outline-secondary,
+  .mobile-btn-secondary,
+  .mobile-btn-gps,
+  .mobile-foto-btn,
+  .mobile-os-filtro-btn,
+  .mc2-ghost,
+  .mc2-qb,
+  .mc2-btn-top {
+    background: #273244 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    color: #d9e2ec !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell button:hover,
+  .app-shell .btn:hover,
+  .app-shell .menu-btn:hover,
+  .app-shell .content-area button:hover,
+  .mobile-card:active,
+  .mobile-menu-action:active,
+  .mc2-nav:active {
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .btn-secondary:hover,
+  .app-shell .btn-dark:hover,
+  .app-shell .btn-light:hover,
+  .app-shell .btn-outline-secondary:hover,
+  .app-shell .btn-outline-success:hover,
+  .app-shell .menu-btn:hover,
+  .mobile-btn-secondary:active,
+  .mobile-btn-gps:active,
+  .mobile-foto-btn:active,
+  .mc2-ghost:active {
+    background: #303b4f !important;
+    border-color: var(--border-strong) !important;
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .btn-danger,
+  .app-shell .btn-outline-danger,
+  .mobile-menu-danger,
+  .mc2-red,
+  .mc2-btn-top-red {
+    background: rgba(224,138,138,.14) !important;
+    border-color: rgba(224,138,138,.45) !important;
+    color: #f2b8b8 !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .btn-warning,
+  .mc2-warn,
+  .mc2-qb.mc2-na {
+    background: rgba(214,169,79,.14) !important;
+    border-color: rgba(214,169,79,.42) !important;
+    color: #ead39a !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .alert-info,
+  .app-shell .badge-info,
+  .app-shell .status-info,
+  .mc2-info {
+    background: var(--info-bg) !important;
+    border-color: rgba(122,167,199,.34) !important;
+    color: #c6d9e7 !important;
+  }
+
+  .app-shell .alert-success,
+  .app-shell .badge-ativo,
+  .app-shell .badge-success,
+  .mobile-toast-ok,
+  .mc2-aok,
+  .mc2-qb.mc2-sim {
+    background: var(--success-bg) !important;
+    border-color: rgba(111,191,143,.34) !important;
+    color: #b9dec8 !important;
+  }
+
+  .app-shell .alert-warning,
+  .app-shell .badge-pendente,
+  .mobile-toast-aviso,
+  .mc2-awarn {
+    background: var(--warning-bg) !important;
+    border-color: rgba(214,169,79,.42) !important;
+    color: #ead39a !important;
+  }
+
+  .app-shell .alert-danger,
+  .app-shell .badge-inativo,
+  .app-shell .badge-bloqueado,
+  .mobile-toast-erro,
+  .mc2-aerr,
+  .mc2-qb.mc2-nao {
+    background: var(--danger-bg) !important;
+    border-color: rgba(224,138,138,.42) !important;
+    color: #f2b8b8 !important;
+  }
+
+  .app-shell .content-area table,
+  .app-shell .content-area th,
+  .app-shell .content-area td {
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area th,
+  .app-shell .content-area thead,
+  .app-shell .content-area .table thead th {
+    background: #273244 !important;
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .content-area tr:hover td,
+  .app-shell .content-area tbody tr:hover td {
+    background: rgba(122,167,199,.10) !important;
+  }
+
+  .app-shell .section-card-title::before,
+  .app-shell h4::before,
+  .app-shell .topbar::before,
+  .app-shell .header-card::before,
+  .mc2-tl-dot {
+    background: var(--accent-2) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .mc2-spin,
+  .app-shell .content-area .fin-spinner {
+    border-color: rgba(154,168,184,.24) !important;
+    border-top-color: var(--accent-2) !important;
+  }
+
+  .mc2-tl::before {
+    background: var(--border) !important;
+  }
+
+  .mc2-canvas,
+  .mobile-foto-thumb,
+  .mc2-thumb,
+  .app-shell .content-area canvas {
+    background: #fff !important;
+    border-color: var(--border-strong) !important;
+  }
+  /* METROLABS COMFORT DARK - PENTE FINO GLOBAL 5C
+     Escopo: telas operacionais dentro do portal. Nao altera documentos, PDF,
+     QR publico, validacao publica, iframe/srcdoc, @media print, A4 ou canvas. */
+  .app-shell .content-area,
+  .app-shell .content-area *:not(iframe):not(canvas) {
+    box-sizing: border-box;
+  }
+
+  .app-shell .content-area .module-shell,
+  .app-shell .content-area .content-panel,
+  .app-shell .content-area .form-card,
+  .app-shell .content-area .list-card,
+  .app-shell .content-area .dashboard-card,
+  .app-shell .content-area .section-card,
+  .app-shell .content-area .frota-shell,
+  .app-shell .content-area .ast-v2-shell,
+  .app-shell .content-area .fin-shell,
+  .app-shell .content-area .ffv2-wrap {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .app-shell .content-area .table-wrap,
+  .app-shell .content-area .fin-table-wrap,
+  .app-shell .content-area .frota-table-wrap,
+  .app-shell .content-area .ast-table-wrap {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    border-color: var(--border) !important;
+    background: var(--panel-2) !important;
+    scrollbar-gutter: stable;
+  }
+
+  .app-shell .content-area .table,
+  .app-shell .content-area .fin-table,
+  .app-shell .content-area .frota-table {
+    width: 100% !important;
+    min-width: max-content;
+    max-width: none;
+    border-collapse: collapse;
+  }
+
+  .app-shell .content-area .table th,
+  .app-shell .content-area .table td,
+  .app-shell .content-area .fin-table th,
+  .app-shell .content-area .fin-table td,
+  .app-shell .content-area .frota-table th,
+  .app-shell .content-area .frota-table td {
+    max-width: 260px;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    vertical-align: top;
+  }
+
+  .app-shell .content-area .table th,
+  .app-shell .content-area .fin-table th,
+  .app-shell .content-area .frota-table th {
+    white-space: nowrap;
+    background: var(--panel-2) !important;
+    color: var(--muted) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .table td,
+  .app-shell .content-area .fin-table td,
+  .app-shell .content-area .frota-table td {
+    background: transparent !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .table tbody tr:hover td,
+  .app-shell .content-area .fin-table tbody tr:hover td,
+  .app-shell .content-area .frota-table tbody tr:hover td {
+    background: rgba(122,167,199,.10) !important;
+  }
+
+  .app-shell .content-area .frota-grid,
+  .app-shell .content-area .frota-form,
+  .app-shell .content-area .frota-mini-grid,
+  .app-shell .content-area .frota-vehicle-card,
+  .app-shell .content-area .frota-checklist,
+  .app-shell .content-area .fin-kpi-grid,
+  .app-shell .content-area .fin-flash-summary,
+  .app-shell .content-area .fin-flash-op-grid,
+  .app-shell .content-area .fin-flash-action-grid,
+  .app-shell .content-area .ffv2-row2,
+  .app-shell .content-area .ffv2-colaboradores-grid,
+  .app-shell .content-area .ast-form-grid,
+  .app-shell .content-area .ast-detail-grid,
+  .app-shell .content-area .ast-gerencial-grid,
+  .app-shell .content-area .ast-doc-grid,
+  .app-shell .content-area .ast-accessory-row {
+    min-width: 0 !important;
+  }
+
+  .app-shell .content-area .ast-filters-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+  }
+
+  .app-shell .content-area .ast-stagebar {
+    grid-template-columns: repeat(10, minmax(96px, 1fr)) !important;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .app-shell .content-area .frota-card,
+  .app-shell .content-area .frota-info,
+  .app-shell .content-area .frota-checkitem,
+  .app-shell .content-area .frota-upload,
+  .app-shell .content-area .ast-side-card,
+  .app-shell .content-area .ast-entry-card,
+  .app-shell .content-area .ast-v2-card,
+  .app-shell .content-area .ast-v2-det-section,
+  .app-shell .content-area .ast-v2-filterbar,
+  .app-shell .content-area .ast-stage,
+  .app-shell .content-area .ffv2-card,
+  .app-shell .content-area .ffv2-sit-card,
+  .app-shell .content-area .fin-flash-op-card,
+  .app-shell .content-area .fin-flash-summary-card,
+  .app-shell .content-area .fin-manual-section,
+  .app-shell .content-area .fin-visao-atalho {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .frota-title h2,
+  .app-shell .content-area .frota-card h3,
+  .app-shell .content-area .frota-kpi strong,
+  .app-shell .content-area .ast-v2-list-title,
+  .app-shell .content-area .ast-entry-card h3,
+  .app-shell .content-area .ast-v2-det-field b,
+  .app-shell .content-area .ast-row-main,
+  .app-shell .content-area .ffv2-card b,
+  .app-shell .content-area .fin-card h3,
+  .app-shell .content-area .fin-card h4 {
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .content-area .frota-title p,
+  .app-shell .content-area .frota-field label,
+  .app-shell .content-area .frota-kpi small,
+  .app-shell .content-area .ast-muted,
+  .app-shell .content-area .ast-v2-subtitle,
+  .app-shell .content-area .ast-v2-det-field span,
+  .app-shell .content-area .ffv2-muted,
+  .app-shell .content-area .fin-muted {
+    color: var(--muted) !important;
+  }
+
+  .app-shell .content-area .frota-field input,
+  .app-shell .content-area .frota-field select,
+  .app-shell .content-area .frota-field textarea,
+  .app-shell .content-area .ffv2-inp,
+  .app-shell .content-area .fin-input,
+  .app-shell .content-area .fin-select,
+  .app-shell .content-area .fin-textarea,
+  .app-shell .content-area .fin-search {
+    background: var(--input) !important;
+    border-color: var(--border) !important;
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .content-area .frota-tab,
+  .app-shell .content-area .ast-tab,
+  .app-shell .content-area .ffv2-nav button,
+  .app-shell .content-area .fin-tab-btn,
+  .app-shell .content-area .fin-toggle-label {
+    color: var(--muted) !important;
+    border-color: var(--border) !important;
+  }
+
+  .app-shell .content-area .frota-tab.active,
+  .app-shell .content-area .ast-tab.active,
+  .app-shell .content-area .ffv2-nav button.ativa,
+  .app-shell .content-area .fin-tab-btn.active {
+    background: rgba(111,191,143,.14) !important;
+    color: var(--text-strong) !important;
+    border-color: rgba(111,191,143,.38) !important;
+  }
+
+  .app-shell .content-area .frota-exec-panel,
+  .app-shell .content-area .fin-header,
+  .app-shell .content-area .ffv2-hdr {
+    background: linear-gradient(135deg, #172033 0%, #26364b 100%) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-strong) !important;
+  }
+
+  .app-shell .content-area .frota-badge,
+  .app-shell .content-area .ast-badge,
+  .app-shell .content-area .fin-pill,
+  .app-shell .content-area .fin-flash-badge {
+    border: 1px solid rgba(255,255,255,.10) !important;
+    box-shadow: none !important;
+  }
+
+
+  .app-shell .content-area .db-kpi,
+  .app-shell .content-area .db-card,
+  .app-shell .content-area .db-top-item,
+  .app-shell .content-area .db-alert-filter,
+  .app-shell .content-area .ia-sug-panel,
+  .app-shell .content-area .ia-sug-texto,
+  .app-shell .content-area .ia-sug-aviso,
+  .app-shell .content-area .qc-card,
+  .app-shell .content-area .qc-kpi,
+  .app-shell .content-area [class*="qc-"] {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .app-shell .content-area .db-act-btn,
+  .app-shell .content-area .qc-action,
+  .app-shell .content-area [class*="qc-"] button {
+    background: var(--panel-soft) !important;
+    border-color: var(--border) !important;
+    color: var(--text-strong) !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .content-area .db-act-btn:hover,
+  .app-shell .content-area .qc-action:hover,
+  .app-shell .content-area [class*="qc-"] button:hover {
+    background: rgba(122,167,199,.12) !important;
+    border-color: rgba(122,167,199,.34) !important;
+  }
+
+  .app-shell .content-area .db-bar-track,
+  .app-shell .content-area .db-posse-track {
+    background: var(--panel-2) !important;
+    border: 1px solid var(--border) !important;
+  }
+  @media (max-width: 900px) {
+    .app-shell .content-area {
+      padding: 12px !important;
+    }
+    .app-shell .content-area .frota-exec-hero,
+    .app-shell .content-area .ast-detail-grid,
+    .app-shell .content-area .fin-flash-op-panels,
+    .app-shell .content-area .fin-flash-dashboard-panels {
+      grid-template-columns: 1fr !important;
+    }
+    .app-shell .content-area .module-header,
+    .app-shell .content-area .frota-top,
+    .app-shell .content-area .ast-v2-top,
+    .app-shell .content-area .fin-header {
+      align-items: stretch !important;
+    }
+  }
+  /* METROLABS COMFORT DARK - AUTH GLOBAL 5D
+     Modais de senha ficam fora da .app-shell; escopo por ID, sem documentos. */
+  #modal-primeiro-acesso,
+  #modal-esqueci-senha,
+  #modal-redefinir-senha {
+    background: rgba(7,11,18,.78) !important;
+    backdrop-filter: blur(8px);
+  }
+
+  #modal-primeiro-acesso > div,
+  #modal-esqueci-senha > div,
+  #modal-redefinir-senha > div {
+    background: #1f2937 !important;
+    border: 1px solid #3a4657 !important;
+    color: #d9e2ec !important;
+    box-shadow: 0 14px 36px rgba(0,0,0,.28) !important;
+    border-radius: 8px !important;
+  }
+
+  #modal-primeiro-acesso h2,
+  #modal-esqueci-senha h2,
+  #modal-redefinir-senha h2 {
+    color: #eef3f8 !important;
+  }
+
+  #modal-primeiro-acesso p,
+  #modal-esqueci-senha p,
+  #modal-redefinir-senha p,
+  #modal-primeiro-acesso label,
+  #modal-esqueci-senha label,
+  #modal-redefinir-senha label {
+    color: #9aa8b8 !important;
+  }
+
+  #modal-primeiro-acesso input,
+  #modal-esqueci-senha input,
+  #modal-redefinir-senha input {
+    background: #172033 !important;
+    border-color: #3a4657 !important;
+    color: #eef3f8 !important;
+    box-shadow: none !important;
+  }
+
+  #modal-primeiro-acesso input:focus,
+  #modal-esqueci-senha input:focus,
+  #modal-redefinir-senha input:focus {
+    border-color: #7aa7c7 !important;
+    box-shadow: 0 0 0 3px rgba(122,167,199,.16) !important;
+    outline: none !important;
+  }
+
+  #pa-erro,
+  #es-erro,
+  #rd-erro {
+    background: rgba(224,138,138,.14) !important;
+    border: 1px solid rgba(224,138,138,.42) !important;
+    color: #f2b8b8 !important;
+  }
+  /* METROLABS COMFORT DARK - OS QUESTIONARIOS 5E
+     Escopo: telas operacionais de questionarios. Sem PDF, QR, print, iframe/srcdoc ou canvas. */
+  .app-shell .content-area #qc_tbody span[style*="background:#f1f5f9"],
+  .app-shell .content-area #qc_tbody span[style*="background: #f1f5f9"],
+  .app-shell .content-area #qc_perguntas_tbody span[style*="background:#f1f5f9"],
+  .app-shell .content-area #qc_perguntas_tbody span[style*="background: #f1f5f9"] {
+    background: #1f2937 !important;
+    border: 1px solid #3a4657 !important;
+    color: #d9e2ec !important;
+  }
+
+  .app-shell .content-area #qc_tbody button,
+  .app-shell .content-area #qc_perguntas_tbody button {
+    background: #273244 !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .content-area #qc_tbody button:hover,
+  .app-shell .content-area #qc_perguntas_tbody button:hover {
+    background: rgba(122,167,199,.12) !important;
+    border-color: rgba(122,167,199,.34) !important;
+    color: #eef3f8 !important;
+  }
+
+  #qcModalPergunta,
+  #qcModalPreview,
+  #qcModalDiag {
+    background: rgba(7,11,18,.72) !important;
+    backdrop-filter: blur(8px);
+  }
+
+  #qcModalPergunta .modal-card,
+  #qcModalPreview .modal-card,
+  #qcModalDiag .modal-card {
+    background: #1f2937 !important;
+    border: 1px solid #3a4657 !important;
+    color: #d9e2ec !important;
+    box-shadow: 0 14px 36px rgba(0,0,0,.28) !important;
+    border-radius: 8px !important;
+  }
+
+  #qcModalPergunta h3,
+  #qcModalPreview h3,
+  #qcModalDiag h3,
+  #qcModalPergunta .modal-title,
+  #qcModalPreview .modal-title,
+  #qcModalDiag .modal-title {
+    color: #eef3f8 !important;
+  }
+
+  #qcModalPergunta .modal-body,
+  #qcModalPreview .modal-body,
+  #qcModalDiag .modal-body,
+  #qcModalPergunta p,
+  #qcModalPreview p,
+  #qcModalDiag p,
+  #qcModalPergunta label,
+  #qcModalPreview label,
+  #qcModalDiag label {
+    color: #9aa8b8 !important;
+  }
+
+  #qcModalPergunta input,
+  #qcModalPergunta select,
+  #qcModalPergunta textarea,
+  #qcModalPreview input,
+  #qcModalPreview select,
+  #qcModalPreview textarea,
+  #qcModalDiag input,
+  #qcModalDiag select,
+  #qcModalDiag textarea {
+    background: #172033 !important;
+    border-color: #3a4657 !important;
+    color: #eef3f8 !important;
+    box-shadow: none !important;
+  }
+
+  #qcModalPreview [style*="background:#fff"],
+  #qcModalPreview [style*="background: #fff"],
+  #qcModalDiag [style*="background:#fff"],
+  #qcModalDiag [style*="background: #fff"] {
+    background: #273244 !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+  }
+
+  #qcModalDiag button {
+    background: #273244 !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+  }
+  /* METROLABS COMFORT DARK - IMPORTACAO 5I
+     Escopo: wizard operacional de importacao. Sem PDF, QR, validacao, iframe/srcdoc, A4, print ou canvas. */
+  .app-shell .content-area .imp-shell,
+  .app-shell .content-area .imp-step,
+  .app-shell .content-area .imp-preview-wrap {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .app-shell .content-area .imp-map-table,
+  .app-shell .content-area .imp-preview-table {
+    width: 100% !important;
+    min-width: max-content;
+    border-collapse: collapse !important;
+  }
+
+  .app-shell .content-area .imp-map-table th,
+  .app-shell .content-area .imp-preview-table th {
+    background: #273244 !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+  }
+
+  .app-shell .content-area .imp-map-table td,
+  .app-shell .content-area .imp-preview-table td,
+  .app-shell .content-area .imp-preview-table tbody tr:nth-child(even) td {
+    background: transparent !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+    max-width: 280px;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell .content-area .imp-map-table tbody tr:hover td,
+  .app-shell .content-area .imp-preview-table tbody tr:hover td {
+    background: rgba(122,167,199,.10) !important;
+  }
+
+  .app-shell .content-area .imp-conf-badge,
+  .app-shell .content-area .imp-dup-badge {
+    border: 1px solid #3a4657 !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .content-area .imp-conf-100,
+  .app-shell .content-area .imp-conf-80 {
+    background: rgba(143,214,163,.13) !important;
+    border-color: rgba(143,214,163,.38) !important;
+    color: #8fd6a3 !important;
+  }
+
+  .app-shell .content-area .imp-conf-60,
+  .app-shell .content-area .imp-dup-badge {
+    background: rgba(231,189,115,.13) !important;
+    border-color: rgba(231,189,115,.38) !important;
+    color: #e7bd73 !important;
+  }
+
+  .app-shell .content-area .imp-conf-0 {
+    background: #273244 !important;
+    border-color: #3a4657 !important;
+    color: #9aa8b8 !important;
+  }
+
+  .app-shell .content-area .imp-dup-row td {
+    background: rgba(231,189,115,.10) !important;
+    color: #e7bd73 !important;
+  }
+
+  .app-shell .content-area .imp-alert.info,
+  .app-shell .content-area .imp-alert.warn,
+  .app-shell .content-area .imp-alert.ok,
+  .app-shell .content-area .imp-errors-list,
+  .app-shell .content-area #imp-danger-zone {
+    background: #1f2937 !important;
+    border-color: #3a4657 !important;
+    color: #d9e2ec !important;
+  }
+
+  .app-shell .content-area .imp-alert.info { color: #7aa7c7 !important; }
+  .app-shell .content-area .imp-alert.warn,
+  .app-shell .content-area #imp-danger-zone p,
+  .app-shell .content-area .imp-errors-list li { color: #e7bd73 !important; }
+  .app-shell .content-area .imp-alert.ok { color: #8fd6a3 !important; }
+
+  .app-shell .content-area .imp-result-card.ignored {
+    background: #273244 !important;
+    border-top-color: #9aa8b8 !important;
+  }
+
+  .app-shell .content-area .imp-toggle-slider {
+    background: #3a4657 !important;
+  }
+
+  .app-shell .content-area .imp-toggle-slider:before {
+    background: #d9e2ec !important;
+  }</style>

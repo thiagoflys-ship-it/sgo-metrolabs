@@ -2275,9 +2275,9 @@ const SGO_AST = (() => {
   const ai = { lapidarTexto: function(sessionId, texto) { return { success: true, texto: safe_(texto) }; } };
 
   // ============================================================
-  // V2  -  NÃšCLEO RECONSTRUÃDO DA ASSISTÃŠNCIA TÃ‰CNICA
+  // V2  -  NÚCLEO RECONSTRUÍDO DA ASSISTÊNCIA TÉCNICA
   // Banco zerado. AST_ENTRADAS congelada como AST_ENTRADAS_LEGADO.
-  // Terceiros e LaboratÃ³rio fora do escopo desta fase.
+  // Terceiros e Laboratório fora do escopo desta fase.
   // ============================================================
 
   const STATUS_V2 = {
@@ -2331,27 +2331,27 @@ const SGO_AST = (() => {
   };
 
   const PROXIMA_ACAO_V2 = {
-    ENTRADA_REGISTRADA:          "Aguardando tecnico iniciar avaliacao",
-    AGUARDANDO_DIAGNOSTICO:      "Tecnico deve iniciar avaliacao do equipamento",
-    EM_BANCADA:                  "Tecnico em avaliacao inicial",
-    DIAGNOSTICO_EM_ANDAMENTO:    "Concluir diagnostico tecnico",
-    DIAGNOSTICO_CONCLUIDO:       "Definir proximo passo: orcamento, execucao ou encerramento",
-    AGUARDANDO_ORCAMENTO:        "Elaborar e enviar orcamento ao cliente",
-    ORCAMENTO_ENVIADO:           "Aguardar aprovacao do cliente",
+    ENTRADA_REGISTRADA:          "Aguardando técnico iniciar avaliação",
+    AGUARDANDO_DIAGNOSTICO:      "Técnico deve iniciar avaliação do equipamento",
+    EM_BANCADA:                  "Técnico em avaliação inicial",
+    DIAGNOSTICO_EM_ANDAMENTO:    "Concluir diagnóstico técnico",
+    DIAGNOSTICO_CONCLUIDO:       "Definir próximo passo: orçamento, execução ou encerramento",
+    AGUARDANDO_ORCAMENTO:        "Elaborar e enviar orçamento ao cliente",
+    ORCAMENTO_ENVIADO:           "Aguardar aprovação do cliente",
     AGUARDANDO_APROVACAO_CLIENTE:"Aguardar retorno do cliente",
-    ORCAMENTO_APROVADO:          "Providenciar pecas ou liberar para execucao",
+    ORCAMENTO_APROVADO:          "Providenciar peças ou liberar para execução",
     ORCAMENTO_RECUSADO:          "Encerrar atendimento ou renegociar com cliente",
-    AGUARDANDO_PECA:             "Aguardar chegada da peca solicitada",
-    AGUARDANDO_TERCEIRO:         "Aguardar retorno do servico terceirizado",
-    LIBERADO_PARA_EXECUCAO:      "Iniciar execucao do reparo",
-    EXECUCAO_EM_ANDAMENTO:       "Concluir execucao do reparo",
-    EXECUCAO_CONCLUIDA:          "Realizar conclusao tecnica e liberar para entrega",
-    AGUARDANDO_CALIBRACAO:       "Encaminhar para calibracao",
+    AGUARDANDO_PECA:             "Aguardar chegada da peça solicitada",
+    AGUARDANDO_TERCEIRO:         "Aguardar retorno do serviço terceirizado",
+    LIBERADO_PARA_EXECUCAO:      "Iniciar execução do reparo",
+    EXECUCAO_EM_ANDAMENTO:       "Concluir execução do reparo",
+    EXECUCAO_CONCLUIDA:          "Realizar conclusão técnica e liberar para entrega",
+    AGUARDANDO_CALIBRACAO:       "Encaminhar para calibração",
     CONCLUIDO_TECNICAMENTE:      "Agendar entrega ao cliente",
     AGUARDANDO_ENTREGA:          "Realizar entrega com assinatura do cliente",
     ENTREGUE:                    "Finalizar atendimento",
     FINALIZADO:                  "Atendimento finalizado",
-    CANCELADO:                   "Atendimento cancelado  -  nenhuma acao necessaria",
+    CANCELADO:                   "Atendimento cancelado - nenhuma ação necessária",
     NAO_REPARADO:                "Informar cliente sobre impossibilidade de reparo"
   };
 
@@ -2375,7 +2375,7 @@ const SGO_AST = (() => {
       "CRIADO_POR", "CRIADO_EM", "ATUALIZADO_POR", "ATUALIZADO_EM"
     ],
 
-    // Trilha de auditoria / histÃ³rico de movimentaÃ§Ãµes
+    // Trilha de auditoria / histórico de movimentações
     AST_HISTORICO: [
       "ID", "ATENDIMENTO_ID", "TIPO", "STATUS_ANTERIOR", "STATUS_NOVO",
       "DESCRICAO", "OBSERVACAO", "PROXIMA_ACAO",
@@ -2383,14 +2383,14 @@ const SGO_AST = (() => {
       "EXECUTADO_POR", "EXECUTADO_EM", "CRIADO_EM"
     ],
 
-    // Fotos com descriÃ§Ã£o individual por foto
+    // Fotos com descrição individual por foto
     AST_FOTOS: [
       "ID", "ATENDIMENTO_ID", "ETAPA", "TIPO_FOTO", "NOME_ARQUIVO",
       "LINK_DRIVE", "FILE_ID", "MIME_TYPE", "DESCRICAO_FOTO",
       "VISIBILIDADE_PUBLICA", "STATUS", "UPLOAD_POR", "UPLOAD_EM", "CRIADO_EM"
     ],
 
-    // AcessÃ³rios com rastreamento de devoluÃ§Ã£o
+    // Acessórios com rastreamento de devolução
     AST_ACESSORIOS: [
       "ID", "ATENDIMENTO_ID", "DESCRICAO", "QUANTIDADE", "ESTADO",
       "OBSERVACAO", "CONFERIDO", "DEVOLVIDO", "DEVOLVIDO_EM",
@@ -2405,8 +2405,8 @@ const SGO_AST = (() => {
       "CRIADO_EM"
     ],
 
-    // SolicitaÃ§Ãµes comerciais: peÃ§as, serviÃ§os, terceiro (unifica AST_PECAS)
-    // Campos TERCEIRO_ID e LAB_ID preparados para integraÃ§Ã£o futura
+    // Solicitações comerciais: peças, serviços, terceiro (unifica AST_PECAS)
+    // Campos TERCEIRO_ID e LAB_ID preparados para integração futura
     AST_SOLICITACOES: [
       "ID", "ATENDIMENTO_ID", "TIPO", "CATEGORIA",
       "DESCRICAO", "QUANTIDADE", "URGENCIA",
@@ -2422,7 +2422,7 @@ const SGO_AST = (() => {
       "CRIADO_POR", "CRIADO_EM", "ATUALIZADO_POR", "ATUALIZADO_EM"
     ],
 
-    // Documentos com separaÃ§Ã£o obrigatÃ³ria dos dois QR Codes
+    // Documentos com separação obrigatória dos dois QR Codes
     AST_DOCUMENTOS: [
       "ID", "ATENDIMENTO_ID", "TIPO_DOCUMENTO", "NUMERO_DOCUMENTO", "TITULO",
       "FILE_ID", "LINK_ARQUIVO", "DOWNLOAD_URL",
@@ -2431,7 +2431,7 @@ const SGO_AST = (() => {
       "STATUS", "GERADO_EM", "GERADO_POR", "CRIADO_EM"
     ],
 
-    // Alertas com rastreamento de leitura e resoluÃ§Ã£o
+    // Alertas com rastreamento de leitura e resolução
     AST_ALERTAS: [
       "ID", "ATENDIMENTO_ID", "TIPO_ALERTA", "SEVERIDADE",
       "MENSAGEM", "STATUS",
@@ -2452,20 +2452,20 @@ const SGO_AST = (() => {
     const sheetLegado   = ss.getSheetByName("AST_ENTRADAS_LEGADO");
     if (sheetEntradas && !sheetLegado) {
       sheetEntradas.setName("AST_ENTRADAS_LEGADO");
-      log.push("Renomeada: AST_ENTRADAS â†’ AST_ENTRADAS_LEGADO (congelada)");
+      log.push("Renomeada: AST_ENTRADAS -> AST_ENTRADAS_LEGADO (congelada)");
     } else if (!sheetEntradas && !sheetLegado) {
-      log.push("AST_ENTRADAS nao encontrada  -  nenhuma renomeacao necessaria");
+      log.push("AST_ENTRADAS não encontrada - nenhuma renomeação necessária");
     } else {
-      log.push("OK legado: AST_ENTRADAS_LEGADO ja existe");
+      log.push("OK legado: AST_ENTRADAS_LEGADO já existe");
     }
 
-    // Cria/verifica as 8 tabelas do nÃºcleo V2
+    // Cria/verifica as 8 tabelas do núcleo V2
     Object.keys(COLUNAS_V2).forEach(function(key) {
       garantirAba_(ss, SV2[key] || key, COLUNAS_V2[key], log);
     });
 
     if (SGO_DATA.clearCache) SGO_DATA.clearCache();
-    return { success: true, message: "Estrutura V2 da Assistencia Tecnica verificada.", log: log };
+    return { success: true, message: "Estrutura V2 da Assistência Técnica verificada.", log: log };
   }
 
   // ============================================================

@@ -22,7 +22,7 @@
   function obter(sessionId, id) {
     exigirSessao(sessionId);
     const fornecedor = SGO_DATA.getById(SHEETS.CAD_FORNECEDORES, id, DB);
-    if (!fornecedor) return { success: false, message: "Fornecedor nao encontrado." };
+    if (!fornecedor) return { success: false, message: "Fornecedor não encontrado." };
     return {
       success: true,
       item: enriquecerFornecedor_(fornecedor),
@@ -36,7 +36,7 @@
     payload = payload || {};
     const cnpj = SGO_UTILS.normalizeCnpj(payload.CNPJ);
     if (!payload.ID && cnpj && SGO_DATA.getByField(SHEETS.CAD_FORNECEDORES, "CNPJ", cnpj, DB)) {
-      return { success: false, message: "Ja existe fornecedor cadastrado com este CNPJ." };
+      return { success: false, message: "Já existe fornecedor cadastrado com este CNPJ." };
     }
 
     const dados = {
@@ -57,9 +57,9 @@
       DATA_BLOQUEIO: SGO_UTILS.safe(payload.DATA_BLOQUEIO)
     };
 
-    if (!dados.RAZAO_SOCIAL) return { success: false, message: "Informe a razao social." };
-    if (dados.EMAIL && !SGO_UTILS.isEmail(dados.EMAIL)) return { success: false, message: "E-mail invalido." };
-    if (dados.CNPJ && !SGO_UTILS.isCnpj(dados.CNPJ)) return { success: false, message: "CNPJ invalido." };
+    if (!dados.RAZAO_SOCIAL) return { success: false, message: "Informe a razão social." };
+    if (dados.EMAIL && !SGO_UTILS.isEmail(dados.EMAIL)) return { success: false, message: "E-mail inválido." };
+    if (dados.CNPJ && !SGO_UTILS.isCnpj(dados.CNPJ)) return { success: false, message: "CNPJ inválido." };
 
     let id = SGO_UTILS.safe(payload.ID);
     if (id) {
@@ -79,7 +79,7 @@
     const fornecedorId = SGO_UTILS.safe(payload.FORNECEDOR_ID);
     if (!fornecedorId) return { success: false, message: "Informe o fornecedor." };
     if (!SGO_DATA.getById(SHEETS.CAD_FORNECEDORES, fornecedorId, DB)) {
-      return { success: false, message: "Fornecedor nao encontrado." };
+      return { success: false, message: "Fornecedor não encontrado." };
     }
 
     const dados = {
@@ -120,13 +120,13 @@
   function validarFornecedorParaUso(fornecedorId) {
     const id = SGO_UTILS.safe(fornecedorId);
     const fornecedor = SGO_DATA.getById(SHEETS.CAD_FORNECEDORES, id, DB);
-    if (!fornecedor) return { ok: false, message: "Fornecedor nao encontrado." };
+    if (!fornecedor) return { ok: false, message: "Fornecedor não encontrado." };
     if (SGO_UTILS.safeUpper(fornecedor.BLOQUEADO) === "S" || SGO_UTILS.safeUpper(fornecedor.STATUS) === "BLOQUEADO") {
       return { ok: false, message: "Fornecedor bloqueado: " + SGO_UTILS.safe(fornecedor.MOTIVO_BLOQUEIO) };
     }
     const qual = obterQualificacao_(id);
     if (!qual || SGO_UTILS.safeUpper(qual.STATUS_QUALIFICACAO) !== "QUALIFICADO") {
-      return { ok: false, message: "Fornecedor sem qualificacao valida." };
+      return { ok: false, message: "Fornecedor sem qualificação válida." };
     }
     return { ok: true, fornecedor: fornecedor, qualificacao: qual };
   }

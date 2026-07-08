@@ -1336,12 +1336,12 @@
     google.script.run
       .withSuccessHandler(function(r) {
         if (!r || !r.ok) {
-          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;"><b>FIN_FLASH_V2_BLOQUEADO_FORA_DEV</b><br>' + escapeHtml_((r && r.motivo) || 'Acesso bloqueado: ambiente nao e DEV.') + '</div></div>';
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;"><b>FIN_FLASH_V2_BLOQUEADO_FORA_DEV</b><br>' + escapeHtml_((r && r.motivo) || 'Acesso bloqueado: ambiente não é DEV.') + '</div></div>';
           return;
         }
         var tpl = document.getElementById('tplFinFlashV2DevModulo');
         if (!tpl) {
-          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">Template tplFinFlashV2DevModulo nao encontrado no Index.html.</div></div>';
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">Template tplFinFlashV2DevModulo não encontrado no Index.html.</div></div>';
           return;
         }
         var doc = new DOMParser().parseFromString(tpl.innerHTML || '', 'text/html');
@@ -1356,7 +1356,7 @@
           div.innerHTML = '<div class="module-shell fin-flash-v2-dev-shell">' + finFlashV2Html_() + '</div>';
           if (typeof finFlashV2CarregarDesktop_ === 'function') finFlashV2CarregarDesktop_();
         } else {
-          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">finFlashV2Html_ nao disponivel apos execucao do template JS_Fin_FlashV2.</div></div>';
+          div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block;">finFlashV2Html_ não disponível após execução do template JS_Fin_FlashV2.</div></div>';
         }
       })
       .withFailureHandler(function(e) {

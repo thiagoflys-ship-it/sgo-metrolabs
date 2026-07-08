@@ -30,18 +30,78 @@ function finFlashV2LabelCartao_(k) {
 function finFlashV2Tabela_(cols, rows, msg) { return ffv2Tabela_(cols, rows, msg); }
 function finFlashV2AuditarEstrutura_() { return {ok:true}; }
 
+function finFlashV2LabelStatus_(status) {
+  var raw = String(status == null || status === '' ? '—' : status);
+  var key = raw.toUpperCase();
+  var labels = {
+    'NAO':'Não',
+    'SIM':'Sim',
+    'FISICO':'Físico',
+    'MEDIO':'Médio',
+    'MÉDIO':'Médio',
+    'PENDENTE':'Pendente',
+    'CONCILIADO':'Conciliado',
+    'AGUARDANDO':'Aguardando',
+    'AGUARDANDO_CORRECAO':'Aguardando correção',
+    'AGUARDANDO_CORREÇÃO':'Aguardando correção',
+    'REPROVADO':'Reprovado',
+    'ENVIADO_SIMULADO':'Enviado simulado',
+    'IMPORTADO':'Importado',
+    'PREPARADO':'Preparado',
+    'ATIVO':'Ativo',
+    'ATIVA':'Ativa',
+    'BLOQUEADO':'Bloqueado',
+    'INATIVO':'Inativo',
+    'VIRTUAL':'Virtual',
+    'ALTO':'Alto',
+    'BAIXO':'Baixo',
+    'GERADO':'Gerado',
+    'PENDENTE_DE_COMPROVANTE':'Pendente de comprovante',
+    'PENDENTE_SEM_COMPROVANTE':'Pendente sem comprovante',
+    'PENDENTE_COMPROVANTE_DIVERGENTE':'Comprovante divergente',
+    'VALOR_DIVERGENTE':'Valor divergente',
+    'BLOQUEADO_POR_PENDENCIA':'Bloqueado por pendência',
+    'CONCILIADO_AUTOMATICO':'Conciliado automático',
+    'CONCILIADO_MANUAL':'Conciliado manual',
+    'MATCH_EXATO':'Conferência exata',
+    'PROVAVEL_MATCH':'Provável conferência',
+    'SEM_PRESTACAO':'Sem prestação',
+    'SEM_COMPROVANTE':'Sem comprovante',
+    'CARTAO_NAO_CADASTRADO':'Cartão não cadastrado',
+    'COLABORADOR_NAO_IDENTIFICADO':'Colaborador não identificado',
+    'JUSTIFICADO':'Justificado',
+    'RESOLVIDO':'Resolvido',
+    'CANCELADO':'Cancelado'
+  };
+  if (labels[key]) return labels[key];
+  if (key.indexOf('_') >= 0) {
+    return key.toLowerCase().split('_').filter(Boolean).map(function(p) {
+      var conectores = { nao:'não', sem:'sem', de:'de', do:'do', da:'da', por:'por', em:'em', com:'com' };
+      if (conectores[p]) return conectores[p];
+      var termos = { modulo:'módulo', tecnico:'técnico', acao:'ação', acoes:'ações', versao:'versão', validacao:'validação', execucao:'execução', manutencao:'manutenção', orcamento:'orçamento', relatorio:'relatório', relatorios:'relatórios', informacao:'informação', informacoes:'informações', configuracao:'configuração', atencao:'atenção', observacao:'observação', observacoes:'observações', descricao:'descrição', prestacao:'prestação', prestacoes:'prestações', pendencia:'pendência', pendencias:'pendências', cartao:'cartão', cartoes:'cartões', conciliacao:'conciliação', cobranca:'cobrança', cobrancas:'cobranças' };
+      var termo = termos[p] || p;
+      return termo.charAt(0).toUpperCase() + termo.slice(1);
+    }).join(' ');
+  }
+  return raw;
+}
+
 function ffv2Badge_(status) {
   var m = {
     'PENDENTE':'#ef4444','CONCILIADO':'#22c55e','AGUARDANDO':'#f59e0b',
     'AGUARDANDO_CORRECAO':'#f59e0b','REPROVADO':'#ef4444','ENVIADO_SIMULADO':'#3b82f6',
     'IMPORTADO':'#6366f1','PREPARADO':'#f97316','ATIVO':'#22c55e','ATIVA':'#22c55e',
     'BLOQUEADO':'#ef4444','INATIVO':'#94a3b8','VIRTUAL':'#8b5cf6','FISICO':'#0ea5e9',
-    'ALTO':'#ef4444','MÉDIO':'#f59e0b','BAIXO':'#22c55e','GERADO':'#22c55e'
+    'ALTO':'#ef4444','MÉDIO':'#f59e0b','MEDIO':'#f59e0b','BAIXO':'#22c55e','GERADO':'#22c55e',
+    'PENDENTE_DE_COMPROVANTE':'#f59e0b','PENDENTE_SEM_COMPROVANTE':'#f59e0b','PENDENTE_COMPROVANTE_DIVERGENTE':'#ea580c',
+    'VALOR_DIVERGENTE':'#ea580c','BLOQUEADO_POR_PENDENCIA':'#dc2626','CONCILIADO_AUTOMATICO':'#22c55e','CONCILIADO_MANUAL':'#22c55e',
+    'MATCH_EXATO':'#22c55e','PROVAVEL_MATCH':'#3b82f6','SEM_PRESTACAO':'#f59e0b','SEM_COMPROVANTE':'#f59e0b',
+    'CARTAO_NAO_CADASTRADO':'#ef4444','COLABORADOR_NAO_IDENTIFICADO':'#ef4444','JUSTIFICADO':'#22c55e','RESOLVIDO':'#22c55e','CANCELADO':'#94a3b8'
   };
-  var cor = m[String(status||'').toUpperCase()] || '#94a3b8';
-  return '<span style="background:'+cor+'20;color:'+cor+';border:1px solid '+cor+'50;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap;">'+finFlashV2Escape_(status||'—')+'</span>';
+  var key = String(status||'').toUpperCase();
+  var cor = m[key] || '#94a3b8';
+  return '<span title="'+finFlashV2Escape_(status||'—')+'" style="background:'+cor+'20;color:'+cor+';border:1px solid '+cor+'50;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap;">'+finFlashV2Escape_(finFlashV2LabelStatus_(status))+'</span>';
 }
-
 function ffv2Tabela_(cols, rows, emptyMsg) {
   if (!rows || !rows.length) return '<p style="color:#94a3b8;font-size:12px;padding:16px 0;">'+(emptyMsg||'Nenhum registro.')+'</p>';
   var h = '<div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#f8fafc;">';

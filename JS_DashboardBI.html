@@ -36,24 +36,24 @@
       '\n        ' +
       (dashboardBIKpi_("SLA OK", (k.slaOkPct || 0) + "%", "Carteira total")) +
       '\n        ' +
-      (dashboardBIKpi_("OS finalizadas", k.osFinalizadas, "Concluidas/aprovadas")) +
+      (dashboardBIKpi_("OS finalizadas", k.osFinalizadas, "Concluídas/aprovadas")) +
       '\n        ' +
-      (dashboardBIKpi_("Horas apontadas", k.horasApontadas, "Missoes tecnicas")) +
+      (dashboardBIKpi_("Horas apontadas", k.horasApontadas, "Missões técnicas")) +
       '\n        ' +
-      (dashboardBIKpi_("Custo OS", dashboardBIMoeda_(k.custoOS), "Pecas + hora + desloc.")) +
+      (dashboardBIKpi_("Custo OS", dashboardBIMoeda_(k.custoOS), "Peças + hora + desloc.")) +
       '\n        ' +
       (dashboardBIKpi_("Custo frota", dashboardBIMoeda_(k.custoFrota), "Abast. + manut.")) +
       '\n        ' +
-      (dashboardBIKpi_("Contratos vencendo", k.contratosVencendo, "Proximos 60 dias")) +
+      (dashboardBIKpi_("Contratos vencendo", k.contratosVencendo, "Próximos 60 dias")) +
       '\n        ' +
-      (dashboardBIKpi_("Pecas vencidas", k.pecasVencidas, "Calibracao critica")) +
+      (dashboardBIKpi_("Peças vencidas", k.pecasVencidas, "Calibração crítica")) +
       '\n        ' +
-      (dashboardBIKpi_("Veiculos bloqueados", k.veiculosBloqueados, "Frota indisponivel")) +
+      (dashboardBIKpi_("Veículos bloqueados", k.veiculosBloqueados, "Frota indisponível")) +
       '\n      </div>\n\n      <div class="module-grid" style="margin-top:18px;">\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">OS por status</h3>\n          ' +
       (dashboardBIBarList_(s.osPorStatus || [])) +
       '\n        </div>\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">OS por tipo</h3>\n          ' +
       (dashboardBIBarList_(s.osPorTipo || [])) +
-      '\n        </div>\n      </div>\n\n      <div class="module-grid" style="margin-top:18px;">\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">Produtividade por tecnico</h3>\n          ' +
+      '\n        </div>\n      </div>\n\n      <div class="module-grid" style="margin-top:18px;">\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">Produtividade por técnico</h3>\n          ' +
       (dashboardBIBarList_((s.produtividadeTecnicos || []).map(function(i){ return { label: i.tecnico, total: i.horas }; }))) +
       '\n        </div>\n        <div class="list-card" style="padding:18px;">\n          <h3 class="section-card-title">Frota por status</h3>\n          ' +
       (dashboardBIBarList_(s.frotaPorStatus || [])) +

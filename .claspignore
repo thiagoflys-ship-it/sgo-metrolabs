@@ -21,3 +21,4 @@ docs/**
 backups/**
 *_DEV.js
 apps-script-imports/**
+_tmp_metrolabs_model/**

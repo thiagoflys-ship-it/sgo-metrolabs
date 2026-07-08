@@ -630,3 +630,11 @@
 - **DEV:** módulo completo, validado ponta a ponta pelo usuário — Conferência de Gastos com motivo/score/responsável/data persistindo e sem cache velho, Extrato por Colaborador com múltiplos cartões e rótulos legíveis, Resumo por Mês correto, Relatórios A4 sem misturar período, Documentos e Relatórios com preview correto e sem ID técnico como coluna principal, modais operacionais limpos (sem ID técnico, sem Imprimir indevido), ambientes DEV/PRODUCAO_V2 reconhecidos no código.
 - **PRODUCAO_V2:** só recebeu planejamento e preparação de código (via DEV/git) — nenhuma planilha criada, nenhum `DB_FIN_ID` configurado, nenhum código pushado lá, nenhum setup rodado, nenhum deploy.
 - **Próximo passo ao retomar:** iniciar a execução real do checklist V2.19B (Passo 1 — criar a planilha `SGO_FIN_FLASH_V2_DB_PROD`), sempre com confirmação explícita antes de cada ação em PRODUCAO_V2.
+## Registro layout METROLABS Comfort - 2026-07-07
+
+- Projeto modelo estudado: `1WZ0tuqy1C2W7E-FDgT8hn9861UNoeU7S8RF6-yYj7IajUIOHrXDSaSU9`.
+- Projeto destino em revisao: `12xiWNlQ-WKVpiofmcGfBaX4EBdlsIxKFJG2PFTamHUmSUs89c4LW3WSG`.
+- Fonte da verdade atualizada: `docs/layouts/LAYOUT_PADRAO_METROLABS_DARK_COMPACT.md`.
+- Auditoria criada: `docs/AUDITORIA_LAYOUT_METROLABS_COMFORT_20260707.md`.
+- Decisao: o padrao correto e Comfort Dark, com acentos suaves (`#6fbf8f`, `#7aa7c7`) e nao a versao mais intensa (`#22c55e`, `#38bdf8`).
+- Antes de nova publicacao, corrigir UI operacional por lote e preservar documentos, PDFs, validadores, QR publico, A4, impressoes, iframes e canvas de assinatura.

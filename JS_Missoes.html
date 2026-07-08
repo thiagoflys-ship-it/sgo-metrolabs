@@ -4,13 +4,13 @@
     if (!div) return;
     const isTecnico = USER_CONTEXT && USER_CONTEXT.perfil === "TECNICO";
     const styleForm = isTecnico ? "display:none;" : "";
-    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Agenda e Missoes</h2>\n            <p class="content-subtitle">Agenda tecnica, check-in/out e apontamento de horas.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;">\n            <input id="missoesPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar missao..." onkeydown="if(event.key===\'Enter\') missoesPesquisar_()">\n            <button class="btn-secondary" type="button" onclick="missoesPesquisar_()">Pesquisar</button>\n            <button class="btn-primary" type="button" style="' +
+    div.innerHTML = '\n      <div class="module-shell">\n        <div class="module-header">\n          <div class="module-header-left">\n            <h2 class="content-title">Agenda e Missões</h2>\n            <p class="content-subtitle">Agenda técnica, check-in/out e apontamento de horas.</p>\n          </div>\n          <div class="module-header-right" style="display:flex;gap:8px;align-items:center;">\n            <input id="missoesPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar missão..." onkeydown="if(event.key===\'Enter\') missoesPesquisar_()">\n            <button class="btn-secondary" type="button" onclick="missoesPesquisar_()">Pesquisar</button>\n            <button class="btn-primary" type="button" style="' +
       (styleForm) +
-      '" onclick="missoesNova_()">+ Nova missao</button>\n          </div>\n        </div>\n        <div class="module-grid" style="' +
+      '" onclick="missoesNova_()">+ Nova missão</button>\n          </div>\n        </div>\n        <div class="module-grid" style="' +
       (isTecnico ? 'grid-template-columns:1fr;' : '') +
       '">\n          <div class="form-card" style="' +
       (styleForm) +
-      '">\n            <h3 class="section-card-title" id="missoesFormTitulo">Nova missao</h3>\n            <div class="form-grid">\n              <div class="full"><label>OS</label><select id="missao_os_id"></select></div>\n              <div class="full"><label>Tecnico</label><select id="missao_tecnico_id"></select></div>\n              <div class="full"><label>Titulo</label><input id="missao_titulo" type="text"></div>\n              <div class="full"><label>Descricao</label><textarea id="missao_descricao" rows="3"></textarea></div>\n              <div><label>Data</label><input id="missao_data" type="date"></div>\n              <div><label>Inicio previsto</label><input id="missao_hora_ini" type="time"></div>\n              <div><label>Fim previsto</label><input id="missao_hora_fim" type="time"></div>\n              <div><label>Horas previstas</label><input id="missao_horas_prev" type="number" min="0" step="0.25"></div>\n              <div class="full"><label>Observacoes</label><textarea id="missao_obs" rows="2"></textarea></div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="missoesSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="missoesNova_()">Limpar</button>\n            </div>\n          </div>\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead><tr><th>Data</th><th>OS</th><th>Titulo</th><th>Tecnico</th><th>Status</th><th>Acoes</th></tr></thead>\n                <tbody id="missoesTabelaBody"><tr><td colspan="6" class="empty-state">Pesquise para listar missoes.</td></tr></tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n      <div id="missaoModal" class="modal-overlay" style="display:none;"></div>';
+      '">\n            <h3 class="section-card-title" id="missoesFormTitulo">Nova missão</h3>\n            <div class="form-grid">\n              <div class="full"><label>OS</label><select id="missao_os_id"></select></div>\n              <div class="full"><label>Técnico</label><select id="missao_tecnico_id"></select></div>\n              <div class="full"><label>Título</label><input id="missao_titulo" type="text"></div>\n              <div class="full"><label>Descrição</label><textarea id="missao_descricao" rows="3"></textarea></div>\n              <div><label>Data</label><input id="missao_data" type="date"></div>\n              <div><label>Início previsto</label><input id="missao_hora_ini" type="time"></div>\n              <div><label>Fim previsto</label><input id="missao_hora_fim" type="time"></div>\n              <div><label>Horas previstas</label><input id="missao_horas_prev" type="number" min="0" step="0.25"></div>\n              <div class="full"><label>Observações</label><textarea id="missao_obs" rows="2"></textarea></div>\n            </div>\n            <div class="form-actions">\n              <button class="btn-primary" type="button" onclick="missoesSalvar_()">Salvar</button>\n              <button class="btn-secondary" type="button" onclick="missoesNova_()">Limpar</button>\n            </div>\n          </div>\n          <div class="list-card">\n            <div class="table-wrap">\n              <table class="table">\n                <thead><tr><th>Data</th><th>OS</th><th>Título</th><th>Técnico</th><th>Status</th><th>Ações</th></tr></thead>\n                <tbody id="missoesTabelaBody"><tr><td colspan="6" class="empty-state">Pesquise para listar missões.</td></tr></tbody>\n              </table>\n            </div>\n          </div>\n        </div>\n      </div>\n      <div id="missaoModal" class="modal-overlay" style="display:none;"></div>';
     missoesCarregarOpcoes_();
   }
 
@@ -26,7 +26,7 @@
   function missoesPreencherTecnicos_(lista) {
     const el = document.getElementById("missao_tecnico_id"); if (!el) return;
     if (!lista || !lista.length) {
-      el.innerHTML = '<option value="">Nenhum tecnico ativo cadastrado. Cadastre um tecnico em Tecnicos de Campo.</option>';
+      el.innerHTML = '<option value="">Nenhum técnico ativo cadastrado. Cadastre um técnico em Técnicos de Campo.</option>';
       return;
     }
     el.innerHTML = '<option value="">Selecione</option>' + lista.map(function(t) {
@@ -46,7 +46,7 @@
     const body = document.getElementById("missoesTabelaBody");
     if (!body) return;
     if (!items.length) {
-      body.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma missao encontrada.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma missão encontrada.</td></tr>';
       return;
     }
     const isTecnico = USER_CONTEXT && USER_CONTEXT.perfil === "TECNICO";
@@ -76,7 +76,7 @@
   function missoesNova_() {
     MISSOES_STATE.editingId = "";
     ["missao_os_id","missao_tecnico_id","missao_titulo","missao_descricao","missao_data","missao_hora_ini","missao_hora_fim","missao_horas_prev","missao_obs"].forEach(id => setValue_(id, ""));
-    const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Nova missao";
+    const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Nova missão";
   }
 
   function missoesPayload_() {
@@ -103,13 +103,13 @@
   function missoesSalvar_() {
     const payload = missoesPayload_();
     if (!payload.OS_ID) return alert("Selecione a OS.");
-    if (!payload.TECNICO_ID) return alert("Selecione o tecnico.");
-    if (!payload.TITULO) return alert("Informe o titulo.");
+    if (!payload.TECNICO_ID) return alert("Selecione o técnico.");
+    if (!payload.TITULO) return alert("Informe o título.");
     if (payload.TECNICO_ID && !payload.TECNICO_USUARIO_ID) {
-      alert("Aviso: tecnico selecionado ainda nao possui usuario vinculado. A missao sera salva, mas ele so vera a missao apos vincular um usuario no cadastro de Tecnicos de Campo.");
+      alert("Aviso: técnico selecionado ainda não possui usuário vinculado. A missão será salva, mas ele só verá a missão após vincular um usuário no cadastro de Técnicos de Campo.");
     }
     const runner = google.script.run.withSuccessHandler(function(res) {
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar missao.");
+      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar missão.");
       alert((res.message || "Salvo.") + (res.warning ? "\n\n" + res.warning : ""));
       missoesNova_(); missoesPesquisar_();
     });
@@ -119,7 +119,7 @@
 
   function missoesEditar_(id) {
     google.script.run.withSuccessHandler(function(res) {
-      if (!res || !res.success || !res.item) return alert("Missao nao encontrada.");
+      if (!res || !res.success || !res.item) return alert("Missão não encontrada.");
       const i = res.item;
       MISSOES_STATE.editingId = i.ID;
       setValue_("missao_os_id", i.OS_ID);
@@ -131,13 +131,13 @@
       setValue_("missao_hora_fim", i.HORA_FIM_PREV);
       setValue_("missao_horas_prev", i.HORAS_PREVISTAS);
       setValue_("missao_obs", i.OBSERVACOES);
-      const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Editar missao";
+      const t = document.getElementById("missoesFormTitulo"); if (t) t.innerText = "Editar missão";
     }).missoesObter(SESSION, id);
   }
 
   function missoesAbrirOperacao_(id) {
     google.script.run.withSuccessHandler(function(res) {
-      if (!res || !res.success || !res.item) return alert("Missao nao encontrada.");
+      if (!res || !res.success || !res.item) return alert("Missão não encontrada.");
       MISSOES_STATE.operando = res.item;
       renderMissaoModal_(res.item);
       missoesCarregarApontamentos_(id);
@@ -153,7 +153,7 @@
       (escapeHtml_(m.NUMERO_OS)) +
       ' | ' +
       (escapeHtml_(m.STATUS)) +
-      '</p>\n          <div class="form-grid">\n            <div><label>Latitude</label><input id="missao_lat" type="text"></div>\n            <div><label>Longitude</label><input id="missao_lng" type="text"></div>\n            <div><label>KM saida</label><input id="missao_km_saida" type="number" min="0"></div>\n            <div><label>KM chegada</label><input id="missao_km_chegada" type="number" min="0"></div>\n            <div class="full"><label>Conclusao tecnica</label><textarea id="missao_conclusao" rows="3"></textarea></div>\n          </div>\n          <div class="form-actions">\n            <button class="btn-primary" type="button" onclick="missoesCheckin_()">Check-in</button>\n            <button class="btn-success" type="button" onclick="missoesCheckout_()">Check-out</button>\n            <button class="btn-secondary" type="button" onclick="missoesAbrirExecucaoOS_()">Executar OS</button>\n          </div>\n          <h3 class="section-card-title" style="margin-top:18px;">Apontamento de horas</h3>\n          <div class="form-grid">\n            <div><label>Data</label><input id="apont_data" type="date"></div>\n            <div><label>Inicio</label><input id="apont_ini" type="time"></div>\n            <div><label>Fim</label><input id="apont_fim" type="time"></div>\n            <div class="full"><label>Atividade</label><input id="apont_atividade" type="text"></div>\n            <div class="full"><label>Observacoes</label><input id="apont_obs" type="text"></div>\n          </div>\n          <div class="form-actions"><button class="btn-secondary" type="button" onclick="missoesApontar_()">Adicionar horas</button></div>\n          <div class="table-wrap">\n            <table class="table"><thead><tr><th>Data</th><th>Inicio</th><th>Fim</th><th>Horas</th><th>Atividade</th></tr></thead><tbody id="apontBody"></tbody></table>\n          </div>\n        </div>\n      </div>';
+      '</p>\n          <div class="form-grid">\n            <div><label>Latitude</label><input id="missao_lat" type="text"></div>\n            <div><label>Longitude</label><input id="missao_lng" type="text"></div>\n            <div><label>KM saída</label><input id="missao_km_saida" type="number" min="0"></div>\n            <div><label>KM chegada</label><input id="missao_km_chegada" type="number" min="0"></div>\n            <div class="full"><label>Conclusão técnica</label><textarea id="missao_conclusao" rows="3"></textarea></div>\n          </div>\n          <div class="form-actions">\n            <button class="btn-primary" type="button" onclick="missoesCheckin_()">Check-in</button>\n            <button class="btn-success" type="button" onclick="missoesCheckout_()">Check-out</button>\n            <button class="btn-secondary" type="button" onclick="missoesAbrirExecucaoOS_()">Executar OS</button>\n          </div>\n          <h3 class="section-card-title" style="margin-top:18px;">Apontamento de horas</h3>\n          <div class="form-grid">\n            <div><label>Data</label><input id="apont_data" type="date"></div>\n            <div><label>Início</label><input id="apont_ini" type="time"></div>\n            <div><label>Fim</label><input id="apont_fim" type="time"></div>\n            <div class="full"><label>Atividade</label><input id="apont_atividade" type="text"></div>\n            <div class="full"><label>Observações</label><input id="apont_obs" type="text"></div>\n          </div>\n          <div class="form-actions"><button class="btn-secondary" type="button" onclick="missoesApontar_()">Adicionar horas</button></div>\n          <div class="table-wrap">\n            <table class="table"><thead><tr><th>Data</th><th>Início</th><th>Fim</th><th>Horas</th><th>Atividade</th></tr></thead><tbody id="apontBody"></tbody></table>\n          </div>\n        </div>\n      </div>';
     modal.style.display = "flex";
     tentarPreencherGeolocMissao_();
   }
@@ -195,10 +195,10 @@
 
   function missoesAbrirExecucaoOS_() {
     const m = MISSOES_STATE.operando;
-    if (!m || !m.OS_ID) return alert("Missao sem OS vinculada.");
+    if (!m || !m.OS_ID) return alert("Missão sem OS vinculada.");
     if (typeof window.renderOSExecucaoModulo_ !== "function") {
-      console.error("[OS_EXEC] renderOSExecucaoModulo_ nao encontrada em Missoes.", typeof window.renderOSExecucaoModulo_);
-      return alert("Modulo de execucao de OS nao carregado. Recarregue a pagina e tente novamente.");
+      console.error("[OS_EXEC] renderOSExecucaoModulo_ não encontrada em Missões.", typeof window.renderOSExecucaoModulo_);
+      return alert("Módulo de execução de OS não carregado. Recarregue a página e tente novamente.");
     }
     missoesFecharModal_();
     OS_EXEC_STATE.osId = m.OS_ID;

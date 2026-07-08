@@ -67,44 +67,44 @@ const SGO_FROTA_NOVA = (() => {
   ];
 
   const FROTA_CHECKLIST_CHECKOUT = [
-    "Painel sem alerta", "Pneus ok", "Limpeza ok", "Combustivel conferido",
+    "Painel sem alerta", "Pneus ok", "Limpeza ok", "Combustível conferido",
     "Objetos/ferramentas conferidos", "Avarias verificadas"
   ];
 
   const FROTA_CHECKLIST_VISTORIA = [
     "Lataria dianteira", "Lataria traseira", "Lateral direita", "Lateral esquerda",
-    "Para-brisa", "Vidros laterais", "Retrovisores", "Farois", "Lanternas",
-    "Setas", "Luz de freio", "Luz de re", "Buzina", "Limpador de para-brisa",
-    "Pneus", "Estepe", "Macaco", "Chave de roda", "Triangulo",
-    "Cinto de seguranca", "Painel sem alerta", "Nivel de oleo",
-    "Agua/arrefecimento", "Fluido de freio", "Combustivel", "Interior limpo",
-    "Porta-malas limpo", "Ar-condicionado", "Freios", "Direcao",
-    "Documentos do veiculo", "Chave", "Odor interno / asseio"
+    "Para-brisa", "Vidros laterais", "Retrovisores", "Faróis", "Lanternas",
+    "Setas", "Luz de freio", "Luz de ré", "Buzina", "Limpador de para-brisa",
+    "Pneus", "Estepe", "Macaco", "Chave de roda", "Triângulo",
+    "Cinto de segurança", "Painel sem alerta", "Nível de óleo",
+    "Água/arrefecimento", "Fluido de freio", "Combustível", "Interior limpo",
+    "Porta-malas limpo", "Ar-condicionado", "Freios", "Direção",
+    "Documentos do veículo", "Chave", "Odor interno / asseio"
   ];
 
   const FROTA_CHECKLIST_PREVENTIVA = [
-    "Troca de oleo", "Filtro de oleo", "Filtro de ar", "Filtro de combustivel",
-    "Filtro de cabine", "Alinhamento", "Balanceamento", "Rodizio de pneus",
+    "Troca de óleo", "Filtro de óleo", "Filtro de ar", "Filtro de combustível",
+    "Filtro de cabine", "Alinhamento", "Balanceamento", "Rodízio de pneus",
     "Freios", "Pastilhas", "Discos/tambores", "Fluido de freio",
-    "Agua/arrefecimento", "Bateria", "Correias", "Suspensao", "Amortecedores",
-    "Luzes", "Limpadores", "Pneus", "Estepe", "Higienizacao/limpeza", "Documentacao"
+    "Água/arrefecimento", "Bateria", "Correias", "Suspensão", "Amortecedores",
+    "Luzes", "Limpadores", "Pneus", "Estepe", "Higienização/limpeza", "Documentação"
   ];
 
   const FROTA_FRASES_ZELO = [
-    "Cuide do veiculo como uma ferramenta de trabalho: zelo hoje evita atraso amanha.",
-    "O veiculo da empresa e patrimonio coletivo. Use com responsabilidade.",
-    "A conservacao do carro comeca na forma como ele e conduzido.",
-    "Quem cuida do veiculo, cuida da operacao e respeita a equipe.",
-    "Atrasos, pneus danificados e avarias evitaveis prejudicam toda a missao.",
-    "Zelar pelo veiculo e respeitar o colega que vai utiliza-lo depois.",
-    "Uma vistoria bem feita evita prejuizo, atraso e desgaste com o cliente."
+    "Cuide do veículo como uma ferramenta de trabalho: zelo hoje evita atraso amanhã.",
+    "O veículo da empresa é patrimônio coletivo. Use com responsabilidade.",
+    "A conservação do carro começa na forma como ele é conduzido.",
+    "Quem cuida do veículo, cuida da operação e respeita a equipe.",
+    "Atrasos, pneus danificados e avarias evitáveis prejudicam toda a missão.",
+    "Zelar pelo veículo é respeitar o colega que vai utilizá-lo depois.",
+    "Uma vistoria bem feita evita prejuízo, atraso e desgaste com o cliente."
   ];
 
   function frotaSheet_(nome) {
     try {
       return SGO_DATA.getSheet(nome, DB);
     } catch (e) {
-      throw new Error("Estrutura nova da Frota ainda nao foi criada. Execute setupFrotaNovaDev. Detalhe: " + e.message);
+      throw new Error("Estrutura nova da Frota ainda não foi criada. Execute setupFrotaNovaDev. Detalhe: " + e.message);
     }
   }
 
@@ -121,7 +121,7 @@ const SGO_FROTA_NOVA = (() => {
   function frotaUpdate_(nome, id, patch) {
     frotaSheet_(nome);
     const ok = SGO_DATA.update(nome, SGO_UTILS.safe(id), patch || {}, DB);
-    if (!ok) throw new Error("Registro nao encontrado para atualizacao: " + id);
+    if (!ok) throw new Error("Registro não encontrado para atualização: " + id);
     return SGO_DATA.getById(nome, SGO_UTILS.safe(id), DB);
   }
 
@@ -272,9 +272,9 @@ const SGO_FROTA_NOVA = (() => {
     return {
       conflito: true,
       reserva: conflito,
-      mensagem: "Este veiculo esta reservado para " + (conflito.RESPONSAVEL_NOME || "outro responsavel") +
-        " no periodo de " + (conflito.DATA_HORA_INICIO || "") + " ate " + (conflito.DATA_HORA_FIM || "") +
-        ", motivo: " + (conflito.MOTIVO || "") + ". Verifique outro veiculo disponivel."
+      mensagem: "Este veículo está reservado para " + (conflito.RESPONSAVEL_NOME || "outro responsável") +
+        " no período de " + (conflito.DATA_HORA_INICIO || "") + " até " + (conflito.DATA_HORA_FIM || "") +
+        ", motivo: " + (conflito.MOTIVO || "") + ". Verifique outro veículo disponível."
     };
   }
 
@@ -291,7 +291,7 @@ const SGO_FROTA_NOVA = (() => {
     return {
       aberto: !!aberto,
       movimento: aberto || null,
-      mensagem: aberto ? "Veiculo possui check-out pendente." : ""
+      mensagem: aberto ? "Veículo possui check-out pendente." : ""
     };
   }
 
@@ -334,7 +334,7 @@ const SGO_FROTA_NOVA = (() => {
     return {
       bloqueante: !!item,
       manutencao: item || null,
-      mensagem: item ? "Veiculo possui manutencao bloqueante." : ""
+      mensagem: item ? "Veículo possui manutenção bloqueante." : ""
     };
   }
 
@@ -980,7 +980,7 @@ const SGO_FROTA_NOVA = (() => {
   }
 
   function exigirCampo_(payload, campo, label) {
-    if (!SGO_UTILS.safe(payload && payload[campo])) throw new Error((label || campo) + " e obrigatorio.");
+    if (!SGO_UTILS.safe(payload && payload[campo])) throw new Error((label || campo) + " é obrigatório.");
   }
 
   function listarVeiculos_(filtro) {
@@ -1000,7 +1000,7 @@ const SGO_FROTA_NOVA = (() => {
     const user = frotaUser_(session);
     const atual = payload.ID ? frotaFindById_(FROTA_ABAS.VEICULOS, payload.ID) : null;
     const placa = frotaNormalizarPlaca_(payload.PLACA);
-    if (!placa) throw new Error("Placa e obrigatoria.");
+    if (!placa) throw new Error("Placa é obrigatória.");
     const dados = {
       ID: atual ? atual.ID : frotaUUID_(),
       CODIGO: SGO_UTILS.safe(payload.CODIGO || (atual && atual.CODIGO)),
@@ -1046,7 +1046,7 @@ const SGO_FROTA_NOVA = (() => {
     const p = payload || {};
     const veiculo = frotaBuscarVeiculo_(p.veiculoId || p.VEICULO_ID || p.placa || p.PLACA);
     if (!veiculo) {
-      return { ok: false, status: "NAO_ENCONTRADO", bloqueios: ["Veiculo nao encontrado."], alertas: [], veiculo: null };
+      return { ok: false, status: "NAO_ENCONTRADO", bloqueios: ["Veículo não encontrado."], alertas: [], veiculo: null };
     }
 
     const bloqueios = [];
@@ -1054,10 +1054,10 @@ const SGO_FROTA_NOVA = (() => {
     let statusFinal = FROTA_STATUS_VEICULO.DISPONIVEL;
     const status = frotaNormalizarStatusVeiculo_(veiculo.STATUS);
 
-    if (status === FROTA_STATUS_VEICULO.INATIVO) bloqueios.push("Veiculo inativo.");
-    if (status === FROTA_STATUS_VEICULO.BLOQUEADO || frotaBool_(veiculo.BLOQUEADO)) bloqueios.push(veiculo.MOTIVO_BLOQUEIO || "Veiculo bloqueado.");
-    if (status === FROTA_STATUS_VEICULO.EM_MANUTENCAO) bloqueios.push("Veiculo em manutencao.");
-    if (status === FROTA_STATUS_VEICULO.EM_USO) bloqueios.push("Veiculo em uso.");
+    if (status === FROTA_STATUS_VEICULO.INATIVO) bloqueios.push("Veículo inativo.");
+    if (status === FROTA_STATUS_VEICULO.BLOQUEADO || frotaBool_(veiculo.BLOQUEADO)) bloqueios.push(veiculo.MOTIVO_BLOQUEIO || "Veículo bloqueado.");
+    if (status === FROTA_STATUS_VEICULO.EM_MANUTENCAO) bloqueios.push("Veículo em manutenção.");
+    if (status === FROTA_STATUS_VEICULO.EM_USO) bloqueios.push("Veículo em uso.");
 
     const doc = frotaDocumentacaoVencida_(veiculo);
     if (doc.vencida) bloqueios.push(doc.motivo);
@@ -1098,7 +1098,7 @@ const SGO_FROTA_NOVA = (() => {
     const p = payload || {};
     const user = frotaUser_(session);
     const veiculo = frotaBuscarVeiculo_(p.veiculoId || p.VEICULO_ID || p.placa || p.PLACA);
-    if (!veiculo) throw new Error("Veiculo nao encontrado.");
+    if (!veiculo) throw new Error("Veículo não encontrado.");
     const disp = verificarDisponibilidade_(session, {
       veiculoId: veiculo.ID,
       placa: veiculo.PLACA,
@@ -1109,13 +1109,13 @@ const SGO_FROTA_NOVA = (() => {
     if (!disp.ok) throw new Error("Check-in bloqueado: " + disp.bloqueios.join(" "));
 
     const kmSaida = frotaParseNumero_(p.kmSaida || p.KM_SAIDA);
-    if (!kmSaida) throw new Error("KM de saida e obrigatorio.");
-    if (kmSaida < frotaParseNumero_(veiculo.KM_ATUAL)) throw new Error("KM de saida nao pode ser menor que o KM atual do veiculo.");
-    exigirCampo_(p, p.combustivelSaida !== undefined ? "combustivelSaida" : "COMBUSTIVEL_SAIDA", "Combustivel de saida");
+    if (!kmSaida) throw new Error("KM de saída é obrigatório.");
+    if (kmSaida < frotaParseNumero_(veiculo.KM_ATUAL)) throw new Error("KM de saída não pode ser menor que o KM atual do veículo.");
+    exigirCampo_(p, p.combustivelSaida !== undefined ? "combustivelSaida" : "COMBUSTIVEL_SAIDA", "Combustível de saída");
     exigirCampo_(p, p.destino !== undefined ? "destino" : "DESTINO", "Destino");
     exigirCampo_(p, p.motivoUso !== undefined ? "motivoUso" : "MOTIVO_USO", "Motivo de uso");
-    if (!p.checklistJson && !p.CHECKLIST_CHECKIN_JSON) throw new Error("Checklist de check-in e obrigatorio.");
-    if (!p.fotosJson && !p.FOTOS_CHECKIN_JSON) throw new Error("Fotos/evidencias de check-in sao obrigatorias.");
+    if (!p.checklistJson && !p.CHECKLIST_CHECKIN_JSON) throw new Error("Checklist de check-in é obrigatório.");
+    if (!p.fotosJson && !p.FOTOS_CHECKIN_JSON) throw new Error("Fotos/evidências de check-in são obrigatórias.");
 
     const id = frotaUUID_();
     const movimento = frotaAppend_(FROTA_ABAS.MOVIMENTOS, {
@@ -1175,20 +1175,20 @@ const SGO_FROTA_NOVA = (() => {
     if (movimento) veiculo = frotaBuscarVeiculo_(movimento.VEICULO_ID || movimento.PLACA);
     if (!movimento) {
       veiculo = frotaBuscarVeiculo_(p.veiculoId || p.VEICULO_ID || p.placa || p.PLACA);
-      if (!veiculo) throw new Error("Veiculo nao encontrado.");
+      if (!veiculo) throw new Error("Veículo não encontrado.");
       const aberto = frotaMovimentoAberto_(veiculo);
       movimento = aberto.movimento;
     }
-    if (!movimento || SGO_UTILS.safe(movimento.DATA_HORA_CHECKOUT)) throw new Error("Movimento aberto nao encontrado para check-out.");
+    if (!movimento || SGO_UTILS.safe(movimento.DATA_HORA_CHECKOUT)) throw new Error("Movimento aberto não encontrado para check-out.");
     if (!veiculo) veiculo = frotaBuscarVeiculo_(movimento.VEICULO_ID || movimento.PLACA);
 
     const kmChegada = frotaParseNumero_(p.kmChegada || p.KM_CHEGADA);
     const kmSaida = frotaParseNumero_(movimento.KM_SAIDA);
-    if (!kmChegada) throw new Error("KM de chegada e obrigatorio.");
-    if (kmChegada < kmSaida) throw new Error("KM de chegada nao pode ser menor que o KM de saida.");
-    exigirCampo_(p, p.combustivelChegada !== undefined ? "combustivelChegada" : "COMBUSTIVEL_CHEGADA", "Combustivel de chegada");
-    if (!p.checklistJson && !p.CHECKLIST_CHECKOUT_JSON) throw new Error("Checklist de check-out e obrigatorio.");
-    if (!p.fotosJson && !p.FOTOS_CHECKOUT_JSON) throw new Error("Fotos/evidencias de check-out sao obrigatorias.");
+    if (!kmChegada) throw new Error("KM de chegada é obrigatório.");
+    if (kmChegada < kmSaida) throw new Error("KM de chegada não pode ser menor que o KM de saída.");
+    exigirCampo_(p, p.combustivelChegada !== undefined ? "combustivelChegada" : "COMBUSTIVEL_CHEGADA", "Combustível de chegada");
+    if (!p.checklistJson && !p.CHECKLIST_CHECKOUT_JSON) throw new Error("Checklist de check-out é obrigatório.");
+    if (!p.fotosJson && !p.FOTOS_CHECKOUT_JSON) throw new Error("Fotos/evidências de check-out são obrigatórias.");
 
     const avarias = frotaNormalizarTexto_(p.avarias || p.AVARIAS);
     const descAvarias = SGO_UTILS.safe(p.descricaoAvarias || p.DESCRICAO_AVARIAS || p.observacoes || p.OBSERVACOES);
@@ -1201,7 +1201,7 @@ const SGO_FROTA_NOVA = (() => {
         PLACA: veiculo.PLACA,
         TIPO_ALERTA: "LAVAGEM",
         NIVEL: FROTA_NIVEIS_ALERTA.AMARELO,
-        MENSAGEM: "Veiculo devolvido sem limpeza.",
+        MENSAGEM: "Veículo devolvido sem limpeza.",
         REFERENCIA_ID: movimento.ID
       }));
     }
@@ -1225,7 +1225,7 @@ const SGO_FROTA_NOVA = (() => {
         PLACA: veiculo.PLACA,
         TIPO_ALERTA: "COMBUSTIVEL",
         NIVEL: FROTA_NIVEIS_ALERTA.AMARELO,
-        MENSAGEM: "Combustivel devolvido abaixo do registrado na saida.",
+        MENSAGEM: "Combustível devolvido abaixo do registrado na saída.",
         REFERENCIA_ID: movimento.ID
       }));
     }
@@ -1286,7 +1286,7 @@ const SGO_FROTA_NOVA = (() => {
     listarVeiculos: function(sessionId, filtro) {
       return wrap_(function() {
         exigirSessao(sessionId);
-        return { items: listarVeiculos_(filtro), message: "Veiculos carregados." };
+        return { items: listarVeiculos_(filtro), message: "Veículos carregados." };
       });
     },
 
@@ -1294,7 +1294,7 @@ const SGO_FROTA_NOVA = (() => {
       return wrap_(function() {
         const session = exigirSessao(sessionId);
         const veiculo = salvarVeiculo_(session, payload || {});
-        return { item: veiculo, message: "Veiculo salvo com sucesso." };
+        return { item: veiculo, message: "Veículo salvo com sucesso." };
       });
     },
 
@@ -1303,7 +1303,7 @@ const SGO_FROTA_NOVA = (() => {
         exigirSessao(sessionId);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.id || p.ID || p.veiculoId || p.VEICULO_ID || p.placa || p.PLACA);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
         return { item: veiculo };
       });
     },
@@ -1321,7 +1321,7 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
         exigirCampo_(p, p.DATA_HORA_INICIO ? "DATA_HORA_INICIO" : "inicio", "Inicio da reserva");
         exigirCampo_(p, p.DATA_HORA_FIM ? "DATA_HORA_FIM" : "fim", "Fim da reserva");
         const id = SGO_UTILS.safe(p.ID);
@@ -1404,8 +1404,8 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
-        if (!p.FOTOS_JSON && !p.fotosJson) throw new Error("Fotos da vistoria sao obrigatorias.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
+        if (!p.FOTOS_JSON && !p.fotosJson) throw new Error("Fotos da vistoria são obrigatórias.");
         const dados = {
           ID: p.ID || frotaUUID_(),
           VEICULO_ID: veiculo.ID,
@@ -1440,13 +1440,13 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
-        if (!frotaParseNumero_(p.KM || p.km)) throw new Error("KM do abastecimento e obrigatorio.");
-        if (!frotaParseNumero_(p.LITROS || p.litros)) throw new Error("Litros do abastecimento e obrigatorio.");
-        if (!frotaParseNumero_(p.VALOR_TOTAL || p.valorTotal)) throw new Error("Valor total do abastecimento e obrigatorio.");
-        if (!SGO_UTILS.safe(p.TIPO_COMBUSTIVEL || p.tipoCombustivel)) throw new Error("Tipo de combustivel e obrigatorio.");
-        if (!p.COMPROVANTE_JSON && !p.comprovanteJson) throw new Error("Comprovante do abastecimento e obrigatorio.");
-        if (!p.FOTO_PAINEL_JSON && !p.fotoPainelJson) throw new Error("Foto do painel/KM e obrigatoria.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
+        if (!frotaParseNumero_(p.KM || p.km)) throw new Error("KM do abastecimento é obrigatório.");
+        if (!frotaParseNumero_(p.LITROS || p.litros)) throw new Error("Litros do abastecimento são obrigatórios.");
+        if (!frotaParseNumero_(p.VALOR_TOTAL || p.valorTotal)) throw new Error("Valor total do abastecimento é obrigatório.");
+        if (!SGO_UTILS.safe(p.TIPO_COMBUSTIVEL || p.tipoCombustivel)) throw new Error("Tipo de combustível é obrigatório.");
+        if (!p.COMPROVANTE_JSON && !p.comprovanteJson) throw new Error("Comprovante do abastecimento é obrigatório.");
+        if (!p.FOTO_PAINEL_JSON && !p.fotoPainelJson) throw new Error("Foto do painel/KM é obrigatória.");
         const base = {
           ID: p.ID || frotaUUID_(),
           VEICULO_ID: veiculo.ID,
@@ -1481,7 +1481,7 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
         const categoria = frotaNormalizarTexto_(p.CATEGORIA || p.categoria || "PREVENTIVA");
         const status = frotaNormalizarTexto_(p.STATUS || p.status || "CONCLUIDA");
         const bloqueante = frotaBool_(p.BLOQUEANTE) ||
@@ -1527,7 +1527,7 @@ const SGO_FROTA_NOVA = (() => {
         if (bloqueante) patchVeiculo.STATUS = FROTA_STATUS_VEICULO.EM_MANUTENCAO;
         frotaUpdate_(FROTA_ABAS.VEICULOS, veiculo.ID, patchVeiculo);
         frotaLog_("SALVAR_MANUTENCAO", { session: session, referenciaId: salvo.ID, veiculoId: veiculo.ID, placa: veiculo.PLACA, depois: salvo });
-        return { item: salvo, message: "Manutencao salva com sucesso." };
+        return { item: salvo, message: "Manutenção salva com sucesso." };
       });
     },
 
@@ -1544,7 +1544,7 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
         const salvo = frotaAppend_(FROTA_ABAS.LAVAGENS, {
           ID: p.ID || frotaUUID_(),
           VEICULO_ID: veiculo.ID,
@@ -1580,7 +1580,7 @@ const SGO_FROTA_NOVA = (() => {
         const user = frotaUser_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.VEICULO_ID || p.veiculoId || p.PLACA || p.placa);
-        if (!veiculo) throw new Error("Veiculo nao encontrado.");
+        if (!veiculo) throw new Error("Veículo não encontrado.");
         const salvo = frotaAppend_(FROTA_ABAS.MULTAS, {
           ID: p.ID || frotaUUID_(),
           VEICULO_ID: veiculo.ID,
@@ -1716,7 +1716,7 @@ const SGO_FROTA_NOVA = (() => {
         frotaExigirPerfilDocumento_(session);
         const p = payload || {};
         const veiculo = frotaBuscarVeiculo_(p.veiculoId || p.VEICULO_ID || p.placa || p.PLACA);
-        if (!veiculo) throw new Error("Veiculo nao encontrado para relatorio.");
+        if (!veiculo) throw new Error("Veículo não encontrado para relatório.");
         const inicio = p.inicio || p.INICIO || "";
         const fim = p.fim || p.FIM || "";
         const dados = frotaConsolidarRelatorioVeiculo_(veiculo, inicio, fim);
@@ -1802,7 +1802,7 @@ const SGO_FROTA_NOVA = (() => {
         const multa = frotaFindById_(FROTA_ABAS.MULTAS, multaId);
         if (!multa) throw new Error("Multa nao encontrada para gerar termo.");
         const veiculo = frotaBuscarVeiculo_(multa.VEICULO_ID || multa.PLACA);
-        if (!veiculo) throw new Error("Veiculo da multa nao encontrado.");
+        if (!veiculo) throw new Error("Veículo da multa não encontrado.");
         const html = frotaHtmlTermoMulta_(multa, veiculo);
         const doc = frotaChamarDocumentFactory_(sessionId, {
           TIPO_DOCUMENTO: "FROTA_TERMO_MULTA",
