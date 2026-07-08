@@ -150,7 +150,7 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - [x] Aplicar lote 3F: Financeiro interno e FIN Flash V2 operacional via CSS do portal, sem alterar termo publico, prestacao publica, iframes, srcdoc, previews A4 ou impressao.
 - [x] Aplicar lote 3G: Index Documentos, modais de autenticacao e Manual operacional via CSS do portal, sem alterar validacao publica, QR publico, geradores ou layouts A4.
 - [x] Aplicar lote 3H: Mobile operacional (.mobile-* e .mc2-*) via CSS do portal, sem alterar QR, validacao, camera/upload, assinaturas/canvas, geradores ou documentos.
-- [ ] Aplicar lote 3: modulos mistos, somente nas telas operacionais.
+- [x] Aplicar lote 3: modulos mistos, somente nas telas operacionais.
 
 ## Observacoes
 
@@ -190,3 +190,9 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - Nos arquivos mistos alterados, a auditoria adicional localizou apenas seletores/observacoes de escopo e textos operacionais. Blocos de `@media print`, `iframe.srcdoc`, A4, QR, token/hash, validacao publica, canvas de assinatura e geracao/abertura de PDF permanecem protegidos.
 - Saidas de `git diff` no console do Windows podem renderizar acentos como `?`; a conferencia direta com `rg` nos arquivos confirmou que os textos reais continuam acentuados corretamente.
 - Conclusao: validacao global concluida; manter a regra de nao aplicar tema em documento oficial, relatorio impresso, PDF, QR publico, validacao ou preview A4.
+
+## Fechamento do lote 3 - 2026-07-08
+
+- Os sublotes 3A a 3H cobrem os modulos mistos e foram aplicados por CSS/escopo operacional, principalmente em `UI_Estilos.html`, com seletores restritos ao portal e `.app-shell .content-area` quando aplicavel.
+- Nenhuma alteracao adicional de codigo foi necessaria neste fechamento: o item pai foi marcado como concluido apos auditoria de `Index.html`, auditoria dos `JS_*.html` por blocos e validacao global da zona documental.
+- Permanecem fora do lote 3: documentos oficiais, relatorios impressos, PDFs, QR publico, validacao publica, iframes/srcdoc, previews A4, canvas de assinatura, upload/camera e templates publicos/documentais.
