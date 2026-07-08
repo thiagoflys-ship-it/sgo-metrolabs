@@ -134,7 +134,7 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - [x] Mapear zona candidata inicial.
 - [x] Mapear zona mista inicial.
 - [x] Auditar `UI_Estilos.html` completo.
-- [ ] Auditar `Index.html` completo.
+- [x] Auditar `Index.html` completo.
 - [ ] Auditar arquivos `JS_*.html` por blocos de impressao/documento.
 - [x] Aplicar lote 1: shell geral, topbar, sidebar, content panel.
 - [x] Validar que nenhum documento/relatorio/validador foi alterado no lote 1.
@@ -167,3 +167,9 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - [x] Aplicar lote 4B: corrigir mojibake e acentuacao operacional segura em SGO_AssistenciaTecnica.js, sem alterar contratos de dados, documentos, QR ou validadores.
 
 - [x] Aplicar lote 4C: corrigir acentuacao/ortografia visivel em Missoes, Dashboard BI e mensagens operacionais do Core, sem tocar documentos, PDFs, QR, validadores ou layouts de impressao.
+
+## Auditoria `Index.html` completa - 2026-07-08
+
+- Escopo operacional auditado: tela de login, shell principal, topbar, sidebar, carregamento de includes, area principal e modais de autenticacao/primeiro acesso.
+- Escopo sensivel identificado e preservado: `renderDocumentosModulo_()` e fluxo de QR publico (`SGO_QR_STATE`, `qrcodeAcessar`, redirecionamento de validacao/sessao).
+- Conclusao: nao houve necessidade de nova alteracao em `Index.html`; os ajustes visuais operacionais ja estao cobertos pelos overrides de `UI_Estilos.html` dos lotes anteriores. Documentos, QR publico, validacao e qualquer layout documental permanecem fora do escopo.
