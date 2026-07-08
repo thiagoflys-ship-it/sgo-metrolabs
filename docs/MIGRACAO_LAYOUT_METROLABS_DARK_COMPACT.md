@@ -135,7 +135,7 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - [x] Mapear zona mista inicial.
 - [x] Auditar `UI_Estilos.html` completo.
 - [x] Auditar `Index.html` completo.
-- [ ] Auditar arquivos `JS_*.html` por blocos de impressao/documento.
+- [x] Auditar arquivos `JS_*.html` por blocos de impressao/documento.
 - [x] Aplicar lote 1: shell geral, topbar, sidebar, content panel.
 - [x] Validar que nenhum documento/relatorio/validador foi alterado no lote 1.
 - [ ] Validar que nenhum documento/relatorio/validador foi alterado.
@@ -173,3 +173,12 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - Escopo operacional auditado: tela de login, shell principal, topbar, sidebar, carregamento de includes, area principal e modais de autenticacao/primeiro acesso.
 - Escopo sensivel identificado e preservado: `renderDocumentosModulo_()` e fluxo de QR publico (`SGO_QR_STATE`, `qrcodeAcessar`, redirecionamento de validacao/sessao).
 - Conclusao: nao houve necessidade de nova alteracao em `Index.html`; os ajustes visuais operacionais ja estao cobertos pelos overrides de `UI_Estilos.html` dos lotes anteriores. Documentos, QR publico, validacao e qualquer layout documental permanecem fora do escopo.
+
+## Auditoria `JS_*.html` por blocos - 2026-07-08
+
+- Arquivos sem marcador documental/print/QR relevante na varredura do projeto alvo: `JS_Cadastros.html`, `JS_DashboardBI.html`, `JS_Missoes.html`, `JS_Rastreabilidade.html`. Podem receber ajustes operacionais normais, respeitando contratos de dados e nomes internos.
+- Arquivos operacionais com termos falsos positivos ou anexos simples: `JS_Admin.html`, `JS_Contratos.html`, `JS_Estoque.html`, `JS_Fornecedores.html`, `JS_Importacao.html`, `JS_Manual.html`, `JS_OS_Questionarios.html`, `JS_Pecas.html`. Ajustes visuais devem ficar em componentes/telas; nao tratar esses termos como permissao para alterar documentos.
+- Arquivos mistos com blocos documentais/print explicitamente protegidos: `JS_AssistenciaTecnica.html`, `JS_Equipamentos.html`, `JS_Fin_Cartoes.html`, `JS_Fin_FlashV2.html`, `JS_Frota.html`, `JS_Inventario.html`, `JS_OS.html`, `JS_OS_Execucao.html`, `JS_Registros.html`, `JS_Relatorios.html`, `JS_Tecnicos.html`.
+- Arquivos publicos ou documentais que devem ficar fora da migracao visual do portal: `JS_Fin_Termo.html` e `JS_Fin_Prestacao.html`, exceto correcao pontual autorizada em tela publica ja isolada.
+- Blocos que nao podem ser alterados por lote visual global: `@media print`, `window.print`, `iframe.srcdoc`, previews A4, `.prt-*`, `#inv-print-overlay`, QR de equipamento, token/hash/validacao, geracao/abertura de PDF, canvas de assinatura, camera/upload de comprovantes e qualquer HTML completo montado para impressao.
+- Conclusao: o proximo lote so pode mirar tela operacional dentro de `.app-shell .content-area` ou classes modulares de portal. Qualquer CSS/HTML documental deve permanecer intacto.
