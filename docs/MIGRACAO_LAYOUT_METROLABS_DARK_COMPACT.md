@@ -138,7 +138,7 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - [x] Auditar arquivos `JS_*.html` por blocos de impressao/documento.
 - [x] Aplicar lote 1: shell geral, topbar, sidebar, content panel.
 - [x] Validar que nenhum documento/relatorio/validador foi alterado no lote 1.
-- [ ] Validar que nenhum documento/relatorio/validador foi alterado.
+- [x] Validar que nenhum documento/relatorio/validador foi alterado.
 - [x] Aplicar lote 2: compatibilidade visual de caixas neutras inline em modulos operacionais.
 - [x] Aplicar lote 2B: overrides UI de Importacao e Frota, sem alterar geracao documental.
 - [x] Aplicar lote 2C: Cadastros, Missoes e Dashboard BI via overrides globais seguros.
@@ -182,3 +182,11 @@ Arquivos abaixo precisam de leitura detalhada bloco a bloco. Podem conter tela o
 - Arquivos publicos ou documentais que devem ficar fora da migracao visual do portal: `JS_Fin_Termo.html` e `JS_Fin_Prestacao.html`, exceto correcao pontual autorizada em tela publica ja isolada.
 - Blocos que nao podem ser alterados por lote visual global: `@media print`, `window.print`, `iframe.srcdoc`, previews A4, `.prt-*`, `#inv-print-overlay`, QR de equipamento, token/hash/validacao, geracao/abertura de PDF, canvas de assinatura, camera/upload de comprovantes e qualquer HTML completo montado para impressao.
 - Conclusao: o proximo lote so pode mirar tela operacional dentro de `.app-shell .content-area` ou classes modulares de portal. Qualquer CSS/HTML documental deve permanecer intacto.
+
+## Validacao global da zona documental - 2026-07-08
+
+- `git diff --name-only origin/master..HEAD -- SGO_DocumentFactory.js SGO_Documentos.js SGO_QRCode.js SGO_Validacao.js Validacao_Documento.html` retornou vazio: a zona documental dura nao entrou nos commits da migracao.
+- `git diff --check origin/master..HEAD` nao encontrou erro de whitespace.
+- Nos arquivos mistos alterados, a auditoria adicional localizou apenas seletores/observacoes de escopo e textos operacionais. Blocos de `@media print`, `iframe.srcdoc`, A4, QR, token/hash, validacao publica, canvas de assinatura e geracao/abertura de PDF permanecem protegidos.
+- Saidas de `git diff` no console do Windows podem renderizar acentos como `?`; a conferencia direta com `rg` nos arquivos confirmou que os textos reais continuam acentuados corretamente.
+- Conclusao: validacao global concluida; manter a regra de nao aplicar tema em documento oficial, relatorio impresso, PDF, QR publico, validacao ou preview A4.
