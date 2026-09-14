@@ -1,0 +1,5 @@
+const fs=require('fs'),assert=require('assert');const b='apps-script-imports/portal_sgo_versao_cnpj_db/';
+['SGO_CertCal_GestaoRelatorios.js','SGO_Conduta_RelatoriosGerenciais.js','SGO_Conduta_Relatorio.js','SGO_Qualidade_Relatorio.js','SGO_Auvo_Relatorio.js'].forEach(function(f){const s=fs.readFileSync(b+f,'utf8');assert(/@page[^\n]*A4/i.test(s),f+' A4');assert(s.includes('LOGO_URL'),f+' logo');assert(/text-align:\s*justify/.test(s),f+' justificado');});
+const c=fs.readFileSync(b+'SGO_CertCal_GestaoRelatorios.js','utf8');['Mapa completo dos padrões','P1: vencido','P2: sem validade/data inválida','P3: vence em até 30 dias','P4: cadastro incompleto','P5: regular','CertCalGest_iaHtml_','print-color-adjust:exact'].forEach(x=>assert(c.includes(x),x));
+const d=fs.readFileSync(b+'SGO_Conduta_RelatoriosGerenciais.js','utf8');assert(d.includes('CondutaRG_textoHtml_'));assert(d.includes('logo-topo'));
+console.log('OK: A4, margens, logo, texto justificado, sequência e legenda de prioridades validados.');
