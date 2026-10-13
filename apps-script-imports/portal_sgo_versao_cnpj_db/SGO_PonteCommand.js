@@ -43,7 +43,11 @@ function doPost(e) {
 function PonteCmd_segredo_() {
   var p = PropertiesService.getScriptProperties().getProperty("PONTE_COMMAND_SEGREDO");
   if (p) return p;
-  try { return typeof comConfigLer_ === "function" ? (comConfigLer_("ponte_segredo") || "") : ""; } catch (e) { return ""; }
+  var s = "";
+  try { s = typeof comConfigLer_ === "function" ? (comConfigLer_("ponte_segredo") || "") : ""; } catch (e) { s = ""; }
+  // vale a primeira chave recebida: fica gravada aqui e quem editar a planilha depois não troca a chave da ponte
+  if (s) { try { PropertiesService.getScriptProperties().setProperty("PONTE_COMMAND_SEGREDO", s); } catch (e) { } }
+  return s;
 }
 
 function PonteCmd_hex_(bytes) {
@@ -223,7 +227,12 @@ function PonteCmd_alertasPainel_() {
 }
 
 function PonteCmd_atualizar_(sheet, id, campos, quem, modulo) {
-  if (!id || !SGO_DATA.getById(sheet, id)) return { ok: false, erro: "Registro não encontrado no SGO+." };
+  var atual = id ? SGO_DATA.getById(sheet, id) : null;
+  if (!atual) return { ok: false, erro: "Registro não encontrado no SGO+." };
+  // nunca sobrescreve o cadastro do SGO+: o COMMAND só completa campos que estão vazios lá
+  var novos = {};
+  Object.keys(campos).forEach(function (k) { if (String(atual[k] == null ? "" : atual[k]).trim() === "") novos[k] = campos[k]; });
+  campos = novos;
   if (!Object.keys(campos).length) return { ok: true, id: id, nada: true };
   SGO_DATA.update(sheet, id, campos);
   SGO_DATA.log(modulo + "_ATUALIZAR", quem, "Atualizado pelo COMMAND: " + id, modulo);
