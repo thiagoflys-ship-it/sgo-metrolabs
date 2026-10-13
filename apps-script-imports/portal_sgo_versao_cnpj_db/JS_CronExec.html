@@ -1,0 +1,57 @@
+<script>
+  // Carregador leve do modulo: o conteudo pesado (CSS + HTML + JS do
+  // formulario) fica guardado como string JS comum em SGO_CronExec_ConteudoModulo.js
+  // (nao num arquivo .html -- o HtmlService distorce/trunca conteudo
+  // grande lido de arquivos .html) e NAO eh incluido no bundle inicial
+  // da pagina -- so eh buscado do servidor na primeira vez que o
+  // usuario abre este modulo. Mesmo padrao ja usado em Autoclave/Cadeia de
+  // Frio/Estufa/Declaracao/RelCal/PlanCME.
+  let tplCronExec_carregado_ = false;
+
+  function renderTplCronExec_() {
+    const container = document.getElementById('tplCronExecContainer');
+    if (!container) return;
+
+    if (tplCronExec_carregado_) {
+      if (typeof tplCronExec_renderReal_ === 'function') tplCronExec_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Cronograma de Execução...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplCronExec_carregado_ = true;
+
+          if (typeof tplCronExec_renderReal_ === 'function') {
+            tplCronExec_renderReal_();
+          } else {
+            console.error('renderTplCronExec_: tplCronExec_renderReal_ nao foi definida apos o eval.');
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
+          }
+        } catch (e) {
+          console.error('renderTplCronExec_: erro ao montar o modulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('renderTplCronExec_: falha ao buscar o modulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .CronExec_obterConteudoModulo();
+  }
+</script>

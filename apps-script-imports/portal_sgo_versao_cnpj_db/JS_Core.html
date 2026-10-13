@@ -2041,7 +2041,7 @@
       mobileFieldHtml_("Técnico executor", '<select id="mob_cc_tecnico"><option value="">Carregando...</option></select>') +
       mobileFieldHtml_("Ou nome livre (se não cadastrado)", '<input type="text" id="mob_cc_tecnico_livre" value="' + escapeHtml_(d.tecnicoExecutorLivre || "") + '">') +
       mobileFieldHtml_("Data da calibração *", '<input type="text" id="mob_cc_data" value="' + escapeHtml_(d.dataCalibracao || hoje) + '" placeholder="dd/mm/aaaa">') +
-      mobileFieldHtml_("Validade (meses) *", '<input type="text" id="mob_cc_validade" inputmode="numeric" value="' + escapeHtml_(d.validadeMeses || "") + '" placeholder="Ex.: 12">') +
+      mobileCertCalProximaCampos_(d.proximaCalibracao || {}) +
       mobileFieldHtml_("Local", '<select id="mob_cc_local">' +
         '<option value="CLIENTE"' + (d.localCalibracao !== "LABORATORIO" ? " selected" : "") + '>No cliente</option>' +
         '<option value="LABORATORIO"' + (d.localCalibracao === "LABORATORIO" ? " selected" : "") + '>No laboratório</option>' +
@@ -2063,16 +2063,39 @@
     }).catch(function (err) { console.error(err); });
   }
 
+  function mobileCertCalProximaCampos_(p) {
+    return mobileFieldHtml_("O cliente solicitou a inclusão da data de próxima calibração?", '<select id="mob_cc_proxima_opcao" onchange="mobileCertCalProximaAlternar_()"><option value="NAO"' + (!p.solicitada ? ' selected' : '') + '>Não — emissão sem data (seleção padrão).</option><option value="SIM"' + (p.solicitada ? ' selected' : '') + '>Sim — incluir data informada pelo cliente.</option></select>') +
+      '<div id="mob_cc_proxima_campos"' + (!p.solicitada ? ' style="display:none"' : '') + '>' +
+      ['data','solicitante','cargoSetor','referencia','observacao'].map(function(k,i) {
+        const labels=['Data de próxima calibração definida pelo cliente (dd/mm/aaaa) *','Nome do solicitante *','Cargo ou setor responsável *','Referência da solicitação (OS, e-mail, contrato ou documento) *','Observação complementar'];
+        return mobileFieldHtml_(labels[i], '<input id="mob_cc_proxima_' + k + '" value="' + escapeHtml_(p[k] || '') + '"' + (!p.solicitada ? ' disabled' : '') + '>');
+      }).join('') + '</div>';
+  }
+
+  function mobileCertCalProximaAlternar_() {
+    const sim=getValue_("mob_cc_proxima_opcao")==="SIM";
+    document.getElementById("mob_cc_proxima_campos").style.display=sim?'':'none';
+    ['data','solicitante','cargoSetor','referencia','observacao'].forEach(function(k) {
+      const el=document.getElementById("mob_cc_proxima_"+k);el.disabled=!sim;el.required=sim&&k!=="observacao";if(!sim)el.value='';
+    });
+  }
+
+  function mobileCertCalLerProxima_() {
+    const sim=getValue_("mob_cc_proxima_opcao")==="SIM", p={solicitada:sim};
+    ['data','solicitante','cargoSetor','referencia','observacao'].forEach(function(k){p[k]=sim?getValue_("mob_cc_proxima_"+k):'';});
+    return p;
+  }
+
   function mobileCertCalAvancarDados_() {
     const data = getValue_("mob_cc_data");
-    const validade = getValue_("mob_cc_validade");
+    const proxima = mobileCertCalLerProxima_();
     if (!data) return alert("Informe a data da calibração.");
-    if (!validade) return alert("Informe a validade em meses.");
+    if (proxima.solicitada && (!proxima.data || !proxima.solicitante || !proxima.cargoSetor || !proxima.referencia)) return alert("Informe a data, o solicitante, o cargo/setor e a referência da solicitação do cliente.");
     MOBILE_CERTCAL.dados = {
       tecnicoId: getValue_("mob_cc_tecnico"),
       tecnicoExecutorLivre: getValue_("mob_cc_tecnico_livre"),
       dataCalibracao: data,
-      validadeMeses: validade,
+      proximaCalibracao: proxima,
       localCalibracao: getValue_("mob_cc_local"),
       temperaturaAmbiente: getValue_("mob_cc_temp"),
       umidadeRelativa: getValue_("mob_cc_umidade")
@@ -2196,17 +2219,15 @@
     renderMobileCertCalEnsaios_();
   }
 
-  // ---------- Passo 5: Veredito ----------
+  // ---------- Passo 5: Responsabilidade pela decisão de uso ----------
   function renderMobileCertCalVeredito_() {
     MOBILE_NAV = { modulo: "certificado_calibracao", tela: "form" };
-    atualizarTituloMobile_("Certificado — Veredito");
+    atualizarTituloMobile_("Certificado — Resultados de medição");
     const div = document.getElementById("conteudo");
     if (!div) return;
-    const atual = MOBILE_CERTCAL.veredito || "APROVADO";
     div.innerHTML =
-      mobileCertCalPasso_(5, "veredito da calibração") +
-      '<div class="mobile-frota-check-item"><div class="linha"><input type="radio" name="mob_cc_veredito" id="mob_cc_ver_a" value="APROVADO"' + (atual === "APROVADO" ? " checked" : "") + '><label for="mob_cc_ver_a">Aprovado</label></div></div>' +
-      '<div class="mobile-frota-check-item"><div class="linha"><input type="radio" name="mob_cc_veredito" id="mob_cc_ver_r" value="REPROVADO"' + (atual === "REPROVADO" ? " checked" : "") + '><label for="mob_cc_ver_r">Reprovado</label></div></div>' +
+      mobileCertCalPasso_(5, "resultados de medição") +
+      '<div class="mobile-card-subtitulo">O laboratório entrega os resultados e as incertezas da calibração. A avaliação de aptidão e a decisão de uso cabem ao setor de qualidade do cliente.</div>' +
       '<div class="mobile-form-actions" style="margin-top:16px">' +
         '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalEnsaios_()">Voltar</button>' +
         '<button type="button" class="mobile-btn-salvar" onclick="mobileCertCalAvancarVeredito_()">Continuar</button>' +
@@ -2214,8 +2235,7 @@
   }
 
   function mobileCertCalAvancarVeredito_() {
-    const el = document.querySelector('input[name="mob_cc_veredito"]:checked');
-    MOBILE_CERTCAL.veredito = el ? el.value : "APROVADO";
+    delete MOBILE_CERTCAL.veredito;
     renderMobileCertCalFotos_();
   }
 
@@ -2269,7 +2289,7 @@
       mobileCertCalPasso_(7, "confirme e gere") +
       '<div class="mobile-card-subtitulo">Cliente: ' + escapeHtml_(MOBILE_CERTCAL.cliente.RAZAO_SOCIAL || MOBILE_CERTCAL.cliente.NOME_FANTASIA || "") + '</div>' +
       '<div class="mobile-card-subtitulo">Equipamento: ' + escapeHtml_(MOBILE_CERTCAL.equipamento.TIPO || "") + '</div>' +
-      '<div class="mobile-card-subtitulo">Data: ' + escapeHtml_(d.dataCalibracao) + ' · Veredito: ' + escapeHtml_(MOBILE_CERTCAL.veredito) + '</div>' +
+      '<div class="mobile-card-subtitulo">Data: ' + escapeHtml_(d.dataCalibracao) + '</div>' +
       '<div class="mobile-card-subtitulo">' + MOBILE_CERTCAL.blocos.length + ' bloco(s) de ensaio, ' + MOBILE_CERTCAL.fotos.length + ' foto(s)</div>' +
       '<div id="mob_cc_gerar_status" style="margin-top:12px"></div>' +
       '<div class="mobile-form-actions" style="margin-top:16px">' +
@@ -2285,11 +2305,10 @@
       tecnicoId: MOBILE_CERTCAL.dados.tecnicoId,
       tecnicoExecutorLivre: MOBILE_CERTCAL.dados.tecnicoExecutorLivre,
       dataCalibracao: MOBILE_CERTCAL.dados.dataCalibracao,
-      validadeMeses: MOBILE_CERTCAL.dados.validadeMeses,
+      proximaCalibracao: MOBILE_CERTCAL.dados.proximaCalibracao || {solicitada:false},
       localCalibracao: MOBILE_CERTCAL.dados.localCalibracao,
       temperaturaAmbiente: MOBILE_CERTCAL.dados.temperaturaAmbiente,
       umidadeRelativa: MOBILE_CERTCAL.dados.umidadeRelativa,
-      veredito: MOBILE_CERTCAL.veredito,
       blocos: MOBILE_CERTCAL.blocos.map(function (b) {
         return {
           titulo: b.titulo, unidade: b.unidade, padroesIds: b.padroesIds,
@@ -2313,19 +2332,38 @@
     if (janela) janela.document.write('<p style="font-family:Arial,sans-serif;padding:40px;color:#374151;">Gerando certificado, aguarde...</p>');
 
     mobileCertCalChamarApi_("apiGerarCertificado", payload).then(function (res) {
+      MOBILE_CERTCAL.certificadoEmitidoId = res.certificadoId;
       if (btn) btn.disabled = false;
       if (janela && !janela.closed) {
         janela.document.open();
         janela.document.write(res.html);
         janela.document.close();
       }
-      if (status) status.innerHTML = '<div class="mobile-frota-alerta">Certificado nº ' + escapeHtml_(res.numeroCertificado) + ' emitido — aberto em nova aba. <a href="' + escapeHtml_(res.linkPdf) + '" target="_blank">Abrir PDF salvo</a></div>';
+      if (status) status.innerHTML = '<div class="mobile-frota-alerta">Certificado nº ' + escapeHtml_(res.numeroCertificado) + ' emitido. <a href="' + escapeHtml_(res.linkPdf) + '" target="_blank">Abrir PDF salvo</a></div>' +
+        ((res.avisos || []).length ? '<div class="mobile-frota-alerta aviso">Documento salvo. Pendências: ' + res.avisos.map(function(aviso) { return escapeHtml_(aviso); }).join(' · ') + '</div>' : '') +
+        '<button type="button" class="mobile-btn-salvar" id="mob_cc_btn_relatorio" onclick="mobileCertCalGerarInterpretativo_()">Gerar relatório interpretativo</button><div id="mob_cc_relatorio_status"></div>';
     }).catch(function (err) {
       if (btn) btn.disabled = false;
       const msg = (err && err.message) ? err.message : String(err);
       if (janela && !janela.closed) janela.document.write('<p style="color:red">Erro: ' + escapeHtml_(msg) + '</p>');
       if (status) status.innerHTML = '<div class="mobile-frota-alerta critico">Erro ao gerar: ' + escapeHtml_(msg) + '</div>';
     });
+  }
+
+  function mobileCertCalGerarInterpretativo_() {
+    const certificadoId = MOBILE_CERTCAL.certificadoEmitidoId;
+    if (!certificadoId) return alert("Emita o certificado antes de gerar o relatório interpretativo.");
+    const btn = document.getElementById("mob_cc_btn_relatorio");
+    const status = document.getElementById("mob_cc_relatorio_status");
+    if (btn && btn.disabled) return;
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = "Preparando relatório a partir do certificado emitido...";
+    return mobileCertCalChamarApi_("apiGerarRelatorioInterpretativo", { certificadoId: certificadoId }).then(function(res) {
+      if (status) status.innerHTML = '<a href="' + escapeHtml_(res.linkPdf) + '" target="_blank">Abrir PDF do relatório interpretativo</a>' +
+        ((res.avisos || []).length ? '<div class="mobile-frota-alerta aviso">Documento salvo. Pendências: ' + res.avisos.map(function(aviso) { return escapeHtml_(aviso); }).join(' · ') + '</div>' : '');
+    }).catch(function(err) {
+      if (status) status.textContent = "Erro ao gerar relatório: " + ((err && err.message) || String(err));
+    }).finally(function() { if (btn) btn.disabled = false; });
   }
 
   // PILOTO — grade de icones da tela inicial mobile (ver classe "modo-mobile").
@@ -2485,11 +2523,77 @@
   let MOBILE_CONDUTA_COLEGAS = null;
   let MOBILE_CONDUTA_CATALOGO = null;
   let MOBILE_CONDUTA_EVENTOS_POS = null;
+  let MOBILE_CONDUTA_OCORRENCIAS = [];
+
+  function mobileCondutaDataBR_(v) {
+    const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? (m[3] + "/" + m[2] + "/" + m[1]) : String(v || "");
+  }
+
+  // Defesa pelo celular: contestar (3 dias úteis) e recorrer (2 dias úteis).
+  function mobileCondutaAbrirDefesa_(id, modo) {
+    const oc = MOBILE_CONDUTA_OCORRENCIAS.filter(function (x) { return String(x.ID) === String(id); })[0];
+    if (!oc) return alert("Não foi possível carregar a ocorrência. Volte e abra a tela de novo.");
+    MOBILE_NAV = { modulo: "conduta", tela: "form" };
+    atualizarTituloMobile_(modo === "CONTESTAR" ? "Contestar ocorrência" : "Recorrer");
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    const prazo = modo === "CONTESTAR" ? oc.PRAZO_CONTESTACAO : oc.PRAZO_RECURSO;
+    div.innerHTML =
+      '<div class="mobile-form">' +
+        '<div class="mobile-card" style="display:block">' +
+          '<div><strong>' + escapeHtml_(oc.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(oc.DATA_FATO)) + '</div>' +
+          (oc.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(oc.TIPO_DESCRICAO) + '</div>' : "") +
+          (prazo ? '<div class="mobile-card-subtitulo">Prazo para responder: até ' + escapeHtml_(mobileCondutaDataBR_(prazo)) + '</div>' : "") +
+          (oc.FOTO_URL ? '<div class="mobile-card-subtitulo"><a href="' + escapeHtml_(oc.FOTO_URL) + '" target="_blank" rel="noopener">ver foto anexada</a></div>' : "") +
+        '</div>' +
+        mobileFieldHtml_(modo === "CONTESTAR" ? "Sua contestação *" : "Motivo do recurso *",
+          '<textarea id="mob_cond_defesa" rows="5" placeholder="Explique o que aconteceu do seu ponto de vista."></textarea>') +
+        '<div class="mobile-form-actions">' +
+          '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileConduta_()">Cancelar</button>' +
+          '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaEnviarDefesa_(\'' + id + '\',\'' + modo + '\')">Enviar</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function mobileCondutaEnviarDefesa_(id, modo) {
+    const texto = getValue_("mob_cond_defesa");
+    if (!String(texto || "").trim()) return alert("Escreva o motivo — o texto é obrigatório.");
+    const fn = modo === "CONTESTAR" ? "apiContestarOcorrencia" : "apiRecorrerOcorrencia";
+    mobileCondutaChamarApi_(fn, { id: id, texto: texto }, function (res) {
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível enviar.");
+      alert(modo === "CONTESTAR" ? "Contestação enviada — a gestão vai julgar." : "Recurso enviado — a gestão vai julgar.");
+      renderMobileConduta_();
+    });
+  }
+
+  // CORREÇÃO 2026-09-24: no celular não havia NENHUMA trava de duplo toque nem
+  // aviso de "salvando". Em 3G o técnico tocava "Registrar", a tela não mudava
+  // por alguns segundos, ele tocava de novo -- e gravava DUAS ocorrências
+  // contra o mesmo colega, com o dobro do demérito no bônus da equipe. O
+  // desktop já era protegido (CONDUTA_API_EM_VOO + overlay); o celular, que é
+  // a tela que a equipe de campo realmente usa, não.
+  let MOBILE_CONDUTA_EM_VOO = false;
 
   function mobileCondutaChamarApi_(fn, payload, onSucesso, onErro) {
+    const altera = /Registrar|Remover|Fechar|Gerar|Processar|Homologar|Contestar|Julgar|Recorrer|Cadastrar|Upload/.test(fn);
+    if (altera) {
+      if (MOBILE_CONDUTA_EM_VOO) return; // segundo toque: ignora em silêncio
+      MOBILE_CONDUTA_EM_VOO = true;
+      SGO_iniciarCarregamento_("Aguarde, salvando...");
+    }
+    function encerrar_() {
+      if (!altera) return;
+      MOBILE_CONDUTA_EM_VOO = false;
+      SGO_finalizarCarregamento_();
+    }
     google.script.run
-      .withSuccessHandler(onSucesso)
-      .withFailureHandler(onErro || function (err) { alert("Erro: " + ((err && err.message) || err)); })
+      .withSuccessHandler(function (r) { encerrar_(); if (onSucesso) onSucesso(r); })
+      .withFailureHandler(function (err) {
+        encerrar_();
+        if (onErro) { onErro(err); return; }
+        alert("Erro: " + ((err && err.message) || err));
+      })
       .Conduta_apiDispatch({ sessionId: SESSION, fn: fn, payload: payload || {} });
   }
 
@@ -2528,10 +2632,33 @@
       }
     });
 
+    // CORREÇÃO 2026-09-24: o celular não tinha NENHUM fluxo de defesa. Contestar
+    // e recorrer só existiam no desktop — mas quem recebe ocorrência é o técnico
+    // de campo, que só tem o aparelho, e o prazo (3 dias úteis para contestar,
+    // 2 para recorrer) corria assim mesmo. Agora o cartão mostra do que é a
+    // ocorrência, até quando dá para responder, e o botão de defesa.
     mobileCondutaChamarApi_("apiListarOcorrencias", {}, function (itens) {
-      mobileRenderListaGenerica_("mobileCondutaRecentes", { success: true, items: (itens || []).slice(0, 10) }, function (o) {
-        return mobileCardHtml_(o.TIPO_CODIGO, o.DATA_FATO, o.STATUS, "void(0)");
-      });
+      MOBILE_CONDUTA_OCORRENCIAS = itens || [];
+      const alvo = document.getElementById("mobileCondutaRecentes");
+      if (!alvo) return;
+      if (!MOBILE_CONDUTA_OCORRENCIAS.length) { alvo.innerHTML = '<div class="mobile-card-subtitulo">Nenhuma ocorrência registrada.</div>'; return; }
+      alvo.innerHTML = MOBILE_CONDUTA_OCORRENCIAS.slice(0, 10).map(function (o) {
+        const st = String(o.STATUS || "").toUpperCase();
+        let acao = "";
+        if (st === "HOMOLOGADA" && o.PODE_CONTESTAR) {
+          acao = '<button type="button" class="mobile-btn-salvar" style="margin-top:8px;background:#6b7280" onclick="mobileCondutaAbrirDefesa_(\'' + o.ID + '\',\'CONTESTAR\')">Contestar' + (o.PRAZO_CONTESTACAO ? " (até " + mobileCondutaDataBR_(o.PRAZO_CONTESTACAO) + ")" : "") + '</button>';
+        } else if (st === "FIRME" && o.PODE_RECORRER) {
+          acao = '<button type="button" class="mobile-btn-salvar" style="margin-top:8px;background:#6b7280" onclick="mobileCondutaAbrirDefesa_(\'' + o.ID + '\',\'RECORRER\')">Recorrer' + (o.PRAZO_RECURSO ? " (até " + mobileCondutaDataBR_(o.PRAZO_RECURSO) + ")" : "") + '</button>';
+        } else if (st === "HOMOLOGADA" && o.PRAZO_CONTESTACAO_VENCIDO) {
+          acao = '<div class="mobile-card-subtitulo" style="margin-top:6px">Prazo de contestação encerrado.</div>';
+        }
+        return '<div class="mobile-card" style="display:block">' +
+          '<div><strong>' + escapeHtml_(o.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(o.DATA_FATO)) + ' · ' + escapeHtml_(st) + '</div>' +
+          (o.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(o.TIPO_DESCRICAO) + '</div>' : "") +
+          (o.COLABORADOR_NOME ? '<div class="mobile-card-subtitulo">Envolvido: ' + escapeHtml_(o.COLABORADOR_NOME) + '</div>' : "") +
+          acao +
+        '</div>';
+      }).join("");
     }, function (err) { mobileErroLista_("mobileCondutaRecentes", err); });
   }
 
@@ -2625,13 +2752,12 @@
     if (!payload.dataFato) return alert("Informe a data do fato.");
 
     function prosseguirRegistro() {
+      // o overlay e a trava de duplo toque agora são do mobileCondutaChamarApi_
       mobileCondutaChamarApi_("apiRegistrarOcorrencia", payload, function (res) {
-        SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) || "Erro ao registrar.");
         alert("Ocorrência registrada — segue pra homologação do gestor.");
         renderMobileConduta_();
       }, function (err) {
-        SGO_finalizarCarregamento_();
         alert("Erro ao registrar: " + ((err && err.message) || err));
       });
     }
@@ -2640,15 +2766,25 @@
     const arquivo = fotoInput && fotoInput.files && fotoInput.files[0];
     if (!arquivo) { prosseguirRegistro(); return; }
 
-    SGO_iniciarCarregamento_("Enviando foto...");
+    // CORREÇÃO 2026-09-24: frotaComprimirImagem_ NUNCA rejeita -- ela devolve
+    // null quando o arquivo é HEIC, está corrompido ou o canvas falha. O código
+    // antigo seguia direto e gravava a ocorrência SEM A FOTO, com o modal
+    // fechando normalmente e nenhum aviso. A evidência do fato que vai custar
+    // dinheiro a alguém sumia em silêncio. Agora o operador decide.
+    SGO_iniciarCarregamento_("Preparando foto...");
     frotaComprimirImagem_(arquivo, 1280, 0.72).then(function (comprimido) {
-      if (!comprimido) { prosseguirRegistro(); return; }
+      SGO_finalizarCarregamento_();
+      if (!comprimido) {
+        if (!confirm("Não foi possível preparar esta foto (formato não suportado ou arquivo com problema).\n\nRegistrar a ocorrência SEM a foto?")) return;
+        prosseguirRegistro();
+        return;
+      }
       mobileCondutaChamarApi_("apiUploadFoto", { base64: comprimido.base64, mimeType: comprimido.mimeType, nomeArquivo: comprimido.nomeArquivo }, function (resUpload) {
-        if (resUpload && resUpload.success) payload.fotoUrl = resUpload.url;
+        if (resUpload && resUpload.success) { payload.fotoUrl = resUpload.url; prosseguirRegistro(); return; }
+        if (!confirm("A foto não pôde ser enviada.\n\nRegistrar a ocorrência SEM a foto?")) return;
         prosseguirRegistro();
       }, function (err) {
-        SGO_finalizarCarregamento_();
-        alert("Falha ao enviar a foto: " + ((err && err.message) || err));
+        alert("Falha ao enviar a foto: " + ((err && err.message) || err) + "\n\nA ocorrência NÃO foi registrada — tente de novo.");
       });
     });
   }
@@ -2666,6 +2802,13 @@
           mobileFieldHtml_("Colega reconhecido *", '<select id="mob_condpos_colaborador">' + mobileCondutaOptionsColegas_() + '</select>') +
           mobileFieldHtml_("Motivo *", '<select id="mob_condpos_tipo">' + mobileCondutaOptionsEventosPositivos_() + '</select>') +
           mobileFieldHtml_("Data *", '<input type="date" id="mob_condpos_data" value="' + mobileCondutaDataHoje_() + '">') +
+          // CORREÇÃO 2026-09-24: este campo NÃO EXISTIA no celular, mas o
+          // servidor sempre exigiu (apiRegistrarEventoPositivo: "Descreva a
+          // melhoria ou atitude que foi observada."). Ou seja: reconhecer um
+          // colega pelo celular era impossível -- o técnico preenchia tudo,
+          // tocava "Reconhecer" e levava erro pedindo um campo que a tela não
+          // tinha. No desktop funcionava, por isso ninguém tinha visto.
+          mobileFieldHtml_("Melhoria observada *", '<textarea id="mob_condpos_texto" rows="3" placeholder="O que essa pessoa fez de bom?"></textarea>') +
           '<div class="mobile-form-actions">' +
             '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
             '<button type="button" class="mobile-btn-salvar" style="background:#059669" onclick="mobileCondutaSalvarPositivo_()">Reconhecer</button>' +
@@ -2678,11 +2821,13 @@
     const payload = {
       colaboradorId: getValue_("mob_condpos_colaborador"),
       tipoCodigo: getValue_("mob_condpos_tipo"),
-      dataFato: getValue_("mob_condpos_data")
+      dataFato: getValue_("mob_condpos_data"),
+      texto: getValue_("mob_condpos_texto")
     };
     if (!payload.colaboradorId) return alert("Selecione o colega.");
     if (!payload.tipoCodigo) return alert("Selecione o motivo.");
     if (!payload.dataFato) return alert("Informe a data.");
+    if (!String(payload.texto || "").trim()) return alert("Descreva a melhoria ou atitude que você observou.");
 
     mobileCondutaChamarApi_("apiRegistrarEventoPositivo", payload, function (res) {
       if (!res || !res.success) return alert((res && res.message) || "Erro ao registrar.");
@@ -2726,6 +2871,7 @@
   function renderMobileFormClientes_(id) {
     MOBILE_NAV = { modulo: "clientes", tela: "form" };
     atualizarTituloMobile_(id ? "Editar Cliente" : "Novo Cliente");
+    const podeExcluir = USER_CONTEXT && ["ADMIN","DIRETORIA","GESTOR"].includes(String(USER_CONTEXT.perfil || "").toUpperCase());
 
     const div = document.getElementById("conteudo");
     if (!div) return;
@@ -2735,6 +2881,7 @@
         mobileFieldHtml_("Razão Social *", '<input type="text" id="mob_cli_razao">') +
         mobileFieldHtml_("Nome Fantasia", '<input type="text" id="mob_cli_fantasia">') +
         mobileFieldHtml_("CNPJ *", '<input type="text" id="mob_cli_cnpj" placeholder="00.000.000/0000-00">') +
+        (!id ? '<label><input type="checkbox" id="mob_cli_principal" checked> Criar unidade principal com os mesmos dados</label>' : '') +
         mobileFieldHtml_("Endereço", '<input type="text" id="mob_cli_endereco">') +
         mobileFieldHtml_("Contato", '<input type="text" id="mob_cli_contato">') +
         mobileFieldHtml_("E-mail", '<input type="email" id="mob_cli_email">') +
@@ -2742,12 +2889,15 @@
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
           '<button type="button" class="mobile-btn-salvar" onclick="mobileClientesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
+          (id && podeExcluir ? '<button type="button" class="btn-danger" onclick="mobileCadastroExcluir_(\'clientes\',\'' + escapeHtml_(id) + '\')">Excluir cliente</button>' : '') +
         '</div>' +
       '</div>';
 
     if (id) {
+      SGO_iniciarCarregamento_("Aguarde, carregando cadastro…");
       google.script.run
         .withSuccessHandler(function (res) {
+          SGO_finalizarCarregamento_();
           if (!res || !res.success || !res.item) { alert((res && res.message) || "Cliente não encontrado."); voltarMobile_(); return; }
           const it = res.item;
           setValue_("mob_cli_razao", it.RAZAO_SOCIAL);
@@ -2758,13 +2908,26 @@
           setValue_("mob_cli_email", it.EMAIL);
           setValue_("mob_cli_telefone", it.TELEFONE);
         })
-        .withFailureHandler(function (err) { alert("Erro ao carregar cliente."); console.error(err); })
+        .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao carregar cliente."); console.error(err); })
         .clientesObter(SESSION, id);
     }
   }
 
+
+  function mobileCadastroExcluir_(tipo, id) {
+    if (!confirm('Excluir este cadastro? Cadastros com vínculos precisam ser inativados ou ter os vínculos transferidos.')) return;
+    SGO_iniciarCarregamento_();
+    const handler = google.script.run.withSuccessHandler(function(res) {
+      SGO_finalizarCarregamento_();
+      if (!res || !res.success) return alert(res && res.message || 'Não foi possível excluir.');
+      if (tipo === 'clientes') renderMobileListaClientes_(); else renderMobileListaUnidades_();
+    }).withFailureHandler(function(err) { SGO_finalizarCarregamento_(); alert(err.message || 'Erro de comunicação.'); });
+    if (tipo === 'clientes') handler.clientesExcluir(SESSION,id); else handler.unidadesExcluir(SESSION,id);
+  }
+
   function mobileClientesSalvar_(id) {
     const payload = {
+      CRIAR_UNIDADE_PRINCIPAL: !document.getElementById("mob_cli_principal") || document.getElementById("mob_cli_principal").checked,
       RAZAO_SOCIAL: getValue_("mob_cli_razao"),
       NOME_FANTASIA: getValue_("mob_cli_fantasia"),
       CNPJ: getValue_("mob_cli_cnpj"),
@@ -2795,6 +2958,14 @@
     const falha = function (err) { SGO_finalizarCarregamento_(); alert("Erro de conexão ao salvar."); console.error(err); };
 
     SGO_iniciarCarregamento_();
+    if (!id && MOBILE_CERTCAL_RETORNO === 'cliente') {
+      mobileCertCalChamarApi_('apiCriarClienteComUnidade', {
+        razaoSocial: payload.RAZAO_SOCIAL, nomeFantasia: payload.NOME_FANTASIA,
+        cnpj: payload.CNPJ, endereco: payload.ENDERECO, contato: payload.CONTATO,
+        email: payload.EMAIL, telefone: payload.TELEFONE
+      }).then(function(res) { sucesso({success:res.ok,item:res.cliente}); }).catch(falha);
+      return;
+    }
     if (id) {
       google.script.run.withSuccessHandler(sucesso).withFailureHandler(falha).clientesAtualizar(SESSION, id, payload);
     } else {
@@ -2837,6 +3008,7 @@
   function renderMobileFormUnidades_(id) {
     MOBILE_NAV = { modulo: "unidades", tela: "form" };
     atualizarTituloMobile_(id ? "Editar Unidade" : "Nova Unidade");
+    const podeExcluir = USER_CONTEXT && ["ADMIN","DIRETORIA","GESTOR"].includes(String(USER_CONTEXT.perfil || "").toUpperCase());
 
     const div = document.getElementById("conteudo");
     if (!div) return;
@@ -2854,27 +3026,32 @@
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
           '<button type="button" class="mobile-btn-salvar" onclick="mobileUnidadesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
+          (id && podeExcluir ? '<button type="button" class="btn-danger" onclick="mobileCadastroExcluir_(\'unidades\',\'' + escapeHtml_(id) + '\')">Excluir unidade</button>' : '') +
         '</div>' +
       '</div>';
 
-    google.script.run
+    SGO_iniciarCarregamento_("Aguarde, carregando cadastro…");
+      google.script.run
       .withSuccessHandler(function (res) {
+          SGO_finalizarCarregamento_();
         const select = document.getElementById("mob_uni_cliente");
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
         }).join("");
 
         if (id) mobileCarregarUnidadeParaEdicao_(id);
       })
-      .withFailureHandler(function (err) { console.error(err); })
+      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar os clientes. Reabra o formulário para tentar novamente."); console.error(err); })
       .unidadesListarClientesAtivos(SESSION);
   }
 
   function mobileCarregarUnidadeParaEdicao_(id) {
-    google.script.run
+    SGO_iniciarCarregamento_("Aguarde, carregando cadastro…");
+      google.script.run
       .withSuccessHandler(function (res) {
+          SGO_finalizarCarregamento_();
         if (!res || !res.success || !res.item) { alert((res && res.message) || "Unidade não encontrada."); voltarMobile_(); return; }
         const it = res.item;
         setSelectValueSafe_("mob_uni_cliente", it.CLIENTE_ID);
@@ -2886,7 +3063,7 @@
         setValue_("mob_uni_responsavel", it.RESPONSAVEL);
         setValue_("mob_uni_telefone", it.TELEFONE);
       })
-      .withFailureHandler(function (err) { alert("Erro ao carregar unidade."); console.error(err); })
+      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao carregar unidade."); console.error(err); })
       .unidadesObter(SESSION, id);
   }
 
@@ -2987,7 +3164,7 @@
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
         }).join("");
 
         if (id) mobileCarregarEquipamentoParaEdicao_(id);
@@ -2999,6 +3176,7 @@
   function mobileEquipCarregarUnidades_(clienteId, unidadeSelecionadaId) {
     const select = document.getElementById("mob_eqp_unidade");
     if (!select) return;
+    const request = select.dataset.request = String(Date.now()) + Math.random();
 
     if (!clienteId) {
       select.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
@@ -3009,6 +3187,7 @@
 
     google.script.run
       .withSuccessHandler(function (res) {
+        if (!select.isConnected || select.dataset.request !== request) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione a unidade</option>' + itens.map(function (u) {
           return '<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME_UNIDADE) + '</option>';
@@ -3138,7 +3317,7 @@
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
         }).join("");
 
         if (id) mobileCarregarDocumentoParaEdicao_(id);
@@ -3151,6 +3330,7 @@
     const select = document.getElementById("mob_doc_unidade");
     const selectEquip = document.getElementById("mob_doc_equipamento");
     if (!select) return;
+    const request = select.dataset.request = String(Date.now()) + Math.random();
 
     if (!clienteId) {
       select.innerHTML = '<option value="">Selecione o cliente primeiro</option>';
@@ -3159,9 +3339,11 @@
     }
 
     select.innerHTML = '<option value="">Carregando...</option>';
+    if(selectEquip){selectEquip.dataset.request="cancelled";selectEquip.innerHTML='<option value="">Selecione a unidade primeiro</option>';}
 
     google.script.run
       .withSuccessHandler(function (res) {
+        if (!select.isConnected || select.dataset.request !== request) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione a unidade</option>' + itens.map(function (u) {
           return '<option value="' + escapeHtml_(u.ID) + '">' + escapeHtml_(u.NOME_UNIDADE) + '</option>';
@@ -3179,6 +3361,7 @@
   function mobileDocCarregarEquipamentos_(unidadeId, equipamentoSelecionadoId) {
     const select = document.getElementById("mob_doc_equipamento");
     if (!select) return;
+    const request = select.dataset.request = String(Date.now()) + Math.random();
 
     if (!unidadeId) {
       select.innerHTML = '<option value="">Geral da unidade</option>';
@@ -3189,6 +3372,7 @@
 
     google.script.run
       .withSuccessHandler(function (res) {
+        if (!select.isConnected || select.dataset.request !== request) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Geral da unidade (opcional)</option>' + itens.map(function (e) {
           return '<option value="' + escapeHtml_(e.ID) + '">' + escapeHtml_(e.NOME_EQUIPAMENTO || e.TIPO || "") + '</option>';
@@ -4760,7 +4944,10 @@
       drop.classList.remove("hidden");
     }
 
-    input.oninput = renderizar_;
+    input.oninput = function(){
+      if(hidden.value){hidden.value='';if(typeof hidden.onchange==='function')hidden.onchange();if(onSelecionar)onSelecionar('','');}
+      renderizar_();
+    };
     input.onfocus = renderizar_;
     drop.onclick = function (ev) {
       const item = ev.target.closest(".sgo-autocomplete-item[data-id]");

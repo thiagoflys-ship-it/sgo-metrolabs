@@ -1,0 +1,67 @@
+<script>
+  let tplCadeiaFrioRel_carregado_ = false;
+  let tplCadeiaFrioRel_pendente_ = false;
+  let tplCadeiaFrioRel_tentativa_ = 0;
+  function tplCadeiaFrioRel_falhaCarga_(erro) {
+    const container = document.getElementById('tplCadeiaFrioRelContainer');
+    if (!container) return;
+    container.replaceChildren();
+    const aviso = document.createElement('p');
+    aviso.style.cssText = 'padding:20px;color:#f87171;';
+    aviso.textContent = 'Não foi possível abrir Cadeia de Frio: ' + (erro && erro.message ? erro.message : String(erro));
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'btn btn-primary';
+    botao.textContent = 'Tentar novamente';
+    botao.addEventListener('click', renderTplCadeiaFrioRel_);
+    container.append(aviso, botao);
+  }
+  function renderTplCadeiaFrioRel_() {
+    const container = document.getElementById('tplCadeiaFrioRelContainer');
+    if (!container) return;
+    if (tplCadeiaFrioRel_carregado_) {
+      try { tplCadeiaFrioRel_renderReal_(); }
+      catch (erro) { tplCadeiaFrioRel_falhaCarga_(erro); }
+      return;
+    }
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Cadeia de Frio...</p>';
+    if (tplCadeiaFrioRel_pendente_) return;
+    tplCadeiaFrioRel_pendente_ = true;
+    const tentativa = ++tplCadeiaFrioRel_tentativa_;
+    const timer = setTimeout(function() {
+      if (tentativa !== tplCadeiaFrioRel_tentativa_) return;
+      tplCadeiaFrioRel_tentativa_++;
+      tplCadeiaFrioRel_pendente_ = false;
+      tplCadeiaFrioRel_falhaCarga_(new Error('O servidor demorou para responder. Tente novamente.'));
+    }, 45000);
+    function falha(erro) {
+      if (tentativa !== tplCadeiaFrioRel_tentativa_) return;
+      clearTimeout(timer);
+      tplCadeiaFrioRel_pendente_ = false;
+      tplCadeiaFrioRel_falhaCarga_(erro);
+    }
+    try {
+      google.script.run.withSuccessHandler(function(conteudo) {
+        if (tentativa !== tplCadeiaFrioRel_tentativa_) return;
+        clearTimeout(timer);
+        tplCadeiaFrioRel_pendente_ = false;
+        try {
+          if (typeof conteudo !== 'string') throw new Error('Conteúdo do módulo indisponível.');
+          const estilo = conteudo.match(/<style>([\s\S]*?)<\/style>/);
+          const script = conteudo.match(/<script>([\s\S]*?)<\/script>/);
+          if (!script) throw new Error('Conteúdo do módulo incompleto.');
+          if (estilo && !document.getElementById('tplCadeiaFrioRel_estilo')) {
+            const el = document.createElement('style');
+            el.id = 'tplCadeiaFrioRel_estilo';
+            el.textContent = estilo[1];
+            document.head.appendChild(el);
+          }
+          window.eval(script[1]);
+          if (typeof tplCadeiaFrioRel_renderReal_ !== 'function') throw new Error('Inicialização do módulo indisponível.');
+          tplCadeiaFrioRel_carregado_ = true;
+          tplCadeiaFrioRel_renderReal_();
+        } catch (erro) { falha(erro); }
+      }).withFailureHandler(falha).CadeiaFrioRel_obterConteudoModulo();
+    } catch (erro) { falha(erro); }
+  }
+</script>

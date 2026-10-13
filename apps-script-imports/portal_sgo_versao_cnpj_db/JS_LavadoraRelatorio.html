@@ -1,0 +1,57 @@
+<script>
+  // Carregador leve do modulo: o conteudo pesado (CSS + HTML + JS do
+  // formulario) fica guardado como string JS comum em SGO_LavRel_ConteudoModulo.js
+  // (nao num arquivo .html -- o HtmlService distorce/trunca conteudo
+  // grande lido de arquivos .html) e NAO eh incluido no bundle inicial
+  // da pagina -- so eh buscado do servidor na primeira vez que o
+  // usuario abre este modulo. Mesmo padrao ja usado em Cadeia de
+  // Frio/Estufa/Declaracao/RelCal/PlanCME.
+  let tplLavRel_carregado_ = false;
+
+  function renderTplLavRel_() {
+    const container = document.getElementById('tplLavRelContainer');
+    if (!container) return;
+
+    if (tplLavRel_carregado_) {
+      if (typeof tplLavRel_renderReal_ === 'function') tplLavRel_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Lavadora (Relatório de Auditoria)...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplLavRel_carregado_ = true;
+
+          if (typeof tplLavRel_renderReal_ === 'function') {
+            tplLavRel_renderReal_();
+          } else {
+            console.error('renderTplLavRel_: tplLavRel_renderReal_ nao foi definida apos o eval.');
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
+          }
+        } catch (e) {
+          console.error('renderTplLavRel_: erro ao montar o modulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('renderTplLavRel_: falha ao buscar o modulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .LavRel_obterConteudoModulo();
+  }
+</script>

@@ -1,0 +1,49 @@
+<script>
+  let tplFrota_carregado_ = false;
+
+  function renderTplFrota_() {
+    const container = document.getElementById('tplFrotaContainer');
+    if (!container) return;
+
+    if (tplFrota_carregado_) {
+      if (typeof tplFrota_renderReal_ === 'function') tplFrota_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Frota...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplFrota_carregado_ = true;
+
+          if (typeof tplFrota_renderReal_ === 'function') {
+            tplFrota_renderReal_();
+          } else {
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+          }
+        } catch (e) {
+          console.error('tplFrota: erro ao montar o módulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('tplFrota: falha ao buscar o módulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .Frota_obterConteudoModulo();
+  }
+</script>

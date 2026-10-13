@@ -1,0 +1,316 @@
+const SGO_EQUIPAMENTOS = (() => {
+  const SHEET_NAME = "CAD_EQUIPAMENTOS";
+  const SHEET_CLIENTES = "CAD_CLIENTES";
+  const SHEET_UNIDADES = "CAD_UNIDADES";
+  const SHEET_USUARIOS = "CAD_USUARIOS";
+  const STATUS_ATIVO = "ATIVO";
+  const STATUS_INATIVO = "INATIVO";
+
+  // =========================
+  // 🔒 VALIDAÇÃO CENTRAL (OTIMIZADA)
+  // =========================
+  function validarAcessoEquipamento_(sessao, equipamento) {
+    if (!sessao || !equipamento) return false;
+
+    const perfil = SGO_UTILS.safeUpper(sessao.perfil);
+
+    // Permite que qualquer funcionário da Metrolabs veja os equipamentos
+    if (perfil !== "CLIENTE") return true;
+
+    // Trava de Segurança usando o dado já presente na memória da sessão
+    const idClienteReal = SGO_UTILS.safe(sessao.clienteId);
+    return SGO_UTILS.safe(equipamento.CLIENTE_ID) === idClienteReal;
+  }
+
+  // =========================
+  // 📱 QR CODE 
+  // =========================
+  function obterPorQRCode(token) {
+    const t = SGO_UTILS.safe(token);
+    if (!t) return null;
+
+    return SGO_DATA.getByField(SHEET_NAME, "QR_TOKEN", t);
+  }
+
+  function listar(sessionId) {
+    const sessao = exigirSessao(sessionId);
+    let equipamentos = SGO_DATA.getAll(SHEET_NAME);
+    const clientes = SGO_DATA.getAll(SHEET_CLIENTES);
+    const unidades = SGO_DATA.getAll(SHEET_UNIDADES);
+
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
+      const idClienteReal = SGO_UTILS.safe(sessao.clienteId);
+      equipamentos = equipamentos.filter(e => SGO_UTILS.safe(e.CLIENTE_ID) === idClienteReal);
+    }
+
+    const mapaClientes = montarMapa_(clientes);
+    const mapaUnidades = montarMapa_(unidades);
+
+    const itens = equipamentos
+      .map(e => enriquecerEquipamento_(e, mapaClientes, mapaUnidades))
+      .sort((a, b) => {
+        const sa = SGO_UTILS.safeUpper(a.STATUS);
+        const sb = SGO_UTILS.safeUpper(b.STATUS);
+
+        if (sa === sb) return SGO_UTILS.safe(a.TAG).localeCompare(SGO_UTILS.safe(b.TAG));
+        if (sa === STATUS_ATIVO) return -1;
+        if (sb === STATUS_ATIVO) return 1;
+        return 0;
+      });
+
+    SGO_DATA.log("EQUIPAMENTOS_LISTAR", sessao.usuario, "Listagem de equipamentos executada.", "EQUIPAMENTOS");
+
+    return { success: true, items: itens, total: itens.length };
+  }
+
+  function obter(sessionId, id) {
+    const sessao = exigirSessao(sessionId);
+    const equipId = SGO_UTILS.safe(id);
+
+    if (!equipId) return { success: false, message: "ID não informado." };
+
+    const equipamento = SGO_DATA.getById(SHEET_NAME, equipId);
+    if (!equipamento) return { success: false, message: "Não encontrado." };
+
+    // 🔒 NOVA TRAVA
+    if (!validarAcessoEquipamento_(sessao, equipamento)) {
+      SGO_DATA.log("ACESSO_NEGADO", sessao.usuario, "Tentou visualizar equipamento de outro cliente ID=" + equipId, "EQUIPAMENTOS");
+      return { success: false, message: "Acesso negado: Este equipamento não pertence à sua empresa." };
+    }
+
+    const cliente = SGO_DATA.getById(SHEET_CLIENTES, equipamento.CLIENTE_ID);
+    const unidade = SGO_DATA.getById(SHEET_UNIDADES, equipamento.UNIDADE_ID);
+    const atendimentosAuvo = listarAtendimentosAuvo_(equipId, sessao);
+
+    return {
+      success: true,
+      item: Object.assign({}, equipamento, {
+        CLIENTE_NOME: cliente ? (cliente.NOME_FANTASIA || cliente.RAZAO_SOCIAL) : "",
+        UNIDADE_NOME: unidade ? unidade.NOME_UNIDADE : ""
+      }),
+      atendimentosAuvo: atendimentosAuvo
+    };
+  }
+
+  // Atendimentos do Auvo vinculados a este equipamento (via equipmentsId
+  // do Task, resolvido sob demanda em SGO_Auvo_Incremental.js). Só
+  // leitura — nunca cria/edita nada aqui.
+  function listarAtendimentosAuvo_(equipId, sessao) {
+    try {
+      return SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_TAREFAS)
+        .filter(function(t) { return (SGO_UTILS.safeUpper(sessao.perfil) !== "CLIENTE" || SGO_UTILS.safe(t.CLIENTE_ID_SGO) === SGO_UTILS.safe(sessao.clienteId)) && SGO_UTILS.safe(t.EQUIPAMENTOS_ID_SGO).split(",").indexOf(equipId) !== -1; })
+        .sort(function(a, b) { return new Date(b.DATA_TAREFA) - new Date(a.DATA_TAREFA); })
+        .slice(0, 20)
+        .map(function(t) {
+          return {
+            auvoTaskId: t.AUVO_TASK_ID,
+            data: t.DATA_TAREFA,
+            tipo: t.TIPO_TAREFA,
+            finalizada: t.FINALIZADA === "SIM",
+            tecnico: t.TECNICO_NOME_AUVO || (t.TECNICO_AUVO_ID ? "Técnico Auvo #" + t.TECNICO_AUVO_ID : ""),
+            relato: t.RELATO_SERVICO
+          };
+        });
+    } catch (e) {
+      return []; // aba AUVO_TAREFAS pode nem existir ainda (integração nunca rodou)
+    }
+  }
+
+  function criar(sessionId, payload) {
+    const sessao = exigirSessao(sessionId);
+
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
+      return { success: false, message: "Acesso negado: Seu perfil não permite criar equipamentos." };
+    }
+
+    const dados = normalizarPayload_(payload);
+
+    const registro = SGO_DATA.normalizarObjetoParaSheet(
+      SHEET_NAME,
+      SGO_DATA.gerarRegistroBase({
+        CLIENTE_ID: dados.CLIENTE_ID,
+        UNIDADE_ID: dados.UNIDADE_ID,
+        TIPO: dados.TIPO,
+        FABRICANTE: dados.FABRICANTE,
+        MODELO: dados.MODELO,
+        SERIE: dados.SERIE,
+        TAG: dados.TAG,
+        SETOR: dados.SETOR,
+        STATUS: STATUS_ATIVO,
+        QR_TOKEN: SGO_UTILS.uuid() // 🔥 QR automático
+      })
+    );
+
+    SGO_DATA.insert(SHEET_NAME, registro);
+    SGO_DATA.log("EQUIPAMENTOS_CRIAR", sessao.usuario, "Equipamento criado TAG=" + dados.TAG, "EQUIPAMENTOS");
+
+    return { success: true, message: "Criado com sucesso.", item: registro };
+  }
+
+  function atualizar(sessionId, id, payload) {
+    const sessao = exigirSessao(sessionId);
+
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
+      return { success: false, message: "Acesso negado: Seu perfil não permite editar equipamentos." };
+    }
+
+    const equipId = SGO_UTILS.safe(id);
+    const atual = SGO_DATA.getById(SHEET_NAME, equipId);
+    
+    if (!atual) return { success: false, message: "Equipamento não encontrado." };
+
+    const dados = normalizarPayload_(payload);
+
+    const novosDados = Object.assign({}, atual, {
+      ID: equipId,
+      CLIENTE_ID: dados.CLIENTE_ID,
+      UNIDADE_ID: dados.UNIDADE_ID,
+      TIPO: dados.TIPO,
+      FABRICANTE: dados.FABRICANTE,
+      MODELO: dados.MODELO,
+      SERIE: dados.SERIE,
+      TAG: dados.TAG,
+      SETOR: dados.SETOR,
+      STATUS: atual.STATUS,
+      CRIADO_EM: atual.CRIADO_EM,
+      QR_TOKEN: atual.QR_TOKEN || SGO_UTILS.uuid() // Garante token caso não tenha
+    });
+
+    const ok = SGO_DATA.update(SHEET_NAME, equipId, novosDados);
+    
+    if (ok) SGO_DATA.log("EQUIPAMENTOS_ATUALIZAR", sessao.usuario, "Equipamento atualizado ID=" + equipId, "EQUIPAMENTOS");
+
+    return ok
+      ? { success: true, message: "Atualizado com sucesso." }
+      : { success: false, message: "Erro ao atualizar." };
+  }
+
+  function inativar(sessionId, id) {
+    const sessao = exigirSessao(sessionId);
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
+    
+    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_INATIVO });
+    return { success: true };
+  }
+
+  function reativar(sessionId, id) {
+    const sessao = exigirSessao(sessionId);
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
+    
+    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_ATIVO });
+    return { success: true };
+  }
+
+  function excluir(sessionId, id) {
+    const sessao = exigirSessao(sessionId);
+    
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
+      return { success: false, message: "Acesso negado." };
+    }
+
+    if (!isAdminSession(sessionId)) {
+      SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir equipamento ID=" + id, "EQUIPAMENTOS");
+      return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
+    }
+
+    SGO_DATA.remove(SHEET_NAME, SGO_UTILS.safe(id));
+    SGO_DATA.log("EQUIPAMENTOS_EXCLUIR", sessao.usuario, "Equipamento excluído ID=" + id, "EQUIPAMENTOS");
+    return { success: true };
+  }
+
+  function pesquisar(sessionId, termo) {
+    // Como a função listar() já aplica a trava de cliente, usamos a base dela
+    const base = listar(sessionId).items;
+    const q = SGO_UTILS.safeLower(termo);
+    
+    if(!q) return { success: true, items: base, total: base.length };
+
+    const qDigitos = String(termo || "").replace(/\D/g, "");
+    const filtrados = base.filter(r => {
+      const bateTexto = [r.TIPO, r.TAG, r.FABRICANTE, r.MODELO, r.SERIE, r.CLIENTE_NOME, r.UNIDADE_NOME].some(v => SGO_UTILS.safeLower(v).includes(q));
+      const bateCnpj = qDigitos.length >= 3 && String(r.CLIENTE_CNPJ || "").replace(/\D/g, "").indexOf(qDigitos) !== -1;
+      return bateTexto || bateCnpj;
+    });
+
+    return { success: true, items: filtrados, total: filtrados.length };
+  }
+
+  function listarClientesAtivos(sessionId) {
+    const sessao = exigirSessao(sessionId);
+    let clientes = SGO_DATA.getAll(SHEET_CLIENTES);
+
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") {
+      const idClienteReal = SGO_UTILS.safe(sessao.clienteId);
+      clientes = clientes.filter(c => SGO_UTILS.safe(c.ID) === idClienteReal);
+    }
+
+    const itens = clientes
+      .filter(c => SGO_UTILS.safeUpper(c.STATUS) === STATUS_ATIVO)
+      .map(c => ({
+        ID: SGO_UTILS.safe(c.ID),
+        NOME: SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL),
+        CNPJ: SGO_UTILS.safe(c.CNPJ)
+      }))
+      .sort((a, b) => a.NOME.localeCompare(b.NOME));
+
+    return {
+      success: true,
+      items: itens
+    };
+  }
+
+  function listarUnidadesAtivasPorCliente(sessionId, clienteId) {
+    return SGO_VINCULOS.units(sessionId, clienteId);
+}
+
+  function normalizarPayload_(payload) {
+    payload = payload || {};
+    return {
+      CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
+      UNIDADE_ID: SGO_UTILS.safe(payload.UNIDADE_ID),
+      TIPO: SGO_UTILS.safeUpper(payload.TIPO), // Padroniza tipo no banco
+      FABRICANTE: SGO_UTILS.safeUpper(payload.FABRICANTE),
+      MODELO: SGO_UTILS.safeUpper(payload.MODELO),
+      SERIE: SGO_UTILS.safeUpper(payload.SERIE),
+      TAG: SGO_UTILS.safeUpper(payload.TAG),
+      SETOR: SGO_UTILS.safeUpper(payload.SETOR)
+    };
+  }
+
+  function enriquecerEquipamento_(e, mapaClientes, mapaUnidades) {
+    const cli = mapaClientes[SGO_UTILS.safe(e.CLIENTE_ID)] || {};
+    const uni = mapaUnidades[SGO_UTILS.safe(e.UNIDADE_ID)] || {};
+    
+    return Object.assign({}, e, {
+      CLIENTE_NOME: cli.NOME_FANTASIA || cli.RAZAO_SOCIAL || "",
+      CLIENTE_CNPJ: cli.CNPJ || "",
+      UNIDADE_NOME: uni.NOME_UNIDADE || ""
+    });
+  }
+
+  function montarMapa_(lista) {
+    const mapa = {};
+    (lista || []).forEach(i => mapa[SGO_UTILS.safe(i.ID)] = i);
+    return mapa;
+  }
+
+  return {
+    listar, obter, criar, atualizar, inativar, reativar, excluir, pesquisar,
+    listarClientesAtivos, listarUnidadesAtivasPorCliente,
+    obterPorQRCode
+  };
+})();
+
+/* =========================
+   WRAPPERS BLINDADOS (VACINA ANTI-DATA)
+========================= */
+function equipamentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosListarUnidadesAtivasPorCliente(sessionId, clienteId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarUnidadesAtivasPorCliente(sessionId, clienteId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }

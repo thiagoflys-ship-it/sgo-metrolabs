@@ -1,0 +1,31 @@
+{
+  "scriptId": "1WZ0tuqy1C2W7E-FDgT8hn9861UNoeU7S8RF6-yYj7IajUIOHrXDSaSU9",
+  "rootDir": "",
+  "filePushOrder": [
+    "SGO_Documento_LogoCompartilhado.js",
+    "appsscript.json",
+    "SGO_Config.js",
+    "SGO_Utilis.js",
+    "SGO_Data.js",
+    "SGO_Auth.js",
+    "SGO_Setup.js",
+    "SGO_Main.js",
+    "SGO_Alertas.js",
+    "SGO_Clientes.js",
+    "SGO_Unidades.js",
+    "SGO_Equipamentos.js",
+    "SGO_Documentos.js",
+    "SGO_Usuarios.js",
+    "SGO_QRCode.js",
+    "SGO_DriverSetup.js",
+    "SGO_Setup_Integracao.js",
+    "SGO_Integracao_Engine.js",
+    "Integracao_OSPlus.js",
+    "Index.html",
+    "UI_Estilos.html",
+    "JS_Core.html",
+    "JS_Admin.html",
+    "JS_Cadastros.html",
+    "JS_Equipamentos.html"
+  ]
+}

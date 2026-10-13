@@ -1,0 +1,442 @@
+<!--
+  PILOTO — Template Autoclave como tela nativa do Portal (sem iframe).
+  Fragmento adaptado de projeto_exec_1_akfycbwt/Index.html.
+  Regra: cores/tema vêm do Comfort Dark global do Portal (UI_Estilos.html,
+  já idêntico ao do módulo standalone) — aqui só o CSS estrutural/layout
+  que ainda não existe no Portal, escopado sob #tplAutoclaveContainer
+  para não vazar para outras telas.
+-->
+<style>
+  #tplAutoclaveContainer .wrap { max-width: 100%; margin: 0; padding: 0; }
+  #tplAutoclaveContainer img { max-width: 100%; }
+  #tplAutoclaveContainer .hidden { display: none !important; }
+
+  #tplAutoclaveContainer .header-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 8px);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  #tplAutoclaveContainer .header-card::before {
+    content: "";
+    width: 4px;
+    align-self: stretch;
+    min-height: 58px;
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    border-radius: 999px;
+    order: -1;
+  }
+  #tplAutoclaveContainer .brand { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; }
+  #tplAutoclaveContainer .logo-img {
+    height: 56px; max-width: 230px; object-fit: contain; display: block;
+    background: #f8fafc; border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; padding: 7px 10px;
+  }
+  #tplAutoclaveContainer .title-area { min-width: 0; }
+  #tplAutoclaveContainer .title-area h1 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.2; }
+  #tplAutoclaveContainer .title-area p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; }
+  #tplAutoclaveContainer .header-widgets { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #tplAutoclaveContainer #tplClockWidget { font-family: Consolas, Monaco, monospace; background: var(--input, #172033); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
+
+  #tplAutoclaveContainer .action-bar {
+    margin-bottom: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius, 8px);
+  }
+
+  /* Grid reage à largura real do container (o Portal tem menos espaço
+     que o standalone, por causa do menu lateral) — por isso usamos
+     minmax(0, ...) em vez de minmax(340px, ...): a coluna nunca força
+     overflow, só encolhe até 1 coluna quando o espaço não é suficiente,
+     mesmo sem depender de media query de viewport. */
+  #tplAutoclaveContainer .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+  #tplAutoclaveContainer .grid-layout > * { min-width: 0; }
+  #tplAutoclaveContainer, #tplAutoclaveContainer * { box-sizing: border-box; }
+  #tplAutoclaveContainer .panel {
+    border-radius: var(--radius, 8px); padding: 18px; border: 1px solid var(--border);
+    min-width: 0; overflow-wrap: break-word; word-break: break-word;
+  }
+  #tplAutoclaveContainer .panel h2 { margin: 0 0 16px; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 11px; text-transform: uppercase; }
+  #tplAutoclaveContainer .panel h2::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
+  #tplAutoclaveContainer .panel-subtitle { margin: -6px 0 16px; font-size: 13px; line-height: 1.5; overflow-wrap: break-word; word-break: break-word; }
+  #tplAutoclaveContainer .section-divider { margin: 22px 0 14px; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--accent-2); border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+
+  #tplAutoclaveContainer .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  #tplAutoclaveContainer .form-group { flex: 1; min-width: 205px; }
+  #tplAutoclaveContainer .form-group.w-100 { flex: 1 1 100%; }
+  #tplAutoclaveContainer .form-group label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; }
+  #tplAutoclaveContainer .field-help { display: block; margin-top: 6px; font-size: 11px; line-height: 1.45; overflow-wrap: break-word; word-break: break-word; }
+  #tplAutoclaveContainer .form-control { width: 100%; min-height: 42px; padding: 10px 11px; border-radius: var(--radius-sm, 6px); font-size: 13px; }
+  #tplAutoclaveContainer select.form-control { cursor: pointer; }
+
+  #tplAutoclaveContainer .btn-container { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  #tplAutoclaveContainer .btn { padding: 11px 16px; border-radius: var(--radius-sm, 6px); font-weight: 800; font-size: 13px; cursor: pointer; text-align: center; min-height: 42px; }
+  #tplAutoclaveContainer .btn:disabled { opacity: 0.62; cursor: not-allowed; }
+
+  #tplAutoclaveContainer .alert-box { margin-top: 14px; border-radius: var(--radius-sm, 6px); padding: 13px 14px; font-size: 13px; line-height: 1.55; border: 1px solid transparent; display: none; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  #tplAutoclaveContainer .alert-box.show { display: block; }
+  #tplAutoclaveContainer .alert-box.success { background: rgba(111,191,143,.14); color: #b9dec8; border-color: rgba(111,191,143,.34); }
+  #tplAutoclaveContainer .alert-box.warning { background: rgba(214,169,79,.14); color: #ead39a; border-color: rgba(214,169,79,.42); }
+  #tplAutoclaveContainer .alert-box.error { background: rgba(224,138,138,.14); color: #f2b8b8; border-color: rgba(224,138,138,.42); }
+  #tplAutoclaveContainer .alert-box.info { background: rgba(122,167,199,.14); color: #c6d9e7; border-color: rgba(122,167,199,.34); }
+
+  #tplAutoclaveContainer .terminal-wrap { margin-top: 12px; border-radius: var(--radius-sm, 6px); overflow: hidden; border: 1px solid var(--border); }
+  #tplAutoclaveContainer .terminal-header { padding: 10px 12px; font-size: 11px; font-weight: 800; border-bottom: 1px solid var(--border); }
+  #tplAutoclaveContainer .terminal { padding: 14px; font-family: Consolas, Monaco, monospace; font-size: 12px; min-height: 220px; max-height: 520px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; line-height: 1.55; }
+  #tplAutoclaveContainer .result-links { display: none; margin-top: 14px; }
+  #tplAutoclaveContainer .result-links.show { display: block; }
+  #tplAutoclaveContainer .result-link-list { display: grid; gap: 10px; }
+  #tplAutoclaveContainer .btn-download { display: block; padding: 14px; text-align: center; border-radius: var(--radius-sm, 6px); text-decoration: none; font-weight: 800; font-size: 14px; overflow-wrap: break-word; word-break: break-word; }
+  #tplAutoclaveContainer .card-note { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--accent-2); border-radius: 6px; font-size: 13px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
+  #tplAutoclaveContainer .tpl-code-chip {
+    display: inline-block; margin-top: 6px; padding: 4px 8px; border-radius: 6px;
+    border: 1px solid var(--border); font-family: Consolas, Monaco, monospace; font-size: 11px;
+    max-width: 100%; overflow-wrap: anywhere; word-break: break-word;
+  }
+  #tplAutoclaveContainer .placeholder-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  #tplAutoclaveContainer .ph-chip { border: 1px solid var(--border); padding: 6px 8px; border-radius: 999px; font-family: Consolas, Monaco, monospace; font-size: 11px; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  #tplAutoclaveContainer .spinner { width: 16px; height: 16px; border: 2px solid rgba(5,46,22,.35); border-top-color: #052e16; border-radius: 50%; display: inline-block; animation: tplAutoclaveSpin .8s linear infinite; vertical-align: -3px; margin-left: 8px; }
+  @keyframes tplAutoclaveSpin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 1100px) { #tplAutoclaveContainer .grid-layout { grid-template-columns: 1fr; } #tplAutoclaveContainer .terminal { max-height: 340px; } }
+  @media (max-width: 768px) {
+    #tplAutoclaveContainer .panel { padding: 14px; }
+    #tplAutoclaveContainer .brand { width: 100%; align-items: flex-start; flex-direction: column; gap: 10px; }
+    #tplAutoclaveContainer .btn { width: 100%; }
+    #tplAutoclaveContainer .btn-container { flex-direction: column; }
+  }
+</style>
+
+<script>
+  // PILOTO — Template Autoclave nativo (proxy). Prefixo tplAutoclave_ em
+  // todo helper para não colidir com nomes globais de outros módulos.
+
+  const TPL_AUTOCLAVE_HTML_ = `
+
+    <div class="wrap">
+      <header class="header-card">
+        <div class="brand">
+          <div class="title-area">
+            <h1 id="tplAppTitle">METROLABS - SISTEMA AUTOCLAVE</h1>
+            <p id="tplAppSubtitle">Suíte técnica para autoclaves, qualificação termobarométrica, rastreabilidade e auditoria de ciclos.</p>
+          </div>
+        </div>
+        <div class="header-widgets">
+          <span id="tplClockWidget">--/--/---- --:--:--</span>
+          <span class="status-badge">SISTEMA ONLINE</span>
+        </div>
+      </header>
+
+      <div class="action-bar">
+        <button class="btn btn-secondary" type="button" onclick="tplAutoclave_preencherExemplo()">Carregar Exemplo</button>
+        <button class="btn btn-secondary" type="button" onclick="tplAutoclave_limparFormulario()">Limpar Campos</button>
+      </div>
+
+      <main class="grid-layout">
+        <section class="panel">
+          <h2>Dados do relatório de autoclave</h2>
+          <p class="panel-subtitle">Preencha os campos abaixo para gerar automaticamente o Google Docs e o PDF a partir do template oficial.</p>
+
+          <form id="tplFormRelatorio" onsubmit="event.preventDefault(); tplAutoclave_gerarRelatorioUI();">
+            <div class="section-divider">Identificação do relatório</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplNumero">Número do relatório</label>
+                <input id="tplNumero" class="form-control" type="text" placeholder="Ex.: 2026-001">
+                <span class="field-help">Usado no template e no nome final do arquivo.</span>
+              </div>
+              <div class="form-group">
+                <label for="tplData">Data do ciclo</label>
+                <input id="tplData" class="form-control" type="text" placeholder="Ex.: 20/03/2026">
+                <span class="field-help">Informe como deseja que apareça no relatório.</span>
+              </div>
+            </div>
+
+            <div class="section-divider">Cliente e local de instalação</div>
+            <div class="form-row">
+              <div class="form-group w-100">
+                <label for="tplCliente">Cliente</label>
+                <input id="tplCliente" class="form-control" type="text" placeholder="Ex.: IMED - Instituto de Medicina, Estudos e Desenvolvimento">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group w-100">
+                <label for="tplUnidade">Unidade / Local</label>
+                <input id="tplUnidade" class="form-control" type="text" placeholder="Ex.: HCN - Hospital Centro Norte Goiano - CME">
+              </div>
+            </div>
+
+            <div class="section-divider">Equipamento</div>
+            <div class="form-row">
+              <div class="form-group w-100">
+                <label for="tplEquipamento">Equipamento</label>
+                <input id="tplEquipamento" class="form-control" type="text" placeholder="Ex.: Autoclave 03">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplMarcaModelo">Marca / Modelo</label>
+                <input id="tplMarcaModelo" class="form-control" type="text" placeholder="Ex.: Baumer B0110-890P">
+              </div>
+              <div class="form-group">
+                <label for="tplNumeroSerie">Número de série</label>
+                <input id="tplNumeroSerie" class="form-control" type="text" placeholder="Ex.: 2130.15.6270">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplTag">TAG</label>
+                <input id="tplTag" class="form-control" type="text" placeholder="Ex.: AUTO-03">
+              </div>
+              <div class="form-group">
+                <label for="tplStatus">Status final</label>
+                <select id="tplStatus" class="form-control">
+                  <option value="APROVADO">APROVADO</option>
+                  <option value="REPROVADO">REPROVADO</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="btn-container">
+              <button id="tplBtnGerar" class="btn btn-primary" type="submit">
+                <span id="tplBtnGerarLabel">Gerar Google Docs + PDF</span>
+                <span id="tplBtnGerarSpinner" class="spinner hidden"></span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="panel">
+          <h2>Painel de geração</h2>
+          <p class="panel-subtitle">Acompanhe o processamento, valide o template e abra os arquivos gerados.</p>
+
+          <div id="tplStatusBox" class="alert-box info show">Sistema pronto para gerar o relatório.</div>
+
+          <div id="tplResultLinks" class="result-links">
+            <div class="result-link-list">
+              <a id="tplDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Docs</a>
+              <a id="tplPdfLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir PDF</a>
+              <a id="tplFolderLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir pasta de saída</a>
+            </div>
+          </div>
+
+          <div class="card-note">O sistema copia o template oficial, substitui os placeholders rastreados, salva o Google Docs preenchido e gera o PDF na pasta configurada.</div>
+          <div class="card-note">
+            O nome do arquivo é gerado automaticamente com número do relatório, cliente e data.
+            <span class="tpl-code-chip" title="Padrão técnico do nome do arquivo">RELATORIO_AUTOCLAVE_NUMERO_CLIENTE_DATA</span>
+          </div>
+
+          <div class="terminal-wrap">
+            <div class="terminal-header">PLACEHOLDERS DO TEMPLATE</div>
+            <div id="tplPlaceholderStatus" class="terminal">Lendo template...</div>
+          </div>
+          <div id="tplPlaceholderList" class="placeholder-list"></div>
+        </aside>
+      </main>
+    </div>
+  `;
+
+  function tplAutoclave_el(id) { return document.getElementById(id); }
+
+  function tplAutoclave_atualizarRelogio() {
+    const d = new Date();
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    const texto = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    const c = tplAutoclave_el('tplClockWidget');
+    if (c) c.textContent = texto;
+  }
+
+  function tplAutoclave_setStatus(message, type) {
+    const box = tplAutoclave_el('tplStatusBox');
+    if (!box) return;
+    box.className = 'alert-box show ' + (type || 'info');
+    box.textContent = message;
+  }
+
+  function tplAutoclave_setLoading(loading) {
+    tplAutoclave_el('tplBtnGerar').disabled = loading;
+    tplAutoclave_el('tplBtnGerarLabel').textContent = loading ? 'Gerando...' : 'Gerar Google Docs + PDF';
+    tplAutoclave_el('tplBtnGerarSpinner').classList.toggle('hidden', !loading);
+  }
+
+  function tplAutoclave_getPayload() {
+    return {
+      numero: tplAutoclave_el('tplNumero').value.trim(),
+      data: tplAutoclave_el('tplData').value.trim(),
+      cliente: tplAutoclave_el('tplCliente').value.trim(),
+      unidade: tplAutoclave_el('tplUnidade').value.trim(),
+      equipamento: tplAutoclave_el('tplEquipamento').value.trim(),
+      marcaModelo: tplAutoclave_el('tplMarcaModelo').value.trim(),
+      numeroSerie: tplAutoclave_el('tplNumeroSerie').value.trim(),
+      tag: tplAutoclave_el('tplTag').value.trim(),
+      status: tplAutoclave_el('tplStatus').value
+    };
+  }
+
+  // Só para exibição na tela — troca "_" por espaço para o nome do
+  // arquivo ficar legível. O valor técnico real (com "_") continua
+  // intacto no Drive e nos links de download, nada aqui altera o
+  // arquivo gerado.
+  function tplAutoclave_nomeAmigavel(nome) {
+    return String(nome || '').replace(/_/g, ' ');
+  }
+
+  function tplAutoclave_validar(payload) {
+    const obrigatorios = [
+      { chave: 'numero', label: 'Número do relatório' },
+      { chave: 'data', label: 'Data do ciclo' },
+      { chave: 'cliente', label: 'Cliente' },
+      { chave: 'unidade', label: 'Unidade / Local' },
+      { chave: 'equipamento', label: 'Equipamento' },
+      { chave: 'marcaModelo', label: 'Marca / Modelo' },
+      { chave: 'numeroSerie', label: 'Número de série' },
+      { chave: 'tag', label: 'TAG' },
+      { chave: 'status', label: 'Status final' }
+    ];
+    for (let i = 0; i < obrigatorios.length; i++) {
+      const item = obrigatorios[i];
+      if (!payload[item.chave]) return 'Preencha o campo: ' + item.label;
+    }
+    return '';
+  }
+
+  function tplAutoclave_mostrarLinks(res) {
+    tplAutoclave_el('tplDocLink').href = res.docUrl || '#';
+    tplAutoclave_el('tplPdfLink').href = res.pdfUrl || '#';
+    tplAutoclave_el('tplFolderLink').href = res.folderUrl || '#';
+    tplAutoclave_el('tplResultLinks').classList.add('show');
+  }
+
+  function tplAutoclave_ocultarLinks() {
+    tplAutoclave_el('tplResultLinks').classList.remove('show');
+    tplAutoclave_el('tplDocLink').href = '#';
+    tplAutoclave_el('tplPdfLink').href = '#';
+    tplAutoclave_el('tplFolderLink').href = '#';
+  }
+
+  function tplAutoclave_limparFormulario() {
+    tplAutoclave_el('tplFormRelatorio').reset();
+    tplAutoclave_ocultarLinks();
+    tplAutoclave_setStatus('Campos limpos. Sistema pronto para nova geração.', 'info');
+  }
+
+  function tplAutoclave_preencherExemplo() {
+    tplAutoclave_el('tplNumero').value = '2026-001';
+    tplAutoclave_el('tplData').value = '20/03/2026';
+    tplAutoclave_el('tplCliente').value = 'IMED - Instituto de Medicina, Estudos e Desenvolvimento';
+    tplAutoclave_el('tplUnidade').value = 'HCN - Hospital Centro Norte Goiano - CME';
+    tplAutoclave_el('tplEquipamento').value = 'Autoclave 03';
+    tplAutoclave_el('tplMarcaModelo').value = 'Baumer B0110-890P';
+    tplAutoclave_el('tplNumeroSerie').value = '2130.15.6270';
+    tplAutoclave_el('tplTag').value = 'AUTO-03';
+    tplAutoclave_el('tplStatus').value = 'APROVADO';
+    tplAutoclave_ocultarLinks();
+    tplAutoclave_setStatus('Exemplo carregado. Revise os dados e clique em gerar.', 'info');
+  }
+
+  function tplAutoclave_gerarRelatorioUI() {
+    const payload = tplAutoclave_getPayload();
+    const erro = tplAutoclave_validar(payload);
+    if (erro) {
+      tplAutoclave_ocultarLinks();
+      tplAutoclave_setStatus(erro, 'error');
+      return;
+    }
+    tplAutoclave_ocultarLinks();
+    tplAutoclave_setLoading(true);
+    tplAutoclave_setStatus('Processando template e gerando arquivos...', 'info');
+    SGO_iniciarCarregamento_();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        SGO_finalizarCarregamento_();
+        tplAutoclave_setLoading(false);
+        if (!res || !res.ok) {
+          tplAutoclave_setStatus((res && res.erro) ? res.erro : 'Falha ao gerar relatório.', 'error');
+          return;
+        }
+        tplAutoclave_mostrarLinks(res);
+        tplAutoclave_setStatus('Relatório gerado com sucesso: ' + tplAutoclave_nomeAmigavel(res.nomeArquivo || 'arquivo gerado'), 'success');
+      })
+      .withFailureHandler(function (err) {
+        SGO_finalizarCarregamento_();
+        tplAutoclave_setLoading(false);
+        tplAutoclave_setStatus('Erro inesperado: ' + (err && err.message ? err.message : err), 'error');
+      })
+      .tplAutoclaveGerarRelatorio(payload);
+  }
+
+  function tplAutoclave_carregarConfigTela() {
+    // obterConfigPublica() no standalone (getPublicConfig_) devolve o objeto
+    // de config direto, sem envelope {ok,...} — igual ao standalone original
+    // (window.APP_PUBLIC_CONFIG), por isso aqui não checamos res.ok.
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res) return;
+        const cfg = res;
+        if (cfg.systemName) tplAutoclave_el('tplAppTitle').textContent = cfg.systemName;
+        if (cfg.subtitle) tplAutoclave_el('tplAppSubtitle').textContent = cfg.subtitle;
+      })
+      .withFailureHandler(function () {})
+      .tplAutoclaveObterConfig(SGO_getSessionId());
+  }
+
+  function tplAutoclave_renderPlaceholders(lista) {
+    const box = tplAutoclave_el('tplPlaceholderList');
+    const status = tplAutoclave_el('tplPlaceholderStatus');
+    box.innerHTML = '';
+    if (!lista || !lista.length) {
+      status.textContent = 'Nenhum placeholder encontrado no template.';
+      return;
+    }
+    status.textContent = 'Template lido com sucesso. Total de placeholders: ' + lista.length;
+    lista.forEach(function (item) {
+      const chip = document.createElement('span');
+      chip.className = 'ph-chip';
+      chip.textContent = item;
+      box.appendChild(chip);
+    });
+  }
+
+  function tplAutoclave_carregarPlaceholders() {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) {
+          tplAutoclave_el('tplPlaceholderStatus').textContent = (res && res.erro) ? res.erro : 'Não foi possível ler o template.';
+          return;
+        }
+        tplAutoclave_renderPlaceholders(res.placeholders || []);
+      })
+      .withFailureHandler(function (err) {
+        tplAutoclave_el('tplPlaceholderStatus').textContent = 'Erro ao ler template: ' + (err && err.message ? err.message : err);
+      })
+      .tplAutoclaveObterPlaceholders(SGO_getSessionId());
+  }
+
+  let tplAutoclave_relogioTimer_ = null;
+
+  function renderTplAutoclave_() {
+    const container = document.getElementById('tplAutoclaveContainer');
+    if (!container) return;
+
+    try {
+      container.innerHTML = TPL_AUTOCLAVE_HTML_;
+
+      tplAutoclave_carregarConfigTela();
+      tplAutoclave_carregarPlaceholders();
+      tplAutoclave_atualizarRelogio();
+
+      if (tplAutoclave_relogioTimer_) clearInterval(tplAutoclave_relogioTimer_);
+      tplAutoclave_relogioTimer_ = setInterval(tplAutoclave_atualizarRelogio, 1000);
+
+      tplAutoclave_setStatus('Sistema pronto para gerar o relatório.', 'info');
+    } catch (e) {
+      console.error('renderTplAutoclave_ falhou:', e);
+      container.innerHTML = '<div style="padding:24px;color:#fca5a5;background:#1f2937;border:1px solid #ef4444;border-radius:8px;font-family:monospace;white-space:pre-wrap;">' +
+        'FALHA AO CARREGAR A ABA GERAR TEMPLATE (AUTOCLAVE):\n\n' + (e && e.message ? e.message : String(e)) +
+        (e && e.stack ? ('\n\n' + e.stack) : '') + '</div>';
+    }
+  }
+</script>

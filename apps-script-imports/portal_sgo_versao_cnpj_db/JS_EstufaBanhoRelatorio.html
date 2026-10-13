@@ -1,0 +1,65 @@
+<script>
+  // Carregador leve do módulo Estufa+Banho-maria: conteúdo pesado (CSS+HTML+JS,
+  // incluindo o Manual do Operador embutido como 2ª "view" do mesmo container)
+  // fica em SGO_EstufaBanhoRel_ConteudoModulo.js (.js, não .html - HtmlService
+  // distorce/trunca conteúdo grande lido de arquivo .html) e só é buscado do
+  // servidor na primeira vez que o usuário abre este módulo.
+  let tplEstufaBanhoRel_carregado_ = false;
+  let tplEstufaBanhoRel_carregando_ = false;
+
+  function renderTplEstufaBanhoRel_() {
+    const container = document.getElementById('tplEstufaBanhoRelContainer');
+    if (!container) return;
+
+    if (tplEstufaBanhoRel_carregado_) {
+      if (!container.querySelector('#tplEstufaBanhoRel_viewModulo') && typeof tplEstufaBanhoRel_renderReal_ === 'function') tplEstufaBanhoRel_renderReal_();
+      return;
+    }
+
+    if (tplEstufaBanhoRel_carregando_) return;
+    tplEstufaBanhoRel_carregando_ = true;
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Estufa+Banho-maria...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        tplEstufaBanhoRel_carregando_ = false;
+        try {
+          if (typeof conteudoBruto !== 'string') throw new Error('Resposta de conteúdo inválida.');
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (!styleMatch) console.warn('tplEstufaBanhoRel: <style> não encontrado no conteúdo recebido.');
+          if (!scriptMatch) throw new Error('Script do módulo ausente.');
+          if (!scriptMatch) console.warn('tplEstufaBanhoRel: <script> não encontrado no conteúdo recebido.');
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplEstufaBanhoRel_carregado_ = typeof tplEstufaBanhoRel_renderReal_ === 'function';
+
+          if (typeof tplEstufaBanhoRel_renderReal_ === 'function') {
+            tplEstufaBanhoRel_renderReal_();
+          } else {
+            console.error('tplEstufaBanhoRel: tplEstufaBanhoRel_renderReal_ não foi definida após o eval.');
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada). Veja o Console (F12) para detalhes.</p>';
+          }
+        } catch (e) {
+          console.error('tplEstufaBanhoRel: erro ao montar o módulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + String(e && e.message ? e.message : e).replace(/[&<>]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        tplEstufaBanhoRel_carregando_ = false;
+        console.error('tplEstufaBanhoRel: falha ao buscar o módulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo Estufa+Banho-maria: ' + String((err && err.message) ? err.message : err).replace(/[&<>]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }) + '</p>';
+      })
+      .EstufaBanhoRel_obterConteudoModulo();
+  }
+</script>

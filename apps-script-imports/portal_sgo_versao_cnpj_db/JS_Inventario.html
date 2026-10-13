@@ -1,0 +1,53 @@
+<script>
+  // Carregador leve do modulo -- mesmo padrao de JS_RegOp.html (conteudo
+  // pesado guardado como string JS em SGO_Inventario_ConteudoModulo.js,
+  // buscado do servidor so na primeira vez que o usuario abre o modulo).
+  let tplInv_carregado_ = false;
+
+  function renderTplInv_() {
+    const container = document.getElementById('tplInvContainer');
+    if (!container) return;
+
+    if (tplInv_carregado_) {
+      if (typeof tplInv_renderReal_ === 'function') tplInv_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Inventário...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplInv_carregado_ = true;
+
+          if (typeof tplInv_renderReal_ === 'function') {
+            tplInv_renderReal_();
+          } else {
+            console.error('renderTplInv_: tplInv_renderReal_ nao foi definida apos o eval.');
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
+          }
+        } catch (e) {
+          console.error('renderTplInv_: erro ao montar o modulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('renderTplInv_: falha ao buscar o modulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .INV_obterConteudoModulo();
+  }
+</script>

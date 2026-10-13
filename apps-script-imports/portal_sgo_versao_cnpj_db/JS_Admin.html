@@ -700,8 +700,11 @@
   }
 
   function carregarUnidadesParaDocumentos_(clienteId, unidadeSelecionadaId, equipamentoSelecionadoId) {
+    const request = DOCUMENTOS_STATE.unidadesRequest = (DOCUMENTOS_STATE.unidadesRequest || 0) + 1;
     if (!SESSION || !clienteId) return;
 
+    DOCUMENTOS_STATE.equipamentosRequest=(DOCUMENTOS_STATE.equipamentosRequest||0)+1;
+    DOCUMENTOS_STATE.equipamentos=[];preencherComboEquipamentosDocumentos_();
     const selectUnidade = document.getElementById("doc_unidade_id");
     if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
 
@@ -709,6 +712,7 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
+        if(request !== DOCUMENTOS_STATE.unidadesRequest || !selectUnidade || !selectUnidade.isConnected || getValue_("doc_cliente_id") !== clienteId)return;
         if (!res || !res.success) return;
         DOCUMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
         preencherComboUnidadesDocumentos_();
@@ -755,6 +759,7 @@
   }
 
   function carregarEquipamentosParaDocumentos_(unidadeId, equipamentoSelecionadoId) {
+    const request = DOCUMENTOS_STATE.equipamentosRequest = (DOCUMENTOS_STATE.equipamentosRequest || 0) + 1;
     if (!SESSION || !unidadeId) return;
 
     const selectEquip = document.getElementById("doc_equipamento_id");
@@ -764,6 +769,7 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
+        if(request !== DOCUMENTOS_STATE.equipamentosRequest || !selectEquip || !selectEquip.isConnected || getValue_("doc_unidade_id") !== unidadeId)return;
         if (!res || !res.success) return;
         DOCUMENTOS_STATE.equipamentos = Array.isArray(res.items) ? res.items : [];
         preencherComboEquipamentosDocumentos_();

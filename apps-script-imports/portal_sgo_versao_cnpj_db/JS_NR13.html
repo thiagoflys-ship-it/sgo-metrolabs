@@ -1,0 +1,49 @@
+<script>
+  let tplNR13_carregado_ = false;
+
+  function renderTplNR13_() {
+    const container = document.getElementById('tplNR13Container');
+    if (!container) return;
+
+    if (tplNR13_carregado_) {
+      if (typeof tplNR13_renderReal_ === 'function') tplNR13_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo NR-13...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplNR13_carregado_ = true;
+
+          if (typeof tplNR13_renderReal_ === 'function') {
+            tplNR13_renderReal_();
+          } else {
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+          }
+        } catch (e) {
+          console.error('tplNR13: erro ao montar o módulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('tplNR13: falha ao buscar o módulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .NR13_obterConteudoModulo();
+  }
+</script>

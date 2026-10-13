@@ -1,0 +1,49 @@
+<script>
+  let tplCertCal_carregado_ = false;
+
+  function renderTplCertCal_() {
+    const container = document.getElementById('tplCertCalContainer');
+    if (!container) return;
+
+    if (tplCertCal_carregado_) {
+      if (typeof tplCertCal_renderReal_ === 'function') tplCertCal_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Certificado de Calibração...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplCertCal_carregado_ = true;
+
+          if (typeof tplCertCal_renderReal_ === 'function') {
+            tplCertCal_renderReal_();
+          } else {
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+          }
+        } catch (e) {
+          console.error('tplCertCal: erro ao montar o módulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('tplCertCal: falha ao buscar o módulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .CertCal_obterConteudoModulo();
+  }
+</script>

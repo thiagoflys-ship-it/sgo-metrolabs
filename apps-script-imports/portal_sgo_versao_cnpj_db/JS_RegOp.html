@@ -1,0 +1,53 @@
+<script>
+  // Carregador leve do modulo -- mesmo padrao de JS_PgtPop.html (conteudo
+  // pesado guardado como string JS em SGO_RegOp_ConteudoModulo.js, buscado
+  // do servidor so na primeira vez que o usuario abre o modulo).
+  let tplRegOp_carregado_ = false;
+
+  function renderTplRegOp_() {
+    const container = document.getElementById('tplRegOpContainer');
+    if (!container) return;
+
+    if (tplRegOp_carregado_) {
+      if (typeof tplRegOp_renderReal_ === 'function') tplRegOp_renderReal_();
+      return;
+    }
+
+    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Registros Operacionais...</p>';
+
+    google.script.run
+      .withSuccessHandler(function(conteudoBruto) {
+        try {
+          const styleMatch = conteudoBruto.match(/<style>([\s\S]*?)<\/style>/);
+          const scriptMatch = conteudoBruto.match(/<script>([\s\S]*?)<\/script>/);
+
+          if (styleMatch) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = styleMatch[1];
+            document.head.appendChild(styleEl);
+          }
+
+          if (scriptMatch) {
+            window.eval(scriptMatch[1]);
+          }
+
+          tplRegOp_carregado_ = true;
+
+          if (typeof tplRegOp_renderReal_ === 'function') {
+            tplRegOp_renderReal_();
+          } else {
+            console.error('renderTplRegOp_: tplRegOp_renderReal_ nao foi definida apos o eval.');
+            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
+          }
+        } catch (e) {
+          console.error('renderTplRegOp_: erro ao montar o modulo:', e);
+          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('renderTplRegOp_: falha ao buscar o modulo:', err);
+        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+      })
+      .RegOp_obterConteudoModulo();
+  }
+</script>
