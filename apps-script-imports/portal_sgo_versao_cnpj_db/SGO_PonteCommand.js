@@ -7,6 +7,24 @@
  * Segurança: cada chamada vem assinada (HMAC-SHA256) com o segredo compartilhado "ponte_segredo"
  * (planilha "METROLABS — Comunicação", só acessível à conta dona dos dois sistemas) ou a propriedade
  * PONTE_COMMAND_SEGREDO; carimbo de tempo de no máximo 5 minutos. Sem segredo configurado, recusa tudo.
+ *
+ * Ações SÓ DE LEITURA para o Prontuário do equipamento no COMMAND (sem log, sem gravar nada, limite de linhas,
+ * cada aba em try/catch — aba inexistente é ignorada):
+ *   docs.equipamento { equipamento_id_sgo, cliente_id_sgo, serie, tag } → documentos emitidos para o equipamento
+ *   docs.desde       { desde_iso, limite }                               → documentos criados desde a data (sincronização)
+ * Abas e colunas usadas (onde o SGO+ registra o que emite por equipamento):
+ *   CERT_CALIBRACAO (Certificado de Calibração): ID, NUMERO_CERTIFICADO, CLIENTE_ID, EQUIPAMENTO_ID, DATA_CALIBRACAO,
+ *     DATA_EMISSAO (dd/MM/yyyy), DATA_VALIDADE (hoje sempre vazio) + DADOS_JSON.proximaCalibracao.data, LINK_PDF_CERTIFICADO,
+ *     LINK_PDF_RELATORIO_INTERPRETATIVO, STATUS (ATIVO), CRIADO_EM
+ *   NR13_LAUDOS (Laudo NR-13): ID, NUMERO_LAUDO, CLIENTE_ID, EQUIPAMENTO_ID, NUMERO_SERIE, TIPO_INSPECAO, DATA_TERMINO_INSPECAO,
+ *     DATA_PROXIMA_INSPECAO, VEREDITO, STATUS (só EMITIDO; RASCUNHO fica de fora), LINK_PDF, CRIADO_EM
+ *   DOC_DOCUMENTOS (documentos por equipamento — inclui Relatório de Calibração "vinculado", relatórios de manutenção/
+ *     qualificação, OS e as cópias que CertCal/NR-13 registram): ID, CLIENTE_ID, EQUIPAMENTO_ID, TIPO_DOCUMENTO, NOME_ARQUIVO,
+ *     LINK_ARQUIVO, DATA_EMISSAO, DATA_VENCIMENTO, STATUS (ATIVO/PENDENTE; INATIVO fica de fora), CRIADO_EM
+ *     (linha com o mesmo link de um certificado/laudo acima não se repete)
+ *   CAD_EQUIPAMENTOS: ID, CLIENTE_ID, SERIE, TAG (achar o equipamento quando o COMMAND só tem série/TAG)
+ * Declaração/QI-QO, Relatório de Calibração (sem vincular), Autoclave, Lavadora, Cadeia de Frio e Estufa/Banho NÃO gravam
+ * linha no banco do SGO+ (só arquivo no Drive ou HTML) — por isso não aparecem até serem registrados em DOC_DOCUMENTOS.
  */
 
 var PONTE_CMD_JANELA_MS = 5 * 60 * 1000;
@@ -61,6 +79,8 @@ function PonteCmd_tratar_(req) {
     case "equipamento.atualizar": var q = PonteCmd_equip_(d); delete q.CLIENTE_ID; delete q.UNIDADE_ID; return PonteCmd_atualizar_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, d.ID, q, quem, "EQUIPAMENTOS");
     case "alertas.padroes": return PonteCmd_alertasPadroes_();
     case "alertas.painel": return PonteCmd_alertasPainel_();
+    case "docs.equipamento": return PonteCmd_docsEquipamento_(d);
+    case "docs.desde": return PonteCmd_docsDesde_(d);
   }
   return { ok: false, erro: "Ação desconhecida." };
 }
@@ -208,4 +228,130 @@ function PonteCmd_atualizar_(sheet, id, campos, quem, modulo) {
   SGO_DATA.update(sheet, id, campos);
   SGO_DATA.log(modulo + "_ATUALIZAR", quem, "Atualizado pelo COMMAND: " + id, modulo);
   return { ok: true, id: id };
+}
+
+/* ================= Prontuário do equipamento no COMMAND: documentos emitidos (SÓ LEITURA, sem log) ================= */
+
+var PONTE_CMD_DOCS_MAX = 500;
+
+/** Lê uma aba sem quebrar: aba inexistente (SGO_DATA.getAll lança) → []. */
+function PonteCmd_lerSeguro_(aba) {
+  try { return SGO_DATA.getAll(aba) || []; } catch (e) { return []; }
+}
+
+/** Data → "yyyy-MM-dd" (só dia) ou ISO (com hora). Aceita Date, ISO, yyyy-MM-dd e dd/MM/yyyy. Inválida → "". */
+function PonteCmd_data_(v) {
+  if (v === null || v === undefined || v === "") return "";
+  if (Object.prototype.toString.call(v) === "[object Date]") return isNaN(v.getTime()) ? "" : v.toISOString();
+  var s = String(v).trim(), m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s);
+  if (m) return m[3] + "-" + m[2] + "-" + m[1];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var t = new Date(s).getTime();
+  return isNaN(t) ? "" : new Date(t).toISOString();
+}
+function PonteCmd_ms_(v) {
+  var s = PonteCmd_data_(v);
+  if (!s) return null;
+  var t = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + "T12:00:00-03:00" : s).getTime();
+  return isNaN(t) ? null : t;
+}
+
+function PonteCmd_semAcento_(s) {
+  return String(s || "").toLowerCase().replace(/[áàâã]/g, "a").replace(/[éê]/g, "e").replace(/[í]/g, "i").replace(/[óôõ]/g, "o").replace(/[ú]/g, "u").replace(/[ç]/g, "c");
+}
+
+/** Categoria a partir do tipo do documento (mesma ideia do Inventário: "calibra" / "qualifica"). */
+function PonteCmd_categoria_(tipo) {
+  var t = PonteCmd_semAcento_(tipo);
+  if (/calibra/.test(t)) return "CALIBRACAO";
+  if (/qualifica/.test(t)) return "QUALIFICACAO";
+  if (/nr ?-?13|vaso de press/.test(t)) return "NR13";
+  if (/manuten|preventiva/.test(t)) return "PREVENTIVA";
+  if (/ordem|ordens de servi/.test(t)) return "OS";
+  if (/contrato/.test(t)) return "CONTRATO";
+  return "OUTRO";
+}
+
+/** Próxima calibração do certificado (só existe dentro de DADOS_JSON; snapshot no Drive não é lido). */
+function PonteCmd_proximaCertCal_(json) {
+  try {
+    var s = String(json || "");
+    if (!s || s.charAt(0) !== "{" || s.length > 60000) return "";
+    var o = JSON.parse(s), p = o && o.proximaCalibracao;
+    return p && p.data ? PonteCmd_data_(p.data) : "";
+  } catch (e) { return ""; }
+}
+
+/** Todos os documentos emitidos (cada módulo em try/catch). filtro(doc) decide se entra. */
+function PonteCmd_docsTodos_(filtro) {
+  var out = [], links = {};
+  var push = function (d) { if (d.link) links[d.link] = 1; if (d.link2) links[d.link2] = 1; if (!filtro || filtro(d)) out.push(d); };
+  try {
+    PonteCmd_lerSeguro_((SGO_CFG.SHEETS && SGO_CFG.SHEETS.CERT_CALIBRACAO) || "CERT_CALIBRACAO").forEach(function (r) {
+      if (SGO_UTILS.safeUpper(r.STATUS) && SGO_UTILS.safeUpper(r.STATUS) !== "ATIVO") return;
+      push({ id: String(r.ID || ""), modulo: "Certificado de Calibração", tipo: "Certificado de calibração", categoria: "CALIBRACAO",
+        numero: String(r.NUMERO_CERTIFICADO || ""), data: PonteCmd_data_(r.DATA_EMISSAO) || PonteCmd_data_(r.DATA_CALIBRACAO),
+        validade: PonteCmd_data_(r.DATA_VALIDADE) || PonteCmd_proximaCertCal_(r.DADOS_JSON), status: "EMITIDO", link: String(r.LINK_PDF_CERTIFICADO || ""),
+        link2: String(r.LINK_PDF_RELATORIO_INTERPRETATIVO || ""), descricao: r.DATA_CALIBRACAO ? "Calibrado em " + r.DATA_CALIBRACAO : "",
+        equipamento_id_sgo: String(r.EQUIPAMENTO_ID || ""), cliente_id_sgo: String(r.CLIENTE_ID || ""), serie: "", alterado_em: PonteCmd_data_(r.CRIADO_EM) });
+    });
+  } catch (e) { }
+  try {
+    PonteCmd_lerSeguro_("NR13_LAUDOS").forEach(function (r) {
+      if (SGO_UTILS.safeUpper(r.STATUS) !== "EMITIDO") return;
+      push({ id: String(r.ID || ""), modulo: "NR-13", tipo: "Laudo NR-13" + (r.TIPO_INSPECAO ? " (" + r.TIPO_INSPECAO + ")" : ""), categoria: "NR13",
+        numero: String(r.NUMERO_LAUDO || ""), data: PonteCmd_data_(r.DATA_TERMINO_INSPECAO) || PonteCmd_data_(r.CRIADO_EM), validade: PonteCmd_data_(r.DATA_PROXIMA_INSPECAO),
+        status: String(r.VEREDITO || "EMITIDO"), link: String(r.LINK_PDF || ""), descricao: "",
+        equipamento_id_sgo: String(r.EQUIPAMENTO_ID || ""), cliente_id_sgo: String(r.CLIENTE_ID || ""), serie: String(r.NUMERO_SERIE || ""), alterado_em: PonteCmd_data_(r.CRIADO_EM) });
+    });
+  } catch (e) { }
+  try {
+    PonteCmd_lerSeguro_("DOC_DOCUMENTOS").forEach(function (r) {
+      var st = SGO_UTILS.safeUpper(r.STATUS);
+      if (st === "INATIVO" || !r.EQUIPAMENTO_ID) return;
+      var link = String(r.LINK_ARQUIVO || "");
+      if (link && links[link]) return;   // cópia do certificado/laudo já listado
+      push({ id: String(r.ID || ""), modulo: "Documentos", tipo: String(r.TIPO_DOCUMENTO || "Documento").replace(/^\d+\.\s*/, ""), categoria: PonteCmd_categoria_(r.TIPO_DOCUMENTO),
+        numero: "", data: PonteCmd_data_(r.DATA_EMISSAO) || PonteCmd_data_(r.CRIADO_EM), validade: PonteCmd_data_(r.DATA_VENCIMENTO), status: st || "ATIVO", link: link,
+        descricao: String(r.NOME_ARQUIVO || ""), equipamento_id_sgo: String(r.EQUIPAMENTO_ID || ""), cliente_id_sgo: String(r.CLIENTE_ID || ""), serie: "",
+        alterado_em: PonteCmd_data_(r.CRIADO_EM) });
+    });
+  } catch (e) { }
+  out.forEach(function (d) { delete d.link2; });
+  return out;
+}
+
+/** docs.equipamento: pelo ID do SGO+; sem ID (ou além dele), pelos equipamentos do mesmo cliente com a mesma série/TAG. */
+function PonteCmd_docsEquipamento_(d) {
+  var ids = {}, idSgo = SGO_UTILS.safe(d.equipamento_id_sgo), cli = SGO_UTILS.safe(d.cliente_id_sgo);
+  var serie = SGO_UTILS.safeUpper(d.serie), tag = SGO_UTILS.safeUpper(d.tag);
+  if (idSgo) ids[idSgo] = 1;
+  if (cli && (serie || tag)) {
+    try {
+      PonteCmd_lerSeguro_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (q) {
+        if (String(q.CLIENTE_ID) !== cli) return;
+        if ((serie && SGO_UTILS.safeUpper(q.SERIE) === serie) || (!idSgo && tag && SGO_UTILS.safeUpper(q.TAG) === tag)) ids[String(q.ID)] = 1;
+      });
+    } catch (e) { }
+  }
+  if (!Object.keys(ids).length) return { ok: true, docs: [], agora: new Date().toISOString(), semEquipamento: true };
+  var docs = PonteCmd_docsTodos_(function (x) {
+    return ids[x.equipamento_id_sgo] || (!x.equipamento_id_sgo && serie && cli && x.cliente_id_sgo === cli && SGO_UTILS.safeUpper(x.serie) === serie);
+  });
+  docs.sort(function (a, b) { return (PonteCmd_ms_(b.data) || 0) - (PonteCmd_ms_(a.data) || 0); });
+  var lim = Math.min(Number(d.limite) || 300, PONTE_CMD_DOCS_MAX);
+  return { ok: true, docs: docs.slice(0, lim), total: docs.length, agora: new Date().toISOString() };
+}
+
+/** docs.desde: criados a partir de desde_iso, do mais antigo para o mais novo (o COMMAND guarda onde parou). */
+function PonteCmd_docsDesde_(d) {
+  var desde = PonteCmd_ms_(d.desde_iso);
+  if (desde === null) return { ok: false, erro: "Informe desde_iso (data ISO)." };
+  var lim = Math.max(1, Math.min(Number(d.limite) || 200, PONTE_CMD_DOCS_MAX));
+  var docs = PonteCmd_docsTodos_(function (x) { var t = PonteCmd_ms_(x.alterado_em); return t !== null && t >= desde; });
+  docs.sort(function (a, b) { return (PonteCmd_ms_(a.alterado_em) || 0) - (PonteCmd_ms_(b.alterado_em) || 0); });
+  var truncado = docs.length > lim;
+  docs = docs.slice(0, lim);
+  return { ok: true, docs: docs, total: docs.length, truncado: truncado, ultimo_alterado_em: docs.length ? docs[docs.length - 1].alterado_em : "",
+    agora: new Date().toISOString() };
 }
