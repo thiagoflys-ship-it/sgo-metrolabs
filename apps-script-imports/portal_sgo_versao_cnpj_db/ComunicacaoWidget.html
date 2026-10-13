@@ -1,0 +1,573 @@
+<!--
+  METROLABS — Comunicação compartilhada (balão). ARQUIVO IDÊNTICO no COMMAND e no SGO+.
+  O sistema define ANTES deste include:
+    window.COM_CFG = { token: function () { return "<sessão>"; }, sistema: "COMMAND"|"SGO", outro: "SGO+"|"COMMAND",
+                       abrirLocal: function (tipo, id) { ... } (opcional: abre um registro do próprio sistema) };
+  Fala só com google.script.run.comApi(token, acao, dados). CSS próprio com prefixo .comw-
+-->
+<style>
+  .comw-raiz { --comw-bg: #0b1220; --comw-card: #111827; --comw-card2: #172033; --comw-txt: #e5e7eb; --comw-mut: #94a3b8; --comw-borda: #30363d;
+    --comw-verde: #34d399; --comw-azul: #38bdf8; --comw-ouro: #fbbf24; --comw-verm: #f87171;
+    font-family: inherit; font-size: 14px; color: var(--comw-txt); }
+  .comw-raiz *, .comw-raiz *::before, .comw-raiz *::after { box-sizing: border-box; }
+  .comw-botao { position: fixed; right: 18px; bottom: 18px; z-index: 2147483000; width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--comw-borda);
+    background: linear-gradient(135deg, #0f766e, #1d4ed8); color: #fff; font-size: 26px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .comw-botao:focus-visible { outline: 3px solid var(--comw-azul); outline-offset: 2px; }
+  .comw-botao.comw-inativo { filter: grayscale(.8); opacity: .75; }
+  .comw-qt { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--comw-verm); color: #fff;
+    font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; border: 2px solid var(--comw-bg); }
+  .comw-qt[hidden] { display: none; }
+  .comw-painel { position: fixed; right: 18px; bottom: 86px; z-index: 2147483001; width: 400px; max-width: calc(100vw - 24px); height: 600px; max-height: calc(100vh - 110px);
+    background: var(--comw-bg); border: 1px solid var(--comw-borda); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.55); display: flex; flex-direction: column; overflow: hidden; }
+  .comw-painel[hidden] { display: none; }
+  .comw-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--comw-card); border-bottom: 1px solid var(--comw-borda); }
+  .comw-cab h2 { margin: 0; font-size: 15px; flex: 1; color: var(--comw-txt); }
+  .comw-cab small { color: var(--comw-mut); font-weight: 400; }
+  .comw-ico { background: transparent; border: 1px solid transparent; color: var(--comw-txt); border-radius: 6px; cursor: pointer; font-size: 16px; padding: 4px 8px; }
+  .comw-ico:hover, .comw-ico:focus-visible { border-color: var(--comw-borda); background: var(--comw-card2); }
+  .comw-abas { display: flex; border-bottom: 1px solid var(--comw-borda); background: var(--comw-card); }
+  .comw-abas button { flex: 1; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--comw-mut); padding: 9px 4px; cursor: pointer; font-size: 13px; }
+  .comw-abas button.comw-on { color: var(--comw-txt); border-bottom-color: var(--comw-verde); font-weight: 600; }
+  .comw-abas .comw-n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--comw-verm); color: #fff; font-size: 11px; line-height: 18px; }
+  .comw-corpo { flex: 1; overflow-y: auto; padding: 10px; }
+  .comw-pe { border-top: 1px solid var(--comw-borda); padding: 8px; background: var(--comw-card); }
+  .comw-item { display: block; width: 100%; text-align: left; background: var(--comw-card); border: 1px solid var(--comw-borda); border-radius: 8px; padding: 9px 10px; margin-bottom: 7px;
+    color: var(--comw-txt); cursor: pointer; font: inherit; }
+  .comw-item:hover, .comw-item:focus-visible { border-color: var(--comw-azul); }
+  .comw-item.comw-novo { border-left: 4px solid var(--comw-verde); }
+  .comw-item.comw-ALTA { border-left: 4px solid var(--comw-ouro); }
+  .comw-item.comw-CRITICA { border-left: 4px solid var(--comw-verm); background: rgba(127,29,29,.30); }
+  .comw-linha { display: flex; align-items: center; gap: 6px; }
+  .comw-cresce { flex: 1; min-width: 0; }
+  .comw-tit { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comw-mut { color: var(--comw-mut); font-size: 12px; }
+  .comw-prev { color: var(--comw-mut); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comw-txt { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; margin-top: 4px; }
+  .comw-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--comw-borda); color: var(--comw-mut); white-space: nowrap; }
+  .comw-tag.comw-cmd { color: var(--comw-azul); border-color: rgba(56,189,248,.5); }
+  .comw-tag.comw-sgo { color: var(--comw-verde); border-color: rgba(52,211,153,.5); }
+  .comw-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--comw-verm); color: #fff; font-size: 11px; line-height: 20px; text-align: center; font-weight: 700; }
+  .comw-btn { background: #1d4ed8; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+  .comw-btn.comw-sec { background: var(--comw-card2); color: var(--comw-txt); border: 1px solid var(--comw-borda); }
+  .comw-btn.comw-verde { background: #047857; }
+  .comw-btn:disabled { opacity: .55; cursor: default; }
+  .comw-btn:focus-visible { outline: 2px solid var(--comw-azul); outline-offset: 1px; }
+  .comw-acoes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .comw-msgs { display: flex; flex-direction: column; gap: 6px; }
+  .comw-msg { max-width: 85%; padding: 7px 10px; border-radius: 10px; background: var(--comw-card); border: 1px solid var(--comw-borda); align-self: flex-start; }
+  .comw-msg.comw-minha { align-self: flex-end; background: #0f3d3a; border-color: #115e59; }
+  .comw-msg .comw-de { font-size: 11px; color: var(--comw-mut); display: flex; gap: 6px; align-items: center; }
+  .comw-link { color: var(--comw-azul); font-size: 12px; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+  .comw-compor { display: flex; gap: 6px; align-items: flex-end; }
+  .comw-compor textarea, .comw-form input, .comw-form textarea, .comw-form select, .comw-busca { width: 100%; background: var(--comw-card2); color: var(--comw-txt); border: 1px solid var(--comw-borda);
+    border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 13px; }
+  .comw-compor textarea { resize: none; min-height: 40px; max-height: 140px; }
+  .comw-form label { display: block; font-size: 12px; color: var(--comw-mut); margin: 8px 0 3px; }
+  .comw-form .comw-chk { display: flex; gap: 6px; align-items: center; color: var(--comw-txt); font-size: 13px; }
+  .comw-form .comw-chk input { width: auto; }
+  .comw-vazio { color: var(--comw-mut); text-align: center; padding: 26px 10px; }
+  .comw-aviso-sis { background: rgba(120,53,15,.32); border: 1px solid rgba(251,191,36,.4); color: #fde68a; border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 13px; }
+  .comw-toasts { position: fixed; right: 18px; bottom: 86px; z-index: 2147483002; display: flex; flex-direction: column-reverse; gap: 8px; width: 330px; max-width: calc(100vw - 24px); pointer-events: none; }
+  .comw-toast { pointer-events: auto; background: #171f2d; color: #fff; border: 1px solid #3d4d66; border-left: 5px solid var(--comw-azul); border-radius: 10px; padding: 10px 12px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.5); cursor: pointer; animation: comwEntrar .25s ease; text-align: left; font: inherit; width: 100%; }
+  .comw-toast.comw-ALTA { border-left-color: var(--comw-ouro); }
+  .comw-toast.comw-CRITICA { border-left-color: var(--comw-verm); background: #3b1111; }
+  .comw-toast b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .comw-toast span { display: block; font-size: 12px; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @keyframes comwEntrar { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .comw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 700px) {
+    /* celular: botão pequeno colado na borda direita, no meio da tela (não cobre botões de salvar do rodapé) */
+    .comw-botao { width: 42px; height: 42px; font-size: 19px; right: 0; bottom: 42%; border-radius: 21px 0 0 21px; }
+    .comw-qt { top: -6px; right: auto; left: -6px; }
+    .comw-painel { inset: 0; right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100%; max-height: 100%; border-radius: 0; }
+    .comw-toasts { right: 8px; left: 8px; width: auto; bottom: auto; top: 8px; flex-direction: column; }
+  }
+</style>
+
+<script>
+(function () {
+  "use strict";
+  var CFG = window.COM_CFG || {};
+  var OUTRO = CFG.outro || (CFG.sistema === "COMMAND" ? "SGO+" : "COMMAND");
+  var NOME_SIS = { COMMAND: "COMMAND", SGO: "SGO+" };
+  var ST = { token: "", d: null, conv: {}, ordem: [], msgs: {}, mais: {}, antes: {}, aberta: null, aba: "conversas", pessoas: null, setores: [],
+    avisos: [], comunicados: [], cursores: null, parado: "", semBanco: false, timer: null, ocupado: false, aberto: false, tela: "lista",
+    toasts: [], tituloBase: "", piscando: null, ultimoErro: 0 };
+  var raiz, botao, qt, painel, corpo, pe, abas, toasts, viva;
+
+  /* ---------------- utilitários ---------------- */
+  function h(s) { return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { } }
+  function lsDel(k) { try { window.localStorage.removeItem(k); } catch (e) { } }
+  function token() { try { return String((CFG.token && CFG.token()) || ""); } catch (e) { return ""; } }
+  function quando(iso) {
+    if (!iso) return "";
+    var d = new Date(iso); if (isNaN(d.getTime())) return "";
+    var hoje = new Date(), hm = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    if (d.toDateString() === hoje.toDateString()) return hm;
+    return ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + " " + hm;
+  }
+  function visto(iso) {
+    if (!iso) return "sem registro de acesso";
+    var min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 35) return "ativo agora";
+    if (min < 120) return "visto há " + min + " min";
+    if (min < 48 * 60) return "visto há " + Math.round(min / 60) + " h";
+    return "visto em " + quando(iso);
+  }
+  function tagSis(s) { return s ? "<span class='comw-tag " + (s === "COMMAND" ? "comw-cmd" : "comw-sgo") + "'>" + h(NOME_SIS[s] || s) + "</span>" : ""; }
+  function tagsPessoa(p) { return (p.cmd ? tagSis("COMMAND") + " " : "") + (p.sgo ? tagSis("SGO") : ""); }
+  function anunciar(t) { if (viva) { viva.textContent = ""; setTimeout(function () { viva.textContent = t; }, 30); } }
+
+  /* ---------------- servidor ---------------- */
+  function api(acao, dados, ok, falha) {
+    var tk = ST.token;
+    if (!tk || !window.google || !google.script || !google.script.run) return falha && falha("Sem conexão.");
+    google.script.run.withSuccessHandler(function (r) {
+      if (tk !== ST.token) return;   // trocou de usuário no meio
+      if (!r || !r.ok) {
+        var erro = (r && r.erro) || "Falha inesperada.";
+        if (erro === "SESSAO") return parar("SESSAO");
+        if (erro === "SEM_ACESSO") return parar("SEM_ACESSO");
+        if (erro === "SEM_BANCO") { ST.semBanco = true; desenhar(); return falha && falha(r.mensagem || "Comunicação ainda não ativada."); }
+        return falha ? falha(erro) : toastErro(erro);
+      }
+      ST.semBanco = false;
+      ok && ok(r);
+    }).withFailureHandler(function (e) { falha ? falha("Sem conexão com o servidor: " + ((e && e.message) || e)) : toastErro("Sem conexão com o servidor."); })
+      .comApi(tk, acao, dados || {});
+  }
+  function toastErro(msg) {
+    if (Date.now() - ST.ultimoErro < 4000) return;
+    ST.ultimoErro = Date.now();
+    toast({ titulo: "Comunicação", texto: msg, prioridade: "ALTA", fixo: false });
+  }
+
+  /* ---------------- ciclo: token, iniciar, novidades ---------------- */
+  function vigiarToken() {
+    var tk = token();
+    if (tk !== ST.token) {
+      ST.token = tk; ST.parado = ""; ST.d = null; ST.conv = {}; ST.ordem = []; ST.msgs = {}; ST.aberta = null; ST.cursores = null; ST.pessoas = null;
+      ST.avisos = []; ST.comunicados = []; ST.tela = "lista";
+      fecharToasts(true);
+      clearTimeout(ST.timer);
+      if (!tk) { raiz.hidden = true; fechar(); atualizarTitulo(0); return; }
+      raiz.hidden = false;
+      iniciar();
+    }
+  }
+  function parar(motivo) {
+    ST.parado = motivo; clearTimeout(ST.timer);
+    if (motivo === "SEM_ACESSO") { raiz.hidden = true; fechar(); }
+    desenhar();
+  }
+  function agendar(ms) {
+    clearTimeout(ST.timer);
+    if (ST.parado || !ST.token) return;
+    ST.timer = setTimeout(function () { if (ST.d) novidades(); else iniciar(); }, ms !== undefined ? ms : (document.hidden ? 120000 : 25000));
+  }
+  function iniciar() {
+    api("iniciar", {}, function (r) {
+      ST.d = r; ST.cursores = r.cursores; ST.conv = {}; ST.ordem = [];
+      (r.conversas || []).forEach(function (c) { ST.conv[c.conversa_id] = c; ST.ordem.push(c.conversa_id); });
+      ST.avisos = r.avisos || []; ST.comunicados = r.comunicados || [];
+      desenhar(); agendar();
+    }, function () { desenhar(); agendar(120000); });
+  }
+  function novidades() {
+    if (ST.ocupado) return agendar();
+    ST.ocupado = true;
+    api("novidades", { cursores: ST.cursores }, function (r) {
+      ST.ocupado = false;
+      ST.cursores = r.cursores;
+      if (r.truncado) return iniciar();
+      aplicar(r);
+      agendar();
+    }, function () { ST.ocupado = false; agendar(); });
+  }
+  function aplicar(r) {
+    var eu = ST.d.eu, novosToast = [];
+    (r.conversas || []).forEach(function (c) {
+      if (!ST.conv[c.conversa_id]) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
+    });
+    (r.mensagens || []).forEach(function (m) {
+      var c = ST.conv[m.conversa_id];
+      if (!c) return;
+      var lista = ST.msgs[m.conversa_id];
+      if (lista && lista.some(function (x) { return x.msg_id === m.msg_id; })) return;
+      if (lista) lista.push(m);
+      c.ultima = { de_nome: m.de_nome, de_sistema: m.de_sistema, texto: String(m.texto).slice(0, 140), criado_em: m.criado_em };
+      ST.ordem = [m.conversa_id].concat(ST.ordem.filter(function (id) { return id !== m.conversa_id; }));
+      if (m.de_pessoa === eu.pessoa_id) return;
+      if (!(ST.aberto && ST.aberta === m.conversa_id && !document.hidden)) novosToast.push({ titulo: m.de_nome + (c.tipo === "DIRETA" ? "" : " · " + c.titulo), texto: m.texto, prioridade: "INFO",
+        sis: m.de_sistema, ir: { conversa: m.conversa_id } });
+    });
+    (r.leituras || []).forEach(function (l) {
+      var c = ST.conv[l.conversa_id];
+      if (c && (!c.lido_ate || l.lido_ate > c.lido_ate)) { c.lido_ate = l.lido_ate; if (c.ultima && c.ultima.criado_em <= l.lido_ate) c.nao_lidas = 0; }
+    });
+    if (r.naoLidas) Object.keys(r.naoLidas).forEach(function (id) { if (ST.conv[id]) ST.conv[id].nao_lidas = r.naoLidas[id]; });
+    (r.avisos || []).forEach(function (a) {
+      if (ST.avisos.some(function (x) { return x.aviso_id === a.aviso_id; })) return;
+      ST.avisos.unshift(a);
+      novosToast.push({ titulo: "Aviso do " + (NOME_SIS[a.origem_sistema] || a.origem_sistema) + ": " + a.titulo, texto: a.texto, prioridade: a.prioridade, sis: a.origem_sistema, ir: { aba: "avisos" } });
+    });
+    (r.comunicados || []).forEach(function (a) {
+      if (ST.comunicados.some(function (x) { return x.aviso_id === a.aviso_id; })) return;
+      ST.comunicados.unshift(a);
+      if (a.criado_por !== eu.nome || a.origem_sistema !== ST.d.sistema)
+        novosToast.push({ titulo: "Comunicado: " + a.titulo, texto: a.texto, prioridade: a.prioridade, sis: a.origem_sistema, ir: { aba: "comunicados" } });
+    });
+    (r.ciencias || []).forEach(function (c) { ST.comunicados.forEach(function (a) { if (a.aviso_id === c.aviso_id) a.ciente = true; }); });
+    if (ST.aberto && ST.aberta && ST.conv[ST.aberta] && !document.hidden) lerConversa(ST.aberta);
+    if (ST.aberto && !document.hidden && (ST.aba === "avisos" || ST.aba === "comunicados") && ST.tela === "lista") marcarAba(ST.aba);
+    if (novosToast.length > 3) {
+      var crit = novosToast.filter(function (t) { return t.prioridade === "CRITICA"; });
+      crit.forEach(toast);
+      toast({ titulo: (novosToast.length - crit.length) + " novidades na Comunicação", texto: "Mensagens, avisos e comunicados novos.", prioridade: "INFO" });
+    } else novosToast.forEach(toast);
+    if (novosToast.length) bip(novosToast.some(function (t) { return t.prioridade === "CRITICA"; }));
+    desenhar();
+  }
+
+  /* ---------------- contagens, título, som ---------------- */
+  function contagens() {
+    var c = { mensagens: 0, avisos: 0, comunicados: 0 };
+    ST.ordem.forEach(function (id) { c.mensagens += (ST.conv[id] && ST.conv[id].nao_lidas) || 0; });
+    ST.avisos.forEach(function (a) { if (a.novo) c.avisos++; });
+    ST.comunicados.forEach(function (a) { if (a.exige_ciencia ? !a.ciente : a.novo) c.comunicados++; });
+    c.total = c.mensagens + c.avisos + c.comunicados;
+    return c;
+  }
+  function atualizarTitulo(n) {
+    var base = ST.tituloBase || document.title.replace(/^\(\d+\+?\)\s*/, "");
+    ST.tituloBase = base;
+    clearInterval(ST.piscando); ST.piscando = null;
+    if (!n) { document.title = base; return; }
+    var rot = "(" + (n > 99 ? "99+" : n) + ") " + base, alt = false;
+    document.title = rot;
+    if (document.hidden) ST.piscando = setInterval(function () { alt = !alt; document.title = alt ? "💬 Nova mensagem" : rot; }, 1500);
+  }
+  var audio = null;
+  function modoSom() { return lsGet("comw_som") || "critica"; }   // critica (padrão) | tudo | nada
+  function bip(critico) {
+    var m = modoSom();
+    if (m === "nada" || (m === "critica" && !critico)) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = "sine"; o.frequency.value = critico ? 880 : 660;
+      g.gain.setValueAtTime(0.0001, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.15, audio.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + (critico ? 0.5 : 0.25));
+      o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + (critico ? 0.55 : 0.3));
+    } catch (e) { }
+  }
+  function trocarSom() {
+    var prox = { critica: "tudo", tudo: "nada", nada: "critica" }[modoSom()];
+    lsSet("comw_som", prox);
+    anunciar("Som: " + rotSom());
+    desenhar();
+  }
+  function rotSom() { return { critica: "só críticos", tudo: "ligado", nada: "desligado" }[modoSom()]; }
+
+  /* ---------------- balões (toasts) ---------------- */
+  function toast(t) {
+    var b = el("button", "comw-toast comw-" + (t.prioridade || "INFO"));
+    b.type = "button";
+    b.setAttribute("aria-label", "Abrir: " + t.titulo);
+    b.innerHTML = "<b>" + h(t.titulo) + "</b><span>" + h(String(t.texto || "").slice(0, 160)) + "</span>" +
+      (t.prioridade === "CRITICA" ? "<span>Clique para ver (fica aqui até você abrir).</span>" : "");
+    b.onclick = function () { tirar(); abrir(); if (t.ir && t.ir.conversa) abrirConversa(t.ir.conversa); else if (t.ir && t.ir.aba) irAba(t.ir.aba); };
+    var tirar = function () { if (b.parentNode) b.parentNode.removeChild(b); ST.toasts = ST.toasts.filter(function (x) { return x !== b; }); };
+    b._fixo = t.prioridade === "CRITICA";
+    toasts.appendChild(b); ST.toasts.push(b);
+    while (ST.toasts.length > 4) { var velho = ST.toasts.filter(function (x) { return !x._fixo; })[0] || ST.toasts[0]; if (velho.parentNode) velho.parentNode.removeChild(velho); ST.toasts.splice(ST.toasts.indexOf(velho), 1); }
+    if (!b._fixo) setTimeout(tirar, 8000);
+    anunciar(t.titulo + ". " + String(t.texto || "").slice(0, 120));
+  }
+  function fecharToasts(todos) { ST.toasts.slice().forEach(function (b) { if (todos || !b._fixo) { if (b.parentNode) b.parentNode.removeChild(b); } }); ST.toasts = todos ? [] : ST.toasts.filter(function (b) { return b._fixo; }); }
+
+  /* ---------------- painel ---------------- */
+  function abrir() { ST.aberto = true; painel.hidden = false; botao.setAttribute("aria-expanded", "true"); desenhar(); setTimeout(function () { var f = painel.querySelector("textarea, .comw-abas button.comw-on"); if (f) f.focus(); }, 30);
+    if (ST.aba === "avisos" || ST.aba === "comunicados") marcarAba(ST.aba); if (ST.aberta) lerConversa(ST.aberta); if (!ST.d && ST.token && !ST.parado) iniciar(); }
+  function fechar() { ST.aberto = false; if (painel) painel.hidden = true; if (botao) { botao.setAttribute("aria-expanded", "false"); } }
+  function alternar() { if (ST.aberto) { fechar(); botao.focus(); } else abrir(); }
+  function irAba(a) { ST.aba = a; ST.tela = "lista"; if (a !== "conversas") ST.aberta = null; desenhar(); marcarAba(a); }
+
+  function desenhar() {
+    if (!raiz) return;
+    var c = contagens();
+    qt.textContent = c.total > 99 ? "99+" : String(c.total); qt.hidden = !c.total;
+    botao.setAttribute("aria-label", "Comunicação" + (c.total ? " — " + c.total + " novidade(s)" : ""));
+    botao.classList.toggle("comw-inativo", !!ST.parado || ST.semBanco);
+    atualizarTitulo(c.total);
+    if (!ST.aberto) return;
+    painel.querySelector(".comw-som").textContent = modoSom() === "nada" ? "🔕" : "🔔";
+    painel.querySelector(".comw-som").setAttribute("aria-label", "Som dos avisos: " + rotSom() + " (clique para trocar)");
+    painel.querySelector(".comw-som").title = "Som: " + rotSom();
+    abas.innerHTML = [["conversas", "Conversas", c.mensagens], ["avisos", "Avisos", c.avisos], ["comunicados", "Comunicados", c.comunicados]].map(function (a) {
+      return "<button type='button' role='tab' aria-selected='" + (ST.aba === a[0]) + "' data-aba='" + a[0] + "' class='" + (ST.aba === a[0] ? "comw-on" : "") + "'>" + a[1] + (a[2] ? "<span class='comw-n'>" + a[2] + "</span>" : "") + "</button>";
+    }).join("");
+    var emConversa = ST.aba === "conversas" && ST.aberta && ST.d && !ST.parado && !ST.semBanco;
+    if (!emConversa) { pe.innerHTML = ""; pe.hidden = true; pe.removeAttribute("data-conv"); }
+    if (ST.parado === "SESSAO") { corpo.innerHTML = "<div class='comw-vazio'>Sua sessão terminou. Entre de novo no sistema para voltar a receber mensagens.</div>"; return; }
+    if (ST.semBanco) { corpo.innerHTML = "<div class='comw-aviso-sis'>Comunicação ainda não ativada: abra o COMMAND uma vez (ele cria a planilha compartilhada). Vamos tentar de novo sozinhos.</div>"; return; }
+    if (!ST.d) { corpo.innerHTML = "<div class='comw-vazio'>Carregando…</div>"; return; }
+    if (ST.aba === "conversas") return ST.aberta ? telaConversa() : ST.tela === "nova" ? telaNova() : ST.tela === "grupo" ? telaGrupo() : telaConversas();
+    if (ST.aba === "avisos") return telaAvisos();
+    return ST.tela === "publicar" ? telaPublicar() : telaComunicados();
+  }
+
+  /* ---- conversas ---- */
+  function telaConversas() {
+    var html = "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='nova'>+ Conversa</button><button type='button' class='comw-btn comw-sec' data-acao='grupo'>+ Grupo</button>" +
+      (ST.d.eu.setor ? "<button type='button' class='comw-btn comw-sec' data-acao='setor'>Meu setor</button>" : "") + "</div>";
+    if (!ST.ordem.length) html += "<div class='comw-vazio'>Nenhuma conversa ainda.</div>";
+    ST.ordem.forEach(function (id) {
+      var c = ST.conv[id]; if (!c) return;
+      var u = c.ultima;
+      html += "<button type='button' class='comw-item" + (c.nao_lidas ? " comw-novo" : "") + "' data-conv='" + h(id) + "' aria-label='Abrir conversa " + h(c.titulo) + (c.nao_lidas ? ", " + c.nao_lidas + " não lida(s)" : "") + "'>" +
+        "<div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + (c.tipo === "GERAL" ? "📢 " : c.tipo === "GRUPO" ? "👥 " : c.tipo === "SETOR" ? "🏷️ " : "") + h(c.titulo) + "</div>" +
+        "<div class='comw-prev'>" + (u ? h(u.de_nome) + ": " + h(u.texto) : "sem mensagens") + "</div></div>" +
+        "<div style='text-align:right'><div class='comw-mut'>" + h(u ? quando(u.criado_em) : "") + "</div>" + (c.com ? tagsPessoa(c.com) : "") + (c.nao_lidas ? "<div class='comw-badge'>" + c.nao_lidas + "</div>" : "") + "</div></div></button>";
+    });
+    corpo.innerHTML = html;
+  }
+  function abrirConversa(id) {
+    ST.aba = "conversas"; ST.aberta = id; ST.tela = "conversa";
+    desenhar();
+    api("conversa", { conversa_id: id, limite: 50 }, function (r) {
+      ST.conv[id] = ST.conv[id] || r.conversa;
+      var ja = ST.msgs[id] || [];
+      var ids = {}; r.mensagens.forEach(function (m) { ids[m.msg_id] = 1; });
+      ST.msgs[id] = r.mensagens.concat(ja.filter(function (m) { return !ids[m.msg_id]; }));
+      ST.mais[id] = r.mais; ST.antes[id] = r.antes;
+      if (ST.aberta === id) { desenhar(); lerConversa(id); rolarFim(); }
+    }, function (erro) { toastErro(erro); });
+  }
+  function anteriores() {
+    var id = ST.aberta; if (!id) return;
+    api("conversa", { conversa_id: id, antes: ST.antes[id], limite: 50 }, function (r) {
+      var ids = {}; (ST.msgs[id] || []).forEach(function (m) { ids[m.msg_id] = 1; });
+      ST.msgs[id] = r.mensagens.filter(function (m) { return !ids[m.msg_id]; }).concat(ST.msgs[id] || []);
+      ST.mais[id] = r.mais; ST.antes[id] = r.antes;
+      desenhar();
+    }, toastErro);
+  }
+  function lerConversa(id) {
+    var c = ST.conv[id]; if (!c) return;
+    var lista = ST.msgs[id] || [], ult = lista.length ? lista[lista.length - 1].criado_em : (c.ultima && c.ultima.criado_em);
+    var tinha = c.nao_lidas;
+    c.nao_lidas = 0;
+    if (!ult || (c.lido_ate && c.lido_ate >= ult)) { if (tinha) desenhar(); return; }
+    c.lido_ate = ult;
+    api("marcarLido", { conversa_id: id, ate: ult }, function () { }, function () { });
+    desenhar();
+  }
+  function rascChave(id) { return "comw_rasc_" + (CFG.sistema || "") + "_" + ((ST.d && ST.d.eu.pessoa_id) || "") + "_" + id; }
+  function telaConversa() {
+    var id = ST.aberta, c = ST.conv[id] || { titulo: "Conversa" }, eu = ST.d.eu, lista = ST.msgs[id];
+    var html = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar para a lista de conversas'>←</button>" +
+      "<div class='comw-cresce'><div class='comw-tit'>" + h(c.titulo) + "</div>" + (c.com ? "<div>" + tagsPessoa(c.com) + "</div>" : "") + "</div></div>";
+    if (!lista) html += "<div class='comw-vazio'>Carregando…</div>";
+    else {
+      if (ST.mais[id]) html += "<div style='text-align:center;margin-bottom:8px'><button type='button' class='comw-btn comw-sec' data-acao='anteriores'>Mensagens anteriores</button></div>";
+      if (!lista.length) html += "<div class='comw-vazio'>Escreva a primeira mensagem.</div>";
+      html += "<div class='comw-msgs'>" + lista.map(function (m) {
+        var minha = m.de_pessoa === eu.pessoa_id;
+        return "<div class='comw-msg" + (minha ? " comw-minha" : "") + "'><div class='comw-de'><b>" + h(minha ? "Você" : m.de_nome) + "</b>" + tagSis(m.de_sistema) + "<span>" + h(quando(m.criado_em)) + "</span></div>" +
+          "<div class='comw-txt'>" + h(m.texto) + "</div>" + linkRef(m) + "</div>";
+      }).join("") + "</div>";
+    }
+    var perto = corpo.scrollHeight - corpo.scrollTop - corpo.clientHeight < 80, antes = corpo.scrollTop;
+    corpo.innerHTML = html;
+    if (perto) corpo.scrollTop = corpo.scrollHeight; else corpo.scrollTop = antes;
+    pe.hidden = false;
+    if (pe.getAttribute("data-conv") === id) return;   // a caixa de texto não é recriada: nada do que está sendo digitado se perde
+    pe.setAttribute("data-conv", id);
+    pe.innerHTML = "<div class='comw-compor'><label class='comw-sr' for='comw-texto'>Mensagem</label><textarea id='comw-texto' rows='2' maxlength='4000' placeholder='Mensagem (Enter envia, Shift+Enter quebra linha)'></textarea>" +
+      "<button type='button' class='comw-btn comw-verde' data-acao='enviar' aria-label='Enviar mensagem'>Enviar</button></div>";
+    var ta = pe.querySelector("textarea");
+    ta.value = lsGet(rascChave(id)) || "";
+    var t;
+    ta.addEventListener("input", function () { clearTimeout(t); t = setTimeout(function () { var v = ta.value; if (v.trim()) lsSet(rascChave(id), v); else lsDel(rascChave(id)); }, 400); });
+    ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviar(); } });
+  }
+  function linkRef(x) {
+    if (!x.ref_tipo && !x.ref_id) return "";
+    var rot = (x.ref_codigo || x.ref_tipo || "registro");
+    if (x.ref_sistema && ST.d && x.ref_sistema === ST.d.sistema && CFG.abrirLocal)
+      return "<div><button type='button' class='comw-link' data-local='" + h(x.ref_tipo) + "' data-id='" + h(x.ref_id) + "'>Abrir " + h(rot) + "</button></div>";
+    if (x.link && /^https:\/\//.test(x.link)) return "<div><a class='comw-link' href='" + h(x.link) + "' target='_blank' rel='noopener'>Abrir no " + h(NOME_SIS[x.ref_sistema] || OUTRO) + "</a></div>";
+    return "";
+  }
+  function rolarFim() { setTimeout(function () { corpo.scrollTop = corpo.scrollHeight; }, 20); }
+  function enviar() {
+    var id = ST.aberta, ta = pe.querySelector("textarea"), bt = pe.querySelector("[data-acao='enviar']");
+    if (!ta || !id) return;
+    var texto = ta.value;
+    if (!texto.trim()) return;
+    if (texto.length > 4000) return toastErro("Mensagem muito longa: o limite é 4000 caracteres.");
+    lsSet(rascChave(id), texto);   // se a rede cair, o texto continua guardado
+    bt.disabled = true;
+    api("enviar", { conversa_id: id, texto: texto }, function (r) {
+      lsDel(rascChave(id));
+      var m = r.mensagem, lista = ST.msgs[id] = ST.msgs[id] || [];
+      if (!lista.some(function (x) { return x.msg_id === m.msg_id; })) lista.push(m);
+      var c = ST.conv[id]; if (c) { c.ultima = { de_nome: m.de_nome, de_sistema: m.de_sistema, texto: String(m.texto).slice(0, 140), criado_em: m.criado_em }; }
+      ST.ordem = [id].concat(ST.ordem.filter(function (x) { return x !== id; }));
+      bt.disabled = false;
+      if (ST.aberta === id) { var t2 = pe.querySelector("textarea"); if (t2 && t2.value === texto) t2.value = ""; desenhar(); rolarFim(); if (t2) t2.focus(); }
+      agendar(4000);
+    }, function (erro) {
+      bt.disabled = false;
+      toastErro(erro + " — o texto continua guardado; tente de novo.");
+    });
+  }
+  function carregarPessoas(depois) {
+    if (ST.pessoas) return depois();
+    api("pessoas", {}, function (r) { ST.pessoas = r.pessoas; ST.setores = r.setores || []; depois(); }, toastErro);
+  }
+  function telaNova() {
+    if (!ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Nova conversa</b></div>" +
+      "<input class='comw-busca' type='search' placeholder='Buscar pessoa' aria-label='Buscar pessoa' id='comw-busca'><div id='comw-lista-p' style='margin-top:8px'></div>";
+    var desenharLista = function () {
+      var q = (document.getElementById("comw-busca").value || "").toLowerCase();
+      document.getElementById("comw-lista-p").innerHTML = ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false && (!q || (p.nome + " " + (p.setor || "")).toLowerCase().indexOf(q) >= 0); }).map(function (p) {
+        return "<button type='button' class='comw-item' data-pessoa='" + h(p.pessoa_id) + "' aria-label='Conversar com " + h(p.nome) + "'><div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + h(p.nome) + "</div>" +
+          "<div class='comw-mut'>" + h(p.setor || "") + " · " + h(visto(p.visto_em)) + "</div></div><div>" + tagsPessoa(p) + "</div></div></button>";
+      }).join("") || "<div class='comw-vazio'>Ninguém encontrado.</div>";
+    };
+    document.getElementById("comw-busca").addEventListener("input", desenharLista);
+    desenharLista();
+  }
+  function telaGrupo() {
+    if (!ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Novo grupo</b></div>" +
+      "<div class='comw-form'><label for='comw-gtit'>Nome do grupo</label><input id='comw-gtit' maxlength='80'><label>Pessoas</label>" +
+      ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false; }).map(function (p) {
+        return "<label class='comw-chk'><input type='checkbox' value='" + h(p.pessoa_id) + "'> " + h(p.nome) + " " + tagsPessoa(p) + "</label>";
+      }).join("") + "<div style='margin-top:10px'><button type='button' class='comw-btn' data-acao='criarGrupo'>Criar grupo</button></div></div>";
+  }
+  function criarGrupo() {
+    var tit = document.getElementById("comw-gtit").value;
+    var ms = Array.prototype.slice.call(corpo.querySelectorAll("input[type=checkbox]:checked")).map(function (x) { return x.value; });
+    api("criarGrupo", { tipo: "GRUPO", titulo: tit, membros: ms }, function (r) { entrouConversa(r.conversa); }, toastErro);
+  }
+  function entrouConversa(c) {
+    if (!ST.conv[c.conversa_id]) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
+    abrirConversa(c.conversa_id);
+  }
+
+  /* ---- avisos e comunicados ---- */
+  function marcarAba(a) {
+    var lista = a === "avisos" ? ST.avisos : ST.comunicados, chave = a === "avisos" ? "AVISOS" : "COMUNICADOS";
+    var novos = lista.filter(function (x) { return x.novo; });
+    if (!novos.length) return;
+    var ult = lista.reduce(function (m, x) { return x.criado_em > m ? x.criado_em : m; }, "");
+    lista.forEach(function (x) { x.novo = false; });   // comunicado que exige ciência continua contando até o "Li e estou ciente"
+    api("marcarLido", { conversa_id: chave, ate: ult }, function () { }, function () { });
+    desenhar();
+  }
+  function telaAvisos() {
+    var html = "<p class='comw-mut' style='margin:0 0 8px'>Avisos automáticos vindos do " + h(OUTRO) + " (os deste sistema continuam no sino 🔔).</p>";
+    if (!ST.avisos.length) html += "<div class='comw-vazio'>Nenhum aviso do " + h(OUTRO) + ".</div>";
+    html += ST.avisos.map(function (a) {
+      return "<div class='comw-item comw-" + h(a.prioridade) + (a.novo ? " comw-novo" : "") + "' style='cursor:default'><div class='comw-linha'><div class='comw-cresce comw-tit'>" + h(a.titulo) + "</div>" + tagSis(a.origem_sistema) + "</div>" +
+        "<div class='comw-txt'>" + h(a.texto) + "</div><div class='comw-mut'>" + h(quando(a.criado_em)) + "</div>" + linkRef(a) + "</div>";
+    }).join("");
+    corpo.innerHTML = html;
+  }
+  function telaComunicados() {
+    var html = ST.d.eu.gestao ? "<div class='comw-acoes'><button type='button' class='comw-btn' data-acao='publicar'>+ Publicar comunicado</button></div>" : "";
+    if (!ST.comunicados.length) html += "<div class='comw-vazio'>Nenhum comunicado.</div>";
+    html += ST.comunicados.map(function (a) {
+      var pend = a.exige_ciencia && !a.ciente;
+      return "<div class='comw-item comw-" + h(a.prioridade) + (pend || a.novo ? " comw-novo" : "") + "' style='cursor:default'><div class='comw-linha'><div class='comw-cresce comw-tit'>" + h(a.titulo) + "</div>" + tagSis(a.origem_sistema) + "</div>" +
+        "<div class='comw-txt'>" + h(a.texto) + "</div><div class='comw-mut'>" + h(a.criado_por) + " · " + h(quando(a.criado_em)) + (a.para && a.para !== "TODOS" ? " · " + h(String(a.para).replace("SETOR:", "setor ")) : "") + "</div>" +
+        (a.exige_ciencia ? (a.ciente ? "<div class='comw-mut'>✔ Você deu ciência.</div>" : "<div style='margin-top:6px'><button type='button' class='comw-btn comw-verde' data-ciente='" + h(a.aviso_id) + "'>Li e estou ciente</button></div>") : "") +
+        linkRef(a) + "</div>";
+    }).join("");
+    corpo.innerHTML = html;
+  }
+  function telaPublicar() {
+    var setores = (ST.setores || []).map(function (s) { return "<option value='SETOR:" + h(s) + "'>Setor " + h(s) + "</option>"; }).join("");
+    if (!ST.pessoas) carregarPessoas(function () { if (ST.tela === "publicar") desenhar(); });
+    corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Publicar comunicado</b></div>" +
+      "<div class='comw-form'><label for='comw-ptit'>Título</label><input id='comw-ptit' maxlength='140'>" +
+      "<label for='comw-ptxt'>Texto</label><textarea id='comw-ptxt' rows='6' maxlength='4000'></textarea>" +
+      "<label for='comw-ppara'>Para</label><select id='comw-ppara'><option value='TODOS'>Todos (COMMAND e SGO+)</option>" + setores + "</select>" +
+      "<label for='comw-ppri'>Prioridade</label><select id='comw-ppri'><option value='INFO'>Normal</option><option value='ALTA'>Alta</option><option value='CRITICA'>Crítica</option></select>" +
+      "<label class='comw-chk'><input type='checkbox' id='comw-pcien'> Exigir \"Li e estou ciente\"</label>" +
+      "<div style='margin-top:10px'><button type='button' class='comw-btn' data-acao='enviarComunicado'>Publicar</button></div></div>";
+    var ta = document.getElementById("comw-ptxt"), k = "comw_rasc_" + (CFG.sistema || "") + "_comunicado";
+    ta.value = lsGet(k) || "";
+    ta.addEventListener("input", function () { if (ta.value.trim()) lsSet(k, ta.value); else lsDel(k); });
+  }
+  function publicar() {
+    var d = { titulo: document.getElementById("comw-ptit").value, texto: document.getElementById("comw-ptxt").value, para: document.getElementById("comw-ppara").value,
+      prioridade: document.getElementById("comw-ppri").value, exige_ciencia: document.getElementById("comw-pcien").checked };
+    api("publicarComunicado", d, function (r) {
+      lsDel("comw_rasc_" + (CFG.sistema || "") + "_comunicado");
+      var a = r.aviso; a.novo = false;
+      if (!ST.comunicados.some(function (x) { return x.aviso_id === a.aviso_id; })) ST.comunicados.unshift(a);
+      ST.tela = "lista"; desenhar(); anunciar("Comunicado publicado.");
+    }, toastErro);
+  }
+  function ciente(id) {
+    api("ciente", { aviso_id: id }, function () { ST.comunicados.forEach(function (a) { if (a.aviso_id === id) { a.ciente = true; a.novo = false; } }); desenhar(); }, toastErro);
+  }
+
+  /* ---------------- montagem ---------------- */
+  function montar() {
+    raiz = el("div", "comw-raiz"); raiz.hidden = true;
+    botao = el("button", "comw-botao", "💬"); botao.type = "button"; botao.setAttribute("aria-label", "Comunicação"); botao.setAttribute("aria-haspopup", "dialog"); botao.setAttribute("aria-expanded", "false");
+    qt = el("span", "comw-qt"); qt.hidden = true; botao.appendChild(qt);
+    painel = el("div", "comw-painel"); painel.hidden = true; painel.setAttribute("role", "dialog"); painel.setAttribute("aria-label", "Comunicação " + (NOME_SIS[CFG.sistema] || "") + " e " + OUTRO);
+    painel.innerHTML = "<div class='comw-cab'><h2>💬 Comunicação <small>" + h(NOME_SIS[CFG.sistema] || "") + " ↔ " + h(OUTRO) + "</small></h2>" +
+      "<button type='button' class='comw-ico comw-som' aria-label='Som'>🔔</button><button type='button' class='comw-ico' data-acao='fechar' aria-label='Fechar a Comunicação (Esc)'>✕</button></div>" +
+      "<div class='comw-abas' role='tablist'></div><div class='comw-corpo' tabindex='-1'></div><div class='comw-pe' hidden></div>";
+    toasts = el("div", "comw-toasts");
+    viva = el("div", "comw-sr"); viva.setAttribute("aria-live", "polite");
+    raiz.appendChild(botao); raiz.appendChild(painel); raiz.appendChild(toasts); raiz.appendChild(viva);
+    document.body.appendChild(raiz);
+    corpo = painel.querySelector(".comw-corpo"); pe = painel.querySelector(".comw-pe"); abas = painel.querySelector(".comw-abas");
+    botao.addEventListener("click", alternar);
+    painel.querySelector(".comw-som").addEventListener("click", trocarSom);
+    painel.addEventListener("click", function (e) {
+      var t = e.target.closest ? e.target.closest("[data-acao],[data-conv],[data-aba],[data-pessoa],[data-ciente],[data-local]") : null;
+      if (!t || !painel.contains(t)) return;
+      if (t.getAttribute("data-aba")) return irAba(t.getAttribute("data-aba"));
+      if (t.getAttribute("data-conv")) return abrirConversa(t.getAttribute("data-conv"));
+      if (t.getAttribute("data-pessoa")) return api("abrirDireta", { pessoa_id: t.getAttribute("data-pessoa") }, function (r) { entrouConversa(r.conversa); }, toastErro);
+      if (t.getAttribute("data-ciente")) return ciente(t.getAttribute("data-ciente"));
+      if (t.getAttribute("data-local")) { try { CFG.abrirLocal(t.getAttribute("data-local"), t.getAttribute("data-id")); } catch (x) { } return; }
+      var a = t.getAttribute("data-acao");
+      if (a === "fechar") { fechar(); botao.focus(); }
+      else if (a === "voltar") { ST.aberta = null; ST.tela = "lista"; desenhar(); }
+      else if (a === "nova") { ST.tela = "nova"; desenhar(); }
+      else if (a === "grupo") { ST.tela = "grupo"; desenhar(); }
+      else if (a === "setor") api("criarGrupo", { tipo: "SETOR", setor: ST.d.eu.setor }, function (r) { entrouConversa(r.conversa); }, toastErro);
+      else if (a === "criarGrupo") criarGrupo();
+      else if (a === "enviar") enviar();
+      else if (a === "anteriores") anteriores();
+      else if (a === "publicar") { ST.tela = "publicar"; desenhar(); }
+      else if (a === "enviarComunicado") publicar();
+    });
+    document.addEventListener("keydown", function (e) { if ((e.key === "Escape" || e.key === "Esc") && ST.aberto) { fechar(); botao.focus(); } });
+    document.addEventListener("visibilitychange", function () {
+      atualizarTitulo(contagens().total);
+      if (!document.hidden && ST.d && !ST.parado) { agendar(800); if (ST.aberto && ST.aberta) lerConversa(ST.aberta); }
+    });
+    vigiarToken();
+    setInterval(vigiarToken, 3000);
+  }
+  if (document.body) montar(); else document.addEventListener("DOMContentLoaded", montar);
+  window.ComunicacaoWidget = { abrir: function () { abrir(); }, atualizar: function () { if (ST.d) novidades(); else iniciar(); } };
+})();
+</script>

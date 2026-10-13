@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>METROLABS SGO+</title>
+  <?!= include('UI_Estilos'); ?>
+</head>
+<body>
+
+  <div id="login" class="login-screen">
+    <div class="login-split">
+      <div class="login-welcome">
+        <div class="login-welcome-shapes" aria-hidden="true"></div>
+        <div class="login-welcome-text">
+          <h2>Bem-vindo(a)</h2>
+          <p>O SGO+ é o sistema de gestão operacional da Metrolabs: clientes, equipamentos, relatórios técnicos e auditorias, tudo em um só lugar.</p>
+        </div>
+      </div>
+
+      <div class="login-card">
+        <div class="login-title-wrap">
+          <h1 class="login-title"><span>SGO+</span></h1>
+          <p class="login-subtitle">Sistema de Gestão Operacional e Técnica</p>
+        </div>
+
+        <div class="login-form">
+          <div class="form-group">
+            <label for="usuario">Usuário</label>
+            <input
+              id="usuario"
+              type="text"
+              placeholder="Digite seu usuário"
+              autocomplete="username"
+              onkeydown="if(event.key === 'Enter') document.getElementById('senha').focus()"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="senha">Senha</label>
+            <input
+              id="senha"
+              type="password"
+              placeholder="Digite sua senha"
+              autocomplete="current-password"
+              onkeydown="if(event.key === 'Enter') fazerLogin()"
+            >
+          </div>
+
+          <div class="login-actions">
+            <button id="btnLogin" type="button" onclick="fazerLogin()">Entrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app-shell" style="display:none;">
+    
+    <header id="topo" class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo-block" onclick="irTelaInicial_()" style="cursor: pointer;">
+          <img id="logoTopo" alt="Logo Metrolabs" class="topbar-logo">
+          <div class="topbar-brand">
+            <div class="topbar-title">SGO<span class="topbar-title-plus">+</span></div>
+            <div class="topbar-subtitle">Metrolabs · Painel Operacional</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div
+          id="mensagemMotivacional"
+          class="mensagem-motivacional"
+          title="Mensagem do dia"
+        ></div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="topbar-info-block">
+          <div id="relogioTopo" class="relogio-texto">--/--/----, --:--:--</div>
+          <div class="status-produtivo">Status: Produtivo 🚀</div>
+        </div>
+        <div class="user-action-block">
+            <div id="userInfo" class="user-info"></div>
+            <button id="btnLogout" type="button" class="btn-logout" onclick="logout()">
+              Sair
+            </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      
+      <aside id="menu" class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">PRINCIPAL</div>
+          <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon">🏠</span>Dashboard</button>
+        </div>
+
+        <div class="sidebar-section" id="menu-secao-tecnica">
+          <div class="sidebar-section-title">MÓDULOS TÉCNICOS</div>
+          <button type="button" class="menu-btn" data-mod="autoclave" onclick="abrir('autoclave')"><span class="menu-btn-icon">⚗️</span>Autoclave</button>
+          <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon">🫧</span>Lavadoras</button>
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon">📋</span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon">🗓️</span>Cronograma de Execução</button>
+          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon">📑</span>PGT e POP</button>
+          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon">✅</span>Registros Operacionais</button>
+          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon">📦</span>Inventário de Equipamentos</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon">🔒</span>Carta de Conformidade (legado)</button>
+          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon">❄️</span>Cadeia de Frio</button>
+          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon">🌡️</span>Estufa+Banho-maria</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon">📝</span>Declaração de Execução de Serviço</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon">✅</span>Relatório de Qualificação (QI/QO/QD)</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon">🎯</span>Relatório de Calibração</button>
+          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon">📜</span>Certificado de Calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon">🛢️</span>Laudo NR-13 (Vaso de Pressão)</button>
+          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon">🚗</span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">GESTÃO</div>
+          <button type="button" class="menu-btn" data-mod="clientes" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon">👤</span>Clientes</button>
+          <button type="button" class="menu-btn" data-mod="unidades" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon">🏢</span>Unidades</button>
+          <button type="button" class="menu-btn" data-mod="equipamentos" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon">🔧</span>Equipamentos</button>
+          <button type="button" class="menu-btn" data-mod="documentos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon">📁</span>Documentos</button>
+        </div>
+
+        <div class="sidebar-section" id="menu-secao-admin">
+          <div class="sidebar-section-title">ADMINISTRAÇÃO</div>
+          <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon">⚙️</span>Painel Admin</button>
+          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon">🔗</span>Integração Auvo</button>
+          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon">🛡️</span>Painel de Qualidade</button>
+          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon">🚦</span>Programa de Conduta</button>
+
+          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()" 
+                  style="background-color: #198754; color: white; margin-top: 15px; border: 2px solid #146c43; font-weight: bold;">
+            <i class="fas fa-sync-alt"></i> SINCRONIZAR COM OS+
+          </button>
+        </div>
+      </aside>
+
+      <main class="content-area">
+        <section id="barraAlertas" class="alert-bar" style="display:none;"></section>
+        <section id="areaAvisos" class="avisos-wrap" style="display:none;"></section>
+        <section id="conteudo" class="content-panel"></section>
+      </main>
+
+    </div>
+
+    <div class="mobile-topbar">
+      <button type="button" class="mobile-topbar-btn" onclick="voltarMobile_()">← Voltar</button>
+      <div id="mobileTopbarTitulo" class="mobile-topbar-titulo">Menu</div>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-sair" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+<?!= include('JS_Core'); ?>
+<?!= include('JS_Admin'); ?>
+<?!= include('JS_Equipamentos'); ?>
+<?!= include('JS_Cadastros'); ?>
+<?!= include('JS_Vinculos'); ?>
+<?!= include('JS_TemplateAutoclave'); ?>
+<?!= include('JS_TemplateLavadora'); ?>
+<?!= include('JS_AutoclaveRelatorio'); ?>
+<?!= include('JS_LavadoraRelatorio'); ?>
+<?!= include('JS_CartaConformidade'); ?>
+<?!= include('JS_CadeiaFrioRelatorio'); ?>
+<?!= include('JS_EstufaBanhoRelatorio'); ?>
+<?!= include('JS_DeclaracaoExec'); ?>
+<?!= include('JS_DeclaracaoExecQIQO'); ?>
+<?!= include('JS_RelCal'); ?>
+<?!= include('JS_CertCal'); ?>
+<?!= include('JS_Frota'); ?>
+<?!= include('JS_PlanejamentoCME'); ?>
+<?!= include('JS_CronExec'); ?>
+<?!= include('JS_PgtPop'); ?>
+<?!= include('JS_RegOp'); ?>
+<?!= include('JS_NR13'); ?>
+<?!= include('JS_Auvo'); ?>
+<?!= include('JS_Qualidade'); ?>
+<?!= include('JS_Conduta'); ?>
+<?!= include('JS_Inventario'); ?>
+<!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
+<script>
+  window.COM_CFG = { sistema: "SGO", outro: "COMMAND",
+    token: function () { try { return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } } };
+</script>
+<?!= include('ComunicacaoWidget'); ?>
+
+  <script>
+    // Lógica da Ponte SGO -> OS+
+    function executarExportacaoDiretor() {
+      const btn = document.getElementById('btnSyncOS');
+      if(!confirm("⚠️ AVISO DE DIRETORIA\n\nDeseja exportar a base atual para o sistema OS+?\n\nClientes, TAGs e Usuários serão atualizados no sistema novo.")) return;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SINCRONIZANDO...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          alert(res.mensagem);
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> SINCRONIZAR COM OS+';
+        })
+        .withFailureHandler(function(err) {
+          alert("ERRO CRÍTICO: " + err.message);
+          btn.disabled = false;
+          btn.innerHTML = 'TENTAR NOVAMENTE';
+        })
+        .dispararSincronizacaoTotal(SGO_getSessionId()); // Chama a função que criamos no Engine.gs
+    }
+
+    // Relógio em tempo real otimizado
+    document.addEventListener("DOMContentLoaded", function() {
+      const elRelogio = document.getElementById('relogioTopo');
+      if (elRelogio) {
+        setInterval(function() {
+          const agora = new Date();
+          const dia = String(agora.getDate()).padStart(2, '0');
+          const mes = String(agora.getMonth() + 1).padStart(2, '0');
+          const ano = agora.getFullYear();
+          const horas = String(agora.getHours()).padStart(2, '0');
+          const min = String(agora.getMinutes()).padStart(2, '0');
+          const seg = String(agora.getSeconds()).padStart(2, '0');
+          elRelogio.innerText = `${dia}/${mes}/${ano}, ${horas}:${min}:${seg}`;
+        }, 1000);
+      }
+    });
+
+    /* ============================================================
+       MODIFICAÇÃO EXCLUSIVA PARA CATEGORIAS NBR 15943 EM DOCUMENTOS
+       ============================================================ */
+    function renderDocumentosModulo_() {
+      const div = document.getElementById("conteudo");
+      if (!div) return;
+
+      const isCliente = typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT.perfil === "CLIENTE";
+      const styleForm = isCliente ? "display:none;" : "";
+      const styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
+      const styleAcoes = isCliente ? "display:none;" : "";
+
+      div.innerHTML = `
+        <div class="module-shell">
+          <div class="module-header">
+            <div class="module-header-left">
+              <h2 class="content-title">Documentos</h2>
+              <p class="content-subtitle">Gestão de relatórios e certificados seguindo a NBR 15943.</p>
+            </div>
+            
+            <div class="module-header-right" style="${styleForm} display: flex; gap: 15px; align-items: center;">
+              <div style="display: flex; gap: 5px;">
+                <input id="documentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar documento..." onkeydown="if(event.key === 'Enter') documentosPesquisar_()">
+                <button class="btn-secondary" type="button" onclick="documentosPesquisar_()">Pesquisar</button>
+              </div>
+              <button class="btn-primary" type="button" onclick="documentosNovo_()">+ Novo Documento</button>
+            </div>
+          </div>
+
+          <div class="module-grid" style="${styleGrid}">
+            <div class="form-card" style="${styleForm}">
+              <h3 class="section-card-title" id="documentosFormTitulo">Novo documento</h3>
+              <div class="form-grid">
+                <div class="full">
+                  <label for="doc_cliente_id_busca">Cliente <span style="color:red;">*</span></label>
+                  ${SGO_htmlBuscaClienteLike_("doc_cliente_id", "Nome ou CNPJ do cliente...")}
+                </div>
+                <div class="full">
+                  <label for="doc_unidade_id">Unidade <span style="color:red;">*</span></label>
+                  <select id="doc_unidade_id" onchange="aoMudarUnidadeDocumentos_()">
+                    <option value="">Selecione um cliente primeiro</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label for="doc_equipamento_id">Equipamento (Opcional)</label>
+                  <select id="doc_equipamento_id">
+                    <option value="">Selecione uma unidade primeiro</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:red;">*</span></label>
+                  <select id="doc_tipo_documento">
+                    <option value="">Selecione a categoria...</option>
+                    <option value="1. Relatórios de Manutenção">1. Relatórios de Manutenção</option>
+                    <option value="2. Certificados de Calibração">2. Certificados de Calibração</option>
+                    <option value="3. Relatórios de Qualificação">3. Relatórios de Qualificação</option>
+                    <option value="4. Ordens de Serviço">4. Ordens de Serviço</option>
+                    <option value="5. Contratos">5. Contratos</option>
+                    <option value="Outros Documentos">Outros Documentos</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label for="doc_nome_arquivo">Nome / Referência <span style="color:red;">*</span></label>
+                  <input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026">
+                </div>
+                <div class="full">
+                  <label for="doc_arquivo">Arquivo do Documento (Upload para Drive)</label>
+                  <input id="doc_arquivo" type="file" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx" onchange="processarArquivoDocumento_()">
+                  <input id="doc_arquivo_base64" type="hidden">
+                  <input id="doc_arquivo_mime" type="hidden">
+                  <input id="doc_arquivo_nome" type="hidden">
+                  <div id="doc_arquivo_preview" style="margin-top:6px; font-size:12px; font-weight:700; color:var(--metro-blue);"></div>
+                </div>
+                <div class="full">
+                  <label for="doc_data_vencimento">Data de Vencimento (Opcional)</label>
+                  <input id="doc_data_vencimento" type="date">
+                </div>
+                <div>
+                  <label for="doc_status">Status</label>
+                  <input id="doc_status" type="text" value="ATIVO" disabled>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn-primary" type="button" onclick="documentosSalvar_()">Salvar</button>
+                <button class="btn-secondary" type="button" onclick="documentosNovo_()">Limpar</button>
+              </div>
+            </div>
+
+            <div class="list-card">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Unidade</th>
+                      <th>Equipamento</th>
+                      <th>Categoria</th>
+                      <th>Arquivo</th>
+                      <th>Status</th>
+                      <th style="${styleAcoes}">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="documentosTabelaBody">
+                    <tr><td colspan="7" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      if (typeof documentosLimparFormulario_ === "function") {
+        documentosLimparFormulario_();
+      }
+    }
+  </script>
+
+  <script>
+    window.SGO_QR_STATE = {
+      equipamentoId: null,
+      processando: false,
+      redirecionado: false
+    };
+
+    function sgoQrGetEquipamentoId_() {
+      try {
+        const url = new URL(window.location.href);
+        return url.searchParams.get("equipamento") || "";
+      } catch (e) {
+        try {
+          const query = window.location.search || "";
+          const params = new URLSearchParams(query);
+          return params.get("equipamento") || "";
+        } catch (err) {
+          return "";
+        }
+      }
+    }
+
+    function sgoQrTemFluxo_() {
+      return !!sgoQrGetEquipamentoId_();
+    }
+
+    function sgoQrMostrarMensagem_(msg) {
+      try { alert(msg); } catch (e) { console.error(msg); }
+    }
+
+    function sgoQrExecutarAcesso_(sessionId) {
+      const equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId || !sessionId) return;
+      if (window.SGO_QR_STATE.processando || window.SGO_QR_STATE.redirecionado) return;
+
+      window.SGO_QR_STATE.equipamentoId = equipamentoId;
+      window.SGO_QR_STATE.processando = true;
+
+      const btn = document.getElementById("btnLogin");
+      if(btn) {
+        btn.innerText = "Acessando Equipamento...";
+        btn.disabled = true;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          window.SGO_QR_STATE.processando = false;
+
+          if (!res || !res.success) {
+            sgoQrMostrarMensagem_((res && res.message) ? res.message : "Acesso negado ao equipamento.");
+            if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+            return;
+          }
+
+          const redirectUrl = (res.redirectUrl || "").trim();
+          if (!redirectUrl) {
+            sgoQrMostrarMensagem_("Link do equipamento não encontrado.");
+            if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+            return;
+          }
+
+          window.SGO_QR_STATE.redirecionado = true;
+          window.location.href = redirectUrl;
+        })
+        .withFailureHandler(function(err) {
+          window.SGO_QR_STATE.processando = false;
+          sgoQrMostrarMensagem_("Erro ao acessar via QR: " + (err && err.message ? err.message : err));
+          if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+        })
+        .qrcodeAcessar(sessionId, equipamentoId);
+    }
+
+    function sgoQrValidarSessaoEExecutar_() {
+      const equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId) return;
+
+      const sessionId = sessionStorage.getItem("SGO_SESSION") || 
+                        sessionStorage.getItem("SGO_SESSION_ID") || 
+                        sessionStorage.getItem("sessionId") || "";
+
+      if (!sessionId) return; 
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          const ok = !!(res && (res.valid || res.success));
+          if (!ok) {
+            try {
+              sessionStorage.removeItem("SGO_SESSION");
+              sessionStorage.removeItem("SGO_SESSION_ID");
+              sessionStorage.removeItem("sessionId");
+            } catch (e) {}
+            return;
+          }
+
+          sgoQrExecutarAcesso_(sessionId);
+        })
+        .withFailureHandler(function() {
+          try {
+            sessionStorage.removeItem("SGO_SESSION");
+            sessionStorage.removeItem("SGO_SESSION_ID");
+            sessionStorage.removeItem("sessionId");
+          } catch (e) {}
+        })
+        .validarSessao(sessionId);
+    }
+
+    function sgoQrPatchLogin_() {
+      if (typeof window.fazerLogin !== "function") return;
+      if (window.__SGO_QR_LOGIN_PATCHED__) return;
+
+      const loginOriginal = window.fazerLogin;
+
+      window.fazerLogin = function() {
+        const retorno = loginOriginal.apply(this, arguments);
+
+        setTimeout(function() {
+          if (sgoQrTemFluxo_()) {
+            sgoQrValidarSessaoEExecutar_();
+          }
+        }, 1000); 
+
+        return retorno;
+      };
+
+      window.__SGO_QR_LOGIN_PATCHED__ = true;
+    }
+
+    function sgoQrBootstrap_() {
+      try {
+        sgoQrPatchLogin_();
+
+        if (sgoQrTemFluxo_()) {
+          sgoQrValidarSessaoEExecutar_();
+        }
+      } catch (e) {
+        console.error("Falha no bootstrap do QR:", e);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(sgoQrBootstrap_, 300);
+    });
+  </script>
+
+  <!-- Overlay global de carregamento — mostrado por SGO_iniciarCarregamento_()/
+       SGO_finalizarCarregamento_() (JS_Core.html) em toda chamada ao servidor
+       que registra/salva/gera algo, em qualquer módulo. Objetivo: sem isto,
+       clique em ação sem nenhum feedback visual levava usuário a clicar
+       várias vezes, gerando registro duplicado (mesma causa raiz do bug de
+       retirada duplicada da Frota, só que espalhada pelo Portal inteiro). -->
+  <div id="sgoOverlayCarregando" class="sgo-overlay-carregando" aria-hidden="true">
+    <div class="sgo-overlay-caixa">
+      <div class="sgo-overlay-spinner"></div>
+      <div id="sgoOverlayCarregandoTexto" class="sgo-overlay-texto">Aguarde, processando...</div>
+    </div>
+  </div>
+</body>
+</html>
