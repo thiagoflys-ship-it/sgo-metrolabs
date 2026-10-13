@@ -59,6 +59,8 @@ function PonteCmd_tratar_(req) {
     case "unidade.atualizar": var u = PonteCmd_unidade_(d); delete u.CLIENTE_ID; return PonteCmd_atualizar_(SGO_CFG.SHEETS.CAD_UNIDADES, d.ID, u, quem, "UNIDADES");
     case "equipamento.criar": return PonteCmd_equipCriar_(d, quem);
     case "equipamento.atualizar": var q = PonteCmd_equip_(d); delete q.CLIENTE_ID; delete q.UNIDADE_ID; return PonteCmd_atualizar_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, d.ID, q, quem, "EQUIPAMENTOS");
+    case "alertas.padroes": return PonteCmd_alertasPadroes_();
+    case "alertas.painel": return PonteCmd_alertasPainel_();
   }
   return { ok: false, erro: "Ação desconhecida." };
 }
@@ -129,6 +131,75 @@ function PonteCmd_equipCriar_(p, quem) {
   SGO_DATA.insert(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, reg);
   SGO_DATA.log("EQUIPAMENTOS_CRIAR", quem, "Equipamento criado pelo COMMAND TAG=" + (d.TAG || "") + " SERIE=" + (d.SERIE || ""), "EQUIPAMENTOS");
   return { ok: true, id: reg.ID };
+}
+
+/**
+ * Mesmos alertas de padrões de calibração que o SGO+ mostra em balão (SGO_AlertasPadroes.js: mesma configuração
+ * e mesma classificação de validade), para o COMMAND mostrar também. Só leitura.
+ */
+function PonteCmd_alertasPadroes_() {
+  if (typeof AlertasPadroes_config_ !== "function" || typeof CertCal_classificarValidadePadrao_ !== "function" || !SGO_CFG.SHEETS.CAD_PADROES)
+    return { ok: true, disponivel: false };
+  var config = AlertasPadroes_config_();
+  var lista = [], vencidos = 0, invalidos = 0, vencendo = 0;
+  SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_PADROES).forEach(function (p) {
+    if (SGO_UTILS.safeUpper(p.STATUS) !== "ATIVO") return;
+    var v = CertCal_classificarValidadePadrao_(p.VALIDADE), sit = "";
+    if (v.diasRestantes === null) { invalidos++; sit = "SEM_VALIDADE"; }
+    else if (Number(v.diasRestantes) < 0) { vencidos++; sit = "VENCIDO"; }
+    else if (Number(v.diasRestantes) <= config.antecedenciaDias) { vencendo++; sit = "VENCENDO"; }
+    if (sit && lista.length < 30) lista.push({ codigo: String(p.CODIGO || p.TAG || p.ID || ""), descricao: String(p.DESCRICAO || p.NOME || p.INSTRUMENTO || ""), validade: String(p.VALIDADE || ""), dias: v.diasRestantes, situacao: sit });
+  });
+  return { ok: true, disponivel: true, ativo: !!config.ativo, perfis: config.perfis || [], antecedenciaDias: config.antecedenciaDias,
+    resumo: { total: vencidos + invalidos + vencendo, vencidos: vencidos, vencendo: vencendo, invalidos: invalidos },
+    critico: !!config.alertaCriticoAtivo && (vencidos > 0 || invalidos > 0), mensagem: config.mensagem || "", lista: lista, em: new Date().toISOString() };
+}
+
+/**
+ * Os mesmos avisos do painel do SGO+ (SGO_Alertas.js: documentos vencendo/vencidos, padrões de referência e frota),
+ * na visão interna (sem trava de cliente), mesmo cálculo e mesmas mensagens. Só leitura, sem log (o COMMAND consulta a cada 15 min).
+ */
+function PonteCmd_alertasPainel_() {
+  var itens = [], hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var diasAviso = (SGO_CFG.ALERTAS && SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO) ? SGO_CFG.ALERTAS.DIAS_ANTECEDENCIA_PADRAO : 30;
+  try {
+    SGO_DATA.getAll("DOC_DOCUMENTOS").forEach(function (doc) {
+      if (SGO_UTILS.safeUpper(doc.STATUS) !== "ATIVO" || !doc.DATA_VENCIMENTO) return;
+      var p = String(doc.DATA_VENCIMENTO).split("T")[0].split("-");
+      if (p.length !== 3) return;
+      var dv = new Date(p[0], p[1] - 1, p[2]); dv.setHours(0, 0, 0, 0);
+      var d = Math.ceil((dv.getTime() - hoje.getTime()) / 86400000);
+      if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") ESTÁ VENCIDO há " + Math.abs(d) + " dia(s)!" });
+      else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") vence em " + d + " dia(s)." });
+    });
+  } catch (e) { }
+  try {
+    var ss = SGO_DATA.getDB();
+    if (SGO_CFG.SHEETS.CAD_PADROES && ss.getSheetByName(SGO_CFG.SHEETS.CAD_PADROES) && typeof CertCal_classificarValidadePadrao_ === "function") {
+      SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_PADROES).forEach(function (pd) {
+        if (SGO_UTILS.safeUpper(pd.STATUS) !== "ATIVO") return;
+        var v = CertCal_classificarValidadePadrao_(pd.VALIDADE);
+        if (v.diasRestantes === null) { itens.push({ tipo: "ATENÇÃO", origem: "PADRAO", dias: null, mensagem: "O padrão de referência '" + pd.TAG + "': " + v.label + "." }); return; }
+        var d = v.diasRestantes;
+        if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") ESTÁ VENCIDO há " + Math.abs(d) + " dia(s)!" });
+        else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") vence em " + d + " dia(s)." });
+      });
+    }
+  } catch (e) { }
+  try {
+    var ss2 = SGO_DATA.getDB();
+    if (SGO_CFG.SHEETS.CAD_VEICULOS && ss2.getSheetByName(SGO_CFG.SHEETS.CAD_VEICULOS) && typeof Frota_calcularAlertasManutencao_ === "function") {
+      Frota_calcularAlertasManutencao_().forEach(function (a) {
+        if (a.categoria === "QUALIDADE") { itens.push({ tipo: "ATENÇÃO", origem: "FROTA", dias: 0, mensagem: "O veículo '" + a.veiculoPlaca + "' tem uma multa (" + a.vencimento + ") sem condutor vinculado — indique em Frota > Multas." }); return; }
+        var critico = a.status === "VENCIDO", cnh = a.categoria === "CNH", doc = a.categoria === "DOCUMENTO";
+        var rot = cnh ? "a CNH" : (doc ? "o documento '" + a.tipoLabel + "'" : "a manutenção '" + a.tipoLabel + "'");
+        var suj = cnh ? "O condutor '" + a.veiculoPlaca + "'" : "O veículo '" + a.veiculoPlaca + "'";
+        itens.push({ tipo: critico ? "CRÍTICO" : "ATENÇÃO", origem: "FROTA", dias: critico ? -1 : 15, mensagem: critico ? suj + " está com " + rot + " VENCIDO(A)!" : suj + " está com " + rot + " vencendo em breve." });
+      });
+    }
+  } catch (e) { }
+  itens.sort(function (a, b) { return (a.dias === null ? 999 : a.dias) - (b.dias === null ? 999 : b.dias); });
+  return { ok: true, itens: itens.slice(0, 200), total: itens.length, criticos: itens.filter(function (i) { return i.tipo === "CRÍTICO"; }).length, em: new Date().toISOString() };
 }
 
 function PonteCmd_atualizar_(sheet, id, campos, quem, modulo) {
