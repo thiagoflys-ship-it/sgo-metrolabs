@@ -645,31 +645,8 @@ function LavRel_apiConsultarCnpj(payload) {
     throw new Error('Informe um CNPJ válido com 14 dígitos.');
   }
 
-  const url = 'https://brasilapi.com.br/api/cnpj/v1/' + encodeURIComponent(cnpj);
-  let res;
-  try {
-    res = UrlFetchApp.fetch(url, {
-      method: 'get',
-      muteHttpExceptions: true,
-      followRedirects: true,
-      headers: { Accept: 'application/json' }
-    });
-  } catch (err) {
-    throw new Error('Falha ao consultar CNPJ na BrasilAPI: ' + err.message);
-  }
-
-  const code = res.getResponseCode();
-  const body = res.getContentText() || '';
-  if (code < 200 || code >= 300) {
-    throw new Error('CNPJ não encontrado ou indisponível na BrasilAPI. Código HTTP: ' + code);
-  }
-
-  let data;
-  try {
-    data = JSON.parse(body);
-  } catch (err) {
-    throw new Error('Resposta inválida da BrasilAPI para o CNPJ informado.');
-  }
+  // Consulta com reserva entre várias bases públicas + cache (SGO_CnpjConsulta.js).
+  const data = SGO_CNPJ_consultarDados_(cnpj);
 
   const endereco = LavRel_montarEnderecoCnpjMain_(data);
   return {

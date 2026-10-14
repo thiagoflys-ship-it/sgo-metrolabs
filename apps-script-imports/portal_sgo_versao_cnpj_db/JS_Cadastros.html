@@ -1,6 +1,8 @@
 <script>
   // ==========================================
-  // INTEGRAÇÃO BRASIL API (CNPJ)
+  // CONSULTA PÚBLICA DE CNPJ — feita no servidor (SGO_CnpjConsulta.js),
+  // com reserva entre várias bases públicas; antes era fetch direto do
+  // navegador a uma base só, que caía com frequência (2026-10-14).
   // ==========================================
   function buscarCnpjAutomacao_(inputEl, modulo) {
     if (!inputEl) return;
@@ -27,11 +29,15 @@
       btnSalvar.innerText = "Buscando Receita...";
     }
 
-    fetch("https://brasilapi.com.br/api/cnpj/v1/" + cnpjLimpo)
-      .then(function(res) {
-        if (!res.ok) throw new Error("CNPJ não encontrado na Receita Federal");
-        return res.json();
-      })
+    new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.ok && res.dados) resolve(res.dados);
+          else reject(new Error((res && res.mensagem) || "Não foi possível consultar o CNPJ."));
+        })
+        .withFailureHandler(function(err) { reject(err); })
+        .SGO_apiConsultarCnpjDados(SGO_getSessionId(), cnpjLimpo);
+    })
       .then(function(data) {
         var razao = data.razao_social || "";
         var fantasia = data.nome_fantasia || razao;
@@ -66,7 +72,10 @@
       })
       .catch(function(err) {
         console.warn("Autopreenchimento falhou:", err);
-        alert("Não foi possível buscar os dados na Receita para este CNPJ. Preencha manualmente.");
+        var msg = String((err && err.message) || err || "").replace(/^Error:\s*/i, "");
+        if (!msg) msg = "Não foi possível buscar os dados deste CNPJ.";
+        if (!/preencha manualmente/i.test(msg)) msg += " Preencha manualmente.";
+        alert(msg);
       })
       .finally(function() {
         if (btnSalvar) {

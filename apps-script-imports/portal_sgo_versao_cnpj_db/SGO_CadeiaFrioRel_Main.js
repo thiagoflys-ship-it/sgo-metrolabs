@@ -132,37 +132,8 @@ function CadeiaFrioRel_apiConsultarCnpj(payload) {
     throw new Error('Informe um CNPJ válido com 14 dígitos.');
   }
 
-  const url = 'https://brasilapi.com.br/api/cnpj/v1/' + encodeURIComponent(cnpj);
-
-  let res;
-  try {
-    res = UrlFetchApp.fetch(url, {
-      method: 'get',
-      muteHttpExceptions: true,
-      followRedirects: true,
-      headers: { Accept: 'application/json' }
-    });
-  } catch (err) {
-    throw new Error('Falha ao consultar CNPJ na BrasilAPI: ' + err.message);
-  }
-
-  const code = res.getResponseCode();
-  const body = res.getContentText() || '';
-
-  if (code === 404) {
-    throw new Error('CNPJ não encontrado na base pública.');
-  }
-
-  if (code < 200 || code >= 300) {
-    throw new Error('BrasilAPI retornou HTTP ' + code + ' ao consultar CNPJ.');
-  }
-
-  let data;
-  try {
-    data = JSON.parse(body);
-  } catch (errJson) {
-    throw new Error('Resposta inválida da API de CNPJ.');
-  }
+  // Consulta com reserva entre várias bases públicas + cache (SGO_CnpjConsulta.js).
+  const data = SGO_CNPJ_consultarDados_(cnpj);
 
   const enderecoPartes = [
     data.descricao_tipo_de_logradouro || '',
@@ -177,7 +148,7 @@ function CadeiaFrioRel_apiConsultarCnpj(payload) {
 
   return {
     ok: true,
-    fonte: 'BrasilAPI',
+    fonte: 'consulta pública',
     cnpj: CadeiaFrioRel_cfFormatarCnpj_(cnpj),
     razaoSocial: data.razao_social || '',
     nomeFantasia: data.nome_fantasia || '',

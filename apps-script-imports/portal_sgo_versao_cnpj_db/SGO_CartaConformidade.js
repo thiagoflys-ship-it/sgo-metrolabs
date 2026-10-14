@@ -103,9 +103,40 @@ function tplCartaConfBootstrap(sessionId) {
 function tplCartaConfBuscarCnpj(sessionId, cnpj) {
   try {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
-    return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.buscarCnpj(cnpj)));
+    const viaModulo = SGO_CARTA_CONFORMIDADE.buscarCnpj(cnpj);
+    if (viaModulo && viaModulo.ok) return JSON.parse(JSON.stringify(viaModulo));
+    // Reserva local (2026-10-14): se o módulo standalone falhar (base pública
+    // fora do ar ou versão antiga publicada), consulta aqui no Portal com a
+    // busca robusta (SGO_CnpjConsulta.js), no mesmo formato de retorno.
+    return tplCartaConf_cnpjLocal_(cnpj);
   } catch (e) {
     return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+  }
+}
+
+// Mesmo formato de buscarCnpjBackend do módulo standalone (projeto_exec_3).
+function tplCartaConf_cnpjLocal_(cnpj) {
+  try {
+    const d = SGO_CNPJ_consultarDados_(cnpj);
+    const logradouro = [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(' ').trim();
+    return {
+      ok: true,
+      fonte: 'consulta pública',
+      cnpj: SGO_CNPJ_somenteDigitos_(cnpj),
+      razaoSocial: d.razao_social || '',
+      nomeFantasia: d.nome_fantasia || '',
+      logradouro: logradouro,
+      numero: d.numero || '',
+      complemento: d.complemento || '',
+      bairro: d.bairro || '',
+      cidade: d.municipio || '',
+      uf: String(d.uf || '').toUpperCase(),
+      cep: d.cep || '',
+      telefone: d.ddd_telefone_1 || d.ddd_telefone_2 || '',
+      email: d.email || ''
+    };
+  } catch (e) {
+    return { ok: false, mensagem: SGO_CNPJ_mensagemErro_(e) };
   }
 }
 
