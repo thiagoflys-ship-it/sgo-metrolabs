@@ -157,6 +157,7 @@ function comProcurarNoDrive_() {
     try {
       if (f.isTrashed && f.isTrashed()) continue;
       if (f.getMimeType && f.getMimeType() !== "application/vnd.google-apps.spreadsheet") continue;
+      try { var dono = f.getOwner && f.getOwner(); if (dono && dono.getEmail() !== Session.getEffectiveUser().getEmail()) continue; } catch (x) { }   // só planilha da própria conta
       var ss = SpreadsheetApp.openById(f.getId());
       if (!ss.getSheetByName("COM_PESSOAS")) continue;
       var d = f.getDateCreated ? new Date(f.getDateCreated()).getTime() : 0;
@@ -361,7 +362,8 @@ function comCandidatoVinculo_(pessoas, sistema, u, nomesRepetidos) {
     return !comMesclada_(p) && !p[pr + "_id"] && p[ou + "_id"] && String(p.vinculo) !== "MANUAL";
   });
   var lg = comNormLogin_(u.login);
-  var porLogin = lg ? livres.filter(function (p) { return comNormLogin_(p[ou + "_login"]) === lg; }) : [];
+  var nmU = comNorm_(u.nome);
+  var porLogin = lg ? livres.filter(function (p) { return comNormLogin_(p[ou + "_login"]) === lg && (!nmU || !comNorm_(p.nome) || comNomesCompativeis_(p.nome, u.nome)); }) : [];
   if (porLogin.length === 1) return porLogin[0];
   var nm = comNorm_(u.nome);
   if (!nm || nomesRepetidos[nm]) return null;
@@ -906,7 +908,7 @@ var COM_ACOES_ = {
     var linhas = {};
     Object.keys(COM_TABS).forEach(function (t) { linhas[t] = Math.max(0, comUltima_(ss, t) - 1); });
     var cfg = comConfigMapa_(ss), conf = {};
-    Object.keys(cfg).forEach(function (k) { conf[k] = { valor: k === "sgo_db_id" ? String(cfg[k].valor).slice(0, 6) + "…" : cfg[k].valor, sistema: cfg[k].sistema, atualizado_em: cfg[k].atualizado_em }; });
+    Object.keys(cfg).forEach(function (k) { conf[k] = { valor: /segredo|token|key|senha/i.test(k) ? "(oculto)" : k === "sgo_db_id" ? String(cfg[k].valor).slice(0, 6) + "…" : cfg[k].valor, sistema: cfg[k].sistema, atualizado_em: cfg[k].atualizado_em }; });
     return { banco: { id: ss.getId(), url: ss.getUrl ? ss.getUrl() : "", nome: COM_NOME_DB }, linhas: linhas, config: conf };
   }
 };
@@ -950,4 +952,13 @@ function comPublicarAviso_(d) {
     comLog_("comPublicarAviso_: " + (e && e.message || e));
     return { ok: false, erro: "FALHA" };
   }
+}
+
+/** Mesmo login só liga contas se os nomes forem compatíveis: mesmo primeiro nome e sobrenome igual ou abreviado ("Maria S." = "Maria Souza"; "Ana Vendas" ≠ "Ana Técnica"). */
+function comNomesCompativeis_(a, b) {
+  var x = comNorm_(a).replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean), y = comNorm_(b).replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
+  if (!x.length || !y.length) return false;
+  if (x.join(" ") === y.join(" ")) return true;
+  if (x[0] !== y[0] || x.length < 2 || y.length < 2) return false;
+  return x[1].indexOf(y[1]) === 0 || y[1].indexOf(x[1]) === 0;
 }
