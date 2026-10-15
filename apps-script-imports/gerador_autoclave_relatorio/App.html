@@ -1,0 +1,1663 @@
+<script>
+  // =========================================================================
+  // 1. ESTADO GLOBAL DA UI
+  // =========================================================================
+  let idleSeconds = 0;
+  let IDLE_LIMIT = 5 * 60;
+  let isIdle = false;
+  let beepInterval = null;
+  let audioCtx = null;
+  let audioLiberado = false;
+  let monitorIdleInterval = null;
+  let clockInterval = null;
+  let listenersOciosidadeRegistrados = false;
+  let linksDrive = { laudos: '', uploads: '' };
+  let isPreviewRunning = false;
+  let isConverterRunning = false;
+  let isCnpjLookupRunning = false;
+  let configServidor = {
+    analise: {},
+    validacaoTempo: {},
+    simuladorAdmin: {},
+    motoresDisponiveis: []
+  };
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function safeValue(id) {
+    const node = el(id);
+    return node ? String(node.value || '') : '';
+  }
+
+  function safeSetValue(id, value) {
+    const node = el(id);
+    if (node) node.value = value == null ? '' : value;
+  }
+
+  function safeChecked(id) {
+    const node = el(id);
+    return !!(node && node.checked);
+  }
+
+  function existeCampo(id) {
+    return !!el(id);
+  }
+
+  function setStatusBadge(texto, bg, fg) {
+    const badge = el('statusBadge');
+    if (!badge) return;
+
+    badge.innerText = texto || '';
+    badge.style.background = bg || '#eef2f7';
+    badge.style.color = fg || '#475569';
+  }
+
+  function setButtonBusy(buttonId, flag, busyText, normalText) {
+    const btn = el(buttonId);
+    if (!btn) return;
+
+    btn.disabled = !!flag;
+    if (flag) {
+      btn.dataset.normalText = btn.innerText || normalText || '';
+      btn.innerText = busyText || 'PROCESSANDO...';
+    } else {
+      btn.innerText = normalText || btn.dataset.normalText || btn.innerText || '';
+    }
+  }
+
+  function escapeHtml_(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function parseNumeroUi_(valor, fallback) {
+    const s = String(valor == null ? '' : valor).replace(',', '.').trim();
+    const n = Number(s);
+    return isFinite(n) ? n : fallback;
+  }
+
+  function parseInteiroUi_(valor, fallback) {
+    const n = parseInt(String(valor == null ? '' : valor).trim(), 10);
+    return isFinite(n) ? n : fallback;
+  }
+
+  function clampUi_(valor, min, max, fallback) {
+    let n = Number(valor);
+    if (!isFinite(n)) n = fallback;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  function normalizarCnpjUi_(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  function formatarCnpjUi_(valor) {
+    const s = normalizarCnpjUi_(valor);
+    if (s.length !== 14) return String(valor || '');
+    return s.substring(0, 2) + '.' + s.substring(2, 5) + '.' + s.substring(5, 8) + '/' + s.substring(8, 12) + '-' + s.substring(12);
+  }
+
+  function fmtNumUi_(valor, casas) {
+    const n = Number(valor);
+    return isFinite(n) ? n.toFixed(casas) : Number(0).toFixed(casas);
+  }
+
+  // =========================================================================
+  // 2. LOG / TERMINAL
+  // =========================================================================
+  function writeLog(text, tipo) {
+    const term = el('terminalLog');
+    if (!term) return;
+
+    const time = new Date().toLocaleTimeString('pt-BR');
+    const msg = `[${time}] ➜ ${String(text || '')}`;
+
+    const line = document.createElement('div');
+    line.textContent = msg;
+
+    if (tipo === 'SUCESSO') {
+      line.className = 'success';
+    } else if (tipo === 'ERRO') {
+      line.className = 'error';
+    } else if (tipo === 'AVISO') {
+      line.className = 'warn';
+    }
+
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  // =========================================================================
+  // 3. SISTEMA ANTI-OCIOSIDADE, RELÓGIO E WIDGETS DE GESTÃO
+  // =========================================================================
+  function atualizarClockEStatus() {
+    const clock = el('clockWidget');
+    const perfWidget = el('perfWidget');
+    const now = new Date();
+
+    if (clock) {
+      clock.innerText = now.toLocaleString('pt-BR');
+    }
+
+    if (perfWidget) {
+      if (isIdle) {
+        perfWidget.innerHTML = 'Status: Ocioso / Alerta';
+        perfWidget.style.background = '#fee2e2';
+        perfWidget.style.color = '#991b1b';
+      } else {
+        perfWidget.innerHTML = 'Status: Produtivo';
+        perfWidget.style.background = '#dcfce7';
+        perfWidget.style.color = '#166534';
+      }
+    }
+  }
+
+  function iniciarRelogioStatus() {
+    if (clockInterval) clearInterval(clockInterval);
+    clockInterval = setInterval(atualizarClockEStatus, 1000);
+  }
+
+  function liberarAudioUsuario() {
+    audioLiberado = true;
+
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    } catch (e) {}
+  }
+
+  function pararBipEstridente() {
+    if (beepInterval) {
+      clearInterval(beepInterval);
+      beepInterval = null;
+    }
+  }
+
+  function tocarBipEstridente() {
+    if (!audioLiberado) {
+      writeLog('Aviso: o navegador ainda não liberou áudio. Clique na tela uma vez para habilitar o som do alarme.', 'AVISO');
+      return;
+    }
+
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      pararBipEstridente();
+
+      beepInterval = setInterval(() => {
+        try {
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+
+          oscillator.type = 'square';
+          oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+
+          gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.22);
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.22);
+        } catch (e) {}
+      }, 700);
+    } catch (e) {
+      writeLog('Aviso: navegador bloqueou o áudio do alerta.', 'AVISO');
+    }
+  }
+
+  function dispararAlarmeOciosidade() {
+    if (isIdle) return;
+
+    isIdle = true;
+
+    const alertBox = el('idleAlert');
+    if (alertBox) {
+      alertBox.classList.add('show');
+    }
+
+    writeLog('ALERTA DE GESTÃO: Operador inativo. Produtividade interrompida.', 'ERRO');
+    tocarBipEstridente();
+    atualizarClockEStatus();
+  }
+
+  function resetIdleTimer() {
+    idleSeconds = 0;
+
+    if (isIdle) {
+      window.resetIdleAlert();
+    }
+  }
+
+  function handleAtividadeUsuario() {
+    liberarAudioUsuario();
+    resetIdleTimer();
+  }
+
+  function iniciarListenersOciosidade() {
+    if (listenersOciosidadeRegistrados) return;
+    listenersOciosidadeRegistrados = true;
+
+    ['mousemove', 'keydown', 'scroll', 'click', 'touchstart', 'mousedown'].forEach(evt => {
+      document.addEventListener(evt, handleAtividadeUsuario, { passive: true });
+    });
+
+    window.addEventListener('focus', resetIdleTimer);
+    window.addEventListener('load', resetIdleTimer);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        resetIdleTimer();
+      }
+    });
+  }
+
+  function iniciarMonitorOciosidade() {
+    if (monitorIdleInterval) clearInterval(monitorIdleInterval);
+
+    monitorIdleInterval = setInterval(() => {
+      if (document.hidden) return;
+      if (isIdle) return;
+
+      idleSeconds++;
+
+      if (idleSeconds >= IDLE_LIMIT) {
+        dispararAlarmeOciosidade();
+      }
+    }, 1000);
+  }
+
+  window.resetIdleAlert = function () {
+    isIdle = false;
+    idleSeconds = 0;
+
+    const alertBox = el('idleAlert');
+    if (alertBox) {
+      alertBox.classList.remove('show');
+    }
+
+    pararBipEstridente();
+    atualizarClockEStatus();
+    writeLog('Operador retomou a atividade. Relógio de produtividade reiniciado.', 'SUCESSO');
+  };
+
+  // =========================================================================
+  // 4. LINKS DRIVE
+  // =========================================================================
+  function abrirLinkPasta(tipo) {
+    if (tipo === 'LAUDOS' && linksDrive.laudos) {
+      window.open(linksDrive.laudos, '_blank');
+      return;
+    }
+
+    if (tipo === 'UPLOADS' && linksDrive.uploads) {
+      window.open(linksDrive.uploads, '_blank');
+      return;
+    }
+
+    alert('O link da pasta ainda não foi sincronizado com o servidor. Verifique o Config.gs.');
+  }
+
+  // =========================================================================
+  // 5. CONTROLE DA INTERFACE
+  // =========================================================================
+  function configurarModoEntrada() {
+    const selectModo = el('uiModo');
+    if (!selectModo) return;
+
+    selectModo.innerHTML = `
+      <option value="FILE_ID">Ler por ID / Link do Google Sheets (Recomendado)</option>
+      <option value="COLAR">Colar Dados Brutos (Texto/CSV)</option>
+      <option value="SIMULADO_ADMIN">Relatório interno / Dados reconstituídos (Admin)</option>
+    `;
+    selectModo.value = 'FILE_ID';
+
+    atualizarVisibilidadeModo();
+  }
+
+  function atualizarVisibilidadeModo() {
+    const modo = safeValue('uiModo');
+
+    const boxUpload = el('boxUpload');
+    const boxTextarea = el('boxTextarea');
+    const boxFileId = el('boxFileId');
+    const boxSimulacao = el('boxSimulacaoAdmin');
+
+    if (boxUpload) boxUpload.style.display = (modo === 'FILE_ID') ? 'block' : 'none';
+    if (boxTextarea) boxTextarea.style.display = (modo === 'COLAR') ? 'block' : 'none';
+    if (boxFileId) boxFileId.style.display = (modo === 'FILE_ID') ? 'block' : 'none';
+    if (boxSimulacao) boxSimulacao.style.display = (modo === 'SIMULADO_ADMIN') ? 'block' : 'none';
+    atualizarBotaoGeracaoPorModo();
+  }
+
+  function isLeakTestAtivo_() {
+    const chk = el('uiLeakTestAtivo');
+    return !!(chk && chk.checked);
+  }
+
+  function isLeakTestReconstituidoAtivo_() {
+    const chk = el('uiLeakTestReconstituido');
+    return !!(isLeakTestAtivo_() && chk && chk.checked);
+  }
+
+  function textoBotaoConverterAtual_() {
+    const modo = safeValue('uiModo');
+    if (isLeakTestAtivo_()) {
+      return isLeakTestReconstituidoAtivo_() ? 'Gerar Relatório de Leak Test (Interno)' : 'Gerar Relatório de Leak Test';
+    }
+    return modo === 'SIMULADO_ADMIN' ? 'Gerar Relatório Interno' : 'Gerar Relatório de Auditoria';
+  }
+
+  function atualizarBotaoGeracaoPorModo() {
+    const btn = el('btnConv');
+    if (!btn || btn.disabled) return;
+
+    const modo = safeValue('uiModo');
+    btn.innerText = textoBotaoConverterAtual_();
+    btn.classList.toggle('btn-warning-simulado', modo === 'SIMULADO_ADMIN' || isLeakTestReconstituidoAtivo_());
+  }
+
+  function atualizarVisibilidadeLeakTest() {
+    const box = el('boxLeakTest');
+    if (box) box.style.display = isLeakTestAtivo_() ? 'block' : 'none';
+
+    if (!isLeakTestAtivo_()) {
+      const chkRecon = el('uiLeakTestReconstituido');
+      if (chkRecon) chkRecon.checked = false;
+    }
+
+    atualizarVisibilidadeLeakTestReconstituido();
+  }
+
+  function atualizarVisibilidadeLeakTestReconstituido() {
+    const ativo = isLeakTestReconstituidoAtivo_();
+
+    const boxRecon = el('boxLeakTestReconstituido');
+    if (boxRecon) boxRecon.style.display = ativo ? 'block' : 'none';
+
+    const blocoNormal = el('blocoIngestaoNormal');
+    if (blocoNormal) blocoNormal.style.display = ativo ? 'none' : '';
+
+    atualizarBotaoGeracaoPorModo();
+  }
+
+  function validarSenhaRelatorioInterno_(senha) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .apiDispatch({
+          fn: 'apiValidarSenhaSimuladorAdmin',
+          payload: { senha: senha }
+        });
+    });
+  }
+
+  async function ativarModoSimuladoAdmin() {
+    const senha = window.prompt('Informe a senha administrativa para abrir o RELATÓRIO INTERNO:');
+    if (senha === null) return;
+
+    const senhaLimpa = String(senha || '').trim();
+    if (!senhaLimpa) {
+      writeLog('Acesso ao relatório interno cancelado: senha não informada.', 'AVISO');
+      return;
+    }
+
+    writeLog('Validando senha administrativa do relatório interno...', 'AVISO');
+
+    try {
+      await validarSenhaRelatorioInterno_(senhaLimpa);
+      safeSetValue('uiSimSenha', senhaLimpa);
+      safeSetValue('uiModo', 'SIMULADO_ADMIN');
+      atualizarVisibilidadeModo();
+
+      const box = el('boxSimulacaoAdmin');
+      if (box && box.scrollIntoView) {
+        box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      setStatusBadge('RELATÓRIO INTERNO', '#ffedd5', '#9a3412');
+      writeLog('Relatório interno liberado. Preencha horários, pré-vácuo, esterilização, secagem e temperatura.', 'AVISO');
+    } catch (err) {
+      writeLog('Senha inválida para abrir relatório interno: ' + normalizarErro_(err), 'ERRO');
+      alert('Senha inválida para abrir o RELATÓRIO INTERNO.');
+    }
+  }
+
+  function atualizarVisibilidadeOverrideManual() {
+    const box = el('overrideManualBox');
+    if (!box) return;
+
+    const modo = safeValue('uiModoAnaliseJanela') || 'AUTO';
+    box.style.display = (modo === 'MANUAL') ? 'block' : 'none';
+  }
+
+  function atualizarVisibilidadeCamposRobustez() {
+    const modo = safeValue('uiModoReconhecimentoExp') || 'PIOR_SENSOR';
+    const wrapPercentual = el('boxPercentualSensoresExp');
+
+    if (wrapPercentual) {
+      wrapPercentual.style.display = (modo === 'PERCENTUAL') ? 'block' : 'none';
+    }
+  }
+
+  function aplicarMotoresDisponiveisNaUI() {
+    const selectMotor = el('uiMotor');
+    const setpoint = el('uiSetpoint');
+    const motores = Array.isArray(configServidor.motoresDisponiveis) && configServidor.motoresDisponiveis.length
+      ? configServidor.motoresDisponiveis
+      : ['134', '121', '127', '60', '55'];
+
+    if (selectMotor && !selectMotor.dataset.renderedBySync) {
+      selectMotor.innerHTML = motores.map(m => {
+        const rotulo =
+          m === '134' ? 'Autoclave 134°C' :
+          m === '121' ? 'Autoclave 121°C' :
+          m === '127' ? 'Autoclave 127°C' :
+          m === '60' ? 'Baixa Temp 60°C' :
+          m === '55' ? 'Baixa Temp 55°C' :
+          (m + ' °C');
+        return `<option value="${escapeHtml_(m)}">${escapeHtml_(rotulo)}</option>`;
+      }).join('');
+      selectMotor.value = motores.includes('134') ? '134' : motores[0];
+      selectMotor.dataset.renderedBySync = '1';
+    }
+
+    if (setpoint) {
+      const valor = safeValue('uiMotor') || (motores.includes('134') ? '134' : (motores[0] || '134'));
+      if (!setpoint.querySelector(`option[value="${CSS.escape(valor)}"]`)) {
+        setpoint.innerHTML = motores.map(m => `<option value="${escapeHtml_(m)}">${escapeHtml_(m)}.0 °C</option>`).join('');
+      }
+      setpoint.value = valor;
+    }
+  }
+
+  function sincronizarCicloPorTemperaturaUi_(temperatura, origem) {
+    const motores = Array.isArray(configServidor.motoresDisponiveis) && configServidor.motoresDisponiveis.length
+      ? configServidor.motoresDisponiveis.map(String)
+      : ['134', '121', '127', '60', '55'];
+    const n = Math.round(parseNumeroUi_(temperatura, NaN));
+    const ciclo = String(n);
+    if (!isFinite(n) || !motores.includes(ciclo)) return;
+
+    safeSetValue('uiMotor', ciclo);
+    safeSetValue('uiSetpoint', ciclo);
+    if (origem !== 'simulacao') {
+      safeSetValue('uiSimTempAlvo', Number(ciclo).toFixed(1));
+    }
+  }
+
+  function injetarHelperDrive() {
+    const boxFileId = el('boxFileId');
+    if (!boxFileId || el('btnDriveAjudante')) return;
+
+    const helper = document.createElement('div');
+    helper.id = 'btnDriveAjudante';
+    helper.innerHTML = `
+      <div class="alert-box warning" style="margin-bottom:15px; text-align:center;">
+        <strong>PASSO 1:</strong>
+        <button
+          type="button"
+          onclick="abrirLinkPasta('UPLOADS');"
+          class="btn btn-secondary"
+          style="display:inline-block; margin:0 10px; min-height:auto; padding:8px 14px;">
+          ABRIR PASTA DE DATALOGGERS
+        </button>
+        <br>
+        <span class="field-help" style="display:inline-block; margin-top:8px;">
+          Você pode enviar o arquivo manualmente na pasta ou usar o upload direto abaixo.
+        </span>
+      </div>
+    `;
+
+    boxFileId.insertBefore(helper, boxFileId.firstChild);
+  }
+
+  function bindEventosUI() {
+    const modo = el('uiModo');
+    if (modo) modo.addEventListener('change', atualizarVisibilidadeModo);
+
+    const cnpjInput = el('uiCnpj');
+    if (cnpjInput) {
+      cnpjInput.addEventListener('blur', consultarCnpjAutomatico);
+      cnpjInput.addEventListener('change', consultarCnpjAutomatico);
+    }
+
+    const motor = el('uiMotor');
+    const setpoint = el('uiSetpoint');
+    if (motor && setpoint) {
+      motor.addEventListener('change', () => {
+        setpoint.value = motor.value;
+        safeSetValue('uiSimTempAlvo', motor.value ? (Number(motor.value).toFixed(1)) : '134.0');
+      });
+
+      setpoint.addEventListener('change', () => {
+        safeSetValue('uiSimTempAlvo', setpoint.value ? (Number(setpoint.value).toFixed(1)) : '134.0');
+        sincronizarCicloPorTemperaturaUi_(setpoint.value, 'setpoint');
+      });
+    }
+
+    const simTempAlvo = el('uiSimTempAlvo');
+    if (simTempAlvo) {
+      simTempAlvo.addEventListener('change', () => {
+        sincronizarCicloPorTemperaturaUi_(simTempAlvo.value, 'simulacao');
+      });
+    }
+
+    const sensores = el('uiSensores');
+    if (sensores) {
+      sensores.addEventListener('change', () => {
+        renderizarSensoresAtivos();
+      });
+    }
+
+    const inputArquivo = el('uiArquivoLocal');
+    if (inputArquivo) {
+      inputArquivo.addEventListener('change', handleUploadArquivoLocal);
+    }
+
+    const modoJanela = el('uiModoAnaliseJanela');
+    if (modoJanela) {
+      modoJanela.addEventListener('change', atualizarVisibilidadeOverrideManual);
+    }
+
+    const modoReconhecimento = el('uiModoReconhecimentoExp');
+    if (modoReconhecimento) {
+      modoReconhecimento.addEventListener('change', atualizarVisibilidadeCamposRobustez);
+    }
+
+    const leakTestAtivo = el('uiLeakTestAtivo');
+    if (leakTestAtivo) {
+      leakTestAtivo.addEventListener('change', atualizarVisibilidadeLeakTest);
+    }
+
+    const leakTestReconstituido = el('uiLeakTestReconstituido');
+    if (leakTestReconstituido) {
+      leakTestReconstituido.addEventListener('change', atualizarVisibilidadeLeakTestReconstituido);
+    }
+  }
+
+  function limparTabelaPreview() {
+    const tabelaHead = document.querySelector('#tblPreview thead');
+    const tabelaBody = document.querySelector('#tblPreview tbody');
+    if (tabelaHead) tabelaHead.innerHTML = '';
+    if (tabelaBody) tabelaBody.innerHTML = '';
+  }
+
+  function limparTela() {
+    const camposTexto = [
+      'uiCliente', 'uiCnpj', 'uiEndereco', 'uiPrograma', 'uiCicloNum',
+      'uiTag', 'uiMarca', 'uiModelo', 'uiNumSerie', 'uiLote', 'uiLocal',
+      'uiRespTecnico', 'uiOperador', 'uiDados', 'uiFileId',
+      'uiSimSenha', 'uiSimInicioCiclo', 'uiSimFimCiclo', 'uiSimInicioPreVacuo', 'uiSimFimPreVacuo', 'uiSimInicioEsterilizacao', 'uiSimFimEsterilizacao', 'uiSimInicioSecagem', 'uiSimFimSecagem',
+      'uiLeakInicio', 'uiLeakFim', 'uiLeakSimSenha'
+    ];
+
+    camposTexto.forEach(id => safeSetValue(id, ''));
+
+    if (el('uiEnsaio')) el('uiEnsaio').selectedIndex = 0;
+    safeSetValue('uiMotor', '134');
+    safeSetValue('uiSetpoint', '134');
+    safeSetValue('uiSensores', '12');
+    safeSetValue('uiDateStyle', String(configServidor.defaultDateStyle || 'AUTO'));
+    safeSetValue('uiOffTemp', '0.00');
+    safeSetValue('uiOffF0', '0.00');
+    safeSetValue('uiDelim', 'AUTO');
+    safeSetValue('uiModo', 'FILE_ID');
+    safeSetValue('uiSimTempAlvo', '134.0');
+    safeSetValue('uiSimIntervalo', String(configServidor.simuladorAdmin?.intervaloSegundosDefault ?? '30'));
+    safeSetValue('uiSimPulsosPreVacuo', '3');
+    safeSetValue('uiSimPressaoPulsoPositiva', '1.50');
+    safeSetValue('uiSimPressaoVacuoMin', '0.35');
+
+    safeSetValue('uiModoAnaliseJanela', 'AUTO');
+    safeSetValue('uiConsInicio', String(configServidor.analise?.consecutivasInicio ?? '2'));
+    safeSetValue('uiConsFim', String(configServidor.analise?.consecutivasFim ?? '3'));
+    safeSetValue('uiHistereseExp', String(configServidor.analise?.histereseTemperatura ?? '0.50'));
+
+    safeSetValue('uiTolEntradaExp', String(configServidor.analise?.toleranciaEntrada ?? '0.00'));
+    safeSetValue('uiTolSaidaExp', String(configServidor.analise?.toleranciaSaida ?? '0.50'));
+    safeSetValue('uiModoReconhecimentoExp', String(configServidor.analise?.modoReconhecimentoExposicao ?? 'PIOR_SENSOR'));
+    safeSetValue('uiPercentualSensoresExp', String(configServidor.analise?.percentualMinimoSensores ?? '1.00'));
+
+    safeSetValue('uiManualInicioCiclo', '');
+    safeSetValue('uiManualFimCiclo', '');
+    safeSetValue('uiManualInicioExp', '');
+    safeSetValue('uiManualFimExp', '');
+
+    const inputArquivo = el('uiArquivoLocal');
+    if (inputArquivo) inputArquivo.value = '';
+
+    safeSetValue('uiLeakUnidadePressao', 'MBAR');
+    safeSetValue('uiLeakSimTemperatura', '25.0');
+    safeSetValue('uiLeakSimResultado', 'ALEATORIO');
+    const leakTestAtivo = el('uiLeakTestAtivo');
+    if (leakTestAtivo) leakTestAtivo.checked = false;
+    const leakTestReconstituido = el('uiLeakTestReconstituido');
+    if (leakTestReconstituido) leakTestReconstituido.checked = false;
+
+    window.resetIdleAlert();
+    atualizarVisibilidadeModo();
+    atualizarVisibilidadeOverrideManual();
+    atualizarVisibilidadeCamposRobustez();
+    atualizarVisibilidadeLeakTest();
+    atualizarBotaoGeracaoPorModo();
+    renderizarSensoresAtivos();
+    limparTabelaPreview();
+
+    const linkResultado = el('linkResultado');
+    if (linkResultado) linkResultado.innerHTML = '';
+
+    const terminal = el('terminalLog');
+    if (terminal) {
+      terminal.innerHTML = '';
+      writeLog('Sistema resetado. Aguardando novos dados...', 'SUCESSO');
+    }
+
+    setStatusBadge('SISTEMA ONLINE', '#dcfce7', '#166534');
+    writeLog('Tela limpa e pronta para nova operação.', 'SUCESSO');
+  }
+
+  // =========================================================================
+  // 6. SENSORES ATIVOS / DESABILITADOS
+  // =========================================================================
+  function obterQuantidadeSensoresUI() {
+    const n = Number(safeValue('uiSensores') || 12);
+    if (!isFinite(n) || n < 1) return 12;
+    return Math.min(Math.max(Math.round(n), 1), 60);
+  }
+
+  function renderizarSensoresAtivos() {
+    const wrap = el('sensorSelectorWrap');
+    if (!wrap) return;
+
+    const total = obterQuantidadeSensoresUI();
+
+    let html = `
+      <div class="section-divider" style="margin-top:10px;">
+        Sensores considerados na análise
+      </div>
+      <div class="check-grid">
+    `;
+
+    for (let i = 1; i <= total; i++) {
+      html += `
+        <label class="check-item">
+          <input type="checkbox" class="sensor-check" data-sensor="${i}" checked>
+          <span>S${i}</span>
+        </label>
+      `;
+    }
+
+    html += `</div>
+      <div class="btn-container" style="margin-top:10px;">
+        <button type="button" class="btn btn-secondary" onclick="marcarTodosSensores(true)">Marcar todos</button>
+        <button type="button" class="btn btn-secondary" onclick="marcarTodosSensores(false)">Desmarcar todos</button>
+      </div>
+    `;
+
+    wrap.innerHTML = html;
+  }
+
+  function marcarTodosSensores(flag) {
+    document.querySelectorAll('.sensor-check').forEach(chk => {
+      chk.checked = !!flag;
+    });
+  }
+
+  function obterSensoresAtivosDaUI() {
+    const checks = Array.from(document.querySelectorAll('.sensor-check'));
+    if (!checks.length) {
+      const total = obterQuantidadeSensoresUI();
+      return Array.from({ length: total }, () => true);
+    }
+    return checks.map(chk => !!chk.checked);
+  }
+
+  // =========================================================================
+  // 7. CONSULTA AUTOMATICA DE CNPJ
+  // =========================================================================
+  function preencherDadosCnpjNaUi_(dados) {
+    dados = dados || {};
+
+    if (dados.cnpj) safeSetValue('uiCnpj', dados.cnpj);
+    if (dados.cliente) safeSetValue('uiCliente', dados.cliente);
+    if (dados.endereco) safeSetValue('uiEndereco', dados.endereco);
+
+    const localizacao = [dados.municipio || '', dados.uf || '']
+      .filter(Boolean)
+      .join(' / ');
+    if (localizacao) safeSetValue('uiLocal', localizacao);
+  }
+
+  async function consultarCnpjAutomatico() {
+    const cnpj = normalizarCnpjUi_(safeValue('uiCnpj'));
+
+    if (!cnpj) return;
+    if (cnpj.length !== 14) {
+      writeLog('CNPJ ainda incompleto para consulta automática.', 'AVISO');
+      return;
+    }
+
+    if (isCnpjLookupRunning) return;
+    isCnpjLookupRunning = true;
+    safeSetValue('uiCnpj', formatarCnpjUi_(cnpj));
+    writeLog('Consultando CNPJ em base pública...', 'SUCESSO');
+
+    google.script.run
+      .withSuccessHandler(res => {
+        isCnpjLookupRunning = false;
+        res = res || {};
+        preencherDadosCnpjNaUi_(res);
+        writeLog('CNPJ preenchido automaticamente via ' + (res.fonte || 'consulta pública') + ': ' + (res.cliente || '-'), 'SUCESSO');
+        if (res.situacaoCadastral) {
+          writeLog('Situacao cadastral: ' + res.situacaoCadastral, 'SUCESSO');
+        }
+      })
+      .withFailureHandler(err => {
+        isCnpjLookupRunning = false;
+        writeLog('Falha ao consultar CNPJ automaticamente: ' + normalizarErro_(err), 'AVISO');
+      })
+      .apiDispatch({
+        fn: 'apiConsultarCnpj',
+        payload: { cnpj: cnpj }
+      });
+  }
+
+  // =========================================================================
+  // 8. UPLOAD DIRETO DO ARQUIVO LOCAL
+  // =========================================================================
+  function handleUploadArquivoLocal(evt) {
+    const file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
+    if (!file) return;
+
+    writeLog('Lendo arquivo local para upload: ' + file.name, 'SUCESSO');
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const result = String((e && e.target && e.target.result) || '');
+        const base64 = result.split(',')[1] || '';
+
+        if (!base64) {
+          writeLog('Falha ao converter arquivo para base64.', 'ERRO');
+          return;
+        }
+
+        writeLog('Enviando arquivo para a pasta de uploads do Drive...', 'SUCESSO');
+
+        google.script.run
+          .withSuccessHandler(res => {
+            res = res || {};
+            safeSetValue('uiFileId', res.fileId || '');
+            writeLog('Upload concluído. File ID preenchido automaticamente: ' + (res.fileId || '-'), 'SUCESSO');
+
+            if (res.fileUrl) {
+              writeLog('Arquivo disponível no Drive: ' + res.fileUrl, 'SUCESSO');
+            }
+          })
+          .withFailureHandler(err => {
+            writeLog('Falha no upload do arquivo: ' + normalizarErro_(err), 'ERRO');
+          })
+          .apiDispatch({
+            fn: 'apiUploadArquivo',
+            payload: {
+              fileName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              base64: base64
+            }
+          });
+      } catch (err) {
+        writeLog('Erro ao preparar upload: ' + normalizarErro_(err), 'ERRO');
+      }
+    };
+
+    reader.onerror = function() {
+      writeLog('Erro ao ler o arquivo local selecionado.', 'ERRO');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  // =========================================================================
+  // 8. PAYLOAD / VALIDAÇÃO
+  // =========================================================================
+  function obterOverrideManualDaUI() {
+    const existeModoAnalise = !!el('uiModoAnaliseJanela');
+    const modoAnaliseJanela = existeModoAnalise ? (safeValue('uiModoAnaliseJanela') || 'AUTO') : 'AUTO';
+    const manual = (modoAnaliseJanela === 'MANUAL');
+
+    return {
+      habilitado: manual,
+      inicioCiclo: safeValue('uiManualInicioCiclo'),
+      fimCiclo: safeValue('uiManualFimCiclo'),
+      inicioExposicao: safeValue('uiManualInicioExp'),
+      fimExposicao: safeValue('uiManualFimExp')
+    };
+  }
+
+  function obterRobustezDaUI() {
+    const histerese = safeValue('uiHistereseExp');
+    const consInicio = safeValue('uiConsInicio');
+    const consFim = safeValue('uiConsFim');
+    const tolEntrada = safeValue('uiTolEntradaExp');
+    const tolSaida = safeValue('uiTolSaidaExp');
+    const modoReconhecimento = safeValue('uiModoReconhecimentoExp');
+    const percentualSensores = safeValue('uiPercentualSensoresExp');
+
+    return {
+      histereseTemperatura: histerese || '0.50',
+      consecutivasInicio: consInicio || '2',
+      consecutivasFim: consFim || '3',
+      toleranciaEntrada: tolEntrada || '0.00',
+      toleranciaSaida: tolSaida || '0.50',
+      modoReconhecimentoExposicao: modoReconhecimento || 'PIOR_SENSOR',
+      percentualMinimoSensores: percentualSensores || '1.00'
+    };
+  }
+
+  async function construirPayload() {
+    if (safeValue('uiModo') === 'SIMULADO_ADMIN') {
+      sincronizarCicloPorTemperaturaUi_(safeValue('uiSimTempAlvo'), 'simulacao');
+    } else {
+      sincronizarCicloPorTemperaturaUi_(safeValue('uiSetpoint'), 'setpoint');
+    }
+
+    const robustez = obterRobustezDaUI();
+    const overrideJanela = obterOverrideManualDaUI();
+    const existeModoAnalise = !!el('uiModoAnaliseJanela');
+
+    return {
+      cliente: safeValue('uiCliente'),
+      cnpj: safeValue('uiCnpj'),
+      endereco: safeValue('uiEndereco'),
+      programa: safeValue('uiPrograma'),
+      ensaio: safeValue('uiEnsaio'),
+      cicloNum: safeValue('uiCicloNum'),
+      tag: safeValue('uiTag'),
+      marca: safeValue('uiMarca'),
+      modelo: safeValue('uiModelo'),
+      numSerie: safeValue('uiNumSerie'),
+      lote: safeValue('uiLote'),
+      local: safeValue('uiLocal'),
+      respTecnico: safeValue('uiRespTecnico'),
+      operador: safeValue('uiOperador'),
+
+      setpoint: safeValue('uiSetpoint'),
+      motor: safeValue('uiMotor'),
+      nSensores: safeValue('uiSensores'),
+      dateStyle: safeValue('uiDateStyle'),
+
+      offsetTemp: safeValue('uiOffTemp'),
+      offsetF0: safeValue('uiOffF0'),
+
+      modoEntrada: isLeakTestReconstituidoAtivo_() ? 'LEAK_TEST_RECONSTITUIDO' : safeValue('uiModo'),
+      delimManual: safeValue('uiDelim'),
+      textoColado: safeValue('uiDados'),
+      fileId: safeValue('uiFileId'),
+
+      simulacaoSenha: safeValue('uiSimSenha'),
+      simulacao: {
+        inicioCiclo: safeValue('uiSimInicioCiclo'),
+        fimCiclo: safeValue('uiSimFimCiclo'),
+        inicioPreVacuo: safeValue('uiSimInicioPreVacuo'),
+        fimPreVacuo: safeValue('uiSimFimPreVacuo'),
+        pulsosPreVacuo: safeValue('uiSimPulsosPreVacuo'),
+        pressaoPulsoPositiva: safeValue('uiSimPressaoPulsoPositiva'),
+        pressaoVacuoMin: safeValue('uiSimPressaoVacuoMin'),
+        inicioEsterilizacao: safeValue('uiSimInicioEsterilizacao'),
+        fimEsterilizacao: safeValue('uiSimFimEsterilizacao'),
+        inicioSecagem: safeValue('uiSimInicioSecagem'),
+        fimSecagem: safeValue('uiSimFimSecagem'),
+        temperaturaAlvo: safeValue('uiSimTempAlvo'),
+        intervaloSegundos: safeValue('uiSimIntervalo')
+      },
+
+      sensoresAtivos: obterSensoresAtivosDaUI(),
+
+      modoAnaliseJanela: existeModoAnalise ? (safeValue('uiModoAnaliseJanela') || 'AUTO') : 'AUTO',
+      robustez: robustez,
+      overrideJanela: overrideJanela,
+
+      tipoRelatorio: isLeakTestAtivo_() ? 'LEAK_TEST' : 'CICLO',
+      leakTest: {
+        inicio: safeValue('uiLeakInicio'),
+        fim: safeValue('uiLeakFim'),
+        unidadePressao: safeValue('uiLeakUnidadePressao') || 'MBAR'
+      },
+      leakTestSimulado: {
+        senha: safeValue('uiLeakSimSenha'),
+        temperatura: safeValue('uiLeakSimTemperatura'),
+        resultadoDesejado: safeValue('uiLeakSimResultado') || 'ALEATORIO'
+      }
+    };
+  }
+
+  function validarPayloadAntesEnvio(payload) {
+    if (!payload) {
+      throw new Error('Payload não foi montado corretamente.');
+    }
+
+    if (payload.modoEntrada === 'FILE_ID' && !String(payload.fileId || '').trim()) {
+      throw new Error('Informe o ID, o link da planilha Google ou faça o upload do arquivo.');
+    }
+
+    if (payload.modoEntrada === 'COLAR' && !String(payload.textoColado || '').trim()) {
+      throw new Error('Cole os dados brutos do datalogger antes de continuar.');
+    }
+
+    if (payload.modoEntrada === 'SIMULADO_ADMIN') {
+      if (!String(payload.simulacaoSenha || '').trim()) {
+        throw new Error('Informe a senha administrativa para o relatório interno.');
+      }
+      const sim = payload.simulacao || {};
+      ['inicioCiclo', 'fimCiclo', 'inicioEsterilizacao', 'fimEsterilizacao'].forEach(campo => {
+        if (!String(sim[campo] || '').trim()) {
+          throw new Error('Preencha todos os horários do relatório interno.');
+        }
+      });
+      const temp = parseNumeroUi_(sim.temperaturaAlvo, NaN);
+      if (!isFinite(temp) || temp < 40 || temp > 150) {
+        throw new Error('Informe uma temperatura alvo válida para o relatório interno.');
+      }
+      const intervalo = parseInteiroUi_(sim.intervaloSegundos, 30);
+      if (!isFinite(intervalo) || intervalo < 10 || intervalo > 600) {
+        throw new Error('Informe intervalo entre leituras de 10 a 600 segundos.');
+      }
+      if ((String(sim.inicioPreVacuo || '').trim() && !String(sim.fimPreVacuo || '').trim()) || (!String(sim.inicioPreVacuo || '').trim() && String(sim.fimPreVacuo || '').trim())) {
+        throw new Error('Informe início e término do pré-vácuo, ou deixe ambos em branco.');
+      }
+      if ((String(sim.inicioSecagem || '').trim() && !String(sim.fimSecagem || '').trim()) || (!String(sim.inicioSecagem || '').trim() && String(sim.fimSecagem || '').trim())) {
+        throw new Error('Informe início e término da secagem, ou deixe ambos em branco.');
+      }
+      const pulsosPreVacuo = clampUi_(parseInteiroUi_(sim.pulsosPreVacuo, 3), 0, 12, 3);
+      const pressaoPulso = clampUi_(parseNumeroUi_(sim.pressaoPulsoPositiva, 1.50), 1.05, 2.50, 1.50);
+      const pressaoVacuo = clampUi_(parseNumeroUi_(sim.pressaoVacuoMin, 0.35), 0.05, 0.95, 0.35);
+      payload.simulacao.temperaturaAlvo = String(temp);
+      payload.simulacao.intervaloSegundos = String(intervalo);
+      payload.simulacao.pulsosPreVacuo = String(pulsosPreVacuo);
+      payload.simulacao.pressaoPulsoPositiva = String(pressaoPulso);
+      payload.simulacao.pressaoVacuoMin = String(pressaoVacuo);
+    }
+
+    if (payload.tipoRelatorio === 'LEAK_TEST') {
+      if (!String(payload.leakTest?.inicio || '').trim()) {
+        throw new Error('Informe a hora de início do Leak Test.');
+      }
+      if (!String(payload.leakTest?.fim || '').trim()) {
+        throw new Error('Informe a hora de fim do Leak Test.');
+      }
+
+      if (payload.modoEntrada === 'LEAK_TEST_RECONSTITUIDO') {
+        if (!String(payload.leakTestSimulado?.senha || '').trim()) {
+          throw new Error('Informe a senha administrativa para o relatório interno do Leak Test.');
+        }
+        const tempLeak = parseNumeroUi_(payload.leakTestSimulado?.temperatura, NaN);
+        if (!isFinite(tempLeak) || tempLeak < -20 || tempLeak > 200) {
+          throw new Error('Informe uma temperatura válida para o relatório interno do Leak Test.');
+        }
+      }
+    }
+
+    if (!String(payload.nSensores || '').trim()) {
+      throw new Error('Informe a quantidade de sensores.');
+    }
+
+    const sensoresMarcados = (payload.sensoresAtivos || []).filter(Boolean).length;
+    if (sensoresMarcados < 1) {
+      throw new Error('Selecione pelo menos 1 sensor ativo para análise.');
+    }
+
+    const histerese = clampUi_(parseNumeroUi_(payload.robustez?.histereseTemperatura, 0.50), 0, 5, 0.50);
+    const consInicio = clampUi_(parseInteiroUi_(payload.robustez?.consecutivasInicio, 2), 1, 20, 2);
+    const consFim = clampUi_(parseInteiroUi_(payload.robustez?.consecutivasFim, 3), 1, 20, 3);
+    const tolEntrada = clampUi_(parseNumeroUi_(payload.robustez?.toleranciaEntrada, 0.00), 0, 5, 0.00);
+    const tolSaida = clampUi_(parseNumeroUi_(payload.robustez?.toleranciaSaida, 0.50), 0, 5, 0.50);
+    const modoReconhecimento = String(payload.robustez?.modoReconhecimentoExposicao || 'PIOR_SENSOR').toUpperCase().trim();
+    const percentualSensores = clampUi_(parseNumeroUi_(payload.robustez?.percentualMinimoSensores, 1.00), 0.01, 1, 1.00);
+
+    if (!['PIOR_SENSOR', 'PERCENTUAL'].includes(modoReconhecimento)) {
+      throw new Error('Modo de reconhecimento da exposição inválido.');
+    }
+
+    payload.robustez = {
+      histereseTemperatura: String(histerese),
+      consecutivasInicio: String(consInicio),
+      consecutivasFim: String(consFim),
+      toleranciaEntrada: String(tolEntrada),
+      toleranciaSaida: String(tolSaida),
+      modoReconhecimentoExposicao: modoReconhecimento,
+      percentualMinimoSensores: String(percentualSensores)
+    };
+
+    const modoAnalise = String(payload.modoAnaliseJanela || 'AUTO').toUpperCase();
+
+    if (modoAnalise === 'MANUAL') {
+      if (!String(payload.overrideJanela?.inicioCiclo || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de início do ciclo.');
+      }
+
+      if (!String(payload.overrideJanela?.fimCiclo || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de fim do ciclo.');
+      }
+
+      if (!String(payload.overrideJanela?.inicioExposicao || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de início da exposição.');
+      }
+
+      if (!String(payload.overrideJanela?.fimExposicao || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de fim da exposição.');
+      }
+    }
+  }
+
+  function normalizarErro_(err) {
+    if (!err) return 'Erro desconhecido.';
+    if (typeof err === 'string') return err;
+    if (err.message) return err.message;
+    try {
+      return JSON.stringify(err);
+    } catch (e) {
+      return String(err);
+    }
+  }
+
+  // =========================================================================
+  // 9. PREVIEW
+  // =========================================================================
+  function escreverDiagnosticoPreview(diag) {
+    if (!diag) return;
+
+    const partes = [];
+    if (diag.detectedDateStyle) partes.push('Padrão de data detectado: ' + diag.detectedDateStyle);
+    partes.push('Sensores detectados: ' + (diag.qtdTemperaturas ?? 0));
+    partes.push('Pressão encontrada: ' + (diag.hasPressao ? 'SIM' : 'NÃO'));
+
+    if (diag.erroDiagnostico) {
+      writeLog('Diagnóstico parcial: ' + diag.erroDiagnostico, 'AVISO');
+    }
+
+    writeLog(partes.join(' | '), 'SUCESSO');
+  }
+
+  async function chamarPreview() {
+    if (isPreviewRunning) {
+      writeLog('A leitura já está em andamento. Aguarde finalizar.', 'AVISO');
+      return;
+    }
+
+    isPreviewRunning = true;
+    setButtonBusy('btnPrev', true, 'LENDO...', 'Pré-visualizar Dados');
+
+    writeLog('Iniciando rotina de leitura e normalização...', 'SUCESSO');
+
+    try {
+      const payload = await construirPayload();
+      validarPayloadAntesEnvio(payload);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          isPreviewRunning = false;
+          setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+
+          res = res || {};
+          writeLog(
+            'Leitura concluída. Linhas detectadas: ' +
+            (res.rows ?? 0) +
+            ' | Colunas: ' +
+            (res.cols ?? 0),
+            'SUCESSO'
+          );
+
+          escreverDiagnosticoPreview(res.diagnostico);
+          montarTabela(res.preview || []);
+        })
+        .withFailureHandler(err => {
+          isPreviewRunning = false;
+          setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+          writeLog('FALHA NA LEITURA: ' + normalizarErro_(err), 'ERRO');
+        })
+        .apiDispatch({ fn: 'apiPreviewEntrada', payload: payload });
+    } catch (e) {
+      isPreviewRunning = false;
+      setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+      writeLog('FALHA INTERNA: ' + normalizarErro_(e), 'ERRO');
+    }
+  }
+
+  function montarTabela(matriz) {
+    const thead = document.querySelector('#tblPreview thead');
+    const tbody = document.querySelector('#tblPreview tbody');
+
+    if (!thead || !tbody) return;
+
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    if (!matriz || !matriz.length) {
+      tbody.innerHTML = '<tr><td colspan="1">Nenhum dado disponível para pré-visualização.</td></tr>';
+      return;
+    }
+
+    const nCols = matriz.reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+
+    let headHtml = '<tr>';
+    for (let i = 1; i <= nCols; i++) {
+      headHtml += `<th>COLUNA ${i}</th>`;
+    }
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+
+    let bodyHtml = '';
+    matriz.forEach(linha => {
+      const arr = Array.isArray(linha) ? linha : [linha];
+      bodyHtml += '<tr>';
+      for (let i = 0; i < nCols; i++) {
+        const valor = (arr[i] !== undefined && arr[i] !== null) ? arr[i] : '';
+        bodyHtml += `<td>${escapeHtml_(String(valor))}</td>`;
+      }
+      bodyHtml += '</tr>';
+    });
+
+    tbody.innerHTML = bodyHtml;
+  }
+
+  // =========================================================================
+  // 10. CONVERSÃO / GERAÇÃO DO LAUDO
+  // =========================================================================
+  function aplicarStatusResultado_(res) {
+    const status = String(res.statusAprovacao || (res.aprovado ? 'APROVADO' : 'REPROVADO')).toUpperCase();
+
+    if (status === 'REPROVADO') {
+      writeLog('Status Final: REPROVADO. Consulte o laudo.', 'ERRO');
+      setStatusBadge('ÚLTIMO CICLO: REPROVADO', '#fee2e2', '#991b1b');
+      return;
+    }
+
+    if (status === 'APROVADO_COM_ALERTA') {
+      writeLog('Status Final: APROVADO COM ALERTA. Consulte os alertas do laudo.', 'AVISO');
+      setStatusBadge('ÚLTIMO CICLO: APROVADO COM ALERTA', '#fef3c7', '#92400e');
+      return;
+    }
+
+    writeLog('Status Final: APROVADO na Qualificação.', 'SUCESSO');
+    setStatusBadge('ÚLTIMO CICLO: APROVADO', '#dcfce7', '#166534');
+  }
+
+  function renderizarLinksResultado_(res) {
+    const linkResultado = el('linkResultado');
+    if (!linkResultado) return;
+
+    let blocos = '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
+
+    if (res.spreadsheetUrl) {
+      blocos += `
+        <a href="${escapeHtml_(res.spreadsheetUrl)}" target="_blank" class="btn-download" style="flex:1; background:#f3f4f6; color:#1f2937; border:1px solid #e5e7eb;">
+          ABRIR PLANILHA DE DADOS
+        </a>
+      `;
+    }
+
+    if (res.pdfUrl) {
+      blocos += `
+        <a href="${escapeHtml_(res.pdfUrl)}" target="_blank" class="btn-download" style="flex:2;">
+          🖨️ BAIXAR LAUDO PDF (ANVISA)
+        </a>
+      `;
+    }
+
+    blocos += '</div>';
+    linkResultado.innerHTML = blocos;
+  }
+
+  function registrarResumoAnalise_(res) {
+    if (!res || !res.analiseResumo) return;
+
+    const a = res.analiseResumo;
+
+    writeLog(
+      'Sensores utilizados: ' +
+      (a.quantidadeSensoresUtilizados || 0) +
+      ' | Desabilitados: ' +
+      (((a.sensoresDesabilitados || []).join(', ')) || 'Nenhum'),
+      'SUCESSO'
+    );
+
+    if (a.tempoInicioCiclo || a.tempoFimCiclo) {
+      writeLog(
+        'Ciclo | Início: ' + (a.tempoInicioCiclo || '-') +
+        ' | Fim: ' + (a.tempoFimCiclo || '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.tempoInicioExposicao || a.tempoFimExposicao) {
+      writeLog(
+        'Exposição | Início: ' + (a.tempoInicioExposicao || '-') +
+        ' | Fim: ' + (a.tempoFimExposicao || '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.origemJanelaCiclo) {
+      writeLog('Janela do ciclo: ' + a.origemJanelaCiclo, 'SUCESSO');
+    }
+
+    if (a.origemJanelaExposicao) {
+      writeLog('Janela da exposição: ' + a.origemJanelaExposicao, 'SUCESSO');
+    }
+
+    if (a.configuracaoDeteccaoExposicao) {
+      const c = a.configuracaoDeteccaoExposicao;
+      writeLog(
+        'Robustez aplicada | Início: ' + (c.consecutivasInicio ?? '-') +
+        ' | Fim: ' + (c.consecutivasFim ?? '-') +
+        ' | Histerese: ' + (c.histereseTemperatura ?? '-') + ' °C' +
+        ' | Tol. entrada: ' + (c.toleranciaEntrada ?? '-') +
+        ' | Tol. saída: ' + (c.toleranciaSaida ?? '-') +
+        ' | Modo: ' + (c.modoReconhecimentoExposicao ?? '-') +
+        ' | % sensores: ' + (c.percentualMinimoSensores ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.limitesAprovacao) {
+      const l = a.limitesAprovacao;
+      writeLog(
+        'Critério F0 | Normativo: ' + (l.f0MinNormativo ?? '-') +
+        ' | Operacional: ' + (l.f0MinOperacional ?? '-') +
+        ' | Tolerância: ' + (l.toleranciaF0 ?? '-') +
+        ' | Limite final: ' + (l.limiteAprovacaoF0 ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.minF0 != null || a.mediaF0 != null || a.maxF0 != null) {
+      writeLog(
+        'F0 | Mín: ' + (a.minF0 ?? '-') +
+        ' | Médio: ' + (a.mediaF0 ?? '-') +
+        ' | Máx: ' + (a.maxF0 ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.deltaMinutosEstimado != null) {
+      writeLog('Delta médio estimado entre leituras: ' + a.deltaMinutosEstimado + ' min', 'SUCESSO');
+    }
+
+    if (Array.isArray(a.observacoesAnalise)) {
+      a.observacoesAnalise.forEach(obs => {
+        writeLog('Obs.: ' + obs, 'AVISO');
+      });
+    }
+
+    if (Array.isArray(a.alertasAnalise)) {
+      a.alertasAnalise.forEach(obs => {
+        writeLog('Alerta: ' + obs, 'AVISO');
+      });
+    }
+
+    if (Array.isArray(a.motivosReprovacao)) {
+      a.motivosReprovacao.forEach(m => {
+        writeLog('Critério: ' + m, res.aprovado ? 'SUCESSO' : 'ERRO');
+      });
+    }
+  }
+
+  function registrarResumoLeakTest_(res) {
+    if (!res || !res.leakTestResumo) return;
+
+    const l = res.leakTestResumo;
+
+    writeLog(
+      'Leak Test | Início: ' + (l.tempoInicioLeakTest || '-') +
+      ' | Fim: ' + (l.tempoFimLeakTest || '-') +
+      ' | Duração: ' + (l.tempoDecorridoMinutos ?? '-') + ' min',
+      'SUCESSO'
+    );
+
+    writeLog(
+      'Pressão | Início: ' + (l.pressaoInicioMbar ?? '-') + ' mbar' +
+      ' | Fim: ' + (l.pressaoFimMbar ?? '-') + ' mbar' +
+      ' | Variação: ' + (l.deltaPressaoMbar ?? '-') + ' mbar',
+      'SUCESSO'
+    );
+
+    writeLog(
+      'Taxa de vazamento: ' + (l.taxaVazamentoMbarMin ?? '-') + ' mbar/min' +
+      ' | Limite de referência: ' + (l.limiteTaxaVazamentoMbarMin ?? '-') + ' mbar/min',
+      res.aprovado ? 'SUCESSO' : 'ERRO'
+    );
+
+    if (Array.isArray(l.motivosReprovacao)) {
+      l.motivosReprovacao.forEach(m => writeLog('Critério: ' + m, 'ERRO'));
+    }
+
+    if (Array.isArray(l.observacoesAnalise)) {
+      l.observacoesAnalise.forEach(o => writeLog('Obs.: ' + o, 'AVISO'));
+    }
+
+    if (Array.isArray(l.alertasAnalise)) {
+      l.alertasAnalise.forEach(a => writeLog('Alerta: ' + a, 'AVISO'));
+    }
+  }
+
+  async function chamarConverter() {
+    if (isConverterRunning) {
+      writeLog('A geração do relatório já está em andamento. Aguarde finalizar.', 'AVISO');
+      return;
+    }
+
+    isConverterRunning = true;
+    const textoBotaoNormal = textoBotaoConverterAtual_();
+    setButtonBusy('btnConv', true, 'PROCESSANDO...', textoBotaoNormal);
+
+    writeLog('Iniciando motor de engenharia. Gerando laudo oficial...', 'SUCESSO');
+
+    const linkResultado = el('linkResultado');
+    if (linkResultado) linkResultado.innerHTML = '';
+
+    try {
+      const payload = await construirPayload();
+      validarPayloadAntesEnvio(payload);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          isConverterRunning = false;
+          setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+          atualizarBotaoGeracaoPorModo();
+
+          res = res || {};
+          writeLog('Processamento concluído com sucesso.', 'SUCESSO');
+
+          registrarResumoAnalise_(res);
+          registrarResumoLeakTest_(res);
+          aplicarStatusResultado_(res);
+          renderizarLinksResultado_(res);
+        })
+        .withFailureHandler(err => {
+          isConverterRunning = false;
+          setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+          atualizarBotaoGeracaoPorModo();
+          writeLog('FALHA NA ENGENHARIA CRÍTICA: ' + normalizarErro_(err), 'ERRO');
+        })
+        .apiDispatch({ fn: 'apiConverter', payload: payload });
+    } catch (e) {
+      isConverterRunning = false;
+      setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+          atualizarBotaoGeracaoPorModo();
+      writeLog('FALHA INTERNA: ' + normalizarErro_(e), 'ERRO');
+    }
+  }
+
+  // =========================================================================
+  // 11. SINCRONIZAÇÃO INICIAL
+  // =========================================================================
+  function sincronizarServidorInicial() {
+    google.script.run
+      .withSuccessHandler(r => {
+        r = r || {};
+        configServidor = r || configServidor;
+
+        writeLog('Conectado ao servidor Metrolabs. (Versão: ' + (r.versao || '-') + ')', 'SUCESSO');
+
+        IDLE_LIMIT = Number(r.idleTimeout || 5) * 60;
+        linksDrive.laudos = r.laudosUrl || '';
+        linksDrive.uploads = r.uploadsUrl || '';
+
+        aplicarMotoresDisponiveisNaUI();
+
+        if (r.defaultDateStyle) {
+          safeSetValue('uiDateStyle', r.defaultDateStyle);
+        }
+
+        if (r.defaultNSensores) {
+          safeSetValue('uiSensores', String(r.defaultNSensores));
+        }
+
+        if (r.analise) {
+          safeSetValue('uiHistereseExp', r.analise.histereseTemperatura ?? '0.50');
+          safeSetValue('uiConsInicio', r.analise.consecutivasInicio ?? '2');
+          safeSetValue('uiConsFim', r.analise.consecutivasFim ?? '3');
+          safeSetValue('uiTolEntradaExp', r.analise.toleranciaEntrada ?? '0.00');
+          safeSetValue('uiTolSaidaExp', r.analise.toleranciaSaida ?? '0.50');
+          safeSetValue('uiModoReconhecimentoExp', r.analise.modoReconhecimentoExposicao ?? 'PIOR_SENSOR');
+          safeSetValue('uiPercentualSensoresExp', r.analise.percentualMinimoSensores ?? '1.00');
+        }
+
+        renderizarSensoresAtivos();
+        atualizarVisibilidadeOverrideManual();
+        atualizarVisibilidadeCamposRobustez();
+        atualizarBotaoGeracaoPorModo();
+        atualizarClockEStatus();
+      })
+      .withFailureHandler(err => {
+        writeLog('Falha ao sincronizar com o servidor: ' + normalizarErro_(err), 'ERRO');
+      })
+      .apiDispatch({ fn: 'apiPing', payload: {} });
+  }
+
+  // =========================================================================
+  // 12. CERTIFICADO DE QUALIFICAÇÃO (IA) — segunda forma de relatório,
+  // reaproveita construirPayload() (mesmos dados já preenchidos acima,
+  // ciclo térmico ou Leak Test conforme tipoRelatorio) e só adiciona os
+  // campos próprios do certificado (número/revisão/DTL/fotos/textos).
+  // =========================================================================
+  function acNomeEstudoUi_(tipoEstudo) {
+    if (tipoEstudo === 'LEAK_TEST') return 'Teste de Estanqueidade (Leak Test)';
+    return 'Ciclo de Esterilização';
+  }
+
+  async function montarPayloadCertificadoBase() {
+    const base = await construirPayload();
+    base.certNumero = safeValue('certNumero');
+    base.certRevisao = safeValue('certRevisao');
+    base.certDataLogger = safeValue('certDataLogger');
+    base.certTarefaOrigem = safeValue('certTarefaOrigem');
+    return base;
+  }
+
+  function gerarRascunhoCertificado() {
+    el('btnRascunhoCertificado').disabled = true;
+    el('certificadoStatusArea').innerHTML = 'Rodando análise e gerando textos com IA, aguarde (pode levar alguns segundos)...';
+    writeLog('Certificado: rodando análise e chamando a IA para os textos narrativos...', 'SUCESSO');
+
+    montarPayloadCertificadoBase().then(payload => {
+      google.script.run
+        .withSuccessHandler(res => {
+          el('btnRascunhoCertificado').disabled = false;
+          el('certificadoStatusArea').innerHTML =
+            '<div class="alert-box success">Rascunho gerado. Revise os textos abaixo antes de confirmar — eles vão direto para o documento final.</div>';
+
+          el('certTextoConclusao').value = (res.textos && res.textos.conclusaoGeral) || '';
+          el('certTextoConclusaoLeigo').value = (res.textos && res.textos.conclusaoLeigo) || '';
+
+          const estudos = (res.contexto && res.contexto.estudos) || [];
+          const box = el('certAnalisesPorEstudoBox');
+          box.innerHTML = '';
+          estudos.forEach(estudo => {
+            const textoExistente = (res.textos.analisePorEstudo && res.textos.analisePorEstudo[estudo.tipoEstudo]) || '';
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            const label = document.createElement('label');
+            label.textContent = 'Análise — ' + acNomeEstudoUi_(estudo.tipoEstudo);
+            const textarea = document.createElement('textarea');
+            textarea.className = 'form-control cert-analise-estudo';
+            textarea.setAttribute('data-estudo', estudo.tipoEstudo);
+            textarea.style.minHeight = '100px';
+            textarea.value = textoExistente;
+            div.appendChild(label);
+            div.appendChild(textarea);
+            box.appendChild(div);
+          });
+
+          el('certificadoRevisaoBox').classList.remove('hidden');
+          el('certificadoRevisaoBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          writeLog('Certificado: rascunho da IA pronto para revisão.', 'SUCESSO');
+        })
+        .withFailureHandler(err => {
+          el('btnRascunhoCertificado').disabled = false;
+          writeLog('Falha ao gerar rascunho do certificado: ' + normalizarErro_(err), 'ERRO');
+          el('certificadoStatusArea').innerHTML = '<div class="alert-box error">' + normalizarErro_(err) + '</div>';
+        })
+        .apiDispatch({ fn: 'apiGerarRascunhoCertificado', payload: payload });
+    }).catch(e => {
+      el('btnRascunhoCertificado').disabled = false;
+      writeLog('Falha interna ao montar payload do certificado: ' + normalizarErro_(e), 'ERRO');
+    });
+  }
+
+  function lerArquivoComoBase64_(inputEl) {
+    return new Promise(resolve => {
+      const file = inputEl && inputEl.files ? inputEl.files[0] : null;
+      if (!file) { resolve(null); return; }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const resultado = String((e && e.target && e.target.result) || '');
+        const base64 = resultado.split(',')[1] || '';
+        resolve(base64 ? { base64: base64, mimeType: file.type || 'image/jpeg' } : null);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function confirmarEGerarCertificado() {
+    // Abre a aba em branco JÁ na chamada síncrona do clique — se esperar a
+    // resposta do servidor pra abrir, o navegador bloqueia como pop-up.
+    const novaJanela = window.open('', '_blank');
+    if (novaJanela) {
+      novaJanela.document.write('<p style="font-family:Arial,sans-serif;padding:40px;color:#374151;">Gerando certificado, aguarde...</p>');
+    }
+
+    writeLog('Certificado: lendo fotos e montando documento final...', 'SUCESSO');
+
+    const leituras = [1, 2, 3, 4].map(i => {
+      return lerArquivoComoBase64_(el('certFoto' + i)).then(foto => {
+        if (!foto) return null;
+        foto.legenda = safeValue('certFoto' + i + 'Legenda') || '';
+        return foto;
+      });
+    });
+
+    Promise.all(leituras).then(fotos => {
+      return montarPayloadCertificadoBase().then(payload => {
+        payload.fotosCertificado = fotos.filter(f => f);
+
+        const analisePorEstudo = {};
+        document.querySelectorAll('.cert-analise-estudo').forEach(ta => {
+          analisePorEstudo[ta.getAttribute('data-estudo')] = ta.value;
+        });
+
+        payload.textosCertificado = {
+          conclusaoGeral: safeValue('certTextoConclusao'),
+          conclusaoLeigo: safeValue('certTextoConclusaoLeigo'),
+          analisePorEstudo: analisePorEstudo
+        };
+
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .apiDispatch({ fn: 'apiMontarCertificadoFinal', payload: payload });
+        });
+      });
+    }).then(res => {
+      if (novaJanela) {
+        novaJanela.document.open();
+        novaJanela.document.write(res.html);
+        novaJanela.document.close();
+      }
+      writeLog('Certificado gerado com sucesso — aberto em nova aba, pronto para Ctrl+P.', 'SUCESSO');
+    }).catch(err => {
+      if (novaJanela) novaJanela.close();
+      writeLog('Falha ao montar o certificado final: ' + normalizarErro_(err), 'ERRO');
+      el('certificadoStatusArea').innerHTML = '<div class="alert-box error">' + normalizarErro_(err) + '</div>';
+    });
+  }
+
+  // =========================================================================
+  // 12b. MEMÓRIA DE CÁLCULO DO F0 — terceira forma de documento, sem IA e
+  // sem etapa de rascunho (é cálculo puro, reaproveita os mesmos números já
+  // certificados pelo motor de análise). Reaproveita montarPayloadCertificadoBase()
+  // só pelos dados do ciclo já preenchidos acima (certNumero/fotos são
+  // ignorados pelo backend desta função).
+  // =========================================================================
+  function confirmarEGerarMemoriaF0() {
+    // Mesma técnica de confirmarEGerarCertificado(): abre a aba em branco JÁ
+    // na chamada síncrona do clique, senão o navegador bloqueia como pop-up.
+    const novaJanela = window.open('', '_blank');
+    if (novaJanela) {
+      novaJanela.document.write('<p style="font-family:Arial,sans-serif;padding:40px;color:#374151;">Montando a memória de cálculo do F0, aguarde...</p>');
+    }
+
+    writeLog('Memória F0: montando documento com o cálculo leitura a leitura de cada sensor...', 'SUCESSO');
+
+    montarPayloadCertificadoBase().then(payload => {
+      google.script.run
+        .withSuccessHandler(res => {
+          if (novaJanela) {
+            novaJanela.document.open();
+            novaJanela.document.write(res.html);
+            novaJanela.document.close();
+          }
+          writeLog('Memória de cálculo do F0 gerada com sucesso — aberta em nova aba, pronta para Ctrl+P.', 'SUCESSO');
+        })
+        .withFailureHandler(err => {
+          if (novaJanela) novaJanela.close();
+          writeLog('Falha ao gerar a memória de cálculo do F0: ' + normalizarErro_(err), 'ERRO');
+          el('certificadoStatusArea').innerHTML = '<div class="alert-box error">' + normalizarErro_(err) + '</div>';
+        })
+        .apiDispatch({ fn: 'apiGerarMemoriaF0', payload: payload });
+    }).catch(e => {
+      if (novaJanela) novaJanela.close();
+      writeLog('Falha interna ao montar payload da memória F0: ' + normalizarErro_(e), 'ERRO');
+    });
+  }
+
+  // =========================================================================
+  // 13. INICIALIZAÇÃO ÚNICA
+  // =========================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    iniciarListenersOciosidade();
+    iniciarRelogioStatus();
+    iniciarMonitorOciosidade();
+    configurarModoEntrada();
+    injetarHelperDrive();
+    bindEventosUI();
+    renderizarSensoresAtivos();
+    sincronizarServidorInicial();
+    atualizarVisibilidadeOverrideManual();
+    atualizarVisibilidadeCamposRobustez();
+    atualizarVisibilidadeLeakTest();
+    atualizarBotaoGeracaoPorModo();
+    atualizarClockEStatus();
+    setStatusBadge('SISTEMA ONLINE', '#dcfce7', '#166534');
+    writeLog('Sistema inicializado. Aguardando operação do usuário...', 'SUCESSO');
+  });
+</script>
+
+

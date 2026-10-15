@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual do Operador — Planejamento CME</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111827;
+      --card: #1f2937;
+      --panel-soft: #273244;
+      --text: #d9e2ec;
+      --text-strong: #eef3f8;
+      --muted: #9aa8b8;
+      --border: #3a4657;
+      --accent: #6fbf8f;
+      --accent-2: #7aa7c7;
+      --accent-soft: rgba(111,191,143,.14);
+      --accent-border: rgba(111,191,143,.35);
+      --input: #172033;
+      --radius: 8px;
+      --radius-sm: 6px;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-2); }
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 18px 18px 60px;
+      line-height: 1.6;
+    }
+    .header-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 28px rgba(0,0,0,.22);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; color: var(--text-strong); }
+    .header-card p { margin: 0; color: var(--muted); font-size: 13px; }
+    h2 {
+      font-size: 19px;
+      margin-top: 40px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-strong);
+    }
+    h3 { font-size: 15px; margin-top: 26px; color: var(--accent-2); }
+    p { color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 13.5px; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--panel-soft); color: var(--text-strong); white-space: nowrap; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    td:first-child, th:first-child { white-space: nowrap; }
+    .callout {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin: 14px 0;
+      font-size: 13.5px;
+    }
+    .callout strong { color: var(--text-strong); }
+    ol, ul { padding-left: 22px; }
+    ol li, ul li { margin-bottom: 6px; }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 30px;
+    }
+    .toc h2 { margin-top: 0; border-bottom: none; font-size: 15px; }
+    .toc ol { columns: 2; column-gap: 30px; }
+    .toc a { text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    code.campo { background: var(--input); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: Consolas, monospace; font-size: 12.5px; color: var(--accent-2); }
+    .btn {
+      display: inline-block;
+      padding: 11px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      background: var(--panel-soft);
+      color: var(--text-strong);
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn-primary { background: linear-gradient(180deg, #6fbf8f, #4f9f75); color: #0d1b12; border-color: rgba(111,191,143,.4); }
+    .voltar-topo { position: fixed; right: 24px; bottom: 24px; z-index: 30; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="header-card">
+      <div>
+        <h1>Manual do Operador</h1>
+        <p>Planejamento CME — planejamento técnico e quantitativo de insumos para qualificação de esterilizadores, termodesinfectoras e lavadoras ultrassônicas</p>
+      </div>
+      <a class="btn" href="<?= ScriptApp.getService().getUrl() ?>" target="_top">← Voltar ao sistema</a>
+    </header>
+
+    <div class="toc" id="topo">
+      <h2>Índice</h2>
+      <ol>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s1&#39;); return false;">Como usar este manual</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s2&#39;); return false;">O que este sistema faz</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s3&#39;); return false;">Os 8 tipos de processo</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s4&#39;); return false;">Mapa da tela</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s5&#39;); return false;">Etapa 1 — Dados do cliente</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s6&#39;); return false;">Etapa 2 — Dados do equipamento</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s7&#39;); return false;">Etapa 3 — O que foi vendido?</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s8&#39;); return false;">Etapa 4 — Receitas</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s9&#39;); return false;">Etapa 5 — Calcular</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s10&#39;); return false;">Observações e Refinar com IA</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s11&#39;); return false;">Gerar Documento, Drive e WhatsApp</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s12&#39;); return false;">Passo a passo do zero</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s13&#39;); return false;">Erros comuns</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s14&#39;); return false;">Glossário</a></li>
+      </ol>
+    </div>
+
+    <h2 id="s1">1. Como usar este manual</h2>
+    <p>Este manual foi escrito para quem <strong>nunca usou o sistema e não precisa entender de engenharia ou metrologia</strong> para operá-lo. Cada campo da tela está explicado em quatro partes:</p>
+    <ul>
+      <li><strong>O que é</strong> — o nome em português simples do que você está vendo.</li>
+      <li><strong>Para que serve</strong> — por que esse campo existe.</li>
+      <li><strong>O que fazer</strong> — como preencher, na prática.</li>
+      <li><strong>O que acontece</strong> — o resultado de preencher certo, errado, ou deixar em branco.</li>
+    </ul>
+    <p>Leia este manual <strong>na ordem</strong>, seguindo a tela de cima para baixo também (a tela é dividida em passos numerados, avançados com o botão "Próximo"). Se aparecer uma palavra técnica que você não entende, vá direto ao <a href="javascript:void(0)" onclick="irParaSecao_(&#39;s14&#39;); return false;">Glossário</a>.</p>
+
+    <h2 id="s2">2. O que este sistema faz, em uma frase</h2>
+    <p>Você informa o cliente, o equipamento (autoclave, termodesinfectora ou lavadora ultrassônica), o que foi contratado (Qualificação de Instalação, Operação, Desempenho) e as receitas a qualificar — e o sistema <strong>calcula automaticamente</strong> quantos sensores, indicadores biológicos, integradores químicos e outros insumos são necessários, e gera um <strong>único documento técnico</strong> explicando, com Inteligência Artificial, o porquê de cada número, citando norma ou protocolo do fabricante.</p>
+    <p>Este documento reúne, num só arquivo: o planejamento técnico e o quantitativo de insumos, a fundamentação de cada exigência, e a orientação de como o cliente pode formalizar uma alteração de critério (Especificação de Requisitos do Usuário — E.R.U.), caso não concorde com algo.</p>
+
+    <h2 id="s3">3. Os 8 tipos de processo</h2>
+    <p>Você escolhe <strong>um</strong> tipo de processo na tela (Etapa 2, campo "Tipo de processo"). Essa escolha muda a fórmula de cálculo de sensores e a exigência (ou não) do Teste Bowie-Dick.</p>
+    <table>
+      <tr><th>Tipo de processo</th><th>Família</th><th>Bowie-Dick disponível?</th></tr>
+      <tr><td>Autoclave a Vapor</td><td>Autoclave</td><td>Sim</td></tr>
+      <tr><td>Autoclave de Peróxido de Hidrogênio</td><td>Autoclave</td><td>Não</td></tr>
+      <tr><td>Esterilizador a Vapor de Baixa Temperatura e Formaldeído (VBTF)</td><td>Autoclave</td><td>Não</td></tr>
+      <tr><td>Esterilizador a Óxido de Etileno (ETO)</td><td>Autoclave</td><td>Não</td></tr>
+      <tr><td>Termodesinfectora</td><td>Termodesinfectora</td><td>Não se aplica</td></tr>
+      <tr><td>Lavadora Ultrassônica (Brasmedical)</td><td>Lavadora</td><td>Não se aplica</td></tr>
+      <tr><td>Lavadora Ultrassônica (Sanders)</td><td>Lavadora</td><td>Não se aplica</td></tr>
+      <tr><td>Lavadora Ultrassônica (Outros)</td><td>Lavadora</td><td>Não se aplica</td></tr>
+    </table>
+    <p><strong>Por que só a Autoclave a Vapor tem Bowie-Dick?</strong> O teste Bowie-Dick detecta ar residual num ciclo de vácuo fracionado — isso é específico do processo a vapor. Peróxido, Formaldeído e Óxido de Etileno não usam vapor saturado sob vácuo fracionado, então não existe um equivalente físico direto. <strong>O sistema já esconde sozinho</strong> o campo de Bowie-Dick da tela quando você escolhe qualquer processo que não seja Vapor — você não precisa lembrar dessa regra, o sistema aplica por você.</p>
+
+    <h2 id="s4">4. Mapa da tela — visão geral</h2>
+    <p>A tela é organizada em passos, avançados com o botão "Próximo":</p>
+    <ol>
+      <li><strong>Dados do cliente</strong> — CNPJ e endereço.</li>
+      <li><strong>Dados do equipamento</strong> — tipo de processo, marca, modelo, volume da câmara.</li>
+      <li><strong>O que foi vendido?</strong> — quais etapas (QI/QO/QD) e o Bowie-Dick foram contratados.</li>
+      <li><strong>Receitas que serão qualificadas</strong> — lista de receitas/ciclos.</li>
+      <li><strong>Resultado do planejamento</strong> — os números calculados, observações, e o botão que gera o documento final.</li>
+    </ol>
+
+    <h2 id="s5">5. Etapa 1 — Dados do cliente</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td><code class="campo">CNPJ</code></td><td>Número de identificação da empresa cliente</td><td>Tenta preencher automaticamente razão social e endereço</td><td>Digite o CNPJ e clique em "Buscar"</td></tr>
+      <tr><td>Razão social</td><td>Nome oficial da empresa</td><td>Aparece no documento</td><td>Confira depois da busca automática; se falhar, digite manualmente</td></tr>
+      <tr><td>Logradouro / Bairro / Cidade / UF</td><td>Endereço da empresa</td><td>Aparece no documento</td><td>Preenchidos automaticamente, ou digite manualmente</td></tr>
+    </table>
+    <div class="callout"><strong>O que acontece se a busca automática falhar?</strong> Uma mensagem avisa que a consulta não funcionou e pede para completar manualmente — você pode continuar normalmente, só precisa digitar os campos você mesmo.</div>
+
+    <h2 id="s6">6. Etapa 2 — Dados do equipamento</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Tipo de equipamento</td><td>Categoria geral (ex.: "Autoclave")</td><td>Informação de identificação no documento</td><td>Já vem preenchido com um valor padrão; ajuste se necessário</td></tr>
+      <tr><td>Tipo de processo (dropdown)</td><td>Um dos 8 processos (seção 3 deste manual)</td><td>Define a fórmula de sensores e se o Bowie-Dick fica disponível na Etapa 3</td><td>Escolha o processo real do equipamento</td></tr>
+      <tr><td>Marca / Modelo</td><td>Fabricante e modelo</td><td>Identificação no documento</td><td>Digite conforme a placa</td></tr>
+      <tr><td>Número de série</td><td>Número de série de fábrica</td><td>Identificação no documento</td><td>Digite o número de série</td></tr>
+      <tr><td>Volume da câmara em litros</td><td>Volume interno da câmara</td><td>Usado para calcular a quantidade de sensores</td><td>Digite o volume real — este número afeta diretamente o cálculo</td></tr>
+      <tr><td>Possui bomba de vácuo?</td><td>Se o equipamento tem bomba de vácuo</td><td>Informação de identificação no documento</td><td>Escolha Sim ou Não</td></tr>
+    </table>
+
+    <h2 id="s7">7. Etapa 3 — O que foi vendido?</h2>
+    <p>Marque exatamente o que foi contratado — o sistema usa exatamente essas marcações para calcular os insumos, nada além disso.</p>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>O que fazer</th></tr>
+      <tr><td>Qualificação de Instalação</td><td>Verificação da infraestrutura e das condições de instalação</td><td>Marque se foi contratada</td></tr>
+      <tr><td>Qualificação de Operação</td><td>Avaliação do funcionamento do equipamento vazio</td><td>Marque se foi contratada</td></tr>
+      <tr><td>Qualificação de Desempenho</td><td>Avaliação do equipamento com carga ou receitas a qualificar</td><td>Marque se foi contratada</td></tr>
+      <tr><td>Teste Bowie-Dick (só para Autoclave a Vapor)</td><td>Teste independente de rotina</td><td>Marque se foi contratado — este campo some sozinho para os outros 7 processos</td></tr>
+    </table>
+    <div class="callout"><strong>Importante — leia com atenção, essa é a regra mais perguntada deste sistema:</strong> quando o cliente contrata <strong>só QI+QO, sem QD</strong> (comum em orçamentos que não incluem a etapa de desempenho), o sistema <strong>ainda inclui 3 indicadores biológicos e 3 integradores químicos fixos por ciclo</strong>, posicionados conceitualmente no início, meio e fim da câmara. Isso existe porque um relatório de qualificação não pode sair sem nenhum teste microbiológico documentado. <strong>Quando o cliente contrata QD junto</strong>, essa responsabilidade passa a ser inteiramente da Qualificação de Desempenho (1 indicador biológico + 1 integrador químico por sensor), e a Qualificação de Operação não leva mais indicador nenhum. Você não precisa fazer nada de diferente na tela — o sistema decide sozinho qual regime se aplica, só olhando se QD foi marcado ou não.</div>
+
+    <h2 id="s8">8. Etapa 4 — Receitas que serão qualificadas</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Nome da receita</td><td>O nome do ciclo/receita (ex.: "Instrumental 134 °C", "Lavagem Geral", "Príons")</td><td>Cada receita informada gera sua própria linha de cálculo no relatório</td><td>Digite o nome e clique em "Adicionar receita" — repita para cada receita</td></tr>
+    </table>
+    <p><strong>O que acontece se eu não marcar Qualificação de Operação nem Desempenho?</strong> Uma mensagem avisa que não é necessário informar receitas nesta etapa, e o campo de receitas fica oculto.</p>
+    <div class="callout"><strong>Atenção com a receita "Príons":</strong> se você digitar uma receita cujo nome contenha a palavra "Príons" (em qualquer capitalização), o sistema automaticamente troca o integrador químico convencional por um integrador químico específico para Príons nessa receita — mantendo o indicador biológico normal. Não existe um campo separado para isso, o sistema reconhece pelo nome da receita.</div>
+
+    <h2 id="s9">9. Etapa 5 — Calcular o planejamento</h2>
+    <p>Depois de preencher as etapas 1 a 4, clique em <strong>"Calcular planejamento"</strong>.</p>
+    <p>O sistema calcula o quantitativo de insumos (sensores, indicadores biológicos, integradores químicos, Bowie-Dick, testes de cavitação/limpeza, dependendo do processo) <strong>e, na mesma chamada, já pede à Inteligência Artificial para escrever a fundamentação técnica do documento inteiro</strong> — por isso este passo pode levar alguns segundos a mais que um cálculo simples.</p>
+    <p>Ao terminar, a tela mostra os <strong>indicadores (KPIs)</strong> — só os que tiverem valor maior que zero para o processo escolhido — e a <strong>tabela de insumos</strong>, com a base calculada e o total já com margem de segurança aplicada.</p>
+
+    <h2 id="s10">10. Observações adicionais e Refinar com IA</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Observações adicionais</td><td>Texto livre sobre particularidades do caso</td><td>Some no documento final como uma seção de observações</td><td>Escreva livremente</td></tr>
+      <tr><td>Refinar texto com IA (botão)</td><td>Pede à IA para melhorar a redação do que você escreveu</td><td>Deixa o texto mais formal/claro, sem mudar o conteúdo</td><td>Escreva algo no campo antes de clicar</td></tr>
+    </table>
+
+    <h2 id="s11">11. Gerar Documento, Salvar no Drive e WhatsApp</h2>
+    <table>
+      <tr><th>Elemento</th><th>O que é</th><th>O que fazer</th></tr>
+      <tr><td>Gerar Documento (botão)</td><td>Monta o documento único completo (planejamento + fundamentação + orientação de E.R.U.)</td><td>Clique depois de calcular. Uma nova aba abre imediatamente e é preenchida com o documento assim que pronto</td></tr>
+      <tr><td>Salvar no Drive (botão, aparece depois de gerar)</td><td>Converte o documento em PDF e salva na pasta do cliente no Google Drive</td><td>Clique se quiser guardar uma cópia — aparece um link direto para o arquivo</td></tr>
+      <tr><td>Abrir WhatsApp (botão)</td><td>Monta uma mensagem pronta com o resumo dos insumos calculados</td><td>Clique a qualquer momento depois de calcular. O link do documento só aparece se você já tiver clicado em "Salvar no Drive" antes</td></tr>
+    </table>
+    <div class="callout">O documento não é salvo automaticamente no Drive. Se você fechar a aba sem clicar em "Salvar no Drive", o documento gerado não fica registrado em lugar nenhum — gere de novo se precisar.</div>
+
+    <h2 id="s12">12. Passo a passo — do zero até o documento pronto</h2>
+    <ol>
+      <li><strong>Etapa 1:</strong> digite o CNPJ, clique em "Buscar", confira/complete o endereço, clique em "Próximo".</li>
+      <li><strong>Etapa 2:</strong> escolha o tipo de processo correto, preencha marca/modelo/série/volume/bomba de vácuo, clique em "Próximo".</li>
+      <li><strong>Etapa 3:</strong> marque exatamente o que foi vendido (QI/QO/QD/Bowie-Dick), clique em "Próximo".</li>
+      <li><strong>Etapa 4:</strong> adicione cada receita a ser qualificada, clique em "Calcular planejamento".</li>
+      <li><strong>Etapa 5:</strong> confira os indicadores e a tabela de insumos. Escreva observações se houver, use "Refinar texto com IA" se quiser.</li>
+      <li>Clique em <strong>"Gerar Documento"</strong> — o documento abre em nova aba assim que pronto.</li>
+      <li>Clique em <strong>"Salvar no Drive"</strong> se quiser guardar uma cópia em PDF.</li>
+      <li>Clique em <strong>"Abrir WhatsApp"</strong> se quiser enviar o resumo ao cliente.</li>
+    </ol>
+
+    <h2 id="s13">13. Erros comuns e o que fazer</h2>
+    <table>
+      <tr><th>O que aconteceu</th><th>Motivo mais provável</th><th>O que fazer</th></tr>
+      <tr><td>O campo de Bowie-Dick sumiu da tela</td><td>Você trocou o tipo de processo para algo diferente de "Autoclave a Vapor"</td><td>Comportamento esperado</td></tr>
+      <tr><td>O cálculo demorou mais do que eu esperava</td><td>O passo de "Calcular" já inclui a geração da fundamentação técnica pela IA</td><td>Normal — espere a mensagem de carregamento terminar</td></tr>
+      <tr><td>Recebi um erro ao calcular, mensagem sobre a IA</td><td>Falha temporária na geração do texto</td><td>Tente calcular novamente</td></tr>
+      <tr><td>O link do documento não apareceu na mensagem do WhatsApp</td><td>Você ainda não clicou em "Salvar no Drive"</td><td>Clique em "Salvar no Drive" primeiro</td></tr>
+      <tr><td>A quantidade de indicadores veio diferente do esperado para QI+QO sem QD</td><td>Comportamento esperado — ver seção 7 deste manual</td><td>Confira se QD estava realmente marcado ou não</td></tr>
+    </table>
+
+    <h2 id="s14">14. Glossário</h2>
+    <table>
+      <tr><th>Termo</th><th>Explicação simples</th></tr>
+      <tr><td>QI (Qualificação de Instalação)</td><td>Verificação de que o equipamento foi instalado corretamente</td></tr>
+      <tr><td>QO (Qualificação de Operação)</td><td>Verificação de que o equipamento opera conforme especificado, em ciclo vazio</td></tr>
+      <tr><td>QD (Qualificação de Desempenho)</td><td>Verificação de que o equipamento entrega o resultado esperado, com carga real</td></tr>
+      <tr><td>Bowie-Dick</td><td>Teste de rotina que detecta ar residual num ciclo de esterilização a vapor com vácuo fracionado</td></tr>
+      <tr><td>Indicador biológico</td><td>Insumo que comprova a eficácia microbiológica (morte de esporos-teste) de um ciclo</td></tr>
+      <tr><td>Integrador químico</td><td>Insumo que verifica se as condições físicas de exposição foram atingidas</td></tr>
+      <tr><td>Receita/ciclo</td><td>O programa específico que o equipamento executa para um tipo de carga</td></tr>
+      <tr><td>E.R.U.</td><td>Documento que o cliente preenche e assina quando quer alterar algum critério do planejamento original</td></tr>
+      <tr><td>Margem de segurança</td><td>Percentual adicional aplicado sobre a quantidade base calculada</td></tr>
+    </table>
+
+    <p style="margin-top:40px; color:var(--muted); font-size:12.5px;"><em>Este manual descreve o módulo Planejamento CME tal como implementado em 2026-07-27. Se a tela mudar no futuro, este documento precisa ser atualizado junto.</em></p>
+
+    <div style="margin-top:20px;">
+      <a class="btn btn-primary" href="<?= ScriptApp.getService().getUrl() ?>" target="_top">← Voltar ao sistema</a>
+    </div>
+  </div>
+
+  <a class="btn voltar-topo" href="javascript:void(0)" onclick="irParaSecao_(&#39;topo&#39;); return false;">↑ Topo</a>
+<script>
+function irParaSecao_(id) {
+  var el = document.getElementById(id);
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+</script>
+</body>
+</html>

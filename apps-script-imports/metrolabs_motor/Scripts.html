@@ -1,0 +1,942 @@
+<script>
+/* ============================================================
+ * METROLABS — MOTOR CENTRAL DE AR MEDICAL V1
+ * ARQUIVO: Scripts.html
+ * VERSÃO REVISADA — PENTE FINO COMPLETO E RENDERIZAÇÃO BLINDADA + SLA
+ * ============================================================ */
+
+(function () {
+  'use strict';
+
+  // ==========================================================
+  // ESTADO
+  // ==========================================================
+
+  var idleSeconds = 0;
+  var IDLE_LIMIT = 7 * 60;
+  var isIdle = false;
+  var beepInterval = null;
+  var audioCtx = null;
+  var audioLiberado = false;
+  var monitorIdleInterval = null;
+  var clockInterval = null;
+  var listenersOciosidadeRegistrados = false;
+  var isPreviewRunning = false;
+  var isConverterRunning = false;
+
+  var linksDrive = {
+    laudos: '',
+    uploads: ''
+  };
+
+  var configServidor = {
+    analise: {},
+    appTitle: 'METROLABS — MOTOR CENTRAL DE AR MEDICAL V1',
+    versao: '1.1.0',
+    defaultDateStyle: 'BR',
+    cnpj: { habilitado: false },
+    labels: {
+      online: 'SISTEMA ONLINE',
+      processando: 'PROCESSANDO...',
+      aprovado: 'APROVADO',
+      aprovadoAlerta: 'APROVADO COM ALERTA',
+      reprovado: 'REPROVADO'
+    }
+  };
+
+  // ==========================================================
+  // HELPERS
+  // ==========================================================
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function safeValue(id) {
+    var node = el(id);
+    return node ? String(node.value || '') : '';
+  }
+
+  function safeSetValue(id, value) {
+    var node = el(id);
+    if (node) node.value = value == null ? '' : String(value);
+  }
+
+  function safeSetHtml(id, html) {
+    var node = el(id);
+    if (node) node.innerHTML = html == null ? '' : String(html);
+  }
+
+  function safeSetText(id, text) {
+    var node = el(id);
+    if (node) node.textContent = text == null ? '' : String(text);
+  }
+
+  function toggleDisplay(id, show, displayType) {
+    var node = el(id);
+    if (!node) return;
+    node.style.display = show ? (displayType || 'block') : 'none';
+  }
+
+  function parseNumeroUi_(valor, fallback) {
+    var s = String(valor == null ? '' : valor).replace(',', '.').trim();
+    var n = Number(s);
+    return isFinite(n) ? n : fallback;
+  }
+
+  function normalizarErro_(err) {
+    if (!err) return 'Erro desconhecido';
+    if (typeof err === 'string') return err;
+    if (err.message) return err.message;
+    try {
+      return JSON.stringify(err);
+    } catch (e) {
+      return 'Erro não serializável';
+    }
+  }
+
+  function escapeHtml_(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function valorNumericoOuTraco_(v, casas) {
+    var n = Number(v);
+    return isFinite(n) ? n.toFixed(casas == null ? 1 : casas) : '-';
+  }
+
+  function normalizarStatusUi_(status) {
+    var s = String(status || '').trim().toUpperCase();
+    if (s === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
+    if (s === 'APROVADO_COM_RESSALVA') return 'APROVADO COM RESSALVA';
+    if (s === 'REPROVADO') return 'REPROVADO';
+    if (s === 'APROVADO') return 'APROVADO';
+    return '-';
+  }
+
+  function obterClasseStatus_(status) {
+    var s = String(status || '').trim().toUpperCase();
+    if (s === 'REPROVADO') return 'error';
+    if (s === 'APROVADO_COM_ALERTA' || s === 'APROVADO_COM_RESSALVA') return 'warning';
+    return 'success';
+  }
+
+  function obterUrlPlanilha_(res) {
+    if (res && res.spreadsheetUrl) return res.spreadsheetUrl;
+    if (res && res.spreadsheetId) return 'https://docs.google.com/spreadsheets/d/' + res.spreadsheetId + '/edit';
+    return '';
+  }
+
+  function obterUrlPdf_(res) {
+    if (res && res.pdfUrl) return res.pdfUrl;
+    if (res && res.pdfFileId) return 'https://drive.google.com/file/d/' + res.pdfFileId + '/view';
+    return '';
+  }
+
+  function getNested_(obj, path, fallback) {
+    var ref = obj;
+    var i;
+    for (i = 0; i < path.length; i++) {
+      if (!ref || typeof ref !== 'object' || !(path[i] in ref)) return fallback;
+      ref = ref[path[i]];
+    }
+    return ref == null ? fallback : ref;
+  }
+
+  function extrairResumoSeguro_(res) {
+    var resumo = (res && res.analiseResumo) ? res.analiseResumo : {};
+    var analise = (res && res.analise) ? res.analise : {};
+    var metricas = analise.metricasAr || {};
+    var pressao = metricas.pressao || {};
+    var orvalho = metricas.orvalho || {};
+
+    return {
+      status: res.statusAprovacao || resumo.status || analise.statusAprovacao || '-',
+      inicio: resumo.inicio || analise.tempoInicioCiclo || '-',
+      fim: resumo.fim || analise.tempoFimCiclo || '-',
+      totalRegistros: res.totalRegistros || resumo.totalRegistros || analise.totalRegistros || 0,
+      pressaoMin: resumo.pressaoMin != null ? resumo.pressaoMin : (pressao.min != null ? pressao.min : null),
+      pressaoMed: resumo.pressaoMed != null ? resumo.pressaoMed : (pressao.media != null ? pressao.media : null),
+      pressaoMax: resumo.pressaoMax != null ? resumo.pressaoMax : (pressao.max != null ? pressao.max : null),
+      orvalhoMin: resumo.orvalhoMin != null ? resumo.orvalhoMin : (orvalho.min != null ? orvalho.min : null),
+      orvalhoMed: resumo.orvalhoMed != null ? resumo.orvalhoMed : (orvalho.media != null ? orvalho.media : null),
+      orvalhoMax: resumo.orvalhoMax != null ? resumo.orvalhoMax : (orvalho.max != null ? orvalho.max : null),
+      motivosReprovacao: resumo.motivosReprovacao || analise.motivosReprovacao || [],
+      alertasAnalise: resumo.alertasAnalise || analise.alertasAnalise || []
+    };
+  }
+
+  function googleRunDisponivel_() {
+    return !!(window.google &&
+      window.google.script &&
+      window.google.script.run &&
+      typeof window.google.script.run.withSuccessHandler === 'function');
+  }
+
+  function apiCall_(fn, payload, onSuccess, onFailure) {
+    if (!googleRunDisponivel_()) {
+      var erroGoogle = 'google.script.run não está disponível nesta tela.';
+      if (typeof onFailure === 'function') onFailure(erroGoogle);
+      return;
+    }
+
+    try {
+      var runner = window.google.script.run
+        .withSuccessHandler(function (res) {
+          if (typeof onSuccess === 'function') onSuccess(res);
+        })
+        .withFailureHandler(function (err) {
+          if (typeof onFailure === 'function') onFailure(err);
+        });
+
+      if (typeof runner.apiDispatch === 'function') {
+        runner.apiDispatch({ fn: fn, payload: payload || {} });
+        return;
+      }
+
+      if (typeof runner[fn] === 'function') {
+        runner[fn](payload || {});
+        return;
+      }
+
+      if (typeof onFailure === 'function') {
+        onFailure('Nenhum método de backend compatível encontrado para: ' + fn);
+      }
+    } catch (err) {
+      if (typeof onFailure === 'function') onFailure(err);
+    }
+  }
+
+  function setPreviewInfo_(html) {
+    if (el('previewInfo')) {
+      safeSetHtml('previewInfo', html);
+      return;
+    }
+    if (el('previewMeta')) {
+      safeSetHtml('previewMeta', html);
+      return;
+    }
+    if (el('previewBox') && !document.querySelector('#previewBox table')) {
+      safeSetHtml('previewBox', html);
+    }
+  }
+
+  // ==========================================================
+  // LOG / STATUS
+  // ==========================================================
+
+  function writeLog(text, tipo) {
+    var term = el('terminalLog');
+    if (!term) return;
+
+    var time = new Date().toLocaleTimeString('pt-BR');
+    var line = document.createElement('div');
+    line.textContent = '[' + time + '] ➜ ' + String(text || '');
+
+    if (tipo === 'SUCESSO') line.className = 'success';
+    else if (tipo === 'ERRO') line.className = 'error';
+    else if (tipo === 'AVISO') line.className = 'warn';
+
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  function limparTerminal() {
+    var term = el('terminalLog');
+    if (term) term.innerHTML = '';
+  }
+
+  function setStatusBadge(texto, bg, fg) {
+    var badge = el('statusBadge');
+    if (!badge) return;
+    badge.innerText = texto || '';
+    badge.style.background = bg || '#eef2f7';
+    badge.style.color = fg || '#475569';
+  }
+
+  function setButtonBusy(buttonId, flag, busyText, normalText) {
+    var btn = el(buttonId);
+    if (!btn) return;
+
+    btn.disabled = !!flag;
+
+    if (flag) {
+      btn.dataset.normalText = btn.innerText || normalText || '';
+      btn.innerText = busyText || 'PROCESSANDO...';
+    } else {
+      btn.innerText = normalText || btn.dataset.normalText || btn.innerText || '';
+    }
+  }
+
+  function mostrarErroTela_(titulo, detalhe) {
+    safeSetHtml('resultadoBox',
+      '<div class="alert-box error">' +
+        '<strong>' + escapeHtml_(titulo || 'Erro') + '</strong><br>' +
+        escapeHtml_(detalhe || 'Falha não detalhada.') +
+      '</div>'
+    );
+  }
+
+  function limparResultado() {
+    safeSetHtml('linkResultado', '');
+    safeSetHtml('resultadoBox', '<div class="table-empty">Nenhum resultado disponível.</div>');
+  }
+
+  // ==========================================================
+  // CLOCK / OCIOSIDADE
+  // ==========================================================
+
+  function atualizarClockEStatus() {
+    var clock = el('clockWidget');
+    var perfWidget = el('perfWidget');
+    var now = new Date();
+
+    if (clock) clock.innerText = now.toLocaleString('pt-BR');
+
+    if (perfWidget) {
+      if (isIdle) {
+        perfWidget.innerHTML = 'Status: Ocioso / Alerta ⚠️';
+        perfWidget.style.background = '#fee2e2';
+        perfWidget.style.color = '#991b1b';
+      } else {
+        perfWidget.innerHTML = 'Status: Produtivo 🚀';
+        perfWidget.style.background = '#dcfce7';
+        perfWidget.style.color = '#166534';
+      }
+    }
+  }
+
+  function iniciarRelogioStatus() {
+    if (clockInterval) clearInterval(clockInterval);
+    clockInterval = setInterval(atualizarClockEStatus, 1000);
+  }
+
+  function liberarAudioUsuario() {
+    audioLiberado = true;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) {}
+  }
+
+  function pararBipEstridente() {
+    if (beepInterval) {
+      clearInterval(beepInterval);
+      beepInterval = null;
+    }
+  }
+
+  function tocarBipEstridente() {
+    if (!audioLiberado) return;
+
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+      pararBipEstridente();
+
+      beepInterval = setInterval(function () {
+        try {
+          var oscillator = audioCtx.createOscillator();
+          var gainNode = audioCtx.createGain();
+
+          oscillator.type = 'square';
+          oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+          gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.22);
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.22);
+        } catch (e) {}
+      }, 700);
+    } catch (e) {}
+  }
+
+  function dispararAlarmeOciosidade() {
+    if (isIdle) return;
+    isIdle = true;
+
+    var alertBox = el('idleAlert');
+    if (alertBox) alertBox.classList.add('show');
+
+    writeLog('ALERTA DE GESTÃO: Operador inativo. Produtividade interrompida.', 'ERRO');
+    tocarBipEstridente();
+    atualizarClockEStatus();
+  }
+
+  function resetIdleTimer() {
+    idleSeconds = 0;
+    if (isIdle && typeof window.resetIdleAlert === 'function') window.resetIdleAlert();
+  }
+
+  function handleAtividadeUsuario() {
+    liberarAudioUsuario();
+    resetIdleTimer();
+  }
+
+  function iniciarListenersOciosidade() {
+    if (listenersOciosidadeRegistrados) return;
+    listenersOciosidadeRegistrados = true;
+
+    ['mousemove', 'keydown', 'scroll', 'click', 'touchstart', 'mousedown'].forEach(function (evt) {
+      document.addEventListener(evt, handleAtividadeUsuario, { passive: true });
+    });
+
+    window.addEventListener('focus', resetIdleTimer);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) resetIdleTimer();
+    });
+  }
+
+  function iniciarMonitorOciosidade() {
+    if (monitorIdleInterval) clearInterval(monitorIdleInterval);
+
+    monitorIdleInterval = setInterval(function () {
+      if (document.hidden || isIdle) return;
+      idleSeconds++;
+      if (idleSeconds >= IDLE_LIMIT) dispararAlarmeOciosidade();
+    }, 1000);
+  }
+
+  window.resetIdleAlert = function () {
+    isIdle = false;
+    idleSeconds = 0;
+
+    var alertBox = el('idleAlert');
+    if (alertBox) alertBox.classList.remove('show');
+
+    pararBipEstridente();
+    atualizarClockEStatus();
+    writeLog('Operador retomou a atividade. Relógio de produtividade reiniciado.', 'SUCESSO');
+  };
+
+  // ==========================================================
+  // LINKS DRIVE
+  // ==========================================================
+
+  function limparTela() {
+    [
+      'uiCliente','uiCnpj','uiEndereco','uiTag','uiMarca','uiModelo','uiNumSerie','uiLocal',
+      'uiRespTecnico','uiOperador','uiDados','uiFileId','uiPontoMonitorado','uiCertificado',
+      'uiOs','uiDataInicio','uiDataFim','uiJustificativa'
+    ].forEach(function (id) {
+      safeSetValue(id, '');
+    });
+
+    if (el('uiEnsaio')) el('uiEnsaio').selectedIndex = 0;
+    if (el('uiModo')) safeSetValue('uiModo', 'UPLOAD_CSV');
+    if (el('uiModoAnalise')) safeSetValue('uiModoAnalise', 'AUTO');
+    if (el('uiTipoPeriodo')) safeSetValue('uiTipoPeriodo', 'LIVRE');
+    if (el('uiArquivoLocal')) el('uiArquivoLocal').value = '';
+
+    preencherLimitesPadrao();
+    atualizarVisibilidadeModoEntrada_();
+    atualizarVisibilidadeModoAnalise_();
+    limparTabelaPreview();
+    limparResultado();
+    limparTerminal();
+
+    if (typeof window.resetIdleAlert === 'function') window.resetIdleAlert();
+
+    setStatusBadge(getNested_(configServidor, ['labels', 'online'], 'SISTEMA ONLINE'), '#dcfce7', '#166534');
+    writeLog('Tela limpa e pronta para nova operação.', 'SUCESSO');
+  }
+
+  window.abrirLinkPasta = function (tipo) {
+    if (tipo === 'LAUDOS' && linksDrive.laudos) return window.open(linksDrive.laudos, '_blank');
+    if (tipo === 'UPLOADS' && linksDrive.uploads) return window.open(linksDrive.uploads, '_blank');
+    alert('O link da pasta ainda não foi sincronizado com o servidor. Verifique o Setup.gs / Config.gs.');
+  }
+
+  window.limparTela = limparTela;
+
+  // ==========================================================
+  // MODO DE ENTRADA / ANÁLISE
+  // ==========================================================
+
+  function configurarModoEntrada() {
+    var selectModo = el('uiModo');
+    if (!selectModo) return;
+
+    selectModo.innerHTML = [
+      '<option value="FILE_ID">Ler por ID / Link do Google Sheets (Recomendado)</option>',
+      '<option value="UPLOAD_CSV">Upload de CSV/TXT</option>',
+      '<option value="COLAR">Colar Dados Brutos (Texto/CSV)</option>'
+    ].join('');
+
+    if (!selectModo.value) selectModo.value = 'UPLOAD_CSV';
+    atualizarVisibilidadeModoEntrada_();
+  }
+
+  function atualizarVisibilidadeModoEntrada_() {
+    var modo = safeValue('uiModo');
+    toggleDisplay('boxUpload', modo === 'UPLOAD_CSV');
+    toggleDisplay('boxTextarea', modo === 'COLAR');
+    toggleDisplay('boxFileId', modo === 'FILE_ID' || modo === 'UPLOAD_CSV');
+  }
+
+  function atualizarVisibilidadeModoAnalise_() {
+    var manual = safeValue('uiModoAnalise') === 'MANUAL';
+    toggleDisplay('boxPeriodoManual', manual);
+  }
+
+  function preencherLimitesPadrao() {
+    safeSetValue('uiPressaoMin', getNested_(configServidor, ['analise', 'pressaoMin'], '4.50'));
+    safeSetValue('uiPressaoMax', getNested_(configServidor, ['analise', 'pressaoMax'], '6.00'));
+    safeSetValue('uiOrvalhoMax', getNested_(configServidor, ['analise', 'orvalhoMax'], '-40.00'));
+    
+    // CARREGA OS PADRÕES DO SLA (Se apagar, volta pra cá)
+    safeSetValue('uiSlaAlerta', '5.0');
+    safeSetValue('uiSlaReprovacao', '15.0');
+    safeSetValue('uiToleranciaFalha', '60');
+    safeSetValue('uiDiasCriticos', '2');
+  }
+
+  function bindEventosUI() {
+    if (el('uiModo')) el('uiModo').addEventListener('change', atualizarVisibilidadeModoEntrada_);
+    if (el('uiModoAnalise')) el('uiModoAnalise').addEventListener('change', atualizarVisibilidadeModoAnalise_);
+    if (el('uiArquivoLocal')) el('uiArquivoLocal').addEventListener('change', handleUploadArquivoLocal);
+    if (el('btnPrev')) el('btnPrev').addEventListener('click', acaoPreview);
+    if (el('btnConv')) el('btnConv').addEventListener('click', acaoConverter);
+    if (el('btnLimparTerminal')) el('btnLimparTerminal').addEventListener('click', limparTerminal);
+
+    if (el('uiCnpj')) {
+      el('uiCnpj').addEventListener('blur', consultarCnpjAutomatico);
+      el('uiCnpj').addEventListener('input', mascararCnpj);
+    }
+
+    atualizarVisibilidadeModoAnalise_();
+  }
+
+  // ==========================================================
+  // PREVIEW
+  // ==========================================================
+
+  function limparTabelaPreview() {
+    var thead = document.querySelector('#tblPreview thead');
+    var tbody = document.querySelector('#tblPreview tbody');
+    if (thead) thead.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+    setPreviewInfo_('');
+  }
+
+  function renderPreview(res) {
+    var thead = document.querySelector('#tblPreview thead');
+    var tbody = document.querySelector('#tblPreview tbody');
+    var previewContainer = el('tblPreview') || el('previewBox');
+
+    limparTabelaPreview();
+
+    if (!res || !res.preview || !res.preview.length) {
+      if (previewContainer && !el('tblPreview')) {
+        previewContainer.innerHTML = '<div class="table-empty">Nenhum dado disponível para pré-visualização.</div>';
+      }
+      setPreviewInfo_('<div class="table-empty">Nenhum dado disponível para pré-visualização.</div>');
+      return;
+    }
+
+    var cols = res.cols || (res.preview[0] ? res.preview[0].length : 0);
+
+    if (thead) {
+      var trHead = document.createElement('tr');
+      for (var i = 0; i < cols; i++) {
+        var th = document.createElement('th');
+        th.textContent = 'COL ' + (i + 1);
+        trHead.appendChild(th);
+      }
+      thead.appendChild(trHead);
+    }
+
+    if (tbody) {
+      res.preview.forEach(function (row) {
+        var tr = document.createElement('tr');
+        (row || []).forEach(function (cell) {
+          var td = document.createElement('td');
+          td.textContent = cell == null ? '' : String(cell);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    var diag = res.diagnostico || {};
+    setPreviewInfo_(
+      'Registros encontrados: <strong>' + escapeHtml_(String(res.rows || 0)) + '</strong> | ' +
+      'Colunas detectadas: <strong>' + escapeHtml_(String(res.cols || 0)) + '</strong> | ' +
+      'Cabeçalho identificado: <strong>' + (diag.encontrouCabecalho ? 'SIM' : 'NÃO') + '</strong>'
+    );
+  }
+
+  // ==========================================================
+  // RESULTADO
+  // ==========================================================
+
+  function renderResultadoConversao(res) {
+    var linkResultado = el('linkResultado');
+    var resultadoBox = el('resultadoBox');
+
+    var resumo = extrairResumoSeguro_(res);
+    var statusExibicao = normalizarStatusUi_(resumo.status);
+    var classeStatus = obterClasseStatus_(resumo.status);
+
+    var spreadsheetUrl = obterUrlPlanilha_(res);
+    var pdfUrl = obterUrlPdf_(res);
+    var pdfError = res && res.pdfError ? String(res.pdfError) : 'O processamento terminou, mas o link do PDF não foi retornado.';
+
+    if (linkResultado) {
+      var blocoPlanilha = spreadsheetUrl
+        ? '<a class="btn-download" href="' + escapeHtml_(spreadsheetUrl) + '" target="_blank">ABRIR PLANILHA</a>'
+        : '<div class="alert-box warning"><strong>Planilha não retornada.</strong><br>Verifique o terminal para checar se o ID foi criado.</div>';
+
+      var blocoPdf = pdfUrl
+        ? '<a class="btn-download" href="' + escapeHtml_(pdfUrl) + '" target="_blank">ABRIR PDF</a>'
+        : '<div class="alert-box warning"><strong>PDF não gerado.</strong><br>' + escapeHtml_(pdfError) + '</div>';
+
+      linkResultado.innerHTML =
+        '<div class="alert-box ' + classeStatus + '">' +
+          '<strong>Relatório processado.</strong><br>' +
+          '<strong>Status:</strong> ' + escapeHtml_(statusExibicao) +
+        '</div>' +
+        blocoPlanilha +
+        '<div style="height:10px;"></div>' +
+        blocoPdf;
+    }
+
+    if (resultadoBox) {
+      var motivos = Array.isArray(resumo.motivosReprovacao) ? resumo.motivosReprovacao : [];
+      var alertas = Array.isArray(resumo.alertasAnalise) ? resumo.alertasAnalise : [];
+
+      resultadoBox.innerHTML =
+        '<div class="alert-box ' + classeStatus + '">' +
+          '<strong>Status:</strong> ' + escapeHtml_(statusExibicao) + '<br>' +
+          '<strong>Início:</strong> ' + escapeHtml_(resumo.inicio || '-') + '<br>' +
+          '<strong>Fim:</strong> ' + escapeHtml_(resumo.fim || '-') + '<br>' +
+          '<strong>Registros:</strong> ' + escapeHtml_(String(resumo.totalRegistros || 0)) + '<br>' +
+          '<strong>Pressão:</strong> mín ' + escapeHtml_(valorNumericoOuTraco_(resumo.pressaoMin, 1)) +
+          ' | méd ' + escapeHtml_(valorNumericoOuTraco_(resumo.pressaoMed, 1)) +
+          ' | máx ' + escapeHtml_(valorNumericoOuTraco_(resumo.pressaoMax, 1)) + '<br>' +
+          '<strong>Orvalho:</strong> mín ' + escapeHtml_(valorNumericoOuTraco_(resumo.orvalhoMin, 1)) +
+          ' | méd ' + escapeHtml_(valorNumericoOuTraco_(resumo.orvalhoMed, 1)) +
+          ' | máx ' + escapeHtml_(valorNumericoOuTraco_(resumo.orvalhoMax, 1)) +
+          (motivos.length ? '<br><strong>Motivos:</strong> ' + escapeHtml_(motivos.join(' | ')) : '') +
+          (alertas.length ? '<br><strong>Alertas:</strong> ' + escapeHtml_(alertas.join(' | ')) : '') +
+        '</div>';
+    }
+  }
+
+  // ==========================================================
+  // UPLOAD
+  // ==========================================================
+
+  function handleUploadArquivoLocal(evt) {
+    var file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
+    if (!file) return;
+
+    writeLog('Lendo arquivo local para upload: ' + file.name, 'SUCESSO');
+
+    var reader = new FileReader();
+
+    reader.onload = function (e) {
+      try {
+        var result = String((e && e.target && e.target.result) || '');
+        var base64 = result.split(',')[1] || '';
+
+        if (!base64) {
+          writeLog('Falha ao converter arquivo para base64.', 'ERRO');
+          return;
+        }
+
+        writeLog('Enviando arquivo para a pasta de uploads do Drive...', 'SUCESSO');
+
+        apiCall_('apiUploadArquivo', {
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          base64: base64
+        }, function (res) {
+          safeSetValue('uiFileId', (res && res.fileId) || '');
+          writeLog('Upload concluído. File ID preenchido automaticamente: ' + ((res && res.fileId) || '-'), 'SUCESSO');
+          if (res && res.fileUrl) writeLog('Arquivo disponível no Drive: ' + res.fileUrl, 'SUCESSO');
+        }, function (err) {
+          writeLog('Falha no upload do arquivo: ' + normalizarErro_(err), 'ERRO');
+        });
+      } catch (err) {
+        writeLog('Erro ao preparar upload: ' + normalizarErro_(err), 'ERRO');
+      }
+    };
+
+    reader.onerror = function () {
+      writeLog('Erro ao ler o arquivo local selecionado.', 'ERRO');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  // ==========================================================
+  // PAYLOAD
+  // ==========================================================
+
+  function construirPayload() {
+    return {
+      modoEntrada: safeValue('uiModo'),
+      modoAnalise: safeValue('uiModoAnalise') || 'AUTO',
+      tipoPeriodo: safeValue('uiTipoPeriodo') || 'LIVRE',
+      fileId: safeValue('uiFileId'),
+      textoColado: safeValue('uiDados'),
+      cliente: safeValue('uiCliente'),
+      cnpj: safeValue('uiCnpj'),
+      endereco: safeValue('uiEndereco'),
+      tag: safeValue('uiTag'),
+      local: safeValue('uiLocal'),
+      marca: safeValue('uiMarca'),
+      modelo: safeValue('uiModelo'),
+      numSerie: safeValue('uiNumSerie'),
+      pontoMonitorado: safeValue('uiPontoMonitorado'),
+      ensaio: safeValue('uiEnsaio'),
+      respTecnico: safeValue('uiRespTecnico'),
+      operador: safeValue('uiOperador'),
+      certificado: safeValue('uiCertificado'),
+      os: safeValue('uiOs'),
+      pressaoMin: parseNumeroUi_(safeValue('uiPressaoMin'), getNested_(configServidor, ['analise', 'pressaoMin'], 4.5)),
+      pressaoMax: parseNumeroUi_(safeValue('uiPressaoMax'), getNested_(configServidor, ['analise', 'pressaoMax'], 6.0)),
+      orvalhoMax: parseNumeroUi_(safeValue('uiOrvalhoMax'), getNested_(configServidor, ['analise', 'orvalhoMax'], -40.0)),
+      
+      // O MENSAGEIRO AGORA LEVA OS PARÂMETROS NOVOS DO SLA
+      slaAlerta: parseNumeroUi_(safeValue('uiSlaAlerta'), 5.0),
+      slaReprovacao: parseNumeroUi_(safeValue('uiSlaReprovacao'), 15.0),
+      toleranciaFalha: parseNumeroUi_(safeValue('uiToleranciaFalha'), 60),
+      diasCriticos: parseNumeroUi_(safeValue('uiDiasCriticos'), 2),
+      justificativa: safeValue('uiJustificativa'),
+      
+      dateStyle: configServidor.defaultDateStyle || 'BR',
+      dataInicio: safeValue('uiDataInicio'),
+      dataFim: safeValue('uiDataFim')
+    };
+  }
+
+  function validarPayload(payload, precisaArquivo) {
+    if (!payload.cliente) writeLog('Aviso: cliente não informado.', 'AVISO');
+    if (!payload.tag) writeLog('Aviso: TAG não informada.', 'AVISO');
+
+    if (payload.modoEntrada === 'COLAR' && !payload.textoColado) {
+      throw new Error('Cole os dados antes de continuar.');
+    }
+
+    if ((payload.modoEntrada === 'FILE_ID' || payload.modoEntrada === 'UPLOAD_CSV') && !payload.fileId && precisaArquivo) {
+      throw new Error('Nenhum arquivo foi carregado. Faça o upload ou informe o File ID.');
+    }
+
+    if (payload.modoAnalise === 'MANUAL') {
+      if (!payload.dataInicio || !payload.dataFim) {
+        throw new Error('No modo manual, informe a data/hora inicial e final.');
+      }
+
+      var inicio = new Date(payload.dataInicio);
+      var fim = new Date(payload.dataFim);
+
+      if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {
+        throw new Error('As datas informadas no modo manual são inválidas.');
+      }
+
+      if (fim <= inicio) {
+        throw new Error('A data/hora final deve ser maior que a data/hora inicial.');
+      }
+    }
+  }
+
+  // ==========================================================
+  // AÇÕES PRINCIPAIS
+  // ==========================================================
+
+  function acaoPreview() {
+    if (isPreviewRunning) return;
+
+    try {
+      var payload = construirPayload();
+      validarPayload(payload, true);
+
+      isPreviewRunning = true;
+      setButtonBusy('btnPrev', true, 'PRÉ-VISUALIZANDO...', 'Pré-visualizar Dados');
+      setStatusBadge('PROCESSANDO PREVIEW...', '#fef3c7', '#92400e');
+      writeLog('Iniciando pré-visualização dos dados...', 'SUCESSO');
+
+      apiCall_('apiPreviewEntrada', payload, function (res) {
+        isPreviewRunning = false;
+        setButtonBusy('btnPrev', false, 'PRÉ-VISUALIZANDO...', 'Pré-visualizar Dados');
+        setStatusBadge(getNested_(configServidor, ['labels', 'online'], 'SISTEMA ONLINE'), '#dcfce7', '#166534');
+        renderPreview(res || {});
+        writeLog('Pré-visualização concluída com sucesso.', 'SUCESSO');
+      }, function (err) {
+        isPreviewRunning = false;
+        setButtonBusy('btnPrev', false, 'PRÉ-VISUALIZANDO...', 'Pré-visualizar Dados');
+        setStatusBadge('ERRO NO PREVIEW', '#fee2e2', '#991b1b');
+        writeLog('Falha no preview: ' + normalizarErro_(err), 'ERRO');
+        mostrarErroTela_('Falha na pré-visualização', normalizarErro_(err));
+      });
+    } catch (err) {
+      isPreviewRunning = false;
+      setButtonBusy('btnPrev', false, 'PRÉ-VISUALIZANDO...', 'Pré-visualizar Dados');
+      setStatusBadge('ERRO NO PREVIEW', '#fee2e2', '#991b1b');
+      writeLog(normalizarErro_(err), 'ERRO');
+      mostrarErroTela_('Falha na pré-visualização', normalizarErro_(err));
+    }
+  }
+
+  function acaoConverter() {
+    if (isConverterRunning) return;
+
+    try {
+      var payload = construirPayload();
+      validarPayload(payload, true);
+
+      isConverterRunning = true;
+      setButtonBusy('btnConv', true, 'GERANDO...', 'Gerar Relatório');
+      setStatusBadge('GERANDO RELATÓRIO...', '#fef3c7', '#92400e');
+      writeLog('Iniciando geração do relatório...', 'SUCESSO');
+      limparResultado();
+
+      apiCall_('apiConverter', payload, function (res) {
+        isConverterRunning = false;
+        setButtonBusy('btnConv', false, 'GERANDO...', 'Gerar Relatório');
+
+        var resumo = extrairResumoSeguro_(res);
+        var statusExibicao = normalizarStatusUi_(resumo.status);
+        var classeStatus = obterClasseStatus_(resumo.status);
+
+        if (classeStatus === 'error') setStatusBadge(statusExibicao, '#fee2e2', '#991b1b');
+        else if (classeStatus === 'warning') setStatusBadge(statusExibicao, '#fef3c7', '#92400e');
+        else setStatusBadge(statusExibicao, '#dcfce7', '#166534');
+
+        renderResultadoConversao(res || {});
+
+        if (res && res.ok === false) {
+          writeLog('O backend retornou processamento sem sucesso explícito.', 'AVISO');
+        } else {
+          writeLog('Relatório gerado com sucesso.', 'SUCESSO');
+        }
+
+        if (!obterUrlPlanilha_(res)) {
+          writeLog('Atenção: a planilha não foi retornada pelo backend.', 'AVISO');
+        }
+        if (!obterUrlPdf_(res)) {
+          writeLog('Atenção: o processamento terminou, mas o PDF não foi retornado.', 'AVISO');
+        }
+      }, function (err) {
+        isConverterRunning = false;
+        setButtonBusy('btnConv', false, 'GERANDO...', 'Gerar Relatório');
+        setStatusBadge('ERRO NA GERAÇÃO', '#fee2e2', '#991b1b');
+        writeLog('Falha na geração: ' + normalizarErro_(err), 'ERRO');
+        mostrarErroTela_('Falha na geração do relatório', normalizarErro_(err));
+      });
+    } catch (err) {
+      isConverterRunning = false;
+      setButtonBusy('btnConv', false, 'GERANDO...', 'Gerar Relatório');
+      setStatusBadge('ERRO NA GERAÇÃO', '#fee2e2', '#991b1b');
+      writeLog(normalizarErro_(err), 'ERRO');
+      mostrarErroTela_('Falha na geração do relatório', normalizarErro_(err));
+    }
+  }
+
+  // ==========================================================
+  // CNPJ
+  // ==========================================================
+
+  function mascararCnpj() {
+    var node = el('uiCnpj');
+    if (!node) return;
+
+    var v = String(node.value || '').replace(/\D/g, '').slice(0, 14);
+    v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+    v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    node.value = v;
+  }
+
+  function consultarCnpjAutomatico() {
+    if (!(configServidor.cnpj && configServidor.cnpj.habilitado)) return;
+
+    var bruto = safeValue('uiCnpj').replace(/\D/g, '');
+    if (bruto.length !== 14) return;
+
+    writeLog('Consultando CNPJ para preenchimento automático...', 'SUCESSO');
+
+    apiCall_('apiConsultarCnpj', { cnpj: bruto }, function (res) {
+      if (!res || !res.ok) return;
+
+      if (!safeValue('uiCliente')) safeSetValue('uiCliente', res.razaoSocial || res.nomeFantasia || '');
+      if (!safeValue('uiEndereco')) safeSetValue('uiEndereco', res.enderecoCompleto || '');
+      safeSetValue('uiCnpj', res.cnpj || safeValue('uiCnpj'));
+
+      writeLog('Dados do cliente preenchidos automaticamente pelo CNPJ.', 'SUCESSO');
+    }, function (err) {
+      writeLog('Falha ao consultar CNPJ: ' + normalizarErro_(err), 'AVISO');
+    });
+  }
+
+  // ==========================================================
+  // SINCRONIZAÇÃO
+  // ==========================================================
+
+  function sincronizarServidor() {
+    writeLog('Sincronizando interface com o servidor...', 'SUCESSO');
+
+    apiCall_('apiPing', {}, function (res) {
+      configServidor = res || configServidor;
+      IDLE_LIMIT = Number((res && res.idleTimeout) || 7) * 60;
+      linksDrive.laudos = (res && res.laudosUrl) || '';
+      linksDrive.uploads = (res && res.uploadsUrl) || '';
+
+      safeSetText('appTitle', (res && res.appTitle) || configServidor.appTitle);
+      safeSetText('appVersion', (res && res.versao) || configServidor.versao);
+
+      preencherLimitesPadrao();
+      atualizarVisibilidadeModoEntrada_();
+      atualizarVisibilidadeModoAnalise_();
+
+      setStatusBadge(getNested_(res || {}, ['labels', 'online'], 'SISTEMA ONLINE'), '#dcfce7', '#166534');
+      writeLog('Sincronização concluída com sucesso.', 'SUCESSO');
+    }, function (err) {
+      setStatusBadge('FALHA DE SINCRONIZAÇÃO', '#fee2e2', '#991b1b');
+      writeLog('Falha ao sincronizar com o servidor: ' + normalizarErro_(err), 'ERRO');
+    });
+  }
+
+  // ==========================================================
+  // BOOT
+  // ==========================================================
+
+  function boot_() {
+    try {
+      configurarModoEntrada();
+      bindEventosUI();
+      iniciarRelogioStatus();
+      iniciarListenersOciosidade();
+      iniciarMonitorOciosidade();
+      atualizarClockEStatus();
+      sincronizarServidor();
+      limparResultado();
+      writeLog('Interface carregada e pronta para operação.', 'SUCESSO');
+    } catch (err) {
+      setStatusBadge('ERRO NO BOOT', '#fee2e2', '#991b1b');
+      writeLog('Falha crítica no carregamento da interface: ' + normalizarErro_(err), 'ERRO');
+      mostrarErroTela_('Falha crítica no carregamento da interface', normalizarErro_(err));
+      try {
+        console.error(err);
+      } catch (e) {}
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot_);
+  } else {
+    boot_();
+  }
+})();
+</script>

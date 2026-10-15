@@ -1,0 +1,2137 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= APP_NOME ?></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --metrolabs:#198754;
+      --metrolabs-dark:#146c43;
+      --bg:#f3f5f7;
+      --border:#dee2e6;
+      --text:#202124;
+      --muted:#6c757d;
+      --card-shadow:0 8px 22px rgba(0,0,0,.06);
+      --card-radius:16px;
+    }
+
+    body{
+      background:var(--bg);
+      font-size:.95rem;
+      color:var(--text);
+    }
+
+    .topo{
+      background:linear-gradient(135deg,var(--metrolabs),var(--metrolabs-dark));
+      color:#fff;
+      padding:24px;
+      border-radius:16px;
+      box-shadow:0 10px 25px rgba(0,0,0,.08);
+    }
+
+    .card{
+      border:none;
+      border-radius:var(--card-radius);
+      box-shadow:var(--card-shadow);
+    }
+
+    .step{ display:none; }
+    .step.active{
+      display:block;
+      animation:fadeIn .25s ease-in-out;
+    }
+
+    @keyframes fadeIn{
+      from{opacity:0;transform:translateY(4px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+
+    .help{
+      color:var(--muted);
+      font-size:.88rem;
+      margin-bottom:12px;
+    }
+
+    .item-card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 14px;
+      margin-bottom:10px;
+      box-shadow:0 2px 6px rgba(0,0,0,.03);
+      transition:all .25s ease;
+    }
+
+    .insumo-card,
+    .ensaio-card,
+    .nr13-card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-left:4px solid var(--metrolabs);
+      border-radius:12px;
+      padding:12px 14px;
+      margin-bottom:10px;
+      box-shadow:0 2px 6px rgba(0,0,0,.03);
+    }
+
+    .required::after{
+      content:" *";
+      color:#dc3545;
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    .radio-status-card{
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:15px;
+      cursor:pointer;
+      transition:all .2s ease;
+      background:#fff;
+      user-select:none;
+    }
+
+    .radio-status-card:hover{
+      background:#f8f9fa;
+      border-color:#cfd4da;
+    }
+
+    .radio-status-card.active{
+      border-color:var(--metrolabs);
+      box-shadow:0 0 0 .15rem rgba(25,135,84,.12);
+      background:#f4fbf6;
+    }
+
+    .step-summary{
+      background:#f8f9fa;
+      border:1px dashed #c7cdd3;
+      border-radius:12px;
+      padding:12px;
+      margin-top:14px;
+      color:#495057;
+      font-size:.9rem;
+    }
+
+    textarea.form-control{
+      min-height:140px;
+    }
+
+    .footer-actions{
+      border-top:1px solid #eceff1;
+      margin-top:24px;
+      padding-top:20px;
+    }
+
+    .doc-item{
+      border:1px solid #dee2e6;
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:12px;
+      background:#fff;
+      box-shadow:0 4px 12px rgba(0,0,0,.04);
+    }
+
+    .doc-meta{
+      font-size:.84rem;
+      color:#6c757d;
+      line-height:1.45;
+    }
+
+    .loading-soft{
+      color:#6c757d;
+      font-style:italic;
+    }
+
+    .badge-soft{
+      background:#eef7f1;
+      color:#146c43;
+      border:1px solid #d7ecdf;
+      font-weight:700;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:.78rem;
+    }
+
+    .profile-badge{
+      display:inline-block;
+      background:#eef7f1;
+      border:1px solid #d7ecdf;
+      color:#146c43;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:.78rem;
+      font-weight:700;
+      margin-right:4px;
+      margin-bottom:4px;
+    }
+
+    /* METROLABS DARK SUITE - padrão autoclave aplicado ao módulo de carta */
+    :root{
+      --bg:#0f172a;
+      --surface:#111827;
+      --surface-2:#0b1220;
+      --surface-3:#172033;
+      --border:#2b3648;
+      --border-strong:#3f4b5f;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --metrolabs:#22c55e;
+      --metrolabs-dark:#0f3f2e;
+      --accent:#38bdf8;
+      --danger:#ef4444;
+      --warning:#f59e0b;
+      --card-shadow:0 18px 50px rgba(0,0,0,.34);
+      --card-radius:10px;
+    }
+    body{background:radial-gradient(circle at top left,rgba(34,197,94,.08),transparent 32%),#0f172a!important;color:var(--text)!important;font-size:.94rem;}
+    .container{max-width:1240px;}
+    .topo{background:linear-gradient(135deg,#111827 0%,#0f3f2e 48%,#0b4ea2 100%)!important;border:1px solid #263244;border-radius:10px!important;padding:22px 24px!important;box-shadow:0 22px 60px rgba(0,0,0,.38)!important;}
+    .topo-shell{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+    .topo-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#86efac;margin-bottom:6px;}
+    .topo-title{font-size:24px;line-height:1.18;margin:0;color:#f9fafb;font-weight:900;}
+    .topo-subtitle{margin-top:7px;color:#d1d5db;max-width:760px;line-height:1.45;}
+    .topo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:0!important;align-items:center;justify-content:flex-end;}
+    .topo-action{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.10);color:#fff;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;cursor:pointer;}
+    .topo-action:hover{background:rgba(255,255,255,.18);}
+    .card,.item-card,.insumo-card,.ensaio-card,.nr13-card,.doc-item,.radio-status-card{background:var(--surface)!important;border:1px solid var(--border)!important;color:var(--text)!important;box-shadow:var(--card-shadow)!important;}
+    .card{border-radius:10px!important;overflow:hidden;}
+    .card-body{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 260px);}
+    h4,h5,h6,.form-label{color:#f9fafb!important;}
+    .form-control,.form-select,textarea.form-control{background:var(--surface-2)!important;color:#f9fafb!important;border:1px solid #374151!important;border-radius:8px!important;}
+    .form-control::placeholder{color:#6b7280!important;}
+    .form-control:focus,.form-select:focus{border-color:#22c55e!important;box-shadow:0 0 0 .2rem rgba(34,197,94,.15)!important;}
+    .help,.text-muted,.doc-meta{color:var(--muted)!important;}
+    .footer-actions{border-top:1px solid var(--border)!important;}
+    .step-summary{background:var(--surface-2)!important;border-color:#334155!important;color:#d1d5db!important;}
+    .badge-soft,.profile-badge{background:#052e1a!important;border-color:#14532d!important;color:#86efac!important;}
+    .btn{border-radius:8px!important;font-weight:800!important;}
+    .btn-success,.btn-primary{background:#16a34a!important;border-color:#16a34a!important;color:#fff!important;}
+    .btn-dark,.btn-outline-secondary,.btn-outline-success{background:#1f2937!important;border-color:#374151!important;color:#f9fafb!important;}
+    .btn-outline-danger{background:#281517!important;border-color:#7f1d1d!important;color:#fecaca!important;}
+    .alert-secondary,.alert-warning,.alert-danger{background:#111827!important;border-color:#374151!important;color:#e5e7eb!important;}
+    .radio-status-card.active{background:#052e1a!important;border-color:#22c55e!important;box-shadow:0 0 0 .15rem rgba(34,197,94,.16)!important;}
+    .ml-modal{position:fixed;inset:0;background:rgba(2,6,23,.78);display:none;align-items:flex-start;justify-content:center;padding:34px 18px;z-index:9999;overflow:auto;}
+    .ml-modal.show{display:flex;}
+    .ml-dialog{width:min(1040px,100%);background:#111827;border:1px solid #334155;border-radius:10px;box-shadow:0 24px 90px rgba(0,0,0,.55);color:#e5e7eb;}
+    .ml-dialog-header{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid #334155;background:#0b1220;position:sticky;top:0;z-index:1;}
+    .ml-dialog-header h2{font-size:18px;margin:0;color:#f9fafb;}
+    .ml-close{background:#1f2937;color:#fff;border:1px solid #4b5563;border-radius:8px;padding:8px 11px;cursor:pointer;font-weight:800;}
+    .ml-dialog-body{padding:20px;line-height:1.62;color:#d1d5db;text-align:justify;}
+    .ml-dialog-body h3{font-size:15px;color:#f9fafb;margin:20px 0 8px;text-align:left;}
+    .ml-dialog-body p{margin-bottom:12px;}
+    .ml-dialog-body li{margin-bottom:7px;}
+    .ml-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:12px 0;}
+    .ml-box{border:1px solid #334155;background:#0f172a;border-radius:8px;padding:12px;text-align:left;}
+    @media (max-width:768px){.topo-title{font-size:20px}.topo-shell{display:block}.topo-actions{justify-content:flex-start;margin-top:14px!important}.card-body{padding:18px!important}}
+
+
+    /* ============================================================
+       LAYOUT PADRÃO METROLABS - AUTOCLAVE STANDALONE DARK
+       Referência: docs/layouts/LAYOUT_PADRAO_AUTOCLAVE_STANDALONE_DARK.md
+       ============================================================ */
+    :root {
+      --bg:#0d1117;
+      --bg-2:#111827;
+      --panel:#161b22;
+      --panel-2:#0f172a;
+      --panel-soft:#1f2937;
+      --text:#e5e7eb;
+      --text-strong:#f8fafc;
+      --muted:#94a3b8;
+      --muted-2:#64748b;
+      --accent:#22c55e;
+      --accent-2:#38bdf8;
+      --warning:#f59e0b;
+      --danger:#ef4444;
+      --border:#30363d;
+      --border-strong:#475569;
+      --input:#0b1220;
+      --input-hover:#111827;
+      --shadow-soft:0 10px 28px rgba(0,0,0,.24);
+      --shadow-strong:0 18px 50px rgba(0,0,0,.35);
+      --radius:8px;
+      --radius-sm:6px;
+      --transition:.16s ease;
+      --metrolabs:#22c55e;
+      --metrolabs-dark:#16a34a;
+      --card-shadow:var(--shadow-soft);
+      --card-radius:var(--radius);
+    }
+    html{scroll-behavior:smooth;}
+    body{
+      margin:0;
+      font-family:"Segoe UI",Inter,Arial,sans-serif;
+      background:
+        radial-gradient(circle at 20% 0%,rgba(56,189,248,.10),transparent 26rem),
+        radial-gradient(circle at 85% 10%,rgba(34,197,94,.08),transparent 24rem),
+        linear-gradient(180deg,#0d1117 0%,#0b1020 100%)!important;
+      color:var(--text)!important;
+      padding-bottom:44px;
+      font-size:.94rem;
+    }
+    .container{max-width:1560px!important;margin:0 auto!important;padding:18px!important;}
+    .topo{
+      position:sticky;
+      top:0;
+      z-index:20;
+      background:rgba(13,17,23,.92)!important;
+      border:1px solid var(--border)!important;
+      border-radius:var(--radius)!important;
+      padding:14px 18px!important;
+      box-shadow:var(--shadow-soft)!important;
+      margin-bottom:14px!important;
+      backdrop-filter:blur(14px);
+    }
+    .topo::before{
+      content:"";
+      width:4px;
+      align-self:stretch;
+      min-height:58px;
+      background:linear-gradient(180deg,var(--accent-2),var(--accent));
+      border-radius:999px;
+      position:absolute;
+      left:14px;
+      top:14px;
+      bottom:14px;
+    }
+    .topo-shell{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;flex-wrap:wrap!important;padding-left:14px;}
+    .topo-brand{display:flex;align-items:center;gap:16px;min-width:0;flex:1;}
+    .topo-logo-img{height:56px;max-width:230px;object-fit:contain;display:block;background:#f8fafc;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:7px 10px;}
+    .topo-kicker{font-size:11px!important;font-weight:900!important;letter-spacing:.08em!important;text-transform:uppercase!important;color:#86efac!important;margin-bottom:6px!important;}
+    .topo-title{margin:0!important;font-size:19px!important;color:var(--text-strong)!important;font-weight:800!important;line-height:1.2!important;letter-spacing:0!important;}
+    .topo-subtitle{margin:5px 0 0!important;color:var(--muted)!important;font-size:13px!important;line-height:1.45!important;max-width:820px!important;}
+    .topo-actions{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;justify-content:flex-end!important;}
+    .topo-action{background:#111827!important;color:#dbeafe!important;border:1px solid var(--border)!important;border-radius:var(--radius-sm)!important;padding:11px 14px!important;font-size:13px!important;font-weight:800!important;cursor:pointer!important;transition:all var(--transition)!important;}
+    .topo-action:hover{background:#1f2937!important;border-color:#64748b!important;transform:translateY(-1px);}
+
+    .card,.item-card,.insumo-card,.ensaio-card,.nr13-card,.doc-item,.radio-status-card{
+      background:linear-gradient(180deg,rgba(22,27,34,.98),rgba(15,23,42,.98))!important;
+      border:1px solid var(--border)!important;
+      border-radius:var(--radius)!important;
+      box-shadow:var(--shadow-soft)!important;
+      color:var(--text)!important;
+    }
+    .card{overflow:hidden;}
+    .card-body{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 260px)!important;}
+    h4,h5,h6,.form-label{color:var(--text-strong)!important;}
+    h4{font-size:14px!important;text-transform:uppercase!important;letter-spacing:0!important;border-bottom:1px solid var(--border);padding-bottom:11px;margin-bottom:16px!important;}
+    h4::before{content:"";display:inline-block;width:8px;height:8px;margin-right:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px rgba(34,197,94,.65);vertical-align:1px;}
+    .help,.text-muted,.doc-meta{color:var(--muted)!important;font-size:13px!important;line-height:1.5!important;}
+    .form-control,.form-select,textarea.form-control{
+      min-height:42px;
+      background:var(--input)!important;
+      color:var(--text-strong)!important;
+      border:1px solid var(--border)!important;
+      border-radius:var(--radius-sm)!important;
+      transition:all var(--transition)!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.03)!important;
+    }
+    .form-control::placeholder{color:var(--muted-2)!important;}
+    .form-control:hover,.form-select:hover{border-color:#475569!important;background:var(--input-hover)!important;}
+    .form-control:focus,.form-select:focus{outline:none!important;border-color:var(--accent-2)!important;box-shadow:0 0 0 .2rem rgba(56,189,248,.12),inset 0 1px 0 rgba(255,255,255,.04)!important;}
+    .input-group .btn{border-top-left-radius:0!important;border-bottom-left-radius:0!important;}
+    .btn{border-radius:var(--radius-sm)!important;font-weight:800!important;font-size:13px!important;min-height:42px!important;letter-spacing:0!important;transition:all var(--transition)!important;}
+    .btn-success,.btn-primary{background:linear-gradient(180deg,#22c55e,#16a34a)!important;color:#052e16!important;border-color:rgba(134,239,172,.34)!important;box-shadow:0 10px 24px rgba(34,197,94,.20)!important;}
+    .btn-success:hover,.btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px);}
+    .btn-dark,.btn-outline-secondary,.btn-outline-success,.btn-secondary{background:#111827!important;color:#dbeafe!important;border:1px solid var(--border)!important;box-shadow:none!important;}
+    .btn-dark:hover,.btn-outline-secondary:hover,.btn-outline-success:hover,.btn-secondary:hover{background:#1f2937!important;border-color:#64748b!important;transform:translateY(-1px);}
+    .btn-outline-danger{background:#281517!important;border-color:#7f1d1d!important;color:#fecaca!important;}
+    .alert-secondary,.alert-warning,.alert-danger,.alert-info{background:#111827!important;border-color:#374151!important;color:#e5e7eb!important;}
+    .footer-actions{border-top:1px solid var(--border)!important;}
+    .step-summary{background:#0b1220!important;border-color:#334155!important;color:#d1d5db!important;}
+    .badge-soft,.profile-badge{background:#052e1a!important;border-color:#14532d!important;color:#86efac!important;}
+    .radio-status-card.active{background:#052e1a!important;border-color:#22c55e!important;box-shadow:0 0 0 .15rem rgba(34,197,94,.16)!important;}
+    .doc-item{border-left:3px solid var(--accent-2)!important;}
+    .ml-dialog{background:#161b22!important;border-color:var(--border)!important;box-shadow:0 24px 90px rgba(0,0,0,.55)!important;}
+    .ml-dialog-header{background:#010409!important;border-bottom-color:var(--border)!important;}
+    .ml-box{background:#0b1220!important;border-color:var(--border)!important;}
+    @media(max-width:768px){
+      .container{padding:10px!important;}
+      .topo{position:static!important;padding:14px!important;}
+      .topo::before{left:10px;top:14px;bottom:14px;}
+      .topo-shell{display:block!important;padding-left:12px;}
+      .topo-brand{align-items:flex-start;flex-direction:column;gap:10px;}
+      .topo-logo-img{height:52px;max-width:210px;}
+      .topo-title{font-size:17px!important;}
+      .topo-actions{justify-content:flex-start!important;margin-top:14px!important;}
+      .card-body{padding:18px!important;}
+    }
+
+
+  /* METROLABS COMFORT DARK - paleta ergonomica para uso prolongado */
+  :root {
+    color-scheme: dark;
+    --bg: #111827;
+    --bg-2: #172033;
+    --card: #1f2937;
+    --card-soft: #273244;
+    --panel: #1f2937;
+    --panel-2: #172033;
+    --panel-soft: #273244;
+    --surface: #1f2937;
+    --surface-2: #172033;
+    --surface-3: #273244;
+    --input: #172033;
+    --input-hover: #1d293a;
+    --text: #d9e2ec;
+    --text-strong: #eef3f8;
+    --muted: #9aa8b8;
+    --muted-2: #7f8da0;
+    --border: #3a4657;
+    --border-strong: #4a5870;
+    --accent: #6fbf8f;
+    --accent-2: #7aa7c7;
+    --metrolabs: #6fbf8f;
+    --metrolabs-dark: #4f9f75;
+    --metro-green: #6fbf8f;
+    --metro-green-dark: #4f9f75;
+    --metro-blue: #7aa7c7;
+    --metro-blue-dark: #9bbad2;
+    --metro-gold: #d6a94f;
+    --success: #6fbf8f;
+    --info: #7aa7c7;
+    --warning: #d6a94f;
+    --danger: #e08a8a;
+    --success-bg: rgba(111,191,143,.14);
+    --info-bg: rgba(122,167,199,.14);
+    --warning-bg: rgba(214,169,79,.14);
+    --danger-bg: rgba(224,138,138,.13);
+    --pending-bg: rgba(214,169,79,.14);
+    --pending: #d6a94f;
+    --shadow: 0 10px 28px rgba(0,0,0,.22);
+    --shadow-soft: 0 8px 22px rgba(0,0,0,.18);
+    --shadow-hover: 0 12px 30px rgba(0,0,0,.24);
+    --shadow-strong: 0 14px 36px rgba(0,0,0,.28);
+  }
+
+  html, body {
+    background: #111827 !important;
+    color: var(--text) !important;
+    text-rendering: optimizeLegibility;
+  }
+
+  body,
+  .app-shell,
+  .main,
+  .content,
+  .content-area,
+  .wrap,
+  .container {
+    background-image: none !important;
+  }
+
+  .topbar,
+  .topo,
+  .header-card,
+  .sidebar,
+  .login-card,
+  .card,
+  .dashboard-card,
+  .panel,
+  .action-bar,
+  .modal-content,
+  .item-card,
+  .insumo-card,
+  .ensaio-card,
+  .nr13-card,
+  .doc-item,
+  .radio-status-card,
+  .iframe-container,
+  .step-summary,
+  .ml-dialog,
+  .ml-box,
+  .kpi,
+  .receita-item {
+    background: #1f2937 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow-soft) !important;
+  }
+
+  .card-body,
+  .modal-header,
+  .modal-footer,
+  .ml-dialog-header,
+  .terminal-header,
+  .terminal,
+  .section-divider,
+  .card-note {
+    background: #172033 !important;
+    background-image: none !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  .content-title,
+  .topo-title,
+  .title-area h1,
+  .form-label,
+  label,
+  strong,
+  .fw-bold {
+    color: var(--text-strong) !important;
+  }
+
+  p,
+  .help,
+  .field-help,
+  .text-muted,
+  .doc-meta,
+  .panel-subtitle,
+  .topo-subtitle,
+  .title-area p,
+  .loading-soft,
+  small {
+    color: var(--muted) !important;
+    opacity: 1 !important;
+  }
+
+  input,
+  select,
+  textarea,
+  .form-control,
+  .form-select {
+    background: var(--input) !important;
+    color: var(--text-strong) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  input:hover,
+  select:hover,
+  textarea:hover,
+  .form-control:hover,
+  .form-select:hover {
+    background: var(--input-hover) !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus,
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--accent-2) !important;
+    box-shadow: 0 0 0 3px rgba(122,167,199,.16) !important;
+    outline: none !important;
+  }
+
+  ::placeholder,
+  .form-control::placeholder {
+    color: var(--muted-2) !important;
+  }
+
+  .btn-primary,
+  .btn-success,
+  .btn-download,
+  .tab-btn.active,
+  .menu-btn.active,
+  #btnSyncOS {
+    background: #6fbf8f !important;
+    background-image: none !important;
+    border-color: #5aa87b !important;
+    color: #102016 !important;
+    box-shadow: none !important;
+  }
+
+  .btn-secondary,
+  .btn-dark,
+  .btn-light,
+  .btn-outline-secondary,
+  .btn-outline-success,
+  .topo-action,
+  .tab-btn,
+  .menu-btn,
+  .btn-download.secondary {
+    background: #273244 !important;
+    background-image: none !important;
+    border: 1px solid var(--border) !important;
+    color: #d9e2ec !important;
+    box-shadow: none !important;
+  }
+
+  button:hover,
+  .btn:hover,
+  .menu-btn:hover,
+  .topo-action:hover,
+  .tab-btn:hover,
+  .btn-download:hover {
+    filter: none !important;
+    transform: none !important;
+    background-image: none !important;
+  }
+
+  .btn-secondary:hover,
+  .btn-dark:hover,
+  .btn-light:hover,
+  .btn-outline-secondary:hover,
+  .btn-outline-success:hover,
+  .topo-action:hover,
+  .tab-btn:hover,
+  .menu-btn:hover,
+  .btn-download.secondary:hover {
+    background: #303b4f !important;
+    border-color: var(--border-strong) !important;
+  }
+
+  .btn-outline-danger,
+  .btn-danger {
+    background: rgba(224,138,138,.14) !important;
+    border-color: rgba(224,138,138,.45) !important;
+    color: #f2b8b8 !important;
+    box-shadow: none !important;
+  }
+
+  .alert-warning,
+  .alert-box.warning {
+    background: var(--warning-bg) !important;
+    color: #ead39a !important;
+    border-color: rgba(214,169,79,.42) !important;
+  }
+
+  .alert-info,
+  .alert-box.info,
+  .card-note {
+    background: var(--info-bg) !important;
+    color: #c6d9e7 !important;
+    border-color: rgba(122,167,199,.34) !important;
+  }
+
+  .alert-danger,
+  .alert-box.error {
+    background: var(--danger-bg) !important;
+    color: #f2b8b8 !important;
+    border-color: rgba(224,138,138,.42) !important;
+  }
+
+  .alert-success,
+  .alert-box.success,
+  .status-badge,
+  .badge-soft,
+  .profile-badge,
+  #perfWidget {
+    background: var(--success-bg) !important;
+    color: #b9dec8 !important;
+    border-color: rgba(111,191,143,.34) !important;
+  }
+
+  .panel h2::before,
+  h4::before,
+  .step h4::before,
+  .topo::before,
+  .header-card::before {
+    background: #7aa7c7 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .terminal,
+  #placeholderStatus,
+  .ph-chip {
+    background: #101722 !important;
+    color: #b9dec8 !important;
+    border-color: var(--border) !important;
+  }
+
+  table,
+  th,
+  td {
+    border-color: var(--border) !important;
+  }
+
+  th,
+  thead,
+  .table thead th {
+    background: #273244 !important;
+    color: var(--text-strong) !important;
+  }
+
+  tr:hover,
+  tbody tr:hover {
+    background: rgba(122,167,199,.10) !important;
+  }</style>
+</head>
+<body>
+
+  <div id="modalManual" class="ml-modal" onclick="fecharModalAjuda(event)">
+    <div class="ml-dialog">
+      <div class="ml-dialog-header">
+        <h2>Manual do Operador - Carta de Conformidade Técnica</h2>
+        <button class="ml-close" type="button" onclick="fecharAjuda('modalManual')">Fechar</button>
+      </div>
+      <div class="ml-dialog-body">
+        <p>Este manual orienta o operador em linguagem simples. A Carta de Conformidade Técnica é um documento de evidência: ela registra quem foi avaliado, qual equipamento foi avaliado, qual escopo foi executado, quais critérios foram considerados e qual foi o parecer final. Antes de emitir, o operador deve conferir os dados com calma, porque o PDF gerado passa a compor o histórico documental do cliente.</p>
+        <h3>1. Dados da instituição</h3>
+        <ol>
+          <li>Digite o CNPJ com ou sem pontuação e clique em <strong>Buscar</strong>. O sistema consulta bases públicas e tenta preencher razão social, endereço, bairro, cidade e UF.</li>
+          <li>Se a busca não retornar dados, preencha manualmente. Isso pode ocorrer por instabilidade da base pública, bloqueio temporário da API ou CNPJ não localizado.</li>
+          <li>Confira a razão social. Esse é um dos campos mais importantes, pois aparece no documento, no histórico e na validação.</li>
+        </ol>
+        <h3>2. Dados do equipamento</h3>
+        <ol>
+          <li>Selecione o tipo de equipamento. Essa escolha muda a lógica técnica, os campos aplicáveis, as normas, os ensaios e os textos do relatório.</li>
+          <li>Preencha marca, modelo, número de série e TAG/patrimônio. Esses campos identificam o equipamento e evitam confusão entre ativos parecidos.</li>
+          <li>Quando houver campos específicos, como faixa térmica, PMTA, gás, classe de filtro ou rotação, preencha somente quando fizer sentido para o equipamento.</li>
+        </ol>
+        <h3>3. Escopo técnico</h3>
+        <p>Marque apenas as etapas realmente executadas. QI significa qualificação de instalação, QO significa qualificação de operação, QD significa qualificação de desempenho e inspeção técnica se aplica a perfis como NR-13. O sistema bloqueia combinações incompatíveis com o equipamento selecionado.</p>
+        <h3>4. Processo, ensaios e insumos</h3>
+        <p>Quando o equipamento usa ciclos ou receitas, informe os programas avaliados. Quando usa ensaios, registre resultados, temperaturas, observações e evidências. Quando usa insumos rastreáveis, registre lote, validade e fabricante. Esses dados sustentam a conclusão técnica.</p>
+        <h3>5. Conclusão e emissão</h3>
+        <ol>
+          <li>Escolha o status final: aprovado, aprovado com ressalvas, reprovado ou pendente.</li>
+          <li>Leia o texto conclusivo antes de gerar. O texto deve explicar o resultado com coerência técnica e sem prometer algo que não foi avaliado.</li>
+          <li>Clique em <strong>Gerar Carta de Conformidade</strong>. O sistema valida os campos, executa auditoria técnica, gera PDF, salva histórico e abre o documento.</li>
+          <li>Abra o PDF e revise visualmente: cliente, CNPJ, equipamento, escopo, conclusão, QR Code e link de validação.</li>
+        </ol>
+        <h3>Erros comuns e interpretação</h3>
+        <ul>
+          <li><strong>CNPJ não buscou:</strong> verifique se há 14 números. Se persistir, pode ser permissão de UrlFetchApp, instabilidade da API pública ou falta de autorização do script.</li>
+          <li><strong>Não avança etapa:</strong> algum campo obrigatório está vazio ou o escopo escolhido não combina com o perfil do equipamento.</li>
+          <li><strong>Falha ao gerar PDF:</strong> confirme se o setup foi executado, se as pastas existem e se o usuário implantador autorizou Drive, Documentos, Planilhas e requisições externas.</li>
+          <li><strong>Texto estranho no PDF:</strong> não envie ao cliente. Corrija o cadastro ou acione o administrador para revisão do modelo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div id="modalInventario" class="ml-modal" onclick="fecharModalAjuda(event)">
+    <div class="ml-dialog">
+      <div class="ml-dialog-header">
+        <h2>Inventário do Sistema - Carta de Conformidade</h2>
+        <button class="ml-close" type="button" onclick="fecharAjuda('modalInventario')">Fechar</button>
+      </div>
+      <div class="ml-dialog-body">
+        <p>Este inventário mostra a função de cada parte do sistema. Ele ajuda o operador e o administrador a entenderem onde nasce cada informação e onde procurar quando algo falhar.</p>
+        <div class="ml-grid">
+          <div class="ml-box"><strong>Index.html</strong><br>Interface principal, formulário em etapas, busca CNPJ, navegação, resumo final, consulta de documentos e comandos do operador.</div>
+          <div class="ml-box"><strong>Codigo.js</strong><br>Entrada do Web App, bootstrap, consulta CNPJ, validação de payload, banco de dados, clientes, equipamentos e histórico.</div>
+          <div class="ml-box"><strong>Config.js</strong><br>Perfis técnicos por equipamento, normas, critérios, textos padrão, escopos e regras específicas.</div>
+          <div class="ml-box"><strong>Documento.js</strong><br>Geração do documento final, estrutura do PDF, seções técnicas, rastreabilidade, QR Code e autenticidade.</div>
+          <div class="ml-box"><strong>Motor_Auditoria.js</strong><br>Análise lógica do payload, pendências, alertas, inconsistências e consolidação técnica.</div>
+          <div class="ml-box"><strong>IA.js</strong><br>Refinamento opcional da conclusão, mantendo o sentido técnico e sem inventar dados.</div>
+          <div class="ml-box"><strong>Validacao.js</strong><br>Tela e backend de validação documental por código de autenticação.</div>
+          <div class="ml-box"><strong>Setup.js</strong><br>Criação/configuração de planilha, abas, pastas do Drive e propriedades do script.</div>
+        </div>
+        <h3>Checklist administrativo antes de liberar uso</h3>
+        <ol>
+          <li>Executar o setup do sistema e confirmar DB_ID, pastas e propriedades.</li>
+          <li>Autorizar os escopos do Apps Script, especialmente Drive, Documentos, Planilhas e requisições externas.</li>
+          <li>Testar busca CNPJ com um CNPJ conhecido.</li>
+          <li>Gerar um PDF de teste e conferir se a validação externa abre corretamente.</li>
+          <li>Revisar se o perfil do equipamento escolhido gera campos e textos compatíveis.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+<script>
+function abrirManualOperador(){abrirAjuda('modalManual');}
+function abrirInventarioSistema(){abrirAjuda('modalInventario');}
+function abrirAjuda(id){var el=document.getElementById(id); if(el) el.classList.add('show');}
+function fecharAjuda(id){var el=document.getElementById(id); if(el) el.classList.remove('show');}
+function fecharModalAjuda(evt){if(evt && evt.target && evt.target.classList && evt.target.classList.contains('ml-modal')) evt.target.classList.remove('show');}
+document.addEventListener('keydown', function(evt){if(evt.key==='Escape'){fecharAjuda('modalManual');fecharAjuda('modalInventario');}});
+</script>
+  <div class="container py-4 py-lg-5">
+    <div class="topo mb-4">
+      <div class="topo-shell">
+        <div class="topo-brand">
+          <img class="topo-logo-img" src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w1200" alt="Metrolabs" onerror="this.onerror=null;this.src='https://via.placeholder.com/150x50/ffffff/007b3e?text=METROLABS';">
+          <div>
+            <div class="topo-kicker">METROLABS - Sistema Integrado</div>
+            <h2 class="topo-title" id="appTitulo">METROLABS - Carta de Conformidade Técnica</h2>
+            <div class="topo-subtitle">Suíte técnica para emissão de cartas de conformidade, rastreabilidade documental, validação externa e auditoria de critérios por tipo de equipamento.</div>
+          </div>
+        </div>
+        <div class="topo-actions">
+          <button class="topo-action" type="button" onclick="abrirManualOperador()">Manual do Operador</button>
+          <button class="topo-action" type="button" onclick="abrirInventarioSistema()">Inventário do Sistema</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-4">
+
+        <div id="alertaSistema" class="alert alert-danger hidden mb-4"></div>
+
+        <!-- STEP 1 -->
+        <div class="step active" id="step1">
+          <h4 class="mb-3">1. Dados da Instituição (Cliente)</h4>
+          <div class="help">Digite o CNPJ e clique em buscar. Funciona colando com ou sem pontuação.</div>
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label required">CNPJ</label>
+              <div class="input-group">
+                <input id="cnpj" class="form-control" placeholder="00.000.000/0000-00" autocomplete="off">
+                <button class="btn btn-dark" type="button" onclick="buscarCNPJ()" id="btnBuscarCnpj">Buscar</button>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label required">Razão Social</label>
+              <input id="cliente" class="form-control" placeholder="Hospital / Clínica">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Logradouro</label>
+              <input id="logradouro" class="form-control" placeholder="Rua / Avenida">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Número</label>
+              <input id="numero" class="form-control" placeholder="Nº">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Bairro</label>
+              <input id="bairro" class="form-control" placeholder="Bairro">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Cidade</label>
+              <input id="cidade" class="form-control" placeholder="Cidade">
+            </div>
+            <div class="col-md-1">
+              <label class="form-label">UF</label>
+              <input id="uf" class="form-control" placeholder="UF" maxlength="2">
+            </div>
+          </div>
+
+          <div id="alertaCnpj" class="alert alert-warning mt-3 hidden"></div>
+
+          <div class="footer-actions d-flex justify-content-end">
+            <button class="btn btn-success px-4" type="button" onclick="irParaEtapa(2)">Próximo</button>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step" id="step2">
+          <h4 class="mb-3">2. Dados do Equipamento</h4>
+          <div class="help">A seleção do equipamento controla automaticamente campos, normas, critérios, ensaios, insumos e textos do relatório.</div>
+
+          <div class="row g-3">
+            <div class="col-md-5">
+              <label class="form-label required">Tipo de Equipamento</label>
+              <select id="tipoEquipamentoCodigo" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label required">Marca</label>
+              <input id="marca" class="form-control" placeholder="Ex: Baumer, Cisa">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label required">Modelo</label>
+              <input id="modelo" class="form-control" placeholder="Ex: HI-VAC II">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label required">Número de Série</label>
+              <input id="serie" class="form-control" placeholder="Nº de Série">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Patrimônio / TAG</label>
+              <input id="patrimonio" class="form-control" placeholder="Tag / Patrimônio">
+            </div>
+            <div class="col-md-4 campo-capacidade">
+              <label class="form-label">Capacidade (Litros)</label>
+              <input id="volume" type="number" class="form-control" placeholder="Volume">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Setor</label>
+              <input id="setor" class="form-control" placeholder="Ex: CME, Laboratório, CAF">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Local de Instalação</label>
+              <input id="localInstalacao" class="form-control" placeholder="Ex: Sala de preparo, Expurgo, Câmara fria 01">
+            </div>
+
+            <div class="col-md-3 campo-termico hidden">
+              <label class="form-label">Faixa mínima (°C)</label>
+              <input id="faixaMin" class="form-control" placeholder="Ex: 2">
+            </div>
+            <div class="col-md-3 campo-termico hidden">
+              <label class="form-label">Faixa máxima (°C)</label>
+              <input id="faixaMax" class="form-control" placeholder="Ex: 8">
+            </div>
+
+            <div class="col-md-3 campo-nr13 hidden">
+              <label class="form-label">PMTA</label>
+              <input id="pmta" class="form-control" placeholder="Ex: 10 bar">
+            </div>
+            <div class="col-md-3 campo-nr13 hidden">
+              <label class="form-label">Categoria NR-13</label>
+              <input id="categoriaNR13" class="form-control" placeholder="Ex: V">
+            </div>
+
+            <div class="col-md-3 campo-capela hidden">
+              <label class="form-label">Classe / Filtro</label>
+              <input id="classeFiltro" class="form-control" placeholder="Ex: HEPA H14">
+            </div>
+
+            <div class="col-md-3 campo-centrifuga hidden">
+              <label class="form-label">Rotação Máxima</label>
+              <input id="rotacaoMaxima" class="form-control" placeholder="Ex: 4000 rpm">
+            </div>
+
+            <div class="col-md-3 campo-secadora hidden">
+              <label class="form-label">Temperatura de Trabalho</label>
+              <input id="temperaturaTrabalho" class="form-control" placeholder="Ex: 45 °C">
+            </div>
+
+            <div class="col-md-3 campo-eto hidden">
+              <label class="form-label">Tipo de Gás</label>
+              <input id="tipoGas" class="form-control" placeholder="Ex: ETO / COâ‚‚">
+            </div>
+            <div class="col-md-3 campo-eto hidden">
+              <label class="form-label">Sistema de Exaustão</label>
+              <input id="sistemaExaustao" class="form-control" placeholder="Ex: Exaustão dedicada">
+            </div>
+          </div>
+
+          <div class="step-summary" id="resumoEquipamentoPreview">
+            Carregando perfil técnico...
+          </div>
+
+          <div class="footer-actions d-flex justify-content-between">
+            <button class="btn btn-outline-secondary px-4" type="button" onclick="irParaEtapa(1)">Voltar</button>
+            <button class="btn btn-success px-4" type="button" onclick="irParaEtapa(3)">Próximo</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step" id="step3">
+          <h4 class="mb-3">3. Escopo Executado e Parecer Técnico</h4>
+          <div class="help">As etapas exibidas são controladas pelo perfil do equipamento selecionado.</div>
+
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card bg-light">
+                <div class="card-body">
+                  <h6 class="fw-bold mb-3">Etapas Aplicáveis</h6>
+
+                  <div class="form-check mb-2" id="boxQi">
+                    <input class="form-check-input" type="checkbox" id="qi">
+                    <label class="form-check-label" for="qi">Qualificação de Instalação (QI)</label>
+                  </div>
+                  <div class="form-check mb-2" id="boxQo">
+                    <input class="form-check-input" type="checkbox" id="qo">
+                    <label class="form-check-label" for="qo">Qualificação de Operação (QO)</label>
+                  </div>
+                  <div class="form-check mb-2" id="boxQd">
+                    <input class="form-check-input" type="checkbox" id="qd">
+                    <label class="form-check-label" for="qd">Qualificação de Desempenho (QD)</label>
+                  </div>
+                  <div class="form-check mb-2 hidden" id="boxInspecao">
+                    <input class="form-check-input" type="checkbox" id="inspecao">
+                    <label class="form-check-label" for="inspecao">Inspeção Técnica / NR-13</label>
+                  </div>
+
+                  <div class="small text-muted mt-3" id="textoEscopoPerfil"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card bg-light">
+                <div class="card-body">
+                  <h6 class="fw-bold mb-3">Parecer Técnico Final</h6>
+
+                  <label class="d-block radio-status-card active mb-2" id="cardStatusAprovado">
+                    <input type="radio" name="statusFinal" value="Aprovado" class="form-check-input me-2" checked>
+                    <span class="fw-bold text-success">Aprovado</span>
+                  </label>
+
+                  <label class="d-block radio-status-card mb-2" id="cardStatusRessalvas">
+                    <input type="radio" name="statusFinal" value="Aprovado com Ressalvas" class="form-check-input me-2">
+                    <span class="fw-bold text-warning">Aprovado com Ressalvas</span>
+                  </label>
+
+                  <label class="d-block radio-status-card" id="cardStatusReprovado">
+                    <input type="radio" name="statusFinal" value="Reprovado" class="form-check-input me-2">
+                    <span class="fw-bold text-danger">Reprovado</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-actions d-flex justify-content-between">
+            <button class="btn btn-outline-secondary px-4" type="button" onclick="irParaEtapa(2)">Voltar</button>
+            <button class="btn btn-success px-4" type="button" onclick="prepararEtapaProcesso()">Próximo</button>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="step" id="step4">
+          <h4 class="mb-3" id="tituloStep4">4. Dados do Processo</h4>
+          <div class="help" id="helpStep4">O conteúdo desta etapa muda conforme o equipamento selecionado.</div>
+
+          <div id="blocoReceitas">
+            <h6 class="fw-bold">Receitas / Programas / Ciclos</h6>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <input id="cicloNome" class="form-control" placeholder="Nome da Receita / Programa">
+              </div>
+              <div class="col-md-4 d-grid">
+                <button class="btn btn-dark" type="button" onclick="addReceita()">Adicionar</button>
+              </div>
+            </div>
+            <div class="mt-3" id="listaReceitas"></div>
+            <div class="mt-2" id="receitasSugeridas"></div>
+          </div>
+
+          <div id="blocoEnsaios" class="hidden">
+            <h6 class="fw-bold">Ensaios Aplicáveis</h6>
+            <div id="containerEnsaios"></div>
+          </div>
+
+          <div id="blocoNR13" class="hidden">
+            <h6 class="fw-bold">Inspeção NR-13 / Vaso de Pressão</h6>
+            <div id="containerNR13"></div>
+          </div>
+
+          <div id="alertaProcessoNaoAplicavel" class="alert alert-info hidden mt-3">
+            Para o escopo selecionado, não há necessidade de informar receitas, ciclos ou ensaios nesta etapa.
+          </div>
+
+          <div class="footer-actions d-flex justify-content-between">
+            <button class="btn btn-outline-secondary px-4" type="button" onclick="irParaEtapa(3)">Voltar</button>
+            <button class="btn btn-success px-4" type="button" onclick="prepararEtapaInsumos()">Próximo</button>
+          </div>
+        </div>
+
+        <!-- STEP 5 -->
+        <div class="step" id="step5">
+          <h4 class="mb-3">5. Rastreabilidade de Insumos / Testes</h4>
+          <div class="help" id="helpInsumos">O sistema exibirá somente os itens aplicáveis ao equipamento selecionado.</div>
+
+          <div id="containerInsumos"></div>
+
+          <div class="footer-actions d-flex justify-content-between">
+            <button class="btn btn-outline-secondary px-4" type="button" onclick="irParaEtapa(4)">Voltar</button>
+            <button class="btn btn-success px-4" type="button" onclick="prepararEtapaConclusao()">Próximo</button>
+          </div>
+        </div>
+
+        <!-- STEP 6 -->
+        <div class="step" id="step6">
+          <h4 class="mb-3">6. Conclusão Técnica e Emissão</h4>
+          <div class="help">O texto padrão é exclusivo para o equipamento selecionado. Você pode ajustar manualmente e refinar com IA antes de emitir.</div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Texto de Conclusão para o Documento</label>
+            <textarea id="textoConclusao" class="form-control" rows="6"></textarea>
+            <div class="d-flex justify-content-between mt-2">
+              <small class="text-muted">A IA deve manter o sentido técnico e não inventar dados.</small>
+              <button class="btn btn-sm btn-outline-success" type="button" id="btnRefinarIA" onclick="refinarConclusaoIA()">Refinar com IA</button>
+            </div>
+          </div>
+
+          <div class="step-summary" id="resumoFinalDocumento">
+            O resumo final será montado automaticamente antes da emissão.
+          </div>
+
+          <div class="footer-actions d-flex flex-wrap gap-2 justify-content-end">
+            <button class="btn btn-outline-secondary px-4 me-auto" type="button" onclick="irParaEtapa(5)">Voltar</button>
+            <button class="btn btn-dark px-4" type="button" onclick="imprimirTermica()">Imprimir Ticket Térmico</button>
+            <button class="btn btn-success px-4" type="button" onclick="abrirWhatsapp()">Avisar Cliente (WhatsApp)</button>
+            <button class="btn btn-primary px-4" type="button" id="btnGerarCarta" onclick="gerarDocumentoFinal()">Gerar Carta de Conformidade</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="container pb-4">
+    <div class="card mt-4">
+      <div class="card-body p-4">
+        <h4 class="mb-3">7. Consulta de Documentos Gerados</h4>
+        <div class="help">Pesquise por cliente, CNPJ, OS, código de autenticação, série, TAG ou status para localizar PDFs já emitidos e reimprimir o ticket quando necessário.</div>
+        <div class="row g-3">
+          <div class="col-md-9">
+            <input id="filtroConsultaDocs" class="form-control" placeholder="Ex: cliente, CNPJ, OS, código, série, status...">
+          </div>
+          <div class="col-md-3 d-grid">
+            <button class="btn btn-dark" type="button" onclick="pesquisarDocumentosGerados()">Pesquisar documentos</button>
+          </div>
+        </div>
+        <div id="resultadoConsultaDocs" class="mt-3">
+          <div class="text-muted">Nenhuma pesquisa executada ainda.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('Impressora'); ?>
+
+  <script>
+    let bootstrapApp = {};
+    let perfilAtual = null;
+    let receitas = [];
+    let urlPdfGerado = "";
+    let ultimoPayloadGerado = null;
+    let ultimaValidacaoGerada = null;
+
+    window.onload = function() {
+      inicializarPagina();
+    };
+
+    function inicializarPagina() {
+      try {
+        aplicarMascaraCnpj();
+        configurarEventos();
+        popularTiposEquipamentoFallback();
+        atualizarCardsStatus();
+        atualizarTelaPorPerfil();
+
+        if (temGoogleScriptRun()) {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              bootstrapApp = res || {};
+              if (bootstrapApp.appNome) {
+                document.getElementById("appTitulo").innerText = bootstrapApp.appNome;
+              }
+              popularTiposEquipamento();
+              atualizarTelaPorPerfil();
+            })
+            .withFailureHandler(function(err) {
+              console.error("Falha bootstrap:", err);
+              mostrarAlertaSistema("Falha ao carregar configurações completas. O formulário seguirá em modo básico.");
+              atualizarTelaPorPerfil();
+            })
+            .getAppBootstrap();
+        }
+      } catch (e) {
+        mostrarAlertaSistema("Erro na inicialização: " + msgErro(e));
+      }
+    }
+
+    function configurarEventos() {
+      const inputCiclo = document.getElementById("cicloNome");
+      if (inputCiclo) {
+        inputCiclo.addEventListener("keydown", function(e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addReceita();
+          }
+        });
+      }
+
+      const inputCnpj = document.getElementById("cnpj");
+      if (inputCnpj) {
+        inputCnpj.addEventListener("keydown", function(e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            buscarCNPJ();
+          }
+        });
+      }
+
+      document.querySelectorAll('input[name="statusFinal"]').forEach(function(radio) {
+        radio.addEventListener("change", atualizarCardsStatus);
+      });
+
+      const sel = document.getElementById("tipoEquipamentoCodigo");
+      if (sel) sel.addEventListener("change", atualizarTelaPorPerfil);
+
+      ["marca","modelo","serie","patrimonio","volume","setor","localInstalacao","faixaMin","faixaMax","pmta","categoriaNR13","classeFiltro","rotacaoMaxima","temperaturaTrabalho","tipoGas","sistemaExaustao"].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", atualizarResumoEquipamentoPreview);
+      });
+    }
+
+    function temGoogleScriptRun() {
+      return typeof google !== "undefined" && google && google.script && google.script.run;
+    }
+
+    function popularTiposEquipamentoFallback() {
+      const select = document.getElementById("tipoEquipamentoCodigo");
+      if (!select) return;
+
+      const tipos = [
+        ["AUTOCLAVE_VAPOR", "Autoclave a Vapor"],
+        ["AUTOCLAVE_PEROXIDO", "Autoclave de Peróxido de Hidrogênio"],
+        ["AUTOCLAVE_ETO", "Autoclave por Óxido de Etileno (ETO)"],
+        ["LAVADORA_ULTRASSONICA", "Lavadora Ultrassônica"],
+        ["TERMODESINFECTORA", "Termodesinfectora"],
+        ["CAMARA_FRIA", "Câmara Conservadora / Câmara Fria"],
+        ["FREEZER", "Freezer"],
+        ["CAIXA_TERMICA", "Caixa Térmica"],
+        ["CAPELA_FLUXO_LAMINAR", "Capela de Fluxo Laminar"],
+        ["CENTRIFUGA", "Centrífuga"],
+        ["ESTUFA", "Estufa"],
+        ["SECADORA_TRAQUEIA", "Secadora de Traqueia"],
+        ["VASO_PRESSAO_NR13", "Ensaio NR-13 / Vaso de Pressão"]
+      ];
+
+      select.innerHTML = tipos.map(function(t) {
+        return '<option value="' + esc(t[0]) + '">' + esc(t[1]) + '</option>';
+      }).join("");
+    }
+
+    function popularTiposEquipamento() {
+      const select = document.getElementById("tipoEquipamentoCodigo");
+      if (!select) return;
+
+      const tipos = Array.isArray(bootstrapApp.tiposEquipamento) ? bootstrapApp.tiposEquipamento : [];
+      if (!tipos.length) {
+        popularTiposEquipamentoFallback();
+        return;
+      }
+
+      select.innerHTML = tipos.map(function(t) {
+        return '<option value="' + esc(t.codigo) + '">' + esc(t.nome) + '</option>';
+      }).join("");
+    }
+
+    function getTipoCodigoSelecionado() {
+      return valorCampo("tipoEquipamentoCodigo");
+    }
+
+    function getPerfilAtual() {
+      const codigo = getTipoCodigoSelecionado();
+
+      if (bootstrapApp && bootstrapApp.perfisEquipamento && bootstrapApp.perfisEquipamento[codigo]) {
+        return bootstrapApp.perfisEquipamento[codigo];
+      }
+
+      const fallback = {
+        AUTOCLAVE_VAPOR: { codigo:"AUTOCLAVE_VAPOR", nome:"Autoclave a Vapor", familia:"ESTERILIZACAO", usaQI:true, usaQO:true, usaQD:true, usaReceitas:true, usaCiclos:true, usaInsumos:true, receitasPadrao:["Instrumental","Têxteis","Bowie-Dick"], insumos:[{codigo:"BI",nome:"Indicador Biológico"},{codigo:"IQ",nome:"Integrador Químico"},{codigo:"BOWIE_DICK",nome:"Teste Bowie-Dick"}], textos:{escopo:"Avaliação de autoclave a vapor.", conclusaoAprovado:"A autoclave a vapor apresentou conformidade preliminar."}},
+        CAMARA_FRIA: { codigo:"CAMARA_FRIA", nome:"Câmara Conservadora / Câmara Fria", familia:"CADEIA_FRIA", usaQI:true, usaQO:false, usaQD:true, usaReceitas:false, usaCiclos:false, usaInsumos:false, usaEnsaiosTermicos:true, ensaiosPadrao:["Ensaio 24 Horas","Porta Semiaberta","Queda de Energia"], textos:{escopo:"Avaliação térmica de câmara fria.", conclusaoAprovado:"A câmara apresentou conformidade preliminar."}},
+        VASO_PRESSAO_NR13: { codigo:"VASO_PRESSAO_NR13", nome:"Ensaio NR-13 / Vaso de Pressão", familia:"NR13", usaQI:false, usaQO:false, usaQD:false, usaReceitas:false, usaCiclos:false, usaInsumos:false, usaInspecaoNR13:true, ensaiosPadrao:["Inspeção Visual","Ensaio Hidrostático","Válvula de Segurança"], textos:{escopo:"Inspeção técnica NR-13.", conclusaoAprovado:"O vaso apresentou conformidade preliminar."}}
+      };
+
+      return fallback[codigo] || fallback.AUTOCLAVE_VAPOR;
+    }
+
+    function atualizarTelaPorPerfil() {
+      perfilAtual = getPerfilAtual();
+
+      receitas = [];
+      renderReceitas();
+
+      aplicarCamposPorPerfil();
+      aplicarEscopoPorPerfil();
+      renderEnsaiosPadrao();
+      renderNR13Padrao();
+      atualizarResumoEquipamentoPreview();
+      atualizarResumoFinalDocumento();
+    }
+
+    function aplicarCamposPorPerfil() {
+      const p = perfilAtual || {};
+
+      toggleGrupo("campo-termico", !!p.usaEnsaiosTermicos);
+      toggleGrupo("campo-nr13", !!p.usaInspecaoNR13);
+      toggleGrupo("campo-capela", p.codigo === "CAPELA_FLUXO_LAMINAR");
+      toggleGrupo("campo-centrifuga", p.codigo === "CENTRIFUGA");
+      toggleGrupo("campo-secadora", p.codigo === "SECADORA_TRAQUEIA");
+      toggleGrupo("campo-eto", p.codigo === "AUTOCLAVE_ETO");
+    }
+
+    function aplicarEscopoPorPerfil() {
+      const p = perfilAtual || {};
+
+      configurarCheckEtapa("boxQi", "qi", !!p.usaQI);
+      configurarCheckEtapa("boxQo", "qo", !!p.usaQO);
+      configurarCheckEtapa("boxQd", "qd", !!p.usaQD);
+      configurarCheckEtapa("boxInspecao", "inspecao", !!p.usaInspecaoNR13);
+
+      const txt = document.getElementById("textoEscopoPerfil");
+      if (txt) {
+        txt.innerHTML = '<span class="profile-badge">' + esc(p.nome || "-") + '</span>' +
+          '<span class="profile-badge">' + esc(p.familia || "-") + '</span>' +
+          '<div class="mt-2">' + esc((p.textos && p.textos.escopo) || "") + '</div>';
+      }
+    }
+
+    function configurarCheckEtapa(boxId, inputId, aplicavel) {
+      const box = document.getElementById(boxId);
+      const input = document.getElementById(inputId);
+
+      if (!box || !input) return;
+
+      box.classList.toggle("hidden", !aplicavel);
+      input.checked = !!aplicavel;
+      input.disabled = !aplicavel;
+    }
+
+    function prepararEtapaProcesso() {
+      const p = perfilAtual || {};
+
+      const temReceitas = !!p.usaReceitas && (isChecked("qo") || isChecked("qd"));
+      const temEnsaios = !!p.usaEnsaiosTermicos || !!p.usaEnsaiosGerais;
+      const temNR13 = !!p.usaInspecaoNR13;
+
+      toggleHidden("blocoReceitas", !temReceitas);
+      toggleHidden("blocoEnsaios", !(temEnsaios && !temNR13));
+      toggleHidden("blocoNR13", !temNR13);
+      toggleHidden("alertaProcessoNaoAplicavel", temReceitas || temEnsaios || temNR13);
+
+      const titulo = document.getElementById("tituloStep4");
+      const help = document.getElementById("helpStep4");
+
+      if (temReceitas) {
+        titulo.innerText = "4. Receitas / Programas / Ciclos";
+        help.innerText = "Informe os programas avaliados. As sugestões abaixo são exclusivas do equipamento selecionado.";
+        renderReceitasSugeridas();
+      } else if (temNR13) {
+        titulo.innerText = "4. Inspeção NR-13 / Vaso de Pressão";
+        help.innerText = "Informe os ensaios e inspeções realizados para o vaso de pressão.";
+      } else if (temEnsaios) {
+        titulo.innerText = "4. Ensaios Aplicáveis";
+        help.innerText = "Informe os ensaios térmicos ou funcionais aplicáveis ao equipamento selecionado.";
+      } else {
+        titulo.innerText = "4. Dados do Processo";
+        help.innerText = "Não há etapa adicional obrigatória para o escopo selecionado.";
+      }
+
+      irParaEtapa(4);
+    }
+
+    function renderReceitasSugeridas() {
+      const area = document.getElementById("receitasSugeridas");
+      if (!area) return;
+
+      const sugestoes = Array.isArray(perfilAtual.receitasPadrao) ? perfilAtual.receitasPadrao : [];
+      if (!sugestoes.length) {
+        area.innerHTML = "";
+        return;
+      }
+
+      area.innerHTML = '<div class="small text-muted mb-1">Sugestões do perfil:</div>' +
+        sugestoes.map(function(nome) {
+          return '<button type="button" class="btn btn-sm btn-outline-success me-1 mb-1" onclick="addReceitaDireta(\'' + escAttr(nome) + '\')">' + esc(nome) + '</button>';
+        }).join("");
+    }
+
+    function addReceita() {
+      const nome = valorCampo("cicloNome");
+      if (!nome) return;
+      addReceitaDireta(nome);
+      setValorCampo("cicloNome", "");
+    }
+
+    function addReceitaDireta(nome) {
+      const n = formatarTextoPtBr(nome);
+      if (!n) return;
+
+      receitas.push(n);
+      receitas = deduplicarListaFront(receitas);
+      renderReceitas();
+      atualizarResumoFinalDocumento();
+    }
+
+    function removerReceita(idx) {
+      receitas.splice(idx, 1);
+      renderReceitas();
+      atualizarResumoFinalDocumento();
+    }
+
+    function renderReceitas() {
+      const div = document.getElementById("listaReceitas");
+      if (!div) return;
+
+      if (!receitas.length) {
+        div.innerHTML = "<div class='text-muted'>Nenhuma receita/programa informado.</div>";
+        return;
+      }
+
+      div.innerHTML = receitas.map(function(c, i) {
+        return '' +
+          '<div class="item-card d-flex justify-content-between align-items-center">' +
+            '<div>' + esc(c) + '</div>' +
+            '<button class="btn btn-sm btn-outline-danger" type="button" onclick="removerReceita(' + i + ')">Remover</button>' +
+          '</div>';
+      }).join("");
+    }
+
+    function renderEnsaiosPadrao() {
+      const area = document.getElementById("containerEnsaios");
+      if (!area) return;
+
+      const ensaios = Array.isArray(perfilAtual.ensaiosPadrao) ? perfilAtual.ensaiosPadrao : [];
+      if (!ensaios.length) {
+        area.innerHTML = '<div class="alert alert-secondary">Não há ensaios específicos configurados para este equipamento.</div>';
+        return;
+      }
+
+      area.innerHTML = ensaios.map(function(nome, idx) {
+        return '' +
+          '<div class="ensaio-card" data-ensaio="' + esc(nome) + '">' +
+            '<h6 class="fw-bold mb-3">' + esc(nome) + '</h6>' +
+            '<div class="row g-2">' +
+              '<div class="col-md-3"><label class="form-label">Resultado</label><select class="form-select ensaio-resultado"><option>Aprovado</option><option>Aprovado com Ressalvas</option><option>Reprovado</option><option>Pendente</option></select></div>' +
+              '<div class="col-md-3 campo-ensaio-termico"><label class="form-label">Temp. mínima</label><input class="form-control ensaio-temp-min" placeholder="°C"></div>' +
+              '<div class="col-md-3 campo-ensaio-termico"><label class="form-label">Temp. máxima</label><input class="form-control ensaio-temp-max" placeholder="°C"></div>' +
+              '<div class="col-md-3 campo-ensaio-termico"><label class="form-label">Excursões</label><input class="form-control ensaio-excursao" placeholder="Ex: 0"></div>' +
+              '<div class="col-md-12"><label class="form-label">Observações</label><input class="form-control ensaio-obs" placeholder="Observações do ensaio"></div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    function renderNR13Padrao() {
+      const area = document.getElementById("containerNR13");
+      if (!area) return;
+
+      const ensaios = Array.isArray(perfilAtual.ensaiosPadrao) ? perfilAtual.ensaiosPadrao : [];
+      area.innerHTML = ensaios.map(function(nome) {
+        return '' +
+          '<div class="nr13-card" data-nr13="' + esc(nome) + '">' +
+            '<h6 class="fw-bold mb-3">' + esc(nome) + '</h6>' +
+            '<div class="row g-2">' +
+              '<div class="col-md-3"><label class="form-label">Resultado</label><select class="form-select nr13-resultado"><option>Aprovado</option><option>Aprovado com Ressalvas</option><option>Reprovado</option><option>Pendente</option></select></div>' +
+              '<div class="col-md-3"><label class="form-label">Pressão de teste</label><input class="form-control nr13-pressao" placeholder="Ex: 15 bar"></div>' +
+              '<div class="col-md-3"><label class="form-label">Tempo de teste</label><input class="form-control nr13-tempo" placeholder="Ex: 30 min"></div>' +
+              '<div class="col-md-3"><label class="form-label">Observações</label><input class="form-control nr13-obs" placeholder="Observações"></div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    function prepararEtapaInsumos() {
+      const container = document.getElementById("containerInsumos");
+      if (!container) return;
+
+      const p = perfilAtual || {};
+      container.innerHTML = "";
+
+      if (!p.usaInsumos) {
+        container.innerHTML = '<div class="alert alert-secondary">' +
+          'Este equipamento não utiliza BI, IQ, Bowie-Dick, Príons, integradores ou insumos rastreáveis neste relatório. A rastreabilidade será baseada em dados técnicos, medições, ensaios e documentação aplicável.' +
+          '</div>';
+        irParaEtapa(5);
+        return;
+      }
+
+      const lista = Array.isArray(p.insumos) ? p.insumos : [];
+      if (!lista.length) {
+        container.innerHTML = '<div class="alert alert-secondary">Nenhum insumo configurado para este equipamento.</div>';
+        irParaEtapa(5);
+        return;
+      }
+
+      container.innerHTML = lista.map(function(insumo) {
+        return '' +
+          '<div class="insumo-card" data-insumo-codigo="' + esc(insumo.codigo || "") + '" data-insumo-nome="' + esc(insumo.nome || "") + '">' +
+            '<h6 class="fw-bold mb-3">' + esc(insumo.nome || "Insumo") + '</h6>' +
+            '<div class="row g-2">' +
+              '<div class="col-md-4"><label class="form-label">Lote</label><input type="text" class="form-control lote-input" placeholder="Lote"></div>' +
+              '<div class="col-md-4"><label class="form-label">Validade</label><input type="text" class="form-control validade-input" placeholder="Mês/Ano ou DD/MM/AAAA"></div>' +
+              '<div class="col-md-4"><label class="form-label">Fabricante</label><input type="text" class="form-control fabricante-input" placeholder="Fabricante"></div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+
+      irParaEtapa(5);
+    }
+
+    function prepararEtapaConclusao() {
+      const textArea = document.getElementById("textoConclusao");
+      if (!textArea) return;
+
+      const status = getStatusSelecionado();
+      const textos = (perfilAtual && perfilAtual.textos) ? perfilAtual.textos : {};
+
+      // Conclusão automática forte por status.
+      // Se o usuário já digitou ou a IA já refinou, preserva o texto manual.
+      if (!textArea.value.trim()) {
+        if (status === "Aprovado") {
+          textArea.value = textos.conclusaoAprovado || "O equipamento apresentou conformidade preliminar com o escopo avaliado.";
+        } else if (status === "Aprovado com Ressalvas") {
+          textArea.value = textos.conclusaoRessalvas || "O equipamento apresentou conformidade preliminar com ressalvas técnicas ou documentais.";
+        } else if (status === "Reprovado") {
+          textArea.value = textos.conclusaoReprovado || "O equipamento não apresentou evidências suficientes de conformidade para o escopo avaliado.";
+        } else {
+          textArea.value = "A conclusão técnica permanece pendente até a consolidação das evidências aplicáveis.";
+        }
+      }
+
+      atualizarResumoFinalDocumento();
+      irParaEtapa(6);
+    }
+
+    function montarPayloadFinal() {
+      const perfil = perfilAtual || getPerfilAtual();
+
+      return {
+        cliente: {
+          cnpj: valorCampo("cnpj"),
+          razaoSocial: formatarTextoPtBr(valorCampo("cliente")),
+          nome: formatarTextoPtBr(valorCampo("cliente")),
+          logradouro: formatarLogradouroPtBr(valorCampo("logradouro")),
+          numero: valorCampo("numero"),
+          bairro: formatarTextoPtBr(valorCampo("bairro")),
+          cidade: formatarTextoPtBr(valorCampo("cidade")),
+          uf: String(valorCampo("uf") || "").toUpperCase()
+        },
+        equipamento: {
+          tipoCodigo: perfil.codigo,
+          tipoNome: perfil.nome,
+          tipo: perfil.nome,
+          marca: formatarTextoPtBr(valorCampo("marca")),
+          modelo: formatarModeloTecnico(valorCampo("modelo")),
+          serie: valorCampo("serie"),
+          numeroSerie: valorCampo("serie"),
+          patrimonio: valorCampo("patrimonio"),
+          tag: valorCampo("patrimonio"),
+          capacidade: valorCampo("volume"),
+          capacidadeLitros: valorCampo("volume"),
+          setor: formatarTextoPtBr(valorCampo("setor")),
+          localInstalacao: formatarTextoPtBr(valorCampo("localInstalacao")),
+          faixaMin: valorCampo("faixaMin"),
+          faixaMax: valorCampo("faixaMax"),
+          pmta: valorCampo("pmta"),
+          volume: valorCampo("volume"),
+          categoriaNR13: valorCampo("categoriaNR13"),
+          classeFiltro: valorCampo("classeFiltro"),
+          rotacaoMaxima: valorCampo("rotacaoMaxima"),
+          temperaturaTrabalho: valorCampo("temperaturaTrabalho"),
+          tipoGas: valorCampo("tipoGas"),
+          sistemaExaustao: valorCampo("sistemaExaustao")
+        },
+        escopo: {
+          qi: isChecked("qi"),
+          qo: isChecked("qo"),
+          qd: isChecked("qd"),
+          inspecao: isChecked("inspecao")
+        },
+        servicos: {
+          qi: isChecked("qi"),
+          qo: isChecked("qo"),
+          qd: isChecked("qd"),
+          inspecao: isChecked("inspecao")
+        },
+        qi: isChecked("qi"),
+        qo: isChecked("qo"),
+        qd: isChecked("qd"),
+        inspecao: isChecked("inspecao"),
+        statusFinal: getStatusSelecionado(),
+        statusManual: getStatusSelecionado(),
+        tipoCodigo: perfil.codigo,
+        tipoEquipamentoCodigo: perfil.codigo,
+        tipoEquipamento: perfil.nome,
+        receitas: coletarReceitasPayload(),
+        ensaios: coletarEnsaiosPayload(),
+        insumos: coletarInsumosPayload(),
+        nr13: coletarNR13Payload(),
+        textoConclusao: valorCampo("textoConclusao"),
+        texto_conclusao: valorCampo("textoConclusao")
+      };
+    }
+
+    function coletarReceitasPayload() {
+      if (!perfilAtual || !perfilAtual.usaReceitas) return [];
+      return receitas.map(function(nome) { return { nome: nome }; });
+    }
+
+    function coletarEnsaiosPayload() {
+      const cards = document.querySelectorAll(".ensaio-card");
+      const out = [];
+      cards.forEach(function(card) {
+        out.push({
+          nome: card.getAttribute("data-ensaio") || "",
+          resultado: getCardValue(card, ".ensaio-resultado"),
+          tempMin: getCardValue(card, ".ensaio-temp-min"),
+          tempMax: getCardValue(card, ".ensaio-temp-max"),
+          excursao: getCardValue(card, ".ensaio-excursao"),
+          obs: getCardValue(card, ".ensaio-obs")
+        });
+      });
+      return out;
+    }
+
+    function coletarNR13Payload() {
+      const cards = document.querySelectorAll(".nr13-card");
+      const ensaios = [];
+      cards.forEach(function(card) {
+        ensaios.push({
+          nome: card.getAttribute("data-nr13") || "",
+          resultado: getCardValue(card, ".nr13-resultado"),
+          pressaoTeste: getCardValue(card, ".nr13-pressao"),
+          tempoTeste: getCardValue(card, ".nr13-tempo"),
+          obs: getCardValue(card, ".nr13-obs")
+        });
+      });
+
+      return {
+        pmta: valorCampo("pmta"),
+        volume: valorCampo("volume"),
+        categoriaNR13: valorCampo("categoriaNR13"),
+        ensaios: ensaios
+      };
+    }
+
+    function coletarInsumosPayload() {
+      if (!perfilAtual || !perfilAtual.usaInsumos) return [];
+
+      const cards = document.querySelectorAll(".insumo-card");
+      const out = [];
+
+      cards.forEach(function(card) {
+        const item = {
+          codigo: card.getAttribute("data-insumo-codigo") || "",
+          nome: card.getAttribute("data-insumo-nome") || "",
+          lote: getCardValue(card, ".lote-input"),
+          validade: getCardValue(card, ".validade-input"),
+          fabricante: getCardValue(card, ".fabricante-input")
+        };
+
+        if (item.lote || item.validade || item.fabricante) out.push(item);
+      });
+
+      return out;
+    }
+
+    function getCardValue(card, selector) {
+      const el = card.querySelector(selector);
+      return el ? String(el.value || "").trim() : "";
+    }
+
+    function gerarDocumentoFinal() {
+      if (!temGoogleScriptRun()) {
+        alert("Ambiente sem acesso ao Apps Script. Não é possível gerar o documento.");
+        return;
+      }
+
+      const btn = document.getElementById("btnGerarCarta");
+      btn.disabled = true;
+      btn.innerText = "Validando...";
+
+      const payload = montarPayloadFinal();
+
+      google.script.run
+        .withSuccessHandler(function(validRes) {
+          if (!validRes || !validRes.ok) {
+            btn.disabled = false;
+            btn.innerText = "Gerar Carta de Conformidade";
+            alert("Corrija antes de gerar:\n\n" + ((validRes && validRes.mensagem) || "Falha na validação."));
+            return;
+          }
+
+          btn.innerText = "Auditando...";
+          google.script.run
+            .withSuccessHandler(function(auditRes) {
+              if (auditRes && auditRes.ok) payload.auditoria = auditRes.resultado || auditRes.auditoria || auditRes;
+
+              btn.innerText = "Gerando PDF...";
+              google.script.run
+                .withSuccessHandler(function(pdfRes) {
+                  if (!pdfRes || !pdfRes.ok) {
+                    btn.disabled = false;
+                    btn.innerText = "Gerar Carta de Conformidade";
+                    alert("Erro ao gerar PDF: " + ((pdfRes && pdfRes.mensagem) || "Erro desconhecido."));
+                    return;
+                  }
+
+                  urlPdfGerado = pdfRes.url || "";
+                  payload.urlPdf = urlPdfGerado;
+                  payload.url_pdf = urlPdfGerado;
+                  payload.codigoValidacao = pdfRes.codigoValidacao || "";
+                  payload.codigo_validacao = pdfRes.codigoValidacao || "";
+                  payload.urlValidacao = pdfRes.urlValidacao || "";
+                  payload.url_validacao = pdfRes.urlValidacao || "";
+                  payload.osNumero = pdfRes.osNumero || "";
+                  payload.os_numero = pdfRes.osNumero || "";
+                  payload.resumo_impressao = pdfRes.resumoImpressao || null;
+
+                  ultimoPayloadGerado = payload;
+                  ultimaValidacaoGerada = {
+                    codigo: payload.codigoValidacao || "",
+                    url: payload.urlValidacao || "",
+                    os: payload.osNumero || ""
+                  };
+
+                  btn.innerText = "Salvando...";
+                  google.script.run
+                    .withSuccessHandler(function(saveRes) {
+                      btn.disabled = false;
+                      btn.innerText = "Concluído";
+                      atualizarResumoFinalDocumento();
+
+                      if (!saveRes || !saveRes.ok) {
+                        alert("PDF gerado, mas falhou ao salvar histórico: " + ((saveRes && saveRes.mensagem) || "Erro desconhecido."));
+                      }
+
+                      try {
+                        if (window.imprimir) window.imprimir(payload.resumo_impressao || payload);
+                      } catch (printErr) {
+                        console.error(printErr);
+                      }
+
+                      if (urlPdfGerado) window.open(urlPdfGerado, "_blank");
+                    })
+                    .withFailureHandler(function(err) {
+                      btn.disabled = false;
+                      btn.innerText = "Concluído (erro DB)";
+                      console.error(err);
+                      if (urlPdfGerado) window.open(urlPdfGerado, "_blank");
+                    })
+                    .salvarRegistroRelatorio(payload);
+                })
+                .withFailureHandler(function(err) {
+                  btn.disabled = false;
+                  btn.innerText = "Gerar Carta de Conformidade";
+                  console.error(err);
+                  alert("Erro ao gerar PDF.");
+                })
+                .gerarCartaConformidade(payload);
+            })
+            .withFailureHandler(function(err) {
+              console.warn("Falha auditoria, seguindo para PDF:", err);
+              payload.auditoria = {};
+              google.script.run
+                .withSuccessHandler(function(pdfRes) {
+                  btn.disabled = false;
+                  btn.innerText = "Gerar Carta de Conformidade";
+                  alert("Motor de documento ainda será conectado na próxima etapa.");
+                })
+                .gerarCartaConformidade(payload);
+            })
+            .auditarQualificacao(payload);
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = "Gerar Carta de Conformidade";
+          console.error(err);
+          alert("Erro na validação do servidor.");
+        })
+        .validarPayloadAntesDeGerar(payload);
+    }
+
+    function refinarConclusaoIA() {
+      if (!temGoogleScriptRun()) {
+        alert("Ambiente sem acesso ao Apps Script. Não é possível usar a IA.");
+        return;
+      }
+
+      const btn = document.getElementById("btnRefinarIA");
+      const textoAtual = valorCampo("textoConclusao");
+      const payload = montarPayloadFinal();
+
+      // Garante que a IA receba o texto manual atual, caso o usuário tenha digitado algo.
+      payload.textoConclusao = textoAtual || payload.textoConclusao || "";
+      payload.texto_conclusao = payload.textoConclusao;
+
+      btn.innerText = "Refinando...";
+      btn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerText = "Refinar com IA";
+          btn.disabled = false;
+
+          if (res && res.ok && res.texto) {
+            setValorCampo("textoConclusao", res.texto);
+            atualizarResumoFinalDocumento();
+            return;
+          }
+
+          alert("Falha na IA: " + ((res && res.mensagem) || "Não foi possível refinar o texto."));
+        })
+        .withFailureHandler(function(err) {
+          btn.innerText = "Refinar com IA";
+          btn.disabled = false;
+          console.error(err);
+          alert("Erro ao conectar com a IA.");
+        })
+        .refinarPayloadConclusaoIA(payload);
+    }
+
+    function pesquisarDocumentosGerados() {
+      if (!temGoogleScriptRun()) {
+        alert("Ambiente sem acesso ao Apps Script.");
+        return;
+      }
+
+      const area = document.getElementById("resultadoConsultaDocs");
+      area.innerHTML = '<div class="loading-soft">Pesquisando documentos...</div>';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.ok) {
+            renderResultadosPesquisa([]);
+            alert((res && res.mensagem) || "Falha na pesquisa.");
+            return;
+          }
+          renderResultadosPesquisa(res.itens || []);
+        })
+        .withFailureHandler(function(err) {
+          console.error(err);
+          renderResultadosPesquisa([]);
+          alert("Erro ao pesquisar documentos.");
+        })
+        .pesquisarDocumentosGerados(valorCampo("filtroConsultaDocs"));
+    }
+
+    function renderResultadosPesquisa(itens) {
+      const area = document.getElementById("resultadoConsultaDocs");
+      if (!area) return;
+
+      if (!itens || !itens.length) {
+        area.innerHTML = '<div class="alert alert-secondary mb-0">Nenhum documento localizado.</div>';
+        window.__resultadoDocsCache = [];
+        return;
+      }
+
+      area.innerHTML = itens.map(function(item, idx) {
+        return '' +
+          '<div class="doc-item">' +
+            '<div class="d-flex flex-column flex-lg-row justify-content-between gap-3">' +
+              '<div>' +
+                '<div class="fw-bold">' + esc(item.cliente || "Cliente não informado") + '</div>' +
+                '<div class="doc-meta">OS: ' + esc(item.osNumero || "-") + ' | Código: ' + esc(item.codigoValidacao || "-") + '</div>' +
+                '<div class="doc-meta">Equipamento: ' + esc(item.equipamento || "-") + ' | Série: ' + esc(item.serie || "-") + '</div>' +
+                '<div class="doc-meta">CNPJ: ' + esc(item.cnpj || "-") + ' | Status: <span class="badge-soft">' + esc(item.status || "-") + '</span></div>' +
+                '<div class="doc-meta">Emitido em: ' + esc(item.dataEmissao || "-") + '</div>' +
+              '</div>' +
+              '<div class="d-flex flex-wrap gap-2 align-items-start">' +
+                (item.urlPdf ? '<a class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" href="' + esc(item.urlPdf) + '">Abrir PDF</a>' : '') +
+                (item.urlValidacao ? '<a class="btn btn-sm btn-outline-success" target="_blank" rel="noopener noreferrer" href="' + esc(item.urlValidacao) + '">Validar</a>' : '') +
+                '<button class="btn btn-sm btn-dark" type="button" onclick="reimprimirDocumentoGerado(' + idx + ')">Reimprimir ticket</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      }).join("");
+
+      window.__resultadoDocsCache = itens;
+    }
+
+    function reimprimirDocumentoGerado(idx) {
+      const cache = Array.isArray(window.__resultadoDocsCache) ? window.__resultadoDocsCache : [];
+      const item = cache[idx];
+      if (!item) return alert("Documento não encontrado.");
+      imprimirTermica(item);
+    }
+
+    function imprimirTermica(itemPesquisa) {
+      try {
+        if (!window.imprimir || !window.PrinterModule) {
+          alert("Módulo de impressora não carregado.");
+          return;
+        }
+
+        const payload = itemPesquisa && typeof itemPesquisa === "object"
+          ? itemPesquisa
+          : (ultimoPayloadGerado || montarPayloadFinal());
+
+        window.imprimir(payload.resumo_impressao || payload);
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao imprimir ticket térmico.");
+      }
+    }
+
+    function abrirWhatsapp() {
+      if (!urlPdfGerado) {
+        alert("Gere o documento oficial primeiro.");
+        return;
+      }
+
+      const msgBase = bootstrapApp.whatsappMsg || "Olá! Segue a Carta de Conformidade Técnica.";
+      const msg =
+        msgBase + "\n\n" +
+        "*Cliente:* " + valorCampo("cliente") + "\n" +
+        "*Equipamento:* " + ((perfilAtual && perfilAtual.nome) || "-") + "\n" +
+        "*Status Técnico:* " + getStatusSelecionado() + "\n\n" +
+        "Link para acesso:\n" + urlPdfGerado;
+
+      window.open("https://wa.me/text=" + encodeURIComponent(msg), "_blank");
+    }
+
+    function atualizarResumoEquipamentoPreview() {
+      const el = document.getElementById("resumoEquipamentoPreview");
+      if (!el) return;
+
+      const p = perfilAtual || getPerfilAtual();
+      const tags = [];
+
+      if (p.usaQI) tags.push("QI");
+      if (p.usaQO) tags.push("QO");
+      if (p.usaQD) tags.push("QD");
+      if (p.usaReceitas) tags.push("Receitas/Ciclos");
+      if (p.usaInsumos) tags.push("Insumos aplicáveis");
+      if (p.usaEnsaiosTermicos) tags.push("Ensaios térmicos");
+      if (p.usaEnsaiosGerais) tags.push("Ensaios funcionais");
+      if (p.usaInspecaoNR13) tags.push("NR-13");
+
+      const normas = Array.isArray(p.normas) ? p.normas : [];
+
+      el.innerHTML =
+        "<strong>Perfil técnico:</strong> " + esc(p.nome || "-") +
+        " | Família: " + esc(p.familia || "-") +
+        "<br><strong>Equipamento:</strong> Marca: " + esc(valorCampo("marca") || "-") +
+        " | Modelo: " + esc(valorCampo("modelo") || "-") +
+        " | Série: " + esc(valorCampo("serie") || "-") +
+        " | TAG: " + esc(valorCampo("patrimonio") || "-") +
+        "<div class='mt-2'>" + tags.map(function(t) { return '<span class="profile-badge">' + esc(t) + '</span>'; }).join("") + "</div>" +
+        (normas.length ? "<div class='mt-2 small text-muted'><strong>Referências do perfil:</strong> " + esc(normas.slice(0, 5).join(" - ")) + (normas.length > 5 ? " - ..." : "") + "</div>" : "");
+    }
+
+    function atualizarResumoFinalDocumento() {
+      const resumoEl = document.getElementById("resumoFinalDocumento");
+      if (!resumoEl) return;
+
+      const p = perfilAtual || getPerfilAtual();
+      const status = getStatusSelecionado();
+
+      resumoEl.innerText =
+        "Cliente: " + (valorCampo("cliente") || "-") +
+        " | Equipamento: " + (p.nome || "-") +
+        " | Receitas: " + receitas.length +
+        " | Ensaios: " + coletarEnsaiosPayload().length +
+        " | Status: " + status +
+        (urlPdfGerado ? " | PDF pronto." : " | PDF pendente.");
+    }
+
+    function atualizarCardsStatus() {
+      const valor = getStatusSelecionado();
+      toggleClasse("cardStatusAprovado", valor === "Aprovado");
+      toggleClasse("cardStatusRessalvas", valor === "Aprovado com Ressalvas");
+      toggleClasse("cardStatusReprovado", valor === "Reprovado");
+      atualizarResumoFinalDocumento();
+    }
+
+    function getStatusSelecionado() {
+      const radio = document.querySelector('input[name="statusFinal"]:checked');
+      return radio ? radio.value : "Aprovado";
+    }
+
+    function buscarCNPJ() {
+      try {
+        const btn = document.getElementById("btnBuscarCnpj");
+        const input = document.getElementById("cnpj");
+        const alerta = document.getElementById("alertaCnpj");
+
+        alerta.classList.add("hidden");
+        alerta.textContent = "";
+
+        const cnpjLimpo = (input.value || "").replace(/\D/g, "");
+        if (cnpjLimpo.length !== 14) {
+          alerta.innerText = "Por favor, informe os 14 números do CNPJ.";
+          alerta.classList.remove("hidden");
+          return;
+        }
+
+        if (!temGoogleScriptRun()) {
+          alerta.innerText = "Ambiente sem acesso ao Apps Script.";
+          alerta.classList.remove("hidden");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Buscando...";
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            btn.innerText = "Buscar";
+
+            if (res && res.ok) {
+              preencherDadosCliente(res);
+              return;
+            }
+
+            alerta.innerText = (res && res.mensagem) || "Não foi possível localizar este CNPJ.";
+            alerta.classList.remove("hidden");
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.innerText = "Buscar";
+            console.error(err);
+            alerta.innerText = "Falha ao consultar CNPJ no servidor.";
+            alerta.classList.remove("hidden");
+          })
+          .buscarCnpjBackend(cnpjLimpo);
+      } catch (e) {
+        mostrarAlertaSistema("Erro ao buscar CNPJ: " + msgErro(e));
+      }
+    }
+
+    function preencherDadosCliente(dados) {
+      setValorCampo("cliente", formatarTextoPtBr(dados.razaoSocial || dados.nome || ""));
+      setValorCampo("logradouro", formatarLogradouroPtBr(dados.logradouro || ""));
+      setValorCampo("numero", dados.numero || "");
+      setValorCampo("bairro", formatarTextoPtBr(dados.bairro || ""));
+      setValorCampo("cidade", formatarTextoPtBr(dados.cidade || ""));
+      setValorCampo("uf", String(dados.uf || "").toUpperCase());
+    }
+
+    function irParaEtapa(n) {
+      try {
+        esconderAlertaSistema();
+        if (!validarEtapaAntesDeAvancar(n)) return;
+
+        const alvo = document.getElementById("step" + n);
+        if (!alvo) throw new Error("Etapa step" + n + " não encontrada.");
+
+        document.querySelectorAll(".step").forEach(function(s) { s.classList.remove("active"); });
+        alvo.classList.add("active");
+      } catch (e) {
+        mostrarAlertaSistema("Erro ao navegar: " + msgErro(e));
+      }
+    }
+
+    function validarEtapaAntesDeAvancar(destino) {
+      const ativa = document.querySelector(".step.active");
+      const atualId = ativa ? ativa.id : "";
+
+      if (atualId === "step1" && destino > 1) {
+        const cnpj = (valorCampo("cnpj") || "").replace(/\D/g, "");
+        if (cnpj.length !== 14) return alertFalse("Informe um CNPJ válido antes de avançar.");
+        if (!valorCampo("cliente")) return alertFalse("Informe a razão social do cliente.");
+      }
+
+      if (atualId === "step2" && destino > 2) {
+        if (!valorCampo("tipoEquipamentoCodigo")) return alertFalse("Selecione o tipo de equipamento.");
+        if (!valorCampo("marca")) return alertFalse("Informe a marca.");
+        if (!valorCampo("modelo")) return alertFalse("Informe o modelo.");
+        if (!valorCampo("serie")) return alertFalse("Informe o número de série.");
+      }
+
+      if (atualId === "step3" && destino > 3) {
+        const p = perfilAtual || getPerfilAtual();
+        const algum =
+          (p.usaQI && isChecked("qi")) ||
+          (p.usaQO && isChecked("qo")) ||
+          (p.usaQD && isChecked("qd")) ||
+          (p.usaInspecaoNR13 && isChecked("inspecao"));
+
+        if (!algum) return alertFalse("Selecione ao menos uma etapa aplicável.");
+      }
+
+      return true;
+    }
+
+    function alertFalse(msg) {
+      alert(msg);
+      return false;
+    }
+
+    function aplicarMascaraCnpj() {
+      const input = document.getElementById("cnpj");
+      if (!input) return;
+
+      input.addEventListener("input", function(e) {
+        let value = (e.target.value || "").replace(/\D/g, "");
+        if (value.length > 14) value = value.slice(0, 14);
+
+        let formatted = value;
+        if (value.length > 2) formatted = value.replace(/^(\d{2})(\d)/, "$1.$2");
+        if (value.length > 5) formatted = formatted.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+        if (value.length > 8) formatted = formatted.replace(/\.(\d{3})(\d)/, ".$1/$2");
+        if (value.length > 12) formatted = formatted.replace(/(\d{4})(\d)/, "$1-$2");
+
+        e.target.value = formatted;
+      });
+    }
+
+    function valorCampo(id) {
+      const el = document.getElementById(id);
+      return el ? String(el.value || "").trim() : "";
+    }
+
+    function setValorCampo(id, valor) {
+      const el = document.getElementById(id);
+      if (el) el.value = valor || "";
+    }
+
+    function isChecked(id) {
+      const el = document.getElementById(id);
+      return !!(el && el.checked);
+    }
+
+    function toggleHidden(id, esconder) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("hidden", !!esconder);
+    }
+
+    function toggleGrupo(classe, mostrar) {
+      document.querySelectorAll("." + classe).forEach(function(el) {
+        el.classList.toggle("hidden", !mostrar);
+      });
+    }
+
+    function toggleClasse(id, ativo) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("active", !!ativo);
+    }
+
+    function mostrarAlertaSistema(msg) {
+      const el = document.getElementById("alertaSistema");
+      if (!el) return;
+      el.textContent = msg || "Erro interno do sistema.";
+      el.classList.remove("hidden");
+    }
+
+    function esconderAlertaSistema() {
+      const el = document.getElementById("alertaSistema");
+      if (!el) return;
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
+
+    function formatarTextoPtBr(texto) {
+      const t = String(texto || "").trim().replace(/\s+/g, " ");
+      if (!t) return "";
+      return t.toLowerCase().split(" ").map(function(p, i) {
+        const siglas = ["CME","UTI","UPA","SUS","CPF","CNPJ","OS","SGO+","NR","NR-13","ABNT","NBR","ISO","RDC","ANVISA","ETO","GO","SP","RJ","MG","DF"];
+        const upper = p.toUpperCase();
+        if (siglas.indexOf(upper) >= 0) return upper;
+        const minus = ["de","da","das","do","dos","e","em","na","no","para","por","com"];
+        if (i > 0 && minus.indexOf(p) >= 0) return p;
+        const especiais = {
+          "goiania":"Goiânia","goias":"Goiás","sao":"São","peroxido":"Peróxido","hidrogenio":"Hidrogênio",
+          "ultrassonica":"Ultrassônica","centrifuga":"Centrífuga","termica":"Térmica","tecnica":"Técnica",
+          "tecnico":"Técnico","prions":"Príons","quimico":"Químico","biologico":"Biológico",
+          "instalacao":"Instalação","operacao":"Operação","desempenho":"Desempenho","traqueia":"Traqueia"
+        };
+        if (especiais[p]) return especiais[p];
+        return p.charAt(0).toUpperCase() + p.slice(1);
+      }).join(" ");
+    }
+
+    function formatarLogradouroPtBr(texto) {
+      return formatarTextoPtBr(texto).replace(/^Av\b/i, "Av.").replace(/^Rua\b/i, "Rua");
+    }
+
+    function formatarModeloTecnico(texto) {
+      const t = String(texto || "").trim();
+      if (!t) return "";
+      if (/^[A-Za-z0-9\-./ ]+$/.test(t)) return t.toUpperCase();
+      return formatarTextoPtBr(t);
+    }
+
+    function deduplicarListaFront(lista) {
+      const vistos = {};
+      return (lista || []).filter(function(item) {
+        const chave = String(item || "").trim().toUpperCase();
+        if (!chave || vistos[chave]) return false;
+        vistos[chave] = true;
+        return true;
+      });
+    }
+
+    function esc(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escAttr(text) {
+      return esc(text).replace(/'/g, "&#39;");
+    }
+
+    function msgErro(e) {
+      return e && e.message ? e.message : String(e || "Erro não identificado.");
+    }
+  </script>
+</body>
+</html>
+

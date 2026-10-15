@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= (UCFG && UCFG.APP && UCFG.APP.NOME) ? UCFG.APP.NOME : 'METROLABS — MOTOR CENTRAL DE AR MEDICAL V1' ?></title>
+  <?!= include('Estilos'); ?>
+</head>
+<body>
+
+  <div class="wrap">
+
+    <header class="header-card">
+      <div class="brand">
+        <img
+          class="logo-img"
+          src="https://drive.google.com/thumbnail?id=1fpp7MsH4ItE8DJS9mHhM26aIt89CrLP0&sz=w400"
+          alt="Metrolabs"
+          onerror="this.onerror=null;this.src='https://via.placeholder.com/220x70/ffffff/007b3e?text=METROLABS';"
+        >
+        <div class="title-area">
+          <h1 id="appTitle"><?= (UCFG && UCFG.APP && UCFG.APP.NOME) ? UCFG.APP.NOME : 'METROLABS — MOTOR CENTRAL DE AR MEDICAL V1' ?></h1>
+          <p>
+            <?= (UCFG && UCFG.APP && UCFG.APP.SUBTITULO) ? UCFG.APP.SUBTITULO : 'RELATÓRIO DE CONTROLE DE QUALIDADE E MONITORAMENTO DE AR MEDICINAL' ?>
+            <br>
+            <strong id="appVersion"><?= (UCFG && UCFG.APP && UCFG.APP.VERSAO) ? UCFG.APP.VERSAO : '1.0.0' ?></strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="header-widgets" style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; text-align:right;">
+        <div id="clockWidget" style="font-size:14px; font-weight:bold; color:#374151;">--/--/---- --:--:--</div>
+        <div
+          id="perfWidget"
+          style="font-size:12px; background:#dcfce7; color:#166534; padding:4px 10px; border-radius:4px; font-weight:bold; display:inline-block;"
+        >
+          Status: Produtivo 🚀
+        </div>
+        <div class="status-badge" id="statusBadge">SISTEMA ONLINE</div>
+      </div>
+    </header>
+
+    <div class="action-bar" style="margin-bottom:20px; display:flex; gap:10px; padding:12px; background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.08); flex-wrap:wrap;">
+      <button
+        class="btn btn-secondary"
+        style="flex:1; font-weight:bold; min-width:220px;"
+        type="button"
+        onclick="abrirLinkPasta('LAUDOS')"
+      >
+        📂 ABRIR PASTA DE LAUDOS
+      </button>
+
+      <button
+        class="btn btn-secondary"
+        style="flex:1; font-weight:bold; min-width:220px;"
+        type="button"
+        onclick="abrirLinkPasta('UPLOADS')"
+      >
+        📂 ABRIR PASTA DE UPLOADS
+      </button>
+
+      <button
+        class="btn btn-secondary"
+        style="flex:1; font-weight:bold; min-width:220px;"
+        type="button"
+        onclick="limparTela()"
+      >
+        🧹 LIMPAR TELA
+      </button>
+    </div>
+
+    <div class="grid-layout">
+
+      <div class="panel">
+
+        <h2>1. Identificação do Monitoramento</h2>
+        <p class="panel-subtitle">
+          Preencha os dados de rastreabilidade do cliente, do ponto monitorado, dos responsáveis e dos critérios de aceitação.
+        </p>
+
+        <div class="section-divider">Dados do Cliente</div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex:2; min-width:280px;">
+            <label for="uiCliente">Cliente / Instituição</label>
+            <input type="text" id="uiCliente" class="form-control" placeholder="Ex: Hospital / Indústria / Unidade">
+          </div>
+          <div class="form-group" style="flex:1; min-width:220px;">
+            <label for="uiCnpj">CNPJ</label>
+            <input type="text" id="uiCnpj" class="form-control" placeholder="00.000.000/0000-00">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group w-100">
+            <label for="uiEndereco">Endereço / Unidade</label>
+            <input type="text" id="uiEndereco" class="form-control" placeholder="Endereço completo ou identificação da unidade">
+          </div>
+        </div>
+
+        <div class="section-divider">Ponto Monitorado</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiTag">TAG / Código</label>
+            <input type="text" id="uiTag" class="form-control" placeholder="Ex: AR-001">
+          </div>
+          <div class="form-group">
+            <label for="uiLocal">Local / Setor</label>
+            <input type="text" id="uiLocal" class="form-control" placeholder="Ex: UTI / CME / Produção">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiMarca">Marca / Fabricante</label>
+            <input type="text" id="uiMarca" class="form-control" placeholder="Ex: Kaeser / Schulz / Atlas Copco">
+          </div>
+          <div class="form-group">
+            <label for="uiModelo">Modelo / Sistema</label>
+            <input type="text" id="uiModelo" class="form-control" placeholder="Ex: Sistema de geração e secagem">
+          </div>
+          <div class="form-group">
+            <label for="uiNumSerie">Número de Série</label>
+            <input type="text" id="uiNumSerie" class="form-control" placeholder="Ex: NS-123456">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiPontoMonitorado">Ponto / Linha Monitorada</label>
+            <input type="text" id="uiPontoMonitorado" class="form-control" placeholder="Ex: Linha 01 / Tomada crítica / Rede principal">
+          </div>
+          <div class="form-group">
+            <label for="uiEnsaio">Tipo de Ensaio</label>
+            <select id="uiEnsaio" class="form-control">
+              <option value="Monitoramento de Rotina">Monitoramento de Rotina</option>
+              <option value="Validação">Validação</option>
+              <option value="Qualificação">Qualificação</option>
+              <option value="Monitoramento 24h">Monitoramento 24h</option>
+              <option value="Monitoramento Semanal">Monitoramento Semanal</option>
+              <option value="Monitoramento Mensal">Monitoramento Mensal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiRespTecnico">Responsável Técnico</label>
+            <input type="text" id="uiRespTecnico" class="form-control" placeholder="Nome do responsável técnico">
+          </div>
+          <div class="form-group">
+            <label for="uiOperador">Operador</label>
+            <input type="text" id="uiOperador" class="form-control" placeholder="Nome do operador">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiCertificado">Certificado / Referência</label>
+            <input type="text" id="uiCertificado" class="form-control" placeholder="Ex: CERT-001">
+          </div>
+          <div class="form-group">
+            <label for="uiOs">O.S. / Chamado</label>
+            <input type="text" id="uiOs" class="form-control" placeholder="Ex: OS-2026-001">
+          </div>
+        </div>
+
+        <div class="section-divider">2. Critérios Técnicos de Aceitação</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiPressaoMin">Pressão mínima (bar)</label>
+            <input type="number" id="uiPressaoMin" class="form-control" step="0.001" placeholder="4.500">
+          </div>
+          <div class="form-group">
+            <label for="uiPressaoMax">Pressão máxima (bar)</label>
+            <input type="number" id="uiPressaoMax" class="form-control" step="0.001" placeholder="6.000">
+          </div>
+          <div class="form-group">
+            <label for="uiOrvalhoMax">Orvalho máximo (°C)</label>
+            <input type="number" id="uiOrvalhoMax" class="form-control" step="0.01" placeholder="-40.00">
+          </div>
+        </div>
+        
+        <div class="section-divider" style="color: #0b4ea2; border-bottom: 2px solid #0b4ea2;">3. Critérios de SLA e Justificativa (Opcional)</div>
+        <p class="panel-subtitle" style="margin-top:-5px; font-size:11px;">Ajuste os parâmetros de flexibilidade para o período ou isente o laudo de falhas operacionais/manutenções.</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiSlaAlerta">Limite para Alerta (%)</label>
+            <input type="number" id="uiSlaAlerta" class="form-control" step="0.1" value="5.0">
+          </div>
+          <div class="form-group">
+            <label for="uiSlaReprovacao">Limite para Reprovação (%)</label>
+            <input type="number" id="uiSlaReprovacao" class="form-control" step="0.1" value="15.0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiToleranciaFalha">Tolerância de Falha Contínua (min)</label>
+            <input type="number" id="uiToleranciaFalha" class="form-control" step="1" value="60">
+          </div>
+          <div class="form-group">
+            <label for="uiDiasCriticos">Dias Críticos Tolerados</label>
+            <input type="number" id="uiDiasCriticos" class="form-control" step="1" value="2">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group w-100">
+            <label for="uiJustificativa" style="color: #d97706; font-weight: bold;">Justificativa Técnica (Anular Reprovação Automática)</label>
+            <textarea id="uiJustificativa" class="form-control" rows="2" placeholder="Ex: Oscilações identificadas no dia 16/04 ocorreram devido à manutenção preventiva no compressor. Operação normalizada."></textarea>
+            <small class="field-help">Preencher este campo forçará o laudo a "APROVADO COM RESSALVA" e imprimirá este texto no PDF.</small>
+          </div>
+        </div>
+
+        <div class="section-divider">4. Janela de Análise</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiModoAnalise">Modo de Análise</label>
+            <select id="uiModoAnalise" class="form-control">
+              <option value="AUTO">Automático</option>
+              <option value="MANUAL">Manual por período</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="uiTipoPeriodo">Tipo de Recorte</label>
+            <select id="uiTipoPeriodo" class="form-control">
+              <option value="LIVRE">Livre</option>
+              <option value="DIARIO">Diário</option>
+              <option value="SEMANAL">Semanal</option>
+              <option value="MENSAL">Mensal</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="boxPeriodoManual" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="uiDataInicio">Data / Hora Inicial</label>
+              <input type="datetime-local" id="uiDataInicio" class="form-control">
+              <small class="field-help">Informe exatamente o início do período que deseja avaliar.</small>
+            </div>
+            <div class="form-group">
+              <label for="uiDataFim">Data / Hora Final</label>
+              <input type="datetime-local" id="uiDataFim" class="form-control">
+              <small class="field-help">Informe exatamente o fim do período que deseja avaliar.</small>
+            </div>
+          </div>
+          <div class="card-note" style="margin-top:10px;">
+            Use esta opção quando quiser avaliar apenas o período em que esteve no local, ou exatamente a faixa da fita de impressão.
+          </div>
+        </div>
+
+        <div class="section-divider">5. Entrada de Dados</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="uiModo">Modo de Leitura</label>
+            <select id="uiModo" class="form-control"></select>
+          </div>
+        </div>
+
+        <div class="form-group" id="boxFileId" style="display:none;">
+          <label for="uiFileId">File ID / Link</label>
+          <input type="text" id="uiFileId" class="form-control" placeholder="Cole o ID ou link da planilha/arquivo">
+          <small class="field-help">Pode ser um Google Sheets ou arquivo já enviado ao Drive.</small>
+        </div>
+
+        <div class="form-group" id="boxUpload" style="display:none;">
+          <label for="uiArquivoLocal">Upload de CSV / TXT</label>
+          <input type="file" id="uiArquivoLocal" class="form-control" style="padding:8px;">
+          <small class="field-help">Ao selecionar, o sistema fará upload automático para a pasta configurada e preencherá o File ID.</small>
+        </div>
+
+        <div class="form-group" id="boxTextarea" style="display:none;">
+          <label for="uiDados">Dados colados</label>
+          <textarea id="uiDados" class="form-control" placeholder="Cole aqui o conteúdo do CSV ou tabela exportada..."></textarea>
+        </div>
+
+        <div class="btn-container">
+          <button class="btn btn-secondary" id="btnPrev" type="button">Pré-visualizar Dados</button>
+          <button class="btn btn-primary" id="btnConv" type="button">Gerar Relatório</button>
+          <button class="btn btn-secondary" id="btnLimparTerminal" type="button">Limpar Terminal</button>
+        </div>
+
+        <div id="linkResultado"></div>
+
+      </div>
+
+      <div class="panel">
+        <h2>Console de Operações</h2>
+        <p class="panel-subtitle">
+          Acompanhe o andamento do preview, upload, leitura, análise, geração da planilha e exportação do PDF.
+        </p>
+
+        <div class="terminal-wrap">
+          <div class="terminal-header">LOG OPERACIONAL</div>
+          <div id="terminalLog" class="terminal"></div>
+        </div>
+
+        <div class="section-divider">Resumo do Resultado</div>
+        <div id="resultadoBox">
+          <div class="table-empty">Nenhum resultado disponível.</div>
+        </div>
+
+        <div class="section-divider">Observações de Uso</div>
+        <div class="card-note">
+          <strong>Automático:</strong> o sistema analisa todo o conjunto válido.<br>
+          <strong>Manual:</strong> o sistema considera apenas o intervalo informado.<br>
+          <strong>Aprovado com alerta / ressalva:</strong> indica evento pontual com recuperação ou impacto operacional reduzido.<br>
+          <strong>Reprovado:</strong> indica persistência, recorrência ou impacto técnico relevante.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="panel" style="margin-top:20px;">
+      <h2>Preview dos Dados Identificados</h2>
+      <div id="previewBox" class="card-note" style="margin-bottom:15px;">
+        O preview será exibido após a leitura da entrada.
+      </div>
+
+      <div class="table-wrapper">
+        <table id="tblPreview" class="data-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="idleAlert">
+      <div class="idle-alert-card">
+        <div class="idle-alert-top">
+          <div class="idle-alert-icon">⚠️</div>
+          <h3 class="idle-alert-title">Alerta de Ociosidade</h3>
+        </div>
+        <div class="idle-alert-body">
+          <p class="idle-alert-text">
+            O operador ficou inativo por tempo superior ao limite configurado.
+          </p>
+          <p class="idle-alert-subtext">
+            Retome a operação para reiniciar o monitor de produtividade.
+          </p>
+          <div class="idle-alert-actions">
+            <button class="idle-alert-btn primary" type="button" onclick="window.resetIdleAlert()">Retomar Operação</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <?!= include('Scripts'); ?>
+</body>
+</html>

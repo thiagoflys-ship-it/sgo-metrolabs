@@ -1,0 +1,130 @@
+/****************************************************
+ * METROLABS — MOTOR CENTRAL DE AR MEDICAL V1
+ * ARQUIVO: Config.gs
+ * VERSÃO CONSOLIDADA
+ ****************************************************/
+
+const UCFG = Object.freeze({
+  APP: Object.freeze({
+    NOME: 'METROLABS — MOTOR CENTRAL DE AR MEDICAL V1',
+    VERSAO: '1.1.0',
+    TZ: Session.getScriptTimeZone() || 'America/Sao_Paulo',
+    LOGO_FILE_ID: '1fpp7MsH4ItE8DJS9mHhM26aIt89CrLP0',
+    WATERMARK_ID: '',
+    SUBTITULO: 'RELATÓRIO DE CONTROLE DE QUALIDADE E MONITORAMENTO DE AR MEDICINAL',
+    REFERENCIA_NORMATIVA: 'Conformidade com as normas ABNT NBR 12188:2016 e ISO 7396-1:2016'
+  }),
+
+  SETUP: Object.freeze({
+    NOME_PASTA_RAIZ: 'METROLABS_CENTRAL_AR_MEDICAL_V1',
+    NOME_PASTA_UPLOADS: '01_UPLOADS_DATALOGGER',
+    NOME_PASTA_LAUDOS: '02_LAUDOS_GERADOS',
+    NOME_PASTA_TEMP: '03_TEMPORARIOS',
+    NOME_PLANILHA_DB: 'METROLABS_CENTRAL_AR_MEDICAL_DB',
+    ABAS_DB: Object.freeze([
+      'CFG_SISTEMA',
+      'ENTRADAS',
+      'ANALISES',
+      'RELATORIOS',
+      'LOG_SISTEMA'
+    ]),
+    PROPRIEDADES: Object.freeze({
+      APP_KEY: 'METROLABS_CENTRAL_AR_MEDICAL_V1',
+      DB_ID: 'CENTRAL_AR_DB_ID',
+      ROOT_FOLDER_ID: 'CENTRAL_AR_ROOT_FOLDER_ID',
+      UPLOAD_FOLDER_ID: 'CENTRAL_AR_UPLOAD_FOLDER_ID',
+      LAUDOS_FOLDER_ID: 'CENTRAL_AR_LAUDOS_FOLDER_ID',
+      TEMP_FOLDER_ID: 'CENTRAL_AR_TEMP_FOLDER_ID'
+    })
+  }),
+
+  SISTEMA: Object.freeze({
+    IDLE_TIMEOUT_MINUTES: 7,
+    MAX_PARSE_ROWS: 200000,
+    PREVIEW_ROWS: 20,
+    DEFAULT_DATE_STYLE: 'BR',
+    MIN_VALID_YEAR: 2020,
+    MAX_VALID_YEAR: 2038,
+    TIMEOUT_HTTP_MS: 30000
+  }),
+
+  CSV: Object.freeze({
+    COL_DATA: 'DATA',
+    COL_HORA: 'HORA',
+    COL_ORVALHO: 'PONTO_DE_ORVALHO_C',
+    COL_PRESSAO: 'PRESSAO_DA_REDE_BAR',
+    CAMPOS_OBRIGATORIOS: Object.freeze([
+      'DATA',
+      'HORA',
+      'PONTO_DE_ORVALHO_C',
+      'PRESSAO_DA_REDE_BAR'
+    ]),
+    ACEITAR_VARIACOES: Object.freeze({
+      DATA: ['DATA', 'DATE', 'DIA'],
+      HORA: ['HORA', 'TIME', 'HORARIO'],
+      PONTO_DE_ORVALHO_C: ['PONTO_DE_ORVALHO_C', 'ORVALHO', 'DEW_POINT', 'DEWPOINT', 'PONTO ORVALHO', 'PONTO_DE_ORVALHO'],
+      PRESSAO_DA_REDE_BAR: ['PRESSAO_DA_REDE_BAR', 'PRESSAO', 'PRESSURE', 'PRESSAO_BAR', 'PRESSAO DA REDE']
+    })
+  }),
+
+  LIMITES: Object.freeze({
+    PRESSAO: Object.freeze({
+      MIN: 4.50,
+      MAX: 6.00,
+      ALVO: 5.00,
+      UNIDADE: 'bar'
+    }),
+    ORVALHO: Object.freeze({
+      MAX_ACEITAVEL: -40.00,
+      ALERTA_ACIMA_DE: -38.00,
+      REPROVACAO_ACIMA_DE: -35.00,
+      UNIDADE: '°C'
+    }),
+    EXCURSAO: Object.freeze({
+      PERCENTUAL_ALERTA_FORA_FAIXA: 1.00,
+      PERCENTUAL_REPROVACAO_FORA_FAIXA: 5.00
+    }),
+    ESTABILIDADE: Object.freeze({
+      AMPLITUDE_PRESSAO_ALERTA: 0.50,
+      AMPLITUDE_PRESSAO_REPROVACAO: 1.00,
+      AMPLITUDE_ORVALHO_ALERTA: 8.00,
+      AMPLITUDE_ORVALHO_REPROVACAO: 12.00
+    })
+  }),
+
+  ANALISE: Object.freeze({
+    USAR_MEDIA_MOVEL: false,
+    JANELA_MEDIA_MOVEL: 5,
+    DETECTAR_TENDENCIA: true,
+    DETECTAR_EXCURSAO: true,
+    TOLERANCIA_RUIDO_PRESSAO: 0.02,
+    TOLERANCIA_RUIDO_ORVALHO: 0.30
+  }),
+
+  RELATORIO: Object.freeze({
+    TITULO: 'RELATÓRIO DE CONTROLE DE QUALIDADE E MONITORAMENTO DE AR MEDICINAL',
+    SUBTITULO: 'Conformidade com as normas ABNT NBR 12188:2016 e ISO 7396-1:2016',
+    ABAS: Object.freeze({
+      RESUMO: 'RESUMO',
+      DADOS: 'DADOS',
+      CONCLUSAO: 'CONCLUSAO',
+      GRAF_PRESSAO: 'GRAFICO_PRESSAO',
+      GRAF_ORVALHO: 'GRAFICO_ORVALHO',
+      GRAF_CONCLUSAO: 'GRAFICO_CONCLUSAO'
+    })
+  }),
+
+  TEXTOS: Object.freeze({
+    LABEL_ONLINE: 'SISTEMA ONLINE',
+    LABEL_PROCESSANDO: 'PROCESSANDO...',
+    LABEL_APROVADO: 'APROVADO',
+    LABEL_APROVADO_ALERTA: 'APROVADO COM ALERTA',
+    LABEL_REPROVADO: 'REPROVADO'
+  }),
+
+  CNPJ: Object.freeze({
+    HABILITADO: true,
+    URL_BRASIL_API: 'https://brasilapi.com.br/api/cnpj/v1/',
+    USER_AGENT: 'Mozilla/5.0 (compatible; MetrolabsCentralAr/1.1)'
+  })
+});

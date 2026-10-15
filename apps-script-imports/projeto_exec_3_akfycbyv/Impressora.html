@@ -1,0 +1,569 @@
+<div class="card mt-4">
+  <div class="card-body p-0">
+    <div class="metro-panel-header" style="background:linear-gradient(135deg,#198754,#146c43); color:#fff; padding:10px 14px; font-weight:bold; font-size:0.88em; letter-spacing:.3px;">
+      🖨️ IMPRESSORA TÉRMICA METROLABS — CARTA DE CONFORMIDADE (58MM)
+    </div>
+
+    <div class="printer-panel-container" style="background:#f8fafc; overflow-y:auto; border-radius:0 0 16px 16px;">
+      <div style="padding:12px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; max-width:340px;">
+          <button class="btn btn-outline-dark btn-sm" style="font-weight:bold;" onclick="PrinterModule.showPreview()">PRÉVIA</button>
+          <button class="btn btn-success btn-sm" style="font-weight:bold;" onclick="PrinterModule.printCurrent()">IMPRIMIR</button>
+          <button class="btn btn-primary btn-sm" style="font-weight:bold;" onclick="PrinterModule.reprint()">REIMPRIMIR</button>
+          <button class="btn btn-light btn-sm border" style="font-weight:bold;" onclick="PrinterModule.clear()">LIMPAR VISUAL</button>
+        </div>
+
+        <div style="background:#f1f5f9; padding:15px; display:flex; flex-direction:column; align-items:center; border:1px solid #cbd5e1; width:100%; max-width:360px; box-sizing:border-box; border-radius:8px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.05);">
+          <div style="font-size:0.65em; font-weight:bold; color:#94a3b8; margin-bottom:8px; letter-spacing:1px;">▼ CORTE DE PAPEL ▼</div>
+
+          <div id="printer-ticket" style="background:#fff; color:#000; font-family:'Courier New', Courier, monospace; width:300px; min-height:170px; padding:10px 15px; font-size:10.8px; font-weight:bold; line-height:1.14; box-shadow:0 4px 10px rgba(0,0,0,0.15); text-transform:uppercase; border:1px solid #e2e8f0; letter-spacing:0;">
+            <div id="print-body" style="white-space:normal; word-wrap:break-word; text-align:left;">
+              <div style="text-align:center; color:#64748b; margin-top:30px; margin-bottom:30px;">
+                <i>AGUARDANDO DADOS...</i>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:0.65em; font-weight:bold; color:#94a3b8; margin-top:10px; letter-spacing:1px;">▲ FIM DO TICKET ▲</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const PrinterModule = (() => {
+    const ST = {
+      IDLE: "IDLE",
+      PREVIEW: "PRÉVIA",
+      OFFICIAL: "OFICIAL",
+      REPRINT: "REIMPRESSÃO",
+      ERROR: "ERRO"
+    };
+
+    let currentState = ST.IDLE;
+    let lastPrintedSnapshot = null;
+
+    function el(id) { return document.getElementById(id); }
+    function nowIso() { return new Date().toISOString(); }
+
+    function esc(v) {
+      return String(v || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatDate(iso) {
+      try { return new Date(iso).toLocaleDateString("pt-BR"); } catch (e) { return "---"; }
+    }
+
+    function formatTime(iso) {
+      try { return new Date(iso).toLocaleTimeString("pt-BR"); } catch (e) { return "---"; }
+    }
+
+    function normalize(v, padrao) {
+      const s = String(v || "").trim();
+      return s || (padrao || "N/I");
+    }
+
+    function safeTitleCase(v) {
+      const s = String(v || "").trim();
+      if (!s) return "";
+
+      return s
+        .toLowerCase()
+        .replace(/\b\w/g, function(l) { return l.toUpperCase(); })
+        .replace(/\bCme\b/g, "CME")
+        .replace(/\bNr\b/g, "NR")
+        .replace(/\bRdc\b/g, "RDC")
+        .replace(/\bIso\b/g, "ISO")
+        .replace(/\bAnvisa\b/g, "ANVISA")
+        .replace(/\bNbr\b/g, "NBR")
+        .replace(/\bCnpj\b/g, "CNPJ")
+        .replace(/\bQi\b/g, "Q.I.")
+        .replace(/\bQo\b/g, "Q.O.")
+        .replace(/\bQd\b/g, "Q.D.")
+        .replace(/\bQ\.i\.\b/gi, "Q.I.")
+        .replace(/\bQ\.o\.\b/gi, "Q.O.")
+        .replace(/\bQ\.d\.\b/gi, "Q.D.")
+        .replace(/\bSgo\+\b/gi, "SGO+")
+        .replace(/\bLtda\b/g, "LTDA")
+        .replace(/\bEireli\b/g, "EIRELI")
+        .replace(/\bMei\b/g, "MEI")
+        .replace(/\bEpp\b/g, "EPP")
+        .replace(/\bGo\b/g, "GO")
+        .replace(/\bDf\b/g, "DF")
+        .replace(/\bRj\b/g, "RJ")
+        .replace(/\bSp\b/g, "SP")
+        .replace(/\bMg\b/g, "MG")
+        .replace(/\bBaumer\b/g, "Baumer")
+        .replace(/\bCisa\b/g, "Cisa")
+        .replace(/\bGetinge\b/g, "Getinge")
+        .replace(/\bUltrassonica\b/g, "Ultrassônica")
+        .replace(/\bPeroxido\b/g, "Peróxido")
+        .replace(/\bHidrogenio\b/g, "Hidrogênio")
+        .replace(/\bPrions\b/g, "Príons")
+        .replace(/\bTecnica\b/g, "Técnica")
+        .replace(/\bTecnico\b/g, "Técnico")
+        .replace(/\bGestao\b/g, "Gestão")
+        .replace(/\bSaude\b/g, "Saúde");
+    }
+
+    function normalizeCode(v) {
+      return String(v || "").trim().toUpperCase();
+    }
+
+    function inferNormas(tipo) {
+      const t = String(tipo || "").toLowerCase();
+
+      if (t.indexOf("peróxido") >= 0 || t.indexOf("peroxido") >= 0) {
+        return [
+          "RDC 15/2012 ANVISA",
+          "ISO 14937",
+          "ISO 11140 / ISO 11138",
+          "PROTOCOLOS DO FABRICANTE"
+        ];
+      }
+
+      if (t.indexOf("ultrassônica") >= 0 || t.indexOf("ultrassonica") >= 0 || t.indexOf("termodesinfectora") >= 0) {
+        return [
+          "RDC 15/2012 ANVISA",
+          "ABNT NBR 16328",
+          "ISO 15883",
+          "PROTOCOLOS DO FABRICANTE"
+        ];
+      }
+
+      if (t.indexOf("câmara") >= 0 || t.indexOf("camara") >= 0) {
+        return [
+          "RDC 430/2020 ANVISA",
+          "PROTOCOLOS DO FABRICANTE",
+          "QUALIFICAÇÃO TÉRMICA",
+          "RASTREABILIDADE METROLÓGICA"
+        ];
+      }
+
+      return [
+        "RDC 15/2012 ANVISA",
+        "ABNT NBR 16328",
+        "ISO 17665",
+        "PROTOCOLOS DO FABRICANTE"
+      ];
+    }
+
+    function fitValue(v, max) {
+      const s = String(v || "").trim();
+      if (!s) return "N/I";
+      const limit = max || 34;
+      return s.length > limit ? (s.substring(0, limit - 3) + "...") : s;
+    }
+
+    function getStatusResultText(status) {
+      const s = String(status || "").toUpperCase();
+      if (s.indexOf("REPROVADO") >= 0) return "REPROVADO";
+      if (s.indexOf("RESSALVAS") >= 0) return "APROVADO COM RESSALVAS";
+      if (s.indexOf("APROVADO") >= 0) return "APROVADO";
+      return s || "PENDENTE";
+    }
+
+    function buildSnapshotFromForm() {
+      const stamp = nowIso();
+      const receitas = Array.isArray(window.receitas) ? window.receitas.slice() : [];
+      const insumos = [];
+
+      document.querySelectorAll(".insumo-card").forEach(function(card) {
+        const nome = safeTitleCase(normalize(card.getAttribute("data-insumo-nome") || card.getAttribute("data-insumo"), "INSUMO"));
+        const lote = normalize(card.querySelector(".lote-input") && card.querySelector(".lote-input").value, "N/I");
+        const validade = normalize(card.querySelector(".validade-input") && card.querySelector(".validade-input").value, "N/I");
+        insumos.push({ nome: nome, lote: lote, validade: validade });
+      });
+
+      const statusEl = document.querySelector('input[name="statusFinal"]:checked');
+      const status = statusEl ? normalize(statusEl.value, "PENDENTE").toUpperCase() : "PENDENTE";
+      const tipoEquipamento = safeTitleCase(normalize((typeof perfilAtual !== "undefined" && perfilAtual && perfilAtual.nome) ? perfilAtual.nome : (el("tipoEquipamentoCodigo") && el("tipoEquipamentoCodigo").value), "EQUIPAMENTO NÃO INFORMADO"));
+      const marca = safeTitleCase(normalize(el("marca") && el("marca").value, ""));
+      const modelo = normalize(el("modelo") && el("modelo").value, "");
+      const marcaModelo = [marca, modelo].filter(Boolean).join(" / ");
+
+      return {
+        documentoTipo: "CARTA_CONFORMIDADE_METROLABS",
+        stateType: "LAUDO TÉCNICO RESUMIDO",
+        ticketTitle: "METROLABS",
+        cycleId: "CARTA-" + new Date().toLocaleDateString("pt-BR").replace(/\//g, "") + "-" + new Date().toLocaleTimeString("pt-BR").replace(/:/g, ""),
+        result: getStatusResultText(status),
+        startTimestamp: stamp,
+        endTimestamp: stamp,
+        conclusion: normalize(
+          el("textoConclusao") && el("textoConclusao").value,
+          "DOCUMENTO RESUMIDO VINCULADO À CARTA PRELIMINAR E AO RELATÓRIO TÉCNICO FINAL."
+        ),
+        thermal: {
+          cliente: safeTitleCase(normalize(el("cliente") && el("cliente").value, "CLIENTE NÃO INFORMADO")),
+          cnpj: normalize(el("cnpj") && el("cnpj").value, "SEM CNPJ"),
+          equipamento: tipoEquipamento,
+          marcaModelo: normalize(marcaModelo, "MARCA / MODELO NÃO INFORMADOS"),
+          serie: normalize(el("serie") && el("serie").value, "SÉRIE NÃO INFORMADA"),
+          patrimonio: normalize(el("patrimonio") && el("patrimonio").value, "TAG NÃO INFORMADA"),
+          capacidade: normalize(el("volume") && el("volume").value, "N/I"),
+          statusQI: el("qi") && el("qi").checked ? "APROVADO" : "NÃO EXECUTADO",
+          statusQO: el("qo") && el("qo").checked ? "APROVADO" : "NÃO EXECUTADO",
+          statusQD: el("qd") && el("qd").checked ? "APROVADO" : "NÃO EXECUTADO",
+          receitas: receitas.map(function(nome) {
+            return { nome: safeTitleCase(String(nome)), qo: "INFORMADO", qd: "INFORMADO" };
+          }),
+          insumos: insumos,
+          normas: inferNormas(tipoEquipamento),
+          textoValidade: "COMPROVANTE RESUMIDO VINCULADO AO DOCUMENTO OFICIAL COMPLETO.",
+          osNumero: window.ultimaValidacaoGerada && window.ultimaValidacaoGerada.os ? window.ultimaValidacaoGerada.os : "",
+          codigoValidacao: window.ultimaValidacaoGerada && window.ultimaValidacaoGerada.codigo ? window.ultimaValidacaoGerada.codigo : "",
+          urlValidacao: window.ultimaValidacaoGerada && window.ultimaValidacaoGerada.url ? window.ultimaValidacaoGerada.url : "",
+          qrDataUri: window.ultimaValidacaoGerada && window.ultimaValidacaoGerada.qrDataUri ? window.ultimaValidacaoGerada.qrDataUri : ""
+        }
+      };
+    }
+
+    function snapshotFromAny(rawData) {
+      if (!rawData || typeof rawData !== "object") return buildSnapshotFromForm();
+      if (rawData.resumo_impressao) return snapshotFromAny(rawData.resumo_impressao);
+
+      if (rawData.thermal) {
+        const t = rawData.thermal || {};
+        const tipoEquipamento = safeTitleCase(normalize(t.equipamento, "EQUIPAMENTO NÃO INFORMADO"));
+
+        return {
+          documentoTipo: rawData.documentoTipo || "CARTA_CONFORMIDADE_METROLABS",
+          stateType: rawData.stateType || "LAUDO TÉCNICO RESUMIDO",
+          ticketTitle: rawData.ticketTitle || "METROLABS",
+          cycleId: normalize(rawData.cycleId || t.osNumero || t.codigoValidacao, "SEM ID"),
+          result: getStatusResultText(rawData.result || rawData.stateLabel || rawData.state || ""),
+          startTimestamp: rawData.startTimestamp || nowIso(),
+          endTimestamp: rawData.endTimestamp || nowIso(),
+          conclusion: normalize(rawData.conclusion || t.textoValidade || "", "DOCUMENTO RESUMIDO VINCULADO AO PDF OFICIAL."),
+          thermal: {
+            cliente: safeTitleCase(normalize(t.cliente, "CLIENTE NÃO INFORMADO")),
+            cnpj: normalize(t.cnpj, "SEM CNPJ"),
+            equipamento: tipoEquipamento,
+            marcaModelo: normalize(t.marcaModelo, "MARCA / MODELO NÃO INFORMADOS"),
+            serie: normalize(t.serie, "N/I"),
+            patrimonio: normalize(t.patrimonio, "N/I"),
+            capacidade: normalize(t.capacidade, "N/I"),
+            statusQI: normalize(t.statusQI, "N/I"),
+            statusQO: normalize(t.statusQO, "N/I"),
+            statusQD: normalize(t.statusQD, "N/I"),
+            receitas: Array.isArray(t.receitas) ? t.receitas : [],
+            insumos: Array.isArray(t.insumos) ? t.insumos : [],
+            normas: Array.isArray(t.normas) && t.normas.length ? t.normas : inferNormas(tipoEquipamento),
+            textoValidade: normalize(t.textoValidade, ""),
+            osNumero: normalize(t.osNumero, ""),
+            codigoValidacao: normalizeCode(t.codigoValidacao),
+            urlValidacao: normalize(t.urlValidacao, ""),
+            qrDataUri: normalize(t.qrDataUri, "")
+          }
+        };
+      }
+
+      return {
+        documentoTipo: "CARTA_CONFORMIDADE_METROLABS",
+        stateType: "LAUDO TÉCNICO RESUMIDO",
+        ticketTitle: "METROLABS",
+        cycleId: normalize(rawData.relatorioId || rawData.documentoId || rawData.osNumero, "SEM ID"),
+        result: getStatusResultText(rawData.status || ""),
+        startTimestamp: nowIso(),
+        endTimestamp: nowIso(),
+        conclusion: "DOCUMENTO RESUMIDO REEMITIDO A PARTIR DO ÍNDICE DE RASTREABILIDADE METROLABS.",
+        thermal: {
+          cliente: safeTitleCase(normalize(rawData.cliente, "CLIENTE NÃO INFORMADO")),
+          cnpj: normalize(rawData.cnpj, "SEM CNPJ"),
+          equipamento: safeTitleCase(normalize(rawData.equipamento, "EQUIPAMENTO NÃO INFORMADO")),
+          marcaModelo: normalize(rawData.marcaModelo || "", "MARCA / MODELO NÃO INFORMADOS"),
+          serie: normalize(rawData.serie, "N/I"),
+          patrimonio: normalize(rawData.patrimonio || rawData.tag || "", "N/I"),
+          capacidade: normalize(rawData.capacidade, "N/I"),
+          statusQI: normalize(rawData.statusQI || rawData.status, "N/I"),
+          statusQO: normalize(rawData.statusQO || rawData.status, "N/I"),
+          statusQD: normalize(rawData.statusQD || rawData.status, "N/I"),
+          receitas: [],
+          insumos: [],
+          normas: inferNormas(rawData.equipamento || ""),
+          textoValidade: "REEMISSÃO A PARTIR DO REGISTRO INDEXADO NO SISTEMA.",
+          osNumero: normalize(rawData.osNumero, ""),
+          codigoValidacao: normalizeCode(rawData.codigoValidacao),
+          urlValidacao: normalize(rawData.urlValidacao, ""),
+          qrDataUri: normalize(rawData.qrDataUri, "")
+        }
+      };
+    }
+
+    function getQrCodeSource(thermal) {
+      const uri = String(thermal.qrDataUri || "").trim();
+      if (uri.length > 20 && (uri.indexOf("data:image") === 0 || uri.indexOf("http") === 0)) {
+        return uri;
+      }
+
+      const fallbackText = thermal.urlValidacao || thermal.codigoValidacao || thermal.osNumero;
+      const cleanText = String(fallbackText || "").trim();
+
+      if (!cleanText || cleanText === "N/I" || cleanText === "undefined" || cleanText === "null") {
+        return "";
+      }
+
+      return "https://quickchart.io/qr?size=120&margin=0&text=" + encodeURIComponent(cleanText);
+    }
+
+    function row(left, right) {
+      return '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:2px;">'
+        + '<span style="font-weight:900;white-space:nowrap;">' + esc(left) + '</span>'
+        + '<span style="text-align:right;flex:1;">' + esc(right) + '</span></div>';
+    }
+
+    function divider() {
+      return '<div style="text-align:center;margin:4px 0;">--------------------------</div>';
+    }
+
+    function thick() {
+      return '<div style="text-align:center;margin:4px 0;">==========================</div>';
+    }
+
+    function renderStatusBox(resultText) {
+      const txt = getStatusResultText(resultText);
+      let border = "#111";
+      if (txt.indexOf("REPROVADO") >= 0) border = "#B91C1C";
+      else if (txt.indexOf("RESSALVAS") >= 0) border = "#A16207";
+      else if (txt.indexOf("APROVADO") >= 0) border = "#166534";
+
+      return ''
+        + '<div style="text-align:center;margin:6px 0 4px 0;">'
+        + '<div style="font-size:0.92em;font-weight:900;">RESULTADO TOTAL</div>'
+        + '<div style="margin-top:4px;border:2px solid ' + border + ';padding:6px 4px;font-size:1.03em;font-weight:900;">' + esc(txt) + '</div>'
+        + '</div>';
+    }
+
+    function renderNormas(normas) {
+      if (!Array.isArray(normas) || !normas.length) return "";
+      let html = '<div style="text-align:center;font-weight:900;">CONFORMIDADE NORMATIVA</div>';
+      normas.slice(0, 4).forEach(function(item) {
+        html += '<div style="font-size:0.82em; line-height:1.08; text-align:center;">' + esc(item) + '</div>';
+      });
+      html += divider();
+      return html;
+    }
+
+    function renderReceitas(receitas) {
+      if (!Array.isArray(receitas) || !receitas.length) return "";
+      let html = '<div style="text-align:center;font-weight:900;">RECEITAS</div>';
+      receitas.slice(0, 6).forEach(function(item) {
+        const nome = typeof item === "string" ? item : (item.nome || item.receita || "");
+        if (nome) html += '<div style="font-size:0.88em;">- ' + esc(nome) + '</div>';
+      });
+      html += divider();
+      return html;
+    }
+
+    function renderInsumos(insumos) {
+      if (!Array.isArray(insumos) || !insumos.length) return "";
+      let html = '<div style="text-align:center;font-weight:900;">INSUMOS</div>';
+      insumos.slice(0, 4).forEach(function(item) {
+        html += '<div style="font-size:0.84em;">' + esc(item.nome || "INSUMO") + '</div>';
+        html += '<div style="font-size:0.76em;">LOTE: ' + esc(item.lote || "N/I") + ' / VAL: ' + esc(item.validade || "N/I") + '</div>';
+      });
+      html += divider();
+      return html;
+    }
+
+    function validationText(thermal) {
+      const code = normalizeCode(thermal.codigoValidacao || "");
+      if (code) return "VALIDAR: " + code;
+      return thermal.urlValidacao || "";
+    }
+
+    function renderTicket(stateType, rawData) {
+      const body = el("print-body");
+      if (!body) return;
+
+      if (stateType === ST.IDLE) {
+        body.innerHTML = '<div style="text-align:center; color:#64748b; margin-top:30px; margin-bottom:30px;"><i>AGUARDANDO DADOS...</i></div>';
+        return;
+      }
+
+      const data = snapshotFromAny(rawData);
+      const thermal = data.thermal || {};
+      const qrSrc = getQrCodeSource(thermal);
+      const resultText = getStatusResultText(data.result);
+      let html = '';
+
+      html += '<div style="text-align:center;margin-bottom:6px;">';
+      html += '<div style="font-size:1.22em;font-weight:900;">METROLABS</div>';
+      html += '<div style="font-size:0.95em;font-weight:900;">CARTA DE CONFORMIDADE</div>';
+      html += thick();
+      html += '<div style="font-size:0.98em;font-weight:900;">' + esc(stateType) + '</div>';
+      html += thick();
+      html += '</div>';
+
+      html += renderStatusBox(resultText);
+      html += divider();
+
+      html += row("CLIENTE:", fitValue(thermal.cliente, 34));
+      html += row("CNPJ:", fitValue(thermal.cnpj, 20));
+      html += row("EQUIP.:", fitValue(thermal.equipamento, 28));
+      html += row("MARCA/MOD:", fitValue(thermal.marcaModelo, 30));
+      html += row("SÉRIE:", fitValue(thermal.serie, 18));
+      html += row("TAG:", fitValue(thermal.patrimonio, 18));
+      html += row("CAPAC.:", fitValue(thermal.capacidade, 12));
+      html += divider();
+
+      html += row("Q.I.:", fitValue(thermal.statusQI, 18));
+      html += row("Q.O.:", fitValue(thermal.statusQO, 18));
+      html += row("Q.D.:", fitValue(thermal.statusQD, 18));
+      html += divider();
+
+      html += row("OS:", fitValue(thermal.osNumero, 22));
+      html += row("CÓDIGO:", fitValue(thermal.codigoValidacao, 22));
+      html += row("EMISSÃO:", formatDate(data.endTimestamp) + " " + formatTime(data.endTimestamp));
+      html += divider();
+
+      html += renderNormas(thermal.normas);
+      html += renderReceitas(thermal.receitas);
+      html += renderInsumos(thermal.insumos);
+
+      html += '<div style="text-align:center;font-weight:900;">CONCLUSÃO AUTOMÁTICA</div>';
+      html += '<div style="text-align:justify;font-size:0.86em;line-height:1.12;">'
+        + esc(data.conclusion || thermal.textoValidade || "DOCUMENTO RESUMIDO VINCULADO AO PDF OFICIAL.")
+        + '</div>';
+      html += divider();
+
+      if (qrSrc) {
+        html += '<div style="text-align:center;">';
+        html += '<div style="font-size:0.86em;font-weight:900;">VALIDAÇÃO EXTERNA</div>';
+        html += '<img data-qrcode-ticket="1" src="' + qrSrc + '" style="width:115px;height:115px;margin-top:4px;margin-left:auto;margin-right:auto;display:block;">';
+        html += '<div style="font-size:0.76em;margin-top:4px;word-break:break-word;">' + esc(validationText(thermal)) + '</div>';
+        html += '</div>';
+        html += divider();
+      }
+
+      html += '<div style="text-align:center;margin-top:12px;line-height:1.12;">';
+      html += '__________________________<br>';
+      html += '<span style="font-weight:900;">ASSINATURA RESPONSÁVEL</span><br>';
+      html += '<div style="margin-top:8px;font-size:0.8em;">DOCUMENTO GERADO VIA METROLABS</div>';
+      html += '<div style="font-size:0.8em;">* FIM DE IMPRESSÃO *</div>';
+      html += '</div>';
+
+      body.innerHTML = html;
+      lastPrintedSnapshot = data;
+    }
+
+    function waitForFrameImages(frameDoc) {
+      return new Promise(function(resolve) {
+        const imgs = Array.prototype.slice.call(frameDoc.images || []);
+        if (!imgs.length) {
+          setTimeout(resolve, 500);
+          return;
+        }
+
+        let pendentes = imgs.length;
+        let resolvido = false;
+
+        function concluir() {
+          if (resolvido) return;
+          resolvido = true;
+          setTimeout(resolve, 600);
+        }
+
+        imgs.forEach(function(img) {
+          if (img.complete && img.naturalWidth > 0) {
+            pendentes--;
+            if (pendentes <= 0) concluir();
+          } else {
+            img.onload = function() {
+              pendentes--;
+              if (pendentes <= 0) concluir();
+            };
+            img.onerror = function() {
+              pendentes--;
+              if (pendentes <= 0) concluir();
+            };
+          }
+        });
+
+        setTimeout(concluir, 3500);
+      });
+    }
+
+    async function executePhysicalPrint() {
+      const ticket = el("printer-ticket");
+      if (!ticket) return;
+
+      const html = ticket.innerHTML;
+      const frame = document.createElement("iframe");
+      frame.style.position = "fixed";
+      frame.style.right = "-9999px";
+      frame.style.bottom = "-9999px";
+      document.body.appendChild(frame);
+
+      const doc = frame.contentWindow.document;
+      doc.open();
+      doc.write(
+        '<html><head><title>Ticket</title><style>'
+        + '@page{margin:0;size:58mm auto;}'
+        + 'body{margin:0;padding:0;width:46mm;margin-left:5mm;font-family:"Courier New",monospace;font-size:9.2px;font-weight:bold;text-transform:uppercase;line-height:1.16;color:#000;}'
+        + 'div{max-width:100%;word-break:break-word;}'
+        + 'img{max-width:100%;display:block;margin:0 auto;}'
+        + '</style></head><body>' + html + '</body></html>'
+      );
+      doc.close();
+
+      try {
+        await waitForFrameImages(doc);
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } finally {
+        setTimeout(function() {
+          if (frame.parentNode) frame.parentNode.removeChild(frame);
+        }, 1200);
+      }
+    }
+
+    return {
+      clear: function() {
+        currentState = ST.IDLE;
+        renderTicket(currentState, null);
+      },
+      showPreview: function() {
+        currentState = ST.PREVIEW;
+        renderTicket(currentState, buildSnapshotFromForm());
+      },
+      printOfficial: function(snapshot) {
+        currentState = ST.OFFICIAL;
+        renderTicket(currentState, snapshot || buildSnapshotFromForm());
+        executePhysicalPrint();
+      },
+      printCurrent: function() {
+        currentState = ST.OFFICIAL;
+        renderTicket(currentState, buildSnapshotFromForm());
+        executePhysicalPrint();
+      },
+      reprint: function() {
+        if (lastPrintedSnapshot) {
+          currentState = ST.REPRINT;
+          renderTicket(currentState, lastPrintedSnapshot);
+          executePhysicalPrint();
+          return;
+        }
+        currentState = ST.REPRINT;
+        renderTicket(currentState, buildSnapshotFromForm());
+        executePhysicalPrint();
+      }
+    };
+  })();
+
+  window.PrinterModule = PrinterModule;
+  window.imprimir = function(snapshot) { PrinterModule.printOfficial(snapshot); };
+})();
+</script>
+ 

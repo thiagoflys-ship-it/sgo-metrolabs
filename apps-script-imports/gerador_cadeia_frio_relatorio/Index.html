@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= (CFCFG && CFCFG.APP_TITLE) ? CFCFG.APP_TITLE : 'METROLABS - CADEIA DE FRIO' ?></title>
+  <?!= include('Estilos'); ?>
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="header-card">
+      <div class="brand">
+        <div class="title-area">
+          <h1><?= (CFCFG && CFCFG.APP_TITLE) ? CFCFG.APP_TITLE : 'METROLABS - CADEIA DE FRIO' ?></h1>
+          <p>Qualificação térmica de cadeia de frio — ABNT NBR 16328:2023, Anexo G.</p>
+        </div>
+      </div>
+      <div id="statusBadge" class="status-badge is-neutral">carregando...</div>
+    </header>
+
+    <div class="action-bar">
+      <a class="btn btn-secondary" href="<?= ScriptApp.getService().getUrl() ?>?page=manual" target="_top">Manual do Operador</a>
+      <button class="btn btn-primary" id="btnRelatorioInterno" onclick="ativarModoSimuladoAdmin()">RELATÓRIO INTERNO</button>
+    </div>
+
+    <div class="panel">
+      <h2>1. Cliente</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="cnpj">CNPJ</label>
+          <input id="cnpj" class="form-control" placeholder="00.000.000/0000-00">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end;">
+          <button class="btn btn-secondary" onclick="buscarCnpj()">Buscar CNPJ</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="cliente">Cliente / Razão Social</label><input id="cliente" class="form-control"></div>
+        <div class="form-group"><label for="endereco">Endereço</label><input id="endereco" class="form-control"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="responsavelTecnico">Responsável técnico (assinatura do laudo) *</label><input id="responsavelTecnico" class="form-control" placeholder="Nome do responsável técnico" required></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>2. Equipamento</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="perfil">Perfil do equipamento</label>
+          <select id="perfil" class="form-control" onchange="aoTrocarPerfil()"></select>
+        </div>
+        <div class="form-group"><label for="tagEquipamento">TAG / Identificação</label><input id="tagEquipamento" class="form-control"></div>
+        <div class="form-group"><label for="marca">Marca</label><input id="marca" class="form-control"></div>
+        <div class="form-group"><label for="modelo">Modelo</label><input id="modelo" class="form-control"></div>
+        <div class="form-group"><label for="numeroSerie">Número de série</label><input id="numeroSerie" class="form-control"></div>
+        <div class="form-group"><label for="localizacao">Localização</label><input id="localizacao" class="form-control"></div>
+        <div class="form-group"><label for="volumeLitros">Volume interno declarado (L)</label><input id="volumeLitros" class="form-control" type="number" step="0.1" oninput="aoMudarVolume()"></div>
+      </div>
+      <div class="check-grid">
+        <div class="check-item">
+          <input id="equipamentoConjugado" type="checkbox" onchange="aoMudarVolume()">
+          <label for="equipamentoConjugado" style="margin:0;">Equipamento conjugado (ex.: refrigerador + freezer)</label>
+        </div>
+      </div>
+
+      <div class="section-divider">Faixa operacional</div>
+      <div id="faixaBox" class="form-row">
+        <div class="form-group"><label for="faixaTMin">Faixa mínima (°C)</label><input id="faixaTMin" class="form-control" type="number" step="0.1"></div>
+        <div class="form-group"><label for="faixaTMax">Faixa máxima (°C)</label><input id="faixaTMax" class="form-control" type="number" step="0.1"></div>
+        <div class="form-group"><label for="tolerancia">Tolerância operacional (°C)</label><input id="tolerancia" class="form-control" type="number" step="0.1"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>3. Estudos do Ensaio</h2>
+      <div class="field-help">
+        Todos os estudos abaixo são lidos do <strong>mesmo arquivo</strong> de datalogger (importado na seção 4) — marque os horários de início/fim de cada estudo que foi realizado durante a gravação. Você pode habilitar mais de um estudo por laudo.
+      </div>
+
+      <div class="section-divider" id="secaoDistribuicao">Distribuição de Temperatura (24h)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="distTipo">Incluir estudo de distribuição?</label>
+          <select id="distTipo" class="form-control" onchange="aoTrocarEstudosHabilitados()">
+            <option value="">Não incluir neste laudo</option>
+            <option value="DISTRIBUICAO_VAZIO">Sim — em vazio</option>
+            <option value="DISTRIBUICAO_CARGA">Sim — com carga</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="distInicio">Início do estudo (dd/MM/aaaa HH:mm:ss)</label><input id="distInicio" class="form-control" placeholder="ex.: 10/07/2026 08:00:00"></div>
+        <div class="form-group"><label for="distFim">Fim do estudo</label><input id="distFim" class="form-control" placeholder="ex.: 11/07/2026 08:00:00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2;">
+          <label for="distFimRampaEstabilizacao">Fim da rampa de estabilização (opcional)</label>
+          <input id="distFimRampaEstabilizacao" class="form-control" placeholder="ex.: 10/07/2026 10:34:00 — deixe vazio se o equipamento já estava estável no início" oninput="aoEditarRampaManualmente_()">
+        </div>
+        <div class="form-group" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <button type="button" id="btnDetectarRampa" class="btn btn-secondary" onclick="sugerirRampaEstabilizacao()">Detectar rampa automaticamente</button>
+        </div>
+      </div>
+      <div id="distRampaStatus" class="status-badge is-neutral" style="display:inline-block; margin-bottom:8px;">Nenhuma rampa aplicada — todas as leituras do arquivo contam para o veredito.</div>
+      <div class="field-help">
+        Preencha SÓ se o equipamento foi ligado frio/fora da faixa no início do arquivo (ex.: técnico ligou o aparelho e já marcou o início do ensaio de 24h). Leituras antes deste horário são registradas no gráfico e nos dados brutos, mas não contam para aprovação/reprovação nem para as estatísticas do laudo — usar "Detectar rampa automaticamente" sugere um horário a partir dos próprios dados, mas sempre pede sua confirmação antes de aplicar. O aviso acima do campo mostra sempre o estado atual (nenhuma rampa / detectada mas não aplicada / aplicada), então dá pra conferir sem depender do log.
+      </div>
+
+      <div class="section-divider" id="secaoPorta">Abertura de Porta</div>
+      <div class="check-grid">
+        <div class="check-item">
+          <input id="portaHabilitada" type="checkbox" onchange="aoTrocarEstudosHabilitados()">
+          <label for="portaHabilitada" style="margin:0;">Incluir estudo de abertura de porta neste laudo</label>
+        </div>
+      </div>
+      <div class="form-row" id="camposPorta">
+        <div class="form-group">
+          <label for="tipoAbertura">Tipo de abertura</label>
+          <select id="tipoAbertura" class="form-control">
+            <option value="SEMI_ABERTA">Porta semiaberta</option>
+            <option value="TOTAL">Porta totalmente aberta</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="portaInicioEvento">Início do evento</label><input id="portaInicioEvento" class="form-control" placeholder="ex.: 10/07/2026 14:32:00"></div>
+        <div class="form-group"><label for="portaFimEvento">Fim do evento (opcional)</label><input id="portaFimEvento" class="form-control" placeholder="ex.: 10/07/2026 14:37:00"></div>
+        <div class="form-group"><label for="portaTempoAlvoMinutos">Tempo-alvo mínimo (min, opcional)</label><input id="portaTempoAlvoMinutos" class="form-control" type="number" step="1" placeholder="ex.: 30"></div>
+      </div>
+
+      <div class="section-divider" id="secaoEnergia">Queda de Energia</div>
+      <div class="check-grid">
+        <div class="check-item">
+          <input id="energiaHabilitada" type="checkbox" onchange="aoTrocarEstudosHabilitados()">
+          <label for="energiaHabilitada" style="margin:0;">Incluir estudo de queda de energia neste laudo</label>
+        </div>
+      </div>
+      <div class="form-row" id="camposEnergia">
+        <div class="form-group"><label for="energiaInicioEvento">Início do evento</label><input id="energiaInicioEvento" class="form-control" placeholder="ex.: 10/07/2026 14:32:00"></div>
+        <div class="form-group"><label for="energiaFimEvento">Fim do evento (opcional)</label><input id="energiaFimEvento" class="form-control" placeholder="ex.: 10/07/2026 14:37:00"></div>
+        <div class="form-group"><label for="energiaTempoAlvoMinutos">Tempo-alvo mínimo (min, opcional)</label><input id="energiaTempoAlvoMinutos" class="form-control" type="number" step="1" placeholder="ex.: 60"></div>
+      </div>
+
+      <div class="section-divider" id="secaoAutonomia">Autonomia (Caixa Térmica)</div>
+      <div class="check-grid">
+        <div class="check-item">
+          <input id="autonomiaHabilitada" type="checkbox" onchange="aoTrocarEstudosHabilitados()">
+          <label for="autonomiaHabilitada" style="margin:0;">Incluir estudo de autonomia neste laudo</label>
+        </div>
+      </div>
+      <div class="form-row" id="camposAutonomia">
+        <div class="form-group"><label for="autonomiaInicio">Início do período gravado</label><input id="autonomiaInicio" class="form-control" placeholder="ex.: 10/07/2026 08:00:00"></div>
+        <div class="form-group"><label for="autonomiaFim">Fim do período gravado</label><input id="autonomiaFim" class="form-control" placeholder="ex.: 10/07/2026 20:00:00"></div>
+      </div>
+
+      <div class="section-divider">Sensores</div>
+      <div class="form-row">
+        <div class="form-group"><label for="nSensores">Nº de sensores instalados</label><input id="nSensores" class="form-control" type="number" min="1" max="60" oninput="montarSensores()"></div>
+      </div>
+      <div id="sensoresGrid" class="check-grid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>4. Importação do Datalogger</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="modoEntrada">Modo de entrada</label>
+          <select id="modoEntrada" class="form-control" onchange="aoTrocarModoEntrada()">
+            <option value="FILE_ID">ID / link do arquivo no Drive</option>
+            <option value="COLAR">Colar dados brutos</option>
+            <option value="ARQUIVO_POR_SENSOR">Um arquivo por sensor (datalogger individual)</option>
+            <option value="SIMULADO_ADMIN">Relatório interno (dados reconstituídos)</option>
+          </select>
+        </div>
+        <div class="form-group" id="campoFileId">
+          <label for="fileId">ID ou link do arquivo</label>
+          <input id="fileId" class="form-control" placeholder="cole o link do Google Drive aqui, ou escolha um arquivo abaixo">
+          <input type="file" id="uploadArquivoLocal" class="form-control" style="padding:8px;margin-top:6px;">
+          <small class="field-help">Ao escolher o arquivo do computador, o sistema faz upload automático para o Drive e preenche o campo acima sozinho.</small>
+        </div>
+      </div>
+      <div class="form-group hidden" id="campoColar">
+        <label for="textoColado">Dados colados (cabeçalho + linhas, separados por tab/vírgula/ponto e vírgula)</label>
+        <textarea id="textoColado" class="form-control"></textarea>
+      </div>
+      <div class="alert-box info hidden" id="campoArquivoPorSensor">
+        <strong>UM ARQUIVO POR SENSOR.</strong> Cada datalogger individual grava seu próprio arquivo (Tempo + 1 temperatura). Volte à seção 3 (Sensores) — cada sensor marcado como ativo ganhou um campo de ID/link do Drive e um botão de upload direto do computador, logo abaixo do seu checkbox. O sistema alinha as leituras dos sensores pelo horário automaticamente.
+      </div>
+
+      <div id="boxSimulacaoAdmin" class="hidden">
+        <div class="alert-box warning">
+          <strong>RELATÓRIO INTERNO / DADOS RECONSTITUÍDOS.</strong> Uso administrativo. O relatório será identificado como análise manual com dados reconstituídos pelo laboratório de metrologia.
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label for="simSenha">Senha administrativa</label><input id="simSenha" class="form-control" type="password" autocomplete="off" placeholder="Senha do administrador"></div>
+          <div class="form-group"><label for="simTemperaturaAlvo">Temperatura alvo (°C)</label><input id="simTemperaturaAlvo" class="form-control" type="number" step="0.1" placeholder="ex.: 5.0"></div>
+          <div class="form-group"><label for="simIntervalo">Intervalo entre leituras (s)</label><input id="simIntervalo" class="form-control" type="number" min="10" max="1800" value="300"></div>
+        </div>
+        <div class="check-grid">
+          <div class="check-item">
+            <input id="simMultiArquivoPorSensor" type="checkbox">
+            <label for="simMultiArquivoPorSensor" style="margin:0;">Simular como dataloggers individuais por sensor (testar mesclagem de arquivos)</label>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label for="simInicioEstudo">Início do arquivo reconstituído</label><input id="simInicioEstudo" class="form-control" placeholder="ex.: 10/07/2026 08:00:00"></div>
+          <div class="form-group"><label for="simFimEstudo">Fim do arquivo reconstituído</label><input id="simFimEstudo" class="form-control" placeholder="ex.: 12/07/2026 08:00:00"></div>
+          <div class="form-group"><label for="simAutonomiaEstimadaMinutos">Autonomia estimada (min, somente para o estudo de Autonomia)</label><input id="simAutonomiaEstimadaMinutos" class="form-control" type="number" min="1" placeholder="opcional"></div>
+        </div>
+
+        <div class="section-divider">Resultado desejado por estudo</div>
+        <div class="form-row">
+          <div class="form-group" id="simResultadoDistribuicaoBox">
+            <label for="simResultadoDistribuicao">Distribuição (24h)</label>
+            <select id="simResultadoDistribuicao" class="form-control">
+              <option value="ALEATORIO">Aleatório</option>
+              <option value="APROVADO">Forçar Aprovado</option>
+              <option value="REPROVADO">Forçar Reprovado</option>
+            </select>
+          </div>
+          <div class="form-group" id="simResultadoPortaBox">
+            <label for="simResultadoPorta">Abertura de Porta</label>
+            <select id="simResultadoPorta" class="form-control">
+              <option value="ALEATORIO">Aleatório</option>
+              <option value="APROVADO">Forçar Aprovado</option>
+              <option value="REPROVADO">Forçar Reprovado</option>
+            </select>
+          </div>
+          <div class="form-group" id="simResultadoEnergiaBox">
+            <label for="simResultadoEnergia">Queda de Energia</label>
+            <select id="simResultadoEnergia" class="form-control">
+              <option value="ALEATORIO">Aleatório</option>
+              <option value="APROVADO">Forçar Aprovado</option>
+              <option value="REPROVADO">Forçar Reprovado</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-help">
+          Cada geração usa parâmetros aleatórios diferentes (amplitude, ponto da excursão, ruído por sensor) — mesmo forçando o mesmo resultado várias vezes, os dados nunca se repetem. Em "Abertura de Porta" e "Queda de Energia", o veredito (Aprovado/Reprovado) só aparece no laudo se o campo "Tempo-alvo mínimo" daquele estudo (seção 3) estiver preenchido — sem ele, o estudo fica como caracterização (sem veredito), mesmo com "Forçar Reprovado" selecionado.
+        </div>
+
+        <div class="field-help">
+          "Início/Fim do arquivo reconstituído" delimita todo o período do datalogger simulado — recomendado cobrir a janela de <strong>todos</strong> os estudos habilitados na seção 3 (distribuição, porta, energia, autonomia), mas não é obrigatório: se algum estudo ficar parcialmente fora desse período, a curva daquele estudo é simplesmente cortada no limite do arquivo, sem travar a geração. Dentro desse período, cada estudo usa os horários que você já preencheu na seção 3 (início/fim do estudo de distribuição; início/fim do evento de porta/energia; início/fim do período gravado de autonomia) para desenhar a curva correspondente — fora dessas janelas, a curva fica estável em torno da temperatura alvo, simulando o intervalo entre um ensaio e outro no mesmo arquivo.
+          Para o estudo de Autonomia (caixa térmica), a curva simula a caixa esquentando gradualmente até romper perto do tempo informado em "Autonomia estimada" — se deixar em branco, rompe perto de 55% da duração do estudo; se informar um tempo maior que a janela, nenhuma ruptura aparece nos dados (mesmo caso de "autonomia não observada" do motor real).
+        </div>
+      </div>
+
+      <div class="btn-container">
+        <button class="btn btn-secondary" onclick="preVisualizar()">Pré-visualizar dados</button>
+      </div>
+      <div id="previewArea"></div>
+    </div>
+
+    <div class="panel">
+      <h2>5. Gerar Relatório</h2>
+      <div class="btn-container">
+        <button class="btn btn-primary" id="btnGerar" onclick="gerarRelatorio()">Gerar Relatório</button>
+        <button class="btn btn-secondary" onclick="limparLog()">Limpar Log</button>
+      </div>
+      <div id="resultadoArea"></div>
+    </div>
+
+    <div class="panel">
+      <h2>6. Certificado de Qualificação Térmica (Beta)</h2>
+      <div class="alert-box info">
+        <strong>SEGUNDA FORMA DE RELATÓRIO.</strong> Documento HTML A4 narrativo, complementar ao Relatório em Planilha (seção 5) — não substitui nada, é um botão independente. Usa os mesmos dados já preenchidos acima. Os textos de Introdução/Objetivo/Análise/Conclusão são escritos por IA a partir dos números já calculados — revise antes de confirmar.
+      </div>
+
+      <div class="form-row">
+        <div class="form-group"><label for="certNumero">Número do Certificado</label><input id="certNumero" class="form-control" placeholder="ex.: 02062026/01RJ"></div>
+        <div class="form-group"><label for="certRevisao">Revisão</label><input id="certRevisao" class="form-control" value="0"></div>
+        <div class="form-group"><label for="certDataLogger">DTL (identificação do data logger)</label><input id="certDataLogger" class="form-control" placeholder="ex.: 04"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="certResponsavelAceite">Responsável pelo aceite (cliente)</label><input id="certResponsavelAceite" class="form-control"></div>
+        <div class="form-group"><label for="certTarefaOrigem">Tarefa de origem (opcional)</label><input id="certTarefaOrigem" class="form-control"></div>
+      </div>
+
+      <div class="section-divider">Registros fotográficos (até 4, opcional)</div>
+      <div class="check-grid-multiarquivo check-grid" id="certFotosGrid">
+        <div class="check-item check-item-com-import">
+          <label for="certFoto1" style="margin:0;">Foto 1</label>
+          <input type="file" id="certFoto1" class="form-control" accept="image/*" style="padding:6px;margin-top:4px;">
+          <input type="text" id="certFoto1Legenda" class="form-control sensor-arquivo" placeholder="Legenda da foto 1">
+        </div>
+        <div class="check-item check-item-com-import">
+          <label for="certFoto2" style="margin:0;">Foto 2</label>
+          <input type="file" id="certFoto2" class="form-control" accept="image/*" style="padding:6px;margin-top:4px;">
+          <input type="text" id="certFoto2Legenda" class="form-control sensor-arquivo" placeholder="Legenda da foto 2">
+        </div>
+        <div class="check-item check-item-com-import">
+          <label for="certFoto3" style="margin:0;">Foto 3</label>
+          <input type="file" id="certFoto3" class="form-control" accept="image/*" style="padding:6px;margin-top:4px;">
+          <input type="text" id="certFoto3Legenda" class="form-control sensor-arquivo" placeholder="Legenda da foto 3">
+        </div>
+        <div class="check-item check-item-com-import">
+          <label for="certFoto4" style="margin:0;">Foto 4</label>
+          <input type="file" id="certFoto4" class="form-control" accept="image/*" style="padding:6px;margin-top:4px;">
+          <input type="text" id="certFoto4Legenda" class="form-control sensor-arquivo" placeholder="Legenda da foto 4">
+        </div>
+      </div>
+
+      <div class="btn-container">
+        <button class="btn btn-secondary" id="btnRascunhoCertificado" onclick="gerarRascunhoCertificado()">Gerar Rascunho com IA</button>
+      </div>
+      <div id="certificadoStatusArea"></div>
+
+      <div id="certificadoRevisaoBox" class="hidden">
+        <div class="section-divider">Revise os textos antes de confirmar</div>
+        <div class="form-group"><label for="certTextoIntroducao">Introdução</label><textarea id="certTextoIntroducao" class="form-control" style="min-height:110px;"></textarea></div>
+        <div class="form-group"><label for="certTextoObjetivo">Objetivo</label><textarea id="certTextoObjetivo" class="form-control" style="min-height:90px;"></textarea></div>
+        <div id="certAnalisesPorEstudoBox"></div>
+        <div class="form-group"><label for="certTextoConclusao">Conclusão Geral</label><textarea id="certTextoConclusao" class="form-control" style="min-height:110px;"></textarea></div>
+
+        <div class="btn-container">
+          <button class="btn btn-primary" onclick="confirmarEGerarCertificado()">Confirmar e Gerar Certificado</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Console Operacional</h2>
+      <div class="terminal-wrap">
+        <div class="terminal-header">LOG OPERACIONAL</div>
+        <div id="terminalLog" class="terminal"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let CFG = null;
+    let PERFIL_ATUAL = null;
+
+    function writeLog(text, tipo) {
+      const term = document.getElementById('terminalLog');
+      if (!term) return;
+
+      const time = new Date().toLocaleTimeString('pt-BR');
+      const line = document.createElement('div');
+      line.textContent = '[' + time + '] ➔ ' + String(text || '');
+
+      if (tipo === 'SUCESSO') line.className = 'success';
+      else if (tipo === 'ERRO') line.className = 'error';
+      else if (tipo === 'AVISO') line.className = 'warn';
+
+      term.appendChild(line);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function limparLog() {
+      const term = document.getElementById('terminalLog');
+      if (term) term.innerHTML = '';
+      writeLog('Log limpo. Aguardando novas operações...', 'SUCESSO');
+    }
+
+    function chamarApi(fn, payload) {
+      return new Promise(function(resolve, reject) {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(function(err) { reject(err); })
+          .apiDispatch({ fn: fn, payload: payload || {} });
+      });
+    }
+
+    function mostrarErro(container, err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      document.getElementById(container).innerHTML = '<div class="alert-box error">' + msg + '</div>';
+    }
+
+    // Upload direto do computador: lê o arquivo escolhido como base64,
+    // sobe pra pasta de uploads do Drive (apiUploadArquivo) e devolve o
+    // fileId pro chamador preencher onde for preciso — usado tanto pelo
+    // campo único (modo antigo) quanto por cada campo de sensor (modo
+    // novo "um arquivo por sensor").
+    function handleUploadArquivoLocal_(evt, aoConcluir) {
+      const file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
+      if (!file) return;
+
+      writeLog('Lendo arquivo local para upload: ' + file.name, 'SUCESSO');
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const resultado = String((e && e.target && e.target.result) || '');
+        const base64 = resultado.split(',')[1] || '';
+        if (!base64) {
+          writeLog('Falha ao converter arquivo para base64.', 'ERRO');
+          return;
+        }
+
+        writeLog('Enviando "' + file.name + '" para a pasta de uploads do Drive...', 'SUCESSO');
+        chamarApi('apiUploadArquivo', {
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          base64: base64
+        }).then(function(res) {
+          aoConcluir(res && res.fileId || '');
+          writeLog('Upload de "' + file.name + '" concluído. Campo preenchido automaticamente.', 'SUCESSO');
+        }).catch(function(err) {
+          writeLog('Falha no upload de "' + file.name + '": ' + ((err && err.message) ? err.message : err), 'ERRO');
+        });
+      };
+
+      reader.onerror = function() {
+        writeLog('Erro ao ler o arquivo local selecionado.', 'ERRO');
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function cfNomeEstudoUi_(tipo) {
+      const mapa = {
+        DISTRIBUICAO_VAZIO: 'Distribuição em Vazio',
+        DISTRIBUICAO_CARGA: 'Distribuição com Carga',
+        ABERTURA_PORTA: 'Abertura de Porta',
+        QUEDA_ENERGIA: 'Queda de Energia',
+        AUTONOMIA: 'Autonomia'
+      };
+      return mapa[tipo] || tipo || '-';
+    }
+
+    function setStatusBadge(texto, variante) {
+      const el = document.getElementById('statusBadge');
+      el.textContent = texto;
+      el.className = 'status-badge' + (variante ? (' ' + variante) : '');
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      writeLog('Iniciando sistema. Sincronizando configuração com o servidor...', 'SUCESSO');
+      chamarApi('apiPing', {}).then(function(cfg) {
+        CFG = cfg;
+        setStatusBadge('SISTEMA ONLINE — v' + cfg.versao, '');
+        writeLog('Sistema online. Versão ' + cfg.versao + '.', 'SUCESSO');
+
+        const selPerfil = document.getElementById('perfil');
+        selPerfil.innerHTML = '';
+        Object.keys(cfg.perfis).forEach(function(chave) {
+          const p = cfg.perfis[chave];
+          const opt = document.createElement('option');
+          opt.value = chave;
+          opt.textContent = p.label;
+          selPerfil.appendChild(opt);
+        });
+
+        selPerfil.value = 'CAMARA_VACINA_2_8';
+        document.getElementById('nSensores').value = cfg.defaultNSensores || 12;
+        document.getElementById('simIntervalo').value = (cfg.simuladorAdmin && cfg.simuladorAdmin.intervaloSegundosDefault) || 300;
+        aoTrocarPerfil();
+        montarSensores();
+        aoTrocarModoEntrada();
+
+        document.getElementById('uploadArquivoLocal').addEventListener('change', function(evt) {
+          handleUploadArquivoLocal_(evt, function(fileId) { document.getElementById('fileId').value = fileId; });
+        });
+
+        // Delegação: os campos "sensor-arquivo-upload" são recriados toda
+        // vez que montarSensores() roda, então o listener fica no
+        // container fixo (sensoresGrid) em vez de em cada input novo.
+        document.getElementById('sensoresGrid').addEventListener('change', function(evt) {
+          if (!evt.target.classList.contains('sensor-arquivo-upload')) return;
+          const idx = evt.target.getAttribute('data-sensor');
+          handleUploadArquivoLocal_(evt, function(fileId) {
+            const alvo = document.querySelector('.sensor-arquivo[data-sensor="' + idx + '"]');
+            if (alvo) alvo.value = fileId;
+          });
+        });
+      }).catch(function(err) {
+        setStatusBadge('ERRO AO CARREGAR', 'is-danger');
+        writeLog('FALHA AO CARREGAR CONFIGURAÇÃO: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('resultadoArea', err);
+      });
+    });
+
+    function aoTrocarPerfil() {
+      const chave = document.getElementById('perfil').value;
+      PERFIL_ATUAL = CFG.perfis[chave];
+      if (!PERFIL_ATUAL) return;
+
+      document.getElementById('faixaTMin').value = PERFIL_ATUAL.tMin;
+      document.getElementById('faixaTMax').value = PERFIL_ATUAL.tMax;
+      document.getElementById('tolerancia').value = PERFIL_ATUAL.toleranciaOperacional;
+      document.getElementById('faixaTMin').disabled = !PERFIL_ATUAL.faixaConfiguravel;
+      document.getElementById('faixaTMax').disabled = !PERFIL_ATUAL.faixaConfiguravel;
+      document.getElementById('simTemperaturaAlvo').value = ((Number(PERFIL_ATUAL.tMin) + Number(PERFIL_ATUAL.tMax)) / 2).toFixed(1);
+
+      const disponiveis = PERFIL_ATUAL.estudosDisponiveis || [];
+      const temDistribuicao = disponiveis.indexOf('DISTRIBUICAO_VAZIO') !== -1 || disponiveis.indexOf('DISTRIBUICAO_CARGA') !== -1;
+      const temPorta = disponiveis.indexOf('ABERTURA_PORTA') !== -1;
+      const temEnergia = disponiveis.indexOf('QUEDA_ENERGIA') !== -1;
+      const temAutonomia = disponiveis.indexOf('AUTONOMIA') !== -1;
+
+      document.getElementById('secaoDistribuicao').classList.toggle('hidden', !temDistribuicao);
+      document.getElementById('distTipo').closest('.form-row').classList.toggle('hidden', !temDistribuicao);
+      document.getElementById('secaoPorta').classList.toggle('hidden', !temPorta);
+      document.getElementById('portaHabilitada').closest('.check-grid').classList.toggle('hidden', !temPorta);
+      document.getElementById('secaoEnergia').classList.toggle('hidden', !temEnergia);
+      document.getElementById('energiaHabilitada').closest('.check-grid').classList.toggle('hidden', !temEnergia);
+      document.getElementById('secaoAutonomia').classList.toggle('hidden', !temAutonomia);
+      document.getElementById('autonomiaHabilitada').closest('.check-grid').classList.toggle('hidden', !temAutonomia);
+
+      document.getElementById('simResultadoDistribuicaoBox').classList.toggle('hidden', !temDistribuicao);
+      document.getElementById('simResultadoPortaBox').classList.toggle('hidden', !temPorta);
+      document.getElementById('simResultadoEnergiaBox').classList.toggle('hidden', !temEnergia);
+
+      if (!temDistribuicao) document.getElementById('distTipo').value = '';
+      if (!temPorta) document.getElementById('portaHabilitada').checked = false;
+      if (!temEnergia) document.getElementById('energiaHabilitada').checked = false;
+      if (!temAutonomia) document.getElementById('autonomiaHabilitada').checked = false;
+
+      aoTrocarEstudosHabilitados();
+    }
+
+    function aoTrocarEstudosHabilitados() {
+      document.getElementById('camposPorta').classList.toggle('hidden', !document.getElementById('portaHabilitada').checked);
+      document.getElementById('camposEnergia').classList.toggle('hidden', !document.getElementById('energiaHabilitada').checked);
+      document.getElementById('camposAutonomia').classList.toggle('hidden', !document.getElementById('autonomiaHabilitada').checked);
+      document.getElementById('simResultadoPortaBox').classList.toggle('hidden', !document.getElementById('portaHabilitada').checked);
+      document.getElementById('simResultadoEnergiaBox').classList.toggle('hidden', !document.getElementById('energiaHabilitada').checked);
+    }
+
+    function aoMudarVolume() {
+      if (!CFG) return;
+      const volume = parseFloat(document.getElementById('volumeLitros').value);
+      const conjugado = document.getElementById('equipamentoConjugado').checked;
+      const cfgVol = CFG.sensoresPorVolume || {};
+
+      let minimo = cfgVol.minSensoresVolumeGrande || 12;
+      if (conjugado) {
+        minimo = cfgVol.minSensoresConjugado || 12;
+      } else if (isFinite(volume) && volume > 0 && volume < (cfgVol.volumeLimiteLitros || 60)) {
+        minimo = cfgVol.minSensoresVolumePequeno || 3;
+      }
+
+      document.getElementById('nSensores').value = minimo;
+      montarSensores();
+    }
+
+    function montarSensores() {
+      const n = parseInt(document.getElementById('nSensores').value, 10) || 0;
+      const modo = document.getElementById('modoEntrada') ? document.getElementById('modoEntrada').value : '';
+      const comImportPorSensor = (modo === 'ARQUIVO_POR_SENSOR');
+
+      const grid = document.getElementById('sensoresGrid');
+      grid.classList.toggle('check-grid-multiarquivo', comImportPorSensor);
+      grid.innerHTML = '';
+      for (let i = 1; i <= n; i++) {
+        const div = document.createElement('div');
+        div.className = 'check-item' + (comImportPorSensor ? ' check-item-com-import' : '');
+        div.innerHTML = '<input type="checkbox" class="sensor-ativo" value="' + (i - 1) + '" checked> S' + i +
+          (comImportPorSensor ? (
+            '<input type="text" class="form-control sensor-arquivo" data-sensor="' + (i - 1) + '" placeholder="ID/link do Drive do sensor S' + i + '">' +
+            '<input type="file" class="form-control sensor-arquivo-upload" data-sensor="' + (i - 1) + '" style="padding:6px;margin-top:4px;">'
+          ) : '');
+        grid.appendChild(div);
+      }
+    }
+
+    function coletarSensoresAtivos() {
+      const n = parseInt(document.getElementById('nSensores').value, 10) || 0;
+      const marcados = Array.from(document.querySelectorAll('.sensor-ativo')).filter(function(c) { return c.checked; }).map(function(c) { return parseInt(c.value, 10); });
+      const out = [];
+      for (let i = 0; i < n; i++) out.push(marcados.indexOf(i) !== -1);
+      return out;
+    }
+
+    function coletarArquivosPorSensor() {
+      const n = parseInt(document.getElementById('nSensores').value, 10) || 0;
+      const out = new Array(n).fill('');
+      document.querySelectorAll('.sensor-arquivo').forEach(function(inp) {
+        const idx = parseInt(inp.getAttribute('data-sensor'), 10);
+        if (idx >= 0 && idx < n) out[idx] = inp.value.trim();
+      });
+      return out;
+    }
+
+    function aoTrocarModoEntrada() {
+      const modo = document.getElementById('modoEntrada').value;
+      document.getElementById('campoFileId').classList.toggle('hidden', modo !== 'FILE_ID');
+      document.getElementById('campoColar').classList.toggle('hidden', modo !== 'COLAR');
+      document.getElementById('campoArquivoPorSensor').classList.toggle('hidden', modo !== 'ARQUIVO_POR_SENSOR');
+      document.getElementById('boxSimulacaoAdmin').classList.toggle('hidden', modo !== 'SIMULADO_ADMIN');
+      montarSensores();
+
+      const btn = document.getElementById('btnGerar');
+      btn.textContent = (modo === 'SIMULADO_ADMIN') ? 'Gerar Relatório Interno' : 'Gerar Relatório';
+      btn.classList.toggle('btn-warning-simulado', modo === 'SIMULADO_ADMIN');
+    }
+
+    async function ativarModoSimuladoAdmin() {
+      const senha = window.prompt('Informe a senha administrativa para abrir o RELATÓRIO INTERNO:');
+      if (senha === null) return;
+
+      const senhaLimpa = String(senha || '').trim();
+      if (!senhaLimpa) {
+        writeLog('Acesso ao relatório interno cancelado: senha não informada.', 'AVISO');
+        return;
+      }
+
+      writeLog('Validando senha administrativa do relatório interno...', 'AVISO');
+
+      try {
+        await chamarApi('apiValidarSenhaSimuladorAdmin', { senha: senhaLimpa });
+        document.getElementById('simSenha').value = senhaLimpa;
+        document.getElementById('modoEntrada').value = 'SIMULADO_ADMIN';
+        aoTrocarModoEntrada();
+        document.getElementById('boxSimulacaoAdmin').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setStatusBadge('RELATÓRIO INTERNO', 'is-warning');
+        writeLog('Relatório interno liberado. Preencha início/fim do estudo e temperatura alvo.', 'AVISO');
+      } catch (err) {
+        writeLog('Senha inválida para abrir relatório interno: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        alert('Senha inválida para abrir o RELATÓRIO INTERNO.');
+      }
+    }
+
+    function buscarCnpj() {
+      const cnpj = document.getElementById('cnpj').value;
+      writeLog('Consultando CNPJ em base pública...', 'SUCESSO');
+      chamarApi('apiConsultarCnpj', { cnpj: cnpj }).then(function(res) {
+        document.getElementById('cliente').value = res.cliente || '';
+        document.getElementById('endereco').value = res.endereco || '';
+        writeLog('CNPJ preenchido automaticamente: ' + (res.cliente || '-'), 'SUCESSO');
+      }).catch(function(err) {
+        writeLog('Falha ao consultar CNPJ: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('resultadoArea', err);
+      });
+    }
+
+    function aoEditarRampaManualmente_() {
+      const campo = document.getElementById('distFimRampaEstabilizacao');
+      const badge = document.getElementById('distRampaStatus');
+      if (!badge) return;
+      if (!campo.value.trim()) {
+        badge.className = 'status-badge is-neutral';
+        badge.textContent = 'Nenhuma rampa aplicada — todas as leituras do arquivo contam para o veredito.';
+      } else {
+        badge.className = 'status-badge is-warning';
+        badge.textContent = 'Horário preenchido manualmente (' + campo.value.trim() + ') — não foi confirmado pela detecção automática.';
+      }
+    }
+
+    function sugerirRampaEstabilizacao() {
+      const btn = document.getElementById('btnDetectarRampa');
+      const badge = document.getElementById('distRampaStatus');
+      const textoOriginalBtn = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = 'Analisando dados...';
+      if (badge) {
+        badge.className = 'status-badge is-neutral';
+        badge.textContent = 'Analisando os dados do arquivo, aguarde...';
+      }
+      writeLog('Analisando dados para sugerir fim da rampa de estabilização...', 'SUCESSO');
+
+      chamarApi('apiSugerirRampaEstabilizacao', montarPayloadBase()).then(function(res) {
+        const s = res && res.sugestao;
+        if (!s) {
+          const msgNenhuma = 'Nenhuma rampa de estabilização detectada — os dados já começam dentro da faixa, ou a única excursão encontrada foi fora da janela inicial (6h).';
+          writeLog(msgNenhuma, 'SUCESSO');
+          if (badge) { badge.className = 'status-badge is-neutral'; badge.textContent = msgNenhuma; }
+          alert(msgNenhuma + '\n\nSe for mesmo uma rampa muito longa (>6h), preencha o campo manualmente.');
+          return;
+        }
+        const horas = (s.duracaoMinutos / 60).toFixed(2);
+        const resumo = 'Fim sugerido: ' + s.fimRampaStr + ' (' + s.temperaturaAoEstabilizar + ' °C) — ' + horas + 'h de rampa, começando em ' + s.temperaturaInicial + ' °C.';
+        const msg = 'Rampa de estabilização detectada:\n\n' +
+          '  Início: ' + document.getElementById('distInicio').value + ' (' + s.temperaturaInicial + ' °C)\n' +
+          '  Fim sugerido: ' + s.fimRampaStr + ' (' + s.temperaturaAoEstabilizar + ' °C)\n' +
+          '  Duração: ' + horas + 'h\n\n' +
+          'Aplicar este horário como início da contagem efetiva do ensaio?';
+        if (confirm(msg)) {
+          document.getElementById('distFimRampaEstabilizacao').value = s.fimRampaStr;
+          writeLog('Fim da rampa de estabilização aplicado: ' + s.fimRampaStr + ' (confirmado manualmente).', 'SUCESSO');
+          if (badge) { badge.className = 'status-badge'; badge.textContent = 'Rampa aplicada — ' + resumo; }
+        } else {
+          writeLog('Sugestão de rampa de estabilização detectada, mas não aplicada (usuário optou por não confirmar).', 'SUCESSO');
+          if (badge) { badge.className = 'status-badge is-warning'; badge.textContent = 'Rampa detectada, mas NÃO aplicada. ' + resumo; }
+        }
+      }).catch(function(err) {
+        const msgErro = 'Falha ao detectar rampa de estabilização: ' + ((err && err.message) ? err.message : err);
+        writeLog(msgErro, 'ERRO');
+        if (badge) { badge.className = 'status-badge is-danger'; badge.textContent = msgErro; }
+        mostrarErro('resultadoArea', err);
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = textoOriginalBtn;
+      });
+    }
+
+    function montarPayloadBase() {
+      return {
+        cnpj: document.getElementById('cnpj').value,
+        cliente: document.getElementById('cliente').value,
+        endereco: document.getElementById('endereco').value,
+        responsavelTecnico: document.getElementById('responsavelTecnico').value,
+        perfil: document.getElementById('perfil').value,
+        tagEquipamento: document.getElementById('tagEquipamento').value,
+        marca: document.getElementById('marca').value,
+        modelo: document.getElementById('modelo').value,
+        numeroSerie: document.getElementById('numeroSerie').value,
+        localizacao: document.getElementById('localizacao').value,
+        volumeLitros: document.getElementById('volumeLitros').value,
+        equipamentoConjugado: document.getElementById('equipamentoConjugado').checked,
+        faixaTMin: document.getElementById('faixaTMin').value,
+        faixaTMax: document.getElementById('faixaTMax').value,
+        tolerancia: document.getElementById('tolerancia').value,
+        estudos: {
+          distribuicao: {
+            tipo: document.getElementById('distTipo').value,
+            inicio: document.getElementById('distInicio').value,
+            fim: document.getElementById('distFim').value,
+            fimRampaEstabilizacao: document.getElementById('distFimRampaEstabilizacao').value,
+            resultadoDesejado: document.getElementById('simResultadoDistribuicao').value
+          },
+          aberturaPorta: {
+            habilitado: document.getElementById('portaHabilitada').checked,
+            tipoAbertura: document.getElementById('tipoAbertura').value,
+            inicioEvento: document.getElementById('portaInicioEvento').value,
+            fimEvento: document.getElementById('portaFimEvento').value,
+            tempoAlvoMinutos: document.getElementById('portaTempoAlvoMinutos').value,
+            resultadoDesejado: document.getElementById('simResultadoPorta').value
+          },
+          quedaEnergia: {
+            habilitado: document.getElementById('energiaHabilitada').checked,
+            inicioEvento: document.getElementById('energiaInicioEvento').value,
+            fimEvento: document.getElementById('energiaFimEvento').value,
+            tempoAlvoMinutos: document.getElementById('energiaTempoAlvoMinutos').value,
+            resultadoDesejado: document.getElementById('simResultadoEnergia').value
+          },
+          autonomia: {
+            habilitado: document.getElementById('autonomiaHabilitada').checked,
+            inicio: document.getElementById('autonomiaInicio').value,
+            fim: document.getElementById('autonomiaFim').value
+          }
+        },
+        nSensores: document.getElementById('nSensores').value,
+        sensoresAtivos: coletarSensoresAtivos(),
+        modoEntrada: document.getElementById('modoEntrada').value,
+        fileId: document.getElementById('fileId').value,
+        textoColado: document.getElementById('textoColado').value,
+        arquivosPorSensor: coletarArquivosPorSensor(),
+        simulacaoSenha: document.getElementById('simSenha').value,
+        simulacao: {
+          temperaturaAlvo: document.getElementById('simTemperaturaAlvo').value,
+          intervaloSegundos: document.getElementById('simIntervalo').value,
+          inicioEstudo: document.getElementById('simInicioEstudo').value,
+          fimEstudo: document.getElementById('simFimEstudo').value,
+          autonomiaEstimadaMinutos: document.getElementById('simAutonomiaEstimadaMinutos').value,
+          multiArquivoPorSensor: document.getElementById('simMultiArquivoPorSensor').checked
+        }
+      };
+    }
+
+    function preVisualizar() {
+      document.getElementById('previewArea').innerHTML = 'Carregando...';
+      writeLog('Lendo e normalizando dados de entrada para pré-visualização...', 'SUCESSO');
+      chamarApi('apiPreviewEntrada', montarPayloadBase()).then(function(res) {
+        let html = '<div class="alert-box success">Linhas detectadas: ' + res.rows + ' | Colunas: ' + res.cols +
+          ' | Sensores detectados: ' + (res.diagnostico.qtdTemperaturas || res.diagnostico.sensoresDetectados || '-') +
+          ' | Padrão de data: ' + (res.diagnostico.detectedDateStyle || res.diagnostico.dateStyleDetectado || '-') + '</div>';
+
+        html += '<div class="table-wrapper"><table class="data-table"><thead><tr>';
+        (res.preview[0] || []).forEach(function(c) { html += '<th>' + c + '</th>'; });
+        html += '</tr></thead><tbody>';
+        res.preview.slice(1).forEach(function(row) {
+          html += '<tr>' + row.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+        });
+        html += '</tbody></table></div>';
+
+        document.getElementById('previewArea').innerHTML = html;
+        writeLog('Pré-visualização concluída: ' + res.rows + ' linhas, ' + (res.diagnostico.qtdTemperaturas || res.diagnostico.sensoresDetectados || 0) + ' sensores detectados.', 'SUCESSO');
+      }).catch(function(err) {
+        writeLog('FALHA NA PRÉ-VISUALIZAÇÃO: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('previewArea', err);
+      });
+    }
+
+    function gerarRelatorio() {
+      if (!document.getElementById('responsavelTecnico').value.trim()) {
+        alert('Preencha o Responsável técnico antes de gerar o relatório.');
+        document.getElementById('responsavelTecnico').focus();
+        return;
+      }
+
+      document.getElementById('btnGerar').disabled = true;
+      document.getElementById('resultadoArea').innerHTML = 'Gerando relatório, aguarde...';
+
+      const modoAtual = document.getElementById('modoEntrada').value;
+      writeLog(modoAtual === 'SIMULADO_ADMIN' ? 'Iniciando geração do RELATÓRIO INTERNO com dados reconstituídos...' : 'Iniciando motor de análise. Gerando relatório...', 'SUCESSO');
+
+      chamarApi('apiConverter', montarPayloadBase()).then(function(res) {
+        document.getElementById('btnGerar').disabled = false;
+
+        const status = (res.statusAprovacao || 'INFORMATIVO').toUpperCase();
+        const classeMap = {
+          APROVADO: '',
+          APROVADO_COM_ALERTA: 'is-warning',
+          REPROVADO: 'is-danger',
+          INFORMATIVO: 'is-neutral',
+          CARACTERIZACAO: 'is-neutral'
+        };
+
+        let html = '<div class="status-badge ' + (classeMap[status] || 'is-neutral') + '" style="display:block; text-align:center; font-size:14px; padding:12px;">LAUDO: ' + status.replace(/_/g, ' ') + '</div>';
+
+        (res.estudos || []).forEach(function(e) {
+          const st = (e.statusAprovacao || 'INFORMATIVO').toUpperCase();
+          html += '<div class="status-badge ' + (classeMap[st] || 'is-neutral') + '" style="display:block; text-align:left; font-size:12px; padding:8px 12px; margin-top:6px;">' +
+            cfNomeEstudoUi_(e.tipoEstudo) + ' — ' + st.replace(/_/g, ' ') + '</div>';
+        });
+
+        html += '<div class="btn-container">';
+        html += '<a class="btn-download" href="' + res.spreadsheetUrl + '" target="_blank">Abrir planilha</a>';
+        html += '<a class="btn-download" href="' + res.pdfUrl + '" target="_blank">Baixar PDF</a>';
+        html += '</div>';
+
+        document.getElementById('resultadoArea').innerHTML = html;
+
+        writeLog('Processamento concluído com sucesso.', 'SUCESSO');
+        writeLog('Status do laudo (consolidado): ' + status.replace(/_/g, ' ') + '.', status === 'REPROVADO' ? 'ERRO' : (status === 'APROVADO_COM_ALERTA' ? 'AVISO' : 'SUCESSO'));
+
+        (res.estudos || []).forEach(function(e) {
+          const st = (e.statusAprovacao || 'INFORMATIVO').toUpperCase();
+          writeLog(cfNomeEstudoUi_(e.tipoEstudo) + ': ' + st.replace(/_/g, ' ') + '.', st === 'REPROVADO' ? 'ERRO' : (st === 'APROVADO_COM_ALERTA' ? 'AVISO' : 'SUCESSO'));
+          (e.motivosReprovacao || []).forEach(function(m) { writeLog('Critério (' + cfNomeEstudoUi_(e.tipoEstudo) + '): ' + m, 'ERRO'); });
+          (e.alertasAnalise || []).forEach(function(m) { writeLog('Alerta (' + cfNomeEstudoUi_(e.tipoEstudo) + '): ' + m, 'AVISO'); });
+        });
+
+        writeLog('Planilha: ' + res.spreadsheetUrl, 'SUCESSO');
+      }).catch(function(err) {
+        document.getElementById('btnGerar').disabled = false;
+        writeLog('FALHA NA GERAÇÃO DO RELATÓRIO: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('resultadoArea', err);
+      });
+    }
+
+    // =========================================================================
+    // CERTIFICADO DE QUALIFICAÇÃO TÉRMICA (BETA) — segunda forma de relatório,
+    // independente do "Gerar Relatório" acima. Usa o mesmo formulário; a
+    // consistência de números entre os dois é garantida no servidor (cache
+    // determinístico no modo simulado — ver cfGerarOuReaproveitarDadosSimulados_
+    // em Simulador.js; no modo real, a mesma leitura de arquivo já é
+    // determinística por natureza).
+    // =========================================================================
+
+    function montarPayloadCertificadoBase() {
+      const base = montarPayloadBase();
+      base.certNumero = document.getElementById('certNumero').value;
+      base.certRevisao = document.getElementById('certRevisao').value;
+      base.certDataLogger = document.getElementById('certDataLogger').value;
+      base.certResponsavelAceite = document.getElementById('certResponsavelAceite').value;
+      base.certTarefaOrigem = document.getElementById('certTarefaOrigem').value;
+      return base;
+    }
+
+    function gerarRascunhoCertificado() {
+      if (!document.getElementById('responsavelTecnico').value.trim()) {
+        alert('Preencha o Responsável técnico antes de gerar o certificado.');
+        document.getElementById('responsavelTecnico').focus();
+        return;
+      }
+
+      document.getElementById('btnRascunhoCertificado').disabled = true;
+      document.getElementById('certificadoStatusArea').innerHTML = 'Rodando análise e gerando textos com IA, aguarde (pode levar alguns segundos)...';
+      writeLog('Certificado: rodando análise e chamando a IA para os textos narrativos...', 'SUCESSO');
+
+      chamarApi('apiGerarRascunhoCertificado', montarPayloadCertificadoBase()).then(function(res) {
+        document.getElementById('btnRascunhoCertificado').disabled = false;
+        document.getElementById('certificadoStatusArea').innerHTML =
+          '<div class="alert-box success">Rascunho gerado. Revise os textos abaixo antes de confirmar — eles vão direto para o documento final.</div>';
+
+        document.getElementById('certTextoIntroducao').value = res.textos.introducao || '';
+        document.getElementById('certTextoObjetivo').value = res.textos.objetivo || '';
+        document.getElementById('certTextoConclusao').value = res.textos.conclusaoGeral || '';
+
+        const estudos = (res.contexto && res.contexto.estudos) || [];
+        const box = document.getElementById('certAnalisesPorEstudoBox');
+        box.innerHTML = '';
+        estudos.forEach(function(estudo) {
+          const textoExistente = (res.textos.analisePorEstudo && res.textos.analisePorEstudo[estudo.tipoEstudo]) || '';
+          const div = document.createElement('div');
+          div.className = 'form-group';
+          const label = document.createElement('label');
+          label.textContent = 'Análise — ' + cfNomeEstudoUi_(estudo.tipoEstudo);
+          const textarea = document.createElement('textarea');
+          textarea.className = 'form-control cert-analise-estudo';
+          textarea.setAttribute('data-estudo', estudo.tipoEstudo);
+          textarea.style.minHeight = '100px';
+          textarea.value = textoExistente;
+          div.appendChild(label);
+          div.appendChild(textarea);
+          box.appendChild(div);
+        });
+
+        document.getElementById('certificadoRevisaoBox').classList.remove('hidden');
+        document.getElementById('certificadoRevisaoBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        writeLog('Certificado: rascunho da IA pronto para revisão.', 'SUCESSO');
+      }).catch(function(err) {
+        document.getElementById('btnRascunhoCertificado').disabled = false;
+        writeLog('Falha ao gerar rascunho do certificado: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('certificadoStatusArea', err);
+      });
+    }
+
+    function lerArquivoComoBase64_(inputEl) {
+      return new Promise(function(resolve) {
+        const file = inputEl && inputEl.files ? inputEl.files[0] : null;
+        if (!file) { resolve(null); return; }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const resultado = String((e && e.target && e.target.result) || '');
+          const base64 = resultado.split(',')[1] || '';
+          resolve(base64 ? { base64: base64, mimeType: file.type || 'image/jpeg' } : null);
+        };
+        reader.onerror = function() { resolve(null); };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function confirmarEGerarCertificado() {
+      // Abre a aba em branco JÁ na chamada síncrona do clique — se esperar a
+      // Promise da API responder pra abrir, o navegador bloqueia como pop-up.
+      const novaJanela = window.open('', '_blank');
+      if (novaJanela) {
+        novaJanela.document.write('<p style="font-family:Arial,sans-serif;padding:40px;color:#374151;">Gerando certificado, aguarde...</p>');
+      }
+
+      writeLog('Certificado: lendo fotos e montando documento final...', 'SUCESSO');
+
+      const leituras = [1, 2, 3, 4].map(function(i) {
+        return lerArquivoComoBase64_(document.getElementById('certFoto' + i)).then(function(foto) {
+          if (!foto) return null;
+          foto.legenda = document.getElementById('certFoto' + i + 'Legenda').value || '';
+          return foto;
+        });
+      });
+
+      Promise.all(leituras).then(function(fotos) {
+        const payload = montarPayloadCertificadoBase();
+        payload.fotosCertificado = fotos.filter(function(f) { return f; });
+
+        const analisePorEstudo = {};
+        document.querySelectorAll('.cert-analise-estudo').forEach(function(ta) {
+          analisePorEstudo[ta.getAttribute('data-estudo')] = ta.value;
+        });
+
+        payload.textosCertificado = {
+          introducao: document.getElementById('certTextoIntroducao').value,
+          objetivo: document.getElementById('certTextoObjetivo').value,
+          conclusaoGeral: document.getElementById('certTextoConclusao').value,
+          analisePorEstudo: analisePorEstudo
+        };
+
+        return chamarApi('apiMontarCertificadoFinal', payload);
+      }).then(function(res) {
+        if (novaJanela) {
+          novaJanela.document.open();
+          novaJanela.document.write(res.html);
+          novaJanela.document.close();
+        }
+        writeLog('Certificado gerado com sucesso — aberto em nova aba, pronto para Ctrl+P.', 'SUCESSO');
+      }).catch(function(err) {
+        if (novaJanela) novaJanela.close();
+        writeLog('Falha ao montar o certificado final: ' + ((err && err.message) ? err.message : err), 'ERRO');
+        mostrarErro('certificadoStatusArea', err);
+      });
+    }
+  </script>
+</body>
+</html>

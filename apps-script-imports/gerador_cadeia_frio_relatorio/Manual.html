@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual do Operador — Cadeia de Frio</title>
+  <?!= include('Estilos'); ?>
+  <style>
+    .manual-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 18px 18px 60px;
+      line-height: 1.6;
+    }
+    .manual-wrap h1 { font-size: 26px; margin-bottom: 4px; }
+    .manual-wrap .subtitulo { color: var(--muted); margin-top: 0; margin-bottom: 22px; }
+    .manual-wrap h2 {
+      font-size: 19px;
+      margin-top: 40px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-strong);
+    }
+    .manual-wrap h3 { font-size: 15px; margin-top: 26px; color: var(--accent-2); }
+    .manual-wrap p { color: var(--text); }
+    .manual-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 22px;
+      font-size: 13.5px;
+    }
+    .manual-wrap th, .manual-wrap td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .manual-wrap th {
+      background: var(--panel-soft);
+      color: var(--text-strong);
+      white-space: nowrap;
+    }
+    .manual-wrap tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .manual-wrap td:first-child, .manual-wrap th:first-child { white-space: nowrap; }
+    .callout {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin: 14px 0;
+      font-size: 13.5px;
+    }
+    .callout strong { color: var(--text-strong); }
+    .manual-wrap ol, .manual-wrap ul { padding-left: 22px; }
+    .manual-wrap ol li, .manual-wrap ul li { margin-bottom: 6px; }
+    .toc {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 30px;
+    }
+    .toc h2 { margin-top: 0; border-bottom: none; font-size: 15px; }
+    .toc ol { columns: 2; column-gap: 30px; }
+    .toc a { text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .voltar-topo {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 30;
+    }
+    .center-emoji { display:none; }
+    code.campo { background: var(--input); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: Consolas, monospace; font-size: 12.5px; color: var(--accent-2); }
+  </style>
+</head>
+<body>
+  <div class="wrap manual-wrap">
+
+    <header class="header-card" style="position:static; margin-bottom:24px;">
+      <div class="brand">
+        <div class="title-area">
+          <h1 style="margin-bottom:4px;">Manual do Operador</h1>
+          <p style="margin:0;">Refrigerador, Câmara de Conservação, Câmara Fria, Freezer, Ultrafreezer e Caixa Térmica — ABNT NBR 16328, Anexo G</p>
+        </div>
+      </div>
+      <a class="btn btn-secondary" href="<?= ScriptApp.getService().getUrl() ?>" target="_top">← Voltar ao sistema</a>
+    </header>
+
+    <div class="toc" id="topo">
+      <h2>Índice</h2>
+      <ol>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s1&#39;); return false;">Como usar este manual</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s2&#39;); return false;">O que este sistema faz</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s3&#39;); return false;">Os nove tipos de equipamento</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s4&#39;); return false;">Mapa da tela</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s5&#39;); return false;">Seção 1 — Cliente</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s6&#39;); return false;">Seção 2 — Equipamento</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s7&#39;); return false;">Seção 3 — Estudos do Ensaio</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s8&#39;); return false;">Sensores</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s9&#39;); return false;">Seção 4 — Importação do Datalogger</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s10&#39;); return false;">Seção 5 — Gerar Relatório</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s11&#39;); return false;">Seção 6 — Certificado (Beta)</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s12&#39;); return false;">Sobre o Modo Personalizado</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s13&#39;); return false;">Console Operacional</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s14&#39;); return false;">Passo a passo do zero</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s15&#39;); return false;">Erros comuns</a></li>
+        <li><a href="javascript:void(0)" onclick="irParaSecao_(&#39;s16&#39;); return false;">Glossário</a></li>
+      </ol>
+    </div>
+
+    <h2 id="s1">1. Como usar este manual</h2>
+    <p>Este manual foi escrito para quem <strong>nunca usou o sistema e não precisa entender de engenharia ou metrologia</strong> para operá-lo. Cada campo da tela está explicado em quatro partes:</p>
+    <ul>
+      <li><strong>O que é</strong> — o nome em português simples do que você está vendo.</li>
+      <li><strong>Para que serve</strong> — por que esse campo existe.</li>
+      <li><strong>O que fazer</strong> — como preencher, na prática.</li>
+      <li><strong>O que acontece</strong> — o resultado de preencher certo, errado, ou deixar em branco.</li>
+    </ul>
+    <p>Leia este manual <strong>na ordem</strong>, de cima para baixo, seguindo a tela de cima para baixo também. Se aparecer uma palavra técnica que você não entende, vá direto ao <a href="javascript:void(0)" onclick="irParaSecao_(&#39;s16&#39;); return false;">Glossário</a> — todo termo técnico está lá, explicado sem jargão.</p>
+
+    <h2 id="s2">2. O que este sistema faz, em uma frase</h2>
+    <p>Você recebe um arquivo de um aparelho chamado <strong>datalogger</strong> (um gravador de temperatura), que ficou registrando a temperatura de um equipamento de cadeia de frio por um período (geralmente 24 horas). Você importa esse arquivo no sistema, preenche alguns dados do cliente e do equipamento, e o sistema:</p>
+    <ol>
+      <li>Lê e organiza os dados de temperatura;</li>
+      <li>Compara com o que a norma técnica (ABNT NBR 16328, Anexo G) exige;</li>
+      <li>Decide se o equipamento <strong>passou</strong> ou <strong>não passou</strong> no teste;</li>
+      <li>Gera um <strong>relatório em planilha</strong> (com gráfico) e, se você quiser, um <strong>certificado em PDF</strong> com texto explicativo, prontos para entregar ao cliente.</li>
+    </ol>
+    <p>Você nunca precisa fazer nenhuma conta. O sistema faz todos os cálculos. Sua função é: preencher os dados certos, no campo certo, e conferir se o resultado faz sentido antes de entregar.</p>
+
+    <h2 id="s3">3. Os nove tipos de equipamento (perfis)</h2>
+    <p>Antes de tudo, você escolhe <strong>um</strong> destes tipos na tela (campo "Perfil do equipamento", seção 2). É a decisão mais importante da tela — <strong>a tela inteira muda de acordo com o que você escolhe</strong>, mostrando só os campos que fazem sentido para aquele equipamento e escondendo o resto.</p>
+    <table>
+      <tr><th>Perfil</th><th>Faixa sugerida</th><th>Tolerância</th><th>Faixa editável?</th><th>Estudos</th></tr>
+      <tr><td>Câmara de Conservação (Imunobiológicos/Vacinas)</td><td>2 °C a 8 °C</td><td>0,5 °C</td><td>Não — travada</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Refrigerador Comum</td><td>2 °C a 8 °C</td><td>0,5 °C</td><td>Não — travada</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Câmara Fria</td><td>2 °C a 8 °C (sugerido)</td><td>0,5 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Freezer -10 °C</td><td>-14 °C a -6 °C</td><td>1,0 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Freezer -20 °C</td><td>-25 °C a -15 °C</td><td>1,0 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Freezer -30 °C</td><td>-35 °C a -25 °C</td><td>1,0 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Ultrafreezer -80 °C</td><td>-86 °C a -74 °C</td><td>2,0 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Ultrafreezer -85 °C</td><td>-91 °C a -79 °C</td><td>2,0 °C</td><td>Sim</td><td>Distribuição, Porta, Energia</td></tr>
+      <tr><td>Caixa Térmica (Transporte)</td><td>2 °C a 8 °C</td><td>0,5 °C</td><td>Não — travada</td><td><strong>Só Autonomia</strong></td></tr>
+    </table>
+    <p><strong>Por que alguns perfis têm a faixa "travada" e outros não?</strong> Câmara de Vacina, Refrigerador Comum e Caixa Térmica têm uma faixa regulatória fixa (2 °C a 8 °C, é lei/norma para produtos termolábeis) — por isso os campos de faixa ficam <strong>desabilitados</strong> (cinza) para esses três. Já Câmara Fria, Freezer e Ultrafreezer variam de instalação para instalação — por isso ficam <strong>liberados</strong> para você ajustar conforme o equipamento real. A <strong>Tolerância</strong>, em todos os perfis, <strong>sempre pode ser editada</strong>, mesmo quando a faixa está travada.</p>
+    <p><strong>Por que a Caixa Térmica é tão diferente?</strong> Fisicamente ela é outra coisa: não tem porta que abre/fecha durante o uso normal, não tem fonte de energia, e não fica ligada continuamente — é uma caixa isolada usada para <strong>transportar</strong> produto por um tempo limitado. O único ensaio que ela precisa é a <strong>Autonomia</strong>: quanto tempo ela consegue segurar a temperatura entre 2 °C e 8 °C antes de sair da faixa, sem eletricidade, só com o isolamento térmico. Não existe "ensaio de 24 horas" para caixa térmica — o teste dura o tempo que ela aguentar.</p>
+
+    <h2 id="s4">4. Mapa da tela — visão geral</h2>
+    <p>A tela é dividida em 6 blocos numerados, de cima para baixo:</p>
+    <ol>
+      <li><strong>Cliente</strong> — quem é o dono do equipamento.</li>
+      <li><strong>Equipamento</strong> — qual equipamento está sendo testado, e em qual faixa de temperatura.</li>
+      <li><strong>Estudos do Ensaio</strong> — quais testes você vai reportar (mudam de acordo com o perfil escolhido).</li>
+      <li><strong>Importação do Datalogger</strong> — de onde vêm os dados de temperatura.</li>
+      <li><strong>Gerar Relatório</strong> — o botão que processa tudo e entrega a planilha + PDF.</li>
+      <li><strong>Certificado de Qualificação Térmica (Beta)</strong> — um segundo documento, opcional, com texto explicativo gerado por Inteligência Artificial.</li>
+    </ol>
+    <p>Existe ainda um <strong>Console Operacional</strong> no fim da tela — um "diário de bordo" que mostra tudo que o sistema está fazendo, em tempo real, enquanto você usa.</p>
+
+    <h2 id="s5">5. Seção 1 — Cliente</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td><code class="campo">CNPJ</code></td><td>Número de identificação da empresa cliente</td><td>Preenche automaticamente nome e endereço do cliente</td><td>Digite o CNPJ e clique em "Buscar CNPJ" — o sistema consulta uma base pública e preenche os dois campos abaixo sozinho</td></tr>
+      <tr><td>Buscar CNPJ (botão)</td><td>Dispara a busca automática</td><td>Evita digitar nome/endereço manualmente</td><td>Clique depois de digitar o CNPJ</td></tr>
+      <tr><td>Cliente / Razão Social</td><td>Nome oficial da empresa</td><td>Aparece na capa do laudo</td><td>Confira se veio certo depois da busca automática; se falhar, digite manualmente</td></tr>
+      <tr><td>Endereço</td><td>Endereço da empresa</td><td>Aparece na capa do laudo</td><td>Mesma lógica do campo acima</td></tr>
+      <tr><td>Responsável técnico</td><td>Seu nome, ou o nome de quem está assinando tecnicamente o laudo</td><td>É o nome que aparece como responsável pelo documento</td><td>Digite o nome completo da pessoa que vai assinar</td></tr>
+    </table>
+    <div class="callout"><strong>O que acontece se eu deixar em branco?</strong> O laudo é gerado do mesmo jeito, mas fica com campos vazios na capa — o que passa uma imagem pouco profissional para o cliente. Preencha sempre antes de gerar o relatório final.</div>
+
+    <h2 id="s6">6. Seção 2 — Equipamento</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Perfil do equipamento</td><td>O tipo de equipamento (seção 3 deste manual)</td><td>Define toda a lógica da tela: faixa sugerida, se a faixa é editável, quais estudos aparecem</td><td>Escolha o tipo certo <strong>antes</strong> de preencher qualquer outra coisa — trocar depois reseta os estudos habilitados</td></tr>
+      <tr><td>TAG / Identificação</td><td>Código interno do equipamento no cliente</td><td>Identifica qual equipamento específico foi testado</td><td>Copie do equipamento físico ou peça ao cliente</td></tr>
+      <tr><td>Marca</td><td>Fabricante do equipamento</td><td>Informação de identificação no laudo</td><td>Digite o nome do fabricante</td></tr>
+      <tr><td>Modelo</td><td>Modelo do equipamento</td><td>Informação de identificação no laudo</td><td>Digite o modelo</td></tr>
+      <tr><td>Número de série</td><td>Número de série de fábrica</td><td>Informação de identificação no laudo</td><td>Digite o número de série</td></tr>
+      <tr><td>Localização</td><td>Onde o equipamento fica fisicamente</td><td>Ajuda a rastrear o equipamento no cliente</td><td>Digite o local</td></tr>
+      <tr><td>Volume interno declarado (L)</td><td>Volume em litros da câmara interna</td><td>Sugere automaticamente um número de sensores (ver seção 8)</td><td>Preencha se souber — não é obrigatório</td></tr>
+      <tr><td>Equipamento conjugado</td><td>Se o equipamento é dois aparelhos numa peça só (ex.: geladeira com freezer embutido)</td><td>Também influencia a sugestão automática de sensores (ver seção 8)</td><td>Marque só se o equipamento físico realmente tiver duas partes distintas conjugadas</td></tr>
+    </table>
+    <h3>Faixa operacional</h3>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Faixa mínima (°C)</td><td>Temperatura mínima aceitável</td><td>É o piso: leituras abaixo disso reprovam o ensaio</td><td>Já vem preenchido ao escolher o perfil. <strong>Travado</strong> (cinza) para Câmara de Vacina, Refrigerador Comum e Caixa Térmica; <strong>editável</strong> para os demais</td></tr>
+      <tr><td>Faixa máxima (°C)</td><td>Temperatura máxima aceitável</td><td>É o teto: leituras acima disso reprovam o ensaio</td><td>Mesma lógica do campo acima</td></tr>
+      <tr><td>Tolerância operacional (°C)</td><td>Margem de segurança em torno da faixa</td><td>Leitura que passou da faixa por pouco vira "Aprovado com Alerta" em vez de "Reprovado" direto</td><td><strong>Sempre editável, em qualquer perfil.</strong> Normalmente não precisa mexer</td></tr>
+    </table>
+
+    <h2 id="s7">7. Seção 3 — Estudos do Ensaio</h2>
+    <p><strong>Ideia central desta seção:</strong> todos os estudos que você marcar aqui são lidos <strong>do mesmo arquivo</strong> de datalogger, importado na seção 4. Você pode marcar <strong>mais de um estudo</strong> no mesmo laudo (ex.: Distribuição + Abertura de Porta + Queda de Energia, os três no mesmo arquivo).</p>
+    <p><strong>Os blocos que aparecem mudam conforme o perfil escolhido.</strong> Para os oito perfis "normais", aparecem Distribuição + Abertura de Porta + Queda de Energia. Para <strong>Caixa Térmica</strong>, só aparece o bloco de Autonomia — os outros três somem da tela. Se um bloco não aparece na sua tela, é porque a norma não pede aquele estudo para o equipamento escolhido — <strong>não é um erro do sistema</strong>, é intencional.</p>
+
+    <h3>7.1 Distribuição de Temperatura (24h)</h3>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Incluir estudo de distribuição?</td><td>Liga/desliga este estudo no laudo</td><td>Se "Não incluir", nada deste bloco entra no relatório</td><td>Escolha "Sim — em vazio" (sem produto dentro) ou "Sim — com carga" (com produto dentro)</td></tr>
+      <tr><td>Início do estudo</td><td>Data/hora em que a gravação começou</td><td>Delimita onde este estudo começa dentro do arquivo</td><td><code class="campo">dd/MM/aaaa HH:mm:ss</code>, ex.: 10/07/2026 08:00:00</td></tr>
+      <tr><td>Fim do estudo</td><td>Data/hora em que a gravação terminou</td><td>Delimita onde este estudo termina</td><td>Mesmo formato</td></tr>
+      <tr><td>Fim da rampa de estabilização</td><td>Momento em que o equipamento terminou de esfriar e entrou na faixa</td><td>Leituras antes desse horário não contam para aprovação</td><td>Deixe em branco se já estava estável no início; preencha só se ligou quente/fora da faixa</td></tr>
+      <tr><td>Detectar rampa automaticamente (botão)</td><td>Pede ao sistema para sugerir esse horário sozinho</td><td>Evita descobrir manualmente</td><td>Clique — o sistema sugere e pede sua confirmação antes de aplicar</td></tr>
+    </table>
+    <div class="callout"><strong>Sobre a duração exigida:</strong> a norma pede 24 horas contínuas de gravação para todos os oito perfis com este estudo (a Caixa Térmica não tem Distribuição).</div>
+    <p><strong>O que acontece se eu não usar "Detectar rampa automaticamente" e nem preencher manualmente?</strong> O sistema assume que <strong>todas</strong> as leituras do arquivo contam para aprovação, inclusive as primeiras. Se o equipamento já estava estável quando você começou a gravar (o mais comum), você não precisa fazer nada.</p>
+
+    <h3>7.2 Abertura de Porta</h3>
+    <p>Simula o que acontece quando um funcionário abre a porta do equipamento durante o uso — quanto tempo a temperatura demora para sair da faixa (se sair) e quanto tempo leva para voltar.</p>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Incluir estudo (caixa de marcar)</td><td>Liga/desliga o bloco</td><td>Sem marcar, os campos ficam escondidos</td><td>Marque só se este teste foi realmente feito</td></tr>
+      <tr><td>Tipo de abertura</td><td>Se a porta foi aberta parcial ou totalmente</td><td>Documenta como o teste foi conduzido — é só um metadado, não muda o cálculo</td><td>Escolha "semiaberta" ou "totalmente aberta"</td></tr>
+      <tr><td>Início do evento</td><td>Hora exata em que a porta foi aberta</td><td>Marca o evento dentro do arquivo</td><td>dd/MM/aaaa HH:mm:ss</td></tr>
+      <tr><td>Fim do evento (opcional)</td><td>Hora em que a porta foi fechada</td><td>Ajuda a visualizar o evento no gráfico</td><td>Preencha se souber; pode deixar em branco</td></tr>
+      <tr><td>Tempo-alvo mínimo (min, opcional)</td><td>Tempo mínimo que o equipamento precisa aguentar sem sair da faixa depois do evento</td><td><strong>Decide se o resultado é Aprovado/Reprovado ou só informativo</strong></td><td>Preencha só se o protocolo definir um tempo-limite</td></tr>
+    </table>
+    <div class="callout"><strong>Muito importante:</strong> se você <strong>preencher</strong> o "Tempo-alvo mínimo", o sistema compara quanto tempo o equipamento aguentou sem sair da faixa com esse valor e marca Aprovado/Reprovado. Se <strong>deixar em branco</strong>, o sistema só documenta os tempos observados (até romper e até recuperar), <strong>sem aprovar nem reprovar</strong>. Se o cliente não tem critério definido, deixe em branco.</div>
+
+    <h3>7.3 Queda de Energia</h3>
+    <p>Mesma lógica da Abertura de Porta, simulando uma falta de energia — a porta permanece fechada durante todo este ensaio.</p>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Incluir estudo</td><td>Liga/desliga o bloco</td><td>—</td><td>Marque só se realmente feito</td></tr>
+      <tr><td>Início do evento</td><td>Hora em que a energia caiu</td><td>Marca o evento no arquivo</td><td>dd/MM/aaaa HH:mm:ss</td></tr>
+      <tr><td>Fim do evento (opcional)</td><td>Hora em que a energia voltou</td><td>Ajuda o gráfico</td><td>Preencha se souber</td></tr>
+      <tr><td>Tempo-alvo mínimo (min, opcional)</td><td>Tempo máximo sem energia antes de sair da faixa seguramente</td><td>Mesma regra da seção 7.2</td><td>Preencha conforme protocolo, ou deixe em branco</td></tr>
+    </table>
+
+    <h3>7.4 Autonomia (só Caixa Térmica)</h3>
+    <p>Único estudo do perfil Caixa Térmica — mede quanto tempo ela sustenta a faixa de 2 °C a 8 °C, sem eletricidade, contando só com o isolamento térmico e a carga fria (gelo/gelox) colocada dentro.</p>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Incluir estudo</td><td>Liga/desliga o bloco</td><td>—</td><td>Marque para incluir o ensaio</td></tr>
+      <tr><td>Início do período gravado</td><td>Hora em que a gravação começou (caixa fechada, pronta)</td><td>Marca o início da contagem</td><td>dd/MM/aaaa HH:mm:ss</td></tr>
+      <tr><td>Fim do período gravado</td><td>Hora em que a gravação terminou</td><td>Marca o fim da contagem</td><td>dd/MM/aaaa HH:mm:ss</td></tr>
+    </table>
+    <div class="callout"><strong>Como o sistema decide o resultado?</strong> Diferente de Porta/Energia, aqui <strong>não existe "tempo-alvo"</strong> — o objetivo do ensaio é <strong>descobrir</strong> quanto tempo a caixa aguenta, não verificar uma meta. O sistema procura o primeiro momento em que algum sensor saiu da faixa e reporta esse tempo como a <strong>autonomia medida</strong>. Se ninguém saiu da faixa durante toda a gravação, reporta "pelo menos o tempo todo gravado" e sugere estender a gravação. Este estudo <strong>nunca</strong> aparece como Aprovado/Reprovado — é sempre uma caracterização.</div>
+
+    <h2 id="s8">8. Sensores</h2>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th><th>O que fazer</th></tr>
+      <tr><td>Nº de sensores instalados</td><td>Quantos sensores foram usados na gravação</td><td>Define quantos "canais" o sistema procura no arquivo</td><td>Digite o número real usado no teste</td></tr>
+      <tr><td>Sensores S1, S2, S3... (caixas de marcar)</td><td>Lista de todos os sensores</td><td>Permite desmarcar um sensor específico que falhou</td><td>Deixe todos marcados por padrão</td></tr>
+    </table>
+    <p><strong>De onde vem o número que já aparece preenchido?</strong> O sistema sugere automaticamente, calculado a partir de dois campos da seção 2:</p>
+    <table>
+      <tr><th>Situação</th><th>Sugestão automática</th></tr>
+      <tr><td>"Equipamento conjugado" marcado</td><td>12 sensores</td></tr>
+      <tr><td>Não conjugado, e "Volume interno" preenchido com menos de 60 L</td><td>3 sensores</td></tr>
+      <tr><td>Não conjugado, volume em branco, ou 60 L ou mais</td><td>12 sensores</td></tr>
+    </table>
+    <div class="callout"><strong>Isso me impede de usar outro número?</strong> Não. É só uma sugestão de partida — você pode digitar por cima o valor real usado no teste. <strong>O sistema não bloqueia a geração do relatório com um número de sensores diferente do sugerido.</strong> Isso é diferente de outros módulos Metrolabs (como Estufa+Banho-maria), onde o mínimo é uma trava rígida — ver <a href="javascript:void(0)" onclick="irParaSecao_(&#39;s12&#39;); return false;">seção 12</a>.</div>
+
+    <h2 id="s9">9. Seção 4 — Importação do Datalogger</h2>
+    <table>
+      <tr><th>Opção de "Modo de entrada"</th><th>Quando usar</th><th>Como funciona</th></tr>
+      <tr><td>ID / link do arquivo no Drive</td><td>Caso mais comum: você já tem o arquivo exportado</td><td>Cole o link do Drive, ou clique no campo de arquivo e escolha do computador — o sistema faz upload sozinho</td></tr>
+      <tr><td>Colar dados brutos</td><td>Quando você tem os dados mas não quer subir um arquivo</td><td>Cole o texto (cabeçalho + linhas) na caixa de texto</td></tr>
+      <tr><td>Um arquivo por sensor</td><td>Cada sensor gravou seu próprio arquivo separado</td><td>Cada sensor ganha seu campo de link/upload; o sistema junta e alinha os horários automaticamente</td></tr>
+    </table>
+    <div class="callout"><strong>Pré-visualizar dados</strong> (botão): depois de escolher o arquivo/dados, clique para conferir <strong>antes</strong> de gerar o laudo final se o sistema está lendo os dados certos. Use sempre antes de gerar o relatório.</div>
+
+    <h2 id="s10">10. Seção 5 — Gerar Relatório</h2>
+    <p><strong>Gerar Relatório</strong> processa tudo que você preencheu. <strong>Limpar Log</strong> apaga o histórico do Console (não afeta os dados preenchidos).</p>
+    <h3>O que cada status significa</h3>
+    <table>
+      <tr><th>Status</th><th>O que significa</th><th>O que fazer</th></tr>
+      <tr><td><strong>APROVADO</strong></td><td>Passou em tudo, dentro da faixa e tolerância, o tempo todo</td><td>Pode entregar o laudo normalmente</td></tr>
+      <tr><td><strong>APROVADO COM ALERTA</strong></td><td>Passou, mas alguma leitura chegou perto do limite (dentro da tolerância)</td><td>Pode entregar, mencione ao cliente a leitura no limite</td></tr>
+      <tr><td><strong>REPROVADO</strong></td><td>Saiu da faixa aceitável, ou rompeu antes do tempo-alvo definido (Porta/Energia)</td><td>Não invente solução sozinho — reporte ao responsável técnico. Motivo exato no Console</td></tr>
+      <tr><td><strong>INFORMATIVO / CARACTERIZAÇÃO</strong></td><td>Estudo sem critério de aprovação definido (ex.: sem "Tempo-alvo mínimo", ou o estudo de Autonomia)</td><td>Normal — nada a fazer</td></tr>
+    </table>
+    <p>Depois do selo, aparecem <strong>Abrir planilha</strong> (relatório completo no navegador) e <strong>Baixar PDF</strong> (documento pronto para o cliente).</p>
+    <div class="callout">Se o laudo tiver mais de um estudo marcado, <strong>o status geral é o pior status entre todos os estudos</strong> — um estudo reprovado faz o laudo inteiro aparecer como Reprovado no selo geral.</div>
+
+    <h2 id="s11">11. Seção 6 — Certificado de Qualificação Térmica (Beta)</h2>
+    <p>Documento <strong>complementar</strong> à planilha da seção 5 — não substitui nada. PDF em página A4 com texto corrido, escrito por <strong>Inteligência Artificial</strong> a partir dos números já calculados.</p>
+    <table>
+      <tr><th>Campo</th><th>O que é</th><th>Para que serve</th></tr>
+      <tr><td>Número do Certificado</td><td>Código do documento (ex.: 02062026/01RJ)</td><td>Numeração/controle interno</td></tr>
+      <tr><td>Revisão</td><td>Número da versão (0, 1, 2...)</td><td>Controle de revisões</td></tr>
+      <tr><td>DTL</td><td>Código do equipamento gravador</td><td>Rastreabilidade do instrumento</td></tr>
+      <tr><td>Responsável pelo aceite (cliente)</td><td>Quem, do lado do cliente, aceita o certificado</td><td>Aceite formal no documento</td></tr>
+      <tr><td>Tarefa de origem (opcional)</td><td>Código de OS/tarefa relacionada</td><td>Rastreabilidade interna</td></tr>
+      <tr><td>Registros fotográficos (até 4)</td><td>Fotos do equipamento/ensaio com legenda</td><td>Evidência visual</td></tr>
+    </table>
+    <h3>Como gerar</h3>
+    <ol>
+      <li>Clique em <strong>"Gerar Rascunho com IA"</strong>.</li>
+      <li><strong>Revise os textos</strong> — eles vão direto para o documento final exatamente como estiverem na tela.</li>
+      <li>Clique em <strong>"Confirmar e Gerar Certificado"</strong> — abre em nova aba, pronto para Ctrl+P.</li>
+    </ol>
+    <div class="callout"><strong>Atenção:</strong> como o texto é gerado por IA, sempre leia antes de confirmar.</div>
+    <p><strong>Quais normas o certificado/relatório citam?</strong> Sempre a ABNT NBR 16328 (Anexo G) e a RDC nº 430/2020 da Anvisa. Para o perfil <strong>Câmara de Conservação (Vacinas)</strong>, o sistema também cita o Manual de Rede de Frio do PNI/Ministério da Saúde.</p>
+
+    <h2 id="s12">12. Sobre o número de sensores — por que este módulo não tem "Modo Personalizado"</h2>
+    <p>Se você já usa outro módulo Metrolabs (como Estufa+Banho-maria), talvez espere encontrar aqui um "Modo Personalizado" protegido por senha, que libera usar menos sensores que o mínimo. <strong>Este módulo não tem esse recurso — e a razão é simples: aqui não existe nenhuma trava para liberar.</strong> Como já explicado na <a href="javascript:void(0)" onclick="irParaSecao_(&#39;s8&#39;); return false;">seção 8</a>, o número de sensores é só uma sugestão automática que você pode sobrescrever livremente, a qualquer momento, sem senha nenhuma. A responsabilidade de conferir se o número usado está de acordo com o protocolo do cliente é sempre sua.</p>
+
+    <h2 id="s13">13. Console Operacional (o log)</h2>
+    <p>A caixa preta no fim da tela, "LOG OPERACIONAL". Toda ação do sistema aparece ali como uma linha de texto, com hora.</p>
+    <table>
+      <tr><th>Cor da linha</th><th>O que significa</th></tr>
+      <tr><td>Verde</td><td>Sucesso — a ação deu certo</td></tr>
+      <tr><td>Amarelo</td><td>Aviso — algo para prestar atenção, mas não é erro</td></tr>
+      <tr><td>Vermelho</td><td>Erro — algo falhou e precisa da sua ação</td></tr>
+    </table>
+    <div class="callout"><strong>Quando algo dá errado e você não sabe por quê, olhe sempre o Console Operacional primeiro</strong> — a mensagem exata, e muitas vezes o motivo específico, está sempre registrada ali.</div>
+
+    <h2 id="s14">14. Passo a passo — gerando um laudo do zero</h2>
+    <ol>
+      <li>Abra o sistema. Espere o selo "SISTEMA ONLINE" aparecer no topo.</li>
+      <li><strong>Seção 1 (Cliente):</strong> digite o CNPJ, clique em "Buscar CNPJ", confira nome/endereço, preencha o responsável técnico.</li>
+      <li><strong>Seção 2 (Equipamento):</strong> escolha o perfil correto (um dos nove). Preencha TAG, marca, modelo, número de série, localização, volume e se é conjugado. Confira a faixa de temperatura e ajuste se o perfil permitir e o protocolo pedir.</li>
+      <li><strong>Seção 3 (Estudos):</strong> marque os estudos realmente feitos, preencha os horários, confira o número de sensores sugerido.</li>
+      <li><strong>Seção 4 (Importação):</strong> escolha o modo de entrada e informe o arquivo/dados. Clique em "Pré-visualizar dados" e confira.</li>
+      <li><strong>Seção 5:</strong> clique em "Gerar Relatório". Confira os selos de status. Se algo reprovou, olhe o Console Operacional.</li>
+      <li>Clique em "Abrir planilha" ou "Baixar PDF".</li>
+      <li><strong>(Opcional) Seção 6:</strong> preencha os campos do Certificado, gere o rascunho com IA, <strong>leia com atenção</strong>, e confirme.</li>
+    </ol>
+
+    <h2 id="s15">15. Erros comuns e o que fazer</h2>
+    <table>
+      <tr><th>O que aconteceu</th><th>Motivo mais provável</th><th>O que fazer</th></tr>
+      <tr><td>Pré-visualização mostra número de sensores diferente do esperado</td><td>Arquivo com mais/menos colunas de temperatura que o esperado</td><td>Confira o arquivo original antes de prosseguir</td></tr>
+      <tr><td>Estudo "Reprovado" quando você esperava "Aprovado"</td><td>Leitura fora da faixa/tolerância, ou rompeu antes do tempo-alvo</td><td>Olhe o Console Operacional — motivo exato sempre aparece ali</td></tr>
+      <tr><td>Campos de Faixa mínima/máxima estão cinza e não deixam digitar</td><td>Perfil com faixa regulatória fixa (Câmara de Vacina, Refrigerador Comum, Caixa Térmica)</td><td>Comportamento esperado — confirme se o perfil escolhido é o certo</td></tr>
+      <tr><td>Bloco de estudo não aparece na tela</td><td>Perfil escolhido não usa esse estudo (ex.: Caixa Térmica só tem Autonomia)</td><td>Confira a tabela da <a href="javascript:void(0)" onclick="irParaSecao_(&#39;s7&#39;); return false;">seção 7</a> — não é erro, é intencional</td></tr>
+      <tr><td>Usei menos sensores que o sugerido e o sistema deixou gerar mesmo assim</td><td>Comportamento esperado — este módulo não bloqueia por número de sensores</td><td>Confira se o número usado está de acordo com o protocolo antes de entregar</td></tr>
+    </table>
+
+    <h2 id="s16">16. Glossário</h2>
+    <table>
+      <tr><th>Termo</th><th>Explicação simples</th></tr>
+      <tr><td>Anexo G</td><td>Capítulo da norma ABNT NBR 16328 com as regras específicas para refrigeradores, freezers, câmaras frias e ultrafreezers</td></tr>
+      <tr><td>Datalogger</td><td>Aparelho gravador de temperatura, que registra leituras ao longo do tempo e gera um arquivo</td></tr>
+      <tr><td>Faixa operacional</td><td>Intervalo de temperatura (mínima até máxima) considerado aceitável</td></tr>
+      <tr><td>Tolerância</td><td>Margem extra em torno da faixa — leitura que passou um pouco não é falha grave</td></tr>
+      <tr><td>Rampa de estabilização</td><td>Período inicial em que o equipamento ainda está esfriando — não conta para aprovação</td></tr>
+      <tr><td>Equipamento conjugado</td><td>Um único aparelho físico com duas partes distintas (ex.: geladeira com freezer embutido)</td></tr>
+      <tr><td>Autonomia</td><td>Tempo que um equipamento sem energia (caixa térmica) mantém a temperatura dentro da faixa, só com isolamento/carga fria</td></tr>
+      <tr><td>Câmara de Conservação</td><td>Nome técnico do refrigerador usado para guardar vacinas/imunobiológicos, com faixa fixa de 2 °C a 8 °C</td></tr>
+      <tr><td>RDC nº 430/2020</td><td>Norma da Anvisa sobre Boas Práticas de Distribuição, Armazenagem e Transporte de Medicamentos</td></tr>
+      <tr><td>PNI</td><td>Programa Nacional de Imunizações (Ministério da Saúde) — dono do "Manual de Rede de Frio"</td></tr>
+    </table>
+
+    <p style="margin-top:40px; color:var(--muted); font-size:12.5px;"><em>Este manual descreve o módulo Cadeia de Frio tal como implementado em 2026-07-22. Se a tela mudar no futuro, este documento precisa ser atualizado junto.</em></p>
+
+    <div class="btn-container" style="margin-top:20px;">
+      <a class="btn btn-primary" href="<?= ScriptApp.getService().getUrl() ?>" target="_top">← Voltar ao sistema</a>
+    </div>
+  </div>
+
+  <a class="btn btn-secondary voltar-topo" href="javascript:void(0)" onclick="irParaSecao_(&#39;topo&#39;); return false;">↑ Topo</a>
+<script>
+function irParaSecao_(id) {
+  var el = document.getElementById(id);
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+</script>
+</body>
+</html>

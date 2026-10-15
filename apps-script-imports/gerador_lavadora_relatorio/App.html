@@ -1,0 +1,1514 @@
+﻿<script>
+  // =========================================================================
+  // 1. ESTADO GLOBAL DA UI
+  // =========================================================================
+  let idleSeconds = 0;
+  let IDLE_LIMIT = 5 * 60;
+  let isIdle = false;
+  let beepInterval = null;
+  let audioCtx = null;
+  let audioLiberado = false;
+  let monitorIdleInterval = null;
+  let clockInterval = null;
+  let listenersOciosidadeRegistrados = false;
+  let linksDrive = { laudos: '', uploads: '' };
+  let isPreviewRunning = false;
+  let isConverterRunning = false;
+  let configServidor = {
+    analise: {},
+    validacaoTempo: {},
+    motoresDisponiveis: []
+  };
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function safeValue(id) {
+    const node = el(id);
+    return node ? String(node.value || '') : '';
+  }
+
+  function safeSetValue(id, value) {
+    const node = el(id);
+    if (node) node.value = value == null ? '' : value;
+  }
+
+  function safeChecked(id) {
+    const node = el(id);
+    return !!(node && node.checked);
+  }
+
+  function existeCampo(id) {
+    return !!el(id);
+  }
+
+  function setStatusBadge(texto, bg, fg) {
+    const badge = el('statusBadge');
+    if (!badge) return;
+
+    badge.innerText = texto || '';
+    badge.style.background = bg || '#eef2f7';
+    badge.style.color = fg || '#475569';
+  }
+
+  function setButtonBusy(buttonId, flag, busyText, normalText) {
+    const btn = el(buttonId);
+    if (!btn) return;
+
+    btn.disabled = !!flag;
+    if (flag) {
+      btn.dataset.normalText = btn.innerText || normalText || '';
+      btn.innerText = busyText || 'PROCESSANDO...';
+    } else {
+      btn.innerText = normalText || btn.dataset.normalText || btn.innerText || '';
+    }
+  }
+
+  function escapeHtml_(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function parseNumeroUi_(valor, fallback) {
+    const s = String(valor == null ? '' : valor).replace(',', '.').trim();
+    const n = Number(s);
+    return isFinite(n) ? n : fallback;
+  }
+
+  function parseInteiroUi_(valor, fallback) {
+    const n = parseInt(String(valor == null ? '' : valor).trim(), 10);
+    return isFinite(n) ? n : fallback;
+  }
+
+  function clampUi_(valor, min, max, fallback) {
+    let n = Number(valor);
+    if (!isFinite(n)) n = fallback;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return n;
+  }
+
+  function fmtNumUi_(valor, casas) {
+    const n = Number(valor);
+    return isFinite(n) ? n.toFixed(casas) : Number(0).toFixed(casas);
+  }
+
+  // =========================================================================
+  // 2. LOG / TERMINAL
+  // =========================================================================
+  function writeLog(text, tipo) {
+    const term = el('terminalLog');
+    if (!term) return;
+
+    const time = new Date().toLocaleTimeString('pt-BR');
+    const msg = `[${time}] ➜ ${String(text || '')}`;
+
+    const line = document.createElement('div');
+    line.textContent = msg;
+
+    if (tipo === 'SUCESSO') {
+      line.className = 'success';
+    } else if (tipo === 'ERRO') {
+      line.className = 'error';
+    } else if (tipo === 'AVISO') {
+      line.className = 'warn';
+    }
+
+    term.appendChild(line);
+    term.scrollTop = term.scrollHeight;
+  }
+
+  // =========================================================================
+  // 3. SISTEMA ANTI-OCIOSIDADE, RELGIO E WIDGETS DE GESTAO
+  // =========================================================================
+  function atualizarClockEStatus() {
+    const clock = el('clockWidget');
+    const perfWidget = el('perfWidget');
+    const now = new Date();
+
+    if (clock) {
+      clock.innerText = now.toLocaleString('pt-BR');
+    }
+
+    if (perfWidget) {
+      if (isIdle) {
+        perfWidget.innerHTML = 'Status: Ocioso / Alerta';
+        perfWidget.style.background = '#fee2e2';
+        perfWidget.style.color = '#991b1b';
+      } else {
+        perfWidget.innerHTML = 'Status: Produtivo ';
+        perfWidget.style.background = '#dcfce7';
+        perfWidget.style.color = '#166534';
+      }
+    }
+  }
+
+  function iniciarRelogioStatus() {
+    if (clockInterval) clearInterval(clockInterval);
+    clockInterval = setInterval(atualizarClockEStatus, 1000);
+  }
+
+  function liberarAudioUsuario() {
+    audioLiberado = true;
+
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    } catch (e) {}
+  }
+
+  function pararBipEstridente() {
+    if (beepInterval) {
+      clearInterval(beepInterval);
+      beepInterval = null;
+    }
+  }
+
+  function tocarBipEstridente() {
+    if (!audioLiberado) {
+      writeLog('Aviso: o navegador ainda não liberou áudio. Clique na tela uma vez para habilitar o som do alarme.', 'AVISO');
+      return;
+    }
+
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      pararBipEstridente();
+
+      beepInterval = setInterval(() => {
+        try {
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+
+          oscillator.type = 'square';
+          oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+
+          gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.22);
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.22);
+        } catch (e) {}
+      }, 700);
+    } catch (e) {
+      writeLog('Aviso: navegador bloqueou o audio do alerta.', 'AVISO');
+    }
+  }
+
+  function dispararAlarmeOciosidade() {
+    if (isIdle) return;
+
+    isIdle = true;
+
+    const alertBox = el('idleAlert');
+    if (alertBox) {
+      alertBox.classList.add('show');
+    }
+
+    writeLog('ALERTA DE GESTAO: Operador inativo. Produtividade interrompida.', 'ERRO');
+    tocarBipEstridente();
+    atualizarClockEStatus();
+  }
+
+  function resetIdleTimer() {
+    idleSeconds = 0;
+
+    if (isIdle) {
+      window.resetIdleAlert();
+    }
+  }
+
+  function handleAtividadeUsuario() {
+    liberarAudioUsuario();
+    resetIdleTimer();
+  }
+
+  function iniciarListenersOciosidade() {
+    if (listenersOciosidadeRegistrados) return;
+    listenersOciosidadeRegistrados = true;
+
+    ['mousemove', 'keydown', 'scroll', 'click', 'touchstart', 'mousedown'].forEach(evt => {
+      document.addEventListener(evt, handleAtividadeUsuario, { passive: true });
+    });
+
+    window.addEventListener('focus', resetIdleTimer);
+    window.addEventListener('load', resetIdleTimer);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        resetIdleTimer();
+      }
+    });
+  }
+
+  function iniciarMonitorOciosidade() {
+    if (monitorIdleInterval) clearInterval(monitorIdleInterval);
+
+    monitorIdleInterval = setInterval(() => {
+      if (document.hidden) return;
+      if (isIdle) return;
+
+      idleSeconds++;
+
+      if (idleSeconds >= IDLE_LIMIT) {
+        dispararAlarmeOciosidade();
+      }
+    }, 1000);
+  }
+
+  window.resetIdleAlert = function () {
+    isIdle = false;
+    idleSeconds = 0;
+
+    const alertBox = el('idleAlert');
+    if (alertBox) {
+      alertBox.classList.remove('show');
+    }
+
+    pararBipEstridente();
+    atualizarClockEStatus();
+    writeLog('Operador retomou a atividade. Relogio de produtividade reiniciado.', 'SUCESSO');
+  };
+
+  // =========================================================================
+  // 4. LINKS DRIVE
+  // =========================================================================
+  function abrirLinkPasta(tipo) {
+    if (tipo === 'LAUDOS' && linksDrive.laudos) {
+      window.open(linksDrive.laudos, '_blank');
+      return;
+    }
+
+    if (tipo === 'UPLOADS' && linksDrive.uploads) {
+      window.open(linksDrive.uploads, '_blank');
+      return;
+    }
+
+    alert('O link da pasta ainda não foi sincronizado com o servidor. Verifique o Config.gs.');
+  }
+
+  // =========================================================================
+  // 5. CONTROLE DA INTERFACE
+  // =========================================================================
+  function configurarModoEntrada() {
+    const selectModo = el('uiModo');
+    if (!selectModo) return;
+
+    const valorAtual = selectModo.value || 'FILE_ID';
+    selectModo.innerHTML = `
+      <option value="FILE_ID">Ler por ID / Link do Google Sheets (Recomendado)</option>
+      <option value="COLAR">Colar Dados Brutos (Texto/CSV)</option>
+      <option value="ARQUIVO_POR_SENSOR">Um arquivo por sensor (datalogger individual)</option>
+      <option value="SIMULADO_ADMIN">Relatório interno / dados reconstituídos</option>
+    `;
+    selectModo.value = ['FILE_ID', 'COLAR', 'ARQUIVO_POR_SENSOR', 'SIMULADO_ADMIN'].includes(valorAtual) ? valorAtual : 'FILE_ID';
+
+    atualizarVisibilidadeModo();
+  }
+
+  function atualizarVisibilidadeModo() {
+    const modo = safeValue('uiModo');
+
+    const boxUpload = el('boxUpload');
+    const boxTextarea = el('boxTextarea');
+    const boxFileId = el('boxFileId');
+    const boxArquivoPorSensor = el('boxArquivoPorSensor');
+    const boxSim = el('boxSimulacaoAdmin');
+
+    if (boxUpload) boxUpload.style.display = (modo === 'FILE_ID') ? 'block' : 'none';
+    if (boxTextarea) boxTextarea.style.display = (modo === 'COLAR') ? 'block' : 'none';
+    if (boxFileId) boxFileId.style.display = (modo === 'FILE_ID') ? 'block' : 'none';
+    if (boxArquivoPorSensor) boxArquivoPorSensor.style.display = (modo === 'ARQUIVO_POR_SENSOR') ? 'block' : 'none';
+    if (boxSim) boxSim.style.display = (modo === 'SIMULADO_ADMIN') ? 'block' : 'none';
+    atualizarLabelsSimuladorAdmin();
+    renderizarSensoresAtivos();
+  }
+
+  function atualizarVisibilidadeOverrideManual() {
+    const box = el('overrideManualBox');
+    if (!box) return;
+
+    const modo = safeValue('uiModoAnaliseJanela') || 'AUTO';
+    box.style.display = (modo === 'MANUAL') ? 'block' : 'none';
+  }
+
+  function atualizarVisibilidadeCamposRobustez() {
+    const modo = safeValue('uiModoReconhecimentoExp') || 'PIOR_SENSOR';
+    const wrapPercentual = el('boxPercentualSensoresExp');
+
+    if (wrapPercentual) {
+      wrapPercentual.style.display = (modo === 'PERCENTUAL') ? 'block' : 'none';
+    }
+  }
+
+  function aplicarMotoresDisponiveisNaUI() {
+    const selectMotor = el('uiMotor');
+    const motores = Array.isArray(configServidor.motoresDisponiveis) && configServidor.motoresDisponiveis.length
+      ? configServidor.motoresDisponiveis
+      : ['TERMO', 'ULTRASSOM'];
+
+    if (selectMotor && !selectMotor.dataset.renderedBySync) {
+      selectMotor.innerHTML = motores.map(m => {
+        const rotulo =
+          m === 'TERMO' ? 'Termodesinfectora (Cálculo de A0)' :
+          m === 'ULTRASSOM' ? 'Lavadora Ultrassônica (Cavitação)' : m;
+        return `<option value="${escapeHtml_(m)}">${escapeHtml_(rotulo)}</option>`;
+      }).join('');
+      
+      selectMotor.value = motores.includes('TERMO') ? 'TERMO' : motores[0];
+      selectMotor.dataset.renderedBySync = '1';
+    }
+  }
+
+  function injetarHelperDrive() {
+    const boxFileId = el('boxFileId');
+    if (!boxFileId || el('btnDriveAjudante')) return;
+
+    const helper = document.createElement('div');
+    helper.id = 'btnDriveAjudante';
+    helper.innerHTML = `
+      <div class="alert-box warning" style="margin-bottom:15px; text-align:center;">
+        <strong>PASSO 1:</strong>
+        <button
+          type="button"
+          onclick="abrirLinkPasta('UPLOADS');"
+          class="btn btn-secondary"
+          style="display:inline-block; margin:0 10px; min-height:auto; padding:8px 14px;">
+          ABRIR PASTA DE DATALOGGERS
+        </button>
+        <br>
+        <span class="field-help" style="display:inline-block; margin-top:8px;">
+          Você pode enviar o arquivo manualmente na pasta ou usar o upload direto abaixo.
+        </span>
+      </div>
+    `;
+
+    boxFileId.insertBefore(helper, boxFileId.firstChild);
+  }
+
+
+  function limparCnpjUi_(valor) {
+    return String(valor || '').replace(/\D/g, '');
+  }
+
+  function aplicarDadosCnpjNaTela_(dados) {
+    dados = dados || {};
+    safeSetValue('uiCnpj', dados.cnpj || safeValue('uiCnpj'));
+    if (dados.razaoSocial) safeSetValue('uiCliente', dados.razaoSocial);
+    if (dados.endereco) safeSetValue('uiEndereco', dados.endereco);
+    if (dados.nomeFantasia && !safeValue('uiPrograma')) {
+      safeSetValue('uiPrograma', 'Validação de processo - ' + dados.nomeFantasia);
+    }
+  }
+
+  function normalizarDadosCnpjBrasilApi_(data, cnpjOriginal) {
+    data = data || {};
+    const partesEndereco = [];
+    const logradouro = [data.descricao_tipo_de_logradouro, data.logradouro].filter(Boolean).join(' ').trim();
+    if (logradouro) partesEndereco.push(logradouro);
+    if (data.numero) partesEndereco.push('n. ' + data.numero);
+    if (data.complemento) partesEndereco.push(data.complemento);
+    if (data.bairro) partesEndereco.push(data.bairro);
+    const cidadeUf = [data.municipio, data.uf].filter(Boolean).join(' / ');
+    if (cidadeUf) partesEndereco.push(cidadeUf);
+    if (data.cep) partesEndereco.push('CEP ' + String(data.cep).replace(/^(\d{5})(\d{3})$/, '$1-$2'));
+
+    return {
+      cnpj: data.cnpj || cnpjOriginal,
+      razaoSocial: data.razao_social || data.nome || '',
+      nomeFantasia: data.nome_fantasia || '',
+      endereco: partesEndereco.join(', '),
+      cidade: data.municipio || '',
+      uf: data.uf || '',
+      telefone: data.ddd_telefone_1 || data.telefone || '',
+      email: data.email || '',
+      atividadePrincipal: data.cnae_fiscal_descricao || '',
+      situacao: data.descricao_situacao_cadastral || data.situacao_cadastral || ''
+    };
+  }
+
+  // (2026-10-14) Consulta direta do navegador removida: a busca de CNPJ
+  // agora é sempre feita no servidor, que tenta várias bases públicas.
+
+  function consultarCnpjViaServidor_(cnpj) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(res => resolve(res || {}))
+        .withFailureHandler(err => reject(err))
+        .apiDispatch({ fn: 'apiConsultarCnpj', payload: { cnpj: cnpj } });
+    });
+  }
+
+  async function consultarCnpjAutomatico(forcar) {
+    const cnpj = limparCnpjUi_(safeValue('uiCnpj'));
+    if (!cnpj) return;
+    if (cnpj.length !== 14) {
+      if (forcar) writeLog('Informe um CNPJ válido com 14 dígitos.', 'AVISO');
+      return;
+    }
+
+    setButtonBusy('btnCnpj', true, '...', 'Buscar');
+    writeLog('Consultando CNPJ em base publica...', 'SUCESSO');
+
+    try {
+      // Servidor tenta várias bases públicas, com reserva e cache.
+      const res = await consultarCnpjViaServidor_(cnpj);
+
+      aplicarDadosCnpjNaTela_(res || {});
+      writeLog('CNPJ preenchido automaticamente: ' + ((res && res.razaoSocial) || '-'), 'SUCESSO');
+    } catch (err) {
+      writeLog('Falha ao consultar CNPJ automaticamente: ' + normalizarErro_(err), 'ERRO');
+      writeLog('Se a falha citar UrlFetchApp.fetch, abra o editor Apps Script e execute autorizarConsultaCnpj uma vez para liberar a permissão.', 'AVISO');
+    } finally {
+      setButtonBusy('btnCnpj', false, '...', 'Buscar');
+    }
+  }
+
+  function validarSenhaRelatorioInterno_(senha) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .apiDispatch({
+          fn: 'apiValidarSenhaSimuladorAdmin',
+          payload: { senha: senha }
+        });
+    });
+  }
+
+  async function ativarModoSimuladoAdmin() {
+    const senha = window.prompt('Informe a senha administrativa para abrir o RELATÓRIO INTERNO:');
+    if (senha === null) return;
+
+    const senhaLimpa = String(senha || '').trim();
+    if (!senhaLimpa) {
+      writeLog('Acesso ao relatório interno cancelado: senha não informada.', 'AVISO');
+      return;
+    }
+
+    writeLog('Validando senha administrativa do relatório interno...', 'AVISO');
+
+    try {
+      await validarSenhaRelatorioInterno_(senhaLimpa);
+      safeSetValue('uiSimSenha', senhaLimpa);
+      safeSetValue('uiModo', 'SIMULADO_ADMIN');
+      atualizarVisibilidadeModo();
+      const box = el('boxSimulacaoAdmin');
+      if (box && box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      writeLog('Relatório interno liberado. Preencha horarios e temperatura.', 'AVISO');
+    } catch (err) {
+      writeLog('Senha inválida para abrir relatório interno: ' + normalizarErro_(err), 'ERRO');
+      alert('Senha inválida para abrir o RELATÓRIO INTERNO.');
+    }
+  }
+
+  function bindEventosUI() {
+    const modo = el('uiModo');
+    if (modo) modo.addEventListener('change', atualizarVisibilidadeModo);
+
+    const motor = el('uiMotor');
+    const setpoint = el('uiSetpoint');
+    
+    // Atualiza a sugesto de temperatura dependendo da maquina escolhida
+    if (motor && setpoint) {
+      motor.addEventListener('change', () => {
+        if (motor.value === 'TERMO') {
+          setpoint.value = '90.0';
+          safeSetValue('uiSimTempAlvo', '90.0');
+        } else if (motor.value === 'ULTRASSOM') {
+          setpoint.value = '45.0';
+          safeSetValue('uiSimTempAlvo', '45.0');
+        }
+        atualizarLabelsSimuladorAdmin();
+      });
+    }
+
+    const sensores = el('uiSensores');
+    if (sensores) {
+      sensores.addEventListener('change', () => {
+        renderizarSensoresAtivos();
+      });
+    }
+
+    const inputArquivo = el('uiArquivoLocal');
+    if (inputArquivo) {
+      inputArquivo.addEventListener('change', handleUploadArquivoLocal);
+    }
+
+    // Delegação: os campos "sensor-arquivo-upload" são recriados toda vez
+    // que renderizarSensoresAtivos() roda, então o listener fica no
+    // container fixo (sensorSelectorWrap) em vez de em cada input novo.
+    const sensorWrap = el('sensorSelectorWrap');
+    if (sensorWrap) {
+      sensorWrap.addEventListener('change', function(evt) {
+        if (!evt.target.classList.contains('sensor-arquivo-upload')) return;
+        const idx = evt.target.getAttribute('data-sensor');
+        handleUploadArquivoLocal(evt, function(fileId) {
+          const alvo = document.querySelector('.sensor-arquivo[data-sensor="' + idx + '"]');
+          if (alvo) alvo.value = fileId;
+        });
+      });
+    }
+
+    const modoJanela = el('uiModoAnaliseJanela');
+    if (modoJanela) {
+      modoJanela.addEventListener('change', atualizarVisibilidadeOverrideManual);
+    }
+
+    const modoReconhecimento = el('uiModoReconhecimentoExp');
+    if (modoReconhecimento) {
+      modoReconhecimento.addEventListener('change', atualizarVisibilidadeCamposRobustez);
+    }
+  }
+
+  function limparTabelaPreview() {
+    const tabelaHead = document.querySelector('#tblPreview thead');
+    const tabelaBody = document.querySelector('#tblPreview tbody');
+    if (tabelaHead) tabelaHead.innerHTML = '';
+    if (tabelaBody) tabelaBody.innerHTML = '';
+  }
+
+  function limparTela() {
+    const camposTexto = [
+      'uiCliente', 'uiCnpj', 'uiEndereco', 'uiPrograma', 'uiCicloNum',
+      'uiTag', 'uiMarca', 'uiModelo', 'uiNumSerie', 'uiLote', 'uiLocal',
+      'uiRespTecnico', 'uiOperador', 'uiDados', 'uiFileId',
+      'uiSimSenha', 'uiSimInicioCiclo', 'uiSimFimCiclo', 'uiSimInicioPreparo',
+      'uiSimFimPreparo', 'uiSimInicioExp', 'uiSimFimExp', 'uiSimInicioFinal', 'uiSimFimFinal'
+    ];
+
+    camposTexto.forEach(id => safeSetValue(id, ''));
+
+    if (el('uiEnsaio')) el('uiEnsaio').selectedIndex = 0;
+    safeSetValue('uiMotor', 'TERMO');
+    safeSetValue('uiSetpoint', '90.0');
+    safeSetValue('uiSensores', '12');
+    safeSetValue('uiDateStyle', String(configServidor.defaultDateStyle || 'AUTO'));
+    safeSetValue('uiOffTemp', '0.00');
+    safeSetValue('uiOffParametro', '0.00'); // Atualizado para o novo ID
+    safeSetValue('uiDelim', 'AUTO');
+    safeSetValue('uiModo', 'FILE_ID');
+    safeSetValue('uiSimTempAlvo', '90.0');
+    safeSetValue('uiSimIntervalo', String(configServidor.simuladorAdmin?.intervaloSegundos || 30));
+
+    safeSetValue('uiModoAnaliseJanela', 'AUTO');
+    safeSetValue('uiConsInicio', String(configServidor.analise?.consecutivasInicio ?? '2'));
+    safeSetValue('uiConsFim', String(configServidor.analise?.consecutivasFim ?? '3'));
+    safeSetValue('uiHistereseExp', String(configServidor.analise?.histereseTemperatura ?? '0.50'));
+
+    safeSetValue('uiTolEntradaExp', String(configServidor.analise?.toleranciaEntrada ?? '0.00'));
+    safeSetValue('uiTolSaidaExp', String(configServidor.analise?.toleranciaSaida ?? '0.50'));
+    safeSetValue('uiModoReconhecimentoExp', String(configServidor.analise?.modoReconhecimentoExposicao ?? 'PIOR_SENSOR'));
+    safeSetValue('uiPercentualSensoresExp', String(configServidor.analise?.percentualMinimoSensores ?? '1.00'));
+
+    safeSetValue('uiManualInicioCiclo', '');
+    safeSetValue('uiManualFimCiclo', '');
+    safeSetValue('uiManualInicioExp', '');
+    safeSetValue('uiManualFimExp', '');
+
+    const inputArquivo = el('uiArquivoLocal');
+    if (inputArquivo) inputArquivo.value = '';
+
+    window.resetIdleAlert();
+    atualizarVisibilidadeModo();
+    atualizarVisibilidadeOverrideManual();
+    atualizarVisibilidadeCamposRobustez();
+    renderizarSensoresAtivos();
+    limparTabelaPreview();
+
+    const linkResultado = el('linkResultado');
+    if (linkResultado) linkResultado.innerHTML = '';
+
+    const terminal = el('terminalLog');
+    if (terminal) {
+      terminal.innerHTML = '';
+      writeLog('Sistema resetado. Aguardando novos dados...', 'SUCESSO');
+    }
+
+    setStatusBadge('SISTEMA ONLINE', '#dcfce7', '#166534');
+    writeLog('Tela limpa e pronta para nova operação.', 'SUCESSO');
+  }
+
+  // =========================================================================
+  // 6. SENSORES ATIVOS / DESABILITADOS
+  // =========================================================================
+  function obterQuantidadeSensoresUI() {
+    const n = Number(safeValue('uiSensores') || 12);
+    if (!isFinite(n) || n < 1) return 12;
+    return Math.min(Math.max(Math.round(n), 1), 60);
+  }
+
+  function renderizarSensoresAtivos() {
+    const wrap = el('sensorSelectorWrap');
+    if (!wrap) return;
+
+    const total = obterQuantidadeSensoresUI();
+    const comImportPorSensor = safeValue('uiModo') === 'ARQUIVO_POR_SENSOR';
+
+    let html = `
+      <div class="section-divider" style="margin-top:10px;">
+        Sensores considerados na análise
+      </div>
+      <div class="check-grid${comImportPorSensor ? ' check-grid-multiarquivo' : ''}">
+    `;
+
+    for (let i = 1; i <= total; i++) {
+      html += `
+        <label class="check-item${comImportPorSensor ? ' check-item-com-import' : ''}">
+          <input type="checkbox" class="sensor-check" data-sensor="${i}" checked>
+          <span>S${i}</span>
+          ${comImportPorSensor ? (
+            '<input type="text" class="form-control sensor-arquivo" data-sensor="' + i + '" placeholder="ID/link do Drive do sensor S' + i + '">' +
+            '<input type="file" class="form-control sensor-arquivo-upload" data-sensor="' + i + '" style="padding:6px;margin-top:4px;">'
+          ) : ''}
+        </label>
+      `;
+    }
+
+    html += `</div>
+      <div class="btn-container" style="margin-top:10px;">
+        <button type="button" class="btn btn-secondary" onclick="marcarTodosSensores(true)">Marcar todos</button>
+        <button type="button" class="btn btn-secondary" onclick="marcarTodosSensores(false)">Desmarcar todos</button>
+      </div>
+    `;
+
+    wrap.innerHTML = html;
+  }
+
+  function marcarTodosSensores(flag) {
+    document.querySelectorAll('.sensor-check').forEach(chk => {
+      chk.checked = !!flag;
+    });
+  }
+
+  function obterSensoresAtivosDaUI() {
+    const checks = Array.from(document.querySelectorAll('.sensor-check'));
+    if (!checks.length) {
+      const total = obterQuantidadeSensoresUI();
+      return Array.from({ length: total }, () => true);
+    }
+    return checks.map(chk => !!chk.checked);
+  }
+
+  function coletarArquivosPorSensor() {
+    const total = obterQuantidadeSensoresUI();
+    const out = new Array(total).fill('');
+    document.querySelectorAll('.sensor-arquivo').forEach(function(inp) {
+      const idx = parseInt(inp.getAttribute('data-sensor'), 10) - 1;
+      if (idx >= 0 && idx < total) out[idx] = inp.value.trim();
+    });
+    return out;
+  }
+
+  // =========================================================================
+  // 7. UPLOAD DIRETO DO ARQUIVO LOCAL
+  // =========================================================================
+  function handleUploadArquivoLocal(evt, aoConcluir) {
+    const file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
+    if (!file) return;
+
+    writeLog('Lendo arquivo local para upload: ' + file.name, 'SUCESSO');
+
+    const reader = new FileReader();
+
+    const concluir = aoConcluir || function(fileId, fileUrl) {
+      safeSetValue('uiFileId', fileId || '');
+      writeLog('Upload concluído. File ID preenchido automaticamente: ' + (fileId || '-'), 'SUCESSO');
+
+      if (fileUrl) {
+        writeLog('Arquivo disponivel no Drive: ' + fileUrl, 'SUCESSO');
+      }
+    };
+
+    reader.onload = function(e) {
+      try {
+        const result = String((e && e.target && e.target.result) || '');
+        const base64 = result.split(',')[1] || '';
+
+        if (!base64) {
+          writeLog('Falha ao converter arquivo para base64.', 'ERRO');
+          return;
+        }
+
+        writeLog('Enviando arquivo para a pasta de uploads do Drive...', 'SUCESSO');
+
+        google.script.run
+          .withSuccessHandler(res => {
+            res = res || {};
+            concluir(res.fileId || '', res.fileUrl || '');
+          })
+          .withFailureHandler(err => {
+            writeLog('Falha no upload do arquivo: ' + normalizarErro_(err), 'ERRO');
+          })
+          .apiDispatch({
+            fn: 'apiUploadArquivo',
+            payload: {
+              fileName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              base64: base64
+            }
+          });
+      } catch (err) {
+        writeLog('Erro ao preparar upload: ' + normalizarErro_(err), 'ERRO');
+      }
+    };
+
+    reader.onerror = function() {
+      writeLog('Erro ao ler o arquivo local selecionado.', 'ERRO');
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  // =========================================================================
+  // 8. PAYLOAD / VALIDAÇÃO
+  // =========================================================================
+  function obterOverrideManualDaUI() {
+    const existeModoAnalise = !!el('uiModoAnaliseJanela');
+    const modoAnaliseJanela = existeModoAnalise ? (safeValue('uiModoAnaliseJanela') || 'AUTO') : 'AUTO';
+    const manual = (modoAnaliseJanela === 'MANUAL');
+
+    return {
+      habilitado: manual,
+      inicioCiclo: safeValue('uiManualInicioCiclo'),
+      fimCiclo: safeValue('uiManualFimCiclo'),
+      inicioExposicao: safeValue('uiManualInicioExp'),
+      fimExposicao: safeValue('uiManualFimExp')
+    };
+  }
+
+  function atualizarLabelsSimuladorAdmin() {
+    const motor = safeValue('uiMotor') || 'TERMO';
+    const termo = motor === 'TERMO';
+    const labels = termo ? {
+      prepIni: 'Início da pré-lavagem / preparo',
+      prepFim: 'Fim da pré-lavagem / início do aquecimento',
+      expIni: 'Início da desinfecção térmica (A0)',
+      expFim: 'Fim da desinfecção térmica (A0)',
+      finalIni: 'Início da secagem / resfriamento',
+      finalFim: 'Fim da secagem / ciclo liberado'
+    } : {
+      prepIni: 'Início do enchimento / dosagem',
+      prepFim: 'Fim do enchimento / início da desgaseificação',
+      expIni: 'Início da cavitação / ultrassom',
+      expFim: 'Fim da cavitação / ultrassom',
+      finalIni: 'Início da drenagem',
+      finalFim: 'Fim da drenagem / cuba liberada'
+    };
+    const pares = [
+      ['lblSimInicioPreparo', labels.prepIni], ['lblSimFimPreparo', labels.prepFim],
+      ['lblSimInicioExp', labels.expIni], ['lblSimFimExp', labels.expFim],
+      ['lblSimInicioFinal', labels.finalIni], ['lblSimFimFinal', labels.finalFim]
+    ];
+    pares.forEach(([id, txt]) => { const node = el(id); if (node) node.textContent = txt; });
+  }
+
+  function obterSimulacaoAdminDaUI() {
+    return {
+      inicioCiclo: safeValue('uiSimInicioCiclo'),
+      fimCiclo: safeValue('uiSimFimCiclo'),
+      inicioPreparo: safeValue('uiSimInicioPreparo'),
+      fimPreparo: safeValue('uiSimFimPreparo'),
+      inicioFasePrincipal: safeValue('uiSimInicioExp'),
+      fimFasePrincipal: safeValue('uiSimFimExp'),
+      inicioFinalizacao: safeValue('uiSimInicioFinal'),
+      fimFinalizacao: safeValue('uiSimFimFinal'),
+      temperaturaAlvo: safeValue('uiSimTempAlvo'),
+      intervaloSegundos: safeValue('uiSimIntervalo')
+    };
+  }
+
+  function obterRobustezDaUI() {
+    const histerese = safeValue('uiHistereseExp');
+    const consInicio = safeValue('uiConsInicio');
+    const consFim = safeValue('uiConsFim');
+    const tolEntrada = safeValue('uiTolEntradaExp');
+    const tolSaida = safeValue('uiTolSaidaExp');
+    const modoReconhecimento = safeValue('uiModoReconhecimentoExp');
+    const percentualSensores = safeValue('uiPercentualSensoresExp');
+
+    return {
+      histereseTemperatura: histerese || '0.50',
+      consecutivasInicio: consInicio || '2',
+      consecutivasFim: consFim || '3',
+      toleranciaEntrada: tolEntrada || '0.00',
+      toleranciaSaida: tolSaida || '0.50',
+      modoReconhecimentoExposicao: modoReconhecimento || 'PIOR_SENSOR',
+      percentualMinimoSensores: percentualSensores || '1.00'
+    };
+  }
+
+  async function construirPayload() {
+    const robustez = obterRobustezDaUI();
+    const overrideJanela = obterOverrideManualDaUI();
+    const existeModoAnalise = !!el('uiModoAnaliseJanela');
+
+    return {
+      cliente: safeValue('uiCliente'),
+      cnpj: safeValue('uiCnpj'),
+      endereco: safeValue('uiEndereco'),
+      programa: safeValue('uiPrograma'),
+      ensaio: safeValue('uiEnsaio'),
+      cicloNum: safeValue('uiCicloNum'),
+      tag: safeValue('uiTag'),
+      marca: safeValue('uiMarca'),
+      modelo: safeValue('uiModelo'),
+      numSerie: safeValue('uiNumSerie'),
+      lote: safeValue('uiLote'),
+      local: safeValue('uiLocal'),
+      respTecnico: safeValue('uiRespTecnico'),
+      operador: safeValue('uiOperador'),
+
+      setpoint: safeValue('uiSetpoint'),
+      motor: safeValue('uiMotor'),
+      nSensores: safeValue('uiSensores'),
+      dateStyle: safeValue('uiDateStyle'),
+
+      offsetTemp: safeValue('uiOffTemp'),
+      offsetParametro: safeValue('uiOffParametro'), // Atualizado
+
+      modoEntrada: safeValue('uiModo'),
+      delimManual: safeValue('uiDelim'),
+      textoColado: safeValue('uiDados'),
+      fileId: safeValue('uiFileId'),
+      simulacaoSenha: safeValue('uiSimSenha'),
+      simulacao: obterSimulacaoAdminDaUI(),
+
+      sensoresAtivos: obterSensoresAtivosDaUI(),
+      arquivosPorSensor: coletarArquivosPorSensor(),
+
+      modoAnaliseJanela: existeModoAnalise ? (safeValue('uiModoAnaliseJanela') || 'AUTO') : 'AUTO',
+      robustez: robustez,
+      overrideJanela: overrideJanela
+    };
+  }
+
+  function validarPayloadAntesEnvio(payload) {
+    if (!payload) {
+      throw new Error('Payload não foi montado corretamente.');
+    }
+
+    if (payload.modoEntrada === 'FILE_ID' && !String(payload.fileId || '').trim()) {
+      throw new Error('Informe o ID, o link da planilha Google ou faca o upload do arquivo.');
+    }
+
+    if (payload.modoEntrada === 'COLAR' && !String(payload.textoColado || '').trim()) {
+      throw new Error('Cole os dados brutos do datalogger antes de continuar.');
+    }
+
+    if (payload.modoEntrada === 'SIMULADO_ADMIN') {
+      const sim = payload.simulacao || {};
+      if (!String(payload.simulacaoSenha || '').trim()) throw new Error('Informe a senha administrativa do relatório interno.');
+      ['inicioCiclo', 'fimCiclo', 'inicioFasePrincipal', 'fimFasePrincipal'].forEach(campo => {
+        if (!String(sim[campo] || '').trim()) throw new Error('Preencha o campo obrigatório do relatório interno: ' + campo + '.');
+      });
+      if (!String(sim.temperaturaAlvo || '').trim()) throw new Error('Informe a temperatura alvo.');
+    }
+
+    if (!String(payload.nSensores || '').trim()) {
+      throw new Error('Informe a quantidade de sensores.');
+    }
+
+    const sensoresMarcados = (payload.sensoresAtivos || []).filter(Boolean).length;
+    if (sensoresMarcados < 1) {
+      throw new Error('Selecione pelo menos 1 sensor ativo para análise.');
+    }
+
+    const histerese = clampUi_(parseNumeroUi_(payload.robustez?.histereseTemperatura, 0.50), 0, 5, 0.50);
+    const consInicio = clampUi_(parseInteiroUi_(payload.robustez?.consecutivasInicio, 2), 1, 20, 2);
+    const consFim = clampUi_(parseInteiroUi_(payload.robustez?.consecutivasFim, 3), 1, 20, 3);
+    const tolEntrada = clampUi_(parseNumeroUi_(payload.robustez?.toleranciaEntrada, 0.00), 0, 5, 0.00);
+    const tolSaida = clampUi_(parseNumeroUi_(payload.robustez?.toleranciaSaida, 0.50), 0, 5, 0.50);
+    const modoReconhecimento = String(payload.robustez?.modoReconhecimentoExposicao || 'PIOR_SENSOR').toUpperCase().trim();
+    const percentualSensores = clampUi_(parseNumeroUi_(payload.robustez?.percentualMinimoSensores, 1.00), 0.01, 1, 1.00);
+
+    if (!['PIOR_SENSOR', 'PERCENTUAL'].includes(modoReconhecimento)) {
+      throw new Error('Modo de reconhecimento da exposição inválido.');
+    }
+
+    payload.robustez = {
+      histereseTemperatura: String(histerese),
+      consecutivasInicio: String(consInicio),
+      consecutivasFim: String(consFim),
+      toleranciaEntrada: String(tolEntrada),
+      toleranciaSaida: String(tolSaida),
+      modoReconhecimentoExposicao: modoReconhecimento,
+      percentualMinimoSensores: String(percentualSensores)
+    };
+
+    const modoAnalise = String(payload.modoAnaliseJanela || 'AUTO').toUpperCase();
+
+    if (modoAnalise === 'MANUAL') {
+      if (!String(payload.overrideJanela?.inicioCiclo || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de início do ciclo.');
+      }
+
+      if (!String(payload.overrideJanela?.fimCiclo || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de fim do ciclo.');
+      }
+
+      if (!String(payload.overrideJanela?.inicioExposicao || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de inicio da fase principal.');
+      }
+
+      if (!String(payload.overrideJanela?.fimExposicao || '').trim()) {
+        throw new Error('No modo manual, informe a data/hora de fim da fase principal.');
+      }
+    }
+  }
+
+  function normalizarErro_(err) {
+    if (!err) return 'Erro desconhecido.';
+    if (typeof err === 'string') return err;
+    if (err.message) return err.message;
+    try {
+      return JSON.stringify(err);
+    } catch (e) {
+      return String(err);
+    }
+  }
+
+  // =========================================================================
+  // 9. PREVIEW
+  // =========================================================================
+  function escreverDiagnosticoPreview(diag) {
+    if (!diag) return;
+
+    const partes = [];
+    if (diag.detectedDateStyle) partes.push('Padrão de data detectado: ' + diag.detectedDateStyle);
+    partes.push('Sensores detectados: ' + (diag.qtdTemperaturas ?? 0));
+    partes.push('Pressão encontrada: ' + (diag.hasPressao ? 'SIM' : 'NÃO'));
+
+    if (diag.erroDiagnostico) {
+      writeLog('Diagnostico parcial: ' + diag.erroDiagnostico, 'AVISO');
+    }
+
+    writeLog(partes.join(' | '), 'SUCESSO');
+  }
+
+  async function chamarPreview() {
+    if (isPreviewRunning) {
+      writeLog('A leitura ja esta em andamento. Aguarde finalizar.', 'AVISO');
+      return;
+    }
+
+    isPreviewRunning = true;
+    setButtonBusy('btnPrev', true, 'LENDO...', 'Pré-visualizar Dados');
+
+    writeLog('Iniciando rotina de leitura e normalizacao...', 'SUCESSO');
+
+    try {
+      const payload = await construirPayload();
+      validarPayloadAntesEnvio(payload);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          isPreviewRunning = false;
+          setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+
+          res = res || {};
+          writeLog(
+            'Leitura concluida. Linhas detectadas: ' +
+            (res.rows ?? 0) +
+            ' | Colunas: ' +
+            (res.cols ?? 0),
+            'SUCESSO'
+          );
+
+          escreverDiagnosticoPreview(res.diagnostico);
+          montarTabela(res.preview || []);
+        })
+        .withFailureHandler(err => {
+          isPreviewRunning = false;
+          setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+          writeLog('FALHA NA LEITURA: ' + normalizarErro_(err), 'ERRO');
+        })
+        .apiDispatch({ fn: 'apiPreviewEntrada', payload: payload });
+    } catch (e) {
+      isPreviewRunning = false;
+      setButtonBusy('btnPrev', false, 'LENDO...', 'Pré-visualizar Dados');
+      writeLog('FALHA INTERNA: ' + normalizarErro_(e), 'ERRO');
+    }
+  }
+
+  function montarTabela(matriz) {
+    const thead = document.querySelector('#tblPreview thead');
+    const tbody = document.querySelector('#tblPreview tbody');
+
+    if (!thead || !tbody) return;
+
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    if (!matriz || !matriz.length) {
+      tbody.innerHTML = '<tr><td colspan="1">Nenhum dado disponivel para pre-visualizacao.</td></tr>';
+      return;
+    }
+
+    const nCols = matriz.reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+
+    let headHtml = '<tr>';
+    for (let i = 1; i <= nCols; i++) {
+      headHtml += `<th>COLUNA ${i}</th>`;
+    }
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+
+    let bodyHtml = '';
+    matriz.forEach(linha => {
+      const arr = Array.isArray(linha) ? linha : [linha];
+      bodyHtml += '<tr>';
+      for (let i = 0; i < nCols; i++) {
+        const valor = (arr[i] !== undefined && arr[i] !== null) ? arr[i] : '';
+        bodyHtml += `<td>${escapeHtml_(String(valor))}</td>`;
+      }
+      bodyHtml += '</tr>';
+    });
+
+    tbody.innerHTML = bodyHtml;
+  }
+
+  // =========================================================================
+  // 10. CONVERSÃO / GERAÇÃO DO LAUDO
+  // =========================================================================
+  function aplicarStatusResultado_(res) {
+    const status = String(res.statusAprovacao || (res.aprovado ? 'APROVADO' : 'REPROVADO')).toUpperCase();
+
+    if (status === 'REPROVADO') {
+      writeLog('Status Final: REPROVADO. Consulte o laudo.', 'ERRO');
+      setStatusBadge('ULTIMO CICLO: REPROVADO', '#fee2e2', '#991b1b');
+      return;
+    }
+
+    if (status === 'APROVADO_COM_ALERTA') {
+      writeLog('Status Final: APROVADO COM ALERTA. Consulte os alertas do laudo.', 'AVISO');
+      setStatusBadge('ULTIMO CICLO: APROVADO COM ALERTA', '#fef3c7', '#92400e');
+      return;
+    }
+
+    writeLog('Status final: APROVADO na qualificação.', 'SUCESSO');
+    setStatusBadge('ULTIMO CICLO: APROVADO', '#dcfce7', '#166534');
+  }
+
+  function renderizarLinksResultado_(res) {
+    const linkResultado = el('linkResultado');
+    if (!linkResultado) return;
+
+    let blocos = '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
+
+    if (res.spreadsheetUrl) {
+      blocos += `
+        <a href="${escapeHtml_(res.spreadsheetUrl)}" target="_blank" class="btn-download" style="flex:1; background:#f3f4f6; color:#1f2937; border:1px solid #e5e7eb;">
+          ABRIR PLANILHA DE DADOS
+        </a>
+      `;
+    }
+
+    if (res.pdfUrl) {
+      blocos += `
+        <a href="${escapeHtml_(res.pdfUrl)}" target="_blank" class="btn-download" style="flex:2;">
+          🖨️ BAIXAR LAUDO PDF (ANVISA)
+        </a>
+      `;
+    }
+
+    blocos += '</div>';
+    linkResultado.innerHTML = blocos;
+  }
+
+  function registrarResumoAnalise_(res) {
+    if (!res || !res.analiseResumo) return;
+
+    const a = res.analiseResumo;
+
+    writeLog(
+      'Sensores utilizados: ' +
+      (a.quantidadeSensoresUtilizados || 0) +
+      ' | Desabilitados: ' +
+      (((a.sensoresDesabilitados || []).join(', ')) || 'Nenhum'),
+      'SUCESSO'
+    );
+
+    if (a.tempoInicioCiclo || a.tempoFimCiclo) {
+      writeLog(
+        'Ciclo | Início: ' + (a.tempoInicioCiclo || '-') +
+        ' | Fim: ' + (a.tempoFimCiclo || '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.tempoInicioExposicao || a.tempoFimExposicao) {
+      writeLog(
+        'Fase principal | Início: ' + (a.tempoInicioExposicao || '-') +
+        ' | Fim: ' + (a.tempoFimExposicao || '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.origemJanelaCiclo) {
+      writeLog('Janela do ciclo: ' + a.origemJanelaCiclo, 'SUCESSO');
+    }
+
+    if (a.origemJanelaExposicao) {
+      writeLog('Janela da fase principal: ' + a.origemJanelaExposicao, 'SUCESSO');
+    }
+
+    if (a.configuracaoDeteccaoExposicao) {
+      const c = a.configuracaoDeteccaoExposicao;
+      writeLog(
+        'Robustez aplicada | Início: ' + (c.consecutivasInicio ?? '-') +
+        ' | Fim: ' + (c.consecutivasFim ?? '-') +
+        ' | Histerese: ' + (c.histereseTemperatura ?? '-') + ' C' +
+        ' | Tol. entrada: ' + (c.toleranciaEntrada ?? '-') +
+        ' | Tol. saida: ' + (c.toleranciaSaida ?? '-') +
+        ' | Modo: ' + (c.modoReconhecimentoExposicao ?? '-') +
+        ' | % sensores: ' + (c.percentualMinimoSensores ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.limitesAprovacao) {
+      const l = a.limitesAprovacao;
+      writeLog(
+        'Critério de letalidade/tempo | Normativo: ' + (l.parametroNormativo ?? '-') +
+        ' | Operacional: ' + (l.parametroOperacional ?? '-') +
+        ' | Tolerancia: ' + (l.toleranciaParametro ?? '-') +
+        ' | Limite final: ' + (l.limiteAprovacaoFinal ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    // Adaptado para A0 ou tempo de cavitação
+    if (a.minA0 != null && a.minA0 > 0) {
+      writeLog(
+        'A0 | Mn: ' + (a.minA0 ?? '-') +
+        ' | Médio: ' + (a.mediaA0 ?? '-') +
+        ' | Mx: ' + (a.maxA0 ?? '-'),
+        'SUCESSO'
+      );
+    }
+
+    if (a.tempoCavitacao != null && a.tempoCavitacao > 0) {
+      writeLog('Tempo de cavitação avaliado: ' + a.tempoCavitacao + ' min', 'SUCESSO');
+    }
+
+    if (a.deltaMinutosEstimado != null) {
+      writeLog('Delta medio estimado entre leituras: ' + a.deltaMinutosEstimado + ' min', 'SUCESSO');
+    }
+
+    if (Array.isArray(a.observacoesAnalise)) {
+      a.observacoesAnalise.forEach(obs => {
+        writeLog('Obs.: ' + obs, 'AVISO');
+      });
+    }
+
+    if (Array.isArray(a.alertasAnalise)) {
+      a.alertasAnalise.forEach(obs => {
+        writeLog('Alerta: ' + obs, 'AVISO');
+      });
+    }
+
+    if (Array.isArray(a.motivosReprovacao)) {
+      a.motivosReprovacao.forEach(m => {
+        writeLog('Critério reprovativo: ' + m, res.aprovado ? 'SUCESSO' : 'ERRO');
+      });
+    }
+  }
+
+  async function chamarConverter() {
+    if (isConverterRunning) {
+      writeLog('A geração do relatório já está em andamento. Aguarde finalizar.', 'AVISO');
+      return;
+    }
+
+    const modoAtual = safeValue('uiModo');
+    const textoBotaoNormal = modoAtual === 'SIMULADO_ADMIN' ? 'Gerar Relatório Interno' : 'Gerar Relatório de Auditoria';
+
+    isConverterRunning = true;
+    setButtonBusy('btnConv', true, 'PROCESSANDO...', textoBotaoNormal);
+    writeLog(modoAtual === 'SIMULADO_ADMIN' ? 'Iniciando relatório interno com dados reconstituídos e análise manual do laboratório de metrologia...' : 'Iniciando motor de engenharia. Gerando laudo oficial...', 'SUCESSO');
+
+    const linkResultado = el('linkResultado');
+    if (linkResultado) linkResultado.innerHTML = '';
+
+    try {
+      const payload = await construirPayload();
+      validarPayloadAntesEnvio(payload);
+
+      google.script.run
+        .withSuccessHandler(res => {
+          isConverterRunning = false;
+          setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+
+          res = res || {};
+          writeLog('Processamento concluído com sucesso.', 'SUCESSO');
+
+          registrarResumoAnalise_(res);
+          aplicarStatusResultado_(res);
+          renderizarLinksResultado_(res);
+        })
+        .withFailureHandler(err => {
+          isConverterRunning = false;
+          setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+          writeLog('FALHA NA ENGENHARIA CRITICA: ' + normalizarErro_(err), 'ERRO');
+        })
+        .apiDispatch({ fn: 'apiConverter', payload: payload });
+    } catch (e) {
+      isConverterRunning = false;
+      setButtonBusy('btnConv', false, 'PROCESSANDO...', textoBotaoNormal);
+      writeLog('FALHA INTERNA: ' + normalizarErro_(e), 'ERRO');
+    }
+  }
+
+  // =========================================================================
+  // 11. SINCRONIZAÇÃO INICIAL
+  // =========================================================================
+  function sincronizarServidorInicial() {
+    google.script.run
+      .withSuccessHandler(r => {
+        r = r || {};
+        configServidor = r || configServidor;
+
+        writeLog('Conectado ao servidor Metrolabs. (Versao: ' + (r.versao || '-') + ')', 'SUCESSO');
+
+        IDLE_LIMIT = Number(r.idleTimeout || 5) * 60;
+        linksDrive.laudos = r.laudosUrl || '';
+        linksDrive.uploads = r.uploadsUrl || '';
+
+        aplicarMotoresDisponiveisNaUI();
+
+        if (r.defaultDateStyle) {
+          safeSetValue('uiDateStyle', r.defaultDateStyle);
+        }
+
+        if (r.defaultNSensores) {
+          safeSetValue('uiSensores', String(r.defaultNSensores));
+        }
+
+        if (r.analise) {
+          safeSetValue('uiHistereseExp', r.analise.histereseTemperatura ?? '0.50');
+          safeSetValue('uiConsInicio', r.analise.consecutivasInicio ?? '2');
+          safeSetValue('uiConsFim', r.analise.consecutivasFim ?? '3');
+          safeSetValue('uiTolEntradaExp', r.analise.toleranciaEntrada ?? '0.00');
+          safeSetValue('uiTolSaidaExp', r.analise.toleranciaSaida ?? '0.50');
+          safeSetValue('uiModoReconhecimentoExp', r.analise.modoReconhecimentoExposicao ?? 'PIOR_SENSOR');
+          safeSetValue('uiPercentualSensoresExp', r.analise.percentualMinimoSensores ?? '1.00');
+          
+          // Libera os limites de temperatura no input
+          const setpointInput = el('uiSetpoint');
+          if (setpointInput) {
+            setpointInput.min = r.analise.tempMinGlobal || 20;
+            setpointInput.max = r.analise.tempMaxGlobal || 100;
+          }
+        }
+
+        safeSetValue('uiSimIntervalo', String(r.simuladorAdmin?.intervaloSegundos || 30));
+        renderizarSensoresAtivos();
+        atualizarVisibilidadeOverrideManual();
+        atualizarVisibilidadeCamposRobustez();
+        atualizarClockEStatus();
+      })
+      .withFailureHandler(err => {
+        writeLog('Falha ao sincronizar com o servidor: ' + normalizarErro_(err), 'ERRO');
+      })
+      .apiDispatch({ fn: 'apiPing', payload: {} });
+  }
+
+  // =========================================================================
+  // 12. CERTIFICADO DE QUALIFICAÇÃO (IA) — segunda forma de relatório,
+  // reaproveita construirPayload() (mesmos dados já preenchidos acima,
+  // Termodesinfectora ou Ultrassônica conforme o campo "motor") e só
+  // adiciona os campos próprios do certificado (número/revisão/DTL/
+  // fotos/textos).
+  // =========================================================================
+  function lvNomeEstudoUi_(tipoEstudo) {
+    if (tipoEstudo === 'ULTRASSOM') return 'Lavadora Ultrassônica (Cavitação)';
+    return 'Termodesinfectora (Cálculo de A0)';
+  }
+
+  async function montarPayloadCertificadoBase() {
+    const base = await construirPayload();
+    base.certNumero = safeValue('certNumero');
+    base.certRevisao = safeValue('certRevisao');
+    base.certDataLogger = safeValue('certDataLogger');
+    base.certTarefaOrigem = safeValue('certTarefaOrigem');
+    return base;
+  }
+
+  function gerarRascunhoCertificado() {
+    el('btnRascunhoCertificado').disabled = true;
+    el('certificadoStatusArea').innerHTML = 'Rodando análise e gerando textos com IA, aguarde (pode levar alguns segundos)...';
+    writeLog('Certificado: rodando análise e chamando a IA para os textos narrativos...', 'SUCESSO');
+
+    montarPayloadCertificadoBase().then(payload => {
+      google.script.run
+        .withSuccessHandler(res => {
+          el('btnRascunhoCertificado').disabled = false;
+          el('certificadoStatusArea').innerHTML =
+            '<div class="alert-box success">Rascunho gerado. Revise os textos abaixo antes de confirmar — eles vão direto para o documento final.</div>';
+
+          el('certTextoConclusao').value = (res.textos && res.textos.conclusaoGeral) || '';
+          el('certTextoConclusaoLeigo').value = (res.textos && res.textos.conclusaoLeigo) || '';
+
+          const estudos = (res.contexto && res.contexto.estudos) || [];
+          const box = el('certAnalisesPorEstudoBox');
+          box.innerHTML = '';
+          estudos.forEach(estudo => {
+            const textoExistente = (res.textos.analisePorEstudo && res.textos.analisePorEstudo[estudo.tipoEstudo]) || '';
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            const label = document.createElement('label');
+            label.textContent = 'Análise — ' + lvNomeEstudoUi_(estudo.tipoEstudo);
+            const textarea = document.createElement('textarea');
+            textarea.className = 'form-control cert-analise-estudo';
+            textarea.setAttribute('data-estudo', estudo.tipoEstudo);
+            textarea.style.minHeight = '100px';
+            textarea.value = textoExistente;
+            div.appendChild(label);
+            div.appendChild(textarea);
+            box.appendChild(div);
+          });
+
+          el('certificadoRevisaoBox').classList.remove('hidden');
+          el('certificadoRevisaoBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          writeLog('Certificado: rascunho da IA pronto para revisão.', 'SUCESSO');
+        })
+        .withFailureHandler(err => {
+          el('btnRascunhoCertificado').disabled = false;
+          writeLog('Falha ao gerar rascunho do certificado: ' + normalizarErro_(err), 'ERRO');
+          el('certificadoStatusArea').innerHTML = '<div class="alert-box error">' + normalizarErro_(err) + '</div>';
+        })
+        .apiDispatch({ fn: 'apiGerarRascunhoCertificado', payload: payload });
+    }).catch(e => {
+      el('btnRascunhoCertificado').disabled = false;
+      writeLog('Falha interna ao montar payload do certificado: ' + normalizarErro_(e), 'ERRO');
+    });
+  }
+
+  function lerArquivoComoBase64_(inputEl) {
+    return new Promise(resolve => {
+      const file = inputEl && inputEl.files ? inputEl.files[0] : null;
+      if (!file) { resolve(null); return; }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const resultado = String((e && e.target && e.target.result) || '');
+        const base64 = resultado.split(',')[1] || '';
+        resolve(base64 ? { base64: base64, mimeType: file.type || 'image/jpeg' } : null);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function confirmarEGerarCertificado() {
+    // Abre a aba em branco JÁ na chamada síncrona do clique — se esperar a
+    // resposta do servidor pra abrir, o navegador bloqueia como pop-up.
+    const novaJanela = window.open('', '_blank');
+    if (novaJanela) {
+      novaJanela.document.write('<p style="font-family:Arial,sans-serif;padding:40px;color:#374151;">Gerando certificado, aguarde...</p>');
+    }
+
+    writeLog('Certificado: lendo fotos e montando documento final...', 'SUCESSO');
+
+    const leituras = [1, 2, 3, 4].map(i => {
+      return lerArquivoComoBase64_(el('certFoto' + i)).then(foto => {
+        if (!foto) return null;
+        foto.legenda = safeValue('certFoto' + i + 'Legenda') || '';
+        return foto;
+      });
+    });
+
+    Promise.all(leituras).then(fotos => {
+      return montarPayloadCertificadoBase().then(payload => {
+        payload.fotosCertificado = fotos.filter(f => f);
+
+        const analisePorEstudo = {};
+        document.querySelectorAll('.cert-analise-estudo').forEach(ta => {
+          analisePorEstudo[ta.getAttribute('data-estudo')] = ta.value;
+        });
+
+        payload.textosCertificado = {
+          conclusaoGeral: safeValue('certTextoConclusao'),
+          conclusaoLeigo: safeValue('certTextoConclusaoLeigo'),
+          analisePorEstudo: analisePorEstudo
+        };
+
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .apiDispatch({ fn: 'apiMontarCertificadoFinal', payload: payload });
+        });
+      });
+    }).then(res => {
+      if (novaJanela) {
+        novaJanela.document.open();
+        novaJanela.document.write(res.html);
+        novaJanela.document.close();
+      }
+      writeLog('Certificado gerado com sucesso — aberto em nova aba, pronto para Ctrl+P.', 'SUCESSO');
+    }).catch(err => {
+      if (novaJanela) novaJanela.close();
+      writeLog('Falha ao montar o certificado final: ' + normalizarErro_(err), 'ERRO');
+      el('certificadoStatusArea').innerHTML = '<div class="alert-box error">' + normalizarErro_(err) + '</div>';
+    });
+  }
+
+  // =========================================================================
+  // 13. INICIALIZAÇÃO ÚNICA
+  // =========================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    iniciarListenersOciosidade();
+    iniciarRelogioStatus();
+    iniciarMonitorOciosidade();
+    configurarModoEntrada();
+    injetarHelperDrive();
+    bindEventosUI();
+    renderizarSensoresAtivos();
+    sincronizarServidorInicial();
+    atualizarVisibilidadeOverrideManual();
+    atualizarVisibilidadeCamposRobustez();
+    atualizarLabelsSimuladorAdmin();
+    atualizarClockEStatus();
+    setStatusBadge('SISTEMA ONLINE', '#dcfce7', '#166534');
+    writeLog('Sistema integrado inicializado. Aguardando operação...', 'SUCESSO');
+  });
+</script>
+
+<script>
+  function abrirManualOperador() {
+    const modal = document.getElementById('manualOperadorModal');
+    if (modal) modal.classList.add('show');
+    if (typeof mostrarTreinamentoAba === 'function') mostrarTreinamentoAba('manual');
+  }
+  function abrirInventarioOperador() {
+    const modal = document.getElementById('manualOperadorModal');
+    if (modal) modal.classList.add('show');
+    if (typeof mostrarTreinamentoAba === 'function') mostrarTreinamentoAba('inventario');
+  }
+  function fecharManualOperador() {
+    const modal = document.getElementById('manualOperadorModal');
+    if (modal) modal.classList.remove('show');
+  }
+</script>

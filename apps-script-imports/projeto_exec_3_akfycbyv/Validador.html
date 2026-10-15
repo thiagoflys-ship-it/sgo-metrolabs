@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Validação de Documento - <?= APP_NOME ?></title>
+  <style>
+    :root{
+      --green:#0b7a3e;--green-dark:#075c2f;--green-soft:#e9f7ef;--green-line:#bfe7cf;
+      --blue:#0b3b78;--blue-dark:#07346b;--blue-soft:#edf5ff;
+      --text:#182230;--muted:#667085;--bg:#f4f7fb;--card:#fff;--border:#dfe6ee;
+      --shadow:0 10px 28px rgba(16,24,40,.10);--radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;width:100%;min-height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg)}
+    body{overflow-x:hidden}
+    .page{width:100%;max-width:1120px;margin:0 auto;padding:14px 14px 24px}
+    .portal-shell{background:#fff;border:1px solid var(--border);border-top:4px solid var(--green);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+    .portal-header{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;padding:26px 34px;background:#fff;border-bottom:1px solid #edf1f5}
+    .brand-logo img{max-width:330px;width:100%;height:auto;display:block;object-fit:contain}
+    .logo-fallback{display:none;font-size:30px;font-weight:900;color:var(--blue)}
+    .header-text{text-align:right}
+    .header-text h1{margin:0;font-size:26px;color:var(--text);font-weight:900;letter-spacing:-.02em}
+    .header-text p{margin:8px 0 0;color:var(--muted);font-size:15px;line-height:1.45}
+    .content{padding:26px 28px 30px}
+    .main-card{background:#fff;border:1px solid var(--border);border-radius:18px;box-shadow:0 5px 18px rgba(16,24,40,.06);padding:22px}
+    .validation-alert{display:flex;gap:14px;align-items:flex-start;background:var(--green-soft);border:1px solid var(--green-line);border-radius:10px;padding:16px 18px;margin-bottom:22px;color:#14532d}
+    .alert-icon{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:900}
+    .alert-title{font-weight:900;font-size:16px;margin-bottom:6px}.alert-text{font-size:14px;line-height:1.45}
+    .alert-error{background:#fff1f0;border-color:#fda29b;color:#7a271a}.alert-error .alert-icon{background:#b42318}
+    .top-grid,.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.top-grid{margin-bottom:12px}
+    .info{background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-height:82px}.info.full{grid-column:1/-1}
+    .label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px;line-height:1.2}
+    .value{color:var(--text);font-size:16px;font-weight:850;line-height:1.35;word-break:break-word}.mono{font-family:Consolas,Monaco,monospace;letter-spacing:.03em}
+    .code-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .copy-btn{width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:#fff;color:#344054;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:900}
+    .status-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;background:#dff3e7;color:#0b6b36;font-size:14px;font-weight:900;text-transform:uppercase;border:1px solid #c1e6cf}
+    .status-pill:before{content:"✓";display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;font-size:12px}
+    .trace-box{margin-top:12px;background:#fbfcfe;border:1px solid var(--border);border-radius:10px;padding:16px}
+    .trace-title{color:var(--green);font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.03em;margin-bottom:12px}
+    .trace-line{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:14px;line-height:1.45;margin-bottom:6px}.trace-line strong{color:#102a43}.url-text{color:#1450a3;word-break:break-all}
+    .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+    .action-btn{min-height:58px;border:none;border-radius:8px;padding:12px 14px;color:#fff;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:.01em;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;text-decoration:none;text-align:center;line-height:1.25;box-shadow:0 4px 10px rgba(16,24,40,.10)}
+    .action-btn svg{width:24px;height:24px;flex:0 0 auto}.btn-print{background:#08783d}.btn-whats{background:#2fb35d}.btn-open{background:#2d72bf}.btn-download{background:#124b96}
+    .action-btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+    .note{margin-top:18px;display:flex;gap:14px;align-items:flex-start;background:#eef6ff;border:1px solid #c9def7;border-radius:10px;padding:14px 16px;color:#184980;font-size:14px;line-height:1.45}
+    .note-icon{width:26px;height:26px;border-radius:50%;background:#2d72bf;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;flex:0 0 auto}
+    .footer{text-align:center;color:#667085;font-size:13px;line-height:1.45;padding:20px 16px 0}.footer strong{color:var(--green)}
+    .print-area{display:none}.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#102a43;color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.18);opacity:0;pointer-events:none;transition:.2s ease;z-index:9999}.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+    @media(max-width:760px){
+      .page{padding:10px 10px 18px}.portal-header{grid-template-columns:1fr;gap:10px;padding:18px 18px 14px}.brand-logo img{max-width:245px}.header-text{text-align:left}.header-text h1{font-size:20px}.header-text p{font-size:13px}
+      .content{padding:12px}.main-card{padding:14px;border-radius:14px}.validation-alert{padding:14px}.top-grid,.info-grid{grid-template-columns:1fr}.info{min-height:72px;padding:13px}.value{font-size:15px}.trace-line{grid-template-columns:1fr;gap:2px}.actions{grid-template-columns:1fr 1fr;gap:10px}.action-btn{min-height:56px;font-size:12.5px;padding:10px}.action-btn svg{width:22px;height:22px}
+    }
+    @media(max-width:420px){.actions{grid-template-columns:1fr}.brand-logo img{max-width:220px}}
+    @page{size:A4 portrait;margin:12mm}
+    @media print{
+      body{background:#fff;color:#000}.page,.portal-shell{max-width:none;margin:0;padding:0;border:none;box-shadow:none;border-radius:0}.portal-header,.content,.footer,.toast{display:none!important}
+      .print-area{display:block!important;font-family:Arial,Helvetica,sans-serif}.print-header{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:14px;border-bottom:3px solid #198754;padding-bottom:10px;margin-bottom:16px}
+      .print-logo img{max-width:260px;height:auto}.print-title{text-align:right}.print-title h2{margin:0;color:#198754;font-size:20px;text-transform:uppercase}.print-title p{margin:4px 0 0;font-size:12px;color:#555}
+      .print-status{border:2px solid #198754;background:#eef7f1;padding:12px;font-weight:900;color:#146c43;margin:12px 0 14px;text-align:center;text-transform:uppercase}.print-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.print-box{border:1px solid #c9d2dc;padding:9px;min-height:55px}.print-full{grid-column:1/-1}.print-label{font-size:10px;color:#666;text-transform:uppercase;font-weight:800}.print-value{font-size:13px;font-weight:800;margin-top:4px;word-break:break-word}.print-footer{margin-top:20px;border-top:1px solid #999;padding-top:9px;font-size:11px;color:#444;line-height:1.45}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="portal-shell">
+      <header class="portal-header">
+        <div class="brand-logo">
+          <img id="logoImg" src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+          <div id="logoFallback" class="logo-fallback">Metrolab's</div>
+        </div>
+        <div class="header-text">
+          <h1>Validação de Documento</h1>
+          <p>Consulta pública de autenticidade, rastreabilidade e conferência do PDF oficial emitido pelo sistema.</p>
+        </div>
+      </header>
+      <main class="content">
+        <section class="main-card">
+          <div id="statusBox" class="validation-alert">
+            <div class="alert-icon">⟳</div>
+            <div><div class="alert-title">Consultando documento...</div><div class="alert-text">Aguarde enquanto o sistema consulta o histórico documental Metrolabs.</div></div>
+          </div>
+          <div id="conteudoValidacao">
+            <div class="top-grid">
+              <div class="info"><div class="label">Código de autenticação</div><div class="code-row"><div class="value mono" id="codigoTela"><?= CODIGO_VALIDACAO ?></div><button class="copy-btn" type="button" onclick="copiarTexto(CODIGO_VALIDACAO)" title="Copiar código">⧉</button></div></div>
+              <div class="info"><div class="label">Status do documento</div><div class="value"><span class="status-pill">Consultando</span></div></div>
+            </div>
+          </div>
+          <div class="note"><div class="note-icon">i</div><div>Esta página confirma a existência do registro documental no histórico do sistema Metrolabs e sua vinculação com o documento oficial gerado no fluxo de emissão.</div></div>
+        </section>
+      </main>
+      <section class="print-area" id="printArea">
+        <div class="print-header">
+          <div class="print-logo"><img src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w900" alt="Metrolabs"></div>
+          <div class="print-title"><h2>Validação Documental</h2><p>Comprovante de autenticidade e rastreabilidade técnica</p></div>
+        </div>
+        <div class="print-status" id="printStatus">Documento validado</div>
+        <div class="print-grid">
+          <div class="print-box"><div class="print-label">Cliente</div><div class="print-value" id="pCliente">-</div></div>
+          <div class="print-box"><div class="print-label">CNPJ</div><div class="print-value" id="pCnpj">-</div></div>
+          <div class="print-box"><div class="print-label">Equipamento</div><div class="print-value" id="pEquipamento">-</div></div>
+          <div class="print-box"><div class="print-label">Série</div><div class="print-value" id="pSerie">-</div></div>
+          <div class="print-box"><div class="print-label">Status</div><div class="print-value" id="pStatus">-</div></div>
+          <div class="print-box"><div class="print-label">Número da O.S.</div><div class="print-value mono" id="pOs">-</div></div>
+          <div class="print-box"><div class="print-label">Data de emissão</div><div class="print-value" id="pData">-</div></div>
+          <div class="print-box"><div class="print-label">Tipo de documento</div><div class="print-value" id="pTipo">-</div></div>
+          <div class="print-box print-full"><div class="print-label">Código de autenticação</div><div class="print-value mono" id="pCodigo">-</div></div>
+          <div class="print-box print-full"><div class="print-label">Validação externa</div><div class="print-value" id="pUrl">-</div></div>
+        </div>
+        <div class="print-footer">Este comprovante confirma vínculo com registro documental emitido pelo sistema Metrolabs. A conferência integral deve ser realizada pelo PDF oficial vinculado ao registro.</div>
+      </section>
+    </div>
+    <div class="footer"><strong>Sistema Metrolabs</strong> • Documento técnico controlado • Validação pública • Consulte sempre o PDF oficial.</div>
+  </div>
+  <div class="toast" id="toast">Copiado</div>
+  <script>
+    const CODIGO_VALIDACAO = "<?= CODIGO_VALIDACAO ?>";
+    let documentoValidadoAtual = null;
+    function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+    function jsEsc(v){return String(v||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\n/g," ")}
+    function norm(v,padrao){const s=String(v||"").trim();return s||(padrao||"Não informado")}
+    function setText(id,value){const el=document.getElementById(id);if(el)el.textContent=norm(value,"-")}
+    function showToast(msg){const t=document.getElementById("toast");if(!t)return;t.textContent=msg||"Copiado";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
+    function copiarTexto(txt){const texto=String(txt||"").trim();if(!texto)return;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(texto).then(()=>showToast("Copiado"));return}const ta=document.createElement("textarea");ta.value=texto;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);showToast("Copiado")}
+    function preencherPrint(item){setText("pCliente",item.cliente);setText("pCnpj",item.cnpj);setText("pEquipamento",item.equipamento);setText("pSerie",item.serie);setText("pStatus",item.status);setText("pOs",item.osNumero);setText("pData",item.dataEmissao);setText("pTipo",item.documentoTipo);setText("pCodigo",item.codigoValidacao||CODIGO_VALIDACAO);setText("pUrl",item.urlValidacao);setText("printStatus","Documento validado • "+norm(item.status,"Status não informado"))}
+    function imprimirValidacao(){if(!documentoValidadoAtual){alert("Nenhum documento validado para impressão.");return}window.print()}
+    function enviarWhatsapp(){if(!documentoValidadoAtual){alert("Nenhum documento validado para enviar.");return}const i=documentoValidadoAtual;const linhas=["Validação de Documento Metrolabs","Cliente: "+norm(i.cliente),"Equipamento: "+norm(i.equipamento),"Status: "+norm(i.status),"Código: "+norm(i.codigoValidacao||CODIGO_VALIDACAO),"PDF: "+norm(i.urlPdf,""),"Validação: "+norm(i.urlValidacao,"")];window.open("https://wa.me/?text="+encodeURIComponent(linhas.join("\n")),"_blank")}
+    function abrirPdf(){if(!documentoValidadoAtual||!documentoValidadoAtual.urlPdf){alert("PDF oficial não disponível para este registro.");return}window.open(documentoValidadoAtual.urlPdf,"_blank")}
+    function baixarPdf(){if(!documentoValidadoAtual||!documentoValidadoAtual.urlPdf){alert("PDF oficial não disponível para download.");return}const a=document.createElement("a");a.href=documentoValidadoAtual.urlPdf;a.target="_blank";a.rel="noopener noreferrer";a.download="Documento_Metrolabs.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a)}
+    function renderOk(item){
+      documentoValidadoAtual=item||{};preencherPrint(documentoValidadoAtual);
+      const statusBox=document.getElementById("statusBox"),conteudo=document.getElementById("conteudoValidacao");
+      statusBox.className="validation-alert";statusBox.innerHTML='<div class="alert-icon">✓</div><div><div class="alert-title">Documento validado com sucesso.</div><div class="alert-text">O código consultado corresponde a um registro documental emitido pela Metrolabs e indexado no histórico do sistema.</div></div>';
+      const codigo=norm(item.codigoValidacao||CODIGO_VALIDACAO);
+      conteudo.innerHTML=''
+      +'<div class="top-grid">'
+      +'<div class="info"><div class="label">Código de autenticação</div><div class="code-row"><div class="value mono">'+esc(codigo)+'</div><button class="copy-btn" type="button" onclick="copiarTexto(\''+jsEsc(codigo)+'\')" title="Copiar código">⧉</button></div></div>'
+      +'<div class="info"><div class="label">Status do documento</div><div class="value"><span class="status-pill">'+esc(norm(item.status))+'</span></div></div></div>'
+      +'<div class="info-grid">'
+      +'<div class="info"><div class="label">Cliente</div><div class="value">'+esc(norm(item.cliente))+'</div></div>'
+      +'<div class="info"><div class="label">CNPJ</div><div class="value">'+esc(norm(item.cnpj))+'</div></div>'
+      +'<div class="info"><div class="label">Equipamento</div><div class="value">'+esc(norm(item.equipamento))+'</div></div>'
+      +'<div class="info"><div class="label">Série</div><div class="value">'+esc(norm(item.serie))+'</div></div>'
+      +'<div class="info"><div class="label">Número da O.S.</div><div class="value mono">'+esc(norm(item.osNumero))+'</div></div>'
+      +'<div class="info"><div class="label">Data de emissão</div><div class="value">'+esc(norm(item.dataEmissao))+'</div></div>'
+      +'<div class="info"><div class="label">Tipo de documento</div><div class="value">'+esc(norm(item.documentoTipo))+'</div></div>'
+      +'<div class="info"><div class="label">Relatório</div><div class="value mono">'+esc(norm(item.relatorioId))+'</div></div></div>'
+      +'<div class="trace-box"><div class="trace-title">Rastreabilidade documental</div><div class="trace-line"><strong>Validação externa:</strong><span class="url-text">'+esc(norm(item.urlValidacao,"URL não disponível"))+'</span></div></div>'
+      +'<div class="actions">'
+      +'<button class="action-btn btn-print" type="button" onclick="imprimirValidacao()">'+iconPrint()+'<span>Imprimir<br>validação</span></button>'
+      +'<button class="action-btn btn-whats" type="button" onclick="enviarWhatsapp()">'+iconWhats()+'<span>Enviar via<br>WhatsApp</span></button>'
+      +'<button class="action-btn btn-open" type="button" onclick="abrirPdf()">'+iconDoc()+'<span>Abrir PDF<br>oficial</span></button>'
+      +'<button class="action-btn btn-download" type="button" onclick="baixarPdf()">'+iconDownload()+'<span>Download<br>do PDF</span></button></div>';
+    }
+    function renderErro(msg){documentoValidadoAtual=null;const statusBox=document.getElementById("statusBox"),conteudo=document.getElementById("conteudoValidacao");statusBox.className="validation-alert alert-error";statusBox.innerHTML='<div class="alert-icon">!</div><div><div class="alert-title">Documento não validado.</div><div class="alert-text">'+esc(msg||"Código não localizado.")+'</div></div>';conteudo.innerHTML='<div class="top-grid"><div class="info"><div class="label">Código de autenticação</div><div class="code-row"><div class="value mono">'+esc(norm(CODIGO_VALIDACAO,"Código não informado"))+'</div></div></div><div class="info"><div class="label">Status do documento</div><div class="value"><span class="status-pill" style="background:#fff1f0;color:#b42318;border-color:#fda29b;">Não validado</span></div></div></div><div class="trace-box"><div class="trace-title">Situação da consulta</div><div>Não foi possível localizar um registro correspondente ao código informado no histórico documental da Metrolabs.</div></div>'}
+    function consultarDocumento(){const codigoTela=document.getElementById("codigoTela");if(codigoTela)codigoTela.textContent=String(CODIGO_VALIDACAO||"").trim()||"Código não informado";if(!CODIGO_VALIDACAO||!String(CODIGO_VALIDACAO).trim()){renderErro("Código de autenticação não informado.");return}if(typeof google==="undefined"||!google.script||!google.script.run){renderErro("Ambiente sem acesso ao Apps Script.");return}google.script.run.withSuccessHandler(res=>{if(res&&res.ok)renderOk(res);else renderErro((res&&res.mensagem)||"Código não localizado.")}).withFailureHandler(err=>{console.error(err);renderErro("Falha ao consultar o documento.")}).buscarDocumentoPorCodigo(CODIGO_VALIDACAO)}
+    function iconPrint(){return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 9V3h12v6" stroke="currentColor" stroke-width="2"/><path d="M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2"/><path d="M6 14h12v7H6v-7Z" stroke="currentColor" stroke-width="2"/></svg>'}
+    function iconWhats(){return '<svg viewBox="0 0 24 24" fill="none"><path d="M12 21a9 9 0 1 0-7.7-4.35L3 21l4.55-1.2A8.96 8.96 0 0 0 12 21Z" stroke="currentColor" stroke-width="2"/><path d="M8.5 8.5c.5 3 3 5.5 6 6l1.2-1.2c.3-.3.3-.8 0-1.1l-1-1c-.3-.3-.8-.3-1.1 0l-.4.4c-.9-.4-1.6-1.1-2-2l.4-.4c.3-.3.3-.8 0-1.1l-1-1c-.3-.3-.8-.3-1.1 0L8.5 8.5Z" fill="currentColor"/></svg>'}
+    function iconDoc(){return '<svg viewBox="0 0 24 24" fill="none"><path d="M6 2h8l4 4v16H6V2Z" stroke="currentColor" stroke-width="2"/><path d="M14 2v5h5" stroke="currentColor" stroke-width="2"/><path d="M8 13h8M8 17h8M8 9h3" stroke="currentColor" stroke-width="2"/></svg>'}
+    function iconDownload(){return '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12" stroke="currentColor" stroke-width="2"/><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="2"/><path d="M4 21h16" stroke="currentColor" stroke-width="2"/></svg>'}
+    consultarDocumento();
+  </script>
+</body>
+</html>

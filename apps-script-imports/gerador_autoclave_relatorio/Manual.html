@@ -1,0 +1,69 @@
+﻿<style>
+  .training-modal-backdrop{position:fixed;inset:0;background:rgba(1,4,9,.78);z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(4px)}
+  .training-modal-backdrop.show{display:flex}.training-modal{width:min(1180px,96vw);max-height:92vh;background:#0d1117;border:1px solid #30363d;border-radius:8px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:flex;flex-direction:column;color:#e5e7eb}
+  .training-modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#010409;border-bottom:1px solid #30363d;color:#fff}.training-modal-header h2{margin:0;font-size:17px;color:#fff}.training-close{border:1px solid #475569;background:#111827;color:#dbeafe;font-weight:800;border-radius:6px;padding:8px 12px;cursor:pointer}
+  .training-tabs{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid #30363d;background:#111827;flex-wrap:wrap}.training-tab{border:1px solid #30363d;background:#0b1220;color:#cbd5e1;padding:9px 12px;border-radius:6px;font-weight:800;cursor:pointer}.training-tab.active{background:#22c55e;border-color:#86efac;color:#052e16}.training-tab.locked{background:#1f2937;color:#fcd34d;border-color:rgba(245,158,11,.35)}
+  .training-content{overflow:auto;padding:20px 24px 28px;line-height:1.6;color:#dbeafe}.training-content h3{margin:24px 0 8px;color:#f8fafc;font-size:18px}.training-content h4{margin:18px 0 6px;color:#bfdbfe;font-size:15px}.training-content p{margin:7px 0}.training-content ul,.training-content ol{margin:7px 0 13px 22px}.training-content li{margin:5px 0}
+  .training-alert{border-left:4px solid #f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);padding:12px 14px;margin:12px 0;color:#fde68a;font-weight:700;border-radius:6px}.training-ok{border-left-color:#22c55e;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.25);color:#bbf7d0}.training-danger{border-left-color:#ef4444;background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.25);color:#fecaca}
+  .training-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.training-card{border:1px solid #30363d;border-radius:8px;padding:12px;background:#0b1220}.training-card strong{color:#f8fafc}.training-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}.training-table th,.training-table td{border:1px solid #30363d;padding:8px;text-align:left;vertical-align:top}.training-table th{background:#111827;color:#e0f2fe}.training-table td{color:#dbeafe}.training-step{background:#0b1220;border:1px solid #30363d;border-radius:8px;padding:12px;margin:10px 0}.training-step strong{color:#86efac}
+</style>
+
+<div id="trainingModalBackdrop" class="training-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="trainingModalTitle">
+  <div class="training-modal">
+    <div class="training-modal-header"><h2 id="trainingModalTitle">Central de Treinamento - Sistema Autoclave</h2><button type="button" class="training-close" onclick="fecharTreinamentoSistema()">FECHAR</button></div>
+    <div class="training-tabs">
+      <button type="button" id="tabManualOperador" class="training-tab active" onclick="mostrarTreinamentoAba('manual')">Manual do Operador</button>
+      <button type="button" id="tabErrosSistema" class="training-tab" onclick="mostrarTreinamentoAba('erros')">Erros e Interpretação</button>
+      <button type="button" id="tabInventarioSistema" class="training-tab" onclick="mostrarTreinamentoAba('inventario')">Inventário</button>
+      <button type="button" id="tabChecklistSistema" class="training-tab" onclick="mostrarTreinamentoAba('checklist')">Checklist</button>
+      <button type="button" id="tabManualInterno" class="training-tab locked" style="display:none" onclick="mostrarTreinamentoAba('interno')">Relatório Interno</button>
+    </div>
+    <div class="training-content">
+      <section id="trainingManual">
+        <div class="training-alert">Este manual foi escrito para quem está começando. A regra principal é simples: preencha com calma, confira antes de gerar e chame a engenharia quando aparecer reprovação, alerta crítico ou dado estranho.</div>
+        <h3>1. O que este sistema faz</h3>
+        <p>O sistema pega uma tabela exportada do datalogger da autoclave e transforma em relatório técnico. Ele lê tempo, temperatura dos sensores e pressão, identifica as fases do ciclo, calcula F0, avalia aprovação/reprovação e gera planilha e PDF.</p>
+        <p>O operador não precisa calcular F0 nem procurar a fase crítica manualmente. O trabalho do operador é garantir que os dados de entrada estejam corretos.</p>
+        <h3>2. Conceitos básicos</h3>
+        <div class="training-grid">
+          <div class="training-card"><strong>Datalogger</strong><p>Equipamento que grava as leituras durante o ciclo. Cada linha normalmente representa uma leitura em um horário.</p></div>
+          <div class="training-card"><strong>Sensor</strong><p>Ponto de medição de temperatura dentro da autoclave ou da carga.</p></div>
+          <div class="training-card"><strong>Pressão</strong><p>Ajuda a identificar vácuo, pressão positiva, esterilização, secagem e despressurização.</p></div>
+          <div class="training-card"><strong>Exposição / esterilização</strong><p>Fase crítica em que a carga deve permanecer na temperatura alvo pelo tempo necessário.</p></div>
+          <div class="training-card"><strong>F0</strong><p>Indicador de letalidade térmica. Combina tempo e temperatura.</p></div>
+          <div class="training-card"><strong>Pior sensor</strong><p>Sensor que apresentou a condição mais crítica. Ele pesa muito na avaliação final.</p></div>
+        </div>
+        <h3>3. Passo a passo para gerar relatório real</h3>
+        <div class="training-step"><strong>Passo 1 - Separe o arquivo correto.</strong><p>Confirme cliente, equipamento, data, ciclo e programa antes de importar.</p></div>
+        <div class="training-step"><strong>Passo 2 - Preencha cliente e CNPJ.</strong><p>Digite o CNPJ, clique em Buscar e confira razão social e endereço.</p></div>
+        <div class="training-step"><strong>Passo 3 - Preencha os dados do ensaio.</strong><p>Informe programa/receita, tipo de ensaio e número do ciclo.</p></div>
+        <div class="training-step"><strong>Passo 4 - Preencha o equipamento.</strong><p>TAG, marca, modelo, número de série, lote e localização garantem rastreabilidade.</p></div>
+        <div class="training-step"><strong>Passo 5 - Escolha ciclo e setpoint.</strong><p>Se o ciclo foi 121 °C, escolha 121 °C. Não deixe 134 °C por padrão.</p></div>
+        <div class="training-step"><strong>Passo 6 - Confira sensores ativos.</strong><p>Marque somente sensores usados e válidos. Nunca desmarque sensor apenas para aprovar relatório.</p></div>
+        <div class="training-step"><strong>Passo 7 - Importe os dados.</strong><p>Use ID/link da planilha ou cole os dados brutos. Depois clique em Pré-visualizar Dados.</p></div>
+        <div class="training-step"><strong>Passo 8 - Confira o preview.</strong><p>Verifique se existem horários, temperaturas e pressão. Se houver algo estranho, pare antes de gerar.</p></div>
+        <div class="training-step"><strong>Passo 9 - Gere e revise.</strong><p>Abra o PDF e confira status, fase de esterilização, F0, pior sensor, gráficos e observações.</p></div>
+      </section>
+      <section id="trainingErros" style="display:none">
+        <h3>Como interpretar resultados e erros</h3>
+        <div class="training-alert training-ok"><strong>APROVADO:</strong> o ciclo atendeu aos critérios configurados. Mesmo assim, revise o PDF antes de enviar.</div>
+        <div class="training-alert"><strong>APROVADO COM ALERTA:</strong> o ciclo passou, mas existe observação técnica. Leia antes de enviar.</div>
+        <div class="training-alert training-danger"><strong>REPROVADO:</strong> não altere sensor, offset ou janela para tentar aprovar. Chame a engenharia.</div>
+        <table class="training-table"><tr><th>Mensagem / sintoma</th><th>O que significa</th><th>O que fazer</th></tr><tr><td>Fase de exposição não identificada</td><td>Temperatura não atingiu ou não manteve o limite.</td><td>Conferir setpoint, sensores e arquivo.</td></tr><tr><td>F0 mínimo insuficiente</td><td>Tempo/temperatura não gerou letalidade suficiente no pior sensor.</td><td>Encaminhar para análise técnica.</td></tr><tr><td>Pressão ausente</td><td>Arquivo não trouxe pressão ou o parser não encontrou a coluna.</td><td>Conferir exportação e preview.</td></tr><tr><td>Data/hora estranha</td><td>Formato pode estar invertido ou quebrado.</td><td>Conferir padrão de data e horários.</td></tr><tr><td>Erro crítico no console</td><td>Processamento parou.</td><td>Copiar mensagem e chamar suporte/engenharia.</td></tr></table>
+      </section>
+      <section id="trainingInventario" style="display:none"><h3>Inventário funcional</h3><table class="training-table"><tr><th>Módulo</th><th>Função</th></tr><tr><td>Cadastro do ensaio</td><td>Cliente, CNPJ, endereço, programa e ciclo.</td></tr><tr><td>Rastreabilidade</td><td>TAG, marca, modelo, série, lote, setor e operador.</td></tr><tr><td>Entrada de dados</td><td>ID/link, colagem manual ou upload.</td></tr><tr><td>Análise de ciclo</td><td>Detecta fases, exposição, F0, pior sensor e aprovação.</td></tr><tr><td>Relatório</td><td>Gera planilha, gráficos, dados brutos e PDF.</td></tr><tr><td>Relatório interno</td><td>Área restrita com senha para dados reconstituídos e análise manual.</td></tr></table></section>
+      <section id="trainingChecklist" style="display:none"><h3>Checklist antes de gerar</h3><ul><li>Cliente, CNPJ e endereço conferidos.</li><li>Programa, ensaio e ciclo preenchidos.</li><li>TAG, marca, modelo, série, lote e local corretos.</li><li>Ciclo alvo e setpoint corretos.</li><li>Sensores ativos conferidos.</li><li>Arquivo correto importado.</li><li>Preview com horários, sensores e pressão.</li><li>PDF final revisado.</li></ul></section>
+      <section id="trainingInterno" style="display:none"><div class="training-alert training-danger">Acesso restrito. Relatório interno usa dados reconstituídos e analisados manualmente pelo laboratório de metrologia. Não é importação direta de datalogger real.</div><h3>Manual do Relatório Interno - Autoclave</h3><ol><li>Clique em <strong>RELATÓRIO INTERNO</strong> e informe a senha administrativa.</li><li>Preencha cliente, equipamento e rastreabilidade normalmente.</li><li>Informe temperatura alvo e intervalo entre leituras.</li><li>Informe início e término do ciclo total.</li><li>Informe início e término do pré-vácuo.</li><li>Informe quantidade de pulsos, pressão positiva e vácuo mínimo.</li><li>Informe início e término da esterilização.</li><li>Informe início e término da secagem.</li><li>Pré-visualize e confira se as fases fazem sentido.</li><li>Gere o relatório e confira a marcação de dados reconstituídos.</li></ol></section>
+    </div>
+  </div>
+</div>
+<script>
+  function abrirTreinamentoSistema(aba){const modal=document.getElementById('trainingModalBackdrop');if(modal)modal.classList.add('show');mostrarTreinamentoAba(aba||'manual');}
+  function abrirManualOperador(){abrirTreinamentoSistema('manual');}
+  function abrirInventarioOperador(){abrirTreinamentoSistema('inventario');}
+  function fecharManualOperador(){fecharTreinamentoSistema();}
+  function fecharTreinamentoSistema(){const modal=document.getElementById('trainingModalBackdrop');if(modal)modal.classList.remove('show');}
+  function mostrarTreinamentoAba(aba){const alvo=aba||'manual';[['manual','trainingManual','tabManualOperador'],['erros','trainingErros','tabErrosSistema'],['inventario','trainingInventario','tabInventarioSistema'],['checklist','trainingChecklist','tabChecklistSistema'],['interno','trainingInterno','tabManualInterno']].forEach(function(item){const ativo=item[0]===alvo;const sec=document.getElementById(item[1]);const tab=document.getElementById(item[2]);if(sec)sec.style.display=ativo?'block':'none';if(tab)tab.classList.toggle('active',ativo);});}
+  function abrirManualRelatorioInternoProtegido(){const senha=window.prompt('Informe a senha administrativa para abrir o MANUAL DO RELATÓRIO INTERNO:');if(senha===null)return;if(!String(senha||'').trim()){alert('Senha não informada.');return;}google.script.run.withSuccessHandler(function(){const tab=document.getElementById('tabManualInterno');if(tab)tab.style.display='inline-block';abrirTreinamentoSistema('interno');}).withFailureHandler(function(err){alert('Senha inválida ou falha ao validar acesso: '+(err&&err.message?err.message:err));}).apiDispatch({fn:'apiValidarSenhaSimuladorAdmin',payload:{senha:senha}});}
+  document.addEventListener('keydown',function(evt){if(evt.key==='Escape')fecharTreinamentoSistema();});
+</script>
