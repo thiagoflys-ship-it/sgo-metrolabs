@@ -271,10 +271,18 @@ function Auvo_obterMapeamento_(tipo, entidadeId) {
   var tipoU = SGO_UTILS.safeUpper(tipo);
   var alvo = SGO_UTILS.safe(entidadeId);
   if (!alvo) return null;
-  var achado = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC).find(function(m) {
+  var achados = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC).filter(function(m) {
     return SGO_UTILS.safeUpper(m.ENTIDADE_TIPO) === tipoU && SGO_UTILS.safe(m.ENTIDADE_ID) === alvo;
   });
-  return achado || null;
+  // 2026-10-15: um cadastro pode ficar com 2 ligações (o cliente que já existia no Auvo,
+  // trazido pela sincronização reversa — CHAVE "tipo:AUVOID:n" — e o que o SGO+ criou
+  // antes de achar o original). Vale o original do Auvo: é nele que os técnicos abrem as
+  // tarefas. Antes valia o primeiro da lista, e as tarefas do SGO+ iam para o repetido.
+  // Só quando há UM original: vários originais ligados ao mesmo cadastro = cadastro ainda
+  // desorganizado (ex.: filiais penduradas num cliente só) — aí fica o comportamento antigo
+  // até o gestor organizar no painel de Vínculos.
+  var doAuvo = achados.filter(function(m) { return /:AUVOID:/.test(String(m.CHAVE || '')) && SGO_UTILS.safe(m.AUVO_ID); });
+  return (doAuvo.length === 1 ? doAuvo[0] : achados[0]) || null;
 }
 
 // Atualiza o mesmo registro que Auvo_obterMapeamento_ acharia (qualquer
