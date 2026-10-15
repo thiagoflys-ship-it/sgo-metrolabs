@@ -336,6 +336,12 @@ function Conduta_apiRodarRotinaAgora(sessionId) {
   return Conduta_rotinaDiaria_();
 }
 
+/** Para o farol: há algo que a rotina ainda precisa aplicar (saneamento ou mês vencido sem fechar)? */
+function Conduta_rotinaPendente_(anterior) {
+  if (PropertiesService.getScriptProperties().getProperty(CONDUTA_SANEAMENTO_20261015) !== '1') return true;
+  return !!(anterior && !anterior.fechado && anterior.prazoVencido && !anterior.pendencias);
+}
+
 /** Fecha sozinho todo mês encerrado que passou do prazo e não tem pendência; os que têm pendência ficam no farol. */
 function Conduta_fecharAutomatico_() {
   var hoje = Conduta_hojeISO_(), atual = Conduta_competenciaDe_(hoje);
@@ -374,15 +380,18 @@ function Conduta_saneamento20261015_() {
     SGO_DATA.update(CONDUTA_SHEETS.PARAMETRO, sombra.ID, { VALOR: '' });
     feito.push('modo sombra desligado');
   }
+  // ainda REGISTRADA → REJEITADA; se alguém já homologou → ANULADA (não conta em nada, fica no histórico)
   var errada = SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA).find(function (o) {
-    return SGO_UTILS.safeUpper(o.TIPO_CODIGO) === 'RH-02' && Conduta_soData_(o.DATA_FATO) === '2026-10-14' && SGO_UTILS.safeUpper(o.STATUS) === 'REGISTRADA';
+    return SGO_UTILS.safeUpper(o.TIPO_CODIGO) === 'RH-02' && Conduta_soData_(o.DATA_FATO) === '2026-10-14' &&
+      ['REGISTRADA', 'HOMOLOGADA', 'CONTESTADA', 'EM_RECURSO', 'FIRME'].indexOf(SGO_UTILS.safeUpper(o.STATUS)) >= 0;
   });
   if (errada) {
-    SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, errada.ID, {
-      STATUS: 'REJEITADA', JULGADA_EM: Conduta_hojeISO_(), JULGADA_POR: 'SISTEMA',
-      TEXTO_JULGAMENTO: 'Rejeitada a pedido da direção em 15/10/2026: lançamento incorreto.'
-    });
-    feito.push('ocorrência RH-02 de 14/10 rejeitada');
+    var registrada = SGO_UTILS.safeUpper(errada.STATUS) === 'REGISTRADA';
+    var camposErrada = { STATUS: registrada ? 'REJEITADA' : 'ANULADA', JULGADA_EM: Conduta_hojeISO_(), JULGADA_POR: 'SISTEMA',
+      TEXTO_JULGAMENTO: (registrada ? 'Rejeitada' : 'Anulada') + ' a pedido da direção em 15/10/2026: lançamento incorreto.' };
+    if (!registrada) camposErrada.ANULADA_EM = Conduta_hojeISO_();
+    SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, errada.ID, camposErrada);
+    feito.push('ocorrência RH-02 de 14/10 ' + (registrada ? 'rejeitada' : 'anulada'));
   }
   props.setProperty(CONDUTA_SANEAMENTO_20261015, '1');
   SGO_DATA.log('CONDUTA_SANEAMENTO_20261015', 'sistema', feito.join('; ') || 'nada a fazer', 'CONDUTA');

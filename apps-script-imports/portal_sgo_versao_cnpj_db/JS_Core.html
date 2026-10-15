@@ -4244,6 +4244,28 @@
       .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiPainelCiencia", payload: {} });
   }
 
+  /** Gestão: roda a rotina (saneamento, prazos e fechamento automático) na hora e mostra o resultado. */
+  function Conduta_aplicarRotinaAgora_(btn) {
+    btn.disabled = true; btn.textContent = "Aplicando… (pode levar até 1 minuto)";
+    google.script.run
+      .withSuccessHandler(function (r) {
+        var linhas = [];
+        if (Array.isArray(r && r.saneamento) && r.saneamento.length) linhas.push("Ajustes: " + r.saneamento.join("; ") + ".");
+        var f = (r && r.fechamentos) || {};
+        if (f.fechados && f.fechados.length) linhas.push("Meses fechados: " + f.fechados.join(", ") + ".");
+        if (f.aguardando && f.aguardando.length) linhas.push("Aguardando: " + f.aguardando.join("; ") + ".");
+        if (r && r.prazos && r.prazos.processadas) linhas.push(r.prazos.processadas + " prazo(s) vencido(s) aplicados.");
+        alert(linhas.length ? linhas.join(String.fromCharCode(10)) : "Nada pendente.");
+        if (typeof carregarFarolCondutaDashboard_ === "function") carregarFarolCondutaDashboard_();
+        Conduta_verificarAvisos_();
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false; btn.textContent = "Tentar de novo";
+        alert("A rotina falhou: " + ((err && err.message) || err));
+      })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiRodarRotinaAgora", payload: {} });
+  }
+
   /** Linhas extras do farol: o que ainda está em apuração no mês e o mês anterior. */
   function Conduta_extrasFarolHtml_(res, compacto) {
     if (!res) return "";
@@ -4263,6 +4285,9 @@
         (!a.fechado ? (a.pendencias ? " · " + a.pendencias + " pendência(s) de defesa" : a.prazoVencido ? " · o fechamento automático sai na próxima rotina (06h)" : " · fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento)) : "") + "</p>";
     }
     if (!compacto && Conduta_ehGestorFront_()) {
+      if (res.rotinaPendente) {
+        out += '<p class="farol-linha" style="margin-top:8px"><button type="button" class="btn-primary" style="padding:6px 12px;font-size:12.5px" onclick="event.stopPropagation();Conduta_aplicarRotinaAgora_(this)">Aplicar agora: fechamentos pendentes e ajustes do programa</button></p>';
+      }
       out += '<p class="farol-linha" style="margin-top:6px"><a href="#" onclick="event.stopPropagation();Conduta_abrirPainelCiencia_();return false;">Ver quem confirmou a leitura dos avisos</a></p>';
     }
     return out;

@@ -225,6 +225,7 @@ function Conduta_apiObterFarolAtual(sessionId) {
   var kSensibilidade = Number(parametros.K_SENSIBILIDADE) || 5.0;
   var icoVerdeMin = Number(parametros.ICO_VERDE_MIN) || 85.0;
 
+  var anteriorF = Conduta_resumoMesAnterior_(competencia);
   var limiteVerdeD = Math.round(((100 - icoVerdeMin) / kSensibilidade) * (apurado.n || 1));
   var titulo, linha;
 
@@ -252,6 +253,7 @@ function Conduta_apiObterFarolAtual(sessionId) {
     // 2026-10-15: o farol passou a mostrar o que ainda está em prazo de defesa
     // (vai contar quando ficar firme) e o resultado do mês anterior.
     emApuracao: Conduta_emApuracao_(competencia, apurado),
-    anterior: Conduta_resumoMesAnterior_(competencia)
+    anterior: anteriorF,
+    rotinaPendente: Conduta_rotinaPendente_(anteriorF)
   };
 }
