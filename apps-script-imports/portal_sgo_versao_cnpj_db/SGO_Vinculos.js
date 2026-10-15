@@ -18,7 +18,7 @@ const SGO_VINCULOS = (() => {
       if (!width || /^(BK_|SYS_LOGS)/.test(name) || name === AUDIT) return;
       const headers = sheet.getRange(1,1,1,width).getValues()[0].map(text);
       const core = Object.values(TABLES).includes(name) || name === 'AUVO_SYNC';
-      const fields = headers.filter(h => /^(ID|CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|STATUS|FINALIZADA|STATUS_PENDENCIA)$/.test(h));
+      const fields = headers.filter(h => /^(ID|CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|STATUS|FINALIZADA|STATUS_PENDENCIA|AUVO_TASK_ID)$/.test(h));
       if (!core && !fields.some(h => h !== 'ID' && h !== 'STATUS')) return;
       schema[name] = {sheetId:sheet.getSheetId(),headers:headers};
       tables[name] = [];
@@ -63,7 +63,7 @@ const SGO_VINCULOS = (() => {
   }
   function details(sessionId,type,id) {
     staff(sessionId,false);if(!TABLES[type])throw new Error('Tipo inválido.');
-    const snapshot=read(),row=get(snapshot,TABLES[type],id);if(!row)throw new Error('Cadastro não encontrado.');
+    const snapshot=read(),row=get(snapshot,TABLES[type],id);if(!row)throw new Error('Cadastro não encontrado: pode ter sido alterado por outra pessoa. Clique em Atualizar e selecione de novo.');
     const ids=new Set([text(id)]);
     if(type==='CLIENTE')base(snapshot,'CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===text(id)).forEach(u=>ids.add(text(u.ID)));
     if(type!=='EQUIPAMENTO')base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>ids.has(text(e.UNIDADE_ID))||text(e.CLIENTE_ID)===text(id)).forEach(e=>ids.add(text(e.ID)));
@@ -88,13 +88,13 @@ const SGO_VINCULOS = (() => {
   }
   function build(snapshot,input) {
     const spec={tipo:text(input.tipo),acao:text(input.acao),origem:text(input.origem),destino:text(input.destino),motivo:text(input.motivo)};
-    if(!TABLES[spec.tipo] || !['TRANSFERIR','DESVINCULAR','CONSOLIDAR','INATIVAR','REATIVAR','EXCLUIR'].includes(spec.acao)) throw new Error('Operação inválida.');
-    if(spec.motivo.length<8 || spec.motivo.length>1000) throw new Error('Informe o motivo (8 a 1000 caracteres).');
+    if(!TABLES[spec.tipo] || !['TRANSFERIR','DESVINCULAR','CONSOLIDAR','INATIVAR','REATIVAR','EXCLUIR'].includes(spec.acao)) throw new Error('Escolha o tipo (Cliente, Unidade ou Equipamento) e a ação antes de clicar em Conferir impacto.');
+    if(spec.motivo.length<8 || spec.motivo.length>1000) throw new Error('Escreva o motivo da mudança (de 8 a 1.000 caracteres). Ele fica registrado na auditoria.');
     const table=TABLES[spec.tipo],source=get(snapshot,table,spec.origem);
-    if(!source) throw new Error('Cadastro de origem não encontrado.');
-    if(['TRANSFERIR','CONSOLIDAR'].includes(spec.acao) && (!spec.destino || spec.destino===spec.origem)) throw new Error('Escolha um destino diferente.');
-    if(spec.acao==='TRANSFERIR' && spec.tipo==='CLIENTE') throw new Error('Para reunir clientes use Consolidar.');
-    if(spec.acao==='DESVINCULAR' && spec.tipo==='CLIENTE') throw new Error('Cliente não possui vínculo superior.');
+    if(!source) throw new Error('O cadastro de origem não foi encontrado: pode ter sido alterado por outra pessoa. Clique em Atualizar, escolha a origem de novo e confira.');
+    if(['TRANSFERIR','CONSOLIDAR'].includes(spec.acao) && (!spec.destino || spec.destino===spec.origem)) throw new Error('Escolha o destino: ele precisa ser diferente da origem.');
+    if(spec.acao==='TRANSFERIR' && spec.tipo==='CLIENTE') throw new Error('Cliente não se transfere. Para juntar dois clientes com o mesmo CNPJ, use Consolidar; para mudar uma unidade de cliente, escolha Tipo Unidade → Transferir.');
+    if(spec.acao==='DESVINCULAR' && spec.tipo==='CLIENTE') throw new Error('Cliente não tem vínculo para desfazer. Para tirar um cliente de uso, use Inativar.');
     const changes=[],blocks=[],warnings=[],historical={};
     function change(name,row,field,value) {
       if(!snapshot.schema[name] || !snapshot.schema[name].headers.includes(field)) throw new Error('Coluna não encontrada: '+name+'.'+field);
@@ -111,7 +111,7 @@ const SGO_VINCULOS = (() => {
       maps.filter(m=>text(m.ENTIDADE_TIPO)==='UNIDADE'&&text(m.ENTIDADE_ID)===text(u.ID)).forEach(m=>{
         const customer=text(m.AUVO_ID);
         const cm=maps.filter(x=>text(x.ENTIDADE_TIPO)==='CLIENTE'&&text(x.AUVO_ID)===customer);
-        if(cm.length!==1) blocks.push('Mapeamento Auvo de cliente ausente/ambíguo para '+customer+'.');
+        if(cm.length!==1) blocks.push('O vínculo deste cadastro com o Auvo (cliente Auvo nº '+customer+') está incompleto ou repetido no SGO+. Abra Integração Auvo, sincronize os clientes e volte aqui para conferir de novo. Se continuar, avise o administrador informando o nº '+customer+'.');
         cm.forEach(x=>change('AUVO_SYNC',x,'ENTIDADE_ID',clientId));
         // O mapeamento da unidade permanece, inclusive no estado pendente.
       });
@@ -119,9 +119,9 @@ const SGO_VINCULOS = (() => {
     let target=null;
     if(spec.acao==='TRANSFERIR') {
       const destTable=spec.tipo==='UNIDADE'?'CAD_CLIENTES':'CAD_UNIDADES';target=get(snapshot,destTable,spec.destino);
-      if(!active(target)) throw new Error('Destino precisa estar ativo.');
+      if(!active(target)) throw new Error('O destino escolhido está inativo. Escolha um destino ativo, ou reative-o antes (ação Reativar), e refaça.');
       if(spec.tipo==='UNIDADE') moveUnit(source,target.ID);
-      else {const client=get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID);if(!active(client))throw new Error('Unidade destino sem cliente ativo.');change(table,source,'UNIDADE_ID',target.ID);change(table,source,'CLIENTE_ID',target.CLIENTE_ID);}
+      else {const client=get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID);if(!active(client))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');change(table,source,'UNIDADE_ID',target.ID);change(table,source,'CLIENTE_ID',target.CLIENTE_ID);}
     }
     if(spec.acao==='DESVINCULAR') {
       if(spec.tipo==='UNIDADE') moveUnit(source,'');
@@ -129,19 +129,19 @@ const SGO_VINCULOS = (() => {
       warnings.push('O cadastro ficará com vínculo pendente. Novos atendimentos e emissões serão bloqueados até a vinculação.');
     }
     if(spec.acao==='CONSOLIDAR') {
-      target=get(snapshot,table,spec.destino);if(!active(target))throw new Error('Cadastro preservado precisa estar ativo.');
+      target=get(snapshot,table,spec.destino);if(!active(target))throw new Error('O cadastro de destino está inativo. Escolha um destino ativo, ou reative-o antes (ação Reativar), e refaça.');
       if(spec.tipo==='CLIENTE') {
-        if(!digits(source.CNPJ)||digits(source.CNPJ)!==digits(target.CNPJ))throw new Error('Consolidação de clientes exige o mesmo CNPJ. Filiais diferentes devem ser transferidas, não consolidadas.');
+        if(!digits(source.CNPJ)||digits(source.CNPJ)!==digits(target.CNPJ))throw new Error('Só dá para consolidar clientes com o mesmo CNPJ. Filiais (CNPJ diferente) são clientes separados: para levar uma unidade de um cliente para outro, use Tipo Unidade → Transferir.');
         base(snapshot,'CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===spec.origem).forEach(u=>moveUnit(u,target.ID));
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.CLIENTE_ID)===spec.origem).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.ID));
       } else if(spec.tipo==='UNIDADE') {
-        if(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE))throw new Error('Consolidação de unidades exige o mesmo CNPJ e conferência manual do local.');
-        if(!active(get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID)))throw new Error('Destino sem cliente ativo.');
+        if(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE))throw new Error('Só dá para consolidar unidades com o mesmo CNPJ (o mesmo local). Se for outro local, use Transferir. Se for o mesmo local e o CNPJ estiver errado, corrija o CNPJ (botão Abrir / editar cadastro) e refaça.');
+        if(!active(get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID)))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');
         moveUnit(source,target.CLIENTE_ID);
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===spec.origem).forEach(e=>{change('CAD_EQUIPAMENTOS',e,'UNIDADE_ID',target.ID);change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.CLIENTE_ID);});
       } else {
-        if(text(source.CLIENTE_ID)!==text(target.CLIENTE_ID)||text(source.TAG).toUpperCase()!==text(target.TAG).toUpperCase()||!text(source.TAG)||/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(source.TAG).toUpperCase()))throw new Error('Confira cliente e TAG real: os equipamentos precisam representar o mesmo cadastro.');
-        if(text(source.SERIE)&&text(target.SERIE)&&text(source.SERIE)!==text(target.SERIE))throw new Error('Números de série diferentes impedem consolidação.');
+        if(text(source.CLIENTE_ID)!==text(target.CLIENTE_ID)||text(source.TAG).toUpperCase()!==text(target.TAG).toUpperCase()||!text(source.TAG)||/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(source.TAG).toUpperCase()))throw new Error('Só dá para consolidar equipamentos do mesmo cliente e com a mesma TAG real (TAGs como S/N ou N/A não servem). Confira a TAG dos dois (botão Abrir / editar cadastro) e refaça.');
+        if(text(source.SERIE)&&text(target.SERIE)&&text(source.SERIE)!==text(target.SERIE))throw new Error('Os dois equipamentos têm números de série diferentes, então não são o mesmo equipamento. Se um número estiver errado, corrija (botão Abrir / editar cadastro) e refaça; se forem equipamentos diferentes, não consolide.');
       }
       base(snapshot,'AUVO_SYNC').filter(m=>text(m.ENTIDADE_TIPO)===spec.tipo&&text(m.ENTIDADE_ID)===spec.origem).forEach(m=>change('AUVO_SYNC',m,'ENTIDADE_ID',target.ID));
       change(table,source,'STATUS','INATIVO');
@@ -156,39 +156,48 @@ const SGO_VINCULOS = (() => {
       if(!matches.length)return;
       if(knownHistorical.includes(name)) {
         historical[name]=matches.length;
-        if(name==='NR13_LAUDOS'&&matches.some(r=>text(r.STATUS)==='RASCUNHO'||text(r.STATUS)==='PENDENTE'||text(r.STATUS_PENDENCIA)==='ABERTA'))blocks.push('Há laudos em andamento. Conclua ou cancele antes de mudar o vínculo.');
-        if(name==='AUVO_TAREFAS'&&matches.some(r=>text(r.FINALIZADA)!=='SIM'))blocks.push('Há tarefas Auvo relacionadas. Confira/conclua as tarefas antes da mudança.');
-      } else blocks.push('Há referências em '+name+' ('+matches.length+'). Resolva-as antes de alterar o vínculo.');
+        if(name==='NR13_LAUDOS'&&matches.some(r=>text(r.STATUS)==='RASCUNHO'||text(r.STATUS)==='PENDENTE'||text(r.STATUS_PENDENCIA)==='ABERTA'))blocks.push('Há laudo NR-13 em andamento ligado a este cadastro. Abra o módulo NR-13, conclua ou cancele o laudo e volte aqui para clicar em Conferir impacto de novo.');
+        // 2026-10-15: a maioria das tarefas nunca é finalizada no Auvo (160 de 224), então a trava antiga
+        // tornava o painel inutilizável. Só trava quando o CLIENTE do equipamento/unidade muda (aí a tarefa
+        // aberta ficaria apontando o cliente antigo); juntar/mover dentro do mesmo cliente vira aviso.
+        if(name==='AUVO_TAREFAS'){
+          const abertas=matches.filter(r=>text(r.FINALIZADA)!=='SIM');
+          const clienteMuda=changes.some(c=>c.field==='CLIENTE_ID'&&(c.table==='CAD_EQUIPAMENTOS'||c.table==='CAD_UNIDADES'));
+          const lista=abertas.map(r=>text(r.AUVO_TASK_ID)).filter(Boolean).slice(0,15).join(', ');
+          if(abertas.length&&clienteMuda)blocks.push('Há '+abertas.length+' tarefa(s) do Auvo em aberto ligadas a este cadastro'+(lista?' (nº '+lista+')':'')+'. Como o cliente vai mudar, finalize ou exclua essas tarefas no Auvo, sincronize e confira de novo.');
+          else if(abertas.length)warnings.push(abertas.length+' tarefa(s) do Auvo em aberto'+(lista?' (nº '+lista+')':'')+' continuam válidas: o cliente e os equipamentos não mudam de cadastro.');
+        }
+      } else blocks.push('Há '+matches.length+' registro(s) na tabela '+name+' ligados a este cadastro, e o painel não sabe ajustá-los sozinho. Nada foi alterado. Avise o administrador do sistema informando a tabela '+name+' e este cadastro; depois da revisão, refaça a operação.');
     });
     // Analisa estado projetado para evitar introduzir inconsistência ou colisão nova.
     const projected={};Object.keys(TABLES).forEach(type=>{const n=TABLES[type];projected[n]=base(snapshot,n).map(r=>Object.assign({},r));});
     changes.filter(c=>projected[c.table]).forEach(c=>{projected[c.table].find(r=>text(r.ID)===c.id)[c.field]=c.after;});
     if(spec.acao==='REATIVAR') {
       const state=diagnostic({tables:projected},spec.tipo,projected[table].find(r=>text(r.ID)===spec.origem));
-      if(state.code!=='REGULAR'&&state.code!=='SEM_UNIDADE')blocks.push('Antes de reativar: '+state.message);
-      if(spec.tipo==='CLIENTE'&&projected.CAD_CLIENTES.some(c=>active(c)&&text(c.ID)!==spec.origem&&digits(source.CNPJ)&&digits(c.CNPJ)===digits(source.CNPJ)))blocks.push('Já existe cliente ativo com este CNPJ. Confira os cadastros antes de reativar.');
+      if(state.code!=='REGULAR'&&state.code!=='SEM_UNIDADE')blocks.push('Ainda não dá para reativar: '+state.message+' Corrija esse ponto no cadastro (botão Abrir / editar cadastro), volte aqui e clique em Conferir impacto de novo.');
+      if(spec.tipo==='CLIENTE'&&projected.CAD_CLIENTES.some(c=>active(c)&&text(c.ID)!==spec.origem&&digits(source.CNPJ)&&digits(c.CNPJ)===digits(source.CNPJ)))blocks.push('Já existe outro cliente ativo com este CNPJ. Em vez de reativar, use Consolidar para juntar os dois cadastros no cliente que está ativo.');
     }
     const movedUnits=new Set(changes.filter(c=>c.table==='CAD_UNIDADES'&&c.field==='CLIENTE_ID').map(c=>c.id));
     projected.CAD_UNIDADES.filter(u=>active(u)&&movedUnits.has(text(u.ID))&&text(u.CLIENTE_ID)).forEach(u=>{
       const name=text(u.NOME_UNIDADE).toUpperCase();
-      if(name&&projected.CAD_UNIDADES.some(o=>active(o)&&text(o.ID)!==text(u.ID)&&text(o.CLIENTE_ID)===text(u.CLIENTE_ID)&&text(o.NOME_UNIDADE).toUpperCase()===name))blocks.push('Já existe unidade com este nome no cliente destino: '+text(u.NOME_UNIDADE)+'. Diferencie os locais antes de transferir.');
+      if(name&&projected.CAD_UNIDADES.some(o=>active(o)&&text(o.ID)!==text(u.ID)&&text(o.CLIENTE_ID)===text(u.CLIENTE_ID)&&text(o.NOME_UNIDADE).toUpperCase()===name))blocks.push('O cliente destino já tem uma unidade chamada "'+text(u.NOME_UNIDADE)+'". Se for o mesmo local, use Consolidar; se forem locais diferentes, edite o nome de uma delas (botão Abrir / editar cadastro, ex.: acrescente a cidade) e refaça a operação.');
     });
     const touched=new Set(changes.filter(c=>c.table==='CAD_EQUIPAMENTOS').map(c=>c.id));
     projected.CAD_EQUIPAMENTOS.filter(e=>active(e)&&touched.has(text(e.ID))&&text(e.CLIENTE_ID)).forEach(e=>{
       const u=projected.CAD_UNIDADES.find(u=>text(u.ID)===text(e.UNIDADE_ID));
-      if(!u||text(u.CLIENTE_ID)!==text(e.CLIENTE_ID))blocks.push('Equipamento '+text(e.TAG)+' possui unidade incompatível.');
-      if(text(e.TAG)&&!/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(e.TAG).toUpperCase())&&projected.CAD_EQUIPAMENTOS.some(o=>active(o)&&text(o.ID)!==text(e.ID)&&text(o.CLIENTE_ID)===text(e.CLIENTE_ID)&&text(o.TAG).toUpperCase()===text(e.TAG).toUpperCase()))blocks.push('TAG repetida no destino: '+text(e.TAG)+'. Resolva a duplicidade antes de transferir.');
+      if(!u||text(u.CLIENTE_ID)!==text(e.CLIENTE_ID))blocks.push('O equipamento '+text(e.TAG)+' ficaria numa unidade de outro cliente. Primeiro leve a unidade para o cliente certo (Tipo Unidade → Transferir) e depois refaça esta operação.');
+      if(text(e.TAG)&&!/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(e.TAG).toUpperCase())&&projected.CAD_EQUIPAMENTOS.some(o=>active(o)&&text(o.ID)!==text(e.ID)&&text(o.CLIENTE_ID)===text(e.CLIENTE_ID)&&text(o.TAG).toUpperCase()===text(e.TAG).toUpperCase()))blocks.push('O cliente destino já tem um equipamento com a TAG '+text(e.TAG)+'. Se for o mesmo equipamento, use Equipamento → Consolidar; se forem diferentes, edite a TAG de um deles (botão Abrir / editar cadastro) e refaça.');
     });
     if(spec.acao==='EXCLUIR') {
       const refs=[];Object.keys(snapshot.tables).forEach(n=>base(snapshot,n).forEach(r=>{
         if(n===table&&text(r.ID)===spec.origem)return;
         if(Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|ENTIDADE_ID)$/.test(k)&&text(r[k]).split(',').includes(spec.origem)))refs.push(n);
       }));
-      if(refs.length) blocks.push('Exclusão impedida por vínculos em '+[...new Set(refs)].join(', ')+'. Inative ou consolide.');
+      if(refs.length) blocks.push('Não dá para excluir: ainda há registros ligados a este cadastro em '+[...new Set(refs)].join(', ')+'. Para tirar de uso sem perder o histórico, use a ação Inativar; se for o mesmo cadastro de outro registro, use Consolidar.');
       changes.push({table:table,id:spec.origem,row:source._row,field:'__DELETE__',before:source,after:''});
     }
-    if(!changes.length)blocks.push('Nenhuma mudança necessária.');
-    if(changes.length>1000)blocks.push('Operação grande demais para uma confirmação. Divida em transferências menores.');
+    if(!changes.length)blocks.push('Nada a fazer: o cadastro já está assim. Confira se escolheu a origem e o destino certos.');
+    if(changes.length>1000)blocks.push('Esta operação mexeria em mais de 1.000 registros de uma vez. Divida: transfira as unidades uma por uma e depois os equipamentos que sobrarem.');
     return {spec:spec,source:label(source),target:target?label(target):'',changes:changes,blocks:[...new Set(blocks)],warnings:warnings,historical:historical};
   }
   function hash(value) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value))); }
@@ -205,16 +214,16 @@ const SGO_VINCULOS = (() => {
   }
   function confirm(sessionId,token) {
     const user=staff(sessionId,true),cached=CacheService.getScriptCache().get('vinc:'+text(token));
-    if(!cached)throw new Error('Prévia expirada. Faça uma nova conferência.');
-    const permit=JSON.parse(cached);if(permit.session!==sessionId||permit.user!==user.usuario)throw new Error('Prévia pertence a outra sessão.');
+    if(!cached)throw new Error('A prévia vale 10 minutos e expirou. Nada foi gravado. Clique em Conferir impacto de novo e confirme.');
+    const permit=JSON.parse(cached);if(permit.session!==sessionId||permit.user!==user.usuario)throw new Error('Esta prévia foi feita em outro login ou em outra aba. Nada foi gravado. Clique em Conferir impacto de novo nesta tela e confirme.');
     const lock=LockService.getScriptLock();lock.waitLock(30000);
     try {
       const db=SGO_DATA.getDB(),audit=db.getSheetByName(AUDIT);
       if(audit&&audit.getLastRow()>1&&audit.getRange(2,2,audit.getLastRow()-1,1).getValues().some(r=>text(r[0])===token))return {success:true,message:'Operação já aplicada. Atualize o painel.'};
-      const snapshot=read();if(hash(snapshot)!==permit.hash)throw new Error('Os cadastros ou vínculos mudaram desde a prévia. Atualize e confira novamente.');
+      const snapshot=read();if(hash(snapshot)!==permit.hash)throw new Error('Alguém alterou cadastros ou vínculos depois da sua prévia (ou a sincronização do Auvo rodou). Por segurança, nada foi gravado. Clique em Conferir impacto de novo e confirme a nova prévia.');
       const plan=build(snapshot,permit.spec);if(plan.blocks.length)throw new Error(plan.blocks.join(' '));
       const requests=[];let auditId;
-      if(audit){auditId=audit.getSheetId();const h=audit.getRange(1,1,1,AUDIT_HEADERS.length).getValues()[0];if(JSON.stringify(h)!==JSON.stringify(AUDIT_HEADERS))throw new Error('Estrutura de auditoria incompatível.');}
+      if(audit){auditId=audit.getSheetId();const h=audit.getRange(1,1,1,AUDIT_HEADERS.length).getValues()[0];if(JSON.stringify(h)!==JSON.stringify(AUDIT_HEADERS))throw new Error('A tabela de auditoria do painel está com a estrutura diferente da esperada, então nada foi gravado. Avise o administrador do sistema (tabela SYS_VINCULOS_AUDITORIA).');}
       else {auditId=Math.floor(Math.random()*1000000000)+100;requests.push({addSheet:{properties:{sheetId:auditId,title:AUDIT,gridProperties:{rowCount:Math.max(1000,plan.changes.length+10),columnCount:AUDIT_HEADERS.length,frozenRowCount:1}}}});requests.push({appendCells:{sheetId:auditId,rows:[{values:AUDIT_HEADERS.map(h=>({userEnteredValue:{stringValue:h}}))}],fields:'userEnteredValue'}});}
       plan.changes.filter(c=>c.field!=='__DELETE__').forEach(c=>requests.push({updateCells:{start:{sheetId:snapshot.schema[c.table].sheetId,rowIndex:c.row-1,columnIndex:snapshot.schema[c.table].headers.indexOf(c.field)},rows:[{values:[{userEnteredValue:cellValue(c.after)}]}],fields:'userEnteredValue'}}));
       plan.changes.filter(c=>c.field==='__DELETE__').sort((a,b)=>b.row-a.row).forEach(c=>requests.push({deleteDimension:{range:{sheetId:snapshot.schema[c.table].sheetId,dimension:'ROWS',startIndex:c.row-1,endIndex:c.row}}}));
