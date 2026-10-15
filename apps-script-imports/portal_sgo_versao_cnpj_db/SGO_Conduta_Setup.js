@@ -111,6 +111,16 @@ function Conduta_migrate_() {
   ['TIPO_ALVO','GRUPO_NOME','TEXTO_RECONHECIMENTO','DESTINATARIOS_JSON','VISIBILIDADE'].forEach(function(c){ CertCal_garantirColuna_(CONDUTA_SHEETS.EVENTO_POSITIVO,c); });
   ['TIPO','PERIODO_INICIO','PERIODO_FIM','VISIBILIDADE'].forEach(function(c){ CertCal_garantirColuna_(CONDUTA_SHEETS.RELATORIO,c); });
 
+  // 2026-10-15: observação do fechamento (ex.: fechamento automático, registro
+  // retroativo de setembro já pago) e o registro de ciência dos avisos —
+  // uma linha por (aviso, pessoa): quando viu, quantas vezes, se fechou sem
+  // confirmar e quando confirmou a leitura.
+  CertCal_garantirColuna_(CONDUTA_SHEETS.FECHAMENTO, 'OBSERVACAO');
+  CertCal_garantirTabela_(CONDUTA_CIENCIA_SHEET, [
+    'ID', 'AVISO_TIPO', 'REF_ID', 'COMPETENCIA', 'USUARIO_ID', 'PRIMEIRA_EXIBICAO_EM', 'ULTIMA_EXIBICAO_EM',
+    'QTD_EXIBICOES', 'FECHOU_SEM_CIENCIA_EM', 'QTD_FECHOU_SEM_CIENCIA', 'CIENTE_EM', 'CRIADO_EM'
+  ]);
+
   // CORREÇÃO 2026-09-24 — a lista ganhou COMPETENCIA e as colunas de prazo.
   // 'YYYY-MM' também é "parecido com data" pro Sheets: ele convertia
   // '2026-09' no dia 01/09/2026, a leitura devolvia '2026-09-01T00:00:00'

@@ -28,6 +28,10 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
 
   var data = String(payload.data || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Data da missão inválida (use AAAA-MM-DD).');
+  // 2026-10-15 (auditoria): sem data futura e sem lançar em mês já fechado
+  // (ficaria no relatório de missões mas fora do fechamento congelado).
+  if (data > Conduta_hojeISO_()) throw new Error('A data da missão não pode estar no futuro.');
+  Conduta_exigirCompetenciaAberta_(Conduta_competenciaDe_(data));
 
   var executante1Id = String(payload.executante1Id || '').trim();
   if (!executante1Id) throw new Error('Informe pelo menos 1 executante.');
@@ -36,6 +40,15 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
   if (executante2Id && executante2Id === executante1Id) {
     throw new Error('O 2º executante precisa ser uma pessoa diferente do 1º.');
   }
+
+  // 2026-10-15 (auditoria): a mesma missão (data + destino + executante) não pode
+  // ser lançada duas vezes — cada lançamento vale um incentivo.
+  var execs = [executante1Id, executante2Id].filter(Boolean);
+  var duplicada = SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).some(function (m) {
+    return Conduta_soData_(m.DATA) === data && SGO_UTILS.safeUpper(m.DESTINO) === SGO_UTILS.safeUpper(referencia.DESTINO) &&
+      execs.some(function (e) { return String(m.EXECUTANTE_1_ID) === e || String(m.EXECUTANTE_2_ID) === e; });
+  });
+  if (duplicada) throw new Error('Já existe missão lançada para este destino, nesta data, com este executante.');
 
   var parametros = Conduta_obterParametros_();
   var kmMinimo = Number(parametros.MISSAO_KM_MINIMO) || 200;

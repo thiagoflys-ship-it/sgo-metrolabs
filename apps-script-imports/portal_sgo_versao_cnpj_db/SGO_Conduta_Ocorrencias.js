@@ -31,6 +31,9 @@ function Conduta_apiDispatch(req) {
   req = req || {};
   Conduta_setup_(); // idempotente — garante schema+seed antes de qualquer chamada
   exigirSessao(String(req.sessionId || ''));
+  // 2026-10-15: garante a rotina diária (prazos + fechamento automático) e o
+  // saneamento único de 15/10 — leve: só lê propriedades na maioria das chamadas.
+  try { Conduta_garantirRotina_(); } catch (eRotina) { SGO_DATA.log('CONDUTA_ROTINA_FALHA', 'sistema', String(eRotina && eRotina.message || eRotina), 'CONDUTA'); }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 
@@ -83,6 +86,12 @@ function Conduta_apiDispatch(req) {
     ,apiListarRelatoriosGerenciais: Conduta_apiListarRelatoriosGerenciais
     ,apiObterRelatorioGerencial: Conduta_apiObterRelatorioGerencial
     ,apiAtivarRelatorioSemanalAutomatico: Conduta_apiAtivarRelatorioSemanalAutomatico
+    // 2026-10-15: avisos com registro de ciência, quem viu cada ocorrência,
+    // fechamento automático e rotina diária (SGO_Conduta_Ciencia.js)
+    ,apiObterAvisos: Conduta_apiObterAvisos
+    ,apiRegistrarCiencia: Conduta_apiRegistrarCiencia
+    ,apiPainelCiencia: Conduta_apiPainelCiencia
+    ,apiRodarRotinaAgora: Conduta_apiRodarRotinaAgora
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -223,7 +232,7 @@ function Conduta_apiListarDistancias(sessionId) {
 function Conduta_apiListarColegas(sessionId) {
   Conduta_exigirEquipe_(sessionId);
   return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS)
-    .filter(function (u) { return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE'; })
+    .filter(function (u) { return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && !Conduta_ehContaGenerica_(u); })
     .map(function (u) { return { ID: u.ID, NOME: u.NOME, SETOR: u.SETOR || u.DEPARTAMENTO || '' }; })
     .sort(function (a, b) { return String(a.NOME).localeCompare(String(b.NOME)); });
 }
@@ -272,12 +281,12 @@ function Conduta_ultimaFirmeMesmoTipo_(colaboradorId, tipoCodigo, antesDe) {
     return String(o.COLABORADOR_ID) === String(colaboradorId) &&
       SGO_UTILS.safeUpper(o.TIPO_CODIGO) === SGO_UTILS.safeUpper(tipoCodigo) &&
       SGO_UTILS.safeUpper(o.STATUS) === 'FIRME' &&
-      String(o.DATA_FATO) <= String(antesDe);
+      Conduta_soData_(o.DATA_FATO) <= Conduta_soData_(antesDe);
   });
   if (!candidatas.length) return null;
-  candidatas.sort(function (a, b) { return String(b.DATA_FATO).localeCompare(String(a.DATA_FATO)); });
+  candidatas.sort(function (a, b) { return Conduta_soData_(b.DATA_FATO).localeCompare(Conduta_soData_(a.DATA_FATO)); });
   var ultima = candidatas[0];
-  return { id: ultima.ID, dataFato: ultima.DATA_FATO };
+  return { id: ultima.ID, dataFato: Conduta_soData_(ultima.DATA_FATO) };
 }
 
 // ------------------------------------------------------------
@@ -332,9 +341,15 @@ function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
   var tipo = Conduta_buscarTipoOcorrencia_(payload.tipoCodigo);
   var colaboradorId = String(payload.colaboradorId || '').trim();
   if (!colaboradorId) throw new Error('Informe o colaborador envolvido.');
+  // 2026-10-15: as ocorrências de setembro foram lançadas na conta genérica
+  // "Administrador" — não é uma pessoa, não aparece no placar de ninguém.
+  var colaboradorUsuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, colaboradorId);
+  if (!colaboradorUsuario) throw new Error('Colaborador não encontrado.');
+  if (Conduta_ehContaGenerica_(colaboradorUsuario)) throw new Error('Escolha a pessoa envolvida: a conta "' + (colaboradorUsuario.NOME || colaboradorUsuario.USUARIO) + '" é uma conta do sistema, não um colaborador.');
 
   var dataFato = String(payload.dataFato || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataFato)) throw new Error('Data do fato inválida (use AAAA-MM-DD).');
+  if (dataFato > Conduta_hojeISO_()) throw new Error('A data do fato não pode estar no futuro.');
 
   Conduta_exigirCompetenciaAberta_(Conduta_competenciaDe_(dataFato));
 
@@ -455,6 +470,15 @@ function Conduta_apiHomologarOcorrencia(sessionId, payload) {
   if (String(oc.FISCAL_ID) === String(sessao.userId)) {
     throw new Error('Você é o fiscal que registrou esta ocorrência — peça a outro Gestor/Administrador/Diretoria para homologar.');
   }
+  // 2026-10-15: ninguém homologa (nem rejeita) a ocorrência em que é o próprio
+  // colaborador envolvido — em setembro a conta "Administrador" homologou as
+  // ocorrências lançadas em nome dela mesma.
+  if (String(oc.COLABORADOR_ID) === String(sessao.userId)) {
+    throw new Error('Você é o colaborador envolvido nesta ocorrência — peça a outro Gestor/Administrador/Diretoria para decidir.');
+  }
+  // 2026-10-15: competência já fechada não recebe ocorrência nova — senão ela
+  // ficaria fora do mês do fato (congelado) e também do mês atual.
+  if (SGO_UTILS.safeUpper(payload.decisao) === 'APROVAR') Conduta_exigirCompetenciaAberta_(Conduta_soComp_(oc.COMPETENCIA || oc.DATA_FATO));
 
   var decisao = SGO_UTILS.safeUpper(payload.decisao);
   if (decisao !== 'APROVAR' && decisao !== 'REJEITAR') throw new Error('Decisão inválida (use APROVAR ou REJEITAR).');
@@ -462,6 +486,7 @@ function Conduta_apiHomologarOcorrencia(sessionId, payload) {
   if (decisao === 'REJEITAR') {
     SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
       STATUS: 'REJEITADA',
+      JULGADA_EM: Conduta_hojeISO_(),
       JULGADA_POR: sessao.userId,
       TEXTO_JULGAMENTO: String(payload.justificativa || '')
     });
@@ -524,6 +549,10 @@ function Conduta_apiJulgarOcorrencia(sessionId, payload) {
   if (String(oc.FISCAL_ID) === String(sessao.userId)) {
     throw new Error('Você é o fiscal que registrou esta ocorrência — peça a outro Gestor/Administrador/Diretoria para julgar.');
   }
+  // 2026-10-15 (auditoria): quem é o colaborador envolvido não julga a própria contestação/recurso.
+  if (String(oc.COLABORADOR_ID) === String(sessao.userId)) {
+    throw new Error('Você é o colaborador envolvido nesta ocorrência — peça a outro Gestor/Administrador/Diretoria para julgar.');
+  }
 
   var decisao = SGO_UTILS.safeUpper(payload.decisao);
   if (decisao !== 'ANULAR' && decisao !== 'MANTER') throw new Error('Decisão inválida (use ANULAR ou MANTER).');
@@ -548,7 +577,9 @@ function Conduta_apiJulgarOcorrencia(sessionId, payload) {
     JULGADA_EM: Conduta_hojeISO_(),
     JULGADA_POR: sessao.userId,
     TEXTO_JULGAMENTO: String(payload.textoJulgamento || ''),
-    PRAZO_RECURSO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoRecursoDias)
+    // 2026-10-15 (auditoria): recurso já julgado não abre novo prazo de recurso —
+    // antes o ciclo FIRME → recurso → FIRME era infinito e travava o fechamento do mês.
+    PRAZO_RECURSO: statusAtual === 'EM_RECURSO' ? Conduta_hojeISO_() : Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoRecursoDias)
   });
   return { success: true };
 }
@@ -566,6 +597,7 @@ function Conduta_apiRecorrerOcorrencia(sessionId, payload) {
     throw new Error('Só o colaborador envolvido (ou um Gestor/Administrador em nome dele) pode recorrer.');
   }
   if (SGO_UTILS.safeUpper(oc.STATUS) !== 'FIRME') throw new Error('Só é possível recorrer de uma ocorrência FIRME (ainda dentro do prazo de recurso).');
+  if (Conduta_soData_(oc.RECURSO_EM)) throw new Error('O recurso desta ocorrência já foi julgado — não cabe novo recurso.');
   if (oc.PRAZO_RECURSO && Conduta_soData_(oc.PRAZO_RECURSO) < Conduta_hojeISO_()) throw new Error('Prazo de recurso já venceu.');
 
   var texto = String(payload.texto || '').trim();
@@ -600,6 +632,8 @@ function Conduta_apiRegistrarEventoPositivo(sessionId, payload) {
 
   var dataFato = String(payload.dataFato || '').trim() || Conduta_hojeISO_();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataFato)) throw new Error('Data do fato inválida (use AAAA-MM-DD).');
+  if (dataFato > Conduta_hojeISO_()) throw new Error('A data do fato não pode estar no futuro.');
+  Conduta_exigirCompetenciaAberta_(Conduta_competenciaDe_(dataFato));
 
   var registro = SGO_DATA.insert(CONDUTA_SHEETS.EVENTO_POSITIVO, {
     TIPO_CODIGO: tipo.CODIGO,
@@ -720,7 +754,8 @@ function Conduta_apiProcessarPrazosVencidosAgora(sessionId) {
 function Conduta_apiAtivarChecagemDiariaPrazos(sessionId) {
   Conduta_exigirGestor_(sessionId);
   Conduta_apiDesativarChecagemDiariaPrazos(sessionId);
-  ScriptApp.newTrigger('Conduta_processarPrazosVencidos_')
+  // 2026-10-15: a rotina diária faz prazos + fechamento automático
+  ScriptApp.newTrigger('Conduta_rotinaDiaria_')
     .timeBased()
     .everyDays(1)
     .atHour(6)
@@ -731,7 +766,8 @@ function Conduta_apiAtivarChecagemDiariaPrazos(sessionId) {
 function Conduta_apiDesativarChecagemDiariaPrazos(sessionId) {
   Conduta_exigirGestor_(sessionId);
   ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'Conduta_processarPrazosVencidos_') ScriptApp.deleteTrigger(t);
+    var h = t.getHandlerFunction();
+    if (h === 'Conduta_processarPrazosVencidos_' || h === 'Conduta_rotinaDiaria_') ScriptApp.deleteTrigger(t);
   });
   return { success: true };
 }
@@ -739,7 +775,8 @@ function Conduta_apiDesativarChecagemDiariaPrazos(sessionId) {
 function Conduta_apiStatusChecagemDiariaPrazos(sessionId) {
   Conduta_exigirGestor_(sessionId);
   var ativo = ScriptApp.getProjectTriggers().some(function (t) {
-    return t.getHandlerFunction() === 'Conduta_processarPrazosVencidos_';
+    var h = t.getHandlerFunction();
+    return h === 'Conduta_processarPrazosVencidos_' || h === 'Conduta_rotinaDiaria_';
   });
   return { ativo: ativo };
 }

@@ -39,11 +39,16 @@ function Conduta_apiRegistrarAusencia(sessionId, payload) {
 }
 
 function Conduta_apiListarAusencias(sessionId, payload) {
-  Conduta_exigirEquipe_(sessionId);
+  var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
+  // 2026-10-15 (auditoria): férias/afastamentos de todos ficam com a gestão; cada um vê os próprios.
+  var gestor = isAdminSession(sessionId);
   return SGO_DATA.getAll(CONDUTA_SHEETS.AUSENCIA).filter(function (a) {
+    if (!gestor && String(a.COLABORADOR_ID) !== String(sessao.userId)) return false;
     if (payload.colaboradorId && String(a.COLABORADOR_ID) !== String(payload.colaboradorId)) return false;
     return true;
+  }).map(function (a) {
+    a.DATA_INICIO = Conduta_soData_(a.DATA_INICIO); a.DATA_FIM = Conduta_soData_(a.DATA_FIM); return a;
   }).sort(function (a, b) { return String(b.DATA_INICIO).localeCompare(String(a.DATA_INICIO)); });
 }
 
@@ -65,6 +70,6 @@ function Conduta_colaboradorAusenteNaCompetencia_(colaboradorId, competencia) {
   var fimMes = competencia + '-31'; // comparação lexicográfica de string ISO, seguro mesmo em meses curtos
   return SGO_DATA.getAll(CONDUTA_SHEETS.AUSENCIA).some(function (a) {
     if (String(a.COLABORADOR_ID) !== String(colaboradorId)) return false;
-    return String(a.DATA_INICIO) <= fimMes && String(a.DATA_FIM) >= inicioMes;
+    return Conduta_soData_(a.DATA_INICIO) <= fimMes && Conduta_soData_(a.DATA_FIM) >= inicioMes;
   });
 }

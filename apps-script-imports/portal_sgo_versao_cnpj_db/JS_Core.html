@@ -259,6 +259,7 @@
           verificarRedirecionamentoQR_();
           carregarBadgesMenu_();
           verificarAvisosLogin_();
+          Conduta_iniciarAvisos_();
         } else {
           limparSessaoFront_();
         }
@@ -324,6 +325,7 @@
         verificarRedirecionamentoQR_();
         carregarBadgesMenu_();
         verificarAvisosLogin_();
+        Conduta_iniciarAvisos_();
       })
       .withFailureHandler(function (err) {
         LOGIN_EM_ANDAMENTO = false;
@@ -1031,7 +1033,7 @@
       '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + corFarol + '"/>';
 
     return '<svg viewBox="0 0 200 148" width="100%" style="display:block">' + zonas + ponteiro +
-      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="26" font-size="28" font-weight="800" fill="var(--text-strong)" style="font-variant-numeric:tabular-nums">' + Math.round(icoClamp) + '</text>' +
+      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="26" font-size="28" font-weight="800" fill="var(--text-strong)" style="font-variant-numeric:tabular-nums">' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '</text>' +
       '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="40" font-size="9.5" font-weight="700" letter-spacing="1" fill="var(--muted)">ICO</text>' +
       '</svg>';
   }
@@ -1046,6 +1048,7 @@
         '<h3 class="farol-titulo">' + escapeHtml_(res.titulo) + '</h3>' +
         '<p class="farol-linha">' + escapeHtml_(res.linha) + '</p>' +
         (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Modo sombra ativo: apura, mas ainda não paga.</p>' : '') +
+        Conduta_extrasFarolHtml_(res) +
         '<div class="farol-legenda">' +
           '<span><i style="background:var(--danger)"></i>&lt; 70 vermelho</span>' +
           '<span><i style="background:var(--warning)"></i>70–84,9 amarelo</span>' +
@@ -2414,7 +2417,7 @@
           el.style.borderLeftColor = corVar;
           el.innerHTML = '<div class="farol-mini-linha">' +
             '<div class="farol-gauge-mini">' + Conduta_montarGaugeSvg_(res.ico, res.farol) + '</div>' +
-            '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + '</div>' +
+            '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + Conduta_extrasFarolHtml_(res, true) + '</div>' +
           '</div>';
         })
         .withFailureHandler(function (err) {
@@ -2621,7 +2624,7 @@
       el.style.borderLeftColor = corVar;
       el.innerHTML = '<div class="farol-mini-linha">' +
         '<div class="farol-gauge-mini">' + Conduta_montarGaugeSvg_(res.ico, res.farol) + '</div>' +
-        '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + '</div>' +
+        '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + Conduta_extrasFarolHtml_(res, true) + '</div>' +
       '</div>';
     }, function (err) {
       console.error("Conduta apiObterFarolAtual falhou:", err);
@@ -4078,6 +4081,191 @@
   function Avisos_fecharModal_() {
     const overlay = document.getElementById("avisosLoginOverlay");
     if (overlay) overlay.style.display = "none";
+  }
+
+  // ------------------------------------------------------------
+  // CONDUTA — AVISOS PARA A EQUIPE COM CIÊNCIA REGISTRADA (2026-10-15)
+  // Cada ocorrência homologada e cada fechamento mensal aparecem para toda a
+  // equipe até a pessoa confirmar a leitura. O servidor registra quando o aviso
+  // foi mostrado, quantas vezes, quem fechou sem confirmar e quando confirmou.
+  // Backend: Conduta_apiObterAvisos / apiRegistrarCiencia / apiPainelCiencia
+  // (SGO_Conduta_Ciencia.js). Volta a checar a cada 30 min enquanto logado.
+  // ------------------------------------------------------------
+  var CONDUTA_AVISOS_PENDENTES = [];
+  var CONDUTA_AVISOS_TIMER = null;
+
+  function Conduta_ehGestorFront_() {
+    var p = USER_CONTEXT && USER_CONTEXT.perfil;
+    return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA";
+  }
+
+  function Conduta_iniciarAvisos_() {
+    Conduta_verificarAvisos_();
+    if (!CONDUTA_AVISOS_TIMER) CONDUTA_AVISOS_TIMER = setInterval(Conduta_verificarAvisos_, 30 * 60 * 1000);
+  }
+
+  function Conduta_verificarAvisos_() {
+    if (!SESSION || (USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE")) return;
+    var aberto = document.getElementById("condutaAvisosOverlay");
+    if (aberto && aberto.style.display === "flex") return;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok || !res.avisos || !res.avisos.length) return;
+        CONDUTA_AVISOS_PENDENTES = res.avisos;
+        Conduta_renderAvisos_();
+      })
+      .withFailureHandler(function (err) { console.error("Conduta avisos:", err); })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterAvisos", payload: {} });
+  }
+
+  function Conduta_renderAvisos_() {
+    var overlay = document.getElementById("condutaAvisosOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "condutaAvisosOverlay";
+      overlay.className = "avisos-login-overlay";
+      document.body.appendChild(overlay);
+    }
+    var itens = CONDUTA_AVISOS_PENDENTES.map(function (a, i) {
+      return '<div class="avisos-item ' + (a.tipo === "FECHAMENTO" ? "avisos-item-elogio" : "avisos-item-cobranca") + '" style="display:block" data-i="' + i + '">' +
+        '<div style="font-weight:800;margin-bottom:6px">' + (a.minha ? "⚠️ " : "") + escapeHtml_(a.titulo) + '</div>' +
+        (a.linhas || []).map(function (l) { return '<div style="margin:2px 0">' + escapeHtml_(l) + '</div>'; }).join("") +
+        '<div style="margin-top:8px;text-align:right"><button type="button" class="btn-primary" style="padding:6px 12px;font-size:12.5px" onclick="Conduta_cienteAviso_(' + i + ', this)">Li e estou ciente</button></div>' +
+      '</div>';
+    }).join("");
+    overlay.innerHTML =
+      '<div class="avisos-login-modal" style="max-width:560px">' +
+        '<div class="avisos-login-header"><h3>Programa de Conduta — avisos para a equipe</h3>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:4px">Leia cada aviso e confirme. O sistema registra quando o aviso apareceu para você, se foi fechado sem confirmação e quando você confirmou a leitura.</div></div>' +
+        '<div class="avisos-login-body" id="condutaAvisosCorpo">' + itens + '</div>' +
+        '<div class="avisos-login-footer" style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">' +
+          '<button type="button" class="btn-secondary" onclick="Conduta_fecharAvisosSemCiencia_()">Fechar sem confirmar</button>' +
+          '<button type="button" class="btn-primary" id="condutaAvisosTodos" disabled title="Role até o fim para liberar" onclick="Conduta_cienteTodos_()">Li todos e estou ciente</button>' +
+        '</div>' +
+      '</div>';
+    overlay.style.display = "flex";
+    var corpo = document.getElementById("condutaAvisosCorpo"), btn = document.getElementById("condutaAvisosTodos");
+    var liberar = function () { if (corpo.scrollTop + corpo.clientHeight >= corpo.scrollHeight - 8) { btn.disabled = false; btn.title = ""; } };
+    corpo.addEventListener("scroll", liberar);
+    setTimeout(liberar, 300);
+  }
+
+  function Conduta_registrarCiencia_(itens, acao, ok) {
+    google.script.run
+      .withSuccessHandler(function (res) { if (ok) ok(res); })
+      .withFailureHandler(function (err) {
+        console.error("Conduta ciência:", err);
+        if (acao === "CIENTE") alert("Não foi possível registrar a confirmação. Tente de novo.");
+      })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiRegistrarCiencia", payload: { acao: acao, itens: itens } });
+  }
+
+  function Conduta_itemCiencia_(a) { return { tipo: a.tipo, ref: a.ref, competencia: a.competencia }; }
+
+  function Conduta_cienteAviso_(i, btn) {
+    var a = CONDUTA_AVISOS_PENDENTES[i];
+    if (!a) return;
+    btn.disabled = true; btn.textContent = "Registrando…";
+    Conduta_registrarCiencia_([Conduta_itemCiencia_(a)], "CIENTE", function () {
+      CONDUTA_AVISOS_PENDENTES[i] = null;
+      var el = btn.closest(".avisos-item");
+      if (el) el.remove();
+      if (!CONDUTA_AVISOS_PENDENTES.some(Boolean)) Conduta_fecharAvisosOverlay_();
+    });
+  }
+
+  function Conduta_cienteTodos_() {
+    var itens = CONDUTA_AVISOS_PENDENTES.filter(Boolean).map(Conduta_itemCiencia_);
+    if (!itens.length) { Conduta_fecharAvisosOverlay_(); return; }
+    var btn = document.getElementById("condutaAvisosTodos");
+    if (btn) { btn.disabled = true; btn.textContent = "Registrando…"; }
+    Conduta_registrarCiencia_(itens, "CIENTE", function () { CONDUTA_AVISOS_PENDENTES = []; Conduta_fecharAvisosOverlay_(); });
+  }
+
+  function Conduta_fecharAvisosSemCiencia_() {
+    var itens = CONDUTA_AVISOS_PENDENTES.filter(Boolean).map(Conduta_itemCiencia_);
+    if (itens.length) Conduta_registrarCiencia_(itens, "FECHOU");
+    Conduta_fecharAvisosOverlay_();
+  }
+
+  function Conduta_fecharAvisosOverlay_() {
+    var overlay = document.getElementById("condutaAvisosOverlay");
+    if (overlay) overlay.style.display = "none";
+  }
+
+  function Conduta_dataHoraBr_(v) {
+    var s = String(v || "");
+    if (!s) return "";
+    var d = /Z$|[+-]\d\d:\d\d$/.test(s) ? new Date(s) : null;
+    if (d && !isNaN(d.getTime())) {
+      var p = function (n) { return String(n).padStart(2, "0"); };
+      return p(d.getDate()) + "/" + p(d.getMonth() + 1) + "/" + d.getFullYear() + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    }
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    return m ? m[3] + "/" + m[2] + "/" + m[1] + (m[4] ? " " + m[4] + ":" + m[5] : "") : s;
+  }
+
+  /** Gestão: quem confirmou, quem viu e fechou sem confirmar e quem nunca viu cada aviso. */
+  function Conduta_abrirPainelCiencia_() {
+    var overlay = document.getElementById("condutaCienciaOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "condutaCienciaOverlay";
+      overlay.className = "avisos-login-overlay";
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = '<div class="avisos-login-modal" style="max-width:760px"><div class="avisos-login-header"><h3>Quem viu os avisos do Conduta</h3></div><div class="avisos-login-body">Carregando…</div></div>';
+    overlay.style.display = "flex";
+    google.script.run
+      .withSuccessHandler(function (res) {
+        var avisos = (res && res.avisos) || [];
+        var rotulo = { CIENTE: "Confirmou", VIU_SEM_CONFIRMAR: "Viu e não confirmou", NUNCA_VIU: "Ainda não viu" };
+        var cor = { CIENTE: "var(--success)", VIU_SEM_CONFIRMAR: "var(--warning)", NUNCA_VIU: "var(--danger)" };
+        var corpo = avisos.length ? avisos.map(function (a) {
+          return '<details style="margin-bottom:10px;border:1px solid var(--border-color,#333);border-radius:8px;padding:8px 10px">' +
+            '<summary style="cursor:pointer;font-weight:700">' + escapeHtml_(a.titulo) + ' <span style="color:var(--muted);font-weight:400">· ' + escapeHtml_(a.data) + ' · ' + a.cientes + ' de ' + a.total + ' confirmaram</span></summary>' +
+            '<table style="width:100%;margin-top:8px;font-size:12.5px;border-collapse:collapse">' +
+              '<tr style="text-align:left;color:var(--muted)"><th>Pessoa</th><th>Situação</th><th>Detalhe</th></tr>' +
+              a.pessoas.map(function (p) {
+                var det = p.situacao === "CIENTE" ? "em " + Conduta_dataHoraBr_(p.cienteEm)
+                  : p.situacao === "VIU_SEM_CONFIRMAR" ? "apareceu " + p.exibicoes + " vez(es), a última em " + Conduta_dataHoraBr_(p.ultimaVez) + (p.fechouSemConfirmar ? "; fechou sem confirmar " + p.fechouSemConfirmar + " vez(es)" : "")
+                  : "ainda não entrou no sistema desde o aviso";
+                return '<tr><td style="padding:3px 0">' + escapeHtml_(p.nome) + '</td><td style="color:' + cor[p.situacao] + ';font-weight:700">' + rotulo[p.situacao] + '</td><td>' + escapeHtml_(det) + '</td></tr>';
+              }).join("") +
+            '</table></details>';
+        }).join("") : '<p>Nenhum aviso nos últimos 60 dias.</p>';
+        overlay.innerHTML = '<div class="avisos-login-modal" style="max-width:760px"><div class="avisos-login-header"><h3>Quem viu os avisos do Conduta</h3></div>' +
+          '<div class="avisos-login-body">' + corpo + '</div>' +
+          '<div class="avisos-login-footer"><button type="button" class="btn-secondary" onclick="document.getElementById(\'condutaCienciaOverlay\').style.display=\'none\'">Fechar</button></div></div>';
+      })
+      .withFailureHandler(function (err) {
+        overlay.querySelector(".avisos-login-body").textContent = "Não foi possível carregar: " + ((err && err.message) || err);
+      })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiPainelCiencia", payload: {} });
+  }
+
+  /** Linhas extras do farol: o que ainda está em apuração no mês e o mês anterior. */
+  function Conduta_extrasFarolHtml_(res, compacto) {
+    if (!res) return "";
+    var num = function (v) { var n = Number(v); return isFinite(n) ? String(n).replace(".", ",") : "—"; };
+    var out = "";
+    var e = res.emApuracao;
+    if (e && (e.emDefesa || e.registradas)) {
+      out += '<p class="farol-linha" style="margin-top:6px">' +
+        (e.emDefesa ? e.emDefesa + " ocorrência(s) em prazo de defesa (" + e.pontosEmDefesa + " ponto(s)) — se ficarem firmes, o ICO vai a " + num(e.icoPrevisto) + " (" + escapeHtml_(e.farolPrevisto) + ")." : "") +
+        (e.registradas ? " " + e.registradas + " aguardando homologação." : "") + "</p>";
+    }
+    var a = res.anterior;
+    if (a) {
+      out += '<p class="farol-linha" style="margin-top:6px">' + escapeHtml_(a.nome.charAt(0).toUpperCase() + a.nome.slice(1)) + ": " +
+        (a.fechado ? "fechado" + (a.automatico ? " automaticamente" : "") : "ainda não fechado") +
+        " · ICO " + num(a.ico) + " · demérito " + a.D + " · farol " + escapeHtml_(a.farol) +
+        (!a.fechado ? (a.pendencias ? " · " + a.pendencias + " pendência(s) de defesa" : a.prazoVencido ? " · o fechamento automático sai na próxima rotina (06h)" : " · fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento)) : "") + "</p>";
+    }
+    if (!compacto && Conduta_ehGestorFront_()) {
+      out += '<p class="farol-linha" style="margin-top:6px"><a href="#" onclick="event.stopPropagation();Conduta_abrirPainelCiencia_();return false;">Ver quem confirmou a leitura dos avisos</a></p>';
+    }
+    return out;
   }
 
   function lerPreferenciaSomOciosidade_() {

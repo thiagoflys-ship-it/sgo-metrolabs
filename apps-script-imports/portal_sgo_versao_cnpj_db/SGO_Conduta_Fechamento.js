@@ -16,8 +16,16 @@
 function Conduta_apiFecharCompetencia(sessionId, payload) {
   var sessao = Conduta_exigirGestor_(sessionId);
   payload = payload || {};
-  var competencia = Conduta_validarCompetencia_(payload.competencia);
+  return Conduta_fecharCompetencia_(Conduta_validarCompetencia_(payload.competencia), sessao.userId, sessao.usuario, '');
+}
+
+/**
+ * Fechamento (manual pelo gestor ou automático pela rotina diária — 2026-10-15).
+ * quemId: CAD_USUARIOS.ID de quem fechou, ou 'SISTEMA' no automático.
+ */
+function Conduta_fecharCompetencia_(competencia, quemId, quemNome, observacao) {
   if (competencia >= Conduta_competenciaDe_(Conduta_hojeISO_())) throw new Error('Aguarde o término do mês para congelar a competência.');
+  var sessao = { userId: quemId, usuario: quemNome || quemId };
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
@@ -47,7 +55,7 @@ function Conduta_apiFecharCompetencia(sessionId, payload) {
       D: resultado.D, N: resultado.n, ICO: resultado.ico, FAROL: resultado.farol,
       TEM_GG: resultado.temGG, SOMBRA: resultado.sombra, CONGELADO: true,
       RESULTADO_JSON: JSON.stringify(resultado.porColaborador),
-      FECHADO_EM: Conduta_hojeISO_(), FECHADO_POR: sessao.userId
+      FECHADO_EM: Conduta_hojeISO_(), FECHADO_POR: sessao.userId, OBSERVACAO: observacao || ''
     });
     registro = SGO_DATA.getById(CONDUTA_SHEETS.FECHAMENTO, existente.ID);
   } else {
@@ -55,9 +63,11 @@ function Conduta_apiFecharCompetencia(sessionId, payload) {
       COMPETENCIA: competencia, D: resultado.D, N: resultado.n, ICO: resultado.ico,
       FAROL: resultado.farol, TEM_GG: resultado.temGG, SOMBRA: resultado.sombra,
       CONGELADO: true, RESULTADO_JSON: JSON.stringify(resultado.porColaborador),
-      FECHADO_EM: Conduta_hojeISO_(), FECHADO_POR: sessao.userId
+      FECHADO_EM: Conduta_hojeISO_(), FECHADO_POR: sessao.userId, OBSERVACAO: observacao || ''
     });
   }
+  // 2026-10-15: toda a equipe recebe o aviso do resultado do mês (com ciência registrada)
+  try { Conduta_avisarFechamento_(competencia, resultado); } catch (eAviso) { SGO_DATA.log('CONDUTA_AVISO_FALHA', sessao.usuario, String(eAviso && eAviso.message || eAviso), 'CONDUTA'); }
 
   // Geração do relatório narrado não pode travar o fechamento (que é o
   // resultado financeiro crítico e já está persistido/congelado nesse
@@ -91,6 +101,8 @@ function Conduta_pendenciasCompetencia_(competencia) {
 function Conduta_apiPreviaFechamento(sessionId, payload) {
   Conduta_exigirGestor_(sessionId);
   var competencia = Conduta_validarCompetencia_((payload || {}).competencia);
+  // 2026-10-15 (auditoria): a prévia aplica os prazos vencidos, igual ao fechamento real.
+  Conduta_processarPrazosVencidos_();
   var apurado = Conduta_apurarCompetencia_(competencia);
   var pendencias = Conduta_pendenciasCompetencia_(competencia);
   var fechamento = SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO).find(function (f) {
@@ -116,11 +128,15 @@ function Conduta_apurarCompetencia_(competencia) {
   var icoAmareloMin = Number(parametros.ICO_AMARELO_MIN) || 70.0;
   var valorBonus = Number(parametros.VALOR_BONUS_COLETIVO) || 300.0;
   var valorIncentivo = Number(parametros.VALOR_INCENTIVO_MISSAO) || 300.0;
-  var modoSombraAte = String(parametros.MODO_SOMBRA_ATE || '');
-  var sombra = !!modoSombraAte && competencia <= modoSombraAte.substring(0, 7);
+  // 2026-10-15: normaliza o parâmetro (pode voltar como data completa
+  // 'AAAA-MM-DDTHH:mm:ss' ou texto 'AAAA-MM'); vazio = programa valendo.
+  var modoSombraAte = Conduta_soComp_(parametros.MODO_SOMBRA_ATE);
+  var sombra = !!modoSombraAte && competencia <= modoSombraAte;
 
+  // 2026-10-15 (auditoria): a conta do sistema ("Administrador") não é uma
+  // pessoa — não entra no divisor n nem recebe linha de bônus.
   var colaboradores = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
-    return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE';
+    return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && !Conduta_ehContaGenerica_(u);
   });
 
   var ausentes = colaboradores.filter(function (c) { return Conduta_colaboradorAusenteNaCompetencia_(c.ID, competencia); });
@@ -168,16 +184,20 @@ function Conduta_apurarCompetencia_(competencia) {
 }
 
 function Conduta_apiObterFechamento(sessionId, payload) {
-  Conduta_exigirEquipe_(sessionId);
+  var sessaoF = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
+  // 2026-10-15 (auditoria): o resultado individual de todos fica com a gestão;
+  // cada pessoa da equipe vê só a própria linha.
+  var gestorF = isAdminSession(sessionId);
   var fechamento = SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO)
     .find(function (f) { return Conduta_soComp_(f.COMPETENCIA) === Conduta_soComp_(payload.competencia); });
   if (!fechamento) return null;
   return {
-    competencia: fechamento.COMPETENCIA, D: fechamento.D, n: fechamento.N, ico: fechamento.ICO,
+    competencia: Conduta_soComp_(fechamento.COMPETENCIA), D: fechamento.D, n: fechamento.N, ico: fechamento.ICO,
     farol: fechamento.FAROL, temGG: fechamento.TEM_GG, sombra: fechamento.SOMBRA,
-    congelado: fechamento.CONGELADO, fechadoEm: fechamento.FECHADO_EM,
-    porColaborador: JSON.parse(fechamento.RESULTADO_JSON || '[]')
+    congelado: fechamento.CONGELADO, fechadoEm: Conduta_soData_(fechamento.FECHADO_EM),
+    fechadoPor: fechamento.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático' : fechamento.FECHADO_POR, observacao: fechamento.OBSERVACAO || '',
+    porColaborador: JSON.parse(fechamento.RESULTADO_JSON || '[]').filter(function (l) { return gestorF || String(l.colaboradorId) === String(sessaoF.userId); })
   };
 }
 
@@ -185,7 +205,8 @@ function Conduta_apiListarFechamentos(sessionId) {
   Conduta_exigirEquipe_(sessionId);
   return SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO)
     .map(function (f) {
-      return { competencia: f.COMPETENCIA, D: f.D, n: f.N, ico: f.ICO, farol: f.FAROL, congelado: f.CONGELADO, fechadoEm: f.FECHADO_EM };
+      return { competencia: Conduta_soComp_(f.COMPETENCIA), D: f.D, n: f.N, ico: f.ICO, farol: f.FAROL, congelado: f.CONGELADO, fechadoEm: Conduta_soData_(f.FECHADO_EM),
+        automatico: f.FECHADO_POR === 'SISTEMA', observacao: f.OBSERVACAO || '' };
     })
     .sort(function (a, b) { return String(b.competencia).localeCompare(String(a.competencia)); });
 }
@@ -210,22 +231,27 @@ function Conduta_apiObterFarolAtual(sessionId) {
   if (apurado.temGG) {
     var ultimaGG = apurado.ocorrenciasGGDoMes.slice().sort(function (a, b) { return String(b.DATA_FATO).localeCompare(String(a.DATA_FATO)); })[0];
     titulo = 'Bônus cancelado — infração gravíssima';
-    linha = 'Registrada ' + apurado.ocorrenciasGGDoMes.length + ' infração gravíssima em ' +
-      (ultimaGG ? ultimaGG.DATA_FATO : competencia) +
-      ' — o cancelamento independe do ICO, que está em ' + apurado.ico;
+    var qtdGG = apurado.ocorrenciasGGDoMes.length;
+    linha = (qtdGG === 1 ? 'Registrada 1 infração gravíssima' : 'Registradas ' + qtdGG + ' infrações gravíssimas') + ' — a última em ' +
+      (ultimaGG ? Conduta_dataBr_(ultimaGG.DATA_FATO) : Conduta_nomeCompetencia_(competencia)) +
+      '. O cancelamento independe do ICO, que está em ' + Conduta_numBr_(apurado.ico);
   } else if (apurado.farol === 'VERDE') {
     titulo = 'Bônus preservado';
-    linha = 'ICO ' + apurado.ico + ' — a equipe pode acumular mais ' + Math.max(0, limiteVerdeD - apurado.D) + ' pontos de demérito sem sair do verde';
+    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — a equipe pode acumular mais ' + Math.max(0, limiteVerdeD - apurado.D) + ' pontos de demérito sem sair do verde';
   } else if (apurado.farol === 'AMARELO') {
     titulo = 'Bônus em risco';
-    linha = 'ICO ' + apurado.ico + ' — o mês está ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito acima do limite do verde. Ainda dá tempo neste mês';
+    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — o mês está ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito acima do limite do verde. Ainda dá tempo neste mês';
   } else {
     titulo = 'Bônus perdido neste mês';
-    linha = 'ICO ' + apurado.ico + ' — não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos';
+    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos';
   }
 
   return {
     competencia: competencia, ico: apurado.ico, farol: apurado.farol, temGG: apurado.temGG,
-    D: apurado.D, n: apurado.n, sombra: apurado.sombra, titulo: titulo, linha: linha
+    D: apurado.D, n: apurado.n, sombra: apurado.sombra, titulo: titulo, linha: linha,
+    // 2026-10-15: o farol passou a mostrar o que ainda está em prazo de defesa
+    // (vai contar quando ficar firme) e o resultado do mês anterior.
+    emApuracao: Conduta_emApuracao_(competencia, apurado),
+    anterior: Conduta_resumoMesAnterior_(competencia)
   };
 }
