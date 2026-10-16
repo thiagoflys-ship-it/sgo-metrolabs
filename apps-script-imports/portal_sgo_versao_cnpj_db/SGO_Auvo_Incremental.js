@@ -46,6 +46,9 @@ function Auvo_incBootstrap_() {
   CertCal_garantirColuna_(SGO_CFG.SHEETS.AUVO_TAREFAS, 'ENDERECO');
   CertCal_garantirColuna_(SGO_CFG.SHEETS.AUVO_TAREFAS, 'TASK_URL');
   CertCal_garantirColuna_(SGO_CFG.SHEETS.AUVO_TAREFAS, 'QUESTIONARIO_JSON');
+  // Avisos de O.S. (2026-10-16): quando cada aviso foi disparado — 1 vez por evento.
+  CertCal_garantirColuna_(SGO_CFG.SHEETS.AUVO_TAREFAS, 'AVISO_ABERTURA_EM');
+  CertCal_garantirColuna_(SGO_CFG.SHEETS.AUVO_TAREFAS, 'AVISO_FECHAMENTO_EM');
 }
 
 // ------------------------------------------------------------
@@ -264,6 +267,7 @@ function Auvo_processarTarefasIncremental_() {
   var indiceSync = Auvo_construirIndiceMapeamento_();
 
   var processadas = 0, clientesNovos = 0, erros = [];
+  var avisos = Auvo_avisosPreparar_(); // null = avisos desligados (AUVO_AVISOS_WHATSAPP != '1')
   tarefas.forEach(function(tarefa) {
     try {
       var clientesAntes = indiceSync['CLIENTE'] ? Object.keys(indiceSync['CLIENTE']).length : 0;
@@ -276,6 +280,7 @@ function Auvo_processarTarefasIncremental_() {
       var dadosTarefa = Auvo_mapearTarefaAuvo_(tarefa, resolvido.clienteId, tecnicoIdSgo, equipamentosIdSgo);
       Auvo_upsertTarefa_(dadosTarefa);
       processadas++;
+      if (avisos) Auvo_avisosTarefa_(avisos, tarefa, dadosTarefa, resolvido); // nunca lança erro
     } catch (e) {
       erros.push('Tarefa #' + tarefa.taskID + ': ' + e.message);
     }
@@ -285,7 +290,8 @@ function Auvo_processarTarefasIncremental_() {
 
   return {
     janelaDesde: Auvo_formatarDataAuvo_(desde), janelaAte: Auvo_formatarDataAuvo_(agora),
-    totalTarefasEncontradas: tarefas.length, processadas: processadas, clientesNovos: clientesNovos, erros: erros
+    totalTarefasEncontradas: tarefas.length, processadas: processadas, clientesNovos: clientesNovos, erros: erros,
+    avisos: avisos ? avisos.contagem : null
   };
 }
 
@@ -303,6 +309,234 @@ function Auvo_configurarTriggerIncremental_() {
 
 function Auvo_dispararSincronizacaoIncremental_() {
   Auvo_processarTarefasIncremental_();
+}
+
+// ------------------------------------------------------------
+// AVISOS DE O.S. POR WHATSAPP E E-MAIL (2026-10-16)
+//
+// Na sincronização incremental, cada Tarefa do Auvo pode gerar 2 eventos:
+//  - ABERTURA: a tarefa aparece pela 1ª vez no SGO+ (não existia em AUVO_TAREFAS).
+//  - FECHAMENTO: a tarefa está finalizada no Auvo (finished = true, mesma regra da
+//    coluna FINALIZADA). Hora do evento = checkOutDate; sem check-out, a hora em que
+//    o SGO+ viu a passagem de "não finalizada" para "finalizada".
+// Destinatários de cada evento (SGO_notificar_, canais e-mail + WhatsApp; modelos
+// da Meta sgo_chamado_aberto / sgo_chamado_concluido de NTF_MODELOS_META):
+//  (a) técnico: TECNICO_ID_SGO (CAD_USUARIOS, vínculo Auvo userId -> usuário em
+//      AUVO_SYNC tipo TECNICO). Celular: CAD_USUARIOS.CELULAR, depois Técnico.
+//  (b) gestão: propriedade AUVO_AVISAR_GESTAO = lista de USUARIO (login) separados
+//      por vírgula (ex.: "joao, maria"); vazia = todos os usuários ativos com perfil
+//      GESTOR ou DIRETORIA.
+//  (c) cliente: contato da unidade (CAD_UNIDADES.TELEFONE, RESPONSAVEL) e do cliente
+//      (CAD_CLIENTES.TELEFONE, EMAIL, CONTATO); telefone da unidade tem preferência.
+//      Sem cadastro ou sem contato: pula e registra o motivo em NTF_ENVIOS.
+// Chaves (Chaves e senhas, grupo Auvo):
+//  AUVO_AVISOS_WHATSAPP = '1' liga (padrão desligado; desligado não grava nada).
+//  AUVO_AVISOS_DESDE = data de corte "aaaa-mm-ddThh:mm:ss" (Brasília), gravada pela
+//      1ª sincronização com os avisos ligados. Evento anterior ao corte nunca avisa,
+//      para não disparar o histórico (centenas de O.S. antigas).
+// Uma vez por evento: AVISO_ABERTURA_EM / AVISO_FECHAMENTO_EM em AUVO_TAREFAS, gravado
+// ANTES do envio (se a marcação falhar, não envia). Falha de aviso nunca derruba a
+// sincronização: tudo em try/catch, com registro em NTF_ENVIOS (ORIGEM AUVO_OS).
+// ------------------------------------------------------------
+var AUVO_AVISOS_CFG = {
+  CHAVE_LIGA: 'AUVO_AVISOS_WHATSAPP',
+  CHAVE_DESDE: 'AUVO_AVISOS_DESDE',
+  CHAVE_GESTAO: 'AUVO_AVISAR_GESTAO',
+  PERFIS_GESTAO_PADRAO: ['GESTOR', 'DIRETORIA'],
+  // tarefa vista pela 1ª vez com data agendada muito antiga = histórico, não abertura
+  DIAS_HISTORICO_ABERTURA: 7,
+  FUSO: 'America/Sao_Paulo',
+  ORIGEM: 'AUVO_OS'
+};
+
+function Auvo_avisosAgora_() {
+  return Utilities.formatDate(new Date(), AUVO_AVISOS_CFG.FUSO, "yyyy-MM-dd'T'HH:mm:ss");
+}
+
+/** Data do Auvo/planilha -> "aaaa-mm-ddThh:mm:ss" em horário de Brasília; '' se não der para ler. */
+function Auvo_avisosDataNorm_(v) {
+  if (v === null || v === undefined || v === '') return '';
+  var fmt = function (d) { return isNaN(d.getTime()) ? '' : Utilities.formatDate(d, AUVO_AVISOS_CFG.FUSO, "yyyy-MM-dd'T'HH:mm:ss"); };
+  if (Object.prototype.toString.call(v) === '[object Date]') return fmt(v);
+  var s = String(v).trim(), m;
+  // com fuso explícito (Z ou +hh:mm): converte para Brasília
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/i.test(s)) return fmt(new Date(s));
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3] + 'T' + (m[4] || '00') + ':' + (m[5] || '00') + ':' + (m[6] || '00');
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) return m[3] + '-' + m[2] + '-' + m[1] + 'T' + (m[4] || '00') + ':' + (m[5] || '00') + ':' + (m[6] || '00');
+  return '';
+}
+
+/** "2026-10-21T08:30:00" -> "21/10/2026 08:30" (sem hora quando 00:00:00). */
+function Auvo_avisosDataBr_(norm) {
+  var m = String(norm || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return '';
+  var d = m[3] + '/' + m[2] + '/' + m[1];
+  return (m[4] + m[5] + m[6] === '000000') ? d : d + ' ' + m[4] + ':' + m[5];
+}
+
+function Auvo_avisosRegistrarFalha_(refId, motivo) {
+  try {
+    Notificar_garantirAba_();
+    SGO_DATA.insert(Notificar_aba_(), {
+      QUANDO: Notificar_agora_(), USUARIO_ID: '', USUARIO_NOME: '', CANAL: 'whatsapp', DESTINO: '',
+      ASSUNTO: 'Aviso de O.S. do Auvo', ORIGEM: AUVO_AVISOS_CFG.ORIGEM, REF_ID: String(refId || '').slice(0, 80),
+      SITUACAO: 'ERRO', MOTIVO: String((motivo && motivo.message) || motivo || '').slice(0, 480)
+    });
+  } catch (e) { console.error('Aviso Auvo: não foi possível registrar a falha: ' + ((e && e.message) || e)); }
+}
+
+/**
+ * Antes do laço da sincronização. null = avisos desligados (nada é gravado).
+ * Grava a data de corte na 1ª execução com os avisos ligados.
+ */
+function Auvo_avisosPreparar_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    if (String(props.getProperty(AUVO_AVISOS_CFG.CHAVE_LIGA) || '').trim() !== '1') return null;
+    var agora = Auvo_avisosAgora_();
+    var desde = Auvo_avisosDataNorm_(props.getProperty(AUVO_AVISOS_CFG.CHAVE_DESDE));
+    if (!desde) { desde = agora; props.setProperty(AUVO_AVISOS_CFG.CHAVE_DESDE, desde); }
+    var anteriores = {};
+    SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_TAREFAS).forEach(function (t) {
+      var id = String(t.AUVO_TASK_ID || '').trim();
+      if (!id) return;
+      anteriores[id] = {
+        FINALIZADA: SGO_UTILS.safeUpper(t.FINALIZADA),
+        AVISO_ABERTURA_EM: t.AVISO_ABERTURA_EM ? '1' : '',
+        AVISO_FECHAMENTO_EM: t.AVISO_FECHAMENTO_EM ? '1' : ''
+      };
+    });
+    return { desde: desde, agora: agora, anteriores: anteriores, ctx: null, contagem: { abertura: 0, fechamento: 0 } };
+  } catch (e) {
+    Auvo_avisosRegistrarFalha_('PREPARAR', 'Avisos de O.S. não preparados nesta sincronização: ' + ((e && e.message) || e));
+    return null;
+  }
+}
+
+/** Quais eventos da tarefa devem avisar agora: [{ tipo: 'abertura'|'fechamento', quando }]. */
+function Auvo_avisosEventos_(av, tarefa, dados) {
+  var ant = av.anteriores[String(dados.AUVO_TASK_ID)] || null;
+  var eventos = [];
+  var fechamentoAntigo = false;
+  if (dados.FINALIZADA === 'SIM' && !(ant && ant.AVISO_FECHAMENTO_EM)) {
+    var quandoFe = Auvo_avisosDataNorm_(tarefa.checkOutDate);
+    if (!quandoFe) {
+      if (ant && ant.FINALIZADA !== 'SIM') quandoFe = av.agora;      // passou a finalizada agora
+      else if (!ant) quandoFe = Auvo_avisosDataNorm_(tarefa.taskDate); // 1ª vez já finalizada
+    }
+    if (quandoFe && quandoFe >= av.desde) eventos.push({ tipo: 'fechamento', quando: quandoFe });
+    else fechamentoAntigo = true;
+  }
+  if (!ant && !fechamentoAntigo) {
+    var agendada = Auvo_avisosDataNorm_(tarefa.taskDate);
+    var limite = Auvo_avisosDataNorm_(new Date(new Date().getTime() - AUVO_AVISOS_CFG.DIAS_HISTORICO_ABERTURA * 86400000));
+    if (!(agendada && agendada < av.desde && agendada < limite)) eventos.unshift({ tipo: 'abertura', quando: av.agora });
+  }
+  return eventos;
+}
+
+/** Usuários e gestão, carregados 1 vez por sincronização (só quando há evento). */
+function Auvo_avisosContexto_(av) {
+  if (av.ctx) return av.ctx;
+  var usuarios = {};
+  var todos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS);
+  todos.forEach(function (u) { usuarios[String(u.ID || '')] = u; });
+  var ativos = todos.filter(function (u) {
+    return SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && u.ID;
+  });
+  var lista = String(PropertiesService.getScriptProperties().getProperty(AUVO_AVISOS_CFG.CHAVE_GESTAO) || '')
+    .split(/[,;\s]+/).map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean);
+  var gestao = ativos.filter(function (u) {
+    if (lista.length) return lista.indexOf(String(u.USUARIO || '').trim().toLowerCase()) >= 0;
+    return AUVO_AVISOS_CFG.PERFIS_GESTAO_PADRAO.indexOf(SGO_UTILS.safeUpper(u.PERFIL)) >= 0;
+  }).map(function (u) { return String(u.ID); });
+  av.ctx = { usuarios: usuarios, gestao: gestao };
+  return av.ctx;
+}
+
+function Auvo_avisosEnviar_(av, ev, dados, resolvido) {
+  var ctx = Auvo_avisosContexto_(av);
+  var cliente = resolvido && resolvido.clienteId ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, resolvido.clienteId) : null;
+  var unidade = resolvido && resolvido.unidadeId ? SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, resolvido.unidadeId) : null;
+  var nomeCliente = (cliente && (SGO_UTILS.safe(cliente.NOME_FANTASIA) || SGO_UTILS.safe(cliente.RAZAO_SOCIAL))) ||
+    dados.CLIENTE_NOME_AUVO || (dados.CLIENTE_AUVO_ID ? 'Cliente Auvo #' + dados.CLIENTE_AUVO_ID : 'Cliente não identificado');
+  var nomeUnidade = unidade ? SGO_UTILS.safe(unidade.NOME_UNIDADE) : '';
+  if (nomeUnidade && nomeUnidade.toUpperCase() !== String(nomeCliente).toUpperCase()) nomeCliente += ' — ' + nomeUnidade;
+  var tec = dados.TECNICO_ID_SGO ? ctx.usuarios[String(dados.TECNICO_ID_SGO)] : null;
+  var nomeTecnico = (tec && SGO_UTILS.safe(tec.NOME)) || dados.TECNICO_NOME_AUVO || 'a definir';
+  var numero = 'Nº ' + dados.AUVO_TASK_ID;
+  var chamado = numero + (dados.TIPO_TAREFA ? ' — ' + dados.TIPO_TAREFA : '');
+  var agendamento = Auvo_avisosDataBr_(Auvo_avisosDataNorm_(dados.DATA_TAREFA)) || 'data a definir';
+  var abertura = ev.tipo === 'abertura';
+  var titulo, texto, modelo;
+  if (abertura) {
+    titulo = 'Chamado técnico aberto: ' + numero + ' — ' + nomeCliente;
+    texto = 'Chamado técnico aberto.\n\nCliente: ' + nomeCliente + '\nChamado: ' + chamado + '\nAgendamento: ' + agendamento +
+      '\nTécnico: ' + nomeTecnico + (dados.ENDERECO ? '\nEndereço: ' + dados.ENDERECO : '');
+    modelo = { nome: 'sgo_chamado_aberto', parametros: [nomeCliente, chamado, agendamento + ', técnico ' + nomeTecnico] };
+  } else {
+    var concluido = Auvo_avisosDataBr_(ev.quando) || Auvo_avisosDataBr_(av.agora);
+    titulo = 'Chamado técnico concluído: ' + numero + ' — ' + nomeCliente;
+    texto = 'Chamado técnico concluído.\n\nCliente: ' + nomeCliente + '\nChamado: ' + chamado + '\nConcluído em: ' + concluido +
+      '\nTécnico: ' + nomeTecnico;
+    modelo = { nome: 'sgo_chamado_concluido', parametros: [nomeCliente, chamado, concluido] };
+  }
+  var refId = String(dados.AUVO_TASK_ID) + ':' + (abertura ? 'ABERTURA' : 'FECHAMENTO');
+
+  // (a) técnico + (b) gestão
+  var internos = [];
+  if (dados.TECNICO_ID_SGO) internos.push(String(dados.TECNICO_ID_SGO));
+  ctx.gestao.forEach(function (id) { if (internos.indexOf(id) < 0) internos.push(id); });
+  var semVinculo = dados.TECNICO_ID_SGO ? [] : [{
+    id: 'TECNICO_AUVO:' + (dados.TECNICO_AUVO_ID || 'sem'), nome: dados.TECNICO_NOME_AUVO || 'Técnico do Auvo', cadastro: 'técnico',
+    motivo: 'Técnico do Auvo ' + (dados.TECNICO_AUVO_ID ? '#' + dados.TECNICO_AUVO_ID + ' ' : '') +
+      'sem vínculo com usuário do SGO+; vincule o usuário ao Auvo na Integração Auvo para ele receber os avisos.'
+  }];
+  SGO_notificar_({ usuarios: internos, contatos: semVinculo, titulo: titulo, texto: texto, canais: ['email', 'whatsapp'],
+    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId });
+
+  // (c) cliente — telefone da unidade primeiro; e-mail do cliente
+  var telUnidade = unidade ? (unidade.WHATSAPP || unidade.CELULAR || unidade.TELEFONE) : '';
+  var telCliente = cliente ? (cliente.WHATSAPP || cliente.CELULAR || cliente.TELEFONE) : '';
+  var contatoCliente = {
+    id: 'CLIENTE:' + ((cliente && cliente.ID) || ('AUVO_' + (dados.CLIENTE_AUVO_ID || 'sem'))),
+    nome: (unidade && SGO_UTILS.safe(unidade.RESPONSAVEL)) || (cliente && SGO_UTILS.safe(cliente.CONTATO)) || nomeCliente,
+    cadastro: unidade ? 'cliente/unidade' : 'cliente',
+    email: (unidade && unidade.EMAIL) || (cliente && cliente.EMAIL) || '',
+    telefone: Notificar_normalizarTelefone_(telUnidade) ? telUnidade : telCliente,
+    motivo: cliente ? '' : 'Cliente do Auvo ' + (dados.CLIENTE_AUVO_ID ? '#' + dados.CLIENTE_AUVO_ID + ' ' : '') + 'sem cadastro vinculado no SGO+.'
+  };
+  SGO_notificar_({ contatos: [contatoCliente], titulo: titulo, texto: texto, canais: ['email', 'whatsapp'], semLink: true,
+    modelo: modelo, origem: AUVO_AVISOS_CFG.ORIGEM, refId: refId });
+}
+
+/** Depois de gravar a tarefa: marca e avisa cada evento novo. Nunca lança erro. */
+function Auvo_avisosTarefa_(av, tarefa, dados, resolvido) {
+  var id = String(dados.AUVO_TASK_ID || '');
+  try {
+    var ant = av.anteriores[id] || { FINALIZADA: '', AVISO_ABERTURA_EM: '', AVISO_FECHAMENTO_EM: '' };
+    var eventos = Auvo_avisosEventos_(av, tarefa, dados);
+    var depois = { FINALIZADA: dados.FINALIZADA, AVISO_ABERTURA_EM: ant.AVISO_ABERTURA_EM, AVISO_FECHAMENTO_EM: ant.AVISO_FECHAMENTO_EM };
+    eventos.forEach(function (ev) {
+      var coluna = ev.tipo === 'abertura' ? 'AVISO_ABERTURA_EM' : 'AVISO_FECHAMENTO_EM';
+      var refId = id + ':' + (ev.tipo === 'abertura' ? 'ABERTURA' : 'FECHAMENTO');
+      try {
+        var marca = {}; marca[coluna] = Auvo_avisosAgora_();
+        SGO_DATA.updateByField(SGO_CFG.SHEETS.AUVO_TAREFAS, 'AUVO_TASK_ID', id, marca);
+        depois[coluna] = '1';
+      } catch (e) {
+        Auvo_avisosRegistrarFalha_(refId, 'Aviso não enviado: não foi possível marcar a tarefa (' + ((e && e.message) || e) + ').');
+        return;
+      }
+      try { Auvo_avisosEnviar_(av, ev, dados, resolvido); av.contagem[ev.tipo]++; }
+      catch (e) { Auvo_avisosRegistrarFalha_(refId, 'Falha ao montar o aviso: ' + ((e && e.message) || e)); }
+    });
+    av.anteriores[id] = depois; // tarefa repetida na mesma janela não avisa de novo
+  } catch (e) {
+    Auvo_avisosRegistrarFalha_(id, 'Avisos da tarefa não processados: ' + ((e && e.message) || e));
+  }
 }
 
 // ------------------------------------------------------------

@@ -46,6 +46,10 @@ var CHV_ITENS = [
     ajuda: 'No Auvo: Menu → Integrações → API (a mesma usada no SGO+ do Google).' },
   { chave: 'AUVO_API_TOKEN', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo — API Token',
     ajuda: 'No Auvo, na mesma tela da API Key.' },
+  { chave: 'AUVO_AVISOS_WHATSAPP', grupo: 'Auvo', tipo: 'aberto', exemplo: '1', nome: 'Avisos de O.S. do Auvo por WhatsApp e e-mail: 1 liga, 0 desliga',
+    ajuda: 'Digite 1 para ligar ou 0 para desligar (vazio = desligado). Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
+  { chave: 'AUVO_AVISAR_GESTAO', grupo: 'Auvo', tipo: 'aberto', exemplo: 'joao, maria', nome: 'Avisos de O.S.: quem da gestão recebe (logins)',
+    ajuda: 'Logins (campo Usuário do cadastro de usuários) separados por vírgula. Vazio = todos os usuários ativos com perfil Gestor ou Diretoria.' },
   { chave: 'MODO_PERSONALIZADO_SENHA', grupo: 'Relatórios técnicos (senhas)', tipo: 'senha', nome: 'Senha do Modo Personalizado (relatórios)',
     ajuda: 'A mesma senha usada hoje no Modo Personalizado dos relatórios técnicos.' },
   { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos (senhas)', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
@@ -155,6 +159,12 @@ function Chaves_validarValor_(item, valor) {
   if (item.chave === 'WHATSAPP_PROVEDOR') {
     v = v.toLowerCase();
     if (v !== 'meta' && v !== 'zapi') throw new Error('Não foi possível gravar: o provedor do WhatsApp aceita só meta ou zapi.');
+  }
+  if (item.chave === 'AUVO_AVISOS_WHATSAPP' && v !== '1' && v !== '0') {
+    throw new Error('Não foi possível gravar: os avisos de O.S. aceitam só 1 (liga) ou 0 (desliga).');
+  }
+  if (item.chave === 'AUVO_AVISAR_GESTAO' && !/^[A-Za-z0-9._@-]+([\s,;]+[A-Za-z0-9._@-]+)*$/.test(v)) {
+    throw new Error('Não foi possível gravar: informe os logins separados por vírgula (ex.: joao, maria), sem outros sinais.');
   }
   if (item.chave === 'META_WA_PHONE_ID' || item.chave === 'META_WA_WABA_ID') {
     if (!/^\d{6,25}$/.test(v)) throw new Error('Não foi possível gravar: este campo é um número de identificação (só algarismos, ex.: ' + item.exemplo + '), copiado do painel da Meta. Não é o número de telefone.');

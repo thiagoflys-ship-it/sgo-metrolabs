@@ -11,7 +11,13 @@
  *     modelo: { nome: 'sgo_...', parametros: [...] }  — opcional, WhatsApp oficial (Meta);
  *             '@NOME' vira o primeiro nome de cada destinatário e '@LINK' o link.
  *             Sem modelo, a Meta recebe sgo_aviso_geral (título, resumo, link).
- *     origem: 'AVISOS' | 'ATIVIDADES' | 'CONDUTA' ..., refId: 'id do registro'
+ *     origem: 'AVISOS' | 'ATIVIDADES' | 'CONDUTA' ..., refId: 'id do registro',
+ *     contatos: [{ id, nome, email, telefone, cadastro, motivo }]  — opcional: destinatários
+ *             FORA de CAD_USUARIOS (ex.: contato do cliente/unidade nos avisos de O.S. do
+ *             Auvo). Em NTF_ENVIOS o USUARIO_ID fica 'EXT:<id>'; 'cadastro' entra no motivo
+ *             do PULADO ("Sem e-mail no cadastro do <cadastro>"); 'motivo' preenchido = pula
+ *             e registra esse motivo.
+ *     semLink: true — não põe o endereço do SGO+ no e-mail/WhatsApp (destinatário externo).
  *   })
  *
  * Canais:
@@ -383,6 +389,14 @@ function SGO_notificar_(opcoes) {
     var o = opcoes || {};
     var ids = [];
     (o.usuarios || []).forEach(function (id) { id = String(id || '').trim(); if (id && ids.indexOf(id) < 0) ids.push(id); });
+    var contatosFora = [];
+    (o.contatos || []).forEach(function (x, i) {
+      if (!x) return;
+      var k = 'EXT:' + String(x.id || ('contato' + i)).slice(0, 70);
+      if (ids.indexOf(k) >= 0) return;
+      ids.push(k);
+      contatosFora.push({ k: k, x: x });
+    });
     var canais = (o.canais && o.canais.length ? o.canais : ['sgo', 'email', 'whatsapp']).map(function (c) { return String(c).toLowerCase(); });
     var externos = canais.filter(function (c) { return c === 'email' || c === 'whatsapp'; });
     if (!ids.length || !externos.length) return resumo;
@@ -390,9 +404,16 @@ function SGO_notificar_(opcoes) {
     Notificar_garantirAba_();
     var titulo = String(o.titulo || 'Aviso do SGO+').replace(/\s+/g, ' ').trim().slice(0, 180);
     var texto = String(o.texto || '').trim();
-    var link = o.link === undefined || o.link === null || o.link === '' ? Notificar_linkSgo_() : String(o.link);
+    var link = o.semLink ? '' : (o.link === undefined || o.link === null || o.link === '' ? Notificar_linkSgo_() : String(o.link));
     var origem = String(o.origem || '').slice(0, 40), refId = String(o.refId || '').slice(0, 80);
     var contatos = Notificar_contatos_(ids);
+    contatosFora.forEach(function (e) {
+      contatos[e.k] = {
+        id: e.k, externo: true, nome: SGO_UTILS.safe(e.x.nome), cadastro: SGO_UTILS.safe(e.x.cadastro) || 'contato',
+        email: SGO_UTILS.safeLower(e.x.email).trim(), telefone: Notificar_normalizarTelefone_(e.x.telefone),
+        ativo: true, motivo: SGO_UTILS.safe(e.x.motivo)
+      };
+    });
     var linhas = [];
     var registrar = function (uid, nome, canal, destino, situacao, motivo) {
       resumo[situacao === 'OK' ? 'ok' : situacao === 'ERRO' ? 'erro' : 'pulado']++;
@@ -433,8 +454,9 @@ function SGO_notificar_(opcoes) {
         try {
           if (!c) { registrar(uid, '', canal, '', 'PULADO', 'Usuário não encontrado no cadastro.'); return; }
           if (!c.ativo) { registrar(uid, c.nome, canal, '', 'PULADO', 'Usuário inativo.'); return; }
+          if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
           if (canal === 'email') {
-            if (!c.email || c.email.indexOf('@') < 0) { registrar(uid, c.nome, canal, '', 'PULADO', 'Sem e-mail no cadastro do usuário.'); return; }
+            if (!c.email || c.email.indexOf('@') < 0) { registrar(uid, c.nome, canal, '', 'PULADO', 'Sem e-mail no cadastro do ' + (c.externo ? c.cadastro : 'usuário') + '.'); return; }
             if (cotaEmail === null) { try { cotaEmail = MailApp.getRemainingDailyQuota(); } catch (e) { cotaEmail = 1; } }
             if (cotaEmail < 1) { registrar(uid, c.nome, canal, c.email, 'PULADO', 'Cota diária de e-mails esgotada; tente de novo amanhã.'); return; }
             MailApp.sendEmail({ to: c.email, subject: 'SGO+ | ' + titulo, body: txtEmail, htmlBody: htmlEmail, name: 'SGO+ Metrolabs' });
@@ -442,7 +464,7 @@ function SGO_notificar_(opcoes) {
             registrar(uid, c.nome, canal, c.email, 'OK', 'Entregue ao serviço de e-mail.');
           } else {
             if (!wa.provedor) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', wa.motivo); return; }
-            if (!c.telefone) { registrar(uid, c.nome, canal, '', 'PULADO', 'Sem telefone celular válido no cadastro (usuário, condutor ou técnico).'); return; }
+            if (!c.telefone) { registrar(uid, c.nome, canal, '', 'PULADO', c.externo ? 'Sem telefone celular válido no cadastro do ' + c.cadastro + '.' : 'Sem telefone celular válido no cadastro (usuário, condutor ou técnico).'); return; }
             var r;
             if (wa.provedor === 'meta') {
               r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
