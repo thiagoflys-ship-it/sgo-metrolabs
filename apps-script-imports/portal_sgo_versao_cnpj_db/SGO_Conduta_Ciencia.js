@@ -178,7 +178,12 @@ function Conduta_avisosVigentes_() {
       linhas: [
         'ICO ' + Conduta_numBr_(f.ICO) + ' · demérito ' + Conduta_numBr_(f.D, 0) + ' ponto(s) · ' + Conduta_numBr_(f.N, 0) + ' colaborador(es) na conta',
         temGG ? 'Houve infração gravíssima firme no mês, o que cancela o bônus coletivo.' : (preservado ? 'A equipe ficou na faixa verde (ICO ≥ ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').' : 'A equipe ficou abaixo da faixa verde (ICO < ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').'),
-        (f.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático em ' : 'Fechado em ') + Conduta_dataBr_(em) + '.' + (f.OBSERVACAO ? ' ' + f.OBSERVACAO : '')
+        (function () {
+          var base = (f.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático em ' : 'Fechado em ') + Conduta_dataBr_(em) + '.';
+          var obs = String(f.OBSERVACAO || '').trim();
+          if (obs.indexOf(base) === 0) obs = obs.slice(base.length).trim();   // a observação já repetia a frase do fechamento
+          return base + (obs ? ' ' + obs : '');
+        })()
       ]
     });
   });
@@ -190,7 +195,11 @@ function Conduta_cienciasDe_(usuarioId) {
   var mapa = {};
   SGO_DATA.getAll(CONDUTA_CIENCIA_SHEET).forEach(function (c) {
     if (usuarioId && String(c.USUARIO_ID) !== String(usuarioId)) return;
-    mapa[c.AVISO_TIPO + '|' + c.REF_ID + '|' + c.USUARIO_ID] = c;
+    // a planilha do Google convertia a competência "2026-09" em data: normaliza para casar com o aviso
+    var ref = c.AVISO_TIPO === 'FECHAMENTO' ? (Conduta_soComp_(c.REF_ID) || String(c.REF_ID)) : String(c.REF_ID);
+    var k = c.AVISO_TIPO + '|' + ref + '|' + c.USUARIO_ID;
+    // registros repetidos do mesmo aviso: vale o que tem a confirmação de leitura
+    if (!mapa[k] || !Conduta_soData_(mapa[k].CIENTE_EM)) mapa[k] = c;
   });
   return mapa;
 }
