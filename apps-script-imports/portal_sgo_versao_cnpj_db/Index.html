@@ -71,10 +71,16 @@
       </div>
 
       <div class="topbar-center">
+        <button type="button" id="buscaGatilho" class="busca-gatilho" onclick="Busca_abrir_()" aria-haspopup="dialog" aria-controls="buscaPainel" title="Busca rápida (Ctrl K)">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <span class="busca-gatilho-texto">Buscar TAG, cliente, certificado ou tela</span>
+          <kbd class="busca-gatilho-tecla">Ctrl K</kbd>
+        </button>
         <div
           id="mensagemMotivacional"
           class="mensagem-motivacional"
           title="Mensagem do dia"
+          style="display:none;"
         ></div>
       </div>
 
@@ -93,53 +99,76 @@
 
     <div class="main-layout">
       
-      <aside id="menu" class="sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">PRINCIPAL</div>
+      <aside id="menu" class="sidebar" aria-label="Menu principal">
+        <div class="sidebar-section menu-grupo" data-grupo="principal" id="menu-secao-principal">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-principal" onclick="Menu_alternarGrupo_('principal')"><span class="menu-grupo-nome">Principal</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-principal">
           <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
           <button type="button" class="menu-btn" data-mod="minhas_atividades" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
           <button type="button" class="menu-btn" data-mod="atividades_equipe" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
+          </div>
         </div>
 
-        <div class="sidebar-section" id="menu-secao-tecnica">
-          <div class="sidebar-section-title">MÓDULOS TÉCNICOS</div>
+        <div class="sidebar-section menu-grupo" data-grupo="qualificacao" id="menu-secao-tecnica">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação térmica</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-qualificacao">
           <button type="button" class="menu-btn" data-mod="autoclave" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclave</button>
           <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
-          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
-          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de Execução</button>
-          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
-          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros Operacionais</button>
-          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de Equipamentos</button>
-          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>Carta de Conformidade (legado)</button>
-          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de Frio</button>
-          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, Banho-maria e Secadora</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de Execução de Serviço</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Relatório de Qualificação (QI/QO/QD)</button>
-          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de Calibração</button>
-          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de Calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
-          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13 (Vaso de Pressão)</button>
-          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
+          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>Relatório de conformidade (legado)</button>
+          </div>
         </div>
 
-        <div class="sidebar-section">
-          <div class="sidebar-section-title">GESTÃO</div>
+        <div class="sidebar-section menu-grupo" data-grupo="calibracao" id="menu-secao-calibracao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-calibracao" onclick="Menu_alternarGrupo_('calibracao')"><span class="menu-grupo-nome">Calibração e documentos</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-calibracao">
+          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de calibração</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="padroes" id="menu-btn-padroes" onclick="Menu_atalho_('padroes')" title="Padrões de referência do laboratório (no Certificado de calibração)"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de execução</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Relatório de qualificação (QI/QO/QD)</button>
+          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
+          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros operacionais</button>
+          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13 (vaso de pressão)</button>
+          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="operacao" id="menu-secao-operacao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-operacao" onclick="Menu_alternarGrupo_('operacao')"><span class="menu-grupo-nome">Operação e campo</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-operacao">
+          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-link" aria-hidden="true"></i></span>Integração Auvo</button>
+          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de qualidade</button>
+          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de conduta</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="cadastros" id="menu-secao-cadastros">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-cadastros" onclick="Menu_alternarGrupo_('cadastros')"><span class="menu-grupo-nome">Cadastros</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-cadastros">
           <button type="button" class="menu-btn" data-mod="clientes" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-user" aria-hidden="true"></i></span>Clientes</button>
           <button type="button" class="menu-btn" data-mod="unidades" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Unidades</button>
           <button type="button" class="menu-btn" data-mod="equipamentos" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-wrench" aria-hidden="true"></i></span>Equipamentos</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="tecnicos" id="menu-btn-tecnicos" onclick="Menu_atalho_('tecnicos')" title="Técnicos executores (cadastro no Certificado de calibração)"><span class="menu-btn-icon"><i class="fas fa-user-gear" aria-hidden="true"></i></span>Técnicos</button>
           <button type="button" class="menu-btn" data-mod="documentos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder" aria-hidden="true"></i></span>Documentos</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="usuarios" id="menu-btn-usuarios" onclick="Menu_atalho_('usuarios')" title="Gestão de usuários (na Administração)"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="vinculos" id="menu-btn-vinculos" onclick="Menu_atalho_('vinculos')" title="Painel de vínculos entre cliente, unidade e equipamento"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          </div>
         </div>
 
-        <div class="sidebar-section" id="menu-secao-admin">
-          <div class="sidebar-section-title">ADMINISTRAÇÃO</div>
+        <div class="sidebar-section menu-grupo" data-grupo="administracao" id="menu-secao-admin">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
           <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
-          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-link" aria-hidden="true"></i></span>Integração Auvo</button>
-          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de Qualidade</button>
-          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de Conduta</button>
-
-          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()" 
+          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()"
                   style="background-color: #198754; color: white; margin-top: 15px; border: 2px solid #146c43; font-weight: bold;">
             <i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+
           </button>
+          </div>
         </div>
       </aside>
 
@@ -154,6 +183,7 @@
     <div class="mobile-topbar">
       <button type="button" class="mobile-topbar-btn" onclick="voltarMobile_()">← Voltar</button>
       <div id="mobileTopbarTitulo" class="mobile-topbar-titulo">Menu</div>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-busca" onclick="Busca_abrir_()" aria-label="Buscar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
       <button type="button" class="mobile-topbar-btn mobile-topbar-sair" onclick="logout()">Sair</button>
     </div>
   </div>
@@ -185,6 +215,7 @@
 <?!= include('JS_Conduta'); ?>
 <?!= include('JS_Inventario'); ?>
 <?!= include('JS_Atividades'); ?>
+<?!= include('JS_Inicio'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
 <script>
   window.COM_CFG = { sistema: "SGO", outro: "COMMAND",

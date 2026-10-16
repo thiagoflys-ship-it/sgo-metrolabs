@@ -575,8 +575,15 @@
 
     if (secaoTecnica) secaoTecnica.style.display = isCliente ? "none" : "block";
     if (secaoOperacao) secaoOperacao.style.display = isCliente ? "none" : "block";
-    if (btnClientes) btnClientes.style.display = isCliente ? "none" : "block";
+    if (btnClientes) btnClientes.style.display = isCliente ? "none" : "";
     if (secaoAdmin) secaoAdmin.style.display = isCliente ? "none" : "block";
+
+    // Menu agrupado (JS_Inicio.html): grupo e atalhos novos seguem a mesma regra.
+    ["menu-secao-calibracao", "menu-btn-tecnicos", "menu-btn-usuarios", "menu-btn-vinculos"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = isCliente ? "none" : "";
+    });
+    if (typeof Menu_iniciar_ === "function") Menu_iniciar_();
   }
 
   // ==========================================
@@ -611,6 +618,7 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    try { if (typeof Menu_aoAbrirModulo_ === "function") Menu_aoAbrirModulo_(mod); } catch (e) { console.error("Menu:", e); }
     abrirModulo_(mod);
     try { if (typeof Atividades_aoAbrirModulo_ === "function") Atividades_aoAbrirModulo_(mod); } catch (e) { console.error("Atividades do módulo:", e); }
   }
@@ -629,6 +637,7 @@
       carregarAlertasDashboard_();
       carregarFarolCondutaDashboard_();
       carregarSituacaoFrotaUI_();
+      if (typeof Inicio_carregarPendencias_ === "function") Inicio_carregarPendencias_();
       return;
     }
 
@@ -844,12 +853,13 @@
 
     return `
       <div class="dash-wrap">
-        <div class="dash-hero">
+        <div class="dash-hero inicio-hero">
           <div>
-            <h2 class="dash-hero-title">Olá${nomeUsuario ? ", " + escapeHtml_(nomeUsuario) : ""}</h2>
-            <p class="dash-hero-subtitle">${dataExtenso.charAt(0).toUpperCase() + dataExtenso.slice(1)} · Visão geral do SGO+</p>
+            <p class="inicio-data">${dataExtenso.charAt(0).toUpperCase() + dataExtenso.slice(1)}</p>
+            <h2 class="dash-hero-title inicio-saudacao"><span id="inicioSaudacao">${escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeUsuario) : "Olá" + (nomeUsuario ? ", " + nomeUsuario : "") + ".")}</span> <span id="inicioResumo" class="inicio-resumo">Verificando o que depende de você hoje…</span></h2>
           </div>
         </div>
+        <div id="inicioFaixa" class="inicio-faixa" aria-live="polite"></div>
 
         <div id="dashboardFarolConduta" style="${styleAdminOnly}"></div>
 
@@ -2402,7 +2412,12 @@
     itens.push({ icone: '<i class="fas fa-wrench" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
 
+    const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
     div.innerHTML =
+      '<div class="inicio-hero inicio-hero-mobile"><h2 class="inicio-saudacao"><span id="inicioSaudacao">' +
+        escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeMobile) : "") +
+        '</span> <span id="inicioResumo" class="inicio-resumo">Verificando o que depende de você hoje…</span></h2></div>' +
+      '<div id="inicioFaixa" class="inicio-faixa" aria-live="polite"></div>' +
       (isCliente ? '' : '<div id="mobileFarolCondutaStrip" class="mobile-farol-strip">Carregando farol do mês...</div>') +
       (isCliente ? '' : '<div id="mobileSituacaoFrota">Carregando situação da frota...</div>') +
       '<div class="mobile-home-titulo">O que você precisa fazer?</div>' +
@@ -2416,6 +2431,7 @@
       '</div>';
 
     carregarSituacaoFrotaUI_();
+    if (typeof Inicio_carregarPendencias_ === "function") Inicio_carregarPendencias_();
     // Farol sempre visível pra toda a equipe no celular (não-CLIENTE) —
     // mesma filosofia de "recurso igual pra todo mundo no mobile" já
     // estabelecida nesta sessão. Falha silenciosa (some a faixa) se o

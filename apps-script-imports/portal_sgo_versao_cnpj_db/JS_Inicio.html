@@ -1,0 +1,455 @@
+<script>
+  // ============================================================
+  // MENU AGRUPADO + INÍCIO (faixa de pendências) + BUSCA RÁPIDA (Ctrl K)
+  // Servidor: SGO_Inicio.js (Inicio_apiPendencias / Inicio_apiBuscar).
+  // Os grupos do menu ficam em Index.html (.menu-grupo[data-grupo]); as
+  // regras de perfil continuam em aplicarRegrasDeAcesso_ (JS_Core) e
+  // Atividades_aplicarMenu_ (JS_Atividades). Aqui só se esconde o grupo
+  // que ficou sem nenhum item visível.
+  // ============================================================
+  var MENU_CHAVE_ESTADO = "SGO_MENU_GRUPOS";
+  var MENU_OBSERVADOR = null;
+  var MENU_PENDENTE_ATUALIZAR = false;
+
+  function Menu_lerEstado_() {
+    try { return JSON.parse(localStorage.getItem(MENU_CHAVE_ESTADO) || "{}") || {}; } catch (e) { return {}; }
+  }
+  function Menu_salvarEstado_(estado) {
+    try { localStorage.setItem(MENU_CHAVE_ESTADO, JSON.stringify(estado)); } catch (e) { /* navegador sem armazenamento: só não lembra */ }
+  }
+
+  function Menu_grupos_() {
+    return Array.prototype.slice.call(document.querySelectorAll("#menu .menu-grupo[data-grupo]"));
+  }
+
+  function Menu_aplicarGrupo_(grupoEl, aberto) {
+    if (!grupoEl) return;
+    grupoEl.classList.toggle("is-aberto", !!aberto);
+    var cab = grupoEl.querySelector(".menu-grupo-cab");
+    if (cab) cab.setAttribute("aria-expanded", aberto ? "true" : "false");
+  }
+
+  function Menu_alternarGrupo_(grupo) {
+    var el = document.querySelector('#menu .menu-grupo[data-grupo="' + grupo + '"]');
+    if (!el) return;
+    var aberto = !el.classList.contains("is-aberto");
+    Menu_aplicarGrupo_(el, aberto);
+    var estado = Menu_lerEstado_();
+    estado[grupo] = aberto;
+    Menu_salvarEstado_(estado);
+  }
+
+  function Menu_itemVisivel_(btn) {
+    return btn && btn.style.display !== "none";
+  }
+
+  /** Esconde grupo sem item visível e mostra quantos itens tem o grupo fechado. */
+  function Menu_atualizarGrupos_() {
+    MENU_PENDENTE_ATUALIZAR = false;
+    Menu_grupos_().forEach(function (g) {
+      var itens = Array.prototype.slice.call(g.querySelectorAll(".menu-grupo-itens > .menu-btn"));
+      var visiveis = itens.filter(Menu_itemVisivel_).length;
+      g.classList.toggle("menu-grupo-vazio", visiveis === 0);
+      var qtd = g.querySelector(".menu-grupo-qtd");
+      if (qtd) qtd.textContent = visiveis ? String(visiveis) : "";
+    });
+  }
+
+  function Menu_agendarAtualizacao_() {
+    if (MENU_PENDENTE_ATUALIZAR) return;
+    MENU_PENDENTE_ATUALIZAR = true;
+    (window.requestAnimationFrame || setTimeout)(Menu_atualizarGrupos_);
+  }
+
+  function Menu_iniciar_() {
+    var estado = Menu_lerEstado_();
+    var temEstado = Object.keys(estado).length > 0;
+    Menu_grupos_().forEach(function (g) {
+      var nome = g.getAttribute("data-grupo");
+      Menu_aplicarGrupo_(g, temEstado ? !!estado[nome] : nome === "principal");
+    });
+    var ativo = document.querySelector("#menu .menu-btn.active");
+    if (ativo) Menu_abrirGrupoDe_(ativo, false);
+    Menu_atualizarGrupos_();
+    var menu = document.getElementById("menu");
+    if (menu && !MENU_OBSERVADOR && window.MutationObserver) {
+      MENU_OBSERVADOR = new MutationObserver(Menu_agendarAtualizacao_);
+      MENU_OBSERVADOR.observe(menu, { subtree: true, attributes: true, attributeFilter: ["style"] });
+    }
+  }
+
+  function Menu_abrirGrupoDe_(btn, lembrar) {
+    var g = btn && btn.closest ? btn.closest(".menu-grupo") : null;
+    if (!g || g.classList.contains("is-aberto")) return;
+    Menu_aplicarGrupo_(g, true);
+    if (lembrar) {
+      var estado = Menu_lerEstado_();
+      estado[g.getAttribute("data-grupo")] = true;
+      Menu_salvarEstado_(estado);
+    }
+  }
+
+  /** Chamado por abrir(mod): o grupo do módulo aberto abre sozinho. */
+  function Menu_aoAbrirModulo_(mod) {
+    document.querySelectorAll("#menu .menu-btn-atalho.active").forEach(function (b) { b.classList.remove("active"); });
+    var btn = document.querySelector('#menu .menu-btn[data-mod="' + mod + '"]');
+    if (btn) Menu_abrirGrupoDe_(btn, true);
+  }
+
+  /** Espera um elemento aparecer (módulos montam a tela depois de buscar dados). */
+  function Menu_esperar_(id, cb, limiteMs) {
+    var fim = Date.now() + (limiteMs || 20000);
+    (function tentar() {
+      var el = document.getElementById(id);
+      if (el) { try { cb(el); } catch (e) { console.error("Menu_esperar_ " + id + ":", e); } return; }
+      if (Date.now() < fim) setTimeout(tentar, 250);
+    })();
+  }
+
+  function Menu_rolarAte_(el, focar) {
+    var alvo = (el.closest && el.closest(".panel, .form-card, .card, section")) || el;
+    try { alvo.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { alvo.scrollIntoView(); }
+    if (focar && el.focus) setTimeout(function () { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }, 350);
+  }
+
+  /** Itens do menu que vivem dentro de outro módulo (Padrões, Técnicos, Usuários, Vínculos). */
+  function Menu_atalho_(alvo) {
+    var btn = document.querySelector('#menu .menu-btn-atalho[data-atalho="' + alvo + '"]');
+    var soComputador = { padroes: "Padrões de referência", tecnicos: "Cadastro de técnicos", usuarios: "Gestão de usuários" };
+    if (soComputador[alvo] && typeof ehMobileModo_ === "function" && ehMobileModo_()) {
+      // mesma regra de renderMotorModulo_: recurso avançado fica só no computador
+      var div = document.getElementById("conteudo");
+      if (typeof atualizarTituloMobile_ === "function") atualizarTituloMobile_(soComputador[alvo]);
+      try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; } catch (e) {}
+      if (div) div.innerHTML = '<div class="mobile-card-subtitulo" style="padding:24px 4px;text-align:center">' +
+        Inicio_esc_(soComputador[alvo]) + ' está disponível apenas na versão para computador. Abra o SGO+ no computador para resolver.</div>';
+      return;
+    }
+    if (alvo === "padroes") {
+      abrir("certificado_calibracao");
+      Menu_esperar_("certcal-padroes-tabela", function (el) { Menu_rolarAte_(el, false); });
+    } else if (alvo === "tecnicos") {
+      abrir("certificado_calibracao");
+      Menu_esperar_("certcal-tecnico", function (el) { Menu_rolarAte_(el, true); });
+    } else if (alvo === "usuarios") {
+      abrir("admin");
+      Menu_esperar_("usuariosPesquisa", function (el) { Menu_rolarAte_(el, true); });
+    } else if (alvo === "vinculos") {
+      if (typeof vincOpen_ === "function") vincOpen_();
+      else { alert("O painel de vínculos não carregou. Atualize a página (F5) e tente de novo."); return; }
+    } else {
+      return;
+    }
+    if (btn) {
+      document.querySelectorAll("#menu .menu-btn.active").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      Menu_abrirGrupoDe_(btn, true);
+    }
+  }
+
+  // ============================================================
+  // INÍCIO — saudação e faixa "o que depende de você hoje"
+  // ============================================================
+  var INICIO_SEQ = 0;
+  var INICIO_ULTIMAS = [];
+
+  function Inicio_saudacao_(nome) {
+    var h = new Date().getHours();
+    var s = h >= 5 && h < 12 ? "Bom dia" : (h >= 12 && h < 18 ? "Boa tarde" : "Boa noite");
+    return s + (nome ? ", " + nome : "") + ".";
+  }
+
+  function Inicio_esc_(v) {
+    return typeof escapeHtml_ === "function" ? escapeHtml_(v) : String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
+
+  var INICIO_ICONES = { critico: "fa-circle-xmark", atencao: "fa-hourglass-half", revisar: "fa-triangle-exclamation", info: "fa-circle-info" };
+
+  function Inicio_carregarPendencias_() {
+    var faixa = document.getElementById("inicioFaixa");
+    var resumo = document.getElementById("inicioResumo");
+    if (!faixa || !SESSION) return;
+    var seq = ++INICIO_SEQ;
+    faixa.innerHTML = '<div class="inicio-faixa-carregando">Verificando pendências…</div>';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (seq !== INICIO_SEQ) return;
+        Inicio_renderPendencias_(res);
+      })
+      .withFailureHandler(function (err) {
+        if (seq !== INICIO_SEQ) return;
+        console.error("Inicio_apiPendencias falhou:", err);
+        Inicio_renderPendencias_({ ok: false, message: "Não foi possível verificar as pendências agora. Verifique a conexão e atualize a página." });
+      })
+      .Inicio_apiPendencias(SESSION);
+  }
+
+  function Inicio_renderPendencias_(res) {
+    var faixa = document.getElementById("inicioFaixa");
+    var resumo = document.getElementById("inicioResumo");
+    if (!faixa) return;
+    if (!res || !res.ok) {
+      if (resumo) resumo.textContent = "";
+      faixa.innerHTML = '<div class="inicio-faixa-aviso" role="status">' + Inicio_esc_((res && res.message) || "Não foi possível verificar as pendências.") + '</div>';
+      return;
+    }
+    var itens = res.itens || [];
+    INICIO_ULTIMAS = itens;
+    var n = itens.length;
+    if (resumo) resumo.textContent = n === 0 ? "Nada pendente para você hoje." : (n === 1 ? "Há 1 item que depende de você hoje." : "Há " + n + " itens que dependem de você hoje.");
+    var html = "";
+    if (n) {
+      html += '<div class="inicio-faixa-lista">' + itens.slice(0, 4).map(function (it, i) {
+        var nivel = INICIO_ICONES[it.nivel] ? it.nivel : "info";
+        return '<button type="button" class="inicio-pend inicio-pend--' + nivel + '" onclick="Inicio_abrirPendencia_(' + i + ')">' +
+          '<span class="inicio-pend-rotulo"><i class="fas ' + INICIO_ICONES[nivel] + '" aria-hidden="true"></i>' + Inicio_esc_(it.rotulo) + '</span>' +
+          '<span class="inicio-pend-titulo">' + Inicio_esc_(it.titulo) + '</span>' +
+          '<span class="inicio-pend-detalhe">' + Inicio_esc_(it.detalhe) + '</span>' +
+        '</button>';
+      }).join("") + '</div>';
+      if (n > 4) html += '<div class="inicio-faixa-nota">Mostrando as 4 mais urgentes de ' + n + '.</div>';
+    }
+    if (res.naoVerificado && res.naoVerificado.length) {
+      html += '<div class="inicio-faixa-nota">Não foi possível verificar agora: ' + Inicio_esc_(res.naoVerificado.join(", ")) + '. Atualize a página para tentar de novo.</div>';
+    }
+    faixa.innerHTML = html;
+    faixa.classList.toggle("is-vazia", !html);
+  }
+
+  function Inicio_abrirPendencia_(i) {
+    var it = INICIO_ULTIMAS[i];
+    if (it) Inicio_executarAcao_(it.acao);
+  }
+
+  /** Preenche o campo de pesquisa do cadastro e roda a pesquisa que já existe. */
+  function Inicio_pesquisarNoCadastro_(mod, idCampo, fnPesquisar, termo) {
+    abrir(mod);
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) {
+      setTimeout(function () {
+        var campo = document.querySelector("#conteudo .mobile-search");
+        if (!campo) return;
+        campo.value = termo || "";
+        campo.dispatchEvent(new Event("input", { bubbles: true }));
+      }, 200);
+      return;
+    }
+    Menu_esperar_(idCampo, function () {
+      // o cadastro termina de montar a tela (e o painel de vínculos) logo depois do campo aparecer
+      setTimeout(function () {
+        var campo = document.getElementById(idCampo);
+        if (!campo) return;
+        campo.value = termo || "";
+        if (typeof window[fnPesquisar] === "function") window[fnPesquisar]();
+      }, 600);
+    }, 8000);
+  }
+
+  function Inicio_executarAcao_(acao) {
+    if (!acao) return;
+    switch (acao.tipo) {
+      case "modulo": abrir(acao.mod); break;
+      case "atalho": Menu_atalho_(acao.alvo); break;
+      case "tela": {
+        var b = document.querySelector('#menu .menu-btn[data-mod="' + acao.mod + '"]') || document.querySelector('#menu .menu-btn-atalho[data-atalho="' + acao.atalho + '"]');
+        if (acao.atalho) Menu_atalho_(acao.atalho); else if (acao.mod) abrir(acao.mod); else if (b) b.click();
+        break;
+      }
+      case "atividade":
+        abrir("minhas_atividades");
+        if (acao.id && typeof Atividades_abrirDetalhe_ === "function") setTimeout(function () { Atividades_abrirDetalhe_(acao.id); }, 300);
+        break;
+      case "conduta_ciencia":
+        if (typeof Conduta_verificarAvisos_ === "function") Conduta_verificarAvisos_(); else abrir("conduta");
+        break;
+      case "cliente": Inicio_pesquisarNoCadastro_("clientes", "clientesPesquisa", "clientesPesquisar_", acao.termo); break;
+      case "equipamento": Inicio_pesquisarNoCadastro_("equipamentos", "equipamentosPesquisa", "equipamentosPesquisar_", acao.termo); break;
+      case "documento": Inicio_pesquisarNoCadastro_("documentos", "documentosPesquisa", "documentosPesquisar_", acao.termo); break;
+      case "certificado":
+        abrir("certificado_calibracao");
+        Menu_esperar_("certcal-busca-cnpj", function (campo) {
+          Menu_rolarAte_(campo, false);
+          if (acao.cnpj && acao.cnpj.length === 14) {
+            campo.value = acao.cnpj;
+            if (typeof tplCertCal_buscarPorCnpj === "function") tplCertCal_buscarPorCnpj();
+          }
+        });
+        break;
+      default: break;
+    }
+  }
+
+  // ============================================================
+  // BUSCA RÁPIDA (Ctrl K)
+  // ============================================================
+  var BUSCA = { seq: 0, timer: null, itens: [], ativo: -1, ultimoFoco: null };
+
+  function Busca_normalizar_(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function Busca_montar_() {
+    var painel = document.getElementById("buscaPainel");
+    if (painel) return painel;
+    painel = document.createElement("div");
+    painel.id = "buscaPainel";
+    painel.className = "busca-overlay";
+    painel.setAttribute("role", "dialog");
+    painel.setAttribute("aria-modal", "true");
+    painel.setAttribute("aria-label", "Busca rápida");
+    painel.innerHTML =
+      '<div class="busca-caixa">' +
+        '<div class="busca-campo">' +
+          '<i class="fas fa-magnifying-glass" aria-hidden="true"></i>' +
+          '<input id="buscaCampo" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="buscaResultados" aria-autocomplete="list" ' +
+            'placeholder="TAG, cliente, CNPJ, certificado, documento, padrão ou tela" aria-label="Buscar">' +
+          '<button type="button" class="busca-fechar" onclick="Busca_fechar_()" aria-label="Fechar busca">Esc</button>' +
+        '</div>' +
+        '<div id="buscaResultados" class="busca-resultados" role="listbox" aria-label="Resultados da busca"></div>' +
+        '<div class="busca-rodape"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> fechar</span></div>' +
+      '</div>';
+    painel.addEventListener("mousedown", function (e) { if (e.target === painel) Busca_fechar_(); });
+    document.body.appendChild(painel);
+    var campo = document.getElementById("buscaCampo");
+    campo.addEventListener("input", Busca_aoDigitar_);
+    campo.addEventListener("keydown", Busca_teclas_);
+    return painel;
+  }
+
+  function Busca_abrir_() {
+    if (!SESSION) return;
+    var painel = Busca_montar_();
+    BUSCA.ultimoFoco = document.activeElement;
+    painel.classList.add("is-aberto");
+    var campo = document.getElementById("buscaCampo");
+    campo.select();
+    campo.focus();
+    Busca_aoDigitar_();
+  }
+
+  function Busca_fechar_(semDevolverFoco) {
+    var painel = document.getElementById("buscaPainel");
+    if (!painel || !painel.classList.contains("is-aberto")) return;
+    painel.classList.remove("is-aberto");
+    BUSCA.seq++;
+    if (semDevolverFoco === true) { try { document.activeElement.blur(); } catch (e) {} return; }
+    var volta = BUSCA.ultimoFoco || document.getElementById("buscaGatilho");
+    if (volta && volta.focus) try { volta.focus(); } catch (e) {}
+  }
+
+  /** Telas do menu (o que o perfil enxerga). */
+  function Busca_telas_(termo) {
+    var q = Busca_normalizar_(termo);
+    var vistos = {};
+    var lista = [];
+    document.querySelectorAll("#menu .menu-btn").forEach(function (b) {
+      var mod = b.getAttribute("data-mod"), atalho = b.getAttribute("data-atalho");
+      if (!mod && !atalho) return;
+      if (b.style.display === "none") return;
+      var g = b.closest(".menu-grupo");
+      if (g && (g.style.display === "none" || g.classList.contains("menu-grupo-vazio"))) return;
+      var c = b.cloneNode(true);
+      c.querySelectorAll(".menu-badge, .menu-btn-icon").forEach(function (x) { x.remove(); });
+      var nome = c.textContent.replace(/\s+/g, " ").trim();
+      var chave = mod || atalho;
+      if (vistos[chave]) return;
+      if (q && Busca_normalizar_(nome).indexOf(q) < 0) return;
+      vistos[chave] = 1;
+      var grupoNome = g ? (g.querySelector(".menu-grupo-nome") || {}).textContent || "" : "";
+      lista.push({ titulo: nome, detalhe: grupoNome, acao: mod ? { tipo: "tela", mod: mod } : { tipo: "tela", atalho: atalho } });
+    });
+    return lista;
+  }
+
+  function Busca_aoDigitar_() {
+    var campo = document.getElementById("buscaCampo");
+    var termo = campo ? campo.value.trim() : "";
+    clearTimeout(BUSCA.timer);
+    var seq = ++BUSCA.seq;
+    var telas = Busca_telas_(termo).slice(0, termo ? 5 : 6);
+    var grupos = telas.length ? [{ grupo: termo ? "Telas" : "Ir para", itens: telas }] : [];
+    if (termo.length < 2) {
+      Busca_render_(grupos, termo.length ? "Digite pelo menos 2 letras para procurar em cadastros, certificados e padrões." : "");
+      return;
+    }
+    Busca_render_(grupos, "Procurando em cadastros, certificados e padrões…");
+    BUSCA.timer = setTimeout(function () {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (seq !== BUSCA.seq) return;
+          if (!res || !res.ok) { Busca_render_(grupos, (res && res.message) || "Não foi possível buscar agora."); return; }
+          var todos = grupos.concat(res.grupos || []);
+          var nota = "";
+          if (res.falhas && res.falhas.length) nota = "Não foi possível procurar em: " + res.falhas.join(", ") + ".";
+          if (!todos.length) nota = "Nada encontrado para “" + termo + "”. Confira a grafia ou procure pela TAG, pelo CNPJ ou pelo número.";
+          Busca_render_(todos, nota);
+        })
+        .withFailureHandler(function (err) {
+          if (seq !== BUSCA.seq) return;
+          console.error("Inicio_apiBuscar falhou:", err);
+          Busca_render_(grupos, "Não foi possível falar com o servidor. Verifique a conexão e tente de novo.");
+        })
+        .Inicio_apiBuscar(SESSION, termo);
+    }, 280);
+  }
+
+  function Busca_render_(grupos, nota) {
+    var box = document.getElementById("buscaResultados");
+    if (!box) return;
+    BUSCA.itens = [];
+    var html = grupos.map(function (g) {
+      var mais = g.total && g.total > g.itens.length ? '<span class="busca-grupo-total">' + g.itens.length + ' de ' + g.total + '</span>' : "";
+      return '<div class="busca-grupo" role="group" aria-label="' + Inicio_esc_(g.grupo) + '"><div class="busca-grupo-titulo">' + Inicio_esc_(g.grupo) + mais + '</div>' +
+        g.itens.map(function (it) {
+          var i = BUSCA.itens.push(it) - 1;
+          return '<button type="button" role="option" id="buscaItem' + i + '" class="busca-item" data-i="' + i + '" aria-selected="false" onclick="Busca_escolher_(' + i + ')">' +
+            '<span class="busca-item-titulo">' + Inicio_esc_(it.titulo) + '</span>' +
+            (it.detalhe ? '<span class="busca-item-detalhe">' + Inicio_esc_(it.detalhe) + '</span>' : '') +
+          '</button>';
+        }).join("") + '</div>';
+    }).join("");
+    if (nota) html += '<div class="busca-nota" role="status">' + Inicio_esc_(nota) + '</div>';
+    box.innerHTML = html;
+    Busca_marcar_(BUSCA.itens.length ? 0 : -1);
+  }
+
+  function Busca_marcar_(i) {
+    BUSCA.ativo = i;
+    var campo = document.getElementById("buscaCampo");
+    document.querySelectorAll("#buscaResultados .busca-item").forEach(function (b) {
+      var sel = Number(b.getAttribute("data-i")) === i;
+      b.classList.toggle("is-ativo", sel);
+      b.setAttribute("aria-selected", sel ? "true" : "false");
+      if (sel && b.scrollIntoView) b.scrollIntoView({ block: "nearest" });
+    });
+    if (campo) { if (i >= 0) campo.setAttribute("aria-activedescendant", "buscaItem" + i); else campo.removeAttribute("aria-activedescendant"); }
+  }
+
+  function Busca_teclas_(e) {
+    var n = BUSCA.itens.length;
+    if (e.key === "ArrowDown") { e.preventDefault(); if (n) Busca_marcar_((BUSCA.ativo + 1) % n); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (n) Busca_marcar_((BUSCA.ativo - 1 + n) % n); }
+    else if (e.key === "Enter") { e.preventDefault(); if (BUSCA.ativo >= 0) Busca_escolher_(BUSCA.ativo); }
+    else if (e.key === "Escape") { e.preventDefault(); Busca_fechar_(); }
+  }
+
+  function Busca_escolher_(i) {
+    var it = BUSCA.itens[i];
+    if (!it) return;
+    Busca_fechar_(true);
+    Inicio_executarAcao_(it.acao);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    var k = String(e.key || "").toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && k === "k") {
+      var app = document.getElementById("app");
+      if (!SESSION || !app || app.style.display === "none") return;
+      e.preventDefault();
+      var painel = document.getElementById("buscaPainel");
+      if (painel && painel.classList.contains("is-aberto")) Busca_fechar_(); else Busca_abrir_();
+    } else if (e.key === "Escape") {
+      var p = document.getElementById("buscaPainel");
+      if (p && p.classList.contains("is-aberto")) { e.preventDefault(); Busca_fechar_(); }
+    }
+  });
+</script>
