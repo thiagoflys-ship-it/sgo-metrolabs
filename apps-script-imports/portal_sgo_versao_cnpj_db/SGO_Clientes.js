@@ -423,7 +423,7 @@ function clientesPesquisar(sessionId, termo) {
 
 /**
  * Mensagem de falha para o operador (usada pelos wrappers globais dos cadastros,
- * Padrões, Carta de Conformidade, Templates, QR Code e Alertas).
+ * Padrões, Templates, QR Code e Alertas).
  * O erro técnico vai para o log; na tela só aparece a mensagem do próprio sistema
  * quando ela foi escrita para o operador (ex.: "CNPJ inválido").
  */

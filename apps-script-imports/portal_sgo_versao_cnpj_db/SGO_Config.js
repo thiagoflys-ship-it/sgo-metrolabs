@@ -76,10 +76,6 @@ const SGO_CFG = (() => {
       LAVADORA_RELATORIO:
         "https://script.google.com/macros/s/AKfycbw7MQaNi1yMU2MfH6Qqj3ICATfVG3_m9qp5Sz7khSztIVv2NjJf_48VwU5OD__Y8t8/exec",
 
-      /* NOVO MÓDULO */
-      RELATORIO_CONFORMIDADE:
-        "https://script.google.com/macros/s/AKfycbyvQX6Kt0P5n2bn313MsOYQGeEwxht_z3tLH96p9cPLTBYAgiFpEPrM3h69mTs9J-11/exec",
-
       /* CADEIA DE FRIO — porte nativo (sem iframe), URL mantida só como
          referência do standalone original */
       CADEIA_FRIO:
@@ -235,7 +231,6 @@ const SGO_CFG = (() => {
       ADMIN: true,
       AUTOCLAVE: true,
       LAVADORA: true,
-      RELATORIO_CONFORMIDADE: true,
       CADEIA_FRIO: true,
       ESTUFA_BANHOMARIA: true,
       DECLARACAO_EXEC: true,

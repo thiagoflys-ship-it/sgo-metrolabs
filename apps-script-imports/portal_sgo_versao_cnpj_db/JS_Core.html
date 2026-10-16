@@ -587,31 +587,6 @@
   }
 
   // ==========================================
-  // TRANCA DO MÓDULO LEGADO (Carta de Conformidade)
-  // ==========================================
-  function abrirRelatorioConformidadeLegado_() {
-    const senha = window.prompt("Módulo legado — acesso restrito. Informe a senha administrativa:");
-    if (senha === null) return;
-
-    const senhaLimpa = String(senha || "").trim();
-    if (!senhaLimpa) return;
-
-    google.script.run
-      .withSuccessHandler(function(res) {
-        if (res && res.ok) {
-          renderMotorModulo_("Carta / Relatório de Conformidade (legado)", "relatorio_conformidade");
-          atualizarBadgeModulo_("relatorio_conformidade");
-        } else {
-          alert("Senha inválida para acessar o módulo legado.");
-        }
-      })
-      .withFailureHandler(function(err) {
-        alert("Falha ao validar a senha: " + ((err && err.message) ? err.message : err));
-      })
-      .tplCartaConfValidarSenhaLegado(senhaLimpa);
-  }
-
-  // ==========================================
   // ROTEADOR CENTRAL E DASHBOARD
   // ==========================================
   // Casca: depois de abrir qualquer módulo, o componente de atividades
@@ -670,15 +645,6 @@
     if (mod === "lavadora") {
       renderMotorModulo_("Lavadoras", "lavadora");
       atualizarBadgeModulo_("lavadora");
-      return;
-    }
-
-    if (mod === "relatorio_conformidade") {
-      // Módulo legado, trancado por senha administrativa (2026-07-22):
-      // substituído pela Declaração de Execução de Serviço, que não
-      // emite veredito de aprovação/reprovação. Mantido só pra consulta
-      // pontual de documentos antigos já emitidos, nunca pra uso normal.
-      abrirRelatorioConformidadeLegado_();
       return;
     }
 
@@ -3510,7 +3476,6 @@
     if (MOTORES.AUTOCLAVE_RELATORIO) total++;
     if (MOTORES.LAVADORA_TEMPLATE) total++;
     if (MOTORES.LAVADORA_RELATORIO) total++;
-    if (MOTORES.RELATORIO_CONFORMIDADE) total++;
     return total;
   }
 
@@ -3522,7 +3487,6 @@
       dashboard: "Início",
       autoclave: "Autoclave",
       lavadora: "Lavadoras",
-      relatorio_conformidade: "Carta / Relatório de Conformidade",
       cadeia_frio: "Cadeia de Frio",
       estufa_banhomaria: "Estufa, Banho-maria e Secadora",
       declaracao_exec: "Declaração de Execução de Serviço",
@@ -4415,9 +4379,6 @@
     } else if (tipoMotor === "lavadora") {
       urlTemplate = MOTORES.LAVADORA_TEMPLATE || "";
       urlRelatorio = MOTORES.LAVADORA_RELATORIO || "";
-    } else if (tipoMotor === "relatorio_conformidade") {
-      urlTemplate = "";
-      urlRelatorio = MOTORES.RELATORIO_CONFORMIDADE || "";
     } else if (tipoMotor === "cadeia_frio") {
       urlTemplate = "";
       urlRelatorio = MOTORES.CADEIA_FRIO || "";
@@ -4513,7 +4474,7 @@
     }
 
     // PILOTO — Lavadora: mesmo padrão do Autoclave. A aba "Gerar Relatório
-    // de Auditoria" e a Carta de Conformidade continuam por iframe.
+    // de Auditoria" continua por iframe.
     if (tipoMotor === "lavadora") {
       div.innerHTML = `
         <div class="module-shell">
@@ -4540,28 +4501,6 @@
         const btnRelatorio = document.getElementById("btn_motor_relatorio");
         if (btnRelatorio) btnRelatorio.style.display = "none";
       }
-
-      return;
-    }
-
-    // PILOTO — Carta de Conformidade: tela nativa unica, sem abas de
-    // template (o wizard de 6 etapas já cobre tudo), sem iframe.
-    // Ver JS_CartaConformidade.html / SGO_CartaConformidade.js.
-    if (tipoMotor === "relatorio_conformidade") {
-      div.innerHTML = `
-        <div class="module-shell">
-          <div class="module-header">
-            <div class="module-header-left">
-              <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo legado, com acesso restrito.</p>
-            </div>
-          </div>
-
-          <div id="tplCartaConfContainer" class="iframe-container"></div>
-        </div>
-      `;
-
-      if (typeof renderTplCartaConf_ === "function") renderTplCartaConf_();
 
       return;
     }
@@ -5002,7 +4941,6 @@
   }
 
   // PILOTO — só usada pela tela da Lavadora (ver renderMotorModulo_).
-  // Carta de Conformidade continua usando alternarAbaMotor_ sem alteração.
   function alternarAbaMotorLavadora_(aba) {
     const btnTemplate = document.getElementById("btn_motor_template");
     const btnRelatorio = document.getElementById("btn_motor_relatorio");

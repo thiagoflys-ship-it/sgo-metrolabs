@@ -119,7 +119,6 @@
           <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
           <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
           <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
-          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>Relatório de conformidade (legado)</button>
           </div>
         </div>
 
@@ -167,9 +166,6 @@
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
           <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
-          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()">
-            <i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+
-          </button>
           </div>
         </div>
       </aside>
@@ -199,7 +195,6 @@
 <?!= include('JS_TemplateLavadora'); ?>
 <?!= include('JS_AutoclaveRelatorio'); ?>
 <?!= include('JS_LavadoraRelatorio'); ?>
-<?!= include('JS_CartaConformidade'); ?>
 <?!= include('JS_CadeiaFrioRelatorio'); ?>
 <?!= include('JS_EstufaBanhoRelatorio'); ?>
 <?!= include('JS_DeclaracaoExec'); ?>
@@ -226,29 +221,6 @@
 <?!= include('ComunicacaoWidget'); ?>
 
   <script>
-    // Lógica da Ponte SGO -> OS+
-    function executarExportacaoDiretor() {
-      const btn = document.getElementById('btnSyncOS');
-      if(!confirm("Enviar a base atual ao OS+? Clientes, TAGs e usuários serão atualizados no OS+. Continuar?")) return;
-      
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando ao OS+...';
-
-      google.script.run
-        .withSuccessHandler(function(res) {
-          alert(res.mensagem);
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+';
-        })
-        .withFailureHandler(function(err) {
-          console.error("Falha no envio ao OS+:", err);
-          alert("Não foi possível enviar ao OS+. Os dados do SGO+ não foram alterados. Tente de novo; se repetir, avise o administrador.");
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Tentar de novo';
-        })
-        .dispararSincronizacaoTotal(SGO_getSessionId()); // Chama a função que criamos no Engine.gs
-    }
-
     // Relógio em tempo real otimizado
     document.addEventListener("DOMContentLoaded", function() {
       const elRelogio = document.getElementById('relogioTopo');
