@@ -184,6 +184,13 @@
   }
   function Atividades_sitHtml_(s) { return '<span class="atv-sit" style="background:' + (ATV_CORES[s] || "#666") + '">' + Atividades_esc_(s) + "</span>"; }
   function Atividades_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  function Atividades_meuId_() { return USER_CONTEXT ? String(USER_CONTEXT.id || USER_CONTEXT.userId || "") : ""; }
+  /** Mesma regra do servidor (Atividades_podeEditar_): gestão qualquer uma; demais, só a que lançaram para si. */
+  function Atividades_podeEditar_(a, eu) {
+    var id = eu && eu.id ? String(eu.id) : Atividades_meuId_();
+    var gestor = eu && eu.gestor !== undefined ? !!eu.gestor : Atividades_ehGestor_();
+    return gestor || (!!id && a.CRIADO_POR_ID === id && a.RESPONSAVEL_ID === id);
+  }
   function Atividades_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
   function Atividades_prazoTexto_(a) {
     var t = Atividades_br_(a.PREVISAO_ATUAL || a.PRAZO);
@@ -444,13 +451,14 @@
       var aberta = Atividades_aberta_(a);
       var linha = function (r, v) { return v ? "<dt>" + r + "</dt><dd>" + v + "</dd>" : ""; };
       var hist = (res.historico || []).map(function (h) {
-        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
+        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", EDICAO: "Editada", REPLANEJAMENTO: "Replanejada pela gestão", RESPONSAVEL: "Responsável alterado", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
         return '<div class="atv-hist-item ' + Atividades_esc_(h.TIPO) + '"><div><b>' + titulo + '</b></div>' +
           (h.TEXTO ? '<div style="white-space:pre-wrap">' + Atividades_esc_(h.TEXTO) + "</div>" : "") +
           (h.TIPO === "JUSTIFICATIVA" ? "<div>Previsão: " + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" : "") +
           '<div class="q">' + Atividades_esc_(h.USUARIO_NOME) + " · " + Atividades_br_(h.DATA) + "</div></div>";
       }).join("") || '<div class="atv-sub">Sem registros.</div>';
       var acoes = [];
+      if (Atividades_podeEditar_(a, eu)) acoes.push('<button type="button" class="btn-secondary atv-mini" data-x="editar" title="Alterar título, descrição, módulo, cliente, prioridade, datas' + (eu.gestor ? " e responsável" : "") + '">Editar</button>');
       if (aberta && souResp) acoes.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar "fazendo agora"</button>' : '<button type="button" class="btn-primary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Estou fazendo agora</button>');
       if (aberta && a.SITUACAO !== "Em andamento") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (aberta && a.SITUACAO !== "Aguardando") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
@@ -479,6 +487,8 @@
         '<h4 style="margin:0 0 8px;font-size:13px">Histórico</h4><div class="atv-hist">' + hist + "</div>";
       var ov = Atividades_modal_(Atividades_esc_(a.TITULO), corpo, "", { id: "atvDetalheOverlay", largura: 700 });
       ov.dataset.id = a.ID;
+      var bEd = ov.querySelector('[data-x="editar"]');
+      if (bEd) bEd.onclick = function () { Atividades_abrirFormulario_({ editar: a }); };
       if (comentarioRascunho) ov.querySelector("#atvComentario").value = comentarioRascunho;
     }, null, { carregando: "Abrindo atividade..." });
   }
@@ -498,62 +508,105 @@
   }
 
   // ---------- formulário: lançar atividade ----------
+  /** pre.editar = atividade já lançada: abre o mesmo formulário preenchido, em modo de edição. */
   function Atividades_abrirFormulario_(pre) {
     var p = pre || {};
+    var ed = p.editar || null;
     Atividades_garantirOpcoes_(function (op) {
       var eu = op.eu;
-      var pessoas = op.usuarios.map(function (u) { return '<option value="' + Atividades_esc_(u.id) + '"' + (u.id === (p.responsavelId || eu.id) ? " selected" : "") + ">" + Atividades_esc_(u.nome) + (u.id === eu.id ? " (eu)" : "") + "</option>"; }).join("");
-      var mods = '<option value="">Nenhum</option>' + Atividades_modulosDoMenu_().map(function (m) { return '<option value="' + Atividades_esc_(m.chave) + '"' + (m.chave === p.modulo ? " selected" : "") + ">" + Atividades_esc_(m.nome) + "</option>"; }).join("");
+      var respSel = ed ? ed.RESPONSAVEL_ID : (p.responsavelId || eu.id);
+      var lista = op.usuarios.slice();
+      if (ed && respSel && !lista.some(function (u) { return u.id === respSel; })) lista.unshift({ id: respSel, nome: ed.RESPONSAVEL_NOME + " (inativo)" });
+      var pessoas = lista.map(function (u) { return '<option value="' + Atividades_esc_(u.id) + '"' + (u.id === respSel ? " selected" : "") + ">" + Atividades_esc_(u.nome) + (u.id === eu.id ? " (eu)" : "") + "</option>"; }).join("");
+      var modSel = ed ? ed.MODULO : p.modulo;
+      var modsMenu = Atividades_modulosDoMenu_();
+      if (modSel && !modsMenu.some(function (m) { return m.chave === modSel; })) modsMenu.push({ chave: modSel, nome: (ed && ed.MODULO_NOME) || modSel });
+      var mods = '<option value="">Nenhum</option>' + modsMenu.map(function (m) { return '<option value="' + Atividades_esc_(m.chave) + '"' + (m.chave === modSel ? " selected" : "") + ">" + Atividades_esc_(m.nome) + "</option>"; }).join("");
       var prazoPadrao = new Date(); prazoPadrao.setDate(prazoPadrao.getDate() + 1); prazoPadrao.setHours(18, 0, 0, 0);
+      var priSel = ed ? ed.PRIORIDADE : "Normal";
+      var vencida = ed && Atividades_vencida_(ed);
+      var avisoEd = "";
+      if (ed && eu.gestor && vencida) avisoEd = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com prazo vencido. Se você mudar o prazo para uma data futura, ela é replanejada: deixa de exigir justificativa de atraso do responsável e o replanejamento fica no histórico (não conta como justificativa).</div>';
+      else if (ed && !eu.gestor && vencida) avisoEd = '<div class="atv-msg" style="border:1px solid var(--warning);background:var(--warning-bg);color:var(--text)">Esta atividade está com prazo vencido: o prazo só pode ser mudado depois de registrar a justificativa de atraso. Os demais campos podem ser alterados.</div>';
       var corpo =
-        '<div id="atvFormMsg"></div>' +
+        '<div id="atvFormMsg"></div>' + avisoEd +
         '<div class="atv-campo"><label for="atvF_titulo">Título *</label><input id="atvF_titulo" type="text" maxlength="200" placeholder="O que precisa ser feito"></div>' +
         '<div class="atv-campo"><label for="atvF_desc">Descrição</label><textarea id="atvF_desc" maxlength="4000" placeholder="Detalhes, critérios de pronto, contatos"></textarea></div>' +
         '<div class="atv-grade2">' +
-          '<div class="atv-campo"><label for="atvF_resp">Responsável *</label><select id="atvF_resp"' + (eu.gestor ? "" : " disabled title=\"Somente Gestor, Admin e Diretoria lançam atividade para outra pessoa.\"") + ">" + pessoas + "</select>" +
-            (eu.gestor ? "" : '<div class="atv-sub">Você lança atividades só para você. Para outra pessoa, peça a um gestor.</div>') + "</div>" +
-          '<div class="atv-campo"><label for="atvF_pri">Prioridade</label><select id="atvF_pri">' + op.prioridades.map(function (x) { return "<option" + (x === "Normal" ? " selected" : "") + ">" + Atividades_esc_(x) + "</option>"; }).join("") + "</select></div>" +
+          '<div class="atv-campo"><label for="atvF_resp">Responsável *</label><select id="atvF_resp"' + (eu.gestor ? "" : " disabled title=\"Somente Gestor, Admin e Diretoria " + (ed ? "trocam o responsável" : "lançam atividade para outra pessoa") + ".\"") + ">" + pessoas + "</select>" +
+            (eu.gestor ? (ed ? '<div class="atv-sub">Ao trocar, o novo responsável é avisado e a troca fica no histórico.</div>' : "") : '<div class="atv-sub">' + (ed ? "Só a gestão troca o responsável." : "Você lança atividades só para você. Para outra pessoa, peça a um gestor.") + "</div>") + "</div>" +
+          '<div class="atv-campo"><label for="atvF_pri">Prioridade</label><select id="atvF_pri">' + op.prioridades.map(function (x) { return "<option" + (x === priSel ? " selected" : "") + ">" + Atividades_esc_(x) + "</option>"; }).join("") + "</select></div>" +
           '<div class="atv-campo"><label for="atvF_ini">Início previsto</label><input id="atvF_ini" type="datetime-local"></div>' +
-          '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local" value="' + Atividades_iso_(prazoPadrao) + '"></div>' +
+          '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local" value="' + Atividades_esc_(ed ? ed.PRAZO : Atividades_iso_(prazoPadrao)) + '"></div>' +
           '<div class="atv-campo"><label for="atvF_mod">Módulo ligado</label><select id="atvF_mod">' + mods + "</select></div>" +
           '<div class="atv-campo"><label for="atvF_uni">Unidade</label><select id="atvF_uni"><option value="">Escolha um cliente primeiro</option></select></div>' +
         "</div>" +
-        '<div class="atv-campo"><label for="atvF_cli_busca">Cliente</label>' + SGO_htmlBuscaClienteLike_("atvF_cli", "Nome ou CNPJ do cliente (opcional)") + "</div>";
-      var ov = Atividades_modal_("Lançar atividade", corpo,
-        '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Lançar</button>', { id: "atvFormOverlay", largura: 680 });
+        '<div class="atv-campo"><label for="atvF_cli_busca">Cliente</label>' + SGO_htmlBuscaClienteLike_("atvF_cli", "Nome ou CNPJ do cliente (opcional)") + "</div>" +
+        (ed ? '<div class="atv-sub">A situação muda pelos botões do detalhe ou arrastando no Kanban. Toda alteração fica registrada no histórico.</div>' : "");
+      var ov = Atividades_modal_(ed ? "Editar atividade" : "Lançar atividade", corpo,
+        '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">' + (ed ? "Salvar alterações" : "Lançar") + "</button>", { id: "atvFormOverlay", largura: 680 });
+      if (ed) {
+        ov.dataset.editId = ed.ID;
+        ov.querySelector("#atvF_titulo").value = ed.TITULO || "";
+        ov.querySelector("#atvF_desc").value = ed.DESCRICAO || "";
+        ov.querySelector("#atvF_ini").value = ed.INICIO_PREVISTO || "";
+      }
       ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
       ov.querySelector('[data-x="ok"]').onclick = function () { Atividades_enviarFormulario_(ov); };
       SGO_montarBuscaClienteLike_("atvF_cli", op.clientes, function (idCli) { Atividades_carregarUnidades_(idCli); });
+      if (ed && ed.CLIENTE_ID) {
+        SGO_prefillBuscaClienteLike_("atvF_cli", ed.CLIENTE_ID, ed.CLIENTE_NOME);
+        Atividades_carregarUnidades_(ed.CLIENTE_ID, ed.UNIDADE_ID, ed.UNIDADE_NOME);
+      }
       ov.querySelector("#atvF_titulo").focus();
     });
   }
 
-  function Atividades_carregarUnidades_(clienteId) {
+  /** Abre a edição a partir da lista: busca a versão atual no servidor antes de preencher. */
+  function Atividades_editarPorId_(id) {
+    Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) { Atividades_abrirFormulario_({ editar: res.item }); }, null, { carregando: "Abrindo atividade..." });
+  }
+
+  function Atividades_carregarUnidades_(clienteId, selecionarId, selecionarNome) {
     var sel = document.getElementById("atvF_uni");
     if (!sel) return;
     if (!clienteId) { sel.innerHTML = '<option value="">Escolha um cliente primeiro</option>'; return; }
-    sel.innerHTML = '<option value="">Carregando...</option>';
+    sel.innerHTML = selecionarId ? '<option value="' + Atividades_esc_(selecionarId) + '" selected>' + Atividades_esc_(selecionarNome || "Carregando...") + "</option>" : '<option value="">Carregando...</option>';
     Atividades_chamar_("Atividades_apiUnidades", { clienteId: clienteId }, function (res) {
       var s = document.getElementById("atvF_uni"); if (!s) return;
-      s.innerHTML = '<option value="">' + (res.unidades.length ? "Nenhuma (opcional)" : "Cliente sem unidade ativa") + "</option>" +
-        res.unidades.map(function (u) { return '<option value="' + Atividades_esc_(u.ID) + '">' + Atividades_esc_(u.NOME) + "</option>"; }).join("");
-    }, function () { var s = document.getElementById("atvF_uni"); if (s) s.innerHTML = '<option value="">Não foi possível carregar as unidades</option>'; });
+      var unis = res.unidades.slice();
+      if (selecionarId && !unis.some(function (u) { return u.ID === selecionarId; })) unis.unshift({ ID: selecionarId, NOME: (selecionarNome || selecionarId) + " (inativa)" });
+      s.innerHTML = '<option value="">' + (unis.length ? "Nenhuma (opcional)" : "Cliente sem unidade ativa") + "</option>" +
+        unis.map(function (u) { return '<option value="' + Atividades_esc_(u.ID) + '"' + (u.ID === selecionarId ? " selected" : "") + ">" + Atividades_esc_(u.NOME) + "</option>"; }).join("");
+    }, function () { var s = document.getElementById("atvF_uni"); if (s && !selecionarId) s.innerHTML = '<option value="">Não foi possível carregar as unidades</option>'; });
   }
 
   function Atividades_enviarFormulario_(ov) {
     var v = function (id) { var el = ov.querySelector("#" + id); return el ? String(el.value || "").trim() : ""; };
     var msg = ov.querySelector("#atvFormMsg");
+    var editId = ov.dataset.editId || "";
+    var verbo = editId ? "salvar a atividade" : "lançar a atividade", botaoNome = editId ? "Salvar alterações" : "Lançar";
     var erro = function (t, campo) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; var el = campo && ov.querySelector("#" + campo); if (el) el.focus(); ov.querySelector(".atv-modal-corpo").scrollTop = 0; };
     var d = {
       titulo: v("atvF_titulo"), descricao: v("atvF_desc"), responsavelId: v("atvF_resp"), prioridade: v("atvF_pri"),
       inicioPrevisto: v("atvF_ini"), prazo: v("atvF_prazo"), modulo: v("atvF_mod"), clienteId: v("atvF_cli"), unidadeId: v("atvF_uni")
     };
     d.moduloNome = d.modulo ? Atividades_nomeModulo_(d.modulo) : "";
-    if (d.titulo.length < 3) return erro("Não foi possível lançar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito e clique em Lançar de novo.", "atvF_titulo");
-    if (!d.prazo) return erro("Não foi possível lançar a atividade: o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em Lançar de novo.", "atvF_prazo");
-    if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível lançar a atividade: o início previsto está depois do prazo. Ajuste uma das datas e clique em Lançar de novo.", "atvF_ini");
-    if (v("atvF_cli_busca") && !d.clienteId) return erro("Não foi possível lançar a atividade: o cliente digitado não foi escolhido na lista. Clique no nome do cliente na lista que aparece, ou apague o campo.", "atvF_cli_busca");
+    if (d.titulo.length < 3) return erro("Não foi possível " + verbo + ": o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito e clique em " + botaoNome + " de novo.", "atvF_titulo");
+    if (!d.prazo) return erro("Não foi possível " + verbo + ": o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em " + botaoNome + " de novo.", "atvF_prazo");
+    if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível " + verbo + ": o início previsto está depois do prazo. Ajuste uma das datas e clique em " + botaoNome + " de novo.", "atvF_ini");
+    if (v("atvF_cli_busca") && !d.clienteId) return erro("Não foi possível " + verbo + ": o cliente digitado não foi escolhido na lista. Clique no nome do cliente na lista que aparece, ou apague o campo.", "atvF_cli_busca");
     var botao = ov.querySelector('[data-x="ok"]'); botao.disabled = true;
+    if (editId) {
+      d.id = editId;
+      Atividades_chamar_("Atividades_apiEditar", d, function (res) {
+        ov.remove();
+        frotaToastEnvio_(true, "Atividade alterada", res.message || "");
+        Atividades_aposAlterar_();
+        Atividades_verificar_();
+      }, function (m) { botao.disabled = false; erro(m); }, { carregando: "Salvando alterações..." });
+      return;
+    }
     Atividades_chamar_("Atividades_apiCriar", d, function (res) {
       ov.remove();
       frotaToastEnvio_(true, "Atividade lançada", res.message || "");
@@ -572,6 +625,7 @@
       if (aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (aberta && a.SITUACAO !== "Aguardando") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
       if (aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
+      if (Atividades_podeEditar_(a)) b.push('<button type="button" class="btn-secondary" title="Editar a atividade" onclick="Atividades_editarPorId_(\'' + a.ID + '\')">Editar</button>');
       return "<tr>" +
         '<td><button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' + Atividades_esc_(a.TITULO) + "</button>" +
           (a.AGORA_DESDE ? ' <span class="atv-selo emdia" title="Em execução">Agora</span>' : "") +

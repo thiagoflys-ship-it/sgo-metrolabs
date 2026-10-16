@@ -11,7 +11,9 @@
  * NUNCA usar setupSGO() aqui):
  *  ATV_ATIVIDADES — uma linha por atividade.
  *  ATV_HISTORICO  — criação, mudanças de situação, comentários,
- *                   justificativas de atraso, "fazendo agora".
+ *                   justificativas de atraso, "fazendo agora", edições
+ *                   (EDICAO), replanejamento da gestão (REPLANEJAMENTO)
+ *                   e troca de responsável (RESPONSAVEL).
  *  ATV_AVISOS     — avisos para uma pessoa (ex.: gestor avisado da
  *                   justificativa), lidos no painel/toast.
  *
@@ -357,6 +359,159 @@ function Atividades_apiCriar(sessionId, payload) {
         Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.');
       }
       return { item: Atividades_limpar_(reg), message: 'Atividade lançada para ' + respNome + '.' };
+    });
+  });
+}
+
+/** Quem pode editar: gestão qualquer uma; demais perfis só a que lançaram para si mesmos. */
+function Atividades_podeEditar_(eu, a) {
+  return eu.gestor || (a.CRIADO_POR_ID === eu.id && a.RESPONSAVEL_ID === eu.id);
+}
+
+function Atividades_resumoHist_(v) {
+  var s = SGO_UTILS.safe(v).replace(/\s+/g, ' ');
+  if (!s) return '(vazio)';
+  return s.length > 160 ? s.slice(0, 157) + '...' : s;
+}
+
+/**
+ * Edição de atividade já lançada (título, descrição, módulo, cliente/unidade,
+ * responsável, prioridade, início previsto, prazo). Situação continua pelos botões/Kanban.
+ * Prazo mudado pela gestão = replanejamento: a previsão volta a ser o novo prazo e,
+ * se ficar no futuro, a atividade deixa de exigir justificativa de atraso.
+ * Campo ausente no payload = mantém o valor atual.
+ */
+function Atividades_apiEditar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var tem = function (k) { return Object.prototype.hasOwnProperty.call(p, k) && p[k] !== undefined && p[k] !== null; };
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      if (!Atividades_podeEditar_(eu, a)) {
+        throw new Error('Não foi possível editar a atividade: ela foi lançada por ' + (a.CRIADO_POR_NOME || 'outra pessoa') +
+          (a.RESPONSAVEL_ID !== eu.id ? ' para ' + (a.RESPONSAVEL_NOME || 'outra pessoa') : ' para você') +
+          '. Só um gestor (Gestor, Admin ou Diretoria) ou quem lançou a atividade para si mesmo pode editar. Para mudar algo, comente na atividade ou peça a um gestor.');
+      }
+      var agora = Atividades_agora_();
+      var dados = {}, mudancas = [];
+      var mudou = function (campo, rotulo, antes, depois, antesTxt, depoisTxt) {
+        if (String(antes) === String(depois)) return;
+        dados[campo] = depois;
+        if (rotulo) mudancas.push(rotulo + ': ' + Atividades_resumoHist_(antesTxt !== undefined ? antesTxt : antes) + ' → ' + Atividades_resumoHist_(depoisTxt !== undefined ? depoisTxt : depois));
+      };
+
+      if (tem('titulo')) {
+        var titulo = Atividades_texto_(p.titulo, 200);
+        if (titulo.length < 3) throw new Error('Não foi possível salvar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito (mínimo 3 letras) e clique em Salvar de novo.');
+        mudou('TITULO', 'Título', a.TITULO, titulo);
+      }
+      if (tem('descricao')) mudou('DESCRICAO', 'Descrição', a.DESCRICAO, Atividades_texto_(p.descricao, 4000));
+      if (tem('prioridade')) {
+        if (ATV_PRIORIDADES.indexOf(p.prioridade) < 0) throw new Error('Não foi possível salvar a atividade: prioridade desconhecida. Escolha Baixa, Normal, Alta ou Urgente.');
+        mudou('PRIORIDADE', 'Prioridade', a.PRIORIDADE, p.prioridade);
+      }
+      if (tem('modulo')) {
+        var modulo = SGO_UTILS.safe(p.modulo);
+        if (modulo && !/^[a-z0-9_]{1,60}$/.test(modulo)) throw new Error('Não foi possível salvar a atividade: módulo não reconhecido. Escolha o módulo de novo na lista.');
+        if (modulo !== a.MODULO) {
+          var moduloNome = modulo ? Atividades_texto_(p.moduloNome, 120) || modulo : '';
+          dados.MODULO = modulo;
+          mudou('MODULO_NOME', 'Módulo', a.MODULO_NOME || a.MODULO, moduloNome);
+          dados.MODULO_NOME = moduloNome;
+        }
+      }
+      if (tem('clienteId') || tem('unidadeId')) {
+        var clienteId = tem('clienteId') ? SGO_UTILS.safe(p.clienteId) : a.CLIENTE_ID;
+        var unidadeId = clienteId ? (tem('unidadeId') ? SGO_UTILS.safe(p.unidadeId) : a.UNIDADE_ID) : '';
+        if (clienteId !== a.CLIENTE_ID || unidadeId !== a.UNIDADE_ID) {
+          var clienteNome = '', unidadeNome = '';
+          if (clienteId) {
+            var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, clienteId);
+            if (!c) throw new Error('Não foi possível salvar a atividade: o cliente escolhido não existe mais. Escolha o cliente de novo na lista.');
+            clienteNome = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL);
+            if (unidadeId) {
+              var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, unidadeId);
+              if (!u || String(u.CLIENTE_ID) !== clienteId) throw new Error('Não foi possível salvar a atividade: a unidade não pertence ao cliente escolhido. Escolha a unidade de novo.');
+              unidadeNome = SGO_UTILS.safe(u.NOME_UNIDADE);
+            }
+          }
+          var cliTxt = function (cn, un) { return cn ? cn + (un ? ' · ' + un : '') : ''; };
+          mudancas.push('Cliente: ' + Atividades_resumoHist_(cliTxt(a.CLIENTE_NOME, a.UNIDADE_NOME)) + ' → ' + Atividades_resumoHist_(cliTxt(clienteNome, unidadeNome)));
+          dados.CLIENTE_ID = clienteId; dados.CLIENTE_NOME = clienteNome; dados.UNIDADE_ID = unidadeId; dados.UNIDADE_NOME = unidadeNome;
+        }
+      }
+
+      // Responsável: só gestão troca.
+      var novoResp = null;
+      if (tem('responsavelId')) {
+        var respId = SGO_UTILS.safe(p.responsavelId);
+        if (!respId) throw new Error('Não foi possível salvar a atividade: o responsável não foi escolhido. Escolha uma pessoa no campo Responsável.');
+        if (respId !== a.RESPONSAVEL_ID) {
+          Atividades_exigirGestor_(eu, 'trocar o responsável da atividade');
+          novoResp = Atividades_usuariosAtivos_().filter(function (x) { return x.id === respId; })[0];
+          if (!novoResp) throw new Error('Não foi possível salvar a atividade: o responsável escolhido não está ativo no SGO+. Escolha outra pessoa na lista ou reative o usuário em Administração.');
+          dados.RESPONSAVEL_ID = novoResp.id; dados.RESPONSAVEL_NOME = novoResp.nome;
+          dados.AGORA_DESDE = ''; // quem estava executando deixa de ser o responsável
+        }
+      }
+
+      // Datas.
+      var prazo = a.PRAZO, inicio = a.INICIO_PREVISTO;
+      if (tem('prazo')) {
+        prazo = Atividades_normData_(p.prazo, '18:00');
+        if (!prazo) throw new Error('Não foi possível salvar a atividade: o prazo não foi informado ou é inválido. Preencha o campo Prazo com data e hora e clique em Salvar de novo.');
+      }
+      if (tem('inicioPrevisto')) {
+        inicio = Atividades_normData_(p.inicioPrevisto, '08:00');
+        if (p.inicioPrevisto && !inicio) throw new Error('Não foi possível salvar a atividade: o início previsto é inválido. Corrija a data ou deixe o campo vazio.');
+      }
+      if (inicio && prazo && inicio > prazo) throw new Error('Não foi possível salvar a atividade: o início previsto está depois do prazo. Ajuste uma das duas datas e clique em Salvar de novo.');
+      mudou('INICIO_PREVISTO', 'Início previsto', a.INICIO_PREVISTO, inicio, Atividades_dataBr_(a.INICIO_PREVISTO), Atividades_dataBr_(inicio));
+      var replanejada = prazo !== a.PRAZO, estavaVencida = Atividades_vencida_(a, agora);
+      if (replanejada) {
+        if (!eu.gestor && estavaVencida) {
+          throw new Error('Não foi possível mudar o prazo: a atividade está com prazo vencido. Registre primeiro a justificativa de atraso (motivo e nova previsão) na janela que aparece na tela; mudar o prazo sem justificar só é permitido à gestão.');
+        }
+        dados.PRAZO = prazo;
+        dados.PREVISAO_ATUAL = prazo; // replanejamento: a previsão passa a ser o novo prazo
+      }
+
+      if (!Object.keys(dados).length) return { item: a, message: 'Nada foi alterado: os campos estão iguais aos já gravados.' };
+      Atividades_gravar_(a.ID, dados);
+
+      if (mudancas.length) Atividades_registrarHist_(eu, a.ID, 'EDICAO', { texto: mudancas.join('\n') });
+      if (replanejada) {
+        var deixou = estavaVencida && prazo > agora;
+        Atividades_registrarHist_(eu, a.ID, eu.gestor ? 'REPLANEJAMENTO' : 'EDICAO', {
+          texto: (eu.gestor ? 'Replanejada: prazo ' : 'Prazo: ') + Atividades_dataBr_(a.PRAZO) + ' → ' + Atividades_dataBr_(prazo) + ' por ' + eu.nome + '.' +
+            (deixou ? ' A atividade deixou de estar atrasada e não exige mais justificativa.' : '') +
+            (eu.gestor ? ' Replanejamento da gestão; não conta como justificativa de atraso.' : ''),
+          previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: prazo
+        });
+      }
+      if (novoResp) {
+        Atividades_registrarHist_(eu, a.ID, 'RESPONSAVEL', {
+          de: a.RESPONSAVEL_NOME, para: novoResp.nome,
+          texto: 'Responsável: ' + (a.RESPONSAVEL_NOME || '(vazio)') + ' → ' + novoResp.nome + ' por ' + eu.nome + '.'
+        });
+      }
+
+      var titAtual = dados.TITULO || a.TITULO, prazoTxt = Atividades_dataBr_(prazo);
+      if (novoResp && novoResp.id !== eu.id) {
+        Atividades_avisar_(novoResp.id, a.ID, 'NOVA', 'Atividade passada para você',
+          eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.');
+      }
+      if (novoResp && a.RESPONSAVEL_ID && a.RESPONSAVEL_ID !== eu.id) {
+        Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'RESPONSAVEL', 'Atividade passada para outra pessoa',
+          eu.nome + ' passou "' + titAtual + '" para ' + novoResp.nome + '. Ela saiu das suas atividades.');
+      }
+      var respFinal = novoResp ? novoResp.id : a.RESPONSAVEL_ID;
+      if (!novoResp && respFinal && respFinal !== eu.id && (replanejada || mudancas.length)) {
+        Atividades_avisar_(respFinal, a.ID, replanejada ? 'REPLANEJAMENTO' : 'EDICAO', replanejada ? 'Atividade replanejada' : 'Atividade alterada',
+          eu.nome + (replanejada ? ' mudou o prazo de "' + titAtual + '" de ' + Atividades_dataBr_(a.PRAZO) + ' para ' + prazoTxt + '.' : ' alterou "' + titAtual + '": ' + mudancas.join('; ') + '.'));
+      }
+      return { item: Atividades_obter_(a.ID), message: 'Atividade alterada.' + (replanejada ? ' Novo prazo: ' + prazoTxt + '.' : '') + (novoResp ? ' Responsável agora: ' + novoResp.nome + '.' : '') };
     });
   });
 }
