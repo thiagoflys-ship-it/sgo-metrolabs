@@ -10,7 +10,7 @@
       return;
     }
 
-    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando painel de qualidade...</p>';
+    container.innerHTML = '<p style="padding:20px;color:var(--bc-text-3);">Carregando painel de qualidade...</p>';
 
     google.script.run
       .withSuccessHandler(function(conteudoBruto) {
@@ -33,16 +33,16 @@
           if (typeof tplQualidade_renderReal_ === 'function') {
             tplQualidade_renderReal_();
           } else {
-            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+            container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
           }
         } catch (e) {
           console.error('tplQualidade: erro ao montar o módulo:', e);
-          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
+          container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
         }
       })
       .withFailureHandler(function(err) {
         console.error('tplQualidade: falha ao buscar o módulo:', err);
-        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+        container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .Qualidade_obterConteudoModulo();
   }

@@ -6,19 +6,19 @@
   Fala só com google.script.run.comApi(token, acao, dados). CSS próprio com prefixo .comw-
 -->
 <style>
-  .comw-raiz { --comw-bg: #0b1220; --comw-card: #111827; --comw-card2: #172033; --comw-txt: #e5e7eb; --comw-mut: #94a3b8; --comw-borda: #30363d;
-    --comw-verde: #34d399; --comw-azul: #38bdf8; --comw-ouro: #fbbf24; --comw-verm: #f87171;
+  .comw-raiz { --comw-bg: var(--bc-bg); --comw-card: #FFFFFF; --comw-card2: var(--bc-surface-2); --comw-txt: var(--bc-text); --comw-mut: var(--bc-text-3); --comw-borda: var(--bc-line);
+    --comw-verde: var(--bc-action); --comw-azul: var(--bc-info); --comw-ouro: var(--bc-warn); --comw-verm: var(--bc-danger);
     font-family: inherit; font-size: 14px; color: var(--comw-txt); }
   .comw-raiz *, .comw-raiz *::before, .comw-raiz *::after { box-sizing: border-box; }
   .comw-botao { position: fixed; right: 18px; bottom: 18px; z-index: 2147483000; width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--comw-borda);
-    background: linear-gradient(135deg, #0f766e, #1d4ed8); color: #fff; font-size: 26px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+    background: var(--bc-side); color: #fff; font-size: 26px; cursor: pointer; box-shadow: 0 10px 30px rgba(28,31,29,0.1); display: flex; align-items: center; justify-content: center; }
   .comw-botao:focus-visible { outline: 3px solid var(--comw-azul); outline-offset: 2px; }
   .comw-botao.comw-inativo { filter: grayscale(.8); opacity: .75; }
   .comw-qt { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--comw-verm); color: #fff;
     font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; border: 2px solid var(--comw-bg); }
   .comw-qt[hidden] { display: none; }
   .comw-painel { position: fixed; right: 18px; bottom: 86px; z-index: 2147483001; width: 400px; max-width: calc(100vw - 24px); height: 600px; max-height: calc(100vh - 110px);
-    background: var(--comw-bg); border: 1px solid var(--comw-borda); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.55); display: flex; flex-direction: column; overflow: hidden; }
+    background: var(--comw-bg); border: 1px solid var(--comw-borda); border-radius: 12px; box-shadow: 0 24px 70px rgba(28,31,29,0.1); display: flex; flex-direction: column; overflow: hidden; }
   .comw-painel[hidden] { display: none; }
   .comw-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--comw-card); border-bottom: 1px solid var(--comw-borda); }
   .comw-cab h2 { margin: 0; font-size: 15px; flex: 1; color: var(--comw-txt); }
@@ -36,7 +36,7 @@
   .comw-item:hover, .comw-item:focus-visible { border-color: var(--comw-azul); }
   .comw-item.comw-novo { border-left: 4px solid var(--comw-verde); }
   .comw-item.comw-ALTA { border-left: 4px solid var(--comw-ouro); }
-  .comw-item.comw-CRITICA { border-left: 4px solid var(--comw-verm); background: rgba(127,29,29,.30); }
+  .comw-item.comw-CRITICA { border-left: 4px solid var(--comw-verm); background: var(--bc-danger-bg); }
   .comw-linha { display: flex; align-items: center; gap: 6px; }
   .comw-cresce { flex: 1; min-width: 0; }
   .comw-tit { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -44,18 +44,18 @@
   .comw-prev { color: var(--comw-mut); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .comw-txt { white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; margin-top: 4px; }
   .comw-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--comw-borda); color: var(--comw-mut); white-space: nowrap; }
-  .comw-tag.comw-cmd { color: var(--comw-azul); border-color: rgba(56,189,248,.5); }
-  .comw-tag.comw-sgo { color: var(--comw-verde); border-color: rgba(52,211,153,.5); }
+  .comw-tag.comw-cmd { color: var(--comw-azul); border-color: var(--bc-info-line); }
+  .comw-tag.comw-sgo { color: var(--comw-verde); border-color: var(--bc-action-line); }
   .comw-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--comw-verm); color: #fff; font-size: 11px; line-height: 20px; text-align: center; font-weight: 700; }
-  .comw-btn { background: #1d4ed8; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font: inherit; font-size: 13px; }
+  .comw-btn { background: var(--bc-info); color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font: inherit; font-size: 13px; }
   .comw-btn.comw-sec { background: var(--comw-card2); color: var(--comw-txt); border: 1px solid var(--comw-borda); }
-  .comw-btn.comw-verde { background: #047857; }
+  .comw-btn.comw-verde { background: var(--bc-action); }
   .comw-btn:disabled { opacity: .55; cursor: default; }
   .comw-btn:focus-visible { outline: 2px solid var(--comw-azul); outline-offset: 1px; }
   .comw-acoes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .comw-msgs { display: flex; flex-direction: column; gap: 6px; }
   .comw-msg { max-width: 85%; padding: 7px 10px; border-radius: 10px; background: var(--comw-card); border: 1px solid var(--comw-borda); align-self: flex-start; }
-  .comw-msg.comw-minha { align-self: flex-end; background: #0f3d3a; border-color: #115e59; }
+  .comw-msg.comw-minha { align-self: flex-end; background: var(--bc-info-bg); border-color: var(--bc-info); }
   .comw-msg .comw-de { font-size: 11px; color: var(--comw-mut); display: flex; gap: 6px; align-items: center; }
   .comw-link { color: var(--comw-azul); font-size: 12px; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
   .comw-compor { display: flex; gap: 6px; align-items: flex-end; }
@@ -66,14 +66,14 @@
   .comw-form .comw-chk { display: flex; gap: 6px; align-items: center; color: var(--comw-txt); font-size: 13px; }
   .comw-form .comw-chk input { width: auto; }
   .comw-vazio { color: var(--comw-mut); text-align: center; padding: 26px 10px; }
-  .comw-aviso-sis { background: rgba(120,53,15,.32); border: 1px solid rgba(251,191,36,.4); color: #fde68a; border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 13px; }
+  .comw-aviso-sis { background: var(--bc-warn-bg); border: 1px solid var(--bc-warn-line); color: var(--bc-warn); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 13px; }
   .comw-toasts { position: fixed; right: 18px; bottom: 86px; z-index: 2147483002; display: flex; flex-direction: column-reverse; gap: 8px; width: 330px; max-width: calc(100vw - 24px); pointer-events: none; }
-  .comw-toast { pointer-events: auto; background: #171f2d; color: #fff; border: 1px solid #3d4d66; border-left: 5px solid var(--comw-azul); border-radius: 10px; padding: 10px 12px;
-    box-shadow: 0 14px 40px rgba(0,0,0,.5); cursor: pointer; animation: comwEntrar .25s ease; text-align: left; font: inherit; width: 100%; }
+  .comw-toast { pointer-events: auto; background: #FFFFFF; color: var(--bc-text); border: 1px solid var(--bc-line-2); border-left: 5px solid var(--comw-azul); border-radius: 10px; padding: 10px 12px;
+    box-shadow: 0 14px 40px rgba(28,31,29,0.1); cursor: pointer; animation: comwEntrar .25s ease; text-align: left; font: inherit; width: 100%; }
   .comw-toast.comw-ALTA { border-left-color: var(--comw-ouro); }
-  .comw-toast.comw-CRITICA { border-left-color: var(--comw-verm); background: #3b1111; }
+  .comw-toast.comw-CRITICA { border-left-color: var(--comw-verm); background: var(--bc-danger-bg); }
   .comw-toast b { display: block; font-size: 13px; margin-bottom: 2px; }
-  .comw-toast span { display: block; font-size: 12px; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .comw-toast span { display: block; font-size: 12px; color: var(--bc-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @keyframes comwEntrar { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
   .comw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   @media (max-width: 700px) {

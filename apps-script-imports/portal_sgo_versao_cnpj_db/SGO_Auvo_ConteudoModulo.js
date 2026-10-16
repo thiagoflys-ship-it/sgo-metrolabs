@@ -1,45 +1,45 @@
 var AUVO_CONTEUDO_MODULO = `<style>
 #tplAuvoContainer {
-  color-scheme: dark;
-  --bg: #111827;
-  --card: #1f2937;
-  --panel: #1f2937;
-  --input: #172033;
-  --input-hover: #1d293a;
-  --text: #d9e2ec;
-  --text-strong: #eef3f8;
-  --muted: #9aa8b8;
-  --muted-2: #7f8da0;
-  --border: #3a4657;
-  --border-strong: #4a5870;
-  --accent: #6fbf8f;
-  --accent-2: #7aa7c7;
-  --warning: #d6a94f;
-  --danger: #e08a8a;
-  --success-bg: rgba(111,191,143,.14);
-  --info-bg: rgba(122,167,199,.14);
-  --warning-bg: rgba(214,169,79,.14);
-  --danger-bg: rgba(224,138,138,.13);
-  --shadow-soft: 0 8px 22px rgba(0,0,0,.18);
-  --radius: 8px;
-  --radius-sm: 6px;
+  color-scheme: light;
+  --bg: var(--bc-bg);
+  --card: var(--bc-surface);
+  --panel: var(--bc-surface);
+  --input: #FFFFFF;
+  --input-hover: var(--bc-surface-2);
+  --text: var(--bc-text);
+  --text-strong: var(--bc-text);
+  --muted: var(--bc-text-3);
+  --muted-2: var(--bc-text-3);
+  --border: var(--bc-line);
+  --border-strong: var(--bc-line-2);
+  --accent: var(--bc-action);
+  --accent-2: var(--bc-action);
+  --warning: var(--bc-warn);
+  --danger: var(--bc-danger);
+  --success-bg: var(--bc-action-bg);
+  --info-bg: var(--bc-info-bg);
+  --warning-bg: var(--bc-warn-bg);
+  --danger-bg: var(--bc-danger-bg);
+  --shadow-soft: none;
+  --radius: 6px;
+  --radius-sm: 4px;
 }
 #tplAuvoContainer * { box-sizing: border-box; }
 #tplAuvoContainer, #tplAuvoContainer body {
-  font-family: "Segoe UI", Inter, Arial, sans-serif;
-  background: #111827 !important;
+  font-family: var(--bc-sans);
+  background: transparent !important;
   color: var(--text) !important;
 }
 #tplAuvoContainer .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
 #tplAuvoContainer .header-card {
-  background: #1f2937 !important; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #FFFFFF !important; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 14px 18px; box-shadow: var(--shadow-soft); margin-bottom: 14px;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
 }
 #tplAuvoContainer .title-area h1 { margin: 0; font-size: 19px; color: var(--text-strong); font-weight: 800; }
 #tplAuvoContainer .title-area p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 #tplAuvoContainer .panel {
-  background: #1f2937 !important; border-radius: var(--radius); padding: 18px;
+  background: #FFFFFF !important; border-radius: var(--radius); padding: 18px;
   box-shadow: var(--shadow-soft); border: 1px solid var(--border); margin-bottom: 14px;
 }
 #tplAuvoContainer .panel h2 {
@@ -56,21 +56,21 @@ var AUVO_CONTEUDO_MODULO = `<style>
   border-radius: var(--radius-sm); padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px;
 }
 #tplAuvoContainer .btn:hover { background: var(--input-hover); }
-#tplAuvoContainer .btn-primary { background: var(--accent); color: #0d1b12; border-color: var(--accent); }
+#tplAuvoContainer .btn-primary { background: var(--accent); color: #FFFFFF; border-color: var(--accent); }
 #tplAuvoContainer .btn-primary:hover { filter: brightness(1.08); }
 #tplAuvoContainer .btn-sm { padding: 5px 10px; font-size: 11.5px; margin-top: 0; }
 #tplAuvoContainer .alert-box { border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12.5px; margin-top: 10px; }
-#tplAuvoContainer .alert-box.success { background: var(--success-bg); color: #b9dec8; border: 1px solid rgba(111,191,143,.34); }
-#tplAuvoContainer .alert-box.error { background: var(--danger-bg); color: #f2b8b8; border: 1px solid rgba(224,138,138,.42); }
-#tplAuvoContainer .alert-box.info { background: var(--info-bg); color: #bcd6ea; border: 1px solid rgba(122,167,199,.34); }
-#tplAuvoContainer .alert-box.warning { background: var(--warning-bg); color: #e8c789; border: 1px solid rgba(214,169,79,.42); }
+#tplAuvoContainer .alert-box.success { background: var(--success-bg); color: var(--bc-text-2); border: 1px solid var(--bc-action-line); }
+#tplAuvoContainer .alert-box.error { background: var(--danger-bg); color: var(--bc-danger); border: 1px solid var(--bc-danger-line); }
+#tplAuvoContainer .alert-box.info { background: var(--info-bg); color: var(--bc-info); border: 1px solid var(--bc-info-line); }
+#tplAuvoContainer .alert-box.warning { background: var(--warning-bg); color: var(--bc-warn); border: 1px solid var(--bc-warn-line); }
 #tplAuvoContainer table.tabela-resultado { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
 #tplAuvoContainer table.tabela-resultado th, #tplAuvoContainer table.tabela-resultado td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: middle; }
-#tplAuvoContainer table.tabela-resultado th { background: #172033; color: var(--muted); font-weight: 700; }
+#tplAuvoContainer table.tabela-resultado th { background: #FFFFFF; color: var(--muted); font-weight: 700; }
 #tplAuvoContainer .status-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-#tplAuvoContainer .status-pill.OK { background: var(--success-bg); color: #b9dec8; }
-#tplAuvoContainer .status-pill.ERRO { background: var(--danger-bg); color: #f2b8b8; }
-#tplAuvoContainer .status-pill.PENDENTE { background: var(--warning-bg); color: #e8c789; }
+#tplAuvoContainer .status-pill.OK { background: var(--success-bg); color: var(--bc-text-2); }
+#tplAuvoContainer .status-pill.ERRO { background: var(--danger-bg); color: var(--bc-danger); }
+#tplAuvoContainer .status-pill.PENDENTE { background: var(--warning-bg); color: var(--bc-warn); }
 #tplAuvoContainer .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; vertical-align: middle; }
 #tplAuvoContainer .toggle-switch input { opacity: 0; width: 0; height: 0; }
 #tplAuvoContainer .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border-strong); border-radius: 999px; transition: .2s; }
@@ -83,12 +83,12 @@ var AUVO_CONTEUDO_MODULO = `<style>
 #tplAuvoContainer .busca-linha input[type="text"] { flex: 1; }
 #tplAuvoContainer select { background: var(--input) !important; color: var(--text) !important; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12.5px; }
 #tplAuvoContainer .badge-evidencia { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-#tplAuvoContainer .badge-evidencia.sim { background: var(--info-bg); color: #bcd6ea; }
-#tplAuvoContainer .badge-evidencia.nao { background: var(--danger-bg); color: #f2b8b8; }
+#tplAuvoContainer .badge-evidencia.sim { background: var(--bc-action-bg); color: var(--bc-action); }
+#tplAuvoContainer .badge-evidencia.nao { background: var(--danger-bg); color: var(--bc-danger); }
 #tplAuvoContainer .tabela-acoes { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
-#tplAuvoContainer .modal-overlay-auvo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 99997; align-items: center; justify-content: center; padding: 20px; }
+#tplAuvoContainer .modal-overlay-auvo { display: none; position: fixed; inset: 0; background: rgba(28,31,29,.42); z-index: 99997; align-items: center; justify-content: center; padding: 20px; }
 #tplAuvoContainer .modal-overlay-auvo.aberto { display: flex; }
-#tplAuvoContainer .modal-auvo { background: #1f2937; border: 1px solid var(--border); border-radius: 12px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+#tplAuvoContainer .modal-auvo { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; box-shadow: 0 20px 60px rgba(28,31,29,0.1); }
 #tplAuvoContainer .modal-auvo h3 { margin: 0 0 4px; font-size: 15px; color: var(--text-strong); }
 #tplAuvoContainer .modal-auvo .muted { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
 #tplAuvoContainer .modal-auvo label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
@@ -97,7 +97,7 @@ var AUVO_CONTEUDO_MODULO = `<style>
 }
 #tplAuvoContainer .modal-auvo .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
 #tplAuvoContainer .modal-auvo .btn-cancelar { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer; }
-#tplAuvoContainer .modal-auvo .btn-salvar { background: var(--accent); color: #0d1b12; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-weight: 700; cursor: pointer; }
+#tplAuvoContainer .modal-auvo .btn-salvar { background: var(--accent); color: #FFFFFF; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-weight: 700; cursor: pointer; }
 
 #tplAuvoContainer .manual-wrap { max-width: 900px; margin: 0 auto; padding: 18px 18px 60px; line-height: 1.6; }
 #tplAuvoContainer .manual-wrap h1 { font-size: 26px; margin-bottom: 4px; }
@@ -107,9 +107,9 @@ var AUVO_CONTEUDO_MODULO = `<style>
 #tplAuvoContainer .manual-wrap p { color: var(--text); }
 #tplAuvoContainer .manual-wrap table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 13.5px; }
 #tplAuvoContainer .manual-wrap th, #tplAuvoContainer .manual-wrap td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
-#tplAuvoContainer .manual-wrap th { background: #172033; color: var(--text-strong); }
-#tplAuvoContainer .manual-wrap tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-#tplAuvoContainer .callout { background: rgba(111,191,143,.14); border: 1px solid rgba(111,191,143,.35); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; margin: 14px 0; font-size: 13.5px; }
+#tplAuvoContainer .manual-wrap th { background: #FFFFFF; color: var(--text-strong); }
+#tplAuvoContainer .manual-wrap tr:nth-child(even) td { background: var(--bc-surface-2); }
+#tplAuvoContainer .callout { background: var(--bc-action-bg); border: 1px solid var(--bc-action-line); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; margin: 14px 0; font-size: 13.5px; }
 #tplAuvoContainer .callout strong { color: var(--text-strong); }
 #tplAuvoContainer .manual-wrap ol, #tplAuvoContainer .manual-wrap ul { padding-left: 22px; }
 #tplAuvoContainer .manual-wrap ol li, #tplAuvoContainer .manual-wrap ul li { margin-bottom: 6px; }

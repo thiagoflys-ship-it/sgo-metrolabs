@@ -5,7 +5,7 @@ var PD_FIELDS = [['LOCALIZACAO','Localização (texto livre)'],['MARCA','Marca']
 function pdEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function pdEl(id){return document.getElementById('pd-'+id);}
 function pdSituacao(v){return {OK:'Vigente',VENCENDO:'Vence em até 30 dias',VENCIDO:'Vencido',SEM_VALIDADE:'Sem vencimento informado',VALIDADE_INVALIDA:'Data inválida'}[v]||v||'Não informado';}
-function pdMsg(text,error){var el=pdEl('status');if(el){el.textContent=text;el.style.color=error?'#f2b8b8':'#b9dec8';}}
+function pdMsg(text,error){var el=pdEl('status');if(el){el.textContent=text;el.style.color=error?'var(--bc-danger)':'var(--bc-action)';}}
 function pdApi(fn,data){return tplCertCal_chamarApi(fn,data).then(function(r){if(!r||r.ok===false)throw new Error(r&&r.message||'Não foi possível concluir.');return r;});}
 async function pdRun(text,fn){
   if(PD.busy)return;PD.busy=true;pdMsg(text);
@@ -18,7 +18,7 @@ function pdMount(){
   var panel=document.createElement('section');panel.id='pd-panel';panel.className='panel';
   panel.innerHTML='<h2>Controle dos padrões · inventário e orçamento</h2>'+
     '<p class="muted">Inventário para controle do acervo. Orçamento com faixas, pontos e exigências de calibração acreditada, pesquisados pela IA conforme os serviços informados.</p>'+
-    '<details><summary style="cursor:pointer;color:#bcd6ea">Como usar — cadastro, certificados e documentos</summary><ol>'+
+    '<details><summary style="cursor:pointer;color:var(--bc-info)">Como usar — cadastro, certificados e documentos</summary><ol>'+
     '<li>Cadastre o padrão e anexe seu PDF no cadastro de padrões deste módulo. Depois abra <b>Dados, localização e foto</b> na lista abaixo.</li>'+
     '<li>Digite qualquer localização: cidade, filial, setor ou responsável. Adicione a foto para reconhecer o instrumento.</li>'+
     '<li>O gestor clica em <b>Atualizar dados pelos certificados</b>: a IA lê os PDFs em lotes, salva os dados e mostra o progresso. Não é necessário abrir cada padrão.</li>'+

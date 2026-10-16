@@ -1102,7 +1102,9 @@
       .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterFarolAtual", payload: {} });
   }
 
-  const DASHC_CORES = ["#e64980", "#4dabf7", "#ffd43b", "#69db7c", "#b197fc", "#868e96"];
+  const DASHC_CORES = ["#2F6FA3", "#C98A00", "#7A5C9E", "#3FAE49", "#C2553A", "#A8A59B"];
+  // avatares levam texto branco: tons escuros da mesma família
+  const DASHC_CORES_AVATAR = ["#2F6FA3", "#7A5200", "#7A5C9E", "#1F6B2A", "#A3261B", "#5F645F"];
 
   function dashcIniciais_(nome) {
     const partes = String(nome || "?").trim().split(/\s+/);
@@ -1147,7 +1149,7 @@
       elRec.innerHTML = lista.length
         ? lista.map(function (c, i) {
             return '<div class="dashc-recentes-item">' +
-              '<span class="dashc-avatar" style="background:' + DASHC_CORES[i % DASHC_CORES.length] + '">' +
+              '<span class="dashc-avatar" style="background:' + DASHC_CORES_AVATAR[i % DASHC_CORES_AVATAR.length] + '">' +
               dashcIniciais_(c.nome) + '</span>' +
               '<span>' + escapeHtml_(c.nome) + '</span></div>';
           }).join("")
@@ -1235,8 +1237,8 @@
   function desenharGraficosDashboard_(res) {
     if (!window.Chart) return;
 
-    const corTexto = "#8b97a8";
-    const corGrade = "rgba(255,255,255,0.05)";
+    const corTexto = "#5F645F";
+    const corGrade = "#ECEAE3";
 
     // rosca: equipamentos por tipo
     const elRosca = document.getElementById("dashcGraficoRosca");
@@ -1250,8 +1252,8 @@
           datasets: [{
             data: dadosRosca.map(function (x) { return x.qtd; }),
             backgroundColor: DASHC_CORES,
-            borderColor: "#161c26",
-            borderWidth: 3
+            borderColor: "#FFFFFF",
+            borderWidth: 2
           }]
         },
         options: {
@@ -1276,7 +1278,7 @@
           labels: meses.map(function (m) { return m.rotulo; }),
           datasets: [{
             data: meses.map(function (m) { return m.qtd; }),
-            backgroundColor: "#339af0",
+            backgroundColor: "#2F6FA3",
             borderRadius: 4,
             maxBarThickness: 26
           }]
@@ -1304,7 +1306,7 @@
           labels: ranking.map(function (r) { return r.nome; }),
           datasets: [{
             data: ranking.map(function (r) { return r.qtd; }),
-            backgroundColor: ranking.map(function (r) { return r.acimaDaMedia ? "#69db7c" : "#4dabf7"; }),
+            backgroundColor: ranking.map(function (r) { return r.acimaDaMedia ? "#3FAE49" : "#2F6FA3"; }),
             borderRadius: 4,
             maxBarThickness: 26
           }]
@@ -1343,7 +1345,7 @@
           if (isCritico) criticos++;
           const bg = isCritico ? "var(--danger-bg)" : "var(--warning-bg)";
           const color = isCritico ? "var(--danger)" : "var(--warning)";
-          const border = isCritico ? "#fecaca" : "#fef0c7";
+          const border = isCritico ? "var(--bc-danger-line)" : "var(--bc-warn-line)";
           const selo = isCritico ? "Vencido" : "A vencer";
           return `<div style="padding:12px; border-radius:8px; background:${bg}; color:${color}; border:1px solid ${border}; margin-bottom:10px; font-weight:700; font-size:13px;"><span style="display:inline-block; padding:1px 8px; margin-right:6px; border-radius:10px; border:1px solid currentColor; font-size:11px;">${selo}</span>${escapeHtml_(a.mensagem)}</div>`;
         }).join("");
@@ -1374,8 +1376,8 @@
 
     const criticos = itensFrota.filter(function (a) { return a.tipo === "CRÍTICO"; });
     const temCritico = criticos.length > 0;
-    const corFundo = temCritico ? "var(--danger-bg, rgba(224,138,138,.16))" : "var(--warning-bg, rgba(214,169,79,.16))";
-    const corBorda = temCritico ? "var(--danger, #e08a8a)" : "var(--warning, #d6a94f)";
+    const corFundo = temCritico ? "var(--bc-danger-bg)" : "var(--bc-warn-bg)";
+    const corBorda = temCritico ? "var(--bc-danger)" : "var(--bc-warn)";
     const titulo = temCritico
       ? "Frota: " + criticos.length + (criticos.length > 1 ? " itens vencidos" : " item vencido") + " (manutenção, documento ou CNH)."
       : "Frota: " + itensFrota.length + (itensFrota.length > 1 ? " avisos" : " aviso") + " (manutenção, documento ou CNH).";
@@ -1664,13 +1666,13 @@
     const ativos = items.filter(function(v) { return v.SITUACAO !== 'INATIVO'; });
     const livres = ativos.filter(function(v) { return v.SITUACAO === 'DISPONIVEL'; }).length;
     const emUso = ativos.filter(function(v) { return v.SITUACAO === 'EM_USO'; }).length;
-    return '<section style="margin:14px 0;padding:16px;border:1px solid var(--border,#475569);border-radius:8px;background:var(--card,#1f2937)">' +
+    return '<section style="margin:14px 0;padding:16px;border:1px solid var(--bc-line);border-radius:6px;background:#FFFFFF">' +
       '<strong>Frota — ' + livres + ' disponível(is) · ' + emUso + ' em uso</strong>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px">' +
       (ativos.length ? ativos.map(function(v) {
         const uso = v.SITUACAO === 'EM_USO';
-        const cor = uso ? '#fbbf24' : (v.SITUACAO === 'DISPONIVEL' ? '#86efac' : '#cbd5e1');
-        return '<div style="border-left:4px solid '+cor+';padding:10px;background:rgba(127,127,127,.08);border-radius:6px">' +
+        const cor = uso ? 'var(--bc-warn)' : (v.SITUACAO === 'DISPONIVEL' ? 'var(--bc-action)' : 'var(--bc-text-3)');
+        return '<div style="border-left:4px solid '+cor+';padding:10px;background:var(--bc-surface-2);border-radius:6px">' +
           '<strong>'+escapeHtml_(v.PLACA+' — '+(v.MODELO||''))+'</strong><div style="color:'+cor+'">'+escapeHtml_(v.SITUACAO.replace(/_/g,' '))+'</div>' +
           (uso ? '<div>Retirado por: '+escapeHtml_(v.CONDUTOR_NOME || 'Responsável não localizado')+'</div><small>'+escapeHtml_([v.DATA_SAIDA,v.HORA_SAIDA,v.FINALIDADE].filter(Boolean).join(' · '))+'</small>' : '')+'</div>';
       }).join('') : '<p>Nenhum veículo cadastrado.</p>') + '</div></section>';
@@ -3931,7 +3933,7 @@
       const fechar = document.createElement("button");
       fechar.type = "button";
       fechar.textContent = "×";
-      fechar.style.cssText = "background:none;border:none;color:#9aa8b8;font-size:16px;cursor:pointer;line-height:1;padding:0 0 0 6px;";
+      fechar.style.cssText = "background:none;border:none;color:var(--bc-text-3);font-size:16px;cursor:pointer;line-height:1;padding:0 0 0 6px;";
       fechar.onclick = function () { toast.remove(); };
       toast.appendChild(fechar);
     }
@@ -4979,7 +4981,7 @@
   // ==========================================
   function SGO_montarDiagnosticoModulo_(nomeFuncao, nomeArquivo) {
     const erros = window.SGO_ERROS_SCRIPT || [];
-    let html = '<div style="padding:24px;background:#1f2937;border:1px solid #ef4444;border-radius:8px;font-family:monospace;font-size:13px;color:#fca5a5;white-space:pre-wrap;word-break:break-word;">';
+    let html = '<div style="padding:24px;background:var(--bc-danger-bg);border:1px solid var(--bc-danger-line);border-radius:6px;font-family:var(--bc-mono);font-size:13px;color:var(--bc-danger);white-space:pre-wrap;word-break:break-word;">';
     html += 'DIAGNÓSTICO DO MÓDULO\n';
     html += '=====================\n';
     html += 'A função ' + nomeFuncao + '() não existe nesta página.\n';
@@ -5172,7 +5174,7 @@
           const nome = nomeDoItem_(it);
           const cnpjFmt = it.CNPJ ? String(it.CNPJ) : "";
           return '<div class="sgo-autocomplete-item" data-id="' + escapeHtml_(it.ID) + '" data-nome="' + escapeHtml_(nome) + '">' +
-            "<b>" + escapeHtml_(nome) + "</b>" + (cnpjFmt ? ' <span style="color:var(--muted,#9aa8b8);">— ' + escapeHtml_(cnpjFmt) + "</span>" : "") +
+            "<b>" + escapeHtml_(nome) + "</b>" + (cnpjFmt ? ' <span style="color:var(--bc-text-3);">— ' + escapeHtml_(cnpjFmt) + "</span>" : "") +
             "</div>";
         }).join("");
       }
@@ -5234,12 +5236,12 @@
        layout e empurra o resto do formulário pra baixo enquanto aberto,
        como um <select> nativo se comportaria. */
     position: relative; width: 100%; margin-top: 4px; z-index: 5;
-    background: var(--card, #1f2937); border: 1px solid var(--border-strong, #4a5870); border-radius: 6px;
-    max-height: 170px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    background: var(--card, #FFFFFF); border: 1px solid var(--border-strong, var(--bc-line-2)); border-radius: 6px;
+    max-height: 170px; overflow-y: auto; box-shadow: 0 4px 12px rgba(28,31,29,0.09);
   }
-  .sgo-autocomplete-item { padding: 8px 10px; font-size: 12.5px; color: var(--text, #d9e2ec); cursor: pointer; }
-  .sgo-autocomplete-item:hover { background: rgba(59,130,246,.12); }
-  .sgo-autocomplete-item.vazio { color: var(--muted, #9aa8b8); cursor: default; }
+  .sgo-autocomplete-item { padding: 8px 10px; font-size: 12.5px; color: var(--text, var(--bc-text)); cursor: pointer; }
+  .sgo-autocomplete-item:hover { background: var(--bc-info-bg); }
+  .sgo-autocomplete-item.vazio { color: var(--muted, var(--bc-text-3)); cursor: default; }
   .sgo-autocomplete-item.vazio:hover { background: none; }
 </style>
 

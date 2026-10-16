@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METROLABS SGO+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <?!= include('UI_Estilos'); ?>
 </head>
@@ -164,8 +167,7 @@
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
           <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
-          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()"
-                  style="background-color: #198754; color: white; margin-top: 15px; border: 2px solid #146c43; font-weight: bold;">
+          <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()">
             <i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+
           </button>
           </div>
@@ -298,11 +300,11 @@
               <h3 class="section-card-title" id="documentosFormTitulo">Novo documento</h3>
               <div class="form-grid">
                 <div class="full">
-                  <label for="doc_cliente_id_busca">Cliente <span style="color:red;">*</span></label>
+                  <label for="doc_cliente_id_busca">Cliente <span style="color:var(--bc-danger);">*</span></label>
                   ${SGO_htmlBuscaClienteLike_("doc_cliente_id", "Nome ou CNPJ do cliente...")}
                 </div>
                 <div class="full">
-                  <label for="doc_unidade_id">Unidade <span style="color:red;">*</span></label>
+                  <label for="doc_unidade_id">Unidade <span style="color:var(--bc-danger);">*</span></label>
                   <select id="doc_unidade_id" onchange="aoMudarUnidadeDocumentos_()">
                     <option value="">Selecione um cliente primeiro</option>
                   </select>
@@ -314,7 +316,7 @@
                   </select>
                 </div>
                 <div class="full">
-                  <label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:red;">*</span></label>
+                  <label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:var(--bc-danger);">*</span></label>
                   <select id="doc_tipo_documento">
                     <option value="">Selecione a categoria...</option>
                     <option value="1. Relatórios de Manutenção">1. Relatórios de Manutenção</option>
@@ -326,7 +328,7 @@
                   </select>
                 </div>
                 <div class="full">
-                  <label for="doc_nome_arquivo">Nome / Referência <span style="color:red;">*</span></label>
+                  <label for="doc_nome_arquivo">Nome / Referência <span style="color:var(--bc-danger);">*</span></label>
                   <input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026">
                 </div>
                 <div class="full">

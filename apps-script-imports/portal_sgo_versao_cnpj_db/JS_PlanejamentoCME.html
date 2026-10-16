@@ -16,7 +16,7 @@
       return;
     }
 
-    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Planejamento CME...</p>';
+    container.innerHTML = '<p style="padding:20px;color:var(--bc-text-3);">Carregando módulo Planejamento CME...</p>';
 
     google.script.run
       .withSuccessHandler(function(conteudoBruto) {
@@ -48,16 +48,16 @@
             tplPlanCME_renderReal_();
           } else {
             console.error('tplPlanCME: tplPlanCME_renderReal_ não foi definida após o eval.');
-            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o módulo (função de renderização não encontrada). Veja o Console (F12) para detalhes.</p>';
+            container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada). Veja o Console (F12) para detalhes.</p>';
           }
         } catch (e) {
           console.error('tplPlanCME: erro ao montar o módulo:', e);
-          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
+          container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';
         }
       })
       .withFailureHandler(function(err) {
         console.error('tplPlanCME: falha ao buscar o módulo:', err);
-        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o módulo Planejamento CME: ' + ((err && err.message) ? err.message : err) + '</p>';
+        container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o módulo Planejamento CME: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .PlanCME_obterConteudoModulo();
   }

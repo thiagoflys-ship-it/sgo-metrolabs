@@ -34,13 +34,13 @@
   #tplAutoclaveContainer .brand { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; }
   #tplAutoclaveContainer .logo-img {
     height: 56px; max-width: 230px; object-fit: contain; display: block;
-    background: #f8fafc; border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; padding: 7px 10px;
+    background: #f8fafc; border: 1px solid var(--bc-line); border-radius: 7px; padding: 7px 10px;
   }
   #tplAutoclaveContainer .title-area { min-width: 0; }
   #tplAutoclaveContainer .title-area h1 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.2; }
   #tplAutoclaveContainer .title-area p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; }
   #tplAutoclaveContainer .header-widgets { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  #tplAutoclaveContainer #tplClockWidget { font-family: Consolas, Monaco, monospace; background: var(--input, #172033); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
+  #tplAutoclaveContainer #tplClockWidget { font-family: var(--bc-mono); background: var(--input, #FFFFFF); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
 
   #tplAutoclaveContainer .action-bar {
     margin-bottom: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -78,14 +78,14 @@
 
   #tplAutoclaveContainer .alert-box { margin-top: 14px; border-radius: var(--radius-sm, 6px); padding: 13px 14px; font-size: 13px; line-height: 1.55; border: 1px solid transparent; display: none; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
   #tplAutoclaveContainer .alert-box.show { display: block; }
-  #tplAutoclaveContainer .alert-box.success { background: rgba(111,191,143,.14); color: #b9dec8; border-color: rgba(111,191,143,.34); }
-  #tplAutoclaveContainer .alert-box.warning { background: rgba(214,169,79,.14); color: #ead39a; border-color: rgba(214,169,79,.42); }
-  #tplAutoclaveContainer .alert-box.error { background: rgba(224,138,138,.14); color: #f2b8b8; border-color: rgba(224,138,138,.42); }
-  #tplAutoclaveContainer .alert-box.info { background: rgba(122,167,199,.14); color: #c6d9e7; border-color: rgba(122,167,199,.34); }
+  #tplAutoclaveContainer .alert-box.success { background: var(--bc-action-bg); color: var(--bc-text-2); border-color: var(--bc-action-line); }
+  #tplAutoclaveContainer .alert-box.warning { background: var(--bc-warn-bg); color: var(--bc-warn); border-color: var(--bc-warn-line); }
+  #tplAutoclaveContainer .alert-box.error { background: var(--bc-danger-bg); color: var(--bc-danger); border-color: var(--bc-danger-line); }
+  #tplAutoclaveContainer .alert-box.info { background: var(--bc-info-bg); color: var(--bc-text-2); border-color: var(--bc-info-line); }
 
   #tplAutoclaveContainer .terminal-wrap { margin-top: 12px; border-radius: var(--radius-sm, 6px); overflow: hidden; border: 1px solid var(--border); }
   #tplAutoclaveContainer .terminal-header { padding: 10px 12px; font-size: 11px; font-weight: 800; border-bottom: 1px solid var(--border); }
-  #tplAutoclaveContainer .terminal { padding: 14px; font-family: Consolas, Monaco, monospace; font-size: 12px; min-height: 220px; max-height: 520px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; line-height: 1.55; }
+  #tplAutoclaveContainer .terminal { padding: 14px; font-family: var(--bc-mono); font-size: 12px; min-height: 220px; max-height: 520px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; line-height: 1.55; }
   #tplAutoclaveContainer .result-links { display: none; margin-top: 14px; }
   #tplAutoclaveContainer .result-links.show { display: block; }
   #tplAutoclaveContainer .result-link-list { display: grid; gap: 10px; }
@@ -93,12 +93,12 @@
   #tplAutoclaveContainer .card-note { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--accent-2); border-radius: 6px; font-size: 13px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
   #tplAutoclaveContainer .tpl-code-chip {
     display: inline-block; margin-top: 6px; padding: 4px 8px; border-radius: 6px;
-    border: 1px solid var(--border); font-family: Consolas, Monaco, monospace; font-size: 11px;
+    border: 1px solid var(--border); font-family: var(--bc-mono); font-size: 11px;
     max-width: 100%; overflow-wrap: anywhere; word-break: break-word;
   }
   #tplAutoclaveContainer .placeholder-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  #tplAutoclaveContainer .ph-chip { border: 1px solid var(--border); padding: 6px 8px; border-radius: 999px; font-family: Consolas, Monaco, monospace; font-size: 11px; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
-  #tplAutoclaveContainer .spinner { width: 16px; height: 16px; border: 2px solid rgba(5,46,22,.35); border-top-color: #052e16; border-radius: 50%; display: inline-block; animation: tplAutoclaveSpin .8s linear infinite; vertical-align: -3px; margin-left: 8px; }
+  #tplAutoclaveContainer .ph-chip { border: 1px solid var(--border); padding: 6px 8px; border-radius: 999px; font-family: var(--bc-mono); font-size: 11px; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  #tplAutoclaveContainer .spinner { width: 16px; height: 16px; border: 2px solid var(--bc-line); border-top-color: var(--bc-line); border-radius: 50%; display: inline-block; animation: tplAutoclaveSpin .8s linear infinite; vertical-align: -3px; margin-left: 8px; }
   @keyframes tplAutoclaveSpin { to { transform: rotate(360deg); } }
 
   @media (max-width: 1100px) { #tplAutoclaveContainer .grid-layout { grid-template-columns: 1fr; } #tplAutoclaveContainer .terminal { max-height: 340px; } }
@@ -434,7 +434,7 @@
       tplAutoclave_setStatus('Pronto para gerar o relatório.', 'info');
     } catch (e) {
       console.error('renderTplAutoclave_ falhou:', e);
-      container.innerHTML = '<div style="padding:24px;color:#fca5a5;background:#1f2937;border:1px solid #ef4444;border-radius:8px;">' +
+      container.innerHTML = '<div style="padding:24px;color:var(--bc-danger);background:var(--bc-danger-bg);border:1px solid var(--bc-danger-line);border-radius:6px;">' +
         'Não foi possível abrir esta tela. Recarregue a página (F5); se persistir, avise o administrador.</div>';
     }
   }

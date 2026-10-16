@@ -441,7 +441,7 @@
 #tplCartaConfContainer * { box-sizing: border-box; }
 #tplCartaConfContainer img { max-width: 100%; }
 #tplCartaConfContainer .hidden { display: none !important; }
-#tplCartaConfContainer .required::after { content: " *"; color: #dc3545; }
+#tplCartaConfContainer .required::after { content: " *"; color: var(--bc-danger); }
 
 #tplCartaConfContainer .step { display: none; }
 #tplCartaConfContainer .step.active { display: block; animation: tplCartaConfFadeIn .25s ease-in-out; }
@@ -477,8 +477,8 @@
 }
 #tplCartaConfContainer .radio-status-card.active {
   border-color: var(--accent) !important;
-  background: rgba(111,191,143,.16) !important;
-  box-shadow: 0 0 0 .15rem rgba(111,191,143,.3) !important;
+  background: var(--bc-action-bg) !important;
+  box-shadow: 0 0 0 .15rem transparent !important;
 }
 
 /* O Comfort Dark global do Portal sobrescreve "background" (shorthand) em
@@ -556,7 +556,7 @@
   object-fit: contain;
   display: block;
   background: #f8fafc;
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid var(--bc-line);
   border-radius: 7px;
   padding: 7px 10px;
 }
@@ -584,10 +584,10 @@
   padding: 34px 18px;
   z-index: 9999;
   overflow: auto;
-  background: rgba(2,6,23,.78);
+  background: rgba(28,31,29,.42);
 }
 #tplCartaConfContainer .ml-modal.show { display: flex; }
-#tplCartaConfContainer .ml-dialog { width: min(1040px, 100%); border-radius: var(--radius); box-shadow: 0 24px 90px rgba(0,0,0,.55); }
+#tplCartaConfContainer .ml-dialog { width: min(1040px, 100%); border-radius: var(--radius); box-shadow: 0 24px 90px rgba(28,31,29,0.1); }
 #tplCartaConfContainer .ml-dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1037,7 +1037,7 @@
         </div>
 
         <div style="background:#f1f5f9; padding:15px; display:flex; flex-direction:column; align-items:center; border:1px solid #cbd5e1; width:100%; max-width:360px; box-sizing:border-box; border-radius:8px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.05);">
-          <div style="font-size:0.65em; font-weight:bold; color:#94a3b8; margin-bottom:8px; letter-spacing:1px;">▼ CORTE DE PAPEL ▼</div>
+          <div style="font-size:0.65em; font-weight:bold; color:var(--bc-text-3); margin-bottom:8px; letter-spacing:1px;">▼ CORTE DE PAPEL ▼</div>
 
           <div id="tplCartaConf_printer-ticket" style="background:#fff; color:#000; font-family:'Courier New', Courier, monospace; width:300px; min-height:170px; padding:10px 15px; font-size:10.8px; font-weight:bold; line-height:1.14; box-shadow:0 4px 10px rgba(0,0,0,0.15); text-transform:uppercase; border:1px solid #e2e8f0; letter-spacing:0;">
             <div id="tplCartaConf_print-body" style="white-space:normal; word-wrap:break-word; text-align:left;">
@@ -1047,7 +1047,7 @@
             </div>
           </div>
 
-          <div style="font-size:0.65em; font-weight:bold; color:#94a3b8; margin-top:10px; letter-spacing:1px;">▲ FIM DO TICKET ▲</div>
+          <div style="font-size:0.65em; font-weight:bold; color:var(--bc-text-3); margin-top:10px; letter-spacing:1px;">▲ FIM DO TICKET ▲</div>
         </div>
       </div>
     </div>

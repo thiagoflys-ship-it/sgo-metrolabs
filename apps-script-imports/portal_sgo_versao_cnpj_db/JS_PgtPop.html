@@ -17,7 +17,7 @@
       return;
     }
 
-    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo PGT e POP...</p>';
+    container.innerHTML = '<p style="padding:20px;color:var(--bc-text-3);">Carregando módulo PGT e POP...</p>';
 
     google.script.run
       .withSuccessHandler(function(conteudoBruto) {
@@ -41,16 +41,16 @@
             tplPgtPop_renderReal_();
           } else {
             console.error('renderTplPgtPop_: tplPgtPop_renderReal_ nao foi definida apos o eval.');
-            container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
+            container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o modulo (funcao de renderizacao nao encontrada). Veja o Console (F12) para detalhes.</p>';
           }
         } catch (e) {
           console.error('renderTplPgtPop_: erro ao montar o modulo:', e);
-          container.innerHTML = '<p style="padding:20px;color:#f87171;">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
+          container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar o modulo: ' + (e && e.message ? e.message : e) + '</p>';
         }
       })
       .withFailureHandler(function(err) {
         console.error('renderTplPgtPop_: falha ao buscar o modulo:', err);
-        container.innerHTML = '<p style="padding:20px;color:#f87171;">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
+        container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao carregar o modulo: ' + ((err && err.message) ? err.message : err) + '</p>';
       })
       .PgtPop_obterConteudoModulo();
   }

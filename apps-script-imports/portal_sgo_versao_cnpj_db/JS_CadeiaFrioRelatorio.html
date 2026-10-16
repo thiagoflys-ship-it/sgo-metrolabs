@@ -7,7 +7,7 @@
     if (!container) return;
     container.replaceChildren();
     const aviso = document.createElement('p');
-    aviso.style.cssText = 'padding:20px;color:#f87171;';
+    aviso.style.cssText = 'padding:20px;color:var(--bc-danger);';
     aviso.textContent = 'Não foi possível abrir Cadeia de Frio: ' + (erro && erro.message ? erro.message : String(erro));
     const botao = document.createElement('button');
     botao.type = 'button';
@@ -24,7 +24,7 @@
       catch (erro) { tplCadeiaFrioRel_falhaCarga_(erro); }
       return;
     }
-    container.innerHTML = '<p style="padding:20px;color:#94a3b8;">Carregando módulo Cadeia de Frio...</p>';
+    container.innerHTML = '<p style="padding:20px;color:var(--bc-text-3);">Carregando módulo Cadeia de Frio...</p>';
     if (tplCadeiaFrioRel_pendente_) return;
     tplCadeiaFrioRel_pendente_ = true;
     const tentativa = ++tplCadeiaFrioRel_tentativa_;

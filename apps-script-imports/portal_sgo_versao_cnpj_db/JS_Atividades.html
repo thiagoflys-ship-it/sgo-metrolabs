@@ -11,7 +11,7 @@
   .atv-selo.hoje { color: var(--warning); background: var(--warning-bg); }
   .atv-selo.emdia { color: var(--success); background: var(--success-bg); }
   .atv-selo.neutro { color: var(--muted); }
-  .atv-sit { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .atv-sit { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 700; color: var(--bc-text); white-space: nowrap; }
   .atv-pri-Urgente { color: var(--danger); font-weight: 800; }
   .atv-pri-Alta { color: var(--warning); font-weight: 700; }
   .atv-pri-Baixa { color: var(--muted); }
@@ -54,7 +54,7 @@
   .atv-mes { display: grid; grid-template-columns: repeat(7, minmax(90px, 1fr)); gap: 4px; }
   .atv-mes .atv-dia { min-height: 96px; }
   .atv-mes-sem { font-size: 11px; font-weight: 800; color: var(--muted); text-align: center; padding: 4px; }
-  .atv-ev { display: block; width: 100%; text-align: left; border: none; border-left: 3px solid var(--muted); background: rgba(127,127,127,.10); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .atv-ev { display: block; width: 100%; text-align: left; border: none; border-left: 3px solid var(--muted); background: var(--bc-surface-3); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .atv-ev.inicio { border-left-style: dashed; opacity: .85; }
   .atv-ev.vencida { color: var(--danger); }
   .atv-ev.fechada { opacity: .55; text-decoration: line-through; }
@@ -68,7 +68,7 @@
   .atv-duas { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
   .atv-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
   .atv-caixa h3 { margin: 0 0 10px; font-size: 14px; color: var(--metro-blue-dark); }
-  .atv-just { border-left: 3px solid var(--warning); padding: 6px 10px; margin-bottom: 8px; font-size: 12.5px; background: rgba(127,127,127,.06); border-radius: 4px; }
+  .atv-just { border-left: 3px solid var(--warning); padding: 6px 10px; margin-bottom: 8px; font-size: 12.5px; background: var(--bc-surface-3); border-radius: 4px; }
   .atv-lista-rolagem { max-height: 320px; overflow: auto; }
   .atv-caixa .table { min-width: 0; }
   .atv-caixa .table thead th, .atv-caixa .table tbody td { padding: 8px 8px; }
@@ -78,9 +78,9 @@
   .atv-legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
 
   /* Modais e painel lateral */
-  .atv-overlay { position: fixed; inset: 0; z-index: 99990; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .atv-overlay.bloqueante { z-index: 100001; background: rgba(0,0,0,.78); }
-  .atv-modal { background: var(--card); color: var(--text-strong, var(--text)); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .atv-overlay { position: fixed; inset: 0; z-index: 99990; background: rgba(28,31,29,.42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .atv-overlay.bloqueante { z-index: 100001; background: rgba(28,31,29,.42); }
+  .atv-modal { background: var(--card); color: var(--text-strong, var(--text)); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(28,31,29,0.1); }
   .atv-modal-cab { padding: 14px 18px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
   .atv-modal-cab h3 { margin: 0; font-size: 16px; }
   .atv-modal-corpo { padding: 14px 18px; overflow-y: auto; font-size: 13px; }
@@ -102,7 +102,7 @@
   .atv-just-card .t { font-weight: 800; margin-bottom: 4px; }
   .atv-contador { font-size: 11px; color: var(--muted); text-align: right; }
   .atv-contador.curto { color: var(--danger); }
-  .atv-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 100vw); z-index: 99980; background: var(--bg); border-left: 1px solid var(--border); box-shadow: -10px 0 40px rgba(0,0,0,.4); display: flex; flex-direction: column; }
+  .atv-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 100vw); z-index: 99980; background: var(--bg); border-left: 1px solid var(--border); box-shadow: -10px 0 40px rgba(28,31,29,0.1); display: flex; flex-direction: column; }
   .atv-drawer-cab { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .atv-drawer-cab h3 { margin: 0; font-size: 16px; }
   .atv-drawer-corpo { padding: 14px 18px; overflow: auto; flex: 1; }
@@ -1049,14 +1049,14 @@
     var agora = new Date();
     if (agora >= ini && agora <= fim) {
       var xh = x(Atividades_agoraIso_());
-      s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cabH - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#38bdf8" stroke-width="2"/>');
-      s.push('<text x="' + (xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#38bdf8">hoje</text>');
+      s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cabH - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/>');
+      s.push('<text x="' + (xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje</text>');
     }
     s.push("</svg>");
     var leg = ATV_SITUACOES_KANBAN.map(function (k) { return '<span><i style="background:' + ATV_CORES[k] + '"></i>' + k + "</span>"; }).join("") +
       '<span><i style="border:1px solid #c2953f;background-image:repeating-linear-gradient(45deg,#c2953f 0 3px,transparent 3px 6px)"></i>Previsão adiada por justificativa</span>' +
       '<span><i style="background:rgba(224,82,82,.55);outline:2px solid #e05252"></i>Atrasada (vencida até hoje)</span>' +
-      '<span><i style="background:#38bdf8;width:3px"></i>Hoje</span><span><i style="background:#fff;border-radius:50%"></i>Fazendo agora</span>';
+      '<span><i style="background:#1E4F7A;width:3px"></i>Hoje</span><span><i style="background:#fff;border-radius:50%"></i>Fazendo agora</span>';
     return '<div class="atv-legenda">' + leg + '</div><div class="atv-gantt-wrap">' + s.join("") + "</div>";
   }
 

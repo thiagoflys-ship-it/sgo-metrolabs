@@ -309,7 +309,7 @@
       const clickable = a.auvoTaskId ? ' style="padding:6px 0; border-bottom:1px solid var(--border-color, #eee); cursor:pointer" onclick="Auvo_abrirModalOS_(\'' + String(a.auvoTaskId).replace(/'/g, "") + '\')" title="Ver O.S. completa"' : ' style="padding:6px 0; border-bottom:1px solid var(--border-color, #eee);"';
       return '<div' + clickable + '>' +
         '<strong>' + escapeHtml_(dataFmt) + '</strong> · ' + escapeHtml_(a.tipo || "") + ' · ' + escapeHtml_(situacao) +
-        '<div style="color:#64748b;">Técnico: ' + escapeHtml_(a.tecnico || "-") + '</div>' +
+        '<div style="color:var(--bc-text-3);">Técnico: ' + escapeHtml_(a.tecnico || "-") + '</div>' +
         (a.relato ? '<div style="margin-top:2px;">' + escapeHtml_(a.relato) + '</div>' : '') +
         '</div>';
     }).join("");

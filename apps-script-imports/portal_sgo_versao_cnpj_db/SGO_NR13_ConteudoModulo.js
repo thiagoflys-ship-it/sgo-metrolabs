@@ -1,46 +1,46 @@
 var NR13_CONTEUDO_MODULO = `<style>
 #tplNR13Container {
-  color-scheme: dark;
-  --bg: #111827;
-  --card: #1f2937;
-  --panel: #1f2937;
-  --input: #172033;
-  --input-hover: #1d293a;
-  --text: #d9e2ec;
-  --text-strong: #eef3f8;
-  --muted: #9aa8b8;
-  --muted-2: #7f8da0;
-  --border: #3a4657;
-  --border-strong: #4a5870;
-  --accent: #6fbf8f;
-  --accent-2: #7aa7c7;
-  --warning: #d6a94f;
-  --danger: #e08a8a;
-  --success-bg: rgba(111,191,143,.14);
-  --info-bg: rgba(122,167,199,.14);
-  --warning-bg: rgba(214,169,79,.14);
-  --danger-bg: rgba(224,138,138,.13);
-  --shadow-soft: 0 8px 22px rgba(0,0,0,.18);
-  --radius: 8px;
-  --radius-sm: 6px;
+  color-scheme: light;
+  --bg: var(--bc-bg);
+  --card: var(--bc-surface);
+  --panel: var(--bc-surface);
+  --input: #FFFFFF;
+  --input-hover: var(--bc-surface-2);
+  --text: var(--bc-text);
+  --text-strong: var(--bc-text);
+  --muted: var(--bc-text-3);
+  --muted-2: var(--bc-text-3);
+  --border: var(--bc-line);
+  --border-strong: var(--bc-line-2);
+  --accent: var(--bc-action);
+  --accent-2: var(--bc-action);
+  --warning: var(--bc-warn);
+  --danger: var(--bc-danger);
+  --success-bg: var(--bc-action-bg);
+  --info-bg: var(--bc-info-bg);
+  --warning-bg: var(--bc-warn-bg);
+  --danger-bg: var(--bc-danger-bg);
+  --shadow-soft: none;
+  --radius: 6px;
+  --radius-sm: 4px;
 }
 #tplNR13Container * { box-sizing: border-box; }
 #tplNR13Container .hidden { display: none !important; }
 #tplNR13Container, #tplNR13Container body {
-  font-family: "Segoe UI", Inter, Arial, sans-serif;
-  background: #111827 !important;
+  font-family: var(--bc-sans);
+  background: transparent !important;
   color: var(--text) !important;
 }
 #tplNR13Container .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
 #tplNR13Container .header-card {
-  background: #1f2937 !important; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #FFFFFF !important; border: 1px solid var(--border); border-radius: var(--radius);
   padding: 14px 18px; box-shadow: var(--shadow-soft); margin-bottom: 14px;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
 }
 #tplNR13Container .title-area h1 { margin: 0; font-size: 19px; color: var(--text-strong); font-weight: 800; }
 #tplNR13Container .title-area p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 #tplNR13Container .panel {
-  background: #1f2937 !important; border-radius: var(--radius); padding: 18px;
+  background: #FFFFFF !important; border-radius: var(--radius); padding: 18px;
   box-shadow: var(--shadow-soft); border: 1px solid var(--border); margin-bottom: 14px;
 }
 #tplNR13Container .panel h2 {
@@ -64,18 +64,18 @@ var NR13_CONTEUDO_MODULO = `<style>
   border-radius: var(--radius-sm); padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px;
 }
 #tplNR13Container .btn:hover { background: var(--input-hover); }
-#tplNR13Container .btn-primary { background: var(--accent); color: #0d1b12; border-color: var(--accent); }
+#tplNR13Container .btn-primary { background: var(--accent); color: #FFFFFF; border-color: var(--accent); }
 #tplNR13Container .btn-primary:hover { filter: brightness(1.08); }
-#tplNR13Container .btn-danger { background: var(--danger-bg); color: #f2b8b8; border-color: rgba(224,138,138,.42); }
-#tplNR13Container .btn-warning { background: var(--warning-bg); color: #e8c789; border-color: rgba(214,169,79,.42); }
+#tplNR13Container .btn-danger { background: var(--danger-bg); color: var(--bc-danger); border-color: var(--bc-danger-line); }
+#tplNR13Container .btn-warning { background: var(--warning-bg); color: var(--bc-warn); border-color: var(--bc-warn-line); }
 #tplNR13Container .btn-sm { padding: 5px 10px; font-size: 11.5px; margin-top: 0; }
 #tplNR13Container .alert-box { border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12.5px; margin-top: 10px; }
-#tplNR13Container .alert-box.success { background: var(--success-bg); color: #b9dec8; border: 1px solid rgba(111,191,143,.34); }
-#tplNR13Container .alert-box.error { background: var(--danger-bg); color: #f2b8b8; border: 1px solid rgba(224,138,138,.42); }
-#tplNR13Container .alert-box.info { background: var(--info-bg); color: #bcd6ea; border: 1px solid rgba(122,167,199,.34); }
-#tplNR13Container .alert-box.warning { background: var(--warning-bg); color: #e8c789; border: 1px solid rgba(214,169,79,.42); }
+#tplNR13Container .alert-box.success { background: var(--success-bg); color: var(--bc-text-2); border: 1px solid var(--bc-action-line); }
+#tplNR13Container .alert-box.error { background: var(--danger-bg); color: var(--bc-danger); border: 1px solid var(--bc-danger-line); }
+#tplNR13Container .alert-box.info { background: var(--info-bg); color: var(--bc-info); border: 1px solid var(--bc-info-line); }
+#tplNR13Container .alert-box.warning { background: var(--warning-bg); color: var(--bc-warn); border: 1px solid var(--bc-warn-line); }
 #tplNR13Container .cliente-card, #tplNR13Container .equip-card {
-  background: var(--success-bg); border: 1px solid rgba(111,191,143,.34); border-radius: var(--radius-sm);
+  background: var(--success-bg); border: 1px solid var(--bc-action-line); border-radius: var(--radius-sm);
   padding: 10px 12px; margin-top: 10px; font-size: 13px;
 }
 #tplNR13Container .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
@@ -88,22 +88,22 @@ var NR13_CONTEUDO_MODULO = `<style>
 #tplNR13Container .categoria-box { flex: 1; min-width: 130px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; background: var(--input); }
 #tplNR13Container .categoria-box .valor { font-size: 22px; font-weight: 800; color: var(--accent); }
 #tplNR13Container .categoria-box .rotulo-mini { font-size: 10.5px; color: var(--muted); text-transform: uppercase; }
-#tplNR13Container .foto-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px; background: #182233; display: flex; gap: 12px; flex-wrap: wrap; }
+#tplNR13Container .foto-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px; background: #FFFFFF; display: flex; gap: 12px; flex-wrap: wrap; }
 #tplNR13Container .foto-card img { width: 140px; height: 105px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
 #tplNR13Container .foto-card .foto-campos { flex: 1; min-width: 220px; }
-#tplNR13Container .foto-card .interpretacao-ia-preview { background: var(--info-bg); border: 1px solid rgba(122,167,199,.34); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12px; margin-top: 8px; }
+#tplNR13Container .foto-card .interpretacao-ia-preview { background: var(--info-bg); border: 1px solid var(--bc-info-line); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12px; margin-top: 8px; }
 #tplNR13Container .cert-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; gap: 8px; flex-wrap: wrap; }
 #tplNR13Container .cert-item-row:last-child { border-bottom: none; }
 #tplNR13Container .muted { color: var(--muted); font-size: 12px; }
 #tplNR13Container table.tabela-resultado { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
 #tplNR13Container table.tabela-resultado th, #tplNR13Container table.tabela-resultado td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
-#tplNR13Container table.tabela-resultado th { background: #172033; color: var(--muted); font-weight: 700; }
+#tplNR13Container table.tabela-resultado th { background: #FFFFFF; color: var(--muted); font-weight: 700; }
 #tplNR13Container .terminal-wrap { margin-top: 12px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); box-shadow: inset 0 1px 0 rgba(255,255,255,.02); }
-#tplNR13Container .terminal-header { background: #010409; color: #94a3b8; padding: 10px 12px; font-size: 11px; font-weight: 800; }
-#tplNR13Container .terminal { background: #010409; color: #86efac; padding: 14px; font-family: Consolas, Monaco, monospace; font-size: 12px; height: 260px; overflow-y: auto; white-space: pre-wrap; line-height: 1.55; }
-#tplNR13Container .terminal .success { color: #4ade80; font-weight: 800; }
-#tplNR13Container .terminal .error { color: #fb7185; font-weight: 800; }
-#tplNR13Container .terminal .warn { color: #facc15; font-weight: 800; }
+#tplNR13Container .terminal-header { background: #FFFFFF; color: var(--bc-text-3); padding: 10px 12px; font-size: 11px; font-weight: 800; }
+#tplNR13Container .terminal { background: #FFFFFF; color: var(--bc-action); padding: 14px; font-family: var(--bc-mono); font-size: 12px; height: 260px; overflow-y: auto; white-space: pre-wrap; line-height: 1.55; }
+#tplNR13Container .terminal .success { color: var(--bc-action); font-weight: 800; }
+#tplNR13Container .terminal .error { color: var(--bc-danger); font-weight: 800; }
+#tplNR13Container .terminal .warn { color: var(--bc-warn); font-weight: 800; }
 
 @media (max-width: 640px) {
   #tplNR13Container .wrap { padding: 10px; }
@@ -122,9 +122,9 @@ var NR13_CONTEUDO_MODULO = `<style>
 #tplNR13Container .manual-wrap p { color: var(--text); }
 #tplNR13Container .manual-wrap table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 13.5px; }
 #tplNR13Container .manual-wrap th, #tplNR13Container .manual-wrap td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
-#tplNR13Container .manual-wrap th { background: #172033; color: var(--text-strong); }
-#tplNR13Container .manual-wrap tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-#tplNR13Container .callout { background: rgba(111,191,143,.14); border: 1px solid rgba(111,191,143,.35); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; margin: 14px 0; font-size: 13.5px; }
+#tplNR13Container .manual-wrap th { background: #FFFFFF; color: var(--text-strong); }
+#tplNR13Container .manual-wrap tr:nth-child(even) td { background: var(--bc-surface-2); }
+#tplNR13Container .callout { background: var(--bc-action-bg); border: 1px solid var(--bc-action-line); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; margin: 14px 0; font-size: 13.5px; }
 #tplNR13Container .callout strong { color: var(--text-strong); }
 #tplNR13Container .manual-wrap ol, #tplNR13Container .manual-wrap ul { padding-left: 22px; }
 #tplNR13Container .manual-wrap ol li, #tplNR13Container .manual-wrap ul li { margin-bottom: 6px; }
@@ -763,7 +763,7 @@ function tplNR13_renderValvulas_() {
   var el = document.getElementById('nr13-valvulas-lista');
   if (!nr13State.valvulas.length) { el.innerHTML = '<span class="muted">Nenhuma válvula adicionada ainda.</span>'; return; }
   el.innerHTML = nr13State.valvulas.map(function(v, idx) {
-    return '<div class="form-row" style="align-items:center;background:#182233;border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+    return '<div class="form-row" style="align-items:center;background:var(--bc-surface-2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
       '<div><label>Identificação/TAG</label><input value="' + (v.identificacao || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarValvula_(' + idx + ',\\'identificacao\\',this.value)"></div>' +
       '<div><label>Nº certificado</label><input value="' + (v.certificado || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarValvula_(' + idx + ',\\'certificado\\',this.value)"></div>' +
       '<div><label>Pressão de abertura ajustada</label><input value="' + (v.pressaoAbertura || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarValvula_(' + idx + ',\\'pressaoAbertura\\',this.value)"></div>' +
@@ -793,7 +793,7 @@ function tplNR13_renderManometros_() {
   var el = document.getElementById('nr13-manometros-lista');
   if (!nr13State.manometros.length) { el.innerHTML = '<span class="muted">Nenhum manômetro adicionado ainda.</span>'; return; }
   el.innerHTML = nr13State.manometros.map(function(m, idx) {
-    return '<div class="form-row" style="align-items:center;background:#182233;border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
+    return '<div class="form-row" style="align-items:center;background:var(--bc-surface-2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:6px;">' +
       '<div><label>Identificação/TAG</label><input value="' + (m.identificacao || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarManometro_(' + idx + ',\\'identificacao\\',this.value)"></div>' +
       '<div><label>Faixa de indicação</label><input value="' + (m.faixaIndicacao || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarManometro_(' + idx + ',\\'faixaIndicacao\\',this.value)"></div>' +
       '<div><label>Nº certificado de aferição</label><input value="' + (m.certificado || '').replace(/"/g, '&quot;') + '" oninput="tplNR13_atualizarManometro_(' + idx + ',\\'certificado\\',this.value)"></div>' +
