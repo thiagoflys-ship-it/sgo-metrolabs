@@ -21,27 +21,6 @@
  *   editar SIMULADOR_ADMIN_SENHA / MODO_PERSONALIZADO_SENHA.
  ****************************************************/
 
-/**
- * TEMPORARIO 2026-08-06: define a senha do Simulador Admin (Relatorio
- * Interno) para um valor escolhido pelo usuario. Rodar uma unica vez
- * pelo editor.
- */
-function DIAG_definirSenhaSimuladorAdmin() {
-  PropertiesService.getScriptProperties().setProperty('SIMULADOR_ADMIN_SENHA', 'METROLABS@2026');
-  Logger.log('SIMULADOR_ADMIN_SENHA definida com sucesso.');
-}
-
-/**
- * DIAGNOSTICO TEMPORARIO 2026-08-06: mostra no log (so o proprietario ve,
- * nunca retorna ao cliente) as senhas administrativas ja configuradas,
- * caso o painel de Propriedades do script nao esteja mostrando (paginacao).
- */
-function DIAG_mostrarSenhasAdmin() {
-  const props = PropertiesService.getScriptProperties();
-  Logger.log('SIMULADOR_ADMIN_SENHA atual: ' + (props.getProperty('SIMULADOR_ADMIN_SENHA') || '(vazia)'));
-  Logger.log('MODO_PERSONALIZADO_SENHA atual: ' + (props.getProperty('MODO_PERSONALIZADO_SENHA') || '(vazia)'));
-}
-
 function setupSeguranca() {
   const resultado = {
     senhaSimuladorDefinida: false,

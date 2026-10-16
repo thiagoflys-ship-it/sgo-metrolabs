@@ -1115,34 +1115,6 @@ function AutoRel_encontrarPiorSensorF0_(f0PorSensor, ativos) {
 }
 
 // ------------------------------------------------------------
-// AUXILIAR: pior sensor térmico global (legado)
-// ------------------------------------------------------------
-function AutoRel_encontrarPiorSensorTemperatura_(statsSensores, ativos) {
-  let piorIdx = -1;
-  let piorValor = Infinity;
-
-  for (let s = 0; s < statsSensores.length; s++) {
-    if (!ativos[s]) continue;
-
-    const v = statsSensores[s].min;
-    if (v === null || !isFinite(v)) continue;
-
-    if (v < piorValor) {
-      piorValor = v;
-      piorIdx = s;
-    }
-  }
-
-  if (piorIdx === -1) return null;
-
-  return {
-    sensor: 'S' + (piorIdx + 1),
-    indice: piorIdx,
-    valor: AutoRel_roundAnalise_(piorValor, 2)
-  };
-}
-
-// ------------------------------------------------------------
 // AUXILIAR: pior sensor térmico na exposição
 // ------------------------------------------------------------
 function AutoRel_encontrarPiorSensorTemperaturaExposicao_(statsSensores, ativos) {

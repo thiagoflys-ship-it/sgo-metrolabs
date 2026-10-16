@@ -796,12 +796,6 @@ function EstufaBanhoRel_ebInserirFaixaRelatorioInterno_(sh, row, span) {
   sh.setRowHeight(row + 1, 8);
   return row + 2;
 }
-function EstufaBanhoRel_ebInserirFaixaModoPersonalizado_(sh, row, span, nSensoresUsado, minimoExigido) {
-  sh.getRange(row, 1, 1, span).merge().setValue('⚠ ENSAIO PERSONALIZADO — ' + nSensoresUsado + ' SENSOR(ES), ABAIXO DO MÍNIMO DE ' + minimoExigido + ' EXIGIDO PELA NBR 16328:2024 PARA ESTE ANEXO — AUTORIZADO POR SENHA ADMINISTRATIVA').setFontSize(11).setFontWeight('bold').setBackground(EstufaBanhoRel_EBCFG.CORES.REPROVADO).setFontColor('#ffffff').setHorizontalAlignment('center').setVerticalAlignment('middle');
-  sh.setRowHeight(row, 24);
-  sh.setRowHeight(row + 1, 8);
-  return row + 2;
-}
 function EstufaBanhoRel_ebTituloSecao_(sh, row, titulo, corStatus) {
   sh.getRange(row, 1, 1, EstufaBanhoRel_EB_RESULTADOS_NUM_COLUNAS).merge().setValue(titulo).setFontSize(13).setFontWeight('bold').setBackground(corStatus).setFontColor(EstufaBanhoRel_EBCFG.CORES.TEXTO_BRANCO).setHorizontalAlignment('center').setVerticalAlignment('middle');
   sh.setRowHeight(row, 28);
@@ -958,11 +952,6 @@ function EstufaBanhoRel_ebListarNormasAplicaveis_(chavePerfil) {
   const anexoRotulo = anexo ? 'Anexo ' + anexo + ' — ' : '';
   const normas = ['ABNT NBR 16328:2024 — Requisitos de desempenho e método de ensaio para equipamentos térmicos (' + anexoRotulo + descricaoAnexo + ')', 'RDC nº 658/2022 (ANVISA) — Boas Práticas de Fabricação de Medicamentos, requisitos de validação de processo (IQ/OQ/PQ) para equipamentos críticos', 'RDC nº 665/2022 (ANVISA) — Boas Práticas de Fabricação de Produtos Médicos e Produtos para Diagnóstico In Vitro (IVD), requisitos de validação de processo (IQ/OQ/PQ) para equipamentos críticos'];
   return normas;
-}
-function EstufaBanhoRel_ebTextoNormasAplicaveis_(chavePerfil) {
-  return EstufaBanhoRel_ebListarNormasAplicaveis_(chavePerfil).map(function (n, i) {
-    return i + 1 + '. ' + n;
-  }).join('\n');
 }
 function EstufaBanhoRel_ebFmtMin_(valor) {
   const n = Number(valor);

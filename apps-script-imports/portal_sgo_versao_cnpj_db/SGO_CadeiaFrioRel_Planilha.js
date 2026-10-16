@@ -1065,10 +1065,6 @@ function CadeiaFrioRel_cfListarNormasAplicaveis_(chavePerfil) {
   return normas;
 }
 
-function CadeiaFrioRel_cfTextoNormasAplicaveis_(chavePerfil) {
-  return CadeiaFrioRel_cfListarNormasAplicaveis_(chavePerfil).map(function(n, i) { return (i + 1) + '. ' + n; }).join('\n');
-}
-
 function CadeiaFrioRel_cfFmtMin_(valor) {
   const n = Number(valor);
   if (!isFinite(n)) return '-';

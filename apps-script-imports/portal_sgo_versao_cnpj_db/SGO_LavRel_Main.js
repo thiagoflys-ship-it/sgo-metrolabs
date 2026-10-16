@@ -689,16 +689,3 @@ function LavRel_montarEnderecoCnpjMain_(data) {
 }
 
 
-function LavRel_autorizarConsultaCnpj() {
-  const res = UrlFetchApp.fetch('https://brasilapi.com.br/api/cnpj/v1/00000000000191', {
-    method: 'get',
-    muteHttpExceptions: true,
-    followRedirects: true,
-    headers: { Accept: 'application/json' }
-  });
-  return {
-    ok: true,
-    httpCode: res.getResponseCode(),
-    mensagem: 'Permissão UrlFetchApp autorizada para consulta pública de CNPJ.'
-  };
-}

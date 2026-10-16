@@ -511,7 +511,6 @@ function Frota_uploadFoto_(placa, base64, mimeType, nomeArquivoSugerido) {
 // retirada/devolução, e manda só os links prontos pro apiIniciarViagem/
 // apiFinalizarViagem (ver payload.fotosSalvas).
 function Frota_apiUploadFotoVeiculo(sessionId, payload) {
-  var diagT0 = Date.now();
   exigirSessao(sessionId);
   payload = payload || {};
   var placa = SGO_UTILS.safe(payload.placa);
@@ -522,22 +521,16 @@ function Frota_apiUploadFotoVeiculo(sessionId, payload) {
   // achar qual chamada ao Drive (pasta raiz / busca de subpasta /
   // upload em si / setSharing) e' a lenta de verdade.
   var raiz = Frota_obterPastaDocumentos_();
-  Frota_diagLog_('upload_foto_apos_obterPastaDocumentos placa=' + placa, diagT0);
   var nomeSubpasta = Frota_sanitizarNome_(placa || 'sem-placa');
   var subpastas = raiz.getFoldersByName(nomeSubpasta);
-  Frota_diagLog_('upload_foto_apos_getFoldersByName placa=' + placa, diagT0);
   var pasta = subpastas.hasNext() ? subpastas.next() : raiz.createFolder(nomeSubpasta);
-  Frota_diagLog_('upload_foto_apos_resolver_subpasta placa=' + placa, diagT0);
 
   var partes = String(payload.base64 || '').split(',');
   var dadosBase64 = partes.length > 1 ? partes[1] : partes[0];
   var nomeArquivo = Frota_sanitizarNome_(payload.nomeArquivo || 'foto');
   var blob = Utilities.newBlob(Utilities.base64Decode(dadosBase64), payload.mimeType || 'image/jpeg', nomeArquivo);
-  Frota_diagLog_('upload_foto_apos_decodificar_base64 placa=' + placa, diagT0);
   var arquivo = pasta.createFile(blob);
-  Frota_diagLog_('upload_foto_apos_createFile placa=' + placa, diagT0);
   arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  Frota_diagLog_('upload_foto_apos_setSharing placa=' + placa, diagT0);
 
   var link = arquivo.getUrl();
   return { ok: true, link: link, legenda: String(payload.legenda || '').trim() };
@@ -614,16 +607,10 @@ function Frota_apiListarViagensEmAndamento(sessionId) {
 }
 
 /**
- * Cronômetro temporário (2026-09-09) — investigação de lentidão real
- * reportada pelo usuário. Loga em SYS_LOGS o tempo entre cada etapa de
- * uma retirada/devolução de verdade, sem mudar nenhum comportamento.
- * REMOVER depois que a causa for confirmada e corrigida.
- */
-/**
  * Recebe do NAVEGADOR o tempo de ida-e-volta real de uma chamada
  * (inclui rede + fila do Apps Script + execução no servidor + volta) —
  * sem sessão exigida de propósito, pra nunca falhar por causa da
- * própria instrumentação. Temporário, ver Frota_diagLog_.
+ * própria instrumentação. Temporário.
  */
 function Frota_apiDiagLogTempoCliente(sessionId, payload) {
   payload = payload || {};
@@ -631,23 +618,13 @@ function Frota_apiDiagLogTempoCliente(sessionId, payload) {
   return { ok: true };
 }
 
-function Frota_diagLog_(rotulo, t0) {
-  try { SGO_DATA.log('DIAG_FROTA_REAL', 'sistema', rotulo + ': ' + (Date.now() - t0) + 'ms desde o inicio', 'DIAG'); } catch (e) {}
-  return Date.now();
-}
-
 function Frota_apiIniciarViagem(sessionId, payload) {
-  var diagT0 = Date.now();
-  Frota_diagLog_('inicio_apiIniciarViagem', diagT0);
   Frota_bootstrap_();
-  Frota_diagLog_('apos_bootstrap', diagT0);
   var sessao = exigirSessao(sessionId);
-  Frota_diagLog_('apos_exigirSessao', diagT0);
   payload = payload || {};
 
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
-  Frota_diagLog_('apos_getById_veiculo_1', diagT0);
   if (!veiculo) throw new Error('Veículo não encontrado.');
   Frota_validarVeiculoRetirada_(veiculo);
 
@@ -657,7 +634,6 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   // retirada em nome de outra pessoa. Gestor/admin continua podendo
   // escolher qualquer condutor (ex.: exceção, motorista esqueceu de bater).
   var condutorId = Frota_resolverCondutorRetirada_(sessionId, payload).ID;
-  Frota_diagLog_('apos_resolver_condutor', diagT0);
 
   var kmSaida = SGO_UTILS.toNumber(payload.kmSaida, NaN);
   if (!isFinite(kmSaida)) throw new Error('Informe o KM de saída.');
@@ -669,12 +645,9 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   // e manda os links prontos em payload.fotosSalvas (rápido). Mantido o
   // caminho antigo (payload.fotos cru, upload sequencial aqui) só como
   // fallback pra quem ainda não atualizou o app/cache do navegador.
-  Frota_diagLog_('vai_processar_fotos_fotosSalvas=' + (Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas.length : 'FALLBACK_payload.fotos=' + (Array.isArray(payload.fotos) ? payload.fotos.length : 0)), diagT0);
   var fotosSalvas = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas : Frota_uploadFotos_(veiculo.PLACA, payload.fotos);
-  Frota_diagLog_('apos_processar_fotos', diagT0);
   var checklistNormalizado = Frota_normalizarChecklist_(payload.checklist);
   Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 'retirada');
-  Frota_diagLog_('apos_validarQualidade', diagT0);
 
   // Trava evita retirada duplicada: 2 pedidos quase simultâneos pro MESMO
   // veículo (2 pessoas testando, ou duplo clique) podiam os dois ler
@@ -683,10 +656,8 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   // pro mesmo veículo ao mesmo tempo (o problema de duplicidade relatado).
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
-  Frota_diagLog_('apos_obter_lock', diagT0);
   try {
     veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
-    Frota_diagLog_('apos_getById_veiculo_2_dentro_lock', diagT0);
     if (!veiculo) throw new Error('Veículo não encontrado.');
     Frota_validarVeiculoRetirada_(veiculo);
 
@@ -706,13 +677,9 @@ function Frota_apiIniciarViagem(sessionId, payload) {
         STATUS: 'EM_ANDAMENTO'
       })
     );
-    Frota_diagLog_('apos_normalizarObjetoParaSheet', diagT0);
     SGO_DATA.insert(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, registro);
-    Frota_diagLog_('apos_insert_movimentacao', diagT0);
     SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId, { KM_ATUAL: kmSaida, STATUS: 'EM_USO' });
-    Frota_diagLog_('apos_update_veiculo', diagT0);
     SGO_DATA.log('FROTA_VIAGEM_INICIAR', sessao.usuario, 'Retirada registrada — veículo ' + veiculo.PLACA, 'FROTA');
-    Frota_diagLog_('fim_apiIniciarViagem_sucesso', diagT0);
 
     return { ok: true, movimentacaoId: registro.ID };
   } finally {
@@ -721,16 +688,12 @@ function Frota_apiIniciarViagem(sessionId, payload) {
 }
 
 function Frota_apiFinalizarViagem(sessionId, payload) {
-  var diagT0 = Date.now();
-  Frota_diagLog_('inicio_apiFinalizarViagem', diagT0);
   Frota_bootstrap_();
-  Frota_diagLog_('apos_bootstrap', diagT0);
   var sessao = exigirSessao(sessionId);
   payload = payload || {};
 
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
   var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
-  Frota_diagLog_('apos_getById_mov_1', diagT0);
   if (!mov) throw new Error('Retirada não encontrada.');
   if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi finalizada.');
 
@@ -746,16 +709,12 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   // Fotos: mesmo esquema do Frota_apiIniciarViagem — cliente já sobe em
   // paralelo e manda os links prontos; payload.fotos cru fica só de
   // fallback.
-  Frota_diagLog_('vai_processar_fotos_fotosSalvas=' + (Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas.length : 'FALLBACK_payload.fotos=' + (Array.isArray(payload.fotos) ? payload.fotos.length : 0)), diagT0);
   var fotosSalvas = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas : Frota_uploadFotos_(veiculo.PLACA, payload.fotos);
-  Frota_diagLog_('apos_processar_fotos', diagT0);
   var checklistNormalizado = Frota_normalizarChecklist_(payload.checklist);
   Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 'devolução');
-  Frota_diagLog_('apos_validarQualidade', diagT0);
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
-  Frota_diagLog_('apos_obter_lock', diagT0);
   try {
     mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
     if (!mov) throw new Error('Retirada não encontrada.');
@@ -771,11 +730,8 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       STATUS: 'FINALIZADO',
       FINALIZADO_EM: SGO_UTILS.nowIso()
     });
-    Frota_diagLog_('apos_update_movimentacao', diagT0);
     SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, { KM_ATUAL: kmChegada, STATUS: 'ATIVO' });
-    Frota_diagLog_('apos_update_veiculo', diagT0);
     SGO_DATA.log('FROTA_VIAGEM_FINALIZAR', sessao.usuario, 'Devolução registrada — veículo ' + veiculo.PLACA, 'FROTA');
-    Frota_diagLog_('fim_apiFinalizarViagem_sucesso', diagT0);
 
     return { ok: true };
   } finally {

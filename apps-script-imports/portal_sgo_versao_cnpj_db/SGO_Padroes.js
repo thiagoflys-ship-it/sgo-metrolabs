@@ -182,13 +182,3 @@ const SGO_PADROES = (() => {
   return { listar, listarAtivos, obter, criar, atualizar, inativar, reativar, validar };
 })();
 
-/* =========================
-   WRAPPERS BLINDADOS (VACINA ANTI-DATA)
-========================= */
-function padroesListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_PADROES.listar(sessionId))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('listar os padrões', e) }; } }
-function padroesListarAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_PADROES.listarAtivos(sessionId))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('listar os padrões ativos', e) }; } }
-function padroesObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PADROES.obter(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('carregar o padrão', e) }; } }
-function padroesCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_PADROES.criar(sessionId, payload))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar o padrão', e) }; } }
-function padroesAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_PADROES.atualizar(sessionId, id, payload))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o padrão', e) }; } }
-function padroesInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PADROES.inativar(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o padrão', e) }; } }
-function padroesReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_PADROES.reativar(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o padrão', e) }; } }

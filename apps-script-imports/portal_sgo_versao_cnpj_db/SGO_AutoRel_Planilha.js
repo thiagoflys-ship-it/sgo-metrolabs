@@ -1499,15 +1499,6 @@ function AutoRel_trimDimensoesParaImpressaoLeakTest_(sheet, ultimaLinhaUsada, ul
   }
 }
 
-// ------------------------------------------------------------
-// HELPERS LOCAIS
-// ------------------------------------------------------------
-function AutoRel_parseFloatSeguroPlanilha_(valor, fallback) {
-  if (valor === null || valor === undefined || valor === '') return fallback;
-  const n = Number(String(valor).replace(',', '.').trim());
-  return isFinite(n) ? n : fallback;
-}
-
 function AutoRel_resumoPreVacuoPlanilha_(analise) {
   const fases = (analise && analise.fasesProcesso) || {};
   const diagnostico = fases.diagnostico || {};

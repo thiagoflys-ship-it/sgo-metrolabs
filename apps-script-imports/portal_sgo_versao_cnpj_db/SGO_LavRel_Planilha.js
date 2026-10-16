@@ -1049,15 +1049,6 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   };
 }
 
-// ------------------------------------------------------------
-// HELPERS LOCAIS
-// ------------------------------------------------------------
-function LavRel_parseFloatSeguroPlanilha_(valor, fallback) {
-  if (valor === null || valor === undefined || valor === '') return fallback;
-  const n = Number(String(valor).replace(',', '.').trim());
-  return isFinite(n) ? n : fallback;
-}
-
 function LavRel_valorSeguroPlanilha_(valor) {
   if (valor === null || valor === undefined) return '';
   return String(valor);

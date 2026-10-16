@@ -43,28 +43,6 @@ function Auvo_chaveSyncPorAuvoId_(tipo, auvoId) {
   return tipo + ':AUVOID:' + auvoId;
 }
 
-function Auvo_gravarMapeamentoPorAuvoId_(tipo, entidadeIdSgo, auvoId, status, erro) {
-  SGO_DATA.upsertByField(SGO_CFG.SHEETS.AUVO_SYNC, 'CHAVE', Auvo_chaveSyncPorAuvoId_(tipo, auvoId), {
-    ENTIDADE_TIPO: tipo,
-    ENTIDADE_ID: entidadeIdSgo,
-    AUVO_ID: auvoId,
-    STATUS: status || AUVO_CFG.STATUS.OK,
-    ULTIMA_SINCRONIZACAO: SGO_UTILS.nowIso(),
-    ULTIMO_ERRO: erro || ''
-  });
-}
-
-function Auvo_obterMapeamentoPorAuvoId_(tipo, auvoId) {
-  var alvo = String(auvoId || '').trim();
-  if (!alvo) return null;
-  var lista = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC);
-  for (var i = 0; i < lista.length; i++) {
-    var m = lista[i];
-    if (SGO_UTILS.safeUpper(m.ENTIDADE_TIPO) === tipo && String(m.AUVO_ID || '').trim() === alvo) return m;
-  }
-  return null;
-}
-
 function Auvo_construirIndiceMapeamento_() {
   var lista = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_SYNC);
   var porAuvoId = {};

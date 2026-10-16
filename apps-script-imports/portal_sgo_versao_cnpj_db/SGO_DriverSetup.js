@@ -66,19 +66,3 @@ function obterOuCriarSubpasta_(pastaPai, nomePasta) {
   }
   return pastaPai.createFolder(nomePasta);
 }
-
-// ======================================================
-// NOVA FUNÇÃO: LIBERAR ACESSO INDIVIDUAL DO EQUIPAMENTO
-// Será chamada pelos outros módulos para liberar apenas 1 pasta
-// ======================================================
-function liberarAcessoPublicoPasta_(folderId) {
-  try {
-    const pasta = DriveApp.getFolderById(folderId);
-    // Define que qualquer pessoa com o link pode VER apenas esta pasta específica
-    pasta.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return true;
-  } catch (e) {
-    Logger.log("Erro ao liberar acesso da pasta: " + e.message);
-    return false;
-  }
-}

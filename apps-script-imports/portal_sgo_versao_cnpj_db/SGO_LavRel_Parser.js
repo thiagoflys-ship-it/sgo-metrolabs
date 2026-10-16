@@ -11,15 +11,6 @@
  ****************************************************/
 
 /**
- * Mantm compatibilidade com a assinatura esperada pelo restante do sistema.
- * Para análise técnica, prioriza matrix (valor real) e não displayMatrix.
- */
-function LavRel_lerDadosEntradaBruta(payload) {
-  const rich = LavRel_lerDadosEntradaRich_(payload);
-  return rich.matrix || rich.displayMatrix || [];
-}
-
-/**
  * L os dados da origem escolhida e devolve:
  * - matrix: valores nativos
  * - displayMatrix: valores formatados

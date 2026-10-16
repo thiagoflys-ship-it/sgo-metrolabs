@@ -21,15 +21,6 @@
  ****************************************************/
 
 /**
- * Mantém compatibilidade com a assinatura esperada pelo restante do sistema.
- * Para análise técnica, prioriza matrix (valor real) e não displayMatrix.
- */
-function EstufaBanhoRel_lerDadosEntradaBruta(payload) {
-  const rich = EstufaBanhoRel_lerDadosEntradaRich_(payload);
-  return rich.matrix || rich.displayMatrix || [];
-}
-
-/**
  * Lê os dados da origem escolhida e devolve:
  * - matrix: valores nativos
  * - displayMatrix: valores formatados
@@ -614,24 +605,6 @@ function EstufaBanhoRel_parseDataHoraSeparadaRobusta_(valorData,valorHora,dateSt
 }
 
 
-function EstufaBanhoRel_parseSomenteDataRobustaParser_(valorData, dateStyle, ultimaDataValida) {
-  if (valorData instanceof Date && !isNaN(valorData.getTime())) {
-    return new Date(valorData.getFullYear(), valorData.getMonth(), valorData.getDate(), 0, 0, 0);
-  }
-  if (typeof valorData === 'number' && isFinite(valorData) && valorData > 1000) {
-    const dNum = EstufaBanhoRel_excelSerialToDateTimeParser_(valorData);
-    if (!dNum) return null;
-    return new Date(dNum.getFullYear(), dNum.getMonth(), dNum.getDate(), 0, 0, 0);
-  }
-  const s = String(valorData || '').trim();
-  if (!s) return null;
-  if (EstufaBanhoRel_isHoraIsoladaParser_(s) && ultimaDataValida instanceof Date) {
-    return new Date(ultimaDataValida.getFullYear(), ultimaDataValida.getMonth(), ultimaDataValida.getDate(), 0, 0, 0);
-  }
-  const dt = EstufaBanhoRel_parseDataHoraRobusta_(s, dateStyle, ultimaDataValida);
-  if (!dt) return null;
-  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0);
-}
 function EstufaBanhoRel_parseSomenteHoraRobustaParser_(valor) {
   if(valor instanceof Date){const p=EstufaBanhoRel_partesData_(valor);return {hh:p[3],mi:p[4],ss:p[5]};}
   if(typeof valor==='number'&&valor>=0&&valor<1){const n=Math.round(valor*86400);if(n>=86400)return null;return {hh:Math.floor(n/3600),mi:Math.floor(n%3600/60),ss:n%60};}
@@ -646,60 +619,8 @@ function EstufaBanhoRel_parseSomenteHoraRobustaParser_(valor) {
 }
 
 
-function EstufaBanhoRel_montarDataParserPorEstilo_(m, dateStyle) {
-  const a = +m[1];
-  const b = +m[2];
-  const yyyy = +m[3];
-  const hh = +(m[4] || 0);
-  const mi = +(m[5] || 0);
-  const ss = +(m[6] || 0);
-  let dd, mm;
-  const style = String(dateStyle || 'BR').toUpperCase();
-  if (style === 'US') {
-    mm = a;
-    dd = b;
-  } else {
-    dd = a;
-    mm = b;
-  }
-  if (!EstufaBanhoRel_isDataValidaParser_(yyyy, mm, dd, hh, mi, ss)) return null;
-  const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
-  return isNaN(d.getTime()) ? null : d;
-}
-function EstufaBanhoRel_isDataValidaParser_(yyyy, mm, dd, hh, mi, ss) {
-  if (!isFinite(yyyy) || !isFinite(mm) || !isFinite(dd)) return false;
-  if (yyyy < EstufaBanhoRel_EBCFG.MIN_VALID_YEAR || yyyy > EstufaBanhoRel_EBCFG.MAX_VALID_YEAR) return false;
-  if (mm < 1 || mm > 12) return false;
-  if (dd < 1 || dd > 31) return false;
-  if (hh < 0 || hh > 23) return false;
-  if (mi < 0 || mi > 59) return false;
-  if (ss < 0 || ss > 59) return false;
-  const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
-  return d.getFullYear() === yyyy && d.getMonth() === mm - 1 && d.getDate() === dd && d.getHours() === hh && d.getMinutes() === mi && d.getSeconds() === ss;
-}
-function EstufaBanhoRel_excelSerialToDateTimeParser_(serial){return EstufaBanhoRel_dataSerialFiel_(serial);}
 
 
-function EstufaBanhoRel_isHoraIsoladaParser_(s) {
-  s = String(s || '').trim();
-  return /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.test(s);
-}
-function EstufaBanhoRel_combinarDataComHoraStringParser_(dataBase, horaStr) {
-  const hora = EstufaBanhoRel_parseSomenteHoraRobustaParser_(horaStr);
-  if (!hora || !(dataBase instanceof Date)) return null;
-  return new Date(dataBase.getFullYear(), dataBase.getMonth(), dataBase.getDate(), hora.hh, hora.mi, hora.ss);
-}
-function EstufaBanhoRel_combinarDataComFracaoDoDiaParser_(dataBase, fracDia) {
-  if (!(dataBase instanceof Date)) return null;
-  if (typeof fracDia !== 'number' || !isFinite(fracDia)) return null;
-  let totalSeconds = Math.round(fracDia * 86400);
-  if (totalSeconds >= 86400) totalSeconds = 86399;
-  if (totalSeconds < 0) totalSeconds = 0;
-  const hh = Math.floor(totalSeconds / 3600);
-  const mi = Math.floor(totalSeconds % 3600 / 60);
-  const ss = totalSeconds % 60;
-  return new Date(dataBase.getFullYear(), dataBase.getMonth(), dataBase.getDate(), hh, mi, ss);
-}
 
 // ------------------------------------------------------------
 // DETECÇÃO DE COLUNAS
@@ -757,70 +678,10 @@ function EstufaBanhoRel_findTempColumnsParser_(header, idxTempo, idxData, idxHor
 // VALIDAÇÃO E RECONSTRUÇÃO TEMPORAL
 // ------------------------------------------------------------
 
-function EstufaBanhoRel_reconstruirSequenciaTemporalSeNecessario_(rows) {
-  if (!rows || rows.length < 3) return;
-  const diagnostico = EstufaBanhoRel_diagnosticarSequenciaTemporal_(rows);
-  const cfg = EstufaBanhoRel_EBCFG.VALIDACAO_TEMPO || {};
-  if (!diagnostico.precisaReconstrucao || !cfg.permitirReconstrucaoTempo) {
-    return;
-  }
-  const deltaSeg = diagnostico.deltaMedianoSegundos;
-  if (!deltaSeg || !isFinite(deltaSeg) || deltaSeg <= 0) {
-    return;
-  }
-  let base = rows[0].tempoDate;
-  if (!(base instanceof Date) || isNaN(base.getTime())) return;
-  for (let i = 0; i < rows.length; i++) {
-    const novo = new Date(base.getTime() + i * deltaSeg * 1000);
-    rows[i].tempoDate = novo;
-  }
-}
 function EstufaBanhoRel_normalizarTempoStrRows_(rows) {
   for (let i = 0; i < rows.length; i++) {
     rows[i].tempoStr = Utilities.formatDate(rows[i].tempoDate, EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy HH:mm:ss');
   }
-}
-function EstufaBanhoRel_diagnosticarSequenciaTemporal_(rows) {
-  const cfg = EstufaBanhoRel_EBCFG.VALIDACAO_TEMPO || {};
-  const maxIguais = Number(cfg.maxTimestampsIguaisSequenciais || 3);
-  const maxSaltoMin = Number(cfg.maxSaltosMinutos || 120);
-  let reversoes = 0;
-  let iguaisSequenciais = 1;
-  let maiorBlocoIguais = 1;
-  let saltosAbsurdos = 0;
-  const deltas = [];
-  for (let i = 1; i < rows.length; i++) {
-    const prev = rows[i - 1].tempoDate;
-    const cur = rows[i].tempoDate;
-    if (!(prev instanceof Date) || isNaN(prev.getTime()) || !(cur instanceof Date) || isNaN(cur.getTime())) {
-      continue;
-    }
-    const deltaSeg = Math.round((cur.getTime() - prev.getTime()) / 1000);
-    if (deltaSeg < 0) reversoes++;
-    if (deltaSeg === 0) {
-      iguaisSequenciais++;
-      if (iguaisSequenciais > maiorBlocoIguais) {
-        maiorBlocoIguais = iguaisSequenciais;
-      }
-    } else {
-      iguaisSequenciais = 1;
-    }
-    if (deltaSeg > 0) {
-      deltas.push(deltaSeg);
-    }
-    if (deltaSeg > maxSaltoMin * 60) {
-      saltosAbsurdos++;
-    }
-  }
-  const deltaMedianoSegundos = EstufaBanhoRel_calcularMedianaNumerica_(deltas);
-  const precisaReconstrucao = reversoes > 0 || maiorBlocoIguais > maxIguais || saltosAbsurdos > 0;
-  return {
-    reversoes: reversoes,
-    maiorBlocoIguais: maiorBlocoIguais,
-    saltosAbsurdos: saltosAbsurdos,
-    deltaMedianoSegundos: deltaMedianoSegundos,
-    precisaReconstrucao: precisaReconstrucao
-  };
 }
 function EstufaBanhoRel_validarSequenciaTempoNormalizado_(rows) {
   if (!rows || !rows.length) {

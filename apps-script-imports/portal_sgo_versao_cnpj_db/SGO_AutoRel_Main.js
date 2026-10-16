@@ -113,20 +113,6 @@ function AutoRel_apiPing() {
 }
 
 // ------------------------------------------------------------
-// AUTORIZAÇÃO MANUAL DE ESCOPO EXTERNO
-// ------------------------------------------------------------
-
-function AutoRel_autorizarConsultaCnpj() {
-  const res = UrlFetchApp.fetch('https://brasilapi.com.br/api/cnpj/v1/00000000000191', {
-    method: 'get',
-    muteHttpExceptions: true,
-    followRedirects: true,
-    headers: { Accept: 'application/json' }
-  });
-  return 'Autorização UrlFetchApp OK. HTTP ' + res.getResponseCode();
-}
-
-// ------------------------------------------------------------
 // CONSULTA PUBLICA DE CNPJ
 // ------------------------------------------------------------
 
