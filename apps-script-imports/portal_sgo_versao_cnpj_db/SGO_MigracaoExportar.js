@@ -250,6 +250,43 @@ function MIGRACAO_empacotarNovos() {
   return MIGRACAO_empacotarContinuar_();
 }
 
+/**
+ * Documentos-modelo dos projetos "Template Autoclave" e "Template Lavadora" (Google Docs com {{CAMPOS}})
+ * e o logotipo deles: vão para o pacote como arquivos/_modelo_<ID>.zip (HTML + imagens, exportação do Docs)
+ * e _modelo_<ID>__<nome> (imagem), com a lista em arquivos/_modelos.json — para o servidor gerar igual.
+ */
+var MIGRACAO_MODELOS = [
+  { id: '10yOcEVhCXO3lsmCIBHeF8yY_gVdpzVzxuSD9jZPdM04', uso: 'Template Autoclave' },
+  { id: '1tMsIsW5Ng6Mz0KSC5s8ujYyWHi1tWqaio13RHbdSctc', uso: 'Template Lavadora (1)' },
+  { id: '1nnUGRulKtf9C_rgp_4dnws43YXG5pTg4QOKIBH1wNds', uso: 'Template Lavadora (2)' },
+  { id: '1WuoymOh5_0S2X3jC2otSq89HMltdDEoP', uso: 'Logotipo dos templates' },
+  { id: '1FiWs9EmnnOBnFNqmXYF2oF-8flfRDgiQ', uso: 'Pasta de saída Template Autoclave', pasta: true },
+  { id: '1BOKYbVvsuvZYxw56pK-xoi21BG5oOycE', uso: 'Pasta de saída Template Lavadora (1)', pasta: true },
+  { id: '18NFqpFosi7mHOwvNxX4grfSM5SDlL9kL', uso: 'Pasta de saída Template Lavadora (2)', pasta: true }
+];
+function MIGRACAO_exportarModelos_(destino) {
+  var lista = [];
+  MIGRACAO_MODELOS.forEach(function (m) {
+    try {
+      if (m.pasta) { var p = DriveApp.getFolderById(m.id); lista.push({ id: m.id, nome: p.getName(), tipo: 'pasta', uso: m.uso }); return; }
+      var f = DriveApp.getFileById(m.id), tipo = f.getMimeType(), nome;
+      if (tipo === MimeType.GOOGLE_DOCS) {
+        var r = UrlFetchApp.fetch('https://docs.google.com/document/d/' + m.id + '/export?format=zip', { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+        if (r.getResponseCode() !== 200) throw new Error('exportação HTML devolveu HTTP ' + r.getResponseCode());
+        nome = '_modelo_' + m.id + '.zip';
+        destino.createFile(r.getBlob().setName(nome));
+      } else {
+        nome = '_modelo_' + m.id + '__' + f.getName().replace(/[\/:*?"<>|]+/g, '_');
+        destino.createFile(f.getBlob().setName(nome));
+      }
+      lista.push({ id: m.id, nome: f.getName(), tipo: tipo, uso: m.uso, arquivo: nome });
+    } catch (e) {
+      lista.push({ id: m.id, uso: m.uso, erro: String(e && e.message || e) });
+    }
+  });
+  MIGRACAO_gravarJson_(destino, '_modelos.json', lista);
+}
+
 // Planilha do Google → .xlsx pelo link de exportação (getAs não aceita essa conversão)
 function MIGRACAO_planilhaXlsx_(id) {
   var r = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + id + '/export?format=xlsx', {
@@ -324,6 +361,7 @@ function MIGRACAO_empacotarContinuar_() {
       Logger.log('Passada completa; %s arquivo(s) com erro serão tentados de novo em 1 minuto.', erros.length);
       return 'REPETINDO ERROS';
     }
+    try { MIGRACAO_exportarModelos_(destino); } catch (eModelos) { erros.push({ id: 'MODELOS', nome: 'documentos-modelo', erro: String(eModelos && eModelos.message || eModelos) }); MIGRACAO_gravarJson_(destino, '_erros.json', erros); }
     var lotes = estado.lote - (estado.primeiroLote || 1);
     MIGRACAO_gravarJson_(destino, '_concluido.json', { concluido_em: new Date().toISOString(), modo: estado.novos ? 'novos' : 'completo', arquivos: lista.length, lotes: lotes, erros: erros.length });
     props.deleteProperty(MIGRACAO_ZIP_ESTADO);
