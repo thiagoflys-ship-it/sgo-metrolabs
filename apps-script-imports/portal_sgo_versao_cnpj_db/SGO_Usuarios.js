@@ -11,9 +11,35 @@ const SGO_USUARIOS = (() => {
     }
   }
 
+  // CELULAR (WhatsApp) — 2026-10-16. Coluna garantida como as dos outros
+  // módulos; formato texto para o "55..." não virar número na planilha.
+  // Cache de 6 h: forçar formato a cada chamada já derrubou a Frota.
+  function garantirColunaCelular_() {
+    try {
+      const cache = CacheService.getScriptCache();
+      if (cache.get("USR_CELULAR_OK_V1")) return;
+      CertCal_garantirColuna_(SHEET_NAME, "CELULAR");
+      CertCal_forcarColunaTexto_(SHEET_NAME, "CELULAR");
+      cache.put("USR_CELULAR_OK_V1", "1", 21600);
+    } catch (e) {
+      console.warn("Não foi possível garantir a coluna CELULAR: " + e.message);
+    }
+  }
+
+  /** "(11) 98765-4321" -> "5511987654321". Vazio = sem celular. null = inválido. */
+  function normalizarCelular_(v) {
+    let d = String(v === null || v === undefined ? "" : v).replace(/\D/g, "");
+    if (!d) return "";
+    d = d.replace(/^0+/, "");
+    if (d.length === 10 || d.length === 11) d = "55" + d;
+    if (!/^55\d{10,11}$/.test(d)) return null;
+    return d;
+  }
+
   function listar(sessionId) {
     const sessao = exigirSessao(sessionId);
     verificarPermissaoAdmin_(sessao);
+    garantirColunaCelular_();
 
     const registros = SGO_DATA.getAll(SHEET_NAME);
 
@@ -81,6 +107,7 @@ const SGO_USUARIOS = (() => {
   function criar(sessionId, payload) {
     const sessao = exigirSessao(sessionId);
     verificarPermissaoAdmin_(sessao);
+    garantirColunaCelular_();
 
     const dados = normalizarPayload_(payload);
     const erros = validarPayload_(dados, false);
@@ -106,6 +133,7 @@ const SGO_USUARIOS = (() => {
         PERFIL: dados.PERFIL,
         CLIENTE_ID: dados.CLIENTE_ID,
         EMAIL: dados.EMAIL,
+        CELULAR: dados.CELULAR || "",
         STATUS: STATUS_ATIVO
       })
     );
@@ -130,6 +158,7 @@ const SGO_USUARIOS = (() => {
       return { success: false, message: "ID do usuário não informado." };
     }
 
+    garantirColunaCelular_();
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) {
       return { success: false, message: "Usuário não encontrado." };
@@ -158,6 +187,7 @@ const SGO_USUARIOS = (() => {
       PERFIL: dados.PERFIL,
       CLIENTE_ID: dados.CLIENTE_ID,
       EMAIL: dados.EMAIL,
+      CELULAR: dados.CELULAR === undefined ? SGO_UTILS.safe(atual.CELULAR) : dados.CELULAR,
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
@@ -238,7 +268,7 @@ const SGO_USUARIOS = (() => {
     if (!q) return { success: true, items: base, total: base.length };
 
     const filtrados = base.filter(function (r) {
-      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS].some(v => SGO_UTILS.safeLower(v).includes(q));
+      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR].some(v => SGO_UTILS.safeLower(v).includes(q));
     });
 
     return { success: true, items: filtrados, total: filtrados.length };
@@ -266,7 +296,9 @@ const SGO_USUARIOS = (() => {
       NOME: SGO_UTILS.safeUpper(payload.NOME), // Força o nome completo para maiúsculo
       PERFIL: SGO_UTILS.safeUpper(payload.PERFIL),
       CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
-      EMAIL: SGO_UTILS.safeLower(payload.EMAIL).trim()
+      EMAIL: SGO_UTILS.safeLower(payload.EMAIL).trim(),
+      // Sem a chave CELULAR no pedido = "não mexer" (undefined), não "apagar".
+      CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined
     };
   }
 
@@ -285,6 +317,9 @@ const SGO_USUARIOS = (() => {
       erros.push("E-mail é obrigatório — usado como identidade do usuário no Portal.");
     } else if (dados.EMAIL.indexOf("@") === -1 || dados.EMAIL.indexOf(".") === -1) {
       erros.push("E-mail inválido.");
+    }
+    if (dados.CELULAR === null) {
+      erros.push("Não foi possível aceitar o celular: informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
     }
     return erros;
   }
