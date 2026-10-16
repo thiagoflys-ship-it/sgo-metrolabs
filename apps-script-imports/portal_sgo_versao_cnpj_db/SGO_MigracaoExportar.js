@@ -206,3 +206,86 @@ function MIGRACAO_caminho_() {
     return cache[id];
   };
 }
+
+/****************************************************
+ * ARQUIVOS EM PACOTES .ZIP (pelo ID)
+ *
+ * Junta o conteúdo de todos os arquivos do mapa (arquivos.json) em pacotes de até
+ * ~45 MB, na pasta SGO_MIGRACAO_PACOTE/arquivos/. Cada arquivo entra no .zip com o
+ * nome "<ID>__<nome original>" — sem ambiguidade entre arquivos de mesmo nome.
+ * Arquivo maior que o limite vai como cópia avulsa "<ID>__<nome>".
+ * Documentos do Google (Docs/Planilhas) entram exportados (Planilha → .xlsx, Doc → .pdf).
+ *
+ * COMO USAR: no editor, escolha MIGRACAO_empacotarArquivos e clique em Executar
+ * UMA vez. Ela continua sozinha (gatilho de 1 em 1 minuto) até terminar e grava
+ * arquivos/_concluido.json. Acompanhe pelo Registro de execuções.
+ ****************************************************/
+var MIGRACAO_ZIP_ESTADO = 'MIGRACAO_ZIP_ESTADO';
+var MIGRACAO_ZIP_LIMITE_BYTES = 45 * 1024 * 1024;
+
+function MIGRACAO_empacotarArquivos() {
+  MIGRACAO_exigirEditor_();
+  PropertiesService.getScriptProperties().setProperty(MIGRACAO_ZIP_ESTADO, JSON.stringify({ i: 0, lote: 1 }));
+  return MIGRACAO_empacotarContinuar_();
+}
+
+function MIGRACAO_empacotarContinuar_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'MIGRACAO_empacotarContinuar_') ScriptApp.deleteTrigger(t);
+  });
+  var props = PropertiesService.getScriptProperties();
+  var estado = JSON.parse(props.getProperty(MIGRACAO_ZIP_ESTADO) || 'null');
+  if (!estado) return 'Nada a fazer: rode MIGRACAO_empacotarArquivos para começar.';
+  var inicio = Date.now();
+  var pacote = MIGRACAO_pasta_();
+  var it = pacote.getFoldersByName('arquivos');
+  var destino = it.hasNext() ? it.next() : pacote.createFolder('arquivos');
+  var mapa = MIGRACAO_lerJson_(pacote, 'arquivos.json');
+  var lista = mapa.arquivos;
+  var nomeZip = function (n) { return 'lote_' + ('000' + n).slice(-4) + '.zip'; };
+  var seguro = function (s) { return String(s || 'arquivo').replace(/[\/:*?"<>|]+/g, '_').slice(0, 150); };
+  var erros = MIGRACAO_lerJson_(destino, '_erros.json') || [];
+
+  while (estado.i < lista.length && Date.now() - inicio < 4.5 * 60 * 1000) {
+    var blobs = [], soma = 0;
+    while (estado.i < lista.length && soma < MIGRACAO_ZIP_LIMITE_BYTES && Date.now() - inicio < 4.5 * 60 * 1000) {
+      var a = lista[estado.i];
+      try {
+        var f = DriveApp.getFileById(a.id), blob, nome = a.id + '__' + seguro(a.nome);
+        if (/^application\/vnd\.google-apps\.spreadsheet/.test(a.tipo)) { blob = f.getAs('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); nome += '.xlsx'; }
+        else if (/^application\/vnd\.google-apps\.document/.test(a.tipo)) { blob = f.getAs('application/pdf'); nome += '.pdf'; }
+        else if (/^application\/vnd\.google-apps\./.test(a.tipo)) { estado.i++; continue; }
+        else blob = f.getBlob();
+        var tam = blob.getBytes().length;
+        if (tam > MIGRACAO_ZIP_LIMITE_BYTES) {
+          destino.createFile(blob.setName(nome));        // grande demais para o .zip: vai avulso
+        } else {
+          if (soma + tam > MIGRACAO_ZIP_LIMITE_BYTES && blobs.length) break;   // fecha o lote antes
+          blobs.push(blob.setName(nome)); soma += tam;
+        }
+      } catch (e) {
+        erros.push({ id: a.id, nome: a.nome, erro: String(e && e.message || e) });
+      }
+      estado.i++;
+    }
+    if (blobs.length) {
+      var existentes = destino.getFilesByName(nomeZip(estado.lote));
+      while (existentes.hasNext()) existentes.next().setTrashed(true);
+      destino.createFile(Utilities.zip(blobs, nomeZip(estado.lote)));
+      estado.lote++;
+    }
+    props.setProperty(MIGRACAO_ZIP_ESTADO, JSON.stringify(estado));
+  }
+  MIGRACAO_gravarJson_(destino, '_erros.json', erros);
+
+  if (estado.i >= lista.length) {
+    MIGRACAO_gravarJson_(destino, '_concluido.json', { concluido_em: new Date().toISOString(), arquivos: lista.length, lotes: estado.lote - 1, erros: erros.length });
+    props.deleteProperty(MIGRACAO_ZIP_ESTADO);
+    Logger.log('CONCLUÍDO: %s arquivos em %s pacotes .zip, %s erro(s). Pasta: %s', lista.length, estado.lote - 1, erros.length, destino.getUrl());
+    return 'CONCLUÍDO';
+  }
+  ScriptApp.newTrigger('MIGRACAO_empacotarContinuar_').timeBased().after(60 * 1000).create();
+  var msg = 'Em andamento: ' + estado.i + ' de ' + lista.length + ' arquivos (' + (estado.lote - 1) + ' pacotes). Continua sozinho em 1 minuto.';
+  Logger.log(msg);
+  return msg;
+}
