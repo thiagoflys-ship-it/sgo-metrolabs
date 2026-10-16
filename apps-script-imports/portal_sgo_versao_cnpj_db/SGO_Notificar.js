@@ -164,16 +164,102 @@ function Notificar_enviarWhatsapp_(cred, telefone, mensagem) {
 
 var NTF_META_VERSAO = 'v21.0';
 var NTF_META_IDIOMA = 'pt_BR';
-/** Modelos cadastrados na Meta: nome fixo -> tamanho máximo de cada variável ({{1}}, {{2}}, ...). */
+var NTF_META_CATEGORIA = 'UTILITY';
+/**
+ * Modelos do WhatsApp oficial — ÚNICA definição no sistema, usada para ENVIAR
+ * (Notificar_montarPedidoMeta_) e para CADASTRAR na Meta (Chaves e senhas,
+ * Notificar_corpoCadastroMeta_). Textos iguais a sgo_servidor/docs/MODELOS_WHATSAPP_META.md.
+ *   limites: tamanho máximo de cada variável ({{1}}, {{2}}, ...), na ordem;
+ *   texto: corpo (BODY) do modelo; exemplos: valores fictícios exigidos pela Meta na análise.
+ * Regras da Meta conferidas por Notificar_validarModeloMeta_: não começa nem termina com
+ * variável, variáveis {{1}}..{{n}} em sequência, sem duas variáveis coladas, no máximo
+ * uma linha em branco seguida, até 1.024 caracteres.
+ */
 var NTF_MODELOS_META = {
-  sgo_aviso_geral: [120, 600, 300],             // título, resumo, link
-  sgo_atividade_atribuida: [60, 200, 40, 300],  // nome, título da atividade, prazo, link
-  sgo_atividade_atrasada: [60, 200, 40, 300],   // nome, título, prazo vencido, link
-  sgo_justificativa_recebida: [80, 200, 300, 40], // colaborador, atividade, motivo resumido, nova previsão
-  sgo_missao_nova: [60, 200, 40, 300],          // nome, missão, data, link
-  sgo_chamado_aberto: [120, 200, 120],          // cliente, nº/descrição, data/técnico (Auvo/COMMAND)
-  sgo_chamado_concluido: [120, 200, 60]         // cliente, nº, data (Auvo/COMMAND)
+  sgo_aviso_geral: {
+    uso: 'Avisos e notificações sem modelo próprio (assunto, resumo, link)',
+    limites: [120, 600, 300],
+    texto: 'Você recebeu um comunicado no SGO+.\n\nAssunto: {{1}}\n\n{{2}}\n\nLeia o comunicado completo e confirme a leitura em: {{3}}\n\nMetrolabs — SGO+',
+    exemplos: ['Aviso importante: Novo procedimento de limpeza da bancada',
+      'A partir de segunda-feira, a limpeza da bancada passa a ser registrada no início de cada turno. Prazo para confirmar a leitura: 20/10/2026 18:00. Confirme a leitura no SGO+.',
+      'https://sgo.metrolabs.com.br']
+  },
+  sgo_atividade_atribuida: {
+    uso: 'Minhas atividades: atividade atribuída (nome, atividade, prazo, link)',
+    limites: [60, 200, 40, 300],
+    texto: 'Olá, {{1}}. Uma atividade foi atribuída a você no SGO+.\n\nAtividade: {{2}}\nPrazo: {{3}}\n\nPara ver os detalhes, acesse: {{4}}\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', 'Calibrar a estufa da unidade Centro', '20/10/2026 18:00', 'https://sgo.metrolabs.com.br']
+  },
+  sgo_atividade_atrasada: {
+    uso: 'Minhas atividades: previsão vencida (nome, atividade, previsão, link)',
+    limites: [60, 200, 40, 300],
+    texto: 'Olá, {{1}}. A atividade abaixo passou da previsão de entrega e ainda está aberta.\n\nAtividade: {{2}}\nPrevisão vencida em: {{3}}\n\nRegistre a justificativa com a nova previsão ou conclua a atividade em: {{4}}\n\nMetrolabs — SGO+',
+    exemplos: ['João', 'Emitir certificado da autoclave 2', '15/10/2026 18:00', 'https://sgo.metrolabs.com.br']
+  },
+  sgo_justificativa_recebida: {
+    uso: 'Minhas atividades: justificativa de atraso (colaborador, atividade, motivo, nova previsão)',
+    limites: [80, 200, 300, 40],
+    texto: 'Justificativa de atraso registrada no SGO+.\n\nColaborador: {{1}}\nAtividade: {{2}}\nMotivo: {{3}}\nNova previsão: {{4}}\n\nVeja o histórico em Atividades da equipe, no SGO+.\n\nMetrolabs — SGO+',
+    exemplos: ['João Pereira', 'Emitir certificado da autoclave 2', 'O padrão de temperatura voltou da calibração externa só hoje.', '17/10/2026 18:00']
+  },
+  sgo_missao_nova: {
+    uso: 'Programa de conduta: missão nova (nome, destino, data, link)',
+    limites: [60, 200, 40, 300],
+    texto: 'Olá, {{1}}. Uma missão em que você é executante foi cadastrada no SGO+.\n\nDestino: {{2}}\nData: {{3}}\n\nConfira os dados no Programa de conduta: {{4}}\n\nMetrolabs — SGO+',
+    exemplos: ['Carlos', 'Hospital Exemplo — Anápolis', '16/10/2026', 'https://sgo.metrolabs.com.br']
+  },
+  sgo_chamado_aberto: {
+    uso: 'Chamado técnico aberto (cliente, chamado, agendamento) — Auvo/COMMAND',
+    limites: [120, 200, 120],
+    texto: 'Chamado técnico aberto.\n\nCliente: {{1}}\nChamado: {{2}}\nAgendamento: {{3}}\n\nAcompanharemos o atendimento e avisaremos a conclusão.\n\nMetrolabs — SGO+',
+    exemplos: ['Clínica Exemplo Ltda.', 'Nº 1234 — manutenção corretiva da autoclave', '21/10/2026, técnico Carlos']
+  },
+  sgo_chamado_concluido: {
+    uso: 'Chamado técnico concluído (cliente, chamado, data) — Auvo/COMMAND',
+    limites: [120, 200, 60],
+    texto: 'Chamado técnico concluído.\n\nCliente: {{1}}\nChamado: {{2}}\nConcluído em: {{3}}\n\nEm caso de dúvida, responda esta mensagem ou fale com a Metrolabs.\n\nMetrolabs — SGO+',
+    exemplos: ['Clínica Exemplo Ltda.', 'Nº 1234', '21/10/2026']
+  }
 };
+
+/** Confere um modelo contra as regras da Meta. Devolve a lista de problemas (vazia = ok). */
+function Notificar_validarModeloMeta_(nome, def) {
+  var erros = [];
+  if (!/^[a-z0-9_]{1,512}$/.test(String(nome || ''))) erros.push('nome com caracteres fora de a-z, 0-9 e _');
+  if (!def || typeof def.texto !== 'string') { erros.push('sem texto'); return erros; }
+  var t = def.texto;
+  if (!t.trim()) erros.push('texto vazio');
+  if (t.length > 1024) erros.push('texto com mais de 1.024 caracteres');
+  if (/^\s*\{\{\d+\}\}/.test(t)) erros.push('o texto começa com variável');
+  if (/\{\{\d+\}\}[\s.!?]*$/.test(t)) erros.push('o texto termina com variável');
+  if (/\{\{\d+\}\}[ \t]*\{\{\d+\}\}/.test(t)) erros.push('duas variáveis coladas');
+  if (/\n\s*\n\s*\n/.test(t)) erros.push('mais de uma linha em branco seguida');
+  if (/[\t]| {4,}/.test(t)) erros.push('tabulação ou 4 ou mais espaços seguidos');
+  var nums = (t.match(/\{\{(\d+)\}\}/g) || []).map(function (x) { return parseInt(x.replace(/\D/g, ''), 10); });
+  for (var i = 0; i < nums.length; i++) if (nums[i] !== i + 1) { erros.push('variáveis fora de sequência ({{1}}, {{2}}, ...) ou repetidas'); break; }
+  if (/\{\{(?!\d+\}\})/.test(t)) erros.push('variável mal escrita (use {{1}}, {{2}}, ...)');
+  var n = nums.length;
+  if (!def.limites || def.limites.length !== n) erros.push('limites não batem com as ' + n + ' variáveis');
+  if (!def.exemplos || def.exemplos.length !== n) erros.push('exemplos não batem com as ' + n + ' variáveis');
+  (def.exemplos || []).forEach(function (ex, k) {
+    if (!String(ex || '').trim() || /[\r\n\t]| {4,}/.test(String(ex))) erros.push('exemplo {{' + (k + 1) + '}} vazio ou com quebra de linha');
+  });
+  return erros;
+}
+
+/** Corpo do POST /<WABA_ID>/message_templates para cadastrar um dos modelos fixos. */
+function Notificar_corpoCadastroMeta_(nomeModelo) {
+  var def = Object.prototype.hasOwnProperty.call(NTF_MODELOS_META, nomeModelo) ? NTF_MODELOS_META[nomeModelo] : null;
+  if (!def) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
+  var erros = Notificar_validarModeloMeta_(nomeModelo, def);
+  if (erros.length) throw new Error('O modelo ' + nomeModelo + ' está fora das regras da Meta: ' + erros.join('; ') + '.');
+  return {
+    name: nomeModelo,
+    language: NTF_META_IDIOMA,
+    category: NTF_META_CATEGORIA,
+    components: [{ type: 'BODY', text: def.texto, example: { body_text: [def.exemplos.slice()] } }]
+  };
+}
 
 /** Variável de modelo da Meta: sem quebra de linha/tab, sem 4+ espaços seguidos, nunca vazia. */
 function Notificar_paramMeta_(v, max) {
@@ -191,7 +277,8 @@ function Notificar_primeiroNome_(nome) {
 
 /** Pedido do envio por modelo: { url, corpo }. Lança erro se o modelo não for um dos fixos ou faltar variável. */
 function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros) {
-  var limites = NTF_MODELOS_META[nomeModelo];
+  var def = Object.prototype.hasOwnProperty.call(NTF_MODELOS_META, nomeModelo) ? NTF_MODELOS_META[nomeModelo] : null;
+  var limites = def && def.limites;
   if (!limites) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
   var ps = parametros || [];
   if (ps.length !== limites.length) throw new Error('O modelo ' + nomeModelo + ' tem ' + limites.length + ' variáveis; vieram ' + ps.length + '.');

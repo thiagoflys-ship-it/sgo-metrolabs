@@ -352,5 +352,223 @@ function Chaves_testarWhatsapp_(telefone) {
   var nomeProv = pv.provedor === 'meta' ? 'WhatsApp oficial (Meta), modelo sgo_aviso_geral' : 'Z-API';
   if (res && res.ok) return { funcionou: true, texto: 'Funcionou: mensagem aceita pelo ' + nomeProv + ' para ' + tel + '. Confira no celular.' };
   return Chaves_falhou_(Notificar_limparSegredos_(res && res.motivo, pv.segredos || []),
-    pv.provedor === 'meta' ? 'confira o token e o Phone Number ID; o modelo sgo_aviso_geral precisa estar aprovado na Meta em pt_BR.' : 'confira as 3 chaves da Z-API e se a instância está conectada ao celular.');
+    pv.provedor === 'meta' ? 'confira o token e o Phone Number ID; o modelo sgo_aviso_geral precisa estar aprovado na Meta em pt_BR (use "Cadastrar modelos na Meta" abaixo).' : 'confira as 3 chaves da Z-API e se a instância está conectada ao celular.');
+}
+
+// ------------------------------------------------------------
+// MODELOS DO WHATSAPP OFICIAL (Meta) — cadastro e situação
+// As definições (nome, texto, exemplos) ficam só em NTF_MODELOS_META
+// (SGO_Notificar.js), as mesmas usadas no envio.
+// ------------------------------------------------------------
+
+/** Token e WABA ID gravados; lança erro dizendo o que gravar. Nunca devolve o token para a tela. */
+function Chaves_credMetaGestao_() {
+  var c = Notificar_credenciaisMeta_();
+  var falta = [];
+  if (!c.token) falta.push('META_WA_TOKEN');
+  if (!c.wabaId) falta.push('META_WA_WABA_ID');
+  if (falta.length) throw new Error('Não foi possível falar com a Meta: falta gravar ' + falta.join(' e ') + ' no grupo WhatsApp desta tela.');
+  return c;
+}
+
+function Chaves_urlGraph_(caminho) {
+  return 'https://graph.facebook.com/' + NTF_META_VERSAO + '/' + caminho;
+}
+
+/** Erros que valem para a conta inteira (token, permissão, WABA ID, limite): não adianta tentar os outros modelos. */
+function Chaves_erroMetaGeral_(http, er) {
+  var cod = er && er.code !== undefined ? String(er.code) : '';
+  var sub = er && er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  return http === 401 || http === 403 || http === 429 || ['190', '200', '10', '3', '4', '80008', '613', '368'].indexOf(cod) >= 0 || (cod === '100' && sub === '33');
+}
+
+/** A Meta disse que o modelo já existe neste idioma? */
+function Chaves_erroMetaDuplicado_(er) {
+  var sub = er && er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  var txt = String((er && (er.error_user_title || '')) + ' ' + (er && (er.error_user_msg || '')) + ' ' + (er && er.message || ''));
+  return sub === '2388024' || /already exists|already .{0,40}content|duplicate|já existe|já há conteúdo/i.test(txt);
+}
+
+/** Erro da Meta traduzido: "Meta recusou (HTTP x, código y): mensagem — o que fazer". Sem o token. */
+function Chaves_erroMeta_(http, j, txt, segredos) {
+  var er = (j && j.error) || {};
+  var cod = er.code !== undefined ? String(er.code) : '';
+  var sub = er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  var msg = String(er.message || '');
+  var msgUsuario = String(er.error_user_msg || '');
+  var bruto = Chaves_semSegredos_((msg + (msgUsuario && msg.indexOf(msgUsuario) < 0 ? ' (' + msgUsuario + ')' : '')) || String(txt || '').slice(0, 200), segredos).slice(0, 260);
+  var fazer;
+  if (cod === '190' || http === 401) {
+    fazer = 'o token é inválido ou venceu: gere um token permanente de usuário do sistema (Gerenciador de Negócios → Usuários do sistema → Gerar novo token, sem validade) e grave de novo META_WA_TOKEN.';
+  } else if (/whatsapp_business_management|permission/i.test(msg) || cod === '200' || cod === '10' || cod === '3' || http === 403) {
+    fazer = 'o token precisa da permissão de gerenciar a conta do WhatsApp: gere um token de usuário do sistema com whatsapp_business_management e whatsapp_business_messaging, com a conta do WhatsApp atribuída a esse usuário, e grave de novo META_WA_TOKEN.';
+  } else if (cod === '100' && (sub === '33' || /does not exist|cannot be loaded|Unsupported (get|post) request/i.test(msg))) {
+    fazer = 'a Meta não encontrou a conta do WhatsApp com este WABA ID, ou o token não tem acesso a ela: confira META_WA_WABA_ID (Identificação da conta do WhatsApp Business, não o Phone Number ID) e se a conta está atribuída ao usuário do sistema.';
+  } else if (cod === '4' || cod === '80008' || cod === '613' || http === 429) {
+    fazer = 'limite de chamadas da Meta atingido: aguarde alguns minutos e tente de novo.';
+  } else if (cod === '368') {
+    fazer = 'a conta está bloqueada temporariamente pela Meta por política: veja o aviso no Gerenciador do WhatsApp (Qualidade da conta).';
+  } else if (sub === '2388023') {
+    fazer = 'um modelo com este nome foi apagado há pouco e a Meta ainda não libera o nome (pode levar até 4 semanas): aguarde; se for urgente, avise o suporte do SGO+.';
+  } else if (sub === '2388299' || sub === '2388293' || /variable|parameter/i.test(msg + ' ' + msgUsuario)) {
+    fazer = 'a Meta recusou o texto do modelo (variáveis): avise o suporte do SGO+ para revisar a definição em SGO_Notificar.js (NTF_MODELOS_META).';
+  } else {
+    fazer = 'confira a mensagem da Meta; se continuar, abra o Gerenciador do WhatsApp (Modelos de mensagem) e veja se há aviso na conta.';
+  }
+  return 'Meta recusou (HTTP ' + http + (cod ? ', código ' + cod + (sub ? '/' + sub : '') : '') + '): ' + (bruto || 'sem detalhe') + ' — ' + fazer;
+}
+
+/** Chamada à Graph API: { http, j, txt } ou lança erro de rede (sem segredos). */
+function Chaves_chamarMeta_(cred, url, metodo, corpo) {
+  var op = { method: metodo, muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + cred.token } };
+  if (corpo) { op.contentType = 'application/json'; op.payload = JSON.stringify(corpo); }
+  var r;
+  try { r = UrlFetchApp.fetch(url, op); }
+  catch (e) { throw new Error('sem resposta da Meta (' + Chaves_semSegredos_(e && e.message, [cred.token]) + ')'); }
+  var txt = String(r.getContentText() || ''), j = null;
+  try { j = JSON.parse(txt); } catch (e) {}
+  return { http: r.getResponseCode(), j: j, txt: txt };
+}
+
+var CHV_STATUS_MODELO = {
+  APPROVED: 'Aprovado', PENDING: 'Em análise', IN_APPEAL: 'Em análise', REJECTED: 'Recusado',
+  PAUSED: 'Pausado', DISABLED: 'Desativado', PENDING_DELETION: 'Em exclusão', DELETED: 'Apagado',
+  LIMIT_EXCEEDED: 'Limite de modelos excedido', ARCHIVED: 'Arquivado'
+};
+var CHV_RECUSA_MODELO = {
+  INVALID_FORMAT: 'formato inválido',
+  TAG_CONTENT_MISMATCH: 'o texto não combina com a categoria Utilidade',
+  INCORRECT_CATEGORY: 'categoria incorreta',
+  PROMOTIONAL: 'a Meta considerou o texto promocional',
+  ABUSIVE_CONTENT: 'a Meta considerou o conteúdo abusivo',
+  SCAM: 'a Meta considerou o texto suspeito de golpe'
+};
+
+/** Lista os modelos da conta (até 5 páginas de 100). { ok, lista } ou { ok:false, motivo, geral }. */
+function Chaves_metaListarModelos_(cred) {
+  var url = Chaves_urlGraph_(encodeURIComponent(cred.wabaId) + '/message_templates?fields=name,status,language,category,rejected_reason&limit=100');
+  var lista = [];
+  for (var pag = 0; pag < 5 && url; pag++) {
+    var r;
+    try { r = Chaves_chamarMeta_(cred, url, 'get', null); }
+    catch (e) { return { ok: false, geral: true, motivo: String(e.message) + ' — confira a internet do servidor e tente de novo.' }; }
+    if (r.http < 200 || r.http >= 300 || !r.j || r.j.error) {
+      return { ok: false, geral: true, motivo: Chaves_erroMeta_(r.http, r.j, r.txt, [cred.token]) };
+    }
+    (r.j.data || []).forEach(function (m) { lista.push(m || {}); });
+    var prox = r.j.paging && r.j.paging.next ? String(r.j.paging.next) : '';
+    url = /^https:\/\/graph\.facebook\.com\//.test(prox) ? prox : '';
+  }
+  return { ok: true, lista: lista };
+}
+
+/** Situação dos 7 modelos do SGO+ a partir da lista da Meta. */
+function Chaves_situacaoModelos_(lista) {
+  var itens = Object.keys(NTF_MODELOS_META).map(function (nome) {
+    var achados = lista.filter(function (m) { return String(m.name || '') === nome; });
+    var pt = achados.filter(function (m) { return String(m.language || '') === NTF_META_IDIOMA; })[0];
+    var it = { nome: nome, uso: NTF_MODELOS_META[nome].uso || '', status: '', situacao: '', motivo: '', categoria: '', falta: !pt };
+    if (!pt) {
+      var outros = achados.map(function (m) { return String(m.language || ''); }).filter(String);
+      it.situacao = 'Não cadastrado';
+      it.motivo = outros.length ? 'existe só em ' + outros.join(', ') + '; o SGO+ envia em ' + NTF_META_IDIOMA + '.' : '';
+      return it;
+    }
+    it.status = String(pt.status || '').toUpperCase();
+    it.situacao = CHV_STATUS_MODELO[it.status] || it.status || 'Sem situação';
+    it.categoria = String(pt.category || '').toUpperCase();
+    var obs = [];
+    if (it.status === 'REJECTED') {
+      var rr = String(pt.rejected_reason || '').toUpperCase();
+      obs.push('motivo: ' + (CHV_RECUSA_MODELO[rr] || (rr && rr !== 'NONE' ? rr : 'não informado pela Meta')) +
+        '. No Gerenciador do WhatsApp (Modelos de mensagem), abra o modelo e peça nova análise; se a Meta mantiver, avise o suporte do SGO+ para revisar o texto');
+    } else if (it.status === 'PAUSED' || it.status === 'DISABLED') {
+      obs.push('a Meta suspendeu o modelo por qualidade; veja o aviso no Gerenciador do WhatsApp');
+    } else if (it.status === 'PENDING' || it.status === 'IN_APPEAL') {
+      obs.push('aguarde a análise da Meta (minutos a 24 h) e clique em Atualizar');
+    }
+    if (it.categoria && it.categoria !== NTF_META_CATEGORIA) obs.push('categoria alterada pela Meta para ' + it.categoria + ' (o SGO+ cadastra como ' + NTF_META_CATEGORIA + ')');
+    it.motivo = obs.join('; ') + (obs.length ? '.' : '');
+    return it;
+  });
+  var faltam = itens.filter(function (x) { return x.falta; }).length;
+  var aprovados = itens.filter(function (x) { return x.status === 'APPROVED'; }).length;
+  return { itens: itens, faltam: faltam, aprovados: aprovados, total: itens.length };
+}
+
+/** Lista "Situação dos modelos". Devolve { funcionou, texto, itens, faltam, aprovados, total }. */
+function Chaves_apiModelosSituacao(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    Chaves_exigirDono_(sessionId);
+    var cred = Chaves_credMetaGestao_();
+    var l = Chaves_metaListarModelos_(cred);
+    if (!l.ok) return { funcionou: false, texto: 'Não foi possível ler os modelos: ' + l.motivo, itens: [] };
+    var s = Chaves_situacaoModelos_(l.lista);
+    s.funcionou = true;
+    s.texto = s.aprovados + ' de ' + s.total + ' modelos aprovados' + (s.faltam ? '; ' + s.faltam + ' não cadastrado(s) em ' + NTF_META_IDIOMA + ' — use "Cadastrar modelos na Meta".' : '.');
+    return s;
+  });
+}
+
+/**
+ * Botão "Cadastrar modelos na Meta": para cada modelo de NTF_MODELOS_META que ainda não
+ * existe em pt_BR, POST /<WABA_ID>/message_templates. "Já existe" conta como já cadastrado.
+ * Devolve { funcionou, texto, itens: [{ nome, resultado: 'cadastrado'|'ja_existe'|'erro'|'nao_tentado', texto }] }.
+ */
+function Chaves_apiModelosCadastrar(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    var eu = Chaves_exigirDono_(sessionId);
+    var cred = Chaves_credMetaGestao_();
+    var nomes = Object.keys(NTF_MODELOS_META);
+    var existentes = {};
+    var l = Chaves_metaListarModelos_(cred);
+    if (!l.ok) return { funcionou: false, texto: 'Nada foi cadastrado: ' + l.motivo, itens: [] };
+    l.lista.forEach(function (m) { if (String(m.language || '') === NTF_META_IDIOMA) existentes[String(m.name || '')] = String(m.status || '').toUpperCase(); });
+
+    var itens = [], parar = '';
+    nomes.forEach(function (nome) {
+      if (parar) { itens.push({ nome: nome, resultado: 'nao_tentado', texto: 'Não tentado: ' + parar }); return; }
+      if (Object.prototype.hasOwnProperty.call(existentes, nome)) {
+        var st = existentes[nome];
+        itens.push({ nome: nome, resultado: 'ja_existe', texto: 'Já cadastrado (' + (CHV_STATUS_MODELO[st] || st || 'sem situação') + ').' });
+        return;
+      }
+      var corpo;
+      try { corpo = Notificar_corpoCadastroMeta_(nome); }
+      catch (e) { itens.push({ nome: nome, resultado: 'erro', texto: String(e.message) + ' Avise o suporte do SGO+.' }); return; }
+      var r;
+      try { r = Chaves_chamarMeta_(cred, Chaves_urlGraph_(encodeURIComponent(cred.wabaId) + '/message_templates'), 'post', corpo); }
+      catch (e) {
+        parar = 'a chamada anterior falhou.';
+        itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: ' + Notificar_limparSegredos_(e && e.message, [cred.token]) });
+        return;
+      }
+      var er = (r.j && r.j.error) || null;
+      if (r.http >= 200 && r.http < 300 && !er) {
+        var stN = String((r.j && r.j.status) || 'PENDING').toUpperCase();
+        itens.push({ nome: nome, resultado: 'cadastrado', texto: 'Enviado para análise da Meta (' + (CHV_STATUS_MODELO[stN] || stN) + ').' });
+        return;
+      }
+      if (er && Chaves_erroMetaDuplicado_(er)) {
+        itens.push({ nome: nome, resultado: 'ja_existe', texto: 'Já cadastrado na Meta.' });
+        return;
+      }
+      var motivo = Chaves_erroMeta_(r.http, r.j, r.txt, [cred.token]);
+      itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: ' + motivo });
+      if (Chaves_erroMetaGeral_(r.http, er)) parar = 'o erro acima vale para a conta inteira; corrija e clique de novo.';
+    });
+
+    var conta = { cadastrado: 0, ja_existe: 0, erro: 0, nao_tentado: 0 };
+    itens.forEach(function (x) { conta[x.resultado]++; });
+    try {
+      SGO_DATA.log('MODELOS_META_CADASTRO', eu.usuario, 'Cadastro de modelos na Meta: ' + conta.cadastrado + ' enviados, ' + conta.ja_existe + ' já existiam, ' +
+        (conta.erro + conta.nao_tentado) + ' com erro ou não tentados.', 'CHAVES');
+    } catch (e) {}
+    var falhou = conta.erro + conta.nao_tentado;
+    return {
+      funcionou: falhou === 0, itens: itens,
+      texto: (falhou ? 'Concluído com problemas: ' : 'Concluído: ') + conta.cadastrado + ' enviado(s) para análise, ' + conta.ja_existe + ' já cadastrado(s)' +
+        (falhou ? ', ' + falhou + ' com erro (veja abaixo).' : '. A aprovação sai em minutos ou até 24 h; acompanhe em "Situação dos modelos".')
+    };
+  });
 }

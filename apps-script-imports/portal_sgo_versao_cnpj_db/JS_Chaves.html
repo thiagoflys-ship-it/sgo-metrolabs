@@ -20,7 +20,17 @@
   .chv-item > .chv-teste:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
   .chv-teste-tit { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
   .chv-res { margin-top: 8px; }
-  @media (max-width: 600px) { .chv-linha button { flex: 1 1 auto; } }
+  .chv-mod-lista { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .chv-mod { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 12.5px; }
+  .chv-mod:first-child { border-top: 0; }
+  .chv-mod-nome { font-family: var(--bc-mono, monospace); font-weight: 700; min-width: 210px; }
+  .chv-mod-sit { font-weight: 700; }
+  .chv-mod-sit.ok { color: var(--success); }
+  .chv-mod-sit.analise { color: var(--info); }
+  .chv-mod-sit.ruim { color: var(--danger, var(--warning)); }
+  .chv-mod-sit.falta { color: var(--warning); }
+  .chv-mod-obs { flex: 1 1 100%; color: var(--muted); line-height: 1.45; }
+  @media (max-width: 600px) { .chv-linha button { flex: 1 1 auto; } .chv-mod-nome { min-width: 0; } }
 </style>
 
 <script>
@@ -136,9 +146,71 @@
       html += '<div class="chv-grupo"><h3 class="chv-grupo-tit">' + ChavesTela_esc_(g) + "</h3>" +
         doGrupo.map(ChavesTela_htmlItem_).join("") +
         (testes.length ? '<div class="chv-item ok" style="border-left-color:var(--info)">' + testes.map(ChavesTela_htmlTeste_).join("") + "</div>" : "") +
+        (g === "WhatsApp" ? ChavesTela_htmlModelos_() : "") +
         "</div>";
     });
     c.innerHTML = html;
+  }
+
+  // ---------- modelos do WhatsApp oficial (Meta) ----------
+  function ChavesTela_htmlModelos_() {
+    return '<div class="chv-item ok" style="border-left-color:var(--info)">' +
+      '<div class="chv-teste"><div class="chv-teste-tit">Modelos de mensagem do WhatsApp oficial (Meta)</div>' +
+        '<div class="chv-ajuda">Pela Meta, o SGO+ só envia por modelo aprovado. "Cadastrar modelos na Meta" envia para análise os 7 modelos do SGO+ (nome, texto e exemplos fixos do sistema, em pt_BR, categoria Utilidade); os que já existem não são alterados. Usa META_WA_TOKEN e META_WA_WABA_ID gravados acima. A aprovação sai em minutos ou até 24 h.</div>' +
+        '<div class="chv-linha">' +
+          '<button type="button" class="btn-primary" id="chvModCadastrar" onclick="ChavesTela_modelosCadastrar_()">Cadastrar modelos na Meta</button>' +
+        '</div><div class="chv-res" id="chvModCadRes"></div></div>' +
+      '<div class="chv-teste"><div class="chv-teste-tit">Situação dos modelos</div>' +
+        '<div class="chv-linha"><button type="button" class="btn-secondary" id="chvModAtualizar" onclick="ChavesTela_modelosSituacao_()">Atualizar</button></div>' +
+        '<div class="chv-res" id="chvModSitRes"><div class="chv-ajuda">Clique em Atualizar para consultar a Meta.</div></div></div>' +
+      "</div>";
+  }
+
+  function ChavesTela_classeModelo_(it) {
+    if (it.falta) return "falta";
+    if (it.status === "APPROVED") return "ok";
+    if (it.status === "PENDING" || it.status === "IN_APPEAL") return "analise";
+    return "ruim";
+  }
+
+  function ChavesTela_modelosCadastrar_() {
+    var res = document.getElementById("chvModCadRes"), btn = document.getElementById("chvModCadastrar");
+    if (!confirm("Enviar para análise da Meta os modelos do SGO+ que ainda não estão cadastrados?\n\nOs que já existem não são alterados.")) return;
+    if (btn) btn.disabled = true;
+    if (res) res.innerHTML = '<div class="chv-ajuda">Cadastrando na Meta...</div>';
+    ChavesTela_chamar_("Chaves_apiModelosCadastrar", {}, function (r) {
+      if (btn) btn.disabled = false;
+      var rot = { cadastrado: ["Enviado", "analise"], ja_existe: ["Já cadastrado", "ok"], erro: ["Erro", "ruim"], nao_tentado: ["Não tentado", "falta"] };
+      var linhas = (r.itens || []).map(function (it) {
+        var x = rot[it.resultado] || [it.resultado, "falta"];
+        return '<div class="chv-mod"><span class="chv-mod-nome">' + ChavesTela_esc_(it.nome) + '</span><span class="chv-mod-sit ' + x[1] + '">' + ChavesTela_esc_(x[0]) +
+          '</span><span class="chv-mod-obs">' + ChavesTela_esc_(it.texto) + "</span></div>";
+      }).join("");
+      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" +
+        (linhas ? '<div class="chv-mod-lista">' + linhas + "</div>" : "");
+      if (r.itens && r.itens.length) ChavesTela_modelosSituacao_();
+    }, function (m) {
+      if (btn) btn.disabled = false;
+      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+    });
+  }
+
+  function ChavesTela_modelosSituacao_() {
+    var res = document.getElementById("chvModSitRes"), btn = document.getElementById("chvModAtualizar");
+    if (btn) btn.disabled = true;
+    if (res) res.innerHTML = '<div class="chv-ajuda">Consultando a Meta...</div>';
+    ChavesTela_chamar_("Chaves_apiModelosSituacao", {}, function (r) {
+      if (btn) btn.disabled = false;
+      var linhas = (r.itens || []).map(function (it) {
+        return '<div class="chv-mod"><span class="chv-mod-nome">' + ChavesTela_esc_(it.nome) + '</span><span class="chv-mod-sit ' + ChavesTela_classeModelo_(it) + '">' + ChavesTela_esc_(it.situacao) + "</span>" +
+          '<span class="chv-mod-obs">' + ChavesTela_esc_(it.uso) + (it.motivo ? ". " + ChavesTela_esc_(it.motivo) : "") + "</span></div>";
+      }).join("");
+      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou && !r.faltam ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" +
+        (linhas ? '<div class="chv-mod-lista">' + linhas + "</div>" : "");
+    }, function (m) {
+      if (btn) btn.disabled = false;
+      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+    });
   }
 
   function ChavesTela_travar_(k, sim) {
