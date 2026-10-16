@@ -7,7 +7,7 @@ function RegOp_getCss_() {
   const css = [];
   css.push('@page { size: A4; margin: 18mm 16mm; }');
   css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 14px; }');
   css.push('.logo-topo { height: 40px; }');
@@ -90,7 +90,7 @@ function RegOp_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>' + RegOp_escaparHtml_(dados.tipoDocumentoNome || 'Registro') + ' — ' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</title>');
-  html.push('<style>' + RegOp_getCss_() + '</style></head><body>');
+  html.push('<style>' + RegOp_getCss_() + SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');

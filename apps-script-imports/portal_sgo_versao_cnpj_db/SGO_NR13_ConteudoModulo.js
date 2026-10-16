@@ -184,7 +184,7 @@ function tplNR13_writeLog(text, tipo) {
   if (!term) return;
   var time = new Date().toLocaleTimeString('pt-BR');
   var line = document.createElement('div');
-  line.textContent = '[' + time + '] ➔ ' + String(text || '');
+  line.textContent = '[' + time + '] ' + String(text || '');
   if (tipo === 'SUCESSO') line.className = 'success';
   else if (tipo === 'ERRO') line.className = 'error';
   else if (tipo === 'AVISO') line.className = 'warn';
@@ -383,22 +383,22 @@ function tplNR13_renderReal_() {
     '    <h2>7. Descrição das inspeções, resultado e recomendações</h2>' +
     '    <label>Descrição das inspeções, exames e testes executados</label>' +
     '    <textarea id="nr13-descricao-inspecoes" placeholder="Ex.: Realizado exame visual externo e interno, verificação de espessura por ultrassom nos pontos críticos, teste de estanqueidade..."></textarea>' +
-    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-descricao-inspecoes\\', \\'Descrição das inspeções\\')">Melhorar com IA</button>' +
+    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-descricao-inspecoes\\', \\'Descrição das inspeções\\')">Revisar texto (IA)</button>' +
     '    <div id="nr13-status-descricao"></div>' +
 
     '    <label>Resultado das inspeções e intervenções executadas</label>' +
     '    <textarea id="nr13-resultado-inspecoes"></textarea>' +
-    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-resultado-inspecoes\\', \\'Resultado das inspeções\\')">Melhorar com IA</button>' +
+    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-resultado-inspecoes\\', \\'Resultado das inspeções\\')">Revisar texto (IA)</button>' +
     '    <div id="nr13-status-resultado"></div>' +
 
     '    <label>Recomendações e providências necessárias</label>' +
     '    <textarea id="nr13-recomendacoes"></textarea>' +
-    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-recomendacoes\\', \\'Recomendações e providências\\')">Melhorar com IA</button>' +
+    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-recomendacoes\\', \\'Recomendações e providências\\')">Revisar texto (IA)</button>' +
     '    <div id="nr13-status-recomendacoes"></div>' +
 
     '    <label>Observações adicionais (opcional)</label>' +
     '    <textarea id="nr13-observacoes"></textarea>' +
-    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-observacoes\\', \\'Observações\\')">Melhorar com IA</button>' +
+    '    <button class="btn btn-sm" onclick="tplNR13_melhorarTexto_(\\'nr13-observacoes\\', \\'Observações\\')">Revisar texto (IA)</button>' +
     '    <div id="nr13-status-observacoes"></div>' +
     '  </div>' +
 
@@ -423,20 +423,20 @@ function tplNR13_renderReal_() {
     '  </div>' +
 
     '  <div class="panel">' +
-    '    <h2>Console Operacional</h2>' +
+    '    <h2>Histórico da operação</h2>' +
     '    <div class="terminal-wrap">' +
-    '      <div class="terminal-header">LOG OPERACIONAL</div>' +
+    '      <div class="terminal-header">Histórico da operação</div>' +
     '      <div id="tplNR13_terminalLog" class="terminal"></div>' +
     '    </div>' +
-    '    <button class="btn btn-sm" style="margin-top:8px;" onclick="tplNR13_limparLog()">Limpar log</button>' +
+    '    <button class="btn btn-sm" style="margin-top:8px;" onclick="tplNR13_limparLog()">Limpar histórico</button>' +
     '  </div>' +
     '</div>' +
     '</div>' +
     '<div id="tplNR13_viewManual" style="display:none">' + tplNR13_manualHtml_() + '</div>';
 
   tplNR13_selecionarVeredito_('APROVADO');
-  tplNR13_writeLog('Sistema inicializado. Conectando ao servidor Metrolabs...', 'SUCESSO');
-  tplNR13_writeLog('Conectado ao servidor Metrolabs. Aguardando operação do usuário...', 'SUCESSO');
+  
+  
 }
 
 function tplNR13_abrirManual_() {
@@ -607,7 +607,7 @@ function tplNR13_carregarPendencias_(equipamentoId) {
     var itens = res.items || [];
     if (!itens.length) { alertaEl.innerHTML = ''; return; }
     var l = itens[0];
-    alertaEl.innerHTML = '<div class="alert-box warning">⚠️ Este equipamento tem o Laudo NR13 nº ' + l.NUMERO_LAUDO +
+    alertaEl.innerHTML = '<div class="alert-box warning">Este equipamento tem o Laudo NR13 nº ' + l.NUMERO_LAUDO +
       ' com veredito "Aprovado com Ressalvas" ainda em aberto. <button class="btn btn-sm" style="margin-left:8px;" onclick="tplNR13_iniciarReinspecao_(\\'' + l.ID + '\\')">Registrar Reinspeção</button></div>';
     tplNR13_writeLog('Atenção: laudo nº ' + l.NUMERO_LAUDO + ' com pendência aberta (Aprovado com Ressalvas) pra este equipamento.', 'AVISO');
   }).catch(function(err) { console.error(err); });

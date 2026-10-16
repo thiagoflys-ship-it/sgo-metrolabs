@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>METROLABS SGO+</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <?!= include('UI_Estilos'); ?>
 </head>
 <body>
@@ -80,7 +81,6 @@
       <div class="topbar-right">
         <div class="topbar-info-block">
           <div id="relogioTopo" class="relogio-texto">--/--/----, --:--:--</div>
-          <div class="status-produtivo">Status: Produtivo 🚀</div>
         </div>
         <div class="user-action-block">
             <div id="userInfo" class="user-info"></div>
@@ -96,47 +96,47 @@
       <aside id="menu" class="sidebar">
         <div class="sidebar-section">
           <div class="sidebar-section-title">PRINCIPAL</div>
-          <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon">🏠</span>Dashboard</button>
+          <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
         </div>
 
         <div class="sidebar-section" id="menu-secao-tecnica">
           <div class="sidebar-section-title">MÓDULOS TÉCNICOS</div>
-          <button type="button" class="menu-btn" data-mod="autoclave" onclick="abrir('autoclave')"><span class="menu-btn-icon">⚗️</span>Autoclave</button>
-          <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon">🫧</span>Lavadoras</button>
-          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon">📋</span>Planejamento CME</button>
-          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon">🗓️</span>Cronograma de Execução</button>
-          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon">📑</span>PGT e POP</button>
-          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon">✅</span>Registros Operacionais</button>
-          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon">📦</span>Inventário de Equipamentos</button>
-          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon">🔒</span>Carta de Conformidade (legado)</button>
-          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon">❄️</span>Cadeia de Frio</button>
-          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon">🌡️</span>Estufa+Banho-maria</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon">📝</span>Declaração de Execução de Serviço</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon">✅</span>Relatório de Qualificação (QI/QO/QD)</button>
-          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon">🎯</span>Relatório de Calibração</button>
-          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon">📜</span>Certificado de Calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
-          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon">🛢️</span>Laudo NR-13 (Vaso de Pressão)</button>
-          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon">🚗</span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+          <button type="button" class="menu-btn" data-mod="autoclave" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclave</button>
+          <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de Execução</button>
+          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
+          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros Operacionais</button>
+          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de Equipamentos</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_conformidade" onclick="abrir('relatorio_conformidade')" title="Módulo legado — acesso restrito por senha administrativa"><span class="menu-btn-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>Carta de Conformidade (legado)</button>
+          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de Frio</button>
+          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, Banho-maria e Secadora</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de Execução de Serviço</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Relatório de Qualificação (QI/QO/QD)</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de Calibração</button>
+          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de Calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13 (Vaso de Pressão)</button>
+          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
         </div>
 
         <div class="sidebar-section">
           <div class="sidebar-section-title">GESTÃO</div>
-          <button type="button" class="menu-btn" data-mod="clientes" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon">👤</span>Clientes</button>
-          <button type="button" class="menu-btn" data-mod="unidades" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon">🏢</span>Unidades</button>
-          <button type="button" class="menu-btn" data-mod="equipamentos" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon">🔧</span>Equipamentos</button>
-          <button type="button" class="menu-btn" data-mod="documentos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon">📁</span>Documentos</button>
+          <button type="button" class="menu-btn" data-mod="clientes" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-user" aria-hidden="true"></i></span>Clientes</button>
+          <button type="button" class="menu-btn" data-mod="unidades" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Unidades</button>
+          <button type="button" class="menu-btn" data-mod="equipamentos" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-wrench" aria-hidden="true"></i></span>Equipamentos</button>
+          <button type="button" class="menu-btn" data-mod="documentos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder" aria-hidden="true"></i></span>Documentos</button>
         </div>
 
         <div class="sidebar-section" id="menu-secao-admin">
           <div class="sidebar-section-title">ADMINISTRAÇÃO</div>
-          <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon">⚙️</span>Painel Admin</button>
-          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon">🔗</span>Integração Auvo</button>
-          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon">🛡️</span>Painel de Qualidade</button>
-          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon">🚦</span>Programa de Conduta</button>
+          <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
+          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-link" aria-hidden="true"></i></span>Integração Auvo</button>
+          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de Qualidade</button>
+          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de Conduta</button>
 
           <button type="button" class="menu-btn" id="btnSyncOS" onclick="executarExportacaoDiretor()" 
                   style="background-color: #198754; color: white; margin-top: 15px; border: 2px solid #146c43; font-weight: bold;">
-            <i class="fas fa-sync-alt"></i> SINCRONIZAR COM OS+
+            <i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+
           </button>
         </div>
       </aside>
@@ -193,21 +193,22 @@
     // Lógica da Ponte SGO -> OS+
     function executarExportacaoDiretor() {
       const btn = document.getElementById('btnSyncOS');
-      if(!confirm("⚠️ AVISO DE DIRETORIA\n\nDeseja exportar a base atual para o sistema OS+?\n\nClientes, TAGs e Usuários serão atualizados no sistema novo.")) return;
+      if(!confirm("Enviar a base atual ao OS+? Clientes, TAGs e usuários serão atualizados no OS+. Continuar?")) return;
       
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SINCRONIZANDO...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando ao OS+...';
 
       google.script.run
         .withSuccessHandler(function(res) {
           alert(res.mensagem);
           btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sync-alt"></i> SINCRONIZAR COM OS+';
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Enviar cadastros ao OS+';
         })
         .withFailureHandler(function(err) {
-          alert("ERRO CRÍTICO: " + err.message);
+          console.error("Falha no envio ao OS+:", err);
+          alert("Não foi possível enviar ao OS+. Os dados do SGO+ não foram alterados. Tente de novo; se repetir, avise o administrador.");
           btn.disabled = false;
-          btn.innerHTML = 'TENTAR NOVAMENTE';
+          btn.innerHTML = '<i class="fas fa-sync-alt"></i> Tentar de novo';
         })
         .dispararSincronizacaoTotal(SGO_getSessionId()); // Chama a função que criamos no Engine.gs
     }
@@ -295,7 +296,7 @@
                   <input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026">
                 </div>
                 <div class="full">
-                  <label for="doc_arquivo">Arquivo do Documento (Upload para Drive)</label>
+                  <label for="doc_arquivo">Arquivo do documento (enviado ao Drive)</label>
                   <input id="doc_arquivo" type="file" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx" onchange="processarArquivoDocumento_()">
                   <input id="doc_arquivo_base64" type="hidden">
                   <input id="doc_arquivo_mime" type="hidden">
@@ -413,7 +414,8 @@
         })
         .withFailureHandler(function(err) {
           window.SGO_QR_STATE.processando = false;
-          sgoQrMostrarMensagem_("Erro ao acessar via QR: " + (err && err.message ? err.message : err));
+          console.error("Falha ao acessar via QR Code:", err);
+          sgoQrMostrarMensagem_("Não foi possível abrir o equipamento pelo QR Code. Verifique a conexão e tente de novo.");
           if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
         })
         .qrcodeAcessar(sessionId, equipamentoId);

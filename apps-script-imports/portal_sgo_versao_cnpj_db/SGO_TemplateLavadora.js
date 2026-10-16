@@ -53,7 +53,7 @@ function tplLavadoraObterConfig(sessionId) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_LAVADORA.obterConfig()));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('carregar a configuração do modelo', e) };
   }
 }
 
@@ -62,7 +62,7 @@ function tplLavadoraObterPlaceholders(sessionId, tipo) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_LAVADORA.obterPlaceholders(tipo)));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('carregar os campos do modelo', e) };
   }
 }
 
@@ -70,6 +70,6 @@ function tplLavadoraGerarRelatorio(payload) {
   try {
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_LAVADORA.gerarRelatorio(payload)));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('preencher o modelo', e) };
   }
 }

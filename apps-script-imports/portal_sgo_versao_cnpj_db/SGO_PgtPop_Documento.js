@@ -49,7 +49,7 @@ function PgtPop_getCss_() {
   const css = [];
   css.push('@page { size: A4; margin: 18mm 16mm; }');
   css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 14px; }');
   css.push('.logo-topo { height: 40px; }');
@@ -60,10 +60,10 @@ function PgtPop_getCss_() {
   css.push('.titulo-central { text-align:center; margin: 16px 0 4px; }');
   css.push('.titulo-central h1 { font-size: 16px; margin: 0; color:#0b4ea2; text-transform: uppercase; letter-spacing: .3px; }');
   css.push('.titulo-central .norma { font-size: 11px; color:#6b7280; margin-top: 4px; }');
-  css.push('table.dados { width:100%; border-collapse: collapse; margin: 18px 0; page-break-inside: avoid; }');
+  css.push('table.dados { width:100%; border-collapse: collapse; margin: 18px 0; }');
   css.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
   css.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  css.push('.secao { margin-top: 22px; page-break-inside: avoid; }');
+  css.push('.secao { margin-top: 22px; }');
   css.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; page-break-after: avoid; page-break-inside: avoid; }');
   css.push('p, li { text-align: justify; margin: 8px 0; orphans: 3; widows: 3; }');
   css.push('table.historico { width:100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12px; }');
@@ -83,7 +83,7 @@ function PgtPop_getCss_() {
   css.push('.destaque { background:#f3f4f6; border-left: 4px solid #0b4ea2; padding: 14px 16px; margin-top: 14px; page-break-inside: avoid; }');
   css.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   css.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  css.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
+  css.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');  css.push(SGO_DocA4_css_());
   return css.join('\n');
 }
 

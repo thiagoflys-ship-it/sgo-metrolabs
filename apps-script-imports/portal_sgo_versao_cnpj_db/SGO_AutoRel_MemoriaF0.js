@@ -134,14 +134,14 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
   html.push('.capa-titulo { text-align:center; margin:10px 0 24px; }');
   html.push('.capa-titulo h1 { font-size:21px; color:#0b4ea2; margin:0 0 6px; }');
   html.push('.capa-titulo p { margin:0; color:#059669; font-weight:600; }');
-  html.push('table.info { width:100%; border-collapse:collapse; margin:14px 0 20px; font-size:11.5px; page-break-inside:avoid; }');
+  html.push('table.info { width:100%; border-collapse:collapse; margin:14px 0 20px; font-size:11.5px; }');
   html.push('table.info td { border:1px solid #d1d5db; padding:7px 10px; vertical-align:top; }');
   html.push('table.info td.rotulo { background:#f3f4f6; font-weight:700; width:34%; color:#374151; }');
   html.push('.status-banner { text-align:center; font-weight:800; font-size:13px; padding:12px; border-radius:4px; border:2px solid; margin:18px 0; letter-spacing:.3px; }');
   html.push('.status-banner.aprovado { background:rgba(5,150,105,.10); border-color:#059669; color:#047857; }');
   html.push('.status-banner.alerta { background:rgba(217,119,6,.10); border-color:#d97706; color:#b45309; }');
   html.push('.status-banner.reprovado { background:rgba(220,38,38,.10); border-color:#dc2626; color:#b91c1c; }');
-  html.push('.secao { margin-top:26px; page-break-inside:avoid; }');
+  html.push('.secao { margin-top:26px; }');
   html.push('.secao h2 { font-size:13px; color:#ffffff; background:#0b4ea2; padding:8px 12px; margin:0 0 12px; border-left:6px solid #059669; }');
   html.push('.secao h3 { font-size:12.5px; color:#ffffff; background:#374151; padding:7px 12px; margin:22px 0 10px; display:flex; justify-content:space-between; align-items:center; }');
   html.push('.secao h3 .tag-f0 { font-family: "Courier New", monospace; font-weight:700; }');
@@ -171,7 +171,7 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
   html.push('.barra-imprimir { max-width:900px; margin:0 auto 12px; text-align:right; }');
   html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
   html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } .secao { page-break-inside:auto; } }');
-  html.push('</style></head><body>');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -194,33 +194,33 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
   html.push('<tr><td class="rotulo">Setor / Local</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.setor || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Equipamento</td><td>' + AutoRel_acEscaparHtml_(ctx.equipamentoLabel) + (ctx.identificacao.tag ? (' — TAG ' + AutoRel_acEscaparHtml_(ctx.identificacao.tag)) : '') + '</td></tr>');
   html.push('<tr><td class="rotulo">Data do ensaio</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.dataDoEnsaio || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Janela de exposição</td><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoInicioExposicao)) + ' às ' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoFimExposicao)) + ' (' + AutoRel_mf0Num_(ctx.tempoExposicaoMinutos, 1) + ' min)</td></tr>');
+  html.push('<tr><td class="rotulo">Janela de exposição</td><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoInicioExposicao)) + ' às ' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoFimExposicao)) + ' (' + AutoRel_mf0Num_(ctx.tempoExposicaoMinutos, 1) + ' min)</td></tr>');
   html.push('<tr><td class="rotulo">Técnico executor</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.tecnicoExecutor || '—') + '</td></tr>');
   html.push('</table></div>');
 
   html.push('<div class="secao"><h2>2. FUNDAMENTAÇÃO TÉCNICA</h2><div class="prosa">');
-  html.push('<p>O F0 não mede tempo de relógio: ele converte o efeito germicida obtido na temperatura real do ensaio para uma escala de referência fixa em ' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C, conforme ABNT NBR 16328 / ISO 17665-1. Como o efeito do calor sobre microrganismos cresce em degraus multiplicativos com a temperatura — cada ' + AutoRel_mf0Num_(ctx.z, 0) + ' °C acima da referência multiplica a velocidade de esterilização por dez — um minuto de exposição na temperatura real do ciclo vale muito mais que um minuto de F0.</p>');
+  html.push('<p>O F0 não mede tempo de relógio: ele converte o efeito germicida obtido na temperatura real do ensaio para uma escala de referência fixa em ' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C, conforme ABNT NBR 16328 / ISO 17665-1. Como o efeito do calor sobre microrganismos cresce em degraus multiplicativos com a temperatura — cada ' + AutoRel_mf0Num_(ctx.z, 0) + ' °C acima da referência multiplica a velocidade de esterilização por dez — um minuto de exposição na temperatura real do ciclo vale muito mais que um minuto de F0.</p>');
   html.push('</div>');
   html.push('<table class="escala"><thead><tr><th>Temperatura</th><th>Relação com a referência</th><th>Fator de equivalência</th></tr></thead><tbody>');
-  html.push('<tr class="destaque-linha"><td>' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C</td><td>referência da norma</td><td>1,0×</td></tr>');
-  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 10, 1) + ' °C</td><td>+10 °C</td><td>10×</td></tr>');
+  html.push('<tr class="destaque-linha"><td>' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C</td><td>referência da norma</td><td>1,0×</td></tr>');
+  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 10, 1) + ' °C</td><td>+10 °C</td><td>10×</td></tr>');
 
   const piorSensorObj = ctx.sensores.find(function(sv) { return ctx.piorSensorF0 && sv.sensor === ctx.piorSensorF0.sensor; });
   if (piorSensorObj && piorSensorObj.leituras.length) {
     const mediaTempPior = AutoRel_mf0MediaLeituras_(piorSensorObj.leituras);
     const mediaFatorPior = AutoRel_mf0MediaFator_(piorSensorObj.leituras);
-    html.push('<tr><td>' + AutoRel_mf0Num_(mediaTempPior, 1) + ' °C</td><td>média do pior sensor (' + AutoRel_acEscaparHtml_(piorSensorObj.sensor) + ') na exposição</td><td>≈ ' + AutoRel_mf0Num_(mediaFatorPior, 1) + '×</td></tr>');
+    html.push('<tr><td>' + AutoRel_mf0Num_(mediaTempPior, 1) + ' °C</td><td>média do pior sensor (' + AutoRel_acEscaparHtml_(piorSensorObj.sensor) + ') na exposição</td><td>≈ ' + AutoRel_mf0Num_(mediaFatorPior, 1) + '×</td></tr>');
   }
-  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 20, 1) + ' °C</td><td>+20 °C</td><td>100×</td></tr>');
+  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 20, 1) + ' °C</td><td>+20 °C</td><td>100×</td></tr>');
   html.push('</tbody></table>');
   html.push('<p class="nota-tabela">No ponto mais frio do ciclo, cada minuto real de exposição já equivale a dezenas de minutos na escala de referência — é por isso que o F0 final soma muito mais que o tempo de relógio da exposição.</p>');
   html.push('</div>');
 
   html.push('<div class="secao"><h2>3. MEMÓRIA DE CÁLCULO — POR SENSOR</h2>');
-  html.push('<div class="prosa"><p>Cálculo aplicado a cada leitura do datalogger dentro da janela de exposição: <strong>F0 = 10^((T − ' + AutoRel_mf0Num_(ctx.tBase, 1) + ') / ' + AutoRel_mf0Num_(ctx.z, 0) + ') × Δt</strong>, com Δt = ' + AutoRel_mf0Num_(ctx.dtMin, 2) + ' min entre leituras.</p></div>');
+  html.push('<div class="prosa"><p>Cálculo aplicado a cada leitura do datalogger dentro da janela de exposição: <strong>F0 = 10^((T − ' + AutoRel_mf0Num_(ctx.tBase, 1) + ') / ' + AutoRel_mf0Num_(ctx.z, 0) + ') × Δt</strong>, com Δt = ' + AutoRel_mf0Num_(ctx.dtMin, 2) + ' min entre leituras.</p></div>');
 
   ctx.sensores.forEach(function(sv) {
-    html.push('<h3><span>Sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + '</span><span class="tag-f0">F0 = ' + AutoRel_mf0Num_(sv.f0, 4) + ' min</span></h3>');
+    html.push('<h3><span>Sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + '</span><span class="tag-f0">F0 = ' + AutoRel_mf0Num_(sv.f0, 4) + ' min</span></h3>');
 
     if (!sv.leituras.length) {
       html.push('<p class="nota-tabela">Sem leituras válidas deste sensor na janela de exposição identificada.</p>');
@@ -229,9 +229,9 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
 
     html.push('<div class="tabela-wrap"><table class="leituras"><thead><tr><th>Horário</th><th>Temperatura</th><th>Fator (10^Δ⁄' + AutoRel_mf0Num_(ctx.z, 0) + ')</th><th>F0 no intervalo</th><th>F0 acumulado</th></tr></thead><tbody>');
     sv.leituras.forEach(function(r) {
-      html.push('<tr><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(r.tempoStr)) + '</td><td class="temp">' + AutoRel_mf0Num_(r.temperatura, 2) + ' °C</td><td>' + AutoRel_mf0Num_(r.fator, 1) + '×</td><td>' + AutoRel_mf0Num_(r.contribuicao, 2) + ' min</td><td>' + AutoRel_mf0Num_(r.acumulado, 2) + ' min</td></tr>');
+      html.push('<tr><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(r.tempoStr)) + '</td><td class="temp">' + AutoRel_mf0Num_(r.temperatura, 2) + ' °C</td><td>' + AutoRel_mf0Num_(r.fator, 1) + '×</td><td>' + AutoRel_mf0Num_(r.contribuicao, 2) + ' min</td><td>' + AutoRel_mf0Num_(r.acumulado, 2) + ' min</td></tr>');
     });
-    html.push('</tbody><tfoot><tr><td colspan="4">F0 do sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + ' — soma das ' + sv.leituras.length + ' leituras da janela de exposição</td><td>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td></tr></tfoot></table></div>');
+    html.push('</tbody><tfoot><tr><td colspan="4">F0 do sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + ' — soma das ' + sv.leituras.length + ' leituras da janela de exposição</td><td>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td></tr></tfoot></table></div>');
   });
   html.push('</div>');
 
@@ -243,8 +243,8 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
     const claCel = ehPior ? ' class="pior-sensor"' : '';
     const claStatus = sv.conforme === null ? '' : (sv.conforme ? ' status-conforme' : ' status-nao-conforme');
     html.push('<tr><td' + claCel + '>' + AutoRel_acEscaparHtml_(sv.sensor) + (ehPior ? ' (pior sensor)' : '') + '</td>' +
-      '<td' + claCel + '>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td>' +
-      '<td' + claCel + '>' + AutoRel_mf0Num_(ctx.f0MinNormativo, 1) + ' min</td>' +
+      '<td' + claCel + '>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td>' +
+      '<td' + claCel + '>' + AutoRel_mf0Num_(ctx.f0MinNormativo, 1) + ' min</td>' +
       '<td' + claCel + '>' + (multiplo !== null ? (AutoRel_mf0Num_(multiplo, 1) + '×') : '—') + '</td>' +
       '<td class="' + claStatus.trim() + '">' + (sv.conforme === null ? '—' : (sv.conforme ? 'CONFORME' : 'NÃO CONFORME')) + '</td></tr>');
   });

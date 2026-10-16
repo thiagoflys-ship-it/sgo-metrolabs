@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <base target="_top">
   <meta charset="utf-8">
@@ -64,7 +64,7 @@
     .status-banner.alerta { background: rgba(217,119,6,.10); border-color: #d97706; color: #b45309; }
     .status-banner.reprovado { background: rgba(220,38,38,.10); border-color: #dc2626; color: #b91c1c; }
 
-    .secao { margin-top: 26px; page-break-inside: avoid; }
+    .secao { margin-top: 26px; }
     .secao h2 {
       font-size: 13px;
       color: #ffffff;
@@ -184,6 +184,14 @@
       .folha { box-shadow: none; margin: 0; padding: 0; max-width: none; }
       .no-print { display: none !important; }
     }
+    /* Acabamento tipográfico A4 (base SGO_DocA4) */
+    p, li { text-align: justify; hyphens: auto; -webkit-hyphens: auto; orphans: 3; widows: 3; }
+    td p, th p, td li, th li { text-align: inherit; }
+    h1, h2, h3, h4 { page-break-after: avoid; break-after: avoid; }
+    thead { display: table-header-group; }
+    tr, .assinatura, .assinaturas, .figura-item, .foto-item { break-inside: avoid; page-break-inside: avoid; }
+    td.num, th.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    @page { @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8.5px Arial, Helvetica, sans-serif; color: #6b7280; } }
   </style>
 </head>
 <body>

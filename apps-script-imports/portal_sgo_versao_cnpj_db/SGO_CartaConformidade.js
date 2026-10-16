@@ -96,7 +96,7 @@ function tplCartaConfBootstrap(sessionId) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.bootstrap()));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('abrir a Carta de Conformidade', e) };
   }
 }
 
@@ -110,7 +110,7 @@ function tplCartaConfBuscarCnpj(sessionId, cnpj) {
     // busca robusta (SGO_CnpjConsulta.js), no mesmo formato de retorno.
     return tplCartaConf_cnpjLocal_(cnpj);
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('consultar o CNPJ', e) };
   }
 }
 
@@ -145,7 +145,7 @@ function tplCartaConfValidarPayload(sessionId, payload) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.validarPayload(payload)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('validar os dados da carta', e) };
   }
 }
 
@@ -153,7 +153,7 @@ function tplCartaConfAuditar(payload) {
   try {
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.auditar(payload)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('auditar os dados da carta', e) };
   }
 }
 
@@ -162,7 +162,7 @@ function tplCartaConfGerarDocumento(sessionId, payload) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.gerarDocumento(payload)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('gerar o documento', e) };
   }
 }
 
@@ -170,7 +170,7 @@ function tplCartaConfSalvarRelatorio(payload) {
   try {
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.salvarRelatorio(payload)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('salvar o relatório', e) };
   }
 }
 
@@ -178,7 +178,7 @@ function tplCartaConfRefinarIA(payload) {
   try {
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.refinarIA(payload)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('revisar o texto com a IA', e) };
   }
 }
 
@@ -186,6 +186,6 @@ function tplCartaConfPesquisarDocumentos(filtro) {
   try {
     return JSON.parse(JSON.stringify(SGO_CARTA_CONFORMIDADE.pesquisarDocumentos(filtro)));
   } catch (e) {
-    return { ok: false, mensagem: 'Erro servidor: ' + e.message };
+    return { ok: false, mensagem: SGO_textoFalhaOperador_('pesquisar os documentos', e) };
   }
 }

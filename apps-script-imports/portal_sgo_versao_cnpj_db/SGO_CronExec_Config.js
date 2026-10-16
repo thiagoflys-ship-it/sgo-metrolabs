@@ -1,6 +1,6 @@
 const CRONEXEC_CFG = {
   APP: {
-    NOME: "METROLABS • Cronograma de Execução",
+    NOME: "Cronograma de Execução",
     VERSAO: "1.0"
   },
 

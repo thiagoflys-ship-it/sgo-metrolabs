@@ -701,9 +701,9 @@
         <div class="topo-brand">
           <img class="topo-logo-img" src="https://drive.google.com/thumbnail?id=1WuoymOh5_0S2X3jC2otSq89HMltdDEoP&sz=w1200" alt="Metrolabs" onerror="this.onerror=null;this.src='https://via.placeholder.com/150x50/ffffff/007b3e?text=METROLABS';">
           <div>
-            <div class="topo-kicker">METROLABS - Sistema Integrado</div>
-            <h2 class="topo-title" id="tplCartaConf_appTitulo">METROLABS - Carta de Conformidade Técnica</h2>
-            <div class="topo-subtitle">Suíte técnica para emissão de cartas de conformidade, rastreabilidade documental, validação externa e auditoria de critérios por tipo de equipamento.</div>
+            <div class="topo-kicker">Documentos técnicos</div>
+            <h2 class="topo-title" id="tplCartaConf_appTitulo">Carta de Conformidade Técnica</h2>
+            <div class="topo-subtitle">Emissão de cartas de conformidade com critérios por tipo de equipamento e validação externa.</div>
           </div>
         </div>
         <div class="topo-actions">
@@ -1023,7 +1023,7 @@
 <div class="card mt-4">
   <div class="card-body p-0">
     <div class="metro-panel-header" style="background:linear-gradient(135deg,#198754,#146c43); color:#fff; padding:10px 14px; font-weight:bold; font-size:0.88em; letter-spacing:.3px;">
-      🖨️ IMPRESSORA TÉRMICA METROLABS — CARTA DE CONFORMIDADE (58MM)
+      Impressão térmica (58 mm) — carta de conformidade
     </div>
 
     <div class="printer-panel-container" style="background:#f8fafc; overflow-y:auto; border-radius:0 0 16px 16px;">
@@ -1078,7 +1078,7 @@ let tplCartaConf_bootstrapApp = {};
               SGO_finalizarCarregamento_();
               tplCartaConf_bootstrapApp = res || {};
               if (tplCartaConf_bootstrapApp.appNome) {
-                document.getElementById("tplCartaConf_appTitulo").innerText = tplCartaConf_bootstrapApp.appNome;
+                document.getElementById("tplCartaConf_appTitulo").innerText = String(tplCartaConf_bootstrapApp.appNome).replace(/^METROLABS\s*[•-]\s*/i, '');
               }
               tplCartaConf_popularTiposEquipamento();
               tplCartaConf_atualizarTelaPorPerfil();

@@ -49,7 +49,7 @@
                 <input id="eqp_tag" type="text" placeholder="Ex: AUT-01">
               </div>
               <div>
-                <label for="eqp_status">Status</label>
+                <label for="eqp_status">Situação</label>
                 <input id="eqp_status" type="text" value="ATIVO" disabled>
               </div>
               <div class="full">
@@ -93,7 +93,7 @@
                     <th>Modelo</th>
                     <th>Série</th>
                     <th>Setor</th>
-                    <th>Status</th>
+                    <th>Situação</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -215,7 +215,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao pesquisar equipamentos:", err);
-        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Erro de comunicação ao buscar equipamentos.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Não foi possível buscar os equipamentos. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
       })
       .equipamentosPesquisar(SESSION, EQUIPAMENTOS_STATE.filtro);
   }
@@ -359,7 +359,7 @@
       google.script.run
         .withSuccessHandler(function (res) {
           SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
           alert(res.message || "Atualizado com sucesso.");
           equipamentosNovo_();
           if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
@@ -367,7 +367,7 @@
         .withFailureHandler(function (err) {
           SGO_finalizarCarregamento_();
           console.error("Falha ao atualizar equipamento:", err);
-          alert("Erro de comunicação ao atualizar equipamento.");
+          alert("Não foi possível atualizar o equipamento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
         })
         .equipamentosAtualizar(SESSION, EQUIPAMENTOS_STATE.editingId, payload);
       return;
@@ -377,14 +377,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível concluir o cadastro. Tente de novo.");
         alert(res.message || "Criado com sucesso.");
         equipamentosNovo_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao criar equipamento:", err);
-        alert("Erro de comunicação ao criar equipamento.");
+        alert("Não foi possível cadastrar o equipamento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .equipamentosCriar(SESSION, payload);
   }
@@ -429,7 +429,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar equipamento:", err);
-        alert("Erro de comunicação ao buscar equipamento.");
+        alert("Não foi possível buscar o equipamento. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .equipamentosObter(SESSION, id);
   }
@@ -441,13 +441,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
         if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao inativar equipamento:", err);
-        alert("Erro de comunicação ao inativar equipamento.");
+        alert("Não foi possível inativar o equipamento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .equipamentosInativar(SESSION, id);
   }
@@ -459,13 +459,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
         if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao reativar equipamento:", err);
-        alert("Erro de comunicação ao reativar equipamento.");
+        alert("Não foi possível reativar o equipamento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .equipamentosReativar(SESSION, id);
   }
@@ -477,14 +477,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
         if (EQUIPAMENTOS_STATE.editingId === id) equipamentosNovo_();
         if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao excluir equipamento:", err);
-        alert("Erro de comunicação ao excluir equipamento.");
+        alert("Não foi possível excluir o equipamento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .equipamentosExcluir(SESSION, id);
   }
@@ -525,7 +525,7 @@
         if (!bodyContent) return;
 
         if (!res || !res.success) {
-          bodyContent.innerHTML = `<p class="text-danger">${res ? escapeHtml_(res.message) : "Erro ao gerar QR Code."}</p>`;
+          bodyContent.innerHTML = `<p class="text-danger">${res ? escapeHtml_(res.message) : "Não foi possível gerar o QR Code. Tente de novo."}</p>`;
           return;
         }
 
@@ -551,7 +551,7 @@
         console.error("Falha ao gerar QR Code:", err);
         const bodyContent = document.getElementById("qr-body-content");
         if (bodyContent) {
-          bodyContent.innerHTML = `<p class="text-danger">Erro de comunicação ao gerar QR Code.</p>`;
+          bodyContent.innerHTML = `<p class="text-danger">Não foi possível gerar o QR Code. Verifique a conexão e tente de novo. Nada foi alterado.</p>`;
         }
       })
       .qrcodeGerarParaEquipamento(SESSION, id);

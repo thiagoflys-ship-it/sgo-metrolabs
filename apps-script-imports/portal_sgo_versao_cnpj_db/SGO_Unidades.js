@@ -497,29 +497,29 @@ const SGO_UNIDADES = (() => {
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
 function unidadesListar(sessionId) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.listar(sessionId))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('listar as unidades', e) }; }
 }
 function unidadesObter(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('carregar a unidade', e) }; }
 }
 function unidadesCriar(sessionId, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar a unidade', e) }; }
 }
 function unidadesAtualizar(sessionId, id, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar a unidade', e) }; }
 }
 function unidadesInativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar a unidade', e) }; }
 }
 function unidadesReativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar a unidade', e) }; }
 }
 function unidadesExcluir(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir a unidade', e) }; }
 }
 function unidadesPesquisar(sessionId, termo) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar as unidades', e) }; }
 }
 function unidadesListarClientesAtivos(sessionId) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('listar os clientes ativos', e) }; }
 }

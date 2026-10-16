@@ -60,7 +60,7 @@ const SGO_INVENTARIO = (() => {
 
     let status, label;
     if (diasRestantes < 0) { status = "VENCIDO"; label = "Vencido em " + dtBR; }
-    else if (diasRestantes === 0) { status = "VENCIDO"; label = "Vence hoje!"; }
+    else if (diasRestantes === 0) { status = "VENCIDO"; label = "Vence hoje"; }
     else if (diasRestantes <= 30) { status = "VENCENDO"; label = "Vence em " + diasRestantes + "d (" + dtBR + ")"; }
     else { status = "OK"; label = "OK até " + dtBR; }
 
@@ -262,7 +262,11 @@ const SGO_INVENTARIO = (() => {
 
     SGO_DATA.log("INVENTARIO_SALVAR_DOCUMENTO", sessao.usuario, "Inventário salvo no Drive: " + file.getName(), "INVENTARIO");
 
-    return { success: true, fileId: file.getId(), fileName: file.getName(), url: file.getUrl() };
+    // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do cliente.
+    const htmlSalvo = SGO_DocSalvar_htmlAoLado_(folder, nomeArquivo, html);
+    const resposta = { success: true, fileId: file.getId(), fileName: file.getName(), url: file.getUrl(), htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
+    if (htmlSalvo.avisoHtml) resposta.avisoHtml = htmlSalvo.avisoHtml;
+    return resposta;
   }
 
   function listarDocumentosSalvos(sessionId, termoBusca) {

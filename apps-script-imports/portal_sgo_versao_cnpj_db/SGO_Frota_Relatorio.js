@@ -25,11 +25,11 @@ function FrotaRel_escaparHtml_(s) {
 function FrotaRel_num_(v, casas) {
   var n = Number(v);
   if (!isFinite(n)) n = 0;
-  return n.toFixed(casas === undefined ? 2 : casas).replace('.', ',');
+  return SGO_DocA4_num_(n, casas === undefined ? 2 : casas);
 }
 
 function FrotaRel_moeda_(v) {
-  return 'R$ ' + FrotaRel_num_(v, 2);
+  return 'R$ ' + FrotaRel_num_(v, 2);
 }
 
 function FrotaRel_obterPastaRelatorios_() {
@@ -347,7 +347,7 @@ function FrotaRel_cssComum_() {
   return [
     '@page { size: A4; margin: 16mm 15mm; }',
     '* { box-sizing: border-box; }',
-    'body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.5; margin: 0; background: #f3f4f6; }',
+    'body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.5; margin: 0; background: #f3f4f6; }',
     '.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }',
     '.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #1f6f45; padding-bottom: 12px; margin-bottom: 16px; }',
     '.logo-topo { height: 44px; }',
@@ -372,7 +372,7 @@ function FrotaRel_cssComum_() {
     '.alerta-item { padding: 6px 10px; border-radius: 4px; font-size: 11px; margin-bottom: 6px; }',
     '.alerta-item.critico { background:#fdecec; color:#b91c1c; border:1px solid #f5b5b5; }',
     '.alerta-item.aviso { background:#fff8e6; color:#8a5a00; border:1px solid #f0d999; }',
-    '.secao-prosa { margin: 10px 0 16px; page-break-inside: avoid; }',
+    '.secao-prosa { margin: 10px 0 16px; }',
     '.secao-prosa p { text-align: justify; margin: 6px 0; }',
     '.identificacao-box { display:flex; flex-wrap:wrap; gap: 10px; margin: 10px 0 16px; }',
     '.identificacao-item { flex:1; min-width: 150px; border:1px solid #cfe8d8; border-radius:4px; padding:8px 12px; background:#f7fdf9; }',
@@ -381,7 +381,9 @@ function FrotaRel_cssComum_() {
     '.rodape-empresa { margin-top: 30px; padding-top: 8px; border-top: 1px solid #cfe8d8; font-size: 10px; color:#6b7280; text-align:center; }',
     '.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }',
     '.barra-imprimir button { background:#1f6f45; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }',
-    '@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }'
+    '@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }',
+    SGO_DocA4_css_(),
+    'table.dados.larga td.num { white-space: normal; }'
   ].join('\n');
 }
 
@@ -401,13 +403,13 @@ function FrotaRel_montarDocumentoHtml_(dados, interpretacaoIA) {
 
   var veiculosPorKm = dados.veiculos.slice().sort(function(a, b) { return b.kmRodado - a.kmRodado; }).slice(0, 15);
   var graficoKm = FrotaRel_montarGraficoBarras_(
-    veiculosPorKm.map(function(v) { return { rotulo: v.placa, valor: v.kmRodado, rotuloValor: FrotaRel_num_(v.kmRodado, 0) + ' km' }; }),
+    veiculosPorKm.map(function(v) { return { rotulo: v.placa, valor: v.kmRodado, rotuloValor: FrotaRel_num_(v.kmRodado, 0) + ' km' }; }),
     { cor: '#2563a8' }
   );
 
   var veiculosPorParada = dados.veiculos.slice().filter(function(v) { return v.paradasDias > 0; }).sort(function(a, b) { return b.paradasDias - a.paradasDias; }).slice(0, 15);
   var graficoParadas = FrotaRel_montarGraficoBarras_(
-    veiculosPorParada.map(function(v) { return { rotulo: v.placa, valor: v.paradasDias, rotuloValor: FrotaRel_num_(v.paradasDias, 1) + ' dias' }; }),
+    veiculosPorParada.map(function(v) { return { rotulo: v.placa, valor: v.paradasDias, rotuloValor: FrotaRel_num_(v.paradasDias, 1) + ' dias' }; }),
     { cor: '#c98a12' }
   );
 
@@ -466,20 +468,20 @@ function FrotaRel_montarDocumentoHtml_(dados, interpretacaoIA) {
   }
 
   html.push('<div class="faixa-secao">DETALHAMENTO POR VEÍCULO</div>');
-  html.push('<table class="dados"><thead><tr><th>Veículo</th><th>Retiradas</th><th>KM</th><th>Utilização</th><th>Consumo</th><th>Manutenção</th><th>Despesas</th><th>Combustível</th><th>Custo/KM</th><th>Paradas</th><th>Multas</th></tr></thead><tbody>');
+  html.push('<table class="dados larga"><thead><tr><th>Veículo</th><th class="num">Retiradas</th><th class="num">KM</th><th class="num">Utilização</th><th class="num">Consumo</th><th class="num">Manutenção</th><th class="num">Despesas</th><th class="num">Combustível</th><th class="num">Custo/KM</th><th class="num">Paradas</th><th class="num">Multas</th></tr></thead><tbody>');
   dados.veiculos.sort(function(a, b) { return b.retiradas - a.retiradas; }).forEach(function(v) {
     html.push('<tr>' +
       '<td>' + FrotaRel_escaparHtml_(v.placa) + (v.modelo ? (' — ' + FrotaRel_escaparHtml_(v.modelo)) : '') + '</td>' +
-      '<td>' + v.retiradas + '</td>' +
-      '<td>' + FrotaRel_num_(v.kmRodado, 0) + '</td>' +
-      '<td>' + FrotaRel_num_(v.taxaUtilizacao, 1) + '%</td>' +
-      '<td>' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : '—') + '</td>' +
-      '<td>' + v.manutencoesQtd + ' (' + FrotaRel_moeda_(v.manutencoesCusto) + ')</td>' +
-      '<td>' + FrotaRel_moeda_(v.despesasValor) + '</td>' +
-      '<td>' + FrotaRel_moeda_(v.abastecimentosValor) + '</td>' +
-      '<td>' + (v.custoPorKm > 0 ? FrotaRel_moeda_(v.custoPorKm) : '—') + '</td>' +
-      '<td>' + v.paradasQtd + ' (' + FrotaRel_num_(v.paradasDias, 1) + ' dias)</td>' +
-      '<td>' + v.multasQtd + ' (' + FrotaRel_moeda_(v.multasValor) + ')</td>' +
+      '<td class="num">' + v.retiradas + '</td>' +
+      '<td class="num">' + FrotaRel_num_(v.kmRodado, 0) + '</td>' +
+      '<td class="num">' + FrotaRel_num_(v.taxaUtilizacao, 1) + '%</td>' +
+      '<td class="num">' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : '—') + '</td>' +
+      '<td class="num">' + v.manutencoesQtd + ' (' + FrotaRel_moeda_(v.manutencoesCusto) + ')</td>' +
+      '<td class="num">' + FrotaRel_moeda_(v.despesasValor) + '</td>' +
+      '<td class="num">' + FrotaRel_moeda_(v.abastecimentosValor) + '</td>' +
+      '<td class="num">' + (v.custoPorKm > 0 ? FrotaRel_moeda_(v.custoPorKm) : '—') + '</td>' +
+      '<td class="num">' + v.paradasQtd + ' (' + FrotaRel_num_(v.paradasDias, 1) + ' dias)</td>' +
+      '<td class="num">' + v.multasQtd + ' (' + FrotaRel_moeda_(v.multasValor) + ')</td>' +
       '</tr>');
   });
   html.push('</tbody></table>');
@@ -492,9 +494,9 @@ function FrotaRel_montarDocumentoHtml_(dados, interpretacaoIA) {
   var tiposDespesa = Object.keys(dados.despesasPorTipo);
   if (tiposDespesa.length) {
     html.push('<div class="faixa-secao">DESPESAS POR TIPO</div>');
-    html.push('<table class="dados"><thead><tr><th>Tipo</th><th>Total</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Tipo</th><th class="num">Total</th></tr></thead><tbody>');
     tiposDespesa.sort(function(a, b) { return dados.despesasPorTipo[b] - dados.despesasPorTipo[a]; }).forEach(function(t) {
-      html.push('<tr><td>' + FrotaRel_escaparHtml_(t) + '</td><td>' + FrotaRel_moeda_(dados.despesasPorTipo[t]) + '</td></tr>');
+      html.push('<tr><td>' + FrotaRel_escaparHtml_(t) + '</td><td class="num">' + FrotaRel_moeda_(dados.despesasPorTipo[t]) + '</td></tr>');
     });
     html.push('</tbody></table>');
   }
@@ -591,11 +593,11 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
   // 2. Utilização no período
   html.push('<div class="faixa-secao">2. UTILIZAÇÃO NO PERÍODO</div>');
   if (v.movimentacoesLista.length) {
-    html.push('<table class="dados"><thead><tr><th>Data</th><th>Condutor</th><th>Destino/Missão</th><th>KM inicial</th><th>KM final</th><th>Total</th><th>Observações</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Data</th><th>Condutor</th><th>Destino/Missão</th><th class="num">KM inicial</th><th class="num">KM final</th><th class="num">Total</th><th>Observações</th></tr></thead><tbody>');
     v.movimentacoesLista.forEach(function(m) {
       html.push('<tr><td>' + FrotaRel_escaparHtml_(m.data) + '</td><td>' + FrotaRel_escaparHtml_(m.condutor || '—') + '</td><td>' + FrotaRel_escaparHtml_(m.finalidade || '—') + '</td>' +
-        '<td>' + FrotaRel_num_(m.kmSaida, 0) + '</td><td>' + (m.kmChegada !== null ? FrotaRel_num_(m.kmChegada, 0) : (m.emAndamento ? 'em andamento' : '—')) + '</td>' +
-        '<td>' + (m.total !== null ? FrotaRel_num_(m.total, 0) : '—') + '</td><td>' + FrotaRel_escaparHtml_(m.observacoes || '—') + '</td></tr>');
+        '<td class="num">' + FrotaRel_num_(m.kmSaida, 0) + '</td><td class="num">' + (m.kmChegada !== null ? FrotaRel_num_(m.kmChegada, 0) : (m.emAndamento ? 'em andamento' : '—')) + '</td>' +
+        '<td class="num">' + (m.total !== null ? FrotaRel_num_(m.total, 0) : '—') + '</td><td>' + FrotaRel_escaparHtml_(m.observacoes || '—') + '</td></tr>');
     });
     html.push('</tbody></table>');
   } else {
@@ -605,14 +607,14 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
   // 3. Abastecimentos
   html.push('<div class="faixa-secao">3. ABASTECIMENTOS</div>');
   if (v.abastecimentosLista.length) {
-    html.push('<table class="dados"><thead><tr><th>Data</th><th>KM</th><th>Combustível</th><th>Litros</th><th>Valor</th><th>Posto</th><th>Comprovante</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Data</th><th class="num">KM</th><th>Combustível</th><th class="num">Litros</th><th class="num">Valor</th><th>Posto</th><th>Comprovante</th></tr></thead><tbody>');
     v.abastecimentosLista.forEach(function(a) {
-      html.push('<tr><td>' + FrotaRel_escaparHtml_(a.data) + '</td><td>' + FrotaRel_num_(a.km, 0) + '</td><td>' + FrotaRel_escaparHtml_(a.tipoCombustivel) + '</td>' +
-        '<td>' + FrotaRel_num_(a.litros, 2) + ' L</td><td>' + FrotaRel_moeda_(a.valor) + '</td><td>' + FrotaRel_escaparHtml_(a.posto || '—') + '</td>' +
+      html.push('<tr><td>' + FrotaRel_escaparHtml_(a.data) + '</td><td class="num">' + FrotaRel_num_(a.km, 0) + '</td><td>' + FrotaRel_escaparHtml_(a.tipoCombustivel) + '</td>' +
+        '<td class="num">' + FrotaRel_num_(a.litros, 2) + ' L</td><td class="num">' + FrotaRel_moeda_(a.valor) + '</td><td>' + FrotaRel_escaparHtml_(a.posto || '—') + '</td>' +
         '<td>' + (a.comprovante ? '<a href="' + a.comprovante + '" target="_blank">ver</a>' : '—') + '</td></tr>');
     });
     html.push('</tbody></table>');
-    html.push('<p style="font-size:11px;color:#374151;"><strong>Consumo médio no período:</strong> ' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : 'sem dados suficientes (precisa de pelo menos 2 abastecimentos)') + '</p>');
+    html.push('<p style="font-size:11px;color:#374151;"><strong>Consumo médio no período:</strong> ' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : 'sem dados suficientes (precisa de pelo menos 2 abastecimentos)') + '</p>');
   } else {
     html.push('<p style="color:#6b7280;font-size:11.5px;">Nenhum abastecimento registrado no período.</p>');
   }
@@ -620,9 +622,9 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
   // 4. Despesas
   html.push('<div class="faixa-secao">4. DESPESAS</div>');
   if (v.despesasLista.length) {
-    html.push('<table class="dados"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th class="num">Valor</th></tr></thead><tbody>');
     v.despesasLista.forEach(function(d) {
-      html.push('<tr><td>' + FrotaRel_escaparHtml_(d.data) + '</td><td>' + FrotaRel_escaparHtml_(d.tipo) + '</td><td>' + FrotaRel_escaparHtml_(d.descricao || '—') + '</td><td>' + FrotaRel_moeda_(d.valor) + '</td></tr>');
+      html.push('<tr><td>' + FrotaRel_escaparHtml_(d.data) + '</td><td>' + FrotaRel_escaparHtml_(d.tipo) + '</td><td>' + FrotaRel_escaparHtml_(d.descricao || '—') + '</td><td class="num">' + FrotaRel_moeda_(d.valor) + '</td></tr>');
     });
     html.push('</tbody></table>');
   } else {
@@ -633,10 +635,10 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
   // 5. Manutenções
   html.push('<div class="faixa-secao">5. MANUTENÇÕES</div>');
   if (v.manutencoesLista.length) {
-    html.push('<table class="dados"><thead><tr><th>Serviço</th><th>Data</th><th>KM</th><th>Oficina</th><th>Valor</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Serviço</th><th>Data</th><th class="num">KM</th><th>Oficina</th><th class="num">Valor</th><th>Próxima</th><th>Situação</th></tr></thead><tbody>');
     v.manutencoesLista.forEach(function(m) {
-      html.push('<tr><td>' + FrotaRel_escaparHtml_(m.servico) + '</td><td>' + FrotaRel_escaparHtml_(m.data) + '</td><td>' + FrotaRel_escaparHtml_(String(m.km || '—')) + '</td>' +
-        '<td>' + FrotaRel_escaparHtml_(m.oficina || '—') + '</td><td>' + FrotaRel_moeda_(m.valor) + '</td><td>' + FrotaRel_escaparHtml_(m.proxima || '—') + '</td><td>Realizada</td></tr>');
+      html.push('<tr><td>' + FrotaRel_escaparHtml_(m.servico) + '</td><td>' + FrotaRel_escaparHtml_(m.data) + '</td><td class="num">' + FrotaRel_escaparHtml_(String(m.km || '—')) + '</td>' +
+        '<td>' + FrotaRel_escaparHtml_(m.oficina || '—') + '</td><td class="num">' + FrotaRel_moeda_(m.valor) + '</td><td>' + FrotaRel_escaparHtml_(m.proxima || '—') + '</td><td>Realizada</td></tr>');
     });
     html.push('</tbody></table>');
   } else {
@@ -664,10 +666,10 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
     return { data: p.dataInicio, tipo: 'Ocorrência: ' + (p.motivo || 'não informado'), condutor: '—', valor: 0, situacao: p.dataFim ? 'Encerrada' : 'Em aberto', observacao: p.descricao || '' };
   }));
   if (ocorrencias.length) {
-    html.push('<table class="dados"><thead><tr><th>Data</th><th>Tipo</th><th>Condutor</th><th>Valor</th><th>Situação</th><th>Observação</th></tr></thead><tbody>');
+    html.push('<table class="dados"><thead><tr><th>Data</th><th>Tipo</th><th>Condutor</th><th class="num">Valor</th><th>Situação</th><th>Observação</th></tr></thead><tbody>');
     ocorrencias.forEach(function(o) {
       html.push('<tr><td>' + FrotaRel_escaparHtml_(o.data) + '</td><td>' + FrotaRel_escaparHtml_(o.tipo) + '</td><td>' + FrotaRel_escaparHtml_(o.condutor) + '</td>' +
-        '<td>' + (o.valor > 0 ? FrotaRel_moeda_(o.valor) : '—') + '</td><td>' + FrotaRel_escaparHtml_(o.situacao) + '</td><td>' + FrotaRel_escaparHtml_(o.observacao || '—') + '</td></tr>');
+        '<td class="num">' + (o.valor > 0 ? FrotaRel_moeda_(o.valor) : '—') + '</td><td>' + FrotaRel_escaparHtml_(o.situacao) + '</td><td>' + FrotaRel_escaparHtml_(o.observacao || '—') + '</td></tr>');
     });
     html.push('</tbody></table>');
   } else {
@@ -679,15 +681,15 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
   var situacaoGeral = pendencias.length ? 'Pendente' : 'Regular';
   html.push('<table class="dados"><thead><tr><th>Indicador</th><th>Resultado</th></tr></thead><tbody>');
   [
-    ['Quilometragem percorrida', FrotaRel_num_(v.kmRodado, 0) + ' km'],
+    ['Quilometragem percorrida', FrotaRel_num_(v.kmRodado, 0) + ' km'],
     ['Combustível consumido', FrotaRel_num_(v.abastecimentosLitros, 2) + ' litros'],
-    ['Consumo médio', v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : '—'],
+    ['Consumo médio', v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : '—'],
     ['Total de abastecimento', FrotaRel_moeda_(v.abastecimentosValor)],
     ['Total de manutenção', FrotaRel_moeda_(v.manutencoesCusto)],
     ['Outras despesas', FrotaRel_moeda_(v.despesasValor)],
     ['Custo total', FrotaRel_moeda_(v.custoTotal)],
     ['Custo por quilômetro', v.custoPorKm > 0 ? (FrotaRel_moeda_(v.custoPorKm) + '/km') : '—'],
-    ['Dias parados (manutenção/ocorrência)', FrotaRel_num_(v.paradasDias, 1) + ' dias'],
+    ['Dias parados (manutenção/ocorrência)', FrotaRel_num_(v.paradasDias, 1) + ' dias'],
     ['Multas no período', String(v.multasQtd)],
     ['Situação geral', situacaoGeral]
   ].forEach(function(par) {

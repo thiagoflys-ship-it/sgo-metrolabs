@@ -19,7 +19,7 @@ function Integracao_exigirContextoPlanilha_() {
   try {
     SpreadsheetApp.getUi();
   } catch (e) {
-    throw new Error("Esta função só pode ser executada pelo menu da planilha (🚀 ENVIAR PARA OS+).");
+    throw new Error("Esta ação só pode ser feita pelo menu Enviar ao OS+ da planilha. Abra a planilha e use Enviar ao OS+ > Enviar tudo ao OS+.");
   }
 }
 
@@ -29,7 +29,7 @@ function sincronizarTudoMetrolabs() {
   sincronizarUnidadesOficial();
   sincronizarEquipamentosOficial();
   sincronizarUsuariosOficial(); // <--- A EQUIPE ENTRA AQUI
-  mostrarAlerta("✅ OPERAÇÃO CONCLUÍDA!\n\nClientes, Unidades, Inventário e Equipe sincronizados com sucesso.");
+  mostrarAlerta("Envio ao OS+ concluído. Clientes, unidades, inventário e equipe foram atualizados.");
 }
 
 /**
@@ -165,8 +165,8 @@ function sincronizarUsuariosOficial() {
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🚀 ENVIAR PARA OS+')
-    .addItem('🚀 Sincronização TOTAL', 'sincronizarTudoMetrolabs')
+  ui.createMenu('Enviar ao OS+')
+    .addItem('Enviar tudo ao OS+', 'sincronizarTudoMetrolabs')
     .addToUi();
 }
 

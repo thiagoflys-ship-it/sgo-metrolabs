@@ -47,8 +47,8 @@ function Qualidade_montarContextoRelatorio_(periodoDias) {
   };
 }
 
-function QualidadeRel_linhaRank_(nome, valor) {
-  return '<tr><td>' + QualidadeRel_escaparHtml_(nome) + '</td><td style="text-align:center">' + QualidadeRel_escaparHtml_(valor) + '</td></tr>';
+function QualidadeRel_linhaRank_(nome, valor, numerico) {
+  return '<tr><td>' + QualidadeRel_escaparHtml_(nome) + '</td><td' + (numerico ? ' class="num"' : ' style="text-align:center"') + '>' + QualidadeRel_escaparHtml_(valor) + '</td></tr>';
 }
 
 function Qualidade_montarRelatorioHtml_(ctx, ia) {
@@ -59,7 +59,7 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   html.push('<style>');
   html.push('@page { size: A4; margin: 16mm 15mm; }');
   html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 18px; }');
   html.push('.logo-topo { height: 42px; }');
@@ -70,7 +70,7 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   html.push('.kpi { flex: 1 1 21%; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; text-align: center; }');
   html.push('.kpi .valor { font-size: 21px; font-weight: 800; color: #0b4ea2; }');
   html.push('.kpi .rotulo { font-size: 10.5px; color: #6b7280; }');
-  html.push('.secao { margin-top: 22px; page-break-inside: avoid; }');
+  html.push('.secao { margin-top: 22px; }');
   html.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }');
   html.push('.secao h2.recon { background: #059669; border-left-color: #0b4ea2; }');
   html.push('.secao h2.atencao { background: #b45309; border-left-color: #dc2626; }');
@@ -84,8 +84,8 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   html.push('.duas-colunas > div { flex: 1 1 45%; min-width: 260px; }');
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } .secao { page-break-inside: avoid; } }');
-  html.push('</style></head><body>');
+  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -135,14 +135,14 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   html.push('<div class="secao"><h2>Frota — custo e confiabilidade</h2><div class="duas-colunas">');
   html.push('<div><strong style="font-size:11px">Maior custo de manutenção</strong>');
   if ((f.rankingCustoManutencao || []).length) {
-    html.push('<table class="tabela-q"><thead><tr><th>Veículo</th><th>Custo</th></tr></thead><tbody>' +
-      f.rankingCustoManutencao.map(function(r) { return QualidadeRel_linhaRank_(r.nome, 'R$ ' + r.valor.toFixed(2).replace('.', ',')); }).join('') + '</tbody></table>');
+    html.push('<table class="tabela-q"><thead><tr><th>Veículo</th><th class="num">Custo</th></tr></thead><tbody>' +
+      f.rankingCustoManutencao.map(function(r) { return QualidadeRel_linhaRank_(r.nome, 'R$ ' + SGO_DocA4_num_(r.valor, 2), true); }).join('') + '</tbody></table>');
   } else { html.push('<p>Sem manutenção registrada no período.</p>'); }
   html.push('</div><div><strong style="font-size:11px">Consumo abaixo da média da frota</strong>');
   if ((f.consumoAbaixoDaMedia || []).length) {
-    html.push('<table class="tabela-q"><thead><tr><th>Veículo</th><th>km/L</th></tr></thead><tbody>' +
-      f.consumoAbaixoDaMedia.map(function(r) { return QualidadeRel_linhaRank_(r.nome, r.kmPorLitro + ' km/L'); }).join('') + '</tbody></table>');
-  } else { html.push('<p>Nenhum veículo abaixo de 70% da média (' + (f.mediaFrotaConsumo || 0) + ' km/L).</p>'); }
+    html.push('<table class="tabela-q"><thead><tr><th>Veículo</th><th class="num">km/L</th></tr></thead><tbody>' +
+      f.consumoAbaixoDaMedia.map(function(r) { return QualidadeRel_linhaRank_(r.nome, r.kmPorLitro + ' km/L', true); }).join('') + '</tbody></table>');
+  } else { html.push('<p>Nenhum veículo abaixo de 70% da média (' + (f.mediaFrotaConsumo || 0) + ' km/L).</p>'); }
   html.push('</div></div></div>');
 
   // ---------------- Ocorrências do período ----------------

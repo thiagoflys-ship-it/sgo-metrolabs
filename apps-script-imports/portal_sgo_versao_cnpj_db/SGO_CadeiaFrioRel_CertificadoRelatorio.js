@@ -269,7 +269,12 @@ function CadeiaFrioRel_apiMontarCertificadoFinal(payload) {
   template.geradoEm = Utilities.formatDate(new Date(), CadeiaFrioRel_CFCFG.TZ, 'dd/MM/yyyy');
 
   const html = template.evaluate().getContent();
-  return { ok: true, html: html };
+  // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
+  // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
+  return SGO_DocSalvar_finalizarCertificado_(html, payload, function() {
+    const id = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10) ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim() : '';
+    return id ? DriveApp.getFolderById(id) : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
+  }, 'Certificado Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
 }
 
 // ------------------------------------------------------------
@@ -295,5 +300,9 @@ function CadeiaFrioRel_cfParagrafosHtml_(texto) {
 
 function CadeiaFrioRel_cfFmtValor_(v, sufixo) {
   if (v === null || v === undefined || v === '') return '—';
-  return v + (sufixo || '');
+  // pt-BR: vírgula decimal, ponto de milhar, 2 casas fixas, espaço inseparável antes da unidade.
+  const suf = String(sufixo || '').replace(/^\s+/, '');
+  const n = typeof v === 'number' ? v : (/^\s*-?\d+(\.\d+)?\s*$/.test(String(v)) ? Number(v) : NaN);
+  const txt = isFinite(n) ? SGO_DocSalvar_num_(n, 2) : String(v);
+  return txt + (suf ? '\u00a0' + suf : '');
 }

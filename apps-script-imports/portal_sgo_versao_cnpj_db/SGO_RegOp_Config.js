@@ -13,7 +13,7 @@
  ****************************************************/
 const REGOP_CFG = {
   APP: {
-    NOME: "METROLABS • Registros Operacionais",
+    NOME: "Registros Operacionais",
     VERSAO: "1.0"
   },
 

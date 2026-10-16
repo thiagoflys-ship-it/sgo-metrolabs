@@ -134,7 +134,7 @@ function Auvo_montarRelatorioHtml_(ctx, ia) {
   html.push('<style>');
   html.push('@page { size: A4; margin: 16mm 15mm; }');
   html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 18px; }');
   html.push('.logo-topo { height: 42px; }');
@@ -145,7 +145,7 @@ function Auvo_montarRelatorioHtml_(ctx, ia) {
   html.push('.kpi { flex: 1 1 21%; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; text-align: center; }');
   html.push('.kpi .valor { font-size: 21px; font-weight: 800; color: #0b4ea2; }');
   html.push('.kpi .rotulo { font-size: 10.5px; color: #6b7280; }');
-  html.push('.secao { margin-top: 22px; page-break-inside: avoid; }');
+  html.push('.secao { margin-top: 22px; }');
   html.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }');
   html.push('p { text-align: justify; margin: 8px 0; }');
   html.push('.grafico-box-full { margin: 10px 0; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 16px; }');
@@ -156,8 +156,8 @@ function Auvo_montarRelatorioHtml_(ctx, ia) {
   html.push('table.tabela-atend tbody tr:nth-child(even) { background: #f3f4f6; }');
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } .secao { page-break-inside: avoid; } }');
-  html.push('</style></head><body>');
+  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');

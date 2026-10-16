@@ -146,7 +146,7 @@
                 '<input id="cli_endereco" type="text" placeholder="Rua, número, bairro...">' +
               '</div>' +
               '<div>' +
-                '<label for="cli_status">Status</label>' +
+                '<label for="cli_status">Situação</label>' +
                 '<input id="cli_status" type="text" value="ATIVO" disabled>' +
               '</div>' +
               '<div>' +
@@ -181,7 +181,7 @@
                     '<th>Contato</th>' +
                     '<th>E-mail</th>' +
                     '<th>Telefone</th>' +
-                    '<th>Status</th>' +
+                    '<th>Situação</th>' +
                     '<th>Ações</th>' +
                   '</tr>' +
                 '</thead>' +
@@ -218,7 +218,7 @@
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Erro na pesquisa.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Não foi possível pesquisar. Tente de novo.</td></tr>';
           return;
         }
         renderTabelaClientes_(Array.isArray(res.items) ? res.items : []);
@@ -226,7 +226,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao pesquisar clientes:", err);
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Erro de comunicação ao buscar clientes.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Não foi possível buscar os clientes. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
       })
       .clientesPesquisar(SESSION, CLIENTES_STATE.filtro);
   }
@@ -320,7 +320,7 @@
       google.script.run
         .withSuccessHandler(function(res) {
           SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar cliente.");
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o cliente. Tente de novo.");
           alert(res.message || "Cliente atualizado com sucesso.");
           CLIENTES_STATE.editingId = "";
           clientesNovo_();
@@ -329,7 +329,7 @@
         .withFailureHandler(function(err) {
           SGO_finalizarCarregamento_();
           console.error("Falha ao atualizar cliente:", err);
-          alert("Erro de comunicação ao atualizar cliente.");
+          alert("Não foi possível atualizar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
         })
         .clientesAtualizar(SESSION, CLIENTES_STATE.editingId, payload);
       return;
@@ -339,14 +339,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar cliente.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível cadastrar o cliente. Tente de novo.");
         alert(res.message || "Cliente cadastrado com sucesso.");
         clientesNovo_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao criar cliente:", err);
-        alert("Erro de comunicação ao criar cliente.");
+        alert("Não foi possível cadastrar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .clientesCriar(SESSION, payload);
   }
@@ -383,7 +383,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar cliente:", err);
-        alert("Erro de comunicação ao buscar cliente.");
+        alert("Não foi possível buscar o cliente. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .clientesObter(SESSION, id);
   }
@@ -395,14 +395,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar cliente.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o cliente. Tente de novo.");
         alert(res.message || "Cliente inativado com sucesso.");
         if (CLIENTES_STATE.filtro) clientesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao inativar cliente:", err);
-        alert("Erro de comunicação ao inativar cliente.");
+        alert("Não foi possível inativar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .clientesInativar(SESSION, id);
   }
@@ -414,14 +414,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar cliente.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o cliente. Tente de novo.");
         alert(res.message || "Cliente reativado com sucesso.");
         if (CLIENTES_STATE.filtro) clientesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao reativar cliente:", err);
-        alert("Erro de comunicação ao reativar cliente.");
+        alert("Não foi possível reativar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .clientesReativar(SESSION, id);
   }
@@ -433,7 +433,7 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir cliente.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o cliente. Tente de novo.");
         if (CLIENTES_STATE.editingId === id) {
           CLIENTES_STATE.editingId = "";
           clientesNovo_();
@@ -444,7 +444,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao excluir cliente:", err);
-        alert("Erro de comunicação ao excluir cliente.");
+        alert("Não foi possível excluir o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .clientesExcluir(SESSION, id);
   }
@@ -486,7 +486,7 @@
                 SGO_htmlBuscaClienteLike_("uni_cliente_id", "Digite o nome ou CNPJ do cliente e clique na sugestão...") +
               '</div>' +
               '<div>' +
-                '<label for="uni_cnpj_unidade">⚠️ CNPJ da unidade (pode ser igual ao cliente na unidade principal)</label>' +
+                '<label for="uni_cnpj_unidade">CNPJ da unidade <small style="font-weight:400; opacity:.75;">Na unidade principal, pode ser o mesmo do cliente.</small></label>' +
                 '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
                   '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:280px;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
                   '<button class="btn-secondary" type="button" onclick="buscarCnpjUnidade_()">Buscar</button>' +
@@ -497,7 +497,7 @@
                 '<input id="uni_nome_unidade" type="text" placeholder="Digite o nome da unidade">' +
               '</div>' +
               '<div>' +
-                '<label for="uni_status">Status</label>' +
+                '<label for="uni_status">Situação</label>' +
                 '<input id="uni_status" type="text" value="ATIVO" disabled>' +
               '</div>' +
               '<div class="full">' +
@@ -540,7 +540,7 @@
                     '<th>UF</th>' +
                     '<th>Responsável</th>' +
                     '<th>Telefone</th>' +
-                    '<th>Status</th>' +
+                    '<th>Situação</th>' +
                     '<th style="' + styleAcoes + '">Ações</th>' +
                   '</tr>' +
                 '</thead>' +
@@ -568,7 +568,7 @@
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) {
-          alert((res && res.message) ? res.message : "Erro ao carregar clientes ativos.");
+          alert((res && res.message) ? res.message : "Não foi possível carregar os clientes ativos. Tente de novo.");
           return;
         }
         UNIDADES_STATE.clientes = Array.isArray(res.items) ? res.items : [];
@@ -577,7 +577,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao carregar clientes ativos para unidades:", err);
-        alert("Erro de comunicação ao carregar clientes.");
+        alert("Não foi possível carregar os clientes. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .unidadesListarClientesAtivos(SESSION);
   }
@@ -607,7 +607,7 @@
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro na pesquisa.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível pesquisar. Tente de novo.</td></tr>';
           return;
         }
         renderTabelaUnidades_(Array.isArray(res.items) ? res.items : []);
@@ -615,7 +615,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao pesquisar unidades:", err);
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro de comunicação ao buscar unidades.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível buscar as unidades. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
       })
       .unidadesPesquisar(SESSION, UNIDADES_STATE.filtro);
   }
@@ -718,7 +718,7 @@
       google.script.run
         .withSuccessHandler(function(res) {
           SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar unidade.");
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar a unidade. Tente de novo.");
           alert(res.message || "Unidade atualizada com sucesso.");
           UNIDADES_STATE.editingId = "";
           unidadesNovo_();
@@ -727,7 +727,7 @@
         .withFailureHandler(function(err) {
           SGO_finalizarCarregamento_();
           console.error("Falha ao atualizar unidade:", err);
-          alert("Erro de comunicação ao atualizar unidade.");
+          alert("Não foi possível atualizar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
         })
         .unidadesAtualizar(SESSION, UNIDADES_STATE.editingId, payload);
       return;
@@ -737,14 +737,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar unidade.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível cadastrar a unidade. Tente de novo.");
         alert(res.message || "Unidade cadastrada com sucesso.");
         unidadesNovo_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao criar unidade:", err);
-        alert("Erro de comunicação ao criar unidade.");
+        alert("Não foi possível cadastrar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .unidadesCriar(SESSION, payload);
   }
@@ -785,7 +785,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar unidade:", err);
-        alert("Erro de comunicação ao buscar unidade.");
+        alert("Não foi possível buscar a unidade. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .unidadesObter(SESSION, id);
   }
@@ -797,14 +797,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar unidade.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar a unidade. Tente de novo.");
         alert(res.message || "Unidade inativada com sucesso.");
         if (UNIDADES_STATE.filtro) unidadesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao inativar unidade:", err);
-        alert("Erro de comunicação ao inativar unidade.");
+        alert("Não foi possível inativar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .unidadesInativar(SESSION, id);
   }
@@ -816,14 +816,14 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar unidade.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar a unidade. Tente de novo.");
         alert(res.message || "Unidade reativada com sucesso.");
         if (UNIDADES_STATE.filtro) unidadesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao reativar unidade:", err);
-        alert("Erro de comunicação ao reativar unidade.");
+        alert("Não foi possível reativar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .unidadesReativar(SESSION, id);
   }
@@ -835,7 +835,7 @@
     google.script.run
       .withSuccessHandler(function(res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir unidade.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir a unidade. Tente de novo.");
         if (UNIDADES_STATE.editingId === id) unidadesNovo_();
         alert(res.message || "Unidade excluída com sucesso.");
         if (UNIDADES_STATE.filtro) unidadesPesquisar_();
@@ -843,7 +843,7 @@
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao excluir unidade:", err);
-        alert("Erro de comunicação ao excluir unidade.");
+        alert("Não foi possível excluir a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .unidadesExcluir(SESSION, id);
   }

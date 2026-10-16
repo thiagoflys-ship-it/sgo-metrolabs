@@ -51,7 +51,7 @@ function tplAutoclaveObterConfig(sessionId) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_AUTOCLAVE.obterConfig()));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('carregar a configuração do modelo', e) };
   }
 }
 
@@ -60,7 +60,7 @@ function tplAutoclaveObterPlaceholders(sessionId) {
     exigirSessao(String(sessionId || '')); // SEGURANCA: exige sessao valida do portal
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_AUTOCLAVE.obterPlaceholders()));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('carregar os campos do modelo', e) };
   }
 }
 
@@ -68,6 +68,6 @@ function tplAutoclaveGerarRelatorio(payload) {
   try {
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_AUTOCLAVE.gerarRelatorio(payload)));
   } catch (e) {
-    return { ok: false, erro: 'Erro servidor: ' + e.message };
+    return { ok: false, erro: SGO_textoFalhaOperador_('preencher o modelo', e) };
   }
 }

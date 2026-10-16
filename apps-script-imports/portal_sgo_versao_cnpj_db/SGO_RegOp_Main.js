@@ -403,7 +403,7 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
 
-  var pdfUrl = '', fileName = '';
+  var pdfUrl = '', fileName = '', htmlSalvo = { htmlId: '', htmlUrl: '' };
   try {
     var pasta = RegOp_obterPastaPorCnpj_(hospital.cnpj, hospital.razaoSocial);
     var blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
@@ -413,6 +413,8 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     pdfUrl = arquivo.getUrl();
     RegOp_registrarDocumento_({ hospital: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', registroId: registroId }, arquivo);
+    // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do CNPJ.
+    htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, fileName, html, { compartilhar: true });
   } catch (e) {
     // não bloqueia o registro se o auto-save do PDF falhar — o registro
     // já fica salvo na planilha (abaixo) mesmo sem o PDF.
@@ -461,5 +463,7 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     }
   }
 
-  return { ok: true, registroId: registroId, html: html, pdfUrl: pdfUrl, fileName: fileName };
+  var respostaRegOp = { ok: true, registroId: registroId, html: html, pdfUrl: pdfUrl, fileName: fileName, htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
+  if (htmlSalvo.avisoHtml) respostaRegOp.avisoHtml = htmlSalvo.avisoHtml;
+  return respostaRegOp;
 }

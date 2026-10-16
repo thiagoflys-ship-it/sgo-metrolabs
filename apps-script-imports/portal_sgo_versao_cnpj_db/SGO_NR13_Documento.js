@@ -21,7 +21,7 @@ function NR13Doc_escaparHtml_(s) {
 
 function NR13Doc_num_(v, casas) {
   if (v === null || v === undefined || !isFinite(v)) return '—';
-  return Number(v).toFixed(casas === undefined ? 2 : casas).replace('.', ',');
+  return SGO_DocA4_num_(Number(v), casas === undefined ? 2 : casas);
 }
 
 function NR13Doc_paragrafosHtml_(texto) {
@@ -115,7 +115,7 @@ function NR13Doc_montarGraficoTH_(th) {
   if (th.pressaoTeste > 0) {
     var yTeste = py(th.pressaoTeste);
     svg.push('<line x1="' + margemEsq + '" y1="' + yTeste.toFixed(1) + '" x2="' + (W - margemDir) + '" y2="' + yTeste.toFixed(1) + '" stroke="#c98a12" stroke-width="1.3" stroke-dasharray="5,4"/>');
-    svg.push('<text x="' + (W - margemDir - 4) + '" y="' + (yTeste - 5).toFixed(1) + '" font-size="9.5" fill="#c98a12" text-anchor="end" font-family="Arial,sans-serif">Pressão de teste (' + NR13Doc_num_(th.pressaoTeste, 2) + ' ' + th.unidade + ')</text>');
+    svg.push('<text x="' + (W - margemDir - 4) + '" y="' + (yTeste - 5).toFixed(1) + '" font-size="9.5" fill="#c98a12" text-anchor="end" font-family="Arial,sans-serif">Pressão de teste (' + NR13Doc_num_(th.pressaoTeste, 2) + ' ' + th.unidade + ')</text>');
   }
 
   // Eixos
@@ -131,10 +131,10 @@ function NR13Doc_montarGraficoTH_(th) {
 
   // Marcações de tempo no eixo X
   var marcasTempo = [
-    [0, '0 min'],
-    [t1, NR13Doc_num_(t1, 0) + ' min'],
-    [t2, NR13Doc_num_(t2, 0) + ' min'],
-    [t3, NR13Doc_num_(t3, 0) + ' min']
+    [0, '0 min'],
+    [t1, NR13Doc_num_(t1, 0) + ' min'],
+    [t2, NR13Doc_num_(t2, 0) + ' min'],
+    [t3, NR13Doc_num_(t3, 0) + ' min']
   ];
   marcasTempo.forEach(function(m) {
     var x = px(m[0]);
@@ -156,15 +156,15 @@ function NR13Doc_montarGraficoTH_(th) {
 function NR13Doc_montarTabelaTH_(th) {
   var h = [];
   h.push('<table class="dados">');
-  h.push('<tr><td class="rotulo">Pressão de teste</td><td>' + NR13Doc_num_(th.pressaoTeste, 2) + ' ' + th.unidade + '</td></tr>');
-  h.push('<tr><td class="rotulo">Tempo de subida até a pressão de teste</td><td>' + NR13Doc_num_(th.tempoSubidaMin, 0) + ' min</td></tr>');
-  h.push('<tr><td class="rotulo">Pressão inicial do patamar</td><td>' + NR13Doc_num_(th.pressaoInicial, 2) + ' ' + th.unidade + '</td></tr>');
-  h.push('<tr><td class="rotulo">Tempo de ensaio (patamar)</td><td>' + NR13Doc_num_(th.tempoEnsaioMin, 0) + ' min</td></tr>');
-  h.push('<tr><td class="rotulo">Pressão final do patamar</td><td>' + NR13Doc_num_(th.pressaoFinal, 2) + ' ' + th.unidade + '</td></tr>');
-  h.push('<tr><td class="rotulo">Tempo de descida/despressurização</td><td>' + NR13Doc_num_(th.tempoDescidaMin, 0) + ' min</td></tr>');
-  h.push('<tr><td class="rotulo">Rampa de subida (calculada)</td><td>' + NR13Doc_num_(th.rampaSubida, 2) + ' ' + th.unidade + '/min</td></tr>');
-  h.push('<tr><td class="rotulo">Rampa de descida (calculada)</td><td>' + NR13Doc_num_(th.rampaDescida, 2) + ' ' + th.unidade + '/min</td></tr>');
-  h.push('<tr><td class="rotulo">Perda de pressão no patamar (calculada)</td><td>' + NR13Doc_num_(th.perda, 2) + ' ' + th.unidade + ' (' + NR13Doc_num_(th.perdaPercentual, 1) + '%)</td></tr>');
+  h.push('<tr><td class="rotulo">Pressão de teste</td><td>' + NR13Doc_num_(th.pressaoTeste, 2) + ' ' + th.unidade + '</td></tr>');
+  h.push('<tr><td class="rotulo">Tempo de subida até a pressão de teste</td><td>' + NR13Doc_num_(th.tempoSubidaMin, 0) + ' min</td></tr>');
+  h.push('<tr><td class="rotulo">Pressão inicial do patamar</td><td>' + NR13Doc_num_(th.pressaoInicial, 2) + ' ' + th.unidade + '</td></tr>');
+  h.push('<tr><td class="rotulo">Tempo de ensaio (patamar)</td><td>' + NR13Doc_num_(th.tempoEnsaioMin, 0) + ' min</td></tr>');
+  h.push('<tr><td class="rotulo">Pressão final do patamar</td><td>' + NR13Doc_num_(th.pressaoFinal, 2) + ' ' + th.unidade + '</td></tr>');
+  h.push('<tr><td class="rotulo">Tempo de descida/despressurização</td><td>' + NR13Doc_num_(th.tempoDescidaMin, 0) + ' min</td></tr>');
+  h.push('<tr><td class="rotulo">Rampa de subida (calculada)</td><td>' + NR13Doc_num_(th.rampaSubida, 2) + ' ' + th.unidade + '/min</td></tr>');
+  h.push('<tr><td class="rotulo">Rampa de descida (calculada)</td><td>' + NR13Doc_num_(th.rampaDescida, 2) + ' ' + th.unidade + '/min</td></tr>');
+  h.push('<tr><td class="rotulo">Perda de pressão no patamar (calculada)</td><td>' + NR13Doc_num_(th.perda, 2) + ' ' + th.unidade + ' (' + NR13Doc_num_(th.perdaPercentual, 1) + '%)</td></tr>');
   h.push('</table>');
   return h.join('');
 }
@@ -220,19 +220,19 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<style>');
   html.push('@page { size: A4; margin: 16mm 15mm; }');
   html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.5; margin: 0; background: #f3f4f6; }');
+  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.5; margin: 0; background: #f3f4f6; }');
   html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #1f6f45; padding-bottom: 12px; margin-bottom: 16px; }');
   html.push('.logo-topo { height: 44px; }');
   html.push('.numero-doc { border:1px solid #1f6f45; color:#1f6f45; font-weight:700; padding:5px 12px; border-radius:4px; font-size:12px; }');
   html.push('h1.titulo-cert { text-align:center; font-size:18px; color:#1f6f45; margin: 6px 0 2px; }');
   html.push('p.subtitulo-cert { text-align:center; font-size:11.5px; color:#6b7280; margin: 0 0 16px; }');
-  html.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 14px; page-break-inside: avoid; }');
+  html.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 14px; }');
   html.push('table.dados td { border: 1px solid #cfe8d8; padding: 5px 9px; font-size: 12px; }');
   html.push('table.dados td.rotulo { background:#eafbf0; font-weight:700; width: 190px; color:#14532d; }');
   html.push('.faixa-secao { background:#1f6f45; color:#fff; font-weight:700; font-size:12.5px; padding:7px 12px; margin: 18px 0 0; }');
   html.push('.subfaixa { background:#8fe0a8; color:#14532d; font-weight:700; font-size:11.5px; padding:5px 12px; text-align:center; }');
-  html.push('.secao-prosa { margin: 10px 0 16px; page-break-inside: avoid; }');
+  html.push('.secao-prosa { margin: 10px 0 16px; }');
   html.push('.secao-prosa p { text-align: justify; margin: 6px 0; }');
   html.push('.categoria-destaque { display:flex; gap: 14px; margin: 10px 0 16px; flex-wrap: wrap; }');
   html.push('.categoria-box { flex:1; min-width: 150px; border:1px solid #cfe8d8; border-radius:4px; padding:10px 14px; background:#f7fdf9; text-align:center; }');
@@ -264,7 +264,7 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#1f6f45; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
   html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  html.push('</style></head><body>');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -315,10 +315,10 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<tr><td class="rotulo">Nº de série</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.numeroSerie || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Ano de fabricação</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.anoFabricacao || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Localização</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.setor || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">PMTA (informada na plaqueta)</td><td>' + NR13Doc_num_(ctx.vaso.pmtaValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.pmtaUnidade || 'MPa') +
-    (ctx.vaso.pmtaUnidade !== 'MPa' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' MPa</strong> (convertido)') : '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Volume (informado)</td><td>' + NR13Doc_num_(ctx.vaso.volumeValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.volumeUnidade || 'm³') +
-    (ctx.vaso.volumeUnidade !== 'm³' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' m³</strong> (convertido)') : '') + '</td></tr>');
+  html.push('<tr><td class="rotulo">PMTA (informada na plaqueta)</td><td>' + NR13Doc_num_(ctx.vaso.pmtaValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.pmtaUnidade || 'MPa') +
+    (ctx.vaso.pmtaUnidade !== 'MPa' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' MPa</strong> (convertido)') : '') + '</td></tr>');
+  html.push('<tr><td class="rotulo">Volume (informado)</td><td>' + NR13Doc_num_(ctx.vaso.volumeValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.volumeUnidade || 'm³') +
+    (ctx.vaso.volumeUnidade !== 'm³' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' m³</strong> (convertido)') : '') + '</td></tr>');
   html.push('<tr><td class="rotulo">Classe do fluido</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.classeFluido || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Fluido de serviço</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.fluidoServico || '—') + '</td></tr>');
   html.push('</table>');
@@ -331,7 +331,7 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.externo)) + ' / ' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.interno)) + '</div><div class="rotulo-mini">Prazo máx. (anos) Externo / Interno</div></div>');
   html.push('</div>');
   html.push('<table class="dados"><tr><td><strong>Memória de cálculo:</strong> P.V = PMTA (MPa) × Volume (m³) = ' +
-    NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' × ' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' = <strong>' + NR13Doc_num_(ctx.categoria.pv, 2) + ' MPa·m³</strong> ' +
+    NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' × ' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' = <strong>' + NR13Doc_num_(ctx.categoria.pv, 2) + ' MPa·m³</strong> ' +
     '→ Grupo de Potencial de Risco ' + ctx.categoria.grupo + ' (item 13.5.1.1.3) → cruzado com a Classe do Fluido "' + NR13Doc_escaparHtml_(ctx.vaso.classeFluido) +
     '" na Tabela 1 da NR-13 → <strong>Categoria ' + NR13Doc_escaparHtml_(ctx.categoria.categoria) + '</strong>. A periodicidade máxima de inspeção (Tabela 2, ' +
     'estabelecimento sem SPIE) para esta categoria é de ' + ctx.categoria.periodicidade.externo + ' ano(s) pro exame externo e ' + ctx.categoria.periodicidade.interno +

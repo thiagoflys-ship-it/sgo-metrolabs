@@ -20,7 +20,7 @@ function PlanCME_apiDispatch(req) {
   var allow = {
     apiCalcular: PlanCME_calcularPlanejamento,
     apiMontarDocumentoFinal: PlanCME_apiMontarDocumentoFinal,
-    apiSalvarDocumento: PlanCME_apiSalvarDocumento,
+    apiSalvarDocumento: SGO_DocSalvar_comCopiaHtml_(PlanCME_apiSalvarDocumento), // PDF + cópia HTML A4 na mesma pasta
     apiRefinarTexto: PlanCME_refinarTextoIA,
     apiSalvarPlanejamento: PlanCME_salvarPlanejamento
   };

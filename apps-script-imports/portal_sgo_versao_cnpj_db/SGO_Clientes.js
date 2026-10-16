@@ -397,26 +397,43 @@ const SGO_CLIENTES = (() => {
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
 function clientesListar(sessionId) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.listar(sessionId))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('listar os clientes', e) }; }
 }
 function clientesObter(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('carregar o cliente', e) }; }
 }
 function clientesCriar(sessionId, payload) { 
-  try { return JSON.parse(JSON.stringify(SGO_VINCULOS.createClient(sessionId, payload))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_VINCULOS.createClient(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar o cliente', e) }; }
 }
 function clientesAtualizar(sessionId, id, payload) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o cliente', e) }; }
 }
 function clientesInativar(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o cliente', e) }; }
 }
 function clientesReativar(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o cliente', e) }; }
 }
 function clientesExcluir(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o cliente', e) }; }
 }
 function clientesPesquisar(sessionId, termo) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar os clientes', e) }; }
+}
+
+/**
+ * Mensagem de falha para o operador (usada pelos wrappers globais dos cadastros,
+ * Padrões, Carta de Conformidade, Templates, QR Code e Alertas).
+ * O erro técnico vai para o log; na tela só aparece a mensagem do próprio sistema
+ * quando ela foi escrita para o operador (ex.: "CNPJ inválido").
+ */
+function SGO_textoFalhaOperador_(acao, e) {
+  var bruto = String((e && e.message) || e || '').trim();
+  try { console.error('Falha ao ' + acao + ': ' + ((e && e.stack) || bruto)); } catch (_) {}
+  var tecnico = !bruto ||
+    /\b(TypeError|ReferenceError|RangeError|SyntaxError|Exception|Error|undefined|null|NaN|is not|Cannot|cannot|failed|Failed|Service|Script|timed out|Timeout|Limit|quota|Unexpected|Invalid|Access denied|Permission)\b/.test(bruto) ||
+    /\w+\.\w+\(/.test(bruto);
+  var base = 'Não foi possível ' + acao;
+  if (!tecnico) base += ': ' + bruto.replace(/[\s.!]+$/, '');
+  return base + '. Tente de novo; se repetir, avise o administrador.';
 }

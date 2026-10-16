@@ -120,13 +120,13 @@
       <header class="header-card">
         <div class="brand">
           <div class="title-area">
-            <h1 id="tplAppTitle">METROLABS - SISTEMA AUTOCLAVE</h1>
-            <p id="tplAppSubtitle">Suíte técnica para autoclaves, qualificação termobarométrica, rastreabilidade e auditoria de ciclos.</p>
+            <h1 id="tplAppTitle">Autoclave</h1>
+            <p id="tplAppSubtitle">Qualificação térmica e rastreabilidade de ciclos de autoclave.</p>
           </div>
         </div>
         <div class="header-widgets">
           <span id="tplClockWidget">--/--/---- --:--:--</span>
-          <span class="status-badge">SISTEMA ONLINE</span>
+          <span class="status-badge">Pronto</span>
         </div>
       </header>
 
@@ -159,13 +159,13 @@
             <div class="form-row">
               <div class="form-group w-100">
                 <label for="tplCliente">Cliente</label>
-                <input id="tplCliente" class="form-control" type="text" placeholder="Ex.: IMED - Instituto de Medicina, Estudos e Desenvolvimento">
+                <input id="tplCliente" class="form-control" type="text" placeholder="Ex.: Hospital Exemplo Ltda.">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group w-100">
                 <label for="tplUnidade">Unidade / Local</label>
-                <input id="tplUnidade" class="form-control" type="text" placeholder="Ex.: HCN - Hospital Centro Norte Goiano - CME">
+                <input id="tplUnidade" class="form-control" type="text" placeholder="Ex.: Unidade Centro - CME">
               </div>
             </div>
 
@@ -179,7 +179,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="tplMarcaModelo">Marca / Modelo</label>
-                <input id="tplMarcaModelo" class="form-control" type="text" placeholder="Ex.: Baumer B0110-890P">
+                <input id="tplMarcaModelo" class="form-control" type="text" placeholder="Ex.: Marca / modelo da placa do equipamento">
               </div>
               <div class="form-group">
                 <label for="tplNumeroSerie">Número de série</label>
@@ -320,16 +320,16 @@
   function tplAutoclave_limparFormulario() {
     tplAutoclave_el('tplFormRelatorio').reset();
     tplAutoclave_ocultarLinks();
-    tplAutoclave_setStatus('Campos limpos. Sistema pronto para nova geração.', 'info');
+    tplAutoclave_setStatus('Formulário limpo.', 'info');
   }
 
   function tplAutoclave_preencherExemplo() {
     tplAutoclave_el('tplNumero').value = '2026-001';
     tplAutoclave_el('tplData').value = '20/03/2026';
-    tplAutoclave_el('tplCliente').value = 'IMED - Instituto de Medicina, Estudos e Desenvolvimento';
-    tplAutoclave_el('tplUnidade').value = 'HCN - Hospital Centro Norte Goiano - CME';
+    tplAutoclave_el('tplCliente').value = 'Hospital Exemplo Ltda.';
+    tplAutoclave_el('tplUnidade').value = 'Unidade Centro - CME';
     tplAutoclave_el('tplEquipamento').value = 'Autoclave 03';
-    tplAutoclave_el('tplMarcaModelo').value = 'Baumer B0110-890P';
+    tplAutoclave_el('tplMarcaModelo').value = 'Marca Exemplo AC-100';
     tplAutoclave_el('tplNumeroSerie').value = '2130.15.6270';
     tplAutoclave_el('tplTag').value = 'AUTO-03';
     tplAutoclave_el('tplStatus').value = 'APROVADO';
@@ -347,23 +347,23 @@
     }
     tplAutoclave_ocultarLinks();
     tplAutoclave_setLoading(true);
-    tplAutoclave_setStatus('Processando template e gerando arquivos...', 'info');
+    tplAutoclave_setStatus('Gerando o relatório…', 'info');
     SGO_iniciarCarregamento_();
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
         tplAutoclave_setLoading(false);
         if (!res || !res.ok) {
-          tplAutoclave_setStatus((res && res.erro) ? res.erro : 'Falha ao gerar relatório.', 'error');
+          tplAutoclave_setStatus((res && res.erro) ? res.erro : 'Não foi possível gerar o relatório. Confira os campos e tente de novo.', 'error');
           return;
         }
         tplAutoclave_mostrarLinks(res);
-        tplAutoclave_setStatus('Relatório gerado com sucesso: ' + tplAutoclave_nomeAmigavel(res.nomeArquivo || 'arquivo gerado'), 'success');
+        tplAutoclave_setStatus('Relatório gerado: ' + tplAutoclave_nomeAmigavel(res.nomeArquivo || 'arquivo gerado'), 'success');
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         tplAutoclave_setLoading(false);
-        tplAutoclave_setStatus('Erro inesperado: ' + (err && err.message ? err.message : err), 'error');
+        tplAutoclave_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
       })
       .tplAutoclaveGerarRelatorio(payload);
   }
@@ -391,7 +391,7 @@
       status.textContent = 'Nenhum placeholder encontrado no template.';
       return;
     }
-    status.textContent = 'Template lido com sucesso. Total de placeholders: ' + lista.length;
+    status.textContent = 'Modelo lido. Campos encontrados: ' + lista.length;
     lista.forEach(function (item) {
       const chip = document.createElement('span');
       chip.className = 'ph-chip';
@@ -431,12 +431,11 @@
       if (tplAutoclave_relogioTimer_) clearInterval(tplAutoclave_relogioTimer_);
       tplAutoclave_relogioTimer_ = setInterval(tplAutoclave_atualizarRelogio, 1000);
 
-      tplAutoclave_setStatus('Sistema pronto para gerar o relatório.', 'info');
+      tplAutoclave_setStatus('Pronto para gerar o relatório.', 'info');
     } catch (e) {
       console.error('renderTplAutoclave_ falhou:', e);
-      container.innerHTML = '<div style="padding:24px;color:#fca5a5;background:#1f2937;border:1px solid #ef4444;border-radius:8px;font-family:monospace;white-space:pre-wrap;">' +
-        'FALHA AO CARREGAR A ABA GERAR TEMPLATE (AUTOCLAVE):\n\n' + (e && e.message ? e.message : String(e)) +
-        (e && e.stack ? ('\n\n' + e.stack) : '') + '</div>';
+      container.innerHTML = '<div style="padding:24px;color:#fca5a5;background:#1f2937;border:1px solid #ef4444;border-radius:8px;">' +
+        'Não foi possível abrir esta tela. Recarregue a página (F5); se persistir, avise o administrador.</div>';
     }
   }
 </script>

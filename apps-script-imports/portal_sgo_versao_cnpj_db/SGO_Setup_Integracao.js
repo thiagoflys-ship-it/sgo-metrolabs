@@ -34,19 +34,19 @@ function executarSetupIntegracao() {
       .create();
 
     // 3. FEEDBACK DE DIRETORIA
-    const statusBanco = dbId ? "✅ Banco SGO Localizado." : "⚠️ DB_ID não encontrado (Rode o sistema uma vez).";
-    const msg = `🚀 INTEGRAÇÃO ATIVADA COM SUCESSO!\n\n` +
-                `• Destino: OS+ (Conectado)\n` +
-                `• Agendamento: Diário às 03:00 AM\n` +
-                `• Status: ${statusBanco}\n\n` +
-                `O sistema agora trabalhará sozinho todas as noites.`;
+    const statusBanco = dbId ? "banco do SGO+ localizado." : "banco do SGO+ não localizado (DB_ID vazio). Abra o SGO+ uma vez e rode este ajuste de novo.";
+    const msg = `Envio automático ao OS+ ativado.\n\n` +
+                `• Destino: OS+\n` +
+                `• Agendamento: todos os dias às 03:00\n` +
+                `• Situação: ${statusBanco}\n\n` +
+                `O envio passa a rodar sozinho todas as madrugadas.`;
 
     console.log(msg);
     try { SpreadsheetApp.getUi().alert(msg); } catch(e) { /* Caso rode do editor */ }
 
   } catch (e) {
-    const erroMsg = "❌ ERRO NO SETUP: " + e.message;
-    console.error(erroMsg);
+    const erroMsg = "Não foi possível ativar o envio automático ao OS+. Tente de novo; se repetir, avise o administrador.";
+    console.error("Falha no ajuste da integração OS+: " + ((e && e.stack) || e));
     try { SpreadsheetApp.getUi().alert(erroMsg); } catch(err) {}
   }
 }

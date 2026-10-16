@@ -1,6 +1,6 @@
 const PLANCME_CFG = {
   APP: {
-    NOME: "METROLABS • Planejamento CME",
+    NOME: "Planejamento CME",
     VERSAO: "3.0"
   },
 

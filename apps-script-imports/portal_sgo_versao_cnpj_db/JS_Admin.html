@@ -10,15 +10,15 @@
       <div class="module-shell">
         <div class="module-header">
           <div class="module-header-left">
-            <h2 class="content-title">Painel Admin</h2>
-            <p class="content-subtitle">Configurações operacionais e Gestão de Usuários.</p>
+            <h2 class="content-title">Administração</h2>
+            <p class="content-subtitle">Configurações operacionais e gestão de usuários.</p>
           </div>
         </div>
 
         <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 10px;">
 
           <div class="card-kpi">
-            <div class="card-kpi-title">Tempo de ociosidade (Segundos)</div>
+            <div class="card-kpi-title">Tempo de ociosidade (segundos)</div>
             <div style="display:flex; gap:5px; align-items:center; margin-top:8px;">
               <input type="number" id="inputIdleLimit" value="${IDLE_LIMIT}" style="width:75px; padding:4px; font-size:14px; text-align:center;" min="30">
               <button class="btn-primary" type="button" style="padding:5px 10px; font-size:12px;" onclick="salvarTempoOciosidadePainel_()">Salvar</button>
@@ -27,7 +27,7 @@
 
           <div class="card-kpi">
             <div class="card-kpi-title">Som de ociosidade</div>
-            <div class="card-kpi-value" id="adminSomStatus">${SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF"}</div>
+            <div class="card-kpi-value" id="adminSomStatus">${SOM_OCIOSIDADE_ATIVO ? "Ativado" : "Desativado"}</div>
           </div>
 
           <div class="card-kpi">
@@ -39,11 +39,6 @@
             </div>
           </div>
 
-          <div class="card-kpi">
-            <div class="card-kpi-title">Mensagem motivacional atual</div>
-            <div id="adminMensagemAtual" style="font-weight:700; color:var(--metro-blue); font-size:12px; line-height:1.4; margin-bottom:8px;"></div>
-            <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="sortearNovaMensagemMotivacional_()">Trocar mensagem</button>
-          </div>
         </div>
 
         <div id="adminAlertasPadroesCard" class="form-card" style="margin-bottom:20px; display:none;">
@@ -121,7 +116,7 @@
                 <select id="usr_cliente_id"><option value="">Selecione...</option></select>
               </div>
               <div>
-                <label for="usr_status">Status</label>
+                <label for="usr_status">Situação</label>
                 <input id="usr_status" type="text" value="ATIVO" disabled>
               </div>
             </div>
@@ -141,7 +136,7 @@
                     <th>Nome Completo</th>
                     <th>E-mail</th>
                     <th>Perfil</th>
-                    <th>Status</th>
+                    <th>Situação</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -191,7 +186,7 @@
     const elMsg = document.getElementById("adminMensagemAtual");
     const elIdle = document.getElementById("inputIdleLimit");
 
-    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "ON" : "OFF";
+    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "Ativado" : "Desativado";
     if (elIdle) elIdle.value = IDLE_LIMIT;
 
     if (elMsg) {
@@ -286,7 +281,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao pesquisar usuários:", err);
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Erro de comunicação ao buscar usuários.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Não foi possível buscar os usuários. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
       })
       .usuariosPesquisar(SESSION, USUARIOS_STATE.filtro);
   }
@@ -378,7 +373,7 @@
       google.script.run
         .withSuccessHandler(function (res) {
           SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
           alert(res.message || "Atualizado com sucesso.");
           usuariosNovo_();
           if (USUARIOS_STATE.filtro) usuariosPesquisar_();
@@ -386,7 +381,7 @@
         .withFailureHandler(function (err) {
           SGO_finalizarCarregamento_();
           console.error("Falha ao atualizar usuário:", err);
-          alert("Erro de comunicação ao atualizar usuário.");
+          alert("Não foi possível atualizar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
         })
         .usuariosAtualizar(SESSION, USUARIOS_STATE.editingId, payload);
       return;
@@ -398,14 +393,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível concluir o cadastro. Tente de novo.");
         alert(res.message || "Criado com sucesso.");
         usuariosNovo_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao criar usuário:", err);
-        alert("Erro de comunicação ao criar usuário.");
+        alert("Não foi possível cadastrar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .usuariosCriar(SESSION, payload);
   }
@@ -417,7 +412,7 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Erro ao buscar usuário.");
+        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Não foi possível buscar o usuário. Tente de novo.");
 
         const item = res.item;
         USUARIOS_STATE.editingId = String(item.ID || "");
@@ -443,7 +438,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar usuário:", err);
-        alert("Erro de comunicação ao buscar usuário.");
+        alert("Não foi possível buscar o usuário. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .usuariosObter(SESSION, id);
   }
@@ -455,13 +450,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
         if (USUARIOS_STATE.filtro) usuariosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao inativar usuário:", err);
-        alert("Erro de comunicação ao inativar usuário.");
+        alert("Não foi possível inativar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .usuariosInativar(SESSION, id);
   }
@@ -473,13 +468,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
         if (USUARIOS_STATE.filtro) usuariosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao reativar usuário:", err);
-        alert("Erro de comunicação ao reativar usuário.");
+        alert("Não foi possível reativar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .usuariosReativar(SESSION, id);
   }
@@ -491,14 +486,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
         if (USUARIOS_STATE.editingId === id) usuariosNovo_();
         if (USUARIOS_STATE.filtro) usuariosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao excluir usuário:", err);
-        alert("Erro de comunicação ao excluir usuário.");
+        alert("Não foi possível excluir o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .usuariosExcluir(SESSION, id);
   }
@@ -535,7 +530,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao pesquisar documentos:", err);
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro de comunicação ao buscar documentos.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível buscar os documentos. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
       })
       .documentosPesquisar(SESSION, DOCUMENTOS_STATE.filtro);
   }
@@ -658,7 +653,7 @@
       if (preview) preview.innerText = "Arquivo pronto para envio: " + file.name;
     };
     reader.onerror = function () {
-      alert("Erro ao tentar ler o arquivo.");
+      alert("Não foi possível ler o arquivo. Escolha o arquivo de novo.");
       if (el) el.value = "";
       if (preview) preview.innerText = "";
     };
@@ -838,7 +833,7 @@
             btn.disabled = false;
             btn.innerText = "Salvar";
           }
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao atualizar.");
+          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
           alert(res.message || "Atualizado com sucesso.");
           documentosNovo_();
           if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
@@ -850,7 +845,7 @@
             btn.disabled = false;
             btn.innerText = "Salvar";
           }
-          alert("Erro de conexão ao salvar.");
+          alert("Não foi possível salvar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
         })
         .documentosAtualizar(SESSION, DOCUMENTOS_STATE.editingId, payload);
       return;
@@ -864,7 +859,7 @@
           btn.disabled = false;
           btn.innerText = "Salvar";
         }
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao criar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível concluir o cadastro. Tente de novo.");
         alert(res.message || "Criado com sucesso.");
         documentosNovo_();
       })
@@ -875,7 +870,7 @@
           btn.disabled = false;
           btn.innerText = "Salvar";
         }
-        alert("Erro de conexão ao enviar documento.");
+        alert("Não foi possível enviar o documento. Verifique a conexão e confira na lista se ele foi cadastrado antes de tentar de novo.");
       })
       .documentosCriar(SESSION, payload);
   }
@@ -923,7 +918,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar documento:", err);
-        alert("Erro de comunicação ao buscar documento.");
+        alert("Não foi possível buscar o documento. Verifique a conexão e tente de novo. Nada foi alterado.");
       })
       .documentosObter(SESSION, id);
   }
@@ -935,13 +930,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao inativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
         if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao inativar documento:", err);
-        alert("Erro de comunicação ao inativar documento.");
+        alert("Não foi possível inativar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .documentosInativar(SESSION, id);
   }
@@ -953,13 +948,13 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao reativar.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
         if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao reativar documento:", err);
-        alert("Erro de comunicação ao reativar documento.");
+        alert("Não foi possível reativar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .documentosReativar(SESSION, id);
   }
@@ -971,14 +966,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Erro ao excluir.");
+        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
         if (DOCUMENTOS_STATE.editingId === id) documentosNovo_();
         if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao excluir documento:", err);
-        alert("Erro de comunicação ao excluir documento.");
+        alert("Não foi possível excluir o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       })
       .documentosExcluir(SESSION, id);
   }
@@ -990,11 +985,11 @@
     card.style.display = "";
     google.script.run
       .withSuccessHandler(function (res) {
-        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Falha ao carregar.", true);
+        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Não foi possível carregar as configurações.", true);
         adminPreencherAlertasPadroes_(res.config || {});
         adminFeedbackAlertasPadroes_("Configurações carregadas.", false);
       })
-      .withFailureHandler(function (err) { adminFeedbackAlertasPadroes_("Erro ao carregar: " + ((err && err.message) || err), true); })
+      .withFailureHandler(function (err) { console.error("Falha ao carregar alertas de padrões:", err); adminFeedbackAlertasPadroes_("Não foi possível carregar as configurações. Verifique a conexão e tente de novo.", true); })
       .alertasPadroesObterConfigAdmin(SESSION);
   }
 
@@ -1042,7 +1037,8 @@
       })
       .withFailureHandler(function (err) {
         if (btn) { btn.disabled = false; btn.textContent = "Salvar configurações"; }
-        adminFeedbackAlertasPadroes_("Erro ao salvar: " + ((err && err.message) || err), true);
+        console.error("Falha ao salvar alertas de padrões:", err);
+        adminFeedbackAlertasPadroes_("Não foi possível salvar as configurações. Verifique a conexão e tente de novo.", true);
       })
       .alertasPadroesSalvarConfigAdmin(SESSION, adminPayloadAlertasPadroes_());
   }
@@ -1054,13 +1050,14 @@
     google.script.run
       .withSuccessHandler(function (res) {
         if (btn) { btn.disabled = false; btn.textContent = "Testar alerta agora"; }
-        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Falha no teste.", true);
+        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Não foi possível testar o alerta.", true);
         if (!res.exibir) return adminFeedbackAlertasPadroes_("Não existem pendências de padrões para demonstrar.", false);
         exibirAlertaCriticoPadroes_(res);
       })
       .withFailureHandler(function (err) {
         if (btn) { btn.disabled = false; btn.textContent = "Testar alerta agora"; }
-        adminFeedbackAlertasPadroes_("Erro no teste: " + ((err && err.message) || err), true);
+        console.error("Falha no teste de alertas de padrões:", err);
+        adminFeedbackAlertasPadroes_("Não foi possível testar o alerta. Verifique a conexão e tente de novo.", true);
       })
       .alertasPadroesObterEstado(SESSION, true);
   }

@@ -193,8 +193,8 @@ function PonteCmd_alertasPainel_() {
       if (p.length !== 3) return;
       var dv = new Date(p[0], p[1] - 1, p[2]); dv.setHours(0, 0, 0, 0);
       var d = Math.ceil((dv.getTime() - hoje.getTime()) / 86400000);
-      if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") ESTÁ VENCIDO há " + Math.abs(d) + " dia(s)!" });
-      else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") vence em " + d + " dia(s)." });
+      if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") está vencido há " + Math.abs(d) + (Math.abs(d) === 1 ? " dia" : " dias") + "." });
+      else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "DOCUMENTO", dias: d, mensagem: "O documento '" + doc.NOME_ARQUIVO + "' (" + doc.TIPO_DOCUMENTO + ") vence em " + d + (d === 1 ? " dia" : " dias") + "." });
     });
   } catch (e) { }
   try {
@@ -205,8 +205,8 @@ function PonteCmd_alertasPainel_() {
         var v = CertCal_classificarValidadePadrao_(pd.VALIDADE);
         if (v.diasRestantes === null) { itens.push({ tipo: "ATENÇÃO", origem: "PADRAO", dias: null, mensagem: "O padrão de referência '" + pd.TAG + "': " + v.label + "." }); return; }
         var d = v.diasRestantes;
-        if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") ESTÁ VENCIDO há " + Math.abs(d) + " dia(s)!" });
-        else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") vence em " + d + " dia(s)." });
+        if (d < 0) itens.push({ tipo: "CRÍTICO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") está vencido há " + Math.abs(d) + (Math.abs(d) === 1 ? " dia" : " dias") + "." });
+        else if (d <= diasAviso) itens.push({ tipo: "ATENÇÃO", origem: "PADRAO", dias: d, mensagem: "O padrão de referência '" + pd.TAG + "' (" + pd.DESCRICAO + ") vence em " + d + (d === 1 ? " dia" : " dias") + "." });
       });
     }
   } catch (e) { }
@@ -218,7 +218,7 @@ function PonteCmd_alertasPainel_() {
         var critico = a.status === "VENCIDO", cnh = a.categoria === "CNH", doc = a.categoria === "DOCUMENTO";
         var rot = cnh ? "a CNH" : (doc ? "o documento '" + a.tipoLabel + "'" : "a manutenção '" + a.tipoLabel + "'");
         var suj = cnh ? "O condutor '" + a.veiculoPlaca + "'" : "O veículo '" + a.veiculoPlaca + "'";
-        itens.push({ tipo: critico ? "CRÍTICO" : "ATENÇÃO", origem: "FROTA", dias: critico ? -1 : 15, mensagem: critico ? suj + " está com " + rot + " VENCIDO(A)!" : suj + " está com " + rot + " vencendo em breve." });
+        itens.push({ tipo: critico ? "CRÍTICO" : "ATENÇÃO", origem: "FROTA", dias: critico ? -1 : 15, mensagem: critico ? suj + " está com " + rot + (doc && !cnh ? " vencido." : " vencida.") : suj + " está com " + rot + " vencendo em breve." });
       });
     }
   } catch (e) { }

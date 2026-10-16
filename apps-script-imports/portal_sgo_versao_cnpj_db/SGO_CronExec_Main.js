@@ -19,7 +19,7 @@ function CronExec_apiDispatch(req) {
     apiSugerirGrupos: CronExec_apiSugerirGrupos,
     apiFinalizar: CronExec_apiFinalizar,
     apiMontarDocumentoFinal: CronExec_apiMontarDocumentoFinal,
-    apiSalvarDocumento: CronExec_apiSalvarDocumento
+    apiSalvarDocumento: SGO_DocSalvar_comCopiaHtml_(CronExec_apiSalvarDocumento) // PDF + cópia HTML A4 na mesma pasta
   };
 
   if (!fn) throw new Error('Função não informada.');

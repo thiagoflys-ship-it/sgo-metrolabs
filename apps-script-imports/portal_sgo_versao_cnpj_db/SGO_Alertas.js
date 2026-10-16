@@ -45,14 +45,14 @@ const SGO_ALERTAS = (() => {
           if (diffDays <= diasAviso && diffDays >= 0) {
             alertas.push({
               tipo: "ATENÇÃO",
-              mensagem: `O documento '${doc.NOME_ARQUIVO}' (${doc.TIPO_DOCUMENTO}) vence em ${diffDays} dia(s).`,
+              mensagem: `O documento '${doc.NOME_ARQUIVO}' (${doc.TIPO_DOCUMENTO}) vence em ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}.`,
               dias: diffDays,
               origem: "DOCUMENTO"
             });
           } else if (diffDays < 0) {
             alertas.push({
               tipo: "CRÍTICO",
-              mensagem: `O documento '${doc.NOME_ARQUIVO}' (${doc.TIPO_DOCUMENTO}) ESTÁ VENCIDO há ${Math.abs(diffDays)} dia(s)!`,
+              mensagem: `O documento '${doc.NOME_ARQUIVO}' (${doc.TIPO_DOCUMENTO}) está vencido há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}.`,
               dias: diffDays,
               origem: "DOCUMENTO"
             });
@@ -84,14 +84,14 @@ const SGO_ALERTAS = (() => {
           if (diffDays <= diasAviso && diffDays >= 0) {
             alertas.push({
               tipo: "ATENÇÃO",
-              mensagem: `O padrão de referência '${p.TAG}' (${p.DESCRICAO}) vence em ${diffDays} dia(s).`,
+              mensagem: `O padrão de referência '${p.TAG}' (${p.DESCRICAO}) vence em ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}.`,
               dias: diffDays,
               origem: "PADRAO"
             });
           } else if (diffDays < 0) {
             alertas.push({
               tipo: "CRÍTICO",
-              mensagem: `O padrão de referência '${p.TAG}' (${p.DESCRICAO}) ESTÁ VENCIDO há ${Math.abs(diffDays)} dia(s)!`,
+              mensagem: `O padrão de referência '${p.TAG}' (${p.DESCRICAO}) está vencido há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}.`,
               dias: diffDays,
               origem: "PADRAO"
             });
@@ -130,7 +130,7 @@ const SGO_ALERTAS = (() => {
           alertas.push({
             tipo: critico ? "CRÍTICO" : "ATENÇÃO",
             mensagem: critico
-              ? `${sujeito} está com ${rotulo} VENCIDO(A)!`
+              ? `${sujeito} está com ${rotulo} ${ehDocumento && !ehCnh ? 'vencido' : 'vencida'}.`
               : `${sujeito} está com ${rotulo} vencendo em breve.`,
             dias: critico ? -1 : 15,
             origem: "FROTA"
@@ -160,6 +160,6 @@ function alertasObterDashboard(sessionId) {
   try {
     return JSON.parse(JSON.stringify(SGO_ALERTAS.obterAlertasDashboard(sessionId)));
   } catch (e) {
-    return { success: false, message: "Erro servidor: " + e.message };
+    return { success: false, message: SGO_textoFalhaOperador_('carregar os alertas', e) };
   }
 }

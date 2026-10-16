@@ -1,6 +1,6 @@
 const PGTPOP_CFG = {
   APP: {
-    NOME: "METROLABS • PGT e POP - Engenharia Clínica",
+    NOME: "PGT e POP",
     VERSAO: "2.0"
   },
 

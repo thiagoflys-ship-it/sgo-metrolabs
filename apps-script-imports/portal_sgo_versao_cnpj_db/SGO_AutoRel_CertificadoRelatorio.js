@@ -281,7 +281,11 @@ function AutoRel_apiMontarCertificadoFinal(payload) {
   template.geradoEm = Utilities.formatDate(new Date(), AutoRel_UCFG.TZ, 'dd/MM/yyyy');
 
   const html = template.evaluate().getContent();
-  return { ok: true, html: html };
+  // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
+  // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
+  return SGO_DocSalvar_finalizarCertificado_(html, payload, function() {
+    return SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', AutoRel_UCFG.LAUDOS_FOLDER_ID);
+  }, 'Certificado Autoclave', AutoRel_UCFG.TZ);
 }
 
 // ------------------------------------------------------------
@@ -307,7 +311,11 @@ function AutoRel_acParagrafosHtml_(texto) {
 
 function AutoRel_acFmtValor_(v, sufixo) {
   if (v === null || v === undefined || v === '') return '—';
-  return v + (sufixo || '');
+  // pt-BR: vírgula decimal, ponto de milhar, 2 casas fixas, espaço inseparável antes da unidade.
+  const suf = String(sufixo || '').replace(/^\s+/, '');
+  const n = typeof v === 'number' ? v : (/^\s*-?\d+(\.\d+)?\s*$/.test(String(v)) ? Number(v) : NaN);
+  const txt = isFinite(n) ? SGO_DocSalvar_num_(n, 2) : String(v);
+  return txt + (suf ? '\u00a0' + suf : '');
 }
 
 /** Assina fatos e leituras, sem incluir textos editáveis ou fotografias. */

@@ -114,11 +114,12 @@ function dispararSincronizacaoTotal(arg) {
     // ENVIO DO E-MAIL DE SUCESSO
     enviarEmailRelatorioDiretoria(resumo);
 
-    return { sucesso: true, mensagem: "✅ SINCROZINADO!\n\nRelatório enviado para thiagoflys@gmail.com." };
+    return { sucesso: true, mensagem: "Envio ao OS+ concluído. O resumo foi enviado por e-mail à diretoria." };
 
   } catch (e) {
     enviarEmailErroDiretoria(e.message);
-    return { sucesso: false, mensagem: "Erro crítico na ponte: " + e.message };
+    console.error("Falha no envio SGO+ → OS+: " + ((e && e.stack) || e));
+    return { sucesso: false, mensagem: "Não foi possível enviar ao OS+. A diretoria foi avisada por e-mail. Tente de novo; se repetir, avise o administrador." };
   }
 }
 
@@ -130,18 +131,18 @@ function enviarEmailRelatorioDiretoria(data) {
   const assunto = "[METROLABS] Relatório de Sincronização OS+";
   const htmlBody = `
     <div style="font-family: sans-serif; color: #333; max-width: 500px; border: 1px solid #ddd; padding: 15px; border-radius: 10px;">
-      <h3 style="color: #198754;">Sincronização Concluída 🚀</h3>
+      <h3 style="color: #198754;">Envio ao OS+ concluído</h3>
       <p>A base de dados do <b>OS+</b> foi atualizada com sucesso.</p>
       <hr>
-      <p><b>Resumo da Carga:</b></p>
+      <p><b>Resumo da carga:</b></p>
       <ul>
         <li>Unidades/Filiais: ${data.unidades}</li>
         <li>Equipamentos (TAGs): ${data.equipamentos}</li>
-        <li>Usuários Migrados: ${data.usuarios}</li>
+        <li>Usuários enviados: ${data.usuarios}</li>
       </ul>
-      <p><b>Tempo de Processamento:</b> ${data.tempo} segundos</p>
+      <p><b>Tempo de processamento:</b> ${String(data.tempo).replace('.', ',')} segundos</p>
       <hr>
-      <p style="font-size: 11px; color: #888;">Relatório gerado automaticamente pelo Ecossistema Metrolabs SGO+.</p>
+      <p style="font-size: 11px; color: #888;">Gerado automaticamente pelo SGO+.</p>
     </div>
   `;
   MailApp.sendEmail({ to: email, subject: assunto, htmlBody: htmlBody });
@@ -150,7 +151,7 @@ function enviarEmailRelatorioDiretoria(data) {
 function enviarEmailErroDiretoria(erroMsg) {
   MailApp.sendEmail({
     to: "thiagoflys@gmail.com",
-    subject: "⚠️ ERRO CRÍTICO: Sincronização SGO+/OS+",
-    body: "Ocorreu uma falha no processo de integração automática:\n\nErro: " + erroMsg
+    subject: "[METROLABS] Falha no envio SGO+ → OS+",
+    body: "Falha no envio SGO+ → OS+.\n\nDetalhe técnico: " + erroMsg
   });
 }

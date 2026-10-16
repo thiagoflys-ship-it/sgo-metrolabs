@@ -22,17 +22,17 @@ function PlanCME_getCss_() {
   const css = [];
   css.push('@page { size: A4; margin: 18mm 16mm; }');
   css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 20px; }');
   css.push('.logo-topo { height: 46px; }');
   css.push('.titulo-doc { text-align:right; }');
   css.push('.titulo-doc h1 { font-size: 18px; margin: 0; color:#0b4ea2; }');
   css.push('.titulo-doc small { color:#6b7280; }');
-  css.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; page-break-inside: avoid; }');
+  css.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; }');
   css.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
   css.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  css.push('.secao { margin-top: 26px; page-break-inside: avoid; }');
+  css.push('.secao { margin-top: 26px; }');
   // Fundamentação Técnica pode juntar QI+QO+QD e passar de 1 página — "avoid" no bloco
   // inteiro é ignorado pelo navegador nesse caso e a quebra cai em qualquer ponto do
   // texto (ex.: no meio de "ABNT NBR 16328:2024"). Cada QI/QO/QD vira uma .subsecao
@@ -90,7 +90,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>Planejamento Técnico de Qualificação — ' + PlanCME_escaparHtml_(dados.cliente.razaoSocial || 'Cliente') + '</title>');
-  html.push('<style>' + PlanCME_getCss_() + '</style></head><body>');
+  html.push('<style>' + PlanCME_getCss_() + SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -276,11 +276,13 @@ function PlanCME_apiSalvarDocumento(payload) {
       pastaId = props.getProperty("PLANCME_PASTA_PDF_ID");
     }
 
-    const pasta = DriveApp.getFolderById(pastaId);
+    // pasta do cliente (CNPJ ou nome) dentro da pasta do módulo; data no nome para não sobrescrever emissões anteriores
+    const raiz = DriveApp.getFolderById(pastaId);
+    const pasta = (payload.cnpj || payload.cliente) ? SGO_DocSalvar_pastaClienteEm_(raiz, payload.cnpj, payload.cliente) : raiz;
     const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
 
     const nomeCliente = PlanCME_sanitizarNomeArquivo_(payload.cliente || "CLIENTE");
-    const nomeArquivo = "PLANEJAMENTO_CME_" + nomeCliente + ".pdf";
+    const nomeArquivo = "PLANEJAMENTO_CME_" + nomeCliente + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmm") + ".pdf";
     blob.setName(nomeArquivo);
 
     const arquivo = pasta.createFile(blob);

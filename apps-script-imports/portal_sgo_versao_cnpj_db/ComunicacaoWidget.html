@@ -137,7 +137,7 @@
       }
       ST.semBanco = false;
       ok && ok(r);
-    }).withFailureHandler(function (e) { falha ? falha("Sem conexão com o servidor: " + ((e && e.message) || e)) : toastErro("Sem conexão com o servidor."); })
+    }).withFailureHandler(function (e) { falha ? (console.error("Comunicação: falha de servidor", e), falha("Sem conexão com o servidor. Verifique a conexão e tente de novo.")) : toastErro("Sem conexão com o servidor."); })
       .comApi(tk, acao, dados || {});
   }
   function toastErro(msg) {
@@ -249,7 +249,7 @@
     if (!n) { document.title = base; return; }
     var rot = "(" + (n > 99 ? "99+" : n) + ") " + base, alt = false;
     document.title = rot;
-    if (document.hidden) ST.piscando = setInterval(function () { alt = !alt; document.title = alt ? "💬 Nova mensagem" : rot; }, 1500);
+    if (document.hidden) ST.piscando = setInterval(function () { alt = !alt; document.title = alt ? "(" + (n > 99 ? "99+" : n) + ") Nova mensagem" : rot; }, 1500);
   }
   var audio = null;
   function modoSom() { return lsGet("comw_som") || "critica"; }   // critica (padrão) | tudo | nada
@@ -306,7 +306,7 @@
     botao.classList.toggle("comw-inativo", !!ST.parado || ST.semBanco);
     atualizarTitulo(c.total);
     if (!ST.aberto) return;
-    painel.querySelector(".comw-som").textContent = modoSom() === "nada" ? "🔕" : "🔔";
+    painel.querySelector(".comw-som").innerHTML = modoSom() === "nada" ? "<i class='fas fa-bell-slash' aria-hidden='true'></i>" : "<i class='fas fa-bell' aria-hidden='true'></i>";
     painel.querySelector(".comw-som").setAttribute("aria-label", "Som dos avisos: " + rotSom() + " (clique para trocar)");
     painel.querySelector(".comw-som").title = "Som: " + rotSom();
     abas.innerHTML = [["conversas", "Conversas", c.mensagens], ["avisos", "Avisos", c.avisos], ["comunicados", "Comunicados", c.comunicados]].map(function (a) {
@@ -331,7 +331,7 @@
       var c = ST.conv[id]; if (!c) return;
       var u = c.ultima;
       html += "<button type='button' class='comw-item" + (c.nao_lidas ? " comw-novo" : "") + "' data-conv='" + h(id) + "' aria-label='Abrir conversa " + h(c.titulo) + (c.nao_lidas ? ", " + c.nao_lidas + " não lida(s)" : "") + "'>" +
-        "<div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + (c.tipo === "GERAL" ? "📢 " : c.tipo === "GRUPO" ? "👥 " : c.tipo === "SETOR" ? "🏷️ " : "") + h(c.titulo) + "</div>" +
+        "<div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + (c.tipo === "GERAL" ? "<i class='fas fa-bullhorn' aria-hidden='true'></i> " : c.tipo === "GRUPO" ? "<i class='fas fa-users' aria-hidden='true'></i> " : c.tipo === "SETOR" ? "<i class='fas fa-tag' aria-hidden='true'></i> " : "") + h(c.titulo) + "</div>" +
         "<div class='comw-prev'>" + (u ? h(u.de_nome) + ": " + h(u.texto) : "sem mensagens") + "</div></div>" +
         "<div style='text-align:right'><div class='comw-mut'>" + h(u ? quando(u.criado_em) : "") + "</div>" + (c.com ? tagsPessoa(c.com) : "") + (c.nao_lidas ? "<div class='comw-badge'>" + c.nao_lidas + "</div>" : "") + "</div></div></button>";
     });
@@ -475,7 +475,7 @@
     desenhar();
   }
   function telaAvisos() {
-    var html = "<p class='comw-mut' style='margin:0 0 8px'>Avisos automáticos vindos do " + h(OUTRO) + " (os deste sistema continuam no sino 🔔).</p>";
+    var html = "<p class='comw-mut' style='margin:0 0 8px'>Avisos automáticos vindos do " + h(OUTRO) + " (os deste sistema continuam no sino).</p>";
     if (!ST.avisos.length) html += "<div class='comw-vazio'>Nenhum aviso do " + h(OUTRO) + ".</div>";
     html += ST.avisos.map(function (a) {
       return "<div class='comw-item comw-" + h(a.prioridade) + (a.novo ? " comw-novo" : "") + "' style='cursor:default'><div class='comw-linha'><div class='comw-cresce comw-tit'>" + h(a.titulo) + "</div>" + tagSis(a.origem_sistema) + "</div>" +
@@ -490,7 +490,7 @@
       var pend = a.exige_ciencia && !a.ciente;
       return "<div class='comw-item comw-" + h(a.prioridade) + (pend || a.novo ? " comw-novo" : "") + "' style='cursor:default'><div class='comw-linha'><div class='comw-cresce comw-tit'>" + h(a.titulo) + "</div>" + tagSis(a.origem_sistema) + "</div>" +
         "<div class='comw-txt'>" + h(a.texto) + "</div><div class='comw-mut'>" + h(a.criado_por) + " · " + h(quando(a.criado_em)) + (a.para && a.para !== "TODOS" ? " · " + h(String(a.para).replace("SETOR:", "setor ")) : "") + "</div>" +
-        (a.exige_ciencia ? (a.ciente ? "<div class='comw-mut'>✔ Você deu ciência.</div>" : "<div style='margin-top:6px'><button type='button' class='comw-btn comw-verde' data-ciente='" + h(a.aviso_id) + "'>Li e estou ciente</button></div>") : "") +
+        (a.exige_ciencia ? (a.ciente ? "<div class='comw-mut'><i class='fas fa-check' aria-hidden='true'></i> Você deu ciência.</div>" : "<div style='margin-top:6px'><button type='button' class='comw-btn comw-verde' data-ciente='" + h(a.aviso_id) + "'>Li e estou ciente</button></div>") : "") +
         linkRef(a) + "</div>";
     }).join("");
     corpo.innerHTML = html;
@@ -526,11 +526,11 @@
   /* ---------------- montagem ---------------- */
   function montar() {
     raiz = el("div", "comw-raiz"); raiz.hidden = true;
-    botao = el("button", "comw-botao", "💬"); botao.type = "button"; botao.setAttribute("aria-label", "Comunicação"); botao.setAttribute("aria-haspopup", "dialog"); botao.setAttribute("aria-expanded", "false");
+    botao = el("button", "comw-botao", "<i class='fas fa-comments' aria-hidden='true'></i>"); botao.type = "button"; botao.setAttribute("aria-label", "Comunicação"); botao.setAttribute("aria-haspopup", "dialog"); botao.setAttribute("aria-expanded", "false");
     qt = el("span", "comw-qt"); qt.hidden = true; botao.appendChild(qt);
     painel = el("div", "comw-painel"); painel.hidden = true; painel.setAttribute("role", "dialog"); painel.setAttribute("aria-label", "Comunicação " + (NOME_SIS[CFG.sistema] || "") + " e " + OUTRO);
-    painel.innerHTML = "<div class='comw-cab'><h2>💬 Comunicação <small>" + h(NOME_SIS[CFG.sistema] || "") + " ↔ " + h(OUTRO) + "</small></h2>" +
-      "<button type='button' class='comw-ico comw-som' aria-label='Som'>🔔</button><button type='button' class='comw-ico' data-acao='fechar' aria-label='Fechar a Comunicação (Esc)'>✕</button></div>" +
+    painel.innerHTML = "<div class='comw-cab'><h2>Comunicação <small>" + h(NOME_SIS[CFG.sistema] || "") + " ↔ " + h(OUTRO) + "</small></h2>" +
+      "<button type='button' class='comw-ico comw-som' aria-label='Som'><i class='fas fa-bell' aria-hidden='true'></i></button><button type='button' class='comw-ico' data-acao='fechar' aria-label='Fechar a Comunicação (Esc)'>✕</button></div>" +
       "<div class='comw-abas' role='tablist'></div><div class='comw-corpo' tabindex='-1'></div><div class='comw-pe' hidden></div>";
     toasts = el("div", "comw-toasts");
     viva = el("div", "comw-sr"); viva.setAttribute("aria-live", "polite");

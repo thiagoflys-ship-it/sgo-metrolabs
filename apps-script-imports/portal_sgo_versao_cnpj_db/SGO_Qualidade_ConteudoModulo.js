@@ -213,7 +213,7 @@ function tplQualidade_botaoOcorrencia_(area, pessoaTipo, id, nome, tipo, rotulo)
 // ------------------------------------------------------------
 function tplQualidade_montarAuvo_(a) {
   if (!a || !a.total) {
-    return '<div class="panel"><h2>🔗 Resumo</h2><p class="indisponivel">Sem atendimento registrado ainda.</p></div>';
+    return '<div class="panel"><h2>Resumo</h2><p class="indisponivel">Sem atendimento registrado ainda.</p></div>';
   }
   var classeRelato = a.pctSemRelato >= 30 ? 'critico' : (a.pctSemRelato > 0 ? 'alerta' : 'ok');
   var classeFoto = a.pctSemFoto >= 30 ? 'critico' : (a.pctSemFoto > 0 ? 'alerta' : 'ok');
@@ -223,7 +223,7 @@ function tplQualidade_montarAuvo_(a) {
   var classeVinculo = a.semVinculo > 0 ? 'alerta' : 'ok';
 
   var painelResumo = '<div class="panel">' +
-    '<h2>🔗 Preenchimento — ' + a.total + ' atendimento(s)</h2>' +
+    '<h2>Preenchimento — ' + a.total + ' atendimento(s)</h2>' +
     '<p class="fonte">' + a.finalizadas + ' finalizado(s)</p>' +
     '<div class="stat-row"><span class="stat-num ' + classeRelato + '">' + a.pctSemRelato + '%</span><span class="stat-label">sem relato de serviço</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeFoto + '">' + a.pctSemFoto + '%</span><span class="stat-label">sem nenhuma foto anexada</span></div>' +
@@ -234,7 +234,7 @@ function tplQualidade_montarAuvo_(a) {
   '</div>';
 
   var painelPior = '<div class="panel">' +
-    '<h2>⚠️ Quem mais deixa incompleto</h2>' +
+    '<h2>Registros incompletos por técnico</h2>' +
     '<p class="fonte">3+ atendimentos, pior % primeiro</p>' +
     tplQualidade_rankLista_(a.rankingPiorQualidade, function(r) {
       return '<li class="rank-item"><div class="rank-info"><span class="rank-nome">' + tplQualidade_esc(r.nome) + ' (' + r.qtd + ')</span>' +
@@ -245,7 +245,7 @@ function tplQualidade_montarAuvo_(a) {
   '</div>';
 
   var painelDestaques = '<div class="panel">' +
-    '<h2>🏆 Destaques (100% completo)</h2>' +
+    '<h2>Atendimentos 100% completos</h2>' +
     '<p class="fonte">3+ atendimentos, sempre com relato e foto</p>' +
     tplQualidade_rankLista_(a.rankingDestaques, function(r) {
       return '<li class="rank-item"><div class="rank-info"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span></div>' +
@@ -255,7 +255,7 @@ function tplQualidade_montarAuvo_(a) {
   '</div>';
 
   var painelVolume = '<div class="panel">' +
-    '<h2>📈 Quem mais atende</h2>' +
+    '<h2>Técnicos com mais atendimentos</h2>' +
     '<p class="fonte">ranking por volume de atendimentos</p>' +
     tplQualidade_rankLista_(a.rankingVolume, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span></li>';
@@ -263,7 +263,7 @@ function tplQualidade_montarAuvo_(a) {
   '</div>';
 
   var painelTempo = '<div class="panel">' +
-    '<h2>⏱️ Tempo de atendimento</h2>' +
+    '<h2>Tempo de atendimento</h2>' +
     '<p class="fonte">check-in → check-out, média em minutos (extremos)</p>' +
     (a.tempoRapidos && a.tempoRapidos.length ? '<p class="fonte" style="margin-bottom:2px">Mais rápidos:</p>' + tplQualidade_rankLista_(a.tempoRapidos, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.mediaMin + ' min</span></li>';
@@ -274,10 +274,10 @@ function tplQualidade_montarAuvo_(a) {
     ((!a.tempoRapidos || !a.tempoRapidos.length) && (!a.tempoLentos || !a.tempoLentos.length) ? '<p class="vazio">Sem dado suficiente (precisa de check-in e check-out).</p>' : '') +
   '</div>';
 
-  var painelPendencias = '<div class="panel"><h2>📋 Pendências identificadas por O.S.</h2><p class="fonte">Mostra exatamente o que precisa ser corrigido</p>' + ((a.pendenciasDetalhadas||[]).length?'<ul class="lista-amostra">'+a.pendenciasDetalhadas.slice(0,15).map(function(p){return '<li><strong>O.S. '+tplQualidade_esc(p.os||'sem número')+'</strong> — '+tplQualidade_esc(p.tecnico)+' / '+tplQualidade_esc(p.cliente)+'<br><span class="rank-sub">'+tplQualidade_esc((p.motivos||[]).join('; '))+'</span>'+(p.link?' <a href="'+tplQualidade_esc(p.link)+'" target="_blank">Abrir O.S.</a>':'')+'</li>';}).join('')+'</ul>':'<p class="vazio">Nenhuma pendência nas O.S. finalizadas.</p>')+'</div>';
+  var painelPendencias = '<div class="panel"><h2>Pendências identificadas por O.S.</h2><p class="fonte">Mostra exatamente o que precisa ser corrigido</p>' + ((a.pendenciasDetalhadas||[]).length?'<ul class="lista-amostra">'+a.pendenciasDetalhadas.slice(0,15).map(function(p){return '<li><strong>O.S. '+tplQualidade_esc(p.os||'sem número')+'</strong> — '+tplQualidade_esc(p.tecnico)+' / '+tplQualidade_esc(p.cliente)+'<br><span class="rank-sub">'+tplQualidade_esc((p.motivos||[]).join('; '))+'</span>'+(p.link?' <a href="'+tplQualidade_esc(p.link)+'" target="_blank">Abrir O.S.</a>':'')+'</li>';}).join('')+'</ul>':'<p class="vazio">Nenhuma pendência nas O.S. finalizadas.</p>')+'</div>';
 
   var painelTipos = '<div class="panel">' +
-    '<h2>🗂️ Tipos mais atendidos</h2>' +
+    '<h2>Tipos mais atendidos</h2>' +
     '<p class="fonte">top 3</p>' +
     tplQualidade_rankLista_(a.tiposMaisComuns, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.tipo) + '</span><span class="rank-qtd">' + r.qtd + '</span></li>';
@@ -285,7 +285,7 @@ function tplQualidade_montarAuvo_(a) {
   '</div>';
 
   var painelClientes = '<div class="panel">' +
-    '<h2>🏢 Clientes mais atendidos</h2>' +
+    '<h2>Clientes mais atendidos</h2>' +
     '<p class="fonte">top 5 por volume</p>' +
     tplQualidade_rankLista_(a.clientesMaisAtendidos, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span></li>';
@@ -300,7 +300,7 @@ function tplQualidade_montarAuvo_(a) {
 // ------------------------------------------------------------
 function tplQualidade_montarFrota_(f) {
   if (!f || !f.totalMovimentacoes) {
-    return '<div class="panel"><h2>🚗 Resumo</h2><p class="indisponivel">Sem retirada/devolução registrada ainda.</p></div>';
+    return '<div class="panel"><h2>Resumo</h2><p class="indisponivel">Sem retirada/devolução registrada ainda.</p></div>';
   }
   var classeIncompletas = f.totalIncompletas > 0 ? 'alerta' : 'ok';
   var classePendurada = f.viagensPenduradas > 0 ? 'critico' : 'ok';
@@ -321,14 +321,14 @@ function tplQualidade_montarFrota_(f) {
   }).join('');
 
   var painelResumo = '<div class="panel">' +
-    '<h2>🚗 Movimentação — ' + f.totalMovimentacoes + ' retirada(s)</h2>' +
+    '<h2>Movimentação — ' + f.totalMovimentacoes + ' retirada(s)</h2>' +
     '<div class="stat-row"><span class="stat-num ' + classePendurada + '">' + f.viagensPenduradas + '</span><span class="stat-label">retirada(s) aberta(s) há 2+ dias sem devolução</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeIncompletas + '">' + f.totalIncompletas + '</span><span class="stat-label">retirada(s)/devolução(ões) sem checklist ou sem foto</span></div>' +
     (amostraPenduradas ? '<ul class="lista-amostra">' + amostraPenduradas + '</ul>' : '') +
   '</div>';
 
   var painelCondutores = '<div class="panel">' +
-    '<h2>👤 Quem mais usa</h2>' +
+    '<h2>Condutores com mais retiradas</h2>' +
     '<p class="fonte">ranking por retirada — badge = pendências dele</p>' +
     tplQualidade_rankLista_(f.rankingCondutores, function(r) {
       var detalhes = (r.pendenciasDetalhes || []).map(function(p) {
@@ -342,7 +342,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelCondutoresDestaque = '<div class="panel">' +
-    '<h2>🏆 Condutores destaque</h2>' +
+    '<h2>Condutores sem ocorrências</h2>' +
     '<p class="fonte">3+ retiradas, zero pendência</p>' +
     tplQualidade_rankLista_(f.rankingCondutoresDestaque, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span>' +
@@ -351,7 +351,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelVeiculos = '<div class="panel">' +
-    '<h2>🚙 Veículo mais usado</h2>' +
+    '<h2>Veículos mais usados</h2>' +
     '<p class="fonte">ranking por retirada</p>' +
     tplQualidade_rankLista_(f.rankingVeiculos, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span></li>';
@@ -359,7 +359,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelManutencaoParadas = '<div class="panel">' +
-    '<h2>🔧 Manutenção e confiabilidade</h2>' +
+    '<h2>Manutenção e confiabilidade</h2>' +
     '<p class="fonte">custo total de manutenção (top 5)</p>' +
     tplQualidade_rankLista_(f.rankingCustoManutencao, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">R$ ' + r.valor.toFixed(2).replace('.', ',') + '</span></li>';
@@ -371,7 +371,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelConsumo = '<div class="panel">' +
-    '<h2>⛽ Consumo (km/L)</h2>' +
+    '<h2>Consumo (km/L)</h2>' +
     '<p class="fonte">' + (f.mediaFrotaConsumo ? 'média da frota: ' + f.mediaFrotaConsumo + ' km/L' : 'sem dado suficiente ainda') + '</p>' +
     (f.consumoAbaixoDaMedia && f.consumoAbaixoDaMedia.length ?
       tplQualidade_rankLista_(f.consumoAbaixoDaMedia, function(r) {
@@ -381,7 +381,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelDocsMultas = '<div class="panel">' +
-    '<h2>📄 Documentação e multas</h2>' +
+    '<h2>Documentação e multas</h2>' +
     '<div class="stat-row"><span class="stat-num ' + classeDocVencido + '">' + f.documentosVencidos + '</span><span class="stat-label">documento(s) vencido(s) (' + f.documentosVencendo + ' vencendo)</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeMultaSemCondutor + '">' + f.multasSemCondutor + '</span><span class="stat-label">de ' + f.multasAbertas + ' multa(s) aberta(s) sem condutor vinculado</span></div>' +
     (f.valorMultasAbertas ? '<p class="fonte" style="margin-top:8px">R$ ' + f.valorMultasAbertas.toFixed(2).replace('.', ',') + ' em multas abertas</p>' : '') +
@@ -393,7 +393,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelIncompletasDetalhe = amostraIncompletas ? '<div class="panel">' +
-    '<h2>🧾 Detalhes das pendências — amostra</h2>' +
+    '<h2>Detalhes das pendências (amostra)</h2>' +
     '<ul class="lista-amostra">' + amostraIncompletas + '</ul>' +
   '</div>' : '';
 

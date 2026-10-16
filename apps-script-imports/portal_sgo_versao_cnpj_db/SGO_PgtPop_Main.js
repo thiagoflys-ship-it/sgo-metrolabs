@@ -35,7 +35,7 @@ function PgtPop_apiDispatch(req) {
     apiListarDocumentos: PgtPop_apiListarDocumentos,
     apiObterDocumentoPorId: PgtPop_apiObterDocumentoPorId,
     apiMontarDocumentoFinal: PgtPop_apiMontarDocumentoFinal,
-    apiSalvarDocumento: PgtPop_apiSalvarDocumento,
+    apiSalvarDocumento: SGO_DocSalvar_comCopiaHtml_(PgtPop_apiSalvarDocumento), // PDF + cópia HTML A4 na pasta do CNPJ
     apiListarArquivosPdf: PgtPop_apiListarArquivosPdf
   };
 
@@ -185,6 +185,18 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
   // planilha de qualquer forma).
   var pdf = PgtPop_salvarPdfAutomatico_(registro);
 
+  // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do CNPJ
+  // (mesmo nome-base do PDF). Só tenta se o PDF foi salvo; nunca derruba a geração.
+  var htmlSalvo = { htmlId: '', htmlUrl: '' };
+  if (pdf && pdf.url) {
+    try {
+      var pastaPgtPop = PgtPop_obterPastaPorCnpj_((registro.hospital && registro.hospital.cnpj) || '', (registro.hospital && registro.hospital.razaoSocial) || '');
+      htmlSalvo = SGO_DocSalvar_htmlAoLado_(pastaPgtPop, pdf.fileName, PgtPop_montarDocumentoHtml_(registro), { compartilhar: true });
+    } catch (eHtml) {
+      htmlSalvo = { htmlId: '', htmlUrl: '', avisoHtml: 'O PDF foi salvo, mas a cópia em HTML (A4) não foi gravada na pasta: ' + eHtml.message + '. O PDF continua válido.' };
+    }
+  }
+
   // Integração Auvo: cria uma Tarefa concluída pra este atendimento. Só
   // dispara se o PDF realmente foi salvo e se o CNPJ digitado bate com um
   // cliente já cadastrado no Portal (este módulo, como o Registros
@@ -227,7 +239,10 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
     elaboradoPorCargo: elaboradoPorCargo,
     elaboradoPorRegistro: elaboradoPorRegistro,
     pdfUrl: pdf.url || '',
-    pdfFileName: pdf.fileName || ''
+    pdfFileName: pdf.fileName || '',
+    htmlId: htmlSalvo.htmlId || '',
+    htmlUrl: htmlSalvo.htmlUrl || '',
+    avisoHtml: htmlSalvo.avisoHtml || ''
   };
 }
 

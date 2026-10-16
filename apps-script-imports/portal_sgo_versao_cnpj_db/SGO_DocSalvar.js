@@ -1,0 +1,292 @@
+/****************************************************
+ * SGO_DocSalvar — helper compartilhado (2026-10-16)
+ *
+ * Regra do dono: todo documento gerado existe em HTML A4 (imprimível)
+ * E em PDF, salvos na pasta do cliente para consulta posterior.
+ *
+ * Funções:
+ *  - SGO_DocSalvar_sanitizarNome_(nome)
+ *  - SGO_DocSalvar_salvarHtml_(pasta, nomeBase, html, opcoes)
+ *  - SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes)
+ *  - SGO_DocSalvar_htmlAoLado_(pasta, nomePdf, html, opcoes)   (nunca lança)
+ *  - SGO_DocSalvar_pastaClienteEm_(raiz, cnpj, nomeCliente)
+ *  - SGO_DocSalvar_salvarCertificadoEquipamento_(raiz|fnRaiz, dados, html)
+ *  - SGO_DocSalvar_injetarAvisoTela_(html, aviso, tipo)
+ *
+ * Nenhuma função devolve objeto Date: só strings.
+ ****************************************************/
+
+/** Remove caracteres proibidos em nome de arquivo (/ \ : * ? " < > |) e controles. */
+function SGO_DocSalvar_sanitizarNome_(nome) {
+  var s = String(nome == null ? '' : nome)
+    .replace(/[\/\\:*?"<>|]/g, '-')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (s.length > 180) s = s.substring(0, 180).trim();
+  return s || 'Documento';
+}
+
+/** Garante <meta charset="utf-8"> para o .html abrir com acentuação certa. */
+function SGO_DocSalvar_garantirCharset_(html) {
+  var h = String(html || '');
+  if (/<meta[^>]+charset/i.test(h)) return h;
+  if (/<head[^>]*>/i.test(h)) return h.replace(/<head[^>]*>/i, function (m) { return m + '<meta charset="utf-8">'; });
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body>' + h + '</body></html>';
+}
+
+function SGO_DocSalvar_tirarExtensao_(nome) {
+  return String(nome || '').replace(/\.(pdf|html?)$/i, '');
+}
+
+function SGO_DocSalvar_compartilhar_(arquivo, opcoes) {
+  if (!opcoes || !opcoes.compartilhar) return;
+  try { arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+}
+
+/** Grava só o .html (UTF-8). Lança erro em caso de falha. */
+function SGO_DocSalvar_salvarHtml_(pasta, nomeBase, html, opcoes) {
+  if (!pasta) throw new Error('Pasta de destino não informada.');
+  var base = SGO_DocSalvar_sanitizarNome_(SGO_DocSalvar_tirarExtensao_(nomeBase));
+  var blob = Utilities.newBlob('', MimeType.HTML, base + '.html');
+  blob.setDataFromString(SGO_DocSalvar_garantirCharset_(html), 'UTF-8');
+  blob.setContentType(MimeType.HTML);
+  var arquivo = pasta.createFile(blob);
+  SGO_DocSalvar_compartilhar_(arquivo, opcoes);
+  return { htmlId: arquivo.getId(), htmlUrl: arquivo.getUrl(), htmlNome: arquivo.getName() };
+}
+
+/**
+ * Grava nomeBase.html e nomeBase.pdf na pasta.
+ * opcoes: { compartilhar: bool, pdfBlob: Blob (reaproveita PDF já gerado) }
+ * Devolve { htmlId, htmlUrl, pdfId, pdfUrl, pdfNome, htmlNome }. Lança erro.
+ */
+function SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes) {
+  opcoes = opcoes || {};
+  if (!pasta) throw new Error('Pasta de destino não informada.');
+  var base = SGO_DocSalvar_sanitizarNome_(SGO_DocSalvar_tirarExtensao_(nomeBase));
+  var conteudo = SGO_DocSalvar_garantirCharset_(html);
+  var pdfBlob = opcoes.pdfBlob;
+  if (!pdfBlob) {
+    var origem = Utilities.newBlob('', MimeType.HTML, base + '.html');
+    origem.setDataFromString(conteudo, 'UTF-8');
+    origem.setContentType(MimeType.HTML);
+    try {
+      pdfBlob = origem.getAs(MimeType.PDF);
+    } catch (err) {
+      throw new Error('Falha ao converter o documento em PDF: ' + (err && err.message ? err.message : err));
+    }
+  }
+  pdfBlob.setName(base + '.pdf');
+  var pdf = pasta.createFile(pdfBlob);
+  SGO_DocSalvar_compartilhar_(pdf, opcoes);
+  var h = SGO_DocSalvar_salvarHtml_(pasta, base, conteudo, opcoes);
+  return {
+    htmlId: h.htmlId, htmlUrl: h.htmlUrl, htmlNome: h.htmlNome,
+    pdfId: pdf.getId(), pdfUrl: pdf.getUrl(), pdfNome: pdf.getName()
+  };
+}
+
+/**
+ * Acrescenta o .html ao lado de um PDF que o módulo já salvou. NUNCA lança:
+ * o PDF já está salvo e o fluxo atual não pode quebrar por causa do .html.
+ * Devolve { htmlId, htmlUrl } ou { htmlId:'', htmlUrl:'', avisoHtml }.
+ */
+function SGO_DocSalvar_htmlAoLado_(pasta, nomePdf, html, opcoes) {
+  try {
+    if (!html) throw new Error('conteúdo HTML vazio');
+    var h = SGO_DocSalvar_salvarHtml_(pasta, nomePdf, html, opcoes);
+    return { htmlId: h.htmlId, htmlUrl: h.htmlUrl };
+  } catch (e) {
+    return {
+      htmlId: '', htmlUrl: '',
+      avisoHtml: 'O PDF foi salvo, mas a cópia em HTML (A4) não foi gravada na pasta: ' + (e && e.message ? e.message : e) + '. O PDF continua válido.'
+    };
+  }
+}
+
+/** ID do arquivo do Drive a partir da URL (…/d/<id>/… ou ?id=<id>). */
+function SGO_DocSalvar_idDaUrl_(url) {
+  var u = String(url || '');
+  var m = /\/d\/([A-Za-z0-9_-]{10,})/.exec(u) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(u);
+  return m ? m[1] : '';
+}
+
+/**
+ * Envolve um apiSalvarDocumento(payload) que já grava o PDF a partir de
+ * payload.html e devolve { ok, url, fileName }: depois do PDF salvo, grava
+ * a cópia .html na MESMA pasta do PDF e acrescenta htmlId/htmlUrl (e
+ * avisoHtml se falhar). Não muda o PDF nem os campos existentes.
+ */
+function SGO_DocSalvar_comCopiaHtml_(fnOriginal) {
+  return function (payload) {
+    var r = fnOriginal.apply(this, arguments);
+    try {
+      var html = payload && payload.html ? String(payload.html) : '';
+      if (!r || !r.ok || !r.url || !html) return r;
+      var id = SGO_DocSalvar_idDaUrl_(r.url);
+      if (!id) throw new Error('não foi possível localizar a pasta do PDF');
+      var pais = DriveApp.getFileById(id).getParents();
+      if (!pais.hasNext()) throw new Error('o PDF salvo não está em nenhuma pasta');
+      var h = SGO_DocSalvar_htmlAoLado_(pais.next(), r.fileName || 'Documento', html, { compartilhar: true });
+      r.htmlId = h.htmlId;
+      r.htmlUrl = h.htmlUrl;
+      if (h.avisoHtml) r.avisoHtml = h.avisoHtml;
+    } catch (e) {
+      if (r && typeof r === 'object') {
+        r.htmlId = ''; r.htmlUrl = '';
+        r.avisoHtml = 'O PDF foi salvo, mas a cópia em HTML (A4) não foi gravada na pasta: ' + (e && e.message ? e.message : e) + '. O PDF continua válido.';
+      }
+    }
+    return r;
+  };
+}
+
+/** Dígitos do CNPJ (14) ou '' se não for um CNPJ completo. */
+function SGO_DocSalvar_cnpjDigitos_(cnpj) {
+  var d = String(cnpj || '').replace(/\D/g, '');
+  return d.length === 14 ? d : '';
+}
+
+/**
+ * Subpasta do cliente dentro de `raiz`. Prefere o CNPJ (14 dígitos, mesmo
+ * padrão de PgtPop/RegOp); sem CNPJ, usa o nome do cliente. Cria se não existir.
+ */
+function SGO_DocSalvar_pastaClienteEm_(raiz, cnpj, nomeCliente) {
+  if (!raiz) throw new Error('Pasta de laudos do módulo não encontrada.');
+  var digitos = SGO_DocSalvar_cnpjDigitos_(cnpj);
+  var nome = String(nomeCliente || '').trim();
+  if (!digitos && !nome) throw new Error('cliente e CNPJ não informados no formulário');
+  var nomePasta = digitos || SGO_DocSalvar_sanitizarNome_(nome);
+  var it = raiz.getFoldersByName(nomePasta);
+  if (it.hasNext()) return it.next();
+  var nova = raiz.createFolder(nomePasta);
+  if (digitos && nome) { try { nova.setDescription(nome.substring(0, 500)); } catch (e) {} }
+  return nova;
+}
+
+/**
+ * Salva HTML + PDF de um certificado de equipamento na pasta do cliente.
+ * NUNCA lança: devolve { salvo, htmlId, htmlUrl, pdfId, pdfUrl, pastaUrl, avisoSalvar }.
+ * obterRaiz: função que devolve a pasta de laudos do módulo (ou a própria pasta).
+ * dados: { cnpj, cliente, nomeBase }
+ */
+function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
+  dados = dados || {};
+  try {
+    var raiz = typeof obterRaiz === 'function' ? obterRaiz() : obterRaiz;
+    var pasta = SGO_DocSalvar_pastaClienteEm_(raiz, dados.cnpj, dados.cliente);
+    var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, dados.nomeBase || 'Certificado', html, {});
+    return {
+      salvo: true,
+      htmlId: r.htmlId, htmlUrl: r.htmlUrl, pdfId: r.pdfId, pdfUrl: r.pdfUrl,
+      pastaUrl: pasta.getUrl(), avisoSalvar: ''
+    };
+  } catch (e) {
+    return {
+      salvo: false, htmlId: '', htmlUrl: '', pdfId: '', pdfUrl: '', pastaUrl: '',
+      avisoSalvar: 'O certificado foi gerado, mas não foi possível salvá-lo na pasta do cliente: ' +
+        String(e && e.message ? e.message : e).replace(/[.\s]+$/, '') + '. Use Imprimir > Salvar como PDF.'
+    };
+  }
+}
+
+/**
+ * Fecha a resposta de *_apiMontarCertificadoFinal (Autoclave, Lavadora, Cadeia
+ * de Frio, Estufa/Banho): salva HTML + PDF na subpasta do cliente (CNPJ, ou nome)
+ * dentro da pasta de laudos do módulo e devolve { ok, html, ...campos novos }.
+ * O html devolvido ganha uma faixa só de tela (some ao imprimir) dizendo se
+ * salvou e onde; o arquivo salvo fica sem a faixa. Nunca lança.
+ */
+function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, tz) {
+  payload = payload || {};
+  var resultado;
+  if (payload.modoRelatorioSimulado) {
+    resultado = {
+      salvo: false, htmlId: '', htmlUrl: '', pdfId: '', pdfUrl: '', pastaUrl: '',
+      avisoSalvar: 'Relatório SIMULADO (uso interno): não foi salvo na pasta do cliente. Se precisar do arquivo, use Imprimir > Salvar como PDF.'
+    };
+  } else {
+    var carimbo = '';
+    try { carimbo = Utilities.formatDate(new Date(), tz || Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd HHmm'); } catch (e) {}
+    var tag = String(payload.tag || payload.tagEquipamento || '').trim() || 'sem-tag';
+    var numero = String(payload.certNumero || '').trim();
+    var nomeBase = [rotulo || 'Certificado', numero, tag, carimbo].filter(function (p) { return !!p; }).join(' - ');
+    resultado = SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, {
+      cnpj: payload.cnpj, cliente: payload.cliente, nomeBase: nomeBase
+    }, html);
+  }
+  return {
+    ok: true,
+    html: SGO_DocSalvar_injetarAvisoTela_(html, resultado),
+    salvoNaPasta: !!resultado.salvo,
+    htmlId: resultado.htmlId, htmlUrl: resultado.htmlUrl,
+    pdfId: resultado.pdfId, pdfUrl: resultado.pdfUrl,
+    pastaUrl: resultado.pastaUrl,
+    avisoSalvar: resultado.avisoSalvar
+  };
+}
+
+/** Pasta raiz persistente (ID em Script Property), criada no Drive se faltar. */
+function SGO_DocSalvar_pastaPersistente_(propKey, nomePasta, idConfigurado) {
+  var id = String(idConfigurado || '').trim();
+  if (id.length > 10) return DriveApp.getFolderById(id);
+  var props = PropertiesService.getScriptProperties();
+  var salvo = props.getProperty(propKey);
+  if (salvo) { try { return DriveApp.getFolderById(salvo); } catch (e) {} }
+  var pasta = DriveApp.getRootFolder().createFolder(nomePasta);
+  props.setProperty(propKey, pasta.getId());
+  return pasta;
+}
+
+function SGO_DocSalvar_esc_(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Faixa SÓ DE TELA (some na impressão) no topo do HTML devolvido ao navegador,
+ * para o operador saber se o documento foi salvo e onde. Não altera o arquivo salvo.
+ */
+function SGO_DocSalvar_injetarAvisoTela_(html, resultado) {
+  var h = String(html || '');
+  resultado = resultado || {};
+  var faixa;
+  if (resultado.salvo) {
+    faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;padding:8px 12px;margin:0 0 8px">' +
+      'Certificado salvo na pasta do cliente (PDF e HTML A4). ' +
+      (resultado.pdfUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a> · ' : '') +
+      (resultado.pastaUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pastaUrl) + '" target="_blank" rel="noopener">Abrir pasta do cliente</a>' : '') +
+      '</div>';
+  } else {
+    faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#fff3e0;color:#8a4b00;border:1px solid #ffb74d;padding:8px 12px;margin:0 0 8px">' +
+      SGO_DocSalvar_esc_(resultado.avisoSalvar || 'O certificado foi gerado, mas não foi salvo na pasta do cliente. Use Imprimir > Salvar como PDF.') +
+      '</div>';
+  }
+  var css = '<style>@media print{.sgo-docsalvar-aviso{display:none!important}}</style>';
+  if (/<body[^>]*>/i.test(h)) return h.replace(/<body[^>]*>/i, function (m) { return m + css + faixa; });
+  return css + faixa + h;
+}
+
+/** Formatação numérica pt-BR (fallback local se SGO_DocA4_num_ não existir). */
+function SGO_DocSalvar_num_(valor, casas) {
+  var n;
+  if (typeof valor === 'number') {
+    n = valor;
+  } else {
+    var s = String(valor == null ? '' : valor).trim().replace(/\s/g, '');
+    if (!s) return String(valor == null ? '' : valor);
+    // Com vírgula: formato pt-BR (ponto = milhar). Sem vírgula: ponto = decimal.
+    n = s.indexOf(',') >= 0 ? Number(s.replace(/\./g, '').replace(',', '.')) : Number(s);
+  }
+  if (!isFinite(n)) return String(valor);
+  var c = (casas === undefined || casas === null) ? 2 : casas;
+  if (typeof SGO_DocA4_num_ === 'function') {
+    try { var viaA4 = SGO_DocA4_num_(n, c); if (viaA4 !== undefined && viaA4 !== null && viaA4 !== '') return String(viaA4); } catch (e) {}
+  }
+  var neg = n < 0;
+  var partes = Math.abs(n).toFixed(c).split('.');
+  var inteiro = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  var r = inteiro + (partes[1] ? ',' + partes[1] : '');
+  if (neg && /[1-9]/.test(r)) r = '-' + r;
+  return r;
+}

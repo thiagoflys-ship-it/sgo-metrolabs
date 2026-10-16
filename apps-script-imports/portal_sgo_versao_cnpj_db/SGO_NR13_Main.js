@@ -744,7 +744,11 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
     SGO_DATA.log('AUVO_TAREFA_FALHOU', sessao.usuario, 'NR13 ' + numero + ': ' + e.message, 'AUVO');
   }
 
-  return { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, linkPdf: arquivo.getUrl() };
+  // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do cliente.
+  var htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, nomeArquivo, html, { compartilhar: true });
+  var resposta = { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, linkPdf: arquivo.getUrl(), htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
+  if (htmlSalvo.avisoHtml) resposta.avisoHtml = htmlSalvo.avisoHtml;
+  return resposta;
 }
 
 function NR13_validarParaEmissao_(dados) {

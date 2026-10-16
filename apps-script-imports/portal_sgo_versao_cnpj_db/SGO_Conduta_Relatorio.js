@@ -176,7 +176,7 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
   html.push('<style>');
   html.push('@page { size: A4; margin: 16mm 15mm; }');
   html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 18px; }');
   html.push('.logo-topo { height: 42px; }');
@@ -188,7 +188,7 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
   html.push('.kpi { flex: 1 1 21%; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; text-align: center; }');
   html.push('.kpi .valor { font-size: 21px; font-weight: 800; color: #0b4ea2; }');
   html.push('.kpi .rotulo { font-size: 10.5px; color: #6b7280; }');
-  html.push('.secao { margin-top: 22px; page-break-inside: avoid; }');
+  html.push('.secao { margin-top: 22px; }');
   html.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }');
   html.push('p { text-align: justify; margin: 8px 0; }');
   html.push('table.tabela-q { border-collapse: collapse; width: 100%; font-size: 11px; }');
@@ -203,8 +203,8 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
   html.push('.cabecalho-flex .kpis { flex:1; min-width:260px; margin-bottom:0; }');
   html.push('.grafico-box { height:230px; margin:6px 0 14px; }');
   html.push('.grafico-box.baixo { height:190px; }');
-  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } .secao { page-break-inside: avoid; } }');
-  html.push('</style></head><body>');
+  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -322,7 +322,7 @@ function CondutaRel_montarScriptGraficos_(ctx) {
     'function corDoFarol(f) { if (f === "VERDE") return "#059669"; if (f === "AMARELO") return "#b45309"; if (f === "VERMELHO") return "#dc2626"; return "#9ca3af"; }\n' +
     'function quandoChartPronto(cb) { if (window.Chart) { cb(); } else { window.addEventListener("load", cb); } }\n' +
     'quandoChartPronto(function () {\n' +
-    '  Chart.defaults.font.family = "Segoe UI, Arial, sans-serif";\n' +
+    '  Chart.defaults.font.family = "Arial, Helvetica, sans-serif";\n' +
     '  Chart.defaults.font.size = 11;\n' +
     '  var elComposicao = document.getElementById("graficoComposicao");\n' +
     '  if (elComposicao && DADOS_COMPOSICAO.length) {\n' +

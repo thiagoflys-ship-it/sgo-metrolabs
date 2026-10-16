@@ -28,11 +28,11 @@ function DeclExec_montarSecaoCalibracoes_(calibracoes) {
   if (!calibracoes || !calibracoes.length) return '';
   var temAchado = calibracoes.some(function(c) { return c.observacao; });
   var linhas = calibracoes.map(function(c) {
-    var cols = '<td>' + DeclExec_escaparHtml_(c.label) + '</td><td style="text-align:center;">' + DeclExec_escaparHtml_(c.quantidade) + '</td>';
+    var cols = '<td>' + DeclExec_escaparHtml_(c.label) + '</td><td class="num">' + DeclExec_escaparHtml_(c.quantidade) + '</td>';
     if (temAchado) cols += '<td style="text-align:center;">' + (c.observacao ? 'Sim — ver texto acima' : '—') + '</td>';
     return '<tr>' + cols + '</tr>';
   }).join('\n');
-  var cabecalho = '<tr><th>Item calibrado</th><th>Quantidade</th>' + (temAchado ? '<th>Achado técnico</th>' : '') + '</tr>';
+  var cabecalho = '<tr><th>Item calibrado</th><th class="num">Quantidade</th>' + (temAchado ? '<th>Achado técnico</th>' : '') + '</tr>';
   return (
     '<table class="tabela-itens"><thead>' + cabecalho + '</thead><tbody>' +
     linhas + '</tbody></table>'
@@ -50,17 +50,17 @@ function DeclExec_montarDocumentoHtml_(ctx) {
   html.push('<style>');
   html.push('@page { size: A4; margin: 18mm 16mm; }');
   html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
+  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
   html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
   html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 20px; }');
   html.push('.logo-topo { height: 46px; }');
   html.push('.titulo-doc { text-align:right; }');
   html.push('.titulo-doc h1 { font-size: 18px; margin: 0; color:#0b4ea2; }');
   html.push('.titulo-doc small { color:#6b7280; }');
-  html.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; page-break-inside: avoid; }');
+  html.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; }');
   html.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
   html.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  html.push('.secao { margin-top: 26px; page-break-inside: avoid; }');
+  html.push('.secao { margin-top: 26px; }');
   html.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }');
   html.push('p { text-align: justify; margin: 8px 0; }');
   html.push('table.tabela-itens { width:100%; border-collapse: collapse; margin: 10px 0 4px; }');
@@ -80,7 +80,7 @@ function DeclExec_montarDocumentoHtml_(ctx) {
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
   html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  html.push('</style></head><body>');
+  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');

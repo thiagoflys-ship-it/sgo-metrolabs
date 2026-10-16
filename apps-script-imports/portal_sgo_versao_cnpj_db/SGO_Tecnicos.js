@@ -310,29 +310,29 @@ const SGO_TECNICOS = (() => {
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
 function tecnicosListar(sessionId) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.listar(sessionId))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.listar(sessionId))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('listar os técnicos', e) }; }
 }
 function tecnicosObter(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.obter(sessionId, id))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.obter(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('carregar o técnico', e) }; }
 }
 function tecnicosCriar(sessionId, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.criar(sessionId, payload))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.criar(sessionId, payload))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('cadastrar o técnico', e) }; }
 }
 function tecnicosAtualizar(sessionId, id, payload) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.atualizar(sessionId, id, payload))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.atualizar(sessionId, id, payload))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o técnico', e) }; }
 }
 function tecnicosInativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.inativar(sessionId, id))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.inativar(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o técnico', e) }; }
 }
 function tecnicosReativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.reativar(sessionId, id))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.reativar(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o técnico', e) }; }
 }
 function tecnicosExcluir(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.excluir(sessionId, id))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.excluir(sessionId, id))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o técnico', e) }; }
 }
 function tecnicosPesquisar(sessionId, termo) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.pesquisar(sessionId, termo))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.pesquisar(sessionId, termo))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar os técnicos', e) }; }
 }
 function tecnicosUsuariosDisponiveis(sessionId) {
-  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.usuariosTecnicosDisponiveis(sessionId))); } catch (e) { return { success: false, message: "Erro servidor: " + e.message }; }
+  try { return JSON.parse(JSON.stringify(SGO_TECNICOS.usuariosTecnicosDisponiveis(sessionId))); } catch (e) { return { success: false, message: SGO_textoFalhaOperador_('listar os usuários técnicos disponíveis', e) }; }
 }

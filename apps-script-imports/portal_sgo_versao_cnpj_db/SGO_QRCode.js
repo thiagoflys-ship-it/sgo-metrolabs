@@ -82,7 +82,7 @@ const SGO_QRCODE = (() => {
     categorias.forEach(cat => obterOuCriarPasta_(pastaEquip, cat));
 
     // ====================================================================
-    // 🔒 LIBERAÇÃO CIRÚRGICA: Define a pasta do equipamento como visualizável
+    // LIBERAÇÃO CIRÚRGICA: Define a pasta do equipamento como visualizável
     // Apenas quem tem o link gerado pelo QR Code consegue ler os PDFs.
     // ====================================================================
     try {
@@ -199,7 +199,7 @@ function qrcodeGerarParaEquipamento(sessionId, equipamentoId) {
   try {
     return JSON.parse(JSON.stringify(SGO_QRCODE.gerarUrlEquipamento(sessionId, equipamentoId)));
   } catch(e) {
-    return { success: false, message: "Erro servidor (QR Code): " + e.message };
+    return { success: false, message: SGO_textoFalhaOperador_('gerar o QR Code', e) };
   }
 }
 
@@ -207,6 +207,6 @@ function qrcodeAcessar(sessionId, equipamentoId) {
   try {
     return JSON.parse(JSON.stringify(SGO_QRCODE.acessarViaQR(sessionId, equipamentoId)));
   } catch(e) {
-    return { success: false, message: "Erro servidor (Acesso QR): " + e.message };
+    return { success: false, message: SGO_textoFalhaOperador_('abrir o equipamento pelo QR Code', e) };
   }
 }

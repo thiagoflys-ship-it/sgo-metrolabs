@@ -268,10 +268,12 @@ function EstufaBanhoRel_apiMontarCertificadoFinal(payload) {
   });
   template.geradoEm = Utilities.formatDate(new Date(), EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy');
   const html = template.evaluate().getContent();
-  return {
-    ok: true,
-    html: html
-  };
+  // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
+  // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
+  return SGO_DocSalvar_finalizarCertificado_(html, payload, function () {
+    const id = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
+    return id ? DriveApp.getFolderById(id) : EstufaBanhoRel_ebObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
+  }, 'Certificado Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
 }
 
 // ------------------------------------------------------------
@@ -295,5 +297,9 @@ function EstufaBanhoRel_ebParagrafosHtml_(texto) {
 }
 function EstufaBanhoRel_ebFmtValor_(v, sufixo) {
   if (v === null || v === undefined || v === '') return '—';
-  return v + (sufixo || '');
+  // pt-BR: vírgula decimal, ponto de milhar, 2 casas fixas, espaço inseparável antes da unidade.
+  const suf = String(sufixo || '').replace(/^\s+/, '');
+  const n = typeof v === 'number' ? v : (/^\s*-?\d+(\.\d+)?\s*$/.test(String(v)) ? Number(v) : NaN);
+  const txt = isFinite(n) ? SGO_DocSalvar_num_(n, 2) : String(v);
+  return txt + (suf ? '\u00a0' + suf : '');
 }

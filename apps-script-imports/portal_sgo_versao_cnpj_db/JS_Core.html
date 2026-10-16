@@ -80,18 +80,6 @@
     MSG_MOTIVACIONAL_IDX: "SGO_MSG_MOTIVACIONAL_IDX"
   };
 
-  const MENSAGENS_FALLBACK = [
-    "Disciplina vence talento todos os dias.",
-    "Qualidade não é opção, é padrão.",
-    "Você não trabalha com equipamentos, você trabalha com vidas.",
-    "Excelência é fazer bem feito mesmo quando ninguém está vendo.",
-    "Cada relatório seu sustenta a credibilidade da Metrolabs.",
-    "Foco, padrão e consistência — esse é o jogo.",
-    "Pequenos detalhes fazem grandes auditorias passarem.",
-    "Quem domina o processo domina o resultado.",
-    "Seu trabalho impacta diretamente a segurança do paciente.",
-    "Alta performance é hábito, não evento."
-  ];
 
   window.onload = function () {
     carregarConfiguracoesIniciais();
@@ -124,7 +112,7 @@
       .withFailureHandler(onErro || function (err) {
         const msg = (err && err.message) ? err.message : String(err);
         console.error("Falha na chamada de servidor [" + nomeFuncao + "]:", msg);
-        alert("Erro de comunicação com o servidor:\n" + msg);
+        alert("Não foi possível concluir a operação. Verifique a conexão e tente de novo.");
       });
     return runner[nomeFuncao].apply(runner, args || []);
   };
@@ -331,7 +319,7 @@
         LOGIN_EM_ANDAMENTO = false;
         setBotaoLoginEstado_(false);
         console.error("Erro no login:", err);
-        alert("Erro ao processar o login. Tente novamente.");
+        alert("Não foi possível entrar. Verifique a conexão e tente de novo.");
       })
       .login(usuario, senha);
   }
@@ -414,7 +402,7 @@
               if (res && res.success && res.redirectUrl && res.equipamento) {
                 renderProntuarioDigital_(res.redirectUrl, res.equipamento);
               } else {
-                alert(res ? res.message : "Erro ao tentar abrir os dados do equipamento.");
+                alert(res ? res.message : "Não foi possível abrir os dados do equipamento. Tente de novo; se repetir, avise o administrador.");
                 irTelaInicial_();
               }
             })
@@ -668,7 +656,7 @@
     }
 
     if (mod === "estufa_banhomaria") {
-      renderMotorModulo_("Estufa+Banho-maria", "estufa_banhomaria");
+      renderMotorModulo_("Estufa, Banho-maria e Secadora", "estufa_banhomaria");
       atualizarBadgeModulo_("estufa_banhomaria");
       return;
     }
@@ -847,17 +835,17 @@
         <div class="dashc-grid-top">
           <div class="dashc-stats">
             <div class="dashc-stat" style="${styleAdminOnly}">
-              <div class="dashc-stat-icon azul">👤</div>
+              <div class="dashc-stat-icon azul"><i class="fas fa-user" aria-hidden="true"></i></div>
               <div class="dashc-stat-label">Clientes cadastrados</div>
               <div class="dashc-stat-value" id="dashCountClientes">···</div>
             </div>
             <div class="dashc-stat">
-              <div class="dashc-stat-icon verde">🏭</div>
+              <div class="dashc-stat-icon verde"><i class="fas fa-industry" aria-hidden="true"></i></div>
               <div class="dashc-stat-label">Equipamentos ativos</div>
               <div class="dashc-stat-value" id="dashCountEquipamentos">···</div>
             </div>
             <div class="dashc-stat">
-              <div class="dashc-stat-icon roxo">📄</div>
+              <div class="dashc-stat-icon roxo"><i class="fas fa-file-lines" aria-hidden="true"></i></div>
               <div class="dashc-stat-label">Documentos / relatórios</div>
               <div class="dashc-stat-value" id="dashCountDocumentos">···</div>
             </div>
@@ -915,17 +903,17 @@
           <div class="dashc-grid-top">
             <div class="dashc-stats">
               <div class="dashc-stat">
-                <div class="dashc-stat-icon amarelo">🛠️</div>
+                <div class="dashc-stat-icon amarelo"><i class="fas fa-screwdriver-wrench" aria-hidden="true"></i></div>
                 <div class="dashc-stat-label">Atendimentos abertos (Auvo)</div>
                 <div class="dashc-stat-value" id="dashcAuvoAbertas">···</div>
               </div>
               <div class="dashc-stat">
-                <div class="dashc-stat-icon verde">✅</div>
+                <div class="dashc-stat-icon verde"><i class="fas fa-circle-check" aria-hidden="true"></i></div>
                 <div class="dashc-stat-label">Concluídos (30 dias)</div>
                 <div class="dashc-stat-value" id="dashcAuvoConcluidas">···</div>
               </div>
               <div class="dashc-stat">
-                <div class="dashc-stat-icon roxo">📝</div>
+                <div class="dashc-stat-icon roxo"><i class="fas fa-file-pen" aria-hidden="true"></i></div>
                 <div class="dashc-stat-label">O.S. sem relato de serviço</div>
                 <div class="dashc-stat-value" id="dashcAuvoSemRelato">···</div>
               </div>
@@ -941,7 +929,7 @@
             <div class="dashc-card">
               <h3 class="dashc-card-title">Últimos Atendimentos</h3>
               <table class="dashc-tabela">
-                <thead><tr><th>Data</th><th>Cliente / Técnico</th><th style="text-align:right;">Status</th></tr></thead>
+                <thead><tr><th>Data</th><th>Cliente / Técnico</th><th style="text-align:right;">Situação</th></tr></thead>
                 <tbody id="dashcAuvoUltimos"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
               </table>
               <a class="dashc-vermais" onclick="abrir('auvo')">Ver Mais &gt;</a>
@@ -951,7 +939,7 @@
 
         <div class="dash-columns">
           <section class="dash-panel">
-            <h3 class="dash-panel-title">⚠️ Alertas e pendências</h3>
+            <h3 class="dash-panel-title">Alertas e pendências</h3>
             <div id="dashboardAlertas" class="dash-panel-body">Carregando alertas do sistema...</div>
           </section>
         </div>
@@ -1144,7 +1132,7 @@
               "<td>" + escapeHtml_(d.descricao) + "</td>" +
               "<td class=\"valor\">" + escapeHtml_(prazo) + "</td></tr>";
           }).join("")
-        : '<tr><td colspan="3" class="dashc-vazio">Nenhum vencimento nos próximos 60 dias. ✅</td></tr>';
+        : '<tr><td colspan="3" class="dashc-vazio">Nenhum vencimento nos próximos 60 dias.</td></tr>';
     }
 
     // ---- tabela: últimos documentos ----
@@ -1190,7 +1178,7 @@
     if (elDestaque) {
       const ranking = auvo.rankingTecnicos || [];
       elDestaque.innerHTML = ranking.length
-        ? "🏆 <b>" + escapeHtml_(ranking[0].nome) + "</b> é quem mais atendeu (" + ranking[0].qtd + " tarefa(s), média da equipe: " + (auvo.mediaTecnico || 0) + ")"
+        ? "Mais atendimentos no período: <b>" + escapeHtml_(ranking[0].nome) + "</b> (" + ranking[0].qtd + (Number(ranking[0].qtd) === 1 ? " tarefa" : " tarefas") + "; média da equipe: " + (auvo.mediaTecnico || 0) + ")."
         : "Nenhum técnico com atendimento registrado ainda.";
     }
 
@@ -1309,7 +1297,7 @@
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success || !res.items || res.items.length === 0) {
-          container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">✅ Tudo certo! Nenhum documento vencido ou próximo do vencimento nos próximos 30 dias.</div>';
+          container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">Nenhum documento vencido ou a vencer nos próximos 30 dias.</div>';
           if (kpiAlertas) kpiAlertas.innerText = "0";
           renderizarAlertaFrotaDashboard_([]);
           return;
@@ -1322,8 +1310,8 @@
           const bg = isCritico ? "var(--danger-bg)" : "var(--warning-bg)";
           const color = isCritico ? "var(--danger)" : "var(--warning)";
           const border = isCritico ? "#fecaca" : "#fef0c7";
-          const icone = isCritico ? "🚨" : "⚠️";
-          return `<div style="padding:12px; border-radius:8px; background:${bg}; color:${color}; border:1px solid ${border}; margin-bottom:10px; font-weight:700; font-size:13px;">${icone} ${escapeHtml_(a.mensagem)}</div>`;
+          const selo = isCritico ? "Vencido" : "A vencer";
+          return `<div style="padding:12px; border-radius:8px; background:${bg}; color:${color}; border:1px solid ${border}; margin-bottom:10px; font-weight:700; font-size:13px;"><span style="display:inline-block; padding:1px 8px; margin-right:6px; border-radius:10px; border:1px solid currentColor; font-size:11px;">${selo}</span>${escapeHtml_(a.mensagem)}</div>`;
         }).join("");
 
         container.innerHTML = html;
@@ -1355,8 +1343,8 @@
     const corFundo = temCritico ? "var(--danger-bg, rgba(224,138,138,.16))" : "var(--warning-bg, rgba(214,169,79,.16))";
     const corBorda = temCritico ? "var(--danger, #e08a8a)" : "var(--warning, #d6a94f)";
     const titulo = temCritico
-      ? "🚨 " + criticos.length + " item" + (criticos.length > 1 ? "s" : "") + " VENCIDO(S) na frota (manutenção, documento ou CNH)"
-      : "⚠️ " + itensFrota.length + " aviso" + (itensFrota.length > 1 ? "s" : "") + " da frota (manutenção, documento ou CNH)";
+      ? "Frota: " + criticos.length + (criticos.length > 1 ? " itens vencidos" : " item vencido") + " (manutenção, documento ou CNH)."
+      : "Frota: " + itensFrota.length + (itensFrota.length > 1 ? " avisos" : " aviso") + " (manutenção, documento ou CNH).";
 
     el.innerHTML =
       '<div style="margin:14px 0; padding:16px 18px; border-radius:12px; background:' + corFundo + '; border:2px solid ' + corBorda + ';">' +
@@ -1733,9 +1721,9 @@
       const itens = res.items || [];
       el.innerHTML = itens.map(function (a) {
         const critico = a.status === "VENCIDO";
-        const generoOk = a.categoria === "DOCUMENTO" ? "VENCIDO" : "VENCIDA";
+        const generoOk = a.categoria === "DOCUMENTO" ? "vencido" : "vencida";
         return '<div class="mobile-frota-alerta ' + (critico ? "critico" : "aviso") + '">' +
-          (critico ? "🚨 " : "⚠️ ") + escapeHtml_(a.veiculoPlaca) + " — " + escapeHtml_(a.tipoLabel) + (critico ? (" " + generoOk) : " vencendo em breve") +
+          '<b>' + (critico ? "Vencido" : "A vencer") + ':</b> ' + escapeHtml_(a.veiculoPlaca) + " — " + escapeHtml_(a.tipoLabel) + (critico ? (" " + generoOk) : " vencendo em breve") +
           "</div>";
       }).join("");
     }).catch(function (err) { console.error(err); });
@@ -1966,7 +1954,7 @@
         MOBILE_CERTCAL.equipamento = null;
         renderMobileCertCalEquipamento_();
       })
-      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao selecionar cliente."); console.error(err); })
+      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar o cliente. Verifique a conexão e tente de novo."); console.error(err); })
       .clientesObter(SESSION, id);
   }
 
@@ -2021,7 +2009,7 @@
         MOBILE_CERTCAL.equipamento = res.item;
         renderMobileCertCalDados_();
       })
-      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao selecionar equipamento."); console.error(err); })
+      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar o equipamento. Verifique a conexão e tente de novo."); console.error(err); })
       .equipamentosObter(SESSION, id);
   }
 
@@ -2348,8 +2336,8 @@
     }).catch(function (err) {
       if (btn) btn.disabled = false;
       const msg = (err && err.message) ? err.message : String(err);
-      if (janela && !janela.closed) janela.document.write('<p style="color:red">Erro: ' + escapeHtml_(msg) + '</p>');
-      if (status) status.innerHTML = '<div class="mobile-frota-alerta critico">Erro ao gerar: ' + escapeHtml_(msg) + '</div>';
+      if (janela && !janela.closed) janela.document.write('<p style="color:red">Não foi possível gerar o documento. ' + escapeHtml_(msg) + '</p>');
+      if (status) status.innerHTML = '<div class="mobile-frota-alerta critico">Não foi possível gerar o documento. ' + escapeHtml_(msg) + '</div>';
     });
   }
 
@@ -2365,7 +2353,7 @@
       if (status) status.innerHTML = '<a href="' + escapeHtml_(res.linkPdf) + '" target="_blank">Abrir PDF do relatório interpretativo</a>' +
         ((res.avisos || []).length ? '<div class="mobile-frota-alerta aviso">Documento salvo. Pendências: ' + res.avisos.map(function(aviso) { return escapeHtml_(aviso); }).join(' · ') + '</div>' : '');
     }).catch(function(err) {
-      if (status) status.textContent = "Erro ao gerar relatório: " + ((err && err.message) || String(err));
+      if (status) status.textContent = "Não foi possível gerar o relatório. " + ((err && err.message) || String(err));
     }).finally(function() { if (btn) btn.disabled = false; });
   }
 
@@ -2379,15 +2367,15 @@
 
     const itens = [];
     if (!isCliente) {
-      itens.push({ icone: "📋", legenda: "Planejamento CME", mod: "planejamento_cme" });
-      itens.push({ icone: "📜", legenda: "Certificado de Calibração", mod: "certificado_calibracao" });
-      itens.push({ icone: "🚗", legenda: "Frota", mod: "frota" });
-      itens.push({ icone: "🚦", legenda: "Conduta", mod: "conduta" });
-      itens.push({ icone: "👤", legenda: "Clientes", mod: "clientes" });
+      itens.push({ icone: '<i class="fas fa-clipboard-list" aria-hidden="true"></i>', legenda: "Planejamento CME", mod: "planejamento_cme" });
+      itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de Calibração", mod: "certificado_calibracao" });
+      itens.push({ icone: '<i class="fas fa-car" aria-hidden="true"></i>', legenda: "Frota", mod: "frota" });
+      itens.push({ icone: '<i class="fas fa-traffic-light" aria-hidden="true"></i>', legenda: "Conduta", mod: "conduta" });
+      itens.push({ icone: '<i class="fas fa-user" aria-hidden="true"></i>', legenda: "Clientes", mod: "clientes" });
     }
-    itens.push({ icone: "🏢", legenda: "Unidades", mod: "unidades" });
-    itens.push({ icone: "🔧", legenda: "Equipamentos", mod: "equipamentos" });
-    itens.push({ icone: "📁", legenda: "Documentos", mod: "documentos" });
+    itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
+    itens.push({ icone: '<i class="fas fa-wrench" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
+    itens.push({ icone: '<i class="fas fa-folder" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
 
     div.innerHTML =
       (isCliente ? '' : '<div id="mobileFarolCondutaStrip" class="mobile-farol-strip">Carregando farol do mês...</div>') +
@@ -2497,7 +2485,7 @@
     if (!container) return;
 
     if (!res || !res.success) {
-      container.innerHTML = '<div class="mobile-card-subtitulo">' + escapeHtml_((res && res.message) || "Erro ao carregar.") + '</div>';
+      container.innerHTML = '<div class="mobile-card-subtitulo">' + escapeHtml_((res && res.message) || "Não foi possível carregar. Tente de novo.") + '</div>';
       return;
     }
 
@@ -2595,7 +2583,8 @@
       .withFailureHandler(function (err) {
         encerrar_();
         if (onErro) { onErro(err); return; }
-        alert("Erro: " + ((err && err.message) || err));
+        console.error("Falha na chamada do Programa de Conduta:", err);
+        alert("Não foi possível concluir a operação. Verifique a conexão e tente de novo.");
       })
       .Conduta_apiDispatch({ sessionId: SESSION, fn: fn, payload: payload || {} });
   }
@@ -2757,11 +2746,12 @@
     function prosseguirRegistro() {
       // o overlay e a trava de duplo toque agora são do mobileCondutaChamarApi_
       mobileCondutaChamarApi_("apiRegistrarOcorrencia", payload, function (res) {
-        if (!res || !res.success) return alert((res && res.message) || "Erro ao registrar.");
+        if (!res || !res.success) return alert((res && res.message) || "Não foi possível registrar. Tente de novo.");
         alert("Ocorrência registrada — segue pra homologação do gestor.");
         renderMobileConduta_();
       }, function (err) {
-        alert("Erro ao registrar: " + ((err && err.message) || err));
+        console.error("Falha ao registrar ocorrência:", err);
+        alert("Não foi possível registrar a ocorrência. Verifique a conexão e tente de novo.");
       });
     }
 
@@ -2833,8 +2823,8 @@
     if (!String(payload.texto || "").trim()) return alert("Descreva a melhoria ou atitude que você observou.");
 
     mobileCondutaChamarApi_("apiRegistrarEventoPositivo", payload, function (res) {
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao registrar.");
-      alert("Reconhecimento registrado!");
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível registrar. Tente de novo.");
+      alert("Reconhecimento registrado.");
       renderMobileConduta_();
     });
   }
@@ -2911,7 +2901,7 @@
           setValue_("mob_cli_email", it.EMAIL);
           setValue_("mob_cli_telefone", it.TELEFONE);
         })
-        .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao carregar cliente."); console.error(err); })
+        .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar o cliente. Verifique a conexão e tente de novo."); console.error(err); })
         .clientesObter(SESSION, id);
     }
   }
@@ -2924,7 +2914,7 @@
       SGO_finalizarCarregamento_();
       if (!res || !res.success) return alert(res && res.message || 'Não foi possível excluir.');
       if (tipo === 'clientes') renderMobileListaClientes_(); else renderMobileListaUnidades_();
-    }).withFailureHandler(function(err) { SGO_finalizarCarregamento_(); alert(err.message || 'Erro de comunicação.'); });
+    }).withFailureHandler(function(err) { SGO_finalizarCarregamento_(); console.error("Falha ao excluir:", err); alert('Não foi possível excluir. Verifique a conexão e tente de novo.'); });
     if (tipo === 'clientes') handler.clientesExcluir(SESSION,id); else handler.unidadesExcluir(SESSION,id);
   }
 
@@ -2945,7 +2935,7 @@
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar.");
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível salvar. Tente de novo.");
       // Cliente novo cadastrado a partir do fluxo do Certificado de
       // Calibração (mobileCertCalNovoCliente_) — volta pro wizard já com
       // o cliente recém-criado selecionado, em vez de ir pra lista.
@@ -3066,7 +3056,7 @@
         setValue_("mob_uni_responsavel", it.RESPONSAVEL);
         setValue_("mob_uni_telefone", it.TELEFONE);
       })
-      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Erro ao carregar unidade."); console.error(err); })
+      .withFailureHandler(function (err) { SGO_finalizarCarregamento_(); alert("Não foi possível carregar a unidade. Verifique a conexão e tente de novo."); console.error(err); })
       .unidadesObter(SESSION, id);
   }
 
@@ -3087,7 +3077,7 @@
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar.");
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível salvar. Tente de novo.");
       alert(res.message || "Salvo com sucesso.");
       renderMobileListaUnidades_();
     };
@@ -3215,7 +3205,7 @@
         setValue_("mob_eqp_tag", it.TAG);
         setValue_("mob_eqp_setor", it.SETOR);
       })
-      .withFailureHandler(function (err) { alert("Erro ao carregar equipamento."); console.error(err); })
+      .withFailureHandler(function (err) { alert("Não foi possível carregar o equipamento. Verifique a conexão e tente de novo."); console.error(err); })
       .equipamentosObter(SESSION, id);
   }
 
@@ -3237,7 +3227,7 @@
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar.");
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível salvar. Tente de novo.");
       // Equipamento novo cadastrado a partir do fluxo do Certificado de
       // Calibração — volta pro wizard já com o equipamento selecionado.
       if (!id && MOBILE_CERTCAL_RETORNO === "equipamento" && res.item) {
@@ -3411,7 +3401,7 @@
       if (preview) preview.innerText = "Pronto para enviar: " + file.name;
     };
     reader.onerror = function () {
-      alert("Erro ao ler o arquivo.");
+      alert("Não foi possível ler o arquivo. Escolha o arquivo de novo.");
       inputEl.value = "";
       if (preview) preview.innerText = "";
     };
@@ -3429,7 +3419,7 @@
         setValue_("mob_doc_nome", it.NOME_ARQUIVO);
         setValue_("mob_doc_vencimento", it.DATA_VENCIMENTO);
       })
-      .withFailureHandler(function (err) { alert("Erro ao carregar documento."); console.error(err); })
+      .withFailureHandler(function (err) { alert("Não foi possível carregar o documento. Verifique a conexão e tente de novo."); console.error(err); })
       .documentosObter(SESSION, id);
   }
 
@@ -3457,7 +3447,7 @@
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
-      if (!res || !res.success) return alert((res && res.message) || "Erro ao salvar.");
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível salvar. Tente de novo.");
       alert(res.message || "Salvo com sucesso.");
       renderMobileListaDocumentos_();
     };
@@ -3486,12 +3476,12 @@
     if (!areaAvisos) return;
 
     const nomes = {
-      dashboard: "Dashboard",
+      dashboard: "Início",
       autoclave: "Autoclave",
       lavadora: "Lavadoras",
       relatorio_conformidade: "Carta / Relatório de Conformidade",
       cadeia_frio: "Cadeia de Frio",
-      estufa_banhomaria: "Estufa+Banho-maria",
+      estufa_banhomaria: "Estufa, Banho-maria e Secadora",
       declaracao_exec: "Declaração de Execução de Serviço",
       declaracao_qiqo: "Relatório de Qualificação (QI/QO/QD)",
       relatorio_calibracao: "Relatório de Calibração",
@@ -3508,7 +3498,7 @@
       unidades: "Unidades",
       equipamentos: "Equipamentos",
       documentos: "Documentos",
-      admin: "Painel Admin"
+      admin: "Administração"
     };
 
     areaAvisos.style.display = "block";
@@ -3687,7 +3677,7 @@
 
   function exibirToastAuvo_(evento) {
     const container = auvoToastContainer_();
-    const icone = evento.tipo === "inicio" ? "🛠️" : "✅";
+    const icone = evento.tipo === "inicio" ? '<i class="fas fa-screwdriver-wrench" aria-hidden="true"></i>' : '<i class="fas fa-circle-check" aria-hidden="true"></i>';
     const titulo = evento.tipo === "inicio" ? "Atendimento iniciado" : "Atendimento concluído";
 
     const toast = document.createElement("div");
@@ -3776,7 +3766,7 @@
 
   function exibirToastFrota_(evento) {
     const container = auvoToastContainer_();
-    const icone = evento.tipo === "retirada" ? "🚗" : "🅿️";
+    const icone = evento.tipo === "retirada" ? '<i class="fas fa-car" aria-hidden="true"></i>' : '<i class="fas fa-square-parking" aria-hidden="true"></i>';
     const titulo = evento.tipo === "retirada" ? "Veículo retirado" : "Veículo devolvido";
     const detalhe = [evento.veiculoPlaca, evento.veiculoModelo, evento.condutorNome].filter(Boolean).join(" · ");
 
@@ -3885,7 +3875,7 @@
     const container = auvoToastContainer_();
     const toast = document.createElement("div");
     toast.className = "auvo-toast" + (sucesso ? "" : " auvo-toast-erro");
-    const icone = sucesso ? "✅" : "⚠️";
+    const icone = sucesso ? '<i class="fas fa-circle-check" aria-hidden="true"></i>' : '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>';
     toast.innerHTML =
       '<span class="auvo-toast-icone">' + icone + "</span>" +
       '<div class="auvo-toast-corpo">' +
@@ -3929,7 +3919,7 @@
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
         console.error("Falha ao buscar O.S.:", err);
-        alert("Erro de comunicação ao buscar a O.S.");
+        alert("Não foi possível buscar a O.S. Verifique a conexão e tente de novo.");
       })
       .Auvo_apiDispatch({ sessionId: SESSION, fn: "apiObterOS", payload: { auvoTaskId: auvoTaskId } });
   }
@@ -4073,7 +4063,7 @@
       })
       .withFailureHandler(function (err) {
         console.error("Erro ao marcar ciência:", err);
-        alert("Erro de comunicação. Tente de novo.");
+        alert("Não foi possível registrar a ciência. Verifique a conexão e tente de novo.");
       })
       .Qualidade_apiDispatch({ sessionId: SESSION, fn: "apiMarcarCiencia", payload: { ocorrenciaId: ocorrenciaId } });
   }
@@ -4128,7 +4118,7 @@
     }
     var itens = CONDUTA_AVISOS_PENDENTES.map(function (a, i) {
       return '<div class="avisos-item ' + (a.tipo === "FECHAMENTO" ? "avisos-item-elogio" : "avisos-item-cobranca") + '" style="display:block" data-i="' + i + '">' +
-        '<div style="font-weight:800;margin-bottom:6px">' + (a.minha ? "⚠️ " : "") + escapeHtml_(a.titulo) + '</div>' +
+        '<div style="font-weight:800;margin-bottom:6px">' + (a.minha ? '<span style="display:inline-block;padding:1px 8px;margin-right:6px;border-radius:10px;border:1px solid currentColor;font-size:11px;font-weight:700">Requer sua ação</span>' : "") + escapeHtml_(a.titulo) + '</div>' +
         (a.linhas || []).map(function (l) { return '<div style="margin:2px 0">' + escapeHtml_(l) + '</div>'; }).join("") +
         '<div style="margin-top:8px;text-align:right"><button type="button" class="btn-primary" style="padding:6px 12px;font-size:12.5px" onclick="Conduta_cienteAviso_(' + i + ', this)">Li e estou ciente</button></div>' +
       '</div>';
@@ -4311,23 +4301,13 @@
     }
   }
 
+  // Topo sem frase (decisão do dono, 16/10): o espaço central fica vazio,
+  // mas o elemento continua no lugar para não mexer no layout da barra.
   function aplicarMensagemMotivacional_() {
-    const mensagens =
-      Array.isArray(PUBLIC_CONFIG.mensagensMotivacionais) && PUBLIC_CONFIG.mensagensMotivacionais.length
-        ? PUBLIC_CONFIG.mensagensMotivacionais
-        : MENSAGENS_FALLBACK;
-
     const el = document.getElementById("mensagemMotivacional");
-    if (!el || !mensagens.length) return;
-
-    const idx = sortearIndiceMensagemSemRepetir_(mensagens.length);
-    el.innerText = mensagens[idx] || mensagens[0];
-
-    try {
-      setLocalStorageItem_(STORAGE_KEYS.MSG_MOTIVACIONAL_IDX, String(idx));
-    } catch (e) {
-      console.error("Falha ao persistir mensagem:", e);
-    }
+    if (!el) return;
+    el.innerText = "";
+    el.style.visibility = "hidden";
   }
 
   function sortearNovaMensagemMotivacional_() {
@@ -4463,17 +4443,17 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Qualificação térmica de autoclaves.</p>
             </div>
           </div>
 
           <div class="motores-tabs">
-            <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotorAutoclave_('template')">GERAR TEMPLATE</button>
-            <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotorAutoclave_('relatorio')">Gerar Relatório de Auditoria</button>
+            <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotorAutoclave_('template')">Preencher modelo</button>
+            <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotorAutoclave_('relatorio')">Gerar relatório</button>
           </div>
 
-          <div id="tplAutoclaveContainer" class="native-module-container">Carregando módulo Autoclave (Template)...</div>
-          <div id="tplAutoRelContainer" class="native-module-container" style="display:none;">Carregando módulo Autoclave (Relatório de Auditoria)...</div>
+          <div id="tplAutoclaveContainer" class="native-module-container">Carregando...</div>
+          <div id="tplAutoRelContainer" class="native-module-container" style="display:none;">Carregando...</div>
         </div>
       `;
 
@@ -4495,17 +4475,17 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Qualificação de lavadoras termodesinfectoras.</p>
             </div>
           </div>
 
           <div class="motores-tabs">
-            <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotorLavadora_('template')">GERAR TEMPLATE</button>
-            <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotorLavadora_('relatorio')">Gerar Relatório de Auditoria</button>
+            <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotorLavadora_('template')">Preencher modelo</button>
+            <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotorLavadora_('relatorio')">Gerar relatório</button>
           </div>
 
-          <div id="tplLavadoraContainer" class="native-module-container">Carregando módulo Lavadora (Template)...</div>
-          <div id="tplLavRelContainer" class="native-module-container" style="display:none;">Carregando módulo Lavadora (Relatório de Auditoria)...</div>
+          <div id="tplLavadoraContainer" class="native-module-container">Carregando...</div>
+          <div id="tplLavRelContainer" class="native-module-container" style="display:none;">Carregando...</div>
         </div>
       `;
 
@@ -4528,7 +4508,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Módulo legado, com acesso restrito.</p>
             </div>
           </div>
 
@@ -4550,7 +4530,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Qualificação térmica de equipamentos da cadeia de frio.</p>
             </div>
           </div>
 
@@ -4572,7 +4552,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Qualificação térmica de estufas, banhos-maria e secadoras.</p>
             </div>
           </div>
 
@@ -4596,7 +4576,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Declarações de serviço executado.</p>
             </div>
           </div>
 
@@ -4620,7 +4600,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Relatórios de qualificação de instalação, operação e desempenho.</p>
             </div>
           </div>
 
@@ -4645,7 +4625,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Relatórios de calibração de instrumentos.</p>
             </div>
           </div>
 
@@ -4668,7 +4648,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Emissão de certificados e controle dos padrões.</p>
             </div>
           </div>
 
@@ -4689,7 +4669,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Laudos de inspeção de vasos de pressão.</p>
             </div>
           </div>
 
@@ -4711,7 +4691,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Sincronização de Clientes, Técnicos e Tarefas com o Auvo.</p>
+              <p class="content-subtitle">Sincronização de clientes, técnicos e tarefas com o Auvo.</p>
             </div>
           </div>
 
@@ -4774,7 +4754,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Veículos, retiradas, devoluções, manutenções e documentos.</p>
             </div>
           </div>
 
@@ -4793,7 +4773,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Planejamento da CME conforme as normas aplicáveis.</p>
             </div>
           </div>
 
@@ -4812,7 +4792,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Cronograma de execução dos serviços.</p>
             </div>
           </div>
 
@@ -4831,7 +4811,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Elaboração de PGT e POP.</p>
             </div>
           </div>
 
@@ -4850,7 +4830,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Registros operacionais da CME.</p>
             </div>
           </div>
 
@@ -4871,7 +4851,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
+              <p class="content-subtitle">Inventário de equipamentos por cliente e unidade.</p>
             </div>
           </div>
 
@@ -4891,13 +4871,12 @@
         <div class="module-header">
           <div class="module-header-left">
             <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-            <p class="content-subtitle">Módulo de Engenharia Clínica Integrado.</p>
           </div>
         </div>
 
         <div class="motores-tabs">
-          <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotor_('template', '${urlTemplate}', '${urlRelatorio}')">GERAR TEMPLATE</button>
-          <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotor_('relatorio', '${urlTemplate}', '${urlRelatorio}')">Gerar Relatório de Auditoria</button>
+          <button id="btn_motor_template" class="motores-tab-btn active" onclick="alternarAbaMotor_('template', '${urlTemplate}', '${urlRelatorio}')">Preencher modelo</button>
+          <button id="btn_motor_relatorio" class="motores-tab-btn" onclick="alternarAbaMotor_('relatorio', '${urlTemplate}', '${urlRelatorio}')">Gerar relatório</button>
         </div>
 
         <div class="iframe-container">
@@ -5310,7 +5289,7 @@
     const el = document.createElement("div");
     el.id = "padroesAlertaToast";
     el.className = "padroes-alerta-toast" + (estado.critico ? " critico" : "");
-    el.innerHTML = '<div class="padroes-alerta-cab"><div class="padroes-alerta-icone">⚠️</div><div class="padroes-alerta-corpo"><div class="padroes-alerta-titulo">Calibrações exigem atenção</div><div class="padroes-alerta-texto">' + textoResumoPadroes_(estado.resumo) + '. A pendência continuará sendo lembrada até os cadastros ficarem válidos.</div><div class="padroes-alerta-acoes"><button class="btn-primary" type="button" onclick="abrirPadroesPeloAlerta_()">Ver padrões</button><button class="btn-secondary" type="button" onclick="fecharBalaoPadroes_()">Lembrar depois</button></div></div><button class="padroes-alerta-fechar" type="button" aria-label="Fechar" onclick="fecharBalaoPadroes_()">×</button></div>';
+    el.innerHTML = '<div class="padroes-alerta-cab"><div class="padroes-alerta-icone"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div><div class="padroes-alerta-corpo"><div class="padroes-alerta-titulo">Calibrações exigem atenção</div><div class="padroes-alerta-texto">' + textoResumoPadroes_(estado.resumo) + '. A pendência continuará sendo lembrada até os cadastros ficarem válidos.</div><div class="padroes-alerta-acoes"><button class="btn-primary" type="button" onclick="abrirPadroesPeloAlerta_()">Ver padrões</button><button class="btn-secondary" type="button" onclick="fecharBalaoPadroes_()">Lembrar depois</button></div></div><button class="padroes-alerta-fechar" type="button" aria-label="Fechar" onclick="fecharBalaoPadroes_()">×</button></div>';
     document.body.appendChild(el);
     PADROES_ALERTA_DURACAO_TIMER = setTimeout(fecharBalaoPadroes_, Number((estado.config || {}).duracaoBalaoSeg || 20) * 1000);
   }
@@ -5321,7 +5300,7 @@
     const el = document.createElement("div");
     el.id = "padroesCriticoOverlay";
     el.className = "padroes-critico-overlay";
-    el.innerHTML = '<div class="padroes-critico-modal" role="dialog" aria-modal="true" aria-labelledby="padroesCriticoTitulo"><div class="padroes-critico-topo"><div style="font-size:34px">🚨</div><div><h2 id="padroesCriticoTitulo">Alerta crítico de calibração</h2><p>' + escapeHtml_(estado.mensagem || "Existem padrões vencidos que exigem ação imediata.") + '</p></div></div><div class="padroes-critico-resumo"><div class="padroes-critico-kpi"><b>' + Number(r.vencidos || 0) + '</b>vencidos</div><div class="padroes-critico-kpi"><b>' + Number(r.vencendo || 0) + '</b>vencendo</div><div class="padroes-critico-kpi"><b>' + Number(r.invalidos || 0) + '</b>cadastros inválidos</div></div><div class="padroes-critico-nota"><b>Seu trabalho está preservado.</b><br>Ao confirmar, você volta exatamente ao ponto em que estava. O sistema registra somente o momento local em que o aviso foi apresentado.</div><div class="padroes-critico-rodape"><button class="btn-secondary" type="button" onclick="fecharAlertaCriticoPadroes_(true)">OK, estou ciente</button><button class="btn-danger" type="button" onclick="abrirPadroesPeloAlerta_()">Tratar agora</button></div></div>';
+    el.innerHTML = '<div class="padroes-critico-modal" role="dialog" aria-modal="true" aria-labelledby="padroesCriticoTitulo"><div class="padroes-critico-topo"><div style="font-size:34px"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div><div><h2 id="padroesCriticoTitulo">Alerta crítico de calibração</h2><p>' + escapeHtml_(estado.mensagem || "Existem padrões vencidos que exigem ação imediata.") + '</p></div></div><div class="padroes-critico-resumo"><div class="padroes-critico-kpi"><b>' + Number(r.vencidos || 0) + '</b>vencidos</div><div class="padroes-critico-kpi"><b>' + Number(r.vencendo || 0) + '</b>vencendo</div><div class="padroes-critico-kpi"><b>' + Number(r.invalidos || 0) + '</b>cadastros inválidos</div></div><div class="padroes-critico-nota"><b>Seu trabalho está preservado.</b><br>Ao confirmar, você volta exatamente ao ponto em que estava. O sistema registra somente o momento local em que o aviso foi apresentado.</div><div class="padroes-critico-rodape"><button class="btn-secondary" type="button" onclick="fecharAlertaCriticoPadroes_(true)">OK, estou ciente</button><button class="btn-danger" type="button" onclick="abrirPadroesPeloAlerta_()">Tratar agora</button></div></div>';
     document.body.appendChild(el);
   }
 
