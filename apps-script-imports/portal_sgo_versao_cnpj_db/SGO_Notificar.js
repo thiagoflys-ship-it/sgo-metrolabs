@@ -7,7 +7,10 @@
  *     texto: 'Texto completo (quebras de linha mantidas)',
  *     link: 'endereço opcional (padrão: endereço público do SGO+)',
  *     canais: ['sgo', 'email', 'whatsapp'],
- *     textoWhatsapp: 'opcional — resumo próprio para o WhatsApp',
+ *     textoWhatsapp: 'opcional — resumo próprio para o WhatsApp (Z-API, texto livre)',
+ *     modelo: { nome: 'sgo_...', parametros: [...] }  — opcional, WhatsApp oficial (Meta);
+ *             '@NOME' vira o primeiro nome de cada destinatário e '@LINK' o link.
+ *             Sem modelo, a Meta recebe sgo_aviso_geral (título, resumo, link).
  *     origem: 'AVISOS' | 'ATIVIDADES' | 'CONDUTA' ..., refId: 'id do registro'
  *   })
  *
@@ -15,9 +18,17 @@
  *  'sgo'      — a janela/lista do próprio módulo que chama já cobre; aqui nada a fazer.
  *  'email'    — MailApp.sendEmail para CAD_USUARIOS.EMAIL (HTML simples). No servidor
  *               novo o MailApp vira a fila emails_saida e sai pelo SMTP do sistema.
- *  'whatsapp' — Z-API (POST /instances/<INSTANCIA>/token/<TOKEN>/send-text, header
- *               Client-Token). Credenciais SÓ nas propriedades do script:
- *               ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN. Telefone: primeiro
+ *  'whatsapp' — dois provedores, escolhidos pela propriedade WHATSAPP_PROVEDOR
+ *               ('meta' | 'zapi'; vazia = meta se META_WA_TOKEN existir, senão zapi
+ *               se a Z-API estiver configurada, senão "WhatsApp não configurado").
+ *    meta  — WhatsApp Cloud API oficial (POST graph.facebook.com/v21.0/<PHONE_ID>/messages,
+ *            Bearer <TOKEN>). Mensagem iniciada pela empresa SÓ por modelo aprovado
+ *            (NTF_MODELOS_META; textos em sgo_servidor/docs/MODELOS_WHATSAPP_META.md).
+ *            Propriedades: META_WA_TOKEN (segredo), META_WA_PHONE_ID, META_WA_WABA_ID.
+ *    zapi  — Z-API (POST /instances/<INSTANCIA>/token/<TOKEN>/send-text, header
+ *            Client-Token). Credenciais SÓ nas propriedades do script:
+ *            ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN.
+ *               Telefone: primeiro
  *               CAD_USUARIOS.CELULAR (Administração > Usuários); depois
  *               WHATSAPP/TELEFONE do usuário se a coluna existir; senão o telefone
  *               do cadastro de Condutor (Frota) ou de Técnico do mesmo USUARIO_ID.
@@ -149,6 +160,132 @@ function Notificar_enviarWhatsapp_(cred, telefone, mensagem) {
   return { ok: false, motivo: 'Z-API respondeu ' + codigo + ': ' + String(r.getContentText() || '').slice(0, 200) };
 }
 
+/* ---------- WhatsApp oficial (Meta — WhatsApp Cloud API) ---------- */
+
+var NTF_META_VERSAO = 'v21.0';
+var NTF_META_IDIOMA = 'pt_BR';
+/** Modelos cadastrados na Meta: nome fixo -> tamanho máximo de cada variável ({{1}}, {{2}}, ...). */
+var NTF_MODELOS_META = {
+  sgo_aviso_geral: [120, 600, 300],             // título, resumo, link
+  sgo_atividade_atribuida: [60, 200, 40, 300],  // nome, título da atividade, prazo, link
+  sgo_atividade_atrasada: [60, 200, 40, 300],   // nome, título, prazo vencido, link
+  sgo_justificativa_recebida: [80, 200, 300, 40], // colaborador, atividade, motivo resumido, nova previsão
+  sgo_missao_nova: [60, 200, 40, 300],          // nome, missão, data, link
+  sgo_chamado_aberto: [120, 200, 120],          // cliente, nº/descrição, data/técnico (Auvo/COMMAND)
+  sgo_chamado_concluido: [120, 200, 60]         // cliente, nº, data (Auvo/COMMAND)
+};
+
+/** Variável de modelo da Meta: sem quebra de linha/tab, sem 4+ espaços seguidos, nunca vazia. */
+function Notificar_paramMeta_(v, max) {
+  var s = String(v === null || v === undefined ? '' : v).replace(/\s+/g, ' ').trim();
+  max = max || 600;
+  if (s.length > max) s = s.slice(0, max - 3).replace(/\s+$/, '') + '...';
+  return s || '-';
+}
+
+/** "MARIA DA SILVA" -> "Maria". */
+function Notificar_primeiroNome_(nome) {
+  var p = String(nome || '').trim().split(/\s+/)[0] || '';
+  return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : 'colaborador';
+}
+
+/** Pedido do envio por modelo: { url, corpo }. Lança erro se o modelo não for um dos fixos ou faltar variável. */
+function Notificar_montarPedidoMeta_(phoneId, telefone, nomeModelo, parametros) {
+  var limites = NTF_MODELOS_META[nomeModelo];
+  if (!limites) throw new Error('Modelo de WhatsApp desconhecido: ' + nomeModelo + '.');
+  var ps = parametros || [];
+  if (ps.length !== limites.length) throw new Error('O modelo ' + nomeModelo + ' tem ' + limites.length + ' variáveis; vieram ' + ps.length + '.');
+  return {
+    url: 'https://graph.facebook.com/' + NTF_META_VERSAO + '/' + encodeURIComponent(String(phoneId)) + '/messages',
+    corpo: {
+      messaging_product: 'whatsapp',
+      to: String(telefone),
+      type: 'template',
+      template: {
+        name: nomeModelo,
+        language: { code: NTF_META_IDIOMA },
+        components: [{ type: 'body', parameters: ps.map(function (v, i) { return { type: 'text', text: Notificar_paramMeta_(v, limites[i]) }; }) }]
+      }
+    }
+  };
+}
+
+function Notificar_credenciaisMeta_() {
+  var p = PropertiesService.getScriptProperties();
+  return {
+    token: String(p.getProperty('META_WA_TOKEN') || '').trim(),
+    phoneId: String(p.getProperty('META_WA_PHONE_ID') || '').replace(/\D/g, ''),
+    wabaId: String(p.getProperty('META_WA_WABA_ID') || '').replace(/\D/g, '')
+  };
+}
+
+/**
+ * Qual WhatsApp usar: { provedor: 'meta'|'zapi'|'', cred, segredos, motivo }.
+ * provedor vazio = não configurado (motivo diz o que gravar e onde).
+ */
+function Notificar_provedorWhatsapp_() {
+  var escolha = '';
+  try { escolha = String(PropertiesService.getScriptProperties().getProperty('WHATSAPP_PROVEDOR') || '').trim().toLowerCase(); } catch (e) {}
+  var meta = Notificar_credenciaisMeta_(), zapi = Notificar_credenciaisZapi_();
+  var zapiOk = !!(zapi.instancia && zapi.token && zapi.clientToken);
+  if (escolha && escolha !== 'meta' && escolha !== 'zapi') {
+    return { provedor: '', motivo: 'WhatsApp não configurado: a chave WHATSAPP_PROVEDOR tem "' + escolha.slice(0, 20) + '"; use meta ou zapi (Chaves e senhas do SGO+).' };
+  }
+  if (escolha === 'meta' || (!escolha && meta.token)) {
+    var falta = [];
+    if (!meta.token) falta.push('META_WA_TOKEN');
+    if (!meta.phoneId) falta.push('META_WA_PHONE_ID');
+    if (falta.length) return { provedor: '', motivo: 'WhatsApp oficial (Meta) não configurado: falta gravar ' + falta.join(' e ') + ' em Chaves e senhas do SGO+.' };
+    return { provedor: 'meta', cred: meta, segredos: [meta.token] };
+  }
+  if (escolha === 'zapi' || zapiOk) {
+    if (!zapiOk) return { provedor: '', motivo: 'WhatsApp não configurado (faltam as chaves ZAPI_INSTANCIA, ZAPI_TOKEN e ZAPI_CLIENT_TOKEN).' };
+    return { provedor: 'zapi', cred: zapi, segredos: [zapi.instancia, zapi.token, zapi.clientToken] };
+  }
+  return { provedor: '', motivo: 'WhatsApp não configurado: grave META_WA_TOKEN e META_WA_PHONE_ID (WhatsApp oficial) ou as 3 chaves da Z-API em Chaves e senhas do SGO+.' };
+}
+
+/** O que fazer quando a Meta recusa, pelos códigos mais comuns. */
+var NTF_META_DICAS = {
+  '190': 'token inválido ou vencido; gere um token permanente (usuário do sistema) e grave de novo META_WA_TOKEN',
+  '10': 'o token não tem permissão whatsapp_business_messaging para este número',
+  '100': 'pedido recusado; confira META_WA_PHONE_ID (é o Phone Number ID, não o número)',
+  '131026': 'o número não tem WhatsApp ou não aceitou os termos',
+  '131030': 'número fora da lista de teste; com o número de teste, cadastre o destinatário na Meta',
+  '131047': 'passou a janela de 24 h; só modelo aprovado',
+  '131049': 'a Meta segurou a mensagem para não saturar o destinatário; tente mais tarde',
+  '132000': 'quantidade de variáveis diferente da cadastrada no modelo',
+  '132001': 'o modelo não existe ou não foi aprovado em pt_BR; cadastre conforme MODELOS_WHATSAPP_META.md',
+  '132005': 'texto das variáveis longo demais para o modelo',
+  '132007': 'o conteúdo violou a política de modelos da Meta',
+  '132015': 'o modelo foi pausado pela Meta por baixa qualidade',
+  '132016': 'o modelo foi desativado pela Meta',
+  '133010': 'o número da empresa ainda não está registrado na Cloud API'
+};
+
+/** Envia um modelo. Devolve { ok, id } ou { ok:false, motivo } com o código e a mensagem da Meta. */
+function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros) {
+  var ped = Notificar_montarPedidoMeta_(cred.phoneId, telefone, nomeModelo, parametros);
+  var r = UrlFetchApp.fetch(ped.url, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + cred.token },
+    payload: JSON.stringify(ped.corpo)
+  });
+  var codigo = r.getResponseCode(), txt = String(r.getContentText() || ''), j = null;
+  try { j = JSON.parse(txt); } catch (e) {}
+  if (codigo >= 200 && codigo < 300 && !(j && j.error)) {
+    var id = j && j.messages && j.messages[0] && j.messages[0].id ? String(j.messages[0].id) : '';
+    return { ok: true, id: id };
+  }
+  var er = (j && j.error) || {};
+  var cod = er.code !== undefined ? String(er.code) : '';
+  var detalhe = er.error_data && er.error_data.details ? String(er.error_data.details) : '';
+  var msg = String(er.message || '') + (detalhe && String(er.message || '').indexOf(detalhe) < 0 ? ' (' + detalhe + ')' : '');
+  if (!msg) msg = txt.slice(0, 200);
+  var dica = NTF_META_DICAS[cod] || '';
+  return { ok: false, motivo: 'Meta recusou (HTTP ' + codigo + (cod ? ', código ' + cod + (er.error_subcode ? '/' + er.error_subcode : '') : '') + '): ' + msg.slice(0, 260) + (dica ? ' — ' + dica + '.' : '') };
+}
+
 /**
  * Envia a notificação pelos canais pedidos. Devolve { ok, erro, pulado } (contagens).
  * Nunca lança erro.
@@ -179,8 +316,20 @@ function SGO_notificar_(opcoes) {
     };
 
     var cotaEmail = null;
-    var cred = externos.indexOf('whatsapp') >= 0 ? Notificar_credenciaisZapi_() : null;
-    var zapiOk = !!(cred && cred.instancia && cred.token && cred.clientToken);
+    var wa = externos.indexOf('whatsapp') >= 0 ? Notificar_provedorWhatsapp_() : { provedor: '', segredos: [] };
+    var segredos = wa.segredos || [];
+    var modelo = o.modelo && o.modelo.nome ? { nome: String(o.modelo.nome), parametros: (o.modelo.parametros || []).slice() } : null;
+    if (!modelo) {
+      var resumoMeta = texto.replace(/\s+/g, ' ');
+      modelo = { nome: 'sgo_aviso_geral', parametros: [titulo, resumoMeta || titulo, '@LINK'] };
+    }
+    var paramsPara = function (c) {
+      return modelo.parametros.map(function (v) {
+        if (v === '@NOME') return Notificar_primeiroNome_(c.nome);
+        if (v === '@LINK') return link || 'acesse o SGO+';
+        return v;
+      });
+    };
     var htmlEmail = Notificar_htmlEmail_(titulo, texto, link);
     var txtEmail = Notificar_textoEmail_(titulo, texto, link);
     var txtWhats = String(o.textoWhatsapp || '').trim();
@@ -205,15 +354,21 @@ function SGO_notificar_(opcoes) {
             cotaEmail--;
             registrar(uid, c.nome, canal, c.email, 'OK', 'Entregue ao serviço de e-mail.');
           } else {
-            if (!zapiOk) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', 'WhatsApp não configurado (faltam as chaves ZAPI_INSTANCIA, ZAPI_TOKEN e ZAPI_CLIENT_TOKEN).'); return; }
+            if (!wa.provedor) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', wa.motivo); return; }
             if (!c.telefone) { registrar(uid, c.nome, canal, '', 'PULADO', 'Sem telefone celular válido no cadastro (usuário, condutor ou técnico).'); return; }
-            var r = Notificar_enviarWhatsapp_(cred, c.telefone, txtWhats);
-            if (r.ok) registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.');
-            else registrar(uid, c.nome, canal, c.telefone, 'ERRO', Notificar_limparSegredos_(r.motivo, [cred.instancia, cred.token, cred.clientToken]));
+            var r;
+            if (wa.provedor === 'meta') {
+              r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
+              if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
+            } else {
+              r = Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhats);
+              if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
+            }
+            registrar(uid, c.nome, canal, c.telefone, 'ERRO', Notificar_limparSegredos_(r.motivo, segredos));
           }
         } catch (e) {
           registrar(uid, c ? c.nome : '', canal, c ? (canal === 'email' ? c.email : c.telefone) : '', 'ERRO',
-            Notificar_limparSegredos_((e && e.message) || e, cred ? [cred.instancia, cred.token, cred.clientToken] : []));
+            Notificar_limparSegredos_((e && e.message) || e, segredos));
         }
       });
     });

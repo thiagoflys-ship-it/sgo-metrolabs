@@ -142,9 +142,10 @@ function Atividades_comTrava_(fn) {
 // a gravação deu certo e a trava foi solta; se a chamada falhar, nada é enviado.
 var ATV_FILA_NTF = [];
 
-function Atividades_notificarExterno_(destinatarioId, atividadeId, titulo, texto) {
+// modelo: WhatsApp oficial (Meta) — { nome, parametros } de NTF_MODELOS_META (SGO_Notificar.js).
+function Atividades_notificarExterno_(destinatarioId, atividadeId, titulo, texto, modelo) {
   if (!destinatarioId) return;
-  ATV_FILA_NTF.push({ usuarios: [destinatarioId], titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'ATIVIDADES', refId: atividadeId });
+  ATV_FILA_NTF.push({ usuarios: [destinatarioId], titulo: titulo, texto: texto, modelo: modelo || null, canais: ['sgo', 'email', 'whatsapp'], origem: 'ATIVIDADES', refId: atividadeId });
 }
 
 function Atividades_enviarFila_() {
@@ -197,7 +198,8 @@ function Atividades_notificarAtrasos_() {
   });
   avisar.forEach(function (a) {
     Atividades_notificarExterno_(a.RESPONSAVEL_ID, a.ID, 'Atividade atrasada: ' + a.TITULO,
-      Atividades_textoNtf_(a, 'A atividade abaixo passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Entre no SGO+ e registre a justificativa de atraso com a nova previsão, ou conclua a atividade.'));
+      Atividades_textoNtf_(a, 'A atividade abaixo passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Entre no SGO+ e registre a justificativa de atraso com a nova previsão, ou conclua a atividade.'),
+      { nome: 'sgo_atividade_atrasada', parametros: ['@NOME', a.TITULO, Atividades_dataBr_(a.PREVISAO_ATUAL), '@LINK'] });
   });
   return avisar.length;
 }
@@ -449,7 +451,8 @@ function Atividades_apiCriar(sessionId, payload) {
       if (respId !== eu.id) {
         Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.');
         Atividades_notificarExterno_(respId, reg.ID, 'Nova atividade para você: ' + titulo,
-          Atividades_textoNtf_(Atividades_limpar_(reg), eu.nome + ' lançou uma atividade para você no SGO+.'));
+          Atividades_textoNtf_(Atividades_limpar_(reg), eu.nome + ' lançou uma atividade para você no SGO+.'),
+          { nome: 'sgo_atividade_atribuida', parametros: ['@NOME', titulo, Atividades_dataBr_(prazo), '@LINK'] });
       }
       return { item: Atividades_limpar_(reg), message: 'Atividade lançada para ' + respNome + '.' };
     });
@@ -595,7 +598,8 @@ function Atividades_apiEditar(sessionId, payload) {
         Atividades_avisar_(novoResp.id, a.ID, 'NOVA', 'Atividade passada para você',
           eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.');
         Atividades_notificarExterno_(novoResp.id, a.ID, 'Atividade passada para você: ' + titAtual,
-          Atividades_textoNtf_(Object.assign({}, a, dados), eu.nome + ' passou para você uma atividade que estava com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '.'));
+          Atividades_textoNtf_(Object.assign({}, a, dados), eu.nome + ' passou para você uma atividade que estava com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '.'),
+          { nome: 'sgo_atividade_atribuida', parametros: ['@NOME', titAtual, prazoTxt, '@LINK'] });
       }
       if (novoResp && a.RESPONSAVEL_ID && a.RESPONSAVEL_ID !== eu.id) {
         Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'RESPONSAVEL', 'Atividade passada para outra pessoa',
@@ -776,7 +780,8 @@ function Atividades_apiJustificar(sessionId, payload) {
         Atividades_notificarExterno_(a.CRIADO_POR_ID, a.ID, 'Justificativa de atraso: ' + a.TITULO,
           eu.nome + ' registrou a justificativa de atraso de uma atividade que você lançou.\n' +
           'Atividade: ' + a.TITULO + '\nMotivo: ' + motivo + '\nPrevisão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.\n' +
-          'Veja o histórico em Atividades da equipe, no SGO+.');
+          'Veja o histórico em Atividades da equipe, no SGO+.',
+          { nome: 'sgo_justificativa_recebida', parametros: [eu.nome, a.TITULO, motivo, Atividades_dataBr_(nova)] });
       }
       return { item: Atividades_obter_(a.ID), message: 'Justificativa registrada. Nova previsão: ' + Atividades_dataBr_(nova) + '.' };
     });

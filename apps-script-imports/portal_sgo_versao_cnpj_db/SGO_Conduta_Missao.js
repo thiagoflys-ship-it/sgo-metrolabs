@@ -95,7 +95,8 @@ function Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo) 
       'Distância do trecho: ' + String(km).replace('.', ',') + ' km. ' +
       (qualifica ? 'Qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).' : 'Não qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).') + '\n' +
       'Se algum dado estiver errado, fale com a gestão. Veja em Programa de conduta, no SGO+.';
-    SGO_notificar_({ usuarios: destino, titulo: 'Missão cadastrada: ' + registro.DESTINO + ' em ' + dataBr, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID });
+    SGO_notificar_({ usuarios: destino, titulo: 'Missão cadastrada: ' + registro.DESTINO + ' em ' + dataBr, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID,
+      modelo: { nome: 'sgo_missao_nova', parametros: ['@NOME', registro.DESTINO, dataBr, '@LINK'] } });
   } catch (e) {
     console.error('Conduta notificar missão: ' + ((e && e.message) || e));
   }
