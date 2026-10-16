@@ -250,6 +250,15 @@ function MIGRACAO_empacotarNovos() {
   return MIGRACAO_empacotarContinuar_();
 }
 
+// Planilha do Google → .xlsx pelo link de exportação (getAs não aceita essa conversão)
+function MIGRACAO_planilhaXlsx_(id) {
+  var r = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + id + '/export?format=xlsx', {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true
+  });
+  if (r.getResponseCode() !== 200) throw new Error('Exportação .xlsx da planilha devolveu HTTP ' + r.getResponseCode());
+  return r.getBlob();
+}
+
 function MIGRACAO_empacotarContinuar_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'MIGRACAO_empacotarContinuar_') ScriptApp.deleteTrigger(t);
@@ -275,7 +284,7 @@ function MIGRACAO_empacotarContinuar_() {
       if (base && base[a.id] === a.atualizado) { estado.i++; continue; }   // sem mudança desde o último empacotamento
       try {
         var f = DriveApp.getFileById(a.id), blob, nome = a.id + '__' + seguro(a.nome);
-        if (/^application\/vnd\.google-apps\.spreadsheet/.test(a.tipo)) { blob = f.getAs('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); nome += '.xlsx'; }
+        if (/^application\/vnd\.google-apps\.spreadsheet/.test(a.tipo)) { blob = MIGRACAO_planilhaXlsx_(a.id); nome += '.xlsx'; }
         else if (/^application\/vnd\.google-apps\.document/.test(a.tipo)) { blob = f.getAs('application/pdf'); nome += '.pdf'; }
         else if (/^application\/vnd\.google-apps\./.test(a.tipo)) { estado.i++; continue; }
         else blob = f.getBlob();
@@ -307,6 +316,14 @@ function MIGRACAO_empacotarContinuar_() {
     erros.forEach(function (e) { comErro[e.id] = true; });
     lista.forEach(function (a) { if (!comErro[a.id]) empacotados[a.id] = a.atualizado; });
     MIGRACAO_gravarJson_(destino, '_empacotados.json', empacotados);
+    if (erros.length && !estado.repetiu) {
+      // uma nova tentativa automática só para os que deram erro (ficaram fora de _empacotados.json)
+      MIGRACAO_gravarJson_(destino, '_erros.json', []);
+      props.setProperty(MIGRACAO_ZIP_ESTADO, JSON.stringify({ i: 0, lote: estado.lote, primeiroLote: estado.primeiroLote || 1, novos: true, repetiu: true }));
+      ScriptApp.newTrigger('MIGRACAO_empacotarContinuar_').timeBased().after(60 * 1000).create();
+      Logger.log('Passada completa; %s arquivo(s) com erro serão tentados de novo em 1 minuto.', erros.length);
+      return 'REPETINDO ERROS';
+    }
     var lotes = estado.lote - (estado.primeiroLote || 1);
     MIGRACAO_gravarJson_(destino, '_concluido.json', { concluido_em: new Date().toISOString(), modo: estado.novos ? 'novos' : 'completo', arquivos: lista.length, lotes: lotes, erros: erros.length });
     props.deleteProperty(MIGRACAO_ZIP_ESTADO);
