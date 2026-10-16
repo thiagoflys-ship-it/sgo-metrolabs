@@ -167,6 +167,7 @@
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
           <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
+          <button type="button" class="menu-btn" data-mod="chaves" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
           </div>
         </div>
       </aside>
@@ -214,6 +215,7 @@
 <?!= include('JS_Inventario'); ?>
 <?!= include('JS_Atividades'); ?>
 <?!= include('JS_Avisos'); ?>
+<?!= include('JS_Chaves'); ?>
 <?!= include('JS_Inicio'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
 <script>

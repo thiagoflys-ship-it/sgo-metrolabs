@@ -1,0 +1,198 @@
+<style>
+  /* CHAVES E SENHAS (2026-10-16) — ver SGO_Chaves.js. Exclusivo do responsável pelo sistema (SGO_DONOS). */
+  .chv-aviso { border: 1px solid var(--border); border-left: 4px solid var(--info); border-radius: var(--radius); background: var(--card); padding: 10px 14px; font-size: 12.5px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .chv-grupo { margin-bottom: 18px; }
+  .chv-grupo-tit { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+  .chv-item { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--warning); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
+  .chv-item.ok { border-left-color: var(--success); }
+  .chv-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 4px; }
+  .chv-nome { font-weight: 700; font-size: 13.5px; color: var(--text-strong, var(--text)); }
+  .chv-codigo { font-family: var(--bc-mono, monospace); font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 500; }
+  .chv-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+  .chv-selo.ok { color: var(--success); background: var(--success-bg); }
+  .chv-selo.falta { color: var(--warning); background: var(--warning-bg); }
+  .chv-mascara { font-family: var(--bc-mono, monospace); font-size: 12px; color: var(--text); margin-left: 8px; word-break: break-all; }
+  .chv-ajuda { font-size: 12px; color: var(--muted); margin: 2px 0 10px; line-height: 1.5; }
+  .chv-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chv-linha input { flex: 1 1 240px; min-width: 0; height: 34px; font-family: var(--bc-mono, monospace); }
+  .chv-linha button { min-height: 34px; white-space: nowrap; }
+  .chv-teste { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .chv-item > .chv-teste:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .chv-teste-tit { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+  .chv-res { margin-top: 8px; }
+  @media (max-width: 600px) { .chv-linha button { flex: 1 1 auto; } }
+</style>
+
+<script>
+  // ==========================================================
+  // CHAVES E SENHAS (2026-10-16)
+  // Servidor: SGO_Chaves.js (Chaves_api*(sessionId, payload)); a lista de
+  // donos (SGO_DONOS) fica só no servidor. Ganchos na casca (JS_Core):
+  // ChavesTela_iniciar_ no login, ChavesTela_parar_ no logout,
+  // abrir('chaves') -> ChavesTela_render_.
+  // ==========================================================
+  var CHV = { dono: false, dados: null, msg: null };
+
+  function ChavesTela_esc_(v) { return escapeHtml_(v === null || v === undefined ? "" : String(v)); }
+  function ChavesTela_ehDono_() { return !!CHV.dono; }
+
+  function ChavesTela_chamar_(fn, payload, ok, erro) {
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { erro((res && res.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+        try { ok(res); } catch (e) { console.error("Chaves " + fn + ":", e); erro("Não foi possível mostrar o resultado: " + (e && e.message ? e.message : e) + ". Atualize a página (F5)."); }
+      })
+      .withFailureHandler(function (err) {
+        console.error("Chaves " + fn + " falhou:", err);
+        erro("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado.");
+      })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  // ---------- ciclo de vida ----------
+  function ChavesTela_mostrarMenu_() {
+    var b = document.getElementById("menu-btn-chaves");
+    if (b) b.style.display = CHV.dono ? "" : "none";
+  }
+
+  function ChavesTela_iniciar_() {
+    CHV.dono = false; CHV.dados = null;
+    ChavesTela_mostrarMenu_();
+    if (!SESSION) return;
+    google.script.run
+      .withSuccessHandler(function (res) { CHV.dono = !!(res && res.ok && res.dono); ChavesTela_mostrarMenu_(); })
+      .withFailureHandler(function () { CHV.dono = false; ChavesTela_mostrarMenu_(); })
+      .Chaves_apiEhDono(SGO_getSessionId(), {});
+  }
+
+  function ChavesTela_parar_() {
+    CHV.dono = false; CHV.dados = null;
+    ChavesTela_mostrarMenu_();
+  }
+
+  // ---------- tela ----------
+  function ChavesTela_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Chaves e senhas");
+    CHV.msg = null;
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Chaves e senhas</h2>' +
+          '<p class="content-subtitle">Chaves de integração e senhas administrativas do SGO+. Exclusivo do responsável pelo sistema.</p></div></div>' +
+        '<div id="chvCorpo"><div class="atv-vazio">Carregando...</div></div>' +
+      "</div>";
+    ChavesTela_chamar_("Chaves_apiListar", {}, function (res) { CHV.dados = res; ChavesTela_desenhar_(); }, function (m) {
+      var c = document.getElementById("chvCorpo");
+      if (c) c.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+    });
+  }
+
+  function ChavesTela_htmlItem_(it) {
+    var k = it.chave;
+    var situacao = it.configurado
+      ? '<span class="chv-selo ok">' + (it.alteradoEm ? "Configurado em " + ChavesTela_esc_(it.alteradoEm) : "Configurado") + "</span>" +
+        (it.mascara ? '<span class="chv-mascara" id="chvMasc_' + k + '">' + ChavesTela_esc_(it.mascara) + "</span>" : "")
+      : '<span class="chv-selo falta">Falta configurar</span>';
+    var tipoCampo = it.tipo === "aberto" ? "text" : "password";
+    var ph = it.exemplo ? "ex.: " + it.exemplo : (it.configurado ? "cole um valor novo para trocar" : "cole aqui");
+    var msg = CHV.msg && CHV.msg.chave === k ? '<div class="atv-msg ' + (CHV.msg.erro ? "erro" : "ok") + '">' + ChavesTela_esc_(CHV.msg.texto) + "</div>" : "";
+    return '<div class="chv-item' + (it.configurado ? " ok" : "") + '" id="chvItem_' + k + '">' +
+      '<div class="chv-cab"><div class="chv-nome">' + ChavesTela_esc_(it.nome) + '<span class="chv-codigo">' + ChavesTela_esc_(k) + "</span></div>" +
+        '<div>' + situacao + "</div></div>" +
+      '<div class="chv-ajuda">' + ChavesTela_esc_(it.ajuda) + "</div>" +
+      '<div class="chv-linha">' +
+        '<input type="' + tipoCampo + '" class="form-control" id="chvValor_' + k + '" autocomplete="new-password" spellcheck="false" placeholder="' + ChavesTela_esc_(ph) + '" aria-label="Valor de ' + ChavesTela_esc_(it.nome) + '">' +
+        '<button type="button" class="btn-primary" id="chvGravar_' + k + '" onclick="ChavesTela_gravar_(\'' + k + '\')">Gravar</button>' +
+        (it.configurado ? '<button type="button" class="btn-secondary" id="chvApagar_' + k + '" onclick="ChavesTela_apagar_(\'' + k + '\')">Apagar</button>' : "") +
+      "</div>" + msg + "</div>";
+  }
+
+  function ChavesTela_htmlTeste_(tipo) {
+    var tit = { gemini: "Testar a IA (Gemini)", auvo: "Testar o login no Auvo", email: "Testar o envio de e-mail", whatsapp: "Testar o WhatsApp" }[tipo];
+    var expl = {
+      gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
+      auvo: "Faz o login na API do Auvo com a API Key e o API Token gravados.",
+      email: "Envia um e-mail de teste para o e-mail do seu usuário (Administração → Usuários).",
+      whatsapp: "Envia uma mensagem de teste para o celular digitado. Pela Meta, sai o modelo sgo_aviso_geral, que precisa estar aprovado na Meta (pt_BR); pela Z-API, sai um texto simples."
+    }[tipo];
+    return '<div class="chv-teste"><div class="chv-teste-tit">' + tit + '</div><div class="chv-ajuda">' + expl + "</div>" +
+      '<div class="chv-linha">' +
+        (tipo === "whatsapp" ? '<input type="tel" class="form-control" id="chvTelTeste" placeholder="celular com DDD, ex.: (62) 98241-7106" aria-label="Celular para o teste">' : "") +
+        '<button type="button" class="btn-secondary" id="chvTestar_' + tipo + '" onclick="ChavesTela_testar_(\'' + tipo + '\')">Testar</button>' +
+      '</div><div class="chv-res" id="chvRes_' + tipo + '"></div></div>';
+  }
+
+  function ChavesTela_desenhar_() {
+    var c = document.getElementById("chvCorpo");
+    if (!c || !CHV.dados) return;
+    var itens = CHV.dados.itens || [];
+    var html = '<div class="chv-aviso">O valor gravado nunca é mostrado de novo: aparece no máximo o final mascarado das chaves de API. Para trocar, grave outro por cima. ' +
+      "Cada alteração fica registrada no log do sistema (quem, quando e qual chave, sem o valor).</div>";
+    (CHV.dados.grupos || []).forEach(function (g) {
+      var doGrupo = itens.filter(function (it) { return it.grupo === g; });
+      if (!doGrupo.length) return;
+      var testes = [];
+      doGrupo.forEach(function (it) { if (it.teste && testes.indexOf(it.teste) < 0) testes.push(it.teste); });
+      html += '<div class="chv-grupo"><h3 class="chv-grupo-tit">' + ChavesTela_esc_(g) + "</h3>" +
+        doGrupo.map(ChavesTela_htmlItem_).join("") +
+        (testes.length ? '<div class="chv-item ok" style="border-left-color:var(--info)">' + testes.map(ChavesTela_htmlTeste_).join("") + "</div>" : "") +
+        "</div>";
+    });
+    c.innerHTML = html;
+  }
+
+  function ChavesTela_travar_(k, sim) {
+    ["chvGravar_", "chvApagar_"].forEach(function (p) { var b = document.getElementById(p + k); if (b) b.disabled = !!sim; });
+  }
+
+  function ChavesTela_mostrarMsg_(k, texto, erro) {
+    CHV.msg = { chave: k, texto: texto, erro: !!erro };
+    var item = document.getElementById("chvItem_" + k);
+    if (!item) return;
+    var antiga = item.querySelector(".atv-msg");
+    if (antiga) antiga.remove();
+    item.insertAdjacentHTML("beforeend", '<div class="atv-msg ' + (erro ? "erro" : "ok") + '">' + ChavesTela_esc_(texto) + "</div>");
+  }
+
+  function ChavesTela_gravar_(k) {
+    var campo = document.getElementById("chvValor_" + k);
+    var valor = campo ? String(campo.value || "").trim() : "";
+    if (!valor) { ChavesTela_mostrarMsg_(k, "Cole o valor no campo antes de clicar em Gravar.", true); if (campo) campo.focus(); return; }
+    ChavesTela_travar_(k, true);
+    ChavesTela_chamar_("Chaves_apiGravar", { chave: k, valor: valor }, function (res) {
+      CHV.dados = res; CHV.msg = { chave: k, texto: res.mensagem || "Gravado.", erro: false };
+      ChavesTela_desenhar_();
+    }, function (m) { ChavesTela_travar_(k, false); ChavesTela_mostrarMsg_(k, m, true); });
+  }
+
+  function ChavesTela_apagar_(k) {
+    var it = (CHV.dados && CHV.dados.itens || []).filter(function (x) { return x.chave === k; })[0];
+    var nome = it ? it.nome : k;
+    if (!confirm("Apagar \"" + nome + "\"?\n\nO que depende desta chave para de funcionar até você gravar outra.")) return;
+    ChavesTela_travar_(k, true);
+    ChavesTela_chamar_("Chaves_apiApagar", { chave: k }, function (res) {
+      CHV.dados = res; CHV.msg = { chave: k, texto: res.mensagem || "Apagado.", erro: false };
+      ChavesTela_desenhar_();
+    }, function (m) { ChavesTela_travar_(k, false); ChavesTela_mostrarMsg_(k, m, true); });
+  }
+
+  function ChavesTela_testar_(tipo) {
+    var res = document.getElementById("chvRes_" + tipo);
+    var btn = document.getElementById("chvTestar_" + tipo);
+    var payload = { tipo: tipo };
+    if (tipo === "whatsapp") {
+      var tel = document.getElementById("chvTelTeste");
+      payload.telefone = tel ? String(tel.value || "").trim() : "";
+      if (!payload.telefone) { if (res) res.innerHTML = '<div class="atv-msg erro">Digite o celular com DDD que vai receber o teste.</div>'; if (tel) tel.focus(); return; }
+    }
+    if (btn) btn.disabled = true;
+    if (res) res.innerHTML = '<div class="chv-ajuda">Testando...</div>';
+    ChavesTela_chamar_("Chaves_apiTestar", payload, function (r) {
+      if (btn) btn.disabled = false;
+      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>";
+    }, function (m) {
+      if (btn) btn.disabled = false;
+      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+    });
+  }
+</script>

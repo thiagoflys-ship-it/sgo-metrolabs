@@ -250,6 +250,7 @@
           Conduta_iniciarAvisos_();
           if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
           if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
+          if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
         } else {
           limparSessaoFront_();
         }
@@ -318,6 +319,7 @@
         Conduta_iniciarAvisos_();
         if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
         if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
+        if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
       })
       .withFailureHandler(function (err) {
         LOGIN_EM_ANDAMENTO = false;
@@ -526,6 +528,7 @@
     pararAlertasPadroesGlobais_();
     if (typeof Atividades_parar_ === "function") Atividades_parar_();
     if (typeof AvisosTela_parar_ === "function") AvisosTela_parar_();
+    if (typeof ChavesTela_parar_ === "function") ChavesTela_parar_();
 
     const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
     limparSessaoFront_();
@@ -643,6 +646,13 @@
     if (mod === "avisos") {
       AvisosTela_render_();
       atualizarBadgeModulo_("avisos");
+      return;
+    }
+
+    // CHAVES E SENHAS (2026-10-16) — exclusivo do dono (SGO_DONOS); ver JS_Chaves.html / SGO_Chaves.js.
+    if (mod === "chaves") {
+      ChavesTela_render_();
+      atualizarBadgeModulo_("chaves");
       return;
     }
 
@@ -2390,6 +2400,7 @@
     itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
     itens.push({ icone: '<i class="fas fa-wrench" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
+    if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
 
     const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
     div.innerHTML =
@@ -3519,7 +3530,8 @@
       admin: "Administração",
       minhas_atividades: "Minhas atividades",
       atividades_equipe: "Atividades da equipe",
-      avisos: "Avisos"
+      avisos: "Avisos",
+      chaves: "Chaves e senhas"
     };
 
     areaAvisos.style.display = "block";
