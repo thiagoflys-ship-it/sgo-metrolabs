@@ -302,6 +302,13 @@ const SGO_CFG = (() => {
          janela recente) — regravada por completo a cada atualização, ver
          SGO_Auvo_Pendencias.js (2026-08-31). */
       AUVO_PENDENCIAS: "AUVO_PENDENCIAS",
+
+      /* MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE — 2026-10-16 (ver
+         SGO_Atividades.js Atividades_garantirAbas_, que cria/completa
+         estas abas sob demanda, sem tocar nas outras) */
+      ATV_ATIVIDADES: "ATV_ATIVIDADES",
+      ATV_HISTORICO: "ATV_HISTORICO",
+      ATV_AVISOS: "ATV_AVISOS",
     },
 
     /* =========================

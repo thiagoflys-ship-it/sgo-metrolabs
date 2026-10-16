@@ -248,6 +248,7 @@
           carregarBadgesMenu_();
           verificarAvisosLogin_();
           Conduta_iniciarAvisos_();
+          if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
         } else {
           limparSessaoFront_();
         }
@@ -314,6 +315,7 @@
         carregarBadgesMenu_();
         verificarAvisosLogin_();
         Conduta_iniciarAvisos_();
+        if (typeof Atividades_iniciar_ === "function") Atividades_iniciar_();
       })
       .withFailureHandler(function (err) {
         LOGIN_EM_ANDAMENTO = false;
@@ -520,6 +522,7 @@
     pararMonitorOciosidade_();
     pararSomOciosidade_();
     pararAlertasPadroesGlobais_();
+    if (typeof Atividades_parar_ === "function") Atividades_parar_();
 
     const currentSession = getSessionStorageItem_(STORAGE_KEYS.SESSION);
     limparSessaoFront_();
@@ -604,7 +607,15 @@
   // ==========================================
   // ROTEADOR CENTRAL E DASHBOARD
   // ==========================================
+  // Casca: depois de abrir qualquer módulo, o componente de atividades
+  // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
+  // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    abrirModulo_(mod);
+    try { if (typeof Atividades_aoAbrirModulo_ === "function") Atividades_aoAbrirModulo_(mod); } catch (e) { console.error("Atividades do módulo:", e); }
+  }
+
+  function abrirModulo_(mod) {
     const div = document.getElementById("conteudo");
     if (!div) return;
 
@@ -625,6 +636,19 @@
     // Ver renderMobileHome_() e a classe "modo-mobile" em exibirAppLogado_().
     if (mod === "mobile_home") {
       renderMobileHome_();
+      return;
+    }
+
+    // MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE (2026-10-16) — ver JS_Atividades.html / SGO_Atividades.js.
+    if (mod === "minhas_atividades") {
+      Atividades_renderMinhas_();
+      atualizarBadgeModulo_("minhas_atividades");
+      return;
+    }
+
+    if (mod === "atividades_equipe") {
+      Atividades_renderEquipe_();
+      atualizarBadgeModulo_("atividades_equipe");
       return;
     }
 
@@ -2367,6 +2391,7 @@
 
     const itens = [];
     if (!isCliente) {
+      itens.push({ icone: '<i class="fas fa-list-check" aria-hidden="true"></i>', legenda: "Minhas atividades", mod: "minhas_atividades" });
       itens.push({ icone: '<i class="fas fa-clipboard-list" aria-hidden="true"></i>', legenda: "Planejamento CME", mod: "planejamento_cme" });
       itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de Calibração", mod: "certificado_calibracao" });
       itens.push({ icone: '<i class="fas fa-car" aria-hidden="true"></i>', legenda: "Frota", mod: "frota" });
@@ -3498,7 +3523,9 @@
       unidades: "Unidades",
       equipamentos: "Equipamentos",
       documentos: "Documentos",
-      admin: "Administração"
+      admin: "Administração",
+      minhas_atividades: "Minhas atividades",
+      atividades_equipe: "Atividades da equipe"
     };
 
     areaAvisos.style.display = "block";

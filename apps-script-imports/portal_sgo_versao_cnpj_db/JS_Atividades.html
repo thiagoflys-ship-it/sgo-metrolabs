@@ -1,0 +1,1085 @@
+<style>
+  /* MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE (2026-10-16) — ver SGO_Atividades.js */
+  .atv-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 0 0 14px; }
+  .atv-barra label { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .atv-barra select, .atv-barra input { min-width: 140px; height: 34px; }
+  .atv-tabs { margin-bottom: 14px; }
+  .atv-agora-faixa { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--border); border-left: 4px solid var(--info); border-radius: var(--radius); background: var(--card); font-size: 13px; }
+  .atv-agora-faixa.vazia { border-left-color: var(--muted); color: var(--muted); }
+  .atv-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+  .atv-selo.vencida { color: var(--danger); background: var(--danger-bg); }
+  .atv-selo.hoje { color: var(--warning); background: var(--warning-bg); }
+  .atv-selo.emdia { color: var(--success); background: var(--success-bg); }
+  .atv-selo.neutro { color: var(--muted); }
+  .atv-sit { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .atv-pri-Urgente { color: var(--danger); font-weight: 800; }
+  .atv-pri-Alta { color: var(--warning); font-weight: 700; }
+  .atv-pri-Baixa { color: var(--muted); }
+  .atv-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .atv-acoes button, .atv-mini { min-height: 28px !important; height: 28px !important; padding: 0 10px !important; font-size: 12px !important; }
+  .atv-titulo-link { background: none; border: none; padding: 0; color: var(--text-strong, var(--text)); font-weight: 700; cursor: pointer; text-align: left; font-size: 13px; }
+  .atv-titulo-link:hover { text-decoration: underline; }
+  .atv-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .atv-vazio { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  .atv-msg { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; }
+  .atv-msg.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+  .atv-msg.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+
+  /* Kanban */
+  .atv-kanban { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+  .atv-kcol { background: var(--card-soft, var(--card)); border: 1px solid var(--border); border-radius: var(--radius); min-height: 240px; display: flex; flex-direction: column; }
+  .atv-kcol.alvo { outline: 2px dashed var(--info); outline-offset: -4px; }
+  .atv-kcol-cab { padding: 10px 12px; font-weight: 800; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .atv-kcol-cab span.qtd { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .atv-kcol-corpo { padding: 8px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .atv-kcard { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 6px; padding: 8px 10px; cursor: grab; font-size: 12.5px; }
+  .atv-kcard:hover { border-color: var(--border-strong, var(--border)); }
+  .atv-kcard.arrastando { opacity: .45; }
+  .atv-kcard.vencida { box-shadow: inset 0 0 0 1px var(--danger); }
+  .atv-kcard-tit { font-weight: 700; color: var(--text-strong, var(--text)); margin-bottom: 4px; }
+  .atv-kcard-rod { display: flex; justify-content: space-between; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .atv-barra-prog { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+  .atv-barra-prog > div { height: 100%; background: var(--info); }
+
+  /* Agenda */
+  .atv-ag-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .atv-ag-nav .rotulo { font-weight: 800; font-size: 14px; margin: 0 8px; }
+  .atv-semana { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 6px; }
+  .atv-dia { background: var(--card); border: 1px solid var(--border); border-radius: 6px; min-height: 180px; display: flex; flex-direction: column; }
+  .atv-dia.hoje { border-color: var(--info); box-shadow: inset 0 0 0 1px var(--info); }
+  .atv-dia.fora { opacity: .5; }
+  .atv-dia-cab { padding: 6px 8px; font-size: 12px; font-weight: 800; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .atv-dia.hoje .atv-dia-cab { color: var(--info); }
+  .atv-dia-corpo { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .atv-mes { display: grid; grid-template-columns: repeat(7, minmax(90px, 1fr)); gap: 4px; }
+  .atv-mes .atv-dia { min-height: 96px; }
+  .atv-mes-sem { font-size: 11px; font-weight: 800; color: var(--muted); text-align: center; padding: 4px; }
+  .atv-ev { display: block; width: 100%; text-align: left; border: none; border-left: 3px solid var(--muted); background: rgba(127,127,127,.10); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11.5px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .atv-ev.inicio { border-left-style: dashed; opacity: .85; }
+  .atv-ev.vencida { color: var(--danger); }
+  .atv-ev.fechada { opacity: .55; text-decoration: line-through; }
+
+  /* Equipe */
+  .atv-ind { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .atv-ind-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+  .atv-ind-card .v { font-size: 26px; font-weight: 800; color: var(--text-strong, var(--text)); }
+  .atv-ind-card .l { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .atv-ind-card.alerta .v { color: var(--danger); }
+  .atv-duas { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+  .atv-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; min-width: 0; }
+  .atv-caixa h3 { margin: 0 0 10px; font-size: 14px; color: var(--metro-blue-dark); }
+  .atv-just { border-left: 3px solid var(--warning); padding: 6px 10px; margin-bottom: 8px; font-size: 12.5px; background: rgba(127,127,127,.06); border-radius: 4px; }
+  .atv-lista-rolagem { max-height: 320px; overflow: auto; }
+  .atv-caixa .table { min-width: 0; }
+  .atv-caixa .table thead th, .atv-caixa .table tbody td { padding: 8px 8px; }
+  .atv-gantt-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+  .atv-gantt-wrap svg text { font-family: inherit; }
+  .atv-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 8px 0; }
+  .atv-legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
+
+  /* Modais e painel lateral */
+  .atv-overlay { position: fixed; inset: 0; z-index: 99990; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .atv-overlay.bloqueante { z-index: 100001; background: rgba(0,0,0,.78); }
+  .atv-modal { background: var(--card); color: var(--text-strong, var(--text)); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  .atv-modal-cab { padding: 14px 18px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .atv-modal-cab h3 { margin: 0; font-size: 16px; }
+  .atv-modal-corpo { padding: 14px 18px; overflow-y: auto; font-size: 13px; }
+  .atv-modal-rod { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .atv-fechar { background: none; border: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+  .atv-campo { margin-bottom: 12px; }
+  .atv-campo label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .atv-campo input, .atv-campo select, .atv-campo textarea { width: 100%; box-sizing: border-box; }
+  .atv-campo textarea { min-height: 70px; resize: vertical; }
+  .atv-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .atv-det-grade { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin-bottom: 12px; font-size: 12.5px; }
+  .atv-det-grade dt { color: var(--muted); font-weight: 700; }
+  .atv-det-grade dd { margin: 0; }
+  .atv-hist { border-left: 2px solid var(--border); margin-left: 6px; padding-left: 12px; }
+  .atv-hist-item { margin-bottom: 10px; font-size: 12.5px; }
+  .atv-hist-item .q { color: var(--muted); font-size: 11.5px; }
+  .atv-hist-item.JUSTIFICATIVA { border-left: 3px solid var(--warning); padding-left: 8px; margin-left: -15px; }
+  .atv-just-card { border: 1px solid var(--danger); border-left: 4px solid var(--danger); border-radius: 8px; padding: 12px; margin-bottom: 12px; background: var(--danger-bg); }
+  .atv-just-card .t { font-weight: 800; margin-bottom: 4px; }
+  .atv-contador { font-size: 11px; color: var(--muted); text-align: right; }
+  .atv-contador.curto { color: var(--danger); }
+  .atv-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 100vw); z-index: 99980; background: var(--bg); border-left: 1px solid var(--border); box-shadow: -10px 0 40px rgba(0,0,0,.4); display: flex; flex-direction: column; }
+  .atv-drawer-cab { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .atv-drawer-cab h3 { margin: 0; font-size: 16px; }
+  .atv-drawer-corpo { padding: 14px 18px; overflow: auto; flex: 1; }
+  .atv-btn-modulo { margin-left: auto; }
+  @media (max-width: 900px) {
+    .atv-kanban { grid-template-columns: 1fr; }
+    .atv-semana { grid-template-columns: 1fr; }
+    .atv-ind { grid-template-columns: 1fr 1fr; }
+    .atv-duas { grid-template-columns: 1fr; }
+    .atv-grade2 { grid-template-columns: 1fr; }
+    .atv-det-grade { grid-template-columns: 110px 1fr; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE (2026-10-16)
+  // Servidor: SGO_Atividades.js (Atividades_api*(sessionId, payload)).
+  // Ganchos na casca (JS_Core): Atividades_iniciar_ no login,
+  // Atividades_parar_ no logout, Atividades_aoAbrirModulo_ depois de
+  // cada abrir(mod) — injeta o botão "Atividades do módulo".
+  // ==========================================================
+  var ATV_SITUACOES_KANBAN = ["A fazer", "Em andamento", "Aguardando", "Concluída"];
+  var ATV_CORES = { "A fazer": "#8a96a8", "Em andamento": "#5b8fb9", "Aguardando": "#c2953f", "Concluída": "#4f9f75", "Cancelada": "#5b6270" };
+  var ATV_PERIODICO_MS = 60 * 1000;
+  var ATV_TELA_MS = 30 * 1000;
+
+  var ATV = {
+    opcoes: null, eu: null, minhas: [], agoraSrv: "", aba: "lista",
+    filtros: { situacao: "abertas", prazo: "", prioridade: "", modulo: "" },
+    agendaModo: "semana", agendaRef: null,
+    equipe: null, equipeAba: "gantt", equipeFiltros: { de: "", ate: "", pessoa: "", modulo: "", agrupar: "colaborador" },
+    timerGlobal: null, timerTela: null, tela: "", modAtual: "", drawerModulo: "", drawerItens: [],
+    justAbertas: {}, arrastando: "", verificando: false, ouvinteVisivel: false
+  };
+
+  // ---------- utilitários ----------
+  function Atividades_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Atividades_p2_(n) { return String(n).padStart(2, "0"); }
+  function Atividades_parse_(s) {
+    var t = String(s || "");
+    if (!t) return null;
+    if (/Z$|[+-]\d\d:\d\d$|\.\d{3}/.test(t)) { var d0 = new Date(t); return isNaN(d0.getTime()) ? null : d0; }
+    var m = t.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0));
+  }
+  function Atividades_iso_(d) {
+    return d.getFullYear() + "-" + Atividades_p2_(d.getMonth() + 1) + "-" + Atividades_p2_(d.getDate()) + "T" + Atividades_p2_(d.getHours()) + ":" + Atividades_p2_(d.getMinutes());
+  }
+  function Atividades_diaIso_(d) { return Atividades_iso_(d).slice(0, 10); }
+  function Atividades_agoraIso_() { return Atividades_iso_(new Date()); }
+  function Atividades_br_(s) {
+    var d = Atividades_parse_(s);
+    if (!d) return "";
+    return Atividades_p2_(d.getDate()) + "/" + Atividades_p2_(d.getMonth() + 1) + "/" + d.getFullYear() + " " + Atividades_p2_(d.getHours()) + ":" + Atividades_p2_(d.getMinutes());
+  }
+  function Atividades_num_(n, casas) { return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 }); }
+  function Atividades_duracao_(desde) {
+    var d = Atividades_parse_(desde);
+    if (!d) return "";
+    var min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+    if (min < 60) return "há " + min + " min";
+    var h = Math.floor(min / 60), r = min % 60;
+    if (h < 24) return "há " + h + " h" + (r ? " " + r + " min" : "");
+    var dias = Math.floor(h / 24);
+    return "há " + dias + (dias === 1 ? " dia" : " dias") + (h % 24 ? " " + (h % 24) + " h" : "");
+  }
+  function Atividades_aberta_(a) { return a.SITUACAO !== "Concluída" && a.SITUACAO !== "Cancelada"; }
+  function Atividades_vencida_(a) { return Atividades_aberta_(a) && a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < Atividades_agoraIso_(); }
+  function Atividades_seloHtml_(a) {
+    if (!Atividades_aberta_(a)) {
+      if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM && a.PRAZO) return a.CONCLUIDA_EM <= a.PRAZO ? '<span class="atv-selo neutro">No prazo</span>' : '<span class="atv-selo neutro">Com atraso</span>';
+      return "";
+    }
+    if (Atividades_vencida_(a)) return '<span class="atv-selo vencida">Vencida</span>';
+    if (String(a.PREVISAO_ATUAL).slice(0, 10) === Atividades_agoraIso_().slice(0, 10)) return '<span class="atv-selo hoje">Vence hoje</span>';
+    return '<span class="atv-selo emdia">Em dia</span>';
+  }
+  function Atividades_sitHtml_(s) { return '<span class="atv-sit" style="background:' + (ATV_CORES[s] || "#666") + '">' + Atividades_esc_(s) + "</span>"; }
+  function Atividades_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  function Atividades_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
+  function Atividades_prazoTexto_(a) {
+    var t = Atividades_br_(a.PREVISAO_ATUAL || a.PRAZO);
+    if (a.PREVISAO_ATUAL && a.PRAZO && a.PREVISAO_ATUAL !== a.PRAZO) t += '<div class="atv-sub">Prazo original ' + Atividades_br_(a.PRAZO) + "</div>";
+    return t;
+  }
+
+  /** Chamada padrão ao servidor. res.ok=false vira erro com a mensagem do servidor. */
+  function Atividades_chamar_(fn, payload, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (msg) {
+      fim();
+      if (erro) erro(msg);
+      else if (!o.silencioso) alert(msg);
+    };
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { falhou((res && res.message) || "Não foi possível concluir a operação: o servidor não respondeu como esperado. Tente de novo."); return; }
+        fim();
+        try { if (ok) ok(res); } catch (e) { console.error("Atividades " + fn + ":", e); if (!o.silencioso) alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+      })
+      .withFailureHandler(function (err) {
+        console.error("Atividades " + fn + " falhou:", err);
+        falhou("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado.");
+      })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  function Atividades_garantirOpcoes_(cb) {
+    if (ATV.opcoes) { cb(ATV.opcoes); return; }
+    Atividades_chamar_("Atividades_apiOpcoes", {}, function (res) { ATV.opcoes = res; ATV.eu = res.eu; cb(res); });
+  }
+
+  /** Módulos do menu (chave = data-mod usada por abrir(mod)). */
+  function Atividades_modulosDoMenu_() {
+    var lista = [], vistos = {};
+    document.querySelectorAll("#menu .menu-btn[data-mod]").forEach(function (b) {
+      var k = b.getAttribute("data-mod");
+      if (!k || vistos[k] || k === "dashboard" || k === "minhas_atividades" || k === "atividades_equipe") return;
+      vistos[k] = 1;
+      var c = b.cloneNode(true);
+      c.querySelectorAll(".menu-badge, .menu-btn-icon").forEach(function (x) { x.remove(); });
+      lista.push({ chave: k, nome: c.textContent.replace(/\s+/g, " ").trim() });
+    });
+    return lista;
+  }
+  function Atividades_nomeModulo_(chave) {
+    var m = Atividades_modulosDoMenu_().filter(function (x) { return x.chave === chave; })[0];
+    return m ? m.nome : chave;
+  }
+
+  // ---------- ciclo de vida (login/logout/verificação periódica) ----------
+  function Atividades_iniciar_() {
+    if (!SESSION || Atividades_ehCliente_()) { Atividades_aplicarMenu_(); return; }
+    ATV.opcoes = null;
+    Atividades_aplicarMenu_();
+    Atividades_verificar_();
+    if (!ATV.timerGlobal) ATV.timerGlobal = setInterval(function () { if (document.visibilityState === "visible") Atividades_verificar_(); }, ATV_PERIODICO_MS);
+    if (!ATV.ouvinteVisivel) {
+      ATV.ouvinteVisivel = true;
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState !== "visible" || !SESSION) return;
+        Atividades_verificar_();
+        Atividades_atualizarTela_(true);
+      });
+    }
+  }
+
+  function Atividades_parar_() {
+    if (ATV.timerGlobal) clearInterval(ATV.timerGlobal);
+    if (ATV.timerTela) clearInterval(ATV.timerTela);
+    ATV.timerGlobal = null; ATV.timerTela = null; ATV.opcoes = null; ATV.eu = null; ATV.justAbertas = {};
+    var ov = document.getElementById("atvJustOverlay"); if (ov) ov.remove();
+    Atividades_fecharDrawer_();
+    document.querySelectorAll(".atv-overlay").forEach(function (o) { o.remove(); });
+  }
+
+  function Atividades_aplicarMenu_() {
+    var cli = Atividades_ehCliente_();
+    var bMinhas = document.getElementById("menu-btn-atv-minhas");
+    var bEquipe = document.getElementById("menu-btn-atv-equipe");
+    if (bMinhas) bMinhas.style.display = cli ? "none" : "";
+    if (bEquipe) bEquipe.style.display = (!cli && Atividades_ehGestor_()) ? "" : "none";
+  }
+
+  function Atividades_verificar_() {
+    if (!SESSION || Atividades_ehCliente_() || ATV.verificando) return;
+    ATV.verificando = true;
+    Atividades_chamar_("Atividades_apiVerificar", {}, function (res) {
+      ATV.verificando = false;
+      var badge = document.getElementById("menuBadgeAtividades");
+      if (badge) {
+        var n = (res.pendentes || []).length;
+        badge.textContent = n ? String(n) : (res.abertas ? String(res.abertas) : "");
+        badge.title = n ? n + " atividade(s) vencida(s)" : (res.abertas ? res.abertas + " atividade(s) aberta(s)" : "");
+        badge.classList.toggle("is-visible", !!(n || res.abertas));
+        badge.style.background = n ? "var(--danger)" : "";
+      }
+      if (res.pendentes && res.pendentes.length) Atividades_mostrarJustificativas_(res.pendentes);
+      else Atividades_fecharJustificativas_();
+      if (res.avisos && res.avisos.length) Atividades_mostrarAvisos_(res.avisos);
+    }, function (msg) { ATV.verificando = false; console.error("Atividades verificar:", msg); }, { silencioso: true });
+  }
+
+  function Atividades_mostrarAvisos_(avisos) {
+    var cont = auvoToastContainer_();
+    avisos.forEach(function (v) {
+      var t = document.createElement("div");
+      t.className = "auvo-toast";
+      t.style.borderLeft = "4px solid " + (v.TIPO === "JUSTIFICATIVA" ? "var(--warning)" : "var(--info)");
+      t.innerHTML = '<span class="auvo-toast-icone"><i class="fas ' + (v.TIPO === "JUSTIFICATIVA" ? "fa-clock-rotate-left" : "fa-list-check") + '" aria-hidden="true"></i></span>' +
+        '<div class="auvo-toast-corpo"><div class="auvo-toast-titulo">' + Atividades_esc_(v.TITULO) + '</div><div class="auvo-toast-detalhe">' + Atividades_esc_(v.TEXTO) + "</div></div>";
+      t.onclick = function () { t.remove(); if (v.ATIVIDADE_ID) Atividades_abrirDetalhe_(v.ATIVIDADE_ID); };
+      cont.appendChild(t);
+      setTimeout(function () { t.classList.add("auvo-toast-saindo"); setTimeout(function () { t.remove(); }, 400); }, 15000);
+    });
+    Atividades_chamar_("Atividades_apiMarcarAvisosLidos", { ids: avisos.map(function (v) { return v.ID; }) }, function () {}, function () {}, { silencioso: true });
+    if (ATV.tela === "equipe") Atividades_carregarEquipe_();
+  }
+
+  // ---------- janela de justificativa de atraso (não fecha sem justificar) ----------
+  function Atividades_mostrarJustificativas_(pendentes) {
+    var ov = document.getElementById("atvJustOverlay");
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.id = "atvJustOverlay";
+      ov.className = "atv-overlay bloqueante";
+      ov.setAttribute("role", "dialog");
+      ov.setAttribute("aria-modal", "true");
+      ov.innerHTML = '<div class="atv-modal" style="max-width:620px">' +
+        '<div class="atv-modal-cab"><div><h3>Atividade com prazo vencido</h3>' +
+        '<div class="atv-sub" style="font-size:12.5px;margin-top:6px">O prazo destas atividades já passou e elas não foram concluídas. Para continuar usando o SGO+, escreva para cada uma o motivo da demora (mínimo 15 letras) e uma nova previsão de entrega. A justificativa fica no histórico da atividade e quem lançou a atividade é avisado. Se a atividade já foi feita, justifique e depois marque como concluída em Minhas atividades.</div></div></div>' +
+        '<div class="atv-modal-corpo" id="atvJustCorpo"></div></div>';
+      document.body.appendChild(ov);
+      ATV.justAbertas = {};
+    }
+    var corpo = document.getElementById("atvJustCorpo");
+    var ids = {};
+    pendentes.forEach(function (a) {
+      ids[a.ID] = 1;
+      if (ATV.justAbertas[a.ID]) return; // já na tela: não apaga o que a pessoa está digitando
+      ATV.justAbertas[a.ID] = 1;
+      var minimo = new Date(Date.now() + 5 * 60000);
+      var sugestao = new Date(); sugestao.setDate(sugestao.getDate() + 1); sugestao.setHours(18, 0, 0, 0);
+      var card = document.createElement("div");
+      card.className = "atv-just-card";
+      card.id = "atvJust_" + a.ID;
+      card.innerHTML = '<div class="t">' + Atividades_esc_(a.TITULO) + "</div>" +
+        '<div class="atv-sub">Previsão vencida em ' + Atividades_br_(a.PREVISAO_ATUAL) + (a.PRAZO !== a.PREVISAO_ATUAL ? " (prazo original " + Atividades_br_(a.PRAZO) + ")" : "") +
+        (a.CRIADO_POR_NOME ? " · lançada por " + Atividades_esc_(a.CRIADO_POR_NOME) : "") + (a.QTD_JUSTIFICATIVAS ? " · já justificada " + a.QTD_JUSTIFICATIVAS + " vez(es)" : "") + "</div>" +
+        '<div class="atv-campo" style="margin-top:10px"><label for="atvJustMot_' + a.ID + '">Motivo da demora</label>' +
+        '<textarea id="atvJustMot_' + a.ID + '" maxlength="2000" placeholder="O que atrasou a atividade e o que falta para concluir"></textarea>' +
+        '<div class="atv-contador curto" id="atvJustCont_' + a.ID + '">0 de 15 letras no mínimo</div></div>' +
+        '<div class="atv-campo"><label for="atvJustPrev_' + a.ID + '">Nova previsão de entrega</label>' +
+        '<input type="datetime-local" id="atvJustPrev_' + a.ID + '" min="' + Atividades_iso_(minimo) + '" value="' + Atividades_iso_(sugestao) + '"></div>' +
+        '<div id="atvJustMsg_' + a.ID + '"></div>' +
+        '<div style="text-align:right"><button type="button" class="btn-primary" onclick="Atividades_enviarJustificativa_(\'' + a.ID + '\', this)">Registrar justificativa</button></div>';
+      corpo.appendChild(card);
+      var ta = card.querySelector("textarea");
+      ta.addEventListener("input", function () {
+        var n = ta.value.replace(/\s+/g, " ").trim().length;
+        var c = document.getElementById("atvJustCont_" + a.ID);
+        c.textContent = n >= 15 ? n + " letras" : n + " de 15 letras no mínimo";
+        c.classList.toggle("curto", n < 15);
+      });
+    });
+    Object.keys(ATV.justAbertas).forEach(function (id) {
+      if (!ids[id]) { var c = document.getElementById("atvJust_" + id); if (c) c.remove(); delete ATV.justAbertas[id]; }
+    });
+    var primeiro = corpo.querySelector("textarea");
+    if (primeiro && !ov.contains(document.activeElement)) primeiro.focus();
+  }
+
+  function Atividades_fecharJustificativas_() {
+    var ov = document.getElementById("atvJustOverlay");
+    if (ov) ov.remove();
+    ATV.justAbertas = {};
+  }
+
+  function Atividades_enviarJustificativa_(id, btn) {
+    var motivo = (document.getElementById("atvJustMot_" + id) || {}).value || "";
+    var prev = (document.getElementById("atvJustPrev_" + id) || {}).value || "";
+    var msg = document.getElementById("atvJustMsg_" + id);
+    var mostrar = function (t) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; };
+    if (motivo.replace(/\s+/g, " ").trim().length < 15) { mostrar("Não foi possível registrar: o motivo precisa ter pelo menos 15 letras. Explique o que atrasou e clique em Registrar de novo."); return; }
+    if (!prev) { mostrar("Não foi possível registrar: informe a nova previsão (data e hora) e clique em Registrar de novo."); return; }
+    if (prev <= Atividades_agoraIso_()) { mostrar("Não foi possível registrar: a nova previsão já passou. Escolha uma data e hora depois de agora."); return; }
+    btn.disabled = true; btn.textContent = "Registrando...";
+    Atividades_chamar_("Atividades_apiJustificar", { id: id, motivo: motivo, novaPrevisao: prev }, function () {
+      var c = document.getElementById("atvJust_" + id); if (c) c.remove();
+      delete ATV.justAbertas[id];
+      if (!Object.keys(ATV.justAbertas).length) { Atividades_fecharJustificativas_(); Atividades_atualizarTela_(true); Atividades_verificar_(); }
+    }, function (m) { btn.disabled = false; btn.textContent = "Registrar justificativa"; mostrar(m); });
+  }
+
+  // ---------- modal genérico ----------
+  function Atividades_modal_(titulo, corpoHtml, rodapeHtml, opcoes) {
+    var o = opcoes || {};
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    if (o.id) ov.id = o.id;
+    ov.innerHTML = '<div class="atv-modal" style="max-width:' + (o.largura || 640) + 'px">' +
+      '<div class="atv-modal-cab"><h3>' + titulo + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+      '<div class="atv-modal-corpo">' + corpoHtml + "</div>" +
+      (rodapeHtml ? '<div class="atv-modal-rod">' + rodapeHtml + "</div>" : "") + "</div>";
+    ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
+    document.body.appendChild(ov);
+    return ov;
+  }
+
+  /** Pede um texto (motivo/observação) antes de mudar a situação. */
+  function Atividades_pedirTexto_(titulo, explicacao, minimo, aoConfirmar) {
+    var ov = Atividades_modal_(Atividades_esc_(titulo),
+      '<p style="margin-top:0">' + Atividades_esc_(explicacao) + '</p><div class="atv-campo"><textarea id="atvPedirTexto" maxlength="2000"></textarea></div><div id="atvPedirMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Confirmar</button>', { largura: 480 });
+    var ta = ov.querySelector("#atvPedirTexto"); ta.focus();
+    ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
+    ov.querySelector('[data-x="ok"]').onclick = function () {
+      var t = ta.value.trim();
+      if (t.length < minimo) { ov.querySelector("#atvPedirMsg").innerHTML = '<div class="atv-msg erro">Não foi possível confirmar: escreva pelo menos ' + minimo + " letras e clique em Confirmar de novo.</div>"; return; }
+      ov.remove(); aoConfirmar(t);
+    };
+  }
+
+  // ---------- ações ----------
+  function Atividades_mudarSituacao_(id, situacao, depois) {
+    var enviar = function (extra) {
+      Atividades_chamar_("Atividades_apiMudarSituacao", Object.assign({ id: id, situacao: situacao }, extra || {}), function () {
+        Atividades_aposAlterar_(); if (depois) depois(true);
+      }, function (m) { alert(m); Atividades_aposAlterar_(); if (depois) depois(false); }, { carregando: "Gravando situação..." });
+    };
+    if (situacao === "Aguardando") Atividades_pedirTexto_("Colocar em Aguardando", "O que você está aguardando? (por exemplo: peça, retorno do cliente, aprovação). Mínimo 5 letras.", 5, function (t) { enviar({ motivo: t }); });
+    else if (situacao === "Cancelada") Atividades_pedirTexto_("Cancelar atividade", "Por que a atividade está sendo cancelada? Mínimo 5 letras.", 5, function (t) { enviar({ motivo: t }); });
+    else if (situacao === "Concluída") Atividades_pedirTexto_("Concluir atividade", "Observação da conclusão (opcional).", 0, function (t) { enviar({ observacao: t }); });
+    else enviar();
+  }
+
+  function Atividades_fazendoAgora_(id, ligar) {
+    Atividades_chamar_("Atividades_apiFazendoAgora", { id: id, ligar: ligar !== false }, function () { Atividades_aposAlterar_(); }, null, { carregando: "Gravando..." });
+  }
+
+  function Atividades_aposAlterar_() {
+    var det = document.getElementById("atvDetalheOverlay");
+    if (det && det.dataset.id) Atividades_abrirDetalhe_(det.dataset.id);
+    Atividades_atualizarTela_(true);
+    if (ATV.drawerModulo) Atividades_carregarDrawer_();
+  }
+
+  // ---------- detalhe ----------
+  function Atividades_abrirDetalhe_(id) {
+    Atividades_chamar_("Atividades_apiDetalhe", { id: id }, function (res) {
+      var a = res.item, eu = res.eu;
+      var antigo = document.getElementById("atvDetalheOverlay");
+      var comentarioRascunho = antigo && antigo.querySelector("#atvComentario") ? antigo.querySelector("#atvComentario").value : "";
+      if (antigo) antigo.remove();
+      var souResp = a.RESPONSAVEL_ID === eu.id, dono = eu.gestor || a.CRIADO_POR_ID === eu.id;
+      var aberta = Atividades_aberta_(a);
+      var linha = function (r, v) { return v ? "<dt>" + r + "</dt><dd>" + v + "</dd>" : ""; };
+      var hist = (res.historico || []).map(function (h) {
+        var titulo = { CRIACAO: "Lançada", SITUACAO: "Situação: " + Atividades_esc_(h.DE) + " para " + Atividades_esc_(h.PARA), COMENTARIO: "Comentário", JUSTIFICATIVA: "Justificativa de atraso", AGORA: "Fazendo agora", PERCENTUAL: "Andamento: " + Atividades_esc_(h.DE || "sem registro") + " para " + Atividades_esc_(h.PARA) }[h.TIPO] || Atividades_esc_(h.TIPO);
+        return '<div class="atv-hist-item ' + Atividades_esc_(h.TIPO) + '"><div><b>' + titulo + '</b></div>' +
+          (h.TEXTO ? '<div style="white-space:pre-wrap">' + Atividades_esc_(h.TEXTO) + "</div>" : "") +
+          (h.TIPO === "JUSTIFICATIVA" ? "<div>Previsão: " + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + "</div>" : "") +
+          '<div class="q">' + Atividades_esc_(h.USUARIO_NOME) + " · " + Atividades_br_(h.DATA) + "</div></div>";
+      }).join("") || '<div class="atv-sub">Sem registros.</div>';
+      var acoes = [];
+      if (aberta && souResp) acoes.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar "fazendo agora"</button>' : '<button type="button" class="btn-primary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Estou fazendo agora</button>');
+      if (aberta && a.SITUACAO !== "Em andamento") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
+      if (aberta && a.SITUACAO !== "Aguardando") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
+      if (aberta) acoes.push('<button type="button" class="btn-primary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
+      if (!aberta && dono) acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'A fazer\')">Reabrir</button>');
+      if (aberta && dono) acoes.push('<button type="button" class="btn-danger atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Cancelada\')">Cancelar atividade</button>');
+      var corpo =
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">' + Atividades_sitHtml_(a.SITUACAO) + " " + Atividades_seloHtml_(a) +
+          (a.AGORA_DESDE ? '<span class="atv-selo emdia"><i class="fas fa-person-digging" aria-hidden="true"></i> Fazendo agora ' + Atividades_duracao_(a.AGORA_DESDE) + "</span>" : "") + "</div>" +
+        (a.DESCRICAO ? '<p style="white-space:pre-wrap;margin-top:0">' + Atividades_esc_(a.DESCRICAO) + "</p>" : "") +
+        '<dl class="atv-det-grade">' +
+          linha("Responsável", Atividades_esc_(a.RESPONSAVEL_NOME)) + linha("Lançada por", Atividades_esc_(a.CRIADO_POR_NOME)) +
+          linha("Prioridade", '<span class="atv-pri-' + Atividades_esc_(a.PRIORIDADE) + '">' + Atividades_esc_(a.PRIORIDADE) + "</span>") +
+          linha("Módulo", Atividades_esc_(a.MODULO_NOME || (a.MODULO ? Atividades_nomeModulo_(a.MODULO) : ""))) +
+          linha("Cliente", Atividades_esc_(a.CLIENTE_NOME) + (a.UNIDADE_NOME ? " · " + Atividades_esc_(a.UNIDADE_NOME) : "")) +
+          linha("Início previsto", Atividades_br_(a.INICIO_PREVISTO)) + linha("Prazo", Atividades_br_(a.PRAZO)) +
+          linha("Previsão atual", a.PREVISAO_ATUAL !== a.PRAZO ? Atividades_br_(a.PREVISAO_ATUAL) + " (" + a.QTD_JUSTIFICATIVAS + " justificativa(s))" : "") +
+          linha("Iniciada em", Atividades_br_(a.INICIADA_EM)) + linha("Concluída em", Atividades_br_(a.CONCLUIDA_EM)) +
+          linha("Aguardando", a.SITUACAO === "Aguardando" ? Atividades_esc_(a.MOTIVO_AGUARDANDO) : "") +
+          linha("Observação final", Atividades_esc_(a.OBS_CONCLUSAO)) +
+        "</dl>" +
+        (aberta && (souResp || eu.gestor) ? '<div class="atv-campo" style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div><button type="button" class="btn-secondary atv-mini" style="height:36px!important" onclick="Atividades_salvarPercentual_(\'' + a.ID + '\')">Gravar andamento</button></div>' : "") +
+        '<div class="atv-acoes" style="margin-bottom:14px">' + acoes.join("") + "</div>" +
+        '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre um andamento, dúvida ou combinado"></textarea></div>' +
+        '<div style="text-align:right;margin-bottom:14px"><button type="button" class="btn-secondary atv-mini" onclick="Atividades_comentar_(\'' + a.ID + '\', this)">Comentar</button></div>' +
+        '<h4 style="margin:0 0 8px;font-size:13px">Histórico</h4><div class="atv-hist">' + hist + "</div>";
+      var ov = Atividades_modal_(Atividades_esc_(a.TITULO), corpo, "", { id: "atvDetalheOverlay", largura: 700 });
+      ov.dataset.id = a.ID;
+      if (comentarioRascunho) ov.querySelector("#atvComentario").value = comentarioRascunho;
+    }, null, { carregando: "Abrindo atividade..." });
+  }
+
+  function Atividades_salvarPercentual_(id) {
+    var v = (document.getElementById("atvPerc") || {}).value;
+    Atividades_chamar_("Atividades_apiPercentual", { id: id, percentual: v }, function () { Atividades_aposAlterar_(); }, null, { carregando: "Gravando andamento..." });
+  }
+
+  function Atividades_comentar_(id, btn) {
+    var ta = document.getElementById("atvComentario");
+    var texto = ta ? ta.value.trim() : "";
+    if (texto.length < 2) { alert("Não foi possível comentar: o texto está vazio. Escreva o comentário e clique em Comentar de novo."); return; }
+    btn.disabled = true;
+    Atividades_chamar_("Atividades_apiComentar", { id: id, texto: texto }, function () { if (ta) ta.value = ""; Atividades_abrirDetalhe_(id); },
+      function (m) { btn.disabled = false; alert(m); }, { carregando: "Registrando comentário..." });
+  }
+
+  // ---------- formulário: lançar atividade ----------
+  function Atividades_abrirFormulario_(pre) {
+    var p = pre || {};
+    Atividades_garantirOpcoes_(function (op) {
+      var eu = op.eu;
+      var pessoas = op.usuarios.map(function (u) { return '<option value="' + Atividades_esc_(u.id) + '"' + (u.id === (p.responsavelId || eu.id) ? " selected" : "") + ">" + Atividades_esc_(u.nome) + (u.id === eu.id ? " (eu)" : "") + "</option>"; }).join("");
+      var mods = '<option value="">Nenhum</option>' + Atividades_modulosDoMenu_().map(function (m) { return '<option value="' + Atividades_esc_(m.chave) + '"' + (m.chave === p.modulo ? " selected" : "") + ">" + Atividades_esc_(m.nome) + "</option>"; }).join("");
+      var prazoPadrao = new Date(); prazoPadrao.setDate(prazoPadrao.getDate() + 1); prazoPadrao.setHours(18, 0, 0, 0);
+      var corpo =
+        '<div id="atvFormMsg"></div>' +
+        '<div class="atv-campo"><label for="atvF_titulo">Título *</label><input id="atvF_titulo" type="text" maxlength="200" placeholder="O que precisa ser feito"></div>' +
+        '<div class="atv-campo"><label for="atvF_desc">Descrição</label><textarea id="atvF_desc" maxlength="4000" placeholder="Detalhes, critérios de pronto, contatos"></textarea></div>' +
+        '<div class="atv-grade2">' +
+          '<div class="atv-campo"><label for="atvF_resp">Responsável *</label><select id="atvF_resp"' + (eu.gestor ? "" : " disabled title=\"Somente Gestor, Admin e Diretoria lançam atividade para outra pessoa.\"") + ">" + pessoas + "</select>" +
+            (eu.gestor ? "" : '<div class="atv-sub">Você lança atividades só para você. Para outra pessoa, peça a um gestor.</div>') + "</div>" +
+          '<div class="atv-campo"><label for="atvF_pri">Prioridade</label><select id="atvF_pri">' + op.prioridades.map(function (x) { return "<option" + (x === "Normal" ? " selected" : "") + ">" + Atividades_esc_(x) + "</option>"; }).join("") + "</select></div>" +
+          '<div class="atv-campo"><label for="atvF_ini">Início previsto</label><input id="atvF_ini" type="datetime-local"></div>' +
+          '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local" value="' + Atividades_iso_(prazoPadrao) + '"></div>' +
+          '<div class="atv-campo"><label for="atvF_mod">Módulo ligado</label><select id="atvF_mod">' + mods + "</select></div>" +
+          '<div class="atv-campo"><label for="atvF_uni">Unidade</label><select id="atvF_uni"><option value="">Escolha um cliente primeiro</option></select></div>' +
+        "</div>" +
+        '<div class="atv-campo"><label for="atvF_cli_busca">Cliente</label>' + SGO_htmlBuscaClienteLike_("atvF_cli", "Nome ou CNPJ do cliente (opcional)") + "</div>";
+      var ov = Atividades_modal_("Lançar atividade", corpo,
+        '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">Lançar</button>', { id: "atvFormOverlay", largura: 680 });
+      ov.querySelector('[data-x="cancelar"]').onclick = function () { ov.remove(); };
+      ov.querySelector('[data-x="ok"]').onclick = function () { Atividades_enviarFormulario_(ov); };
+      SGO_montarBuscaClienteLike_("atvF_cli", op.clientes, function (idCli) { Atividades_carregarUnidades_(idCli); });
+      ov.querySelector("#atvF_titulo").focus();
+    });
+  }
+
+  function Atividades_carregarUnidades_(clienteId) {
+    var sel = document.getElementById("atvF_uni");
+    if (!sel) return;
+    if (!clienteId) { sel.innerHTML = '<option value="">Escolha um cliente primeiro</option>'; return; }
+    sel.innerHTML = '<option value="">Carregando...</option>';
+    Atividades_chamar_("Atividades_apiUnidades", { clienteId: clienteId }, function (res) {
+      var s = document.getElementById("atvF_uni"); if (!s) return;
+      s.innerHTML = '<option value="">' + (res.unidades.length ? "Nenhuma (opcional)" : "Cliente sem unidade ativa") + "</option>" +
+        res.unidades.map(function (u) { return '<option value="' + Atividades_esc_(u.ID) + '">' + Atividades_esc_(u.NOME) + "</option>"; }).join("");
+    }, function () { var s = document.getElementById("atvF_uni"); if (s) s.innerHTML = '<option value="">Não foi possível carregar as unidades</option>'; });
+  }
+
+  function Atividades_enviarFormulario_(ov) {
+    var v = function (id) { var el = ov.querySelector("#" + id); return el ? String(el.value || "").trim() : ""; };
+    var msg = ov.querySelector("#atvFormMsg");
+    var erro = function (t, campo) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; var el = campo && ov.querySelector("#" + campo); if (el) el.focus(); ov.querySelector(".atv-modal-corpo").scrollTop = 0; };
+    var d = {
+      titulo: v("atvF_titulo"), descricao: v("atvF_desc"), responsavelId: v("atvF_resp"), prioridade: v("atvF_pri"),
+      inicioPrevisto: v("atvF_ini"), prazo: v("atvF_prazo"), modulo: v("atvF_mod"), clienteId: v("atvF_cli"), unidadeId: v("atvF_uni")
+    };
+    d.moduloNome = d.modulo ? Atividades_nomeModulo_(d.modulo) : "";
+    if (d.titulo.length < 3) return erro("Não foi possível lançar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito e clique em Lançar de novo.", "atvF_titulo");
+    if (!d.prazo) return erro("Não foi possível lançar a atividade: o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em Lançar de novo.", "atvF_prazo");
+    if (d.inicioPrevisto && d.inicioPrevisto > d.prazo) return erro("Não foi possível lançar a atividade: o início previsto está depois do prazo. Ajuste uma das datas e clique em Lançar de novo.", "atvF_ini");
+    if (v("atvF_cli_busca") && !d.clienteId) return erro("Não foi possível lançar a atividade: o cliente digitado não foi escolhido na lista. Clique no nome do cliente na lista que aparece, ou apague o campo.", "atvF_cli_busca");
+    var botao = ov.querySelector('[data-x="ok"]'); botao.disabled = true;
+    Atividades_chamar_("Atividades_apiCriar", d, function (res) {
+      ov.remove();
+      frotaToastEnvio_(true, "Atividade lançada", res.message || "");
+      Atividades_aposAlterar_();
+    }, function (m) { botao.disabled = false; erro(m); }, { carregando: "Lançando atividade..." });
+  }
+
+  // ---------- componentes: lista, kanban, agenda ----------
+  function Atividades_listaHtml_(itens, opcoes) {
+    var o = opcoes || {};
+    if (!itens.length) return '<div class="atv-vazio">' + (o.vazio || "Nenhuma atividade encontrada com estes filtros.") + "</div>";
+    var linhas = itens.map(function (a) {
+      var aberta = Atividades_aberta_(a);
+      var b = [];
+      if (aberta && o.minhas) b.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary" title="Parar de marcar como em execução" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar agora</button>' : '<button type="button" class="btn-secondary" title="Marcar como a atividade que estou executando" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
+      if (aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
+      if (aberta && a.SITUACAO !== "Aguardando") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
+      if (aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
+      return "<tr>" +
+        '<td><button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' + Atividades_esc_(a.TITULO) + "</button>" +
+          (a.AGORA_DESDE ? ' <span class="atv-selo emdia" title="Em execução">Agora</span>' : "") +
+          '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div></td>" +
+        '<td><span class="atv-pri-' + Atividades_esc_(a.PRIORIDADE) + '">' + Atividades_esc_(a.PRIORIDADE) + "</span></td>" +
+        "<td>" + Atividades_prazoTexto_(a) + "</td>" +
+        "<td>" + Atividades_seloHtml_(a) + "</td>" +
+        "<td>" + Atividades_sitHtml_(a.SITUACAO) + (a.PERCENTUAL !== "" ? '<div class="atv-sub">' + Atividades_num_(a.PERCENTUAL) + "%</div>" : "") + "</td>" +
+        '<td><div class="atv-acoes">' + b.join("") + "</div></td></tr>";
+    }).join("");
+    return '<div class="list-card"><div class="table-wrap"><table class="table"><thead><tr><th>Atividade</th><th>Prioridade</th><th>Prazo / previsão</th><th>Selo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>' + linhas + "</tbody></table></div></div>";
+  }
+
+  function Atividades_kanbanHtml_(itens, ctx, opcoes) {
+    var o = opcoes || {};
+    var cols = ATV_SITUACOES_KANBAN.map(function (s) {
+      var doCol = itens.filter(function (a) { return a.SITUACAO === s; });
+      if (s === "Concluída") doCol = doCol.sort(function (a, b) { return a.CONCLUIDA_EM < b.CONCLUIDA_EM ? 1 : -1; }).slice(0, 30);
+      var cards = doCol.map(function (a) {
+        var venc = Atividades_vencida_(a);
+        return '<div class="atv-kcard' + (venc ? " vencida" : "") + '" draggable="true" data-id="' + Atividades_esc_(a.ID) + '" style="border-left-color:' + ATV_CORES[a.SITUACAO] + '">' +
+          '<div class="atv-kcard-tit">' + Atividades_esc_(a.TITULO) + "</div>" +
+          '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", o.semModulo ? "" : Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" +
+          (a.PERCENTUAL !== "" && a.PERCENTUAL !== undefined ? '<div class="atv-barra-prog"><div style="width:' + Number(a.PERCENTUAL) + '%"></div></div>' : "") +
+          '<div class="atv-kcard-rod"><span class="atv-sub">' + Atividades_br_(a.PREVISAO_ATUAL).slice(0, 16) + "</span>" + Atividades_seloHtml_(a) + "</div>" +
+          (a.AGORA_DESDE ? '<div class="atv-sub" style="color:var(--success)"><i class="fas fa-person-digging" aria-hidden="true"></i> Fazendo agora ' + Atividades_duracao_(a.AGORA_DESDE) + "</div>" : "") +
+          "</div>";
+      }).join("");
+      return '<div class="atv-kcol" data-sit="' + s + '"><div class="atv-kcol-cab">' + s + '<span class="qtd">' + doCol.length + "</span></div>" +
+        '<div class="atv-kcol-corpo">' + (cards || '<div class="atv-sub" style="text-align:center;padding:16px 0">Arraste uma atividade para cá</div>') + "</div></div>";
+    }).join("");
+    return '<div class="atv-kanban" data-ctx="' + ctx + '">' + cols + "</div>";
+  }
+
+  /** Liga arrastar/soltar e clique nos cartões de um Kanban já desenhado. */
+  function Atividades_ligarKanban_(raiz, itens) {
+    var porId = {}; itens.forEach(function (a) { porId[a.ID] = a; });
+    raiz.querySelectorAll(".atv-kcard").forEach(function (c) {
+      c.addEventListener("dragstart", function (ev) { ATV.arrastando = c.dataset.id; c.classList.add("arrastando"); try { ev.dataTransfer.setData("text/plain", c.dataset.id); ev.dataTransfer.effectAllowed = "move"; } catch (e) {} });
+      c.addEventListener("dragend", function () { c.classList.remove("arrastando"); ATV.arrastando = ""; raiz.querySelectorAll(".atv-kcol").forEach(function (k) { k.classList.remove("alvo"); }); });
+      c.addEventListener("click", function () { Atividades_abrirDetalhe_(c.dataset.id); });
+    });
+    raiz.querySelectorAll(".atv-kcol").forEach(function (col) {
+      col.addEventListener("dragover", function (ev) { ev.preventDefault(); col.classList.add("alvo"); });
+      col.addEventListener("dragleave", function () { col.classList.remove("alvo"); });
+      col.addEventListener("drop", function (ev) {
+        ev.preventDefault(); col.classList.remove("alvo");
+        var id = ATV.arrastando; try { id = ev.dataTransfer.getData("text/plain") || id; } catch (e) {}
+        var a = porId[id]; var nova = col.dataset.sit;
+        ATV.arrastando = "";
+        if (!a || a.SITUACAO === nova) return;
+        Atividades_mudarSituacao_(id, nova);
+      });
+    });
+  }
+
+  function Atividades_agendaHtml_(itens) {
+    var ref = ATV.agendaRef || new Date();
+    var hoje = Atividades_diaIso_(new Date());
+    var eventosDoDia = {};
+    itens.filter(function (a) { return a.SITUACAO !== "Cancelada"; }).forEach(function (a) {
+      var dp = String(a.PREVISAO_ATUAL || a.PRAZO).slice(0, 10);
+      (eventosDoDia[dp] = eventosDoDia[dp] || []).push({ a: a, tipo: "prazo" });
+      var di = String(a.INICIO_PREVISTO || "").slice(0, 10);
+      if (di && di !== dp) (eventosDoDia[di] = eventosDoDia[di] || []).push({ a: a, tipo: "inicio" });
+    });
+    var evHtml = function (e) {
+      var a = e.a, cls = "atv-ev" + (e.tipo === "inicio" ? " inicio" : "") + (Atividades_vencida_(a) ? " vencida" : "") + (!Atividades_aberta_(a) ? " fechada" : "");
+      var hora = String(e.tipo === "inicio" ? a.INICIO_PREVISTO : a.PREVISAO_ATUAL).slice(11, 16);
+      return '<button type="button" class="' + cls + '" style="border-left-color:' + ATV_CORES[a.SITUACAO] + '" title="' + Atividades_esc_((e.tipo === "inicio" ? "Início: " : "Prazo: ") + a.TITULO) + '" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' +
+        (e.tipo === "inicio" ? "Início " : "") + hora + " " + Atividades_esc_(a.TITULO) + "</button>";
+    };
+    var nomesDia = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+    var segunda = function (d) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); var w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x; };
+    var rotulo, grade;
+    if (ATV.agendaModo === "semana") {
+      var ini = segunda(ref), fimS = new Date(ini); fimS.setDate(fimS.getDate() + 6);
+      rotulo = "Semana de " + Atividades_br_(Atividades_iso_(ini)).slice(0, 5) + " a " + Atividades_br_(Atividades_iso_(fimS)).slice(0, 10);
+      var dias = [];
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(ini); d.setDate(ini.getDate() + i);
+        var k = Atividades_diaIso_(d), ev = (eventosDoDia[k] || []).sort(function (x, y) { return (x.tipo === "inicio" ? x.a.INICIO_PREVISTO : x.a.PREVISAO_ATUAL) < (y.tipo === "inicio" ? y.a.INICIO_PREVISTO : y.a.PREVISAO_ATUAL) ? -1 : 1; });
+        dias.push('<div class="atv-dia' + (k === hoje ? " hoje" : "") + '"><div class="atv-dia-cab">' + nomesDia[i] + " " + Atividades_p2_(d.getDate()) + "/" + Atividades_p2_(d.getMonth() + 1) + "</div>" +
+          '<div class="atv-dia-corpo">' + (ev.map(evHtml).join("") || "") + "</div></div>");
+      }
+      grade = '<div class="atv-semana">' + dias.join("") + "</div>";
+    } else {
+      var primeiro = new Date(ref.getFullYear(), ref.getMonth(), 1);
+      var ini2 = segunda(primeiro);
+      var meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+      rotulo = meses[ref.getMonth()] + " de " + ref.getFullYear();
+      rotulo = rotulo.charAt(0).toUpperCase() + rotulo.slice(1);
+      var celulas = nomesDia.map(function (n) { return '<div class="atv-mes-sem">' + n + "</div>"; });
+      for (var j = 0; j < 42; j++) {
+        var d2 = new Date(ini2); d2.setDate(ini2.getDate() + j);
+        if (j >= 35 && d2.getMonth() !== ref.getMonth()) break;
+        var k2 = Atividades_diaIso_(d2), ev2 = eventosDoDia[k2] || [];
+        celulas.push('<div class="atv-dia' + (k2 === hoje ? " hoje" : "") + (d2.getMonth() !== ref.getMonth() ? " fora" : "") + '"><div class="atv-dia-cab">' + d2.getDate() + "</div>" +
+          '<div class="atv-dia-corpo">' + ev2.slice(0, 4).map(evHtml).join("") + (ev2.length > 4 ? '<div class="atv-sub">mais ' + (ev2.length - 4) + "</div>" : "") + "</div></div>");
+      }
+      grade = '<div class="atv-mes">' + celulas.join("") + "</div>";
+    }
+    return '<div class="atv-ag-nav">' +
+      '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_agendaMover_(-1)" aria-label="Anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>' +
+      '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_agendaMover_(0)">Hoje</button>' +
+      '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_agendaMover_(1)" aria-label="Próximo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>' +
+      '<span class="rotulo">' + rotulo + "</span>" +
+      '<span style="margin-left:auto" class="motores-tabs" role="tablist">' +
+        '<button type="button" class="motores-tab-btn' + (ATV.agendaModo === "semana" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'semana\')">Semana</button>' +
+        '<button type="button" class="motores-tab-btn' + (ATV.agendaModo === "mes" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'mes\')">Mês</button></span></div>' +
+      grade +
+      '<div class="atv-legenda">Cada atividade aparece no dia da previsão de entrega; quando tem início previsto em outro dia, aparece também nesse dia com a borda tracejada.</div>';
+  }
+
+  function Atividades_agendaMover_(passo) {
+    var r = ATV.agendaRef || new Date();
+    if (passo === 0) r = new Date();
+    else if (ATV.agendaModo === "semana") { r = new Date(r); r.setDate(r.getDate() + 7 * passo); }
+    else r = new Date(r.getFullYear(), r.getMonth() + passo, 1);
+    ATV.agendaRef = r;
+    Atividades_desenharMinhas_();
+  }
+  function Atividades_agendaModo_(m) { ATV.agendaModo = m; Atividades_desenharMinhas_(); }
+
+  // ---------- tela: Minhas atividades ----------
+  function Atividades_renderMinhas_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (Atividades_ehCliente_()) { div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block">O perfil Cliente não usa o módulo de atividades.</div></div>'; return; }
+    if (ehMobileModo_()) atualizarTituloMobile_("Minhas atividades");
+    ATV.tela = "minhas";
+    var f = ATV.filtros;
+    var opt = function (v, t, atual) { return '<option value="' + v + '"' + (v === atual ? " selected" : "") + ">" + t + "</option>"; };
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Minhas atividades</h2>' +
+          '<p class="content-subtitle">O que está sob sua responsabilidade, com prazo, situação e o que você está fazendo agora.</p></div>' +
+          '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova atividade</button></div></div>' +
+        '<div id="atvAgoraFaixa" class="atv-agora-faixa vazia">Carregando...</div>' +
+        '<div class="motores-tabs atv-tabs">' +
+          ["lista", "agenda", "kanban"].map(function (a) { return '<button type="button" class="motores-tab-btn' + (ATV.aba === a ? " active" : "") + '" onclick="Atividades_trocarAba_(\'' + a + '\')">' + { lista: "Lista", agenda: "Agenda", kanban: "Kanban" }[a] + "</button>"; }).join("") + "</div>" +
+        '<div id="atvFiltrosMinhas" class="atv-barra"' + (ATV.aba === "lista" ? "" : ' style="display:none"') + '>' +
+          '<div><label for="atvFSit">Situação</label><select id="atvFSit" onchange="Atividades_filtrar_()">' + opt("abertas", "Abertas", f.situacao) + opt("", "Todas", f.situacao) + ["A fazer", "Em andamento", "Aguardando", "Concluída", "Cancelada"].map(function (s) { return opt(s, s, f.situacao); }).join("") + "</select></div>" +
+          '<div><label for="atvFPrazo">Prazo</label><select id="atvFPrazo" onchange="Atividades_filtrar_()">' + opt("", "Todos", f.prazo) + opt("vencidas", "Vencidas", f.prazo) + opt("hoje", "Vence hoje", f.prazo) + opt("7dias", "Próximos 7 dias", f.prazo) + "</select></div>" +
+          '<div><label for="atvFPri">Prioridade</label><select id="atvFPri" onchange="Atividades_filtrar_()">' + opt("", "Todas", f.prioridade) + ["Urgente", "Alta", "Normal", "Baixa"].map(function (s) { return opt(s, s, f.prioridade); }).join("") + "</select></div>" +
+          '<div><label for="atvFMod">Módulo</label><select id="atvFMod" onchange="Atividades_filtrar_()">' + opt("", "Todos", f.modulo) + opt("-", "Sem módulo", f.modulo) + Atividades_modulosDoMenu_().map(function (m) { return opt(m.chave, Atividades_esc_(m.nome), f.modulo); }).join("") + "</select></div>" +
+        "</div>" +
+        '<div id="atvMinhasCorpo"><div class="atv-vazio">Carregando atividades...</div></div>' +
+      "</div>";
+    Atividades_carregarMinhas_();
+    Atividades_ligarTimerTela_();
+  }
+
+  function Atividades_trocarAba_(aba) {
+    ATV.aba = aba;
+    document.querySelectorAll("#conteudo .atv-tabs .motores-tab-btn").forEach(function (b, i) { b.classList.toggle("active", ["lista", "agenda", "kanban"][i] === aba); });
+    var fb = document.getElementById("atvFiltrosMinhas"); if (fb) fb.style.display = aba === "lista" ? "" : "none";
+    Atividades_desenharMinhas_();
+  }
+
+  function Atividades_filtrar_() {
+    ATV.filtros = { situacao: getValue_("atvFSit"), prazo: getValue_("atvFPrazo"), prioridade: getValue_("atvFPri"), modulo: getValue_("atvFMod") };
+    Atividades_desenharMinhas_();
+  }
+
+  function Atividades_carregarMinhas_() {
+    Atividades_chamar_("Atividades_apiListarMinhas", {}, function (res) {
+      ATV.minhas = res.itens || []; ATV.agoraSrv = res.agora;
+      if (ATV.tela === "minhas") Atividades_desenharMinhas_();
+    }, function (m) { var c = document.getElementById("atvMinhasCorpo"); if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { silencioso: true });
+  }
+
+  function Atividades_ordenarPorPrazo_(lista) {
+    return lista.slice().sort(function (a, b) {
+      var aa = Atividades_aberta_(a) ? 0 : 1, bb = Atividades_aberta_(b) ? 0 : 1;
+      if (aa !== bb) return aa - bb;
+      return String(a.PREVISAO_ATUAL) < String(b.PREVISAO_ATUAL) ? -1 : String(a.PREVISAO_ATUAL) > String(b.PREVISAO_ATUAL) ? 1 : 0;
+    });
+  }
+
+  function Atividades_desenharMinhas_() {
+    var corpo = document.getElementById("atvMinhasCorpo");
+    if (!corpo) return;
+    var faixa = document.getElementById("atvAgoraFaixa");
+    var atual = ATV.minhas.filter(function (a) { return a.AGORA_DESDE && Atividades_aberta_(a); })[0];
+    if (faixa) {
+      faixa.className = "atv-agora-faixa" + (atual ? "" : " vazia");
+      var vencidas = ATV.minhas.filter(Atividades_vencida_).length, abertas = ATV.minhas.filter(Atividades_aberta_).length;
+      var resumo = '<span style="margin-left:auto" class="atv-sub">' + Atividades_num_(abertas) + " aberta(s)" + (vencidas ? ' · <b style="color:var(--danger)">' + Atividades_num_(vencidas) + " vencida(s)</b>" : "") + "</span>";
+      faixa.innerHTML = atual
+        ? '<i class="fas fa-person-digging" aria-hidden="true" style="color:var(--info)"></i><span>Fazendo agora: <button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + atual.ID + '\')">' + Atividades_esc_(atual.TITULO) + "</button> <span class=\"atv-sub\">" + Atividades_duracao_(atual.AGORA_DESDE) + '</span></span><button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + atual.ID + '\', false)">Parar</button>' + resumo
+        : '<i class="fas fa-circle-pause" aria-hidden="true"></i><span>Nenhuma atividade marcada como "fazendo agora". Use o botão Fazendo agora na atividade que você está executando.</span>' + resumo;
+    }
+    if (ATV.aba === "agenda") { corpo.innerHTML = Atividades_agendaHtml_(ATV.minhas); return; }
+    if (ATV.aba === "kanban") {
+      corpo.innerHTML = '<div class="atv-legenda">Arraste o cartão para mudar a situação. Clique para abrir o detalhe. Canceladas não aparecem; concluídas mostram as 30 mais recentes.</div>' + Atividades_kanbanHtml_(ATV.minhas, "minhas");
+      Atividades_ligarKanban_(corpo, ATV.minhas);
+      return;
+    }
+    var f = ATV.filtros, agora = Atividades_agoraIso_(), hoje = agora.slice(0, 10);
+    var em7 = Atividades_iso_(new Date(Date.now() + 7 * 86400000));
+    var lista = ATV.minhas.filter(function (a) {
+      if (f.situacao === "abertas" && !Atividades_aberta_(a)) return false;
+      if (f.situacao && f.situacao !== "abertas" && a.SITUACAO !== f.situacao) return false;
+      if (f.prazo === "vencidas" && !Atividades_vencida_(a)) return false;
+      if (f.prazo === "hoje" && !(Atividades_aberta_(a) && String(a.PREVISAO_ATUAL).slice(0, 10) === hoje)) return false;
+      if (f.prazo === "7dias" && !(Atividades_aberta_(a) && a.PREVISAO_ATUAL >= agora && a.PREVISAO_ATUAL <= em7)) return false;
+      if (f.prioridade && a.PRIORIDADE !== f.prioridade) return false;
+      if (f.modulo === "-" && a.MODULO) return false;
+      if (f.modulo && f.modulo !== "-" && a.MODULO !== f.modulo) return false;
+      return true;
+    });
+    corpo.innerHTML = Atividades_listaHtml_(Atividades_ordenarPorPrazo_(lista), { minhas: true, vazio: ATV.minhas.length ? "Nenhuma atividade com estes filtros." : "Você não tem atividades. Use Nova atividade para registrar o que precisa fazer." });
+  }
+
+  // ---------- tela: Atividades da equipe ----------
+  function Atividades_renderEquipe_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (!Atividades_ehGestor_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Atividades da equipe</h2><div class="avisos-wrap" style="display:block">Esta tela é dos perfis Gestor, Admin e Diretoria. Suas atividades estão em Minhas atividades, no menu.</div></div>';
+      return;
+    }
+    ATV.tela = "equipe";
+    var f = ATV.equipeFiltros;
+    if (!f.de) { var d0 = new Date(); d0.setDate(d0.getDate() - 7); f.de = Atividades_diaIso_(d0); }
+    if (!f.ate) { var d1 = new Date(); d1.setDate(d1.getDate() + 30); f.ate = Atividades_diaIso_(d1); }
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Atividades da equipe</h2>' +
+          '<p class="content-subtitle">Quem está fazendo o quê agora, prazos, justificativas de atraso e o andamento em Gantt e Kanban. Atualiza sozinho a cada 30 segundos.</p></div>' +
+          '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-secondary" onclick="Atividades_carregarEquipe_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+          '<button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Lançar atividade</button></div></div>' +
+        '<div id="atvEqInd" class="atv-ind"></div>' +
+        '<div class="atv-duas"><div class="atv-caixa"><h3>Agora</h3><div id="atvEqAgora" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div>' +
+          '<div class="atv-caixa"><h3>Justificativas recentes</h3><div id="atvEqJust" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div></div>' +
+        '<div class="atv-barra">' +
+          '<div><label for="atvEqDe">Período de</label><input type="date" id="atvEqDe" value="' + f.de + '" onchange="Atividades_filtrarEquipe_()"></div>' +
+          '<div><label for="atvEqAte">até</label><input type="date" id="atvEqAte" value="' + f.ate + '" onchange="Atividades_filtrarEquipe_()"></div>' +
+          '<div><label for="atvEqPessoa">Pessoa</label><select id="atvEqPessoa" onchange="Atividades_filtrarEquipe_()"><option value="">Todas</option></select></div>' +
+          '<div><label for="atvEqMod">Módulo</label><select id="atvEqMod" onchange="Atividades_filtrarEquipe_()"><option value="">Todos</option><option value="-">Sem módulo</option>' + Atividades_modulosDoMenu_().map(function (m) { return '<option value="' + Atividades_esc_(m.chave) + '"' + (m.chave === f.modulo ? " selected" : "") + ">" + Atividades_esc_(m.nome) + "</option>"; }).join("") + "</select></div>" +
+          '<div><label for="atvEqAgrupar">Gantt por</label><select id="atvEqAgrupar" onchange="Atividades_filtrarEquipe_()"><option value="colaborador"' + (f.agrupar === "colaborador" ? " selected" : "") + '>Colaborador</option><option value="atividade"' + (f.agrupar === "atividade" ? " selected" : "") + ">Atividade</option></select></div>" +
+        "</div>" +
+        '<div class="motores-tabs atv-tabs" id="atvEqTabs">' +
+          ["gantt", "kanban", "lista"].map(function (a) { return '<button type="button" class="motores-tab-btn' + (ATV.equipeAba === a ? " active" : "") + '" data-aba="' + a + '" onclick="Atividades_trocarAbaEquipe_(\'' + a + '\')">' + { gantt: "Gantt", kanban: "Kanban da equipe", lista: "Lista" }[a] + "</button>"; }).join("") + "</div>" +
+        '<div id="atvEqCorpo"><div class="atv-vazio">Carregando...</div></div>' +
+      "</div>";
+    if (f.modulo) setSelectValueSafe_("atvEqMod", f.modulo);
+    Atividades_carregarEquipe_();
+    Atividades_ligarTimerTela_();
+  }
+
+  function Atividades_trocarAbaEquipe_(aba) {
+    ATV.equipeAba = aba;
+    document.querySelectorAll("#atvEqTabs .motores-tab-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.aba === aba); });
+    Atividades_desenharEquipeCorpo_();
+  }
+
+  function Atividades_filtrarEquipe_() {
+    ATV.equipeFiltros = { de: getValue_("atvEqDe"), ate: getValue_("atvEqAte"), pessoa: getValue_("atvEqPessoa"), modulo: getValue_("atvEqMod"), agrupar: getValue_("atvEqAgrupar") || "colaborador" };
+    Atividades_desenharEquipeCorpo_();
+  }
+
+  function Atividades_carregarEquipe_(comAviso) {
+    Atividades_chamar_("Atividades_apiPainelEquipe", {}, function (res) {
+      ATV.equipe = res;
+      if (ATV.tela === "equipe") Atividades_desenharEquipe_();
+    }, function (m) { var c = document.getElementById("atvEqCorpo"); if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { silencioso: true, carregando: comAviso ? "Atualizando..." : "" });
+  }
+
+  function Atividades_desenharEquipe_() {
+    var r = ATV.equipe; if (!r) return;
+    var ind = r.indicadores;
+    var el = document.getElementById("atvEqInd");
+    if (el) el.innerHTML =
+      '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.abertas) + '</div><div class="l">Abertas</div></div>' +
+      '<div class="atv-ind-card' + (ind.vencidas ? " alerta" : "") + '"><div class="v">' + Atividades_num_(ind.vencidas) + '</div><div class="l">Vencidas</div></div>' +
+      '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.concluidas30) + '</div><div class="l">Concluídas nos últimos 30 dias</div></div>' +
+      '<div class="atv-ind-card"><div class="v">' + (ind.percNoPrazo30 === null ? "—" : Atividades_num_(ind.percNoPrazo30, 1) + "%") + '</div><div class="l">Concluídas no prazo (30 dias)' + (ind.concluidas30 ? ": " + ind.noPrazo30 + " de " + ind.concluidas30 : "") + "</div></div>";
+    var ag = document.getElementById("atvEqAgora");
+    if (ag) ag.innerHTML = r.painelAgora.length ? '<table class="table"><thead><tr><th>Colaborador</th><th>Fazendo agora</th><th>Há</th><th>Abertas</th><th>Vencidas</th></tr></thead><tbody>' +
+      r.painelAgora.map(function (p) {
+        return "<tr><td>" + Atividades_esc_(p.nome) + "</td><td>" + (p.atual ? '<button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + p.atual.ID + '\')">' + Atividades_esc_(p.atual.TITULO) + "</button>" + (p.atual.CLIENTE_NOME ? '<div class="atv-sub">' + Atividades_esc_(p.atual.CLIENTE_NOME) + "</div>" : "") : '<span class="atv-sub">Nenhuma marcada</span>') + "</td>" +
+          "<td>" + (p.atual ? Atividades_duracao_(p.atual.AGORA_DESDE).replace(/^há /, "") : "") + "</td><td>" + Atividades_num_(p.abertas) + "</td><td>" + (p.vencidas ? '<b style="color:var(--danger)">' + Atividades_num_(p.vencidas) + "</b>" : "0") + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<div class="atv-sub">Ninguém com atividade aberta.</div>';
+    var js = document.getElementById("atvEqJust");
+    if (js) js.innerHTML = r.justificativas.length ? r.justificativas.map(function (h) {
+      return '<div class="atv-just"><b>' + Atividades_esc_(h.RESPONSAVEL_NOME) + '</b> · <button type="button" class="atv-titulo-link" style="font-size:12.5px" onclick="Atividades_abrirDetalhe_(\'' + h.ATIVIDADE_ID + '\')">' + Atividades_esc_(h.TITULO) + "</button>" +
+        '<div style="white-space:pre-wrap;margin:3px 0">' + Atividades_esc_(h.TEXTO) + "</div>" +
+        '<div class="atv-sub">Previsão ' + Atividades_br_(h.PREVISAO_ANTERIOR) + " para " + Atividades_br_(h.PREVISAO_NOVA) + " · registrada " + Atividades_br_(h.DATA) + "</div></div>";
+    }).join("") : '<div class="atv-sub">Nenhuma justificativa de atraso registrada.</div>';
+    var selP = document.getElementById("atvEqPessoa");
+    if (selP && selP.options.length <= 1) {
+      selP.innerHTML = '<option value="">Todas</option>' + r.usuarios.map(function (u) { return '<option value="' + Atividades_esc_(u.id) + '">' + Atividades_esc_(u.nome) + "</option>"; }).join("");
+      if (ATV.equipeFiltros.pessoa) selP.value = ATV.equipeFiltros.pessoa;
+    }
+    Atividades_desenharEquipeCorpo_();
+  }
+
+  function Atividades_itensEquipeFiltrados_(comPeriodo) {
+    var r = ATV.equipe; if (!r) return [];
+    var f = ATV.equipeFiltros;
+    var de = f.de ? f.de + "T00:00" : "", ate = f.ate ? f.ate + "T23:59" : "";
+    return r.itens.filter(function (a) {
+      if (f.pessoa && a.RESPONSAVEL_ID !== f.pessoa) return false;
+      if (f.modulo === "-" && a.MODULO) return false;
+      if (f.modulo && f.modulo !== "-" && a.MODULO !== f.modulo) return false;
+      if (comPeriodo) {
+        var ini = Atividades_inicioBarra_(a), fim = Atividades_fimBarra_(a);
+        if (de && fim < de) return false;
+        if (ate && ini > ate) return false;
+      }
+      return true;
+    });
+  }
+
+  function Atividades_inicioBarra_(a) {
+    var c = Atividades_parse_(a.CRIADO_EM);
+    var cands = [a.INICIO_PREVISTO, a.INICIADA_EM, c ? Atividades_iso_(c) : ""].filter(Boolean);
+    var ini = a.INICIO_PREVISTO || (cands.sort()[0]) || a.PRAZO;
+    return ini > a.PRAZO ? a.PRAZO : ini;
+  }
+  function Atividades_fimBarra_(a) {
+    var lista = [a.PRAZO, a.PREVISAO_ATUAL];
+    if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM) lista.push(a.CONCLUIDA_EM);
+    if (Atividades_vencida_(a)) lista.push(Atividades_agoraIso_());
+    return lista.filter(Boolean).sort().pop();
+  }
+
+  function Atividades_desenharEquipeCorpo_() {
+    var corpo = document.getElementById("atvEqCorpo");
+    if (!corpo || !ATV.equipe) return;
+    if (ATV.equipeAba === "kanban") {
+      var itensK = Atividades_itensEquipeFiltrados_(false);
+      corpo.innerHTML = '<div class="atv-legenda">Arraste o cartão para mudar a situação. Clique para abrir o detalhe.</div>' + Atividades_kanbanHtml_(itensK, "equipe", { mostrarResp: true });
+      Atividades_ligarKanban_(corpo, itensK);
+      return;
+    }
+    if (ATV.equipeAba === "lista") {
+      corpo.innerHTML = Atividades_listaHtml_(Atividades_ordenarPorPrazo_(Atividades_itensEquipeFiltrados_(true)), { mostrarResp: true });
+      return;
+    }
+    corpo.innerHTML = Atividades_ganttHtml_(Atividades_itensEquipeFiltrados_(true), corpo.clientWidth || 1000);
+    corpo.querySelectorAll("[data-atv]").forEach(function (g) { g.addEventListener("click", function () { Atividades_abrirDetalhe_(g.getAttribute("data-atv")); }); });
+  }
+
+  // ---------- Gantt (SVG próprio) ----------
+  function Atividades_ganttHtml_(itens, largura) {
+    var f = ATV.equipeFiltros;
+    var ini = Atividades_parse_(f.de + "T00:00"), fim = Atividades_parse_(f.ate + "T23:59");
+    if (!ini || !fim || fim <= ini) return '<div class="atv-msg erro">Não foi possível montar o Gantt: o período está inválido. Ajuste as datas "Período de" e "até".</div>';
+    if (!itens.length) return '<div class="atv-vazio">Nenhuma atividade no período e filtros escolhidos.</div>';
+    var dias = Math.round((fim - ini) / 86400000) + 1;
+    var rotuloW = 230, W = Math.max(largura - 2, rotuloW + dias * 22), area = W - rotuloW - 10;
+    var pxDia = area / dias, linhaH = 26, cabH = 40;
+    var x = function (iso) { var d = Atividades_parse_(iso); if (!d) return rotuloW; var v = rotuloW + ((d - ini) / 86400000) * pxDia; return Math.max(rotuloW, Math.min(rotuloW + area, v)); };
+    var ordenados = itens.slice().sort(function (a, b) { return Atividades_inicioBarra_(a) < Atividades_inicioBarra_(b) ? -1 : 1; });
+    var linhas = []; // {rotulo, sub, itens:[], grupo}
+    if (f.agrupar === "atividade") {
+      ordenados.forEach(function (a) { linhas.push({ rotulo: a.TITULO, sub: a.RESPONSAVEL_NOME, itens: [a] }); });
+    } else {
+      var grupos = {}, ordem = [];
+      ordenados.forEach(function (a) { var k = a.RESPONSAVEL_ID; if (!grupos[k]) { grupos[k] = { nome: a.RESPONSAVEL_NOME, faixas: [] }; ordem.push(k); } var g = grupos[k];
+        var i0 = Atividades_inicioBarra_(a), placed = false;
+        for (var i = 0; i < g.faixas.length && !placed; i++) { if (g.faixas[i].fim < i0) { g.faixas[i].itens.push(a); g.faixas[i].fim = Atividades_fimBarra_(a); placed = true; } }
+        if (!placed) g.faixas.push({ fim: Atividades_fimBarra_(a), itens: [a] });
+      });
+      ordem.sort(function (p, q) { return grupos[p].nome.localeCompare(grupos[q].nome); }).forEach(function (k) {
+        grupos[k].faixas.forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].nome : "", sub: i === 0 ? grupos[k].faixas.reduce(function (s, z) { return s + z.itens.length; }, 0) + " atividade(s)" : "", itens: fx.itens, grupo: i === 0 }); });
+      });
+    }
+    var H = cabH + linhas.length * linhaH + 10;
+    var s = [];
+    s.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img" aria-label="Gráfico de Gantt das atividades" style="display:block">');
+    s.push('<defs><pattern id="atvListra" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="#c2953f" opacity=".85"/></pattern></defs>');
+    // grade de dias e cabeçalho
+    var passoRot = pxDia >= 26 ? 1 : pxDia >= 12 ? 2 : pxDia >= 6 ? 7 : 14;
+    for (var i = 0; i < dias; i++) {
+      var d = new Date(ini); d.setDate(ini.getDate() + i);
+      var xx = rotuloW + i * pxDia;
+      var fimSemana = d.getDay() === 0 || d.getDay() === 6;
+      if (fimSemana) s.push('<rect x="' + xx.toFixed(1) + '" y="' + cabH + '" width="' + pxDia.toFixed(1) + '" height="' + (H - cabH) + '" fill="rgba(127,127,127,.07)"/>');
+      if (d.getDate() === 1 || i === 0) s.push('<text x="' + (xx + 2).toFixed(1) + '" y="14" font-size="11" font-weight="700" fill="var(--text)">' + ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][d.getMonth()] + "/" + d.getFullYear() + "</text>");
+      if (i % passoRot === 0) {
+        s.push('<line x1="' + xx.toFixed(1) + '" y1="' + (cabH - 6) + '" x2="' + xx.toFixed(1) + '" y2="' + H + '" stroke="rgba(127,127,127,.18)"/>');
+        s.push('<text x="' + (xx + 2).toFixed(1) + '" y="' + (cabH - 10) + '" font-size="10" fill="var(--muted)">' + Atividades_p2_(d.getDate()) + "</text>");
+      }
+    }
+    // linhas
+    linhas.forEach(function (ln, idx) {
+      var y = cabH + idx * linhaH;
+      if (ln.grupo && idx > 0) s.push('<line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="rgba(127,127,127,.35)"/>');
+      if (ln.rotulo) {
+        var rot = String(ln.rotulo); if (rot.length > 30) rot = rot.slice(0, 29) + "…";
+        s.push('<text x="8" y="' + (y + 12) + '" font-size="12" font-weight="700" fill="var(--text)">' + Atividades_esc_(rot) + "</text>");
+        if (ln.sub) s.push('<text x="8" y="' + (y + 23) + '" font-size="10" fill="var(--muted)">' + Atividades_esc_(ln.sub) + "</text>");
+      }
+      ln.itens.forEach(function (a) {
+        var x0 = x(Atividades_inicioBarra_(a)), xp = x(a.PRAZO), xprev = x(a.PREVISAO_ATUAL), xf = x(Atividades_fimBarra_(a));
+        var venc = Atividades_vencida_(a), cor = ATV_CORES[a.SITUACAO] || "#888";
+        var by = y + 5, bh = linhaH - 10;
+        var tip = a.TITULO + " — " + a.RESPONSAVEL_NOME + "\nSituação: " + a.SITUACAO + (venc ? " (vencida)" : "") + "\nInício: " + Atividades_br_(Atividades_inicioBarra_(a)) + "\nPrazo: " + Atividades_br_(a.PRAZO) +
+          (a.PREVISAO_ATUAL !== a.PRAZO ? "\nPrevisão atual: " + Atividades_br_(a.PREVISAO_ATUAL) : "") + (a.CONCLUIDA_EM ? "\nConcluída em: " + Atividades_br_(a.CONCLUIDA_EM) : "") + (a.PERCENTUAL !== "" ? "\nAndamento: " + a.PERCENTUAL + "%" : "");
+        s.push('<g data-atv="' + Atividades_esc_(a.ID) + '" style="cursor:pointer"><title>' + Atividades_esc_(tip) + "</title>");
+        var wBase = Math.max(8, xp - x0);
+        s.push('<rect x="' + x0.toFixed(1) + '" y="' + by + '" width="' + wBase.toFixed(1) + '" height="' + bh + '" rx="3" fill="' + cor + '"' + (venc ? ' stroke="#e05252" stroke-width="2"' : "") + "/>");
+        if (a.PERCENTUAL !== "" && Number(a.PERCENTUAL) > 0 && Atividades_aberta_(a)) s.push('<rect x="' + x0.toFixed(1) + '" y="' + (by + bh - 4) + '" width="' + (wBase * Number(a.PERCENTUAL) / 100).toFixed(1) + '" height="4" fill="rgba(255,255,255,.75)"/>');
+        if (xprev > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xprev - xp).toFixed(1) + '" height="' + bh + '" fill="url(#atvListra)" stroke="#c2953f" stroke-width="1"/>');
+        if (venc && xf > Math.max(xp, xprev) + 0.5) s.push('<rect x="' + Math.max(xp, xprev).toFixed(1) + '" y="' + by + '" width="' + (xf - Math.max(xp, xprev)).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.55)"/>');
+        if (a.SITUACAO === "Concluída" && a.CONCLUIDA_EM > a.PRAZO && xf > xp + 0.5) s.push('<rect x="' + xp.toFixed(1) + '" y="' + by + '" width="' + (xf - xp).toFixed(1) + '" height="' + bh + '" fill="rgba(224,82,82,.35)"/>');
+        if (a.AGORA_DESDE && Atividades_aberta_(a)) s.push('<circle cx="' + (x0 + 6).toFixed(1) + '" cy="' + (by + bh / 2) + '" r="3.5" fill="#fff"/>');
+        var larg = Math.max(wBase, xf - x0);
+        if (f.agrupar !== "atividade" || larg > 60) {
+          var maxC = Math.floor((larg - 14) / 6.2);
+          var t = String(a.TITULO); if (maxC > 3 && t.length > maxC) t = t.slice(0, maxC - 1) + "…";
+          if (maxC > 3) s.push('<text x="' + (x0 + (a.AGORA_DESDE ? 13 : 5)).toFixed(1) + '" y="' + (by + bh / 2 + 4) + '" font-size="10.5" fill="#fff" font-weight="700" pointer-events="none">' + Atividades_esc_(t) + "</text>");
+        }
+        s.push("</g>");
+      });
+    });
+    var agora = new Date();
+    if (agora >= ini && agora <= fim) {
+      var xh = x(Atividades_agoraIso_());
+      s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cabH - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#38bdf8" stroke-width="2"/>');
+      s.push('<text x="' + (xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#38bdf8">hoje</text>');
+    }
+    s.push("</svg>");
+    var leg = ATV_SITUACOES_KANBAN.map(function (k) { return '<span><i style="background:' + ATV_CORES[k] + '"></i>' + k + "</span>"; }).join("") +
+      '<span><i style="border:1px solid #c2953f;background-image:repeating-linear-gradient(45deg,#c2953f 0 3px,transparent 3px 6px)"></i>Previsão adiada por justificativa</span>' +
+      '<span><i style="background:rgba(224,82,82,.55);outline:2px solid #e05252"></i>Atrasada (vencida até hoje)</span>' +
+      '<span><i style="background:#38bdf8;width:3px"></i>Hoje</span><span><i style="background:#fff;border-radius:50%"></i>Fazendo agora</span>';
+    return '<div class="atv-legenda">' + leg + '</div><div class="atv-gantt-wrap">' + s.join("") + "</div>";
+  }
+
+  // ---------- atualização automática (30 s, só com a aba visível e sem edição em andamento) ----------
+  function Atividades_ligarTimerTela_() {
+    if (ATV.timerTela) return;
+    ATV.timerTela = setInterval(function () { Atividades_atualizarTela_(false); }, ATV_TELA_MS);
+  }
+
+  function Atividades_emEdicao_() {
+    if (document.querySelector(".atv-overlay") || document.getElementById("atvJustOverlay")) return true;
+    if (ATV.arrastando) return true;
+    var foco = document.activeElement;
+    return !!(foco && /^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName) && foco.closest("#conteudo, .atv-drawer"));
+  }
+
+  function Atividades_atualizarTela_(forcar) {
+    if (!SESSION) return;
+    if (!forcar && (document.visibilityState !== "visible" || Atividades_emEdicao_())) return;
+    if (ATV.tela === "minhas" && document.getElementById("atvMinhasCorpo")) Atividades_carregarMinhas_();
+    else if (ATV.tela === "equipe" && document.getElementById("atvEqCorpo")) Atividades_carregarEquipe_();
+    if (ATV.drawerModulo && !forcar) Atividades_carregarDrawer_();
+  }
+
+  // ---------- Kanban do módulo (painel lateral injetado pela casca) ----------
+  function Atividades_aoAbrirModulo_(mod) {
+    ATV.modAtual = mod;
+    if (mod !== "minhas_atividades" && mod !== "atividades_equipe") ATV.tela = "";
+    Atividades_fecharDrawer_();
+    if (!SESSION || Atividades_ehCliente_()) return;
+    if (!mod || mod === "dashboard" || mod === "mobile_home" || mod === "minhas_atividades" || mod === "atividades_equipe") return;
+    var cab = document.querySelector("#conteudo .module-header");
+    if (!cab || cab.querySelector(".atv-btn-modulo")) return;
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn-secondary atv-btn-modulo";
+    b.title = "Atividades ligadas a este módulo, em Kanban";
+    b.innerHTML = '<i class="fas fa-list-check" aria-hidden="true"></i>&nbsp;Atividades do módulo';
+    b.onclick = function () { Atividades_abrirDrawer_(mod); };
+    var direita = cab.querySelector(".module-header-right");
+    if (direita) direita.appendChild(b);
+    else { cab.style.display = "flex"; cab.style.alignItems = "center"; cab.style.gap = "12px"; cab.appendChild(b); }
+  }
+
+  function Atividades_abrirDrawer_(mod) {
+    Atividades_fecharDrawer_();
+    ATV.drawerModulo = mod;
+    var nome = Atividades_nomeModulo_(mod);
+    var dr = document.createElement("div");
+    dr.className = "atv-drawer"; dr.id = "atvDrawer";
+    dr.setAttribute("role", "dialog"); dr.setAttribute("aria-label", "Atividades do módulo " + nome);
+    dr.innerHTML = '<div class="atv-drawer-cab"><h3>Atividades do módulo: ' + Atividades_esc_(nome) + "</h3>" +
+      '<div style="display:flex;gap:8px"><button type="button" class="btn-primary atv-mini" id="atvDrawerNova"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova atividade neste módulo</button>' +
+      '<button type="button" class="atv-fechar" aria-label="Fechar" onclick="Atividades_fecharDrawer_()">&times;</button></div></div>' +
+      '<div class="atv-drawer-corpo" id="atvDrawerCorpo"><div class="atv-vazio">Carregando...</div></div>';
+    document.body.appendChild(dr);
+    dr.querySelector("#atvDrawerNova").onclick = function () { Atividades_abrirFormulario_({ modulo: mod }); };
+    Atividades_carregarDrawer_();
+    Atividades_ligarTimerTela_();
+  }
+
+  function Atividades_carregarDrawer_() {
+    var mod = ATV.drawerModulo;
+    if (!mod) return;
+    Atividades_chamar_("Atividades_apiListarModulo", { modulo: mod }, function (res) {
+      var corpo = document.getElementById("atvDrawerCorpo");
+      if (!corpo || ATV.drawerModulo !== mod) return;
+      ATV.drawerItens = res.itens || [];
+      corpo.innerHTML = '<div class="atv-legenda">' + (res.gestor ? "Todas as atividades ligadas a este módulo." : "Suas atividades ligadas a este módulo e as que você lançou.") + " Arraste o cartão para mudar a situação; clique para abrir o detalhe.</div>" +
+        Atividades_kanbanHtml_(ATV.drawerItens, "modulo", { mostrarResp: res.gestor, semModulo: true });
+      Atividades_ligarKanban_(corpo, ATV.drawerItens);
+    }, function (m) { var corpo = document.getElementById("atvDrawerCorpo"); if (corpo) corpo.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { silencioso: true });
+  }
+
+  function Atividades_fecharDrawer_() {
+    var dr = document.getElementById("atvDrawer");
+    if (dr) dr.remove();
+    ATV.drawerModulo = ""; ATV.drawerItens = [];
+  }
+</script>

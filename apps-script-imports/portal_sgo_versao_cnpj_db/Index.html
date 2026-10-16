@@ -97,6 +97,8 @@
         <div class="sidebar-section">
           <div class="sidebar-section-title">PRINCIPAL</div>
           <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
+          <button type="button" class="menu-btn" data-mod="minhas_atividades" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
+          <button type="button" class="menu-btn" data-mod="atividades_equipe" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
         </div>
 
         <div class="sidebar-section" id="menu-secao-tecnica">
@@ -182,6 +184,7 @@
 <?!= include('JS_Qualidade'); ?>
 <?!= include('JS_Conduta'); ?>
 <?!= include('JS_Inventario'); ?>
+<?!= include('JS_Atividades'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
 <script>
   window.COM_CFG = { sistema: "SGO", outro: "COMMAND",
