@@ -33,7 +33,10 @@ var ATV_COLUNAS = [
   'ID', 'TITULO', 'DESCRICAO', 'MODULO', 'MODULO_NOME', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME',
   'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'PRIORIDADE',
   'INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'SITUACAO', 'PERCENTUAL', 'INICIADA_EM', 'CONCLUIDA_EM',
-  'AGORA_DESDE', 'MOTIVO_AGUARDANDO', 'OBS_CONCLUSAO', 'QTD_JUSTIFICATIVAS', 'ATUALIZADO_EM', 'CRIADO_EM'
+  'AGORA_DESDE', 'MOTIVO_AGUARDANDO', 'OBS_CONCLUSAO', 'QTD_JUSTIFICATIVAS', 'ATUALIZADO_EM', 'CRIADO_EM',
+  // 2026-10-16: previsão cujo atraso já foi avisado por e-mail/WhatsApp (um aviso por atraso;
+  // nova previsão vencida = novo atraso = novo aviso). Ver Atividades_notificarAtrasos_.
+  'ATRASO_AVISADO_PREV'
 ];
 var ATV_COLUNAS_HIST = [
   'ID', 'ATIVIDADE_ID', 'TIPO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'DE', 'PARA', 'TEXTO',
@@ -55,7 +58,7 @@ function Atividades_abas_() {
 /** Cria/completa as abas sob demanda. Guardado em cache para não conferir a planilha a cada chamada. */
 function Atividades_garantirAbas_() {
   var cache = CacheService.getScriptCache();
-  if (cache.get('ATV_ABAS_OK_V1')) return;
+  if (cache.get('ATV_ABAS_OK_V2')) return;
   var abas = Atividades_abas_();
   CertCal_garantirTabela_(abas.ATIVIDADES, ATV_COLUNAS);
   CertCal_garantirTabela_(abas.HISTORICO, ATV_COLUNAS_HIST);
@@ -64,13 +67,13 @@ function Atividades_garantirAbas_() {
   ATV_COLUNAS_HIST.forEach(function (c) { CertCal_garantirColuna_(abas.HISTORICO, c); });
   ATV_COLUNAS_AVISOS.forEach(function (c) { CertCal_garantirColuna_(abas.AVISOS, c); });
   // Datas são texto "aaaa-mm-ddThh:mm": trava o formato para a planilha não converter sozinha.
-  ['INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'INICIADA_EM', 'CONCLUIDA_EM', 'AGORA_DESDE', 'ATUALIZADO_EM'].forEach(function (c) {
+  ['INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'INICIADA_EM', 'CONCLUIDA_EM', 'AGORA_DESDE', 'ATUALIZADO_EM', 'ATRASO_AVISADO_PREV'].forEach(function (c) {
     CertCal_forcarColunaTexto_(abas.ATIVIDADES, c);
   });
   ['DATA', 'PREVISAO_ANTERIOR', 'PREVISAO_NOVA'].forEach(function (c) { CertCal_forcarColunaTexto_(abas.HISTORICO, c); });
   CertCal_forcarColunaTexto_(abas.AVISOS, 'DATA');
   CertCal_forcarColunaTexto_(abas.AVISOS, 'LIDO_EM');
-  cache.put('ATV_ABAS_OK_V1', '1', 21600);
+  cache.put('ATV_ABAS_OK_V2', '1', 21600);
 }
 
 /** Sessão válida e perfil que pode usar o módulo. Lança erro com mensagem para a tela. */
@@ -135,13 +138,101 @@ function Atividades_comTrava_(fn) {
   try { return fn(); } finally { try { SpreadsheetApp.flush(); } catch (e) {} lock.releaseLock(); }
 }
 
+// E-mail/WhatsApp (SGO_Notificar.js) pedidos durante a chamada: só saem depois que
+// a gravação deu certo e a trava foi solta; se a chamada falhar, nada é enviado.
+var ATV_FILA_NTF = [];
+
+function Atividades_notificarExterno_(destinatarioId, atividadeId, titulo, texto) {
+  if (!destinatarioId) return;
+  ATV_FILA_NTF.push({ usuarios: [destinatarioId], titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'ATIVIDADES', refId: atividadeId });
+}
+
+function Atividades_enviarFila_() {
+  var fila = ATV_FILA_NTF;
+  ATV_FILA_NTF = [];
+  fila.forEach(function (n) { try { SGO_notificar_(n); } catch (e) { console.error('Atividades notificar: ' + ((e && e.message) || e)); } });
+}
+
 function Atividades_resposta_(fn) {
+  ATV_FILA_NTF = [];
   try {
     var r = fn();
-    return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
+    var saida = JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
+    Atividades_enviarFila_();
+    return saida;
   } catch (e) {
+    ATV_FILA_NTF = [];
     return { ok: false, message: String((e && e.message) || e) };
   }
+}
+
+function Atividades_textoNtf_(a, extra) {
+  var linhas = [extra];
+  linhas.push('Atividade: ' + a.TITULO);
+  if (a.DESCRICAO) linhas.push('Descrição: ' + a.DESCRICAO);
+  if (a.MODULO_NOME) linhas.push('Módulo: ' + a.MODULO_NOME);
+  if (a.CLIENTE_NOME) linhas.push('Cliente: ' + a.CLIENTE_NOME + (a.UNIDADE_NOME ? ' - ' + a.UNIDADE_NOME : ''));
+  if (a.PRIORIDADE) linhas.push('Prioridade: ' + a.PRIORIDADE);
+  linhas.push('Prazo: ' + Atividades_dataBr_(a.PREVISAO_ATUAL || a.PRAZO) + '.');
+  linhas.push('Veja em Minhas atividades, no SGO+.');
+  return linhas.join('\n');
+}
+
+/**
+ * Atraso: avisa o responsável por e-mail/WhatsApp UMA vez por atraso (marca a
+ * previsão avisada em ATRASO_AVISADO_PREV; nova previsão que vencer = novo aviso).
+ * Chamado pela verificação periódica das telas (no máximo a cada 10 min) e pela
+ * rotina de hora em hora (Atividades_rotinaAtrasos).
+ */
+function Atividades_notificarAtrasos_() {
+  var agora = Atividades_agora_();
+  var avisar = [];
+  Atividades_comTrava_(function () {
+    Atividades_todas_().forEach(function (a) {
+      if (!Atividades_vencida_(a, agora) || !a.RESPONSAVEL_ID) return;
+      if (a.ATRASO_AVISADO_PREV && a.ATRASO_AVISADO_PREV === a.PREVISAO_ATUAL) return;
+      SGO_DATA.update(Atividades_abas_().ATIVIDADES, a.ID, { ATRASO_AVISADO_PREV: a.PREVISAO_ATUAL });
+      avisar.push(a);
+    });
+  });
+  avisar.forEach(function (a) {
+    Atividades_notificarExterno_(a.RESPONSAVEL_ID, a.ID, 'Atividade atrasada: ' + a.TITULO,
+      Atividades_textoNtf_(a, 'A atividade abaixo passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Entre no SGO+ e registre a justificativa de atraso com a nova previsão, ou conclua a atividade.'));
+  });
+  return avisar.length;
+}
+
+function Atividades_verificarAtrasosTalvez_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    if (cache.get('ATV_ATRASOS_CHECADO')) return;
+    cache.put('ATV_ATRASOS_CHECADO', '1', 600);
+    Atividades_garantirRotina_();
+    Atividades_notificarAtrasos_();
+  } catch (e) { console.error('Atividades atrasos: ' + ((e && e.message) || e)); }
+}
+
+/** Gatilho de hora em hora: avisa atrasos mesmo sem ninguém com o SGO+ aberto. */
+function Atividades_garantirRotina_() {
+  var props = PropertiesService.getScriptProperties();
+  var hoje = Atividades_agora_().slice(0, 10);
+  if (props.getProperty('ATV_ROTINA_CHECADA_EM') === hoje) return;
+  var tem = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'Atividades_rotinaAtrasos'; });
+  if (!tem) ScriptApp.newTrigger('Atividades_rotinaAtrasos').timeBased().everyHours(1).create();
+  props.setProperty('ATV_ROTINA_CHECADA_EM', hoje);
+}
+
+/**
+ * Gatilho de hora em hora (nome sem "_" no fim para o gatilho de tempo do Google achar a função).
+ * Não recebe nem devolve dado de ninguém: só dispara os avisos de atraso ainda não enviados
+ * (cada atraso uma vez), então é inofensiva se chamada de outro lugar.
+ */
+function Atividades_rotinaAtrasos() {
+  Atividades_garantirAbas_();
+  ATV_FILA_NTF = [];
+  var n = Atividades_notificarAtrasos_();
+  Atividades_enviarFila_();
+  return n;
 }
 
 // ------------------------------------------------------------
@@ -155,7 +246,7 @@ function Atividades_todas_() {
 function Atividades_limpar_(r) {
   var o = {};
   ATV_COLUNAS.forEach(function (c) { o[c] = r[c] === undefined || r[c] === null ? '' : r[c]; });
-  ['INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'INICIADA_EM', 'CONCLUIDA_EM', 'AGORA_DESDE', 'ATUALIZADO_EM'].forEach(function (c) {
+  ['INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'INICIADA_EM', 'CONCLUIDA_EM', 'AGORA_DESDE', 'ATUALIZADO_EM', 'ATRASO_AVISADO_PREV'].forEach(function (c) {
     o[c] = Atividades_normData_(o[c], '00:00');
   });
   o.CRIADO_EM = String(o.CRIADO_EM || '');
@@ -357,6 +448,8 @@ function Atividades_apiCriar(sessionId, payload) {
       Atividades_registrarHist_(eu, reg.ID, 'CRIACAO', { para: 'A fazer', texto: 'Atividade lançada para ' + respNome + '. Prazo: ' + Atividades_dataBr_(prazo) + '.' });
       if (respId !== eu.id) {
         Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.');
+        Atividades_notificarExterno_(respId, reg.ID, 'Nova atividade para você: ' + titulo,
+          Atividades_textoNtf_(Atividades_limpar_(reg), eu.nome + ' lançou uma atividade para você no SGO+.'));
       }
       return { item: Atividades_limpar_(reg), message: 'Atividade lançada para ' + respNome + '.' };
     });
@@ -501,6 +594,8 @@ function Atividades_apiEditar(sessionId, payload) {
       if (novoResp && novoResp.id !== eu.id) {
         Atividades_avisar_(novoResp.id, a.ID, 'NOVA', 'Atividade passada para você',
           eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.');
+        Atividades_notificarExterno_(novoResp.id, a.ID, 'Atividade passada para você: ' + titAtual,
+          Atividades_textoNtf_(Object.assign({}, a, dados), eu.nome + ' passou para você uma atividade que estava com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '.'));
       }
       if (novoResp && a.RESPONSAVEL_ID && a.RESPONSAVEL_ID !== eu.id) {
         Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'RESPONSAVEL', 'Atividade passada para outra pessoa',
@@ -629,6 +724,7 @@ function Atividades_apiFazendoAgora(sessionId, payload) {
 function Atividades_apiVerificar(sessionId, payload) {
   return Atividades_resposta_(function () {
     var eu = Atividades_sessao_(sessionId);
+    Atividades_verificarAtrasosTalvez_();
     var agora = Atividades_agora_();
     var minhas = Atividades_todas_().filter(function (a) { return a.RESPONSAVEL_ID === eu.id && Atividades_aberta_(a); });
     var pendentes = minhas.filter(function (a) { return Atividades_vencida_(a, agora); })
@@ -677,6 +773,10 @@ function Atividades_apiJustificar(sessionId, payload) {
       if (a.CRIADO_POR_ID && a.CRIADO_POR_ID !== eu.id) {
         Atividades_avisar_(a.CRIADO_POR_ID, a.ID, 'JUSTIFICATIVA', 'Justificativa de atraso',
           eu.nome + ' justificou o atraso de "' + a.TITULO + '": ' + motivo + ' Previsão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.');
+        Atividades_notificarExterno_(a.CRIADO_POR_ID, a.ID, 'Justificativa de atraso: ' + a.TITULO,
+          eu.nome + ' registrou a justificativa de atraso de uma atividade que você lançou.\n' +
+          'Atividade: ' + a.TITULO + '\nMotivo: ' + motivo + '\nPrevisão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.\n' +
+          'Veja o histórico em Atividades da equipe, no SGO+.');
       }
       return { item: Atividades_obter_(a.ID), message: 'Justificativa registrada. Nova previsão: ' + Atividades_dataBr_(nova) + '.' };
     });

@@ -70,7 +70,35 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
     REGISTRADO_POR: sessao.userId
   });
 
+  Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo);
   return { success: true, item: registro };
+}
+
+/**
+ * 2026-10-16: avisa por e-mail/WhatsApp (SGO_Notificar.js) os executantes da missão
+ * recém-cadastrada, menos quem cadastrou. Só informa — não muda regra nem cálculo;
+ * qualquer falha de envio fica em NTF_ENVIOS e não desfaz o cadastro.
+ * Missão não tem prazo (a data é a da execução, nunca futura), então não há aviso de atraso.
+ */
+function Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo) {
+  try {
+    var destino = execs.filter(function (id) { return id && String(id) !== String(sessao.userId); });
+    if (!destino.length) return;
+    var nomes = {};
+    SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) { nomes[String(u.ID)] = String(u.NOME || u.USUARIO || '').trim(); });
+    var d = String(registro.DATA || ''), dataBr = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d.substring(8, 10) + '/' + d.substring(5, 7) + '/' + d.substring(0, 4) : d;
+    var km = Number(registro.KM_TRECHO) || 0;
+    var texto = (nomes[String(sessao.userId)] || sessao.nome || 'A gestão') + ' cadastrou uma missão em que você é executante.\n' +
+      'Destino: ' + registro.DESTINO + '\n' +
+      'Data: ' + dataBr + '\n' +
+      'Executante(s): ' + execs.map(function (id) { return nomes[String(id)] || 'colaborador'; }).join(' e ') + '\n' +
+      'Distância do trecho: ' + String(km).replace('.', ',') + ' km. ' +
+      (qualifica ? 'Qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).' : 'Não qualifica para o incentivo de missão (mínimo de ' + kmMinimo + ' km).') + '\n' +
+      'Se algum dado estiver errado, fale com a gestão. Veja em Programa de conduta, no SGO+.';
+    SGO_notificar_({ usuarios: destino, titulo: 'Missão cadastrada: ' + registro.DESTINO + ' em ' + dataBr, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID });
+  } catch (e) {
+    console.error('Conduta notificar missão: ' + ((e && e.message) || e));
+  }
 }
 
 function Conduta_apiListarMissoes(sessionId, payload) {

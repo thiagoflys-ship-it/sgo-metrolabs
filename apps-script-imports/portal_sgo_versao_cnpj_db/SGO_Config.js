@@ -304,6 +304,16 @@ const SGO_CFG = (() => {
       ATV_ATIVIDADES: "ATV_ATIVIDADES",
       ATV_HISTORICO: "ATV_HISTORICO",
       ATV_AVISOS: "ATV_AVISOS",
+
+      /* AVISOS DA GESTÃO COM CIÊNCIA — 2026-10-16 (ver SGO_Avisos.js
+         Avisos_garantirAbas_, criadas sob demanda, sem tocar nas outras) */
+      AVS_AVISOS: "AVS_AVISOS",
+      AVS_CIENCIA: "AVS_CIENCIA",
+      AVS_ANEXOS: "AVS_ANEXOS",
+
+      /* REGISTRO DE NOTIFICAÇÕES POR E-MAIL/WHATSAPP — 2026-10-16
+         (ver SGO_Notificar.js SGO_notificar_) */
+      NTF_ENVIOS: "NTF_ENVIOS",
     },
 
     /* =========================

@@ -230,7 +230,7 @@
     var lista = [], vistos = {};
     document.querySelectorAll("#menu .menu-btn[data-mod]").forEach(function (b) {
       var k = b.getAttribute("data-mod");
-      if (!k || vistos[k] || k === "dashboard" || k === "minhas_atividades" || k === "atividades_equipe") return;
+      if (!k || vistos[k] || k === "dashboard" || k === "minhas_atividades" || k === "atividades_equipe" || k === "avisos") return;
       vistos[k] = 1;
       var c = b.cloneNode(true);
       c.querySelectorAll(".menu-badge, .menu-btn-icon").forEach(function (x) { x.remove(); });
@@ -1087,7 +1087,7 @@
     if (mod !== "minhas_atividades" && mod !== "atividades_equipe") ATV.tela = "";
     Atividades_fecharDrawer_();
     if (!SESSION || Atividades_ehCliente_()) return;
-    if (!mod || mod === "dashboard" || mod === "mobile_home" || mod === "minhas_atividades" || mod === "atividades_equipe") return;
+    if (!mod || mod === "dashboard" || mod === "mobile_home" || mod === "minhas_atividades" || mod === "atividades_equipe" || mod === "avisos") return;
     var cab = document.querySelector("#conteudo .module-header");
     if (!cab || cab.querySelector(".atv-btn-modulo")) return;
     var b = document.createElement("button");

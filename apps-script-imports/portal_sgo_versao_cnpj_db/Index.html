@@ -108,6 +108,7 @@
           <div class="menu-grupo-itens" id="menu-grupo-itens-principal">
           <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
           <button type="button" class="menu-btn" data-mod="minhas_atividades" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
+          <button type="button" class="menu-btn" data-mod="avisos" id="menu-btn-avisos" onclick="abrir('avisos')"><span class="menu-btn-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span>Avisos<span class="menu-badge" id="menuBadgeAvisos"></span></button>
           <button type="button" class="menu-btn" data-mod="atividades_equipe" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
           </div>
         </div>
@@ -212,6 +213,7 @@
 <?!= include('JS_Conduta'); ?>
 <?!= include('JS_Inventario'); ?>
 <?!= include('JS_Atividades'); ?>
+<?!= include('JS_Avisos'); ?>
 <?!= include('JS_Inicio'); ?>
 <!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
 <script>
