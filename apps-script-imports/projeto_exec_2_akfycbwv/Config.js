@@ -7,8 +7,8 @@
  ****************************************************/
 
 const CONFIG = {
-  APP_NAME: 'METROLABS - SISTEMA LAVADORAS',
-  APP_SUBTITLE: 'Suíte técnica para lavadora ultrassônica, termodesinfectora, rastreabilidade e emissão documental.',
+  APP_NAME: 'Lavadoras',
+  APP_SUBTITLE: 'Relatório de lavadora ultrassônica e termodesinfectora a partir do modelo oficial.',
   LOGO_ID: '1WuoymOh5_0S2X3jC2otSq89HMltdDEoP',
 
   MODULOS: {
