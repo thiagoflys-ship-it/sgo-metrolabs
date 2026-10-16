@@ -229,6 +229,27 @@ function MIGRACAO_empacotarArquivos() {
   return MIGRACAO_empacotarContinuar_();
 }
 
+/**
+ * DIA DA TROCA: depois de rodar MIGRACAO_exportarPacote de novo (mapa atualizado), rode esta função UMA vez.
+ * Empacota só os arquivos novos ou alterados desde o último empacotamento (lista em arquivos/_empacotados.json),
+ * em pacotes com numeração seguinte (os anteriores ficam onde estão). Continua sozinha como a completa.
+ */
+function MIGRACAO_empacotarNovos() {
+  MIGRACAO_exigirEditor_();
+  var pacote = MIGRACAO_pasta_();
+  var it = pacote.getFoldersByName('arquivos');
+  if (!it.hasNext()) throw new Error('Ainda não há empacotamento anterior. Rode MIGRACAO_empacotarArquivos (completo) primeiro.');
+  var destino = it.next();
+  if (!MIGRACAO_lerJson_(destino, '_empacotados.json')) throw new Error('Falta arquivos/_empacotados.json (o empacotamento completo não terminou). Rode MIGRACAO_empacotarArquivos e espere o _concluido.json.');
+  var ultimo = 0, arqs = destino.getFiles();
+  while (arqs.hasNext()) { var m = /^lote_(\d+)\.zip$/.exec(arqs.next().getName()); if (m) ultimo = Math.max(ultimo, Number(m[1])); }
+  var concl = destino.getFilesByName('_concluido.json');
+  while (concl.hasNext()) concl.next().setTrashed(true);
+  MIGRACAO_gravarJson_(destino, '_erros.json', []);
+  PropertiesService.getScriptProperties().setProperty(MIGRACAO_ZIP_ESTADO, JSON.stringify({ i: 0, lote: ultimo + 1, novos: true, primeiroLote: ultimo + 1 }));
+  return MIGRACAO_empacotarContinuar_();
+}
+
 function MIGRACAO_empacotarContinuar_() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'MIGRACAO_empacotarContinuar_') ScriptApp.deleteTrigger(t);
@@ -245,11 +266,13 @@ function MIGRACAO_empacotarContinuar_() {
   var nomeZip = function (n) { return 'lote_' + ('000' + n).slice(-4) + '.zip'; };
   var seguro = function (s) { return String(s || 'arquivo').replace(/[\/:*?"<>|]+/g, '_').slice(0, 150); };
   var erros = MIGRACAO_lerJson_(destino, '_erros.json') || [];
+  var base = estado.novos ? (MIGRACAO_lerJson_(destino, '_empacotados.json') || {}) : null;   // id → data de alteração já empacotada
 
   while (estado.i < lista.length && Date.now() - inicio < 4.5 * 60 * 1000) {
     var blobs = [], soma = 0;
     while (estado.i < lista.length && soma < MIGRACAO_ZIP_LIMITE_BYTES && Date.now() - inicio < 4.5 * 60 * 1000) {
       var a = lista[estado.i];
+      if (base && base[a.id] === a.atualizado) { estado.i++; continue; }   // sem mudança desde o último empacotamento
       try {
         var f = DriveApp.getFileById(a.id), blob, nome = a.id + '__' + seguro(a.nome);
         if (/^application\/vnd\.google-apps\.spreadsheet/.test(a.tipo)) { blob = f.getAs('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); nome += '.xlsx'; }
@@ -279,13 +302,19 @@ function MIGRACAO_empacotarContinuar_() {
   MIGRACAO_gravarJson_(destino, '_erros.json', erros);
 
   if (estado.i >= lista.length) {
-    MIGRACAO_gravarJson_(destino, '_concluido.json', { concluido_em: new Date().toISOString(), arquivos: lista.length, lotes: estado.lote - 1, erros: erros.length });
+    // lista do que já está empacotado (base do MIGRACAO_empacotarNovos): tudo do mapa, menos os que deram erro
+    var comErro = {}, empacotados = base || {};
+    erros.forEach(function (e) { comErro[e.id] = true; });
+    lista.forEach(function (a) { if (!comErro[a.id]) empacotados[a.id] = a.atualizado; });
+    MIGRACAO_gravarJson_(destino, '_empacotados.json', empacotados);
+    var lotes = estado.lote - (estado.primeiroLote || 1);
+    MIGRACAO_gravarJson_(destino, '_concluido.json', { concluido_em: new Date().toISOString(), modo: estado.novos ? 'novos' : 'completo', arquivos: lista.length, lotes: lotes, erros: erros.length });
     props.deleteProperty(MIGRACAO_ZIP_ESTADO);
-    Logger.log('CONCLUÍDO: %s arquivos em %s pacotes .zip, %s erro(s). Pasta: %s', lista.length, estado.lote - 1, erros.length, destino.getUrl());
+    Logger.log('CONCLUÍDO (%s): %s arquivos no mapa, %s pacote(s) .zip novo(s), %s erro(s). Pasta: %s', estado.novos ? 'só novos/alterados' : 'completo', lista.length, lotes, erros.length, destino.getUrl());
     return 'CONCLUÍDO';
   }
   ScriptApp.newTrigger('MIGRACAO_empacotarContinuar_').timeBased().after(60 * 1000).create();
-  var msg = 'Em andamento: ' + estado.i + ' de ' + lista.length + ' arquivos (' + (estado.lote - 1) + ' pacotes). Continua sozinho em 1 minuto.';
+  var msg = 'Em andamento: ' + estado.i + ' de ' + lista.length + ' arquivos (' + (estado.lote - (estado.primeiroLote || 1)) + ' pacotes). Continua sozinho em 1 minuto.';
   Logger.log(msg);
   return msg;
 }
