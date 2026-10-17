@@ -27,10 +27,11 @@ function CertCalGestIA_gerar_(tipo, contexto) {
   var prompt = regras + '\n\nTAREFA: ' + tarefa + '\n\nCONTEXTO:\n' + JSON.stringify(contexto);
   var resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + key, {
     method:'post', muteHttpExceptions:true, contentType:'application/json',
-    payload:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:4096,temperature:0.2}})
+    payload:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:8192,temperature:0.2}})
   });
   if (resp.getResponseCode() !== 200) throw new Error('Falha ao gerar interpretação por IA (HTTP ' + resp.getResponseCode() + ').');
   var body=JSON.parse(resp.getContentText()||'{}');
+  if(body.candidates&&body.candidates[0]&&body.candidates[0].finishReason==='MAX_TOKENS') throw new Error('A resposta da IA veio incompleta.');
   var texto=body.candidates&&body.candidates[0]&&body.candidates[0].content&&body.candidates[0].content.parts;
   texto=texto&&texto.map(function(p){return p.text||'';}).join('');
   var resumo=/###RESUMO###([\s\S]*?)###PRIORIDADES###/.exec(texto||'');
@@ -40,20 +41,34 @@ function CertCalGestIA_gerar_(tipo, contexto) {
 }
 
 /**
- * Mesma chamada, mas o relatório gerencial não fica bloqueado quando a IA falha:
- * os dados (tabelas, indicadores e gráficos) vêm do cadastro e continuam valendo;
- * a seção de interpretação diz por que ficou sem texto e o que fazer.
+ * Mesma chamada, mas o relatório gerencial nunca fica bloqueado quando a IA falha:
+ * sai uma análise padrão escrita a partir dos próprios indicadores (sem números
+ * inventados) e o motivo vai em `aviso`, para a tela — não para o documento.
  */
 function CertCalGestIA_gerarOuAviso_(tipo, contexto) {
   try {
-    return CertCalGestIA_gerar_(tipo, contexto);
+    var r = CertCalGestIA_gerar_(tipo, contexto);
+    r.aviso = '';
+    return r;
   } catch (e) {
-    var motivo = String((e && e.message) || e || 'falha desconhecida');
-    return {
-      resumo: 'Esta emissão saiu sem o texto da IA. Motivo: ' + motivo + ' Os indicadores, tabelas e gráficos abaixo foram calculados diretamente do cadastro e não dependem da IA.',
-      prioridades: tipo === 'RENOVACAO'
-        ? 'Siga a ordem de prioridade do mapa de padrões abaixo (P1 a P5). Para incluir a interpretação, gere o relatório de novo depois de resolver o motivo indicado.'
-        : 'Use os índices e gráficos abaixo. Para incluir a interpretação, gere o relatório de novo depois de resolver o motivo indicado.'
-    };
+    var motivo = String((e && e.message) || e || 'falha desconhecida').replace(/^A interpretação por IA não está disponível: /, '').replace(/[.\s]+$/, '');
+    var c = contexto || {};
+    var n = function (v) { return SGO_DocA4_num_(Number(v) || 0, 0); };
+    var resumo, prioridades;
+    if (tipo === 'RENOVACAO') {
+      var k = c.contagens || {};
+      resumo = 'O cadastro reúne ' + n(c.total) + ' padrões de referência ativos: ' + n(k.OK) + ' vigentes, ' + n(k.VENCENDO) +
+        ' com vencimento em até 30 dias, ' + n(k.VENCIDO) + ' vencidos, ' + n(k.SEM_VALIDADE) + ' sem validade informada e ' +
+        n(k.VALIDADE_INVALIDA) + ' com data de validade inválida. ' + n(c.comErros) + ' cadastros têm dados a completar ou corrigir.';
+      prioridades = 'Trate os padrões na ordem do mapa abaixo: primeiro os vencidos (P1), depois os sem validade ou com data inválida (P2), os que vencem em até 30 dias (P3) e os cadastros incompletos (P4). Padrão vencido na data da calibração não pode ser usado em certificado.';
+    } else {
+      resumo = 'No período (' + String(c.periodo || '') + '), foram emitidos ' + n(c.totalCertificados) + ' certificados de calibração para ' +
+        n(c.clientesAtendidos) + ' clientes e ' + n(c.equipamentosAtendidos) + ' equipamentos, com ' + n(c.pontosCalibrados) +
+        ' pontos calibrados. ' + n(c.comRelatorioIA) + ' certificados têm relatório interpretativo.';
+      var p = c.padroes || {};
+      prioridades = 'Situação atual dos padrões: ' + n(p.validos) + ' vigentes de ' + n(p.total) + ', ' + n(p.vencidos) + ' vencidos e ' + n(p.vencendo) +
+        ' com vencimento em até 30 dias. Revise os vencidos e os sem validade antes de novas emissões.';
+    }
+    return { resumo: resumo, prioridades: prioridades, aviso: 'O relatório saiu com a análise padrão, sem a redação da IA: ' + motivo + '.' };
   }
 }

@@ -278,11 +278,13 @@ function tplNR13_renderReal_() {
     '      <select id="nr13-equipamento-existente"><option value="">— selecione —</option></select>' +
     '      <button class="btn" onclick="tplNR13_selecionarEquipamentoExistente()">Usar este equipamento</button>' +
     '    </div>' +
+    '    <button class="btn btn-sm hidden" id="nr13-btn-novo-equip" onclick="tplNR13_mostrarFormNovoEquip_()">+ Cadastrar equipamento novo</button>' +
+    '    <div id="nr13-form-novo-equip">' +
     '    <p class="muted">ou cadastre um novo:</p>' +
     '    <label>Unidade</label>' +
     '    <select id="nr13-unidade"></select>' +
     '    <div class="grid-3">' +
-    '      <div><label>Tipo de vaso</label><select id="nr13-eq-tipo">' + NR13_TIPOS_VASO.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('') + '</select></div>' +
+    '      <div><label>Tipo de vaso</label><select id="nr13-eq-tipo-novo">' + NR13_TIPOS_VASO.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('') + '</select></div>' +
     '      <div><label>Fabricante</label><input id="nr13-eq-fabricante"></div>' +
     '      <div><label>Modelo</label><input id="nr13-eq-modelo"></div>' +
     '    </div>' +
@@ -291,7 +293,8 @@ function tplNR13_renderReal_() {
     '      <div><label>TAG</label><input id="nr13-eq-tag"></div>' +
     '      <div><label>Setor</label><input id="nr13-eq-setor"></div>' +
     '    </div>' +
-    '    <button class="btn-primary" onclick="tplNR13_criarEquipamento()">Cadastrar Equipamento</button>' +
+    '    <button class="btn-primary" onclick="tplNR13_criarEquipamento()">Cadastrar equipamento</button>' +
+    '    </div>' +
     '    <div id="nr13-equipamento-status"></div>' +
     '    <div id="nr13-equipamento-selecionado" class="hidden equip-card"></div>' +
     '    <div id="nr13-pendencias-alerta"></div>' +
@@ -300,6 +303,7 @@ function tplNR13_renderReal_() {
     '  <div class="panel hidden" id="nr13-panel-vaso">' +
     '    <h2>3. Dados técnicos do vaso</h2>' +
     '    <span id="nr13-eq-tipo-atual" class="hidden"></span>' +
+    '    <div class="grid-4"><div><label>Tipo de vaso</label><select id="nr13-eq-tipo">' + NR13_TIPOS_VASO.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('') + '</select></div></div>' +
     '    <p class="muted">Informe os valores exatamente como estão na plaqueta de identificação do fabricante — escolha a unidade correspondente, o sistema converte sozinho.</p>' +
     '    <div class="grid-4">' +
     '      <div><label>PMTA — Pressão Máx. de Trabalho Admissível</label><input id="nr13-pmta" placeholder="Ex.: 6" oninput="tplNR13_recalcularCategoria_()"></div>' +
@@ -334,7 +338,7 @@ function tplNR13_renderReal_() {
     '    <label>Data prevista da próxima inspeção (dd/mm/aaaa)</label>' +
     '    <input id="nr13-data-proxima-inspecao" placeholder="Sugestão automática: 1 ano após a data de término" style="max-width:260px;">' +
     '    <p class="muted">Preenchida sozinha com 1 ano após a data de término — pode apagar e digitar outra data manualmente a qualquer momento (ex.: se a categoria do vaso permitir um prazo maior, ou se o cliente pedir um prazo menor).</p>' +
-    '    <label>Profissional Habilitado (PH) responsável</label><select id="nr13-assinante-ph" style="max-width:340px;"><option value="">— selecione —</option>' +
+    '    <label>Profissional Legalmente Habilitado (PLH) responsável</label><select id="nr13-assinante-ph" style="max-width:340px;"><option value="">— selecione —</option>' +
     NR13_ASSINANTES.map(function(n) { return '<option value="' + n + '">' + n + '</option>'; }).join('') +
     '      </select>' +
 
@@ -559,7 +563,7 @@ function tplNR13_criarEquipamento() {
   var payload = {
     clienteId: nr13State.cliente.ID,
     unidadeId: document.getElementById('nr13-unidade').value,
-    tipo: document.getElementById('nr13-eq-tipo').value,
+    tipo: document.getElementById('nr13-eq-tipo-novo').value,
     fabricante: document.getElementById('nr13-eq-fabricante').value,
     modelo: document.getElementById('nr13-eq-modelo').value,
     serie: document.getElementById('nr13-eq-serie').value,
@@ -577,8 +581,26 @@ function tplNR13_criarEquipamento() {
   }).catch(function(err) { tplNR13_erro('nr13-equipamento-status', err); });
 }
 
+function tplNR13_mostrarFormNovoEquip_() {
+  var f = document.getElementById('nr13-form-novo-equip');
+  if (f) f.classList.remove('hidden');
+  var b = document.getElementById('nr13-btn-novo-equip');
+  if (b) b.classList.add('hidden');
+}
+
 function tplNR13_confirmarEquipamento_(eq) {
   nr13State.equipamentoSelecionado = eq;
+  // Equipamento escolhido: o formulário de cadastro fecha (fica atrás do botão
+  // "+ Cadastrar equipamento novo") e os campos dele são limpos, para não
+  // misturar dados digitados ali com os do equipamento escolhido.
+  ['nr13-eq-fabricante', 'nr13-eq-modelo', 'nr13-eq-serie', 'nr13-eq-tag', 'nr13-eq-setor'].forEach(function(idCampo) {
+    var c = document.getElementById(idCampo);
+    if (c) c.value = '';
+  });
+  var formNovo = document.getElementById('nr13-form-novo-equip');
+  if (formNovo) formNovo.classList.add('hidden');
+  var btnNovo = document.getElementById('nr13-btn-novo-equip');
+  if (btnNovo) btnNovo.classList.remove('hidden');
   var el = document.getElementById('nr13-equipamento-selecionado');
   el.classList.remove('hidden');
   el.innerHTML = '<strong>' + (eq.TIPO || '') + '</strong> — TAG ' + (eq.TAG || '') + '<br>' + (eq.FABRICANTE || '') + ' / ' + (eq.MODELO || '');
@@ -976,7 +998,7 @@ function tplNR13_montarPayload_() {
     laudoId: nr13State.laudoId,
     registroOrigemId: nr13State.registroOrigemId,
     clienteId: nr13State.cliente ? nr13State.cliente.ID : '',
-    unidadeId: document.getElementById('nr13-unidade') ? document.getElementById('nr13-unidade').value : '',
+    unidadeId: (nr13State.equipamentoSelecionado && nr13State.equipamentoSelecionado.UNIDADE_ID) || (document.getElementById('nr13-unidade') ? document.getElementById('nr13-unidade').value : ''),
     equipamentoId: nr13State.equipamentoSelecionado ? nr13State.equipamentoSelecionado.ID : '',
     tipoVaso: document.getElementById('nr13-eq-tipo').value,
     fabricante: document.getElementById('nr13-eq-fabricante').value || (nr13State.equipamentoSelecionado ? nr13State.equipamentoSelecionado.FABRICANTE : ''),
@@ -1240,7 +1262,7 @@ function tplNR13_manualHtml_() {
   'reservatório, entre outros — é inspecionado. O sistema calcula sozinho a categoria de risco do vaso e o prazo até a ' +
   'próxima inspeção, e usa Inteligência Artificial pra ajudar a redigir a interpretação técnica das fotos e a lapidar os ' +
   'textos do laudo — mas quem decide o resultado final (Aprovado, Aprovado com Ressalvas ou Reprovado) é sempre o ' +
-  'engenheiro Profissional Habilitado (PH), nunca a IA.</p>' +
+  'engenheiro Profissional Legalmente Habilitado (PLH), nunca a IA.</p>' +
 
   '<h2 id="tplNR13_ms2">2. Mapa da tela</h2>' +
   '<ol>' +
@@ -1296,7 +1318,7 @@ function tplNR13_manualHtml_() {
   '<h2 id="tplNR13_ms8">8. Erros comuns</h2>' +
   '<table><tr><th>O que aconteceu</th><th>O que fazer</th></tr>' +
   '<tr><td>A categoria não aparece</td><td>Confira se PMTA, Volume e Classe do fluido estão todos preenchidos</td></tr>' +
-  '<tr><td>"Selecione o Profissional Habilitado (PH) responsável"</td><td>Escolha um assinante na Seção 4 antes de emitir</td></tr>' +
+  '<tr><td>"Selecione o Profissional Legalmente Habilitado (PLH) responsável"</td><td>Escolha um assinante na Seção 4 antes de emitir</td></tr>' +
   '<tr><td>A foto não sobe</td><td>Aguarde — o upload acontece em segundo plano; se falhar, aparece o motivo abaixo da foto</td></tr>' +
   '<tr><td>Quero corrigir um laudo já emitido</td><td>Não é possível — emita um novo laudo (reinspeção, se for o caso de uma ressalva)</td></tr>' +
   '</table>' +

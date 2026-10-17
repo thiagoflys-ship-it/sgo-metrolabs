@@ -80,14 +80,14 @@ function DeclExec_montarDocumentoHtml_(ctx) {
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
   html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  html.push(SGO_DocA4_css_() + '</style></head><body>');
+  html.push(SGO_DocA4_css_() + RelTecA4_css_({ titulo: 'Declaração de Execução de Serviço', numero: ctx.numeroDocumento || '', revisao: ctx.revisao || '00' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
 
   html.push('<div class="topo">');
   if (logo && logo.data) {
-    html.push('<img class="logo-topo" src="data:' + logo.mimeType + ';base64,' + logo.data + '" alt="Metrolab\'s">');
+    html.push('<img class="logo-topo" src="data:' + logo.mimeType + ';base64,' + logo.data + '" alt="Metrolabs">');
   } else {
     html.push('<div></div>');
   }
@@ -102,7 +102,7 @@ function DeclExec_montarDocumentoHtml_(ctx) {
   html.push('<tr><td class="rotulo">Marca / Modelo</td><td>' + DeclExec_escaparHtml_((ctx.marca || '—') + ' / ' + (ctx.modelo || '—')) + '</td></tr>');
   html.push('<tr><td class="rotulo">Localização</td><td>' + DeclExec_escaparHtml_(ctx.localizacao || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Período do atendimento</td><td>' + DeclExec_escaparHtml_(ctx.periodoLabel || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Local do atendimento</td><td>' + DeclExec_escaparHtml_(ctx.localAtendimento === 'LABORATORIO' ? 'Laboratório da Metrolab\'s' : 'Instalações do cliente') + '</td></tr>');
+  html.push('<tr><td class="rotulo">Local do atendimento</td><td>' + DeclExec_escaparHtml_(ctx.localAtendimento === 'LABORATORIO' ? 'Laboratório da Metrolabs' : 'Instalações do cliente') + '</td></tr>');
   html.push('<tr><td class="rotulo">Técnico executor</td><td>' + DeclExec_escaparHtml_(ctx.tecnicoExecutor || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Empresa executante</td><td>' + DeclExec_escaparHtml_(empresa.nome) + (empresa.cnpj ? (' — CNPJ ' + DeclExec_escaparHtml_(empresa.cnpj)) : '') + '</td></tr>');
   html.push('</table>');

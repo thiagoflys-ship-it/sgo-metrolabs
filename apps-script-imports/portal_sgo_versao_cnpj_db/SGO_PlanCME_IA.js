@@ -132,7 +132,7 @@ function PlanCMEIA_montarContexto_(dados, resultado) {
 
   linhas.push("CLIENTE: " + ((dados.cliente && dados.cliente.razaoSocial) || "-"));
   linhas.push("TIPO DE EQUIPAMENTO: " + (equipamento.tipo || "-"));
-  linhas.push("TIPO DE PROCESSO: " + (equipamento.tipoProcesso || "-"));
+  linhas.push("TIPO DE PROCESSO: " + (PlanCME_tipoProcessoGenerico_(equipamento.tipoProcesso) || "-"));
   linhas.push("MARCA/MODELO: " + (equipamento.marca || "-") + " / " + (equipamento.modelo || "-"));
   linhas.push("VOLUME DA CÂMARA: " + (equipamento.volume ? PlanCME_formatarNumeroBr_(equipamento.volume) : "-") + " litros");
   linhas.push("");
@@ -311,7 +311,7 @@ function PlanCME_gerarJustificativasIA_(dados, resultado) {
         muteHttpExceptions: true,
         payload: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, topP: 0.95, maxOutputTokens: PLANCMEIA_TOKENS }
+          generationConfig: { temperature: 0.2, topP: 0.95, maxOutputTokens: PLANCMEIA_TOKENS }
         })
       });
 

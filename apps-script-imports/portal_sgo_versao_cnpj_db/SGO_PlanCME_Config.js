@@ -65,8 +65,7 @@ const PLANCME_CFG = {
     // Constantes para Lavadoras Ultrassônicas — critério vem de
     // documentação do fabricante (usuário vai anexar), NÃO MEXER.
     LAVA_ULTR_REPETICOES: 4,
-    LAVA_ULTR_PONTOS_BRASMEDICAL: 9,
-    LAVA_ULTR_PONTOS_SANDERS: 9,
+    LAVA_ULTR_PONTOS: 9,
     LAVA_ULTR_LIMPEZA_POR_SENSOR: 1
   },
 
@@ -75,9 +74,9 @@ const PLANCME_CFG = {
     AUTOCLAVE_PEROXIDO: "Autoclave de Peróxido de Hidrogênio",
     AUTOCLAVE_FORMALDEIDO: "Esterilizador a Vapor de Baixa Temperatura e Formaldeído (VBTF)",
     AUTOCLAVE_ETO: "Esterilizador a Óxido de Etileno (ETO)",
-    LAVADORA_ULTR_BRASMEDICAL: "Lavadora Ultrassônica (Brasmedical)",
-    LAVADORA_ULTR_SANDERS: "Lavadora Ultrassônica (Sanders)",
-    LAVADORA_ULTR_OUTROS: "Lavadora Ultrassônica (Outros)",
+    // Decisão do dono (17/10/2026): sem nome de fabricante nas opções. As três
+    // opções antigas (duas com marca) tinham o mesmo cálculo; viraram uma só.
+    LAVADORA_ULTR: "Lavadora Ultrassônica",
     TERMODESINFECTORA: "Termodesinfectora"
   },
 

@@ -90,7 +90,7 @@ function RegOp_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>' + RegOp_escaparHtml_(dados.tipoDocumentoNome || 'Registro') + ' — ' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</title>');
-  html.push('<style>' + RegOp_getCss_() + SGO_DocA4_css_() + '</style></head><body>');
+  html.push('<style>' + RegOp_getCss_() + SGO_DocA4_css_() + RelTecA4_css_({ titulo: (dados.tipoDocumentoNome || 'Registro operacional') + (hospital.razaoSocial ? ' — ' + hospital.razaoSocial : ''), numero: dados.registroId ? RegOp_numeroCurto_(dados.registroId) : '', revisao: '00' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -108,6 +108,7 @@ function RegOp_montarDocumentoHtml_(dados) {
   html.push('<div class="controle-doc-linha">');
   html.push('<span><b>Tipo de Documento:</b> ' + RegOp_escaparHtml_(dados.tipoDocumentoNome || '—') + '</span>');
   html.push('<span><b>Data do Registro:</b> ' + RegOp_escaparHtml_(dados.data || '') + '</span>');
+  if (dados.registroId) html.push('<span><b>Registro nº:</b> ' + RegOp_escaparHtml_(RegOp_numeroCurto_(dados.registroId)) + '</span>');
   html.push('</div>');
   if (dados.registroOrigemInfo) {
     html.push('<div class="controle-doc-linha"><span><b>Referente ao registro de:</b> ' +
@@ -307,4 +308,10 @@ function RegOp_escaparHtml_(valor) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+
+/** Número curto do registro para o documento (o ID completo fica na base). */
+function RegOp_numeroCurto_(id) {
+  return 'REG-' + String(id || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toUpperCase();
 }

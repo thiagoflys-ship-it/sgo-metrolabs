@@ -82,10 +82,14 @@ const NR13_CFG = Object.freeze({
     V: Object.freeze({ externo: 5, interno: 10 })
   }),
 
+  // Referência legal conferida em 17/10/2026 no texto consolidado do MTE (gov.br, "NR-13 atualizada"):
+  // redação da Portaria MTP 1.846/2022 (retificada em 20/10/2022); a Portaria MTP 4.219/2022 só alterou
+  // o item 13.4.1.11 (CIPA → CIPA e assédio). A citação anterior atribuía a redação à 4.219, o que era incoerente.
   // Título oficial da NR-13. (O texto anterior, "Inspeção de Caldeira, Laudo
   // de Vaso sob Pressão, Inspeção de Tanques...", não é o nome da norma.)
   NORMA_REFERENCIA: 'NR-13 — Caldeiras, Vasos de Pressão, Tubulações e Tanques Metálicos de Armazenamento ' +
-    '(Ministério do Trabalho e Emprego, redação dada pela Portaria MTP nº 4.219/2022, com retificação de 20/10/2022).',
+    '(Ministério do Trabalho e Emprego), com redação dada pela Portaria MTP nº 1.846, de 1º de julho de 2022 (retificada em 20/10/2022), ' +
+    'e alterada pela Portaria MTP nº 4.219, de 20 de dezembro de 2022.',
 
   /**
    * Teste Hidrostático (TH) — a pressão de teste usual é 1,5x a PMTA

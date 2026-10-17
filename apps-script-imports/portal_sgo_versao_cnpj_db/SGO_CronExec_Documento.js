@@ -68,7 +68,8 @@ function CronExec_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>Cronograma de Execução — ' + CronExec_escaparHtml_(cliente.razaoSocial || 'Cliente') + '</title>');
-  html.push('<style>' + CronExec_getCss_() + SGO_DocA4_css_() + '</style></head><body>');
+  const numeroCron = dados.numeroDocumento || ('CRN-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm'));
+  html.push('<style>' + CronExec_getCss_() + SGO_DocA4_css_() + RelTecA4_css_({ titulo: 'Cronograma de Execução — ' + (cliente.razaoSocial || ''), numero: numeroCron, revisao: '00' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -79,7 +80,7 @@ function CronExec_montarDocumentoHtml_(dados) {
   } else {
     html.push('<div></div>');
   }
-  html.push('<div class="titulo-doc"><h1>CRONOGRAMA DE EXECUÇÃO</h1><small>Documento gerado em ' + CronExec_escaparHtml_(dataAtual) + '</small></div>');
+  html.push('<div class="titulo-doc"><h1>CRONOGRAMA DE EXECUÇÃO</h1><small>Documento nº ' + CronExec_escaparHtml_(numeroCron) + ' · Revisão 00 · emitido em ' + CronExec_escaparHtml_(dataAtual) + '</small></div>');
   html.push('</div>');
 
   html.push('<table class="dados">');

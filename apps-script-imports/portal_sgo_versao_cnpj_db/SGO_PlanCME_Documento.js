@@ -90,7 +90,8 @@ function PlanCME_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>Planejamento Técnico de Qualificação — ' + PlanCME_escaparHtml_(dados.cliente.razaoSocial || 'Cliente') + '</title>');
-  html.push('<style>' + PlanCME_getCss_() + SGO_DocA4_css_() + '</style></head><body>');
+  const numeroPlan = dados.numeroDocumento || ('PLC-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm'));
+  html.push('<style>' + PlanCME_getCss_() + SGO_DocA4_css_() + RelTecA4_css_({ titulo: 'Planejamento Técnico de Qualificação — ' + (dados.cliente.razaoSocial || ''), numero: numeroPlan, revisao: '00' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
@@ -101,7 +102,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   } else {
     html.push('<div></div>');
   }
-  html.push('<div class="titulo-doc"><h1>PLANEJAMENTO TÉCNICO DE QUALIFICAÇÃO E QUANTITATIVO DE INSUMOS</h1><small>Documento gerado em ' + PlanCME_escaparHtml_(dataAtual) + '</small></div>');
+  html.push('<div class="titulo-doc"><h1>PLANEJAMENTO TÉCNICO DE QUALIFICAÇÃO E QUANTITATIVO DE INSUMOS</h1><small>Documento nº ' + PlanCME_escaparHtml_(numeroPlan) + ' · Revisão 00 · emitido em ' + PlanCME_escaparHtml_(dataAtual) + '</small></div>');
   html.push('</div>');
 
   html.push('<table class="dados">');
@@ -320,9 +321,14 @@ function PlanCME_registrarDocumento_(dados, arquivo, tipoDocumento) {
   ]);
 }
 
+/** Valores antigos com marca ("Lavadora Ultrassônica (…)") viram o nome genérico. */
+function PlanCME_tipoProcessoGenerico_(tp) {
+  return String(tp || '').replace(/^Lavadora Ultrass[oô]nica\s*\([^)]*\)\s*$/i, 'Lavadora Ultrassônica');
+}
+
 function PlanCME_obterTipoProcesso_(dados) {
   return (dados && dados.equipamento && dados.equipamento.tipoProcesso)
-    ? dados.equipamento.tipoProcesso
+    ? PlanCME_tipoProcessoGenerico_(dados.equipamento.tipoProcesso)
     : PLANCME_CFG.TIPOS_EQUIPAMENTO.AUTOCLAVE_VAPOR;
 }
 

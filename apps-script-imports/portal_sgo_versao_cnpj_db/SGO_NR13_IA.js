@@ -8,7 +8,7 @@
  * no Portal).
  *
  * REGRA DE OURO, igual ao CertCal: a IA NUNCA decide aprovação/reprovação/
- * ressalvas sozinha — isso é sempre uma decisão do Profissional Habilitado
+ * ressalvas sozinha — isso é sempre uma decisão do Profissional Legalmente Habilitado
  * (PH), digitada/escolhida por ele. A IA só: (1) descreve tecnicamente o
  * que uma foto mostra a partir do que o usuário disse que ela representa;
  * (2) reescreve um texto do usuário de forma mais clara, sem inventar
@@ -165,7 +165,7 @@ function NR13IA_analisarFoto_(base64, mimeType, legendaUsuario, contextoVaso) {
   if (!base64) throw new Error('Nenhuma imagem informada.');
 
   var prompt =
-    'Você é um Profissional Habilitado (engenheiro) fazendo a inspeção de segurança NR-13 de um vaso de pressão. ' +
+    'Você é um Profissional Legalmente Habilitado (engenheiro) fazendo a inspeção de segurança NR-13 de um vaso de pressão. ' +
     'O técnico tirou uma foto durante a inspeção e descreveu em poucas palavras o que ela representa. Sua tarefa é ' +
     'aprofundar tecnicamente essa descrição, como se fosse escrever o registro fotográfico do laudo oficial ' +
     '(item 13.5.4.11, alínea "h", da NR-13 — registro fotográfico das anomalias detectadas no exame interno e externo).\n\n' +
@@ -273,7 +273,7 @@ function NR13IA_gerarParecerConclusivo_(payload) {
     : 'APROVADO';
 
   var prompt =
-    'Você é um engenheiro Profissional Habilitado (PH) redigindo o "parecer conclusivo quanto à integridade do ' +
+    'Você é um engenheiro Profissional Legalmente Habilitado (PLH) redigindo o "parecer conclusivo quanto à integridade do ' +
     'vaso de pressão até a próxima inspeção" (item 13.5.4.11, alínea "k", da NR-13) — a seção mais importante do ' +
     'laudo.\n' +
     'O ENGENHEIRO JÁ DECIDIU O VEREDITO (não questione, apenas fundamente por escrito): ' + veredictoTexto + '\n\n' +
@@ -312,7 +312,7 @@ var NR13IA_MARC_FIM = '###FIM###';
 
 function NR13IA_gerarTextosLaudo_(ctx) {
   var prompt =
-    'Você é um engenheiro Profissional Habilitado redigindo a Introdução e o Objetivo de um Laudo de Inspeção de ' +
+    'Você é um engenheiro Profissional Legalmente Habilitado redigindo a Introdução e o Objetivo de um Laudo de Inspeção de ' +
     'Segurança de Vaso de Pressão, conforme a NR-13 (Ministério do Trabalho e Emprego).\n\n' +
     'DADOS REAIS (única fonte de fatos — nunca invente dado técnico não informado aqui):\n' +
     'Cliente: ' + (ctx.cliente.razaoSocial || '-') + '\n' +

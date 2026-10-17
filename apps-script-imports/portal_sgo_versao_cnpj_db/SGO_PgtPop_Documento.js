@@ -131,7 +131,7 @@ function PgtPop_montarDocumentoHtml_(dados) {
   const html = [];
   html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
   html.push('<title>' + PgtPop_escaparHtml_(dados.codigoDocumento || tipo) + ' — ' + PgtPop_escaparHtml_(dados.titulo || tipo) + '</title>');
-  html.push('<style>' + PgtPop_getCss_() + '</style></head><body>');
+  html.push('<style>' + PgtPop_getCss_() + RelTecA4_css_({ titulo: (tipo === 'POP' ? 'Procedimento Operacional Padrão' : 'Plano de Gerenciamento das Tecnologias em Saúde') + (hospital.razaoSocial ? ' — ' + hospital.razaoSocial : ''), numero: dados.codigoDocumento || '', revisao: String(dados.versaoAtual || 1) + '.0' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');

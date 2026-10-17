@@ -27,7 +27,8 @@ function CronExec_apiDispatch(req) {
     // PDF + cópia HTML A4 na mesma pasta: a cópia HTML é gravada dentro de
     // CronExec_apiSalvarDocumento, com a pasta do cliente já em mãos (sem
     // depender de descobrir a pasta pela URL do PDF).
-    apiSalvarDocumento: CronExec_apiSalvarDocumento
+    apiSalvarDocumento: CronExec_apiSalvarDocumento,
+    apiEquipamentosDoCadastro: CronExec_apiEquipamentosDoCadastro
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -101,11 +102,13 @@ function CronExec_apiFinalizar(payload) {
     return { ok: false, mensagem: eVal.message };
   }
 
-  var textosIA;
+  var textosIA, avisoIA = '';
   try {
     textosIA = CronExec_gerarTextosIA_(cliente, equipamentos, agrupamento);
   } catch (e) {
-    return { ok: false, mensagem: "Erro ao gerar os textos do cronograma: " + e.message };
+    // Sem a IA o cronograma sai com o texto padrão: datas, grupos e quantidades não dependem dela.
+    textosIA = CronExec_textosPadrao_(cliente, equipamentos, agrupamento);
+    avisoIA = 'O cronograma saiu com o texto padrão, sem a redação da IA (' + String(e && e.message ? e.message : e).replace(/^A interpretação por IA não está disponível: /, '').replace(/[.\s]+$/, '') + '). Datas, grupos e quantidades não mudam.';
   }
 
   var resultado = {
@@ -119,7 +122,9 @@ function CronExec_apiFinalizar(payload) {
   var salvo = CronExec_salvarCronograma_(resultado);
   resultado.cronogramaId = salvo.cronogramaId || '';
 
+  resultado.numeroDocumento = 'CRN-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm');
   var resposta = { ok: true, resultado: resultado };
+  if (avisoIA) resposta.avisoIA = avisoIA;
   if (!salvo.ok) {
     // Os textos já foram gerados: o documento pode ser aberto e salvo;
     // só o registro no histórico do módulo falhou.
@@ -288,4 +293,54 @@ function CronExec_getDB_() {
     dbId = props.getProperty("CRONEXEC_DB_ID");
   }
   return SpreadsheetApp.openById(dbId);
+}
+
+/**
+ * Equipamentos do cadastro do cliente (cliente → unidade → equipamentos ativos),
+ * para o Cronograma não depender de digitação. Busca o cliente pelo CNPJ.
+ * Devolve { ok, encontrado, cliente, unidades:[{id,nome}], equipamentos:[{unidadeId, unidade, tipo, marca, modelo, tag}] }.
+ */
+function CronExec_apiEquipamentosDoCadastro(payload) {
+  payload = payload || {};
+  var cnpj = String(payload.cnpj || '').replace(/\D/g, '');
+  if (cnpj.length !== 14) {
+    return { ok: true, encontrado: false, mensagem: 'Informe o CNPJ do cliente na etapa 1 para trazer os equipamentos do cadastro; sem ele, acrescente os equipamentos à mão.' };
+  }
+  var cliente = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).filter(function (c) {
+    return String(c.CNPJ || '').replace(/\D/g, '') === cnpj && String(c.STATUS || 'ATIVO').toUpperCase() !== 'INATIVO';
+  })[0];
+  if (!cliente) {
+    return { ok: true, encontrado: false, mensagem: 'Este CNPJ não está no cadastro de Clientes do SGO+. Acrescente os equipamentos à mão ou cadastre o cliente em Cadastros › Clientes.' };
+  }
+  var unidades = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES).filter(function (u) {
+    return String(u.CLIENTE_ID) === String(cliente.ID) && String(u.STATUS || 'ATIVO').toUpperCase() !== 'INATIVO';
+  }).map(function (u) { return { id: String(u.ID), nome: String(u.NOME_UNIDADE || u.NOME || 'Unidade') }; });
+  var nomeUnidade = {};
+  unidades.forEach(function (u) { nomeUnidade[u.id] = u.nome; });
+  var equipamentos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) {
+    return String(e.CLIENTE_ID) === String(cliente.ID) && String(e.STATUS || 'ATIVO').toUpperCase() === 'ATIVO';
+  }).map(function (e) {
+    return { unidadeId: String(e.UNIDADE_ID || ''), unidade: nomeUnidade[String(e.UNIDADE_ID || '')] || '', tipo: String(e.TIPO || '').trim(), marca: String(e.FABRICANTE || '').trim(), modelo: String(e.MODELO || '').trim(), tag: String(e.TAG || '').trim() };
+  }).filter(function (e) { return e.tipo; });
+  return { ok: true, encontrado: true, cliente: { id: String(cliente.ID), razaoSocial: String(cliente.RAZAO_SOCIAL || cliente.NOME_FANTASIA || '') }, unidades: unidades, equipamentos: equipamentos };
+}
+
+
+/** Textos padrão do cronograma (sem IA), escritos a partir dos grupos já calculados. */
+function CronExec_textosPadrao_(cliente, equipamentos, agrupamento) {
+  var grupos = (agrupamento && agrupamento.grupos) || [];
+  var total = 0;
+  (equipamentos || []).forEach(function (e) { total += Number(e.quantidade) || 0; });
+  var tipos = (equipamentos || []).map(function (e) { return e.tipo; }).filter(function (t, i, a) { return t && a.indexOf(t) === i; });
+  var primeiro = grupos[0], ultimo = grupos[grupos.length - 1];
+  var periodo = (primeiro && ultimo && primeiro.dataInicio && ultimo.dataFim)
+    ? ' entre ' + CronExec_formatarDataBr_(primeiro.dataInicio) + ' e ' + CronExec_formatarDataBr_(ultimo.dataFim) : '';
+  return {
+    objetivo: 'Este cronograma organiza a execução dos serviços técnicos da Metrolabs nos equipamentos de ' + (cliente && cliente.razaoSocial ? cliente.razaoSocial : 'o cliente') +
+      ', ' + total + (total === 1 ? ' unidade' : ' unidades') + ' (' + tipos.join(', ') + '), distribuídas em ' + grupos.length + (grupos.length === 1 ? ' grupo' : ' grupos') + periodo +
+      ', para que a rotina do setor seja mantida durante os atendimentos.',
+    metodologia: 'Os equipamentos foram divididos em grupos de execução, considerando dias úteis (fins de semana e feriados nacionais não são contados) e o intervalo entre grupos definido no planejamento. As datas de cada grupo estão na tabela a seguir.',
+    gruposIntro: 'A tabela abaixo apresenta, para cada grupo, o período de execução e os equipamentos atendidos.',
+    consideracoesFinais: 'As datas podem ser ajustadas em comum acordo com o cliente, conforme a disponibilidade dos equipamentos e da equipe. Alterações devem ser registradas em nova revisão deste cronograma.'
+  };
 }

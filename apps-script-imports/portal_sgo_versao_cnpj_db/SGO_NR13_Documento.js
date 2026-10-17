@@ -157,7 +157,7 @@ function NR13Doc_montarGraficoTH_(th) {
   svg.push('<text x="' + px((t1 + t2) / 2).toFixed(1) + '" y="' + (H - margemBase + 32) + '" font-size="9.5" fill="#6b7280" text-anchor="middle" font-family="Arial,sans-serif">Patamar (ensaio)</text>');
   svg.push('<text x="' + px((t2 + t3) / 2).toFixed(1) + '" y="' + (H - margemBase + 32) + '" font-size="9.5" fill="#6b7280" text-anchor="middle" font-family="Arial,sans-serif">Rampa de descida</text>');
 
-  svg.push('<text x="' + (margemEsq - 40) + '" y="' + (margemTopo + 4) + '" font-size="10" fill="#374151" font-family="Arial,sans-serif" transform="rotate(-90 ' + (margemEsq - 40) + ' ' + (margemTopo + 4) + ')">Pressão (' + th.unidade + ')</text>');
+  svg.push('<text x="' + (margemEsq - 40) + '" y="' + (margemTopo + 4) + '" font-size="10" fill="#374151" text-anchor="end" font-family="Arial,sans-serif" transform="rotate(-90 ' + (margemEsq - 40) + ' ' + (margemTopo + 4) + ')">Pressão (' + th.unidade + ')</text>');
 
   svg.push('</svg>');
   return svg.join('');
@@ -247,7 +247,10 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('.categoria-destaque { display:flex; gap: 14px; margin: 10px 0 16px; flex-wrap: wrap; }');
   html.push('.categoria-box { flex:1; min-width: 150px; border:1px solid #cfe8d8; border-radius:4px; padding:10px 14px; background:#f7fdf9; text-align:center; }');
   html.push('.categoria-box .valor { font-size: 22px; font-weight:800; color:#1f6f45; }');
-  html.push('.categoria-box .rotulo-mini { font-size: 10.5px; color:#6b7280; text-transform: uppercase; }');
+  html.push('.categoria-box .rotulo-mini { font-size: 10.5px; color:#6b7280; }');
+  html.push('table.tabela-fontes { border-collapse: collapse; width: 100%; font-size: 11px; margin: 4px 0 10px; }');
+  html.push('table.tabela-fontes th, table.tabela-fontes td { border: 1px solid #cfe8d8; padding: 5px 7px; text-align: center; }');
+  html.push('table.tabela-fontes thead th { background: #eafbf0; color:#14532d; }');
   html.push('.veredito-box { margin: 18px 0; padding: 12px 14px; border-radius: 4px; font-size: 12.5px; border: 1px solid; }');
   html.push('.veredito-box.aprovado { background:#eafbf0; border-color:#1f6f45; }');
   html.push('.veredito-box.ressalvas { background:#fff8e6; border-color:#c98a12; }');
@@ -274,18 +277,18 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
   html.push('.barra-imprimir button { background:#1f6f45; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
   html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  html.push(SGO_DocA4_css_() + '</style></head><body>');
+  html.push(SGO_DocA4_css_() + RelTecA4_css_({ titulo: 'Laudo de Inspeção de Segurança — NR-13', numero: ctx.numeroLaudo || '', revisao: ctx.revisao || '00' }) + '</style></head><body>');
 
   html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
   html.push('<div class="folha">');
 
   html.push('<div class="topo">');
   if (logo && logo.data) {
-    html.push('<img class="logo-topo" src="data:' + logo.mimeType + ';base64,' + logo.data + '" alt="Metrolab\'s">');
+    html.push('<img class="logo-topo" src="data:' + logo.mimeType + ';base64,' + logo.data + '" alt="Metrolabs">');
   } else {
     html.push('<div></div>');
   }
-  html.push('<div class="numero-doc">LAUDO Nº ' + NR13Doc_escaparHtml_(ctx.numeroLaudo || '—') + '</div>');
+  html.push('<div class="numero-doc">Laudo nº ' + NR13Doc_escaparHtml_(ctx.numeroLaudo || '—') + ' · Revisão ' + NR13Doc_escaparHtml_(RelTecA4_revisao_(ctx.revisao)) + '</div>');
   html.push('</div>');
 
   html.push('<h1 class="titulo-cert">Laudo de Inspeção de Segurança — Vaso de Pressão</h1>');
@@ -340,12 +343,12 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_numVar_(ctx.categoria.pv, 6) + '</div><div class="rotulo-mini">P.V (MPa·m³)</div></div>');
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.externo)) + ' / ' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.interno)) + '</div><div class="rotulo-mini">Prazo máx. (anos) Externo / Interno</div></div>');
   html.push('</div>');
-  html.push('<table class="dados"><tr><td><strong>Memória de cálculo:</strong> P.V = PMTA (MPa) × Volume (m³) = ' +
-    NR13Doc_numVar_(ctx.vaso.pmtaMpa) + ' × ' + NR13Doc_numVar_(ctx.vaso.volumeM3) + ' = <strong>' + NR13Doc_numVar_(ctx.categoria.pv, 6) + ' MPa·m³</strong> ' +
+  html.push('<table class="dados"><tr><td><strong>Memória de cálculo:</strong> P.V = P (MPa) × Volume (m³), adotando como P a PMTA informada (critério conservador: a pressão máxima de operação não excede a PMTA) = ' +
+    NR13Doc_numVar_(ctx.vaso.pmtaMpa, 6) + ' × ' + NR13Doc_numVar_(ctx.vaso.volumeM3, 6) + ' = <strong>' + NR13Doc_numVar_(ctx.categoria.pv, 6) + ' MPa·m³</strong> ' +
     '→ Grupo de Potencial de Risco ' + ctx.categoria.grupo + ' (item 13.5.1.1.3) → cruzado com a Classe do Fluido "' + NR13Doc_escaparHtml_(ctx.vaso.classeFluido) +
     '" na Tabela 1 da NR-13 → <strong>Categoria ' + NR13Doc_escaparHtml_(ctx.categoria.categoria) + '</strong>. A periodicidade máxima de inspeção (Tabela 2, ' +
-    'estabelecimento sem SPIE) para esta categoria é de ' + ctx.categoria.periodicidade.externo + ' ano(s) para o exame externo e ' + ctx.categoria.periodicidade.interno +
-    ' ano(s) para o exame interno.</td></tr></table>');
+    'estabelecimento sem SPIE) para esta categoria é de ' + ctx.categoria.periodicidade.externo + (Number(ctx.categoria.periodicidade.externo) === 1 ? ' ano' : ' anos') + ' para o exame externo e ' + ctx.categoria.periodicidade.interno +
+    (Number(ctx.categoria.periodicidade.interno) === 1 ? ' ano' : ' anos') + ' para o exame interno.</td></tr></table>');
   // Campo de aplicação (item 13.2.1): aviso quando P.V (kPa·m³) não passa de 8
   // e o fluido não é da classe A. Só aparece nesse caso.
   if (ctx.categoria.foraDoCampoAplicacao) {
@@ -410,7 +413,7 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   if (assinante) {
     html.push('<div class="assinatura-item">');
     if (assinante.imagemSvg) html.push(assinante.imagemSvg);
-    html.push('<div class="assinatura-linha"><strong>' + NR13Doc_escaparHtml_(assinante.nome) + '</strong><br>' + NR13Doc_escaparHtml_(assinante.cargo) + '<br>' + NR13Doc_escaparHtml_(assinante.registro) + '<br>Profissional Habilitado (PH) responsável</div>');
+    html.push('<div class="assinatura-linha"><strong>' + NR13Doc_escaparHtml_(assinante.nome) + '</strong><br>' + NR13Doc_escaparHtml_(assinante.cargo) + '<br>' + NR13Doc_escaparHtml_(assinante.registro) + '<br>Profissional Legalmente Habilitado (PLH) responsável (NR-13, item 13.3.2)</div>');
     html.push('</div>');
   }
   html.push('</div>');

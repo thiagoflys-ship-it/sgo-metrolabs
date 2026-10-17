@@ -26,7 +26,7 @@
  * "Documentos e Procedimentos Relacionados", que lista e explica os
  * POPs gerados pra este hospital + os documentos já existentes.
  ****************************************************/
-var PGTPOPIA_TOKENS = 8192;
+var PGTPOPIA_TOKENS = 16384; // o POP com o raciocínio (thinking) ligado podia passar de 8.192 e sair cortado
 // PGT (2026-08-14, v15): gerado em 6 chamadas separadas (uma por bloco
 // de seções) em vez de 1 chamada única cobrindo as ~28 seções — usuário
 // reportou o PGT "muito resumido", e o teto de tokens de uma única
@@ -283,7 +283,7 @@ function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdIma
         muteHttpExceptions: true,
         payload: JSON.stringify({
           contents: [{ role: "user", parts: parts }],
-          generationConfig: { temperature: 0.35, topP: 0.95, maxOutputTokens: tokens }
+          generationConfig: { temperature: 0.25, topP: 0.95, maxOutputTokens: tokens }
         })
       });
 
@@ -293,6 +293,7 @@ function PgtPopIA_chamarGeminiComParts_(chave, parts, tokens, temImagens, qtdIma
 
       if (codigo === 200) {
         var cand = corpoResp.candidates && corpoResp.candidates[0];
+        if (cand && cand.finishReason === 'MAX_TOKENS') { erroModelo = 'resposta da IA incompleta'; break; }
         var partesResp = cand && cand.content && cand.content.parts;
         var texto = (partesResp || []).map(function (p) { return p && p.text ? p.text : ""; }).join("").trim();
         if (!texto) { erroModelo = "resposta vazia"; break; }

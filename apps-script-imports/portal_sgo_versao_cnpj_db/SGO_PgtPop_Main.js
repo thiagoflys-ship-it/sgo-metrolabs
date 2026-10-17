@@ -143,6 +143,7 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
   });
 
   var gerado;
+  var avisoSemIA = '';
   try {
     // PGT (v15, 2026-08-14) gera em blocos — usuário pediu documento
     // muito mais robusto/longo; POP continua 1 chamada só, sem mudança.
@@ -154,7 +155,17 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
       gerado = PgtPop_gerarTextoIA_(tipo, hospital, payload.roteiro || '', payload.pop || null, imagens);
     }
   } catch (e) {
-    return { ok: false, mensagem: "Erro ao gerar o texto (IA): " + e.message };
+    // (2026-10-17) Sem a IA: o POP com roteiro escrito pelo técnico sai com o texto padrão
+    // montado a partir do próprio roteiro (aviso na tela). O PGT e o POP sem roteiro dependem
+    // da redação normativa da IA: nada é gravado e a revisão não muda.
+    var motivoIA = String(e && e.message ? e.message : e).replace(/^A interpretação por IA não está disponível: /, '').replace(/[.\s]+$/, '');
+    if (tipo === 'POP' && String(payload.roteiro || '').trim()) {
+      gerado = PgtPop_textoPadraoPop_(hospital, payload.pop, payload.roteiro);
+      avisoSemIA = 'O POP saiu com o texto padrão montado a partir do roteiro informado, sem a redação da IA (' + motivoIA + '). Revise o documento antes de enviar ao cliente.';
+    } else {
+      return { ok: false, mensagem: 'O ' + (tipo === 'PGT' ? 'PGT' : 'POP') + ' não foi gerado e nada foi gravado (a revisão continua a mesma): ' + motivoIA + '. ' +
+        (tipo === 'POP' ? 'Para gerar sem a IA, escreva o roteiro do POP na etapa 3 e gere de novo.' : 'O PGT é redigido pela IA a partir dos requisitos da RDC nº 509/2021 e da ABNT NBR 15943:2011; gere de novo quando a IA estiver disponível.') };
+    }
   }
 
   var registro = {
@@ -248,7 +259,7 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
     pdfFileName: pdf.fileName || '',
     htmlId: htmlSalvo.htmlId || '',
     htmlUrl: htmlSalvo.htmlUrl || '',
-    avisoHtml: htmlSalvo.avisoHtml || ''
+    avisoHtml: [htmlSalvo.avisoHtml || '', avisoSemIA].filter(Boolean).join(' ')
   };
 }
 
@@ -526,4 +537,25 @@ function PgtPop_formatarCnpj_(cnpj) {
   const s = String(cnpj || '').replace(/\D/g, '');
   if (s.length !== 14) return String(cnpj || '');
   return s.substring(0, 2) + '.' + s.substring(2, 5) + '.' + s.substring(5, 8) + '/' + s.substring(8, 12) + '-' + s.substring(12);
+}
+
+
+/** POP sem a IA: texto padrão montado a partir do roteiro escrito pelo técnico. */
+function PgtPop_textoPadraoPop_(hospital, pop, roteiro) {
+  var nome = (pop && pop.nome) || 'Procedimento';
+  var cliente = (hospital && hospital.razaoSocial) || 'o estabelecimento';
+  var corpo = [
+    '## Objetivo ##',
+    'Estabelecer a sistemática de ' + nome.toLowerCase() + ' em ' + cliente + ', em atendimento à RDC nº 509/2021 (ANVISA) e à ABNT NBR 15943:2011.',
+    '',
+    '## Responsabilidades ##',
+    'A execução cabe à equipe de engenharia clínica responsável pelo serviço. A aprovação deste procedimento e a guarda dos registros cabem ao responsável técnico do estabelecimento.',
+    '',
+    '## Desenvolvimento da Atividade ##',
+    String(roteiro || '').trim(),
+    '',
+    '## Registros ##',
+    'Os registros gerados por este procedimento devem ser arquivados conforme o procedimento de controle de documentos do estabelecimento.'
+  ].join('\n');
+  return { titulo: nome, textoGerado: corpo, imagensComInterpretacao: [] };
 }

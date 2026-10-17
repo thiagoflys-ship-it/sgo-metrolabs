@@ -413,7 +413,8 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     assinaturas: assinaturas,
     observacoesGerais: payload.observacoesGerais || '',
     imagens: imagens,
-    registroOrigemInfo: registroOrigemInfo
+    registroOrigemInfo: registroOrigemInfo,
+    registroId: registroId
   };
 
   var html;

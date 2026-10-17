@@ -48,7 +48,7 @@ function PlanCME_calcularPlanejamento(dados) {
         if (isUltrassonica) {
           // Lógica Lavadora Ultrassônica (QO - Ciclo Vazio)
           const repQO = 4; // 4 repetições
-          const ptsCavitacao = PLANCME_CFG.CALCULO.LAVA_ULTR_PONTOS_BRASMEDICAL || 9;
+          const ptsCavitacao = PLANCME_CFG.CALCULO.LAVA_ULTR_PONTOS || 9;
           const cavitacaoCiclo = repQO * ptsCavitacao;
           
           baseCavitacao += cavitacaoCiclo;
@@ -138,7 +138,7 @@ function PlanCME_calcularPlanejamento(dados) {
         if (isUltrassonica) {
           // Lógica Lavadora Ultrassônica (QD - Com Carga)
           const repQD = 4; // 4 repetições
-          const ptsCavitacao = PLANCME_CFG.CALCULO.LAVA_ULTR_PONTOS_BRASMEDICAL || 9;
+          const ptsCavitacao = PLANCME_CFG.CALCULO.LAVA_ULTR_PONTOS || 9;
           const limpezaPorSensor = PLANCME_CFG.CALCULO.LAVA_ULTR_LIMPEZA_POR_SENSOR || 1;
           
           const cavitacaoCiclo = repQD * ptsCavitacao;

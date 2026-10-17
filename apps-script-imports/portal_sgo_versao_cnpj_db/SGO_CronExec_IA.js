@@ -11,7 +11,7 @@
  * deterministicamente por CronExec_sugerirGrupos_ (SGO_CronExec_Grupos.js).
  * A IA só escreve prosa em cima desses fatos já dados.
  ****************************************************/
-var CRONEXECIA_TOKENS = 4096;
+var CRONEXECIA_TOKENS = 8192; // margem para o raciocínio do modelo (thinking) + texto; resposta cortada é tratada como falha
 var CRONEXECIA_MODELOS_FALLBACK = ["gemini-2.5-flash", "gemini-2.0-flash"];
 var CRONEXECIA_MAX_TENTATIVAS = 3;
 var CRONEXECIA_DELAYS_MS = [800, 1600];
@@ -201,7 +201,7 @@ function CronExec_gerarTextosIA_(cliente, equipamentos, agrupamento) {
         muteHttpExceptions: true,
         payload: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, topP: 0.95, maxOutputTokens: CRONEXECIA_TOKENS }
+          generationConfig: { temperature: 0.2, topP: 0.95, maxOutputTokens: CRONEXECIA_TOKENS }
         })
       });
 
@@ -211,6 +211,7 @@ function CronExec_gerarTextosIA_(cliente, equipamentos, agrupamento) {
 
       if (codigo === 200) {
         var cand = corpo.candidates && corpo.candidates[0];
+        if (cand && cand.finishReason === 'MAX_TOKENS') { erroModelo = 'resposta da IA incompleta'; break; }
         var partes = cand && cand.content && cand.content.parts;
         var texto = (partes || []).map(function (p) { return p && p.text ? p.text : ""; }).join("").trim();
         if (!texto) { erroModelo = "resposta vazia"; break; }

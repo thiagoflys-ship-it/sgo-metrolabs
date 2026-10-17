@@ -65,6 +65,13 @@ function NR13_apiDispatch(req) {
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
+  // Decisão do dono (17/10/2026): Comercial e Financeiro consultam laudos, mas não emitem nem alteram.
+  var perfilNr = String(sessaoDispatch.perfil || '').trim().toUpperCase();
+  var soEquipeTecnica = { apiSalvarRascunho: 1, apiEmitirLaudo: 1, apiUploadFoto: 1, apiAnalisarFoto: 1, apiMelhorarTexto: 1, apiGerarParecerConclusivo: 1 };
+  if ((perfilNr === 'COMERCIAL' || perfilNr === 'FINANCEIRO') && soEquipeTecnica[fn]) {
+    throw new Error('O perfil ' + (perfilNr === 'COMERCIAL' ? 'Comercial' : 'Financeiro') + ' consulta os laudos NR-13, mas não pode preencher nem emitir. Peça a emissão a um técnico, à metrologia ou ao gestor.');
+  }
+
   return allow[fn](req.sessionId, payload);
 }
 
@@ -806,13 +813,13 @@ function NR13_validarParaEmissao_(dados) {
     if (!dIni) erros.push('A data de início da inspeção (' + dados.DATA_INICIO_INSPECAO + ') não é uma data válida: use dd/mm/aaaa.');
     else if (dFim && dIni.getTime() > dFim.getTime()) erros.push('A data de início da inspeção não pode ser posterior à data de término.');
   }
-  if (!dados.ASSINANTE_PH) erros.push('Selecione o Profissional Habilitado (PH) responsável.');
+  if (!dados.ASSINANTE_PH) erros.push('Selecione o Profissional Legalmente Habilitado (PLH) responsável.');
   else {
     // O documento assina com o PH escolhido; sem esta checagem, um nome fora
     // da lista fazia o laudo sair assinado pelo primeiro PH cadastrado.
     var phs = (typeof CadeiaFrioRel_CFCFG !== 'undefined' && CadeiaFrioRel_CFCFG.ASSINATURAS_PADRAO) || [];
     if (phs.length && !phs.some(function (a) { return a && a.nome === dados.ASSINANTE_PH; })) {
-      erros.push('O Profissional Habilitado "' + dados.ASSINANTE_PH + '" não está na lista de assinaturas cadastradas. Selecione um PH da lista no passo 4 (Dados da inspeção).');
+      erros.push('O Profissional Legalmente Habilitado "' + dados.ASSINANTE_PH + '" não está na lista de assinaturas cadastradas. Selecione um PH da lista no passo 4 (Dados da inspeção).');
     }
   }
   if (!dados.DESCRICAO_INSPECOES) erros.push('Descreva as inspeções, exames e testes executados.');
