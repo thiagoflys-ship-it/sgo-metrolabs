@@ -828,7 +828,13 @@
     Atividades_chamar_("Atividades_apiListarMinhas", {}, function (res) {
       ATV.minhas = res.itens || []; ATV.agoraSrv = res.agora;
       if (ATV.tela === "minhas") Atividades_desenharMinhas_();
-    }, function (m) { var c = document.getElementById("atvMinhasCorpo"); if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { silencioso: true });
+    }, function (m) {
+      // sem conexão: a faixa "fazendo agora" não fica em "Carregando..." e a pessoa tem como tentar de novo
+      var c = document.getElementById("atvMinhasCorpo");
+      if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Atividades_carregarMinhas_()">Tentar de novo</button></p>';
+      var fx = document.getElementById("atvAgoraFaixa");
+      if (fx) fx.textContent = "Não foi possível carregar as suas atividades agora. Veja o aviso abaixo.";
+    }, { silencioso: true });
   }
 
   function Atividades_ordenarPorPrazo_(lista) {
@@ -927,7 +933,11 @@
     Atividades_chamar_("Atividades_apiPainelEquipe", {}, function (res) {
       ATV.equipe = res;
       if (ATV.tela === "equipe") Atividades_desenharEquipe_();
-    }, function (m) { var c = document.getElementById("atvEqCorpo"); if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + "</div>"; }, { silencioso: true, carregando: comAviso ? "Atualizando..." : "" });
+    }, function (m) {
+      var c = document.getElementById("atvEqCorpo");
+      if (c) c.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Atividades_carregarEquipe_(true)">Tentar de novo</button></p>';
+      ["atvEqAgora", "atvEqJust"].forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = '<div class="atv-sub">Não carregou. Veja o aviso abaixo.</div>'; });
+    }, { silencioso: true, carregando: comAviso ? "Atualizando..." : "" });
   }
 
   function Atividades_desenharEquipe_() {

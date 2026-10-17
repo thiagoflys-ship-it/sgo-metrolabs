@@ -3127,4 +3127,183 @@
     .app-shell.modo-mobile .mobile-form-actions button { flex: 1 1 140px; }
   }
 
+  /* =========================================================================
+     ENCAIXE EM QUALQUER APARELHO (17/10). O SGO+ saiu do iframe do Google e roda
+     direto no navegador: a página passa a controlar a própria altura, o entalhe
+     do celular e o teclado. Regras desta seção:
+     1. altura da tela em dvh (100vh no celular inclui a área atrás da barra do
+        navegador, e a tela "pulava" ao rolar);
+     2. campos com 16 px em toque (com menos, o iPhone amplia a tela ao focar);
+     3. barra do topo e botões flutuantes respeitam o entalhe e a barra de gestos;
+     4. as telas completas (relatórios, gestão, configurações) cabem na largura
+        do celular: grades em uma coluna, tabelas largas rolam dentro da própria
+        caixa (JS_Core › SGO_ajustarTabelasLargas_), nada empurra a página para o lado.
+     ========================================================================= */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  @supports (height: 100dvh) {
+    body, .login-screen, .login-split, .login-welcome, .app-shell { min-height: 100dvh; }
+    .main-layout { min-height: calc(100dvh - var(--topbar-h)); }
+    .busca-caixa { max-height: 76dvh; }
+    .atv-overlay .atv-modal { max-height: calc(100dvh - 32px); }
+  }
+  img, video { max-width: 100%; height: auto; }
+
+  /* 2. toque: campos com 16 px */
+  @media (pointer: coarse), (max-width: 900px) {
+    input, select, textarea, .form-control, .form-select,
+    .login-form input, .mobile-search,
+    #app #conteudo :is(input, select, textarea) { font-size: 16px !important; }
+  }
+  /* toque: botões e campos com pelo menos 44 px de altura; caixas de marcar maiores, com o rótulo inteiro tocável */
+  @media (pointer: coarse) {
+    button, .btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-download, .tab-btn, .motores-tab-btn,
+    select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+    #app #conteudo :is(button, .btn, select, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"])) { min-height: 44px !important; }
+    #app #conteudo summary { min-height: 44px; padding-top: 12px !important; padding-bottom: 12px !important; box-sizing: border-box; }
+    input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; min-height: 0 !important; flex: 0 0 auto; }
+    label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+    .menu-btn, .menu-grupo-cab { min-height: 44px !important; }
+    button { min-width: 44px; }
+    #app #conteudo :is(.dashc-vermais, .farol-card a, .dashc-venc-aba) { display: inline-flex; align-items: center; min-height: 44px; }
+    #app #conteudo :is(input[type="checkbox"], input[type="radio"]) { min-width: 22px !important; min-height: 22px !important; }
+    #app #conteudo :is(input[type="checkbox"], input[type="radio"]) + label { display: inline-flex; align-items: center; min-height: 44px; }
+    /* caixas de marcar soltas em tabela (sensor ativo, sem rótulo ao lado): 32 px */
+    #app #conteudo td > input[type="checkbox"]:only-child, #app #conteudo input.sensor-ativo { min-width: 32px !important; min-height: 32px !important; }
+  }
+
+  /* 3. entalhe e barra de gestos (a página usa viewport-fit=cover, Index.html) */
+  .app-shell.modo-mobile .mobile-topbar {
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+  }
+  /* o conteúdo reserva a altura medida da barra (JS_Core › SGO_medirBarraMovel_), não um número fixo */
+  .app-shell.modo-mobile .main-layout .content-area {
+    padding-top: calc(var(--mobile-topbar-h, 70px) + 12px) !important;
+    padding-left: calc(12px + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .app-shell.modo-mobile .mobile-fab {
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    right: calc(18px + env(safe-area-inset-right, 0px));
+    max-width: calc(100vw - 36px);
+  }
+  .app-shell.modo-mobile #conteudo { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  /* título longo ("Estufa, banho-maria e secadora") quebra em até duas linhas sem empurrar os botões */
+  .app-shell.modo-mobile .mobile-topbar-titulo {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    font-size: 15px; min-width: 0;
+  }
+  .app-shell.modo-mobile .mobile-topbar-btn { flex: 0 0 auto; }
+  @media (max-width: 359px) {
+    .app-shell.modo-mobile .mobile-topbar { gap: 6px; padding-left: calc(8px + env(safe-area-inset-left, 0px)); padding-right: calc(8px + env(safe-area-inset-right, 0px)); }
+    .app-shell.modo-mobile .mobile-topbar-btn { padding: 8px 10px; }
+  }
+
+  /* celular deitado: pouca altura, barra do topo mais baixa */
+  @media (max-height: 500px) {
+    .app-shell.modo-mobile .mobile-topbar { padding-top: calc(4px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; }
+    .app-shell.modo-mobile .mobile-home-tile { min-height: 76px; }
+  }
+
+  /* 4. telas completas no celular */
+  .app-shell.modo-mobile #conteudo .native-module-container { padding: 8px 0; }
+  .app-shell.modo-mobile #conteudo,
+  .app-shell.modo-mobile #conteudo .module-shell { min-width: 0; max-width: 100%; }
+  .app-shell.modo-mobile #conteudo .module-shell :is(div, section, form, fieldset, article, header, footer, nav, ul, ol, p, details, h1, h2, h3, h4, label) {
+    max-width: 100%;
+  }
+  /* linhas de campos lado a lado: no celular cada campo ocupa a linha inteira */
+  .app-shell.modo-mobile #conteudo .module-shell .form-row { flex-wrap: wrap !important; }
+  .app-shell.modo-mobile #conteudo .module-shell .form-row > * { flex: 1 1 100% !important; min-width: 0; }
+  /* barra de passos (1. Cliente, 2. Tipo...): duas por linha, sem partir palavra */
+  .app-shell.modo-mobile #conteudo .step-nav { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell.modo-mobile #conteudo .step-nav-item { min-width: 0 !important; overflow-wrap: normal; word-break: normal; hyphens: auto; font-size: 13px !important; display: flex; align-items: center; justify-content: center; min-height: 44px; }
+  .app-shell.modo-mobile #conteudo .module-shell :is(.module-grid, .form-grid, .dashboard-grid),
+  .app-shell.modo-mobile #conteudo .module-shell [style*="grid-template-columns"]:not(.sgo-grade-livre),
+  .app-shell.modo-mobile #conteudo .module-shell [class*="grid"]:not([class*="calend"]):not([class*="agenda"]):not([class*="gantt"]):not(.sgo-grade-livre) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .app-shell.modo-mobile #conteudo .module-shell :is(.module-grid, .form-grid, .dashboard-grid) > *,
+  .app-shell.modo-mobile #conteudo .module-shell [style*="grid-template-columns"]:not(.sgo-grade-livre) > *,
+  .app-shell.modo-mobile #conteudo .module-shell [class*="grid"]:not([class*="calend"]):not([class*="agenda"]):not([class*="gantt"]):not(.sgo-grade-livre) > * {
+    grid-column: 1 / -1 !important;
+  }
+  .app-shell.modo-mobile #conteudo .module-header { flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .app-shell.modo-mobile #conteudo .module-header-right { flex-wrap: wrap; width: 100%; }
+  .app-shell.modo-mobile #conteudo .module-header-right > * { flex: 1 1 auto; }
+  .app-shell.modo-mobile #conteudo .module-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .app-shell.modo-mobile #conteudo .module-shell select,
+  .app-shell.modo-mobile #conteudo .module-shell textarea { max-width: 100%; }
+  .app-shell.modo-mobile #conteudo .toolbar-search { width: 100%; min-width: 0; }
+  .app-shell.modo-mobile #conteudo .motores-tabs { flex-wrap: wrap; }
+  .app-shell.modo-mobile #conteudo .motores-tab-btn { flex: 1 1 140px; }
+  .app-shell.modo-mobile #conteudo .iframe-container { min-height: 0; }
+  .app-shell.modo-mobile #conteudo .content-title { font-size: 20px; }
+
+  /* tabelas largas: rolam dentro da própria caixa (o invólucro é posto por JS_Core › SGO_ajustarTabelasLargas_) */
+  .sgo-rolagem-x {
+    display: block; width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    background:
+      linear-gradient(to right, var(--bc-surface, #FFFFFF) 30%, rgba(255,255,255,0)) left center / 24px 100% no-repeat local,
+      linear-gradient(to left, var(--bc-surface, #FFFFFF) 30%, rgba(255,255,255,0)) right center / 24px 100% no-repeat local,
+      linear-gradient(to right, rgba(28,31,29,.14), rgba(28,31,29,0)) left center / 10px 100% no-repeat scroll,
+      linear-gradient(to left, rgba(28,31,29,.14), rgba(28,31,29,0)) right center / 10px 100% no-repeat scroll;
+  }
+  .sgo-rolagem-x > table { margin: 0; }
+  .sgo-rolagem-x-dica { display: none; font-size: 12px; color: var(--bc-text-3); margin: 4px 0 0; }
+  .sgo-rolagem-x.sgo-rola + .sgo-rolagem-x-dica { display: block; }
+
+  /* janela aberta (atividade, aviso, vínculos): o balão de comunicação não fica por cima dos campos */
+  body:has(.atv-overlay, .vinc-overlay) .comw-botao { display: none !important; }
+
+  /* painel de vínculos no celular: título numa linha e botões numa faixa abaixo, na altura do toque */
+  @media (max-width: 600px) {
+    .vinc-dialog .vinc-actions { flex-wrap: wrap; align-items: center !important; }
+    .vinc-dialog .vinc-actions > h2 { flex: 1 1 100%; margin-bottom: 4px; }
+    .vinc-dialog .vinc-actions > button { flex: 1 1 auto; align-self: center; }
+  }
+
+  /* filtros das atividades no celular: dois por linha, do mesmo tamanho */
+  .app-shell.modo-mobile .atv-barra > * { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .app-shell.modo-mobile .atv-barra select, .app-shell.modo-mobile .atv-barra input { width: 100%; min-width: 0; height: auto; }
+
+  /* apresentação das telas longas no celular (JS_Core › SGO_movelApresentacaoHtml_) */
+  .movel-apresentacao { background: #FFFFFF; border: 1px solid var(--bc-line); border-radius: var(--radius); padding: 18px 16px; color: var(--bc-text); font-size: 15px; line-height: 1.5; }
+  .movel-apresentacao-titulo { margin: 0 0 8px; font-size: 19px !important; }
+  .movel-apresentacao p { margin: 0 0 10px; }
+  .movel-apresentacao-sub { font-weight: 600; color: var(--bc-text-2); }
+  .movel-apresentacao-lista { margin: 0 0 16px; padding-left: 20px; }
+  .movel-apresentacao-lista li { margin-bottom: 4px; }
+  .movel-apresentacao-acoes { display: flex; flex-direction: column; gap: 10px; }
+  .movel-apresentacao-acoes button { width: 100%; min-height: 48px !important; font-size: 15px !important; }
+
+  /* esqueletos de carregamento (JS_Core › SGO_esq*Html_): mesmo espaço do conteúdo que vai chegar */
+  .sgo-esq { background: linear-gradient(90deg, var(--bc-surface-2, #EFEEE9) 0%, #E6E4DD 50%, var(--bc-surface-2, #EFEEE9) 100%); background-size: 200% 100%; animation: sgoEsq 1.3s ease-in-out infinite; border-radius: 4px; }
+  .sgo-esq-linha { height: 11px; margin: 7px 0; }
+  @keyframes sgoEsq { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .sgo-esq { animation: none; } }
+  .sgo-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mobile-farol-strip { min-height: 100px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+  @media (max-width: 359px) { .mobile-farol-strip { min-height: 128px; } }
+
+  /* "Outras telas" na tela inicial do celular: os grupos do menu lateral, na mesma ordem */
+  .movel-telas-titulo { margin-top: 26px; }
+  .movel-telas { display: flex; flex-direction: column; gap: 8px; }
+  .movel-telas-grupo { background: #FFFFFF; border: 1px solid var(--bc-line); border-radius: var(--radius); }
+  .movel-telas-grupo > summary { list-style: none; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; font-weight: 700; font-size: 15px; color: var(--bc-text); cursor: pointer; }
+  .movel-telas-grupo > summary::-webkit-details-marker { display: none; }
+  .movel-telas-grupo > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--bc-text-3); border-bottom: 2px solid var(--bc-text-3); transform: rotate(45deg); margin-left: 4px; transition: transform .15s ease; }
+  .movel-telas-grupo[open] > summary::after { transform: rotate(-135deg); }
+  .movel-telas-qtd { margin-left: auto; font-family: var(--bc-mono); font-size: 12px; color: var(--bc-text-3); font-weight: 500; }
+  .movel-telas-itens { border-top: 1px solid var(--bc-line); }
+  .movel-tela-item { display: flex !important; align-items: center; gap: 12px; width: 100%; min-height: 52px !important; padding: 0 16px !important; background: transparent !important; border: 0 !important; border-bottom: 1px solid var(--bc-line) !important; border-radius: 0 !important; color: var(--bc-text) !important; font-size: 15px !important; font-weight: 500 !important; text-align: left; box-shadow: none !important; }
+  .movel-tela-item:last-child { border-bottom: 0 !important; }
+  .movel-tela-item:active { background: var(--bc-surface-2) !important; }
+  .movel-tela-icone { width: 22px; text-align: center; color: var(--bc-text-3); flex: 0 0 auto; }
+  .movel-tela-nome { flex: 1 1 auto; min-width: 0; }
+  .movel-tela-seta { font-size: 12px; color: var(--bc-text-3); }
+
 </style>

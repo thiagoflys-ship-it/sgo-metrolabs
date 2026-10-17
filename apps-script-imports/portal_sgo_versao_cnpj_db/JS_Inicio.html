@@ -118,16 +118,7 @@
   function Menu_atalho_(alvo) {
     var btn = document.querySelector('#menu .menu-btn-atalho[data-atalho="' + alvo + '"]');
     // Padrões de referência tem consulta própria no celular desde a fase 3 (17/10): abrir("padroes") cuida disso.
-    var soComputador = { usuarios: "Gestão de usuários" };
-    if (soComputador[alvo] && typeof ehMobileModo_ === "function" && ehMobileModo_()) {
-      // mesma regra de renderMotorModulo_: recurso avançado fica só no computador
-      var div = document.getElementById("conteudo");
-      if (typeof atualizarTituloMobile_ === "function") atualizarTituloMobile_(soComputador[alvo]);
-      try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; } catch (e) {}
-      if (div) div.innerHTML = '<div class="mobile-card-subtitulo" style="padding:24px 4px;text-align:center">' +
-        Inicio_esc_(soComputador[alvo]) + ' está disponível apenas na versão para computador. Abra o SGO+ no computador para resolver.</div>';
-      return;
-    }
+    // Celular (17/10): Usuários abre a mesma tela do computador, com o layout ajustado à largura.
     if (alvo === "padroes") {
       abrir("padroes"); // página própria desde a fase 2 (16/10)
       return;
@@ -170,7 +161,9 @@
     var resumo = document.getElementById("inicioResumo");
     if (!faixa || !SESSION) return;
     var seq = ++INICIO_SEQ;
-    faixa.innerHTML = '<div class="inicio-faixa-carregando">Verificando pendências…</div>';
+    // sem linha "Verificando pendências…": o resumo ao lado da saudação já diz isso, e a linha
+    // aparecia e sumia, puxando a tela para cima (17/10)
+    if (!faixa.innerHTML) faixa.classList.add("is-vazia");
     google.script.run
       .withSuccessHandler(function (res) {
         if (seq !== INICIO_SEQ) return;
@@ -191,6 +184,7 @@
     if (!res || !res.ok) {
       if (resumo) resumo.textContent = "";
       faixa.innerHTML = '<div class="inicio-faixa-aviso" role="status">' + Inicio_esc_((res && res.message) || "Não foi possível verificar as pendências.") + '</div>';
+      faixa.classList.remove("is-vazia");
       return;
     }
     var itens = res.itens || [];
@@ -420,20 +414,15 @@
     if (volta && volta.focus) try { volta.focus(); } catch (e) {}
   }
 
-  /** Telas que têm versão própria no celular (mesma lista da grade de renderMobileHome_ em JS_Core).
-      As demais, no celular, só mostram "disponível apenas na versão para computador". */
-  var MENU_TELAS_CELULAR = { dashboard: 1, minhas_atividades: 1, avisos: 1, certificado_calibracao: 1, padroes: 1, frota: 1, conduta: 1, clientes: 1, unidades: 1, equipamentos: 1, documentos: 1, chaves: 1 };
-
   /** Telas do menu (o que o perfil enxerga). */
   function Busca_telas_(termo) {
     var q = Busca_normalizar_(termo);
     var vistos = {};
     var lista = [];
-    var celular = typeof ehMobileModo_ === "function" && ehMobileModo_();
     document.querySelectorAll("#menu .menu-btn").forEach(function (b) {
       var mod = b.getAttribute("data-mod"), atalho = b.getAttribute("data-atalho");
       if (!mod && !atalho) return;
-      if (celular && !(mod && MENU_TELAS_CELULAR[mod])) return;
+      // celular (17/10): todas as telas abrem também no celular, então a busca oferece todas
       if (b.style.display === "none") return;
       if (!q && b.classList.contains("active")) return; // sem termo: não sugere a tela em que a pessoa já está
       var g = b.closest(".menu-grupo");

@@ -14,7 +14,7 @@ function doGet(e) {
       .evaluate()
       .setTitle(SGO_CFG.APP_NAME)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1'); // <- Inserido para garantir responsividade em smartphones
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover'); // igual à meta da própria página (Index.html)
   } catch (err) {
     return HtmlService
       .createHtmlOutput(

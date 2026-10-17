@@ -128,8 +128,8 @@
             '<div class="form-grid">' +
               '<div>' +
                 '<label for="cli_cnpj">CNPJ</label>' +
-                '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
+                '<div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; width:100%;">' +
+                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1 1 160px; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
                   '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjCliente_()" title="Busca razão social e endereço na Receita Federal">Preencher pela Receita</button>' +
                 '</div>' +
               '</div>' +
@@ -485,8 +485,8 @@
               '</div>' +
               '<div>' +
                 '<label for="uni_cnpj_unidade">CNPJ da unidade</label>' +
-                '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
+                '<div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; width:100%;">' +
+                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1 1 160px; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
                   '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjUnidade_()" title="Busca nome e endereço na Receita Federal">Preencher pela Receita</button>' +
                 '</div>' +
                 '<div class="helper-text" style="margin-top:4px">Na unidade principal, pode ser o mesmo CNPJ do cliente.</div>' +

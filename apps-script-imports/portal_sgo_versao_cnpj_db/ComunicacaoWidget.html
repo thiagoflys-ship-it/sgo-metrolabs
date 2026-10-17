@@ -17,7 +17,7 @@
   .comw-qt { position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--comw-verm); color: #fff;
     font-size: 12px; font-weight: 700; line-height: 22px; text-align: center; border: 2px solid var(--comw-bg); }
   .comw-qt[hidden] { display: none; }
-  .comw-painel { position: fixed; right: 18px; bottom: 86px; z-index: 2147483001; width: 400px; max-width: calc(100vw - 24px); height: 600px; max-height: calc(100vh - 110px);
+  .comw-painel { position: fixed; right: 18px; bottom: 86px; z-index: 2147483001; width: 400px; max-width: calc(100vw - 24px); height: 600px; max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px);
     background: var(--comw-bg); border: 1px solid var(--comw-borda); border-radius: 12px; box-shadow: 0 24px 70px rgba(28,31,29,0.1); display: flex; flex-direction: column; overflow: hidden; }
   .comw-painel[hidden] { display: none; }
   .comw-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--comw-card); border-bottom: 1px solid var(--comw-borda); }
@@ -76,11 +76,13 @@
   .comw-toast span { display: block; font-size: 12px; color: var(--bc-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @keyframes comwEntrar { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
   .comw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  @media (max-width: 700px) {
-    /* celular: botão pequeno colado na borda direita, no meio da tela (não cobre botões de salvar do rodapé) */
-    .comw-botao { width: 42px; height: 42px; font-size: 19px; right: 0; bottom: 42%; border-radius: 21px 0 0 21px; }
+  @media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
+    /* celular (também deitado): botão colado na borda direita, no meio da tela (não cobre botões de salvar
+       do rodapé), com 44 px de toque e fora da área do entalhe */
+    .comw-botao { width: 44px; height: 46px; font-size: 19px; right: env(safe-area-inset-right, 0px); bottom: 42%; border-radius: 23px 0 0 23px; }
     .comw-qt { top: -6px; right: auto; left: -6px; }
-    .comw-painel { inset: 0; right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100%; max-height: 100%; border-radius: 0; }
+    .comw-painel { inset: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
     .comw-toasts { right: 8px; left: 8px; width: auto; bottom: auto; top: 8px; flex-direction: column; }
   }
 </style>

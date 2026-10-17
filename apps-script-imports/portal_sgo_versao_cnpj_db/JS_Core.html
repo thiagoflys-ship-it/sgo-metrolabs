@@ -338,10 +338,118 @@
     if (appBox) {
       appBox.style.display = "flex";
 
-      const ehMobile = !!(window.matchMedia && window.matchMedia("(max-width: 900px)").matches);
-      appBox.classList.toggle("modo-mobile", ehMobile);
+      appBox.classList.toggle("modo-mobile", SGO_modoMovelDesejado_());
+    }
+    SGO_medirBarraMovel_();
+  }
+
+  // Modo celular: tela estreita (até 900 px) ou celular deitado (toque e altura até 500 px).
+  // Antes era decidido só no login; girar o aparelho ou mudar a janela deixava o modo errado
+  // (celular grande deitado abria o layout de computador espremido, tablet girado ficava preso).
+  function SGO_modoMovelDesejado_() {
+    if (!window.matchMedia) return false;
+    return window.matchMedia("(max-width: 900px)").matches ||
+      window.matchMedia("(pointer: coarse) and (max-height: 500px)").matches;
+  }
+
+  // A barra fixa do topo do celular muda de altura (título em duas linhas, área do entalhe);
+  // o conteúdo reserva exatamente essa altura, em vez de um número fixo que cobria ou sobrava.
+  function SGO_medirBarraMovel_() {
+    try {
+      const barra = document.querySelector(".mobile-topbar");
+      if (!barra) return;
+      const aplicar = function () {
+        const h = barra.getBoundingClientRect().height;
+        if (h > 0) document.documentElement.style.setProperty("--mobile-topbar-h", Math.ceil(h) + "px");
+      };
+      aplicar();
+      if (!barra.__sgoObservada && typeof ResizeObserver === "function") {
+        barra.__sgoObservada = true;
+        new ResizeObserver(aplicar).observe(barra);
+      }
+    } catch (e) {}
+  }
+
+  // Girar o aparelho ou redimensionar a janela: troca o modo sem perder o que está na tela.
+  // Só a tela inicial é redesenhada (ela tem versão própria em cada modo); um formulário aberto
+  // continua como está, e o layout em volta se ajusta pelo CSS.
+  let SGO_TIMER_MODO = null;
+  function SGO_reavaliarModo_() {
+    const appBox = document.getElementById("app");
+    if (!appBox || appBox.style.display === "none" || !SESSION) return;
+    const querMovel = SGO_modoMovelDesejado_();
+    if (querMovel === appBox.classList.contains("modo-mobile")) { SGO_medirBarraMovel_(); return; }
+    appBox.classList.toggle("modo-mobile", querMovel);
+    SGO_medirBarraMovel_();
+    const atual = window.SGO_MODULO_ATUAL || "";
+    const ativo = document.activeElement;
+    const digitando = ativo && /^(INPUT|TEXTAREA|SELECT)$/.test(ativo.tagName);
+    if (!digitando && (atual === "dashboard" || atual === "mobile_home" || !atual)) {
+      abrir(querMovel ? "mobile_home" : "dashboard");
     }
   }
+  window.addEventListener("resize", function () {
+    clearTimeout(SGO_TIMER_MODO);
+    SGO_TIMER_MODO = setTimeout(SGO_reavaliarModo_, 200);
+  });
+  window.addEventListener("orientationchange", function () {
+    clearTimeout(SGO_TIMER_MODO);
+    SGO_TIMER_MODO = setTimeout(SGO_reavaliarModo_, 250);
+  });
+
+  // Tabela mais larga que a tela: passa a rolar dentro da própria caixa, com uma linha que avisa,
+  // em vez de empurrar a página inteira para o lado (no celular, no tablet e no computador).
+  // Roda sozinho quando qualquer tela muda (MutationObserver) e ao girar o aparelho.
+  function SGO_ajustarTabelasLargas_() {
+    const W = window.innerWidth;
+    document.querySelectorAll("#conteudo table, .atv-overlay table, .vinc-overlay table").forEach(function (t) {
+      if (t.closest("svg")) return;
+      const caixaExistente = t.parentElement && t.parentElement.classList.contains("sgo-rolagem-x") ? t.parentElement : null;
+      if (caixaExistente) { SGO_marcarRolagem_(caixaExistente); return; }
+      const pai = t.parentElement;
+      if (!pai || t.getBoundingClientRect().width < 1) return;
+      for (let a = pai; a && a !== document.body; a = a.parentElement) {
+        const ox = getComputedStyle(a).overflowX;
+        if (ox === "auto" || ox === "scroll") return; // já rola na própria caixa
+      }
+      const larga = t.offsetWidth > pai.clientWidth + 1 || t.getBoundingClientRect().right > W + 1;
+      if (!larga) return;
+      const caixa = document.createElement("div");
+      caixa.className = "sgo-rolagem-x";
+      pai.insertBefore(caixa, t);
+      caixa.appendChild(t);
+      const dica = document.createElement("p");
+      dica.className = "sgo-rolagem-x-dica";
+      dica.textContent = "Arraste a tabela para o lado para ver todas as colunas.";
+      caixa.insertAdjacentElement("afterend", dica);
+      SGO_marcarRolagem_(caixa);
+    });
+  }
+  function SGO_marcarRolagem_(caixa) {
+    caixa.classList.toggle("sgo-rola", caixa.scrollWidth > caixa.clientWidth + 1);
+  }
+  let SGO_TIMER_TABELAS = null;
+  function SGO_agendarAjusteTabelas_() {
+    clearTimeout(SGO_TIMER_TABELAS);
+    SGO_TIMER_TABELAS = setTimeout(function () { try { SGO_ajustarTabelasLargas_(); } catch (e) {} }, 120);
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    try {
+      if (typeof MutationObserver === "function") {
+        new MutationObserver(function (lista) {
+          for (let i = 0; i < lista.length; i++) {
+            const n = lista[i].addedNodes;
+            for (let j = 0; j < n.length; j++) {
+              if (n[j].nodeType === 1 && (n[j].tagName === "TABLE" || n[j].tagName === "TR" || (n[j].querySelector && n[j].querySelector("table")))) { SGO_agendarAjusteTabelas_(); return; }
+            }
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      }
+    } catch (e) {}
+  });
+  window.addEventListener("resize", SGO_agendarAjusteTabelas_);
+  // aba que estava escondida e passa a aparecer (a tabela só tem largura quando visível)
+  document.addEventListener("click", SGO_agendarAjusteTabelas_, true);
 
   function ehMobileModo_() {
     const appBox = document.getElementById("app");
@@ -353,7 +461,8 @@
   document.addEventListener("focusin", function (ev) {
     const alvo = ev.target;
     if (!alvo || !/^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName) || alvo.type === "checkbox" || alvo.type === "radio" || alvo.type === "file") return;
-    if (!ehMobileModo_()) return;
+    // também em tablet no modo computador (toque): o teclado cobre a metade de baixo da tela
+    if (!ehMobileModo_() && !(window.matchMedia && window.matchMedia("(pointer: coarse)").matches)) return;
     setTimeout(function () {
       try { if (document.activeElement === alvo) alvo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
     }, 350);
@@ -405,10 +514,10 @@
           if (div) {
             div.innerHTML = `
               <div style="padding: 40px 20px; text-align: center; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: var(--shadow); border: 1px solid var(--border);">
-                <h2 style="color: var(--metro-blue); margin-bottom: 10px;">Acessando Equipamento...</h2>
+                <h2 style="color: var(--metro-blue); margin-bottom: 10px;">Abrindo o equipamento</h2>
                 <p style="color: var(--muted); font-size: 15px;">Validando credenciais e localizando os dados do equipamento.</p>
                 <div style="margin-top: 20px; padding: 15px; border-radius: 8px; background: var(--info-bg); color: var(--metro-blue); font-weight: 600;">
-                  ⏳ Por favor, aguarde o redirecionamento...
+                  Aguarde: abrindo os dados do equipamento.
                 </div>
               </div>
             `;
@@ -457,9 +566,9 @@
     div.innerHTML = `
       <style>
         .content-area { padding: 0 !important; background: #f4f7f6 !important; }
-        .main-layout { min-height: 100vh !important; }
+        .main-layout { min-height: 100vh !important; min-height: 100dvh !important; }
       </style>
-      <div style="width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 30px 20px; background: #f4f7f6; font-family: 'Segoe UI', sans-serif;">
+      <div style="width: 100%; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 30px 20px; background: #f4f7f6; font-family: 'Segoe UI', sans-serif;">
 
         <img src="${logoSrc}" alt="Metrolabs" style="width: 180px; height: auto; margin-bottom: 30px;">
 
@@ -623,6 +732,8 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    // celular: "Início" (busca, logotipo, atalhos) é a tela inicial do celular, não o painel do computador
+    if (mod === "dashboard" && ehMobileModo_()) mod = "mobile_home";
     // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
     try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home"); } catch (e) {}
     // Celular: a barra do topo mostra o nome da tela (do menu) antes de o módulo montar; telas que
@@ -832,8 +943,8 @@
     }
 
     if (mod === "admin") {
-      // celular: mesma regra dos demais recursos avançados (mensagem "só no computador" do casco)
-      if (ehMobileModo_()) { renderMotorModulo_("Configurações", "admin"); return; }
+      // celular: a mesma tela, com o layout ajustado à largura (UI_Estilos › "CELULAR — telas completas")
+      if (ehMobileModo_()) { atualizarTituloMobile_("Configurações"); MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; }
       renderAdminModulo_();
       atualizarBadgeModulo_("admin");
       if (typeof preencherEstadoPainelAdmin_ === "function") {
@@ -907,15 +1018,15 @@
         <div class="dash-hero inicio-hero">
           <div>
             <p class="inicio-data">${dataExtenso.charAt(0).toUpperCase() + dataExtenso.slice(1)}</p>
-            <h2 class="dash-hero-title inicio-saudacao"><span id="inicioSaudacao">${escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeUsuario) : "Olá" + (nomeUsuario ? ", " + nomeUsuario : "") + ".")}</span> <span id="inicioResumo" class="inicio-resumo">Verificando o que depende de você hoje…</span></h2>
+            <h2 class="dash-hero-title inicio-saudacao"><span id="inicioSaudacao">${escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeUsuario) : "Olá" + (nomeUsuario ? ", " + nomeUsuario : "") + ".")}</span> <span id="inicioResumo" class="inicio-resumo">Verificando suas pendências…</span></h2>
           </div>
         </div>
         <div id="inicioFaixa" class="inicio-faixa" aria-live="polite"></div>
 
-        <div id="dashboardFarolConduta" style="${styleAdminOnly}"></div>
+        <div id="dashboardFarolConduta" style="${styleAdminOnly}">${isCliente ? "" : SGO_esqFarolCardHtml_()}</div>
 
         <div id="dashboardAlertaFrota" style="${styleAdminOnly}"></div>
-        <div id="dashboardSituacaoFrota" style="${styleAdminOnly}"></div>
+        <div id="dashboardSituacaoFrota" style="${styleAdminOnly}">${isCliente ? "" : SGO_esqFrotaHtml_()}</div>
 
         <div class="dashc-grid-top dashc-grid-top-2">
           <div class="dashc-stats">
@@ -1753,6 +1864,26 @@
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
 
+  // Esqueletos de carregamento (17/10): ocupam o mesmo espaço do conteúdo que vai chegar,
+  // para a tela não pular quando o servidor responde (antes: uma linha "Carregando..." que
+  // virava um cartão de 90 a 130 px e empurrava a grade de atalhos para baixo).
+  function SGO_esqFrotaHtml_() {
+    return '<section class="sgo-esq-frota" style="margin:14px 0;padding:16px;border:1px solid var(--bc-line);border-radius:6px;background:#FFFFFF" aria-busy="true">' +
+      '<strong>Frota</strong><span class="sgo-sr">: carregando a situação dos veículos</span>' +
+      '<div class="sgo-esq" style="height:44px;margin-top:14px"></div></section>';
+  }
+  function SGO_esqFarolMiniHtml_() {
+    return '<div class="farol-mini-linha" aria-busy="true"><div class="farol-gauge-mini sgo-esq" style="height:58px"></div>' +
+      '<div style="flex:1"><div class="sgo-esq sgo-esq-linha" style="width:55%"></div><div class="sgo-esq sgo-esq-linha"></div><div class="sgo-esq sgo-esq-linha" style="width:75%"></div></div>' +
+      '<span class="sgo-sr">Carregando o farol do mês</span></div>';
+  }
+  function SGO_esqFarolCardHtml_() {
+    return '<div class="farol-card sgo-esq-farol" aria-busy="true"><div class="farol-gauge-wrap sgo-esq" style="height:96px"></div>' +
+      '<div class="farol-body"><div class="sgo-esq sgo-esq-linha" style="width:30%"></div><div class="sgo-esq sgo-esq-linha" style="width:60%;height:16px"></div>' +
+      '<div class="sgo-esq sgo-esq-linha" style="width:85%"></div><div class="sgo-esq sgo-esq-linha" style="width:45%"></div></div>' +
+      '<span class="sgo-sr">Carregando o farol da conduta</span></div>';
+  }
+
   function frotaSituacaoHtml_(items) {
     const ativos = items.filter(function(v) { return v.SITUACAO !== 'INATIVO'; });
     const livres = ativos.filter(function(v) { return v.SITUACAO === 'DISPONIVEL'; }).length;
@@ -1822,7 +1953,7 @@
     const perfilFrota = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
     const gestaoFrota = perfilFrota === "ADMIN" || perfilFrota === "GESTOR" || perfilFrota === "DIRETORIA";
     div.innerHTML =
-      '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">Carregando situação da frota...</div>' +
+      '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">' + SGO_esqFrotaHtml_() + '</div>' +
       (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' : '') +
       '<div class="mobile-frota-secao-titulo">Retiradas em andamento</div>' +
       '<div class="mobile-list" id="mob_frota_emAndamento">Carregando...</div>' +
@@ -2600,6 +2731,40 @@
     }).finally(function() { if (btn) btn.disabled = false; });
   }
 
+  // Celular (17/10): as demais telas do menu, nos mesmos grupos e na mesma ordem do menu lateral
+  // (lidas do próprio #menu, que já tem as regras de perfil aplicadas). Antes elas não tinham
+  // caminho no celular, ou levavam a "disponível apenas na versão para computador".
+  function SGO_movelOutrasTelasHtml_(jaNaGrade) {
+    const naGrade = {};
+    (jaNaGrade || []).forEach(function (m) { naGrade[m] = true; });
+    const grupos = [];
+    document.querySelectorAll("#menu .menu-grupo").forEach(function (g) {
+      if (g.classList.contains("menu-grupo-vazio") || g.style.display === "none") return;
+      const itens = [];
+      g.querySelectorAll(".menu-btn").forEach(function (b) {
+        if (b.style.display === "none") return;
+        const mod = b.getAttribute("data-mod"), atalho = b.getAttribute("data-atalho");
+        if ((!mod && !atalho) || mod === "dashboard" || (mod && naGrade[mod]) || atalho === "padroes") return;
+        const c = b.cloneNode(true);
+        c.querySelectorAll(".menu-badge").forEach(function (x) { x.remove(); });
+        const ic = c.querySelector(".menu-btn-icon");
+        const icone = ic ? ic.innerHTML : "";
+        if (ic) ic.remove();
+        const nome = c.textContent.replace(/\s+/g, " ").trim();
+        const acao = mod ? "abrir('" + mod + "')" : "Menu_atalho_('" + atalho + "')";
+        itens.push('<button type="button" class="movel-tela-item" onclick="' + acao + '">' +
+          '<span class="movel-tela-icone">' + icone + '</span><span class="movel-tela-nome">' + escapeHtml_(nome) + '</span>' +
+          '<i class="fas fa-chevron-right movel-tela-seta" aria-hidden="true"></i></button>');
+      });
+      if (!itens.length) return;
+      const nomeEl = g.querySelector(".menu-grupo-nome");
+      grupos.push('<details class="movel-telas-grupo"><summary><span>' + escapeHtml_(nomeEl ? nomeEl.textContent.trim() : "Principal") +
+        '</span><span class="movel-telas-qtd">' + itens.length + '</span></summary><div class="movel-telas-itens">' + itens.join("") + '</div></details>');
+    });
+    if (!grupos.length) return "";
+    return '<div class="mobile-home-titulo movel-telas-titulo">Outras telas</div><div class="movel-telas">' + grupos.join("") + '</div>';
+  }
+
   // PILOTO — grade de icones da tela inicial mobile (ver classe "modo-mobile").
   // Reaproveita 100% o roteador abrir(mod) ja existente, so muda a apresentacao.
   function renderMobileHome_() {
@@ -2628,10 +2793,10 @@
     div.innerHTML =
       '<div class="inicio-hero inicio-hero-mobile"><h2 class="inicio-saudacao"><span id="inicioSaudacao">' +
         escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeMobile) : "") +
-        '</span> <span id="inicioResumo" class="inicio-resumo">Verificando o que depende de você hoje…</span></h2></div>' +
+        '</span> <span id="inicioResumo" class="inicio-resumo">Verificando suas pendências…</span></h2></div>' +
       '<div id="inicioFaixa" class="inicio-faixa" aria-live="polite"></div>' +
-      (isCliente ? '' : '<div id="mobileFarolCondutaStrip" class="mobile-farol-strip">Carregando farol do mês...</div>') +
-      (isCliente ? '' : '<div id="mobileSituacaoFrota">Carregando situação da frota...</div>') +
+      (isCliente ? '' : '<div id="mobileFarolCondutaStrip" class="mobile-farol-strip">' + SGO_esqFarolMiniHtml_() + '</div>') +
+      (isCliente ? '' : '<div id="mobileSituacaoFrota">' + SGO_esqFrotaHtml_() + '</div>') +
       '<div class="mobile-home-titulo">O que você precisa fazer?</div>' +
       '<div class="mobile-home-grid">' +
       itens.map(function (it) {
@@ -2640,7 +2805,8 @@
           '<span class="legenda">' + escapeHtml_(it.legenda) + '</span>' +
           '</button>';
       }).join('') +
-      '</div>';
+      '</div>' +
+      SGO_movelOutrasTelasHtml_(itens.map(function (it) { return it.mod; }));
 
     carregarSituacaoFrotaUI_();
     if (typeof Inicio_carregarPendencias_ === "function") Inicio_carregarPendencias_();
@@ -2775,7 +2941,9 @@
   function mobileErroLista_(containerId, err) {
     console.error(err);
     const container = document.getElementById(containerId);
-    if (container) container.innerHTML = '<div class="mobile-card-subtitulo">Falha ao carregar a lista.</div>';
+    // operador nunca no limbo: diz o que houve e oferece tentar de novo na mesma tela
+    if (container) container.innerHTML = '<div class="mobile-card-subtitulo">Não foi possível carregar a lista agora. Verifique a conexão e toque em Tentar de novo; se continuar, avise o administrador.</div>' +
+      '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" style="margin-top:10px" onclick="abrir(window.SGO_MODULO_ATUAL || \'mobile_home\')">Tentar de novo</button>';
   }
 
   // ==========================================
@@ -2871,7 +3039,7 @@
     if (!div) return;
 
     div.innerHTML =
-      '<div id="mobileCondutaFarol" class="mobile-farol-strip">Carregando farol do mês...</div>' +
+      '<div id="mobileCondutaFarol" class="mobile-farol-strip">' + SGO_esqFarolMiniHtml_() + '</div>' +
       '<div class="mobile-form-actions" style="margin:14px 0;">' +
         '<button type="button" class="mobile-btn-salvar" style="background:#dc2626" onclick="renderMobileCondutaFormOcorrencia_()">Registrar ocorrência</button>' +
         '<button type="button" class="mobile-btn-salvar" style="background:#059669" onclick="renderMobileCondutaFormPositivo_()">Reconhecer colega</button>' +
@@ -4814,6 +4982,40 @@
   // ==========================================
   // MOTORES DE ENGENHARIA
   // ==========================================
+  // Telas longas no celular: o que é a tela e o que dá para fazer no celular (sem beco sem saída).
+  const SGO_MOVEL_TELAS_PESADAS = {
+    autoclave: { oQue: "monta o relatório de qualificação térmica a partir dos arquivos do registrador, com gráficos de temperatura e pressão e tabelas por sensor" },
+    lavadora: { oQue: "monta o relatório de qualificação a partir dos arquivos do registrador, com gráficos e tabelas por sensor" },
+    cadeia_frio: { oQue: "monta o relatório de qualificação a partir das planilhas dos registradores, com gráficos e tabelas por sensor" },
+    estufa_banhomaria: { oQue: "monta o relatório de qualificação a partir das planilhas dos registradores, com gráficos e tabelas por sensor" },
+    planejamento_cme: { oQue: "calcula o dimensionamento da CME em várias etapas, com tabelas de receitas e equipamentos" }
+  };
+  const SGO_MOVEL_LIBERADAS = {};
+
+  function SGO_movelApresentacaoHtml_(titulo, tipoMotor, info) {
+    const podeCadastros = !(USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE");
+    return '<div class="movel-apresentacao">' +
+      '<h2 class="movel-apresentacao-titulo">' + escapeHtml_(titulo) + '</h2>' +
+      '<p>Esta tela ' + escapeHtml_(info.oQue) + '. Ela funciona no celular, mas é longa: com o computador o trabalho fica mais rápido.</p>' +
+      '<p class="movel-apresentacao-sub">No celular você também pode:</p>' +
+      '<ul class="movel-apresentacao-lista">' +
+        '<li>abrir os relatórios já emitidos em <strong>Arquivo de documentos</strong>;</li>' +
+        (podeCadastros ? '<li>conferir o cliente e o equipamento em <strong>Equipamentos</strong>;</li>' : '') +
+        '<li>anotar o que falta em <strong>Minhas atividades</strong> e terminar no computador.</li>' +
+      '</ul>' +
+      '<div class="movel-apresentacao-acoes">' +
+        '<button type="button" class="btn-primary" onclick="SGO_movelLiberar_(\'' + tipoMotor + '\')">Abrir a tela completa</button>' +
+        '<button type="button" class="btn-secondary" onclick="abrir(\'documentos\')">Arquivo de documentos</button>' +
+        (podeCadastros ? '<button type="button" class="btn-secondary" onclick="abrir(\'minhas_atividades\')">Minhas atividades</button>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function SGO_movelLiberar_(tipoMotor) {
+    SGO_MOVEL_LIBERADAS[tipoMotor] = true;
+    abrir(window.SGO_MODULO_ATUAL || tipoMotor);
+  }
+
   function renderMotorModulo_(titulo, tipoMotor) {
     const div = document.getElementById("conteudo");
     if (!div) return;
@@ -4822,14 +5024,18 @@
     // Todo módulo que ainda não tem tela mobile própria (renderMobile*_,
     // com fork dedicado em abrir(mod)) cai aqui em vez de mostrar o painel
     // do desktop espremido — nunca deixa vazar uma tela "adaptada".
+    // Celular (17/10): toda tela abre também no celular, com o layout ajustado à largura
+    // (UI_Estilos › "CELULAR — telas completas"). As telas que montam relatório técnico a partir
+    // de arquivos de registrador, com gráficos e tabelas por sensor, mostram antes uma
+    // apresentação que diz o que dá para fazer no celular e deixam abrir a tela completa.
     if (ehMobileModo_()) {
       atualizarTituloMobile_(titulo);
       MOBILE_NAV = { modulo: "mobile_home", tela: "lista" };
-      div.innerHTML =
-        '<div class="mobile-card-subtitulo" style="padding:24px 4px;text-align:center">' +
-        escapeHtml_(titulo) + ' está disponível apenas na versão para computador. Abra o SGO+ num computador para usar esta tela.' +
-        '</div><p style="text-align:center"><button type="button" class="btn-secondary" onclick="abrir(\'mobile_home\')">Voltar ao Início</button></p>';
-      return;
+      const pesada = SGO_MOVEL_TELAS_PESADAS[tipoMotor];
+      if (pesada && !SGO_MOVEL_LIBERADAS[tipoMotor]) {
+        div.innerHTML = SGO_movelApresentacaoHtml_(titulo, tipoMotor, pesada);
+        return;
+      }
     }
 
     let urlTemplate = "";
