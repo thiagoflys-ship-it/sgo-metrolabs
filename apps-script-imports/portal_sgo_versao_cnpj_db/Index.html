@@ -65,7 +65,7 @@
     <header id="topo" class="topbar">
       <div class="topbar-left">
         <div class="topbar-logo-block" onclick="irTelaInicial_()" style="cursor: pointer;">
-          <img id="logoTopo" alt="Logo Metrolabs" class="topbar-logo">
+          <img id="logoTopo" alt="" class="topbar-logo" onerror="this.style.display='none'" onload="this.style.display=''">
           <div class="topbar-brand">
             <div class="topbar-title">SGO<span class="topbar-title-plus">+</span></div>
             <div class="topbar-subtitle">Metrolabs · Painel Operacional</div>
@@ -102,72 +102,89 @@
 
     <div class="main-layout">
       
+      <!-- MENU LATERAL — ordem de trabalho (revisado 16/10/2026):
+           Principal, Qualificação, Calibração, Documentos técnicos, Operação de campo, Gestão, Cadastros, Administração.
+           data-mod = chave usada por abrir(mod) (não mudar: módulos e atividades dependem dela).
+           data-busca = palavras extras para a busca rápida (Ctrl K) achar a tela por sinônimo ou sigla.
+           Regras de perfil: aplicarRegrasDeAcesso_ (JS_Core), Atividades_aplicarMenu_ (JS_Atividades),
+           AvisosTela_iniciar_ (JS_Avisos), ChavesTela_mostrarMenu_ (JS_Chaves). -->
       <aside id="menu" class="sidebar" aria-label="Menu principal">
         <div class="sidebar-section menu-grupo" data-grupo="principal" id="menu-secao-principal">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-principal" onclick="Menu_alternarGrupo_('principal')"><span class="menu-grupo-nome">Principal</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-principal">
-          <button type="button" class="menu-btn" data-mod="dashboard" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
-          <button type="button" class="menu-btn" data-mod="minhas_atividades" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
-          <button type="button" class="menu-btn" data-mod="avisos" id="menu-btn-avisos" onclick="abrir('avisos')"><span class="menu-btn-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span>Avisos<span class="menu-badge" id="menuBadgeAvisos"></span></button>
-          <button type="button" class="menu-btn" data-mod="atividades_equipe" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
+          <button type="button" class="menu-btn" data-mod="dashboard" data-busca="inicio painel pendencias" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
+          <button type="button" class="menu-btn" data-mod="minhas_atividades" data-busca="tarefas agenda kanban" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
+          <button type="button" class="menu-btn" data-mod="atividades_equipe" data-busca="tarefas gantt equipe justificativas" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
+          <button type="button" class="menu-btn" data-mod="avisos" data-busca="comunicados ciencia recados" id="menu-btn-avisos" onclick="abrir('avisos')"><span class="menu-btn-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span>Avisos<span class="menu-badge" id="menuBadgeAvisos"></span></button>
           </div>
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="qualificacao" id="menu-secao-tecnica">
-          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação térmica</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-qualificacao">
-          <button type="button" class="menu-btn" data-mod="autoclave" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclave</button>
-          <button type="button" class="menu-btn" data-mod="lavadora" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
-          <button type="button" class="menu-btn" data-mod="cadeia_frio" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
-          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
+          <button type="button" class="menu-btn" data-mod="autoclave" data-busca="esterilizacao vapor ciclo qualificacao termica" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclaves</button>
+          <button type="button" class="menu-btn" data-mod="lavadora" data-busca="termodesinfectora ultrassonica qualificacao termica" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
+          <button type="button" class="menu-btn" data-mod="cadeia_frio" data-busca="geladeira refrigerador camara fria freezer vacina datalogger qualificacao termica" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
+          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" data-busca="estufa banho maria secadora traqueias qualificacao termica" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" data-busca="qi qo qd qualificacao instalacao operacao desempenho" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-file-circle-check" aria-hidden="true"></i></span>Relatório QI/QO/QD</button>
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" data-busca="cme central material esterilizado receitas planejamento qualificacao" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
           </div>
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="calibracao" id="menu-secao-calibracao">
-          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-calibracao" onclick="Menu_alternarGrupo_('calibracao')"><span class="menu-grupo-nome">Calibração e documentos</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-calibracao" onclick="Menu_alternarGrupo_('calibracao')"><span class="menu-grupo-nome">Calibração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-calibracao">
-          <button type="button" class="menu-btn" data-mod="certificado_calibracao" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de calibração<span class="menu-badge" id="menuBadgePadroes"></span></button>
-          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de calibração</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="padroes" id="menu-btn-padroes" onclick="Menu_atalho_('padroes')" title="Padrões de referência do laboratório (no Certificado de calibração)"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_exec" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de execução</button>
-          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Relatório de qualificação (QI/QO/QD)</button>
-          <button type="button" class="menu-btn" data-mod="pgt_pop" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
-          <button type="button" class="menu-btn" data-mod="planejamento_cme" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
-          <button type="button" class="menu-btn" data-mod="cronograma_execucao" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
-          <button type="button" class="menu-btn" data-mod="reg_op" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros operacionais</button>
-          <button type="button" class="menu-btn" data-mod="nr13" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13 (vaso de pressão)</button>
-          <button type="button" class="menu-btn" data-mod="inventario" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
+          <button type="button" class="menu-btn" data-mod="certificado_calibracao" data-busca="certificado metrologia emitir rascunho" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de calibração</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" data-busca="instrumento metrologia" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de calibração</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="padroes" data-busca="padroes referencia laboratorio vencimento rastreabilidade" id="menu-btn-padroes" onclick="Menu_atalho_('padroes')" title="Padrões de referência do laboratório: cadastro e controle de vencimento"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões de referência<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="documentos" id="menu-secao-documentos">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-documentos" onclick="Menu_alternarGrupo_('documentos')"><span class="menu-grupo-nome">Documentos técnicos</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-documentos">
+          <button type="button" class="menu-btn" data-mod="declaracao_exec" data-busca="declaracao execucao servico atestado" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de execução</button>
+          <button type="button" class="menu-btn" data-mod="nr13" data-busca="nr13 nr 13 vaso pressao caldeira inspecao laudo" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" data-busca="cronograma calendario planejamento grupos" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
+          <button type="button" class="menu-btn" data-mod="pgt_pop" data-busca="pgt pop plano gerenciamento tecnologias procedimento operacional padrao" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
+          <button type="button" class="menu-btn" data-mod="reg_op" data-busca="registros operacionais formularios" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros operacionais</button>
+          <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
           </div>
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="operacao" id="menu-secao-operacao">
-          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-operacao" onclick="Menu_alternarGrupo_('operacao')"><span class="menu-grupo-nome">Operação e campo</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-operacao" onclick="Menu_alternarGrupo_('operacao')"><span class="menu-grupo-nome">Operação de campo</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-operacao">
-          <button type="button" class="menu-btn" data-mod="frota" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
-          <button type="button" class="menu-btn" data-mod="auvo" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-link" aria-hidden="true"></i></span>Integração Auvo</button>
-          <button type="button" class="menu-btn" data-mod="qualidade" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de qualidade</button>
-          <button type="button" class="menu-btn" data-mod="conduta" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de conduta</button>
+          <button type="button" class="menu-btn" data-mod="auvo" data-busca="auvo ordem servico os tarefas atendimentos tecnicos" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-arrows-rotate" aria-hidden="true"></i></span>Integração Auvo</button>
+          <button type="button" class="menu-btn" data-mod="frota" data-busca="veiculo carro retirada devolucao abastecimento multa manutencao condutor" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="gestao" id="menu-secao-gestao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-gestao" onclick="Menu_alternarGrupo_('gestao')"><span class="menu-grupo-nome">Gestão</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-gestao">
+          <button type="button" class="menu-btn" data-mod="qualidade" data-busca="qualidade ocorrencias indicadores" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de qualidade</button>
+          <button type="button" class="menu-btn" data-mod="conduta" data-busca="conduta farol ico bonus pontuacao ocorrencias missoes ausencias" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de conduta</button>
           </div>
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="cadastros" id="menu-secao-cadastros">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-cadastros" onclick="Menu_alternarGrupo_('cadastros')"><span class="menu-grupo-nome">Cadastros</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-cadastros">
-          <button type="button" class="menu-btn" data-mod="clientes" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-user" aria-hidden="true"></i></span>Clientes</button>
-          <button type="button" class="menu-btn" data-mod="unidades" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Unidades</button>
-          <button type="button" class="menu-btn" data-mod="equipamentos" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-wrench" aria-hidden="true"></i></span>Equipamentos</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="tecnicos" id="menu-btn-tecnicos" onclick="Menu_atalho_('tecnicos')" title="Técnicos executores (cadastro no Certificado de calibração)"><span class="menu-btn-icon"><i class="fas fa-user-gear" aria-hidden="true"></i></span>Técnicos</button>
-          <button type="button" class="menu-btn" data-mod="documentos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder" aria-hidden="true"></i></span>Documentos</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="usuarios" id="menu-btn-usuarios" onclick="Menu_atalho_('usuarios')" title="Gestão de usuários (na Administração)"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="vinculos" id="menu-btn-vinculos" onclick="Menu_atalho_('vinculos')" title="Painel de vínculos entre cliente, unidade e equipamento"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          <button type="button" class="menu-btn" data-mod="clientes" data-busca="cliente cnpj hospital empresa" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Clientes</button>
+          <button type="button" class="menu-btn" data-mod="unidades" data-busca="unidade filial local endereco" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span>Unidades</button>
+          <button type="button" class="menu-btn" data-mod="equipamentos" data-busca="equipamento tag serie qr code prontuario" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-industry" aria-hidden="true"></i></span>Equipamentos</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="vinculos" data-busca="vinculos cliente unidade equipamento auvo" id="menu-btn-vinculos" onclick="Menu_atalho_('vinculos')" title="Painel de vínculos entre cliente, unidade e equipamento"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          <button type="button" class="menu-btn" data-mod="documentos" data-busca="documentos arquivo anexos nbr 15943 relatorios certificados contratos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Arquivo de documentos</button>
           </div>
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="administracao" id="menu-secao-admin">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
-          <button type="button" class="menu-btn" data-mod="admin" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Administração</button>
-          <button type="button" class="menu-btn" data-mod="chaves" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
+          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="usuarios" data-busca="usuarios login senha perfil acesso" id="menu-btn-usuarios" onclick="Menu_atalho_('usuarios')" title="Gestão de usuários e perfis de acesso"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
+          <button type="button" class="menu-btn" data-mod="admin" data-busca="administracao configuracoes ociosidade alertas sessao" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Configurações</button>
+          <button type="button" class="menu-btn" data-mod="chaves" data-busca="chaves senhas api integracoes whatsapp email" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
           </div>
         </div>
       </aside>
@@ -258,8 +275,8 @@
         <div class="module-shell">
           <div class="module-header">
             <div class="module-header-left">
-              <h2 class="content-title">Documentos</h2>
-              <p class="content-subtitle">Gestão de relatórios e certificados seguindo a NBR 15943.</p>
+              <h2 class="content-title">Arquivo de documentos</h2>
+              <p class="content-subtitle">Relatórios, certificados, ordens de serviço e contratos de cada cliente, organizados pelas categorias da NBR 15943.</p>
             </div>
             
             <div class="module-header-right" style="${styleForm} display: flex; gap: 15px; align-items: center;">
@@ -267,7 +284,7 @@
                 <input id="documentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar documento..." onkeydown="if(event.key === 'Enter') documentosPesquisar_()">
                 <button class="btn-secondary" type="button" onclick="documentosPesquisar_()">Pesquisar</button>
               </div>
-              <button class="btn-primary" type="button" onclick="documentosNovo_()">+ Novo Documento</button>
+              <button class="btn-primary" type="button" onclick="documentosNovo_()">Novo documento</button>
             </div>
           </div>
 
@@ -286,7 +303,7 @@
                   </select>
                 </div>
                 <div class="full">
-                  <label for="doc_equipamento_id">Equipamento (Opcional)</label>
+                  <label for="doc_equipamento_id">Equipamento (opcional)</label>
                   <select id="doc_equipamento_id">
                     <option value="">Selecione uma unidade primeiro</option>
                   </select>
@@ -304,11 +321,11 @@
                   </select>
                 </div>
                 <div class="full">
-                  <label for="doc_nome_arquivo">Nome / Referência <span style="color:var(--bc-danger);">*</span></label>
+                  <label for="doc_nome_arquivo">Nome ou referência <span style="color:var(--bc-danger);">*</span></label>
                   <input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026">
                 </div>
                 <div class="full">
-                  <label for="doc_arquivo">Arquivo do documento (enviado ao Drive)</label>
+                  <label for="doc_arquivo">Arquivo do documento</label>
                   <input id="doc_arquivo" type="file" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx" onchange="processarArquivoDocumento_()">
                   <input id="doc_arquivo_base64" type="hidden">
                   <input id="doc_arquivo_mime" type="hidden">
@@ -316,11 +333,11 @@
                   <div id="doc_arquivo_preview" style="margin-top:6px; font-size:12px; font-weight:700; color:var(--metro-blue);"></div>
                 </div>
                 <div class="full">
-                  <label for="doc_data_vencimento">Data de Vencimento (Opcional)</label>
+                  <label for="doc_data_vencimento">Data de vencimento (opcional)</label>
                   <input id="doc_data_vencimento" type="date">
                 </div>
                 <div>
-                  <label for="doc_status">Status</label>
+                  <label for="doc_status">Situação</label>
                   <input id="doc_status" type="text" value="ATIVO" disabled>
                 </div>
               </div>
@@ -340,12 +357,12 @@
                       <th>Equipamento</th>
                       <th>Categoria</th>
                       <th>Arquivo</th>
-                      <th>Status</th>
+                      <th>Situação</th>
                       <th style="${styleAcoes}">Ações</th>
                     </tr>
                   </thead>
                   <tbody id="documentosTabelaBody">
-                    <tr><td colspan="7" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr>
+                    <tr><td colspan="7" class="empty-state">Pesquise pelo cliente, pelo nome do arquivo ou pela categoria para ver os documentos.</td></tr>
                   </tbody>
                 </table>
               </div>

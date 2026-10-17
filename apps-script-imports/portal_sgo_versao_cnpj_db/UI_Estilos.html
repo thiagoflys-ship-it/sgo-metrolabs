@@ -735,9 +735,21 @@
     border-left: 4px solid var(--bc-warn);
   }
 
-  /* faixa de avisos antiga: substituída pela janela de avisos do login */
-  .avisos-wrap,
+  /* faixa antiga "Módulo atual: X" (#areaAvisos, preenchida por atualizarBadgeModulo_): continua escondida.
+     A classe .avisos-wrap é usada também em mensagens de módulo (ex.: "links ainda não configurados"
+     em renderMotorModulo_); até 16/10/2026 ela era escondida junto e a mensagem sumia. Agora só o id some. */
   #areaAvisos { display: none !important; }
+  .avisos-wrap {
+    background: var(--bc-warn-bg);
+    border: 1px solid var(--bc-warn-line);
+    border-left: 4px solid var(--bc-warn);
+    color: var(--bc-warn);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 12px 0;
+  }
 
   /* =========================
      DASHBOARD (KPIs)
@@ -2891,7 +2903,8 @@
   .menu-grupo.is-aberto .menu-grupo-seta { transform: rotate(180deg); }
   .menu-grupo:not(.is-aberto) .menu-grupo-itens { display: none; }
   .menu-grupo-itens { padding-bottom: 6px; }
-  @media (max-width: 900px) {
+  /* celular: na tela inicial não há para onde voltar (classe posta por abrir() em JS_Core) */
+  .app-shell.modo-mobile.mobile-na-home .mobile-topbar > .mobile-topbar-btn:first-child { display: none; }  @media (max-width: 900px) {
     .app-shell:not(.modo-mobile) .menu-grupo-cab { display: none !important; }
     .app-shell:not(.modo-mobile) .menu-grupo-itens { display: contents !important; }
   }

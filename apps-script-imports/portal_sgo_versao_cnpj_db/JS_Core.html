@@ -584,10 +584,20 @@
     if (btnClientes) btnClientes.style.display = isCliente ? "none" : "";
     if (secaoAdmin) secaoAdmin.style.display = isCliente ? "none" : "block";
 
-    // Menu agrupado (JS_Inicio.html): grupo e atalhos novos seguem a mesma regra.
-    ["menu-secao-calibracao", "menu-btn-tecnicos", "menu-btn-usuarios", "menu-btn-vinculos"].forEach(function (id) {
+    // Menu agrupado (JS_Inicio.html): grupos e atalhos novos seguem a mesma regra.
+    ["menu-secao-calibracao", "menu-secao-documentos", "menu-secao-gestao", "menu-btn-vinculos"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.style.display = isCliente ? "none" : "";
+    });
+    // Usuários: o servidor só deixa ADMIN, GESTOR e DIRETORIA gerir usuários (SGO_Usuarios.js,
+    // verificarPermissaoAdmin_); para os demais perfis o item levaria a uma tela que só dá erro.
+    // Mesma regra para Integração Auvo e Painel de qualidade (Auvo_exigirAdmin_ / Qualidade_exigirGestor_
+    // usam isAdminPerfilAuth_: ADMIN, DIRETORIA, GESTOR).
+    const perfilMenu = String(USER_CONTEXT.perfil || "").toUpperCase();
+    const ehGestaoMenu = (perfilMenu === "ADMIN" || perfilMenu === "GESTOR" || perfilMenu === "DIRETORIA");
+    ["#menu-btn-usuarios", '#menu .menu-btn[data-mod="auvo"]', '#menu .menu-btn[data-mod="qualidade"]'].forEach(function (sel) {
+      const el = document.querySelector(sel);
+      if (el) el.style.display = ehGestaoMenu ? "" : "none";
     });
     if (typeof Menu_iniciar_ === "function") Menu_iniciar_();
   }
@@ -599,8 +609,30 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
+    try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home"); } catch (e) {}
+    // Celular: a barra do topo mostra o nome da tela (do menu) antes de o módulo montar; telas que
+    // têm título próprio (atualizarTituloMobile_) sobrescrevem depois. Sem isto ficava "Menu".
+    try {
+      if (mod !== "mobile_home" && ehMobileModo_()) {
+        const btnNav = document.querySelector('#menu .menu-btn[data-mod="' + mod + '"]');
+        if (btnNav) {
+          const copia = btnNav.cloneNode(true);
+          copia.querySelectorAll(".menu-badge, .menu-btn-icon").forEach(function (x) { x.remove(); });
+          atualizarTituloMobile_(copia.textContent.replace(/\s+/g, " ").trim());
+        }
+      }
+    } catch (e) {}
     try { if (typeof Menu_aoAbrirModulo_ === "function") Menu_aoAbrirModulo_(mod); } catch (e) { console.error("Menu:", e); }
     abrirModulo_(mod);
+    // Destaque do item ativo no menu: antes só os módulos que chamavam atualizarBadgeModulo_ marcavam
+    // (Auvo, Qualidade, Conduta e NR-13 deixavam "Início" aceso). Atalhos (Padrões, Usuários, Vínculos)
+    // remarcam depois em Menu_atalho_.
+    if (mod !== "mobile_home") {
+      document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-mod") === mod);
+      });
+    }
     try { if (typeof Atividades_aoAbrirModulo_ === "function") Atividades_aoAbrirModulo_(mod); } catch (e) { console.error("Atividades do módulo:", e); }
   }
 
@@ -669,44 +701,44 @@
     }
 
     if (mod === "cadeia_frio") {
-      renderMotorModulo_("Cadeia de Frio", "cadeia_frio");
+      renderMotorModulo_("Cadeia de frio", "cadeia_frio");
       atualizarBadgeModulo_("cadeia_frio");
       return;
     }
 
     if (mod === "estufa_banhomaria") {
-      renderMotorModulo_("Estufa, Banho-maria e Secadora", "estufa_banhomaria");
+      renderMotorModulo_("Estufa, banho-maria e secadora", "estufa_banhomaria");
       atualizarBadgeModulo_("estufa_banhomaria");
       return;
     }
 
     if (mod === "declaracao_exec") {
-      renderMotorModulo_("Declaração de Execução de Serviço", "declaracao_exec");
+      renderMotorModulo_("Declaração de execução de serviço", "declaracao_exec");
       atualizarBadgeModulo_("declaracao_exec");
       return;
     }
 
     if (mod === "declaracao_qiqo") {
-      renderMotorModulo_("Relatório de Qualificação (QI/QO/QD)", "declaracao_qiqo");
+      renderMotorModulo_("Relatório de qualificação (QI/QO/QD)", "declaracao_qiqo");
       atualizarBadgeModulo_("declaracao_qiqo");
       return;
     }
 
     if (mod === "relatorio_calibracao") {
-      renderMotorModulo_("Relatório de Calibração", "relatorio_calibracao");
+      renderMotorModulo_("Relatório de calibração", "relatorio_calibracao");
       atualizarBadgeModulo_("relatorio_calibracao");
       return;
     }
 
     if (mod === "certificado_calibracao") {
       if (ehMobileModo_()) { renderMobileCertCal_(); return; }
-      renderMotorModulo_("Certificado de Calibração", "certificado_calibracao");
+      renderMotorModulo_("Certificado de calibração", "certificado_calibracao");
       atualizarBadgeModulo_("certificado_calibracao");
       return;
     }
 
     if (mod === "nr13") {
-      renderMotorModulo_("Laudo NR-13 (Vaso de Pressão)", "nr13");
+      renderMotorModulo_("Laudo NR-13 (vaso de pressão)", "nr13");
       return;
     }
 
@@ -716,13 +748,13 @@
     }
 
     if (mod === "qualidade") {
-      renderMotorModulo_("Painel de Qualidade", "qualidade");
+      renderMotorModulo_("Painel de qualidade", "qualidade");
       return;
     }
 
     if (mod === "conduta") {
       if (ehMobileModo_()) { renderMobileConduta_(); return; }
-      renderMotorModulo_("Programa de Conduta, Pontuação e Bonificação", "conduta");
+      renderMotorModulo_("Programa de conduta", "conduta");
       return;
     }
 
@@ -773,6 +805,8 @@
     }
 
     if (mod === "admin") {
+      // celular: mesma regra dos demais recursos avançados (mensagem "só no computador" do casco)
+      if (ehMobileModo_()) { renderMotorModulo_("Configurações", "admin"); return; }
       renderAdminModulo_();
       atualizarBadgeModulo_("admin");
       if (typeof preencherEstadoPainelAdmin_ === "function") {
@@ -792,7 +826,7 @@
     // CRONOGRAMA DE EXECUÇÃO — módulo nativo desde o início (2026-08-11),
     // mesmo padrão de planejamento_cme.
     if (mod === "cronograma_execucao") {
-      renderMotorModulo_("Cronograma de Execução", "cronograma_execucao");
+      renderMotorModulo_("Cronograma de execução", "cronograma_execucao");
       atualizarBadgeModulo_("cronograma_execucao");
       return;
     }
@@ -806,19 +840,23 @@
 
     // REGISTROS OPERACIONAIS — módulo nativo desde o início (2026-08-15), mesmo padrão.
     if (mod === "reg_op") {
-      renderMotorModulo_("Registros Operacionais", "reg_op");
+      renderMotorModulo_("Registros operacionais", "reg_op");
       atualizarBadgeModulo_("reg_op");
       return;
     }
 
     // INVENTÁRIO DE EQUIPAMENTOS — módulo nativo desde o início (2026-08-18), mesmo padrão.
     if (mod === "inventario") {
-      renderMotorModulo_("Inventário de Equipamentos", "inventario");
+      renderMotorModulo_("Inventário de equipamentos", "inventario");
       atualizarBadgeModulo_("inventario");
       return;
     }
 
-    div.innerHTML = "<p>Módulo não encontrado.</p>";
+    div.innerHTML =
+      '<div class="module-shell"><h2 class="content-title">Tela não encontrada</h2>' +
+      '<p class="content-subtitle">Esta tela foi removida do sistema ou o atalho usado está desatualizado. Escolha a tela no menu ao lado ou volte ao Início.</p>' +
+      '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+    console.warn("abrir(): tela desconhecida:", mod);
   }
 
   function obterBadgeStatusHtml_(statusString) {
@@ -855,7 +893,7 @@
         <div class="dashc-grid-top">
           <div class="dashc-stats">
             <div class="dashc-stat" style="${styleAdminOnly}">
-              <div class="dashc-stat-icon azul"><i class="fas fa-user" aria-hidden="true"></i></div>
+              <div class="dashc-stat-icon azul"><i class="fas fa-building" aria-hidden="true"></i></div>
               <div class="dashc-stat-label">Clientes cadastrados</div>
               <div class="dashc-stat-value" id="dashCountClientes">···</div>
             </div>
@@ -866,7 +904,7 @@
             </div>
             <div class="dashc-stat">
               <div class="dashc-stat-icon roxo"><i class="fas fa-file-lines" aria-hidden="true"></i></div>
-              <div class="dashc-stat-label">Documentos / relatórios</div>
+              <div class="dashc-stat-label">Documentos no arquivo</div>
               <div class="dashc-stat-value" id="dashCountDocumentos">···</div>
             </div>
           </div>
@@ -885,37 +923,36 @@
 
         <div class="dashc-grid-charts">
           <div class="dashc-card">
-            <h3 class="dashc-card-title">Equipamentos por Tipo</h3>
+            <h3 class="dashc-card-title">Equipamentos por tipo</h3>
             <div class="dashc-chart-box"><canvas id="dashcGraficoRosca"></canvas></div>
           </div>
           <div class="dashc-card">
-            <h3 class="dashc-card-title">Documentos por Mês</h3>
+            <h3 class="dashc-card-title">Documentos por mês</h3>
             <div class="dashc-chart-box"><canvas id="dashcGraficoBarras"></canvas></div>
           </div>
         </div>
 
         <div class="dashc-grid-tabelas">
           <div class="dashc-card">
-            <h3 class="dashc-card-title">Documentos a Vencer</h3>
+            <h3 class="dashc-card-title">Documentos a vencer (60 dias)</h3>
             <table class="dashc-tabela">
               <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Prazo</th></tr></thead>
               <tbody id="dashcDocsAVencer"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
             </table>
-            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver Mais &gt;</a>
+            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
           </div>
           <div class="dashc-card">
-            <h3 class="dashc-card-title">Últimos Documentos</h3>
+            <h3 class="dashc-card-title">Últimos documentos</h3>
             <table class="dashc-tabela">
               <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;"></th></tr></thead>
               <tbody id="dashcUltimosDocs"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
             </table>
-            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver Mais &gt;</a>
+            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
           </div>
         </div>
 
         <div class="dashc-chips" style="${styleAdminOnly}">
           <span class="dashc-chip"><b id="dashCountUnidades">···</b> Unidades</span>
-          <span class="dashc-chip"><b>${totalMotores}</b> Motores de relatório ativos</span>
           <span class="dashc-chip alerta"><b id="kpiAlertas">0</b> Alertas críticos</span>
         </div>
 
@@ -942,25 +979,25 @@
 
           <div class="dashc-grid-charts">
             <div class="dashc-card">
-              <h3 class="dashc-card-title">Atendimentos por Técnico</h3>
+              <h3 class="dashc-card-title">Atendimentos por técnico</h3>
               <div class="dashc-chart-box"><canvas id="dashcGraficoTecnicos"></canvas></div>
               <div id="dashcAuvoDestaqueTecnico" class="dashc-vazio" style="margin-top:8px"></div>
             </div>
             <div class="dashc-card">
-              <h3 class="dashc-card-title">Últimos Atendimentos</h3>
+              <h3 class="dashc-card-title">Últimos atendimentos</h3>
               <table class="dashc-tabela">
                 <thead><tr><th>Data</th><th>Cliente / Técnico</th><th style="text-align:right;">Situação</th></tr></thead>
                 <tbody id="dashcAuvoUltimos"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
               </table>
-              <a class="dashc-vermais" onclick="abrir('auvo')">Ver Mais &gt;</a>
+              <a class="dashc-vermais" onclick="abrir('auvo')">Ver todos</a>
             </div>
           </div>
         </div>
 
         <div class="dash-columns">
           <section class="dash-panel">
-            <h3 class="dash-panel-title">Alertas e pendências</h3>
-            <div id="dashboardAlertas" class="dash-panel-body">Carregando alertas do sistema...</div>
+            <h3 class="dash-panel-title">Alertas de vencimento</h3>
+            <div id="dashboardAlertas" class="dash-panel-body">Carregando alertas...</div>
           </section>
         </div>
       </div>
@@ -1151,7 +1188,7 @@
       elVenc.innerHTML = lista.length
         ? lista.map(function (d) {
             const dot = d.vencido ? "vermelho" : (d.dias <= 15 ? "amarelo" : "verde");
-            const prazo = d.vencido ? "vencido" : ("em " + d.dias + "d");
+            const prazo = d.vencido ? "vencido" : (Number(d.dias) === 1 ? "em 1 dia" : "em " + d.dias + " dias");
             return "<tr><td><span class=\"dashc-dot " + dot + "\">●</span>" + escapeHtml_(d.data) + "</td>" +
               "<td>" + escapeHtml_(d.descricao) + "</td>" +
               "<td class=\"valor\">" + escapeHtml_(prazo) + "</td></tr>";
@@ -1321,7 +1358,7 @@
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success || !res.items || res.items.length === 0) {
-          container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">Nenhum documento vencido ou a vencer nos próximos 30 dias.</div>';
+          container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">Nenhum alerta de vencimento: documentos, padrões e frota em dia.</div>';
           if (kpiAlertas) kpiAlertas.innerText = "0";
           renderizarAlertaFrotaDashboard_([]);
           return;
@@ -1344,7 +1381,7 @@
       })
       .withFailureHandler(function (err) {
         console.error("Falha ao carregar alertas:", err);
-        container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; font-weight:700; font-size:13px;">Falha ao carregar o sistema de alertas.</div>';
+        container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; font-weight:700; font-size:13px;">Não foi possível carregar os alertas agora. Atualize a página para tentar de novo.</div>';
       })
       .alertasObterDashboard(SESSION);
   }
@@ -1700,7 +1737,7 @@
         }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
       }
     }).catch(function(err) {
-      if (pedido === FROTA_SITUACAO_PEDIDO && sessao === SGO_getSessionId()) els.forEach(function(el) { if (el.isConnected) el.innerHTML = '<p>Não foi possível atualizar a situação da frota. '+escapeHtml_(err.message || String(err))+'</p>'; });
+      if (pedido === FROTA_SITUACAO_PEDIDO && sessao === SGO_getSessionId()) els.forEach(function(el) { if (el.isConnected) el.innerHTML = '<p>Não foi possível carregar a situação da frota agora. Atualize a página para tentar de novo; se continuar, avise o administrador.</p>'; }); console.error("Situação da frota:", err);
     }).finally(function() {
       if (pedido === FROTA_SITUACAO_PEDIDO && sessao === SGO_getSessionId() && els.some(function(el) { return el.isConnected; })) {
         if (FROTA_SITUACAO_TIMER) clearTimeout(FROTA_SITUACAO_TIMER);
@@ -1755,7 +1792,7 @@
 
   function renderMobileFrotaRetirar_() {
     MOBILE_NAV = { modulo: "frota", tela: "form" };
-    atualizarTituloMobile_("Retirar Veículo");
+    atualizarTituloMobile_("Retirar veículo");
     MOBILE_FROTA.fotosRetirada = [];
 
     const div = document.getElementById("conteudo");
@@ -1835,7 +1872,7 @@
 
   function renderMobileFrotaDevolver_(movimentacaoId) {
     MOBILE_NAV = { modulo: "frota", tela: "form" };
-    atualizarTituloMobile_("Devolver Veículo");
+    atualizarTituloMobile_("Devolver veículo");
     MOBILE_FROTA.fotosDevolucao = [];
     MOBILE_FROTA.movimentacaoDevolucaoAtual = movimentacaoId;
 
@@ -2393,18 +2430,18 @@
     if (!isCliente) {
       itens.push({ icone: '<i class="fas fa-list-check" aria-hidden="true"></i>', legenda: "Minhas atividades", mod: "minhas_atividades" });
       itens.push({ icone: '<i class="fas fa-bullhorn" aria-hidden="true"></i>', legenda: "Avisos", mod: "avisos" });
-      itens.push({ icone: '<i class="fas fa-clipboard-list" aria-hidden="true"></i>', legenda: "Planejamento CME", mod: "planejamento_cme" });
-      itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de Calibração", mod: "certificado_calibracao" });
+      itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de calibração", mod: "certificado_calibracao" });
       itens.push({ icone: '<i class="fas fa-car" aria-hidden="true"></i>', legenda: "Frota", mod: "frota" });
       itens.push({ icone: '<i class="fas fa-traffic-light" aria-hidden="true"></i>', legenda: "Conduta", mod: "conduta" });
-      itens.push({ icone: '<i class="fas fa-user" aria-hidden="true"></i>', legenda: "Clientes", mod: "clientes" });
+      itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Clientes", mod: "clientes" });
     }
-    itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
-    itens.push({ icone: '<i class="fas fa-wrench" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
-    itens.push({ icone: '<i class="fas fa-folder" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
+    itens.push({ icone: '<i class="fas fa-location-dot" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
+    itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
+    itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
 
     const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
+    atualizarTituloMobile_("Início");
     div.innerHTML =
       '<div class="inicio-hero inicio-hero-mobile"><h2 class="inicio-saudacao"><span id="inicioSaudacao">' +
         escapeHtml_(typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(nomeMobile) : "") +
@@ -3513,27 +3550,27 @@
 
     const nomes = {
       dashboard: "Início",
-      autoclave: "Autoclave",
+      autoclave: "Autoclaves",
       lavadora: "Lavadoras",
-      cadeia_frio: "Cadeia de Frio",
-      estufa_banhomaria: "Estufa, Banho-maria e Secadora",
-      declaracao_exec: "Declaração de Execução de Serviço",
-      declaracao_qiqo: "Relatório de Qualificação (QI/QO/QD)",
-      relatorio_calibracao: "Relatório de Calibração",
-      certificado_calibracao: "Certificado de Calibração",
-      nr13: "Laudo NR-13 (Vaso de Pressão)",
+      cadeia_frio: "Cadeia de frio",
+      estufa_banhomaria: "Estufa, banho-maria e secadora",
+      declaracao_exec: "Declaração de execução de serviço",
+      declaracao_qiqo: "Relatório de qualificação (QI/QO/QD)",
+      relatorio_calibracao: "Relatório de calibração",
+      certificado_calibracao: "Certificado de calibração",
+      nr13: "Laudo NR-13 (vaso de pressão)",
       frota: "Frota",
       auvo: "Integração Auvo",
       planejamento_cme: "Planejamento CME",
-      cronograma_execucao: "Cronograma de Execução",
+      cronograma_execucao: "Cronograma de execução",
       pgt_pop: "PGT e POP",
-      reg_op: "Registros Operacionais",
-      inventario: "Inventário de Equipamentos",
+      reg_op: "Registros operacionais",
+      inventario: "Inventário de equipamentos",
       clientes: "Clientes",
       unidades: "Unidades",
       equipamentos: "Equipamentos",
-      documentos: "Documentos",
-      admin: "Administração",
+      documentos: "Arquivo de documentos",
+      admin: "Configurações",
       minhas_atividades: "Minhas atividades",
       atividades_equipe: "Atividades da equipe",
       avisos: "Avisos",
@@ -4395,8 +4432,8 @@
       MOBILE_NAV = { modulo: "mobile_home", tela: "lista" };
       div.innerHTML =
         '<div class="mobile-card-subtitulo" style="padding:24px 4px;text-align:center">' +
-        escapeHtml_(titulo) + ' está disponível apenas na versão para computador.' +
-        '</div>';
+        escapeHtml_(titulo) + ' está disponível apenas na versão para computador. Abra o SGO+ num computador para usar esta tela.' +
+        '</div><p style="text-align:center"><button type="button" class="btn-secondary" onclick="abrir(\'mobile_home\')">Voltar ao Início</button></p>';
       return;
     }
 
@@ -4747,7 +4784,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Catálogo de ocorrências, homologação, missões, fechamento mensal e os dois benefícios variáveis.</p>
+              <p class="content-subtitle">Pontuação e bonificação: ocorrências, reconhecimentos, missões, ausências e fechamento mensal do bônus.</p>
             </div>
           </div>
 
