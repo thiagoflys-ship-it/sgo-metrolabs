@@ -10,78 +10,19 @@
       <div class="module-shell">
         <div class="module-header">
           <div class="module-header-left">
-            <h2 class="content-title">Administração</h2>
-            <p class="content-subtitle">Configurações operacionais e gestão de usuários.</p>
+            <h2 class="content-title">Configurações</h2>
+            <p class="content-subtitle">Usuários e perfis de acesso, aviso de ociosidade, lembretes de calibração e sessão neste navegador.</p>
           </div>
         </div>
-
-        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 10px;">
-
-          <div class="card-kpi">
-            <div class="card-kpi-title">Tempo de ociosidade (segundos)</div>
-            <div style="display:flex; gap:5px; align-items:center; margin-top:8px;">
-              <input type="number" id="inputIdleLimit" value="${IDLE_LIMIT}" style="width:75px; padding:4px; font-size:14px; text-align:center;" min="30">
-              <button class="btn-primary" type="button" style="padding:5px 10px; font-size:12px;" onclick="salvarTempoOciosidadePainel_()">Salvar</button>
-            </div>
-          </div>
-
-          <div class="card-kpi">
-            <div class="card-kpi-title">Som de ociosidade</div>
-            <div class="card-kpi-value" id="adminSomStatus">${SOM_OCIOSIDADE_ATIVO ? "Ativado" : "Desativado"}</div>
-          </div>
-
-          <div class="card-kpi">
-            <div class="card-kpi-title">Controle de som</div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-              <button class="btn-primary" type="button" style="padding:6px 10px; font-size:12px;" onclick="ativarSomOciosidadePainel_()">Ativar</button>
-              <button class="btn-secondary" type="button" style="padding:6px 10px; font-size:12px;" onclick="desativarSomOciosidadePainel_()">Desativar</button>
-              <button class="btn-info" type="button" style="padding:6px 10px; font-size:12px;" onclick="testarSomOciosidade_()">Testar</button>
-            </div>
-          </div>
-
-        </div>
-
-        <div id="adminAlertasPadroesCard" class="form-card" style="margin-bottom:20px; display:none;">
-          <div class="module-header" style="margin-bottom:12px;">
-            <div class="module-header-left">
-              <h3 class="section-card-title" style="margin:0;">Alertas globais de calibração</h3>
-              <p class="content-subtitle">Configuração exclusiva do perfil ADMIN para os lembretes de padrões.</p>
-            </div>
-            <span id="ap_status" class="badge badge-ativo">ATIVO</span>
-          </div>
-          <div class="form-grid">
-            <div><label for="ap_ativo">Funcionamento</label><select id="ap_ativo"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
-            <div><label>Perfis que recebem</label><div style="display:flex;gap:16px;padding:9px 0;"><label><input id="ap_gestor" type="checkbox"> GESTOR</label><label><input id="ap_metrologia" type="checkbox"> METROLOGIA</label></div></div>
-            <div><label for="ap_inicio">Horário inicial</label><input id="ap_inicio" type="time"></div>
-            <div><label for="ap_fim">Horário final</label><input id="ap_fim" type="time"></div>
-            <div><label for="ap_intervalo_balao">Intervalo do balão (minutos)</label><input id="ap_intervalo_balao" type="number" min="15" max="720"></div>
-            <div><label for="ap_duracao">Tempo visível (segundos)</label><input id="ap_duracao" type="number" min="5" max="120"></div>
-            <div><label for="ap_critico">Aviso vermelho central</label><select id="ap_critico"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
-            <div><label for="ap_intervalo_critico">Intervalo do aviso central (minutos)</label><input id="ap_intervalo_critico" type="number" min="30" max="1440"></div>
-            <div><label for="ap_antecedencia">Alertar antes do vencimento (dias)</label><input id="ap_antecedencia" type="number" min="1" max="365"></div>
-            <div class="full"><label for="ap_mensagem">Mensagem do alerta crítico</label><input id="ap_mensagem" maxlength="240"></div>
-          </div>
-          <div class="form-actions">
-            <button id="ap_btn_salvar" class="btn-primary" type="button" onclick="adminSalvarAlertasPadroes_()">Salvar configurações</button>
-            <button id="ap_btn_testar" class="btn-secondary" type="button" onclick="adminTestarAlertasPadroes_()">Testar alerta agora</button>
-          </div>
-          <div id="ap_feedback" class="helper-text">Carregando configurações...</div>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <button class="btn-danger" type="button" style="padding:6px 12px; font-size:12px;" onclick="limparCacheNavegador_()">Limpar Sessão Travada (Logout Forçado)</button>
-        </div>
-
-        <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">
 
         <div id="adminUsuariosSecao">
         <div class="module-header">
           <div class="module-header-left">
-            <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de Usuários</h3>
+            <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de usuários</h3>
           </div>
           <div class="module-header-right" style="display: flex; gap: 15px; align-items: center;">
             <div style="display: flex; gap: 5px;">
-              <input id="usuariosPesquisa" class="toolbar-search" type="text" placeholder="Nome ou Login..." onkeydown="if(event.key === 'Enter') usuariosPesquisar_()">
+              <input id="usuariosPesquisa" class="toolbar-search" type="text" placeholder="Nome ou login" onkeydown="if(event.key === 'Enter') usuariosPesquisar_()">
               <button class="btn-secondary" type="button" onclick="usuariosPesquisar_()">Pesquisar</button>
             </div>
             <button class="btn-primary" type="button" onclick="usuariosNovo_()">+ Novo usuário</button>
@@ -93,11 +34,11 @@
             <h3 class="section-card-title" id="usuariosFormTitulo">Novo usuário</h3>
             <div class="form-grid">
               <div class="full">
-                <label for="usr_usuario">Login (Nome de usuário)</label>
+                <label for="usr_usuario">Login (nome de usuário)</label>
                 <input id="usr_usuario" type="text" placeholder="Ex: joao.silva">
               </div>
               <div class="full">
-                <label for="usr_nome">Nome Completo</label>
+                <label for="usr_nome">Nome completo</label>
                 <input id="usr_nome" type="text" placeholder="Nome completo do colaborador">
               </div>
               <div class="full">
@@ -113,11 +54,11 @@
                 <input id="usr_senha" type="password" placeholder="Digite a senha (ou deixe vazio p/ manter a atual)">
               </div>
               <div>
-                <label for="usr_perfil">Perfil de Acesso</label>
+                <label for="usr_perfil">Perfil de acesso</label>
                 <select id="usr_perfil" onchange="aoMudarPerfilUsuario_()"></select>
               </div>
               <div id="usr_cliente_container" style="display:none;">
-                <label for="usr_cliente_id">Vincular Cliente</label>
+                <label for="usr_cliente_id">Cliente vinculado</label>
                 <select id="usr_cliente_id"><option value="">Selecione...</option></select>
               </div>
               <div>
@@ -138,7 +79,7 @@
                 <thead>
                   <tr>
                     <th>Login</th>
-                    <th>Nome Completo</th>
+                    <th>Nome completo</th>
                     <th>E-mail</th>
                     <th>Celular</th>
                     <th>Perfil</th>
@@ -147,12 +88,64 @@
                   </tr>
                 </thead>
                 <tbody id="usuariosTabelaBody">
-                  <tr><td colspan="7" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>
+                  <tr><td colspan="7" class="empty-state">Carregando usuários…</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </div>
+        </div>
+        <div class="form-card" style="margin:20px 0;">
+          <h3 class="section-card-title">Aviso de ociosidade</h3>
+          <div class="form-grid">
+            <div>
+              <label for="inputIdleLimit">Tempo sem uso até o aviso (segundos)</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="number" id="inputIdleLimit" value="${IDLE_LIMIT}" style="width:110px;" min="30">
+                <button class="btn-primary" type="button" onclick="salvarTempoOciosidadePainel_()">Salvar</button>
+              </div>
+            </div>
+            <div>
+              <label>Som do aviso: <span id="adminSomStatus">${SOM_OCIOSIDADE_ATIVO ? "ligado" : "desligado"}</span></label>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="btn-secondary" type="button" onclick="ativarSomOciosidadePainel_()">Ligar</button>
+                <button class="btn-secondary" type="button" onclick="desativarSomOciosidadePainel_()">Desligar</button>
+                <button class="btn-secondary" type="button" onclick="testarSomOciosidade_()">Testar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="adminAlertasPadroesCard" class="form-card" style="margin-bottom:20px; display:none;">
+          <div class="module-header" style="margin-bottom:12px;">
+            <div class="module-header-left">
+              <h3 class="section-card-title" style="margin:0;">Alertas globais de calibração</h3>
+              <p class="content-subtitle">Lembretes de vencimento dos padrões de referência. Só o Administrador altera.</p>
+            </div>
+            <span id="ap_status" class="badge badge-ativo">ATIVO</span>
+          </div>
+          <div class="form-grid">
+            <div><label for="ap_ativo">Funcionamento</label><select id="ap_ativo"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
+            <div><label>Perfis que recebem</label><div style="display:flex;gap:16px;padding:9px 0;"><label><input id="ap_gestor" type="checkbox"> Gestor</label><label><input id="ap_metrologia" type="checkbox"> Metrologia</label></div></div>
+            <div><label for="ap_inicio">Horário inicial</label><input id="ap_inicio" type="time"></div>
+            <div><label for="ap_fim">Horário final</label><input id="ap_fim" type="time"></div>
+            <div><label for="ap_intervalo_balao">Repetir o lembrete a cada (minutos)</label><input id="ap_intervalo_balao" type="number" min="15" max="720"></div>
+            <div><label for="ap_duracao">Tempo visível (segundos)</label><input id="ap_duracao" type="number" min="5" max="120"></div>
+            <div><label for="ap_critico">Janela de alerta no centro da tela</label><select id="ap_critico"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
+            <div><label for="ap_intervalo_critico">Repetir a janela a cada (minutos)</label><input id="ap_intervalo_critico" type="number" min="30" max="1440"></div>
+            <div><label for="ap_antecedencia">Alertar antes do vencimento (dias)</label><input id="ap_antecedencia" type="number" min="1" max="365"></div>
+            <div class="full"><label for="ap_mensagem">Mensagem do alerta crítico</label><input id="ap_mensagem" maxlength="240"></div>
+          </div>
+          <div class="form-actions">
+            <button id="ap_btn_salvar" class="btn-primary" type="button" onclick="adminSalvarAlertasPadroes_()">Salvar configurações</button>
+            <button id="ap_btn_testar" class="btn-secondary" type="button" onclick="adminTestarAlertasPadroes_()">Testar alerta agora</button>
+          </div>
+          <div id="ap_feedback" class="helper-text">Carregando configurações...</div>
+        </div>
+
+        <div class="form-card" style="margin-bottom:20px;">
+          <h3 class="section-card-title">Sessão neste navegador</h3>
+          <p class="helper-text" style="margin-top:0;">Sai do SGO+ neste navegador e recarrega a página. Use quando a tela travar após uma atualização. Os dados salvos não são afetados.</p>
+          <button class="btn-secondary" type="button" onclick="limparCacheNavegador_()">Sair e recarregar</button>
         </div>
       </div>
     `;
@@ -172,6 +165,7 @@
     usuariosLimparFormulario_();
     preencherComboPerfis_();
     carregarClientesParaUsuarios_();
+    usuariosPesquisar_();
     preencherEstadoPainelAdmin_();
     adminCarregarAlertasPadroes_();
   }
@@ -205,7 +199,7 @@
     const elMsg = document.getElementById("adminMensagemAtual");
     const elIdle = document.getElementById("inputIdleLimit");
 
-    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "Ativado" : "Desativado";
+    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "ligado" : "desligado";
     if (elIdle) elIdle.value = IDLE_LIMIT;
 
     if (elMsg) {
@@ -217,6 +211,11 @@
   // ==========================================
   // MÓDULO: USUÁRIOS
   // ==========================================
+  function SGO_rotuloPerfil_(p) {
+    const k = String(p || "").toUpperCase();
+    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", CLIENTE: "Cliente" })[k] || p;
+  }
+
   function preencherComboPerfis_() {
     const select = document.getElementById("usr_perfil");
     if (!select) return;
@@ -230,7 +229,7 @@
     // Só um Administrador cria ou promove outro Administrador (regra do servidor, SGO_Usuarios.js).
     const souAdmin = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase() === "ADMIN";
     profiles.filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; }).forEach(function (p) {
-      options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(p) + "</option>");
+      options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(SGO_rotuloPerfil_(p)) + "</option>");
     });
     select.innerHTML = options.join("");
   }
@@ -282,11 +281,6 @@
     const tbody = document.getElementById("usuariosTabelaBody");
     if (!tbody) return;
 
-    if (!USUARIOS_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Utilize a barra de pesquisa para buscar usuários.</td></tr>';
-      return;
-    }
-
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Buscando na base...</td></tr>';
 
     SGO_iniciarCarregamento_();
@@ -328,7 +322,7 @@
           <td>${escapeHtml_(item.NOME)}</td>
           <td>${escapeHtml_(item.EMAIL)}</td>
           <td>${escapeHtml_(usuariosMascaraCelular_(item.CELULAR))}</td>
-          <td>${escapeHtml_(item.PERFIL)}</td>
+          <td>${escapeHtml_(SGO_rotuloPerfil_(item.PERFIL))}</td>
           <td>${obterBadgeStatusHtml_(status)}</td>
           <td>
             <div class="table-actions">
@@ -408,7 +402,7 @@
     const payload = usuariosLerFormulario_();
 
     if (!payload.USUARIO) return alert("O Login é obrigatório.");
-    if (!payload.NOME) return alert("O Nome Completo é obrigatório.");
+    if (!payload.NOME) return alert("Informe o nome completo.");
     if (!payload.EMAIL || payload.EMAIL.indexOf("@") === -1) return alert("Informe um e-mail válido — é a identidade do usuário no Portal.");
     if (payload.CELULAR === null) return alert("Não foi possível aceitar o celular. Informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
     if (!payload.PERFIL) return alert("Selecione o perfil de acesso.");
@@ -549,6 +543,14 @@
   // LÓGICA DE SUPORTE: DOCUMENTOS
   // (A renderização está no Index.html)
   // ==========================================
+
+    // Fase 2 (16/10): sem filtro, mostra os 50 cadastrados mais recentes; a pesquisa filtra.
+    function documentosRecentes_(itens) {
+      if (DOCUMENTOS_STATE.filtro || itens.length <= 50) return { itens: itens, nota: "" };
+      const ord = itens.slice().sort(function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); });
+      return { itens: ord.slice(0, 50), nota: '<tr><td colspan="9" class="empty-state">Mostrando os 50 mais recentes de ' + itens.length + '. Use a pesquisa para achar os demais.</td></tr>' };
+    }
+
   function documentosPesquisar_() {
     const el = document.getElementById("documentosPesquisa");
     DOCUMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
@@ -556,11 +558,6 @@
 
     const tbody = document.getElementById("documentosTabelaBody");
     if (!tbody) return;
-
-    if (!DOCUMENTOS_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar documentos.</td></tr>';
-      return;
-    }
 
     tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
 
@@ -572,7 +569,9 @@
           tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Falha ao buscar documentos.</td></tr>';
           return;
         }
-        renderTabelaDocumentos_(Array.isArray(res.items) ? res.items : []);
+        const lista = documentosRecentes_(Array.isArray(res.items) ? res.items : []);
+        renderTabelaDocumentos_(lista.itens);
+        if (lista.nota) tbody.insertAdjacentHTML("beforeend", lista.nota);
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -883,7 +882,7 @@
           if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
           alert(res.message || "Atualizado com sucesso.");
           documentosNovo_();
-          if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+          documentosPesquisar_();
         })
         .withFailureHandler(function (err) {
           SGO_finalizarCarregamento_();
@@ -957,7 +956,7 @@
         const preview = document.getElementById("doc_arquivo_preview");
         if (preview) {
           if (item.LINK_ARQUIVO) {
-            preview.innerHTML = `Arquivo atual: <a href="${escapeHtml_(item.LINK_ARQUIVO)}" target="_blank">Visualizar no Drive</a> <br><span style="color:var(--muted); font-weight:normal;">(Selecione um novo arquivo apenas se quiser substituir o atual)</span>`;
+            preview.innerHTML = `Arquivo atual: <a href="${escapeHtml_(item.LINK_ARQUIVO)}" target="_blank">Abrir arquivo</a> <br><span style="color:var(--muted); font-weight:normal;">(Selecione um novo arquivo apenas se quiser substituir o atual)</span>`;
           } else {
             preview.innerText = "";
           }
@@ -982,7 +981,7 @@
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
-        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+        documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -1000,7 +999,7 @@
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
-        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+        documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -1019,7 +1018,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
         if (DOCUMENTOS_STATE.editingId === id) documentosNovo_();
-        if (DOCUMENTOS_STATE.filtro) documentosPesquisar_();
+        documentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();

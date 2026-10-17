@@ -118,7 +118,7 @@
               '<input id="clientesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') clientesPesquisar_()">' +
               '<button class="btn-secondary" type="button" onclick="clientesPesquisar_()">Pesquisar</button>' +
             '</div>' +
-            '<button class="btn-primary" type="button" onclick="clientesNovo_()">+ Novo Cliente</button>' +
+            '<button class="btn-primary" type="button" onclick="clientesNovo_()">+ Novo cliente</button>' +
           '</div>' +
         '</div>' +
 
@@ -127,10 +127,10 @@
             '<h3 class="section-card-title" id="clientesFormTitulo">Novo cliente</h3>' +
             '<div class="form-grid">' +
               '<div>' +
-                '<label for="cli_cnpj">CNPJ (Busca Automática)</label>' +
+                '<label for="cli_cnpj">CNPJ</label>' +
                 '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:280px;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
-                  '<button class="btn-secondary" type="button" onclick="buscarCnpjCliente_()">Buscar</button>' +
+                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
+                  '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjCliente_()" title="Busca razão social e endereço na Receita Federal">Preencher pela Receita</button>' +
                 '</div>' +
               '</div>' +
               '<div class="full">' +
@@ -145,7 +145,8 @@
                 '<label for="cli_endereco">Endereço</label>' +
                 '<input id="cli_endereco" type="text" placeholder="Rua, número, bairro...">' +
               '</div>' +
-              '<div>' +
+              '<div class="full cad-opcao-principal"><label class="cad-check"><input id="cli_criar_principal" type="checkbox" checked> Criar a unidade principal com este CNPJ e endereço ao cadastrar. Desmarque só para cliente que agrupa outras unidades.</label></div>' +
+              '<div id="cli_status_wrap" hidden>' +
                 '<label for="cli_status">Situação</label>' +
                 '<input id="cli_status" type="text" value="ATIVO" disabled>' +
               '</div>' +
@@ -166,7 +167,6 @@
               '<button class="btn-primary" type="button" onclick="clientesSalvar_()">Salvar</button>' +
               '<button class="btn-secondary" type="button" onclick="clientesNovo_()">Limpar</button>' +
             '</div>' +
-            '<label><input id="cli_criar_principal" type="checkbox" checked> Criar unidade principal com este CNPJ e endereço ao cadastrar. Desmarque somente para cliente agrupador.</label>' +
             '<div class="helper-text" id="clientesHelper">Preencha os dados do cliente e clique em salvar.</div>' +
           '</div>' +
 
@@ -186,7 +186,7 @@
                   '</tr>' +
                 '</thead>' +
                 '<tbody id="clientesTabelaBody">' +
-                  '<tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>' +
+                  '<tr><td colspan="8" class="empty-state">Carregando clientes…</td></tr>' +
                 '</tbody>' +
               '</table>' +
             '</div>' +
@@ -195,21 +195,16 @@
       '</div>';
 
     clientesLimparFormulario_();
+    clientesPesquisar_();
   }
 
   function clientesPesquisar_() {
-    if(typeof vincSearchLegacy_ === "function" && vincSearchLegacy_("CLIENTE"))return;
     var el = document.getElementById("clientesPesquisa");
     CLIENTES_STATE.filtro = el ? String(el.value || "").trim() : "";
     if (!SESSION) return;
 
     var tbody = document.getElementById("clientesTabelaBody");
     if (!tbody) return;
-
-    if (!CLIENTES_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Utilize a barra de pesquisa para buscar clientes.</td></tr>';
-      return;
-    }
 
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Buscando na base...</td></tr>';
 
@@ -236,7 +231,7 @@
     if (!tbody) return;
 
     if (!items || !items.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum cliente encontrado para esta busca.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">' + (CLIENTES_STATE.filtro ? "Nenhum cliente encontrado para esta busca. Confira o nome ou o CNPJ, ou limpe a pesquisa." : "Nenhum cliente cadastrado ainda. Use + Novo cliente.") + '</td></tr>';
       return;
     }
 
@@ -277,6 +272,7 @@
     var titulo = document.getElementById("clientesFormTitulo");
     var helper = document.getElementById("clientesHelper");
     if (titulo) titulo.innerText = "Novo cliente";
+    var stwN = document.getElementById("cli_status_wrap"); if (stwN) stwN.hidden = true;
     if (helper) helper.innerText = "Preencha os dados do cliente e clique em salvar.";
   }
 
@@ -324,7 +320,7 @@
           alert(res.message || "Cliente atualizado com sucesso.");
           CLIENTES_STATE.editingId = "";
           clientesNovo_();
-          if (CLIENTES_STATE.filtro) clientesPesquisar_();
+          clientesPesquisar_();
         })
         .withFailureHandler(function(err) {
           SGO_finalizarCarregamento_();
@@ -372,6 +368,7 @@
         setValue_("cli_email", item.EMAIL || "");
         setValue_("cli_telefone", item.TELEFONE || "");
         setValue_("cli_status", item.STATUS || "ATIVO");
+        var stw = document.getElementById("cli_status_wrap"); if (stw) stw.hidden = false;
 
         var titulo = document.getElementById("clientesFormTitulo");
         var helper = document.getElementById("clientesHelper");
@@ -397,7 +394,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o cliente. Tente de novo.");
         alert(res.message || "Cliente inativado com sucesso.");
-        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+        clientesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
@@ -416,7 +413,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o cliente. Tente de novo.");
         alert(res.message || "Cliente reativado com sucesso.");
-        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+        clientesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
@@ -439,7 +436,7 @@
           clientesNovo_();
         }
         alert(res.message || "Cliente excluído com sucesso.");
-        if (CLIENTES_STATE.filtro) clientesPesquisar_();
+        clientesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
@@ -486,17 +483,18 @@
                 SGO_htmlBuscaClienteLike_("uni_cliente_id", "Digite o nome ou CNPJ do cliente e clique na sugestão...") +
               '</div>' +
               '<div>' +
-                '<label for="uni_cnpj_unidade">CNPJ da unidade <small style="font-weight:400; opacity:.75;">Na unidade principal, pode ser o mesmo do cliente.</small></label>' +
+                '<label for="uni_cnpj_unidade">CNPJ da unidade</label>' +
                 '<div style="display:flex; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:280px;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
-                  '<button class="btn-secondary" type="button" onclick="buscarCnpjUnidade_()">Buscar</button>' +
+                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
+                  '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjUnidade_()" title="Busca nome e endereço na Receita Federal">Preencher pela Receita</button>' +
                 '</div>' +
+                '<div class="helper-text" style="margin-top:4px">Na unidade principal, pode ser o mesmo CNPJ do cliente.</div>' +
               '</div>' +
               '<div class="full">' +
                 '<label for="uni_nome_unidade">Nome da unidade</label>' +
                 '<input id="uni_nome_unidade" type="text" placeholder="Digite o nome da unidade">' +
               '</div>' +
-              '<div>' +
+              '<div id="uni_status_wrap" hidden>' +
                 '<label for="uni_status">Situação</label>' +
                 '<input id="uni_status" type="text" value="ATIVO" disabled>' +
               '</div>' +
@@ -545,7 +543,7 @@
                   '</tr>' +
                 '</thead>' +
                 '<tbody id="unidadesTabelaBody">' +
-                  '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>' +
+                  '<tr><td colspan="9" class="empty-state">Carregando unidades…</td></tr>' +
                 '</tbody>' +
               '</table>' +
             '</div>' +
@@ -558,6 +556,7 @@
     if (!isCliente) {
       carregarClientesAtivosParaUnidades_();
     }
+    unidadesPesquisar_();
   }
 
   function carregarClientesAtivosParaUnidades_() {
@@ -587,18 +586,12 @@
   }
 
   function unidadesPesquisar_() {
-    if(typeof vincSearchLegacy_ === "function" && vincSearchLegacy_("UNIDADE"))return;
     var el = document.getElementById("unidadesPesquisa");
     UNIDADES_STATE.filtro = el ? String(el.value || "").trim() : "";
     if (!SESSION) return;
 
     var tbody = document.getElementById("unidadesTabelaBody");
     if (!tbody) return;
-
-    if (!UNIDADES_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Utilize a barra de pesquisa para buscar unidades.</td></tr>';
-      return;
-    }
 
     tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
 
@@ -628,7 +621,7 @@
     var styleAcoes = isCliente ? "display:none;" : "";
 
     if (!items || !items.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma unidade encontrada.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">' + (UNIDADES_STATE.filtro ? "Nenhuma unidade encontrada para esta busca. Confira o nome ou o CNPJ, ou limpe a pesquisa." : "Nenhuma unidade cadastrada ainda.") + '</td></tr>';
       return;
     }
 
@@ -672,6 +665,7 @@
     var titulo = document.getElementById("unidadesFormTitulo");
     var helper = document.getElementById("unidadesHelper");
     if (titulo) titulo.innerText = "Nova unidade";
+    var stwU = document.getElementById("uni_status_wrap"); if (stwU) stwU.hidden = true;
     if (helper) helper.innerText = "Preencha os dados da unidade e clique em salvar.";
 
     if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
@@ -722,7 +716,7 @@
           alert(res.message || "Unidade atualizada com sucesso.");
           UNIDADES_STATE.editingId = "";
           unidadesNovo_();
-          if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+          unidadesPesquisar_();
         })
         .withFailureHandler(function(err) {
           SGO_finalizarCarregamento_();
@@ -774,6 +768,7 @@
         setValue_("uni_responsavel", item.RESPONSAVEL || "");
         setValue_("uni_telefone", item.TELEFONE || "");
         setValue_("uni_status", item.STATUS || "ATIVO");
+        var stwE = document.getElementById("uni_status_wrap"); if (stwE) stwE.hidden = false;
 
         var titulo = document.getElementById("unidadesFormTitulo");
         var helper = document.getElementById("unidadesHelper");
@@ -799,7 +794,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar a unidade. Tente de novo.");
         alert(res.message || "Unidade inativada com sucesso.");
-        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+        unidadesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
@@ -818,7 +813,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar a unidade. Tente de novo.");
         alert(res.message || "Unidade reativada com sucesso.");
-        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+        unidadesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();
@@ -838,7 +833,7 @@
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir a unidade. Tente de novo.");
         if (UNIDADES_STATE.editingId === id) unidadesNovo_();
         alert(res.message || "Unidade excluída com sucesso.");
-        if (UNIDADES_STATE.filtro) unidadesPesquisar_();
+        unidadesPesquisar_();
       })
       .withFailureHandler(function(err) {
         SGO_finalizarCarregamento_();

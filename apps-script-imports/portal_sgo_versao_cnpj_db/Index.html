@@ -136,7 +136,7 @@
           <div class="menu-grupo-itens" id="menu-grupo-itens-calibracao">
           <button type="button" class="menu-btn" data-mod="certificado_calibracao" data-busca="certificado metrologia emitir rascunho" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de calibração</button>
           <button type="button" class="menu-btn" data-mod="relatorio_calibracao" data-busca="instrumento metrologia" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de calibração</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="padroes" data-busca="padroes referencia laboratorio vencimento rastreabilidade" id="menu-btn-padroes" onclick="Menu_atalho_('padroes')" title="Padrões de referência do laboratório: cadastro e controle de vencimento"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões de referência<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          <button type="button" class="menu-btn" data-mod="padroes" data-busca="padroes referencia laboratorio vencimento rastreabilidade" id="menu-btn-padroes" onclick="abrir('padroes')" title="Padrões de referência do laboratório: cadastro e controle de vencimento"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões de referência<span class="menu-badge" id="menuBadgePadroes"></span></button>
           </div>
         </div>
 
@@ -362,7 +362,7 @@
                     </tr>
                   </thead>
                   <tbody id="documentosTabelaBody">
-                    <tr><td colspan="7" class="empty-state">Pesquise pelo cliente, pelo nome do arquivo ou pela categoria para ver os documentos.</td></tr>
+                    <tr><td colspan="7" class="empty-state">Carregando documentos…</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -374,6 +374,7 @@
       if (typeof documentosLimparFormulario_ === "function") {
         documentosLimparFormulario_();
       }
+      if (typeof documentosPesquisar_ === "function") documentosPesquisar_();
     }
   </script>
 

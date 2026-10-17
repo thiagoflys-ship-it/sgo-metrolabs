@@ -128,8 +128,8 @@
       return;
     }
     if (alvo === "padroes") {
-      abrir("certificado_calibracao");
-      Menu_esperar_("certcal-padroes-tabela", function (el) { Menu_rolarAte_(el, false); });
+      abrir("padroes"); // página própria desde a fase 2 (16/10)
+      return;
     } else if (alvo === "usuarios") {
       abrir("admin");
       Menu_esperar_("usuariosPesquisa", function (el) { Menu_rolarAte_(el, true); });

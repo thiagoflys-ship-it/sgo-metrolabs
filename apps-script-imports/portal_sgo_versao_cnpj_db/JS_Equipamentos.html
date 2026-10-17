@@ -98,7 +98,7 @@
                   </tr>
                 </thead>
                 <tbody id="equipamentosTabelaBody">
-                  <tr><td colspan="10" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>
+                  <tr><td colspan="10" class="empty-state">Carregando equipamentos…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -112,6 +112,7 @@
     if (!isCliente) {
       carregarClientesParaEquipamentos_();
     }
+    equipamentosPesquisar_();
   }
 
   function carregarClientesParaEquipamentos_() {
@@ -187,6 +188,14 @@
     select.innerHTML = options.join("");
   }
 
+
+    // Fase 2 (16/10): sem filtro, mostra os 50 cadastrados mais recentes; a pesquisa filtra.
+    function equipamentosRecentes_(itens) {
+      if (EQUIPAMENTOS_STATE.filtro || itens.length <= 50) return { itens: itens, nota: "" };
+      const ord = itens.slice().sort(function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); });
+      return { itens: ord.slice(0, 50), nota: '<tr><td colspan="10" class="empty-state">Mostrando os 50 mais recentes de ' + itens.length + '. Use a pesquisa para achar os demais.</td></tr>' };
+    }
+
   function equipamentosPesquisar_() {
     const el = document.getElementById("equipamentosPesquisa");
     EQUIPAMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
@@ -194,11 +203,6 @@
 
     const tbody = document.getElementById("equipamentosTabelaBody");
     if (!tbody) return;
-
-    if (!EQUIPAMENTOS_STATE.filtro) {
-      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Utilize a barra de pesquisa para buscar equipamentos.</td></tr>';
-      return;
-    }
 
     tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Buscando na base...</td></tr>';
 
@@ -210,7 +214,9 @@
           tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Falha ao buscar equipamentos.</td></tr>';
           return;
         }
-        renderTabelaEquipamentos_(Array.isArray(res.items) ? res.items : []);
+        const lista = equipamentosRecentes_(Array.isArray(res.items) ? res.items : []);
+        renderTabelaEquipamentos_(lista.itens);
+        if (lista.nota) tbody.insertAdjacentHTML("beforeend", lista.nota);
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -228,7 +234,7 @@
     const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
 
     if (!items.length) {
-      tbody.innerHTML = `<tr><td colspan="10" class="empty-state">Nenhum equipamento encontrado.</td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">' + (EQUIPAMENTOS_STATE.filtro ? "Nenhum equipamento encontrado para esta busca. Confira a TAG, a série ou o cliente, ou limpe a pesquisa." : "Nenhum equipamento cadastrado ainda.") + '</td></tr>';
       return;
     }
 
@@ -362,7 +368,7 @@
           if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
           alert(res.message || "Atualizado com sucesso.");
           equipamentosNovo_();
-          if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+          equipamentosPesquisar_();
         })
         .withFailureHandler(function (err) {
           SGO_finalizarCarregamento_();
@@ -442,7 +448,7 @@
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
-        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+        equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -460,7 +466,7 @@
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
-        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+        equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
@@ -479,7 +485,7 @@
         SGO_finalizarCarregamento_();
         if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
         if (EQUIPAMENTOS_STATE.editingId === id) equipamentosNovo_();
-        if (EQUIPAMENTOS_STATE.filtro) equipamentosPesquisar_();
+        equipamentosPesquisar_();
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();

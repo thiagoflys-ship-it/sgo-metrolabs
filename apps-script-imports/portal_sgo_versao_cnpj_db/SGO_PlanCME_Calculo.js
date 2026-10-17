@@ -253,10 +253,14 @@ function PlanCME_calcularPlanejamento(dados) {
     // NUNCA chamam a IA de novo. Isso garante que os 2 documentos nunca
     // descrevam o mesmo cálculo de forma divergente. Lança erro se
     // falhar — não existe "calcular sem fundamentação".
+    // Fase 2 (16/10, auditoria P1): o quantitativo é cálculo determinístico e sai sempre. Se a IA
+    // falhar (sem chave, fora do ar), o resultado volta com um aviso; o documento sai sem os
+    // parágrafos de fundamentação até a IA responder (calcular de novo gera os textos).
     try {
       resultado.textosIA = PlanCME_gerarJustificativasIA_(dados, resultado);
     } catch (eIA) {
-      throw new Error("O planejamento não foi concluído porque a fundamentação técnica do documento é escrita pela IA. " + eIA.message);
+      resultado.textosIA = null;
+      resultado.avisoIA = "O quantitativo está correto, mas o texto de fundamentação não pôde ser gerado agora (" + String(eIA && eIA.message || eIA).replace(/[.s]+$/, "") + "). O documento sai sem esses parágrafos; para incluí-los, clique em Calcular de novo em alguns minutos ou avise o administrador.";
     }
 
     return {

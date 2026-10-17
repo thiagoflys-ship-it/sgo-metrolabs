@@ -72,11 +72,31 @@ const SGO_PADROES = (() => {
     return erros;
   }
 
+  // Fase 2 (16/10): duas TAGs iguais deixavam o técnico escolher o padrão errado no ensaio.
+  // A TAG é única no cadastro (ativos e inativos); a edição do próprio padrão é permitida.
+  function tagDuplicada_(tag, ignorarId) {
+    const alvo = SGO_UTILS.safeUpper(tag);
+    if (!alvo) return null;
+    const ign = SGO_UTILS.safe(ignorarId);
+    return SGO_DATA.getAll(SHEET_NAME).filter(function (p) {
+      return SGO_UTILS.safeUpper(p.TAG) === alvo && SGO_UTILS.safe(p.ID) !== ign;
+    })[0] || null;
+  }
+
+  function mensagemTagDuplicada_(existente) {
+    const inativo = SGO_UTILS.safeUpper(existente.STATUS) !== STATUS_ATIVO;
+    return "Já existe um padrão com a TAG " + existente.TAG + (inativo ? " (inativo)" : "") + ". Cada padrão precisa de uma TAG própria: " +
+      (inativo ? "reative o cadastro existente na lista de Padrões de referência, ou " : "edite o cadastro existente na lista de Padrões de referência, ou ") +
+      "use outra TAG (por exemplo, com o canal ou a grandeza: " + existente.TAG + "-UR).";
+  }
+
   function validar(sessionId, payload) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === 'CLIENTE') throw new Error('Acesso negado.');
     const dados = normalizarPayload_(payload);
     const erros = validarPayload_(dados);
+    const dup = tagDuplicada_(dados.TAG, payload && payload.padraoId);
+    if (dup) erros.push(mensagemTagDuplicada_(dup));
     if (erros.length) throw new Error(erros.join(' '));
     return dados;
   }
@@ -101,6 +121,8 @@ const SGO_PADROES = (() => {
 
     const dados = normalizarPayload_(payload);
     const erros = validarPayload_(dados);
+    const dupCriar = tagDuplicada_(dados.TAG, "");
+    if (dupCriar) erros.push(mensagemTagDuplicada_(dupCriar));
     if (erros.length) return { success: false, message: erros.join(" ") };
 
     const registro = SGO_DATA.normalizarObjetoParaSheet(
@@ -127,6 +149,8 @@ const SGO_PADROES = (() => {
 
     const dados = normalizarPayload_(payload);
     const erros = validarPayload_(dados);
+    const dupAtualizar = tagDuplicada_(dados.TAG, padraoId);
+    if (dupAtualizar) erros.push(mensagemTagDuplicada_(dupAtualizar));
     if (erros.length) return { success: false, message: erros.join(" ") };
 
     const novosDados = SGO_DATA.normalizarObjetoParaSheet(SHEET_NAME, Object.assign({}, atual, dados, {

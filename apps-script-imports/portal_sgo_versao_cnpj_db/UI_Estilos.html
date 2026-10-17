@@ -263,19 +263,42 @@
   }
 
   select option { background: #FFFFFF; color: var(--bc-text); }
+  /* Fase 2 (16/10): sem caixa alta forçada nos títulos de seção, rótulos e listas de verificação
+     dos módulos de calibração e documentos técnicos (o texto aparece como foi escrito). */
+  :is(#tplCertCalContainer, #tplRelCalContainer, #tplDeclExecContainer, #tplDeclExecQIQOContainer, #tplNR13Container,
+      #tplPlanCMEContainer, #tplCronExecContainer, #tplPgtPopContainer, #tplRegOpContainer, #tplInvContainer)
+    :is(.panel h2, .section-divider, label, .form-label, .check-grid, .check-grid *, .checkbox-row label, h4, .doc-tipo, .ia-label, .resumo-label, .rotulo-mini, .inv-kpi-label) {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+  /* Casco dos módulos técnicos (JS_Core › SGO_cascoAjustar_) */
+  details.sgo-detalhes-tecnicos { margin: 14px 0; border: 1px solid var(--bc-line-2); border-radius: 8px; padding: 8px 12px; background: #FFFFFF; }
+  details.sgo-detalhes-tecnicos > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--bc-text-3); }
+  details.sgo-detalhes-tecnicos .terminal, details.sgo-detalhes-tecnicos [id$="_terminalLog"] { max-height: 220px; overflow: auto; }
+  .sgo-faixa-operacao { position: sticky; bottom: 12px; z-index: 50; display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 12px 0; padding: 12px 16px; border-radius: 8px; border: 2px solid var(--bc-warn); background: var(--bc-warn-bg, #FFF6E0); color: var(--bc-text); font-size: 13.5px; line-height: 1.5; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+  .sgo-faixa-operacao.is-erro { border-color: var(--bc-danger); background: var(--bc-danger-bg, #FDECEA); }
+  .sgo-faixa-operacao button { flex: 0 0 auto; width: auto !important; }
+  /* Seletor de arquivo em português (JS_Core › SGO_melhorarSeletorArquivo_) */
+  .sgo-arquivo { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: 100%; position: relative; }
+  .sgo-arquivo .sgo-arquivo-nativo { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; overflow: hidden; pointer-events: none; padding: 0 !important; border: 0 !important; margin: 0 !important; }
+  .sgo-arquivo .sgo-arquivo-btn { width: auto !important; padding: 6px 14px; font-size: 13px; }
+  .sgo-arquivo .sgo-arquivo-nome { font-size: 12.5px; color: var(--bc-text-3); overflow-wrap: anywhere; }
   input[type="file"]::file-selector-button { background: #FFFFFF; color: var(--bc-text); border: 1px solid var(--bc-line-2); border-radius: 4px; padding: 3px 10px; margin-right: 8px; font-family: inherit; }
   input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #FFFFFF inset !important; -webkit-text-fill-color: var(--bc-text) !important; }
 
   label {
     display: block;
     margin-bottom: 4px;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 12px;
+    font-weight: 700;
+    /* Fase 2 (16/10): sem caixa alta forçada; o texto aparece como foi escrito. */
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--bc-text-2);
     text-align: left;
   }
+  /* Opções de marcar/escolher (checkbox e rádio) são frases: peso normal. */
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { font-weight: 500; font-size: 13px; color: var(--bc-text); }
 
   /* =========================
      LOGIN
@@ -1019,10 +1042,10 @@
 
   .section-card-title {
     margin: 0 0 16px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    text-transform: none;
+    letter-spacing: 0;
     color: var(--bc-text);
     border-bottom: 1px solid var(--bc-line);
     padding-bottom: 10px;
@@ -1108,6 +1131,11 @@
     flex-wrap: wrap;
     gap: 6px;
   }
+  /* Fase 2 (16/10): na lista ao lado do formulário a coluna Ações ficava cortada ("Inativ", "QR C").
+     Os botões ficam um embaixo do outro e as colunas de texto quebram linha. */
+  .list-card .table td .table-actions { display: grid; grid-template-columns: 1fr; gap: 4px; min-width: 88px; }
+  .list-card .table td .table-actions button { width: 100%; }
+  .list-card .table td { overflow-wrap: anywhere; }
 
   .table-actions button {
     min-height: 28px;
@@ -1625,10 +1653,10 @@
     gap: 6px;
   }
   .mobile-field label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--muted);
-    text-transform: uppercase;
+    text-transform: none;
   }
   .mobile-field input,
   .mobile-field select,

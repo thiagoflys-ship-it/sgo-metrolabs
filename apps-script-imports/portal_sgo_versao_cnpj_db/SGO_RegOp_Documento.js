@@ -119,8 +119,8 @@ function RegOp_montarDocumentoHtml_(dados) {
   html.push('<div class="titulo-central"><h1>' + RegOp_escaparHtml_(dados.tipoDocumentoNome || '') + '</h1><div class="norma">' + RegOp_escaparHtml_(REGOP_CFG.BASE_NORMATIVA) + '</div></div>');
 
   html.push('<table class="dados">');
-  html.push('<tr><td class="rotulo">Hospital/Instituição</td><td>' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">CNPJ</td><td>' + RegOp_escaparHtml_(hospital.cnpj || '—') + '</td></tr>');
+  html.push('<tr><td class="rotulo">Cliente / instituição</td><td>' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</td></tr>');
+  html.push('<tr><td class="rotulo">CNPJ</td><td>' + RegOp_escaparHtml_(hospital.cnpj ? RegOp_formatarCnpj_(hospital.cnpj) : '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Localização</td><td>' + RegOp_escaparHtml_([hospital.cidade, hospital.uf].filter(Boolean).join('/') || '—') + '</td></tr>');
   html.push('</table>');
 
@@ -275,6 +275,12 @@ function RegOp_registrarDocumento_(dados, arquivo) {
 }
 
 function RegOp_getLogoDataUri_() {
+  // Fase 2 (16/10): no servidor próprio não há Drive do Google; usa a mesma logo embutida do
+  // Certificado de calibração (CadeiaFrioRel_CFCFG.LOGO_BASE64). O ID do Drive fica como reserva.
+  try {
+    const cfgLogo = typeof CadeiaFrioRel_CFCFG !== "undefined" ? CadeiaFrioRel_CFCFG.LOGO_BASE64 : null;
+    if (cfgLogo && cfgLogo.data) return "data:" + (cfgLogo.mimeType || "image/png") + ";base64," + cfgLogo.data;
+  } catch (e) { /* segue para o Drive */ }
   try {
     const logoId = PropertiesService.getScriptProperties().getProperty("REGOP_LOGO_ID") || REGOP_CFG.LOGO_ID;
     const blob = DriveApp.getFileById(logoId).getBlob();

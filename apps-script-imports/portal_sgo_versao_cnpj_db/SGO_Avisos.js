@@ -358,6 +358,11 @@ function Avisos_apiOpcoes(sessionId, payload) {
     var eu = Avisos_sessao_(sessionId);
     Avisos_exigirGestor_(eu, 'abrir a publicação de avisos');
     var pessoas = Avisos_usuariosAtivos_();
+    // Para a confirmação do "Publicar": quantas pessoas recebem por e-mail e por WhatsApp.
+    try {
+      var contatos = Notificar_contatos_(pessoas.map(function (u) { return u.id; }));
+      pessoas.forEach(function (u) { var c = contatos[u.id] || {}; u.temEmail = !!c.email; u.temWhatsapp = !!c.telefone; });
+    } catch (e) { /* sem contatos: a confirmação diz só o total */ }
     var perfis = [];
     (SGO_CFG.PROFILES || []).concat(pessoas.map(function (u) { return u.perfil; })).forEach(function (pf) {
       pf = SGO_UTILS.safeUpper(pf);

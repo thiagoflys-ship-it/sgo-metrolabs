@@ -4,7 +4,8 @@ var PD = {items:[],selected:{},current:null,token:'',documento:null,busy:false,f
 var PD_FIELDS = [['LOCALIZACAO','Localização (texto livre)'],['MARCA','Marca'],['MODELO','Modelo'],['SERIE','Número de série'],['FAIXA','Faixa de medição'],['GRANDEZA','Grandeza'],['UNIDADE','Unidade de medida'],['RESOLUCAO','Resolução'],['LABORATORIO','Laboratório que calibrou'],['DATA_CALIBRACAO','Data da calibração (dd/mm/aaaa)'],['CERTIFICADO_NUMERO','Número do certificado'],['VALIDADE','Vencimento cadastrado (dd/mm/aaaa)'],['PONTOS','Todos os pontos e canais calibrados'],['RESULTADOS_CERTIFICADO','Resultados, incertezas e fatores por ponto (conforme certificado)'],['METODO','Método / procedimento'],['RASTREABILIDADE','Rastreabilidade declarada'],['OBSERVACOES_TECNICAS','Observações técnicas, acessórios e condições']];
 function pdEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function pdEl(id){return document.getElementById('pd-'+id);}
-function pdSituacao(v){return {OK:'Vigente',VENCENDO:'Vence em até 30 dias',VENCIDO:'Vencido',SEM_VALIDADE:'Sem vencimento informado',VALIDADE_INVALIDA:'Data inválida'}[v]||v||'Não informado';}
+function pdSituacao(v){return {OK:'Vigente',VENCENDO:'Vence em até 30 dias',VENCIDO:'Vencido',SEM_VALIDADE:'Sem validade informada',VALIDADE_INVALIDA:'Data inválida'}[v]||v||'Não informado';}
+function pdRotuloDoc(v){return {INVENTARIO:'Inventário',ORCAMENTO:'Orçamento',EMITIDO:'Emitido',RASCUNHO:'Rascunho'}[String(v||'').toUpperCase()]||v||'';}
 function pdMsg(text,error){var el=pdEl('status');if(el){el.textContent=text;el.style.color=error?'var(--bc-danger)':'var(--bc-action)';}}
 function pdApi(fn,data){return tplCertCal_chamarApi(fn,data).then(function(r){if(!r||r.ok===false)throw new Error(r&&r.message||'Não foi possível concluir.');return r;});}
 async function pdRun(text,fn){
@@ -16,28 +17,31 @@ function pdMount(){
   if(pdEl('panel'))return;
   var base=document.getElementById('certcal-panel-padroes');if(!base)return;
   var panel=document.createElement('section');panel.id='pd-panel';panel.className='panel';
-  panel.innerHTML='<h2>Controle dos padrões · inventário e orçamento</h2>'+
-    '<p class="muted">Inventário para controle do acervo. Orçamento com faixas, pontos e exigências de calibração acreditada, pesquisados pela IA conforme os serviços informados.</p>'+
+  panel.innerHTML='<h2>Lista de padrões</h2>'+
+    '<p class="muted">Marque os padrões para gerar inventário ou orçamento na aba Inventário e orçamento. Editar, Inativar e o certificado em PDF ficam nas colunas da lista.</p>'+
     '<details><summary style="cursor:pointer;color:var(--bc-info)">Como usar — cadastro, certificados e documentos</summary><ol>'+
-    '<li>Cadastre o padrão e anexe seu PDF no cadastro de padrões deste módulo. Depois abra <b>Dados, localização e foto</b> na lista abaixo.</li>'+
+    '<li>Cadastre o padrão em <b>Cadastrar novo padrão</b> e anexe o PDF do certificado. Depois abra <b>Dados, localização e foto</b> na lista abaixo.</li>'+
     '<li>Digite qualquer localização: cidade, filial, setor ou responsável. Adicione a foto para reconhecer o instrumento.</li>'+
     '<li>O gestor clica em <b>Atualizar dados pelos certificados</b>: a IA lê os PDFs em lotes, salva os dados e mostra o progresso. Não é necessário abrir cada padrão.</li>'+
     '<li>Revise somente as pendências indicadas. Dados já preenchidos são preservados; divergências precisam de decisão humana. Extraído por IA não significa conferência humana.</li>'+
-    '<li>Filtre a localização e marque os padrões. Gere inventário ou orçamento. Quantidades e situações vêm dos registros selecionados; pendências ficam explícitas no documento.</li>'+
-    '<li>Ao gerar, aguarde: o documento é salvo e abre em outra página, pronto para impressão A4. Permita pop-ups do portal. O histórico permite reabrir as cópias.</li>'+
+    '<li>Filtre a localização e marque os padrões. Na aba <b>Inventário e orçamento</b>, gere o documento. Quantidades e situações vêm dos registros selecionados; pendências ficam explícitas no documento.</li>'+
+    '<li>Ao gerar, aguarde: o documento é salvo e abre em outra página, pronto para impressão A4. Permita pop-ups do SGO+. O histórico permite reabrir as cópias.</li>'+
     '</ol><p class="muted">O pedido solicita intervalo de recalibração pretendido de 3 anos, sujeito à avaliação técnica, sem alterar o vencimento atual. Nunca é enviado automaticamente ao laboratório.</p></details>'+
     '<div class="form-row"><div><label for="pd-busca">Buscar TAG, descrição, série ou marca</label><input id="pd-busca" type="text"></div><div><label for="pd-local">Filtrar localização</label><input id="pd-local" type="text" placeholder="Todas — digite parte do local"></div><div><label for="pd-ativos">Situação cadastral</label><select id="pd-ativos"><option value="ATIVO">Ativos</option><option value="TODOS">Todos</option><option value="INATIVO">Inativos</option></select></div></div>'+
-    '<div class="padrao-card" style="margin:16px 0;padding:16px"><h3>Preparação automática do acervo</h3><p>Atualiza todos os padrões cadastrados, incluindo inativos. Salva a origem e preserva os dados manuais. A localização deve ser informada pela equipe.</p><button class="btn-primary" data-pd-action="auto-start">Atualizar dados pelos certificados</button> <button class="btn" data-pd-action="auto-status">Consultar andamento / retomar</button><div id="pd-auto" role="status" aria-live="polite"></div></div>'+
+    '<div class="padrao-card" style="margin:16px 0;padding:16px"><h3>Atualizar dados pelos certificados</h3><p>Lê os PDFs e atualiza todos os padrões cadastrados, incluindo inativos. Salva a origem e preserva os dados manuais. A localização deve ser informada pela equipe.</p><button class="btn-primary" data-pd-action="auto-start">Atualizar dados pelos certificados</button> <button class="btn" data-pd-action="auto-status">Consultar andamento / retomar</button><div id="pd-auto" role="status" aria-live="polite"></div></div>'+
     '<button class="btn" data-pd-action="refresh">Atualizar lista</button> <button class="btn" data-pd-action="all">Marcar visíveis</button> <button class="btn" data-pd-action="none">Limpar seleção</button> <span id="pd-count" class="muted"></span>'+
     '<div id="pd-status" role="status" aria-live="polite" style="padding:12px 0">Aguarde, carregando padrões...</div><div id="pd-lista" style="overflow:auto;max-height:500px"></div>'+
-    '<div id="pd-editor" class="hidden padrao-card" style="margin-top:18px"></div>'+
+    '<div id="pd-editor" class="hidden padrao-card" style="margin-top:18px"></div>';
+  var docs=document.createElement('section');docs.id='pd-docs';docs.className='panel';
+  docs.innerHTML='<h2>Inventário e orçamento</h2><p class="muted">Trabalha sobre os padrões marcados na aba Padrões. <span id="pd-count2"></span></p>'+
     '<div class="grid-2"><div><label for="pd-destinatario">Laboratório destinatário (opcional)</label><input id="pd-destinatario" type="text" maxlength="1500"></div><div><label for="pd-orientacoes">Orientações adicionais no documento (opcional)</label><textarea id="pd-orientacoes" maxlength="6000" placeholder="Informe instruções que devem constar no documento."></textarea></div></div>'+
-    '<div><label for="pd-servicos">Serviços e faixas de trabalho para o orçamento</label><textarea id="pd-servicos" maxlength="4000" rows="3">Qualificação de autoclaves, lavadoras e termodesinfetadoras, estufas, banho-maria e cadeia de frio; calibração e manutenção de equipamentos médico-hospitalares. Confirmar os setpoints de cada processo. Faixas especiais (ultrafreezer e despirogenização) dependem do sensor e da aplicação.</textarea><p class="muted">Informe os setpoints utilizados e as faixas especiais. A IA pesquisa referências e propõe pontos; o laboratório deve confirmar capacidade, cobertura acreditada e incerteza adequada. Exigência: calibração acreditada e intervalo solicitado de 3 anos.</p></div>'+
+    '<div><label for="pd-servicos">Serviços e faixas de trabalho para o orçamento</label><textarea id="pd-servicos" maxlength="4000" rows="3">Qualificação de autoclaves, lavadoras e termodesinfetadoras, estufas, banho-maria e cadeia de frio; calibração e manutenção de equipamentos médico-hospitalares. Confirmar os pontos de ajuste de cada processo. Faixas especiais (ultrafreezer e despirogenização) dependem do sensor e da aplicação.</textarea><p class="muted">Informe os pontos de ajuste utilizados e as faixas especiais. A IA pesquisa referências e propõe pontos; o laboratório deve confirmar capacidade, cobertura acreditada e incerteza adequada. Exigência: calibração acreditada e intervalo solicitado de 3 anos.</p></div>'+
     '<button class="btn-primary" data-pd-action="inventory">Gerar inventário</button> <button class="btn" data-pd-action="quote">Pesquisar faixas e gerar orçamento</button>'+
     '<div id="pd-preview" class="hidden padrao-card" style="margin-top:18px"></div>'+
     '<h2 style="margin-top:24px">Documentos e rascunhos salvos</h2><div class="form-row"><input id="pd-termo" aria-label="Buscar documentos" placeholder="Tipo, localização, destinatário, autor ou ID"><button class="btn" data-pd-action="history">Consultar histórico</button></div><div id="pd-history"></div>';
   base.insertAdjacentElement('beforebegin',panel);
-  panel.addEventListener('click',function(e){var b=e.target.closest('[data-pd-action]');if(!b)return;var a=b.dataset.pdAction;
+  panel.insertAdjacentElement('afterend',docs);
+  var ouvir=function(e){var b=e.target.closest('[data-pd-action]');if(!b)return;var a=b.dataset.pdAction;
     if(a==='auto-start')pdAutoStart();if(a==='auto-status')pdAutoStatus();if(a==='document-window')pdDocumentWindow(PD.documento);
     if(a==='refresh')pdLoad();if(a==='all'){pdFiltered().forEach(function(p){PD.selected[p.ID]=true;});pdList();}if(a==='none'){PD.selected={};pdList();}
     if(a==='edit')pdEdit(b.dataset.id);if(a==='photo')pdPhoto(b.dataset.id,b);
@@ -45,15 +49,23 @@ function pdMount(){
     if(a==='inventory')pdGenerate('INVENTARIO');if(a==='quote')pdGenerate('ORCAMENTO');
     if(a==='emit')pdEmit();if(a==='preview-text')pdPreviewText();if(a==='print')pdPrint();if(a==='download')pdDownload();
     if(a==='history')pdHistory();if(a==='open')pdOpen(b.dataset.id);
-  });
+    if(a==='cad-edit')tplCertCal_abrirEditarPadrao(b.dataset.id);if(a==='cad-inativar')tplCertCal_inativarPadrao(b.dataset.id);if(a==='cad-reativar')tplCertCal_reativarPadrao(b.dataset.id);
+  };
+  panel.addEventListener('click',ouvir);docs.addEventListener('click',ouvir);
+  pdMontarAbas_(panel,docs);
   ['busca','local','ativos'].forEach(function(k){pdEl(k).addEventListener('input',pdList);});
-  panel.addEventListener('change',function(e){if(e.target.matches('[data-pd-select]')){PD.selected[e.target.dataset.pdSelect]=e.target.checked;pdCount();}});
+  panel.addEventListener('change',function(e){if(e.target.matches('[data-pd-select]')){PD.selected[e.target.dataset.pdSelect]=e.target.checked;pdCount();}if(e.target.matches('[data-pd-anexar]'))tplCertCal_anexarCertificadoPadrao(e.target.dataset.pdAnexar,e.target);});
   pdLoad();
 }
 function pdFiltered(){var q=pdEl('busca').value.toLocaleLowerCase(),l=pdEl('local').value.toLocaleLowerCase(),s=pdEl('ativos').value;return PD.items.filter(function(p){return(s==='TODOS'||p.STATUS===s)&&[p.TAG,p.DESCRICAO,p.SERIE,p.MARCA].join(' ').toLocaleLowerCase().indexOf(q)>=0&&String(p.LOCALIZACAO||'').toLocaleLowerCase().indexOf(l)>=0;});}
-function pdCount(){var n=PD.items.filter(function(p){return PD.selected[p.ID];}).length;pdEl('count').textContent=n+' selecionado(s), inclusive fora do filtro';}
-function pdList(){if(!pdEl('lista'))return;var rows=pdFiltered().map(function(p){return '<tr><td><input type="checkbox" aria-label="Selecionar '+pdEsc(p.TAG)+'" data-pd-select="'+pdEsc(p.ID)+'" '+(PD.selected[p.ID]?'checked':'')+'></td><td><b>'+pdEsc(p.TAG)+'</b><br>'+pdEsc(p.DESCRICAO)+'</td><td>'+pdEsc(p.LOCALIZACAO||'Localização pendente')+'</td><td>'+pdEsc(p.MARCA||'—')+' / '+pdEsc(p.MODELO||'—')+'<br>Série: '+pdEsc(p.SERIE||'—')+'</td><td>'+pdEsc(p.VALIDADE||'Sem vencimento')+'<br>'+pdEsc(pdSituacao(p.situacao))+'<br>'+(p.conferido?'Conferido pela equipe':p.extraido?'Extraído por IA':'Dados pendentes')+'</td><td><button class="btn btn-sm" data-pd-action="edit" data-id="'+pdEsc(p.ID)+'">Dados, localização e foto</button>'+(p.FOTO_ID?'<br><button class="btn btn-sm" data-pd-action="photo" data-id="'+pdEsc(p.ID)+'">Ver foto</button>':'')+'</td></tr>';}).join('');
-  pdEl('lista').innerHTML=rows?'<table class="resultado-table"><thead><tr><th>Marcar</th><th>Padrão</th><th>Localização</th><th>Identificação</th><th>Controle</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>':'<p>Nenhum padrão nesse filtro. Cadastre na área acima ou ajuste a busca.</p>';pdCount();}
+function pdCount(){var n=PD.items.filter(function(p){return PD.selected[p.ID];}).length;var c1=pdEl('count');if(c1)c1.textContent=n+' selecionado(s), inclusive fora do filtro';var c2=pdEl('count2');if(c2)c2.textContent=n?n+' padrão(ões) marcado(s).':'Nenhum padrão marcado ainda: marque na aba Padrões.';}
+function pdCadastro_(id){return (certcalState.padroesTodos||[]).filter(function(x){return x.ID===id;})[0]||{};}
+function pdList(){if(!pdEl('lista'))return;var rows=pdFiltered().map(function(p){var c=pdCadastro_(p.ID),ativo=(c.STATUS||p.STATUS)==='ATIVO',link=c.LINK_CERTIFICADO_PDF||p.LINK_CERTIFICADO_PDF||'';
+  var pdf=(link?'<a href="'+pdEsc(link)+'" target="_blank" rel="noopener">Ver PDF</a><br>':'<span class="muted">Sem PDF</span><br>')+'<input type="file" accept="application/pdf" data-rotulo="'+(link?'Substituir PDF':'Anexar PDF')+'" data-pd-anexar="'+pdEsc(p.ID)+'">';
+  var acoes='<button class="btn btn-sm" data-pd-action="cad-edit" data-id="'+pdEsc(p.ID)+'">Editar</button> '+(ativo?'<button class="btn btn-sm btn-danger" data-pd-action="cad-inativar" data-id="'+pdEsc(p.ID)+'">Inativar</button>':'<button class="btn btn-sm" data-pd-action="cad-reativar" data-id="'+pdEsc(p.ID)+'">Reativar</button>')+'<br>';
+  var sit=c.statusValidade&&typeof tplCertCal_pillStatusValidade_==='function'?tplCertCal_pillStatusValidade_(c):pdEsc(pdSituacao(p.situacao));
+  return '<tr><td><input type="checkbox" aria-label="Selecionar '+pdEsc(p.TAG)+'" data-pd-select="'+pdEsc(p.ID)+'" '+(PD.selected[p.ID]?'checked':'')+'></td><td><b>'+pdEsc(p.TAG)+'</b><br>'+pdEsc(p.DESCRICAO)+'</td><td>'+pdEsc(p.LOCALIZACAO||'Localização pendente')+'</td><td>'+pdEsc(p.MARCA||'—')+' / '+pdEsc(p.MODELO||'—')+'<br>Série: '+pdEsc(p.SERIE||'—')+'</td><td>'+pdEsc(p.VALIDADE||'Sem validade')+'<br>'+sit+(ativo?'':'<br><b>Inativo</b>')+'<br><span class="muted">'+(p.conferido?'Conferido pela equipe':p.extraido?'Extraído por IA':'Dados pendentes')+'</span></td><td>'+pdf+'</td><td>'+acoes+'<button class="btn btn-sm" data-pd-action="edit" data-id="'+pdEsc(p.ID)+'">Dados, localização e foto</button>'+(p.FOTO_ID?'<br><button class="btn btn-sm" data-pd-action="photo" data-id="'+pdEsc(p.ID)+'">Ver foto</button>':'')+'</td></tr>';}).join('');
+  pdEl('lista').innerHTML=rows?'<table class="resultado-table"><thead><tr><th>Marcar</th><th>Padrão</th><th>Localização</th><th>Identificação</th><th>Validade e situação</th><th>Certificado (PDF)</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>':'<p>Nenhum padrão neste filtro. Use "Cadastrar novo padrão" ou limpe a busca.</p>';pdCount();}
 function pdAplicarCadastros(r){
   PD.items=r.items||[];certcalState.padroesTodos=r.padroes||[];
   certcalState.padroes=certcalState.padroesTodos.filter(function(p){return p.STATUS==='ATIVO';});
@@ -63,15 +75,15 @@ function pdAplicarCadastros(r){
 }
 function pdErroCarregamento(err){
   var raw=err&&err.message||String(err);
-  var texto=/tempo limite|timed out|timeout|service unavailable|too many times/i.test(raw)?'O Google Planilhas demorou para responder. Aguarde alguns instantes e clique em Atualizar lista para tentar novamente.':raw;
-  var el=document.getElementById('certcal-padroes-tabela');if(el&&!certcalState.padroesTodos.length)el.textContent='Cadastros não carregados. Use Atualizar lista na seção Controle dos padrões.';
+  var texto=/tempo limite|timed out|timeout|service unavailable|too many times/i.test(raw)?'O servidor demorou para responder. Aguarde alguns instantes e clique em Atualizar lista para tentar de novo.':raw;
+  var el=document.getElementById('certcal-padroes-tabela');if(el&&!certcalState.padroesTodos.length)el.textContent='Cadastros não carregados. Use Atualizar lista em Padrões de referência.';
   throw new Error(texto);
 }
 function pdLoad(){return pdRun('Aguarde, carregando padrões e técnicos em uma única consulta...',async function(){try{var r=await pdApi('apiListarControlePadroes');pdAplicarCadastros(r);pdMsg('Dados carregados. Selecione os padrões ou complete seus cadastros.');}catch(err){pdErroCarregamento(err);}});}
 function pdEdit(id){
   if(PD.busy)return;var p=PD.items.find(function(x){return x.ID===id;});if(!p)return;PD.current=p;PD.token='';
   var el=pdEl('editor');el.classList.remove('hidden');el.innerHTML='<h3>'+pdEsc(p.TAG)+' — localização, foto e dados documentais</h3><p class="muted">Leitura da IA preenche uma proposta. Confira o PDF antes de salvar. Número e vencimento são os mesmos do cadastro principal.</p>'+
-    '<button class="btn" data-pd-action="extract">Ler certificado com IA</button> '+(/^https:\/\/(drive|docs)\.google\.com\//.test(p.LINK_CERTIFICADO_PDF||'')?'<a href="'+pdEsc(p.LINK_CERTIFICADO_PDF)+'" target="_blank" rel="noopener">Abrir certificado original</a>':'<span>Primeiro anexe o PDF no cadastro de padrões deste módulo.</span>')+
+    '<button class="btn" data-pd-action="extract">Ler certificado com IA</button> '+(/^(https:\/\/(drive|docs)\.google\.com\/|\/arquivos\/)/.test(p.LINK_CERTIFICADO_PDF||'')?'<a href="'+pdEsc(p.LINK_CERTIFICADO_PDF)+'" target="_blank" rel="noopener">Abrir certificado original</a>':'<span>Primeiro anexe o PDF do certificado (coluna Certificado da lista).</span>')+
     '<div id="pd-extraction" class="muted" style="white-space:pre-wrap;margin:12px 0"></div><div class="grid-3">'+PD_FIELDS.map(function(f){var long=['PONTOS','RESULTADOS_CERTIFICADO','METODO','RASTREABILIDADE','OBSERVACOES_TECNICAS'].indexOf(f[0])>=0;return '<div'+(long?' style="grid-column:1/-1"':'')+'><label for="pd-f-'+f[0]+'">'+f[1]+'</label>'+(long?'<textarea id="pd-f-'+f[0]+'" rows="3">'+pdEsc(p[f[0]]||'')+'</textarea>':'<input id="pd-f-'+f[0]+'" type="text" value="'+pdEsc(p[f[0]]||'')+'">')+'</div>';}).join('')+'</div>'+
     '<label for="pd-foto">Foto do instrumento (JPG ou PNG)</label><input id="pd-foto" type="file" accept="image/jpeg,image/png"><div id="pd-foto-preview"></div>'+
     '<label><input id="pd-remover-foto" type="checkbox"> Remover foto deste cadastro</label><label><input id="pd-conferido" type="checkbox"> Conferi identificação, datas, faixas e todos os pontos com o certificado atual</label>'+
@@ -132,7 +144,7 @@ function pdShow(r,win){
   PD.documento=r;var el=pdEl('preview');el.classList.remove('hidden');
   el.innerHTML='<h3>'+(r.status==='EMITIDO'?'Documento emitido e salvo':'Rascunho salvo')+'</h3><p>ID: '+pdEsc(r.id)+'</p>'+
     (r.status==='RASCUNHO'?'<label for="pd-texto">Texto — revise antes de emitir</label><textarea id="pd-texto" rows="6" maxlength="14000">'+pdEsc(r.texto)+'</textarea><button class="btn-primary" data-pd-action="emit">Emitir e salvar cópia</button>':'')+
-    ' <button class="btn" data-pd-action="document-window">Abrir documento para impressão</button> <button class="btn" data-pd-action="download">Baixar HTML A4</button>';
+    ' <button class="btn" data-pd-action="document-window">Abrir documento para impressão</button> <button class="btn" data-pd-action="print">Imprimir / salvar PDF</button>';
   pdDocumentWindow(r,win);
 }
 function pdPreviewText(){var w=PD.docWindow,box=w&&!w.closed&&w.document.querySelector('[data-paddoc-texto]');if(box&&pdEl('texto')){box.textContent=pdEl('texto').value;box.style.whiteSpace='pre-wrap';}}
@@ -155,8 +167,43 @@ async function pdAutoStep(){
   try{var r=await pdApi(PD.autoCanProcess?'apiProcessarAtualizacaoPadroes':'apiStatusAtualizacaoPadroes');pdAutoRender(r);pdAutoSchedule(r);if(r.job&&r.job.status==='CONCLUIDO'){await pdRecarregarCadastros();pdMsg('Atualização concluída. Consulte as pendências e gere os documentos.');}}
   catch(e){pdMsg('Atualização: '+(e.message||e)+'. O progresso salvo será mantido. Use Consultar andamento ou Atualizar dados para retomar.',true);}
 }
-function pdHistory(){return pdRun('Aguarde, consultando cópias salvas...',async function(){var r=await pdApi('apiHistoricoDocumentosPadroes',{termo:pdEl('termo').value});pdEl('history').innerHTML=r.items.map(function(d){return '<div class="cert-item-row"><span><b>'+pdEsc(d.TIPO)+' · '+pdEsc(d.STATUS)+'</b><br>'+pdEsc(d.CRIADO_EM)+' · '+pdEsc(d.CRIADO_POR)+'<br>'+pdEsc(d.RESUMO)+'</span><button class="btn" data-pd-action="open" data-id="'+pdEsc(d.ID)+'">Abrir cópia salva</button></div>';}).join('')||'<p>Nenhum documento encontrado.</p>';pdMsg('Histórico: '+r.total+' documento(s). Exibindo até 200; use a busca para refinar.');});}
+function pdHistory(){return pdRun('Aguarde, consultando cópias salvas...',async function(){var r=await pdApi('apiHistoricoDocumentosPadroes',{termo:pdEl('termo').value});pdEl('history').innerHTML=r.items.map(function(d){return '<div class="cert-item-row"><span><b>'+pdEsc(pdRotuloDoc(d.TIPO))+' · '+pdEsc(pdRotuloDoc(d.STATUS))+'</b><br>'+pdEsc(d.CRIADO_EM)+' · '+pdEsc(d.CRIADO_POR)+'<br>'+pdEsc(d.RESUMO)+'</span><button class="btn" data-pd-action="open" data-id="'+pdEsc(d.ID)+'">Abrir cópia salva</button></div>';}).join('')||'<p>Nenhum documento encontrado.</p>';pdMsg('Histórico: '+r.total+' documento(s). Exibindo até 200; use a busca para refinar.');});}
 function pdOpen(id){if(PD.busy)return;var win=pdPrepareWindow();return pdRun('Aguarde, abrindo a cópia preservada...',async function(){try{var r=await pdApi('apiReabrirDocumentoPadroes',{id:id});pdShow(r,win);pdMsg('Cópia salva carregada.');}catch(e){pdWindowError(win,e);throw e;}});}
+/* Fase 2 (16/10): "Padrões de referência" virou página própria (abrir('padroes')). O módulo do Certificado
+   continua o mesmo (mesmos dados e funções); a visão escolhe o que aparece:
+   - emissao: só a emissão (1 Cliente ... 6 Gerar) e "Certificados emitidos";
+   - padroes: abas Padrões / Inventário e orçamento / Relatórios gerenciais. */
+function pdMontarAbas_(panel,docs){
+  var wrap=panel.parentNode;if(!wrap||document.getElementById('pd-abas'))return;
+  var cad=document.getElementById('certcal-panel-padroes'),rel=document.getElementById('certcal-panel-relatorios-gestao');
+  var abas=document.createElement('div');abas.id='pd-abas';
+  abas.innerHTML='<div class="pd-abas-barra" role="tablist"><button type="button" role="tab" data-pd-aba="padroes">Padrões</button><button type="button" role="tab" data-pd-aba="docs">Inventário e orçamento</button><button type="button" role="tab" data-pd-aba="relatorios">Relatórios gerenciais</button></div>'+
+    '<div id="pd-aba-padroes" class="pd-aba"></div><div id="pd-aba-docs" class="pd-aba"></div><div id="pd-aba-relatorios" class="pd-aba"></div>';
+  wrap.insertBefore(abas,wrap.firstChild);
+  if(cad)document.getElementById('pd-aba-padroes').appendChild(cad);
+  document.getElementById('pd-aba-padroes').appendChild(panel);
+  document.getElementById('pd-aba-docs').appendChild(docs);
+  if(rel)document.getElementById('pd-aba-relatorios').appendChild(rel);
+  // a tabela antiga do cadastro repetia a lista: fica só a lista única (com as mesmas ações)
+  var antiga=document.getElementById('certcal-padroes-tabela');if(antiga)antiga.style.display='none';
+  abas.querySelector('.pd-abas-barra').addEventListener('click',function(e){var b=e.target.closest('[data-pd-aba]');if(b)pdTrocarAba_(b.dataset.pdAba);});
+  pdAplicarVisao_();
+}
+function pdTrocarAba_(aba){
+  PD.aba=aba;
+  ['padroes','docs','relatorios'].forEach(function(k){var el=document.getElementById('pd-aba-'+k);if(el)el.style.display=k===aba?'':'none';});
+  document.querySelectorAll('#pd-abas [data-pd-aba]').forEach(function(b){var on=b.dataset.pdAba===aba;b.classList.toggle('ativa',on);b.setAttribute('aria-selected',on?'true':'false');});
+  try{localStorage.setItem('sgo_padroes_aba',aba);}catch(e){}
+  pdCount();
+}
+function pdAplicarVisao_(){
+  var abas=document.getElementById('pd-abas');if(!abas)return;var wrap=abas.parentNode;
+  var visao=window.CERTCAL_VISAO==='padroes'?'padroes':'emissao';
+  Array.prototype.forEach.call(wrap.children,function(el){if(el===abas)return;el.style.display=visao==='padroes'?'none':'';});
+  abas.style.display=visao==='padroes'?'':'none';
+  if(visao==='padroes'){var aba='padroes';try{aba=localStorage.getItem('sgo_padroes_aba')||'padroes';}catch(e){}if(['padroes','docs','relatorios'].indexOf(aba)<0)aba='padroes';pdTrocarAba_(aba);}
+}
+(function(){var st=document.createElement('style');st.textContent='#pd-abas .pd-abas-barra{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;border-bottom:1px solid var(--bc-line-2,#d8dcd8);padding-bottom:8px}#pd-abas .pd-abas-barra button{border:1px solid var(--bc-line-2,#d8dcd8);background:#fff;color:var(--bc-text,#1c1f1d);border-radius:4px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}#pd-abas .pd-abas-barra button.ativa{background:var(--bc-text,#1c1f1d);border-color:var(--bc-text,#1c1f1d);color:#fff}';document.head.appendChild(st);})();
 var pdRenderOriginal_=tplCertCal_renderReal_;
 tplCertCal_renderReal_=function(){pdRenderOriginal_();pdMount();};
 // Releituras após cadastrar/editar/inativar reaproveitam o mesmo caminho leve.

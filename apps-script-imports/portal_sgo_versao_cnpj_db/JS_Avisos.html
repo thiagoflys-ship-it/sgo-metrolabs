@@ -117,8 +117,21 @@
   }
 
   /** Ao entrar: mostra a janela com todos os pendentes. Depois, de 5 em 5 min: só se chegou aviso novo. */
+  function AvisosTela_perfil_(p) {
+    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", CLIENTE: "Cliente" })[String(p || "").toUpperCase()] || p;
+  }
+
+  /** Há formulário ou janela em uso? Então a janela do aviso espera e tenta de novo em 30 s
+      (antes abria por cima de um formulário sendo preenchido). */
+  function AvisosTela_ocupado_() {
+    if (document.querySelector('.atv-overlay, .vinc-overlay, [role="dialog"][aria-modal="true"]')) return true;
+    var a = document.activeElement;
+    return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !/^(button|checkbox|radio|submit)$/.test(a.type || ""));
+  }
+
   function AvisosTela_verificar_(entrada) {
     if (!SESSION || AvisosTela_ehCliente_() || AVT.verificando) return;
+    if (AvisosTela_ocupado_()) { clearTimeout(AVT.adiado); AVT.adiado = setTimeout(function () { AvisosTela_verificar_(entrada); }, 30000); return; }
     AVT.verificando = true;
     AvisosTela_chamar_("Avisos_apiPendentes", { exibir: !!entrada }, function (res) {
       AVT.verificando = false;
@@ -275,7 +288,7 @@
           (gestor ? '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-primary" onclick="AvisosTela_abrirFormulario_()"><i class="fas fa-bullhorn" aria-hidden="true"></i>&nbsp;Novo aviso</button></div>' : "") +
         "</div>" +
         (gestor ? '<div class="motores-tabs atv-tabs">' +
-          [["meus", "Para mim"], ["gestao", "Publicados (gestão)"]].map(function (t) { return '<button type="button" class="motores-tab-btn' + (AVT.aba === t[0] ? " active" : "") + '" onclick="AvisosTela_trocarAba_(\'' + t[0] + '\')">' + t[1] + "</button>"; }).join("") + "</div>" : "") +
+          [["meus", "Para mim"], ["gestao", "Publicados"]].map(function (t) { return '<button type="button" class="motores-tab-btn' + (AVT.aba === t[0] ? " active" : "") + '" onclick="AvisosTela_trocarAba_(\'' + t[0] + '\')">' + t[1] + "</button>"; }).join("") + "</div>" : "") +
         '<div id="avsCorpo"><div class="atv-vazio">Carregando avisos...</div></div>' +
       "</div>";
     AvisosTela_carregar_();
@@ -356,7 +369,7 @@
 
   function AvisosTela_resumoEnvio_(n) {
     if (!n) return "";
-    return "\n\nEnvios registrados: " + n.ok + " feito(s), " + n.erro + " com erro, " + n.pulado + " pulado(s) (sem e-mail/telefone ou canal não configurado). O detalhe fica na aba NTF_ENVIOS.";
+    return "\n\nEnvios registrados: " + n.ok + " feito(s), " + n.erro + " com erro, " + n.pulado + " pulado(s) (sem e-mail/telefone ou canal não configurado). Quem leu aparece em Publicados, no botão de leitura do aviso.";
   }
 
   function AvisosTela_arquivar_(id, reativar) {
@@ -427,10 +440,10 @@
               '<label class="op"><input type="radio" name="avsF_pub" value="PERFIS" onchange="AvisosTela_trocarPublico_()"> Por perfil</label>' +
               '<label class="op"><input type="radio" name="avsF_pub" value="PESSOAS" onchange="AvisosTela_trocarPublico_()"> Pessoas escolhidas</label>' +
               '<div id="avsF_perfis" class="avs-checks" style="display:none">' + res.perfis.map(function (p) {
-                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.perfil) + '"' + (p.qtd ? "" : " disabled") + "> " + AvisosTela_esc_(p.perfil) + " (" + p.qtd + ")</label>";
+                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.perfil) + '"' + (p.qtd ? "" : " disabled") + "> " + AvisosTela_esc_(AvisosTela_perfil_(p.perfil)) + " (" + p.qtd + ")</label>";
               }).join("") + "</div>" +
               '<div id="avsF_pessoas" class="avs-checks" style="display:none">' + res.pessoas.map(function (p) {
-                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.id) + '"> ' + AvisosTela_esc_(p.nome) + ' <span style="color:var(--muted);font-size:11px">' + AvisosTela_esc_(p.perfil) + "</span></label>";
+                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.id) + '"> ' + AvisosTela_esc_(p.nome) + ' <span style="color:var(--muted);font-size:11px">' + AvisosTela_esc_(AvisosTela_perfil_(p.perfil)) + "</span></label>";
               }).join("") + "</div>" +
             "</div></div>" +
             '<div class="atv-campo"><label for="avsF_arq">Anexos (imagens e documentos; até ' + res.limites.anexos + " arquivos, " + res.limites.mbArquivo + " MB cada)</label>" +
@@ -520,6 +533,17 @@
       anexos: AVT.anexosForm.map(function (x) { return { nome: x.nome, tipo: x.tipo, base64: x.base64 }; }) };
     if (tipo === "PERFIS" && !payload.perfis.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos um perfil, ou escolha Todos os usuários."); return; }
     if (tipo === "PESSOAS" && !payload.pessoas.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos uma pessoa, ou escolha Todos os usuários."); return; }
+    // Confirmação: publicar dispara e-mail e WhatsApp na hora e não pode ser desfeito.
+    var todas = (AVT.opcoes && AVT.opcoes.pessoas) || [];
+    var alvo = tipo === "PESSOAS" ? todas.filter(function (p) { return payload.pessoas.indexOf(p.id) >= 0; })
+      : tipo === "PERFIS" ? todas.filter(function (p) { return payload.perfis.indexOf(p.perfil) >= 0; }) : todas;
+    var nEmail = alvo.filter(function (p) { return p.temEmail; }).length, nWhats = alvo.filter(function (p) { return p.temWhatsapp; }).length;
+    var temContatos = alvo.some(function (p) { return p.temEmail !== undefined; });
+    var conf = "Publicar o aviso \"" + titulo + "\" para " + alvo.length + (alvo.length === 1 ? " pessoa" : " pessoas") + "?\n\n" +
+      "- Janela de ciência no SGO+: " + alvo.length + "\n" +
+      (temContatos ? "- E-mail agora: " + nEmail + " (quem tem e-mail no cadastro)\n- WhatsApp agora: " + nWhats + " (quem tem celular no cadastro)\n" : "- E-mail e WhatsApp agora, para quem tem contato no cadastro\n") +
+      "\nOs envios saem na hora e não podem ser desfeitos. Para conferir antes, clique em Cancelar.";
+    if (!confirm(conf)) return;
     var btn = document.getElementById("avsF_ok"); if (btn) btn.disabled = true;
     AvisosTela_chamar_("Avisos_apiPublicar", payload, function (res) {
       AvisosTela_fecharFormulario_();

@@ -368,6 +368,12 @@ function PgtPop_apiListarArquivosPdf(payload) {
 }
 
 function PgtPop_getLogoDataUri_() {
+  // Fase 2 (16/10): no servidor próprio não há Drive do Google; usa a mesma logo embutida do
+  // Certificado de calibração (CadeiaFrioRel_CFCFG.LOGO_BASE64). O ID do Drive fica como reserva.
+  try {
+    const cfgLogo = typeof CadeiaFrioRel_CFCFG !== "undefined" ? CadeiaFrioRel_CFCFG.LOGO_BASE64 : null;
+    if (cfgLogo && cfgLogo.data) return "data:" + (cfgLogo.mimeType || "image/png") + ";base64," + cfgLogo.data;
+  } catch (e) { /* segue para o Drive */ }
   try {
     const logoId = PropertiesService.getScriptProperties().getProperty("PGTPOP_LOGO_ID") || PGTPOP_CFG.LOGO_ID;
     const blob = DriveApp.getFileById(logoId).getBlob();

@@ -624,6 +624,7 @@
       }
     } catch (e) {}
     try { if (typeof Menu_aoAbrirModulo_ === "function") Menu_aoAbrirModulo_(mod); } catch (e) { console.error("Menu:", e); }
+    window.SGO_MODULO_ATUAL = mod; // usado pelo painel de Vínculos para devolver o destaque do menu ao fechar
     abrirModulo_(mod);
     // Destaque do item ativo no menu: antes só os módulos que chamavam atualizarBadgeModulo_ marcavam
     // (Auvo, Qualidade, Conduta e NR-13 deixavam "Início" aceso). Atalhos (Padrões, Usuários, Vínculos)
@@ -732,8 +733,19 @@
 
     if (mod === "certificado_calibracao") {
       if (ehMobileModo_()) { renderMobileCertCal_(); return; }
+      window.CERTCAL_VISAO = "emissao";
       renderMotorModulo_("Certificado de calibração", "certificado_calibracao");
       atualizarBadgeModulo_("certificado_calibracao");
+      return;
+    }
+
+    // PADRÕES DE REFERÊNCIA (fase 2, 16/10): página própria com o cadastro, a validade, o inventário,
+    // o orçamento e os relatórios gerenciais dos padrões. Usa o mesmo módulo do Certificado (mesmos
+    // dados e funções), mostrando só a parte do laboratório — ver JS_Padroes_Documentos.html › pdAplicarVisao_.
+    if (mod === "padroes") {
+      window.CERTCAL_VISAO = "padroes";
+      renderMotorModulo_("Padrões de referência", "certificado_calibracao");
+      atualizarBadgeModulo_("padroes");
       return;
     }
 
@@ -1783,6 +1795,13 @@
       el.innerHTML = itens.map(function (a) {
         const critico = a.status === "VENCIDO";
         const generoOk = a.categoria === "DOCUMENTO" ? "vencido" : "vencida";
+        // Multa sem condutor não é vencimento: texto próprio (pedido da frente Frota, 16/10).
+        if (a.tipo === "MULTA_SEM_CONDUTOR") {
+          const ambigua = /conferir/i.test(String(a.tipoLabel || ""));
+          return '<div class="mobile-frota-alerta critico"><b>Multa a conferir:</b> ' + escapeHtml_(a.veiculoPlaca) + " — " +
+            (ambigua ? "mais de uma retirada no horário; confirme o condutor" : "condutor não identificado") +
+            (a.vencimento ? " (infração em " + escapeHtml_(a.vencimento) + ")" : "") + "</div>";
+        }
         return '<div class="mobile-frota-alerta ' + (critico ? "critico" : "aviso") + '">' +
           '<b>' + (critico ? "Vencido" : "A vencer") + ':</b> ' + escapeHtml_(a.veiculoPlaca) + " — " + escapeHtml_(a.tipoLabel) + (critico ? (" " + generoOk) : " vencendo em breve") +
           "</div>";
@@ -2216,12 +2235,30 @@
       if (!el) return;
       const itens = res.items || [];
       if (!itens.length) { el.innerHTML = '<div class="mobile-card-subtitulo">Nenhum padrão ativo cadastrado.</div>'; return; }
+      // Fase 2 (16/10): cada padrão mostra a validade e a situação. Vencido (na data da calibração)
+      // ou com data inválida fica bloqueado aqui, com o motivo; antes o técnico só descobria ao gerar.
+      const dataCal = String((MOBILE_CERTCAL.dados && MOBILE_CERTCAL.dados.dataCalibracao) || "");
+      const isoDe = function (br) { const m = String(br || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? m[3] + m[2] + m[1] : ""; };
+      const hojeIso = (function () { const d = new Date(); return String(d.getFullYear()) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); })();
+      const refIso = isoDe(dataCal) || hojeIso;
+      const cores = { OK: "#1F6B2A", VENCENDO: "#7A5200", VENCIDO: "#A3261B", SEM_VALIDADE: "#5F645F", VALIDADE_INVALIDA: "#A3261B" };
+      const nomes = { OK: "Vigente", VENCENDO: "Vence em até 30 dias", VENCIDO: "Vencido", SEM_VALIDADE: "Sem validade informada", VALIDADE_INVALIDA: "Data inválida" };
       el.innerHTML = itens.map(function (p) {
-        const marcado = MOBILE_CERTCAL_BLOCO_TEMP.padroesIds.indexOf(p.ID) !== -1;
+        const valIso = isoDe(p.VALIDADE);
+        const vencidoNaData = !!valIso && valIso < refIso;
+        const invalida = p.statusValidade === "VALIDADE_INVALIDA";
+        const bloqueado = vencidoNaData || invalida;
+        const st = vencidoNaData ? "VENCIDO" : (p.statusValidade === "VENCIDO" ? "OK" : (p.statusValidade || "SEM_VALIDADE"));
+        if (bloqueado) MOBILE_CERTCAL_BLOCO_TEMP.padroesIds = MOBILE_CERTCAL_BLOCO_TEMP.padroesIds.filter(function (x) { return x !== p.ID; });
+        const marcado = !bloqueado && MOBILE_CERTCAL_BLOCO_TEMP.padroesIds.indexOf(p.ID) !== -1;
+        const selo = '<span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:700;color:' + cores[st] + ';border:1px solid ' + cores[st] + '55;background:' + cores[st] + '18">' + nomes[st] + '</span>';
+        const motivo = bloqueado
+          ? '<div class="mobile-card-subtitulo" style="color:#A3261B;margin:4px 0 0 28px">' + (invalida ? "A validade cadastrada é inválida." : "Vencido em " + escapeHtml_(p.VALIDADE) + (dataCal ? ", antes da data da calibração (" + escapeHtml_(dataCal) + ")." : ".")) + " Não pode ser usado: atualize a validade no computador, em Padrões de referência.</div>"
+          : '<div class="mobile-card-subtitulo" style="margin:2px 0 0 28px">Validade: ' + escapeHtml_(p.VALIDADE || "não informada") + '</div>';
         return '<div class="mobile-frota-check-item"><div class="linha">' +
-          '<input type="checkbox" id="mob_cc_padrao_' + p.ID + '"' + (marcado ? " checked" : "") + ' onchange="mobileCertCalTogglePadrao_(\'' + p.ID + '\', this.checked)">' +
-          '<label for="mob_cc_padrao_' + p.ID + '">' + escapeHtml_(p.TAG || p.DESCRICAO || p.ID) + '</label>' +
-          '</div></div>';
+          '<input type="checkbox" id="mob_cc_padrao_' + p.ID + '"' + (marcado ? " checked" : "") + (bloqueado ? " disabled" : "") + ' onchange="mobileCertCalTogglePadrao_(\'' + p.ID + '\', this.checked)">' +
+          '<label for="mob_cc_padrao_' + p.ID + '">' + escapeHtml_(p.TAG || p.DESCRICAO || p.ID) + selo + '</label>' +
+          '</div>' + motivo + '</div>';
       }).join("");
     }).catch(function (err) { console.error(err); });
   }
@@ -3101,7 +3138,7 @@
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(mobileRotuloCliente_(c)) + '</option>';
         }).join("");
 
         if (id) mobileCarregarUnidadeParaEdicao_(id);
@@ -3227,7 +3264,7 @@
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(mobileRotuloCliente_(c)) + '</option>';
         }).join("");
 
         if (id) mobileCarregarEquipamentoParaEdicao_(id);
@@ -3380,7 +3417,7 @@
         if (!select) return;
         const itens = (res && res.success && Array.isArray(res.items)) ? res.items : [];
         select.innerHTML = '<option value="">Selecione o cliente</option>' + itens.map(function (c) {
-          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_((c.RAZAO_SOCIAL || c.NOME_FANTASIA || "") + " — " + (c.CNPJ || "sem CNPJ")) + '</option>';
+          return '<option value="' + escapeHtml_(c.ID) + '">' + escapeHtml_(mobileRotuloCliente_(c)) + '</option>';
         }).join("");
 
         if (id) mobileCarregarDocumentoParaEdicao_(id);
@@ -3558,6 +3595,7 @@
       declaracao_qiqo: "Relatório de qualificação (QI/QO/QD)",
       relatorio_calibracao: "Relatório de calibração",
       certificado_calibracao: "Certificado de calibração",
+      padroes: "Padrões de referência",
       nr13: "Laudo NR-13 (vaso de pressão)",
       frota: "Frota",
       auvo: "Integração Auvo",
@@ -4310,26 +4348,45 @@
       .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiPainelCiencia", payload: {} });
   }
 
-  /** Gestão: roda a rotina (saneamento, prazos e fechamento automático) na hora e mostra o resultado. */
+  /** Gestão: roda a rotina (saneamento, prazos e fechamento automático) na hora e mostra o resultado.
+      16/10: primeiro pede a prévia (apiPreverRotina); se houver mês a fechar, mostra quais e só roda
+      depois da confirmação, mandando a mesma lista de meses (o servidor recusa sem ela). */
   function Conduta_aplicarRotinaAgora_(btn) {
-    btn.disabled = true; btn.textContent = "Aplicando… (pode levar até 1 minuto)";
+    var textoOriginal = btn.textContent;
+    var restaurar = function (texto) { btn.disabled = false; btn.textContent = texto || textoOriginal; };
+    var falha = function (err) {
+      restaurar("Tentar de novo");
+      alert("Não foi possível aplicar a rotina: " + ((err && err.message) || err) + String.fromCharCode(10) + "Nada foi fechado. Tente de novo; se repetir, avise o administrador.");
+    };
+    btn.disabled = true; btn.textContent = "Conferindo o que será aplicado…";
     google.script.run
-      .withSuccessHandler(function (r) {
-        var linhas = [];
-        if (Array.isArray(r && r.saneamento) && r.saneamento.length) linhas.push("Ajustes: " + r.saneamento.join("; ") + ".");
-        var f = (r && r.fechamentos) || {};
-        if (f.fechados && f.fechados.length) linhas.push("Meses fechados: " + f.fechados.join(", ") + ".");
-        if (f.aguardando && f.aguardando.length) linhas.push("Aguardando: " + f.aguardando.join("; ") + ".");
-        if (r && r.prazos && r.prazos.processadas) linhas.push(r.prazos.processadas + " prazo(s) vencido(s) aplicados.");
-        alert(linhas.length ? linhas.join(String.fromCharCode(10)) : "Nada pendente.");
-        if (typeof carregarFarolCondutaDashboard_ === "function") carregarFarolCondutaDashboard_();
-        Conduta_verificarAvisos_();
+      .withSuccessHandler(function (previa) {
+        previa = previa || {};
+        var meses = Array.isArray(previa.mesesAFechar) ? previa.mesesAFechar : [];
+        var payload = {};
+        if (meses.length) {
+          if (!confirm(previa.mensagemConfirmacao || ("Esta ação vai fechar e congelar " + meses.length + " mês(es). Confirma?"))) { restaurar(); return; }
+          payload = { confirmar: true, meses: meses };
+        }
+        btn.textContent = "Aplicando… (pode levar até 1 minuto)";
+        google.script.run
+          .withSuccessHandler(function (r) {
+            var linhas = [];
+            if (!meses.length) linhas.push("Nenhum mês precisava ser fechado agora; foram aplicados só os prazos vencidos e os ajustes.");
+            if (Array.isArray(r && r.saneamento) && r.saneamento.length) linhas.push("Ajustes: " + r.saneamento.join("; ") + ".");
+            var f = (r && r.fechamentos) || {};
+            if (f.fechados && f.fechados.length) linhas.push("Meses fechados: " + f.fechados.join(", ") + ".");
+            if (f.aguardando && f.aguardando.length) linhas.push("Aguardando: " + f.aguardando.join("; ") + ".");
+            if (r && r.prazos && r.prazos.processadas) linhas.push(r.prazos.processadas + " prazo(s) vencido(s) aplicados.");
+            alert(linhas.join(String.fromCharCode(10)));
+            if (typeof carregarFarolCondutaDashboard_ === "function") carregarFarolCondutaDashboard_();
+            Conduta_verificarAvisos_();
+          })
+          .withFailureHandler(falha)
+          .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiRodarRotinaAgora", payload: payload });
       })
-      .withFailureHandler(function (err) {
-        btn.disabled = false; btn.textContent = "Tentar de novo";
-        alert("A rotina falhou: " + ((err && err.message) || err));
-      })
-      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiRodarRotinaAgora", payload: {} });
+      .withFailureHandler(falha)
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiPreverRotina", payload: {} });
   }
 
   /** Linhas extras do farol: o que ainda está em apuração no mês e o mês anterior. */
@@ -4699,8 +4756,9 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Emissão de certificados e controle dos padrões.</p>
+              <p class="content-subtitle">${window.CERTCAL_VISAO === "padroes" ? "Cadastro e validade dos padrões do laboratório, inventário, orçamento de recalibração e relatórios gerenciais." : "Emissão do certificado de calibração e consulta dos emitidos."}</p>
             </div>
+            <div class="module-header-right"><button type="button" class="btn-secondary sgo-btn-manual" onclick="if(typeof tplCertCal_abrirManual_==='function')tplCertCal_abrirManual_()"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador</button></div>
           </div>
 
           <div id="tplCertCalContainer" class="iframe-container"></div>
@@ -4720,8 +4778,9 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Laudos de inspeção de vasos de pressão.</p>
+              <p class="content-subtitle">Laudos de inspeção de vasos de pressão, com categoria pela NR-13 e parecer do profissional habilitado.</p>
             </div>
+            <div class="module-header-right"><button type="button" class="btn-secondary sgo-btn-manual" onclick="if(typeof tplNR13_abrirManual_==='function')tplNR13_abrirManual_()"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador</button></div>
           </div>
 
           <div id="tplNR13Container" class="iframe-container"></div>
@@ -4824,7 +4883,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Planejamento da CME conforme as normas aplicáveis.</p>
+              <p class="content-subtitle">Quantitativo de insumos e planejamento da qualificação de equipamentos da CME.</p>
             </div>
           </div>
 
@@ -4843,7 +4902,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Cronograma de execução dos serviços.</p>
+              <p class="content-subtitle">Cronograma de calibração e qualificação, agrupando os equipamentos e sugerindo as datas.</p>
             </div>
           </div>
 
@@ -4862,7 +4921,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Elaboração de PGT e POP.</p>
+              <p class="content-subtitle">Gera o PGTS e os POPs personalizados para cada cliente.</p>
             </div>
           </div>
 
@@ -4881,7 +4940,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Registros operacionais da CME.</p>
+              <p class="content-subtitle">Registros de execução dos POPs (rondas, checklists, formulários e treinamentos) e pendências por cliente.</p>
             </div>
           </div>
 
@@ -5098,6 +5157,16 @@
   // ==========================================
   // FUNÇÕES UTILITÁRIAS
   // ==========================================
+  // Rótulo do cliente nos seletores do celular. O servidor devolve NOME (fantasia ou razão social)
+  // em equipamentosListarClientesAtivos/unidadesListarClientesAtivos; RAZAO_SOCIAL fica como reserva.
+  function mobileRotuloCliente_(c) {
+    c = c || {};
+    var nome = String(c.NOME || c.RAZAO_SOCIAL || c.NOME_FANTASIA || "").trim() || "Cliente sem nome";
+    var dig = String(c.CNPJ || "").replace(/\D/g, "");
+    var cnpj = dig.length === 14 ? dig.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : (c.CNPJ || "sem CNPJ");
+    return nome + " — " + cnpj;
+  }
+
   function formatarCnpjFront_(valor) {
     const v = String(valor || "").replace(/\D/g, "");
     if (v.length !== 14) return escapeHtml_(valor || "");
@@ -5231,6 +5300,162 @@
       '<div id="' + prefixo + '_drop" class="hidden sgo-autocomplete-drop"></div>' +
       "</div>";
   }
+
+  // ==========================================
+  // CASCO DOS MÓDULOS TÉCNICOS (fase 2, 16/10)
+  // ==========================================
+  // Nos módulos de calibração e documentos técnicos o casco já mostra o título da página;
+  // o cabeçalho interno (H1 + selo "pronto") repetia o título. Aqui ele some, e o botão
+  // "Manual do Operador" passa para a barra do casco, ao lado de "Atividades do módulo".
+  // O "Histórico da operação" vira "Detalhes técnicos da operação", recolhido, e todo erro
+  // ou aviso escrito nele aparece também numa faixa visível (o operador não fica sem saber).
+  var SGO_CASCO_MODULOS = ["tplCertCalContainer", "tplRelCalContainer", "tplDeclExecContainer", "tplDeclExecQIQOContainer",
+    "tplNR13Container", "tplPlanCMEContainer", "tplCronExecContainer", "tplPgtPopContainer", "tplRegOpContainer", "tplInvContainer"];
+
+  function SGO_cascoEhManual_(el) {
+    const h = el.querySelector("h1, h2");
+    return !!(h && /manual do operador/i.test(h.textContent || ""));
+  }
+
+  function SGO_cascoAvisoFaixa_(cont, texto, tipo) {
+    let faixa = cont.querySelector(":scope > .sgo-faixa-operacao");
+    if (!faixa) {
+      faixa = document.createElement("div");
+      faixa.className = "sgo-faixa-operacao";
+      faixa.setAttribute("role", "alert");
+      cont.appendChild(faixa);
+    }
+    faixa.className = "sgo-faixa-operacao " + (tipo === "erro" ? "is-erro" : "is-aviso");
+    faixa.innerHTML = '<span class="sgo-faixa-texto"></span><button type="button" class="btn-secondary">Fechar</button>';
+    faixa.querySelector(".sgo-faixa-texto").textContent = texto;
+    faixa.querySelector("button").onclick = function () { faixa.remove(); };
+  }
+
+  function SGO_cascoAjustar_(cont) {
+    const shell = cont.closest(".module-shell");
+    const cab = shell ? shell.querySelector(".module-header") : null;
+    // 1) cabeçalho interno repetido
+    cont.querySelectorAll(".header-card, .topo").forEach(function (hc) {
+      if (hc.dataset.sgoCasco || SGO_cascoEhManual_(hc)) return;
+      if (hc.closest('[id$="_viewManual"], [id*="Manual"]')) return;
+      hc.dataset.sgoCasco = "1";
+      const btnManual = Array.prototype.find.call(hc.querySelectorAll("button, a"), function (b) { return /manual/i.test(b.textContent || ""); });
+      hc.style.display = "none";
+      if (!btnManual || !cab) return;
+      let direita = cab.querySelector(".module-header-right");
+      if (!direita) { direita = document.createElement("div"); direita.className = "module-header-right"; cab.appendChild(direita); }
+      if (direita.querySelector(".sgo-btn-manual")) return;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn-secondary sgo-btn-manual";
+      b.innerHTML = '<i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador';
+      b.onclick = function () { btnManual.click(); try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {} };
+      direita.insertBefore(b, direita.firstChild);
+    });
+    // 2) histórico técnico recolhido + faixa de erro/aviso
+    cont.querySelectorAll('[id$="_terminalLog"]').forEach(function (term) {
+      if (term.dataset.sgoCasco) return;
+      term.dataset.sgoCasco = "1";
+      const alvo = term.closest(".terminal-wrap") || term;
+      if (!term.closest("details")) {
+        const det = document.createElement("details");
+        det.className = "sgo-detalhes-tecnicos";
+        det.innerHTML = "<summary>Detalhes técnicos da operação</summary>";
+        alvo.parentNode.insertBefore(det, alvo);
+        det.appendChild(alvo);
+        alvo.querySelectorAll(".terminal-header").forEach(function (t) { t.style.display = "none"; });
+        // título "Histórico da operação" logo antes ou no topo do mesmo painel
+        const ant = det.previousElementSibling;
+        if (ant && ant.matches(".section-divider, h2, h3, h4") && /hist[oó]rico/i.test(ant.textContent || "")) ant.style.display = "none";
+        Array.prototype.forEach.call(det.parentNode.children, function (t) {
+          if (t.matches("h2, h3, h4") && /hist[oó]rico da opera/i.test(t.textContent || "")) t.style.display = "none";
+        });
+      }
+      new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          Array.prototype.forEach.call(m.addedNodes, function (n) {
+            if (n.nodeType !== 1) return;
+            const cls = String(n.className || "");
+            const tipo = /\b(error|erro)\b/.test(cls) ? "erro" : (/\b(aviso|warn|warning)\b/.test(cls) ? "aviso" : "");
+            if (!tipo) return;
+            const texto = String(n.textContent || "").replace(/^\[[^\]]*\]\s*(➔\s*)?/, "").trim();
+            if (texto) SGO_cascoAvisoFaixa_(cont, texto, tipo);
+          });
+        });
+      }).observe(term, { childList: true });
+    });
+  }
+
+  (function () {
+    let agendado = false;
+    function varrer() {
+      agendado = false;
+      SGO_CASCO_MODULOS.forEach(function (id) {
+        const cont = document.getElementById(id);
+        if (cont) { try { SGO_cascoAjustar_(cont); } catch (e) { console.error("Casco do módulo:", e); } }
+      });
+    }
+    function iniciar() { new MutationObserver(function () { if (!agendado) { agendado = true; setTimeout(varrer, 80); } }).observe(document.body, { childList: true, subtree: true }); }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
+  })();
+
+  // ==========================================
+  // SELETOR DE ARQUIVO EM PORTUGUÊS (fase 2, 16/10)
+  // ==========================================
+  // O seletor nativo mostra "Choose File / No file chosen" (idioma do navegador). Todo
+  // <input type="file"> visível ganha um botão "Escolher arquivo" e a linha com o nome
+  // escolhido; o campo original continua no lugar (escondido), com os mesmos ouvintes.
+  // Rótulo próprio: data-rotulo="Anexar PDF". Para não mexer num campo: data-sgo-nativo.
+  function SGO_arquivoTexto_(input) {
+    const n = input.files ? input.files.length : 0;
+    if (!n) return input.closest("td") ? "" : "Nenhum arquivo escolhido"; // em tabela, só o botão
+    if (n === 1) return input.files[0].name;
+    return n + " arquivos escolhidos";
+  }
+
+  function SGO_melhorarSeletorArquivo_(input) {
+    if (!input || input.dataset.sgoArquivo || input.hasAttribute("data-sgo-nativo")) return;
+    const cs = window.getComputedStyle(input);
+    if (cs.display === "none" || cs.visibility === "hidden" || input.hidden) return; // já é acionado por botão próprio
+    input.dataset.sgoArquivo = "1";
+    const caixa = document.createElement("span");
+    caixa.className = "sgo-arquivo";
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn-secondary sgo-arquivo-btn";
+    botao.textContent = input.getAttribute("data-rotulo") || (input.multiple ? "Escolher arquivos" : "Escolher arquivo");
+    const nome = document.createElement("span");
+    nome.className = "sgo-arquivo-nome";
+    nome.textContent = SGO_arquivoTexto_(input);
+    botao.addEventListener("click", function () { if (!input.disabled) input.click(); });
+    input.addEventListener("change", function () { nome.textContent = SGO_arquivoTexto_(input); });
+    input.classList.add("sgo-arquivo-nativo");
+    input.parentNode.insertBefore(caixa, input);
+    caixa.appendChild(input);
+    caixa.appendChild(botao);
+    caixa.appendChild(nome);
+  }
+
+  (function () {
+    let agendado = false;
+    function varrer() {
+      agendado = false;
+      document.querySelectorAll('input[type="file"]:not([data-sgo-arquivo])').forEach(function (i) {
+        try { SGO_melhorarSeletorArquivo_(i); } catch (e) { /* segue com o nativo */ }
+      });
+      // depois de limpar o campo por código (input.value = ""), a linha volta ao texto padrão
+      document.querySelectorAll(".sgo-arquivo").forEach(function (c) {
+        const i = c.querySelector('input[type="file"]'), n = c.querySelector(".sgo-arquivo-nome");
+        if (i && n) n.textContent = SGO_arquivoTexto_(i);
+      });
+    }
+    function agendar() { if (!agendado) { agendado = true; setTimeout(varrer, 120); } }
+    function iniciar() {
+      new MutationObserver(agendar).observe(document.body, { childList: true, subtree: true });
+      varrer();
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
+  })();
 </script>
 
 <style>
@@ -5363,6 +5588,6 @@
   function abrirPadroesPeloAlerta_() {
     fecharBalaoPadroes_();
     fecharAlertaCriticoPadroes_(true);
-    abrir("certificado_calibracao");
+    abrir("padroes");
   }
 </script>

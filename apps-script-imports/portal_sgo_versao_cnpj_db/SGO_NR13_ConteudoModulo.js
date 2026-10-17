@@ -175,6 +175,8 @@ function tplNR13_msg(containerId, tipo, texto) {
 function tplNR13_erro(containerId, err) {
   var msg = (err && err.message) ? err.message : String(err);
   tplNR13_msg(containerId, 'error', msg);
+  var contorno = document.getElementById('nr13-contorno-emitido');
+  if (contorno && /já foi emitido/i.test(msg)) contorno.classList.remove('hidden');
   tplNR13_writeLog(msg, 'ERRO');
 }
 
@@ -195,7 +197,7 @@ function tplNR13_writeLog(text, tipo) {
 function tplNR13_limparLog() {
   var term = document.getElementById('tplNR13_terminalLog');
   if (term) term.innerHTML = '';
-  tplNR13_writeLog('Log limpo. Aguardando novas operações...', 'SUCESSO');
+  tplNR13_writeLog('Histórico limpo.', 'SUCESSO');
 }
 
 function tplNR13_contextoVaso_() {
@@ -233,10 +235,6 @@ function tplNR13_renderReal_() {
   container.innerHTML =
     '<div id="tplNR13_viewModulo">' +
     '<div class="wrap">' +
-    '  <div class="header-card">' +
-    '    <div class="title-area"><h1>Laudo de Inspeção NR-13 (Vaso de Pressão)</h1><p>Relatório de Inspeção de Segurança de vaso de pressão, com categorização automática (NR-13, item 13.5), interpretação de fotos e parecer conclusivo assistidos por IA.</p></div>' +
-    '    <button type="button" class="btn" onclick="tplNR13_abrirManual_()">Manual do Operador</button>' +
-    '  </div>' +
 
     '  <div class="panel">' +
     '    <h2>Consultar laudos já emitidos ou continuar rascunho salvo (por CNPJ)</h2>' +
@@ -404,7 +402,7 @@ function tplNR13_renderReal_() {
 
     '  <div class="panel hidden" id="nr13-panel-veredito">' +
     '    <h2>8. Veredito e parecer conclusivo</h2>' +
-    '    <div class="radio-veredito" id="nr13-radio-aprovado" onclick="tplNR13_selecionarVeredito_(\\'APROVADO\\')"><input type="radio" name="nr13-veredito" value="APROVADO" checked><strong>Aprovado</strong></div>' +
+    '    <div class="radio-veredito" id="nr13-radio-aprovado" onclick="tplNR13_selecionarVeredito_(\\'APROVADO\\')"><input type="radio" name="nr13-veredito" value="APROVADO"><strong>Aprovado</strong></div>' +
     '    <div class="radio-veredito" id="nr13-radio-ressalvas" onclick="tplNR13_selecionarVeredito_(\\'APROVADO_COM_RESSALVAS\\')"><input type="radio" name="nr13-veredito" value="APROVADO_COM_RESSALVAS"><strong>Aprovado com Ressalvas</strong> <span class="muted">— integridade mantida, condicionada às recomendações; recomenda-se reinspeção</span></div>' +
     '    <div class="radio-veredito" id="nr13-radio-reprovado" onclick="tplNR13_selecionarVeredito_(\\'REPROVADO\\')"><input type="radio" name="nr13-veredito" value="REPROVADO"><strong>Reprovado</strong> <span class="muted">— vaso não deve permanecer em operação</span></div>' +
     '    <label>Parecer conclusivo quanto à integridade do vaso até a próxima inspeção</label>' +
@@ -415,26 +413,25 @@ function tplNR13_renderReal_() {
 
     '  <div class="panel hidden" id="nr13-panel-gerar">' +
     '    <h2>9. Salvar / Emitir</h2>' +
-    '    <button class="btn" onclick="tplNR13_salvarRascunho()">Salvar Rascunho</button>' +
-    '    <button class="btn-primary" onclick="tplNR13_emitirLaudo()">Emitir Laudo Final</button>' +
+    '    <button class="btn" onclick="tplNR13_salvarRascunho()">Salvar rascunho</button>' +
+    '    <button class="btn-primary" onclick="tplNR13_emitirLaudo()">Emitir laudo final</button>' +
     '    <div id="nr13-status-gerar"></div>' +
-    '    <p class="muted" style="margin-top:14px;">Recebeu o erro "Este laudo já foi emitido e não pode mais ser editado"? Isso acontece quando a tela ainda está apontando pra um laudo já finalizado. Clique abaixo pra soltar esse vínculo e salvar os dados atuais como um laudo novo (os campos preenchidos continuam na tela).</p>' +
-    '    <button class="btn btn-warning btn-sm" onclick="tplNR13_novoLaudo_()">Começar Novo Laudo (mantém os campos preenchidos)</button>' +
+    '    <div id="nr13-contorno-emitido" class="hidden"><p class="muted" style="margin-top:14px;">Esta tela ainda aponta para um laudo já emitido, que não pode mais ser alterado. Para salvar os dados atuais como um laudo novo (os campos preenchidos continuam na tela), clique abaixo.</p>' +
+    '    <button class="btn btn-warning btn-sm" onclick="tplNR13_novoLaudo_()">Começar novo laudo com estes dados</button></div>' +
     '  </div>' +
 
-    '  <div class="panel">' +
-    '    <h2>Histórico da operação</h2>' +
+    '  <details class="panel sgo-detalhes-tecnicos">' +
+    '    <summary>Detalhes técnicos da operação</summary>' +
     '    <div class="terminal-wrap">' +
-    '      <div class="terminal-header">Histórico da operação</div>' +
     '      <div id="tplNR13_terminalLog" class="terminal"></div>' +
     '    </div>' +
     '    <button class="btn btn-sm" style="margin-top:8px;" onclick="tplNR13_limparLog()">Limpar histórico</button>' +
-    '  </div>' +
+    '  </details>' +
     '</div>' +
     '</div>' +
     '<div id="tplNR13_viewManual" style="display:none">' + tplNR13_manualHtml_() + '</div>';
 
-  tplNR13_selecionarVeredito_('APROVADO');
+  tplNR13_selecionarVeredito_('');
   
   
 }
@@ -841,7 +838,7 @@ function tplNR13_renderManometros_() {
 function tplNR13_onFotosSelecionadas() {
   var input = document.getElementById('nr13-fotos-input');
   var files = Array.from(input.files || []);
-  tplNR13_writeLog('Enviando ' + files.length + ' foto(s) para o Drive...', 'SUCESSO');
+  tplNR13_writeLog('Enviando ' + files.length + ' foto(s)...', 'SUCESSO');
   var promessas = files.map(function(file) {
     return tplNR13_lerArquivoComoBase64_(file).then(function(lido) {
       var item = { base64: lido.base64, mimeType: lido.mimeType, legendaUsuario: '', interpretacaoIA: '', fileId: '', link: '', enviando: true };
@@ -876,7 +873,7 @@ function tplNR13_renderFotosLista_() {
     var statusUpload = f.enviando ? '<span class="muted">Enviando...</span>' : (f.erroUpload ? '<span style="color:var(--danger);">Falha no upload: ' + f.erroUpload + '</span>' : '');
     // Foto restaurada de um rascunho salvo não tem base64 local (nunca é
     // guardado na planilha) — usa o link direto do Drive como imagem.
-    var srcImg = f.base64 ? ('data:' + f.mimeType + ';base64,' + f.base64) : ((f.link && f.link.indexOf('drive.google.com') === -1) ? f.link : ('https://drive.google.com/uc?export=view&id=' + f.fileId));
+    var srcImg = f.base64 ? ('data:' + f.mimeType + ';base64,' + f.base64) : ((f.link && f.link.indexOf('drive.google.com') === -1) ? f.link : ('/arquivos/' + encodeURIComponent(f.fileId || '')));
     return '<div class="foto-card">' +
       '<img src="' + srcImg + '" alt="Foto">' +
       '<div class="foto-campos">' +
@@ -902,7 +899,7 @@ function tplNR13_interpretarFotoIA_(idx) {
   var foto = nr13State.fotos[idx];
   if (!foto) return;
   tplNR13_msg('nr13-foto-status-' + idx, 'info', 'Analisando com IA...');
-  tplNR13_writeLog('Analisando foto ' + (idx + 1) + ' com IA (Gemini vision)...', 'SUCESSO');
+  tplNR13_writeLog('Analisando foto ' + (idx + 1) + ' com IA...', 'SUCESSO');
   tplNR13_chamarApi('apiAnalisarFoto', {
     base64: foto.base64, mimeType: foto.mimeType, legendaUsuario: foto.legendaUsuario, contextoVaso: tplNR13_contextoVaso_()
   }).then(function(res) {
@@ -935,17 +932,23 @@ function tplNR13_melhorarTexto_(campoId, rotulo) {
 
 // ---------------- Veredito / Parecer ----------------
 function tplNR13_selecionarVeredito_(valor) {
-  document.querySelector('input[name="nr13-veredito"][value="' + valor + '"]').checked = true;
+  // Fase 2 (16/10): o laudo começa sem veredito; o PH escolhe (antes vinha "Aprovado" marcado).
   ['aprovado', 'ressalvas', 'reprovado'].forEach(function(k) {
-    document.getElementById('nr13-radio-' + k).classList.remove('selecionado-' + k);
+    var r = document.getElementById('nr13-radio-' + k);
+    if (r) r.classList.remove('selecionado-' + k);
   });
   var mapa = { APROVADO: 'aprovado', APROVADO_COM_RESSALVAS: 'ressalvas', REPROVADO: 'reprovado' };
+  if (!mapa[valor]) {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="nr13-veredito"]'), function(i) { i.checked = false; });
+    return;
+  }
+  document.querySelector('input[name="nr13-veredito"][value="' + valor + '"]').checked = true;
   document.getElementById('nr13-radio-' + mapa[valor]).classList.add('selecionado-' + mapa[valor]);
 }
 
 function tplNR13_vereditoSelecionado_() {
   var el = document.querySelector('input[name="nr13-veredito"]:checked');
-  return el ? el.value : 'APROVADO';
+  return el ? el.value : '';
 }
 
 function tplNR13_sugerirParecer_() {
@@ -1041,6 +1044,17 @@ function tplNR13_salvarRascunho() {
 
 function tplNR13_emitirLaudo() {
   var payload = tplNR13_montarPayload_();
+  var veredito = tplNR13_vereditoSelecionado_();
+  var nomesVeredito = { APROVADO: 'APROVADO', APROVADO_COM_RESSALVAS: 'APROVADO COM RESSALVAS', REPROVADO: 'REPROVADO' };
+  if (!veredito) {
+    tplNR13_msg('nr13-status-gerar', 'error', 'Falta o veredito. Na seção 8 (Veredito e parecer conclusivo), escolha Aprovado, Aprovado com ressalvas ou Reprovado e clique em "Emitir laudo final" de novo.');
+    var pv = document.getElementById('nr13-panel-veredito'); if (pv && pv.scrollIntoView) pv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  var ph = (document.getElementById('nr13-assinante-ph') || {}).value || '';
+  var eqSel = nr13State.equipamentoSelecionado || {};
+  var vaso = (payload.tipoVaso || 'vaso de pressão') + (eqSel.TAG ? ' TAG ' + eqSel.TAG : '');
+  if (!confirm('Emitir o laudo do ' + vaso + ' como ' + nomesVeredito[veredito] + (ph ? ', assinado por ' + ph : '') + '?\\n\\nDepois de emitido, o laudo recebe número e não pode mais ser alterado. Para revisar antes, clique em Cancelar e use "Salvar rascunho".')) return;
 
   var novaJanela = window.open('', '_blank');
   if (!novaJanela) {
@@ -1060,7 +1074,7 @@ function tplNR13_emitirLaudo() {
   }).then(function(res) {
     tplNR13_abrirHtmlEmNovaAba_(novaJanela, res.html);
     tplNR13_msg('nr13-status-gerar', 'success', 'Laudo nº ' + res.numeroLaudo + ' emitido com sucesso.');
-    tplNR13_writeLog('Laudo nº ' + res.numeroLaudo + ' emitido e salvo no Drive com sucesso.', 'SUCESSO');
+    tplNR13_writeLog('Laudo nº ' + res.numeroLaudo + ' emitido e salvo na pasta do cliente.', 'SUCESSO');
   }).catch(function(err) {
     if (novaJanela) novaJanela.close();
     tplNR13_erro('nr13-status-gerar', err);
@@ -1186,7 +1200,7 @@ function tplNR13_carregarRascunho_(laudoId) {
     document.getElementById('nr13-recomendacoes').value = laudo.RECOMENDACOES || '';
     document.getElementById('nr13-observacoes').value = laudo.OBSERVACOES || '';
 
-    tplNR13_selecionarVeredito_(laudo.VEREDITO || 'APROVADO');
+    tplNR13_selecionarVeredito_(laudo.VEREDITO || '');
     document.getElementById('nr13-parecer-conclusivo').value = laudo.PARECER_CONCLUSIVO || '';
 
     document.getElementById('nr13-busca-resultado').innerHTML = '';
@@ -1272,7 +1286,7 @@ function tplNR13_manualHtml_() {
   '<h2 id="tplNR13_ms6">6. Rascunho × Emissão final</h2>' +
   '<p>Clique em <strong>"Salvar Rascunho"</strong> a qualquer momento — os dados ficam salvos e você pode continuar depois. ' +
   'O rascunho pode ser editado livremente. Quando estiver tudo pronto e revisado, clique em <strong>"Emitir Laudo Final"</strong>: ' +
-  'o sistema gera o PDF oficial, numera o laudo, salva no Drive, e a partir daí o laudo <strong>não pode mais ser editado</strong> — ' +
+  'o sistema gera o PDF oficial, numera o laudo, salva na pasta do cliente, e a partir daí o laudo <strong>não pode mais ser editado</strong> — ' +
   'exatamente como os outros certificados e laudos oficiais do Portal.</p>' +
 
   '<h2 id="tplNR13_ms7">7. Consultar laudos já emitidos</h2>' +
