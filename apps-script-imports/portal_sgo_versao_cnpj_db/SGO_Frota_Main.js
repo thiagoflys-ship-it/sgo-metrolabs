@@ -80,10 +80,84 @@ function Frota_exigirGestor_(sessionId) {
   }
 }
 
+// Pente fino 16/10/2026: login de CLIENTE listava veículos e condutores
+// (com telefone e CNH). A Frota é da equipe interna — qualquer perfil da
+// equipe entra (retirada/devolução), cliente não.
+function Frota_exigirEquipe_(sessionId) {
+  var sessao = exigirSessao(sessionId);
+  if (SGO_UTILS.safeUpper(sessao && sessao.perfil) === 'CLIENTE') {
+    throw new Error('A Frota é de uso exclusivo da equipe interna.');
+  }
+  return sessao;
+}
+
+// Pente fino 16/10/2026: SGO_UTILS.toNumber apaga todo ponto antes de
+// converter, então "350.90" virava 35090 e "12345.5" km virava 123455.
+// Aqui: número já convertido passa direto; com vírgula, ponto é milhar
+// ("1.234,56"); sem vírgula, ponto só é milhar no formato 1.234 / 12.345.678,
+// senão é a casa decimal ("45.6").
+function Frota_num_(v, padrao) {
+  if (typeof v === 'number') return isFinite(v) ? v : padrao;
+  var s = String(v === null || v === undefined ? '' : v).replace(/R\$/gi, '').replace(/\s+/g, '');
+  if (!s) return padrao;
+  if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  var n = Number(s);
+  return isFinite(n) ? n : padrao;
+}
+
+// Datas/horas gravadas pela planilha antiga podem voltar como Date ou como
+// texto ISO ("2026-10-15T00:00:00", "1899-12-30T10:44:00"). Normaliza para
+// o formato que o módulo grava (dd/mm/aaaa e hh:mm) antes de comparar.
+function Frota_textoData_(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return ('0' + v.getDate()).slice(-2) + '/' + ('0' + (v.getMonth() + 1)).slice(-2) + '/' + v.getFullYear();
+  }
+  var s = String(v || '').trim();
+  var iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso && iso[1] !== '1899') return iso[3] + '/' + iso[2] + '/' + iso[1];
+  return s;
+}
+
+function Frota_textoHora_(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) return ('0' + v.getHours()).slice(-2) + ':' + ('0' + v.getMinutes()).slice(-2);
+  var s = String(v || '').trim();
+  var iso = /^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})/.exec(s);
+  return iso ? iso[1] + ':' + iso[2] : s;
+}
+
+/** Data de validade/vencimento (dd/mm/aaaa ou ISO) como Date à meia-noite, ou null. */
+function Frota_dataDia_(v) {
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(Frota_textoData_(v));
+  if (!m) return null;
+  var d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Dias de hoje até a data (negativo = já passou), ou null se a data não for válida. */
+function Frota_diasAte_(v) {
+  var d = Frota_dataDia_(v);
+  if (!d) return null;
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - hoje.getTime()) / 86400000);
+}
+
+// Pente fino 16/10/2026 (regra do dono: nunca apagar dado): "Excluir"
+// abastecimento/documento/multa passa a marcar EXCLUIDO_EM/EXCLUIDO_POR em vez
+// de remover a linha. Toda leitura do módulo usa esta função.
+function Frota_registrosValidos_(aba) {
+  return SGO_DATA.getAll(aba).filter(function(r) { return !SGO_UTILS.safe(r.EXCLUIDO_EM); });
+}
+
+function Frota_marcarExcluido_(aba, id, usuario) {
+  SGO_DATA.update(aba, id, { EXCLUIDO_EM: SGO_UTILS.nowIso(), EXCLUIDO_POR: SGO_UTILS.safe(usuario) });
+}
+
 
 // A identidade vem da sessão validada, nunca do nome exibido no formulário.
 function Frota_apiContextoOperacional(sessionId) {
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_bootstrap_();
   var gestor = isAdminSession(sessionId);
   var condutor = Frota_obterCondutorPorUsuario_(sessao.userId);
@@ -95,7 +169,7 @@ function Frota_apiContextoOperacional(sessionId) {
 }
 
 function Frota_resolverCondutorRetirada_(sessionId, payload) {
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   var vinculado = Frota_obterCondutorPorUsuario_(sessao.userId);
   var id = isAdminSession(sessionId) ? (SGO_UTILS.safe(payload.condutorId) || (vinculado && vinculado.ID)) : (vinculado && vinculado.ID);
   if (!id) throw new Error('Seu login não possui condutor vinculado. Peça ao gestor para vincular seu usuário ou selecionar um condutor autorizado.');
@@ -108,14 +182,23 @@ function Frota_movimentoAberto_(m) {
   return SGO_UTILS.safeUpper(m.STATUS) === 'EM_ANDAMENTO';
 }
 
+// 16/10/2026 (achado do agente do núcleo): em base onde a Frota nunca foi aberta
+// as abas não existem, e a situação da frota (tela inicial) e os avisos ao entrar
+// (Qualidade) falhavam com "Aba não encontrada: CAD_CONDUTORES" a cada login.
+// Estas leituras não criam abas (são consultas periódicas): aba ausente = lista vazia.
+function Frota_lerSeExistir_(aba) {
+  try { if (!SGO_DATA.getDB().getSheetByName(aba)) return []; } catch (e) { return []; }
+  return SGO_DATA.getAll(aba);
+}
+
 function Frota_veiculosComSituacao_() {
   var abertos = {};
   var condutores = {};
-  SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
-  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(Frota_movimentoAberto_).forEach(function(m) {
+  Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
+  Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(Frota_movimentoAberto_).forEach(function(m) {
     abertos[SGO_UTILS.safe(m.VEICULO_ID)] = m;
   });
-  return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS).map(function(v) {
+  return Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_VEICULOS).map(function(v) {
     var m = abertos[SGO_UTILS.safe(v.ID)];
     var status = SGO_UTILS.safeUpper(v.STATUS);
     var situacao = m ? 'EM_USO' : (status === 'ATIVO' || status === 'DISPONIVEL' ? 'DISPONIVEL' : status || 'INDISPONIVEL');
@@ -128,7 +211,7 @@ function Frota_veiculosComSituacao_() {
 }
 
 function Frota_apiSituacaoFrota(sessionId) {
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   // Consulta periódica: não reformatar dezenas de colunas a cada atualização.
   // O bootstrap continua nas operações de abertura/cadastro do módulo.
   var items = Frota_veiculosComSituacao_();
@@ -223,6 +306,11 @@ function Frota_bootstrap_() {
   // e devolução, 2026-08-28) — DATA_CHEGADA/HORA_CHEGADA são digitados pelo
   // condutor, não servem pra saber quando o registro realmente foi salvo.
   CertCal_garantirColuna_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, 'FINALIZADO_EM');
+  // Exclusão sem apagar a linha (16/10/2026) — ver Frota_registrosValidos_.
+  [SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO, SGO_CFG.SHEETS.REG_FROTA_MULTA].forEach(function(aba) {
+    CertCal_garantirColuna_(aba, 'EXCLUIDO_EM');
+    CertCal_garantirColuna_(aba, 'EXCLUIDO_POR');
+  });
 }
 
 // ------------------------------------------------------------
@@ -230,7 +318,7 @@ function Frota_bootstrap_() {
 // ------------------------------------------------------------
 function Frota_apiListarVeiculosAtivos(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var itens = Frota_veiculosComSituacao_()
     .filter(function(v) { return SGO_UTILS.safeUpper(v.STATUS) !== 'INATIVO'; })
     .sort(function(a, b) { return SGO_UTILS.safe(a.PLACA).localeCompare(SGO_UTILS.safe(b.PLACA)); });
@@ -239,7 +327,7 @@ function Frota_apiListarVeiculosAtivos(sessionId) {
 
 function Frota_apiListarVeiculosTodos(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var itens = Frota_veiculosComSituacao_()
     .sort(function(a, b) { return SGO_UTILS.safe(a.PLACA).localeCompare(SGO_UTILS.safe(b.PLACA)); });
   return { ok: true, items: itens };
@@ -247,7 +335,7 @@ function Frota_apiListarVeiculosTodos(sessionId) {
 
 function Frota_apiCriarVeiculo(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var placa = SGO_UTILS.safeUpper(payload.placa);
@@ -264,7 +352,7 @@ function Frota_apiCriarVeiculo(sessionId, payload) {
       MARCA: SGO_UTILS.safe(payload.marca),
       ANO: SGO_UTILS.safe(payload.ano),
       COR: SGO_UTILS.safe(payload.cor),
-      KM_ATUAL: SGO_UTILS.toNumber(payload.kmAtual, 0),
+      KM_ATUAL: Frota_num_(payload.kmAtual, 0),
       STATUS: 'ATIVO'
     })
   );
@@ -275,7 +363,7 @@ function Frota_apiCriarVeiculo(sessionId, payload) {
 
 function Frota_apiAtualizarVeiculo(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
@@ -292,7 +380,7 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
     if (colisao) throw new Error('Já existe outro veículo cadastrado com essa placa.');
   }
 
-  var kmAtual = payload.kmAtual !== undefined && payload.kmAtual !== '' ? SGO_UTILS.toNumber(payload.kmAtual, NaN) : Number(atual.KM_ATUAL || 0);
+  var kmAtual = payload.kmAtual !== undefined && payload.kmAtual !== '' ? Frota_num_(payload.kmAtual, NaN) : Number(atual.KM_ATUAL || 0);
   if (!isFinite(kmAtual) || kmAtual < 0) throw new Error('KM atual inválido.');
 
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, {
@@ -309,17 +397,21 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
 
 function Frota_apiInativarVeiculo(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   var id = SGO_UTILS.safe((payload || {}).id);
   if (!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id)) throw new Error('Veículo não encontrado.');
+  // 16/10/2026: inativar com retirada aberta deixava a devolução reativar o
+  // veículo sozinha, sem ninguém perceber.
+  var emUso = Frota_veiculosComSituacao_().filter(function(v) { return SGO_UTILS.safe(v.ID) === id && v.SITUACAO === 'EM_USO'; })[0];
+  if (emUso) throw new Error('Este veículo está em uso (retirado por ' + (emUso.CONDUTOR_NOME || 'condutor não localizado') + '). Registre a devolução em "Retiradas em andamento" e depois inative.');
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, { STATUS: 'INATIVO' });
   return { ok: true };
 }
 
 function Frota_apiReativarVeiculo(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   var id = SGO_UTILS.safe((payload || {}).id);
   if (!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id)) throw new Error('Veículo não encontrado.');
@@ -337,7 +429,7 @@ function Frota_apiReativarVeiculo(sessionId, payload) {
 // ------------------------------------------------------------
 function Frota_apiListarCondutoresAtivos(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES)
     .filter(function(c) { return SGO_UTILS.safeUpper(c.STATUS) !== 'INATIVO'; })
     .sort(function(a, b) { return SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME)); });
@@ -346,7 +438,7 @@ function Frota_apiListarCondutoresAtivos(sessionId) {
 
 function Frota_apiListarCondutoresTodos(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES)
     .sort(function(a, b) { return SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME)); });
   return { ok: true, items: itens };
@@ -356,7 +448,7 @@ function Frota_apiListarCondutoresTodos(sessionId) {
 function Frota_obterCondutorPorUsuario_(usuarioId) {
   usuarioId = SGO_UTILS.safe(usuarioId);
   if (!usuarioId) return null;
-  var achado = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).filter(function(c) {
+  var achado = Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_CONDUTORES).filter(function(c) {
     return SGO_UTILS.safe(c.USUARIO_ID) === usuarioId && SGO_UTILS.safeUpper(c.STATUS) !== 'INATIVO';
   })[0];
   return achado || null;
@@ -384,7 +476,7 @@ function Frota_apiListarUsuariosParaVinculo(sessionId) {
 /** Upload do arquivo da CNH (foto ou PDF) — mesmo miolo genérico de upload já usado pra documentos do veículo. */
 function Frota_apiUploadCnh(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -401,7 +493,7 @@ function Frota_apiUploadCnh(sessionId, payload) {
 
 function Frota_apiCriarCondutor(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -440,7 +532,7 @@ function Frota_apiCriarCondutor(sessionId, payload) {
 
 function Frota_apiInativarCondutor(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   var id = SGO_UTILS.safe((payload || {}).id);
   if (!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, id)) throw new Error('Condutor não encontrado.');
@@ -450,7 +542,7 @@ function Frota_apiInativarCondutor(sessionId, payload) {
 
 function Frota_apiReativarCondutor(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   var id = SGO_UTILS.safe((payload || {}).id);
   if (!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, id)) throw new Error('Condutor não encontrado.');
@@ -511,7 +603,7 @@ function Frota_uploadFoto_(placa, base64, mimeType, nomeArquivoSugerido) {
 // retirada/devolução, e manda só os links prontos pro apiIniciarViagem/
 // apiFinalizarViagem (ver payload.fotosSalvas).
 function Frota_apiUploadFotoVeiculo(sessionId, payload) {
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   payload = payload || {};
   var placa = SGO_UTILS.safe(payload.placa);
   if (!placa) throw new Error('Placa não informada.');
@@ -587,7 +679,7 @@ function Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 
 
 function Frota_apiListarViagensEmAndamento(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var veiculos = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS).forEach(function(v) { veiculos[SGO_UTILS.safe(v.ID)] = v; });
   var condutores = {};
@@ -614,13 +706,31 @@ function Frota_apiListarViagensEmAndamento(sessionId) {
  */
 function Frota_apiDiagLogTempoCliente(sessionId, payload) {
   payload = payload || {};
+  // 16/10/2026: sem sessão válida não grava nada (a função é chamável direto
+  // pelo navegador e escrevia em SYS_LOGS para qualquer um).
+  try { if (!validarSessao(String(sessionId || '')).valid) return { ok: true }; } catch (eSessao) { return { ok: true }; }
   try { SGO_DATA.log('DIAG_FROTA_CLIENTE', 'navegador', String(payload.rotulo || '?') + ': ' + String(payload.ms || '?') + 'ms (medido no navegador, ida e volta)', 'DIAG'); } catch (e) {}
   return { ok: true };
 }
 
+/**
+ * Data/hora digitadas na retirada/devolução (16/10/2026). Antes eram gravadas
+ * como texto livre: "15-10" ou "8h" passavam e depois sumiam do relatório e
+ * do cruzamento de multas sem aviso. Vazio = agora (horário de Brasília).
+ */
+function Frota_dataHoraMovimento_(data, hora, rotulo) {
+  var agora = new Date();
+  var d = String(data || '').trim() || Utilities.formatDate(agora, 'America/Sao_Paulo', 'dd/MM/yyyy');
+  var h = String(hora || '').trim() || Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
+  if (/^\d:\d{2}$/.test(h)) h = '0' + h;
+  var quando = Frota_parseDataHora_(d, h);
+  if (!quando) throw new Error('Data/hora de ' + rotulo + ' inválida (' + d + ' ' + h + '). Use dd/mm/aaaa e hh:mm, ou toque em "Usar data/hora atual".');
+  return { data: d, hora: h, quando: quando };
+}
+
 function Frota_apiIniciarViagem(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   payload = payload || {};
 
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
@@ -635,8 +745,9 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   // escolher qualquer condutor (ex.: exceção, motorista esqueceu de bater).
   var condutorId = Frota_resolverCondutorRetirada_(sessionId, payload).ID;
 
-  var kmSaida = SGO_UTILS.toNumber(payload.kmSaida, NaN);
+  var kmSaida = Frota_num_(payload.kmSaida, NaN);
   if (!isFinite(kmSaida)) throw new Error('Informe o KM de saída.');
+  var quandoSaida = Frota_dataHoraMovimento_(payload.dataSaida, payload.horaSaida, 'saída');
   if (kmSaida < Number(veiculo.KM_ATUAL || 0)) {
     throw new Error('O KM de saída (' + kmSaida + ') não pode ser menor que o KM atual do veículo (' + veiculo.KM_ATUAL + ').');
   }
@@ -666,8 +777,8 @@ function Frota_apiIniciarViagem(sessionId, payload) {
       SGO_DATA.gerarRegistroBase({
         VEICULO_ID: veiculoId,
         CONDUTOR_ID: condutorId,
-        DATA_SAIDA: String(payload.dataSaida || '').trim(),
-        HORA_SAIDA: String(payload.horaSaida || '').trim(),
+        DATA_SAIDA: quandoSaida.data,
+        HORA_SAIDA: quandoSaida.hora,
         KM_SAIDA: kmSaida,
         CHECKLIST_SAIDA_JSON: JSON.stringify(checklistNormalizado),
         FOTOS_SAIDA_JSON: JSON.stringify(fotosSalvas),
@@ -689,7 +800,7 @@ function Frota_apiIniciarViagem(sessionId, payload) {
 
 function Frota_apiFinalizarViagem(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   payload = payload || {};
 
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
@@ -700,8 +811,13 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID);
   if (!veiculo) throw new Error('Veículo não encontrado.');
 
-  var kmChegada = SGO_UTILS.toNumber(payload.kmChegada, NaN);
+  var kmChegada = Frota_num_(payload.kmChegada, NaN);
   if (!isFinite(kmChegada)) throw new Error('Informe o KM de chegada.');
+  var quandoChegada = Frota_dataHoraMovimento_(payload.dataChegada, payload.horaChegada, 'chegada');
+  var saidaReg = Frota_parseDataHora_(mov.DATA_SAIDA, mov.HORA_SAIDA);
+  if (saidaReg && quandoChegada.quando.getTime() < saidaReg.getTime()) {
+    throw new Error('A data/hora de chegada (' + quandoChegada.data + ' ' + quandoChegada.hora + ') é anterior à saída registrada (' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) + '). Confira os campos de chegada.');
+  }
   if (kmChegada < Number(mov.KM_SAIDA || 0)) {
     throw new Error('O KM de chegada (' + kmChegada + ') não pode ser menor que o KM de saída (' + mov.KM_SAIDA + ').');
   }
@@ -721,8 +837,8 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
     if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi finalizada.');
 
     SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId, {
-      DATA_CHEGADA: String(payload.dataChegada || '').trim(),
-      HORA_CHEGADA: String(payload.horaChegada || '').trim(),
+      DATA_CHEGADA: quandoChegada.data,
+      HORA_CHEGADA: quandoChegada.hora,
       KM_CHEGADA: kmChegada,
       CHECKLIST_CHEGADA_JSON: JSON.stringify(checklistNormalizado),
       FOTOS_CHEGADA_JSON: JSON.stringify(fotosSalvas),
@@ -730,7 +846,9 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       STATUS: 'FINALIZADO',
       FINALIZADO_EM: SGO_UTILS.nowIso()
     });
-    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, { KM_ATUAL: kmChegada, STATUS: 'ATIVO' });
+    // Veículo inativado durante a retirada continua inativo depois da devolução.
+    var statusDepois = SGO_UTILS.safeUpper(veiculo.STATUS) === 'INATIVO' ? 'INATIVO' : 'ATIVO';
+    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, { KM_ATUAL: kmChegada, STATUS: statusDepois });
     SGO_DATA.log('FROTA_VIAGEM_FINALIZAR', sessao.usuario, 'Devolução registrada — veículo ' + veiculo.PLACA, 'FROTA');
 
     return { ok: true };
@@ -785,7 +903,7 @@ function Frota_apiVerificarNovosEventos(sessionId, payload) {
 // ------------------------------------------------------------
 function Frota_apiRegistrarManutencao(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -800,11 +918,11 @@ function Frota_apiRegistrarManutencao(sessionId, payload) {
       VEICULO_ID: veiculoId,
       TIPO: String(payload.tipo),
       DATA: String(payload.data || '').trim(),
-      KM: SGO_UTILS.toNumber(payload.km, veiculo.KM_ATUAL || 0),
+      KM: Frota_num_(payload.km, veiculo.KM_ATUAL || 0),
       DESCRICAO: String(payload.descricao || '').trim(),
-      CUSTO: SGO_UTILS.toNumber(payload.custo, 0),
+      CUSTO: Frota_num_(payload.custo, 0),
       OFICINA: String(payload.oficina || '').trim(),
-      PROXIMA_KM: payload.proximaKm !== undefined && payload.proximaKm !== '' ? SGO_UTILS.toNumber(payload.proximaKm, 0) : '',
+      PROXIMA_KM: payload.proximaKm !== undefined && payload.proximaKm !== '' ? Frota_num_(payload.proximaKm, 0) : '',
       PROXIMA_DATA: String(payload.proximaData || '').trim()
     })
   );
@@ -815,7 +933,7 @@ function Frota_apiRegistrarManutencao(sessionId, payload) {
 
 function Frota_apiRegistrarDespesa(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -829,7 +947,7 @@ function Frota_apiRegistrarDespesa(sessionId, payload) {
       VEICULO_ID: veiculoId,
       TIPO: String(payload.tipo || 'Outro'),
       DATA: String(payload.data || '').trim(),
-      VALOR: SGO_UTILS.toNumber(payload.valor, 0),
+      VALOR: Frota_num_(payload.valor, 0),
       DESCRICAO: String(payload.descricao || '').trim()
     })
   );
@@ -840,7 +958,7 @@ function Frota_apiRegistrarDespesa(sessionId, payload) {
 
 function Frota_apiRegistrarParada(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -869,30 +987,62 @@ function Frota_apiRegistrarParada(sessionId, payload) {
 // MESMO alarme de manutenção quando preenchida — ver
 // Frota_calcularAlertasManutencao_, que já lê REG_FROTA_DOCUMENTO.
 // ------------------------------------------------------------
+// 16/10/2026: um CRLV/seguro renovado não apagava o aviso do anterior —
+// o documento vencido continuava em VENCIDO para sempre (a única saída era
+// excluir). Para cada veículo + tipo vale o documento de validade mais
+// distante; os anteriores ficam como SUBSTITUIDO. Tipos sem prazo comum
+// ("Outro", "Nota Fiscal", "Laudo de Vistoria") contam um a um.
+var FROTA_DOC_TIPOS_AVULSOS = ['OUTRO', 'NOTA FISCAL', 'LAUDO DE VISTORIA'];
+
+function Frota_chaveDocumento_(d) {
+  var tipo = SGO_UTILS.safeUpper(d.TIPO_DOCUMENTO);
+  return FROTA_DOC_TIPOS_AVULSOS.indexOf(tipo) >= 0 ? 'ID|' + SGO_UTILS.safe(d.ID) : SGO_UTILS.safe(d.VEICULO_ID) + '|' + tipo;
+}
+
+/** Mapa chave -> ID do documento vigente (validade mais distante) entre os que têm validade. */
+function Frota_documentosVigentes_(docs) {
+  var melhor = {};
+  docs.forEach(function(d) {
+    var dt = Frota_dataDia_(d.VALIDADE);
+    if (!dt) return;
+    var k = Frota_chaveDocumento_(d);
+    if (!melhor[k] || dt.getTime() > melhor[k].t) melhor[k] = { t: dt.getTime(), id: SGO_UTILS.safe(d.ID) };
+  });
+  var out = {};
+  Object.keys(melhor).forEach(function(k) { out[k] = melhor[k].id; });
+  return out;
+}
+
+/** OK / VENCENDO / VENCIDO / SEM_VALIDADE / SUBSTITUIDO */
+function Frota_statusDocumento_(d, vigentes) {
+  var dias = Frota_diasAte_(d.VALIDADE);
+  if (dias === null) return 'SEM_VALIDADE';
+  var vigente = vigentes && vigentes[Frota_chaveDocumento_(d)];
+  if (vigente && vigente !== SGO_UTILS.safe(d.ID)) return 'SUBSTITUIDO';
+  return dias < 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+}
+
+function Frota_situacaoPorDias_(dias) {
+  return dias < 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+}
+
 function Frota_apiListarDocumentos(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   payload = payload || {};
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
 
   var veiculos = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS).forEach(function(v) { veiculos[SGO_UTILS.safe(v.ID)] = v; });
 
-  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var todos = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO);
+  var vigentes = Frota_documentosVigentes_(todos);
 
-  var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO)
+  var itens = todos
     .filter(function(d) { return !veiculoId || SGO_UTILS.safe(d.VEICULO_ID) === veiculoId; })
     .map(function(d) {
       var veiculo = veiculos[SGO_UTILS.safe(d.VEICULO_ID)] || {};
-      var status = 'SEM_VALIDADE';
-      var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(d.VALIDADE || '').trim());
-      if (m) {
-        var dataVenc = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-        dataVenc.setHours(0, 0, 0, 0);
-        var dias = Math.ceil((dataVenc.getTime() - hoje.getTime()) / 86400000);
-        status = dias < 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
-      }
-      return Object.assign({}, d, { veiculoPlaca: veiculo.PLACA || '', status: status });
+      return Object.assign({}, d, { VALIDADE: Frota_textoData_(d.VALIDADE), veiculoPlaca: veiculo.PLACA || '', status: Frota_statusDocumento_(d, vigentes) });
     })
     .sort(function(a, b) { return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || '')); });
 
@@ -901,7 +1051,7 @@ function Frota_apiListarDocumentos(sessionId, payload) {
 
 function Frota_apiUploadDocumento(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -936,15 +1086,14 @@ function Frota_apiUploadDocumento(sessionId, payload) {
 
 function Frota_apiExcluirDocumento(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
   var doc = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO, id);
   if (!doc) throw new Error('Documento não encontrado.');
-  // Remove só o registro — o arquivo permanece no Drive (fica recuperável
-  // manualmente se for engano), mesmo critério não-destrutivo do resto do Portal.
-  SGO_DATA.remove(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO, id);
+  // Marca como excluído (a linha e o arquivo continuam guardados) — 16/10/2026.
+  Frota_marcarExcluido_(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO, id, sessao.usuario);
   SGO_DATA.log('FROTA_DOCUMENTO_EXCLUIR', sessao.usuario, 'Documento removido — ' + doc.TIPO_DOCUMENTO + ' (' + doc.NOME_ARQUIVO + ')', 'FROTA');
   return { ok: true };
 }
@@ -957,7 +1106,7 @@ function Frota_apiExcluirDocumento(sessionId, payload) {
 // ------------------------------------------------------------
 function Frota_apiListarAbastecimentos(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   payload = payload || {};
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
 
@@ -966,7 +1115,7 @@ function Frota_apiListarAbastecimentos(sessionId, payload) {
   var condutores = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
 
-  var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO)
+  var itens = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO)
     .filter(function(a) { return !veiculoId || SGO_UTILS.safe(a.VEICULO_ID) === veiculoId; })
     .map(function(a) {
       var veiculo = veiculos[SGO_UTILS.safe(a.VEICULO_ID)] || {};
@@ -980,7 +1129,7 @@ function Frota_apiListarAbastecimentos(sessionId, payload) {
 
 function Frota_apiRegistrarAbastecimento(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -991,10 +1140,10 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
   var data = String(payload.data || '').trim();
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(data)) throw new Error('Informe a data no formato dd/mm/aaaa.');
 
-  var litros = SGO_UTILS.toNumber(payload.litros, NaN);
+  var litros = Frota_num_(payload.litros, NaN);
   if (!isFinite(litros) || litros <= 0) throw new Error('Informe os litros abastecidos.');
 
-  var km = SGO_UTILS.toNumber(payload.km, NaN);
+  var km = Frota_num_(payload.km, NaN);
   if (!isFinite(km)) throw new Error('Informe o KM no momento do abastecimento.');
 
   // Achado real 2026-08-28: comprovante era opcional — abastecimento ficava
@@ -1012,7 +1161,7 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
       KM: km,
       TIPO_COMBUSTIVEL: SGO_UTILS.safe(payload.tipoCombustivel) || 'Outro',
       LITROS: litros,
-      VALOR: SGO_UTILS.toNumber(payload.valor, 0),
+      VALOR: Frota_num_(payload.valor, 0),
       POSTO: SGO_UTILS.safe(payload.posto),
       COMPROVANTE_LINK: link
     })
@@ -1024,13 +1173,13 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
 
 function Frota_apiExcluirAbastecimento(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
   var abastecimento = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, id);
   if (!abastecimento) throw new Error('Abastecimento não encontrado.');
-  SGO_DATA.remove(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, id);
+  Frota_marcarExcluido_(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, id, sessao.usuario);
   SGO_DATA.log('FROTA_ABASTECIMENTO_EXCLUIR', sessao.usuario, 'Abastecimento removido — ' + id, 'FROTA');
   return { ok: true };
 }
@@ -1042,8 +1191,10 @@ function Frota_apiExcluirAbastecimento(sessionId, payload) {
 // estava usando o carro na hora da infração (cobrança/evidência).
 // ------------------------------------------------------------
 function Frota_parseDataHora_(data, hora) {
-  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(data || '').trim());
+  // 16/10/2026: aceita também Date/ISO vindos da planilha antiga (ver Frota_textoData_).
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(Frota_textoData_(data));
   if (!m) return null;
+  hora = Frota_textoHora_(hora);
   var h = /^(\d{1,2}):(\d{2})$/.exec(String(hora || '').trim());
   if (String(hora || '').trim() && !h) return null;
   var hh = h ? Number(h[1]) : 0;
@@ -1073,6 +1224,12 @@ function Frota_cruzarMulta_(veiculoId, dataInfracao, horaInfracao) {
     .map(function(m) {
       var inicio = Frota_parseDataHora_(m.DATA_SAIDA, m.HORA_SAIDA);
       var fim = m.DATA_CHEGADA ? Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA) : null;
+      // 16/10/2026: devolução gravada com data ilegível virava retirada "sem
+      // fim" e o condutor aparecia em toda multa posterior. Usa o carimbo do
+      // servidor; sem nenhum dos dois, a retirada finalizada não entra.
+      var finalizada = SGO_UTILS.safeUpper(m.STATUS) === 'FINALIZADO';
+      if (finalizada && !fim && m.FINALIZADO_EM) { var f = new Date(m.FINALIZADO_EM); if (!isNaN(f.getTime())) fim = f; }
+      if (finalizada && !fim) return { m: m, inicio: null, fim: null };
       return { m: m, inicio: inicio, fim: fim };
     })
     .filter(function(c) {
@@ -1097,7 +1254,7 @@ function Frota_cruzarMulta_(veiculoId, dataInfracao, horaInfracao) {
 
 function Frota_apiListarMultas(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   payload = payload || {};
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
 
@@ -1106,7 +1263,7 @@ function Frota_apiListarMultas(sessionId, payload) {
   var condutores = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
 
-  var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MULTA)
+  var itens = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MULTA)
     .filter(function(m) { return !veiculoId || SGO_UTILS.safe(m.VEICULO_ID) === veiculoId; })
     .map(function(m) {
       var veiculo = veiculos[SGO_UTILS.safe(m.VEICULO_ID)] || {};
@@ -1120,7 +1277,7 @@ function Frota_apiListarMultas(sessionId, payload) {
 
 function Frota_apiRegistrarMulta(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -1150,8 +1307,8 @@ function Frota_apiRegistrarMulta(sessionId, payload) {
       HORA_INFRACAO: horaInfracao,
       LOCAL: String(payload.local || '').trim(),
       DESCRICAO: String(payload.descricao || '').trim(),
-      VALOR: SGO_UTILS.toNumber(payload.valor, 0),
-      PONTOS: payload.pontos !== undefined && payload.pontos !== '' ? SGO_UTILS.toNumber(payload.pontos, 0) : '',
+      VALOR: Frota_num_(payload.valor, 0),
+      PONTOS: payload.pontos !== undefined && payload.pontos !== '' ? Frota_num_(payload.pontos, 0) : '',
       ORGAO_AUTUADOR: String(payload.orgaoAutuador || '').trim(),
       NUMERO_AIT: String(payload.numeroAit || '').trim(),
       VENCIMENTO: vencimento,
@@ -1171,7 +1328,7 @@ function Frota_apiRegistrarMulta(sessionId, payload) {
 /** Re-roda o cruzamento (ex.: usuário registrou a movimentação depois da multa, ou corrigiu um horário). */
 function Frota_apiRecruzarMulta(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
@@ -1191,7 +1348,7 @@ function Frota_apiRecruzarMulta(sessionId, payload) {
 /** Override manual — cruzamento automático não achou, achou errado, ou achou ambíguo. */
 function Frota_apiIndicarCondutorMulta(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
@@ -1207,7 +1364,7 @@ function Frota_apiIndicarCondutorMulta(sessionId, payload) {
 
 function Frota_apiAtualizarStatusMulta(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
@@ -1222,13 +1379,13 @@ function Frota_apiAtualizarStatusMulta(sessionId, payload) {
 
 function Frota_apiExcluirMulta(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.id);
   var multa = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MULTA, id);
   if (!multa) throw new Error('Multa não encontrada.');
-  SGO_DATA.remove(SGO_CFG.SHEETS.REG_FROTA_MULTA, id);
+  Frota_marcarExcluido_(SGO_CFG.SHEETS.REG_FROTA_MULTA, id, sessao.usuario);
   SGO_DATA.log('FROTA_MULTA_EXCLUIR', sessao.usuario, 'Multa removida — ' + id, 'FROTA');
   return { ok: true };
 }
@@ -1238,7 +1395,7 @@ function Frota_apiExcluirMulta(sessionId, payload) {
 // ------------------------------------------------------------
 function Frota_apiHistoricoVeiculo(sessionId, payload) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   var veiculoId = SGO_UTILS.safe((payload || {}).veiculoId);
   if (!veiculoId) throw new Error('Selecione um veículo.');
 
@@ -1289,25 +1446,35 @@ function Frota_classificarManutencao_(manutencao, veiculo) {
     considerar(faltamKm < 0 ? 'VENCIDO' : (faltamKm <= FROTA_CFG.KM_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK'));
   }
 
-  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(manutencao.PROXIMA_DATA || '').trim());
-  if (m) {
-    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    var dataVenc = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])); dataVenc.setHours(0, 0, 0, 0);
-    var diasRestantes = Math.ceil((dataVenc.getTime() - hoje.getTime()) / 86400000);
-    considerar(diasRestantes < 0 ? 'VENCIDO' : (diasRestantes <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK'));
-  }
+  var diasRestantes = Frota_diasAte_(manutencao.PROXIMA_DATA);
+  if (diasRestantes !== null) considerar(Frota_situacaoPorDias_(diasRestantes));
 
   return pior || 'SEM_PREVISAO';
 }
 
-/** Última manutenção de cada TIPO, por veículo (a mais recente por DATA_CRIADO_EM). */
+/**
+ * Última manutenção de cada TIPO, por veículo. 16/10/2026: a mais recente
+ * pela DATA da manutenção (depois KM), não pela data em que foi digitada —
+ * lançar hoje uma troca de óleo antiga (histórico) passava a valer como a
+ * última e reabria um alerta já resolvido. CRIADO_EM só desempata.
+ */
 function Frota_ultimasManutencoesPorVeiculo_() {
   var todas = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MANUTENCAO);
   var porVeiculoTipo = {};
+  function chaveOrdem(m) {
+    var d = Frota_dataDia_(m.DATA);
+    return [d ? d.getTime() : -1, Number(m.KM) || 0, String(m.CRIADO_EM || '')];
+  }
+  function maisNova(a, b) {
+    var x = chaveOrdem(a), y = chaveOrdem(b);
+    if (x[0] !== y[0]) return x[0] > y[0];
+    if (x[1] !== y[1]) return x[1] > y[1];
+    return x[2] > y[2];
+  }
   todas.forEach(function(m) {
     var chave = SGO_UTILS.safe(m.VEICULO_ID) + '|' + SGO_UTILS.safe(m.TIPO);
     var atual = porVeiculoTipo[chave];
-    if (!atual || String(m.CRIADO_EM || '') > String(atual.CRIADO_EM || '')) porVeiculoTipo[chave] = m;
+    if (!atual || maisNova(m, atual)) porVeiculoTipo[chave] = m;
   });
   return porVeiculoTipo;
 }
@@ -1315,7 +1482,7 @@ function Frota_ultimasManutencoesPorVeiculo_() {
 /** Lista de alertas (VENCENDO/VENCIDO) — usado pela tela + reaproveitado por SGO_Alertas.js pro Dashboard/balão do menu. */
 function Frota_apiListarAlertasManutencao(sessionId) {
   Frota_bootstrap_();
-  exigirSessao(sessionId);
+  Frota_exigirEquipe_(sessionId);
   return { ok: true, items: Frota_calcularAlertasManutencao_() };
 }
 
@@ -1350,17 +1517,15 @@ function Frota_calcularAlertasManutencao_() {
   // mesmo alarme de manutenção vencida, só que pra papelada. Documento sem
   // VALIDADE preenchida (ex.: nota fiscal, laudo avulso) nunca entra aqui
   // de propósito — não tem prazo pra vencer.
-  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO).forEach(function(doc) {
+  // 16/10/2026: documento renovado substitui o anterior (Frota_statusDocumento_).
+  var documentos = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO);
+  var docsVigentes = Frota_documentosVigentes_(documentos);
+  documentos.forEach(function(doc) {
     var veiculo = veiculos[SGO_UTILS.safe(doc.VEICULO_ID)];
     if (!veiculo) return;
-    var m2 = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(doc.VALIDADE || '').trim());
-    if (!m2) return;
-    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    var dataVenc = new Date(Number(m2[3]), Number(m2[2]) - 1, Number(m2[1])); dataVenc.setHours(0, 0, 0, 0);
-    var diasRestantes = Math.ceil((dataVenc.getTime() - hoje.getTime()) / 86400000);
-    var statusDoc = diasRestantes < 0 ? 'VENCIDO' : (diasRestantes <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+    var statusDoc = Frota_statusDocumento_(doc, docsVigentes);
     if (statusDoc !== 'VENCENDO' && statusDoc !== 'VENCIDO') return;
-    alertas.push({ veiculoId: veiculo.ID, veiculoPlaca: veiculo.PLACA, tipo: 'DOC_' + doc.TIPO_DOCUMENTO, tipoLabel: doc.TIPO_DOCUMENTO, status: statusDoc, categoria: 'DOCUMENTO', vencimento: SGO_UTILS.safe(doc.VALIDADE) });
+    alertas.push({ veiculoId: veiculo.ID, veiculoPlaca: veiculo.PLACA, tipo: 'DOC_' + doc.TIPO_DOCUMENTO, tipoLabel: doc.TIPO_DOCUMENTO, status: statusDoc, categoria: 'DOCUMENTO', vencimento: Frota_textoData_(doc.VALIDADE) });
   });
 
   // CNH dos condutores (Fase 5, 2026-08-25) — mesmo alarme, mas por
@@ -1370,14 +1535,11 @@ function Frota_calcularAlertasManutencao_() {
   // categoria:'CNH' sabe que ali vai o nome do condutor, não a placa.
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) {
     if (SGO_UTILS.safeUpper(c.STATUS) === 'INATIVO') return;
-    var m3 = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(c.CNH_VALIDADE || '').trim());
-    if (!m3) return;
-    var hoje2 = new Date(); hoje2.setHours(0, 0, 0, 0);
-    var dataVenc2 = new Date(Number(m3[3]), Number(m3[2]) - 1, Number(m3[1])); dataVenc2.setHours(0, 0, 0, 0);
-    var dias2 = Math.ceil((dataVenc2.getTime() - hoje2.getTime()) / 86400000);
-    var statusCnh = dias2 < 0 ? 'VENCIDO' : (dias2 <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+    var dias2 = Frota_diasAte_(c.CNH_VALIDADE);
+    if (dias2 === null) return;
+    var statusCnh = Frota_situacaoPorDias_(dias2);
     if (statusCnh !== 'VENCENDO' && statusCnh !== 'VENCIDO') return;
-    alertas.push({ veiculoId: '', veiculoPlaca: c.NOME, tipo: 'CNH', tipoLabel: 'CNH', status: statusCnh, categoria: 'CNH', vencimento: SGO_UTILS.safe(c.CNH_VALIDADE) });
+    alertas.push({ veiculoId: '', veiculoPlaca: c.NOME, tipo: 'CNH', tipoLabel: 'CNH', status: statusCnh, categoria: 'CNH', vencimento: Frota_textoData_(c.CNH_VALIDADE) });
   });
 
   // Multa sem condutor vinculado (2026-08-28, achado real: o cruzamento
@@ -1385,14 +1547,17 @@ function Frota_calcularAlertasManutencao_() {
   // acha mais de uma — a multa fica salva do jeito assim mesmo, sem virar
   // pendência visível pra ninguém resolver). Só entra em ABERTA — multa já
   // paga/recorrida/cancelada não precisa mais de condutor pra nada.
-  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(multa) {
+  Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(multa) {
     if (SGO_UTILS.safeUpper(multa.STATUS) !== 'ABERTA') return;
-    if (SGO_UTILS.safe(multa.CONDUTOR_ID)) return;
+    // 16/10/2026: MULTIPLOS (mais de uma retirada cobre o horário) grava um
+    // condutor só como palpite — também precisa de conferência do gestor.
+    var ambigua = SGO_UTILS.safeUpper(multa.STATUS_CRUZAMENTO) === 'MULTIPLOS';
+    if (SGO_UTILS.safe(multa.CONDUTOR_ID) && !ambigua) return;
     var veiculo = veiculos[SGO_UTILS.safe(multa.VEICULO_ID)];
     alertas.push({
       veiculoId: multa.VEICULO_ID, veiculoPlaca: veiculo ? veiculo.PLACA : '',
-      tipo: 'MULTA_SEM_CONDUTOR', tipoLabel: 'Multa sem condutor vinculado',
-      status: 'VENCIDO', categoria: 'QUALIDADE', vencimento: SGO_UTILS.safe(multa.DATA_INFRACAO)
+      tipo: 'MULTA_SEM_CONDUTOR', tipoLabel: ambigua ? 'Multa com condutor a conferir (mais de uma retirada no horário)' : 'Multa sem condutor vinculado',
+      status: 'VENCIDO', categoria: 'QUALIDADE', vencimento: Frota_textoData_(multa.DATA_INFRACAO)
     });
   });
 

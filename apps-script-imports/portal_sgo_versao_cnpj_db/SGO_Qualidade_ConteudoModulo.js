@@ -123,9 +123,25 @@ function tplQualidade_esc(s) {
   });
 }
 
+// 16/10/2026: números no padrão brasileiro (1.234,56) em todo o painel.
+function tplQualidade_num_(v, casas) {
+  var n = Number(v);
+  if (!isFinite(n)) return '-';
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 });
+}
+
 function tplQualidade_renderReal_() {
   var container = document.getElementById('tplQualidadeContainer');
   if (!container) return;
+  // 16/10/2026: o painel é da gestão (o servidor recusa os outros perfis). Antes a
+  // tela abria com os botões e só mostrava "Erro: acesso restrito" no corpo.
+  var perfilQ = (typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT && USER_CONTEXT.perfil) ? String(USER_CONTEXT.perfil).toUpperCase() : '';
+  if (['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(perfilQ) === -1) {
+    container.innerHTML = '<div class="wrap"><div class="panel"><h2>Painel de qualidade</h2>' +
+      '<p class="rank-sub">Este painel é usado pela gestão (Gestor, Administrador e Diretoria) para acompanhar a qualidade dos atendimentos e da frota. ' +
+      'Cobranças e reconhecimentos registrados aqui aparecem para você ao entrar no SGO+, na janela de avisos. Em caso de dúvida, fale com o seu gestor.</p></div></div>';
+    return;
+  }
   container.innerHTML =
     '<div class="wrap">' +
       '<div class="toolbar">' +
@@ -152,7 +168,7 @@ function tplQualidade_carregar_() {
   tplQualidade_chamarApi('apiObterPainel', {periodoDias:periodoDias})
     .then(function(res) {
       if (!res || !res.ok) { if (corpo) corpo.innerHTML = '<p class="indisponivel">Falha ao carregar.</p>'; return; }
-      var r=res.resumo||{},saude=r.areasIndisponiveis?'<span class="stat-num critico">'+r.areasIndisponiveis+'</span> integração(ões) com falha':'<span class="stat-num ok">OK</span> integrações respondendo';
+      var r=res.resumo||{},saude=r.areasIndisponiveis?'<span class="stat-num critico">'+r.areasIndisponiveis+'</span> integração(ões) com falha':(res.auvoConfigurado===false?'<span class="stat-num alerta">!</span> Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)':'<span class="stat-num ok">OK</span> integrações respondendo');
       var falhas=(res.auvo&&res.auvo.indisponivel?'<div class="panel"><h2>Auvo indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.auvo.erro||'Falha não identificada')+'</p></div>':'')+(res.frota&&res.frota.indisponivel?'<div class="panel"><h2>Frota indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.frota.erro||'Falha não identificada')+'</p></div>':'');
       if (corpo) corpo.innerHTML =
         '<div class="secao-titulo">Visão executiva — últimos '+res.periodoDias+' dias</div><div class="grid"><div class="panel"><h2>Itens que exigem ação</h2><div class="stat-row"><span class="stat-num '+(r.pendencias?'critico':'ok')+'">'+(r.pendencias||0)+'</span><span class="stat-label">pendências detectadas nas fontes</span></div><div class="stat-row">'+saude+'</div><p class="fonte">Atualizado em '+tplQualidade_esc(res.geradoEm)+'</p></div><div class="panel"><h2>Volume analisado</h2><div class="stat-row"><span class="stat-num">'+(r.atendimentos||0)+'</span><span class="stat-label">atendimentos Auvo</span></div><div class="stat-row"><span class="stat-num">'+(r.movimentacoes||0)+'</span><span class="stat-label">movimentações da Frota</span></div></div>'+falhas+'</div>'+
@@ -298,9 +314,29 @@ function tplQualidade_montarAuvo_(a) {
 // ------------------------------------------------------------
 // FROTA
 // ------------------------------------------------------------
+function tplQualidade_montarCnh_(f) {
+  if (!f || !(f.cnhVencidas || f.cnhVencendo)) return '';
+  var lista = (f.amostraCnh || []).map(function(c) {
+    return '<li>' + tplQualidade_esc(c.condutorNome || '?') + ' — CNH ' + (c.status === 'VENCIDO' ? 'vencida' : 'vencendo') + ' em ' + tplQualidade_esc(c.vencimento || '?') + '</li>';
+  }).join('');
+  return '<div class="panel"><h2>CNH dos condutores</h2>' +
+    '<div class="stat-row"><span class="stat-num ' + (f.cnhVencidas ? 'critico' : 'alerta') + '">' + (f.cnhVencidas || 0) + '</span><span class="stat-label">CNH vencida(s) · ' + (f.cnhVencendo || 0) + ' vencendo em 30 dias</span></div>' +
+    (lista ? '<ul class="lista-amostra">' + lista + '</ul>' : '') + '<p class="fonte">Atualize a validade em Frota &gt; Condutores.</p></div>';
+}
+
+function tplQualidade_montarDocsMultasSemUso_(f) {
+  return '<div class="panel"><h2>Documentos e multas</h2>' +
+    '<div class="stat-row"><span class="stat-num ' + (f.documentosVencidos ? 'critico' : 'ok') + '">' + (f.documentosVencidos || 0) + '</span><span class="stat-label">documento(s) vencido(s) · ' + (f.documentosVencendo || 0) + ' vencendo</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + (f.multasSemCondutor ? 'critico' : 'ok') + '">' + (f.multasAbertas || 0) + '</span><span class="stat-label">multa(s) aberta(s) · ' + (f.multasSemCondutor || 0) + ' sem condutor</span></div></div>';
+}
+
 function tplQualidade_montarFrota_(f) {
+  // 16/10/2026: sem retirada no período o bloco sumia junto com CNH, documentos
+  // e multas (que não dependem de retirada). Agora só o resumo de uso fica vazio.
+  var cnh = tplQualidade_montarCnh_(f);
   if (!f || !f.totalMovimentacoes) {
-    return '<div class="panel"><h2>Resumo</h2><p class="indisponivel">Sem retirada/devolução registrada ainda.</p></div>';
+    return '<div class="panel"><h2>Uso da frota</h2><p class="indisponivel">Nenhuma retirada ou devolução no período.</p></div>' + cnh +
+      (f && (f.documentosVencidos || f.documentosVencendo || f.multasAbertas) ? tplQualidade_montarDocsMultasSemUso_(f) : '');
   }
   var classeIncompletas = f.totalIncompletas > 0 ? 'alerta' : 'ok';
   var classePendurada = f.viagensPenduradas > 0 ? 'critico' : 'ok';
@@ -362,7 +398,7 @@ function tplQualidade_montarFrota_(f) {
     '<h2>Manutenção e confiabilidade</h2>' +
     '<p class="fonte">custo total de manutenção (top 5)</p>' +
     tplQualidade_rankLista_(f.rankingCustoManutencao, function(r) {
-      return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">R$ ' + r.valor.toFixed(2).replace('.', ',') + '</span></li>';
+      return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">R$ ' + tplQualidade_num_(r.valor, 2) + '</span></li>';
     }) +
     (f.rankingParadasNaoPlanejadas && f.rankingParadasNaoPlanejadas.length ?
       '<p class="fonte" style="margin:10px 0 2px">Paradas por acidente/pane:</p>' + tplQualidade_rankLista_(f.rankingParadasNaoPlanejadas, function(r) {
@@ -372,10 +408,10 @@ function tplQualidade_montarFrota_(f) {
 
   var painelConsumo = '<div class="panel">' +
     '<h2>Consumo (km/L)</h2>' +
-    '<p class="fonte">' + (f.mediaFrotaConsumo ? 'média da frota: ' + f.mediaFrotaConsumo + ' km/L' : 'sem dado suficiente ainda') + '</p>' +
+    '<p class="fonte">' + (f.mediaFrotaConsumo ? 'média da frota: ' + tplQualidade_num_(f.mediaFrotaConsumo, 2) + ' km/L' : 'sem dado suficiente ainda') + '</p>' +
     (f.consumoAbaixoDaMedia && f.consumoAbaixoDaMedia.length ?
       tplQualidade_rankLista_(f.consumoAbaixoDaMedia, function(r) {
-        return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd stat-num alerta" style="font-size:13px;min-width:auto">' + r.kmPorLitro + ' km/L</span></li>';
+        return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd stat-num alerta" style="font-size:13px;min-width:auto">' + tplQualidade_num_(r.kmPorLitro, 2) + ' km/L</span></li>';
       }) :
       (f.mediaFrotaConsumo ? '<p class="vazio">Nenhum veículo abaixo de 70% da média da frota.</p>' : '<p class="indisponivel">Precisa de pelo menos 2 abastecimentos por veículo pra calcular.</p>')) +
   '</div>';
@@ -384,7 +420,7 @@ function tplQualidade_montarFrota_(f) {
     '<h2>Documentação e multas</h2>' +
     '<div class="stat-row"><span class="stat-num ' + classeDocVencido + '">' + f.documentosVencidos + '</span><span class="stat-label">documento(s) vencido(s) (' + f.documentosVencendo + ' vencendo)</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeMultaSemCondutor + '">' + f.multasSemCondutor + '</span><span class="stat-label">de ' + f.multasAbertas + ' multa(s) aberta(s) sem condutor vinculado</span></div>' +
-    (f.valorMultasAbertas ? '<p class="fonte" style="margin-top:8px">R$ ' + f.valorMultasAbertas.toFixed(2).replace('.', ',') + ' em multas abertas</p>' : '') +
+    (f.valorMultasAbertas ? '<p class="fonte" style="margin-top:8px">R$ ' + tplQualidade_num_(f.valorMultasAbertas, 2) + ' em multas abertas</p>' : '') +
     (f.rankingMultasCondutor && f.rankingMultasCondutor.length ?
       '<p class="fonte" style="margin:10px 0 2px">Multas por condutor:</p>' + tplQualidade_rankLista_(f.rankingMultasCondutor, function(r) {
         return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span></li>';
@@ -397,7 +433,7 @@ function tplQualidade_montarFrota_(f) {
     '<ul class="lista-amostra">' + amostraIncompletas + '</ul>' +
   '</div>' : '';
 
-  return painelResumo + painelCondutores + painelCondutoresDestaque + painelVeiculos + painelManutencaoParadas + painelConsumo + painelDocsMultas + painelIncompletasDetalhe;
+  return painelResumo + cnh + painelCondutores + painelCondutoresDestaque + painelVeiculos + painelManutencaoParadas + painelConsumo + painelDocsMultas + painelIncompletasDetalhe;
 }
 
 // ------------------------------------------------------------
@@ -442,8 +478,9 @@ function tplQualidade_salvarOcorrencia_(area, pessoaTipo, pessoaId, pessoaNome) 
   }
   tplQualidade_chamarApi('apiRegistrarOcorrencia', {
     area: area, tipo: tipo, pessoaTipo: pessoaTipo, pessoaId: pessoaId, pessoaNome: pessoaNome, descricao: descricao
-  }).then(function() {
+  }).then(function(res) {
     tplQualidade_fecharModalOcorrencia_();
+    if (res && res.aviso) alert(res.aviso);
     tplQualidade_carregar_();
   }).catch(function(err) {
     var statusEl = document.getElementById('tplQualidade_oc_status');

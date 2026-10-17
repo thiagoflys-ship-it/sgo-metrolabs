@@ -92,6 +92,7 @@ function Conduta_apiDispatch(req) {
     ,apiRegistrarCiencia: Conduta_apiRegistrarCiencia
     ,apiPainelCiencia: Conduta_apiPainelCiencia
     ,apiRodarRotinaAgora: Conduta_apiRodarRotinaAgora
+    ,apiPreverRotina: Conduta_apiPreverRotina
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -185,7 +186,7 @@ function Conduta_exigirCompetenciaAberta_(competencia) {
     return Conduta_soComp_(f.COMPETENCIA) === competencia &&
       (f.CONGELADO === true || SGO_UTILS.safeUpper(f.CONGELADO) === 'TRUE');
   });
-  if (congelado) throw new Error('A competência ' + competencia + ' está congelada. O ajuste exige tratamento formal fora deste fechamento.');
+  if (congelado) throw new Error('O mês de ' + Conduta_nomeCompetencia_(competencia) + ' já foi fechado e congelado: nada com data nesse mês pode ser lançado, alterado ou removido no programa. Confira a data informada; se o caso for real, a gestão registra o ajuste fora do programa (o fechamento não é refeito).');
 }
 
 function Conduta_somarDiasUteis_(dataISO, n) {
@@ -444,8 +445,12 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     var hojeISO = Conduta_hojeISO_();
     o.PRAZO_CONTESTACAO_VENCIDO = !!o.PRAZO_CONTESTACAO && o.PRAZO_CONTESTACAO < hojeISO;
     o.PRAZO_RECURSO_VENCIDO = !!o.PRAZO_RECURSO && o.PRAZO_RECURSO < hojeISO;
-    o.PODE_CONTESTAR = (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_CONTESTACAO_VENCIDO;
-    o.PODE_RECORRER = (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_RECURSO_VENCIDO;
+    // 16/10/2026: o botão Recorrer aparecia depois do recurso já julgado (o
+    // servidor recusava) — cada ocorrência tem um recurso só. E só oferece cada
+    // ação no status em que ela é aceita.
+    var statusO = SGO_UTILS.safeUpper(o.STATUS);
+    o.PODE_CONTESTAR = statusO === 'HOMOLOGADA' && (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_CONTESTACAO_VENCIDO;
+    o.PODE_RECORRER = statusO === 'FIRME' && !Conduta_soData_(o.RECURSO_EM) && (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_RECURSO_VENCIDO;
     // Contexto para quem decide (e para quem se defende saber do que é acusado)
     var d = descricoes[SGO_UTILS.safeUpper(o.TIPO_CODIGO)] || {};
     o.COLABORADOR_NOME = nomes[String(o.COLABORADOR_ID)] || o.COLABORADOR_ID || '';
@@ -669,19 +674,19 @@ function Conduta_apiListarEventosPositivos(sessionId, payload) {
 // de verdade; só o RESULTADO de um fechamento vira imutável).
 // ------------------------------------------------------------
 function Conduta_calcularDCompetencia_(competencia) {
-  return SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA)
+  return Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA)
     .filter(function (o) { return Conduta_soComp_(o.COMPETENCIA) === competencia && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME'; })
     .reduce(function (soma, o) { return soma + (Number(o.PESO_APLICADO) || 0); }, 0);
 }
 
 function Conduta_temGGNaCompetencia_(competencia) {
-  return SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA).some(function (o) {
+  return Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA).some(function (o) {
     return Conduta_soComp_(o.COMPETENCIA) === competencia && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME' && SGO_UTILS.safeUpper(o.NIVEL_APLICADO) === 'GG';
   });
 }
 
 function Conduta_placarIndividual_(competencia, colaboradorId) {
-  var negativos = SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA)
+  var negativos = Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA)
     .filter(function (o) {
       return Conduta_soComp_(o.COMPETENCIA) === competencia && String(o.COLABORADOR_ID) === String(colaboradorId) && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME';
     })
@@ -694,13 +699,13 @@ function Conduta_placarIndividual_(competencia, colaboradorId) {
       // fechamento do mês parar de rodar. A contagem de eventos positivos,
       // três linhas abaixo, já usava find com fallback — agora as duas são
       // iguais: código sumido vale 0 ponto e não derruba ninguém.
-      var tipo = SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA_TIPO)
+      var tipo = Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA_TIPO)
         .find(function (t) { return SGO_UTILS.safeUpper(t.CODIGO) === SGO_UTILS.safeUpper(o.TIPO_CODIGO); });
       return soma + (tipo ? (Number(tipo.PONTOS_PLACAR) || 0) : 0);
     }, 0);
 
-  var eventosTipo = SGO_DATA.getAll(CONDUTA_SHEETS.EVENTO_POSITIVO_TIPO);
-  var positivos = SGO_DATA.getAll(CONDUTA_SHEETS.EVENTO_POSITIVO)
+  var eventosTipo = Conduta_ler_(CONDUTA_SHEETS.EVENTO_POSITIVO_TIPO);
+  var positivos = Conduta_ler_(CONDUTA_SHEETS.EVENTO_POSITIVO)
     .filter(function (e) { var ds=[];try{ds=JSON.parse(e.DESTINATARIOS_JSON||'[]');}catch(x){} return Conduta_soComp_(e.COMPETENCIA) === competencia && (String(e.COLABORADOR_ID) === String(colaboradorId)||ds.map(String).indexOf(String(colaboradorId))>=0); })
     .reduce(function (soma, e) {
       var tipo = eventosTipo.find(function (t) { return SGO_UTILS.safeUpper(t.CODIGO) === SGO_UTILS.safeUpper(e.TIPO_CODIGO); });

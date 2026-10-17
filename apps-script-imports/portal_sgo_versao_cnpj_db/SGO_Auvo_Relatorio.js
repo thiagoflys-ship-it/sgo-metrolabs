@@ -235,14 +235,22 @@ function Auvo_montarRelatorioHtml_(ctx, ia) {
 // ------------------------------------------------------------
 // ORQUESTRAÇÃO — junta agregação + IA + HTML, exposta ao painel
 // ------------------------------------------------------------
+// 16/10/2026: relatório sai mesmo sem a chave da IA (números não dependem dela).
+function Auvo_iaComFallback_(ctx) {
+  try { return AuvoRelIA_gerarInterpretacao_(ctx); } catch (e) {
+    return { resumoExecutivo: 'Interpretação automática indisponível neste momento (' + (e && e.message ? e.message : e) + '). Os números e tabelas deste relatório são reais e não dependem dela.', pontosDeAtencao: 'Consulte as tabelas abaixo.' };
+  }
+}
+
 function Auvo_apiGerarRelatorio(sessionId, payload) {
   Auvo_exigirAdmin_(sessionId);
+  Auvo_incBootstrap_(); // antes da 1ª sincronização a aba AUVO_TAREFAS ainda não existe
   var periodoDias = (payload || {}).periodoDias || 30;
 
   var tecnicosIds = Array.isArray((payload || {}).tecnicosIds) ? payload.tecnicosIds : [];
   var ctx = Auvo_montarContextoRelatorio_(periodoDias, tecnicosIds);
   var ia = ctx.total
-    ? AuvoRelIA_gerarInterpretacao_(ctx)
+    ? Auvo_iaComFallback_(ctx)
     : { resumoExecutivo: 'Nenhum atendimento registrado no período selecionado.', pontosDeAtencao: 'Sem dados suficientes pra análise neste período.' };
 
   var html = Auvo_montarRelatorioHtml_(ctx, ia);
@@ -251,6 +259,7 @@ function Auvo_apiGerarRelatorio(sessionId, payload) {
 
 function Auvo_apiListarColaboradoresRelatorio(sessionId) {
   Auvo_exigirAdmin_(sessionId);
+  Auvo_incBootstrap_();
   var usuarios = {};
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function(u) { usuarios[u.ID] = u; });
   var mapa = {};

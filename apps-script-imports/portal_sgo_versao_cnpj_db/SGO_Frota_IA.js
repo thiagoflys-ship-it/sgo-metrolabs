@@ -78,7 +78,7 @@ function FrotaIA_proximoOrcamento_(atual) {
 function FrotaIA_chamarGemini_(prompt, maxTokens) {
   var cfg = FrotaIA_obterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error('Chave GEMINI_API_KEY não configurada. O administrador cadastra a chave em Chaves e senhas, no menu do SGO+.');
   }
 
   var modelos = FrotaIA_obterListaModelos_(cfg);

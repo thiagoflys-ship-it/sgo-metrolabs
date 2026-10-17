@@ -20,7 +20,9 @@ var AUVO_INC_CFG = {
   // roda a cada 30min (Auvo_configurarTriggerIncremental_) — margem pequena
   // já basta pra pegar edição tardia de Tarefa já vista, sem reprocessar
   // uma janela grande toda vez.
-  MARGEM_HORAS: 6
+  MARGEM_HORAS: 6,
+  // O.S. ainda aberta agendada nos últimos N dias é relida a cada rodada (ver Auvo_inicioJanelaComAbertas_)
+  DIAS_REVISAR_ABERTAS: 7
 };
 
 function Auvo_incBootstrap_() {
@@ -144,8 +146,23 @@ function Auvo_mapearTarefaAuvo_(tarefa, clienteIdSgo, tecnicoIdSgo, equipamentos
   };
 }
 
-function Auvo_upsertTarefa_(dadosTarefa) {
-  SGO_DATA.upsertByField(SGO_CFG.SHEETS.AUVO_TAREFAS, 'AUVO_TASK_ID', dadosTarefa.AUVO_TASK_ID, dadosTarefa);
+// 16/10/2026 (regra do dono: nunca sobrescrever sem merge): quando o vínculo
+// não se resolve nesta rodada (cliente/técnico sem mapeamento, equipamento que
+// falhou ao consultar no Auvo), o valor vazio não apaga o vínculo que a tarefa
+// já tinha. Os demais campos vêm do Auvo, que é a fonte da tarefa.
+var AUVO_TAREFA_CAMPOS_VINCULO = ['CLIENTE_ID_SGO', 'TECNICO_ID_SGO', 'EQUIPAMENTOS_ID_SGO'];
+
+function Auvo_upsertTarefa_(dadosTarefa, existente) {
+  var dados = Object.assign({}, dadosTarefa);
+  if (existente === undefined) {
+    existente = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_TAREFAS).filter(function(t) { return String(t.AUVO_TASK_ID) === String(dadosTarefa.AUVO_TASK_ID); })[0] || null;
+  }
+  if (existente) {
+    AUVO_TAREFA_CAMPOS_VINCULO.forEach(function(campo) {
+      if (!SGO_UTILS.safe(dados[campo]) && SGO_UTILS.safe(existente[campo])) delete dados[campo];
+    });
+  }
+  SGO_DATA.upsertByField(SGO_CFG.SHEETS.AUVO_TAREFAS, 'AUVO_TASK_ID', dadosTarefa.AUVO_TASK_ID, dados);
 }
 
 // ------------------------------------------------------------
@@ -164,9 +181,14 @@ function Auvo_resolverEquipamentosIncremental_(equipmentsIdAuvo, indiceSync) {
   if (!equipmentsIdAuvo || !equipmentsIdAuvo.length) return [];
   var mapaEquip = indiceSync['EQUIPAMENTO'] || {};
   var resolvidos = [];
+  // 16/10/2026: o mesmo equipamento sem cadastro útil era consultado no Auvo
+  // de novo a cada tarefa da rodada. Agora 1 consulta por rodada.
+  var jaConsultados = indiceSync.__equipConsultados = indiceSync.__equipConsultados || {};
   var pendentes = equipmentsIdAuvo.filter(function(idAuvo) {
     var m = mapaEquip[String(idAuvo)];
     if (m && m.ENTIDADE_ID) { resolvidos.push(m.ENTIDADE_ID); return false; }
+    if (jaConsultados[String(idAuvo)]) return false;
+    jaConsultados[String(idAuvo)] = true;
     return true;
   });
   if (!pendentes.length) return resolvidos;
@@ -262,9 +284,13 @@ function Auvo_processarTarefasIncremental_() {
   var checkpoint = Auvo_lerCheckpointIncremental_();
   var desde = checkpoint && checkpoint.ultimaExecucao ? new Date(checkpoint.ultimaExecucao) : new Date(agora.getTime() - 24 * 60 * 60 * 1000);
   desde = new Date(desde.getTime() - AUVO_INC_CFG.MARGEM_HORAS * 60 * 60 * 1000);
+  var tarefasLocais = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_TAREFAS);
+  desde = Auvo_inicioJanelaComAbertas_(desde, agora, tarefasLocais);
 
   var tarefas = Auvo_buscarTarefasRecentes_(desde, agora);
   var indiceSync = Auvo_construirIndiceMapeamento_();
+  var locaisPorId = {};
+  tarefasLocais.forEach(function(t) { locaisPorId[String(t.AUVO_TASK_ID)] = t; });
 
   var processadas = 0, clientesNovos = 0, erros = [];
   var avisos = Auvo_avisosPreparar_(); // null = avisos desligados (AUVO_AVISOS_WHATSAPP != '1')
@@ -278,7 +304,7 @@ function Auvo_processarTarefasIncremental_() {
       var tecnicoIdSgo = Auvo_resolverTecnicoIncremental_(tarefa.idUserTo, indiceSync);
       var equipamentosIdSgo = Auvo_resolverEquipamentosIncremental_(tarefa.equipmentsId, indiceSync);
       var dadosTarefa = Auvo_mapearTarefaAuvo_(tarefa, resolvido.clienteId, tecnicoIdSgo, equipamentosIdSgo);
-      Auvo_upsertTarefa_(dadosTarefa);
+      Auvo_upsertTarefa_(dadosTarefa, locaisPorId[String(dadosTarefa.AUVO_TASK_ID)] || null);
       processadas++;
       if (avisos) Auvo_avisosTarefa_(avisos, tarefa, dadosTarefa, resolvido); // nunca lança erro
     } catch (e) {
@@ -293,6 +319,29 @@ function Auvo_processarTarefasIncremental_() {
     totalTarefasEncontradas: tarefas.length, processadas: processadas, clientesNovos: clientesNovos, erros: erros,
     avisos: avisos ? avisos.contagem : null
   };
+}
+
+/**
+ * 16/10/2026: o filtro de datas do Auvo é pela data agendada da tarefa. Com a
+ * janela só das últimas horas, uma O.S. agendada para ontem e finalizada hoje
+ * nunca era lida de novo — continuava "não finalizada" no SGO+ e o aviso de
+ * conclusão não saía. A janela recua até a tarefa ainda aberta mais antiga
+ * dos últimos AUVO_INC_CFG.DIAS_REVISAR_ABERTAS dias (as mais antigas ficam
+ * com o painel de Pendências, que varre o histórico todo uma vez por dia).
+ */
+function Auvo_inicioJanelaComAbertas_(desde, agora, tarefasLocais) {
+  var limite = new Date(agora.getTime() - AUVO_INC_CFG.DIAS_REVISAR_ABERTAS * 86400000);
+  var inicio = desde;
+  (tarefasLocais || []).forEach(function(t) {
+    if (SGO_UTILS.safeUpper(t.FINALIZADA) === 'SIM') return;
+    var norm = Auvo_avisosDataNorm_(t.DATA_TAREFA);
+    if (!norm) return;
+    var d = new Date(Number(norm.substring(0, 4)), Number(norm.substring(5, 7)) - 1, Number(norm.substring(8, 10)));
+    if (isNaN(d.getTime()) || d > agora) return;
+    if (d < limite) return; // mais antiga que isso fica com o painel de Pendências
+    if (d < inicio) inicio = d;
+  });
+  return inicio;
 }
 
 function Auvo_estaSincronizacaoIncrementalAtiva_() {
@@ -547,6 +596,7 @@ function Auvo_avisosTarefa_(av, tarefa, dados, resolvido) {
 // ------------------------------------------------------------
 function Auvo_apiVerificarNovosEventos(sessionId, payload) {
   Auvo_exigirAdmin_(sessionId);
+  Auvo_incBootstrap_(); // 16/10/2026: sem isso a consulta periódica falhava antes da 1ª sincronização
   var desdeIso = (payload || {}).desde;
   if (!desdeIso) return { ok: true, eventos: [] };
   var desde = new Date(desdeIso).getTime();
@@ -582,6 +632,7 @@ function Auvo_apiVerificarNovosEventos(sessionId, payload) {
 // o conteúdo real do atendimento dentro do SGO+ (não só um link pra fora).
 function Auvo_apiObterOS(sessionId, payload) {
   Auvo_exigirAdmin_(sessionId);
+  Auvo_incBootstrap_();
   var auvoTaskId = (payload || {}).auvoTaskId;
   if (!auvoTaskId) return { ok: false, message: 'ID da tarefa não informado.' };
 

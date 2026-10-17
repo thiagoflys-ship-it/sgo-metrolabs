@@ -80,7 +80,7 @@ function Conduta_montarContextoRelatorio_(competencia) {
     comparativo6Meses.push({ competencia: comp, ico: f ? f.ICO : null, farol: f ? f.FAROL : null });
   }
 
-  var missoesCompetencia = SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).filter(function (m) {
+  var missoesCompetencia = Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
     return Conduta_soComp_(m.COMPETENCIA) === competencia && (SGO_UTILS.safeUpper(m.QUALIFICA) === 'TRUE' || m.QUALIFICA === true);
   });
   var valorTotalMissoes = porColaborador.reduce(function (soma, c) {
@@ -223,7 +223,7 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
   html.push('<div style="flex:0 0 auto">' + CondutaRel_montarGaugeSvg_(ctx.ico, ctx.farol) + '</div>');
   html.push('<div class="kpis">');
   html.push('<div class="kpi"><div class="valor"><span class="farol-badge">' + CondutaRel_escaparHtml_(ctx.farol) + '</span></div><div class="rotulo">Farol do mês</div></div>');
-  html.push('<div class="kpi"><div class="valor">' + ctx.ico + '</div><div class="rotulo">ICO (Índice de Conduta)</div></div>');
+  html.push('<div class="kpi"><div class="valor">' + Conduta_numBr_(ctx.ico) + '</div><div class="rotulo">ICO (Índice de Conduta)</div></div>');
   html.push('<div class="kpi"><div class="valor">' + ctx.qtdColaboradoresComBonus + ' / ' + ctx.qtdColaboradoresTotal + '</div><div class="rotulo">Colaboradores com Bônus Coletivo</div></div>');
   html.push('<div class="kpi"><div class="valor">' + ctx.missoes.qtdQualificadas + '</div><div class="rotulo">Missões qualificadas (≥200km)</div></div>');
   html.push('</div>');
@@ -267,7 +267,7 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
   html.push('<div class="grafico-box"><canvas id="graficoComparativo"></canvas></div>');
   html.push('<table class="tabela-q"><thead><tr><th>Competência</th><th class="num">ICO</th><th class="num">Farol</th></tr></thead><tbody>');
   ctx.comparativo6Meses.forEach(function (m) {
-    html.push('<tr><td>' + CondutaRel_escaparHtml_(m.competencia) + '</td><td class="num">' + (m.ico === null ? '—' : m.ico) + '</td><td class="num">' + (m.farol || '—') + '</td></tr>');
+    html.push('<tr><td>' + CondutaRel_escaparHtml_(m.competencia) + '</td><td class="num">' + (m.ico === null ? '—' : Conduta_numBr_(m.ico)) + '</td><td class="num">' + (m.farol || '—') + '</td></tr>');
   });
   html.push('</tbody></table>');
   html.push('</div>');
@@ -360,7 +360,11 @@ function CondutaRel_montarScriptGraficos_(ctx) {
  */
 function Conduta_gerarRelatorio_(competencia) {
   var ctx = Conduta_montarContextoRelatorio_(competencia);
-  var ia = CondutaIA_gerarInterpretacao_(ctx);
+  // 16/10/2026: sem a chave da IA o relatório mensal não era gerado nem no fechamento.
+  var ia;
+  try { ia = CondutaIA_gerarInterpretacao_(ctx); } catch (eIa) {
+    ia = { narrativa: 'Interpretação automática indisponível neste momento (' + (eIa && eIa.message ? eIa.message : eIa) + '). Os números deste relatório são reais e não dependem dela.', recomendacao: 'Conferir os números e as ocorrências do mês com a gestão.' };
+  }
   var html = Conduta_montarRelatorioHtml_(ctx, ia);
 
   var existente = SGO_DATA.getAll(CONDUTA_SHEETS.RELATORIO).find(function (r) { return Conduta_soComp_(r.COMPETENCIA) === competencia && (!r.TIPO || r.TIPO === 'MENSAL'); });

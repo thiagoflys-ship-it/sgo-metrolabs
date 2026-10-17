@@ -147,6 +147,20 @@ function tplAuvo_erro(containerId, err) {
   tplAuvo_msg(containerId, 'error', msg);
 }
 
+// 16/10/2026: datas na tela no formato brasileiro (o servidor manda ISO).
+// Com fuso (Z/+hh:mm) converte para o horário local; sem fuso mostra como veio.
+function tplAuvo_dataBr_(v) {
+  var s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  if (/(Z|[+-]\\d{2}:?\\d{2})$/i.test(s)) {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  var m = /^(\\d{4})-(\\d{2})-(\\d{2})(?:[T ](\\d{2}):(\\d{2}))?/.exec(s);
+  if (!m) return s;
+  return m[3] + '/' + m[2] + '/' + m[1] + (m[4] && (m[4] + m[5]) !== '0000' ? ' ' + m[4] + ':' + m[5] : '');
+}
+
 function tplAuvo_esc(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -156,6 +170,16 @@ function tplAuvo_esc(v) {
 function tplAuvo_renderReal_() {
   var container = document.getElementById('tplAuvoContainer');
   if (!container) return;
+
+  // 16/10/2026: a integração é da gestão (o servidor recusa os outros perfis);
+  // antes a tela abria inteira e cada painel mostrava um erro de acesso.
+  var perfilA = (typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT && USER_CONTEXT.perfil) ? String(USER_CONTEXT.perfil).toUpperCase() : '';
+  if (['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(perfilA) === -1) {
+    container.innerHTML = '<div class="wrap"><div class="panel"><h2>Integração Auvo</h2>' +
+      '<p>Esta tela é usada pela gestão (Gestor, Administrador e Diretoria) para sincronizar o Auvo com o SGO+ e acompanhar as O.S. em aberto. ' +
+      'Suas O.S. continuam no aplicativo do Auvo; pendências e cobranças registradas pela gestão aparecem para você ao entrar no SGO+.</p></div></div>';
+    return;
+  }
 
   container.innerHTML =
     '<div id="tplAuvo_viewPainel">' + tplAuvo_paintPainel_() + '</div>' +
@@ -224,6 +248,8 @@ function tplAuvo_sincronizarCliente(id) {
 }
 
 function tplAuvo_sincronizarTodosClientes() {
+  // 16/10/2026 (auditoria): envio em lote grava no Auvo — confirmar antes
+  if (!confirm('Enviar todos os clientes ativos para o Auvo? Os cadastros que já existem lá serão atualizados com os dados do SGO+.')) return;
   document.getElementById('tplAuvo_clientesResultado').innerHTML = '';
   tplAuvo_chamarApi('apiSincronizarTodosClientes', {})
     .then(function(res) {
@@ -286,6 +312,7 @@ function tplAuvo_sincronizarTecnico(id) {
 }
 
 function tplAuvo_sincronizarTodosTecnicos() {
+  if (!confirm('Enviar todos os técnicos ativos para o Auvo? Os usuários que já existem lá serão atualizados com os dados do SGO+.')) return;
   document.getElementById('tplAuvo_tecnicosResultado').innerHTML = '';
   tplAuvo_chamarApi('apiSincronizarTodosTecnicos', {})
     .then(function(res) {
@@ -334,7 +361,7 @@ function tplAuvo_renderStatusIncremental_(cp, ativo) {
   var toggle = document.getElementById('tplAuvo_toggleSincAuto');
   if (toggle) toggle.checked = !!ativo;
   if (!el) return;
-  var ultima = (cp && cp.ultimaExecucao) ? ('Última execução: ' + tplAuvo_esc(cp.ultimaExecucao)) : 'Nunca rodou ainda.';
+  var ultima = (cp && cp.ultimaExecucao) ? ('Última execução: ' + tplAuvo_esc(tplAuvo_dataBr_(cp.ultimaExecucao))) : 'Nunca rodou ainda.';
   el.innerHTML = '<span class="muted">' + ultima + '</span>';
 }
 
@@ -351,7 +378,7 @@ function tplAuvo_rodarSincIncremental() {
   document.getElementById('tplAuvo_incrementalResultado').innerHTML = '<div class="alert-box info">Buscando Tarefas recentes no Auvo...</div>';
   tplAuvo_chamarApi('apiRodarSincronizacaoIncremental', {})
     .then(function(res) {
-      var linha = 'Janela: ' + tplAuvo_esc(res.janelaDesde) + ' a ' + tplAuvo_esc(res.janelaAte) + '<br>' +
+      var linha = 'Janela: ' + tplAuvo_esc(tplAuvo_dataBr_(res.janelaDesde)) + ' a ' + tplAuvo_esc(tplAuvo_dataBr_(res.janelaAte)) + '<br>' +
         res.totalTarefasEncontradas + ' tarefa(s) encontrada(s) no Auvo, ' + res.processadas + ' processada(s), ' +
         res.clientesNovos + ' cliente(s) novo(s) trazido(s) sob demanda.' +
         (res.erros && res.erros.length ? ('<br><span style="color:var(--danger)">' + res.erros.length + ' erro(s): ' + res.erros.slice(0, 5).map(tplAuvo_esc).join(' | ') + '</span>') : '');
@@ -426,7 +453,7 @@ function tplAuvo_pendRenderResumo_(res) {
   var el = document.getElementById('tplAuvo_pendResumo');
   if (!el) return;
   var linha = res.total + ' O.S. em aberto — ' + res.comEvidencia + ' com evidência de execução, ' + res.semEvidencia + ' sem nenhuma evidência.';
-  linha += res.ultimaAtualizacao ? (' Última atualização: ' + tplAuvo_esc(res.ultimaAtualizacao) + '.') : ' Ainda não atualizado — clique em "Atualizar agora".';
+  linha += res.ultimaAtualizacao ? (' Última atualização: ' + tplAuvo_esc(tplAuvo_dataBr_(res.ultimaAtualizacao)) + '.') : ' Ainda não atualizado — clique em "Atualizar agora".';
   if (res.atualizando) linha += ' <strong style="color:var(--warning)">Atualização em andamento em segundo plano...</strong>';
   el.innerHTML = linha;
 }
@@ -466,7 +493,7 @@ function tplAuvo_renderPendenciasTabela_(itens) {
     var pendenciaTxt = (i.TEM_EVIDENCIA === 'NAO')
       ? '<span class="badge-evidencia nao">Sem evidência de execução</span>'
       : '<span class="badge-evidencia sim">Aberta há ' + tplAuvo_esc(i.DIAS_ABERTA) + ' dias</span>';
-    var tarefaTxt = tplAuvo_esc(i.TASK_TYPE_DESCRICAO) + '<br><span class="muted">' + tplAuvo_esc(i.CLIENTE_NOME) + ' · ' + tplAuvo_esc(i.TASK_DATE) + '</span>';
+    var tarefaTxt = tplAuvo_esc(i.TASK_TYPE_DESCRICAO) + '<br><span class="muted">' + tplAuvo_esc(i.CLIENTE_NOME) + ' · ' + tplAuvo_esc(tplAuvo_dataBr_(i.TASK_DATE)) + '</span>';
     var verNoAuvo = i.TASK_URL ? ('<a href="' + tplAuvo_esc(i.TASK_URL) + '" target="_blank" rel="noopener" class="btn btn-sm">Ver no Auvo</a>') : '';
     var cobrarBtn = i.TECNICO_ID_SGO
       ? ('<button type="button" class="btn btn-sm" onclick="tplAuvo_abrirModalCobranca_(&#39;' +
@@ -769,8 +796,8 @@ function tplAuvo_manualHtml_() {
     'de criar algo novo.</p>' +
 
     '<h2 id="ma-2">2. Como configurar as credenciais</h2>' +
-    '<p>Gere a API Key e o API Token na conta Auvo, em <strong>Menu &gt; Integração</strong>. Depois, no editor do Apps Script ' +
-    'deste projeto, acesse <strong>Configurações do projeto &gt; Propriedades do script</strong> e crie duas propriedades: ' +
+    '<p>Gere a API Key e o API Token na conta Auvo, em <strong>Menu &gt; Integração</strong>. Depois, o administrador do SGO+ abre ' +
+    '<strong>Chaves e senhas</strong> (menu do administrador, grupo Auvo) e grava as duas chaves: ' +
     '<strong>AUVO_API_KEY</strong> e <strong>AUVO_API_TOKEN</strong>, com os valores gerados. Use o botão "Testar Conexão" ' +
     'nesta tela pra confirmar que ficou certo.</p>' +
 
@@ -835,7 +862,7 @@ function tplAuvo_manualHtml_() {
 
     '<h2 id="ma-7">7. Erros comuns</h2>' +
     '<table><tr><th>Situação</th><th>O que fazer</th></tr>' +
-    '<tr><td>"Credenciais do Auvo não configuradas"</td><td>Crie AUVO_API_KEY e AUVO_API_TOKEN nas Propriedades do script.</td></tr>' +
+    '<tr><td>"Credenciais do Auvo não configuradas"</td><td>Peça ao administrador para gravar AUVO_API_KEY e AUVO_API_TOKEN em Chaves e senhas (grupo Auvo).</td></tr>' +
     '<tr><td>"Credenciais do Auvo inválidas"</td><td>Confira se a API Key/Token gerados no Auvo foram colados corretamente, sem espaços.</td></tr>' +
     '<tr><td>"não tem e-mail cadastrado"</td><td>Preencha o e-mail do usuário na tabela de Técnicos antes de sincronizar.</td></tr>' +
     '<tr><td>"Limite de requisições do Auvo atingido"</td><td>Aguarde alguns minutos e tente novamente — não é um erro de configuração.</td></tr>' +
@@ -865,22 +892,22 @@ function tplAuvo_paintPainel_() {
 
     '<div class="panel">' +
       '<h2>Sincronização automática de Tarefas</h2>' +
-      '<p class="muted">Verifica quais atendimentos aconteceram recentemente no Auvo e traz o Cliente correspondente pro ' +
-      'Portal <strong>só quando ele aparece numa Tarefa de verdade</strong> — nunca a base inteira do Auvo de uma vez. É ' +
-      'essa sincronização que alimenta o dashboard principal e o alerta de atendimento.</p>' +
+      '<p class="muted">Verifica os atendimentos recentes no Auvo (e os ainda abertos dos últimos 7 dias) e traz o cliente para o ' +
+      'SGO+ <strong>só quando ele aparece numa tarefa</strong>, nunca a base inteira do Auvo de uma vez. É ' +
+      'essa sincronização que alimenta o Início e o alerta de atendimento.</p>' +
       '<div class="toggle-linha">' +
         '<label class="toggle-switch"><input type="checkbox" id="tplAuvo_toggleSincAuto" onchange="tplAuvo_toggleSincAuto()"><span class="toggle-slider"></span></label>' +
         '<span>Sincronizar automaticamente a cada 30 minutos</span>' +
       '</div>' +
       '<div id="tplAuvo_statusIncremental" class="muted" style="margin:6px 0"></div>' +
-      '<button type="button" class="btn btn-sm" onclick="tplAuvo_rodarSincIncremental()">Rodar agora (manual)</button>' +
+      '<button type="button" class="btn btn-sm" onclick="tplAuvo_rodarSincIncremental()">Sincronizar agora</button>' +
       '<div id="tplAuvo_incrementalResultado"></div>' +
     '</div>' +
 
     '<div class="panel">' +
       '<h2>Pendências de Fechamento (O.S. abertas no Auvo)</h2>' +
-      '<p class="muted">O Auvo não permite fechar tarefa por API (testado e confirmado) — essa lista existe pra tornar o ' +
-      'fechamento manual gerenciável: quem é o técnico responsável, o que falta, e o link direto pra resolver lá dentro.</p>' +
+      '<p class="muted">O Auvo não permite encerrar a O.S. pelo SGO+; esta lista mostra o técnico responsável, o que falta ' +
+      'e o link para encerrar no Auvo.</p>' +
       '<div id="tplAuvo_pendResumo" class="muted" style="margin:8px 0"></div>' +
       '<div class="busca-linha" style="flex-wrap:wrap">' +
         '<select id="tplAuvo_pendFiltroTecnico"><option value="">Todos os técnicos</option></select>' +

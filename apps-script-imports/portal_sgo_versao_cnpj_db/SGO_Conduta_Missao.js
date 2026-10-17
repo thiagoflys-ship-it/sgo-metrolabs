@@ -44,7 +44,7 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
   // 2026-10-15 (auditoria): a mesma missão (data + destino + executante) não pode
   // ser lançada duas vezes — cada lançamento vale um incentivo.
   var execs = [executante1Id, executante2Id].filter(Boolean);
-  var duplicada = SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).some(function (m) {
+  var duplicada = Conduta_ativos_(CONDUTA_SHEETS.MISSAO).some(function (m) {
     return Conduta_soData_(m.DATA) === data && SGO_UTILS.safeUpper(m.DESTINO) === SGO_UTILS.safeUpper(referencia.DESTINO) &&
       execs.some(function (e) { return String(m.EXECUTANTE_1_ID) === e || String(m.EXECUTANTE_2_ID) === e; });
   });
@@ -109,7 +109,7 @@ function Conduta_apiListarMissoes(sessionId, payload) {
   var nomes = Object.create(null);
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function(u){nomes[String(u.ID)] = String(u.NOME || '').trim();});
 
-  return SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).filter(function (m) {
+  return Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
     if (payload.competencia && Conduta_soComp_(m.COMPETENCIA) !== Conduta_soComp_(payload.competencia)) return false;
     if (somenteMinhas) {
       return String(m.EXECUTANTE_1_ID) === String(sessao.userId) || String(m.EXECUTANTE_2_ID) === String(sessao.userId);
@@ -127,10 +127,15 @@ function Conduta_apiListarMissoes(sessionId, payload) {
 }
 
 function Conduta_apiRemoverMissao(sessionId, payload) {
-  Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirGestor_(sessionId);
   payload = payload || {};
-  var ok = SGO_DATA.remove(CONDUTA_SHEETS.MISSAO, payload.id);
-  if (!ok) throw new Error('Missão não encontrada.');
+  var missao = SGO_DATA.getById(CONDUTA_SHEETS.MISSAO, payload.id);
+  if (!missao || SGO_UTILS.safe(missao.EXCLUIDA_EM)) throw new Error('Missão não encontrada (pode já ter sido removida). Atualize a lista.');
+  // 16/10/2026: mês já fechado não muda (o incentivo já foi apurado e congelado).
+  Conduta_exigirCompetenciaAberta_(Conduta_soComp_(missao.COMPETENCIA || missao.DATA));
+  // não apaga a linha: fica no histórico como excluída, com quem e quando
+  SGO_DATA.update(CONDUTA_SHEETS.MISSAO, missao.ID, { EXCLUIDA_EM: SGO_UTILS.nowIso(), EXCLUIDA_POR: sessao.userId });
+  SGO_DATA.log('CONDUTA_MISSAO_REMOVER', sessao.usuario, 'Missão removida: ' + missao.DESTINO + ' em ' + Conduta_soData_(missao.DATA), 'CONDUTA');
   return { success: true };
 }
 
@@ -142,14 +147,14 @@ function Conduta_apiRemoverMissao(sessionId, payload) {
  * Usado só pelo fechamento (SGO_Conduta_Fechamento.js).
  */
 function Conduta_qtdMissoesElegiveisColaborador_(competencia, colaboradorId) {
-  var missoesDoColaborador = SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).filter(function (m) {
+  var missoesDoColaborador = Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
     return Conduta_soComp_(m.COMPETENCIA) === competencia && (SGO_UTILS.safeUpper(m.QUALIFICA) === 'TRUE' || m.QUALIFICA === true) &&
       (String(m.EXECUTANTE_1_ID) === String(colaboradorId) || String(m.EXECUTANTE_2_ID) === String(colaboradorId));
   });
   if (!missoesDoColaborador.length) return 0;
 
   var missoesComOcorrenciaDoExecutante = {};
-  SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
+  Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
     if (SGO_UTILS.safeUpper(o.STATUS) !== 'FIRME') return;
     if (!o.MISSAO_ID) return;
     if (String(o.COLABORADOR_ID) !== String(colaboradorId)) return;

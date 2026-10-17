@@ -116,7 +116,7 @@ function QualidadeIA_extrairPorMarcadores_(texto) {
 function QualidadeIA_gerarInterpretacao_(ctx) {
   var cfg = QualidadeIA_obterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error('Chave GEMINI_API_KEY não configurada. O administrador cadastra a chave em Chaves e senhas, no menu do SGO+.');
   }
 
   var a = ctx.auvo || {}, f = ctx.frota || {};

@@ -93,8 +93,8 @@ function Auvo_autenticar_() {
   var apiToken = props.getProperty('AUVO_API_TOKEN') || '';
 
   if (!apiKey || !apiToken) {
-    throw new Error('Credenciais do Auvo não configuradas. Acesse Configurações do projeto > Propriedades do script, ' +
-      'e crie AUVO_API_KEY e AUVO_API_TOKEN (gerados em Menu > Integração na conta Auvo).');
+    throw new Error('Credenciais do Auvo não configuradas. O administrador cadastra as chaves em Chaves e senhas, no menu do SGO+ (grupo Auvo): ' +
+      'AUVO_API_KEY e AUVO_API_TOKEN (gerados no Auvo em Menu > Integração).');
   }
 
   var resp = UrlFetchApp.fetch(AUVO_CFG.BASE_URL + AUVO_CFG.ENDPOINTS.LOGIN, {
@@ -173,7 +173,7 @@ function Auvo_extrairMensagemErro_(corpo) {
 
 function Auvo_interpretarErro_(codigo, corpo) {
   var msgApi = Auvo_extrairMensagemErro_(corpo) || ('HTTP ' + codigo);
-  if (codigo === 401 || codigo === 403) return 'Credenciais do Auvo inválidas (HTTP ' + codigo + '). Confira AUVO_API_KEY/AUVO_API_TOKEN nas Propriedades do script.';
+  if (codigo === 401 || codigo === 403) return 'Credenciais do Auvo inválidas (HTTP ' + codigo + '). Confira AUVO_API_KEY/AUVO_API_TOKEN em Chaves e senhas, no menu do SGO+.';
   if (codigo === 429) return 'Limite de requisições do Auvo atingido (HTTP 429). Aguarde e tente novamente.';
   if (codigo >= 500) return 'Auvo temporariamente indisponível (HTTP ' + codigo + ').';
   return 'Erro na API do Auvo (HTTP ' + codigo + '): ' + msgApi;

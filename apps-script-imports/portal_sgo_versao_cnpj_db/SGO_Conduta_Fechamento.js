@@ -121,7 +121,25 @@ function Conduta_apiPreviaFechamento(sessionId, payload) {
  * colaboradores já persistidos e delega toda a matemática pro motor
  * (CondutaCalculo). Não escreve nada — quem persiste é quem chama.
  */
+// 16/10/2026 (desempenho): a apuração lia as mesmas abas dezenas de vezes
+// (por colaborador e por ocorrência — 400 ms com 40 pessoas, e o farol roda
+// na tela inicial de todos). Durante uma apuração cada aba é lida uma vez só.
+// O cache vive só dentro da chamada (o processo do servidor é reaproveitado).
+var CONDUTA_CACHE_LEITURA = null;
+function Conduta_ler_(aba) {
+  if (!CONDUTA_CACHE_LEITURA) return SGO_DATA.getAll(aba);
+  if (!CONDUTA_CACHE_LEITURA[aba]) CONDUTA_CACHE_LEITURA[aba] = SGO_DATA.getAll(aba);
+  return CONDUTA_CACHE_LEITURA[aba];
+}
+
 function Conduta_apurarCompetencia_(competencia) {
+  var dono = !CONDUTA_CACHE_LEITURA;
+  if (dono) CONDUTA_CACHE_LEITURA = {};
+  try { return Conduta_apurarCompetenciaSemCache_(competencia); }
+  finally { if (dono) CONDUTA_CACHE_LEITURA = null; }
+}
+
+function Conduta_apurarCompetenciaSemCache_(competencia) {
   var parametros = Conduta_obterParametros_();
   var kSensibilidade = Number(parametros.K_SENSIBILIDADE) || 5.0;
   var icoVerdeMin = Number(parametros.ICO_VERDE_MIN) || 85.0;
@@ -135,7 +153,7 @@ function Conduta_apurarCompetencia_(competencia) {
 
   // 2026-10-15 (auditoria): a conta do sistema ("Administrador") não é uma
   // pessoa — não entra no divisor n nem recebe linha de bônus.
-  var colaboradores = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
+  var colaboradores = Conduta_ler_(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
     return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && !Conduta_ehContaGenerica_(u);
   });
 
@@ -147,7 +165,7 @@ function Conduta_apurarCompetencia_(competencia) {
   var ico = CondutaCalculo.calcularICO(D, n || 1, kSensibilidade);
   var farol = CondutaCalculo.determinarFarol(ico, temGG, icoVerdeMin, icoAmareloMin);
 
-  var ocorrenciasGGDoMes = SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA).filter(function (o) {
+  var ocorrenciasGGDoMes = Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA).filter(function (o) {
     return Conduta_soComp_(o.COMPETENCIA) === competencia && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME' && SGO_UTILS.safeUpper(o.NIVEL_APLICADO) === 'GG';
   });
 

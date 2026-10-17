@@ -119,7 +119,7 @@ function QualidadeFrota_coletar_(desde) {
     // ---------------- Multas ----------------
     var multasSemCondutor = 0, multasAbertas = 0, valorMultasAbertas = 0;
     var porCondutorMulta = {};
-    SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(m) {
+    Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(m) {
       if (SGO_UTILS.safeUpper(m.STATUS) !== 'ABERTA') return;
       multasAbertas++;
       valorMultasAbertas += Number(m.VALOR) || 0;
@@ -133,9 +133,16 @@ function QualidadeFrota_coletar_(desde) {
       .sort(function(a, b) { return b.qtd - a.qtd; }).slice(0, 5);
 
     // ---------------- Documentação ----------------
+    // 16/10/2026 (auditoria P1): CNH vencida não entrava no painel — dizia "0 itens / OK".
     var documentosVencidos = 0, documentosVencendo = 0, amostraDocumentos = [];
+    var cnhVencidas = 0, cnhVencendo = 0, amostraCnh = [];
     if (typeof Frota_calcularAlertasManutencao_ === 'function') {
       Frota_calcularAlertasManutencao_().forEach(function(a) {
+        if (a.categoria === 'CNH') {
+          if (a.status === 'VENCIDO') cnhVencidas++; else cnhVencendo++;
+          if (amostraCnh.length < 8) amostraCnh.push({ condutorNome: a.veiculoPlaca, status: a.status, vencimento: a.vencimento });
+          return;
+        }
         if (a.categoria !== 'DOCUMENTO') return;
         if (a.status === 'VENCIDO') documentosVencidos++; else documentosVencendo++;
         if (amostraDocumentos.length < 8) amostraDocumentos.push({ veiculoPlaca: a.veiculoPlaca, tipoLabel: a.tipoLabel, status: a.status, vencimento: a.vencimento });
@@ -168,7 +175,7 @@ function QualidadeFrota_coletar_(desde) {
 
     // ---------------- Consumo (km/L) por veículo, relativo à média da frota ----------------
     var abastecimentosPorVeiculo = {};
-    SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO).forEach(function(a) {
+    Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO).forEach(function(a) {
       if (desde && !depoisDoCorte_(a.DATA || a.DATA_ABASTECIMENTO)) return;
       var vid = SGO_UTILS.safe(a.VEICULO_ID);
       if (!vid) return;
@@ -212,6 +219,7 @@ function QualidadeFrota_coletar_(desde) {
       multasAbertas: multasAbertas, valorMultasAbertas: Math.round(valorMultasAbertas * 100) / 100, multasSemCondutor: multasSemCondutor,
       rankingMultasCondutor: rankingMultasCondutor,
       documentosVencidos: documentosVencidos, documentosVencendo: documentosVencendo, amostraDocumentos: amostraDocumentos,
+      cnhVencidas: cnhVencidas, cnhVencendo: cnhVencendo, amostraCnh: amostraCnh,
       rankingCustoManutencao: rankingCustoManutencao,
       rankingParadasNaoPlanejadas: rankingParadasNaoPlanejadas,
       mediaFrotaConsumo: Math.round(mediaFrotaConsumo * 100) / 100,

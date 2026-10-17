@@ -170,6 +170,20 @@ function Conduta_migrate_() {
 
     propsFmt.setProperty('CONDUTA_COLUNAS_TEXTO_V3', '1');
   }
+  // 16/10/2026 (regra do dono: nunca apagar dado): "Remover" missão/ausência
+  // marca EXCLUIDA_EM/EXCLUIDA_POR em vez de apagar a linha (ver Conduta_ativos_).
+  if (propsFmt.getProperty('CONDUTA_COLUNAS_EXCLUSAO_V1') !== '1') {
+    [CONDUTA_SHEETS.MISSAO, CONDUTA_SHEETS.AUSENCIA].forEach(function (aba) {
+      CertCal_garantirColuna_(aba, 'EXCLUIDA_EM');
+      CertCal_garantirColuna_(aba, 'EXCLUIDA_POR');
+    });
+    propsFmt.setProperty('CONDUTA_COLUNAS_EXCLUSAO_V1', '1');
+  }
+}
+
+/** Linhas válidas (não excluídas) de qual_missao / qual_ausencia. */
+function Conduta_ativos_(aba) {
+  return Conduta_ler_(aba).filter(function (r) { return !SGO_UTILS.safe(r.EXCLUIDA_EM); });
 }
 
 // ------------------------------------------------------------

@@ -56,7 +56,18 @@ function Qualidade_apiRegistrarOcorrencia(sessionId, payload) {
   );
   SGO_DATA.insert(QUALIDADE_OCORRENCIAS_SHEET, registro);
   SGO_DATA.log('QUALIDADE_OCORRENCIA_REGISTRAR', sessao.usuario, tipo + ' — ' + pessoaNome, 'QUALIDADE');
-  return { ok: true, item: registro };
+  // 16/10/2026: o aviso ao entrar só chega a quem tem login ligado ao registro
+  // (técnico = usuário do SGO; condutor = condutor vinculado a um login). Sem
+  // isso a cobrança fica salva, mas a pessoa nunca vê — o gestor precisa saber.
+  var aviso = '';
+  var pessoaTipo = SGO_UTILS.safeUpper(registro.PESSOA_TIPO), pessoaId = SGO_UTILS.safe(registro.PESSOA_ID);
+  if (tipo !== 'OBSERVACAO') {
+    var alcanca = false;
+    if (pessoaTipo === 'TECNICO') alcanca = !!pessoaId && !!SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, pessoaId);
+    else if (pessoaTipo === 'CONDUTOR') { var cond = pessoaId && SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, pessoaId); alcanca = !!(cond && SGO_UTILS.safe(cond.USUARIO_ID)); }
+    if (!alcanca) aviso = 'Registro salvo. ' + pessoaNome + ' não tem login do SGO+ ligado a este cadastro, então o aviso não aparece para a pessoa ao entrar — comunique pessoalmente' + (pessoaTipo === 'CONDUTOR' ? ' ou vincule o condutor a um usuário na Frota (Condutores).' : '.');
+  }
+  return { ok: true, item: registro, aviso: aviso };
 }
 
 function Qualidade_apiListarOcorrencias(sessionId, payload) {

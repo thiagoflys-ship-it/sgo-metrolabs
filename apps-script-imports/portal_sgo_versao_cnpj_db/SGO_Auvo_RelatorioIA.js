@@ -116,7 +116,7 @@ function AuvoRelIA_extrairPorMarcadores_(texto) {
 function AuvoRelIA_gerarInterpretacao_(contexto) {
   var cfg = AuvoRelIA_obterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error('Chave GEMINI_API_KEY não configurada. O administrador cadastra a chave em Chaves e senhas, no menu do SGO+.');
   }
 
   var linhas = [];

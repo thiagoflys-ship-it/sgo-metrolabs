@@ -141,8 +141,8 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   html.push('</div><div><strong style="font-size:11px">Consumo abaixo da média da frota</strong>');
   if ((f.consumoAbaixoDaMedia || []).length) {
     html.push('<table class="tabela-q"><thead><tr><th>Veículo</th><th class="num">km/L</th></tr></thead><tbody>' +
-      f.consumoAbaixoDaMedia.map(function(r) { return QualidadeRel_linhaRank_(r.nome, r.kmPorLitro + ' km/L', true); }).join('') + '</tbody></table>');
-  } else { html.push('<p>Nenhum veículo abaixo de 70% da média (' + (f.mediaFrotaConsumo || 0) + ' km/L).</p>'); }
+      f.consumoAbaixoDaMedia.map(function(r) { return QualidadeRel_linhaRank_(r.nome, SGO_DocA4_num_(r.kmPorLitro, 2) + ' km/L', true); }).join('') + '</tbody></table>');
+  } else { html.push('<p>Nenhum veículo abaixo de 70% da média (' + SGO_DocA4_num_(f.mediaFrotaConsumo || 0, 2) + ' km/L).</p>'); }
   html.push('</div></div></div>');
 
   // ---------------- Ocorrências do período ----------------
@@ -167,6 +167,14 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
   return html.join('\n');
 }
 
+// 16/10/2026: sem a chave da IA (ou com a IA fora do ar) o relatório não saía.
+// Os números e tabelas não dependem da IA — sai o relatório com o aviso no lugar da interpretação.
+function Qualidade_iaComFallback_(ctx) {
+  try { return QualidadeIA_gerarInterpretacao_(ctx); } catch (e) {
+    return { resumoExecutivo: 'Interpretação automática indisponível neste momento (' + (e && e.message ? e.message : e) + '). Os números e tabelas deste relatório são reais e não dependem dela.', pontosDeAtencao: 'Consulte as tabelas abaixo.' };
+  }
+}
+
 function Qualidade_apiGerarRelatorio(sessionId, payload) {
   Qualidade_exigirGestor_(sessionId);
   var periodoDias = (payload || {}).periodoDias || 30;
@@ -175,7 +183,7 @@ function Qualidade_apiGerarRelatorio(sessionId, payload) {
   var semDadoNenhum = !(ctx.auvo && ctx.auvo.total) && !(ctx.frota && ctx.frota.totalMovimentacoes);
   var ia = semDadoNenhum
     ? { resumoExecutivo: 'Nenhum atendimento nem movimentação de veículo registrado no período selecionado.', pontosDeAtencao: 'Sem dados suficientes pra análise neste período.' }
-    : QualidadeIA_gerarInterpretacao_(ctx);
+    : Qualidade_iaComFallback_(ctx);
 
   var html = Qualidade_montarRelatorioHtml_(ctx, ia);
   return { ok: true, html: html };

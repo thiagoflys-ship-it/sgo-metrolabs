@@ -43,7 +43,7 @@ function Conduta_apiListarAusencias(sessionId, payload) {
   payload = payload || {};
   // 2026-10-15 (auditoria): férias/afastamentos de todos ficam com a gestão; cada um vê os próprios.
   var gestor = isAdminSession(sessionId);
-  return SGO_DATA.getAll(CONDUTA_SHEETS.AUSENCIA).filter(function (a) {
+  return Conduta_ativos_(CONDUTA_SHEETS.AUSENCIA).filter(function (a) {
     if (!gestor && String(a.COLABORADOR_ID) !== String(sessao.userId)) return false;
     if (payload.colaboradorId && String(a.COLABORADOR_ID) !== String(payload.colaboradorId)) return false;
     return true;
@@ -53,10 +53,13 @@ function Conduta_apiListarAusencias(sessionId, payload) {
 }
 
 function Conduta_apiRemoverAusencia(sessionId, payload) {
-  Conduta_exigirGestor_(sessionId);
+  var sessao = Conduta_exigirGestor_(sessionId);
   payload = payload || {};
-  var ok = SGO_DATA.remove(CONDUTA_SHEETS.AUSENCIA, payload.id);
-  if (!ok) throw new Error('Ausência não encontrada.');
+  var ausencia = SGO_DATA.getById(CONDUTA_SHEETS.AUSENCIA, payload.id);
+  if (!ausencia || SGO_UTILS.safe(ausencia.EXCLUIDA_EM)) throw new Error('Ausência não encontrada (pode já ter sido removida). Atualize a lista.');
+  // 16/10/2026: não apaga a linha (regra do dono) — fica marcada como excluída
+  SGO_DATA.update(CONDUTA_SHEETS.AUSENCIA, ausencia.ID, { EXCLUIDA_EM: SGO_UTILS.nowIso(), EXCLUIDA_POR: sessao.userId });
+  SGO_DATA.log('CONDUTA_AUSENCIA_REMOVER', sessao.usuario, 'Ausência removida: ' + Conduta_soData_(ausencia.DATA_INICIO) + ' a ' + Conduta_soData_(ausencia.DATA_FIM), 'CONDUTA');
   return { success: true };
 }
 
@@ -68,7 +71,7 @@ function Conduta_apiRemoverAusencia(sessionId, payload) {
 function Conduta_colaboradorAusenteNaCompetencia_(colaboradorId, competencia) {
   var inicioMes = competencia + '-01';
   var fimMes = competencia + '-31'; // comparação lexicográfica de string ISO, seguro mesmo em meses curtos
-  return SGO_DATA.getAll(CONDUTA_SHEETS.AUSENCIA).some(function (a) {
+  return Conduta_ativos_(CONDUTA_SHEETS.AUSENCIA).some(function (a) {
     if (String(a.COLABORADOR_ID) !== String(colaboradorId)) return false;
     return Conduta_soData_(a.DATA_INICIO) <= fimMes && Conduta_soData_(a.DATA_FIM) >= inicioMes;
   });

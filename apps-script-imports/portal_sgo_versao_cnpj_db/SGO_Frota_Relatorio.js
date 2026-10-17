@@ -108,7 +108,8 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
 
       var chegada = Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA);
       if (chegada) {
-        var horas = (chegada.getTime() - saida.getTime()) / 3600000;
+        // 16/10/2026: só conta as horas dentro do período (devolução depois do fim não infla a taxa de uso)
+        var horas = (Math.min(chegada.getTime(), fim.getTime()) - saida.getTime()) / 3600000;
         if (isFinite(horas) && horas > 0) alvo.horasEmUso += horas;
       }
     }
@@ -164,7 +165,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
     alvo.paradasLista.push({ dataInicio: p.DATA_INICIO, dataFim: p.DATA_FIM || '', motivo: p.MOTIVO || '', descricao: p.DESCRICAO || '', dias: dias });
   });
 
-  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(mu) {
+  Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_MULTA).forEach(function(mu) {
     var data = Frota_parseDataHora_(mu.DATA_INFRACAO, mu.HORA_INFRACAO || '00:00');
     if (!data || data.getTime() < inicio.getTime() || data.getTime() > fim.getTime()) return;
     var alvo = porVeiculo[SGO_UTILS.safe(mu.VEICULO_ID)];
@@ -180,7 +181,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   });
 
   var abastecimentosPorVeiculoKm = {};
-  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO).forEach(function(a) {
+  Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO).forEach(function(a) {
     var data = Frota_parseDataHora_(a.DATA, '00:00');
     if (!data || data.getTime() < inicio.getTime() || data.getTime() > fim.getTime()) return;
     var vid = SGO_UTILS.safe(a.VEICULO_ID);
@@ -206,6 +207,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   // cada trecho — precisa de pelo menos 2 abastecimentos no período pra
   // ter um KM de referência anterior; com só 1, não dá pra calcular
   // consumo sem inventar um ponto de partida.
+  var kmConsumoFrota = 0, litrosConsumoFrota = 0;
   Object.keys(abastecimentosPorVeiculoKm).forEach(function(vid) {
     var listaAb = abastecimentosPorVeiculoKm[vid].slice().sort(function(a, b) { return a.km - b.km; });
     var kmTotal = 0, litrosParaConsumo = 0;
@@ -216,6 +218,7 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
         litrosParaConsumo += listaAb[i].litros;
       }
     }
+    kmConsumoFrota += kmTotal; litrosConsumoFrota += litrosParaConsumo;
     if (litrosParaConsumo > 0 && porVeiculo[vid]) {
       porVeiculo[vid].consumoMedioKmL = kmTotal / litrosParaConsumo;
     }
@@ -255,7 +258,10 @@ function FrotaRel_agregarDados_(dataInicioStr, dataFimStr) {
   }, { retiradas: 0, km: 0, despesas: 0, manutencao: 0, multasValor: 0, multasQtd: 0, paradasQtd: 0, paradasDias: 0, abastecimentosLitros: 0, abastecimentosValor: 0 });
   totais.custoTotal = totais.despesas + totais.manutencao + totais.abastecimentosValor;
   totais.custoPorKm = totais.km > 0 ? (totais.custoTotal / totais.km) : 0;
-  totais.consumoMedioKmL = totais.abastecimentosLitros > 0 ? (totais.km / totais.abastecimentosLitros) : 0;
+  // 16/10/2026: mesma regra do consumo por veículo (trechos entre abastecimentos).
+  // Antes dividia o km das retiradas por TODOS os litros — misturava duas fontes
+  // e dava um número diferente da soma dos veículos.
+  totais.consumoMedioKmL = litrosConsumoFrota > 0 ? (kmConsumoFrota / litrosConsumoFrota) : 0;
 
   return {
     periodo: { inicio: dataInicioStr, fim: dataFimStr, dias: Math.round((fim.getTime() - inicio.getTime()) / 86400000) + 1 },
@@ -290,6 +296,7 @@ function FrotaRel_montarPendencias_(alertasJaFiltrados) {
       var critico = a.status === 'VENCIDO';
       var pendencia = a.categoria === 'CNH' ? ('Renovar CNH — ' + a.veiculoPlaca)
         : a.categoria === 'DOCUMENTO' ? ('Renovar documento — ' + a.tipoLabel + ' (' + a.veiculoPlaca + ')')
+        : a.categoria === 'QUALIDADE' ? (a.tipoLabel + (a.veiculoPlaca ? ' (' + a.veiculoPlaca + ')' : '') + (a.vencimento ? ' — infração de ' + a.vencimento : ''))
         : ('Manutenção — ' + a.tipoLabel + ' (' + a.veiculoPlaca + ')');
       return {
         pendencia: pendencia,
@@ -725,25 +732,20 @@ function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, interpretacaoIA, alert
 // ------------------------------------------------------------
 /** Documentos ATUAIS do veículo (não são recortados pelo período — representam a situação de agora), com situação calculada. */
 function FrotaRel_documentosAtuaisVeiculo_(veiculoId) {
-  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-  return SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO)
+  // 16/10/2026: documento renovado aparece como "Substituído" (Frota_statusDocumento_).
+  var todos = Frota_registrosValidos_(SGO_CFG.SHEETS.REG_FROTA_DOCUMENTO);
+  var vigentes = Frota_documentosVigentes_(todos);
+  var rotulos = { SEM_VALIDADE: 'Sem prazo', VENCIDO: 'Vencido', VENCENDO: 'Próximo do vencimento', OK: 'Regular', SUBSTITUIDO: 'Substituído por documento mais novo' };
+  return todos
     .filter(function(d) { return SGO_UTILS.safe(d.VEICULO_ID) === veiculoId; })
     .map(function(d) {
-      var situacao = 'Sem prazo';
-      var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(d.VALIDADE || '').trim());
-      if (m) {
-        var dataVenc = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-        dataVenc.setHours(0, 0, 0, 0);
-        var dias = Math.ceil((dataVenc.getTime() - hoje.getTime()) / 86400000);
-        situacao = dias < 0 ? 'Vencido' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'Próximo do vencimento' : 'Regular');
-      }
-      return { tipo: d.TIPO_DOCUMENTO, validade: d.VALIDADE, situacao: situacao };
+      return { tipo: d.TIPO_DOCUMENTO, validade: Frota_textoData_(d.VALIDADE), situacao: rotulos[Frota_statusDocumento_(d, vigentes)] || 'Sem prazo' };
     });
 }
 
 function Frota_apiGerarRelatorio(sessionId, payload) {
   Frota_bootstrap_();
-  var sessao = exigirSessao(sessionId);
+  var sessao = Frota_exigirEquipe_(sessionId);
   Frota_exigirGestor_(sessionId);
   payload = payload || {};
 
@@ -803,11 +805,20 @@ function Frota_apiGerarRelatorio(sessionId, payload) {
     nomeArquivoBase = 'Relatorio Frota Geral ' + dataInicio.replace(/\//g, '-') + ' a ' + dataFim.replace(/\//g, '-');
   }
 
-  var pasta = FrotaRel_obterPastaRelatorios_();
-  var nomeArquivo = Frota_sanitizarNome_(nomeArquivoBase) + '.pdf';
-  var pdfBlob = Utilities.newBlob(html, 'text/html', nomeArquivo.replace(/\.pdf$/i, '.html')).getAs(MimeType.PDF).setName(nomeArquivo);
-  var arquivo = pasta.createFile(pdfBlob);
-  arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // 16/10/2026: a cópia em PDF é secundária — se a conversão/gravação falhar,
+  // o relatório (HTML) continua saindo para revisar e imprimir, com o aviso.
+  var link = '', avisoPdf = '';
+  try {
+    var pasta = FrotaRel_obterPastaRelatorios_();
+    var nomeArquivo = Frota_sanitizarNome_(nomeArquivoBase) + '.pdf';
+    var pdfBlob = Utilities.newBlob(html, 'text/html', nomeArquivo.replace(/\.pdf$/i, '.html')).getAs(MimeType.PDF).setName(nomeArquivo);
+    var arquivo = pasta.createFile(pdfBlob);
+    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    link = arquivo.getUrl();
+  } catch (ePdf) {
+    avisoPdf = 'O relatório abriu para revisão, mas a cópia em PDF não foi salva (' + (ePdf && ePdf.message ? ePdf.message : ePdf) + '). Use "Imprimir / salvar PDF" na página do relatório.';
+    SGO_DATA.log('FROTA_RELATORIO_PDF_FALHA', sessao.usuario, avisoPdf, 'FROTA');
+  }
 
   SGO_DATA.log('FROTA_RELATORIO_GERAR', sessao.usuario, 'Relatório de frota gerado — ' + dataInicio + ' a ' + dataFim + (veiculoId ? (' (veículo ' + veiculoId + ')') : ' (geral)'), 'FROTA');
 
@@ -816,5 +827,5 @@ function Frota_apiGerarRelatorio(sessionId, payload) {
   // abre numa aba nova pro usuário revisar e imprimir/salvar como PDF na
   // hora, o PDF no Drive é só uma cópia permanente por trás, não o único
   // jeito de ver o documento.
-  return { ok: true, html: html, link: arquivo.getUrl() };
+  return { ok: true, html: html, link: link, aviso: avisoPdf };
 }

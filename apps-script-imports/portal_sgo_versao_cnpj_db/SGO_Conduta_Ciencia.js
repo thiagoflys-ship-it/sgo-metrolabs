@@ -108,8 +108,9 @@ function Conduta_emApuracao_(competencia, apurado) {
 
 function Conduta_resumoMesAnterior_(competencia) {
   var ant = CondutaRel_competenciaAnterior_(competencia);
-  if (ant < Conduta_inicioPrograma_()) return null;
   var f = Conduta_fechamentoDe_(ant);
+  // 16/10/2026: mês fechado aparece sempre (antes sumia se fosse anterior à data dos parâmetros)
+  if (!f && ant < Conduta_inicioPrograma_()) return null;
   if (f) {
     return {
       competencia: ant, nome: Conduta_nomeCompetencia_(ant), fechado: true, automatico: f.FECHADO_POR === 'SISTEMA',
@@ -340,8 +341,49 @@ function Conduta_rotinaDiaria_() {
   return r;
 }
 
-function Conduta_apiRodarRotinaAgora(sessionId) {
+/**
+ * 16/10/2026 (auditoria de design, P1): o botão "Aplicar agora" fechava e
+ * congelava meses sem nenhuma confirmação. Agora a rotina manual só fecha mês
+ * quando o pedido traz confirmar: true e a MESMA lista de meses que a prévia
+ * mostrou (Conduta_apiPreverRotina). Sem isso, recusa dizendo quais meses
+ * seriam fechados. A rotina automática das 06h continua igual (regra do programa).
+ */
+function Conduta_preverRotina_() {
+  var hoje = Conduta_hojeISO_(), atual = Conduta_competenciaDe_(hoje);
+  var fechar = [], aguardando = [];
+  for (var comp = Conduta_inicioPrograma_(), voltas = 0; comp < atual && voltas < 36; comp = Conduta_proximaCompetencia_(comp), voltas++) {
+    if (Conduta_fechamentoDe_(comp)) continue;
+    var limite = Conduta_limiteFechamento_(comp);
+    if (hoje <= limite) { aguardando.push(Conduta_nomeCompetencia_(comp) + ' (prazo do gestor até ' + Conduta_dataBr_(limite) + ')'); continue; }
+    var pend = Conduta_pendenciasCompetencia_(comp);
+    if (pend.length) { aguardando.push(Conduta_nomeCompetencia_(comp) + ' (' + pend.length + ' pendência(s) de defesa)'); continue; }
+    fechar.push(comp);
+  }
+  return { mesesAFechar: fechar, mesesAFecharNomes: fechar.map(Conduta_nomeCompetencia_), aguardando: aguardando };
+}
+
+function Conduta_apiPreverRotina(sessionId) {
   Conduta_exigirGestor_(sessionId);
+  var p = Conduta_preverRotina_();
+  p.ok = true;
+  p.mensagemConfirmacao = p.mesesAFechar.length
+    ? 'Esta ação vai FECHAR e CONGELAR: ' + p.mesesAFecharNomes.join(', ') + '. Depois de fechado, o resultado do mês (ICO, farol e bônus) não muda mais e nada com data nesse mês pode ser lançado. Confirma?'
+    : 'Nenhum mês será fechado agora. A rotina só aplica os prazos vencidos.';
+  return p;
+}
+
+function Conduta_apiRodarRotinaAgora(sessionId, payload) {
+  var sessao = Conduta_exigirGestor_(sessionId);
+  payload = payload || {};
+  var previa = Conduta_preverRotina_();
+  if (previa.mesesAFechar.length) {
+    var pedidos = (Array.isArray(payload.meses) ? payload.meses : []).map(String).sort().join(',');
+    if (payload.confirmar !== true || pedidos !== previa.mesesAFechar.slice().sort().join(',')) {
+      throw new Error('Confirmação necessária: esta ação fecha e congela ' + previa.mesesAFecharNomes.join(', ') +
+        ' (o resultado do mês não muda mais depois). Para conferir antes, abra Programa de conduta > Fechamentos e consulte a prévia; para fechar, confirme a lista de meses na tela.');
+    }
+  }
+  SGO_DATA.log('CONDUTA_ROTINA_MANUAL', sessao.usuario, 'Rotina rodada manualmente' + (previa.mesesAFechar.length ? ' com fechamento confirmado de ' + previa.mesesAFechar.join(', ') : ''), 'CONDUTA');
   return Conduta_rotinaDiaria_();
 }
 
