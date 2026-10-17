@@ -27,12 +27,27 @@ function setupSGO() {
     SGO_CFG.SHEETS.CERT_CALIBRACAO
   ];
 
+  // TRAVA: setupTabela() abaixo LIMPA cada aba. Numa base que já tem dados
+  // (clientes, equipamentos, usuários além do admin...) isso apagaria a
+  // produção. Só segue em banco novo/vazio.
+  const comDados = abas.filter(function (nomeAba) {
+    const sh = ss.getSheetByName(nomeAba);
+    if (!sh) return false;
+    const linhas = sh.getLastRow();
+    if (nomeAba === SGO_CFG.SHEETS.CFG_SISTEMA || nomeAba === SGO_CFG.SHEETS.SYS_LOGS) return false;
+    if (nomeAba === SGO_CFG.SHEETS.CAD_USUARIOS) return linhas > 2; // só o admin inicial
+    return linhas > 1;
+  });
+  if (comDados.length) {
+    throw new Error("setupSGO recusado: o banco já tem dados em " + comDados.join(", ") + ". Esta rotina apaga as abas e só serve para instalação nova. Nada foi alterado.");
+  }
+
   // Garante a existência de todas as abas de forma mais segura
   const sheetsAtuais = ss.getSheets();
   abas.forEach((nomeAba, index) => {
     if (!ss.getSheetByName(nomeAba)) {
       // Se for a primeira execução, renomeia a "Página1" padrão do Google Sheets
-      if (index === 0 && sheetsAtuais[0].getName() === "Página1" || sheetsAtuais[0].getName() === "Sheet1") {
+      if (index === 0 && (sheetsAtuais[0].getName() === "Página1" || sheetsAtuais[0].getName() === "Sheet1")) {
         sheetsAtuais[0].setName(nomeAba);
       } else {
         ss.insertSheet(nomeAba);

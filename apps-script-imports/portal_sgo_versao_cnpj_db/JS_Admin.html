@@ -74,6 +74,7 @@
 
         <hr style="border:0; border-top:1px solid var(--border); margin: 20px 0;">
 
+        <div id="adminUsuariosSecao">
         <div class="module-header">
           <div class="module-header-left">
             <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de Usuários</h3>
@@ -152,8 +153,21 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     `;
+
+    // Gestão de usuários: o servidor só aceita Admin, Gestor e Diretoria
+    // (SGO_Usuarios.js verificarPermissaoAdmin_). Para os demais perfis a
+    // seção mostrava formulário e lista que só davam "Acesso negado".
+    const perfilAdm = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfilAdm) === -1) {
+      const secao = document.getElementById("adminUsuariosSecao");
+      if (secao) secao.innerHTML = '<div class="helper-text" role="status">A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria. Para criar ou alterar um acesso, peça a um gestor.</div>';
+      preencherEstadoPainelAdmin_();
+      adminCarregarAlertasPadroes_();
+      return;
+    }
 
     usuariosLimparFormulario_();
     preencherComboPerfis_();
@@ -210,10 +224,12 @@
     const profiles =
       PUBLIC_CONFIG && Array.isArray(PUBLIC_CONFIG.profiles) && PUBLIC_CONFIG.profiles.length > 0
         ? PUBLIC_CONFIG.profiles
-        : ["ADMIN", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"];
+        : ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"];
 
     const options = ['<option value="">Selecione o perfil</option>'];
-    profiles.forEach(function (p) {
+    // Só um Administrador cria ou promove outro Administrador (regra do servidor, SGO_Usuarios.js).
+    const souAdmin = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase() === "ADMIN";
+    profiles.filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; }).forEach(function (p) {
       options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(p) + "</option>");
     });
     select.innerHTML = options.join("");
@@ -926,6 +942,10 @@
 
         let dt = item.DATA_VENCIMENTO || "";
         if (typeof dt === "string" && dt.includes("T")) dt = dt.split("T")[0];
+        // Vencimento gravado por outro módulo como dd/mm/aaaa: o campo de data só
+        // aceita aaaa-mm-dd e ficava vazio — e salvar apagava o vencimento.
+        const dtBr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(dt));
+        if (dtBr) dt = dtBr[3] + "-" + dtBr[2] + "-" + dtBr[1];
         setValue_("doc_data_vencimento", dt);
 
         setValue_("doc_arquivo", "");

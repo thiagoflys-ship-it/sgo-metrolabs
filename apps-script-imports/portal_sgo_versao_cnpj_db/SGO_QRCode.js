@@ -54,7 +54,7 @@ const SGO_QRCODE = (() => {
                  : PropertiesService.getScriptProperties().getProperty("FOLDER_DOCUMENTOS");
                  
     if (!rootId) {
-      throw new Error("Estrutura de pastas não configurada. Execute a função configurarPastasSGO() no arquivo SGO_DriverSetup.");
+      throw new Error("A pasta de documentos do sistema ainda não foi configurada, então o prontuário do equipamento não pode ser aberto. Avise o administrador do sistema (configuração das pastas do Drive)");
     }
 
     const root = DriveApp.getFolderById(rootId);

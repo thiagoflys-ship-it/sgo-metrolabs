@@ -754,7 +754,7 @@
   function Atividades_renderMinhas_() {
     var div = document.getElementById("conteudo");
     if (!div) return;
-    if (Atividades_ehCliente_()) { div.innerHTML = '<div class="module-shell"><div class="avisos-wrap" style="display:block">O perfil Cliente não usa o módulo de atividades.</div></div>'; return; }
+    if (Atividades_ehCliente_()) { div.innerHTML = '<div class="module-shell"><div class="sgo-aviso-bloqueio" role="status" style="display:block;margin:12px 0;padding:14px 16px;border:1px solid var(--bc-line-2);border-left:4px solid var(--bc-warn);border-radius:8px;background:var(--bc-surface-2,#fff);color:var(--bc-text);font-size:14px;line-height:1.5">O perfil Cliente não usa o módulo de atividades.</div></div>'; return; }
     if (ehMobileModo_()) atualizarTituloMobile_("Minhas atividades");
     ATV.tela = "minhas";
     var f = ATV.filtros;
@@ -846,7 +846,7 @@
     var div = document.getElementById("conteudo");
     if (!div) return;
     if (!Atividades_ehGestor_()) {
-      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Atividades da equipe</h2><div class="avisos-wrap" style="display:block">Esta tela é dos perfis Gestor, Admin e Diretoria. Suas atividades estão em Minhas atividades, no menu.</div></div>';
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Atividades da equipe</h2><div class="sgo-aviso-bloqueio" role="status" style="display:block;margin:12px 0;padding:14px 16px;border:1px solid var(--bc-line-2);border-left:4px solid var(--bc-warn);border-radius:8px;background:var(--bc-surface-2,#fff);color:var(--bc-text);font-size:14px;line-height:1.5">Esta tela é dos perfis Gestor, Admin e Diretoria. Suas atividades estão em Minhas atividades, no menu.</div></div>';
       return;
     }
     ATV.tela = "equipe";

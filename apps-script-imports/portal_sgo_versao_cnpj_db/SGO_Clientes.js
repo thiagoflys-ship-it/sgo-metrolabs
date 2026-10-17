@@ -131,7 +131,9 @@ const SGO_CLIENTES = (() => {
       return { success: false, message: "Cliente não encontrado." };
     }
 
-    const dados = normalizarPayload_(payload);
+    // Merge: campo ausente no pedido mantém o valor atual (não apaga).
+    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
+      ["RAZAO_SOCIAL", "NOME_FANTASIA", "CNPJ", "ENDERECO", "CONTATO", "EMAIL", "TELEFONE"]);
     const erros = validarPayload_(dados, false);
 
     if (erros.length) {
@@ -261,7 +263,16 @@ const SGO_CLIENTES = (() => {
       return { success: false, message: "Cliente não encontrado." };
     }
 
-    const ok = SGO_DATA.remove(SHEET_NAME, clienteId);
+    // Cadastro com vínculos (unidades, equipamentos, documentos...) não é apagado:
+    // a regra vem de SGO_DATA.exigirSemVinculos_ e a mensagem já diz o que fazer.
+    let ok;
+    try {
+      ok = SGO_DATA.remove(SHEET_NAME, clienteId);
+    } catch (eVinculo) {
+      const msg = String((eVinculo && eVinculo.message) || eVinculo);
+      if (/possui vínculos/.test(msg)) return { success: false, message: "Não foi possível excluir o cliente: " + msg.charAt(0).toLowerCase() + msg.slice(1) };
+      throw eVinculo;
+    }
 
     if (!ok) {
       return { success: false, message: "Não foi possível excluir o cliente." };

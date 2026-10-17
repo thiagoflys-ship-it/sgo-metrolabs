@@ -1,4 +1,6 @@
 function configurarPastasSGO() {
+  // Configuração do Drive: só pelo editor (pelo navegador trocaria as pastas do sistema).
+  if (!SGO_execucaoInterna_()) return { success: false, message: "Esta configuração só pode ser executada pelo administrador do sistema, no editor." };
   try {
     // Busca o nome do sistema no arquivo de configuração ou usa um padrão
     const rootName = (typeof SGO_CFG !== "undefined" && SGO_CFG.SISTEMA && SGO_CFG.SISTEMA.NOME_EXIBICAO)

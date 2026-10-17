@@ -1,0 +1,532 @@
+<style>
+  /* AVISOS DA GESTÃO COM CIÊNCIA (2026-10-16) — ver SGO_Avisos.js. Janelas reaproveitam .atv-overlay/.atv-modal (JS_Atividades). */
+  .avs-overlay { z-index: 100000; }
+  .avs-modal { max-width: 720px; }
+  .avs-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+  .avs-selo.importante { color: var(--danger); background: var(--danger-bg); }
+  .avs-selo.normal { color: var(--muted); }
+  .avs-selo.lido { color: var(--success); background: var(--success-bg); }
+  .avs-selo.pendente { color: var(--warning); background: var(--warning-bg); }
+  .avs-selo.arquivado { color: var(--muted); background: var(--bc-surface-3); }
+  .avs-meta { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
+  .avs-texto { white-space: pre-wrap; word-break: break-word; font-size: 13.5px; line-height: 1.55; margin-bottom: 14px; }
+  .avs-anexos-tit { font-size: 12px; font-weight: 700; color: var(--muted); margin: 6px 0 6px; }
+  .avs-miniaturas { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .avs-mini { width: 132px; height: 100px; border: 1px solid var(--border); border-radius: 6px; background: var(--bc-surface-3); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: zoom-in; padding: 0; font-size: 11px; color: var(--muted); }
+  .avs-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .avs-docs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+  .avs-doc { display: inline-flex; align-items: center; gap: 8px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--info); cursor: pointer; font-size: 12.5px; text-align: left; width: fit-content; max-width: 100%; }
+  .avs-doc:hover { text-decoration: underline; }
+  .avs-zoom { position: fixed; inset: 0; z-index: 100002; background: rgba(28,31,29,.8); display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+  .avs-zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
+  .avs-lista { display: flex; flex-direction: column; gap: 10px; }
+  .avs-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  .avs-card.pendente { border-left-color: var(--warning); }
+  .avs-card.importante.pendente { border-left-color: var(--danger); }
+  .avs-card-tit { font-weight: 700; font-size: 13.5px; color: var(--text-strong, var(--text)); margin-bottom: 3px; }
+  .avs-card-txt { font-size: 12.5px; color: var(--muted); max-width: 760px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .avs-prog { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 4px; min-width: 110px; }
+  .avs-prog > div { height: 100%; background: var(--success); }
+  .avs-pessoas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .avs-pessoas h4 { margin: 0 0 8px; font-size: 13px; }
+  .avs-pessoa { font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .avs-pessoa .q { color: var(--muted); font-size: 11.5px; }
+  .avs-publico { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .avs-publico label.op { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px 6px 0; font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .avs-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; max-height: 180px; overflow: auto; padding: 6px 0 0; }
+  .avs-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--text); margin: 0; }
+  .avs-arq { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  @media (max-width: 900px) { .avs-pessoas { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+  // ==========================================================
+  // AVISOS DA GESTÃO COM CIÊNCIA (2026-10-16)
+  // Servidor: SGO_Avisos.js (Avisos_api*(sessionId, payload)).
+  // Ganchos na casca (JS_Core): AvisosTela_iniciar_ no login,
+  // AvisosTela_parar_ no logout, abrir('avisos') -> AvisosTela_render_.
+  // Nomes "AvisosTela_" para não colidir com Avisos_* do JS_Core
+  // (janela de cobranças/elogios da Qualidade).
+  // ==========================================================
+  var AVT_PERIODICO_MS = 5 * 60 * 1000;
+  var AVT = { pendentes: [], idx: 0, mostrados: {}, timer: null, verificando: false, tela: "", aba: "meus", arquivados: false, opcoes: null, anexosForm: [], cacheAnexo: {}, avulso: false };
+
+  function AvisosTela_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function AvisosTela_br_(s) {
+    var m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+    return m ? m[3] + "/" + m[2] + "/" + m[1] + (m[4] ? " " + m[4] + ":" + m[5] : "") : "";
+  }
+  function AvisosTela_tam_(n) {
+    n = Number(n) || 0;
+    if (n >= 1048576) return (n / 1048576).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " MB";
+    return Math.max(1, Math.round(n / 1024)).toLocaleString("pt-BR") + " KB";
+  }
+  function AvisosTela_toast_(texto) {
+    if (!texto || typeof auvoToastContainer_ !== "function") return;
+    var t = document.createElement("div");
+    t.className = "auvo-toast"; t.style.borderLeft = "4px solid var(--success)";
+    t.innerHTML = '<span class="auvo-toast-icone"><i class="fas fa-check" aria-hidden="true"></i></span><div class="auvo-toast-corpo"><div class="auvo-toast-titulo">Avisos</div><div class="auvo-toast-detalhe">' + AvisosTela_esc_(texto) + "</div></div>";
+    t.onclick = function () { t.remove(); };
+    auvoToastContainer_().appendChild(t);
+    setTimeout(function () { t.classList.add("auvo-toast-saindo"); setTimeout(function () { t.remove(); }, 400); }, 6000);
+  }
+  function AvisosTela_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
+  function AvisosTela_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+
+  /** Chamada padrão ao servidor. res.ok=false vira erro com a mensagem do servidor. */
+  function AvisosTela_chamar_(fn, payload, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (msg) { fim(); if (erro) erro(msg); else if (!o.silencioso) alert(msg); };
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { falhou((res && res.message) || "Não foi possível concluir a operação: o servidor não respondeu como esperado. Tente de novo."); return; }
+        fim();
+        try { if (ok) ok(res); } catch (e) { console.error("Avisos " + fn + ":", e); if (!o.silencioso) alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+      })
+      .withFailureHandler(function (err) {
+        console.error("Avisos " + fn + " falhou:", err);
+        falhou("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado.");
+      })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  // ---------- ciclo de vida ----------
+  function AvisosTela_iniciar_() {
+    var b = document.getElementById("menu-btn-avisos");
+    if (b) b.style.display = AvisosTela_ehCliente_() ? "none" : "";
+    if (!SESSION || AvisosTela_ehCliente_()) return;
+    AVT.mostrados = {}; AVT.cacheAnexo = {};
+    AvisosTela_verificar_(true);
+    if (!AVT.timer) AVT.timer = setInterval(function () { if (document.visibilityState === "visible") AvisosTela_verificar_(false); }, AVT_PERIODICO_MS);
+  }
+
+  function AvisosTela_parar_() {
+    if (AVT.timer) clearInterval(AVT.timer);
+    AVT.timer = null; AVT.pendentes = []; AVT.mostrados = {}; AVT.cacheAnexo = {}; AVT.opcoes = null;
+    ["avsOverlay", "avsFormOverlay", "avsLeituraOverlay"].forEach(function (id) { var o = document.getElementById(id); if (o) o.remove(); });
+  }
+
+  function AvisosTela_badge_(n) {
+    var badge = document.getElementById("menuBadgeAvisos");
+    if (!badge) return;
+    badge.textContent = n ? String(n) : "";
+    badge.title = n ? n + " aviso(s) aguardando sua ciência" : "";
+    badge.classList.toggle("is-visible", !!n);
+    badge.style.background = n ? "var(--danger)" : "";
+  }
+
+  /** Ao entrar: mostra a janela com todos os pendentes. Depois, de 5 em 5 min: só se chegou aviso novo. */
+  function AvisosTela_verificar_(entrada) {
+    if (!SESSION || AvisosTela_ehCliente_() || AVT.verificando) return;
+    AVT.verificando = true;
+    AvisosTela_chamar_("Avisos_apiPendentes", { exibir: !!entrada }, function (res) {
+      AVT.verificando = false;
+      var lista = res.avisos || [];
+      AvisosTela_badge_(lista.length);
+      if (!lista.length) return;
+      var aberto = document.getElementById("avsOverlay");
+      if (entrada) { AvisosTela_mostrar_(lista, false); return; }
+      var novos = lista.filter(function (a) { return !AVT.mostrados[a.ID]; });
+      if (novos.length && !aberto) {
+        AvisosTela_chamar_("Avisos_apiPendentes", { exibir: true }, function (r2) { if ((r2.avisos || []).length) AvisosTela_mostrar_(r2.avisos, false); }, function () {}, { silencioso: true });
+      }
+    }, function (msg) { AVT.verificando = false; console.error("Avisos verificar:", msg); }, { silencioso: true });
+  }
+
+  // ---------- janela do aviso ----------
+  function AvisosTela_mostrar_(lista, avulso) {
+    AVT.pendentes = lista.slice(); AVT.idx = 0; AVT.avulso = !!avulso;
+    lista.forEach(function (a) { AVT.mostrados[a.ID] = true; });
+    AvisosTela_desenharJanela_();
+  }
+
+  function AvisosTela_anexosHtml_(anexos, prefixo) {
+    anexos = anexos || [];
+    if (!anexos.length) return "";
+    var imgs = anexos.filter(function (x) { return x.EH_IMAGEM; }), docs = anexos.filter(function (x) { return !x.EH_IMAGEM; });
+    return '<div class="avs-anexos-tit">Anexos (' + anexos.length + ')</div>' +
+      (imgs.length ? '<div class="avs-miniaturas">' + imgs.map(function (x) {
+        return '<button type="button" class="avs-mini" id="' + prefixo + x.ID + '" title="' + AvisosTela_esc_(x.NOME) + ' - clique para ampliar" onclick="AvisosTela_ampliar_(\'' + x.ID + '\')">carregando...</button>';
+      }).join("") + "</div>" : "") +
+      (docs.length ? '<div class="avs-docs">' + docs.map(function (x) {
+        return '<button type="button" class="avs-doc" onclick="AvisosTela_baixar_(\'' + x.ID + '\', this)"><i class="fas fa-file-arrow-down" aria-hidden="true"></i>' + AvisosTela_esc_(x.NOME) + ' <span style="color:var(--muted)">(' + AvisosTela_tam_(x.TAMANHO) + ")</span></button>";
+      }).join("") + "</div>" : "");
+  }
+
+  function AvisosTela_carregarMiniaturas_(anexos, prefixo) {
+    (anexos || []).filter(function (x) { return x.EH_IMAGEM; }).forEach(function (x) {
+      AvisosTela_obterAnexo_(x.ID, function (d) {
+        var el = document.getElementById(prefixo + x.ID);
+        if (el) el.innerHTML = '<img alt="' + AvisosTela_esc_(x.NOME) + '" src="data:' + AvisosTela_esc_(d.tipo) + ";base64," + d.base64 + '">';
+      }, function (msg) { var el = document.getElementById(prefixo + x.ID); if (el) { el.textContent = "Não carregou"; el.title = msg; } });
+    });
+  }
+
+  function AvisosTela_obterAnexo_(id, ok, erro) {
+    if (AVT.cacheAnexo[id]) { ok(AVT.cacheAnexo[id]); return; }
+    AvisosTela_chamar_("Avisos_apiAnexo", { id: id }, function (res) {
+      if (String(res.base64 || "").length < 3 * 1024 * 1024) AVT.cacheAnexo[id] = res;
+      ok(res);
+    }, erro, { silencioso: !!erro });
+  }
+
+  function AvisosTela_ampliar_(id) {
+    AvisosTela_obterAnexo_(id, function (d) {
+      var z = document.createElement("div");
+      z.className = "avs-zoom"; z.setAttribute("role", "dialog"); z.title = "Clique para fechar";
+      z.innerHTML = '<img alt="' + AvisosTela_esc_(d.nome) + '" src="data:' + AvisosTela_esc_(d.tipo) + ";base64," + d.base64 + '">';
+      z.onclick = function () { z.remove(); };
+      document.body.appendChild(z);
+    });
+  }
+
+  function AvisosTela_baixar_(id, btn) {
+    if (btn) btn.disabled = true;
+    AvisosTela_obterAnexo_(id, function (d) {
+      if (btn) btn.disabled = false;
+      var bin = atob(d.base64), bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([bytes], { type: d.tipo || "application/octet-stream" }));
+      var a = document.createElement("a");
+      a.href = url; a.download = d.nome || "anexo"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }, function (msg) { if (btn) btn.disabled = false; alert(msg); });
+  }
+
+  function AvisosTela_desenharJanela_() {
+    var a = AVT.pendentes[AVT.idx];
+    var ov = document.getElementById("avsOverlay");
+    if (!a) { if (ov) ov.remove(); return; }
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.id = "avsOverlay"; ov.className = "atv-overlay avs-overlay";
+      ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-labelledby", "avsTitulo");
+      document.body.appendChild(ov);
+    }
+    var total = AVT.pendentes.length, lido = !!a.CIENTE_EM;
+    ov.innerHTML =
+      '<div class="atv-modal avs-modal">' +
+        '<div class="atv-modal-cab"><div>' +
+          '<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px">Aviso da gestão' + (total > 1 ? " · " + (AVT.idx + 1) + " de " + total : "") + "</div>" +
+          '<h3 id="avsTitulo">' + AvisosTela_esc_(a.TITULO) + "</h3></div>" +
+          '<span class="avs-selo ' + (a.IMPORTANCIA === "Importante" ? "importante" : "normal") + '">' + AvisosTela_esc_(a.IMPORTANCIA) + "</span></div>" +
+        '<div class="atv-modal-corpo">' +
+          '<div class="avs-meta">Publicado por ' + AvisosTela_esc_(a.PUBLICADO_POR_NOME || "gestão") + " em " + AvisosTela_br_(a.PUBLICADO_EM) +
+            (a.PRAZO_CIENCIA ? ' · <strong style="color:' + (a.PRAZO_VENCIDO ? "var(--danger)" : "inherit") + '">Confirme a leitura até ' + AvisosTela_br_(a.PRAZO_CIENCIA) + (a.PRAZO_VENCIDO ? " (prazo vencido)" : "") + "</strong>" : "") + "</div>" +
+          '<div class="avs-texto">' + AvisosTela_esc_(a.TEXTO) + "</div>" +
+          AvisosTela_anexosHtml_(a.ANEXOS, "avsMiniJ_") +
+          (lido ? '<div class="atv-msg ok">Você confirmou a leitura em ' + AvisosTela_br_(a.CIENTE_EM) + ".</div>" :
+            '<div style="font-size:12px;color:var(--muted);margin-top:8px">Ao clicar em "Li e estou ciente", o SGO+ registra a data e a hora da sua confirmação. Se fechar sem confirmar, o aviso volta a aparecer na próxima entrada e fica em Principal &gt; Avisos.</div>') +
+          '<div id="avsJanelaMsg"></div>' +
+        "</div>" +
+        '<div class="atv-modal-rod">' +
+          (lido ? '<button type="button" class="btn-primary" onclick="AvisosTela_fecharJanela_()">Fechar</button>' :
+            '<button type="button" class="btn-secondary" onclick="AvisosTela_depois_()">' + (AVT.idx + 1 < total ? "Ver depois e ir ao próximo" : "Ver depois") + "</button>" +
+            '<button type="button" class="btn-primary" id="avsBtnCiente" onclick="AvisosTela_ciente_()"><i class="fas fa-check" aria-hidden="true"></i>&nbsp;Li e estou ciente</button>') +
+        "</div>" +
+      "</div>";
+    AvisosTela_carregarMiniaturas_(a.ANEXOS, "avsMiniJ_");
+    var b = document.getElementById("avsBtnCiente"); if (b) b.focus();
+  }
+
+  function AvisosTela_fecharJanela_() { var ov = document.getElementById("avsOverlay"); if (ov) ov.remove(); AVT.pendentes = []; }
+
+  function AvisosTela_depois_() {
+    if (AVT.idx + 1 < AVT.pendentes.length) { AVT.idx++; AvisosTela_desenharJanela_(); return; }
+    AvisosTela_fecharJanela_();
+  }
+
+  function AvisosTela_ciente_() {
+    var a = AVT.pendentes[AVT.idx];
+    if (!a) return;
+    var btn = document.getElementById("avsBtnCiente");
+    if (btn) { btn.disabled = true; btn.textContent = "Registrando..."; }
+    AvisosTela_chamar_("Avisos_apiCiente", { id: a.ID }, function (res) {
+      AVT.pendentes.splice(AVT.idx, 1);
+      if (AVT.idx >= AVT.pendentes.length) AVT.idx = 0;
+      if (AVT.pendentes.length) AvisosTela_desenharJanela_();
+      else { AvisosTela_fecharJanela_(); AvisosTela_toast_(res.message); }
+      AvisosTela_atualizarContador_();
+      if (AVT.tela === "avisos") AvisosTela_carregar_();
+    }, function (msg) {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>&nbsp;Li e estou ciente'; }
+      var m = document.getElementById("avsJanelaMsg"); if (m) m.innerHTML = '<div class="atv-msg erro">' + AvisosTela_esc_(msg) + "</div>";
+    });
+  }
+
+  function AvisosTela_atualizarContador_() {
+    AvisosTela_chamar_("Avisos_apiPendentes", { exibir: false }, function (res) { AvisosTela_badge_((res.avisos || []).length); }, function () {}, { silencioso: true });
+  }
+
+  // ---------- tela "Avisos" (menu Principal) ----------
+  function AvisosTela_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (AvisosTela_ehCliente_()) { div.innerHTML = '<div class="module-shell"><div class="sgo-aviso-bloqueio" role="status" style="display:block;margin:12px 0;padding:14px 16px;border:1px solid var(--bc-line-2);border-left:4px solid var(--bc-warn);border-radius:8px;background:var(--bc-surface-2,#fff);color:var(--bc-text);font-size:14px;line-height:1.5">Os avisos são internos da equipe; o perfil Cliente não os recebe.</div></div>'; return; }
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Avisos");
+    AVT.tela = "avisos";
+    var gestor = AvisosTela_ehGestor_();
+    if (!gestor) AVT.aba = "meus";
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Avisos</h2>' +
+          '<p class="content-subtitle">Comunicados da gestão. Cada aviso precisa da sua confirmação de leitura ("Li e estou ciente").</p></div>' +
+          (gestor ? '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-primary" onclick="AvisosTela_abrirFormulario_()"><i class="fas fa-bullhorn" aria-hidden="true"></i>&nbsp;Novo aviso</button></div>' : "") +
+        "</div>" +
+        (gestor ? '<div class="motores-tabs atv-tabs">' +
+          [["meus", "Para mim"], ["gestao", "Publicados (gestão)"]].map(function (t) { return '<button type="button" class="motores-tab-btn' + (AVT.aba === t[0] ? " active" : "") + '" onclick="AvisosTela_trocarAba_(\'' + t[0] + '\')">' + t[1] + "</button>"; }).join("") + "</div>" : "") +
+        '<div id="avsCorpo"><div class="atv-vazio">Carregando avisos...</div></div>' +
+      "</div>";
+    AvisosTela_carregar_();
+  }
+
+  function AvisosTela_trocarAba_(aba) { AVT.aba = aba; AvisosTela_render_(); }
+
+  function AvisosTela_carregar_() {
+    var corpo = function (html) { var c = document.getElementById("avsCorpo"); if (c) c.innerHTML = html; };
+    var erro = function (msg) { corpo('<div class="atv-msg erro">' + AvisosTela_esc_(msg) + "</div>"); };
+    if (AVT.aba === "gestao" && AvisosTela_ehGestor_()) {
+      AvisosTela_chamar_("Avisos_apiPainel", { arquivados: AVT.arquivados }, function (res) { corpo(AvisosTela_htmlPainel_(res.itens || [])); }, erro);
+      return;
+    }
+    AvisosTela_chamar_("Avisos_apiMeus", {}, function (res) {
+      AVT.meus = res.itens || [];
+      AvisosTela_badge_(res.naoLidos || 0);
+      corpo(AvisosTela_htmlMeus_(AVT.meus));
+    }, erro);
+  }
+
+  function AvisosTela_htmlMeus_(itens) {
+    if (!itens.length) return '<div class="atv-vazio">Nenhum aviso para você por enquanto.</div>';
+    return '<div class="avs-lista">' + itens.map(function (a, i) {
+      var pend = !a.CIENTE_EM;
+      return '<div class="avs-card' + (pend ? " pendente" : "") + (a.IMPORTANCIA === "Importante" ? " importante" : "") + '">' +
+        '<div style="min-width:0;flex:1">' +
+          '<div class="avs-card-tit">' + AvisosTela_esc_(a.TITULO) + "</div>" +
+          '<div class="avs-card-txt">' + AvisosTela_esc_(a.TEXTO) + "</div>" +
+          '<div class="avs-meta" style="margin:6px 0 0">' + AvisosTela_esc_(a.PUBLICADO_POR_NOME) + " · " + AvisosTela_br_(a.PUBLICADO_EM) + (a.ANEXOS && a.ANEXOS.length ? " · " + a.ANEXOS.length + " anexo(s)" : "") +
+            (a.PRAZO_CIENCIA && pend ? " · confirmar até " + AvisosTela_br_(a.PRAZO_CIENCIA) : "") + "</div>" +
+        "</div>" +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' +
+            (a.IMPORTANCIA === "Importante" ? '<span class="avs-selo importante">Importante</span>' : "") +
+            (pend ? '<span class="avs-selo pendente">Aguardando sua ciência</span>' : '<span class="avs-selo lido">Lido em ' + AvisosTela_br_(a.CIENTE_EM) + "</span>") +
+          "</div>" +
+          '<button type="button" class="' + (pend ? "btn-primary" : "btn-secondary") + ' atv-mini" onclick="AvisosTela_abrirMeu_(' + i + ')">' + (pend ? "Ler e confirmar" : "Abrir") + "</button>" +
+        "</div>" +
+      "</div>";
+    }).join("") + "</div>";
+  }
+
+  function AvisosTela_abrirMeu_(i) {
+    var a = (AVT.meus || [])[i];
+    if (a) AvisosTela_mostrar_([a], true);
+  }
+
+  function AvisosTela_htmlPainel_(itens) {
+    var topo = '<div class="atv-barra"><label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);margin:0"><input type="checkbox" id="avsArq"' + (AVT.arquivados ? " checked" : "") + ' onchange="AVT.arquivados=this.checked;AvisosTela_carregar_()" style="min-width:0;height:auto"> Mostrar arquivados</label></div>';
+    if (!itens.length) return topo + '<div class="atv-vazio">Nenhum aviso publicado' + (AVT.arquivados ? "" : " em vigor") + '. Use "Novo aviso" para publicar o primeiro.</div>';
+    return topo + '<div class="table-responsive"><table class="table"><thead><tr><th>Aviso</th><th>Publicado</th><th>Prazo de ciência</th><th>Leitura</th><th>Ações</th></tr></thead><tbody>' +
+      itens.map(function (a) {
+        var perc = a.total ? Math.round(a.lidos * 100 / a.total) : 0, arq = a.SITUACAO === "ARQUIVADO", faltam = a.total - a.lidos;
+        var publico = a.PUBLICO_TIPO === "PERFIS" ? "Perfis: " + a.PUBLICO_PERFIS.split(",").join(", ") : a.PUBLICO_TIPO === "PESSOAS" ? "Pessoas escolhidas" : "Todos os usuários";
+        return "<tr>" +
+          '<td><div style="font-weight:700">' + AvisosTela_esc_(a.TITULO) + "</div>" +
+            '<div class="atv-sub">' + (a.IMPORTANCIA === "Importante" ? '<span class="avs-selo importante">Importante</span> ' : "") + (arq ? '<span class="avs-selo arquivado">Arquivado em ' + AvisosTela_br_(a.ARQUIVADO_EM) + "</span> " : "") + AvisosTela_esc_(publico) + (a.QTD_ANEXOS ? " · " + a.QTD_ANEXOS + " anexo(s)" : "") + "</div></td>" +
+          "<td>" + AvisosTela_br_(a.PUBLICADO_EM) + '<div class="atv-sub">' + AvisosTela_esc_(a.PUBLICADO_POR_NOME) + "</div>" + (a.QTD_REENVIOS ? '<div class="atv-sub">Reenviado ' + a.QTD_REENVIOS + "x (último " + AvisosTela_br_(a.ULTIMO_REENVIO_EM) + ")</div>" : "") + "</td>" +
+          "<td>" + (a.PRAZO_CIENCIA ? AvisosTela_br_(a.PRAZO_CIENCIA) + (a.PRAZO_VENCIDO && faltam ? '<div class="atv-sub" style="color:var(--danger)">vencido, ' + faltam + " sem ler</div>" : "") : '<span class="atv-sub">sem prazo</span>') + "</td>" +
+          '<td><strong>' + a.lidos + " de " + a.total + "</strong> leram" + '<div class="avs-prog"><div style="width:' + perc + '%"></div></div></td>' +
+          '<td><div class="atv-acoes">' +
+            '<button type="button" class="btn-secondary atv-mini" onclick="AvisosTela_abrirLeitura_(\'' + a.ID + '\')">Quem leu</button>' +
+            (!arq && faltam ? '<button type="button" class="btn-secondary atv-mini" onclick="AvisosTela_reenviar_(\'' + a.ID + '\')">Reenviar a quem não leu</button>' : "") +
+            '<button type="button" class="btn-secondary atv-mini" onclick="AvisosTela_arquivar_(\'' + a.ID + "', " + (arq ? "true" : "false") + ')">' + (arq ? "Reativar" : "Arquivar") + "</button>" +
+          "</div></td></tr>";
+      }).join("") + "</tbody></table></div>";
+  }
+
+  function AvisosTela_reenviar_(id) {
+    if (!confirm("Reenviar este aviso por e-mail e WhatsApp para quem ainda não confirmou a leitura?")) return;
+    AvisosTela_chamar_("Avisos_apiReenviar", { id: id }, function (res) {
+      alert(res.message + AvisosTela_resumoEnvio_(res.notificacoes));
+      AvisosTela_carregar_();
+      var ov = document.getElementById("avsLeituraOverlay"); if (ov) AvisosTela_abrirLeitura_(id);
+    }, null, { carregando: "Reenviando o aviso..." });
+  }
+
+  function AvisosTela_resumoEnvio_(n) {
+    if (!n) return "";
+    return "\n\nEnvios registrados: " + n.ok + " feito(s), " + n.erro + " com erro, " + n.pulado + " pulado(s) (sem e-mail/telefone ou canal não configurado). O detalhe fica na aba NTF_ENVIOS.";
+  }
+
+  function AvisosTela_arquivar_(id, reativar) {
+    if (!reativar && !confirm("Arquivar este aviso? Ele deixa de aparecer para quem ainda não leu. O registro de quem leu continua guardado.")) return;
+    AvisosTela_chamar_("Avisos_apiArquivar", { id: id, reativar: !!reativar }, function (res) {
+      AvisosTela_toast_(res.message);
+      AvisosTela_carregar_();
+    }, null, { carregando: reativar ? "Reativando..." : "Arquivando..." });
+  }
+
+  function AvisosTela_abrirLeitura_(id) {
+    AvisosTela_chamar_("Avisos_apiLeitura", { id: id }, function (res) {
+      var ov = document.getElementById("avsLeituraOverlay");
+      if (!ov) {
+        ov = document.createElement("div");
+        ov.id = "avsLeituraOverlay"; ov.className = "atv-overlay avs-overlay";
+        ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true");
+        document.body.appendChild(ov);
+      }
+      var a = res.aviso, leram = res.pessoas.filter(function (p) { return p.situacao === "LEU"; }), nao = res.pessoas.filter(function (p) { return p.situacao !== "LEU"; });
+      ov.innerHTML =
+        '<div class="atv-modal avs-modal" style="max-width:820px">' +
+          '<div class="atv-modal-cab"><div><h3>Quem leu: ' + AvisosTela_esc_(a.TITULO) + "</h3>" +
+            '<div class="avs-meta" style="margin:4px 0 0">' + res.lidos + " de " + res.total + " confirmaram · publicado em " + AvisosTela_br_(a.PUBLICADO_EM) + (a.PRAZO_CIENCIA ? " · prazo " + AvisosTela_br_(a.PRAZO_CIENCIA) : "") + (res.qtdReenvios ? " · reenviado " + res.qtdReenvios + "x" : "") + "</div></div>" +
+            '<button type="button" class="atv-fechar" aria-label="Fechar" onclick="document.getElementById(\'avsLeituraOverlay\').remove()">&times;</button></div>' +
+          '<div class="atv-modal-corpo">' +
+            '<details style="margin-bottom:12px"><summary style="cursor:pointer;font-weight:700;font-size:12.5px">Ver o texto do aviso</summary><div class="avs-texto" style="margin-top:8px">' + AvisosTela_esc_(a.TEXTO) + "</div>" + AvisosTela_anexosHtml_(a.ANEXOS, "avsMiniL_") + "</details>" +
+            '<div class="avs-pessoas">' +
+              '<div id="avsLeram"><h4 style="color:var(--success)">Leram (' + leram.length + ")</h4>" + (leram.length ? leram.map(function (p) {
+                return '<div class="avs-pessoa">' + AvisosTela_esc_(p.nome) + '<div class="q">Confirmou em ' + AvisosTela_br_(p.cienteEm) + "</div></div>";
+              }).join("") : '<div class="atv-sub">Ninguém confirmou ainda.</div>') + "</div>" +
+              '<div id="avsNaoLeram"><h4 style="color:var(--danger)">Não leram (' + nao.length + ")</h4>" + (nao.length ? nao.map(function (p) {
+                return '<div class="avs-pessoa">' + AvisosTela_esc_(p.nome) + (p.ativo ? "" : " (inativo)") + '<div class="q">' +
+                  (p.situacao === "VIU_SEM_CONFIRMAR" ? "Viu " + p.exibicoes + " vez(es) sem confirmar · última em " + AvisosTela_br_(p.ultimaVez) : "Ainda não abriu o SGO+ desde a publicação") + "</div></div>";
+              }).join("") : '<div class="atv-sub">Todos confirmaram.</div>') + "</div>" +
+            "</div>" +
+          "</div>" +
+          '<div class="atv-modal-rod">' +
+            (nao.length && a.SITUACAO === "PUBLICADO" ? '<button type="button" class="btn-secondary" onclick="AvisosTela_reenviar_(\'' + a.ID + '\')">Reenviar a quem não leu</button>' : "") +
+            '<button type="button" class="btn-primary" onclick="document.getElementById(\'avsLeituraOverlay\').remove()">Fechar</button>' +
+          "</div>" +
+        "</div>";
+      var det = ov.querySelector("details");
+      if (det) det.addEventListener("toggle", function () { if (det.open) AvisosTela_carregarMiniaturas_(a.ANEXOS, "avsMiniL_"); });
+    }, null, { carregando: "Carregando a leitura..." });
+  }
+
+  // ---------- formulário de publicação (gestão) ----------
+  function AvisosTela_abrirFormulario_() {
+    if (!AvisosTela_ehGestor_()) { alert("Não foi possível abrir: publicar aviso é só para os perfis Gestor, Admin e Diretoria."); return; }
+    AvisosTela_chamar_("Avisos_apiOpcoes", {}, function (res) {
+      AVT.opcoes = res; AVT.anexosForm = [];
+      var ov = document.createElement("div");
+      ov.id = "avsFormOverlay"; ov.className = "atv-overlay avs-overlay";
+      ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true");
+      ov.innerHTML =
+        '<div class="atv-modal avs-modal">' +
+          '<div class="atv-modal-cab"><h3>Novo aviso</h3><button type="button" class="atv-fechar" aria-label="Fechar" onclick="AvisosTela_fecharFormulario_()">&times;</button></div>' +
+          '<div class="atv-modal-corpo">' +
+            '<div class="atv-campo"><label for="avsF_titulo">Título</label><input id="avsF_titulo" type="text" maxlength="160" placeholder="Assunto do aviso"></div>' +
+            '<div class="atv-campo"><label for="avsF_texto">Texto</label><textarea id="avsF_texto" rows="7" maxlength="20000" placeholder="Mensagem completa. As quebras de linha são mantidas."></textarea></div>' +
+            '<div class="atv-grade2">' +
+              '<div class="atv-campo"><label for="avsF_imp">Importância</label><select id="avsF_imp">' + res.importancias.map(function (i) { return '<option value="' + i + '">' + i + "</option>"; }).join("") + "</select></div>" +
+              '<div class="atv-campo"><label for="avsF_prazo">Prazo para ciência (opcional)</label><input id="avsF_prazo" type="date" min="' + res.hoje + '"></div>' +
+            "</div>" +
+            '<div class="atv-campo"><label>Público</label><div class="avs-publico">' +
+              '<label class="op"><input type="radio" name="avsF_pub" value="TODOS" checked onchange="AvisosTela_trocarPublico_()"> Todos os usuários ativos (' + res.pessoas.length + ")</label>" +
+              '<label class="op"><input type="radio" name="avsF_pub" value="PERFIS" onchange="AvisosTela_trocarPublico_()"> Por perfil</label>' +
+              '<label class="op"><input type="radio" name="avsF_pub" value="PESSOAS" onchange="AvisosTela_trocarPublico_()"> Pessoas escolhidas</label>' +
+              '<div id="avsF_perfis" class="avs-checks" style="display:none">' + res.perfis.map(function (p) {
+                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.perfil) + '"' + (p.qtd ? "" : " disabled") + "> " + AvisosTela_esc_(p.perfil) + " (" + p.qtd + ")</label>";
+              }).join("") + "</div>" +
+              '<div id="avsF_pessoas" class="avs-checks" style="display:none">' + res.pessoas.map(function (p) {
+                return '<label><input type="checkbox" value="' + AvisosTela_esc_(p.id) + '"> ' + AvisosTela_esc_(p.nome) + ' <span style="color:var(--muted);font-size:11px">' + AvisosTela_esc_(p.perfil) + "</span></label>";
+              }).join("") + "</div>" +
+            "</div></div>" +
+            '<div class="atv-campo"><label for="avsF_arq">Anexos (imagens e documentos; até ' + res.limites.anexos + " arquivos, " + res.limites.mbArquivo + " MB cada)</label>" +
+              '<input id="avsF_arq" type="file" multiple accept="image/png,image/jpeg,image/gif,image/webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.odt,.ods" onchange="AvisosTela_adicionarArquivos_(this)">' +
+              '<div id="avsF_lista" style="margin-top:6px"></div></div>' +
+            '<div style="font-size:12px;color:var(--muted)">Ao publicar, cada pessoa do público vê o aviso numa janela ao entrar no SGO+ e recebe o aviso completo por e-mail e um resumo por WhatsApp (quando o cadastro tem e-mail/telefone).</div>' +
+            '<div id="avsFormMsg"></div>' +
+          "</div>" +
+          '<div class="atv-modal-rod"><button type="button" class="btn-secondary" onclick="AvisosTela_fecharFormulario_()">Cancelar</button>' +
+            '<button type="button" class="btn-primary" id="avsF_ok" onclick="AvisosTela_publicar_()"><i class="fas fa-bullhorn" aria-hidden="true"></i>&nbsp;Publicar</button></div>' +
+        "</div>";
+      document.body.appendChild(ov);
+      document.getElementById("avsF_titulo").focus();
+    }, null, { carregando: "Abrindo o formulário..." });
+  }
+
+  function AvisosTela_fecharFormulario_() { var ov = document.getElementById("avsFormOverlay"); if (ov) ov.remove(); AVT.anexosForm = []; }
+
+  function AvisosTela_trocarPublico_() {
+    var v = (document.querySelector('input[name="avsF_pub"]:checked') || {}).value;
+    document.getElementById("avsF_perfis").style.display = v === "PERFIS" ? "" : "none";
+    document.getElementById("avsF_pessoas").style.display = v === "PESSOAS" ? "" : "none";
+  }
+
+  function AvisosTela_msgForm_(texto, tipo) {
+    var m = document.getElementById("avsFormMsg");
+    if (m) m.innerHTML = texto ? '<div class="atv-msg ' + (tipo || "erro") + '">' + AvisosTela_esc_(texto) + "</div>" : "";
+  }
+
+  /** Imagem grande (acima de 1,5 MB ou 2000 px) é reduzida no navegador para JPEG antes de enviar. */
+  function AvisosTela_lerArquivo_(file) {
+    return new Promise(function (ok, falha) {
+      var leitor = new FileReader();
+      leitor.onerror = function () { falha(new Error('Não foi possível ler o arquivo "' + file.name + '". Escolha o arquivo de novo.')); };
+      leitor.onload = function () {
+        var dataUrl = String(leitor.result || "");
+        var ehImg = /^image\/(png|jpeg|webp)$/.test(file.type);
+        if (!ehImg || file.size <= 1.5 * 1024 * 1024) { ok({ nome: file.name, tipo: file.type, tamanho: file.size, base64: dataUrl.replace(/^data:[^,]*,/, "") }); return; }
+        var img = new Image();
+        img.onerror = function () { ok({ nome: file.name, tipo: file.type, tamanho: file.size, base64: dataUrl.replace(/^data:[^,]*,/, "") }); };
+        img.onload = function () {
+          var maior = Math.max(img.width, img.height), escala = maior > 2000 ? 2000 / maior : 1;
+          var c = document.createElement("canvas");
+          c.width = Math.round(img.width * escala); c.height = Math.round(img.height * escala);
+          var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+          var r = c.toDataURL("image/jpeg", 0.85), b64 = r.replace(/^data:[^,]*,/, "");
+          ok({ nome: file.name.replace(/\.[^.]+$/, "") + ".jpg", tipo: "image/jpeg", tamanho: Math.round(b64.length * 0.75), base64: b64, reduzida: true });
+        };
+        img.src = dataUrl;
+      };
+      leitor.readAsDataURL(file);
+    });
+  }
+
+  function AvisosTela_adicionarArquivos_(input) {
+    var arquivos = Array.prototype.slice.call(input.files || []);
+    input.value = "";
+    if (!arquivos.length) return;
+    var lim = AVT.opcoes.limites;
+    if (AVT.anexosForm.length + arquivos.length > lim.anexos) { AvisosTela_msgForm_("Não foi possível adicionar: o limite é " + lim.anexos + " anexos por aviso. Tire algum arquivo da lista ou junte-os num PDF."); return; }
+    var grande = arquivos.filter(function (f) { return f.size > lim.mbArquivo * 1024 * 1024 && !/^image\/(png|jpeg|webp)$/.test(f.type); })[0];
+    if (grande) { AvisosTela_msgForm_('Não foi possível adicionar "' + grande.name + '": passa de ' + lim.mbArquivo + " MB. Reduza o arquivo (ou divida em partes) e tente de novo."); return; }
+    AvisosTela_msgForm_("Lendo " + arquivos.length + " arquivo(s)...", "ok");
+    Promise.all(arquivos.map(AvisosTela_lerArquivo_)).then(function (lidos) {
+      AVT.anexosForm = AVT.anexosForm.concat(lidos);
+      AvisosTela_msgForm_("");
+      AvisosTela_desenharArquivos_();
+    }).catch(function (e) { AvisosTela_msgForm_(e.message); });
+  }
+
+  function AvisosTela_desenharArquivos_() {
+    var el = document.getElementById("avsF_lista");
+    if (!el) return;
+    el.innerHTML = AVT.anexosForm.map(function (x, i) {
+      return '<div class="avs-arq"><span><i class="fas ' + (/^image\//.test(x.tipo) ? "fa-image" : "fa-file") + '" aria-hidden="true"></i> ' + AvisosTela_esc_(x.nome) + ' <span style="color:var(--muted)">(' + AvisosTela_tam_(x.tamanho) + (x.reduzida ? ", imagem reduzida" : "") + ')</span></span>' +
+        '<button type="button" class="btn-secondary atv-mini" onclick="AVT.anexosForm.splice(' + i + ',1);AvisosTela_desenharArquivos_()">Tirar</button></div>';
+    }).join("");
+  }
+
+  function AvisosTela_publicar_() {
+    var titulo = String(getValue_("avsF_titulo") || "").trim(), texto = String((document.getElementById("avsF_texto") || {}).value || "").trim();
+    if (titulo.length < 3) { AvisosTela_msgForm_("Não foi possível publicar: escreva o título do aviso (mínimo 3 letras)."); document.getElementById("avsF_titulo").focus(); return; }
+    if (texto.length < 5) { AvisosTela_msgForm_("Não foi possível publicar: escreva o texto do aviso no campo Texto."); document.getElementById("avsF_texto").focus(); return; }
+    var tipo = (document.querySelector('input[name="avsF_pub"]:checked') || {}).value || "TODOS";
+    var marcados = function (id) { return Array.prototype.slice.call(document.querySelectorAll("#" + id + " input:checked")).map(function (c) { return c.value; }); };
+    var payload = { titulo: titulo, texto: texto, importancia: getValue_("avsF_imp"), prazo: getValue_("avsF_prazo"), publicoTipo: tipo, perfis: tipo === "PERFIS" ? marcados("avsF_perfis") : [], pessoas: tipo === "PESSOAS" ? marcados("avsF_pessoas") : [],
+      anexos: AVT.anexosForm.map(function (x) { return { nome: x.nome, tipo: x.tipo, base64: x.base64 }; }) };
+    if (tipo === "PERFIS" && !payload.perfis.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos um perfil, ou escolha Todos os usuários."); return; }
+    if (tipo === "PESSOAS" && !payload.pessoas.length) { AvisosTela_msgForm_("Não foi possível publicar: marque pelo menos uma pessoa, ou escolha Todos os usuários."); return; }
+    var btn = document.getElementById("avsF_ok"); if (btn) btn.disabled = true;
+    AvisosTela_chamar_("Avisos_apiPublicar", payload, function (res) {
+      AvisosTela_fecharFormulario_();
+      alert(res.message + AvisosTela_resumoEnvio_(res.notificacoes));
+      AVT.aba = "gestao";
+      if (AVT.tela === "avisos") AvisosTela_render_();
+      AvisosTela_atualizarContador_();
+    }, function (msg) { if (btn) btn.disabled = false; AvisosTela_msgForm_(msg); }, { carregando: "Publicando o aviso e enviando as notificações..." });
+  }
+</script>

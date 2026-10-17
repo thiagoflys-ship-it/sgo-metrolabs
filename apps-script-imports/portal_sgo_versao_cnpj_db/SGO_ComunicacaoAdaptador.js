@@ -11,7 +11,7 @@
  *  - o SGO+ não cria a planilha compartilhada: espera o COMMAND criar.
  */
 
-var SGO_COM_SETORES = { ADMIN: "Administração", GESTOR: "Gestão", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro" };
+var SGO_COM_SETORES = { ADMIN: "Administração", DIRETORIA: "Diretoria", GESTOR: "Gestão", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro" };
 
 function comAdaptador_() {
   var url = "";
@@ -46,7 +46,8 @@ function comUsuarioDoToken_(token) {
   var id = String(data.userId || data.id || "").trim();
   if (!id) throw new Error("COM: SESSAO");
   return { id: id, login: String(data.usuario || ""), nome: String(data.nome || data.usuario || ""), setor: sgoComSetor_(perfil),
-    admin: perfil === "ADMIN", gestao: perfil === "ADMIN" || perfil === "GESTOR" };
+    // gestão = os mesmos perfis de isAdminPerfilAuth_ (SGO_Auth.js); antes a Diretoria ficava de fora.
+    admin: perfil === "ADMIN", gestao: perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA" };
 }
 
 /** Usuários ativos do SGO+ (sem os do Portal do Cliente). */
@@ -86,6 +87,8 @@ function comAdaptadorConfigExtra_() {
 
 /** Rotina diária do SGO+ (instale com SGO_comInstalarGatilho uma vez no editor). */
 function SGO_comSincronizarPessoasDiario() {
+  // Rotina do gatilho: recusada quando chamada pelo navegador (SGO_Main.js SGO_execucaoInterna_).
+  if (!SGO_execucaoInterna_()) return { ok: false, message: "Rotina interna: roda só pelo gatilho diário." };
   return comSincronizarPessoas_();
 }
 

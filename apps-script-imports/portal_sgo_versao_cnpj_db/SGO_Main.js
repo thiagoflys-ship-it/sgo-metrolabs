@@ -25,6 +25,16 @@ function doGet(e) {
   }
 }
 
+/**
+ * Funções de rotina (gatilho de tempo, editor) que não recebem sessão ficam
+ * visíveis para o navegador porque o nome não termina em "_". Esta conferência
+ * recusa a chamada vinda da internet: no gatilho e no editor há usuário ativo
+ * (o dono / o e-mail do sistema); no navegador, não (getActiveUser vazio).
+ */
+function SGO_execucaoInterna_() {
+  try { return !!String(Session.getActiveUser().getEmail() || "").trim(); } catch (e) { return false; }
+}
+
 function getPublicConfig() {
   return {
     appName: SGO_CFG.APP_NAME,
@@ -75,7 +85,15 @@ function obterDashboardDetalhado(sessionId) {
 
     const parseData_ = function (v) {
       if (!v) return null;
-      const d = (v instanceof Date) ? v : new Date(String(v));
+      if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+      const s = String(v).trim();
+      // "aaaa-mm-dd" e "dd/mm/aaaa" como dia local (new Date("aaaa-mm-dd") é UTC
+      // e "dd/mm/aaaa" nem é lido — esses vencimentos sumiam do painel).
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      const d = new Date(s);
       return (d && !isNaN(d.getTime())) ? d : null;
     };
 

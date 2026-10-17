@@ -262,6 +262,26 @@ function validarSessao(sessionId) {
       return { valid: false, message: "Sessão expirada ou inexistente." };
     }
 
+    // Reconfere o cadastro a cada 5 minutos: usuário inativado, excluído ou
+    // com perfil trocado não continua entrando com a sessão antiga (antes
+    // valia até 6 h depois de inativado).
+    const conferidoEm = Date.parse(data.conferidoEm || "") || 0;
+    if (data.userId && Date.now() - conferidoEm > 300000) {
+      const cadastro = lerUsuarioSessaoAuth_(data.userId);
+      if (cadastro === null || (cadastro && SGO_UTILS.safeUpper(cadastro.STATUS) !== SGO_CFG.STATUS.ATIVO)) {
+        removerSessaoAuth_(sessionKey);
+        registrarLogAuth_("SESSAO_ENCERRADA", { usuario: data.usuario, perfil: data.perfil, detalhe: "Sessão encerrada: usuário inativo ou removido do cadastro." });
+        return { valid: false, message: "Seu acesso foi desativado ou o seu usuário não existe mais. Fale com o gestor do sistema." };
+      }
+      if (cadastro) {
+        data.perfil = SGO_UTILS.safeUpper(cadastro.PERFIL);
+        data.clienteId = SGO_UTILS.safe(cadastro.CLIENTE_ID);
+        data.nome = SGO_UTILS.safe(cadastro.NOME) || data.nome;
+        data.usuario = normalizarTextoAuth_(cadastro.USUARIO) || data.usuario;
+        data.conferidoEm = new Date().toISOString();
+      }
+    }
+
     // Renova a sessão a cada validação
     const agora = new Date();
     data.lastAccessAt = SGO_UTILS.nowIso();
@@ -279,6 +299,20 @@ function validarSessao(sessionId) {
       valid: false,
       message: "Erro ao validar sessão."
     };
+  }
+}
+
+/**
+ * Linha do usuário da sessão em CAD_USUARIOS: objeto, null (não existe mais)
+ * ou false (não deu para ler agora — não derruba a sessão por falha de leitura).
+ */
+function lerUsuarioSessaoAuth_(userId) {
+  try {
+    const alvo = SGO_UTILS.safe(userId);
+    const achado = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).find(function (u) { return SGO_UTILS.safe(u.ID) === alvo; });
+    return achado || null;
+  } catch (e) {
+    return false;
   }
 }
 

@@ -30,8 +30,12 @@ const SGO_ALERTAS = (() => {
       if (doc.DATA_VENCIMENTO) {
         // Tenta fazer o parse da data. Como implementamos o padrão ISO nas outras abas, 
         // precisamos separar o "T" caso o banco retorne "YYYY-MM-DDTHH:mm:ss"
-        let dataStr = String(doc.DATA_VENCIMENTO);
+        let dataStr = String(doc.DATA_VENCIMENTO).trim();
         if (dataStr.includes("T")) dataStr = dataStr.split("T")[0];
+        // Também aceita dd/mm/aaaa (vencimentos gravados por outros módulos);
+        // antes esses documentos nunca geravam alerta.
+        const br = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (br) dataStr = br[3] + "-" + br[2] + "-" + br[1];
 
         const partes = dataStr.split("-");
         
@@ -142,7 +146,8 @@ const SGO_ALERTAS = (() => {
     }
 
     // Ordena do mais urgente (negativos/vencidos primeiro) para os mais distantes
-    alertas.sort((a, b) => a.dias - b.dias);
+    // Alerta sem data (validade ilegível) vai para o topo, junto dos vencidos.
+    alertas.sort((a, b) => ((a.dias === null ? -1e9 : a.dias) - (b.dias === null ? -1e9 : b.dias)));
 
     // Adicionado log padronizado para as 6 colunas do SYS_LOGS
     SGO_DATA.log("ALERTAS_CONSULTA", sessao.usuario, "Alertas do dashboard carregados. Total gerado: " + alertas.length, "ALERTAS");

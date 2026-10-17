@@ -1072,6 +1072,8 @@
   function carregarFarolCondutaDashboard_() {
     const el = document.getElementById("dashboardFarolConduta");
     if (!el) return;
+    // Sem sessão (painel montado antes do login): não chama o servidor, que só devolveria "Sessão não informada".
+    if (!SESSION) return;
     if (USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE") return;
 
     google.script.run
@@ -3448,7 +3450,11 @@
         mobileDocCarregarUnidades_(it.CLIENTE_ID, it.UNIDADE_ID, it.EQUIPAMENTO_ID);
         setValue_("mob_doc_tipo", it.TIPO_DOCUMENTO);
         setValue_("mob_doc_nome", it.NOME_ARQUIVO);
-        setValue_("mob_doc_vencimento", it.DATA_VENCIMENTO);
+        // Campo de data só aceita aaaa-mm-dd: hora ou dd/mm/aaaa deixavam o campo vazio e salvar apagava o vencimento.
+        let venc = String(it.DATA_VENCIMENTO || "").split("T")[0];
+        const vencBr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(venc);
+        if (vencBr) venc = vencBr[3] + "-" + vencBr[2] + "-" + vencBr[1];
+        setValue_("mob_doc_vencimento", venc);
       })
       .withFailureHandler(function (err) { alert("Não foi possível carregar o documento. Verifique a conexão e tente de novo."); console.error(err); })
       .documentosObter(SESSION, id);

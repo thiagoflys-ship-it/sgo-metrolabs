@@ -156,11 +156,17 @@ const SGO_UNIDADES = (() => {
       return { success: false, message: "Unidade não encontrada." };
     }
 
-    const dados = normalizarPayload_(payload);
+    // Merge: campo ausente no pedido mantém o valor atual (não apaga).
+    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
+      ["CLIENTE_ID", "NOME_UNIDADE", "CNPJ_UNIDADE", "ENDERECO", "CIDADE", "UF", "RESPONSAVEL", "TELEFONE"]);
     const erros = validarPayload_(dados, false);
 
     if (erros.length) {
       return { success: false, message: erros.join(" ") };
+    }
+
+    if (SGO_UTILS.safe(dados.CLIENTE_ID) !== SGO_UTILS.safe(atual.CLIENTE_ID)) {
+      return { success: false, message: "Não foi possível salvar: a unidade não muda de cliente por esta tela. Para levar a unidade a outro cliente, use Gestão de vínculos (Tipo Unidade, ação Transferir), que confere equipamentos e documentos ligados." };
     }
 
     const cliente = SGO_DATA.getById(SHEET_CLIENTES, dados.CLIENTE_ID);
@@ -169,7 +175,7 @@ const SGO_UNIDADES = (() => {
     }
 
     if (SGO_UTILS.safeUpper(cliente.STATUS) !== STATUS_ATIVO) {
-      return { success: false, message: "Não é permitido vincular unidade a cliente inativo." };
+      return { success: false, message: "Não foi possível salvar: o cliente desta unidade está inativo. Reative o cliente em Cadastros > Clientes e salve a unidade de novo." };
     }
 
     if (dados.CNPJ_UNIDADE && existeCnpjDuplicado_(dados.CNPJ_UNIDADE, unidadeId)) {
@@ -304,7 +310,16 @@ const SGO_UNIDADES = (() => {
       return { success: false, message: "Unidade não encontrada." };
     }
 
-    const ok = SGO_DATA.remove(SHEET_NAME, unidadeId);
+    // Cadastro com vínculos (unidades, equipamentos, documentos...) não é apagado:
+    // a regra vem de SGO_DATA.exigirSemVinculos_ e a mensagem já diz o que fazer.
+    let ok;
+    try {
+      ok = SGO_DATA.remove(SHEET_NAME, unidadeId);
+    } catch (eVinculo) {
+      const msg = String((eVinculo && eVinculo.message) || eVinculo);
+      if (/possui vínculos/.test(msg)) return { success: false, message: "Não foi possível excluir a unidade: " + msg.charAt(0).toLowerCase() + msg.slice(1) };
+      throw eVinculo;
+    }
 
     if (!ok) {
       return { success: false, message: "Não foi possível excluir a unidade." };

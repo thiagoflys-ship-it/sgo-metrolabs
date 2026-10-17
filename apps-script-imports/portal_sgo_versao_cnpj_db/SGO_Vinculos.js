@@ -253,7 +253,7 @@ const SGO_VINCULOS = (() => {
     const lock=LockService.getScriptLock(),owner=!lock.hasLock();if(owner)lock.waitLock(30000);
     try {
       const c=SGO_DATA.getById('CAD_CLIENTES',clienteId);if(!active(c))throw new Error('Cliente não encontrado ou inativo.');
-      const cnpj=digits(c.CNPJ);if(!cnpj||!SGO_UTILS.isCnpj(cnpj))throw new Error('Confira o CNPJ do cliente antes de criar a unidade principal.');
+      const cnpj=digits(c.CNPJ);if(!cnpj||!SGO_UTILS.isCnpj(cnpj))throw new Error('Não foi possível criar a unidade principal: o cliente não tem CNPJ válido. Clique em Abrir / editar cadastro, informe o CNPJ do cliente, salve e tente de novo.');
       const existing=SGO_DATA.getAll('CAD_UNIDADES').filter(u=>digits(u.CNPJ_UNIDADE)===cnpj);
       if(existing.length) {
         if(existing.length===1&&text(existing[0].CLIENTE_ID)===text(c.ID)&&active(existing[0]))return {success:true,item:existing[0],message:'Unidade principal já cadastrada: '+label(existing[0])};

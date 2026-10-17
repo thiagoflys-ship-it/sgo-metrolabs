@@ -230,6 +230,8 @@ function Atividades_garantirRotina_() {
  * (cada atraso uma vez), então é inofensiva se chamada de outro lugar.
  */
 function Atividades_rotinaAtrasos() {
+  // Rotina do gatilho: recusada quando chamada pelo navegador (SGO_Main.js SGO_execucaoInterna_).
+  if (!SGO_execucaoInterna_()) return 0;
   Atividades_garantirAbas_();
   ATV_FILA_NTF = [];
   var n = Atividades_notificarAtrasos_();

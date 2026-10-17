@@ -124,6 +124,8 @@ const SGO_EQUIPAMENTOS = (() => {
     }
 
     const dados = normalizarPayload_(payload);
+    const errosVinculo = validarVinculo_(dados);
+    if (errosVinculo) return { success: false, message: "Não foi possível cadastrar: " + errosVinculo };
 
     const registro = SGO_DATA.normalizarObjetoParaSheet(
       SHEET_NAME,
@@ -159,7 +161,12 @@ const SGO_EQUIPAMENTOS = (() => {
     
     if (!atual) return { success: false, message: "Equipamento não encontrado." };
 
-    const dados = normalizarPayload_(payload);
+    // Merge: campo ausente no pedido mantém o valor atual (não apaga).
+    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
+      ["CLIENTE_ID", "UNIDADE_ID", "TIPO", "FABRICANTE", "MODELO", "SERIE", "TAG", "SETOR"]);
+    if (SGO_UTILS.safe(dados.CLIENTE_ID) !== SGO_UTILS.safe(atual.CLIENTE_ID) || SGO_UTILS.safe(dados.UNIDADE_ID) !== SGO_UTILS.safe(atual.UNIDADE_ID)) {
+      return { success: false, message: "Não foi possível salvar: o equipamento não muda de cliente ou de unidade por esta tela. Use Gestão de vínculos (Tipo Equipamento, ação Transferir), que confere documentos e certificados ligados." };
+    }
 
     const novosDados = Object.assign({}, atual, {
       ID: equipId,
@@ -189,16 +196,52 @@ const SGO_EQUIPAMENTOS = (() => {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
     
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_INATIVO });
-    return { success: true };
+    const equipId = SGO_UTILS.safe(id);
+    if (!SGO_DATA.getById(SHEET_NAME, equipId)) return { success: false, message: "Equipamento não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista e tente de novo." };
+    if (!SGO_DATA.update(SHEET_NAME, equipId, { STATUS: STATUS_INATIVO })) return { success: false, message: "Não foi possível inativar o equipamento. Atualize a lista e tente de novo." };
+    SGO_DATA.log("EQUIPAMENTOS_INATIVAR", sessao.usuario, "Equipamento inativado ID=" + equipId, "EQUIPAMENTOS");
+    return { success: true, message: "Equipamento inativado com sucesso." };
   }
 
   function reativar(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
     
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_ATIVO });
-    return { success: true };
+    const equipId = SGO_UTILS.safe(id);
+    const atual = SGO_DATA.getById(SHEET_NAME, equipId);
+    if (!atual) return { success: false, message: "Equipamento não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista e tente de novo." };
+    // Não reativa equipamento ligado a cliente/unidade inativos (ficaria "ativo" sem vínculo válido).
+    const errosVinculo = validarVinculo_(atual);
+    if (errosVinculo) return { success: false, message: "Não foi possível reativar: " + errosVinculo };
+    if (!SGO_DATA.update(SHEET_NAME, equipId, { STATUS: STATUS_ATIVO })) return { success: false, message: "Não foi possível reativar o equipamento. Atualize a lista e tente de novo." };
+    SGO_DATA.log("EQUIPAMENTOS_REATIVAR", sessao.usuario, "Equipamento reativado ID=" + equipId, "EQUIPAMENTOS");
+    return { success: true, message: "Equipamento reativado com sucesso." };
+  }
+
+  /** Cliente e unidade obrigatórios, ativos e correspondentes. Devolve a mensagem do problema ou "". */
+  function validarVinculo_(dados) {
+    if (!SGO_UTILS.safe(dados.CLIENTE_ID)) return "Selecione o cliente do equipamento.";
+    if (!SGO_UTILS.safe(dados.UNIDADE_ID)) return "Selecione a unidade do equipamento.";
+    const cliente = SGO_DATA.getById(SHEET_CLIENTES, dados.CLIENTE_ID);
+    if (!cliente) return "O cliente escolhido não foi encontrado. Atualize a página e selecione de novo.";
+    if (SGO_UTILS.safeUpper(cliente.STATUS) !== STATUS_ATIVO) return "o cliente deste equipamento está inativo. Reative o cliente em Cadastros > Clientes e tente de novo.";
+    const unidade = SGO_DATA.getById(SHEET_UNIDADES, dados.UNIDADE_ID);
+    if (!unidade || SGO_UTILS.safe(unidade.CLIENTE_ID) !== SGO_UTILS.safe(cliente.ID)) return "A unidade escolhida não pertence a este cliente. Selecione o cliente e depois uma unidade dele.";
+    if (SGO_UTILS.safeUpper(unidade.STATUS) !== STATUS_ATIVO) return "a unidade deste equipamento está inativa. Reative a unidade em Cadastros > Unidades e tente de novo.";
+    return "";
+  }
+
+  /** Abas (fora do cadastro) que citam este equipamento. Só leitura. */
+  function tabelasComEquipamento_(equipId) {
+    const achadas = [];
+    SGO_DATA.getDB().getSheets().forEach(function (sheet) {
+      const nome = sheet.getName();
+      if (nome === SHEET_NAME || /^(SYS_LOGS|BK_|SYS_VINCULOS_AUDITORIA)/.test(nome) || sheet.getLastRow() < 2 || sheet.getLastColumn() < 1) return;
+      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const cols = headers.map(function (h, i) { return /^(EQUIPAMENTO_ID|EQUIPAMENTOS_ID_SGO)$/.test(String(h)) ? i : -1; }).filter(function (i) { return i >= 0; });
+      if (cols.some(function (i) { return sheet.getRange(2, i + 1, sheet.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]).split(",").map(function (x) { return x.trim(); }).indexOf(equipId) >= 0; }); })) achadas.push(nome);
+    });
+    return achadas;
   }
 
   function excluir(sessionId, id) {
@@ -213,9 +256,15 @@ const SGO_EQUIPAMENTOS = (() => {
       return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
     }
 
-    SGO_DATA.remove(SHEET_NAME, SGO_UTILS.safe(id));
-    SGO_DATA.log("EQUIPAMENTOS_EXCLUIR", sessao.usuario, "Equipamento excluído ID=" + id, "EQUIPAMENTOS");
-    return { success: true };
+    const equipId = SGO_UTILS.safe(id);
+    if (!SGO_DATA.getById(SHEET_NAME, equipId)) return { success: false, message: "Equipamento não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
+    // Equipamento com documento, certificado, laudo ou atendimento ligado não é apagado
+    // (perderia o histórico do prontuário): o caminho é inativar.
+    const ligados = tabelasComEquipamento_(equipId);
+    if (ligados.length) return { success: false, message: "Não foi possível excluir: este equipamento tem registros ligados em " + ligados.join(", ") + ". Para tirar de uso sem perder o histórico, use Inativar." };
+    if (!SGO_DATA.remove(SHEET_NAME, equipId)) return { success: false, message: "Não foi possível excluir o equipamento. Atualize a lista e tente de novo." };
+    SGO_DATA.log("EQUIPAMENTOS_EXCLUIR", sessao.usuario, "Equipamento excluído ID=" + equipId, "EQUIPAMENTOS");
+    return { success: true, message: "Equipamento excluído com sucesso." };
   }
 
   function pesquisar(sessionId, termo) {
@@ -304,13 +353,13 @@ const SGO_EQUIPAMENTOS = (() => {
 /* =========================
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
-function equipamentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function equipamentosListarUnidadesAtivasPorCliente(sessionId, clienteId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarUnidadesAtivasPorCliente(sessionId, clienteId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function equipamentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar os equipamentos", e) }; } }
+function equipamentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("carregar o equipamento", e) }; } }
+function equipamentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("cadastrar o equipamento", e) }; } }
+function equipamentosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("atualizar o equipamento", e) }; } }
+function equipamentosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("inativar o equipamento", e) }; } }
+function equipamentosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("reativar o equipamento", e) }; } }
+function equipamentosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("excluir o equipamento", e) }; } }
+function equipamentosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("pesquisar os equipamentos", e) }; } }
+function equipamentosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar os clientes", e) }; } }
+function equipamentosListarUnidadesAtivasPorCliente(sessionId, clienteId) { try { return JSON.parse(JSON.stringify(SGO_EQUIPAMENTOS.listarUnidadesAtivasPorCliente(sessionId, clienteId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar as unidades do cliente", e) }; } }

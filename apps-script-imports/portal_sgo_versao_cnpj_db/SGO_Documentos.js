@@ -124,7 +124,7 @@ const SGO_DOCUMENTOS = (() => {
                  : PropertiesService.getScriptProperties().getProperty("FOLDER_DOCUMENTOS");
 
     if (!rootId) {
-      throw new Error("Sistema de pastas inteligente não configurado. Execute a função configurarPastasSGO() no arquivo SGO_DriverSetup.");
+      throw new Error("a pasta de documentos do sistema ainda não foi configurada, então o arquivo não foi guardado. Avise o administrador do sistema (configuração das pastas do Drive)");
     }
 
     const root = DriveApp.getFolderById(rootId);
@@ -141,7 +141,8 @@ const SGO_DOCUMENTOS = (() => {
 
     // 3. Se houver equipamento, cria a estrutura exclusiva para ele
     if (equipamento) {
-      const nomeEquip = SGO_UTILS.safe(equipamento.TAG) + " - " + SGO_UTILS.safe(equipamento.TIPO);
+      // Mesmo nome de pasta que o QR Code abre (SGO_QRCode.js obterLinkPastaEquipamento_).
+      const nomeEquip = (SGO_UTILS.safe(equipamento.TAG) || "SEM TAG") + " - " + (SGO_UTILS.safe(equipamento.TIPO) || "SEM TIPO");
       const pastaEquip = obterOuCriarPasta_(pastaUnidade, nomeEquip);
 
       // =========================================================================
@@ -213,7 +214,7 @@ const SGO_DOCUMENTOS = (() => {
         // Envia para o motor inteligente de pastas
         dados.LINK_ARQUIVO = uploadInteligente_(sessao, payload, cliente, unidade, equipamento);
       } catch (e) {
-        return { success: false, message: "Falha ao organizar arquivo no Drive: " + e.message };
+        return { success: false, message: "Não foi possível guardar o arquivo no Drive: " + String(e.message || e).replace(/[.\s]+$/, "") + ". Nada foi registrado; tente de novo." };
       }
     } else {
         // Se não mandou arquivo, cria o documento como PENDENTE
@@ -236,9 +237,12 @@ const SGO_DOCUMENTOS = (() => {
     );
 
     SGO_DATA.insert(SHEET_NAME, registro);
+    SGO_DATA.log("DOCUMENTOS_CRIAR", sessao.usuario, "Documento criado: " + registro.NOME_ARQUIVO + (registro.STATUS === STATUS_PENDENTE ? " (pendente, sem arquivo)" : ""), "DOCUMENTOS");
     return {
       success: true,
-      message: "Documento salvo e organizado conforme NBR 15943!"
+      message: registro.STATUS === STATUS_PENDENTE
+        ? "Documento registrado como pendente (sem arquivo). Para concluir, abra o documento na lista, clique em Editar e anexe o arquivo."
+        : "Documento salvo e organizado conforme NBR 15943."
     };
   }
 
@@ -250,9 +254,14 @@ const SGO_DOCUMENTOS = (() => {
     const atual = SGO_DATA.getById(SHEET_NAME, docId);
     if (!atual) return { success: false, message: "Não encontrado." };
 
-    const dados = normalizarPayload_(payload);
+    payload = payload || {};
+    // Merge: campo ausente no pedido mantém o valor atual (não apaga).
+    const dados = SGO_DATA.mesclarCampos_(atual, normalizarPayload_(payload), payload,
+      ["CLIENTE_ID", "UNIDADE_ID", "EQUIPAMENTO_ID", "TIPO_DOCUMENTO", "NOME_ARQUIVO", "DATA_VENCIMENTO"]);
+    const erros = validarPayload_(dados, false);
+    if (erros.length) return { success: false, message: erros.join(" ") };
     SGO_VINCULOS.relation(sessionId, dados.CLIENTE_ID, dados.UNIDADE_ID, dados.EQUIPAMENTO_ID);
-    
+
     if (payload.ARQUIVO_BASE64) {
       try {
         const cli = SGO_DATA.getById(SHEET_CLIENTES, dados.CLIENTE_ID);
@@ -261,14 +270,16 @@ const SGO_DOCUMENTOS = (() => {
         dados.LINK_ARQUIVO = uploadInteligente_(sessao, payload, cli, uni, eqp);
         dados.STATUS = STATUS_ATIVO; // Se estava pendente e fez upload, vira ativo
       } catch (e) {
-        return { success: false, message: "Erro no upload: " + e.message };
+        return { success: false, message: "Não foi possível guardar o novo arquivo no Drive: " + String(e.message || e).replace(/[.\s]+$/, "") + ". O documento ficou como estava; tente de novo." };
       }
     } else {
       dados.LINK_ARQUIVO = atual.LINK_ARQUIVO;
       dados.STATUS = atual.STATUS; 
     }
 
-    const novosDados = SGO_DATA.normalizarObjetoParaSheet(SHEET_NAME, {
+    // Só os campos deste formulário: colunas que outros módulos acrescentem
+    // em DOC_DOCUMENTOS ficam como estão (antes o normalizar zerava todas).
+    const novosDados = Object.assign({}, {
       ID: docId,
       CLIENTE_ID: dados.CLIENTE_ID,
       UNIDADE_ID: dados.UNIDADE_ID,
@@ -289,27 +300,33 @@ const SGO_DOCUMENTOS = (() => {
     return { success: true, message: "Documento atualizado com sucesso." };
   }
 
-  function inativar(sessionId, id) { 
+  function statusDoc_(sessionId, id, status, acao) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_INATIVO }); return { success: true }; 
+    const docId = SGO_UTILS.safe(id);
+    if (!SGO_DATA.getById(SHEET_NAME, docId)) return { success: false, message: "Documento não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista e tente de novo." };
+    if (!SGO_DATA.update(SHEET_NAME, docId, { STATUS: status })) return { success: false, message: "Não foi possível " + acao + " o documento. Atualize a lista e tente de novo." };
+    SGO_DATA.log("DOCUMENTOS_" + status, sessao.usuario, "Documento " + (status === STATUS_ATIVO ? "reativado" : "inativado") + " ID=" + docId, "DOCUMENTOS");
+    return { success: true, message: "Documento " + (status === STATUS_ATIVO ? "reativado" : "inativado") + " com sucesso." };
   }
-  function reativar(sessionId, id) { 
+  function inativar(sessionId, id) { return statusDoc_(sessionId, id, STATUS_INATIVO, "inativar"); }
+  function reativar(sessionId, id) { return statusDoc_(sessionId, id, STATUS_ATIVO, "reativar"); }
+  function excluir(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    SGO_DATA.update(SHEET_NAME, SGO_UTILS.safe(id), { STATUS: STATUS_ATIVO }); return { success: true }; 
-  }
-  function excluir(sessionId, id) { 
-    const sessao = exigirSessao(sessionId);
-    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
-    
+
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir documento ID=" + id, "DOCUMENTOS");
       return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
     }
-    
-    SGO_DATA.remove(SHEET_NAME, SGO_UTILS.safe(id)); 
-    return { success: true }; 
+
+    const docId = SGO_UTILS.safe(id);
+    const atual = SGO_DATA.getById(SHEET_NAME, docId);
+    if (!atual) return { success: false, message: "Documento não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
+    if (!SGO_DATA.remove(SHEET_NAME, docId)) return { success: false, message: "Não foi possível excluir o documento. Atualize a lista e tente de novo." };
+    // O arquivo no Drive não é apagado: só o registro sai da lista (fica no log para rastrear).
+    SGO_DATA.log("DOCUMENTOS_EXCLUIR", sessao.usuario, "Documento excluído ID=" + docId + " (" + SGO_UTILS.safe(atual.NOME_ARQUIVO) + ", " + SGO_UTILS.safe(atual.LINK_ARQUIVO) + ")", "DOCUMENTOS");
+    return { success: true, message: "Documento excluído da lista com sucesso. O arquivo no Drive foi mantido." };
   }
 
   function pesquisar(sessionId, termo) {
@@ -461,13 +478,13 @@ const SGO_DOCUMENTOS = (() => {
 /* =========================
    WRAPPERS BLINDADOS (VACINA ANTI-DATA)
 ========================= */
-function documentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosListarEquipamentosAtivosPorUnidade(sessionId, unidadeId) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.listarEquipamentosAtivosPorUnidade(sessionId, unidadeId))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
-function documentosRegistrarExistente(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.registrarDocumentoExistente(sessionId, payload))); } catch(e) { return { success: false, message: "Erro: " + e.message }; } }
+function documentosListar(sessionId) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.listar(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar os documentos", e) }; } }
+function documentosObter(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.obter(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("carregar o documento", e) }; } }
+function documentosCriar(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.criar(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("salvar o documento", e) }; } }
+function documentosAtualizar(sessionId, id, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("atualizar o documento", e) }; } }
+function documentosInativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("inativar o documento", e) }; } }
+function documentosReativar(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("reativar o documento", e) }; } }
+function documentosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("excluir o documento", e) }; } }
+function documentosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("pesquisar os documentos", e) }; } }
+function documentosListarEquipamentosAtivosPorUnidade(sessionId, unidadeId) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.listarEquipamentosAtivosPorUnidade(sessionId, unidadeId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("listar os equipamentos da unidade", e) }; } }
+function documentosRegistrarExistente(sessionId, payload) { try { return JSON.parse(JSON.stringify(SGO_DOCUMENTOS.registrarDocumentoExistente(sessionId, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("vincular o documento ao cadastro", e) }; } }

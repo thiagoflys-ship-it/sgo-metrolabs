@@ -563,6 +563,22 @@ const SGO_DATA = {
   };
 });
 
+/**
+ * Edição com merge (regra do dono: nunca sobrescrever campo existente sem
+ * merge). Para cada campo: se o pedido trouxe a chave, vale o valor já
+ * normalizado (inclusive vazio, quando o operador limpou o campo); se não
+ * trouxe, fica o valor atual do registro. Assim uma chamada parcial (outro
+ * módulo, integração, formulário com campo faltando) não apaga dados.
+ */
+SGO_DATA.mesclarCampos_ = function(atual, normalizado, pedido, campos) {
+  const saida = {};
+  const origem = pedido || {};
+  campos.forEach(function(c) {
+    saida[c] = Object.prototype.hasOwnProperty.call(origem, c) ? normalizado[c] : (atual && atual[c] !== undefined && atual[c] !== null ? atual[c] : "");
+  });
+  return saida;
+};
+
 SGO_DATA.prepararCnpjTexto_ = function(sheet, headers, inicio, rows) {
   if (inicio + rows.length - 1 > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), inicio + rows.length - 1 - sheet.getMaxRows());
   headers.forEach(function(h, i) {

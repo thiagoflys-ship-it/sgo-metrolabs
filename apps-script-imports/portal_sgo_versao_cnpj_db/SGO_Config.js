@@ -49,6 +49,9 @@ const SGO_CFG = (() => {
     ========================== */
     PROFILES: [
       "ADMIN",
+      // DIRETORIA: tratado como gestão em todo o sistema (isAdminPerfilAuth_,
+      // Avisos, Atividades, Auvo), mas faltava aqui — não dava para cadastrar.
+      "DIRETORIA",
       "GESTOR",
       "TECNICO",
       "METROLOGIA",

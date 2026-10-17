@@ -81,7 +81,10 @@ const SGO_INVENTARIO = (() => {
 
   function gerarInventario(sessionId, filtros) {
     const sessao = exigirSessao(sessionId);
-    filtros = filtros || {};
+    filtros = Object.assign({}, filtros || {});
+    // Perfil Cliente: o filtro de cliente é sempre o da própria sessão (antes,
+    // pedir outro clienteId devolvia o contato/e-mail/telefone de outra empresa).
+    if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") filtros.clienteId = SGO_UTILS.safe(sessao.clienteId);
 
     let equipamentos = SGO_DATA.getAll(SHEET_EQP);
     const clientes = SGO_DATA.getAll(SHEET_CLI);
@@ -194,9 +197,10 @@ const SGO_INVENTARIO = (() => {
   }
 
   function listarClientesAtivos(sessionId) {
-    exigirSessao(sessionId);
+    const sessao = exigirSessao(sessionId);
+    const ehCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE";
     const itens = SGO_DATA.getAll(SHEET_CLI)
-      .filter(c => SGO_UTILS.safeUpper(c.STATUS) === STATUS_ATIVO)
+      .filter(c => SGO_UTILS.safeUpper(c.STATUS) === STATUS_ATIVO && (!ehCliente || SGO_UTILS.safe(c.ID) === SGO_UTILS.safe(sessao.clienteId)))
       .map(c => ({ ID: SGO_UTILS.safe(c.ID), NOME: SGO_UTILS.safe(c.NOME_FANTASIA || c.RAZAO_SOCIAL), CNPJ: SGO_UTILS.safe(c.CNPJ) }))
       .sort((a, b) => a.NOME.localeCompare(b.NOME));
     return { success: true, items: itens };
@@ -247,9 +251,11 @@ const SGO_INVENTARIO = (() => {
     if (!html) return { success: false, message: "Nenhum conteúdo de documento recebido para salvar." };
 
     const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Sao_Paulo", "yyyyMMdd_HHmmss");
-    const nomeArquivo = INV_sanitizarNome_("Inventario - " + (payload.cliente || "Todos os clientes") + " - " + timestamp) + ".pdf";
+    // Perfil Cliente grava sempre na pasta da própria empresa.
+    const nomeCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE" ? INV_nomeClienteSessao_(sessao) : payload.cliente;
+    const nomeArquivo = INV_sanitizarNome_("Inventario - " + (nomeCliente || "Todos os clientes") + " - " + timestamp) + ".pdf";
 
-    const folder = INV_obterPastaCliente_(payload.cliente);
+    const folder = INV_obterPastaCliente_(nomeCliente);
     const blobHtml = Utilities.newBlob(html, "text/html", nomeArquivo.replace(/\.pdf$/i, ".html"));
 
     let pdfBlob;
@@ -269,8 +275,17 @@ const SGO_INVENTARIO = (() => {
     return resposta;
   }
 
+  /** Nome da pasta da empresa do usuário Cliente (o mesmo que a tela usa: fantasia ou razão social). */
+  function INV_nomeClienteSessao_(sessao) {
+    const c = SGO_DATA.getById(SHEET_CLI, SGO_UTILS.safe(sessao.clienteId));
+    if (!c) throw new Error("Não foi possível localizar a empresa do seu usuário. Peça ao gestor para conferir o vínculo do seu usuário com o cliente.");
+    return SGO_UTILS.safe(c.NOME_FANTASIA || c.RAZAO_SOCIAL);
+  }
+
   function listarDocumentosSalvos(sessionId, termoBusca) {
-    exigirSessao(sessionId);
+    const sessao = exigirSessao(sessionId);
+    // Perfil Cliente só vê os inventários da pasta da própria empresa.
+    const pastaPermitida = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE" ? INV_sanitizarNome_(INV_nomeClienteSessao_(sessao)) : null;
     const termo = String(termoBusca || "").trim().toLowerCase();
     const raiz = INV_obterPastaDocumentos_();
     const resultado = [];
@@ -279,6 +294,7 @@ const SGO_INVENTARIO = (() => {
     while (pastasClientes.hasNext() && resultado.length < 300) {
       const pastaCliente = pastasClientes.next();
       const nomeCliente = pastaCliente.getName();
+      if (pastaPermitida !== null && nomeCliente !== pastaPermitida) continue;
       const bateNomeCliente = !termo || nomeCliente.toLowerCase().indexOf(termo) !== -1;
 
       const arquivos = pastaCliente.getFilesByType(MimeType.PDF);
