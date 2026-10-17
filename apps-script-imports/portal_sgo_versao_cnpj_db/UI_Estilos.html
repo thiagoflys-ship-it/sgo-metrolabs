@@ -1584,7 +1584,7 @@
     line-height: 1.4;
     color: var(--text-strong);
   }
-  .mobile-farol-strip .farol-gauge-mini { width: 46px; flex: 0 0 auto; }
+  .mobile-farol-strip .farol-gauge-mini { width: 84px; flex: 0 0 auto; }
   .mobile-farol-strip .farol-mini-linha { display: flex; align-items: center; gap: 10px; }
 
   /* Gauge/sinaleiro do Programa de Conduta (2026-09-02) — card com
@@ -1703,9 +1703,8 @@
     border: 1px solid var(--bc-warn-line);
   }
   .mobile-frota-secao-titulo {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
-    text-transform: uppercase;
     color: var(--muted);
     margin: 18px 0 8px;
   }
@@ -1713,7 +1712,6 @@
     font-size: 12.5px;
     font-weight: 700;
     color: var(--bc-action);
-    text-transform: uppercase;
     margin: 14px 0 6px;
   }
   .mobile-frota-check-item {
@@ -2124,6 +2122,20 @@
   }
   .dashc-espera-legenda { font-size: 12.5px; color: var(--muted); }
 
+  /* Início: bloco único "Vencimentos" (alertas + documentos em 60 dias) */
+  .dashc-grid-top.dashc-grid-top-2 { grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.4fr); }
+  .dashc-venc-resumo { margin: -4px 0 10px; font-size: 13px; color: var(--muted); }
+  .dashc-venc-resumo b { color: var(--text-strong); font-size: 15px; }
+  .dashc-venc-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; border-bottom: 1px solid var(--bc-line); }
+  .dashc-venc-aba {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    padding: 6px 10px; margin-bottom: -1px; font-size: 12.5px; font-weight: 700;
+    color: var(--muted); cursor: pointer;
+  }
+  .dashc-venc-aba.ativa { color: var(--bc-action); border-bottom-color: var(--bc-action); }
+  .dashc-venc-painel[hidden] { display: none; }
+  .dashc-venc-painel .dash-panel-body { max-height: 320px; overflow-y: auto; }
+
   .dashc-grid-charts {
     display: grid; grid-template-columns: 1fr 1.35fr;
     gap: 16px; margin-bottom: 16px;
@@ -2188,7 +2200,7 @@
     .dashc-grid-charts { grid-template-columns: 1fr; }
   }
   @media (max-width: 700px) {
-    .dashc-grid-top, .dashc-grid-tabelas { grid-template-columns: 1fr; }
+    .dashc-grid-top, .dashc-grid-top.dashc-grid-top-2, .dashc-grid-tabelas { grid-template-columns: 1fr; }
     .dashc-espera { grid-column: auto; }
   }
 
@@ -2921,7 +2933,7 @@
     outline-offset: -2px;
   }
   .inicio-pend:focus-visible { outline: 2px solid var(--bc-action) !important; outline-offset: -2px; }
-  .menu-grupo-nome { flex: 1 1 auto; min-width: 0; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .menu-grupo-nome { flex: 1 1 auto; min-width: 0; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
   .menu-grupo-qtd { font-family: var(--bc-mono); color: var(--bc-side-muted); font-size: 11px; font-weight: 600; letter-spacing: 0; opacity: .8; }
   /* o grupo "principal" (Início, atividades) fica sempre aberto e sem cabeçalho */
   .menu-grupo[data-grupo="principal"] > .menu-grupo-cab { display: none !important; }
@@ -3076,5 +3088,43 @@
     .busca-rodape { display: none; }
   }
   .mobile-topbar-busca { margin-left: auto; }
+
+  /* =========================================================================
+     CELULAR — revisão de 17/10: toques de pelo menos 44 px, campos com fonte
+     de 16 px (o navegador não amplia a tela ao focar), grade inicial mais baixa
+     e espaço no fim da página para o botão flutuante não cobrir o último item.
+     ========================================================================= */
+  .mobile-card-status.aviso { background: var(--bc-warn-bg); color: var(--bc-warn); }
+  .mobile-btn-linha { display: block; width: 100%; min-height: 44px; margin: 0 0 10px; padding: 10px 14px; font-size: 14px; cursor: pointer; }
+  .app-shell.modo-mobile .mobile-btn-salvar,
+  .app-shell.modo-mobile .mobile-btn-cancelar,
+  .app-shell.modo-mobile .mobile-topbar-btn { min-height: 44px; }
+  .app-shell.modo-mobile .mobile-field input,
+  .app-shell.modo-mobile .mobile-field select,
+  .app-shell.modo-mobile .mobile-field textarea,
+  .app-shell.modo-mobile .mobile-search,
+  .app-shell.modo-mobile .mobile-frota-check-obs,
+  .app-shell.modo-mobile .mobile-ponto-card input { font-size: 16px; }
+  .app-shell.modo-mobile .mobile-frota-check-item input[type="checkbox"] { width: 24px; height: 24px; }
+  .app-shell.modo-mobile .mobile-frota-check-item label { padding: 6px 0; }
+  .app-shell.modo-mobile .mobile-frota-foto-thumb button,
+  .app-shell.modo-mobile .mobile-ponto-remover { min-height: 40px; padding: 8px 12px; }
+  .app-shell.modo-mobile #conteudo { padding-bottom: 96px; overflow-wrap: anywhere; }
+  /* a barra fixa do topo tem cerca de 70 px; com 64 px a primeira linha da tela ficava atrás dela */
+  .app-shell.modo-mobile .main-layout .content-area { padding-top: 82px !important; }
+  .app-shell.modo-mobile .mobile-topbar-titulo { white-space: normal; line-height: 1.2; overflow-wrap: anywhere; }
+  .app-shell.modo-mobile #conteudo img, .app-shell.modo-mobile #conteudo table { max-width: 100%; }
+  .app-shell.modo-mobile .mobile-home-grid { gap: 10px; }
+  .app-shell.modo-mobile .mobile-home-tile { aspect-ratio: auto; min-height: 96px; gap: 8px; padding: 14px 8px; }
+  .app-shell.modo-mobile .mobile-home-tile .icone { font-size: 28px; }
+  .app-shell.modo-mobile .mobile-home-tile .legenda { font-size: 13.5px; overflow-wrap: normal; }
+  /* Início do computador aberto pelo celular (busca): links e abas com área de toque maior */
+  .app-shell.modo-mobile .dashc-vermais { display: inline-block; min-height: 40px; padding: 10px 0; }
+  .app-shell.modo-mobile .farol-card a { display: inline-block; min-height: 40px; padding: 10px 0; }
+  .app-shell.modo-mobile .dashc-venc-aba { min-height: 44px; }
+  @media (max-width: 380px) {
+    .app-shell.modo-mobile .mobile-form-actions { flex-wrap: wrap; }
+    .app-shell.modo-mobile .mobile-form-actions button { flex: 1 1 140px; }
+  }
 
 </style>

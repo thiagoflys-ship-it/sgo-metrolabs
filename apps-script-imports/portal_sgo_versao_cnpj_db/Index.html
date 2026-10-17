@@ -120,14 +120,14 @@
         </div>
 
         <div class="sidebar-section menu-grupo" data-grupo="qualificacao" id="menu-secao-tecnica">
-          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação e inspeção</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-qualificacao">
           <button type="button" class="menu-btn" data-mod="autoclave" data-busca="esterilizacao vapor ciclo qualificacao termica" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclaves</button>
           <button type="button" class="menu-btn" data-mod="lavadora" data-busca="termodesinfectora ultrassonica qualificacao termica" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
           <button type="button" class="menu-btn" data-mod="cadeia_frio" data-busca="geladeira refrigerador camara fria freezer vacina datalogger qualificacao termica" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
           <button type="button" class="menu-btn" data-mod="estufa_banhomaria" data-busca="estufa banho maria secadora traqueias qualificacao termica" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
           <button type="button" class="menu-btn" data-mod="declaracao_qiqo" data-busca="qi qo qd qualificacao instalacao operacao desempenho" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-file-circle-check" aria-hidden="true"></i></span>Relatório QI/QO/QD</button>
-          <button type="button" class="menu-btn" data-mod="planejamento_cme" data-busca="cme central material esterilizado receitas planejamento qualificacao" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="nr13" data-busca="nr13 nr 13 vaso pressao caldeira inspecao laudo" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13</button>
           </div>
         </div>
 
@@ -144,11 +144,16 @@
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-documentos" onclick="Menu_alternarGrupo_('documentos')"><span class="menu-grupo-nome">Documentos técnicos</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-documentos">
           <button type="button" class="menu-btn" data-mod="declaracao_exec" data-busca="declaracao execucao servico atestado" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de execução</button>
-          <button type="button" class="menu-btn" data-mod="nr13" data-busca="nr13 nr 13 vaso pressao caldeira inspecao laudo" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13</button>
-          <button type="button" class="menu-btn" data-mod="cronograma_execucao" data-busca="cronograma calendario planejamento grupos" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
           <button type="button" class="menu-btn" data-mod="pgt_pop" data-busca="pgt pop plano gerenciamento tecnologias procedimento operacional padrao" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
           <button type="button" class="menu-btn" data-mod="reg_op" data-busca="registros operacionais formularios" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros operacionais</button>
-          <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="planejamento" id="menu-secao-planejamento">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-planejamento" onclick="Menu_alternarGrupo_('planejamento')"><span class="menu-grupo-nome">Planejamento de serviços</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-planejamento">
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" data-busca="cme central material esterilizado receitas planejamento servicos qualificacao" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" data-busca="cronograma calendario planejamento servicos grupos datas" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
           </div>
         </div>
 
@@ -176,6 +181,7 @@
           <button type="button" class="menu-btn" data-mod="equipamentos" data-busca="equipamento tag serie qr code prontuario" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-industry" aria-hidden="true"></i></span>Equipamentos</button>
           <button type="button" class="menu-btn menu-btn-atalho" data-atalho="vinculos" data-busca="vinculos cliente unidade equipamento auvo" id="menu-btn-vinculos" onclick="Menu_atalho_('vinculos')" title="Painel de vínculos entre cliente, unidade e equipamento"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
           <button type="button" class="menu-btn" data-mod="documentos" data-busca="documentos arquivo anexos nbr 15943 relatorios certificados contratos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Arquivo de documentos</button>
+          <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
           </div>
         </div>
 
@@ -312,12 +318,12 @@
                   <label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:var(--bc-danger);">*</span></label>
                   <select id="doc_tipo_documento">
                     <option value="">Selecione a categoria...</option>
-                    <option value="1. Relatórios de Manutenção">1. Relatórios de Manutenção</option>
-                    <option value="2. Certificados de Calibração">2. Certificados de Calibração</option>
-                    <option value="3. Relatórios de Qualificação">3. Relatórios de Qualificação</option>
-                    <option value="4. Ordens de Serviço">4. Ordens de Serviço</option>
-                    <option value="5. Contratos">5. Contratos</option>
-                    <option value="Outros Documentos">Outros Documentos</option>
+                    <option value="1. Relatórios de Manutenção">Relatórios de manutenção</option>
+                    <option value="2. Certificados de Calibração">Certificados de calibração</option>
+                    <option value="3. Relatórios de Qualificação">Relatórios de qualificação</option>
+                    <option value="4. Ordens de Serviço">Ordens de serviço</option>
+                    <option value="5. Contratos">Contratos</option>
+                    <option value="Outros Documentos">Outros documentos</option>
                   </select>
                 </div>
                 <div class="full">

@@ -348,6 +348,17 @@
     return !!(appBox && appBox.classList.contains("modo-mobile"));
   }
 
+  // Celular: quando o teclado abre, o campo em foco é levado para o meio da área visível
+  // (antes ficava escondido atrás do teclado nos formulários longos, como a vistoria da Frota).
+  document.addEventListener("focusin", function (ev) {
+    const alvo = ev.target;
+    if (!alvo || !/^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName) || alvo.type === "checkbox" || alvo.type === "radio" || alvo.type === "file") return;
+    if (!ehMobileModo_()) return;
+    setTimeout(function () {
+      try { if (document.activeElement === alvo) alvo.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {}
+    }, 350);
+  });
+
   function irTelaInicial_() {
     if (ehMobileModo_()) {
       abrir("mobile_home");
@@ -585,10 +596,13 @@
     if (secaoAdmin) secaoAdmin.style.display = isCliente ? "none" : "block";
 
     // Menu agrupado (JS_Inicio.html): grupos e atalhos novos seguem a mesma regra.
-    ["menu-secao-calibracao", "menu-secao-documentos", "menu-secao-gestao", "menu-btn-vinculos"].forEach(function (id) {
+    ["menu-secao-calibracao", "menu-secao-documentos", "menu-secao-planejamento", "menu-secao-gestao", "menu-btn-vinculos"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.style.display = isCliente ? "none" : "";
     });
+    // Inventário passou para Cadastros (grupo que o cliente vê); antes ficava em Documentos técnicos, escondido do cliente.
+    const btnInventario = document.querySelector('#menu .menu-btn[data-mod="inventario"]');
+    if (btnInventario) btnInventario.style.display = isCliente ? "none" : "";
     // Usuários: o servidor só deixa ADMIN, GESTOR e DIRETORIA gerir usuários (SGO_Usuarios.js,
     // verificarPermissaoAdmin_); para os demais perfis o item levaria a uma tela que só dá erro.
     // Mesma regra para Integração Auvo e Painel de qualidade (Auvo_exigirAdmin_ / Qualidade_exigirGestor_
@@ -743,6 +757,7 @@
     // o orçamento e os relatórios gerenciais dos padrões. Usa o mesmo módulo do Certificado (mesmos
     // dados e funções), mostrando só a parte do laboratório — ver JS_Padroes_Documentos.html › pdAplicarVisao_.
     if (mod === "padroes") {
+      if (ehMobileModo_()) { renderMobilePadroes_(); return; }
       window.CERTCAL_VISAO = "padroes";
       renderMotorModulo_("Padrões de referência", "certificado_calibracao");
       atualizarBadgeModulo_("padroes");
@@ -902,7 +917,7 @@
         <div id="dashboardAlertaFrota" style="${styleAdminOnly}"></div>
         <div id="dashboardSituacaoFrota" style="${styleAdminOnly}"></div>
 
-        <div class="dashc-grid-top">
+        <div class="dashc-grid-top dashc-grid-top-2">
           <div class="dashc-stats">
             <div class="dashc-stat" style="${styleAdminOnly}">
               <div class="dashc-stat-icon azul"><i class="fas fa-building" aria-hidden="true"></i></div>
@@ -919,17 +934,45 @@
               <div class="dashc-stat-label">Documentos no arquivo</div>
               <div class="dashc-stat-value" id="dashCountDocumentos">···</div>
             </div>
+            <div class="dashc-stat" style="${styleAdminOnly}">
+              <div class="dashc-stat-icon azul"><i class="fas fa-location-dot" aria-hidden="true"></i></div>
+              <div class="dashc-stat-label">Unidades cadastradas</div>
+              <div class="dashc-stat-value" id="dashCountUnidades">···</div>
+            </div>
           </div>
 
           <div class="dashc-card" style="${styleAdminOnly}">
             <h3 class="dashc-card-title">Clientes recentes</h3>
             <div id="dashcClientesRecentes"><div class="dashc-vazio">Carregando...</div></div>
           </div>
+        </div>
 
-          <div class="dashc-card dashc-espera">
-            <h3 class="dashc-card-title">Vencimentos (30 dias)</h3>
-            <div class="dashc-espera-circulo" id="dashcVencendo30">0</div>
-            <div class="dashc-espera-legenda">documentos vencendo<br>ou vencidos</div>
+        <div class="dashc-grid-tabelas">
+          <div class="dashc-card dashc-vencimentos">
+            <h3 class="dashc-card-title">Vencimentos</h3>
+            <p class="dashc-venc-resumo"><b id="dashcVencendo30">0</b> <span id="dashcVencendo30Txt">documentos vencidos ou vencendo em 30 dias</span> · <b id="kpiAlertas">0</b> <span id="kpiAlertasTxt">alertas vencidos</span></p>
+            <div class="dashc-venc-abas" role="tablist">
+              <button type="button" class="dashc-venc-aba ativa" role="tab" aria-selected="true" data-aba="alertas" onclick="dashcVencAba_('alertas')">Alertas (documentos, padrões e frota)</button>
+              <button type="button" class="dashc-venc-aba" role="tab" aria-selected="false" data-aba="docs" onclick="dashcVencAba_('docs')">Documentos em 60 dias</button>
+            </div>
+            <div class="dashc-venc-painel" data-painel="alertas">
+              <div id="dashboardAlertas" class="dash-panel-body">Carregando alertas...</div>
+            </div>
+            <div class="dashc-venc-painel" data-painel="docs" hidden>
+              <table class="dashc-tabela">
+                <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Prazo</th></tr></thead>
+                <tbody id="dashcDocsAVencer"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
+              </table>
+              <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
+            </div>
+          </div>
+          <div class="dashc-card">
+            <h3 class="dashc-card-title">Últimos documentos</h3>
+            <table class="dashc-tabela">
+              <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;"></th></tr></thead>
+              <tbody id="dashcUltimosDocs"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
+            </table>
+            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
           </div>
         </div>
 
@@ -942,30 +985,6 @@
             <h3 class="dashc-card-title">Documentos por mês</h3>
             <div class="dashc-chart-box"><canvas id="dashcGraficoBarras"></canvas></div>
           </div>
-        </div>
-
-        <div class="dashc-grid-tabelas">
-          <div class="dashc-card">
-            <h3 class="dashc-card-title">Documentos a vencer (60 dias)</h3>
-            <table class="dashc-tabela">
-              <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Prazo</th></tr></thead>
-              <tbody id="dashcDocsAVencer"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
-            </table>
-            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
-          </div>
-          <div class="dashc-card">
-            <h3 class="dashc-card-title">Últimos documentos</h3>
-            <table class="dashc-tabela">
-              <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;"></th></tr></thead>
-              <tbody id="dashcUltimosDocs"><tr><td colspan="3" class="dashc-vazio">Carregando...</td></tr></tbody>
-            </table>
-            <a class="dashc-vermais" onclick="abrir('documentos')" style="${styleAdminOnly}">Ver todos</a>
-          </div>
-        </div>
-
-        <div class="dashc-chips" style="${styleAdminOnly}">
-          <span class="dashc-chip"><b id="dashCountUnidades">···</b> Unidades</span>
-          <span class="dashc-chip alerta"><b id="kpiAlertas">0</b> Alertas críticos</span>
         </div>
 
         <div id="dashcAuvoSecao" style="display:none">
@@ -1005,15 +1024,21 @@
             </div>
           </div>
         </div>
-
-        <div class="dash-columns">
-          <section class="dash-panel">
-            <h3 class="dash-panel-title">Alertas de vencimento</h3>
-            <div id="dashboardAlertas" class="dash-panel-body">Carregando alertas...</div>
-          </section>
-        </div>
       </div>
     `;
+  }
+
+  // Bloco único "Vencimentos" do Início: alterna entre a lista de alertas
+  // (documentos, padrões e frota) e a tabela de documentos em 60 dias.
+  function dashcVencAba_(aba) {
+    document.querySelectorAll(".dashc-venc-aba").forEach(function (b) {
+      const ativa = b.getAttribute("data-aba") === aba;
+      b.classList.toggle("ativa", ativa);
+      b.setAttribute("aria-selected", ativa ? "true" : "false");
+    });
+    document.querySelectorAll(".dashc-venc-painel").forEach(function (p) {
+      p.hidden = p.getAttribute("data-painel") !== aba;
+    });
   }
 
   // ==========================================
@@ -1089,9 +1114,9 @@
       '<circle cx="' + cx + '" cy="' + cy + '" r="8.5" fill="var(--text-strong)"/>' +
       '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + corFarol + '"/>';
 
-    return '<svg viewBox="0 0 200 148" width="100%" style="display:block">' + zonas + ponteiro +
-      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="26" font-size="28" font-weight="800" fill="var(--text-strong)" style="font-variant-numeric:tabular-nums">' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '</text>' +
-      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="40" font-size="9.5" font-weight="700" letter-spacing="1" fill="var(--muted)">ICO</text>' +
+    return '<svg viewBox="0 0 200 160" width="100%" style="display:block" role="img" aria-label="Índice de conduta ' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '">' + zonas + ponteiro +
+      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="42" font-size="28" font-weight="800" fill="var(--text-strong)" style="font-variant-numeric:tabular-nums">' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '</text>' +
+      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="60" font-size="14" font-weight="700" fill="var(--muted)">Índice</text>' +
       '</svg>';
   }
 
@@ -1104,7 +1129,7 @@
         '<div class="farol-eyebrow"><span class="dot"></span>' + escapeHtml_(res.farol) + (res.temGG ? ' · GRAVÍSSIMA' : '') + '</div>' +
         '<h3 class="farol-titulo">' + escapeHtml_(res.titulo) + '</h3>' +
         '<p class="farol-linha">' + escapeHtml_(res.linha) + '</p>' +
-        (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Modo sombra ativo: apura, mas ainda não paga.</p>' : '') +
+        (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Período de teste: o índice é calculado, mas o bônus ainda não é pago.</p>' : '') +
         Conduta_extrasFarolHtml_(res) +
         '<div class="farol-legenda">' +
           '<span><i style="background:var(--danger)"></i>&lt; 70 vermelho</span>' +
@@ -1133,8 +1158,8 @@
       .withFailureHandler(function (err) {
         console.error("Conduta apiObterFarolAtual falhou:", err);
         el.innerHTML = '<div class="farol-card" style="--farol-cor:var(--danger)"><div class="farol-body">' +
-          '<h3 class="farol-titulo">Conduta indisponível</h3>' +
-          '<p class="farol-linha">' + escapeHtml_((err && err.message) || String(err)) + '</p></div></div>';
+          '<h3 class="farol-titulo">Farol da conduta indisponível</h3>' +
+          '<p class="farol-linha">Não foi possível carregar o farol agora. Atualize a página em alguns minutos; se continuar, avise o administrador do sistema.</p></div></div>';
       })
       .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterFarolAtual", payload: {} });
   }
@@ -1178,6 +1203,7 @@
     setTxt("dashCountDocumentos", t.documentos);
     setTxt("dashCountUnidades", t.unidades);
     setTxt("dashcVencendo30", res.vencendo30 || 0);
+    setTxt("dashcVencendo30Txt", Number(res.vencendo30 || 0) === 1 ? "documento vencido ou vencendo em 30 dias" : "documentos vencidos ou vencendo em 30 dias");
 
     // ---- clientes recentes ----
     const elRec = document.getElementById("dashcClientesRecentes");
@@ -1282,6 +1308,8 @@
     if (elRosca) {
       if (DASHC_ROSCA) { DASHC_ROSCA.destroy(); DASHC_ROSCA = null; }
       const dadosRosca = res.equipamentosPorTipo || [];
+      if (!dadosRosca.length) { elRosca.parentNode.innerHTML = '<div class="dashc-vazio">Sem equipamentos cadastrados.</div>'; }
+      else
       DASHC_ROSCA = new Chart(elRosca, {
         type: "doughnut",
         data: {
@@ -1309,6 +1337,8 @@
     if (elBarras) {
       if (DASHC_BARRAS) { DASHC_BARRAS.destroy(); DASHC_BARRAS = null; }
       const meses = res.documentosPorMes || [];
+      if (!meses.some(function (m) { return Number(m.qtd) > 0; })) { elBarras.parentNode.innerHTML = '<div class="dashc-vazio">Nenhum documento nos últimos 12 meses.</div>'; }
+      else
       DASHC_BARRAS = new Chart(elBarras, {
         type: "bar",
         data: {
@@ -1365,13 +1395,18 @@
   function carregarAlertasDashboard_() {
     const container = document.getElementById("dashboardAlertas");
     const kpiAlertas = document.getElementById("kpiAlertas");
+    const kpiAlertasTxt = document.getElementById("kpiAlertasTxt");
     if (!container || !SESSION) return;
+    function contarCriticos_(n) {
+      if (kpiAlertas) kpiAlertas.innerText = String(n);
+      if (kpiAlertasTxt) kpiAlertasTxt.innerText = n === 1 ? "alerta vencido" : "alertas vencidos";
+    }
 
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success || !res.items || res.items.length === 0) {
           container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">Nenhum alerta de vencimento: documentos, padrões e frota em dia.</div>';
-          if (kpiAlertas) kpiAlertas.innerText = "0";
+          contarCriticos_(0);
           renderizarAlertaFrotaDashboard_([]);
           return;
         }
@@ -1388,7 +1423,7 @@
         }).join("");
 
         container.innerHTML = html;
-        if (kpiAlertas) kpiAlertas.innerText = criticos;
+        contarCriticos_(criticos);
         renderizarAlertaFrotaDashboard_(res.items);
       })
       .withFailureHandler(function (err) {
@@ -1699,18 +1734,38 @@
     }).finally(function() { FROTA_ENVIO_ATIVO = false; SGO_finalizarCarregamento_(); });
   }
 
+  // Quantidade com o substantivo no singular ou no plural (sem "(s)"), número em pt-BR.
+  function SGO_qtd_(n, um, varios) {
+    const v = Number(n) || 0;
+    return v.toLocaleString("pt-BR") + " " + (v === 1 ? um : varios);
+  }
+
+  // KM com separador de milhar pt-BR ("229.052"); texto que não é número volta como veio.
+  function frotaKm_(v) {
+    const n = typeof v === "number" ? v : Number(String(v == null ? "" : v).replace(/\./g, "").replace(",", "."));
+    return String(v == null ? "" : v).trim() !== "" && isFinite(n) ? n.toLocaleString("pt-BR") : String(v == null ? "" : v);
+  }
+
+  function frotaRotuloSituacao_(sit) {
+    const mapa = { DISPONIVEL: 'Disponível', EM_USO: 'Em uso', MANUTENCAO: 'Em manutenção', EM_MANUTENCAO: 'Em manutenção', INATIVO: 'Inativo' };
+    const k = String(sit || '').toUpperCase();
+    if (mapa[k]) return mapa[k];
+    const t = k.replace(/_/g, ' ').toLowerCase();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
   function frotaSituacaoHtml_(items) {
     const ativos = items.filter(function(v) { return v.SITUACAO !== 'INATIVO'; });
     const livres = ativos.filter(function(v) { return v.SITUACAO === 'DISPONIVEL'; }).length;
     const emUso = ativos.filter(function(v) { return v.SITUACAO === 'EM_USO'; }).length;
     return '<section style="margin:14px 0;padding:16px;border:1px solid var(--bc-line);border-radius:6px;background:#FFFFFF">' +
-      '<strong>Frota — ' + livres + ' disponível(is) · ' + emUso + ' em uso</strong>' +
+      '<strong>Frota: ' + livres + (livres === 1 ? ' veículo disponível' : ' veículos disponíveis') + ' · ' + emUso + ' em uso</strong>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px">' +
       (ativos.length ? ativos.map(function(v) {
         const uso = v.SITUACAO === 'EM_USO';
         const cor = uso ? 'var(--bc-warn)' : (v.SITUACAO === 'DISPONIVEL' ? 'var(--bc-action)' : 'var(--bc-text-3)');
         return '<div style="border-left:4px solid '+cor+';padding:10px;background:var(--bc-surface-2);border-radius:6px">' +
-          '<strong>'+escapeHtml_(v.PLACA+' — '+(v.MODELO||''))+'</strong><div style="color:'+cor+'">'+escapeHtml_(v.SITUACAO.replace(/_/g,' '))+'</div>' +
+          '<strong>'+escapeHtml_(v.PLACA+' — '+(v.MODELO||''))+'</strong><div style="color:'+cor+'">'+escapeHtml_(frotaRotuloSituacao_(v.SITUACAO))+'</div>' +
           (uso ? '<div>Retirado por: '+escapeHtml_(v.CONDUTOR_NOME || 'Responsável não localizado')+'</div><small>'+escapeHtml_([v.DATA_SAIDA,v.HORA_SAIDA,v.FINALIDADE].filter(Boolean).join(' · '))+'</small>' : '')+'</div>';
       }).join('') : '<p>Nenhum veículo cadastrado.</p>') + '</div></section>';
   }
@@ -1734,8 +1789,8 @@
         MOBILE_FROTA.emAndamento = viagens;
         mobileLista.innerHTML = viagens.length ? viagens.map(function(m) {
           return mobileCardHtml_(m.veiculoPlaca + ' — ' + m.condutorNome,
-            'Saiu em ' + m.dataSaida + ' ' + m.horaSaida + ' (KM ' + m.kmSaida + ')',
-            'EM USO', escapeHtml_('renderMobileFrotaDevolver_(' + JSON.stringify(String(m.id)) + ')'));
+            'Saiu em ' + m.dataSaida + ' ' + m.horaSaida + ' (KM ' + frotaKm_(m.kmSaida) + ')',
+            'Em uso', escapeHtml_('renderMobileFrotaDevolver_(' + JSON.stringify(String(m.id)) + ')'));
         }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
       }
       // No desktop, atualizar apenas a lista de uso preserva o checklist em edição.
@@ -1745,7 +1800,7 @@
         desktopLista.innerHTML = viagens.length ? viagens.map(function(m) {
           return '<div class="linha-lista"><span><strong>' + escapeHtml_(m.veiculoPlaca) + '</strong> — ' + escapeHtml_(m.condutorNome) +
             ' — saiu ' + escapeHtml_(m.dataSaida + ' ' + m.horaSaida) + '</span><button class="btn btn-sm btn-primary" onclick="' +
-            escapeHtml_('tplFrota_abrirDevolucao_(' + JSON.stringify(String(m.id)) + ')') + '">Registrar Devolução</button></div>';
+            escapeHtml_('tplFrota_abrirDevolucao_(' + JSON.stringify(String(m.id)) + ')') + '">Registrar devolução</button></div>';
         }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
       }
     }).catch(function(err) {
@@ -1765,30 +1820,21 @@
     const div = document.getElementById("conteudo");
     if (!div) return;
 
+    const perfilFrota = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    const gestaoFrota = perfilFrota === "ADMIN" || perfilFrota === "GESTOR" || perfilFrota === "DIRETORIA";
     div.innerHTML =
       '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">Carregando situação da frota...</div>' +
+      (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' : '') +
       '<div class="mobile-frota-secao-titulo">Retiradas em andamento</div>' +
       '<div class="mobile-list" id="mob_frota_emAndamento">Carregando...</div>' +
       '<button type="button" class="mobile-fab" onclick="renderMobileFrotaRetirar_()">+ Retirar veículo</button>';
 
-    carregarSituacaoFrotaUI_();
-    mobileFrota_chamarApi_("apiListarViagensEmAndamento").then(function (res) {
-      MOBILE_FROTA.emAndamento = res.items || [];
-      const el = document.getElementById("mob_frota_emAndamento");
-      if (!el) return;
-      el.innerHTML = MOBILE_FROTA.emAndamento.length
-        ? MOBILE_FROTA.emAndamento.map(function (m) {
-            return mobileCardHtml_(
-              m.veiculoPlaca + " — " + m.condutorNome,
-              "Saiu em " + m.dataSaida + " " + m.horaSaida + " (KM " + m.kmSaida + ")",
-              "EM USO",
-              "renderMobileFrotaDevolver_('" + m.id + "')"
-            );
-          }).join("")
-        : '<div class="mobile-card-subtitulo">Nenhum veículo com retirada em aberto.</div>';
-    }).catch(function (err) { mobileErroLista_("mob_frota_emAndamento", err); });
-
-    mobileFrota_chamarApi_("apiListarAlertasManutencao").then(function (res) {
+    // A situação da frota (apiSituacaoFrota) já traz as retiradas em andamento e preenche a lista acima.
+    // Os avisos vêm depois dela: chamadas paralelas na primeira abertura disputavam a criação das tabelas
+    // da Frota no servidor ("Já existe uma página chamada CAD_CONDUTORES").
+    Promise.resolve(carregarSituacaoFrotaUI_()).then(function () {
+      return mobileFrota_chamarApiSilencioso_("apiListarAlertasManutencao");
+    }).then(function (res) {
       const el = document.getElementById("mob_frota_alertas");
       if (!el) return;
       const itens = res.items || [];
@@ -1835,7 +1881,7 @@
         '<div id="mob_frota_r_status"></div>' +
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
-          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarRetirada_()">Registrar Retirada</button>' +
+          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarRetirada_()">Registrar retirada</button>' +
         '</div>' +
       '</div>';
 
@@ -1856,6 +1902,81 @@
       }
       mobileFrotaRenderChecklist_("mob_frota_r_checklist");
     }).catch(function (err) { mobileFrotaErro_("mob_frota_r_status", err); });
+  }
+
+  // Abastecimento no celular (gestão: o servidor só aceita Administrador, Gestor e Diretoria).
+  function renderMobileFrotaAbastecer_() {
+    MOBILE_NAV = { modulo: "frota", tela: "form" };
+    atualizarTituloMobile_("Registrar abastecimento");
+    MOBILE_FROTA.comprovante = null;
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    const agora = mobileFrotaHoraAgora_();
+    div.innerHTML =
+      '<div class="mobile-form">' +
+        mobileFieldHtml_("Veículo *", '<select id="mob_frota_a_veiculo"><option value="">Carregando...</option></select>') +
+        mobileFieldHtml_("Condutor", '<select id="mob_frota_a_condutor"><option value="">Carregando...</option></select>') +
+        mobileFieldHtml_("Data *", '<input type="text" id="mob_frota_a_data" value="' + agora.data + '" placeholder="dd/mm/aaaa" inputmode="numeric">') +
+        mobileFieldHtml_("KM no abastecimento *", '<input type="text" id="mob_frota_a_km" inputmode="numeric" placeholder="Ex.: 45000">') +
+        mobileFieldHtml_("Combustível", '<select id="mob_frota_a_tipo"><option value="">Carregando...</option></select>') +
+        mobileFieldHtml_("Litros *", '<input type="text" id="mob_frota_a_litros" inputmode="decimal" placeholder="Ex.: 38,5">') +
+        mobileFieldHtml_("Valor total (R$)", '<input type="text" id="mob_frota_a_valor" inputmode="decimal" placeholder="Ex.: 230,90">') +
+        mobileFieldHtml_("Posto", '<input type="text" id="mob_frota_a_posto">') +
+        mobileFieldHtml_("Comprovante (foto ou PDF) *", '<input type="file" id="mob_frota_a_arquivo" accept="image/*,application/pdf" capture="environment">') +
+        '<div id="mob_frota_a_status"></div>' +
+        '<div class="mobile-form-actions">' +
+          '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
+          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarAbastecimento_()">Registrar abastecimento</button>' +
+        '</div>' +
+      '</div>';
+    Promise.all([
+      mobileFrota_chamarApi_("apiPing"),
+      mobileFrota_chamarApiSilencioso_("apiListarVeiculosAtivos"),
+      frotaContextoCondutorUI_("mob_frota_a_condutor")
+    ]).then(function (r) {
+      const selV = document.getElementById("mob_frota_a_veiculo");
+      if (selV) selV.innerHTML = '<option value="">Selecione</option>' + (r[1].items || []).map(function (v) {
+        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.PLACA + " — " + (v.MODELO || "")) + '</option>';
+      }).join("");
+      const selT = document.getElementById("mob_frota_a_tipo");
+      if (selT) selT.innerHTML = (r[0].tiposCombustivel || []).map(function (t) { return '<option value="' + escapeHtml_(t) + '">' + escapeHtml_(t) + '</option>'; }).join("");
+      const selC = document.getElementById("mob_frota_a_condutor");
+      if (selC) selC.disabled = false;
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_a_status", err); });
+  }
+
+  function mobileFrotaSalvarAbastecimento_() {
+    if (FROTA_ENVIO_ATIVO) return;
+    const veiculoId = getValue_("mob_frota_a_veiculo");
+    if (!veiculoId) return mobileFrotaMsg_("mob_frota_a_status", "error", "Escolha o veículo.");
+    if (!getValue_("mob_frota_a_km")) return mobileFrotaMsg_("mob_frota_a_status", "error", "Informe o KM no momento do abastecimento.");
+    if (!getValue_("mob_frota_a_litros")) return mobileFrotaMsg_("mob_frota_a_status", "error", "Informe os litros abastecidos.");
+    const input = document.getElementById("mob_frota_a_arquivo");
+    const arquivo = input && input.files && input.files[0];
+    if (!arquivo) return mobileFrotaMsg_("mob_frota_a_status", "error", "Anexe a foto ou o PDF do comprovante do abastecimento.");
+    const ler = (typeof frotaComprimirImagem_ === "function" && /^image\//.test(arquivo.type)) ? frotaComprimirImagem_(arquivo, 1280, 0.72) : mobileFrota_lerArquivoComoBase64_(arquivo);
+    FROTA_ENVIO_ATIVO = true;
+    mobileFrotaMsg_("mob_frota_a_status", "info", "Enviando o abastecimento. Aguarde a confirmação.");
+    Promise.resolve(ler).then(function (lido) {
+      if (!lido) throw new Error("Não foi possível ler o comprovante. Tire a foto de novo ou escolha outro arquivo.");
+      return mobileFrota_chamarApi_("apiRegistrarAbastecimento", {
+        veiculoId: veiculoId,
+        condutorId: getValue_("mob_frota_a_condutor"),
+        data: getValue_("mob_frota_a_data"),
+        km: getValue_("mob_frota_a_km"),
+        tipoCombustivel: getValue_("mob_frota_a_tipo"),
+        litros: getValue_("mob_frota_a_litros"),
+        valor: getValue_("mob_frota_a_valor"),
+        posto: getValue_("mob_frota_a_posto"),
+        base64: lido.base64, mimeType: lido.mimeType, nomeArquivo: lido.nomeArquivo
+      });
+    }).then(function (res) {
+      if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não confirmou o abastecimento. Confira na Frota do computador antes de lançar de novo.");
+      const sel = document.getElementById("mob_frota_a_veiculo");
+      frotaToastEnvio_(true, "Abastecimento registrado", sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : "");
+      renderMobileFrotaOperacional_();
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_a_status", err); })
+      .finally(function () { FROTA_ENVIO_ATIVO = false; });
   }
 
   function mobileFrotaSalvarRetirada_() {
@@ -1904,7 +2025,7 @@
     div.innerHTML =
       '<div class="mobile-form">' +
         '<div class="mobile-card-subtitulo" id="mob_frota_d_info">' +
-          (mov ? ("Veículo " + escapeHtml_(mov.veiculoPlaca) + " — condutor " + escapeHtml_(mov.condutorNome) + " — saiu em " + escapeHtml_(mov.dataSaida) + " " + escapeHtml_(mov.horaSaida) + " (KM " + escapeHtml_(String(mov.kmSaida)) + ")") : "Carregando...") +
+          (mov ? ("Veículo " + escapeHtml_(mov.veiculoPlaca) + " — condutor " + escapeHtml_(mov.condutorNome) + " — saiu em " + escapeHtml_(mov.dataSaida) + " " + escapeHtml_(mov.horaSaida) + " (KM " + escapeHtml_(frotaKm_(mov.kmSaida)) + ")") : "Carregando...") +
         '</div>' +
         mobileFieldHtml_("Data de chegada", '<input type="text" id="mob_frota_d_data" value="' + agora.data + '" placeholder="dd/mm/aaaa">') +
         mobileFieldHtml_("Hora de chegada", '<input type="text" id="mob_frota_d_hora" value="' + agora.hora + '" placeholder="hh:mm">') +
@@ -1918,7 +2039,7 @@
         '<div id="mob_frota_d_status"></div>' +
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
-          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarDevolucao_()">Registrar Devolução</button>' +
+          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarDevolucao_()">Registrar devolução</button>' +
         '</div>' +
       '</div>';
 
@@ -1933,7 +2054,7 @@
         const achado = MOBILE_FROTA.emAndamento.filter(function (m) { return m.id === movimentacaoId; })[0];
         const infoEl = document.getElementById("mob_frota_d_info");
         if (infoEl && achado) {
-          infoEl.textContent = "Veículo " + achado.veiculoPlaca + " — condutor " + achado.condutorNome + " — saiu em " + achado.dataSaida + " " + achado.horaSaida + " (KM " + achado.kmSaida + ")";
+          infoEl.textContent = "Veículo " + achado.veiculoPlaca + " — condutor " + achado.condutorNome + " — saiu em " + achado.dataSaida + " " + achado.horaSaida + " (KM " + frotaKm_(achado.kmSaida) + ")";
         }
       }).catch(function (err) { console.error(err); });
     }
@@ -1987,7 +2108,7 @@
   }
 
   function mobileCertCalPasso_(numero, texto) {
-    return '<div class="mobile-card-subtitulo" style="padding:0 0 12px">Passo ' + numero + ' de 7 — ' + escapeHtml_(texto) + '</div>';
+    return '<div class="mobile-card-subtitulo" style="padding:0 0 12px">Passo ' + numero + ' de 5 — ' + escapeHtml_(texto) + '</div>';
   }
 
   function renderMobileCertCal_() {
@@ -2015,7 +2136,7 @@
     const handler = google.script.run
       .withSuccessHandler(function (res) {
         mobileRenderListaGenerica_("mobileCertCalListaClientes", res, function (item) {
-          return mobileCardHtml_(item.RAZAO_SOCIAL || item.NOME_FANTASIA, item.CNPJ, null,
+          return mobileCardHtml_(item.RAZAO_SOCIAL || item.NOME_FANTASIA || item.NOME, mobileCnpj_(item.CNPJ), null,
             "mobileCertCalSelecionarCliente_('" + item.ID + "')");
         });
       })
@@ -2131,7 +2252,12 @@
       sel.innerHTML = '<option value="">— nenhum —</option>' + itens.map(function (t) {
         return '<option value="' + escapeHtml_(t.ID) + '"' + (d.tecnicoId === t.ID ? " selected" : "") + '>' + escapeHtml_(t.NOME) + '</option>';
       }).join("");
-    }).catch(function (err) { console.error(err); });
+    }).catch(function (err) {
+      // Sem cadastro de técnicos (ou falha ao ler): o técnico usa o campo de nome livre logo abaixo.
+      console.warn("Técnicos do certificado:", err && err.message ? err.message : err);
+      const sel = document.getElementById("mob_cc_tecnico");
+      if (sel) sel.innerHTML = "<option value=\"\">Lista de técnicos indisponível: use o nome livre abaixo</option>";
+    });
   }
 
   function mobileCertCalProximaCampos_(p) {
@@ -2197,14 +2323,15 @@
     if (!el) return;
     if (!MOBILE_CERTCAL.blocos.length) { el.innerHTML = '<div class="mobile-card-subtitulo">Nenhum bloco adicionado ainda.</div>'; return; }
     el.innerHTML = MOBILE_CERTCAL.blocos.map(function (b, i) {
-      return mobileCardHtml_(b.titulo || "(sem título)", (b.unidade || "") + " · " + b.pontos.length + " ponto(s)", null,
+      return mobileCardHtml_(b.titulo || "(sem título)", (b.unidade || "") + " · " + SGO_qtd_(b.pontos.length, "ponto", "pontos"), null,
         "mobileCertCalEditarBloco_(" + i + ")");
     }).join("");
   }
 
   function mobileCertCalAvancarEnsaios_() {
     if (!MOBILE_CERTCAL.blocos.length) return alert("Adicione ao menos 1 bloco de ensaio.");
-    renderMobileCertCalVeredito_();
+    delete MOBILE_CERTCAL.veredito;
+    renderMobileCertCalGerar_();
   }
 
   function mobileCertCalEditarBloco_(idx) {
@@ -2308,42 +2435,48 @@
     renderMobileCertCalEnsaios_();
   }
 
-  // ---------- Passo 5: Responsabilidade pela decisão de uso ----------
-  function renderMobileCertCalVeredito_() {
-    MOBILE_NAV = { modulo: "certificado_calibracao", tela: "form" };
-    atualizarTituloMobile_("Certificado — Resultados de medição");
+  // PADRÕES DE REFERÊNCIA no celular (17/10): consulta da validade em campo, sem edição.
+  // Cadastro, inventário e orçamento continuam no computador.
+  let MOBILE_PADROES = [];
+  function renderMobilePadroes_() {
+    MOBILE_NAV = { modulo: "mobile_home", tela: "lista" };
+    atualizarTituloMobile_("Padrões de referência");
     const div = document.getElementById("conteudo");
     if (!div) return;
     div.innerHTML =
-      mobileCertCalPasso_(5, "resultados de medição") +
-      '<div class="mobile-card-subtitulo">O laboratório entrega os resultados e as incertezas da calibração. A avaliação de aptidão e a decisão de uso cabem ao setor de qualidade do cliente.</div>' +
-      '<div class="mobile-form-actions" style="margin-top:16px">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalEnsaios_()">Voltar</button>' +
-        '<button type="button" class="mobile-btn-salvar" onclick="mobileCertCalAvancarVeredito_()">Continuar</button>' +
-      '</div>';
+      '<div class="mobile-card-subtitulo" style="padding:0 0 10px">Consulta da validade dos padrões ativos. Para cadastrar ou atualizar um padrão, use o computador.</div>' +
+      '<input type="text" class="mobile-search" placeholder="Buscar por TAG ou descrição..." oninput="mobilePadroesFiltrar_(this.value)">' +
+      '<div class="mobile-list" id="mobilePadroesLista">Carregando...</div>';
+    mobileCertCalChamarApi_("apiListarPadroesAtivos", {}).then(function (res) {
+      MOBILE_PADROES = (res && res.items) || [];
+      mobilePadroesFiltrar_("");
+    }).catch(function (err) { mobileErroLista_("mobilePadroesLista", err); });
+  }
+  function mobilePadroesFiltrar_(termo) {
+    const el = document.getElementById("mobilePadroesLista");
+    if (!el) return;
+    const q = String(termo || "").trim().toLowerCase();
+    const nomes = { OK: "Vigente", VENCENDO: "Vence em até 30 dias", VENCIDO: "Vencido", SEM_VALIDADE: "Sem validade informada", VALIDADE_INVALIDA: "Data inválida" };
+    const itens = MOBILE_PADROES.filter(function (p) {
+      return !q || [p.TAG, p.DESCRICAO, p.FABRICANTE, p.MODELO].some(function (v) { return String(v || "").toLowerCase().indexOf(q) !== -1; });
+    });
+    if (!itens.length) { el.innerHTML = '<div class="mobile-card-subtitulo">' + (MOBILE_PADROES.length ? "Nenhum padrão encontrado. Confira a busca." : "Nenhum padrão ativo cadastrado. O cadastro é feito no computador, em Padrões de referência.") + '</div>'; return; }
+    el.innerHTML = itens.map(function (p) {
+      const st = p.statusValidade || "SEM_VALIDADE";
+      const classe = st === "OK" ? "" : (st === "VENCENDO" || st === "SEM_VALIDADE" ? " aviso" : " inativo");
+      return '<div class="mobile-card" style="display:block;cursor:default">' +
+        '<div class="mobile-card-titulo">' + escapeHtml_(p.TAG || p.DESCRICAO || "Padrão") + '</div>' +
+        (p.DESCRICAO && p.TAG ? '<div class="mobile-card-subtitulo">' + escapeHtml_(p.DESCRICAO) + '</div>' : '') +
+        '<div class="mobile-card-subtitulo">Validade: ' + escapeHtml_(p.VALIDADE || "não informada") + '</div>' +
+        '<div class="mobile-card-status' + classe + '">' + escapeHtml_(nomes[st] || st) + '</div></div>';
+    }).join("");
   }
 
-  function mobileCertCalAvancarVeredito_() {
-    delete MOBILE_CERTCAL.veredito;
-    renderMobileCertCalFotos_();
-  }
-
-  // ---------- Passo 6: Fotos ----------
-  function renderMobileCertCalFotos_() {
-    MOBILE_NAV = { modulo: "certificado_calibracao", tela: "form" };
-    atualizarTituloMobile_("Certificado — Fotos");
-    const div = document.getElementById("conteudo");
-    if (!div) return;
-    div.innerHTML =
-      mobileCertCalPasso_(6, "fotos do ensaio (opcional)") +
-      mobileFieldHtml_("Fotos", '<input type="file" id="mob_cc_fotosInput" multiple accept="image/*" capture="environment" onchange="mobileCertCalOnFotos_()">') +
-      '<div class="mobile-frota-fotos" id="mob_cc_fotosLista"></div>' +
-      '<div class="mobile-form-actions" style="margin-top:16px">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalVeredito_()">Voltar</button>' +
-        '<button type="button" class="mobile-btn-salvar" onclick="renderMobileCertCalGerar_()">Continuar</button>' +
-      '</div>';
-    mobileCertCalRenderFotos_();
-  }
+  // 17/10: o passo da avaliação pelo cliente saiu do celular (virou nota no certificado, como no
+  // computador) e as fotos entraram no passo da emissão. Nomes antigos mantidos como atalhos.
+  function renderMobileCertCalVeredito_() { renderMobileCertCalGerar_(); }
+  function mobileCertCalAvancarVeredito_() { delete MOBILE_CERTCAL.veredito; renderMobileCertCalGerar_(); }
+  function renderMobileCertCalFotos_() { renderMobileCertCalGerar_(); }
 
   function mobileCertCalOnFotos_() {
     const input = document.getElementById("mob_cc_fotosInput");
@@ -2361,30 +2494,38 @@
   function mobileCertCalRenderFotos_() {
     const el = document.getElementById("mob_cc_fotosLista");
     if (!el) return;
+    const resumo = document.getElementById("mob_cc_resumo_qtd");
+    if (resumo) resumo.textContent = SGO_qtd_(MOBILE_CERTCAL.blocos.length, "bloco de ensaio", "blocos de ensaio") + ", " + SGO_qtd_(MOBILE_CERTCAL.fotos.length, "foto", "fotos");
     el.innerHTML = MOBILE_CERTCAL.fotos.map(function (f, i) {
       return '<div class="mobile-frota-foto-thumb"><img src="data:' + f.mimeType + ';base64,' + f.base64 + '">' +
         '<button type="button" onclick="mobileCertCalRemoverFoto_(' + i + ')">Remover</button></div>';
     }).join("");
   }
 
-  // ---------- Passo 7: Gerar ----------
+  // ---------- Passo 5: Fotos e emissão ----------
   function renderMobileCertCalGerar_() {
+    if (!MOBILE_CERTCAL.dados || !MOBILE_CERTCAL.blocos.length) { renderMobileCertCalEnsaios_(); return; }
     MOBILE_NAV = { modulo: "certificado_calibracao", tela: "form" };
-    atualizarTituloMobile_("Certificado — Gerar");
+    atualizarTituloMobile_("Certificado — Emitir");
     const div = document.getElementById("conteudo");
     if (!div) return;
     const d = MOBILE_CERTCAL.dados;
     div.innerHTML =
-      mobileCertCalPasso_(7, "confirme e gere") +
-      '<div class="mobile-card-subtitulo">Cliente: ' + escapeHtml_(MOBILE_CERTCAL.cliente.RAZAO_SOCIAL || MOBILE_CERTCAL.cliente.NOME_FANTASIA || "") + '</div>' +
-      '<div class="mobile-card-subtitulo">Equipamento: ' + escapeHtml_(MOBILE_CERTCAL.equipamento.TIPO || "") + '</div>' +
+      mobileCertCalPasso_(5, "fotos e emissão") +
+      mobileFieldHtml_("Fotos do ensaio (opcional)", '<input type="file" id="mob_cc_fotosInput" multiple accept="image/*" capture="environment" onchange="mobileCertCalOnFotos_()">') +
+      '<div class="mobile-frota-fotos" id="mob_cc_fotosLista"></div>' +
+      '<div class="mobile-frota-secao-titulo">Confira antes de emitir</div>' +
+      '<div class="mobile-card-subtitulo">Cliente: ' + escapeHtml_(MOBILE_CERTCAL.cliente.RAZAO_SOCIAL || MOBILE_CERTCAL.cliente.NOME_FANTASIA || MOBILE_CERTCAL.cliente.NOME || "") + '</div>' +
+      '<div class="mobile-card-subtitulo">Equipamento: ' + escapeHtml_([MOBILE_CERTCAL.equipamento.TIPO, MOBILE_CERTCAL.equipamento.TAG].filter(Boolean).join(" · ")) + '</div>' +
       '<div class="mobile-card-subtitulo">Data: ' + escapeHtml_(d.dataCalibracao) + '</div>' +
-      '<div class="mobile-card-subtitulo">' + MOBILE_CERTCAL.blocos.length + ' bloco(s) de ensaio, ' + MOBILE_CERTCAL.fotos.length + ' foto(s)</div>' +
+      '<div class="mobile-card-subtitulo" id="mob_cc_resumo_qtd">' + SGO_qtd_(MOBILE_CERTCAL.blocos.length, 'bloco de ensaio', 'blocos de ensaio') + ', ' + SGO_qtd_(MOBILE_CERTCAL.fotos.length, 'foto', 'fotos') + '</div>' +
+      '<div class="mobile-card-subtitulo" style="margin-top:8px">O certificado traz os resultados e as incertezas. A avaliação de aptidão e a decisão de uso ficam com o cliente, como nota no próprio certificado.</div>' +
       '<div id="mob_cc_gerar_status" style="margin-top:12px"></div>' +
       '<div class="mobile-form-actions" style="margin-top:16px">' +
-        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalFotos_()">Voltar</button>' +
-        '<button type="button" class="mobile-btn-salvar" id="mob_cc_btn_gerar" onclick="mobileCertCalGerar_()">Gerar Certificado</button>' +
+        '<button type="button" class="mobile-btn-cancelar" onclick="renderMobileCertCalEnsaios_()">Voltar</button>' +
+        '<button type="button" class="mobile-btn-salvar" id="mob_cc_btn_gerar" onclick="mobileCertCalGerar_()">Emitir certificado</button>' +
       '</div>';
+    mobileCertCalRenderFotos_();
   }
 
   function mobileCertCalGerar_() {
@@ -2468,6 +2609,7 @@
       itens.push({ icone: '<i class="fas fa-list-check" aria-hidden="true"></i>', legenda: "Minhas atividades", mod: "minhas_atividades" });
       itens.push({ icone: '<i class="fas fa-bullhorn" aria-hidden="true"></i>', legenda: "Avisos", mod: "avisos" });
       itens.push({ icone: '<i class="fas fa-certificate" aria-hidden="true"></i>', legenda: "Certificado de calibração", mod: "certificado_calibracao" });
+      itens.push({ icone: '<i class="fas fa-ruler-combined" aria-hidden="true"></i>', legenda: "Padrões de referência", mod: "padroes" });
       itens.push({ icone: '<i class="fas fa-car" aria-hidden="true"></i>', legenda: "Frota", mod: "frota" });
       itens.push({ icone: '<i class="fas fa-traffic-light" aria-hidden="true"></i>', legenda: "Conduta", mod: "conduta" });
       itens.push({ icone: '<i class="fas fa-building" aria-hidden="true"></i>', legenda: "Clientes", mod: "clientes" });
@@ -2520,7 +2662,7 @@
           const el = document.getElementById("mobileFarolCondutaStrip");
           if (el) {
             el.style.borderLeftColor = "var(--danger)";
-            el.innerHTML = "Conduta indisponível: " + escapeHtml_((err && err.message) || String(err));
+            el.innerHTML = "O farol da conduta não pôde ser carregado agora. Volte ao Início em alguns minutos; se continuar, avise o gestor.";
           }
         })
         .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterFarolAtual", payload: {} });
@@ -2573,13 +2715,26 @@
     MOBILE_BUSCA_TIMER = setTimeout(function () { fn(valor); }, 350);
   }
 
+  // Situação legível nos cartões do celular ("Ativo", "Inativo", "Em uso"), sem caixa alta.
+  function mobileRotuloStatus_(s) {
+    const k = String(s || "").trim().toUpperCase();
+    const mapa = { ATIVO: "Ativo", INATIVO: "Inativo", PENDENTE: "Pendente", BLOQUEADO: "Bloqueado", EM_USO: "Em uso", "EM USO": "Em uso" };
+    if (mapa[k]) return mapa[k];
+    const t = String(s || "").trim();
+    return t === t.toUpperCase() ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+  }
+  function mobileCnpj_(v) {
+    const d = String(v || "").replace(/[^0-9]/g, "");
+    return d.length === 14 ? d.replace(/^([0-9]{2})([0-9]{3})([0-9]{3})([0-9]{4})([0-9]{2})$/, "$1.$2.$3/$4-$5") : String(v || "");
+  }
+
   function mobileCardHtml_(titulo, subtitulo, statusTexto, onclickJs) {
     const statusUpper = String(statusTexto || "").toUpperCase();
-    const statusClasse = statusUpper === "ATIVO" ? "" : " inativo";
+    const statusClasse = (statusUpper === "INATIVO" || statusUpper === "BLOQUEADO") ? " inativo" : ((statusUpper === "EM USO" || statusUpper === "EM_USO" || statusUpper === "PENDENTE") ? " aviso" : "");
     return '<button type="button" class="mobile-card" onclick="' + onclickJs + '">' +
       '<div class="mobile-card-titulo">' + escapeHtml_(titulo || "-") + '</div>' +
       (subtitulo ? '<div class="mobile-card-subtitulo">' + escapeHtml_(subtitulo) + '</div>' : '') +
-      (statusTexto ? '<div class="mobile-card-status' + statusClasse + '">' + escapeHtml_(statusUpper) + '</div>' : '') +
+      (statusTexto ? '<div class="mobile-card-status' + statusClasse + '">' + escapeHtml_(mobileRotuloStatus_(statusTexto)) + '</div>' : '') +
       '</button>';
   }
 
@@ -2598,7 +2753,15 @@
 
     const itens = Array.isArray(res.items) ? res.items : [];
     if (!itens.length) {
-      container.innerHTML = '<div class="mobile-card-subtitulo">Nenhum registro encontrado.</div>';
+      const vazios = {
+        mobileListaClientes: 'Nenhum cliente encontrado. Confira a busca ou toque em + Novo cliente.',
+        mobileListaUnidades: 'Nenhuma unidade encontrada. Confira a busca ou toque em + Nova unidade.',
+        mobileListaEquipamentos: 'Nenhum equipamento encontrado. Confira a busca ou toque em + Novo equipamento.',
+        mobileListaDocumentos: 'Nenhum documento cadastrado. Toque em + Novo documento para enviar o primeiro.',
+        mobileCertCalListaClientes: 'Nenhum cliente encontrado. Confira a busca ou toque em + Novo cliente.',
+        mobileCertCalListaEquip: 'Nenhum equipamento deste cliente. Toque em + Novo equipamento para cadastrar.'
+      };
+      container.innerHTML = '<div class="mobile-card-subtitulo">' + escapeHtml_(vazios[containerId] || 'Nada encontrado. Confira a busca.') + '</div>';
       return;
     }
 
@@ -2709,7 +2872,8 @@
         '<button type="button" class="mobile-btn-salvar" style="background:#dc2626" onclick="renderMobileCondutaFormOcorrencia_()">Registrar ocorrência</button>' +
         '<button type="button" class="mobile-btn-salvar" style="background:#059669" onclick="renderMobileCondutaFormPositivo_()">Reconhecer colega</button>' +
       '</div>' +
-      '<div class="mobile-home-titulo">Minhas ocorrências recentes</div>' +
+      '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirManual_()">Manual do colaborador</button>' +
+      '<div class="mobile-frota-secao-titulo">Minhas ocorrências recentes</div>' +
       '<div class="mobile-list" id="mobileCondutaRecentes">Carregando...</div>';
 
     mobileCondutaChamarApi_("apiObterFarolAtual", {}, function (res) {
@@ -2727,7 +2891,7 @@
       const el = document.getElementById("mobileCondutaFarol");
       if (el) {
         el.style.borderLeftColor = "var(--danger)";
-        el.innerHTML = "Conduta indisponível: " + escapeHtml_((err && err.message) || String(err));
+        el.innerHTML = "O farol da conduta não pôde ser carregado agora. Volte ao Início em alguns minutos; se continuar, avise o gestor.";
       }
     });
 
@@ -2752,13 +2916,47 @@
           acao = '<div class="mobile-card-subtitulo" style="margin-top:6px">Prazo de contestação encerrado.</div>';
         }
         return '<div class="mobile-card" style="display:block">' +
-          '<div><strong>' + escapeHtml_(o.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(o.DATA_FATO)) + ' · ' + escapeHtml_(st) + '</div>' +
+          '<div><strong>' + escapeHtml_(o.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(o.DATA_FATO)) + ' · ' + escapeHtml_(mobileCondutaRotuloSituacao_(st)) + '</div>' +
           (o.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(o.TIPO_DESCRICAO) + '</div>' : "") +
           (o.COLABORADOR_NOME ? '<div class="mobile-card-subtitulo">Envolvido: ' + escapeHtml_(o.COLABORADOR_NOME) + '</div>' : "") +
           acao +
         '</div>';
       }).join("");
     }, function (err) { mobileErroLista_("mobileCondutaRecentes", err); });
+  }
+
+  function mobileCondutaRotuloSituacao_(st) {
+    const mapa = { REGISTRADA: "Registrada", HOMOLOGADA: "Homologada", CONTESTADA: "Contestada", FIRME: "Firme", EM_RECURSO: "Em recurso", RECORRIDA: "Em recurso", REJEITADA: "Rejeitada", ANULADA: "Anulada", CANCELADA: "Cancelada", ARQUIVADA: "Arquivada" };
+    const k = String(st || "").toUpperCase();
+    if (mapa[k]) return mapa[k];
+    const t = k.replace(/_/g, " ").toLowerCase();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  // Manual do colaborador no celular: abre o material da biblioteca numa aba nova
+  // (mesma origem do botão do computador). Se o navegador bloquear a aba, baixa o arquivo.
+  function mobileCondutaAbrirManual_() {
+    const w = window.open("", "_blank");
+    if (w) { w.opener = null; w.document.write("<p style='font-family:sans-serif'>Carregando o manual do colaborador...</p>"); }
+    mobileCondutaChamarApi_("apiObterMaterialBiblioteca", { id: "manual_colaborador" }, function (m) {
+      if (!m) { if (w && !w.closed) w.close(); alert("O manual do colaborador não foi encontrado. Avise o gestor."); return; }
+      let blob;
+      if (m.base64) {
+        const raw = atob(m.base64), bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+        blob = new Blob([bytes], { type: m.mime });
+      } else {
+        blob = new Blob([m.html || ""], { type: m.mime || "text/html" });
+      }
+      if (w && !w.closed && m.html) { w.document.open(); w.document.write(m.html); w.document.close(); return; }
+      const url = URL.createObjectURL(blob);
+      if (w && !w.closed) { w.location.href = url; }
+      else { const a = document.createElement("a"); a.href = url; a.download = m.arquivo || "manual_do_colaborador"; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(function () { URL.revokeObjectURL(url); }, 300000);
+    }, function (err) {
+      if (w && !w.closed) w.close();
+      alert("Não foi possível abrir o manual agora: " + ((err && err.message) || err) + ". Tente de novo em instantes.");
+    });
   }
 
   function mobileCondutaCarregarListasBase_(callback) {
@@ -2947,7 +3145,7 @@
     div.innerHTML =
       '<input type="text" class="mobile-search" placeholder="Buscar por nome ou CNPJ..." oninput="mobileBuscarComDebounce_(mobileClientesBuscar_, this.value)">' +
       '<div class="mobile-list" id="mobileListaClientes">Carregando...</div>' +
-      '<button type="button" class="mobile-fab" onclick="renderMobileFormClientes_(null)">+ Novo</button>';
+      '<button type="button" class="mobile-fab" onclick="renderMobileFormClientes_(null)">+ Novo cliente</button>';
 
     mobileClientesBuscar_("");
   }
@@ -2959,7 +3157,7 @@
     const handler = google.script.run
       .withSuccessHandler(function (res) {
         mobileRenderListaGenerica_("mobileListaClientes", res, function (item) {
-          return mobileCardHtml_(item.RAZAO_SOCIAL || item.NOME_FANTASIA, item.CNPJ, item.STATUS, "renderMobileFormClientes_('" + item.ID + "')");
+          return mobileCardHtml_(item.RAZAO_SOCIAL || item.NOME_FANTASIA || item.NOME, mobileCnpj_(item.CNPJ), item.STATUS, "renderMobileFormClientes_('" + item.ID + "')");
         });
       })
       .withFailureHandler(function (err) { mobileErroLista_("mobileListaClientes", err); });
@@ -2978,9 +3176,9 @@
 
     div.innerHTML =
       '<div class="mobile-form">' +
-        mobileFieldHtml_("Razão Social *", '<input type="text" id="mob_cli_razao">') +
-        mobileFieldHtml_("Nome Fantasia", '<input type="text" id="mob_cli_fantasia">') +
-        mobileFieldHtml_("CNPJ *", '<input type="text" id="mob_cli_cnpj" placeholder="00.000.000/0000-00">') +
+        mobileFieldHtml_("Razão social *", '<input type="text" id="mob_cli_razao">') +
+        mobileFieldHtml_("Nome fantasia", '<input type="text" id="mob_cli_fantasia">') +
+        mobileFieldHtml_("CNPJ", '<input type="text" id="mob_cli_cnpj" placeholder="00.000.000/0000-00">') +
         (!id ? '<label><input type="checkbox" id="mob_cli_principal" checked> Criar unidade principal com os mesmos dados</label>' : '') +
         mobileFieldHtml_("Endereço", '<input type="text" id="mob_cli_endereco">') +
         mobileFieldHtml_("Contato", '<input type="text" id="mob_cli_contato">') +
@@ -3038,7 +3236,7 @@
     };
 
     if (!payload.RAZAO_SOCIAL) return alert("Informe a razão social.");
-    if (!payload.CNPJ) return alert("Informe o CNPJ.");
+    // CNPJ opcional, como no computador (JS_Cadastros › clientesSalvar_) e no servidor.
 
     const sucesso = function (res) {
       SGO_finalizarCarregamento_();
@@ -3084,7 +3282,7 @@
     div.innerHTML =
       '<input type="text" class="mobile-search" placeholder="Buscar unidade por nome ou CNPJ..." oninput="mobileBuscarComDebounce_(mobileUnidadesBuscar_, this.value)">' +
       '<div class="mobile-list" id="mobileListaUnidades">Carregando...</div>' +
-      '<button type="button" class="mobile-fab" onclick="renderMobileFormUnidades_(null)">+ Novo</button>';
+      '<button type="button" class="mobile-fab" onclick="renderMobileFormUnidades_(null)">+ Nova unidade</button>';
 
     mobileUnidadesBuscar_("");
   }
@@ -3096,7 +3294,7 @@
     const handler = google.script.run
       .withSuccessHandler(function (res) {
         mobileRenderListaGenerica_("mobileListaUnidades", res, function (item) {
-          return mobileCardHtml_(item.NOME_UNIDADE, item.CIDADE ? (item.CIDADE + "/" + (item.UF || "")) : item.CNPJ_UNIDADE, item.STATUS, "renderMobileFormUnidades_('" + item.ID + "')");
+          return mobileCardHtml_(item.NOME_UNIDADE, item.CIDADE ? (item.CIDADE + "/" + (item.UF || "")) : mobileCnpj_(item.CNPJ_UNIDADE), item.STATUS, "renderMobileFormUnidades_('" + item.ID + "')");
         });
       })
       .withFailureHandler(function (err) { mobileErroLista_("mobileListaUnidades", err); });
@@ -3116,8 +3314,8 @@
     div.innerHTML =
       '<div class="mobile-form">' +
         mobileFieldHtml_("Cliente *", '<select id="mob_uni_cliente"><option value="">Carregando...</option></select>') +
-        mobileFieldHtml_("Nome da Unidade *", '<input type="text" id="mob_uni_nome">') +
-        mobileFieldHtml_("CNPJ da Unidade", '<input type="text" id="mob_uni_cnpj">') +
+        mobileFieldHtml_("Nome da unidade *", '<input type="text" id="mob_uni_nome">') +
+        mobileFieldHtml_("CNPJ da unidade", '<input type="text" id="mob_uni_cnpj">') +
         mobileFieldHtml_("Endereço", '<input type="text" id="mob_uni_endereco">') +
         mobileFieldHtml_("Cidade", '<input type="text" id="mob_uni_cidade">') +
         mobileFieldHtml_("UF", '<input type="text" id="mob_uni_uf" maxlength="2">') +
@@ -3209,7 +3407,7 @@
     div.innerHTML =
       '<input type="text" class="mobile-search" placeholder="Buscar por TAG, série ou tipo..." oninput="mobileBuscarComDebounce_(mobileEquipamentosBuscar_, this.value)">' +
       '<div class="mobile-list" id="mobileListaEquipamentos">Carregando...</div>' +
-      '<button type="button" class="mobile-fab" onclick="renderMobileFormEquipamentos_(null)">+ Novo</button>';
+      '<button type="button" class="mobile-fab" onclick="renderMobileFormEquipamentos_(null)">+ Novo equipamento</button>';
 
     mobileEquipamentosBuscar_("");
   }
@@ -3249,8 +3447,8 @@
         mobileFieldHtml_("Tipo *", '<input type="text" id="mob_eqp_tipo" placeholder="Ex: Autoclave, Bomba de infusão...">') +
         mobileFieldHtml_("Fabricante", '<input type="text" id="mob_eqp_fabricante">') +
         mobileFieldHtml_("Modelo", '<input type="text" id="mob_eqp_modelo">') +
-        mobileFieldHtml_("Série", '<input type="text" id="mob_eqp_serie">') +
-        mobileFieldHtml_("TAG / Patrimônio", '<input type="text" id="mob_eqp_tag">') +
+        mobileFieldHtml_("Número de série", '<input type="text" id="mob_eqp_serie">') +
+        mobileFieldHtml_("TAG (identificador)", '<input type="text" id="mob_eqp_tag">') +
         mobileFieldHtml_("Setor", '<input type="text" id="mob_eqp_setor">') +
         '<div class="mobile-form-actions">' +
           '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
@@ -3367,7 +3565,7 @@
     div.innerHTML =
       '<input type="text" class="mobile-search" placeholder="Buscar documento..." oninput="mobileBuscarComDebounce_(mobileDocumentosBuscar_, this.value)">' +
       '<div class="mobile-list" id="mobileListaDocumentos">Carregando...</div>' +
-      '<button type="button" class="mobile-fab" onclick="renderMobileFormDocumentos_(null)">+ Novo</button>';
+      '<button type="button" class="mobile-fab" onclick="renderMobileFormDocumentos_(null)">+ Novo documento</button>';
 
     mobileDocumentosBuscar_("");
   }
@@ -3401,8 +3599,8 @@
         mobileFieldHtml_("Cliente *", '<select id="mob_doc_cliente" onchange="mobileDocCarregarUnidades_(this.value)"><option value="">Carregando...</option></select>') +
         mobileFieldHtml_("Unidade *", '<select id="mob_doc_unidade" onchange="mobileDocCarregarEquipamentos_(this.value)"><option value="">Selecione o cliente primeiro</option></select>') +
         mobileFieldHtml_("Equipamento (opcional)", '<select id="mob_doc_equipamento"><option value="">Geral da unidade</option></select>') +
-        mobileFieldHtml_("Categoria do Documento *", '<input type="text" id="mob_doc_tipo" placeholder="Ex: Calibração, Manutenção...">') +
-        mobileFieldHtml_("Nome / Referência do Arquivo *", '<input type="text" id="mob_doc_nome">') +
+        mobileFieldHtml_("Categoria do documento *", '<select id="mob_doc_tipo"><option value="">Selecione a categoria</option><option value="1. Relatórios de Manutenção">Relatórios de manutenção</option><option value="2. Certificados de Calibração">Certificados de calibração</option><option value="3. Relatórios de Qualificação">Relatórios de qualificação</option><option value="4. Ordens de Serviço">Ordens de serviço</option><option value="5. Contratos">Contratos</option><option value="Outros Documentos">Outros documentos</option></select>') +
+        mobileFieldHtml_("Nome ou referência *", '<input type="text" id="mob_doc_nome">') +
         mobileFieldHtml_("Anexar arquivo ou foto", '<input type="file" id="mob_doc_arquivo" accept="image/*,application/pdf" capture="environment" onchange="mobileDocProcessarArquivo_(this)"><div id="mob_doc_arquivo_preview" class="mobile-card-subtitulo"></div>') +
         mobileFieldHtml_("Vencimento", '<input type="date" id="mob_doc_vencimento">') +
         '<div class="mobile-form-actions">' +
@@ -3522,6 +3720,11 @@
         const it = res.item;
         setSelectValueSafe_("mob_doc_cliente", it.CLIENTE_ID);
         mobileDocCarregarUnidades_(it.CLIENTE_ID, it.UNIDADE_ID, it.EQUIPAMENTO_ID);
+        // Categoria antiga digitada à mão (antes o celular aceitava texto livre): entra na lista para não se perder ao salvar.
+        const selTipoDoc = document.getElementById("mob_doc_tipo");
+        if (selTipoDoc && it.TIPO_DOCUMENTO && ![].some.call(selTipoDoc.options, function (o) { return o.value === it.TIPO_DOCUMENTO; })) {
+          const opt = document.createElement("option"); opt.value = it.TIPO_DOCUMENTO; opt.textContent = it.TIPO_DOCUMENTO; selTipoDoc.appendChild(opt);
+        }
         setValue_("mob_doc_tipo", it.TIPO_DOCUMENTO);
         setValue_("mob_doc_nome", it.NOME_ARQUIVO);
         // Campo de data só aceita aaaa-mm-dd: hora ou dd/mm/aaaa deixavam o campo vazio e salvar apagava o vencimento.
@@ -4332,7 +4535,7 @@
               '<tr style="text-align:left;color:var(--muted)"><th>Pessoa</th><th>Situação</th><th>Detalhe</th></tr>' +
               a.pessoas.map(function (p) {
                 var det = p.situacao === "CIENTE" ? "em " + Conduta_dataHoraBr_(p.cienteEm)
-                  : p.situacao === "VIU_SEM_CONFIRMAR" ? "apareceu " + p.exibicoes + " vez(es), a última em " + Conduta_dataHoraBr_(p.ultimaVez) + (p.fechouSemConfirmar ? "; fechou sem confirmar " + p.fechouSemConfirmar + " vez(es)" : "")
+                  : p.situacao === "VIU_SEM_CONFIRMAR" ? "apareceu " + SGO_qtd_(p.exibicoes, "vez", "vezes") + ", a última em " + Conduta_dataHoraBr_(p.ultimaVez) + (p.fechouSemConfirmar ? "; fechou sem confirmar " + SGO_qtd_(p.fechouSemConfirmar, "vez", "vezes") : "")
                   : "ainda não entrou no sistema desde o aviso";
                 return '<tr><td style="padding:3px 0">' + escapeHtml_(p.nome) + '</td><td style="color:' + cor[p.situacao] + ';font-weight:700">' + rotulo[p.situacao] + '</td><td>' + escapeHtml_(det) + '</td></tr>';
               }).join("") +
@@ -4365,7 +4568,7 @@
         var meses = Array.isArray(previa.mesesAFechar) ? previa.mesesAFechar : [];
         var payload = {};
         if (meses.length) {
-          if (!confirm(previa.mensagemConfirmacao || ("Esta ação vai fechar e congelar " + meses.length + " mês(es). Confirma?"))) { restaurar(); return; }
+          if (!confirm(previa.mensagemConfirmacao || ("Esta ação vai fechar e congelar " + SGO_qtd_(meses.length, "mês", "meses") + ". Confirma?"))) { restaurar(); return; }
           payload = { confirmar: true, meses: meses };
         }
         btn.textContent = "Aplicando… (pode levar até 1 minuto)";
@@ -4377,7 +4580,7 @@
             var f = (r && r.fechamentos) || {};
             if (f.fechados && f.fechados.length) linhas.push("Meses fechados: " + f.fechados.join(", ") + ".");
             if (f.aguardando && f.aguardando.length) linhas.push("Aguardando: " + f.aguardando.join("; ") + ".");
-            if (r && r.prazos && r.prazos.processadas) linhas.push(r.prazos.processadas + " prazo(s) vencido(s) aplicados.");
+            if (r && r.prazos && r.prazos.processadas) linhas.push(Number(r.prazos.processadas) === 1 ? "1 prazo vencido aplicado." : SGO_qtd_(r.prazos.processadas, "prazo vencido aplicado", "prazos vencidos aplicados") + ".");
             alert(linhas.join(String.fromCharCode(10)));
             if (typeof carregarFarolCondutaDashboard_ === "function") carregarFarolCondutaDashboard_();
             Conduta_verificarAvisos_();
@@ -4397,15 +4600,15 @@
     var e = res.emApuracao;
     if (e && (e.emDefesa || e.registradas)) {
       out += '<p class="farol-linha" style="margin-top:6px">' +
-        (e.emDefesa ? e.emDefesa + " ocorrência(s) em prazo de defesa (" + e.pontosEmDefesa + " ponto(s)) — se ficarem firmes, o ICO vai a " + num(e.icoPrevisto) + " (" + escapeHtml_(e.farolPrevisto) + ")." : "") +
-        (e.registradas ? " " + e.registradas + " aguardando homologação." : "") + "</p>";
+        (e.emDefesa ? SGO_qtd_(e.emDefesa, "ocorrência", "ocorrências") + " em prazo de defesa (" + SGO_qtd_(e.pontosEmDefesa, "ponto", "pontos") + "). " + (Number(e.emDefesa) === 1 ? "Se ficar firme" : "Se ficarem firmes") + ", o índice de conduta vai a " + num(e.icoPrevisto) + " (" + escapeHtml_(e.farolPrevisto) + ")." : "") +
+        (e.registradas ? " " + Number(e.registradas).toLocaleString("pt-BR") + " aguardando homologação." : "") + "</p>";
     }
     var a = res.anterior;
     if (a) {
       out += '<p class="farol-linha" style="margin-top:6px">' + escapeHtml_(a.nome.charAt(0).toUpperCase() + a.nome.slice(1)) + ": " +
         (a.fechado ? "fechado" + (a.automatico ? " automaticamente" : "") : "ainda não fechado") +
-        " · ICO " + num(a.ico) + " · demérito " + a.D + " · farol " + escapeHtml_(a.farol) +
-        (!a.fechado ? (a.pendencias ? " · " + a.pendencias + " pendência(s) de defesa" : a.prazoVencido ? " · o fechamento automático sai na próxima rotina (06h)" : " · fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento)) : "") + "</p>";
+        " · índice de conduta " + num(a.ico) + " · " + SGO_qtd_(a.D, "ponto de demérito", "pontos de demérito") + " · farol " + escapeHtml_(String(a.farol || "").toLowerCase()) +
+        (!a.fechado ? (a.pendencias ? " · " + SGO_qtd_(a.pendencias, "pendência de defesa", "pendências de defesa") : a.prazoVencido ? " · o fechamento automático sai na próxima rotina (06h)" : " · fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento)) : "") + "</p>";
     }
     if (!compacto && Conduta_ehGestorFront_()) {
       if (res.rotinaPendente) {
@@ -4605,7 +4808,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">Qualificação de lavadoras termodesinfectoras.</p>
+              <p class="content-subtitle">Qualificação de lavadoras: termodesinfectoras e ultrassônicas.</p>
             </div>
           </div>
 

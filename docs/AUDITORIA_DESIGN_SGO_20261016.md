@@ -145,11 +145,11 @@ Corrigido:
 - [P2] Erro técnico cru na tela ("Não foi possível atualizar a situação da frota. Aba não encontrada: CAD_CONDUTORES"). **Feito:** mensagem orientativa; o detalhe vai para o console.
 
 Fica para a fase 2:
-- [P2] **Três blocos falando de vencimento** — card "Vencimentos (30 dias)", tabela "Documentos a vencer (60 dias)" e painel "Alertas de vencimento" no rodapé, com janelas diferentes. **Fazer:** um único bloco "Vencimentos" com abas 30/60 dias e a lista de alertas (documentos, padrões, frota) e remover o círculo grande. *Onde:* JS_Core › `montarDashboardHtml_`, `preencherDashboardDetalhado_`, `carregarAlertasDashboard_`; SGO_Main.js › `obterDashboardDetalhado` (30 e 60 dias fixos).
+- ~~[P2] **Três blocos falando de vencimento**~~ — **feito na fase 3, 17/10: bloco único "Vencimentos" com o resumo (documentos em 30 dias e alertas vencidos) e duas abas: alertas de documentos, padrões e frota, e documentos em 60 dias; círculo e painel do rodapé removidos (JS_Core › montarDashboardHtml_, dashcVencAba_).** — card "Vencimentos (30 dias)", tabela "Documentos a vencer (60 dias)" e painel "Alertas de vencimento" no rodapé, com janelas diferentes. **Fazer:** um único bloco "Vencimentos" com abas 30/60 dias e a lista de alertas (documentos, padrões, frota) e remover o círculo grande. *Onde:* JS_Core › `montarDashboardHtml_`, `preencherDashboardDetalhado_`, `carregarAlertasDashboard_`; SGO_Main.js › `obterDashboardDetalhado` (30 e 60 dias fixos).
 - [P2] **Ação administrativa no alto do Início** — o farol de conduta do ADMIN traz o botão verde "Aplicar agora: fechamentos pendentes e ajustes do programa" como primeira coisa da tela. Ação de manutenção do programa não é o assunto do Início. **Fazer:** virar item da faixa "o que depende de você hoje" (rótulo "Conduta", título "Fechamento do mês pendente", ação abrir Conduta › Fechamentos) e o card do farol ficar só informativo. *Onde:* JS_Conduta/JS_Core › `Conduta_montarFarolCardHtml_`; SGO_Inicio.js › `Inicio_apiPendencias`.
-- [P3] **Gráficos vazios sem mensagem** — "Equipamentos por tipo" fica um quadro em branco e "Documentos por mês" mostra eixo 0–1 sem barras quando não há dados. **Fazer:** mensagem "Sem equipamentos cadastrados" / "Nenhum documento nos últimos 12 meses" no lugar do gráfico. *Onde:* JS_Core › `preencherDashboardDetalhado_`.
+- ~~[P3] **Gráficos vazios sem mensagem**~~ — **feito na fase 3, 17/10: "Sem equipamentos cadastrados." e "Nenhum documento nos últimos 12 meses." no lugar do gráfico.** — "Equipamentos por tipo" fica um quadro em branco e "Documentos por mês" mostra eixo 0–1 sem barras quando não há dados. **Fazer:** mensagem "Sem equipamentos cadastrados" / "Nenhum documento nos últimos 12 meses" no lugar do gráfico. *Onde:* JS_Core › `preencherDashboardDetalhado_`.
 - [P3] **"Clientes recentes" para o ADMIN** tem pouco valor diário. **Fazer:** trocar por "Últimos certificados emitidos" ou "O.S. abertas no Auvo" (já existe a seção Auvo escondida `dashcAuvoSecao`).
-- [P3] Chip "Alertas críticos" repete o painel de alertas. **Fazer:** levar "Unidades" para os cartões de números e apagar a linha de chips.
+- ~~[P3] Chip~~ — **feito na fase 3, 17/10: "Unidades cadastradas" virou cartão de número; a linha de chips saiu (o número de alertas vencidos está no bloco Vencimentos).** "Alertas críticos" repete o painel de alertas. **Fazer:** levar "Unidades" para os cartões de números e apagar a linha de chips.
 
 ### 1.5 Celular (390 px)
 
@@ -310,7 +310,7 @@ Contagem: 33 itens (P1 6, P2 18, P3 9).
   2. se o modelo existe mas este ambiente não abre documentos (Google sem a permissão de Documentos), usa o aplicativo antigo como antes;
   3. sem o modelo, gera a folha de identificação do relatório no modelo padrão do SGO+ (HTML A4 justificado + PDF, mesma pasta) e avisa o motivo e o caminho para voltar ao oficial (pedir ao administrador para importar o documento-modelo).
   A tela mostra, antes de gerar, se o modelo oficial está disponível. Testado no servidor: Autoclave com um documento-modelo de teste (campos preenchidos, PDF de 48 KB) e Termodesinfectora sem modelo (folha padrão + PDF na pasta do cliente).
-- **Pendências fora dos arquivos deste bloco (para a frente do núcleo):** `JS_Core › renderMotorModulo_` — subtítulo do casco da Lavadora ainda diz só "termodesinfectoras" (o módulo também cobre lavadora ultrassônica).
+- **Pendências fora dos arquivos deste bloco (para a frente do núcleo):** `JS_Core › renderMotorModulo_` — subtítulo do casco da Lavadora ainda diz só "termodesinfectoras" (o módulo também cobre lavadora ultrassônica). **Feito na fase 3 (17/10): "Qualificação de lavadoras: termodesinfectoras e ultrassônicas."**
 
 ### Nota fora do design (para o responsável pela segurança)
 - `tplAutoclaveGerarRelatorio(payload)` e o equivalente da Lavadora não chamam `exigirSessao`, ao contrário das outras funções do mesmo arquivo (`SGO_TemplateAutoclave.js`, `SGO_TemplateLavadora.js`).
@@ -645,7 +645,7 @@ Já corrigido na cópia de trabalho (falta publicar):
 **Avisos e retiradas**
 - ~~[P2] **"Avisos de manutenção" também mostra CNH vencida.**~~ — **feito em 63123cf (título); o formato da linha vem do servidor e ficou como está.**
   - **Fazer:** título "Avisos de vencimento" e linha no formato "CNH de João da Silva vencida em 10/10/2026".
-- ~~[P2] **"Retiradas em andamento" junta duas coisas:**~~ — **feito em a0b91b7: painéis "Situação da frota" e "Retiradas em andamento" separados. O texto "0 disponível(is) · 0 em uso" é montado no JS_Core (frotaSituacaoHtml_) — pendência registrada.** o quadro de situação da frota e a lista de retiradas.
+- ~~[P2] **"Retiradas em andamento" junta duas coisas:**~~ — **feito em a0b91b7: painéis "Situação da frota" e "Retiradas em andamento" separados. O texto "0 disponível(is) · 0 em uso" passou a "Frota: 1 veículo disponível · 0 em uso" na fase 3 (17/10, JS_Core › frotaSituacaoHtml_), com situações legíveis e KM com separador de milhar.** o quadro de situação da frota e a lista de retiradas.
   - **Fazer:** separar em "Situação da frota" e "Retiradas em andamento", e escrever "1 disponível · 0 em uso".
 - ~~[P2] **Situações cruas e "Status".**~~ — **feito em 63123cf + a0b91b7: rótulos legíveis e colunas "Situação"; "em andamento" em caixa normal no histórico.** "DISPONIVEL", "EM USO", "ABERTA/PAGA/RECORRIDA".
   - **Fazer:** "Disponível", "Em uso", "Aberta", "Paga"…, e coluna "Situação".
@@ -662,7 +662,7 @@ Já corrigido na cópia de trabalho (falta publicar):
 **Manual e celular**
 - ~~[P2] **A seção 3 do manual diz que gestor vê a tela completa no celular.**~~ — **feito em 63123cf.** No código, todos os perfis veem só retirar e devolver.
   - **Fazer:** corrigir o texto. *Onde:* `tplFrota_manualHtml_ › #tplFrota_ms3`.
-- [P3] **Os 31 itens da vistoria no celular estão em CAIXA ALTA.** **Fazer:** tirar o uppercase. (Captura: frota_celular_retirar_390.png)
+- ~~[P3] **Os 31 itens da vistoria no celular estão em CAIXA ALTA.**~~ — **feito na fase 3, 17/10: vistoria e títulos de seção do celular sem caixa alta (UI_Estilos › .mobile-frota-secao-titulo, .mobile-frota-check-grupo); situações "Em uso"/"Disponível" e botões "Registrar retirada"/"Registrar devolução".** **Fazer:** tirar o uppercase. (Captura: frota_celular_retirar_390.png)
 
 ### Integração Auvo
 No uso diário a tela tem Conexão, Sincronização, Pendências e Relatório. Atrás de "Mostrar ferramentas avançadas" ficam 5 ferramentas de implantação.
@@ -696,7 +696,7 @@ Já corrigido na cópia de trabalho: a mensagem de "Testar Conexão" mandava par
   - **Fazer:** basear no estado real e escrever "Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)".
 - ~~[P3] **Cartões em 1/3 da largura e dois títulos "Resumo".**~~ — **feito em a0b91b7: grade em largura total; títulos "Atendimentos do Auvo" e "Uso da frota".** **Fazer:** grade em largura total, com títulos "Atendimentos do Auvo" e "Uso da frota".
 - ~~[P3] **Select de período ocupando 70% da barra**~~ — **feito em a0b91b7: select com largura do conteúdo e barra que quebra linha sem espremer.** e botões quebrando linha.
-- ~~[P3] **Plurais com parênteses ("integração(ões)"), CAIXA ALTA e "Erro: …" cru.**~~ — **feito em a0b91b7: plural pelo número nos totais e cartões principais (as linhas de detalhe dos rankings ainda usam "(s)"); sem caixa alta; erros dizem o que fazer.** **Fazer:** plural de acordo com o número e mensagem que diga o que fazer.
+- ~~[P3] **Plurais com parênteses ("integração(ões)"), CAIXA ALTA e "Erro: …" cru.**~~ — **feito em a0b91b7: plural pelo número nos totais e cartões principais (as linhas de detalhe dos rankings e o relatório também, na fase 3, commit 62b7bf1); sem caixa alta; erros dizem o que fazer.** **Fazer:** plural de acordo com o número e mensagem que diga o que fazer.
 - ~~[P2] **"Ocorrência" tem três sentidos no sistema**~~ — **feito em a0b91b7: "Cobranças e elogios de campo" (botão, histórico e modal).** (aqui, no Auvo e no Programa de conduta).
   - **Fazer:** chamar aqui de "Cobranças e elogios de campo" e alinhar o vocabulário com a Conduta.
 - ~~[P3] **Estado vazio sem orientação.**~~ — **feito em a0b91b7: cada bloco vazio diz de onde vêm os dados e o que fazer.**
@@ -710,7 +710,7 @@ Já corrigido na cópia de trabalho: a mensagem de "Testar Conexão" mandava par
   - (Captura: conduta_farol_1440.png)
 - ~~[P2] **Jargão da fórmula.**~~ — **feito em a0b91b7: "Índice de conduta", "Pontos de demérito", "Pessoas no cálculo" e o texto do período de teste.** "ICO", "Demérito (D)", "Divisor (n)", "Modo sombra ativo".
   - **Fazer:** "Índice de conduta", "Pontos de demérito", "Pessoas no cálculo", e "Período de teste: o índice é calculado, mas o bônus ainda não é pago."
-- [P3] **Velocímetro com o número sobre o ponteiro**, ilegível no celular. **Fazer:** número abaixo do arco. *Onde:* `Conduta_montarFarolCardHtml_`.
+- ~~[P3] **Velocímetro com o número sobre o ponteiro**, ilegível no celular. **Fazer:**~~ — **feito na fase 3, 17/10: número abaixo do arco, rótulo "Índice" e velocímetro maior no celular (JS_Core › Conduta_montarGaugeSvg_).** número abaixo do arco. *Onde:* `Conduta_montarFarolCardHtml_`.
 - ~~[P2] **"Como usar esta tela" ocupa um cartão inteiro em cada aba**~~ — **feito em a0b91b7: link discreto à direita; abre o manual do gestor para a gestão e o do colaborador para os demais.** e sempre abre o manual do colaborador, inclusive nas abas da gestão.
   - **Fazer:** link discreto e o manual certo para cada papel. (Captura: conduta_ocorrencias_1440.png)
 - ~~[P2] **Botões principais em quatro cores sem regra.**~~ — **feito em a0b91b7: verde para a ação principal, contorno para as secundárias, vermelho só para "Rejeitar" e "Manter (firme)".**
@@ -723,11 +723,11 @@ Já corrigido na cópia de trabalho: a mensagem de "Testar Conexão" mandava par
 - ~~[P3] **Estados vazios sem o próximo passo.**~~ — **feito em a0b91b7: cada lista vazia diz o próximo passo.**
 - ~~[P3] **Aba "Eventos Positivos"**~~ — **feito em a0b91b7.** destoa dos botões "Reconhecer…". **Fazer:** "Reconhecimentos".
 - ~~[P3] **Relatórios semanais: campo de data sem rótulo.**~~ — **feito em a0b91b7: "Semana terminando em" e "Competência".** **Fazer:** rótulo "Semana terminando em".
-- [P2] **No celular não há como abrir os manuais.** **Fazer:** botão "Manual do colaborador" em `renderMobileConduta_`.
-- [P3] **Título "Minhas ocorrências recentes" desalinhado no celular.** (Captura: conduta_celular_390.png)
+- ~~[P2] **No celular não há como abrir os manuais.**~~ — **feito na fase 3, 17/10: botão "Manual do colaborador" na Conduta do celular; abre o mesmo material da biblioteca (JS_Core › mobileCondutaAbrirManual_).** **Fazer:** botão "Manual do colaborador" em `renderMobileConduta_`.
+- ~~[P3] **Título "Minhas ocorrências recentes" desalinhado no celular.**~~ — **feito na fase 3, 17/10: título alinhado à esquerda com as ocorrências; situação legível ("Homologada", "Em recurso"...).** (Captura: conduta_celular_390.png)
 
 
-### Fase 2 — pendências deste bloco que dependem do JS_Core (frente do núcleo)
+### Fase 2 — pendências deste bloco que dependem do JS_Core (frente do núcleo) — todas feitas na fase 3 (17/10)
 - `frotaSituacaoHtml_`: "0 disponível(is) · 0 em uso" → "1 disponível · 0 em uso" (plural pelo número).
 - `renderMobileFrotaOperacional_`: títulos em caixa alta ("RETIRADAS EM ANDAMENTO") e os 31 itens da vistoria em caixa alta (item [P3] acima).
 - `Conduta_montarFarolCardHtml_`: número do velocímetro abaixo do arco (item [P3] acima).
@@ -783,7 +783,7 @@ As telas são bem resolvidas: o estado vazio orienta e os erros dizem o que faze
   - **Fazer:** remover a faixa (`bar.id='vincEntry'`).
 - ~~[P2] **Caixa "Criar unidade principal…" abaixo dos botões e em CAIXA ALTA.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** mover para depois do Endereço. *Onde:* `JS_Cadastros.html › renderClientesModulo_`.
-- [P2] **CNPJ sem máscara** em cartões, sugestões, vínculos e listas do celular.
+- ~~[P2] **CNPJ sem máscara**~~ — **feito na fase 3, 17/10: no celular (listas de clientes e unidades e assistente do certificado, JS_Core › mobileCnpj_). Cartões e sugestões do computador ficam com a frente de cadastros.** em cartões, sugestões, vínculos e listas do celular.
   - **Fazer:** formato 11.222.333/0001-81. *Onde:* `vincCards_`, `SGO_montarBuscaClienteLike_`, `renderMobileListaClientes_/Unidades_`.
 - ~~[P2] **Dois botões "Buscar" com sentidos diferentes**~~ (Receita × SGO+). **Feito na fase 2 (78a0405).**
   - **Fazer:** botão do CNPJ "Preencher pela Receita".
@@ -792,7 +792,7 @@ As telas são bem resolvidas: o estado vazio orienta e os erros dizem o que faze
 - [P3] **Tudo gravado em MAIÚSCULAS.** **Fazer:** confirmar com o dono se a normalização é desejada.
 - ~~[P2] **Celular: duas buscas e o painel de vínculos já aberto, com título repetido.**~~ **Feito na fase 2 (78a0405):** o painel de vínculos vem fechado.
   - **Fazer:** painel fechado no celular. (Captura: clientes_lista_390.png)
-- [P2] **CNPJ obrigatório no celular, mas não no computador.**
+- ~~[P2] **CNPJ obrigatório no celular, mas não no computador.**~~ — **feito na fase 3, 17/10: o celular passou a aceitar cliente sem CNPJ, como o computador e o servidor.**
   - **Fazer:** igualar a regra. *Onde:* `JS_Core › renderMobileFormClientes_` × `JS_Cadastros › clientesSalvar_`.
 
 ### Unidades
@@ -809,7 +809,7 @@ As telas são bem resolvidas: o estado vazio orienta e os erros dizem o que faze
   - **Fazer:** Editar e QR Code visíveis; Inativar e Excluir num menu "Mais". (Captura: equipamentos_lista_1440.png)
 - ~~[P2] **Lista vazia ao abrir**~~ (também em Documentos e Usuários). **Feito na fase 2 (78a0405)** em Equipamentos, Arquivo de documentos, Usuários, Clientes e Unidades (50 mais recentes sem filtro).
   - **Fazer:** carregar os 50 mais recentes e usar a pesquisa como filtro.
-- [P2] **Rótulos diferentes entre computador e celular** ("TAG (Identificador)" × "TAG / Patrimônio"; "Número de Série" × "Série").
+- ~~[P2] **Rótulos diferentes entre computador e celular**~~ — **feito na fase 3, 17/10: celular com "TAG (identificador)" e "Número de série". No computador o rótulo ainda é "Número de Série" (JS_Equipamentos, frente de cadastros).** ("TAG (Identificador)" × "TAG / Patrimônio"; "Número de Série" × "Série").
 - [P3] **Sucesso genérico** ("Criado com sucesso."). **Fazer:** "Equipamento AUT-TESTE-01 cadastrado."
 - [P3] **A exclusão não diz qual equipamento.** **Fazer:** "Excluir o equipamento AUT-TESTE-01? Não pode ser desfeito."
 
@@ -826,25 +826,25 @@ Corrigido nesta rodada em `Index.html`:
 Fica para a fase 2:
 - ~~[P2] **"Visualizar no Drive" na lista.**~~ **Fazer:** "Abrir arquivo". *Onde:* `JS_Admin.html`, perto da linha 940. **Feito na fase 2 (78a0405).**
 - ~~[P2] **"Choose File / No file chosen"**~~ no computador e no celular. **Fazer:** botão "Escolher arquivo". **Feito na fase 2 (78a0405).**
-- [P2] **Categoria em lista fechada no computador e em texto livre no celular.**
+- ~~[P2] **Categoria em lista fechada no computador e em texto livre no celular.**~~ — **feito na fase 3, 17/10: o celular usa a mesma lista do computador; categoria antiga digitada à mão continua na lista ao editar.**
   - **Fazer:** o mesmo select no celular. *Onde:* `renderMobileFormDocumentos_ (mob_doc_tipo)`.
 - ~~[P2] **Coluna Ações cortada ("AÇ").**~~ **Feito na fase 2 (78a0405).**
 - [P2] **Erro de programador pode chegar ao operador** ("Execute a função configurarPastasSGO() no arquivo SGO_DriverSetup").
   - **Fazer:** "O envio de arquivos não está configurado. Avise o administrador do sistema; nada foi gravado." *Onde:* `SGO_Documentos.js`, perto da linha 127.
 - ~~[P1] **Celular: clientes sem nome no seletor**~~ (mesmo item de Equipamentos). **Feito na fase 2 (78a0405).**
-- [P3] **Categorias com numeração parcial** ("1. Relatórios de Manutenção"… "Outros Documentos").
-- [P3] **Celular: a lista vazia diz só "Nenhum registro encontrado."**
+- ~~[P3] **Categorias com numeração parcial**~~ — **feito na fase 3, 17/10: rótulos sem numeração e em caixa normal ("Relatórios de manutenção"... "Outros documentos"); o valor gravado não mudou.** ("1. Relatórios de Manutenção"… "Outros Documentos").
+- ~~[P3] **Celular: a lista vazia diz só "Nenhum registro encontrado."**~~ — **feito na fase 3, 17/10: cada lista do celular diz o próximo passo ("Nenhum documento cadastrado. Toque em + Novo documento...") e o botão diz o que cria.**
   - **Fazer:** "Nenhum documento cadastrado. Toque em + Novo para enviar o primeiro."
 
 ### Vínculos (painel em sobreposição)
 - ~~[P2] **"CONSOLIDAR" já vem escolhido**~~, e a ação inativa a origem. **Feito na fase 2 (78a0405).**
   - **Fazer:** primeira opção vazia "Escolha a ação" e nomes em caixa normal.
   - *Onde:* `JS_Vinculos.html › vincSelected_`. (Captura: vinculos_painel_1440.png)
-- ~~[P2] **Códigos internos na tela**~~ ("REGULAR", nomes de tabela e campo). **Em parte na fase 2 (78a0405):** diagnóstico em texto ("Regular"); a prévia ainda mostra nomes de tabela e campo.
+- ~~[P2] **Códigos internos na tela**~~ ("REGULAR", nomes de tabela e campo). **Feito: fase 2 (78a0405) no diagnóstico e fase 3 (17/10) na prévia, nas referências e no histórico, com nomes de tela ("Equipamentos › Cliente", "Laudos NR-13: 2 registros") no lugar das tabelas e campos (JS_Vinculos › vincTabela_, vincCampo_).**
   - **Fazer:** "Situação: regular" e nomes de tela. *Onde:* `vincSelected_`, `vincPreview_`.
 - [P3] **Botões cinza chapados e "Fechar" no meio.** **Fazer:** ordem "Atualizar · Como usar" e "Fechar" no canto.
 - [P3] **Legenda densa no topo**, antes de qualquer seleção. **Fazer:** mover para "Como usar".
-- [P3] **Confirmação confusa** ("…somente se ainda não existir?").
+- ~~[P3] **Confirmação confusa**~~ — **feito na fase 3, 17/10: "Criar a unidade principal deste cliente? Se ela já existir, nada é criado."** ("…somente se ainda não existir?").
 - ~~[P2] **Ao fechar o painel, o menu continua marcando "Vínculos".**~~ Ver 1.6. **Feito na fase 2 (78a0405).**
 
 ### Configurações (página "Administração")
@@ -868,10 +868,31 @@ Fica para a fase 2:
 - [P2] **Texto do Google:** "(a mesma usada no SGO+ do Google)". **Fazer:** "No Auvo: Menu → Integrações → API." (Captura: chaves_pagina_1440.png)
 - [P2] **Liga/desliga e escolha de provedor por digitação livre** ("Digite 1…", "Digite meta ou zapi").
   - **Fazer:** chave Ligado/Desligado e um select "Automático / WhatsApp oficial (Meta) / Z-API". *Onde:* `JS_Chaves.html › ChavesTela_htmlItem_`.
-- [P3] **Nomes de variáveis e caminho de arquivo do repositório nos títulos.**
-- [P3] **Títulos em inglês** ("API Key", "Phone Number ID", "Client-Token").
+- ~~[P3] **Nomes de variáveis e caminho de arquivo do repositório nos títulos.**~~ — **feito na fase 3, 17/10: o código interno da chave não aparece mais no título (JS_Chaves).**
+- ~~[P3] **Títulos em inglês**~~ — **feito na fase 3, 17/10: títulos em português ("Auvo: chave de acesso", "WhatsApp oficial (Meta): identificação do número de telefone", "Z-API: token de segurança da conta"...); o termo original fica só na ajuda, para achar o campo no painel do fornecedor (SGO_Chaves.js).** ("API Key", "Phone Number ID", "Client-Token").
 - [P3] **Página com cerca de 3.300 px.** **Fazer:** recolher o bloco do provedor de WhatsApp que não estiver em uso.
 
+
+## 6.1 Fase 3 (17/10) — celular e menu
+
+Revisão da versão celular em 390 e 360 px com ADMIN, GESTOR, TECNICO e CLIENTE (dados de teste no servidor local, modo ensaio). Arquivos: JS_Core, Index, UI_Estilos.
+
+- **Menu:** grupo "Planejamento de serviços" (Planejamento CME e Cronograma); NR-13 no grupo "Qualificação e inspeção"; Inventário em Cadastros (escondido do cliente, como antes). As chaves das telas não mudaram; a busca Ctrl K lê o menu e ganhou as palavras "planejamento servicos". Nome de grupo longo quebra a linha em vez de cortar.
+- **Assistente do certificado no celular:** 5 passos (cliente, equipamento, dados, ensaios, fotos e emissão). O passo da avaliação pelo cliente saiu; a tela da emissão lembra que a decisão de uso fica com o cliente, como nota no certificado. Sem a lista de técnicos, o campo orienta usar o nome livre.
+- **Frota no celular:** abastecimento pelo celular para Administrador, Gestor e Diretoria (o servidor só aceita esses perfis), com comprovante por foto ou PDF; a lista de retiradas usa a mesma consulta da situação da frota (uma chamada a menos) e os avisos vêm depois, o que evita a disputa "Já existe uma página chamada CAD_CONDUTORES" na primeira abertura. Retirada, vistoria, devolução e abastecimento testados de ponta a ponta.
+- **Padrões de referência no celular:** consulta da validade dos padrões ativos (sem edição), com busca; atalho na tela inicial do celular.
+- **Toque e leitura:** botões de pelo menos 44 px, campos com fonte de 16 px (o celular não amplia a tela ao focar), campo em foco levado para o meio da tela quando o teclado abre, espaço no fim da página para o botão flutuante, primeira linha da tela não fica mais atrás da barra do topo, grade inicial mais baixa, situações dos cartões em caixa normal ("Ativo", "Em uso").
+- **Mensagens:** erro do farol da Conduta sem texto técnico; listas vazias dizem o próximo passo; formulários do celular com rótulos em caixa normal.
+- **Sem erros de console nas telas próprias** (o único 404 é o logo do Drive, que não existe no banco de teste).
+
+**Pendências do celular que dependem de outras frentes:**
+- Alertas (JS_Atividades): "Minhas atividades" no celular repete o título, empilha as abas Lista/Agenda/Kanban (cerca de 150 px) e mostra a tabela de 3 colunas apertada; "1 aberta(s) · 1 vencida(s)". Itens [P3] de Atividades (nomes do ato, "Fazendo agora", dois botões primários, "Andamento (%)", coluna "Selo", filtro "Gantt por", marca "hoje", altura dos botões da agenda) continuam abertos. A justificativa de atraso funciona no celular.
+- Alertas (JS_Inicio): incluir `padroes` em `MENU_TELAS_CELULAR`, para a busca do celular oferecer a nova tela de padrões; a saudação usa o nome como está no cadastro ("TECNICO").
+- Conduta (servidor): `Conduta_apiGerarExtratoColaborador is not defined` durante esta revisão (arquivo em edição pela frente); a linha do farol ainda diz "ICO 100,0".
+- Frota (servidor): criação das tabelas da Frota não é protegida contra chamadas simultâneas; nomes de condutor gravados em maiúsculas.
+- Documentos técnicos (servidor): `apiListarTecnicos` falha com "Aba não encontrada: CAD_TECNICOS" quando a tabela não existe; deveria devolver lista vazia.
+- Cadastros (JS_Equipamentos): mensagens [P3] de sucesso e exclusão sem o nome do equipamento; rótulo "Número de Série" no computador.
+- Frota (JS_Core, decisão do dono): o cronômetro temporário de 09/09 (`mobileFrota_diagRegistrarTempo_`) faz uma chamada extra ao servidor a cada ação da Frota no celular; pode sair quando a investigação de lentidão terminar.
 
 ## 7. Capturas
 
