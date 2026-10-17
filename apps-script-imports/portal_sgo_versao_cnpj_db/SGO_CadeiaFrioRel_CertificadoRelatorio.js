@@ -116,6 +116,9 @@ function CadeiaFrioRel_cfMontarContextoCertificado_(payload, resultado) {
       inicioEnsaioPorta: inicioEnsaioPortaReal,
       inicioEnsaioEnergia: inicioEnsaioEnergiaReal,
       tecnicoExecutor: String(payload.responsavelTecnico || '').trim(),
+      marca: String(payload.marca || '').trim(),
+      modelo: String(payload.modelo || '').trim(),
+      numeroSerie: String(payload.numeroSerie || '').trim(),
       responsavelAceite: String(payload.certResponsavelAceite || '').trim(),
       tarefaOrigem: String(payload.certTarefaOrigem || '').trim(),
       empresaExecutante: CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE
@@ -236,12 +239,14 @@ function CadeiaFrioRel_apiGerarRascunhoCertificado(payload) {
 
   const resultado = CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload);
   const contexto = CadeiaFrioRel_cfMontarContextoCertificado_(payload, resultado);
-  const textos = CadeiaFrioRel_cfIACriarTextosCertificado_(contexto);
+  const ia = SGO_DocSalvar_textosIaOuManual_(CadeiaFrioRel_cfIACriarTextosCertificado_, contexto);
 
   return {
     ok: true,
-    textos: textos,
-    contexto: contexto
+    textos: ia.textos,
+    avisoIA: ia.avisoIA,
+    contexto: contexto,
+    assinaturaContexto: SGO_DocSalvar_assinatura_(contexto)
   };
 }
 
@@ -253,6 +258,7 @@ function CadeiaFrioRel_apiMontarCertificadoFinal(payload) {
 
   const resultado = CadeiaFrioRel_cfExecutarAnaliseCompleta_(payload);
   const contexto = CadeiaFrioRel_cfMontarContextoCertificado_(payload, resultado);
+  SGO_DocSalvar_validarEmissao_(payload, contexto, ['introducao', 'objetivo', 'conclusaoGeral']);
 
   const textos = payload.textosCertificado || {};
   const fotos = Array.isArray(payload.fotosCertificado) ? payload.fotosCertificado.slice(0, 4) : [];

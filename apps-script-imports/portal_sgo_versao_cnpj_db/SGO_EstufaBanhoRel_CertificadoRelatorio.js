@@ -129,6 +129,9 @@ function EstufaBanhoRel_ebMontarContextoCertificado_(payload, resultado) {
       inicioEnsaioPorta: inicioEnsaioPortaReal,
       inicioEnsaioEnergia: inicioEnsaioEnergiaReal,
       tecnicoExecutor: String(payload.responsavelTecnico || '').trim(),
+      marca: String(payload.marca || '').trim(),
+      modelo: String(payload.modelo || '').trim(),
+      numeroSerie: String(payload.numeroSerie || '').trim(),
       responsavelAceite: String(payload.certResponsavelAceite || '').trim(),
       tarefaOrigem: String(payload.certTarefaOrigem || '').trim(),
       empresaExecutante: EstufaBanhoRel_EBCFG.EMPRESA_EXECUTANTE
@@ -234,10 +237,11 @@ function EstufaBanhoRel_apiGerarRascunhoCertificado(payload) {
   payload = payload || {};
   const resultado = EstufaBanhoRel_ebExecutarAnaliseCompleta_(payload);
   const contexto = EstufaBanhoRel_ebMontarContextoCertificado_(payload, resultado);
-  const textos = EstufaBanhoRel_ebIACriarTextosCertificado_(contexto);
+  const ia = SGO_DocSalvar_textosIaOuManual_(EstufaBanhoRel_ebIACriarTextosCertificado_, contexto);
   return {
     ok: true,
-    textos: textos,
+    textos: ia.textos,
+    avisoIA: ia.avisoIA,
     contexto: contexto,
     assinaturaContexto: EstufaBanhoRel_ebAssinaturaContexto_(contexto)
   };

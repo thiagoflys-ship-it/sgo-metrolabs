@@ -199,21 +199,27 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
   html.push('</table></div>');
 
   html.push('<div class="secao"><h2>2. FUNDAMENTAÇÃO TÉCNICA</h2><div class="prosa">');
-  html.push('<p>O F0 não mede tempo de relógio: ele converte o efeito germicida obtido na temperatura real do ensaio para uma escala de referência fixa em ' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C, conforme ABNT NBR 16328 / ISO 17665-1. Como o efeito do calor sobre microrganismos cresce em degraus multiplicativos com a temperatura — cada ' + AutoRel_mf0Num_(ctx.z, 0) + ' °C acima da referência multiplica a velocidade de esterilização por dez — um minuto de exposição na temperatura real do ciclo vale muito mais que um minuto de F0.</p>');
+  html.push('<p>O F0 não mede tempo de relógio: ele converte o efeito germicida obtido na temperatura real do ensaio para uma escala de referência fixa em ' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C, conforme ABNT NBR 16328 / ISO 17665-1. Como o efeito do calor sobre microrganismos cresce em degraus multiplicativos com a temperatura — cada ' + AutoRel_mf0Num_(ctx.z, 0) + ' °C acima da referência multiplica a velocidade de esterilização por dez — um minuto de exposição acima da referência vale mais que um minuto de F0, e um minuto abaixo dela vale menos.</p>');
   html.push('</div>');
   html.push('<table class="escala"><thead><tr><th>Temperatura</th><th>Relação com a referência</th><th>Fator de equivalência</th></tr></thead><tbody>');
   html.push('<tr class="destaque-linha"><td>' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C</td><td>referência da norma</td><td>1,0×</td></tr>');
-  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 10, 1) + ' °C</td><td>+10 °C</td><td>10×</td></tr>');
-
+  // Linhas em ordem crescente de temperatura (a média do pior sensor entra na posição certa).
+  const linhasEscala = [
+    { t: ctx.tBase + 10, html: '<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 10, 1) + ' °C</td><td>+10 °C</td><td>10×</td></tr>' },
+    { t: ctx.tBase + 20, html: '<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 20, 1) + ' °C</td><td>+20 °C</td><td>100×</td></tr>' }
+  ];
+  let mediaFatorPior = null;
   const piorSensorObj = ctx.sensores.find(function(sv) { return ctx.piorSensorF0 && sv.sensor === ctx.piorSensorF0.sensor; });
   if (piorSensorObj && piorSensorObj.leituras.length) {
     const mediaTempPior = AutoRel_mf0MediaLeituras_(piorSensorObj.leituras);
-    const mediaFatorPior = AutoRel_mf0MediaFator_(piorSensorObj.leituras);
-    html.push('<tr><td>' + AutoRel_mf0Num_(mediaTempPior, 1) + ' °C</td><td>média do pior sensor (' + AutoRel_acEscaparHtml_(piorSensorObj.sensor) + ') na exposição</td><td>≈ ' + AutoRel_mf0Num_(mediaFatorPior, 1) + '×</td></tr>');
+    mediaFatorPior = AutoRel_mf0MediaFator_(piorSensorObj.leituras);
+    linhasEscala.push({ t: mediaTempPior, html: '<tr><td>' + AutoRel_mf0Num_(mediaTempPior, 1) + ' °C</td><td>média do pior sensor (' + AutoRel_acEscaparHtml_(piorSensorObj.sensor) + ') na exposição</td><td>≈ ' + AutoRel_mf0Num_(mediaFatorPior, 1) + '×</td></tr>' });
   }
-  html.push('<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 20, 1) + ' °C</td><td>+20 °C</td><td>100×</td></tr>');
+  linhasEscala.sort(function(x, y) { return x.t - y.t; }).forEach(function(l) { html.push(l.html); });
   html.push('</tbody></table>');
-  html.push('<p class="nota-tabela">No ponto mais frio do ciclo, cada minuto real de exposição já equivale a dezenas de minutos na escala de referência — é por isso que o F0 final soma muito mais que o tempo de relógio da exposição.</p>');
+  if (mediaFatorPior !== null && isFinite(mediaFatorPior)) {
+    html.push('<p class="nota-tabela">No ponto mais frio do ciclo, cada minuto real de exposição equivaleu, em média, a ' + AutoRel_mf0Num_(mediaFatorPior, 1) + ' minuto(s) na escala de referência' + (mediaFatorPior > 1 ? ' — por isso o F0 final é maior que o tempo de relógio da exposição.' : (mediaFatorPior < 1 ? ' — por isso o F0 final é menor que o tempo de relógio da exposição.' : '.')) + '</p>');
+  }
   html.push('</div>');
 
   html.push('<div class="secao"><h2>3. MEMÓRIA DE CÁLCULO — POR SENSOR</h2>');

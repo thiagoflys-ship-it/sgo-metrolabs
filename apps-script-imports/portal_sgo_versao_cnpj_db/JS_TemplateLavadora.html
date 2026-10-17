@@ -114,7 +114,7 @@
       <main class="grid-layout">
         <section class="panel">
           <h2>Geração de relatórios de lavadoras</h2>
-          <p class="panel-subtitle">Escolha o módulo ativo e preencha os dados técnicos para gerar Google Docs e PDF no template correspondente.</p>
+          <p class="panel-subtitle">Escolha o módulo ativo e preencha os dados técnicos para gerar o documento e o PDF no modelo correspondente.</p>
           <div class="tabs">
             <button id="tplTabLavadora" class="tab-btn active" type="button" onclick="tplLavadora_alternarModulo('LAVADORA')">Lavadora Ultrassônica</button>
             <button id="tplTabTermo" class="tab-btn" type="button" onclick="tplLavadora_alternarModulo('TERMODESINFECTORA')">Termodesinfectora</button>
@@ -184,12 +184,12 @@
           <div id="tplLavStatusBox" class="alert-box info show">Pronto para gerar relatórios.</div>
           <div id="tplLavResultLinks" class="result-links">
             <div class="result-link-list">
-              <a id="tplLavDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Docs</a>
+              <a id="tplLavDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir documento</a>
               <a id="tplLavPdfLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir PDF</a>
               <a id="tplLavFolderLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir pasta de saída</a>
             </div>
           </div>
-          <div class="card-note">O sistema identifica o módulo ativo, copia o template correto, substitui os placeholders e gera o PDF na pasta correspondente.</div>
+          <div class="card-note">O sistema identifica o módulo ativo, copia o modelo correto, preenche os campos marcados e gera o PDF na pasta correspondente.</div>
           <div class="terminal-wrap">
             <div class="terminal-header">PLACEHOLDERS DO MÓDULO ATIVO</div>
             <div id="tplLavPlaceholderStatus" class="terminal">Lendo template...</div>
@@ -326,7 +326,7 @@
         tplLavadora_setLoading('LAVADORA', false);
         tplLavadora_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
       })
-      .tplLavadoraGerarRelatorio(payload);
+      .tplLavadoraGerarRelatorio(SGO_getSessionId(), payload);
   }
 
   function tplLavadora_gerarTermodesinfectora() {
@@ -350,7 +350,7 @@
         tplLavadora_setLoading('TERMODESINFECTORA', false);
         tplLavadora_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
       })
-      .tplLavadoraGerarRelatorio(payload);
+      .tplLavadoraGerarRelatorio(SGO_getSessionId(), payload);
   }
 
   function tplLavadora_limparLavadora() { tplLavadora_el('tplFormLavadora').reset(); tplLavadora_ocultarLinks(); tplLavadora_setStatus('Campos da Lavadora Ultrassônica limpos.', 'info'); }

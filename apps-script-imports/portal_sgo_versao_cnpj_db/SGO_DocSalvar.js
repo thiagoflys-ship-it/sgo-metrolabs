@@ -108,7 +108,9 @@ function SGO_DocSalvar_htmlAoLado_(pasta, nomePdf, html, opcoes) {
 /** ID do arquivo do Drive a partir da URL (…/d/<id>/… ou ?id=<id>). */
 function SGO_DocSalvar_idDaUrl_(url) {
   var u = String(url || '');
-  var m = /\/d\/([A-Za-z0-9_-]{10,})/.exec(u) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(u);
+  // Formatos aceitos: Google (…/d/<id>/…, ?id=<id>) e servidor próprio (…/arquivos/<id>, absoluto ou relativo).
+  var m = /\/d\/([A-Za-z0-9_-]{10,})/.exec(u) || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(u) ||
+    /(?:^|\/)arquivos\/([A-Za-z0-9_-]{10,})/.exec(u);
   return m ? m[1] : '';
 }
 
@@ -265,6 +267,69 @@ function SGO_DocSalvar_injetarAvisoTela_(html, resultado) {
   var css = '<style>@media print{.sgo-docsalvar-aviso{display:none!important}}</style>';
   if (/<body[^>]*>/i.test(h)) return h.replace(/<body[^>]*>/i, function (m) { return m + css + faixa; });
   return css + faixa + h;
+}
+
+/**
+ * Rascunho dos certificados de equipamento (Autoclave, Lavadora, Cadeia de
+ * Frio, Estufa/Banho): roda a redação por IA; se a IA não estiver disponível
+ * (chave não cadastrada, limite de uso, serviço fora), devolve os textos
+ * vazios e um aviso, para o técnico escrever à mão e emitir normalmente.
+ * Os cálculos e o veredito não dependem da IA. Nunca lança.
+ */
+function SGO_DocSalvar_textosIaOuManual_(fnIA, contexto) {
+  try {
+    return { textos: fnIA(contexto) || {}, avisoIA: '' };
+  } catch (e) {
+    var motivo = String(e && e.message ? e.message : e).replace(/[.\s]+$/, '');
+    return {
+      textos: { introducao: '', objetivo: '', conclusaoGeral: '', conclusaoLeigo: '', analisePorEstudo: {} },
+      avisoIA: 'O rascunho foi preparado sem a redação automática (' + motivo + '). Os resultados e o veredito abaixo já estão calculados; ' +
+        'escreva a análise e as conclusões nos campos e emita normalmente.'
+    };
+  }
+}
+
+/** Impressão digital (SHA-256 hex) dos fatos do certificado: o texto revisado só é emitido sobre os mesmos dados do rascunho. */
+function SGO_DocSalvar_assinatura_(valor) {
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(valor), Utilities.Charset.UTF_8);
+  return digest.map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+
+/**
+ * Validação comum da emissão final: rascunho gerado sobre os mesmos dados e
+ * textos obrigatórios preenchidos. campos: nomes dos textos exigidos.
+ */
+function SGO_DocSalvar_validarEmissao_(payload, contexto, campos) {
+  if (!payload.assinaturaContextoCertificado || payload.assinaturaContextoCertificado !== SGO_DocSalvar_assinatura_(contexto)) {
+    throw new Error('Os dados ou critérios mudaram desde o rascunho, ou o rascunho não foi gerado. Clique em Gerar Rascunho de novo, revise os textos e emita.');
+  }
+  var textos = payload.textosCertificado || {};
+  var faltaCampo = (campos || []).some(function (c) { return !String(textos[c] || '').trim(); });
+  var faltaEstudo = (contexto.estudos || []).some(function (e) { return !String((textos.analisePorEstudo || {})[e.tipoEstudo] || '').trim(); });
+  if (faltaCampo || faltaEstudo) {
+    throw new Error('A interpretação está incompleta. Preencha a análise de cada estudo e as conclusões antes de emitir.');
+  }
+}
+
+/** Texto de duração legível (s ou min, pt-BR). */
+function SGO_DocSalvar_duracao_(min) {
+  var n = Number(min);
+  if (!isFinite(n)) return String(min);
+  return n < 1 ? SGO_DocSalvar_num_(n * 60, n * 60 < 10 ? 1 : 0) + ' s' : SGO_DocSalvar_num_(n, n < 10 ? 1 : 0) + ' min';
+}
+
+/** Mensagem dos parsers quando o intervalo típico entre leituras sai da faixa aceita. */
+function SGO_DocSalvar_msgIntervalo_(medianoMin, minMin, maxMin) {
+  return 'O intervalo típico entre leituras do arquivo é de ' + SGO_DocSalvar_duracao_(medianoMin) +
+    ', fora da faixa aceita pelo sistema (de ' + SGO_DocSalvar_duracao_(minMin) + ' a ' + SGO_DocSalvar_duracao_(maxMin) + '). ' +
+    'Confira se o arquivo é o do datalogger certo e se a coluna de hora foi lida corretamente (veja a prévia); se o datalogger foi programado com outro intervalo, ' +
+    'exporte os dados com intervalo dentro da faixa ou peça ao administrador para ajustar a configuração do módulo.';
+}
+
+/** Mensagem única para a chave da IA ausente/recusada (aponta para a tela Chaves e senhas). */
+function SGO_DocSalvar_msgChaveIA_(codigo) {
+  if (codigo) return 'a chave da IA foi recusada pelo serviço (HTTP ' + codigo + '); peça ao administrador para conferi-la em Chaves e senhas';
+  return 'a chave da IA (GEMINI_API_KEY) não está cadastrada; peça ao administrador para cadastrá-la em Chaves e senhas';
 }
 
 /** Formatação numérica pt-BR (fallback local se SGO_DocA4_num_ não existir). */

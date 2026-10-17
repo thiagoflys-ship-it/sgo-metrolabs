@@ -49,6 +49,10 @@
     }
     table.info td { border: 1px solid #d1d5db; padding: 7px 10px; vertical-align: top; }
     table.info td.rotulo { background: #f3f4f6; font-weight: 700; width: 34%; color: #374151; }
+    table.sensores { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 10.5px; }
+    table.sensores th, table.sensores td { border: 1px solid #d1d5db; padding: 5px 7px; }
+    table.sensores th { background: #f3f4f6; color: #374151; text-align: left; }
+    table.sensores td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
     .status-banner {
       text-align: center;
@@ -244,6 +248,9 @@
         <tr><td class="rotulo">Endereço</td><td><?= ctx.identificacao.endereco || '—' ?></td></tr>
         <tr><td class="rotulo">Setor</td><td><?= ctx.identificacao.setor || '—' ?></td></tr>
         <tr><td class="rotulo">Equipamento</td><td><?= ctx.equipamentoLabel ?></td></tr>
+        <? if (ctx.identificacao.marca || ctx.identificacao.modelo || ctx.identificacao.numeroSerie) { ?>
+        <tr><td class="rotulo">Marca / modelo / nº de série</td><td><?= [ctx.identificacao.marca, ctx.identificacao.modelo, ctx.identificacao.numeroSerie ? ('nº de série ' + ctx.identificacao.numeroSerie) : ''].filter(function(v) { return !!v; }).join(' / ') ?></td></tr>
+        <? } ?>
         <tr><td class="rotulo">TAG</td><td><?= ctx.identificacao.tag || '—' ?></td></tr>
         <tr><td class="rotulo">DTL (data logger)</td><td><?= ctx.identificacao.dtl || '—' ?></td></tr>
         <tr><td class="rotulo">Data do ensaio</td><td><?= ctx.identificacao.dataDoEnsaio || '—' ?></td></tr>
@@ -313,27 +320,38 @@
         <? if (estudo.tipoEstudo !== 'ULTRASSOM') { ?>
         <div><span class="k">Sensores utilizados:</span> <?= f.quantidadeSensoresUtilizados ?> de <?= f.quantidadeSensoresInstalados ?> instalados</div>
         <? } ?>
-        <div><span class="k">Limite operacional:</span> <?= LavRel_lvFmtValor_(f.limiteAprovacaoFinal, estudo.tipoEstudo === 'ULTRASSOM' ? ' min' : '') ?></div>
+        <? if (estudo.tipoEstudo !== 'ULTRASSOM' && f.parametroNormativo) { ?><div><span class="k">A0 mínimo normativo:</span> <?= LavRel_lvFmtValor_(f.parametroNormativo, ' s') ?></div><? } ?>
+        <div><span class="k">Limite operacional:</span> <?= LavRel_lvFmtValor_(f.limiteAprovacaoFinal, estudo.tipoEstudo === 'ULTRASSOM' ? ' min' : ' s') ?></div>
       </div>
 
       <? if (estudo.tipoEstudo === 'ULTRASSOM') { ?>
       <div class="stat-grid">
-        <div class="stat-tile"><div class="rotulo">Tempo de cavitação</div><div class="valor"><?= f.tempoCavitacao ?> min</div></div>
-        <div class="stat-tile"><div class="rotulo">Limite operacional</div><div class="valor"><?= f.limiteAprovacaoFinal ?> min</div></div>
+        <div class="stat-tile"><div class="rotulo">Tempo de cavitação</div><div class="valor"><?= LavRel_lvFmtValor_(f.tempoCavitacao, ' min') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Limite operacional</div><div class="valor"><?= LavRel_lvFmtValor_(f.limiteAprovacaoFinal, ' min') ?></div></div>
       </div>
       <? } else { ?>
       <div class="stat-grid">
-        <div class="stat-tile"><div class="rotulo">A0 mínimo</div><div class="valor"><?= f.minA0 ?></div></div>
-        <div class="stat-tile"><div class="rotulo">A0 médio</div><div class="valor"><?= f.mediaA0 ?></div></div>
-        <div class="stat-tile"><div class="rotulo">A0 máximo</div><div class="valor"><?= f.maxA0 ?></div></div>
+        <div class="stat-tile"><div class="rotulo">A0 mínimo</div><div class="valor"><?= LavRel_lvFmtValor_(f.minA0, ' s') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">A0 médio</div><div class="valor"><?= LavRel_lvFmtValor_(f.mediaA0, ' s') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">A0 máximo</div><div class="valor"><?= LavRel_lvFmtValor_(f.maxA0, ' s') ?></div></div>
       </div>
+      <? if (f.conformidadePorSensor && f.conformidadePorSensor.length) { ?>
+      <table class="sensores">
+        <thead><tr><th>Sensor</th><th class="num">A0 acumulado</th><th class="num">Mínima na fase principal</th><th class="num">Média na fase principal</th><th class="num">Máxima na fase principal</th><th>Situação</th></tr></thead>
+        <tbody>
+        <? f.conformidadePorSensor.forEach(function(cs) { ?>
+          <tr><td><?= cs.sensor ?></td><td class="num"><?= LavRel_lvFmtValor_(cs.a0, ' s') ?></td><td class="num"><?= LavRel_lvFmtValor_(cs.minTemp, ' °C') ?></td><td class="num"><?= LavRel_lvFmtValor_(cs.mediaTemp, ' °C') ?></td><td class="num"><?= LavRel_lvFmtValor_(cs.maxTemp, ' °C') ?></td><td><?= cs.statusSensor === 'CONFORME' ? 'Atende ao limite' : 'Abaixo do limite' ?></td></tr>
+        <? }) ?>
+        </tbody>
+      </table>
+      <? } ?>
       <? } ?>
 
       <h3>Análise</h3>
       <div class="prosa"><?!= LavRel_lvParagrafosHtml_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
 
       <div class="conclusao-ensaio <?= classeSt ?>">
-        Conclusão do ensaio: <?= LavRel_lvLabelStatus_(st) ?><? if (st === 'REPROVADO') { ?> — não conforme<? } else { ?> — conforme<? } ?>
+        Conclusão do ensaio: <?= LavRel_lvLabelStatus_(st) ?><? if (st === 'REPROVADO') { ?> — não conforme<? } else if (st !== 'INFORMATIVO') { ?> — conforme<? } ?>
       </div>
     </div>
     <? }) ?>

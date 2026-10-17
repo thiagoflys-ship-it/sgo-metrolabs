@@ -157,6 +157,9 @@ function LavRel_lvMontarContextoCertificado_(payload) {
       revisao: String(payload.certRevisao || '0').trim(),
       dataDoEnsaio: LavRel_lvExtrairDataDoTexto_(fatos.tempoInicioExposicao || a.tempoInicioCiclo || ''),
       tecnicoExecutor: String(payload.respTecnico || payload.operador || '').trim(),
+      marca: String(payload.marca || '').trim(),
+      modelo: String(payload.modelo || '').trim(),
+      numeroSerie: String(payload.numSerie || '').trim(),
       responsavelAceite: String(payload.certResponsavelAceite || '').trim(),
       tarefaOrigem: String(payload.certTarefaOrigem || '').trim(),
       empresaExecutante: LavRel_UCFG.EMPRESA_EXECUTANTE
@@ -192,12 +195,14 @@ function LavRel_apiGerarRascunhoCertificado(payload) {
   payload = payload || {};
 
   const contexto = LavRel_lvMontarContextoCertificado_(payload);
-  const textos = LavRel_lvIACriarTextosCertificado_(contexto);
+  const ia = SGO_DocSalvar_textosIaOuManual_(LavRel_lvIACriarTextosCertificado_, contexto);
 
   return {
     ok: true,
-    textos: textos,
-    contexto: contexto
+    textos: ia.textos,
+    avisoIA: ia.avisoIA,
+    contexto: contexto,
+    assinaturaContexto: SGO_DocSalvar_assinatura_(contexto)
   };
 }
 
@@ -208,6 +213,7 @@ function LavRel_apiMontarCertificadoFinal(payload) {
   payload = payload || {};
 
   const contexto = LavRel_lvMontarContextoCertificado_(payload);
+  SGO_DocSalvar_validarEmissao_(payload, contexto, ['conclusaoGeral', 'conclusaoLeigo']);
 
   const textos = payload.textosCertificado || {};
   const fotos = Array.isArray(payload.fotosCertificado) ? payload.fotosCertificado.slice(0, 4) : [];

@@ -237,6 +237,9 @@
         <tr><td class="rotulo">Endereço</td><td><?= ctx.identificacao.endereco || '—' ?></td></tr>
         <tr><td class="rotulo">Setor</td><td><?= ctx.identificacao.setor || '—' ?></td></tr>
         <tr><td class="rotulo">Equipamento</td><td><?= ctx.equipamentoLabel ?></td></tr>
+        <? if (ctx.identificacao.marca || ctx.identificacao.modelo || ctx.identificacao.numeroSerie) { ?>
+        <tr><td class="rotulo">Marca / modelo / nº de série</td><td><?= [ctx.identificacao.marca, ctx.identificacao.modelo, ctx.identificacao.numeroSerie ? ('nº de série ' + ctx.identificacao.numeroSerie) : ''].filter(function(v) { return !!v; }).join(' / ') ?></td></tr>
+        <? } ?>
         <tr><td class="rotulo">TAG</td><td><?= ctx.identificacao.tag || '—' ?></td></tr>
         <tr><td class="rotulo">DTL (data logger)</td><td><?= ctx.identificacao.dtl || '—' ?></td></tr>
         <tr><td class="rotulo">Início do estudo térmico</td><td><?= ctx.identificacao.inicioEnsaio24h || '—' ?></td></tr>
@@ -269,7 +272,7 @@
       <h2>4. METODOLOGIA E CRITÉRIOS DE ACEITAÇÃO</h2><p><strong>Equipamento:</strong> <?= ctx.equipamentoLabel ?> · <strong>Sensores utilizados:</strong> <?= ctx.sensoresUtilizados ?></p>
       <ul class="criterios">
         <li>Registro de temperatura conforme intervalo do data logger utilizado, ao longo de toda a janela de cada ensaio.</li>
-        <li>Faixa operacional aceitável de referência: <?= ctx.faixa.tMin ?> °C a <?= ctx.faixa.tMax ?> °C, com tolerância de <?= ctx.faixa.tolerancia ?> °C.</li>
+        <li>Faixa operacional aceitável de referência: <?= EstufaBanhoRel_ebFmtValor_(ctx.faixa.tMin, ' °C') ?> a <?= EstufaBanhoRel_ebFmtValor_(ctx.faixa.tMax, ' °C') ?>, com tolerância de <?= EstufaBanhoRel_ebFmtValor_(ctx.faixa.tolerancia, ' °C') ?>.</li>
         <li>Tratamento estatístico dos dados: mínima, máxima, média, mediana, desvio-padrão e amplitude.</li>
         <li>Avaliação dos valores térmicos registrados e, quando incluído o estudo correspondente, ruptura e recuperação após eventos.</li>
         <li>Rastreabilidade: dados de campo tratados de forma distinta de qualquer dado de desenvolvimento ou demonstração de layout.</li>
@@ -340,12 +343,12 @@
 
       <? if (e) { ?>
       <div class="stat-grid">
-        <div class="stat-tile"><div class="rotulo">Mínima</div><div class="valor"><?= e.min ?> °C</div></div>
-        <div class="stat-tile"><div class="rotulo">Máxima</div><div class="valor"><?= e.max ?> °C</div></div>
-        <div class="stat-tile"><div class="rotulo">Média</div><div class="valor"><?= e.media ?> °C</div></div>
-        <div class="stat-tile"><div class="rotulo">Mediana</div><div class="valor"><?= e.mediana ?> °C</div></div>
-        <div class="stat-tile"><div class="rotulo">Desvio-padrão</div><div class="valor"><?= e.desvioPadrao ?> °C</div></div>
-        <div class="stat-tile"><div class="rotulo">Amplitude</div><div class="valor"><?= e.amplitude ?> °C</div></div>
+        <div class="stat-tile"><div class="rotulo">Mínima</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.min, ' °C') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Máxima</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.max, ' °C') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Média</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.media, ' °C') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Mediana</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.mediana, ' °C') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Desvio-padrão</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.desvioPadrao, ' °C') ?></div></div>
+        <div class="stat-tile"><div class="rotulo">Amplitude</div><div class="valor"><?= EstufaBanhoRel_ebFmtValor_(e.amplitude, ' °C') ?></div></div>
       </div>
       <? } ?>
 

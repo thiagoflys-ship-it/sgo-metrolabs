@@ -557,7 +557,7 @@ function EstufaBanhoRel_detectarPadraoDataNaMatriz_(matriz,startIdx,idxColunaDat
   let br=false,us=false,ambigua=false;
   for(let i=startIdx;i<matriz.length;i++) {
     const value=(matriz[i]||[])[idxColunaData||0];
-    const m=String(value||'').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:\s|$)/);
+    const m=String(value||'').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4}|\d{2})(?:\s|$)/);
     if(!m)continue;
     const a=+m[1],b=+m[2];
     if(a>12&&b<=12)br=true;
@@ -579,9 +579,9 @@ function EstufaBanhoRel_parseDataHoraRobusta_(valor,dateStyle,ultimaDataValida) 
   let y,month,day,time;
   if(m){y=+m[1];month=+m[2];day=+m[3];time=m[4];}
   else {
-    m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:\s+(.+))?$/);
+    m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4}|\d{2})(?:\s+(.+))?$/);
     if(!m)return null;
-    y=+m[3];month=+(dateStyle==='US'?m[1]:m[2]);day=+(dateStyle==='US'?m[2]:m[1]);time=m[4];
+    y=+m[3]+(m[3].length===2?2000:0);month=+(dateStyle==='US'?m[1]:m[2]);day=+(dateStyle==='US'?m[2]:m[1]);time=m[4];
   }
   // Fuso explícito representa um instante; datas sem fuso mantêm o horário civil do estudo.
   if(time&&/(Z|[+-]\d{2}:?\d{2})$/.test(time)) {
@@ -697,6 +697,7 @@ function EstufaBanhoRel_validarSequenciaTempoNormalizado_(rows) {
   let iguaisSequenciais = 1;
   let maiorBlocoIguais = 1;
   let saltosAbsurdos = 0;
+  let primeiroSalto = null;
   const deltasMin = [];
   for (let i = 0; i < rows.length; i++) {
     const d = rows[i].tempoDate;
@@ -714,6 +715,7 @@ function EstufaBanhoRel_validarSequenciaTempoNormalizado_(rows) {
       }
       if (deltaMin > maxSaltoMin) {
         saltosAbsurdos++;
+        if (!primeiroSalto) primeiroSalto = { linha: i + 1, de: String((rows[i - 1] && rows[i - 1].tempoStr) || prev), ate: String(rows[i].tempoStr || d), min: deltaMin };
       }
       if (deltaMin > 0) {
         deltasMin.push(deltaMin);
@@ -728,12 +730,12 @@ function EstufaBanhoRel_validarSequenciaTempoNormalizado_(rows) {
     throw new Error('Foram detectados timestamps repetidos em excesso após a normalização (bloco máximo: ' + maiorBlocoIguais + ').');
   }
   if (saltosAbsurdos > 0) {
-    throw new Error('Foram detectados saltos temporais excessivos após a normalização (' + saltosAbsurdos + ').');
+    throw new Error('O arquivo tem ' + saltosAbsurdos + ' intervalo(s) sem leituras maior(es) que ' + maxSaltoMin + ' min' + (primeiroSalto ? (' — o primeiro entre ' + primeiroSalto.de + ' e ' + primeiroSalto.ate + ' (linha ' + primeiroSalto.linha + ' dos dados)') : '') + '. Isso costuma acontecer quando o arquivo junta registros de períodos diferentes. Separe o período do ensaio em um arquivo próprio (ou apague as linhas fora do ensaio) e envie de novo; confira também o formato de data na seção de importação.');
   }
   const deltaMedianoMin = EstufaBanhoRel_calcularMedianaNumerica_(deltasMin);
   if (deltaMedianoMin !== null) {
     if (deltaMedianoMin < intervaloEsperadoMin || deltaMedianoMin > intervaloEsperadoMax) {
-      throw new Error('O intervalo mediano entre leituras ficou fora do esperado (' + deltaMedianoMin.toFixed(3) + ' min).');
+      throw new Error(SGO_DocSalvar_msgIntervalo_(deltaMedianoMin, intervaloEsperadoMin, intervaloEsperadoMax));
     }
   }
 }
@@ -758,7 +760,7 @@ function EstufaBanhoRel_extrairDriveIdSeguro_(input) {
   const s = String(input || '').trim();
   if (!s) return '';
   if (/^[a-zA-Z0-9\-_]{20,}$/.test(s)) return s;
-  let m = s.match(/\/d\/([a-zA-Z0-9\-_]+)/);
+  let m = s.match(/\/(?:d|arquivos|planilhas)\/([a-zA-Z0-9\-_]+)/); // Google (/d/) ou servidor próprio (/arquivos/, /planilhas/)
   if (m && m[1]) return m[1];
   m = s.match(/[?&]id=([a-zA-Z0-9\-_]+)/);
   if (m && m[1]) return m[1];

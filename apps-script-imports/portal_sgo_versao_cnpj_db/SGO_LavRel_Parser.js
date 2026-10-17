@@ -773,7 +773,7 @@ function LavRel_detectarPadraoDataNaMatriz_(matriz, startIdx, idxColunaData) {
 
     const datePart = s.split(/\s+/)[0];
 
-    let m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    let m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})$/);
     if (m) {
       const a = +m[1];
       const b = +m[2];
@@ -783,7 +783,7 @@ function LavRel_detectarPadraoDataNaMatriz_(matriz, startIdx, idxColunaData) {
       continue;
     }
 
-    m = datePart.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    m = datePart.match(/^(\d{1,2})-(\d{1,2})-(\d{4}|\d{2})$/);
     if (m) {
       const a2 = +m[1];
       const b2 = +m[2];
@@ -836,12 +836,12 @@ function LavRel_parseDataHoraRobusta_(valor, dateStyle, ultimaDataValida) {
     return LavRel_combinarDataComHoraStringParser_(ultimaDataValida, s);
   }
 
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
     return LavRel_montarDataParserPorEstilo_(m, dateStyle);
   }
 
-  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
     return LavRel_montarDataParserPorEstilo_(m, dateStyle);
   }
@@ -984,7 +984,8 @@ function LavRel_parseSomenteHoraRobustaParser_(valorHora) {
 function LavRel_montarDataParserPorEstilo_(m, dateStyle) {
   const a = +m[1];
   const b = +m[2];
-  const yyyy = +m[3];
+  // Ano com 2 dígitos (ex.: 8/13/26) vale como 20xx.
+  const yyyy = (String(m[3]).length === 2 ? 2000 : 0) + Number(m[3]);
   const hh = +(m[4] || 0);
   const mi = +(m[5] || 0);
   const ss = +(m[6] || 0);
@@ -1322,7 +1323,7 @@ function LavRel_extrairDriveIdSeguro_(input) {
 
   if (/^[a-zA-Z0-9\-_]{20,}$/.test(s)) return s;
 
-  let m = s.match(/\/d\/([a-zA-Z0-9\-_]+)/);
+  let m = s.match(/\/(?:d|arquivos|planilhas)\/([a-zA-Z0-9\-_]+)/); // Google (/d/) ou servidor próprio (/arquivos/, /planilhas/)
   if (m && m[1]) return m[1];
 
   m = s.match(/[?&]id=([a-zA-Z0-9\-_]+)/);

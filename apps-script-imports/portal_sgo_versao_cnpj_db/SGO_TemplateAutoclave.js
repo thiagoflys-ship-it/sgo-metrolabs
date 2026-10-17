@@ -64,8 +64,9 @@ function tplAutoclaveObterPlaceholders(sessionId) {
   }
 }
 
-function tplAutoclaveGerarRelatorio(payload) {
+function tplAutoclaveGerarRelatorio(sessionId, payload) {
   try {
+    exigirSessao(String(typeof sessionId === 'string' ? sessionId : '')); // SEGURANCA: exige sessao valida do portal (tela antiga sem sessao recebe o aviso de login)
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_AUTOCLAVE.gerarRelatorio(payload)));
   } catch (e) {
     return { ok: false, erro: SGO_textoFalhaOperador_('preencher o modelo', e) };

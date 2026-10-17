@@ -79,7 +79,7 @@ function AutoRel_acIAObterListaModelos_(cfg) {
 
 function AutoRel_acIAInterpretarErro_(codigo, corpo) {
   var msgApi = (corpo && corpo.error && (corpo.error.message || corpo.error.status)) || ('HTTP ' + codigo);
-  if (codigo === 401 || codigo === 403) return 'Chave GEMINI_API_KEY inválida ou sem autorização (HTTP ' + codigo + '). Verifique as Propriedades do Script deste projeto.';
+  if (codigo === 401 || codigo === 403) return SGO_DocSalvar_msgChaveIA_(codigo);
   if (codigo === 429) return 'Limite de uso da IA atingido (HTTP 429). Aguarde alguns minutos e tente novamente.';
   if (codigo === 404) return 'Modelo não encontrado (HTTP 404): ' + msgApi;
   if (codigo >= 500) return 'Serviço de IA temporariamente indisponível (HTTP ' + codigo + '): ' + msgApi;
@@ -93,7 +93,7 @@ function AutoRel_acIAERetentavel_(codigo) {
 function AutoRel_acIAChamarGemini_(prompt) {
   var cfg = AutoRel_acIAObterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse o editor do Apps Script deste projeto (Autoclave) > Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error(SGO_DocSalvar_msgChaveIA_());
   }
 
   var modelos = AutoRel_acIAObterListaModelos_(cfg);

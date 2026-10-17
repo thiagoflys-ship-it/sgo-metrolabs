@@ -190,18 +190,21 @@ function AutoRel_acMontarContextoCertificado_(payload) {
     equipamentoLabel: equipamentoLabel,
     tag: String(payload.tag || payload.tagEquipamento || '').trim(),
     cliente: String(payload.cliente || '').trim(),
-    setor: String(payload.setor || payload.localizacao || '').trim(),
+    setor: String(payload.setor || payload.localizacao || payload.local || '').trim(),
     identificacao: {
       cliente: String(payload.cliente || '').trim(),
       endereco: String(payload.endereco || '').trim(),
-      setor: String(payload.setor || payload.localizacao || '').trim(),
+      setor: String(payload.setor || payload.localizacao || payload.local || '').trim(),
       equipamento: equipamentoLabel,
       tag: String(payload.tag || payload.tagEquipamento || '').trim(),
       dtl: String(payload.certDataLogger || '').trim(),
       certificadoNumero: String(payload.certNumero || '').trim(),
       revisao: String(payload.certRevisao || '0').trim(),
       dataDoEnsaio: AutoRel_acExtrairDataDoTexto_(estudo.fatos.tempoInicioExposicao || estudo.fatos.tempoInicio || tempoInicioCicloBruto || ''),
-      tecnicoExecutor: String(payload.responsavelTecnico || payload.operador || '').trim(),
+      tecnicoExecutor: String(payload.responsavelTecnico || payload.respTecnico || payload.operador || '').trim(),
+      marca: String(payload.marca || '').trim(),
+      modelo: String(payload.modelo || '').trim(),
+      numeroSerie: String(payload.numSerie || '').trim(),
       responsavelAceite: String(payload.certResponsavelAceite || '').trim(),
       tarefaOrigem: String(payload.certTarefaOrigem || '').trim(),
       empresaExecutante: AutoRel_UCFG.EMPRESA_EXECUTANTE
@@ -243,11 +246,12 @@ function AutoRel_apiGerarRascunhoCertificado(payload) {
   payload = payload || {};
 
   const contexto = AutoRel_acMontarContextoCertificado_(payload);
-  const textos = AutoRel_acIACriarTextosCertificado_(contexto);
+  const ia = SGO_DocSalvar_textosIaOuManual_(AutoRel_acIACriarTextosCertificado_, contexto);
 
   return {
     ok: true,
-    textos: textos,
+    textos: ia.textos,
+    avisoIA: ia.avisoIA,
     contexto: contexto,
     assinaturaContexto: AutoRel_acAssinatura_(contexto)
   };

@@ -138,7 +138,7 @@
       <main class="grid-layout">
         <section class="panel">
           <h2>Dados do relatório de autoclave</h2>
-          <p class="panel-subtitle">Preencha os campos abaixo para gerar automaticamente o Google Docs e o PDF a partir do template oficial.</p>
+          <p class="panel-subtitle">Preencha os campos abaixo para gerar o documento e o PDF a partir do modelo oficial.</p>
 
           <form id="tplFormRelatorio" onsubmit="event.preventDefault(); tplAutoclave_gerarRelatorioUI();">
             <div class="section-divider">Identificação do relatório</div>
@@ -202,7 +202,7 @@
 
             <div class="btn-container">
               <button id="tplBtnGerar" class="btn btn-primary" type="submit">
-                <span id="tplBtnGerarLabel">Gerar Google Docs + PDF</span>
+                <span id="tplBtnGerarLabel">Gerar documento e PDF</span>
                 <span id="tplBtnGerarSpinner" class="spinner hidden"></span>
               </button>
             </div>
@@ -217,13 +217,13 @@
 
           <div id="tplResultLinks" class="result-links">
             <div class="result-link-list">
-              <a id="tplDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Docs</a>
+              <a id="tplDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir documento</a>
               <a id="tplPdfLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir PDF</a>
               <a id="tplFolderLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir pasta de saída</a>
             </div>
           </div>
 
-          <div class="card-note">O sistema copia o template oficial, substitui os placeholders rastreados, salva o Google Docs preenchido e gera o PDF na pasta configurada.</div>
+          <div class="card-note">O sistema copia o modelo oficial, preenche os campos marcados, salva o documento preenchido e gera o PDF na pasta configurada.</div>
           <div class="card-note">
             O nome do arquivo é gerado automaticamente com número do relatório, cliente e data.
             <span class="tpl-code-chip" title="Padrão técnico do nome do arquivo">RELATORIO_AUTOCLAVE_NUMERO_CLIENTE_DATA</span>
@@ -258,7 +258,7 @@
 
   function tplAutoclave_setLoading(loading) {
     tplAutoclave_el('tplBtnGerar').disabled = loading;
-    tplAutoclave_el('tplBtnGerarLabel').textContent = loading ? 'Gerando...' : 'Gerar Google Docs + PDF';
+    tplAutoclave_el('tplBtnGerarLabel').textContent = loading ? 'Gerando...' : 'Gerar documento e PDF';
     tplAutoclave_el('tplBtnGerarSpinner').classList.toggle('hidden', !loading);
   }
 
@@ -365,7 +365,7 @@
         tplAutoclave_setLoading(false);
         tplAutoclave_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
       })
-      .tplAutoclaveGerarRelatorio(payload);
+      .tplAutoclaveGerarRelatorio(SGO_getSessionId(), payload);
   }
 
   function tplAutoclave_carregarConfigTela() {

@@ -66,8 +66,9 @@ function tplLavadoraObterPlaceholders(sessionId, tipo) {
   }
 }
 
-function tplLavadoraGerarRelatorio(payload) {
+function tplLavadoraGerarRelatorio(sessionId, payload) {
   try {
+    exigirSessao(String(typeof sessionId === 'string' ? sessionId : '')); // SEGURANCA: exige sessao valida do portal (tela antiga sem sessao recebe o aviso de login)
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_LAVADORA.gerarRelatorio(payload)));
   } catch (e) {
     return { ok: false, erro: SGO_textoFalhaOperador_('preencher o modelo', e) };

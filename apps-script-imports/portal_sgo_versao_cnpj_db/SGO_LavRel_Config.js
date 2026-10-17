@@ -97,6 +97,8 @@ const LavRel_UCFG = Object.freeze({
       descricao: 'Termodesinfectora (Cálculo de A0)',
       tBase: 80.0, // Base ISO 15883 para A0
       z: 10.0,
+      // ISO 15883-1: o A0 só acumula enquanto a temperatura está em 65 °C ou acima.
+      tLimiteA0: 65.0,
 
       // Limites totalmente livres para receitas variadas
       tMin: 20.0,

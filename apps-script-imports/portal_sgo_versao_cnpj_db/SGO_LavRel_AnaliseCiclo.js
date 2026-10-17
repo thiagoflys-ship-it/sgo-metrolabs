@@ -409,7 +409,7 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
         const t = row.temperaturas[s];
         if (t === null || !isFinite(t)) continue;
 
-        if (tipoCiclo === 'TERMO') {
+        if (tipoCiclo === 'TERMO' && (!isFinite(Number(cfg.tLimiteA0)) || t >= Number(cfg.tLimiteA0))) {
           a0Acumulado[s] += Math.pow(10, (t - cfg.tBase) / cfg.z) * (dtMin * 60);
         }
 

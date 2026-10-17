@@ -659,7 +659,7 @@ function AutoRel_detectarPadraoDataNaMatriz_(matriz, startIdx, idxColunaData) {
 
     const datePart = s.split(/\s+/)[0];
 
-    let m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    let m = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})$/);
     if (m) {
       const a = +m[1];
       const b = +m[2];
@@ -669,7 +669,7 @@ function AutoRel_detectarPadraoDataNaMatriz_(matriz, startIdx, idxColunaData) {
       continue;
     }
 
-    m = datePart.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    m = datePart.match(/^(\d{1,2})-(\d{1,2})-(\d{4}|\d{2})$/);
     if (m) {
       const a2 = +m[1];
       const b2 = +m[2];
@@ -722,12 +722,12 @@ function AutoRel_parseDataHoraRobusta_(valor, dateStyle, ultimaDataValida) {
     return AutoRel_combinarDataComHoraStringParser_(ultimaDataValida, s);
   }
 
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
     return AutoRel_montarDataParserPorEstilo_(m, dateStyle);
   }
 
-  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4}|\d{2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
     return AutoRel_montarDataParserPorEstilo_(m, dateStyle);
   }
@@ -870,7 +870,8 @@ function AutoRel_parseSomenteHoraRobustaParser_(valorHora) {
 function AutoRel_montarDataParserPorEstilo_(m, dateStyle) {
   const a = +m[1];
   const b = +m[2];
-  const yyyy = +m[3];
+  // Ano com 2 dígitos (ex.: 8/13/26) vale como 20xx.
+  const yyyy = (String(m[3]).length === 2 ? 2000 : 0) + Number(m[3]);
   const hh = +(m[4] || 0);
   const mi = +(m[5] || 0);
   const ss = +(m[6] || 0);
@@ -1162,6 +1163,7 @@ function AutoRel_validarSequenciaTempoNormalizado_(rows) {
   let iguaisSequenciais = 1;
   let maiorBlocoIguais = 1;
   let saltosAbsurdos = 0;
+  let primeiroSalto = null;
   const deltasMin = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -1185,6 +1187,7 @@ function AutoRel_validarSequenciaTempoNormalizado_(rows) {
 
       if (deltaMin > maxSaltoMin) {
         saltosAbsurdos++;
+        if (!primeiroSalto) primeiroSalto = { linha: i + 1, de: String((rows[i - 1] && rows[i - 1].tempoStr) || prev), ate: String(rows[i].tempoStr || d), min: deltaMin };
       }
 
       if (deltaMin > 0) {
@@ -1209,7 +1212,7 @@ function AutoRel_validarSequenciaTempoNormalizado_(rows) {
 
   if (saltosAbsurdos > 0) {
     throw new Error(
-      'Foram detectados saltos temporais excessivos após a normalização (' + saltosAbsurdos + ').'
+      'O arquivo tem ' + saltosAbsurdos + ' intervalo(s) sem leituras maior(es) que ' + maxSaltoMin + ' min' + (primeiroSalto ? (' — o primeiro entre ' + primeiroSalto.de + ' e ' + primeiroSalto.ate + ' (linha ' + primeiroSalto.linha + ' dos dados)') : '') + '. Isso costuma acontecer quando o arquivo junta registros de períodos diferentes. Separe o período do ensaio em um arquivo próprio (ou apague as linhas fora do ensaio) e envie de novo; confira também o formato de data na seção de importação.'
     );
   }
 
@@ -1217,7 +1220,7 @@ function AutoRel_validarSequenciaTempoNormalizado_(rows) {
   if (deltaMedianoMin !== null) {
     if (deltaMedianoMin < intervaloEsperadoMin || deltaMedianoMin > intervaloEsperadoMax) {
       throw new Error(
-        'O intervalo mediano entre leituras ficou fora do esperado (' + deltaMedianoMin.toFixed(3) + ' min).'
+        SGO_DocSalvar_msgIntervalo_(deltaMedianoMin, intervaloEsperadoMin, intervaloEsperadoMax)
       );
     }
   }
@@ -1248,7 +1251,7 @@ function AutoRel_extrairDriveIdSeguro_(input) {
 
   if (/^[a-zA-Z0-9\-_]{20,}$/.test(s)) return s;
 
-  let m = s.match(/\/d\/([a-zA-Z0-9\-_]+)/);
+  let m = s.match(/\/(?:d|arquivos|planilhas)\/([a-zA-Z0-9\-_]+)/); // Google (/d/) ou servidor próprio (/arquivos/, /planilhas/)
   if (m && m[1]) return m[1];
 
   m = s.match(/[?&]id=([a-zA-Z0-9\-_]+)/);
