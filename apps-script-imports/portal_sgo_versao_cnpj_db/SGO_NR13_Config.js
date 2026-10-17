@@ -82,7 +82,9 @@ const NR13_CFG = Object.freeze({
     V: Object.freeze({ externo: 5, interno: 10 })
   }),
 
-  NORMA_REFERENCIA: 'NR-13 — Inspeção de Caldeira, Laudo de Vaso sob Pressão, Inspeção de Tanques de Armazenamento ' +
+  // Título oficial da NR-13. (O texto anterior, "Inspeção de Caldeira, Laudo
+  // de Vaso sob Pressão, Inspeção de Tanques...", não é o nome da norma.)
+  NORMA_REFERENCIA: 'NR-13 — Caldeiras, Vasos de Pressão, Tubulações e Tanques Metálicos de Armazenamento ' +
     '(Ministério do Trabalho e Emprego, redação dada pela Portaria MTP nº 4.219/2022, com retificação de 20/10/2022).',
 
   /**

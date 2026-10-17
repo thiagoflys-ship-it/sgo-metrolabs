@@ -134,13 +134,15 @@ function RegOp_montarDocumentoHtml_(dados) {
       if (item.tipo === 'sim_nao_na') {
         classeValor = valorBruto === 'Sim' ? 'sim' : (valorBruto === 'Não' ? 'nao' : (valorBruto === 'N/A' ? 'na' : ''));
       }
-      html.push('<tr><td class="rotulo">' + RegOp_escaparHtml_(item.rotulo || '') + '</td><td class="valor ' + classeValor + '">' + RegOp_escaparHtml_(valorBruto || '—') + '</td></tr>');
+      html.push('<tr><td class="rotulo">' + RegOp_escaparHtml_(item.rotulo || '') + '</td><td class="valor ' + classeValor + '">' + RegOp_quebrasLinha_(RegOp_escaparHtml_(RegOp_formatarValorCampo_(item.tipo, valorBruto) || '—')) + '</td></tr>');
     });
     html.push('</table></div>');
   });
 
   if (dados.observacoesGerais) {
-    html.push('<div class="secao"><h2>Observações Gerais</h2><p>' + RegOp_escaparHtml_(dados.observacoesGerais) + '</p></div>');
+    // Parágrafos e quebras de linha digitados pelo colaborador são mantidos.
+    const paragrafosObs = String(dados.observacoesGerais).replace(/\r\n/g, '\n').split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean);
+    html.push('<div class="secao"><h2>Observações Gerais</h2>' + paragrafosObs.map(function (p) { return '<p>' + RegOp_quebrasLinha_(RegOp_escaparHtml_(p)) + '</p>'; }).join('') + '</div>');
   }
 
   if (imagens.length) {
@@ -198,6 +200,23 @@ function RegOp_obterPastaPorCnpjSeExistir_(cnpjNormalizado) {
   return it.hasNext() ? it.next() : null;
 }
 
+/** Valor de campo como aparece no documento: número com vírgula decimal e data dd/mm/aaaa. */
+function RegOp_formatarValorCampo_(tipo, valor) {
+  const s = String(valor == null ? '' : valor).trim();
+  if (!s) return '';
+  if (tipo === 'numero' && /^-?\d+(\.\d+)?$/.test(s)) return s.replace('.', ',');
+  if (tipo === 'data') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (m) return m[3] + '/' + m[2] + '/' + m[1];
+  }
+  return s;
+}
+
+/** Quebra de linha digitada vira <br> (recebe texto já escapado). */
+function RegOp_quebrasLinha_(htmlEscapado) {
+  return String(htmlEscapado).replace(/\r?\n/g, '<br>');
+}
+
 function RegOp_normalizarCnpj_(cnpj) {
   return String(cnpj || '').replace(/\D/g, '');
 }
@@ -224,12 +243,15 @@ function RegOp_apiListarArquivosPdf(payload) {
     while (it.hasNext()) {
       const f = it.next();
       arquivos.push({
+        criadoEm: f.getDateCreated().getTime(),
         nome: f.getName(),
         url: f.getUrl(),
         data: Utilities.formatDate(f.getDateCreated(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm")
       });
     }
-    arquivos.sort(function (a, b) { return a.nome < b.nome ? 1 : (a.nome > b.nome ? -1 : 0); });
+    // Mais recente primeiro pela data de criação (o nome tinha a data em
+    // ddmmaaaa, que não ordena por tempo). criadoEm é número, não Date.
+    arquivos.sort(function (a, b) { return b.criadoEm - a.criadoEm; });
     return { ok: true, arquivos: arquivos, pastaUrl: pasta.getUrl() };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao listar arquivos: " + e.message };

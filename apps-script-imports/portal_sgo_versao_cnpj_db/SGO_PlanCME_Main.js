@@ -13,7 +13,13 @@
 
 function PlanCME_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoPlanCME = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  // (2026-10-16) Módulo interno da equipe: o perfil CLIENTE só tinha o menu
+  // escondido no navegador; pela API conseguia calcular, gravar planejamento
+  // e salvar PDF na pasta de qualquer cliente.
+  if (String((sessaoPlanCME && sessaoPlanCME.perfil) || '').trim().toUpperCase() === 'CLIENTE') {
+    throw new Error('O módulo Planejamento CME é de uso da equipe Metrolabs e não está disponível para o perfil Cliente. Para receber um planejamento, solicite à Metrolabs.');
+  }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 

@@ -26,6 +26,12 @@ function PgtPopDoc_corpoParaHtml_(corpo) {
       secoes.push(atual);
     } else if (!linha) {
       flushParagrafo();
+    } else if (/^\d{1,2}[.)]\s/.test(linha)) {
+      // (2026-10-16) Passo numerado ("1. ...", "2) ...") em linha própria
+      // vira parágrafo próprio — antes os passos consecutivos sem linha em
+      // branco eram colados num parágrafo corrido só.
+      flushParagrafo();
+      paragrafoAtual.push(linha);
     } else {
       paragrafoAtual.push(linha);
     }
@@ -101,8 +107,12 @@ function PgtPop_montarDocumentoHtml_(dados) {
   const logo = PgtPop_getLogoDataUri_();
   const hospital = dados.hospital || {};
   const tipo = dados.tipo === 'POP' ? 'POP' : 'PGT';
-  const dataAtual = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
   const historico = dados.historico || [];
+  // (2026-10-16) "Data desta Revisão" é a data em que ESTA revisão foi
+  // emitida (registrada no histórico), não a data em que o documento é
+  // reaberto — antes, reabrir a revisão 1 meses depois saía com a data do dia.
+  const entradaRevisao = historico.filter(function (h) { return String(h && h.versao) === String(dados.versaoAtual || 1); }).pop() || historico[historico.length - 1];
+  const dataAtual = (entradaRevisao && entradaRevisao.data) ? String(entradaRevisao.data) : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
   const imagens = dados.imagens || [];
   // Nome/cargo/registro de "Elaborado por" são editáveis no wizard
   // (2026-08-13) — cargo/registro NÃO podem mais cair no padrão fixo de
@@ -166,7 +176,8 @@ function PgtPop_montarDocumentoHtml_(dados) {
     html.push('<div class="secao"><h2>Registros Fotográficos</h2>');
     imagens.forEach(function (img, i) {
       html.push('<div class="figura-item">');
-      html.push('<img src="data:' + (img.mimeType || 'image/jpeg') + ';base64,' + img.base64 + '" alt="Figura ' + (i + 1) + '">');
+      const mimeSeguro = /^image\/[a-z0-9.+-]+$/i.test(String(img.mimeType || '')) ? img.mimeType : 'image/jpeg';
+      html.push('<img src="data:' + mimeSeguro + ';base64,' + String(img.base64 || '').replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Figura ' + (i + 1) + '">');
       html.push('<div class="figura-legenda">Figura ' + (i + 1) + (img.legenda ? (': ' + PgtPop_escaparHtml_(img.legenda)) : '') + '</div>');
       if (img.interpretacao) {
         html.push('<div class="figura-interpretacao">' + PgtPop_escaparHtml_(img.interpretacao) + '</div>');
@@ -301,7 +312,10 @@ function PgtPop_salvarPdfAutomatico_(registro) {
     const html = PgtPop_montarDocumentoHtml_(registro);
     const pasta = PgtPop_obterPastaPorCnpj_((registro.hospital && registro.hospital.cnpj) || '', (registro.hospital && registro.hospital.razaoSocial) || '');
     const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
-    const nomeArquivo = PgtPop_sanitizarNomeArquivo_(registro.codigoDocumento || registro.tipo) + "_v" + (registro.versaoAtual || 1) + ".pdf";
+    // POP avulso (sem código): o nome leva o nome do POP — antes todo avulso
+    // saía "POP_v1.pdf" e um sobrepunha o outro na lista da pasta do CNPJ.
+    const baseNome = registro.codigoDocumento || (registro.tipo + ((registro.pop && registro.pop.nome) ? ('_' + registro.pop.nome) : ''));
+    const nomeArquivo = PgtPop_sanitizarNomeArquivo_(baseNome) + "_v" + (registro.versaoAtual || 1) + ".pdf";
     blob.setName(nomeArquivo);
     const arquivo = pasta.createFile(blob);
     arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

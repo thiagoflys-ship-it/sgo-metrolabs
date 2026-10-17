@@ -29,8 +29,11 @@ function PgtPop_setupModulo() {
   const pastaPdfId = props.getProperty("PGTPOP_PASTA_PDF_ID");
 
   if (!pastaRaizId || !pastaPdfId) {
-    const pastaRaiz = DriveApp.createFolder(PGTPOP_CFG.DRIVE.PASTA_RAIZ);
-    const pastaPdf = pastaRaiz.createFolder(PGTPOP_CFG.DRIVE.PASTA_PDFS);
+    // (2026-10-16) Reaproveita a pasta já existente (pelo ID salvo ou pelo
+    // nome) — antes criava outra raiz sempre que faltava uma das duas
+    // propriedades, e os PDFs antigos sumiam da consulta por CNPJ.
+    const pastaRaiz = PgtPop_pastaExistenteOuNova_(null, PGTPOP_CFG.DRIVE.PASTA_RAIZ, pastaRaizId);
+    const pastaPdf = PgtPop_pastaExistenteOuNova_(pastaRaiz, PGTPOP_CFG.DRIVE.PASTA_PDFS, pastaPdfId);
 
     props.setProperty("PGTPOP_PASTA_RAIZ_ID", pastaRaiz.getId());
     props.setProperty("PGTPOP_PASTA_PDF_ID", pastaPdf.getId());
@@ -82,8 +85,7 @@ function PgtPop_inicializarAbas_(planilha) {
 
   // 2. Aba de Clientes (CAD_CLIENTES) — cache de CNPJ
   const clientes = planilha.getSheetByName(abas.CLIENTES);
-  clientes.clear();
-  clientes.getRange(1, 1, 1, 7).setValues([[
+  if (PgtPop_abaVazia_(clientes)) clientes.getRange(1, 1, 1, 7).setValues([[
     "ID", "CNPJ", "RAZAO_SOCIAL", "LOGRADOURO", "BAIRRO", "CIDADE", "UF"
   ]]);
 
@@ -96,8 +98,7 @@ function PgtPop_inicializarAbas_(planilha) {
   //    profissional (REA-GO) de uma pessoa a documentos assinados por
   //    outra; agora ambos ficam gravados junto com o nome.
   const pgts = planilha.getSheetByName(abas.PGT);
-  pgts.clear();
-  pgts.getRange(1, 1, 1, 14).setValues([[
+  if (PgtPop_abaVazia_(pgts)) pgts.getRange(1, 1, 1, 14).setValues([[
     "ID", "DATA", "HOSPITAL", "CNPJ", "CODIGO_DOCUMENTO", "VERSAO_ATUAL",
     "ROTEIRO", "ELABORADO_POR_NOME", "TEXTO_GERADO_JSON", "HISTORICO_REVISOES_JSON",
     "HOSPITAL_JSON", "OBS", "ELABORADO_POR_CARGO", "ELABORADO_POR_REGISTRO"
@@ -105,8 +106,7 @@ function PgtPop_inicializarAbas_(planilha) {
 
   // 4. Aba de POPs gerados (MOV_POPS) — idem
   const pops = planilha.getSheetByName(abas.POPS);
-  pops.clear();
-  pops.getRange(1, 1, 1, 15).setValues([[
+  if (PgtPop_abaVazia_(pops)) pops.getRange(1, 1, 1, 15).setValues([[
     "ID", "DATA", "HOSPITAL", "CNPJ", "PGT_ID", "CODIGO_DOCUMENTO", "NOME_POP",
     "VERSAO_ATUAL", "ROTEIRO", "ELABORADO_POR_NOME", "TEXTO_GERADO_JSON",
     "HISTORICO_REVISOES_JSON", "HOSPITAL_JSON", "ELABORADO_POR_CARGO", "ELABORADO_POR_REGISTRO"
@@ -116,8 +116,7 @@ function PgtPop_inicializarAbas_(planilha) {
   //    é a chave real da pasta do Drive agora (ver PgtPop_obterPastaPorCnpj_
   //    em SGO_PgtPop_Main.js), não mais o nome do hospital.
   const documentos = planilha.getSheetByName(abas.DOCUMENTOS);
-  documentos.clear();
-  documentos.getRange(1, 1, 1, 8).setValues([[
+  if (PgtPop_abaVazia_(documentos)) documentos.getRange(1, 1, 1, 8).setValues([[
     "ID", "DATA", "HOSPITAL", "CNPJ", "TIPO_DOCUMENTO", "NOME_ARQUIVO", "URL", "REGISTRO_ID"
   ]]);
 
@@ -126,6 +125,27 @@ function PgtPop_inicializarAbas_(planilha) {
   PgtPop_aplicarEstiloCabecalho_(pgts);
   PgtPop_aplicarEstiloCabecalho_(pops);
   PgtPop_aplicarEstiloCabecalho_(documentos);
+}
+
+/**
+ * (2026-10-16) As abas de dados (CAD_CLIENTES, MOV_PGT, MOV_POPS,
+ * MOV_DOCUMENTOS) só recebem cabeçalho quando estão vazias. Antes o setup
+ * fazia clear() nelas sempre que rodava com a planilha já existente — e ele
+ * roda sozinho quando falta só a propriedade da pasta de PDFs
+ * (PgtPop_obterPastaPorCnpj_), o que apagaria todo o histórico de PGT/POP.
+ */
+/** Pasta pelo ID salvo; senão a primeira com esse nome (dentro de `pai`, ou no Drive); senão cria. */
+function PgtPop_pastaExistenteOuNova_(pai, nome, idSalvo) {
+  if (idSalvo) {
+    try { return DriveApp.getFolderById(idSalvo); } catch (e) { /* ID inválido: procura pelo nome */ }
+  }
+  const it = pai ? pai.getFoldersByName(nome) : DriveApp.getFoldersByName(nome);
+  if (it.hasNext()) return it.next();
+  return pai ? pai.createFolder(nome) : DriveApp.createFolder(nome);
+}
+
+function PgtPop_abaVazia_(aba) {
+  return !aba || aba.getLastRow() === 0;
 }
 
 function PgtPop_aplicarEstiloCabecalho_(aba) {

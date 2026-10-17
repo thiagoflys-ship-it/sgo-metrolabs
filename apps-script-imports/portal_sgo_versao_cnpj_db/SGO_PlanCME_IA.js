@@ -134,7 +134,7 @@ function PlanCMEIA_montarContexto_(dados, resultado) {
   linhas.push("TIPO DE EQUIPAMENTO: " + (equipamento.tipo || "-"));
   linhas.push("TIPO DE PROCESSO: " + (equipamento.tipoProcesso || "-"));
   linhas.push("MARCA/MODELO: " + (equipamento.marca || "-") + " / " + (equipamento.modelo || "-"));
-  linhas.push("VOLUME DA CÂMARA: " + (equipamento.volume || "-") + " litros");
+  linhas.push("VOLUME DA CÂMARA: " + (equipamento.volume ? PlanCME_formatarNumeroBr_(equipamento.volume) : "-") + " litros");
   linhas.push("");
   linhas.push("ESCOPO CONTRATADO: QI=" + (servicos.qi ? "SIM" : "NAO") + " | QO=" + (servicos.qo ? "SIM" : "NAO") +
     " | QD=" + (servicos.qd ? "SIM" : "NAO") + " | Bowie-Dick=" + (servicos.bowieDick ? "SIM" : "NAO"));
@@ -185,7 +185,7 @@ function PlanCME_gerarJustificativasIA_(dados, resultado) {
   var props = PropertiesService.getScriptProperties();
   var chave = String(props.getProperty("GEMINI_API_KEY") || "").trim();
   if (!chave) {
-    throw new Error("A chave GEMINI_KEY não foi configurada nas propriedades do script.");
+    throw new Error("A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.");
   }
 
   // PlanCME_gerarJustificativasIA_ é chamada só dentro de PlanCME_calcularPlanejamento
@@ -328,7 +328,7 @@ function PlanCME_gerarJustificativasIA_(dados, resultado) {
       }
 
       if (codigo === 401 || codigo === 403) {
-        throw new Error("Chave GEMINI_KEY inválida ou sem autorização (HTTP " + codigo + ").");
+        throw new Error("Chave GEMINI_API_KEY inválida ou sem autorização (HTTP " + codigo + ").");
       }
       var msgApi = (corpo && corpo.error && corpo.error.message) || ("HTTP " + codigo);
       erroModelo = msgApi;
@@ -352,7 +352,7 @@ function PlanCME_refinarTextoIA(texto) {
     if (!chave) {
       return {
         ok: false,
-        mensagem: "A chave GEMINI_KEY não foi configurada nas propriedades do script."
+        mensagem: "A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo."
       };
     }
 

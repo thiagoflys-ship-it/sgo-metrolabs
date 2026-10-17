@@ -5,7 +5,7 @@
 function CertCalGestIA_gerar_(tipo, contexto) {
   var props = PropertiesService.getScriptProperties();
   var key = props.getProperty('GEMINI_API_KEY') || '';
-  if (!key) throw new Error('Chave GEMINI_API_KEY não configurada.');
+  if (!key) throw new Error('A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.');
   var modelo = (props.getProperty('IA_MODEL') || 'gemini-2.5-flash').trim();
   var regras = [
     'Você é um especialista em gestão metrológica e qualidade.',
@@ -37,4 +37,23 @@ function CertCalGestIA_gerar_(tipo, contexto) {
   var prioridades=/###PRIORIDADES###([\s\S]*?)###FIM###/.exec(texto||'');
   if(!resumo||!prioridades) throw new Error('A IA não retornou as seções esperadas. Tente novamente.');
   return {resumo:resumo[1].trim(),prioridades:prioridades[1].trim()};
+}
+
+/**
+ * Mesma chamada, mas o relatório gerencial não fica bloqueado quando a IA falha:
+ * os dados (tabelas, indicadores e gráficos) vêm do cadastro e continuam valendo;
+ * a seção de interpretação diz por que ficou sem texto e o que fazer.
+ */
+function CertCalGestIA_gerarOuAviso_(tipo, contexto) {
+  try {
+    return CertCalGestIA_gerar_(tipo, contexto);
+  } catch (e) {
+    var motivo = String((e && e.message) || e || 'falha desconhecida');
+    return {
+      resumo: 'Esta emissão saiu sem o texto da IA. Motivo: ' + motivo + ' Os indicadores, tabelas e gráficos abaixo foram calculados diretamente do cadastro e não dependem da IA.',
+      prioridades: tipo === 'RENOVACAO'
+        ? 'Siga a ordem de prioridade do mapa de padrões abaixo (P1 a P5). Para incluir a interpretação, gere o relatório de novo depois de resolver o motivo indicado.'
+        : 'Use os índices e gráficos abaixo. Para incluir a interpretação, gere o relatório de novo depois de resolver o motivo indicado.'
+    };
+  }
 }

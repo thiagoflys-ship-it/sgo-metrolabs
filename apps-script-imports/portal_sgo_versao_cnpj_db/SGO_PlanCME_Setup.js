@@ -30,9 +30,11 @@ function PlanCME_setupModulo() {
   const pastaJustificativasId = props.getProperty("PLANCME_PASTA_JUSTIFICATIVAS_ID");
 
   if (!pastaRaizId || !pastaPdfId || !pastaJustificativasId) {
-    const pastaRaiz = DriveApp.createFolder(PLANCME_CFG.DRIVE.PASTA_RAIZ);
-    const pastaPdf = pastaRaiz.createFolder(PLANCME_CFG.DRIVE.PASTA_PDFS);
-    const pastaJustificativas = pastaRaiz.createFolder(PLANCME_CFG.DRIVE.PASTA_JUSTIFICATIVAS);
+    // (2026-10-16) Reaproveita as pastas já existentes (ID salvo ou nome) —
+    // antes criava outra raiz sempre que faltava uma das três propriedades.
+    const pastaRaiz = PlanCME_pastaExistenteOuNova_(null, PLANCME_CFG.DRIVE.PASTA_RAIZ, pastaRaizId);
+    const pastaPdf = PlanCME_pastaExistenteOuNova_(pastaRaiz, PLANCME_CFG.DRIVE.PASTA_PDFS, pastaPdfId);
+    const pastaJustificativas = PlanCME_pastaExistenteOuNova_(pastaRaiz, PLANCME_CFG.DRIVE.PASTA_JUSTIFICATIVAS, pastaJustificativasId);
 
     props.setProperty("PLANCME_PASTA_RAIZ_ID", pastaRaiz.getId());
     props.setProperty("PLANCME_PASTA_PDF_ID", pastaPdf.getId());
@@ -116,22 +118,20 @@ function PlanCME_inicializarAbas_(planilha) {
 
   // 2. Aba de Clientes (CAD_CLIENTES)
   const clientes = planilha.getSheetByName(abas.CLIENTES);
-  clientes.clear();
-  clientes.getRange(1, 1, 1, 7).setValues([[
+  if (PlanCME_abaVazia_(clientes)) clientes.getRange(1, 1, 1, 7).setValues([[
     "ID", "CNPJ", "RAZAO_SOCIAL", "LOGRADOURO", "BAIRRO", "CIDADE", "UF"
   ]]);
 
   // 3. Aba de Equipamentos (CAD_EQUIPAMENTOS)
   const equipamentos = planilha.getSheetByName(abas.EQUIPAMENTOS);
-  equipamentos.clear();
-  equipamentos.getRange(1, 1, 1, 9).setValues([[
+  if (PlanCME_abaVazia_(equipamentos)) equipamentos.getRange(1, 1, 1, 9).setValues([[
     "ID", "TIPO", "MARCA", "MODELO", "SERIE", "VOLUME", "BOMBA_VACUO", "TIPO_PROCESSO", "OBS"
   ]]);
 
   // 4. Aba de Receitas/Ciclos (CAD_RECEITAS)
   const receitas = planilha.getSheetByName(abas.RECEITAS);
-  receitas.clear();
-  receitas.getRange(1, 1, 1, 4).setValues([[
+  const receitasVazia = PlanCME_abaVazia_(receitas);
+  if (receitasVazia) receitas.getRange(1, 1, 1, 4).setValues([[
     "ID", "TIPO", "NOME", "ATIVO"
   ]]);
 
@@ -139,14 +139,13 @@ function PlanCME_inicializarAbas_(planilha) {
     PlanCME_gerarId_(), "PADRAO", nome, "SIM"
   ]);
 
-  if (receitasPadrao.length > 0) {
+  if (receitasVazia && receitasPadrao.length > 0) {
     receitas.getRange(2, 1, receitasPadrao.length, 4).setValues(receitasPadrao);
   }
 
   // 5. Aba de Movimentação de Planejamentos (MOV_PLANEJAMENTOS)
   const planejamentos = planilha.getSheetByName(abas.PLANEJAMENTOS);
-  planejamentos.clear();
-  planejamentos.getRange(1, 1, 1, 14).setValues([[
+  if (PlanCME_abaVazia_(planejamentos)) planejamentos.getRange(1, 1, 1, 14).setValues([[
     "ID",
     "DATA",
     "CLIENTE",
@@ -165,8 +164,7 @@ function PlanCME_inicializarAbas_(planilha) {
 
   // 6. Aba de Documentos Gerados (MOV_DOCUMENTOS)
   const documentos = planilha.getSheetByName(abas.DOCUMENTOS);
-  documentos.clear();
-  documentos.getRange(1, 1, 1, 7).setValues([[
+  if (PlanCME_abaVazia_(documentos)) documentos.getRange(1, 1, 1, 7).setValues([[
     "ID",
     "DATA",
     "CLIENTE",
@@ -182,6 +180,26 @@ function PlanCME_inicializarAbas_(planilha) {
   PlanCME_aplicarEstiloCabecalho_(receitas);
   PlanCME_aplicarEstiloCabecalho_(planejamentos);
   PlanCME_aplicarEstiloCabecalho_(documentos);
+}
+
+/**
+ * (2026-10-16) Abas de dados só recebem cabeçalho/receitas padrão quando
+ * estão vazias. Antes o setup fazia clear() nelas sempre — e ele roda sozinho
+ * quando falta só a propriedade da pasta de PDFs (PlanCME_apiSalvarDocumento),
+ * o que apagaria todos os planejamentos e documentos já registrados.
+ */
+/** Pasta pelo ID salvo; senão a primeira com esse nome (dentro de `pai`, ou no Drive); senão cria. */
+function PlanCME_pastaExistenteOuNova_(pai, nome, idSalvo) {
+  if (idSalvo) {
+    try { return DriveApp.getFolderById(idSalvo); } catch (e) { /* ID inválido: procura pelo nome */ }
+  }
+  const it = pai ? pai.getFoldersByName(nome) : DriveApp.getFoldersByName(nome);
+  if (it.hasNext()) return it.next();
+  return pai ? pai.createFolder(nome) : DriveApp.createFolder(nome);
+}
+
+function PlanCME_abaVazia_(aba) {
+  return !aba || aba.getLastRow() === 0;
 }
 
 function PlanCME_aplicarEstiloCabecalho_(aba) {

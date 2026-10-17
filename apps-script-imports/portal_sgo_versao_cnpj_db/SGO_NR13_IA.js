@@ -90,7 +90,7 @@ function NR13IA_proximoOrcamento_(atual) {
 function NR13IA_chamarGemini_(prompt, maxTokens) {
   var cfg = NR13IA_obterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error('A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.');
   }
 
   var modelos = NR13IA_obterListaModelos_(cfg);
@@ -160,7 +160,7 @@ function NR13IA_chamarGemini_(prompt, maxTokens) {
 function NR13IA_analisarFoto_(base64, mimeType, legendaUsuario, contextoVaso) {
   var cfg = NR13IA_obterConfig_();
   if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. Acesse Configurações do projeto > Propriedades do script, e crie GEMINI_API_KEY.');
+    throw new Error('A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.');
   }
   if (!base64) throw new Error('Nenhuma imagem informada.');
 

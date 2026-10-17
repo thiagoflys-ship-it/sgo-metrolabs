@@ -5,7 +5,13 @@
  ****************************************************/
 function RegOp_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoRegOp = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  // Módulo interno da equipe técnica: o menu já esconde para o perfil
+  // CLIENTE; aqui o servidor também recusa a chamada direta (a consulta
+  // por CNPJ listaria registros e PDFs de qualquer hospital).
+  if (String(sessaoRegOp && sessaoRegOp.perfil || '').toUpperCase() === 'CLIENTE') {
+    throw new Error('Os Registros operacionais são de uso interno da equipe Metrolabs e não estão disponíveis para o perfil Cliente. Em caso de dúvida, fale com o seu contato na Metrolabs.');
+  }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 
@@ -294,7 +300,7 @@ function RegOp_apiListarRegistrosPendentes(payload) {
       if (String(linha[REGOP_COL_REGISTRO.STATUS_PENDENCIA]) !== 'aberto') continue;
       pendentes.push({
         id: linha[REGOP_COL_REGISTRO.ID],
-        data: linha[REGOP_COL_REGISTRO.DATA],
+        data: RegOp_dataTexto_(linha[REGOP_COL_REGISTRO.DATA]),
         tipoDocumentoId: linha[REGOP_COL_REGISTRO.TIPO_DOCUMENTO_ID],
         tipoDocumentoNome: linha[REGOP_COL_REGISTRO.TIPO_DOCUMENTO_NOME]
       });
@@ -344,7 +350,11 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
 
   var respostas = Array.isArray(payload.respostas) ? payload.respostas : [];
   var imagens = Array.isArray(payload.imagens) ? payload.imagens.filter(function (im) { return im && im.base64; }) : [];
-  var data = String(payload.data || '').trim() || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  var dataInformada = String(payload.data || '').trim();
+  var data = dataInformada ? RegOp_normalizarDataBr_(dataInformada) : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  if (!data) {
+    return { ok: false, mensagem: 'A data do registro "' + dataInformada + '" não é uma data válida. Corrija o campo "Data" no formato dd/mm/aaaa (ex.: 16/10/2026) e gere de novo.' };
+  }
   var registroId = RegOp_gerarId_();
   var fechaRegistroId = String(payload.fechaRegistroId || '').trim();
 
@@ -360,13 +370,23 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
   if (fechaRegistroId) {
     for (var r = 1; r < dadosReg.length; r++) {
       if (String(dadosReg[r][REGOP_COL_REGISTRO.ID]) === fechaRegistroId) {
+        if (String(dadosReg[r][REGOP_COL_REGISTRO.STATUS_PENDENCIA]) !== 'aberto') {
+          return { ok: false, mensagem: 'Esta pendência já foi fechada por outro registro. Atualize a lista na etapa 4 (botão "Buscar") antes de continuar.' };
+        }
+        var cnpjOrigem = RegOp_normalizarCnpj_(dadosReg[r][REGOP_COL_REGISTRO.CNPJ]);
+        if (cnpjOrigem && cnpjOrigem !== RegOp_normalizarCnpj_(hospital.cnpj)) {
+          return { ok: false, mensagem: 'A pendência que você está fechando é do CNPJ ' + RegOp_formatarCnpj_(cnpjOrigem) + ', mas a etapa 1 está com outro hospital. Corrija o CNPJ na etapa 1 (ou abra o fechamento de novo pela etapa 4) e gere de novo.' };
+        }
         linhaRegistroOrigem = r + 1;
         registroOrigemInfo = {
-          data: dadosReg[r][REGOP_COL_REGISTRO.DATA],
+          data: RegOp_dataTexto_(dadosReg[r][REGOP_COL_REGISTRO.DATA]),
           tipoDocumentoNome: dadosReg[r][REGOP_COL_REGISTRO.TIPO_DOCUMENTO_NOME]
         };
         break;
       }
+    }
+    if (linhaRegistroOrigem < 0) {
+      return { ok: false, mensagem: 'A pendência que este registro deveria fechar não foi encontrada (pode ter sido apagada). Volte à etapa 4, clique em "Buscar" e escolha a pendência de novo.' };
     }
   }
 
@@ -403,11 +423,14 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
 
-  var pdfUrl = '', fileName = '', htmlSalvo = { htmlId: '', htmlUrl: '' };
+  var pdfUrl = '', fileName = '', htmlSalvo = { htmlId: '', htmlUrl: '' }, avisoPdf = '';
   try {
     var pasta = RegOp_obterPastaPorCnpj_(hospital.cnpj, hospital.razaoSocial);
     var blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
-    fileName = RegOp_sanitizarNomeArquivo_(tipoDocumentoNome) + "_" + RegOp_sanitizarNomeArquivo_(data) + ".pdf";
+    // Data no formato aaaa-mm-dd (ordena certo) + hora da emissão: dois
+    // registros do mesmo tipo no mesmo dia não saem com o mesmo nome.
+    var partesData = data.split('/');
+    fileName = RegOp_sanitizarNomeArquivo_(tipoDocumentoNome) + "_" + partesData[2] + "-" + partesData[1] + "-" + partesData[0] + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HHmmss") + ".pdf";
     blob.setName(fileName);
     var arquivo = pasta.createFile(blob);
     arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -417,7 +440,10 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
     htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, fileName, html, { compartilhar: true });
   } catch (e) {
     // não bloqueia o registro se o auto-save do PDF falhar — o registro
-    // já fica salvo na planilha (abaixo) mesmo sem o PDF.
+    // já fica salvo na planilha (abaixo) mesmo sem o PDF. Mas o operador
+    // precisa saber: o documento aberto na tela é a única cópia.
+    avisoPdf = 'O registro foi gravado, mas o PDF não foi salvo na pasta do hospital (' + (e && e.message ? e.message : e) + '). Use "Imprimir / Salvar como PDF" na aba do documento para guardar uma cópia e avise o administrador.';
+    try { SGO_DATA.log("REGOP_PDF_FALHOU", "", "REGOP " + registroId + ": " + (e && e.message ? e.message : e), "REGOP"); } catch (eLog) {}
   }
 
   try {
@@ -465,5 +491,34 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
 
   var respostaRegOp = { ok: true, registroId: registroId, html: html, pdfUrl: pdfUrl, fileName: fileName, htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
   if (htmlSalvo.avisoHtml) respostaRegOp.avisoHtml = htmlSalvo.avisoHtml;
+  if (avisoPdf) respostaRegOp.avisoPdf = avisoPdf;
   return respostaRegOp;
+}
+
+/**
+ * Valor da coluna DATA como texto dd/MM/yyyy. A planilha pode devolver a
+ * célula como Date (o Sheets converte "16/10/2026" sozinho), e Date cru
+ * devolvido ao navegador quebra o google.script.run.
+ */
+function RegOp_dataTexto_(valor) {
+  if (valor instanceof Date) {
+    return isNaN(valor.getTime()) ? '' : Utilities.formatDate(valor, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  }
+  return String(valor == null ? '' : valor);
+}
+
+/** "16/10/2026" ou "2026-10-16" → "16/10/2026"; ano com 2 dígitos ou data inexistente (ex.: 31/02) → ''. */
+function RegOp_normalizarDataBr_(texto) {
+  var s = String(texto || '').trim();
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  var dia, mes, ano;
+  if (m) { dia = Number(m[1]); mes = Number(m[2]); ano = Number(m[3]); }
+  else {
+    m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return '';
+    ano = Number(m[1]); mes = Number(m[2]); dia = Number(m[3]);
+  }
+  var d = new Date(ano, mes - 1, dia);
+  if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return '';
+  return (dia < 10 ? '0' : '') + dia + '/' + (mes < 10 ? '0' : '') + mes + '/' + ano;
 }

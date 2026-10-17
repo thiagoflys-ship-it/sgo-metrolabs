@@ -112,7 +112,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   html.push('<tr><td class="rotulo">Tipo de Processo</td><td>' + PlanCME_escaparHtml_(tipoProcesso) + '</td></tr>');
   html.push('<tr><td class="rotulo">Marca / Modelo</td><td>' + PlanCME_escaparHtml_((dados.equipamento.marca || '—') + ' / ' + (dados.equipamento.modelo || '—')) + '</td></tr>');
   html.push('<tr><td class="rotulo">Número de Série</td><td>' + PlanCME_escaparHtml_(dados.equipamento.serie || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Volume da Câmara</td><td>' + PlanCME_escaparHtml_(String(dados.equipamento.volume || '')) + ' litros</td></tr>');
+  html.push('<tr><td class="rotulo">Volume da Câmara</td><td>' + PlanCME_escaparHtml_(PlanCME_formatarNumeroBr_(dados.equipamento.volume)) + ' litros</td></tr>');
   html.push('<tr><td class="rotulo">Bomba de Vácuo</td><td>' + (dados.equipamento.bombaVacuo ? 'Sim' : 'Não') + '</td></tr>');
   html.push('<tr><td class="rotulo">Empresa executante</td><td>' + PlanCME_escaparHtml_(PLANCME_CFG.EMPRESA.NOME) + ' — ' + PlanCME_escaparHtml_(PLANCME_CFG.EMPRESA.RESPONSAVEL_TECNICO) + '</td></tr>');
   html.push('</table>');
@@ -147,7 +147,7 @@ function PlanCME_montarDocumentoHtml_(dados) {
   });
   html.push('</tbody></table>');
   html.push('<div class="destaque"><div><strong>Quantidade de sensores prevista:</strong> ' + PlanCME_escaparHtml_(String(resultado.sensores || 0)) + '</div>');
-  html.push('<div><strong>Margem de segurança aplicada:</strong> ' + PlanCME_escaparHtml_(String(resultado.margem || PLANCME_CFG.CALCULO.MARGEM_SEGURANCA)) + '</div></div>');
+  html.push('<div><strong>Margem de segurança aplicada:</strong> ' + PlanCME_escaparHtml_(PlanCME_descreverMargem_(resultado.margem || PLANCME_CFG.CALCULO.MARGEM_SEGURANCA)) + '</div></div>');
   html.push('</div>');
 
   if (textosIA.fundamentacaoQI || textosIA.fundamentacaoQO || textosIA.fundamentacaoQD) {
@@ -366,6 +366,29 @@ function PlanCME_montarEnderecoDoc_(cliente) {
   if (cidadeUf) partes.push(cidadeUf);
 
   return partes.join(" - ");
+}
+
+/**
+ * Número para exibição no documento em pt-BR (vírgula decimal, ponto de
+ * milhar), sem casas decimais inúteis. Aceita number ou string crua do
+ * formulário ("54.5" do input type=number, ou "54,5"). (2026-10-16: o volume
+ * e a margem saíam com ponto decimal, ex. "1.2".)
+ */
+function PlanCME_formatarNumeroBr_(valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const n = typeof valor === 'number' ? valor : Number(String(valor).trim().replace(/\s/g, '').replace(',', '.'));
+  if (!isFinite(n)) return String(valor);
+  const partes = (Math.round(n * 1000) / 1000).toString().split('.');
+  const inteiro = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return partes[1] ? inteiro + ',' + partes[1] : inteiro;
+}
+
+/** "1,2 (acréscimo de 20% sobre a base calculada)". */
+function PlanCME_descreverMargem_(margem) {
+  const m = Number(margem);
+  if (!isFinite(m) || m <= 0) return PlanCME_formatarNumeroBr_(margem);
+  const pct = Math.round((m - 1) * 1000) / 10;
+  return PlanCME_formatarNumeroBr_(m) + ' (acréscimo de ' + PlanCME_formatarNumeroBr_(pct) + '% sobre a base calculada)';
 }
 
 function PlanCME_escaparHtml_(valor) {

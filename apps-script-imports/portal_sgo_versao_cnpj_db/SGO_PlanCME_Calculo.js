@@ -19,11 +19,7 @@ function PlanCME_calcularPlanejamento(dados) {
 
     const volume = Number(dados.volume || 0);
     const sensores = PlanCME_calcularSensores_(volume, tipoProcesso);
-    const margem = Number(
-      PropertiesService.getScriptProperties().getProperty("MARGEM_SEGURANCA") ||
-      PLANCME_CFG.CALCULO.MARGEM_SEGURANCA ||
-      1.2
-    );
+    const margem = PlanCME_obterMargemSeguranca_();
 
     let baseBI = 0;
     let baseIQ = 0;
@@ -257,7 +253,11 @@ function PlanCME_calcularPlanejamento(dados) {
     // NUNCA chamam a IA de novo. Isso garante que os 2 documentos nunca
     // descrevam o mesmo cálculo de forma divergente. Lança erro se
     // falhar — não existe "calcular sem fundamentação".
-    resultado.textosIA = PlanCME_gerarJustificativasIA_(dados, resultado);
+    try {
+      resultado.textosIA = PlanCME_gerarJustificativasIA_(dados, resultado);
+    } catch (eIA) {
+      throw new Error("O planejamento não foi concluído porque a fundamentação técnica do documento é escrita pela IA. " + eIA.message);
+    }
 
     return {
       ok: true,
@@ -271,14 +271,38 @@ function PlanCME_calcularPlanejamento(dados) {
   }
 }
 
+/**
+ * Margem de segurança (multiplicador, ex.: 1,2 = +20%). (2026-10-16) Antes
+ * lia só a propriedade "MARGEM_SEGURANCA", mas o setup grava
+ * "PLANCME_MARGEM_SEGURANCA" — a gravada nunca era usada. Agora aceita as
+ * duas (a antiga primeiro, por compatibilidade), tolera vírgula decimal e cai
+ * no valor do config se o valor gravado for inválido (< 1 ou não numérico),
+ * em vez de devolver totais NaN.
+ */
+function PlanCME_obterMargemSeguranca_() {
+  const props = PropertiesService.getScriptProperties();
+  const candidatos = [props.getProperty("MARGEM_SEGURANCA"), props.getProperty("PLANCME_MARGEM_SEGURANCA")];
+  for (let i = 0; i < candidatos.length; i++) {
+    const bruto = String(candidatos[i] == null ? "" : candidatos[i]).trim().replace(",", ".");
+    if (!bruto) continue;
+    const n = Number(bruto);
+    if (isFinite(n) && n >= 1) return n;
+  }
+  return Number(PLANCME_CFG.CALCULO.MARGEM_SEGURANCA || 1.2);
+}
+
 function PlanCME_validarEntradaCalculo_(dados) {
   if (!dados) {
     throw new Error("Dados não recebidos para cálculo.");
   }
 
+  if (!String((dados.cliente && dados.cliente.razaoSocial) || "").trim()) {
+    throw new Error("Informe a razão social do cliente (etapa 1 - Dados do cliente) antes de calcular.");
+  }
+
   const volume = Number(dados.volume || 0);
   if (!volume || volume <= 0) {
-    throw new Error("Informe um volume válido da câmara.");
+    throw new Error("Informe um volume válido da câmara (etapa 2 - Dados do equipamento), em litros, maior que zero.");
   }
 
   if (!dados.qi && !dados.qo && !dados.qd && !dados.bowieDick) {
@@ -346,7 +370,7 @@ function PlanCME_montarFundamentacao_(tipoProcesso, volume, sensores, isVapor, i
   let basisBowieDick = "";
 
   if (isAutoclave) {
-    basisSensores = "ABNT NBR 16328:2024 — volume da câmara (" + volume + " L) " +
+    basisSensores = "ABNT NBR 16328:2024 — volume da câmara (" + PlanCME_formatarNumeroBr_(volume) + " L) " +
       (volume <= limite ? ("≤ " + limite + " L, exige mínimo de 3 sensores de temperatura") : ("> " + limite + " L, exige mínimo de 12 sensores de temperatura")) +
       ". Resultado deste planejamento: " + sensores + " sensores.";
     if (temQO && !temQD) {

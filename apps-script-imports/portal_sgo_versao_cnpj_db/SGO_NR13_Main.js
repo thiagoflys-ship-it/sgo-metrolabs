@@ -28,7 +28,14 @@
 
 function NR13_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || ''));
+  var sessaoDispatch = exigirSessao(String(req.sessionId || ''));
+  // Laudo NR-13 é ferramenta da equipe interna: o perfil CLIENTE não pode
+  // chamar nenhuma função daqui (sem esta trava, um cliente lia por CNPJ ou
+  // por ID os laudos de outra empresa). O cliente recebe o laudo pelos
+  // Documentos do próprio cadastro.
+  if (!sessaoDispatch || String(sessaoDispatch.perfil || '').trim().toUpperCase() === 'CLIENTE') {
+    throw new Error('Acesso exclusivo à equipe interna. O laudo NR-13 emitido fica disponível para o cliente em Documentos.');
+  }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 
@@ -250,18 +257,29 @@ function NR13_calcularCategoria_(pmtaMpa, volumeM3, classeFluido) {
   if (!isFinite(v) || v <= 0) throw new Error('Informe o Volume do vaso em m³, maior que zero.');
   if (!NR13_CFG.TABELA_CATEGORIA[classe]) throw new Error('Classe de fluido inválida — use A, B, C ou D.');
 
-  var pv = p * v;
+  // Arredonda o produto (9 casas) para a conversão kgf/cm² ou bar não
+  // jogar um valor de fronteira (ex.: 1,0000000002 ou 0,9999999998) no
+  // grupo errado.
+  var pv = Math.round(p * v * 1e9) / 1e9;
+  // Grupos de potencial de risco da NR-13 (limites inclusivos):
+  // 1: P.V >= 100 | 2: 30 <= P.V < 100 | 3: 2,5 <= P.V < 30 | 4: 1 <= P.V < 2,5 | 5: P.V < 1
   var grupo;
-  if (pv > 100) grupo = 1;
-  else if (pv > 30) grupo = 2;
-  else if (pv > 2.5) grupo = 3;
-  else if (pv > 1) grupo = 4;
+  if (pv >= 100) grupo = 1;
+  else if (pv >= 30) grupo = 2;
+  else if (pv >= 2.5) grupo = 3;
+  else if (pv >= 1) grupo = 4;
   else grupo = 5;
 
   var categoria = NR13_CFG.TABELA_CATEGORIA[classe][grupo - 1];
   var periodicidade = NR13_CFG.TABELA_PERIODICIDADE[categoria];
 
-  return { pv: pv, grupo: grupo, categoria: categoria, periodicidade: periodicidade };
+  // Campo de aplicação (item 13.2.1 da NR-13): vaso com P.V até 8, com P em
+  // kPa e V em m³, só entra se o fluido for da classe A. Aqui P é a PMTA
+  // (valor conservador). Não bloqueia: só avisa na tela e no laudo.
+  var pvKpa = Math.round(p * 1000 * v * 1e6) / 1e6;
+  var foraDoCampoAplicacao = pvKpa <= 8 && classe !== 'A';
+
+  return { pv: pv, grupo: grupo, categoria: categoria, periodicidade: periodicidade, pvKpa: pvKpa, foraDoCampoAplicacao: foraDoCampoAplicacao };
 }
 
 function NR13_apiCalcularCategoria(sessionId, payload) {
@@ -283,6 +301,15 @@ function NR13_somarAnos_(dataBr, anos) {
   base.setFullYear(base.getFullYear() + Number(anos));
   var tz = Session.getScriptTimeZone() || 'America/Sao_Paulo';
   return Utilities.formatDate(base, tz, 'dd/MM/yyyy');
+}
+
+/** Data dd/mm/aaaa real (rejeita 31/02, 00/13 etc.) → Date local; senão null. */
+function NR13_dataBrValida_(dataBr) {
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(dataBr || '').trim());
+  if (!m) return null;
+  var d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  if (d.getFullYear() !== Number(m[3]) || d.getMonth() !== Number(m[2]) - 1 || d.getDate() !== Number(m[1])) return null;
+  return d;
 }
 
 // ------------------------------------------------------------
@@ -383,7 +410,7 @@ function NR13_apiSalvarRascunho(sessionId, payload) {
   if (laudoId) {
     var atual = SGO_DATA.getById(NR13_SHEET, laudoId);
     if (!atual) throw new Error('Rascunho não encontrado.');
-    if (SGO_UTILS.safeUpper(atual.STATUS) === NR13_CFG.STATUS.EMITIDO) throw new Error('Este laudo já foi emitido e não pode mais ser editado.');
+    if (SGO_UTILS.safeUpper(atual.STATUS) === NR13_CFG.STATUS.EMITIDO) throw new Error('Este laudo já foi emitido e não pode mais ser editado. Para fazer outro laudo deste vaso, clique em "Começar Novo Laudo (mantém os campos preenchidos)" e depois em Salvar Rascunho ou Emitir Laudo Final.');
 
     var novosDados = SGO_DATA.normalizarObjetoParaSheet(NR13_SHEET, Object.assign({}, dados, {
       ID: laudoId,
@@ -612,8 +639,17 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
   // ano) — se vier preenchida e em formato válido, ela sempre prevalece
   // sobre a sugestão automática.
   var dataProximaManual = SGO_UTILS.safe(payload.dataProximaInspecao);
-  var dataProximaValida = /^\d{2}\/\d{2}\/\d{4}$/.test(dataProximaManual) ? dataProximaManual : '';
-  var dataProxima = dataProximaValida || NR13_somarAnos_(dados.DATA_TERMINO_INSPECAO, 1);
+  var dataProxima = dataProximaManual || NR13_somarAnos_(dados.DATA_TERMINO_INSPECAO, 1);
+  // Data digitada à mão: antes uma data em formato errado era trocada em
+  // silêncio por "término + 1 ano". Agora a emissão para e diz o que corrigir,
+  // e não aceita data além do prazo máximo da categoria (exame externo).
+  var dTerminoProx = NR13_dataBrValida_(dados.DATA_TERMINO_INSPECAO);
+  var dProxima = NR13_dataBrValida_(dataProxima);
+  if (!dProxima) throw new Error('A data prevista da próxima inspeção (' + dataProxima + ') não é uma data válida. Corrija no passo 4 (Dados da inspeção) no formato dd/mm/aaaa, ou apague o campo para usar a sugestão de 1 ano após o término.');
+  if (dTerminoProx && dProxima.getTime() <= dTerminoProx.getTime()) throw new Error('A data prevista da próxima inspeção (' + dataProxima + ') precisa ser posterior à data de término da inspeção (' + dados.DATA_TERMINO_INSPECAO + '). Corrija no passo 4 (Dados da inspeção).');
+  var limiteProximaBr = NR13_somarAnos_(dados.DATA_TERMINO_INSPECAO, categoria.periodicidade.externo);
+  var limiteProxima = NR13_dataBrValida_(limiteProximaBr);
+  if (limiteProxima && dProxima.getTime() > limiteProxima.getTime()) throw new Error('A data prevista da próxima inspeção (' + dataProxima + ') ultrapassa o prazo máximo da NR-13 para vaso de categoria ' + categoria.categoria + ' (exame externo a cada ' + categoria.periodicidade.externo + ' ano(s), ou seja, até ' + limiteProximaBr + '). Corrija no passo 4 (Dados da inspeção).');
 
   var numero = NR13_proximoNumero_();
   var tz = Session.getScriptTimeZone() || 'America/Sao_Paulo';
@@ -763,7 +799,22 @@ function NR13_validarParaEmissao_(dados) {
   if (!dados.CLASSE_FLUIDO) erros.push('Selecione a classe do fluido.');
   if (!dados.TIPO_INSPECAO) erros.push('Selecione o tipo de inspeção.');
   if (!dados.DATA_TERMINO_INSPECAO) erros.push('Informe a data de término da inspeção.');
+  else if (!NR13_dataBrValida_(dados.DATA_TERMINO_INSPECAO)) erros.push('A data de término da inspeção (' + dados.DATA_TERMINO_INSPECAO + ') não é uma data válida: use dd/mm/aaaa.');
+  if (dados.DATA_INICIO_INSPECAO) {
+    var dIni = NR13_dataBrValida_(dados.DATA_INICIO_INSPECAO);
+    var dFim = NR13_dataBrValida_(dados.DATA_TERMINO_INSPECAO);
+    if (!dIni) erros.push('A data de início da inspeção (' + dados.DATA_INICIO_INSPECAO + ') não é uma data válida: use dd/mm/aaaa.');
+    else if (dFim && dIni.getTime() > dFim.getTime()) erros.push('A data de início da inspeção não pode ser posterior à data de término.');
+  }
   if (!dados.ASSINANTE_PH) erros.push('Selecione o Profissional Habilitado (PH) responsável.');
+  else {
+    // O documento assina com o PH escolhido; sem esta checagem, um nome fora
+    // da lista fazia o laudo sair assinado pelo primeiro PH cadastrado.
+    var phs = (typeof CadeiaFrioRel_CFCFG !== 'undefined' && CadeiaFrioRel_CFCFG.ASSINATURAS_PADRAO) || [];
+    if (phs.length && !phs.some(function (a) { return a && a.nome === dados.ASSINANTE_PH; })) {
+      erros.push('O Profissional Habilitado "' + dados.ASSINANTE_PH + '" não está na lista de assinaturas cadastradas. Selecione um PH da lista no passo 4 (Dados da inspeção).');
+    }
+  }
   if (!dados.DESCRICAO_INSPECOES) erros.push('Descreva as inspeções, exames e testes executados.');
   if (!dados.PARECER_CONCLUSIVO) erros.push('Escreva o parecer conclusivo (obrigatório pela NR-13, item 13.5.4.11-k).');
   if (!dados.VEREDITO) erros.push('Selecione o veredito do laudo (Aprovado, Aprovado com ressalvas ou Reprovado).');
@@ -886,8 +937,16 @@ function NR13_proximoNumero_() {
   var props = PropertiesService.getScriptProperties();
   var ano = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy');
   var chave = NR13_NUMERO_PROP_PREFIX + ano;
-  var atual = parseInt(props.getProperty(chave) || '0', 10) || 0;
-  var proximo = atual + 1;
-  props.setProperty(chave, String(proximo));
-  return ano + String(proximo).padStart(5, '0');
+  // Trava: duas emissões ao mesmo tempo liam o mesmo contador e saíam com
+  // o mesmo número de laudo.
+  var trava = LockService.getScriptLock();
+  if (!trava.tryLock(20000)) throw new Error('Outro laudo NR-13 está sendo numerado neste momento. Aguarde alguns segundos e clique em "Emitir Laudo Final" de novo.');
+  try {
+    var atual = parseInt(props.getProperty(chave) || '0', 10) || 0;
+    var proximo = atual + 1;
+    props.setProperty(chave, String(proximo));
+    return ano + String(proximo).padStart(5, '0');
+  } finally {
+    trava.releaseLock();
+  }
 }

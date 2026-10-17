@@ -588,7 +588,23 @@ function tplNR13_confirmarEquipamento_(eq) {
 
   document.getElementById('nr13-eq-tipo-atual').textContent = eq.TIPO || '';
   var elTipo = document.getElementById('nr13-eq-tipo');
-  if (elTipo) elTipo.value = eq.TIPO || '';
+  if (elTipo) {
+    // O cadastro grava o tipo em maiúsculas ("AUTOCLAVE") e a lista usa
+    // "Autoclave": atribuir direto deixava o campo vazio e a emissão parava em
+    // "Informe o tipo de vaso". Casa sem diferenciar maiúsculas; se o tipo do
+    // cadastro não estiver na lista, acrescenta-o como opção.
+    var tipoEq = String(eq.TIPO || '').trim();
+    if (tipoEq) {
+      var opcaoTipo = Array.prototype.filter.call(elTipo.options, function(o) { return o.value.toUpperCase() === tipoEq.toUpperCase(); })[0];
+      if (!opcaoTipo) {
+        opcaoTipo = document.createElement('option');
+        opcaoTipo.value = tipoEq.charAt(0) + tipoEq.slice(1).toLowerCase();
+        opcaoTipo.textContent = opcaoTipo.value;
+        elTipo.appendChild(opcaoTipo);
+      }
+      elTipo.value = opcaoTipo.value;
+    }
+  }
   var elFab = document.getElementById('nr13-eq-fabricante-atual');
 
   ['nr13-panel-vaso', 'nr13-panel-inspecao', 'nr13-panel-th', 'nr13-panel-fotos', 'nr13-panel-textos', 'nr13-panel-veredito', 'nr13-panel-gerar'].forEach(function(id) {
@@ -629,7 +645,13 @@ function tplNR13_iniciarReinspecao_(laudoOrigemId) {
 
 // ---------------- Categorização (preview em tempo real) ----------------
 function tplNR13_numeroBr_(valor) {
-  var n = parseFloat(String(valor || '').replace(',', '.'));
+  if (typeof valor === 'number') return isFinite(valor) ? valor : 0;
+  // pt-BR: "1.000,5" = 1000,5 e "1.000" = 1000 (antes virava 1, e um vaso de
+  // 1.000 L entrava como 1 L). Vírgula é sempre a casa decimal.
+  var s = String(valor || '').trim().split(' ').join('');
+  if (s.indexOf(',') !== -1) s = s.split('.').join('').replace(',', '.');
+  else if (/^[0-9]{1,3}([.][0-9]{3})+$/.test(s)) s = s.split('.').join('');
+  var n = parseFloat(s);
   return isFinite(n) ? n : 0;
 }
 
@@ -638,6 +660,16 @@ function tplNR13_fmt_(valor, casas) {
   var n = Number(valor);
   if (!isFinite(n)) return '—';
   return n.toFixed(casas === undefined ? 2 : casas).replace('.', ',');
+}
+
+/** Igual a tplNR13_fmt_, mas com até maxCasas (padrão 4) quando o valor tem mais precisão (mesmo critério de NR13Doc_numVar_ no laudo): P.V pequeno não vira 0,00. */
+function tplNR13_fmtVar_(valor, maxCasas) {
+  var n = Number(valor);
+  if (!isFinite(n)) return '—';
+  var max = maxCasas === undefined ? 4 : maxCasas;
+  var casas = 2;
+  while (casas < max && Math.abs(Number(n.toFixed(casas)) - n) > Math.abs(n) * 1e-9) casas++;
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
 /** Soma N anos a uma data dd/mm/aaaa — só matemática de data, sem chamada ao servidor. */
@@ -690,16 +722,17 @@ function tplNR13_recalcularCategoria_() {
 
     conversaoEl.innerHTML =
       '<div class="alert-box info">' +
-      'PMTA: ' + tplNR13_fmt_(pmtaValor) + ' ' + pmtaUnidade + (pmtaUnidade !== 'MPa' ? (' = <strong>' + tplNR13_fmt_(r.pmtaMpaConvertido) + ' MPa</strong>') : '') + '<br>' +
-      'Volume: ' + tplNR13_fmt_(volumeValor) + ' ' + volumeUnidade + (volumeUnidade !== 'm³' ? (' = <strong>' + tplNR13_fmt_(r.volumeM3Convertido) + ' m³</strong>') : '') + '<br>' +
-      'P.V = ' + tplNR13_fmt_(r.pmtaMpaConvertido) + ' × ' + tplNR13_fmt_(r.volumeM3Convertido) + ' = <strong>' + tplNR13_fmt_(r.pv) + ' MPa·m³</strong>' +
+      'PMTA: ' + tplNR13_fmtVar_(pmtaValor) + ' ' + pmtaUnidade + (pmtaUnidade !== 'MPa' ? (' = <strong>' + tplNR13_fmtVar_(r.pmtaMpaConvertido) + ' MPa</strong>') : '') + '<br>' +
+      'Volume: ' + tplNR13_fmtVar_(volumeValor) + ' ' + volumeUnidade + (volumeUnidade !== 'm³' ? (' = <strong>' + tplNR13_fmtVar_(r.volumeM3Convertido) + ' m³</strong>') : '') + '<br>' +
+      'P.V = ' + tplNR13_fmtVar_(r.pmtaMpaConvertido) + ' × ' + tplNR13_fmtVar_(r.volumeM3Convertido) + ' = <strong>' + tplNR13_fmtVar_(r.pv, 6) + ' MPa·m³</strong>' +
+      (r.foraDoCampoAplicacao ? '<br><strong>Atenção:</strong> com a PMTA em kPa, P.V = ' + tplNR13_fmtVar_(r.pvKpa) + ' kPa·m³ (não superior a 8) e o fluido não é da classe A. Pelo item 13.2.1 da NR-13 este vaso não se enquadra obrigatoriamente na norma. Pode emitir o laudo; ele sairá com essa observação.' : '') +
       '</div>';
 
     previewEl.classList.remove('hidden');
     previewEl.innerHTML =
       '<div class="categoria-box"><div class="valor">' + r.categoria + '</div><div class="rotulo-mini">Categoria</div></div>' +
       '<div class="categoria-box"><div class="valor">' + r.grupo + '</div><div class="rotulo-mini">Grupo de Risco</div></div>' +
-      '<div class="categoria-box"><div class="valor">' + tplNR13_fmt_(r.pv) + '</div><div class="rotulo-mini">P.V (MPa·m³)</div></div>' +
+      '<div class="categoria-box"><div class="valor">' + tplNR13_fmtVar_(r.pv, 6) + '</div><div class="rotulo-mini">P.V (MPa·m³)</div></div>' +
       '<div class="categoria-box"><div class="valor">' + r.periodicidade.externo + ' / ' + r.periodicidade.interno + '</div><div class="rotulo-mini">Prazo (anos) Ext. / Int.</div></div>';
 
     // Sugestão de pressão de teste hidrostático (1,5x a PMTA, na mesma
@@ -843,7 +876,7 @@ function tplNR13_renderFotosLista_() {
     var statusUpload = f.enviando ? '<span class="muted">Enviando...</span>' : (f.erroUpload ? '<span style="color:var(--danger);">Falha no upload: ' + f.erroUpload + '</span>' : '');
     // Foto restaurada de um rascunho salvo não tem base64 local (nunca é
     // guardado na planilha) — usa o link direto do Drive como imagem.
-    var srcImg = f.base64 ? ('data:' + f.mimeType + ';base64,' + f.base64) : ('https://drive.google.com/uc?export=view&id=' + f.fileId);
+    var srcImg = f.base64 ? ('data:' + f.mimeType + ';base64,' + f.base64) : ((f.link && f.link.indexOf('drive.google.com') === -1) ? f.link : ('https://drive.google.com/uc?export=view&id=' + f.fileId));
     return '<div class="foto-card">' +
       '<img src="' + srcImg + '" alt="Foto">' +
       '<div class="foto-campos">' +
@@ -1111,9 +1144,9 @@ function tplNR13_carregarRascunho_(laudoId) {
 
     document.getElementById('nr13-ano-fabricacao').value = laudo.ANO_FABRICACAO || '';
     document.getElementById('nr13-codigo-construcao').value = laudo.CODIGO_CONSTRUCAO || '';
-    document.getElementById('nr13-pmta').value = laudo.PMTA_VALOR ? tplNR13_fmt_(laudo.PMTA_VALOR) : '';
+    document.getElementById('nr13-pmta').value = laudo.PMTA_VALOR ? tplNR13_fmtVar_(laudo.PMTA_VALOR, 6) : '';
     document.getElementById('nr13-pmta-unidade').value = laudo.PMTA_UNIDADE || 'MPa';
-    document.getElementById('nr13-volume').value = laudo.VOLUME_VALOR ? tplNR13_fmt_(laudo.VOLUME_VALOR) : '';
+    document.getElementById('nr13-volume').value = laudo.VOLUME_VALOR ? tplNR13_fmtVar_(laudo.VOLUME_VALOR, 6) : '';
     document.getElementById('nr13-volume-unidade').value = laudo.VOLUME_UNIDADE || 'm³';
     document.getElementById('nr13-classe-fluido').value = laudo.CLASSE_FLUIDO || '';
     document.getElementById('nr13-fluido-servico').value = laudo.FLUIDO_SERVICO || '';
@@ -1134,11 +1167,11 @@ function tplNR13_carregarRascunho_(laudoId) {
     tplNR13_toggleTH_();
     if (laudo.TH_REALIZADO === 'S') {
       document.getElementById('nr13-th-unidade').value = laudo.TH_UNIDADE_PRESSAO || laudo.PMTA_UNIDADE || 'MPa';
-      document.getElementById('nr13-th-pressao-teste').value = laudo.TH_PRESSAO_TESTE ? tplNR13_fmt_(laudo.TH_PRESSAO_TESTE) : '';
+      document.getElementById('nr13-th-pressao-teste').value = laudo.TH_PRESSAO_TESTE ? tplNR13_fmtVar_(laudo.TH_PRESSAO_TESTE, 6) : '';
       document.getElementById('nr13-th-tempo-subida').value = laudo.TH_TEMPO_SUBIDA_MIN || '';
-      document.getElementById('nr13-th-pressao-inicial').value = laudo.TH_PRESSAO_INICIAL ? tplNR13_fmt_(laudo.TH_PRESSAO_INICIAL) : '';
+      document.getElementById('nr13-th-pressao-inicial').value = laudo.TH_PRESSAO_INICIAL ? tplNR13_fmtVar_(laudo.TH_PRESSAO_INICIAL, 6) : '';
       document.getElementById('nr13-th-tempo-ensaio').value = laudo.TH_TEMPO_ENSAIO_MIN || '';
-      document.getElementById('nr13-th-pressao-final').value = laudo.TH_PRESSAO_FINAL ? tplNR13_fmt_(laudo.TH_PRESSAO_FINAL) : '';
+      document.getElementById('nr13-th-pressao-final').value = laudo.TH_PRESSAO_FINAL ? tplNR13_fmtVar_(laudo.TH_PRESSAO_FINAL, 6) : '';
       document.getElementById('nr13-th-tempo-descida').value = laudo.TH_TEMPO_DESCIDA_MIN || '';
       tplNR13_recalcularTH_();
     }

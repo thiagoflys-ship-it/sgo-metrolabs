@@ -211,7 +211,11 @@ function CronExec_apiSalvarDocumento(payload) {
       cronogramaId: payload.cronogramaId || ""
     }, arquivo, "CRONOGRAMA_EXECUCAO");
 
-    return { ok: true, url: arquivo.getUrl(), fileName: arquivo.getName() };
+    // Cópia HTML A4 na mesma pasta do PDF (nunca lança).
+    const htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, nomeArquivo, html, { compartilhar: true });
+    const resposta = { ok: true, url: arquivo.getUrl(), fileName: arquivo.getName(), htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
+    if (htmlSalvo.avisoHtml) resposta.avisoHtml = htmlSalvo.avisoHtml;
+    return resposta;
   } catch (e) {
     return { ok: false, mensagem: "Erro ao salvar o documento no Drive: " + e.message };
   }
@@ -270,7 +274,9 @@ function CronExec_montarEnderecoDoc_(cliente) {
 function CronExec_formatarDataBr_(dataIso) {
   const partes = String(dataIso || "").split("-");
   if (partes.length !== 3) return dataIso || "";
-  return partes[2] + "/" + partes[1];
+  // Com o ano: cronograma que atravessa a virada do ano (ex.: dezembro a
+  // janeiro) ficava ambíguo só com dia/mês.
+  return partes[2] + "/" + partes[1] + "/" + partes[0];
 }
 
 /**

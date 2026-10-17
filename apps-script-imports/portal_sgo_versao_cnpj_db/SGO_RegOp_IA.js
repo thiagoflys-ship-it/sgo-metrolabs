@@ -141,7 +141,7 @@ function RegOpIA_chamarGemini_(prompt, maxTokens) {
   var props = PropertiesService.getScriptProperties();
   var chave = String(props.getProperty("GEMINI_API_KEY") || "").trim();
   if (!chave) {
-    throw new Error("A chave GEMINI_API_KEY não foi configurada nas propriedades do script.");
+    throw new Error("A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.");
   }
 
   var parts = [{ text: prompt }];

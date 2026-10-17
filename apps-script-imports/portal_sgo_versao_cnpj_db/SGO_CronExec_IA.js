@@ -116,7 +116,7 @@ function CronExecIA_montarContexto_(cliente, equipamentos, agrupamento) {
   linhas.push("");
   linhas.push("GRUPOS:");
   grupos.forEach(function (g) {
-    linhas.push("  Grupo " + g.ordinal + " — período de " + g.dataInicio + " a " + g.dataFim + ":");
+    linhas.push("  Grupo " + g.ordinal + " — período de " + CronExec_formatarDataBr_(g.dataInicio) + " a " + CronExec_formatarDataBr_(g.dataFim) + ":");
     (g.itens || []).forEach(function (item) {
       linhas.push("    - " + item.tipo + " " + (item.marca || "") + " " + (item.modelo || "") + " — quantidade: " + item.quantidade);
     });
@@ -145,7 +145,7 @@ function CronExec_gerarTextosIA_(cliente, equipamentos, agrupamento) {
   var props = PropertiesService.getScriptProperties();
   var chave = String(props.getProperty("GEMINI_API_KEY") || "").trim();
   if (!chave) {
-    throw new Error("A chave GEMINI_API_KEY não foi configurada nas propriedades do script.");
+    throw new Error("A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.");
   }
 
   var marcadoresAtivos = [CRONEXECIA_MARC_OBJETIVO, CRONEXECIA_MARC_METODOLOGIA];

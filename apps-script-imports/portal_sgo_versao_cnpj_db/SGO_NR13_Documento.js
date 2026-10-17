@@ -24,6 +24,16 @@ function NR13Doc_num_(v, casas) {
   return SGO_DocA4_num_(Number(v), casas === undefined ? 2 : casas);
 }
 
+/** Número pt-BR com 2 casas, ou até maxCasas (padrão 4) quando o valor tem mais precisão: não arredonda 0,215 MPa para 0,22 nem P.V pequeno para 0,00. */
+function NR13Doc_numVar_(v, maxCasas) {
+  if (v === null || v === undefined || v === '' || !isFinite(v)) return '—';
+  var n = Number(v);
+  var max = maxCasas === undefined ? 4 : maxCasas;
+  var casas = 2;
+  while (casas < max && Math.abs(Number(n.toFixed(casas)) - n) > Math.abs(n) * 1e-9) casas++;
+  return SGO_DocA4_num_(n, casas);
+}
+
 function NR13Doc_paragrafosHtml_(texto) {
   var partes = String(texto || '').split(/\n{2,}/).map(function(p) { return p.trim(); }).filter(Boolean);
   if (!partes.length) return '<p>-</p>';
@@ -315,10 +325,10 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<tr><td class="rotulo">Nº de série</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.numeroSerie || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Ano de fabricação</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.anoFabricacao || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Localização</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.setor || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">PMTA (informada na plaqueta)</td><td>' + NR13Doc_num_(ctx.vaso.pmtaValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.pmtaUnidade || 'MPa') +
-    (ctx.vaso.pmtaUnidade !== 'MPa' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' MPa</strong> (convertido)') : '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Volume (informado)</td><td>' + NR13Doc_num_(ctx.vaso.volumeValor, 2) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.volumeUnidade || 'm³') +
-    (ctx.vaso.volumeUnidade !== 'm³' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' m³</strong> (convertido)') : '') + '</td></tr>');
+  html.push('<tr><td class="rotulo">PMTA (informada na plaqueta)</td><td>' + NR13Doc_numVar_(ctx.vaso.pmtaValor) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.pmtaUnidade || 'MPa') +
+    (ctx.vaso.pmtaUnidade !== 'MPa' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_numVar_(ctx.vaso.pmtaMpa) + ' MPa</strong> (convertido)') : '') + '</td></tr>');
+  html.push('<tr><td class="rotulo">Volume (informado)</td><td>' + NR13Doc_numVar_(ctx.vaso.volumeValor) + ' ' + NR13Doc_escaparHtml_(ctx.vaso.volumeUnidade || 'm³') +
+    (ctx.vaso.volumeUnidade !== 'm³' ? (' &nbsp;=&nbsp; <strong>' + NR13Doc_numVar_(ctx.vaso.volumeM3) + ' m³</strong> (convertido)') : '') + '</td></tr>');
   html.push('<tr><td class="rotulo">Classe do fluido</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.classeFluido || '—') + '</td></tr>');
   html.push('<tr><td class="rotulo">Fluido de serviço</td><td>' + NR13Doc_escaparHtml_(ctx.vaso.fluidoServico || '—') + '</td></tr>');
   html.push('</table>');
@@ -327,15 +337,22 @@ function NR13Doc_montarDocumentoHtml_(ctx) {
   html.push('<div class="categoria-destaque">');
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_escaparHtml_(ctx.categoria.categoria || '—') + '</div><div class="rotulo-mini">Categoria</div></div>');
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_escaparHtml_(String(ctx.categoria.grupo || '—')) + '</div><div class="rotulo-mini">Grupo de Potencial de Risco</div></div>');
-  html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_num_(ctx.categoria.pv, 2) + '</div><div class="rotulo-mini">P.V (MPa·m³)</div></div>');
+  html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_numVar_(ctx.categoria.pv, 6) + '</div><div class="rotulo-mini">P.V (MPa·m³)</div></div>');
   html.push('<div class="categoria-box"><div class="valor">' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.externo)) + ' / ' + NR13Doc_escaparHtml_(String(ctx.categoria.periodicidade.interno)) + '</div><div class="rotulo-mini">Prazo máx. (anos) Externo / Interno</div></div>');
   html.push('</div>');
   html.push('<table class="dados"><tr><td><strong>Memória de cálculo:</strong> P.V = PMTA (MPa) × Volume (m³) = ' +
-    NR13Doc_num_(ctx.vaso.pmtaMpa, 2) + ' × ' + NR13Doc_num_(ctx.vaso.volumeM3, 2) + ' = <strong>' + NR13Doc_num_(ctx.categoria.pv, 2) + ' MPa·m³</strong> ' +
+    NR13Doc_numVar_(ctx.vaso.pmtaMpa) + ' × ' + NR13Doc_numVar_(ctx.vaso.volumeM3) + ' = <strong>' + NR13Doc_numVar_(ctx.categoria.pv, 6) + ' MPa·m³</strong> ' +
     '→ Grupo de Potencial de Risco ' + ctx.categoria.grupo + ' (item 13.5.1.1.3) → cruzado com a Classe do Fluido "' + NR13Doc_escaparHtml_(ctx.vaso.classeFluido) +
     '" na Tabela 1 da NR-13 → <strong>Categoria ' + NR13Doc_escaparHtml_(ctx.categoria.categoria) + '</strong>. A periodicidade máxima de inspeção (Tabela 2, ' +
-    'estabelecimento sem SPIE) para esta categoria é de ' + ctx.categoria.periodicidade.externo + ' ano(s) pro exame externo e ' + ctx.categoria.periodicidade.interno +
-    ' ano(s) pro exame interno.</td></tr></table>');
+    'estabelecimento sem SPIE) para esta categoria é de ' + ctx.categoria.periodicidade.externo + ' ano(s) para o exame externo e ' + ctx.categoria.periodicidade.interno +
+    ' ano(s) para o exame interno.</td></tr></table>');
+  // Campo de aplicação (item 13.2.1): aviso quando P.V (kPa·m³) não passa de 8
+  // e o fluido não é da classe A. Só aparece nesse caso.
+  if (ctx.categoria.foraDoCampoAplicacao) {
+    html.push('<table class="dados"><tr><td><strong>Observação sobre o campo de aplicação:</strong> com a PMTA em kPa, o produto P.V deste vaso é ' +
+      NR13Doc_numVar_(ctx.categoria.pvKpa, 4) + ' kPa·m³, não superior a 8, e o fluido não é da classe A. Pelo item 13.2.1 da NR-13 o vaso não se enquadra ' +
+      'obrigatoriamente na norma; a inspeção seguiu os mesmos critérios, a pedido do cliente ou por boa prática, e a categoria acima é informada apenas como referência.</td></tr></table>');
+  }
 
   html.push('<div class="faixa-secao">DADOS DA INSPEÇÃO</div>');
   html.push('<table class="dados">');

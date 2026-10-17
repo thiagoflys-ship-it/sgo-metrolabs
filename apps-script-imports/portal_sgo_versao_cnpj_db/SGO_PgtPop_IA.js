@@ -200,7 +200,7 @@ function PgtPop_gerarTextoIA_(tipo, hospital, roteiro, pop, imagens) {
   var props = PropertiesService.getScriptProperties();
   var chave = String(props.getProperty("GEMINI_API_KEY") || "").trim();
   if (!chave) {
-    throw new Error("A chave GEMINI_API_KEY não foi configurada nas propriedades do script.");
+    throw new Error("A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.");
   }
 
   imagens = Array.isArray(imagens) ? imagens : [];
@@ -253,7 +253,11 @@ function PgtPop_gerarTextoIA_(tipo, hospital, roteiro, pop, imagens) {
     parts.push({ inline_data: { mime_type: img.mimeType || 'image/jpeg', data: img.base64 } });
   });
 
-  return PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS, temImagens, imagens.length, imagens);
+  var resultadoPop = PgtPopIA_chamarGeminiComParts_(chave, parts, PGTPOPIA_TOKENS, temImagens, imagens.length, imagens);
+  // (2026-10-16) Mesma rede de segurança contra markdown residual que o PGT
+  // já usa (PgtPopIA_removerMarkdownResidual_) — o POP não tinha.
+  resultadoPop.textoGerado = PgtPopIA_removerMarkdownResidual_(resultadoPop.textoGerado);
+  return resultadoPop;
 }
 
 /**
@@ -445,7 +449,7 @@ function PgtPop_gerarTextoPGT_(hospital, roteiro, imagens, popsRelacionados, aoI
   var props = PropertiesService.getScriptProperties();
   var chave = String(props.getProperty("GEMINI_API_KEY") || "").trim();
   if (!chave) {
-    throw new Error("A chave GEMINI_API_KEY não foi configurada nas propriedades do script.");
+    throw new Error("A interpretação por IA não está disponível: a chave GEMINI_API_KEY não está cadastrada. Peça ao administrador para cadastrá-la em Chaves e senhas e tente de novo.");
   }
 
   imagens = Array.isArray(imagens) ? imagens : [];

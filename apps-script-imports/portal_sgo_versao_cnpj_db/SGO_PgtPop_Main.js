@@ -25,7 +25,13 @@
 
 function PgtPop_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoPgtPop = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  // (2026-10-16) Módulo interno da equipe: o perfil CLIENTE só tinha o menu
+  // escondido no navegador, mas chamando a API listava documentos de qualquer
+  // CNPJ (de outros clientes) e podia gerar documentos.
+  if (String((sessaoPgtPop && sessaoPgtPop.perfil) || '').trim().toUpperCase() === 'CLIENTE') {
+    throw new Error('O módulo PGT e POP é de uso da equipe Metrolabs e não está disponível para o perfil Cliente. Para receber um documento, solicite à Metrolabs.');
+  }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 

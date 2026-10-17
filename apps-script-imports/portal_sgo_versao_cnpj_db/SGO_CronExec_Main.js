@@ -10,7 +10,12 @@
 
 function CronExec_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoCron = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  // Módulo interno da equipe técnica: o menu já esconde para o perfil
+  // CLIENTE; aqui o servidor também recusa a chamada direta.
+  if (String(sessaoCron && sessaoCron.perfil || '').toUpperCase() === 'CLIENTE') {
+    throw new Error('O Cronograma de execução é de uso interno da equipe Metrolabs e não está disponível para o perfil Cliente. Em caso de dúvida, fale com o seu contato na Metrolabs.');
+  }
   var fn = String(req.fn || '').trim();
   var payload = req.payload || {};
 
@@ -19,7 +24,10 @@ function CronExec_apiDispatch(req) {
     apiSugerirGrupos: CronExec_apiSugerirGrupos,
     apiFinalizar: CronExec_apiFinalizar,
     apiMontarDocumentoFinal: CronExec_apiMontarDocumentoFinal,
-    apiSalvarDocumento: SGO_DocSalvar_comCopiaHtml_(CronExec_apiSalvarDocumento) // PDF + cópia HTML A4 na mesma pasta
+    // PDF + cópia HTML A4 na mesma pasta: a cópia HTML é gravada dentro de
+    // CronExec_apiSalvarDocumento, com a pasta do cliente já em mãos (sem
+    // depender de descobrir a pasta pela URL do PDF).
+    apiSalvarDocumento: CronExec_apiSalvarDocumento
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -84,9 +92,14 @@ function CronExec_apiFinalizar(payload) {
 
   // Se o front não mandou grupos (ex.: técnico nunca clicou "Sugerir"),
   // gera agora a partir dos parâmetros.
-  var agrupamento = grupos || CronExec_sugerirGrupos_(equipamentos, params);
-
-  CronExec_validarConsistenciaGrupos_(equipamentos, agrupamento);
+  var agrupamento;
+  try {
+    agrupamento = grupos || CronExec_sugerirGrupos_(equipamentos, params);
+    agrupamento = CronExec_normalizarAgrupamento_(agrupamento);
+    CronExec_validarConsistenciaGrupos_(equipamentos, agrupamento);
+  } catch (eVal) {
+    return { ok: false, mensagem: eVal.message };
+  }
 
   var textosIA;
   try {
@@ -104,15 +117,58 @@ function CronExec_apiFinalizar(payload) {
   };
 
   var salvo = CronExec_salvarCronograma_(resultado);
-  resultado.cronogramaId = salvo.cronogramaId;
+  resultado.cronogramaId = salvo.cronogramaId || '';
 
-  return { ok: true, resultado: resultado };
+  var resposta = { ok: true, resultado: resultado };
+  if (!salvo.ok) {
+    // Os textos já foram gerados: o documento pode ser aberto e salvo;
+    // só o registro no histórico do módulo falhou.
+    resposta.aviso = (salvo.mensagem || 'Erro ao salvar cronograma.') + ' O documento pode ser aberto e salvo normalmente; se o problema continuar, avise o administrador.';
+  }
+  return resposta;
+}
+
+/**
+ * Agrupamento editado à mão na etapa 3: tira grupos que ficaram vazios,
+ * renumera, confere as datas de cada grupo e recalcula os totais (o
+ * navegador pode mandar totais antigos, ex. depois de "+ Novo grupo vazio").
+ */
+function CronExec_normalizarAgrupamento_(agrupamento) {
+  agrupamento = agrupamento || {};
+  var grupos = (agrupamento.grupos || []).map(function (g) {
+    var itens = (g.itens || []).filter(function (it) { return it && Number(it.quantidade) > 0; });
+    return { ordinal: g.ordinal, dataInicio: String(g.dataInicio || '').trim(), dataFim: String(g.dataFim || '').trim(), itens: itens };
+  }).filter(function (g) { return g.itens.length > 0; });
+  if (!grupos.length) {
+    throw new Error('Nenhum grupo tem equipamento. Clique em "Sugerir Grupos" na etapa 3 (ou distribua os equipamentos nos grupos) antes de gerar.');
+  }
+  var totalUnidades = 0;
+  grupos.forEach(function (g, i) {
+    g.ordinal = i + 1;
+    if (!CronExec_dataIsoValida_(g.dataInicio) || !CronExec_dataIsoValida_(g.dataFim)) {
+      throw new Error('O Grupo ' + g.ordinal + ' está sem data de início ou de fim válida. Corrija as datas do grupo na etapa 3 antes de gerar.');
+    }
+    if (g.dataFim < g.dataInicio) {
+      throw new Error('No Grupo ' + g.ordinal + ' a data de fim é anterior à data de início. Corrija as datas do grupo na etapa 3 antes de gerar.');
+    }
+    g.itens.forEach(function (it) { it.quantidade = Number(it.quantidade); totalUnidades += it.quantidade; });
+  });
+  agrupamento.grupos = grupos;
+  agrupamento.totalGrupos = grupos.length;
+  agrupamento.totalUnidades = totalUnidades;
+  agrupamento.modoUnico = grupos.length === 1;
+  agrupamento.fundamentacao = agrupamento.fundamentacao || { estrategia: '' };
+  return agrupamento;
 }
 
 /** Confere que a soma das quantidades por equipamento nos grupos bate com o informado originalmente. */
 function CronExec_validarConsistenciaGrupos_(equipamentos, agrupamento) {
   var totalPorId = {};
-  equipamentos.forEach(function (e) { totalPorId[e.id] = Number(e.quantidade) || 0; });
+  var nomePorId = {};
+  equipamentos.forEach(function (e) {
+    totalPorId[e.id] = Number(e.quantidade) || 0;
+    nomePorId[e.id] = [e.tipo, e.marca, e.modelo].filter(function (x) { return String(x || '').trim(); }).join(' ') || 'sem nome';
+  });
 
   var somaPorId = {};
   (agrupamento.grupos || []).forEach(function (grupo) {
@@ -124,8 +180,19 @@ function CronExec_validarConsistenciaGrupos_(equipamentos, agrupamento) {
   Object.keys(totalPorId).forEach(function (id) {
     var esperado = totalPorId[id];
     var obtido = somaPorId[id] || 0;
+    if (esperado < 1) {
+      throw new Error('O equipamento "' + nomePorId[id] + '" está com quantidade ' + esperado + ' na etapa 2. Remova-o e adicione de novo com quantidade 1 ou mais.');
+    }
     if (esperado !== obtido) {
-      throw new Error("A quantidade de equipamento nos grupos não bate com a lista informada (equipamento " + id + ": esperado " + esperado + ", encontrado " + obtido + "). Revise a distribuição antes de gerar.");
+      throw new Error('A quantidade de equipamento nos grupos não bate com a lista informada ("' + nomePorId[id] + '": ' + esperado + ' na lista, ' + obtido + ' nos grupos). Revise a distribuição na etapa 3 ou clique em "Sugerir Grupos" de novo antes de gerar.');
+    }
+  });
+
+  // Equipamento removido da lista (etapa 2) depois de sugerir os grupos
+  // continuaria aparecendo no documento.
+  Object.keys(somaPorId).forEach(function (id) {
+    if (!(id in totalPorId)) {
+      throw new Error('Os grupos têm um equipamento que não está mais na lista da etapa 2. Clique em "Sugerir Grupos" de novo na etapa 3 antes de gerar.');
     }
   });
 }
