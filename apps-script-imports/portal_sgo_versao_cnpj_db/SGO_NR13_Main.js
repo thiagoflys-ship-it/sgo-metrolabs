@@ -72,7 +72,10 @@ function NR13_apiDispatch(req) {
     throw new Error('O perfil ' + (perfilNr === 'COMERCIAL' ? 'Comercial' : 'Financeiro') + ' consulta os laudos NR-13, mas não pode preencher nem emitir. Peça a emissão a um técnico, à metrologia ou ao gestor.');
   }
 
-  return allow[fn](req.sessionId, payload);
+  var resultadoNr = allow[fn](req.sessionId, payload);
+  // 17/10/2026: laudo emitido substitui o vencimento anterior na central de pendências.
+  if (fn === 'apiEmitirLaudo' && typeof SGO_Pendencias_aposGravar_ === 'function') SGO_Pendencias_aposGravar_(resultadoNr);
+  return resultadoNr;
 }
 
 function NR13_apiPing() {

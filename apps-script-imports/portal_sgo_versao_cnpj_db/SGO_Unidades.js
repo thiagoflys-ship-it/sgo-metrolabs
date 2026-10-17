@@ -524,13 +524,13 @@ function unidadesAtualizar(sessionId, id, payload) {
   try { return JSON.parse(JSON.stringify(SGO_UNIDADES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar a unidade', e) }; }
 }
 function unidadesInativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar a unidade', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.inativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar a unidade', e) }; }
 }
 function unidadesReativar(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar a unidade', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.reativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar a unidade', e) }; }
 }
 function unidadesExcluir(sessionId, id) {
-  try { return JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir a unidade', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_UNIDADES.excluir(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir a unidade', e) }; }
 }
 function unidadesPesquisar(sessionId, termo) {
   try { return JSON.parse(JSON.stringify(SGO_UNIDADES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar as unidades', e) }; }

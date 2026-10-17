@@ -2335,7 +2335,7 @@
 
   function mobileCertCalEditarBloco_(idx) {
     MOBILE_CERTCAL_BLOCO_EDITANDO = idx;
-    const base = idx >= 0 ? MOBILE_CERTCAL.blocos[idx] : { titulo: "", unidade: "", padroesIds: [], pontos: [{ nominal: "", leituras: ["", "", ""] }] };
+    const base = idx >= 0 ? MOBILE_CERTCAL.blocos[idx] : { titulo: "", unidade: "", resolucao: "", padroesIds: [], pontos: [{ nominal: "", leituras: ["", "", ""] }] };
     MOBILE_CERTCAL_BLOCO_TEMP = JSON.parse(JSON.stringify(base));
     MOBILE_NAV = { modulo: "certificado_calibracao", tela: "form" };
     atualizarTituloMobile_(idx >= 0 ? "Editar bloco" : "Novo bloco");
@@ -2344,6 +2344,10 @@
     div.innerHTML =
       mobileFieldHtml_("Título do ensaio *", '<input type="text" id="mob_cc_bloco_titulo" value="' + escapeHtml_(MOBILE_CERTCAL_BLOCO_TEMP.titulo) + '" placeholder="Ex.: Temperatura">') +
       mobileFieldHtml_("Unidade *", '<input type="text" id="mob_cc_bloco_unidade" value="' + escapeHtml_(MOBILE_CERTCAL_BLOCO_TEMP.unidade) + '" placeholder="Ex.: °C">') +
+      // 17/10: resolução do instrumento por bloco, igual ao computador. Em branco, o servidor deduz
+      // das leituras (menor incremento) e o certificado informa que foi deduzida.
+      mobileFieldHtml_("Resolução do instrumento (na unidade do bloco)", '<input type="text" inputmode="decimal" id="mob_cc_bloco_resolucao" value="' + escapeHtml_(MOBILE_CERTCAL_BLOCO_TEMP.resolucao || "") + '" placeholder="Ex.: 0,1">') +
+      '<div class="mobile-card-subtitulo" style="margin:-4px 0 8px">Menor incremento que o instrumento indica. Em branco, o sistema usa o menor incremento das leituras e informa isso no certificado.</div>' +
       '<div class="mobile-frota-secao-titulo">Padrões utilizados</div>' +
       '<div id="mob_cc_bloco_padroes">Carregando...</div>' +
       '<div class="mobile-frota-secao-titulo">Pontos de medição</div>' +
@@ -2424,6 +2428,7 @@
     if (!unidade) return alert("Informe a unidade.");
     MOBILE_CERTCAL_BLOCO_TEMP.titulo = titulo;
     MOBILE_CERTCAL_BLOCO_TEMP.unidade = unidade;
+    MOBILE_CERTCAL_BLOCO_TEMP.resolucao = getValue_("mob_cc_bloco_resolucao");
     if (MOBILE_CERTCAL_BLOCO_EDITANDO >= 0) MOBILE_CERTCAL.blocos[MOBILE_CERTCAL_BLOCO_EDITANDO] = MOBILE_CERTCAL_BLOCO_TEMP;
     else MOBILE_CERTCAL.blocos.push(MOBILE_CERTCAL_BLOCO_TEMP);
     renderMobileCertCalEnsaios_();
@@ -2540,7 +2545,7 @@
       umidadeRelativa: MOBILE_CERTCAL.dados.umidadeRelativa,
       blocos: MOBILE_CERTCAL.blocos.map(function (b) {
         return {
-          titulo: b.titulo, unidade: b.unidade, padroesIds: b.padroesIds,
+          titulo: b.titulo, unidade: b.unidade, resolucao: b.resolucao || "", padroesIds: b.padroesIds,
           pontos: b.pontos.map(function (p) {
             return {
               nominal: p.nominal,
@@ -2836,7 +2841,7 @@
   let MOBILE_CONDUTA_EM_VOO = false;
 
   function mobileCondutaChamarApi_(fn, payload, onSucesso, onErro) {
-    const altera = /Registrar|Remover|Fechar|Gerar|Processar|Homologar|Contestar|Julgar|Recorrer|Cadastrar|Upload/.test(fn);
+    const altera = /Registrar|Remover|Fechar|Gerar|Processar|Homologar|Contestar|Julgar|Recorrer|Cadastrar|Upload|Decidir/.test(fn);
     if (altera) {
       if (MOBILE_CONDUTA_EM_VOO) return; // segundo toque: ignora em silêncio
       MOBILE_CONDUTA_EM_VOO = true;
@@ -2871,9 +2876,13 @@
         '<button type="button" class="mobile-btn-salvar" style="background:#dc2626" onclick="renderMobileCondutaFormOcorrencia_()">Registrar ocorrência</button>' +
         '<button type="button" class="mobile-btn-salvar" style="background:#059669" onclick="renderMobileCondutaFormPositivo_()">Reconhecer colega</button>' +
       '</div>' +
+      '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileCondutaFormMissao_()">Registrar missão</button>' +
       '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirManual_()">Manual do colaborador</button>' +
       '<div class="mobile-frota-secao-titulo">Minhas ocorrências recentes</div>' +
-      '<div class="mobile-list" id="mobileCondutaRecentes">Carregando...</div>';
+      '<div class="mobile-list" id="mobileCondutaRecentes">Carregando...</div>' +
+      '<div class="mobile-frota-secao-titulo">' + (mobileCondutaEhGestao_() ? "Missões" : "Minhas missões") + '</div>' +
+      '<div class="mobile-list" id="mobileCondutaMissoes">Carregando...</div>';
+    mobileCondutaCarregarMissoes_();
 
     mobileCondutaChamarApi_("apiObterFarolAtual", {}, function (res) {
       const el = document.getElementById("mobileCondutaFarol");
@@ -2955,6 +2964,131 @@
     }, function (err) {
       if (w && !w.closed) w.close();
       alert("Não foi possível abrir o manual agora: " + ((err && err.message) || err) + ". Tente de novo em instantes.");
+    });
+  }
+
+  // ---------- Missões no celular (17/10) ----------
+  // Mesma regra do computador: missão com incentivo lançada pelo próprio colaborador
+  // (ou por quem não é da gestão) vai para a aprovação da gestão e só conta depois de
+  // aprovada; a gestão aprova ou recusa (com motivo) as pendentes em que não é executante.
+  let MOBILE_CONDUTA_DISTANCIAS = null;
+  let MOBILE_CONDUTA_MISSOES = [];
+
+  function mobileCondutaEhGestao_() {
+    const perfil = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase();
+    return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfil) !== -1;
+  }
+
+  function mobileCondutaMsgErro_(err, padrao) {
+    const m = String((err && err.message) || err || "").replace(/^Error:\s*/, "").trim();
+    return m || padrao;
+  }
+
+  function mobileCondutaCarregarMissoes_() {
+    mobileCondutaChamarApi_("apiListarMissoes", {}, function (itens) {
+      MOBILE_CONDUTA_MISSOES = itens || [];
+      const alvo = document.getElementById("mobileCondutaMissoes");
+      if (!alvo) return;
+      if (!MOBILE_CONDUTA_MISSOES.length) { alvo.innerHTML = '<div class="mobile-card-subtitulo">Nenhuma missão registrada.</div>'; return; }
+      const pendentesPrimeiro = MOBILE_CONDUTA_MISSOES.slice().sort(function (a, b) {
+        return (b.PODE_DECIDIR ? 1 : 0) - (a.PODE_DECIDIR ? 1 : 0) || String(b.DATA).localeCompare(String(a.DATA));
+      });
+      alvo.innerHTML = pendentesPrimeiro.slice(0, 15).map(function (m) {
+        const km = String(Number(m.KM_TRECHO) || 0).replace(".", ",");
+        const execs = [m.EXECUTANTE_1_NOME, m.EXECUTANTE_2_NOME].filter(Boolean).join(" e ");
+        const st = String(m.APROVACAO || "");
+        const cor = st === "APROVADA" || st === "LEGADA" ? "var(--success)" : (st === "RECUSADA" ? "var(--danger)" : (st === "PENDENTE" ? "var(--warning)" : "var(--text-muted, #5F645F)"));
+        let acao = "";
+        if (m.PODE_DECIDIR) {
+          acao = '<div class="mobile-form-actions" style="margin-top:8px">' +
+            '<button type="button" class="mobile-btn-cancelar" onclick="mobileCondutaRecusarMissao_(\'' + escapeHtml_(m.ID) + '\')">Recusar</button>' +
+            '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaDecidirMissao_(\'' + escapeHtml_(m.ID) + '\',\'APROVAR\',\'\')">Aprovar</button>' +
+          '</div>';
+        } else if (st === "PENDENTE") {
+          acao = '<div class="mobile-card-subtitulo" style="margin-top:6px">' + (mobileCondutaEhGestao_()
+            ? "Você é executante desta missão: outra pessoa da gestão (Gestor ou Diretoria) precisa aprovar."
+            : "O incentivo só conta depois da aprovação da gestão. Você recebe o aviso da decisão.") + '</div>';
+        }
+        return '<div class="mobile-card" style="display:block">' +
+          '<div><strong>' + escapeHtml_(m.DESTINO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(m.DATA)) + '</div>' +
+          '<div class="mobile-card-subtitulo">' + escapeHtml_(km) + ' km · ' + escapeHtml_(execs) + '</div>' +
+          '<div class="mobile-card-subtitulo" style="color:' + cor + ';font-weight:700">' + escapeHtml_(m.APROVACAO_ROTULO || st) + '</div>' +
+          (st === "RECUSADA" && m.APROVACAO_MOTIVO ? '<div class="mobile-card-subtitulo">Motivo: ' + escapeHtml_(m.APROVACAO_MOTIVO) + '</div>' : "") +
+          acao +
+        '</div>';
+      }).join("");
+    }, function (err) { mobileErroLista_("mobileCondutaMissoes", err); });
+  }
+
+  function renderMobileCondutaFormMissao_() {
+    MOBILE_NAV = { modulo: "conduta", tela: "form" };
+    atualizarTituloMobile_("Registrar missão");
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML = '<div class="mobile-form"><div class="mobile-card-subtitulo">Carregando...</div></div>';
+    const montar = function () {
+      const eu = String((USER_CONTEXT && (USER_CONTEXT.id || USER_CONTEXT.userId)) || "");
+      const destinos = MOBILE_CONDUTA_DISTANCIAS || [];
+      if (!destinos.length) {
+        div.innerHTML = '<div class="mobile-form"><div class="mobile-card-subtitulo">Nenhum destino cadastrado para missões. Peça à gestão para cadastrar o destino em Programa de conduta &gt; Missões, no computador, e depois volte aqui.</div>' +
+          '<div class="mobile-form-actions"><button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Voltar</button></div></div>';
+        return;
+      }
+      const optsDestino = '<option value="">Selecione...</option>' + destinos.map(function (d) {
+        return '<option value="' + escapeHtml_(d.ID) + '">' + escapeHtml_(d.DESTINO) + ' (' + escapeHtml_(String(Number(d.KM_TRECHO) || 0).replace(".", ",")) + ' km)</option>';
+      }).join("");
+      const optsExec1 = mobileCondutaOptionsColegas_().replace('value="' + escapeHtml_(eu) + '"', 'value="' + escapeHtml_(eu) + '" selected');
+      div.innerHTML =
+        '<div class="mobile-form">' +
+          mobileFieldHtml_("Destino *", '<select id="mob_mis_destino">' + optsDestino + '</select>') +
+          mobileFieldHtml_("Data *", '<input type="date" id="mob_mis_data" max="' + mobileCondutaDataHoje_() + '" value="' + mobileCondutaDataHoje_() + '">') +
+          mobileFieldHtml_("1º executante *", '<select id="mob_mis_exec1">' + optsExec1 + '</select>') +
+          mobileFieldHtml_("2º executante (opcional)", '<select id="mob_mis_exec2">' + mobileCondutaOptionsColegas_() + '</select>') +
+          '<div class="mobile-card-subtitulo" style="margin:4px 0 10px">' + (mobileCondutaEhGestao_()
+            ? "Lançada pela gestão para outra pessoa, a missão já fica aprovada. Se você for executante, ela vai para a aprovação de outra pessoa da gestão."
+            : "A missão com incentivo vai para a aprovação da gestão e só conta depois de aprovada. Você recebe o aviso da decisão.") + '</div>' +
+          '<div class="mobile-form-actions">' +
+            '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
+            '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaSalvarMissao_()">Registrar</button>' +
+          '</div>' +
+        '</div>';
+    };
+    mobileCondutaCarregarListasBase_(function () {
+      if (MOBILE_CONDUTA_DISTANCIAS) { montar(); return; }
+      mobileCondutaChamarApi_("apiListarDistancias", {}, function (r) { MOBILE_CONDUTA_DISTANCIAS = r || []; montar(); },
+        function (err) { div.innerHTML = '<div class="mobile-form"><div class="mobile-card-subtitulo">' + escapeHtml_(mobileCondutaMsgErro_(err, "Não foi possível carregar os destinos.")) + ' Volte ao Início e tente de novo; se continuar, avise o gestor.</div></div>'; });
+    });
+  }
+
+  function mobileCondutaSalvarMissao_() {
+    const payload = { referenciaId: getValue_("mob_mis_destino"), data: getValue_("mob_mis_data"), executante1Id: getValue_("mob_mis_exec1"), executante2Id: getValue_("mob_mis_exec2") };
+    if (!payload.referenciaId) return alert("Selecione o destino da missão.");
+    if (!payload.data) return alert("Informe a data da missão.");
+    if (!payload.executante1Id) return alert("Selecione o 1º executante.");
+    mobileCondutaChamarApi_("apiRegistrarMissao", payload, function (res) {
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível registrar a missão. Confira os campos e tente de novo.");
+      alert(res.message || "Missão registrada.");
+      renderMobileConduta_();
+    }, function (err) {
+      alert(mobileCondutaMsgErro_(err, "Não foi possível registrar a missão.") + "\n\nA missão não foi registrada. Corrija e tente de novo.");
+    });
+  }
+
+  function mobileCondutaRecusarMissao_(id) {
+    const motivo = prompt("Motivo da recusa (vai no aviso para quem lançou a missão):", "");
+    if (motivo === null) return;
+    if (String(motivo).trim().length < 8) return alert("Para recusar, escreva o motivo com pelo menos 8 caracteres.");
+    mobileCondutaDecidirMissao_(id, "RECUSAR", motivo);
+  }
+
+  function mobileCondutaDecidirMissao_(id, decisao, motivo) {
+    mobileCondutaChamarApi_("apiDecidirMissao", { id: id, decisao: decisao, motivo: motivo || "" }, function (res) {
+      if (!res || !res.success) return alert((res && res.message) || "Não foi possível registrar a decisão. Tente de novo.");
+      alert(res.message || "Decisão registrada.");
+      mobileCondutaCarregarMissoes_();
+    }, function (err) {
+      alert(mobileCondutaMsgErro_(err, "Não foi possível registrar a decisão.") + "\n\nA lista será atualizada.");
+      mobileCondutaCarregarMissoes_();
     });
   }
 
@@ -3188,6 +3322,7 @@
           '<button type="button" class="mobile-btn-salvar" onclick="mobileClientesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
           (id && podeExcluir ? '<button type="button" class="btn-danger" onclick="mobileCadastroExcluir_(\'clientes\',\'' + escapeHtml_(id) + '\')">Excluir cliente</button>' : '') +
         '</div>' +
+        (id && !podeExcluir ? '<div class="mobile-card-subtitulo" style="margin-top:8px">Para excluir este cadastro ou trocar vínculos, peça à gestão (Gestor, Diretoria ou Administrador).</div>' : '') +
       '</div>';
 
     if (id) {
@@ -3325,6 +3460,7 @@
           '<button type="button" class="mobile-btn-salvar" onclick="mobileUnidadesSalvar_(\'' + (id || "") + '\')">Salvar</button>' +
           (id && podeExcluir ? '<button type="button" class="btn-danger" onclick="mobileCadastroExcluir_(\'unidades\',\'' + escapeHtml_(id) + '\')">Excluir unidade</button>' : '') +
         '</div>' +
+        (id && !podeExcluir ? '<div class="mobile-card-subtitulo" style="margin-top:8px">Para excluir este cadastro ou trocar vínculos, peça à gestão (Gestor, Diretoria ou Administrador).</div>' : '') +
       '</div>';
 
     SGO_iniciarCarregamento_("Aguarde, carregando cadastro…");

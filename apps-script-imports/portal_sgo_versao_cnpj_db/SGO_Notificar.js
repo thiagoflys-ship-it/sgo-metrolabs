@@ -460,7 +460,9 @@ function SGO_notificar_(opcoes) {
     // 17/10/2026: a mesma mensagem para a mesma pessoa pelo mesmo canal não sai duas vezes em 10 minutos,
     // venha do caminho que vier (duplo clique em Publicar/Reenviar, a verificação das telas e a rotina de
     // hora em hora avisando o mesmo atraso, duas sincronizações do Auvo ao mesmo tempo). Fica PULADO com o motivo.
-    var assinaturaMsg = Notificar_hash_(titulo + '|' + texto + '|' + (modelo ? modelo.nome + ':' + modelo.parametros.join('|') : ''));
+    // A assinatura inclui o registro de origem (refId): dois avisos diferentes com o mesmo texto
+    // (duas atividades com o mesmo título, por exemplo) saem os dois; o mesmo registro não repete.
+    var assinaturaMsg = Notificar_hash_(refId + '|' + titulo + '|' + texto + '|' + (modelo ? modelo.nome + ':' + modelo.parametros.join('|') : ''));
     var cacheDup = null;
     try { cacheDup = CacheService.getScriptCache(); } catch (e) { cacheDup = null; }
     var chaveDup = function (uid, canal) { return 'NTF_DUP_' + Notificar_hash_(uid + '|' + canal) + '_' + assinaturaMsg; };

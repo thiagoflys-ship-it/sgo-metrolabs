@@ -420,13 +420,13 @@ function clientesAtualizar(sessionId, id, payload) {
   try { return JSON.parse(JSON.stringify(SGO_CLIENTES.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('atualizar o cliente', e) }; }
 }
 function clientesInativar(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o cliente', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.inativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('inativar o cliente', e) }; }
 }
 function clientesReativar(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o cliente', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.reativar(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('reativar o cliente', e) }; }
 }
 function clientesExcluir(sessionId, id) { 
-  try { return JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o cliente', e) }; }
+  try { return SGO_Pendencias_aposGravar_(JSON.parse(JSON.stringify(SGO_CLIENTES.excluir(sessionId, id)))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('excluir o cliente', e) }; }
 }
 function clientesPesquisar(sessionId, termo) { 
   try { return JSON.parse(JSON.stringify(SGO_CLIENTES.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_('pesquisar os clientes', e) }; }

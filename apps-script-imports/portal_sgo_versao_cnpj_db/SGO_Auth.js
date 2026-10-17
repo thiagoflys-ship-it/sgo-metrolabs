@@ -18,6 +18,8 @@
  * automatizacao "USER_DEPLOYING" esteja com consentimento pendente.
  */
 function DIAG_forcarAutorizacaoCompleta() {
+  // 17/10/2026: só pelo editor; pelo navegador não executa nada (sem portas dos fundos).
+  if (!SGO_execucaoInterna_()) return { success: false, message: "Esta rotina só pode ser executada pelo administrador do sistema, no editor." };
   const props = PropertiesService.getScriptProperties();
   const dbId = props.getProperty('DB_ID');
   if (dbId) {

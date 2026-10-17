@@ -1014,3 +1014,13 @@ function SGO_Pendencias_apiListar(sessionId, payload) {
 function SGO_Pendencias_invalidar_() {
   try { CacheService.getScriptCache().put('PEND_GERACAO', String(Date.now()), 21600); } catch (e) {}
 }
+
+/**
+ * 17/10/2026 (verificação geral): documentos, equipamentos, clientes, unidades, padrões,
+ * certificados, laudos NR-13 e vínculos também mudam pendências. Sem isto, o documento
+ * renovado continuava no Início por até 60 s. Devolve o próprio resultado da gravação.
+ */
+function SGO_Pendencias_aposGravar_(resultado) {
+  if (!(resultado && (resultado.success === false || resultado.ok === false))) SGO_Pendencias_invalidar_();
+  return resultado;
+}

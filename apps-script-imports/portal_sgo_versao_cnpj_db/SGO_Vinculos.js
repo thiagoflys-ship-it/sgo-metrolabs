@@ -318,6 +318,6 @@ const SGO_VINCULOS = (() => {
 function vinculosConsultar(sessionId,termo) { return SGO_VINCULOS.search(sessionId,termo); }
 function vinculosPainel(sessionId) { return SGO_VINCULOS.overview(sessionId); }
 function vinculosPrevia(sessionId,payload) { return SGO_VINCULOS.preview(sessionId,payload); }
-function vinculosConfirmar(sessionId,token) { return SGO_VINCULOS.confirm(sessionId,token); }
+function vinculosConfirmar(sessionId,token) { return SGO_Pendencias_aposGravar_(SGO_VINCULOS.confirm(sessionId,token)); }
 function vinculosCriarPrincipal(sessionId,clienteId) { return SGO_VINCULOS.principal(sessionId,clienteId); }
 function vinculosDetalhes(sessionId,tipo,id) { return SGO_VINCULOS.details(sessionId,tipo,id); }
