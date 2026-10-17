@@ -106,6 +106,7 @@ function EstufaBanhoRel_ebMontarContextoCertificado_(payload, resultado) {
     simulado: !!payload.modoRelatorioSimulado,
     assinaturaDados: EstufaBanhoRel_ebAssinaturaContexto_({dados:resultado.dadosCompletos.map(function(r){return [r.tempoDate.getTime()].concat(r.temperaturas.filter(function(t,i){return sensoresAtivos[i];}));}),estudos:payload.estudos||{},faixa:faixa,sensoresAtivos:sensoresAtivos}),
     sensoresUtilizados: EstufaBanhoRel_ebResumoSensores_(sensoresAtivos),
+    registradores: SGO_DocA4_registradores_(String(payload.certDataLogger || '').trim(), dataDoEnsaio),
     perfilChave: payload.perfil,
     perfilCfg: perfilCfg,
     faixa: faixa,
@@ -122,6 +123,7 @@ function EstufaBanhoRel_ebMontarContextoCertificado_(payload, resultado) {
       equipamento: perfilCfg.label,
       tag: String(payload.tagEquipamento || '').trim(),
       dtl: String(payload.certDataLogger || '').trim(),
+      cnpj: String(payload.cnpj || '').trim(),
       certificadoNumero: String(payload.certNumero || '').trim(),
       revisao: String(payload.certRevisao || '0').trim(),
       dataDoEnsaio: dataDoEnsaio,
@@ -271,13 +273,22 @@ function EstufaBanhoRel_apiMontarCertificadoFinal(payload) {
     return f && f.base64;
   });
   template.geradoEm = Utilities.formatDate(new Date(), EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy');
+  // Gráficos por estudo (mesmo recorte de dados usado na análise) e assinaturas.
+  const graficos = {};
+  (resultado.analises || []).forEach(function(a) {
+    try { const g = SGO_DocA4_graficoEstudoFaixa_(a._dadosFatia || [], resultado.sensoresAtivos, resultado.faixa, EstufaBanhoRel_EBCFG.TZ); if (g) graficos[String(a.tipoEstudo || '').toUpperCase()] = g; } catch (e) {}
+  });
+  template.graficos = graficos;
+  template.intervaloLeiturasSegundos = (resultado.analises && resultado.analises[0] && resultado.analises[0].intervaloMedioMinutos) ? Math.round(resultado.analises[0].intervaloMedioMinutos * 60) : null;
+  template.assinaturas = [].concat(contexto.identificacao.tecnicoExecutor ? [{ nome: contexto.identificacao.tecnicoExecutor, cargo: 'Técnico executor do ensaio' }] : [], EstufaBanhoRel_EBCFG.ASSINATURAS_PADRAO || []);
+
   const html = template.evaluate().getContent();
   // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
   // dentro da pasta de laudos). Falha ao salvar não impede a entrega na tela.
   return SGO_DocSalvar_finalizarCertificado_(html, payload, function () {
     const id = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
     return id ? DriveApp.getFolderById(id) : EstufaBanhoRel_ebObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
-  }, 'Certificado Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
+  }, 'Certificado de qualificação térmica Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
 }
 
 // ------------------------------------------------------------

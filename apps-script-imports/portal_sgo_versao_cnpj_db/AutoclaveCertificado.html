@@ -1,383 +1,154 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <title>Certificado de Qualificação<?= ctx.identificacao.certificadoNumero ? (' — ' + ctx.identificacao.certificadoNumero) : '' ?></title>
-  <style>
-    @page { size: A4; margin: 18mm 16mm; }
-    * { box-sizing: border-box; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      color: #1f2937;
-      font-size: 12px;
-      line-height: 1.55;
-      margin: 0;
-      background: #f3f4f6;
-    }
-    .folha {
-      max-width: 900px;
-      margin: 24px auto;
-      background: #ffffff;
-      padding: 28px 34px 40px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.12);
-    }
-    .topo {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      border-bottom: 3px solid #007b3e;
-      padding-bottom: 10px;
-      margin-bottom: 22px;
-    }
-    .topo .marca { font-size: 20px; font-weight: 800; color: #0b4ea2; }
-    .topo .marca .logo-topo { display: block; height: 42px; width: auto; margin-bottom: 4px; }
-    .topo .marca small { display: block; font-size: 10px; font-weight: 400; color: #6b7280; }
-    .topo .meta { text-align: right; font-size: 11px; color: #374151; }
-    .topo .meta strong { color: #0b4ea2; font-size: 12px; }
+<?
+  // Relatório de ensaio térmico — Autoclave (um ciclo ou um teste de estanqueidade).
+  // Padrão comum SGO_DocA4: cabeçalho/rodapé em todas as páginas, A4, sem JavaScript no PDF.
+  var id = ctx.identificacao;
+  var estudo = ctx.estudos[0];
+  var f = estudo.fatos || {};
+  var leak = ctx.tipoRelatorio === 'LEAK_TEST';
+  var st = String(ctx.statusConsolidado || '').toUpperCase();
+  var numeroDoc = id.certificadoNumero || 'sem número';
+  var ficha = [
+    ['Data do ensaio', id.dataDoEnsaio || '—'],
+    ['Emissão', geradoEm],
+    ['Tipo de ensaio', leak ? 'Teste de estanqueidade da câmara' : AutoRel_acTextoTipoEnsaio_(id.tipoEnsaio)],
+    ['Ciclo nº', id.cicloNumero || '—']
+  ];
+  var nFig = 0;
+  var cicloTxt = leak ? 'teste de estanqueidade da câmara' : String(ctx.equipamentoLabel || '').replace(/^Ciclo de Esterilização/, 'ciclo de esterilização').replace(/^Ciclo de Baixa Temperatura/, 'ciclo de baixa temperatura');
+?>
+<?!= SGO_DocA4_inicioDocumento_({
+  titulo: 'Relatório de ensaio térmico — Autoclave',
+  subtitulo: 'Interpretação técnica de um ' + cicloTxt + '. O resultado refere-se exclusivamente ao ensaio aqui identificado.',
+  tituloCurto: 'Relatório de ensaio térmico — Autoclave',
+  rotuloNumero: 'Relatório nº',
+  numero: numeroDoc,
+  revisao: id.revisao,
+  empresa: id.empresaExecutante,
+  ficha: ficha,
+  simulado: ctx.simulado,
+  resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado }
+}) ?>
 
-    .capa-titulo { text-align: center; margin: 10px 0 24px; }
-    .capa-titulo h1 { font-size: 22px; color: #0b4ea2; margin: 0 0 6px; }
-    .capa-titulo p { margin: 0; color: #059669; font-weight: 600; }
+<h2>1. Identificação</h2>
+<?!= SGO_DocA4_tabelaIdent_([
+  ['Cliente', id.cliente],
+  ['CNPJ', id.cnpj],
+  ['Endereço', id.endereco, { largo: true }],
+  ['Setor', id.setor],
+  ['TAG', id.tag],
+  ['Equipamento', 'Autoclave a vapor'],
+  ['Marca', id.marca],
+  ['Modelo', id.modelo],
+  ['Nº de série', id.numeroSerie],
+  ['Receita / programa', id.programa],
+  ['Lote', id.lote],
+  ['Técnico executor', id.tecnicoExecutor],
+  ['Responsável pelo aceite', id.responsavelAceite],
+  ['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]
+].concat(id.tarefaOrigem ? [['Tarefa de origem', id.tarefaOrigem, { largo: true }]] : [])) ?>
 
-    table.info {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 14px 0 20px;
-      font-size: 11.5px;
-      page-break-inside: avoid;
-    }
-    table.info td { border: 1px solid #d1d5db; padding: 7px 10px; vertical-align: top; }
-    table.info td.rotulo { background: #f3f4f6; font-weight: 700; width: 34%; color: #374151; }
-    table.sensores { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 10.5px; }
-    table.sensores th, table.sensores td { border: 1px solid #d1d5db; padding: 5px 7px; }
-    table.sensores th { background: #f3f4f6; color: #374151; text-align: left; }
-    table.sensores td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+<h2>2. Instrumentação e rastreabilidade</h2>
+<p>As temperaturas<?= leak ? ' e a pressão' : ' e a pressão da câmara' ?> foram registradas por registrador de dados (datalogger) com sensores distribuídos na câmara. A tabela abaixo identifica o registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante.</p>
+<?!= SGO_DocA4_tabelaRegistradores_(ctx.registradores) ?>
+<?!= SGO_DocA4_tabelaIdent_(ctx.parametros || []) ?>
 
-    .status-banner {
-      text-align: center;
-      font-weight: 800;
-      font-size: 13px;
-      padding: 12px;
-      border-radius: 4px;
-      border: 2px solid;
-      margin: 18px 0;
-      letter-spacing: .3px;
-    }
-    .status-banner.aprovado { background: rgba(5,150,105,.10); border-color: #059669; color: #047857; }
-    .status-banner.alerta { background: rgba(217,119,6,.10); border-color: #d97706; color: #b45309; }
-    .status-banner.reprovado { background: rgba(220,38,38,.10); border-color: #dc2626; color: #b91c1c; }
+<h2>3. Metodologia, critérios de aceitação e referências</h2>
+<? if (leak) { ?>
+<p>O teste de estanqueidade avalia a capacidade da câmara de manter o vácuo. Após a evacuação, a pressão absoluta da câmara é registrada durante a janela de espera. A taxa de vazamento é calculada como a variação de pressão dividida pelo tempo decorrido na janela (mbar/min) e comparada ao limite de referência. A curva também é avaliada quanto à estabilidade e à ausência de ruído de medição.</p>
+<? } else { ?>
+<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. A fase de exposição (patamar de esterilização) é reconhecida quando os sensores ativos atingem e mantêm a temperatura mínima de esterilização do ciclo, com histerese e número mínimo de leituras consecutivas para evitar que oscilações isoladas abram ou fechem a janela.</p>
+<p>Para cada sensor calcula-se a letalidade térmica acumulada na fase de exposição, expressa em minutos equivalentes à temperatura de referência:</p>
+<p class="formula">F<sub>0</sub> = Σ 10<sup>(T − T<sub>ref</sub>) / z</sup> · Δt</p>
+<p>com T<sub>ref</sub> = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).tBase, 1, '°C') ?>, z = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).z, 0, '°C') ?> e Δt igual ao intervalo entre leituras. O ciclo é avaliado pelo pior sensor (menor F<sub>0</sub>), que representa o ponto de mais difícil penetração do calor. A aprovação térmica não demonstra, isoladamente, a remoção completa do ar nem a ausência de gases não condensáveis, que dependem de ensaios específicos (por exemplo, o teste de Bowie-Dick).</p>
+<? } ?>
+<h3>Critérios de aceitação</h3>
+<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.referencia]; })) ?>
+<h3>Referências normativas</h3>
+<?!= SGO_DocA4_lista_(ctx.normas) ?>
 
-    .secao { margin-top: 26px; }
-    .secao h2 {
-      font-size: 13px;
-      color: #ffffff;
-      background: #0b4ea2;
-      padding: 8px 12px;
-      margin: 0 0 12px;
-      border-left: 6px solid #059669;
-    }
-    .secao h3 {
-      font-size: 12.5px;
-      color: #ffffff;
-      background: #374151;
-      padding: 7px 12px;
-      margin: 22px 0 10px;
-    }
+<h2>4. Resultados</h2>
+<? if (leak) { ?>
+<h3>4.1 Teste de estanqueidade</h3>
+<?!= SGO_DocA4_tabela_([{ t: 'Grandeza' }, { t: 'Valor', cls: 'num' }], [
+  ['Início do teste', { t: f.tempoInicio || '—', cls: 'num' }],
+  ['Fim do teste', { t: f.tempoFim || '—', cls: 'num' }],
+  ['Duração', SGO_DocA4_val_(f.tempoDecorridoMinutos, 2, 'min')],
+  ['Pressão inicial', SGO_DocA4_val_(f.pressaoInicioMbar, 2, 'mbar')],
+  ['Pressão final', SGO_DocA4_val_(f.pressaoFimMbar, 2, 'mbar')],
+  ['Variação de pressão', SGO_DocA4_val_(f.deltaPressaoMbar, 2, 'mbar')],
+  ['Taxa de vazamento', SGO_DocA4_val_(f.taxaVazamentoMbarMin, 2, 'mbar/min')],
+  ['Limite de referência', SGO_DocA4_val_(f.limiteTaxaVazamentoMbarMin, 2, 'mbar/min')]
+]) ?>
+<? } else { ?>
+<h3>4.1 Fases do ciclo</h3>
+<?
+  var fr = f.fasesProcesso || {};
+  var dg = f.diagnosticoPreVacuo || {};
+  var pres = f.pressaoRegistrada || {};
+  var txtPre = { DETECTADO: 'Evacuações observadas', NAO_DETECTADO: 'Nenhuma evacuação observada', NAO_APLICAVEL: 'Não aplicável ao modo de remoção de ar informado', INDETERMINADO: 'Indeterminado pelos dados registrados' }[dg.status] || 'Indeterminado pelos dados registrados';
+?>
+<?!= SGO_DocA4_tabelaIdent_([
+  ['Início da exposição', f.tempoInicioExposicao || '—'],
+  ['Fim da exposição', f.tempoFimExposicao || '—'],
+  ['Duração da exposição', SGO_DocA4_val_(f.tempoExposicaoMinutos, 2, 'min')],
+  ['Duração total registrada', SGO_DocA4_val_(f.tempoTotalMinutos, 2, 'min')],
+  ['Remoção de ar (pré-vácuo)', txtPre + (fr.contagemEvacuacoes ? ' — ' + fr.contagemEvacuacoes + (fr.contagemEvacuacoes === 1 ? ' evacuação' : ' evacuações') : '')],
+  ['Pressão mínima antes da exposição', isFinite(dg.pressaoMinimaBarAbs) && dg.pressaoMinimaBarAbs !== null ? SGO_DocA4_val_(dg.pressaoMinimaBarAbs, 3, 'bar abs.') : '—'],
+  ['Pressão registrada (mín. / máx.)', (pres.min !== null && pres.min !== undefined) ? SGO_DocA4_val_(pres.min, 3, '') + ' / ' + SGO_DocA4_val_(pres.max, 3, 'bar abs.') : '—'],
+  ['Vácuo pós-exposição observado', fr.vacuoPosExposicaoDetectado ? 'Sim (secagem não comprovada pela curva)' : 'Não observado']
+]) ?>
+<? if (f.conformidadePorSensor && f.conformidadePorSensor.length) { ?>
+<h3>4.2 Resultados por sensor (fase de exposição)</h3>
+<?!= SGO_DocA4_tabela_(
+  [{ t: 'Sensor' }, { t: 'Mínima (°C)', cls: 'num' }, { t: 'Média (°C)', cls: 'num' }, { t: 'Máxima (°C)', cls: 'num' }, { t: 'F0 (min)', cls: 'num' }, { t: 'Situação' }],
+  f.conformidadePorSensor.map(function(c) {
+    var pior = f.piorSensorF0 && f.piorSensorF0.sensor === c.sensor;
+    return [c.sensor + (pior ? ' (pior)' : ''), SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2), SGO_DocA4_val_(c.f0, 2),
+      f.exigeF0 ? SGO_DocA4_celSituacao_(c.statusSensor === 'CONFORME', 'Atende', 'Abaixo do mínimo') : { html: '<span class="info-txt">Informativo</span>' }];
+  })
+) ?>
+<? if (f.exigeF0) { ?>
+<p class="nota">F<sub>0</sub> do ciclo entre os sensores ativos: mínimo <?= SGO_DocA4_val_(f.minF0, 2, 'min') ?>, médio <?= SGO_DocA4_val_(f.mediaF0, 2, 'min') ?> e máximo <?= SGO_DocA4_val_(f.maxF0, 2, 'min') ?>. Exigido: <?= SGO_DocA4_val_(f.f0MinNormativo, 2, 'min') ?> ou mais em todos os sensores.</p>
+<? } ?>
+<? } ?>
+<? } ?>
 
-    .prosa p { margin: 0 0 10px; text-align: justify; }
+<? if (graficos && graficos.length) { ?>
+<h3>4.<?= leak ? '2' : '3' ?> Gráficos</h3>
+<? graficos.forEach(function(g) { if (g.erro) { ?><p class="nota"><?= g.erro ?></p><? } else { nFig++; ?><?!= SGO_DocA4_figura_(g.svg, nFig, g.legenda) ?><? } }); ?>
+<? } ?>
 
-    .prosa-simples {
-      background: #f0f7ff;
-      border-left: 4px solid #0b4ea2;
-      border-radius: 4px;
-      padding: 14px 16px 4px;
-      margin-top: 8px;
-    }
+<h3>4.<?= leak ? (graficos && graficos.length ? '3' : '2') : (graficos && graficos.length ? '4' : '3') ?> Verificação dos critérios de aceitação</h3>
+<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
+  (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
 
-    ul.criterios { margin: 8px 0; padding-left: 20px; }
-    ul.criterios li { margin-bottom: 6px; }
+<h2>5. Análise técnica</h2>
+<div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
 
-    ul.normas { margin: 8px 0; padding-left: 20px; }
-    ul.normas li { margin-bottom: 8px; }
+<h2>6. Não conformidades e observações</h2>
+<?
+  var ncs = (estudo.motivosReprovacao || []);
+  var obs = [].concat(estudo.alertasAnalise || [], estudo.observacoesAnalise || [], (ctx.registradores && ctx.registradores.observacoes) || []);
+?>
+<h3>Não conformidades</h3>
+<? if (ncs.length) { ?><?!= SGO_DocA4_lista_(ncs) ?><? } else { ?><p>Nenhuma não conformidade foi registrada neste ensaio.</p><? } ?>
+<h3>Observações</h3>
+<? if (obs.length) { ?><?!= SGO_DocA4_lista_(obs) ?><? } else { ?><p>Sem observações adicionais.</p><? } ?>
 
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin: 12px 0 16px;
-      page-break-inside: avoid;
-    }
-    .stat-tile {
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      padding: 8px 10px;
-      text-align: center;
-      background: #f9fafb;
-    }
-    .stat-tile .rotulo { font-size: 9.5px; color: #6b7280; text-transform: uppercase; letter-spacing: .3px; }
-    .stat-tile .valor { font-size: 14px; font-weight: 800; color: #0b4ea2; margin-top: 2px; }
+<h2>7. Conclusão</h2>
+<div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.conclusaoGeral) ?></div>
+<h3>Em linguagem simples</h3>
+<div class="leigo"><?!= SGO_DocA4_paragrafos_(textos.conclusaoLeigo) ?></div>
+<?!= SGO_DocA4_quadroResultado_({ status: st, rotulo: 'Parecer deste ensaio', valor: (st === 'REPROVADO' ? 'Reprovado — o ensaio não atende aos critérios de aceitação' : (st === 'APROVADO' ? 'Aprovado — o ensaio atende aos critérios de aceitação' : 'Informativo — sem critério de aprovação aplicável')), texto: ctx.resumoResultado }) ?>
 
-    .ficha-evento {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 16px;
-      font-size: 11.5px;
-      margin: 10px 0 6px;
-      page-break-inside: avoid;
-    }
-    .ficha-evento div span.k { font-weight: 700; color: #374151; }
+<div class="manter">
+<h2>8. Responsabilidade técnica</h2>
+<p>Este relatório refere-se exclusivamente ao ensaio identificado, com os dados do registrador informado. Numa campanha de qualificação com vários ciclos, cada ciclo tem o seu relatório, e a qualificação do equipamento é declarada no documento consolidado da campanha. A reprodução parcial deste documento depende de autorização da empresa executante.</p>
+<?!= SGO_DocA4_assinaturas_(assinaturas) ?>
+</div>
 
-    .conclusao-ensaio {
-      margin-top: 10px;
-      padding: 8px 12px;
-      border-left: 4px solid;
-      font-weight: 700;
-      font-size: 11.5px;
-      page-break-inside: avoid;
-    }
-    .conclusao-ensaio.aprovado { border-color: #059669; background: rgba(5,150,105,.08); color: #047857; }
-    .conclusao-ensaio.alerta { border-color: #d97706; background: rgba(217,119,6,.08); color: #b45309; }
-    .conclusao-ensaio.reprovado { border-color: #dc2626; background: rgba(220,38,38,.08); color: #b91c1c; }
-
-    .fotos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
-    .foto-item { border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden; background: #ffffff; page-break-inside: avoid; }
-    .foto-item .foto-frame { height: 210px; display: flex; align-items: center; justify-content: center; background: #f9fafb; border-bottom: 1px solid #d1d5db; }
-    .foto-item .foto-frame img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
-    .foto-item .legenda { font-size: 10.5px; color: #4b5563; text-align: center; padding: 7px 8px; }
-
-    .parecer-final {
-      text-align: center;
-      font-weight: 800;
-      font-size: 15px;
-      padding: 16px;
-      border: 2px solid;
-      border-radius: 4px;
-      margin: 20px 0;
-    }
-
-    .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 34px; }
-    .assinatura { text-align: center; page-break-inside: avoid; }
-    .assinatura .imagem-assinatura { height: 100px; display: flex; align-items: flex-end; justify-content: center; margin: 0 auto; }
-    .assinatura .imagem-assinatura img,
-    .assinatura .imagem-assinatura svg { height: 100px; width: auto; max-width: 100%; display: block; margin: 0 auto; }
-    .assinatura .espaco-assinatura { height: 100px; }
-    .assinatura .linha { border-top: 1px solid #374151; margin-top: 8px; padding-top: 6px; font-weight: 700; }
-    .assinatura .cargo { font-size: 10.5px; color: #6b7280; }
-
-    .rodape {
-      margin-top: 30px;
-      border-top: 1px solid #d1d5db;
-      padding-top: 8px;
-      font-size: 9.5px;
-      color: #9ca3af;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .barra-imprimir {
-      max-width: 900px;
-      margin: 0 auto 12px;
-      text-align: right;
-    }
-    .barra-imprimir button {
-      background: #0b4ea2;
-      color: #fff;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 4px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    @media print {
-      body { background: #ffffff; }
-      .folha { box-shadow: none; margin: 0; padding: 0; max-width: none; }
-      .no-print { display: none !important; }
-    }
-    /* Acabamento tipográfico A4 (base SGO_DocA4) */
-    p, li { text-align: justify; hyphens: auto; -webkit-hyphens: auto; orphans: 3; widows: 3; }
-    td p, th p, td li, th li { text-align: inherit; }
-    h1, h2, h3, h4 { page-break-after: avoid; break-after: avoid; }
-    thead { display: table-header-group; }
-    tr, .assinatura, .assinaturas, .figura-item, .foto-item { break-inside: avoid; page-break-inside: avoid; }
-    td.num, th.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    @page { @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8.5px Arial, Helvetica, sans-serif; color: #6b7280; } }
-  </style>
-</head>
-<body>
-
-  <div class="barra-imprimir no-print">
-    <button onclick="window.print()">Imprimir / Salvar como PDF</button>
-  </div>
-
-  <div class="folha">
-
-    <div class="topo">
-      <div class="marca">
-        <? if (AutoRel_UCFG.LOGO_BASE64 && AutoRel_UCFG.LOGO_BASE64.data) { ?>
-        <img class="logo-topo" src="data:<?= AutoRel_UCFG.LOGO_BASE64.mimeType ?>;base64,<?= AutoRel_UCFG.LOGO_BASE64.data ?>" alt="Metrolab's">
-        <? } else { ?>
-        Metrolab's
-        <? } ?>
-        <small><?= ctx.identificacao.empresaExecutante.nome ?> – CNPJ <?= ctx.identificacao.empresaExecutante.cnpj ?></small>
-      </div>
-      <div class="meta">
-        <strong>Ensaio <?= ctx.identificacao.certificadoNumero || '—' ?></strong><br>
-        Revisão <?= ctx.identificacao.revisao ?> | <?= geradoEm ?>
-      </div>
-    </div>
-
-    <div class="capa-titulo">
-      <h1>INTERPRETAÇÃO TÉCNICA DO ENSAIO</h1>
-      <p>Leitura técnica deste ciclo — complementar ao Relatório de Auditoria (Planilha/PDF) do mesmo ensaio<?= ctx.simulado ? ' — SIMULADO: uso interno; não representa ensaio real' : '' ?></p>
-    </div>
-
-    <?
-      var statusCapa = String(ctx.statusConsolidado || '').toUpperCase();
-      var classeCapa = (statusCapa.indexOf('REPROVADO') !== -1) ? 'reprovado' : (statusCapa === 'APROVADO' ? 'aprovado' : 'alerta');
-      var textoCapa = AutoRel_acLabelStatus_(statusCapa);
-    ?>
-    <div class="status-banner <?= classeCapa ?>">RESULTADO DESTE ENSAIO: <?= textoCapa ?></div>
-
-    <div class="secao">
-      <h2>1. IDENTIFICAÇÃO</h2>
-      <table class="info">
-        <tr><td class="rotulo">Cliente</td><td><?= ctx.identificacao.cliente || '—' ?></td></tr>
-        <tr><td class="rotulo">Endereço</td><td><?= ctx.identificacao.endereco || '—' ?></td></tr>
-        <tr><td class="rotulo">Setor</td><td><?= ctx.identificacao.setor || '—' ?></td></tr>
-        <tr><td class="rotulo">Equipamento</td><td><?= ctx.equipamentoLabel ?></td></tr>
-        <? if (ctx.identificacao.marca || ctx.identificacao.modelo || ctx.identificacao.numeroSerie) { ?>
-        <tr><td class="rotulo">Marca / modelo / nº de série</td><td><?= [ctx.identificacao.marca, ctx.identificacao.modelo, ctx.identificacao.numeroSerie ? ('nº de série ' + ctx.identificacao.numeroSerie) : ''].filter(function(v) { return !!v; }).join(' / ') ?></td></tr>
-        <? } ?>
-        <tr><td class="rotulo">TAG</td><td><?= ctx.identificacao.tag || '—' ?></td></tr>
-        <tr><td class="rotulo">DTL (data logger)</td><td><?= ctx.identificacao.dtl || '—' ?></td></tr>
-        <tr><td class="rotulo">Data do ensaio</td><td><?= ctx.identificacao.dataDoEnsaio || '—' ?></td></tr>
-        <tr><td class="rotulo">Técnico executor</td><td><?= ctx.identificacao.tecnicoExecutor || '—' ?></td></tr>
-        <tr><td class="rotulo">Empresa executante</td><td><?= ctx.identificacao.empresaExecutante.nome ?> – CNPJ <?= ctx.identificacao.empresaExecutante.cnpj ?></td></tr>
-        <? if (ctx.identificacao.tarefaOrigem) { ?>
-        <tr><td class="rotulo">Tarefa de origem</td><td><?= ctx.identificacao.tarefaOrigem ?></td></tr>
-        <? } ?>
-      </table>
-    </div>
-
-    <div class="secao">
-      <h2>2. METODOLOGIA E CRITÉRIOS DE ACEITAÇÃO</h2>
-      <ul class="criterios">
-        <? if (ctx.tipoRelatorio === 'LEAK_TEST') { ?>
-        <li>Registro de pressão absoluta da câmara conforme intervalo do data logger utilizado, ao longo de toda a janela do teste.</li>
-        <li>Taxa de vazamento calculada como a variação de pressão dividida pelo tempo decorrido (mbar/min), comparada ao limite de referência.</li>
-        <li>Avaliação qualitativa da curva de pressão quanto à estabilidade e ausência de ruído espúrio.</li>
-        <? } else { ?>
-        <li>Registro de temperatura conforme intervalo do data logger utilizado, na janela disponível do ciclo. A identificação das fases depende dos dados registrados e do modo de remoção de ar informado.</li>
-        <li>Cálculo de letalidade térmica (F0) por sensor, acumulado durante a fase de exposição, comparado ao F0 mínimo normativo do ciclo selecionado.</li>
-        <li>Tratamento estatístico dos dados de temperatura durante a exposição: mínima, máxima e média por posição de sensor.</li>
-        <li>Interpretação das curvas registradas e das limitações da detecção. A aprovação térmica não demonstra, isoladamente, eficácia de remoção de ar.</li>
-        <? } ?>
-        <li>Rastreabilidade: dados de campo tratados de forma distinta de qualquer dado de desenvolvimento ou demonstração de layout.</li>
-        <li>Elaboração de parecer técnico conclusivo, assinado por profissionais habilitados e registrados em seus respectivos conselhos de classe.</li>
-      </ul>
-    </div>
-
-    <div class="secao">
-      <h2>3. REFERÊNCIAS NORMATIVAS</h2>
-      <ul class="normas">
-        <? ctx.normas.forEach(function(norma) { ?>
-        <li><?= norma ?></li>
-        <? }) ?>
-      </ul>
-    </div>
-
-    <? if (fotos && fotos.length) { ?>
-    <div class="secao">
-      <h2>4. REGISTROS FOTOGRÁFICOS</h2>
-      <div class="fotos-grid">
-        <? fotos.forEach(function(foto) { ?>
-        <div class="foto-item">
-          <div class="foto-frame"><img src="data:<?= foto.mimeType || 'image/jpeg' ?>;base64,<?= foto.base64 ?>"></div>
-          <? if (foto.legenda) { ?><div class="legenda"><?= foto.legenda ?></div><? } ?>
-        </div>
-        <? }) ?>
-      </div>
-    </div>
-    <? } ?>
-
-    <? ctx.estudos.forEach(function(estudo, idx) {
-         var numeroSecao = (fotos && fotos.length ? 5 : 4) + idx;
-         var st = String(estudo.statusAprovacao || '').toUpperCase();
-         var classeSt = (st === 'REPROVADO') ? 'reprovado' : ((st.indexOf('ALERTA') !== -1) ? 'alerta' : (st === 'INFORMATIVO' ? 'alerta' : 'aprovado'));
-         var f = estudo.fatos;
-    ?>
-    <div class="secao">
-      <h2><?= numeroSecao ?>. <?= estudo.tituloSecao ?></h2>
-
-      <? if (estudo.tipoEstudo === 'CICLO_TERMICO') { ?>
-      <div class="ficha-evento">
-        <div><span class="k">Início da exposição:</span> <?= f.tempoInicioExposicao || '—' ?></div>
-        <div><span class="k">Fim da exposição:</span> <?= f.tempoFimExposicao || '—' ?></div>
-        <div><span class="k">Duração da exposição:</span> <?= AutoRel_acFmtValor_(f.tempoExposicaoMinutos, ' min') ?></div>
-        <div><span class="k">Duração total do ciclo:</span> <?= AutoRel_acFmtValor_(f.tempoTotalMinutos, ' min') ?></div>
-        <div><span class="k">Sensores utilizados:</span> <?= f.quantidadeSensoresUtilizados ?> de <?= f.quantidadeSensoresInstalados ?> instalados</div>
-        <? if (f.exigeF0) { ?><div><span class="k">F0 mínimo normativo:</span> <?= AutoRel_acFmtValor_(f.f0MinNormativo, ' min') ?></div><? } ?>
-      </div>
-      <? if (f.exigeF0) { ?>
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="rotulo">F0 mínimo</div><div class="valor"><?= AutoRel_acFmtValor_(f.minF0, ' min') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">F0 médio</div><div class="valor"><?= AutoRel_acFmtValor_(f.mediaF0, ' min') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">F0 máximo</div><div class="valor"><?= AutoRel_acFmtValor_(f.maxF0, ' min') ?></div></div>
-      </div>
-      <? if (f.conformidadePorSensor && f.conformidadePorSensor.length) { ?>
-      <table class="sensores">
-        <thead><tr><th>Sensor</th><th class="num">F0 acumulado</th><th class="num">Mínima na exposição</th><th class="num">Média na exposição</th><th class="num">Máxima na exposição</th><th>Situação</th></tr></thead>
-        <tbody>
-        <? f.conformidadePorSensor.forEach(function(cs) { ?>
-          <tr><td><?= cs.sensor ?></td><td class="num"><?= AutoRel_acFmtValor_(cs.f0, ' min') ?></td><td class="num"><?= AutoRel_acFmtValor_(cs.minTemp, ' °C') ?></td><td class="num"><?= AutoRel_acFmtValor_(cs.mediaTemp, ' °C') ?></td><td class="num"><?= AutoRel_acFmtValor_(cs.maxTemp, ' °C') ?></td><td><?= cs.statusSensor === 'CONFORME' ? 'Atende ao F0 mínimo' : 'Abaixo do F0 mínimo' ?></td></tr>
-        <? }) ?>
-        </tbody>
-      </table>
-      <? } ?>
-      <? } ?>
-      <? } else { ?>
-      <div class="ficha-evento">
-        <div><span class="k">Início do teste:</span> <?= f.tempoInicio || '—' ?></div>
-        <div><span class="k">Fim do teste:</span> <?= f.tempoFim || '—' ?></div>
-        <div><span class="k">Duração:</span> <?= AutoRel_acFmtValor_(f.tempoDecorridoMinutos, ' min') ?></div>
-      </div>
-      <div class="stat-grid">
-        <div class="stat-tile"><div class="rotulo">Pressão inicial</div><div class="valor"><?= AutoRel_acFmtValor_(f.pressaoInicioMbar, ' mbar') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">Pressão final</div><div class="valor"><?= AutoRel_acFmtValor_(f.pressaoFimMbar, ' mbar') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">Variação</div><div class="valor"><?= AutoRel_acFmtValor_(f.deltaPressaoMbar, ' mbar') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">Taxa de vazamento</div><div class="valor"><?= AutoRel_acFmtValor_(f.taxaVazamentoMbarMin, ' mbar/min') ?></div></div>
-        <div class="stat-tile"><div class="rotulo">Limite de referência</div><div class="valor"><?= AutoRel_acFmtValor_(f.limiteTaxaVazamentoMbarMin, ' mbar/min') ?></div></div>
-      </div>
-      <? } ?>
-
-      <h3>Análise</h3>
-      <div class="prosa"><?!= AutoRel_acParagrafosHtml_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
-
-      <div class="conclusao-ensaio <?= classeSt ?>">
-        Conclusão do ensaio: <?= AutoRel_acLabelStatus_(st) ?><? if (st === 'REPROVADO') { ?> — não conforme<? } else if (st !== 'INFORMATIVO') { ?> — conforme<? } ?>
-      </div>
-    </div>
-    <? }) ?>
-
-    <?
-      var numeroConclusao = (fotos && fotos.length ? 5 : 4) + ctx.estudos.length;
-    ?>
-    <div class="secao">
-      <h2><?= numeroConclusao ?>. CONCLUSÃO TÉCNICA</h2>
-      <div class="prosa"><?!= AutoRel_acParagrafosHtml_(textos.conclusaoGeral) ?></div>
-
-      <h3>Conclusão em Linguagem de Fácil Compreensão</h3>
-      <div class="prosa prosa-simples"><?!= AutoRel_acParagrafosHtml_(textos.conclusaoLeigo) ?></div>
-    </div>
-
-    <div class="rodape">
-      <span><?= ctx.identificacao.empresaExecutante.nome ?> – CNPJ <?= ctx.identificacao.empresaExecutante.cnpj ?> — Interpretação técnica, não é o documento final da qualificação</span>
-      <span>Ensaio <?= ctx.identificacao.certificadoNumero || '—' ?></span>
-    </div>
-
-  </div>
-</body>
-</html>
+<? if (fotos && fotos.length) { ?>
+<h2 class="quebra">Anexo A — Registro fotográfico</h2>
+<?!= SGO_DocA4_fotos_(fotos) ?>
+<? } ?>
+<?!= SGO_DocA4_fimDocumento_() ?>

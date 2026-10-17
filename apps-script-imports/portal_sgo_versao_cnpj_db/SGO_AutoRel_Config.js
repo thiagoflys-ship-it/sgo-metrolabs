@@ -117,8 +117,8 @@ const AutoRel_UCFG = Object.freeze({
 
       // Referência normativa e operacional
       f0MinNormativo: 15.0,
-      f0MinOperacional: 14.8,
-      toleranciaF0: 0.2,
+      f0MinOperacional: 15.0,
+      toleranciaF0: 0.0,
 
       tMin: 134.0,
       tMax: 137.0,
@@ -145,8 +145,8 @@ const AutoRel_UCFG = Object.freeze({
 
       // Referência normativa e operacional
       f0MinNormativo: 15.0,
-      f0MinOperacional: 14.8,
-      toleranciaF0: 0.2,
+      f0MinOperacional: 15.0,
+      toleranciaF0: 0.0,
 
       tMin: 121.0,
       tMax: 124.0,
@@ -173,8 +173,8 @@ const AutoRel_UCFG = Object.freeze({
 
       // Referência normativa e operacional
       f0MinNormativo: 15.0,
-      f0MinOperacional: 14.8,
-      toleranciaF0: 0.2,
+      f0MinOperacional: 15.0,
+      toleranciaF0: 0.0,
 
       tMin: 127.0,
       tMax: 130.0,

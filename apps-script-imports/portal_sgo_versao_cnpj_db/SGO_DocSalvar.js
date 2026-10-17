@@ -187,7 +187,7 @@ function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
   } catch (e) {
     return {
       salvo: false, htmlId: '', htmlUrl: '', pdfId: '', pdfUrl: '', pastaUrl: '',
-      avisoSalvar: 'O certificado foi gerado, mas não foi possível salvá-lo na pasta do cliente: ' +
+      avisoSalvar: 'O documento foi gerado, mas não foi possível salvá-lo na pasta do cliente: ' +
         String(e && e.message ? e.message : e).replace(/[.\s]+$/, '') + '. Use Imprimir > Salvar como PDF.'
     };
   }
@@ -255,13 +255,13 @@ function SGO_DocSalvar_injetarAvisoTela_(html, resultado) {
   var faixa;
   if (resultado.salvo) {
     faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;padding:8px 12px;margin:0 0 8px">' +
-      'Certificado salvo na pasta do cliente (PDF e HTML A4). ' +
+      'Documento salvo na pasta do cliente (PDF e HTML A4). ' +
       (resultado.pdfUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a> · ' : '') +
       (resultado.pastaUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pastaUrl) + '" target="_blank" rel="noopener">Abrir pasta do cliente</a>' : '') +
       '</div>';
   } else {
     faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#fff3e0;color:#8a4b00;border:1px solid #ffb74d;padding:8px 12px;margin:0 0 8px">' +
-      SGO_DocSalvar_esc_(resultado.avisoSalvar || 'O certificado foi gerado, mas não foi salvo na pasta do cliente. Use Imprimir > Salvar como PDF.') +
+      SGO_DocSalvar_esc_(resultado.avisoSalvar || 'O documento foi gerado, mas não foi salvo na pasta do cliente. Use Imprimir > Salvar como PDF.') +
       '</div>';
   }
   var css = '<style>@media print{.sgo-docsalvar-aviso{display:none!important}}</style>';

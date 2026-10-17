@@ -581,7 +581,9 @@ function LavRel_normalizarOpcoesAnaliseMain_(payload) {
   return {
     robustez: robustez,
     overrideJanela: overrideJanela,
-    setpoint: LavRel_parseFloatOpcionalSeguro_(payload.setpoint)
+    setpoint: LavRel_parseFloatOpcionalSeguro_(payload.setpoint),
+    // Classificação do artigo processado (termodesinfecção): CRITICO → A0 ≥ 3.000 s; demais → A0 ≥ 600 s.
+    classeArtigo: String(payload.classeArtigo || '').toUpperCase() === 'CRITICO' ? 'CRITICO' : 'SEMICRITICO'
   };
 }
 

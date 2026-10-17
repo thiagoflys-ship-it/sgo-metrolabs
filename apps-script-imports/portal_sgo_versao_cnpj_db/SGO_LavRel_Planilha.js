@@ -376,7 +376,7 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   let letalidadeValorMax = '';
 
   if (motor === 'TERMO') {
-    criterioTxt = 'A0 OPERACIONAL ≥ ' + limiteAprovacaoFinal.toFixed(2) + ' | TOL.: ' + toleranciaParametro.toFixed(2);
+    criterioTxt = 'CRITÉRIO: A0 ≥ ' + limiteAprovacaoFinal.toFixed(0) + ' S EM TODOS OS SENSORES ATIVOS (' + (String((analise.configuracaoCiclo || {}).classeArtigo) === 'CRITICO' ? 'ARTIGO CRÍTICO' : 'ARTIGO SEMICRÍTICO OU NÃO CRÍTICO') + ')';
     letalidadeTituloMin = 'A0 MÍNIMO OBTIDO:';
     letalidadeValorMin = analise.faseInicioExp !== -1 ? fmtA0_(analise.minA0) : 'N/A';
     letalidadeTituloMed = 'A0 MÉDIO DA CMARA:';
@@ -384,7 +384,7 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     letalidadeTituloMax = 'A0 MÁXIMO OBTIDO:';
     letalidadeValorMax = analise.faseInicioExp !== -1 ? fmtA0_(analise.maxA0) : 'N/A';
   } else {
-    criterioTxt = 'TEMPO DE CAVITAÇÃO ≥ ' + limiteAprovacaoFinal.toFixed(2) + ' MIN | TOL.: ' + toleranciaParametro.toFixed(2) + ' MIN';
+    criterioTxt = 'CRITÉRIO: TEMPO DE CAVITAÇÃO ≥ ' + limiteAprovacaoFinal.toFixed(2).replace('.', ',') + ' MIN';
     letalidadeTituloMin = 'TEMPO DE CAVITAÇÃO:';
     letalidadeValorMin = analise.faseInicioExp !== -1 ? fmtMin_(analise.tempoCavitacao) : 'N/A';
     letalidadeTituloMed = 'TEMPO DE EXPOSIÇÃO GERAL:';
@@ -473,14 +473,14 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
               'A análise térmica identificou janela de desinfecção com duração de ' + tempoExpExibicao + ' contínuos. ' +
               'Entretanto, o pior caso de letalidade (A0) foi insuficiente para aprovação. O A0 médio calculado foi de ' + fmtA0_(analise.mediaA0) +
               ', enquanto o menor valor obtido foi de ' + fmtA0_(analise.minA0) +
-              ', abaixo do limite operacional configurado de ' + fmtA0_(limiteAprovacaoFinal) + '.';
+              ', abaixo do mínimo exigido de ' + fmtA0_(limiteAprovacaoFinal) + '.';
           } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
             txtP1 =
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
               'A análise térmica confirmou estabilidade operacional durante a desinfecção, com duração de ' + tempoExpExibicao + ' contínuos. ' +
               'A letalidade (A0) apresentou média de ' + fmtA0_(analise.mediaA0) +
               ' e pior caso de ' + fmtA0_(analise.minA0) +
-              ', atendendo ao limite operacional configurado de ' + fmtA0_(limiteAprovacaoFinal) +
+              ', atendendo ao mínimo exigido de ' + fmtA0_(limiteAprovacaoFinal) +
               ', porém abaixo do valor normativo estrito de ' + fmtA0_(parametroNormativo) + '.';
           } else {
             txtP1 =
@@ -495,12 +495,12 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
             txtP1 =
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
               'A análise térmica e de exposição identificou que o equipamento manteve as condições operacionais (Cavitação) por ' + fmtMin_(analise.tempoCavitacao) +
-              ', o que é insuficiente e está abaixo do limite operacional configurado de ' + fmtMin_(limiteAprovacaoFinal) + '.';
+              ', o que é insuficiente e está abaixo do mínimo exigido de ' + fmtMin_(limiteAprovacaoFinal) + '.';
           } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
             txtP1 =
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
               'A análise térmica e de exposição confirmou estabilidade operacional, com duração de cavitação efetiva de ' + fmtMin_(analise.tempoCavitacao) +
-              ', atendendo ao limite operacional configurado de ' + fmtMin_(limiteAprovacaoFinal) +
+              ', atendendo ao mínimo exigido de ' + fmtMin_(limiteAprovacaoFinal) +
               ', porém abaixo do valor estrito de projeto de ' + fmtMin_(parametroNormativo) + '.';
           } else {
             txtP1 =
@@ -770,7 +770,7 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   let valRefTxt = '';
   if (motor === 'TERMO') {
       valRefTxt = 'A0 normativo de referência: ' + fmtA0_(parametroNormativo) + '. ' +
-                  'A0 operacional (com tolerância): ' + fmtA0_(limiteAprovacaoFinal) + '. ';
+                  'Critério aplicado (classificação do artigo): A0 mínimo de ' + fmtA0_(limiteAprovacaoFinal) + '. ';
   } else {
       valRefTxt = 'Tempo exigido de cavitação: ' + fmtMin_(parametroNormativo) + '. ';
   }

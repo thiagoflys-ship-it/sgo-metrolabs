@@ -71,50 +71,30 @@ var SGO_TPLMODELO = (function () {
     try { return Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'); } catch (e) { return ''; }
   }
 
-  function logoSrc() {
-    try { if (typeof AutoRel_UCFG !== 'undefined' && AutoRel_UCFG.LOGO_BASE64 && AutoRel_UCFG.LOGO_BASE64.data) return 'data:' + (AutoRel_UCFG.LOGO_BASE64.mimeType || 'image/png') + ';base64,' + AutoRel_UCFG.LOGO_BASE64.data; } catch (e) {}
-    try { if (typeof CadeiaFrioRel_CFCFG !== 'undefined' && CadeiaFrioRel_CFCFG.LOGO_BASE64 && CadeiaFrioRel_CFCFG.LOGO_BASE64.data) return 'data:' + (CadeiaFrioRel_CFCFG.LOGO_BASE64.mimeType || 'image/png') + ';base64,' + CadeiaFrioRel_CFCFG.LOGO_BASE64.data; } catch (e) {}
-    try { return (typeof SGO_CFG !== 'undefined' && SGO_CFG.LOGO_URL) ? SGO_CFG.LOGO_URL : ''; } catch (e) { return ''; }
-  }
-
-  /** Folha de identificação do relatório (modelo padrão do SGO+), HTML A4, texto justificado. */
+  /** Folha de identificação do relatório (modelo padrão do SGO+), no padrão comum SGO_DocA4. */
   function htmlPadrao(def, dados) {
-    var linhas = def.linhas.map(function (l) {
-      return '<tr><th>' + esc(l[0]) + '</th><td>' + (txt(l[1]) ? esc(l[1]) : '—') + '</td></tr>';
-    }).join('');
     var resultado = txt(dados.resultado);
-    var resTxt = resultado === 'APROVADO' ? 'Aprovado' : (resultado === 'REPROVADO' ? 'Reprovado' : '');
-    var logo = logoSrc();
-    var css = '' +
-      '@page{size:A4;margin:18mm 16mm 20mm}' +
-      'body{font:11pt/1.5 Arial,Helvetica,sans-serif;color:#1f2937;margin:0}' +
-      '@media screen{body{max-width:180mm;margin:20px auto;padding:0 14px}}' +
-      '.topo{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1f2937;padding-bottom:8px;margin-bottom:18px}' +
-      '.topo img{height:40px;width:auto}' +
-      '.topo .marca{font-weight:700;font-size:13pt;letter-spacing:.5px}' +
-      '.topo .doc{font-size:9pt;color:#4b5563;text-align:right}' +
-      'h1{font-size:15pt;margin:0 0 4px}' +
-      '.sub{color:#4b5563;margin:0 0 16px}' +
-      'table{width:100%;border-collapse:collapse;margin:8px 0 18px}' +
-      'th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:left;vertical-align:top;font-size:10.5pt}' +
-      'th{width:34%;background:#f1f5f9;font-weight:600}' +
-      '.resultado{display:inline-block;padding:4px 14px;border:1.5px solid #1f2937;border-radius:4px;font-weight:700}' +
-      '.assinaturas{display:flex;gap:40px;margin-top:60px}' +
-      '.assinaturas div{flex:1;border-top:1px solid #1f2937;padding-top:6px;text-align:center;font-size:10pt}' +
-      '.rodape{margin-top:28px;font-size:8.5pt;color:#6b7280}' +
-      (typeof SGO_DocA4_css_ === 'function' ? SGO_DocA4_css_() : '');
-    return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(def.titulo) + '</title><style>' + css + '</style></head><body>' +
-      '<div class="topo"><div>' + (logo ? '<img src="' + esc(logo) + '" alt="Metrolabs">' : '<span class="marca">METROLABS</span>') + '</div>' +
-      '<div class="doc">Relatório nº ' + esc(dados.numero) + '<br>Data do ciclo: ' + esc(dados.data) + '</div></div>' +
-      '<h1>' + esc(def.titulo) + '</h1>' +
-      '<p class="sub">Folha de identificação do relatório de qualificação.</p>' +
-      '<table>' + linhas + '</table>' +
-      (resTxt ? '<p>Resultado da qualificação: <span class="resultado">' + esc(resTxt) + '</span></p>' : '') +
-      (txt(dados.observacoes) ? '<p><strong>Observações:</strong> ' + esc(dados.observacoes) + '</p>' : '') +
-      '<p>Os dados de medição, os critérios de aceitação e a análise do ensaio constam do relatório de dados e do certificado de qualificação térmica emitidos para este equipamento.</p>' +
-      '<div class="assinaturas"><div>Responsável técnico — Metrolabs</div><div>Responsável pelo aceite — cliente</div></div>' +
-      '<p class="rodape">Documento gerado pelo SGO+ em ' + esc(carimbo()) + '.</p>' +
-      '</body></html>';
+    var st = resultado === 'APROVADO' || resultado === 'REPROVADO' ? resultado : '';
+    var empresa = null, assinaturas = [];
+    try { if (typeof AutoRel_UCFG !== 'undefined') { empresa = AutoRel_UCFG.EMPRESA_EXECUTANTE; assinaturas = (AutoRel_UCFG.ASSINATURAS_PADRAO || []).slice(0, 1); } } catch (e) {}
+    var data = carimbo();
+    var h = SGO_DocA4_inicioDocumento_({
+      titulo: def.titulo,
+      subtitulo: 'Folha de identificação do relatório de qualificação. Os dados de medição, os critérios de aceitação e a análise do ensaio constam do relatório de dados e do relatório de ensaio emitidos para este equipamento.',
+      tituloCurto: def.titulo,
+      rotuloNumero: 'Relatório nº',
+      numero: txt(dados.numero) || 'sem número',
+      revisao: '0',
+      empresa: empresa || undefined,
+      ficha: [['Data do ciclo', txt(dados.data) || '—'], ['Emissão', data ? data.substring(0, 10) : '—']],
+      resultado: st ? { status: st, rotulo: 'Resultado informado pelo técnico', texto: 'Resultado registrado no preenchimento do modelo; a fundamentação está no relatório de ensaio do mesmo ciclo.' } : null
+    });
+    h += '<h2>1. Identificação</h2>' + SGO_DocA4_tabelaIdent_(def.linhas.map(function (l) { return [l[0], txt(l[1]) || '—']; }));
+    if (txt(dados.observacoes)) h += '<h2>2. Observações</h2>' + SGO_DocA4_paragrafos_(dados.observacoes);
+    h += '<div class="manter"><h2>' + (txt(dados.observacoes) ? '3' : '2') + '. Responsabilidade técnica</h2>' +
+      '<p>Documento gerado pelo SGO+ em ' + esc(data) + '. Esta folha identifica o relatório e não substitui o relatório de ensaio nem o relatório de dados do ciclo.</p>' +
+      SGO_DocA4_assinaturas_(assinaturas.concat([{ nome: ' ', cargo: 'Responsável pelo aceite — cliente' }])) + '</div>';
+    return h + SGO_DocA4_fimDocumento_();
   }
 
   function viaModeloOficial(def, dados, modelo, pasta, nome) {

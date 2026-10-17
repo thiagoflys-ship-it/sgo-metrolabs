@@ -36,7 +36,7 @@ function EstufaBanhoRel_ebResumoSensores_(ativos) {
   var ids=[];(ativos||[]).forEach(function(v,i){if(v)ids.push('S'+(i+1));});return ids.length+' — '+ids.join(', ');
 }
 function EstufaBanhoRel_ebParecerResultado_(status) {
-  return {APROVADO:'ATENDEU AOS CRITÉRIOS DO ENSAIO',APROVADO_COM_ALERTA:'ATENDEU COM ALERTAS',REPROVADO:'NÃO ATENDEU AOS CRITÉRIOS DO ENSAIO',INFORMATIVO:'RESULTADO INFORMATIVO',CARACTERIZACAO:'CARACTERIZAÇÃO TÉRMICA'}[String(status||'').toUpperCase()]||'RESULTADO INFORMATIVO';
+  return {APROVADO:'ATENDEU AOS CRITÉRIOS DO ENSAIO',APROVADO_COM_ALERTA:'ATENDEU AOS CRITÉRIOS DO ENSAIO (COM OBSERVAÇÃO)',REPROVADO:'NÃO ATENDEU AOS CRITÉRIOS DO ENSAIO',INFORMATIVO:'RESULTADO INFORMATIVO',CARACTERIZACAO:'CARACTERIZAÇÃO TÉRMICA'}[String(status||'').toUpperCase()]||'RESULTADO INFORMATIVO';
 }
 function EstufaBanhoRel_ebAssinaturaContexto_(ctx) {
   // Vincula textos revisados aos fatos usados na geração; alterações pedem nova interpretação.

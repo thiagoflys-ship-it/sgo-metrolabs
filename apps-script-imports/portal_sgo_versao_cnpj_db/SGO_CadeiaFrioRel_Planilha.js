@@ -1025,7 +1025,7 @@ function CadeiaFrioRel_cfCorPorStatus_(status) {
 function CadeiaFrioRel_cfLabelStatus_(status) {
   status = String(status || '').toUpperCase();
   if (status === 'REPROVADO') return 'REPROVADO';
-  if (status === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
+  if (status === 'APROVADO_COM_ALERTA') return 'APROVADO (COM OBSERVAÇÃO)';
   if (status === 'INFORMATIVO') return 'INFORMATIVO (SEM TEMPO-ALVO DEFINIDO)';
   if (status === 'CARACTERIZACAO') return 'CARACTERIZAÇÃO (AUTONOMIA MEDIDA)';
   return 'APROVADO';

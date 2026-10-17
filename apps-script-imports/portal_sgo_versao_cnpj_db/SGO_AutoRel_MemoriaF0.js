@@ -59,6 +59,8 @@ function AutoRel_mf0MontarContexto_(payload) {
       tag: String(payload.tag || payload.tagEquipamento || '').trim(),
       dataDoEnsaio: AutoRel_acExtrairDataDoTexto_(a.tempoInicioExposicao || a.tempoInicioCiclo || ''),
       tecnicoExecutor: String(payload.responsavelTecnico || payload.respTecnico || payload.operador || '').trim(),
+      certificadoNumero: String(payload.certNumero || '').trim(),
+      revisao: String(payload.certRevisao || '0').trim() || '0',
       empresaExecutante: AutoRel_UCFG.EMPRESA_EXECUTANTE
     },
     tBase: a.configuracaoCiclo.tBase,
@@ -109,163 +111,89 @@ function AutoRel_mf0MediaFator_(leituras) {
 // (folha branca A4, topo azul/verde) já usada em Certificado.html
 // ------------------------------------------------------------
 function AutoRel_mf0MontarDocumentoHtml_(ctx) {
-  const empresa = ctx.identificacao.empresaExecutante || { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
-  const logo = AutoRel_UCFG.LOGO_BASE64;
+  // Padrão comum SGO_DocA4 (17/10/2026): cabeçalho e rodapé em todas as
+  // páginas, numeração, tabelas que repetem o cabeçalho na quebra de página.
+  const id = ctx.identificacao;
+  const empresa = id.empresaExecutante || { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
   const geradoEm = Utilities.formatDate(new Date(), AutoRel_UCFG.TZ || Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  const st = AutoRel_acNormalizarStatus_(ctx.statusAprovacao);
+  const n = SGO_DocA4_num_;
+  const esc = SGO_DocA4_esc_;
 
-  const statusUp = String(ctx.statusAprovacao || '').toUpperCase();
-  const classeStatus = statusUp.indexOf('REPROVADO') !== -1 ? 'reprovado' : (statusUp.indexOf('ALERTA') !== -1 ? 'alerta' : 'aprovado');
-  const textoStatus = classeStatus === 'reprovado' ? 'REPROVADO' : (classeStatus === 'alerta' ? 'APROVADO COM ALERTA' : 'APROVADO');
+  const h = [];
+  h.push(SGO_DocA4_inicioDocumento_({
+    titulo: 'Memória de cálculo do F0',
+    subtitulo: 'Demonstração, leitura a leitura e por sensor, do F0 apurado no relatório de ensaio térmico do mesmo ciclo. Os valores são os mesmos do relatório: nada é recalculado aqui.',
+    tituloCurto: 'Memória de cálculo do F0 — Autoclave',
+    rotuloNumero: 'Relatório nº',
+    numero: id.certificadoNumero || 'sem número',
+    revisao: id.revisao || '0',
+    empresa: empresa,
+    ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm]],
+    resultado: { status: st, rotulo: 'Resultado do ensaio (pior sensor)', texto: ctx.piorSensorF0 ? ('F0 mínimo de ' + SGO_DocA4_val_(ctx.piorSensorF0.valor, 2, 'min') + ' no sensor ' + ctx.piorSensorF0.sensor + '; mínimo exigido ' + SGO_DocA4_val_(ctx.f0MinNormativo, 2, 'min') + '.') : '' }
+  }));
 
-  const html = [];
-  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
-  html.push('<title>Memória de Cálculo do F0' + (ctx.identificacao.tag ? (' — ' + AutoRel_acEscaparHtml_(ctx.identificacao.tag)) : '') + '</title>');
-  html.push('<style>');
-  html.push('@page { size: A4; margin: 18mm 16mm; }');
-  html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
-  html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
-  html.push('.topo { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #007b3e; padding-bottom:10px; margin-bottom:22px; }');
-  html.push('.topo .marca { font-size:20px; font-weight:800; color:#0b4ea2; }');
-  html.push('.topo .marca .logo-topo { display:block; height:42px; width:auto; margin-bottom:4px; }');
-  html.push('.topo .marca small { display:block; font-size:10px; font-weight:400; color:#6b7280; }');
-  html.push('.topo .meta { text-align:right; font-size:11px; color:#374151; }');
-  html.push('.topo .meta strong { color:#0b4ea2; font-size:12px; }');
-  html.push('.capa-titulo { text-align:center; margin:10px 0 24px; }');
-  html.push('.capa-titulo h1 { font-size:21px; color:#0b4ea2; margin:0 0 6px; }');
-  html.push('.capa-titulo p { margin:0; color:#059669; font-weight:600; }');
-  html.push('table.info { width:100%; border-collapse:collapse; margin:14px 0 20px; font-size:11.5px; }');
-  html.push('table.info td { border:1px solid #d1d5db; padding:7px 10px; vertical-align:top; }');
-  html.push('table.info td.rotulo { background:#f3f4f6; font-weight:700; width:34%; color:#374151; }');
-  html.push('.status-banner { text-align:center; font-weight:800; font-size:13px; padding:12px; border-radius:4px; border:2px solid; margin:18px 0; letter-spacing:.3px; }');
-  html.push('.status-banner.aprovado { background:rgba(5,150,105,.10); border-color:#059669; color:#047857; }');
-  html.push('.status-banner.alerta { background:rgba(217,119,6,.10); border-color:#d97706; color:#b45309; }');
-  html.push('.status-banner.reprovado { background:rgba(220,38,38,.10); border-color:#dc2626; color:#b91c1c; }');
-  html.push('.secao { margin-top:26px; }');
-  html.push('.secao h2 { font-size:13px; color:#ffffff; background:#0b4ea2; padding:8px 12px; margin:0 0 12px; border-left:6px solid #059669; }');
-  html.push('.secao h3 { font-size:12.5px; color:#ffffff; background:#374151; padding:7px 12px; margin:22px 0 10px; display:flex; justify-content:space-between; align-items:center; }');
-  html.push('.secao h3 .tag-f0 { font-family: "Courier New", monospace; font-weight:700; }');
-  html.push('.prosa p { margin:0 0 10px; text-align:justify; }');
-  html.push('table.escala { border-collapse:collapse; width:100%; font-size:11.5px; margin:8px 0; }');
-  html.push('table.escala th, table.escala td { border:1px solid #d1d5db; padding:6px 9px; text-align:center; }');
-  html.push('table.escala thead th { background:#e5e7eb; color:#374151; font-size:10.5px; text-transform:uppercase; }');
-  html.push('table.escala td.destaque-linha { background:#eff6ff; font-weight:700; }');
-  html.push('.tabela-wrap { overflow-x:auto; margin:6px 0; }');
-  html.push('table.leituras { border-collapse:collapse; width:100%; font-size:10.8px; min-width:520px; }');
-  html.push('table.leituras thead { display: table-header-group; }');
-  html.push('table.leituras th, table.leituras td { border:1px solid #d1d5db; padding:5px 7px; text-align:center; }');
-  html.push('table.leituras thead th { background:#dbeafe; color:#1e3a8a; font-size:10px; text-transform:uppercase; }');
-  html.push('table.leituras tbody tr:nth-child(even) { background:#f9fafb; }');
-  html.push('table.leituras td.temp { color:#b45309; font-weight:600; }');
-  html.push('table.leituras tfoot td { font-weight:800; background:#eafbf0; color:#065f46; border-top:2px solid #059669; }');
-  html.push('.nota-tabela { font-size:10px; color:#6b7280; margin-top:4px; }');
-  html.push('table.comparativo { border-collapse:collapse; width:100%; font-size:11.5px; margin:8px 0; }');
-  html.push('table.comparativo th, table.comparativo td { border:1px solid #d1d5db; padding:7px 9px; text-align:center; }');
-  html.push('table.comparativo thead th { background:#0b4ea2; color:#fff; font-size:10.5px; text-transform:uppercase; }');
-  html.push('table.comparativo td.pior-sensor { background:#fef3c7; font-weight:700; }');
-  html.push('table.comparativo td.status-conforme { color:#047857; font-weight:700; }');
-  html.push('table.comparativo td.status-nao-conforme { color:#b91c1c; font-weight:700; }');
-  html.push('.observacoes { font-size:10.5px; color:#4b5563; margin-top:6px; }');
-  html.push('.observacoes p { margin:5px 0; text-align:justify; }');
-  html.push('.rodape-doc { margin-top:30px; padding-top:8px; border-top:1px solid #d1d5db; font-size:10px; color:#6b7280; text-align:center; }');
-  html.push('.barra-imprimir { max-width:900px; margin:0 auto 12px; text-align:right; }');
-  html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } .secao { page-break-inside:auto; } }');
-  html.push(SGO_DocA4_css_() + '</style></head><body>');
+  h.push('<h2>1. Identificação</h2>');
+  h.push(SGO_DocA4_tabelaIdent_([
+    ['Cliente', id.cliente], ['Setor', id.setor],
+    ['Equipamento', 'Autoclave a vapor — ' + ctx.equipamentoLabel], ['TAG', id.tag],
+    ['Janela de exposição', AutoRel_mf0SoTempo_(ctx.tempoInicioExposicao) + ' a ' + AutoRel_mf0SoTempo_(ctx.tempoFimExposicao) + ' (' + SGO_DocA4_val_(ctx.tempoExposicaoMinutos, 2, 'min') + ')'],
+    ['Técnico executor', id.tecnicoExecutor]
+  ]));
 
-  html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
-  html.push('<div class="folha">');
-
-  html.push('<div class="topo"><div class="marca">');
-  if (logo && logo.data) {
-    html.push('<img class="logo-topo" src="data:' + logo.mimeType + ';base64,' + logo.data + '" alt="Metrolab\'s">');
-  } else {
-    html.push('Metrolab\'s');
-  }
-  html.push('<small>' + AutoRel_acEscaparHtml_(empresa.nome) + (empresa.cnpj ? (' – CNPJ ' + AutoRel_acEscaparHtml_(empresa.cnpj)) : '') + '</small>');
-  html.push('</div><div class="meta"><strong>' + AutoRel_acEscaparHtml_(ctx.identificacao.tag || ctx.equipamentoLabel) + '</strong><br>' + AutoRel_acEscaparHtml_(geradoEm) + '</div></div>');
-
-  html.push('<div class="capa-titulo"><h1>MEMÓRIA DE CÁLCULO DO F0</h1><p>Demonstração leitura a leitura, por sensor — complementar à Interpretação Técnica do mesmo ensaio</p></div>');
-
-  html.push('<div class="status-banner ' + classeStatus + '">RESULTADO DESTE ENSAIO: ' + textoStatus + '</div>');
-
-  html.push('<div class="secao"><h2>1. IDENTIFICAÇÃO</h2><table class="info">');
-  html.push('<tr><td class="rotulo">Cliente</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.cliente || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Setor / Local</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.setor || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Equipamento</td><td>' + AutoRel_acEscaparHtml_(ctx.equipamentoLabel) + (ctx.identificacao.tag ? (' — TAG ' + AutoRel_acEscaparHtml_(ctx.identificacao.tag)) : '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Data do ensaio</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.dataDoEnsaio || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Janela de exposição</td><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoInicioExposicao)) + ' às ' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(ctx.tempoFimExposicao)) + ' (' + AutoRel_mf0Num_(ctx.tempoExposicaoMinutos, 1) + ' min)</td></tr>');
-  html.push('<tr><td class="rotulo">Técnico executor</td><td>' + AutoRel_acEscaparHtml_(ctx.identificacao.tecnicoExecutor || '—') + '</td></tr>');
-  html.push('</table></div>');
-
-  html.push('<div class="secao"><h2>2. FUNDAMENTAÇÃO TÉCNICA</h2><div class="prosa">');
-  html.push('<p>O F0 não mede tempo de relógio: ele converte o efeito germicida obtido na temperatura real do ensaio para uma escala de referência fixa em ' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C, conforme ABNT NBR 16328 / ISO 17665-1. Como o efeito do calor sobre microrganismos cresce em degraus multiplicativos com a temperatura — cada ' + AutoRel_mf0Num_(ctx.z, 0) + ' °C acima da referência multiplica a velocidade de esterilização por dez — um minuto de exposição acima da referência vale mais que um minuto de F0, e um minuto abaixo dela vale menos.</p>');
-  html.push('</div>');
-  html.push('<table class="escala"><thead><tr><th>Temperatura</th><th>Relação com a referência</th><th>Fator de equivalência</th></tr></thead><tbody>');
-  html.push('<tr class="destaque-linha"><td>' + AutoRel_mf0Num_(ctx.tBase, 1) + ' °C</td><td>referência da norma</td><td>1,0×</td></tr>');
-  // Linhas em ordem crescente de temperatura (a média do pior sensor entra na posição certa).
+  h.push('<h2>2. Fundamentação</h2>');
+  h.push('<p>O F<sub>0</sub> não mede tempo de relógio. Ele converte o efeito letal obtido na temperatura real do ensaio para uma escala de referência fixa em ' + esc(SGO_DocA4_val_(ctx.tBase, 1, '°C')) + ', conforme a ABNT NBR ISO 17665-1. O efeito do calor sobre os microrganismos cresce de forma multiplicativa com a temperatura: cada ' + esc(SGO_DocA4_val_(ctx.z, 0, '°C')) + ' acima da referência multiplica a taxa de inativação por dez. Por isso um minuto de exposição acima da referência vale mais do que um minuto de F<sub>0</sub>, e um minuto abaixo dela vale menos.</p>');
+  h.push('<p class="formula">F<sub>0</sub> = Σ 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup> · Δt &nbsp;&nbsp; (Δt = ' + esc(SGO_DocA4_val_(ctx.dtMin, 2, 'min')) + ')</p>');
   const linhasEscala = [
-    { t: ctx.tBase + 10, html: '<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 10, 1) + ' °C</td><td>+10 °C</td><td>10×</td></tr>' },
-    { t: ctx.tBase + 20, html: '<tr><td>' + AutoRel_mf0Num_(ctx.tBase + 20, 1) + ' °C</td><td>+20 °C</td><td>100×</td></tr>' }
+    { t: ctx.tBase, c: [SGO_DocA4_val_(ctx.tBase, 1, '°C'), 'temperatura de referência', '1,0×'] },
+    { t: ctx.tBase + 10, c: [SGO_DocA4_val_(ctx.tBase + 10, 1, '°C'), '+10 °C', '10×'] },
+    { t: ctx.tBase + 20, c: [SGO_DocA4_val_(ctx.tBase + 20, 1, '°C'), '+20 °C', '100×'] }
   ];
   let mediaFatorPior = null;
   const piorSensorObj = ctx.sensores.find(function(sv) { return ctx.piorSensorF0 && sv.sensor === ctx.piorSensorF0.sensor; });
   if (piorSensorObj && piorSensorObj.leituras.length) {
     const mediaTempPior = AutoRel_mf0MediaLeituras_(piorSensorObj.leituras);
     mediaFatorPior = AutoRel_mf0MediaFator_(piorSensorObj.leituras);
-    linhasEscala.push({ t: mediaTempPior, html: '<tr><td>' + AutoRel_mf0Num_(mediaTempPior, 1) + ' °C</td><td>média do pior sensor (' + AutoRel_acEscaparHtml_(piorSensorObj.sensor) + ') na exposição</td><td>≈ ' + AutoRel_mf0Num_(mediaFatorPior, 1) + '×</td></tr>' });
+    linhasEscala.push({ t: mediaTempPior, c: [SGO_DocA4_val_(mediaTempPior, 1, '°C'), 'média do pior sensor (' + piorSensorObj.sensor + ') na exposição', '≈ ' + n(mediaFatorPior, 1) + '×'] });
   }
-  linhasEscala.sort(function(x, y) { return x.t - y.t; }).forEach(function(l) { html.push(l.html); });
-  html.push('</tbody></table>');
+  h.push(SGO_DocA4_tabela_([{ t: 'Temperatura', cls: 'num' }, { t: 'Relação com a referência' }, { t: 'Fator de equivalência', cls: 'num' }],
+    linhasEscala.sort(function(x, y) { return x.t - y.t; }).map(function(l) { return l.c; })));
   if (mediaFatorPior !== null && isFinite(mediaFatorPior)) {
-    html.push('<p class="nota-tabela">No ponto mais frio do ciclo, cada minuto real de exposição equivaleu, em média, a ' + AutoRel_mf0Num_(mediaFatorPior, 1) + ' minuto(s) na escala de referência' + (mediaFatorPior > 1 ? ' — por isso o F0 final é maior que o tempo de relógio da exposição.' : (mediaFatorPior < 1 ? ' — por isso o F0 final é menor que o tempo de relógio da exposição.' : '.')) + '</p>');
+    h.push('<p class="nota">No ponto mais frio do ciclo, cada minuto real de exposição equivaleu, em média, a ' + esc(n(mediaFatorPior, 1)) + ' minuto(s) na escala de referência' +
+      (mediaFatorPior > 1 ? '; por isso o F0 final é maior que o tempo de relógio da exposição.' : (mediaFatorPior < 1 ? '; por isso o F0 final é menor que o tempo de relógio da exposição.' : '.')) + '</p>');
   }
-  html.push('</div>');
 
-  html.push('<div class="secao"><h2>3. MEMÓRIA DE CÁLCULO — POR SENSOR</h2>');
-  html.push('<div class="prosa"><p>Cálculo aplicado a cada leitura do datalogger dentro da janela de exposição: <strong>F0 = 10^((T − ' + AutoRel_mf0Num_(ctx.tBase, 1) + ') / ' + AutoRel_mf0Num_(ctx.z, 0) + ') × Δt</strong>, com Δt = ' + AutoRel_mf0Num_(ctx.dtMin, 2) + ' min entre leituras.</p></div>');
+  h.push('<h2>3. Comparativo entre sensores</h2>');
+  h.push(SGO_DocA4_tabela_([{ t: 'Sensor' }, { t: 'F0 obtido (min)', cls: 'num' }, { t: 'Mínimo exigido (min)', cls: 'num' }, { t: 'Múltiplo do mínimo', cls: 'num' }, { t: 'Situação' }],
+    ctx.sensores.map(function(sv) {
+      const ehPior = ctx.piorSensorF0 && sv.sensor === ctx.piorSensorF0.sensor;
+      const multiplo = (sv.f0 !== null && ctx.f0MinNormativo) ? (sv.f0 / ctx.f0MinNormativo) : null;
+      return [sv.sensor + (ehPior ? ' (pior)' : ''), SGO_DocA4_val_(sv.f0, 2), SGO_DocA4_val_(ctx.f0MinNormativo, 2), multiplo !== null ? n(multiplo, 1) + '×' : '—',
+        sv.conforme === null ? '—' : SGO_DocA4_celSituacao_(sv.conforme, 'Conforme', 'Não conforme')];
+    })));
 
+  h.push('<h2>4. Memória de cálculo por sensor</h2>');
+  h.push('<p>Para cada leitura da janela de exposição: fator = 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup>; contribuição = fator × Δt; o F<sub>0</sub> do sensor é a soma das contribuições.</p>');
   ctx.sensores.forEach(function(sv) {
-    html.push('<h3><span>Sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + '</span><span class="tag-f0">F0 = ' + AutoRel_mf0Num_(sv.f0, 4) + ' min</span></h3>');
-
+    h.push('<h3>Sensor ' + esc(sv.sensor) + ' — F<sub>0</sub> = ' + esc(SGO_DocA4_val_(sv.f0, 2, 'min')) + '</h3>');
     if (!sv.leituras.length) {
-      html.push('<p class="nota-tabela">Sem leituras válidas deste sensor na janela de exposição identificada.</p>');
+      h.push('<p class="nota">Sem leituras válidas deste sensor na janela de exposição identificada.</p>');
       return;
     }
-
-    html.push('<div class="tabela-wrap"><table class="leituras"><thead><tr><th>Horário</th><th>Temperatura</th><th>Fator (10^Δ⁄' + AutoRel_mf0Num_(ctx.z, 0) + ')</th><th>F0 no intervalo</th><th>F0 acumulado</th></tr></thead><tbody>');
-    sv.leituras.forEach(function(r) {
-      html.push('<tr><td>' + AutoRel_acEscaparHtml_(AutoRel_mf0SoTempo_(r.tempoStr)) + '</td><td class="temp">' + AutoRel_mf0Num_(r.temperatura, 2) + ' °C</td><td>' + AutoRel_mf0Num_(r.fator, 1) + '×</td><td>' + AutoRel_mf0Num_(r.contribuicao, 2) + ' min</td><td>' + AutoRel_mf0Num_(r.acumulado, 2) + ' min</td></tr>');
-    });
-    html.push('</tbody><tfoot><tr><td colspan="4">F0 do sensor ' + AutoRel_acEscaparHtml_(sv.sensor) + ' — soma das ' + sv.leituras.length + ' leituras da janela de exposição</td><td>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td></tr></tfoot></table></div>');
+    h.push(SGO_DocA4_tabela_([{ t: 'Horário' }, { t: 'Temperatura (°C)', cls: 'num' }, { t: 'Fator', cls: 'num' }, { t: 'Contribuição (min)', cls: 'num' }, { t: 'F0 acumulado (min)', cls: 'num' }],
+      sv.leituras.map(function(r) { return [AutoRel_mf0SoTempo_(r.tempoStr), n(r.temperatura, 2), n(r.fator, 2) + '×', n(r.contribuicao, 3), n(r.acumulado, 2)]; }),
+      { classe: 'compacta', rodape: [{ t: 'Soma das ' + sv.leituras.length + ' leituras da janela de exposição', colspan: 4 }, { t: n(sv.f0, 2), cls: 'num' }] }));
   });
-  html.push('</div>');
 
-  html.push('<div class="secao"><h2>4. COMPARATIVO FINAL ENTRE SENSORES</h2>');
-  html.push('<table class="comparativo"><thead><tr><th>Sensor</th><th>F0 obtido</th><th>Mínimo normativo</th><th>Múltiplo do mínimo</th><th>Status</th></tr></thead><tbody>');
-  ctx.sensores.forEach(function(sv) {
-    const ehPior = ctx.piorSensorF0 && sv.sensor === ctx.piorSensorF0.sensor;
-    const multiplo = (sv.f0 !== null && ctx.f0MinNormativo) ? (sv.f0 / ctx.f0MinNormativo) : null;
-    const claCel = ehPior ? ' class="pior-sensor"' : '';
-    const claStatus = sv.conforme === null ? '' : (sv.conforme ? ' status-conforme' : ' status-nao-conforme');
-    html.push('<tr><td' + claCel + '>' + AutoRel_acEscaparHtml_(sv.sensor) + (ehPior ? ' (pior sensor)' : '') + '</td>' +
-      '<td' + claCel + '>' + AutoRel_mf0Num_(sv.f0, 4) + ' min</td>' +
-      '<td' + claCel + '>' + AutoRel_mf0Num_(ctx.f0MinNormativo, 1) + ' min</td>' +
-      '<td' + claCel + '>' + (multiplo !== null ? (AutoRel_mf0Num_(multiplo, 1) + '×') : '—') + '</td>' +
-      '<td class="' + claStatus.trim() + '">' + (sv.conforme === null ? '—' : (sv.conforme ? 'CONFORME' : 'NÃO CONFORME')) + '</td></tr>');
-  });
-  html.push('</tbody></table></div>');
-
-  html.push('<div class="secao"><h2>Observações</h2><div class="observacoes">');
-  html.push('<p>O F0 mínimo normativo representa o piso de segurança abaixo do qual o ciclo seria reprovado — não é uma meta a ser atingida por pouco, e sim o limiar mínimo aceitável.</p>');
-  html.push('<p>O F0 é calculado exclusivamente na janela de exposição térmica do ciclo (fase de patamar/esterilização), conforme ABNT NBR 16328 / ISO 17665-1, não incluindo as fases de aquecimento (rampa) e despressurização/secagem.</p>');
-  html.push('<p>Este documento tem caráter explicativo e demonstrativo. Os valores de F0 aqui exibidos são exatamente os mesmos apurados no Relatório de Auditoria e na Interpretação Técnica deste ensaio — este documento não substitui nenhum dos dois.</p>');
-  html.push('</div></div>');
-
-  html.push('<div class="rodape-doc">' + AutoRel_acEscaparHtml_(empresa.nome) + (empresa.cnpj ? (' — CNPJ ' + AutoRel_acEscaparHtml_(empresa.cnpj)) : '') + '<br>Documento gerado em ' + AutoRel_acEscaparHtml_(geradoEm) + '</div>');
-
-  html.push('</div></body></html>');
-  return html.join('\n');
+  h.push('<h2>5. Observações</h2>');
+  h.push(SGO_DocA4_lista_([
+    'O F0 mínimo exigido é o piso abaixo do qual o ciclo é reprovado; um valor acima dele, mesmo que próximo, aprova o ciclo e é registrado como observação de acompanhamento.',
+    'O F0 é somado apenas na janela de exposição (patamar de esterilização); as fases de aquecimento, despressurização e secagem não entram no cálculo.',
+    'Os valores deste documento são os mesmos do relatório de dados e do relatório de ensaio térmico deste ciclo; este documento os demonstra e não os substitui.'
+  ]));
+  h.push(SGO_DocA4_assinaturas_(AutoRel_acListaAssinaturas_({ identificacao: id })));
+  h.push(SGO_DocA4_fimDocumento_());
+  return h.join('\n');
 }
 
 // ------------------------------------------------------------
@@ -275,5 +203,8 @@ function AutoRel_apiGerarMemoriaF0(payload) {
   payload = payload || {};
   const ctx = AutoRel_mf0MontarContexto_(payload);
   const html = AutoRel_mf0MontarDocumentoHtml_(ctx);
-  return { ok: true, html: html };
+  // Regra do dono: HTML A4 + PDF na pasta do cliente (mesma pasta do relatório de ensaio).
+  return SGO_DocSalvar_finalizarCertificado_(html, payload, function() {
+    return SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', AutoRel_UCFG.LAUDOS_FOLDER_ID);
+  }, 'Memória de cálculo F0 Autoclave', AutoRel_UCFG.TZ);
 }

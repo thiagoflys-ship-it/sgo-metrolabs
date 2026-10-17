@@ -81,15 +81,22 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
   let parametroOperacional = 0;
   let toleranciaParametro = 0;
 
+  // Decisões do dono (17/10/2026):
+  // (a) nada é aprovado abaixo do mínimo: o limite de aprovação é o valor
+  //     normativo (a antiga faixa "aprovado com alerta" com tolerância saiu);
+  // (b) termodesinfecção de artigo crítico exige A0 ≥ 3.000 s (ISO 15883-1,
+  //     Anexo B); semicrítico/não crítico segue com A0 ≥ 600 s.
+  const classeArtigo = String((opcoesAnalise && opcoesAnalise.classeArtigo) || '').toUpperCase() === 'CRITICO' ? 'CRITICO' : 'SEMICRITICO';
   if (tipoCiclo === 'TERMO') {
-    parametroNormativo = LavRel_parseFloatSeguroAnalise_(cfg.parametroNormativo, 600);
-    parametroOperacional = LavRel_parseFloatSeguroAnalise_(cfg.parametroOperacional, 600);
-    toleranciaParametro = LavRel_parseFloatSeguroAnalise_(cfg.toleranciaParametro, 10);
+    parametroNormativo = classeArtigo === 'CRITICO'
+      ? LavRel_parseFloatSeguroAnalise_(cfg.parametroNormativoCritico, 3000)
+      : LavRel_parseFloatSeguroAnalise_(cfg.parametroNormativo, 600);
   } else if (tipoCiclo === 'ULTRASSOM') {
     parametroNormativo = LavRel_parseFloatSeguroAnalise_(cfg.parametroNormativo, 10);
-    parametroOperacional = LavRel_parseFloatSeguroAnalise_(cfg.parametroOperacional, 10);
-    toleranciaParametro = LavRel_parseFloatSeguroAnalise_(cfg.toleranciaParametro, 0.5);
   }
+  parametroOperacional = parametroNormativo;
+  toleranciaParametro = 0;
+  const margemObservacao = LavRel_parseFloatSeguroAnalise_(cfg.margemObservacaoPercentual, 10);
 
   let analise = {
     tipoCiclo: tipoCiclo,
@@ -100,7 +107,8 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
       z: LavRel_parseFloatSeguroAnalise_(cfg.z, 10),
       parametroNormativo: parametroNormativo,
       parametroOperacional: parametroOperacional,
-      toleranciaParametro: toleranciaParametro
+      toleranciaParametro: toleranciaParametro,
+      classeArtigo: tipoCiclo === 'TERMO' ? classeArtigo : ''
     },
 
     configuracaoDeteccaoExposicao: {
@@ -395,6 +403,8 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
   analise.deltaMinutosEstimado = LavRel_roundAnalise_(dtMin, 4);
 
   let a0Acumulado = new Array(nSensores).fill(null);
+  // Memória do A0 (mesmo laço que soma o A0 oficial: nunca uma segunda conta).
+  const memoriaA0 = new Array(nSensores).fill(null).map(function() { return []; });
   if (tipoCiclo === 'TERMO') {
     for (let s = 0; s < nSensores; s++) { if (ativos[s]) a0Acumulado[s] = 0; }
   }
@@ -410,7 +420,9 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
         if (t === null || !isFinite(t)) continue;
 
         if (tipoCiclo === 'TERMO' && (!isFinite(Number(cfg.tLimiteA0)) || t >= Number(cfg.tLimiteA0))) {
-          a0Acumulado[s] += Math.pow(10, (t - cfg.tBase) / cfg.z) * (dtMin * 60);
+          const fatorA0 = Math.pow(10, (t - cfg.tBase) / cfg.z);
+          a0Acumulado[s] += fatorA0 * (dtMin * 60);
+          memoriaA0[s].push({ tempoStr: row.tempoStr || '', temperatura: t, fator: fatorA0, contribuicao: fatorA0 * dtMin * 60, acumulado: a0Acumulado[s] });
         }
 
         if (analise.stats.exposicaoTemp.min === null || t < analise.stats.exposicaoTemp.min) { analise.stats.exposicaoTemp.min = t; }
@@ -427,6 +439,8 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
   }
 
   if (tipoCiclo === 'TERMO') {
+    // Não enumerável: fica fora do que vai para a tela/planilha; só o relatório A4 lê.
+    Object.defineProperty(analise, 'memoriaA0PorSensor', { value: memoriaA0, enumerable: false, writable: true });
     analise.a0PorSensor = a0Acumulado.map(function(v, s) {
       if (!ativos[s]) return null;
       return LavRel_roundAnalise_(v + offParam, 2); 
@@ -507,10 +521,9 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
       if (analise.minA0 < limiteAprovacaoFinal) {
         analise.aprovado = false;
         analise.statusAprovacao = 'REPROVADO';
-        analise.motivosReprovacao.push('A0 mínimo insuficiente: pior sensor ativo (' + (analise.piorSensorA0 ? analise.piorSensorA0.sensor : 'N/A') + ') obteve ' + analise.minA0 + ', abaixo do limite operacional configurado de ' + limiteAprovacaoFinal + '.');
-      } else if (analise.minA0 < parametroNormativo) {
-        analise.statusAprovacao = analise.aprovado ? 'APROVADO_COM_ALERTA' : analise.statusAprovacao;
-        analise.alertasAnalise.push('A0 mínimo abaixo do valor normativo estrito, porém dentro da tolerância operacional configurada. Pior sensor: ' + (analise.piorSensorA0 ? analise.piorSensorA0.sensor : 'N/A') + ' | A0: ' + analise.minA0 + '.');
+        analise.motivosReprovacao.push('A0 mínimo insuficiente: o pior sensor ativo (' + (analise.piorSensorA0 ? analise.piorSensorA0.sensor : 'N/A') + ') obteve ' + SGO_DocA4_num_(analise.minA0, 2) + ' s, abaixo do A0 mínimo de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 0) + ' s exigido para artigo ' + (classeArtigo === 'CRITICO' ? 'crítico' : 'semicrítico ou não crítico') + '.');
+      } else if (analise.minA0 < limiteAprovacaoFinal * (1 + margemObservacao / 100)) {
+        analise.observacoesAnalise.push('A0 mínimo próximo do limite: o pior sensor ativo (' + (analise.piorSensorA0 ? analise.piorSensorA0.sensor : 'N/A') + ') obteve ' + SGO_DocA4_num_(analise.minA0, 2) + ' s, acima do mínimo de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 0) + ' s, porém a menos de ' + margemObservacao + '% dele. Recomenda-se acompanhar este ponto nas próximas requalificações.');
       }
     } else {
       analise.aprovado = false;
@@ -521,10 +534,9 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
     if (analise.tempoCavitacao < limiteAprovacaoFinal) {
       analise.aprovado = false;
       analise.statusAprovacao = 'REPROVADO';
-      analise.motivosReprovacao.push('Tempo de cavitação insuficiente: obteve ' + analise.tempoCavitacao + ' min, abaixo do limite operacional configurado de ' + limiteAprovacaoFinal + ' min.');
-    } else if (analise.tempoCavitacao < parametroNormativo) {
-        analise.statusAprovacao = analise.aprovado ? 'APROVADO_COM_ALERTA' : analise.statusAprovacao;
-        analise.alertasAnalise.push('Tempo de cavitação abaixo do valor normativo estrito, porém dentro da tolerância operacional configurada.');
+      analise.motivosReprovacao.push('Tempo de cavitação insuficiente: obteve ' + SGO_DocA4_num_(analise.tempoCavitacao, 2) + ' min, abaixo do mínimo de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 2) + ' min.');
+    } else if (analise.tempoCavitacao < limiteAprovacaoFinal * (1 + margemObservacao / 100)) {
+      analise.observacoesAnalise.push('Tempo de cavitação próximo do limite: ' + SGO_DocA4_num_(analise.tempoCavitacao, 2) + ' min, acima do mínimo de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 2) + ' min, porém a menos de ' + margemObservacao + '% dele.');
     }
   }
 

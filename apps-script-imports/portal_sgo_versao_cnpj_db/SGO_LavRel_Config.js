@@ -107,7 +107,9 @@ const LavRel_UCFG = Object.freeze({
       // Parametros de Letalidade (A0)
       parametroNormativo: 600.0,
       parametroOperacional: 600.0,
-      toleranciaParametro: 10.0,
+      toleranciaParametro: 0.0,
+      // Artigo crítico (ISO 15883-1, Anexo B): A0 mínimo 3.000 s. Escolhido na tela (classificação do artigo).
+      parametroNormativoCritico: 3000.0,
 
       analise: Object.freeze({
         histereseTemperatura: 0.5,
@@ -131,7 +133,7 @@ const LavRel_UCFG = Object.freeze({
       // Parametros de Letalidade (Tempo em Minutos)
       parametroNormativo: 10.0, 
       parametroOperacional: 10.0,
-      toleranciaParametro: 0.5,
+      toleranciaParametro: 0.0,
 
       analise: Object.freeze({
         histereseTemperatura: 0.5,

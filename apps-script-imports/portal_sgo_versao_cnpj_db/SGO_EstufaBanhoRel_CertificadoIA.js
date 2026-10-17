@@ -17,6 +17,9 @@ var EstufaBanhoRel_EBIA_FALLBACKS_PADRAO = ['gemini-2.5-flash-lite', 'gemini-2.0
 var EstufaBanhoRel_EBIA_ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/';
 var EstufaBanhoRel_EBIA_MAX_TENTATIVAS = 3;
 var EstufaBanhoRel_EBIA_DELAYS_MS = [800, 1600];
+function EstufaBanhoRel_ebIARegrasBase_() {
+  return 'Você é engenheiro sênior em qualificação térmica de equipamentos de aquecimento (estufas de incubação, banhos-maria, estufas de esterilização/despirogenização e secadoras) e redige o certificado de qualificação térmica, no padrão de laboratórios de metrologia e engenharia clínica. Pense com cuidado antes de escrever: confira cada número com o contexto e não afirme nada que os dados não sustentem.\n' + SGO_DocA4_regrasRedacaoIA_() + '\n- Cada seção deve ser substancial e escrita a partir dos fatos; não copie frases prontas.';
+}
 var EstufaBanhoRel_EBIA_REGRAS_BASE = 'Você é um redator técnico especializado em certificados de qualificação térmica de equipamentos industriais/farmacêuticos ' + '(estufa de incubação, banho-maria), no padrão de laboratórios de metrologia e engenharia clínica.\n' + 'REGRAS ABSOLUTAS — nunca violar:\n' + '1. Nunca invente número, data, valor, veredito ou resultado que não esteja explicitamente no contexto fornecido.\n' + '2. Preserve e cite corretamente todos os valores numéricos e fatos fornecidos (mínima, máxima, média, desvio-padrão, ' + 'amplitude, tempos de ruptura/recuperação, vereditos de aprovação).\n' + '3. Não copie frases prontas de outro documento — escreva prosa original, extensa e fluida a partir dos fatos.\n' + '4. Não use markdown, negrito, itálico, listas ou títulos dentro dos textos — texto corrido, formal, em português brasileiro técnico.\n' + '5. Cada seção deve ser substancial (vários parágrafos quando fizer sentido) — não entregue resumos curtos.';
 
 // Marcadores do protocolo de saída (substitui JSON): pedir texto longo e
@@ -64,64 +67,10 @@ function EstufaBanhoRel_ebIAERetentavel_(codigo) {
   return codigo === 500 || codigo === 503;
 }
 function EstufaBanhoRel_ebIAChamarGemini_(prompt) {
-  var cfg = EstufaBanhoRel_ebIAObterConfig_();
-  if (!cfg.geminiKey) {
-    throw new Error(SGO_DocSalvar_msgChaveIA_());
-  }
-  var modelos = EstufaBanhoRel_ebIAObterListaModelos_(cfg);
-  var ultimoErr = 'A IA está temporariamente indisponível. Tente novamente em alguns instantes.';
-  for (var mi = 0; mi < modelos.length; mi++) {
-    var modelo = modelos[mi];
-    for (var tent = 0; tent < EstufaBanhoRel_EBIA_MAX_TENTATIVAS; tent++) {
-      if (tent > 0) Utilities.sleep(EstufaBanhoRel_EBIA_DELAYS_MS[tent - 1] || 1600);
-      var url = EstufaBanhoRel_EBIA_ENDPOINT_GEMINI + modelo + ':generateContent?key=' + cfg.geminiKey;
-      var resp = UrlFetchApp.fetch(url, {
-        method: 'post',
-        muteHttpExceptions: true,
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            maxOutputTokens: EstufaBanhoRel_EBIA_TOKENS_CERTIFICADO,
-            temperature: 0.4
-          }
-        })
-      });
-      var codigo = resp.getResponseCode();
-      var corpo = {};
-      try {
-        corpo = JSON.parse(resp.getContentText());
-      } catch (e) {}
-      if (codigo === 200) {
-        var cand = corpo.candidates && corpo.candidates[0];
-        if(cand&&cand.finishReason&&cand.finishReason!=='STOP')throw new Error('A IA não concluiu o texto ('+cand.finishReason+'). O relatório técnico pode ser gerado sem IA; reduza o escopo do interpretativo ou tente novamente.');
-        var parts = cand && cand.content && cand.content.parts;
-        var texto = parts && parts.map(function (p) {
-          return p.text || '';
-        }).join('');
-        if (!texto) throw new Error('A IA retornou resposta vazia. Tente novamente.');
-        return String(texto).trim();
-      }
-      if (codigo === 401 || codigo === 403 || codigo === 429) throw new Error(EstufaBanhoRel_ebIAInterpretarErro_(codigo, corpo));
-      if (codigo === 404) {
-        ultimoErr = 'Modelo ' + modelo + ' não encontrado. Tentando próximo.';
-        break;
-      }
-      ultimoErr = EstufaBanhoRel_ebIAInterpretarErro_(codigo, corpo);
-      if (!EstufaBanhoRel_ebIAERetentavel_(codigo)) break;
-    }
-  }
-  throw new Error(ultimoErr);
+  // Chamada comum (SGO_DocA4): raciocínio ligado, temperatura baixa, resposta cortada nunca é aproveitada.
+  return SGO_DocA4_chamarGemini_(prompt, { tokens: 32768, temperatura: 0.2 });
 }
 
-/**
- * Monta a instrução de formato de saída (marcadores, um por linha) a
- * partir da lista de tipos de estudo incluídos neste laudo.
- */
 function EstufaBanhoRel_ebIAMontarInstrucaoFormato_(tiposEstudo) {
   var linhas = [];
   linhas.push('Responda SOMENTE em texto puro (sem JSON, sem markdown, sem crase), seguindo EXATAMENTE esta ' + 'estrutura de marcadores, cada um sozinho em sua própria linha, nesta ordem:');
@@ -199,8 +148,11 @@ function EstufaBanhoRel_ebIAMontarContextoCertificado_(dados) {
   linhas.push('TAG: ' + (dados.tag || '-'));
   linhas.push('CLIENTE: ' + (dados.cliente || '-'));
   linhas.push('SETOR/LOCALIZAÇÃO: ' + (dados.setor || '-'));
-  linhas.push('FAIXA OPERACIONAL ACEITÁVEL: ' + dados.faixa.tMin + ' °C a ' + dados.faixa.tMax + ' °C (tolerância ' + dados.faixa.tolerancia + ' °C)');
-  linhas.push('NORMAS APLICÁVEIS: ' + dados.normas.join(' | '));
+  linhas.push('FAIXA DE ACEITAÇÃO: ' + SGO_DocA4_val_(dados.faixa.tMin, 1, '°C') + ' a ' + SGO_DocA4_val_(dados.faixa.tMax, 1, '°C') + ' (tolerância ± ' + SGO_DocA4_val_(dados.faixa.tolerancia, 1, '°C') + ')');
+  linhas.push('NORMAS APLICÁVEIS (cite somente estas): ' + dados.normas.join(' | '));
+  linhas.push('CRITÉRIOS DE ACEITAÇÃO E RESULTADO OBTIDO POR ESTUDO (cite exatamente):');
+  dados.estudos.forEach(function(e) { var c = SGO_DocA4_criterioEstudo_(e, dados.faixa); linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + '; obtido ' + c.obtido + '; situação ' + (c.conforme === true ? 'CONFORME' : (c.conforme === false ? 'NÃO CONFORME' : 'INFORMATIVO'))); });
+  if (dados.registradores && dados.registradores.observacoes && dados.registradores.observacoes.length) linhas.push('RASTREABILIDADE DOS REGISTRADORES (mencione na análise): ' + dados.registradores.observacoes.join(' '));
   linhas.push('ESTUDOS INCLUÍDOS NESTE LAUDO: ' + dados.estudos.map(function (e) {
     return e.label;
   }).join(', '));
@@ -208,7 +160,7 @@ function EstufaBanhoRel_ebIAMontarContextoCertificado_(dados) {
   dados.estudos.forEach(function (e) {
     linhas.push('--- ESTUDO: ' + e.label + ' (tipo interno: ' + e.tipoEstudo + ') ---');
     linhas.push('Status de aprovação: ' + e.statusAprovacao);
-    linhas.push('Fatos calculados: ' + JSON.stringify(e.fatos));
+    linhas.push('Fatos calculados (números já no formato brasileiro): ' + JSON.stringify(SGO_DocA4_fatosPtBr_(e.fatos)));
     if (e.motivosReprovacao && e.motivosReprovacao.length) linhas.push('Motivos de reprovação: ' + e.motivosReprovacao.join(' '));
     if (e.alertasAnalise && e.alertasAnalise.length) linhas.push('Alertas: ' + e.alertasAnalise.join(' '));
     if (e.observacoesAnalise && e.observacoesAnalise.length) linhas.push('Observações: ' + e.observacoesAnalise.join(' '));
@@ -221,12 +173,14 @@ function EstufaBanhoRel_ebIAMontarContextoCertificado_(dados) {
     if (cps.length) {
       linhas.push('Conformidade detalhada por posição/sensor:');
       cps.forEach(function (c) {
+        c = SGO_DocA4_fatosPtBr_(c);
         linhas.push('  ' + c.sensor + ': status ' + c.statusSensor + ' | mínima ' + c.min + ' °C | máxima ' + c.max + ' °C | média ' + c.media + ' °C' + ' | pior desvio ABAIXO do piso da faixa: ' + c.piorDesvioAbaixo + ' °C' + ' | pior desvio ACIMA do teto da faixa: ' + c.piorDesvioAcima + ' °C' + ' | tempo fora da faixa: ' + c.percentualForaFaixa + '% do período (' + c.minutosForaFaixa + ' min)' + ' | primeira leitura fora da faixa: ' + (c.primeiraLeituraForaFaixaStr || 'nenhuma') + ' | terminou o período fora da faixa: ' + (c.terminouForaFaixa ? 'SIM' : 'NÃO'));
       });
     }
     linhas.push('');
   });
-  linhas.push('VEREDITO CONSOLIDADO DO LAUDO: ' + dados.statusConsolidado);
+  var stIA = SGO_DocA4_classeStatus_(dados.statusConsolidado);
+  linhas.push('PARECER FINAL (use exatamente, sem forma intermediária): ' + (stIA === 'nok' ? 'NÃO QUALIFICADO PARA O USO PRETENDIDO' : (stIA === 'ok' ? 'QUALIFICADO PARA O USO PRETENDIDO' : 'CARACTERIZAÇÃO TÉRMICA, SEM CRITÉRIO DE APROVAÇÃO')) + '. Estudos com status APROVADO_COM_ALERTA estão APROVADOS: a excursão ficou dentro da tolerância declarada e deve ser descrita como observação.');
   return linhas.join('\n');
 }
 
@@ -240,7 +194,7 @@ function EstufaBanhoRel_ebIACriarTextosCertificado_(dadosContexto) {
   var tiposEstudo = dadosContexto.estudos.map(function (e) {
     return e.tipoEstudo;
   });
-  var prompt = EstufaBanhoRel_EBIA_REGRAS_BASE + '\n\n' + 'TAREFA: com base no contexto de um Certificado de Qualificação Térmica abaixo, escreva os textos narrativos ' + 'do documento. A INTRODUÇÃO deve contextualizar, em 2 parágrafos extensos, a importância da qualificação térmica ' + 'para segurança do paciente e conformidade regulatória (registro formal, sem citar números específicos deste ' + 'ensaio ainda). O OBJETIVO deve declarar, em 1 a 2 parágrafos, o que este certificado especificamente verifica ' + 'e documenta, citando equipamento/TAG/cliente/faixa reais.\n\n' + 'Para CADA estudo, escreva uma ANÁLISE TÉCNICA EXTENSA E DIDÁTICA — o leitor pode ser um farmacêutico ou ' + 'administrador sem formação técnica em processos térmicos industriais, então o texto precisa literalmente ENSINAR, não só relatar. ' + 'Regras específicas desta seção:\n' + '1. Se o bloco "Conformidade detalhada por posição/sensor" estiver presente no contexto do estudo, dedique um ' + 'parágrafo específico a CADA sensor/posição individualmente (não só ao agregado global) — cite o status, a ' + 'direção do desvio (abaixo do piso = frio demais / acima do teto = quente demais), a magnitude, a duração/' + 'percentual do tempo fora da faixa, e se terminou ou não fora da faixa ao fim do período.\n' + '2. Para cada posição não conforme, explique em linguagem acessível as causas técnicas PROVÁVEIS mais comuns ' + 'para aquele padrão específico — sempre como hipótese/prática usual do setor, nunca como diagnóstico certo, ' + 'já que não houve inspeção física direta do equipamento. Estes são equipamentos de AQUECIMENTO (estufa de ' + 'incubação, banho-maria ou estufa de esterilização/despirogenização por calor seco), não refrigeração — adapte ' + 'a explicação ao padrão observado nesse sentido: um desvio FRIO DEMAIS e SUSTENTADO (a maior parte do tempo, ' + 'terminando fora da faixa) sugere resistência de aquecimento com potência insuficiente ou parcialmente ' + 'danificada, controlador/termostato com set point regulado abaixo do necessário, perda de calor por isolamento ' + 'térmico comprometido, ou posição do sensor numa zona de sombra térmica fora do fluxo de recirculação de ar ' + 'quente (ex.: perto de porta ou parede externa); um desvio QUENTE DEMAIS e SUSTENTADO sugere sensor posicionado ' + 'muito próximo da resistência/fonte de calor direta, controlador com sobressinal (overshoot) por sintonia ' + 'inadequada, ou ventilação/recirculação interna insuficiente causando acúmulo localizado de calor; um desvio ' + 'PONTUAL/TRANSITÓRIO (pequeno percentual do tempo, não presente no fim do período) sugere abertura de porta ' + 'durante o ensaio, ciclo normal de liga/desliga do controlador (histerese do termostato), ou oscilação ' + 'momentânea sem indicar falha estrutural do equipamento.\n' + '3. Traduza cada achado em orientação PRÁTICA E ACIONÁVEL: quais posições são adequadas para o processo ' + 'térmico avaliado e quais não são; se o padrão sugere ajuste simples (recalibração do controlador, reposicionamento ' + 'de carga, desobstrução de ventilação) versus necessidade de manutenção técnica mais profunda ou substituição ' + 'do equipamento.\n' + '4. Se não houver dados de conformidade por sensor (ex.: estudo de evento sem essa quebra), escreva a análise ' + 'de forma extensa e didática mesmo assim, interpretando os fatos agregados fornecidos.\n' + 'Esta seção deve ter NO MÍNIMO 4 parágrafos substanciais quando houver dados por posição, e no mínimo 2 quando ' + 'não houver — nunca um resumo curto.\n\n' + 'A CONCLUSÃO GERAL deve amarrar todos os estudos incluídos num texto extenso e coeso, culminando no veredito ' + 'consolidado, e resumindo (sem repetir todos os detalhes já ditos) quais posições do equipamento, se houver, ' + 'são utilizáveis com segurança e quais não são.\n\n' + 'CONTEXTO REAL DESTE ENSAIO (única fonte de fatos permitida):\n' + contextoStr + '\n\n' + EstufaBanhoRel_ebIAMontarInstrucaoFormato_(tiposEstudo);
+  var prompt = EstufaBanhoRel_ebIARegrasBase_() + '\n\n' + 'TAREFA: com base no contexto de um Certificado de Qualificação Térmica abaixo, escreva os textos narrativos ' + 'do documento. A INTRODUÇÃO deve contextualizar, em 2 parágrafos extensos, a importância da qualificação térmica ' + 'para segurança do paciente e conformidade regulatória (registro formal, sem citar números específicos deste ' + 'ensaio ainda). O OBJETIVO deve declarar, em 1 a 2 parágrafos, o que este certificado especificamente verifica ' + 'e documenta, citando equipamento/TAG/cliente/faixa reais.\n\n' + 'Para CADA estudo, escreva uma ANÁLISE TÉCNICA EXTENSA E DIDÁTICA — o leitor pode ser um farmacêutico ou ' + 'administrador sem formação técnica em processos térmicos industriais, então o texto precisa literalmente ENSINAR, não só relatar. ' + 'Regras específicas desta seção:\n' + '1. Se o bloco "Conformidade detalhada por posição/sensor" estiver presente no contexto do estudo, dedique um ' + 'parágrafo específico a CADA sensor/posição individualmente (não só ao agregado global) — cite o status, a ' + 'direção do desvio (abaixo do piso = frio demais / acima do teto = quente demais), a magnitude, a duração/' + 'percentual do tempo fora da faixa, e se terminou ou não fora da faixa ao fim do período.\n' + '2. Para cada posição não conforme, explique em linguagem acessível as causas técnicas PROVÁVEIS mais comuns ' + 'para aquele padrão específico — sempre como hipótese/prática usual do setor, nunca como diagnóstico certo, ' + 'já que não houve inspeção física direta do equipamento. Estes são equipamentos de AQUECIMENTO (estufa de ' + 'incubação, banho-maria ou estufa de esterilização/despirogenização por calor seco), não refrigeração — adapte ' + 'a explicação ao padrão observado nesse sentido: um desvio FRIO DEMAIS e SUSTENTADO (a maior parte do tempo, ' + 'terminando fora da faixa) sugere resistência de aquecimento com potência insuficiente ou parcialmente ' + 'danificada, controlador/termostato com set point regulado abaixo do necessário, perda de calor por isolamento ' + 'térmico comprometido, ou posição do sensor numa zona de sombra térmica fora do fluxo de recirculação de ar ' + 'quente (ex.: perto de porta ou parede externa); um desvio QUENTE DEMAIS e SUSTENTADO sugere sensor posicionado ' + 'muito próximo da resistência/fonte de calor direta, controlador com sobressinal (overshoot) por sintonia ' + 'inadequada, ou ventilação/recirculação interna insuficiente causando acúmulo localizado de calor; um desvio ' + 'PONTUAL/TRANSITÓRIO (pequeno percentual do tempo, não presente no fim do período) sugere abertura de porta ' + 'durante o ensaio, ciclo normal de liga/desliga do controlador (histerese do termostato), ou oscilação ' + 'momentânea sem indicar falha estrutural do equipamento.\n' + '3. Traduza cada achado em orientação PRÁTICA E ACIONÁVEL: quais posições são adequadas para o processo ' + 'térmico avaliado e quais não são; se o padrão sugere ajuste simples (recalibração do controlador, reposicionamento ' + 'de carga, desobstrução de ventilação) versus necessidade de manutenção técnica mais profunda ou substituição ' + 'do equipamento.\n' + '4. Se não houver dados de conformidade por sensor (ex.: estudo de evento sem essa quebra), escreva a análise ' + 'de forma extensa e didática mesmo assim, interpretando os fatos agregados fornecidos.\n' + 'Esta seção deve ter NO MÍNIMO 4 parágrafos substanciais quando houver dados por posição, e no mínimo 2 quando ' + 'não houver — nunca um resumo curto.\n\n' + 'A CONCLUSÃO GERAL deve amarrar todos os estudos incluídos num texto extenso e coeso, culminando no veredito ' + 'consolidado, e resumindo (sem repetir todos os detalhes já ditos) quais posições do equipamento, se houver, ' + 'são utilizáveis com segurança e quais não são.\n\n' + 'CONTEXTO REAL DESTE ENSAIO (única fonte de fatos permitida):\n' + contextoStr + '\n\n' + EstufaBanhoRel_ebIAMontarInstrucaoFormato_(tiposEstudo);
   var respostaBruta = EstufaBanhoRel_ebIAChamarGemini_(prompt);
   var json;
   try {
@@ -248,5 +202,7 @@ function EstufaBanhoRel_ebIACriarTextosCertificado_(dadosContexto) {
   } catch (e) {
     throw new Error('Falha ao gerar os textos do certificado: ' + e.message);
   }
+  ['introducao', 'objetivo', 'conclusaoGeral', 'conclusaoLeigo'].forEach(function(k) { if (json[k]) json[k] = SGO_DocA4_limparTextoIA_(json[k]); });
+  Object.keys(json.analisePorEstudo || {}).forEach(function(k) { json.analisePorEstudo[k] = SGO_DocA4_limparTextoIA_(json.analisePorEstudo[k]); });
   return json;
 }

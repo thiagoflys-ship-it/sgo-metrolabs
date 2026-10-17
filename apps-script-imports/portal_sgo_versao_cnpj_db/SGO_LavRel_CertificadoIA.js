@@ -34,17 +34,13 @@ var LavRel_LVIA_ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1b
 var LavRel_LVIA_MAX_TENTATIVAS = 3;
 var LavRel_LVIA_DELAYS_MS = [800, 1600];
 
-var LavRel_LVIA_REGRAS_BASE =
-  'Você é um redator técnico especializado em certificados de qualificação de lavadoras para reprocessamento de ' +
-  'produtos para saúde (termodesinfectoras e lavadoras ultrassônicas), no padrão de laboratórios de metrologia e ' +
-  'engenharia clínica.\n' +
-  'REGRAS ABSOLUTAS — nunca violar:\n' +
-  '1. Nunca invente número, data, valor, veredito ou resultado que não esteja explicitamente no contexto fornecido.\n' +
-  '2. Preserve e cite corretamente todos os valores numéricos e fatos fornecidos (A0 mínimo/médio/máximo, tempo de ' +
-  'cavitação, tempos de exposição, vereditos de aprovação).\n' +
-  '3. Não copie frases prontas de outro documento — escreva prosa original, extensa e fluida a partir dos fatos.\n' +
-  '4. Não use markdown, negrito, itálico, listas ou títulos dentro dos textos — texto corrido, formal, em português brasileiro técnico.\n' +
-  '5. Cada seção deve ser substancial (vários parágrafos quando fizer sentido) — não entregue resumos curtos.';
+function LavRel_lvIARegrasBase_() {
+  return 'Você é engenheiro sênior em qualificação de lavadoras para reprocessamento de produtos para saúde ' +
+    '(termodesinfectoras e lavadoras ultrassônicas) e redige o relatório técnico de um ciclo ensaiado, no padrão de ' +
+    'laboratórios de metrologia e engenharia clínica. Pense com cuidado antes de escrever: confira cada número com o ' +
+    'contexto e não afirme nada que os dados não sustentem.\n' + SGO_DocA4_regrasRedacaoIA_() + '\n' +
+    '- Cada seção deve ser substancial e escrita a partir dos fatos; não copie frases prontas.';
+}
 
 var LavRel_LVIA_MARC_ANALISE_PREFIXO = '###ANALISE:';
 var LavRel_LVIA_MARC_CONCLUSAO_TECNICA = '###CONCLUSAO_TECNICA###';
@@ -87,51 +83,8 @@ function LavRel_lvIAERetentavel_(codigo) {
 }
 
 function LavRel_lvIAChamarGemini_(prompt) {
-  var cfg = LavRel_lvIAObterConfig_();
-  if (!cfg.geminiKey) {
-    throw new Error(SGO_DocSalvar_msgChaveIA_());
-  }
-
-  var modelos = LavRel_lvIAObterListaModelos_(cfg);
-  var ultimoErr = 'A IA está temporariamente indisponível. Tente novamente em alguns instantes.';
-
-  for (var mi = 0; mi < modelos.length; mi++) {
-    var modelo = modelos[mi];
-    for (var tent = 0; tent < LavRel_LVIA_MAX_TENTATIVAS; tent++) {
-      if (tent > 0) Utilities.sleep(LavRel_LVIA_DELAYS_MS[tent - 1] || 1600);
-
-      var url = LavRel_LVIA_ENDPOINT_GEMINI + modelo + ':generateContent?key=' + cfg.geminiKey;
-      var resp = UrlFetchApp.fetch(url, {
-        method: 'post',
-        muteHttpExceptions: true,
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: LavRel_LVIA_TOKENS_CERTIFICADO, temperature: 0.4 }
-        })
-      });
-
-      var codigo = resp.getResponseCode();
-      var corpo = {};
-      try { corpo = JSON.parse(resp.getContentText()); } catch (e) {}
-
-      if (codigo === 200) {
-        var cand = corpo.candidates && corpo.candidates[0];
-        var parts = cand && cand.content && cand.content.parts;
-        var texto = parts && parts.map(function(p) { return p.text || ''; }).join('');
-        if (!texto) throw new Error('A IA retornou resposta vazia. Tente novamente.');
-        return String(texto).trim();
-      }
-
-      if (codigo === 401 || codigo === 403 || codigo === 429) throw new Error(LavRel_lvIAInterpretarErro_(codigo, corpo));
-      if (codigo === 404) { ultimoErr = 'Modelo ' + modelo + ' não encontrado. Tentando próximo.'; break; }
-
-      ultimoErr = LavRel_lvIAInterpretarErro_(codigo, corpo);
-      if (!LavRel_lvIAERetentavel_(codigo)) break;
-    }
-  }
-
-  throw new Error(ultimoErr);
+  // Chamada comum (SGO_DocA4): raciocínio ligado, temperatura baixa, resposta cortada nunca é aproveitada.
+  return SGO_DocA4_chamarGemini_(prompt, { tokens: 32768, temperatura: 0.2 });
 }
 
 function LavRel_lvIAMontarInstrucaoFormato_(tiposEstudo) {
@@ -205,14 +158,22 @@ function LavRel_lvIAMontarContextoCertificado_(dados) {
   linhas.push('TAG: ' + (dados.tag || '-'));
   linhas.push('CLIENTE: ' + (dados.cliente || '-'));
   linhas.push('SETOR/LOCALIZAÇÃO: ' + (dados.setor || '-'));
-  linhas.push('NORMAS APLICÁVEIS: ' + dados.normas.join(' | '));
+  linhas.push('NORMAS APLICÁVEIS (cite somente estas): ' + dados.normas.join(' | '));
+  if (dados.criterios && dados.criterios.length) {
+    linhas.push('CRITÉRIOS DE ACEITAÇÃO E RESULTADO OBTIDO (cite exatamente):');
+    dados.criterios.forEach(function(c) {
+      linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + ' (' + c.referencia + '); obtido ' + c.obtido + '; situação ' + (c.conforme === true ? 'CONFORME' : (c.conforme === false ? 'NÃO CONFORME' : 'INFORMATIVO')));
+    });
+  }
+  if (dados.parametros && dados.parametros.length) linhas.push('PARÂMETROS DO ENSAIO: ' + dados.parametros.map(function(p) { return p[0] + ': ' + p[1]; }).join(' | '));
+  if (dados.registradores && dados.registradores.observacoes && dados.registradores.observacoes.length) linhas.push('RASTREABILIDADE DO REGISTRADOR (mencione na análise): ' + dados.registradores.observacoes.join(' '));
   linhas.push('ESTUDOS INCLUÍDOS NESTE LAUDO: ' + dados.estudos.map(function(e) { return e.label; }).join(', '));
   linhas.push('');
 
   dados.estudos.forEach(function(e) {
     linhas.push('--- ESTUDO: ' + e.label + ' (tipo interno: ' + e.tipoEstudo + ') ---');
     linhas.push('Status de aprovação: ' + e.statusAprovacao);
-    linhas.push('Fatos calculados: ' + JSON.stringify(e.fatos));
+    linhas.push('Fatos calculados (números já no formato brasileiro): ' + JSON.stringify(SGO_DocA4_fatosPtBr_(e.fatos)));
     if (e.motivosReprovacao && e.motivosReprovacao.length) linhas.push('Motivos de reprovação: ' + e.motivosReprovacao.join(' '));
     if (e.alertasAnalise && e.alertasAnalise.length) linhas.push('Alertas: ' + e.alertasAnalise.join(' '));
     if (e.observacoesAnalise && e.observacoesAnalise.length) linhas.push('Observações: ' + e.observacoesAnalise.join(' '));
@@ -226,15 +187,15 @@ function LavRel_lvIAMontarContextoCertificado_(dados) {
       cps.forEach(function(c) {
         linhas.push(
           '  ' + c.sensor + ': status ' + c.statusSensor +
-          ' | A0 acumulado ' + c.a0 + ' | temperatura mínima na exposição ' + c.minTemp + ' °C' +
-          ' | temperatura máxima na exposição ' + c.maxTemp + ' °C | temperatura média na exposição ' + c.mediaTemp + ' °C'
+          ' | A0 acumulado ' + SGO_DocA4_val_(c.a0, 2, 's') + ' | temperatura mínima na fase principal ' + SGO_DocA4_val_(c.minTemp, 2, '°C') +
+          ' | temperatura máxima na fase principal ' + SGO_DocA4_val_(c.maxTemp, 2, '°C') + ' | temperatura média na fase principal ' + SGO_DocA4_val_(c.mediaTemp, 2, '°C')
         );
       });
     }
     linhas.push('');
   });
 
-  linhas.push('VEREDITO CONSOLIDADO DO LAUDO: ' + dados.statusConsolidado);
+  linhas.push('VEREDITO DESTE ENSAIO (use exatamente): ' + LavRel_lvNormalizarStatus_(dados.statusConsolidado) + (dados.resumoResultado ? ' — ' + dados.resumoResultado : ''));
   return linhas.join('\n');
 }
 
@@ -248,7 +209,7 @@ function LavRel_lvIAMontarContextoCertificado_(dados) {
 function LavRel_lvIARegraCausasPorTipo_(tipoEstudo) {
   if (tipoEstudo === 'ULTRASSOM') {
     return (
-      '2. Se o tempo de cavitação medido ficar abaixo do limite operacional configurado, explique em linguagem ' +
+      '2. Se o tempo de cavitação medido ficar abaixo do mínimo exigido no critério de aceitação, explique em linguagem ' +
       'acessível as causas técnicas PROVÁVEIS mais comuns para lavadoras ultrassônicas — sempre como hipótese/' +
       'prática usual do setor, nunca como diagnóstico certo, já que não houve inspeção física direta do ' +
       'equipamento: degaseificação incompleta da solução (ar dissolvido no líquido amortece a formação das ' +
@@ -260,7 +221,7 @@ function LavRel_lvIARegraCausasPorTipo_(tipoEstudo) {
     );
   }
   return (
-    '2. Se o A0 mínimo entre os sensores ativos ficar abaixo do limite operacional configurado, ou se algum ' +
+    '2. Se o A0 mínimo entre os sensores ativos ficar abaixo do mínimo exigido no critério de aceitação, ou se algum ' +
     'sensor apresentar temperatura de exposição sustentadamente abaixo do esperado, explique em linguagem ' +
     'acessível as causas técnicas PROVÁVEIS mais comuns para desinfecção térmica (termodesinfectoras) — sempre ' +
     'como hipótese/prática usual do setor, nunca como diagnóstico certo, já que não houve inspeção física direta ' +
@@ -283,7 +244,7 @@ function LavRel_lvIACriarTextosCertificado_(dadosContexto) {
   var regraCausas = tiposEstudo.map(LavRel_lvIARegraCausasPorTipo_).join('\n');
 
   var prompt =
-    LavRel_LVIA_REGRAS_BASE + '\n\n' +
+    LavRel_lvIARegrasBase_() + '\n\n' +
     'TAREFA: com base no contexto de um único ciclo/ensaio abaixo, escreva os textos narrativos da Interpretação ' +
     'Técnica deste ensaio específico. Este NÃO é um certificado final — é uma leitura técnica de UM ciclo dentro ' +
     'de uma campanha de qualificação maior (outros ciclos/receitas são analisados em documentos separados, iguais ' +
@@ -294,18 +255,21 @@ function LavRel_lvIACriarTextosCertificado_(dadosContexto) {
     'ENSINAR, não só relatar. Regras específicas desta seção:\n' +
     '1. Se o bloco "Conformidade detalhada por posição/sensor" estiver presente no contexto, dedique um parágrafo ' +
     'específico a CADA sensor/posição individualmente (não só ao agregado global) — cite o A0 acumulado, a ' +
-    'temperatura mínima/máxima/média durante a exposição, e se está conforme ou não em relação ao limite ' +
-    'operacional do ciclo.\n' +
+    'temperatura mínima/máxima/média durante a exposição, e se está conforme ou não em relação ao A0 mínimo ' +
+    'exigido no critério de aceitação.\n' +
     regraCausas +
     '3. Se não houver dados de conformidade por sensor (caso da Lavadora Ultrassônica), escreva a análise de forma ' +
     'extensa e didática mesmo assim, interpretando os fatos agregados fornecidos (tempo de cavitação, limite).\n' +
     'Esta seção deve ter NO MÍNIMO 4 parágrafos substanciais quando houver dados por posição/sensor, e no mínimo 2 ' +
     'quando não houver — nunca um resumo curto.\n\n' +
     'A CONCLUSÃO TÉCNICA deve amarrar o que foi observado neste ciclo específico num texto extenso, denso e ' +
-    'rigoroso, culminando no veredito deste ensaio (aprovado/reprovado) — sem declarar qualificação final do ' +
+    'rigoroso, culminando no veredito deste ensaio — sem declarar qualificação final do ' +
     'equipamento como um todo, já que este documento cobre só este ciclo. Esta seção é dirigida a um público técnico ' +
     '(engenheiros, auditores, outros laboratórios) — use a terminologia correta com precisão total, cite os valores ' +
-    'com exatidão e não simplifique nada aqui.\n\n' +
+    'com exatidão e não simplifique nada aqui. Na termodesinfecção, explique que o critério de A0 aplicado decorre da ' +
+    'classificação do artigo informada (600 s para semicrítico ou não crítico, 3.000 s para crítico). O último parágrafo ' +
+    'deve declarar o veredito de forma inequívoca ("O ensaio está APROVADO" ou "O ensaio está REPROVADO"), citando o ' +
+    'critério de aceitação e o valor decisivo (o pior sensor e o seu A0, ou o tempo de cavitação e o mínimo).\n\n' +
     'A CONCLUSÃO EM LINGUAGEM DE FÁCIL COMPREENSÃO deve comunicar exatamente o MESMO veredito e os mesmos fatos ' +
     'centrais da conclusão técnica, mas escrita para qualquer leitor sem formação técnica (ex.: um fiscal ' +
     'administrativo, um profissional de enfermagem, ou qualquer pessoa curiosa que abra o documento) — alguém que ' +
@@ -331,5 +295,8 @@ function LavRel_lvIACriarTextosCertificado_(dadosContexto) {
     throw new Error('Falha ao gerar os textos do certificado: ' + e.message);
   }
 
+  json.conclusaoGeral = SGO_DocA4_limparTextoIA_(json.conclusaoGeral);
+  json.conclusaoLeigo = SGO_DocA4_limparTextoIA_(json.conclusaoLeigo);
+  Object.keys(json.analisePorEstudo || {}).forEach(function(k) { json.analisePorEstudo[k] = SGO_DocA4_limparTextoIA_(json.analisePorEstudo[k]); });
   return json;
 }

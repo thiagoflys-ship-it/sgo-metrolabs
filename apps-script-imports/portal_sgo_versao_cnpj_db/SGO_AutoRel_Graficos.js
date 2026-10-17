@@ -386,12 +386,12 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       ? 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
         'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
         'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
-        'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o limite operacional configurado de ' + limiteAprovacaoF0.toFixed(2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
+        'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o F0 mínimo normativo de ' + limiteAprovacaoF0.toFixed(2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
       : (statusAprovacao === 'APROVADO_COM_ALERTA'
           ? 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
             'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
             'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
-            'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atendeu ao limite operacional configurado de ' + limiteAprovacaoF0.toFixed(2) + ' min, porém permaneceu abaixo do valor normativo estrito de ' + f0MinNormativo.toFixed(2) + ' min, justificando aprovação com alerta.'
+            'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atendeu ao F0 mínimo normativo de ' + limiteAprovacaoF0.toFixed(2) + ' min, porém permaneceu abaixo do valor normativo estrito de ' + f0MinNormativo.toFixed(2) + ' min, justificando aprovação com alerta.'
           : 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
             'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
             'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
@@ -484,9 +484,7 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     '. Temperatura máxima de exposição: ' + fmtTemp_(exposicaoTemp.max) + '. ' +
     'Temperatura média global do ciclo: ' + fmtTemp_(globalTemp.media) + '. ' +
     'F0 normativo de referência: ' + fmtMin_(f0MinNormativo) +
-    '. F0 operacional configurado: ' + fmtMin_(f0MinOperacional) +
-    '. Tolerância aplicada: ' + fmtMin_(toleranciaF0) +
-    '. Limite operacional final: ' + fmtMin_(limiteAprovacaoF0) + '. ' +
+    '. Critério de aprovação: F0 igual ou acima do mínimo normativo em todos os sensores ativos. ' +
     blocoMotivos + blocoObservacoes + ' ' +
     'Pelos critérios térmicos e de letalidade configurados, o ciclo é classificado como ' +
     statusLongo_() + '.';

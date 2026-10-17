@@ -98,6 +98,9 @@ function CadeiaFrioRel_cfMontarContextoCertificado_(payload, resultado) {
     faixa: faixa,
     normas: CadeiaFrioRel_cfListarNormasAplicaveis_(payload.perfil),
     statusConsolidado: CadeiaFrioRel_cfConsolidarStatus_(analises),
+    registradores: SGO_DocA4_registradores_(String(payload.certDataLogger || '').trim(), dataDoEnsaio),
+    quantidadeSensoresAtivos: (sensoresAtivos || []).filter(function(a) { return !!a; }).length,
+    simulado: !!payload.modoRelatorioSimulado,
     equipamentoLabel: perfilCfg.label,
     tag: String(payload.tagEquipamento || '').trim(),
     cliente: String(payload.cliente || '').trim(),
@@ -109,6 +112,7 @@ function CadeiaFrioRel_cfMontarContextoCertificado_(payload, resultado) {
       equipamento: perfilCfg.label,
       tag: String(payload.tagEquipamento || '').trim(),
       dtl: String(payload.certDataLogger || '').trim(),
+      cnpj: String(payload.cnpj || '').trim(),
       certificadoNumero: String(payload.certNumero || '').trim(),
       revisao: String(payload.certRevisao || '0').trim(),
       dataDoEnsaio: dataDoEnsaio,
@@ -273,6 +277,14 @@ function CadeiaFrioRel_apiMontarCertificadoFinal(payload) {
   };
   template.fotos = fotos.filter(function(f) { return f && f.base64; });
   template.geradoEm = Utilities.formatDate(new Date(), CadeiaFrioRel_CFCFG.TZ, 'dd/MM/yyyy');
+  // Gráficos por estudo (mesmo recorte de dados usado na análise) e assinaturas.
+  const graficos = {};
+  (resultado.analises || []).forEach(function(a) {
+    try { const g = SGO_DocA4_graficoEstudoFaixa_(a._dadosFatia || [], resultado.sensoresAtivos, resultado.faixa, CadeiaFrioRel_CFCFG.TZ); if (g) graficos[String(a.tipoEstudo || '').toUpperCase()] = g; } catch (e) {}
+  });
+  template.graficos = graficos;
+  template.intervaloLeiturasSegundos = (resultado.analises && resultado.analises[0] && resultado.analises[0].intervaloMedioMinutos) ? Math.round(resultado.analises[0].intervaloMedioMinutos * 60) : null;
+  template.assinaturas = [].concat(contexto.identificacao.tecnicoExecutor ? [{ nome: contexto.identificacao.tecnicoExecutor, cargo: 'Técnico executor do ensaio' }] : [], CadeiaFrioRel_CFCFG.ASSINATURAS_PADRAO || []);
 
   const html = template.evaluate().getContent();
   // Regra do dono: HTML A4 + PDF salvos na pasta do cliente (subpasta por CNPJ
@@ -280,7 +292,7 @@ function CadeiaFrioRel_apiMontarCertificadoFinal(payload) {
   return SGO_DocSalvar_finalizarCertificado_(html, payload, function() {
     const id = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10) ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim() : '';
     return id ? DriveApp.getFolderById(id) : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
-  }, 'Certificado Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
+  }, 'Certificado de qualificação térmica Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
 }
 
 // ------------------------------------------------------------

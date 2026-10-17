@@ -350,9 +350,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   estiloCabecalhoClaro(shCapa.getRange('A14:F14'));
 
   const criterioTxt =
-    'OPERACIONAL: F0 ≥ ' + f0MinOperacional.toFixed(2) + ' MIN' +
-    ' | TOL.: ' + toleranciaF0.toFixed(2) +
-    ' | LIMITE FINAL: ' + limiteAprovacaoF0.toFixed(2) + ' MIN';
+    'CRITÉRIO: F0 ≥ ' + limiteAprovacaoF0.toFixed(2).replace('.', ',') + ' MIN EM TODOS OS SENSORES ATIVOS (MÍNIMO NORMATIVO)';
 
   const sensoresResumoTxt = qtdSensoresUtilizados + ' DE ' + qtdSensoresInstalados + ' PONTOS';
 
@@ -425,14 +423,14 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'A análise termobarométrica identificou janela de exposição com duração de ' + AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
       'Entretanto, o pior caso de letalidade térmica foi insuficiente para aprovação. O F0 médio calculado foi de ' + fmtMin_(analise.mediaF0) +
       ', enquanto o menor valor obtido foi de ' + fmtMin_(analise.minF0) +
-      ', abaixo do limite operacional configurado de ' + fmtMin_(limiteAprovacaoF0) + '.';
+      ', abaixo do F0 mínimo normativo de ' + fmtMin_(limiteAprovacaoF0) + '.';
   } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
     txtP1 =
       'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
       'A análise termobarométrica confirmou estabilidade operacional durante a exposição, com duração de ' + AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
       'A letalidade térmica apresentou F0 médio de ' + fmtMin_(analise.mediaF0) +
       ' e pior caso de ' + fmtMin_(analise.minF0) +
-      ', atendendo ao limite operacional configurado de ' + fmtMin_(limiteAprovacaoF0) +
+      ', atendendo ao F0 mínimo normativo de ' + fmtMin_(limiteAprovacaoF0) +
       ', porém abaixo do valor normativo estrito de ' + fmtMin_(f0MinNormativo) + '.';
   } else {
     txtP1 =

@@ -909,7 +909,7 @@ function EstufaBanhoRel_ebCorPorStatus_(status) {
 function EstufaBanhoRel_ebLabelStatus_(status) {
   status = String(status || '').toUpperCase();
   if (status === 'REPROVADO') return 'REPROVADO';
-  if (status === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
+  if (status === 'APROVADO_COM_ALERTA') return 'APROVADO (COM OBSERVAÇÃO)';
   if (status === 'INFORMATIVO') return 'INFORMATIVO';
   if (status === 'CARACTERIZACAO') return 'CARACTERIZAÇÃO (AUTONOMIA MEDIDA)';
   return status==='APROVADO'?'APROVADO':'INFORMATIVO';

@@ -272,7 +272,7 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nFase de lavagem não iniciada de forma estável. O tempo em temperatura alvo de cavitação foi nulo (0.00 min), caracterizando falha crítica estrutural no ciclo.';
   } else {
     txtLeta = motor === 'TERMO'
-      ? 'PARECER TÉCNICO (VALOR A0):\n\nO indicador A0 representa a integração térmica. O pior caso (' + (piorSensorA0 ? piorSensorA0.sensor : 'N/A') + ') obteve ' + minA0.toFixed(2) + ', frente ao limite operacional de ' + limiteAprovacaoFinal.toFixed(2) + '. Classificação: ' + statusLongo_() + '.'
+      ? 'PARECER TÉCNICO (VALOR A0):\n\nO indicador A0 representa a integração térmica. O pior caso (' + (piorSensorA0 ? piorSensorA0.sensor : 'N/A') + ') obteve ' + minA0.toFixed(2) + ', frente ao mínimo exigido de ' + limiteAprovacaoFinal.toFixed(2) + '. Classificação: ' + statusLongo_() + '.'
       : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nO tempo de cavitação eficaz obtido foi de ' + tempoCavitacao.toFixed(2) + ' min, frente ao limite de ' + limiteAprovacaoFinal.toFixed(2) + ' min. Classificação: ' + statusLongo_() + '.';
   }
 
@@ -309,8 +309,8 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   let letalidadeInfoTxt = '';
   if (analise.faseInicioExp === -1) {
     letalidadeInfoTxt = motor === 'TERMO'
-      ? 'A0 mínimo alcançado: 0.00 (FALHA DO COLETOR TÉRMICO). Limite operacional mínimo: ' + fmtA0_(limiteAprovacaoFinal) + '. '
-      : 'Tempo eficaz mantido: 0.00 min (CICLO INTERROMPIDO). Limite operacional mínimo: ' + fmtMin_(limiteAprovacaoFinal) + '. ';
+      ? 'A0 mínimo alcançado: 0.00 (FALHA DO COLETOR TÉRMICO). Mínimo exigido: ' + fmtA0_(limiteAprovacaoFinal) + '. '
+      : 'Tempo eficaz mantido: 0.00 min (CICLO INTERROMPIDO). Mínimo exigido: ' + fmtMin_(limiteAprovacaoFinal) + '. ';
   } else {
     letalidadeInfoTxt = motor === 'TERMO' 
       ? 'A0 mínimo alcançado: ' + fmtA0_(minA0) + '. Limite aprovativo: ' + fmtA0_(limiteAprovacaoFinal) + '. '

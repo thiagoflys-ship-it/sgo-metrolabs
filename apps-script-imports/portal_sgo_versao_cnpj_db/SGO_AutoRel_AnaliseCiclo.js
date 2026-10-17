@@ -548,10 +548,15 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
   analise.aprovado = true;
   analise.statusAprovacao = 'APROVADO';
 
+  // Decisão do dono (17/10/2026): nada é aprovado abaixo do mínimo da norma.
+  // O limite de aprovação é o F0 mínimo normativo; a antiga faixa "aprovado
+  // com alerta" (operacional − tolerância) deixou de existir. Acima do mínimo,
+  // mas a menos de 10% dele, o ciclo é aprovado com observação.
   const f0MinNormativo = AutoRel_parseFloatSeguroAnalise_(cfg.f0MinNormativo, AutoRel_parseFloatSeguroAnalise_(cfg.f0Min, 0));
-  const f0MinOperacional = AutoRel_parseFloatSeguroAnalise_(cfg.f0MinOperacional, f0MinNormativo);
-  const toleranciaF0 = AutoRel_parseFloatSeguroAnalise_(cfg.toleranciaF0, 0);
-  const limiteAprovacaoF0 = Math.max(0, f0MinOperacional - toleranciaF0);
+  const f0MinOperacional = f0MinNormativo;
+  const toleranciaF0 = 0;
+  const limiteAprovacaoF0 = Math.max(0, f0MinNormativo);
+  const margemObservacaoF0 = AutoRel_parseFloatSeguroAnalise_(cfg.margemObservacaoPercentual, 10);
 
   analise.limitesAprovacao = {
     f0MinNormativo: AutoRel_roundAnalise_(f0MinNormativo, 4),
@@ -591,15 +596,15 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
       analise.motivosReprovacao.push(
         'F0 mínimo insuficiente: pior sensor ativo (' +
         (analise.piorSensorF0 ? analise.piorSensorF0.sensor : 'N/A') +
-        ') obteve ' + AutoRel_roundAnalise_(analise.minF0, 2) +
-        ' min, abaixo do limite operacional configurado de ' + AutoRel_roundAnalise_(limiteAprovacaoF0, 2) + ' min.'
+        ') obteve ' + SGO_DocA4_num_(analise.minF0, 2) +
+        ' min, abaixo do F0 mínimo normativo de ' + SGO_DocA4_num_(limiteAprovacaoF0, 2) + ' min.'
       );
-    } else if (analise.minF0 < f0MinNormativo) {
-      analise.statusAprovacao = analise.aprovado ? 'APROVADO_COM_ALERTA' : analise.statusAprovacao;
-      analise.alertasAnalise.push(
-        'F0 mínimo abaixo do valor normativo estrito, porém dentro da tolerância operacional configurada. ' +
-        'Pior sensor: ' + (analise.piorSensorF0 ? analise.piorSensorF0.sensor : 'N/A') +
-        ' | F0: ' + AutoRel_roundAnalise_(analise.minF0, 2) + ' min.'
+    } else if (limiteAprovacaoF0 > 0 && analise.minF0 < limiteAprovacaoF0 * (1 + margemObservacaoF0 / 100)) {
+      analise.observacoesAnalise.push(
+        'F0 mínimo próximo do limite: o pior sensor ativo (' + (analise.piorSensorF0 ? analise.piorSensorF0.sensor : 'N/A') +
+        ') obteve ' + SGO_DocA4_num_(analise.minF0, 2) + ' min, acima do mínimo normativo de ' +
+        SGO_DocA4_num_(limiteAprovacaoF0, 2) + ' min, porém a menos de ' + margemObservacaoF0 +
+        '% dele. Recomenda-se acompanhar este ponto nas próximas requalificações.'
       );
     }
   } else {
