@@ -59,7 +59,12 @@ function Frota_apiDispatch(req) {
     apiRegistrarAbastecimento: Frota_apiRegistrarAbastecimento,
     apiExcluirAbastecimento: Frota_apiExcluirAbastecimento,
     apiVerificarNovosEventos: Frota_apiVerificarNovosEventos,
-    apiUploadFotoVeiculo: Frota_apiUploadFotoVeiculo
+    apiUploadFotoVeiculo: Frota_apiUploadFotoVeiculo,
+    // 17/10/2026 (travas do dono): ajuste de KM, conferência de KM divergente e trilha de auditoria — só a gestão
+    apiAjustarKm: Frota_apiAjustarKm,
+    apiConferirKm: Frota_apiConferirKm,
+    apiListarKmAConferir: Frota_apiListarKmAConferir,
+    apiListarAuditoria: Frota_apiListarAuditoria
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -214,7 +219,8 @@ function Frota_veiculosComSituacao_() {
     var c = m && condutores[SGO_UTILS.safe(m.CONDUTOR_ID)];
     return Object.assign({}, v, { STATUS: m ? 'EM_USO' : status, SITUACAO: situacao,
       CONDUTOR_NOME: m ? (c && c.NOME || 'Condutor não localizado') : '',
-      MOVIMENTACAO_ID: m ? m.ID : '', DATA_SAIDA: m ? m.DATA_SAIDA : '', HORA_SAIDA: m ? m.HORA_SAIDA : '',
+      CONDUTOR_ID: m ? SGO_UTILS.safe(m.CONDUTOR_ID) : '', CONDUTOR_USUARIO_ID: m ? SGO_UTILS.safe(c && c.USUARIO_ID) : '',
+      MOVIMENTACAO_ID: m ? m.ID : '', DATA_SAIDA: m ? Frota_textoData_(m.DATA_SAIDA) : '', HORA_SAIDA: m ? Frota_textoHora_(m.HORA_SAIDA) : '',
       KM_SAIDA: m ? m.KM_SAIDA : '', FINALIDADE: m ? m.FINALIDADE : '' });
   });
 }
@@ -229,11 +235,17 @@ function Frota_apiSituacaoFrota(sessionId) {
 
 function Frota_validarVeiculoRetirada_(veiculo) {
   if (!veiculo) throw new Error('Veículo não encontrado.');
-  var aberto = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).some(function(m) {
+  var aberto = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(function(m) {
     return SGO_UTILS.safe(m.VEICULO_ID) === SGO_UTILS.safe(veiculo.ID) && Frota_movimentoAberto_(m);
-  });
-  if (aberto || SGO_UTILS.safeUpper(veiculo.STATUS) === 'EM_USO') throw new Error('Este veículo já está com uma retirada em andamento — finalize-a antes de iniciar outra.');
-  if (['ATIVO', 'DISPONIVEL'].indexOf(SGO_UTILS.safeUpper(veiculo.STATUS)) < 0) throw new Error('Veículo indisponível para retirada.');
+  })[0];
+  if (aberto) {
+    var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, aberto.CONDUTOR_ID) || {};
+    var nome = SGO_UTILS.safe(c.NOME) || 'outro condutor';
+    throw new Error('O veículo ' + veiculo.PLACA + ' já está retirado por ' + nome + ' desde ' + Frota_textoData_(aberto.DATA_SAIDA) + ' ' + Frota_textoHora_(aberto.HORA_SAIDA) +
+      '. Escolha outro veículo. Se ele já voltou, ' + nome + ' (ou a gestão) precisa registrar a devolução antes de uma nova retirada.');
+  }
+  if (SGO_UTILS.safeUpper(veiculo.STATUS) === 'EM_USO') throw new Error('O veículo ' + veiculo.PLACA + ' está marcado como em uso. Atualize a tela; se continuar, avise a gestão.');
+  if (['ATIVO', 'DISPONIVEL'].indexOf(SGO_UTILS.safeUpper(veiculo.STATUS)) < 0) throw new Error('O veículo ' + veiculo.PLACA + ' está indisponível para retirada (situação: ' + SGO_UTILS.safe(veiculo.STATUS).toLowerCase() + '). Escolha outro veículo ou fale com a gestão.');
 }
 
 function Frota_apiPing() {
@@ -334,6 +346,157 @@ function Frota_bootstrapSemTrava_() {
     CertCal_garantirColuna_(aba, 'EXCLUIDO_EM');
     CertCal_garantirColuna_(aba, 'EXCLUIDO_POR');
   });
+  // Travas de 17/10/2026 (decisão do dono): quem registrou, registro pela gestão,
+  // justificativa, KM divergente com foto do painel e conferência. Só colunas novas.
+  FROTA_COLUNAS_TRAVAS.forEach(function(col) { CertCal_garantirColuna_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, col); });
+  CertCal_garantirTabela_(FROTA_ABA_AUDITORIA, FROTA_COLUNAS_AUDITORIA);
+}
+
+// ------------------------------------------------------------
+// TRAVAS DE RETIRADA/DEVOLUÇÃO (17/10/2026, decisão do dono)
+//  - devolução: só o condutor da retirada; a gestão registra no lugar dele
+//    com justificativa, marca, auditoria e aviso ao condutor;
+//  - retirada em nome de outro condutor: só a gestão, mesma regra;
+//  - data/hora: equipe = hora do servidor; gestão pode informar outra
+//    (diferença acima de 10 min exige justificativa; futuro acima de 5 min é recusado);
+//  - KM diferente do registrado (ou rodado absurdo) não trava: exige foto do
+//    painel, grava a diferença e avisa a gestão para conferir;
+//  - ajuste de KM do veículo só pela gestão, com justificativa e trilha.
+// ------------------------------------------------------------
+var FROTA_ABA_AUDITORIA = 'REG_FROTA_AUDITORIA';
+var FROTA_COLUNAS_AUDITORIA = ['ID', 'QUANDO', 'ACAO', 'VEICULO_ID', 'PLACA', 'MOVIMENTACAO_ID', 'CONDUTOR_ID', 'CONDUTOR_NOME',
+  'USUARIO_ID', 'USUARIO_NOME', 'PERFIL', 'CAMPO', 'VALOR_ANTES', 'VALOR_DEPOIS', 'JUSTIFICATIVA', 'DETALHE', 'CRIADO_EM'];
+var FROTA_COLUNAS_TRAVAS = [
+  'REGISTRADO_SAIDA_POR_ID', 'REGISTRADO_SAIDA_POR_NOME', 'REGISTRO_GESTAO_SAIDA', 'REGISTRO_GESTAO_SAIDA_EM', 'JUSTIFICATIVA_SAIDA', 'MOTIVO_GESTAO_SAIDA',
+  'KM_VEICULO_NA_SAIDA', 'KM_DIVERGENCIA_SAIDA', 'FOTOS_PAINEL_SAIDA_JSON', 'KM_CONFERIDO_SAIDA_EM', 'KM_CONFERIDO_SAIDA_POR',
+  'REGISTRADO_CHEGADA_POR_ID', 'REGISTRADO_CHEGADA_POR_NOME', 'REGISTRO_GESTAO_CHEGADA', 'REGISTRO_GESTAO_CHEGADA_EM', 'JUSTIFICATIVA_CHEGADA', 'MOTIVO_GESTAO_CHEGADA',
+  'KM_ALERTA_CHEGADA', 'FOTOS_PAINEL_CHEGADA_JSON', 'KM_CONFERIDO_CHEGADA_EM', 'KM_CONFERIDO_CHEGADA_POR'
+];
+var FROTA_JUSTIFICATIVA_MIN = 15;
+var FROTA_TOLERANCIA_HORARIO_MIN = 10;
+var FROTA_TOLERANCIA_FUTURO_MIN = 5;
+var FROTA_MEDIA_MAXIMA_KMH = 120;
+var FROTA_KM_MAXIMO_RETIRADA = 1500;
+var FROTA_HORAS_RETIRADA_ESQUECIDA = 12;
+var FROTA_DIAS_AVISO_REGISTRO_GESTAO = 7;
+var FROTA_TEXTO_GESTAO = 'a gestão (Administrador, Gestor ou Diretoria)';
+
+/** Mesma regra de Frota_exigirGestor_ (ADMIN, GESTOR, DIRETORIA). */
+function Frota_ehGestao_(sessionId) {
+  return isAdminSession(sessionId);
+}
+
+/** KM em pt-BR ("12.650"). */
+function Frota_kmTexto_(n) {
+  var v = Math.round(Number(n) || 0);
+  return (v < 0 ? '-' : '') + String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** Agora no horário de Brasília, no mesmo formato (e na mesma régua) das datas digitadas. */
+function Frota_agoraSP_() {
+  var agora = new Date();
+  var data = Utilities.formatDate(agora, 'America/Sao_Paulo', 'dd/MM/yyyy');
+  var hora = Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
+  return { data: data, hora: hora, quando: Frota_parseDataHora_(data, hora) };
+}
+
+function Frota_duracaoTexto_(min) {
+  min = Math.round(Math.abs(Number(min) || 0));
+  if (min < 60) return min + (min === 1 ? ' minuto' : ' minutos');
+  var h = Math.floor(min / 60), m = min % 60;
+  if (h < 48) return h + (h === 1 ? ' hora' : ' horas') + (m ? ' e ' + m + ' min' : '');
+  var d = Math.floor(h / 24);
+  return d + ' dias e ' + (h % 24) + ' h';
+}
+
+/**
+ * Data/hora do registro. Quem não é gestão: sempre a hora do servidor (o que vier
+ * no payload é ignorado). Gestão: o que informar (vazio = agora); futuro acima de
+ * 5 min é recusado; diferença acima de 10 min marca "retroativo" (exige justificativa).
+ */
+function Frota_quandoRegistro_(gestao, data, hora, rotulo) {
+  var agora = Frota_agoraSP_();
+  if (!gestao || (!String(data || '').trim() && !String(hora || '').trim())) {
+    return { data: agora.data, hora: agora.hora, quando: agora.quando, retroativo: false, difMin: 0, horaDoServidor: true };
+  }
+  var q = Frota_dataHoraMovimento_(String(data || '').trim() || agora.data, String(hora || '').trim() || agora.hora, rotulo);
+  var difMin = (q.quando.getTime() - agora.quando.getTime()) / 60000;
+  if (difMin > FROTA_TOLERANCIA_FUTURO_MIN) {
+    throw new Error('A data/hora de ' + rotulo + ' (' + q.data + ' ' + q.hora + ') está no futuro. Agora são ' + agora.hora + ' de ' + agora.data +
+      ' (horário de Brasília). Corrija a data/hora ou deixe os campos vazios para usar a hora atual.');
+  }
+  return { data: q.data, hora: q.hora, quando: q.quando, retroativo: Math.abs(difMin) > FROTA_TOLERANCIA_HORARIO_MIN, difMin: difMin, horaDoServidor: false };
+}
+
+/** Justificativa obrigatória (mínimo de 15 caracteres), com o motivo de ser exigida. */
+function Frota_exigirJustificativa_(texto, motivos, exemplo) {
+  var j = String(texto || '').replace(/\s+/g, ' ').trim();
+  if (j.length < FROTA_JUSTIFICATIVA_MIN) {
+    throw new Error('Justificativa obrigatória: ' + motivos.join('; ') + '. Escreva no campo "Justificativa" o motivo (mínimo de ' +
+      FROTA_JUSTIFICATIVA_MIN + ' caracteres; foram ' + j.length + '), por exemplo: "' + (exemplo || 'condutor esqueceu de registrar, confirmado por telefone') + '".');
+  }
+  return j.slice(0, 500);
+}
+
+/** Fotos do painel já enviadas (links) ou, em último caso, enviadas cruas no pedido. */
+function Frota_fotosPainel_(payload, placa) {
+  var lista = Array.isArray(payload.fotosPainelSalvas) ? payload.fotosPainelSalvas : Frota_uploadFotos_(placa, payload.fotosPainel);
+  return lista.filter(function(f) { return f && f.link; }).map(function(f) { return { link: String(f.link), legenda: String(f.legenda || 'Painel (odômetro)').trim() }; });
+}
+
+/** Linha na trilha de auditoria da Frota (REG_FROTA_AUDITORIA) + SGO_DATA.log. Nunca derruba a ação principal. */
+function Frota_auditar_(sessao, o) {
+  try {
+    var reg = SGO_DATA.normalizarObjetoParaSheet(FROTA_ABA_AUDITORIA, SGO_DATA.gerarRegistroBase({
+      QUANDO: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm'),
+      ACAO: o.acao, VEICULO_ID: o.veiculoId || '', PLACA: o.placa || '', MOVIMENTACAO_ID: o.movimentacaoId || '',
+      CONDUTOR_ID: o.condutorId || '', CONDUTOR_NOME: o.condutorNome || '',
+      USUARIO_ID: SGO_UTILS.safe(sessao && sessao.userId), USUARIO_NOME: SGO_UTILS.safe(sessao && (sessao.nome || sessao.usuario)),
+      PERFIL: SGO_UTILS.safeUpper(sessao && sessao.perfil),
+      CAMPO: o.campo || '', VALOR_ANTES: o.antes === undefined ? '' : String(o.antes), VALOR_DEPOIS: o.depois === undefined ? '' : String(o.depois),
+      JUSTIFICATIVA: o.justificativa || '', DETALHE: String(o.detalhe || '').slice(0, 1000)
+    }));
+    SGO_DATA.insert(FROTA_ABA_AUDITORIA, reg);
+  } catch (e) { console.error('Frota auditoria: ' + ((e && e.message) || e)); }
+  try { SGO_DATA.log('FROTA_' + o.acao, SGO_UTILS.safe(sessao && sessao.usuario), String(o.detalhe || o.acao).slice(0, 480), 'FROTA'); } catch (e2) {}
+}
+
+/** Aviso ao condutor (e-mail e WhatsApp pelo notificador; no SGO+ o aviso aparece na central de pendências). */
+function Frota_avisarCondutor_(condutor, sessao, titulo, texto, refId) {
+  var uid = SGO_UTILS.safe(condutor && condutor.USUARIO_ID);
+  if (!uid || uid === SGO_UTILS.safe(sessao && sessao.userId) || typeof SGO_notificar_ !== 'function') return null;
+  try {
+    return SGO_notificar_({ usuarios: [uid], titulo: titulo, texto: texto, canais: ['sgo', 'email', 'whatsapp'], origem: 'FROTA', refId: refId });
+  } catch (e) { console.error('Frota aviso: ' + ((e && e.message) || e)); return null; }
+}
+
+/** Última devolução registrada do veículo (uma retirada retroativa não pode começar antes dela). */
+function Frota_ultimaChegadaVeiculo_(veiculoId) {
+  var ultima = null;
+  SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).forEach(function(m) {
+    if (SGO_UTILS.safe(m.VEICULO_ID) !== SGO_UTILS.safe(veiculoId) || SGO_UTILS.safeUpper(m.STATUS) !== 'FINALIZADO') return;
+    var q = Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA);
+    if (q && (!ultima || q.getTime() > ultima.quando.getTime())) ultima = { quando: q, data: Frota_textoData_(m.DATA_CHEGADA), hora: Frota_textoHora_(m.HORA_CHEGADA) };
+  });
+  return ultima;
+}
+
+/**
+ * KM da devolução fora do razoável para o tempo da retirada: mais de 1.500 km,
+ * ou média acima de 120 km/h (tempo mínimo considerado: 15 minutos). Devolve o motivo ou ''.
+ */
+function Frota_kmChegadaAbsurdo_(kmSaida, kmChegada, saida, chegada) {
+  var rodado = Number(kmChegada) - Number(kmSaida);
+  if (!(rodado > 0)) return '';
+  if (rodado > FROTA_KM_MAXIMO_RETIRADA) return 'rodou ' + Frota_kmTexto_(rodado) + ' km numa retirada (acima de ' + Frota_kmTexto_(FROTA_KM_MAXIMO_RETIRADA) + ' km)';
+  if (!saida || !chegada) return '';
+  var horas = Math.max((chegada.getTime() - saida.getTime()) / 3600000, 0.25);
+  var media = rodado / horas;
+  if (media > FROTA_MEDIA_MAXIMA_KMH) {
+    return 'rodou ' + Frota_kmTexto_(rodado) + ' km em ' + Frota_duracaoTexto_((chegada.getTime() - saida.getTime()) / 60000) +
+      ' (média de ' + Frota_kmTexto_(media) + ' km/h, acima de ' + FROTA_MEDIA_MAXIMA_KMH + ' km/h)';
+  }
+  return '';
 }
 
 // ------------------------------------------------------------
@@ -403,16 +566,19 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
     if (colisao) throw new Error('Já existe outro veículo cadastrado com essa placa.');
   }
 
-  var kmAtual = payload.kmAtual !== undefined && payload.kmAtual !== '' ? Frota_num_(payload.kmAtual, NaN) : Number(atual.KM_ATUAL || 0);
+  var kmAtual = payload.kmAtual !== undefined && payload.kmAtual !== '' ? Frota_num_(payload.kmAtual, NaN) : Frota_num_(atual.KM_ATUAL, 0);
   if (!isFinite(kmAtual) || kmAtual < 0) throw new Error('KM atual inválido.');
+  // 17/10/2026 (decisão do dono): mudar o KM só pelo "Ajustar KM", com justificativa e trilha.
+  if (kmAtual !== Frota_num_(atual.KM_ATUAL, 0)) {
+    throw new Error('O KM do veículo não é alterado por aqui. Use o botão "Ajustar KM" (Frota > Veículos e condutores), que pede a justificativa e grava o valor antigo e o novo na trilha de auditoria.');
+  }
 
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, {
     PLACA: placa,
     MODELO: SGO_UTILS.safe(payload.modelo || atual.MODELO),
     MARCA: SGO_UTILS.safe(payload.marca || atual.MARCA),
     ANO: SGO_UTILS.safe(payload.ano || atual.ANO),
-    COR: SGO_UTILS.safe(payload.cor || atual.COR),
-    KM_ATUAL: kmAtual
+    COR: SGO_UTILS.safe(payload.cor || atual.COR)
   });
   SGO_DATA.log('FROTA_VEICULO_ATUALIZAR', sessao.usuario, 'Veículo atualizado ID=' + id + ' (placa=' + placa + ', km=' + kmAtual + ')', 'FROTA');
   return { ok: true };
@@ -716,7 +882,8 @@ function Frota_apiListarViagensEmAndamento(sessionId) {
       var c = condutores[SGO_UTILS.safe(m.CONDUTOR_ID)] || {};
       return {
         id: m.ID, veiculoId: m.VEICULO_ID, veiculoPlaca: v.PLACA || '', veiculoModelo: v.MODELO || '',
-        condutorNome: c.NOME || '', dataSaida: m.DATA_SAIDA, horaSaida: m.HORA_SAIDA, kmSaida: m.KM_SAIDA, finalidade: m.FINALIDADE
+        condutorNome: c.NOME || '', condutorId: SGO_UTILS.safe(m.CONDUTOR_ID), condutorUsuarioId: SGO_UTILS.safe(c.USUARIO_ID),
+        dataSaida: Frota_textoData_(m.DATA_SAIDA), horaSaida: Frota_textoHora_(m.HORA_SAIDA), kmSaida: m.KM_SAIDA, finalidade: m.FINALIDADE
       };
     });
   return { ok: true, items: itens };
@@ -741,47 +908,77 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   Frota_bootstrap_();
   var sessao = Frota_exigirEquipe_(sessionId);
   payload = payload || {};
+  var gestao = Frota_ehGestao_(sessionId);
 
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
-  if (!veiculo) throw new Error('Veículo não encontrado.');
+  if (!veiculo) throw new Error('Veículo não encontrado. Atualize a tela e escolha o veículo de novo.');
   Frota_validarVeiculoRetirada_(veiculo);
 
-  // Trava de identidade (Fase 5, 2026-08-25): quem NÃO é gestor/admin não
-  // escolhe condutor — o sistema usa o condutor vinculado ao próprio
-  // login, sempre, ignorando o que veio no payload. Evita registrar
-  // retirada em nome de outra pessoa. Gestor/admin continua podendo
-  // escolher qualquer condutor (ex.: exceção, motorista esqueceu de bater).
-  var condutorId = Frota_resolverCondutorRetirada_(sessionId, payload).ID;
+  // Trava de identidade (Fase 5, 2026-08-25): quem NÃO é gestão não escolhe
+  // condutor — o sistema usa o condutor vinculado ao próprio login, sempre,
+  // ignorando o que veio no payload. A gestão pode escolher outro condutor
+  // (ex.: a pessoa esqueceu de registrar) — 17/10/2026: com justificativa,
+  // marca "registrado pela gestão", auditoria e aviso ao condutor.
+  var condutor = Frota_resolverCondutorRetirada_(sessionId, payload);
+  var condutorId = condutor.ID;
+  var vinculado = Frota_obterCondutorPorUsuario_(sessao.userId);
+  var emNomeDeOutro = gestao && (!vinculado || SGO_UTILS.safe(vinculado.ID) !== SGO_UTILS.safe(condutorId));
 
   var kmSaida = Frota_num_(payload.kmSaida, NaN);
-  if (!isFinite(kmSaida)) throw new Error('Informe o KM de saída.');
-  var quandoSaida = Frota_dataHoraMovimento_(payload.dataSaida, payload.horaSaida, 'saída');
-  if (kmSaida < Number(veiculo.KM_ATUAL || 0)) {
-    throw new Error('O KM de saída (' + kmSaida + ') não pode ser menor que o KM atual do veículo (' + veiculo.KM_ATUAL + ').');
+  if (!isFinite(kmSaida) || kmSaida < 0) throw new Error('Informe o KM de saída (o número do odômetro do painel, só números).');
+
+  // 17/10/2026: para quem não é gestão vale a hora do servidor (o que vier no pedido é ignorado).
+  var quandoSaida = Frota_quandoRegistro_(gestao, payload.dataSaida, payload.horaSaida, 'saída');
+  if (!quandoSaida.horaDoServidor) {
+    var ultimaChegada = Frota_ultimaChegadaVeiculo_(veiculoId);
+    if (ultimaChegada && quandoSaida.quando.getTime() < ultimaChegada.quando.getTime()) {
+      throw new Error('A data/hora de saída informada (' + quandoSaida.data + ' ' + quandoSaida.hora + ') é anterior à última devolução deste veículo (' +
+        ultimaChegada.data + ' ' + ultimaChegada.hora + '). Duas retiradas não podem se sobrepor: confira a data/hora ou deixe os campos vazios para usar a hora atual.');
+    }
   }
 
-  // Fotos: o cliente já sobe cada uma em paralelo via apiUploadFotoVeiculo
-  // e manda os links prontos em payload.fotosSalvas (rápido). Mantido o
-  // caminho antigo (payload.fotos cru, upload sequencial aqui) só como
-  // fallback pra quem ainda não atualizou o app/cache do navegador.
   var fotosSalvas = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas : Frota_uploadFotos_(veiculo.PLACA, payload.fotos);
   var checklistNormalizado = Frota_normalizarChecklist_(payload.checklist);
   Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 'retirada');
+  var fotosPainel = Frota_fotosPainel_(payload, veiculo.PLACA);
+
+  // Regras do KM e da justificativa, conferidas de novo dentro da trava com o KM atual relido.
+  function conferir(v) {
+    var kmAtual = Frota_num_(v.KM_ATUAL, 0);
+    var dif = kmSaida - kmAtual;
+    if (dif < 0 && !gestao) {
+      throw new Error('O KM de saída (' + Frota_kmTexto_(kmSaida) + ') é menor que o KM registrado do veículo ' + v.PLACA + ' (' + Frota_kmTexto_(kmAtual) +
+        '). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Gestor ou Diretoria) o ajuste de KM do veículo (Frota > Veículos e condutores > Ajustar KM).');
+    }
+    if (dif !== 0 && !fotosPainel.length) {
+      throw new Error('O KM de saída (' + Frota_kmTexto_(kmSaida) + ') é diferente do KM registrado do veículo ' + v.PLACA + ' (' + Frota_kmTexto_(kmAtual) +
+        '): diferença de ' + Frota_kmTexto_(dif) + ' km. A retirada não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe no campo "Foto do painel (odômetro)" e registre de novo. A gestão será avisada para conferir.');
+    }
+    var motivos = [];
+    if (emNomeDeOutro) motivos.push('retirada registrada pela gestão em nome de ' + condutor.NOME);
+    if (quandoSaida.retroativo) motivos.push('data/hora de saída diferente de agora (' + Frota_duracaoTexto_(quandoSaida.difMin) + (quandoSaida.difMin < 0 ? ' antes' : ' depois') + ')');
+    if (dif < 0) motivos.push('KM de saída menor que o KM registrado do veículo');
+    return { kmAtual: kmAtual, dif: dif, motivos: motivos };
+  }
+  var regra = conferir(veiculo);
+  var justificativa = regra.motivos.length ? Frota_exigirJustificativa_(payload.justificativa, regra.motivos) : String(payload.justificativa || '').trim().slice(0, 500);
 
   // Trava evita retirada duplicada: 2 pedidos quase simultâneos pro MESMO
-  // veículo (2 pessoas testando, ou duplo clique) podiam os dois ler
-  // STATUS "ATIVO" antes de qualquer um gravar, passando os dois pela
-  // checagem lá em cima — sem isto, 2 movimentações "EM_ANDAMENTO" abertas
-  // pro mesmo veículo ao mesmo tempo (o problema de duplicidade relatado).
+  // veículo (2 pessoas, ou duplo clique) podiam os dois ler STATUS "ATIVO"
+  // antes de qualquer um gravar. Dentro da trava, relê e confere tudo de novo.
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
+  var registro, depois;
   try {
     veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
-    if (!veiculo) throw new Error('Veículo não encontrado.');
+    if (!veiculo) throw new Error('Veículo não encontrado. Atualize a tela e escolha o veículo de novo.');
     Frota_validarVeiculoRetirada_(veiculo);
+    depois = conferir(veiculo);
+    if (depois.motivos.length > regra.motivos.length) justificativa = Frota_exigirJustificativa_(payload.justificativa, depois.motivos);
 
-    var registro = SGO_DATA.normalizarObjetoParaSheet(
+    var pelaGestao = emNomeDeOutro || quandoSaida.retroativo || depois.dif < 0;
+    registro = SGO_DATA.normalizarObjetoParaSheet(
       SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO,
       SGO_DATA.gerarRegistroBase({
         VEICULO_ID: veiculoId,
@@ -794,56 +991,108 @@ function Frota_apiIniciarViagem(sessionId, payload) {
         FINALIDADE: String(payload.finalidade || '').trim(),
         DATA_CHEGADA: '', HORA_CHEGADA: '', KM_CHEGADA: '', CHECKLIST_CHEGADA_JSON: '', FOTOS_CHEGADA_JSON: '',
         OBSERVACOES: '',
-        STATUS: 'EM_ANDAMENTO'
+        STATUS: 'EM_ANDAMENTO',
+        REGISTRADO_SAIDA_POR_ID: SGO_UTILS.safe(sessao.userId),
+        REGISTRADO_SAIDA_POR_NOME: SGO_UTILS.safe(sessao.nome || sessao.usuario),
+        REGISTRO_GESTAO_SAIDA: pelaGestao ? 'SIM' : '',
+        REGISTRO_GESTAO_SAIDA_EM: pelaGestao ? SGO_UTILS.nowIso() : '',
+        JUSTIFICATIVA_SAIDA: justificativa,
+        MOTIVO_GESTAO_SAIDA: depois.motivos.join('; '),
+        KM_VEICULO_NA_SAIDA: depois.kmAtual,
+        KM_DIVERGENCIA_SAIDA: depois.dif !== 0 ? depois.dif : '',
+        FOTOS_PAINEL_SAIDA_JSON: fotosPainel.length ? JSON.stringify(fotosPainel) : ''
       })
     );
     SGO_DATA.insert(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, registro);
     SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId, { KM_ATUAL: kmSaida, STATUS: 'EM_USO' });
-    SGO_DATA.log('FROTA_VIAGEM_INICIAR', sessao.usuario, 'Retirada registrada — veículo ' + veiculo.PLACA, 'FROTA');
-
-    return { ok: true, movimentacaoId: registro.ID };
+    SGO_DATA.log('FROTA_VIAGEM_INICIAR', sessao.usuario, 'Retirada registrada — veículo ' + veiculo.PLACA + ' — condutor ' + condutor.NOME, 'FROTA');
   } finally {
     try { SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
   }
+
+  // Auditoria e avisos fora da trava (não seguram a fila de quem está retirando outro veículo).
+  var base = { veiculoId: veiculoId, placa: veiculo.PLACA, movimentacaoId: registro.ID, condutorId: condutorId, condutorNome: condutor.NOME };
+  if (registro.REGISTRO_GESTAO_SAIDA === 'SIM') {
+    Frota_auditar_(sessao, Object.assign({}, base, { acao: 'RETIRADA_PELA_GESTAO', justificativa: justificativa,
+      campo: 'DATA_SAIDA/HORA_SAIDA', depois: quandoSaida.data + ' ' + quandoSaida.hora,
+      detalhe: 'Retirada do veículo ' + veiculo.PLACA + ' registrada por ' + (sessao.nome || sessao.usuario) + ' para ' + condutor.NOME + ' (' + depois.motivos.join('; ') + ').' }));
+  }
+  if (depois.dif !== 0) {
+    Frota_auditar_(sessao, Object.assign({}, base, { acao: 'KM_DIVERGENTE_SAIDA', campo: 'KM_ATUAL', antes: depois.kmAtual, depois: kmSaida, justificativa: justificativa,
+      detalhe: 'KM de saída ' + Frota_kmTexto_(kmSaida) + ' diferente do KM registrado ' + Frota_kmTexto_(depois.kmAtual) + ' (diferença de ' + Frota_kmTexto_(depois.dif) + ' km), com foto do painel. A gestão confere.' }));
+  }
+  if (emNomeDeOutro) {
+    Frota_avisarCondutor_(condutor, sessao, 'Retirada registrada em seu nome: veículo ' + veiculo.PLACA,
+      (sessao.nome || sessao.usuario) + ' registrou no SGO+ a retirada do veículo ' + veiculo.PLACA + ' em seu nome, com saída em ' + quandoSaida.data + ' às ' + quandoSaida.hora +
+      ' e KM ' + Frota_kmTexto_(kmSaida) + '.\nJustificativa: ' + justificativa + '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Ao devolver o veículo, registre a devolução normalmente.',
+      registro.ID);
+  }
+  return { ok: true, movimentacaoId: registro.ID, registroPelaGestao: registro.REGISTRO_GESTAO_SAIDA === 'SIM', kmDivergencia: depois.dif || 0,
+    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor };
 }
 
 function Frota_apiFinalizarViagem(sessionId, payload) {
   Frota_bootstrap_();
   var sessao = Frota_exigirEquipe_(sessionId);
   payload = payload || {};
+  var gestao = Frota_ehGestao_(sessionId);
 
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
   var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
-  if (!mov) throw new Error('Retirada não encontrada.');
-  if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi finalizada.');
+  if (!mov) throw new Error('Retirada não encontrada. Atualize a tela: ela pode ter sido devolvida por outra pessoa.');
+  if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi devolvida. Atualize a tela para ver a situação atual do veículo.');
 
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID);
   if (!veiculo) throw new Error('Veículo não encontrado.');
 
+  // 17/10/2026 (decisão do dono): só o condutor da retirada devolve. A gestão
+  // devolve no lugar dele (esqueceu) com justificativa, marca, auditoria e aviso.
+  var condutor = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, mov.CONDUTOR_ID) || {};
+  var nomeCondutor = SGO_UTILS.safe(condutor.NOME) || 'o condutor da retirada';
+  var souCondutor = !!SGO_UTILS.safe(condutor.USUARIO_ID) && SGO_UTILS.safe(condutor.USUARIO_ID) === SGO_UTILS.safe(sessao.userId);
+  if (!souCondutor && !gestao) {
+    throw new Error('Esta retirada está com ' + nomeCondutor + '. Só ' + nomeCondutor + ' ou a gestão podem registrar a devolução. ' +
+      'Se o veículo já voltou, peça a ' + nomeCondutor + ' para registrar a devolução no SGO+; se não for possível, procure ' + FROTA_TEXTO_GESTAO + ', que registra no lugar dele com justificativa.');
+  }
+  var pelaGestao = !souCondutor;
+
   var kmChegada = Frota_num_(payload.kmChegada, NaN);
-  if (!isFinite(kmChegada)) throw new Error('Informe o KM de chegada.');
-  var quandoChegada = Frota_dataHoraMovimento_(payload.dataChegada, payload.horaChegada, 'chegada');
+  if (!isFinite(kmChegada) || kmChegada < 0) throw new Error('Informe o KM de chegada (o número do odômetro do painel, só números).');
+  var quandoChegada = Frota_quandoRegistro_(gestao, payload.dataChegada, payload.horaChegada, 'chegada');
   var saidaReg = Frota_parseDataHora_(mov.DATA_SAIDA, mov.HORA_SAIDA);
   if (saidaReg && quandoChegada.quando.getTime() < saidaReg.getTime()) {
-    throw new Error('A data/hora de chegada (' + quandoChegada.data + ' ' + quandoChegada.hora + ') é anterior à saída registrada (' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) + '). Confira os campos de chegada.');
+    throw new Error('A data/hora de chegada (' + quandoChegada.data + ' ' + quandoChegada.hora + ') é anterior à saída registrada (' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) + '). ' +
+      (quandoChegada.horaDoServidor ? 'A saída foi registrada com data/hora errada: peça à gestão (Administrador, Gestor ou Diretoria) para conferir a retirada.' : 'Confira os campos de chegada.'));
   }
-  if (kmChegada < Number(mov.KM_SAIDA || 0)) {
-    throw new Error('O KM de chegada (' + kmChegada + ') não pode ser menor que o KM de saída (' + mov.KM_SAIDA + ').');
+  var kmSaidaMov = Frota_num_(mov.KM_SAIDA, 0);
+  if (kmChegada < kmSaidaMov) {
+    throw new Error('O KM de chegada (' + Frota_kmTexto_(kmChegada) + ') não pode ser menor que o KM de saída desta retirada (' + Frota_kmTexto_(kmSaidaMov) +
+      '). Confira o número no painel. Se o KM de saída foi digitado errado, procure ' + FROTA_TEXTO_GESTAO + '.');
   }
+  var alertaKm = Frota_kmChegadaAbsurdo_(kmSaidaMov, kmChegada, saidaReg, quandoChegada.quando);
 
-  // Fotos: mesmo esquema do Frota_apiIniciarViagem — cliente já sobe em
-  // paralelo e manda os links prontos; payload.fotos cru fica só de
-  // fallback.
   var fotosSalvas = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas : Frota_uploadFotos_(veiculo.PLACA, payload.fotos);
   var checklistNormalizado = Frota_normalizarChecklist_(payload.checklist);
   Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 'devolução');
+  var fotosPainel = Frota_fotosPainel_(payload, veiculo.PLACA);
+  if (alertaKm && !fotosPainel.length) {
+    throw new Error('O KM de chegada ficou fora do esperado: ' + alertaKm + '. A devolução não é bloqueada, mas precisa da foto do painel mostrando o odômetro: ' +
+      'anexe no campo "Foto do painel (odômetro)" e registre de novo. Se o número foi digitado errado, corrija o KM de chegada. A gestão será avisada para conferir.');
+  }
+
+  var motivos = [];
+  if (pelaGestao) motivos.push('devolução registrada pela gestão no lugar de ' + nomeCondutor);
+  if (quandoChegada.retroativo) motivos.push('data/hora de chegada diferente de agora (' + Frota_duracaoTexto_(quandoChegada.difMin) + (quandoChegada.difMin < 0 ? ' antes' : ' depois') + ')');
+  var justificativa = motivos.length ? Frota_exigirJustificativa_(payload.justificativa, motivos) : String(payload.justificativa || '').trim().slice(0, 500);
+  var marcaGestao = pelaGestao || quandoChegada.retroativo;
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
-    if (!mov) throw new Error('Retirada não encontrada.');
-    if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi finalizada.');
+    if (!mov) throw new Error('Retirada não encontrada. Atualize a tela.');
+    if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada acabou de ser devolvida por outra pessoa. Atualize a tela para ver a situação atual do veículo.');
+    veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID) || veiculo;
 
     SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId, {
       DATA_CHEGADA: quandoChegada.data,
@@ -853,17 +1102,155 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       FOTOS_CHEGADA_JSON: JSON.stringify(fotosSalvas),
       OBSERVACOES: String(payload.observacoes || '').trim(),
       STATUS: 'FINALIZADO',
-      FINALIZADO_EM: SGO_UTILS.nowIso()
+      FINALIZADO_EM: SGO_UTILS.nowIso(),
+      REGISTRADO_CHEGADA_POR_ID: SGO_UTILS.safe(sessao.userId),
+      REGISTRADO_CHEGADA_POR_NOME: SGO_UTILS.safe(sessao.nome || sessao.usuario),
+      REGISTRO_GESTAO_CHEGADA: marcaGestao ? 'SIM' : '',
+      REGISTRO_GESTAO_CHEGADA_EM: marcaGestao ? SGO_UTILS.nowIso() : '',
+      JUSTIFICATIVA_CHEGADA: justificativa,
+      MOTIVO_GESTAO_CHEGADA: motivos.join('; '),
+      KM_ALERTA_CHEGADA: alertaKm,
+      FOTOS_PAINEL_CHEGADA_JSON: fotosPainel.length ? JSON.stringify(fotosPainel) : ''
     });
     // Veículo inativado durante a retirada continua inativo depois da devolução.
     var statusDepois = SGO_UTILS.safeUpper(veiculo.STATUS) === 'INATIVO' ? 'INATIVO' : 'ATIVO';
     SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, { KM_ATUAL: kmChegada, STATUS: statusDepois });
-    SGO_DATA.log('FROTA_VIAGEM_FINALIZAR', sessao.usuario, 'Devolução registrada — veículo ' + veiculo.PLACA, 'FROTA');
-
-    return { ok: true };
+    SGO_DATA.log('FROTA_VIAGEM_FINALIZAR', sessao.usuario, 'Devolução registrada — veículo ' + veiculo.PLACA + ' — condutor ' + nomeCondutor, 'FROTA');
   } finally {
     try { SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
   }
+
+  var base = { veiculoId: veiculo.ID, placa: veiculo.PLACA, movimentacaoId: movId, condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), condutorNome: nomeCondutor };
+  if (marcaGestao) {
+    Frota_auditar_(sessao, Object.assign({}, base, { acao: 'DEVOLUCAO_PELA_GESTAO', justificativa: justificativa,
+      campo: 'DATA_CHEGADA/HORA_CHEGADA', depois: quandoChegada.data + ' ' + quandoChegada.hora,
+      detalhe: 'Devolução do veículo ' + veiculo.PLACA + ' (retirada de ' + nomeCondutor + ') registrada por ' + (sessao.nome || sessao.usuario) + ' (' + motivos.join('; ') + ').' }));
+  }
+  if (alertaKm) {
+    Frota_auditar_(sessao, Object.assign({}, base, { acao: 'KM_DIVERGENTE_CHEGADA', campo: 'KM_CHEGADA', antes: kmSaidaMov, depois: kmChegada, justificativa: justificativa,
+      detalhe: 'KM de chegada fora do esperado: ' + alertaKm + '. Com foto do painel. A gestão confere.' }));
+  }
+  if (pelaGestao) {
+    Frota_avisarCondutor_(condutor, sessao, 'Devolução registrada em seu nome: veículo ' + veiculo.PLACA,
+      (sessao.nome || sessao.usuario) + ' registrou no SGO+ a devolução do veículo ' + veiculo.PLACA + ' (sua retirada de ' + Frota_textoData_(mov.DATA_SAIDA) + ' ' + Frota_textoHora_(mov.HORA_SAIDA) +
+      '), com chegada em ' + quandoChegada.data + ' às ' + quandoChegada.hora + ' e KM ' + Frota_kmTexto_(kmChegada) + '.\nJustificativa: ' + justificativa +
+      '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Da próxima vez, registre a devolução assim que entregar o veículo.',
+      movId);
+  }
+  return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor };
+}
+
+// ------------------------------------------------------------
+// AJUSTE DE KM, CONFERÊNCIA E TRILHA (só a gestão) — 17/10/2026
+// ------------------------------------------------------------
+function Frota_apiAjustarKm(sessionId, payload) {
+  Frota_bootstrap_();
+  var sessao = Frota_exigirEquipe_(sessionId);
+  if (!Frota_ehGestao_(sessionId)) {
+    throw new Error('O ajuste de KM do veículo é feito só pela gestão (Administrador, Gestor ou Diretoria). Se o KM registrado está errado, avise a gestão com a foto do painel.');
+  }
+  payload = payload || {};
+  var id = SGO_UTILS.safe(payload.veiculoId);
+  var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id);
+  if (!veiculo) throw new Error('Veículo não encontrado. Atualize a tela e escolha o veículo de novo.');
+  var kmNovo = Frota_num_(payload.kmNovo, NaN);
+  if (!isFinite(kmNovo) || kmNovo < 0) throw new Error('Informe o KM novo (o número do odômetro do painel, só números).');
+  var kmAntes = Frota_num_(veiculo.KM_ATUAL, 0);
+  if (kmNovo === kmAntes) throw new Error('O KM informado (' + Frota_kmTexto_(kmNovo) + ') é igual ao KM registrado. Nada a ajustar.');
+  var justificativa = Frota_exigirJustificativa_(payload.justificativa, ['ajuste do KM do veículo ' + veiculo.PLACA + ' de ' + Frota_kmTexto_(kmAntes) + ' para ' + Frota_kmTexto_(kmNovo)], 'KM digitado errado na devolução de 15/10, conferido pela foto do painel');
+  var fotos = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas.filter(function(f) { return f && f.link; }) : [];
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, id);
+    var emUso = Frota_veiculosComSituacao_().filter(function(v) { return SGO_UTILS.safe(v.ID) === id && v.SITUACAO === 'EM_USO'; })[0];
+    if (emUso) {
+      throw new Error('O veículo ' + veiculo.PLACA + ' está em uso (retirado por ' + (emUso.CONDUTOR_NOME || 'condutor não localizado') +
+        '). A devolução grava o KM de chegada; ajuste o KM depois que a devolução for registrada.');
+    }
+    kmAntes = Frota_num_(veiculo.KM_ATUAL, 0);
+    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, id, { KM_ATUAL: kmNovo });
+  } finally {
+    try { SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
+  }
+  Frota_auditar_(sessao, { acao: 'AJUSTE_KM', veiculoId: id, placa: veiculo.PLACA, campo: 'KM_ATUAL', antes: kmAntes, depois: kmNovo, justificativa: justificativa,
+    detalhe: 'KM do veículo ' + veiculo.PLACA + ' ajustado de ' + Frota_kmTexto_(kmAntes) + ' para ' + Frota_kmTexto_(kmNovo) + ' por ' + (sessao.nome || sessao.usuario) + '.' +
+      (fotos.length ? ' Foto: ' + fotos.map(function(f) { return f.link; }).join(' ') : '') });
+  return { ok: true, kmAntes: kmAntes, kmNovo: kmNovo, placa: veiculo.PLACA };
+}
+
+/** Movimentações com KM divergente ainda não conferidas pela gestão (saída e chegada). */
+function Frota_kmAConferir_() {
+  var veiculos = {}, condutores = {};
+  Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_VEICULOS).forEach(function(v) { veiculos[SGO_UTILS.safe(v.ID)] = v; });
+  Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
+  var lista = [];
+  Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).forEach(function(m) {
+    var v = veiculos[SGO_UTILS.safe(m.VEICULO_ID)] || {}, c = condutores[SGO_UTILS.safe(m.CONDUTOR_ID)] || {};
+    var fotos = function(txt) { try { return JSON.parse(txt || '[]') || []; } catch (e) { return []; } };
+    var comum = { movimentacaoId: SGO_UTILS.safe(m.ID), veiculoId: SGO_UTILS.safe(m.VEICULO_ID), placa: SGO_UTILS.safe(v.PLACA), condutorNome: SGO_UTILS.safe(c.NOME),
+      condutorUsuarioId: SGO_UTILS.safe(c.USUARIO_ID), dataSaida: Frota_textoData_(m.DATA_SAIDA), horaSaida: Frota_textoHora_(m.HORA_SAIDA) };
+    var difSaida = Frota_num_(m.KM_DIVERGENCIA_SAIDA, 0);
+    if (String(m.KM_DIVERGENCIA_SAIDA === undefined ? '' : m.KM_DIVERGENCIA_SAIDA).trim() !== '' && difSaida !== 0 && !SGO_UTILS.safe(m.KM_CONFERIDO_SAIDA_EM)) {
+      lista.push(Object.assign({ etapa: 'SAIDA', data: comum.dataSaida, hora: comum.horaSaida,
+        motivo: 'KM de saída ' + Frota_kmTexto_(m.KM_SAIDA) + ' diferente do KM registrado ' + Frota_kmTexto_(m.KM_VEICULO_NA_SAIDA) + ' (diferença de ' + Frota_kmTexto_(difSaida) + ' km)',
+        fotos: fotos(m.FOTOS_PAINEL_SAIDA_JSON), registradoPor: SGO_UTILS.safe(m.REGISTRADO_SAIDA_POR_NOME) }, comum));
+    }
+    if (SGO_UTILS.safe(m.KM_ALERTA_CHEGADA) && !SGO_UTILS.safe(m.KM_CONFERIDO_CHEGADA_EM)) {
+      lista.push(Object.assign({ etapa: 'CHEGADA', data: Frota_textoData_(m.DATA_CHEGADA), hora: Frota_textoHora_(m.HORA_CHEGADA),
+        motivo: 'KM de chegada ' + Frota_kmTexto_(m.KM_CHEGADA) + ' (saída ' + Frota_kmTexto_(m.KM_SAIDA) + '): ' + SGO_UTILS.safe(m.KM_ALERTA_CHEGADA),
+        fotos: fotos(m.FOTOS_PAINEL_CHEGADA_JSON), registradoPor: SGO_UTILS.safe(m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
+    }
+  });
+  return lista;
+}
+
+function Frota_apiListarKmAConferir(sessionId) {
+  Frota_exigirEquipe_(sessionId);
+  Frota_exigirGestor_(sessionId);
+  return { ok: true, items: Frota_kmAConferir_() };
+}
+
+function Frota_apiConferirKm(sessionId, payload) {
+  Frota_bootstrap_();
+  var sessao = Frota_exigirEquipe_(sessionId);
+  if (!Frota_ehGestao_(sessionId)) throw new Error('A conferência de KM é feita só pela gestão (Administrador, Gestor ou Diretoria).');
+  payload = payload || {};
+  var movId = SGO_UTILS.safe(payload.movimentacaoId);
+  var etapa = SGO_UTILS.safeUpper(payload.etapa) === 'CHEGADA' ? 'CHEGADA' : 'SAIDA';
+  var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
+  if (!mov) throw new Error('Movimentação não encontrada. Atualize a tela.');
+  if (SGO_UTILS.safe(mov['KM_CONFERIDO_' + etapa + '_EM'])) throw new Error('Este KM já foi conferido. Atualize a tela.');
+  var obs = String(payload.observacao || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  var upd = {};
+  upd['KM_CONFERIDO_' + etapa + '_EM'] = SGO_UTILS.nowIso();
+  upd['KM_CONFERIDO_' + etapa + '_POR'] = SGO_UTILS.safe(sessao.nome || sessao.usuario);
+  SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId, upd);
+  var v = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID) || {};
+  Frota_auditar_(sessao, { acao: 'KM_CONFERIDO_' + etapa, veiculoId: SGO_UTILS.safe(mov.VEICULO_ID), placa: SGO_UTILS.safe(v.PLACA), movimentacaoId: movId,
+    condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), justificativa: obs,
+    detalhe: 'KM ' + (etapa === 'SAIDA' ? 'de saída' : 'de chegada') + ' conferido pela gestão' + (obs ? ': ' + obs : '.') });
+  return { ok: true };
+}
+
+/** Trilha de auditoria da Frota (gestão), mais recente primeiro. */
+function Frota_apiListarAuditoria(sessionId, payload) {
+  Frota_bootstrap_();
+  Frota_exigirEquipe_(sessionId);
+  Frota_exigirGestor_(sessionId);
+  payload = payload || {};
+  var veiculoId = SGO_UTILS.safe(payload.veiculoId);
+  var itens = Frota_lerSeExistir_(FROTA_ABA_AUDITORIA)
+    .filter(function(a) { return !veiculoId || SGO_UTILS.safe(a.VEICULO_ID) === veiculoId; })
+    .sort(function(a, b) { return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || '')); })
+    .slice(0, Math.min(Number(payload.limite) || 100, 500))
+    .map(function(a) {
+      return { quando: SGO_UTILS.safe(a.QUANDO), acao: SGO_UTILS.safe(a.ACAO), placa: SGO_UTILS.safe(a.PLACA), condutorNome: SGO_UTILS.safe(a.CONDUTOR_NOME),
+        usuarioNome: SGO_UTILS.safe(a.USUARIO_NOME), campo: SGO_UTILS.safe(a.CAMPO), antes: SGO_UTILS.safe(a.VALOR_ANTES), depois: SGO_UTILS.safe(a.VALOR_DEPOIS),
+        justificativa: SGO_UTILS.safe(a.JUSTIFICATIVA), detalhe: SGO_UTILS.safe(a.DETALHE) };
+    });
+  return { ok: true, items: itens };
 }
 
 // Polling de notificação (toast/som), 2026-08-28 — mesmo padrão de

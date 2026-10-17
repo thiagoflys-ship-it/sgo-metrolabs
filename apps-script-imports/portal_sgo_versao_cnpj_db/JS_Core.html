@@ -1758,28 +1758,36 @@
     return lista;
   }
 
+  // qual: "retirada" | "devolucao" (fotos do veículo) | "painel_r" | "painel_d" (foto do painel/odômetro, 17/10/2026)
+  const MOBILE_FROTA_FOTOS = {
+    retirada: { input: "mob_frota_r_fotosInput", lista: "mob_frota_r_fotosLista", alvo: "fotosRetirada" },
+    devolucao: { input: "mob_frota_d_fotosInput", lista: "mob_frota_d_fotosLista", alvo: "fotosDevolucao" },
+    painel_r: { input: "mob_frota_r_painelInput", lista: "mob_frota_r_painelLista", alvo: "fotosPainelRetirada", legenda: "Painel (odômetro) na retirada" },
+    painel_d: { input: "mob_frota_d_painelInput", lista: "mob_frota_d_painelLista", alvo: "fotosPainelDevolucao", legenda: "Painel (odômetro) na devolução" }
+  };
   function mobileFrotaOnFotos_(qual) {
-    const input = document.getElementById(qual === "retirada" ? "mob_frota_r_fotosInput" : "mob_frota_d_fotosInput");
+    const cfg = MOBILE_FROTA_FOTOS[qual];
+    const input = document.getElementById(cfg.input);
     const arquivos = Array.prototype.slice.call((input && input.files) || []).slice(0, 10);
     const comprimir = typeof frotaComprimirImagem_ === "function" ? frotaComprimirImagem_ : mobileFrota_lerArquivoComoBase64_;
     Promise.all(arquivos.map(function (f) { return comprimir(f, 1280, 0.72); })).then(function (lidos) {
-      const alvo = qual === "retirada" ? "fotosRetirada" : "fotosDevolucao";
-      lidos.filter(Boolean).forEach(function (f) { MOBILE_FROTA[alvo].push({ base64: f.base64, mimeType: f.mimeType, nomeArquivo: f.nomeArquivo, legenda: "" }); });
+      MOBILE_FROTA[cfg.alvo] = MOBILE_FROTA[cfg.alvo] || [];
+      lidos.filter(Boolean).forEach(function (f) { MOBILE_FROTA[cfg.alvo].push({ base64: f.base64, mimeType: f.mimeType, nomeArquivo: f.nomeArquivo, legenda: cfg.legenda || "" }); });
       mobileFrotaRenderFotos_(qual);
       if (input) input.value = "";
     });
   }
   function mobileFrotaAtualizarLegenda_(qual, idx, valor) {
-    MOBILE_FROTA[qual === "retirada" ? "fotosRetirada" : "fotosDevolucao"][idx].legenda = valor;
+    MOBILE_FROTA[MOBILE_FROTA_FOTOS[qual].alvo][idx].legenda = valor;
   }
   function mobileFrotaRemoverFoto_(qual, idx) {
-    const alvo = qual === "retirada" ? "fotosRetirada" : "fotosDevolucao";
-    MOBILE_FROTA[alvo].splice(idx, 1);
+    MOBILE_FROTA[MOBILE_FROTA_FOTOS[qual].alvo].splice(idx, 1);
     mobileFrotaRenderFotos_(qual);
   }
   function mobileFrotaRenderFotos_(qual) {
-    const el = document.getElementById(qual === "retirada" ? "mob_frota_r_fotosLista" : "mob_frota_d_fotosLista");
-    const lista = MOBILE_FROTA[qual === "retirada" ? "fotosRetirada" : "fotosDevolucao"];
+    const cfg = MOBILE_FROTA_FOTOS[qual];
+    const el = document.getElementById(cfg.lista);
+    const lista = MOBILE_FROTA[cfg.alvo] || [];
     if (!el) return;
     el.innerHTML = lista.map(function (f, i) {
       return '<div class="mobile-frota-foto-thumb"><img src="data:' + f.mimeType + ';base64,' + f.base64 + '">' +
@@ -1796,15 +1804,42 @@
     };
   }
 
+  // 17/10/2026: os campos de data/hora (só a gestão os vê) ficam vazios = hora atual do servidor.
+  // Este botão limpa o que foi digitado (antes preenchia com a hora do aparelho, que envelhecia na tela).
   function mobileFrotaPreencherAgora_(qual) {
-    const agora = mobileFrotaHoraAgora_();
     const prefixo = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
     const elData = document.getElementById(prefixo + "data");
     const elHora = document.getElementById(prefixo + "hora");
-    if (elData) elData.value = agora.data;
-    if (elHora) elHora.value = agora.hora;
+    if (elData) elData.value = "";
+    if (elHora) elHora.value = "";
   }
 
+  // Bloco de data/hora + justificativa: equipe vê só "Registro com a hora atual"; a gestão pode informar outra.
+  function mobileFrotaBlocoHorario_(qual) {
+    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
+    const rotulo = qual === "retirada" ? "saída" : "chegada";
+    if (!frotaSouGestao_()) {
+      return '<div class="mobile-frota-alerta aviso" id="' + p + 'horaAtual">Registro com a hora atual: a data e a hora de ' + rotulo + ' são as do servidor (horário de Brasília) no momento em que você confirmar.</div>';
+    }
+    return mobileFieldHtml_("Data de " + rotulo + " (vazio = agora)", '<input type="text" id="' + p + 'data" value="" placeholder="dd/mm/aaaa" inputmode="numeric">') +
+      mobileFieldHtml_("Hora de " + rotulo + " (vazio = agora)", '<input type="text" id="' + p + 'hora" value="" placeholder="hh:mm" inputmode="numeric">') +
+      '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" style="margin:-6px 0 10px;" onclick="mobileFrotaPreencherAgora_(\'' + qual + '\')">Limpar (usar a hora atual)</button>';
+  }
+  function mobileFrotaBlocoJustificativa_(qual) {
+    if (!frotaSouGestao_()) return "";
+    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
+    return mobileFieldHtml_("Justificativa (gestão)", '<textarea id="' + p + 'justificativa" placeholder="Obrigatória (mínimo de 15 caracteres) se registrar em nome de outro condutor ou com data/hora diferente de agora"></textarea>');
+  }
+  function mobileFrotaBlocoPainel_(qual) {
+    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
+    const q = qual === "retirada" ? "painel_r" : "painel_d";
+    const regra = qual === "retirada"
+      ? "Obrigatória se o KM de saída for diferente do KM registrado do veículo."
+      : "Obrigatória se o KM rodado passar de 1.500 km ou der média acima de 120 km/h no período da retirada.";
+    return mobileFieldHtml_("Foto do painel (odômetro)", '<input type="file" id="' + p + 'painelInput" accept="image/*" capture="environment" onchange="mobileFrotaOnFotos_(\'' + q + '\')">') +
+      '<div class="mobile-card-subtitulo" id="' + p + 'kmInfo" style="margin:-6px 0 8px;">' + regra + '</div>' +
+      '<div class="mobile-frota-fotos" id="' + p + 'painelLista"></div>';
+  }
 
   let FROTA_ENVIO_ATIVO = false;
   let FROTA_SITUACAO_TIMER = null;
@@ -1824,8 +1859,63 @@
     });
   }
 
+  // ---------- Travas da Frota (17/10/2026, decisão do dono) ----------
+  // O servidor decide; estas funções só avisam antes de enviar as fotos, com a mesma regra.
+  function frotaSouGestao_() {
+    const perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    return perfil === "ADMIN" || perfil === "GESTOR" || perfil === "DIRETORIA";
+  }
+  function frotaMeuUsuarioId_() { return USER_CONTEXT ? String(USER_CONTEXT.id || USER_CONTEXT.userId || "") : ""; }
+  // Pode registrar a devolução: o condutor da retirada ou a gestão.
+  function frotaPodeDevolver_(m) {
+    return frotaSouGestao_() || (!!m && !!m.condutorUsuarioId && String(m.condutorUsuarioId) === frotaMeuUsuarioId_());
+  }
+  function frotaTextoSoCondutorDevolve_(nome) {
+    nome = nome || "o condutor da retirada";
+    return "Esta retirada está com " + nome + ". Só " + nome + " ou a gestão podem registrar a devolução. Se o veículo já voltou, peça a " + nome +
+      " para registrar no SGO+; se não for possível, procure a gestão (Administrador, Gestor ou Diretoria), que registra no lugar dele com justificativa.";
+  }
+  function frotaAvisoDevolucaoDeOutro_(nome) { alert(frotaTextoSoCondutorDevolve_(nome)); }
+  // Mesma leitura do servidor (Frota_num_): "45.000" e "45000" = 45000; "1.234,5" = 1234,5.
+  function frotaNumCliente_(v) {
+    if (typeof v === "number") return isFinite(v) ? v : NaN;
+    let s = String(v == null ? "" : v).replace(/\s+/g, "");
+    if (!s) return NaN;
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+    const n = Number(s);
+    return isFinite(n) ? n : NaN;
+  }
+  function frotaDataHoraCliente_(d, h) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(d || "").trim());
+    if (!m) return null;
+    const hh = /^(\d{1,2}):(\d{2})$/.exec(String(h || "").trim());
+    return new Date(+m[3], +m[2] - 1, +m[1], hh ? +hh[1] : 0, hh ? +hh[2] : 0);
+  }
+  // Motivo da foto do painel obrigatória ('' = não precisa). Retirada: KM diferente do registrado.
+  // Devolução: mais de 1.500 km ou média acima de 120 km/h no período.
+  function frotaMotivoFotoPainel_(o) {
+    if (o.tipo === "retirada") {
+      const km = frotaNumCliente_(o.kmInformado), atual = frotaNumCliente_(o.kmVeiculo);
+      if (!isFinite(km) || !isFinite(atual) || km === atual) return "";
+      return "O KM de saída (" + km.toLocaleString("pt-BR") + ") é diferente do KM registrado do veículo (" + atual.toLocaleString("pt-BR") + ").";
+    }
+    const ks = frotaNumCliente_(o.kmSaida), kc = frotaNumCliente_(o.kmChegada);
+    if (!isFinite(ks) || !isFinite(kc) || kc <= ks) return "";
+    const rodado = kc - ks;
+    if (rodado > 1500) return "Rodou " + rodado.toLocaleString("pt-BR") + " km nesta retirada (acima de 1.500 km).";
+    const saida = frotaDataHoraCliente_(o.dataSaida, o.horaSaida);
+    const chegada = (o.dataChegada ? frotaDataHoraCliente_(o.dataChegada, o.horaChegada) : null) || new Date();
+    if (!saida) return "";
+    const horas = Math.max((chegada.getTime() - saida.getTime()) / 3600000, 0.25);
+    const media = rodado / horas;
+    if (media > 120) return "Rodou " + rodado.toLocaleString("pt-BR") + " km desde a saída (média de " + Math.round(media).toLocaleString("pt-BR") + " km/h, acima de 120 km/h).";
+    return "";
+  }
+
   // Só confirmar na interface quando a gravação no servidor foi concluída.
-  function frotaEnviarMovimentacaoUI_(fn, payload, fotos, placa) {
+  // fotosPainel (17/10/2026): foto do painel/odômetro, exigida quando o KM foge do registrado.
+  function frotaEnviarMovimentacaoUI_(fn, payload, fotos, placa, fotosPainel) {
     if (FROTA_ENVIO_ATIVO) return Promise.reject(new Error('Já existe uma movimentação sendo enviada. Aguarde a confirmação.'));
     if (!payload.checklist || !payload.checklist.length) return Promise.reject(new Error('Aguarde o checklist carregar e confira os itens.'));
     if (payload.checklist.some(function(i) { return !i.ok && !String(i.observacao || '').trim(); })) return Promise.reject(new Error('Descreva os problemas marcados no checklist.'));
@@ -1833,9 +1923,10 @@
     const sessao = SGO_getSessionId();
     FROTA_ENVIO_ATIVO = true;
     SGO_iniciarCarregamento_();
-    return mobileFrota_uploadFotosEmParalelo_(placa, fotos).then(function(links) {
+    return Promise.all([mobileFrota_uploadFotosEmParalelo_(placa, fotos), mobileFrota_uploadFotosEmParalelo_(placa, fotosPainel || [])]).then(function(r) {
       if (sessao !== SGO_getSessionId()) throw new Error('Sessão alterada durante o envio. Entre novamente antes de registrar.');
-      payload.fotosSalvas = links;
+      payload.fotosSalvas = r[0];
+      payload.fotosPainelSalvas = r[1];
       return mobileFrota_chamarApiSilencioso_(fn,payload);
     }).then(function(res) {
       if (!res || res.ok !== true) throw new Error(res && res.message || 'O servidor não confirmou a movimentação.');
@@ -1912,15 +2003,18 @@
       els.forEach(function(el) { if (el.isConnected) el.innerHTML = frotaSituacaoHtml_(res.items || []); });
       const viagens = (res.items || []).filter(function(v) { return v.MOVIMENTACAO_ID; }).map(function(v) {
         return { id: v.MOVIMENTACAO_ID, veiculoId: v.ID, veiculoPlaca: v.PLACA, veiculoModelo: v.MODELO,
-          condutorNome: v.CONDUTOR_NOME, dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: v.KM_SAIDA, finalidade: v.FINALIDADE };
+          condutorNome: v.CONDUTOR_NOME, condutorId: v.CONDUTOR_ID, condutorUsuarioId: v.CONDUTOR_USUARIO_ID,
+          dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: v.KM_SAIDA, finalidade: v.FINALIDADE };
       });
       const mobileLista = document.getElementById('mob_frota_emAndamento');
       if (mobileLista) {
         MOBILE_FROTA.emAndamento = viagens;
+        // 17/10/2026: só o condutor da retirada (ou a gestão) registra a devolução; os demais veem com quem está.
         mobileLista.innerHTML = viagens.length ? viagens.map(function(m) {
+          const pode = frotaPodeDevolver_(m);
           return mobileCardHtml_(m.veiculoPlaca + ' — ' + m.condutorNome,
-            'Saiu em ' + m.dataSaida + ' ' + m.horaSaida + ' (KM ' + frotaKm_(m.kmSaida) + ')',
-            'Em uso', escapeHtml_('renderMobileFrotaDevolver_(' + JSON.stringify(String(m.id)) + ')'));
+            'Saiu em ' + m.dataSaida + ' ' + m.horaSaida + ' (KM ' + frotaKm_(m.kmSaida) + ')' + (pode ? ' · Toque para registrar a devolução' : ' · Só ' + m.condutorNome + ' ou a gestão registram a devolução'),
+            'Em uso', escapeHtml_(pode ? 'renderMobileFrotaDevolver_(' + JSON.stringify(String(m.id)) + ')' : 'frotaAvisoDevolucaoDeOutro_(' + JSON.stringify(String(m.condutorNome || '')) + ')'));
         }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
       }
       // No desktop, atualizar apenas a lista de uso preserva o checklist em edição.
@@ -1928,9 +2022,11 @@
       if (desktopLista && typeof frotaState !== 'undefined') {
         frotaState.emAndamento = viagens;
         desktopLista.innerHTML = viagens.length ? viagens.map(function(m) {
+          const pode = frotaPodeDevolver_(m);
           return '<div class="linha-lista"><span><strong>' + escapeHtml_(m.veiculoPlaca) + '</strong> — ' + escapeHtml_(m.condutorNome) +
-            ' — saiu ' + escapeHtml_(m.dataSaida + ' ' + m.horaSaida) + '</span><button class="btn btn-sm btn-primary" onclick="' +
-            escapeHtml_('tplFrota_abrirDevolucao_(' + JSON.stringify(String(m.id)) + ')') + '">Registrar devolução</button></div>';
+            ' — saiu ' + escapeHtml_(m.dataSaida + ' ' + m.horaSaida) + '</span>' + (pode ? '<button class="btn btn-sm btn-primary" onclick="' +
+            escapeHtml_('tplFrota_abrirDevolucao_(' + JSON.stringify(String(m.id)) + ')') + '">Registrar devolução</button>'
+            : '<span class="muted">Só ' + escapeHtml_(m.condutorNome) + ' ou a gestão registram a devolução</span>') + '</div>';
         }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
       }
     }).catch(function(err) {
@@ -1954,7 +2050,8 @@
     const gestaoFrota = perfilFrota === "ADMIN" || perfilFrota === "GESTOR" || perfilFrota === "DIRETORIA";
     div.innerHTML =
       '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">' + SGO_esqFrotaHtml_() + '</div>' +
-      (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' : '') +
+      (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAjustarKm_()">Ajustar KM do veículo</button>' : '') +
       '<div class="mobile-frota-secao-titulo">Retiradas em andamento</div>' +
       '<div class="mobile-list" id="mob_frota_emAndamento">Carregando...</div>' +
       '<button type="button" class="mobile-fab" onclick="renderMobileFrotaRetirar_()">+ Retirar veículo</button>';
@@ -1989,21 +2086,20 @@
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Retirar veículo");
     MOBILE_FROTA.fotosRetirada = [];
+    MOBILE_FROTA.fotosPainelRetirada = [];
 
     const div = document.getElementById("conteudo");
     if (!div) return;
 
-    const agora = mobileFrotaHoraAgora_();
-
     div.innerHTML =
       '<div class="mobile-form">' +
-        mobileFieldHtml_("Veículo *", '<select id="mob_frota_r_veiculo"><option value="">Carregando...</option></select>') +
+        mobileFieldHtml_("Veículo *", '<select id="mob_frota_r_veiculo" onchange="mobileFrotaAoEscolherVeiculo_()"><option value="">Carregando...</option></select>') +
         mobileFieldHtml_("Condutor *", '<select id="mob_frota_r_condutor" disabled><option value="">Carregando vínculo do login...</option></select>') +
-        mobileFieldHtml_("Data de saída", '<input type="text" id="mob_frota_r_data" value="' + agora.data + '" placeholder="dd/mm/aaaa">') +
-        mobileFieldHtml_("Hora de saída", '<input type="text" id="mob_frota_r_hora" value="' + agora.hora + '" placeholder="hh:mm">') +
-        '<button type="button" class="mobile-btn-cancelar" style="margin:-6px 0 10px;" onclick="mobileFrotaPreencherAgora_(\'retirada\')">Usar data/hora atual</button>' +
+        mobileFrotaBlocoHorario_("retirada") +
         mobileFieldHtml_("KM de saída *", '<input type="text" id="mob_frota_r_km" inputmode="numeric" placeholder="Ex.: 45000">') +
+        mobileFrotaBlocoPainel_("retirada") +
         mobileFieldHtml_("Finalidade", '<input type="text" id="mob_frota_r_finalidade" placeholder="Ex.: visita técnica ao cliente X">') +
+        mobileFrotaBlocoJustificativa_("retirada") +
         '<div class="mobile-frota-secao-titulo">Checklist de vistoria</div>' +
         '<div id="mob_frota_r_checklist">Carregando...</div>' +
         mobileFieldHtml_("Fotos (pelo menos uma)", '<input type="file" id="mob_frota_r_fotosInput" multiple accept="image/*" capture="environment" onchange="mobileFrotaOnFotos_(\'retirada\')">') +
@@ -2032,6 +2128,53 @@
       }
       mobileFrotaRenderChecklist_("mob_frota_r_checklist");
     }).catch(function (err) { mobileFrotaErro_("mob_frota_r_status", err); });
+  }
+
+  // Ajuste de KM no celular (17/10/2026): só a gestão; justificativa obrigatória; antes e depois na trilha de auditoria.
+  function renderMobileFrotaAjustarKm_() {
+    MOBILE_NAV = { modulo: "frota", tela: "form" };
+    atualizarTituloMobile_("Ajustar KM do veículo");
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML =
+      '<div class="mobile-form">' +
+        '<div class="mobile-frota-alerta aviso">Use só para corrigir o KM registrado do veículo (erro de digitação ou uso sem registro). O valor antigo, o novo e a justificativa ficam na trilha de auditoria.</div>' +
+        mobileFieldHtml_("Veículo *", '<select id="mob_frota_k_veiculo" onchange="mobileFrotaKmMostrarAtual_()"><option value="">Carregando...</option></select>') +
+        '<div class="mobile-card-subtitulo" id="mob_frota_k_atual" style="margin:-6px 0 8px;"></div>' +
+        mobileFieldHtml_("KM novo *", '<input type="text" id="mob_frota_k_km" inputmode="numeric" placeholder="Número do odômetro">') +
+        mobileFieldHtml_("Justificativa *", '<textarea id="mob_frota_k_justificativa" placeholder="Mínimo de 15 caracteres. Ex.: KM digitado errado na devolução de 15/10, conferido pela foto do painel"></textarea>') +
+        '<div id="mob_frota_k_status"></div>' +
+        '<div class="mobile-form-actions">' +
+          '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
+          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarAjusteKm_()">Ajustar KM</button>' +
+        '</div>' +
+      '</div>';
+    mobileFrota_chamarApiSilencioso_("apiListarVeiculosAtivos").then(function (r) {
+      MOBILE_FROTA.veiculosKm = r.items || [];
+      const sel = document.getElementById("mob_frota_k_veiculo");
+      if (sel) sel.innerHTML = '<option value="">Selecione</option>' + MOBILE_FROTA.veiculosKm.map(function (v) {
+        return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.PLACA + " — " + (v.MODELO || "")) + '</option>';
+      }).join("");
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_k_status", err); });
+  }
+  function mobileFrotaKmMostrarAtual_() {
+    const v = (MOBILE_FROTA.veiculosKm || []).filter(function (x) { return x.ID === getValue_("mob_frota_k_veiculo"); })[0];
+    const el = document.getElementById("mob_frota_k_atual");
+    if (el) el.textContent = v ? "KM registrado hoje: " + frotaKm_(v.KM_ATUAL || 0) + (v.SITUACAO === "EM_USO" ? ". Veículo em uso: ajuste depois da devolução." : ".") : "";
+  }
+  function mobileFrotaSalvarAjusteKm_() {
+    if (FROTA_ENVIO_ATIVO) return;
+    const veiculoId = getValue_("mob_frota_k_veiculo");
+    if (!veiculoId) return mobileFrotaMsg_("mob_frota_k_status", "error", "Escolha o veículo.");
+    if (!getValue_("mob_frota_k_km")) return mobileFrotaMsg_("mob_frota_k_status", "error", "Informe o KM novo (número do odômetro).");
+    const just = String(getValue_("mob_frota_k_justificativa") || "").trim();
+    if (just.length < 15) return mobileFrotaMsg_("mob_frota_k_status", "error", "Escreva a justificativa do ajuste (mínimo de 15 caracteres; foram " + just.length + ").");
+    FROTA_ENVIO_ATIVO = true;
+    mobileFrota_chamarApi_("apiAjustarKm", { veiculoId: veiculoId, kmNovo: getValue_("mob_frota_k_km"), justificativa: just }).then(function (res) {
+      frotaToastEnvio_(true, "KM ajustado", res.placa + ": " + frotaKm_(res.kmAntes) + " para " + frotaKm_(res.kmNovo));
+      renderMobileFrotaOperacional_();
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_k_status", err); })
+      .finally(function () { FROTA_ENVIO_ATIVO = false; });
   }
 
   // Abastecimento no celular (gestão: o servidor só aceita Administrador, Gestor e Diretoria).
@@ -2109,6 +2252,14 @@
       .finally(function () { FROTA_ENVIO_ATIVO = false; });
   }
 
+  // Mostra o KM registrado do veículo escolhido, para o condutor saber quando a foto do painel será pedida.
+  function mobileFrotaAoEscolherVeiculo_() {
+    const v = (MOBILE_FROTA.veiculos || []).filter(function (x) { return x.ID === getValue_("mob_frota_r_veiculo"); })[0];
+    const el = document.getElementById("mob_frota_r_kmInfo");
+    if (el) el.textContent = v ? "KM registrado do veículo: " + frotaKm_(v.KM_ATUAL || 0) + ". Se o painel mostrar outro número, anexe a foto do painel; a gestão confere."
+      : "Obrigatória se o KM de saída for diferente do KM registrado do veículo.";
+  }
+
   function mobileFrotaSalvarRetirada_() {
     if (FROTA_ENVIO_ATIVO) return;
     const selEl = document.getElementById("mob_frota_r_veiculo");
@@ -2122,20 +2273,28 @@
     const veiculoEscolhido = (MOBILE_FROTA.veiculos || []).filter(function (v) { return v.ID === veiculoId; })[0];
     const veiculoLabel = (selEl && selEl.selectedOptions && selEl.selectedOptions[0]) ? selEl.selectedOptions[0].text : "veículo";
     const fotos = MOBILE_FROTA.fotosRetirada;
+    const fotosPainel = MOBILE_FROTA.fotosPainelRetirada || [];
+    // 17/10/2026: equipe não manda data/hora (vale a hora do servidor); a gestão manda o que digitou (vazio = agora).
     const payloadBase = {
       veiculoId: veiculoId,
       condutorId: condutorId,
-      dataSaida: getValue_("mob_frota_r_data"),
-      horaSaida: getValue_("mob_frota_r_hora"),
+      dataSaida: frotaSouGestao_() ? getValue_("mob_frota_r_data") : "",
+      horaSaida: frotaSouGestao_() ? getValue_("mob_frota_r_hora") : "",
       kmSaida: kmSaida,
       finalidade: getValue_("mob_frota_r_finalidade"),
+      justificativa: frotaSouGestao_() ? getValue_("mob_frota_r_justificativa") : "",
       checklist: mobileFrotaColetarChecklist_("mob_frota_r_checklist")
     };
+    const motivoPainel = veiculoEscolhido ? frotaMotivoFotoPainel_({ tipo: "retirada", kmInformado: kmSaida, kmVeiculo: veiculoEscolhido.KM_ATUAL }) : "";
+    if (motivoPainel && !fotosPainel.length) {
+      return mobileFrotaMsg_("mob_frota_r_status", "error", motivoPainel + " A retirada não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe em \"Foto do painel (odômetro)\". A gestão será avisada para conferir.");
+    }
 
     mobileFrotaMsg_("mob_frota_r_status", "info", "Enviando retirada. Aguarde a confirmação.");
-    return frotaEnviarMovimentacaoUI_('apiIniciarViagem', payloadBase, fotos, veiculoEscolhido ? veiculoEscolhido.PLACA : '').then(function() {
+    return frotaEnviarMovimentacaoUI_('apiIniciarViagem', payloadBase, fotos, veiculoEscolhido ? veiculoEscolhido.PLACA : '', fotosPainel).then(function(res) {
       MOBILE_FROTA.fotosRetirada = [];
-      frotaToastEnvio_(true, 'Retirada registrada', veiculoLabel);
+      MOBILE_FROTA.fotosPainelRetirada = [];
+      frotaToastEnvio_(true, 'Retirada registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.kmDivergencia ? ' · KM diferente do registrado: a gestão vai conferir' : ''));
       renderMobileFrotaOperacional_();
     }).catch(function(err) { mobileFrotaErro_('mob_frota_r_status', err); });
   }
@@ -2144,23 +2303,26 @@
     MOBILE_NAV = { modulo: "frota", tela: "form" };
     atualizarTituloMobile_("Devolver veículo");
     MOBILE_FROTA.fotosDevolucao = [];
+    MOBILE_FROTA.fotosPainelDevolucao = [];
     MOBILE_FROTA.movimentacaoDevolucaoAtual = movimentacaoId;
 
     const div = document.getElementById("conteudo");
     if (!div) return;
 
-    const agora = mobileFrotaHoraAgora_();
     const mov = MOBILE_FROTA.emAndamento.filter(function (m) { return m.id === movimentacaoId; })[0];
+    // 17/10/2026: a gestão registrando no lugar do condutor vê o aviso (justificativa obrigatória, condutor avisado).
+    const noLugar = !!mov && frotaSouGestao_() && String(mov.condutorUsuarioId || "") !== frotaMeuUsuarioId_();
 
     div.innerHTML =
       '<div class="mobile-form">' +
         '<div class="mobile-card-subtitulo" id="mob_frota_d_info">' +
           (mov ? ("Veículo " + escapeHtml_(mov.veiculoPlaca) + " — condutor " + escapeHtml_(mov.condutorNome) + " — saiu em " + escapeHtml_(mov.dataSaida) + " " + escapeHtml_(mov.horaSaida) + " (KM " + escapeHtml_(frotaKm_(mov.kmSaida)) + ")") : "Carregando...") +
         '</div>' +
-        mobileFieldHtml_("Data de chegada", '<input type="text" id="mob_frota_d_data" value="' + agora.data + '" placeholder="dd/mm/aaaa">') +
-        mobileFieldHtml_("Hora de chegada", '<input type="text" id="mob_frota_d_hora" value="' + agora.hora + '" placeholder="hh:mm">') +
-        '<button type="button" class="mobile-btn-cancelar" style="margin:-6px 0 10px;" onclick="mobileFrotaPreencherAgora_(\'devolucao\')">Usar data/hora atual</button>' +
+        (noLugar ? '<div class="mobile-frota-alerta aviso">Você está registrando a devolução no lugar de ' + escapeHtml_(mov.condutorNome) + '. A justificativa é obrigatória e ' + escapeHtml_(mov.condutorNome) + ' será avisado.</div>' : '') +
+        mobileFrotaBlocoHorario_("devolucao") +
         mobileFieldHtml_("KM de chegada *", '<input type="text" id="mob_frota_d_km" inputmode="numeric">') +
+        mobileFrotaBlocoPainel_("devolucao") +
+        mobileFrotaBlocoJustificativa_("devolucao") +
         '<div class="mobile-frota-secao-titulo">Checklist de vistoria</div>' +
         '<div id="mob_frota_d_checklist">Carregando...</div>' +
         mobileFieldHtml_("Observações", '<textarea id="mob_frota_d_observacoes"></textarea>') +
@@ -2198,21 +2360,31 @@
     const kmChegada = getValue_("mob_frota_d_km");
     if (!kmChegada) return alert("Informe o KM de chegada.");
 
+    if (mov && !frotaPodeDevolver_(mov)) return mobileFrotaMsg_('mob_frota_d_status', 'error', frotaTextoSoCondutorDevolve_(mov.condutorNome));
+    const gestao = frotaSouGestao_();
     const payloadBase = {
       movimentacaoId: MOBILE_FROTA.movimentacaoDevolucaoAtual,
-      dataChegada: getValue_("mob_frota_d_data"),
-      horaChegada: getValue_("mob_frota_d_hora"),
+      dataChegada: gestao ? getValue_("mob_frota_d_data") : "",
+      horaChegada: gestao ? getValue_("mob_frota_d_hora") : "",
       kmChegada: kmChegada,
+      justificativa: gestao ? getValue_("mob_frota_d_justificativa") : "",
       checklist: mobileFrotaColetarChecklist_("mob_frota_d_checklist"),
       observacoes: getValue_("mob_frota_d_observacoes")
     };
     const fotos = MOBILE_FROTA.fotosDevolucao;
+    const fotosPainel = MOBILE_FROTA.fotosPainelDevolucao || [];
+    const motivoPainel = mov ? frotaMotivoFotoPainel_({ tipo: "devolucao", kmSaida: mov.kmSaida, kmChegada: kmChegada, dataSaida: mov.dataSaida, horaSaida: mov.horaSaida,
+      dataChegada: payloadBase.dataChegada, horaChegada: payloadBase.horaChegada }) : "";
+    if (motivoPainel && !fotosPainel.length) {
+      return mobileFrotaMsg_('mob_frota_d_status', 'error', 'KM de chegada fora do esperado. ' + motivoPainel + ' A devolução não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe em "Foto do painel (odômetro)". Se o número foi digitado errado, corrija o KM de chegada.');
+    }
 
     mobileFrotaMsg_('mob_frota_d_status', 'info', 'Enviando devolução. Aguarde a confirmação.');
-    return frotaEnviarMovimentacaoUI_('apiFinalizarViagem', payloadBase, fotos, mov ? mov.veiculoPlaca : '').then(function() {
+    return frotaEnviarMovimentacaoUI_('apiFinalizarViagem', payloadBase, fotos, mov ? mov.veiculoPlaca : '', fotosPainel).then(function(res) {
       MOBILE_FROTA.movimentacaoDevolucaoAtual = null;
       MOBILE_FROTA.fotosDevolucao = [];
-      frotaToastEnvio_(true, 'Devolução registrada', veiculoLabel);
+      MOBILE_FROTA.fotosPainelDevolucao = [];
+      frotaToastEnvio_(true, 'Devolução registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.alertaKm ? ' · KM fora do esperado: a gestão vai conferir' : ''));
       renderMobileFrotaOperacional_();
     }).catch(function(err) { mobileFrotaErro_('mob_frota_d_status', err); });
   }
