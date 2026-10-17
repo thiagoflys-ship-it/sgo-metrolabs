@@ -867,8 +867,9 @@
     // PADRÕES DE REFERÊNCIA (fase 2, 16/10): página própria com o cadastro, a validade, o inventário,
     // o orçamento e os relatórios gerenciais dos padrões. Usa o mesmo módulo do Certificado (mesmos
     // dados e funções), mostrando só a parte do laboratório — ver JS_Padroes_Documentos.html › pdAplicarVisao_.
+    // 17/10 (redesenho): a mesma página abre no celular, em cartões e com as mesmas ações;
+    // a consulta antiga só de leitura (renderMobilePadroes_) ficou sem uso.
     if (mod === "padroes") {
-      if (ehMobileModo_()) { renderMobilePadroes_(); return; }
       window.CERTCAL_VISAO = "padroes";
       renderMotorModulo_("Padrões de referência", "certificado_calibracao");
       atualizarBadgeModulo_("padroes");
@@ -905,40 +906,42 @@
       return;
     }
 
+    // CADASTROS E ADMINISTRAÇÃO 17/10: Clientes, Unidades, Equipamentos, Arquivo de documentos, Vínculos e
+    // Usuários usam a mesma tela no computador e no celular (cartões no celular; JS_Cadastros › CadTela_*).
+    // As listas antigas do celular (renderMobileLista*) ficaram só para o assistente do certificado.
     if (mod === "clientes") {
-      if (ehMobileModo_()) { renderMobileListaClientes_(); return; }
       renderClientesModulo_();
       atualizarBadgeModulo_("clientes");
       return;
     }
 
     if (mod === "unidades") {
-      if (ehMobileModo_()) { renderMobileListaUnidades_(); return; }
       renderUnidadesModulo_();
       atualizarBadgeModulo_("unidades");
-      if (typeof carregarClientesAtivosParaUnidades_ === "function") {
-        carregarClientesAtivosParaUnidades_();
-      }
       return;
     }
 
     if (mod === "equipamentos") {
-      if (ehMobileModo_()) { renderMobileListaEquipamentos_(); return; }
       renderEquipamentosModulo_();
       atualizarBadgeModulo_("equipamentos");
-      if (typeof carregarClientesParaEquipamentos_ === "function") {
-        carregarClientesParaEquipamentos_();
-      }
       return;
     }
 
     if (mod === "documentos") {
-      if (ehMobileModo_()) { renderMobileListaDocumentos_(); return; }
       renderDocumentosModulo_();
       atualizarBadgeModulo_("documentos");
-      if (typeof carregarClientesParaDocumentos_ === "function") {
-        carregarClientesParaDocumentos_();
-      }
+      return;
+    }
+
+    if (mod === "vinculos") {
+      renderVinculosModulo_();
+      atualizarBadgeModulo_("vinculos");
+      return;
+    }
+
+    if (mod === "usuarios") {
+      renderUsuariosModulo_();
+      atualizarBadgeModulo_("usuarios");
       return;
     }
 
@@ -4879,6 +4882,8 @@
       unidades: "Unidades",
       equipamentos: "Equipamentos",
       documentos: "Arquivo de documentos",
+      vinculos: "Vínculos",
+      usuarios: "Usuários",
       admin: "Configurações",
       minhas_atividades: "Minhas atividades",
       atividades_equipe: "Atividades da equipe",
@@ -6065,7 +6070,7 @@
           <div class="module-header">
             <div class="module-header-left">
               <h2 class="content-title">${escapeHtml_(titulo)}</h2>
-              <p class="content-subtitle">${window.CERTCAL_VISAO === "padroes" ? "Cadastro e validade dos padrões do laboratório, inventário, orçamento de recalibração e relatórios gerenciais." : "Emissão do certificado de calibração e consulta dos emitidos."}</p>
+              <p class="content-subtitle">${window.CERTCAL_VISAO === "padroes" ? "Validade, certificados e localização dos padrões do laboratório." : "Emissão do certificado de calibração e consulta dos emitidos."}</p>
             </div>
             <div class="module-header-right"><button type="button" class="btn-secondary sgo-btn-manual" onclick="if(typeof tplCertCal_abrirManual_==='function')tplCertCal_abrirManual_()"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador</button></div>
           </div>

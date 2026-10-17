@@ -309,3 +309,33 @@ function CertCal_apiReabrirDocumentoPadroes(sid,payload) {
   PadDoc_sessao_(sid);PadDoc_bootstrap_();var row=SGO_DATA.getById(PAD_DOC_HISTORICO,String(payload.id||''));
   if(!row)throw new Error('Documento não encontrado.');return PadDoc_reabrir_(row);
 }
+/* PADRÕES DE REFERÊNCIA 17/10 — histórico dos PDFs anexados a um padrão (painel de detalhe).
+ * Só leitura: procura a pasta "Padroes de Referencia/<TAG>" onde CertCal_uploadCertificadoPadrao_ grava
+ * cada PDF (os anteriores nunca são apagados) e lista os arquivos. Não cria pasta nem altera nada. */
+function CertCal_apiHistoricoCertificadosPadrao(sid, payload) {
+  PadDoc_sessao_(sid);
+  var p = PadDoc_base_((payload || {}).padraoId);
+  var atual = String(p.LINK_CERTIFICADO_PDF || '');
+  var itens = [];
+  try {
+    var idRaiz = PropertiesService.getScriptProperties().getProperty(CERTCAL_DOCS_FOLDER_PROP);
+    if (idRaiz) {
+      var pastas = DriveApp.getFolderById(idRaiz).getFoldersByName('Padroes de Referencia');
+      if (pastas.hasNext()) {
+        var sub = pastas.next().getFoldersByName(CertCal_sanitizarNome_(p.TAG || 'sem-tag'));
+        if (sub.hasNext()) {
+          var arquivos = sub.next().getFiles(), tz = Session.getScriptTimeZone() || 'America/Sao_Paulo';
+          while (arquivos.hasNext() && itens.length < 60) {
+            var f = arquivos.next(), criado = f.getDateCreated(), url = f.getUrl();
+            itens.push({ nome: f.getName(), url: url, criadoEm: criado ? Utilities.formatDate(criado, tz, 'dd/MM/yyyy HH:mm') : '', _t: criado ? criado.getTime() : 0, atual: !!atual && (url === atual || (f.getId() && atual.indexOf(f.getId()) >= 0)) });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    return { ok: true, items: [], aviso: 'Não foi possível consultar a pasta dos certificados agora. O PDF atual continua no link do cadastro.' };
+  }
+  itens.sort(function(a, b) { return b._t - a._t; });
+  itens.forEach(function(i) { delete i._t; });
+  return { ok: true, items: itens, aviso: itens.length ? '' : (atual ? 'O PDF atual está no link do cadastro; anexos anteriores não foram encontrados na pasta do padrão.' : 'Nenhum PDF anexado a este padrão até agora.') };
+}

@@ -1,115 +1,532 @@
 <script>
 /* Extensão adicional do CertCal, carregada junto ao script existente. */
+/* PADRÕES DE REFERÊNCIA 17/10 — página redesenhada: resumo em números que filtra, faixa curta de
+   vencidos, barra de busca/filtros, lista agrupada por TAG base (canais e grandezas do mesmo
+   equipamento), ações "Editar" + menu "Mais", painel lateral de detalhe e cartões no celular.
+   Regras de negócio e dados gravados não mudaram: as chamadas e os campos enviados são os mesmos.
+   Componentes reaproveitáveis (classes): bc-resumo/bc-resumo-item, bc-faixa, bc-ferramentas,
+   bc-mais-menu, bc-painel, bc-selo, bc-lote, bc-cartao, bc-tabela, bc-vazio. */
 var PD = {items:[],selected:{},current:null,token:'',documento:null,busy:false,fotos:{}};
+var PDR = {filtro:'ATIVOS',busca:'',local:'',grandeza:'',ordem:'SITUACAO',agrupar:true,abertos:{},lista:[],painel:null,menu:null,historico:{}};
 var PD_FIELDS = [['LOCALIZACAO','Localização (texto livre)'],['MARCA','Marca'],['MODELO','Modelo'],['SERIE','Número de série'],['FAIXA','Faixa de medição'],['GRANDEZA','Grandeza'],['UNIDADE','Unidade de medida'],['RESOLUCAO','Resolução'],['LABORATORIO','Laboratório que calibrou'],['DATA_CALIBRACAO','Data da calibração (dd/mm/aaaa)'],['CERTIFICADO_NUMERO','Número do certificado'],['VALIDADE','Vencimento cadastrado (dd/mm/aaaa)'],['PONTOS','Todos os pontos e canais calibrados'],['RESULTADOS_CERTIFICADO','Resultados, incertezas e fatores por ponto (conforme certificado)'],['METODO','Método / procedimento'],['RASTREABILIDADE','Rastreabilidade declarada'],['OBSERVACOES_TECNICAS','Observações técnicas, acessórios e condições']];
 function pdEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function pdEl(id){return document.getElementById('pd-'+id);}
 function pdSituacao(v){return {OK:'Vigente',VENCENDO:'Vence em até 30 dias',VENCIDO:'Vencido',SEM_VALIDADE:'Sem validade informada',VALIDADE_INVALIDA:'Data inválida'}[v]||v||'Não informado';}
 function pdRotuloDoc(v){return {INVENTARIO:'Inventário',ORCAMENTO:'Orçamento',EMITIDO:'Emitido',RASCUNHO:'Rascunho'}[String(v||'').toUpperCase()]||v||'';}
-function pdMsg(text,error){var el=pdEl('status');if(el){el.textContent=text;el.style.color=error?'var(--bc-danger)':'var(--bc-action)';}}
+function pdMsg(text,error){['status','status-docs'].forEach(function(k){var el=pdEl(k);if(el){el.textContent=text||'';el.className='bc-status'+(error?' bc-status-erro':'');}});}
 function pdApi(fn,data){return tplCertCal_chamarApi(fn,data).then(function(r){if(!r||r.ok===false)throw new Error(r&&r.message||'Não foi possível concluir.');return r;});}
 async function pdRun(text,fn){
-  if(PD.busy)return;PD.busy=true;pdMsg(text);
+  if(PD.busy){pdMsg('Aguarde a operação em andamento terminar.');return;}PD.busy=true;pdMsg(text);
   var panel=pdEl('panel');if(panel)panel.setAttribute('aria-busy','true');
-  try{return await fn();}catch(e){pdMsg(e&&e.message||String(e),true);}finally{PD.busy=false;if(panel)panel.setAttribute('aria-busy','false');}
+  try{return await fn();}catch(e){pdMsg(e&&e.message||String(e),true);pdrPainelMsg_(e&&e.message||String(e),true);}finally{PD.busy=false;if(panel)panel.setAttribute('aria-busy','false');}
 }
+
+/* ---------- perfil ---------- */
+function pdrPerfil_(){try{return String((typeof USER_CONTEXT!=='undefined'&&USER_CONTEXT&&USER_CONTEXT.perfil)||'').toUpperCase();}catch(e){return '';}}
+function pdrPodeEditar_(){var p=pdrPerfil_();return p!=='COMERCIAL'&&p!=='FINANCEIRO'&&p!=='CLIENTE';}
+
+/* ---------- dados da lista ---------- */
+var PDR_SEVERIDADE={VENCIDO:0,VALIDADE_INVALIDA:0,SEM_VALIDADE:1,VENCENDO:2,OK:3};
+var PDR_SELO={OK:['ok','Vigente'],VENCENDO:['aviso','Vence em 30 dias'],VENCIDO:['erro','Vencido'],VALIDADE_INVALIDA:['erro','Data inválida'],SEM_VALIDADE:['aviso','Sem validade'],INATIVO:['neutro','Inativo']};
+function pdrNum_(v){if(v===null||v===undefined||String(v).trim()==='')return '—';var n=Number(String(v).replace(',','.'));if(!isFinite(n))return pdEsc(v);return n.toLocaleString('pt-BR',{maximumFractionDigits:6});}
+function pdrVeff_(v){var n=Number(String(v==null?'':v).replace(',','.'));if(String(v==null?'':v).trim()===''||!isFinite(n))return '—';return n===0?'∞':n.toLocaleString('pt-BR',{maximumFractionDigits:2});}
+function pdrDataNum_(br){var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(br||''));return m?Number(m[3]+m[2]+m[1]):99999999;}
+function pdrBase_(tag){var t=String(tag||'').trim();var b=t.replace(/\s*\([^()]*\)\s*$/,'');return b||t;}
+function pdrSufixo_(tag){var m=/\(([^()]*)\)\s*$/.exec(String(tag||''));return m?m[1]:'';}
+function pdrMontarLista_(){
+  var cad={};(certcalState.padroesTodos||[]).forEach(function(c){cad[c.ID]=c;});
+  PDR.lista=PD.items.map(function(p){var c=cad[p.ID]||{};var ativo=(c.STATUS||p.STATUS)==='ATIVO';
+    var st=c.statusValidade||p.situacao||'SEM_VALIDADE';
+    return {ID:p.ID,TAG:p.TAG||c.TAG||'',DESCRICAO:p.DESCRICAO||c.DESCRICAO||'',ativo:ativo,st:st,sev:ativo?(PDR_SEVERIDADE[st]!=null?PDR_SEVERIDADE[st]:1):4,
+      rotulo:c.statusValidadeLabel||pdSituacao(st),dias:c.diasRestantesValidade,VALIDADE:c.VALIDADE||p.VALIDADE||'',
+      link:c.LINK_CERTIFICADO_PDF||p.LINK_CERTIFICADO_PDF||'',CERT:c.CERTIFICADO_NUMERO||p.CERTIFICADO_NUMERO||'',
+      U95:c.INCERTEZA_U95,K:c.FATOR_K,VEFF:c.VEFF,MARCA:p.MARCA||'',MODELO:p.MODELO||'',SERIE:p.SERIE||'',LOCAL:String(p.LOCALIZACAO||'').trim(),
+      GRANDEZA:String(p.GRANDEZA||'').trim(),UNIDADE:p.UNIDADE||'',FOTO_ID:p.FOTO_ID||'',conferido:!!p.conferido,extraido:!!p.extraido,base:pdrBase_(p.TAG||c.TAG),suf:pdrSufixo_(p.TAG||c.TAG),item:p,cad:c};});
+  var cont={};PDR.lista.forEach(function(x){cont[x.base]=(cont[x.base]||0)+1;});
+  PDR.lista.forEach(function(x){x.emGrupo=cont[x.base]>1;});
+}
+function pdrContagens_(){
+  var r={ATIVOS:0,VENCIDO:0,VENCENDO:0,OK:0,SEM_VALIDADE:0,SEM_PDF:0,INATIVO:0,TODOS:PDR.lista.length};
+  PDR.lista.forEach(function(x){if(!x.ativo){r.INATIVO++;return;}r.ATIVOS++;if(x.st==='VENCIDO'||x.st==='VALIDADE_INVALIDA')r.VENCIDO++;else if(r[x.st]!=null)r[x.st]++;if(!x.link)r.SEM_PDF++;});
+  return r;
+}
+function pdrPassaFiltro_(x){
+  var f=PDR.filtro;
+  if(f==='INATIVO'){if(x.ativo)return false;}
+  else if(f!=='TODOS'){if(!x.ativo)return false;
+    if(f==='VENCIDO'&&!(x.st==='VENCIDO'||x.st==='VALIDADE_INVALIDA'))return false;
+    if((f==='VENCENDO'||f==='OK'||f==='SEM_VALIDADE')&&x.st!==f)return false;
+    if(f==='SEM_PDF'&&x.link)return false;}
+  if(PDR.local){if(PDR.local==='__SEM__'?x.LOCAL:x.LOCAL!==PDR.local)return false;}
+  if(PDR.grandeza){if(PDR.grandeza==='__SEM__'?x.GRANDEZA:x.GRANDEZA!==PDR.grandeza)return false;}
+  var q=PDR.busca.trim().toLocaleLowerCase('pt-BR');
+  if(q&&[x.TAG,x.DESCRICAO,x.SERIE,x.MARCA,x.MODELO,x.CERT].join(' ').toLocaleLowerCase('pt-BR').indexOf(q)<0)return false;
+  return true;
+}
+function pdFiltered(){return PDR.lista.filter(pdrPassaFiltro_).map(function(x){return x.item;});}
+function pdrComparar_(a,b){
+  if(PDR.ordem==='TAG')return a.chave.localeCompare(b.chave,'pt-BR',{numeric:true});
+  if(PDR.ordem==='VALIDADE')return (a.dataMin-b.dataMin)||a.chave.localeCompare(b.chave,'pt-BR',{numeric:true});
+  if(PDR.ordem==='LOCAL')return String(a.local||'~').localeCompare(String(b.local||'~'),'pt-BR')||a.chave.localeCompare(b.chave,'pt-BR',{numeric:true});
+  return (a.sev-b.sev)||(a.dataMin-b.dataMin)||a.chave.localeCompare(b.chave,'pt-BR',{numeric:true});
+}
+function pdrPrefixoComum_(arr){if(!arr.length)return '';var p=arr[0];arr.forEach(function(s){while(p&&String(s).indexOf(p)!==0)p=p.slice(0,-1);});p=p.replace(/[\s\-–—(:,;.]+$/,'').replace(/\s*[-–—]\s*(canal|ch|grandeza)?\s*$/i,'').trim();return p.length>=4?p:arr[0];}
+function pdrLinhas_(){
+  var vis=PDR.lista.filter(pdrPassaFiltro_),ordem=[],grupos={};
+  vis.forEach(function(x){var k=PDR.agrupar&&x.emGrupo?'G:'+x.base:'P:'+x.ID;if(!grupos[k]){grupos[k]={k:k,grupo:k.charAt(0)==='G',chave:PDR.agrupar&&x.emGrupo?x.base:x.TAG,itens:[]};ordem.push(grupos[k]);}grupos[k].itens.push(x);});
+  ordem.forEach(function(g){g.itens.sort(function(a,b){return a.TAG.localeCompare(b.TAG,'pt-BR',{numeric:true});});
+    g.sev=Math.min.apply(null,g.itens.map(function(x){return x.sev;}));g.dataMin=Math.min.apply(null,g.itens.map(function(x){return pdrDataNum_(x.VALIDADE);}));
+    var locs=g.itens.map(function(x){return x.LOCAL;}).filter(function(v,i,a){return a.indexOf(v)===i;});g.local=locs.length===1?locs[0]:(locs.length?'Vários locais':'');
+    if(g.grupo){var total=PDR.lista.filter(function(x){return x.base===g.chave;}).length;g.total=total;}});
+  ordem.sort(pdrComparar_);return {grupos:ordem,total:vis.length};
+}
+
+/* ---------- peças visuais ---------- */
+function pdrSelo_(x){var k=x.ativo?x.st:'INATIVO';var s=PDR_SELO[k]||PDR_SELO.SEM_VALIDADE;var texto=s[1];if(x.ativo&&x.st==='VENCENDO'&&x.dias!=null)texto='Vence em '+x.dias+(x.dias===1?' dia':' dias');return '<span class="bc-selo bc-selo-'+s[0]+'" title="'+pdEsc(x.ativo?x.rotulo:'Inativo: fora da escolha dos ensaios')+'">'+pdEsc(texto)+'</span>';}
+function pdrEquip_(x){var mm=[x.MARCA,x.MODELO].filter(Boolean).join(' ');if(!mm&&!x.SERIE)return '<span class="pdr-mudo">Não informado</span>';return '<span class="pdr-eq1">'+pdEsc(mm||'—')+'</span>'+(x.SERIE?'<span class="pdr-eq2">Série '+pdEsc(x.SERIE)+'</span>':'');}
+function pdrPdf_(x){return x.link?'<a class="pdr-pdf" href="'+pdEsc(x.link)+'" target="_blank" rel="noopener" title="Abrir o certificado '+pdEsc(x.CERT||'')+' em outra aba"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</a>':'<span class="pdr-mudo">Sem PDF</span>';}
+function pdrAcoes_(x){var pode=pdrPodeEditar_();return '<div class="pdr-acoes">'+(pode?'<button type="button" class="pdr-btn" data-pdr="editar" data-id="'+pdEsc(x.ID)+'">Editar</button>':'<button type="button" class="pdr-btn" data-pdr="detalhe" data-id="'+pdEsc(x.ID)+'">Detalhes</button>')+'<button type="button" class="pdr-btn pdr-btn-icone" data-pdr="mais" data-id="'+pdEsc(x.ID)+'" aria-haspopup="menu" aria-label="Mais ações de '+pdEsc(x.TAG)+'" title="Mais ações"><i class="fas fa-ellipsis" aria-hidden="true"></i></button></div>';}
+function pdrCheck_(ids,rotulo){var n=ids.filter(function(id){return PD.selected[id];}).length;return '<label class="pdr-check"><input type="checkbox" data-pdr-sel="'+pdEsc(ids.join(','))+'"'+(n&&n===ids.length?' checked':'')+(n&&n<ids.length?' data-indet="1"':'')+' aria-label="Selecionar '+pdEsc(rotulo)+'"></label>';}
+function pdrValidadeGrupo_(g){
+  var datas=g.itens.map(function(x){return x.VALIDADE||'';}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  var pior=g.itens.slice().sort(function(a,b){return a.sev-b.sev;})[0];
+  if(datas.length===1)return '<span class="pdr-data">'+pdEsc(datas[0]||'—')+'</span>'+pdrSelo_(pior);
+  var ord=datas.slice().sort(function(a,b){return pdrDataNum_(a)-pdrDataNum_(b);});
+  return '<span class="pdr-data">'+pdEsc(ord[0]||'—')+' a '+pdEsc(ord[ord.length-1]||'—')+'</span><span class="bc-selo bc-selo-aviso" title="Os canais têm validades diferentes. Confira cada canal.">Validade divergente</span>'+(pior.sev<3?pdrSelo_(pior):'');
+}
+function pdrValidadeDivergente_(g,x){var cont={};g.itens.forEach(function(i){cont[i.VALIDADE]=(cont[i.VALIDADE]||0)+1;});var maior=Object.keys(cont).sort(function(a,b){return cont[b]-cont[a];})[0];return Object.keys(cont).length>1&&x.VALIDADE!==maior;}
+function pdrRotuloGrupo_(g){var canais=g.itens.every(function(x){return /^(canal|ch|c)\s*\d+/i.test(x.suf);});var n=g.total||g.itens.length;var vis=g.itens.length;var nome=canais?(n===1?'canal':'canais'):(n===1?'grandeza':'grandezas');return (vis<n?vis+' de '+n:n)+' '+nome;}
+
+function pdrLinhaTabela_(x,filho,g){
+  var div=filho&&g&&pdrValidadeDivergente_(g,x);
+  return '<tr class="'+(filho?'pdr-filho':'pdr-linha')+(x.ativo?'':' pdr-inativo')+'" data-id="'+pdEsc(x.ID)+'">'+
+    '<td class="pdr-c-sel">'+pdrCheck_([x.ID],x.TAG)+'</td>'+
+    '<td class="pdr-c-tag"><button type="button" class="pdr-tag" data-pdr="detalhe" data-id="'+pdEsc(x.ID)+'">'+(filho?'<span class="pdr-suf">'+pdEsc(x.suf||x.TAG)+'</span>':pdEsc(x.TAG))+'</button><div class="pdr-desc">'+pdEsc(x.DESCRICAO)+'</div></td>'+
+    '<td class="pdr-c-eq">'+(filho?'<span class="pdr-u">U95 '+pdrNum_(x.U95)+(x.UNIDADE?' '+pdEsc(x.UNIDADE):'')+'</span><span class="pdr-u pdr-eq2">k '+pdrNum_(x.K)+' · νeff '+pdrVeff_(x.VEFF)+'</span>':pdrEquip_(x))+'</td>'+
+    '<td class="pdr-c-local">'+(x.LOCAL?pdEsc(x.LOCAL):'<span class="pdr-mudo">Sem localização</span>')+'</td>'+
+    '<td class="pdr-c-val'+(div?' pdr-divergente':'')+'"><span class="pdr-data">'+pdEsc(x.VALIDADE||'—')+'</span>'+pdrSelo_(x)+(div?'<span class="pdr-div-nota">diferente dos outros canais</span>':'')+'</td>'+
+    '<td class="pdr-c-pdf">'+pdrPdf_(x)+'</td>'+
+    '<td class="pdr-c-acoes">'+pdrAcoes_(x)+'</td></tr>';
+}
+function pdrLinhaGrupo_(g){
+  var x0=g.itens[0],aberto=!!PDR.abertos[g.chave]||PDR.busca.trim().length>1,ids=g.itens.map(function(x){return x.ID;});
+  var comPdf=g.itens.filter(function(x){return x.link;}).length,certs=g.itens.map(function(x){return x.CERT;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;});
+  var pdf=comPdf===g.itens.length?'<span class="pdr-pdf-n"><i class="fas fa-file-pdf" aria-hidden="true"></i> '+(certs.length===1?pdEsc(certs[0]):comPdf+' PDFs')+'</span>':(comPdf?'<span class="bc-selo bc-selo-aviso">'+(g.itens.length-comPdf)+' sem PDF</span>':'<span class="pdr-mudo">Sem PDF</span>');
+  var desc=pdrPrefixoComum_(g.itens.map(function(x){return x.DESCRICAO;}));
+  var h='<tr class="pdr-grupo'+(aberto?' pdr-aberto':'')+'" data-grupo="'+pdEsc(g.chave)+'">'+
+    '<td class="pdr-c-sel">'+pdrCheck_(ids,g.chave)+'</td>'+
+    '<td class="pdr-c-tag"><div class="pdr-tag-linha"><button type="button" class="pdr-expandir" data-pdr="expandir" data-grupo="'+pdEsc(g.chave)+'" aria-expanded="'+aberto+'" aria-label="'+(aberto?'Recolher':'Mostrar')+' os canais de '+pdEsc(g.chave)+'"><i class="fas fa-chevron-right" aria-hidden="true"></i></button><div class="pdr-tag-bloco"><button type="button" class="pdr-tag" data-pdr="grupo" data-grupo="'+pdEsc(g.chave)+'">'+pdEsc(g.chave)+'</button><span class="pdr-chip">'+pdEsc(pdrRotuloGrupo_(g))+'</span><div class="pdr-desc">'+pdEsc(desc)+'</div></div></div></td>'+
+    '<td class="pdr-c-eq">'+pdrEquip_(x0)+'</td>'+
+    '<td class="pdr-c-local">'+(g.local?pdEsc(g.local):'<span class="pdr-mudo">Sem localização</span>')+'</td>'+
+    '<td class="pdr-c-val">'+pdrValidadeGrupo_(g)+'</td>'+
+    '<td class="pdr-c-pdf">'+pdf+'</td>'+
+    '<td class="pdr-c-acoes"><div class="pdr-acoes"><button type="button" class="pdr-btn" data-pdr="grupo" data-grupo="'+pdEsc(g.chave)+'">Detalhes</button><button type="button" class="pdr-btn pdr-btn-icone" data-pdr="expandir" data-grupo="'+pdEsc(g.chave)+'" aria-label="'+(aberto?'Recolher':'Mostrar')+' canais" title="'+(aberto?'Recolher':'Mostrar')+' canais"><i class="fas fa-'+(aberto?'chevron-up':'chevron-down')+'" aria-hidden="true"></i></button></div></td></tr>';
+  if(aberto)h+=g.itens.map(function(x){return pdrLinhaTabela_(x,true,g);}).join('');
+  return h;
+}
+function pdrCartao_(x,filho,g){
+  var div=filho&&g&&pdrValidadeDivergente_(g,x);
+  return '<div class="pdr-cartao'+(filho?' pdr-cartao-filho':'')+(x.ativo?'':' pdr-inativo')+'">'+
+    '<div class="pdr-cartao-topo">'+pdrCheck_([x.ID],x.TAG)+'<button type="button" class="pdr-tag" data-pdr="detalhe" data-id="'+pdEsc(x.ID)+'">'+pdEsc(x.TAG)+'</button>'+pdrSelo_(x)+'</div>'+
+    '<div class="pdr-desc">'+pdEsc(x.DESCRICAO)+'</div>'+
+    '<div class="pdr-cartao-meta"><span'+(div?' class="pdr-divergente"':'')+'>Validade '+pdEsc(x.VALIDADE||'—')+(div?' (diferente dos outros canais)':'')+'</span>'+(filho?'<span>U95 '+pdrNum_(x.U95)+' · k '+pdrNum_(x.K)+'</span>':'<span>'+(x.LOCAL?pdEsc(x.LOCAL):'Sem localização')+'</span>')+'<span>'+pdrPdf_(x)+'</span></div>'+
+    pdrAcoes_(x)+'</div>';
+}
+function pdrCartaoGrupo_(g){
+  var aberto=!!PDR.abertos[g.chave]||PDR.busca.trim().length>1,ids=g.itens.map(function(x){return x.ID;});
+  var x0=g.itens[0],pior=g.itens.slice().sort(function(a,b){return a.sev-b.sev;})[0];
+  var datas=g.itens.map(function(x){return x.VALIDADE;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  return '<div class="pdr-cartao pdr-cartao-grupo">'+
+    '<div class="pdr-cartao-topo">'+pdrCheck_(ids,g.chave)+'<button type="button" class="pdr-tag" data-pdr="grupo" data-grupo="'+pdEsc(g.chave)+'">'+pdEsc(g.chave)+'</button>'+pdrSelo_(pior)+'</div>'+
+    '<div class="pdr-desc">'+pdEsc(pdrPrefixoComum_(g.itens.map(function(x){return x.DESCRICAO;})))+'</div>'+
+    '<div class="pdr-cartao-meta"><span class="pdr-chip">'+pdEsc(pdrRotuloGrupo_(g))+'</span>'+(datas.length>1?'<span class="bc-selo bc-selo-aviso">Validade divergente</span>':'<span>Validade '+pdEsc(datas[0]||'—')+'</span>')+'<span>'+(g.local?pdEsc(g.local):'Sem localização')+'</span></div>'+
+    '<div class="pdr-acoes"><button type="button" class="pdr-btn" data-pdr="expandir" data-grupo="'+pdEsc(g.chave)+'" aria-expanded="'+aberto+'">'+(aberto?'Recolher canais':'Ver canais')+'</button><button type="button" class="pdr-btn" data-pdr="grupo" data-grupo="'+pdEsc(g.chave)+'">Detalhes</button></div>'+
+    (aberto?'<div class="pdr-cartao-filhos">'+g.itens.map(function(x){return pdrCartao_(x,true,g);}).join('')+'</div>':'')+'</div>';
+}
+function pdrCelular_(){var r=document.getElementById('pdr');return !!(r&&r.clientWidth&&r.clientWidth<760);}
+
+/* ---------- montagem ---------- */
 function pdMount(){
   if(pdEl('panel'))return;
   var base=document.getElementById('certcal-panel-padroes');if(!base)return;
-  var panel=document.createElement('section');panel.id='pd-panel';panel.className='panel';
-  panel.innerHTML='<h2>Lista de padrões</h2>'+
-    '<p class="muted">Marque os padrões para gerar inventário ou orçamento na aba Inventário e orçamento. Editar, Inativar e o certificado em PDF ficam nas colunas da lista.</p>'+
-    '<details><summary style="cursor:pointer;color:var(--bc-info)">Como usar — cadastro, certificados e documentos</summary><ol>'+
-    '<li>Cadastre o padrão em <b>Cadastrar novo padrão</b> e anexe o PDF do certificado. Depois abra <b>Dados, localização e foto</b> na lista abaixo.</li>'+
-    '<li>Digite qualquer localização: cidade, filial, setor ou responsável. Adicione a foto para reconhecer o instrumento.</li>'+
-    '<li>O gestor clica em <b>Atualizar dados pelos certificados</b>: a IA lê os PDFs em lotes, salva os dados e mostra o progresso. Não é necessário abrir cada padrão.</li>'+
-    '<li>Revise somente as pendências indicadas. Dados já preenchidos são preservados; divergências precisam de decisão humana. Extraído por IA não significa conferência humana.</li>'+
-    '<li>Filtre a localização e marque os padrões. Na aba <b>Inventário e orçamento</b>, gere o documento. Quantidades e situações vêm dos registros selecionados; pendências ficam explícitas no documento.</li>'+
-    '<li>Ao gerar, aguarde: o documento é salvo e abre em outra página, pronto para impressão A4. Permita pop-ups do SGO+. O histórico permite reabrir as cópias.</li>'+
-    '</ol><p class="muted">O pedido solicita intervalo de recalibração pretendido de 3 anos, sujeito à avaliação técnica, sem alterar o vencimento atual. Nunca é enviado automaticamente ao laboratório.</p></details>'+
-    '<div class="form-row"><div><label for="pd-busca">Buscar TAG, descrição, série ou marca</label><input id="pd-busca" type="text"></div><div><label for="pd-local">Filtrar localização</label><input id="pd-local" type="text" placeholder="Todas — digite parte do local"></div><div><label for="pd-ativos">Situação cadastral</label><select id="pd-ativos"><option value="ATIVO">Ativos</option><option value="TODOS">Todos</option><option value="INATIVO">Inativos</option></select></div></div>'+
-    '<div class="padrao-card" style="margin:16px 0;padding:16px"><h3>Atualizar dados pelos certificados</h3><p>Lê os PDFs e atualiza todos os padrões cadastrados, incluindo inativos. Salva a origem e preserva os dados manuais. A localização deve ser informada pela equipe.</p><button class="btn-primary" data-pd-action="auto-start">Atualizar dados pelos certificados</button> <button class="btn" data-pd-action="auto-status">Consultar andamento / retomar</button><div id="pd-auto" role="status" aria-live="polite"></div></div>'+
-    '<button class="btn" data-pd-action="refresh">Atualizar lista</button> <button class="btn" data-pd-action="all">Marcar visíveis</button> <button class="btn" data-pd-action="none">Limpar seleção</button> <span id="pd-count" class="muted"></span>'+
-    '<div id="pd-status" role="status" aria-live="polite" style="padding:12px 0">Aguarde, carregando padrões...</div><div id="pd-lista" style="overflow:auto;max-height:500px"></div>'+
-    '<div id="pd-editor" class="hidden padrao-card" style="margin-top:18px"></div>';
-  var docs=document.createElement('section');docs.id='pd-docs';docs.className='panel';
-  docs.innerHTML='<h2>Inventário e orçamento</h2><p class="muted">Trabalha sobre os padrões marcados na aba Padrões. <span id="pd-count2"></span></p>'+
-    '<div class="grid-2"><div><label for="pd-destinatario">Laboratório destinatário (opcional)</label><input id="pd-destinatario" type="text" maxlength="1500"></div><div><label for="pd-orientacoes">Orientações adicionais no documento (opcional)</label><textarea id="pd-orientacoes" maxlength="6000" placeholder="Informe instruções que devem constar no documento."></textarea></div></div>'+
-    '<div><label for="pd-servicos">Serviços e faixas de trabalho para o orçamento</label><textarea id="pd-servicos" maxlength="4000" rows="3">Qualificação de autoclaves, lavadoras e termodesinfetadoras, estufas, banho-maria e cadeia de frio; calibração e manutenção de equipamentos médico-hospitalares. Confirmar os pontos de ajuste de cada processo. Faixas especiais (ultrafreezer e despirogenização) dependem do sensor e da aplicação.</textarea><p class="muted">Informe os pontos de ajuste utilizados e as faixas especiais. A IA pesquisa referências e propõe pontos; o laboratório deve confirmar capacidade, cobertura acreditada e incerteza adequada. Exigência: calibração acreditada e intervalo solicitado de 3 anos.</p></div>'+
-    '<button class="btn-primary" data-pd-action="inventory">Gerar inventário</button> <button class="btn" data-pd-action="quote">Pesquisar faixas e gerar orçamento</button>'+
-    '<div id="pd-preview" class="hidden padrao-card" style="margin-top:18px"></div>'+
-    '<h2 style="margin-top:24px">Documentos e rascunhos salvos</h2><div class="form-row"><input id="pd-termo" aria-label="Buscar documentos" placeholder="Tipo, localização, destinatário, autor ou ID"><button class="btn" data-pd-action="history">Consultar histórico</button></div><div id="pd-history"></div>';
+  pdrEstilos_();
+  var pode=pdrPodeEditar_();
+  var panel=document.createElement('section');panel.id='pd-panel';
+  panel.innerHTML='<div id="pdr" class="pdr">'+
+    '<div class="bc-resumo" id="pdr-resumo" role="group" aria-label="Resumo dos padrões: clique para filtrar"></div>'+
+    '<div id="pdr-faixa"></div>'+
+    '<div class="bc-ferramentas">'+
+      '<div class="bc-busca"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input id="pdr-busca" type="search" placeholder="Buscar TAG, descrição, série ou marca" aria-label="Buscar TAG, descrição, série ou marca" autocomplete="off"></div>'+
+      '<button type="button" class="pdr-btn bc-ferr-filtros" data-pdr="filtros" aria-expanded="false" aria-controls="pdr-filtros"><i class="fas fa-sliders" aria-hidden="true"></i> Filtros</button>'+
+      '<div class="bc-ferr-campos" id="pdr-filtros">'+
+        '<label class="bc-campo"><span>Situação</span><select id="pdr-situacao"><option value="ATIVOS">Ativos</option><option value="VENCIDO">Vencidos</option><option value="VENCENDO">Vencem em 30 dias</option><option value="OK">Vigentes</option><option value="SEM_VALIDADE">Sem validade</option><option value="SEM_PDF">Sem PDF</option><option value="INATIVO">Inativos</option><option value="TODOS">Todos</option></select></label>'+
+        '<label class="bc-campo"><span>Local</span><select id="pdr-local"></select></label>'+
+        '<label class="bc-campo"><span>Grandeza</span><select id="pdr-grandeza"></select></label>'+
+        '<label class="bc-campo"><span>Ordenar</span><select id="pdr-ordem"><option value="SITUACAO">Situação (vencidos primeiro)</option><option value="VALIDADE">Validade (mais próxima)</option><option value="TAG">TAG (A a Z)</option><option value="LOCAL">Local</option></select></label>'+
+      '</div>'+
+      '<div class="bc-ferr-acoes">'+
+        '<button type="button" class="pdr-btn pdr-btn-icone" data-pdr="recarregar" aria-label="Atualizar lista" title="Atualizar lista"><i class="fas fa-rotate" aria-hidden="true"></i></button>'+
+        (pode?'<button type="button" class="pdr-btn" data-pdr="ia" aria-expanded="false" aria-controls="pdr-ia">Ler certificados com IA</button><button type="button" class="pdr-btn pdr-btn-primario" data-pdr="novo"><i class="fas fa-plus" aria-hidden="true"></i> Cadastrar<span class="pdr-so-largo"> padrão</span></button>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="pdr-linha-info"><span id="pdr-contagem" aria-live="polite"></span><button type="button" class="pdr-link" data-pdr="limpar" id="pdr-limpar" hidden>Limpar filtros</button><span class="pdr-espaco"></span>'+
+      '<label class="pdr-alternar"><input type="checkbox" id="pdr-agrupar" checked> Agrupar canais e grandezas</label>'+
+      '<button type="button" class="pdr-link" data-pdr="ajuda" aria-expanded="false" aria-controls="pdr-ajuda">Como funciona</button></div>'+
+    '<div class="bc-ajuda" id="pdr-ajuda" hidden><ul>'+
+      '<li>Cada canal ou grandeza de um certificado é um cadastro próprio, com TAG, U95, k e validade. Cadastros com a mesma TAG base, como REG-001 (CANAL1) a (CANAL8), aparecem num grupo.</li>'+
+      '<li>Padrão vencido ou com data inválida não entra em certificado. Para liberar, atualize a validade e o PDF em <b>Editar</b>.</li>'+
+      '<li><b>Dados, localização e foto</b> (no menu <b>Mais</b>) completam marca, série, faixa e laboratório. A leitura por IA preenche uma proposta: confira com o PDF antes de salvar.</li>'+
+      '<li>Para inventário ou orçamento, marque os padrões na lista e use a barra que aparece, ou a aba <b>Inventário e orçamento</b>.</li>'+
+      '<li><b>Inativar</b> tira o padrão da escolha dos ensaios. O histórico fica guardado e dá para reativar pelo filtro Inativos.</li>'+
+      '<li>Nos números, vírgula e ponto valem como separador decimal.'+(pode?'':' Seu perfil só consulta: o cadastro é feito pela metrologia, pelos técnicos ou pela gestão.')+'</li></ul></div>'+
+    (pode?'<div class="bc-cartao" id="pdr-ia" hidden><div class="bc-cartao-cab"><h3>Ler certificados com IA</h3><button type="button" class="pdr-btn pdr-btn-icone" data-pdr="ia" aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></div><p class="pdr-mudo">Lê os PDFs de todos os padrões, inclusive inativos, em lotes. Salva a origem e preserva os dados digitados. A localização é sempre informada pela equipe.</p><div class="pdr-botoes"><button class="pdr-btn pdr-btn-primario" data-pd-action="auto-start">Iniciar leitura</button><button class="pdr-btn" data-pd-action="auto-status">Ver andamento ou retomar</button></div><div id="pd-auto" role="status" aria-live="polite"></div></div>':'')+
+    '<div class="bc-lote" id="pdr-lote" hidden><span id="pd-count"></span><span class="pdr-espaco"></span><button type="button" class="pdr-btn" data-pdr="lote-docs">Inventário e orçamento</button><button type="button" class="pdr-btn" data-pd-action="all">Marcar todos da lista</button><button type="button" class="pdr-btn" data-pd-action="none">Limpar seleção</button></div>'+
+    '<div id="pd-status" class="bc-status" role="status" aria-live="polite">Aguarde, carregando padrões...</div>'+
+    '<div id="pdr-lista" class="pdr-lista"></div>'+
+  '</div>';
+  var docs=document.createElement('section');docs.id='pd-docs';docs.className='pdr';
+  docs.innerHTML='<div class="pdr-docs-grade">'+
+    '<div class="bc-cartao"><div class="bc-cartao-cab"><h3>Padrões selecionados</h3><button type="button" class="pdr-btn" data-pdr="ir-padroes">Escolher na lista</button></div><p id="pd-count2" class="pdr-mudo"></p><div id="pdr-sel-chips" class="pdr-chips"></div></div>'+
+    '<div class="bc-cartao"><div class="bc-cartao-cab"><h3>Dados do documento</h3></div>'+
+      '<div class="pdr-form-grade"><label class="bc-campo"><span>Laboratório destinatário (opcional)</span><input id="pd-destinatario" type="text" maxlength="1500"></label>'+
+      '<label class="bc-campo"><span>Orientações no documento (opcional)</span><textarea id="pd-orientacoes" maxlength="6000" rows="3" placeholder="Instruções que devem constar no documento."></textarea></label></div>'+
+      '<label class="bc-campo"><span>Serviços e faixas de trabalho (para o orçamento)</span><textarea id="pd-servicos" maxlength="4000" rows="3">Qualificação de autoclaves, lavadoras e termodesinfetadoras, estufas, banho-maria e cadeia de frio; calibração e manutenção de equipamentos médico-hospitalares. Confirmar os pontos de ajuste de cada processo. Faixas especiais (ultrafreezer e despirogenização) dependem do sensor e da aplicação.</textarea></label>'+
+      '<p class="pdr-mudo">A IA pesquisa referências e propõe pontos; o laboratório confirma capacidade, cobertura acreditada e incerteza. O pedido solicita calibração acreditada e intervalo de 3 anos, sujeito à avaliação técnica, sem alterar o vencimento atual. Nada é enviado ao laboratório automaticamente.</p>'+
+      '<div class="pdr-botoes"><button class="pdr-btn pdr-btn-primario" data-pd-action="inventory">Gerar inventário</button><button class="pdr-btn" data-pd-action="quote">Pesquisar faixas e gerar orçamento</button></div>'+
+      '<div id="pd-status-docs" class="bc-status" role="status" aria-live="polite"></div>'+
+      '<div id="pd-preview" class="hidden pdr-previa"></div></div>'+
+    '<div class="bc-cartao pdr-docs-hist"><div class="bc-cartao-cab"><h3>Documentos e rascunhos salvos</h3></div><div class="pdr-botoes pdr-busca-hist"><input id="pd-termo" type="search" aria-label="Buscar documentos" placeholder="Tipo, localização, destinatário, autor ou ID"><button class="pdr-btn" data-pd-action="history">Consultar</button></div><div id="pd-history"><p class="pdr-mudo">Use Consultar para ver as cópias salvas.</p></div></div>'+
+  '</div>';
   base.insertAdjacentElement('beforebegin',panel);
   panel.insertAdjacentElement('afterend',docs);
   var ouvir=function(e){var b=e.target.closest('[data-pd-action]');if(!b)return;var a=b.dataset.pdAction;
     if(a==='auto-start')pdAutoStart();if(a==='auto-status')pdAutoStatus();if(a==='document-window')pdDocumentWindow(PD.documento);
     if(a==='refresh')pdLoad();if(a==='all'){pdFiltered().forEach(function(p){PD.selected[p.ID]=true;});pdList();}if(a==='none'){PD.selected={};pdList();}
-    if(a==='edit')pdEdit(b.dataset.id);if(a==='photo')pdPhoto(b.dataset.id,b);
-    if(a==='extract')pdExtract();if(a==='save')pdSave();if(a==='close-editor')pdEl('editor').classList.add('hidden');
+    if(a==='edit')pdEdit(b.dataset.id);
+    if(a==='extract')pdExtract();if(a==='save')pdSave();
     if(a==='inventory')pdGenerate('INVENTARIO');if(a==='quote')pdGenerate('ORCAMENTO');
     if(a==='emit')pdEmit();if(a==='preview-text')pdPreviewText();if(a==='print')pdPrint();if(a==='download')pdDownload();
     if(a==='history')pdHistory();if(a==='open')pdOpen(b.dataset.id);
-    if(a==='cad-edit')tplCertCal_abrirEditarPadrao(b.dataset.id);if(a==='cad-inativar')tplCertCal_inativarPadrao(b.dataset.id);if(a==='cad-reativar')tplCertCal_reativarPadrao(b.dataset.id);
   };
   panel.addEventListener('click',ouvir);docs.addEventListener('click',ouvir);
+  panel.addEventListener('click',pdrClique_);docs.addEventListener('click',pdrClique_);
   pdMontarAbas_(panel,docs);
-  ['busca','local','ativos'].forEach(function(k){pdEl(k).addEventListener('input',pdList);});
-  panel.addEventListener('change',function(e){if(e.target.matches('[data-pd-select]')){PD.selected[e.target.dataset.pdSelect]=e.target.checked;pdCount();}if(e.target.matches('[data-pd-anexar]'))tplCertCal_anexarCertificadoPadrao(e.target.dataset.pdAnexar,e.target);});
+  var busca=document.getElementById('pdr-busca'),tm=null;
+  busca.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(function(){PDR.busca=busca.value;pdList();},120);});
+  [['pdr-situacao','filtro'],['pdr-local','local'],['pdr-grandeza','grandeza'],['pdr-ordem','ordem']].forEach(function(par){document.getElementById(par[0]).addEventListener('change',function(e){PDR[par[1]]=e.target.value;pdList();});});
+  document.getElementById('pdr-agrupar').addEventListener('change',function(e){PDR.agrupar=e.target.checked;pdList();});
+  panel.addEventListener('change',function(e){var s=e.target.getAttribute('data-pdr-sel');if(s!=null){s.split(',').forEach(function(id){if(e.target.checked)PD.selected[id]=true;else delete PD.selected[id];});pdList();}});
+  pdrGarantirPainel_();
   pdLoad();
 }
-function pdFiltered(){var q=pdEl('busca').value.toLocaleLowerCase(),l=pdEl('local').value.toLocaleLowerCase(),s=pdEl('ativos').value;return PD.items.filter(function(p){return(s==='TODOS'||p.STATUS===s)&&[p.TAG,p.DESCRICAO,p.SERIE,p.MARCA].join(' ').toLocaleLowerCase().indexOf(q)>=0&&String(p.LOCALIZACAO||'').toLocaleLowerCase().indexOf(l)>=0;});}
-function pdCount(){var n=PD.items.filter(function(p){return PD.selected[p.ID];}).length;var c1=pdEl('count');if(c1)c1.textContent=n+' selecionado(s), inclusive fora do filtro';var c2=pdEl('count2');if(c2)c2.textContent=n?n+' padrão(ões) marcado(s).':'Nenhum padrão marcado ainda: marque na aba Padrões.';}
+
+function pdrClique_(e){
+  var b=e.target.closest('[data-pdr]');if(!b)return;var a=b.getAttribute('data-pdr'),id=b.getAttribute('data-id'),g=b.getAttribute('data-grupo');
+  if(a==='filtro'){PDR.filtro=PDR.filtro===b.getAttribute('data-valor')&&PDR.filtro!=='ATIVOS'?'ATIVOS':b.getAttribute('data-valor');pdList();var l=document.getElementById('pdr-lista');if(l&&b.closest('#pdr-faixa'))l.scrollIntoView({block:'start',behavior:'smooth'});}
+  else if(a==='limpar'){PDR.filtro='ATIVOS';PDR.busca='';PDR.local='';PDR.grandeza='';var bs=document.getElementById('pdr-busca');if(bs)bs.value='';pdList();}
+  else if(a==='expandir'){PDR.abertos[g]=!PDR.abertos[g];pdList();}
+  else if(a==='detalhe')pdrAbrirPainel_(id,'resumo');
+  else if(a==='editar')pdrAbrirPainel_(id,'cadastro');
+  else if(a==='grupo')pdrAbrirGrupo_(g);
+  else if(a==='mais')pdrAbrirMenu_(b,id);
+  else if(a==='novo')pdrAbrirNovo_();
+  else if(a==='recarregar')pdLoad();
+  else if(a==='lote-docs'||a==='ir-padroes')pdTrocarAba_(a==='lote-docs'?'docs':'padroes');
+  else if(a==='ajuda'||a==='ia'||a==='filtros'){var alvo=document.getElementById(a==='ajuda'?'pdr-ajuda':a==='ia'?'pdr-ia':'pdr-filtros');if(!alvo)return;
+    if(a==='filtros'){var ab=alvo.classList.toggle('bc-aberto');b.setAttribute('aria-expanded',ab?'true':'false');return;}
+    alvo.hidden=!alvo.hidden;document.querySelectorAll('[data-pdr="'+a+'"][aria-expanded]').forEach(function(x){x.setAttribute('aria-expanded',alvo.hidden?'false':'true');});}
+}
+
+function pdrOpcoes_(sel,valores,rotTodos){var el=document.getElementById(sel);if(!el)return;var atual=el.value;var semCont=PDR.lista.filter(function(x){return sel==='pdr-local'?!x.LOCAL:!x.GRANDEZA;}).length;
+  el.innerHTML='<option value="">'+rotTodos+'</option>'+valores.map(function(v){return '<option value="'+pdEsc(v)+'">'+pdEsc(v)+'</option>';}).join('')+(semCont?'<option value="__SEM__">'+(sel==='pdr-local'?'Sem localização':'Não informada')+'</option>':'');el.value=atual&&(valores.indexOf(atual)>=0||atual==='__SEM__')?atual:'';PDR[sel==='pdr-local'?'local':'grandeza']=el.value;}
+function pdrDistintos_(campo){return PDR.lista.map(function(x){return x[campo];}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort(function(a,b){return a.localeCompare(b,'pt-BR');});}
+
+function pdrResumo_(){
+  var c=pdrContagens_(),el=document.getElementById('pdr-resumo');if(!el)return;
+  var tiles=[['ATIVOS','Ativos','neutro'],['VENCIDO','Vencidos','erro'],['VENCENDO','Vencem em 30 dias','aviso'],['OK','Vigentes','ok']];
+  if(c.SEM_VALIDADE)tiles.push(['SEM_VALIDADE','Sem validade','aviso']);
+  tiles.push(['SEM_PDF','Sem PDF','neutro'],['INATIVO','Inativos','neutro']);
+  el.innerHTML=tiles.map(function(t){var on=PDR.filtro===t[0];return '<button type="button" class="bc-resumo-item bc-tom-'+t[2]+(on?' bc-ativo':'')+(c[t[0]]?'':' bc-zero')+'" data-pdr="filtro" data-valor="'+t[0]+'" aria-pressed="'+on+'"><span class="bc-resumo-num">'+c[t[0]].toLocaleString('pt-BR')+'</span><span class="bc-resumo-rot">'+t[1]+'</span></button>';}).join('');
+  var fx=document.getElementById('pdr-faixa');
+  if(fx){var partes=[];
+    if(c.VENCIDO&&PDR.filtro!=='VENCIDO')partes.push('<span>'+(c.VENCIDO===1?'1 padrão vencido ou com data inválida não pode ser usado':c.VENCIDO.toLocaleString('pt-BR')+' padrões vencidos ou com data inválida não podem ser usados')+' em certificado.</span><button type="button" class="pdr-link" data-pdr="filtro" data-valor="VENCIDO">Ver vencidos</button>');
+    if(c.VENCENDO&&PDR.filtro!=='VENCENDO')partes.push('<span>'+(c.VENCENDO===1?'1 vence':c.VENCENDO+' vencem')+' em até 30 dias.</span><button type="button" class="pdr-link" data-pdr="filtro" data-valor="VENCENDO">Programar recalibração</button>');
+    fx.innerHTML=partes.length?'<div class="bc-faixa '+(c.VENCIDO&&PDR.filtro!=='VENCIDO'?'bc-faixa-erro':'bc-faixa-aviso')+'"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i>'+partes.join('<span class="pdr-sep">·</span>')+'</div>':'';}
+}
+
+function pdCount(){
+  var ids=Object.keys(PD.selected).filter(function(id){return PD.selected[id]&&PD.items.some(function(p){return p.ID===id;});});
+  var n=ids.length;var c1=pdEl('count');if(c1)c1.textContent=n===1?'1 padrão selecionado':n.toLocaleString('pt-BR')+' padrões selecionados';
+  var lote=document.getElementById('pdr-lote');if(lote)lote.hidden=!n;var an=document.getElementById('pdr-aba-n');if(an){an.hidden=!n;an.textContent=String(n);}
+  var c2=pdEl('count2');if(c2)c2.textContent=n?(n===1?'1 padrão entra no documento.':n+' padrões entram no documento.'):'Nenhum padrão marcado. Marque na lista da aba Padrões.';
+  var ch=document.getElementById('pdr-sel-chips');if(ch){var tags=PD.items.filter(function(p){return PD.selected[p.ID];}).map(function(p){return p.TAG;}).sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{numeric:true});});
+    ch.innerHTML=tags.slice(0,40).map(function(t){return '<span class="pdr-chip">'+pdEsc(t)+'</span>';}).join('')+(tags.length>40?'<span class="pdr-mudo">e mais '+(tags.length-40)+'</span>':'');}
+}
 function pdCadastro_(id){return (certcalState.padroesTodos||[]).filter(function(x){return x.ID===id;})[0]||{};}
-function pdList(){if(!pdEl('lista'))return;var rows=pdFiltered().map(function(p){var c=pdCadastro_(p.ID),ativo=(c.STATUS||p.STATUS)==='ATIVO',link=c.LINK_CERTIFICADO_PDF||p.LINK_CERTIFICADO_PDF||'';
-  var pdf=(link?'<a href="'+pdEsc(link)+'" target="_blank" rel="noopener">Ver PDF</a><br>':'<span class="muted">Sem PDF</span><br>')+'<input type="file" accept="application/pdf" data-rotulo="'+(link?'Substituir PDF':'Anexar PDF')+'" data-pd-anexar="'+pdEsc(p.ID)+'">';
-  var acoes='<button class="btn btn-sm" data-pd-action="cad-edit" data-id="'+pdEsc(p.ID)+'">Editar</button> '+(ativo?'<button class="btn btn-sm btn-danger" data-pd-action="cad-inativar" data-id="'+pdEsc(p.ID)+'">Inativar</button>':'<button class="btn btn-sm" data-pd-action="cad-reativar" data-id="'+pdEsc(p.ID)+'">Reativar</button>')+'<br>';
-  var sit=c.statusValidade&&typeof tplCertCal_pillStatusValidade_==='function'?tplCertCal_pillStatusValidade_(c):pdEsc(pdSituacao(p.situacao));
-  return '<tr><td><input type="checkbox" aria-label="Selecionar '+pdEsc(p.TAG)+'" data-pd-select="'+pdEsc(p.ID)+'" '+(PD.selected[p.ID]?'checked':'')+'></td><td><b>'+pdEsc(p.TAG)+'</b><br>'+pdEsc(p.DESCRICAO)+'</td><td>'+pdEsc(p.LOCALIZACAO||'Localização pendente')+'</td><td>'+pdEsc(p.MARCA||'—')+' / '+pdEsc(p.MODELO||'—')+'<br>Série: '+pdEsc(p.SERIE||'—')+'</td><td>'+pdEsc(p.VALIDADE||'Sem validade')+'<br>'+sit+(ativo?'':'<br><b>Inativo</b>')+'<br><span class="muted">'+(p.conferido?'Conferido pela equipe':p.extraido?'Extraído por IA':'Dados pendentes')+'</span></td><td>'+pdf+'</td><td>'+acoes+'<button class="btn btn-sm" data-pd-action="edit" data-id="'+pdEsc(p.ID)+'">Dados, localização e foto</button>'+(p.FOTO_ID?'<br><button class="btn btn-sm" data-pd-action="photo" data-id="'+pdEsc(p.ID)+'">Ver foto</button>':'')+'</td></tr>';}).join('');
-  pdEl('lista').innerHTML=rows?'<table class="resultado-table"><thead><tr><th>Marcar</th><th>Padrão</th><th>Localização</th><th>Identificação</th><th>Validade e situação</th><th>Certificado (PDF)</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>':'<p>Nenhum padrão neste filtro. Use "Cadastrar novo padrão" ou limpe a busca.</p>';pdCount();}
+function pdList(){
+  var el=document.getElementById('pdr-lista');if(!el)return;
+  pdrResumo_();
+  var sit=document.getElementById('pdr-situacao');if(sit)sit.value=PDR.filtro;
+  var r=pdrLinhas_(),filtrado=PDR.filtro!=='ATIVOS'||PDR.busca.trim()||PDR.local||PDR.grandeza;
+  var ct=document.getElementById('pdr-contagem');if(ct){var nG=r.grupos.length;ct.textContent=(r.total===1?'1 padrão':r.total.toLocaleString('pt-BR')+' padrões')+(PDR.agrupar&&nG!==r.total?' em '+nG+' linhas':'')+(filtrado?' no filtro':'');}
+  var lp=document.getElementById('pdr-limpar');if(lp)lp.hidden=!filtrado;
+  if(!PDR.lista.length){el.innerHTML='<div class="bc-vazio"><p>Nenhum padrão cadastrado ainda.</p>'+(pdrPodeEditar_()?'<button type="button" class="pdr-btn pdr-btn-primario" data-pdr="novo">Cadastrar padrão</button>':'<p class="pdr-mudo">O cadastro é feito pela metrologia, pelos técnicos ou pela gestão.</p>')+'</div>';pdCount();return;}
+  if(!r.total){el.innerHTML='<div class="bc-vazio"><p>Nenhum padrão neste filtro.</p><button type="button" class="pdr-btn" data-pdr="limpar">Limpar filtros</button></div>';pdCount();return;}
+  if(pdrCelular_()){el.innerHTML='<div class="pdr-cartoes">'+r.grupos.map(function(g){return g.grupo?pdrCartaoGrupo_(g):pdrCartao_(g.itens[0],false);}).join('')+'</div>';}
+  else{el.innerHTML='<table class="bc-tabela pdr-tabela"><thead><tr><th class="pdr-c-sel"><span class="pdr-oculto">Selecionar</span></th><th>Padrão</th><th>Equipamento</th><th>Local</th><th>Validade</th><th>Certificado</th><th class="pdr-c-acoes"><span class="pdr-oculto">Ações</span></th></tr></thead><tbody>'+
+    r.grupos.map(function(g){return g.grupo?pdrLinhaGrupo_(g):pdrLinhaTabela_(g.itens[0],false);}).join('')+'</tbody></table>';}
+  el.querySelectorAll('input[data-indet]').forEach(function(i){i.indeterminate=true;});
+  pdCount();
+}
 function pdAplicarCadastros(r){
   PD.items=r.items||[];certcalState.padroesTodos=r.padroes||[];
   certcalState.padroes=certcalState.padroesTodos.filter(function(p){return p.STATUS==='ATIVO';});
   certcalState.tecnicos=r.tecnicos||[];
   var sel=document.getElementById('certcal-tecnico');if(sel){var anterior=sel.value;sel.innerHTML='<option value="">— nenhum —</option>'+certcalState.tecnicos.map(function(t){return '<option value="'+pdEsc(t.ID)+'">'+pdEsc(t.NOME)+'</option>';}).join('');if(anterior)sel.value=anterior;}
-  tplCertCal_renderPadroesTabela_();tplCertCal_renderBlocos();pdList();
+  tplCertCal_renderPadroesTabela_();tplCertCal_renderBlocos();
+  pdrMontarLista_();pdrOpcoes_('pdr-local',pdrDistintos_('LOCAL'),'Todos os locais');pdrOpcoes_('pdr-grandeza',pdrDistintos_('GRANDEZA'),'Todas as grandezas');
+  var raiz=document.getElementById('pdr');if(raiz)raiz.setAttribute('data-pdr-pronto','1');
+  pdList();pdrAtualizarPainel_();
 }
 function pdErroCarregamento(err){
   var raw=err&&err.message||String(err);
-  var texto=/tempo limite|timed out|timeout|service unavailable|too many times/i.test(raw)?'O servidor demorou para responder. Aguarde alguns instantes e clique em Atualizar lista para tentar de novo.':raw;
+  var texto=/tempo limite|timed out|timeout|service unavailable|too many times/i.test(raw)?'O servidor demorou para responder. Aguarde alguns instantes e use o botão Atualizar lista (setas, ao lado de Cadastrar padrão).':raw;
   var el=document.getElementById('certcal-padroes-tabela');if(el&&!certcalState.padroesTodos.length)el.textContent='Cadastros não carregados. Use Atualizar lista em Padrões de referência.';
+  var l=document.getElementById('pdr-lista');if(l&&!PDR.lista.length)l.innerHTML='<div class="bc-vazio"><p>Não foi possível carregar os padrões.</p><button type="button" class="pdr-btn" data-pdr="recarregar">Tentar de novo</button></div>';
   throw new Error(texto);
 }
-function pdLoad(){return pdRun('Aguarde, carregando padrões e técnicos em uma única consulta...',async function(){try{var r=await pdApi('apiListarControlePadroes');pdAplicarCadastros(r);pdMsg('Dados carregados. Selecione os padrões ou complete seus cadastros.');}catch(err){pdErroCarregamento(err);}});}
-function pdEdit(id){
-  if(PD.busy)return;var p=PD.items.find(function(x){return x.ID===id;});if(!p)return;PD.current=p;PD.token='';
-  var el=pdEl('editor');el.classList.remove('hidden');el.innerHTML='<h3>'+pdEsc(p.TAG)+' — localização, foto e dados documentais</h3><p class="muted">Leitura da IA preenche uma proposta. Confira o PDF antes de salvar. Número e vencimento são os mesmos do cadastro principal.</p>'+
-    '<button class="btn" data-pd-action="extract">Ler certificado com IA</button> '+(/^(https:\/\/(drive|docs)\.google\.com\/|\/arquivos\/)/.test(p.LINK_CERTIFICADO_PDF||'')?'<a href="'+pdEsc(p.LINK_CERTIFICADO_PDF)+'" target="_blank" rel="noopener">Abrir certificado original</a>':'<span>Primeiro anexe o PDF do certificado (coluna Certificado da lista).</span>')+
-    '<div id="pd-extraction" class="muted" style="white-space:pre-wrap;margin:12px 0"></div><div class="grid-3">'+PD_FIELDS.map(function(f){var long=['PONTOS','RESULTADOS_CERTIFICADO','METODO','RASTREABILIDADE','OBSERVACOES_TECNICAS'].indexOf(f[0])>=0;return '<div'+(long?' style="grid-column:1/-1"':'')+'><label for="pd-f-'+f[0]+'">'+f[1]+'</label>'+(long?'<textarea id="pd-f-'+f[0]+'" rows="3">'+pdEsc(p[f[0]]||'')+'</textarea>':'<input id="pd-f-'+f[0]+'" type="text" value="'+pdEsc(p[f[0]]||'')+'">')+'</div>';}).join('')+'</div>'+
-    '<label for="pd-foto">Foto do instrumento (JPG ou PNG)</label><input id="pd-foto" type="file" accept="image/jpeg,image/png"><div id="pd-foto-preview"></div>'+
-    '<label><input id="pd-remover-foto" type="checkbox"> Remover foto deste cadastro</label><label><input id="pd-conferido" type="checkbox"> Conferi identificação, datas, faixas e todos os pontos com o certificado atual</label>'+
-    '<button class="btn-primary" data-pd-action="save">Salvar dados conferidos</button> <button class="btn" data-pd-action="close-editor">Fechar</button>';
-  if(p.AUTOMACAO){var note=document.createElement('p');note.style.whiteSpace='pre-wrap';note.textContent='Leitura automática: '+(p.AUTOMACAO.impedimentos||'')+'\n'+(p.AUTOMACAO.conflitos||[]).join('\n')+'\nOrigem: '+(p.AUTOMACAO.paginas||'');el.prepend(note);}
-  el.scrollIntoView({behavior:'smooth',block:'start'});
-  if(p.FOTO_ID)pdPhoto(id,pdEl('foto-preview'));
+function pdLoad(){return pdRun('Aguarde, carregando padrões...',async function(){try{var r=await pdApi('apiListarControlePadroes');pdAplicarCadastros(r);pdMsg('');}catch(err){pdErroCarregamento(err);}});}
+
+/* ---------- painel lateral de detalhe (bc-painel) ---------- */
+function pdrGarantirPainel_(){
+  ['pdr-painel','pdr-fundo','pdr-menu','pdr-arquivo'].forEach(function(id){var v=document.getElementById(id);if(v)v.remove();});
+  var fundo=document.createElement('div');fundo.id='pdr-fundo';fundo.className='bc-painel-fundo';fundo.hidden=true;
+  var p=document.createElement('aside');p.id='pdr-painel';p.className='bc-painel pdr';p.hidden=true;p.setAttribute('role','dialog');p.setAttribute('aria-modal','true');p.setAttribute('aria-labelledby','pdr-painel-titulo');
+  p.innerHTML='<header class="bc-painel-cab"><div class="bc-painel-tit"><h2 id="pdr-painel-titulo"></h2><p id="pdr-painel-sub"></p></div><button type="button" class="pdr-btn pdr-btn-icone" data-pdr-p="fechar" aria-label="Fechar o painel" title="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>'+
+    '<nav class="bc-painel-abas" id="pdr-painel-abas" role="tablist"></nav><div class="bc-painel-corpo" id="pdr-painel-corpo"></div><div id="pdr-painel-status" class="bc-status" role="status" aria-live="polite"></div><footer class="bc-painel-rodape" id="pdr-painel-rodape"></footer>';
+  var menu=document.createElement('div');menu.id='pdr-menu';menu.className='bc-mais-menu pdr';menu.setAttribute('role','menu');menu.hidden=true;
+  var arq=document.createElement('input');arq.type='file';arq.id='pdr-arquivo';arq.accept='application/pdf';arq.hidden=true;arq.setAttribute('aria-hidden','true');
+  document.body.appendChild(fundo);document.body.appendChild(p);document.body.appendChild(menu);document.body.appendChild(arq);
+  fundo.addEventListener('click',pdrFecharPainel_);
+  p.addEventListener('click',pdrCliquePainel_);menu.addEventListener('click',pdrCliqueMenu_);
+  arq.addEventListener('change',function(){var id=arq.getAttribute('data-id');var f=arq.files&&arq.files[0];arq.value='';if(id&&f)pdrAnexar_(id,f);});
+  if(!window.__pdrTeclas){window.__pdrTeclas=true;document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;var m=document.getElementById('pdr-menu');if(m&&!m.hidden){pdrFecharMenu_(true);return;}var pp=document.getElementById('pdr-painel');if(pp&&!pp.hidden)pdrFecharPainel_();});
+    document.addEventListener('click',function(e){var m=document.getElementById('pdr-menu');if(m&&!m.hidden&&!e.target.closest('#pdr-menu')&&!e.target.closest('[data-pdr="mais"]'))pdrFecharMenu_();},true);
+    window.addEventListener('resize',function(){pdrFecharMenu_();clearTimeout(window.__pdrRz);window.__pdrRz=setTimeout(function(){if(document.getElementById('pdr-lista'))pdList();},150);});}
 }
-function pdPhoto(id,target){return pdRun('Aguarde, carregando foto...',async function(){var data=PD.fotos[id];if(!data){var r=await pdApi('apiFotoControlePadrao',{padraoId:id});data=r.data;PD.fotos[id]=data;}if(data&&/^data:image\/(jpeg|png);base64,/.test(data)){var img=document.createElement('img');img.src=data;img.alt='Foto do padrão';img.style.cssText='display:block;max-width:180px;max-height:140px;object-fit:contain;margin:8px';target.insertAdjacentElement('afterend',img);}pdMsg('Foto carregada.');});}
+function pdrX_(id){return PDR.lista.filter(function(x){return x.ID===id;})[0];}
+function pdrPainelMsg_(t,erro){var el=document.getElementById('pdr-painel-status');var p=document.getElementById('pdr-painel');if(el&&p&&!p.hidden){el.textContent=t||'';el.className='bc-status'+(erro?' bc-status-erro':'');}}
+function pdrMostrarPainel_(alvoId){var p=document.getElementById('pdr-painel'),f=document.getElementById('pdr-fundo');if(!p)return;var jaAberto=!p.hidden;if(!jaAberto){PDR.voltarFoco=document.activeElement;}p.hidden=false;f.hidden=false;document.documentElement.classList.add('pdr-painel-aberto');var b=(alvoId&&document.getElementById(alvoId))||(!jaAberto&&p.querySelector('[data-pdr-p="fechar"]'));if(b)b.focus();}
+function pdrFecharPainel_(){var p=document.getElementById('pdr-painel'),f=document.getElementById('pdr-fundo');if(!p||p.hidden)return;
+  if(PDR.painel&&/cadastro|dados|novo/.test(PDR.painel.modo)&&PDR.painel.sujo&&!confirm('Fechar sem salvar? O que foi digitado será descartado.'))return;
+  p.hidden=true;f.hidden=true;document.documentElement.classList.remove('pdr-painel-aberto');PDR.painel=null;if(PDR.voltarFoco&&PDR.voltarFoco.focus&&document.body.contains(PDR.voltarFoco))PDR.voltarFoco.focus();}
+function pdrAbas_(id,modo){var pode=pdrPodeEditar_();var abas=[['resumo','Resumo']];if(pode){abas.push(['cadastro','Cadastro e validade'],['dados','Dados, localização e foto']);}
+  return abas.map(function(a){var on=a[0]===modo;return '<button type="button" role="tab" aria-selected="'+on+'" class="'+(on?'bc-ativo':'')+'" data-pdr-p="aba" data-modo="'+a[0]+'" data-id="'+pdEsc(id)+'">'+a[1]+'</button>';}).join('');}
+function pdrCampoLeitura_(rot,val){return '<div class="pdr-dl-item"><dt>'+rot+'</dt><dd>'+(val===''||val==null?'<span class="pdr-mudo">—</span>':val)+'</dd></div>';}
+function pdrAbrirPainel_(id,modo){
+  pdrFecharMenu_();var x=pdrX_(id);if(!x){pdMsg('Padrão não encontrado na lista. Use Atualizar lista.',true);return;}
+  if(PDR.painel&&PDR.painel.sujo&&PDR.painel.id===id&&modo!==PDR.painel.modo&&!confirm('Trocar de aba sem salvar? O que foi digitado será descartado.'))return;
+  if(!pdrPodeEditar_())modo='resumo';
+  PDR.painel={modo:modo,id:id,sujo:false};PD.current=x.item;PD.token='';
+  document.getElementById('pdr-painel-titulo').textContent=x.TAG;
+  document.getElementById('pdr-painel-sub').innerHTML=pdEsc(x.DESCRICAO)+' '+pdrSelo_(x);
+  document.getElementById('pdr-painel-abas').innerHTML=pdrAbas_(id,modo);document.getElementById('pdr-painel-abas').hidden=false;
+  pdrPainelMsg_('');
+  var corpo=document.getElementById('pdr-painel-corpo'),rod=document.getElementById('pdr-painel-rodape');
+  if(modo==='cadastro'){corpo.innerHTML=pdrFormCadastro_(x);rod.innerHTML='<button type="button" class="pdr-btn pdr-btn-primario" data-pdr-p="salvar-cadastro" data-id="'+pdEsc(id)+'">Salvar alterações</button><button type="button" class="pdr-btn" data-pdr-p="aba" data-modo="resumo" data-id="'+pdEsc(id)+'">Cancelar</button>';}
+  else if(modo==='dados'){corpo.innerHTML=pdrFormDados_(x);rod.innerHTML='<button type="button" class="pdr-btn pdr-btn-primario" data-pd-action="save">Salvar dados</button><button type="button" class="pdr-btn" data-pdr-p="aba" data-modo="resumo" data-id="'+pdEsc(id)+'">Cancelar</button>';if(x.FOTO_ID)pdPhoto(id,document.getElementById('pd-foto-preview'));}
+  else{corpo.innerHTML=pdrResumoHtml_(x);var pode=pdrPodeEditar_();
+    rod.innerHTML=pode?'<button type="button" class="pdr-btn pdr-btn-primario" data-pdr-p="aba" data-modo="cadastro" data-id="'+pdEsc(id)+'">Editar</button><button type="button" class="pdr-btn" data-pdr-p="aba" data-modo="dados" data-id="'+pdEsc(id)+'">Dados e foto</button><span class="pdr-espaco"></span>'+(x.ativo?'<button type="button" class="pdr-btn pdr-btn-perigo" data-pdr-p="inativar" data-id="'+pdEsc(id)+'">Inativar</button>':'<button type="button" class="pdr-btn" data-pdr-p="reativar" data-id="'+pdEsc(id)+'">Reativar</button>'):'<span class="pdr-mudo">Seu perfil só consulta.</span><span class="pdr-espaco"></span><button type="button" class="pdr-btn" data-pdr-p="fechar">Fechar</button>';
+    if(x.FOTO_ID)pdPhoto(id,document.getElementById('pdr-foto'));pdrCarregarHistorico_(id);}
+  corpo.scrollTop=0;
+  corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
+  pdrMostrarPainel_();
+}
+function pdrResumoHtml_(x){
+  var i=x.item||{},pode=pdrPodeEditar_(),h='';
+  if(x.ativo&&(x.st==='VENCIDO'||x.st==='VALIDADE_INVALIDA'))h+='<div class="bc-faixa bc-faixa-erro"><span>'+pdEsc(x.rotulo)+'. Não pode ser usado em certificado.'+(pode?' Atualize a validade e o PDF em Editar.':'')+'</span></div>';
+  else if(x.ativo&&x.st==='SEM_VALIDADE')h+='<div class="bc-faixa bc-faixa-aviso"><span>Sem validade informada.'+(pode?' Informe a validade em Editar.':'')+'</span></div>';
+  else if(x.ativo&&x.st==='VENCENDO')h+='<div class="bc-faixa bc-faixa-aviso"><span>'+pdEsc(x.rotulo)+'. Programe a recalibração.</span></div>';
+  else if(!x.ativo)h+='<div class="bc-faixa"><span>Inativo: não aparece na escolha dos ensaios. O histórico continua guardado.</span></div>';
+  h+='<h3 class="pdr-sec">Certificado e incerteza</h3><dl class="pdr-dl">'+
+    pdrCampoLeitura_('Nº do certificado',pdEsc(x.CERT))+pdrCampoLeitura_('Validade',pdEsc(x.VALIDADE)+(x.ativo&&x.st!=='OK'?' <span class="pdr-mudo">'+pdEsc(x.rotulo)+'</span>':''))+
+    pdrCampoLeitura_('Incerteza (U95)',pdrNum_(x.U95)+(x.UNIDADE?' '+pdEsc(x.UNIDADE):''))+pdrCampoLeitura_('Fator k',pdrNum_(x.K))+pdrCampoLeitura_('Graus de liberdade (νeff)',pdrVeff_(x.VEFF))+
+    pdrCampoLeitura_('Laboratório',pdEsc(i.LABORATORIO))+pdrCampoLeitura_('Data da calibração',pdEsc(i.DATA_CALIBRACAO))+
+    pdrCampoLeitura_('PDF',x.link?'<a href="'+pdEsc(x.link)+'" target="_blank" rel="noopener"><i class="fas fa-file-pdf" aria-hidden="true"></i> Abrir certificado</a>':'<span class="pdr-mudo">Sem PDF</span>')+'</dl>'+
+    (pode?'<div class="pdr-botoes"><button type="button" class="pdr-btn" data-pdr-p="pdf" data-id="'+pdEsc(x.ID)+'">'+(x.link?'Substituir PDF':'Anexar PDF')+'</button></div>':'');
+  h+='<h3 class="pdr-sec">Equipamento e localização</h3><dl class="pdr-dl">'+pdrCampoLeitura_('Marca',pdEsc(x.MARCA))+pdrCampoLeitura_('Modelo',pdEsc(x.MODELO))+pdrCampoLeitura_('Série',pdEsc(x.SERIE))+
+    pdrCampoLeitura_('Grandeza',pdEsc(x.GRANDEZA))+pdrCampoLeitura_('Faixa',pdEsc(i.FAIXA))+pdrCampoLeitura_('Resolução',pdEsc(i.RESOLUCAO))+
+    pdrCampoLeitura_('Localização',x.LOCAL?pdEsc(x.LOCAL):'<span class="bc-selo bc-selo-aviso">Pendente</span>')+
+    pdrCampoLeitura_('Conferência',x.conferido?'<span class="bc-selo bc-selo-ok">Conferido pela equipe</span>':x.extraido?'<span class="bc-selo bc-selo-aviso">Lido por IA, falta conferir</span>':'<span class="pdr-mudo">Dados pendentes</span>')+'</dl>';
+  h+='<div id="pdr-foto" class="pdr-foto">'+(x.FOTO_ID?'':'<span class="pdr-mudo">Sem foto cadastrada.</span>')+'</div>';
+  var irmaos=x.emGrupo?PDR.lista.filter(function(y){return y.base===x.base;}).sort(function(a,b){return a.TAG.localeCompare(b.TAG,'pt-BR',{numeric:true});}):[];
+  if(irmaos.length)h+='<h3 class="pdr-sec">Outros canais de '+pdEsc(x.base)+'</h3>'+pdrTabelaCanais_(irmaos,x.ID);
+  if(i.PONTOS||i.RESULTADOS_CERTIFICADO)h+='<details class="pdr-det"><summary>Pontos e resultados do certificado</summary>'+(i.PONTOS?'<p class="pdr-pre">'+pdEsc(i.PONTOS)+'</p>':'')+(i.RESULTADOS_CERTIFICADO?'<p class="pdr-pre">'+pdEsc(i.RESULTADOS_CERTIFICADO)+'</p>':'')+'</details>';
+  h+='<h3 class="pdr-sec">Histórico de certificados</h3><div id="pdr-historico"><span class="pdr-mudo">Aguarde, consultando os PDFs anexados...</span></div>';
+  return h;
+}
+function pdrTabelaCanais_(lista,atual){
+  var cont={};lista.forEach(function(i){cont[i.VALIDADE]=(cont[i.VALIDADE]||0)+1;});var maior=Object.keys(cont).sort(function(a,b){return cont[b]-cont[a];})[0],div=Object.keys(cont).length>1;
+  return '<div class="pdr-rolar"><table class="bc-tabela pdr-canais"><thead><tr><th>Canal</th><th>U95</th><th>k</th><th>νeff</th><th>Validade</th><th>PDF</th><th><span class="pdr-oculto">Abrir</span></th></tr></thead><tbody>'+lista.map(function(y){var d=div&&y.VALIDADE!==maior;
+    return '<tr'+(y.ID===atual?' class="pdr-atual"':'')+'><td><b>'+pdEsc(y.suf||y.TAG)+'</b></td><td>'+pdrNum_(y.U95)+'</td><td>'+pdrNum_(y.K)+'</td><td>'+pdrVeff_(y.VEFF)+'</td><td class="'+(d?'pdr-divergente':'')+'">'+pdEsc(y.VALIDADE||'—')+' '+pdrSelo_(y)+'</td><td>'+(y.link?'<a href="'+pdEsc(y.link)+'" target="_blank" rel="noopener">PDF</a>':'<span class="pdr-mudo">—</span>')+'</td><td>'+(y.ID===atual?'<span class="pdr-mudo">Aberto</span>':'<button type="button" class="pdr-btn pdr-btn-p" data-pdr-p="abrir" data-id="'+pdEsc(y.ID)+'">Abrir</button>')+'</td></tr>';}).join('')+'</tbody></table></div>'+(div?'<p class="pdr-divergente-nota">Validades diferentes entre os canais: confira se todos estão no mesmo certificado.</p>':'');
+}
+function pdrAbrirGrupo_(base){
+  pdrFecharMenu_();var lista=PDR.lista.filter(function(x){return x.base===base;}).sort(function(a,b){return a.TAG.localeCompare(b.TAG,'pt-BR',{numeric:true});});if(!lista.length)return;
+  PDR.painel={modo:'grupo',grupo:base,sujo:false};var x0=lista[0];
+  var g={itens:lista,total:lista.length,chave:base};
+  document.getElementById('pdr-painel-titulo').textContent=base;
+  document.getElementById('pdr-painel-sub').innerHTML=pdEsc(pdrPrefixoComum_(lista.map(function(x){return x.DESCRICAO;})))+' · '+pdEsc(pdrRotuloGrupo_(g));
+  document.getElementById('pdr-painel-abas').hidden=true;pdrPainelMsg_('');
+  var certs=lista.map(function(x){return x.CERT;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;});
+  document.getElementById('pdr-painel-corpo').innerHTML='<dl class="pdr-dl">'+pdrCampoLeitura_('Equipamento',pdrEquip_(x0))+pdrCampoLeitura_('Certificado',pdEsc(certs.join(', ')))+pdrCampoLeitura_('Local',pdEsc(lista.map(function(x){return x.LOCAL;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).join(', ')))+pdrCampoLeitura_('Validade',pdrValidadeGrupo_(g))+'</dl>'+
+    '<h3 class="pdr-sec">Canais</h3>'+pdrTabelaCanais_(lista,'');
+  var ids=lista.map(function(x){return x.ID;});
+  document.getElementById('pdr-painel-rodape').innerHTML='<button type="button" class="pdr-btn" data-pdr-p="sel-grupo" data-ids="'+pdEsc(ids.join(','))+'">Selecionar o grupo para inventário</button><span class="pdr-espaco"></span><button type="button" class="pdr-btn" data-pdr-p="fechar">Fechar</button>';
+  pdrMostrarPainel_();
+}
+function pdrAtualizarPainel_(){var pp=document.getElementById('pdr-painel');if(!pp||pp.hidden||!PDR.painel)return;if(PDR.painel.modo==='grupo'){pdrAbrirGrupo_(PDR.painel.grupo);return;}if(PDR.painel.modo==='resumo'&&PDR.painel.id){if(pdrX_(PDR.painel.id))pdrAbrirPainel_(PDR.painel.id,'resumo');}}
+function pdrCarregarHistorico_(id){
+  var el=document.getElementById('pdr-historico');if(!el)return;
+  pdApi('apiHistoricoCertificadosPadrao',{padraoId:id}).then(function(r){var alvo=document.getElementById('pdr-historico');if(!alvo||!PDR.painel||PDR.painel.id!==id)return;
+    var it=r.items||[];alvo.innerHTML=it.length?'<ul class="pdr-hist">'+it.map(function(f){return '<li><a href="'+pdEsc(f.url)+'" target="_blank" rel="noopener"><i class="fas fa-file-pdf" aria-hidden="true"></i> '+pdEsc(f.nome)+'</a><span class="pdr-mudo">'+pdEsc(f.criadoEm||'')+'</span>'+(f.atual?'<span class="bc-selo bc-selo-ok">Atual</span>':'')+'</li>';}).join('')+'</ul>':'<span class="pdr-mudo">'+pdEsc(r.aviso||'Nenhum PDF anexado a este padrão até agora.')+'</span>';
+  }).catch(function(e){var alvo=document.getElementById('pdr-historico');if(alvo)alvo.innerHTML='<span class="pdr-mudo">Não foi possível consultar o histórico agora ('+pdEsc(e.message||e)+'). O PDF atual continua no link acima.</span>';});
+}
+function pdrFormCadastro_(x){
+  var v=function(k){return x?pdEsc(k):'';},num=function(n,pad){return pdEsc(String(n==null||n===''?pad:n).replace('.',','));};
+  var aviso=x&&x.emGrupo?'<p class="pdr-mudo">Este cadastro faz parte de '+pdEsc(x.base)+'. Mudar a validade aqui muda só este canal.</p>':'';
+  return aviso+'<div class="pdr-form-grade">'+
+    '<label class="bc-campo"><span>Identificação (TAG)</span><input id="pdr-f-tag" type="text" maxlength="120" value="'+(x?v(x.TAG):'')+'" placeholder="Ex.: THM-002 (T)"></label>'+
+    '<label class="bc-campo"><span>Nº do certificado</span><input id="pdr-f-cert" type="text" maxlength="200" value="'+(x?v(x.CERT):'')+'"></label>'+
+    '<label class="bc-campo pdr-larga"><span>Descrição</span><input id="pdr-f-desc" type="text" maxlength="400" value="'+(x?v(x.DESCRICAO):'')+'" placeholder="Ex.: Termo-higrômetro - temperatura"></label>'+
+    '<label class="bc-campo"><span>Incerteza (U95)</span><input id="pdr-f-u95" type="text" inputmode="decimal" value="'+(x?num(x.U95,''):'')+'"></label>'+
+    '<label class="bc-campo"><span>Fator k</span><input id="pdr-f-k" type="text" inputmode="decimal" value="'+(x?num(x.K,2):'2')+'"></label>'+
+    '<label class="bc-campo"><span>Graus de liberdade (0 = infinito)</span><input id="pdr-f-veff" type="text" inputmode="decimal" value="'+(x?num(x.VEFF,0):'0')+'"></label>'+
+    '<label class="bc-campo"><span>Validade (dd/mm/aaaa)</span><input id="pdr-f-validade" type="text" maxlength="10" value="'+(x?v(x.VALIDADE):'')+'" placeholder="dd/mm/aaaa"></label>'+
+    '<label class="bc-campo pdr-larga"><span>'+(x&&x.link?'Substituir o PDF do certificado (opcional)':'PDF do certificado (opcional)')+'</span><input id="pdr-f-pdf" type="file" accept="application/pdf" data-rotulo="Escolher PDF"></label>'+
+    '</div><p class="pdr-mudo">Um certificado com vários canais ou grandezas tem um cadastro para cada um, com a mesma TAG base e o canal entre parênteses, cada um com seus U95 e k. A TAG não pode repetir.</p>';
+}
+function pdrFormDados_(x){
+  var p=x.item||{};
+  var campos=PD_FIELDS.filter(function(f){return f[0]!=='CERTIFICADO_NUMERO'&&f[0]!=='VALIDADE';});
+  var longos=['PONTOS','RESULTADOS_CERTIFICADO','METODO','RASTREABILIDADE','OBSERVACOES_TECNICAS'];
+  var temPdf=/^(https:\/\/(drive|docs)\.google\.com\/|\/arquivos\/)/.test(p.LINK_CERTIFICADO_PDF||'');
+  var h='';
+  if(p.AUTOMACAO)h+='<p class="pdr-pre pdr-mudo">Leitura automática: '+pdEsc(p.AUTOMACAO.impedimentos||'')+'\n'+pdEsc((p.AUTOMACAO.conflitos||[]).join('\n'))+'\nOrigem: '+pdEsc(p.AUTOMACAO.paginas||'')+'</p>';
+  h+='<div class="pdr-botoes"><button type="button" class="pdr-btn" data-pd-action="extract"'+(temPdf?'':' disabled')+'>Ler o certificado com IA</button>'+(temPdf?'<a href="'+pdEsc(p.LINK_CERTIFICADO_PDF)+'" target="_blank" rel="noopener">Abrir o PDF</a>':'<span class="pdr-mudo">Anexe o PDF primeiro (Substituir PDF no menu Mais ou em Cadastro e validade).</span>')+'</div>'+
+    '<div id="pd-extraction" class="pdr-pre pdr-mudo"></div>'+
+    '<p class="pdr-mudo">A IA preenche uma proposta. Confira com o PDF antes de salvar. Número do certificado ('+pdEsc(p.CERTIFICADO_NUMERO||'—')+') e validade ('+pdEsc(p.VALIDADE||'—')+') são editados em Cadastro e validade.</p>'+
+    '<input type="hidden" id="pd-f-CERTIFICADO_NUMERO" value="'+pdEsc(p.CERTIFICADO_NUMERO||'')+'"><input type="hidden" id="pd-f-VALIDADE" value="'+pdEsc(p.VALIDADE||'')+'">'+
+    '<div class="pdr-form-grade">'+campos.map(function(f){var l=longos.indexOf(f[0])>=0;return '<label class="bc-campo'+(l||f[0]==='LOCALIZACAO'?' pdr-larga':'')+'"><span>'+f[1]+'</span>'+(l?'<textarea id="pd-f-'+f[0]+'" rows="3">'+pdEsc(p[f[0]]||'')+'</textarea>':'<input id="pd-f-'+f[0]+'" type="text" value="'+pdEsc(p[f[0]]||'')+'">')+'</label>';}).join('')+'</div>'+
+    '<h3 class="pdr-sec">Foto do instrumento</h3><div id="pd-foto-preview" class="pdr-foto">'+(x.FOTO_ID?'':'<span class="pdr-mudo">Sem foto.</span>')+'</div>'+
+    '<label class="bc-campo"><span>Nova foto (JPG ou PNG, até 12 MB)</span><input id="pd-foto" type="file" accept="image/jpeg,image/png" data-rotulo="Escolher foto"></label>'+
+    (x.FOTO_ID?'<label class="pdr-check-linha"><input id="pd-remover-foto" type="checkbox"> Remover a foto atual</label>':'<input id="pd-remover-foto" type="checkbox" hidden>')+
+    '<label class="pdr-check-linha"><input id="pd-conferido" type="checkbox"> Conferi identificação, datas, faixas e todos os pontos com o certificado atual</label>'+
+    (x.conferido?'<p class="pdr-mudo">Este cadastro estava conferido. Ao salvar, marque a conferência de novo se ela continuar valendo.</p>':'');
+  return h;
+}
+
+/* ---------- menu "Mais" (bc-mais-menu) ---------- */
+function pdrAbrirMenu_(botao,id){
+  var m=document.getElementById('pdr-menu');if(!m)return;
+  if(!m.hidden&&m.getAttribute('data-id')===id){pdrFecharMenu_();return;}
+  var x=pdrX_(id);if(!x)return;var pode=pdrPodeEditar_();
+  var it=['<button type="button" role="menuitem" data-pdr-m="detalhe">Ver detalhes</button>'];
+  if(pode){it.push('<button type="button" role="menuitem" data-pdr-m="pdf">'+(x.link?'Substituir PDF':'Anexar PDF')+'</button>','<button type="button" role="menuitem" data-pdr-m="dados">Dados, localização e foto</button>');}
+  if(x.FOTO_ID)it.push('<button type="button" role="menuitem" data-pdr-m="foto">Ver foto</button>');
+  if(x.link)it.push('<a role="menuitem" href="'+pdEsc(x.link)+'" target="_blank" rel="noopener">Abrir o PDF</a>');
+  if(pode)it.push('<hr>',x.ativo?'<button type="button" role="menuitem" class="bc-perigo" data-pdr-m="inativar">Inativar</button>':'<button type="button" role="menuitem" data-pdr-m="reativar">Reativar</button>');
+  m.innerHTML=it.join('');m.setAttribute('data-id',id);m.hidden=false;PDR.menuBotao=botao;botao.setAttribute('aria-expanded','true');
+  var r=botao.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+  var left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w)),top=r.bottom+4;if(top+h>window.innerHeight-8)top=Math.max(8,r.top-h-4);
+  m.style.left=left+'px';m.style.top=top+'px';
+  var primeiro=m.querySelector('[role="menuitem"]');if(primeiro)primeiro.focus();
+  m.onkeydown=function(e){if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;e.preventDefault();var its=[].slice.call(m.querySelectorAll('[role="menuitem"]'));var i=its.indexOf(document.activeElement);i=e.key==='ArrowDown'?(i+1)%its.length:(i-1+its.length)%its.length;its[i].focus();};
+}
+function pdrFecharMenu_(foco){var m=document.getElementById('pdr-menu');if(!m||m.hidden)return;m.hidden=true;if(PDR.menuBotao){PDR.menuBotao.setAttribute('aria-expanded','false');if(foco&&document.body.contains(PDR.menuBotao))PDR.menuBotao.focus();}}
+function pdrCliqueMenu_(e){var b=e.target.closest('[data-pdr-m]');var m=document.getElementById('pdr-menu');if(!b){if(e.target.closest('a'))pdrFecharMenu_();return;}var id=m.getAttribute('data-id'),a=b.getAttribute('data-pdr-m');pdrFecharMenu_();
+  if(a==='detalhe'||a==='foto')pdrAbrirPainel_(id,'resumo');else if(a==='dados')pdrAbrirPainel_(id,'dados');else if(a==='pdf')pdrEscolherPdf_(id);else if(a==='inativar')pdrInativar_(id);else if(a==='reativar')pdrReativar_(id);}
+function pdrCliquePainel_(e){
+  var b=e.target.closest('[data-pdr-p]');if(!b)return;var a=b.getAttribute('data-pdr-p'),id=b.getAttribute('data-id');
+  if(a==='fechar')pdrFecharPainel_();
+  else if(a==='aba')pdrAbrirPainel_(id,b.getAttribute('data-modo'));
+  else if(a==='abrir')pdrAbrirPainel_(id,'resumo');
+  else if(a==='salvar-cadastro')pdrSalvarCadastro_(id);
+  else if(a==='salvar-novo')pdrSalvarCadastro_('');
+  else if(a==='pdf')pdrEscolherPdf_(id);
+  else if(a==='inativar')pdrInativar_(id);
+  else if(a==='reativar')pdrReativar_(id);
+  else if(a==='sel-grupo'){b.getAttribute('data-ids').split(',').forEach(function(i){PD.selected[i]=true;});pdList();pdrPainelMsg_('Grupo selecionado. Gere o documento na aba Inventário e orçamento.');}
+}
+document.addEventListener('click',function(e){var b=e.target.closest('#pdr-painel [data-pd-action]');if(!b)return;var a=b.dataset.pdAction;if(a==='extract')pdExtract();if(a==='save')pdSave();});
+
+/* ---------- ações (mesmas chamadas do servidor de antes) ---------- */
+function pdrAbrirNovo_(){
+  pdrFecharMenu_();PDR.painel={modo:'novo',id:'',sujo:false};
+  document.getElementById('pdr-painel-titulo').textContent='Cadastrar padrão';
+  document.getElementById('pdr-painel-sub').textContent='TAG, certificado, incerteza e validade. Os dados do equipamento entram depois, em Dados, localização e foto.';
+  document.getElementById('pdr-painel-abas').hidden=true;pdrPainelMsg_('');
+  var corpo=document.getElementById('pdr-painel-corpo');corpo.innerHTML=pdrFormCadastro_(null);
+  corpo.oninput=function(){if(PDR.painel)PDR.painel.sujo=true;};corpo.onchange=corpo.oninput;
+  document.getElementById('pdr-painel-rodape').innerHTML='<button type="button" class="pdr-btn pdr-btn-primario" data-pdr-p="salvar-novo">Salvar padrão</button><button type="button" class="pdr-btn" data-pdr-p="fechar">Cancelar</button>';
+  pdrMostrarPainel_('pdr-f-tag');
+}
+function pdrSalvarCadastro_(id){
+  var g=function(k){var el=document.getElementById('pdr-f-'+k);return el?el.value:'';};
+  var payload={tag:g('tag'),descricao:g('desc'),incertezaU95:g('u95'),fatorK:g('k'),veff:g('veff'),certificadoNumero:g('cert'),validade:g('validade')};
+  if(id)payload.padraoId=id;
+  var inp=document.getElementById('pdr-f-pdf'),arquivo=inp&&inp.files?inp.files[0]:null;
+  var botoes=document.querySelectorAll('#pdr-painel-rodape button');
+  return pdRun(id?'Aguarde, salvando o cadastro...':'Aguarde, cadastrando o padrão...',async function(){
+    botoes.forEach(function(b){b.disabled=true;});pdrPainelMsg_(id?'Aguarde, salvando...':'Aguarde, cadastrando...');
+    try{
+      if(arquivo){if(arquivo.type&&arquivo.type!=='application/pdf')throw new Error('O certificado deve ser um arquivo PDF.');var lido=await tplCertCal_lerArquivoComoBase64_(arquivo);payload.certificadoBase64=lido.base64;payload.certificadoMimeType=lido.mimeType;payload.certificadoNomeArquivo=arquivo.name;}
+      var r=await pdApi(id?'apiAtualizarPadrao':'apiCriarPadrao',payload);
+      var novoId=id||(r.item&&r.item.ID)||'';
+      if(PDR.painel)PDR.painel.sujo=false;
+      await pdRecarregarCadastros();
+      if(novoId&&pdrX_(novoId)){pdrAbrirPainel_(novoId,'resumo');pdrPainelMsg_(id?'Alterações salvas.':'Padrão cadastrado. Complete marca, série e localização em Dados e foto.');}
+      pdMsg(id?'Cadastro de '+payload.tag+' salvo.':'Padrão '+payload.tag+' cadastrado.');
+    }finally{botoes.forEach(function(b){b.disabled=false;});}
+  });
+}
+function pdrEscolherPdf_(id){var a=document.getElementById('pdr-arquivo');if(!a)return;a.setAttribute('data-id',id);a.click();}
+function pdrAnexar_(id,arquivo){var x=pdrX_(id);if(!x)return;
+  if(arquivo.type&&arquivo.type!=='application/pdf'){pdMsg('Escolha um arquivo PDF.',true);pdrPainelMsg_('Escolha um arquivo PDF.',true);return;}
+  return pdRun('Aguarde, enviando o PDF de '+x.TAG+'...',async function(){pdrPainelMsg_('Aguarde, enviando o PDF...');var lido=await tplCertCal_lerArquivoComoBase64_(arquivo);
+    await pdApi('apiAnexarCertificadoPadrao',{padraoId:id,certificadoBase64:lido.base64,certificadoMimeType:lido.mimeType,certificadoNomeArquivo:arquivo.name});
+    await pdRecarregarCadastros();pdMsg('PDF de '+x.TAG+' '+(x.link?'substituído':'anexado')+'. O anterior continua no histórico do padrão.');pdrPainelMsg_('PDF '+(x.link?'substituído':'anexado')+'.');});}
+function pdrInativar_(id){var x=pdrX_(id);if(!x)return;
+  if(!confirm('Inativar o padrão '+x.TAG+'? Ele deixa de aparecer na escolha de padrões dos ensaios; o histórico é mantido e você pode reativá-lo depois.'))return;
+  return pdRun('Aguarde, inativando '+x.TAG+'...',async function(){await pdApi('apiInativarPadrao',{padraoId:id});await pdRecarregarCadastros();pdMsg(x.TAG+' inativado. Para desfazer, filtre Inativos e use Reativar no menu Mais.');pdrPainelMsg_('Inativado. Use Reativar para desfazer.');});}
+function pdrReativar_(id){var x=pdrX_(id);if(!x)return;
+  return pdRun('Aguarde, reativando '+x.TAG+'...',async function(){await pdApi('apiReativarPadrao',{padraoId:id});await pdRecarregarCadastros();pdMsg(x.TAG+' reativado. Ele volta para a escolha dos ensaios'+(x.st==='VENCIDO'?', mas continua vencido: atualize a validade antes de usar.':'.'));pdrPainelMsg_('Reativado.');});}
+/* Nome antigo mantido: abre o painel na aba de dados. */
+function pdEdit(id){pdrAbrirPainel_(id,'dados');}
+function pdPhoto(id,target){if(!target)return;target.innerHTML='<span class="pdr-mudo">Aguarde, carregando a foto...</span>';
+  var mostrar=function(data){if(!document.body.contains(target))return;if(data&&/^data:image\/(jpeg|png);base64,/.test(data)){target.innerHTML='';var img=document.createElement('img');img.src=data;img.alt='Foto do padrão';target.appendChild(img);}else target.innerHTML='<span class="pdr-mudo">Foto não disponível.</span>';};
+  if(PD.fotos[id]){mostrar(PD.fotos[id]);return;}
+  pdApi('apiFotoControlePadrao',{padraoId:id}).then(function(r){PD.fotos[id]=r.data;mostrar(r.data);}).catch(function(e){if(document.body.contains(target))target.innerHTML='<span class="pdr-mudo">Não foi possível carregar a foto ('+pdEsc(e.message||e)+').</span>';});}
 function pdExtract(){return pdRun('Aguarde, a IA está lendo todas as páginas do certificado...',async function(){
+  pdrPainelMsg_('Aguarde, a IA está lendo o certificado...');
   var r=await pdApi('apiExtrairControlePadrao',{padraoId:PD.current.ID});PD.token=r.token;
-  Object.keys(r.campos).forEach(function(k){var el=pdEl('f-'+k);if(el&&r.campos[k])el.value=r.campos[k];});
-  pdEl('conferido').checked=false;pdEl('extraction').textContent='Páginas: '+r.paginas+'\n'+r.alertas+'\nRevise todos os campos. Campos vazios da extração não substituíram os dados já digitados.';
-  pdMsg('Leitura concluída. Confira os dados antes de salvar.');
+  Object.keys(r.campos).forEach(function(k){var el=pdEl('f-'+k);if(el&&r.campos[k]&&k!=='CERTIFICADO_NUMERO'&&k!=='VALIDADE')el.value=r.campos[k];});
+  if(PDR.painel)PDR.painel.sujo=true;
+  pdEl('conferido').checked=false;pdEl('extraction').textContent='Páginas: '+r.paginas+'\n'+r.alertas+'\nRevise todos os campos. Campos vazios da leitura não substituíram os dados já digitados.'+((r.campos.CERTIFICADO_NUMERO&&r.campos.CERTIFICADO_NUMERO!==PD.current.CERTIFICADO_NUMERO)||(r.campos.VALIDADE&&r.campos.VALIDADE!==PD.current.VALIDADE)?'\nO certificado lido indica número '+(r.campos.CERTIFICADO_NUMERO||'—')+' e validade '+(r.campos.VALIDADE||'—')+': se estiverem certos, atualize em Cadastro e validade.':'');
+  pdMsg('Leitura concluída. Confira os dados antes de salvar.');pdrPainelMsg_('Leitura concluída. Confira os dados antes de salvar.');
 });}
 function pdReadPhoto(file){return new Promise(function(resolve,reject){
   if(!file)return resolve(null);if(!/^image\/(jpeg|png)$/.test(file.type)||file.size>12*1024*1024)return reject(new Error('Escolha JPG ou PNG de até 12 MB.'));
   var reader=new FileReader();reader.onerror=function(){reject(new Error('Não foi possível ler a foto.'));};reader.onload=function(){var image=new Image();image.onerror=function(){reject(new Error('Imagem inválida.'));};image.onload=function(){var scale=Math.min(1,1000/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);var ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);resolve({base64:canvas.toDataURL('image/jpeg',0.82).split(',')[1],mimeType:'image/jpeg'});};image.src=reader.result;};reader.readAsDataURL(file);
 });}
 function pdSave(){return pdRun('Aguarde, salvando cadastro e foto...',async function(){
-  var campos={};PD_FIELDS.forEach(function(f){campos[f[0]]=pdEl('f-'+f[0]).value;});
-  var foto=await pdReadPhoto(pdEl('foto').files[0]);
-  var r=await pdApi('apiSalvarControlePadrao',{padraoId:PD.current.ID,revisao:PD.current.revisao,campos:campos,foto:foto,removerFoto:pdEl('remover-foto').checked,conferido:pdEl('conferido').checked,token:PD.token});
-  PD.items=PD.items.map(function(p){return p.ID===r.item.ID?r.item:p;});delete PD.fotos[r.item.ID];PD.current=r.item;PD.token='';pdEl('editor').classList.add('hidden');pdList();
-  await tplCertCal_carregarPadroes();pdMsg('Cadastro salvo. Os documentos anteriores continuam preservados.');
+  pdrPainelMsg_('Aguarde, salvando os dados...');
+  var campos={};PD_FIELDS.forEach(function(f){var el=pdEl('f-'+f[0]);campos[f[0]]=el?el.value:'';});
+  var foto=await pdReadPhoto(pdEl('foto')&&pdEl('foto').files[0]);
+  var r=await pdApi('apiSalvarControlePadrao',{padraoId:PD.current.ID,revisao:PD.current.revisao,campos:campos,foto:foto,removerFoto:!!(pdEl('remover-foto')&&pdEl('remover-foto').checked),conferido:!!(pdEl('conferido')&&pdEl('conferido').checked),token:PD.token});
+  delete PD.fotos[r.item.ID];PD.current=r.item;PD.token='';if(PDR.painel)PDR.painel.sujo=false;
+  await pdRecarregarCadastros();pdrAbrirPainel_(r.item.ID,'resumo');pdrPainelMsg_('Dados salvos. Os documentos anteriores continuam preservados.');pdMsg('Dados de '+r.item.TAG+' salvos.');
 });}
+
 function pdPrepareWindow(){
   var w=window.open('','_blank');
   if(w){w.document.open();w.document.write('<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Aguarde — SGO+</title><body style="font:18px Arial;padding:60px;background:#f3f6fa;color:#18324c"><h1>Aguarde, preparando documento…</h1><p>A cópia será salva no histórico e aberta aqui para impressão.</p></body></html>');w.document.close();}
@@ -143,8 +560,8 @@ function pdGenerate(tipo){
 function pdShow(r,win){
   PD.documento=r;var el=pdEl('preview');el.classList.remove('hidden');
   el.innerHTML='<h3>'+(r.status==='EMITIDO'?'Documento emitido e salvo':'Rascunho salvo')+'</h3><p>ID: '+pdEsc(r.id)+'</p>'+
-    (r.status==='RASCUNHO'?'<label for="pd-texto">Texto — revise antes de emitir</label><textarea id="pd-texto" rows="6" maxlength="14000">'+pdEsc(r.texto)+'</textarea><button class="btn-primary" data-pd-action="emit">Emitir e salvar cópia</button>':'')+
-    ' <button class="btn" data-pd-action="document-window">Abrir documento para impressão</button> <button class="btn" data-pd-action="print">Imprimir / salvar PDF</button>';
+    (r.status==='RASCUNHO'?'<label for="pd-texto">Texto — revise antes de emitir</label><textarea id="pd-texto" rows="6" maxlength="14000">'+pdEsc(r.texto)+'</textarea><button class="pdr-btn pdr-btn-primario" data-pd-action="emit">Emitir e salvar cópia</button>':'')+
+    ' <button class="pdr-btn" data-pd-action="document-window">Abrir documento para impressão</button> <button class="pdr-btn" data-pd-action="print">Imprimir / salvar PDF</button>';
   pdDocumentWindow(r,win);
 }
 function pdPreviewText(){var w=PD.docWindow,box=w&&!w.closed&&w.document.querySelector('[data-paddoc-texto]');if(box&&pdEl('texto')){box.textContent=pdEl('texto').value;box.style.whiteSpace='pre-wrap';}}
@@ -154,7 +571,7 @@ function pdDownload(){var url=URL.createObjectURL(new Blob([PD.documento.html],{
 function pdAutoRender(r){
   var el=pdEl('auto');if(!el)return;var j=r.job;
   if(!j){el.textContent='Nenhuma atualização iniciada.';return;}
-  el.innerHTML='<p><b>'+pdEsc(j.status==='CONCLUIDO'?'Processamento concluído':j.status==='PAUSADO'?'Processamento pausado':'Aguarde, processando certificados…')+'</b> · '+j.processados+' de '+j.total+' padrões</p><progress max="'+Math.max(1,j.total)+'" value="'+j.processados+'" style="width:100%"></progress><p>'+pdEsc(j.aviso||'O andamento fica salvo; a tarefa em segundo plano continua mesmo ao fechar esta tela.')+'</p><details><summary>Ver resultados e pendências por padrão</summary><div style="max-height:320px;overflow:auto">'+j.itens.map(function(p){return '<p><b>'+pdEsc(p.tag)+'</b> · '+pdEsc(p.status)+'<br>'+pdEsc(p.mensagem)+(p.status==='PENDENTE'?' <button class="btn btn-sm" data-pd-action="edit" data-id="'+pdEsc(p.id)+'">Revisar cadastro</button>':'')+'</p>';}).join('')+'</div></details>';
+  el.innerHTML='<p><b>'+pdEsc(j.status==='CONCLUIDO'?'Processamento concluído':j.status==='PAUSADO'?'Processamento pausado':'Aguarde, processando certificados…')+'</b> · '+j.processados+' de '+j.total+' padrões</p><progress max="'+Math.max(1,j.total)+'" value="'+j.processados+'" style="width:100%"></progress><p>'+pdEsc(j.aviso||'O andamento fica salvo; a tarefa em segundo plano continua mesmo ao fechar esta tela.')+'</p><details><summary>Ver resultados e pendências por padrão</summary><div style="max-height:320px;overflow:auto">'+j.itens.map(function(p){return '<p><b>'+pdEsc(p.tag)+'</b> · '+pdEsc(p.status)+'<br>'+pdEsc(p.mensagem)+(p.status==='PENDENTE'?' <button class="pdr-btn pdr-btn-p" data-pd-action="edit" data-id="'+pdEsc(p.id)+'">Revisar cadastro</button>':'')+'</p>';}).join('')+'</div></details>';
 }
 function pdAutoSchedule(r){
   clearTimeout(PD.autoTimer);
@@ -167,8 +584,9 @@ async function pdAutoStep(){
   try{var r=await pdApi(PD.autoCanProcess?'apiProcessarAtualizacaoPadroes':'apiStatusAtualizacaoPadroes');pdAutoRender(r);pdAutoSchedule(r);if(r.job&&r.job.status==='CONCLUIDO'){await pdRecarregarCadastros();pdMsg('Atualização concluída. Consulte as pendências e gere os documentos.');}}
   catch(e){pdMsg('Atualização: '+(e.message||e)+'. O progresso salvo será mantido. Use Consultar andamento ou Atualizar dados para retomar.',true);}
 }
-function pdHistory(){return pdRun('Aguarde, consultando cópias salvas...',async function(){var r=await pdApi('apiHistoricoDocumentosPadroes',{termo:pdEl('termo').value});pdEl('history').innerHTML=r.items.map(function(d){return '<div class="cert-item-row"><span><b>'+pdEsc(pdRotuloDoc(d.TIPO))+' · '+pdEsc(pdRotuloDoc(d.STATUS))+'</b><br>'+pdEsc(d.CRIADO_EM)+' · '+pdEsc(d.CRIADO_POR)+'<br>'+pdEsc(d.RESUMO)+'</span><button class="btn" data-pd-action="open" data-id="'+pdEsc(d.ID)+'">Abrir cópia salva</button></div>';}).join('')||'<p>Nenhum documento encontrado.</p>';pdMsg('Histórico: '+r.total+' documento(s). Exibindo até 200; use a busca para refinar.');});}
+function pdHistory(){return pdRun('Aguarde, consultando cópias salvas...',async function(){var r=await pdApi('apiHistoricoDocumentosPadroes',{termo:pdEl('termo').value});pdEl('history').innerHTML=r.items.length?'<div class="pdr-rolar"><table class="bc-tabela pdr-hist-docs"><thead><tr><th>Documento</th><th>Criado em</th><th>Por</th><th>Resumo</th><th><span class="pdr-oculto">Abrir</span></th></tr></thead><tbody>'+r.items.map(function(d){return '<tr><td><b>'+pdEsc(pdRotuloDoc(d.TIPO))+'</b> <span class="bc-selo bc-selo-'+(String(d.STATUS).toUpperCase()==='EMITIDO'?'ok':'aviso')+'">'+pdEsc(pdRotuloDoc(d.STATUS))+'</span></td><td>'+pdEsc(d.CRIADO_EM)+'</td><td>'+pdEsc(d.CRIADO_POR)+'</td><td class="pdr-hist-resumo">'+pdEsc(d.RESUMO)+'</td><td><button class="pdr-btn pdr-btn-p" data-pd-action="open" data-id="'+pdEsc(d.ID)+'">Abrir cópia</button></td></tr>';}).join('')+'</tbody></table></div>':'<p class="pdr-mudo">Nenhum documento encontrado.</p>';pdMsg(r.total===1?'Histórico: 1 documento.':'Histórico: '+r.total+' documentos'+(r.total>200?'. Exibindo 200; use a busca para refinar.':'.'));});}
 function pdOpen(id){if(PD.busy)return;var win=pdPrepareWindow();return pdRun('Aguarde, abrindo a cópia preservada...',async function(){try{var r=await pdApi('apiReabrirDocumentoPadroes',{id:id});pdShow(r,win);pdMsg('Cópia salva carregada.');}catch(e){pdWindowError(win,e);throw e;}});}
+
 /* Fase 2 (16/10): "Padrões de referência" virou página própria (abrir('padroes')). O módulo do Certificado
    continua o mesmo (mesmos dados e funções); a visão escolhe o que aparece:
    - emissao: só a emissão (1 Cliente ... 6 Gerar) e "Certificados emitidos";
@@ -177,37 +595,260 @@ function pdMontarAbas_(panel,docs){
   var wrap=panel.parentNode;if(!wrap||document.getElementById('pd-abas'))return;
   var cad=document.getElementById('certcal-panel-padroes'),rel=document.getElementById('certcal-panel-relatorios-gestao');
   var abas=document.createElement('div');abas.id='pd-abas';
-  abas.innerHTML='<div class="pd-abas-barra" role="tablist"><button type="button" role="tab" data-pd-aba="padroes">Padrões</button><button type="button" role="tab" data-pd-aba="docs">Inventário e orçamento</button><button type="button" role="tab" data-pd-aba="relatorios">Relatórios gerenciais</button></div>'+
-    '<div id="pd-aba-padroes" class="pd-aba"></div><div id="pd-aba-docs" class="pd-aba"></div><div id="pd-aba-relatorios" class="pd-aba"></div>';
+  abas.innerHTML='<div class="pd-abas-barra" role="tablist" aria-label="Seções de padrões de referência"><button type="button" role="tab" data-pd-aba="padroes">Padrões</button><button type="button" role="tab" data-pd-aba="docs">Inventário e orçamento<span class="pdr-aba-n" id="pdr-aba-n" hidden></span></button><button type="button" role="tab" data-pd-aba="relatorios">Relatórios gerenciais</button></div>'+
+    '<div id="pd-aba-padroes" class="pd-aba" role="tabpanel"></div><div id="pd-aba-docs" class="pd-aba" role="tabpanel"></div><div id="pd-aba-relatorios" class="pd-aba" role="tabpanel"></div>';
   wrap.insertBefore(abas,wrap.firstChild);
-  if(cad)document.getElementById('pd-aba-padroes').appendChild(cad);
+  // O cadastro antigo (formulários e tabela) fica guardado e escondido: a lista nova e o painel lateral
+  // fazem o mesmo trabalho com as mesmas chamadas do servidor.
+  if(cad){cad.style.display='none';document.getElementById('pd-aba-padroes').appendChild(cad);}
   document.getElementById('pd-aba-padroes').appendChild(panel);
   document.getElementById('pd-aba-docs').appendChild(docs);
-  if(rel)document.getElementById('pd-aba-relatorios').appendChild(rel);
-  // a tabela antiga do cadastro repetia a lista: fica só a lista única (com as mesmas ações)
+  if(rel){
+    rel.className='pdr';rel.removeAttribute('style');
+    rel.innerHTML='<div class="pdr-rel-grade">'+
+      '<div class="bc-cartao"><div class="bc-cartao-cab"><h3>Plano de renovação e auditoria</h3></div><p class="pdr-mudo">Todos os padrões com validade, situação, prioridade de recalibração e pontos de atenção para auditoria. Abre pronto para imprimir ou salvar em PDF A4.</p><div class="pdr-botoes"><button type="button" class="pdr-btn pdr-btn-primario" data-pdr-rel="RENOVACAO">Gerar plano</button></div></div>'+
+      '<div class="bc-cartao"><div class="bc-cartao-cab"><h3>Relatório de desempenho</h3></div><p class="pdr-mudo">Certificados emitidos, padrões mais usados e ocorrências no período escolhido, com leitura por IA.</p><div class="pdr-botoes"><label class="bc-campo pdr-campo-curto"><span>Período</span><select id="certcal-gestao-periodo"><option value="30">Últimos 30 dias</option><option value="90" selected>Últimos 90 dias</option><option value="365">Últimos 12 meses</option><option value="0">Todo o histórico</option></select></label><button type="button" class="pdr-btn pdr-btn-primario" data-pdr-rel="DESEMPENHO">Gerar relatório</button></div></div>'+
+      '</div><div id="certcal-gestao-relatorios-status"></div><p class="pdr-mudo pdr-rodape-nota">Os relatórios abrem em outra aba. Se nada abrir, permita pop-ups do SGO+ no navegador e clique de novo.</p>';
+    rel.addEventListener('click',function(e){var b=e.target.closest('[data-pdr-rel]');if(b)tplCertCal_gerarRelatorioGestao_(b.getAttribute('data-pdr-rel'));});
+    document.getElementById('pd-aba-relatorios').appendChild(rel);
+  }
   var antiga=document.getElementById('certcal-padroes-tabela');if(antiga)antiga.style.display='none';
   abas.querySelector('.pd-abas-barra').addEventListener('click',function(e){var b=e.target.closest('[data-pd-aba]');if(b)pdTrocarAba_(b.dataset.pdAba);});
+  abas.querySelector('.pd-abas-barra').addEventListener('keydown',function(e){if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;var ord=['padroes','docs','relatorios'],i=ord.indexOf(PD.aba||'padroes');i=(i+(e.key==='ArrowRight'?1:2))%3;pdTrocarAba_(ord[i]);var nb=abas.querySelector('[data-pd-aba="'+ord[i]+'"]');if(nb)nb.focus();});
   pdAplicarVisao_();
 }
 function pdTrocarAba_(aba){
   PD.aba=aba;
+  if(!PD.busy){var sd=pdEl('status-docs');if(sd)sd.textContent='';var sp=pdEl('status');if(sp&&!/carregando/i.test(sp.textContent))sp.textContent='';}
   ['padroes','docs','relatorios'].forEach(function(k){var el=document.getElementById('pd-aba-'+k);if(el)el.style.display=k===aba?'':'none';});
-  document.querySelectorAll('#pd-abas [data-pd-aba]').forEach(function(b){var on=b.dataset.pdAba===aba;b.classList.toggle('ativa',on);b.setAttribute('aria-selected',on?'true':'false');});
+  document.querySelectorAll('#pd-abas [data-pd-aba]').forEach(function(b){var on=b.dataset.pdAba===aba;b.classList.toggle('ativa',on);b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;});
   try{localStorage.setItem('sgo_padroes_aba',aba);}catch(e){}
   pdCount();
+  if(aba==='padroes'&&document.getElementById('pdr-lista'))pdList();
 }
 function pdAplicarVisao_(){
   var abas=document.getElementById('pd-abas');if(!abas)return;var wrap=abas.parentNode;
   var visao=window.CERTCAL_VISAO==='padroes'?'padroes':'emissao';
   Array.prototype.forEach.call(wrap.children,function(el){if(el===abas)return;el.style.display=visao==='padroes'?'none':'';});
   abas.style.display=visao==='padroes'?'':'none';
+  wrap.classList.toggle('pdr-largo',visao==='padroes');
   if(visao==='padroes'){var aba='padroes';try{aba=localStorage.getItem('sgo_padroes_aba')||'padroes';}catch(e){}if(['padroes','docs','relatorios'].indexOf(aba)<0)aba='padroes';pdTrocarAba_(aba);}
+  else{var pp=document.getElementById('pdr-painel');if(pp&&!pp.hidden){PDR.painel=null;pdrFecharPainel_();}}
 }
-(function(){var st=document.createElement('style');st.textContent='#pd-abas .pd-abas-barra{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;border-bottom:1px solid var(--bc-line-2,#d8dcd8);padding-bottom:8px}#pd-abas .pd-abas-barra button{border:1px solid var(--bc-line-2,#d8dcd8);background:#fff;color:var(--bc-text,#1c1f1d);border-radius:4px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}#pd-abas .pd-abas-barra button.ativa{background:var(--bc-text,#1c1f1d);border-color:var(--bc-text,#1c1f1d);color:#fff}';document.head.appendChild(st);})();
+function pdrEstilos_(){
+  if(document.getElementById('pdr-estilos'))return;
+  var st=document.createElement('style');st.id='pdr-estilos';
+  st.textContent=[
+  /* abas */
+  '#pd-abas .pd-abas-barra{display:flex;gap:2px;flex-wrap:wrap;margin:0 0 16px;border-bottom:1px solid var(--bc-line-2)}',
+  '#pd-abas .pd-abas-barra button{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--bc-text-3);padding:10px 14px;margin-bottom:-1px;font:600 14px var(--bc-sans);cursor:pointer;min-height:44px;display:inline-flex;align-items:center;gap:6px}',
+  '#pd-abas .pd-abas-barra button:hover{color:var(--bc-text)}',
+  '#pd-abas .pd-abas-barra button.ativa{color:var(--bc-text);border-bottom-color:var(--bc-action)}',
+  '#pd-abas .pd-abas-barra button:focus-visible{outline:2px solid var(--bc-action);outline-offset:-2px}',
+  '.pdr-aba-n{background:var(--bc-action);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700}',
+  '#tplCertCalContainer .wrap.pdr-largo{max-width:1480px;padding:4px 0 24px}',
+  /* base */
+  '.pdr{font-family:var(--bc-sans);color:var(--bc-text);font-size:14px}',
+  '.pdr *{box-sizing:border-box}',
+  '.pdr [hidden],.bc-painel[hidden],.bc-painel-fundo[hidden],.bc-mais-menu[hidden]{display:none!important}',
+  '.pdr-mudo{color:var(--bc-text-3);font-size:13px}',
+  '.pdr-sep{color:var(--bc-line-2);margin:0 2px}',
+  '.pdr-espaco{flex:1 1 auto}',
+  '.pdr-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
+  '.pdr-pre{white-space:pre-wrap}',
+  '.pdr-botoes{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin:10px 0}',
+  /* botões */
+  '.pdr .pdr-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 14px;margin:0;border:1px solid var(--bc-line-2);border-radius:4px;background:var(--bc-surface);color:var(--bc-text);font:600 13px var(--bc-sans);cursor:pointer;white-space:nowrap;text-decoration:none}',
+  '.pdr .pdr-btn:hover{background:var(--bc-surface-3)}',
+  '.pdr .pdr-btn:focus-visible,.pdr .pdr-link:focus-visible,.pdr .pdr-tag:focus-visible,.bc-mais-menu [role=menuitem]:focus-visible{outline:2px solid var(--bc-action);outline-offset:1px}',
+  '.pdr .pdr-btn:disabled{opacity:.55;cursor:not-allowed}',
+  '.pdr .pdr-btn-primario{background:var(--bc-action);border-color:var(--bc-action);color:#fff}',
+  '.pdr .pdr-btn-primario:hover{background:var(--bc-action-hover)}',
+  '.pdr .pdr-btn-perigo{color:var(--bc-danger);border-color:var(--bc-danger-line);background:var(--bc-surface)}',
+  '.pdr .pdr-btn-perigo:hover{background:var(--bc-danger-bg)}',
+  '.pdr .pdr-btn-icone{width:36px;padding:0}',
+  '.pdr .pdr-btn-p{min-height:30px;padding:4px 10px;font-size:12.5px}',
+  '.pdr .pdr-link{border:0;background:none;padding:4px 2px;color:var(--bc-info);font:600 13px var(--bc-sans);cursor:pointer;text-decoration:underline;text-underline-offset:2px}',
+  /* resumo em números */
+  '.bc-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin:0 0 12px}',
+  '.bc-resumo-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 14px;min-height:64px;border:1px solid var(--bc-line);border-left:3px solid var(--bc-line-2);border-radius:4px;background:var(--bc-surface);cursor:pointer;text-align:left;font-family:var(--bc-sans);color:var(--bc-text)}',
+  '.bc-resumo-item:hover{background:var(--bc-surface-2);border-color:var(--bc-line-2)}',
+  '.bc-resumo-item:focus-visible{outline:2px solid var(--bc-action);outline-offset:1px}',
+  '.bc-resumo-num{font:700 22px/1.1 var(--bc-mono);font-variant-numeric:tabular-nums}',
+  '.bc-resumo-rot{font-size:12.5px;color:var(--bc-text-3);font-weight:600}',
+  '.bc-resumo-item.bc-tom-erro{border-left-color:var(--bc-danger)}.bc-resumo-item.bc-tom-erro .bc-resumo-num{color:var(--bc-danger)}',
+  '.bc-resumo-item.bc-tom-aviso{border-left-color:#C49A2C}.bc-resumo-item.bc-tom-aviso .bc-resumo-num{color:var(--bc-warn)}',
+  '.bc-resumo-item.bc-tom-ok{border-left-color:var(--bc-action)}.bc-resumo-item.bc-tom-ok .bc-resumo-num{color:var(--bc-action)}',
+  '.bc-resumo-item.bc-zero .bc-resumo-num{color:var(--bc-text-3)}',
+  '.bc-resumo-item.bc-ativo{background:var(--bc-surface-3);border-color:var(--bc-text);box-shadow:inset 0 0 0 1px var(--bc-text)}',
+  /* faixa */
+  '.bc-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 12px;margin:0 0 12px;border:1px solid var(--bc-line);border-radius:4px;background:var(--bc-surface-2);font-size:13.5px}',
+  '.bc-faixa-erro{background:var(--bc-danger-bg);border-color:var(--bc-danger-line);color:var(--bc-danger)}',
+  '.bc-faixa-aviso{background:var(--bc-warn-bg);border-color:var(--bc-warn-line);color:var(--bc-warn)}',
+  '.bc-faixa .pdr-link{color:inherit}',
+  /* barra de ferramentas */
+  '.bc-ferramentas{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;padding:10px 12px;border:1px solid var(--bc-line);border-radius:4px 4px 0 0;background:var(--bc-surface)}',
+  '.bc-busca{position:relative;order:1;flex:1 1 280px;min-width:200px;max-width:520px}',
+  '.bc-busca i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--bc-text-3);font-size:13px;pointer-events:none}',
+  '#tplCertCalContainer .bc-busca input{width:100%;padding:6px 10px 6px 32px!important;height:38px;border:1px solid var(--bc-line-2);border-radius:4px;background:#fff;font:14px var(--bc-sans);margin:0}',
+  '.bc-ferr-campos{order:3;flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end}',
+  '.bc-campo{display:flex;flex-direction:column;gap:4px;margin:0;min-width:0}',
+  '#tplCertCalContainer .bc-campo>span,.bc-painel .bc-campo>span{font-size:12px;color:var(--bc-text-3);font-weight:600;margin:0}',
+  '#tplCertCalContainer .bc-ferr-campos select{height:38px;padding:6px 8px;min-width:150px;max-width:220px}',
+  '.bc-ferr-acoes{order:2;display:flex;gap:8px;margin-left:auto;align-items:flex-end}',
+  '.bc-ferr-acoes .pdr-btn{min-height:38px}.bc-ferr-acoes .pdr-btn-icone{width:38px}',
+  '.pdr .bc-ferr-filtros{display:none;order:1;min-height:38px}',
+  '.pdr-linha-info{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 12px;border:1px solid var(--bc-line);border-top:0;border-radius:0 0 4px 4px;background:var(--bc-surface-2);font-size:13px;color:var(--bc-text-3);margin-bottom:12px}',
+  '.pdr-alternar{display:inline-flex!important;align-items:center;gap:6px;margin:0!important;font-size:13px!important;color:var(--bc-text-2)!important;cursor:pointer}',
+  '.pdr-alternar input{width:16px;height:16px;margin:0}',
+  '.bc-ajuda{border:1px solid var(--bc-info-line);background:var(--bc-info-bg);border-radius:4px;padding:10px 14px;margin:0 0 12px;font-size:13.5px;color:var(--bc-text-2)}',
+  '.bc-ajuda ul{margin:0;padding-left:18px}.bc-ajuda li{margin:3px 0}',
+  /* cartão */
+  '.bc-cartao{border:1px solid var(--bc-line);border-radius:4px;background:var(--bc-surface);padding:14px 16px;margin:0 0 12px}',
+  '.bc-cartao-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}',
+  '.bc-cartao h3,.pdr-sec{margin:0;font:700 14.5px var(--bc-sans);color:var(--bc-text)}',
+  '.pdr-sec{margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--bc-line-soft)}',
+  /* lote */
+  '.bc-lote{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;margin:0 0 10px;border:1px solid var(--bc-text);border-radius:4px;background:var(--bc-side);color:#fff;font-weight:600;font-size:13.5px}',
+  '.bc-lote .pdr-btn{background:transparent;color:#fff;border-color:var(--bc-side-muted)}.bc-lote .pdr-btn:hover{background:var(--bc-side-3)}',
+  /* status */
+  '.bc-status{font-size:13px;color:var(--bc-action);padding:2px 0 8px}',
+  '.bc-status:empty{display:none}',
+  '.bc-status-erro{color:var(--bc-danger);font-weight:600}',
+  /* selo */
+  '.bc-selo{display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font:700 11.5px/1.6 var(--bc-sans);border:1px solid;white-space:nowrap;vertical-align:middle}',
+  '.bc-selo-ok{color:var(--bc-action);background:var(--bc-action-bg);border-color:var(--bc-action-line)}',
+  '.bc-selo-aviso{color:var(--bc-warn);background:var(--bc-warn-bg);border-color:var(--bc-warn-line)}',
+  '.bc-selo-erro{color:var(--bc-danger);background:var(--bc-danger-bg);border-color:var(--bc-danger-line)}',
+  '.bc-selo-neutro{color:var(--bc-text-3);background:var(--bc-surface-3);border-color:var(--bc-line-2)}',
+  /* tabela */
+  '.pdr-lista{border:1px solid var(--bc-line);border-radius:4px;background:var(--bc-surface);overflow-x:auto}',
+  '.pdr table.bc-tabela{width:100%;border-collapse:collapse;font-size:13.5px;margin:0}',
+  '.pdr .bc-tabela th{position:sticky;top:0;background:var(--bc-surface-2);color:var(--bc-text-3);font:700 12px var(--bc-sans);text-align:left;padding:9px 10px;border-bottom:1px solid var(--bc-line-2);white-space:nowrap}',
+  '.pdr .bc-tabela td{padding:8px 10px;border-bottom:1px solid var(--bc-line-soft);vertical-align:middle;text-align:left}',
+  '.pdr .bc-tabela tbody tr:hover td{background:var(--bc-surface-2)}',
+  '.pdr-tabela .pdr-c-sel{width:40px;padding-right:0}',
+  '.pdr-tabela .pdr-c-tag{min-width:200px}','.pdr-tabela td.pdr-c-eq{min-width:150px}','.pdr-tabela td.pdr-c-local{min-width:110px}','.pdr-tabela td.pdr-c-pdf{white-space:nowrap}','.pdr-eq1,.pdr-eq2{display:block}','.pdr-eq2{font-size:12.5px;color:var(--bc-text-3)}','.pdr-u.pdr-eq2{font-family:var(--bc-mono)}','.pdr-tag-linha{display:flex;align-items:flex-start;gap:2px}',
+  '.pdr-tabela .pdr-c-val{min-width:170px}','.pdr-c-val .pdr-data{display:inline-block;margin:0 6px 3px 0}','.pdr-c-val .bc-selo{margin:0 4px 2px 0}',
+  '.pdr-tabela .pdr-c-acoes{width:1%;white-space:nowrap;text-align:right}',
+  '.pdr-tabela td.pdr-c-eq,.pdr-tabela td.pdr-c-local{color:var(--bc-text-2)}',
+  '.pdr-tag-bloco{display:inline-block;vertical-align:top}',
+  '.pdr .pdr-tag{border:0;background:none;padding:0;margin:0;font:700 13.5px var(--bc-mono);color:var(--bc-text);cursor:pointer;text-align:left}',
+  '.pdr .pdr-tag:hover{text-decoration:underline;color:var(--bc-info)}',
+  '.pdr-desc{font-size:12.5px;color:var(--bc-text-3);margin-top:2px;line-height:1.35}',
+  '.pdr-data{font:500 13px var(--bc-mono);font-variant-numeric:tabular-nums;margin-right:8px}',
+  
+  '.pdr-chip{display:inline-block;margin-left:8px;padding:0 7px;border-radius:3px;background:var(--bc-surface-3);border:1px solid var(--bc-line);font-size:11.5px;font-weight:600;color:var(--bc-text-2);vertical-align:middle}',
+  '.pdr-chips .pdr-chip{margin:0 6px 6px 0;font-family:var(--bc-mono)}',
+  '.pdr-acoes{display:inline-flex;gap:6px;align-items:center;justify-content:flex-end}',
+  '.pdr-pdf,.pdr-pdf-n{display:inline-flex;align-items:center;gap:5px;color:var(--bc-info);font-weight:600;text-decoration:none;white-space:nowrap}',
+  '.pdr-pdf:hover{text-decoration:underline}.pdr-pdf i,.pdr-pdf-n i{color:var(--bc-danger)}',
+  '.pdr-pdf-n{color:var(--bc-text-2);font:500 12.5px var(--bc-mono)}',
+  '.pdr .pdr-check{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin:0;cursor:pointer}',
+  '.pdr .pdr-check input{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--bc-action)}',
+  '.pdr-expandir{border:0;background:none;width:24px;height:24px;margin:0 4px 0 -4px;display:inline-flex;align-items:center;justify-content:center;color:var(--bc-text-3);cursor:pointer;border-radius:3px;vertical-align:top}',
+  '.pdr-expandir i{transition:transform .15s}.pdr-aberto .pdr-expandir i{transform:rotate(90deg)}',
+  '.pdr-expandir:hover{background:var(--bc-surface-3);color:var(--bc-text)}',
+  '.pdr-grupo td{background:var(--bc-surface)}',
+  '.pdr-grupo.pdr-aberto td{background:var(--bc-surface-2);border-bottom-color:var(--bc-line)}',
+  '.pdr-filho td{background:var(--bc-surface-2)}',
+  '.pdr-filho .pdr-c-tag{padding-left:36px}',
+  '.pdr-suf{font:600 12.5px var(--bc-mono);color:var(--bc-text-2)}',
+  '.pdr-filho .pdr-desc{display:none}',
+  '.pdr-u{font:500 12.5px var(--bc-mono);color:var(--bc-text-2)}',
+  '.pdr-divergente .pdr-data,.pdr-divergente-nota,td.pdr-divergente,span.pdr-divergente{color:var(--bc-warn);font-weight:700}',
+  '.pdr-div-nota{display:block;font-size:11.5px;color:var(--bc-warn);margin-top:2px;white-space:normal}',
+  '.pdr-inativo td,.pdr-cartao.pdr-inativo{opacity:.72}',
+  '.bc-vazio{padding:28px 16px;text-align:center;color:var(--bc-text-2)}.bc-vazio p{margin:0 0 10px}',
+  /* menu Mais */
+  '.bc-mais-menu{position:fixed;z-index:10050;min-width:220px;padding:4px;background:var(--bc-surface);border:1px solid var(--bc-line-2);border-radius:4px;box-shadow:0 6px 20px rgba(28,31,29,.16)}',
+  '.bc-mais-menu [role=menuitem]{display:flex;align-items:center;width:100%;min-height:36px;padding:7px 12px;border:0;background:none;text-align:left;font:500 13.5px var(--bc-sans);color:var(--bc-text);cursor:pointer;border-radius:3px;text-decoration:none}',
+  '.bc-mais-menu [role=menuitem]:hover{background:var(--bc-surface-3)}',
+  '.bc-mais-menu .bc-perigo{color:var(--bc-danger)}.bc-mais-menu .bc-perigo:hover{background:var(--bc-danger-bg)}',
+  '.bc-mais-menu hr{border:0;border-top:1px solid var(--bc-line);margin:4px 0}',
+  /* painel lateral */
+  '.bc-painel-fundo{position:fixed;inset:0;z-index:10030;background:rgba(28,31,29,.32)}',
+  '.bc-painel{position:fixed;top:0;right:0;bottom:0;z-index:10040;width:min(640px,100vw);display:flex;flex-direction:column;background:var(--bc-surface);border-left:1px solid var(--bc-line-2);box-shadow:-8px 0 28px rgba(28,31,29,.14)}',
+  '.bc-painel-cab{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 10px;border-bottom:1px solid var(--bc-line)}',
+  '.bc-painel-tit{flex:1;min-width:0}.bc-painel-tit h2{margin:0;font:700 18px var(--bc-mono);color:var(--bc-text);overflow-wrap:anywhere}',
+  '.bc-painel-tit p{margin:4px 0 0;font-size:13px;color:var(--bc-text-3);display:flex;flex-wrap:wrap;gap:6px;align-items:center}',
+  '.bc-painel-abas{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--bc-line);overflow-x:auto}',
+  '.bc-painel-abas button{border:0;border-bottom:2px solid transparent;background:none;padding:10px 10px;min-height:44px;font:600 13px var(--bc-sans);color:var(--bc-text-3);cursor:pointer;white-space:nowrap}',
+  '.bc-painel-abas button.bc-ativo{color:var(--bc-text);border-bottom-color:var(--bc-action)}',
+  '.bc-painel-corpo{flex:1;overflow:auto;padding:14px 18px}',
+  '.bc-painel>.bc-status{padding:6px 18px 0;margin:0}',
+  '.bc-painel-rodape{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid var(--bc-line);background:var(--bc-surface-2)}',
+  '.pdr-dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:0}',
+  '.pdr-dl dt{font-size:12px;color:var(--bc-text-3);font-weight:600}.pdr-dl dd{margin:2px 0 0;font-size:13.5px;overflow-wrap:anywhere}',
+  '.pdr-foto img{display:block;max-width:220px;max-height:180px;object-fit:contain;border:1px solid var(--bc-line);border-radius:4px;margin:12px 0 0}',
+  '.pdr-foto{margin-top:8px}',
+  '.pdr-rolar{overflow-x:auto;max-width:100%}',
+  '.pdr-canais td,.pdr-canais th{font-size:12.5px}.pdr-canais tr.pdr-atual td{background:var(--bc-action-bg)}',
+  '.pdr-hist{list-style:none;margin:0;padding:0}.pdr-hist li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bc-line-soft)}',
+  '.pdr-hist a{color:var(--bc-info);font-weight:600;overflow-wrap:anywhere}.pdr-hist i{color:var(--bc-danger)}',
+  '.pdr-det{margin-top:12px}.pdr-det summary{cursor:pointer;font-weight:600;min-height:32px}',
+  '.pdr-form-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}',
+  '.pdr-form-grade .pdr-larga{grid-column:1/-1}',
+  '.bc-painel input[type=text],.bc-painel input:not([type]),.bc-painel textarea,.bc-painel select,.bc-painel input[type=file]{width:100%;border:1px solid var(--bc-line-2);border-radius:4px;padding:8px 10px;font:14px var(--bc-sans);background:#fff;color:var(--bc-text);min-height:38px}',
+  '.bc-painel textarea{resize:vertical}',
+  '.bc-painel input:focus,.bc-painel textarea:focus,.bc-painel select:focus{outline:2px solid var(--bc-action);outline-offset:0;border-color:var(--bc-action)}',
+  '.pdr .pdr-check-linha{display:flex!important;align-items:flex-start;gap:8px;margin:10px 0!important;font-size:13.5px!important;color:var(--bc-text)!important}',
+  '.pdr-check-linha input{width:18px;height:18px;margin:1px 0 0;flex:none}',
+  'html.pdr-painel-aberto,html.pdr-painel-aberto body{overflow:hidden}',
+  /* inventário e relatórios */
+  '.pdr-docs-grade{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,2fr);gap:12px;align-items:start}',
+  '.pdr-docs-grade .pdr-docs-hist{grid-column:1/-1}',
+  '.pdr-busca-hist input{flex:1 1 260px;max-width:480px}',
+  '.pdr-hist-resumo{max-width:520px;color:var(--bc-text-2)}',
+  '.pdr-previa{border:1px solid var(--bc-action-line);background:var(--bc-action-bg);border-radius:4px;padding:12px 14px;margin-top:12px}',
+  '.pdr-previa h3{margin:0 0 6px;font-size:14px}',
+  '.pdr-rel-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}',
+  '.pdr-campo-curto select{min-width:180px}',
+  '.pdr-rodape-nota{margin-top:4px}',
+  '#tplCertCalContainer .pdr label{margin:0}',
+  /* celular e tablet */
+  '.pdr-cartoes{display:flex;flex-direction:column}',
+  '.pdr-cartao{padding:12px;border-bottom:1px solid var(--bc-line)}',
+  '.pdr-cartao:last-child{border-bottom:0}',
+  '.pdr-cartao-topo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
+  '.pdr .pdr-cartao-topo .pdr-tag{flex:1;min-width:0;font-size:15px;min-height:44px;padding:0!important;margin:0!important;width:auto;justify-content:flex-start!important;text-align:left!important;display:flex;align-items:center}',
+  '.pdr-cartao-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 8px;font-size:13px;color:var(--bc-text-2)}',
+  '.pdr-cartao .pdr-acoes{justify-content:flex-start;flex-wrap:wrap}',
+  '.pdr-cartao-filhos{margin:8px 0 0 12px;border-left:2px solid var(--bc-line-2)}',
+  '.pdr-cartao-filho{padding:10px 0 10px 12px}',
+  '.pdr-cartao-grupo .pdr-chip{margin-left:0}',
+  '@media (max-width:1100px){.pdr-docs-grade,.pdr-rel-grade{grid-template-columns:1fr}.bc-busca{max-width:none}}',
+  '@media (max-width:760px){',
+  ' .bc-resumo{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}',
+  ' .bc-resumo-item{padding:8px 10px;min-height:56px}.bc-resumo-num{font-size:19px}.bc-resumo-rot{font-size:12px}',
+  ' .bc-ferramentas{padding:10px}.bc-busca{flex:1 1 100%;max-width:none}',' .pdr .bc-ferr-filtros{order:2}.bc-ferr-acoes{order:3;flex:1 1 0;min-width:0}.bc-ferr-campos{order:4}',' .bc-ferr-acoes [data-pdr="ia"]{display:none}.pdr-so-largo{display:none}',' .pdr-cartao .pdr-check{margin-left:-8px!important}',
+  ' .pdr .bc-ferr-filtros{display:inline-flex}',
+  ' .bc-ferr-campos{display:none;width:100%}.bc-ferr-campos.bc-aberto{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+  ' #tplCertCalContainer .bc-ferr-campos select{max-width:none;min-width:0;width:100%}',
+  ' .bc-ferr-acoes{margin-left:0;justify-content:flex-end;flex-wrap:nowrap}',
+  ' .pdr .pdr-btn{min-height:44px}.pdr .pdr-btn-icone,.bc-ferr-acoes .pdr-btn-icone{width:44px}.pdr .pdr-btn-p{min-height:44px}',
+  ' .pdr .pdr-check{width:44px;height:44px}.pdr .pdr-check input{width:20px;height:20px}',
+  ' .pdr .pdr-link{min-height:44px}',
+  ' .pdr-alternar{min-height:44px}',
+  ' #pd-abas .pd-abas-barra{flex-wrap:nowrap;overflow-x:auto}',
+  ' #pd-abas .pd-abas-barra button{padding:10px 10px;font-size:13.5px;white-space:nowrap}',
+  ' .bc-mais-menu [role=menuitem]{min-height:44px;font-size:15px}',
+  ' .bc-painel{width:100vw;border-left:0}',
+  ' .bc-painel-cab{padding:max(12px,env(safe-area-inset-top)) 14px 10px}',
+  ' .bc-painel-corpo{padding:12px 14px}.bc-painel-rodape{padding:10px 14px max(10px,env(safe-area-inset-bottom))}',
+  ' .bc-painel-rodape .pdr-btn{flex:1 1 auto}',
+  ' .pdr-dl,.pdr-form-grade{grid-template-columns:1fr}',
+  ' .bc-painel-abas button{min-height:44px}',
+  ' .bc-lote{top:0}',
+  '}',
+  '@media (max-width:760px),(pointer:coarse){#tplCertCalContainer .pdr input,#tplCertCalContainer .pdr select,#tplCertCalContainer .pdr textarea,.bc-painel input,.bc-painel select,.bc-painel textarea{font-size:16px!important}}'
+  ].join('\n');
+  document.head.appendChild(st);
+}
 var pdRenderOriginal_=tplCertCal_renderReal_;
 tplCertCal_renderReal_=function(){pdRenderOriginal_();pdMount();};
 // Releituras após cadastrar/editar/inativar reaproveitam o mesmo caminho leve.
-function pdRecarregarCadastros(){return pdApi('apiListarControlePadroes').then(function(r){pdAplicarCadastros(r);return r;}).catch(function(err){try{pdErroCarregamento(err);}catch(e){pdMsg(e.message,true);}return null;});}
+function pdRecarregarCadastros(){return pdApi('apiListarControlePadroes').then(function(r){pdAplicarCadastros(r);if(typeof carregarBadgesMenu_==='function'){try{carregarBadgesMenu_();}catch(e){}}return r;}).catch(function(err){try{pdErroCarregamento(err);}catch(e){pdMsg(e.message,true);}return null;});}
 tplCertCal_carregarPadroes=pdRecarregarCadastros;
 tplCertCal_carregarTecnicos=pdRecarregarCadastros;
 </script>
