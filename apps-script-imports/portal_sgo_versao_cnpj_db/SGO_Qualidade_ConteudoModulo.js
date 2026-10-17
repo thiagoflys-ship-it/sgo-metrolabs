@@ -356,7 +356,7 @@ function tplQualidade_montarFrota_(f) {
   }).join('');
 
   var amostraPenduradas = (f.amostraPenduradas || []).map(function(v) {
-    return '<li>' + tplQualidade_esc(v.veiculoPlaca || '?') + ' · ' + tplQualidade_esc(v.condutorNome || '?') + ' — saiu ' + tplQualidade_esc(v.dataSaida || '?') + ', há ' + v.dias + ' dia(s)</li>';
+    return '<li>' + tplQualidade_esc(v.veiculoPlaca || '?') + ' · ' + tplQualidade_esc(v.condutorNome || '?') + ' — saiu ' + tplQualidade_esc(v.dataSaida || '?') + ', há ' + v.dias + ' ' + tplQualidade_pl_(v.dias, 'dia', 'dias') + '</li>';
   }).join('');
 
   var amostraDocumentos = (f.amostraDocumentos || []).map(function(d) {
@@ -365,8 +365,8 @@ function tplQualidade_montarFrota_(f) {
 
   var painelResumo = '<div class="panel">' +
     '<h2>Movimentação — ' + f.totalMovimentacoes + ' ' + tplQualidade_pl_(f.totalMovimentacoes, 'retirada', 'retiradas') + '</h2>' +
-    '<div class="stat-row"><span class="stat-num ' + classePendurada + '">' + f.viagensPenduradas + '</span><span class="stat-label">retirada(s) aberta(s) há 2+ dias sem devolução</span></div>' +
-    '<div class="stat-row"><span class="stat-num ' + classeIncompletas + '">' + f.totalIncompletas + '</span><span class="stat-label">retirada(s)/devolução(ões) sem checklist ou sem foto</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classePendurada + '">' + f.viagensPenduradas + '</span><span class="stat-label">' + tplQualidade_pl_(f.viagensPenduradas, 'retirada aberta', 'retiradas abertas') + ' há 2 dias ou mais sem devolução</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classeIncompletas + '">' + f.totalIncompletas + '</span><span class="stat-label">' + tplQualidade_pl_(f.totalIncompletas, 'retirada ou devolução', 'retiradas ou devoluções') + ' sem checklist ou sem foto</span></div>' +
     (amostraPenduradas ? '<ul class="lista-amostra">' + amostraPenduradas + '</ul>' : '') +
   '</div>';
 
@@ -378,7 +378,7 @@ function tplQualidade_montarFrota_(f) {
         return '<span class="rank-sub">' + tplQualidade_esc(p.veiculoPlaca || '?') + ' · ' + tplQualidade_esc(p.dataSaida || '?') + ': ' + tplQualidade_esc((p.motivos || []).join('; ')) + '</span>';
       }).join('');
       return '<li class="rank-item"><div class="rank-info"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span>' +
-        (r.pendencias ? '<span class="rank-sub">' + r.pendencias + ' movimentação(ões) com pendência' + (r.ocorrenciasAbertas ? ' · <span class="rank-badge">' + r.ocorrenciasAbertas + ' ocorrência(s)</span>' : '') + '</span>' + detalhes : '') + '</div>' +
+        (r.pendencias ? '<span class="rank-sub">' + r.pendencias + ' ' + tplQualidade_pl_(r.pendencias, 'movimentação com pendência', 'movimentações com pendência') + (r.ocorrenciasAbertas ? ' · <span class="rank-badge">' + r.ocorrenciasAbertas + ' ' + tplQualidade_pl_(r.ocorrenciasAbertas, 'cobrança aberta', 'cobranças abertas') + '</span>' : '') + '</span>' + detalhes : '') + '</div>' +
         '<span class="rank-qtd">' + r.qtd + '</span>' +
         (r.pendencias ? tplQualidade_botaoOcorrencia_('FROTA', 'CONDUTOR', r.id, r.nome, 'COBRANCA', 'Cobrar') : '') + '</li>';
     }) +
@@ -425,8 +425,8 @@ function tplQualidade_montarFrota_(f) {
 
   var painelDocsMultas = '<div class="panel">' +
     '<h2>Documentação e multas</h2>' +
-    '<div class="stat-row"><span class="stat-num ' + classeDocVencido + '">' + f.documentosVencidos + '</span><span class="stat-label">documento(s) vencido(s) (' + f.documentosVencendo + ' vencendo)</span></div>' +
-    '<div class="stat-row"><span class="stat-num ' + classeMultaSemCondutor + '">' + f.multasSemCondutor + '</span><span class="stat-label">de ' + f.multasAbertas + ' multa(s) aberta(s) sem condutor vinculado</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classeDocVencido + '">' + f.documentosVencidos + '</span><span class="stat-label">' + tplQualidade_pl_(f.documentosVencidos, 'documento vencido', 'documentos vencidos') + ' (' + f.documentosVencendo + ' vencendo)</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classeMultaSemCondutor + '">' + f.multasSemCondutor + '</span><span class="stat-label">de ' + f.multasAbertas + ' ' + tplQualidade_pl_(f.multasAbertas, 'multa aberta', 'multas abertas') + ' sem condutor vinculado</span></div>' +
     (f.valorMultasAbertas ? '<p class="fonte" style="margin-top:8px">R$ ' + tplQualidade_num_(f.valorMultasAbertas, 2) + ' em multas abertas</p>' : '') +
     (f.rankingMultasCondutor && f.rankingMultasCondutor.length ?
       '<p class="fonte" style="margin:10px 0 2px">Multas por condutor:</p>' + tplQualidade_rankLista_(f.rankingMultasCondutor, function(r) {

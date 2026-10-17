@@ -109,8 +109,8 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
 
   // ---------------- Reconhecimento (nome + número, sem IA) ----------------
   var linhasRecon = [];
-  (a.rankingDestaques || []).forEach(function(r) { linhasRecon.push(QualidadeRel_linhaRank_(r.nome + ' (Auvo)', r.qtd + ' atendimento(s) — sempre com relato e foto')); });
-  (f.rankingCondutoresDestaque || []).forEach(function(r) { linhasRecon.push(QualidadeRel_linhaRank_(r.nome + ' (Frota)', r.qtd + ' retirada(s) — sempre com checklist/foto')); });
+  (a.rankingDestaques || []).forEach(function(r) { linhasRecon.push(QualidadeRel_linhaRank_(r.nome + ' (Auvo)', r.qtd + (Number(r.qtd) === 1 ? ' atendimento' : ' atendimentos') + ' — sempre com relato e foto')); });
+  (f.rankingCondutoresDestaque || []).forEach(function(r) { linhasRecon.push(QualidadeRel_linhaRank_(r.nome + ' (Frota)', r.qtd + (Number(r.qtd) === 1 ? ' retirada' : ' retiradas') + ' — sempre com checklist e foto')); });
   html.push('<div class="secao"><h2 class="recon">Reconhecimento</h2>');
   if (linhasRecon.length) {
     html.push('<table class="tabela-q"><thead><tr><th>Pessoa</th><th>Motivo</th></tr></thead><tbody>' + linhasRecon.join('') + '</tbody></table>');
@@ -121,8 +121,8 @@ function Qualidade_montarRelatorioHtml_(ctx, ia) {
 
   // ---------------- Acompanhamento (nome + número, sem IA) ----------------
   var linhasAcomp = [];
-  (a.rankingPiorQualidade || []).forEach(function(r) { linhasAcomp.push(QualidadeRel_linhaRank_(r.nome + ' (Auvo)', r.pctSemRelato + '% sem relato, ' + r.pctSemFoto + '% sem foto (' + r.qtd + ' atend.)')); });
-  (f.rankingCondutores || []).filter(function(r) { return r.pendencias > 0; }).forEach(function(r) { linhasAcomp.push(QualidadeRel_linhaRank_(r.nome + ' (Frota)', r.pendencias + ' retirada(s)/devolução(ões) incompleta(s) de ' + r.qtd)); });
+  (a.rankingPiorQualidade || []).forEach(function(r) { linhasAcomp.push(QualidadeRel_linhaRank_(r.nome + ' (Auvo)', r.pctSemRelato + '% sem relato, ' + r.pctSemFoto + '% sem foto (' + r.qtd + (Number(r.qtd) === 1 ? ' atendimento)' : ' atendimentos)'))); });
+  (f.rankingCondutores || []).filter(function(r) { return r.pendencias > 0; }).forEach(function(r) { linhasAcomp.push(QualidadeRel_linhaRank_(r.nome + ' (Frota)', r.pendencias + (Number(r.pendencias) === 1 ? ' retirada ou devolução incompleta' : ' retiradas ou devoluções incompletas') + ' de ' + r.qtd)); });
   html.push('<div class="secao"><h2 class="atencao">Acompanhamento</h2>');
   if (linhasAcomp.length) {
     html.push('<table class="tabela-q"><thead><tr><th>Pessoa</th><th>Motivo</th></tr></thead><tbody>' + linhasAcomp.join('') + '</tbody></table>');
