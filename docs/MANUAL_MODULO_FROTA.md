@@ -28,29 +28,42 @@ Antes de registrar qualquer retirada, o veículo e o condutor precisam estar cad
 
 ## 3. Retirar veículo
 
-Escolha o veículo, digite o **KM de saída** (o número do painel) e a finalidade da viagem. Quem não é da gestão não escolhe condutor: o sistema usa o condutor ligado ao seu login.
+A mesma tela no celular (abra a Frota) e no computador (aba Situação e retiradas, painel "Retirar e devolver").
+
+1. **Toque no veículo** em "Retirar um veículo". Só aparecem os disponíveis, com placa, modelo, KM e a foto da última vistoria.
+2. **KM do painel:** já vem com o último KM registrado. Confira no painel do carro. Igual: não mexa. Diferente: corrija; a tela pede a **foto do painel**.
+3. **Fotos do veículo:** toque em "Tirar foto do veículo" (a câmera abre direto). Pelo menos uma. Cada foto já vai sendo enviada enquanto você continua ("Enviando…", "Enviada" ou "Não enviada: toque para tentar de novo"; o sistema também tenta de novo sozinho).
+4. **Vistoria:** "Tudo OK" em um toque. Encontrou algo? "Tem problema", toque em cada item com problema e escreva o que viu.
+5. **"Confirmar retirada".** O botão vira "Registrando…" e só espera as fotos que faltam. A linha acima do botão diz o que falta, se faltar algo.
+
+A retirada é sempre em nome do condutor do seu login. "Tudo OK" grava cada item da vistoria como OK, igual a marcar um por um. A finalidade é opcional.
 
 > **Data e hora.** Vale sempre a hora do servidor (horário de Brasília) no momento em que você confirma. A tela mostra "Registro com a hora atual" e não pede data nem hora. Só a gestão pode informar outra data/hora (por exemplo, quando alguém esqueceu de registrar). Se a diferença para agora passar de 10 minutos, a justificativa é obrigatória. Data no futuro não é aceita.
 
-> **KM diferente do registrado.** Ao escolher o veículo, a tela mostra o KM registrado. Se o painel mostrar um número **maior** (alguém usou sem registrar, ou houve erro de digitação), a retirada não é bloqueada: anexe a **foto do painel (odômetro)**. A diferença fica gravada e a gestão recebe um aviso para conferir. KM **menor** que o registrado é recusado (o odômetro não volta); se o KM registrado estiver errado, peça à gestão o Ajuste de KM.
+> **KM diferente do registrado.** Ao escolher o veículo, a tela mostra o KM registrado. Se o painel mostrar um número **maior** (alguém usou sem registrar, ou houve erro de digitação), a retirada não é bloqueada: corrija o KM e toque em **"Tirar foto do painel"**. A diferença fica gravada e a gestão recebe um aviso para conferir. KM **menor** que o registrado é recusado (o odômetro não volta); se o KM registrado estiver errado, peça à gestão o Ajuste de KM.
 
-> **Retirada em nome de outra pessoa.** Só a gestão escolhe outro condutor. A justificativa é obrigatória, o registro fica marcado como "registrado pela gestão", entra na trilha de auditoria e o condutor recebe um aviso (no SGO+, por e-mail e por WhatsApp, conforme o cadastro dele).
+> **Retirada em nome de outra pessoa.** Só a gestão escolhe outro condutor, em **"Opções da gestão"** (recolhido, no fim da tela: condutor, data/hora e justificativa). A justificativa é obrigatória, o registro fica marcado como "registrado pela gestão", entra na trilha de auditoria e o condutor recebe um aviso (no SGO+, por e-mail e por WhatsApp, conforme o cadastro dele).
 
-Depois, faça o **checklist de vistoria**: cada item já vem marcado como "OK" — desmarque o que estiver com problema e escreva uma observação ao lado. Anexe pelo menos uma foto do veículo (obrigatória). Clique em **"Registrar Retirada"**.
-
-> **O que acontece?** O veículo passa a aparecer em "Retiradas em andamento" e some da lista de veículos disponíveis pra retirada, até ser devolvido. Se duas pessoas tentarem retirar o mesmo veículo ao mesmo tempo, só a primeira consegue; a outra recebe o nome de quem está com ele.
+> **O que acontece?** A tela volta na hora para o início da Frota, com o botão "Devolver [placa]" no topo, e o veículo sai da lista de disponíveis até ser devolvido. Se duas pessoas tentarem retirar o mesmo veículo ao mesmo tempo, só a primeira consegue; a outra recebe o nome de quem está com ele.
 
 ---
 
 ## 4. Devolver veículo
 
-Na seção "Retiradas em andamento", clique em **"Registrar Devolução"** do veículo correspondente — abre um formulário já sabendo qual retirada está sendo fechada. Preencha o **KM de chegada** (tem que ser igual ou maior que o KM de saída registrado). Faça o checklist de vistoria de novo (mesma lista) e anexe pelo menos uma foto do veículo. A data e a hora são as do servidor, como na retirada.
+O sistema já sabe qual veículo está com você: o botão verde **"Devolver [placa]"** aparece no topo da Frota (e no Início do celular).
 
-> **Quem devolve.** Só quem está com a retirada (o condutor) registra a devolução. Para as outras pessoas a lista mostra "Só [nome] ou a gestão registram a devolução". Se o condutor esqueceu, a gestão registra no lugar dele, com justificativa obrigatória; o registro fica marcado, entra na trilha de auditoria e o condutor é avisado.
+1. Toque em **"Devolver [placa]"**.
+2. Digite o **KM de chegada** (igual ou maior que o de saída) e tire a **foto do painel** (obrigatória na devolução).
+3. **Vistoria:** "Tudo OK" ou "Tem problema", como na retirada.
+4. **"Confirmar devolução".**
+
+Mais fotos e observações são opcionais ("Mais fotos e observações"). A data e a hora são as do servidor.
+
+> **Quem devolve.** Só quem está com a retirada (o condutor) registra a devolução. Os veículos com outras pessoas ficam em "Em uso por outras pessoas". Se o condutor esqueceu, a gestão toca no veículo e registra no lugar dele, em "Opções da gestão", com justificativa obrigatória; o registro fica marcado, entra na trilha de auditoria e o condutor é avisado.
 
 > **Esqueceu de devolver?** Retirada aberta há mais de 12 horas aparece no Início, para o condutor e para a gestão, como "possível devolução esquecida", com o que fazer.
 
-> **KM fora do esperado.** Se o KM rodado passar de 1.500 km, ou der média acima de 120 km/h no tempo da retirada, a devolução não é bloqueada, mas pede a **foto do painel (odômetro)**. Confira se o número não foi digitado errado; se estiver certo, anexe a foto. A gestão é avisada para conferir no painel "KM a conferir".
+> **KM fora do esperado.** Se o KM rodado passar de 1.500 km, ou der média acima de 120 km/h no tempo da retirada, a devolução não é bloqueada (a foto do painel já vai junto). Confira se o número não foi digitado errado. A gestão é avisada para conferir no painel "KM a conferir".
 
 > **Por que o checklist se repete na devolução?** Pra você comparar: se um item estava OK na saída e voltou com problema, é fácil perceber que aconteceu durante o uso.
 
@@ -81,8 +94,8 @@ Escolha um veículo e clique em "Buscar" — mostra tudo junto: movimentações,
 ## 8. Passo a passo completo
 
 1. Cadastre veículos e condutores (uma vez só).
-2. Na retirada: escolha veículo/condutor, preencha KM e finalidade, faça o checklist, registre.
-3. Na devolução: clique em "Registrar Devolução" na retirada em andamento, preencha KM de chegada, faça o checklist de novo, registre.
+2. Na retirada: toque no veículo, confira o KM, tire as fotos, "Tudo OK" (ou marque o problema), "Confirmar retirada".
+3. Na devolução: "Devolver [placa]", KM de chegada e foto do painel, "Tudo OK" (ou marque o problema), "Confirmar devolução".
 4. Registre manutenções, despesas e paradas conforme forem acontecendo.
 5. Consulte o histórico de um veículo quando precisar.
 

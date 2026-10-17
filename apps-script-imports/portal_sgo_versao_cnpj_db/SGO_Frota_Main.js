@@ -21,6 +21,8 @@ function Frota_apiDispatch(req) {
     apiPing: Frota_apiPing,
     apiContextoOperacional: Frota_apiContextoOperacional,
     apiSituacaoFrota: Frota_apiSituacaoFrota,
+    // 17/10/2026 (Frota simples e rápida): tela inicial do celular em uma chamada
+    apiInicioFrota: Frota_apiInicioFrota,
     apiListarVeiculosAtivos: Frota_apiListarVeiculosAtivos,
     apiListarVeiculosTodos: Frota_apiListarVeiculosTodos,
     apiCriarVeiculo: Frota_apiCriarVeiculo,
@@ -82,7 +84,7 @@ function Frota_apiDispatch(req) {
   var resultado = allow[fn](req.sessionId, payload);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -241,6 +243,53 @@ function Frota_apiSituacaoFrota(sessionId) {
   return { ok: true, items: items, atualizadoEm: SGO_UTILS.nowIso() };
 }
 
+/**
+ * Tela inicial da Frota em UMA chamada (17/10/2026, Frota simples e rápida).
+ * Antes o celular fazia 2 chamadas ao abrir e mais 3 ao tocar em "Retirar"
+ * (apiPing, apiListarVeiculosAtivos, apiContextoOperacional); cada uma custa a
+ * latência inteira da rede do celular. Aqui vem tudo junto: veículos com
+ * situação e miniatura, retiradas em aberto (as minhas marcadas), contexto do
+ * condutor, grupos do checklist, tipos de combustível e alertas de manutenção.
+ * Só leitura (não invalida a central de pendências).
+ */
+function Frota_apiInicioFrota(sessionId) {
+  var sessao = Frota_exigirEquipe_(sessionId);
+  Frota_bootstrap_();
+  var gestor = isAdminSession(sessionId);
+  var meuId = SGO_UTILS.safe(sessao.userId);
+  var condutoresAtivos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).filter(function(c) { return SGO_UTILS.safeUpper(c.STATUS) !== 'INATIVO'; });
+  var meuCondutor = condutoresAtivos.filter(function(c) { return SGO_UTILS.safe(c.USUARIO_ID) === meuId; })[0] || null;
+  var veiculos = Frota_veiculosComSituacao_()
+    .filter(function(v) { return SGO_UTILS.safeUpper(v.STATUS) !== 'INATIVO'; })
+    .sort(function(a, b) { return SGO_UTILS.safe(a.PLACA).localeCompare(SGO_UTILS.safe(b.PLACA)); });
+  var enxuto = veiculos.map(function(v) {
+    return { id: SGO_UTILS.safe(v.ID), placa: SGO_UTILS.safe(v.PLACA), modelo: SGO_UTILS.safe(v.MODELO), marca: SGO_UTILS.safe(v.MARCA), cor: SGO_UTILS.safe(v.COR),
+      km: Frota_num_(v.KM_ATUAL, 0), situacao: v.SITUACAO, foto: SGO_UTILS.safe(v.FOTO_MINIATURA_LINK) };
+  });
+  var emAndamento = veiculos.filter(function(v) { return v.MOVIMENTACAO_ID; }).map(function(v) {
+    return { id: SGO_UTILS.safe(v.MOVIMENTACAO_ID), veiculoId: SGO_UTILS.safe(v.ID), veiculoPlaca: SGO_UTILS.safe(v.PLACA), veiculoModelo: SGO_UTILS.safe(v.MODELO),
+      condutorNome: SGO_UTILS.safe(v.CONDUTOR_NOME), condutorId: SGO_UTILS.safe(v.CONDUTOR_ID), condutorUsuarioId: SGO_UTILS.safe(v.CONDUTOR_USUARIO_ID),
+      dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: Frota_num_(v.KM_SAIDA, 0), finalidade: SGO_UTILS.safe(v.FINALIDADE),
+      minha: !!meuId && SGO_UTILS.safe(v.CONDUTOR_USUARIO_ID) === meuId, foto: SGO_UTILS.safe(v.FOTO_MINIATURA_LINK) };
+  });
+  var alertas = [];
+  try { alertas = Frota_calcularAlertasManutencao_(); } catch (eAl) { console.error('Frota início, alertas: ' + ((eAl && eAl.message) || eAl)); }
+  return {
+    ok: true, agora: SGO_UTILS.nowIso(), gestor: gestor,
+    condutor: meuCondutor ? { id: SGO_UTILS.safe(meuCondutor.ID), nome: SGO_UTILS.safe(meuCondutor.NOME) } : null,
+    condutores: (gestor ? condutoresAtivos : (meuCondutor ? [meuCondutor] : [])).map(function(c) { return { id: SGO_UTILS.safe(c.ID), nome: SGO_UTILS.safe(c.NOME) }; }),
+    veiculos: enxuto, emAndamento: emAndamento,
+    gruposChecklist: FROTA_CFG.GRUPOS_CHECKLIST, tiposCombustivel: FROTA_CFG.TIPOS_COMBUSTIVEL,
+    alertas: alertas
+  };
+}
+
+/** Miniatura do veículo (foto da última vistoria, reduzida no celular): só um link de arquivo já enviado. */
+function Frota_linkMiniatura_(v) {
+  var s = String(v || '').trim();
+  return /^(https?:\/\/|\/arquivos\/)/.test(s) && s.length < 500 ? s : '';
+}
+
 function Frota_validarVeiculoRetirada_(veiculo) {
   if (!veiculo) throw new Error('Veículo não encontrado.');
   var aberto = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(function(m) {
@@ -358,6 +407,8 @@ function Frota_bootstrapSemTrava_() {
   // justificativa, KM divergente com foto do painel e conferência. Só colunas novas.
   FROTA_COLUNAS_TRAVAS.forEach(function(col) { CertCal_garantirColuna_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, col); });
   CertCal_garantirTabela_(FROTA_ABA_AUDITORIA, FROTA_COLUNAS_AUDITORIA);
+  // 17/10/2026 (Frota simples): miniatura do veículo para a escolha no celular (foto da última vistoria, reduzida). Só coluna nova.
+  CertCal_garantirColuna_(SGO_CFG.SHEETS.CAD_VEICULOS, 'FOTO_MINIATURA_LINK');
   // Rastreador (17/10/2026): vínculo no veículo, hodômetro na movimentação, comandos e alertas (SGO_Frota_Rastreador.js).
   if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
 }
@@ -1020,7 +1071,9 @@ function Frota_apiIniciarViagem(sessionId, payload) {
       })
     );
     SGO_DATA.insert(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, registro);
-    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId, { KM_ATUAL: kmSaida, STATUS: 'EM_USO' });
+    var mudVeic = { KM_ATUAL: kmSaida, STATUS: 'EM_USO' };
+    if (Frota_linkMiniatura_(payload.miniaturaLink)) mudVeic.FOTO_MINIATURA_LINK = Frota_linkMiniatura_(payload.miniaturaLink);
+    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId, mudVeic);
     SGO_DATA.log('FROTA_VIAGEM_INICIAR', sessao.usuario, 'Retirada registrada — veículo ' + veiculo.PLACA + ' — condutor ' + condutor.NOME, 'FROTA');
   } finally {
     try { SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
@@ -1132,7 +1185,9 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
     });
     // Veículo inativado durante a retirada continua inativo depois da devolução.
     var statusDepois = SGO_UTILS.safeUpper(veiculo.STATUS) === 'INATIVO' ? 'INATIVO' : 'ATIVO';
-    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, { KM_ATUAL: kmChegada, STATUS: statusDepois });
+    var mudVeicD = { KM_ATUAL: kmChegada, STATUS: statusDepois };
+    if (Frota_linkMiniatura_(payload.miniaturaLink)) mudVeicD.FOTO_MINIATURA_LINK = Frota_linkMiniatura_(payload.miniaturaLink);
+    SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, veiculo.ID, mudVeicD);
     SGO_DATA.log('FROTA_VIAGEM_FINALIZAR', sessao.usuario, 'Devolução registrada — veículo ' + veiculo.PLACA + ' — condutor ' + nomeCondutor, 'FROTA');
   } finally {
     try { SpreadsheetApp.flush(); } finally { lock.releaseLock(); }

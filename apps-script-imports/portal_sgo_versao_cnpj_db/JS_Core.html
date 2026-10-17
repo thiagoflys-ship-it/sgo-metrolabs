@@ -1723,122 +1723,12 @@
     mobileFrotaMsg_(containerId, "error", msg);
   }
 
-  function mobileFrotaRenderChecklist_(containerId) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    el.innerHTML = MOBILE_FROTA.gruposChecklist.map(function (g) {
-      const itens = g.itens.map(function (item) {
-        const idSafe = (containerId + "_" + g.grupo + "_" + item).replace(/[^a-zA-Z0-9]/g, "_");
-        return '<div class="mobile-frota-check-item" id="wrap_' + idSafe + '">' +
-          '<div class="linha">' +
-            '<input type="checkbox" id="' + idSafe + '" checked data-grupo="' + escapeHtml_(g.grupo) + '" data-item="' + escapeHtml_(item) + '" onchange="mobileFrotaAlternarObs_(this)">' +
-            '<label for="' + idSafe + '">' + escapeHtml_(item) + '</label>' +
-          '</div>' +
-          '<input type="text" class="mobile-frota-check-obs" placeholder="Descreva o problema encontrado" data-obs-de="' + idSafe + '">' +
-        '</div>';
-      }).join("");
-      return '<div class="mobile-frota-check-grupo">' + escapeHtml_(g.grupo) + '</div>' + itens;
-    }).join("");
-  }
-
-  function mobileFrotaAlternarObs_(checkbox) {
-    const wrap = document.getElementById("wrap_" + checkbox.id);
-    if (wrap) wrap.classList.toggle("nao-conforme", !checkbox.checked);
-  }
-
-  function mobileFrotaColetarChecklist_(containerId) {
-    const el = document.getElementById(containerId);
-    if (!el) return [];
-    const checkboxes = el.querySelectorAll('input[type="checkbox"]');
-    const lista = [];
-    checkboxes.forEach(function (cb) {
-      const obsInput = el.querySelector('input[data-obs-de="' + cb.id + '"]');
-      lista.push({ grupo: cb.getAttribute("data-grupo"), item: cb.getAttribute("data-item"), ok: cb.checked, observacao: obsInput ? obsInput.value : "" });
-    });
-    return lista;
-  }
-
-  // qual: "retirada" | "devolucao" (fotos do veículo) | "painel_r" | "painel_d" (foto do painel/odômetro, 17/10/2026)
-  const MOBILE_FROTA_FOTOS = {
-    retirada: { input: "mob_frota_r_fotosInput", lista: "mob_frota_r_fotosLista", alvo: "fotosRetirada" },
-    devolucao: { input: "mob_frota_d_fotosInput", lista: "mob_frota_d_fotosLista", alvo: "fotosDevolucao" },
-    painel_r: { input: "mob_frota_r_painelInput", lista: "mob_frota_r_painelLista", alvo: "fotosPainelRetirada", legenda: "Painel (odômetro) na retirada" },
-    painel_d: { input: "mob_frota_d_painelInput", lista: "mob_frota_d_painelLista", alvo: "fotosPainelDevolucao", legenda: "Painel (odômetro) na devolução" }
-  };
-  function mobileFrotaOnFotos_(qual) {
-    const cfg = MOBILE_FROTA_FOTOS[qual];
-    const input = document.getElementById(cfg.input);
-    const arquivos = Array.prototype.slice.call((input && input.files) || []).slice(0, 10);
-    const comprimir = typeof frotaComprimirImagem_ === "function" ? frotaComprimirImagem_ : mobileFrota_lerArquivoComoBase64_;
-    Promise.all(arquivos.map(function (f) { return comprimir(f, 1280, 0.72); })).then(function (lidos) {
-      MOBILE_FROTA[cfg.alvo] = MOBILE_FROTA[cfg.alvo] || [];
-      lidos.filter(Boolean).forEach(function (f) { MOBILE_FROTA[cfg.alvo].push({ base64: f.base64, mimeType: f.mimeType, nomeArquivo: f.nomeArquivo, legenda: cfg.legenda || "" }); });
-      mobileFrotaRenderFotos_(qual);
-      if (input) input.value = "";
-    });
-  }
-  function mobileFrotaAtualizarLegenda_(qual, idx, valor) {
-    MOBILE_FROTA[MOBILE_FROTA_FOTOS[qual].alvo][idx].legenda = valor;
-  }
-  function mobileFrotaRemoverFoto_(qual, idx) {
-    MOBILE_FROTA[MOBILE_FROTA_FOTOS[qual].alvo].splice(idx, 1);
-    mobileFrotaRenderFotos_(qual);
-  }
-  function mobileFrotaRenderFotos_(qual) {
-    const cfg = MOBILE_FROTA_FOTOS[qual];
-    const el = document.getElementById(cfg.lista);
-    const lista = MOBILE_FROTA[cfg.alvo] || [];
-    if (!el) return;
-    el.innerHTML = lista.map(function (f, i) {
-      return '<div class="mobile-frota-foto-thumb"><img src="data:' + f.mimeType + ';base64,' + f.base64 + '">' +
-        '<input placeholder="Legenda (opcional)" value="' + escapeHtml_(f.legenda) + '" oninput="mobileFrotaAtualizarLegenda_(\'' + qual + '\',' + i + ',this.value)">' +
-        '<button type="button" onclick="mobileFrotaRemoverFoto_(\'' + qual + '\',' + i + ')">Remover</button></div>';
-    }).join("");
-  }
-
   function mobileFrotaHoraAgora_() {
     const agora = new Date();
     return {
       data: ("0" + agora.getDate()).slice(-2) + "/" + ("0" + (agora.getMonth() + 1)).slice(-2) + "/" + agora.getFullYear(),
       hora: ("0" + agora.getHours()).slice(-2) + ":" + ("0" + agora.getMinutes()).slice(-2)
     };
-  }
-
-  // 17/10/2026: os campos de data/hora (só a gestão os vê) ficam vazios = hora atual do servidor.
-  // Este botão limpa o que foi digitado (antes preenchia com a hora do aparelho, que envelhecia na tela).
-  function mobileFrotaPreencherAgora_(qual) {
-    const prefixo = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
-    const elData = document.getElementById(prefixo + "data");
-    const elHora = document.getElementById(prefixo + "hora");
-    if (elData) elData.value = "";
-    if (elHora) elHora.value = "";
-  }
-
-  // Bloco de data/hora + justificativa: equipe vê só "Registro com a hora atual"; a gestão pode informar outra.
-  function mobileFrotaBlocoHorario_(qual) {
-    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
-    const rotulo = qual === "retirada" ? "saída" : "chegada";
-    if (!frotaSouGestao_()) {
-      return '<div class="mobile-frota-alerta aviso" id="' + p + 'horaAtual">Registro com a hora atual: a data e a hora de ' + rotulo + ' são as do servidor (horário de Brasília) no momento em que você confirmar.</div>';
-    }
-    return mobileFieldHtml_("Data de " + rotulo + " (vazio = agora)", '<input type="text" id="' + p + 'data" value="" placeholder="dd/mm/aaaa" inputmode="numeric">') +
-      mobileFieldHtml_("Hora de " + rotulo + " (vazio = agora)", '<input type="text" id="' + p + 'hora" value="" placeholder="hh:mm" inputmode="numeric">') +
-      '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" style="margin:-6px 0 10px;" onclick="mobileFrotaPreencherAgora_(\'' + qual + '\')">Limpar (usar a hora atual)</button>';
-  }
-  function mobileFrotaBlocoJustificativa_(qual) {
-    if (!frotaSouGestao_()) return "";
-    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
-    return mobileFieldHtml_("Justificativa (gestão)", '<textarea id="' + p + 'justificativa" placeholder="Obrigatória (mínimo de 15 caracteres) se registrar em nome de outro condutor ou com data/hora diferente de agora"></textarea>');
-  }
-  function mobileFrotaBlocoPainel_(qual) {
-    const p = qual === "retirada" ? "mob_frota_r_" : "mob_frota_d_";
-    const q = qual === "retirada" ? "painel_r" : "painel_d";
-    const regra = qual === "retirada"
-      ? "Obrigatória se o KM de saída for diferente do KM registrado do veículo."
-      : "Obrigatória se o KM rodado passar de 1.500 km ou der média acima de 120 km/h no período da retirada.";
-    return mobileFieldHtml_("Foto do painel (odômetro)", '<input type="file" id="' + p + 'painelInput" accept="image/*" capture="environment" onchange="mobileFrotaOnFotos_(\'' + q + '\')">') +
-      '<div class="mobile-card-subtitulo" id="' + p + 'kmInfo" style="margin:-6px 0 8px;">' + regra + '</div>' +
-      '<div class="mobile-frota-fotos" id="' + p + 'painelLista"></div>';
   }
 
   let FROTA_ENVIO_ATIVO = false;
@@ -2006,16 +1896,16 @@
           condutorNome: v.CONDUTOR_NOME, condutorId: v.CONDUTOR_ID, condutorUsuarioId: v.CONDUTOR_USUARIO_ID,
           dataSaida: v.DATA_SAIDA, horaSaida: v.HORA_SAIDA, kmSaida: v.KM_SAIDA, finalidade: v.FINALIDADE };
       });
-      const mobileLista = document.getElementById('mob_frota_emAndamento');
-      if (mobileLista) {
-        MOBILE_FROTA.emAndamento = viagens;
-        // 17/10/2026: só o condutor da retirada (ou a gestão) registra a devolução; os demais veem com quem está.
-        mobileLista.innerHTML = viagens.length ? viagens.map(function(m) {
-          const pode = frotaPodeDevolver_(m);
-          return mobileCardHtml_(m.veiculoPlaca + ' — ' + m.condutorNome,
-            'Saiu em ' + m.dataSaida + ' ' + m.horaSaida + ' (KM ' + frotaKm_(m.kmSaida) + ')' + (pode ? ' · Toque para registrar a devolução' : ' · Só ' + m.condutorNome + ' ou a gestão registram a devolução'),
-            'Em uso', escapeHtml_(pode ? 'renderMobileFrotaDevolver_(' + JSON.stringify(String(m.id)) + ')' : 'frotaAvisoDevolucaoDeOutro_(' + JSON.stringify(String(m.condutorNome || '')) + ')'));
-        }).join('') : '<p>Nenhum veículo com retirada em aberto.</p>';
+      // 17/10/2026 (Frota simples): na tela inicial do celular, quem está com um veículo vê o atalho para devolver.
+      const mobileSit = document.getElementById('mobileSituacaoFrota');
+      const meu = frotaMeuUsuarioId_();
+      const minhas = meu ? viagens.filter(function(m) { return String(m.condutorUsuarioId || '') === meu; }) : [];
+      if (mobileSit && mobileSit.isConnected && minhas.length) {
+        fsEstilo_();
+        mobileSit.insertAdjacentHTML('afterbegin', minhas.map(function(m) {
+          return '<button type="button" class="fs-devolver" style="margin:14px 0 0" onclick="' + escapeHtml_('fsIrDevolver_(' + JSON.stringify(String(m.id)) + ')') + '"><span class="fs-dv-txt"><b>Devolver ' + escapeHtml_(m.veiculoPlaca) + '</b><span>' +
+            escapeHtml_((m.veiculoModelo || '') + ' · retirado em ' + m.dataSaida + ' ' + m.horaSaida) + '</span></span><span class="fs-seta" aria-hidden="true" style="color:#fff">&rsaquo;</span></button>';
+        }).join(''));
       }
       // No desktop, atualizar apenas a lista de uso preserva o checklist em edição.
       const desktopLista = document.getElementById('tplFrota_emAndamentoWrap');
@@ -2039,100 +1929,866 @@
     });
   }
 
-  function renderMobileFrotaOperacional_() {
-    MOBILE_NAV = { modulo: "frota", tela: "lista" };
-    atualizarTituloMobile_("Frota");
+  // ---------- FROTA SIMPLES E RÁPIDA (17/10/2026) ----------
+  // Pedido do dono: retirar e devolver em poucos passos, com uma mão, ao lado do carro.
+  //  - Abrir a Frota: UMA chamada (apiInicioFrota) com tudo da tela inicial, guardada por 60 s.
+  //  - Retirar: tocar no veículo disponível > KM já preenchido (confirmar ou corrigir) > fotos com a
+  //    câmera abrindo direto > vistoria "Tudo OK" em um toque (ou "Tem problema" e marcar os itens) > confirmar.
+  //  - Devolver: o sistema já sabe qual carro está com a pessoa: KM de chegada + foto do painel > vistoria > confirmar.
+  //  - Gestão: a mesma tela; outro condutor, data/hora e justificativa ficam em "Opções da gestão" (recolhido).
+  //  - Fotos: reduzidas no próprio celular (lado maior até 1.600 px, JPEG 0,7, alvo de 400 KB), fora da tela
+  //    principal (Worker), e enviadas assim que tiradas, em segundo plano, com nova tentativa automática.
+  //    Confirmar só espera as que faltam.
+  //  - O que é gravado não mudou: o checklist vai item a item (Tudo OK = todos os itens OK), as fotos como links,
+  //    a foto do painel em fotosPainelSalvas. Campo novo só FOTO_MINIATURA_LINK no veículo.
+  const FS = { inicio: null, inicioEm: 0, pedido: 0, timer: null, fluxo: null, enviando: false, sessao: "", fila: [], decodificando: false, worker: null, workerFalhou: false };
+  const FS_CACHE_MS = 60000;
+  const FS_FOTO_LADO = 1600, FS_FOTO_QUALIDADE = 0.7, FS_FOTO_ALVO = 400 * 1024, FS_MINI_LADO = 320;
+  const FS_TENTATIVAS = [2000, 5000, 10000];
 
-    const div = document.getElementById("conteudo");
-    if (!div) return;
-
-    const perfilFrota = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
-    const gestaoFrota = perfilFrota === "ADMIN" || perfilFrota === "GESTOR" || perfilFrota === "DIRETORIA";
-    // 17/10/2026 (rastreador): aviso de partida não liberada fica na tela até a próxima abertura da Frota.
-    const avisoRastreador = MOBILE_FROTA.avisoRastreador || '';
-    MOBILE_FROTA.avisoRastreador = '';
-    div.innerHTML =
-      (avisoRastreador ? '<div class="mobile-frota-alerta critico" id="mob_frota_avisoRastreador" role="alert"><b>' + escapeHtml_(avisoRastreador) + '</b></div>' : '') +
-      '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">' + SGO_esqFrotaHtml_() + '</div>' +
-      (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' +
-        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAjustarKm_()">Ajustar KM do veículo</button>' +
-        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaPartida_()">Partida do veículo (rastreador)</button>' : '') +
-      '<div class="mobile-frota-secao-titulo">Retiradas em andamento</div>' +
-      '<div class="mobile-list" id="mob_frota_emAndamento">Carregando...</div>' +
-      '<button type="button" class="mobile-fab" onclick="renderMobileFrotaRetirar_()">+ Retirar veículo</button>';
-
-    // A situação da frota (apiSituacaoFrota) já traz as retiradas em andamento e preenche a lista acima.
-    // Os avisos vêm depois dela: chamadas paralelas na primeira abertura disputavam a criação das tabelas
-    // da Frota no servidor ("Já existe uma página chamada CAD_CONDUTORES").
-    Promise.resolve(carregarSituacaoFrotaUI_()).then(function () {
-      return mobileFrota_chamarApiSilencioso_("apiListarAlertasManutencao");
-    }).then(function (res) {
-      const el = document.getElementById("mob_frota_alertas");
-      if (!el) return;
-      const itens = res.items || [];
-      el.innerHTML = itens.map(function (a) {
-        const critico = a.status === "VENCIDO";
-        const generoOk = a.categoria === "DOCUMENTO" ? "vencido" : "vencida";
-        // Multa sem condutor não é vencimento: texto próprio (pedido da frente Frota, 16/10).
-        if (a.tipo === "MULTA_SEM_CONDUTOR") {
-          const ambigua = /conferir/i.test(String(a.tipoLabel || ""));
-          return '<div class="mobile-frota-alerta critico"><b>Multa a conferir:</b> ' + escapeHtml_(a.veiculoPlaca) + " — " +
-            (ambigua ? "mais de uma retirada no horário; confirme o condutor" : "condutor não identificado") +
-            (a.vencimento ? " (infração em " + escapeHtml_(a.vencimento) + ")" : "") + "</div>";
-        }
-        return '<div class="mobile-frota-alerta ' + (critico ? "critico" : "aviso") + '">' +
-          '<b>' + (critico ? "Vencido" : "A vencer") + ':</b> ' + escapeHtml_(a.veiculoPlaca) + " — " + escapeHtml_(a.tipoLabel) + (critico ? (" " + generoOk) : " vencendo em breve") +
-          "</div>";
-      }).join("");
-    }).catch(function (err) { console.error(err); });
+  function fsEstilo_() {
+    if (document.getElementById("fsEstilo")) return;
+    const st = document.createElement("style");
+    st.id = "fsEstilo";
+    st.textContent = [
+      ".fs{display:flex;flex-direction:column;gap:14px;padding-bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;width:100%;box-sizing:border-box}",
+      ".fs *{box-sizing:border-box}",
+      ".fs-titulo{font-size:15px;font-weight:800;color:var(--text-strong);margin:6px 0 0}",
+      ".fs-sub{font-size:14px;color:var(--muted);line-height:1.4}",
+      ".fs-devolver{display:flex;align-items:center;gap:12px;width:100%;min-height:88px;padding:14px;border-radius:10px;border:2px solid var(--bc-action);background:var(--bc-action);color:#fff;text-align:left;cursor:pointer;font:inherit}",
+      ".fs-devolver .fs-dv-txt{flex:1;min-width:0}",
+      ".fs-devolver b{display:block;font-size:20px;line-height:1.2}",
+      ".fs-devolver span{display:block;font-size:14px;opacity:.92;margin-top:2px}",
+      ".fs-veics{display:flex;flex-direction:column;gap:10px}",
+      ".fs-veic{display:flex;align-items:center;gap:12px;width:100%;min-height:84px;padding:10px;border-radius:10px;border:1px solid var(--bc-line);background:#fff;color:var(--bc-text);text-align:left;cursor:pointer;font:inherit}",
+      ".fs-veic:active,.fs-devolver:active{transform:scale(.985)}",
+      ".fs-veic[aria-disabled=true]{opacity:.75}",
+      ".fs-foto-veic{position:relative;flex:0 0 auto;width:88px;height:66px;border-radius:8px;background:var(--bc-surface-2);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-weight:800;font-size:15px;letter-spacing:.02em}",
+      ".fs-foto-veic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}",
+      ".fs-veic-txt{flex:1;min-width:0}",
+      ".fs-placa{display:block;font-size:20px;font-weight:800;color:var(--text-strong);letter-spacing:.03em}",
+      ".fs-modelo{display:block;font-size:15px;color:var(--bc-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+      ".fs-km{display:block;font-size:13px;color:var(--muted);margin-top:2px}",
+      ".fs-seta{flex:0 0 auto;font-size:22px;color:var(--muted)}",
+      ".fs details{border:1px solid var(--bc-line);border-radius:10px;background:#fff}",
+      ".fs details>summary{min-height:48px;display:flex;align-items:center;padding:0 14px;font-weight:700;font-size:15px;cursor:pointer;list-style:none;color:var(--text-strong)}",
+      ".fs details>summary::-webkit-details-marker{display:none}",
+      ".fs details>summary::after{content:'+';margin-left:auto;font-size:20px;color:var(--muted)}",
+      ".fs details[open]>summary::after{content:'\\2212'}",
+      ".fs details>.fs-det{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}",
+      ".fs-passo{background:#fff;border:1px solid var(--bc-line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}",
+      ".fs-passo h3{margin:0;font-size:16px;font-weight:800;color:var(--text-strong);display:flex;align-items:center;gap:8px}",
+      ".fs-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--bc-action);color:#fff;font-size:14px;flex:0 0 auto}",
+      ".fs-passo.feito .fs-num{background:var(--bc-action-bg);color:var(--bc-action);border:2px solid var(--bc-action)}",
+      ".fs-campo{display:flex;flex-direction:column;gap:6px}",
+      ".fs-campo label{font-size:14px;font-weight:700;color:var(--muted)}",
+      ".fs input[type=text],.fs select,.fs textarea{width:100%;min-height:48px;padding:12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-strong);font-size:16px}",
+      ".fs input.fs-km-in{font-size:24px;font-weight:800;letter-spacing:.02em;min-height:56px}",
+      ".fs textarea{min-height:88px}",
+      // As regras de toque do celular (campos com 44 px, !important) mostravam o campo de arquivo; aqui ele some de verdade (o botão é o rótulo).
+      "#app #conteudo .fs .fs-oculto,.fs .fs-oculto{position:absolute!important;width:1px!important;height:1px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;opacity:0!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;pointer-events:none}",
+      ".fs-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;padding:10px 14px;border-radius:10px;border:1px solid var(--bc-line);background:#fff;color:var(--text-strong);font:inherit;font-size:16px;font-weight:700;cursor:pointer;text-align:center}",
+      ".fs-btn.prim{background:var(--bc-action);border-color:var(--bc-action);color:#fff}",
+      ".fs-btn.foto{min-height:64px;border:2px dashed var(--bc-action);color:var(--bc-action);background:var(--bc-action-bg)}",
+      ".fs-btn[disabled]{opacity:.6;cursor:default}",
+      ".fs-link{background:none;border:0;color:var(--bc-action);font:inherit;font-size:15px;font-weight:700;min-height:44px;padding:0 4px;cursor:pointer;text-decoration:underline;align-self:flex-start}",
+      ".fs-fotos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}",
+      ".fs-ft{position:relative;border-radius:8px;overflow:hidden;background:var(--bc-surface-2);aspect-ratio:4/3}",
+      ".fs-ft img{width:100%;height:100%;object-fit:cover;display:block}",
+      ".fs-ft-est{position:absolute;left:0;right:0;bottom:0;padding:4px 6px;font-size:12px;font-weight:700;background:rgba(0,0,0,.62);color:#fff;line-height:1.25}",
+      ".fs-ft.ok .fs-ft-est{background:rgba(6,95,70,.85)}",
+      ".fs-ft.erro .fs-ft-est{background:rgba(153,27,27,.9)}",
+      ".fs-ft-x{position:absolute;top:0;right:0;width:44px;height:44px;border:0;background:transparent;cursor:pointer;display:flex;align-items:flex-start;justify-content:flex-end;padding:4px}",
+      ".fs-ft-x span{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1}",
+      ".fs-ft-tentar{position:absolute;inset:0;border:0;background:transparent;cursor:pointer}",
+      ".fs-duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}",
+      ".fs-op{min-height:64px;border-radius:10px;border:2px solid var(--bc-line);background:#fff;color:var(--text-strong);font:inherit;font-size:17px;font-weight:800;cursor:pointer}",
+      ".fs-op.ok[aria-pressed=true]{border-color:var(--bc-action);background:var(--bc-action);color:#fff}",
+      ".fs-op.prob[aria-pressed=true]{border-color:var(--bc-danger);background:var(--bc-danger);color:#fff}",
+      ".fs-item{border-top:1px solid var(--bc-line);padding:4px 0}",
+      ".fs-item:first-child{border-top:0}",
+      ".fs-item-bt{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 0;border:0;background:none;font:inherit;font-size:16px;color:var(--text-strong);text-align:left;cursor:pointer}",
+      ".fs-item-bt .fs-marca{margin-left:auto;flex:0 0 auto;font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--bc-action-bg);color:var(--bc-action)}",
+      ".fs-item.prob .fs-item-bt .fs-marca{background:var(--bc-danger);color:#fff}",
+      ".fs-item .fs-obs{display:none;margin:0 0 8px}",
+      ".fs-item.prob .fs-obs{display:block}",
+      ".fs-cont{font-size:13px;color:var(--bc-danger);font-weight:700;margin-left:6px}",
+      ".fs-aviso{padding:12px 14px;border-radius:8px;font-size:14.5px;font-weight:600;line-height:1.4;border:1px solid var(--bc-warn-line);background:var(--bc-warn-bg);color:var(--bc-warn)}",
+      ".fs-aviso.erro{border-color:var(--bc-danger);background:var(--bc-danger-bg);color:var(--bc-danger)}",
+      ".fs-aviso.info{border-color:var(--bc-line);background:var(--bc-surface-2);color:var(--bc-text)}",
+      ".fs-aviso.ok{border-color:var(--bc-action);background:var(--bc-action-bg);color:var(--bc-action)}",
+      ".fs-barra{position:fixed;left:0;right:0;bottom:0;z-index:440;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--bc-line);box-shadow:0 -4px 16px rgba(0,0,0,.08)}",
+      ".fs-barra .fs-btn{max-width:608px;margin:0 auto;min-height:56px;font-size:17px}",
+      ".fs-barra-sub{max-width:608px;margin:0 auto 6px;font-size:13px;color:var(--muted);text-align:center}",
+      ".fs-desk .fs-barra{position:sticky;bottom:0;border-radius:10px;border:1px solid var(--bc-line)}",
+      ".fs-desk{padding-bottom:16px}",
+      ".fs-esq{height:84px;border-radius:10px}",
+      ".fs-rodape{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}"
+    ].join("\n");
+    document.head.appendChild(st);
   }
 
-  function renderMobileFrotaRetirar_() {
-    MOBILE_NAV = { modulo: "frota", tela: "form" };
-    atualizarTituloMobile_("Retirar veículo");
-    MOBILE_FROTA.fotosRetirada = [];
-    MOBILE_FROTA.fotosPainelRetirada = [];
+  function fsGestao_() { return frotaSouGestao_(); }
+  function fsEsc_(v) { return escapeHtml_(v == null ? "" : String(v)); }
+  function fsKm_(n) { const v = Number(n); return isFinite(v) ? Math.round(v).toLocaleString("pt-BR") : String(n == null ? "" : n); }
+  function fsDiaHora_(d, h) { const m = /^(\d{2})\/(\d{2})\/\d{4}$/.exec(String(d || "")); return (m ? m[1] + "/" + m[2] : String(d || "")) + (h ? " às " + h : ""); }
+  function fsUrlImagem_(link) {
+    const s = String(link || "");
+    const g = /drive\.google\.com\/file\/d\/([^/?#]+)/.exec(s) || /[?&]id=([^&#]+)/.exec(s);
+    if (g && /google\.com/.test(s)) return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(g[1]) + "&sz=w320";
+    return s;
+  }
+  function fsFotoVeicHtml_(v) {
+    const sigla = fsEsc_(String(v.placa || v.veiculoPlaca || "").slice(0, 3));
+    if (!v.foto) return '<span class="fs-foto-veic" aria-hidden="true">' + sigla + '</span>';
+    // A sigla fica atrás da foto: se a foto não abrir, ela aparece sozinha (sem caixa vazia).
+    return '<span class="fs-foto-veic" aria-hidden="true">' + sigla + '<img src="' + fsEsc_(fsUrlImagem_(v.foto)) + '" alt="" width="88" height="66" loading="lazy" decoding="async" onerror="this.remove()"></span>';
+  }
+  function fsRaiz_() { return document.getElementById("fsRaiz"); }
+  function fsHost_() { return document.getElementById("tplFrota_simples") || document.getElementById("conteudo"); }
+  function fsNoComputador_() { return !!document.getElementById("tplFrota_simples"); }
 
-    const div = document.getElementById("conteudo");
-    if (!div) return;
+  // ---- dados da tela inicial (uma chamada, cache curto) ----
+  function fsCarregarInicio_(forcar) {
+    const sessao = SGO_getSessionId();
+    if (!forcar && FS.inicio && FS.sessao === sessao && Date.now() - FS.inicioEm < FS_CACHE_MS) return Promise.resolve(FS.inicio);
+    const pedido = ++FS.pedido;
+    return mobileFrota_chamarApiSilencioso_("apiInicioFrota").then(function (res) {
+      if (sessao !== SGO_getSessionId()) throw new Error("Sessão alterada. Abra a Frota de novo.");
+      if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não devolveu a situação da frota.");
+      if (pedido === FS.pedido) { FS.inicio = res; FS.inicioEm = Date.now(); FS.sessao = sessao; }
+      MOBILE_FROTA.gruposChecklist = res.gruposChecklist || [];
+      MOBILE_FROTA.emAndamento = res.emAndamento || [];
+      return res;
+    });
+  }
+  function fsAssinatura_(d) { return d ? JSON.stringify([d.veiculos, d.emAndamento, (d.alertas || []).length, d.condutor]) : ""; }
 
-    div.innerHTML =
-      '<div class="mobile-form">' +
-        mobileFieldHtml_("Veículo *", '<select id="mob_frota_r_veiculo" onchange="mobileFrotaAoEscolherVeiculo_()"><option value="">Carregando...</option></select>') +
-        mobileFieldHtml_("Condutor *", '<select id="mob_frota_r_condutor" disabled><option value="">Carregando vínculo do login...</option></select>') +
-        mobileFrotaBlocoHorario_("retirada") +
-        mobileFieldHtml_("KM de saída *", '<input type="text" id="mob_frota_r_km" inputmode="numeric" placeholder="Ex.: 45000">') +
-        mobileFrotaBlocoPainel_("retirada") +
-        mobileFieldHtml_("Finalidade", '<input type="text" id="mob_frota_r_finalidade" placeholder="Ex.: visita técnica ao cliente X">') +
-        mobileFrotaBlocoJustificativa_("retirada") +
-        '<div class="mobile-frota-secao-titulo">Checklist de vistoria</div>' +
-        '<div id="mob_frota_r_checklist">Carregando...</div>' +
-        mobileFieldHtml_("Fotos (pelo menos uma)", '<input type="file" id="mob_frota_r_fotosInput" multiple accept="image/*" capture="environment" onchange="mobileFrotaOnFotos_(\'retirada\')">') +
-        '<div class="mobile-frota-fotos" id="mob_frota_r_fotosLista"></div>' +
-        '<div id="mob_frota_r_status"></div>' +
-        '<div class="mobile-form-actions">' +
-          '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
-          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarRetirada_()">Registrar retirada</button>' +
-        '</div>' +
-      '</div>';
+  function fsAgendarAtualizacao_() {
+    if (FS.timer) clearTimeout(FS.timer);
+    FS.timer = setTimeout(function () {
+      FS.timer = null;
+      const raiz = fsRaiz_();
+      if (!raiz || raiz.getAttribute("data-tela") !== "inicio") return;
+      if (document.visibilityState && document.visibilityState !== "visible") { fsAgendarAtualizacao_(); return; }
+      const antes = fsAssinatura_(FS.inicio);
+      fsCarregarInicio_(true).then(function (d) {
+        const r = fsRaiz_();
+        if (r && r.getAttribute("data-tela") === "inicio" && fsAssinatura_(d) !== antes) fsDesenharInicio_();
+      }).catch(function () {}).finally(fsAgendarAtualizacao_);
+    }, 30000);
+  }
 
-    Promise.all([
-      mobileFrota_chamarApi_("apiPing"),
-      mobileFrota_chamarApi_("apiListarVeiculosAtivos"),
-      frotaContextoCondutorUI_("mob_frota_r_condutor")
-    ]).then(function (resultados) {
-      MOBILE_FROTA.gruposChecklist = resultados[0].gruposChecklist || [];
-      const todos = resultados[1].items || [];
-      MOBILE_FROTA.veiculos = todos.filter(function (v) { return v.SITUACAO === "DISPONIVEL"; });
+  // ---- tela inicial ----
+  function renderMobileFrotaOperacional_() {
+    if (!fsNoComputador_()) {
+      MOBILE_NAV = { modulo: "frota", tela: "lista" };
+      atualizarTituloMobile_("Frota");
+    }
+    const host = fsHost_();
+    if (!host) return;
+    fsEstilo_();
+    const fresco = FS.inicio && FS.sessao === SGO_getSessionId() && Date.now() - FS.inicioEm < FS_CACHE_MS;
+    if (fresco) {
+      fsDesenharInicio_();
+      fsAgendarAtualizacao_();
+      fsDepoisDoInicio_();
+      return;
+    }
+    host.innerHTML = '<div class="fs' + (fsNoComputador_() ? ' fs-desk' : '') + '" id="fsRaiz" data-tela="carregando" aria-busy="true">' +
+      '<div class="sgo-esq fs-esq"></div><div class="sgo-esq fs-esq"></div><div class="sgo-esq fs-esq"></div>' +
+      '<span class="sgo-sr">Carregando a frota</span></div>';
+    fsCarregarInicio_(true).then(function () { fsDesenharInicio_(); fsAgendarAtualizacao_(); fsDepoisDoInicio_(); }).catch(function (err) {
+      const r = fsRaiz_();
+      if (!r) return;
+      r.setAttribute("data-tela", "erro"); r.removeAttribute("aria-busy");
+      r.innerHTML = '<div class="fs-aviso erro" role="alert">Não foi possível carregar a frota agora. ' + fsEsc_((err && err.message) || "") +
+        ' Verifique a conexão e toque em Tentar de novo; se continuar, avise o administrador.</div>' +
+        '<button type="button" class="fs-btn prim" data-acao="recarregar">Tentar de novo</button>';
+      r.addEventListener("click", fsClique_);
+    });
+  }
 
-      const selVeiculo = document.getElementById("mob_frota_r_veiculo");
-      if (selVeiculo) {
-        selVeiculo.innerHTML = '<option value="">Selecione</option>' + MOBILE_FROTA.veiculos.map(function (v) {
-          return '<option value="' + escapeHtml_(v.ID) + '">' + escapeHtml_(v.PLACA + " — " + (v.MODELO || "")) + '</option>';
-        }).join("");
+  // Atalho da tela inicial do celular: abre a Frota já na devolução.
+  function fsIrDevolver_(movId) { FS.abrirDevolucao = String(movId || ""); abrir("frota"); }
+  function fsDepoisDoInicio_() {
+    const id = FS.abrirDevolucao; FS.abrirDevolucao = "";
+    if (id && FS.inicio && (FS.inicio.emAndamento || []).some(function (m) { return m.id === id; })) fsAbrirDevolucao_(id);
+  }
+
+  function fsDesenharInicio_() {
+    const host = fsHost_();
+    const d = FS.inicio;
+    if (!host || !d) return;
+    const gestao = !!d.gestor;
+    const minhas = (d.emAndamento || []).filter(function (m) { return m.minha; });
+    const outras = (d.emAndamento || []).filter(function (m) { return !m.minha; });
+    const livres = (d.veiculos || []).filter(function (v) { return v.situacao === "DISPONIVEL"; });
+    const avisoRastreador = MOBILE_FROTA.avisoRastreador || "";
+    MOBILE_FROTA.avisoRastreador = "";
+    const semCondutor = !d.condutor && !gestao;
+    const rascunho = FS.fluxo && !FS.fluxo.concluido ? FS.fluxo : null;
+
+    const alertas = (d.alertas || []).map(function (a) {
+      if (a.tipo === "MULTA_SEM_CONDUTOR") {
+        const ambigua = /conferir/i.test(String(a.tipoLabel || ""));
+        return '<div class="fs-aviso erro"><b>Multa a conferir:</b> ' + fsEsc_(a.veiculoPlaca) + " — " + (ambigua ? "mais de uma retirada no horário; confirme o condutor" : "condutor não identificado") +
+          (a.vencimento ? " (infração em " + fsEsc_(a.vencimento) + ")" : "") + "</div>";
       }
-      mobileFrotaRenderChecklist_("mob_frota_r_checklist");
-    }).catch(function (err) { mobileFrotaErro_("mob_frota_r_status", err); });
+      const critico = a.status === "VENCIDO";
+      const generoOk = a.categoria === "DOCUMENTO" ? "vencido" : "vencida";
+      return '<div class="fs-aviso' + (critico ? " erro" : "") + '"><b>' + (critico ? "Vencido" : "A vencer") + ":</b> " + fsEsc_(a.veiculoPlaca) + " — " + fsEsc_(a.tipoLabel) + (critico ? " " + generoOk : " vencendo em breve") + "</div>";
+    });
+
+    let h = "";
+    if (avisoRastreador) h += '<div class="fs-aviso erro" id="mob_frota_avisoRastreador" role="alert"><b>' + fsEsc_(avisoRastreador) + "</b></div>";
+    minhas.forEach(function (m) {
+      h += '<button type="button" class="fs-devolver" data-acao="devolver" data-id="' + fsEsc_(m.id) + '">' + fsFotoVeicHtml_({ placa: m.veiculoPlaca, foto: m.foto }) +
+        '<span class="fs-dv-txt"><b>Devolver ' + fsEsc_(m.veiculoPlaca) + "</b><span>" + fsEsc_(m.veiculoModelo || "") + "</span><span>Retirado " + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) + " · KM " + fsEsc_(fsKm_(m.kmSaida)) + "</span></span>" +
+        '<span class="fs-seta" aria-hidden="true" style="color:#fff">&rsaquo;</span></button>';
+    });
+    if (rascunho) {
+      const enviadas = rascunho.fotos.concat(rascunho.painel).filter(function (f) { return f.estado === "enviada"; }).length;
+      h += '<button type="button" class="fs-btn" data-acao="continuar">Continuar ' + (rascunho.tipo === "retirada" ? "a retirada do " : "a devolução do ") + fsEsc_(rascunho.placa) +
+        (enviadas ? " (" + SGO_qtd_(enviadas, "foto enviada", "fotos enviadas") + ")" : "") + "</button>";
+    }
+    if (semCondutor) h += '<div class="fs-aviso">Seu login ainda não tem condutor vinculado, então a retirada não pode ser registrada em seu nome. Peça à gestão (Administrador, Gestor ou Diretoria) para vincular o seu usuário em Frota &gt; Condutores e abra a Frota de novo.</div>';
+    if (alertas.length) {
+      h += alertas.length > 2
+        ? '<details><summary>Avisos da frota (' + alertas.length + ')</summary><div class="fs-det">' + alertas.join("") + "</div></details>"
+        : alertas.join("");
+    }
+    h += '<div class="fs-titulo">' + (minhas.length ? "Retirar outro veículo" : "Retirar um veículo") + ' <span class="fs-sub">(' + SGO_qtd_(livres.length, "disponível", "disponíveis") + ")</span></div>";
+    h += livres.length ? '<div class="fs-veics">' + livres.map(function (v) {
+      return '<button type="button" class="fs-veic" data-acao="retirar" data-id="' + fsEsc_(v.id) + '"' + (semCondutor ? ' aria-disabled="true"' : "") + ">" + fsFotoVeicHtml_(v) +
+        '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(v.placa) + '</span><span class="fs-modelo">' + fsEsc_([v.modelo, v.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">KM ' + fsEsc_(fsKm_(v.km)) + "</span></span>" +
+        '<span class="fs-seta" aria-hidden="true">&rsaquo;</span></button>';
+    }).join("") + "</div>"
+      : '<div class="fs-aviso info">Nenhum veículo disponível agora. Os veículos em uso aparecem abaixo; quando alguém devolver, ele volta para esta lista (a tela se atualiza sozinha).</div>';
+    if (outras.length) {
+      h += "<details" + (gestao ? " open" : "") + "><summary>Em uso por outras pessoas (" + outras.length + ")</summary><div class=\"fs-det\">" + outras.map(function (m) {
+        return '<button type="button" class="fs-veic" data-acao="devolver" data-id="' + fsEsc_(m.id) + '">' + fsFotoVeicHtml_({ placa: m.veiculoPlaca, foto: m.foto }) +
+          '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(m.veiculoPlaca) + '</span><span class="fs-modelo">Com ' + fsEsc_(m.condutorNome || "condutor não localizado") + '</span><span class="fs-km">Desde ' + fsEsc_(fsDiaHora_(m.dataSaida, m.horaSaida)) +
+          (gestao ? " · Toque para devolver no lugar" : " · Só " + fsEsc_(m.condutorNome || "o condutor") + " ou a gestão devolvem") + "</span></span></button>";
+      }).join("") + "</div></details>";
+    }
+    if (gestao && !fsNoComputador_()) {
+      h += '<details><summary>Opções da gestão</summary><div class="fs-det">' +
+        '<button type="button" class="fs-btn" data-acao="abastecer">Registrar abastecimento</button>' +
+        '<button type="button" class="fs-btn" data-acao="ajustarKm">Ajustar KM do veículo</button>' +
+        '<button type="button" class="fs-btn" data-acao="partida">Partida do veículo (rastreador)</button></div></details>';
+    }
+    const hora = new Date(FS.inicioEm || Date.now());
+    h += '<div class="fs-rodape">Atualizado às ' + ("0" + hora.getHours()).slice(-2) + ":" + ("0" + hora.getMinutes()).slice(-2) + '<button type="button" class="fs-link" data-acao="recarregar">Atualizar agora</button></div>';
+    host.innerHTML = '<div class="fs' + (fsNoComputador_() ? ' fs-desk' : '') + '" id="fsRaiz" data-tela="inicio">' + h + "</div>";
+    fsRaiz_().addEventListener("click", fsClique_);
+  }
+
+  function fsClique_(ev) {
+    const alvo = ev.target.closest("[data-acao]");
+    if (!alvo || !fsRaiz_() || !fsRaiz_().contains(alvo)) return;
+    const acao = alvo.getAttribute("data-acao"), id = alvo.getAttribute("data-id") || "";
+    if (acao === "recarregar") { FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (acao === "retirar") { fsAbrirRetirada_(id); return; }
+    if (acao === "devolver") { fsAbrirDevolucao_(id); return; }
+    if (acao === "continuar") { if (FS.fluxo) fsDesenharFluxo_(); return; }
+    if (acao === "abastecer") { renderMobileFrotaAbastecer_(); return; }
+    if (acao === "ajustarKm") { renderMobileFrotaAjustarKm_(); return; }
+    if (acao === "partida") { renderMobileFrotaPartida_(); return; }
+    if (acao === "vistoria") { fsVistoria_(alvo.getAttribute("data-v")); return; }
+    if (acao === "item") { fsAlternarItem_(alvo); return; }
+    if (acao === "removerFoto") { ev.preventDefault(); ev.stopPropagation(); fsRemoverFoto_(id); return; }
+    if (acao === "tentarFoto") { fsTentarDeNovo_(id); return; }
+    if (acao === "confirmar") { fsConfirmar_(); return; }
+    if (acao === "cancelar") { fsCancelar_(); return; }
+  }
+
+  // ---- fluxo (retirada / devolução) ----
+  function fsNovoFluxo_(tipo, o) {
+    return Object.assign({ tipo: tipo, fotos: [], painel: [], vistoria: "", problemas: {}, km: "", kmTocado: false, finalidade: "", observacoes: "",
+      condutorId: "", data: "", hora: "", justificativa: "", miniatura: null, concluido: false }, o);
+  }
+  function fsAbrirRetirada_(veiculoId) {
+    const d = FS.inicio || {};
+    const v = (d.veiculos || []).filter(function (x) { return x.id === veiculoId; })[0];
+    if (!v) { FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (!d.condutor && !d.gestor) { fsDesenharInicio_(); const r = fsRaiz_(); if (r) r.scrollIntoView({ block: "start" }); return; }
+    if (v.situacao !== "DISPONIVEL") { alert("O veículo " + v.placa + " não está mais disponível. A lista foi atualizada."); FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "retirada" && FS.fluxo.veiculo.id === v.id)) {
+      FS.fluxo = fsNovoFluxo_("retirada", { veiculo: v, placa: v.placa, km: fsKm_(v.km), condutorId: d.condutor ? d.condutor.id : "" });
+    }
+    fsDesenharFluxo_();
+  }
+  function fsAbrirDevolucao_(movId) {
+    const d = FS.inicio || {};
+    const m = (d.emAndamento || []).filter(function (x) { return x.id === movId; })[0];
+    if (!m) { FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
+    if (!m.minha && !d.gestor) {
+      // Operador nunca no limbo: diz com quem está e o que fazer, sem abrir um formulário que o servidor recusaria.
+      const r = fsRaiz_();
+      const caixa = document.createElement("div");
+      caixa.className = "fs-aviso"; caixa.setAttribute("role", "alert");
+      caixa.textContent = frotaTextoSoCondutorDevolve_(m.condutorNome);
+      const ant = r && r.querySelector("#fsAvisoDono"); if (ant) ant.remove();
+      caixa.id = "fsAvisoDono";
+      if (r) { r.insertBefore(caixa, r.firstChild); caixa.scrollIntoView({ block: "start", behavior: "smooth" }); }
+      return;
+    }
+    if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "devolucao" && FS.fluxo.mov.id === m.id)) {
+      FS.fluxo = fsNovoFluxo_("devolucao", { mov: m, placa: m.veiculoPlaca });
+    }
+    fsDesenharFluxo_();
+  }
+
+  function fsDesenharFluxo_() {
+    const f = FS.fluxo, d = FS.inicio || {}, host = fsHost_();
+    if (!f || !host) return;
+    const ret = f.tipo === "retirada";
+    const gestao = !!d.gestor;
+    if (!fsNoComputador_()) {
+      MOBILE_NAV = { modulo: "frota", tela: "form" };
+      atualizarTituloMobile_((ret ? "Retirar " : "Devolver ") + f.placa);
+    }
+    const noLugar = !ret && !f.mov.minha;
+    const semCondutorProprio = ret && gestao && !d.condutor;
+    let h = "";
+    // cabeçalho do veículo
+    if (ret) {
+      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_(f.veiculo) + '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(f.placa) + '</span><span class="fs-modelo">' +
+        fsEsc_([f.veiculo.modelo, f.veiculo.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">Retirada em nome de ' + fsEsc_(d.condutor ? d.condutor.nome : "condutor a escolher (Opções da gestão)") + "</span></span></div>";
+    } else {
+      h += '<div class="fs-veic" style="cursor:default">' + fsFotoVeicHtml_({ placa: f.placa, foto: f.mov.foto }) + '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(f.placa) + '</span><span class="fs-modelo">' +
+        fsEsc_(f.mov.veiculoModelo || "") + '</span><span class="fs-km">Retirado por ' + fsEsc_(f.mov.condutorNome) + " " + fsEsc_(fsDiaHora_(f.mov.dataSaida, f.mov.horaSaida)) + " · KM " + fsEsc_(fsKm_(f.mov.kmSaida)) + "</span></span></div>";
+      if (noLugar) h += '<div class="fs-aviso">Você está registrando a devolução no lugar de ' + fsEsc_(f.mov.condutorNome) + ". Escreva a justificativa em Opções da gestão (mínimo de 15 caracteres); " + fsEsc_(f.mov.condutorNome) + " será avisado.</div>";
+    }
+    // 1. KM
+    h += '<section class="fs-passo" id="fsPassoKm"><h3><span class="fs-num">1</span>' + (ret ? "KM do painel" : "KM de chegada") + "</h3>" +
+      '<div class="fs-campo"><label for="fs_km">' + (ret ? "Confira o número no painel. Se for diferente, corrija." : "Número do odômetro agora") + "</label>" +
+      '<input type="text" id="fs_km" class="fs-km-in" inputmode="numeric" autocomplete="off" value="' + fsEsc_(f.km) + '" placeholder="' + (ret ? "" : "Ex.: " + fsEsc_(fsKm_(Number(f.mov.kmSaida) + 35))) + '"></div>' +
+      '<div class="fs-sub" id="fs_kmInfo"></div><div id="fs_painelBloco"></div></section>';
+    // 2. Fotos (retirada) — na devolução, a foto do painel vem no passo 1 e fotos extras do veículo são opcionais
+    if (ret) {
+      h += '<section class="fs-passo" id="fsPassoFotos"><h3><span class="fs-num">2</span>Fotos do veículo</h3>' +
+        '<div class="fs-sub">Pelo menos uma. A câmera abre direto; cada foto já vai sendo enviada.</div>' +
+        '<div class="fs-fotos" id="fs_fotos"></div>' +
+        '<label class="fs-btn foto" for="fs_inFoto">Tirar foto do veículo</label><input type="file" id="fs_inFoto" class="fs-oculto" data-sgo-nativo accept="image/*" capture="environment">' +
+        '<label class="fs-link" for="fs_inGaleria">Escolher da galeria</label><input type="file" id="fs_inGaleria" class="fs-oculto" data-sgo-nativo accept="image/*" multiple></section>';
+    }
+    // 3. Vistoria
+    const nProb = Object.keys(f.problemas).length;
+    h += '<section class="fs-passo" id="fsPassoVist"><h3><span class="fs-num">' + (ret ? "3" : "2") + "</span>Vistoria</h3>" +
+      '<div class="fs-sub">Olhe o veículo por fora e por dentro.</div>' +
+      '<div class="fs-duas"><button type="button" class="fs-op ok" data-acao="vistoria" data-v="ok" aria-pressed="' + (f.vistoria === "ok") + '">Tudo OK</button>' +
+      '<button type="button" class="fs-op prob" data-acao="vistoria" data-v="problema" aria-pressed="' + (f.vistoria === "problema") + '">Tem problema</button></div>' +
+      '<div id="fs_itens"' + (f.vistoria === "problema" ? "" : " hidden") + ">" + (f.vistoria === "problema" ? fsItensHtml_(f) : "") + "</div>" +
+      '<div class="fs-sub" id="fs_vistInfo">' + (f.vistoria === "ok" ? "Todos os itens serão gravados como OK." : (f.vistoria === "problema" ? (nProb ? SGO_qtd_(nProb, "item marcado", "itens marcados") + " com problema." : "Toque nos itens com problema e escreva o que encontrou.") : "")) + "</div></section>";
+    // Complementos opcionais
+    if (ret) {
+      h += '<div class="fs-campo"><label for="fs_finalidade">Finalidade (opcional)</label><input type="text" id="fs_finalidade" value="' + fsEsc_(f.finalidade) + '" placeholder="Ex.: visita técnica ao cliente"></div>';
+    } else {
+      h += '<details id="fs_maisDev"' + (f.fotos.length || f.observacoes ? " open" : "") + '><summary>Mais fotos e observações (opcional)</summary><div class="fs-det">' +
+        '<div class="fs-fotos" id="fs_fotos"></div>' +
+        '<label class="fs-btn" for="fs_inFoto">Tirar foto do veículo</label><input type="file" id="fs_inFoto" class="fs-oculto" data-sgo-nativo accept="image/*" capture="environment">' +
+        '<div class="fs-campo"><label for="fs_obs">Observações</label><textarea id="fs_obs">' + fsEsc_(f.observacoes) + "</textarea></div></div></details>";
+    }
+    // Opções da gestão (recolhido)
+    if (gestao) {
+      const abrir = noLugar || semCondutorProprio || !!(f.data || f.hora || f.justificativa) || (ret && d.condutor && f.condutorId && f.condutorId !== d.condutor.id);
+      h += '<details id="fs_gestao"' + (abrir ? " open" : "") + '><summary>Opções da gestão</summary><div class="fs-det">' +
+        (semCondutorProprio ? '<div class="fs-aviso">Seu login não tem condutor vinculado: escolha o condutor desta retirada e escreva a justificativa.</div>' : "") +
+        (ret ? '<div class="fs-campo"><label for="fs_condutor">Condutor</label><select id="fs_condutor"><option value="">Escolha o condutor</option>' + (d.condutores || []).map(function (c) {
+          return '<option value="' + fsEsc_(c.id) + '"' + (c.id === f.condutorId ? " selected" : "") + ">" + fsEsc_(c.nome) + (d.condutor && c.id === d.condutor.id ? " (eu)" : "") + "</option>";
+        }).join("") + "</select></div>" : "") +
+        '<div class="fs-duas"><div class="fs-campo"><label for="fs_data">Data (vazio = agora)</label><input type="text" id="fs_data" inputmode="numeric" placeholder="dd/mm/aaaa" value="' + fsEsc_(f.data) + '"></div>' +
+        '<div class="fs-campo"><label for="fs_hora">Hora (vazio = agora)</label><input type="text" id="fs_hora" inputmode="numeric" placeholder="hh:mm" value="' + fsEsc_(f.hora) + '"></div></div>' +
+        '<div class="fs-campo"><label for="fs_just">Justificativa</label><textarea id="fs_just" placeholder="Obrigatória (mínimo de 15 caracteres) para outro condutor, data/hora diferente de agora ou devolução no lugar do condutor">' + fsEsc_(f.justificativa) + "</textarea></div></div></details>";
+    } else {
+      h += '<div class="fs-sub">Registro com a hora atual do servidor (horário de Brasília) no momento em que você confirmar.</div>';
+    }
+    h += '<div id="fs_status" aria-live="polite"></div>';
+    h += '<button type="button" class="fs-link" data-acao="cancelar">Cancelar e voltar</button>';
+    h += '<div class="fs-barra"><div class="fs-barra-sub" id="fs_barraSub"></div><button type="button" class="fs-btn prim" id="fs_confirmar" data-acao="confirmar">' + (ret ? "Confirmar retirada" : "Confirmar devolução") + "</button></div>";
+
+    host.innerHTML = '<div class="fs' + (fsNoComputador_() ? ' fs-desk' : '') + '" id="fsRaiz" data-tela="' + f.tipo + '">' + h + "</div>";
+    const raiz = fsRaiz_();
+    raiz.addEventListener("click", fsClique_);
+    raiz.addEventListener("input", fsAoDigitar_);
+    raiz.addEventListener("change", fsAoMudar_);
+    fsAtualizarKmInfo_();
+    fsDesenharFotos_();
+    fsAtualizarBarra_();
+    if (!fsNoComputador_()) window.scrollTo(0, 0); else host.scrollIntoView({ block: "start" });
+  }
+
+  function fsItensHtml_(f) {
+    return (MOBILE_FROTA.gruposChecklist || []).map(function (g, gi) {
+      const marcados = g.itens.filter(function (it) { return f.problemas[g.grupo + "|" + it]; }).length;
+      return "<details" + (marcados || gi === 0 ? " open" : "") + "><summary>" + fsEsc_(g.grupo) + (marcados ? '<span class="fs-cont">' + marcados + " com problema</span>" : "") + '</summary><div class="fs-det">' +
+        g.itens.map(function (it) {
+          const k = g.grupo + "|" + it, p = f.problemas[k];
+          return '<div class="fs-item' + (p ? " prob" : "") + '" data-k="' + fsEsc_(k) + '"><button type="button" class="fs-item-bt" data-acao="item" aria-pressed="' + (!!p) + '">' + fsEsc_(it) +
+            '<span class="fs-marca">' + (p ? "Problema" : "OK") + "</span></button>" +
+            '<input type="text" class="fs-obs" data-obs="' + fsEsc_(k) + '" placeholder="O que tem? Ex.: risco na porta" value="' + fsEsc_(p ? p.obs : "") + '"></div>';
+        }).join("") + "</div></details>";
+    }).join("");
+  }
+
+  function fsVistoria_(v) {
+    const f = FS.fluxo; if (!f) return;
+    f.vistoria = v;
+    const raiz = fsRaiz_();
+    raiz.querySelectorAll('[data-acao="vistoria"]').forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-v") === v)); });
+    const itens = document.getElementById("fs_itens");
+    if (itens) itens.hidden = v !== "problema";
+    // Os 31 itens só são montados quando a pessoa toca em "Tem problema" (tela mais leve).
+    if (v === "ok") { f.problemas = {}; if (itens) itens.innerHTML = ""; }
+    if (v === "problema" && itens && !itens.firstChild) itens.innerHTML = fsItensHtml_(f);
+    fsAtualizarVistInfo_();
+    fsAtualizarBarra_();
+    if (v === "problema" && itens) itens.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+  function fsAlternarItem_(bt) {
+    const f = FS.fluxo; if (!f) return;
+    const caixa = bt.closest(".fs-item"), k = caixa.getAttribute("data-k");
+    if (f.problemas[k]) delete f.problemas[k]; else f.problemas[k] = { obs: (caixa.querySelector(".fs-obs") || {}).value || "" };
+    const p = !!f.problemas[k];
+    caixa.classList.toggle("prob", p);
+    bt.setAttribute("aria-pressed", String(p));
+    bt.querySelector(".fs-marca").textContent = p ? "Problema" : "OK";
+    const det = caixa.closest("details"), sum = det && det.querySelector("summary");
+    if (sum) {
+      const n = det.querySelectorAll(".fs-item.prob").length, cont = sum.querySelector(".fs-cont");
+      if (cont) cont.remove();
+      if (n) sum.insertAdjacentHTML("beforeend", '<span class="fs-cont">' + n + " com problema</span>");
+    }
+    if (p) { const o = caixa.querySelector(".fs-obs"); if (o) setTimeout(function () { o.focus(); }, 30); }
+    fsAtualizarVistInfo_();
+    fsAtualizarBarra_();
+  }
+  function fsAtualizarVistInfo_() {
+    const f = FS.fluxo, el = document.getElementById("fs_vistInfo"); if (!f || !el) return;
+    const n = Object.keys(f.problemas).length;
+    el.textContent = f.vistoria === "ok" ? "Todos os itens serão gravados como OK." : (f.vistoria === "problema" ? (n ? SGO_qtd_(n, "item marcado", "itens marcados") + " com problema. Escreva o que encontrou em cada um." : "Toque nos itens com problema e escreva o que encontrou.") : "");
+  }
+
+  function fsAoDigitar_(ev) {
+    const f = FS.fluxo, t = ev.target; if (!f || !t) return;
+    if (t.id === "fs_km") { f.km = t.value; f.kmTocado = true; fsAtualizarKmInfo_(); fsAtualizarBarra_(); }
+    else if (t.id === "fs_finalidade") f.finalidade = t.value;
+    else if (t.id === "fs_obs") f.observacoes = t.value;
+    else if (t.id === "fs_data") f.data = t.value;
+    else if (t.id === "fs_hora") f.hora = t.value;
+    else if (t.id === "fs_just") f.justificativa = t.value;
+    else if (t.classList.contains("fs-obs")) { const k = t.getAttribute("data-obs"); if (f.problemas[k]) f.problemas[k].obs = t.value; fsAtualizarBarra_(); }
+  }
+  function fsAoMudar_(ev) {
+    const f = FS.fluxo, t = ev.target; if (!f || !t) return;
+    if (t.id === "fs_condutor") { f.condutorId = t.value; return; }
+    if (t.type === "file") {
+      const arquivos = Array.prototype.slice.call(t.files || []).slice(0, 10);
+      const destino = t.getAttribute("data-destino") === "painel" ? "painel" : "fotos";
+      arquivos.forEach(function (arq) { fsAdicionarFoto_(arq, destino); });
+      t.value = "";
+    }
+  }
+
+  // Foto do painel: retirada = só quando o KM for diferente do registrado; devolução = sempre.
+  function fsPrecisaPainel_() {
+    const f = FS.fluxo; if (!f) return "";
+    if (f.tipo === "devolucao") return "sempre";
+    const km = frotaNumCliente_(f.km), atual = Number(f.veiculo.km);
+    return isFinite(km) && km !== atual ? "divergente" : "";
+  }
+  function fsAtualizarKmInfo_() {
+    const f = FS.fluxo, info = document.getElementById("fs_kmInfo"), bloco = document.getElementById("fs_painelBloco");
+    if (!f || !info || !bloco) return;
+    const km = frotaNumCliente_(f.km);
+    let txt = "";
+    if (f.tipo === "retirada") {
+      const atual = Number(f.veiculo.km);
+      if (!String(f.km).trim()) txt = "Digite o número do odômetro.";
+      else if (!isFinite(km)) txt = "Use só números (ex.: 45.120).";
+      else if (km === atual) txt = "Igual ao KM registrado (" + fsKm_(atual) + ").";
+      else if (km < atual && !fsGestao_()) txt = "Menor que o KM registrado (" + fsKm_(atual) + "). O odômetro não volta: confira o painel. Se o registro estiver errado, peça à gestão o ajuste de KM.";
+      else txt = "Diferente do KM registrado (" + fsKm_(atual) + "): diferença de " + fsKm_(km - atual) + " km. Tire a foto do painel; a gestão confere.";
+    } else {
+      const ks = Number(f.mov.kmSaida);
+      if (!String(f.km).trim()) txt = "Na saída estava com " + fsKm_(ks) + " km.";
+      else if (!isFinite(km)) txt = "Use só números (ex.: 45.120).";
+      else if (km < ks) txt = "Menor que o KM de saída (" + fsKm_(ks) + "). Confira o número no painel.";
+      else txt = "Rodou " + fsKm_(km - ks) + " km nesta retirada.";
+    }
+    info.textContent = txt;
+    const precisa = fsPrecisaPainel_();
+    const mostrar = !!precisa || f.painel.length;
+    if (!mostrar) { bloco.innerHTML = ""; return; }
+    if (!bloco.querySelector("#fs_inPainel")) {
+      bloco.innerHTML = '<div class="fs-fotos" id="fs_fotosPainel"></div>' +
+        '<label class="fs-btn foto" for="fs_inPainel" id="fs_lbPainel">Tirar foto do painel</label><input type="file" id="fs_inPainel" class="fs-oculto" data-sgo-nativo accept="image/*" capture="environment" data-destino="painel">';
+      fsDesenharFotos_();
+    }
+    const lb = document.getElementById("fs_lbPainel");
+    if (lb) lb.textContent = f.painel.length ? "Tirar outra foto do painel" : (precisa === "sempre" ? "Tirar foto do painel (obrigatória)" : "Tirar foto do painel (obrigatória: KM diferente)");
+  }
+
+  // ---- fotos: reduzir no celular e enviar em segundo plano ----
+  const FS_WORKER_SRC = "self.onmessage=function(e){var d=e.data;createImageBitmap(d.arquivo).then(function(bmp){" +
+    "function gerar(lado,q){var w=bmp.width,h=bmp.height,f=Math.min(1,lado/Math.max(w,h));w=Math.max(1,Math.round(w*f));h=Math.max(1,Math.round(h*f));" +
+    "var c=new OffscreenCanvas(w,h);c.getContext('2d').drawImage(bmp,0,0,w,h);return c.convertToBlob({type:'image/jpeg',quality:q}).then(function(b){return {b:b,w:w,h:h};});}" +
+    "function caber(lado,q){return gerar(lado,q).then(function(r){if(r.b.size<=d.alvo||q<=0.45){if(r.b.size>d.alvo&&lado>1280)return caber(1280,0.6);return r;}return caber(lado,Math.round((q-0.1)*100)/100);});}" +
+    "return caber(d.lado,d.q).then(function(r){if(!d.mini){bmp.close&&bmp.close();self.postMessage({id:d.id,blob:r.b,w:r.w,h:r.h});return;}" +
+    "return gerar(d.miniLado,0.6).then(function(m){bmp.close&&bmp.close();self.postMessage({id:d.id,blob:r.b,w:r.w,h:r.h,mini:m.b});});});" +
+    "}).catch(function(err){self.postMessage({id:d.id,erro:String(err&&err.message||err)});});};";
+
+  function fsReduzirNoWorker_(arquivo, mini) {
+    if (FS.workerFalhou || typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap !== "function" || !OffscreenCanvas.prototype.convertToBlob) return null;
+    try {
+      if (!FS.worker) {
+        FS.worker = new Worker(URL.createObjectURL(new Blob([FS_WORKER_SRC], { type: "text/javascript" })));
+        FS.workerEspera = {};
+        FS.worker.onmessage = function (e) { const cb = FS.workerEspera[e.data.id]; delete FS.workerEspera[e.data.id]; if (cb) cb(e.data); };
+        FS.worker.onerror = function () { FS.workerFalhou = true; Object.keys(FS.workerEspera).forEach(function (k) { const cb = FS.workerEspera[k]; delete FS.workerEspera[k]; cb({ erro: "worker" }); }); };
+      }
+    } catch (e) { FS.workerFalhou = true; return null; }
+    return new Promise(function (resolve) {
+      const id = "w" + Date.now() + Math.random();
+      FS.workerEspera[id] = resolve;
+      FS.worker.postMessage({ id: id, arquivo: arquivo, lado: FS_FOTO_LADO, q: FS_FOTO_QUALIDADE, alvo: FS_FOTO_ALVO, mini: !!mini, miniLado: FS_MINI_LADO });
+    });
+  }
+  // Sem Worker (navegador antigo): mesma redução na tela principal.
+  function fsReduzirNaTela_(arquivo, mini) {
+    return new Promise(function (resolve) {
+      const url = URL.createObjectURL(arquivo), img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        function gerar(lado, q) {
+          return new Promise(function (ok) {
+            let w = img.naturalWidth, h = img.naturalHeight; const fator = Math.min(1, lado / Math.max(w, h));
+            w = Math.max(1, Math.round(w * fator)); h = Math.max(1, Math.round(h * fator));
+            const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+            c.toBlob(function (b) { ok({ b: b, w: w, h: h }); }, "image/jpeg", q);
+          });
+        }
+        function caber(lado, q) {
+          return gerar(lado, q).then(function (r) {
+            if (!r.b) throw new Error("canvas");
+            if (r.b.size <= FS_FOTO_ALVO || q <= 0.45) return (r.b.size > FS_FOTO_ALVO && lado > 1280) ? caber(1280, 0.6) : r;
+            return caber(lado, Math.round((q - 0.1) * 100) / 100);
+          });
+        }
+        caber(FS_FOTO_LADO, FS_FOTO_QUALIDADE).then(function (r) {
+          if (!mini) return resolve({ blob: r.b, w: r.w, h: r.h });
+          return gerar(FS_MINI_LADO, 0.6).then(function (m) { resolve({ blob: r.b, w: r.w, h: r.h, mini: m.b }); });
+        }).catch(function (e) { resolve({ erro: String((e && e.message) || e) }); });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve({ erro: "leitura" }); };
+      img.src = url;
+    });
+  }
+  function fsBase64_(blob) {
+    return new Promise(function (resolve, reject) {
+      const r = new FileReader();
+      r.onload = function () { const s = String(r.result || ""); resolve(s.indexOf(",") >= 0 ? s.split(",")[1] : s); };
+      r.onerror = function () { reject(new Error("Não foi possível ler a foto reduzida.")); };
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function fsAdicionarFoto_(arquivo, destino) {
+    const f = FS.fluxo; if (!f) return;
+    const foto = { id: "f" + Date.now() + "_" + Math.floor(Math.random() * 1e6), arquivo: arquivo, estado: "preparando", tentativa: 0, link: "", url: "", kb: 0,
+      destino: destino, legenda: destino === "painel" ? (f.tipo === "retirada" ? "Painel (odômetro) na retirada" : "Painel (odômetro) na devolução") : "", fluxo: f,
+      mini: f.tipo === "retirada" && destino === "fotos" && !f.miniatura && !f.fotos.length };
+    foto.pronta = new Promise(function (ok) { foto.aoFicarPronta = ok; });
+    (destino === "painel" ? f.painel : f.fotos).push(foto);
+    fsDesenharFotos_(); fsAtualizarKmInfo_(); fsAtualizarBarra_();
+    FS.fila.push(foto);
+    fsProcessarFila_();
+  }
+  // Uma redução por vez (memória do celular); o envio de cada foto começa assim que ela fica pronta.
+  function fsProcessarFila_() {
+    if (FS.decodificando) return;
+    const foto = FS.fila.shift();
+    if (!foto) return;
+    if (foto.removida) { if (foto.aoFicarPronta) foto.aoFicarPronta(); fsProcessarFila_(); return; }
+    FS.decodificando = true;
+    const t0 = Date.now();
+    Promise.resolve(fsReduzirNoWorker_(foto.arquivo, foto.mini)).then(function (r) {
+      return (!r || r.erro) ? fsReduzirNaTela_(foto.arquivo, foto.mini) : r;
+    }).then(function (r) {
+      foto.msReducao = Date.now() - t0;
+      if (!r || r.erro || !r.blob) {
+        foto.estado = "ilegivel";
+      } else {
+        foto.blob = r.blob; foto.kb = Math.round(r.blob.size / 1024); foto.dim = r.w + "x" + r.h;
+        foto.url = URL.createObjectURL(r.blob);
+        foto.arquivo = null; // libera o original (3 a 8 MB)
+        if (r.mini) foto.miniBlob = r.mini;
+        fsEnviarFoto_(foto);
+      }
+      fsAtualizarFoto_(foto);
+    }).finally(function () { FS.decodificando = false; if (foto.aoFicarPronta) foto.aoFicarPronta(); fsProcessarFila_(); });
+  }
+
+  function fsEnviarFoto_(foto) {
+    if (foto.removida || foto.estado === "enviada") return foto.promessa || Promise.resolve(foto);
+    if (foto.promessa && foto.estado === "enviando") return foto.promessa;
+    const placa = foto.fluxo.placa, sessao = SGO_getSessionId();
+    foto.estado = "enviando"; foto.erro = "";
+    fsAtualizarFoto_(foto);
+    const t0 = Date.now();
+    foto.promessa = fsBase64_(foto.blob).then(function (b64) {
+      return mobileFrota_chamarApiSilencioso_("apiUploadFotoVeiculo", { placa: placa, base64: b64, mimeType: "image/jpeg", nomeArquivo: (foto.destino === "painel" ? "painel_" : "veiculo_") + placa + ".jpg", legenda: foto.legenda });
+    }).then(function (res) {
+      if (sessao !== SGO_getSessionId()) throw new Error("Sessão alterada durante o envio.");
+      if (!res || !res.link) throw new Error("O servidor não devolveu o link da foto.");
+      foto.link = res.link; foto.estado = "enviada"; foto.msEnvio = Date.now() - t0;
+      fsAtualizarFoto_(foto);
+      if (foto.miniBlob && !foto.fluxo.miniatura) fsEnviarMiniatura_(foto);
+      return foto;
+    }).catch(function (err) {
+      foto.erro = (err && err.message) || String(err);
+      foto.tentativa++;
+      foto.promessa = null;
+      if (foto.removida) return foto;
+      if (foto.tentativa <= FS_TENTATIVAS.length) {
+        foto.estado = "esperando";
+        fsAtualizarFoto_(foto);
+        return new Promise(function (ok) { setTimeout(ok, FS_TENTATIVAS[foto.tentativa - 1]); }).then(function () { return fsEnviarFoto_(foto); });
+      }
+      foto.estado = "falhou";
+      fsAtualizarFoto_(foto);
+      throw new Error("Uma foto não foi enviada (" + foto.erro + "). Verifique a conexão e toque na foto para tentar de novo, ou remova e tire outra.");
+    });
+    return foto.promessa;
+  }
+  function fsEnviarMiniatura_(foto) {
+    const fl = foto.fluxo;
+    fl.miniatura = { estado: "enviando" };
+    fsBase64_(foto.miniBlob).then(function (b64) {
+      return mobileFrota_chamarApiSilencioso_("apiUploadFotoVeiculo", { placa: fl.placa, base64: b64, mimeType: "image/jpeg", nomeArquivo: "miniatura_" + fl.placa + ".jpg", legenda: "Miniatura do veículo" });
+    }).then(function (res) { fl.miniatura = { estado: "enviada", link: res && res.link }; })
+      .catch(function () { fl.miniatura = null; }); // a miniatura é só conforto visual: falhou, fica a de antes
+  }
+  function fsTentarDeNovo_(id) {
+    const foto = fsAcharFoto_(id); if (!foto) return;
+    if (foto.estado === "falhou") { foto.tentativa = 0; fsEnviarFoto_(foto).catch(function () {}); }
+  }
+  function fsAcharFoto_(id) { const f = FS.fluxo; return f ? f.fotos.concat(f.painel).filter(function (x) { return x.id === id; })[0] : null; }
+  function fsRemoverFoto_(id) {
+    const f = FS.fluxo, foto = fsAcharFoto_(id); if (!foto) return;
+    foto.removida = true;
+    f.fotos = f.fotos.filter(function (x) { return x !== foto; });
+    f.painel = f.painel.filter(function (x) { return x !== foto; });
+    if (foto.url) URL.revokeObjectURL(foto.url);
+    fsDesenharFotos_(); fsAtualizarKmInfo_(); fsAtualizarBarra_();
+  }
+  function fsTextoEstado_(foto) {
+    if (foto.estado === "preparando") return "Preparando…";
+    if (foto.estado === "enviando") return "Enviando…";
+    if (foto.estado === "enviada") return "Enviada";
+    if (foto.estado === "esperando") return "Sem sinal: nova tentativa em instantes";
+    if (foto.estado === "falhou") return "Não enviada: toque para tentar de novo";
+    if (foto.estado === "ilegivel") return "Não deu para ler: remova e tire de novo";
+    return "";
+  }
+  function fsFotoHtml_(foto) {
+    const cls = foto.estado === "enviada" ? " ok" : (foto.estado === "falhou" || foto.estado === "ilegivel" ? " erro" : "");
+    return '<div class="fs-ft' + cls + '" id="ft_' + foto.id + '">' + (foto.url ? '<img src="' + foto.url + '" alt="Foto ' + fsEsc_(foto.legenda || "do veículo") + '">' : "") +
+      (foto.estado === "falhou" ? '<button type="button" class="fs-ft-tentar" data-acao="tentarFoto" data-id="' + foto.id + '" aria-label="Tentar enviar de novo"></button>' : "") +
+      '<div class="fs-ft-est">' + fsEsc_(fsTextoEstado_(foto)) + "</div>" +
+      '<button type="button" class="fs-ft-x" data-acao="removerFoto" data-id="' + foto.id + '" aria-label="Remover esta foto"><span aria-hidden="true">&times;</span></button></div>';
+  }
+  function fsDesenharFotos_() {
+    const f = FS.fluxo; if (!f) return;
+    const a = document.getElementById("fs_fotos"), b = document.getElementById("fs_fotosPainel");
+    if (a) a.innerHTML = f.fotos.map(fsFotoHtml_).join("");
+    if (b) b.innerHTML = f.painel.map(fsFotoHtml_).join("");
+  }
+  // Atualiza só a foto que mudou (não redesenha a lista inteira).
+  function fsAtualizarFoto_(foto) {
+    if (foto.fluxo !== FS.fluxo) return;
+    const el = document.getElementById("ft_" + foto.id);
+    if (el) el.outerHTML = fsFotoHtml_(foto);
+    fsAtualizarBarra_();
+  }
+
+  // ---- barra de confirmação ----
+  function fsPendencias_() {
+    const f = FS.fluxo, d = FS.inicio || {}; if (!f) return ["fluxo"];
+    const p = [];
+    const km = frotaNumCliente_(f.km);
+    if (!String(f.km).trim() || !isFinite(km)) p.push(f.tipo === "retirada" ? "o KM do painel" : "o KM de chegada");
+    const precisa = fsPrecisaPainel_();
+    if (precisa && !f.painel.filter(function (x) { return x.estado !== "ilegivel"; }).length) p.push("a foto do painel");
+    if (f.tipo === "retirada" && !f.fotos.filter(function (x) { return x.estado !== "ilegivel"; }).length) p.push("pelo menos uma foto do veículo");
+    if (!f.vistoria) p.push("a vistoria (Tudo OK ou Tem problema)");
+    else if (f.vistoria === "problema") {
+      const ks = Object.keys(f.problemas);
+      if (!ks.length) p.push("marcar o item com problema (ou tocar em Tudo OK)");
+      else if (ks.some(function (k) { return !String(f.problemas[k].obs || "").trim(); })) p.push("escrever o que tem em cada item com problema");
+    }
+    if (f.tipo === "retirada" && d.gestor && !f.condutorId) p.push("o condutor (Opções da gestão)");
+    return p;
+  }
+  function fsAtualizarBarra_() {
+    const sub = document.getElementById("fs_barraSub"), bt = document.getElementById("fs_confirmar"), f = FS.fluxo;
+    if (!sub || !bt || !f) return;
+    if (FS.enviando) return;
+    const p = fsPendencias_();
+    const todas = f.fotos.concat(f.painel).filter(function (x) { return !x.removida && x.estado !== "ilegivel"; });
+    const enviadas = todas.filter(function (x) { return x.estado === "enviada"; }).length;
+    let txt = p.length ? "Falta: " + p.join(", ") + "." : "Tudo pronto.";
+    if (todas.length) txt += " Fotos: " + enviadas + " de " + todas.length + " enviadas.";
+    sub.textContent = txt;
+    ["fsPassoKm", "fsPassoFotos", "fsPassoVist"].forEach(function (id, i) {
+      const el = document.getElementById(id); if (!el) return;
+      const feito = i === 0 ? (p.indexOf("o KM do painel") < 0 && p.indexOf("o KM de chegada") < 0 && p.indexOf("a foto do painel") < 0)
+        : (i === 1 ? p.indexOf("pelo menos uma foto do veículo") < 0 : !!f.vistoria && !p.some(function (x) { return /vistoria|item|escrever/.test(x); }));
+      el.classList.toggle("feito", feito);
+    });
+  }
+  function fsStatus_(tipo, texto) {
+    const el = document.getElementById("fs_status"); if (!el) return;
+    el.innerHTML = texto ? '<div class="fs-aviso ' + tipo + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + fsEsc_(texto) + "</div>" : "";
+    if (texto && tipo === "erro") el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function fsChecklist_(f) {
+    // Mesma estrutura de CHECKLIST_*_JSON: todos os itens, item a item. "Tudo OK" = todos ok.
+    const lista = [];
+    (MOBILE_FROTA.gruposChecklist || []).forEach(function (g) {
+      g.itens.forEach(function (it) {
+        const p = f.vistoria === "problema" ? f.problemas[g.grupo + "|" + it] : null;
+        lista.push({ grupo: g.grupo, item: it, ok: !p, observacao: p ? String(p.obs || "").trim() : "" });
+      });
+    });
+    return lista;
+  }
+
+  function fsConfirmar_() {
+    const f = FS.fluxo, d = FS.inicio || {};
+    if (!f || FS.enviando) return;
+    const p = fsPendencias_();
+    if (p.length) { fsStatus_("erro", "Para confirmar, falta: " + p.join(", ") + "."); return; }
+    if (!(MOBILE_FROTA.gruposChecklist || []).length) { fsStatus_("erro", "A lista da vistoria não carregou. Toque em Cancelar e voltar, depois em Atualizar agora."); return; }
+    const ret = f.tipo === "retirada";
+    const km = frotaNumCliente_(f.km);
+    if (ret && km < Number(f.veiculo.km) && !d.gestor) { fsStatus_("erro", "O KM (" + fsKm_(km) + ") é menor que o KM registrado do veículo (" + fsKm_(f.veiculo.km) + "). O odômetro não volta: confira o número no painel. Se o KM registrado estiver errado, peça à gestão (Administrador, Gestor ou Diretoria) o ajuste de KM."); return; }
+    if (!ret && km < Number(f.mov.kmSaida)) { fsStatus_("erro", "O KM de chegada (" + fsKm_(km) + ") é menor que o KM de saída desta retirada (" + fsKm_(f.mov.kmSaida) + "). Confira o número no painel."); return; }
+    const gestao = !!d.gestor;
+    const payload = ret ? {
+      veiculoId: f.veiculo.id, condutorId: gestao ? f.condutorId : (d.condutor ? d.condutor.id : ""), kmSaida: String(f.km).trim(),
+      dataSaida: gestao ? String(f.data || "").trim() : "", horaSaida: gestao ? String(f.hora || "").trim() : "",
+      finalidade: String(f.finalidade || "").trim(), justificativa: gestao ? String(f.justificativa || "").trim() : "", checklist: fsChecklist_(f)
+    } : {
+      movimentacaoId: f.mov.id, kmChegada: String(f.km).trim(),
+      dataChegada: gestao ? String(f.data || "").trim() : "", horaChegada: gestao ? String(f.hora || "").trim() : "",
+      justificativa: gestao ? String(f.justificativa || "").trim() : "", checklist: fsChecklist_(f), observacoes: String(f.observacoes || "").trim()
+    };
+    FS.enviando = true;
+    const bt = document.getElementById("fs_confirmar"), sub = document.getElementById("fs_barraSub");
+    if (bt) { bt.disabled = true; bt.textContent = "Registrando…"; }
+    fsStatus_("", "");
+    const todas = f.fotos.concat(f.painel).filter(function (x) { return !x.removida && x.estado !== "ilegivel"; });
+    function progresso() {
+      const n = todas.filter(function (x) { return x.estado === "enviada"; }).length;
+      if (sub) sub.textContent = n < todas.length ? "Terminando de enviar as fotos: " + n + " de " + todas.length + "…" : "Gravando o registro…";
+    }
+    progresso();
+    const relogio = setInterval(progresso, 400);
+    const sessao = SGO_getSessionId();
+    const t0 = Date.now();
+    Promise.all(todas.map(function (x) { return x.pronta.then(function () { if (x.removida || x.estado === "ilegivel") return x; if (x.estado === "falhou") x.tentativa = 0; return fsEnviarFoto_(x); }); })).then(function () {
+      clearInterval(relogio); progresso();
+      if (sessao !== SGO_getSessionId()) throw new Error("Sessão alterada durante o envio. Entre novamente antes de registrar.");
+      const veic = f.fotos.filter(function (x) { return !x.removida && x.link; }).map(function (x) { return { link: x.link, legenda: x.legenda }; });
+      const painel = f.painel.filter(function (x) { return !x.removida && x.link; }).map(function (x) { return { link: x.link, legenda: x.legenda }; });
+      // Na devolução a foto do painel é a foto obrigatória do registro (pelo menos uma foto) e também a do odômetro.
+      payload.fotosSalvas = ret ? veic : painel.concat(veic);
+      payload.fotosPainelSalvas = painel;
+      if (f.miniatura && f.miniatura.link) payload.miniaturaLink = f.miniatura.link;
+      f.msFotosNoConfirmar = Date.now() - t0;
+      return mobileFrota_chamarApiSilencioso_(ret ? "apiIniciarViagem" : "apiFinalizarViagem", payload);
+    }).then(function (res) {
+      if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não confirmou o registro.");
+      fsConcluido_(f, res, payload);
+    }).catch(function (err) {
+      clearInterval(relogio);
+      const sem = err && (err.name === "NetworkError" || /Sem conexão/.test(String(err.message || "")));
+      if (sem && f.fotos.concat(f.painel).every(function (x) { return x.removida || x.estado === "enviada" || x.estado === "ilegivel"; })) {
+        // A resposta pode ter se perdido depois de gravar: confere antes de pedir para registrar de novo.
+        return fsCarregarInicio_(true).then(function (dd) {
+          const gravou = ret ? (dd.emAndamento || []).some(function (m) { return m.veiculoId === f.veiculo.id && String(m.kmSaida) === String(frotaNumCliente_(f.km)); })
+            : !(dd.emAndamento || []).some(function (m) { return m.id === f.mov.id; });
+          if (gravou) { fsConcluido_(f, { ok: true, data: "", hora: "", conferido: true }, payload); return; }
+          throw err;
+        }).catch(function () { fsFalhou_(err); });
+      }
+      fsFalhou_(err);
+    });
+  }
+  function fsFalhou_(err) {
+    FS.enviando = false;
+    const bt = document.getElementById("fs_confirmar");
+    if (bt) { bt.disabled = false; bt.textContent = FS.fluxo && FS.fluxo.tipo === "retirada" ? "Confirmar retirada" : "Confirmar devolução"; }
+    const msg = (err && err.message) || String(err);
+    const abrirGestao = /Justificativa|gestão|condutor/i.test(msg) && document.getElementById("fs_gestao");
+    if (abrirGestao) document.getElementById("fs_gestao").open = true;
+    fsStatus_("erro", msg + (/conex/i.test(msg) ? "" : " Nada foi gravado; corrija e toque em Confirmar de novo (as fotos já enviadas não são enviadas outra vez)."));
+    fsAtualizarBarra_();
+  }
+  function fsConcluido_(f, res, payload) {
+    FS.enviando = false;
+    f.concluido = true;
+    const d = FS.inicio;
+    const ret = f.tipo === "retirada";
+    const km = frotaNumCliente_(f.km);
+    // Atualiza a tela inicial na hora, sem recarregar o módulo; a conferência com o servidor vem logo depois, em segundo plano.
+    if (d) {
+      if (ret) {
+        const v = d.veiculos.filter(function (x) { return x.id === f.veiculo.id; })[0];
+        if (v) { v.situacao = "EM_USO"; v.km = km; if (payload.miniaturaLink) v.foto = payload.miniaturaLink; }
+        const cond = (d.condutores || []).filter(function (c) { return c.id === payload.condutorId; })[0] || d.condutor || {};
+        if (!res.conferido) d.emAndamento.push({ id: res.movimentacaoId, veiculoId: f.veiculo.id, veiculoPlaca: f.placa, veiculoModelo: f.veiculo.modelo, condutorNome: cond.nome || "",
+          condutorId: payload.condutorId, condutorUsuarioId: "", dataSaida: res.data, horaSaida: res.hora, kmSaida: km, finalidade: payload.finalidade,
+          minha: !!(d.condutor && payload.condutorId === d.condutor.id), foto: v ? v.foto : "" });
+      } else {
+        d.emAndamento = d.emAndamento.filter(function (m) { return m.id !== f.mov.id; });
+        const v = d.veiculos.filter(function (x) { return x.id === f.mov.veiculoId; })[0];
+        if (v) { v.situacao = "DISPONIVEL"; v.km = km; }
+      }
+      MOBILE_FROTA.emAndamento = d.emAndamento;
+    }
+    f.fotos.concat(f.painel).forEach(function (x) { if (x.url) URL.revokeObjectURL(x.url); });
+    FS.ultimoRegistro = { tipo: f.tipo, fotosNoConfirmarMs: f.msFotosNoConfirmar, fotos: f.fotos.concat(f.painel).map(function (x) { return { kb: x.kb, dim: x.dim, msReducao: x.msReducao, msEnvio: x.msEnvio }; }) };
+    FS.fluxo = null;
+    const rt = res.rastreador || {};
+    const quando = res.data ? " · " + res.data + " " + res.hora : "";
+    if (ret) {
+      frotaToastEnvio_(!rt.aviso, "Retirada registrada", f.placa + quando + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
+      if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + " A retirada já está registrada: não registre de novo.";
+    } else {
+      frotaToastEnvio_(true, "Devolução registrada", f.placa + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
+    }
+    if (res.conferido) frotaToastEnvio_(true, "Registro conferido", "A conexão caiu na resposta, mas o registro foi gravado. Não registre de novo.");
+    FS.inicioEm = Date.now();
+    fsDesenharInicio_();
+    if (!fsNoComputador_()) { MOBILE_NAV = { modulo: "frota", tela: "lista" }; atualizarTituloMobile_("Frota"); window.scrollTo(0, 0); }
+    if (typeof frotaState !== "undefined" && typeof tplFrota_carregarEmAndamento_ === "function") { try { tplFrota_carregarVeiculos_(); tplFrota_carregarEmAndamento_(); } catch (e) {} }
+    setTimeout(function () {
+      const antes = fsAssinatura_(FS.inicio);
+      fsCarregarInicio_(true).then(function (dd) { const r = fsRaiz_(); if (r && r.getAttribute("data-tela") === "inicio" && fsAssinatura_(dd) !== antes) fsDesenharInicio_(); }).catch(function () {});
+      fsAgendarAtualizacao_();
+    }, 1500);
+  }
+  function fsCancelar_() {
+    const f = FS.fluxo;
+    if (f && (f.fotos.length || f.painel.length || f.vistoria) && !confirm("Descartar esta " + (f.tipo === "retirada" ? "retirada" : "devolução") + "? Nada foi registrado ainda.")) return;
+    if (f) { f.fotos.concat(f.painel).forEach(function (x) { x.removida = true; if (x.url) URL.revokeObjectURL(x.url); }); }
+    FS.fluxo = null;
+    renderMobileFrotaOperacional_();
   }
 
   // Ajuste de KM no celular (17/10/2026): só a gestão; justificativa obrigatória; antes e depois na trilha de auditoria.
@@ -2176,6 +2832,7 @@
     if (just.length < 15) return mobileFrotaMsg_("mob_frota_k_status", "error", "Escreva a justificativa do ajuste (mínimo de 15 caracteres; foram " + just.length + ").");
     FROTA_ENVIO_ATIVO = true;
     mobileFrota_chamarApi_("apiAjustarKm", { veiculoId: veiculoId, kmNovo: getValue_("mob_frota_k_km"), justificativa: just }).then(function (res) {
+      FS.inicioEm = 0;
       frotaToastEnvio_(true, "KM ajustado", res.placa + ": " + frotaKm_(res.kmAntes) + " para " + frotaKm_(res.kmNovo));
       renderMobileFrotaOperacional_();
     }).catch(function (err) { mobileFrotaErro_("mob_frota_k_status", err); })
@@ -2317,149 +2974,11 @@
     }).then(function (res) {
       if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não confirmou o abastecimento. Confira na Frota do computador antes de lançar de novo.");
       const sel = document.getElementById("mob_frota_a_veiculo");
+      FS.inicioEm = 0;
       frotaToastEnvio_(true, "Abastecimento registrado", sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : "");
       renderMobileFrotaOperacional_();
     }).catch(function (err) { mobileFrotaErro_("mob_frota_a_status", err); })
       .finally(function () { FROTA_ENVIO_ATIVO = false; });
-  }
-
-  // Mostra o KM registrado do veículo escolhido, para o condutor saber quando a foto do painel será pedida.
-  function mobileFrotaAoEscolherVeiculo_() {
-    const v = (MOBILE_FROTA.veiculos || []).filter(function (x) { return x.ID === getValue_("mob_frota_r_veiculo"); })[0];
-    const el = document.getElementById("mob_frota_r_kmInfo");
-    if (el) el.textContent = v ? "KM registrado do veículo: " + frotaKm_(v.KM_ATUAL || 0) + ". Se o painel mostrar outro número, anexe a foto do painel; a gestão confere."
-      : "Obrigatória se o KM de saída for diferente do KM registrado do veículo.";
-  }
-
-  function mobileFrotaSalvarRetirada_() {
-    if (FROTA_ENVIO_ATIVO) return;
-    const selEl = document.getElementById("mob_frota_r_veiculo");
-    const veiculoId = getValue_("mob_frota_r_veiculo");
-    const kmSaida = getValue_("mob_frota_r_km");
-    if (!veiculoId) return alert("Selecione o veículo.");
-    const condutorId = getValue_("mob_frota_r_condutor");
-    if (!condutorId) return alert("Selecione um condutor ou peça ao gestor para vincular seu login.");
-    if (!kmSaida) return alert("Informe o KM de saída.");
-
-    const veiculoEscolhido = (MOBILE_FROTA.veiculos || []).filter(function (v) { return v.ID === veiculoId; })[0];
-    const veiculoLabel = (selEl && selEl.selectedOptions && selEl.selectedOptions[0]) ? selEl.selectedOptions[0].text : "veículo";
-    const fotos = MOBILE_FROTA.fotosRetirada;
-    const fotosPainel = MOBILE_FROTA.fotosPainelRetirada || [];
-    // 17/10/2026: equipe não manda data/hora (vale a hora do servidor); a gestão manda o que digitou (vazio = agora).
-    const payloadBase = {
-      veiculoId: veiculoId,
-      condutorId: condutorId,
-      dataSaida: frotaSouGestao_() ? getValue_("mob_frota_r_data") : "",
-      horaSaida: frotaSouGestao_() ? getValue_("mob_frota_r_hora") : "",
-      kmSaida: kmSaida,
-      finalidade: getValue_("mob_frota_r_finalidade"),
-      justificativa: frotaSouGestao_() ? getValue_("mob_frota_r_justificativa") : "",
-      checklist: mobileFrotaColetarChecklist_("mob_frota_r_checklist")
-    };
-    const motivoPainel = veiculoEscolhido ? frotaMotivoFotoPainel_({ tipo: "retirada", kmInformado: kmSaida, kmVeiculo: veiculoEscolhido.KM_ATUAL }) : "";
-    if (motivoPainel && !fotosPainel.length) {
-      return mobileFrotaMsg_("mob_frota_r_status", "error", motivoPainel + " A retirada não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe em \"Foto do painel (odômetro)\". A gestão será avisada para conferir.");
-    }
-
-    mobileFrotaMsg_("mob_frota_r_status", "info", "Enviando retirada. Aguarde a confirmação.");
-    return frotaEnviarMovimentacaoUI_('apiIniciarViagem', payloadBase, fotos, veiculoEscolhido ? veiculoEscolhido.PLACA : '', fotosPainel).then(function(res) {
-      MOBILE_FROTA.fotosRetirada = [];
-      MOBILE_FROTA.fotosPainelRetirada = [];
-      const rt = res.rastreador || {};
-      frotaToastEnvio_(!rt.aviso, 'Retirada registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.kmDivergencia ? ' · KM diferente do registrado: a gestão vai conferir' : '') + (rt.texto ? ' · ' + rt.texto : ''));
-      if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + ' A retirada já está registrada: não registre de novo.';
-      renderMobileFrotaOperacional_();
-    }).catch(function(err) { mobileFrotaErro_('mob_frota_r_status', err); });
-  }
-
-  function renderMobileFrotaDevolver_(movimentacaoId) {
-    MOBILE_NAV = { modulo: "frota", tela: "form" };
-    atualizarTituloMobile_("Devolver veículo");
-    MOBILE_FROTA.fotosDevolucao = [];
-    MOBILE_FROTA.fotosPainelDevolucao = [];
-    MOBILE_FROTA.movimentacaoDevolucaoAtual = movimentacaoId;
-
-    const div = document.getElementById("conteudo");
-    if (!div) return;
-
-    const mov = MOBILE_FROTA.emAndamento.filter(function (m) { return m.id === movimentacaoId; })[0];
-    // 17/10/2026: a gestão registrando no lugar do condutor vê o aviso (justificativa obrigatória, condutor avisado).
-    const noLugar = !!mov && frotaSouGestao_() && String(mov.condutorUsuarioId || "") !== frotaMeuUsuarioId_();
-
-    div.innerHTML =
-      '<div class="mobile-form">' +
-        '<div class="mobile-card-subtitulo" id="mob_frota_d_info">' +
-          (mov ? ("Veículo " + escapeHtml_(mov.veiculoPlaca) + " — condutor " + escapeHtml_(mov.condutorNome) + " — saiu em " + escapeHtml_(mov.dataSaida) + " " + escapeHtml_(mov.horaSaida) + " (KM " + escapeHtml_(frotaKm_(mov.kmSaida)) + ")") : "Carregando...") +
-        '</div>' +
-        (noLugar ? '<div class="mobile-frota-alerta aviso">Você está registrando a devolução no lugar de ' + escapeHtml_(mov.condutorNome) + '. A justificativa é obrigatória e ' + escapeHtml_(mov.condutorNome) + ' será avisado.</div>' : '') +
-        mobileFrotaBlocoHorario_("devolucao") +
-        mobileFieldHtml_("KM de chegada *", '<input type="text" id="mob_frota_d_km" inputmode="numeric">') +
-        mobileFrotaBlocoPainel_("devolucao") +
-        mobileFrotaBlocoJustificativa_("devolucao") +
-        '<div class="mobile-frota-secao-titulo">Checklist de vistoria</div>' +
-        '<div id="mob_frota_d_checklist">Carregando...</div>' +
-        mobileFieldHtml_("Observações", '<textarea id="mob_frota_d_observacoes"></textarea>') +
-        mobileFieldHtml_("Fotos (pelo menos uma)", '<input type="file" id="mob_frota_d_fotosInput" multiple accept="image/*" capture="environment" onchange="mobileFrotaOnFotos_(\'devolucao\')">') +
-        '<div class="mobile-frota-fotos" id="mob_frota_d_fotosLista"></div>' +
-        '<div id="mob_frota_d_status"></div>' +
-        '<div class="mobile-form-actions">' +
-          '<button type="button" class="mobile-btn-cancelar" onclick="voltarMobile_()">Cancelar</button>' +
-          '<button type="button" class="mobile-btn-salvar" onclick="mobileFrotaSalvarDevolucao_()">Registrar devolução</button>' +
-        '</div>' +
-      '</div>';
-
-    mobileFrota_chamarApi_("apiPing").then(function (res) {
-      MOBILE_FROTA.gruposChecklist = res.gruposChecklist || [];
-      mobileFrotaRenderChecklist_("mob_frota_d_checklist");
-    }).catch(function (err) { mobileFrotaErro_("mob_frota_d_status", err); });
-
-    if (!mov) {
-      mobileFrota_chamarApi_("apiListarViagensEmAndamento").then(function (res) {
-        MOBILE_FROTA.emAndamento = res.items || [];
-        const achado = MOBILE_FROTA.emAndamento.filter(function (m) { return m.id === movimentacaoId; })[0];
-        const infoEl = document.getElementById("mob_frota_d_info");
-        if (infoEl && achado) {
-          infoEl.textContent = "Veículo " + achado.veiculoPlaca + " — condutor " + achado.condutorNome + " — saiu em " + achado.dataSaida + " " + achado.horaSaida + " (KM " + frotaKm_(achado.kmSaida) + ")";
-        }
-      }).catch(function (err) { console.error(err); });
-    }
-  }
-
-  function mobileFrotaSalvarDevolucao_() {
-    if (FROTA_ENVIO_ATIVO) return;
-    if (!MOBILE_FROTA.movimentacaoDevolucaoAtual) return;
-    const mov = MOBILE_FROTA.emAndamento.filter(function (m) { return m.id === MOBILE_FROTA.movimentacaoDevolucaoAtual; })[0];
-    const veiculoLabel = mov ? mov.veiculoPlaca : "veículo";
-    const kmChegada = getValue_("mob_frota_d_km");
-    if (!kmChegada) return alert("Informe o KM de chegada.");
-
-    if (mov && !frotaPodeDevolver_(mov)) return mobileFrotaMsg_('mob_frota_d_status', 'error', frotaTextoSoCondutorDevolve_(mov.condutorNome));
-    const gestao = frotaSouGestao_();
-    const payloadBase = {
-      movimentacaoId: MOBILE_FROTA.movimentacaoDevolucaoAtual,
-      dataChegada: gestao ? getValue_("mob_frota_d_data") : "",
-      horaChegada: gestao ? getValue_("mob_frota_d_hora") : "",
-      kmChegada: kmChegada,
-      justificativa: gestao ? getValue_("mob_frota_d_justificativa") : "",
-      checklist: mobileFrotaColetarChecklist_("mob_frota_d_checklist"),
-      observacoes: getValue_("mob_frota_d_observacoes")
-    };
-    const fotos = MOBILE_FROTA.fotosDevolucao;
-    const fotosPainel = MOBILE_FROTA.fotosPainelDevolucao || [];
-    const motivoPainel = mov ? frotaMotivoFotoPainel_({ tipo: "devolucao", kmSaida: mov.kmSaida, kmChegada: kmChegada, dataSaida: mov.dataSaida, horaSaida: mov.horaSaida,
-      dataChegada: payloadBase.dataChegada, horaChegada: payloadBase.horaChegada }) : "";
-    if (motivoPainel && !fotosPainel.length) {
-      return mobileFrotaMsg_('mob_frota_d_status', 'error', 'KM de chegada fora do esperado. ' + motivoPainel + ' A devolução não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe em "Foto do painel (odômetro)". Se o número foi digitado errado, corrija o KM de chegada.');
-    }
-
-    mobileFrotaMsg_('mob_frota_d_status', 'info', 'Enviando devolução. Aguarde a confirmação.');
-    return frotaEnviarMovimentacaoUI_('apiFinalizarViagem', payloadBase, fotos, mov ? mov.veiculoPlaca : '', fotosPainel).then(function(res) {
-      MOBILE_FROTA.movimentacaoDevolucaoAtual = null;
-      MOBILE_FROTA.fotosDevolucao = [];
-      MOBILE_FROTA.fotosPainelDevolucao = [];
-      frotaToastEnvio_(true, 'Devolução registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.alertaKm ? ' · KM fora do esperado: a gestão vai conferir' : '') + (res.rastreador && res.rastreador.texto ? ' · ' + res.rastreador.texto : ''));
-      renderMobileFrotaOperacional_();
-    }).catch(function(err) { mobileFrotaErro_('mob_frota_d_status', err); });
   }
 
   // ==========================================
