@@ -90,6 +90,11 @@ var PEND_TIPOS = {
   frota_viagem_aberta: { modulo: 'frota', um: 'possível devolução esquecida (retirada aberta há mais de 12 horas)', varios: 'possíveis devoluções esquecidas (retiradas abertas há mais de 12 horas)', rotulo: 'Revisar', fazer: 'se o veículo já voltou, o condutor registra a devolução na Frota; se não puder, a gestão registra no lugar dele com justificativa', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   // 17/10/2026 (travas da Frota): KM divergente com foto do painel e registro feito pela gestão em nome do condutor.
   frota_km_conferir: { modulo: 'frota', um: 'KM de veículo a conferir', varios: 'KMs de veículos a conferir', rotulo: 'Conferir', fazer: 'confira a foto do painel em Frota > Situação e retiradas > KM a conferir', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 17/10/2026 (rastreador): uso sem registro, partida não liberada, bloqueio pendente há 30 min e falha de conexão (SGO_Frota_Rastreador.js).
+  frota_rastreador_uso: { modulo: 'frota', um: 'veículo usado sem registro (rastreador)', varios: 'veículos usados sem registro (rastreador)', rotulo: 'Uso sem registro', fazer: 'confirme quem está com o veículo e marque como conferido em Frota > Rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_rastreador_liberar: { modulo: 'frota', um: 'partida não liberada pelo rastreador', varios: 'partidas não liberadas pelo rastreador', rotulo: 'Liberar partida', fazer: 'libere em Frota > Rastreador ou pelo app da iTracker', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_rastreador_bloqueio: { modulo: 'frota', um: 'bloqueio da partida pendente há mais de 30 minutos', varios: 'bloqueios da partida pendentes há mais de 30 minutos', rotulo: 'Bloqueio pendente', fazer: 'veja a posição do veículo em Frota > Rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_rastreador_conexao: { modulo: 'frota', um: 'falha de comunicação com o rastreador', varios: 'falhas de comunicação com o rastreador', rotulo: 'Sem conexão', fazer: 'confira a internet do servidor e a plataforma da iTracker', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_registro_gestao: { modulo: 'frota', um: 'registro da Frota feito pela gestão em seu nome', varios: 'registros da Frota feitos pela gestão em seu nome', rotulo: 'Informativo', fazer: 'confira os dados na Frota e fale com a gestão se algo estiver errado', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   atividade_atrasada: { modulo: 'atividades', um: 'atividade atrasada', varios: 'atividades atrasadas', rotulo: 'Atrasada', fazer: 'conclua ou justifique com a nova previsão', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
   atividade_hoje: { modulo: 'atividades', um: 'atividade vence hoje', varios: 'atividades vencem hoje', rotulo: 'Vence hoje', fazer: 'conclua até o horário previsto', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
@@ -565,16 +570,23 @@ function Pend_fonteFrota_(add) {
   if (typeof Frota_kmAConferir_ === 'function') {
     Frota_kmAConferir_().forEach(function (k) {
       var placa = k.placa || 'veículo não identificado';
+      // 17/10/2026: etapa RASTREADOR_SAIDA/RASTREADOR_CHEGADA = hodômetro do rastreador x KM digitado.
+      var etapaTxt = (/SAIDA$/.test(k.etapa) ? 'retirada' : 'devolução') + (k.rastreador ? ' (hodômetro do rastreador)' : '');
       add(Pend_item_('frota_km_conferir', {
-        id: 'FROTA:KM:' + k.movimentacaoId + ':' + k.etapa, nome: placa + ' (' + (k.etapa === 'SAIDA' ? 'retirada' : 'devolução') + ' de ' + k.data + ')', publico: 'GESTAO',
+        id: 'FROTA:KM:' + k.movimentacaoId + ':' + k.etapa, nome: placa + ' (' + etapaTxt + ' de ' + k.data + ')', publico: 'GESTAO',
         gravidade: 'ATENCAO', dias: null, vencimento: k.data, responsavel: 'Gestão da frota',
-        titulo: 'KM a conferir: veículo ' + placa + ' na ' + (k.etapa === 'SAIDA' ? 'retirada' : 'devolução') + ' de ' + k.data,
-        detalhe: k.motivo + '. Condutor: ' + (k.condutorNome || 'não identificado') + '. Registrado com foto do painel.',
-        oQueFazer: 'Abra Frota > Situação e retiradas > KM a conferir, veja a foto do painel e clique em "Conferido". Se o KM do cadastro estiver errado, use "Ajustar KM" com a justificativa.',
-        textoEstavel: 'O veículo \'' + placa + '\' tem KM divergente a conferir na ' + (k.etapa === 'SAIDA' ? 'retirada' : 'devolução') + ' de ' + k.data + '.'
+        titulo: 'KM a conferir: veículo ' + placa + ' na ' + etapaTxt + ' de ' + k.data,
+        detalhe: k.motivo + '. Condutor: ' + (k.condutorNome || 'não identificado') + '.' + (k.fotos && k.fotos.length ? ' Registrado com foto do painel.' : ''),
+        oQueFazer: k.rastreador
+          ? 'Abra Frota > Situação e retiradas > KM a conferir e compare o KM digitado com o hodômetro do rastreador. Se o KM do cadastro estiver errado, use "Ajustar KM"; se o hodômetro do rastreador estiver desajustado, peça à iTracker a calibração. Depois clique em "Conferido".'
+          : 'Abra Frota > Situação e retiradas > KM a conferir, veja a foto do painel e clique em "Conferido". Se o KM do cadastro estiver errado, use "Ajustar KM" com a justificativa.',
+        textoEstavel: 'O veículo \'' + placa + '\' tem KM divergente a conferir na ' + etapaTxt + ' de ' + k.data + '.'
       }));
     });
   }
+
+  // Rastreador (17/10/2026): uso sem registro, partida não liberada, bloqueio pendente há 30 min, falha de conexão.
+  if (typeof Rastreador_pendencias_ === 'function') Rastreador_pendencias_(add, veiculos, condutores);
 
   // Registro feito pela gestão em nome do condutor: informativo para o condutor por 7 dias.
   var diasInfo = typeof FROTA_DIAS_AVISO_REGISTRO_GESTAO !== 'undefined' ? FROTA_DIAS_AVISO_REGISTRO_GESTAO : 7;

@@ -64,7 +64,15 @@ function Frota_apiDispatch(req) {
     apiAjustarKm: Frota_apiAjustarKm,
     apiConferirKm: Frota_apiConferirKm,
     apiListarKmAConferir: Frota_apiListarKmAConferir,
-    apiListarAuditoria: Frota_apiListarAuditoria
+    apiListarAuditoria: Frota_apiListarAuditoria,
+    // 17/10/2026: rastreador (SGO_Frota_Rastreador.js) — tudo só da gestão; o técnico aciona pela retirada/devolução
+    apiListarRastreador: Frota_apiListarRastreador,
+    apiRastreadorVincular: Frota_apiRastreadorVincular,
+    apiRastreadorConferirComandos: Frota_apiRastreadorConferirComandos,
+    apiRastreadorLiberar: Frota_apiRastreadorLiberar,
+    apiRastreadorBloquear: Frota_apiRastreadorBloquear,
+    apiRastreadorConferirAlerta: Frota_apiRastreadorConferirAlerta,
+    apiRastreadorAtualizarAgora: Frota_apiRastreadorAtualizarAgora
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -350,6 +358,8 @@ function Frota_bootstrapSemTrava_() {
   // justificativa, KM divergente com foto do painel e conferência. Só colunas novas.
   FROTA_COLUNAS_TRAVAS.forEach(function(col) { CertCal_garantirColuna_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, col); });
   CertCal_garantirTabela_(FROTA_ABA_AUDITORIA, FROTA_COLUNAS_AUDITORIA);
+  // Rastreador (17/10/2026): vínculo no veículo, hodômetro na movimentação, comandos e alertas (SGO_Frota_Rastreador.js).
+  if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
 }
 
 // ------------------------------------------------------------
@@ -581,7 +591,13 @@ function Frota_apiAtualizarVeiculo(sessionId, payload) {
     COR: SGO_UTILS.safe(payload.cor || atual.COR)
   });
   SGO_DATA.log('FROTA_VEICULO_ATUALIZAR', sessao.usuario, 'Veículo atualizado ID=' + id + ' (placa=' + placa + ', km=' + kmAtual + ')', 'FROTA');
-  return { ok: true };
+  // 17/10/2026: ID do dispositivo no rastreador (mesma regra e trilha do painel Rastreador).
+  var rastreador = null;
+  if (payload.rastreadorDeviceId !== undefined && typeof Rastreador_vincular_ === 'function' &&
+      String(payload.rastreadorDeviceId || '').trim() !== SGO_UTILS.safe(atual.RASTREADOR_DEVICE_ID)) {
+    rastreador = Rastreador_vincular_(sessao, id, payload.rastreadorDeviceId);
+  }
+  return { ok: true, rastreador: rastreador };
 }
 
 function Frota_apiInativarVeiculo(sessionId, payload) {
@@ -1027,8 +1043,10 @@ function Frota_apiIniciarViagem(sessionId, payload) {
       ' e KM ' + Frota_kmTexto_(kmSaida) + '.\nJustificativa: ' + justificativa + '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Ao devolver o veículo, registre a devolução normalmente.',
       registro.ID);
   }
+  // Rastreador (17/10/2026): libera a partida. Nunca derruba a retirada, que já está gravada.
+  var rastreador = Frota_rastreadorAoRetirar_(sessao, veiculoId, registro.ID);
   return { ok: true, movimentacaoId: registro.ID, registroPelaGestao: registro.REGISTRO_GESTAO_SAIDA === 'SIM', kmDivergencia: depois.dif || 0,
-    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor };
+    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador };
 }
 
 function Frota_apiFinalizarViagem(sessionId, payload) {
@@ -1137,7 +1155,9 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Da próxima vez, registre a devolução assim que entregar o veículo.',
       movId);
   }
-  return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor };
+  // Rastreador (17/10/2026): bloqueio da partida fica pendente até o veículo estar parado com a ignição desligada.
+  var rastreador = Frota_rastreadorAoDevolver_(sessao, veiculo.ID, movId);
+  return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor, rastreador: rastreador };
 }
 
 // ------------------------------------------------------------
@@ -1202,6 +1222,18 @@ function Frota_kmAConferir_() {
         motivo: 'KM de chegada ' + Frota_kmTexto_(m.KM_CHEGADA) + ' (saída ' + Frota_kmTexto_(m.KM_SAIDA) + '): ' + SGO_UTILS.safe(m.KM_ALERTA_CHEGADA),
         fotos: fotos(m.FOTOS_PAINEL_CHEGADA_JSON), registradoPor: SGO_UTILS.safe(m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
     }
+    // 17/10/2026: hodômetro do rastreador x KM digitado (acima de 20 km ou 5%), gravado por SGO_Frota_Rastreador.js.
+    ['SAIDA', 'CHEGADA'].forEach(function(e) {
+      var div = m['KM_RASTREADOR_DIVERGENCIA_' + e];
+      if (String(div === undefined || div === null ? '' : div).trim() === '' || Frota_num_(div, 0) === 0 || SGO_UTILS.safe(m['KM_CONFERIDO_RASTREADOR_' + e + '_EM'])) return;
+      var kmDig = e === 'SAIDA' ? m.KM_SAIDA : m.KM_CHEGADA;
+      lista.push(Object.assign({ etapa: 'RASTREADOR_' + e, rastreador: true,
+        data: e === 'SAIDA' ? comum.dataSaida : Frota_textoData_(m.DATA_CHEGADA), hora: e === 'SAIDA' ? comum.horaSaida : Frota_textoHora_(m.HORA_CHEGADA),
+        motivo: 'KM ' + (e === 'SAIDA' ? 'de saída' : 'de chegada') + ' digitado ' + Frota_kmTexto_(kmDig) + ' e hodômetro do rastreador ' + Frota_kmTexto_(m['KM_RASTREADOR_' + e]) +
+          ' (diferença de ' + Frota_kmTexto_(Frota_num_(div, 0)) + ' km, acima de 20 km ou 5%)',
+        fotos: fotos(e === 'SAIDA' ? m.FOTOS_PAINEL_SAIDA_JSON : m.FOTOS_PAINEL_CHEGADA_JSON),
+        registradoPor: SGO_UTILS.safe(e === 'SAIDA' ? m.REGISTRADO_SAIDA_POR_NOME : m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
+    });
   });
   return lista;
 }
@@ -1218,7 +1250,8 @@ function Frota_apiConferirKm(sessionId, payload) {
   if (!Frota_ehGestao_(sessionId)) throw new Error('A conferência de KM é feita só pela gestão (Administrador, Gestor ou Diretoria).');
   payload = payload || {};
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
-  var etapa = SGO_UTILS.safeUpper(payload.etapa) === 'CHEGADA' ? 'CHEGADA' : 'SAIDA';
+  // 17/10/2026: também as divergências com o hodômetro do rastreador (RASTREADOR_SAIDA / RASTREADOR_CHEGADA).
+  var etapa = ['SAIDA', 'CHEGADA', 'RASTREADOR_SAIDA', 'RASTREADOR_CHEGADA'].indexOf(SGO_UTILS.safeUpper(payload.etapa)) >= 0 ? SGO_UTILS.safeUpper(payload.etapa) : 'SAIDA';
   var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
   if (!mov) throw new Error('Movimentação não encontrada. Atualize a tela.');
   if (SGO_UTILS.safe(mov['KM_CONFERIDO_' + etapa + '_EM'])) throw new Error('Este KM já foi conferido. Atualize a tela.');
@@ -1230,7 +1263,7 @@ function Frota_apiConferirKm(sessionId, payload) {
   var v = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID) || {};
   Frota_auditar_(sessao, { acao: 'KM_CONFERIDO_' + etapa, veiculoId: SGO_UTILS.safe(mov.VEICULO_ID), placa: SGO_UTILS.safe(v.PLACA), movimentacaoId: movId,
     condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), justificativa: obs,
-    detalhe: 'KM ' + (etapa === 'SAIDA' ? 'de saída' : 'de chegada') + ' conferido pela gestão' + (obs ? ': ' + obs : '.') });
+    detalhe: 'KM ' + (/SAIDA$/.test(etapa) ? 'de saída' : 'de chegada') + (/^RASTREADOR/.test(etapa) ? ' (hodômetro do rastreador)' : '') + ' conferido pela gestão' + (obs ? ': ' + obs : '.') });
   return { ok: true };
 }
 

@@ -118,17 +118,18 @@
   }
 
   function ChavesTela_htmlTeste_(tipo) {
-    var tit = { gemini: "Testar a IA (Gemini)", auvo: "Testar o login no Auvo", email: "Testar o envio de e-mail", whatsapp: "Testar o WhatsApp" }[tipo];
+    var tit = { gemini: "Testar a IA (Gemini)", auvo: "Testar o login no Auvo", email: "Testar o envio de e-mail", whatsapp: "Testar o WhatsApp", rastreador: "Testar conexão com o rastreador" }[tipo];
     var expl = {
       gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
       auvo: "Faz o login na API do Auvo com a API Key e o API Token gravados.",
       email: "Envia um e-mail de teste para o e-mail do seu usuário (Administração → Usuários).",
-      whatsapp: "Envia uma mensagem de teste para o celular digitado. Pela Meta, sai o modelo sgo_aviso_geral, que precisa estar aprovado na Meta (pt_BR); pela Z-API, sai um texto simples."
+      whatsapp: "Envia uma mensagem de teste para o celular digitado. Pela Meta, sai o modelo sgo_aviso_geral, que precisa estar aprovado na Meta (pt_BR); pela Z-API, sai um texto simples.",
+      rastreador: "Entra na plataforma do rastreador com as credenciais gravadas e lista os dispositivos encontrados (número de identificação, nome e situação). Não envia nenhum comando e não mostra usuário, senha nem token. Funciona mesmo com o rastreador desligado no SGO+."
     }[tipo];
     return '<div class="chv-teste"><div class="chv-teste-tit">' + tit + '</div><div class="chv-ajuda">' + expl + "</div>" +
       '<div class="chv-linha">' +
         (tipo === "whatsapp" ? '<input type="tel" class="form-control" id="chvTelTeste" placeholder="celular com DDD, ex.: (62) 98241-7106" aria-label="Celular para o teste">' : "") +
-        '<button type="button" class="btn-secondary" id="chvTestar_' + tipo + '" onclick="ChavesTela_testar_(\'' + tipo + '\')">Testar</button>' +
+        '<button type="button" class="btn-secondary" id="chvTestar_' + tipo + '" onclick="ChavesTela_testar_(\'' + tipo + '\')">' + (tipo === "rastreador" ? "Testar conexão" : "Testar") + '</button>' +
       '</div><div class="chv-res" id="chvRes_' + tipo + '"></div></div>';
   }
 
@@ -261,7 +262,12 @@
     if (res) res.innerHTML = '<div class="chv-ajuda">Testando...</div>';
     ChavesTela_chamar_("Chaves_apiTestar", payload, function (r) {
       if (btn) btn.disabled = false;
-      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>";
+      // Rastreador: lista dos dispositivos encontrados (o ID é o que se vincula ao veículo em Frota > Rastreador).
+      var lista = (tipo === "rastreador" && r.dispositivos && r.dispositivos.length) ? '<div class="chv-mod-lista">' + r.dispositivos.map(function (d) {
+        return '<div class="chv-mod"><span class="chv-mod-nome">ID ' + ChavesTela_esc_(d.id) + '</span><span class="chv-mod-sit">' + ChavesTela_esc_(d.nome || "sem nome") + '</span>' +
+          (d.situacao ? '<span class="chv-mod-obs">' + ChavesTela_esc_(d.situacao.charAt(0).toUpperCase() + d.situacao.slice(1)) + "</span>" : "") + "</div>";
+      }).join("") + "</div>" : "";
+      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" + lista;
     }, function (m) {
       if (btn) btn.disabled = false;
       if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";

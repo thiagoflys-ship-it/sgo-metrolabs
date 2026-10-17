@@ -32,7 +32,7 @@ var CHV_FUSO = 'America/Sao_Paulo';
 var CHV_PREFIXO_ALTERADO = 'CHV_ALTERADO_';
 var CHV_MSG_EXCLUSIVO = 'Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.';
 
-var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'Relatórios técnicos (senhas)', 'E-mail', 'WhatsApp', 'COMMAND'];
+var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'Relatórios técnicos (senhas)', 'E-mail', 'WhatsApp', 'Rastreador da frota', 'COMMAND'];
 
 /**
  * tipo: 'chave' (segredo, mostra os 4 últimos), 'senha' (segredo, não mostra nada),
@@ -70,6 +70,19 @@ var CHV_ITENS = [
     ajuda: 'Na mesma tela da instância na Z-API, copie o campo "Token da instância" (não é o Client-Token). Se a instância for recriada, o token muda e precisa ser gravado de novo aqui.' },
   { chave: 'ZAPI_CLIENT_TOKEN', grupo: 'WhatsApp', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token de segurança da conta',
     ajuda: 'Na Z-API: menu Segurança → "Token de segurança da conta" (Client-Token). Ative o token lá e cole aqui o mesmo valor; sem ele a Z-API recusa os envios.' },
+  // 17/10/2026: rastreador dos veículos (iTracker, plataforma Tarkan sobre o Traccar) — SGO_Frota_Rastreador.js.
+  { chave: 'RASTREADOR_URL', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: 'https://acesso.itrackergo.com.br', nome: 'Rastreador: endereço da plataforma',
+    ajuda: 'Endereço de acesso da plataforma do rastreador (o mesmo do navegador). Vazio = https://acesso.itrackergo.com.br. Só https (http apenas para testes no próprio servidor).' },
+  { chave: 'RASTREADOR_USUARIO', grupo: 'Rastreador da frota', tipo: 'chave', teste: 'rastreador', nome: 'Rastreador: usuário de integração (e-mail)',
+    ajuda: 'O e-mail do usuário criado pela iTracker só para o SGO+, com acesso aos veículos da Metrolabs e permissão de enviar comandos. Use junto com a senha abaixo, ou grave só o token.' },
+  { chave: 'RASTREADOR_SENHA', grupo: 'Rastreador da frota', tipo: 'senha', teste: 'rastreador', nome: 'Rastreador: senha do usuário de integração',
+    ajuda: 'A senha do usuário de integração. Nunca aparece na tela, em log, e-mail ou aviso.' },
+  { chave: 'RASTREADOR_TOKEN', grupo: 'Rastreador da frota', tipo: 'chave', teste: 'rastreador', nome: 'Rastreador: token de acesso (no lugar de usuário e senha)',
+    ajuda: 'Token do usuário de integração gerado na plataforma (conta do usuário > token). Se gravado, é usado no lugar do usuário e da senha.' },
+  { chave: 'RASTREADOR_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', nome: 'Rastreador ligado no SGO+: 1 liga, 0 desliga',
+    ajuda: 'Vazio ou 0 = desligado: o SGO+ não faz nenhuma chamada ao rastreador (o botão Testar conexão continua funcionando). 1 = liga a leitura das posições a cada 2 minutos, o alerta de uso sem registro, a conferência do hodômetro e os comandos (se o bloqueio também estiver ligado).' },
+  { chave: 'RASTREADOR_BLOQUEIO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', nome: 'Bloqueio da partida pelo SGO+: 1 liga, 0 desliga',
+    ajuda: 'Separado do anterior: com 0 o SGO+ só monitora. Com 1, a retirada libera a partida e a devolução deixa o bloqueio pendente até o veículo estar parado com a ignição desligada (nunca em movimento). Ligue só depois de conferir em Frota > Rastreador que os veículos aceitam bloquear e liberar.' },
   { chave: 'PONTE_COMMAND_SEGREDO', grupo: 'COMMAND', tipo: 'chave', nome: 'Segredo da ponte com o COMMAND',
     ajuda: 'O mesmo valor configurado no COMMAND para falar com o SGO+.' }
 ];
@@ -166,6 +179,15 @@ function Chaves_validarValor_(item, valor) {
   if (item.chave === 'AUVO_AVISAR_GESTAO' && !/^[A-Za-z0-9._@-]+([\s,;]+[A-Za-z0-9._@-]+)*$/.test(v)) {
     throw new Error('Não foi possível gravar: informe os logins separados por vírgula (ex.: joao, maria), sem outros sinais.');
   }
+  if ((item.chave === 'RASTREADOR_LIGADO' || item.chave === 'RASTREADOR_BLOQUEIO_LIGADO') && v !== '1' && v !== '0') {
+    throw new Error('Não foi possível gravar: este campo aceita só 1 (liga) ou 0 (desliga).');
+  }
+  if (item.chave === 'RASTREADOR_URL') {
+    v = v.replace(/\/+$/, '');
+    if (!/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s?#]*)?$/.test(v) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s?#]*)?$/.test(v)) {
+      throw new Error('Não foi possível gravar: informe o endereço com https://, por exemplo https://acesso.itrackergo.com.br (sem espaços, sem ? e sem #).');
+    }
+  }
   if (item.chave === 'META_WA_PHONE_ID' || item.chave === 'META_WA_WABA_ID') {
     if (!/^\d{6,25}$/.test(v)) throw new Error('Não foi possível gravar: este campo é um número de identificação (só algarismos, ex.: ' + item.exemplo + '), copiado do painel da Meta. Não é o número de telefone.');
   }
@@ -176,6 +198,13 @@ function Chaves_validarValor_(item, valor) {
 function Chaves_aposAlterar_(chave) {
   if (chave === 'AUVO_API_KEY' || chave === 'AUVO_API_TOKEN') {
     try { if (typeof Auvo_invalidarTokenCache_ === 'function') Auvo_invalidarTokenCache_(); } catch (e) {}
+  }
+  // Rastreador: credencial ou endereço trocado = sessão guardada não vale mais; ligado = garante a rotina de 2 minutos.
+  if (/^RASTREADOR_/.test(chave)) {
+    try { if (typeof Rastreador_esquecerSessao_ === 'function') Rastreador_esquecerSessao_(); } catch (e) {}
+    if (chave === 'RASTREADOR_LIGADO' && String(PropertiesService.getScriptProperties().getProperty(chave) || '') === '1') {
+      try { if (typeof Frota_rastreadorGarantirRotina_ === 'function') Frota_rastreadorGarantirRotina_(); } catch (e) { console.error('Rotina do rastreador: ' + ((e && e.message) || e)); }
+    }
   }
 }
 
@@ -254,9 +283,13 @@ function Chaves_apiTestar(sessionId, payload) {
     else if (tipo === 'auvo') r = Chaves_testarAuvo_();
     else if (tipo === 'email') r = Chaves_testarEmail_(eu);
     else if (tipo === 'whatsapp') r = Chaves_testarWhatsapp_(p.telefone);
+    else if (tipo === 'rastreador') r = typeof Rastreador_testarConexao_ === 'function' ? Rastreador_testarConexao_() : Chaves_falhou_('o módulo do rastreador não está carregado neste sistema', 'avise o suporte do SGO+.');
     else throw new Error('Não foi possível testar: tipo de teste desconhecido. Atualize a página (F5).');
     try { SGO_DATA.log('CHAVE_TESTADA', eu.usuario, 'Teste ' + tipo + ': ' + (r.funcionou ? 'funcionou' : 'não funcionou') + '.', 'CHAVES'); } catch (e) {}
-    return { funcionou: !!r.funcionou, texto: String(r.texto || ''), tipo: tipo };
+    var saida = { funcionou: !!r.funcionou, texto: String(r.texto || ''), tipo: tipo };
+    // Rastreador: dispositivos encontrados (ID, nome e situação; nenhum segredo).
+    if (tipo === 'rastreador') saida.dispositivos = (r.dispositivos || []).map(function (d) { return { id: String(d.id), nome: String(d.nome || ''), situacao: String(d.situacao || '') }; });
+    return saida;
   });
 }
 

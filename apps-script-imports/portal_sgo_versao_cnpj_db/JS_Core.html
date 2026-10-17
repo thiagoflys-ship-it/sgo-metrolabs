@@ -2048,10 +2048,15 @@
 
     const perfilFrota = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
     const gestaoFrota = perfilFrota === "ADMIN" || perfilFrota === "GESTOR" || perfilFrota === "DIRETORIA";
+    // 17/10/2026 (rastreador): aviso de partida não liberada fica na tela até a próxima abertura da Frota.
+    const avisoRastreador = MOBILE_FROTA.avisoRastreador || '';
+    MOBILE_FROTA.avisoRastreador = '';
     div.innerHTML =
+      (avisoRastreador ? '<div class="mobile-frota-alerta critico" id="mob_frota_avisoRastreador" role="alert"><b>' + escapeHtml_(avisoRastreador) + '</b></div>' : '') +
       '<div id="mob_frota_alertas"></div><div id="mobileSituacaoFrota">' + SGO_esqFrotaHtml_() + '</div>' +
       (gestaoFrota ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAbastecer_()">Registrar abastecimento</button>' +
-        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAjustarKm_()">Ajustar KM do veículo</button>' : '') +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaAjustarKm_()">Ajustar KM do veículo</button>' +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileFrotaPartida_()">Partida do veículo (rastreador)</button>' : '') +
       '<div class="mobile-frota-secao-titulo">Retiradas em andamento</div>' +
       '<div class="mobile-list" id="mob_frota_emAndamento">Carregando...</div>' +
       '<button type="button" class="mobile-fab" onclick="renderMobileFrotaRetirar_()">+ Retirar veículo</button>';
@@ -2177,6 +2182,72 @@
       .finally(function () { FROTA_ENVIO_ATIVO = false; });
   }
 
+  // Partida do veículo pelo rastreador no celular (17/10/2026): só a gestão (o servidor confere o perfil).
+  // "Liberar partida" e "Bloquear agora" com justificativa e confirmação; o bloqueio só sai com o veículo parado e a ignição desligada.
+  function renderMobileFrotaPartida_() {
+    MOBILE_NAV = { modulo: "frota", tela: "form" };
+    atualizarTituloMobile_("Partida do veículo");
+    const div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML =
+      '<div class="mobile-form">' +
+        '<div id="mob_frota_p_estado" class="mobile-card-subtitulo">Carregando o rastreador...</div>' +
+        mobileFieldHtml_("Veículo *", '<select id="mob_frota_p_veiculo" onchange="mobileFrotaPartidaMostrar_()"><option value="">Carregando...</option></select>') +
+        '<div class="mobile-card-subtitulo" id="mob_frota_p_info" style="margin:-6px 0 8px;"></div>' +
+        mobileFieldHtml_("Justificativa *", '<textarea id="mob_frota_p_justificativa" placeholder="Mínimo de 15 caracteres. Ex.: condutor sem sinal no celular, retirada confirmada por telefone"></textarea>') +
+        '<div id="mob_frota_p_status"></div>' +
+        '<button type="button" class="mobile-btn-salvar mobile-btn-linha" id="mob_frota_p_liberar" onclick="mobileFrotaPartidaComando_(\'liberar\')">Liberar partida</button>' +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" id="mob_frota_p_bloquear" onclick="mobileFrotaPartidaComando_(\'bloquear\')">Bloquear agora</button>' +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="voltarMobile_()">Voltar</button>' +
+      '</div>';
+    mobileFrota_chamarApiSilencioso_("apiListarRastreador").then(function (r) {
+      MOBILE_FROTA.rastreador = r;
+      const est = document.getElementById("mob_frota_p_estado");
+      if (est) est.innerHTML = !r.ligado ? '<div class="mobile-frota-alerta critico">Rastreador desligado no SGO+: nada é enviado por aqui. Em emergência, use o app da iTracker.</div>'
+        : (r.bloqueio ? 'O bloqueio só é enviado com o veículo parado e a ignição desligada; nunca em movimento.' : '<div class="mobile-frota-alerta aviso">Bloqueio desligado no SGO+: só monitoramento. "Liberar partida" continua disponível.</div>');
+      const comDispositivo = (r.veiculos || []).filter(function (v) { return v.deviceId; });
+      const sel = document.getElementById("mob_frota_p_veiculo");
+      if (sel) sel.innerHTML = '<option value="">' + (comDispositivo.length ? 'Selecione' : 'Nenhum veículo com rastreador vinculado') + '</option>' + comDispositivo.map(function (v) {
+        return '<option value="' + escapeHtml_(v.id) + '">' + escapeHtml_(v.placa + " — " + (v.modelo || "") + (v.situacao === "EM_USO" ? " (em uso)" : "")) + '</option>';
+      }).join("");
+      const bL = document.getElementById("mob_frota_p_liberar"), bB = document.getElementById("mob_frota_p_bloquear");
+      if (bL) bL.disabled = !r.ligado;
+      if (bB) bB.disabled = !r.ligado || !r.bloqueio;
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_p_status", err); });
+  }
+  function mobileFrotaPartidaMostrar_() {
+    const r = MOBILE_FROTA.rastreador || {};
+    const v = (r.veiculos || []).filter(function (x) { return x.id === getValue_("mob_frota_p_veiculo"); })[0];
+    const el = document.getElementById("mob_frota_p_info");
+    if (!el) return;
+    if (!v) { el.textContent = ""; return; }
+    const p = v.posicao;
+    const pend = (r.comandos || []).filter(function (c) { return c.placa === v.placa && c.situacao === "PENDENTE"; })[0];
+    el.textContent = (v.situacao === "EM_USO" ? "Em uso por " + (v.condutorNome || "condutor não localizado") + ". " : "Disponível. ") +
+      (p ? "Última posição " + p.quando + ": " + (p.parado ? "parado, ignição desligada" : (p.kmh != null ? Number(p.kmh).toLocaleString("pt-BR") + " km/h" : "velocidade não informada") + (p.ignicao === true ? ", ignição ligada" : "")) + ". " : "Sem posição lida ainda. ") +
+      (pend ? (pend.acao === "BLOQUEAR" ? "Bloqueio pendente desde " : "Liberação pendente desde ") + pend.pedidoEm + "." : "");
+  }
+  function mobileFrotaPartidaComando_(qual) {
+    if (FROTA_ENVIO_ATIVO) return;
+    const veiculoId = getValue_("mob_frota_p_veiculo");
+    if (!veiculoId) return mobileFrotaMsg_("mob_frota_p_status", "error", "Escolha o veículo.");
+    const just = String(getValue_("mob_frota_p_justificativa") || "").trim();
+    if (just.length < 15) return mobileFrotaMsg_("mob_frota_p_status", "error", "Escreva a justificativa (mínimo de 15 caracteres; foram " + just.length + ").");
+    const v = ((MOBILE_FROTA.rastreador || {}).veiculos || []).filter(function (x) { return x.id === veiculoId; })[0] || {};
+    const texto = qual === "liberar"
+      ? "Liberar a partida do veículo " + v.placa + "?\n\nO comando vai agora para o rastreador e fica na trilha de auditoria."
+      : "Bloquear a partida do veículo " + v.placa + "?" + (v.situacao === "EM_USO" ? "\n\nAtenção: o veículo está em uso por " + (v.condutorNome || "condutor não localizado") + "." : "") +
+        "\n\nO bloqueio só é enviado com o veículo parado e a ignição desligada; se estiver andando, fica pendente.";
+    if (!confirm(texto)) return;
+    FROTA_ENVIO_ATIVO = true;
+    mobileFrotaMsg_("mob_frota_p_status", "info", "Enviando ao rastreador. Aguarde a confirmação.");
+    mobileFrota_chamarApi_(qual === "liberar" ? "apiRastreadorLiberar" : "apiRastreadorBloquear", { veiculoId: veiculoId, justificativa: just }).then(function (res) {
+      mobileFrotaMsg_("mob_frota_p_status", qual === "liberar" || res.enviado ? "success" : "info", res.texto || "Pedido registrado.");
+      const j = document.getElementById("mob_frota_p_justificativa"); if (j) j.value = "";
+    }).catch(function (err) { mobileFrotaErro_("mob_frota_p_status", err); })
+      .finally(function () { FROTA_ENVIO_ATIVO = false; });
+  }
+
   // Abastecimento no celular (gestão: o servidor só aceita Administrador, Gestor e Diretoria).
   function renderMobileFrotaAbastecer_() {
     MOBILE_NAV = { modulo: "frota", tela: "form" };
@@ -2294,7 +2365,9 @@
     return frotaEnviarMovimentacaoUI_('apiIniciarViagem', payloadBase, fotos, veiculoEscolhido ? veiculoEscolhido.PLACA : '', fotosPainel).then(function(res) {
       MOBILE_FROTA.fotosRetirada = [];
       MOBILE_FROTA.fotosPainelRetirada = [];
-      frotaToastEnvio_(true, 'Retirada registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.kmDivergencia ? ' · KM diferente do registrado: a gestão vai conferir' : ''));
+      const rt = res.rastreador || {};
+      frotaToastEnvio_(!rt.aviso, 'Retirada registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.kmDivergencia ? ' · KM diferente do registrado: a gestão vai conferir' : '') + (rt.texto ? ' · ' + rt.texto : ''));
+      if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + ' A retirada já está registrada: não registre de novo.';
       renderMobileFrotaOperacional_();
     }).catch(function(err) { mobileFrotaErro_('mob_frota_r_status', err); });
   }
@@ -2384,7 +2457,7 @@
       MOBILE_FROTA.movimentacaoDevolucaoAtual = null;
       MOBILE_FROTA.fotosDevolucao = [];
       MOBILE_FROTA.fotosPainelDevolucao = [];
-      frotaToastEnvio_(true, 'Devolução registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.alertaKm ? ' · KM fora do esperado: a gestão vai conferir' : ''));
+      frotaToastEnvio_(true, 'Devolução registrada', veiculoLabel + ' · ' + res.data + ' ' + res.hora + (res.alertaKm ? ' · KM fora do esperado: a gestão vai conferir' : '') + (res.rastreador && res.rastreador.texto ? ' · ' + res.rastreador.texto : ''));
       renderMobileFrotaOperacional_();
     }).catch(function(err) { mobileFrotaErro_('mob_frota_d_status', err); });
   }
