@@ -10,6 +10,47 @@
 
 var QUALIDADE_FROTA_LIMIAR_CONSUMO_BAIXO = 0.7; // 70% da média da frota
 
+/** JSON de checklist/fotos da movimentação: { valido, itens }. */
+function QualidadeFrota_analisarJson_(json) {
+  try {
+    var arr = JSON.parse(json || '[]');
+    return { valido: Array.isArray(arr), itens: Array.isArray(arr) ? arr : [] };
+  } catch (e) { return { valido: false, itens: [] }; }
+}
+
+/**
+ * Motivos de uma retirada/devolução estar incompleta. Usada pelo painel (abaixo) e pela
+ * central de pendências (SGO_Alertas_Central.js) — uma regra só para os dois.
+ */
+function QualidadeFrota_motivosMovimentacao_(m) {
+  var analisarJson_ = QualidadeFrota_analisarJson_;
+  var motivos = [];
+  var finalizada = SGO_UTILS.safeUpper(m.STATUS) === 'FINALIZADO';
+  var chkSaida = analisarJson_(m.CHECKLIST_SAIDA_JSON);
+  var fotosSaida = analisarJson_(m.FOTOS_SAIDA_JSON);
+  var chkChegada = analisarJson_(m.CHECKLIST_CHEGADA_JSON);
+  var fotosChegada = analisarJson_(m.FOTOS_CHEGADA_JSON);
+  if (!Frota_parseDataHora_(m.DATA_SAIDA, m.HORA_SAIDA)) motivos.push('data/hora de retirada ausente ou inválida');
+  if (!SGO_UTILS.safe(m.KM_SAIDA) || !(Number(m.KM_SAIDA) >= 0)) motivos.push('KM de retirada ausente ou inválido');
+  if (!SGO_UTILS.safe(m.FINALIDADE)) motivos.push('finalidade não preenchida');
+  if (!chkSaida.valido) motivos.push('checklist da retirada com dados inválidos');
+  else if (!chkSaida.itens.length) motivos.push('checklist da retirada não preenchido');
+  chkSaida.itens.forEach(function(i) { if (i && i.ok === false && !SGO_UTILS.safe(i.observacao)) motivos.push('item reprovado na retirada sem observação: ' + (i.item || 'não identificado')); });
+  if (!fotosSaida.valido) motivos.push('fotos da retirada com dados inválidos');
+  else if (!fotosSaida.itens.length) motivos.push('foto da retirada não anexada');
+  if (finalizada) {
+    if (!Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA)) motivos.push('data/hora de devolução ausente ou inválida');
+    if (!SGO_UTILS.safe(m.KM_CHEGADA) || !(Number(m.KM_CHEGADA) >= 0)) motivos.push('KM de devolução ausente ou inválido');
+    else if (Number(m.KM_CHEGADA) < Number(m.KM_SAIDA)) motivos.push('KM da devolução menor que o KM da retirada');
+    if (!chkChegada.valido) motivos.push('checklist da devolução com dados inválidos');
+    else if (!chkChegada.itens.length) motivos.push('checklist da devolução não preenchido');
+    chkChegada.itens.forEach(function(i) { if (i && i.ok === false && !SGO_UTILS.safe(i.observacao)) motivos.push('item reprovado na devolução sem observação: ' + (i.item || 'não identificado')); });
+    if (!fotosChegada.valido) motivos.push('fotos da devolução com dados inválidos');
+    else if (!fotosChegada.itens.length) motivos.push('foto da devolução não anexada');
+  }
+  return motivos;
+}
+
 // `desde` (Date, opcional) — mesmo princípio do coletor Auvo: sem argumento
 // o painel vê tudo; o relatório A4 passa a data de corte do período. Datas
 // da Frota são texto "dd/mm/aaaa" (não Date), por isso usa
@@ -25,39 +66,8 @@ function QualidadeFrota_coletar_(desde) {
     SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).forEach(function(c) { condutores[SGO_UTILS.safe(c.ID)] = c; });
     var contagemOcorrencias = (typeof Qualidade_contarOcorrenciasAbertasPorPessoa_ === 'function') ? Qualidade_contarOcorrenciasAbertasPorPessoa_() : {};
 
-    var analisarJson_ = function(json) {
-      try {
-        var arr = JSON.parse(json || '[]');
-        return { valido: Array.isArray(arr), itens: Array.isArray(arr) ? arr : [] };
-      } catch (e) { return { valido: false, itens: [] }; }
-    };
-    var pendenciasMovimentacao_ = function(m) {
-      var motivos = [];
-      var finalizada = SGO_UTILS.safeUpper(m.STATUS) === 'FINALIZADO';
-      var chkSaida = analisarJson_(m.CHECKLIST_SAIDA_JSON);
-      var fotosSaida = analisarJson_(m.FOTOS_SAIDA_JSON);
-      var chkChegada = analisarJson_(m.CHECKLIST_CHEGADA_JSON);
-      var fotosChegada = analisarJson_(m.FOTOS_CHEGADA_JSON);
-      if (!Frota_parseDataHora_(m.DATA_SAIDA, m.HORA_SAIDA)) motivos.push('data/hora de retirada ausente ou inválida');
-      if (!SGO_UTILS.safe(m.KM_SAIDA) || !(Number(m.KM_SAIDA) >= 0)) motivos.push('KM de retirada ausente ou inválido');
-      if (!SGO_UTILS.safe(m.FINALIDADE)) motivos.push('finalidade não preenchida');
-      if (!chkSaida.valido) motivos.push('checklist da retirada com dados inválidos');
-      else if (!chkSaida.itens.length) motivos.push('checklist da retirada não preenchido');
-      chkSaida.itens.forEach(function(i) { if (i && i.ok === false && !SGO_UTILS.safe(i.observacao)) motivos.push('item reprovado na retirada sem observação: ' + (i.item || 'não identificado')); });
-      if (!fotosSaida.valido) motivos.push('fotos da retirada com dados inválidos');
-      else if (!fotosSaida.itens.length) motivos.push('foto da retirada não anexada');
-      if (finalizada) {
-        if (!Frota_parseDataHora_(m.DATA_CHEGADA, m.HORA_CHEGADA)) motivos.push('data/hora de devolução ausente ou inválida');
-        if (!SGO_UTILS.safe(m.KM_CHEGADA) || !(Number(m.KM_CHEGADA) >= 0)) motivos.push('KM de devolução ausente ou inválido');
-        else if (Number(m.KM_CHEGADA) < Number(m.KM_SAIDA)) motivos.push('KM da devolução menor que o KM da retirada');
-        if (!chkChegada.valido) motivos.push('checklist da devolução com dados inválidos');
-        else if (!chkChegada.itens.length) motivos.push('checklist da devolução não preenchido');
-        chkChegada.itens.forEach(function(i) { if (i && i.ok === false && !SGO_UTILS.safe(i.observacao)) motivos.push('item reprovado na devolução sem observação: ' + (i.item || 'não identificado')); });
-        if (!fotosChegada.valido) motivos.push('fotos da devolução com dados inválidos');
-        else if (!fotosChegada.itens.length) motivos.push('foto da devolução não anexada');
-      }
-      return motivos;
-    };
+    // Regra da movimentação incompleta: função de topo, a mesma usada pela central de pendências.
+    var pendenciasMovimentacao_ = QualidadeFrota_motivosMovimentacao_;
     var depoisDoCorte_ = function(dataBr) {
       if (!desde) return true;
       var d = Frota_parseDataHora_(dataBr, '');

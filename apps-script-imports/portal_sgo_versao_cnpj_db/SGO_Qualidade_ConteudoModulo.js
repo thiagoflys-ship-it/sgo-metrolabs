@@ -166,6 +166,20 @@ function tplQualidade_renderReal_() {
   tplQualidade_carregar_();
 }
 
+// 17/10/2026: as pendências do painel vêm da central (as mesmas do Início): por área e o que fazer.
+function tplQualidade_resumoCentral_(c) {
+  if (!c) return '';
+  var nomes = { frota: 'Frota', auvo: 'Auvo', qualidade: 'Registros' };
+  var partes = Object.keys(nomes).map(function (m) { var x = (c.porModulo || {})[m] || { total: 0 }; return nomes[m] + ' ' + (x.total || 0); });
+  var lista = (c.grupos || []).slice(0, 6).map(function (g) {
+    return '<li><strong>' + tplQualidade_esc(g.titulo) + '</strong><br><span class="rank-sub">' + tplQualidade_esc(g.oQueFazer || g.detalhe) + '</span></li>';
+  }).join('');
+  return '<p class="fonte">' + tplQualidade_esc(partes.join(' · ')) + ' — mesma contagem do Início; não depende do período escolhido.' +
+    (c.criticos ? ' ' + c.criticos + ' ' + tplQualidade_esc(tplQualidade_pl_(c.criticos, 'crítica', 'críticas')) + '.' : '') + '</p>' +
+    (lista ? '<ul class="lista-amostra">' + lista + '</ul>' : '') +
+    ((c.naoVerificado || []).length ? '<p class="rank-sub">Não foi possível verificar agora: ' + tplQualidade_esc(c.naoVerificado.join(', ')) + '. Clique em Atualizar.</p>' : '');
+}
+
 function tplQualidade_carregar_() {
   var corpo = document.getElementById('tplQualidade_corpo');
   if (corpo) corpo.innerHTML = '<p class="indisponivel">Carregando...</p>';
@@ -176,7 +190,7 @@ function tplQualidade_carregar_() {
       var r=res.resumo||{},saude=r.areasIndisponiveis?'<span class="stat-num critico">'+r.areasIndisponiveis+'</span> '+tplQualidade_pl_(r.areasIndisponiveis,'integração com falha','integrações com falha'):(res.auvoConfigurado===false?'<span class="stat-num alerta">!</span> Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)':'<span class="stat-num ok">OK</span> integrações respondendo');
       var falhas=(res.auvo&&res.auvo.indisponivel?'<div class="panel"><h2>Auvo indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.auvo.erro||'Falha não identificada')+'</p></div>':'')+(res.frota&&res.frota.indisponivel?'<div class="panel"><h2>Frota indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.frota.erro||'Falha não identificada')+'</p></div>':'');
       if (corpo) corpo.innerHTML =
-        '<div class="secao-titulo">Visão executiva — últimos '+res.periodoDias+' dias</div><div class="grid"><div class="panel"><h2>Itens que exigem ação</h2><div class="stat-row"><span class="stat-num '+(r.pendencias?'critico':'ok')+'">'+(r.pendencias||0)+'</span><span class="stat-label">pendências detectadas nas fontes</span></div><div class="stat-row">'+saude+'</div><p class="fonte">Atualizado em '+tplQualidade_esc(res.geradoEm)+'</p></div><div class="panel"><h2>Volume analisado</h2><div class="stat-row"><span class="stat-num">'+(r.atendimentos||0)+'</span><span class="stat-label">atendimentos Auvo</span></div><div class="stat-row"><span class="stat-num">'+(r.movimentacoes||0)+'</span><span class="stat-label">movimentações da Frota</span></div></div>'+falhas+'</div>'+
+        '<div class="secao-titulo">Visão executiva — últimos '+res.periodoDias+' dias</div><div class="grid"><div class="panel"><h2>Itens que exigem ação</h2><div class="stat-row"><span class="stat-num '+(r.pendencias?'critico':'ok')+'">'+(r.pendencias||0)+'</span><span class="stat-label">'+tplQualidade_pl_(r.pendencias||0,'pendência aberta agora','pendências abertas agora')+'</span></div>'+tplQualidade_resumoCentral_(res.pendenciasCentral)+'<div class="stat-row">'+saude+'</div><p class="fonte">Atualizado em '+tplQualidade_esc(res.geradoEm)+'</p></div><div class="panel"><h2>Volume analisado</h2><div class="stat-row"><span class="stat-num">'+(r.atendimentos||0)+'</span><span class="stat-label">atendimentos Auvo</span></div><div class="stat-row"><span class="stat-num">'+(r.movimentacoes||0)+'</span><span class="stat-label">movimentações da Frota</span></div></div>'+falhas+'</div>'+
         '<div class="secao-titulo">Auvo — técnicos e atendimentos</div>' +
         '<div class="grid">' + tplQualidade_montarAuvo_(res.auvo) + '</div>' +
         '<div class="secao-titulo">Frota — veículos e condutores</div>' +

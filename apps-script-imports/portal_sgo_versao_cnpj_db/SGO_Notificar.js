@@ -47,6 +47,15 @@
 
 var NTF_COLUNAS = ['ID', 'QUANDO', 'USUARIO_ID', 'USUARIO_NOME', 'CANAL', 'DESTINO', 'ASSUNTO', 'ORIGEM', 'REF_ID', 'SITUACAO', 'MOTIVO', 'CRIADO_EM'];
 var NTF_FUSO = 'America/Sao_Paulo';
+// Mesma mensagem, mesma pessoa, mesmo canal: não repete dentro desta janela (ver SGO_notificar_).
+var NTF_JANELA_REPETICAO_SEG = 600;
+
+function Notificar_hash_(s) {
+  var h = 5381;
+  s = String(s || '');
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
 
 function Notificar_aba_() {
   return SGO_CFG.SHEETS.NTF_ENVIOS || 'NTF_ENVIOS';
@@ -448,17 +457,32 @@ function SGO_notificar_(opcoes) {
     }
     if (link && txtWhats.indexOf(link) < 0) txtWhats += '\n\nAbra o SGO+: ' + link;
 
+    // 17/10/2026: a mesma mensagem para a mesma pessoa pelo mesmo canal não sai duas vezes em 10 minutos,
+    // venha do caminho que vier (duplo clique em Publicar/Reenviar, a verificação das telas e a rotina de
+    // hora em hora avisando o mesmo atraso, duas sincronizações do Auvo ao mesmo tempo). Fica PULADO com o motivo.
+    var assinaturaMsg = Notificar_hash_(titulo + '|' + texto + '|' + (modelo ? modelo.nome + ':' + modelo.parametros.join('|') : ''));
+    var cacheDup = null;
+    try { cacheDup = CacheService.getScriptCache(); } catch (e) { cacheDup = null; }
+    var chaveDup = function (uid, canal) { return 'NTF_DUP_' + Notificar_hash_(uid + '|' + canal) + '_' + assinaturaMsg; };
+
     ids.forEach(function (uid) {
       var c = contatos[uid];
       externos.forEach(function (canal) {
+        var reservaFeita = false;
         try {
           if (!c) { registrar(uid, '', canal, '', 'PULADO', 'Usuário não encontrado no cadastro.'); return; }
           if (!c.ativo) { registrar(uid, c.nome, canal, '', 'PULADO', 'Usuário inativo.'); return; }
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
+          var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;
+          if (jaFoi) { registrar(uid, c.nome, canal, canal === 'email' ? c.email : c.telefone, 'PULADO', 'Mesma mensagem já enviada a esta pessoa por este canal às ' + String(jaFoi).split('|')[0] + ' (origem ' + (String(jaFoi).split('|')[1] || 'SGO+') + '); não foi repetida.'); return; }
+          // reserva antes de enviar (dois caminhos ao mesmo tempo não enviam os dois); falhou = libera
+          var reservar = function () { try { if (cacheDup) cacheDup.put(chaveDup(uid, canal), Utilities.formatDate(new Date(), NTF_FUSO, 'HH:mm') + '|' + (origem || 'SGO+'), NTF_JANELA_REPETICAO_SEG); } catch (e) {} };
+          var liberar = function () { try { if (cacheDup) cacheDup.remove(chaveDup(uid, canal)); } catch (e) {} };
           if (canal === 'email') {
             if (!c.email || c.email.indexOf('@') < 0) { registrar(uid, c.nome, canal, '', 'PULADO', 'Sem e-mail no cadastro do ' + (c.externo ? c.cadastro : 'usuário') + '.'); return; }
             if (cotaEmail === null) { try { cotaEmail = MailApp.getRemainingDailyQuota(); } catch (e) { cotaEmail = 1; } }
             if (cotaEmail < 1) { registrar(uid, c.nome, canal, c.email, 'PULADO', 'Cota diária de e-mails esgotada; tente de novo amanhã.'); return; }
+            reservar(); reservaFeita = true;
             MailApp.sendEmail({ to: c.email, subject: 'SGO+ | ' + titulo, body: txtEmail, htmlBody: htmlEmail, name: 'SGO+ Metrolabs' });
             cotaEmail--;
             registrar(uid, c.nome, canal, c.email, 'OK', 'Entregue ao serviço de e-mail.');
@@ -466,6 +490,7 @@ function SGO_notificar_(opcoes) {
             if (!wa.provedor) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', wa.motivo); return; }
             if (!c.telefone) { registrar(uid, c.nome, canal, '', 'PULADO', c.externo ? 'Sem telefone celular válido no cadastro do ' + c.cadastro + '.' : 'Sem telefone celular válido no cadastro (usuário, condutor ou técnico).'); return; }
             var r;
+            reservar(); reservaFeita = true;
             if (wa.provedor === 'meta') {
               r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
               if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
@@ -473,9 +498,11 @@ function SGO_notificar_(opcoes) {
               r = Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhats);
               if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
             }
+            liberar();
             registrar(uid, c.nome, canal, c.telefone, 'ERRO', Notificar_limparSegredos_(r.motivo, segredos));
           }
         } catch (e) {
+          if (reservaFeita) { try { if (cacheDup) cacheDup.remove(chaveDup(uid, canal)); } catch (e2) {} }
           registrar(uid, c ? c.nome : '', canal, c ? (canal === 'email' ? c.email : c.telefone) : '', 'ERRO',
             Notificar_limparSegredos_((e && e.message) || e, segredos));
         }

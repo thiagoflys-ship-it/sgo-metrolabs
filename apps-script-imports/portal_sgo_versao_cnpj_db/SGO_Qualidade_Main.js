@@ -54,10 +54,28 @@ function Qualidade_apiObterPainel(sessionId,payload) {
   Qualidade_exigirGestor_(sessionId);
   var dias=Number((payload||{}).periodoDias);if(!isFinite(dias)||dias<=0)dias=30;
   var desde=new Date(Date.now()-dias*86400000),areas=Qualidade_coletarTodasAreas_(desde),a=areas.auvo||{},f=areas.frota||{};
-  var pendencias=(a.semRelato||0)+(a.semFoto||0)+(a.questionariosVazios||0)+(a.finalizadasSemCheckout||0)+(a.semVinculo||0)+(f.totalIncompletas||0)+(f.viagensPenduradas||0)+(f.multasSemCondutor||0)+(f.documentosVencidos||0)+(f.cnhVencidas||0);
+  // 17/10/2026: "itens que exigem ação" vem da central de pendências (SGO_Alertas_Central.js), a mesma
+  // contagem do Início. Antes somava cada falta da O.S. (a mesma O.S. sem relato e sem foto contava 2
+  // ou 3 vezes) e não via manutenção de veículo vencida — o painel dizia OK com a Frota pendente.
+  var central=Qualidade_pendenciasCentral_(sessionId),pendencias=central.total;
   // 16/10/2026 (auditoria P2): "OK, integrações respondendo" aparecia com o Auvo sem chaves.
   var props=PropertiesService.getScriptProperties(),auvoConfigurado=!!(props.getProperty('AUVO_API_KEY')&&props.getProperty('AUVO_API_TOKEN'));
-  return Object.assign({ok:true,auvoConfigurado:auvoConfigurado,periodoDias:dias,geradoEm:Utilities.formatDate(new Date(),Session.getScriptTimeZone()||'America/Sao_Paulo','dd/MM/yyyy HH:mm'),resumo:{pendencias:pendencias,atendimentos:a.total||0,movimentacoes:f.totalMovimentacoes||0,areasIndisponiveis:(a.indisponivel?1:0)+(f.indisponivel?1:0)}},areas);
+  return Object.assign({ok:true,auvoConfigurado:auvoConfigurado,periodoDias:dias,pendenciasCentral:central,geradoEm:Utilities.formatDate(new Date(),Session.getScriptTimeZone()||'America/Sao_Paulo','dd/MM/yyyy HH:mm'),resumo:{pendencias:pendencias,atendimentos:a.total||0,movimentacoes:f.totalMovimentacoes||0,areasIndisponiveis:(a.indisponivel?1:0)+(f.indisponivel?1:0)}},areas);
+}
+
+/** Módulos que o Painel de qualidade acompanha na central de pendências. */
+var QUALIDADE_MODULOS_PENDENCIA = ['frota', 'auvo', 'qualidade'];
+
+/** Pendências abertas agora das áreas do painel, lidas da central (mesmos números do Início). */
+function Qualidade_pendenciasCentral_(sessionId) {
+  var r = SGO_Pendencias_listar(sessionId, { limite: 1000 });
+  var porModulo = {}, total = 0, criticos = 0, grupos = [];
+  QUALIDADE_MODULOS_PENDENCIA.forEach(function (m) {
+    var x = (r.resumo.porModulo || {})[m] || { nome: (PEND_MODULOS[m] || m), total: 0, criticos: 0 };
+    porModulo[m] = x; total += x.total; criticos += x.criticos;
+  });
+  (r.grupos || []).forEach(function (g) { if (QUALIDADE_MODULOS_PENDENCIA.indexOf(g.modulo) >= 0) grupos.push(g); });
+  return { total: total, criticos: criticos, porModulo: porModulo, grupos: grupos, naoVerificado: r.naoVerificado || [], geradoEm: r.geradoEm };
 }
 
 function Qualidade_obterConteudoModulo() {

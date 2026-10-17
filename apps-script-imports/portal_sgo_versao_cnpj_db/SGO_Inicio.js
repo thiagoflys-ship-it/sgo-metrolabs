@@ -1,34 +1,16 @@
 /**
  * INÍCIO — faixa "o que depende de você hoje" e busca rápida (Ctrl K).
  *
- * Só AGREGA o que os módulos já calculam (não repete regra de negócio):
- *   - atividades: Atividades_apiListarMinhas (SGO_Atividades.js)
- *   - padrões / documentos a vencer: alertasObterDashboard (SGO_Alertas.js)
- *   - ciência do Conduta: Conduta_avisosVigentes_ + Conduta_cienciasDe_ (SGO_Conduta_Ciencia.js),
- *     a mesma regra de Conduta_apiObterAvisos, mas sem registrar "exibição" do aviso
- *   - O.S. Auvo pendentes: Auvo_apiListarPendencias (SGO_Auvo_Pendencias.js), só gestores
- *   - busca: SGO_CLIENTES/SGO_EQUIPAMENTOS/SGO_DOCUMENTOS.pesquisar, que já aplicam a trava do cliente
+ * Pendências: lidas da central (SGO_Alertas_Central.js, SGO_Pendencias_listar) — a mesma fonte
+ * do painel de alertas, do balão de padrões, da janela ao entrar, do Painel de qualidade e da
+ * ponte com o COMMAND; aqui só vira cartão da faixa.
+ * Busca: SGO_CLIENTES/SGO_EQUIPAMENTOS/SGO_DOCUMENTOS.pesquisar, que já aplicam a trava do cliente.
  * Devolve só texto (datas já formatadas) para o google.script.run.
  */
 
 var INICIO_FUSO = 'America/Sao_Paulo';
 var INICIO_BUSCA_LIMITE = 6;      // por grupo
 var INICIO_BUSCA_TERMO_MAX = 80;
-
-function Inicio_plural_(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
-
-function Inicio_listaCurta_(nomes, max) {
-  var m = max || 3;
-  nomes = nomes.map(function (n) { n = String(n || ''); return n.length > 44 ? n.slice(0, 42).replace(/\s+\S*$/, '') + '…' : n; });
-  if (nomes.length <= m) return nomes.join(', ');
-  return nomes.slice(0, m).join(', ') + ' e mais ' + (nomes.length - m);
-}
-
-/** Nome entre aspas simples na mensagem do alerta ("O padrão de referência 'PS-01' ..."). */
-function Inicio_nomeDoAlerta_(msg) {
-  var m = String(msg || '').match(/'([^']+)'/);
-  return m ? m[1] : '';
-}
 
 function Inicio_dataBr_(v) {
   if (v === null || v === undefined || v === '') return '';
@@ -42,170 +24,36 @@ function Inicio_dataBr_(v) {
   return br ? br[0] : '';
 }
 
-function Inicio_horaDe_(isoDataHora) {
-  var m = String(isoDataHora || '').match(/T(\d{2}):(\d{2})/);
-  return m ? m[1] + ':' + m[2] : '';
+// ------------------------------------------------------------
+// PENDÊNCIAS — 17/10/2026: lidas da central (SGO_Alertas_Central.js), a mesma fonte do
+// painel de alertas, do balão de padrões, da janela ao entrar, do Painel de qualidade e da
+// ponte com o COMMAND. Aqui só se converte cada grupo da central para o cartão da faixa.
+// ------------------------------------------------------------
+var INICIO_NIVEL = { CRITICO: 'critico', ATENCAO: 'atencao', INFO: 'info' };
+
+function Inicio_cartaoDoGrupo_(g) {
+  var nivel = INICIO_NIVEL[g.gravidade] || 'info';
+  if (nivel === 'atencao' && g.rotulo === 'Revisar') nivel = 'revisar';
+  return { nivel: nivel, rotulo: g.rotulo, titulo: g.titulo, detalhe: g.detalhe, oQueFazer: g.oQueFazer, qtd: g.qtd, tipo: g.tipo, modulo: g.modulo, acao: g.tela || null };
 }
 
-// ------------------------------------------------------------
-// PENDÊNCIAS
-// ------------------------------------------------------------
 function Inicio_apiPendencias(sessionId) {
   try {
-    var sessao = exigirSessao(sessionId);
-    var perfil = SGO_UTILS.safeUpper(sessao.perfil);
-    var ehCliente = perfil === 'CLIENTE';
-    var gestor = typeof isAdminPerfilAuth_ === 'function' ? isAdminPerfilAuth_(perfil) : false;
-    var itens = [];
-    var naoVerificado = [];
-
-    // 1) Atividades minhas: atrasadas e vencendo hoje
-    if (!ehCliente && typeof Atividades_apiListarMinhas === 'function') {
-      try {
-        var ra = Atividades_apiListarMinhas(sessionId, {});
-        if (ra && ra.ok) {
-          var agora = String(ra.agora || '');
-          var hoje = agora.slice(0, 10);
-          var abertas = (ra.itens || []).filter(function (a) {
-            return a.SITUACAO !== 'Concluída' && a.SITUACAO !== 'Cancelada' && a.PREVISAO_ATUAL;
-          });
-          var atrasadas = abertas.filter(function (a) { return a.PREVISAO_ATUAL < agora; })
-            .sort(function (a, b) { return String(a.PREVISAO_ATUAL).localeCompare(String(b.PREVISAO_ATUAL)); });
-          var hojeLista = abertas.filter(function (a) { return a.PREVISAO_ATUAL >= agora && a.PREVISAO_ATUAL.slice(0, 10) === hoje; });
-          if (atrasadas.length) {
-            var a0 = atrasadas[0];
-            itens.push({
-              prioridade: 2, nivel: 'critico', rotulo: 'Atrasada',
-              titulo: atrasadas.length === 1 ? SGO_UTILS.safe(a0.TITULO) : Inicio_plural_(atrasadas.length, 'atividade atrasada', 'atividades atrasadas'),
-              detalhe: atrasadas.length === 1
-                ? 'Previsão era ' + Inicio_dataHoraBr_(a0.PREVISAO_ATUAL) + ' · justifique ou conclua'
-                : 'A mais antiga: ' + SGO_UTILS.safe(a0.TITULO) + ' (' + Inicio_dataHoraBr_(a0.PREVISAO_ATUAL) + ')',
-              acao: atrasadas.length === 1 ? { tipo: 'atividade', id: SGO_UTILS.safe(a0.ID) } : { tipo: 'modulo', mod: 'minhas_atividades' }
-            });
-          }
-          if (hojeLista.length) {
-            var h0 = hojeLista[0];
-            itens.push({
-              prioridade: 4, nivel: 'atencao', rotulo: 'Vence hoje',
-              titulo: hojeLista.length === 1 ? SGO_UTILS.safe(h0.TITULO) : Inicio_plural_(hojeLista.length, 'atividade vence hoje', 'atividades vencem hoje'),
-              detalhe: hojeLista.length === 1 ? 'Previsão para hoje às ' + Inicio_horaDe_(h0.PREVISAO_ATUAL) : 'Primeira às ' + Inicio_horaDe_(h0.PREVISAO_ATUAL) + ': ' + SGO_UTILS.safe(h0.TITULO),
-              acao: hojeLista.length === 1 ? { tipo: 'atividade', id: SGO_UTILS.safe(h0.ID) } : { tipo: 'modulo', mod: 'minhas_atividades' }
-            });
-          }
-        } else {
-          naoVerificado.push('atividades');
-        }
-      } catch (e) { naoVerificado.push('atividades'); }
-    }
-
-    // 2) Padrões de referência e documentos (mesma regra do painel de alertas)
-    try {
-      var rAl = alertasObterDashboard(sessionId);
-      var alertas = (rAl && rAl.success && rAl.items) ? rAl.items : [];
-      if (rAl && rAl.success === false) naoVerificado.push('vencimentos');
-
-      var padVenc = alertas.filter(function (x) { return x.origem === 'PADRAO' && x.tipo === 'CRÍTICO'; });
-      var padAVencer = alertas.filter(function (x) { return x.origem === 'PADRAO' && x.tipo !== 'CRÍTICO' && x.dias !== null; });
-      var padSemData = alertas.filter(function (x) { return x.origem === 'PADRAO' && x.dias === null; });
-      var docVenc = alertas.filter(function (x) { return x.origem === 'DOCUMENTO' && x.tipo === 'CRÍTICO'; });
-      var docAVencer = alertas.filter(function (x) { return x.origem === 'DOCUMENTO' && x.tipo !== 'CRÍTICO'; });
-      var nomes = function (lista) { return lista.map(function (x) { return Inicio_nomeDoAlerta_(x.mensagem) || '—'; }); };
-
-      if (padVenc.length) {
-        itens.push({
-          prioridade: 1, nivel: 'critico', rotulo: 'Bloqueia emissão',
-          titulo: padVenc.length === 1 ? 'Padrão ' + nomes(padVenc)[0] + ' vencido' : Inicio_plural_(padVenc.length, 'padrão vencido', 'padrões vencidos'),
-          detalhe: padVenc.length === 1
-            ? 'Vencido há ' + Inicio_plural_(Math.abs(Number(padVenc[0].dias) || 0), 'dia', 'dias') + ' · não pode ser usado em certificado'
-            : Inicio_listaCurta_(nomes(padVenc), 3),
-          acao: { tipo: 'atalho', alvo: 'padroes' }
-        });
-      }
-      if (padAVencer.length) {
-        var maisPerto = padAVencer.slice().sort(function (a, b) { return a.dias - b.dias; })[0];
-        itens.push({
-          prioridade: 5, nivel: 'atencao', rotulo: 'A vencer',
-          titulo: padAVencer.length === 1 ? 'Padrão ' + nomes(padAVencer)[0] + ' a vencer' : Inicio_plural_(padAVencer.length, 'padrão a vencer', 'padrões a vencer'),
-          detalhe: 'O mais próximo vence em ' + Inicio_plural_(Number(maisPerto.dias) || 0, 'dia', 'dias') + ' (' + (Inicio_nomeDoAlerta_(maisPerto.mensagem) || '—') + ')',
-          acao: { tipo: 'atalho', alvo: 'padroes' }
-        });
-      }
-      if (padSemData.length) {
-        itens.push({
-          prioridade: 7, nivel: 'revisar', rotulo: 'Revisar',
-          titulo: Inicio_plural_(padSemData.length, 'padrão sem validade válida', 'padrões sem validade válida'),
-          detalhe: Inicio_listaCurta_(nomes(padSemData), 3) + ' · corrija o cadastro',
-          acao: { tipo: 'atalho', alvo: 'padroes' }
-        });
-      }
-      if (docVenc.length) {
-        itens.push({
-          prioridade: 6, nivel: 'revisar', rotulo: 'Revisar',
-          titulo: Inicio_plural_(docVenc.length, 'documento vencido', 'documentos vencidos'),
-          detalhe: Inicio_listaCurta_(nomes(docVenc), 1),
-          acao: { tipo: 'modulo', mod: 'documentos' }
-        });
-      }
-      if (docAVencer.length) {
-        var dPerto = docAVencer.slice().sort(function (a, b) { return a.dias - b.dias; })[0];
-        itens.push({
-          prioridade: 8, nivel: 'atencao', rotulo: 'A vencer',
-          titulo: Inicio_plural_(docAVencer.length, 'documento a vencer', 'documentos a vencer'),
-          detalhe: 'O mais próximo vence em ' + Inicio_plural_(Number(dPerto.dias) || 0, 'dia', 'dias') + ' (' + (Inicio_nomeDoAlerta_(dPerto.mensagem) || '—') + ')',
-          acao: { tipo: 'modulo', mod: 'documentos' }
-        });
-      }
-    } catch (e) { naoVerificado.push('vencimentos'); }
-
-    // 3) Ciência pendente do Programa de Conduta (sem registrar exibição)
-    if (!ehCliente && typeof Conduta_avisosVigentes_ === 'function' && typeof Conduta_cienciasDe_ === 'function') {
-      try {
-        var eu = String(sessao.userId);
-        var ciencias = Conduta_cienciasDe_(eu);
-        var pend = Conduta_avisosVigentes_().filter(function (a) {
-          var c = ciencias[a.tipo + '|' + a.ref + '|' + eu];
-          return !(c && Conduta_soData_(c.CIENTE_EM));
-        });
-        if (pend.length) {
-          itens.push({
-            prioridade: 3, nivel: 'info', rotulo: 'Ciência pendente',
-            titulo: pend.length === 1 ? 'Aviso do Programa de Conduta' : Inicio_plural_(pend.length, 'aviso do Programa de Conduta', 'avisos do Programa de Conduta'),
-            detalhe: pend.length === 1 ? String(pend[0].titulo || '').slice(0, 90) : 'Confirme a leitura para registrar sua ciência',
-            acao: { tipo: 'conduta_ciencia' }
-          });
-        }
-      } catch (e) { naoVerificado.push('avisos do Conduta'); }
-    }
-
-    // 4) O.S. Auvo pendentes (só gestores, mesma trava do módulo)
-    if (gestor && typeof Auvo_apiListarPendencias === 'function') {
-      try {
-        var rv = Auvo_apiListarPendencias(sessionId);
-        if (rv && rv.ok && rv.total) {
-          var maisAntiga = (rv.items || []).reduce(function (m, i) { return Math.max(m, Number(i.DIAS_ABERTA) || 0); }, 0);
-          itens.push({
-            prioridade: 6, nivel: 'revisar', rotulo: 'Revisar',
-            titulo: Inicio_plural_(rv.total, 'O.S. Auvo pendente', 'O.S. Auvo pendentes'),
-            detalhe: Inicio_plural_(rv.semEvidencia || 0, 'sem evidência', 'sem evidência') + (maisAntiga ? ' · mais antiga aberta há ' + Inicio_plural_(maisAntiga, 'dia', 'dias') : ''),
-            acao: { tipo: 'modulo', mod: 'auvo' }
-          });
-        }
-      } catch (e) { naoVerificado.push('O.S. Auvo'); }
-    }
-
-    itens.sort(function (a, b) { return a.prioridade - b.prioridade; });
-    itens.forEach(function (i) { delete i.prioridade; });
-    return JSON.parse(JSON.stringify({ ok: true, total: itens.length, itens: itens, naoVerificado: naoVerificado }));
+    var r = SGO_Pendencias_listar(sessionId, { limite: 400 });
+    var cartoes = (r.grupos || []).map(Inicio_cartaoDoGrupo_);
+    return JSON.parse(JSON.stringify({
+      ok: true,
+      total: r.resumo.total,           // pendências (não cartões): o mesmo número do Painel de qualidade e da janela ao entrar
+      resumo: r.resumo,
+      itens: cartoes,                  // cartões da faixa, um por tipo, do mais grave para o menos grave
+      pendencias: r.itens,             // lista completa para "Ver todas"
+      geradoEm: r.geradoEm,
+      cortado: !!r.cortado,
+      naoVerificado: r.naoVerificado || []
+    }));
   } catch (e) {
-    return { ok: false, message: 'Não foi possível verificar as pendências: ' + ((e && e.message) || e) + '. O restante do Início continua valendo; atualize a página para tentar de novo.' };
+    return { ok: false, message: 'Não foi possível verificar as pendências: ' + String((e && e.message) || e).replace(/[.\s]+$/, '') + '. O restante do Início continua valendo; atualize a página para tentar de novo.' };
   }
-}
-
-/** Usa Atividades_dataBr_ (módulo de atividades) se existir; senão formata aqui. */
-function Inicio_dataHoraBr_(s) {
-  if (typeof Atividades_dataBr_ === 'function') { var r = Atividades_dataBr_(s); if (r) return r; }
-  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
-  return m ? m[3] + '/' + m[2] + '/' + m[1] + (m[4] ? ' ' + m[4] + ':' + m[5] : '') : '';
 }
 
 // ------------------------------------------------------------

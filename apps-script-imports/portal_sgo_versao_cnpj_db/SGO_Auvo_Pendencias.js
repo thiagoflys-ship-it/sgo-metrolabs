@@ -178,6 +178,7 @@ function Auvo_pendExecutarLote_() {
     Auvo_pendRemoverLinhasAntigas_(sincronizacaoId);
     Auvo_pendLimparCheckpoint_();
     PropertiesService.getScriptProperties().setProperty(AUVO_PEND_CFG.ULTIMA_COMPLETA_KEY, SGO_UTILS.nowIso());
+    if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_(); // Início e Painel de qualidade veem a lista nova
     return { concluido: true };
   }
 

@@ -117,7 +117,8 @@
       Certificado (um seletor, não um cadastro). */
   function Menu_atalho_(alvo) {
     var btn = document.querySelector('#menu .menu-btn-atalho[data-atalho="' + alvo + '"]');
-    var soComputador = { padroes: "Padrões de referência", usuarios: "Gestão de usuários" };
+    // Padrões de referência tem consulta própria no celular desde a fase 3 (17/10): abrir("padroes") cuida disso.
+    var soComputador = { usuarios: "Gestão de usuários" };
     if (soComputador[alvo] && typeof ehMobileModo_ === "function" && ehMobileModo_()) {
       // mesma regra de renderMotorModulo_: recurso avançado fica só no computador
       var div = document.getElementById("conteudo");
@@ -194,8 +195,14 @@
     }
     var itens = res.itens || [];
     INICIO_ULTIMAS = itens;
+    INICIO_PENDENCIAS = res.pendencias || [];
     var n = itens.length;
-    if (resumo) resumo.textContent = n === 0 ? "Nada pendente para você hoje." : (n === 1 ? "Há 1 item que depende de você hoje." : "Há " + n + " itens que dependem de você hoje.");
+    // Total = pendências (não cartões): o mesmo número do Painel de qualidade e da janela ao entrar.
+    var r = res.resumo || { total: res.total || 0, criticos: 0 };
+    var total = Number(r.total) || 0, criticos = Number(r.criticos) || 0;
+    if (resumo) resumo.textContent = total === 0 ? "Nada pendente para você hoje." :
+      (total === 1 ? "Há 1 pendência" : "Há " + Inicio_num_(total) + " pendências") +
+      (criticos ? " (" + Inicio_num_(criticos) + (criticos === 1 ? " crítica" : " críticas") + ")" : "") + " para você.";
     var html = "";
     if (n) {
       html += '<div class="inicio-faixa-lista">' + itens.slice(0, 4).map(function (it, i) {
@@ -206,7 +213,8 @@
           '<span class="inicio-pend-detalhe">' + Inicio_esc_(it.detalhe) + '</span>' +
         '</button>';
       }).join("") + '</div>';
-      if (n > 4) html += '<div class="inicio-faixa-nota">Mostrando as 4 mais urgentes de ' + n + '.</div>';
+      html += '<div class="inicio-faixa-nota">' + (n > 4 ? 'Mostrando os 4 grupos mais urgentes de ' + n + '. ' : '') +
+        '<button type="button" class="inicio-ver-todas" onclick="Inicio_abrirTodas_()" style="background:none;border:0;padding:0;color:var(--primary,#1d4ed8);font-weight:700;cursor:pointer;text-decoration:underline">Ver todas as pendências (' + Inicio_num_(total) + ')</button></div>';
     }
     if (res.naoVerificado && res.naoVerificado.length) {
       html += '<div class="inicio-faixa-nota">Não foi possível verificar agora: ' + Inicio_esc_(res.naoVerificado.join(", ")) + '. Atualize a página para tentar de novo.</div>';
@@ -217,7 +225,77 @@
 
   function Inicio_abrirPendencia_(i) {
     var it = INICIO_ULTIMAS[i];
-    if (it) Inicio_executarAcao_(it.acao);
+    if (!it) return;
+    // grupo com várias pendências e sem tela própria do módulo: abre a lista completa já filtrada
+    if (it.qtd > 1 && (!it.acao || it.acao.tipo === "link")) { Inicio_abrirTodas_(it.tipo); return; }
+    Inicio_executarAcao_(it.acao);
+  }
+
+  function Inicio_num_(n) {
+    return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  // ------------------------------------------------------------
+  // "Ver todas as pendências": lista completa da central, por módulo, com o motivo,
+  // o que fazer e o botão que leva à tela. Usa o visual da busca rápida (.busca-*).
+  // ------------------------------------------------------------
+  var INICIO_PENDENCIAS = [];
+  var INICIO_GRAV_TXT = { CRITICO: "Crítica", ATENCAO: "Atenção", INFO: "Informação" };
+
+  function Inicio_abrirTodas_(soTipo) {
+    var painel = document.getElementById("inicioTodasPainel");
+    if (!painel) {
+      painel = document.createElement("div");
+      painel.id = "inicioTodasPainel";
+      painel.className = "busca-overlay";
+      painel.setAttribute("role", "dialog");
+      painel.setAttribute("aria-modal", "true");
+      painel.setAttribute("aria-label", "Todas as pendências");
+      painel.addEventListener("mousedown", function (e) { if (e.target === painel) Inicio_fecharTodas_(); });
+      document.body.appendChild(painel);
+    }
+    var lista = INICIO_PENDENCIAS.filter(function (p) { return !soTipo || p.tipo === soTipo; });
+    var porModulo = {}, ordem = [];
+    lista.forEach(function (p, i) {
+      if (!porModulo[p.modulo]) { porModulo[p.modulo] = { nome: p.moduloNome, itens: [] }; ordem.push(p.modulo); }
+      porModulo[p.modulo].itens.push({ p: p, i: INICIO_PENDENCIAS.indexOf(p) });
+    });
+    var corpo = ordem.map(function (m) {
+      var g = porModulo[m];
+      return '<div class="busca-grupo"><div class="busca-grupo-titulo">' + Inicio_esc_(g.nome) + '<span class="busca-grupo-total">' + Inicio_num_(g.itens.length) + '</span></div>' +
+        g.itens.map(function (x) {
+          var p = x.p, cor = p.gravidade === "CRITICO" ? "var(--danger,#b42318)" : (p.gravidade === "ATENCAO" ? "var(--warning,#b54708)" : "var(--text-3,#475467)");
+          var acao = p.tela ? '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="Inicio_abrirItemTodas_(' + x.i + ')">' + Inicio_esc_((p.tela && p.tela.rotulo) || "Abrir a tela") + '</button>' : '';
+          return '<div class="busca-item" style="cursor:default;display:block;text-align:left">' +
+            '<span class="busca-item-titulo"><span style="color:' + cor + ';font-weight:800">' + Inicio_esc_(p.rotulo || INICIO_GRAV_TXT[p.gravidade] || "") + '</span> · ' + Inicio_esc_(p.titulo) + '</span>' +
+            '<span class="busca-item-detalhe">' + Inicio_esc_(p.detalhe) + (p.responsavel ? ' Responsável: ' + Inicio_esc_(p.responsavel) + '.' : '') + '</span>' +
+            (p.oQueFazer ? '<span class="busca-item-detalhe"><strong>O que fazer:</strong> ' + Inicio_esc_(p.oQueFazer) + '</span>' : '') +
+            acao + '</div>';
+        }).join("") + '</div>';
+    }).join("");
+    if (!corpo) corpo = '<div class="busca-nota">Nada pendente para você agora.</div>';
+    painel.innerHTML =
+      '<div class="busca-caixa" style="max-height:86vh;display:flex;flex-direction:column">' +
+        '<div class="busca-campo"><i class="fas fa-list-check" aria-hidden="true"></i>' +
+          '<strong style="flex:1">' + (soTipo ? 'Pendências deste grupo' : 'Todas as pendências') + ' (' + Inicio_num_(lista.length) + ')</strong>' +
+          (soTipo ? '<button type="button" class="busca-fechar" onclick="Inicio_abrirTodas_()">Ver todas</button>' : '') +
+          '<button type="button" class="busca-fechar" onclick="Inicio_fecharTodas_()" aria-label="Fechar">Fechar</button></div>' +
+        '<div class="busca-resultados" style="overflow:auto;flex:1">' + corpo + '</div>' +
+        '<div class="busca-rodape"><span>Mesma lista usada pelo painel de alertas, pela janela ao entrar e pelo Painel de qualidade. Vencido ou vence hoje é crítico; até 30 dias é atenção.</span></div>' +
+      '</div>';
+    painel.classList.add("is-aberto");
+  }
+
+  function Inicio_fecharTodas_() {
+    var painel = document.getElementById("inicioTodasPainel");
+    if (painel) painel.classList.remove("is-aberto");
+  }
+
+  function Inicio_abrirItemTodas_(i) {
+    var p = INICIO_PENDENCIAS[i];
+    if (!p) return;
+    Inicio_fecharTodas_();
+    Inicio_executarAcao_(p.tela);
   }
 
   /** Preenche o campo de pesquisa do cadastro e roda a pesquisa que já existe. */
@@ -259,6 +337,13 @@
         break;
       case "conduta_ciencia":
         if (typeof Conduta_verificarAvisos_ === "function") Conduta_verificarAvisos_(); else abrir("conduta");
+        break;
+      case "qualidade_ciencia":
+        // cobrança da gestão: reabre a janela de avisos (Estou ciente)
+        if (typeof verificarAvisosLogin_ === "function") verificarAvisosLogin_(); else abrir("avisos");
+        break;
+      case "link":
+        if (acao.url && /^https:\/\//i.test(acao.url)) window.open(acao.url, "_blank", "noopener");
         break;
       case "cliente": Inicio_pesquisarNoCadastro_("clientes", "clientesPesquisa", "clientesPesquisar_", acao.termo); break;
       case "equipamento": Inicio_pesquisarNoCadastro_("equipamentos", "equipamentosPesquisa", "equipamentosPesquisar_", acao.termo); break;
@@ -337,7 +422,7 @@
 
   /** Telas que têm versão própria no celular (mesma lista da grade de renderMobileHome_ em JS_Core).
       As demais, no celular, só mostram "disponível apenas na versão para computador". */
-  var MENU_TELAS_CELULAR = { dashboard: 1, minhas_atividades: 1, avisos: 1, certificado_calibracao: 1, frota: 1, conduta: 1, clientes: 1, unidades: 1, equipamentos: 1, documentos: 1, chaves: 1 };
+  var MENU_TELAS_CELULAR = { dashboard: 1, minhas_atividades: 1, avisos: 1, certificado_calibracao: 1, padroes: 1, frota: 1, conduta: 1, clientes: 1, unidades: 1, equipamentos: 1, documentos: 1, chaves: 1 };
 
   /** Telas do menu (o que o perfil enxerga). */
   function Busca_telas_(termo) {
@@ -458,7 +543,9 @@
       if (painel && painel.classList.contains("is-aberto")) Busca_fechar_(); else Busca_abrir_();
     } else if (e.key === "Escape") {
       var p = document.getElementById("buscaPainel");
-      if (p && p.classList.contains("is-aberto")) { e.preventDefault(); Busca_fechar_(); }
+      if (p && p.classList.contains("is-aberto")) { e.preventDefault(); Busca_fechar_(); return; }
+      var t = document.getElementById("inicioTodasPainel");
+      if (t && t.classList.contains("is-aberto")) { e.preventDefault(); Inicio_fecharTodas_(); }
     }
   });
 </script>

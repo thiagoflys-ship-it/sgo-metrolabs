@@ -107,6 +107,19 @@
   .atv-drawer-cab h3 { margin: 0; font-size: 16px; }
   .atv-drawer-corpo { padding: 14px 18px; overflow: auto; flex: 1; }
   .atv-btn-modulo { margin-left: auto; }
+  /* Celular (fase 3, 17/10): título só na barra do topo, abas numa linha, lista em cartões */
+  #app.modo-mobile .atv-cab-titulo { display: none; }
+  #app.modo-mobile .atv-cab .module-header-right { width: 100%; }
+  #app.modo-mobile .atv-cab .module-header-right .btn-primary { flex: 1; }
+  #conteudo .motores-tabs.atv-tabs { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
+  #conteudo .motores-tabs.atv-tabs .motores-tab-btn { flex: 1 1 0; white-space: nowrap; }
+  .atv-cartoes { display: flex; flex-direction: column; gap: 10px; }
+  .atv-cartao { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 8px; padding: 10px 12px; }
+  .atv-cartao.vencida { border-left-color: var(--danger) !important; }
+  .atv-cartao-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; font-size: 12.5px; }
+  .atv-cartao .atv-acoes { margin-top: 8px; }
+  .atv-cartao .atv-acoes button { flex: 1 1 auto; min-height: 40px !important; height: auto !important; }
+  #app.modo-mobile .atv-agora-faixa .atv-resumo-faixa { margin-left: 0 !important; width: 100%; }
   @media (max-width: 900px) {
     .atv-kanban { grid-template-columns: 1fr; }
     .atv-semana { grid-template-columns: 1fr; }
@@ -160,6 +173,7 @@
     if (!d) return "";
     return Atividades_p2_(d.getDate()) + "/" + Atividades_p2_(d.getMonth() + 1) + "/" + d.getFullYear() + " " + Atividades_p2_(d.getHours()) + ":" + Atividades_p2_(d.getMinutes());
   }
+  function Atividades_pl_(n, um, varios) { return Atividades_num_(n) + " " + (Number(n) === 1 ? um : varios); }
   function Atividades_num_(n, casas) { return Number(n).toLocaleString("pt-BR", { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 }); }
   function Atividades_duracao_(desde) {
     var d = Atividades_parse_(desde);
@@ -286,7 +300,7 @@
       if (badge) {
         var n = (res.pendentes || []).length;
         badge.textContent = n ? String(n) : (res.abertas ? String(res.abertas) : "");
-        badge.title = n ? n + " atividade(s) vencida(s)" : (res.abertas ? res.abertas + " atividade(s) aberta(s)" : "");
+        badge.title = n ? Atividades_pl_(n, "atividade vencida", "atividades vencidas") : (res.abertas ? Atividades_pl_(res.abertas, "atividade aberta", "atividades abertas") : "");
         badge.classList.toggle("is-visible", !!(n || res.abertas));
         badge.style.background = n ? "var(--danger)" : "";
       }
@@ -459,8 +473,8 @@
       }).join("") || '<div class="atv-sub">Sem registros.</div>';
       var acoes = [];
       if (Atividades_podeEditar_(a, eu)) acoes.push('<button type="button" class="btn-secondary atv-mini" data-x="editar" title="Alterar título, descrição, módulo, cliente, prioridade, datas' + (eu.gestor ? " e responsável" : "") + '">Editar</button>');
-      if (aberta && souResp) acoes.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar "fazendo agora"</button>' : '<button type="button" class="btn-primary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Estou fazendo agora</button>');
-      if (aberta && a.SITUACAO !== "Em andamento") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
+      if (aberta && souResp) acoes.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar fazendo agora</button>' : '<button type="button" class="btn-secondary atv-mini" title="Marca esta como a atividade que você está executando agora" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
+      if (aberta && a.SITUACAO !== "Em andamento") acoes.push('<button type="button" class="btn-secondary atv-mini" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (aberta && a.SITUACAO !== "Aguardando") acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
       if (aberta) acoes.push('<button type="button" class="btn-primary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       if (!aberta && dono) acoes.push('<button type="button" class="btn-secondary atv-mini" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'A fazer\')">Reabrir</button>');
@@ -475,12 +489,12 @@
           linha("Módulo", Atividades_esc_(a.MODULO_NOME || (a.MODULO ? Atividades_nomeModulo_(a.MODULO) : ""))) +
           linha("Cliente", Atividades_esc_(a.CLIENTE_NOME) + (a.UNIDADE_NOME ? " · " + Atividades_esc_(a.UNIDADE_NOME) : "")) +
           linha("Início previsto", Atividades_br_(a.INICIO_PREVISTO)) + linha("Prazo", Atividades_br_(a.PRAZO)) +
-          linha("Previsão atual", a.PREVISAO_ATUAL !== a.PRAZO ? Atividades_br_(a.PREVISAO_ATUAL) + " (" + a.QTD_JUSTIFICATIVAS + " justificativa(s))" : "") +
+          linha("Previsão atual", a.PREVISAO_ATUAL !== a.PRAZO ? Atividades_br_(a.PREVISAO_ATUAL) + " (" + Atividades_pl_(a.QTD_JUSTIFICATIVAS, "justificativa", "justificativas") + ")" : "") +
           linha("Iniciada em", Atividades_br_(a.INICIADA_EM)) + linha("Concluída em", Atividades_br_(a.CONCLUIDA_EM)) +
           linha("Aguardando", a.SITUACAO === "Aguardando" ? Atividades_esc_(a.MOTIVO_AGUARDANDO) : "") +
           linha("Observação final", Atividades_esc_(a.OBS_CONCLUSAO)) +
         "</dl>" +
-        (aberta && (souResp || eu.gestor) ? '<div class="atv-campo" style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div><button type="button" class="btn-secondary atv-mini" style="height:36px!important" onclick="Atividades_salvarPercentual_(\'' + a.ID + '\')">Gravar andamento</button></div>' : "") +
+        (aberta && (souResp || eu.gestor) ? '<div class="atv-campo" style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><label for="atvPerc">Andamento (%)</label><input type="number" id="atvPerc" min="0" max="100" step="5" placeholder="0 a 100" value="' + Atividades_esc_(a.PERCENTUAL) + '"></div><button type="button" class="btn-secondary atv-mini" style="height:36px!important" onclick="Atividades_salvarPercentual_(\'' + a.ID + '\')">Gravar andamento</button></div>' : "") +
         '<div class="atv-acoes" style="margin-bottom:14px">' + acoes.join("") + "</div>" +
         '<div class="atv-campo"><label for="atvComentario">Comentário</label><textarea id="atvComentario" maxlength="4000" placeholder="Registre um andamento, dúvida ou combinado"></textarea></div>' +
         '<div style="text-align:right;margin-bottom:14px"><button type="button" class="btn-secondary atv-mini" onclick="Atividades_comentar_(\'' + a.ID + '\', this)">Comentar</button></div>' +
@@ -507,7 +521,7 @@
       function (m) { btn.disabled = false; alert(m); }, { carregando: "Registrando comentário..." });
   }
 
-  // ---------- formulário: lançar atividade ----------
+  // ---------- formulário: nova atividade ----------
   /** pre.editar = atividade já lançada: abre o mesmo formulário preenchido, em modo de edição. */
   function Atividades_abrirFormulario_(pre) {
     var p = pre || {};
@@ -539,12 +553,14 @@
           '<div class="atv-campo"><label for="atvF_ini">Início previsto</label><input id="atvF_ini" type="datetime-local"></div>' +
           '<div class="atv-campo"><label for="atvF_prazo">Prazo *</label><input id="atvF_prazo" type="datetime-local" value="' + Atividades_esc_(ed ? ed.PRAZO : Atividades_iso_(prazoPadrao)) + '"></div>' +
           '<div class="atv-campo"><label for="atvF_mod">Módulo ligado</label><select id="atvF_mod">' + mods + "</select></div>" +
-          '<div class="atv-campo"><label for="atvF_uni">Unidade</label><select id="atvF_uni"><option value="">Escolha um cliente primeiro</option></select></div>' +
         "</div>" +
-        '<div class="atv-campo"><label for="atvF_cli_busca">Cliente</label>' + SGO_htmlBuscaClienteLike_("atvF_cli", "Nome ou CNPJ do cliente (opcional)") + "</div>" +
+        '<div class="atv-grade2">' +
+          '<div class="atv-campo"><label for="atvF_cli_busca">Cliente</label>' + SGO_htmlBuscaClienteLike_("atvF_cli", "Nome ou CNPJ do cliente (opcional)") + "</div>" +
+          '<div class="atv-campo"><label for="atvF_uni">Unidade</label><select id="atvF_uni"><option value="">Escolha o cliente ao lado</option></select></div>' +
+        "</div>" +
         (ed ? '<div class="atv-sub">A situação muda pelos botões do detalhe ou arrastando no Kanban. Toda alteração fica registrada no histórico.</div>' : "");
-      var ov = Atividades_modal_(ed ? "Editar atividade" : "Lançar atividade", corpo,
-        '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">' + (ed ? "Salvar alterações" : "Lançar") + "</button>", { id: "atvFormOverlay", largura: 680 });
+      var ov = Atividades_modal_(ed ? "Editar atividade" : "Nova atividade", corpo,
+        '<button type="button" class="btn-secondary" data-x="cancelar">Cancelar</button><button type="button" class="btn-primary" data-x="ok">' + (ed ? "Salvar alterações" : "Salvar atividade") + "</button>", { id: "atvFormOverlay", largura: 680 });
       if (ed) {
         ov.dataset.editId = ed.ID;
         ov.querySelector("#atvF_titulo").value = ed.TITULO || "";
@@ -570,7 +586,7 @@
   function Atividades_carregarUnidades_(clienteId, selecionarId, selecionarNome) {
     var sel = document.getElementById("atvF_uni");
     if (!sel) return;
-    if (!clienteId) { sel.innerHTML = '<option value="">Escolha um cliente primeiro</option>'; return; }
+    if (!clienteId) { sel.innerHTML = '<option value="">Escolha o cliente ao lado</option>'; return; }
     sel.innerHTML = selecionarId ? '<option value="' + Atividades_esc_(selecionarId) + '" selected>' + Atividades_esc_(selecionarNome || "Carregando...") + "</option>" : '<option value="">Carregando...</option>';
     Atividades_chamar_("Atividades_apiUnidades", { clienteId: clienteId }, function (res) {
       var s = document.getElementById("atvF_uni"); if (!s) return;
@@ -585,7 +601,7 @@
     var v = function (id) { var el = ov.querySelector("#" + id); return el ? String(el.value || "").trim() : ""; };
     var msg = ov.querySelector("#atvFormMsg");
     var editId = ov.dataset.editId || "";
-    var verbo = editId ? "salvar a atividade" : "lançar a atividade", botaoNome = editId ? "Salvar alterações" : "Lançar";
+    var verbo = "salvar a atividade", botaoNome = editId ? "Salvar alterações" : "Salvar atividade";
     var erro = function (t, campo) { msg.innerHTML = '<div class="atv-msg erro">' + Atividades_esc_(t) + "</div>"; var el = campo && ov.querySelector("#" + campo); if (el) el.focus(); ov.querySelector(".atv-modal-corpo").scrollTop = 0; };
     var d = {
       titulo: v("atvF_titulo"), descricao: v("atvF_desc"), responsavelId: v("atvF_resp"), prioridade: v("atvF_pri"),
@@ -609,9 +625,9 @@
     }
     Atividades_chamar_("Atividades_apiCriar", d, function (res) {
       ov.remove();
-      frotaToastEnvio_(true, "Atividade lançada", res.message || "");
+      frotaToastEnvio_(true, "Atividade salva", res.message || "");
       Atividades_aposAlterar_();
-    }, function (m) { botao.disabled = false; erro(m); }, { carregando: "Lançando atividade..." });
+    }, function (m) { botao.disabled = false; erro(m); }, { carregando: "Salvando atividade..." });
   }
 
   // ---------- componentes: lista, kanban, agenda ----------
@@ -621,8 +637,8 @@
     var linhas = itens.map(function (a) {
       var aberta = Atividades_aberta_(a);
       var b = [];
-      if (aberta && o.minhas) b.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary" title="Parar de marcar como em execução" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar agora</button>' : '<button type="button" class="btn-secondary" title="Marcar como a atividade que estou executando" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
-      if (aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
+      if (aberta && o.minhas) b.push(a.AGORA_DESDE ? '<button type="button" class="btn-secondary" title="Parar de marcar como em execução" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\', false)">Parar fazendo agora</button>' : '<button type="button" class="btn-secondary" title="Marcar como a atividade que estou executando" onclick="Atividades_fazendoAgora_(\'' + a.ID + '\')">Fazendo agora</button>');
+      if (aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
       if (aberta && a.SITUACAO !== "Aguardando") b.push('<button type="button" class="btn-secondary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Aguardando\')">Aguardando</button>');
       if (aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
       if (Atividades_podeEditar_(a)) b.push('<button type="button" class="btn-secondary" title="Editar a atividade" onclick="Atividades_editarPorId_(\'' + a.ID + '\')">Editar</button>');
@@ -636,7 +652,24 @@
         "<td>" + Atividades_sitHtml_(a.SITUACAO) + (a.PERCENTUAL !== "" ? '<div class="atv-sub">' + Atividades_num_(a.PERCENTUAL) + "%</div>" : "") + "</td>" +
         '<td><div class="atv-acoes">' + b.join("") + "</div></td></tr>";
     }).join("");
-    return '<div class="list-card"><div class="table-wrap"><table class="table"><thead><tr><th>Atividade</th><th>Prioridade</th><th>Prazo / previsão</th><th>Selo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>' + linhas + "</tbody></table></div></div>";
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) return Atividades_cartoesHtml_(itens, o);
+    return '<div class="list-card"><div class="table-wrap"><table class="table"><thead><tr><th>Atividade</th><th>Prioridade</th><th>Prazo / previsão</th><th>Situação do prazo</th><th>Situação</th><th>Ações</th></tr></thead><tbody>' + linhas + "</tbody></table></div></div>";
+  }
+
+  /** Celular: um cartão por atividade (a tabela de 6 colunas não cabe em 360 px). */
+  function Atividades_cartoesHtml_(itens, o) {
+    return '<div class="atv-cartoes">' + itens.map(function (a) {
+      var aberta = Atividades_aberta_(a), venc = Atividades_vencida_(a), b = [];
+      if (aberta && a.SITUACAO !== "Em andamento") b.push('<button type="button" class="btn-secondary" title="Muda a situação para Em andamento" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Em andamento\')">Iniciar</button>');
+      if (aberta) b.push('<button type="button" class="btn-primary" onclick="Atividades_mudarSituacao_(\'' + a.ID + '\', \'Concluída\')">Concluir</button>');
+      b.push('<button type="button" class="btn-secondary" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">Detalhes</button>');
+      return '<div class="atv-cartao' + (venc ? " vencida" : "") + '" style="border-left-color:' + (ATV_CORES[a.SITUACAO] || "var(--muted)") + '">' +
+        '<button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + a.ID + '\')">' + Atividades_esc_(a.TITULO) + "</button>" +
+        '<div class="atv-sub">' + [o.mostrarResp ? Atividades_esc_(a.RESPONSAVEL_NOME) : "", Atividades_esc_(a.MODULO_NOME), Atividades_esc_(a.CLIENTE_NOME)].filter(Boolean).join(" · ") + "</div>" +
+        '<div class="atv-cartao-linha">' + Atividades_sitHtml_(a.SITUACAO) + " " + Atividades_seloHtml_(a) + (a.AGORA_DESDE ? ' <span class="atv-selo emdia">Fazendo agora</span>' : "") + "</div>" +
+        '<div class="atv-cartao-linha"><span>Prazo: ' + Atividades_prazoTexto_(a) + '</span><span class="atv-pri-' + Atividades_esc_(a.PRIORIDADE) + '">· ' + Atividades_esc_(a.PRIORIDADE) + "</span>" + (a.PERCENTUAL !== "" ? "<span>· " + Atividades_num_(a.PERCENTUAL) + "%</span>" : "") + "</div>" +
+        '<div class="atv-acoes">' + b.join("") + "</div></div>";
+    }).join("") + "</div>";
   }
 
   function Atividades_kanbanHtml_(itens, ctx, opcoes) {
@@ -734,8 +767,8 @@
       '<button type="button" class="btn-secondary atv-mini" onclick="Atividades_agendaMover_(1)" aria-label="Próximo"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>' +
       '<span class="rotulo">' + rotulo + "</span>" +
       '<span style="margin-left:auto" class="motores-tabs" role="tablist">' +
-        '<button type="button" class="motores-tab-btn' + (ATV.agendaModo === "semana" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'semana\')">Semana</button>' +
-        '<button type="button" class="motores-tab-btn' + (ATV.agendaModo === "mes" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'mes\')">Mês</button></span></div>' +
+        '<button type="button" class="motores-tab-btn atv-mini' + (ATV.agendaModo === "semana" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'semana\')">Semana</button>' +
+        '<button type="button" class="motores-tab-btn atv-mini' + (ATV.agendaModo === "mes" ? " active" : "") + '" onclick="Atividades_agendaModo_(\'mes\')">Mês</button></span></div>' +
       grade +
       '<div class="atv-legenda">Cada atividade aparece no dia da previsão de entrega; quando tem início previsto em outro dia, aparece também nesse dia com a borda tracejada.</div>';
   }
@@ -761,7 +794,7 @@
     var opt = function (v, t, atual) { return '<option value="' + v + '"' + (v === atual ? " selected" : "") + ">" + t + "</option>"; };
     div.innerHTML =
       '<div class="module-shell">' +
-        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Minhas atividades</h2>' +
+        '<div class="module-header atv-cab"><div class="module-header-left atv-cab-titulo"><h2 class="content-title">Minhas atividades</h2>' +
           '<p class="content-subtitle">O que está sob sua responsabilidade, com prazo, situação e o que você está fazendo agora.</p></div>' +
           '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova atividade</button></div></div>' +
         '<div id="atvAgoraFaixa" class="atv-agora-faixa vazia">Carregando...</div>' +
@@ -814,7 +847,7 @@
     if (faixa) {
       faixa.className = "atv-agora-faixa" + (atual ? "" : " vazia");
       var vencidas = ATV.minhas.filter(Atividades_vencida_).length, abertas = ATV.minhas.filter(Atividades_aberta_).length;
-      var resumo = '<span style="margin-left:auto" class="atv-sub">' + Atividades_num_(abertas) + " aberta(s)" + (vencidas ? ' · <b style="color:var(--danger)">' + Atividades_num_(vencidas) + " vencida(s)</b>" : "") + "</span>";
+      var resumo = '<span style="margin-left:auto" class="atv-sub atv-resumo-faixa">' + Atividades_pl_(abertas, "aberta", "abertas") + (vencidas ? ' · <b style="color:var(--danger)">' + Atividades_pl_(vencidas, "vencida", "vencidas") + "</b>" : "") + "</span>";
       faixa.innerHTML = atual
         ? '<i class="fas fa-person-digging" aria-hidden="true" style="color:var(--info)"></i><span>Fazendo agora: <button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + atual.ID + '\')">' + Atividades_esc_(atual.TITULO) + "</button> <span class=\"atv-sub\">" + Atividades_duracao_(atual.AGORA_DESDE) + '</span></span><button type="button" class="btn-secondary atv-mini" onclick="Atividades_fazendoAgora_(\'' + atual.ID + '\', false)">Parar</button>' + resumo
         : '<i class="fas fa-circle-pause" aria-hidden="true"></i><span>Nenhuma atividade marcada como "fazendo agora". Use o botão Fazendo agora na atividade que você está executando.</span>' + resumo;
@@ -855,10 +888,10 @@
     if (!f.ate) { var d1 = new Date(); d1.setDate(d1.getDate() + 30); f.ate = Atividades_diaIso_(d1); }
     div.innerHTML =
       '<div class="module-shell">' +
-        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Atividades da equipe</h2>' +
+        '<div class="module-header atv-cab"><div class="module-header-left atv-cab-titulo"><h2 class="content-title">Atividades da equipe</h2>' +
           '<p class="content-subtitle">Quem está fazendo o quê agora, prazos, justificativas de atraso e o andamento em Gantt e Kanban. Atualiza sozinho a cada 30 segundos.</p></div>' +
           '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-secondary" onclick="Atividades_carregarEquipe_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
-          '<button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Lançar atividade</button></div></div>' +
+          '<button type="button" class="btn-primary" onclick="Atividades_abrirFormulario_()"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova atividade</button></div></div>' +
         '<div id="atvEqInd" class="atv-ind"></div>' +
         '<div class="atv-duas"><div class="atv-caixa"><h3>Agora</h3><div id="atvEqAgora" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div>' +
           '<div class="atv-caixa"><h3>Justificativas recentes</h3><div id="atvEqJust" class="atv-lista-rolagem"><div class="atv-sub">Carregando...</div></div></div></div>' +
@@ -867,7 +900,7 @@
           '<div><label for="atvEqAte">até</label><input type="date" id="atvEqAte" value="' + f.ate + '" onchange="Atividades_filtrarEquipe_()"></div>' +
           '<div><label for="atvEqPessoa">Pessoa</label><select id="atvEqPessoa" onchange="Atividades_filtrarEquipe_()"><option value="">Todas</option></select></div>' +
           '<div><label for="atvEqMod">Módulo</label><select id="atvEqMod" onchange="Atividades_filtrarEquipe_()"><option value="">Todos</option><option value="-">Sem módulo</option>' + Atividades_modulosDoMenu_().map(function (m) { return '<option value="' + Atividades_esc_(m.chave) + '"' + (m.chave === f.modulo ? " selected" : "") + ">" + Atividades_esc_(m.nome) + "</option>"; }).join("") + "</select></div>" +
-          '<div><label for="atvEqAgrupar">Gantt por</label><select id="atvEqAgrupar" onchange="Atividades_filtrarEquipe_()"><option value="colaborador"' + (f.agrupar === "colaborador" ? " selected" : "") + '>Colaborador</option><option value="atividade"' + (f.agrupar === "atividade" ? " selected" : "") + ">Atividade</option></select></div>" +
+          '<div id="atvEqAgruparCampo"' + (ATV.equipeAba === "gantt" ? "" : ' style="display:none"') + '><label for="atvEqAgrupar">Gantt por</label><select id="atvEqAgrupar" onchange="Atividades_filtrarEquipe_()"><option value="colaborador"' + (f.agrupar === "colaborador" ? " selected" : "") + '>Colaborador</option><option value="atividade"' + (f.agrupar === "atividade" ? " selected" : "") + ">Atividade</option></select></div>" +
         "</div>" +
         '<div class="motores-tabs atv-tabs" id="atvEqTabs">' +
           ["gantt", "kanban", "lista"].map(function (a) { return '<button type="button" class="motores-tab-btn' + (ATV.equipeAba === a ? " active" : "") + '" data-aba="' + a + '" onclick="Atividades_trocarAbaEquipe_(\'' + a + '\')">' + { gantt: "Gantt", kanban: "Kanban da equipe", lista: "Lista" }[a] + "</button>"; }).join("") + "</div>" +
@@ -881,6 +914,7 @@
   function Atividades_trocarAbaEquipe_(aba) {
     ATV.equipeAba = aba;
     document.querySelectorAll("#atvEqTabs .motores-tab-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.aba === aba); });
+    var campoG = document.getElementById("atvEqAgruparCampo"); if (campoG) campoG.style.display = aba === "gantt" ? "" : "none";
     Atividades_desenharEquipeCorpo_();
   }
 
@@ -994,7 +1028,7 @@
         if (!placed) g.faixas.push({ fim: Atividades_fimBarra_(a), itens: [a] });
       });
       ordem.sort(function (p, q) { return grupos[p].nome.localeCompare(grupos[q].nome); }).forEach(function (k) {
-        grupos[k].faixas.forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].nome : "", sub: i === 0 ? grupos[k].faixas.reduce(function (s, z) { return s + z.itens.length; }, 0) + " atividade(s)" : "", itens: fx.itens, grupo: i === 0 }); });
+        grupos[k].faixas.forEach(function (fx, i) { linhas.push({ rotulo: i === 0 ? grupos[k].nome : "", sub: i === 0 ? Atividades_pl_(grupos[k].faixas.reduce(function (s, z) { return s + z.itens.length; }, 0), "atividade", "atividades") : "", itens: fx.itens, grupo: i === 0 }); });
       });
     }
     var H = cabH + linhas.length * linhaH + 10;
@@ -1050,7 +1084,7 @@
     if (agora >= ini && agora <= fim) {
       var xh = x(Atividades_agoraIso_());
       s.push('<line x1="' + xh.toFixed(1) + '" y1="' + (cabH - 4) + '" x2="' + xh.toFixed(1) + '" y2="' + H + '" stroke="#1E4F7A" stroke-width="2"/>');
-      s.push('<text x="' + (xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje</text>');
+      s.push('<text x="' + (xh + 3).toFixed(1) + '" y="' + (cabH - 22) + '" font-size="10" font-weight="700" fill="#1E4F7A">hoje ' + Atividades_p2_(agora.getDate()) + "/" + Atividades_p2_(agora.getMonth() + 1) + '</text>');
     }
     s.push("</svg>");
     var leg = ATV_SITUACOES_KANBAN.map(function (k) { return '<span><i style="background:' + ATV_CORES[k] + '"></i>' + k + "</span>"; }).join("") +

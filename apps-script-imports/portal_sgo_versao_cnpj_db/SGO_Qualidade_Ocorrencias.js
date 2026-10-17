@@ -55,6 +55,7 @@ function Qualidade_apiRegistrarOcorrencia(sessionId, payload) {
     })
   );
   SGO_DATA.insert(QUALIDADE_OCORRENCIAS_SHEET, registro);
+  if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
   SGO_DATA.log('QUALIDADE_OCORRENCIA_REGISTRAR', sessao.usuario, tipo + ' — ' + pessoaNome, 'QUALIDADE');
   // 16/10/2026: o aviso ao entrar só chega a quem tem login ligado ao registro
   // (técnico = usuário do SGO; condutor = condutor vinculado a um login). Sem
@@ -89,6 +90,7 @@ function Qualidade_apiResolverOcorrencia(sessionId, payload) {
   var oc = SGO_DATA.getById(QUALIDADE_OCORRENCIAS_SHEET, id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
   SGO_DATA.update(QUALIDADE_OCORRENCIAS_SHEET, id, { STATUS: QUALIDADE_OCORRENCIAS_STATUS.RESOLVIDA, RESOLVIDO_EM: SGO_UTILS.nowIso() });
+  if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
   return { ok: true };
 }
 
@@ -156,7 +158,49 @@ function Qualidade_apiObterAvisosLogin(sessionId) {
     return SGO_UTILS.safeUpper(o.TIPO) === 'ELOGIO' && String(o.CRIADO_EM || '') >= limiteElogio;
   }).sort(function(a, b) { return String(b.CRIADO_EM || '').localeCompare(String(a.CRIADO_EM || '')); });
 
-  return { ok: true, cobrancas: cobrancas, elogios: elogios };
+  // 17/10/2026: a janela ao entrar também resume as pendências CRÍTICAS da central (SGO_Alertas_Central.js),
+  // as mesmas do Início. Só entra o que não tem janela própria (atividade atrasada, aviso com ciência,
+  // Conduta e cobrança já abrem sozinhos) e o balão de padrões, para quem já recebe esse balão.
+  var resumo = null;
+  try {
+    var pend = SGO_Pendencias_listar(sessionId, {});
+    resumo = { total: pend.resumo.total, criticos: pend.resumo.criticos, geradoEm: pend.geradoEm };
+    var item = Qualidade_itemResumoPendencias_(sessao, pend);
+    if (item) cobrancas = [item].concat(cobrancas);
+  } catch (e) { resumo = null; }
+
+  return { ok: true, cobrancas: cobrancas, elogios: elogios, pendencias: resumo };
+}
+
+var QUALIDADE_PEND_VISTO_PREFIXO = 'PEND_LOGIN_VISTO_';
+
+/** Item "Pendências críticas" para a janela ao entrar (formato de cobrança; ID começa com PEND:). null = nada a mostrar. */
+function Qualidade_itemResumoPendencias_(sessao, pend) {
+  var perfil = SGO_UTILS.safeUpper(sessao.perfil);
+  var balaoPadroes = false;
+  try { var cfg = AlertasPadroes_config_(); balaoPadroes = !!cfg.ativo && (cfg.perfis || []).indexOf(perfil) >= 0; } catch (e) {}
+  var grupos = (pend.grupos || []).filter(function(g) {
+    if (g.gravidade !== 'CRITICO') return false;
+    if (PEND_TIPOS_COM_JANELA_PROPRIA.indexOf(g.tipo) >= 0) return false;
+    if (balaoPadroes && g.modulo === 'padroes') return false;
+    return true;
+  });
+  if (!grupos.length) return null;
+  var ids = [];
+  grupos.forEach(function(g) { ids = ids.concat(g.ids || []); });
+  var assinatura = Pend_hash_(ids.sort().join('|'));
+  try {
+    if (CacheService.getScriptCache().get(QUALIDADE_PEND_VISTO_PREFIXO + sessao.userId) === assinatura) return null;
+  } catch (e) {}
+  var n = grupos.reduce(function(s, g) { return s + (g.criticos || g.qtd); }, 0);
+  var linhas = grupos.slice(0, 5).map(function(g) { return g.titulo + (g.qtd > 1 ? ' (' + Pend_listaCurta_([g.detalhe.split(' · ')[0]], 1) + ')' : '') + ': ' + (g.oQueFazer || '').replace(/\.$/, ''); });
+  return {
+    ID: 'PEND:' + assinatura,
+    TIPO: 'PENDENCIAS',
+    DESCRICAO: (n === 1 ? 'Há 1 pendência crítica no SGO+. ' : 'Há ' + n + ' pendências críticas no SGO+. ') + linhas.join('. ') +
+      (grupos.length > 5 ? '. E mais ' + (grupos.length - 5) + ' grupo(s)' : '') +
+      '. A lista completa, com o motivo e o que fazer em cada uma, está no Início (Ver todas as pendências).'
+  };
 }
 
 function Qualidade_apiMarcarCiencia(sessionId, payload) {
@@ -164,6 +208,12 @@ function Qualidade_apiMarcarCiencia(sessionId, payload) {
   Qualidade_bootstrapOcorrencias_();
   payload = payload || {};
   var id = SGO_UTILS.safe(payload.ocorrenciaId);
+  // Resumo de pendências da janela ao entrar: "Estou ciente" só deixa de mostrar o mesmo conjunto
+  // de pendências por 20 horas (nada é gravado na planilha; a pendência continua no Início).
+  if (id.indexOf('PEND:') === 0) {
+    try { CacheService.getScriptCache().put(QUALIDADE_PEND_VISTO_PREFIXO + sessao.userId, id.slice(5), 72000); } catch (e) {}
+    return { ok: true };
+  }
   var oc = SGO_DATA.getById(QUALIDADE_OCORRENCIAS_SHEET, id);
   if (!oc) throw new Error('Ocorrência não encontrada.');
 
@@ -175,5 +225,6 @@ function Qualidade_apiMarcarCiencia(sessionId, payload) {
   if (!ehMinha) throw new Error('Essa ocorrência não pertence a você.');
 
   SGO_DATA.update(QUALIDADE_OCORRENCIAS_SHEET, id, { CIENTE_EM: SGO_UTILS.nowIso() });
+  if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
   return { ok: true };
 }

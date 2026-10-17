@@ -125,7 +125,20 @@ function Avisos_lista_(v) {
 function Avisos_comTrava_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  try { return fn(); } finally { try { SpreadsheetApp.flush(); } catch (e) {} lock.releaseLock(); }
+  try { return fn(); } finally {
+    try { SpreadsheetApp.flush(); } catch (e) {}
+    lock.releaseLock();
+    // toda gravação dos avisos passa por aqui: o Início e a janela ao entrar recalculam as pendências
+    if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+  }
+}
+
+// Mesmo aviso publicado de novo em seguida (duplo clique) e reenvio em seguida não repetem e-mail/WhatsApp.
+var AVS_JANELA_REPETICAO_MIN = 10;
+
+/** "aaaa-mm-ddThh:mm:ss" de N minutos atrás (horário de Brasília). */
+function Avisos_haMinutos_(min) {
+  return Utilities.formatDate(new Date(Date.now() - min * 60000), AVS_FUSO, "yyyy-MM-dd'T'HH:mm:ss");
 }
 
 /** Resposta padrão; as notificações (e-mail/WhatsApp) saem depois de gravar e de soltar a trava. */
@@ -416,6 +429,12 @@ function Avisos_apiPublicar(sessionId, payload) {
 
     var res = Avisos_comTrava_(function () {
       var agora = Avisos_agora_();
+      // 17/10/2026: o mesmo aviso (mesma pessoa, título e texto) publicado há poucos minutos não é publicado de novo
+      var limiteRepeticao = Avisos_haMinutos_(AVS_JANELA_REPETICAO_MIN);
+      var repetido = Avisos_todos_().filter(function (a) {
+        return String(a.PUBLICADO_POR_ID) === eu.id && a.TITULO === titulo && a.TEXTO === texto && a.PUBLICADO_EM >= limiteRepeticao;
+      })[0];
+      if (repetido) return { id: repetido.ID, repetido: true };
       var reg = SGO_DATA.insert(Avisos_abas_().AVISOS, {
         TITULO: titulo, TEXTO: texto, IMPORTANCIA: importancia, PUBLICO_TIPO: tipoPublico,
         PUBLICO_PERFIS: perfis.join(','), PUBLICO_IDS: escolhidos.join(','), DESTINATARIOS_IDS: ids.join(','),
@@ -435,6 +454,9 @@ function Avisos_apiPublicar(sessionId, payload) {
       return { id: reg.ID };
     });
 
+    if (res.repetido) {
+      return { id: res.id, destinatarios: ids.length, repetido: true, message: 'Este aviso já tinha sido publicado por você há menos de ' + AVS_JANELA_REPETICAO_MIN + ' minutos; não foi publicado nem enviado de novo. Ele está no painel de Avisos.' };
+    }
     notificar(Avisos_mensagem_({ ID: res.id, TITULO: titulo, TEXTO: texto, IMPORTANCIA: importancia, PRAZO_CIENCIA: prazo, PUBLICADO_POR_NOME: eu.nome, QTD_ANEXOS: anexos.length }, ids, false));
     return { id: res.id, destinatarios: ids.length, message: 'Aviso publicado para ' + ids.length + ' pessoa(s). Elas verão a janela ao entrar no SGO+ e receberão por e-mail e WhatsApp.' };
   });
@@ -522,6 +544,9 @@ function Avisos_apiReenviar(sessionId, payload) {
     var r = Avisos_comTrava_(function () {
       var a = Avisos_obter_(payload && payload.id);
       if (a.SITUACAO !== 'PUBLICADO') throw new Error('Não foi possível reenviar: o aviso está arquivado. Reative o aviso no painel antes de reenviar.');
+      if (a.ULTIMO_REENVIO_EM && a.ULTIMO_REENVIO_EM >= Avisos_haMinutos_(AVS_JANELA_REPETICAO_MIN)) {
+        throw new Error('Não foi possível reenviar agora: este aviso já foi reenviado às ' + a.ULTIMO_REENVIO_EM.slice(11, 16) + '. Para não mandar o mesmo lembrete duas vezes, aguarde ' + AVS_JANELA_REPETICAO_MIN + ' minutos e clique em Reenviar de novo.');
+      }
       var ciencias = Avisos_ciencias_(null, a.ID);
       var ativos = {};
       Avisos_usuariosAtivos_().forEach(function (u) { ativos[u.id] = true; });

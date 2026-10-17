@@ -1202,8 +1202,8 @@
     setTxt("dashCountEquipamentos", t.equipamentos);
     setTxt("dashCountDocumentos", t.documentos);
     setTxt("dashCountUnidades", t.unidades);
-    setTxt("dashcVencendo30", res.vencendo30 || 0);
-    setTxt("dashcVencendo30Txt", Number(res.vencendo30 || 0) === 1 ? "documento vencido ou vencendo em 30 dias" : "documentos vencidos ou vencendo em 30 dias");
+    // dashcVencendo30 (documentos vencidos ou vencendo em 30 dias) é preenchido por carregarAlertasDashboard_,
+    // com a contagem da central de pendências (17/10/2026), igual ao painel de alertas e ao Início.
 
     // ---- clientes recentes ----
     const elRec = document.getElementById("dashcClientesRecentes");
@@ -1392,6 +1392,13 @@
     }
   }
 
+  var DASH_ALERTAS_ITENS = [];
+  /** Leva à tela do alerta (mesma ação do Início: JS_Inicio.html › Inicio_executarAcao_). */
+  function dashAbrirAlerta_(i) {
+    const a = DASH_ALERTAS_ITENS[i];
+    if (a && a.tela && typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(a.tela);
+  }
+
   function carregarAlertasDashboard_() {
     const container = document.getElementById("dashboardAlertas");
     const kpiAlertas = document.getElementById("kpiAlertas");
@@ -1401,29 +1408,41 @@
       if (kpiAlertas) kpiAlertas.innerText = String(n);
       if (kpiAlertasTxt) kpiAlertasTxt.innerText = n === 1 ? "alerta vencido" : "alertas vencidos";
     }
+    // 17/10/2026: documentos, calibrações e NR-13 vencidos ou vencendo em 30 dias pela central de pendências
+    // (documento renovado substitui o anterior) — o mesmo número do Início e da ponte com o COMMAND.
+    function contarDocumentos_(itens) {
+      const n = (itens || []).filter(function (a) { return a.origem === "DOCUMENTO"; }).length;
+      const el = document.getElementById("dashcVencendo30"), tx = document.getElementById("dashcVencendo30Txt");
+      if (el) el.textContent = String(n);
+      if (tx) tx.textContent = n === 1 ? "documento vencido ou vencendo em 30 dias" : "documentos vencidos ou vencendo em 30 dias";
+    }
 
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success || !res.items || res.items.length === 0) {
           container.innerHTML = '<div style="padding:12px; border-radius:8px; background:var(--success-bg); color:var(--success); border:1px solid #a6f4c5; font-weight:700; font-size:13px;">Nenhum alerta de vencimento: documentos, padrões e frota em dia.</div>';
           contarCriticos_(0);
+          contarDocumentos_([]);
           renderizarAlertaFrotaDashboard_([]);
           return;
         }
 
         let criticos = 0;
-        const html = res.items.map(function (a) {
+        DASH_ALERTAS_ITENS = res.items;
+        const html = res.items.map(function (a, i) {
           const isCritico = a.tipo === "CRÍTICO";
           if (isCritico) criticos++;
           const bg = isCritico ? "var(--danger-bg)" : "var(--warning-bg)";
           const color = isCritico ? "var(--danger)" : "var(--warning)";
           const border = isCritico ? "var(--bc-danger-line)" : "var(--bc-warn-line)";
-          const selo = isCritico ? "Vencido" : "A vencer";
-          return `<div style="padding:12px; border-radius:8px; background:${bg}; color:${color}; border:1px solid ${border}; margin-bottom:10px; font-weight:700; font-size:13px;"><span style="display:inline-block; padding:1px 8px; margin-right:6px; border-radius:10px; border:1px solid currentColor; font-size:11px;">${selo}</span>${escapeHtml_(a.mensagem)}</div>`;
+          const selo = a.rotulo || (isCritico ? "Vencido" : "A vencer");
+          const abrirTela = a.tela && typeof Inicio_executarAcao_ === "function" ? ` <button type="button" onclick="dashAbrirAlerta_(${i})" style="margin-left:6px; padding:2px 10px; border-radius:6px; border:1px solid currentColor; background:transparent; color:inherit; font-weight:700; font-size:12px; cursor:pointer;">Abrir</button>` : "";
+          return `<div style="padding:12px; border-radius:8px; background:${bg}; color:${color}; border:1px solid ${border}; margin-bottom:10px; font-weight:700; font-size:13px;"><span style="display:inline-block; padding:1px 8px; margin-right:6px; border-radius:10px; border:1px solid currentColor; font-size:11px;">${escapeHtml_(selo)}</span>${escapeHtml_(a.mensagem)}${abrirTela}</div>`;
         }).join("");
 
         container.innerHTML = html;
         contarCriticos_(criticos);
+        contarDocumentos_(res.items);
         renderizarAlertaFrotaDashboard_(res.items);
       })
       .withFailureHandler(function (err) {

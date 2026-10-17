@@ -135,7 +135,12 @@ function Atividades_texto_(v, max) {
 function Atividades_comTrava_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  try { return fn(); } finally { try { SpreadsheetApp.flush(); } catch (e) {} lock.releaseLock(); }
+  try { return fn(); } finally {
+    try { SpreadsheetApp.flush(); } catch (e) {}
+    lock.releaseLock();
+    // toda gravação das atividades passa por aqui: o Início e o painel recalculam as pendências
+    if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+  }
 }
 
 // E-mail/WhatsApp (SGO_Notificar.js) pedidos durante a chamada: só saem depois que
@@ -408,12 +413,12 @@ function Atividades_apiCriar(sessionId, payload) {
     var eu = Atividades_sessao_(sessionId);
     var p = payload || {};
     var titulo = Atividades_texto_(p.titulo, 200);
-    if (titulo.length < 3) throw new Error('Não foi possível lançar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito (mínimo 3 letras) e clique em Lançar de novo.');
+    if (titulo.length < 3) throw new Error('Não foi possível salvar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito (mínimo 3 letras) e clique em Salvar atividade de novo.');
     var prazo = Atividades_normData_(p.prazo, '18:00');
-    if (!prazo) throw new Error('Não foi possível lançar a atividade: o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em Lançar de novo.');
+    if (!prazo) throw new Error('Não foi possível salvar a atividade: o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em Salvar atividade de novo.');
     var inicio = Atividades_normData_(p.inicioPrevisto, '08:00');
-    if (p.inicioPrevisto && !inicio) throw new Error('Não foi possível lançar a atividade: o início previsto é inválido. Corrija a data ou deixe o campo vazio.');
-    if (inicio && inicio > prazo) throw new Error('Não foi possível lançar a atividade: o início previsto está depois do prazo. Ajuste uma das duas datas e clique em Lançar de novo.');
+    if (p.inicioPrevisto && !inicio) throw new Error('Não foi possível salvar a atividade: o início previsto é inválido. Corrija a data ou deixe o campo vazio.');
+    if (inicio && inicio > prazo) throw new Error('Não foi possível salvar a atividade: o início previsto está depois do prazo. Ajuste uma das duas datas e clique em Salvar atividade de novo.');
     var prioridade = ATV_PRIORIDADES.indexOf(p.prioridade) >= 0 ? p.prioridade : 'Normal';
 
     var respId = SGO_UTILS.safe(p.responsavelId) || eu.id;

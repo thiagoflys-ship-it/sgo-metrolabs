@@ -9,6 +9,25 @@
  * projeto, não vale arriscar interpretar errado.
  ****************************************************/
 
+/**
+ * O que falta no registro de uma O.S. concluída (relato, foto, check-in, check-out,
+ * questionário). opcoes.semVinculo=true também aponta "vínculo Portal ausente" (o painel
+ * mostra); a central de pendências (SGO_Alertas_Central.js) passa false porque O.S. sem
+ * vínculo é pendência própria do Auvo — assim a mesma falta não conta duas vezes.
+ */
+function QualidadeAuvo_motivosTarefa_(t, opcoes) {
+  var motivos = [];
+  var questionarioVazio = true;
+  try { var arr = JSON.parse(t.QUESTIONARIO_JSON || '[]'); questionarioVazio = !Array.isArray(arr) || arr.length === 0; } catch (e) { questionarioVazio = true; }
+  if (!SGO_UTILS.safe(t.RELATO_SERVICO)) motivos.push('relato ausente');
+  if (!(Number(t.QTD_FOTOS) > 0)) motivos.push('foto ausente');
+  if (!SGO_UTILS.safe(t.CHECKIN_EM)) motivos.push('check-in ausente');
+  if (!SGO_UTILS.safe(t.CHECKOUT_EM)) motivos.push('check-out ausente');
+  if (questionarioVazio) motivos.push('questionário vazio');
+  if (opcoes && opcoes.semVinculo && (!t.CLIENTE_ID_SGO || !t.TECNICO_ID_SGO)) motivos.push('vínculo Portal ausente');
+  return motivos;
+}
+
 // `desde` (Date, opcional) — quando informado, só entram tarefas com
 // DATA_TAREFA >= desde. Painel (sem período) chama sem argumento e vê tudo;
 // o relatório A4 (Qualidade_Relatorio.js) passa a data de corte do período.
@@ -80,7 +99,7 @@ function QualidadeAuvo_coletar_(desde) {
       if (!porTecnico[chaveTecnico]) porTecnico[chaveTecnico] = { id: t.TECNICO_ID_SGO || '', nome: nomeTecnico_(t), qtd: 0, avaliadas:0, semRelato: 0, semFoto: 0 };
       porTecnico[chaveTecnico].qtd++;
       if(finalizada){porTecnico[chaveTecnico].avaliadas++;if (!SGO_UTILS.safe(t.RELATO_SERVICO)) porTecnico[chaveTecnico].semRelato++;if (!(Number(t.QTD_FOTOS) > 0)) porTecnico[chaveTecnico].semFoto++;}
-      if(finalizada){var motivos=[];if(!SGO_UTILS.safe(t.RELATO_SERVICO))motivos.push('relato ausente');if(!(Number(t.QTD_FOTOS)>0))motivos.push('foto ausente');if(!SGO_UTILS.safe(t.CHECKIN_EM))motivos.push('check-in ausente');if(!SGO_UTILS.safe(t.CHECKOUT_EM))motivos.push('check-out ausente');if(questionarioVazio_(t.QUESTIONARIO_JSON))motivos.push('questionário vazio');if(!t.CLIENTE_ID_SGO||!t.TECNICO_ID_SGO)motivos.push('vínculo Portal ausente');if(motivos.length&&pendenciasDetalhadas.length<30)pendenciasDetalhadas.push({os:String(t.AUVO_TASK_ID||''),tecnico:nomeTecnico_(t),cliente:nomeCliente_(t),data:String(t.DATA_TAREFA||''),motivos:motivos,link:String(t.TASK_URL||'')});}
+      if(finalizada){var motivos=QualidadeAuvo_motivosTarefa_(t,{semVinculo:true});if(motivos.length&&pendenciasDetalhadas.length<30)pendenciasDetalhadas.push({os:String(t.AUVO_TASK_ID||''),tecnico:nomeTecnico_(t),cliente:nomeCliente_(t),data:String(t.DATA_TAREFA||''),motivos:motivos,link:String(t.TASK_URL||'')});}
 
       var checkin = parseData_(t.CHECKIN_EM), checkout = parseData_(t.CHECKOUT_EM);
       if (checkin && checkout && checkout > checkin) {

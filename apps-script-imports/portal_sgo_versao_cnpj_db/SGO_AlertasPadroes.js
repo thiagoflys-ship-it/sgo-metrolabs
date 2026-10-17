@@ -83,6 +83,7 @@ function alertasPadroesSalvarConfigAdmin(sessionId, dados) {
     var sessao = AlertasPadroes_exigirAdmin_(sessionId);
     var config = AlertasPadroes_normalizarConfig_(dados);
     PropertiesService.getScriptProperties().setProperty(SGO_ALERTAS_PADROES_PROP, JSON.stringify(config));
+    if (typeof SGO_Pendencias_invalidar_ === "function") SGO_Pendencias_invalidar_(); // antecedência mudou: recalcula para todos
     SGO_DATA.log("ALERTAS_PADROES_CONFIG", sessao.usuario, "Configuração de alertas de calibração atualizada.", "ALERTAS");
     return { success: true, config: config, message: "Configurações salvas com sucesso." };
   } catch (e) {
@@ -104,16 +105,10 @@ function alertasPadroesObterEstado(sessionId, forcarTeste) {
       return { success: true, exibir: false, foraHorario: true, config: config };
     }
 
-    var padroes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_PADROES).filter(function (p) {
-      return SGO_UTILS.safeUpper(p.STATUS) === "ATIVO";
-    });
-    var vencidos = 0, invalidos = 0, vencendo = 0;
-    padroes.forEach(function (p) {
-      var validade = CertCal_classificarValidadePadrao_(p.VALIDADE);
-      if (validade.diasRestantes === null) invalidos++;
-      else if (Number(validade.diasRestantes) < 0) vencidos++;
-      else if (Number(validade.diasRestantes) <= config.antecedenciaDias) vencendo++;
-    });
+    // 17/10/2026: contagem da central de pendências (SGO_Alertas_Central.js), a mesma do Início e do
+    // painel de alertas. "Vence hoje" conta como vencido (a emissão de certificado já bloqueia o padrão).
+    var porTipo = SGO_Pendencias_listar(sessionId, {}).resumo.porTipo || {};
+    var vencidos = porTipo.padrao_vencido || 0, invalidos = porTipo.padrao_sem_validade || 0, vencendo = porTipo.padrao_vencendo || 0;
     var total = vencidos + invalidos + vencendo;
     return {
       success: true,
