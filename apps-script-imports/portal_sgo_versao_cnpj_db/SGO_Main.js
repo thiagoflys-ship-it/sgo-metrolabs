@@ -147,11 +147,19 @@ function obterDashboardDetalhado(sessionId) {
     // ---- Documentos a vencer (vencidos ou nos próximos 60 dias) ----
     const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
     const limite = new Date(hoje.getTime() + 60 * 24 * 3600 * 1000);
-    const docsAVencer = documentos
-      .map(function (d) {
-        const venc = parseData_(d.DATA_VENCIMENTO);
-        return venc ? { doc: d, venc: venc } : null;
-      })
+    // mesma regra da central de pendências: por equipamento e tipo vale o vencimento mais recente (renovado substitui)
+    const ultimoPorChave = {};
+    documentos.forEach(function (d) {
+      if (SGO_UTILS.safeUpper(d.STATUS || "ATIVO") !== "ATIVO") return;
+      const venc = parseData_(d.DATA_VENCIMENTO);
+      if (!venc) return;
+      const eq = SGO_UTILS.safe(d.EQUIPAMENTO_ID);
+      const tipo = SGO_UTILS.safe(d.TIPO_DOCUMENTO).replace(/^\d+\.\s*/, "").toLowerCase().replace(/\s+/g, " ");
+      const chave = eq ? eq + "|" + tipo : "ID:" + SGO_UTILS.safe(d.ID);
+      if (!ultimoPorChave[chave] || venc > ultimoPorChave[chave].venc) ultimoPorChave[chave] = { doc: d, venc: venc };
+    });
+    const docsAVencer = Object.keys(ultimoPorChave)
+      .map(function (k) { return ultimoPorChave[k]; })
       .filter(function (x) { return x && x.venc <= limite; })
       .sort(function (a, b) { return a.venc - b.venc; })
       .slice(0, 6)
