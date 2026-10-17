@@ -756,6 +756,25 @@ function Auvo_apiDispatch(req) {
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
+  // Fase 2 (16/10): as ferramentas de implantação (envio em lote, importação completa, auditoria
+  // e envio de cadastro pendente) gravam muito no Auvo ou no SGO+ de uma vez: só o Administrador.
+  // O uso diário (conexão, sincronização automática, pendências e relatório) continua para a gestão.
+  var soAdmin = {
+    apiListarClientesParaSync: 1, apiListarUsuariosParaSync: 1, apiDefinirEmailUsuario: 1,
+    apiSincronizarCliente: 1, apiSincronizarTecnico: 1, apiSincronizarTodosClientes: 1, apiSincronizarTodosTecnicos: 1,
+    apiBuscarClienteParaSync: 1, apiBuscarTecnicoParaSync: 1,
+    apiSimularSincronizacaoReversa: 1, apiIniciarSincronizacaoReversa: 1, apiContinuarSincronizacaoReversa: 1,
+    apiStatusSincronizacaoReversa: 1, apiAtivarSincronizacaoDiaria: 1, apiAuditarNomesParecidos: 1,
+    apiSimularEnvioCadastro: 1, apiEnviarUnidadesPendentes: 1, apiIniciarEnvioEquipamentos: 1, apiContinuarEnvioEquipamentos: 1
+  };
+  if (soAdmin[fn]) {
+    var sessaoAuvo = validarSessao(String(req.sessionId || ''));
+    var perfilAuvo = String((sessaoAuvo && sessaoAuvo.data && sessaoAuvo.data.perfil) || '').toUpperCase();
+    if (perfilAuvo !== 'ADMIN') {
+      throw new Error('Esta ferramenta de implantação do Auvo é exclusiva do Administrador. Peça a ele para executá-la (Integração Auvo › Ferramentas de implantação).');
+    }
+  }
+
   return allow[fn](req.sessionId, payload);
 }
 

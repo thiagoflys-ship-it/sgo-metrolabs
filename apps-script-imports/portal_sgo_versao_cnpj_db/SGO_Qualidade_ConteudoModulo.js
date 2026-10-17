@@ -29,7 +29,9 @@ var QUALIDADE_CONTEUDO_MODULO = `<style>
   color: var(--text) !important;
 }
 #tplQualidadeContainer .wrap { padding: 18px; }
-#tplQualidadeContainer .toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 14px; }
+#tplQualidadeContainer .toolbar { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+#tplQualidadeContainer .toolbar select { width: auto; flex: 0 0 auto; }
+#tplQualidadeContainer .vazio-orienta { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 6px 0 0; }
 #tplQualidadeContainer .btn { border: 1px solid var(--border-strong); background: var(--input); color: var(--text); border-radius: var(--radius-sm); padding: 8px 14px; font-weight: 700; font-size: 12.5px; cursor: pointer; }
 #tplQualidadeContainer .btn:hover { background: #FFFFFF; }
 #tplQualidadeContainer .btn-mini { border: 1px solid var(--border-strong); background: var(--input); color: var(--text); border-radius: 6px; padding: 3px 9px; font-weight: 700; font-size: 10.5px; cursor: pointer; white-space: nowrap; }
@@ -37,10 +39,10 @@ var QUALIDADE_CONTEUDO_MODULO = `<style>
 #tplQualidadeContainer .btn-mini.elogio { border-color: var(--bc-action-line); color: var(--accent); }
 #tplQualidadeContainer .btn-mini.cobranca { border-color: var(--bc-danger-line); color: var(--danger); }
 
-#tplQualidadeContainer .secao-titulo { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; margin: 22px 0 10px; }
+#tplQualidadeContainer .secao-titulo { font-size: 14px; color: var(--text-strong); font-weight: 700; margin: 22px 0 10px; }
 #tplQualidadeContainer .secao-titulo:first-child { margin-top: 0; }
 
-#tplQualidadeContainer .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 320px)); gap: 14px; }
+#tplQualidadeContainer .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
 #tplQualidadeContainer .panel {
   background: #FFFFFF !important; border-radius: var(--radius); padding: 16px 18px;
   box-shadow: var(--shadow-soft); border: 1px solid var(--border);
@@ -78,7 +80,7 @@ var QUALIDADE_CONTEUDO_MODULO = `<style>
 #tplQualidadeContainer .modal-q { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; box-shadow: 0 20px 60px rgba(28,31,29,0.1); }
 #tplQualidadeContainer .modal-q h3 { margin: 0 0 4px; font-size: 15px; color: var(--text-strong); }
 #tplQualidadeContainer .modal-q .muted { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
-#tplQualidadeContainer .modal-q label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
+#tplQualidadeContainer .modal-q label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; }
 #tplQualidadeContainer .modal-q select, #tplQualidadeContainer .modal-q textarea {
   width: 100%; background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; font-family: inherit;
 }
@@ -130,6 +132,9 @@ function tplQualidade_num_(v, casas) {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 });
 }
 
+// Fase 2 (16/10): plural de acordo com o número (sem "(s)" / "(ões)").
+function tplQualidade_pl_(n, um, varios) { return (Number(n) === 1 ? um : varios); }
+
 function tplQualidade_renderReal_() {
   var container = document.getElementById('tplQualidadeContainer');
   if (!container) return;
@@ -150,8 +155,8 @@ function tplQualidade_renderReal_() {
           '<option value="30" selected>Últimos 30 dias</option>' +
           '<option value="90">Últimos 90 dias</option>' +
         '</select>' +
-        '<button type="button" class="btn" onclick="tplQualidade_gerarRelatorio_()">Gerar Relatório A4</button>' +
-        '<button type="button" class="btn" onclick="tplQualidade_abrirHistorico_()">Histórico de Ocorrências</button>' +
+        '<button type="button" class="btn" onclick="tplQualidade_gerarRelatorio_()">Gerar relatório A4</button>' +
+        '<button type="button" class="btn" onclick="tplQualidade_abrirHistorico_()">Histórico de cobranças e elogios</button>' +
         '<button type="button" class="btn" onclick="tplQualidade_carregar_()">Atualizar</button>' +
       '</div>' +
       '<div id="tplQualidade_corpo"><p class="indisponivel">Carregando...</p></div>' +
@@ -167,8 +172,8 @@ function tplQualidade_carregar_() {
   var sel=document.getElementById('tplQualidade_periodoRelatorio'),periodoDias=sel?Number(sel.value):30;
   tplQualidade_chamarApi('apiObterPainel', {periodoDias:periodoDias})
     .then(function(res) {
-      if (!res || !res.ok) { if (corpo) corpo.innerHTML = '<p class="indisponivel">Falha ao carregar.</p>'; return; }
-      var r=res.resumo||{},saude=r.areasIndisponiveis?'<span class="stat-num critico">'+r.areasIndisponiveis+'</span> integração(ões) com falha':(res.auvoConfigurado===false?'<span class="stat-num alerta">!</span> Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)':'<span class="stat-num ok">OK</span> integrações respondendo');
+      if (!res || !res.ok) { if (corpo) corpo.innerHTML = '<p class="indisponivel">Não foi possível carregar o painel. Clique em Atualizar; se continuar, avise o administrador.</p>'; return; }
+      var r=res.resumo||{},saude=r.areasIndisponiveis?'<span class="stat-num critico">'+r.areasIndisponiveis+'</span> '+tplQualidade_pl_(r.areasIndisponiveis,'integração com falha','integrações com falha'):(res.auvoConfigurado===false?'<span class="stat-num alerta">!</span> Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)':'<span class="stat-num ok">OK</span> integrações respondendo');
       var falhas=(res.auvo&&res.auvo.indisponivel?'<div class="panel"><h2>Auvo indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.auvo.erro||'Falha não identificada')+'</p></div>':'')+(res.frota&&res.frota.indisponivel?'<div class="panel"><h2>Frota indisponível</h2><p class="rank-sub">'+tplQualidade_esc(res.frota.erro||'Falha não identificada')+'</p></div>':'');
       if (corpo) corpo.innerHTML =
         '<div class="secao-titulo">Visão executiva — últimos '+res.periodoDias+' dias</div><div class="grid"><div class="panel"><h2>Itens que exigem ação</h2><div class="stat-row"><span class="stat-num '+(r.pendencias?'critico':'ok')+'">'+(r.pendencias||0)+'</span><span class="stat-label">pendências detectadas nas fontes</span></div><div class="stat-row">'+saude+'</div><p class="fonte">Atualizado em '+tplQualidade_esc(res.geradoEm)+'</p></div><div class="panel"><h2>Volume analisado</h2><div class="stat-row"><span class="stat-num">'+(r.atendimentos||0)+'</span><span class="stat-label">atendimentos Auvo</span></div><div class="stat-row"><span class="stat-num">'+(r.movimentacoes||0)+'</span><span class="stat-label">movimentações da Frota</span></div></div>'+falhas+'</div>'+
@@ -178,7 +183,7 @@ function tplQualidade_carregar_() {
         '<div class="grid">' + tplQualidade_montarFrota_(res.frota) + '</div>';
     })
     .catch(function(err) {
-      if (corpo) corpo.innerHTML = '<p class="indisponivel">Erro: ' + tplQualidade_esc(err && err.message ? err.message : err) + '</p>';
+      if (corpo) corpo.innerHTML = '<p class="indisponivel">Não foi possível carregar o painel: ' + tplQualidade_esc(String(err && err.message ? err.message : err).replace(/[.\\s]+$/, '')) + '. Clique em Atualizar; se continuar, avise o administrador.</p>';
     });
 }
 
@@ -201,7 +206,7 @@ function tplQualidade_gerarRelatorio_() {
     })
     .catch(function(err) {
       if (janela && !janela.closed) {
-        janela.document.write('<p style="color:red">Erro ao gerar relatório: ' + tplQualidade_esc(err && err.message ? err.message : err) + '</p>');
+        janela.document.write('<p style="color:#a3261b;font-family:sans-serif;padding:40px">Não foi possível gerar o relatório: ' + tplQualidade_esc(String(err && err.message ? err.message : err).replace(/[.\\s]+$/, '')) + '. Feche esta aba e tente de novo; se continuar, avise o administrador.</p>');
       }
     });
 }
@@ -229,7 +234,8 @@ function tplQualidade_botaoOcorrencia_(area, pessoaTipo, id, nome, tipo, rotulo)
 // ------------------------------------------------------------
 function tplQualidade_montarAuvo_(a) {
   if (!a || !a.total) {
-    return '<div class="panel"><h2>Resumo</h2><p class="indisponivel">Sem atendimento registrado ainda.</p></div>';
+    return '<div class="panel"><h2>Atendimentos do Auvo</h2><p class="indisponivel">Nenhum atendimento do Auvo no período.</p>' +
+      '<p class="vazio-orienta">Os atendimentos chegam pela sincronização automática (Integração Auvo › Sincronização automática de tarefas). Se ela estiver desligada, ligue-a lá ou clique em Sincronizar agora.</p></div>';
   }
   var classeRelato = a.pctSemRelato >= 30 ? 'critico' : (a.pctSemRelato > 0 ? 'alerta' : 'ok');
   var classeFoto = a.pctSemFoto >= 30 ? 'critico' : (a.pctSemFoto > 0 ? 'alerta' : 'ok');
@@ -239,14 +245,14 @@ function tplQualidade_montarAuvo_(a) {
   var classeVinculo = a.semVinculo > 0 ? 'alerta' : 'ok';
 
   var painelResumo = '<div class="panel">' +
-    '<h2>Preenchimento — ' + a.total + ' atendimento(s)</h2>' +
-    '<p class="fonte">' + a.finalizadas + ' finalizado(s)</p>' +
+    '<h2>Preenchimento — ' + a.total + ' ' + tplQualidade_pl_(a.total, 'atendimento', 'atendimentos') + '</h2>' +
+    '<p class="fonte">' + a.finalizadas + ' ' + tplQualidade_pl_(a.finalizadas, 'finalizado', 'finalizados') + '</p>' +
     '<div class="stat-row"><span class="stat-num ' + classeRelato + '">' + a.pctSemRelato + '%</span><span class="stat-label">sem relato de serviço</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeFoto + '">' + a.pctSemFoto + '%</span><span class="stat-label">sem nenhuma foto anexada</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeQuestionario + '">' + a.pctQuestionarioVazio + '%</span><span class="stat-label">com o questionário 100% vazio</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeCheckin + '">' + a.pctSemCheckin + '%</span><span class="stat-label">sem check-in registrado</span></div>' +
-    '<div class="stat-row"><span class="stat-num ' + classeCheckout + '">' + a.finalizadasSemCheckout + '</span><span class="stat-label">finalizada(s) sem check-out</span></div>' +
-    '<div class="stat-row"><span class="stat-num ' + classeVinculo + '">' + a.semVinculo + '</span><span class="stat-label">sem cliente/técnico vinculado no Portal</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classeCheckout + '">' + a.finalizadasSemCheckout + '</span><span class="stat-label">' + tplQualidade_pl_(a.finalizadasSemCheckout, 'finalizada sem check-out', 'finalizadas sem check-out') + '</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + classeVinculo + '">' + a.semVinculo + '</span><span class="stat-label">sem cliente ou técnico vinculado no SGO+</span></div>' +
   '</div>';
 
   var painelPior = '<div class="panel">' +
@@ -255,7 +261,7 @@ function tplQualidade_montarAuvo_(a) {
     tplQualidade_rankLista_(a.rankingPiorQualidade, function(r) {
       return '<li class="rank-item"><div class="rank-info"><span class="rank-nome">' + tplQualidade_esc(r.nome) + ' (' + r.qtd + ')</span>' +
         '<span class="rank-sub">' + r.pctSemRelato + '% sem relato · ' + r.pctSemFoto + '% sem foto' +
-        (r.ocorrenciasAbertas ? ' · <span class="rank-badge">' + r.ocorrenciasAbertas + ' ocorrência(s) aberta(s)</span>' : '') + '</span></div>' +
+        (r.ocorrenciasAbertas ? ' · <span class="rank-badge">' + r.ocorrenciasAbertas + ' ' + tplQualidade_pl_(r.ocorrenciasAbertas, 'cobrança aberta', 'cobranças abertas') + '</span>' : '') + '</span></div>' +
         tplQualidade_botaoOcorrencia_('AUVO', 'TECNICO', r.id, r.nome, 'COBRANCA', 'Cobrar') + '</li>';
     }) +
   '</div>';
@@ -320,14 +326,14 @@ function tplQualidade_montarCnh_(f) {
     return '<li>' + tplQualidade_esc(c.condutorNome || '?') + ' — CNH ' + (c.status === 'VENCIDO' ? 'vencida' : 'vencendo') + ' em ' + tplQualidade_esc(c.vencimento || '?') + '</li>';
   }).join('');
   return '<div class="panel"><h2>CNH dos condutores</h2>' +
-    '<div class="stat-row"><span class="stat-num ' + (f.cnhVencidas ? 'critico' : 'alerta') + '">' + (f.cnhVencidas || 0) + '</span><span class="stat-label">CNH vencida(s) · ' + (f.cnhVencendo || 0) + ' vencendo em 30 dias</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + (f.cnhVencidas ? 'critico' : 'alerta') + '">' + (f.cnhVencidas || 0) + '</span><span class="stat-label">' + tplQualidade_pl_(f.cnhVencidas || 0, 'CNH vencida', 'CNHs vencidas') + ' · ' + (f.cnhVencendo || 0) + ' vencendo em 30 dias</span></div>' +
     (lista ? '<ul class="lista-amostra">' + lista + '</ul>' : '') + '<p class="fonte">Atualize a validade em Frota &gt; Condutores.</p></div>';
 }
 
 function tplQualidade_montarDocsMultasSemUso_(f) {
   return '<div class="panel"><h2>Documentos e multas</h2>' +
-    '<div class="stat-row"><span class="stat-num ' + (f.documentosVencidos ? 'critico' : 'ok') + '">' + (f.documentosVencidos || 0) + '</span><span class="stat-label">documento(s) vencido(s) · ' + (f.documentosVencendo || 0) + ' vencendo</span></div>' +
-    '<div class="stat-row"><span class="stat-num ' + (f.multasSemCondutor ? 'critico' : 'ok') + '">' + (f.multasAbertas || 0) + '</span><span class="stat-label">multa(s) aberta(s) · ' + (f.multasSemCondutor || 0) + ' sem condutor</span></div></div>';
+    '<div class="stat-row"><span class="stat-num ' + (f.documentosVencidos ? 'critico' : 'ok') + '">' + (f.documentosVencidos || 0) + '</span><span class="stat-label">' + tplQualidade_pl_(f.documentosVencidos || 0, 'documento vencido', 'documentos vencidos') + ' · ' + (f.documentosVencendo || 0) + ' vencendo</span></div>' +
+    '<div class="stat-row"><span class="stat-num ' + (f.multasSemCondutor ? 'critico' : 'ok') + '">' + (f.multasAbertas || 0) + '</span><span class="stat-label">' + tplQualidade_pl_(f.multasAbertas || 0, 'multa aberta', 'multas abertas') + ' · ' + (f.multasSemCondutor || 0) + ' sem condutor</span></div></div>';
 }
 
 function tplQualidade_montarFrota_(f) {
@@ -335,7 +341,8 @@ function tplQualidade_montarFrota_(f) {
   // e multas (que não dependem de retirada). Agora só o resumo de uso fica vazio.
   var cnh = tplQualidade_montarCnh_(f);
   if (!f || !f.totalMovimentacoes) {
-    return '<div class="panel"><h2>Uso da frota</h2><p class="indisponivel">Nenhuma retirada ou devolução no período.</p></div>' + cnh +
+    return '<div class="panel"><h2>Uso da frota</h2><p class="indisponivel">Nenhuma retirada ou devolução no período.</p>' +
+      '<p class="vazio-orienta">As retiradas e devoluções são registradas na Frota (aba Situação e retiradas). Para ver outro intervalo, troque o período acima.</p></div>' + cnh +
       (f && (f.documentosVencidos || f.documentosVencendo || f.multasAbertas) ? tplQualidade_montarDocsMultasSemUso_(f) : '');
   }
   var classeIncompletas = f.totalIncompletas > 0 ? 'alerta' : 'ok';
@@ -357,7 +364,7 @@ function tplQualidade_montarFrota_(f) {
   }).join('');
 
   var painelResumo = '<div class="panel">' +
-    '<h2>Movimentação — ' + f.totalMovimentacoes + ' retirada(s)</h2>' +
+    '<h2>Movimentação — ' + f.totalMovimentacoes + ' ' + tplQualidade_pl_(f.totalMovimentacoes, 'retirada', 'retiradas') + '</h2>' +
     '<div class="stat-row"><span class="stat-num ' + classePendurada + '">' + f.viagensPenduradas + '</span><span class="stat-label">retirada(s) aberta(s) há 2+ dias sem devolução</span></div>' +
     '<div class="stat-row"><span class="stat-num ' + classeIncompletas + '">' + f.totalIncompletas + '</span><span class="stat-label">retirada(s)/devolução(ões) sem checklist ou sem foto</span></div>' +
     (amostraPenduradas ? '<ul class="lista-amostra">' + amostraPenduradas + '</ul>' : '') +
@@ -378,7 +385,7 @@ function tplQualidade_montarFrota_(f) {
   '</div>';
 
   var painelCondutoresDestaque = '<div class="panel">' +
-    '<h2>Condutores sem ocorrências</h2>' +
+    '<h2>Condutores sem cobranças</h2>' +
     '<p class="fonte">3+ retiradas, zero pendência</p>' +
     tplQualidade_rankLista_(f.rankingCondutoresDestaque, function(r) {
       return '<li class="rank-item"><span class="rank-nome">' + tplQualidade_esc(r.nome) + '</span><span class="rank-qtd">' + r.qtd + '</span>' +
@@ -448,7 +455,7 @@ function tplQualidade_abrirModalOcorrencia_(area, pessoaTipo, pessoaId, pessoaNo
   }).join('');
   overlay.innerHTML =
     '<div class="modal-q">' +
-      '<h3>Registrar ocorrência</h3>' +
+      '<h3>Registrar cobrança ou elogio de campo</h3>' +
       '<p class="muted">' + tplQualidade_esc(pessoaNome) + ' · ' + tplQualidade_esc(area) + '</p>' +
       '<label>Tipo</label>' +
       '<select id="tplQualidade_oc_tipo">' + opcoesTipo + '</select>' +
@@ -496,7 +503,7 @@ function tplQualidade_abrirHistorico_() {
   if (!overlay) return;
   overlay.innerHTML =
     '<div class="modal-q" style="max-width:640px">' +
-      '<h3>Histórico de Ocorrências</h3>' +
+      '<h3>Histórico de cobranças e elogios de campo</h3>' +
       '<p class="muted">Cobranças, elogios e observações registrados</p>' +
       '<div class="modal-actions" style="justify-content:flex-start;margin-top:0;margin-bottom:10px">' +
         '<button type="button" class="btn-mini" onclick="tplQualidade_carregarHistorico_(&#39;&#39;)">Todas</button>' +
@@ -524,7 +531,7 @@ function tplQualidade_carregarHistorico_(status) {
     .then(function(res) {
       if (!lista) return;
       var itens = (res && res.items) || [];
-      if (!itens.length) { lista.innerHTML = '<p class="vazio">Nenhuma ocorrência encontrada.</p>'; return; }
+      if (!itens.length) { lista.innerHTML = '<p class="vazio">Nenhuma cobrança ou elogio registrado com estes filtros. Para registrar, use os botões Cobrar e Elogiar nas listas do painel.</p>'; return; }
       var linhas = itens.map(function(o) {
         return '<tr>' +
           '<td><span class="pill ' + tplQualidade_esc(o.TIPO) + '">' + tplQualidade_esc(o.TIPO) + '</span></td>' +
@@ -540,7 +547,7 @@ function tplQualidade_carregarHistorico_(status) {
         '<tbody>' + linhas + '</tbody></table></div>';
     })
     .catch(function(err) {
-      if (lista) lista.innerHTML = '<p class="indisponivel">Erro: ' + tplQualidade_esc(err && err.message ? err.message : err) + '</p>';
+      if (lista) lista.innerHTML = '<p class="indisponivel">Não foi possível carregar o histórico: ' + tplQualidade_esc(String(err && err.message ? err.message : err).replace(/[.\\s]+$/, '')) + '. Feche e abra de novo; se continuar, avise o administrador.</p>';
     });
 }
 

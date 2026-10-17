@@ -1,215 +1,208 @@
 <!--
-  PILOTO — Template Lavadora (Ultrassônica + Termodesinfectora) como
-  tela nativa do Portal (sem iframe). Fragmento adaptado de
-  projeto_exec_2_akfycbwv/Index.html. Mesma técnica do Template
-  Autoclave: cores vêm do Comfort Dark global do Portal; aqui só o
-  CSS estrutural que ainda não existe no Portal, escopado sob
-  #tplLavadoraContainer.
+  "Preencher modelo" das Lavadoras (lavadora ultrassônica e termodesinfectora) — tela nativa do SGO+.
+  Fase 2 (16/10): um formulário só, com os mesmos campos para os dois tipos de equipamento;
+  sem cabeçalho repetido, relógio, exemplos fictícios ou jargão. Geração pelo próprio SGO+
+  (SGO_TemplateLavadora.js). CSS escopado sob #tplLavadoraContainer.
 -->
 <style>
   #tplLavadoraContainer, #tplLavadoraContainer * { box-sizing: border-box; }
   #tplLavadoraContainer .wrap { max-width: 100%; margin: 0; padding: 0; }
   #tplLavadoraContainer .hidden { display: none !important; }
-
-  #tplLavadoraContainer .header-card {
-    border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 14px 18px; margin-bottom: 14px;
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
-  }
-  #tplLavadoraContainer .header-card::before {
-    content: ""; width: 4px; align-self: stretch; min-height: 58px;
-    background: linear-gradient(180deg, var(--accent-2), var(--accent)); border-radius: 999px; order: -1;
-  }
-  #tplLavadoraContainer .brand { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; }
-  #tplLavadoraContainer .logo-img { height: 56px; max-width: 230px; object-fit: contain; display: block; background: #f8fafc; border: 1px solid var(--bc-line); border-radius: 7px; padding: 7px 10px; }
-  #tplLavadoraContainer .title-area { min-width: 0; overflow-wrap: break-word; }
-  #tplLavadoraContainer .title-area h1 { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.2; }
-  #tplLavadoraContainer .title-area p { margin: 5px 0 0; font-size: 13px; line-height: 1.45; }
-  #tplLavadoraContainer .header-widgets { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  #tplLavadoraContainer #tplLavClockWidget { font-family: var(--bc-mono); background: var(--input, #FFFFFF); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; }
-
-  #tplLavadoraContainer .action-bar { margin-bottom: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius, 8px); }
-
-  #tplLavadoraContainer .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+  #tplLavadoraContainer .grid-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; align-items: start; }
   #tplLavadoraContainer .grid-layout > * { min-width: 0; }
-  #tplLavadoraContainer .panel { border-radius: var(--radius, 8px); padding: 18px; border: 1px solid var(--border); min-width: 0; overflow-wrap: break-word; word-break: break-word; }
-  #tplLavadoraContainer .panel h2 { margin: 0 0 16px; font-size: 14px; border-bottom: 1px solid var(--border); padding-bottom: 11px; text-transform: uppercase; }
-  #tplLavadoraContainer .panel h2::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 9px; border-radius: 50%; background: var(--accent); vertical-align: 1px; }
-  #tplLavadoraContainer .panel-subtitle { margin: -6px 0 16px; font-size: 13px; line-height: 1.5; overflow-wrap: break-word; word-break: break-word; }
-  #tplLavadoraContainer .section-divider { margin: 22px 0 14px; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--accent-2); border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
-
-  #tplLavadoraContainer .tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  #tplLavadoraContainer .tab-btn { padding: 11px 16px; border-radius: var(--radius-sm, 6px); font-weight: 800; font-size: 13px; cursor: pointer; }
-  #tplLavadoraContainer .form-panel { display: none; }
-  #tplLavadoraContainer .form-panel.active { display: block; }
-
+  #tplLavadoraContainer .panel { border-radius: var(--radius, 8px); padding: 18px; border: 1px solid var(--border); background: var(--bc-surface, #FFFFFF); min-width: 0; overflow-wrap: break-word; }
+  #tplLavadoraContainer .panel h2 { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
+  #tplLavadoraContainer .panel-subtitle { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--bc-text-3); }
+  #tplLavadoraContainer .section-divider { margin: 22px 0 12px; padding: 0 0 6px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--bc-text-2); }
   #tplLavadoraContainer .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
   #tplLavadoraContainer .form-group { flex: 1; min-width: 205px; }
   #tplLavadoraContainer .form-group.w-100 { flex: 1 1 100%; }
-  #tplLavadoraContainer .form-group label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; }
-  #tplLavadoraContainer .field-help { display: block; margin-top: 6px; font-size: 11px; line-height: 1.45; overflow-wrap: break-word; word-break: break-word; }
+  #tplLavadoraContainer .form-group label { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; }
+  #tplLavadoraContainer .field-help { display: block; margin-top: 6px; font-size: 11.5px; line-height: 1.45; color: var(--bc-text-3); }
   #tplLavadoraContainer .form-control { width: 100%; min-height: 42px; padding: 10px 11px; border-radius: var(--radius-sm, 6px); font-size: 13px; }
-  #tplLavadoraContainer textarea.form-control { min-height: 116px; resize: vertical; }
-  #tplLavadoraContainer select.form-control { cursor: pointer; }
-  #tplLavadoraContainer .cnpj-msg { font-size: 12px; color: var(--muted-2); margin-top: 6px; min-height: 16px; overflow-wrap: break-word; }
-  #tplLavadoraContainer .cnpj-msg.ok { color: var(--bc-action); }
-  #tplLavadoraContainer .cnpj-msg.err { color: var(--bc-danger); }
-
+  #tplLavadoraContainer textarea.form-control { min-height: 96px; resize: vertical; }
   #tplLavadoraContainer .btn-container { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
-  #tplLavadoraContainer .btn { padding: 11px 16px; border-radius: var(--radius-sm, 6px); font-weight: 800; font-size: 13px; cursor: pointer; text-align: center; min-height: 42px; }
+  #tplLavadoraContainer .btn { padding: 11px 16px; border-radius: var(--radius-sm, 6px); font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; min-height: 42px; }
   #tplLavadoraContainer .btn:disabled { opacity: 0.62; cursor: not-allowed; }
-
-  #tplLavadoraContainer .alert-box { margin-top: 14px; border-radius: var(--radius-sm, 6px); padding: 13px 14px; font-size: 13px; line-height: 1.55; border: 1px solid transparent; display: none; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  #tplLavadoraContainer .alert-box { margin-top: 12px; border-radius: var(--radius-sm, 6px); padding: 12px 14px; font-size: 13px; line-height: 1.55; border: 1px solid transparent; display: none; overflow-wrap: anywhere; }
   #tplLavadoraContainer .alert-box.show { display: block; }
   #tplLavadoraContainer .alert-box.success { background: var(--bc-action-bg); color: var(--bc-text-2); border-color: var(--bc-action-line); }
+  #tplLavadoraContainer .alert-box.warning { background: var(--bc-warn-bg); color: var(--bc-warn); border-color: var(--bc-warn-line); }
   #tplLavadoraContainer .alert-box.error { background: var(--bc-danger-bg); color: var(--bc-danger); border-color: var(--bc-danger-line); }
   #tplLavadoraContainer .alert-box.info { background: var(--bc-info-bg); color: var(--bc-text-2); border-color: var(--bc-info-line); }
-
-  #tplLavadoraContainer .terminal-wrap { margin-top: 12px; border-radius: var(--radius-sm, 6px); overflow: hidden; border: 1px solid var(--border); }
-  #tplLavadoraContainer .terminal-header { padding: 10px 12px; font-size: 11px; font-weight: 800; border-bottom: 1px solid var(--border); }
-  #tplLavadoraContainer .terminal { padding: 14px; font-family: var(--bc-mono); font-size: 12px; min-height: 220px; max-height: 520px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; line-height: 1.55; }
   #tplLavadoraContainer .result-links { display: none; margin-top: 14px; }
-  #tplLavadoraContainer .result-links.show { display: block; }
-  #tplLavadoraContainer .result-link-list { display: grid; gap: 10px; }
-  #tplLavadoraContainer .btn-download { display: block; padding: 14px; text-align: center; border-radius: var(--radius-sm, 6px); text-decoration: none; font-weight: 800; font-size: 14px; overflow-wrap: break-word; word-break: break-word; }
-  #tplLavadoraContainer .card-note { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--accent-2); border-radius: 6px; font-size: 13px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
-  #tplLavadoraContainer .placeholder-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  #tplLavadoraContainer .ph-chip { border: 1px solid var(--border); padding: 6px 8px; border-radius: 999px; font-family: var(--bc-mono); font-size: 11px; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
-  #tplLavadoraContainer .spinner { width: 16px; height: 16px; border: 2px solid var(--bc-line); border-top-color: var(--bc-line); border-radius: 50%; display: inline-block; animation: tplLavadoraSpin .8s linear infinite; vertical-align: -3px; margin-left: 8px; }
+  #tplLavadoraContainer .result-links.show { display: grid; gap: 10px; }
+  #tplLavadoraContainer .btn-download { display: block; padding: 12px; text-align: center; border-radius: var(--radius-sm, 6px); text-decoration: none; font-weight: 700; font-size: 13.5px; border: 1px solid var(--border); }
+  #tplLavadoraContainer .modelo-situacao { font-size: 12.5px; line-height: 1.5; color: var(--bc-text-3); margin-top: 12px; }
+  #tplLavadoraContainer .spinner { width: 16px; height: 16px; border: 2px solid var(--bc-line); border-top-color: transparent; border-radius: 50%; display: inline-block; animation: tplLavadoraSpin .8s linear infinite; vertical-align: -3px; margin-left: 8px; }
   @keyframes tplLavadoraSpin { to { transform: rotate(360deg); } }
-
-
+  @media (max-width: 1100px) { #tplLavadoraContainer .grid-layout { grid-template-columns: 1fr; } }
   @media (max-width: 768px) {
     #tplLavadoraContainer .panel { padding: 14px; }
-    #tplLavadoraContainer .brand { width: 100%; align-items: flex-start; flex-direction: column; gap: 10px; }
+    #tplLavadoraContainer .form-group { min-width: 100%; }
     #tplLavadoraContainer .btn { width: 100%; }
     #tplLavadoraContainer .btn-container { flex-direction: column; }
   }
 </style>
 
 <script>
-  // PILOTO — Template Lavadora nativo (proxy). Prefixo tplLavadora_ /
-  // tplLav em todo helper e ID, para não colidir com o fragmento do
-  // Template Autoclave (tplAutoclave_) nem com o restante do Portal.
+  // Prefixo tplLavadora_ / tplLav em todo helper e ID, para não colidir com outros módulos.
 
   const TPL_LAVADORA_HTML_ = `
     <div class="wrap">
-      <header class="header-card">
-        <div class="brand">
-          <div class="title-area">
-            <h1 id="tplLavAppTitle">Lavadoras</h1>
-            <p id="tplLavAppSubtitle">Relatórios de lavadoras ultrassônicas e termodesinfectoras.</p>
-          </div>
-        </div>
-        <div class="header-widgets">
-          <span id="tplLavClockWidget">--/--/---- --:--:--</span>
-          <span class="status-badge">Pronto</span>
-        </div>
-      </header>
-
-      <div class="action-bar">
-        <button class="btn btn-secondary" type="button" onclick="tplLavadora_exemploLavadora()">Exemplo Lavadora</button>
-        <button class="btn btn-secondary" type="button" onclick="tplLavadora_exemploTermo()">Exemplo Termodesinfectora</button>
-      </div>
-
       <main class="grid-layout">
         <section class="panel">
-          <h2>Geração de relatórios de lavadoras</h2>
-          <p class="panel-subtitle">Escolha o módulo ativo e preencha os dados técnicos para gerar o documento e o PDF no modelo correspondente.</p>
-          <div class="tabs">
-            <button id="tplTabLavadora" class="tab-btn active" type="button" onclick="tplLavadora_alternarModulo('LAVADORA')">Lavadora Ultrassônica</button>
-            <button id="tplTabTermo" class="tab-btn" type="button" onclick="tplLavadora_alternarModulo('TERMODESINFECTORA')">Termodesinfectora</button>
-          </div>
+          <h2>Relatório no modelo oficial</h2>
+          <p class="panel-subtitle">Escolha o tipo de equipamento e preencha os dados para gerar o relatório. O documento e o PDF ficam guardados na pasta do cliente.</p>
 
-          <div id="tplPanelLavadora" class="form-panel active">
-            <form id="tplFormLavadora" onsubmit="event.preventDefault(); tplLavadora_gerarLavadora();">
-              <div class="section-divider">Lavadora ultrassônica</div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplLav_numeroRelatorio">Número do relatório</label><input id="tplLav_numeroRelatorio" class="form-control" type="text" placeholder="Ex.: LU-2026-001"></div>
-                <div class="form-group"><label for="tplLav_dataCiclo">Data do ciclo</label><input id="tplLav_dataCiclo" class="form-control" type="text" placeholder="Ex.: 20/03/2026"></div>
+          <form id="tplFormLavadora" onsubmit="event.preventDefault(); tplLavadora_gerar();" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplLav_tipo">Tipo de equipamento</label>
+                <select id="tplLav_tipo" class="form-control" onchange="tplLavadora_aoTrocarTipo()">
+                  <option value="TERMODESINFECTORA">Termodesinfectora</option>
+                  <option value="LAVADORA">Lavadora ultrassônica</option>
+                </select>
               </div>
-              <div class="form-row"><div class="form-group w-100"><label for="tplLav_cliente">Cliente</label><input id="tplLav_cliente" class="form-control" type="text" placeholder="Ex.: Hospital Exemplo Ltda."></div></div>
-              <div class="form-row"><div class="form-group w-100"><label for="tplLav_equipamento">Equipamento</label><input id="tplLav_equipamento" class="form-control" type="text" placeholder="Ex.: Lavadora Ultrassônica 01"></div></div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplLav_tag">TAG</label><input id="tplLav_tag" class="form-control" type="text" placeholder="Ex.: LAV-01"></div>
-                <div class="form-group"><label for="tplLav_identificacao">Identificação</label><input id="tplLav_identificacao" class="form-control" type="text" placeholder="Ex.: Marca / Modelo / NS"></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplLav_tipoEnsaio">Tipo de ensaio</label><input id="tplLav_tipoEnsaio" class="form-control" type="text" placeholder="Ex.: Qualificação de Operação"></div>
-                <div class="form-group"><label for="tplLav_perfil">Perfil</label><input id="tplLav_perfil" class="form-control" type="text" placeholder="Ex.: Instrumental Delicado / Canulados"></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplLav_cnpj">CNPJ</label><input id="tplLav_cnpj" class="form-control" type="text" placeholder="Ex.: 00.000.000/0001-00"><div id="tplLav_cnpj_msg" class="cnpj-msg"></div></div>
-                <div class="form-group"><label for="tplLav_setorLocal">Setor / Local</label><input id="tplLav_setorLocal" class="form-control" type="text" placeholder="Ex.: CME / Central de Material"></div>
-              </div>
-              <div class="form-row"><div class="form-group w-100"><label for="tplLav_observacoes">Observações</label><textarea id="tplLav_observacoes" class="form-control" placeholder="Observações complementares do relatório"></textarea></div></div>
-              <div class="btn-container">
-                <button id="tplBtnGerarLavadora" class="btn btn-primary" type="submit"><span id="tplBtnGerarLavadoraLabel">Gerar Lavadora</span><span id="tplBtnGerarLavadoraSpinner" class="spinner hidden"></span></button>
-                <button class="btn btn-secondary" type="button" onclick="tplLavadora_limparLavadora()">Limpar</button>
-              </div>
-            </form>
-          </div>
+              <div class="form-group"></div>
+            </div>
 
-          <div id="tplPanelTermo" class="form-panel">
-            <form id="tplFormTermo" onsubmit="event.preventDefault(); tplLavadora_gerarTermodesinfectora();">
-              <div class="section-divider">Termodesinfectora</div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplTer_numeroRelatorio">Número do relatório</label><input id="tplTer_numeroRelatorio" class="form-control" type="text" placeholder="Ex.: TD-2026-001"></div>
-                <div class="form-group"><label for="tplTer_dataCiclo">Data do ciclo</label><input id="tplTer_dataCiclo" class="form-control" type="text" placeholder="Ex.: 20/03/2026"></div>
+            <div class="section-divider">1. Identificação do relatório</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplLav_numeroRelatorio">Número do relatório</label>
+                <input id="tplLav_numeroRelatorio" class="form-control" type="text" placeholder="Ex.: TD-2026-001">
+                <span class="field-help">Aparece no relatório e no nome do arquivo.</span>
               </div>
-              <div class="form-row"><div class="form-group w-100"><label for="tplTer_cliente">Cliente</label><input id="tplTer_cliente" class="form-control" type="text" placeholder="Ex.: Hospital Exemplo Ltda."></div></div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplTer_cnpjCliente">CNPJ do cliente</label><input id="tplTer_cnpjCliente" class="form-control" type="text" placeholder="Ex.: 00.000.000/0001-00"><div id="tplTer_cnpj_msg" class="cnpj-msg"></div></div>
-                <div class="form-group"><label for="tplTer_tag">TAG</label><input id="tplTer_tag" class="form-control" type="text" placeholder="Ex.: TDS-01"></div>
+              <div class="form-group">
+                <label for="tplLav_dataCiclo">Data do ciclo</label>
+                <input id="tplLav_dataCiclo" class="form-control" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="tplLavadora_mascaraData(this)">
+                <span class="field-help">Data em que o ciclo foi executado.</span>
               </div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplTer_marca">Marca</label><input id="tplTer_marca" class="form-control" type="text" placeholder="Ex.: marca da placa"></div>
-                <div class="form-group"><label for="tplTer_modelo">Modelo</label><input id="tplTer_modelo" class="form-control" type="text" placeholder="Ex.: modelo da placa"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplLav_tipoEnsaio">Tipo de ensaio</label>
+                <select id="tplLav_tipoEnsaio" class="form-control">
+                  <option value="">Escolha o tipo de ensaio</option>
+                  <option>Qualificação de instalação (QI)</option>
+                  <option>Qualificação de operação (QO)</option>
+                  <option>Qualificação de desempenho (QD)</option>
+                  <option>Requalificação</option>
+                  <option>Monitoramento de rotina</option>
+                </select>
               </div>
-              <div class="form-row">
-                <div class="form-group"><label for="tplTer_ns">Número de série</label><input id="tplTer_ns" class="form-control" type="text" placeholder="Ex.: 2131.15.6370"></div>
-                <div class="form-group"><label for="tplTer_statusFinal">Status final</label><select id="tplTer_statusFinal" class="form-control"><option value="APROVADO">APROVADO</option><option value="REPROVADO">REPROVADO</option></select></div>
+              <div class="form-group">
+                <label for="tplLav_perfil">Perfil da carga (opcional)</label>
+                <input id="tplLav_perfil" class="form-control" type="text" placeholder="Ex.: instrumental delicado / canulados">
               </div>
-              <div class="form-row"><div class="form-group w-100"><label for="tplTer_localizacao">Localização</label><input id="tplTer_localizacao" class="form-control" type="text" placeholder="Ex.: Unidade Centro - CME"></div></div>
-              <div class="btn-container">
-                <button id="tplBtnGerarTermo" class="btn btn-primary" type="submit"><span id="tplBtnGerarTermoLabel">Gerar Termodesinfectora</span><span id="tplBtnGerarTermoSpinner" class="spinner hidden"></span></button>
-                <button class="btn btn-secondary" type="button" onclick="tplLavadora_limparTermo()">Limpar</button>
+            </div>
+
+            <div class="section-divider">2. Cliente e local de instalação</div>
+            <div class="form-row">
+              <div class="form-group" style="flex:2;">
+                <label for="tplLav_cliente">Cliente</label>
+                <input id="tplLav_cliente" class="form-control" type="text" placeholder="Razão social do cliente">
               </div>
-            </form>
-          </div>
+              <div class="form-group">
+                <label for="tplLav_cnpj">CNPJ (opcional)</label>
+                <input id="tplLav_cnpj" class="form-control" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" oninput="tplLavadora_mascaraCnpj(this)">
+                <span class="field-help">Usado para guardar o documento na pasta do cliente.</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group w-100">
+                <label for="tplLav_setorLocal">Setor / local</label>
+                <input id="tplLav_setorLocal" class="form-control" type="text" placeholder="Ex.: CME — Central de Material">
+              </div>
+            </div>
+
+            <div class="section-divider">3. Equipamento e resultado</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplLav_equipamento">Equipamento (opcional)</label>
+                <input id="tplLav_equipamento" class="form-control" type="text" placeholder="Ex.: Termodesinfectora 01">
+              </div>
+              <div class="form-group">
+                <label for="tplLav_tag">TAG</label>
+                <input id="tplLav_tag" class="form-control" type="text" placeholder="Ex.: TDS-01">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label for="tplLav_marca">Marca</label><input id="tplLav_marca" class="form-control" type="text" placeholder="Como consta na placa"></div>
+              <div class="form-group"><label for="tplLav_modelo">Modelo</label><input id="tplLav_modelo" class="form-control" type="text" placeholder="Como consta na placa"></div>
+              <div class="form-group"><label for="tplLav_ns">Número de série</label><input id="tplLav_ns" class="form-control" type="text" placeholder="Como consta na placa"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tplLav_resultado">Resultado</label>
+                <select id="tplLav_resultado" class="form-control">
+                  <option value="">Escolha o resultado</option>
+                  <option value="APROVADO">Aprovado</option>
+                  <option value="REPROVADO">Reprovado</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group w-100">
+                <label for="tplLav_observacoes">Observações (opcional)</label>
+                <textarea id="tplLav_observacoes" class="form-control" placeholder="Observações complementares do relatório"></textarea>
+              </div>
+            </div>
+
+            <div class="btn-container">
+              <button id="tplBtnGerarLav" class="btn btn-primary" type="submit"><span id="tplBtnGerarLavLabel">Gerar relatório da termodesinfectora</span><span id="tplBtnGerarLavSpinner" class="spinner hidden"></span></button>
+              <button class="btn btn-secondary" type="button" onclick="tplLavadora_limpar()">Limpar campos</button>
+            </div>
+          </form>
         </section>
 
         <aside class="panel">
-          <h2>Painel de geração</h2>
-          <p class="panel-subtitle">Acompanhe o processamento do módulo ativo, valide o template e abra os arquivos gerados.</p>
-          <div id="tplLavStatusBox" class="alert-box info show">Pronto para gerar relatórios.</div>
+          <h2>Resultado</h2>
+          <div id="tplLavStatusBox" class="alert-box info show">Preencha os campos e clique em gerar.</div>
           <div id="tplLavResultLinks" class="result-links">
-            <div class="result-link-list">
-              <a id="tplLavDocLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir documento</a>
-              <a id="tplLavPdfLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir PDF</a>
-              <a id="tplLavFolderLink" class="btn-download secondary" href="#" target="_blank" rel="noopener noreferrer">Abrir pasta de saída</a>
-            </div>
+            <a id="tplLavDocLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir documento</a>
+            <a id="tplLavPdfLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir PDF</a>
+            <a id="tplLavFolderLink" class="btn-download" href="#" target="_blank" rel="noopener noreferrer">Abrir pasta do cliente</a>
           </div>
-          <div class="card-note">O sistema identifica o módulo ativo, copia o modelo correto, preenche os campos marcados e gera o PDF na pasta correspondente.</div>
-          <div class="terminal-wrap">
-            <div class="terminal-header">PLACEHOLDERS DO MÓDULO ATIVO</div>
-            <div id="tplLavPlaceholderStatus" class="terminal">Lendo template...</div>
-          </div>
-          <div id="tplLavPlaceholderList" class="placeholder-list"></div>
+          <p id="tplLavModeloSituacao" class="modelo-situacao">Conferindo o modelo do relatório…</p>
         </aside>
       </main>
     </div>
   `;
 
-  let TPL_LAV_MODULO_ATIVO_ = 'LAVADORA';
-
   function tplLavadora_el(id) { return document.getElementById(id); }
 
+  function tplLavadora_mascaraData(input) {
+    const d = String(input.value || '').replace(/\D/g, '').slice(0, 8);
+    let s = d;
+    if (d.length > 4) s = d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
+    else if (d.length > 2) s = d.slice(0, 2) + '/' + d.slice(2);
+    input.value = s;
+  }
 
-  function tplLavadora_atualizarRelogio() {
-    const d = new Date();
-    const p = function (n) { return String(n).padStart(2, '0'); };
-    const c = tplLavadora_el('tplLavClockWidget');
-    if (c) c.textContent = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  function tplLavadora_mascaraCnpj(input) {
+    const d = String(input.value || '').replace(/\D/g, '').slice(0, 14);
+    let s = d;
+    if (d.length > 12) s = d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/, '$1.$2.$3/$4-$5');
+    else if (d.length > 8) s = d.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})$/, '$1.$2.$3/$4');
+    else if (d.length > 5) s = d.replace(/^(\d{2})(\d{3})(\d{0,3})$/, '$1.$2.$3');
+    else if (d.length > 2) s = d.replace(/^(\d{2})(\d{0,3})$/, '$1.$2');
+    input.value = s;
+  }
+
+  function tplLavadora_dataValida(s) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || ''));
+    if (!m) return false;
+    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    return d.getFullYear() === Number(m[3]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[1]);
+  }
+
+  function tplLavadora_tipo() { return tplLavadora_el('tplLav_tipo').value; }
+
+  function tplLavadora_rotuloBotao() {
+    return tplLavadora_tipo() === 'LAVADORA' ? 'Gerar relatório da lavadora ultrassônica' : 'Gerar relatório da termodesinfectora';
   }
 
   function tplLavadora_setStatus(message, type) {
@@ -219,231 +212,121 @@
     box.textContent = message;
   }
 
-  function tplLavadora_ocultarLinks() {
-    tplLavadora_el('tplLavResultLinks').classList.remove('show');
-    tplLavadora_el('tplLavDocLink').href = '#';
-    tplLavadora_el('tplLavPdfLink').href = '#';
-    tplLavadora_el('tplLavFolderLink').href = '#';
-  }
+  function tplLavadora_ocultarLinks() { tplLavadora_el('tplLavResultLinks').classList.remove('show'); }
 
   function tplLavadora_mostrarLinks(res) {
     tplLavadora_el('tplLavDocLink').href = res.docUrl || '#';
     tplLavadora_el('tplLavPdfLink').href = res.pdfUrl || '#';
     tplLavadora_el('tplLavFolderLink').href = res.folderUrl || '#';
+    tplLavadora_el('tplLavDocLink').style.display = res.docUrl ? '' : 'none';
+    tplLavadora_el('tplLavFolderLink').style.display = res.folderUrl ? '' : 'none';
     tplLavadora_el('tplLavResultLinks').classList.add('show');
   }
 
-  function tplLavadora_setLoading(tipo, loading) {
-    if (tipo === 'LAVADORA') {
-      tplLavadora_el('tplBtnGerarLavadora').disabled = loading;
-      tplLavadora_el('tplBtnGerarLavadoraLabel').textContent = loading ? 'Gerando...' : 'Gerar Lavadora';
-      tplLavadora_el('tplBtnGerarLavadoraSpinner').classList.toggle('hidden', !loading);
-    } else {
-      tplLavadora_el('tplBtnGerarTermo').disabled = loading;
-      tplLavadora_el('tplBtnGerarTermoLabel').textContent = loading ? 'Gerando...' : 'Gerar Termodesinfectora';
-      tplLavadora_el('tplBtnGerarTermoSpinner').classList.toggle('hidden', !loading);
-    }
+  function tplLavadora_setLoading(loading) {
+    tplLavadora_el('tplBtnGerarLav').disabled = loading;
+    tplLavadora_el('tplBtnGerarLavLabel').textContent = loading ? 'Gerando…' : tplLavadora_rotuloBotao();
+    tplLavadora_el('tplBtnGerarLavSpinner').classList.toggle('hidden', !loading);
   }
 
-  function tplLavadora_alternarModulo(tipo) {
-    TPL_LAV_MODULO_ATIVO_ = tipo;
-    tplLavadora_el('tplTabLavadora').classList.toggle('active', tipo === 'LAVADORA');
-    tplLavadora_el('tplTabTermo').classList.toggle('active', tipo === 'TERMODESINFECTORA');
-    tplLavadora_el('tplPanelLavadora').classList.toggle('active', tipo === 'LAVADORA');
-    tplLavadora_el('tplPanelTermo').classList.toggle('active', tipo === 'TERMODESINFECTORA');
+  function tplLavadora_aoTrocarTipo() {
+    const lav = tplLavadora_tipo() === 'LAVADORA';
+    tplLavadora_el('tplBtnGerarLavLabel').textContent = tplLavadora_rotuloBotao();
+    tplLavadora_el('tplLav_numeroRelatorio').placeholder = lav ? 'Ex.: LU-2026-001' : 'Ex.: TD-2026-001';
+    tplLavadora_el('tplLav_equipamento').placeholder = lav ? 'Ex.: Lavadora ultrassônica 01' : 'Ex.: Termodesinfectora 01';
+    tplLavadora_el('tplLav_tag').placeholder = lav ? 'Ex.: LAV-01' : 'Ex.: TDS-01';
     tplLavadora_ocultarLinks();
-    tplLavadora_setStatus('Módulo ativo: ' + (tipo === 'LAVADORA' ? 'Lavadora Ultrassônica' : 'Termodesinfectora') + '.', 'info');
-    tplLavadora_carregarPlaceholders(tipo);
+    tplLavadora_setStatus('Equipamento selecionado: ' + (lav ? 'lavadora ultrassônica' : 'termodesinfectora') + '.', 'info');
+    tplLavadora_carregarSituacaoModelo();
   }
 
-  function tplLavadora_getPayloadLavadora() {
+  function tplLavadora_getPayload() {
+    const v = function (id) { return tplLavadora_el(id).value.trim(); };
     return {
-      tipo: 'LAVADORA',
-      numeroRelatorio: tplLavadora_el('tplLav_numeroRelatorio').value.trim(),
-      cliente: tplLavadora_el('tplLav_cliente').value.trim(),
-      equipamento: tplLavadora_el('tplLav_equipamento').value.trim(),
-      tag: tplLavadora_el('tplLav_tag').value.trim(),
-      identificacao: tplLavadora_el('tplLav_identificacao').value.trim(),
-      tipoEnsaio: tplLavadora_el('tplLav_tipoEnsaio').value.trim(),
-      perfil: tplLavadora_el('tplLav_perfil').value.trim(),
-      cnpj: tplLavadora_el('tplLav_cnpj').value.trim(),
-      setorLocal: tplLavadora_el('tplLav_setorLocal').value.trim(),
-      observacoes: tplLavadora_el('tplLav_observacoes').value.trim(),
-      dataCiclo: tplLavadora_el('tplLav_dataCiclo').value.trim()
+      tipo: tplLavadora_tipo(),
+      numeroRelatorio: v('tplLav_numeroRelatorio'), dataCiclo: v('tplLav_dataCiclo'),
+      cliente: v('tplLav_cliente'), cnpj: v('tplLav_cnpj'), setorLocal: v('tplLav_setorLocal'),
+      equipamento: v('tplLav_equipamento'), tag: v('tplLav_tag'), marca: v('tplLav_marca'), modelo: v('tplLav_modelo'), ns: v('tplLav_ns'),
+      tipoEnsaio: v('tplLav_tipoEnsaio'), perfil: v('tplLav_perfil'), resultado: v('tplLav_resultado'), observacoes: v('tplLav_observacoes')
     };
   }
 
-  function tplLavadora_getPayloadTermo() {
-    return {
-      tipo: 'TERMODESINFECTORA',
-      numeroRelatorio: tplLavadora_el('tplTer_numeroRelatorio').value.trim(),
-      dataCiclo: tplLavadora_el('tplTer_dataCiclo').value.trim(),
-      cliente: tplLavadora_el('tplTer_cliente').value.trim(),
-      cnpjCliente: tplLavadora_el('tplTer_cnpjCliente').value.trim(),
-      tag: tplLavadora_el('tplTer_tag').value.trim(),
-      marca: tplLavadora_el('tplTer_marca').value.trim(),
-      modelo: tplLavadora_el('tplTer_modelo').value.trim(),
-      ns: tplLavadora_el('tplTer_ns').value.trim(),
-      localizacao: tplLavadora_el('tplTer_localizacao').value.trim(),
-      statusFinal: tplLavadora_el('tplTer_statusFinal').value
-    };
-  }
-
-  // Só para exibição na tela — troca "_" por espaço para o nome do
-  // arquivo ficar legível. O valor técnico real (com "_") continua
-  // intacto no Drive e nos links de download, nada aqui altera o
-  // arquivo gerado.
-  function tplLavadora_nomeAmigavel(nome) {
-    return String(nome || '').replace(/_/g, ' ');
-  }
-
-  function tplLavadora_validarPayload(payload) {
-    for (const chave in payload) {
-      if (chave === 'tipo') continue;
-      if (!String(payload[chave] || '').trim()) return 'Preencha todos os campos obrigatórios antes de gerar.';
+  function tplLavadora_validar(p) {
+    const obrig = [
+      ['numeroRelatorio', 'Número do relatório', 'tplLav_numeroRelatorio'], ['dataCiclo', 'Data do ciclo', 'tplLav_dataCiclo'],
+      ['tipoEnsaio', 'Tipo de ensaio', 'tplLav_tipoEnsaio'], ['cliente', 'Cliente', 'tplLav_cliente'],
+      ['setorLocal', 'Setor / local', 'tplLav_setorLocal'], ['tag', 'TAG', 'tplLav_tag'], ['marca', 'Marca', 'tplLav_marca'],
+      ['modelo', 'Modelo', 'tplLav_modelo'], ['ns', 'Número de série', 'tplLav_ns'], ['resultado', 'Resultado', 'tplLav_resultado']
+    ];
+    const faltam = obrig.filter(function (o) { return !p[o[0]]; });
+    if (faltam.length) {
+      try { tplLavadora_el(faltam[0][2]).focus(); } catch (e) {}
+      return 'Preencha: ' + faltam.map(function (o) { return o[1]; }).join(', ') + '.';
+    }
+    if (!tplLavadora_dataValida(p.dataCiclo)) {
+      try { tplLavadora_el('tplLav_dataCiclo').focus(); } catch (e) {}
+      return 'Data do ciclo inválida: use dia/mês/ano, por exemplo 20/03/2026.';
     }
     return '';
   }
 
-  function tplLavadora_gerarLavadora() {
-    const payload = tplLavadora_getPayloadLavadora();
-    const erro = tplLavadora_validarPayload(payload);
-    if (erro) { tplLavadora_ocultarLinks(); tplLavadora_setStatus(erro, 'error'); return; }
+  function tplLavadora_gerar() {
+    const payload = tplLavadora_getPayload();
+    const erro = tplLavadora_validar(payload);
     tplLavadora_ocultarLinks();
-    tplLavadora_setLoading('LAVADORA', true);
-    tplLavadora_setStatus('Gerando o relatório da lavadora ultrassônica…', 'info');
+    if (erro) { tplLavadora_setStatus(erro, 'error'); return; }
+    tplLavadora_setLoading(true);
+    tplLavadora_setStatus('Gerando o documento e o PDF…', 'info');
     SGO_iniciarCarregamento_();
     google.script.run
       .withSuccessHandler(function (res) {
         SGO_finalizarCarregamento_();
-        tplLavadora_setLoading('LAVADORA', false);
-        if (!res || !res.ok) { tplLavadora_setStatus((res && res.erro) ? res.erro : 'Não foi possível gerar o relatório. Confira os campos e tente de novo.', 'error'); return; }
+        tplLavadora_setLoading(false);
+        if (!res || !res.ok) {
+          tplLavadora_setStatus((res && res.erro) ? res.erro : 'Não foi possível gerar o relatório. Confira os campos e tente de novo; se repetir, avise o administrador.', 'error');
+          return;
+        }
         tplLavadora_mostrarLinks(res);
-        tplLavadora_setStatus('Relatório da lavadora ultrassônica gerado: ' + tplLavadora_nomeAmigavel(res.nomeArquivo || ''), 'success');
+        const nome = String(res.nomeArquivo || '').replace(/_/g, ' ');
+        if (res.aviso) tplLavadora_setStatus('Relatório gerado: ' + nome + '. ' + res.aviso, 'warning');
+        else tplLavadora_setStatus('Relatório gerado no modelo oficial: ' + nome + '.', 'success');
       })
       .withFailureHandler(function (err) {
         SGO_finalizarCarregamento_();
-        tplLavadora_setLoading('LAVADORA', false);
-        tplLavadora_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
+        tplLavadora_setLoading(false);
+        tplLavadora_setStatus('Não foi possível gerar o relatório: ' + String(err && err.message ? err.message : err).replace(/[.\s]+$/, '') + '. Os campos continuam preenchidos; tente de novo e, se repetir, avise o administrador.', 'error');
       })
       .tplLavadoraGerarRelatorio(SGO_getSessionId(), payload);
   }
 
-  function tplLavadora_gerarTermodesinfectora() {
-    const payload = tplLavadora_getPayloadTermo();
-    const erro = tplLavadora_validarPayload(payload);
-    if (erro) { tplLavadora_ocultarLinks(); tplLavadora_setStatus(erro, 'error'); return; }
+  function tplLavadora_limpar() {
+    const tipo = tplLavadora_tipo();
+    tplLavadora_el('tplFormLavadora').reset();
+    tplLavadora_el('tplLav_tipo').value = tipo;
     tplLavadora_ocultarLinks();
-    tplLavadora_setLoading('TERMODESINFECTORA', true);
-    tplLavadora_setStatus('Gerando o relatório da termodesinfectora…', 'info');
-    SGO_iniciarCarregamento_();
+    tplLavadora_setStatus('Campos limpos. Preencha os dados e clique em gerar.', 'info');
+  }
+
+  function tplLavadora_carregarSituacaoModelo() {
     google.script.run
       .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        tplLavadora_setLoading('TERMODESINFECTORA', false);
-        if (!res || !res.ok) { tplLavadora_setStatus((res && res.erro) ? res.erro : 'Não foi possível gerar o relatório. Confira os campos e tente de novo.', 'error'); return; }
-        tplLavadora_mostrarLinks(res);
-        tplLavadora_setStatus('Relatório da termodesinfectora gerado: ' + tplLavadora_nomeAmigavel(res.nomeArquivo || ''), 'success');
+        const p = tplLavadora_el('tplLavModeloSituacao');
+        if (p) p.textContent = (res && res.texto) ? res.texto : '';
       })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        tplLavadora_setLoading('TERMODESINFECTORA', false);
-        tplLavadora_setStatus('Não foi possível gerar o relatório: ' + (err && err.message ? err.message : err) + '. Tente de novo; se persistir, avise o administrador.', 'error');
+      .withFailureHandler(function () {
+        const p = tplLavadora_el('tplLavModeloSituacao');
+        if (p) p.textContent = '';
       })
-      .tplLavadoraGerarRelatorio(SGO_getSessionId(), payload);
+      .tplLavadoraObterConfig(SGO_getSessionId(), tplLavadora_tipo());
   }
-
-  function tplLavadora_limparLavadora() { tplLavadora_el('tplFormLavadora').reset(); tplLavadora_ocultarLinks(); tplLavadora_setStatus('Campos da Lavadora Ultrassônica limpos.', 'info'); }
-  function tplLavadora_limparTermo() { tplLavadora_el('tplFormTermo').reset(); tplLavadora_ocultarLinks(); tplLavadora_setStatus('Campos da Termodesinfectora limpos.', 'info'); }
-
-  function tplLavadora_exemploLavadora() {
-    tplLavadora_el('tplLav_numeroRelatorio').value = 'LU-2026-001';
-    tplLavadora_el('tplLav_dataCiclo').value = '20/03/2026';
-    tplLavadora_el('tplLav_cliente').value = 'Hospital Exemplo Ltda.';
-    tplLavadora_el('tplLav_equipamento').value = 'Lavadora Ultrassônica 01';
-    tplLavadora_el('tplLav_tag').value = 'LAV-01';
-    tplLavadora_el('tplLav_identificacao').value = 'Marca Exemplo LU-20 - NS 0000.00.0000';
-    tplLavadora_el('tplLav_tipoEnsaio').value = 'Qualificação de Operação';
-    tplLavadora_el('tplLav_perfil').value = 'Instrumental Delicado';
-    tplLavadora_el('tplLav_cnpj').value = '00.000.000/0001-00';
-    tplLavadora_el('tplLav_setorLocal').value = 'Unidade Centro - CME';
-    tplLavadora_el('tplLav_observacoes').value = 'Exemplo de observação.';
-    tplLavadora_ocultarLinks();
-    tplLavadora_setStatus('Exemplo da Lavadora carregado.', 'info');
-  }
-
-  function tplLavadora_exemploTermo() {
-    tplLavadora_el('tplTer_numeroRelatorio').value = 'TD-2026-001';
-    tplLavadora_el('tplTer_dataCiclo').value = '20/03/2026';
-    tplLavadora_el('tplTer_cliente').value = 'Hospital Exemplo Ltda.';
-    tplLavadora_el('tplTer_cnpjCliente').value = '00.000.000/0001-00';
-    tplLavadora_el('tplTer_tag').value = 'TDS-01';
-    tplLavadora_el('tplTer_marca').value = 'Marca Exemplo';
-    tplLavadora_el('tplTer_modelo').value = 'TD-190';
-    tplLavadora_el('tplTer_ns').value = '2131.15.6370';
-    tplLavadora_el('tplTer_localizacao').value = 'Unidade Centro - CME';
-    tplLavadora_el('tplTer_statusFinal').value = 'APROVADO';
-    tplLavadora_ocultarLinks();
-    tplLavadora_setStatus('Exemplo da Termodesinfectora carregado.', 'info');
-  }
-
-  function tplLavadora_renderPlaceholders(lista) {
-    const box = tplLavadora_el('tplLavPlaceholderList');
-    const status = tplLavadora_el('tplLavPlaceholderStatus');
-    box.innerHTML = '';
-    if (!lista || !lista.length) { status.textContent = 'Nenhum placeholder encontrado no template.'; return; }
-    status.textContent = 'Modelo lido. Campos encontrados: ' + lista.length;
-    lista.forEach(function (item) {
-      const chip = document.createElement('span');
-      chip.className = 'ph-chip';
-      chip.textContent = item;
-      box.appendChild(chip);
-    });
-  }
-
-  function tplLavadora_carregarPlaceholders(tipo) {
-    tplLavadora_el('tplLavPlaceholderStatus').textContent = 'Lendo template...';
-    tplLavadora_el('tplLavPlaceholderList').innerHTML = '';
-    google.script.run
-      .withSuccessHandler(function (res) {
-        if (!res || !res.ok) { tplLavadora_el('tplLavPlaceholderStatus').textContent = (res && res.erro) ? res.erro : 'Não foi possível ler o template.'; return; }
-        tplLavadora_renderPlaceholders(res.placeholders || []);
-      })
-      .withFailureHandler(function (err) {
-        tplLavadora_el('tplLavPlaceholderStatus').textContent = 'Erro ao ler template: ' + (err && err.message ? err.message : err);
-      })
-      .tplLavadoraObterPlaceholders(SGO_getSessionId(), tipo);
-  }
-
-  function tplLavadora_carregarConfigTela() {
-    // getPublicConfig_ do standalone devolve appName/subtitle/logoFileUrl
-    // direto, sem envelope {ok,...} — não checar res.ok aqui.
-    google.script.run
-      .withSuccessHandler(function (res) {
-        if (!res) return;
-        if (res.appName) tplLavadora_el('tplLavAppTitle').textContent = res.appName;
-        if (res.subtitle) tplLavadora_el('tplLavAppSubtitle').textContent = res.subtitle;
-      })
-      .withFailureHandler(function () {})
-      .tplLavadoraObterConfig(SGO_getSessionId());
-  }
-
-  let tplLavadora_relogioTimer_ = null;
 
   function renderTplLavadora_() {
     const container = document.getElementById('tplLavadoraContainer');
     if (!container) return;
-
     try {
       container.innerHTML = TPL_LAVADORA_HTML_;
-
-      tplLavadora_carregarConfigTela();
-      tplLavadora_atualizarRelogio();
-
-      if (tplLavadora_relogioTimer_) clearInterval(tplLavadora_relogioTimer_);
-      tplLavadora_relogioTimer_ = setInterval(tplLavadora_atualizarRelogio, 1000);
-
-      tplLavadora_alternarModulo('LAVADORA');
+      tplLavadora_aoTrocarTipo();
+      tplLavadora_setStatus('Preencha os campos e clique em gerar.', 'info');
     } catch (e) {
       console.error('renderTplLavadora_ falhou:', e);
       container.innerHTML = '<div style="padding:24px;color:var(--bc-danger);background:var(--bc-danger-bg);border:1px solid var(--bc-danger-line);border-radius:6px;">' +

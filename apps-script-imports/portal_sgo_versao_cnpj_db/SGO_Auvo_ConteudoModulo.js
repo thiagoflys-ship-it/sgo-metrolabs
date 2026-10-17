@@ -44,8 +44,12 @@ var AUVO_CONTEUDO_MODULO = `<style>
 }
 #tplAuvoContainer .panel h2 {
   margin: 0 0 6px; font-size: 14px; color: var(--text-strong) !important;
-  border-bottom: 1px solid var(--border); padding-bottom: 10px; text-transform: uppercase;
+  border-bottom: 1px solid var(--border); padding-bottom: 10px;
 }
+#tplAuvoContainer .colab-caixas { max-width: 560px; max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; margin-top: 6px; background: #FFFFFF; }
+#tplAuvoContainer .colab-caixas label { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text); padding: 3px 0; cursor: pointer; }
+#tplAuvoContainer .colab-caixas input { width: auto; }
+#tplAuvoContainer .colab-busca { max-width: 560px; margin-top: 6px; }
 #tplAuvoContainer .muted { color: var(--muted); font-size: 12px; }
 #tplAuvoContainer input[type="text"], #tplAuvoContainer input:not([type]) {
   background: var(--input) !important; color: var(--text) !important; border: 1px solid var(--border);
@@ -91,7 +95,7 @@ var AUVO_CONTEUDO_MODULO = `<style>
 #tplAuvoContainer .modal-auvo { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; padding: 20px; box-shadow: 0 20px 60px rgba(28,31,29,0.1); }
 #tplAuvoContainer .modal-auvo h3 { margin: 0 0 4px; font-size: 15px; color: var(--text-strong); }
 #tplAuvoContainer .modal-auvo .muted { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
-#tplAuvoContainer .modal-auvo label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
+#tplAuvoContainer .modal-auvo label { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin: 10px 0 4px; }
 #tplAuvoContainer .modal-auvo textarea {
   width: 100%; background: var(--input); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; font-family: inherit; min-height: 90px; resize: vertical;
 }
@@ -161,6 +165,12 @@ function tplAuvo_dataBr_(v) {
   return m[3] + '/' + m[2] + '/' + m[1] + (m[4] && (m[4] + m[5]) !== '0000' ? ' ' + m[4] + ':' + m[5] : '');
 }
 
+function tplAuvo_rotuloSituacao_(v) {
+  var m = { OK: 'Sincronizado', ERRO: 'Com erro', PENDENTE: 'Pendente', NAO_SINCRONIZADO: 'Não sincronizado' };
+  var k = String(v || '').toUpperCase();
+  return m[k] || (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1).toLowerCase().replace(/_/g, ' ') : '—');
+}
+
 function tplAuvo_esc(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -186,7 +196,8 @@ function tplAuvo_renderReal_() {
     '<div id="tplAuvo_viewManual" style="display:none">' + tplAuvo_manualHtml_() + '</div>' +
     '<div class="modal-overlay-auvo" id="tplAuvo_modalCobranca"></div>';
 
-  tplAuvo_carregarStatusReverso_();
+  tplAuvo_cascoManual_();
+  if (tplAuvo_ehAdmin_()) tplAuvo_carregarStatusReverso_();
   tplAuvo_carregarStatusIncremental_();
   tplAuvo_carregarPendencias_();
   tplAuvo_pendCarregarStatusDiario_();
@@ -199,7 +210,7 @@ function tplAuvo_toggleAvancado() {
   if (!el) return;
   var abrindo = el.style.display === 'none';
   el.style.display = abrindo ? '' : 'none';
-  if (btn) btn.textContent = abrindo ? 'Ocultar ferramentas avançadas' : 'Mostrar ferramentas avançadas';
+  if (btn) btn.textContent = abrindo ? 'Ocultar ferramentas de implantação' : 'Mostrar ferramentas de implantação (administrador)';
 }
 
 // ---------------- Conexão ----------------
@@ -234,7 +245,7 @@ function tplAuvo_renderClientesTabela_(items) {
     return '<tr>' +
       '<td>' + tplAuvo_esc(c.nome) + '</td>' +
       '<td>' + tplAuvo_esc(c.cnpj) + '</td>' +
-      '<td><span class="status-pill ' + tplAuvo_esc(c.status) + '">' + tplAuvo_esc(c.status) + '</span></td>' +
+      '<td><span class="status-pill ' + tplAuvo_esc(c.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(c.status)) + '</span></td>' +
       '<td class="muted">' + tplAuvo_esc(c.ultimoErro) + '</td>' +
       '<td><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarCliente(\\'' + c.id + '\\')">Sincronizar</button></td>' +
       '</tr>';
@@ -289,7 +300,7 @@ function tplAuvo_renderTecnicosTabela_(items) {
       '<td>' + tplAuvo_esc(u.nome) + '</td>' +
       '<td>' + tplAuvo_esc(u.perfil) + '</td>' +
       '<td>' + campoEmail + '</td>' +
-      '<td><span class="status-pill ' + tplAuvo_esc(u.status) + '">' + tplAuvo_esc(u.status) + '</span></td>' +
+      '<td><span class="status-pill ' + tplAuvo_esc(u.status) + '">' + tplAuvo_esc(tplAuvo_rotuloSituacao_(u.status)) + '</span></td>' +
       '<td class="muted">' + tplAuvo_esc(u.ultimoErro) + '</td>' +
       '<td><button type="button" class="btn btn-sm" onclick="tplAuvo_sincronizarTecnico(\\'' + u.id + '\\')">Sincronizar</button></td>' +
       '</tr>';
@@ -395,7 +406,29 @@ function tplAuvo_carregarColaboradoresRelatorio_() {
     sel.innerHTML = (res.items || []).map(function(i) {
       return '<option value="' + tplAuvo_esc(i.id) + '">' + tplAuvo_esc(i.nome) + '</option>';
     }).join('');
+    tplAuvo_montarCaixasColaboradores_();
   }).catch(function(err) { tplAuvo_erro('tplAuvo_relatorioResultado', err); });
+}
+
+// Fase 2 (16/10): marcação por caixas, com busca, no lugar do Ctrl+clique no select múltiplo.
+function tplAuvo_montarCaixasColaboradores_() {
+  var sel = document.getElementById('tplAuvo_colaboradoresRelatorio');
+  var box = document.getElementById('tplAuvo_colabCaixas');
+  if (!sel || !box) return;
+  var ops = Array.prototype.slice.call(sel.options);
+  if (!ops.length) { box.innerHTML = '<span class="muted">Nenhum colaborador com atendimento sincronizado ainda. Os nomes aparecem depois da primeira sincronização de tarefas.</span>'; return; }
+  box.innerHTML = ops.map(function(op, i) {
+    return '<label data-nome="' + tplAuvo_esc(String(op.text).toLowerCase()) + '"><input type="checkbox" data-i="' + i + '"> ' + tplAuvo_esc(op.text) + '</label>';
+  }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('input[type=checkbox]'), function(cb) {
+    cb.addEventListener('change', function() { var op = sel.options[Number(cb.getAttribute('data-i'))]; if (op) op.selected = cb.checked; });
+  });
+}
+function tplAuvo_filtrarColaboradores_() {
+  var q = String((document.getElementById('tplAuvo_colabBusca') || {}).value || '').toLowerCase().trim();
+  Array.prototype.forEach.call(document.querySelectorAll('#tplAuvo_colabCaixas label'), function(l) {
+    l.style.display = !q || String(l.getAttribute('data-nome') || '').indexOf(q) >= 0 ? '' : 'none';
+  });
 }
 
 function tplAuvo_gerarRelatorio(filtrarColaboradores) {
@@ -406,7 +439,7 @@ function tplAuvo_gerarRelatorio(filtrarColaboradores) {
     ? Array.prototype.slice.call(selColabs.selectedOptions || []).map(function(o) { return o.value; })
     : [];
   if (filtrarColaboradores && !tecnicosIds.length) {
-    tplAuvo_msg('tplAuvo_relatorioResultado', 'warning', 'Selecione ao menos um colaborador para gerar o relatório individual ou em grupo.');
+    tplAuvo_msg('tplAuvo_relatorioResultado', 'warning', 'Marque ao menos um colaborador na lista para gerar o relatório individual ou do grupo.');
     return;
   }
 
@@ -502,7 +535,7 @@ function tplAuvo_renderPendenciasTabela_(itens) {
           tplAuvo_esc(i.TASK_TYPE_DESCRICAO).replace(/'/g, '&#39;') + '&#39;,&#39;' +
           tplAuvo_esc(i.CLIENTE_NOME).replace(/'/g, '&#39;') + '&#39;,&#39;' +
           tplAuvo_esc(i.DIAS_ABERTA).replace(/'/g, '&#39;') + '&#39;)">Cobrar</button>')
-      : '<span class="muted" title="Esse técnico não tem login no Portal — a cobrança fica sem como notificar">Sem login</span>';
+      : '<span class="muted" title="Esse técnico não tem login no SGO+ — a cobrança fica sem como notificar">Sem login</span>';
     return '<tr>' +
       '<td>' + tplAuvo_esc(i.TECNICO_NOME) + '</td>' +
       '<td>' + tarefaTxt + '</td>' +
@@ -607,20 +640,35 @@ function tplAuvo_salvarCobranca_(tecnicoId, tecnicoNome) {
 // ---------------- Sincronização reversa (Auvo -> Portal) ----------------
 function tplAuvo_carregarStatusReverso_() {
   tplAuvo_chamarApi('apiStatusSincronizacaoReversa', {})
-    .then(function(res) { tplAuvo_renderStatusReverso_(res.checkpoint); })
+    .then(function(res) { tplAuvo_renderStatusReverso_(res.checkpoint, res); })
     .catch(function() {});
 }
 
-function tplAuvo_renderStatusReverso_(cp) {
+// Fase 2 (16/10): diz se há importação, desde quando está parada, o motivo e como retomar.
+function tplAuvo_renderStatusReverso_(cp, info) {
   var el = document.getElementById('tplAuvo_statusReverso');
   if (!el || !cp) return;
-  if (cp.fase === 'CONCLUIDO' || !cp.fase) {
-    el.innerHTML = '<span class="muted">Nenhuma sincronização em andamento no momento.</span>';
+  info = info || {};
+  var nomesFase = { CLIENTES: 'Clientes e unidades', EQUIPAMENTOS: 'Equipamentos' };
+  if (info.existe === false || !cp.fase) {
+    el.innerHTML = '<span class="muted">Nenhuma importação completa foi feita ainda. Para começar, clique em Simular e confira a prévia.</span>';
     return;
   }
-  el.innerHTML = '<span class="muted">Em andamento — fase <strong>' + tplAuvo_esc(cp.fase) + '</strong>' +
-    (cp.indice ? (', a partir do item ' + tplAuvo_esc(cp.indice)) : '') +
-    '. Continua sozinha em segundo plano (gatilho automático); pode fechar esta tela.</span>';
+  if (cp.fase === 'CONCLUIDO') {
+    el.innerHTML = '<span class="muted">Última importação completa concluída' + (cp.concluidoEm ? ' em ' + tplAuvo_esc(tplAuvo_dataBr_(cp.concluidoEm)) : '') + '.</span>';
+    return;
+  }
+  var fase = nomesFase[cp.fase] || String(cp.fase).toLowerCase();
+  var desde = cp.erroEm || cp.atualizadoEm || '';
+  var item = cp.indice ? ', a partir do item ' + tplAuvo_esc(cp.indice) : '';
+  if (info.agendado && !cp.ultimoErro) {
+    el.innerHTML = '<span class="muted">Em andamento na fase ' + tplAuvo_esc(fase) + item + (desde ? ' (último lote em ' + tplAuvo_esc(tplAuvo_dataBr_(desde)) + ')' : '') + '. Continua sozinha em segundo plano; pode fechar esta tela.</span>';
+    return;
+  }
+  var motivo = cp.ultimoErro ? tplAuvo_esc(cp.ultimoErro)
+    : (info.credenciais === false ? 'a conexão com o Auvo não está configurada (Chaves e senhas)' : 'a continuação automática não está agendada');
+  el.innerHTML = '<div class="alert-box warning">Importação parada' + (desde ? ' desde ' + tplAuvo_esc(tplAuvo_dataBr_(desde)) : '') + ' na fase ' + tplAuvo_esc(fase) + item + '. Motivo: ' + motivo + '. ' +
+    (info.credenciais === false ? 'Grave as chaves do Auvo em Chaves e senhas e depois clique em Retomar.' : 'Para continuar, clique em Retomar sincronização em andamento.') + '</div>';
 }
 
 function tplAuvo_simularSincReversa() {
@@ -647,7 +695,7 @@ function tplAuvo_renderSimulacao_(res) {
     'nenhum campo alterado) &mdash; ' + c.unidadesCriar + ' unidade(s) nova(s), ' +
     c.unidadesAtualizar + ' unidade(s) atualizada(s). ' + c.gruposSemCnpj + ' cliente(s) do Auvo sem CNPJ (nunca mesclados automaticamente).<br>' +
     '<strong>Equipamentos:</strong> ' + e.total + ' no Auvo (' + e.criar + ' novo(s), ' + e.atualizar + ' atualizado(s), ' + (e.protegidos || 0) + ' protegido(s)). ' +
-    (e.ignoradosSemDado ? (e.ignoradosSemDado + ' ignorado(s) por não ter nenhum dado útil preenchido (sem TAG/fabricante/modelo/série) — não entram no Portal. ') : '') +
+    (e.ignoradosSemDado ? (e.ignoradosSemDado + ' ignorado(s) por não ter nenhum dado útil preenchido (sem TAG/fabricante/modelo/série) — não entram no SGO+. ') : '') +
     (e.semClienteMapeado ? (e.semClienteMapeado + ' sem cliente/unidade correspondente ainda (serão importados sem vínculo até a unidade ser sincronizada).') : '') +
     '</div>' +
     (amostra ? ('<table class="tabela-resultado"><thead><tr><th>CNPJ raiz</th><th>Qtd. unidades</th><th>Nomes (Auvo)</th></tr></thead><tbody>' + amostra + '</tbody></table>') : '') +
@@ -774,8 +822,8 @@ function tplAuvo_voltarDoManual_() {
 
 function tplAuvo_manualHtml_() {
   return '<div class="wrap manual-wrap">' +
-    '<h1>Integração Auvo — Manual do Operador</h1>' +
-    '<p class="subtitulo">Acesso restrito a Gestor/Administrador.</p>' +
+    '<h1>Integração Auvo — Manual do operador</h1>' +
+    '<p class="subtitulo">Uso diário pela gestão (Gestor, Administrador e Diretoria); ferramentas de implantação só pelo Administrador.</p>' +
 
     '<div class="toc"><h2>Índice</h2><ol>' +
     '<li><a onclick="document.getElementById(\\'ma-1\\').scrollIntoView({behavior:\\'smooth\\'})">O que esta tela faz</a></li>' +
@@ -790,73 +838,73 @@ function tplAuvo_manualHtml_() {
     '</ol></div>' +
 
     '<h2 id="ma-1">1. O que esta tela faz</h2>' +
-    '<p>Sincroniza dados nos dois sentidos com o Auvo. Portal &rarr; Auvo: Clientes, Técnicos/Usuários e Tarefas (sempre que um ' +
-    'documento oficial é emitido). Auvo &rarr; Portal: Clientes/Unidades e Equipamentos, trazidos automaticamente pra dentro do ' +
-    'Portal (ver seção 5b). Em ambos os sentidos, o Portal nunca cria registro duplicado — sempre casa com o que já existe antes ' +
+    '<p>Sincroniza dados nos dois sentidos com o Auvo. SGO+ &rarr; Auvo: Clientes, Técnicos/Usuários e Tarefas (sempre que um ' +
+    'documento oficial é emitido). Auvo &rarr; SGO+: Clientes/Unidades e Equipamentos, trazidos automaticamente pra dentro do ' +
+    'SGO+ (ver seção 5b). Em ambos os sentidos, o SGO+ nunca cria registro duplicado — sempre casa com o que já existe antes ' +
     'de criar algo novo.</p>' +
 
     '<h2 id="ma-2">2. Como configurar as credenciais</h2>' +
     '<p>Gere a API Key e o API Token na conta Auvo, em <strong>Menu &gt; Integração</strong>. Depois, o administrador do SGO+ abre ' +
     '<strong>Chaves e senhas</strong> (menu do administrador, grupo Auvo) e grava as duas chaves: ' +
-    '<strong>AUVO_API_KEY</strong> e <strong>AUVO_API_TOKEN</strong>, com os valores gerados. Use o botão "Testar Conexão" ' +
+    '<strong>AUVO_API_KEY</strong> e <strong>AUVO_API_TOKEN</strong>, com os valores gerados. Use o botão "Testar conexão" ' +
     'nesta tela pra confirmar que ficou certo.</p>' +
 
-    '<h2 id="ma-3">3. Sincronizar Clientes (Ferramentas avançadas)</h2>' +
-    '<p>Dentro de "Ferramentas avançadas", em "Consultar Cliente": busque pelo nome ou CNPJ (a lista não aparece inteira — ' +
+    '<h2 id="ma-3">3. Sincronizar Clientes (ferramentas de implantação, administrador)</h2>' +
+    '<p>Dentro de "Ferramentas de implantação", em "Consultar Cliente": busque pelo nome ou CNPJ (a lista não aparece inteira — ' +
     'a base só cresce, então é sempre busca). O botão "Sincronizar" no resultado envia aquele cliente pro Auvo — se já ' +
     'tiver sido sincronizado antes, os dados são atualizados lá; se não, um novo cadastro é criado. O status (OK / ERRO / ' +
     'PENDENTE) mostra o resultado da última tentativa. "Sincronizar todos os clientes ativos" faz isso em lote, sem precisar ' +
     'buscar um por um.</p>' +
 
     '<h2 id="ma-4">4. Sincronizar Técnicos</h2>' +
-    '<p>São considerados "técnicos" os usuários ativos do Portal com perfil Técnico, Metrologia, Gestor ou Administrador. ' +
-    'O Auvo exige e-mail pra cada usuário — se o Portal não tiver o e-mail cadastrado, um campo aparece no próprio ' +
+    '<p>São considerados "técnicos" os usuários ativos do SGO+ com perfil Técnico, Metrologia, Gestor ou Administrador. ' +
+    'O Auvo exige e-mail pra cada usuário — se o SGO+ não tiver o e-mail cadastrado, um campo aparece no próprio ' +
     'resultado da busca pra preencher e salvar antes de sincronizar.</p>' +
 
-    '<div class="callout"><strong>Nota:</strong> a sincronização usa os usuários reais do Portal (login), que são quem de ' +
+    '<div class="callout"><strong>Nota:</strong> a sincronização usa os usuários reais do SGO+ (login), que são quem de ' +
     'fato executa o serviço — não uma aba interna separada de técnicos.</div>' +
 
     '<h2 id="ma-5">5. Como as Tarefas são criadas</h2>' +
     '<p>Toda vez que um Certificado de Calibração, Laudo NR-13, Registro Operacional ou documento de PGT/POP é emitido no ' +
-    'Portal, uma Tarefa concluída é criada automaticamente no Auvo pra registrar esse atendimento — sem nenhuma ação manual. ' +
+    'SGO+, uma Tarefa concluída é criada automaticamente no Auvo pra registrar esse atendimento — sem nenhuma ação manual. ' +
     'Se o cliente ou o técnico responsável ainda não tiverem sido sincronizados antes, isso acontece automaticamente na hora, ' +
     'sem precisar passar por esta tela primeiro. Se o Auvo estiver fora do ar ou mal configurado no momento da emissão, o ' +
     'documento é emitido normalmente mesmo assim — a Tarefa simplesmente não é criada.</p>' +
 
     '<h2 id="ma-5b">5b. Sincronização diária (Tarefas) — fluxo padrão</h2>' +
-    '<p>Todo dia, o Portal pergunta ao Auvo quais Tarefas/atendimentos aconteceram recentemente. Pra cada Tarefa nova, o ' +
-    'Cliente correspondente é trazido pro Portal <strong>só se ainda não estiver aqui</strong> — sob demanda, não a base ' +
-    'inteira do Auvo de uma vez. Isso alimenta a aba AUVO_TAREFAS (histórico de atendimentos), base do futuro módulo de ' +
-    'indicadores. Usa a mesma proteção de sempre: nunca sobrescreve dado que você já digitou (ver 5c). Equipamento não entra ' +
+    '<p>Todo dia, o SGO+ pergunta ao Auvo quais Tarefas/atendimentos aconteceram recentemente. Pra cada Tarefa nova, o ' +
+    'Cliente correspondente é trazido para o SGO+ <strong>só se ainda não estiver aqui</strong> — sob demanda, não a base ' +
+    'inteira do Auvo de uma vez. Isso alimenta o histórico de atendimentos do SGO+, usado no relatório de atendimentos e no Painel de qualidade.' +
+    ' Usa a mesma proteção de sempre: nunca sobrescreve dado que você já digitou (ver 5c). Equipamento não entra ' +
     'por esse caminho — o Auvo não vincula equipamento a Tarefa por ID; equipamento continua só na Importação completa manual.</p>' +
     '<p>O histórico é só a partir da data em que essa sincronização foi ligada — atendimentos antigos do Auvo (antes disso) ' +
-    'não entram automaticamente. O botão "Rodar agora" testa manualmente; a chave (toggle) liga/desliga a sincronização ' +
-    'automática a cada 30 minutos — é essa cadência que alimenta o alerta de atendimento no dashboard principal.</p>' +
+    'não entram automaticamente. O botão "Sincronizar agora" faz a consulta na hora; a chave liga e desliga a sincronização ' +
+    'automática a cada 30 minutos, que alimenta o alerta de atendimento no Início.</p>' +
 
     '<h2 id="ma-5c">5c. Importação completa (manual, opcional)</h2>' +
-    '<p>Traz Clientes e Equipamentos cadastrados no Auvo pra dentro do Portal <strong>de uma vez só</strong> — ferramenta ' +
+    '<p>Traz Clientes e Equipamentos cadastrados no Auvo para dentro do SGO+ <strong>de uma vez só</strong> — ferramenta ' +
     'separada, não roda automaticamente (é pesada pra API do Auvo). Como o Auvo não tem o conceito de "Unidade" ' +
     '(só Cliente), a regra é: clientes do Auvo com o mesmo CNPJ (8 primeiros dígitos, ignorando filial/DV) viram <strong>1 ' +
-    'Cliente no Portal + 1 Unidade pra cada endereço diferente</strong>. Clientes do Auvo sem CNPJ preenchido nunca são ' +
+    'Cliente no SGO+ + 1 Unidade pra cada endereço diferente</strong>. Clientes do Auvo sem CNPJ preenchido nunca são ' +
     'mesclados automaticamente (fica 1 Cliente + 1 Unidade própria, pra revisão manual).</p>' +
     '<p><strong>Nunca duplica</strong>: antes de criar qualquer registro novo, o sistema verifica se aquele Cliente/Unidade/' +
     'Equipamento do Auvo já foi trazido antes (e só atualiza) e, se não, tenta casar com um cadastro manual já existente pelo ' +
     'CNPJ (Cliente) ou pela TAG (Equipamento) antes de criar algo novo.</p>' +
     '<p><strong>Nunca sobrescreve dado que você já digitou</strong>: um registro cadastrado manualmente é sempre protegido — ' +
-    'quando casa com um Cliente/Equipamento do Auvo, só ganha o vínculo (pra runs futuras reconhecerem), nenhum campo dele é ' +
+    'quando casa com um Cliente/Equipamento do Auvo, só ganha o vínculo (para as próximas importações o reconhecerem), nenhum campo dele é ' +
     'alterado. Só um registro que já foi criado por uma sincronização anterior (marcado ORIGEM=AUVO) recebe atualização, e ' +
     'mesmo assim só preenche campo que estava vazio — nunca troca um valor já preenchido por outro.</p>' +
     '<p><strong>Sempre clique em "Simular" primeiro</strong> — mostra uma prévia (quantos Clientes/Unidades/Equipamentos ' +
-    'seriam criados ou atualizados, incluindo os grupos com mais de uma Unidade) sem gravar nada no Portal. Só depois de ' +
+    'seriam criados ou atualizados, incluindo os grupos com mais de uma Unidade) sem gravar nada no SGO+. Só depois de ' +
     'revisar essa prévia, clique em "Confirmar e executar de verdade".</p>' +
     '<p>Bases grandes (milhares de registros) são processadas em lotes — a tela mostra o progresso e continua sozinha em ' +
-    'segundo plano mesmo se você fechar a aba (um gatilho automático retoma de onde parou).</p>' +
-    '<div class="callout"><strong>Nota:</strong> registros trazidos do Auvo ganham <strong>ORIGEM = AUVO</strong> (visível na ' +
-    'planilha de Clientes/Unidades/Equipamentos), pra diferenciar do que foi cadastrado manualmente (ORIGEM = MANUAL).</div>' +
+    'segundo plano mesmo se você fechar a aba (o SGO+ retoma sozinho de onde parou). Se parar, a tela mostra desde quando, o motivo e o botão para retomar.</p>' +
+    '<div class="callout"><strong>Nota:</strong> registros trazidos do Auvo ficam marcados com a origem Auvo nos cadastros de ' +
+    'Clientes, Unidades e Equipamentos, para diferenciar do que foi cadastrado manualmente.</div>' +
 
     '<h2 id="ma-6">6. O que ainda não está incluído</h2>' +
-    '<p>Equipes não são sincronizadas (o Portal não tem esse conceito hoje). Usuários/Técnicos do Auvo não são trazidos de ' +
-    'volta pro Portal (só o sentido Portal &rarr; Auvo existe pra Técnicos). Documentos gerados por Relatório de Calibração, ' +
+    '<p>Equipes não são sincronizadas (o SGO+ não tem esse conceito hoje). Usuários/Técnicos do Auvo não são trazidos de ' +
+    'volta para o SGO+ (só o sentido SGO+ &rarr; Auvo existe pra Técnicos). Documentos gerados por Relatório de Calibração, ' +
     'Declaração de Execução, Cronograma de Execução, Planejamento CME, Autoclave, Cadeia de Frio, Estufa/Banho-maria e ' +
     'Lavadora ainda não criam Tarefa automaticamente — fica como uma próxima etapa a decidir.</p>' +
 
@@ -873,20 +921,14 @@ function tplAuvo_manualHtml_() {
 }
 
 function tplAuvo_paintPainel_() {
+  var ehAdminAuvo = tplAuvo_ehAdmin_();
   return '<div class="wrap">' +
-    '<div class="header-card">' +
-      '<div class="title-area">' +
-        '<h1>Integração Auvo</h1>' +
-        '<p>Uso diário: sincronização automática de Tarefas e relatório de atendimentos. O resto (buscar cliente/técnico, ' +
-        'auditoria, importação completa) fica nas ferramentas avançadas, abaixo.</p>' +
-      '</div>' +
-      '<div><button type="button" class="btn" onclick="tplAuvo_abrirManual_()">Manual do Operador</button></div>' +
-    '</div>' +
+    '<div id="tplAuvo_barraLocal" style="display:none;justify-content:flex-end;margin-bottom:10px"><button type="button" class="btn" onclick="tplAuvo_abrirManual_()">Manual do operador</button></div>' +
 
     '<div class="panel">' +
       '<h2>Conexão</h2>' +
-      '<p class="muted">Confirma se AUVO_API_KEY/AUVO_API_TOKEN estão configurados corretamente.</p>' +
-      '<button type="button" class="btn btn-primary" onclick="tplAuvo_testarConexao()">Testar Conexão</button>' +
+      '<p class="muted">Confere se a conta do Auvo está conectada ao SGO+. As chaves de acesso são gravadas pelo administrador em Chaves e senhas.</p>' +
+      '<button type="button" class="btn btn-primary" onclick="tplAuvo_testarConexao()">Testar conexão</button>' +
       '<div id="tplAuvo_conexaoResultado"></div>' +
     '</div>' +
 
@@ -905,7 +947,7 @@ function tplAuvo_paintPainel_() {
     '</div>' +
 
     '<div class="panel">' +
-      '<h2>Pendências de Fechamento (O.S. abertas no Auvo)</h2>' +
+      '<h2>Pendências de fechamento (O.S. abertas no Auvo)</h2>' +
       '<p class="muted">O Auvo não permite encerrar a O.S. pelo SGO+; esta lista mostra o técnico responsável, o que falta ' +
       'e o link para encerrar no Auvo.</p>' +
       '<div id="tplAuvo_pendResumo" class="muted" style="margin:8px 0"></div>' +
@@ -927,7 +969,7 @@ function tplAuvo_paintPainel_() {
     '</div>' +
 
     '<div class="panel">' +
-      '<h2>Relatório de Atendimentos (A4)</h2>' +
+      '<h2>Relatório de atendimentos (A4)</h2>' +
       '<p class="muted">O relatório geral e o relatório por colaborador/grupo são gerados em HTML A4, com número da O.S., indicadores e interpretação por IA.</p>' +
       '<select id="tplAuvo_periodoRelatorio">' +
         '<option value="7">Últimos 7 dias</option>' +
@@ -935,32 +977,35 @@ function tplAuvo_paintPainel_() {
         '<option value="90">Últimos 90 dias</option>' +
       '</select> ' +
       '<button type="button" class="btn btn-primary" onclick="tplAuvo_gerarRelatorio(false)">Gerar relatório geral</button>' +
-      '<div style="margin-top:12px"><label class="muted" for="tplAuvo_colaboradoresRelatorio">Colaborador ou grupo de colaboradores (Ctrl/Cmd + clique para selecionar vários)</label><br>' +
-      '<select id="tplAuvo_colaboradoresRelatorio" multiple size="6" style="width:100%;max-width:520px;margin-top:6px"></select> ' +
+      '<div style="margin-top:12px"><label class="muted" for="tplAuvo_colabBusca">Colaborador ou grupo de colaboradores (marque um ou mais)</label>' +
+      '<input type="text" id="tplAuvo_colabBusca" class="colab-busca" placeholder="Buscar pelo nome" oninput="tplAuvo_filtrarColaboradores_()">' +
+      '<div id="tplAuvo_colabCaixas" class="colab-caixas"><span class="muted">Carregando...</span></div>' +
+      '<select id="tplAuvo_colaboradoresRelatorio" multiple style="display:none"></select> ' +
       '<button type="button" class="btn btn-primary" onclick="tplAuvo_gerarRelatorio(true)">Gerar relatório dos selecionados</button></div>' +
       '<div id="tplAuvo_relatorioResultado"></div>' +
     '</div>' +
 
-    '<button type="button" id="tplAuvo_avancadoBtn" class="btn avancado-toggle-btn" onclick="tplAuvo_toggleAvancado()">Mostrar ferramentas avançadas</button>' +
+    (!ehAdminAuvo ? '<p class="muted" style="margin-top:4px">As ferramentas de implantação (envio em lote, importação completa, auditoria do cadastro e envio de cadastro pendente) ficam com o Administrador.</p>' : '') +
+    (!ehAdminAuvo ? '' : '<button type="button" id="tplAuvo_avancadoBtn" class="btn avancado-toggle-btn" onclick="tplAuvo_toggleAvancado()">Mostrar ferramentas de implantação (administrador)</button>' +
 
     '<div id="tplAuvo_avancado" style="display:none;margin-top:14px">' +
 
       '<div class="panel">' +
-        '<h2>Consultar Cliente (Portal &rarr; Auvo)</h2>' +
-        '<p class="muted">Busca em vez de listar tudo — a base de clientes só cresce. Perfis com login "Sincronizar" mandam ' +
-        'o cadastro do Portal pro Auvo (criando ou atualizando lá).</p>' +
+        '<h2>Consultar cliente (SGO+ &rarr; Auvo)</h2>' +
+        '<p class="muted">Busca em vez de listar tudo — a base de clientes só cresce. O botão "Sincronizar" manda ' +
+        'o cadastro do SGO+ para o Auvo (criando ou atualizando lá).</p>' +
         '<div class="busca-linha">' +
           '<input type="text" id="tplAuvo_buscaClienteInput" placeholder="Nome ou CNPJ do cliente..." onkeydown="if(event.key===\\'Enter\\')tplAuvo_buscarClientes()">' +
           '<button type="button" class="btn btn-sm" onclick="tplAuvo_buscarClientes()">Buscar</button>' +
         '</div>' +
         '<button type="button" class="btn btn-sm" style="margin-top:10px" onclick="tplAuvo_sincronizarTodosClientes()">Sincronizar todos os clientes ativos (lote)</button>' +
         '<div id="tplAuvo_clientesResultado"></div>' +
-        '<table class="tabela-resultado"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Status</th><th>Último erro</th><th></th></tr></thead>' +
+        '<table class="tabela-resultado"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Situação</th><th>Último erro</th><th></th></tr></thead>' +
         '<tbody id="tplAuvo_clientesBody"><tr><td colspan="5" class="muted">Busque um cliente acima.</td></tr></tbody></table>' +
       '</div>' +
 
       '<div class="panel">' +
-        '<h2>Consultar Técnico / Usuário (Portal &rarr; Auvo)</h2>' +
+        '<h2>Consultar técnico / usuário (SGO+ &rarr; Auvo)</h2>' +
         '<p class="muted">Perfis considerados: Técnico, Metrologia, Gestor, Administrador. O Auvo exige e-mail.</p>' +
         '<div class="busca-linha">' +
           '<input type="text" id="tplAuvo_buscaTecnicoInput" placeholder="Nome do técnico/usuário..." onkeydown="if(event.key===\\'Enter\\')tplAuvo_buscarTecnicos()">' +
@@ -968,7 +1013,7 @@ function tplAuvo_paintPainel_() {
         '</div>' +
         '<button type="button" class="btn btn-sm" style="margin-top:10px" onclick="tplAuvo_sincronizarTodosTecnicos()">Sincronizar todos (lote)</button>' +
         '<div id="tplAuvo_tecnicosResultado"></div>' +
-        '<table class="tabela-resultado"><thead><tr><th>Nome</th><th>Perfil</th><th>E-mail</th><th>Status</th><th>Último erro</th><th></th></tr></thead>' +
+        '<table class="tabela-resultado"><thead><tr><th>Nome</th><th>Perfil</th><th>E-mail</th><th>Situação</th><th>Último erro</th><th></th></tr></thead>' +
         '<tbody id="tplAuvo_tecnicosBody"><tr><td colspan="6" class="muted">Busque um usuário acima.</td></tr></tbody></table>' +
       '</div>' +
 
@@ -993,8 +1038,8 @@ function tplAuvo_paintPainel_() {
       '</div>' +
 
       '<div class="panel">' +
-        '<h2>Enviar cadastro pendente pro Auvo (Portal &rarr; Auvo)</h2>' +
-        '<p class="muted">Garante que Unidade/Equipamento que já existem no Portal também existam no Auvo (Cliente/Técnico já ' +
+        '<h2>Enviar cadastro pendente para o Auvo (SGO+ &rarr; Auvo)</h2>' +
+        '<p class="muted">Garante que Unidade/Equipamento que já existem no SGO+ também existam no Auvo (Cliente/Técnico já ' +
         'sincronizam sozinhos quando geram um documento). Cada Unidade vira um Cliente próprio no Auvo; Equipamento fica ' +
         'vinculado à Unidade dele. <strong>Sempre rode "Simular" primeiro.</strong> Documento não é enviado retroativamente — ' +
         'só os gerados a partir de agora entram automaticamente.</p>' +
@@ -1002,8 +1047,30 @@ function tplAuvo_paintPainel_() {
         '<div id="tplAuvo_envioResultado"></div>' +
       '</div>' +
 
-    '</div>' +
+    '</div>') +
   '</div>';
+}
+
+function tplAuvo_ehAdmin_() {
+  try { return String((typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase() === 'ADMIN'; } catch (e) { return false; }
+}
+
+// O casco já mostra o título; o manual vai para a barra do casco, ao lado de "Atividades do módulo".
+function tplAuvo_cascoManual_() {
+  try {
+    var cab = document.querySelector('#conteudo .module-header');
+    if (!cab) { var l = document.getElementById('tplAuvo_barraLocal'); if (l) l.style.display = 'flex'; return; }
+    if (cab.querySelector('.tplAuvo-btn-manual')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn-secondary sgo-btn-manual tplAuvo-btn-manual';
+    b.innerHTML = '<i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador';
+    b.onclick = function () { tplAuvo_abrirManual_(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} };
+    var atv = cab.querySelector('.atv-btn-modulo');
+    var dir = cab.querySelector('.module-header-right');
+    if (!dir) { dir = document.createElement('div'); dir.className = 'module-header-right'; dir.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;'; if (atv && atv.parentNode === cab) cab.insertBefore(dir, atv); else cab.appendChild(dir); }
+    if (atv && atv.parentNode === cab) dir.appendChild(atv);
+    dir.insertBefore(b, dir.firstChild);
+  } catch (e) {}
 }
 </script>
 `;

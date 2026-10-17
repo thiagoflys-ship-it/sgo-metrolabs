@@ -361,7 +361,20 @@ function Auvo_lerCheckpointReverso_() {
 }
 
 function Auvo_gravarCheckpointReverso_(cp) {
+  // Fase 2 (16/10): guarda quando o checkpoint mudou (para a tela dizer "parada desde ...").
+  cp = Object.assign({}, cp || {});
+  if (!cp.atualizadoEm) cp.atualizadoEm = SGO_UTILS.nowIso();
   PropertiesService.getScriptProperties().setProperty(AUVO_REV_CFG.CHECKPOINT_KEY, JSON.stringify(cp));
+}
+
+/** Registra o motivo de uma parada no checkpoint, sem mudar fase nem índice. */
+function Auvo_registrarErroReverso_(e) {
+  try {
+    var cp = Auvo_lerCheckpointReverso_();
+    cp.ultimoErro = String(e && e.message ? e.message : e).slice(0, 300);
+    cp.erroEm = SGO_UTILS.nowIso();
+    PropertiesService.getScriptProperties().setProperty(AUVO_REV_CFG.CHECKPOINT_KEY, JSON.stringify(cp));
+  } catch (e2) {}
 }
 
 // ------------------------------------------------------------
@@ -648,7 +661,8 @@ function Auvo_continuarViaTrigger_() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'Auvo_continuarViaTrigger_') ScriptApp.deleteTrigger(t);
   });
-  var resultado = Auvo_executarLoteReverso_();
+  var resultado;
+  try { resultado = Auvo_executarLoteReverso_(); } catch (e) { Auvo_registrarErroReverso_(e); throw e; }
   if (!resultado.concluido && resultado.fase !== 'CONCLUIDO') {
     Auvo_agendarContinuacaoReversa_();
   }
@@ -700,7 +714,8 @@ function Auvo_apiIniciarSincronizacaoReversa(sessionId) {
 function Auvo_apiContinuarSincronizacaoReversa(sessionId) {
   Auvo_exigirAdmin_(sessionId);
   Auvo_bootstrap_();
-  var resultado = Auvo_executarLoteReverso_();
+  var resultado;
+  try { resultado = Auvo_executarLoteReverso_(); } catch (e) { Auvo_registrarErroReverso_(e); throw e; }
   if (!resultado.concluido && resultado.fase !== 'CONCLUIDO') {
     Auvo_agendarContinuacaoReversa_();
   }
@@ -709,7 +724,16 @@ function Auvo_apiContinuarSincronizacaoReversa(sessionId) {
 
 function Auvo_apiStatusSincronizacaoReversa(sessionId) {
   Auvo_exigirAdmin_(sessionId);
-  return { ok: true, checkpoint: Auvo_lerCheckpointReverso_() };
+  // Fase 2 (16/10): diz se já houve importação e se a continuação automática está agendada,
+  // para a tela não mostrar "em andamento" quando nada roda (operador no limbo).
+  var existe = !!PropertiesService.getScriptProperties().getProperty(AUVO_REV_CFG.CHECKPOINT_KEY);
+  var agendado = false;
+  try {
+    agendado = ScriptApp.getProjectTriggers().some(function(t) { return t.getHandlerFunction() === 'Auvo_continuarViaTrigger_'; });
+  } catch (e) {}
+  var credenciais = true;
+  try { credenciais = !!(PropertiesService.getScriptProperties().getProperty('AUVO_API_KEY') && PropertiesService.getScriptProperties().getProperty('AUVO_API_TOKEN')); } catch (e) {}
+  return { ok: true, checkpoint: Auvo_lerCheckpointReverso_(), existe: existe, agendado: agendado, credenciais: credenciais };
 }
 
 function Auvo_apiAtivarSincronizacaoDiaria(sessionId) {

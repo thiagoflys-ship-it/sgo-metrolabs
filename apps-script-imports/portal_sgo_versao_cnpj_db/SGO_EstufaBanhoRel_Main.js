@@ -65,7 +65,13 @@ function EstufaBanhoRel_apiPing() {
   const laudosId = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
   const uploadsId = EstufaBanhoRel_EBCFG.UPLOAD_FOLDER_ID && String(EstufaBanhoRel_EBCFG.UPLOAD_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.UPLOAD_FOLDER_ID).trim() : '';
   const perfis = {};
-  Object.keys(EstufaBanhoRel_EBCFG.PERFIS || {}).forEach(function (chave) {
+  // Fase 2 (16/10): o perfil padrão (Estufa de Incubação) vem primeiro; os demais em ordem alfabética.
+  const ordemPerfis = ['ESTUFA_INCUBACAO', 'BANHO_MARIA', 'ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO', 'SECADORA_TRAQUEIAS'];
+  const chavesPerfis = Object.keys(EstufaBanhoRel_EBCFG.PERFIS || {}).sort(function (a, b) {
+    const ia = ordemPerfis.indexOf(a), ib = ordemPerfis.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  chavesPerfis.forEach(function (chave) {
     const p = EstufaBanhoRel_EBCFG.PERFIS[chave];
     perfis[chave] = {
       label: p.label,
@@ -202,7 +208,7 @@ function EstufaBanhoRel_apiPreviewEntrada(payload) {
     };
     const estudosConfig = EstufaBanhoRel_ebMontarConfigEstudos_(payload, perfilCfg);
     if (!estudosConfig.length) {
-      throw new Error('Selecione ao menos um estudo (Distribuição, Abertura de Porta, Queda de Energia ou Autonomia) para pré-visualizar os dados reconstituídos.');
+      throw new Error('Nenhum estudo selecionado. Na seção 3, inclua pelo menos um estudo (Distribuição, Abertura de porta, Queda de energia ou, na secadora, um período em vazio ou com carga) e pré-visualize de novo');
     }
     const simularMultiArquivo = !!(payload.simulacao && payload.simulacao.multiArquivoPorSensor);
     const dadosSimulados = EstufaBanhoRel_ebGerarOuReaproveitarDadosSimulados_(payload, estudosConfig, faixa, simularMultiArquivo);
@@ -401,7 +407,7 @@ function EstufaBanhoRel_ebExecutarAnaliseCompleta_(payload) {
   const sensoresAtivos = EstufaBanhoRel_ebNormalizarSensoresAtivosMain_(payload.sensoresAtivos, nSensores);
   const estudosConfig = EstufaBanhoRel_ebMontarConfigEstudos_(payload, perfilCfg);
   if (!estudosConfig.length) {
-    throw new Error('Selecione ao menos um estudo (Distribuição, Abertura de Porta, Queda de Energia ou Autonomia) para gerar o laudo.');
+    throw new Error('Nenhum estudo selecionado. Na seção 3, inclua pelo menos um estudo (Distribuição, Abertura de porta, Queda de energia ou, na secadora, um período em vazio ou com carga) e gere de novo');
   }
   const modoEntradaNormalizado = String(payload.modoEntrada || 'FILE_ID').toUpperCase().trim();
   const dadosCompletos = EstufaBanhoRel_ebLerDadosCompletos_(payload, modoEntradaNormalizado, nSensores, sensoresAtivos, dateStyle, estudosConfig, faixa);
