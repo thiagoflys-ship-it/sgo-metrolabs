@@ -26,6 +26,7 @@ Revisão de produto e experiência de uso do SGO+ (Metrolabs) rodando no servido
 - A navegação global (seção 1) foi corrigida nesta rodada.
 - As seções 2 a 6 são a lista de trabalho da **fase 2**: nenhum arquivo de módulo foi alterado nesta auditoria.
 - Itens que já estavam corrigidos na cópia de trabalho por outros agentes e ainda não foram publicados aparecem como "já corrigido, falta publicar".
+- Fase 2 do núcleo, cadastros, calibração e documentos técnicos: commit 78a0405 (não publicado). Os itens feitos estão riscados com a nota "Feito na fase 2". Também nesse commit, fora da lista: logo embutida nos documentos de PGT/POP, Planejamento CME, Cronograma e Registros (antes lida pelo ID do Drive, saía em branco), TAG de padrão duplicada recusada com mensagem, botão "Escolher arquivo" em português em todo o sistema e confirmação da rotina da Conduta pela prévia (`apiPreverRotina`).
 
 ## Resumo
 
@@ -166,11 +167,11 @@ Fica para a fase 2:
 
 ### 1.6 Problemas globais que se repetem nos módulos (fase 2)
 
-- [P2] **Título duplo em quase todos os módulos** — o casco mostra o título da página (H2 com ponto verde e botão "Atividades do módulo") e o módulo repete outro cabeçalho logo abaixo (H1 "Autoclave" com relógio e "Pronto"; H1 "Certificado de Calibração"; "Integração Auvo — Manual do Operador"...). **Fazer:** manter só o cabeçalho do casco; no módulo, tirar o H1/cartão de cabeçalho e levar o botão "Manual do Operador" para o lado de "Atividades do módulo". Detalhes por módulo nas seções abaixo.
+- ~~[P2] **Título duplo em quase todos os módulos**~~ — o casco mostra o título da página (H2 com ponto verde e botão "Atividades do módulo") e o módulo repete outro cabeçalho logo abaixo (H1 "Autoclave" com relógio e "Pronto"; H1 "Certificado de Calibração"; "Integração Auvo — Manual do Operador"...). **Fazer:** manter só o cabeçalho do casco; no módulo, tirar o H1/cartão de cabeçalho e levar o botão "Manual do Operador" para o lado de "Atividades do módulo". Detalhes por módulo nas seções abaixo. **Feito na fase 2 (78a0405) nos módulos de calibração e documentos técnicos** (Certificado, Padrões, Relatório de calibração, Declaração, QI/QO/QD, NR-13, PGT/POP, Planejamento CME, Cronograma, Registros, Inventário): o cabeçalho interno some e "Manual do operador" vai para a barra do casco (JS_Core › `SGO_cascoAjustar_`). Qualificação, Frota, Auvo, Qualidade e Conduta ficam com as outras frentes.
 - [P2] **Manual do Operador montado dentro da página** em ~12 módulos (o texto inteiro fica no HTML, escondido ou embaixo do formulário). **Fazer:** abrir o manual em painel lateral ou nova aba, carregado só ao clicar.
-- [P2] **"Atividades do módulo" aparece em telas onde não faz sentido** (Configurações, Chaves e senhas). **Fazer:** lista de exceções em `Atividades_aoAbrirModulo_` (JS_Atividades).
-- [P3] **Títulos de seção em CAIXA ALTA** em quase todos os formulários ("1. CLIENTE", "DADOS DO RELATÓRIO DE AUTOCLAVE"), misturados com seções em caixa normal na mesma tela ("2. Equipamento"). **Fazer:** padronizar em maiúscula só na primeira palavra, via estilo, sem mexer em texto.
-- [P2] **Vínculos abre por cima da última tela** e o menu marca "Vínculos" como ativo; ao fechar, o menu continua marcando Vínculos sobre outra página. **Fazer:** ao fechar o painel, devolver o destaque ao item da página de baixo. *Onde:* JS_Vinculos › fechamento do painel, chamando `Menu_aoAbrirModulo_`.
+- ~~[P2] **"Atividades do módulo" aparece em telas onde não faz sentido**~~ (Configurações, Chaves e senhas). **Fazer:** lista de exceções em `Atividades_aoAbrirModulo_` (JS_Atividades). **Feito na fase 2 (78a0405).**
+- ~~[P3] **Títulos de seção em CAIXA ALTA**~~ em quase todos os formulários ("1. CLIENTE", "DADOS DO RELATÓRIO DE AUTOCLAVE"), misturados com seções em caixa normal na mesma tela ("2. Equipamento"). **Fazer:** padronizar em maiúscula só na primeira palavra, via estilo, sem mexer em texto. **Feito na fase 2 (78a0405):** rótulos e títulos de seção sem caixa alta forçada no estilo global (UI_Estilos) e nos módulos técnicos.
+- ~~[P2] **Vínculos abre por cima da última tela**~~ e o menu marca "Vínculos" como ativo; ao fechar, o menu continua marcando Vínculos sobre outra página. **Fazer:** ao fechar o painel, devolver o destaque ao item da página de baixo. *Onde:* JS_Vinculos › fechamento do painel, chamando `Menu_aoAbrirModulo_`. **Feito na fase 2 (78a0405).**
 
 ## 2. Qualificação (Autoclaves, Lavadoras, Cadeia de frio, Estufa/Banho-maria/Secadora)
 
@@ -347,45 +348,45 @@ O subtítulo do casco passa a "Emissão do certificado de calibração e consult
 - **Para o futuro:** o cadastro de técnicos guarda só o nome e não tem tela própria. O Relatório de calibração, a Declaração e o QI/QO/QD usam texto livre. O certo é o seletor listar os usuários com perfil técnico, em vez de manter uma terceira lista de nomes.
 
 ### Certificado de calibração › estrutura e atalhos
-- [P1] **A página mistura emissão com gestão do laboratório.**
+- ~~[P1] **A página mistura emissão com gestão do laboratório.**~~ **Feito na fase 2 (78a0405):** página própria "Padrões de referência" (`abrir('padroes')`) com as abas Padrões, Inventário e orçamento e Relatórios gerenciais; o Certificado começa em "1. Cliente" e termina em "Certificados emitidos".
   - Antes do "1. Cliente" há quatro painéis de gestão, cerca de 1.400 px na tela de 1440 px.
   - **Fazer:** aplicar a separação proposta acima.
-- [P2] **O atalho "Padrões" cai no meio de um painel**, entre "Atualizar lista" e o cadastro, porque a página acaba antes. Enquanto isso o título continua "Certificado de calibração". **Fazer:** a página própria. (Captura: certcal_atalho-padroes_1440.png)
+- ~~[P2] **O atalho "Padrões" cai no meio de um painel**~~, entre "Atualizar lista" e o cadastro, porque a página acaba antes. Enquanto isso o título continua "Certificado de calibração". **Fazer:** a página própria. (Captura: certcal_atalho-padroes_1440.png) **Feito na fase 2 (78a0405).**
 - ~~[P2] Selo de padrões vencendo no item "Certificado de calibração"~~ — **corrigido nesta rodada:** foi para "Padrões de referência".
-- [P2] **Título repetido.** O casco mostra "Certificado de calibração" e o cartão do módulo repete o H1 com outro subtítulo ("…GUM/EA-4/02 + relatório interpretativo…").
+- ~~[P2] **Título repetido.**~~ O casco mostra "Certificado de calibração" e o cartão do módulo repete o H1 com outro subtítulo ("…GUM/EA-4/02 + relatório interpretativo…"). **Feito na fase 2 (78a0405).**
   - **Fazer:** remover o `<h1>` do `.header-card` e levar "Manual do Operador" para a barra do casco.
 
 ### Certificado › padrões (lista, cadastro e controle)
-- [P2] **Mesmo padrão em duas tabelas, com situações escritas de forma diferente.** O THM-900 aparece como "Vence em até 30 dias / Dados pendentes" numa tabela e como "Vencendo" na outra. Os rótulos vêm de dois dicionários.
+- ~~[P2] **Mesmo padrão em duas tabelas, com situações escritas de forma diferente.**~~ O THM-900 aparece como "Vence em até 30 dias / Dados pendentes" numa tabela e como "Vencendo" na outra. Os rótulos vêm de dois dicionários. **Feito na fase 2 (78a0405):** uma lista só (com Editar, Inativar e PDF) e o vocabulário Vigente / Vence em até 30 dias / Vencido / Sem validade informada / Data inválida.
   - **Fazer:** uma lista só e um único vocabulário: "Vigente", "Vence em até 30 dias", "Vencido", "Sem validade informada", "Data inválida".
   - *Onde:* `JS_Padroes_Documentos.html › pdSituacao/pdList`; `CERTCAL_STATUS_VALIDADE_LABELS_`, `tplCertCal_renderPadroesTabela_`.
   - (Captura: certcal_padroes-duas-listas_1440.png)
-- [P2] **A orientação manda cadastrar "acima", mas o cadastro fica abaixo.**
+- ~~[P2] **A orientação manda cadastrar "acima", mas o cadastro fica abaixo.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** "Nenhum padrão neste filtro. Use 'Cadastrar novo padrão' ou limpe a busca." *Onde:* `pdList`.
-- [P2] **"Inativar" age na hora, sem confirmação**, e o padrão some do seletor dos ensaios.
+- ~~[P2] **"Inativar" age na hora, sem confirmação**~~, e o padrão some do seletor dos ensaios. **Feito na fase 2 (78a0405).**
   - **Fazer:** perguntar antes: "Inativar o padrão THM-900? Ele deixa de aparecer na escolha de padrões dos ensaios; o histórico é mantido e você pode reativá-lo depois."
   - *Onde:* `tplCertCal_inativarPadrao`.
-- [P2] **Alerta vermelho para padrão ainda vigente.** "Vencendo em 25 dias" aparece igual a vencido.
+- ~~[P2] **Alerta vermelho para padrão ainda vigente.**~~ "Vencendo em 25 dias" aparece igual a vencido. **Feito na fase 2 (78a0405).**
   - **Fazer:** separar por gravidade. Vermelho: "Padrões vencidos ou com data inválida — não use em certificado até atualizar a validade." Amarelo: "1 padrão vence nos próximos 30 dias." O selo "VENCIDO" passa a "Vencido".
-- [P3] **Seletor de arquivo nativo em cada linha**, em fonte de 10 px. **Fazer:** botão "Anexar PDF" ou "Substituir PDF".
-- [P3] **Linguagem informal no rótulo** "(PDF, opcional — pra consulta futura)". **Fazer:** "(PDF, opcional)".
-- [P3] **Inglês e códigos crus.** "setpoints", "INVENTARIO · EMITIDO", "Baixar HTML A4".
+- ~~[P3] **Seletor de arquivo nativo em cada linha**~~, em fonte de 10 px. **Fazer:** botão "Anexar PDF" ou "Substituir PDF". **Feito na fase 2 (78a0405).**
+- ~~[P3] **Linguagem informal no rótulo**~~ "(PDF, opcional — pra consulta futura)". **Fazer:** "(PDF, opcional)". **Feito na fase 2 (78a0405).**
+- ~~[P3] **Inglês e códigos crus.**~~ "setpoints", "INVENTARIO · EMITIDO", "Baixar HTML A4". **Feito na fase 2 (78a0405).**
   - **Fazer:** "pontos de ajuste", "Inventário · Emitido", "Imprimir / salvar PDF".
 
 ### Certificado › formulário de emissão
-- [P2] **A numeração pula o 4** (1, 2, 3, 5, 6, 7, 8) e não bate com o manual nem com o celular ("Passo X de 7").
+- ~~[P2] **A numeração pula o 4**~~ (1, 2, 3, 5, 6, 7, 8) e não bate com o manual nem com o celular ("Passo X de 7"). **Feito na fase 2 (78a0405) no computador e no manual** (1 Cliente … 6 Gerar). Falta alinhar o celular ("Passo X de 7").
   - **Fazer:** renumerar como 1 Cliente, 2 Equipamento, 3 Dados da calibração, 4 Ensaios, 5 Fotos, 6 Gerar, e alinhar o manual e o celular.
   - *Onde:* `tplCertCal_renderReal_`, `tplCertCal_manualHtml_`, `JS_Core › mobileCertCalPasso_`.
   - (Captura: certcal_formulario-secoes_1440.png)
-- [P2] **"6. Avaliação pelo cliente" é uma seção sem nada para preencher.** No celular vira um passo inteiro só com texto.
+- ~~[P2] **"6. Avaliação pelo cliente" é uma seção sem nada para preencher.**~~ No celular vira um passo inteiro só com texto. **Feito na fase 2 (78a0405) no computador** (virou nota em "6. Gerar"). O passo do celular continua.
   - **Fazer:** virar uma nota dentro de "Gerar" e retirar a seção e o passo.
   - *Onde:* `#certcal-panel-responsabilidade`, `renderMobileCertCalVeredito_`.
-- [P2] **Mensagens dizem "salvo no Drive".**
+- ~~[P2] **Mensagens dizem "salvo no Drive".**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** "Certificado nº X emitido e salvo no SGO+ — aberto em nova aba."
-- [P2] **"Remover bloco" e "Remover" (ponto) apagam dados sem confirmar.**
+- ~~[P2] **"Remover bloco" e "Remover" (ponto) apagam dados sem confirmar.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** se houver valores digitados, perguntar "Remover o bloco … e os N pontos digitados?".
-- [P3] **CAIXA ALTA até em opções de rádio.** **Fazer:** tirar o `text-transform` de `.checkbox-row label`.
-- [P3] **Nome da empresa grafado "Metrolab's"** no Certificado, Relatório de calibração, Declaração, QI/QO/QD e nos manuais. **Fazer:** "Realizado no laboratório da Metrolabs".
+- ~~[P3] **CAIXA ALTA até em opções de rádio.**~~ **Fazer:** tirar o `text-transform` de `.checkbox-row label`. **Feito na fase 2 (78a0405).**
+- ~~[P3] **Nome da empresa grafado "Metrolab's"**~~ no Certificado, Relatório de calibração, Declaração, QI/QO/QD e nos manuais. **Fazer:** "Realizado no laboratório da Metrolabs". **Feito na fase 2 (78a0405).**
 - [P3] **O cadastro de equipamento novo continua aberto depois de escolher um existente.** **Fazer:** recolher atrás de "+ Cadastrar equipamento novo".
 
 ### Certificado › Manual do operador
@@ -393,7 +394,7 @@ O subtítulo do casco passa a "Emissão do certificado de calibração e consult
   - **Fazer:** dividir em "Manual — Emissão de certificado" e "Manual — Padrões", em português.
 
 ### Certificado › celular (390 px)
-- [P2] **No celular o padrão aparece só pela TAG, sem situação de validade.** O técnico pode marcar um padrão vencido sem aviso.
+- ~~[P2] **No celular o padrão aparece só pela TAG, sem situação de validade.**~~ O técnico pode marcar um padrão vencido sem aviso. **Feito na fase 2 (78a0405):** selo de situação e validade em cada padrão; vencido na data da calibração ou com data inválida fica bloqueado, com o motivo e onde corrigir.
   - **Fazer:** mostrar o selo de situação ao lado da TAG e bloquear padrão vencido.
   - *Onde:* `JS_Core › mobileCertCalEditarBloco_`.
 - [P2] **Local da calibração com padrão diferente** (computador "laboratório", celular "no cliente").
@@ -403,8 +404,8 @@ O subtítulo do casco passa a "Emissão do certificado de calibração e consult
 - [P3] **CNPJ sem máscara na lista de clientes do celular.** *Onde:* `mobileCertCalBuscarCliente_`.
 
 ### Relatório de calibração
-- [P2] **Título duplicado e selo "pronto".** **Fazer:** remover o H1 do `.header-card` e o `#tplRelCal_statusBadge`. (Captura: relcal_pagina_1440.png)
-- [P2] **"Histórico da operação" é um registro técnico vazio**, com título duplicado e cerca de 300 px. **Fazer:** remover, ou trocar por "Detalhes técnicos da última geração" recolhido.
+- ~~[P2] **Título duplicado e selo "pronto".**~~ **Fazer:** remover o H1 do `.header-card` e o `#tplRelCal_statusBadge`. (Captura: relcal_pagina_1440.png) **Feito na fase 2 (78a0405).**
+- ~~[P2] **"Histórico da operação" é um registro técnico vazio**~~, com título duplicado e cerca de 300 px. **Fazer:** remover, ou trocar por "Detalhes técnicos da última geração" recolhido. **Feito na fase 2 (78a0405):** virou "Detalhes técnicos da operação", recolhido; erro ou aviso aparece numa faixa visível (vale para os módulos técnicos).
 - [P2] **O documento só fica guardado se o operador clicar "Salvar no Drive".** Fechar a aba perde a cópia.
   - **Fazer:** salvar automaticamente na pasta do cliente ao gerar e mostrar "Relatório salvo no SGO+ (pasta do cliente)".
 - [P2] **Técnico em texto livre**, diferente do Certificado. **Fazer:** a mesma fonte de técnicos nos quatro módulos.
@@ -413,7 +414,7 @@ O subtítulo do casco passa a "Emissão do certificado de calibração e consult
 - [P3] **Manual com "dropdown", "slots", "upload" e uma nota interna** ("tal como implementado em 2026-07-27…"). **Fazer:** traduzir os termos e remover a nota.
 
 ### Declaração de execução
-- [P2] **Mesmos defeitos do Relatório de calibração:** título duplicado, "pronto", histórico vazio e "Salvar no Drive". *Onde:* `TPL_DECLEXEC_HTML_` e manual.
+- ~~[P2] **Mesmos defeitos do Relatório de calibração:**~~ título duplicado, "pronto", histórico vazio e "Salvar no Drive". *Onde:* `TPL_DECLEXEC_HTML_` e manual. **Feito na fase 2 (78a0405)**, exceto salvar sozinho: o botão passou a "Salvar na pasta do cliente".
 - [P3] **Botão "Gerar Declaração com IA" e "EXECUÇÃO" em caixa alta no meio do texto.**
   - **Fazer:** botão "Gerar texto da declaração para revisão"; texto "Descreva o que foi feito. Este documento registra a execução do serviço, sem aprovação ou reprovação."
 - [P3] **Dica longa no número do documento.** **Fazer:** "Código interno do documento, se houver. A data já sai no documento."
@@ -421,8 +422,8 @@ O subtítulo do casco passa a "Emissão do certificado de calibração e consult
 ### Relatório de qualificação (QI/QO/QD)
 - [P2] **O nome do documento muda de um lugar para outro.** O menu diz "QI/QO/QD", a seção 3 diz "QI/QO" (mas contém a QD) e os botões dizem "Relatório de QI/QO".
   - **Fazer:** seções "3. Qualificação de instalação (QI)", "4. Qualificação de operação (QO)", "5. Qualificação de desempenho (QD)", "6. Revisão"; botões "Gerar textos para revisão" e "Confirmar e gerar relatório de qualificação".
-- [P2] **Lista de verificação inteira em CAIXA ALTA**, com frases de 3 a 4 linhas. **Fazer:** tirar o `text-transform` de `.check-grid`. (Captura: qiqo_checklist-caixa-alta_1440.png)
-- [P2] **Mesmos defeitos do Relatório de calibração.**
+- ~~[P2] **Lista de verificação inteira em CAIXA ALTA**~~, com frases de 3 a 4 linhas. **Fazer:** tirar o `text-transform` de `.check-grid`. (Captura: qiqo_checklist-caixa-alta_1440.png) **Feito na fase 2 (78a0405).**
+- ~~[P2] **Mesmos defeitos do Relatório de calibração.**~~ **Feito na fase 2 (78a0405)**, exceto salvar sozinho.
 - [P3] **Tom de propaganda** ("texto extenso e tecnicamente rico") e fonte de terminal nas caixas de texto.
   - **Fazer:** "Marque os itens verificados neste atendimento; o texto de cada seção é gerado para revisão antes de emitir."; usar a fonte padrão.
 
@@ -441,7 +442,7 @@ O ambiente de teste não tem a chave da IA. Por isso as etapas finais de geraç�
 Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta rodada (destaque do NR-13 no menu e a mensagem do celular).
 
 ### PGT e POP
-- [P2] **Título duplicado.**
+- ~~[P2] **Título duplicado.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** remover o `header.header-card` e levar o "Manual do Operador" para o casco.
   - Subtítulo do casco: "Gera o PGTS e os POPs personalizados para cada cliente."
   - *Onde:* `SGO_PgtPop_ConteudoModulo.js › TPL_PGTPOP_HTML_`.
@@ -456,17 +457,17 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
   - **Fazer:** "O campo 'Revisado por' sai automaticamente com o responsável técnico da Metrolabs", com o nome vindo da configuração.
 - [P3] **Catálogo de 28 POPs em CAIXA ALTA e "até 4+ imagens".**
   - **Fazer:** nomes em caixa normal e a frase "Cada POP aceita um roteiro e imagens opcionais."
-- [P2] **"Salvar no Drive" / "salvo no Drive".**
+- ~~[P2] **"Salvar no Drive" / "salvo no Drive".**~~ **Feito na fase 2 (78a0405) na tela e no manual.**
   - **Fazer:** "Salvar PDF na pasta do cliente" / "PDF salvo na pasta do cliente". Corrigir também o manual.
 - [P2] **"Salvar no Drive" exige "Abrir" antes.**
   - **Fazer:** salvar o PDF ao gerar e remover o botão.
 - [P3] **"Gerar Tudo" / "Ver Documentos".**
   - **Fazer:** "Gerar todos os documentos" / "Ver documentos gerados".
-- [P3] **Histórico com título duplo, "Log limpo" e hora sem pt-BR.**
+- ~~[P3] **Histórico com título duplo, "Log limpo" e hora sem pt-BR.**~~ **Feito na fase 2 (78a0405)** em PGT/POP, Registros, Planejamento CME, Cronograma e NR-13.
   - **Fazer:** um título só, "Histórico limpo." e `toLocaleTimeString('pt-BR')`. Vale também para Registros operacionais, Planejamento CME e NR-13.
 
 ### Planejamento CME
-- [P2] **Título duplicado, com o sobrenome "METROLABS CME".**
+- ~~[P2] **Título duplicado, com o sobrenome "METROLABS CME".**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** remover o `.topo`. Subtítulo: "Quantitativo de insumos e planejamento da qualificação de equipamentos da CME".
   - (Captura: plancme_titulo-duplicado-sem-etapas_1440.png)
 - [P2] **Não tem a faixa de etapas que os outros módulos têm.**
@@ -478,7 +479,7 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
 - [P3] **Fabricante na lista de processos ("Brasmedical", "Sanders")**, e o nome vai para o WhatsApp.
   - **Fazer:** confirmar com o dono; no documento e na mensagem, usar o nome genérico.
 - [P3] **"O que foi vendido?"** **Fazer:** "3. Escopo contratado".
-- [P1] **O cálculo das quantidades depende da IA.** Sem a chave, aparece o alerta "A chave GEMINI_KEY não foi configurada nas propriedades do script." e nenhum número é mostrado.
+- ~~[P1] **O cálculo das quantidades depende da IA.**~~ Sem a chave, aparece o alerta "A chave GEMINI_KEY não foi configurada nas propriedades do script." e nenhum número é mostrado. **Feito na fase 2 (78a0405):** o quantitativo sai sempre; sem a IA volta um aviso e o documento sai sem os parágrafos de fundamentação (`PlanCME_calcularPlanejamento`).
   - **Fazer:** o cálculo sai sempre; a fundamentação é gerada em separado.
   - Se a IA falhar: "O texto de fundamentação não pôde ser gerado agora. O quantitativo está correto; tente de novo em alguns minutos ou avise o administrador."
   - *Onde:* `tplPlanCME_calcular`; `SGO_PlanCME_* › apiCalcular`.
@@ -491,7 +492,7 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
   - **Fazer:** remover a nota e escrever "pasta do cliente no SGO+".
 
 ### Cronograma de execução
-- [P2] **Título duplicado.** **Fazer:** remover o `header-card`.
+- ~~[P2] **Título duplicado.**~~ **Fazer:** remover o `header-card`. **Feito na fase 2 (78a0405).**
 - [P2] **Gera cronograma sem cliente.**
   - **Fazer:** conferir a razão social no "Avançar" da etapa 1. *Onde:* `tplCronExec_finalizar`.
 - [P2] **Os equipamentos são digitados à mão, embora já estejam no cadastro.**
@@ -500,7 +501,7 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
   - **Fazer:** uma linha por equipamento: nome · "Qtd." · "Mover para" [Grupo ▼]. (Captura: cronograma_grupos_1440.png)
 - [P3] **Explicação da divisão escrita com "o(s) primeiro(s) grupo(s) recebe(m)".**
   - **Fazer:** uma frase curta.
-- [P1] **"Abrir Documento" abre a aba depois da chamada ao servidor.** O navegador bloqueia a aba, aparece "Cannot read properties of null", e por isso o documento também não é salvo.
+- ~~[P1] **"Abrir Documento" abre a aba depois da chamada ao servidor.**~~ O navegador bloqueia a aba, aparece "Cannot read properties of null", e por isso o documento também não é salvo. **Já corrigido na revisão de lógica (3520fd1).**
   - **Fazer:** abrir a aba vazia no clique, como o PGT e POP já faz. *Onde:* `tplCronExec_abrirDocumento`.
 - [P2] **"Abrir WhatsApp" manda só uma frase, sem documento.**
   - **Fazer:** incluir o link do PDF ou remover o botão.
@@ -508,13 +509,13 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
 - [P3] **Cartão "Modo: Único/Múltiplo".** **Fazer:** remover.
 
 ### Registros operacionais
-- [P1] **A etapa "4. Consultar" não abre por nenhum caminho.** Pendências, histórico e "Registrar Fechamento" ficam inacessíveis.
+- ~~[P1] **A etapa "4. Consultar" não abre por nenhum caminho.**~~ Pendências, histórico e "Registrar Fechamento" ficam inacessíveis. **Já corrigido na revisão de lógica (3520fd1)**: botão "Consultar registros e pendências" nas etapas 1 e 3; conferido na fase 2.
   - **Fazer:** pôr a consulta no topo: "Consultar registros e pendências deste cliente".
   - *Onde:* `SGO_RegOp_ConteudoModulo.js › #tplRegOp_step4`, `#tplRegOp_nav4`.
-- [P1] **Um tipo novo de documento só pode ser criado pela IA.**
+- ~~[P1] **Um tipo novo de documento só pode ser criado pela IA.**~~ **Já corrigido na revisão de lógica (3520fd1)** ("Montar os campos manualmente").
   - **Fazer:** mostrar a montagem manual desde o início, e a falha da IA junto ao botão.
   - (Captura: regop_novo-tipo-so-com-ia_1440.png)
-- [P2] **Avisos aparecem só no histórico, no pé da página.** **Fazer:** mostrar ao lado do botão.
+- ~~[P2] **Avisos aparecem só no histórico, no pé da página.**~~ **Fazer:** mostrar ao lado do botão. **Feito na fase 2 (78a0405):** faixa visível com o erro ou aviso.
 - [P2] **"Registrar Fechamento" leva só o CNPJ**, e depois o sistema pede de novo os dados do cliente.
   - **Fazer:** levar os dados completos. *Onde:* `tplRegOp_registrarFechamento_`.
 - [P3] **Datas em texto livre.**
@@ -526,18 +527,18 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
 
 ### Laudo NR-13
 - ~~[P2] O menu não destacava o NR-13~~ — **corrigido nesta rodada** (`abrir()` marca o item ativo).
-- [P2] **Título duplicado**, com nome diferente do menu. **Fazer:** remover o `header-card`.
-- [P1] **Ao escolher um equipamento já cadastrado, o "Tipo de vaso" fica vazio e a emissão trava.** O cadastro grava "AUTOCLAVE" e a lista tem "Autoclave".
+- ~~[P2] **Título duplicado**~~, com nome diferente do menu. **Fazer:** remover o `header-card`. **Feito na fase 2 (78a0405).**
+- ~~[P1] **Ao escolher um equipamento já cadastrado, o "Tipo de vaso" fica vazio e a emissão trava.**~~ O cadastro grava "AUTOCLAVE" e a lista tem "Autoclave". **Já corrigido na revisão de lógica (3520fd1)** (comparação sem diferenciar maiúsculas); conferido na fase 2.
   - **Fazer:** comparar sem diferenciar maiúsculas e esconder o formulário "cadastre um novo" depois da escolha.
   - *Onde:* `tplNR13_confirmarEquipamento_`, `tplNR13_montarPayload_`.
   - (Captura: nr13_equipamento-tipo-vazio_1440.png)
 - [P2] **O formulário de cadastro continua aberto depois da escolha.**
-- [P1] **As fotos de um rascunho reaberto apontam para `drive.google.com`** e aparecem quebradas.
+- ~~[P1] **As fotos de um rascunho reaberto apontam para `drive.google.com`**~~ e aparecem quebradas. **Feito na fase 2 (78a0405).**
   - **Fazer:** usar `f.link` ou `'/arquivos/' + f.fileId`. *Onde:* `tplNR13_renderFotosLista_`.
   - Trocar também "(Gemini vision)" e "Enviando … para o Drive" no histórico.
-- [P1] **"Aprovado" já vem marcado, e "Emitir Laudo Final" não pede confirmação.**
+- ~~[P1] **"Aprovado" já vem marcado, e "Emitir Laudo Final" não pede confirmação.**~~ **Feito na fase 2 (78a0405):** começa sem veredito, emitir sem veredito explica o que falta e a emissão pede confirmação com veredito e PH.
   - **Fazer:** começar sem veredito e confirmar antes de emitir: "Emitir o laudo nº … como APROVADO, assinado por …? Depois de emitido ele não pode ser alterado."
-- [P2] **Texto de contorno de erro sempre visível** ("Recebeu o erro 'Este laudo já foi emitido…'?").
+- ~~[P2] **Texto de contorno de erro sempre visível**~~ ("Recebeu o erro 'Este laudo já foi emitido…'?"). **Feito na fase 2 (78a0405).**
   - **Fazer:** mostrar só quando o erro acontecer.
 - [P2] **Lista de profissionais escrita no código** (`NR13_ASSINANTES`), enquanto o servidor confere contra outra lista.
   - **Fazer:** carregar a lista do servidor.
@@ -545,8 +546,8 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
 
 ### Inventário de equipamentos
 É a tela mais limpa do bloco.
-- [P2] **Título duplicado.** *Onde:* `tplInv_irParaTela_`.
-- [P2] **"Salvar no Drive" / "já salvos no Drive"**, também no manual (seção 7).
+- ~~[P2] **Título duplicado.**~~ *Onde:* `tplInv_irParaTela_`. **Feito na fase 2 (78a0405).**
+- ~~[P2] **"Salvar no Drive" / "já salvos no Drive"**~~, também no manual (seção 7). **Feito na fase 2 (78a0405).**
 - [P3] **Avisos por `alert()` do navegador.**
 - [P3] **"1 equipamentos" e "Sem doc / Sem documento".**
 - [P3] **Títulos com Cada Palavra em Maiúscula.**
@@ -563,7 +564,7 @@ Contagem: 52 itens (P1 9, P2 28, P3 15). Desses, 2 já foram corrigidos nesta ro
 | Salvar PDF | automático + "Salvar no Drive" | manual | manual, exige abrir antes | automático | automático | manual |
 | Histórico | todas as etapas, título duplo | todas, título duplo | só na etapa 4 | todas, título duplo | todas, título duplo | não tem |
 
-- [P2] **"Hospital" ou "cliente".** **Fazer:** "Cliente" nos seis módulos.
+- ~~[P2] **"Hospital" ou "cliente".**~~ **Fazer:** "Cliente" nos seis módulos. **Feito na fase 2 (78a0405) nas telas de PGT/POP e Registros** (etapa 1 "Cliente").
 - [P2] **Quatro módulos ignoram o cadastro de Clientes:** o documento gerado não fica ligado ao cliente nem à pasta dele.
   - **Fazer:** buscar primeiro no cadastro, como o NR-13 faz.
   - *Onde:* `tplPgtPop_buscarCNPJ`, `tplPlanCME_buscarCNPJ`, `tplCronExec_buscarCNPJ`, `tplRegOp_buscarCNPJ`.
@@ -735,7 +736,7 @@ As telas são bem resolvidas: o estado vazio orienta e os erros dizem o que faze
 - [P3] **Dois botões primários verdes no detalhe.** **Fazer:** só "Concluir" fica primário.
 - [P3] **"Andamento (%)" vazio**, sem faixa nem valor atual. **Fazer:** placeholder "0 a 100" e preencher com o valor gravado.
 - [P3] **Coluna "Selo".** **Fazer:** "Situação do prazo".
-- [P2] **Configurações e Chaves e senhas aparecem como "módulo ligado"** e ganham o botão "Atividades do módulo".
+- ~~[P2] **Configurações e Chaves e senhas aparecem como "módulo ligado"**~~ e ganham o botão "Atividades do módulo". **Feito na fase 2 (78a0405).**
   - **Fazer:** tirar `admin` e `chaves` de `Atividades_modulosDoMenu_` e de `Atividades_aoAbrirModulo_`.
 - [P2] **Celular: tabela de 6 colunas cortada** (prazo "19/10/2026 01:2", ações fora da tela).
   - **Fazer:** cartões no modo celular. *Onde:* `Atividades_listaHtml_`. (Captura: atividades_lista_390.png)
@@ -746,53 +747,53 @@ As telas são bem resolvidas: o estado vazio orienta e os erros dizem o que faze
 - [P3] **Agenda: botões Semana e Mês com altura diferente de "‹ Hoje ›".**
 
 ### Avisos
-- [P2] **A janela do aviso abre por cima de um formulário em uso.**
+- ~~[P2] **A janela do aviso abre por cima de um formulário em uso.**~~ **Feito na fase 2 (78a0405):** a janela espera 30 s enquanto houver janela aberta ou campo em uso.
   - **Fazer:** adiar a janela enquanto houver modal ou overlay aberto, ou campo com foco.
   - *Onde:* `JS_Avisos.html › AvisosTela_verificar_`. (Captura: atividades_aviso_sobre_formulario_1440.png)
-- [P2] **"Publicar" dispara e-mail e WhatsApp para todos sem confirmar.**
+- ~~[P2] **"Publicar" dispara e-mail e WhatsApp para todos sem confirmar.**~~ **Feito na fase 2 (78a0405):** confirmação com o número de pessoas e quantas recebem por e-mail e por WhatsApp.
   - **Fazer:** perguntar "Publicar para N pessoas? Cada uma recebe e-mail e WhatsApp agora." *Onde:* `AvisosTela_publicar_`.
-- [P2] **A mensagem cita a tabela interna** ("O detalhe fica na aba NTF_ENVIOS.").
+- ~~[P2] **A mensagem cita a tabela interna**~~ ("O detalhe fica na aba NTF_ENVIOS."). **Feito na fase 2 (78a0405).**
   - **Fazer:** tirar a frase, ou dizer "Publicados › Quem leu". *Onde:* `AvisosTela_resumoEnvio_`.
-- [P2] **Perfis em código ("TECNICO") e opções em CAIXA ALTA.**
+- ~~[P2] **Perfis em código ("TECNICO") e opções em CAIXA ALTA.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** nomes por extenso e tirar o `text-transform` de `.avs-publico label.op` e de `.avs-checks label`. (Captura: avisos_novo_1440.png)
-- [P2] **"Choose Files / No file chosen".** **Fazer:** botão próprio "Escolher arquivos". *Onde:* `#avsF_arq`.
-- [P3] **"MOSTRAR ARQUIVADOS" em caixa alta.**
-- [P3] **Aba "Publicados (gestão)".** **Fazer:** "Publicados".
+- ~~[P2] **"Choose Files / No file chosen".**~~ **Fazer:** botão próprio "Escolher arquivos". *Onde:* `#avsF_arq`. **Feito na fase 2 (78a0405).**
+- ~~[P3] **"MOSTRAR ARQUIVADOS" em caixa alta.**~~ **Feito na fase 2 (78a0405).**
+- ~~[P3] **Aba "Publicados (gestão)".**~~ **Fazer:** "Publicados". **Feito na fase 2 (78a0405).**
 
 ### Clientes
-- [P1] **A lista de clientes sumiu, e com ela Inativar, Reativar e Excluir.** O script de vínculos esconde a tabela e a pesquisa (`old.hidden=true`).
+- ~~[P1] **A lista de clientes sumiu, e com ela Inativar, Reativar e Excluir.**~~ O script de vínculos esconde a tabela e a pesquisa (`old.hidden=true`). **Feito na fase 2 (78a0405):** a lista carrega ao abrir e a pesquisa filtra; a consulta de vínculos fica recolhida abaixo da lista.
   - **Fazer:** manter a tabela carregada ao abrir e deixar os vínculos como apoio ao lado.
   - *Onde:* `JS_Vinculos.html › attach()`. O mesmo vale para Unidades.
   - (Captura: clientes_pagina_1440.png)
-- [P2] **Faixa "Cadastre com segurança" acima do título**, com um segundo "Como usar".
+- ~~[P2] **Faixa "Cadastre com segurança" acima do título**~~, com um segundo "Como usar". **Feito na fase 2 (78a0405).**
   - **Fazer:** remover a faixa (`bar.id='vincEntry'`).
-- [P2] **Caixa "Criar unidade principal…" abaixo dos botões e em CAIXA ALTA.**
+- ~~[P2] **Caixa "Criar unidade principal…" abaixo dos botões e em CAIXA ALTA.**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** mover para depois do Endereço. *Onde:* `JS_Cadastros.html › renderClientesModulo_`.
 - [P2] **CNPJ sem máscara** em cartões, sugestões, vínculos e listas do celular.
   - **Fazer:** formato 11.222.333/0001-81. *Onde:* `vincCards_`, `SGO_montarBuscaClienteLike_`, `renderMobileListaClientes_/Unidades_`.
-- [P2] **Dois botões "Buscar" com sentidos diferentes** (Receita × SGO+).
+- ~~[P2] **Dois botões "Buscar" com sentidos diferentes**~~ (Receita × SGO+). **Feito na fase 2 (78a0405).**
   - **Fazer:** botão do CNPJ "Preencher pela Receita".
-- [P3] **"+ Novo Cliente".** **Fazer:** "+ Novo cliente".
-- [P3] **Campo "Situação: ATIVO" travado num cadastro novo.** **Fazer:** mostrar a situação só na edição, como selo. Vale também para Unidades, Equipamentos, Documentos e Usuários.
+- ~~[P3] **"+ Novo Cliente".**~~ **Fazer:** "+ Novo cliente". **Feito na fase 2 (78a0405).**
+- ~~[P3] **Campo "Situação: ATIVO" travado num cadastro novo.**~~ **Fazer:** mostrar a situação só na edição, como selo. Vale também para Unidades, Equipamentos, Documentos e Usuários. **Feito na fase 2 (78a0405) em Clientes e Unidades** (a situação aparece só na edição).
 - [P3] **Tudo gravado em MAIÚSCULAS.** **Fazer:** confirmar com o dono se a normalização é desejada.
-- [P2] **Celular: duas buscas e o painel de vínculos já aberto, com título repetido.**
+- ~~[P2] **Celular: duas buscas e o painel de vínculos já aberto, com título repetido.**~~ **Feito na fase 2 (78a0405):** o painel de vínculos vem fechado.
   - **Fazer:** painel fechado no celular. (Captura: clientes_lista_390.png)
 - [P2] **CNPJ obrigatório no celular, mas não no computador.**
   - **Fazer:** igualar a regra. *Onde:* `JS_Core › renderMobileFormClientes_` × `JS_Cadastros › clientesSalvar_`.
 
 ### Unidades
-- [P1] **Lista e ações escondidas** (mesma causa de Clientes).
-- [P2] **A dica está colada no rótulo do CNPJ:** "CNPJ DA UNIDADE NA UNIDADE PRINCIPAL, PODE SER O MESMO DO CLIENTE."
+- ~~[P1] **Lista e ações escondidas**~~ (mesma causa de Clientes). **Feito na fase 2 (78a0405).**
+- ~~[P2] **A dica está colada no rótulo do CNPJ:**~~ "CNPJ DA UNIDADE NA UNIDADE PRINCIPAL, PODE SER O MESMO DO CLIENTE." **Feito na fase 2 (78a0405).**
   - **Fazer:** rótulo "CNPJ da unidade" e a dica abaixo do campo. *Onde:* `JS_Cadastros.html`, perto da linha 489. (Captura: unidades_formulario_1440.png)
 - [P3] **As sugestões de cliente continuam abertas depois de salvar** (também em Equipamentos).
 
 ### Equipamentos
-- [P1] **Celular: clientes sem nome no seletor** ("— 11222333000181"). A tela lê `RAZAO_SOCIAL`/`NOME_FANTASIA`, mas o servidor devolve `NOME`.
+- ~~[P1] **Celular: clientes sem nome no seletor**~~ ("— 11222333000181"). A tela lê `RAZAO_SOCIAL`/`NOME_FANTASIA`, mas o servidor devolve `NOME`. **Feito na fase 2 (78a0405):** nome e CNPJ com máscara (JS_Core › `mobileRotuloCliente_`).
   - **Fazer:** usar `c.NOME || c.RAZAO_SOCIAL || c.NOME_FANTASIA`.
   - *Onde:* `JS_Core › renderMobileFormEquipamentos_` e `renderMobileFormDocumentos_`. (Captura: equipamentos_formulario_390.png)
-- [P2] **Coluna Ações cortada em 1440 px** ("QR C", "Inativ").
+- ~~[P2] **Coluna Ações cortada em 1440 px**~~ ("QR C", "Inativ"). **Feito na fase 2 (78a0405):** botões empilhados na coluna Ações das listas ao lado do formulário.
   - **Fazer:** Editar e QR Code visíveis; Inativar e Excluir num menu "Mais". (Captura: equipamentos_lista_1440.png)
-- [P2] **Lista vazia ao abrir** (também em Documentos e Usuários).
+- ~~[P2] **Lista vazia ao abrir**~~ (também em Documentos e Usuários). **Feito na fase 2 (78a0405)** em Equipamentos, Arquivo de documentos, Usuários, Clientes e Unidades (50 mais recentes sem filtro).
   - **Fazer:** carregar os 50 mais recentes e usar a pesquisa como filtro.
 - [P2] **Rótulos diferentes entre computador e celular** ("TAG (Identificador)" × "TAG / Patrimônio"; "Número de Série" × "Série").
 - [P3] **Sucesso genérico** ("Criado com sucesso."). **Fazer:** "Equipamento AUT-TESTE-01 cadastrado."
@@ -809,44 +810,44 @@ Corrigido nesta rodada em `Index.html`:
 - estado vazio orientando a pesquisa.
 
 Fica para a fase 2:
-- [P2] **"Visualizar no Drive" na lista.** **Fazer:** "Abrir arquivo". *Onde:* `JS_Admin.html`, perto da linha 940.
-- [P2] **"Choose File / No file chosen"** no computador e no celular. **Fazer:** botão "Escolher arquivo".
+- ~~[P2] **"Visualizar no Drive" na lista.**~~ **Fazer:** "Abrir arquivo". *Onde:* `JS_Admin.html`, perto da linha 940. **Feito na fase 2 (78a0405).**
+- ~~[P2] **"Choose File / No file chosen"**~~ no computador e no celular. **Fazer:** botão "Escolher arquivo". **Feito na fase 2 (78a0405).**
 - [P2] **Categoria em lista fechada no computador e em texto livre no celular.**
   - **Fazer:** o mesmo select no celular. *Onde:* `renderMobileFormDocumentos_ (mob_doc_tipo)`.
-- [P2] **Coluna Ações cortada ("AÇ").**
+- ~~[P2] **Coluna Ações cortada ("AÇ").**~~ **Feito na fase 2 (78a0405).**
 - [P2] **Erro de programador pode chegar ao operador** ("Execute a função configurarPastasSGO() no arquivo SGO_DriverSetup").
   - **Fazer:** "O envio de arquivos não está configurado. Avise o administrador do sistema; nada foi gravado." *Onde:* `SGO_Documentos.js`, perto da linha 127.
-- [P1] **Celular: clientes sem nome no seletor** (mesmo item de Equipamentos).
+- ~~[P1] **Celular: clientes sem nome no seletor**~~ (mesmo item de Equipamentos). **Feito na fase 2 (78a0405).**
 - [P3] **Categorias com numeração parcial** ("1. Relatórios de Manutenção"… "Outros Documentos").
 - [P3] **Celular: a lista vazia diz só "Nenhum registro encontrado."**
   - **Fazer:** "Nenhum documento cadastrado. Toque em + Novo para enviar o primeiro."
 
 ### Vínculos (painel em sobreposição)
-- [P2] **"CONSOLIDAR" já vem escolhido**, e a ação inativa a origem.
+- ~~[P2] **"CONSOLIDAR" já vem escolhido**~~, e a ação inativa a origem. **Feito na fase 2 (78a0405).**
   - **Fazer:** primeira opção vazia "Escolha a ação" e nomes em caixa normal.
   - *Onde:* `JS_Vinculos.html › vincSelected_`. (Captura: vinculos_painel_1440.png)
-- [P2] **Códigos internos na tela** ("REGULAR", nomes de tabela e campo).
+- ~~[P2] **Códigos internos na tela**~~ ("REGULAR", nomes de tabela e campo). **Em parte na fase 2 (78a0405):** diagnóstico em texto ("Regular"); a prévia ainda mostra nomes de tabela e campo.
   - **Fazer:** "Situação: regular" e nomes de tela. *Onde:* `vincSelected_`, `vincPreview_`.
 - [P3] **Botões cinza chapados e "Fechar" no meio.** **Fazer:** ordem "Atualizar · Como usar" e "Fechar" no canto.
 - [P3] **Legenda densa no topo**, antes de qualquer seleção. **Fazer:** mover para "Como usar".
 - [P3] **Confirmação confusa** ("…somente se ainda não existir?").
-- [P2] **Ao fechar o painel, o menu continua marcando "Vínculos".** Ver 1.6.
+- ~~[P2] **Ao fechar o painel, o menu continua marcando "Vínculos".**~~ Ver 1.6. **Feito na fase 2 (78a0405).**
 
 ### Configurações (página "Administração")
-- [P2] **O menu agora diz "Configurações", e a página ainda se chama "Administração".**
+- ~~[P2] **O menu agora diz "Configurações", e a página ainda se chama "Administração".**~~ **Feito na fase 2 (78a0405).**
   - **Fazer:** título "Configurações" e "Gestão de usuários" como primeiro bloco. *Onde:* `JS_Admin.html › renderAdminModulo_`.
-- [P1] **Perfis sem permissão veem a seção "Gestão de usuários"**, com "+ Novo usuário", e o servidor recusa tudo. O item "Usuários" do menu já foi escondido nesta rodada.
+- ~~[P1] **Perfis sem permissão veem a seção "Gestão de usuários"**~~, com "+ Novo usuário", e o servidor recusa tudo. O item "Usuários" do menu já foi escondido nesta rodada. **Já corrigido na revisão do núcleo (e4c1238).**
   - **Fazer:** esconder a seção para quem não é ADMIN, GESTOR ou DIRETORIA. (Captura: admin_usuarios_perfil_tecnico_1440.png)
-- [P2] **"Limpar Sessão Travada (Logout Forçado)".** Mistura inglês e Title Case, é um botão vermelho sem explicação e só limpa este navegador.
+- ~~[P2] **"Limpar Sessão Travada (Logout Forçado)".**~~ Mistura inglês e Title Case, é um botão vermelho sem explicação e só limpa este navegador. **Feito na fase 2 (78a0405).**
   - **Fazer:** cartão "Sessão neste navegador", com o texto "Sai do SGO+ neste navegador e recarrega a página. Use quando a tela travar após uma atualização." e o botão "Sair e recarregar".
   - (Captura: admin_pagina_1440.png)
-- [P2] **Som de ociosidade em dois cartões**, com "Ativado" em fonte de terminal. **Fazer:** um cartão com chave e "Testar".
-- [P2] **Jargão nos alertas de calibração** ("Intervalo do balão", "Aviso vermelho central") e selo "ATIVO" duplicado.
+- ~~[P2] **Som de ociosidade em dois cartões**~~, com "Ativado" em fonte de terminal. **Fazer:** um cartão com chave e "Testar". **Feito na fase 2 (78a0405).**
+- ~~[P2] **Jargão nos alertas de calibração**~~ ("Intervalo do balão", "Aviso vermelho central") e selo "ATIVO" duplicado. **Feito na fase 2 (78a0405).**
   - **Fazer:** "Repetir o lembrete a cada (minutos)", "Janela de alerta no centro da tela".
-- [P2] **Perfis em código no combo; DIRETORIA não aparece.**
+- ~~[P2] **Perfis em código no combo; DIRETORIA não aparece.**~~ **Feito na fase 2 (78a0405)** (nomes por extenso; Diretoria entrou em e4c1238).
   - **Fazer:** nomes por extenso. *Onde:* `preencherComboPerfis_`.
-- [P2] **Usuários: tabela vazia até pesquisar e coluna "AÇÕ" cortada.**
-- [P3] **"Gestão de Usuários", "Nome ou Login…", "O Nome Completo é obrigatório."** **Fazer:** escrever em caixa normal.
+- ~~[P2] **Usuários: tabela vazia até pesquisar e coluna "AÇÕ" cortada.**~~ **Feito na fase 2 (78a0405).**
+- ~~[P3] **"Gestão de Usuários", "Nome ou Login…", "O Nome Completo é obrigatório."**~~ **Fazer:** escrever em caixa normal. **Feito na fase 2 (78a0405).**
 - ~~[P3] Celular: página de computador inteira~~ — **corrigido nesta rodada** (mensagem "disponível apenas na versão para computador").
 
 ### Chaves e senhas
