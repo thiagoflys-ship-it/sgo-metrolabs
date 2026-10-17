@@ -313,7 +313,30 @@ const SGO_VINCULOS = (() => {
       }
     } finally {if(owner){try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}}
   }
-  return {overview:overview,details:details,search:search,preview:preview,confirm:confirm,relation:relation,units:units,principal:principal,createClient:createClient,_build:build,_diagnostic:diagnostic};
+  // CADASTROS E ADMINISTRAÇÃO 17/10: histórico geral das alterações (tela Vínculos), só para a gestão.
+  // Agrupa as linhas de SYS_VINCULOS_AUDITORIA por operação; só leitura.
+  function historyAll(sessionId,limit) {
+    staff(sessionId,true);
+    const audit=SGO_DATA.getDB().getSheetByName(AUDIT);
+    if(!audit||audit.getLastRow()<2)return {success:true,items:[]};
+    const max=Math.max(1,Math.min(200,Number(limit)||60));
+    const rows=audit.getRange(2,1,audit.getLastRow()-1,AUDIT_HEADERS.length).getValues();
+    const ops={},order=[];
+    for(let i=rows.length-1;i>=0;i--){
+      const r=rows[i],op=text(r[1]);
+      if(!op)continue;
+      if(!ops[op]){if(order.length>=max)continue;ops[op]={operacao:op,data:text(r[11]),usuario:text(r[2]),motivo:text(r[3]),acao:text(r[4]),origemId:text(r[5]),alteracoes:[],documentos:0};order.push(op);}
+      const it={tabela:text(r[6]),registro:text(r[7]),campo:text(r[8]),antes:text(r[9]),depois:text(r[10])};
+      if(it.campo==='__DELETE__'){try{const o=JSON.parse(it.antes);it.antes=label(o);}catch(_){}}
+      ops[op].alteracoes.push(it);
+      if(it.tabela==='DOC_DOCUMENTOS'&&it.campo==='CLIENTE_ID')ops[op].documentos++;
+    }
+    const names={};
+    ['CAD_CLIENTES','CAD_UNIDADES','CAD_EQUIPAMENTOS'].forEach(n=>SGO_DATA.getAll(n).forEach(r=>{names[text(r.ID)]=label(r);}));
+    const nome=id=>names[text(id)]||'';
+    return {success:true,items:order.map(op=>{const o=ops[op];o.origem=nome(o.origemId)||'(cadastro excluído ou sem nome)';o.alteracoes.forEach(a=>{if(a.campo==='CLIENTE_ID'||a.campo==='UNIDADE_ID'){a.antesNome=nome(a.antes);a.depoisNome=nome(a.depois);}if(a.tabela!=='DOC_DOCUMENTOS')a.registroNome=nome(a.registro);});return o;})};
+  }
+  return {overview:overview,details:details,search:search,preview:preview,confirm:confirm,relation:relation,units:units,principal:principal,createClient:createClient,historyAll:historyAll,_build:build,_diagnostic:diagnostic};
 })();
 function vinculosConsultar(sessionId,termo) { return SGO_VINCULOS.search(sessionId,termo); }
 function vinculosPainel(sessionId) { return SGO_VINCULOS.overview(sessionId); }
@@ -321,3 +344,4 @@ function vinculosPrevia(sessionId,payload) { return SGO_VINCULOS.preview(session
 function vinculosConfirmar(sessionId,token) { return SGO_Pendencias_aposGravar_(SGO_VINCULOS.confirm(sessionId,token)); }
 function vinculosCriarPrincipal(sessionId,clienteId) { return SGO_VINCULOS.principal(sessionId,clienteId); }
 function vinculosDetalhes(sessionId,tipo,id) { return SGO_VINCULOS.details(sessionId,tipo,id); }
+function vinculosHistorico(sessionId,limite) { try { return JSON.parse(JSON.stringify(SGO_VINCULOS.historyAll(sessionId,limite))); } catch(e) { return {success:false,message:String((e&&e.message)||e)}; } }

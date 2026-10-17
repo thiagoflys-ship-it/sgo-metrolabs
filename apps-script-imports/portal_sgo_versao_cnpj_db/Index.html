@@ -179,7 +179,7 @@
           <button type="button" class="menu-btn" data-mod="clientes" data-busca="cliente cnpj hospital empresa" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Clientes</button>
           <button type="button" class="menu-btn" data-mod="unidades" data-busca="unidade filial local endereco" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span>Unidades</button>
           <button type="button" class="menu-btn" data-mod="equipamentos" data-busca="equipamento tag serie qr code prontuario" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-industry" aria-hidden="true"></i></span>Equipamentos</button>
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="vinculos" data-busca="vinculos cliente unidade equipamento auvo" id="menu-btn-vinculos" onclick="Menu_atalho_('vinculos')" title="Painel de vínculos entre cliente, unidade e equipamento"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          <button type="button" class="menu-btn" data-mod="vinculos" data-busca="vinculos cliente unidade equipamento auvo transferir consolidar desvincular auditoria" id="menu-btn-vinculos" onclick="abrir('vinculos')" title="Vínculos entre cliente, unidade, equipamento e documentos"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
           <button type="button" class="menu-btn" data-mod="documentos" data-busca="documentos arquivo anexos nbr 15943 relatorios certificados contratos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Arquivo de documentos</button>
           <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
           </div>
@@ -188,7 +188,7 @@
         <div class="sidebar-section menu-grupo" data-grupo="administracao" id="menu-secao-admin">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
-          <button type="button" class="menu-btn menu-btn-atalho" data-atalho="usuarios" data-busca="usuarios login senha perfil acesso" id="menu-btn-usuarios" onclick="Menu_atalho_('usuarios')" title="Gestão de usuários e perfis de acesso"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
+          <button type="button" class="menu-btn" data-mod="usuarios" data-busca="usuarios login senha perfil acesso celular whatsapp" id="menu-btn-usuarios" onclick="abrir('usuarios')" title="Usuários e perfis de acesso"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
           <button type="button" class="menu-btn" data-mod="admin" data-busca="administracao configuracoes ociosidade alertas sessao" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Configurações</button>
           <button type="button" class="menu-btn" data-mod="chaves" data-busca="chaves senhas api integracoes whatsapp email" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
           </div>
@@ -265,123 +265,7 @@
       }
     });
 
-    /* ============================================================
-       MODIFICAÇÃO EXCLUSIVA PARA CATEGORIAS NBR 15943 EM DOCUMENTOS
-       ============================================================ */
-    function renderDocumentosModulo_() {
-      const div = document.getElementById("conteudo");
-      if (!div) return;
-
-      const isCliente = typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT.perfil === "CLIENTE";
-      const styleForm = isCliente ? "display:none;" : "";
-      const styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
-      const styleAcoes = isCliente ? "display:none;" : "";
-
-      div.innerHTML = `
-        <div class="module-shell">
-          <div class="module-header">
-            <div class="module-header-left">
-              <h2 class="content-title">Arquivo de documentos</h2>
-              <p class="content-subtitle">Relatórios, certificados, ordens de serviço e contratos de cada cliente, organizados pelas categorias da NBR 15943.</p>
-            </div>
-            
-            <div class="module-header-right" style="${styleForm} display: flex; gap: 15px; align-items: center;">
-              <div style="display: flex; gap: 5px;">
-                <input id="documentosPesquisa" class="toolbar-search" type="text" placeholder="Pesquisar documento..." onkeydown="if(event.key === 'Enter') documentosPesquisar_()">
-                <button class="btn-secondary" type="button" onclick="documentosPesquisar_()">Pesquisar</button>
-              </div>
-              <button class="btn-primary" type="button" onclick="documentosNovo_()">Novo documento</button>
-            </div>
-          </div>
-
-          <div class="module-grid" style="${styleGrid}">
-            <div class="form-card" style="${styleForm}">
-              <h3 class="section-card-title" id="documentosFormTitulo">Novo documento</h3>
-              <div class="form-grid">
-                <div class="full">
-                  <label for="doc_cliente_id_busca">Cliente <span style="color:var(--bc-danger);">*</span></label>
-                  ${SGO_htmlBuscaClienteLike_("doc_cliente_id", "Nome ou CNPJ do cliente...")}
-                </div>
-                <div class="full">
-                  <label for="doc_unidade_id">Unidade <span style="color:var(--bc-danger);">*</span></label>
-                  <select id="doc_unidade_id" onchange="aoMudarUnidadeDocumentos_()">
-                    <option value="">Selecione um cliente primeiro</option>
-                  </select>
-                </div>
-                <div class="full">
-                  <label for="doc_equipamento_id">Equipamento (opcional)</label>
-                  <select id="doc_equipamento_id">
-                    <option value="">Selecione uma unidade primeiro</option>
-                  </select>
-                </div>
-                <div class="full">
-                  <label for="doc_tipo_documento">Categoria NBR 15943 <span style="color:var(--bc-danger);">*</span></label>
-                  <select id="doc_tipo_documento">
-                    <option value="">Selecione a categoria...</option>
-                    <option value="1. Relatórios de Manutenção">Relatórios de manutenção</option>
-                    <option value="2. Certificados de Calibração">Certificados de calibração</option>
-                    <option value="3. Relatórios de Qualificação">Relatórios de qualificação</option>
-                    <option value="4. Ordens de Serviço">Ordens de serviço</option>
-                    <option value="5. Contratos">Contratos</option>
-                    <option value="Outros Documentos">Outros documentos</option>
-                  </select>
-                </div>
-                <div class="full">
-                  <label for="doc_nome_arquivo">Nome ou referência <span style="color:var(--bc-danger);">*</span></label>
-                  <input id="doc_nome_arquivo" type="text" placeholder="Ex: REL-AUT-01-2026">
-                </div>
-                <div class="full">
-                  <label for="doc_arquivo">Arquivo do documento</label>
-                  <input id="doc_arquivo" type="file" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx" onchange="processarArquivoDocumento_()">
-                  <input id="doc_arquivo_base64" type="hidden">
-                  <input id="doc_arquivo_mime" type="hidden">
-                  <input id="doc_arquivo_nome" type="hidden">
-                  <div id="doc_arquivo_preview" style="margin-top:6px; font-size:12px; font-weight:700; color:var(--metro-blue);"></div>
-                </div>
-                <div class="full">
-                  <label for="doc_data_vencimento">Data de vencimento (opcional)</label>
-                  <input id="doc_data_vencimento" type="date">
-                </div>
-                <div>
-                  <label for="doc_status">Situação</label>
-                  <input id="doc_status" type="text" value="ATIVO" disabled>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button class="btn-primary" type="button" onclick="documentosSalvar_()">Salvar</button>
-                <button class="btn-secondary" type="button" onclick="documentosNovo_()">Limpar</button>
-              </div>
-            </div>
-
-            <div class="list-card">
-              <div class="table-wrap">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Unidade</th>
-                      <th>Equipamento</th>
-                      <th>Categoria</th>
-                      <th>Arquivo</th>
-                      <th>Situação</th>
-                      <th style="${styleAcoes}">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="documentosTabelaBody">
-                    <tr><td colspan="7" class="empty-state">Carregando documentos…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      if (typeof documentosLimparFormulario_ === "function") {
-        documentosLimparFormulario_();
-      }
-      if (typeof documentosPesquisar_ === "function") documentosPesquisar_();
-    }
+    // Arquivo de documentos: a tela passou para JS_Admin.html › renderDocumentosModulo_ (CADASTROS E ADMINISTRAÇÃO 17/10).
   </script>
 
   <script>

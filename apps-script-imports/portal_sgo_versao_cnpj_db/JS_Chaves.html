@@ -1,69 +1,52 @@
-<style>
-  /* CHAVES E SENHAS (2026-10-16) — ver SGO_Chaves.js. Exclusivo do responsável pelo sistema (SGO_DONOS). */
-  .chv-aviso { border: 1px solid var(--border); border-left: 4px solid var(--info); border-radius: var(--radius); background: var(--card); padding: 10px 14px; font-size: 12.5px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
-  .chv-grupo { margin-bottom: 18px; }
-  .chv-grupo-tit { font-size: 13px; font-weight: 800; color: var(--muted); margin: 0 0 8px; }
-  .chv-item { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--warning); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
-  .chv-item.ok { border-left-color: var(--success); }
-  .chv-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 4px; }
-  .chv-nome { font-weight: 700; font-size: 13.5px; color: var(--text-strong, var(--text)); }
-  .chv-codigo { display: none; font-family: var(--bc-mono, monospace); font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 500; }
-  .chv-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
-  .chv-selo.ok { color: var(--success); background: var(--success-bg); }
-  .chv-selo.falta { color: var(--warning); background: var(--warning-bg); }
-  .chv-mascara { font-family: var(--bc-mono, monospace); font-size: 12px; color: var(--text); margin-left: 8px; word-break: break-all; }
-  .chv-ajuda { font-size: 12px; color: var(--muted); margin: 2px 0 10px; line-height: 1.5; }
-  .chv-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .chv-linha input { flex: 1 1 240px; min-width: 0; height: 34px; font-family: var(--bc-mono, monospace); }
-  .chv-linha button { min-height: 34px; white-space: nowrap; }
-  .chv-teste { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
-  .chv-item > .chv-teste:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-  .chv-teste-tit { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
-  .chv-res { margin-top: 8px; }
-  .chv-mod-lista { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .chv-mod { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 12.5px; }
-  .chv-mod:first-child { border-top: 0; }
-  .chv-mod-nome { font-family: var(--bc-mono, monospace); font-weight: 700; min-width: 210px; }
-  .chv-mod-sit { font-weight: 700; }
-  .chv-mod-sit.ok { color: var(--success); }
-  .chv-mod-sit.analise { color: var(--info); }
-  .chv-mod-sit.ruim { color: var(--danger, var(--warning)); }
-  .chv-mod-sit.falta { color: var(--warning); }
-  .chv-mod-obs { flex: 1 1 100%; color: var(--muted); line-height: 1.45; }
-  @media (max-width: 600px) { .chv-linha button { flex: 1 1 auto; } .chv-mod-nome { min-width: 0; } }
-</style>
-
 <script>
   // ==========================================================
-  // CHAVES E SENHAS (2026-10-16)
-  // Servidor: SGO_Chaves.js (Chaves_api*(sessionId, payload)); a lista de
-  // donos (SGO_DONOS) fica só no servidor. Ganchos na casca (JS_Core):
-  // ChavesTela_iniciar_ no login, ChavesTela_parar_ no logout,
-  // abrir('chaves') -> ChavesTela_render_.
+  // CHAVES E SENHAS (2026-10-16; redesenho CADASTROS E ADMINISTRAÇÃO 17/10)
+  // Servidor: SGO_Chaves.js (Chaves_api*(sessionId, payload)); a lista de donos
+  // (SGO_DONOS) fica só no servidor. O valor gravado nunca volta para a tela:
+  // no máximo o final mascarado das chaves de API; senhas, nem isso.
+  // Um cartão por integração, com a situação (Configurada / Falta configurar /
+  // Com erro no teste), o "Testar" ao lado e a ajuda recolhida.
+  // Ganchos na casca (JS_Core): ChavesTela_iniciar_ no login, ChavesTela_parar_ no
+  // logout, abrir('chaves') -> ChavesTela_render_.
   // ==========================================================
-  var CHV = { dono: false, dados: null, msg: null };
+  var CHV = { dono: false, dados: null, abertos: {}, resultados: {} };
 
-  function ChavesTela_esc_(v) { return escapeHtml_(v === null || v === undefined ? "" : String(v)); }
+  // Integrações: o que é obrigatório para estar "Configurada" e qual teste usar.
+  var CHV_INTEGRACOES = {
+    "Inteligência artificial": { icone: "fa-wand-magic-sparkles", teste: "gemini", obrig: [["GEMINI_API_KEY"]], resumo: "Interpretações técnicas, PGT e POP, relatórios com análise e leitura de documentos." },
+    "Auvo": { icone: "fa-arrows-rotate", teste: "auvo", obrig: [["AUVO_API_KEY", "AUVO_API_TOKEN"]], resumo: "Sincronização de clientes, equipamentos e ordens de serviço com o Auvo." },
+    "E-mail": { icone: "fa-envelope", teste: "email", obrig: [["SMTP_SENHA"]], resumo: "Envio dos avisos e documentos por e-mail (sistema@metrolabs.com.br)." },
+    "WhatsApp oficial (Meta)": { icone: "fa-comment-dots", teste: "whatsapp", provedor: "meta", obrig: [["META_WA_TOKEN", "META_WA_PHONE_ID"]], resumo: "Avisos por WhatsApp pelo número oficial, com modelos aprovados pela Meta." },
+    "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp por instância da Z-API (texto simples), alternativa à Meta." },
+    "Rastreador da frota": { icone: "fa-location-crosshairs", teste: "rastreador", obrig: [["RASTREADOR_TOKEN"], ["RASTREADOR_USUARIO", "RASTREADOR_SENHA"]], resumo: "Posição, hodômetro e bloqueio da partida dos veículos (iTracker)." },
+    "Relatórios técnicos": { icone: "fa-file-shield", obrig: [["MODO_PERSONALIZADO_SENHA", "SIMULADOR_ADMIN_SENHA"]], resumo: "Senhas do Modo personalizado e do Simulador dos relatórios de qualificação." },
+    "COMMAND": { icone: "fa-tower-broadcast", obrig: [["PONTE_COMMAND_SEGREDO"]], resumo: "Segredo da ponte entre o SGO+ e o COMMAND." }
+  };
+  var CHV_TESTES = {
+    gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
+    auvo: "Entra na API do Auvo com a chave e o token gravados.",
+    email: "Envia um e-mail de teste para o e-mail do seu usuário.",
+    whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto simples.",
+    rastreador: "Entra na plataforma do rastreador e lista os dispositivos (número, nome e situação). Não envia comando e não mostra usuário, senha nem token."
+  };
+
+  function ChavesTela_esc_(v) { return CadUI_esc_(v); }
   function ChavesTela_ehDono_() { return !!CHV.dono; }
 
   function ChavesTela_chamar_(fn, payload, ok, erro) {
     google.script.run
       .withSuccessHandler(function (res) {
-        if (!res || !res.ok) { erro((res && res.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
-        try { ok(res); } catch (e) { console.error("Chaves " + fn + ":", e); erro("Não foi possível mostrar o resultado: " + (e && e.message ? e.message : e) + ". Atualize a página (F5)."); }
+        if (!res || !res.ok) { erro((res && res.message) || "O servidor não confirmou. Atualize a página e tente de novo."); return; }
+        try { ok(res); } catch (e) { console.error("Chaves " + fn + ":", e); erro("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); }
       })
       .withFailureHandler(function (err) {
         console.error("Chaves " + fn + " falhou:", err);
-        erro("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado.");
+        erro("Não foi possível falar com o servidor. Verifique a conexão e tente de novo; nada foi alterado.");
       })[fn](SGO_getSessionId(), payload || {});
   }
 
   // ---------- ciclo de vida ----------
-  function ChavesTela_mostrarMenu_() {
-    var b = document.getElementById("menu-btn-chaves");
-    if (b) b.style.display = CHV.dono ? "" : "none";
-  }
-
+  function ChavesTela_mostrarMenu_() { var b = document.getElementById("menu-btn-chaves"); if (b) b.style.display = CHV.dono ? "" : "none"; }
   function ChavesTela_iniciar_() {
     CHV.dono = false; CHV.dados = null;
     ChavesTela_mostrarMenu_();
@@ -73,204 +56,261 @@
       .withFailureHandler(function () { CHV.dono = false; ChavesTela_mostrarMenu_(); })
       .Chaves_apiEhDono(SGO_getSessionId(), {});
   }
-
-  function ChavesTela_parar_() {
-    CHV.dono = false; CHV.dados = null;
-    ChavesTela_mostrarMenu_();
-  }
+  function ChavesTela_parar_() { CHV.dono = false; CHV.dados = null; CHV.resultados = {}; ChavesTela_mostrarMenu_(); }
 
   // ---------- tela ----------
   function ChavesTela_render_() {
     var div = document.getElementById("conteudo");
     if (!div) return;
-    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Chaves e senhas");
-    CHV.msg = null;
+    if (CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Chaves e senhas"); } catch (e) {} }
     div.innerHTML =
-      '<div class="module-shell">' +
+      '<div class="module-shell cadx" id="chvTela">' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Chaves e senhas</h2>' +
-          '<p class="content-subtitle">Chaves de integração e senhas administrativas do SGO+. Exclusivo do responsável pelo sistema.</p></div></div>' +
-        '<div id="chvCorpo"><div class="atv-vazio">Carregando...</div></div>' +
+          '<p class="content-subtitle">Chaves das integrações e senhas administrativas, agrupadas por integração. Exclusivo do responsável pelo sistema.</p></div><div class="module-header-right"></div></div>' +
+        CadUI_ajuda_(
+          "<ul><li><b>O valor gravado nunca aparece de novo.</b> Das chaves de API aparecem só os 4 últimos caracteres; das senhas, nada. Para trocar, grave outro valor por cima.</li>" +
+          "<li><b>Configurada</b> = os campos obrigatórios da integração estão gravados. <b>Com erro no teste</b> = o último teste não funcionou e nenhuma chave da integração mudou depois dele. <b>Falta configurar</b> = algum campo obrigatório está vazio.</li>" +
+          "<li><b>Testar</b> usa os valores gravados (não o que está digitado no campo). Grave primeiro, depois teste.</li>" +
+          "<li><b>Apagar</b> desliga o que depende daquela chave até gravar outra. Cada gravação, teste e exclusão fica no log do sistema (quem, quando e qual chave; nunca o valor).</li>" +
+          "<li>WhatsApp: o SGO+ usa um provedor por vez (Meta ou Z-API). Em <i>Automático</i>, usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas.</li></ul>") +
+        '<div class="cadx-resumo bc-resumo" id="chvResumo">' + [1, 2, 3].map(function () { return '<div class="cadx-num bc-resumo-item"><div class="sgo-esq sgo-esq-linha" style="width:40%;height:20px"></div><div class="sgo-esq sgo-esq-linha" style="width:70%"></div></div>'; }).join("") + "</div>" +
+        '<div id="chvCorpo">' + CadUI_esqueleto_(6) + "</div>" +
       "</div>";
     ChavesTela_chamar_("Chaves_apiListar", {}, function (res) { CHV.dados = res; ChavesTela_desenhar_(); }, function (m) {
       var c = document.getElementById("chvCorpo");
-      if (c) c.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A lista de chaves não carregou.</strong>' + ChavesTela_esc_(m) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="ChavesTela_render_()">Tentar de novo</button></div></div>';
+      var r = document.getElementById("chvResumo"); if (r) r.innerHTML = "";
     });
   }
 
-  function ChavesTela_htmlItem_(it) {
-    var k = it.chave;
-    var situacao = it.configurado
-      ? '<span class="chv-selo ok">' + (it.alteradoEm ? "Configurado em " + ChavesTela_esc_(it.alteradoEm) : "Configurado") + "</span>" +
-        (it.mascara ? '<span class="chv-mascara" id="chvMasc_' + k + '">' + ChavesTela_esc_(it.mascara) + "</span>" : "")
-      : '<span class="chv-selo falta">Falta configurar</span>';
-    var tipoCampo = it.tipo === "aberto" ? "text" : "password";
-    var ph = it.exemplo ? "ex.: " + it.exemplo : (it.configurado ? "cole um valor novo para trocar" : "cole aqui");
-    var msg = CHV.msg && CHV.msg.chave === k ? '<div class="atv-msg ' + (CHV.msg.erro ? "erro" : "ok") + '">' + ChavesTela_esc_(CHV.msg.texto) + "</div>" : "";
-    return '<div class="chv-item' + (it.configurado ? " ok" : "") + '" id="chvItem_' + k + '">' +
-      '<div class="chv-cab"><div class="chv-nome">' + ChavesTela_esc_(it.nome) + '<span class="chv-codigo">' + ChavesTela_esc_(k) + "</span></div>" +
-        '<div>' + situacao + "</div></div>" +
-      '<div class="chv-ajuda">' + ChavesTela_esc_(it.ajuda) + "</div>" +
-      '<div class="chv-linha">' +
-        '<input type="' + tipoCampo + '" class="form-control" id="chvValor_' + k + '" autocomplete="new-password" spellcheck="false" placeholder="' + ChavesTela_esc_(ph) + '" aria-label="Valor de ' + ChavesTela_esc_(it.nome) + '">' +
-        '<button type="button" class="btn-primary" id="chvGravar_' + k + '" onclick="ChavesTela_gravar_(\'' + k + '\')">Gravar</button>' +
-        (it.configurado ? '<button type="button" class="btn-secondary" id="chvApagar_' + k + '" onclick="ChavesTela_apagar_(\'' + k + '\')">Apagar</button>' : "") +
-      "</div>" + msg + "</div>";
+  function ChavesTela_itensDo_(grupo) { return ((CHV.dados && CHV.dados.itens) || []).filter(function (it) { return it.grupo === grupo; }); }
+  function ChavesTela_item_(k) { return ((CHV.dados && CHV.dados.itens) || []).filter(function (it) { return it.chave === k; })[0]; }
+  function ChavesTela_configurado_(k) { var it = ChavesTela_item_(k); return !!(it && it.configurado); }
+
+  /** Provedor do WhatsApp em uso: o escolhido; em Automático, Meta se o token dela existir, senão Z-API completa. */
+  function ChavesTela_provedorWhats_() {
+    var p = ChavesTela_item_("WHATSAPP_PROVEDOR");
+    var v = p && p.configurado ? String(p.mascara || "").toLowerCase() : "";
+    if (v === "meta" || v === "zapi") return v;
+    if (ChavesTela_configurado_("META_WA_TOKEN")) return "meta";
+    if (["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"].every(ChavesTela_configurado_)) return "zapi";
+    return "";
   }
 
-  function ChavesTela_htmlTeste_(tipo) {
-    var tit = { gemini: "Testar a IA (Gemini)", auvo: "Testar o login no Auvo", email: "Testar o envio de e-mail", whatsapp: "Testar o WhatsApp", rastreador: "Testar conexão com o rastreador" }[tipo];
-    var expl = {
-      gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
-      auvo: "Faz o login na API do Auvo com a API Key e o API Token gravados.",
-      email: "Envia um e-mail de teste para o e-mail do seu usuário (Administração → Usuários).",
-      whatsapp: "Envia uma mensagem de teste para o celular digitado. Pela Meta, sai o modelo sgo_aviso_geral, que precisa estar aprovado na Meta (pt_BR); pela Z-API, sai um texto simples.",
-      rastreador: "Entra na plataforma do rastreador com as credenciais gravadas e lista os dispositivos encontrados (número de identificação, nome e situação). Não envia nenhum comando e não mostra usuário, senha nem token. Funciona mesmo com o rastreador desligado no SGO+."
-    }[tipo];
-    return '<div class="chv-teste"><div class="chv-teste-tit">' + tit + '</div><div class="chv-ajuda">' + expl + "</div>" +
-      '<div class="chv-linha">' +
-        (tipo === "whatsapp" ? '<input type="tel" class="form-control" id="chvTelTeste" placeholder="celular com DDD, ex.: (62) 98241-7106" aria-label="Celular para o teste">' : "") +
-        '<button type="button" class="btn-secondary" id="chvTestar_' + tipo + '" onclick="ChavesTela_testar_(\'' + tipo + '\')">' + (tipo === "rastreador" ? "Testar conexão" : "Testar") + '</button>' +
-      '</div><div class="chv-res" id="chvRes_' + tipo + '"></div></div>';
+  /** Situação de uma integração: { codigo: ok|falta|erro, texto, tom, detalhe } */
+  function ChavesTela_situacao_(grupo) {
+    var info = CHV_INTEGRACOES[grupo] || {};
+    var itens = ChavesTela_itensDo_(grupo);
+    var obrig = info.obrig || [];
+    var completo = !obrig.length ? itens.some(function (i) { return i.configurado; }) : obrig.some(function (alternativa) { return alternativa.every(ChavesTela_configurado_); });
+    if (!completo) {
+      var faltam = [];
+      (obrig[0] || []).forEach(function (k) { if (!ChavesTela_configurado_(k)) { var it = ChavesTela_item_(k); faltam.push(it ? it.nome : k); } });
+      return { codigo: "falta", texto: "Falta configurar", tom: "tom-alerta", detalhe: faltam.length ? "Falta: " + faltam.join("; ") + (obrig.length > 1 ? " (ou a alternativa indicada na ajuda)" : "") + "." : "" };
+    }
+    var t = info.teste && CHV.dados && CHV.dados.testes ? CHV.dados.testes[info.teste] : null;
+    var emUso = !info.provedor || ChavesTela_provedorWhats_() === info.provedor;
+    if (t && emUso) {
+      var ultimaTroca = itens.map(function (i) { return i.alteradoIso || ""; }).sort().pop() || "";
+      var valeAinda = !ultimaTroca || String(t.em || "") >= ultimaTroca;
+      if (valeAinda && !t.funcionou) return { codigo: "erro", texto: "Com erro no teste", tom: "tom-perigo", detalhe: "Teste de " + (t.emBr || "") + ": " + (t.texto || "não funcionou.") };
+      if (valeAinda && t.funcionou) return { codigo: "ok", texto: "Configurada", tom: "tom-ok", detalhe: "Testada em " + (t.emBr || "") + " e funcionou." };
+    }
+    var nota = info.provedor && !emUso ? "Configurada, mas o WhatsApp está usando " + (ChavesTela_provedorWhats_() === "meta" ? "a Meta" : ChavesTela_provedorWhats_() === "zapi" ? "a Z-API" : "outro provedor") + "." : (info.teste ? "Ainda não testada depois da última alteração." : "");
+    return { codigo: "ok", texto: "Configurada", tom: "tom-ok", detalhe: nota };
   }
 
   function ChavesTela_desenhar_() {
     var c = document.getElementById("chvCorpo");
     if (!c || !CHV.dados) return;
-    var itens = CHV.dados.itens || [];
-    var html = '<div class="chv-aviso">O valor gravado nunca é mostrado de novo: aparece no máximo o final mascarado das chaves de API. Para trocar, grave outro por cima. ' +
-      "Cada alteração fica registrada no log do sistema (quem, quando e qual chave, sem o valor).</div>";
-    (CHV.dados.grupos || []).forEach(function (g) {
-      var doGrupo = itens.filter(function (it) { return it.grupo === g; });
-      if (!doGrupo.length) return;
-      var testes = [];
-      doGrupo.forEach(function (it) { if (it.teste && testes.indexOf(it.teste) < 0) testes.push(it.teste); });
-      html += '<div class="chv-grupo"><h3 class="chv-grupo-tit">' + ChavesTela_esc_(g) + "</h3>" +
-        doGrupo.map(ChavesTela_htmlItem_).join("") +
-        (testes.length ? '<div class="chv-item ok" style="border-left-color:var(--info)">' + testes.map(ChavesTela_htmlTeste_).join("") + "</div>" : "") +
-        (g === "WhatsApp" ? ChavesTela_htmlModelos_() : "") +
-        "</div>";
+    var grupos = (CHV.dados.grupos || []).filter(function (g) { return ChavesTela_itensDo_(g).length; });
+    var sit = {};
+    grupos.forEach(function (g) { sit[g] = ChavesTela_situacao_(g); });
+    var conta = function (cod) { return grupos.filter(function (g) { return sit[g].codigo === cod; }).length; };
+    var res = document.getElementById("chvResumo");
+    if (res) res.innerHTML = [["ok", "Configuradas", "tom-ok"], ["falta", "Falta configurar", "tom-alerta"], ["erro", "Com erro no teste", "tom-perigo"]].map(function (x) {
+      var n = conta(x[0]);
+      return '<button type="button" class="cadx-num bc-resumo-item ' + x[2] + (n === 0 ? " is-zero" : "") + '" onclick="ChavesTela_irPara_(\'' + x[0] + '\')"><span class="cadx-num-valor bc-resumo-num">' + n + '</span><span class="cadx-num-rotulo bc-resumo-rot">' + x[1] + "</span></button>";
+    }).join("");
+    c.innerHTML = grupos.map(function (g) { return ChavesTela_htmlGrupo_(g, sit[g]); }).join("");
+    c.querySelectorAll("[data-chv-grupo]").forEach(function (det) {
+      det.addEventListener("toggle", function () { CHV.abertos[det.getAttribute("data-chv-grupo")] = det.open; });
     });
-    c.innerHTML = html;
+  }
+
+  function ChavesTela_irPara_(cod) {
+    var grupos = (CHV.dados.grupos || []).filter(function (g) { return ChavesTela_itensDo_(g).length && ChavesTela_situacao_(g).codigo === cod; });
+    if (!grupos.length) return;
+    grupos.forEach(function (g) { CHV.abertos[g] = true; });
+    ChavesTela_desenhar_();
+    var el = document.querySelector('[data-chv-grupo="' + grupos[0].replace(/"/g, "") + '"]');
+    if (el) try { el.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {}
+  }
+
+  function ChavesTela_idGrupo_(g) { return String(g).replace(/[^A-Za-z0-9]/g, ""); }
+
+  function ChavesTela_htmlGrupo_(g, s) {
+    var info = CHV_INTEGRACOES[g] || {};
+    var gid = ChavesTela_idGrupo_(g);
+    var aberto = CHV.abertos[g] !== undefined ? CHV.abertos[g] : s.codigo === "erro";
+    var teste = info.teste;
+    return '<details class="chvx-grupo" data-chv-grupo="' + ChavesTela_esc_(g) + '"' + (aberto ? " open" : "") + ">" +
+      '<summary class="chvx-grupo-cab" style="list-style:none;cursor:pointer">' +
+        '<div class="chvx-grupo-nome"><h3><i class="fas ' + (info.icone || "fa-key") + '" aria-hidden="true" style="color:var(--bc-text-3);width:20px"></i> ' + ChavesTela_esc_(g) + "</h3>" +
+          '<div class="cadx-sub">' + ChavesTela_esc_(info.resumo || "") + "</div>" + (s.detalhe ? '<div class="cadx-sub" style="margin-top:3px">' + ChavesTela_esc_(s.detalhe) + "</div>" : "") + "</div>" +
+        '<div class="chvx-grupo-acoes"><span class="cadx-selo bc-selo ' + s.tom + '">' + ChavesTela_esc_(s.texto) + "</span>" +
+          (teste && teste !== "whatsapp" ? '<button type="button" class="cadx-btn cadx-btn-grande" id="chvTestar_' + gid + '" onclick="event.preventDefault();ChavesTela_testar_(\'' + teste + "','" + gid + '\')">' + (teste === "rastreador" ? "Testar conexão" : "Testar") + "</button>" : "") +
+          '<span class="cadx-sub">' + (aberto ? "" : "Configurar") + "</span></div>" +
+      "</summary>" +
+      '<div class="chvx-grupo-corpo">' +
+        (teste ? '<div class="chvx-teste"><div class="cadx-sub">' + ChavesTela_esc_(CHV_TESTES[teste]) + "</div>" +
+          (teste === "whatsapp" ? '<div class="chvx-linha" style="margin-top:6px"><input type="tel" id="chvTel_' + gid + '" placeholder="Celular com DDD para o teste, ex.: (62) 98241-7106" aria-label="Celular para o teste" inputmode="tel"><button type="button" class="cadx-btn cadx-btn-grande" id="chvTestar_' + gid + '" onclick="ChavesTela_testar_(\'whatsapp\',\'' + gid + '\')">Testar</button></div>' : "") +
+          '<div class="chvx-res" id="chvRes_' + gid + '">' + (CHV.resultados[gid] || "") + "</div></div>" : "") +
+        ChavesTela_itensDo_(g).map(ChavesTela_htmlItem_).join("") +
+        (g === "WhatsApp oficial (Meta)" ? ChavesTela_htmlModelos_() : "") +
+      "</div></details>";
+  }
+
+  function ChavesTela_htmlItem_(it) {
+    var k = it.chave;
+    var sit = it.configurado
+      ? '<span class="cadx-selo bc-selo tom-ok">Gravado' + (it.alteradoEm ? " em " + ChavesTela_esc_(it.alteradoEm) : "") + "</span>" + (it.mascara && !it.opcoes ? '<span class="chvx-mascara">' + ChavesTela_esc_(it.mascara) + "</span>" : "")
+      : '<span class="cadx-selo bc-selo">Vazio</span>';
+    var controle;
+    if (it.opcoes) {
+      var atual = it.configurado ? String(it.mascara || "") : "";
+      controle = '<select id="chvValor_' + k + '" aria-label="' + ChavesTela_esc_(it.nome) + '"><option value=""' + (atual ? "" : " selected") + ">" + ChavesTela_esc_(it.vazio || "Não definido") + "</option>" +
+        it.opcoes.map(function (o) { return '<option value="' + ChavesTela_esc_(o[0]) + '"' + (atual === o[0] ? " selected" : "") + ">" + ChavesTela_esc_(o[1]) + "</option>"; }).join("") + "</select>" +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="chvGravar_' + k + '" onclick="ChavesTela_gravarOpcao_(\'' + k + '\')">Gravar</button>';
+    } else {
+      var tipoCampo = it.tipo === "aberto" ? "text" : "password";
+      var ph = it.exemplo ? "ex.: " + it.exemplo : (it.configurado ? "Cole um valor novo para trocar" : "Cole aqui o valor");
+      controle = '<input type="' + tipoCampo + '" id="chvValor_' + k + '" autocomplete="new-password" spellcheck="false" placeholder="' + ChavesTela_esc_(ph) + '" aria-label="' + ChavesTela_esc_(it.nome) + '">' +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="chvGravar_' + k + '" onclick="ChavesTela_gravar_(\'' + k + '\')">Gravar</button>' +
+        (it.configurado ? '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-risco" id="chvApagar_' + k + '" onclick="ChavesTela_apagar_(\'' + k + '\')">Apagar</button>' : "");
+    }
+    return '<div class="chvx-item" id="chvItem_' + k + '"><div><div class="chvx-item-nome">' + ChavesTela_esc_(it.nome) + '</div><div class="chvx-item-sit">' + sit + "</div></div>" +
+      '<div><div class="chvx-linha">' + controle + "</div>" +
+        (it.ajuda ? '<details class="chvx-ajuda-item"><summary>Onde encontrar e para que serve</summary><p>' + ChavesTela_esc_(it.ajuda) + "</p></details>" : "") +
+        '<div class="cadx-msg" id="chvMsg_' + k + '" role="status"></div></div></div>';
   }
 
   // ---------- modelos do WhatsApp oficial (Meta) ----------
   function ChavesTela_htmlModelos_() {
-    return '<div class="chv-item ok" style="border-left-color:var(--info)">' +
-      '<div class="chv-teste"><div class="chv-teste-tit">Modelos de mensagem do WhatsApp oficial (Meta)</div>' +
-        '<div class="chv-ajuda">Pela Meta, o SGO+ só envia por modelo aprovado. "Cadastrar modelos na Meta" envia para análise os 7 modelos do SGO+ (nome, texto e exemplos fixos do sistema, em pt_BR, categoria Utilidade); os que já existem não são alterados. Usa META_WA_TOKEN e META_WA_WABA_ID gravados acima. A aprovação sai em minutos ou até 24 h.</div>' +
-        '<div class="chv-linha">' +
-          '<button type="button" class="btn-primary" id="chvModCadastrar" onclick="ChavesTela_modelosCadastrar_()">Cadastrar modelos na Meta</button>' +
-        '</div><div class="chv-res" id="chvModCadRes"></div></div>' +
-      '<div class="chv-teste"><div class="chv-teste-tit">Situação dos modelos</div>' +
-        '<div class="chv-linha"><button type="button" class="btn-secondary" id="chvModAtualizar" onclick="ChavesTela_modelosSituacao_()">Atualizar</button></div>' +
-        '<div class="chv-res" id="chvModSitRes"><div class="chv-ajuda">Clique em Atualizar para consultar a Meta.</div></div></div>' +
-      "</div>";
+    return '<div class="chvx-item"><div><div class="chvx-item-nome">Modelos de mensagem (Meta)</div><div class="chvx-item-sit">Pela Meta, o SGO+ só envia por modelo aprovado.</div></div><div>' +
+      '<div class="chvx-linha"><button type="button" class="cadx-btn cadx-btn-grande" id="chvModAtualizar" onclick="ChavesTela_modelosSituacao_()">Ver a situação dos modelos</button>' +
+      '<button type="button" class="cadx-btn cadx-btn-grande" id="chvModCadastrar" onclick="ChavesTela_modelosCadastrar_()">Cadastrar os modelos na Meta</button></div>' +
+      '<details class="chvx-ajuda-item"><summary>Como funciona</summary><p>"Cadastrar os modelos na Meta" envia para análise os 7 modelos do SGO+ (texto fixo do sistema, pt_BR, categoria Utilidade); os que já existem não são alterados. Usa o token e a identificação da conta comercial gravados acima. A aprovação sai em minutos ou em até 24 horas.</p></details>' +
+      '<div class="chvx-res" id="chvModRes"></div></div></div>';
   }
-
-  function ChavesTela_classeModelo_(it) {
-    if (it.falta) return "falta";
-    if (it.status === "APPROVED") return "ok";
-    if (it.status === "PENDING" || it.status === "IN_APPEAL") return "analise";
-    return "ruim";
+  function ChavesTela_classeModelo_(it) { if (it.falta) return "tom-alerta"; if (it.status === "APPROVED") return "tom-ok"; if (it.status === "PENDING" || it.status === "IN_APPEAL") return "tom-info"; return "tom-perigo"; }
+  function ChavesTela_listaModelos_(itens, rot) {
+    return itens && itens.length ? '<ul class="cadx-arvore" style="margin-top:8px">' + itens.map(function (it) {
+      var x = rot ? (rot[it.resultado] || [it.resultado, ""]) : [it.situacao, ChavesTela_classeModelo_(it)];
+      return '<li><div class="cadx-no"><div class="cadx-no-texto"><span class="cadx-mono">' + ChavesTela_esc_(it.nome) + '</span><div class="cadx-sub">' + ChavesTela_esc_(rot ? it.texto : (it.uso || "") + (it.motivo ? ". " + it.motivo : "")) + '</div></div><span class="cadx-selo bc-selo ' + x[1] + '">' + ChavesTela_esc_(x[0]) + "</span></div></li>";
+    }).join("") + "</ul>" : "";
   }
-
   function ChavesTela_modelosCadastrar_() {
-    var res = document.getElementById("chvModCadRes"), btn = document.getElementById("chvModCadastrar");
-    if (!confirm("Enviar para análise da Meta os modelos do SGO+ que ainda não estão cadastrados?\n\nOs que já existem não são alterados.")) return;
-    if (btn) btn.disabled = true;
-    if (res) res.innerHTML = '<div class="chv-ajuda">Cadastrando na Meta...</div>';
-    ChavesTela_chamar_("Chaves_apiModelosCadastrar", {}, function (r) {
-      if (btn) btn.disabled = false;
-      var rot = { cadastrado: ["Enviado", "analise"], ja_existe: ["Já cadastrado", "ok"], erro: ["Erro", "ruim"], nao_tentado: ["Não tentado", "falta"] };
-      var linhas = (r.itens || []).map(function (it) {
-        var x = rot[it.resultado] || [it.resultado, "falta"];
-        return '<div class="chv-mod"><span class="chv-mod-nome">' + ChavesTela_esc_(it.nome) + '</span><span class="chv-mod-sit ' + x[1] + '">' + ChavesTela_esc_(x[0]) +
-          '</span><span class="chv-mod-obs">' + ChavesTela_esc_(it.texto) + "</span></div>";
-      }).join("");
-      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" +
-        (linhas ? '<div class="chv-mod-lista">' + linhas + "</div>" : "");
-      if (r.itens && r.itens.length) ChavesTela_modelosSituacao_();
-    }, function (m) {
-      if (btn) btn.disabled = false;
-      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+    CadUI_confirmar_({
+      titulo: "Cadastrar os modelos na Meta", botao: "Enviar para análise",
+      texto: "<p>Enviar para análise da Meta os modelos do SGO+ que ainda não estão cadastrados? Os que já existem não são alterados.</p>",
+      aoConfirmar: function (v, fechar) {
+        fechar();
+        var res = document.getElementById("chvModRes"), btn = document.getElementById("chvModCadastrar");
+        if (btn) btn.disabled = true;
+        if (res) res.innerHTML = '<div class="cadx-sub">Cadastrando na Meta…</div>';
+        ChavesTela_chamar_("Chaves_apiModelosCadastrar", {}, function (r) {
+          if (btn) btn.disabled = false;
+          var rot = { cadastrado: ["Enviado", "tom-info"], ja_existe: ["Já cadastrado", "tom-ok"], erro: ["Erro", "tom-perigo"], nao_tentado: ["Não tentado", "tom-alerta"] };
+          if (res) res.innerHTML = '<div class="cadx-faixa bc-faixa ' + (r.funcionou ? "tom-ok" : "tom-perigo") + '">' + ChavesTela_esc_(r.texto) + "</div>" + ChavesTela_listaModelos_(r.itens, rot);
+        }, function (m) { if (btn) btn.disabled = false; if (res) res.innerHTML = '<div class="cadx-faixa bc-faixa tom-perigo">' + ChavesTela_esc_(m) + "</div>"; });
+      }
     });
   }
-
   function ChavesTela_modelosSituacao_() {
-    var res = document.getElementById("chvModSitRes"), btn = document.getElementById("chvModAtualizar");
+    var res = document.getElementById("chvModRes"), btn = document.getElementById("chvModAtualizar");
     if (btn) btn.disabled = true;
-    if (res) res.innerHTML = '<div class="chv-ajuda">Consultando a Meta...</div>';
+    if (res) res.innerHTML = '<div class="cadx-sub">Consultando a Meta…</div>';
     ChavesTela_chamar_("Chaves_apiModelosSituacao", {}, function (r) {
       if (btn) btn.disabled = false;
-      var linhas = (r.itens || []).map(function (it) {
-        return '<div class="chv-mod"><span class="chv-mod-nome">' + ChavesTela_esc_(it.nome) + '</span><span class="chv-mod-sit ' + ChavesTela_classeModelo_(it) + '">' + ChavesTela_esc_(it.situacao) + "</span>" +
-          '<span class="chv-mod-obs">' + ChavesTela_esc_(it.uso) + (it.motivo ? ". " + ChavesTela_esc_(it.motivo) : "") + "</span></div>";
-      }).join("");
-      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou && !r.faltam ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" +
-        (linhas ? '<div class="chv-mod-lista">' + linhas + "</div>" : "");
-    }, function (m) {
-      if (btn) btn.disabled = false;
-      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
-    });
+      if (res) res.innerHTML = '<div class="cadx-faixa bc-faixa ' + (r.funcionou && !r.faltam ? "tom-ok" : "tom-alerta") + '">' + ChavesTela_esc_(r.texto) + "</div>" + ChavesTela_listaModelos_(r.itens, null);
+    }, function (m) { if (btn) btn.disabled = false; if (res) res.innerHTML = '<div class="cadx-faixa bc-faixa tom-perigo">' + ChavesTela_esc_(m) + "</div>"; });
   }
 
-  function ChavesTela_travar_(k, sim) {
-    ["chvGravar_", "chvApagar_"].forEach(function (p) { var b = document.getElementById(p + k); if (b) b.disabled = !!sim; });
-  }
-
-  function ChavesTela_mostrarMsg_(k, texto, erro) {
-    CHV.msg = { chave: k, texto: texto, erro: !!erro };
-    var item = document.getElementById("chvItem_" + k);
-    if (!item) return;
-    var antiga = item.querySelector(".atv-msg");
-    if (antiga) antiga.remove();
-    item.insertAdjacentHTML("beforeend", '<div class="atv-msg ' + (erro ? "erro" : "ok") + '">' + ChavesTela_esc_(texto) + "</div>");
+  // ---------- gravar, apagar, testar ----------
+  function ChavesTela_msg_(k, texto, tipo) { var el = document.getElementById("chvMsg_" + k); if (el) { el.textContent = texto || ""; el.className = "cadx-msg" + (tipo === "erro" ? " is-erro" : tipo === "ok" ? " is-ok" : ""); } }
+  function ChavesTela_travar_(k, sim) { ["chvGravar_", "chvApagar_"].forEach(function (p) { var b = document.getElementById(p + k); if (b) b.disabled = !!sim; }); }
+  function ChavesTela_depoisDeGravar_(res, k, texto) {
+    CHV.dados = res;
+    var it = ChavesTela_item_(k);
+    if (it) CHV.abertos[it.grupo] = true;
+    ChavesTela_desenhar_();
+    ChavesTela_msg_(k, texto, "ok");
+    CadUI_aviso_(texto, "ok");
   }
 
   function ChavesTela_gravar_(k) {
     var campo = document.getElementById("chvValor_" + k);
     var valor = campo ? String(campo.value || "").trim() : "";
-    if (!valor) { ChavesTela_mostrarMsg_(k, "Cole o valor no campo antes de clicar em Gravar.", true); if (campo) campo.focus(); return; }
+    if (!valor) { ChavesTela_msg_(k, "Cole o valor no campo antes de clicar em Gravar.", "erro"); if (campo) campo.focus(); return; }
     ChavesTela_travar_(k, true);
+    ChavesTela_msg_(k, "Gravando…", "");
     ChavesTela_chamar_("Chaves_apiGravar", { chave: k, valor: valor }, function (res) {
-      CHV.dados = res; CHV.msg = { chave: k, texto: res.mensagem || "Gravado.", erro: false };
-      ChavesTela_desenhar_();
-    }, function (m) { ChavesTela_travar_(k, false); ChavesTela_mostrarMsg_(k, m, true); });
+      if (campo) campo.value = "";
+      ChavesTela_depoisDeGravar_(res, k, res.mensagem || "Gravado.");
+    }, function (m) { ChavesTela_travar_(k, false); ChavesTela_msg_(k, m, "erro"); });
+  }
+
+  /** Opções (Ligado/Desligado, provedor): o vazio apaga a chave (volta ao padrão). */
+  function ChavesTela_gravarOpcao_(k) {
+    var sel = document.getElementById("chvValor_" + k);
+    var valor = sel ? sel.value : "";
+    var it = ChavesTela_item_(k) || {};
+    if (!valor) {
+      if (!it.configurado) { ChavesTela_msg_(k, "Já está em " + (it.vazio || "padrão") + ".", "ok"); return; }
+      ChavesTela_travar_(k, true);
+      ChavesTela_chamar_("Chaves_apiApagar", { chave: k }, function (res) { ChavesTela_depoisDeGravar_(res, k, it.nome + ": " + (it.vazio || "padrão") + "."); }, function (m) { ChavesTela_travar_(k, false); ChavesTela_msg_(k, m, "erro"); });
+      return;
+    }
+    ChavesTela_travar_(k, true);
+    ChavesTela_chamar_("Chaves_apiGravar", { chave: k, valor: valor }, function (res) { ChavesTela_depoisDeGravar_(res, k, res.mensagem || "Gravado."); }, function (m) { ChavesTela_travar_(k, false); ChavesTela_msg_(k, m, "erro"); });
   }
 
   function ChavesTela_apagar_(k) {
-    var it = (CHV.dados && CHV.dados.itens || []).filter(function (x) { return x.chave === k; })[0];
-    var nome = it ? it.nome : k;
-    if (!confirm("Apagar \"" + nome + "\"?\n\nO que depende desta chave para de funcionar até você gravar outra.")) return;
-    ChavesTela_travar_(k, true);
-    ChavesTela_chamar_("Chaves_apiApagar", { chave: k }, function (res) {
-      CHV.dados = res; CHV.msg = { chave: k, texto: res.mensagem || "Apagado.", erro: false };
-      ChavesTela_desenhar_();
-    }, function (m) { ChavesTela_travar_(k, false); ChavesTela_mostrarMsg_(k, m, true); });
+    var it = ChavesTela_item_(k) || { nome: k };
+    CadUI_confirmar_({
+      titulo: "Apagar a chave", risco: true, botao: "Apagar",
+      texto: "<p>Apagar <b>" + ChavesTela_esc_(it.nome) + "</b>?</p><p>O que depende desta chave para de funcionar até você gravar outra. O valor apagado não pode ser recuperado por aqui.</p>",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        ChavesTela_chamar_("Chaves_apiApagar", { chave: k }, function (res) { fechar(); ChavesTela_depoisDeGravar_(res, k, res.mensagem || "Apagado."); }, reabilitar);
+      }
+    });
   }
 
-  function ChavesTela_testar_(tipo) {
-    var res = document.getElementById("chvRes_" + tipo);
-    var btn = document.getElementById("chvTestar_" + tipo);
+  function ChavesTela_testar_(tipo, gid) {
+    var res = document.getElementById("chvRes_" + gid), btn = document.getElementById("chvTestar_" + gid);
     var payload = { tipo: tipo };
     if (tipo === "whatsapp") {
-      var tel = document.getElementById("chvTelTeste");
+      var tel = document.getElementById("chvTel_" + gid);
       payload.telefone = tel ? String(tel.value || "").trim() : "";
-      if (!payload.telefone) { if (res) res.innerHTML = '<div class="atv-msg erro">Digite o celular com DDD que vai receber o teste.</div>'; if (tel) tel.focus(); return; }
+      if (!payload.telefone) { if (res) res.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">Digite o celular com DDD que vai receber o teste.</div>'; if (tel) tel.focus(); return; }
     }
-    if (btn) btn.disabled = true;
-    if (res) res.innerHTML = '<div class="chv-ajuda">Testando...</div>';
+    var grupo = Object.keys(CHV_INTEGRACOES).filter(function (g) { return ChavesTela_idGrupo_(g) === gid; })[0];
+    if (grupo) CHV.abertos[grupo] = true;
+    if (btn) { btn.disabled = true; btn.textContent = "Testando…"; }
+    if (res) res.innerHTML = '<div class="cadx-sub">Testando…</div>';
+    else { var det = document.querySelector('[data-chv-grupo="' + (grupo || "") + '"]'); if (det) det.open = true; }
     ChavesTela_chamar_("Chaves_apiTestar", payload, function (r) {
-      if (btn) btn.disabled = false;
-      // Rastreador: lista dos dispositivos encontrados (o ID é o que se vincula ao veículo em Frota > Rastreador).
-      var lista = (tipo === "rastreador" && r.dispositivos && r.dispositivos.length) ? '<div class="chv-mod-lista">' + r.dispositivos.map(function (d) {
-        return '<div class="chv-mod"><span class="chv-mod-nome">ID ' + ChavesTela_esc_(d.id) + '</span><span class="chv-mod-sit">' + ChavesTela_esc_(d.nome || "sem nome") + '</span>' +
-          (d.situacao ? '<span class="chv-mod-obs">' + ChavesTela_esc_(d.situacao.charAt(0).toUpperCase() + d.situacao.slice(1)) + "</span>" : "") + "</div>";
-      }).join("") + "</div>" : "";
-      if (res) res.innerHTML = '<div class="atv-msg ' + (r.funcionou ? "ok" : "erro") + '">' + ChavesTela_esc_(r.texto) + "</div>" + lista;
+      var lista = tipo === "rastreador" && r.dispositivos && r.dispositivos.length ? '<ul class="cadx-arvore" style="margin-top:8px">' + r.dispositivos.map(function (d) {
+        return '<li><div class="cadx-no"><span class="cadx-mono">ID ' + ChavesTela_esc_(d.id) + "</span><span>" + ChavesTela_esc_(d.nome || "sem nome") + '</span><span class="cadx-sub">' + ChavesTela_esc_(CadUI_maiusculaInicial_(d.situacao || "")) + "</span></div></li>";
+      }).join("") + "</ul>" : "";
+      CHV.resultados[gid] = '<div class="cadx-faixa bc-faixa ' + (r.funcionou ? "tom-ok" : "tom-perigo") + '">' + ChavesTela_esc_(r.texto) + "</div>" + lista;
+      // a situação do grupo usa o teste gravado no servidor: recarrega a lista (sem valores)
+      ChavesTela_chamar_("Chaves_apiListar", {}, function (l) { CHV.dados = l; ChavesTela_desenhar_(); }, function () { var el = document.getElementById("chvRes_" + gid); if (el) el.innerHTML = CHV.resultados[gid]; if (btn) btn.disabled = false; });
     }, function (m) {
-      if (btn) btn.disabled = false;
-      if (res) res.innerHTML = '<div class="atv-msg erro">' + ChavesTela_esc_(m) + "</div>";
+      if (btn) { btn.disabled = false; btn.textContent = tipo === "rastreador" ? "Testar conexão" : "Testar"; }
+      CHV.resultados[gid] = '<div class="cadx-faixa bc-faixa tom-perigo">' + ChavesTela_esc_(m) + "</div>";
+      if (res) res.innerHTML = CHV.resultados[gid];
     });
   }
 </script>

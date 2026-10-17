@@ -417,3 +417,67 @@ function usuariosReativar(sessionId, id) { try { return JSON.parse(JSON.stringif
 function usuariosExcluir(sessionId, id) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosPesquisar(sessionId, termo) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+
+/* =========================
+   CADASTROS E ADMINISTRAÇÃO 17/10 — tela Usuários
+   Lista com perfil, situação, e-mail, celular (WhatsApp) e último acesso.
+   Só leitura: a permissão é a mesma da lista (Administrador, Gestor e
+   Diretoria, conferida em SGO_USUARIOS.pesquisar); a senha nunca sai daqui.
+   Último acesso: o LOGIN_OK mais recente de cada login nas últimas 40 mil
+   linhas do SYS_LOGS (lido do fim, guardado 60 s).
+========================= */
+function Usuarios_ultimosAcessos_() {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); var c = cache.get("USR_ULTIMO_ACESSO_V1"); if (c) return JSON.parse(c); } catch (e) {}
+  var mapa = {};
+  try {
+    var sh = SGO_DATA.getSheet(SGO_CFG.SHEETS.SYS_LOGS);
+    var n = sh ? sh.getLastRow() : 0;
+    if (n > 1) {
+      var ini = Math.max(2, n - 40000 + 1);
+      var vals = sh.getRange(ini, 2, n - ini + 1, 3).getValues(); // DATA, USUARIO, ACAO
+      for (var i = vals.length - 1; i >= 0; i--) {
+        var r = vals[i];
+        if (String(r[2] || "") !== "LOGIN_OK") continue;
+        var u = String(r[1] || "").trim().toLowerCase();
+        if (!u || mapa[u]) continue;
+        mapa[u] = Object.prototype.toString.call(r[0]) === "[object Date]" ? r[0].toISOString() : String(r[0] || "");
+      }
+    }
+  } catch (e) { console.warn("Último acesso dos usuários: " + ((e && e.message) || e)); }
+  try { if (cache) cache.put("USR_ULTIMO_ACESSO_V1", JSON.stringify(mapa), 60); } catch (e) {}
+  return mapa;
+}
+
+function usuariosPainel(sessionId) {
+  try {
+    var sessao = exigirSessao(sessionId);
+    var base = SGO_USUARIOS.pesquisar(sessionId, "");
+    if (!base || !base.success) return base || { success: false, message: "Não foi possível carregar os usuários." };
+    var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
+    var acessos = Usuarios_ultimosAcessos_();
+    var clientes = {};
+    try { SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[SGO_UTILS.safe(c.ID)] = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL); }); } catch (e) {}
+    var ativosAdmin = (base.items || []).filter(function (u) { return SGO_UTILS.safeUpper(u.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO"; }).length;
+    var itens = (base.items || []).map(function (u) {
+      var o = {};
+      Object.keys(u).forEach(function (k) { if (k !== "SENHA") { var v = u[k]; o[k] = Object.prototype.toString.call(v) === "[object Date]" ? v.toISOString() : v; } });
+      var perfil = SGO_UTILS.safeUpper(u.PERFIL);
+      o.ULTIMO_ACESSO = acessos[SGO_UTILS.safeLower(u.USUARIO)] || "";
+      o.CLIENTE_NOME = perfil === "CLIENTE" ? (clientes[SGO_UTILS.safe(u.CLIENTE_ID)] || "") : "";
+      o.SEM_CELULAR = !String(u.CELULAR || "").replace(/\D/g, "");
+      o.EU = SGO_UTILS.safe(u.ID) === SGO_UTILS.safe(sessao.userId);
+      // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
+      o.PODE_ALTERAR = souAdmin || perfil !== "ADMIN";
+      o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
+      return o;
+    });
+    itens.sort(function (a, b) {
+      var sa = SGO_UTILS.safeUpper(a.STATUS) === "ATIVO" ? 0 : 1, sb = SGO_UTILS.safeUpper(b.STATUS) === "ATIVO" ? 0 : 1;
+      return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
+    });
+    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, perfis: SGO_CFG.PROFILES || [] }));
+  } catch (e) {
+    return { success: false, message: SGO_textoFalhaOperador_("carregar os usuários", e) };
+  }
+}

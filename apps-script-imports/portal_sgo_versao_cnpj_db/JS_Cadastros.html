@@ -1,877 +1,1283 @@
 <script>
-  // ==========================================
-  // CONSULTA PÚBLICA DE CNPJ — feita no servidor (SGO_CnpjConsulta.js),
-  // com reserva entre várias bases públicas; antes era fetch direto do
-  // navegador a uma base só, que caía com frequência (2026-10-14).
-  // ==========================================
-  function buscarCnpjAutomacao_(inputEl, modulo) {
-    if (!inputEl) return;
+  // =====================================================================
+  // CADASTROS E ADMINISTRAÇÃO 17/10 — padrão comum das telas (CadUI_* e CadTela_*)
+  // Resumo em números que filtra · barra única de busca e filtros com a ação
+  // principal à direita · linhas compactas com "Editar" e o resto em "Mais"
+  // (ações de risco em vermelho, com confirmação) · detalhe num painel lateral ·
+  // cartões no celular · ajuda longa recolhida em "Como funciona".
+  // Estilos: UI_Estilos.html, seção "CADASTROS E ADMINISTRAÇÃO 17/10" (prefixo cadx-).
+  // Usado por: Clientes e Unidades (aqui), Equipamentos (JS_Equipamentos),
+  // Arquivo de documentos, Usuários e Configurações (JS_Admin), Vínculos (JS_Vinculos)
+  // e Chaves e senhas (JS_Chaves).
+  // Servidor: cadastrosPainel / cadastrosDetalhe (SGO_CadastrosPainel.js) e as
+  // funções de sempre de cada cadastro (criar, atualizar, inativar, reativar, excluir).
+  // =====================================================================
+  var CADUI = { telas: {}, menu: null, painel: null, avisoSeq: 0 };
 
-    var valorDigitado = String(inputEl.value || "");
-    inputEl.value = formatarCnpjFront_(valorDigitado);
+  function CadUI_esc_(v) { return escapeHtml_(v === null || v === undefined ? "" : String(v)); }
+  function CadUI_num_(n) { return Number(n || 0).toLocaleString("pt-BR"); }
+  function CadUI_semAcento_(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function CadUI_digitos_(s) { return String(s || "").replace(/\D/g, ""); }
+  function CadUI_cnpj_(v) {
+    var d = CadUI_digitos_(v);
+    return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : String(v || "");
+  }
+  function CadUI_cnpjValido_(v) {
+    var d = CadUI_digitos_(v);
+    if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false;
+    var calc = function (n) {
+      var pesos = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+      var s = 0; for (var i = 0; i < n; i++) s += Number(d[i]) * pesos[i];
+      var r = s % 11; return r < 2 ? 0 : 11 - r;
+    };
+    return calc(12) === Number(d[12]) && calc(13) === Number(d[13]);
+  }
+  function CadUI_tel_(v) {
+    var d = CadUI_digitos_(v);
+    if (d.length > 11 && d.indexOf("55") === 0) d = d.slice(2);
+    if (d.length === 11) return "(" + d.slice(0, 2) + ") " + d.slice(2, 7) + "-" + d.slice(7);
+    if (d.length === 10) return "(" + d.slice(0, 2) + ") " + d.slice(2, 6) + "-" + d.slice(6);
+    return String(v || "");
+  }
+  function CadUI_emailValido_(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
+  function CadUI_data_(v) {
+    if (!v) return "";
+    var s = String(v), m;
+    if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s))) return m[3] + "/" + m[2] + "/" + m[1];
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.slice(0, 10);
+    return "";
+  }
+  function CadUI_dataHora_(v) {
+    if (!v) return "";
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return CadUI_data_(v);
+    return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+  function CadUI_perfil_() { return String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase(); }
+  function CadUI_gestao_() { var p = CadUI_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  function CadUI_ehCliente_() { return CadUI_perfil_() === "CLIENTE"; }
+  function CadUI_movel_() { return typeof ehMobileModo_ === "function" && ehMobileModo_(); }
+  function CadUI_maiusculaInicial_(s) {
+    s = String(s || "").trim();
+    if (!s) return "";
+    return s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s;
+  }
 
-    var cnpjLimpo = valorDigitado.replace(/\D/g, "");
-    if (cnpjLimpo.length !== 14) {
-      alert("Digite um CNPJ válido com 14 números.");
-      return;
-    }
-
-    var tituloId = modulo === "cliente" ? "clientesFormTitulo" : "unidadesFormTitulo";
-    var tituloEl = document.getElementById(tituloId);
-    var btnSalvar = null;
-
-    if (tituloEl && tituloEl.parentElement) {
-      btnSalvar = tituloEl.parentElement.querySelector(".btn-primary");
-    }
-
-    if (btnSalvar) {
-      btnSalvar.disabled = true;
-      btnSalvar.innerText = "Buscando Receita...";
-    }
-
-    new Promise(function(resolve, reject) {
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if (res && res.ok && res.dados) resolve(res.dados);
-          else reject(new Error((res && res.mensagem) || "Não foi possível consultar o CNPJ."));
-        })
-        .withFailureHandler(function(err) { reject(err); })
-        .SGO_apiConsultarCnpjDados(SGO_getSessionId(), cnpjLimpo);
-    })
-      .then(function(data) {
-        var razao = data.razao_social || "";
-        var fantasia = data.nome_fantasia || razao;
-        var telefone = data.ddd_telefone_1 || "";
-
-        var logradouro = data.logradouro || "";
-        var numero = data.numero || "";
-        var bairro = data.bairro || "";
-
-        var endCompleto = "";
-        if (logradouro) {
-          endCompleto = logradouro;
-          if (numero) endCompleto += ", " + numero;
-          if (bairro) endCompleto += " - " + bairro;
-        }
-
-        var cidade = data.municipio || "";
-        var uf = data.uf || "";
-
-        if (modulo === "cliente") {
-          setValue_("cli_razao_social", razao);
-          setValue_("cli_nome_fantasia", fantasia);
-          setValue_("cli_telefone", telefone);
-          setValue_("cli_endereco", endCompleto);
-        } else if (modulo === "unidade") {
-          setValue_("uni_nome_unidade", fantasia);
-          setValue_("uni_endereco", endCompleto);
-          setValue_("uni_cidade", cidade);
-          setValue_("uni_uf", uf);
-          setValue_("uni_telefone", telefone);
-        }
+  /** Chamada ao servidor com sessão; ok(res) só quando success/ok; erro(msg) com texto para o operador. */
+  function CadUI_chamar_(fn, args, ok, erro, carregando) {
+    if (carregando) SGO_iniciarCarregamento_(carregando);
+    var run = google.script.run
+      .withSuccessHandler(function (res) {
+        if (carregando) SGO_finalizarCarregamento_();
+        if (res && (res.success === true || res.ok === true)) { try { ok(res); } catch (e) { console.error(fn, e); erro("A resposta chegou, mas a tela não conseguiu mostrá-la. Atualize a página (F5); nada foi perdido."); } return; }
+        erro((res && (res.message || res.mensagem)) || "O servidor não confirmou a operação. Atualize a lista para conferir e tente de novo.");
       })
-      .catch(function(err) {
-        console.warn("Autopreenchimento falhou:", err);
-        var msg = String((err && err.message) || err || "").replace(/^Error:\s*/i, "");
-        if (!msg) msg = "Não foi possível buscar os dados deste CNPJ.";
-        if (!/preencha manualmente/i.test(msg)) msg += " Preencha manualmente.";
-        alert(msg);
-      })
-      .finally(function() {
-        if (btnSalvar) {
-          btnSalvar.disabled = false;
-          btnSalvar.innerText = "Salvar";
-        }
+      .withFailureHandler(function (err) {
+        if (carregando) SGO_finalizarCarregamento_();
+        console.error(fn + " falhou:", err);
+        erro("Não foi possível falar com o servidor. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
       });
+    run[fn].apply(run, [SGO_getSessionId()].concat(args || []));
   }
 
-  function buscarCnpjCliente_() {
-    var input = document.getElementById("cli_cnpj");
-    if (!input) return;
-    if(typeof vincSearchQueue_ === "function")vincSearchQueue_(input.value);
-    buscarCnpjAutomacao_(input, "cliente");
+  // ---------- avisos curtos (sucesso some em 6 s; erro fica até fechar) ----------
+  function CadUI_aviso_(texto, tipo) {
+    var caixa = document.getElementById("cadxAvisos");
+    if (!caixa) { caixa = document.createElement("div"); caixa.id = "cadxAvisos"; caixa.className = "cadx-avisos"; caixa.setAttribute("aria-live", "polite"); document.body.appendChild(caixa); }
+    var id = "cadxAviso" + (++CADUI.avisoSeq);
+    var el = document.createElement("div");
+    el.id = id;
+    el.className = "cadx-aviso" + (tipo === "erro" ? " is-erro" : tipo === "alerta" ? " is-alerta" : "");
+    el.setAttribute("role", tipo === "erro" ? "alert" : "status");
+    el.innerHTML = '<div class="cadx-aviso-texto">' + CadUI_esc_(texto) + '</div><button type="button" aria-label="Fechar aviso">&times;</button>';
+    el.querySelector("button").onclick = function () { el.remove(); };
+    caixa.appendChild(el);
+    if (tipo !== "erro") setTimeout(function () { if (el.isConnected) el.remove(); }, 6500);
   }
 
-  function buscarCnpjUnidade_() {
-    var input = document.getElementById("uni_cnpj_unidade");
-    if (!input) return;
-    if(typeof vincSearchQueue_ === "function")vincSearchQueue_(input.value);
-    buscarCnpjAutomacao_(input, "unidade");
+  // ---------- janela de confirmação ----------
+  // opts: { titulo, texto (html), botao, risco, motivo: { rotulo, min, max, dica }, extraHtml, validar(fundo) -> msg|"" , aoConfirmar(valores, fechar, reabilitar) }
+  function CadUI_confirmar_(opts) {
+    CadUI_fecharMenu_();
+    var antigo = document.getElementById("cadxDialogo");
+    if (antigo) antigo.remove();
+    var fundo = document.createElement("div");
+    fundo.id = "cadxDialogo";
+    fundo.className = "cadx-dialogo-fundo";
+    var m = opts.motivo;
+    fundo.innerHTML =
+      '<div class="cadx-dialogo' + (opts.risco ? " is-risco" : "") + '" role="dialog" aria-modal="true" aria-labelledby="cadxDialogoTit">' +
+        '<div class="cadx-dialogo-cab"><h3 id="cadxDialogoTit">' + CadUI_esc_(opts.titulo) + '</h3></div>' +
+        '<div class="cadx-dialogo-corpo">' + (opts.texto || "") +
+          (m ? '<div class="cadx-campo" id="cadxDlgMotivoCampo"><label for="cadxDlgMotivo">' + CadUI_esc_(m.rotulo || "Motivo") + ' <span class="cadx-obr">*</span></label>' +
+            '<textarea id="cadxDlgMotivo" maxlength="' + (m.max || 1000) + '" placeholder="' + CadUI_esc_(m.placeholder || "") + '"></textarea>' +
+            '<div class="cadx-dica">' + CadUI_esc_(m.dica || ("Mínimo de " + (m.min || 8) + " caracteres. Fica registrado com o seu nome, a data e a hora.")) + '</div>' +
+            '<div class="cadx-erro" id="cadxDlgMotivoErro"></div></div>' : "") +
+          (opts.extraHtml || "") +
+          '<div class="cadx-msg is-erro" id="cadxDlgErro" role="alert"></div>' +
+        '</div>' +
+        '<div class="cadx-dialogo-rodape">' +
+          '<button type="button" class="cadx-btn cadx-btn-grande" id="cadxDlgCancelar">Cancelar</button>' +
+          '<button type="button" class="cadx-btn cadx-btn-grande ' + (opts.risco ? "cadx-btn-risco-cheio" : "cadx-btn-primario") + '" id="cadxDlgOk">' + CadUI_esc_(opts.botao || "Confirmar") + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(fundo);
+    var foco = document.activeElement;
+    function fechar() { fundo.remove(); document.removeEventListener("keydown", tecla); try { if (foco && foco.isConnected) foco.focus(); } catch (e) {} }
+    function tecla(e) { if (e.key === "Escape") fechar(); }
+    document.addEventListener("keydown", tecla);
+    var bOk = fundo.querySelector("#cadxDlgOk");
+    fundo.querySelector("#cadxDlgCancelar").onclick = fechar;
+    fundo.addEventListener("click", function (e) { if (e.target === fundo) fechar(); });
+    bOk.onclick = function () {
+      var erroEl = fundo.querySelector("#cadxDlgErro");
+      erroEl.textContent = "";
+      var valores = {};
+      if (m) {
+        var t = String(fundo.querySelector("#cadxDlgMotivo").value || "").trim();
+        var campo = fundo.querySelector("#cadxDlgMotivoCampo");
+        if (t.length < (m.min || 8)) {
+          campo.classList.add("tem-erro");
+          fundo.querySelector("#cadxDlgMotivoErro").textContent = "Escreva o motivo com pelo menos " + (m.min || 8) + " caracteres.";
+          fundo.querySelector("#cadxDlgMotivo").focus();
+          return;
+        }
+        campo.classList.remove("tem-erro");
+        valores.motivo = t;
+      }
+      if (typeof opts.validar === "function") {
+        var msg = opts.validar(fundo, valores);
+        if (msg) { erroEl.textContent = msg; return; }
+      }
+      bOk.disabled = true;
+      bOk.textContent = "Aguarde…";
+      opts.aoConfirmar(valores, fechar, function (msgErro) {
+        bOk.disabled = false;
+        bOk.textContent = opts.botao || "Confirmar";
+        if (msgErro) erroEl.textContent = msgErro;
+      });
+    };
+    setTimeout(function () { var alvo = fundo.querySelector("textarea, input") || bOk; try { alvo.focus(); } catch (e) {} }, 30);
   }
 
-  // ==========================================
-  // MÓDULO: CLIENTES
-  // ==========================================
+  // ---------- menu "Mais" ----------
+  // itens: [{ texto, icone, acao(), risco, desabilitado, nota }] ou "-" para separar
+  function CadUI_fecharMenu_() {
+    if (CADUI.menu) { CADUI.menu.remove(); CADUI.menu = null; }
+  }
+  /** Põe o menu junto do botão; ao rolar a página ele acompanha (fecha se o botão sair da tela). */
+  function CadUI_posicionarMenu_() {
+    var m = CADUI.menu;
+    if (!m || !m.__botao) return;
+    var r = m.__botao.getBoundingClientRect();
+    if (!m.__botao.isConnected || r.bottom < 0 || r.top > window.innerHeight) { CadUI_fecharMenu_(); return; }
+    var w = m.offsetWidth, h = m.offsetHeight;
+    var left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
+    var top = r.bottom + 4;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 4);
+    m.style.left = left + "px";
+    m.style.top = top + "px";
+  }
+  function CadUI_menu_(botao, itens) {
+    var jaAberto = CADUI.menu && CADUI.menu.__botao === botao;
+    CadUI_fecharMenu_();
+    if (jaAberto) return;
+    var m = document.createElement("div");
+    m.className = "cadx-menu bc-mais-menu";
+    m.setAttribute("role", "menu");
+    m.__botao = botao;
+    var acoes = [];
+    m.innerHTML = itens.map(function (it) {
+      if (it === "-") return "<hr>";
+      if (it.nota && !it.texto) return '<div class="cadx-menu-nota">' + CadUI_esc_(it.nota) + "</div>";
+      acoes.push(it);
+      var i = acoes.length - 1;
+      return '<button type="button" role="menuitem" data-i="' + i + '" class="' + (it.risco ? "is-risco bc-perigo" : "") + '"' + (it.desabilitado ? " disabled" : "") + (it.nota ? ' title="' + CadUI_esc_(it.nota) + '"' : "") + '>' +
+        (it.icone ? '<i class="fas ' + it.icone + '" aria-hidden="true"></i>' : "") + "<span>" + CadUI_esc_(it.texto) + "</span></button>" +
+        (it.desabilitado && it.nota ? '<div class="cadx-menu-nota">' + CadUI_esc_(it.nota) + "</div>" : "");
+    }).join("");
+    document.body.appendChild(m);
+    CADUI.menu = m;
+    CadUI_posicionarMenu_();
+    m.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-i]");
+      if (!b || b.disabled) return;
+      var it = acoes[Number(b.getAttribute("data-i"))];
+      CadUI_fecharMenu_();
+      if (it && typeof it.acao === "function") it.acao();
+    });
+    m.addEventListener("keydown", function (e) {
+      var bs = Array.prototype.slice.call(m.querySelectorAll("button:not([disabled])"));
+      var i = bs.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); (bs[i + 1] || bs[0]).focus(); }
+      if (e.key === "ArrowUp") { e.preventDefault(); (bs[i - 1] || bs[bs.length - 1]).focus(); }
+      if (e.key === "Escape") { CadUI_fecharMenu_(); try { botao.focus(); } catch (er) {} }
+    });
+    CADUI.menu = m;
+    var primeiro = m.querySelector("button:not([disabled])");
+    if (primeiro) setTimeout(function () { try { primeiro.focus({ preventScroll: true }); } catch (e) {} }, 10);
+  }
+  document.addEventListener("click", function (e) {
+    if (!CADUI.menu) return;
+    if (CADUI.menu.contains(e.target) || (CADUI.menu.__botao && CADUI.menu.__botao.contains(e.target))) return;
+    CadUI_fecharMenu_();
+  }, true);
+  window.addEventListener("resize", CadUI_fecharMenu_);
+  window.addEventListener("scroll", function (e) { if (CADUI.menu && !CADUI.menu.contains(e.target)) CadUI_posicionarMenu_(); }, true);
+
+  // ---------- painel lateral ----------
+  // cfg: { chave, id, titulo, sub, seloHtml, abas: [{id, rotulo}], aba, corpo(abaId) -> html, rodape -> html, depois(painel) }
+  function CadUI_painelAbrir_(cfg) {
+    CadUI_fecharMenu_();
+    var cont = document.getElementById("conteudo");
+    if (!cont) return;
+    // resposta que chegou depois de a pessoa trocar de tela: não abre painel por cima de outra tela
+    if (cfg.chave && !document.getElementById("cadxTela_" + cfg.chave)) return;
+    var p = document.getElementById("cadxPainel");
+    if (!p) {
+      var fundo = document.createElement("div");
+      fundo.id = "cadxPainelFundo";
+      fundo.className = "cadx-painel-fundo bc-painel-fundo";
+      fundo.onclick = function () { CadUI_painelFechar_(); };
+      cont.appendChild(fundo);
+      p = document.createElement("aside");
+      p.id = "cadxPainel";
+      p.className = "cadx-painel bc-painel";
+      p.setAttribute("role", "dialog");
+      p.setAttribute("aria-modal", "false");
+      cont.appendChild(p);
+      document.addEventListener("keydown", CadUI_painelTecla_);
+    }
+    CADUI.painel = cfg;
+    cfg.aba = cfg.aba || (cfg.abas && cfg.abas[0] && cfg.abas[0].id) || "";
+    p.setAttribute("aria-label", cfg.titulo || "Detalhe");
+    p.innerHTML =
+      '<div class="cadx-painel-cab bc-painel-cab"><div class="cadx-painel-cab-texto"><h3>' + CadUI_esc_(cfg.titulo) + "</h3>" +
+        (cfg.sub ? '<div class="cadx-sub">' + cfg.sub + "</div>" : "") +
+        (cfg.seloHtml ? '<div class="cadx-chips">' + cfg.seloHtml + "</div>" : "") +
+      '</div><button type="button" class="cadx-painel-fechar" aria-label="Fechar o painel" onclick="CadUI_painelFechar_()">&times;</button></div>' +
+      (cfg.abas && cfg.abas.length > 1 ? '<div class="cadx-painel-abas bc-painel-abas" role="tablist">' + cfg.abas.map(function (a) {
+        return '<button type="button" role="tab" class="cadx-painel-aba' + (a.id === cfg.aba ? " is-ativa bc-ativo" : "") + '" aria-selected="' + (a.id === cfg.aba) + '" data-aba="' + CadUI_esc_(a.id) + '">' + CadUI_esc_(a.rotulo) + "</button>";
+      }).join("") + "</div>" : "") +
+      '<div class="cadx-painel-corpo bc-painel-corpo" id="cadxPainelCorpo"></div>' +
+      (cfg.rodape ? '<div class="cadx-painel-rodape bc-painel-rodape" id="cadxPainelRodape">' + cfg.rodape + "</div>" : "");
+    p.querySelectorAll(".cadx-painel-aba").forEach(function (b) {
+      b.onclick = function () { cfg.aba = b.getAttribute("data-aba"); CadUI_painelAbrir_(cfg); };
+    });
+    var corpo = p.querySelector("#cadxPainelCorpo");
+    corpo.innerHTML = typeof cfg.corpo === "function" ? cfg.corpo(cfg.aba) : (cfg.corpo || "");
+    if (typeof cfg.depois === "function") { try { cfg.depois(p, cfg.aba); } catch (e) { console.error("painel:", e); } }
+    // celular: o Voltar da barra do topo fecha o painel (volta para a lista da mesma tela)
+    if (CadUI_movel_() && cfg.chave) { try { MOBILE_NAV = { modulo: cfg.chave, tela: "form" }; } catch (e) {} }
+    CadTela_marcarSelecionado_(cfg.chave, cfg.id);
+  }
+  function CadUI_painelTecla_(e) {
+    if (e.key !== "Escape" || document.getElementById("cadxDialogo") || CADUI.menu) return;
+    CadUI_painelFechar_();
+  }
+  function CadUI_painelFechar_() {
+    var p = document.getElementById("cadxPainel"), f = document.getElementById("cadxPainelFundo");
+    if (p && p.__sujo && !confirm("Fechar sem salvar? O que foi digitado neste formulário será perdido.")) return;
+    var chave = CADUI.painel && CADUI.painel.chave;
+    if (p) p.remove();
+    if (f) f.remove();
+    CADUI.painel = null;
+    document.removeEventListener("keydown", CadUI_painelTecla_);
+    if (CadUI_movel_() && chave) { try { MOBILE_NAV = { modulo: chave, tela: "lista" }; } catch (e) {} }
+    if (chave) CadTela_marcarSelecionado_(chave, "");
+  }
+  /** Marca o formulário do painel como alterado (pede confirmação ao fechar). */
+  function CadUI_painelSujo_(sim) { var p = document.getElementById("cadxPainel"); if (p) p.__sujo = !!sim; }
+
+  // ---------- peças de HTML ----------
+  function CadUI_selo_(status) {
+    var s = String(status || "").toUpperCase();
+    var tom = s === "ATIVO" ? "tom-ok" : s === "PENDENTE" ? "tom-alerta" : s === "BLOQUEADO" ? "tom-perigo" : "";
+    var txt = { ATIVO: "Ativo", INATIVO: "Inativo", PENDENTE: "Pendente", BLOQUEADO: "Bloqueado" }[s] || CadUI_maiusculaInicial_(s) || "Sem situação";
+    return '<span class="cadx-selo bc-selo ' + tom + '">' + CadUI_esc_(txt) + "</span>";
+  }
+  var CADUI_PENDENCIAS = {
+    sem_unidade: ["Sem unidade", "tom-alerta"],
+    incompleto: ["Cadastro incompleto", "tom-alerta"],
+    doc_vencido: ["Documento vencido", "tom-perigo"],
+    doc_vencendo: ["Documento vencendo", "tom-alerta"],
+    vinculo_pendente: ["Vínculo pendente", "tom-perigo"],
+    sem_documento: ["Sem documento", "tom-info"],
+    sem_arquivo: ["Sem arquivo", "tom-alerta"]
+  };
+  function CadUI_chips_(item) {
+    var p = item.PENDENCIAS || [];
+    if (!p.length) return "";
+    return '<div class="cadx-chips">' + p.map(function (k) {
+      var d = CADUI_PENDENCIAS[k] || [k, ""];
+      var titulo = k === "incompleto" && item.FALTAM && item.FALTAM.length ? ' title="Falta: ' + CadUI_esc_(item.FALTAM.join(", ")) + '"' : "";
+      return '<span class="cadx-chip ' + d[1] + '"' + titulo + ">" + CadUI_esc_(d[0]) + "</span>";
+    }).join("") + "</div>";
+  }
+  function CadUI_vencimento_(sit, dias, iso) {
+    var data = CadUI_data_(iso);
+    if (sit === "vencido") return '<span class="cadx-selo bc-selo tom-perigo">' + (dias === 0 ? "Vence hoje" : "Vencido") + "</span>" + (data ? '<div class="cadx-sub">' + data + "</div>" : "");
+    if (sit === "vencendo") return '<span class="cadx-selo bc-selo tom-alerta">Vence em ' + dias + (dias === 1 ? " dia" : " dias") + "</span>" + (data ? '<div class="cadx-sub">' + data + "</div>" : "");
+    if (sit === "em_dia") return '<span class="cadx-mono">' + data + "</span>";
+    return '<span class="cadx-sub">Sem vencimento</span>';
+  }
+  function CadUI_ajuda_(html) {
+    return '<details class="cadx-ajuda bc-ajuda-recolhida"><summary>Como funciona</summary><div class="cadx-ajuda-corpo">' + html + "</div></details>";
+  }
+  function CadUI_dados_(pares) {
+    return '<dl class="cadx-dados">' + pares.filter(function (p) { return p; }).map(function (p) {
+      return "<dt>" + CadUI_esc_(p[0]) + "</dt><dd>" + (p[2] ? p[1] : (p[1] === "" || p[1] === null || p[1] === undefined ? '<span class="cadx-sub">Não informado</span>' : CadUI_esc_(p[1]))) + "</dd>";
+    }).join("") + "</dl>";
+  }
+  function CadUI_esqueleto_(linhas) {
+    var h = "";
+    for (var i = 0; i < (linhas || 5); i++) h += '<div class="sgo-esq sgo-esq-linha" style="width:' + (60 + (i * 7) % 35) + '%"></div>';
+    return '<div class="cadx-carregando" aria-busy="true">' + h + '<span class="sgo-sr">Carregando…</span></div>';
+  }
+
+  // ---------- campos de formulário com validação no próprio campo ----------
+  // c: { id, rotulo, tipo, obrigatorio, dica, inteiro, valor, placeholder, opcoes: [[v, t]], attrs, html (campo pronto) }
+  function CadUI_campo_(c) {
+    var v = c.valor === null || c.valor === undefined ? "" : String(c.valor);
+    var controle = c.html;
+    if (!controle) {
+      if (c.tipo === "select") {
+        controle = '<select id="' + c.id + '"' + (c.attrs || "") + ">" + (c.opcoes || []).map(function (o) {
+          return '<option value="' + CadUI_esc_(o[0]) + '"' + (String(o[0]) === v ? " selected" : "") + ">" + CadUI_esc_(o[1]) + "</option>";
+        }).join("") + "</select>";
+      } else if (c.tipo === "textarea") {
+        controle = '<textarea id="' + c.id + '"' + (c.attrs || "") + ' placeholder="' + CadUI_esc_(c.placeholder || "") + '">' + CadUI_esc_(v) + "</textarea>";
+      } else {
+        controle = '<input id="' + c.id + '" type="' + (c.tipo || "text") + '" value="' + CadUI_esc_(v) + '" placeholder="' + CadUI_esc_(c.placeholder || "") + '"' + (c.attrs || "") + ">";
+      }
+    }
+    return '<div class="cadx-campo' + (c.inteiro ? " is-inteiro" : "") + '" data-campo="' + c.id + '">' +
+      '<label for="' + (c.paraId || c.id) + '">' + CadUI_esc_(c.rotulo) + (c.obrigatorio ? ' <span class="cadx-obr" aria-hidden="true">*</span>' : "") + "</label>" +
+      controle +
+      (c.dica ? '<div class="cadx-dica">' + c.dica + "</div>" : "") +
+      '<div class="cadx-erro" id="' + c.id + '_erro" role="alert"></div></div>';
+  }
+  function CadUI_secao_(titulo, campos) {
+    return '<fieldset class="cadx-form-sec"><legend>' + CadUI_esc_(titulo) + '</legend><div class="cadx-campos">' + campos.join("") + "</div></fieldset>";
+  }
+  function CadUI_erroCampo_(id, msg) {
+    var bloco = document.querySelector('.cadx-campo[data-campo="' + id + '"]');
+    var el = document.getElementById(id + "_erro");
+    if (bloco) bloco.classList.toggle("tem-erro", !!msg);
+    if (el) el.innerHTML = msg || "";
+  }
+  /** erros: { id: "mensagem" }. Mostra todos e leva o foco ao primeiro. true = sem erro. */
+  function CadUI_mostrarErros_(erros, todosIds) {
+    (todosIds || []).forEach(function (id) { CadUI_erroCampo_(id, ""); });
+    var ids = Object.keys(erros || {}).filter(function (k) { return erros[k]; });
+    ids.forEach(function (id) { CadUI_erroCampo_(id, erros[id]); });
+    if (ids.length) {
+      var el = document.getElementById(ids[0]) || document.getElementById(ids[0] + "_busca");
+      if (el) { try { el.focus(); el.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (e) {} }
+      return false;
+    }
+    return true;
+  }
+  /** Liga a marcação "alterado" e limpa o erro do campo quando a pessoa corrige. */
+  function CadUI_ligarFormulario_(painel) {
+    painel.querySelectorAll(".cadx-painel-corpo input, .cadx-painel-corpo select, .cadx-painel-corpo textarea").forEach(function (el) {
+      var marcar = function () {
+        CadUI_painelSujo_(true);
+        var b = el.closest(".cadx-campo");
+        if (b && b.classList.contains("tem-erro")) { b.classList.remove("tem-erro"); }
+      };
+      el.addEventListener("input", marcar);
+      el.addEventListener("change", marcar);
+    });
+  }
+  function CadUI_botaoSalvar_(texto) { return '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="cadxSalvar">' + CadUI_esc_(texto || "Salvar") + "</button>"; }
+  function CadUI_salvando_(sim, texto) {
+    var b = document.getElementById("cadxSalvar");
+    if (!b) return;
+    if (sim) { b.__texto = b.textContent; b.disabled = true; b.textContent = "Salvando…"; }
+    else { b.disabled = false; b.textContent = texto || b.__texto || "Salvar"; }
+  }
+
+  // ---------- consulta de CNPJ na Receita (servidor: SGO_CnpjConsulta.js) ----------
+  // mapa: { razao, fantasia, endereco, telefone, cidade, uf } = ids dos campos. Só preenche campo vazio.
+  function CadUI_preencherReceita_(campoCnpj, mapa, botao) {
+    var el = document.getElementById(campoCnpj);
+    var d = CadUI_digitos_(el && el.value);
+    if (d.length !== 14 || !CadUI_cnpjValido_(d)) { CadUI_erroCampo_(campoCnpj, "Digite um CNPJ válido, com 14 números, para buscar na Receita."); if (el) el.focus(); return; }
+    CadUI_erroCampo_(campoCnpj, "");
+    if (el) el.value = CadUI_cnpj_(d);
+    var b = document.getElementById(botao);
+    if (b) { b.disabled = true; b.textContent = "Buscando na Receita…"; }
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (b) { b.disabled = false; b.textContent = "Preencher pela Receita"; }
+        if (!res || !res.ok || !res.dados) { CadUI_aviso_(((res && res.mensagem) || "Não foi possível consultar o CNPJ.") + " Preencha os campos à mão.", "alerta"); return; }
+        var x = res.dados;
+        var end = [x.logradouro, x.numero].filter(Boolean).join(", ") + (x.bairro ? " - " + x.bairro : "");
+        var valores = { razao: x.razao_social, fantasia: x.nome_fantasia || x.razao_social, endereco: end, telefone: x.ddd_telefone_1, cidade: x.municipio, uf: x.uf };
+        var mantidos = [], preenchidos = 0;
+        Object.keys(mapa).forEach(function (k) {
+          var campo = document.getElementById(mapa[k]);
+          if (!campo || !valores[k]) return;
+          if (String(campo.value || "").trim()) { if (String(campo.value).trim().toUpperCase() !== String(valores[k]).trim().toUpperCase()) mantidos.push((campo.closest(".cadx-campo") || {}).querySelector ? campo.closest(".cadx-campo").querySelector("label").textContent.replace("*", "").trim() : k); return; }
+          campo.value = k === "telefone" ? CadUI_tel_(valores[k]) : valores[k];
+          campo.dispatchEvent(new Event("input", { bubbles: true }));
+          preenchidos++;
+        });
+        CadUI_aviso_("Dados da Receita: " + preenchidos + (preenchidos === 1 ? " campo preenchido." : " campos preenchidos.") + (mantidos.length ? " Mantidos como você digitou: " + mantidos.join(", ") + "." : ""), "ok");
+      })
+      .withFailureHandler(function (err) {
+        if (b) { b.disabled = false; b.textContent = "Preencher pela Receita"; }
+        console.error("CNPJ:", err);
+        CadUI_aviso_("Não foi possível consultar a Receita agora. Preencha os campos à mão; nada foi perdido.", "alerta");
+      })
+      .SGO_apiConsultarCnpjDados(SGO_getSessionId(), d);
+  }
+
+  // =====================================================================
+  // MOTOR DAS TELAS DE LISTA (CadTela_*)
+  // cfg: { chave, titulo, subtitulo, ajuda, idBusca, buscaPlaceholder, texto(item), resumo: [{id, rotulo, filtro, tom}],
+  //        filtros: [{id, rotulo, opcoes(itens) -> [[v,t]], aplicar(item, v)}], acao: {texto, fn} | null, colunas: [{titulo, classe, html(item)}],
+  //        cartao(item) -> html, editar(item) | null, mais(item) -> itens do menu | null, abrir(item), carregar(ok, erro), nomeItens: ["cliente","clientes"],
+  //        vazio: texto quando não há cadastro, ordenar: [{id, rotulo, fn(a,b)}] }
+  // =====================================================================
+  function CadTela_estado_(chave) { return CADUI.telas[chave]; }
+
+  function CadTela_montar_(cfg) {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    CadUI_fecharMenu_();
+    var st = CADUI.telas[cfg.chave] = { cfg: cfg, itens: [], carregado: false, resumo: "todos", busca: "", filtros: {}, ordem: cfg.ordenar ? cfg.ordenar[0].id : "", limite: 100, selecionado: "", extra: (CADUI.telas[cfg.chave] && CADUI.telas[cfg.chave].extra) || {} };
+    if (CadUI_movel_()) { try { MOBILE_NAV = { modulo: cfg.chave, tela: "lista" }; atualizarTituloMobile_(cfg.titulo); } catch (e) {} }
+    var filtrosHtml = (cfg.filtros || []).map(function (f) {
+      return '<select id="cadxFiltro_' + cfg.chave + "_" + f.id + '" aria-label="' + CadUI_esc_(f.rotulo) + '" data-filtro="' + f.id + '"><option value="">' + CadUI_esc_(f.rotulo) + "</option></select>";
+    }).join("");
+    var ordemHtml = cfg.ordenar ? '<select id="cadxOrdem_' + cfg.chave + '" aria-label="Ordenar a lista">' + cfg.ordenar.map(function (o) { return '<option value="' + o.id + '">' + CadUI_esc_(o.rotulo) + "</option>"; }).join("") + "</select>" : "";
+    div.innerHTML =
+      '<div class="module-shell cadx" id="cadxTela_' + cfg.chave + '">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + CadUI_esc_(cfg.titulo) + '</h2>' +
+          '<p class="content-subtitle">' + CadUI_esc_(cfg.subtitulo) + '</p></div><div class="module-header-right"></div></div>' +
+        (cfg.ajuda ? CadUI_ajuda_(cfg.ajuda) : "") +
+        '<div class="cadx-resumo bc-resumo" id="cadxResumo_' + cfg.chave + '" aria-label="Resumo em números (clique para filtrar)">' + (cfg.resumo || []).map(function () { return '<div class="cadx-num bc-resumo-item"><div class="sgo-esq sgo-esq-linha" style="width:40%;height:20px"></div><div class="sgo-esq sgo-esq-linha" style="width:70%"></div></div>'; }).join("") + "</div>" +
+        '<div class="cadx-barra" role="search">' +
+          '<div class="cadx-busca"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="' + (cfg.idBusca || ("cadxBusca_" + cfg.chave)) + '" class="cadx-busca-campo' + (CadUI_movel_() ? " mobile-search" : "") + '" placeholder="' + CadUI_esc_(cfg.buscaPlaceholder || "Buscar") + '" aria-label="' + CadUI_esc_(cfg.buscaPlaceholder || "Buscar") + '" autocomplete="off"></div>' +
+          filtrosHtml + ordemHtml +
+          '<button type="button" class="cadx-barra-limpar" id="cadxLimpar_' + cfg.chave + '" hidden>Limpar filtros</button>' +
+          (cfg.acao ? '<div class="cadx-barra-acao"><button type="button" class="btn-primary" id="cadxAcao_' + cfg.chave + '"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;' + CadUI_esc_(cfg.acao.texto) + "</button></div>" : "") +
+        "</div>" +
+        '<div class="cadx-lista">' +
+          '<div class="cadx-tabela-caixa"><table class="cadx-tabela bc-tabela"><thead><tr>' + cfg.colunas.map(function (c) { return '<th class="' + (c.classe || "") + '">' + CadUI_esc_(c.titulo) + "</th>"; }).join("") + "</tr></thead>" +
+          '<tbody id="cadxCorpo_' + cfg.chave + '"><tr><td colspan="' + cfg.colunas.length + '">' + CadUI_esqueleto_(5) + "</td></tr></tbody></table></div>" +
+          '<div class="cadx-cartoes" id="cadxCartoes_' + cfg.chave + '">' + CadUI_esqueleto_(4) + "</div>" +
+          '<div class="cadx-rodape" id="cadxRodape_' + cfg.chave + '" aria-live="polite"></div>' +
+        "</div>" +
+      "</div>";
+    var raiz = document.getElementById("cadxTela_" + cfg.chave);
+    var busca = raiz.querySelector(".cadx-busca-campo");
+    var timer = null;
+    busca.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { st.busca = busca.value; st.limite = 100; CadTela_desenhar_(cfg.chave); }, 180); });
+    raiz.querySelectorAll("select[data-filtro]").forEach(function (s) { s.addEventListener("change", function () { st.filtros[s.getAttribute("data-filtro")] = s.value; st.limite = 100; CadTela_desenhar_(cfg.chave); }); });
+    var ord = document.getElementById("cadxOrdem_" + cfg.chave);
+    if (ord) ord.addEventListener("change", function () { st.ordem = ord.value; CadTela_desenhar_(cfg.chave); });
+    document.getElementById("cadxLimpar_" + cfg.chave).onclick = function () { CadTela_limpar_(cfg.chave); };
+    if (cfg.acao) document.getElementById("cadxAcao_" + cfg.chave).onclick = cfg.acao.fn;
+    raiz.addEventListener("click", function (e) { CadTela_clique_(cfg.chave, e); });
+    raiz.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("tr.cadx-linha")) { e.preventDefault(); CadTela_abrirItem_(cfg.chave, e.target.getAttribute("data-id")); }
+    });
+    CadTela_carregar_(cfg.chave);
+  }
+
+  function CadTela_carregar_(chave, depois) {
+    var st = CADUI.telas[chave];
+    if (!st) return;
+    var cfg = st.cfg;
+    cfg.carregar(function (itens, extra) {
+      if (CADUI.telas[chave] !== st || !document.getElementById("cadxTela_" + chave)) return;
+      st.itens = itens || [];
+      if (extra) st.extra = extra;
+      st.carregado = true;
+      CadTela_preencherFiltros_(chave);
+      CadTela_desenhar_(chave);
+      if (typeof depois === "function") depois();
+    }, function (msg) {
+      if (CADUI.telas[chave] !== st) return;
+      var html = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A lista não carregou.</strong>' + CadUI_esc_(msg) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" data-cadx="recarregar">Tentar de novo</button></div></div>';
+      var corpo = document.getElementById("cadxCorpo_" + chave), cart = document.getElementById("cadxCartoes_" + chave);
+      if (corpo) corpo.innerHTML = '<tr><td colspan="' + cfg.colunas.length + '">' + html + "</td></tr>";
+      if (cart) cart.innerHTML = html;
+      var res = document.getElementById("cadxResumo_" + chave);
+      if (res) res.innerHTML = "";
+    });
+  }
+
+  function CadTela_recarregar_(chave, reabrirId) {
+    CadTela_carregar_(chave, function () {
+      if (reabrirId && CADUI.painel && CADUI.painel.chave === chave) {
+        var it = CadTela_item_(chave, reabrirId);
+        if (it) CadTela_abrirItem_(chave, reabrirId, CADUI.painel.aba);
+      }
+    });
+  }
+
+  function CadTela_item_(chave, id) {
+    var st = CADUI.telas[chave];
+    if (!st) return null;
+    for (var i = 0; i < st.itens.length; i++) if (String(st.itens[i].ID) === String(id)) return st.itens[i];
+    return null;
+  }
+
+  function CadTela_preencherFiltros_(chave) {
+    var st = CADUI.telas[chave], cfg = st.cfg;
+    (cfg.filtros || []).forEach(function (f) {
+      var s = document.getElementById("cadxFiltro_" + chave + "_" + f.id);
+      if (!s) return;
+      var atual = st.filtros[f.id] || "";
+      var ops = f.opcoes(st.itens);
+      s.innerHTML = '<option value="">' + CadUI_esc_(f.rotulo) + "</option>" + ops.map(function (o) { return '<option value="' + CadUI_esc_(o[0]) + '">' + CadUI_esc_(o[1]) + "</option>"; }).join("");
+      if (ops.some(function (o) { return String(o[0]) === atual; })) s.value = atual; else st.filtros[f.id] = "";
+    });
+  }
+
+  function CadTela_filtrar_(chave, ignorarResumo) {
+    var st = CADUI.telas[chave], cfg = st.cfg;
+    var q = CadUI_semAcento_(st.busca).trim(), qd = CadUI_digitos_(st.busca);
+    var r = (cfg.resumo || []).filter(function (x) { return x.id === st.resumo; })[0];
+    return st.itens.filter(function (it) {
+      if (!ignorarResumo && r && r.filtro && !r.filtro(it)) return false;
+      for (var i = 0; i < (cfg.filtros || []).length; i++) {
+        var f = cfg.filtros[i], v = st.filtros[f.id];
+        if (v && !f.aplicar(it, v)) return false;
+      }
+      if (q) {
+        var t = CadUI_semAcento_(cfg.texto(it));
+        var bate = q.split(/\s+/).every(function (p) { return t.indexOf(p) !== -1; });
+        if (!bate && !(qd.length >= 3 && CadUI_digitos_(cfg.texto(it)).indexOf(qd) !== -1)) return false;
+      }
+      return true;
+    });
+  }
+
+  function CadTela_desenhar_(chave) {
+    var st = CADUI.telas[chave];
+    if (!st || !st.carregado) return;
+    var cfg = st.cfg;
+    // resumo: os números contam a base inteira (os filtros da barra refinam a lista, não os números)
+    var res = document.getElementById("cadxResumo_" + chave);
+    if (res) {
+      res.innerHTML = (cfg.resumo || []).map(function (r) {
+        var n = r.filtro ? st.itens.filter(r.filtro).length : st.itens.length;
+        var ativo = st.resumo === r.id;
+        return '<button type="button" class="cadx-num bc-resumo-item ' + (r.tom || "") + (ativo ? " is-ativo" : "") + (n === 0 ? " is-zero" : "") + '" data-cadx="resumo" data-resumo="' + r.id + '" aria-pressed="' + ativo + '" title="' + CadUI_esc_(r.dica || ("Mostrar: " + r.rotulo)) + '">' +
+          '<span class="cadx-num-valor bc-resumo-num">' + CadUI_num_(n) + '</span><span class="cadx-num-rotulo bc-resumo-rot">' + CadUI_esc_(r.rotulo) + "</span></button>";
+      }).join("");
+    }
+    var lista = CadTela_filtrar_(chave);
+    if (st.ordem && cfg.ordenar) {
+      var o = cfg.ordenar.filter(function (x) { return x.id === st.ordem; })[0];
+      if (o && o.fn) lista = lista.slice().sort(o.fn);
+    }
+    var mostrar = lista.slice(0, st.limite);
+    var corpo = document.getElementById("cadxCorpo_" + chave), cart = document.getElementById("cadxCartoes_" + chave), rod = document.getElementById("cadxRodape_" + chave);
+    var filtrando = !!(st.busca || st.resumo !== "todos" || Object.keys(st.filtros).some(function (k) { return st.filtros[k]; }));
+    var limpar = document.getElementById("cadxLimpar_" + chave);
+    if (limpar) limpar.hidden = !filtrando;
+    if (!mostrar.length) {
+      var vazio = '<div class="cadx-vazio bc-vazio">' + (st.itens.length
+        ? "<strong>Nada encontrado com estes filtros.</strong>Confira o que foi digitado na busca ou clique em Limpar filtros."
+        : "<strong>" + CadUI_esc_(cfg.vazioTitulo || "Nenhum cadastro ainda.") + "</strong>" + CadUI_esc_(cfg.vazio || "")) + "</div>";
+      if (corpo) corpo.innerHTML = '<tr><td colspan="' + cfg.colunas.length + '">' + vazio + "</td></tr>";
+      if (cart) cart.innerHTML = vazio;
+    } else {
+      if (corpo) corpo.innerHTML = mostrar.map(function (it) {
+        return '<tr class="cadx-linha' + (String(it.ID) === String(st.selecionado) ? " is-selecionada" : "") + '" data-id="' + CadUI_esc_(it.ID) + '" tabindex="0">' +
+          cfg.colunas.map(function (c) { return '<td class="' + (c.classe || "") + '">' + c.html(it) + "</td>"; }).join("") + "</tr>";
+      }).join("");
+      if (cart) cart.innerHTML = mostrar.map(function (it) {
+        return '<article class="cadx-cartao" data-id="' + CadUI_esc_(it.ID) + '">' + cfg.cartao(it) + CadTela_botoesLinha_(chave, it, true) + "</article>";
+      }).join("");
+    }
+    if (rod) {
+      var nome = cfg.nomeItens || ["registro", "registros"];
+      rod.innerHTML = "<span>" + (lista.length === st.itens.length
+        ? CadUI_num_(st.itens.length) + " " + (st.itens.length === 1 ? nome[0] : nome[1])
+        : "Mostrando " + CadUI_num_(Math.min(lista.length, st.limite)) + " de " + CadUI_num_(lista.length) + " encontrados (" + CadUI_num_(st.itens.length) + " no total)") + "</span>" +
+        (lista.length > st.limite ? '<button type="button" class="cadx-btn" data-cadx="mais-linhas">Mostrar mais ' + CadUI_num_(Math.min(100, lista.length - st.limite)) + "</button>" : "");
+    }
+  }
+
+  /** Botões de cada linha: "Editar" visível e o resto em "Mais". */
+  function CadTela_botoesLinha_(chave, it, cartao) {
+    var cfg = CADUI.telas[chave].cfg;
+    var principal = cfg.botaoPrincipal ? cfg.botaoPrincipal(it) : (cfg.editar ? { texto: "Editar", acao: "editar" } : null);
+    var temMais = cfg.mais && (cfg.mais(it) || []).length;
+    var h = (principal ? '<button type="button" class="cadx-btn" data-cadx="' + principal.acao + '" data-id="' + CadUI_esc_(it.ID) + '">' + CadUI_esc_(principal.texto) + "</button>" : "") +
+      (temMais ? '<button type="button" class="cadx-btn" data-cadx="mais" data-id="' + CadUI_esc_(it.ID) + '" aria-haspopup="menu" aria-label="Mais ações">Mais <i class="fas fa-chevron-down" aria-hidden="true" style="font-size:10px"></i></button>' : "");
+    if (cartao) return '<div class="cadx-cartao-acoes">' + (h || '<button type="button" class="cadx-btn" data-cadx="abrir" data-id="' + CadUI_esc_(it.ID) + '">Ver detalhes</button>') + "</div>";
+    return '<div class="cadx-acoes">' + h + "</div>";
+  }
+
+  function CadTela_clique_(chave, e) {
+    var st = CADUI.telas[chave];
+    if (!st) return;
+    var b = e.target.closest("[data-cadx]");
+    if (b) {
+      var acao = b.getAttribute("data-cadx"), id = b.getAttribute("data-id");
+      var it = id ? CadTela_item_(chave, id) : null;
+      if (acao === "resumo") { var r = b.getAttribute("data-resumo"); st.resumo = st.resumo === r && r !== "todos" ? "todos" : r; st.limite = 100; CadTela_desenhar_(chave); return; }
+      if (acao === "mais-linhas") { st.limite += 100; CadTela_desenhar_(chave); return; }
+      if (acao === "recarregar") { CadTela_carregar_(chave); return; }
+      if (acao === "editar" && it) { e.stopPropagation(); st.cfg.editar(it); return; }
+      if (acao === "mais" && it) { e.stopPropagation(); CadUI_menu_(b, st.cfg.mais(it)); return; }
+      if (acao === "abrir" && it) { CadTela_abrirItem_(chave, id); return; }
+      if (st.cfg.acoesExtras && st.cfg.acoesExtras[acao] && it) { e.stopPropagation(); st.cfg.acoesExtras[acao](it); return; }
+      return;
+    }
+    if (e.target.closest("a, button, input, select, textarea, label")) return;
+    var linha = e.target.closest("tr.cadx-linha, .cadx-cartao");
+    if (linha) CadTela_abrirItem_(chave, linha.getAttribute("data-id"));
+  }
+
+  function CadTela_abrirItem_(chave, id, aba) {
+    var st = CADUI.telas[chave];
+    var it = CadTela_item_(chave, id);
+    if (!st || !it) return;
+    st.selecionado = String(id);
+    st.cfg.abrir(it, aba);
+  }
+
+  function CadTela_marcarSelecionado_(chave, id) {
+    var st = CADUI.telas[chave];
+    if (!st) return;
+    st.selecionado = String(id || "");
+    document.querySelectorAll("#cadxCorpo_" + chave + " tr.cadx-linha").forEach(function (tr) { tr.classList.toggle("is-selecionada", tr.getAttribute("data-id") === st.selecionado); });
+  }
+
+  function CadTela_limpar_(chave) {
+    var st = CADUI.telas[chave];
+    if (!st) return;
+    st.busca = ""; st.resumo = "todos"; st.filtros = {}; st.limite = 100;
+    var raiz = document.getElementById("cadxTela_" + chave);
+    if (raiz) { raiz.querySelector(".cadx-busca-campo").value = ""; raiz.querySelectorAll("select[data-filtro]").forEach(function (s) { s.value = ""; }); }
+    CadTela_desenhar_(chave);
+  }
+
+  /** Busca vinda de fora (Ctrl K / Início): lê o campo de busca da tela e filtra. */
+  function CadTela_buscarDoCampo_(chave) {
+    var st = CADUI.telas[chave];
+    if (!st) return;
+    var campo = document.querySelector("#cadxTela_" + chave + " .cadx-busca-campo");
+    st.busca = campo ? campo.value : "";
+    st.limite = 100;
+    CadTela_desenhar_(chave);
+  }
+
+  /** Painel lateral com vínculos (carrega cadastrosDetalhe na hora). */
+  function CadTela_detalheRemoto_(tipo, id, cb) {
+    CadUI_chamar_("cadastrosDetalhe", [tipo, id], cb, function (msg) {
+      var corpo = document.getElementById("cadxPainelCorpo");
+      if (corpo) corpo.querySelectorAll("[data-vinc-carregando]").forEach(function (el) { el.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + CadUI_esc_(msg) + "</div>"; });
+    });
+  }
+
+  /** Abre outra tela de cadastro já com um registro no painel (ex.: da árvore de vínculos). */
+  function CadTela_irPara_(chave, id) {
+    CADUI.irPara = { chave: chave, id: id };
+    abrir(chave);
+  }
+  /** Chamado ao terminar a carga de cada tela: abre o registro pedido por CadTela_irPara_. */
+  function CadTela_cumprirIrPara_(chave) {
+    var ir = CADUI.irPara;
+    if (!ir || ir.chave !== chave) return;
+    CADUI.irPara = null;
+    if (ir.novo && typeof ir.novo === "function") { ir.novo(); return; }
+    if (ir.id) CadTela_abrirItem_(chave, ir.id);
+  }
+
+  /** Ações de risco padronizadas (inativar, reativar, excluir) com confirmação e aviso do resultado. */
+  function CadTela_acaoRisco_(o) {
+    // o: { titulo, texto, botao, risco, fn, id, chave, sucesso, aoConcluir }
+    CadUI_confirmar_({
+      titulo: o.titulo, texto: o.texto, botao: o.botao, risco: o.risco !== false,
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_(o.fn, [o.id], function (res) {
+          fechar();
+          CadUI_aviso_(res.message || o.sucesso || "Feito.", "ok");
+          if (typeof o.aoConcluir === "function") o.aoConcluir(res);
+        }, function (msg) { reabilitar(msg); });
+      }
+    });
+  }
+
+  // ---------- caminhos para outras telas (vínculos, nova unidade, novo equipamento) ----------
+  function CadTela_abrirVinculos_(tipo, id) {
+    if (!CadUI_gestao_()) { CadUI_aviso_("Transferir, consolidar ou desvincular é feito pela gestão (Gestor, Diretoria ou Administrador). Peça a eles informando o cadastro e o motivo.", "alerta"); return; }
+    if (typeof Vinculos_abrirCom_ === "function") Vinculos_abrirCom_(tipo, id);
+    else abrir("vinculos");
+  }
+
+  // =====================================================================
+  // CLIENTES
+  // =====================================================================
+  function Clientes_nome_(c) { return (c && (c.RAZAO_SOCIAL || c.NOME_FANTASIA)) || "Cliente sem nome"; }
+
   function renderClientesModulo_() {
-    var div = document.getElementById("conteudo");
-    if (!div) return;
-
-    div.innerHTML =
-      '<div class="module-shell">' +
-        '<div class="module-header">' +
-          '<div class="module-header-left">' +
-            '<h2 class="content-title">Clientes</h2>' +
-            '<p class="content-subtitle">Cadastro mestre de clientes e rastreabilidade.</p>' +
-          '</div>' +
-          '<div class="module-header-right" style="display:flex; gap:15px; align-items:center;">' +
-            '<div style="display:flex; gap:5px;">' +
-              '<input id="clientesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') clientesPesquisar_()">' +
-              '<button class="btn-secondary" type="button" onclick="clientesPesquisar_()">Pesquisar</button>' +
-            '</div>' +
-            '<button class="btn-primary" type="button" onclick="clientesNovo_()">+ Novo cliente</button>' +
-          '</div>' +
-        '</div>' +
-
-        '<div class="module-grid">' +
-          '<div class="form-card">' +
-            '<h3 class="section-card-title" id="clientesFormTitulo">Novo cliente</h3>' +
-            '<div class="form-grid">' +
-              '<div>' +
-                '<label for="cli_cnpj">CNPJ</label>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="cli_cnpj" type="text" placeholder="Digite o CNPJ" style="flex:1 1 160px; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjCliente_();}">' +
-                  '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjCliente_()" title="Busca razão social e endereço na Receita Federal">Preencher pela Receita</button>' +
-                '</div>' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="cli_razao_social">Razão social</label>' +
-                '<input id="cli_razao_social" type="text" placeholder="Digite a razão social">' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="cli_nome_fantasia">Nome fantasia</label>' +
-                '<input id="cli_nome_fantasia" type="text" placeholder="Digite o nome fantasia">' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="cli_endereco">Endereço</label>' +
-                '<input id="cli_endereco" type="text" placeholder="Rua, número, bairro...">' +
-              '</div>' +
-              '<div class="full cad-opcao-principal"><label class="cad-check"><input id="cli_criar_principal" type="checkbox" checked> Criar a unidade principal com este CNPJ e endereço ao cadastrar. Desmarque só para cliente que agrupa outras unidades.</label></div>' +
-              '<div id="cli_status_wrap" hidden>' +
-                '<label for="cli_status">Situação</label>' +
-                '<input id="cli_status" type="text" value="ATIVO" disabled>' +
-              '</div>' +
-              '<div>' +
-                '<label for="cli_contato">Contato</label>' +
-                '<input id="cli_contato" type="text" placeholder="Nome do contato principal">' +
-              '</div>' +
-              '<div>' +
-                '<label for="cli_telefone">Telefone</label>' +
-                '<input id="cli_telefone" type="text" placeholder="Telefone principal">' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="cli_email">E-mail</label>' +
-                '<input id="cli_email" type="email" placeholder="E-mail principal">' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-actions">' +
-              '<button class="btn-primary" type="button" onclick="clientesSalvar_()">Salvar</button>' +
-              '<button class="btn-secondary" type="button" onclick="clientesNovo_()">Limpar</button>' +
-            '</div>' +
-            '<div class="helper-text" id="clientesHelper">Preencha os dados do cliente e clique em salvar.</div>' +
-          '</div>' +
-
-          '<div class="list-card">' +
-            '<div class="table-wrap">' +
-              '<table class="table">' +
-                '<thead>' +
-                  '<tr>' +
-                    '<th>Razão social</th>' +
-                    '<th>Nome fantasia</th>' +
-                    '<th>CNPJ</th>' +
-                    '<th>Contato</th>' +
-                    '<th>E-mail</th>' +
-                    '<th>Telefone</th>' +
-                    '<th>Situação</th>' +
-                    '<th>Ações</th>' +
-                  '</tr>' +
-                '</thead>' +
-                '<tbody id="clientesTabelaBody">' +
-                  '<tr><td colspan="8" class="empty-state">Carregando clientes…</td></tr>' +
-                '</tbody>' +
-              '</table>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    clientesLimparFormulario_();
-    clientesPesquisar_();
+    var gestao = CadUI_gestao_();
+    CadTela_montar_({
+      chave: "clientes", titulo: "Clientes", nomeItens: ["cliente", "clientes"],
+      subtitulo: "Empresas atendidas pela Metrolabs, com as unidades, os equipamentos e os documentos de cada uma.",
+      idBusca: "clientesPesquisa", buscaPlaceholder: "Buscar por razão social, nome fantasia, CNPJ, contato ou e-mail",
+      ajuda:
+        "<p>Cada cliente é uma empresa (um CNPJ). Os locais atendidos ficam em <b>Unidades</b>; os equipamentos ficam ligados a uma unidade; os documentos, ao cliente, à unidade e, quando houver, ao equipamento.</p>" +
+        "<ul><li><b>Novo cliente:</b> digite o CNPJ e use <i>Preencher pela Receita</i>. Deixe marcada a criação da unidade principal (mesmo CNPJ e endereço); desmarque só para um cliente que agrupa outras unidades.</li>" +
+        "<li><b>Números do topo:</b> clique para filtrar. <i>Sem unidade</i> = cliente ativo sem nenhuma unidade ativa (não recebe atendimento). <i>Cadastro incompleto</i> = falta CNPJ, endereço ou um meio de contato (e-mail ou telefone).</li>" +
+        "<li><b>Editar</b> fica na linha; as outras ações ficam em <i>Mais</i>. Inativar guarda todo o histórico. Excluir é só da gestão e só funciona para cadastro sem nada ligado.</li>" +
+        "<li>Trocar unidade de cliente, juntar cadastros repetidos ou desvincular: tela <b>Vínculos</b> (gestão), com prévia e registro do motivo.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "ativos", rotulo: "Ativos", tom: "tom-ok", filtro: function (c) { return c.STATUS === "ATIVO"; } },
+        { id: "inativos", rotulo: "Inativos", filtro: function (c) { return c.STATUS !== "ATIVO"; } },
+        { id: "sem_unidade", rotulo: "Sem unidade", tom: "tom-alerta", filtro: function (c) { return (c.PENDENCIAS || []).indexOf("sem_unidade") >= 0; } },
+        { id: "incompleto", rotulo: "Cadastro incompleto", tom: "tom-alerta", filtro: function (c) { return (c.PENDENCIAS || []).indexOf("incompleto") >= 0; } },
+        { id: "docs", rotulo: "Documento vencido ou vencendo", tom: "tom-perigo", filtro: function (c) { return (c.PENDENCIAS || []).some(function (p) { return p === "doc_vencido" || p === "doc_vencendo"; }); } }
+      ],
+      ordenar: [
+        { id: "nome", rotulo: "Ordenar por nome", fn: null },
+        { id: "recentes", rotulo: "Mais recentes primeiro", fn: function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); } },
+        { id: "equip", rotulo: "Mais equipamentos primeiro", fn: function (a, b) { return (b.QTD_EQUIPAMENTOS || 0) - (a.QTD_EQUIPAMENTOS || 0); } }
+      ],
+      texto: function (c) { return [c.RAZAO_SOCIAL, c.NOME_FANTASIA, c.CNPJ, CadUI_cnpj_(c.CNPJ), c.CONTATO, c.EMAIL, c.TELEFONE].join(" "); },
+      acao: CadUI_ehCliente_() ? null : { texto: "Novo cliente", fn: function () { Clientes_formulario_(null); } },
+      vazioTitulo: "Nenhum cliente cadastrado ainda.", vazio: "Clique em Novo cliente para cadastrar o primeiro.",
+      colunas: [
+        { titulo: "Cliente", html: function (c) { return '<div class="cadx-tit">' + CadUI_esc_(Clientes_nome_(c)) + "</div>" + (c.NOME_FANTASIA && c.NOME_FANTASIA !== c.RAZAO_SOCIAL ? '<div class="cadx-sub">' + CadUI_esc_(c.NOME_FANTASIA) + "</div>" : "") + CadUI_chips_(c); } },
+        { titulo: "CNPJ", html: function (c) { return c.CNPJ ? '<span class="cadx-mono">' + CadUI_esc_(CadUI_cnpj_(c.CNPJ)) + "</span>" : '<span class="cadx-sub">Sem CNPJ</span>'; } },
+        { titulo: "Contato", html: function (c) { return '<div>' + CadUI_esc_(c.CONTATO || "") + "</div>" + '<div class="cadx-sub">' + CadUI_esc_([c.EMAIL, CadUI_tel_(c.TELEFONE)].filter(Boolean).join(" · ") || (c.CONTATO ? "" : "Sem contato")) + "</div>"; } },
+        { titulo: "Unidades", classe: "cadx-col-num", html: function (c) { return CadUI_num_(c.QTD_UNIDADES); } },
+        { titulo: "Equipamentos", classe: "cadx-col-num", html: function (c) { return CadUI_num_(c.QTD_EQUIPAMENTOS); } },
+        { titulo: "Documentos", classe: "cadx-col-num", html: function (c) { return CadUI_num_(c.QTD_DOCUMENTOS); } },
+        { titulo: "Situação", html: function (c) { return CadUI_selo_(c.STATUS); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (c) { return CadTela_botoesLinha_("clientes", c); } }
+      ],
+      cartao: function (c) {
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Clientes_nome_(c)) + '</div><div class="cadx-sub">' + CadUI_esc_(c.CNPJ ? CadUI_cnpj_(c.CNPJ) : "Sem CNPJ") + "</div></div>" + CadUI_selo_(c.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>' + CadUI_num_(c.QTD_UNIDADES) + " unid.</span><span>" + CadUI_num_(c.QTD_EQUIPAMENTOS) + " equip.</span><span>" + CadUI_num_(c.QTD_DOCUMENTOS) + " doc.</span></div>" + CadUI_chips_(c);
+      },
+      editar: CadUI_ehCliente_() ? null : function (c) { Clientes_formulario_(c.ID); },
+      mais: CadUI_ehCliente_() ? null : function (c) { return Clientes_menu_(c, gestao); },
+      abrir: function (c, aba) { Clientes_detalhe_(c, aba); },
+      carregar: function (ok, erro) {
+        CadUI_chamar_("cadastrosPainel", ["clientes"], function (res) { ok(res.items || []); setTimeout(function () { CadTela_cumprirIrPara_("clientes"); }, 0); }, erro);
+      }
+    });
   }
 
-  function clientesPesquisar_() {
-    var el = document.getElementById("clientesPesquisa");
-    CLIENTES_STATE.filtro = el ? String(el.value || "").trim() : "";
-    if (!SESSION) return;
+  function Clientes_menu_(c, gestao) {
+    var ativo = c.STATUS === "ATIVO";
+    return [
+      { texto: "Ver detalhes e vínculos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("clientes", c.ID); } },
+      { texto: "Nova unidade deste cliente", icone: "fa-location-dot", desabilitado: !ativo, nota: ativo ? "" : "Reative o cliente para cadastrar unidade.", acao: function () { Unidades_novaPara_(c.ID, Clientes_nome_(c)); } },
+      { texto: "Novo equipamento deste cliente", icone: "fa-industry", desabilitado: !ativo, nota: ativo ? "" : "Reative o cliente para cadastrar equipamento.", acao: function () { if (typeof Equipamentos_novoPara_ === "function") Equipamentos_novoPara_(c.ID, Clientes_nome_(c)); } },
+      { texto: "Juntar cadastro repetido (Vínculos)", icone: "fa-diagram-project", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Gestor, Diretoria ou Administrador).", acao: function () { CadTela_abrirVinculos_("CLIENTE", c.ID); } },
+      "-",
+      ativo
+        ? { texto: "Inativar cliente", icone: "fa-ban", risco: true, acao: function () { Clientes_inativar_(c); } }
+        : { texto: "Reativar cliente", icone: "fa-rotate-left", acao: function () { Clientes_reativar_(c); } },
+      { texto: "Excluir cliente", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Clientes_excluir_(c); } }
+    ];
+  }
 
-    var tbody = document.getElementById("clientesTabelaBody");
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Buscando na base...</td></tr>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Não foi possível pesquisar. Tente de novo.</td></tr>';
+  function Clientes_detalhe_(c, aba) {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    var det = null;
+    var cfg = {
+      chave: "clientes", id: c.ID, titulo: Clientes_nome_(c),
+      sub: CadUI_esc_(c.CNPJ ? "CNPJ " + CadUI_cnpj_(c.CNPJ) : "Sem CNPJ"),
+      seloHtml: CadUI_selo_(c.STATUS) + CadUI_chips_(c).replace('<div class="cadx-chips">', "").replace(/<\/div>$/, ""),
+      abas: [{ id: "dados", rotulo: "Dados" }, { id: "vinculos", rotulo: "Unidades e equipamentos (" + CadUI_num_(c.QTD_UNIDADES_TOTAL || c.QTD_UNIDADES) + ")" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(c.QTD_DOCUMENTOS) + ")" }],
+      aba: aba || "dados",
+      corpo: function (a) {
+        if (a === "dados") {
+          var faixas = "";
+          if ((c.PENDENCIAS || []).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((c.FALTAM || []).join(", ")) + ". Clique em Editar para completar.</div>";
+          if ((c.PENDENCIAS || []).indexOf("sem_unidade") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem unidade ativa.</b> Sem unidade o cliente não recebe atendimento nem documento. ' + (c.CNPJ ? 'Use <i>Criar unidade principal</i> (mesmo CNPJ e endereço) ou cadastre uma unidade em Mais.' : "Cadastre uma unidade em Mais › Nova unidade deste cliente.") + "</div>";
+          if (c.STATUS !== "ATIVO") faixas += '<div class="cadx-faixa bc-faixa">Cliente inativo: o histórico continua guardado. Para voltar a atender, use Mais › Reativar cliente.</div>';
+          return faixas +
+            '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Razão social", c.RAZAO_SOCIAL], ["Nome fantasia", c.NOME_FANTASIA], ["CNPJ", c.CNPJ ? CadUI_cnpj_(c.CNPJ) : ""], ["Endereço", c.ENDERECO]]) + "</section>" +
+            '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["Contato", c.CONTATO], ["E-mail", c.EMAIL], ["Telefone", CadUI_tel_(c.TELEFONE)]]) + "</section>" +
+            '<section class="cadx-sec"><h4 class="cadx-sec-tit">Resumo</h4>' + CadUI_dados_([["Unidades ativas", CadUI_num_(c.QTD_UNIDADES)], ["Equipamentos ativos", CadUI_num_(c.QTD_EQUIPAMENTOS)], ["Documentos", CadUI_num_(c.QTD_DOCUMENTOS) + (c.DOCS_VENCIDOS ? " · " + CadUI_num_(c.DOCS_VENCIDOS) + " vencido(s)" : "") + (c.DOCS_VENCENDO ? " · " + CadUI_num_(c.DOCS_VENCENDO) + " vencendo" : "")], ["Cadastrado em", CadUI_dataHora_(c.CRIADO_EM)]]) + "</section>";
+        }
+        return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(6) + "</div>";
+      },
+      depois: function (p, a) {
+        if (a === "dados") {
+          var b = p.querySelector("#cadxCriarPrincipal");
+          if (b) b.onclick = function () { Clientes_criarPrincipal_(c); };
           return;
         }
-        renderTabelaClientes_(Array.isArray(res.items) ? res.items : []);
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao pesquisar clientes:", err);
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Não foi possível buscar os clientes. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
-      })
-      .clientesPesquisar(SESSION, CLIENTES_STATE.filtro);
-  }
-
-  function renderTabelaClientes_(items) {
-    var tbody = document.getElementById("clientesTabelaBody");
-    if (!tbody) return;
-
-    if (!items || !items.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">' + (CLIENTES_STATE.filtro ? "Nenhum cliente encontrado para esta busca. Confira o nome ou o CNPJ, ou limpe a pesquisa." : "Nenhum cliente cadastrado ainda. Use + Novo cliente.") + '</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map(function(item) {
-      var id = escapeHtml_(item.ID);
-      var status = String(item.STATUS || "").toUpperCase();
-
-      return (
-        '<tr>' +
-          '<td>' + escapeHtml_(item.RAZAO_SOCIAL) + '</td>' +
-          '<td>' + escapeHtml_(item.NOME_FANTASIA) + '</td>' +
-          '<td>' + formatarCnpjFront_(item.CNPJ) + '</td>' +
-          '<td>' + escapeHtml_(item.CONTATO) + '</td>' +
-          '<td>' + escapeHtml_(item.EMAIL) + '</td>' +
-          '<td>' + escapeHtml_(item.TELEFONE) + '</td>' +
-          '<td>' + obterBadgeStatusHtml_(status) + '</td>' +
-          '<td>' +
-            '<div class="table-actions">' +
-              '<button class="btn-info" type="button" onclick="clientesEditar_(\'' + id + '\')">Editar</button>' +
-              (
-                status === "ATIVO"
-                  ? '<button class="btn-warning" type="button" onclick="clientesInativar_(\'' + id + '\')">Inativar</button>'
-                  : '<button class="btn-success" type="button" onclick="clientesReativar_(\'' + id + '\')">Reativar</button>'
-              ) +
-              // 17/10/2026: excluir é da gestão (o servidor também recusa); técnico e comercial criam e editam.
-              (['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? '<button class="btn-danger" type="button" onclick="clientesExcluir_(\'' + id + '\')">Excluir</button>' : '') +
-            '</div>' +
-          '</td>' +
-        '</tr>'
-      );
-    }).join("");
-  }
-
-  function clientesNovo_() {
-    var principal = document.getElementById("cli_criar_principal"); if(principal){principal.checked=true;principal.parentElement.hidden=false;}
-    CLIENTES_STATE.editingId = "";
-    clientesLimparFormulario_();
-
-    var titulo = document.getElementById("clientesFormTitulo");
-    var helper = document.getElementById("clientesHelper");
-    if (titulo) titulo.innerText = "Novo cliente";
-    var stwN = document.getElementById("cli_status_wrap"); if (stwN) stwN.hidden = true;
-    if (helper) helper.innerText = "Preencha os dados do cliente e clique em salvar.";
-  }
-
-  function clientesLimparFormulario_() {
-    setValue_("cli_razao_social", "");
-    setValue_("cli_nome_fantasia", "");
-    setValue_("cli_endereco", "");
-    setValue_("cli_cnpj", "");
-    setValue_("cli_contato", "");
-    setValue_("cli_email", "");
-    setValue_("cli_telefone", "");
-    setValue_("cli_status", "ATIVO");
-  }
-
-  function clientesLerFormulario_() {
-    return {
-      CRIAR_UNIDADE_PRINCIPAL: !document.getElementById("cli_criar_principal") || document.getElementById("cli_criar_principal").checked,
-      RAZAO_SOCIAL: getValue_("cli_razao_social"),
-      NOME_FANTASIA: getValue_("cli_nome_fantasia"),
-      ENDERECO: getValue_("cli_endereco"),
-      CNPJ: getValue_("cli_cnpj"),
-      CONTATO: getValue_("cli_contato"),
-      EMAIL: getValue_("cli_email"),
-      TELEFONE: getValue_("cli_telefone")
+        var desenhar = function () {
+          var corpo = p.querySelector("#cadxPainelCorpo");
+          if (!corpo || !det) return;
+          corpo.innerHTML = a === "vinculos" ? Clientes_htmlVinculos_(c, det) : CadTela_htmlDocumentos_(det.documentos, "Nenhum documento deste cliente no Arquivo de documentos.");
+        };
+        if (det) { desenhar(); return; }
+        CadTela_detalheRemoto_("clientes", c.ID, function (res) { det = res; if (CADUI.painel === cfg) desenhar(); });
+      },
+      rodape: cliente ? "" :
+        '<div class="cadx-rodape-esq">' +
+          ((c.PENDENCIAS || []).indexOf("sem_unidade") >= 0 && c.CNPJ && c.STATUS === "ATIVO" ? '<button type="button" class="cadx-btn cadx-btn-grande" id="cadxCriarPrincipal2" onclick="Clientes_criarPrincipalId_(\'' + CadUI_esc_(c.ID) + '\')">Criar unidade principal</button>' : "") +
+          '<button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button>' +
+        "</div>" +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Clientes_formulario_(\'' + CadUI_esc_(c.ID) + '\')">Editar</button>'
     };
+    var depoisOriginal = cfg.depois;
+    cfg.depois = function (p, a) {
+      var mais = p.querySelector("#cadxPainelMais");
+      if (mais) mais.onclick = function () { CadUI_menu_(mais, Clientes_menu_(c, gestao).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes e vínculos"; })); };
+      depoisOriginal(p, a);
+    };
+    CadUI_painelAbrir_(cfg);
   }
 
-  function clientesSalvar_() {
-    if (!SESSION) return;
+  function Clientes_htmlVinculos_(c, det) {
+    var cliente = CadUI_ehCliente_();
+    var porUnidade = {};
+    (det.equipamentos || []).forEach(function (e) { (porUnidade[e.UNIDADE_ID] = porUnidade[e.UNIDADE_ID] || []).push(e); });
+    var docsPorEquip = {}, docsPorUni = {};
+    (det.documentos || []).forEach(function (d) { if (d.EQUIPAMENTO_ID) docsPorEquip[d.EQUIPAMENTO_ID] = (docsPorEquip[d.EQUIPAMENTO_ID] || 0) + 1; docsPorUni[d.UNIDADE_ID] = (docsPorUni[d.UNIDADE_ID] || 0) + 1; });
+    var uns = det.unidades || [];
+    var h = '<section class="cadx-sec"><h4 class="cadx-sec-tit"><span>Cliente → unidades → equipamentos</span>' +
+      (!cliente && c.STATUS === "ATIVO" ? '<button type="button" class="cadx-btn" onclick="Unidades_novaPara_(\'' + CadUI_esc_(c.ID) + "','" + CadUI_esc_(String(Clientes_nome_(c)).replace(/'/g, "")) + '\')">Nova unidade</button>' : "") + "</h4>";
+    if (!uns.length) return h + '<div class="cadx-faixa bc-faixa tom-alerta">Este cliente ainda não tem unidade. Sem unidade não há como ligar equipamento nem documento.</div></section>';
+    h += '<ul class="cadx-arvore">' + uns.map(function (u) {
+      var eqs = porUnidade[u.ID] || [];
+      return '<li><div class="cadx-no"><div class="cadx-no-texto"><i class="fas fa-location-dot" aria-hidden="true"></i><b>' + CadUI_esc_(u.NOME_UNIDADE) + "</b> " + CadUI_selo_(u.STATUS) +
+        '<div class="cadx-sub">' + CadUI_esc_([u.CNPJ_UNIDADE ? CadUI_cnpj_(u.CNPJ_UNIDADE) : "", [u.CIDADE, u.UF].filter(Boolean).join("/")].filter(Boolean).join(" · ")) + " · " + CadUI_num_(eqs.length) + " equip. · " + CadUI_num_(docsPorUni[u.ID] || 0) + ' doc.</div></div><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'unidades\',\'' + CadUI_esc_(u.ID) + '\')">Abrir</button></div>' +
+        (eqs.length ? "<ul>" + eqs.map(function (e) {
+          return '<li><div class="cadx-no"><div class="cadx-no-texto"><i class="fas fa-industry" aria-hidden="true"></i>' + CadUI_esc_([e.TAG, e.TIPO].filter(Boolean).join(" · ") || "Equipamento sem identificação") + " " + (e.STATUS !== "ATIVO" ? CadUI_selo_(e.STATUS) : "") +
+            '<div class="cadx-sub">' + CadUI_num_(docsPorEquip[e.ID] || 0) + ' documento(s)</div></div><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'equipamentos\',\'' + CadUI_esc_(e.ID) + '\')">Abrir</button></div></li>';
+        }).join("") + "</ul>" : "") + "</li>";
+    }).join("") + "</ul></section>";
+    return h;
+  }
 
-    var payload = clientesLerFormulario_();
+  /** Lista de documentos usada nos painéis de cliente, unidade e equipamento. */
+  function CadTela_htmlDocumentos_(docs, vazio) {
+    docs = docs || [];
+    if (!docs.length) return '<div class="cadx-vazio bc-vazio">' + CadUI_esc_(vazio) + "</div>";
+    return '<ul class="cadx-arvore">' + docs.map(function (d) {
+      return '<li><div class="cadx-no"><div class="cadx-no-texto"><i class="fas fa-file-lines" aria-hidden="true"></i><b>' + CadUI_esc_(d.NOME_ARQUIVO || "Documento sem nome") + "</b>" + (d.STATUS === "INATIVO" ? " " + CadUI_selo_(d.STATUS) : "") +
+        '<div class="cadx-sub">' + CadUI_esc_([Documentos_categoria_(d.TIPO_DOCUMENTO), d.EQUIPAMENTO_NOME].filter(Boolean).join(" · ")) + "</div>" +
+        '<div style="margin-top:4px">' + CadUI_vencimento_(d.VENCIMENTO_SITUACAO, d.VENCIMENTO_DIAS, d.VENCIMENTO_ISO) + "</div></div>" +
+        '<div class="cadx-acoes">' + (d.LINK_ARQUIVO ? '<a class="cadx-btn" href="' + CadUI_esc_(d.LINK_ARQUIVO) + '" target="_blank" rel="noopener">Abrir arquivo</a>' : '<span class="cadx-chip tom-alerta">Sem arquivo</span>') +
+        '<button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'documentos\',\'' + CadUI_esc_(d.ID) + '\')">Ver</button></div></div></li>';
+    }).join("") + "</ul>";
+  }
 
-    if (!payload.RAZAO_SOCIAL) {
-      alert("Informe a razão social.");
-      focusIfExists_("cli_razao_social");
-      return;
+  /** Rótulo da categoria NBR 15943 sem a numeração ("2. Certificados de Calibração" -> "Certificados de calibração"). */
+  function Documentos_categoria_(v) {
+    var s = String(v || "").replace(/^\s*\d+\.\s*/, "").trim();
+    if (!s) return "";
+    s = s.toLowerCase();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function Clientes_criarPrincipalId_(id) { var c = CadTela_item_("clientes", id); if (c) Clientes_criarPrincipal_(c); }
+  function Clientes_criarPrincipal_(c) {
+    CadUI_confirmar_({
+      titulo: "Criar a unidade principal",
+      texto: "<p>Cria a unidade principal de <b>" + CadUI_esc_(Clientes_nome_(c)) + "</b> com o mesmo CNPJ (" + CadUI_esc_(CadUI_cnpj_(c.CNPJ)) + ") e o mesmo endereço do cliente. Se ela já existir, nada é criado.</p>",
+      botao: "Criar unidade principal",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("vinculosCriarPrincipal", [c.ID], function (res) {
+          fechar(); CadUI_aviso_(res.message || "Unidade principal criada.", "ok"); CadTela_recarregar_("clientes", c.ID);
+        }, reabilitar);
+      }
+    });
+  }
+
+  function Clientes_inativar_(c) {
+    CadTela_acaoRisco_({
+      titulo: "Inativar o cliente", botao: "Inativar cliente", fn: "clientesInativar", id: c.ID,
+      texto: "<p>Inativar <b>" + CadUI_esc_(Clientes_nome_(c)) + "</b>?</p><p>O cliente sai das listas de novos atendimentos e certificados. Unidades, equipamentos e documentos continuam guardados. Para voltar, use Reativar.</p>",
+      aoConcluir: function () { CadTela_recarregar_("clientes", c.ID); }
+    });
+  }
+  function Clientes_reativar_(c) {
+    CadTela_acaoRisco_({
+      titulo: "Reativar o cliente", botao: "Reativar cliente", risco: false, fn: "clientesReativar", id: c.ID,
+      texto: "<p>Reativar <b>" + CadUI_esc_(Clientes_nome_(c)) + "</b>? Ele volta às listas de atendimento. As unidades inativas continuam inativas até serem reativadas uma a uma.</p>",
+      aoConcluir: function () { CadTela_recarregar_("clientes", c.ID); }
+    });
+  }
+  function Clientes_excluir_(c) {
+    var ligados = (c.QTD_UNIDADES_TOTAL || 0) + (c.QTD_EQUIPAMENTOS || 0) + (c.QTD_DOCUMENTOS || 0);
+    CadTela_acaoRisco_({
+      titulo: "Excluir o cliente", botao: "Excluir definitivamente", fn: "clientesExcluir", id: c.ID,
+      texto: "<p>Excluir <b>" + CadUI_esc_(Clientes_nome_(c)) + "</b>? A exclusão não pode ser desfeita.</p>" +
+        (ligados ? '<div class="cadx-faixa bc-faixa tom-alerta">Este cliente tem ' + CadUI_num_(c.QTD_UNIDADES_TOTAL) + " unidade(s), " + CadUI_num_(c.QTD_EQUIPAMENTOS) + " equipamento(s) e " + CadUI_num_(c.QTD_DOCUMENTOS) + " documento(s) ligados: o sistema não vai excluir. Use Inativar, ou junte os cadastros repetidos em Vínculos.</div>" : "<p>Para tirar de uso sem perder o histórico, use Inativar.</p>"),
+      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("clientes"); }
+    });
+  }
+
+  function Clientes_formulario_(id) {
+    if (CadUI_ehCliente_()) return;
+    var c = id ? CadTela_item_("clientes", id) : null;
+    var novo = !c;
+    c = c || {};
+    var cfg = {
+      chave: "clientes", id: id || "", titulo: novo ? "Novo cliente" : "Editar cliente",
+      sub: novo ? "Comece pelo CNPJ: o sistema confere se a empresa já está cadastrada." : CadUI_esc_(Clientes_nome_(c)),
+      corpo: function () {
+        return CadUI_secao_("Identificação", [
+          CadUI_campo_({ id: "cli_cnpj", rotulo: "CNPJ", inteiro: true, valor: c.CNPJ ? CadUI_cnpj_(c.CNPJ) : "", obrigatorio: novo, dica: novo ? "Obrigatório quando a unidade principal é criada junto." : "",
+            html: '<div class="cadx-linha-campo"><input id="cli_cnpj" type="text" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" value="' + CadUI_esc_(c.CNPJ ? CadUI_cnpj_(c.CNPJ) : "") + '">' +
+              '<button type="button" class="cadx-btn cadx-btn-grande" id="cli_receita">Preencher pela Receita</button></div>' }),
+          CadUI_campo_({ id: "cli_razao_social", rotulo: "Razão social", obrigatorio: true, inteiro: true, valor: c.RAZAO_SOCIAL, placeholder: "Nome jurídico da empresa" }),
+          CadUI_campo_({ id: "cli_nome_fantasia", rotulo: "Nome fantasia", inteiro: true, valor: c.NOME_FANTASIA, placeholder: "Como o cliente é conhecido" })
+        ]) +
+        CadUI_secao_("Endereço", [CadUI_campo_({ id: "cli_endereco", rotulo: "Endereço", inteiro: true, valor: c.ENDERECO, placeholder: "Rua, número, bairro, cidade" })]) +
+        CadUI_secao_("Contato", [
+          CadUI_campo_({ id: "cli_contato", rotulo: "Pessoa de contato", inteiro: true, valor: c.CONTATO, placeholder: "Nome do contato principal" }),
+          CadUI_campo_({ id: "cli_email", rotulo: "E-mail", tipo: "email", valor: c.EMAIL, placeholder: "contato@empresa.com.br" }),
+          CadUI_campo_({ id: "cli_telefone", rotulo: "Telefone", tipo: "tel", valor: CadUI_tel_(c.TELEFONE), placeholder: "(19) 3333-0000", attrs: ' inputmode="tel"' })
+        ]) +
+        (novo ? CadUI_secao_("Unidade principal", ['<div class="cadx-campo is-inteiro"><label class="cadx-marcar"><input id="cli_criar_principal" type="checkbox" checked> <span>Criar a unidade principal com este CNPJ e endereço. Desmarque só para um cliente que agrupa outras unidades (sem atendimento próprio).</span></label></div>']) : "") +
+        '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios. Ao editar, os campos que você não mexer ficam como estão.</p>';
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Clientes_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Cadastrar cliente" : "Salvar alterações"),
+      depois: function (p) {
+        CadUI_ligarFormulario_(p);
+        var cnpj = p.querySelector("#cli_cnpj");
+        cnpj.addEventListener("input", function () { cnpj.value = Clientes_mascaraCnpj_(cnpj.value); Clientes_conferirCnpj_(id); });
+        p.querySelector("#cli_receita").onclick = function () { CadUI_preencherReceita_("cli_cnpj", { razao: "cli_razao_social", fantasia: "cli_nome_fantasia", endereco: "cli_endereco", telefone: "cli_telefone" }, "cli_receita"); };
+        p.querySelector("#cadxSalvar").onclick = function () { Clientes_salvar_(id); };
+        setTimeout(function () { try { (novo ? cnpj : p.querySelector("#cli_razao_social")).focus(); } catch (e) {} }, 50);
+      }
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+  function Clientes_voltarDetalhe_(id) { CadUI_painelSujo_(false); var c = CadTela_item_("clientes", id); if (c) Clientes_detalhe_(c); else CadUI_painelFechar_(); }
+
+  function Clientes_mascaraCnpj_(v) {
+    var d = CadUI_digitos_(v).slice(0, 14);
+    var r = d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+    return r;
+  }
+  /** Avisa no campo quando o CNPJ já existe em outro cliente (a regra final é do servidor). */
+  function Clientes_conferirCnpj_(id) {
+    var d = CadUI_digitos_(getValue_("cli_cnpj"));
+    if (d.length !== 14) { CadUI_erroCampo_("cli_cnpj", ""); return true; }
+    if (!CadUI_cnpjValido_(d)) { CadUI_erroCampo_("cli_cnpj", "CNPJ inválido: confira os números (os dois últimos são o dígito verificador)."); return false; }
+    var st = CADUI.telas.clientes;
+    var outro = st && st.itens.filter(function (x) { return CadUI_digitos_(x.CNPJ) === d && String(x.ID) !== String(id || ""); })[0];
+    if (outro) {
+      CadUI_erroCampo_("cli_cnpj", "Já existe cliente com este CNPJ: " + CadUI_esc_(Clientes_nome_(outro)) + (outro.STATUS !== "ATIVO" ? " (inativo)" : "") + '. <button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);CadTela_abrirItem_(\'clientes\',\'' + CadUI_esc_(outro.ID) + '\')">Abrir o cadastro existente</button>');
+      return false;
     }
-
-    if (CLIENTES_STATE.editingId) {
-      SGO_iniciarCarregamento_();
-      google.script.run
-        .withSuccessHandler(function(res) {
-          SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o cliente. Tente de novo.");
-          alert(res.message || "Cliente atualizado com sucesso.");
-          CLIENTES_STATE.editingId = "";
-          clientesNovo_();
-          clientesPesquisar_();
-        })
-        .withFailureHandler(function(err) {
-          SGO_finalizarCarregamento_();
-          console.error("Falha ao atualizar cliente:", err);
-          alert("Não foi possível atualizar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-        })
-        .clientesAtualizar(SESSION, CLIENTES_STATE.editingId, payload);
-      return;
-    }
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível cadastrar o cliente. Tente de novo.");
-        alert(res.message || "Cliente cadastrado com sucesso.");
-        clientesNovo_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao criar cliente:", err);
-        alert("Não foi possível cadastrar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .clientesCriar(SESSION, payload);
+    CadUI_erroCampo_("cli_cnpj", "");
+    return true;
   }
 
-  function clientesEditar_(id) {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Cliente não encontrado.");
-
-        var item = res.item;
-        CLIENTES_STATE.editingId = String(item.ID || "");
-        var principal = document.getElementById("cli_criar_principal"); if(principal) principal.parentElement.hidden=true;
-
-        setValue_("cli_razao_social", item.RAZAO_SOCIAL || "");
-        setValue_("cli_nome_fantasia", item.NOME_FANTASIA || "");
-        setValue_("cli_endereco", item.ENDERECO || "");
-        setValue_("cli_cnpj", item.CNPJ || "");
-        setValue_("cli_contato", item.CONTATO || "");
-        setValue_("cli_email", item.EMAIL || "");
-        setValue_("cli_telefone", item.TELEFONE || "");
-        setValue_("cli_status", item.STATUS || "ATIVO");
-        var stw = document.getElementById("cli_status_wrap"); if (stw) stw.hidden = false;
-
-        var titulo = document.getElementById("clientesFormTitulo");
-        var helper = document.getElementById("clientesHelper");
-        if (titulo) titulo.innerText = "Editar cliente";
-        if (helper) helper.innerText = "Editando cliente selecionado. Após ajustar os dados, clique em salvar.";
-
-        focusIfExists_("cli_razao_social");
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao buscar cliente:", err);
-        alert("Não foi possível buscar o cliente. Verifique a conexão e tente de novo. Nada foi alterado.");
-      })
-      .clientesObter(SESSION, id);
+  function Clientes_salvar_(id) {
+    var novo = !id;
+    var p = {
+      RAZAO_SOCIAL: getValue_("cli_razao_social"), NOME_FANTASIA: getValue_("cli_nome_fantasia"), ENDERECO: getValue_("cli_endereco"),
+      CNPJ: CadUI_digitos_(getValue_("cli_cnpj")), CONTATO: getValue_("cli_contato"), EMAIL: getValue_("cli_email"), TELEFONE: CadUI_digitos_(getValue_("cli_telefone"))
+    };
+    var principal = document.getElementById("cli_criar_principal");
+    if (novo) p.CRIAR_UNIDADE_PRINCIPAL = !principal || principal.checked;
+    var erros = {};
+    if (!p.RAZAO_SOCIAL) erros.cli_razao_social = "Informe a razão social.";
+    if (p.CNPJ && (p.CNPJ.length !== 14 || !CadUI_cnpjValido_(p.CNPJ))) erros.cli_cnpj = "CNPJ inválido: confira os 14 números.";
+    else if (novo && p.CRIAR_UNIDADE_PRINCIPAL && !p.CNPJ) erros.cli_cnpj = "Informe o CNPJ para criar a unidade principal, ou desmarque a unidade principal (cliente agrupador).";
+    if (p.EMAIL && !CadUI_emailValido_(p.EMAIL)) erros.cli_email = "E-mail inválido: confira o formato (nome@empresa.com.br).";
+    if (p.TELEFONE && (p.TELEFONE.length < 10 || p.TELEFONE.length > 11)) erros.cli_telefone = "Telefone com DDD: 10 ou 11 números.";
+    if (!CadUI_mostrarErros_(erros, ["cli_razao_social", "cli_cnpj", "cli_email", "cli_telefone"])) return;
+    if (!erros.cli_cnpj && p.CNPJ && !Clientes_conferirCnpj_(id)) return;
+    CadUI_salvando_(true);
+    CadUI_chamar_(novo ? "clientesCriar" : "clientesAtualizar", novo ? [p] : [id, p], function (res) {
+      CadUI_painelSujo_(false);
+      var novoId = id || (res.item && res.item.ID) || "";
+      CadUI_aviso_((novo ? "Cliente " + p.RAZAO_SOCIAL.toUpperCase() + " cadastrado." + (res.unidade ? " Unidade principal criada." : "") : "Cliente " + p.RAZAO_SOCIAL.toUpperCase() + " atualizado."), "ok");
+      CadTela_carregar_("clientes", function () {
+        var it = novoId && CadTela_item_("clientes", novoId);
+        if (it) Clientes_detalhe_(it); else CadUI_painelFechar_();
+      });
+    }, function (msg) {
+      CadUI_salvando_(false);
+      if (/cnpj/i.test(msg)) CadUI_erroCampo_("cli_cnpj", CadUI_esc_(msg));
+      else if (/e-?mail/i.test(msg)) CadUI_erroCampo_("cli_email", CadUI_esc_(msg));
+      else if (/raz[aã]o social/i.test(msg)) CadUI_erroCampo_("cli_razao_social", CadUI_esc_(msg));
+      CadUI_aviso_(msg, "erro");
+    }, novo ? "Aguarde, cadastrando o cliente…" : "Aguarde, salvando as alterações…");
   }
 
-  function clientesInativar_(id) {
-    if (!SESSION || !confirm("Deseja realmente inativar este cliente?")) return;
+  // Compatibilidade: outras telas (Vínculos antigo, busca rápida, celular) chamam estes nomes.
+  function clientesPesquisar_() { CadTela_buscarDoCampo_("clientes"); }
+  function clientesEditar_(id) { if (CADUI.telas.clientes && CadTela_item_("clientes", id)) Clientes_formulario_(id); else { CADUI.irPara = { chave: "clientes", novo: function () { Clientes_formulario_(id); } }; abrir("clientes"); } }
+  function clientesNovo_() { Clientes_formulario_(null); }
 
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o cliente. Tente de novo.");
-        alert(res.message || "Cliente inativado com sucesso.");
-        clientesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao inativar cliente:", err);
-        alert("Não foi possível inativar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .clientesInativar(SESSION, id);
-  }
-
-  function clientesReativar_(id) {
-    if (!SESSION || !confirm("Deseja realmente reativar este cliente?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o cliente. Tente de novo.");
-        alert(res.message || "Cliente reativado com sucesso.");
-        clientesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao reativar cliente:", err);
-        alert("Não foi possível reativar o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .clientesReativar(SESSION, id);
-  }
-
-  function clientesExcluir_(id) {
-    if (!SESSION || !confirm("Excluir este cliente? O cadastro sai da lista e a exclusão não pode ser desfeita por aqui. Para tirar de uso sem perder o histórico, use Inativar.")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o cliente. Tente de novo.");
-        if (CLIENTES_STATE.editingId === id) {
-          CLIENTES_STATE.editingId = "";
-          clientesNovo_();
-        }
-        alert(res.message || "Cliente excluído com sucesso.");
-        clientesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao excluir cliente:", err);
-        alert("Não foi possível excluir o cliente. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .clientesExcluir(SESSION, id);
-  }
-
-  // ==========================================
-  // MÓDULO: UNIDADES
-  // ==========================================
+  // =====================================================================
+  // UNIDADES
+  // =====================================================================
   function renderUnidadesModulo_() {
-    var div = document.getElementById("conteudo");
-    if (!div) return;
-
-    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
-    var styleForm = isCliente ? "display:none;" : "";
-    var styleGrid = isCliente ? "grid-template-columns: 1fr;" : "";
-    var styleAcoes = isCliente ? "display:none;" : "";
-
-    div.innerHTML =
-      '<div class="module-shell">' +
-        '<div class="module-header">' +
-          '<div class="module-header-left">' +
-            '<h2 class="content-title">Unidades</h2>' +
-            '<p class="content-subtitle">Cadastro de unidades vinculadas aos clientes.</p>' +
-          '</div>' +
-          '<div class="module-header-right" style="' + styleForm + '; display:flex; gap:15px; align-items:center;">' +
-            '<div style="display:flex; gap:5px;">' +
-              '<input id="unidadesPesquisa" class="toolbar-search" type="text" placeholder="Nome ou CNPJ..." onkeydown="if(event.key === \'Enter\') unidadesPesquisar_()">' +
-              '<button class="btn-secondary" type="button" onclick="unidadesPesquisar_()">Pesquisar</button>' +
-            '</div>' +
-            '<button class="btn-primary" type="button" onclick="unidadesNovo_()">+ Nova unidade</button>' +
-          '</div>' +
-        '</div>' +
-
-        '<div class="module-grid" style="' + styleGrid + '">' +
-          '<div class="form-card" style="' + styleForm + '">' +
-            '<h3 class="section-card-title" id="unidadesFormTitulo">Nova unidade</h3>' +
-            '<div class="form-grid">' +
-              '<div class="full" style="margin-bottom:10px;">' +
-                '<label for="uni_cliente_id_busca">Cliente (empresa já cadastrada)</label>' +
-                SGO_htmlBuscaClienteLike_("uni_cliente_id", "Digite o nome ou CNPJ do cliente e clique na sugestão...") +
-              '</div>' +
-              '<div>' +
-                '<label for="uni_cnpj_unidade">CNPJ da unidade</label>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; width:100%;">' +
-                  '<input id="uni_cnpj_unidade" type="text" placeholder="Digite o CNPJ" style="flex:1 1 160px; min-width:0;" onkeydown="if(event.key === \'Enter\'){event.preventDefault(); buscarCnpjUnidade_();}">' +
-                  '<button class="btn-secondary" type="button" style="white-space:nowrap" onclick="buscarCnpjUnidade_()" title="Busca nome e endereço na Receita Federal">Preencher pela Receita</button>' +
-                '</div>' +
-                '<div class="helper-text" style="margin-top:4px">Na unidade principal, pode ser o mesmo CNPJ do cliente.</div>' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="uni_nome_unidade">Nome da unidade</label>' +
-                '<input id="uni_nome_unidade" type="text" placeholder="Digite o nome da unidade">' +
-              '</div>' +
-              '<div id="uni_status_wrap" hidden>' +
-                '<label for="uni_status">Situação</label>' +
-                '<input id="uni_status" type="text" value="ATIVO" disabled>' +
-              '</div>' +
-              '<div class="full">' +
-                '<label for="uni_endereco">Endereço</label>' +
-                '<input id="uni_endereco" type="text" placeholder="Rua, número, bairro, complemento">' +
-              '</div>' +
-              '<div>' +
-                '<label for="uni_cidade">Cidade</label>' +
-                '<input id="uni_cidade" type="text" placeholder="Cidade">' +
-              '</div>' +
-              '<div>' +
-                '<label for="uni_uf">UF</label>' +
-                '<input id="uni_uf" type="text" maxlength="2" placeholder="UF">' +
-              '</div>' +
-              '<div>' +
-                '<label for="uni_responsavel">Responsável</label>' +
-                '<input id="uni_responsavel" type="text" placeholder="Responsável local">' +
-              '</div>' +
-              '<div>' +
-                '<label for="uni_telefone">Telefone</label>' +
-                '<input id="uni_telefone" type="text" placeholder="Telefone da unidade">' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-actions">' +
-              '<button class="btn-primary" type="button" onclick="unidadesSalvar_()">Salvar</button>' +
-              '<button class="btn-secondary" type="button" onclick="unidadesNovo_()">Limpar</button>' +
-            '</div>' +
-            '<div class="helper-text" id="unidadesHelper">Preencha os dados da unidade e clique em salvar.</div>' +
-          '</div>' +
-
-          '<div class="list-card">' +
-            '<div class="table-wrap">' +
-              '<table class="table">' +
-                '<thead>' +
-                  '<tr>' +
-                    '<th>Cliente</th>' +
-                    '<th>Unidade</th>' +
-                    '<th>CNPJ</th>' +
-                    '<th>Cidade</th>' +
-                    '<th>UF</th>' +
-                    '<th>Responsável</th>' +
-                    '<th>Telefone</th>' +
-                    '<th>Situação</th>' +
-                    '<th style="' + styleAcoes + '">Ações</th>' +
-                  '</tr>' +
-                '</thead>' +
-                '<tbody id="unidadesTabelaBody">' +
-                  '<tr><td colspan="9" class="empty-state">Carregando unidades…</td></tr>' +
-                '</tbody>' +
-              '</table>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    unidadesLimparFormulario_();
-
-    if (!isCliente) {
-      carregarClientesAtivosParaUnidades_();
-    }
-    unidadesPesquisar_();
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    CadTela_montar_({
+      chave: "unidades", titulo: "Unidades", nomeItens: ["unidade", "unidades"],
+      subtitulo: cliente ? "Os locais da sua empresa atendidos pela Metrolabs." : "Locais atendidos de cada cliente (matriz, filiais, anexos), com os equipamentos e documentos de cada um.",
+      idBusca: "unidadesPesquisa", buscaPlaceholder: "Buscar por unidade, cliente, CNPJ, cidade ou responsável",
+      ajuda: cliente
+        ? "<p>Aqui aparecem só as unidades da sua empresa. Para corrigir um dado, fale com a Metrolabs.</p>"
+        : "<p>A unidade é o local onde os equipamentos ficam. Todo equipamento e todo documento pertencem a uma unidade, que pertence a um cliente.</p>" +
+          "<ul><li><b>Nova unidade:</b> escolha o cliente, digite o CNPJ do local (na unidade principal pode ser o mesmo do cliente) e use <i>Preencher pela Receita</i>.</li>" +
+          "<li><b>Vínculo pendente</b> = unidade ativa cujo cliente está inativo ou não existe: não recebe atendimento até a gestão corrigir em Vínculos.</li>" +
+          "<li><b>Cadastro incompleto</b> = falta endereço, cidade ou UF.</li>" +
+          "<li>Levar a unidade para outro cliente é feito em <b>Vínculos</b> (gestão): os equipamentos e os documentos acompanham, com prévia e auditoria.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "ativos", rotulo: "Ativas", tom: "tom-ok", filtro: function (u) { return u.STATUS === "ATIVO"; } },
+        { id: "inativos", rotulo: "Inativas", filtro: function (u) { return u.STATUS !== "ATIVO"; } },
+        { id: "vinculo", rotulo: "Vínculo pendente", tom: "tom-perigo", filtro: function (u) { return (u.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0; } },
+        { id: "incompleto", rotulo: "Cadastro incompleto", tom: "tom-alerta", filtro: function (u) { return (u.PENDENCIAS || []).indexOf("incompleto") >= 0; } },
+        { id: "docs", rotulo: "Documento vencido ou vencendo", tom: "tom-perigo", filtro: function (u) { return (u.PENDENCIAS || []).some(function (p) { return p === "doc_vencido" || p === "doc_vencendo"; }); } }
+      ],
+      filtros: [
+        { id: "cliente", rotulo: "Todos os clientes", opcoes: function (its) { return CadTela_opcoesDe_(its, "CLIENTE_ID", "CLIENTE_NOME"); }, aplicar: function (u, v) { return String(u.CLIENTE_ID) === v; } },
+        { id: "uf", rotulo: "Todas as UF", opcoes: function (its) { return CadTela_opcoesDe_(its, "UF", "UF"); }, aplicar: function (u, v) { return String(u.UF || "") === v; } }
+      ],
+      texto: function (u) { return [u.NOME_UNIDADE, u.CLIENTE_NOME, u.CNPJ_UNIDADE, CadUI_cnpj_(u.CNPJ_UNIDADE), u.CIDADE, u.UF, u.RESPONSAVEL, u.ENDERECO, u.TELEFONE].join(" "); },
+      acao: cliente ? null : { texto: "Nova unidade", fn: function () { Unidades_formulario_(null); } },
+      vazioTitulo: "Nenhuma unidade cadastrada ainda.", vazio: cliente ? "Fale com a Metrolabs para cadastrar as unidades da sua empresa." : "Clique em Nova unidade, ou crie a unidade principal pelo cadastro do cliente.",
+      colunas: [
+        { titulo: "Unidade", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(u.NOME_UNIDADE || "Unidade sem nome") + '</div><div class="cadx-sub">' + CadUI_esc_(u.ENDERECO || "Sem endereço") + "</div>" + CadUI_chips_(u); } },
+        { titulo: "Cliente", html: function (u) { return CadUI_esc_(u.CLIENTE_NOME || "Sem cliente") + (u.CLIENTE_STATUS && u.CLIENTE_STATUS !== "ATIVO" ? '<div class="cadx-sub">Cliente inativo</div>' : ""); } },
+        { titulo: "CNPJ", html: function (u) { return u.CNPJ_UNIDADE ? '<span class="cadx-mono">' + CadUI_esc_(CadUI_cnpj_(u.CNPJ_UNIDADE)) + "</span>" : '<span class="cadx-sub">Sem CNPJ</span>'; } },
+        { titulo: "Cidade/UF", html: function (u) { return CadUI_esc_([u.CIDADE, u.UF].filter(Boolean).join("/")) || '<span class="cadx-sub">Não informada</span>'; } },
+        { titulo: "Equipamentos", classe: "cadx-col-num", html: function (u) { return CadUI_num_(u.QTD_EQUIPAMENTOS); } },
+        { titulo: "Documentos", classe: "cadx-col-num", html: function (u) { return CadUI_num_(u.QTD_DOCUMENTOS); } },
+        { titulo: "Situação", html: function (u) { return CadUI_selo_(u.STATUS); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (u) { return CadTela_botoesLinha_("unidades", u); } }
+      ],
+      cartao: function (u) {
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(u.NOME_UNIDADE) + '</div><div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME) + "</div></div>" + CadUI_selo_(u.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>' + CadUI_esc_([u.CIDADE, u.UF].filter(Boolean).join("/") || "Sem cidade") + "</span><span>" + CadUI_num_(u.QTD_EQUIPAMENTOS) + " equip.</span><span>" + CadUI_num_(u.QTD_DOCUMENTOS) + " doc.</span></div>" + CadUI_chips_(u);
+      },
+      editar: cliente ? null : function (u) { Unidades_formulario_(u.ID); },
+      mais: cliente ? null : function (u) { return Unidades_menu_(u, gestao); },
+      abrir: function (u, aba) { Unidades_detalhe_(u, aba); },
+      carregar: function (ok, erro) {
+        CadUI_chamar_("cadastrosPainel", ["unidades"], function (res) { ok(res.items || []); setTimeout(function () { CadTela_cumprirIrPara_("unidades"); }, 0); }, erro);
+      }
+    });
   }
 
-  function carregarClientesAtivosParaUnidades_() {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) {
-          alert((res && res.message) ? res.message : "Não foi possível carregar os clientes ativos. Tente de novo.");
-          return;
-        }
-        UNIDADES_STATE.clientes = Array.isArray(res.items) ? res.items : [];
-        preencherComboClientesUnidades_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao carregar clientes ativos para unidades:", err);
-        alert("Não foi possível carregar os clientes. Verifique a conexão e tente de novo. Nada foi alterado.");
-      })
-      .unidadesListarClientesAtivos(SESSION);
+  /** Opções de filtro a partir dos próprios itens (ex.: clientes que aparecem na lista). */
+  function CadTela_opcoesDe_(itens, campoValor, campoTexto) {
+    var vistos = {}, out = [];
+    itens.forEach(function (it) {
+      var v = String(it[campoValor] || ""), t = String(it[campoTexto] || "");
+      if (!v || vistos[v]) return;
+      vistos[v] = 1; out.push([v, t || v]);
+    });
+    return out.sort(function (a, b) { return a[1].localeCompare(b[1], "pt-BR"); });
   }
 
-  function preencherComboClientesUnidades_() {
-    SGO_montarBuscaClienteLike_("uni_cliente_id", UNIDADES_STATE.clientes || []);
+  function Unidades_menu_(u, gestao) {
+    var ativo = u.STATUS === "ATIVO";
+    return [
+      { texto: "Ver detalhes e vínculos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("unidades", u.ID); } },
+      { texto: "Novo equipamento nesta unidade", icone: "fa-industry", desabilitado: !ativo, nota: ativo ? "" : "Reative a unidade para cadastrar equipamento.", acao: function () { if (typeof Equipamentos_novoPara_ === "function") Equipamentos_novoPara_(u.CLIENTE_ID, u.CLIENTE_NOME, u.ID); } },
+      { texto: "Transferir para outro cliente (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Gestor, Diretoria ou Administrador).", acao: function () { CadTela_abrirVinculos_("UNIDADE", u.ID); } },
+      "-",
+      ativo
+        ? { texto: "Inativar unidade", icone: "fa-ban", risco: true, acao: function () { Unidades_inativar_(u); } }
+        : { texto: "Reativar unidade", icone: "fa-rotate-left", acao: function () { Unidades_reativar_(u); } },
+      { texto: "Excluir unidade", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Unidades_excluir_(u); } }
+    ];
   }
 
-  function unidadesPesquisar_() {
-    var el = document.getElementById("unidadesPesquisa");
-    UNIDADES_STATE.filtro = el ? String(el.value || "").trim() : "";
-    if (!SESSION) return;
-
-    var tbody = document.getElementById("unidadesTabelaBody");
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível pesquisar. Tente de novo.</td></tr>';
-          return;
-        }
-        renderTabelaUnidades_(Array.isArray(res.items) ? res.items : []);
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao pesquisar unidades:", err);
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível buscar as unidades. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
-      })
-      .unidadesPesquisar(SESSION, UNIDADES_STATE.filtro);
-  }
-
-  function renderTabelaUnidades_(items) {
-    var tbody = document.getElementById("unidadesTabelaBody");
-    if (!tbody) return;
-
-    var isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
-    var styleAcoes = isCliente ? "display:none;" : "";
-
-    if (!items || !items.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">' + (UNIDADES_STATE.filtro ? "Nenhuma unidade encontrada para esta busca. Confira o nome ou o CNPJ, ou limpe a pesquisa." : "Nenhuma unidade cadastrada ainda.") + '</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map(function(item) {
-      var id = escapeHtml_(item.ID);
-      var status = String(item.STATUS || "").toUpperCase();
-
-      var acoesHtml = isCliente ? "" :
-        '<td style="' + styleAcoes + '">' +
-          '<div class="table-actions">' +
-            '<button class="btn-info" type="button" onclick="unidadesEditar_(\'' + id + '\')">Editar</button>' +
-            (
-              status === "ATIVO"
-                ? '<button class="btn-warning" type="button" onclick="unidadesInativar_(\'' + id + '\')">Inativar</button>'
-                : '<button class="btn-success" type="button" onclick="unidadesReativar_(\'' + id + '\')">Reativar</button>'
-            ) +
-            (['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? '<button class="btn-danger" type="button" onclick="unidadesExcluir_(\'' + id + '\')">Excluir</button>' : '') +
-          '</div>' +
-        '</td>';
-
-      return (
-        '<tr>' +
-          '<td>' + escapeHtml_(item.CLIENTE_NOME) + '</td>' +
-          '<td>' + escapeHtml_(item.NOME_UNIDADE) + '</td>' +
-          '<td>' + formatarCnpjFront_(item.CNPJ_UNIDADE) + '</td>' +
-          '<td>' + escapeHtml_(item.CIDADE) + '</td>' +
-          '<td>' + escapeHtml_(item.UF) + '</td>' +
-          '<td>' + escapeHtml_(item.RESPONSAVEL) + '</td>' +
-          '<td>' + escapeHtml_(item.TELEFONE) + '</td>' +
-          '<td>' + obterBadgeStatusHtml_(status) + '</td>' +
-          acoesHtml +
-        '</tr>'
-      );
-    }).join("");
-  }
-
-  function unidadesNovo_() {
-    UNIDADES_STATE.editingId = "";
-    unidadesLimparFormulario_();
-
-    var titulo = document.getElementById("unidadesFormTitulo");
-    var helper = document.getElementById("unidadesHelper");
-    if (titulo) titulo.innerText = "Nova unidade";
-    var stwU = document.getElementById("uni_status_wrap"); if (stwU) stwU.hidden = true;
-    if (helper) helper.innerText = "Preencha os dados da unidade e clique em salvar.";
-
-    if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
-      carregarClientesAtivosParaUnidades_();
-    }
-  }
-
-  function unidadesLimparFormulario_() {
-    SGO_limparBuscaClienteLike_("uni_cliente_id");
-    setValue_("uni_nome_unidade", "");
-    setValue_("uni_cnpj_unidade", "");
-    setValue_("uni_endereco", "");
-    setValue_("uni_cidade", "");
-    setValue_("uni_uf", "");
-    setValue_("uni_responsavel", "");
-    setValue_("uni_telefone", "");
-    setValue_("uni_status", "ATIVO");
-  }
-
-  function unidadesLerFormulario_() {
-    return {
-      CLIENTE_ID: getValue_("uni_cliente_id"),
-      NOME_UNIDADE: getValue_("uni_nome_unidade"),
-      CNPJ_UNIDADE: getValue_("uni_cnpj_unidade"),
-      ENDERECO: getValue_("uni_endereco"),
-      CIDADE: getValue_("uni_cidade"),
-      UF: getValue_("uni_uf"),
-      RESPONSAVEL: getValue_("uni_responsavel"),
-      TELEFONE: getValue_("uni_telefone")
+  function Unidades_detalhe_(u, aba) {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    var det = null;
+    var cfg = {
+      chave: "unidades", id: u.ID, titulo: u.NOME_UNIDADE || "Unidade",
+      sub: CadUI_esc_((u.CLIENTE_NOME || "Sem cliente") + (u.CNPJ_UNIDADE ? " · CNPJ " + CadUI_cnpj_(u.CNPJ_UNIDADE) : "")),
+      seloHtml: CadUI_selo_(u.STATUS) + CadUI_chips_(u).replace('<div class="cadx-chips">', "").replace(/<\/div>$/, ""),
+      abas: [{ id: "dados", rotulo: "Dados" }, { id: "vinculos", rotulo: "Equipamentos (" + CadUI_num_(u.QTD_EQUIPAMENTOS) + ")" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(u.QTD_DOCUMENTOS) + ")" }],
+      aba: aba || "dados",
+      corpo: function (a) {
+        if (a !== "dados") return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(5) + "</div>";
+        var faixas = "";
+        if ((u.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> O cliente desta unidade está inativo ou não existe; ela não recebe atendimento. ' + (gestao ? "Corrija em Mais › Transferir para outro cliente, ou reative o cliente." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
+        if ((u.PENDENCIAS || []).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((u.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
+        return faixas +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Unidade</h4>' + CadUI_dados_([["Nome", u.NOME_UNIDADE], ["Cliente", u.CLIENTE_NOME], ["CNPJ", u.CNPJ_UNIDADE ? CadUI_cnpj_(u.CNPJ_UNIDADE) : ""]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Endereço</h4>' + CadUI_dados_([["Endereço", u.ENDERECO], ["Cidade", u.CIDADE], ["UF", u.UF]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["Responsável", u.RESPONSAVEL], ["Telefone", CadUI_tel_(u.TELEFONE)], ["Cadastrada em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
+      },
+      depois: function (p, a) {
+        var mais = p.querySelector("#cadxPainelMais");
+        if (mais) mais.onclick = function () { CadUI_menu_(mais, Unidades_menu_(u, gestao).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes e vínculos"; })); };
+        if (a === "dados") return;
+        var desenhar = function () {
+          var corpo = p.querySelector("#cadxPainelCorpo");
+          if (!corpo || !det) return;
+          if (a === "documentos") { corpo.innerHTML = CadTela_htmlDocumentos_(det.documentos, "Nenhum documento desta unidade."); return; }
+          var cli = det.cliente;
+          corpo.innerHTML = '<section class="cadx-sec"><h4 class="cadx-sec-tit">Cliente</h4>' + (cli ? '<div class="cadx-no"><div class="cadx-no-texto"><i class="fas fa-building" aria-hidden="true"></i><b>' + CadUI_esc_(cli.NOME) + "</b> " + CadUI_selo_(cli.STATUS) + '<div class="cadx-sub">' + CadUI_esc_(cli.CNPJ ? CadUI_cnpj_(cli.CNPJ) : "Sem CNPJ") + "</div></div>" + (cliente ? "" : '<button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'clientes\',\'' + CadUI_esc_(cli.ID) + '\')">Abrir</button>') + "</div>" : '<div class="cadx-faixa bc-faixa tom-perigo">Sem cliente ligado.</div>') + "</section>" +
+            '<section class="cadx-sec"><h4 class="cadx-sec-tit"><span>Equipamentos desta unidade</span>' + (!cliente && u.STATUS === "ATIVO" ? '<button type="button" class="cadx-btn" onclick="Equipamentos_novoPara_(\'' + CadUI_esc_(u.CLIENTE_ID) + "','" + CadUI_esc_(String(u.CLIENTE_NOME || "").replace(/'/g, "")) + "','" + CadUI_esc_(u.ID) + '\')">Novo equipamento</button>' : "") + "</h4>" +
+            ((det.equipamentos || []).length ? '<ul class="cadx-arvore">' + det.equipamentos.map(function (e) {
+              return '<li><div class="cadx-no"><div class="cadx-no-texto"><i class="fas fa-industry" aria-hidden="true"></i><b>' + CadUI_esc_(e.TAG || "Sem TAG") + "</b> · " + CadUI_esc_(e.TIPO) + " " + (e.STATUS !== "ATIVO" ? CadUI_selo_(e.STATUS) : "") + '<div class="cadx-sub">' + CadUI_esc_(e.SERIE ? "Série " + e.SERIE : "Sem número de série") + '</div></div><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'equipamentos\',\'' + CadUI_esc_(e.ID) + '\')">Abrir</button></div></li>';
+            }).join("") + "</ul>" : '<div class="cadx-vazio bc-vazio">Nenhum equipamento nesta unidade.</div>') + "</section>";
+        };
+        if (det) { desenhar(); return; }
+        CadTela_detalheRemoto_("unidades", u.ID, function (res) { det = res; if (CADUI.painel === cfg) desenhar(); });
+      },
+      rodape: cliente ? "" :
+        '<div class="cadx-rodape-esq"><button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button></div>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Unidades_formulario_(\'' + CadUI_esc_(u.ID) + '\')">Editar</button>'
     };
+    CadUI_painelAbrir_(cfg);
   }
 
-  function unidadesSalvar_() {
-    if (!SESSION) return;
-
-    var payload = unidadesLerFormulario_();
-
-    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
-    if (!payload.NOME_UNIDADE) return alert("Informe o nome da unidade.");
-    payload.UF = String(payload.UF || "").trim().toUpperCase();
-
-    if (UNIDADES_STATE.editingId) {
-      SGO_iniciarCarregamento_();
-      google.script.run
-        .withSuccessHandler(function(res) {
-          SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar a unidade. Tente de novo.");
-          alert(res.message || "Unidade atualizada com sucesso.");
-          UNIDADES_STATE.editingId = "";
-          unidadesNovo_();
-          unidadesPesquisar_();
-        })
-        .withFailureHandler(function(err) {
-          SGO_finalizarCarregamento_();
-          console.error("Falha ao atualizar unidade:", err);
-          alert("Não foi possível atualizar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-        })
-        .unidadesAtualizar(SESSION, UNIDADES_STATE.editingId, payload);
-      return;
-    }
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível cadastrar a unidade. Tente de novo.");
-        alert(res.message || "Unidade cadastrada com sucesso.");
-        unidadesNovo_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao criar unidade:", err);
-        alert("Não foi possível cadastrar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .unidadesCriar(SESSION, payload);
+  function Unidades_inativar_(u) {
+    CadTela_acaoRisco_({
+      titulo: "Inativar a unidade", botao: "Inativar unidade", fn: "unidadesInativar", id: u.ID,
+      texto: "<p>Inativar <b>" + CadUI_esc_(u.NOME_UNIDADE) + "</b> (" + CadUI_esc_(u.CLIENTE_NOME) + ")?</p><p>A unidade sai das listas de novos atendimentos. Equipamentos e documentos continuam guardados. Para voltar, use Reativar.</p>",
+      aoConcluir: function () { CadTela_recarregar_("unidades", u.ID); }
+    });
+  }
+  function Unidades_reativar_(u) {
+    CadTela_acaoRisco_({
+      titulo: "Reativar a unidade", botao: "Reativar unidade", risco: false, fn: "unidadesReativar", id: u.ID,
+      texto: "<p>Reativar <b>" + CadUI_esc_(u.NOME_UNIDADE) + "</b>? " + (u.CLIENTE_STATUS && u.CLIENTE_STATUS !== "ATIVO" ? "O cliente desta unidade está inativo: reative o cliente antes (Clientes › Mais › Reativar)." : "Ela volta às listas de atendimento.") + "</p>",
+      aoConcluir: function () { CadTela_recarregar_("unidades", u.ID); }
+    });
+  }
+  function Unidades_excluir_(u) {
+    var ligados = (u.QTD_EQUIPAMENTOS || 0) + (u.QTD_DOCUMENTOS || 0);
+    CadTela_acaoRisco_({
+      titulo: "Excluir a unidade", botao: "Excluir definitivamente", fn: "unidadesExcluir", id: u.ID,
+      texto: "<p>Excluir <b>" + CadUI_esc_(u.NOME_UNIDADE) + "</b>? A exclusão não pode ser desfeita.</p>" +
+        (ligados ? '<div class="cadx-faixa bc-faixa tom-alerta">Esta unidade tem ' + CadUI_num_(u.QTD_EQUIPAMENTOS) + " equipamento(s) e " + CadUI_num_(u.QTD_DOCUMENTOS) + " documento(s) ligados: o sistema não vai excluir. Use Inativar, ou transfira em Vínculos.</div>" : "<p>Para tirar de uso sem perder o histórico, use Inativar.</p>"),
+      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("unidades"); }
+    });
   }
 
-  function unidadesEditar_(id) {
-    if (!SESSION) return;
+  /** Nova unidade já com o cliente escolhido (vindo de Clientes). */
+  function Unidades_novaPara_(clienteId, clienteNome) {
+    if (CADUI.telas.unidades && document.getElementById("cadxTela_unidades")) { Unidades_formulario_(null, { id: clienteId, nome: clienteNome }); return; }
+    CADUI.irPara = { chave: "unidades", novo: function () { Unidades_formulario_(null, { id: clienteId, nome: clienteNome }); } };
+    abrir("unidades");
+  }
 
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success || !res.item) return alert("Unidade não encontrada.");
+  var UNIDADES_UFS = ["AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO"];
 
-        var item = res.item;
-        UNIDADES_STATE.editingId = String(item.ID || "");
-
-        if (USER_CONTEXT && USER_CONTEXT.perfil !== "CLIENTE") {
-          carregarClientesAtivosParaUnidades_();
+  function Unidades_formulario_(id, clientePre) {
+    if (CadUI_ehCliente_()) return;
+    var u = id ? CadTela_item_("unidades", id) : null;
+    var novo = !u;
+    u = u || {};
+    var gestao = CadUI_gestao_();
+    var campoCliente = novo
+      ? CadUI_campo_({ id: "uni_cliente_id", paraId: "uni_cliente_id_busca", rotulo: "Cliente", obrigatorio: true, inteiro: true, html: SGO_htmlBuscaClienteLike_("uni_cliente_id", "Digite o nome ou o CNPJ do cliente e escolha na lista"), dica: "Só aparecem clientes ativos." })
+      : CadUI_campo_({ id: "uni_cliente_fixo", rotulo: "Cliente", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_(u.CLIENTE_NOME || "Sem cliente") + "</div>",
+          dica: gestao ? 'Para levar a unidade a outro cliente use <button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);CadTela_abrirVinculos_(\'UNIDADE\',\'' + CadUI_esc_(id) + '\')">Vínculos › Transferir</button>: equipamentos e documentos acompanham, com prévia e auditoria.' : "Trocar o cliente é feito pela gestão, na tela Vínculos." });
+    var cfg = {
+      chave: "unidades", id: id || "", titulo: novo ? "Nova unidade" : "Editar unidade",
+      sub: novo ? "Local atendido de um cliente: matriz, filial ou anexo." : CadUI_esc_(u.NOME_UNIDADE),
+      corpo: function () {
+        return CadUI_secao_("Cliente", [campoCliente]) +
+          CadUI_secao_("Identificação", [
+            CadUI_campo_({ id: "uni_cnpj_unidade", rotulo: "CNPJ da unidade", inteiro: true, dica: "Na unidade principal pode ser o mesmo CNPJ do cliente.",
+              html: '<div class="cadx-linha-campo"><input id="uni_cnpj_unidade" type="text" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" value="' + CadUI_esc_(u.CNPJ_UNIDADE ? CadUI_cnpj_(u.CNPJ_UNIDADE) : "") + '"><button type="button" class="cadx-btn cadx-btn-grande" id="uni_receita">Preencher pela Receita</button></div>' }),
+            CadUI_campo_({ id: "uni_nome_unidade", rotulo: "Nome da unidade", obrigatorio: true, inteiro: true, valor: u.NOME_UNIDADE, placeholder: "Ex.: Hospital Modelo - Anexo Norte" })
+          ]) +
+          CadUI_secao_("Endereço", [
+            CadUI_campo_({ id: "uni_endereco", rotulo: "Endereço", inteiro: true, valor: u.ENDERECO, placeholder: "Rua, número, bairro, complemento" }),
+            CadUI_campo_({ id: "uni_cidade", rotulo: "Cidade", valor: u.CIDADE }),
+            CadUI_campo_({ id: "uni_uf", rotulo: "UF", tipo: "select", valor: u.UF, opcoes: [["", "Escolha a UF"]].concat(UNIDADES_UFS.map(function (x) { return [x, x]; })) })
+          ]) +
+          CadUI_secao_("Contato", [
+            CadUI_campo_({ id: "uni_responsavel", rotulo: "Responsável no local", valor: u.RESPONSAVEL }),
+            CadUI_campo_({ id: "uni_telefone", rotulo: "Telefone", tipo: "tel", valor: CadUI_tel_(u.TELEFONE), placeholder: "(19) 3333-0000", attrs: ' inputmode="tel"' })
+          ]) +
+          '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios.</p>';
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Unidades_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Cadastrar unidade" : "Salvar alterações"),
+      depois: function (p) {
+        CadUI_ligarFormulario_(p);
+        if (novo) {
+          CadUI_chamar_("unidadesListarClientesAtivos", [], function (res) {
+            SGO_montarBuscaClienteLike_("uni_cliente_id", (res.items || []).map(function (c) { return Object.assign({}, c, { CNPJ: CadUI_cnpj_(c.CNPJ) }); }), function () { CadUI_erroCampo_("uni_cliente_id", ""); });
+            if (clientePre && clientePre.id) SGO_prefillBuscaClienteLike_("uni_cliente_id", clientePre.id, clientePre.nome || "");
+          }, function (msg) { CadUI_erroCampo_("uni_cliente_id", "A lista de clientes não carregou: " + CadUI_esc_(msg)); });
         }
+        var cnpj = p.querySelector("#uni_cnpj_unidade");
+        cnpj.addEventListener("input", function () { cnpj.value = Clientes_mascaraCnpj_(cnpj.value); Unidades_conferirCnpj_(id); });
+        p.querySelector("#uni_receita").onclick = function () { CadUI_preencherReceita_("uni_cnpj_unidade", { fantasia: "uni_nome_unidade", endereco: "uni_endereco", cidade: "uni_cidade", uf: "uni_uf", telefone: "uni_telefone" }, "uni_receita"); };
+        p.querySelector("#cadxSalvar").onclick = function () { Unidades_salvar_(id); };
+      }
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+  function Unidades_voltarDetalhe_(id) { CadUI_painelSujo_(false); var u = CadTela_item_("unidades", id); if (u) Unidades_detalhe_(u); else CadUI_painelFechar_(); }
 
-        SGO_prefillBuscaClienteLike_("uni_cliente_id", item.CLIENTE_ID || "", item.CLIENTE_NOME || "");
-        setValue_("uni_nome_unidade", item.NOME_UNIDADE || "");
-        setValue_("uni_cnpj_unidade", item.CNPJ_UNIDADE || "");
-        setValue_("uni_endereco", item.ENDERECO || "");
-        setValue_("uni_cidade", item.CIDADE || "");
-        setValue_("uni_uf", item.UF || "");
-        setValue_("uni_responsavel", item.RESPONSAVEL || "");
-        setValue_("uni_telefone", item.TELEFONE || "");
-        setValue_("uni_status", item.STATUS || "ATIVO");
-        var stwE = document.getElementById("uni_status_wrap"); if (stwE) stwE.hidden = false;
-
-        var titulo = document.getElementById("unidadesFormTitulo");
-        var helper = document.getElementById("unidadesHelper");
-        if (titulo) titulo.innerText = "Editar unidade";
-        if (helper) helper.innerText = "Editando unidade selecionada. Após ajustar os dados, clique em salvar.";
-
-        focusIfExists_("uni_nome_unidade");
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao buscar unidade:", err);
-        alert("Não foi possível buscar a unidade. Verifique a conexão e tente de novo. Nada foi alterado.");
-      })
-      .unidadesObter(SESSION, id);
+  function Unidades_conferirCnpj_(id) {
+    var d = CadUI_digitos_(getValue_("uni_cnpj_unidade"));
+    if (d.length !== 14) { CadUI_erroCampo_("uni_cnpj_unidade", ""); return true; }
+    if (!CadUI_cnpjValido_(d)) { CadUI_erroCampo_("uni_cnpj_unidade", "CNPJ inválido: confira os números."); return false; }
+    var st = CADUI.telas.unidades;
+    var outra = st && st.itens.filter(function (x) { return CadUI_digitos_(x.CNPJ_UNIDADE) === d && String(x.ID) !== String(id || ""); })[0];
+    if (outra) {
+      CadUI_erroCampo_("uni_cnpj_unidade", "Já existe unidade com este CNPJ: " + CadUI_esc_(outra.NOME_UNIDADE) + " (cliente " + CadUI_esc_(outra.CLIENTE_NOME || "sem cliente") + '). <button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);CadTela_abrirItem_(\'unidades\',\'' + CadUI_esc_(outra.ID) + '\')">Abrir a unidade existente</button>');
+      return false;
+    }
+    CadUI_erroCampo_("uni_cnpj_unidade", "");
+    return true;
   }
 
-  function unidadesInativar_(id) {
-    if (!SESSION || !confirm("Deseja realmente inativar esta unidade?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar a unidade. Tente de novo.");
-        alert(res.message || "Unidade inativada com sucesso.");
-        unidadesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao inativar unidade:", err);
-        alert("Não foi possível inativar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .unidadesInativar(SESSION, id);
+  function Unidades_salvar_(id) {
+    var novo = !id;
+    var p = {
+      NOME_UNIDADE: getValue_("uni_nome_unidade"), CNPJ_UNIDADE: CadUI_digitos_(getValue_("uni_cnpj_unidade")), ENDERECO: getValue_("uni_endereco"),
+      CIDADE: getValue_("uni_cidade"), UF: getValue_("uni_uf"), RESPONSAVEL: getValue_("uni_responsavel"), TELEFONE: CadUI_digitos_(getValue_("uni_telefone"))
+    };
+    if (novo) p.CLIENTE_ID = getValue_("uni_cliente_id");
+    else { var atual = CadTela_item_("unidades", id); if (atual) p.CLIENTE_ID = atual.CLIENTE_ID; }
+    var erros = {};
+    if (novo && !p.CLIENTE_ID) erros.uni_cliente_id = "Escolha o cliente na lista (digite parte do nome ou do CNPJ e clique na sugestão).";
+    if (!p.NOME_UNIDADE) erros.uni_nome_unidade = "Informe o nome da unidade.";
+    if (p.CNPJ_UNIDADE && (p.CNPJ_UNIDADE.length !== 14 || !CadUI_cnpjValido_(p.CNPJ_UNIDADE))) erros.uni_cnpj_unidade = "CNPJ inválido: confira os 14 números.";
+    if (p.TELEFONE && (p.TELEFONE.length < 10 || p.TELEFONE.length > 11)) erros.uni_telefone = "Telefone com DDD: 10 ou 11 números.";
+    if (!CadUI_mostrarErros_(erros, ["uni_cliente_id", "uni_nome_unidade", "uni_cnpj_unidade", "uni_telefone"])) return;
+    if (p.CNPJ_UNIDADE && !Unidades_conferirCnpj_(id)) return;
+    CadUI_salvando_(true);
+    CadUI_chamar_(novo ? "unidadesCriar" : "unidadesAtualizar", novo ? [p] : [id, p], function (res) {
+      CadUI_painelSujo_(false);
+      var novoId = id || (res.item && res.item.ID) || "";
+      CadUI_aviso_("Unidade " + p.NOME_UNIDADE.toUpperCase() + (novo ? " cadastrada." : " atualizada."), "ok");
+      CadTela_carregar_("unidades", function () {
+        var it = novoId && CadTela_item_("unidades", novoId);
+        if (!it && novo) it = (CADUI.telas.unidades.itens || []).filter(function (x) { return x.CLIENTE_ID === p.CLIENTE_ID && String(x.NOME_UNIDADE).toUpperCase() === p.NOME_UNIDADE.toUpperCase(); })[0];
+        if (it) Unidades_detalhe_(it); else CadUI_painelFechar_();
+      });
+    }, function (msg) {
+      CadUI_salvando_(false);
+      if (/cnpj/i.test(msg)) CadUI_erroCampo_("uni_cnpj_unidade", CadUI_esc_(msg));
+      else if (/cliente/i.test(msg)) CadUI_erroCampo_(novo ? "uni_cliente_id" : "uni_cliente_fixo", CadUI_esc_(msg));
+      else if (/nome/i.test(msg)) CadUI_erroCampo_("uni_nome_unidade", CadUI_esc_(msg));
+      else if (/UF/.test(msg)) CadUI_erroCampo_("uni_uf", CadUI_esc_(msg));
+      CadUI_aviso_(msg, "erro");
+    }, novo ? "Aguarde, cadastrando a unidade…" : "Aguarde, salvando as alterações…");
   }
 
-  function unidadesReativar_(id) {
-    if (!SESSION || !confirm("Deseja realmente reativar esta unidade?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar a unidade. Tente de novo.");
-        alert(res.message || "Unidade reativada com sucesso.");
-        unidadesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao reativar unidade:", err);
-        alert("Não foi possível reativar a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .unidadesReativar(SESSION, id);
-  }
-
-  function unidadesExcluir_(id) {
-    if (!SESSION || !confirm("Excluir esta unidade? O cadastro sai da lista e a exclusão não pode ser desfeita por aqui. Para tirar de uso sem perder o histórico, use Inativar.")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function(res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir a unidade. Tente de novo.");
-        if (UNIDADES_STATE.editingId === id) unidadesNovo_();
-        alert(res.message || "Unidade excluída com sucesso.");
-        unidadesPesquisar_();
-      })
-      .withFailureHandler(function(err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao excluir unidade:", err);
-        alert("Não foi possível excluir a unidade. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .unidadesExcluir(SESSION, id);
-  }
-
-  // GARANTE DISPONIBILIDADE GLOBAL
-  window.buscarCnpjAutomacao_ = buscarCnpjAutomacao_;
-  window.buscarCnpjCliente_ = buscarCnpjCliente_;
-  window.buscarCnpjUnidade_ = buscarCnpjUnidade_;
-
-  window.renderClientesModulo_ = renderClientesModulo_;
-  window.clientesPesquisar_ = clientesPesquisar_;
-  window.renderTabelaClientes_ = renderTabelaClientes_;
-  window.clientesNovo_ = clientesNovo_;
-  window.clientesLimparFormulario_ = clientesLimparFormulario_;
-  window.clientesLerFormulario_ = clientesLerFormulario_;
-  window.clientesSalvar_ = clientesSalvar_;
-  window.clientesEditar_ = clientesEditar_;
-  window.clientesInativar_ = clientesInativar_;
-  window.clientesReativar_ = clientesReativar_;
-  window.clientesExcluir_ = clientesExcluir_;
-
-  window.renderUnidadesModulo_ = renderUnidadesModulo_;
-  window.carregarClientesAtivosParaUnidades_ = carregarClientesAtivosParaUnidades_;
-  window.preencherComboClientesUnidades_ = preencherComboClientesUnidades_;
-  window.unidadesPesquisar_ = unidadesPesquisar_;
-  window.renderTabelaUnidades_ = renderTabelaUnidades_;
-  window.unidadesNovo_ = unidadesNovo_;
-  window.unidadesLimparFormulario_ = unidadesLimparFormulario_;
-  window.unidadesLerFormulario_ = unidadesLerFormulario_;
-  window.unidadesSalvar_ = unidadesSalvar_;
-  window.unidadesEditar_ = unidadesEditar_;
-  window.unidadesInativar_ = unidadesInativar_;
-  window.unidadesReativar_ = unidadesReativar_;
-  window.unidadesExcluir_ = unidadesExcluir_;
+  // Compatibilidade com chamadas antigas (busca rápida, celular, Vínculos).
+  function unidadesPesquisar_() { CadTela_buscarDoCampo_("unidades"); }
+  function unidadesEditar_(id) { if (CADUI.telas.unidades && CadTela_item_("unidades", id)) Unidades_formulario_(id); else { CADUI.irPara = { chave: "unidades", novo: function () { Unidades_formulario_(id); } }; abrir("unidades"); } }
+  function unidadesNovo_() { Unidades_formulario_(null); }
+  function carregarClientesAtivosParaUnidades_() { /* 17/10: a lista de clientes carrega dentro do formulário (Unidades_formulario_) */ }
+  function buscarCnpjCliente_() { CadUI_preencherReceita_("cli_cnpj", { razao: "cli_razao_social", fantasia: "cli_nome_fantasia", endereco: "cli_endereco", telefone: "cli_telefone" }, "cli_receita"); }
+  function buscarCnpjUnidade_() { CadUI_preencherReceita_("uni_cnpj_unidade", { fantasia: "uni_nome_unidade", endereco: "uni_endereco", cidade: "uni_cidade", uf: "uni_uf", telefone: "uni_telefone" }, "uni_receita"); }
 </script>

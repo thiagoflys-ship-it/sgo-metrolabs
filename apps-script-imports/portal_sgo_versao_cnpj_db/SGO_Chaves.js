@@ -32,7 +32,10 @@ var CHV_FUSO = 'America/Sao_Paulo';
 var CHV_PREFIXO_ALTERADO = 'CHV_ALTERADO_';
 var CHV_MSG_EXCLUSIVO = 'Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.';
 
-var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'Relatórios técnicos (senhas)', 'E-mail', 'WhatsApp', 'Rastreador da frota', 'COMMAND'];
+// 17/10/2026: um grupo por integração (a tela mostra a situação e o teste de cada grupo).
+var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Relatórios técnicos', 'COMMAND'];
+var CHV_PREFIXO_TESTE = 'CHV_TESTE_';
+var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
 
 /**
  * tipo: 'chave' (segredo, mostra os 4 últimos), 'senha' (segredo, não mostra nada),
@@ -46,29 +49,29 @@ var CHV_ITENS = [
     ajuda: 'No Auvo: Menu → Integrações → API, campo da chave de acesso (API Key).' },
   { chave: 'AUVO_API_TOKEN', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: token de acesso',
     ajuda: 'No Auvo, na mesma tela da chave de acesso, campo do token (API Token).' },
-  { chave: 'AUVO_AVISOS_WHATSAPP', grupo: 'Auvo', tipo: 'aberto', exemplo: '1', nome: 'Avisos de O.S. do Auvo por WhatsApp e e-mail: 1 liga, 0 desliga',
-    ajuda: 'Digite 1 para ligar ou 0 para desligar (vazio = desligado). Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
+  { chave: 'AUVO_AVISOS_WHATSAPP', grupo: 'Auvo', tipo: 'aberto', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Avisos de O.S. do Auvo por WhatsApp e e-mail',
+    ajuda: 'Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
   { chave: 'AUVO_AVISAR_GESTAO', grupo: 'Auvo', tipo: 'aberto', exemplo: 'joao, maria', nome: 'Avisos de O.S.: quem da gestão recebe (logins)',
     ajuda: 'Logins (campo Usuário do cadastro de usuários) separados por vírgula. Vazio = todos os usuários ativos com perfil Gestor ou Diretoria.' },
-  { chave: 'MODO_PERSONALIZADO_SENHA', grupo: 'Relatórios técnicos (senhas)', tipo: 'senha', nome: 'Senha do Modo Personalizado (relatórios)',
+  { chave: 'MODO_PERSONALIZADO_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Modo Personalizado (relatórios)',
     ajuda: 'A mesma senha usada hoje no Modo Personalizado dos relatórios técnicos.' },
-  { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos (senhas)', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
+  { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
     ajuda: 'A mesma senha usada hoje no Simulador dos relatórios técnicos.' },
   { chave: 'SMTP_SENHA', grupo: 'E-mail', tipo: 'senha', teste: 'email', nome: 'Senha do e-mail sistema@metrolabs.com.br',
     ajuda: 'A senha da caixa sistema@metrolabs.com.br (servidor mail.metrolabs.com.br, porta 465). Os e-mails do SGO+ saem por ela.' },
-  { chave: 'WHATSAPP_PROVEDOR', grupo: 'WhatsApp', tipo: 'aberto', teste: 'whatsapp', exemplo: 'meta', nome: 'Provedor do WhatsApp: meta ou zapi',
-    ajuda: 'Digite meta (WhatsApp oficial da Meta, por modelos aprovados) ou zapi (Z-API). Vazio: usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas.' },
-  { chave: 'META_WA_TOKEN', grupo: 'WhatsApp', tipo: 'chave', teste: 'whatsapp', nome: 'WhatsApp oficial (Meta): token permanente',
+  { chave: 'WHATSAPP_PROVEDOR', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', teste: 'whatsapp', exemplo: 'meta', opcoes: [['meta', 'WhatsApp oficial (Meta)'], ['zapi', 'Z-API']], vazio: 'Automático', nome: 'Provedor do WhatsApp em uso',
+    ajuda: 'WhatsApp oficial (Meta): mensagens por modelos aprovados. Z-API: texto simples pela instância da Z-API. Automático: usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas.' },
+  { chave: 'META_WA_TOKEN', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', teste: 'whatsapp', nome: 'WhatsApp oficial (Meta): token permanente',
     ajuda: 'No Gerenciador de Negócios da Meta: Configurações do negócio → Usuários → Usuários do sistema → crie (ou abra) um usuário do sistema com acesso ao app e à conta do WhatsApp → Gerar novo token, sem validade, com as permissões whatsapp_business_messaging e whatsapp_business_management. Não use o token temporário de 24 h da tela de teste. As mensagens só saem por modelos aprovados (docs/MODELOS_WHATSAPP_META.md).' },
-  { chave: 'META_WA_PHONE_ID', grupo: 'WhatsApp', tipo: 'aberto', exemplo: '1409597008899044', nome: 'WhatsApp oficial (Meta): identificação do número de telefone',
+  { chave: 'META_WA_PHONE_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1409597008899044', nome: 'WhatsApp oficial (Meta): identificação do número de telefone',
     ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → WhatsApp → Configuração da API: campo "Identificação do número de telefone" (Phone Number ID). O da Metrolabs (+55 62 98241-7106) é 1409597008899044. Não é o número de telefone.' },
-  { chave: 'META_WA_WABA_ID', grupo: 'WhatsApp', tipo: 'aberto', exemplo: '1406451067859707', nome: 'WhatsApp oficial (Meta): identificação da conta comercial',
+  { chave: 'META_WA_WABA_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1406451067859707', nome: 'WhatsApp oficial (Meta): identificação da conta comercial',
     ajuda: 'Na mesma tela da Configuração da API: "Identificação da conta do WhatsApp Business" (WABA ID). O da Metrolabs é 1406451067859707. Usado para conferir os modelos de mensagem cadastrados.' },
-  { chave: 'ZAPI_INSTANCIA', grupo: 'WhatsApp', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: identificação da instância',
+  { chave: 'ZAPI_INSTANCIA', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: identificação da instância',
     ajuda: 'No painel da Z-API (app.z-api.io): Instâncias → abra a instância do WhatsApp da Metrolabs → copie o campo "ID da instância". Sem as 3 chaves Z-API, o WhatsApp por Z-API fica desligado.' },
-  { chave: 'ZAPI_TOKEN', grupo: 'WhatsApp', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token da instância',
+  { chave: 'ZAPI_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token da instância',
     ajuda: 'Na mesma tela da instância na Z-API, copie o campo "Token da instância" (não é o Client-Token). Se a instância for recriada, o token muda e precisa ser gravado de novo aqui.' },
-  { chave: 'ZAPI_CLIENT_TOKEN', grupo: 'WhatsApp', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token de segurança da conta',
+  { chave: 'ZAPI_CLIENT_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token de segurança da conta',
     ajuda: 'Na Z-API: menu Segurança → "Token de segurança da conta" (Client-Token). Ative o token lá e cole aqui o mesmo valor; sem ele a Z-API recusa os envios.' },
   // 17/10/2026: rastreador dos veículos (iTracker, plataforma Tarkan sobre o Traccar) — SGO_Frota_Rastreador.js.
   { chave: 'RASTREADOR_URL', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: 'https://acesso.itrackergo.com.br', nome: 'Rastreador: endereço da plataforma',
@@ -79,10 +82,10 @@ var CHV_ITENS = [
     ajuda: 'A senha do usuário de integração. Nunca aparece na tela, em log, e-mail ou aviso.' },
   { chave: 'RASTREADOR_TOKEN', grupo: 'Rastreador da frota', tipo: 'chave', teste: 'rastreador', nome: 'Rastreador: token de acesso (no lugar de usuário e senha)',
     ajuda: 'Token do usuário de integração gerado na plataforma (conta do usuário > token). Se gravado, é usado no lugar do usuário e da senha.' },
-  { chave: 'RASTREADOR_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', nome: 'Rastreador ligado no SGO+: 1 liga, 0 desliga',
-    ajuda: 'Vazio ou 0 = desligado: o SGO+ não faz nenhuma chamada ao rastreador (o botão Testar conexão continua funcionando). 1 = liga a leitura das posições a cada 2 minutos, o alerta de uso sem registro, a conferência do hodômetro e os comandos (se o bloqueio também estiver ligado).' },
-  { chave: 'RASTREADOR_BLOQUEIO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', nome: 'Bloqueio da partida pelo SGO+: 1 liga, 0 desliga',
-    ajuda: 'Separado do anterior: com 0 o SGO+ só monitora. Com 1, a retirada libera a partida e a devolução deixa o bloqueio pendente até o veículo estar parado com a ignição desligada (nunca em movimento). Ligue só depois de conferir em Frota > Rastreador que os veículos aceitam bloquear e liberar.' },
+  { chave: 'RASTREADOR_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Rastreador ligado no SGO+',
+    ajuda: 'Desligado: o SGO+ não faz nenhuma chamada ao rastreador (o botão Testar conexão continua funcionando). Ligado: liga a leitura das posições a cada 2 minutos, o alerta de uso sem registro, a conferência do hodômetro e os comandos (se o bloqueio também estiver ligado).' },
+  { chave: 'RASTREADOR_BLOQUEIO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Bloqueio da partida pelo SGO+',
+    ajuda: 'Separado do anterior: desligado, o SGO+ só monitora. Ligado, a retirada libera a partida e a devolução deixa o bloqueio pendente até o veículo estar parado com a ignição desligada (nunca em movimento). Ligue só depois de conferir em Frota > Rastreador que os veículos aceitam bloquear e liberar.' },
   { chave: 'PONTE_COMMAND_SEGREDO', grupo: 'COMMAND', tipo: 'chave', nome: 'Segredo da ponte com o COMMAND',
     ajuda: 'O mesmo valor configurado no COMMAND para falar com o SGO+.' }
 ];
@@ -148,8 +151,8 @@ function Chaves_situacao_(item, props) {
   var em = Chaves_dataBr_(props[CHV_PREFIXO_ALTERADO + item.chave]);
   return {
     chave: item.chave, grupo: item.grupo, nome: item.nome, ajuda: item.ajuda, exemplo: item.exemplo || '',
-    tipo: item.tipo, teste: item.teste || '',
-    configurado: !!valor.trim(), alteradoEm: em, mascara: Chaves_mascara_(item, valor)
+    tipo: item.tipo, teste: item.teste || '', opcoes: item.opcoes || null, vazio: item.vazio || '',
+    configurado: !!valor.trim(), alteradoEm: em, alteradoIso: String(props[CHV_PREFIXO_ALTERADO + item.chave] || ''), mascara: Chaves_mascara_(item, valor)
   };
 }
 
@@ -210,7 +213,11 @@ function Chaves_aposAlterar_(chave) {
 
 function Chaves_lista_() {
   var props = Chaves_lerTodas_();
-  return { grupos: CHV_GRUPOS, itens: CHV_ITENS.map(function (it) { return Chaves_situacao_(it, props); }) };
+  var p = PropertiesService.getScriptProperties(), testes = {};
+  ['gemini', 'auvo', 'email', 'whatsapp', 'rastreador'].forEach(function (t) {
+    try { var j = p.getProperty(CHV_PREFIXO_TESTE + t); if (j) testes[t] = JSON.parse(j); } catch (e) {}
+  });
+  return { grupos: CHV_GRUPOS, itens: CHV_ITENS.map(function (it) { return Chaves_situacao_(it, props); }), testes: testes };
 }
 
 // ------------------------------------------------------------
@@ -286,6 +293,8 @@ function Chaves_apiTestar(sessionId, payload) {
     else if (tipo === 'rastreador') r = typeof Rastreador_testarConexao_ === 'function' ? Rastreador_testarConexao_() : Chaves_falhou_('o módulo do rastreador não está carregado neste sistema', 'avise o suporte do SGO+.');
     else throw new Error('Não foi possível testar: tipo de teste desconhecido. Atualize a página (F5).');
     try { SGO_DATA.log('CHAVE_TESTADA', eu.usuario, 'Teste ' + tipo + ': ' + (r.funcionou ? 'funcionou' : 'não funcionou') + '.', 'CHAVES'); } catch (e) {}
+    // 17/10/2026: a tela mostra "Com erro no teste" até a próxima troca de chave ou o próximo teste (o texto já vem sem segredo).
+    try { PropertiesService.getScriptProperties().setProperty(CHV_PREFIXO_TESTE + tipo, JSON.stringify({ funcionou: !!r.funcionou, em: Chaves_agora_(), emBr: Chaves_dataBr_(Chaves_agora_()), texto: String(r.texto || '').slice(0, 400) })); } catch (e) {}
     var saida = { funcionou: !!r.funcionou, texto: String(r.texto || ''), tipo: tipo };
     // Rastreador: dispositivos encontrados (ID, nome e situação; nenhum segredo).
     if (tipo === 'rastreador') saida.dispositivos = (r.dispositivos || []).map(function (d) { return { id: String(d.id), nome: String(d.nome || ''), situacao: String(d.situacao || '') }; });

@@ -1,1121 +1,720 @@
 <script>
-  // ==========================================
-  // MÓDULO: ADMINISTRAÇÃO E CONFIGURAÇÕES
-  // ==========================================
-  function renderAdminModulo_() {
-    const div = document.getElementById("conteudo");
-    if (!div) return;
+  // =====================================================================
+  // ADMINISTRAÇÃO E ARQUIVO DE DOCUMENTOS (CADASTROS E ADMINISTRAÇÃO 17/10)
+  // Padrão comum em JS_Cadastros.html (CadUI_/CadTela_).
+  //  - Arquivo de documentos (abrir('documentos')) — antes montado em Index.html.
+  //  - Usuários (abrir('usuarios')) — tela própria; antes ficava dentro de Configurações.
+  //  - Configurações (abrir('admin')) — blocos com título, explicação e Salvar próprio.
+  // Regras que não mudam (conferidas no servidor): só um Administrador mexe em conta de
+  // Administrador e o sistema nunca fica sem Administrador ativo (SGO_Usuarios.js);
+  // usuário inativado perde a sessão em até 5 minutos (SGO_Auth.js › validarSessao);
+  // edição nunca apaga campo ausente; cliente só vê a própria empresa; excluir é da gestão.
+  // =====================================================================
 
-    div.innerHTML = `
-      <div class="module-shell">
-        <div class="module-header">
-          <div class="module-header-left">
-            <h2 class="content-title">Configurações</h2>
-            <p class="content-subtitle">Usuários e perfis de acesso, aviso de ociosidade, lembretes de calibração e sessão neste navegador.</p>
-          </div>
-        </div>
-
-        <div id="adminUsuariosSecao">
-        <div class="module-header">
-          <div class="module-header-left">
-            <h3 style="margin:0; font-size:18px; color:var(--text);">Gestão de usuários</h3>
-          </div>
-          <div class="module-header-right" style="display: flex; gap: 15px; align-items: center;">
-            <div style="display: flex; gap: 5px;">
-              <input id="usuariosPesquisa" class="toolbar-search" type="text" placeholder="Nome ou login" onkeydown="if(event.key === 'Enter') usuariosPesquisar_()">
-              <button class="btn-secondary" type="button" onclick="usuariosPesquisar_()">Pesquisar</button>
-            </div>
-            <button class="btn-primary" type="button" onclick="usuariosNovo_()">+ Novo usuário</button>
-          </div>
-        </div>
-
-        <div class="module-grid">
-          <div class="form-card">
-            <h3 class="section-card-title" id="usuariosFormTitulo">Novo usuário</h3>
-            <div class="form-grid">
-              <div class="full">
-                <label for="usr_usuario">Login (nome de usuário)</label>
-                <input id="usr_usuario" type="text" placeholder="Ex: joao.silva">
-              </div>
-              <div class="full">
-                <label for="usr_nome">Nome completo</label>
-                <input id="usr_nome" type="text" placeholder="Nome completo do colaborador">
-              </div>
-              <div class="full">
-                <label for="usr_email">E-mail</label>
-                <input id="usr_email" type="email" placeholder="nome@metrolabs.com.br">
-              </div>
-              <div class="full">
-                <label for="usr_celular">Celular (WhatsApp)</label>
-                <input id="usr_celular" type="tel" inputmode="numeric" maxlength="16" placeholder="(11) 98765-4321 — opcional" oninput="this.value = usuariosMascaraCelular_(this.value)">
-              </div>
-              <div class="full">
-                <label for="usr_senha">Senha</label>
-                <input id="usr_senha" type="password" placeholder="Digite a senha (ou deixe vazio p/ manter a atual)">
-              </div>
-              <div>
-                <label for="usr_perfil">Perfil de acesso</label>
-                <select id="usr_perfil" onchange="aoMudarPerfilUsuario_()"></select>
-              </div>
-              <div id="usr_cliente_container" style="display:none;">
-                <label for="usr_cliente_id">Cliente vinculado</label>
-                <select id="usr_cliente_id"><option value="">Selecione...</option></select>
-              </div>
-              <div>
-                <label for="usr_status">Situação</label>
-                <input id="usr_status" type="text" value="ATIVO" disabled>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="btn-primary" type="button" onclick="usuariosSalvar_()">Salvar</button>
-              <button class="btn-secondary" type="button" onclick="usuariosNovo_()">Limpar</button>
-            </div>
-            <div class="helper-text" id="usuariosHelper">Preencha os dados e atribua o perfil correto.</div>
-          </div>
-
-          <div class="list-card">
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Login</th>
-                    <th>Nome completo</th>
-                    <th>E-mail</th>
-                    <th>Celular</th>
-                    <th>Perfil</th>
-                    <th>Situação</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="usuariosTabelaBody">
-                  <tr><td colspan="7" class="empty-state">Carregando usuários…</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        </div>
-        <div class="form-card" style="margin:20px 0;">
-          <h3 class="section-card-title">Aviso de ociosidade</h3>
-          <div class="form-grid">
-            <div>
-              <label for="inputIdleLimit">Tempo sem uso até o aviso (segundos)</label>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input type="number" id="inputIdleLimit" value="${IDLE_LIMIT}" style="width:110px;" min="30">
-                <button class="btn-primary" type="button" onclick="salvarTempoOciosidadePainel_()">Salvar</button>
-              </div>
-            </div>
-            <div>
-              <label>Som do aviso: <span id="adminSomStatus">${SOM_OCIOSIDADE_ATIVO ? "ligado" : "desligado"}</span></label>
-              <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button class="btn-secondary" type="button" onclick="ativarSomOciosidadePainel_()">Ligar</button>
-                <button class="btn-secondary" type="button" onclick="desativarSomOciosidadePainel_()">Desligar</button>
-                <button class="btn-secondary" type="button" onclick="testarSomOciosidade_()">Testar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="adminAlertasPadroesCard" class="form-card" style="margin-bottom:20px; display:none;">
-          <div class="module-header" style="margin-bottom:12px;">
-            <div class="module-header-left">
-              <h3 class="section-card-title" style="margin:0;">Alertas globais de calibração</h3>
-              <p class="content-subtitle">Lembretes de vencimento dos padrões de referência. Só o Administrador altera.</p>
-            </div>
-            <span id="ap_status" class="badge badge-ativo">ATIVO</span>
-          </div>
-          <div class="form-grid">
-            <div><label for="ap_ativo">Funcionamento</label><select id="ap_ativo"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
-            <div><label>Perfis que recebem</label><div style="display:flex;gap:16px;padding:9px 0;"><label><input id="ap_gestor" type="checkbox"> Gestor</label><label><input id="ap_metrologia" type="checkbox"> Metrologia</label></div></div>
-            <div><label for="ap_inicio">Horário inicial</label><input id="ap_inicio" type="time"></div>
-            <div><label for="ap_fim">Horário final</label><input id="ap_fim" type="time"></div>
-            <div><label for="ap_intervalo_balao">Repetir o lembrete a cada (minutos)</label><input id="ap_intervalo_balao" type="number" min="15" max="720"></div>
-            <div><label for="ap_duracao">Tempo visível (segundos)</label><input id="ap_duracao" type="number" min="5" max="120"></div>
-            <div><label for="ap_critico">Janela de alerta no centro da tela</label><select id="ap_critico"><option value="true">Ativo</option><option value="false">Desativado</option></select></div>
-            <div><label for="ap_intervalo_critico">Repetir a janela a cada (minutos)</label><input id="ap_intervalo_critico" type="number" min="30" max="1440"></div>
-            <div><label for="ap_antecedencia">Alertar antes do vencimento (dias)</label><input id="ap_antecedencia" type="number" min="1" max="365"></div>
-            <div class="full"><label for="ap_mensagem">Mensagem do alerta crítico</label><input id="ap_mensagem" maxlength="240"></div>
-          </div>
-          <div class="form-actions">
-            <button id="ap_btn_salvar" class="btn-primary" type="button" onclick="adminSalvarAlertasPadroes_()">Salvar configurações</button>
-            <button id="ap_btn_testar" class="btn-secondary" type="button" onclick="adminTestarAlertasPadroes_()">Testar alerta agora</button>
-          </div>
-          <div id="ap_feedback" class="helper-text">Carregando configurações...</div>
-        </div>
-
-        <div class="form-card" style="margin-bottom:20px;">
-          <h3 class="section-card-title">Sessão neste navegador</h3>
-          <p class="helper-text" style="margin-top:0;">Sai do SGO+ neste navegador e recarrega a página. Use quando a tela travar após uma atualização. Os dados salvos não são afetados.</p>
-          <button class="btn-secondary" type="button" onclick="limparCacheNavegador_()">Sair e recarregar</button>
-        </div>
-      </div>
-    `;
-
-    // Gestão de usuários: o servidor só aceita Admin, Gestor e Diretoria
-    // (SGO_Usuarios.js verificarPermissaoAdmin_). Para os demais perfis a
-    // seção mostrava formulário e lista que só davam "Acesso negado".
-    const perfilAdm = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
-    if (["ADMIN", "GESTOR", "DIRETORIA"].indexOf(perfilAdm) === -1) {
-      const secao = document.getElementById("adminUsuariosSecao");
-      if (secao) secao.innerHTML = '<div class="helper-text" role="status">A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria. Para criar ou alterar um acesso, peça a um gestor.</div>';
-      preencherEstadoPainelAdmin_();
-      adminCarregarAlertasPadroes_();
-      return;
-    }
-
-    usuariosLimparFormulario_();
-    preencherComboPerfis_();
-    carregarClientesParaUsuarios_();
-    usuariosPesquisar_();
-    preencherEstadoPainelAdmin_();
-    adminCarregarAlertasPadroes_();
-  }
-
-  function limparCacheNavegador_() {
-    if (!confirm("Isso forçará a limpeza da sessão no navegador e recarregará a página. Continuar?")) return;
-
-    try {
-      if (typeof STORAGE_KEYS !== "undefined" && STORAGE_KEYS.SESSION) {
-        sessionStorage.removeItem(STORAGE_KEYS.SESSION);
-        sessionStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-        localStorage.removeItem(STORAGE_KEYS.SESSION);
-        localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
-      } else {
-        sessionStorage.removeItem("SGO_SESSION");
-        sessionStorage.removeItem("SGO_SESSION_ID");
-        localStorage.removeItem("SGO_SESSION");
-        localStorage.removeItem("SGO_SESSION_ID");
-      }
-    } catch (e) {
-      console.error("Falha ao limpar sessão:", e);
-    }
-
-    SESSION = null;
-    USER_CONTEXT = null;
-    location.reload();
-  }
-
-  function preencherEstadoPainelAdmin_() {
-    const elSom = document.getElementById("adminSomStatus");
-    const elMsg = document.getElementById("adminMensagemAtual");
-    const elIdle = document.getElementById("inputIdleLimit");
-
-    if (elSom) elSom.innerText = SOM_OCIOSIDADE_ATIVO ? "ligado" : "desligado";
-    if (elIdle) elIdle.value = IDLE_LIMIT;
-
-    if (elMsg) {
-      const elMsgGlobal = document.getElementById("mensagemMotivacional");
-      elMsg.innerText = elMsgGlobal ? (elMsgGlobal.innerText || "") : "";
-    }
-  }
-
-  // ==========================================
-  // MÓDULO: USUÁRIOS
-  // ==========================================
   function SGO_rotuloPerfil_(p) {
-    const k = String(p || "").toUpperCase();
+    var k = String(p || "").toUpperCase();
     return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", CLIENTE: "Cliente" })[k] || p;
   }
-
-  function preencherComboPerfis_() {
-    const select = document.getElementById("usr_perfil");
-    if (!select) return;
-
-    const profiles =
-      PUBLIC_CONFIG && Array.isArray(PUBLIC_CONFIG.profiles) && PUBLIC_CONFIG.profiles.length > 0
-        ? PUBLIC_CONFIG.profiles
-        : ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"];
-
-    const options = ['<option value="">Selecione o perfil</option>'];
-    // Só um Administrador cria ou promove outro Administrador (regra do servidor, SGO_Usuarios.js).
-    const souAdmin = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase() === "ADMIN";
-    profiles.filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; }).forEach(function (p) {
-      options.push('<option value="' + escapeHtml_(p) + '">' + escapeHtml_(SGO_rotuloPerfil_(p)) + "</option>");
-    });
-    select.innerHTML = options.join("");
-  }
-
-  function carregarClientesParaUsuarios_() {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return;
-
-        const select = document.getElementById("usr_cliente_id");
-        if (!select) return;
-
-        const options = ['<option value="">Selecione o cliente</option>'];
-        (res.items || []).forEach(function (item) {
-          const nome = item.NOME || item.NOME_FANTASIA || item.RAZAO_SOCIAL || "";
-          options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(nome) + "</option>");
-        });
-        select.innerHTML = options.join("");
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao carregar clientes para usuários:", err);
-      })
-      .usuariosListarClientesAtivos(SESSION);
-  }
-
-  function aoMudarPerfilUsuario_() {
-    const perfil = getValue_("usr_perfil");
-    const container = document.getElementById("usr_cliente_container");
-    if (!container) return;
-
-    if (perfil === "CLIENTE") {
-      container.style.display = "block";
-    } else {
-      container.style.display = "none";
-      setSelectValueSafe_("usr_cliente_id", "");
-    }
-  }
-
-  function usuariosPesquisar_() {
-    const el = document.getElementById("usuariosPesquisa");
-    USUARIOS_STATE.filtro = el ? String(el.value || "").trim() : "";
-    if (!SESSION) return;
-
-    const tbody = document.getElementById("usuariosTabelaBody");
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Buscando na base...</td></tr>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Falha ao buscar usuários.</td></tr>';
-          return;
-        }
-        renderTabelaUsuarios_(Array.isArray(res.items) ? res.items : []);
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao pesquisar usuários:", err);
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Não foi possível buscar os usuários. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
-      })
-      .usuariosPesquisar(SESSION, USUARIOS_STATE.filtro);
-  }
-
-  function renderTabelaUsuarios_(itemsOverride) {
-    const tbody = document.getElementById("usuariosTabelaBody");
-    if (!tbody) return;
-
-    const items = Array.isArray(itemsOverride) ? itemsOverride : USUARIOS_STATE.items;
-
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum usuário encontrado para esta busca.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map(function (item) {
-      const id = escapeHtml_(item.ID);
-      const status = String(item.STATUS || "").toUpperCase();
-
-      return `
-        <tr>
-          <td style="font-weight:700;">${escapeHtml_(item.USUARIO)}</td>
-          <td>${escapeHtml_(item.NOME)}</td>
-          <td>${escapeHtml_(item.EMAIL)}</td>
-          <td>${escapeHtml_(usuariosMascaraCelular_(item.CELULAR))}</td>
-          <td>${escapeHtml_(SGO_rotuloPerfil_(item.PERFIL))}</td>
-          <td>${obterBadgeStatusHtml_(status)}</td>
-          <td>
-            <div class="table-actions">
-              <button class="btn-info" type="button" onclick="usuariosEditar_('${id}')">Editar</button>
-              ${
-                status === "ATIVO"
-                  ? `<button class="btn-warning" type="button" onclick="usuariosInativar_('${id}')">Inativar</button>`
-                  : `<button class="btn-success" type="button" onclick="usuariosReativar_('${id}')">Reativar</button>`
-              }
-              <button class="btn-danger" type="button" onclick="usuariosExcluir_('${id}')">Excluir</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  }
-
   // Celular (WhatsApp): mostra "(11) 98765-4321"; grava só dígitos com 55 na frente.
   function usuariosMascaraCelular_(v) {
-    let d = String(v === null || v === undefined ? "" : v).replace(/\D/g, "");
+    var d = String(v === null || v === undefined ? "" : v).replace(/\D/g, "");
     if (d.length > 11 && d.indexOf("55") === 0) d = d.slice(2);
     d = d.slice(0, 11);
     if (!d) return "";
     if (d.length <= 2) return "(" + d;
-    const ddd = d.slice(0, 2), resto = d.slice(2);
-    const corte = resto.length > 8 ? 5 : 4;
+    var ddd = d.slice(0, 2), resto = d.slice(2);
+    var corte = resto.length > 8 ? 5 : 4;
     if (resto.length <= corte) return "(" + ddd + ") " + resto;
     return "(" + ddd + ") " + resto.slice(0, corte) + "-" + resto.slice(corte);
   }
-
   /** "" = sem celular; null = inválido; senão "55" + DDD + número. */
   function usuariosCelularDigitos_(v) {
-    let d = String(v || "").replace(/\D/g, "").replace(/^0+/, "");
+    var d = String(v || "").replace(/\D/g, "").replace(/^0+/, "");
     if (!d) return "";
     if (d.length === 10 || d.length === 11) d = "55" + d;
     return /^55\d{10,11}$/.test(d) ? d : null;
   }
 
-  function usuariosNovo_() {
-    USUARIOS_STATE.editingId = "";
-    usuariosLimparFormulario_();
+  // =====================================================================
+  // ARQUIVO DE DOCUMENTOS
+  // =====================================================================
+  var DOC_CATEGORIAS = [["1. Relatórios de Manutenção", "Relatórios de manutenção"], ["2. Certificados de Calibração", "Certificados de calibração"], ["3. Relatórios de Qualificação", "Relatórios de qualificação"], ["4. Ordens de Serviço", "Ordens de serviço"], ["5. Contratos", "Contratos"], ["Outros Documentos", "Outros documentos"]];
 
-    const titulo = document.getElementById("usuariosFormTitulo");
-    const helper = document.getElementById("usuariosHelper");
+  function Documentos_nome_(d) { return (d && d.NOME_ARQUIVO) || "Documento sem nome"; }
 
-    if (titulo) titulo.innerText = "Novo usuário";
-    if (helper) helper.innerText = "Preencha os dados e atribua o perfil correto.";
+  function renderDocumentosModulo_() {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    CadTela_montar_({
+      chave: "documentos", titulo: "Arquivo de documentos", nomeItens: ["documento", "documentos"],
+      subtitulo: cliente ? "Relatórios, certificados, ordens de serviço e contratos da sua empresa, organizados pelas categorias da NBR 15943." : "Relatórios, certificados, ordens de serviço e contratos de cada cliente, organizados pelas categorias da NBR 15943.",
+      idBusca: "documentosPesquisa", buscaPlaceholder: "Buscar por documento, cliente, unidade, TAG ou categoria",
+      ajuda: cliente
+        ? "<p>Aqui ficam os documentos da sua empresa. Clique em <i>Abrir arquivo</i> para ver ou baixar. <b>Vencendo</b> = vence em até 30 dias; <b>Vencido</b> = venceu ou vence hoje.</p>"
+        : "<p>Cada documento fica ligado a um cliente e a uma unidade e, quando for o caso, a um equipamento. O arquivo é guardado na pasta Cliente › Unidade › TAG › categoria.</p>" +
+          "<ul><li><b>Vencendo</b> = vence em até 30 dias; <b>Vencido</b> = venceu ou vence hoje (mesma regra da central de pendências do Início).</li>" +
+          "<li><b>Sem arquivo</b> = registro feito sem o arquivo. Abra, clique em Editar e anexe o arquivo para concluir.</li>" +
+          "<li>Para renovar um documento, cadastre o novo (mesmo equipamento e mesma categoria) com o vencimento novo.</li>" +
+          "<li>Trocar o cliente, a unidade ou o equipamento de um documento já ligado é da gestão. Quando a unidade ou o equipamento muda de cliente em <b>Vínculos</b>, os documentos acompanham automaticamente.</li>" +
+          "<li>Excluir tira o registro da lista (só a gestão); o arquivo guardado não é apagado.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "ativos", rotulo: "Ativos", tom: "tom-ok", filtro: function (d) { return d.STATUS !== "INATIVO"; } },
+        { id: "inativos", rotulo: "Inativos", filtro: function (d) { return d.STATUS === "INATIVO"; } },
+        { id: "vencidos", rotulo: "Vencidos", tom: "tom-perigo", filtro: function (d) { return d.STATUS !== "INATIVO" && d.VENCIMENTO_SITUACAO === "vencido"; } },
+        { id: "vencendo", rotulo: "Vencendo em 30 dias", tom: "tom-alerta", filtro: function (d) { return d.STATUS !== "INATIVO" && d.VENCIMENTO_SITUACAO === "vencendo"; } },
+        { id: "semarq", rotulo: "Sem arquivo", tom: "tom-alerta", filtro: function (d) { return (d.PENDENCIAS || []).indexOf("sem_arquivo") >= 0; } }
+      ],
+      filtros: [
+        { id: "categoria", rotulo: "Todas as categorias", opcoes: function (its) { return CadTela_opcoesDe_(its, "TIPO_DOCUMENTO", "TIPO_DOCUMENTO").map(function (o) { return [o[0], Documentos_categoria_(o[1])]; }); }, aplicar: function (d, v) { return String(d.TIPO_DOCUMENTO || "") === v; } },
+        { id: "cliente", rotulo: "Todos os clientes", opcoes: function (its) { return cliente ? [] : CadTela_opcoesDe_(its, "CLIENTE_ID", "CLIENTE_NOME"); }, aplicar: function (d, v) { return String(d.CLIENTE_ID) === v; } }
+      ],
+      ordenar: [
+        { id: "recentes", rotulo: "Mais recentes primeiro", fn: null },
+        { id: "venc", rotulo: "Vencimento mais próximo", fn: function (a, b) { var x = a.VENCIMENTO_DIAS, y = b.VENCIMENTO_DIAS; return (x === null || x === undefined) - (y === null || y === undefined) || (x || 0) - (y || 0); } },
+        { id: "nome", rotulo: "Ordenar por nome", fn: function (a, b) { return Documentos_nome_(a).localeCompare(Documentos_nome_(b), "pt-BR"); } }
+      ],
+      texto: function (d) { return [d.NOME_ARQUIVO, d.TIPO_DOCUMENTO, Documentos_categoria_(d.TIPO_DOCUMENTO), d.CLIENTE_NOME, d.UNIDADE_NOME, d.EQUIPAMENTO_NOME, d.CLIENTE_CNPJ].join(" "); },
+      acao: cliente ? null : { texto: "Novo documento", fn: function () { Documentos_formulario_(null); } },
+      vazioTitulo: "Nenhum documento no arquivo ainda.", vazio: cliente ? "Os documentos da sua empresa aparecem aqui assim que forem enviados pela Metrolabs." : "Clique em Novo documento para enviar o primeiro.",
+      colunas: [
+        { titulo: "Documento", html: function (d) { return '<div class="cadx-tit">' + CadUI_esc_(Documentos_nome_(d)) + '</div><div class="cadx-sub">' + CadUI_esc_(Documentos_categoria_(d.TIPO_DOCUMENTO) || "Sem categoria") + "</div>" + CadUI_chips_({ PENDENCIAS: (d.PENDENCIAS || []).filter(function (p) { return p === "sem_arquivo"; }) }); } },
+        { titulo: "Cliente / unidade", html: function (d) { return "<div>" + CadUI_esc_(d.CLIENTE_NOME || "Sem cliente") + '</div><div class="cadx-sub">' + CadUI_esc_(d.UNIDADE_NOME || "Sem unidade") + "</div>"; } },
+        { titulo: "Equipamento", html: function (d) { return d.EQUIPAMENTO_NOME ? CadUI_esc_(d.EQUIPAMENTO_NOME) : '<span class="cadx-sub">Geral da unidade</span>'; } },
+        { titulo: "Vencimento", html: function (d) { return CadUI_vencimento_(d.VENCIMENTO_SITUACAO, d.VENCIMENTO_DIAS, d.VENCIMENTO_ISO); } },
+        { titulo: "Situação", html: function (d) { return CadUI_selo_(d.STATUS); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (d) { return CadTela_botoesLinha_("documentos", d); } }
+      ],
+      cartao: function (d) {
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Documentos_nome_(d)) + '</div><div class="cadx-sub">' + CadUI_esc_([Documentos_categoria_(d.TIPO_DOCUMENTO), d.CLIENTE_NOME].filter(Boolean).join(" · ")) + "</div></div>" + CadUI_selo_(d.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>' + CadUI_esc_(d.EQUIPAMENTO_NOME || d.UNIDADE_NOME || "") + "</span></div><div>" + CadUI_vencimento_(d.VENCIMENTO_SITUACAO, d.VENCIMENTO_DIAS, d.VENCIMENTO_ISO) + "</div>" + CadUI_chips_({ PENDENCIAS: (d.PENDENCIAS || []).filter(function (p) { return p === "sem_arquivo"; }) });
+      },
+      botaoPrincipal: cliente ? function (d) { return d.LINK_ARQUIVO ? { texto: "Abrir arquivo", acao: "arquivo" } : null; } : null,
+      acoesExtras: { arquivo: function (d) { Documentos_abrirArquivo_(d); } },
+      editar: cliente ? null : function (d) { Documentos_formulario_(d.ID); },
+      mais: cliente ? null : function (d) { return Documentos_menu_(d, gestao); },
+      abrir: function (d) { Documentos_detalhe_(d); },
+      carregar: function (ok, erro) {
+        CadUI_chamar_("cadastrosPainel", ["documentos"], function (res) { ok(res.items || []); setTimeout(function () { CadTela_cumprirIrPara_("documentos"); }, 0); }, erro);
+      }
+    });
   }
 
-  function usuariosLimparFormulario_() {
-    setValue_("usr_usuario", "");
-    setValue_("usr_nome", "");
-    setValue_("usr_email", "");
-    setValue_("usr_celular", "");
-    setValue_("usr_senha", "");
-    setSelectValueSafe_("usr_perfil", "");
-    setSelectValueSafe_("usr_cliente_id", "");
-    setValue_("usr_status", "ATIVO");
-    aoMudarPerfilUsuario_();
+  function Documentos_abrirArquivo_(d) {
+    if (!d.LINK_ARQUIVO) { CadUI_aviso_("Este documento ainda não tem arquivo. Clique em Editar e anexe o arquivo.", "alerta"); return; }
+    window.open(d.LINK_ARQUIVO, "_blank", "noopener");
   }
 
-  function usuariosLerFormulario_() {
-    return {
-      USUARIO: getValue_("usr_usuario"),
-      NOME: getValue_("usr_nome"),
-      EMAIL: getValue_("usr_email"),
-      CELULAR: usuariosCelularDigitos_(getValue_("usr_celular")),
-      SENHA: getValue_("usr_senha"),
-      PERFIL: getValue_("usr_perfil"),
-      CLIENTE_ID: getValue_("usr_cliente_id")
-    };
+  function Documentos_menu_(d, gestao) {
+    var ativo = d.STATUS !== "INATIVO";
+    return [
+      { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("documentos", d.ID); } },
+      { texto: d.LINK_ARQUIVO ? "Abrir arquivo" : "Abrir arquivo (sem arquivo)", icone: "fa-up-right-from-square", desabilitado: !d.LINK_ARQUIVO, nota: d.LINK_ARQUIVO ? "" : "Sem arquivo: clique em Editar e anexe.", acao: function () { Documentos_abrirArquivo_(d); } },
+      "-",
+      ativo
+        ? { texto: "Inativar documento", icone: "fa-ban", risco: true, acao: function () { Documentos_inativar_(d); } }
+        : { texto: "Reativar documento", icone: "fa-rotate-left", acao: function () { Documentos_reativar_(d); } },
+      { texto: "Excluir documento", icone: "fa-trash-can", risco: true, desabilitado: !gestao, nota: gestao ? "" : "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador).", acao: function () { Documentos_excluir_(d); } }
+    ];
   }
 
-  function usuariosSalvar_() {
-    if (!SESSION) return;
-
-    const payload = usuariosLerFormulario_();
-
-    if (!payload.USUARIO) return alert("O Login é obrigatório.");
-    if (!payload.NOME) return alert("Informe o nome completo.");
-    if (!payload.EMAIL || payload.EMAIL.indexOf("@") === -1) return alert("Informe um e-mail válido — é a identidade do usuário no Portal.");
-    if (payload.CELULAR === null) return alert("Não foi possível aceitar o celular. Informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
-    if (!payload.PERFIL) return alert("Selecione o perfil de acesso.");
-    if (payload.PERFIL === "CLIENTE" && !payload.CLIENTE_ID) return alert("Para perfil CLIENTE, é obrigatório vincular a empresa.");
-
-    if (USUARIOS_STATE.editingId) {
-      SGO_iniciarCarregamento_();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          SGO_finalizarCarregamento_();
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
-          alert(res.message || "Atualizado com sucesso.");
-          usuariosNovo_();
-          if (USUARIOS_STATE.filtro) usuariosPesquisar_();
-        })
-        .withFailureHandler(function (err) {
-          SGO_finalizarCarregamento_();
-          console.error("Falha ao atualizar usuário:", err);
-          alert("Não foi possível atualizar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-        })
-        .usuariosAtualizar(SESSION, USUARIOS_STATE.editingId, payload);
-      return;
-    }
-
-    if (!payload.SENHA) return alert("A senha é obrigatória para um NOVO usuário.");
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível concluir o cadastro. Tente de novo.");
-        alert(res.message || "Criado com sucesso.");
-        usuariosNovo_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao criar usuário:", err);
-        alert("Não foi possível cadastrar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .usuariosCriar(SESSION, payload);
+  function Documentos_detalhe_(d) {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    var semArq = (d.PENDENCIAS || []).indexOf("sem_arquivo") >= 0;
+    CadUI_painelAbrir_({
+      chave: "documentos", id: d.ID, titulo: Documentos_nome_(d), sub: CadUI_esc_(Documentos_categoria_(d.TIPO_DOCUMENTO) || "Sem categoria"),
+      seloHtml: CadUI_selo_(d.STATUS),
+      corpo: function () {
+        return (semArq ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem arquivo.</b> ' + (cliente ? "O arquivo ainda não foi enviado pela Metrolabs." : "Clique em Editar e anexe o arquivo para concluir o documento.") + "</div>" : "") +
+          (d.VENCIMENTO_SITUACAO === "vencido" && d.STATUS !== "INATIVO" ? '<div class="cadx-faixa bc-faixa tom-perigo"><b>Documento vencido.</b> ' + (cliente ? "A Metrolabs já foi avisada pela central de pendências." : "Cadastre a versão renovada (mesmo equipamento e categoria); ela substitui esta nos alertas.") + "</div>" : "") +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Documento</h4>' + CadUI_dados_([["Nome ou referência", d.NOME_ARQUIVO], ["Categoria", Documentos_categoria_(d.TIPO_DOCUMENTO)], ["Vencimento", CadUI_vencimento_(d.VENCIMENTO_SITUACAO, d.VENCIMENTO_DIAS, d.VENCIMENTO_ISO), true], ["Cadastrado em", CadUI_dataHora_(d.CRIADO_EM)],
+            ["Arquivo", d.LINK_ARQUIVO ? '<a class="cadx-btn" href="' + CadUI_esc_(d.LINK_ARQUIVO) + '" target="_blank" rel="noopener">Abrir arquivo</a>' : '<span class="cadx-chip tom-alerta">Sem arquivo</span>', true]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Ligado a</h4>' + CadUI_dados_([["Cliente", d.CLIENTE_NOME], ["Unidade", d.UNIDADE_NOME], ["Equipamento", d.EQUIPAMENTO_NOME || "Geral da unidade"]]) +
+            (cliente ? "" : '<div class="cadx-acoes" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">' +
+              (d.CLIENTE_ID ? '<button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'clientes\',\'' + CadUI_esc_(d.CLIENTE_ID) + '\')">Abrir cliente</button>' : "") +
+              (d.UNIDADE_ID ? '<button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'unidades\',\'' + CadUI_esc_(d.UNIDADE_ID) + '\')">Abrir unidade</button>' : "") +
+              (d.EQUIPAMENTO_ID ? '<button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'equipamentos\',\'' + CadUI_esc_(d.EQUIPAMENTO_ID) + '\')">Abrir equipamento</button>' : "") + "</div>") + "</section>";
+      },
+      depois: function (p) {
+        var mais = p.querySelector("#cadxPainelMais");
+        if (mais) mais.onclick = function () { CadUI_menu_(mais, Documentos_menu_(d, gestao).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes"; })); };
+      },
+      rodape: cliente ? (d.LINK_ARQUIVO ? '<a class="cadx-btn cadx-btn-grande cadx-btn-primario" href="' + CadUI_esc_(d.LINK_ARQUIVO) + '" target="_blank" rel="noopener">Abrir arquivo</a>' : "") :
+        '<div class="cadx-rodape-esq"><button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button></div>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Documentos_formulario_(\'' + CadUI_esc_(d.ID) + '\')">' + (semArq ? "Editar e anexar arquivo" : "Editar") + "</button>"
+    });
   }
 
-  function usuariosEditar_(id) {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success || !res.item) return alert((res && res.message) ? res.message : "Não foi possível buscar o usuário. Tente de novo.");
-
-        const item = res.item;
-        USUARIOS_STATE.editingId = String(item.ID || "");
-
-        setValue_("usr_usuario", item.USUARIO || "");
-        setValue_("usr_nome", item.NOME || "");
-        setValue_("usr_email", item.EMAIL || "");
-        setValue_("usr_celular", usuariosMascaraCelular_(item.CELULAR));
-        setValue_("usr_senha", "");
-        setSelectValueSafe_("usr_perfil", item.PERFIL || "");
-        setSelectValueSafe_("usr_cliente_id", item.CLIENTE_ID || "");
-        setValue_("usr_status", item.STATUS || "ATIVO");
-
-        aoMudarPerfilUsuario_();
-
-        const titulo = document.getElementById("usuariosFormTitulo");
-        const helper = document.getElementById("usuariosHelper");
-
-        if (titulo) titulo.innerText = "Editar usuário";
-        if (helper) helper.innerText = "Deixe a senha em branco caso não queira alterá-la.";
-
-        focusIfExists_("usr_usuario");
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao buscar usuário:", err);
-        alert("Não foi possível buscar o usuário. Verifique a conexão e tente de novo. Nada foi alterado.");
-      })
-      .usuariosObter(SESSION, id);
+  function Documentos_inativar_(d) {
+    CadTela_acaoRisco_({ titulo: "Inativar o documento", botao: "Inativar documento", fn: "documentosInativar", id: d.ID,
+      texto: "<p>Inativar <b>" + CadUI_esc_(Documentos_nome_(d)) + "</b>?</p><p>Ele sai dos alertas de vencimento e da lista do cliente. O arquivo continua guardado; para voltar, use Reativar.</p>",
+      aoConcluir: function () { CadTela_recarregar_("documentos", d.ID); } });
+  }
+  function Documentos_reativar_(d) {
+    CadTela_acaoRisco_({ titulo: "Reativar o documento", botao: "Reativar documento", risco: false, fn: "documentosReativar", id: d.ID,
+      texto: "<p>Reativar <b>" + CadUI_esc_(Documentos_nome_(d)) + "</b>? Ele volta à lista do cliente e aos alertas de vencimento.</p>",
+      aoConcluir: function () { CadTela_recarregar_("documentos", d.ID); } });
+  }
+  function Documentos_excluir_(d) {
+    CadTela_acaoRisco_({ titulo: "Excluir o documento", botao: "Excluir da lista", fn: "documentosExcluir", id: d.ID,
+      texto: "<p>Excluir <b>" + CadUI_esc_(Documentos_nome_(d)) + "</b> da lista? A exclusão não pode ser desfeita por aqui.</p><p>O arquivo guardado não é apagado (fica registrado no log). Para só tirar de uso, prefira Inativar.</p>",
+      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("documentos"); } });
   }
 
-  function usuariosInativar_(id) {
-    if (!SESSION || !confirm("Bloquear o acesso deste usuário?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
-        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao inativar usuário:", err);
-        alert("Não foi possível inativar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .usuariosInativar(SESSION, id);
+  /** Novo documento já ligado a um equipamento (vindo de Equipamentos). */
+  function Documentos_novoPara_(e) {
+    var pre = { clienteId: e.CLIENTE_ID, clienteNome: e.CLIENTE_NOME, unidadeId: e.UNIDADE_ID, equipamentoId: e.ID };
+    if (CADUI.telas.documentos && document.getElementById("cadxTela_documentos")) { Documentos_formulario_(null, pre); return; }
+    CADUI.irPara = { chave: "documentos", novo: function () { Documentos_formulario_(null, pre); } };
+    abrir("documentos");
   }
 
-  function usuariosReativar_(id) {
-    if (!SESSION || !confirm("Liberar o acesso deste usuário?")) return;
+  var DOC_ARQ = { base64: "", mime: "", nome: "" };
 
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
-        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao reativar usuário:", err);
-        alert("Não foi possível reativar o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .usuariosReativar(SESSION, id);
-  }
-
-  function usuariosExcluir_(id) {
-    if (!SESSION || !confirm("Excluir definitivamente este usuário do banco de dados?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
-        if (USUARIOS_STATE.editingId === id) usuariosNovo_();
-        if (USUARIOS_STATE.filtro) usuariosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao excluir usuário:", err);
-        alert("Não foi possível excluir o usuário. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .usuariosExcluir(SESSION, id);
-  }
-
-  // ==========================================
-  // LÓGICA DE SUPORTE: DOCUMENTOS
-  // (A renderização está no Index.html)
-  // ==========================================
-
-    // Fase 2 (16/10): sem filtro, mostra os 50 cadastrados mais recentes; a pesquisa filtra.
-    function documentosRecentes_(itens) {
-      if (DOCUMENTOS_STATE.filtro || itens.length <= 50) return { itens: itens, nota: "" };
-      const ord = itens.slice().sort(function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); });
-      return { itens: ord.slice(0, 50), nota: '<tr><td colspan="9" class="empty-state">Mostrando os 50 mais recentes de ' + itens.length + '. Use a pesquisa para achar os demais.</td></tr>' };
-    }
-
-  function documentosPesquisar_() {
-    const el = document.getElementById("documentosPesquisa");
-    DOCUMENTOS_STATE.filtro = el ? String(el.value || "").trim() : "";
-    if (!SESSION) return;
-
-    const tbody = document.getElementById("documentosTabelaBody");
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Buscando na base...</td></tr>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) {
-          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Falha ao buscar documentos.</td></tr>';
-          return;
-        }
-        const lista = documentosRecentes_(Array.isArray(res.items) ? res.items : []);
-        renderTabelaDocumentos_(lista.itens);
-        if (lista.nota) tbody.insertAdjacentHTML("beforeend", lista.nota);
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao pesquisar documentos:", err);
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Não foi possível buscar os documentos. Verifique a conexão e tente de novo. Nada foi alterado.</td></tr>';
-      })
-      .documentosPesquisar(SESSION, DOCUMENTOS_STATE.filtro);
-  }
-
-  function renderTabelaDocumentos_(itemsOverride) {
-    const tbody = document.getElementById("documentosTabelaBody");
-    if (!tbody) return;
-
-    const items = Array.isArray(itemsOverride) ? itemsOverride : DOCUMENTOS_STATE.items;
-    const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
-    const styleAcoes = isCliente ? "display:none;" : "";
-
-    if (!items.length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum documento encontrado para a busca.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = items.map(function (item) {
-      const id = escapeHtml_(item.ID);
-      const status = String(item.STATUS || "").toUpperCase();
-
-      const linkHtml = item.LINK_ARQUIVO
-        ? `<a href="${escapeHtml_(item.LINK_ARQUIVO)}" target="_blank" style="color:var(--metro-blue);font-weight:700;text-decoration:none;">Acessar</a>`
-        : "--";
-
-      const vencimentoHtml = typeof formatarDataFront_ === "function"
-        ? formatarDataFront_(item.DATA_VENCIMENTO)
-        : item.DATA_VENCIMENTO;
-
-      const acoesHtml = isCliente ? "" : `
-        <td style="${styleAcoes}">
-          <div class="table-actions">
-            <button class="btn-info" type="button" onclick="documentosEditar_('${id}')">Editar</button>
-            ${
-              status === "ATIVO" || status === "PENDENTE"
-                ? `<button class="btn-warning" type="button" onclick="documentosInativar_('${id}')">Inativar</button>`
-                : `<button class="btn-success" type="button" onclick="documentosReativar_('${id}')">Reativar</button>`
-            }
-            ${ ['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? `<button class="btn-danger" type="button" onclick="documentosExcluir_('${id}')">Excluir</button>` : '' }
-          </div>
-        </td>
-      `;
-
-      return `
-        <tr>
-          <td>${escapeHtml_(item.CLIENTE_NOME)}</td>
-          <td>${escapeHtml_(item.UNIDADE_NOME)}</td>
-          <td>${escapeHtml_(item.EQUIPAMENTO_NOME || "Geral da Unidade")}</td>
-          <td>${escapeHtml_(item.TIPO_DOCUMENTO)}</td>
-          <td>${escapeHtml_(item.NOME_ARQUIVO)}</td>
-          <td><strong>${vencimentoHtml}</strong></td>
-          <td>${linkHtml}</td>
-          <td>${obterBadgeStatusHtml_(status)}</td>
-          ${acoesHtml}
-        </tr>
-      `;
-    }).join("");
-  }
-
-  function documentosLimparFormulario_() {
-    SGO_limparBuscaClienteLike_("doc_cliente_id");
-    setSelectValueSafe_("doc_unidade_id", "");
-    setSelectValueSafe_("doc_equipamento_id", "");
-    setValue_("doc_tipo_documento", "");
-    setValue_("doc_nome_arquivo", "");
-    setValue_("doc_arquivo", "");
-    setValue_("doc_arquivo_base64", "");
-    setValue_("doc_arquivo_mime", "");
-    setValue_("doc_arquivo_nome", "");
-    setValue_("doc_data_vencimento", "");
-    setValue_("doc_status", "ATIVO");
-
-    const elInput = document.getElementById("doc_arquivo");
-    if (elInput) elInput.value = "";
-
-    const preview = document.getElementById("doc_arquivo_preview");
-    if (preview) preview.innerText = "";
-
-    const selectUnidade = document.getElementById("doc_unidade_id");
-    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Selecione um cliente primeiro</option>';
-
-    const selectEquip = document.getElementById("doc_equipamento_id");
-    if (selectEquip) selectEquip.innerHTML = '<option value="">Selecione uma unidade primeiro</option>';
-  }
-
-  function documentosNovo_() {
-    DOCUMENTOS_STATE.editingId = "";
-    documentosLimparFormulario_();
-
-    const titulo = document.getElementById("documentosFormTitulo");
-    if (titulo) titulo.innerText = "Novo documento";
-  }
-
-  function processarArquivoDocumento_() {
-    const el = document.getElementById("doc_arquivo");
-    const file = el && el.files ? el.files[0] : null;
-    const preview = document.getElementById("doc_arquivo_preview");
-
-    if (!file) {
-      setValue_("doc_arquivo_base64", "");
-      setValue_("doc_arquivo_mime", "");
-      setValue_("doc_arquivo_nome", "");
-      if (preview) preview.innerText = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("O arquivo selecionado é muito grande. O limite máximo é de 5MB.");
-      if (el) el.value = "";
-      return;
-    }
-
-    if (preview) preview.innerText = "Lendo arquivo: " + file.name + "...";
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      setValue_("doc_arquivo_base64", e.target.result);
-      setValue_("doc_arquivo_mime", file.type);
-      setValue_("doc_arquivo_nome", file.name);
-      if (preview) preview.innerText = "Arquivo pronto para envio: " + file.name;
-    };
-    reader.onerror = function () {
-      alert("Não foi possível ler o arquivo. Escolha o arquivo de novo.");
-      if (el) el.value = "";
-      if (preview) preview.innerText = "";
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function carregarClientesParaDocumentos_() {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return;
-        DOCUMENTOS_STATE.clientes = Array.isArray(res.items) ? res.items : [];
-        preencherComboClientesDocumentos_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao carregar clientes para documentos:", err);
-      })
-      .equipamentosListarClientesAtivos(SESSION);
-  }
-
-  function preencherComboClientesDocumentos_() {
-    SGO_montarBuscaClienteLike_("doc_cliente_id", DOCUMENTOS_STATE.clientes || [], aoMudarClienteDocumentos_);
-  }
-
-  function aoMudarClienteDocumentos_() {
-    const clienteId = getValue_("doc_cliente_id");
-    if (!clienteId) {
-      DOCUMENTOS_STATE.unidades = [];
-      DOCUMENTOS_STATE.equipamentos = [];
-      preencherComboUnidadesDocumentos_();
-      preencherComboEquipamentosDocumentos_();
-      return;
-    }
-    carregarUnidadesParaDocumentos_(clienteId);
-  }
-
-  function carregarUnidadesParaDocumentos_(clienteId, unidadeSelecionadaId, equipamentoSelecionadoId) {
-    const request = DOCUMENTOS_STATE.unidadesRequest = (DOCUMENTOS_STATE.unidadesRequest || 0) + 1;
-    if (!SESSION || !clienteId) return;
-
-    DOCUMENTOS_STATE.equipamentosRequest=(DOCUMENTOS_STATE.equipamentosRequest||0)+1;
-    DOCUMENTOS_STATE.equipamentos=[];preencherComboEquipamentosDocumentos_();
-    const selectUnidade = document.getElementById("doc_unidade_id");
-    if (selectUnidade) selectUnidade.innerHTML = '<option value="">Carregando unidades...</option>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if(request !== DOCUMENTOS_STATE.unidadesRequest || !selectUnidade || !selectUnidade.isConnected || getValue_("doc_cliente_id") !== clienteId)return;
-        if (!res || !res.success) return;
-        DOCUMENTOS_STATE.unidades = Array.isArray(res.items) ? res.items : [];
-        preencherComboUnidadesDocumentos_();
-
-        if (unidadeSelecionadaId) {
-          setSelectValueSafe_("doc_unidade_id", unidadeSelecionadaId);
-          carregarEquipamentosParaDocumentos_(unidadeSelecionadaId, equipamentoSelecionadoId);
+  function Documentos_formulario_(id, pre) {
+    if (CadUI_ehCliente_()) return;
+    var d = id ? CadTela_item_("documentos", id) : null;
+    var novo = !d;
+    d = d || {};
+    pre = pre || {};
+    DOC_ARQ = { base64: "", mime: "", nome: "" };
+    var gestao = CadUI_gestao_();
+    // não gestão: o vínculo já preenchido fica travado (o servidor recusa a troca); campo vazio continua livre
+    var travaCli = !novo && !gestao && !!d.CLIENTE_ID, travaUni = !novo && !gestao && !!d.UNIDADE_ID, travaEq = !novo && !gestao && !!d.EQUIPAMENTO_ID;
+    var tipoAtual = String(d.TIPO_DOCUMENTO || "");
+    var cats = DOC_CATEGORIAS.slice();
+    var achou = cats.filter(function (c) { return c[0].toUpperCase() === tipoAtual.toUpperCase(); })[0];
+    if (tipoAtual && !achou) cats.push([tipoAtual, Documentos_categoria_(tipoAtual) + " (categoria antiga)"]);
+    var valorCat = achou ? achou[0] : tipoAtual;
+    var cfg = {
+      chave: "documentos", id: id || "", titulo: novo ? "Novo documento" : "Editar documento",
+      sub: novo ? "Escolha onde o documento fica, a categoria e o arquivo." : CadUI_esc_(Documentos_nome_(d)),
+      corpo: function () {
+        return CadUI_secao_("Vínculo", [
+          travaCli ? CadUI_campo_({ id: "doc_cliente_fixo", rotulo: "Cliente", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_(d.CLIENTE_NOME) + "</div>" })
+                   : CadUI_campo_({ id: "doc_cliente_id", paraId: "doc_cliente_id_busca", rotulo: "Cliente", obrigatorio: true, inteiro: true, html: SGO_htmlBuscaClienteLike_("doc_cliente_id", "Digite o nome ou o CNPJ do cliente e escolha na lista") }),
+          travaUni ? CadUI_campo_({ id: "doc_unidade_fixo", rotulo: "Unidade", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_(d.UNIDADE_NOME) + "</div>" })
+                   : CadUI_campo_({ id: "doc_unidade_id", rotulo: "Unidade", obrigatorio: true, inteiro: true, tipo: "select", opcoes: [["", "Escolha o cliente primeiro"]] }),
+          travaEq ? CadUI_campo_({ id: "doc_equip_fixo", rotulo: "Equipamento", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_(d.EQUIPAMENTO_NOME) + "</div>" })
+                  : CadUI_campo_({ id: "doc_equipamento_id", rotulo: "Equipamento (opcional)", inteiro: true, tipo: "select", opcoes: [["", "Escolha a unidade primeiro"]], dica: "Deixe em branco para documento geral da unidade (ex.: contrato)." })
+        ].concat(travaCli || travaUni || travaEq ? ['<p class="cadx-dica is-inteiro" style="grid-column:1/-1">Trocar o cliente, a unidade ou o equipamento de um documento já ligado é feito pela gestão (Gestor, Diretoria ou Administrador). Os outros campos você edita normalmente.</p>'] : [])) +
+        CadUI_secao_("Documento", [
+          CadUI_campo_({ id: "doc_tipo_documento", rotulo: "Categoria (NBR 15943)", obrigatorio: true, inteiro: true, tipo: "select", valor: valorCat, opcoes: [["", "Escolha a categoria"]].concat(cats) }),
+          CadUI_campo_({ id: "doc_nome_arquivo", rotulo: "Nome ou referência", obrigatorio: true, inteiro: true, valor: d.NOME_ARQUIVO, placeholder: "Ex.: Relatório de qualificação AUT-01 2026" }),
+          CadUI_campo_({ id: "doc_data_vencimento", rotulo: "Data de vencimento", tipo: "date", valor: d.VENCIMENTO_ISO || "", dica: "Opcional. Com data, o documento entra nos alertas: vencendo em até 30 dias e vencido." })
+        ]) +
+        CadUI_secao_("Arquivo", [
+          CadUI_campo_({ id: "doc_arquivo", rotulo: novo ? "Arquivo do documento" : "Substituir o arquivo", inteiro: true,
+            html: '<input id="doc_arquivo" type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" data-rotulo="Escolher arquivo"><div class="cadx-dica" id="doc_arquivo_preview">' +
+              (d.LINK_ARQUIVO ? 'Arquivo atual: <a href="' + CadUI_esc_(d.LINK_ARQUIVO) + '" target="_blank" rel="noopener">abrir</a>. Escolha outro só se quiser substituir.' : (novo ? "PDF, imagem, Word ou Excel, até 5 MB. Sem arquivo, o documento fica como Sem arquivo até ser anexado." : "Este documento ainda não tem arquivo: anexe para concluir.")) + "</div>" })
+        ]) +
+        '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios.</p>';
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Documentos_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Salvar documento" : "Salvar alterações"),
+      depois: function (p) {
+        CadUI_ligarFormulario_(p);
+        var cliIni = novo ? (pre.clienteId || "") : d.CLIENTE_ID, uniIni = novo ? (pre.unidadeId || "") : d.UNIDADE_ID, eqIni = novo ? (pre.equipamentoId || "") : d.EQUIPAMENTO_ID;
+        var carregarEquip = function (uid, escolher) {
+          var sel = document.getElementById("doc_equipamento_id");
+          if (!sel) return;
+          if (!uid) { sel.innerHTML = '<option value="">Escolha a unidade primeiro</option>'; return; }
+          sel.innerHTML = '<option value="">Carregando os equipamentos…</option>';
+          CadUI_chamar_("documentosListarEquipamentosAtivosPorUnidade", [uid], function (res) {
+            var its = res.items || [];
+            sel.dataset.carregado = "1";
+            sel.innerHTML = '<option value="">Geral da unidade (sem equipamento)</option>' + its.map(function (x) { return '<option value="' + CadUI_esc_(x.ID) + '">' + CadUI_esc_(x.NOME_EQUIPAMENTO) + "</option>"; }).join("");
+            if (escolher) { if (!its.some(function (x) { return x.ID === escolher; }) && d.EQUIPAMENTO_NOME) sel.insertAdjacentHTML("beforeend", '<option value="' + CadUI_esc_(escolher) + '">' + CadUI_esc_(d.EQUIPAMENTO_NOME) + " (inativo)</option>"); sel.value = escolher; }
+          }, function (msg) { sel.innerHTML = '<option value="">Não foi possível carregar</option>'; CadUI_erroCampo_("doc_equipamento_id", CadUI_esc_(msg)); });
+        };
+        var carregarUni = function (cid, escolherU, escolherE) {
+          var sel = document.getElementById("doc_unidade_id");
+          if (!sel) { carregarEquip(uniIni, escolherE); return; }
+          if (!cid) { sel.innerHTML = '<option value="">Escolha o cliente primeiro</option>'; carregarEquip("", ""); return; }
+          sel.innerHTML = '<option value="">Carregando as unidades…</option>';
+          CadUI_chamar_("equipamentosListarUnidadesAtivasPorCliente", [cid], function (res) {
+            var its = res.items || [];
+            sel.dataset.carregado = "1";
+            sel.innerHTML = its.length ? '<option value="">Escolha a unidade</option>' + its.map(function (u) { return '<option value="' + CadUI_esc_(u.ID) + '">' + CadUI_esc_(u.NOME_UNIDADE) + "</option>"; }).join("") : '<option value="">Este cliente não tem unidade ativa</option>';
+            if (escolherU) sel.value = escolherU; else if (its.length === 1) sel.value = its[0].ID;
+            carregarEquip(sel.value, escolherE);
+          }, function (msg) { sel.innerHTML = '<option value="">Não foi possível carregar</option>'; CadUI_erroCampo_("doc_unidade_id", CadUI_esc_(msg)); });
+          sel.onchange = function () { CadUI_erroCampo_("doc_unidade_id", ""); carregarEquip(sel.value, ""); };
+        };
+        if (document.getElementById("doc_cliente_id_busca")) {
+          CadUI_chamar_("equipamentosListarClientesAtivos", [], function (res) {
+            SGO_montarBuscaClienteLike_("doc_cliente_id", (res.items || []).map(function (c) { return Object.assign({}, c, { CNPJ: CadUI_cnpj_(c.CNPJ) }); }), function (cid) { CadUI_erroCampo_("doc_cliente_id", ""); carregarUni(cid, "", ""); });
+            if (cliIni) { SGO_prefillBuscaClienteLike_("doc_cliente_id", cliIni, novo ? (pre.clienteNome || "") : d.CLIENTE_NOME); carregarUni(cliIni, uniIni, eqIni); }
+          }, function (msg) { CadUI_erroCampo_("doc_cliente_id", "A lista de clientes não carregou: " + CadUI_esc_(msg)); });
         } else {
-          DOCUMENTOS_STATE.equipamentos = [];
-          preencherComboEquipamentosDocumentos_();
+          carregarUni(cliIni, uniIni, eqIni);
         }
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao carregar unidades para documentos:", err);
-      })
-      .equipamentosListarUnidadesAtivasPorCliente(SESSION, clienteId);
-  }
-
-  function preencherComboUnidadesDocumentos_() {
-    const select = document.getElementById("doc_unidade_id");
-    if (!select) return;
-
-    if (!DOCUMENTOS_STATE.unidades || DOCUMENTOS_STATE.unidades.length === 0) {
-      select.innerHTML = '<option value="">Nenhuma unidade ativa encontrada</option>';
-      return;
-    }
-
-    const options = ['<option value="">Selecione a unidade</option>'];
-    (DOCUMENTOS_STATE.unidades || []).forEach(function (item) {
-      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_UNIDADE) + "</option>");
-    });
-    select.innerHTML = options.join("");
-  }
-
-  function aoMudarUnidadeDocumentos_() {
-    const unidadeId = getValue_("doc_unidade_id");
-    if (!unidadeId) {
-      DOCUMENTOS_STATE.equipamentos = [];
-      preencherComboEquipamentosDocumentos_();
-      return;
-    }
-    carregarEquipamentosParaDocumentos_(unidadeId);
-  }
-
-  function carregarEquipamentosParaDocumentos_(unidadeId, equipamentoSelecionadoId) {
-    const request = DOCUMENTOS_STATE.equipamentosRequest = (DOCUMENTOS_STATE.equipamentosRequest || 0) + 1;
-    if (!SESSION || !unidadeId) return;
-
-    const selectEquip = document.getElementById("doc_equipamento_id");
-    if (selectEquip) selectEquip.innerHTML = '<option value="">Carregando equipamentos...</option>';
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if(request !== DOCUMENTOS_STATE.equipamentosRequest || !selectEquip || !selectEquip.isConnected || getValue_("doc_unidade_id") !== unidadeId)return;
-        if (!res || !res.success) return;
-        DOCUMENTOS_STATE.equipamentos = Array.isArray(res.items) ? res.items : [];
-        preencherComboEquipamentosDocumentos_();
-        if (equipamentoSelecionadoId) setSelectValueSafe_("doc_equipamento_id", equipamentoSelecionadoId);
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao carregar equipamentos para documentos:", err);
-      })
-      .documentosListarEquipamentosAtivosPorUnidade(SESSION, unidadeId);
-  }
-
-  function preencherComboEquipamentosDocumentos_() {
-    const select = document.getElementById("doc_equipamento_id");
-    if (!select) return;
-
-    if (!DOCUMENTOS_STATE.equipamentos || DOCUMENTOS_STATE.equipamentos.length === 0) {
-      select.innerHTML = '<option value="">Nenhum equipamento ativo (opcional)</option>';
-      return;
-    }
-
-    const options = ['<option value="">Geral da Unidade (Opcional)</option>'];
-    (DOCUMENTOS_STATE.equipamentos || []).forEach(function (item) {
-      options.push('<option value="' + escapeHtml_(item.ID) + '">' + escapeHtml_(item.NOME_EQUIPAMENTO) + "</option>");
-    });
-    select.innerHTML = options.join("");
-  }
-
-  function documentosLerFormulario_() {
-    return {
-      CLIENTE_ID: getValue_("doc_cliente_id"),
-      UNIDADE_ID: getValue_("doc_unidade_id"),
-      EQUIPAMENTO_ID: getValue_("doc_equipamento_id"),
-      TIPO_DOCUMENTO: getValue_("doc_tipo_documento"),
-      NOME_ARQUIVO: getValue_("doc_nome_arquivo"),
-      ARQUIVO_BASE64: getValue_("doc_arquivo_base64"),
-      ARQUIVO_MIME: getValue_("doc_arquivo_mime"),
-      ARQUIVO_NOME: getValue_("doc_arquivo_nome"),
-      DATA_VENCIMENTO: getValue_("doc_data_vencimento")
+        p.querySelector("#doc_arquivo").addEventListener("change", Documentos_lerArquivo_);
+        p.querySelector("#cadxSalvar").onclick = function () { Documentos_salvar_(id); };
+      }
     };
+    CadUI_painelAbrir_(cfg);
+  }
+  function Documentos_voltarDetalhe_(id) { CadUI_painelSujo_(false); var d = CadTela_item_("documentos", id); if (d) Documentos_detalhe_(d); else CadUI_painelFechar_(); }
+
+  function Documentos_lerArquivo_() {
+    var el = document.getElementById("doc_arquivo");
+    var f = el && el.files ? el.files[0] : null;
+    var prev = document.getElementById("doc_arquivo_preview");
+    DOC_ARQ = { base64: "", mime: "", nome: "" };
+    CadUI_erroCampo_("doc_arquivo", "");
+    if (!f) return;
+    if (f.size > 5 * 1024 * 1024) { el.value = ""; CadUI_erroCampo_("doc_arquivo", "O arquivo tem " + (f.size / 1048576).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " MB; o limite é 5 MB. Reduza (ex.: PDF compactado) e escolha de novo."); return; }
+    if (prev) prev.textContent = "Lendo " + f.name + "…";
+    var r = new FileReader();
+    r.onload = function (e) { DOC_ARQ = { base64: e.target.result, mime: f.type, nome: f.name }; if (prev) prev.textContent = "Pronto para enviar: " + f.name + " (" + (f.size / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + " KB)."; };
+    r.onerror = function () { el.value = ""; CadUI_erroCampo_("doc_arquivo", "Não foi possível ler o arquivo. Escolha de novo."); };
+    r.readAsDataURL(f);
   }
 
-  function documentosSalvar_() {
-    if (!SESSION) return;
+  function Documentos_salvar_(id) {
+    var novo = !id;
+    var d = id ? CadTela_item_("documentos", id) || {} : {};
+    var p = { TIPO_DOCUMENTO: getValue_("doc_tipo_documento"), NOME_ARQUIVO: getValue_("doc_nome_arquivo"), DATA_VENCIMENTO: getValue_("doc_data_vencimento") };
+    // Lista ainda carregando: vale o vínculo atual (nunca apaga o que já estava gravado).
+    var pronto = function (idSel) { var el = document.getElementById(idSel); return el && el.dataset.carregado === "1"; };
+    p.CLIENTE_ID = document.getElementById("doc_cliente_id") ? getValue_("doc_cliente_id") : d.CLIENTE_ID;
+    p.UNIDADE_ID = pronto("doc_unidade_id") ? getValue_("doc_unidade_id") : d.UNIDADE_ID;
+    p.EQUIPAMENTO_ID = pronto("doc_equipamento_id") ? getValue_("doc_equipamento_id") : d.EQUIPAMENTO_ID;
+    if (!novo && document.getElementById("doc_unidade_id") && !pronto("doc_unidade_id") && p.CLIENTE_ID !== d.CLIENTE_ID) { CadUI_aviso_("Aguarde carregar as unidades do cliente escolhido e salve de novo.", "alerta"); return; }
+    if (novo && (!pronto("doc_unidade_id") || (p.UNIDADE_ID && !pronto("doc_equipamento_id")))) { if (p.CLIENTE_ID) { CadUI_aviso_("Aguarde carregar as unidades e os equipamentos e salve de novo.", "alerta"); return; } }
+    if (DOC_ARQ.base64) { p.ARQUIVO_BASE64 = DOC_ARQ.base64; p.ARQUIVO_MIME = DOC_ARQ.mime; p.ARQUIVO_NOME = DOC_ARQ.nome; }
+    var erros = {};
+    if (!p.CLIENTE_ID) erros.doc_cliente_id = "Escolha o cliente na lista.";
+    if (!p.UNIDADE_ID) erros.doc_unidade_id = "Escolha a unidade.";
+    if (!p.TIPO_DOCUMENTO) erros.doc_tipo_documento = "Escolha a categoria.";
+    if (!p.NOME_ARQUIVO) erros.doc_nome_arquivo = "Informe o nome ou a referência do documento.";
+    var el = document.getElementById("doc_arquivo");
+    if (el && el.files && el.files[0] && !DOC_ARQ.base64) erros.doc_arquivo = "Aguarde terminar a leitura do arquivo e clique em Salvar de novo.";
+    if (!CadUI_mostrarErros_(erros, ["doc_cliente_id", "doc_unidade_id", "doc_tipo_documento", "doc_nome_arquivo", "doc_arquivo"])) return;
+    CadUI_salvando_(true);
+    CadUI_chamar_(novo ? "documentosCriar" : "documentosAtualizar", novo ? [p] : [id, p], function (res) {
+      CadUI_painelSujo_(false);
+      CadUI_aviso_(res.message || "Documento salvo.", "ok");
+      CadTela_carregar_("documentos", function () {
+        var it = id ? CadTela_item_("documentos", id) : (CADUI.telas.documentos.itens || []).filter(function (x) { return String(x.NOME_ARQUIVO).toUpperCase() === p.NOME_ARQUIVO.toUpperCase() && x.UNIDADE_ID === p.UNIDADE_ID; })[0];
+        if (it) Documentos_detalhe_(it); else CadUI_painelFechar_();
+      });
+    }, function (msg) { CadUI_salvando_(false); CadUI_aviso_(msg, "erro"); }, DOC_ARQ.base64 ? "Aguarde, enviando o arquivo…" : "Aguarde, salvando…");
+  }
 
-    const payload = documentosLerFormulario_();
+  // Compatibilidade (busca rápida, celular, outros módulos).
+  function documentosPesquisar_() { CadTela_buscarDoCampo_("documentos"); }
+  function documentosNovo_() { Documentos_formulario_(null); }
+  function documentosEditar_(id) { if (CADUI.telas.documentos && CadTela_item_("documentos", id)) Documentos_formulario_(id); else { CADUI.irPara = { chave: "documentos", novo: function () { Documentos_formulario_(id); } }; abrir("documentos"); } }
+  function documentosLimparFormulario_() {}
+  function carregarClientesParaDocumentos_() {}
+  function processarArquivoDocumento_() { Documentos_lerArquivo_(); }
 
-    if (!payload.CLIENTE_ID) return alert("Selecione o cliente.");
-    if (!payload.UNIDADE_ID) return alert("Selecione a unidade.");
-    if (!payload.TIPO_DOCUMENTO) return alert("Informe a categoria do documento.");
-    if (!payload.NOME_ARQUIVO) return alert("Informe a referência do arquivo.");
-    if (!DOCUMENTOS_STATE.editingId && !payload.ARQUIVO_BASE64) return alert("Selecione um arquivo para o upload.");
+  // =====================================================================
+  // USUÁRIOS
+  // =====================================================================
+  function Usuarios_nome_(u) { return (u && (u.NOME || u.USUARIO)) || "Usuário sem nome"; }
 
-    const btn = document.querySelector("#documentosFormTitulo")?.parentElement?.querySelector(".btn-primary");
-    if (btn) {
-      btn.disabled = true;
-      btn.innerText = "Salvando/Enviando...";
-    }
-
-    if (DOCUMENTOS_STATE.editingId) {
-      SGO_iniciarCarregamento_();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          SGO_finalizarCarregamento_();
-          if (btn) {
-            btn.disabled = false;
-            btn.innerText = "Salvar";
-          }
-          if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível atualizar o registro. Tente de novo.");
-          alert(res.message || "Atualizado com sucesso.");
-          documentosNovo_();
-          documentosPesquisar_();
-        })
-        .withFailureHandler(function (err) {
-          SGO_finalizarCarregamento_();
-          console.error("Falha ao atualizar documento:", err);
-          if (btn) {
-            btn.disabled = false;
-            btn.innerText = "Salvar";
-          }
-          alert("Não foi possível salvar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-        })
-        .documentosAtualizar(SESSION, DOCUMENTOS_STATE.editingId, payload);
+  function renderUsuariosModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!CadUI_gestao_()) {
+      if (div) div.innerHTML = '<div class="module-shell cadx"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Usuários</h2><p class="content-subtitle">Contas de acesso ao SGO+.</p></div></div>' +
+        '<div class="cadx-faixa bc-faixa tom-info" role="status">A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um deles.</div></div>';
       return;
     }
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = "Salvar";
-        }
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível concluir o cadastro. Tente de novo.");
-        alert(res.message || "Criado com sucesso.");
-        documentosNovo_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao criar documento:", err);
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = "Salvar";
-        }
-        alert("Não foi possível enviar o documento. Verifique a conexão e confira na lista se ele foi cadastrado antes de tentar de novo.");
-      })
-      .documentosCriar(SESSION, payload);
+    CadTela_montar_({
+      chave: "usuarios", titulo: "Usuários", nomeItens: ["usuário", "usuários"],
+      subtitulo: "Contas de acesso ao SGO+: perfil, situação, e-mail e celular (WhatsApp) de cada pessoa.",
+      idBusca: "usuariosPesquisa", buscaPlaceholder: "Buscar por nome, login, e-mail ou celular",
+      ajuda:
+        "<ul><li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Gestor e Diretoria são a gestão; Cliente vê só a própria empresa.</li>" +
+        "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
+        "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
+        "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Prefira inativar a excluir.</li>" +
+        "<li><b>Redefinir senha</b> fica em <i>Mais</i>. Combine a senha nova com a pessoa por um canal seguro e peça para ela trocar no primeiro acesso.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "ativos", rotulo: "Ativos", tom: "tom-ok", filtro: function (u) { return u.STATUS === "ATIVO"; } },
+        { id: "inativos", rotulo: "Inativos", filtro: function (u) { return u.STATUS !== "ATIVO"; } },
+        { id: "semcel", rotulo: "Sem celular (ativos)", tom: "tom-alerta", dica: "Ativos sem celular: não recebem WhatsApp nem usam o Assistente do ponto do COMMAND.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE"; } },
+        { id: "gestao", rotulo: "Administração e gestão", filtro: function (u) { return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(u.PERFIL).toUpperCase()) >= 0; } },
+        { id: "nunca", rotulo: "Nunca entraram", filtro: function (u) { return u.STATUS === "ATIVO" && !u.ULTIMO_ACESSO; } }
+      ],
+      filtros: [
+        { id: "perfil", rotulo: "Todos os perfis", opcoes: function (its) { return CadTela_opcoesDe_(its, "PERFIL", "PERFIL").map(function (o) { return [o[0], SGO_rotuloPerfil_(o[0])]; }); }, aplicar: function (u, v) { return String(u.PERFIL).toUpperCase() === v.toUpperCase(); } },
+        { id: "situacao", rotulo: "Todas as situações", opcoes: function () { return [["ATIVO", "Ativos"], ["INATIVO", "Inativos"]]; }, aplicar: function (u, v) { return v === "ATIVO" ? u.STATUS === "ATIVO" : u.STATUS !== "ATIVO"; } }
+      ],
+      ordenar: [
+        { id: "nome", rotulo: "Ordenar por nome", fn: null },
+        { id: "acesso", rotulo: "Último acesso mais recente", fn: function (a, b) { return String(b.ULTIMO_ACESSO || "").localeCompare(String(a.ULTIMO_ACESSO || "")); } }
+      ],
+      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME].join(" "); },
+      acao: { texto: "Novo usuário", fn: function () { Usuarios_formulario_(null); } },
+      vazioTitulo: "Nenhum usuário além de você.", vazio: "Clique em Novo usuário para dar acesso a alguém.",
+      colunas: [
+        { titulo: "Usuário", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + (u.EU ? ' <span class="cadx-chip tom-info">Você</span>' : "") + '</div><div class="cadx-sub cadx-mono">' + CadUI_esc_(u.USUARIO) + "</div>"; } },
+        { titulo: "Perfil", html: function (u) { return CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + (u.CLIENTE_NOME ? '<div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME) + "</div>" : ""); } },
+        { titulo: "E-mail", html: function (u) { return u.EMAIL ? CadUI_esc_(u.EMAIL) : '<span class="cadx-chip tom-alerta">Sem e-mail</span>'; } },
+        { titulo: "Celular (WhatsApp)", html: function (u) { return u.SEM_CELULAR ? (String(u.PERFIL).toUpperCase() === "CLIENTE" ? '<span class="cadx-sub">Não informado</span>' : '<span class="cadx-chip tom-alerta">Sem celular</span>') : '<span class="cadx-mono">' + CadUI_esc_(usuariosMascaraCelular_(u.CELULAR)) + "</span>"; } },
+        { titulo: "Último acesso", html: function (u) { return u.ULTIMO_ACESSO ? '<span class="cadx-mono">' + CadUI_esc_(CadUI_dataHora_(u.ULTIMO_ACESSO)) + "</span>" : '<span class="cadx-sub">Nunca entrou</span>'; } },
+        { titulo: "Situação", html: function (u) { return CadUI_selo_(u.STATUS); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (u) { return CadTela_botoesLinha_("usuarios", u); } }
+      ],
+      cartao: function (u) {
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + '</div><div class="cadx-sub">' + CadUI_esc_(u.USUARIO + " · " + SGO_rotuloPerfil_(u.PERFIL)) + "</div></div>" + CadUI_selo_(u.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>' + CadUI_esc_(u.EMAIL || "Sem e-mail") + "</span><span>" + (u.SEM_CELULAR ? '<span class="cadx-chip tom-alerta">Sem celular</span>' : CadUI_esc_(usuariosMascaraCelular_(u.CELULAR))) + "</span><span>" + CadUI_esc_(u.ULTIMO_ACESSO ? "Último acesso " + CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou") + "</span></div>";
+      },
+      botaoPrincipal: function (u) { return u.PODE_ALTERAR ? { texto: "Editar", acao: "editar" } : null; },
+      editar: function (u) { Usuarios_formulario_(u.ID); },
+      mais: function (u) { return Usuarios_menu_(u); },
+      abrir: function (u) { Usuarios_detalhe_(u); },
+      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [] }); }, erro); }
+    });
   }
 
-  function documentosEditar_(id) {
-    if (!SESSION) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success || !res.item) return alert("Documento não encontrado.");
-
-        const item = res.item;
-        DOCUMENTOS_STATE.editingId = String(item.ID || "");
-
-        SGO_prefillBuscaClienteLike_("doc_cliente_id", item.CLIENTE_ID || "", item.CLIENTE_NOME || "");
-        carregarUnidadesParaDocumentos_(item.CLIENTE_ID, item.UNIDADE_ID, item.EQUIPAMENTO_ID);
-
-        setValue_("doc_tipo_documento", item.TIPO_DOCUMENTO || "");
-        setValue_("doc_nome_arquivo", item.NOME_ARQUIVO || "");
-
-        let dt = item.DATA_VENCIMENTO || "";
-        if (typeof dt === "string" && dt.includes("T")) dt = dt.split("T")[0];
-        // Vencimento gravado por outro módulo como dd/mm/aaaa: o campo de data só
-        // aceita aaaa-mm-dd e ficava vazio — e salvar apagava o vencimento.
-        const dtBr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(dt));
-        if (dtBr) dt = dtBr[3] + "-" + dtBr[2] + "-" + dtBr[1];
-        setValue_("doc_data_vencimento", dt);
-
-        setValue_("doc_arquivo", "");
-        setValue_("doc_arquivo_base64", "");
-        setValue_("doc_arquivo_mime", "");
-        setValue_("doc_arquivo_nome", "");
-        setValue_("doc_status", item.STATUS || "ATIVO");
-
-        const preview = document.getElementById("doc_arquivo_preview");
-        if (preview) {
-          if (item.LINK_ARQUIVO) {
-            preview.innerHTML = `Arquivo atual: <a href="${escapeHtml_(item.LINK_ARQUIVO)}" target="_blank">Abrir arquivo</a> <br><span style="color:var(--muted); font-weight:normal;">(Selecione um novo arquivo apenas se quiser substituir o atual)</span>`;
-          } else {
-            preview.innerText = "";
-          }
-        }
-
-        const titulo = document.getElementById("documentosFormTitulo");
-        if (titulo) titulo.innerText = "Editar documento";
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao buscar documento:", err);
-        alert("Não foi possível buscar o documento. Verifique a conexão e tente de novo. Nada foi alterado.");
-      })
-      .documentosObter(SESSION, id);
+  function Usuarios_menu_(u) {
+    var ativo = u.STATUS === "ATIVO";
+    var bloqueio = !u.PODE_ALTERAR ? "Conta de Administrador: só outro Administrador altera." : "";
+    var proprio = u.EU ? "Você não pode inativar nem excluir a sua própria conta." : "";
+    var ultimo = u.ULTIMO_ADMIN ? "Único Administrador ativo: cadastre ou reative outro antes." : "";
+    return [
+      { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("usuarios", u.ID); } },
+      { texto: "Redefinir senha", icone: "fa-key", desabilitado: !!bloqueio, nota: bloqueio, acao: function () { Usuarios_redefinirSenha_(u); } },
+      "-",
+      ativo
+        ? { texto: "Inativar (bloquear o acesso)", icone: "fa-ban", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_inativar_(u); } }
+        : { texto: "Reativar (liberar o acesso)", icone: "fa-rotate-left", desabilitado: !!bloqueio, nota: bloqueio, acao: function () { Usuarios_reativar_(u); } },
+      { texto: "Excluir usuário", icone: "fa-trash-can", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_excluir_(u); } }
+    ];
   }
 
-  function documentosInativar_(id) {
-    if (!SESSION || !confirm("Inativar este documento?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível inativar o registro. Tente de novo.");
-        documentosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao inativar documento:", err);
-        alert("Não foi possível inativar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .documentosInativar(SESSION, id);
+  function Usuarios_detalhe_(u) {
+    var semCel = u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE";
+    CadUI_painelAbrir_({
+      chave: "usuarios", id: u.ID, titulo: Usuarios_nome_(u), sub: CadUI_esc_(u.USUARIO + " · " + SGO_rotuloPerfil_(u.PERFIL)), seloHtml: CadUI_selo_(u.STATUS),
+      corpo: function () {
+        return (semCel && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem celular.</b> Esta pessoa não recebe avisos por WhatsApp e não consegue usar o Assistente do ponto do COMMAND. Clique em Editar e informe o celular com DDD.</div>' : "") +
+          (!u.PODE_ALTERAR ? '<div class="cadx-faixa bc-faixa tom-info">Conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir.</div>' : "") +
+          (u.STATUS !== "ATIVO" ? '<div class="cadx-faixa bc-faixa">Acesso bloqueado (inativo). Para liberar, use Mais › Reativar.</div>' : "") +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["Login", u.USUARIO]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["E-mail", u.EMAIL], ["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
+      },
+      depois: function (p) {
+        var mais = p.querySelector("#cadxPainelMais");
+        if (mais) mais.onclick = function () { CadUI_menu_(mais, Usuarios_menu_(u).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes"; })); };
+      },
+      rodape: '<div class="cadx-rodape-esq"><button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button></div>' +
+        (u.PODE_ALTERAR ? '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Usuarios_formulario_(\'' + CadUI_esc_(u.ID) + '\')">Editar</button>' : "")
+    });
   }
 
-  function documentosReativar_(id) {
-    if (!SESSION || !confirm("Reativar este documento?")) return;
-
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível reativar o registro. Tente de novo.");
-        documentosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao reativar documento:", err);
-        alert("Não foi possível reativar o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .documentosReativar(SESSION, id);
+  function Usuarios_redefinirSenha_(u) {
+    CadUI_confirmar_({
+      titulo: "Redefinir a senha", botao: "Gravar senha nova",
+      texto: "<p>Senha nova para <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> (" + CadUI_esc_(u.USUARIO) + "). A senha atual deixa de valer na hora.</p>",
+      extraHtml: '<div class="cadx-campo" data-campo="cadxSenha1"><label for="cadxSenha1">Senha nova <span class="cadx-obr">*</span></label><input id="cadxSenha1" type="password" autocomplete="new-password"><div class="cadx-dica">Mínimo de 6 caracteres.</div></div>' +
+        '<div class="cadx-campo" data-campo="cadxSenha2" style="margin-top:10px"><label for="cadxSenha2">Repita a senha nova <span class="cadx-obr">*</span></label><input id="cadxSenha2" type="password" autocomplete="new-password"></div>',
+      validar: function (f) {
+        var a = f.querySelector("#cadxSenha1").value, b = f.querySelector("#cadxSenha2").value;
+        if (a.length < 6) return "A senha nova precisa ter pelo menos 6 caracteres.";
+        if (a !== b) return "As duas senhas não são iguais. Digite de novo.";
+        return "";
+      },
+      aoConfirmar: function (v, fechar, reabilitar) {
+        var senha = document.getElementById("cadxSenha1").value;
+        CadUI_chamar_("usuariosAtualizar", [u.ID, { SENHA: senha }], function () { fechar(); CadUI_aviso_("Senha de " + Usuarios_nome_(u) + " redefinida. Combine a senha nova com a pessoa por um canal seguro.", "ok"); }, reabilitar);
+      }
+    });
+  }
+  function Usuarios_inativar_(u) {
+    CadTela_acaoRisco_({ titulo: "Inativar o usuário", botao: "Bloquear o acesso", fn: "usuariosInativar", id: u.ID,
+      texto: "<p>Bloquear o acesso de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> (" + CadUI_esc_(u.USUARIO) + ")?</p><p>A sessão aberta dela é encerrada em até 5 minutos. O histórico fica guardado; para liberar de novo, use Reativar.</p>",
+      aoConcluir: function () { CadTela_recarregar_("usuarios", u.ID); } });
+  }
+  function Usuarios_reativar_(u) {
+    CadTela_acaoRisco_({ titulo: "Reativar o usuário", botao: "Liberar o acesso", risco: false, fn: "usuariosReativar", id: u.ID,
+      texto: "<p>Liberar o acesso de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> com o perfil " + CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + "?</p>",
+      aoConcluir: function () { CadTela_recarregar_("usuarios", u.ID); } });
+  }
+  function Usuarios_excluir_(u) {
+    CadTela_acaoRisco_({ titulo: "Excluir o usuário", botao: "Excluir definitivamente", fn: "usuariosExcluir", id: u.ID,
+      texto: "<p>Excluir a conta <b>" + CadUI_esc_(u.USUARIO) + "</b> (" + CadUI_esc_(Usuarios_nome_(u)) + ")? Não pode ser desfeito.</p><p>Para só bloquear o acesso e manter o histórico ligado ao nome da pessoa, prefira Inativar.</p>",
+      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("usuarios"); } });
   }
 
-  function documentosExcluir_(id) {
-    if (!SESSION || !confirm("Excluir definitivamente este documento?")) return;
+  function Usuarios_formulario_(id) {
+    var u = id ? CadTela_item_("usuarios", id) : null;
+    var novo = !u;
+    u = u || {};
+    var st = CADUI.telas.usuarios || {};
+    var souAdmin = !!(st.extra && st.extra.souAdmin);
+    var perfis = (st.extra && st.extra.perfis && st.extra.perfis.length ? st.extra.perfis : ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "CLIENTE"])
+      .filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; });
+    var cfg = {
+      chave: "usuarios", id: id || "", titulo: novo ? "Novo usuário" : "Editar usuário", sub: novo ? "Conta de acesso ao SGO+." : CadUI_esc_(Usuarios_nome_(u) + " · " + u.USUARIO),
+      corpo: function () {
+        return CadUI_secao_("Identificação", [
+          CadUI_campo_({ id: "usr_nome", rotulo: "Nome completo", obrigatorio: true, inteiro: true, valor: u.NOME, placeholder: "Nome e sobrenome" }),
+          CadUI_campo_({ id: "usr_usuario", rotulo: "Login (nome de usuário)", obrigatorio: true, valor: u.USUARIO, placeholder: "ex.: joao.silva", attrs: ' autocapitalize="none" autocomplete="off" spellcheck="false"', dica: "Letras minúsculas, sem espaço." })
+        ]) +
+        CadUI_secao_("Contato", [
+          CadUI_campo_({ id: "usr_email", rotulo: "E-mail", tipo: "email", obrigatorio: true, inteiro: true, valor: u.EMAIL, placeholder: "nome@metrolabs.com.br", dica: "Identidade da pessoa no SGO+; recebe os avisos por e-mail." }),
+          CadUI_campo_({ id: "usr_celular", rotulo: "Celular (WhatsApp)", tipo: "tel", inteiro: true, valor: usuariosMascaraCelular_(u.CELULAR), placeholder: "(11) 98765-4321", attrs: ' inputmode="numeric" maxlength="16"', dica: "Usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Pode ficar vazio, mas a pessoa aparece como Sem celular." })
+        ]) +
+        CadUI_secao_("Acesso", [
+          CadUI_campo_({ id: "usr_perfil", rotulo: "Perfil de acesso", obrigatorio: true, tipo: "select", valor: String(u.PERFIL || "").toUpperCase(), opcoes: [["", "Escolha o perfil"]].concat(perfis.map(function (p) { return [String(p).toUpperCase(), SGO_rotuloPerfil_(p)]; })),
+            dica: souAdmin ? "" : "O perfil Administrador só é dado por outro Administrador." }),
+          '<div id="usr_cliente_bloco" hidden>' + CadUI_campo_({ id: "usr_cliente_id", rotulo: "Empresa (cliente)", obrigatorio: true, tipo: "select", opcoes: [["", "Carregando os clientes…"]], dica: "O perfil Cliente só vê os dados desta empresa." }) + "</div>",
+          novo ? CadUI_campo_({ id: "usr_senha", rotulo: "Senha inicial", tipo: "password", obrigatorio: true, inteiro: true, attrs: ' autocomplete="new-password"', dica: "Mínimo de 6 caracteres. Combine com a pessoa por um canal seguro." })
+               : '<p class="cadx-dica" style="grid-column:1/-1">Para trocar a senha, use Mais › Redefinir senha.</p>'
+        ]) +
+        '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios.</p>';
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Usuarios_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Cadastrar usuário" : "Salvar alterações"),
+      depois: function (p) {
+        CadUI_ligarFormulario_(p);
+        var perfilSel = p.querySelector("#usr_perfil"), bloco = p.querySelector("#usr_cliente_bloco");
+        var atualizarCliente = function () { bloco.hidden = perfilSel.value !== "CLIENTE"; };
+        perfilSel.addEventListener("change", atualizarCliente);
+        atualizarCliente();
+        p.querySelector("#usr_celular").addEventListener("input", function (e) { e.target.value = usuariosMascaraCelular_(e.target.value); });
+        p.querySelector("#usr_usuario").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
+        CadUI_chamar_("usuariosListarClientesAtivos", [], function (res) {
+          var sel = document.getElementById("usr_cliente_id");
+          if (!sel) return;
+          sel.innerHTML = '<option value="">Escolha a empresa</option>' + (res.items || []).map(function (c) { return '<option value="' + CadUI_esc_(c.ID) + '">' + CadUI_esc_(c.NOME || c.NOME_FANTASIA || c.RAZAO_SOCIAL) + "</option>"; }).join("");
+          if (u.CLIENTE_ID) sel.value = u.CLIENTE_ID;
+        }, function (msg) { CadUI_erroCampo_("usr_cliente_id", "A lista de clientes não carregou: " + CadUI_esc_(msg)); });
+        p.querySelector("#cadxSalvar").onclick = function () { Usuarios_salvar_(id); };
+      }
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+  function Usuarios_voltarDetalhe_(id) { CadUI_painelSujo_(false); var u = CadTela_item_("usuarios", id); if (u) Usuarios_detalhe_(u); else CadUI_painelFechar_(); }
 
-    SGO_iniciarCarregamento_();
-    google.script.run
-      .withSuccessHandler(function (res) {
-        SGO_finalizarCarregamento_();
-        if (!res || !res.success) return alert((res && res.message) ? res.message : "Não foi possível excluir o registro. Tente de novo.");
-        if (DOCUMENTOS_STATE.editingId === id) documentosNovo_();
-        documentosPesquisar_();
-      })
-      .withFailureHandler(function (err) {
-        SGO_finalizarCarregamento_();
-        console.error("Falha ao excluir documento:", err);
-        alert("Não foi possível excluir o documento. Verifique a conexão e confira na lista se a alteração foi feita antes de tentar de novo.");
-      })
-      .documentosExcluir(SESSION, id);
+  function Usuarios_salvar_(id) {
+    var novo = !id;
+    var cel = usuariosCelularDigitos_(getValue_("usr_celular"));
+    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "" };
+    if (novo) p.SENHA = (document.getElementById("usr_senha") || {}).value || "";
+    var erros = {};
+    if (!p.NOME) erros.usr_nome = "Informe o nome completo.";
+    if (!p.USUARIO) erros.usr_usuario = "Informe o login.";
+    else if (!/^[a-z0-9._@-]+$/.test(p.USUARIO)) erros.usr_usuario = "Use só letras sem acento, números, ponto, hífen ou sublinhado.";
+    else { var st = CADUI.telas.usuarios; var dup = st && st.itens.filter(function (x) { return String(x.USUARIO).toLowerCase() === p.USUARIO && String(x.ID) !== String(id || ""); })[0]; if (dup) erros.usr_usuario = "Este login já é de " + CadUI_esc_(Usuarios_nome_(dup)) + "."; }
+    if (!p.EMAIL) erros.usr_email = "Informe o e-mail.";
+    else if (!CadUI_emailValido_(p.EMAIL)) erros.usr_email = "E-mail inválido: confira o formato (nome@empresa.com.br).";
+    if (cel === null) erros.usr_celular = "Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.";
+    if (!p.PERFIL) erros.usr_perfil = "Escolha o perfil de acesso.";
+    if (p.PERFIL === "CLIENTE" && !p.CLIENTE_ID) erros.usr_cliente_id = "Escolha a empresa do usuário Cliente.";
+    if (novo && p.SENHA.length < 6) erros.usr_senha = "A senha inicial precisa ter pelo menos 6 caracteres.";
+    if (!CadUI_mostrarErros_(erros, ["usr_nome", "usr_usuario", "usr_email", "usr_celular", "usr_perfil", "usr_cliente_id", "usr_senha"])) return;
+    CadUI_salvando_(true);
+    CadUI_chamar_(novo ? "usuariosCriar" : "usuariosAtualizar", novo ? [p] : [id, p], function (res) {
+      CadUI_painelSujo_(false);
+      CadUI_aviso_((novo ? "Usuário " + p.USUARIO + " cadastrado." : "Usuário " + p.USUARIO + " atualizado.") + (res.message && /perfil/.test(res.message) ? " " + res.message.replace(/^Usuário atualizado com sucesso\.\s*/, "") : ""), "ok");
+      CadTela_carregar_("usuarios", function () {
+        var it = (CADUI.telas.usuarios.itens || []).filter(function (x) { return String(x.USUARIO).toLowerCase() === p.USUARIO; })[0];
+        if (it) Usuarios_detalhe_(it); else CadUI_painelFechar_();
+      });
+    }, function (msg) {
+      CadUI_salvando_(false);
+      if (/login|nome de usuário/i.test(msg)) CadUI_erroCampo_("usr_usuario", CadUI_esc_(msg));
+      else if (/e-?mail/i.test(msg)) CadUI_erroCampo_("usr_email", CadUI_esc_(msg));
+      else if (/celular/i.test(msg)) CadUI_erroCampo_("usr_celular", CadUI_esc_(msg));
+      else if (/perfil|Administrador/i.test(msg)) CadUI_erroCampo_("usr_perfil", CadUI_esc_(msg));
+      CadUI_aviso_(msg, "erro");
+    }, novo ? "Aguarde, cadastrando o usuário…" : "Aguarde, salvando…");
   }
 
+  // Compatibilidade com chamadas antigas.
+  function usuariosPesquisar_() { CadTela_buscarDoCampo_("usuarios"); }
+  function usuariosNovo_() { Usuarios_formulario_(null); }
+  function usuariosEditar_(id) { Usuarios_formulario_(id); }
+
+  // =====================================================================
+  // CONFIGURAÇÕES — blocos com título, explicação curta e Salvar próprio
+  // =====================================================================
+  function Config_bloco_(id, titulo, explicacao, corpo, rodape, direita) {
+    return '<section class="cadx-bloco" id="' + id + '"><div class="cadx-bloco-cab"><div><h3>' + CadUI_esc_(titulo) + "</h3><p>" + explicacao + "</p></div>" + (direita || "") + "</div>" +
+      '<div class="cadx-bloco-corpo">' + corpo + "</div>" + (rodape ? '<div class="cadx-bloco-rodape">' + rodape + "</div>" : "") + "</section>";
+  }
+  function Config_msg_(id, texto, tipo) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = texto || "";
+    el.className = "cadx-msg" + (tipo === "ok" ? " is-ok" : tipo === "erro" ? " is-erro" : "");
+  }
+
+  function renderAdminModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    var perfil = CadUI_perfil_();
+    var gestao = CadUI_gestao_();
+    var dono = typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_();
+    var minutos = Math.round((Number(IDLE_LIMIT) || 300) / 60 * 10) / 10;
+    var blocos = [];
+    blocos.push(Config_bloco_("cfgOciosidade", "Sessão e ociosidade",
+      "Aviso que aparece quando o SGO+ fica parado, para ninguém deixar a tela aberta sem querer. Vale para este navegador.",
+      '<div class="cadx-campos">' +
+        CadUI_campo_({ id: "inputIdleLimit", rotulo: "Avisar depois de (minutos sem uso)", tipo: "number", valor: String(minutos).replace(".", ","), attrs: ' min="0.5" step="0.5" inputmode="decimal"', dica: "Mínimo de meio minuto. Hoje: " + CadUI_num_(Number(IDLE_LIMIT) || 300) + " segundos." }) +
+        '<div class="cadx-campo"><label>Som do aviso</label><label class="cadx-chave" style="min-height:36px"><input type="checkbox" id="cfgSom"' + (SOM_OCIOSIDADE_ATIVO ? " checked" : "") + '><span class="cadx-chave-trilho" aria-hidden="true"></span><span id="adminSomStatus">' + (SOM_OCIOSIDADE_ATIVO ? "Ligado" : "Desligado") + "</span></label></div>" +
+      "</div>",
+      '<span class="cadx-msg" id="cfgOciosidadeMsg"></span><button type="button" class="cadx-btn cadx-btn-grande" onclick="testarSomOciosidade_()">Testar o som</button><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Config_salvarOciosidade_()">Salvar</button>'));
+    if (perfil === "ADMIN") {
+      blocos.push(Config_bloco_("adminAlertasPadroesCard", "Alertas de calibração",
+        "Lembretes de vencimento dos padrões de referência para Gestor e Metrologia: um balão discreto e, se ligado, uma janela no centro da tela. Só o Administrador altera.",
+        '<div class="cadx-campos">' +
+          '<div class="cadx-campo is-inteiro"><label class="cadx-chave"><input type="checkbox" id="ap_ativo_chave"><span class="cadx-chave-trilho" aria-hidden="true"></span><span>Alertas ligados</span></label></div>' +
+          '<div class="cadx-campo is-inteiro"><label>Quem recebe</label><div style="display:flex;gap:18px;flex-wrap:wrap"><label class="cadx-marcar"><input id="ap_gestor" type="checkbox"> Gestor</label><label class="cadx-marcar"><input id="ap_metrologia" type="checkbox"> Metrologia</label></div></div>' +
+          CadUI_campo_({ id: "ap_inicio", rotulo: "Horário inicial", tipo: "time" }) + CadUI_campo_({ id: "ap_fim", rotulo: "Horário final", tipo: "time" }) +
+          CadUI_campo_({ id: "ap_antecedencia", rotulo: "Avisar antes do vencimento (dias)", tipo: "number", attrs: ' min="1" max="365"' }) +
+          CadUI_campo_({ id: "ap_intervalo_balao", rotulo: "Repetir o lembrete a cada (minutos)", tipo: "number", attrs: ' min="15" max="720"' }) +
+          CadUI_campo_({ id: "ap_duracao", rotulo: "Tempo visível do lembrete (segundos)", tipo: "number", attrs: ' min="5" max="120"' }) +
+          '<div class="cadx-campo"><label>Janela no centro da tela</label><label class="cadx-chave" style="min-height:36px"><input type="checkbox" id="ap_critico_chave"><span class="cadx-chave-trilho" aria-hidden="true"></span><span>Mostrar quando houver padrão vencido</span></label></div>' +
+          CadUI_campo_({ id: "ap_intervalo_critico", rotulo: "Repetir a janela a cada (minutos)", tipo: "number", attrs: ' min="30" max="1440"' }) +
+          CadUI_campo_({ id: "ap_mensagem", rotulo: "Mensagem da janela", inteiro: true, attrs: ' maxlength="240"' }) +
+        "</div>",
+        '<span class="cadx-msg" id="ap_feedback">Carregando…</span><button type="button" id="ap_btn_testar" class="cadx-btn cadx-btn-grande" onclick="adminTestarAlertasPadroes_()">Testar agora</button><button type="button" id="ap_btn_salvar" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="adminSalvarAlertasPadroes_()">Salvar</button>',
+        '<span id="ap_status" class="cadx-selo bc-selo">…</span>'));
+    }
+    blocos.push(Config_bloco_("cfgSessao", "Sessão neste navegador",
+      "Sai do SGO+ neste navegador e recarrega a página. Use quando a tela travar depois de uma atualização. Os dados salvos não são afetados.",
+      '<p class="cadx-dica" style="margin:0">Você entra de novo com o seu login e senha.</p>',
+      '<button type="button" class="cadx-btn cadx-btn-grande" onclick="limparCacheNavegador_()">Sair e recarregar</button>'));
+    var app = (typeof PUBLIC_CONFIG !== "undefined" && PUBLIC_CONFIG) || {};
+    blocos.push(Config_bloco_("cfgSistema", "Empresa e sistema",
+      "Dados do sistema e atalhos para o que é configurado em outra tela.",
+      CadUI_dados_([["Sistema", (app.appName || "SGO+") + " · Metrolabs"], ["Versão", app.version || ""], ["Seu acesso", (USER_CONTEXT && USER_CONTEXT.nome ? USER_CONTEXT.nome + " · " : "") + SGO_rotuloPerfil_(perfil)]]) +
+        '<div class="cadx-acoes" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">' +
+          (gestao ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="abrir(\'usuarios\')"><i class="fas fa-users" aria-hidden="true"></i> Usuários e perfis</button>' : "") +
+          (dono ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="abrir(\'chaves\')"><i class="fas fa-key" aria-hidden="true"></i> Chaves e senhas das integrações</button>' : "") +
+          (perfil !== "CLIENTE" ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="abrir(\'padroes\')"><i class="fas fa-scale-balanced" aria-hidden="true"></i> Padrões de referência</button>' : "") +
+        "</div>" +
+        (!gestao ? '<p class="cadx-dica">Usuários e perfis são geridos pelos perfis Administrador, Gestor e Diretoria.</p>' : ""), ""));
+    div.innerHTML = '<div class="module-shell cadx"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Configurações</h2>' +
+      '<p class="content-subtitle">Ajustes do SGO+ separados por assunto. Cada bloco tem o seu próprio Salvar.</p></div><div class="module-header-right"></div></div>' +
+      '<div class="cadx-blocos">' + blocos.join("") + "</div></div>";
+    var som = document.getElementById("cfgSom");
+    if (som) som.addEventListener("change", function () { var s = document.getElementById("adminSomStatus"); if (s) s.textContent = som.checked ? "Ligado" : "Desligado"; Config_msg_("cfgOciosidadeMsg", "Alteração ainda não salva.", ""); });
+    if (perfil === "ADMIN") adminCarregarAlertasPadroes_();
+  }
+
+  function Config_salvarOciosidade_() {
+    var campo = document.getElementById("inputIdleLimit");
+    var min = Number(String(campo ? campo.value : "").replace(",", "."));
+    if (!isFinite(min) || min < 0.5) { CadUI_erroCampo_("inputIdleLimit", "Informe pelo menos meio minuto (0,5)."); return; }
+    CadUI_erroCampo_("inputIdleLimit", "");
+    var seg = Math.round(min * 60);
+    IDLE_LIMIT = seg;
+    try { setLocalStorageItem_(STORAGE_KEYS.IDLE_LIMIT, String(seg)); } catch (e) {}
+    try { resetarOciosidade_(); iniciarMonitorOciosidade_(); } catch (e) {}
+    var som = document.getElementById("cfgSom");
+    if (som) {
+      SOM_OCIOSIDADE_ATIVO = som.checked;
+      try { salvarPreferenciaSomOciosidade_(som.checked); } catch (e) {}
+      if (!som.checked) { try { pararSomOciosidade_(); } catch (e) {} }
+    }
+    Config_msg_("cfgOciosidadeMsg", "Salvo: aviso depois de " + CadUI_num_(min) + (min === 1 ? " minuto" : " minutos") + ", som " + (SOM_OCIOSIDADE_ATIVO ? "ligado" : "desligado") + ".", "ok");
+  }
+
+  function limparCacheNavegador_() {
+    CadUI_confirmar_({
+      titulo: "Sair e recarregar", botao: "Sair e recarregar",
+      texto: "<p>Sai do SGO+ neste navegador e recarrega a página. Os dados salvos não são afetados; você entra de novo com o seu login.</p>",
+      aoConfirmar: function () {
+        try {
+          if (typeof STORAGE_KEYS !== "undefined" && STORAGE_KEYS.SESSION) {
+            sessionStorage.removeItem(STORAGE_KEYS.SESSION); sessionStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+            localStorage.removeItem(STORAGE_KEYS.SESSION); localStorage.removeItem(STORAGE_KEYS.SESSION_ID);
+          } else { ["SGO_SESSION", "SGO_SESSION_ID"].forEach(function (k) { sessionStorage.removeItem(k); localStorage.removeItem(k); }); }
+        } catch (e) { console.error("Falha ao limpar sessão:", e); }
+        SESSION = null; USER_CONTEXT = null;
+        location.reload();
+      }
+    });
+  }
+
+  function preencherEstadoPainelAdmin_() {
+    var s = document.getElementById("adminSomStatus"), c = document.getElementById("cfgSom"), i = document.getElementById("inputIdleLimit");
+    if (s) s.textContent = SOM_OCIOSIDADE_ATIVO ? "Ligado" : "Desligado";
+    if (c) c.checked = !!SOM_OCIOSIDADE_ATIVO;
+    if (i) i.value = String(Math.round((Number(IDLE_LIMIT) || 300) / 60 * 10) / 10).replace(".", ",");
+  }
+
+  // ---------- alertas de calibração (servidor: SGO_AlertasPadroes.js, não alterado) ----------
   function adminCarregarAlertasPadroes_() {
-    const perfil = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase();
-    const card = document.getElementById("adminAlertasPadroesCard");
-    if (!card || perfil !== "ADMIN") return;
-    card.style.display = "";
+    if (CadUI_perfil_() !== "ADMIN" || !document.getElementById("adminAlertasPadroesCard")) return;
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Não foi possível carregar as configurações.", true);
         adminPreencherAlertasPadroes_(res.config || {});
-        adminFeedbackAlertasPadroes_("Configurações carregadas.", false);
+        adminFeedbackAlertasPadroes_("", false);
       })
-      .withFailureHandler(function (err) { console.error("Falha ao carregar alertas de padrões:", err); adminFeedbackAlertasPadroes_("Não foi possível carregar as configurações. Verifique a conexão e tente de novo.", true); })
+      .withFailureHandler(function (err) { console.error("Alertas de padrões:", err); adminFeedbackAlertasPadroes_("Não foi possível carregar as configurações. Verifique a conexão e atualize a página.", true); })
       .alertasPadroesObterConfigAdmin(SESSION);
   }
-
   function adminPreencherAlertasPadroes_(c) {
-    setSelectValueSafe_("ap_ativo", String(c.ativo !== false));
-    document.getElementById("ap_gestor").checked = (c.perfis || []).indexOf("GESTOR") !== -1;
-    document.getElementById("ap_metrologia").checked = (c.perfis || []).indexOf("METROLOGIA") !== -1;
-    setValue_("ap_inicio", c.horaInicio || "08:00");
-    setValue_("ap_fim", c.horaFim || "17:30");
-    setValue_("ap_intervalo_balao", c.intervaloBalaoMin || 120);
-    setValue_("ap_duracao", c.duracaoBalaoSeg || 20);
-    setSelectValueSafe_("ap_critico", String(c.alertaCriticoAtivo !== false));
-    setValue_("ap_intervalo_critico", c.intervaloCriticoMin || 240);
-    setValue_("ap_antecedencia", c.antecedenciaDias || 30);
+    var marca = function (id, v) { var el = document.getElementById(id); if (el) el.checked = !!v; };
+    marca("ap_ativo_chave", c.ativo !== false);
+    marca("ap_gestor", (c.perfis || []).indexOf("GESTOR") !== -1);
+    marca("ap_metrologia", (c.perfis || []).indexOf("METROLOGIA") !== -1);
+    marca("ap_critico_chave", c.alertaCriticoAtivo !== false);
+    setValue_("ap_inicio", c.horaInicio || "08:00"); setValue_("ap_fim", c.horaFim || "17:30");
+    setValue_("ap_intervalo_balao", c.intervaloBalaoMin || 120); setValue_("ap_duracao", c.duracaoBalaoSeg || 20);
+    setValue_("ap_intervalo_critico", c.intervaloCriticoMin || 240); setValue_("ap_antecedencia", c.antecedenciaDias || 30);
     setValue_("ap_mensagem", c.mensagem || "");
-    const status = document.getElementById("ap_status");
-    if (status) { status.textContent = c.ativo !== false ? "ATIVO" : "DESATIVADO"; status.className = "badge " + (c.ativo !== false ? "badge-ativo" : "badge-inativo"); }
+    var st = document.getElementById("ap_status");
+    if (st) { st.textContent = c.ativo !== false ? "Ligados" : "Desligados"; st.className = "cadx-selo bc-selo " + (c.ativo !== false ? "tom-ok" : ""); }
   }
-
   function adminPayloadAlertasPadroes_() {
-    const perfis = [];
+    var perfis = [];
     if (document.getElementById("ap_gestor").checked) perfis.push("GESTOR");
     if (document.getElementById("ap_metrologia").checked) perfis.push("METROLOGIA");
     return {
-      ativo: getValue_("ap_ativo") === "true", perfis: perfis,
+      ativo: document.getElementById("ap_ativo_chave").checked, perfis: perfis,
       horaInicio: getValue_("ap_inicio"), horaFim: getValue_("ap_fim"),
       intervaloBalaoMin: getValue_("ap_intervalo_balao"), duracaoBalaoSeg: getValue_("ap_duracao"),
-      alertaCriticoAtivo: getValue_("ap_critico") === "true",
-      intervaloCriticoMin: getValue_("ap_intervalo_critico"),
-      antecedenciaDias: getValue_("ap_antecedencia"), mensagem: getValue_("ap_mensagem")
+      alertaCriticoAtivo: document.getElementById("ap_critico_chave").checked,
+      intervaloCriticoMin: getValue_("ap_intervalo_critico"), antecedenciaDias: getValue_("ap_antecedencia"), mensagem: getValue_("ap_mensagem")
     };
   }
-
   function adminSalvarAlertasPadroes_() {
-    const btn = document.getElementById("ap_btn_salvar");
+    var btn = document.getElementById("ap_btn_salvar");
     if (btn && btn.disabled) return;
-    if (btn) { btn.disabled = true; btn.textContent = "Salvando..."; }
-    adminFeedbackAlertasPadroes_("Aguarde, salvando configurações...", false);
+    if (btn) { btn.disabled = true; btn.textContent = "Salvando…"; }
+    adminFeedbackAlertasPadroes_("Salvando…", false);
     google.script.run
       .withSuccessHandler(function (res) {
-        if (btn) { btn.disabled = false; btn.textContent = "Salvar configurações"; }
-        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Falha ao salvar.", true);
+        if (btn) { btn.disabled = false; btn.textContent = "Salvar"; }
+        if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Não foi possível salvar.", true);
         adminPreencherAlertasPadroes_(res.config || {});
-        adminFeedbackAlertasPadroes_(res.message || "Configurações salvas.", false);
+        adminFeedbackAlertasPadroes_(res.message || "Configurações salvas.", false, true);
       })
       .withFailureHandler(function (err) {
-        if (btn) { btn.disabled = false; btn.textContent = "Salvar configurações"; }
-        console.error("Falha ao salvar alertas de padrões:", err);
-        adminFeedbackAlertasPadroes_("Não foi possível salvar as configurações. Verifique a conexão e tente de novo.", true);
+        if (btn) { btn.disabled = false; btn.textContent = "Salvar"; }
+        console.error("Salvar alertas de padrões:", err);
+        adminFeedbackAlertasPadroes_("Não foi possível salvar. Verifique a conexão e tente de novo; nada foi alterado.", true);
       })
       .alertasPadroesSalvarConfigAdmin(SESSION, adminPayloadAlertasPadroes_());
   }
-
   function adminTestarAlertasPadroes_() {
-    const btn = document.getElementById("ap_btn_testar");
+    var btn = document.getElementById("ap_btn_testar");
     if (btn && btn.disabled) return;
-    if (btn) { btn.disabled = true; btn.textContent = "Preparando..."; }
+    if (btn) { btn.disabled = true; btn.textContent = "Preparando…"; }
     google.script.run
       .withSuccessHandler(function (res) {
-        if (btn) { btn.disabled = false; btn.textContent = "Testar alerta agora"; }
+        if (btn) { btn.disabled = false; btn.textContent = "Testar agora"; }
         if (!res || !res.success) return adminFeedbackAlertasPadroes_((res && res.message) || "Não foi possível testar o alerta.", true);
-        if (!res.exibir) return adminFeedbackAlertasPadroes_("Não existem pendências de padrões para demonstrar.", false);
-        exibirAlertaCriticoPadroes_(res);
+        if (!res.exibir) return adminFeedbackAlertasPadroes_("Nenhum padrão vencido ou vencendo agora: não há o que mostrar no teste.", false);
+        if (typeof exibirAlertaCriticoPadroes_ === "function") exibirAlertaCriticoPadroes_(res);
       })
       .withFailureHandler(function (err) {
-        if (btn) { btn.disabled = false; btn.textContent = "Testar alerta agora"; }
-        console.error("Falha no teste de alertas de padrões:", err);
-        adminFeedbackAlertasPadroes_("Não foi possível testar o alerta. Verifique a conexão e tente de novo.", true);
+        if (btn) { btn.disabled = false; btn.textContent = "Testar agora"; }
+        console.error("Teste de alertas de padrões:", err);
+        adminFeedbackAlertasPadroes_("Não foi possível testar. Verifique a conexão e tente de novo.", true);
       })
       .alertasPadroesObterEstado(SESSION, true);
   }
-
-  function adminFeedbackAlertasPadroes_(texto, erro) {
-    const el = document.getElementById("ap_feedback");
-    if (!el) return;
-    el.textContent = texto || "";
-    el.style.color = erro ? "var(--danger,#dc2626)" : "var(--muted,#64748b)";
-  }
+  function adminFeedbackAlertasPadroes_(texto, erro, ok) { Config_msg_("ap_feedback", texto, erro ? "erro" : ok ? "ok" : ""); }
 </script>

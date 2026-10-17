@@ -1,117 +1,439 @@
-<style>
-.vinc-workspace{padding:18px;font-family:var(--bc-sans)}.module-grid.vinc-cadastros-grid{grid-template-columns:minmax(340px,.9fr) minmax(380px,1.1fr)}.vinc-cadastros-grid .form-grid>div:first-child{grid-column:1/-1}.vinc-cadastros-grid #cli_cnpj,.vinc-cadastros-grid #uni_cnpj_unidade{min-width:0!important}.vinc-cadastros-grid .list-card{align-self:start}@media(max-width:960px){.module-grid.vinc-cadastros-grid{grid-template-columns:minmax(0,1fr)}}
-.vinc-help{padding:12px;border:1px solid var(--bc-line-2);border-radius:8px;margin:10px 0;white-space:normal;line-height:1.5}.vinc-help small{display:block}.vinc-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.vinc-overlay{position:fixed;inset:0;z-index:99990;background:rgba(28,31,29,.42);padding:2vh 3vw;overflow:auto}.vinc-dialog{max-width:1150px;margin:auto;background:#FFFFFF;color:var(--bc-text);border:1px solid var(--bc-line-2);border-radius:12px;padding:20px}.vinc-dialog select,.vinc-dialog input,.vinc-dialog textarea{width:100%;padding:10px;background:var(--bc-surface-2);color:var(--bc-text);border:1px solid var(--bc-line-2);border-radius:6px}.vinc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.vinc-dialog td,.vinc-dialog th{padding:8px;text-align:left;border-bottom:1px solid var(--bc-line-2);overflow-wrap:anywhere}.vinc-dialog table{width:100%;border-collapse:collapse}.vinc-dialog button{cursor:pointer;padding:9px 13px}.vinc-dialog button:disabled{opacity:.5;cursor:wait}.vinc-bad{border-left:5px solid var(--bc-danger)}.vinc-good{border-left:5px solid var(--bc-brand)}.vinc-warn{border-left:5px solid #C98A00}.vinc-scroll{max-height:330px;overflow:auto}
-</style>
 <script>
-var VINC_UI={epoch:0,token:'',data:null,busy:false,searchSeq:0};
-function vincCodigo_(c){c=String(c||"").replace(/_/g," ").toLowerCase();return c?c.charAt(0).toUpperCase()+c.slice(1):"Sem diagnóstico";}
-// Nomes de tela no lugar das tabelas e campos internos (prévia, referências e histórico).
-var VINC_TABELAS={CAD_CLIENTES:'Clientes',CAD_UNIDADES:'Unidades',CAD_EQUIPAMENTOS:'Equipamentos',DOC_DOCUMENTOS:'Arquivo de documentos',CERT_CALIBRACAO:'Certificados de calibração',NR13_LAUDOS:'Laudos NR-13',AUVO_TAREFAS:'Atendimentos do Auvo',AUVO_SYNC:'Integração com o Auvo',ATV_ATIVIDADES:'Atividades',AVS_AVISOS:'Avisos',MOV_POPS:'Registros operacionais'};
-var VINC_PREFIXOS=[['CAD_','Cadastros'],['DOC_','Arquivo de documentos'],['CERT','Certificados de calibração'],['PAD','Padrões de referência'],['NR13','Laudos NR-13'],['AUVO','Integração com o Auvo'],['FROTA','Frota'],['FRT','Frota'],['CND','Programa de conduta'],['CONDUTA','Programa de conduta'],['QUAL','Painel de qualidade'],['ATV','Atividades'],['AVS','Avisos'],['PGT','PGT e POP'],['POP','PGT e POP'],['MOV_POP','Registros operacionais'],['REGOP','Registros operacionais'],['CRON','Cronograma de execução'],['PLANCME','Planejamento CME'],['PCME','Planejamento CME'],['RELCAL','Relatório de calibração'],['DECL','Declaração de execução'],['INV','Inventário de equipamentos'],['AUTOREL','Autoclaves'],['LAVREL','Lavadoras'],['CADEIA','Cadeia de frio'],['ESTUFA','Estufas e banhos-maria']];
-var VINC_CAMPOS={CLIENTE_ID:'Cliente',UNIDADE_ID:'Unidade',EQUIPAMENTO_ID:'Equipamento',STATUS:'Situação',ENTIDADE_ID:'Cadastro ligado no Auvo',CLIENTE_ID_SGO:'Cliente',EQUIPAMENTOS_ID_SGO:'Equipamentos',__DELETE__:'Cadastro'};
-function vincTabela_(n){n=String(n||'');if(VINC_TABELAS[n])return VINC_TABELAS[n];for(var i=0;i<VINC_PREFIXOS.length;i++){if(n.indexOf(VINC_PREFIXOS[i][0])===0)return VINC_PREFIXOS[i][1];}return 'Outros registros do SGO+';}
-function vincCampo_(f){f=String(f||'');return VINC_CAMPOS[f]||vincCodigo_(f);}
-function vincValor_(field,v){var s=String(v==null?'':v);if(field==='STATUS'&&/^[A-Z_]+$/.test(s))return vincCodigo_(s);if(field==='__DELETE__'&&!s)return 'excluído';return s||'(vazio)';}
-function vincEsc_(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-function vincCall_(method,args){return new Promise(function(resolve,reject){var api=google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);api[method].apply(api,[SGO_getSessionId()].concat(args||[]));});}
-function vincStatus_(message){var e=document.getElementById('vincStatus');if(e)e.textContent=message;}
-function vincClose_(){if(VINC_UI.busy)return;VINC_UI.epoch++;VINC_UI.token='';var e=document.getElementById('vincOverlay');if(e)e.remove();vincRestaurarMenu_();}
-// Ao fechar o painel, o menu volta a marcar a página que está por baixo (antes ficava "Vínculos" aceso).
-function vincRestaurarMenu_(){try{var mod=window.SGO_MODULO_ATUAL||'';document.querySelectorAll('#menu .menu-btn.active').forEach(function(b){b.classList.remove('active');});if(!mod)return;var b=document.querySelector('#menu .menu-btn[data-mod="'+mod+'"]');if(b)b.classList.add('active');}catch(_){}}
-function vincOpen_(){
- if(document.getElementById('vincOverlay'))return;
- var e=document.createElement('div');e.id='vincOverlay';e.className='vinc-overlay';e.innerHTML='<section class="vinc-dialog" role="dialog" aria-modal="true" aria-labelledby="vincTitle"><div class="vinc-actions"><h2 id="vincTitle">Clientes, unidades e vínculos</h2><button type="button" onclick="vincHelp_()">Como usar</button><button type="button" onclick="vincClose_()">Fechar</button><button type="button" onclick="vincLoad_()">Atualizar</button></div><p>Cliente → Unidade → Equipamento. O mesmo CNPJ pode identificar o cliente e sua unidade principal.</p><p>Regular: pronto para uso. Sem unidade: precisa de local. Vínculo pendente/inconsistente: corrigir antes de emitir. Duplicidade: conferir os registros. Inativo: preservado no histórico.</p><div id="vincStatus" role="status">Carregando…</div><div id="vincBody"></div></section>';document.body.appendChild(e);vincLoad_();
-}
-function vincLoad_(){
- if(VINC_UI.busy)return;VINC_UI.token='';var epoch=++VINC_UI.epoch;vincStatus_('Aguarde, carregando cadastros e diagnósticos…');var previous=document.getElementById('vincBody');if(previous)previous.innerHTML='';
- vincCall_('vinculosPainel').then(function(res){if(epoch!==VINC_UI.epoch)return;VINC_UI.data=res;var b=document.getElementById('vincBody');if(!b)return;
- b.innerHTML='<div class="vinc-grid"><label>Tipo<select id="vincTipo" onchange="vincSources_()"><option value="CLIENTE">Cliente</option><option value="UNIDADE">Unidade</option><option value="EQUIPAMENTO">Equipamento</option></select></label><label>Pesquisar nome, CNPJ ou local<input id="vincFiltro" oninput="vincSources_()"></label></div><label>Cadastro de origem<select id="vincOrigem" onchange="vincSelected_()"></select></label><div id="vincDetails"></div>'+(res.gestor?'<div class="vinc-grid"><label>Ação do gestor<select id="vincAcao" onchange="vincTargets_()"></select></label><label>Destino<select id="vincDestino" onchange="vincInvalidate_()"></select></label></div><label>Motivo da alteração<textarea id="vincMotivo" maxlength="1000" oninput="vincInvalidate_()" placeholder="Explique a correção necessária"></textarea></label><div class="vinc-actions"><button id="vincPreviewButton" type="button" onclick="vincPreview_()">Conferir impacto</button></div><div id="vincPreview"></div>':'<p>Transferências, consolidação e exclusão estão disponíveis somente para gestores.</p>');if(VINC_UI.focus)document.getElementById('vincTipo').value=VINC_UI.focus.type;vincSources_();VINC_UI.focus=null;vincStatus_('Selecione o cadastro para ver os vínculos.');
- }).catch(function(err){if(epoch===VINC_UI.epoch)vincStatus_(err.message||String(err));});
-}
-function vincInvalidate_(){VINC_UI.token='';VINC_UI.epoch++;var e=document.getElementById('vincPreview');if(e)e.innerHTML='';}
-function vincVal_(id){var e=document.getElementById(id);return e?e.value:'';}
-function vincSources_(){
- vincInvalidate_();var type=vincVal_('vincTipo'),q=vincVal_('vincFiltro').toLowerCase(),select=document.getElementById('vincOrigem'),old=VINC_UI.focus?VINC_UI.focus.id:select.value;
- select.innerHTML=(VINC_UI.data[type]||[]).filter(function(r){return r.label.toLowerCase().includes(q)||r.ID===q;}).map(function(r){return '<option value="'+vincEsc_(r.ID)+'">'+vincEsc_(r.label)+' ['+vincEsc_(vincCodigo_(r.diagnostic.code))+']</option>';}).join('');if(Array.from(select.options).some(function(o){return o.value===old;}))select.value=old;vincSelected_();
-}
-function vincSelected_(){
- vincInvalidate_();var type=vincVal_('vincTipo'),id=vincVal_('vincOrigem'),r=(VINC_UI.data[type]||[]).find(function(r){return r.ID===id;}),e=document.getElementById('vincDetails');if(!r){e.textContent='Nenhum cadastro encontrado.';return;}
- var parent=type==='UNIDADE'?VINC_UI.data.CLIENTE.find(function(c){return c.ID===r.CLIENTE_ID;}):type==='EQUIPAMENTO'?VINC_UI.data.UNIDADE.find(function(u){return u.ID===r.UNIDADE_ID;}):null;
- var children=type==='CLIENTE'?VINC_UI.data.UNIDADE.filter(function(u){return u.CLIENTE_ID===id;}):type==='UNIDADE'?VINC_UI.data.EQUIPAMENTO.filter(function(eq){return eq.UNIDADE_ID===id;}):[];
- e.innerHTML='<div class="vinc-help '+(r.diagnostic.code==='REGULAR'?'vinc-good':'vinc-warn')+'"><strong>'+vincEsc_(vincCodigo_(r.diagnostic.code))+'</strong><p>'+vincEsc_(r.diagnostic.message)+'</p><p>Vinculado a: '+vincEsc_(parent?parent.label:type==='CLIENTE'?'Cliente principal':'Nenhum vínculo')+'</p><div class="vinc-actions"><button type="button" onclick="vincEdit_()">Abrir / editar cadastro</button>'+(type==='CLIENTE'&&r.STATUS==='ATIVO'?'<button type="button" onclick="vincPrincipal_()">Criar ou localizar unidade principal</button>':'')+'</div><strong>Registros vinculados: '+children.length+'</strong><div class="vinc-scroll">'+children.map(function(c){return '<p>'+vincEsc_(c.label)+' — '+vincEsc_(vincCodigo_(c.diagnostic.code))+'</p>';}).join('')+'</div></div>';
- var ref=document.createElement('div');ref.className='vinc-help';ref.textContent='Conferindo histórico e referências…';e.appendChild(ref);
- vincCall_('vinculosDetalhes',[type,id]).then(function(res){if(!ref.isConnected)return;ref.innerHTML='<strong>Referências nos módulos</strong>'+res.references.map(function(r){return '<p>'+vincEsc_(vincTabela_(r.table))+': '+r.count+(r.count===1?' registro':' registros')+'</p>';}).join('')+(!res.references.length?'<p>Nenhuma referência registrada nos módulos consultados.</p>':'')+'<strong>Últimas alterações do gestor</strong><div class="vinc-scroll">'+res.history.map(function(h){return '<p>'+vincEsc_(h.date)+' — '+vincEsc_(h.user)+' — '+vincEsc_(vincCodigo_(h.action))+'<br>'+vincEsc_(h.reason)+'<br>'+vincEsc_(vincTabela_(h.table))+' › '+vincEsc_(vincCampo_(h.field))+': '+vincEsc_(vincValor_(h.field,h.before))+' → '+vincEsc_(vincValor_(h.field,h.after))+'</p>';}).join('')+'</div>';}).catch(function(err){if(ref.isConnected)ref.textContent=err.message||String(err);});
- var a=document.getElementById('vincAcao');if(a){a.innerHTML=(type==='CLIENTE'?['CONSOLIDAR','INATIVAR','REATIVAR','EXCLUIR']:['TRANSFERIR','DESVINCULAR','CONSOLIDAR','INATIVAR','REATIVAR','EXCLUIR']).map(function(v){return '<option value="'+v+'">'+({CONSOLIDAR:'Consolidar (reunir no destino; a origem fica inativa)',INATIVAR:'Inativar',REATIVAR:'Reativar',EXCLUIR:'Excluir',TRANSFERIR:'Transferir',DESVINCULAR:'Desvincular'}[v]||v)+'</option>';}).join('');a.innerHTML='<option value="">Escolha a ação</option>'+a.innerHTML;a.value='';vincTargets_();}
-}
-function vincTargets_(){
- vincInvalidate_();var type=vincVal_('vincTipo'),action=vincVal_('vincAcao'),dest=document.getElementById('vincDestino');if(!dest)return;
- var needed=action==='TRANSFERIR'||action==='CONSOLIDAR';dest.disabled=!needed;var targetType=action==='TRANSFERIR'?(type==='UNIDADE'?'CLIENTE':'UNIDADE'):type;
- dest.innerHTML='<option value="">'+(needed?'Selecione o destino':'Não se aplica')+'</option>'+(needed?(VINC_UI.data[targetType]||[]).filter(function(r){return r.STATUS==='ATIVO'&&r.ID!==vincVal_('vincOrigem');}).map(function(r){return '<option value="'+vincEsc_(r.ID)+'">'+vincEsc_(r.label)+'</option>';}).join(''):'');
-}
-function vincBusy_(busy){VINC_UI.busy=busy;var root=document.getElementById('vincOverlay');if(root)root.querySelectorAll('button,input,select,textarea').forEach(function(e){e.disabled=busy;});if(!busy){var d=document.getElementById('vincDestino');if(d)d.disabled=!['TRANSFERIR','CONSOLIDAR'].includes(vincVal_('vincAcao'));}}
-function vincPreview_(){
- if(VINC_UI.busy)return;if(!vincVal_('vincAcao')){vincStatus_('Escolha a ação do gestor antes de conferir o impacto.');return;}vincInvalidate_();var epoch=VINC_UI.epoch;vincBusy_(true);vincStatus_('Aguarde, conferindo dependências e impacto…');
- var p={tipo:vincVal_('vincTipo'),acao:vincVal_('vincAcao'),origem:vincVal_('vincOrigem'),destino:vincVal_('vincDestino'),motivo:vincVal_('vincMotivo')};
- vincCall_('vinculosPrevia',[p]).then(function(res){if(epoch!==VINC_UI.epoch)return;VINC_UI.token=res.token;var e=document.getElementById('vincPreview');
- e.innerHTML='<h3>Conferência da alteração</h3><p>Origem: '+vincEsc_(res.source)+'</p><p>Destino: '+vincEsc_(res.target||'Sem destino')+'</p>'+res.blocks.map(function(b){return '<p class="vinc-help vinc-bad">'+vincEsc_(b)+'</p>';}).join('')+res.warnings.map(function(w){return '<p class="vinc-help vinc-warn">'+vincEsc_(w)+'</p>';}).join('')+'<p>Histórico preservado no cadastro original: '+vincEsc_(Object.keys(res.historical).map(function(k){var n=res.historical[k];return vincTabela_(k)+': '+n+(n===1?' registro':' registros');}).join('; ')||'nenhuma referência encontrada')+'</p>'+((res.documentos||[]).length?'<h4>Documentos que acompanham a mudança ('+res.documentos.length+')</h4><div class="vinc-scroll"><table><thead><tr><th>Documento</th><th>Tipo</th><th>De (cliente / unidade)</th><th>Para (cliente / unidade)</th></tr></thead><tbody>'+res.documentos.map(function(d){return '<tr><td>'+vincEsc_(d.nome)+'</td><td>'+vincEsc_(d.tipo||'—')+'</td><td>'+vincEsc_(d.de)+'</td><td>'+vincEsc_(d.para)+'</td></tr>';}).join('')+'</tbody></table></div>':'')+'<h4>Todas as alterações</h4><div class="vinc-scroll"><table><thead><tr><th>Área</th><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>'+res.changes.map(function(c){return '<tr><td>'+vincEsc_(vincTabela_(c.table))+'</td><td>'+vincEsc_(vincCampo_(c.field))+'</td><td>'+vincEsc_(vincValor_(c.field,c.before))+'</td><td>'+vincEsc_(c.field==='__DELETE__'?'Excluído':vincValor_(c.field,c.after))+'</td></tr>';}).join('')+'</tbody></table></div>'+(res.token?'<button type="button" onclick="vincConfirm_()">Confirmar esta alteração</button>':'');vincStatus_(res.blocks.length?'Resolva os impedimentos antes de continuar.':'Confira origem, destino e impacto antes de confirmar.');
- }).catch(function(err){vincStatus_(err.message||String(err));}).finally(function(){vincBusy_(false);});
-}
-function vincConfirm_(){
- if(VINC_UI.busy||!VINC_UI.token)return;if(!confirm('Aplicar exatamente a alteração conferida?'))return;vincBusy_(true);vincStatus_('Aguarde, aplicando alteração e registrando auditoria…');
- vincCall_('vinculosConfirmar',[VINC_UI.token]).then(function(res){alert(res.message);VINC_UI.token='';vincBusy_(false);window.dispatchEvent(new Event('sgo-vinculos-alterados'));vincLoad_();}).catch(function(err){vincStatus_(err.message||String(err));vincBusy_(false);});
-}
-function vincEdit_(){var type=vincVal_('vincTipo'),id=vincVal_('vincOrigem');vincClose_();var mobile=typeof ehMobileModo_==='function'&&ehMobileModo_();if(type==='CLIENTE'){if(mobile)renderMobileFormClientes_(id);else{abrir('clientes');clientesEditar_(id);}}else if(type==='UNIDADE'){if(mobile)renderMobileFormUnidades_(id);else{abrir('unidades');unidadesEditar_(id);}}else{if(mobile)renderMobileFormEquipamentos_(id);else{abrir('equipamentos');equipamentosEditar_(id);}}}
-function vincPrincipal_(){if(VINC_UI.busy)return;var id=vincVal_('vincOrigem');if(!confirm('Criar a unidade principal deste cliente? Se ela já existir, nada é criado.'))return;vincBusy_(true);vincStatus_('Aguarde, criando ou localizando a unidade principal…');vincCall_('vinculosCriarPrincipal',[id]).then(function(r){alert(r.message);vincBusy_(false);vincLoad_();}).catch(function(err){vincStatus_(err.message||String(err));vincBusy_(false);});}
-window.addEventListener('sgo-vinculos-alterados',function(){var root=document.getElementById('conteudo');if(!root)return;var b=document.createElement('div');b.className='vinc-help vinc-warn';b.textContent='Os vínculos foram atualizados. Reabra o módulo pelo menu antes de continuar ou salvar um formulário que já estava aberto.';root.prepend(b);});
-</script>
-<style>
-.vinc-workspace{min-width:0}.vinc-workspace .vinc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.vinc-workspace h3{margin:0;font-size:19px}.vinc-subtitle{color:var(--muted,var(--bc-text-3));font-size:13px;line-height:1.6;margin:6px 0 16px}.vinc-searchbar{display:flex;gap:8px}.vinc-searchbar input{flex:1;min-width:0;padding:11px;border:1px solid var(--border,var(--bc-line-2));border-radius:8px;background:var(--input-bg,#FFFFFF);color:var(--text,var(--bc-text))}.vinc-feedback{padding:13px 0;min-height:44px;font-size:13px;line-height:1.5}.vinc-results{display:grid;gap:12px;max-height:68vh;overflow:auto;padding:2px}.vinc-result{border:1px solid var(--border,var(--bc-line-2));border-radius:12px;padding:16px;background:var(--card,#FFFFFF);overflow-wrap:anywhere}.vinc-result header{display:flex;justify-content:space-between;gap:12px;align-items:center}.vinc-result h4{margin:10px 0;line-height:1.5;font-size:14px}.vinc-badge{display:inline-block;border-radius:30px;padding:4px 9px;font-size:11px;background:var(--bc-surface-2);color:var(--bc-action)}.vinc-badge.off{background:var(--bc-surface-2);color:var(--bc-warn)}.vinc-kind{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,var(--bc-text-3))}.vinc-result p,.vinc-result summary{font-size:13px;line-height:1.6}.vinc-result details{border-top:1px solid var(--border,var(--bc-line-2));padding-top:10px}.vinc-result summary{cursor:pointer}.vinc-result .vinc-child{padding:8px 0;border-bottom:1px solid var(--border,var(--bc-line-2))}.vinc-result button,.vinc-workspace button{white-space:normal}.vinc-empty{padding:22px;text-align:center;border:1px dashed var(--border,var(--bc-line-2));border-radius:10px;color:var(--muted,var(--bc-text-3));line-height:1.7}.vinc-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--bc-line-2);border-top-color:var(--bc-info);border-radius:50%;animation:vinc-spin .8s linear infinite;margin-right:8px;vertical-align:middle}@keyframes vinc-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.vinc-spinner{animation:none}}.vinc-manual details{border:1px solid var(--bc-line-2);border-radius:9px;margin:10px 0;padding:14px}.vinc-manual summary{font-weight:600;cursor:pointer}.vinc-manual p,.vinc-manual li{line-height:1.7}.vinc-manual nav{display:flex;gap:10px;flex-wrap:wrap}.vinc-mobile-summary{cursor:pointer;font-weight:600;padding:12px 0}.vinc-guidebar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border:1px solid var(--border,var(--bc-line-2));border-radius:10px}.vinc-guidebar p{margin:0;font-size:13px}.vinc-dialog .vinc-actions h2{flex:1}@media(max-width:760px){.vinc-results{max-height:none}.vinc-searchbar{flex-wrap:wrap}.vinc-searchbar input{flex-basis:65%}.vinc-overlay{padding:10px}.vinc-dialog{padding:15px}.vinc-result{padding:12px}}
-</style>
-<script>
-var VINC_SEARCH={seq:0,timer:null};
-function vincSearchMarkup_(){return '<section class="vinc-workspace" aria-label="Consulta de cadastros e vínculos"><div class="vinc-toolbar"><h3>Cadastros e vínculos</h3><button class="btn-secondary" type="button" onclick="vincHelp_()">Como usar</button></div><p class="vinc-subtitle">Confira o que já existe enquanto preenche o formulário. A consulta não altera os dados digitados.</p><div class="vinc-searchbar"><input id="vincSearch" aria-label="Buscar cadastro por nome ou CNPJ" placeholder="Buscar nome ou CNPJ no portal" autocomplete="off"><button class="btn-primary" type="button" onclick="vincSearchNow_()">Buscar</button></div><div id="vincFeedback" class="vinc-feedback" role="status" aria-live="polite">Digite pelo menos 3 caracteres para consultar.</div><div id="vincResults" class="vinc-results"><div class="vinc-empty">Cliente → Unidade → Equipamento<br>O cliente e sua unidade principal podem ter o mesmo CNPJ.</div></div><div class="vinc-actions"><button class="btn-secondary" type="button" onclick="vincOpen_()">Abrir painel de vínculos</button></div></section>';}
-function vincResultButton_(type,id,label,edit){return '<button class="btn-secondary" type="button" data-vinc-type="'+vincEsc_(type)+'" data-vinc-id="'+vincEsc_(id)+'" data-vinc-action="'+(edit?'edit':'view')+'">'+vincEsc_(label)+'</button>';}
-function vincBadge_(status){return '<span class="vinc-badge '+(status==='ATIVO'?'':'off')+'">'+vincEsc_(status==='ATIVO'?'Ativo':status||'Situação não informada')+'</span>';}
-function vincCards_(res){
- var grouped=new Set();var html=res.clientes.map(function(c){(c.unidades||[]).forEach(function(u){grouped.add(u.ID);});return '<article class="vinc-result"><header><span class="vinc-kind">Cliente existente</span>'+vincBadge_(c.STATUS)+'</header><h4>'+vincEsc_(c.label)+'</h4><div class="vinc-actions">'+vincResultButton_('CLIENTE',c.ID,'Ver vínculos',false)+vincResultButton_('CLIENTE',c.ID,'Abrir cadastro',true)+'</div><details><summary>Unidades vinculadas ('+(c.unidades||[]).length+')</summary>'+((c.unidades||[]).map(function(u){return '<div class="vinc-child"><p>'+vincEsc_(u.label)+'</p>'+vincBadge_(u.STATUS)+' '+vincResultButton_('UNIDADE',u.ID,'Ver unidade',false)+'</div>';}).join('')||'<p>Sem unidade cadastrada. Use o painel para criar ou localizar a unidade principal.</p>')+'</details></article>';}).join('');
- html+=res.unidades.filter(function(u){return !grouped.has(u.ID);}).map(function(u){return '<article class="vinc-result"><header><span class="vinc-kind">Unidade existente</span>'+vincBadge_(u.STATUS)+'</header><h4>'+vincEsc_(u.label)+'</h4><p><strong>Cliente responsável</strong><br>'+vincEsc_(u.CLIENTE_ID?u.cliente:'Sem vínculo — peça ao gestor para corrigir')+'</p><div class="vinc-actions">'+vincResultButton_('UNIDADE',u.ID,'Ver vínculos',false)+vincResultButton_('UNIDADE',u.ID,'Abrir cadastro',true)+'</div></article>';}).join('');
- return html||'<div class="vinc-empty"><strong>Nenhum cadastro encontrado.</strong><br>Confira o nome ou CNPJ. Você pode continuar preenchendo; ao salvar, o sistema verificará novamente as duplicidades.</div>';
-}
-function vincSearchNow_(){clearTimeout(VINC_SEARCH.timer);vincSearchRun_(vincVal_('vincSearch'));}
-function vincSearchQueue_(value){clearTimeout(VINC_SEARCH.timer);VINC_SEARCH.seq++;var field=document.getElementById('vincSearch');if(!field)return;field.value=value;var feedback=document.getElementById('vincFeedback');if(feedback)feedback.textContent=value.trim().length>=3?'Aguarde, preparando consulta…':'Digite pelo menos 3 caracteres para consultar.';var results=document.getElementById('vincResults');if(results)results.innerHTML='';VINC_SEARCH.timer=setTimeout(function(){vincSearchRun_(value);},450);}
-function vincSearchRun_(value){
- var field=document.getElementById('vincSearch'),feedback=document.getElementById('vincFeedback'),results=document.getElementById('vincResults');if(!field||!feedback||!results)return;
- var seq=++VINC_SEARCH.seq;value=String(value||'').trim();field.value=value;
- if(value.length<3){feedback.textContent='Digite pelo menos 3 caracteres para consultar.';results.innerHTML='';results.removeAttribute('aria-busy');return;}
- feedback.innerHTML='<span class="vinc-spinner" aria-hidden="true"></span>Aguarde, consultando cadastros e vínculos…';results.innerHTML='';results.setAttribute('aria-busy','true');
- vincCall_('vinculosConsultar',[value]).then(function(res){if(seq!==VINC_SEARCH.seq||!results.isConnected)return;if(!res||!res.success)throw Error('Não foi possível consultar os cadastros.');results.innerHTML=vincCards_(res);feedback.textContent=res.clientes.length+' cliente(s) e '+res.unidades.length+' unidade(s) encontrados. Confira os dados antes de cadastrar.';var summary=document.getElementById('vincMobileSummary');if(summary)summary.textContent='Cadastros e vínculos · '+(res.clientes.length+res.unidades.length)+' resultado(s)';}).catch(function(err){if(seq!==VINC_SEARCH.seq||!results.isConnected)return;feedback.textContent='Consulta não concluída: '+(err.message||'falha de comunicação');results.innerHTML='<div class="vinc-empty">Os dados do formulário foram preservados.<br><button class="btn-secondary" type="button" onclick="vincSearchNow_()">Tentar novamente</button></div>';}).finally(function(){if(seq===VINC_SEARCH.seq&&results.isConnected)results.removeAttribute('aria-busy');});
-}
-function vincSearchLegacy_(type){var input=document.getElementById(type==='CLIENTE'?'clientesPesquisa':'unidadesPesquisa');if(!document.getElementById('vincSearch'))return false;clearTimeout(VINC_SEARCH.timer);var field=document.getElementById('vincSearch');field.value=input?input.value:'';vincSearchNow_();return true;}
-function vincOpenRecord_(type,id){VINC_UI.focus={type:type,id:id};if(document.getElementById('vincOverlay'))vincLoad_();else vincOpen_();}
-function vincOpenEdit_(type,id){if(!confirm('Abrir o cadastro existente? Alterações ainda não salvas no formulário atual serão descartadas.'))return;var mobile=typeof ehMobileModo_==='function'&&ehMobileModo_();if(type==='CLIENTE'){if(mobile)renderMobileFormClientes_(id);else{abrir('clientes');clientesEditar_(id);}}else{if(mobile)renderMobileFormUnidades_(id);else{abrir('unidades');unidadesEditar_(id);}}}
-function vincHelp_(){
- if(document.getElementById('vincManual'))return;var e=document.createElement('div');e.id='vincManual';e.className='vinc-overlay';e.style.zIndex='100000';e.innerHTML='<section class="vinc-dialog vinc-manual" role="dialog" aria-modal="true" aria-labelledby="vincManualTitle"><div class="vinc-actions"><h2 id="vincManualTitle">Como usar Clientes e Unidades</h2><button type="button" onclick="vincHelpClose_()">Fechar guia</button></div><p>Comece consultando o CNPJ. Reutilizar o cadastro correto mantém equipamentos e documentos organizados.</p>'+[
- ['1. Cadastrar cliente e unidade principal','Digite o CNPJ completo, incluindo zeros iniciais. O painel ao lado consulta os cadastros do portal. O botão Buscar junto ao CNPJ preenche dados da Receita; são consultas diferentes.','Se não houver cadastro, complete os campos e mantenha marcada a criação da unidade principal. Ao salvar, cliente e unidade ficam vinculados. Desmarque somente quando o cliente servir como agrupador de outras unidades.'],
- ['2. Cadastrar outras unidades','Em Unidades, selecione o cliente responsável e informe nome, CNPJ e endereço do local. A unidade principal pode ter o mesmo CNPJ do cliente.','Se aparecer uma unidade existente, confira o cliente responsável. Abra o cadastro ou peça ao gestor a correção do vínculo; não tente cadastrar o mesmo estabelecimento novamente.'],
- ['3. Consultar e editar','Use a busca por nome ou CNPJ no painel Cadastros e vínculos. No computador ela fica ao lado do formulário; no celular, abaixo dele. A busca também acompanha o nome e o CNPJ digitados.','Abra Unidades vinculadas no cartão do cliente para conferir seus locais. Ver vínculos abre o painel sem apagar o formulário. Abrir cadastro pede confirmação antes de substituir a tela. Edite dados cadastrais e clique em Salvar; transferências são feitas no painel do gestor.'],
- ['4. Corrigir vínculos — gestor','Abra o painel, escolha o cadastro de origem e a ação. Transferir vincula uma unidade a outro cliente ou um equipamento a outra unidade; também permite vincular novamente um cadastro pendente. Desvincular deixa o cadastro pendente e bloqueia novos atendimentos até a correção.','Selecione o destino, explique o motivo e clique em Conferir impacto. Leia os impedimentos, o histórico preservado e cada alteração. Confirme somente após conferir os dados. Se a prévia expirar ou os cadastros mudarem, atualize e confira novamente.'],
- ['5. Consolidar, inativar ou excluir','Consolidar reúne cadastros que representam a mesma identificação; a origem fica inativa para preservar documentos e histórico. Filiais diferentes não devem ser consolidadas. Inativar mantém o histórico e impede novos usos dependentes do cadastro.','Excluir remove somente cadastro sem dependências. Se houver vínculos, o sistema indica o impedimento. Consulte o histórico das alterações no painel. Reativar também verifica possíveis duplicidades.'],
- ['6. Entender avisos e continuar nos módulos','Regular: vínculo pronto para uso. Sem unidade: crie ou vincule um local. Vínculo pendente ou inconsistente: solicite correção. Duplicidade: confira as identificações. Inativo: disponível no histórico.','Após uma mudança, reabra o módulo e selecione cliente, unidade e equipamento novamente. Documentos antigos continuam associados ao atendimento original. Durante Aguarde, espere a conclusão. Se ocorrer erro, leia a mensagem antes de repetir; uma consulta sem resultados não garante que o cadastro poderá ser salvo.']
- ].map(function(t,i){return '<details'+(i===0?' open':'')+'><summary>'+t[0]+'</summary><p>'+t[1]+'</p><p>'+t[2]+'</p></details>';}).join('')+'</section>';document.body.appendChild(e);e.querySelector('button').focus();
-}
-function vincHelpClose_(){var e=document.getElementById('vincManual');if(e)e.remove();}
-(function(){
- var fields=['cli_cnpj','uni_cnpj_unidade','mob_cli_cnpj','mob_uni_cnpj','cli_razao_social','uni_nome_unidade','mob_cli_razao','mob_uni_nome'];
- function consult(event){var input=event.target;if(input.id==='vincSearch'||fields.includes(input.id))vincSearchQueue_(input.value);}
- document.addEventListener('input',consult);document.addEventListener('change',consult);
- document.addEventListener('keydown',function(e){if(e.target.id==='vincSearch'&&e.key==='Enter'){e.preventDefault();vincSearchNow_();}if(e.key==='Escape'&&document.getElementById('vincManual'))vincHelpClose_();});
- document.addEventListener('click',function(e){var b=e.target.closest('[data-vinc-action]');if(!b)return;if(b.dataset.vincAction==='edit')vincOpenEdit_(b.dataset.vincType,b.dataset.vincId);else vincOpenRecord_(b.dataset.vincType,b.dataset.vincId);});
- function attach(){var root=document.getElementById('conteudo');if(!root)return;if(typeof USER_CONTEXT!=='undefined'&&USER_CONTEXT&&String(USER_CONTEXT.perfil).toUpperCase()==='CLIENTE')return;var has=root.querySelector('#cli_cnpj,#uni_cnpj_unidade,#mob_cli_cnpj,#mob_uni_cnpj,#clientesTabelaBody,#unidadesTabelaBody,#mobileListaClientes,#mobileListaUnidades');if(!has||root.querySelector('#vincEntry'))return;
-  // A lista de cadastros (com Editar, Inativar, Reativar e Excluir) continua visível; a consulta de
-  // vínculos entra como apoio, recolhida, abaixo da lista (antes ela escondia a tabela e a pesquisa).
-  VINC_SEARCH.seq++;clearTimeout(VINC_SEARCH.timer);var bar=document.createElement('span');bar.id='vincEntry';bar.hidden=true;root.prepend(bar);
-  var list=root.querySelector('.list-card');var box=document.createElement('details');box.id='vincMobile';box.className='vinc-help vinc-apoio';box.innerHTML='<summary id="vincMobileSummary" class="vinc-mobile-summary">Consultar cadastros e vínculos</summary>'+vincSearchMarkup_();if(list){list.appendChild(box);}else{root.appendChild(box);}
- }
- new MutationObserver(attach).observe(document.body,{childList:true,subtree:true});attach();
-})();
+  // =====================================================================
+  // VÍNCULOS (CADASTROS E ADMINISTRAÇÃO 17/10) — tela de verdade, dentro do sistema
+  // (antes era uma janela por cima de tudo). Abre por abrir('vinculos'): menu marcado,
+  // título no casco e o Voltar do celular funcionando.
+  // Fluxo guiado: 1 origem → 2 situação → 3 ação → 4 prévia do impacto → 5 confirmar com motivo.
+  // Servidor (SGO_Vinculos.js, regras não mudaram): vinculosPainel, vinculosDetalhes,
+  // vinculosPrevia (só gestão), vinculosConfirmar (só gestão; grava SYS_VINCULOS_AUDITORIA
+  // e os documentos acompanham a unidade/equipamento que muda de cliente),
+  // vinculosCriarPrincipal, vinculosHistorico (só gestão).
+  // =====================================================================
+  var VINC = { data: null, tipo: "CLIENTE", busca: "", cod: "", origem: "", acao: "", destino: "", destBusca: "", motivo: "", previa: null, token: "", epoch: 0, aba: "alterar", foco: null, ocupado: false, hist: null };
+
+  var VINC_TIPOS = { CLIENTE: "Cliente", UNIDADE: "Unidade", EQUIPAMENTO: "Equipamento" };
+  var VINC_DIAG = {
+    REGULAR: ["Regular", "tom-ok", "Cadastro e vínculo em ordem."],
+    SEM_UNIDADE: ["Sem unidade", "tom-alerta", "Cliente ativo sem nenhuma unidade ativa: não recebe atendimento."],
+    VINCULO_PENDENTE: ["Vínculo pendente", "tom-perigo", "Unidade sem cliente ativo: bloqueia novos atendimentos."],
+    INCONSISTENTE: ["Inconsistente", "tom-perigo", "Equipamento com cliente e unidade que não batem, ou inativos."],
+    DUPLICIDADE: ["Duplicidade", "tom-alerta", "Mesmo CNPJ (ou mesma TAG no cliente) em outro cadastro ativo."],
+    INATIVO: ["Inativo", "", "Cadastro inativo, guardado no histórico."]
+  };
+  var VINC_ACOES = {
+    TRANSFERIR: { rotulo: "Transferir", risco: false, texto: { UNIDADE: "Leva a unidade para outro cliente. Os equipamentos e os documentos da unidade vão junto.", EQUIPAMENTO: "Leva o equipamento para outra unidade (de qualquer cliente). Os documentos do equipamento vão junto." } },
+    CONSOLIDAR: { rotulo: "Juntar cadastros repetidos", risco: true, texto: { CLIENTE: "Reúne no destino tudo o que está no cadastro repetido (mesmo CNPJ). A origem fica inativa.", UNIDADE: "Reúne no destino a unidade repetida (mesmo CNPJ). A origem fica inativa.", EQUIPAMENTO: "Reúne no destino o equipamento repetido (mesma TAG e série). A origem fica inativa." } },
+    DESVINCULAR: { rotulo: "Desvincular", risco: true, texto: { UNIDADE: "Tira a unidade do cliente. Ela fica com vínculo pendente e bloqueia novos atendimentos até ser vinculada de novo.", EQUIPAMENTO: "Tira o equipamento da unidade. Ele fica com vínculo pendente até ser vinculado de novo." } },
+    INATIVAR: { rotulo: "Inativar", risco: true, texto: { ALL: "Tira de uso e guarda o histórico. Pode ser reativado depois." } },
+    REATIVAR: { rotulo: "Reativar", risco: false, texto: { ALL: "Volta a usar. O sistema confere antes se não cria duplicidade nem vínculo quebrado." } },
+    EXCLUIR: { rotulo: "Excluir", risco: true, texto: { ALL: "Apaga o cadastro. Só funciona se nada estiver ligado a ele; senão o sistema orienta a inativar." } }
+  };
+
+  function vincEsc_(v) { return CadUI_esc_(v); }
+  function vincCnpjNoTexto_(s) { return String(s || "").replace(/\b(\d{14})\b/g, function (m) { return CadUI_cnpj_(m); }); }
+  function vincDiag_(code) { return VINC_DIAG[code] || [CadUI_maiusculaInicial_(String(code || "").replace(/_/g, " ")) || "Sem diagnóstico", "", ""]; }
+  function vincSeloDiag_(code) { var d = vincDiag_(code); return '<span class="cadx-selo bc-selo ' + d[1] + '">' + vincEsc_(d[0]) + "</span>"; }
+  function vincNome_(r) { return r ? vincCnpjNoTexto_(r.label) : ""; }
+  function vincItem_(tipo, id) { return VINC.data && (VINC.data[tipo] || []).filter(function (r) { return r.ID === id; })[0]; }
+  function vincGestao_() { return !!(VINC.data && VINC.data.gestor); }
+
+  // Nomes de tela no lugar das tabelas e campos internos (prévia e histórico).
+  var VINC_TABELAS = { CAD_CLIENTES: "Clientes", CAD_UNIDADES: "Unidades", CAD_EQUIPAMENTOS: "Equipamentos", DOC_DOCUMENTOS: "Arquivo de documentos", CERT_CALIBRACAO: "Certificados de calibração", NR13_LAUDOS: "Laudos NR-13", AUVO_TAREFAS: "Atendimentos do Auvo", AUVO_SYNC: "Integração com o Auvo", ATV_ATIVIDADES: "Atividades", AVS_AVISOS: "Avisos", MOV_POPS: "Registros operacionais" };
+  var VINC_PREFIXOS = [["CAD_", "Cadastros"], ["DOC_", "Arquivo de documentos"], ["CERT", "Certificados de calibração"], ["PAD", "Padrões de referência"], ["NR13", "Laudos NR-13"], ["AUVO", "Integração com o Auvo"], ["FROTA", "Frota"], ["FRT", "Frota"], ["CND", "Programa de conduta"], ["CONDUTA", "Programa de conduta"], ["QUAL", "Painel de qualidade"], ["ATV", "Atividades"], ["AVS", "Avisos"], ["PGT", "PGT e POP"], ["POP", "PGT e POP"], ["MOV_POP", "Registros operacionais"], ["REGOP", "Registros operacionais"], ["CRON", "Cronograma de execução"], ["PLANCME", "Planejamento CME"], ["PCME", "Planejamento CME"], ["RELCAL", "Relatório de calibração"], ["DECL", "Declaração de execução"], ["INV", "Inventário de equipamentos"], ["AUTOREL", "Autoclaves"], ["LAVREL", "Lavadoras"], ["CADEIA", "Cadeia de frio"], ["ESTUFA", "Estufas e banhos-maria"]];
+  var VINC_CAMPOS = { CLIENTE_ID: "Cliente", UNIDADE_ID: "Unidade", EQUIPAMENTO_ID: "Equipamento", STATUS: "Situação", ENTIDADE_ID: "Cadastro ligado no Auvo", CLIENTE_ID_SGO: "Cliente", EQUIPAMENTOS_ID_SGO: "Equipamentos", __DELETE__: "Cadastro" };
+  function vincTabela_(n) { n = String(n || ""); if (VINC_TABELAS[n]) return VINC_TABELAS[n]; for (var i = 0; i < VINC_PREFIXOS.length; i++) if (n.indexOf(VINC_PREFIXOS[i][0]) === 0) return VINC_PREFIXOS[i][1]; return "Outros registros do SGO+"; }
+  function vincCampo_(f) { f = String(f || ""); return VINC_CAMPOS[f] || CadUI_maiusculaInicial_(f.replace(/_/g, " ")); }
+  function vincValor_(field, v) { var s = String(v == null ? "" : v).replace(/\s*\([0-9a-f]{8}-[0-9a-f-]{27,}\)\s*$/i, ""); if (field === "STATUS" && /^[A-Z_]+$/.test(s)) return CadUI_maiusculaInicial_(s); if (field === "__DELETE__" && !s) return "Excluído"; return vincCnpjNoTexto_(s) || "(vazio)"; }
+  function vincAcaoNome_(a) { return (VINC_ACOES[a] && VINC_ACOES[a].rotulo) || CadUI_maiusculaInicial_(a); }
+
+  // ---------- entrada ----------
+  function renderVinculosModulo_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    CadUI_fecharMenu_();
+    if (CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Vínculos"); } catch (e) {} }
+    var foco = VINC.foco;
+    VINC = { data: null, tipo: foco ? foco.tipo : "CLIENTE", busca: "", cod: "", origem: foco ? foco.id : "", acao: "", destino: "", destBusca: "", motivo: "", previa: null, token: "", epoch: (VINC.epoch || 0) + 1, aba: "alterar", foco: null, ocupado: false, hist: null };
+    div.innerHTML =
+      '<div class="module-shell cadx" id="vincTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Vínculos</h2>' +
+          '<p class="content-subtitle">Cliente → unidade → equipamento → documentos. Confira a situação de cada cadastro e, pela gestão, transfira, junte repetidos ou desvincule com prévia do impacto e registro do motivo.</p></div><div class="module-header-right"></div></div>' +
+        CadUI_ajuda_(
+          "<ol><li><b>Escolha a origem</b>: o cliente, a unidade ou o equipamento que precisa de correção. Os números do topo filtram os que têm problema.</li>" +
+          "<li><b>Veja a situação</b>: a que está ligado, o que depende dele, em quais módulos aparece e as últimas alterações.</li>" +
+          "<li><b>Escolha a ação</b> (só a gestão: Gestor, Diretoria ou Administrador) e escreva o motivo.</li>" +
+          "<li><b>Confira a prévia</b>: cada campo que muda, os documentos que acompanham (de onde, para onde) e o que impede a operação.</li>" +
+          "<li><b>Confirme</b>. Tudo fica na auditoria (quem, quando, motivo, antes e depois). A prévia vale 10 minutos; se alguém mudar os cadastros nesse tempo, nada é gravado e a tela pede para conferir de novo.</li></ol>" +
+          "<p>Documentos do Arquivo de documentos acompanham a unidade ou o equipamento que muda de cliente; o arquivo fica na mesma pasta e o link não muda. Certificados, laudos NR-13 e atendimentos do Auvo ficam no cadastro original. Nada é apagado, a não ser em Excluir (cadastro sem nada ligado).</p>") +
+        '<div class="cadx-resumo bc-resumo" id="vincResumo">' + [1, 2, 3, 4, 5].map(function () { return '<div class="cadx-num bc-resumo-item"><div class="sgo-esq sgo-esq-linha" style="width:40%;height:20px"></div><div class="sgo-esq sgo-esq-linha" style="width:70%"></div></div>'; }).join("") + "</div>" +
+        '<div id="vincAbas"></div>' +
+        '<div id="vincCorpo">' + CadUI_esqueleto_(8) + "</div>" +
+      "</div>";
+    vincCarregar_();
+  }
+
+  /** Abre a tela já com uma origem escolhida (vindo de Clientes, Unidades ou Equipamentos). */
+  function Vinculos_abrirCom_(tipo, id) { VINC.foco = { tipo: tipo, id: id }; abrir("vinculos"); }
+  function vincOpen_() { abrir("vinculos"); }
+  function vincOpenRecord_(tipo, id) { Vinculos_abrirCom_(tipo, id); }
+
+  function vincCarregar_(depois) {
+    var ep = VINC.epoch;
+    CadUI_chamar_("vinculosPainel", [], function (res) {
+      if (ep !== VINC.epoch || !document.getElementById("vincTela")) return;
+      VINC.data = res;
+      if (VINC.origem && !vincItem_(VINC.tipo, VINC.origem)) VINC.origem = "";
+      vincDesenhar_();
+      if (typeof depois === "function") depois();
+    }, function (msg) {
+      if (ep !== VINC.epoch) return;
+      var c = document.getElementById("vincCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>O painel de vínculos não carregou.</strong>' + vincEsc_(msg) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="vincCarregar_()">Tentar de novo</button></div></div>';
+      var r = document.getElementById("vincResumo"); if (r) r.innerHTML = "";
+    });
+  }
+
+  function vincDesenhar_() {
+    var d = VINC.data;
+    if (!d) return;
+    var conta = function (tipo, code) { return (d[tipo] || []).filter(function (r) { return r.diagnostic && r.diagnostic.code === code; }).length; };
+    var cards = [
+      ["CLIENTE", "SEM_UNIDADE", "Clientes sem unidade", "tom-alerta"],
+      ["UNIDADE", "VINCULO_PENDENTE", "Unidades com vínculo pendente", "tom-perigo"],
+      ["EQUIPAMENTO", "INCONSISTENTE", "Equipamentos inconsistentes", "tom-perigo"],
+      ["*", "DUPLICIDADE", "Possíveis duplicidades", "tom-alerta"],
+      ["*", "REGULAR", "Cadastros regulares", "tom-ok"]
+    ];
+    var res = document.getElementById("vincResumo");
+    if (res) res.innerHTML = cards.map(function (c) {
+      var n = c[0] === "*" ? conta("CLIENTE", c[1]) + conta("UNIDADE", c[1]) + conta("EQUIPAMENTO", c[1]) : conta(c[0], c[1]);
+      var ativo = VINC.cod === c[1] && (c[0] === "*" || VINC.tipo === c[0]);
+      return '<button type="button" class="cadx-num bc-resumo-item ' + c[3] + (ativo ? " is-ativo" : "") + (n === 0 ? " is-zero" : "") + '" aria-pressed="' + ativo + '" onclick="vincFiltroResumo_(\'' + c[0] + "','" + c[1] + '\')"><span class="cadx-num-valor bc-resumo-num">' + CadUI_num_(n) + '</span><span class="cadx-num-rotulo bc-resumo-rot">' + vincEsc_(c[2]) + "</span></button>";
+    }).join("");
+    var abas = document.getElementById("vincAbas");
+    if (abas) abas.innerHTML = vincGestao_() ? '<div class="cadx-painel-abas" role="tablist" style="padding:0;background:transparent">' +
+      '<button type="button" role="tab" class="cadx-painel-aba' + (VINC.aba === "alterar" ? " is-ativa" : "") + '" onclick="vincAba_(\'alterar\')">Conferir e alterar</button>' +
+      '<button type="button" role="tab" class="cadx-painel-aba' + (VINC.aba === "historico" ? " is-ativa" : "") + '" onclick="vincAba_(\'historico\')">Histórico das alterações</button></div>' : "";
+    if (VINC.aba === "historico") { vincDesenharHistorico_(); return; }
+    var corpo = document.getElementById("vincCorpo");
+    if (!corpo) return;
+    corpo.innerHTML = vincPassosHtml_() +
+      '<div class="vincx-area" style="margin-top:12px">' +
+        '<div class="vincx-cartao" id="vincOrigemCartao">' + vincOrigemHtml_() + "</div>" +
+        '<div id="vincDireita">' + vincDireitaHtml_() + "</div>" +
+      "</div>";
+    vincLigarOrigem_();
+    vincLigarDireita_();
+    if (VINC.origem) vincCarregarDetalhes_();
+  }
+
+  function vincAba_(a) { VINC.aba = a; vincDesenhar_(); }
+  function vincFiltroResumo_(tipo, cod) {
+    if (VINC.cod === cod && (tipo === "*" || VINC.tipo === tipo)) VINC.cod = "";
+    else { VINC.cod = cod; if (tipo !== "*") VINC.tipo = tipo; }
+    if (VINC.origem && VINC.tipo !== (vincItem_(VINC.tipo, VINC.origem) ? VINC.tipo : "")) VINC.origem = "";
+    VINC.aba = "alterar";
+    vincDesenhar_();
+  }
+
+  function vincPassoAtual_() {
+    if (!VINC.origem) return 1;
+    if (!vincGestao_()) return 2;
+    if (!VINC.acao) return 3;
+    if (!VINC.previa) return 4;
+    return 5;
+  }
+  function vincPassosHtml_() {
+    var at = vincPassoAtual_();
+    var nomes = ["Origem", "Situação", "Ação", "Prévia do impacto", "Confirmar"];
+    return '<ol class="vincx-passos" aria-label="Passos">' + nomes.map(function (n, i) {
+      var k = i + 1;
+      return '<li class="vincx-passo ' + (k < at ? "is-feito" : k === at ? "is-atual" : "") + '"' + (k === at ? ' aria-current="step"' : "") + "><b>" + k + "</b>" + vincEsc_(n) + "</li>";
+    }).join("") + "</ol>";
+  }
+  function vincAtualizarPassos_() {
+    var ol = document.querySelector("#vincCorpo .vincx-passos");
+    if (ol) ol.outerHTML = vincPassosHtml_();
+  }
+
+  // ---------- passo 1: origem ----------
+  function vincOrigemHtml_() {
+    return '<div class="vincx-cartao-cab"><h3><b>1</b>Escolha a origem</h3></div><div class="vincx-cartao-corpo">' +
+      '<div class="vincx-tipos" role="group" aria-label="Tipo de cadastro">' + Object.keys(VINC_TIPOS).map(function (t) {
+        return '<button type="button" class="' + (VINC.tipo === t ? "is-ativo" : "") + '" aria-pressed="' + (VINC.tipo === t) + '" data-tipo="' + t + '">' + vincEsc_(VINC_TIPOS[t]) + "</button>";
+      }).join("") + "</div>" +
+      '<div class="cadx-busca"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="vincBusca" placeholder="Buscar por nome, CNPJ, TAG ou endereço" aria-label="Buscar a origem" value="' + vincEsc_(VINC.busca) + '" autocomplete="off"></div>' +
+      '<div style="margin-top:8px"><select id="vincFiltroCod" aria-label="Filtrar pela situação" style="width:100%;height:34px"><option value="">Todas as situações</option>' +
+        Object.keys(VINC_DIAG).map(function (k) { return '<option value="' + k + '"' + (VINC.cod === k ? " selected" : "") + ">" + vincEsc_(VINC_DIAG[k][0]) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="vincx-origens" id="vincOrigens" role="listbox" aria-label="Cadastros">' + vincOrigensHtml_() + "</div></div>";
+  }
+  function vincOrigensHtml_() {
+    var q = CadUI_semAcento_(VINC.busca).trim(), qd = CadUI_digitos_(VINC.busca);
+    var lista = (VINC.data[VINC.tipo] || []).filter(function (r) {
+      if (VINC.cod && (!r.diagnostic || r.diagnostic.code !== VINC.cod)) return false;
+      if (!q) return true;
+      var t = CadUI_semAcento_(r.label);
+      return q.split(/\s+/).every(function (p) { return t.indexOf(p) !== -1; }) || (qd.length >= 3 && CadUI_digitos_(r.label).indexOf(qd) !== -1);
+    });
+    if (!lista.length) return '<div class="cadx-vazio bc-vazio">' + ((VINC.data[VINC.tipo] || []).length ? "Nada encontrado. Confira a busca ou a situação escolhida." : "Nenhum cadastro deste tipo.") + "</div>";
+    var mostrar = lista.slice(0, 200);
+    return mostrar.map(function (r) {
+      var pai = VINC.tipo === "UNIDADE" ? vincItem_("CLIENTE", r.CLIENTE_ID) : VINC.tipo === "EQUIPAMENTO" ? vincItem_("UNIDADE", r.UNIDADE_ID) : null;
+      return '<button type="button" role="option" class="vincx-origem' + (r.ID === VINC.origem ? " is-ativa" : "") + '" aria-selected="' + (r.ID === VINC.origem) + '" data-id="' + vincEsc_(r.ID) + '"><span class="vincx-origem-texto"><span class="cadx-tit">' + vincEsc_(vincNome_(r)) + "</span>" +
+        (pai ? '<span class="cadx-sub" style="display:block">' + vincEsc_((VINC.tipo === "UNIDADE" ? "Cliente: " : "Unidade: ") + vincNome_(pai)) + "</span>" : "") + "</span>" + vincSeloDiag_(r.diagnostic && r.diagnostic.code) + "</button>";
+    }).join("") + (lista.length > 200 ? '<div class="cadx-vazio bc-vazio">Mostrando 200 de ' + CadUI_num_(lista.length) + ". Use a busca para achar os demais.</div>" : "");
+  }
+  function vincLigarOrigem_() {
+    var c = document.getElementById("vincOrigemCartao");
+    if (!c) return;
+    c.querySelectorAll(".vincx-tipos button").forEach(function (b) { b.onclick = function () { VINC.tipo = b.getAttribute("data-tipo"); VINC.origem = ""; vincLimparAcao_(); VINC.cod = VINC.cod && ["REGULAR", "INATIVO", "DUPLICIDADE"].indexOf(VINC.cod) >= 0 ? VINC.cod : ""; vincDesenhar_(); }; });
+    var busca = c.querySelector("#vincBusca"), t = null;
+    busca.addEventListener("input", function () { clearTimeout(t); t = setTimeout(function () { VINC.busca = busca.value; document.getElementById("vincOrigens").innerHTML = vincOrigensHtml_(); }, 160); });
+    c.querySelector("#vincFiltroCod").addEventListener("change", function (e) { VINC.cod = e.target.value; vincDesenhar_(); });
+    c.querySelector("#vincOrigens").addEventListener("click", function (e) {
+      var b = e.target.closest(".vincx-origem");
+      if (!b) return;
+      VINC.origem = b.getAttribute("data-id");
+      vincLimparAcao_();
+      c.querySelectorAll(".vincx-origem").forEach(function (x) { var s = x === b; x.classList.toggle("is-ativa", s); x.setAttribute("aria-selected", s); });
+      vincRedesenharDireita_();
+      vincCarregarDetalhes_();
+      if (CadUI_movel_()) { var d = document.getElementById("vincDireita"); if (d) try { d.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (er) {} }
+    });
+  }
+  function vincLimparAcao_() { VINC.acao = ""; VINC.destino = ""; VINC.destBusca = ""; VINC.previa = null; VINC.token = ""; VINC.epoch++; }
+
+  // ---------- passos 2 a 5 ----------
+  function vincDireitaHtml_() {
+    if (!VINC.origem) return '<div class="vincx-cartao"><div class="vincx-cartao-corpo"><div class="cadx-vazio bc-vazio"><strong>Escolha um cadastro na lista ao lado.</strong>A situação, os vínculos e as ações aparecem aqui.</div></div></div>';
+    var r = vincItem_(VINC.tipo, VINC.origem);
+    if (!r) return "";
+    var d = vincDiag_(r.diagnostic && r.diagnostic.code);
+    var pai = VINC.tipo === "UNIDADE" ? vincItem_("CLIENTE", r.CLIENTE_ID) : VINC.tipo === "EQUIPAMENTO" ? vincItem_("UNIDADE", r.UNIDADE_ID) : null;
+    var filhos = VINC.tipo === "CLIENTE" ? (VINC.data.UNIDADE || []).filter(function (u) { return u.CLIENTE_ID === r.ID; }) : VINC.tipo === "UNIDADE" ? (VINC.data.EQUIPAMENTO || []).filter(function (e) { return e.UNIDADE_ID === r.ID; }) : [];
+    var html = '<div class="vincx-cartao"><div class="vincx-cartao-cab"><h3><b>2</b>Situação</h3>' + vincSeloDiag_(r.diagnostic && r.diagnostic.code) + "</div><div class=\"vincx-cartao-corpo\">" +
+      '<div class="cadx-tit" style="font-size:15px">' + vincEsc_(vincNome_(r)) + '</div><div class="cadx-sub" style="margin-bottom:10px">' + vincEsc_(VINC_TIPOS[VINC.tipo]) + " · " + CadUI_selo_(r.STATUS).replace(/<[^>]+>/g, "") + "</div>" +
+      '<div class="cadx-faixa bc-faixa ' + (d[1] === "tom-ok" ? "tom-ok" : d[1] === "tom-perigo" ? "tom-perigo" : d[1] === "tom-alerta" ? "tom-alerta" : "") + '">' + vincEsc_((r.diagnostic && r.diagnostic.message) || d[2]) + "</div>" +
+      CadUI_dados_([
+        VINC.tipo === "CLIENTE" ? ["Ligado a", "Cliente principal (topo da cadeia)"] : ["Ligado a", pai ? vincNome_(pai) : "Nenhum vínculo (pendente)"],
+        VINC.tipo === "CLIENTE" ? ["Unidades", CadUI_num_(filhos.length)] : VINC.tipo === "UNIDADE" ? ["Equipamentos", CadUI_num_(filhos.length)] : null
+      ]) +
+      (filhos.length ? '<details class="cadx-ajuda bc-ajuda-recolhida" style="margin-top:10px"><summary>' + (VINC.tipo === "CLIENTE" ? "Ver as unidades" : "Ver os equipamentos") + " (" + filhos.length + ')</summary><div class="cadx-ajuda-corpo"><ul class="cadx-arvore">' + filhos.map(function (f) {
+        return '<li><div class="cadx-no"><div class="cadx-no-texto">' + vincEsc_(vincNome_(f)) + "</div>" + vincSeloDiag_(f.diagnostic && f.diagnostic.code) + "</div></li>";
+      }).join("") + "</ul></div></details>" : "") +
+      '<div id="vincRefs" style="margin-top:12px">' + CadUI_esqueleto_(3) + "</div>" +
+      '<div class="cadx-acoes" style="justify-content:flex-start;flex-wrap:wrap;margin-top:12px">' +
+        '<button type="button" class="cadx-btn cadx-btn-grande" onclick="vincAbrirCadastro_()">Abrir o cadastro</button>' +
+        (VINC.tipo === "CLIENTE" && r.STATUS === "ATIVO" && r.diagnostic && r.diagnostic.code === "SEM_UNIDADE" ? '<button type="button" class="cadx-btn cadx-btn-grande" onclick="vincPrincipal_()">Criar a unidade principal</button>' : "") +
+      "</div></div></div>";
+    if (!vincGestao_()) {
+      return html + '<div class="vincx-cartao"><div class="vincx-cartao-corpo"><div class="cadx-faixa bc-faixa tom-info"><b>Transferir, juntar repetidos, desvincular, inativar ou excluir</b> é feito pela gestão (Gestor, Diretoria ou Administrador). Peça a eles informando este cadastro e o motivo. Você pode abrir o cadastro para corrigir dados como nome, endereço e contato.</div></div></div>';
+    }
+    return html + vincAcaoHtml_(r) + vincPreviaHtml_() + vincConfirmarHtml_();
+  }
+
+  function vincAcoesPermitidas_(tipo) { return tipo === "CLIENTE" ? ["CONSOLIDAR", "INATIVAR", "REATIVAR", "EXCLUIR"] : ["TRANSFERIR", "CONSOLIDAR", "DESVINCULAR", "INATIVAR", "REATIVAR", "EXCLUIR"]; }
+
+  function vincAcaoHtml_(r) {
+    var ativo = r.STATUS === "ATIVO";
+    var acoes = vincAcoesPermitidas_(VINC.tipo).filter(function (a) { return ativo ? a !== "REATIVAR" : (a === "REATIVAR" || a === "EXCLUIR"); });
+    var precisaDest = VINC.acao === "TRANSFERIR" || VINC.acao === "CONSOLIDAR";
+    var destTipo = VINC.acao === "TRANSFERIR" ? (VINC.tipo === "UNIDADE" ? "CLIENTE" : "UNIDADE") : VINC.tipo;
+    var destinos = precisaDest ? (VINC.data[destTipo] || []).filter(function (x) { return x.STATUS === "ATIVO" && x.ID !== VINC.origem; }) : [];
+    var q = CadUI_semAcento_(VINC.destBusca).trim();
+    if (q) destinos = destinos.filter(function (x) { return CadUI_semAcento_(x.label).indexOf(q) !== -1 || (CadUI_digitos_(VINC.destBusca).length >= 3 && CadUI_digitos_(x.label).indexOf(CadUI_digitos_(VINC.destBusca)) !== -1); });
+    return '<div class="vincx-cartao" id="vincPasso3"><div class="vincx-cartao-cab"><h3><b>3</b>Escolha a ação</h3></div><div class="vincx-cartao-corpo">' +
+      '<div class="vincx-acoes" role="radiogroup" aria-label="Ação">' + acoes.map(function (a) {
+        var info = VINC_ACOES[a];
+        var txt = info.texto[VINC.tipo] || info.texto.ALL || "";
+        return '<label class="vincx-acao' + (info.risco ? " is-risco" : "") + '"><input type="radio" name="vincAcao" value="' + a + '"' + (VINC.acao === a ? " checked" : "") + "><span><strong>" + vincEsc_(info.rotulo) + "</strong>" + vincEsc_(txt) + "</span></label>";
+      }).join("") + "</div>" +
+      (precisaDest ? '<div class="cadx-campo" style="margin-top:12px" data-campo="vincDestino"><label for="vincDestino">' + (VINC.acao === "TRANSFERIR" ? (VINC.tipo === "UNIDADE" ? "Cliente de destino" : "Unidade de destino") : "Cadastro que fica (destino)") + ' <span class="cadx-obr">*</span></label>' +
+        '<input type="search" id="vincDestBusca" placeholder="Filtrar os destinos por nome ou CNPJ" value="' + vincEsc_(VINC.destBusca) + '" style="margin-bottom:6px" autocomplete="off">' +
+        '<select id="vincDestino" size="' + Math.min(6, Math.max(2, destinos.length + 1)) + '" style="height:auto"><option value="">' + (destinos.length ? "Escolha o destino" : "Nenhum destino ativo encontrado") + "</option>" +
+        destinos.slice(0, 300).map(function (x) {
+          var pai = destTipo === "UNIDADE" ? vincItem_("CLIENTE", x.CLIENTE_ID) : null;
+          return '<option value="' + vincEsc_(x.ID) + '"' + (x.ID === VINC.destino ? " selected" : "") + ">" + vincEsc_(vincNome_(x) + (pai ? " (cliente " + vincNome_(pai) + ")" : "")) + "</option>";
+        }).join("") + '</select><div class="cadx-erro" id="vincDestino_erro"></div></div>' : "") +
+      '<div class="cadx-campo" style="margin-top:12px" data-campo="vincMotivo"><label for="vincMotivo">Motivo da alteração <span class="cadx-obr">*</span></label>' +
+        '<textarea id="vincMotivo" maxlength="1000" placeholder="Ex.: a unidade foi vendida para outro grupo; cadastro repetido do mesmo CNPJ">' + vincEsc_(VINC.motivo) + '</textarea>' +
+        '<div class="vincx-contador" id="vincMotivoConta">' + VINC.motivo.length + ' de 1.000 (mínimo 8)</div><div class="cadx-erro" id="vincMotivo_erro"></div><div class="cadx-dica">Fica registrado na auditoria com o seu nome, a data e a hora.</div></div>' +
+      '<div class="cadx-acoes" style="justify-content:flex-start;margin-top:12px"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" id="vincBtnPrevia"' + (VINC.acao ? "" : " disabled") + ">Conferir o impacto</button></div>" +
+      "</div></div>";
+  }
+
+  function vincPreviaHtml_() {
+    var p = VINC.previa;
+    var cab = '<div class="vincx-cartao' + (p ? "" : " is-bloqueado") + '" id="vincPasso4"><div class="vincx-cartao-cab"><h3><b>4</b>Prévia do impacto</h3></div><div class="vincx-cartao-corpo">';
+    if (!p) return cab + '<p class="cadx-sub" style="margin:0">Escolha a ação, escreva o motivo e clique em Conferir o impacto. Nada é gravado nesta etapa.</p></div></div>';
+    var docs = p.documentos || [];
+    var hist = Object.keys(p.historical || {});
+    return cab +
+      CadUI_dados_([["Origem", vincCnpjNoTexto_(p.source)], ["Destino", vincCnpjNoTexto_(p.target) || "Sem destino"], ["Ação", vincAcaoNome_(VINC.acao)]]) +
+      (p.blocks || []).map(function (b) { return '<div class="cadx-faixa bc-faixa tom-perigo" style="margin-top:10px"><b>Impede a operação:</b> ' + vincEsc_(b) + "</div>"; }).join("") +
+      (p.warnings || []).map(function (w) { return '<div class="cadx-faixa bc-faixa tom-alerta" style="margin-top:10px">' + vincEsc_(w) + "</div>"; }).join("") +
+      (docs.length ? '<h4 class="cadx-sec-tit" style="margin-top:14px">Documentos que acompanham (' + CadUI_num_(docs.length) + ')</h4><div class="vincx-rolagem"><table class="vincx-tabela"><thead><tr><th>Documento</th><th>Categoria</th><th>De (cliente / unidade)</th><th>Para (cliente / unidade)</th></tr></thead><tbody>' +
+        docs.map(function (d) { return "<tr><td>" + vincEsc_(d.nome) + "</td><td>" + vincEsc_(Documentos_categoria_(d.tipo) || "—") + "</td><td>" + vincEsc_(vincCnpjNoTexto_(d.de)) + "</td><td>" + vincEsc_(vincCnpjNoTexto_(d.para)) + "</td></tr>"; }).join("") + "</tbody></table></div>" : "") +
+      '<p class="cadx-sub" style="margin:12px 0 4px">Fica no cadastro original: ' + vincEsc_(hist.map(function (k) { var n = p.historical[k]; return vincTabela_(k) + ": " + n + (n === 1 ? " registro" : " registros"); }).join("; ") || "nenhuma referência encontrada") + ".</p>" +
+      '<details class="cadx-ajuda bc-ajuda-recolhida" style="margin-top:8px"' + ((p.changes || []).length <= 8 ? " open" : "") + '><summary>Todas as alterações (' + CadUI_num_((p.changes || []).length) + ')</summary><div class="cadx-ajuda-corpo" style="padding-left:14px"><div class="vincx-rolagem"><table class="vincx-tabela"><thead><tr><th>Área</th><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>' +
+        (p.changes || []).map(function (c) { return "<tr><td>" + vincEsc_(vincTabela_(c.table)) + "</td><td>" + vincEsc_(vincCampo_(c.field)) + "</td><td>" + vincEsc_(vincValor_(c.field, c.before)) + "</td><td>" + vincEsc_(c.field === "__DELETE__" ? "Excluído" : vincValor_(c.field, c.after)) + "</td></tr>"; }).join("") +
+      "</tbody></table></div></div></details></div></div>";
+  }
+
+  function vincConfirmarHtml_() {
+    var p = VINC.previa;
+    var pode = !!(p && VINC.token);
+    var risco = VINC_ACOES[VINC.acao] && VINC_ACOES[VINC.acao].risco;
+    return '<div class="vincx-cartao' + (pode ? "" : " is-bloqueado") + '" id="vincPasso5"><div class="vincx-cartao-cab"><h3><b>5</b>Confirmar</h3></div><div class="vincx-cartao-corpo">' +
+      (p && !pode ? '<p class="cadx-sub" style="margin:0 0 8px">Resolva o que impede a operação (acima), depois clique de novo em Conferir o impacto.</p>' : !p ? '<p class="cadx-sub" style="margin:0 0 8px">Disponível depois da prévia sem impedimentos.</p>' : '<p class="cadx-sub" style="margin:0 0 8px">A prévia vale 10 minutos. Ao confirmar, as alterações acima são gravadas de uma vez e ficam na auditoria com o motivo.</p>') +
+      '<button type="button" class="cadx-btn cadx-btn-grande ' + (risco ? "cadx-btn-risco-cheio" : "cadx-btn-primario") + '" id="vincBtnConfirmar"' + (pode ? "" : " disabled") + ">Confirmar: " + vincEsc_(vincAcaoNome_(VINC.acao) || "alteração") + "</button></div></div>";
+  }
+
+  function vincRedesenharDireita_() {
+    var d = document.getElementById("vincDireita");
+    if (!d) return;
+    d.innerHTML = vincDireitaHtml_();
+    vincLigarDireita_();
+    vincAtualizarPassos_();
+  }
+
+  function vincLigarDireita_() {
+    var d = document.getElementById("vincDireita");
+    if (!d) return;
+    d.querySelectorAll('input[name="vincAcao"]').forEach(function (r) {
+      r.onchange = function () { VINC.acao = r.value; VINC.destino = ""; VINC.destBusca = ""; VINC.previa = null; VINC.token = ""; VINC.epoch++; vincGuardarMotivo_(); vincRedesenharDireitaMantendoRefs_(); };
+    });
+    var dest = d.querySelector("#vincDestino");
+    if (dest) dest.onchange = function () { VINC.destino = dest.value; vincInvalidar_(); CadUI_erroCampo_("vincDestino", ""); };
+    var db = d.querySelector("#vincDestBusca"), tm = null;
+    if (db) db.addEventListener("input", function () { clearTimeout(tm); tm = setTimeout(function () { VINC.destBusca = db.value; vincGuardarMotivo_(); vincRedesenharDireitaMantendoRefs_(); var n = document.getElementById("vincDestBusca"); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); });
+    var mot = d.querySelector("#vincMotivo");
+    if (mot) mot.addEventListener("input", function () { VINC.motivo = mot.value; var c = document.getElementById("vincMotivoConta"); if (c) c.textContent = mot.value.length + " de 1.000 (mínimo 8)"; CadUI_erroCampo_("vincMotivo", ""); if (VINC.previa) vincInvalidar_(); });
+    var bp = d.querySelector("#vincBtnPrevia");
+    if (bp) bp.onclick = vincPrevia_;
+    var bc = d.querySelector("#vincBtnConfirmar");
+    if (bc) bc.onclick = vincConfirmar_;
+  }
+  function vincGuardarMotivo_() { var m = document.getElementById("vincMotivo"); if (m) VINC.motivo = m.value; }
+  /** Redesenha os passos 3–5 sem recarregar as referências do passo 2. */
+  function vincRedesenharDireitaMantendoRefs_() {
+    var refs = document.getElementById("vincRefs");
+    var html = refs ? refs.innerHTML : "";
+    vincRedesenharDireita_();
+    var n = document.getElementById("vincRefs");
+    if (n && html) n.innerHTML = html;
+  }
+  function vincInvalidar_() {
+    if (!VINC.previa && !VINC.token) return;
+    VINC.previa = null; VINC.token = ""; VINC.epoch++;
+    var p4 = document.getElementById("vincPasso4"), p5 = document.getElementById("vincPasso5");
+    if (p4) p4.outerHTML = vincPreviaHtml_();
+    if (p5) { p5.outerHTML = vincConfirmarHtml_(); var bc = document.getElementById("vincBtnConfirmar"); if (bc) bc.onclick = vincConfirmar_; }
+    vincAtualizarPassos_();
+  }
+
+  function vincCarregarDetalhes_() {
+    var tipo = VINC.tipo, id = VINC.origem, ep = VINC.epoch;
+    CadUI_chamar_("vinculosDetalhes", [tipo, id], function (res) {
+      if (VINC.origem !== id || VINC.tipo !== tipo) return;
+      var el = document.getElementById("vincRefs");
+      if (!el) return;
+      var refs = res.references || [], hist = res.history || [];
+      el.innerHTML = '<h4 class="cadx-sec-tit">Onde este cadastro aparece</h4>' +
+        (refs.length ? '<ul class="cadx-arvore">' + refs.map(function (r) { return '<li><div class="cadx-no"><span>' + vincEsc_(vincTabela_(r.table)) + '</span><span class="cadx-mono">' + CadUI_num_(r.count) + "</span></div></li>"; }).join("") + "</ul>" : '<p class="cadx-sub" style="margin:0">Nenhuma referência nos módulos consultados.</p>') +
+        (vincGestao_() ? '<h4 class="cadx-sec-tit" style="margin-top:12px">Últimas alterações de vínculo</h4>' + (hist.length ? '<div class="vincx-rolagem" style="max-height:180px;border:0">' + hist.slice(0, 12).map(function (h) {
+          return '<div class="cadx-no" style="display:block"><b>' + vincEsc_(CadUI_dataHora_(h.date)) + "</b> · " + vincEsc_(h.user) + " · " + vincEsc_(vincAcaoNome_(h.action)) + '<div class="cadx-sub">' + vincEsc_(vincTabela_(h.table) + " › " + vincCampo_(h.field) + ": " + vincValor_(h.field, h.before) + " → " + vincValor_(h.field, h.after)) + '</div><div class="cadx-sub">Motivo: ' + vincEsc_(h.reason) + "</div></div>";
+        }).join("") + "</div>" : '<p class="cadx-sub" style="margin:0">Nenhuma alteração de vínculo registrada para este cadastro.</p>') : "");
+    }, function (msg) {
+      var el = document.getElementById("vincRefs");
+      if (el) el.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + vincEsc_(msg) + "</div>";
+    });
+  }
+
+  function vincPrevia_() {
+    if (VINC.ocupado) return;
+    vincGuardarMotivo_();
+    var erros = {};
+    if ((VINC.acao === "TRANSFERIR" || VINC.acao === "CONSOLIDAR") && !VINC.destino) erros.vincDestino = "Escolha o destino na lista.";
+    if (VINC.motivo.trim().length < 8) erros.vincMotivo = "Escreva o motivo com pelo menos 8 caracteres.";
+    if (!CadUI_mostrarErros_(erros, ["vincDestino", "vincMotivo"])) return;
+    VINC.ocupado = true;
+    var ep = ++VINC.epoch;
+    var bp = document.getElementById("vincBtnPrevia");
+    if (bp) { bp.disabled = true; bp.textContent = "Conferindo…"; }
+    CadUI_chamar_("vinculosPrevia", [{ tipo: VINC.tipo, acao: VINC.acao, origem: VINC.origem, destino: VINC.destino, motivo: VINC.motivo.trim() }], function (res) {
+      VINC.ocupado = false;
+      if (ep !== VINC.epoch) return;
+      VINC.previa = res; VINC.token = res.token || "";
+      vincRedesenharDireitaMantendoRefs_();
+      var p4 = document.getElementById("vincPasso4");
+      if (p4) try { p4.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {}
+    }, function (msg) {
+      VINC.ocupado = false;
+      var b = document.getElementById("vincBtnPrevia");
+      if (b) { b.disabled = false; b.textContent = "Conferir o impacto"; }
+      CadUI_aviso_(msg, "erro");
+    }, "Aguarde, conferindo dependências e impacto…");
+  }
+
+  function vincConfirmar_() {
+    if (!VINC.token || VINC.ocupado) return;
+    var p = VINC.previa, info = VINC_ACOES[VINC.acao] || {};
+    CadUI_confirmar_({
+      titulo: "Confirmar: " + vincAcaoNome_(VINC.acao), risco: !!info.risco, botao: "Aplicar a alteração",
+      texto: "<p>" + CadUI_dados_([["Origem", vincCnpjNoTexto_(p.source)], ["Destino", vincCnpjNoTexto_(p.target) || "Sem destino"], ["Alterações", CadUI_num_((p.changes || []).length)], ["Documentos que acompanham", CadUI_num_((p.documentos || []).length)], ["Motivo", VINC.motivo.trim()]]) + "</p><p>Aplicar exatamente a alteração conferida? Ela fica registrada na auditoria.</p>",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        VINC.ocupado = true;
+        CadUI_chamar_("vinculosConfirmar", [VINC.token], function (res) {
+          VINC.ocupado = false;
+          fechar();
+          CadUI_aviso_((res.message || "Alteração aplicada.").replace(/\s*Recarregue as telas abertas antes de continuar\.?/, "") + " Registrada na auditoria.", "ok");
+          var origem = VINC.origem, tipo = VINC.tipo;
+          vincLimparAcao_(); VINC.motivo = ""; VINC.hist = null;
+          VINC.origem = origem; VINC.tipo = tipo;
+          vincCarregar_();
+        }, function (msg) { VINC.ocupado = false; reabilitar(msg); });
+      }
+    });
+  }
+
+  function vincAbrirCadastro_() {
+    var tipo = VINC.tipo, id = VINC.origem;
+    var chave = tipo === "CLIENTE" ? "clientes" : tipo === "UNIDADE" ? "unidades" : "equipamentos";
+    CadTela_irPara_(chave, id);
+  }
+
+  function vincPrincipal_() {
+    var r = vincItem_("CLIENTE", VINC.origem);
+    if (!r) return;
+    CadUI_confirmar_({
+      titulo: "Criar a unidade principal", botao: "Criar unidade principal",
+      texto: "<p>Cria a unidade principal de <b>" + vincEsc_(vincNome_(r)) + "</b> com o mesmo CNPJ e endereço do cliente. Se ela já existir, nada é criado.</p>",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("vinculosCriarPrincipal", [r.ID], function (res) { fechar(); CadUI_aviso_(res.message || "Unidade principal criada.", "ok"); vincCarregar_(); }, reabilitar);
+      }
+    });
+  }
+
+  // ---------- histórico das alterações (gestão) ----------
+  function vincDesenharHistorico_() {
+    var corpo = document.getElementById("vincCorpo");
+    if (!corpo) return;
+    if (!VINC.hist) {
+      corpo.innerHTML = CadUI_esqueleto_(6);
+      CadUI_chamar_("vinculosHistorico", [80], function (res) { VINC.hist = res.items || []; if (VINC.aba === "historico") vincDesenharHistorico_(); },
+        function (msg) { corpo.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>O histórico não carregou.</strong>' + vincEsc_(msg) + '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="VINC.hist=null;vincDesenharHistorico_()">Tentar de novo</button></div></div>'; });
+      return;
+    }
+    if (!VINC.hist.length) { corpo.innerHTML = '<div class="vincx-cartao"><div class="cadx-vazio bc-vazio"><strong>Nenhuma alteração de vínculo registrada ainda.</strong>Cada transferência, junção, desvinculação, inativação ou exclusão feita aqui aparece nesta lista.</div></div>'; return; }
+    corpo.innerHTML = '<div class="vincx-cartao"><div class="vincx-cartao-cab"><h3>Últimas ' + CadUI_num_(VINC.hist.length) + ' alterações</h3><button type="button" class="cadx-btn" onclick="VINC.hist=null;vincDesenharHistorico_()">Atualizar</button></div><div class="vincx-cartao-corpo">' +
+      VINC.hist.map(function (h) {
+        return '<details class="vincx-hist"><summary><b>' + vincEsc_(CadUI_dataHora_(h.data)) + "</b><span>" + vincEsc_(vincAcaoNome_(h.acao)) + '</span><span class="cadx-tit">' + vincEsc_(vincCnpjNoTexto_(h.origem)) + '</span><span class="cadx-sub">por ' + vincEsc_(h.usuario) + " · " + CadUI_num_(h.alteracoes.length) + " alteração(ões)" + (h.documentos ? " · " + CadUI_num_(h.documentos) + " documento(s) acompanharam" : "") + "</span></summary>" +
+          '<p class="cadx-sub" style="margin:8px 0">Motivo: ' + vincEsc_(h.motivo) + "</p>" +
+          '<div class="vincx-rolagem"><table class="vincx-tabela"><thead><tr><th>Área</th><th>Registro</th><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>' +
+          h.alteracoes.map(function (a) {
+            return "<tr><td>" + vincEsc_(vincTabela_(a.tabela)) + "</td><td>" + vincEsc_(vincCnpjNoTexto_(a.registroNome) || (a.tabela === "DOC_DOCUMENTOS" ? "Documento" : "—")) + "</td><td>" + vincEsc_(vincCampo_(a.campo)) + "</td><td>" + vincEsc_(a.antesNome ? vincCnpjNoTexto_(a.antesNome) : vincValor_(a.campo, a.antes)) + "</td><td>" + vincEsc_(a.campo === "__DELETE__" ? "Excluído" : (a.depoisNome ? vincCnpjNoTexto_(a.depoisNome) : vincValor_(a.campo, a.depois))) + "</td></tr>";
+          }).join("") + "</tbody></table></div></details>";
+      }).join("") + "</div></div>";
+  }
 </script>
