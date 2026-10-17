@@ -63,6 +63,8 @@ function Conduta_apiDispatch(req) {
     apiRegistrarMissao: Conduta_apiRegistrarMissao,
     apiListarMissoes: Conduta_apiListarMissoes,
     apiRemoverMissao: Conduta_apiRemoverMissao,
+    apiDecidirMissao: Conduta_apiDecidirMissao,
+    apiGerarExtratoColaborador: Conduta_apiGerarExtratoColaborador,
 
     apiRegistrarAusencia: Conduta_apiRegistrarAusencia,
     apiListarAusencias: Conduta_apiListarAusencias,
@@ -98,7 +100,12 @@ function Conduta_apiDispatch(req) {
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
-  return allow[fn](req.sessionId, payload);
+  var resultado = allow[fn](req.sessionId, payload);
+  // 17/10/2026: ocorrência, ciência, missão e fechamento mudam pendências do Início.
+  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+    try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
+  }
+  return resultado;
 }
 
 function Conduta_apiPing() {

@@ -296,7 +296,7 @@ const SGO_UNIDADES = (() => {
 
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir unidade ID=" + id, "UNIDADES");
-      return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
+      return { success: false, message: "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador). Nada foi alterado. Você pode continuar criando e editando cadastros; para excluir ou trocar vínculos, peça à gestão." };
     }
 
     const unidadeId = String(id || "").trim();

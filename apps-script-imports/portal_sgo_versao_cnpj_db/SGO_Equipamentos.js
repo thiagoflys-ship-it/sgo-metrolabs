@@ -146,7 +146,7 @@ const SGO_EQUIPAMENTOS = (() => {
     SGO_DATA.insert(SHEET_NAME, registro);
     SGO_DATA.log("EQUIPAMENTOS_CRIAR", sessao.usuario, "Equipamento criado TAG=" + dados.TAG, "EQUIPAMENTOS");
 
-    return { success: true, message: "Criado com sucesso.", item: registro };
+    return { success: true, message: "Equipamento " + nomeEquip_(registro) + " cadastrado.", item: registro };
   }
 
   function atualizar(sessionId, id, payload) {
@@ -188,19 +188,23 @@ const SGO_EQUIPAMENTOS = (() => {
     if (ok) SGO_DATA.log("EQUIPAMENTOS_ATUALIZAR", sessao.usuario, "Equipamento atualizado ID=" + equipId, "EQUIPAMENTOS");
 
     return ok
-      ? { success: true, message: "Atualizado com sucesso." }
+      ? { success: true, message: "Equipamento " + nomeEquip_(Object.assign({}, atual, novosDados)) + " atualizado." }
       : { success: false, message: "Erro ao atualizar." };
   }
+
+  // 17/10/2026: mensagens dizem qual equipamento (TAG, ou tipo e série).
+  function nomeEquip_(e) { e = e || {}; return SGO_UTILS.safe(e.TAG) || [SGO_UTILS.safe(e.TIPO), SGO_UTILS.safe(e.SERIE)].filter(Boolean).join(" ") || "sem identificação"; }
 
   function inativar(sessionId, id) {
     const sessao = exigirSessao(sessionId);
     if (SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE") return { success: false, message: "Acesso negado." };
     
     const equipId = SGO_UTILS.safe(id);
-    if (!SGO_DATA.getById(SHEET_NAME, equipId)) return { success: false, message: "Equipamento não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista e tente de novo." };
+    const atualI = SGO_DATA.getById(SHEET_NAME, equipId);
+    if (!atualI) return { success: false, message: "Equipamento não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista e tente de novo." };
     if (!SGO_DATA.update(SHEET_NAME, equipId, { STATUS: STATUS_INATIVO })) return { success: false, message: "Não foi possível inativar o equipamento. Atualize a lista e tente de novo." };
     SGO_DATA.log("EQUIPAMENTOS_INATIVAR", sessao.usuario, "Equipamento inativado ID=" + equipId, "EQUIPAMENTOS");
-    return { success: true, message: "Equipamento inativado com sucesso." };
+    return { success: true, message: "Equipamento " + nomeEquip_(atualI) + " inativado." };
   }
 
   function reativar(sessionId, id) {
@@ -215,7 +219,7 @@ const SGO_EQUIPAMENTOS = (() => {
     if (errosVinculo) return { success: false, message: "Não foi possível reativar: " + errosVinculo };
     if (!SGO_DATA.update(SHEET_NAME, equipId, { STATUS: STATUS_ATIVO })) return { success: false, message: "Não foi possível reativar o equipamento. Atualize a lista e tente de novo." };
     SGO_DATA.log("EQUIPAMENTOS_REATIVAR", sessao.usuario, "Equipamento reativado ID=" + equipId, "EQUIPAMENTOS");
-    return { success: true, message: "Equipamento reativado com sucesso." };
+    return { success: true, message: "Equipamento " + nomeEquip_(atual) + " reativado." };
   }
 
   /** Cliente e unidade obrigatórios, ativos e correspondentes. Devolve a mensagem do problema ou "". */
@@ -253,18 +257,19 @@ const SGO_EQUIPAMENTOS = (() => {
 
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir equipamento ID=" + id, "EQUIPAMENTOS");
-      return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
+      return { success: false, message: "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador). Nada foi alterado. Você pode continuar criando e editando cadastros; para excluir ou trocar vínculos, peça à gestão." };
     }
 
     const equipId = SGO_UTILS.safe(id);
-    if (!SGO_DATA.getById(SHEET_NAME, equipId)) return { success: false, message: "Equipamento não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
+    const atualE = SGO_DATA.getById(SHEET_NAME, equipId);
+    if (!atualE) return { success: false, message: "Equipamento não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
     // Equipamento com documento, certificado, laudo ou atendimento ligado não é apagado
     // (perderia o histórico do prontuário): o caminho é inativar.
     const ligados = tabelasComEquipamento_(equipId);
     if (ligados.length) return { success: false, message: "Não foi possível excluir: este equipamento tem registros ligados em " + ligados.join(", ") + ". Para tirar de uso sem perder o histórico, use Inativar." };
     if (!SGO_DATA.remove(SHEET_NAME, equipId)) return { success: false, message: "Não foi possível excluir o equipamento. Atualize a lista e tente de novo." };
     SGO_DATA.log("EQUIPAMENTOS_EXCLUIR", sessao.usuario, "Equipamento excluído ID=" + equipId, "EQUIPAMENTOS");
-    return { success: true, message: "Equipamento excluído com sucesso." };
+    return { success: true, message: "Equipamento " + nomeEquip_(atualE) + " excluído." };
   }
 
   function pesquisar(sessionId, termo) {

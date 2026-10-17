@@ -17,7 +17,9 @@ const SGO_VINCULOS = (() => {
       const name = sheet.getName(), width = sheet.getLastColumn(), height = sheet.getLastRow();
       if (!width || /^(BK_|SYS_LOGS)/.test(name) || name === AUDIT) return;
       const headers = sheet.getRange(1,1,1,width).getValues()[0].map(text);
-      const core = Object.values(TABLES).includes(name) || name === 'AUVO_SYNC';
+      // 17/10/2026: DOC_DOCUMENTOS lido inteiro — os documentos acompanham a unidade/equipamento
+      // que muda de cliente (decisão do dono) e a prévia mostra nome e tipo de cada um.
+      const core = Object.values(TABLES).includes(name) || name === 'AUVO_SYNC' || name === 'DOC_DOCUMENTOS';
       const fields = headers.filter(h => /^(ID|CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO|STATUS|FINALIZADA|STATUS_PENDENCIA|AUVO_TASK_ID)$/.test(h));
       if (!core && !fields.some(h => h !== 'ID' && h !== 'STATUS')) return;
       schema[name] = {sheetId:sheet.getSheetId(),headers:headers};
@@ -104,9 +106,23 @@ const SGO_VINCULOS = (() => {
       if(old){old.after=value;return;}
       changes.push({table:name,id:text(row.ID),row:row._row,field:field,before:before,after:value});
     }
+    // 17/10/2026 (decisão do dono): quando a unidade ou o equipamento muda de cliente, os documentos
+    // ligados (Arquivo de documentos) acompanham: CLIENTE_ID/UNIDADE_ID atualizados, com cada mudança
+    // na auditoria (quem, quando, de onde, para onde). Nada é apagado; o arquivo fica onde está.
+    const docsMovidos={};
+    function moverDocs(filtro,clienteId,unidadeId) {
+      if(!clienteId)return;
+      base(snapshot,'DOC_DOCUMENTOS').filter(filtro).forEach(d=>{
+        change('DOC_DOCUMENTOS',d,'CLIENTE_ID',clienteId);
+        if(unidadeId)change('DOC_DOCUMENTOS',d,'UNIDADE_ID',unidadeId);
+        docsMovidos[text(d.ID)]=d;
+      });
+    }
     function moveUnit(u,clientId) {
       change('CAD_UNIDADES',u,'CLIENTE_ID',clientId);
       base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===text(u.ID)).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',clientId));
+      const equipsDaUnidade=new Set(base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===text(u.ID)).map(e=>text(e.ID)));
+      moverDocs(d=>text(d.UNIDADE_ID)===text(u.ID)||(text(d.EQUIPAMENTO_ID)&&equipsDaUnidade.has(text(d.EQUIPAMENTO_ID))),clientId,text(u.ID));
       const maps=base(snapshot,'AUVO_SYNC');
       maps.filter(m=>text(m.ENTIDADE_TIPO)==='UNIDADE'&&text(m.ENTIDADE_ID)===text(u.ID)).forEach(m=>{
         const customer=text(m.AUVO_ID);
@@ -121,7 +137,7 @@ const SGO_VINCULOS = (() => {
       const destTable=spec.tipo==='UNIDADE'?'CAD_CLIENTES':'CAD_UNIDADES';target=get(snapshot,destTable,spec.destino);
       if(!active(target)) throw new Error('O destino escolhido está inativo. Escolha um destino ativo, ou reative-o antes (ação Reativar), e refaça.');
       if(spec.tipo==='UNIDADE') moveUnit(source,target.ID);
-      else {const client=get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID);if(!active(client))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');change(table,source,'UNIDADE_ID',target.ID);change(table,source,'CLIENTE_ID',target.CLIENTE_ID);}
+      else {const client=get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID);if(!active(client))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');change(table,source,'UNIDADE_ID',target.ID);change(table,source,'CLIENTE_ID',target.CLIENTE_ID);moverDocs(d=>text(d.EQUIPAMENTO_ID)===text(source.ID),text(target.CLIENTE_ID),text(target.ID));}
     }
     if(spec.acao==='DESVINCULAR') {
       if(spec.tipo==='UNIDADE') moveUnit(source,'');
@@ -134,11 +150,13 @@ const SGO_VINCULOS = (() => {
         if(!digits(source.CNPJ)||digits(source.CNPJ)!==digits(target.CNPJ))throw new Error('Só dá para consolidar clientes com o mesmo CNPJ. Filiais (CNPJ diferente) são clientes separados: para levar uma unidade de um cliente para outro, use Tipo Unidade → Transferir.');
         base(snapshot,'CAD_UNIDADES').filter(u=>text(u.CLIENTE_ID)===spec.origem).forEach(u=>moveUnit(u,target.ID));
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.CLIENTE_ID)===spec.origem).forEach(e=>change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.ID));
+        moverDocs(d=>text(d.CLIENTE_ID)===spec.origem,text(target.ID),null);
       } else if(spec.tipo==='UNIDADE') {
         if(!digits(source.CNPJ_UNIDADE)||digits(source.CNPJ_UNIDADE)!==digits(target.CNPJ_UNIDADE))throw new Error('Só dá para consolidar unidades com o mesmo CNPJ (o mesmo local). Se for outro local, use Transferir. Se for o mesmo local e o CNPJ estiver errado, corrija o CNPJ (botão Abrir / editar cadastro) e refaça.');
         if(!active(get(snapshot,'CAD_CLIENTES',target.CLIENTE_ID)))throw new Error('A unidade de destino não está ligada a um cliente ativo. Primeiro leve essa unidade para um cliente ativo (Tipo Unidade → Transferir) e depois refaça esta operação.');
         moveUnit(source,target.CLIENTE_ID);
         base(snapshot,'CAD_EQUIPAMENTOS').filter(e=>text(e.UNIDADE_ID)===spec.origem).forEach(e=>{change('CAD_EQUIPAMENTOS',e,'UNIDADE_ID',target.ID);change('CAD_EQUIPAMENTOS',e,'CLIENTE_ID',target.CLIENTE_ID);});
+        moverDocs(d=>text(d.UNIDADE_ID)===spec.origem,text(target.CLIENTE_ID),text(target.ID));
       } else {
         if(text(source.CLIENTE_ID)!==text(target.CLIENTE_ID)||text(source.TAG).toUpperCase()!==text(target.TAG).toUpperCase()||!text(source.TAG)||/^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(text(source.TAG).toUpperCase()))throw new Error('Só dá para consolidar equipamentos do mesmo cliente e com a mesma TAG real (TAGs como S/N ou N/A não servem). Confira a TAG dos dois (botão Abrir / editar cadastro) e refaça.');
         if(text(source.SERIE)&&text(target.SERIE)&&text(source.SERIE)!==text(target.SERIE))throw new Error('Os dois equipamentos têm números de série diferentes, então não são o mesmo equipamento. Se um número estiver errado, corrija (botão Abrir / editar cadastro) e refaça; se forem equipamentos diferentes, não consolide.');
@@ -148,14 +166,16 @@ const SGO_VINCULOS = (() => {
       warnings.push('O cadastro de origem será mantido inativo para preservar documentos, histórico e QR antigos. Os vínculos operacionais serão reunidos no destino.');
     }
     if(spec.acao==='INATIVAR'||spec.acao==='REATIVAR') change(table,source,'STATUS',spec.acao==='INATIVAR'?'INATIVO':'ATIVO');
-    // Detecta efeitos em registros persistidos fora do cadastro. Históricos ficam no proprietário original.
+    // Detecta efeitos em registros persistidos fora do cadastro. Documentos do Arquivo acompanham o cadastro
+    // (acima); certificados, laudos e atendimentos ficam no proprietário original.
     const affected=new Set([spec.origem,...changes.map(c=>c.id)]);
     const knownHistorical=['DOC_DOCUMENTOS','CERT_CALIBRACAO','NR13_LAUDOS','AUVO_TAREFAS'];
     Object.keys(snapshot.tables).filter(n=>!Object.values(TABLES).includes(n)&&n!=='AUVO_SYNC').forEach(name=>{
       const matches=base(snapshot,name).filter(r=>Object.keys(r).some(k=>/^(CLIENTE_ID|UNIDADE_ID|EQUIPAMENTO_ID|CLIENTE_ID_SGO|EQUIPAMENTOS_ID_SGO)$/.test(k)&&text(r[k]).split(',').some(id=>affected.has(id.trim()))));
       if(!matches.length)return;
       if(knownHistorical.includes(name)) {
-        historical[name]=matches.length;
+        const ficam=name==='DOC_DOCUMENTOS'?matches.filter(r=>!docsMovidos[text(r.ID)]).length:matches.length;
+        if(ficam)historical[name]=ficam;
         if(name==='NR13_LAUDOS'&&matches.some(r=>text(r.STATUS)==='RASCUNHO'||text(r.STATUS)==='PENDENTE'||text(r.STATUS_PENDENCIA)==='ABERTA'))blocks.push('Há laudo NR-13 em andamento ligado a este cadastro. Abra o módulo NR-13, conclua ou cancele o laudo e volte aqui para clicar em Conferir impacto de novo.');
         // 2026-10-15: a maioria das tarefas nunca é finalizada no Auvo (160 de 224), então a trava antiga
         // tornava o painel inutilizável. Só trava quando o CLIENTE do equipamento/unidade muda (aí a tarefa
@@ -198,14 +218,20 @@ const SGO_VINCULOS = (() => {
     }
     if(!changes.length)blocks.push('Nada a fazer: o cadastro já está assim. Confira se escolheu a origem e o destino certos.');
     if(changes.length>1000)blocks.push('Esta operação mexeria em mais de 1.000 registros de uma vez. Divida: transfira as unidades uma por uma e depois os equipamentos que sobrarem.');
-    return {spec:spec,source:label(source),target:target?label(target):'',changes:changes,blocks:[...new Set(blocks)],warnings:warnings,historical:historical};
+    const documentos=Object.keys(docsMovidos).map(id=>{const d=docsMovidos[id],cc=changes.find(c=>c.table==='DOC_DOCUMENTOS'&&c.id===id&&c.field==='CLIENTE_ID'),cu=changes.find(c=>c.table==='DOC_DOCUMENTOS'&&c.id===id&&c.field==='UNIDADE_ID');
+      return {id:id,nome:text(d.NOME_ARQUIVO)||'Documento sem nome',tipo:text(d.TIPO_DOCUMENTO),clienteAntes:text(d.CLIENTE_ID),clienteDepois:cc?text(cc.after):text(d.CLIENTE_ID),unidadeAntes:text(d.UNIDADE_ID),unidadeDepois:cu?text(cu.after):text(d.UNIDADE_ID)};})
+      .filter(d=>d.clienteAntes!==d.clienteDepois||d.unidadeAntes!==d.unidadeDepois);
+    if(documentos.length)warnings.push(documentos.length+(documentos.length===1?' documento do Arquivo de documentos acompanha':' documentos do Arquivo de documentos acompanham')+' esta mudança: cliente e unidade são atualizados e cada troca fica na auditoria. O arquivo continua na mesma pasta e o link não muda.');
+    return {spec:spec,source:label(source),target:target?label(target):'',changes:changes,blocks:[...new Set(blocks)],warnings:warnings,historical:historical,documentos:documentos};
   }
   function hash(value) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value))); }
   function preview(sessionId,input) {
     const user=staff(sessionId,true),snapshot=read(),plan=build(snapshot,input),token=Utilities.getUuid();
     if(!plan.blocks.length) CacheService.getScriptCache().put('vinc:'+token,JSON.stringify({session:sessionId,user:user.usuario,spec:plan.spec,hash:hash(snapshot)}),600);
     function display(c,value){const name={CLIENTE_ID:'CAD_CLIENTES',UNIDADE_ID:'CAD_UNIDADES'}[c.field];return name&&value?label(get(snapshot,name,value))+' ('+value+')':value;}
-    return {success:true,token:plan.blocks.length?'':token,source:plan.source,target:plan.target,blocks:plan.blocks,warnings:plan.warnings,historical:plan.historical,changes:plan.changes.map(c=>({table:c.table,id:c.id,field:c.field,before:c.field==='__DELETE__'?label(c.before):display(c,c.before),after:display(c,c.after)}))};
+    const nomeDe=(tabela,id)=>id?label(get(snapshot,tabela,id)):'(sem vínculo)';
+    const documentos=(plan.documentos||[]).map(d=>({id:d.id,nome:d.nome,tipo:d.tipo,de:nomeDe('CAD_CLIENTES',d.clienteAntes)+' / '+nomeDe('CAD_UNIDADES',d.unidadeAntes),para:nomeDe('CAD_CLIENTES',d.clienteDepois)+' / '+nomeDe('CAD_UNIDADES',d.unidadeDepois)}));
+    return {success:true,token:plan.blocks.length?'':token,source:plan.source,target:plan.target,blocks:plan.blocks,warnings:plan.warnings,historical:plan.historical,documentos:documentos,changes:plan.changes.map(c=>({table:c.table,id:c.id,field:c.field,before:c.field==='__DELETE__'?label(c.before):display(c,c.before),after:display(c,c.after)}))};
   }
   function cellValue(v) { return typeof v==='number'?{numberValue:v}:typeof v==='boolean'?{boolValue:v}:{stringValue:v==null?'':String(v)}; }
   function batch(requests) {
@@ -230,6 +256,8 @@ const SGO_VINCULOS = (() => {
       const now=new Date().toISOString();
       requests.push({appendCells:{sheetId:auditId,rows:plan.changes.map(c=>({values:[Utilities.getUuid(),token,text(user.usuario),plan.spec.motivo,plan.spec.acao,plan.spec.origem,c.table,c.id,c.field,typeof c.before==='object'?JSON.stringify(c.before):text(c.before),text(c.after),now].map(v=>({userEnteredValue:{stringValue:v}}))})),fields:'userEnteredValue'}});
       batch(requests);SGO_DATA._headersCache={};SGO_DATA._headerMapCache={};
+      const qtdDocs=new Set(plan.changes.filter(c=>c.table==='DOC_DOCUMENTOS').map(c=>c.id)).size;
+      try{SGO_DATA.log('VINCULOS_'+plan.spec.acao,user.usuario,plan.spec.tipo+' '+plan.spec.origem+(plan.spec.destino?' para '+plan.spec.destino:'')+': '+plan.changes.length+' alteração(ões)'+(qtdDocs?', '+qtdDocs+' documento(s) acompanharam':'')+'. Operação '+token+'. Motivo: '+plan.spec.motivo,'VINCULOS');}catch(eLog){}
       return {success:true,message:'Alteração aplicada com auditoria. Recarregue as telas abertas antes de continuar.',operationId:token};
     } finally {lock.releaseLock();}
   }

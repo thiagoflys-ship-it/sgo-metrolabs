@@ -52,18 +52,27 @@ function Frota_apiDispatch(req) {
     apiAtualizarStatusMulta: Frota_apiAtualizarStatusMulta,
     apiExcluirMulta: Frota_apiExcluirMulta,
     apiGerarRelatorio: Frota_apiGerarRelatorio,
+    // 17/10/2026: consulta de despesas (gestão) e levantamento somente leitura (Administrador)
+    apiConsultarDespesas: Frota_apiConsultarDespesas,
+    apiLevantamentoValoresSuspeitos: Frota_apiLevantamentoValoresSuspeitos,
     apiListarAbastecimentos: Frota_apiListarAbastecimentos,
     apiRegistrarAbastecimento: Frota_apiRegistrarAbastecimento,
     apiExcluirAbastecimento: Frota_apiExcluirAbastecimento,
     apiVerificarNovosEventos: Frota_apiVerificarNovosEventos,
-    apiUploadFotoVeiculo: Frota_apiUploadFotoVeiculo,
-    apiDiagLogTempoCliente: Frota_apiDiagLogTempoCliente
+    apiUploadFotoVeiculo: Frota_apiUploadFotoVeiculo
+    // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
   if (!fn) throw new Error('Função não informada.');
   if (!allow[fn] || typeof allow[fn] !== 'function') throw new Error('Função não permitida ou não encontrada: ' + fn);
 
-  return allow[fn](req.sessionId, payload);
+  var resultado = allow[fn](req.sessionId, payload);
+  // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
+  // avisa a central de alertas, para o Início atualizar na hora.
+  if (!/^api(Ping|Listar|Situacao|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+    try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
+  }
+  return resultado;
 }
 
 /**
@@ -243,7 +252,21 @@ function Frota_apiPing() {
 // outra. Reaproveita CertCal_garantirTabela_/CertCal_garantirColuna_
 // (SGO_CertCal_Main.js) — mesmo mecanismo genérico, sem duplicar.
 // ------------------------------------------------------------
+// 17/10/2026: duas chamadas simultâneas na primeira abertura criavam a mesma aba
+// ("Já existe uma página chamada CAD_CONDUTORES"). Trava + nova conferência dentro dela.
+var FROTA_BOOTSTRAP_OK = false;
 function Frota_bootstrap_() {
+  if (FROTA_BOOTSTRAP_OK) return;
+  var lock = LockService.getScriptLock();
+  var dono = !lock.hasLock();
+  if (dono) lock.waitLock(30000);
+  try {
+    Frota_bootstrapSemTrava_();
+    FROTA_BOOTSTRAP_OK = true;
+  } finally { if (dono) lock.releaseLock(); }
+}
+
+function Frota_bootstrapSemTrava_() {
   CertCal_garantirTabela_(SGO_CFG.SHEETS.CAD_VEICULOS, [
     'ID', 'PLACA', 'MODELO', 'MARCA', 'ANO', 'COR', 'KM_ATUAL', 'STATUS', 'CRIADO_EM'
   ]);
@@ -498,7 +521,8 @@ function Frota_apiCriarCondutor(sessionId, payload) {
   payload = payload || {};
 
   var usuarioId = SGO_UTILS.safe(payload.usuarioId);
-  var nome = SGO_UTILS.safeUpper(payload.nome);
+  // 17/10/2026: nome gravado como digitado (só sem espaços nas pontas); os já gravados não mudam.
+  var nome = SGO_UTILS.safe(payload.nome).replace(/s+/g, ' ').trim();
 
   if (usuarioId) {
     var usuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, usuarioId);
@@ -509,7 +533,7 @@ function Frota_apiCriarCondutor(sessionId, payload) {
     if (jaVinculado) throw new Error('Este usuário já está vinculado ao condutor "' + jaVinculado.NOME + '".');
     // Nome do condutor sempre vem do cadastro de usuário quando vinculado —
     // evita divergência entre "quem está logado" e "quem aparece no relatório".
-    nome = SGO_UTILS.safeUpper(usuario.NOME) || nome;
+    nome = SGO_UTILS.safe(usuario.NOME).trim() || nome;
   }
 
   if (!nome) throw new Error('Informe o nome do condutor.');
@@ -696,21 +720,6 @@ function Frota_apiListarViagensEmAndamento(sessionId) {
       };
     });
   return { ok: true, items: itens };
-}
-
-/**
- * Recebe do NAVEGADOR o tempo de ida-e-volta real de uma chamada
- * (inclui rede + fila do Apps Script + execução no servidor + volta) —
- * sem sessão exigida de propósito, pra nunca falhar por causa da
- * própria instrumentação. Temporário.
- */
-function Frota_apiDiagLogTempoCliente(sessionId, payload) {
-  payload = payload || {};
-  // 16/10/2026: sem sessão válida não grava nada (a função é chamável direto
-  // pelo navegador e escrevia em SYS_LOGS para qualquer um).
-  try { if (!validarSessao(String(sessionId || '')).valid) return { ok: true }; } catch (eSessao) { return { ok: true }; }
-  try { SGO_DATA.log('DIAG_FROTA_CLIENTE', 'navegador', String(payload.rotulo || '?') + ': ' + String(payload.ms || '?') + 'ms (medido no navegador, ida e volta)', 'DIAG'); } catch (e) {}
-  return { ok: true };
 }
 
 /**
@@ -1019,11 +1028,13 @@ function Frota_statusDocumento_(d, vigentes) {
   if (dias === null) return 'SEM_VALIDADE';
   var vigente = vigentes && vigentes[Frota_chaveDocumento_(d)];
   if (vigente && vigente !== SGO_UTILS.safe(d.ID)) return 'SUBSTITUIDO';
-  return dias < 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+  return Frota_situacaoPorDias_(dias);
 }
 
+// 17/10/2026: regra única com a central de alertas — vencido OU vence hoje = VENCIDO;
+// até 30 dias = VENCENDO.
 function Frota_situacaoPorDias_(dias) {
-  return dias < 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
+  return dias <= 0 ? 'VENCIDO' : (dias <= FROTA_CFG.DIAS_AVISO_VENCIMENTO ? 'VENCENDO' : 'OK');
 }
 
 function Frota_apiListarDocumentos(sessionId, payload) {

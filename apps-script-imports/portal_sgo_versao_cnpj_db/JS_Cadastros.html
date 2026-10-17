@@ -256,7 +256,8 @@
                   ? '<button class="btn-warning" type="button" onclick="clientesInativar_(\'' + id + '\')">Inativar</button>'
                   : '<button class="btn-success" type="button" onclick="clientesReativar_(\'' + id + '\')">Reativar</button>'
               ) +
-              '<button class="btn-danger" type="button" onclick="clientesExcluir_(\'' + id + '\')">Excluir</button>' +
+              // 17/10/2026: excluir é da gestão (o servidor também recusa); técnico e comercial criam e editam.
+              (['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? '<button class="btn-danger" type="button" onclick="clientesExcluir_(\'' + id + '\')">Excluir</button>' : '') +
             '</div>' +
           '</td>' +
         '</tr>'
@@ -424,7 +425,7 @@
   }
 
   function clientesExcluir_(id) {
-    if (!SESSION || !confirm("Deseja realmente excluir este cliente? Esta ação remove o registro da planilha.")) return;
+    if (!SESSION || !confirm("Excluir este cliente? O cadastro sai da lista e a exclusão não pode ser desfeita por aqui. Para tirar de uso sem perder o histórico, use Inativar.")) return;
 
     SGO_iniciarCarregamento_();
     google.script.run
@@ -638,7 +639,7 @@
                 ? '<button class="btn-warning" type="button" onclick="unidadesInativar_(\'' + id + '\')">Inativar</button>'
                 : '<button class="btn-success" type="button" onclick="unidadesReativar_(\'' + id + '\')">Reativar</button>'
             ) +
-            '<button class="btn-danger" type="button" onclick="unidadesExcluir_(\'' + id + '\')">Excluir</button>' +
+            (['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? '<button class="btn-danger" type="button" onclick="unidadesExcluir_(\'' + id + '\')">Excluir</button>' : '') +
           '</div>' +
         '</td>';
 
@@ -824,7 +825,7 @@
   }
 
   function unidadesExcluir_(id) {
-    if (!SESSION || !confirm("Deseja realmente excluir esta unidade? Esta ação remove o registro da planilha.")) return;
+    if (!SESSION || !confirm("Excluir esta unidade? O cadastro sai da lista e a exclusão não pode ser desfeita por aqui. Para tirar de uso sem perder o histórico, use Inativar.")) return;
 
     SGO_iniciarCarregamento_();
     google.script.run

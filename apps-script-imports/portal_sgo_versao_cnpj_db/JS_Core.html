@@ -1531,32 +1531,19 @@
     fotosRetirada: [], fotosDevolucao: [], movimentacaoDevolucaoAtual: null
   };
 
-  // Cronometro temporario (2026-09-09) -- registra o tempo de ida-e-volta
-  // REAL sentido pelo navegador (rede + fila + execucao + volta), pra
-  // comparar com o tempo de execucao no servidor (Frota_diagLog_). Envio
-  // e' "fire and forget" (nao espera resposta, nao atrasa nada).
-  function mobileFrota_diagRegistrarTempo_(rotulo, ms) {
-    try {
-      google.script.run
-        .withSuccessHandler(function () {})
-        .withFailureHandler(function () {})
-        .Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: 'apiDiagLogTempoCliente', payload: { rotulo: rotulo, ms: ms } });
-    } catch (e) {}
-  }
+  // 17/10/2026 (decisão do dono): o medidor de tempo provisório de 09/09 saiu —
+  // fazia uma chamada extra ao servidor a cada ação da Frota no celular.
 
   function mobileFrota_chamarApi_(fn, payload) {
-    const diagInicio = Date.now();
     return new Promise(function (resolve, reject) {
       SGO_iniciarCarregamento_();
       google.script.run
         .withSuccessHandler(function (res) {
           SGO_finalizarCarregamento_();
-          mobileFrota_diagRegistrarTempo_('mobile_' + fn + '_sucesso', Date.now() - diagInicio);
           resolve(res);
         })
         .withFailureHandler(function (err) {
           SGO_finalizarCarregamento_();
-          mobileFrota_diagRegistrarTempo_('mobile_' + fn + '_falha', Date.now() - diagInicio);
           reject(err);
         })
         .Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: fn, payload: payload || {} });
@@ -1568,10 +1555,9 @@
   // (2026-08-28): o usuário já volta pra lista na hora, o registro real
   // acontece em segundo plano, um toast avisa quando terminar (ou falhar).
   function mobileFrota_chamarApiSegundoPlano_(fn, payload, aoTerminar) {
-    const diagInicio = Date.now();
     google.script.run
-      .withSuccessHandler(function (res) { mobileFrota_diagRegistrarTempo_('bg_' + fn + '_sucesso', Date.now() - diagInicio); aoTerminar(null, res); })
-      .withFailureHandler(function (err) { mobileFrota_diagRegistrarTempo_('bg_' + fn + '_falha', Date.now() - diagInicio); aoTerminar(err, null); })
+      .withSuccessHandler(function (res) { aoTerminar(null, res); })
+      .withFailureHandler(function (err) { aoTerminar(err, null); })
       .Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: fn, payload: payload || {} });
   }
 
@@ -1594,17 +1580,11 @@
   // da soma de todos.
   function mobileFrota_uploadFotosEmParalelo_(placa, fotos) {
     if (!fotos || !fotos.length) return Promise.resolve([]);
-    const diagInicio = Date.now();
     return Promise.all(fotos.map(function (f) {
-      const diagFotoInicio = Date.now();
       return mobileFrota_chamarApiSilencioso_("apiUploadFotoVeiculo", {
         placa: placa, base64: f.base64, mimeType: f.mimeType, nomeArquivo: f.nomeArquivo, legenda: f.legenda
-      }).then(function (r) {
-        mobileFrota_diagRegistrarTempo_('upload_1foto_individual', Date.now() - diagFotoInicio);
-        return r;
       });
     })).then(function (respostas) {
-      mobileFrota_diagRegistrarTempo_('upload_' + fotos.length + '_fotos_TODAS_em_paralelo', Date.now() - diagInicio);
       return respostas.map(function (r) { return { link: r.link, legenda: r.legenda }; });
     });
   }

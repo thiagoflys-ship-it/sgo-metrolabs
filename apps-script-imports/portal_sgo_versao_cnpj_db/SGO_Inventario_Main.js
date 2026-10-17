@@ -318,9 +318,108 @@ const SGO_INVENTARIO = (() => {
     return { success: true, documentos: resultado.slice(0, 50) };
   }
 
+  // =========================
+  // RELATÓRIO A4 COM ANÁLISE (17/10/2026) — montado no servidor na moldura
+  // comum (SGO_Documentos_RelatorioA4.js), com a análise pela IA (texto padrão
+  // sem chave), gravado em HTML + PDF na pasta do cliente (a mesma que a lista
+  // "Documentos já gerados" consulta).
+  // =========================
+  function INV_rotuloDoc_(d) {
+    const s = d && d.status;
+    if (s === "OK") return RelA4_marca_("Em dia", "ok");
+    if (s === "VENCENDO") return RelA4_marca_("Vence em breve", "aviso");
+    if (s === "VENCIDO") return RelA4_marca_("Vencido", "critico");
+    if (s === "SEM_VENCIMENTO") return RelA4_marca_("Sem vencimento", "neutra");
+    return RelA4_marca_("Sem documento", "neutra");
+  }
+  function INV_celulaDoc_(d) {
+    const m = INV_rotuloDoc_(d);
+    const det = d && d.vencimento ? formatarDataBR_(d.vencimento) : "";
+    return { html: m.html + (det ? '<br><span class="nota">' + RelA4_esc_(det) + "</span>" : "") };
+  }
+
+  function INV_textoPadrao_(dados, nomeCliente, porTipo) {
+    const i = dados.indicadores, p = [];
+    p.push("O inventário de " + nomeCliente + " reúne " + RelA4_plural_(i.total, "equipamento", "equipamentos") +
+      (porTipo.length ? ", distribuídos em " + RelA4_plural_(porTipo.length, "tipo", "tipos") + " (os mais numerosos: " + porTipo.slice(0, 3).map(t => t.tipo + " com " + t.qtd).join(", ") + ")" : "") + ". " +
+      RelA4_num_(i.calibPct, 0) + "% dos equipamentos têm calibração em dia (" + i.calibOk + ") e " + RelA4_num_(i.qualPct, 0) + "% têm qualificação em dia (" + i.qualOk + ").");
+    p.push(i.vencidos || i.vencendo
+      ? "Na data de emissão há " + RelA4_plural_(i.vencidos, "equipamento com documento vencido", "equipamentos com documento vencido") + " e " + RelA4_plural_(i.vencendo, "equipamento com documento vencendo", "equipamentos com documento vencendo") + " nos próximos 30 dias. Recomenda-se programar primeiro a calibração ou a qualificação dos itens vencidos, listados na seção de itens que exigem ação."
+      : "Na data de emissão não há documento de calibração ou qualificação vencido nem vencendo nos próximos 30 dias.");
+    if (i.semDoc) p.push(RelA4_plural_(i.semDoc, "equipamento não tem", "equipamentos não têm") + " nenhum documento de calibração ou qualificação registrado no SGO+. Convém confirmar se o equipamento exige esses serviços e, se exigir, anexar o certificado no Arquivo de documentos.");
+    return p.join("\n\n");
+  }
+
+  function gerarRelatorioA4(sessionId, filtros) {
+    const sessao = exigirSessao(sessionId);
+    const dados = gerarInventario(sessionId, filtros);
+    const ci = dados.clienteInfo;
+    const nomeCliente = ci ? SGO_UTILS.safe(ci.NOME_FANTASIA || ci.RAZAO_SOCIAL) : "Todos os clientes";
+    const unidade = dados.unidadeInfo ? SGO_UTILS.safe(dados.unidadeInfo.NOME_UNIDADE) : "Todas as unidades";
+    const i = dados.indicadores;
+    const tipos = {};
+    dados.itens.forEach(e => {
+      const t = e.TIPO || "Sem tipo";
+      const x = tipos[t] = tipos[t] || { tipo: t, qtd: 0, cal: 0, qual: 0, venc: 0, semDoc: 0 };
+      x.qtd++;
+      if (e.CALIBRACAO.status === "OK") x.cal++;
+      if (e.QUALIFICACAO.status === "OK") x.qual++;
+      if (e.CALIBRACAO.status === "VENCIDO" || e.QUALIFICACAO.status === "VENCIDO") x.venc++;
+      if (e.CALIBRACAO.status === "SEM_DOC" && e.QUALIFICACAO.status === "SEM_DOC") x.semDoc++;
+    });
+    const porTipo = Object.keys(tipos).map(k => tipos[k]).sort((a, b) => b.qtd - a.qtd);
+    const vencido = e => e.CALIBRACAO.status === "VENCIDO" || e.QUALIFICACAO.status === "VENCIDO";
+    const acao = dados.itens.filter(e => ["VENCIDO", "VENCENDO"].indexOf(e.CALIBRACAO.status) >= 0 || ["VENCIDO", "VENCENDO"].indexOf(e.QUALIFICACAO.status) >= 0)
+      .sort((a, b) => (vencido(a) ? 0 : 1) - (vencido(b) ? 0 : 1));
+
+    const prompt = "Você é o engenheiro clínico da Metrolab's responsável pelo inventário de equipamentos de um cliente e escreve a seção \"Análise do inventário\" do relatório entregue a ele. " +
+      "Com base SOMENTE nos dados abaixo, escreva de 2 a 4 parágrafos: a situação geral da calibração e da qualificação do parque, os tipos de equipamento que concentram vencimentos ou falta de documento, " +
+      "e as prioridades práticas (o que programar primeiro). Não afirme que um equipamento está impróprio para uso: diga apenas a situação documental registrada.\n\n" +
+      "CLIENTE: " + nomeCliente + " | UNIDADE: " + unidade + "\n" +
+      "TOTAIS: " + i.total + " equipamentos; calibração em dia " + i.calibOk + " (" + i.calibPct + "%); qualificação em dia " + i.qualOk + " (" + i.qualPct + "%); com documento vencido " + i.vencidos + "; vencendo em 30 dias " + i.vencendo + "; sem nenhum documento " + i.semDoc + "\n" +
+      "POR TIPO:\n" + porTipo.map(t => "- " + t.tipo + ": " + t.qtd + " equipamentos, calibração em dia " + t.cal + ", qualificação em dia " + t.qual + ", com vencido " + t.venc + ", sem documento " + t.semDoc).join("\n") + "\n" +
+      "ITENS QUE EXIGEM AÇÃO (até 30):\n" + (acao.slice(0, 30).map(e => "- " + e.TAG + " (" + (e.TIPO || "sem tipo") + "): calibração " + e.CALIBRACAO.label + "; qualificação " + e.QUALIFICACAO.label).join("\n") || "nenhum");
+    const analise = RelA4_analise_(prompt, INV_textoPadrao_(dados, nomeCliente, porTipo));
+
+    const cnpj = ci && ci.CNPJ ? SGO_UTILS.safe(ci.CNPJ).replace(/\D/g, "") : "";
+    const c = [];
+    c.push(RelA4_secao_("Identificação", RelA4_identificacao_([
+      ["Cliente", ci ? SGO_UTILS.safe(ci.RAZAO_SOCIAL || ci.NOME_FANTASIA) : "Todos os clientes"],
+      ["CNPJ", cnpj.length === 14 ? cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : (cnpj || "—")],
+      ["Unidade", unidade],
+      ["Situação dos equipamentos", filtros && filtros.status ? (String(filtros.status).toUpperCase() === "ATIVO" ? "Somente ativos" : "Somente inativos") : "Ativos e inativos"],
+      ["Emitido por", SGO_UTILS.safe(sessao.nome || sessao.usuario)]
+    ])));
+    c.push(RelA4_secao_("Indicadores", RelA4_kpis_([
+      [RelA4_num_(i.total, 0), "Equipamentos"], [RelA4_num_(i.calibPct, 0) + "%", "Calibração em dia (" + i.calibOk + ")"], [RelA4_num_(i.qualPct, 0) + "%", "Qualificação em dia (" + i.qualOk + ")"],
+      [RelA4_num_(i.vencidos, 0), "Com documento vencido"], [RelA4_num_(i.vencendo, 0), "Vencendo em 30 dias"], [RelA4_num_(i.semDoc, 0), "Sem nenhum documento"],
+      [RelA4_num_(porTipo.length, 0), "Tipos de equipamento"], [RelA4_num_(dados.itens.filter(e => String(e.STATUS).toUpperCase() === "INATIVO").length, 0), "Inativos"]
+    ])));
+    c.push(RelA4_secao_("Análise do inventário", RelA4_paragrafos_(analise.texto)));
+    c.push(RelA4_secao_("Distribuição por tipo", RelA4_tabela_([{ t: "Tipo" }, { t: "Quantidade", num: true }, { t: "Calibração em dia", num: true }, { t: "Qualificação em dia", num: true }, { t: "Com vencido", num: true }, { t: "Sem documento", num: true }],
+      porTipo.map(t => [t.tipo, RelA4_num_(t.qtd, 0), RelA4_num_(t.cal, 0), RelA4_num_(t.qual, 0), RelA4_num_(t.venc, 0), RelA4_num_(t.semDoc, 0)]), { vazio: "Nenhum equipamento com os filtros escolhidos." })));
+    c.push(RelA4_secao_("Itens que exigem ação", RelA4_tabela_([{ t: "TAG" }, { t: "Tipo" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }],
+      acao.map(e => [e.TAG || "—", e.TIPO || "—", e.UNIDADE_NOME || "—", INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO)]), { vazio: "Nenhum documento vencido ou vencendo nos próximos 30 dias." })));
+    c.push(RelA4_secao_("Inventário completo", RelA4_tabela_([{ t: "Nº", num: true }, { t: "TAG" }, { t: "Tipo" }, { t: "Fabricante e modelo" }, { t: "Série" }, { t: "Setor" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }, { t: "Situação" }],
+      dados.itens.map(e => [String(e.IDX), e.TAG || "—", e.TIPO || "—", [e.FABRICANTE, e.MODELO].filter(Boolean).join(" / ") || "—", e.SERIE || "—", e.SETOR || "—", e.UNIDADE_NOME || "—",
+        INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO), String(e.STATUS).toUpperCase() === "INATIVO" ? "Inativo" : "Ativo"]), { vazio: "Nenhum equipamento com os filtros escolhidos." })));
+    c.push('<p class="nota">Situação documental conforme os registros do SGO+ na data de emissão: considera o documento de calibração e o de qualificação de validade mais distante de cada equipamento; "vence em breve" significa nos próximos 30 dias. ' +
+      "O inventário não substitui os certificados, que prevalecem em caso de divergência.</p>");
+    const html = RelA4_documento_({ titulo: "Inventário de equipamentos", subtitulo: nomeCliente + (dados.unidadeInfo ? " — " + unidade : ""), identificacao: Utilities.formatDate(new Date(), RELA4_TZ, "dd/MM/yyyy"),
+      corpo: c.join("\n"), cor: "#007b3e", paisagem: true, emitidoPor: SGO_UTILS.safe(sessao.nome || sessao.usuario) });
+
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Sao_Paulo", "yyyyMMdd_HHmmss");
+    const nomeBase = INV_sanitizarNome_("Inventario - " + nomeCliente + " - " + timestamp);
+    const pastaCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE" ? INV_nomeClienteSessao_(sessao) : nomeCliente;
+    const g = RelA4_salvar_(() => INV_obterPastaCliente_(pastaCliente), nomeBase, html, { compartilhar: true });
+    SGO_DATA.log("INVENTARIO_RELATORIO_A4", sessao.usuario, "Relatório A4 do inventário (" + nomeCliente + ", " + i.total + " equipamentos, análise: " + (analise.origem === "IA" ? "IA" : "texto padrão") + ")" + (g.salvo ? "" : " — cópia não gravada"), "INVENTARIO");
+    return { success: true, html: RelA4_injetarAvisos_(html, RelA4_avisosPadrao_(g, [analise])), url: g.pdfUrl, htmlUrl: g.htmlUrl, pastaUrl: g.pastaUrl,
+      fileName: nomeBase + ".pdf", salvo: g.salvo, aviso: [g.aviso, analise.aviso].filter(Boolean).join(" "), analise: analise.origem };
+  }
+
   return {
     gerarInventario, listarClientesAtivos, listarUnidadesAtivasPorCliente,
-    salvarDocumento, listarDocumentosSalvos
+    salvarDocumento, listarDocumentosSalvos, gerarRelatorioA4
   };
 })();
 
@@ -342,6 +441,10 @@ function inventarioListarUnidadesAtivasPorCliente(sessionId, clienteId) {
 function inventarioSalvarDocumento(sessionId, payload) {
   try { return JSON.parse(JSON.stringify(SGO_INVENTARIO.salvarDocumento(sessionId, payload))); }
   catch (e) { return { success: false, message: "Erro ao salvar no Drive: " + e.message }; }
+}
+function inventarioGerarRelatorio(sessionId, filtros) {
+  try { return JSON.parse(JSON.stringify(SGO_INVENTARIO.gerarRelatorioA4(sessionId, filtros))); }
+  catch (e) { return { success: false, message: "Não foi possível gerar o relatório do inventário: " + String((e && e.message) || e).replace(/[.\s]+$/, "") + ". Confira os filtros e tente de novo; se repetir, avise o administrador." }; }
 }
 function inventarioListarDocumentosSalvos(sessionId, termoBusca) {
   try { return JSON.parse(JSON.stringify(SGO_INVENTARIO.listarDocumentosSalvos(sessionId, termoBusca))); }

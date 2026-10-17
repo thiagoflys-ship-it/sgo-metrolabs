@@ -1,189 +1,66 @@
 /****************************************************
- * FROTA — INTELIGÊNCIA ARTIFICIAL (interpretação executiva do relatório
- * A4 da frota)
+ * FROTA — ANÁLISE DO RELATÓRIO PELA IA
  *
- * Mesmo scaffolding do SGO_NR13_IA.js/SGO_CertCal_IA.js (fallback de
- * modelo via Script Properties, retry, tratamento de quota 429 com
- * RetryInfo) — duplicado de propósito, módulos irmãos independentes
- * (convenção já estabelecida no Portal).
+ * 17/10/2026: a chamada ao Gemini passou para a moldura comum dos
+ * relatórios gerenciais (RelA4_gemini_, SGO_Documentos_RelatorioA4.js),
+ * com o raciocínio do modelo ligado. Sem chave ou com falha, o relatório
+ * sai com o texto padrão montado dos mesmos números (RelA4_analise_).
  *
- * REGRA DE OURO, igual aos outros módulos: a IA só interpreta os números
- * JÁ CALCULADOS pelo servidor (Frota_apiGerarRelatorio) — nunca inventa
- * veículo, condutor, valor ou fato que não esteja no resumo enviado a ela.
+ * REGRA DE OURO: a IA só interpreta os números JÁ CALCULADOS pelo
+ * servidor (FrotaRel_agregarDados_) — nunca inventa veículo, condutor,
+ * valor ou fato que não esteja no contexto enviado.
  ****************************************************/
-var FrotaIA_TOKENS = 4096;
-var FrotaIA_TOKENS_MAX = 16384;
-var FrotaIA_MODELO_PADRAO = 'gemini-2.5-flash';
-var FrotaIA_FALLBACKS_PADRAO = ['gemini-2.0-flash-lite'];
-var FrotaIA_ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/';
-var FrotaIA_MAX_TENTATIVAS = 3;
-var FrotaIA_DELAYS_MS = [800, 1600];
+var FrotaIA_TOKENS = 2048;
 
-function FrotaIA_obterConfig_() {
-  var props = PropertiesService.getScriptProperties();
-  var model = (props.getProperty('IA_MODEL') || '').trim();
-  var fbProp = (props.getProperty('IA_MODEL_FALLBACKS') || '').trim();
-  return {
-    model: model || FrotaIA_MODELO_PADRAO,
-    fallbacksRaw: fbProp,
-    geminiKey: props.getProperty('GEMINI_API_KEY') || ''
-  };
-}
-
-function FrotaIA_obterListaModelos_(cfg) {
-  var lista = [cfg.model];
-  var fb = cfg.fallbacksRaw
-    ? cfg.fallbacksRaw.split(',').map(function(m) { return m.trim(); }).filter(Boolean)
-    : [].concat(FrotaIA_FALLBACKS_PADRAO);
-  fb.forEach(function(m) { if (lista.indexOf(m) === -1) lista.push(m); });
-  return lista;
-}
-
-function FrotaIA_extrairDetalheQuota_(corpo) {
-  var detalhes = corpo && corpo.error && corpo.error.details;
-  if (!Array.isArray(detalhes)) return { retryDelay: null, descricao: null };
-  var retryInfo = detalhes.filter(function(d) { return d['@type'] && d['@type'].indexOf('RetryInfo') !== -1; })[0];
-  var quotaFailure = detalhes.filter(function(d) { return d['@type'] && d['@type'].indexOf('QuotaFailure') !== -1; })[0];
-  var descricao = null;
-  if (quotaFailure && Array.isArray(quotaFailure.violations) && quotaFailure.violations[0]) {
-    descricao = quotaFailure.violations[0].description || quotaFailure.violations[0].subject || null;
-  }
-  return { retryDelay: retryInfo ? retryInfo.retryDelay : null, descricao: descricao };
-}
-
-function FrotaIA_interpretarErro_(codigo, corpo) {
-  var msgApi = (corpo && corpo.error && (corpo.error.message || corpo.error.status)) || ('HTTP ' + codigo);
-  if (codigo === 401 || codigo === 403) return 'Chave GEMINI_API_KEY inválida ou sem autorização (HTTP ' + codigo + ').';
-  if (codigo === 429) {
-    var detalhe = FrotaIA_extrairDetalheQuota_(corpo);
-    var sugestao = detalhe.retryDelay
-      ? ('Aguarde aproximadamente ' + detalhe.retryDelay + ' e tente novamente.')
-      : 'Aguarde alguns minutos e tente novamente.';
-    return 'Limite de uso da IA atingido (HTTP 429)' + (detalhe.descricao ? (' — ' + detalhe.descricao) : '') + '. ' + sugestao;
-  }
-  if (codigo === 404) return 'Modelo não encontrado (HTTP 404): ' + msgApi;
-  if (codigo >= 500) return 'Serviço de IA temporariamente indisponível (HTTP ' + codigo + '): ' + msgApi;
-  return 'Erro na API de IA (HTTP ' + codigo + '): ' + msgApi;
-}
-
-function FrotaIA_retentavel_(codigo) {
-  return codigo === 500 || codigo === 503;
-}
-
-function FrotaIA_proximoOrcamento_(atual) {
-  return Math.min(atual * 2, FrotaIA_TOKENS_MAX);
-}
-
-/** Chamada genérica texto-only. */
+/** Mantido para compatibilidade: chamada genérica de texto (lança erro). */
 function FrotaIA_chamarGemini_(prompt, maxTokens) {
-  var cfg = FrotaIA_obterConfig_();
-  if (!cfg.geminiKey) {
-    throw new Error('Chave GEMINI_API_KEY não configurada. O administrador cadastra a chave em Chaves e senhas, no menu do SGO+.');
-  }
-
-  var modelos = FrotaIA_obterListaModelos_(cfg);
-  var errosPorModelo = [];
-
-  for (var mi = 0; mi < modelos.length; mi++) {
-    var modelo = modelos[mi];
-    var erroModelo = 'falha desconhecida';
-    var orcamento = maxTokens || FrotaIA_TOKENS;
-    for (var tent = 0; tent < FrotaIA_MAX_TENTATIVAS; tent++) {
-      if (tent > 0) Utilities.sleep(FrotaIA_DELAYS_MS[tent - 1] || 1600);
-
-      var url = FrotaIA_ENDPOINT_GEMINI + modelo + ':generateContent?key=' + cfg.geminiKey;
-      var resp = UrlFetchApp.fetch(url, {
-        method: 'post',
-        muteHttpExceptions: true,
-        contentType: 'application/json',
-        payload: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: orcamento, temperature: 0.3 }
-        })
-      });
-
-      var codigo = resp.getResponseCode();
-      var corpo = {};
-      try { corpo = JSON.parse(resp.getContentText()); } catch (e) {}
-
-      if (codigo === 200) {
-        var cand = corpo.candidates && corpo.candidates[0];
-
-        if (cand && cand.finishReason === 'MAX_TOKENS') {
-          erroModelo = 'resposta cortada por limite de tokens (finishReason=MAX_TOKENS), tentando com mais orçamento';
-          orcamento = FrotaIA_proximoOrcamento_(orcamento);
-          continue;
-        }
-
-        var partes = cand && cand.content && cand.content.parts;
-        var texto = partes && partes.map(function(p) { return p.text || ''; }).join('');
-        if (!texto) throw new Error('A IA retornou resposta vazia. Tente novamente.');
-        return texto.trim();
-      }
-
-      if (codigo === 401 || codigo === 403) throw new Error(FrotaIA_interpretarErro_(codigo, corpo));
-      if (codigo === 429) { erroModelo = FrotaIA_interpretarErro_(codigo, corpo); break; }
-      if (codigo === 404) { erroModelo = 'modelo não encontrado (HTTP 404)'; break; }
-
-      erroModelo = FrotaIA_interpretarErro_(codigo, corpo);
-      if (!FrotaIA_retentavel_(codigo)) break;
-    }
-    errosPorModelo.push(modelo + ': ' + erroModelo);
-  }
-
-  throw new Error('Falha ao chamar a IA após tentar ' + modelos.length + ' modelo(s) — ' + errosPorModelo.join(' | '));
+  return RelA4_gemini_(prompt, { tokens: maxTokens || FrotaIA_TOKENS });
 }
 
-/**
- * Interpretação executiva do relatório de frota — recebe SOMENTE os
- * números já agregados por Frota_apiGerarRelatorio (SGO_Frota_Relatorio.js),
- * nunca dados brutos de movimentação. Nunca decide nada sozinha, só
- * descreve/recomenda a partir do que já foi calculado.
- */
-function FrotaIA_interpretarFrota_(dados) {
-  var linhas = dados.veiculos.map(function(v) {
-    return '- ' + v.placa + ' (' + (v.modelo || 'sem modelo') + '): ' + v.retiradas + ' retiradas, ' +
-      FrotaRel_num_(v.kmRodado, 0) + ' km rodados, utilização ' + FrotaRel_num_(v.taxaUtilizacao, 1) + '%, ' +
-      'consumo ' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : 'sem dado suficiente') + ', ' +
-      v.manutencoesQtd + ' manutenções (R$ ' + FrotaRel_num_(v.manutencoesCusto, 2) + '), despesas R$ ' +
-      FrotaRel_num_(v.despesasValor, 2) + ', combustível R$ ' + FrotaRel_num_(v.abastecimentosValor, 2) +
-      ', custo por km R$ ' + FrotaRel_num_(v.custoPorKm, 2) + ', ' + v.paradasQtd + ' paradas (' + FrotaRel_num_(v.paradasDias, 1) + ' dias), ' +
-      v.multasQtd + ' multas (R$ ' + FrotaRel_num_(v.multasValor, 2) + ', ' + v.multasIdentificadas + ' com condutor identificado).';
-  }).join('\n');
-
-  var alertas = dados.alertasAtuais.length
-    ? dados.alertasAtuais.map(function(a) { return '- ' + a.veiculoPlaca + ': ' + a.tipoLabel + ' (' + a.status + ')'; }).join('\n')
-    : 'nenhum alerta ativo no momento';
-
-  var prompt = 'Você é um analista de frota. Com base SOMENTE nos dados reais abaixo (nunca invente número, veículo, condutor ou fato que não esteja aqui), escreva uma interpretação executiva em português do Brasil, em 3 a 5 parágrafos curtos e diretos, cobrindo: (1) quais veículos estão mais usados/disputados e quais estão ociosos/subutilizados, com base nos números; (2) padrões relevantes de custo (manutenção, despesas, combustível, multas) e o que chama atenção, incluindo consumo/custo por km fora do padrão dos demais; (3) a situação atual de alertas (documentos/manutenções/CNH vencidos ou vencendo); (4) 2 a 3 recomendações práticas e objetivas para a gestão da frota. Nunca cite fabricante de peça/serviço específico. Nunca afirme causa que os números não comprovem — se algo for só uma hipótese, deixe claro que é hipótese.\n\n' +
-    'PERÍODO ANALISADO: ' + dados.periodo.inicio + ' a ' + dados.periodo.fim + ' (' + dados.periodo.dias + ' dias)\n\n' +
-    'DADOS POR VEÍCULO:\n' + linhas + '\n\n' +
-    'CONDUTOR MAIS ATUANTE NO PERÍODO: ' + (dados.condutorMaisAtuante ? (dados.condutorMaisAtuante.nome + ' (' + dados.condutorMaisAtuante.retiradas + ' retiradas)') : 'sem dados suficientes no período') + '\n\n' +
-    'ALERTAS ATUAIS (documentos/manutenções/CNH vencidos ou vencendo, situação de hoje):\n' + alertas;
-
-  return FrotaIA_chamarGemini_(prompt, FrotaIA_TOKENS);
+function FrotaIA_linhaVeiculo_(v) {
+  return '- ' + v.placa + ' (' + (v.modelo || 'modelo não informado') + '): ' + RelA4_plural_(v.retiradas, 'retirada', 'retiradas') + ', ' +
+    RelA4_num_(v.kmRodado, 0) + ' km rodados, utilização de ' + RelA4_num_(v.taxaUtilizacao, 1) + '% do tempo, consumo ' +
+    (v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) + ' km/L' : 'sem dado suficiente') + ', combustível ' + RelA4_moeda_(v.abastecimentosValor) +
+    ', ' + RelA4_plural_(v.manutencoesQtd, 'manutenção', 'manutenções') + ' (' + RelA4_moeda_(v.manutencoesCusto) + '), outras despesas ' + RelA4_moeda_(v.despesasValor) +
+    ', custo total ' + RelA4_moeda_(v.custoTotal) + ', custo por km ' + (v.kmRodado > 0 ? RelA4_moeda_(v.custoPorKm) : 'sem quilometragem') + ', ' +
+    RelA4_plural_(v.paradasQtd, 'parada', 'paradas') + ' (' + RelA4_num_(v.paradasDias, 1) + ' dias), ' + RelA4_plural_(v.multasQtd, 'multa', 'multas') +
+    ' (' + RelA4_moeda_(v.multasValor) + ', ' + RelA4_num_(v.multasIdentificadas, 0) + ' com condutor identificado).';
 }
 
-/**
- * Conclusão do responsável (bloco 9 do relatório por veículo) — texto
- * curto, grounded SOMENTE nos dados desse veículo específico. Mesma
- * regra de ouro: nunca inventa achado, nunca decide nada, só resume o
- * que os números mostram.
- */
-function FrotaIA_interpretarVeiculo_(v, periodo, alertasVeiculo) {
-  var alertasTxt = alertasVeiculo.length
-    ? alertasVeiculo.map(function(a) { return '- ' + a.tipoLabel + ' (' + a.status + ')'; }).join('\n')
-    : 'nenhum alerta ativo no momento';
-
-  var prompt = 'Você é um analista de frota. Com base SOMENTE nos dados reais abaixo de UM único veículo (nunca invente número ou fato que não esteja aqui), escreva uma conclusão curta e objetiva em português do Brasil (1 parágrafo, 3 a 5 frases) sobre a situação desse veículo no período: funcionamento, documentação, manutenção e quaisquer pendências. Termine indicando, de forma direta, se a situação geral está regular ou se há pendências relevantes. Nunca cite fabricante de peça/serviço específico. Nunca afirme causa que os números não comprovem.\n\n' +
-    'VEÍCULO: ' + v.placa + ' (' + (v.modelo || 'sem modelo') + ')\n' +
-    'PERÍODO: ' + periodo.inicio + ' a ' + periodo.fim + ' (' + periodo.dias + ' dias)\n' +
-    'Retiradas: ' + v.retiradas + ' | KM rodados: ' + FrotaRel_num_(v.kmRodado, 0) + ' | Utilização: ' + FrotaRel_num_(v.taxaUtilizacao, 1) + '%\n' +
-    'Consumo médio: ' + (v.consumoMedioKmL > 0 ? (FrotaRel_num_(v.consumoMedioKmL, 1) + ' km/L') : 'sem dado suficiente') + '\n' +
-    'Manutenções no período: ' + v.manutencoesQtd + ' (R$ ' + FrotaRel_num_(v.manutencoesCusto, 2) + ')\n' +
-    'Despesas: R$ ' + FrotaRel_num_(v.despesasValor, 2) + ' | Combustível: R$ ' + FrotaRel_num_(v.abastecimentosValor, 2) + ' | Custo por km: R$ ' + FrotaRel_num_(v.custoPorKm, 2) + '\n' +
-    'Paradas/ocorrências: ' + v.paradasQtd + ' (' + FrotaRel_num_(v.paradasDias, 1) + ' dias) | Multas: ' + v.multasQtd + ' (R$ ' + FrotaRel_num_(v.multasValor, 2) + ')\n\n' +
-    'ALERTAS ATUAIS DESSE VEÍCULO (documentos/manutenções/CNH do condutor responsável):\n' + alertasTxt;
-
-  return FrotaIA_chamarGemini_(prompt, FrotaIA_TOKENS);
+function FrotaIA_linhasAlertas_(alertas) {
+  return alertas.length
+    ? alertas.map(function(a) { return '- ' + a.veiculoPlaca + ': ' + a.tipoLabel + ' — ' + (a.status === 'VENCIDO' ? 'vencido' : 'vence em breve') + (a.vencimento ? ' (' + a.vencimento + ')' : ''); }).join('\n')
+    : 'nenhum aviso ativo na data de emissão';
 }
+
+/** Prompt da análise do relatório geral. */
+function FrotaIA_promptFrota_(dados) {
+  var t = dados.totais;
+  return 'Você é o analista de frota da Metrolab\'s e escreve a seção "Análise do período" do relatório gerencial de frota, lido pela diretoria.\n' +
+    'Com base SOMENTE nos dados abaixo, escreva de 3 a 5 parágrafos curtos cobrindo: (1) quais veículos foram mais usados e quais ficaram ociosos ou subutilizados; ' +
+    '(2) o que chama atenção nos custos (combustível, manutenção, outras despesas, multas), inclusive consumo ou custo por km fora do padrão dos demais veículos; ' +
+    '(3) a situação dos avisos de vencimento (manutenção, documentos, CNH) na data de emissão; (4) de 2 a 3 recomendações práticas e objetivas para a gestão da frota, em uma lista com hífen no último parágrafo.\n\n' +
+    'PERÍODO: ' + dados.periodo.inicio + ' a ' + dados.periodo.fim + ' (' + RelA4_plural_(dados.periodo.dias, 'dia', 'dias') + ')\n' +
+    'TOTAIS: ' + RelA4_plural_(dados.totalVeiculosFrota, 'veículo ativo', 'veículos ativos') + ', ' + RelA4_plural_(t.retiradas, 'retirada', 'retiradas') + ', ' + RelA4_num_(t.km, 0) +
+    ' km, custo total ' + RelA4_moeda_(t.custoTotal) + ' (combustível ' + RelA4_moeda_(t.abastecimentosValor) + ', manutenção ' + RelA4_moeda_(t.manutencao) + ', outras ' + RelA4_moeda_(t.despesas) +
+    '), custo por km ' + (t.km > 0 ? RelA4_moeda_(t.custoPorKm) : 'sem quilometragem') + ', consumo médio ' + (t.consumoMedioKmL > 0 ? RelA4_num_(t.consumoMedioKmL, 1) + ' km/L' : 'sem dado suficiente') +
+    ', ' + RelA4_plural_(t.multasQtd, 'multa', 'multas') + ' (' + RelA4_moeda_(t.multasValor) + '), ' + RelA4_num_(t.paradasDias, 1) + ' dias parados.\n' +
+    'POR VEÍCULO:\n' + dados.veiculos.map(FrotaIA_linhaVeiculo_).join('\n') + '\n' +
+    'CONDUTOR COM MAIS RETIRADAS: ' + (dados.condutorMaisAtuante ? dados.condutorMaisAtuante.nome + ' (' + RelA4_plural_(dados.condutorMaisAtuante.retiradas, 'retirada', 'retiradas') + ')' : 'sem retiradas no período') + '\n' +
+    'AVISOS NA DATA DE EMISSÃO:\n' + FrotaIA_linhasAlertas_(dados.alertasAtuais);
+}
+
+/** Prompt da análise do relatório por veículo. */
+function FrotaIA_promptVeiculo_(v, periodo, alertasVeiculo) {
+  return 'Você é o analista de frota da Metrolab\'s e escreve a seção "Análise do responsável" do relatório de UM veículo.\n' +
+    'Com base SOMENTE nos dados abaixo, escreva 2 parágrafos curtos: o primeiro sobre uso, consumo e custos do veículo no período; o segundo sobre documentação, manutenção e pendências, ' +
+    'terminando com uma frase direta dizendo se a situação geral está regular ou se há pendências relevantes e o que fazer primeiro.\n\n' +
+    'PERÍODO: ' + periodo.inicio + ' a ' + periodo.fim + ' (' + RelA4_plural_(periodo.dias, 'dia', 'dias') + ')\n' +
+    'VEÍCULO: ' + FrotaIA_linhaVeiculo_(v).slice(2) + '\n' +
+    'CONDUTOR MAIS FREQUENTE: ' + (v.condutorResponsavel || 'nenhuma retirada no período') + '\n' +
+    'AVISOS NA DATA DE EMISSÃO (veículo e CNH do condutor mais frequente):\n' + FrotaIA_linhasAlertas_(alertasVeiculo);
+}
+
+/** Mantidos para compatibilidade: lançam erro se a IA não estiver disponível. */
+function FrotaIA_interpretarFrota_(dados) { return RelA4_limparTextoIa_(RelA4_gemini_(FrotaIA_promptFrota_(dados) + '\n\n' + RELA4_REGRAS_REDACAO)); }
+function FrotaIA_interpretarVeiculo_(v, periodo, alertasVeiculo) { return RelA4_limparTextoIa_(RelA4_gemini_(FrotaIA_promptVeiculo_(v, periodo, alertasVeiculo) + '\n\n' + RELA4_REGRAS_REDACAO)); }

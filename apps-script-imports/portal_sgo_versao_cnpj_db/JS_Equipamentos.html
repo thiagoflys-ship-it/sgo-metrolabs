@@ -61,8 +61,8 @@
                 <input id="eqp_modelo" type="text" placeholder="Modelo">
               </div>
               <div>
-                <label for="eqp_serie">Número de Série</label>
-                <input id="eqp_serie" type="text" placeholder="Número de Série">
+                <label for="eqp_serie">Número de série</label>
+                <input id="eqp_serie" type="text" placeholder="Número de série">
               </div>
               <div class="full">
                 <label for="eqp_setor">Setor / Localização</label>
@@ -258,7 +258,7 @@
                 ? `<button class="btn-warning" type="button" onclick="equipamentosInativar_('${id}')">Inativar</button>`
                 : `<button class="btn-success" type="button" onclick="equipamentosReativar_('${id}')">Reativar</button>`
             }
-            <button class="btn-danger" type="button" onclick="equipamentosExcluir_('${id}')">Excluir</button>
+            ${ ['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? `<button class="btn-danger" type="button" onclick="equipamentosExcluir_('${id}')">Excluir</button>` : '' }
           </div>
         </td>
       `;
@@ -440,8 +440,14 @@
       .equipamentosObter(SESSION, id);
   }
 
+  // 17/10/2026: confirmação com o nome do equipamento (TAG, ou tipo e série).
+  function equipamentosNome_(id) {
+    const e = (EQUIPAMENTOS_STATE.items || []).find(function (x) { return String(x.ID) === String(id); }) || {};
+    return e.TAG || [e.TIPO, e.SERIE].filter(Boolean).join(" ") || "selecionado";
+  }
+
   function equipamentosInativar_(id) {
-    if (!SESSION || !confirm("Inativar este equipamento?")) return;
+    if (!SESSION || !confirm("Inativar o equipamento " + equipamentosNome_(id) + "?")) return;
 
     SGO_iniciarCarregamento_();
     google.script.run
@@ -459,7 +465,7 @@
   }
 
   function equipamentosReativar_(id) {
-    if (!SESSION || !confirm("Reativar este equipamento?")) return;
+    if (!SESSION || !confirm("Reativar o equipamento " + equipamentosNome_(id) + "?")) return;
 
     SGO_iniciarCarregamento_();
     google.script.run
@@ -477,7 +483,7 @@
   }
 
   function equipamentosExcluir_(id) {
-    if (!SESSION || !confirm("Excluir definitivamente este equipamento?")) return;
+    if (!SESSION || !confirm("Excluir o equipamento " + equipamentosNome_(id) + "? O cadastro sai da lista e a exclusão não pode ser desfeita por aqui. Para tirar de uso sem perder o histórico, use Inativar.")) return;
 
     SGO_iniciarCarregamento_();
     google.script.run

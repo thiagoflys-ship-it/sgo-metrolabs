@@ -122,7 +122,7 @@ function Conduta_resumoMesAnterior_(competencia) {
   return {
     competencia: ant, nome: Conduta_nomeCompetencia_(ant), fechado: false,
     D: ap.D, ico: ap.ico, farol: ap.farol, temGG: ap.temGG,
-    pendencias: Conduta_pendenciasCompetencia_(ant).length, limiteFechamento: Conduta_limiteFechamento_(ant),
+    pendencias: Conduta_pendenciasCompetencia_(ant).length + Conduta_missoesPendentesCompetencia_(ant).length, limiteFechamento: Conduta_limiteFechamento_(ant),
     prazoVencido: Conduta_hojeISO_() > Conduta_limiteFechamento_(ant)
   };
 }
@@ -159,7 +159,7 @@ function Conduta_avisosVigentes_() {
         'Código ' + o.TIPO_CODIGO + (t.GRUPO ? ' · ' + t.GRUPO : '') + ' · nível ' + (o.NIVEL_APLICADO || t.NIVEL || '—') + ' · ' + Conduta_numBr_(o.PESO_APLICADO, 0) + ' ponto(s) de demérito',
         'Data do fato: ' + Conduta_dataBr_(o.DATA_FATO) + ' · conta no mês de ' + Conduta_nomeCompetencia_(comp),
         situacao,
-        'O demérito é coletivo: cada ponto reduz o ICO de toda a equipe e pode tirar o bônus de todos.'
+        'O demérito é coletivo: cada ponto reduz o índice de conduta de toda a equipe e pode tirar o bônus de todos.'
       ],
       colaboradorId: String(o.COLABORADOR_ID || ''),
       contaSistema: Conduta_ehContaGenerica_(colab),
@@ -177,7 +177,7 @@ function Conduta_avisosVigentes_() {
       tipo: 'FECHAMENTO', ref: comp, competencia: comp, data: em,
       titulo: 'Resultado de ' + Conduta_nomeCompetencia_(comp) + ': farol ' + f.FAROL + (preservado ? ' · bônus coletivo preservado' : ' · bônus coletivo perdido'),
       linhas: [
-        'ICO ' + Conduta_numBr_(f.ICO) + ' · demérito ' + Conduta_numBr_(f.D, 0) + ' ponto(s) · ' + Conduta_numBr_(f.N, 0) + ' colaborador(es) na conta',
+        'Índice de conduta ' + Conduta_numBr_(f.ICO) + ' · pontos de demérito: ' + Conduta_numBr_(f.D, 0) + ' ponto(s) · ' + Conduta_numBr_(f.N, 0) + ' colaborador(es) na conta',
         temGG ? 'Houve infração gravíssima firme no mês, o que cancela o bônus coletivo.' : (preservado ? 'A equipe ficou na faixa verde (ICO ≥ ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').' : 'A equipe ficou abaixo da faixa verde (ICO < ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').'),
         (function () {
           var base = (f.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático em ' : 'Fechado em ') + Conduta_dataBr_(em) + '.';
@@ -403,6 +403,8 @@ function Conduta_fecharAutomatico_() {
     if (hoje <= limite) { aguardando.push(comp + ' (prazo do gestor até ' + limite + ')'); continue; }
     var pend = Conduta_pendenciasCompetencia_(comp);
     if (pend.length) { aguardando.push(comp + ' (' + pend.length + ' pendência(s) de defesa)'); continue; }
+    var missPend = Conduta_missoesPendentesCompetencia_(comp);
+    if (missPend.length) { aguardando.push(comp + ' (' + missPend.length + ' missão(ões) aguardando aprovação da gestão)'); continue; }
     var obs = comp === '2026-09'
       ? 'Fechamento automático em ' + Conduta_dataBr_(hoje) + '. Registro retroativo: o bônus coletivo de setembro/2026 já tinha sido pago antes do fechamento oficial; as 2 ocorrências do mês (24/09) entram aqui.'
       : 'Fechamento automático: ninguém fechou até o prazo (' + Conduta_dataBr_(limite) + ').';

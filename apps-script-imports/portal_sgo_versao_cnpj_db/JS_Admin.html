@@ -615,7 +615,7 @@
                 ? `<button class="btn-warning" type="button" onclick="documentosInativar_('${id}')">Inativar</button>`
                 : `<button class="btn-success" type="button" onclick="documentosReativar_('${id}')">Reativar</button>`
             }
-            <button class="btn-danger" type="button" onclick="documentosExcluir_('${id}')">Excluir</button>
+            ${ ['ADMIN','GESTOR','DIRETORIA'].indexOf(String((USER_CONTEXT && USER_CONTEXT.perfil) || '').toUpperCase()) >= 0 ? `<button class="btn-danger" type="button" onclick="documentosExcluir_('${id}')">Excluir</button>` : '' }
           </div>
         </td>
       `;

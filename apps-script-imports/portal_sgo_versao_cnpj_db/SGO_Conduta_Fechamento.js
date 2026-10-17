@@ -47,6 +47,10 @@ function Conduta_fecharCompetencia_(competencia, quemId, quemNome, observacao) {
 
   var pendencias = Conduta_pendenciasCompetencia_(competencia);
   if (pendencias.length) throw new Error('Fechamento bloqueado: ' + pendencias.length + ' ocorrência(s) com decisão ou prazo de defesa pendente. Preserve a competência do fato e aguarde os prazos; consulte a prévia.');
+  // 17/10/2026: missão com incentivo aguardando a gestão trava o fechamento (depois de
+  // congelado o mês, a aprovação não teria mais efeito e o colaborador perderia o valor).
+  var missoesPend = Conduta_missoesPendentesCompetencia_(competencia);
+  if (missoesPend.length) throw new Error('Fechamento bloqueado: ' + (missoesPend.length === 1 ? '1 missão aguarda' : missoesPend.length + ' missões aguardam') + ' aprovação da gestão em ' + Conduta_nomeCompetencia_(competencia) + '. Abra Programa de conduta > Missões, aprove ou recuse cada uma e feche de novo.');
   var resultado = Conduta_apurarCompetencia_(competencia);
 
   var registro;
@@ -111,7 +115,8 @@ function Conduta_apiPreviaFechamento(sessionId, payload) {
   var fechamentoCongelado = !!fechamento && (fechamento.CONGELADO === true || SGO_UTILS.safeUpper(fechamento.CONGELADO) === 'TRUE');
   return { competencia: competencia, resultado: apurado, pendencias: pendencias,
     fechamentoCongelado: fechamentoCongelado, fechamentoData: fechamento ? Conduta_soData_(fechamento.FECHADO_EM) : '',
-    podeFechar: !fechamentoCongelado && !pendencias.length && competencia < Conduta_competenciaDe_(Conduta_hojeISO_()),
+    missoesPendentes: Conduta_missoesPendentesCompetencia_(competencia).map(function (m) { return { id: m.ID, destino: m.DESTINO, data: Conduta_soData_(m.DATA) }; }),
+    podeFechar: !fechamentoCongelado && !pendencias.length && !Conduta_missoesPendentesCompetencia_(competencia).length && competencia < Conduta_competenciaDe_(Conduta_hojeISO_()),
     provisorio: true, mensagem: 'Prévia sem congelamento. Datas reais e prazos de defesa permanecem intactos. ' +
       (apurado.sombra ? 'Modo sombra: valores são simulação, sem pagamento.' : 'Confira as pendências antes de enviar valores à folha.') };
 }
@@ -253,16 +258,16 @@ function Conduta_apiObterFarolAtual(sessionId) {
     var qtdGG = apurado.ocorrenciasGGDoMes.length;
     linha = (qtdGG === 1 ? 'Registrada 1 infração gravíssima' : 'Registradas ' + qtdGG + ' infrações gravíssimas') + ' — a última em ' +
       (ultimaGG ? Conduta_dataBr_(ultimaGG.DATA_FATO) : Conduta_nomeCompetencia_(competencia)) +
-      '. O cancelamento independe do ICO, que está em ' + Conduta_numBr_(apurado.ico);
+      '. O cancelamento independe do índice de conduta, que está em ' + Conduta_numBr_(apurado.ico);
   } else if (apurado.farol === 'VERDE') {
     titulo = 'Bônus preservado';
-    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — a equipe pode acumular mais ' + Math.max(0, limiteVerdeD - apurado.D) + ' pontos de demérito sem sair do verde';
+    linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — a equipe pode acumular mais ' + Math.max(0, limiteVerdeD - apurado.D) + ' pontos de demérito sem sair do verde';
   } else if (apurado.farol === 'AMARELO') {
     titulo = 'Bônus em risco';
-    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — o mês está ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito acima do limite do verde. Ainda dá tempo neste mês';
+    linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — o mês está ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito acima do limite do verde. Ainda dá tempo neste mês';
   } else {
     titulo = 'Bônus perdido neste mês';
-    linha = 'ICO ' + Conduta_numBr_(apurado.ico) + ' — não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos';
+    linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos';
   }
 
   return {

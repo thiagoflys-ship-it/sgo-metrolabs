@@ -55,7 +55,20 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
   var kmTrecho = Number(referencia.KM_TRECHO) || 0;
   var qualifica = CondutaCalculo.missaoQualifica(kmTrecho, kmMinimo);
 
+  // 17/10/2026 (decisão do dono): missão com incentivo lançada pelo próprio
+  // colaborador (ou por quem não é da gestão) só conta depois de aprovada pela
+  // gestão. Lançada pela gestão para outra pessoa já nasce aprovada.
+  var gestaoLanca = isAdminSession(sessionId);
+  var lancaPraSi = execs.some(function (e) { return String(e) === String(sessao.userId); });
+  var aprovacao = !qualifica ? 'SEM_INCENTIVO' : (gestaoLanca && !lancaPraSi ? 'APROVADA' : 'PENDENTE');
+  var agora = SGO_UTILS.nowIso();
+
   var registro = SGO_DATA.insert(CONDUTA_SHEETS.MISSAO, {
+    APROVACAO: aprovacao,
+    APROVACAO_POR: aprovacao === 'APROVADA' ? sessao.userId : '',
+    APROVACAO_POR_NOME: aprovacao === 'APROVADA' ? String(sessao.nome || sessao.usuario || '') : '',
+    APROVACAO_EM: aprovacao === 'APROVADA' ? agora : '',
+    APROVACAO_MOTIVO: aprovacao === 'APROVADA' ? 'Lançada pela gestão.' : '',
     COMPETENCIA: Conduta_competenciaDe_(data),
     // Destinos cadastrados pela busca de CNPJ carregam o vínculo do cliente;
     // assim a missão continua rastreável mesmo quando a tela envia só a cidade.
@@ -71,7 +84,105 @@ function Conduta_apiRegistrarMissao(sessionId, payload) {
   });
 
   Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo);
-  return { success: true, item: registro };
+  if (aprovacao === 'PENDENTE') Conduta_avisarGestaoMissaoPendente_(registro, sessao);
+  SGO_DATA.log('CONDUTA_MISSAO_REGISTRAR', sessao.usuario, 'Missão registrada: ' + registro.DESTINO + ' em ' + data + ' (' + Conduta_rotuloAprovacao_(aprovacao) + ')', 'CONDUTA');
+  return {
+    success: true, item: registro, aprovacao: aprovacao,
+    message: aprovacao === 'PENDENTE'
+      ? 'Missão registrada e enviada para aprovação da gestão. O incentivo só conta depois de aprovado; você recebe o aviso da decisão.'
+      : aprovacao === 'APROVADA' ? 'Missão registrada e aprovada.' : 'Missão registrada. Ela não atinge a distância mínima, então não gera incentivo.'
+  };
+}
+
+// ------------------------------------------------------------
+// APROVAÇÃO DA GESTÃO (17/10/2026)
+// ------------------------------------------------------------
+var CONDUTA_APROVACAO_ROTULOS = {
+  PENDENTE: 'Aguardando aprovação da gestão', APROVADA: 'Aprovada', RECUSADA: 'Recusada',
+  LEGADA: 'Aprovação legada', SEM_INCENTIVO: 'Sem incentivo (abaixo da distância mínima)'
+};
+function Conduta_rotuloAprovacao_(s) { return CONDUTA_APROVACAO_ROTULOS[String(s || 'LEGADA').toUpperCase()] || String(s || ''); }
+
+/** Situação da aprovação; registro antigo sem o campo vale como aprovação legada. */
+function Conduta_situacaoAprovacao_(m) {
+  var s = SGO_UTILS.safeUpper(m && m.APROVACAO);
+  return s || 'LEGADA';
+}
+
+/** Conta para o incentivo: aprovada pela gestão ou lançada antes da regra (legada). */
+function Conduta_missaoAprovada_(m) {
+  var s = Conduta_situacaoAprovacao_(m);
+  return s === 'APROVADA' || s === 'LEGADA';
+}
+
+/** Missões com incentivo aguardando decisão numa competência (travam o fechamento). */
+function Conduta_missoesPendentesCompetencia_(competencia) {
+  return Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
+    return Conduta_soComp_(m.COMPETENCIA) === competencia && Conduta_situacaoAprovacao_(m) === 'PENDENTE';
+  });
+}
+
+function Conduta_gestoresParaAviso_(excetoIds) {
+  var fora = (excetoIds || []).map(String);
+  return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
+    var p = SGO_UTILS.safeUpper(u.PERFIL);
+    return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && (p === 'GESTOR' || p === 'DIRETORIA') && fora.indexOf(String(u.ID)) < 0;
+  }).map(function (u) { return u.ID; });
+}
+
+function Conduta_avisarGestaoMissaoPendente_(registro, sessao) {
+  try {
+    var destino = Conduta_gestoresParaAviso_([sessao.userId]);
+    if (!destino.length) return;
+    var dataBr = Conduta_dataBr_(registro.DATA);
+    SGO_notificar_({ usuarios: destino, titulo: 'Missão aguardando aprovação: ' + registro.DESTINO + ' em ' + dataBr,
+      texto: (sessao.nome || sessao.usuario || 'Um colaborador') + ' registrou uma missão com incentivo que precisa da aprovação da gestão.\n' +
+        'Destino: ' + registro.DESTINO + '\nData: ' + dataBr + '\nDistância do trecho: ' + String(Number(registro.KM_TRECHO) || 0).replace('.', ',') + ' km.\n' +
+        'Para decidir, abra Programa de conduta > Missões no SGO+ e clique em Aprovar ou Recusar. O mês só fecha depois da decisão.',
+      canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: registro.ID });
+  } catch (e) { console.error('Conduta aviso missão pendente: ' + ((e && e.message) || e)); }
+}
+
+/**
+ * Aprovar ou recusar missão pendente. payload: { id, decisao: 'APROVAR'|'RECUSAR', motivo }
+ * Só gestão (Gestor, Diretoria ou Administrador); ninguém decide missão em que é executante.
+ */
+function Conduta_apiDecidirMissao(sessionId, payload) {
+  var sessao = Conduta_exigirGestor_(sessionId);
+  payload = payload || {};
+  var decisao = SGO_UTILS.safeUpper(payload.decisao);
+  if (decisao !== 'APROVAR' && decisao !== 'RECUSAR') throw new Error('Escolha Aprovar ou Recusar.');
+  var motivo = String(payload.motivo || '').trim();
+  if (decisao === 'RECUSAR' && motivo.length < 8) throw new Error('Para recusar, escreva o motivo (pelo menos 8 caracteres). Ele vai no aviso para quem lançou a missão.');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var m = SGO_DATA.getById(CONDUTA_SHEETS.MISSAO, payload.id);
+    if (!m || SGO_UTILS.safe(m.EXCLUIDA_EM)) throw new Error('Missão não encontrada (pode ter sido removida). Atualize a lista de missões.');
+    var situacao = Conduta_situacaoAprovacao_(m);
+    if (situacao !== 'PENDENTE') throw new Error('Esta missão não está aguardando aprovação (situação atual: ' + Conduta_rotuloAprovacao_(situacao) + '). Atualize a lista.');
+    if ([m.EXECUTANTE_1_ID, m.EXECUTANTE_2_ID].map(String).indexOf(String(sessao.userId)) >= 0) {
+      throw new Error('Você é executante desta missão e não pode decidir sobre ela. Peça a outra pessoa da gestão (Gestor ou Diretoria) para aprovar ou recusar.');
+    }
+    Conduta_exigirCompetenciaAberta_(Conduta_soComp_(m.COMPETENCIA || m.DATA));
+    var nova = decisao === 'APROVAR' ? 'APROVADA' : 'RECUSADA';
+    SGO_DATA.update(CONDUTA_SHEETS.MISSAO, m.ID, {
+      APROVACAO: nova, APROVACAO_POR: sessao.userId, APROVACAO_POR_NOME: String(sessao.nome || sessao.usuario || ''),
+      APROVACAO_EM: SGO_UTILS.nowIso(), APROVACAO_MOTIVO: motivo || (nova === 'APROVADA' ? 'Aprovada pela gestão.' : '')
+    });
+    SGO_DATA.log('CONDUTA_MISSAO_' + nova, sessao.usuario, 'Missão ' + m.DESTINO + ' em ' + Conduta_soData_(m.DATA) + ' ' + nova.toLowerCase() + (motivo ? ': ' + motivo : ''), 'CONDUTA');
+  } finally { lock.releaseLock(); }
+
+  try {
+    var destino = [m.REGISTRADO_POR, m.EXECUTANTE_1_ID, m.EXECUTANTE_2_ID].filter(function (id) { return id && String(id) !== String(sessao.userId); });
+    var dataBr = Conduta_dataBr_(m.DATA);
+    SGO_notificar_({ usuarios: destino, titulo: 'Missão ' + (nova === 'APROVADA' ? 'aprovada' : 'recusada') + ': ' + m.DESTINO + ' em ' + dataBr,
+      texto: 'A missão para ' + m.DESTINO + ' em ' + dataBr + ' foi ' + (nova === 'APROVADA' ? 'aprovada' : 'recusada') + ' por ' + (sessao.nome || sessao.usuario) + '.\n' +
+        (nova === 'APROVADA' ? 'Ela passa a contar para o incentivo de missão do mês.' : 'Motivo: ' + motivo + '\nEla não conta para o incentivo. Se houver engano, fale com a gestão antes do fechamento do mês.') +
+        '\nVeja em Programa de conduta > Missões, no SGO+.',
+      canais: ['sgo', 'email', 'whatsapp'], origem: 'CONDUTA', refId: m.ID });
+  } catch (eAviso) { console.error('Conduta aviso decisão missão: ' + ((eAviso && eAviso.message) || eAviso)); }
+  return { success: true, aprovacao: nova, message: 'Missão ' + (nova === 'APROVADA' ? 'aprovada' : 'recusada') + '. Quem lançou recebe o aviso.' };
 }
 
 /**
@@ -111,8 +222,9 @@ function Conduta_apiListarMissoes(sessionId, payload) {
 
   return Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
     if (payload.competencia && Conduta_soComp_(m.COMPETENCIA) !== Conduta_soComp_(payload.competencia)) return false;
+    if (payload.aprovacao && Conduta_situacaoAprovacao_(m) !== SGO_UTILS.safeUpper(payload.aprovacao)) return false;
     if (somenteMinhas) {
-      return String(m.EXECUTANTE_1_ID) === String(sessao.userId) || String(m.EXECUTANTE_2_ID) === String(sessao.userId);
+      return String(m.EXECUTANTE_1_ID) === String(sessao.userId) || String(m.EXECUTANTE_2_ID) === String(sessao.userId) || String(m.REGISTRADO_POR) === String(sessao.userId);
     }
     return true;
   }).map(function (m) {
@@ -122,6 +234,13 @@ function Conduta_apiListarMissoes(sessionId, payload) {
     item.EXECUTANTE_1_NOME = nomes[String(m.EXECUTANTE_1_ID)] || 'Colaborador não localizado';
     item.EXECUTANTE_2_NOME = m.EXECUTANTE_2_ID ? (nomes[String(m.EXECUTANTE_2_ID)] || 'Colaborador não localizado') : '';
     item.QUALIFICA = m.QUALIFICA === true || SGO_UTILS.safeUpper(m.QUALIFICA) === 'TRUE';
+    item.APROVACAO = Conduta_situacaoAprovacao_(m);
+    item.APROVACAO_ROTULO = Conduta_rotuloAprovacao_(item.APROVACAO);
+    item.APROVACAO_EM = Conduta_soData_(m.APROVACAO_EM);
+    item.REGISTRADO_POR_NOME = nomes[String(m.REGISTRADO_POR)] || '';
+    item.CONTA_INCENTIVO = item.QUALIFICA && Conduta_missaoAprovada_(m);
+    // gestão decide, exceto quem é executante da própria missão
+    item.PODE_DECIDIR = !somenteMinhas && item.APROVACAO === 'PENDENTE' && String(m.EXECUTANTE_1_ID) !== String(sessao.userId) && String(m.EXECUTANTE_2_ID) !== String(sessao.userId);
     return item;
   }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
 }
@@ -148,7 +267,8 @@ function Conduta_apiRemoverMissao(sessionId, payload) {
  */
 function Conduta_qtdMissoesElegiveisColaborador_(competencia, colaboradorId) {
   var missoesDoColaborador = Conduta_ativos_(CONDUTA_SHEETS.MISSAO).filter(function (m) {
-    return Conduta_soComp_(m.COMPETENCIA) === competencia && (SGO_UTILS.safeUpper(m.QUALIFICA) === 'TRUE' || m.QUALIFICA === true) &&
+    // 17/10/2026: só conta missão aprovada pela gestão (ou legada, lançada antes da regra)
+    return Conduta_soComp_(m.COMPETENCIA) === competencia && (SGO_UTILS.safeUpper(m.QUALIFICA) === 'TRUE' || m.QUALIFICA === true) && Conduta_missaoAprovada_(m) &&
       (String(m.EXECUTANTE_1_ID) === String(colaboradorId) || String(m.EXECUTANTE_2_ID) === String(colaboradorId));
   });
   if (!missoesDoColaborador.length) return 0;

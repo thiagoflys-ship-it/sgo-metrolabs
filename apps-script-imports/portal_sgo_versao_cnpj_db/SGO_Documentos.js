@@ -260,6 +260,18 @@ const SGO_DOCUMENTOS = (() => {
       ["CLIENTE_ID", "UNIDADE_ID", "EQUIPAMENTO_ID", "TIPO_DOCUMENTO", "NOME_ARQUIVO", "DATA_VENCIMENTO"]);
     const erros = validarPayload_(dados, false);
     if (erros.length) return { success: false, message: erros.join(" ") };
+    // 17/10/2026 (decisão do dono): técnico e comercial editam o documento, mas trocar o
+    // cliente, a unidade ou o equipamento de um documento já vinculado é da gestão.
+    // Completar um vínculo vazio (ex.: equipamento não informado) continua liberado.
+    if (!isAdminSession(sessionId)) {
+      const trocados = ["CLIENTE_ID", "UNIDADE_ID", "EQUIPAMENTO_ID"].filter(function (c) {
+        return SGO_UTILS.safe(atual[c]) && SGO_UTILS.safe(dados[c]) !== SGO_UTILS.safe(atual[c]);
+      });
+      if (trocados.length) {
+        SGO_DATA.log("DOCUMENTOS_VINCULO_RECUSADO", sessao.usuario, "Tentativa de trocar o vínculo do documento ID=" + docId + " (" + trocados.join(", ") + ")", "DOCUMENTOS");
+        return { success: false, message: "Trocar o cliente, a unidade ou o equipamento de um documento já vinculado é feito pela gestão (Gestor ou Diretoria). Nada foi gravado. Os outros campos podem ser editados normalmente; para corrigir o vínculo, peça à gestão." };
+      }
+    }
     SGO_VINCULOS.relation(sessionId, dados.CLIENTE_ID, dados.UNIDADE_ID, dados.EQUIPAMENTO_ID);
 
     if (payload.ARQUIVO_BASE64) {
@@ -317,7 +329,7 @@ const SGO_DOCUMENTOS = (() => {
 
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir documento ID=" + id, "DOCUMENTOS");
-      return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros." };
+      return { success: false, message: "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador). Nada foi alterado. Você pode continuar criando e editando cadastros; para excluir ou trocar vínculos, peça à gestão." };
     }
 
     const docId = SGO_UTILS.safe(id);

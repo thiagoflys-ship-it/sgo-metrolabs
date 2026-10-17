@@ -179,6 +179,23 @@ function Conduta_migrate_() {
     });
     propsFmt.setProperty('CONDUTA_COLUNAS_EXCLUSAO_V1', '1');
   }
+  // 17/10/2026 (decisão do dono): missão com incentivo lançada pelo próprio
+  // colaborador só conta depois de aprovada pela gestão. As missões que já
+  // existiam ficam como "aprovação legada" — o valor gravado não muda.
+  if (propsFmt.getProperty('CONDUTA_MISSAO_APROVACAO_V1') !== '1') {
+    ['APROVACAO', 'APROVACAO_POR', 'APROVACAO_POR_NOME', 'APROVACAO_EM', 'APROVACAO_MOTIVO'].forEach(function (c) {
+      CertCal_garantirColuna_(CONDUTA_SHEETS.MISSAO, c);
+    });
+    var agoraMig = SGO_UTILS.nowIso(), qtdLegadas = 0;
+    SGO_DATA.getAll(CONDUTA_SHEETS.MISSAO).forEach(function (m) {
+      if (SGO_UTILS.safe(m.APROVACAO)) return;
+      SGO_DATA.update(CONDUTA_SHEETS.MISSAO, m.ID, { APROVACAO: 'LEGADA', APROVACAO_EM: agoraMig,
+        APROVACAO_MOTIVO: 'Lançada antes da regra de aprovação da gestão (17/10/2026); valor gravado mantido.' });
+      qtdLegadas++;
+    });
+    propsFmt.setProperty('CONDUTA_MISSAO_APROVACAO_V1', '1');
+    if (qtdLegadas) SGO_DATA.log('CONDUTA_MISSAO_LEGADA', 'sistema', qtdLegadas + ' missão(ões) existente(s) marcada(s) como aprovação legada', 'CONDUTA');
+  }
 }
 
 /** Linhas válidas (não excluídas) de qual_missao / qual_ausencia. */

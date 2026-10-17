@@ -249,7 +249,7 @@ const SGO_CLIENTES = (() => {
     // Trava Extra de Segurança: Só admins e gestores podem EXCLUIR registros definitivamente
     if (!isAdminSession(sessionId)) {
       SGO_DATA.log("TENTATIVA_EXCLUSAO", sessao.usuario, "Tentativa não autorizada de excluir cliente ID=" + id, "CLIENTES");
-      return { success: false, message: "Acesso negado: Apenas gestores podem excluir registros da base." };
+      return { success: false, message: "Excluir é feito pela gestão (Gestor, Diretoria ou Administrador). Nada foi alterado. Você pode continuar criando e editando cadastros; para excluir ou trocar vínculos, peça à gestão." };
     }
 
     const clienteId = SGO_UTILS.safe(id);
