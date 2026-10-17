@@ -2751,7 +2751,7 @@
         const v = d.veiculos.filter(function (x) { return x.id === f.veiculo.id; })[0];
         if (v) { v.situacao = "EM_USO"; v.km = km; if (payload.miniaturaLink) v.foto = payload.miniaturaLink; }
         const cond = (d.condutores || []).filter(function (c) { return c.id === payload.condutorId; })[0] || d.condutor || {};
-        if (!res.conferido) d.emAndamento.push({ id: res.movimentacaoId, veiculoId: f.veiculo.id, veiculoPlaca: f.placa, veiculoModelo: f.veiculo.modelo, condutorNome: cond.nome || "",
+        if (!res.conferido && !d.emAndamento.some(function (m) { return m.id === res.movimentacaoId; })) d.emAndamento.push({ id: res.movimentacaoId, veiculoId: f.veiculo.id, veiculoPlaca: f.placa, veiculoModelo: f.veiculo.modelo, condutorNome: cond.nome || "",
           condutorId: payload.condutorId, condutorUsuarioId: "", dataSaida: res.data, horaSaida: res.hora, kmSaida: km, finalidade: payload.finalidade,
           minha: !!(d.condutor && payload.condutorId === d.condutor.id), foto: v ? v.foto : "" });
       } else {
@@ -2773,6 +2773,7 @@
       frotaToastEnvio_(true, "Devolução registrada", f.placa + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
     }
     if (res.conferido) frotaToastEnvio_(true, "Registro conferido", "A conexão caiu na resposta, mas o registro foi gravado. Não registre de novo.");
+    if (res.jaRegistrada) frotaToastEnvio_(true, "Já estava registrado", res.mensagem || "O registro já tinha sido gravado na primeira tentativa. Nada foi registrado em dobro.");
     FS.inicioEm = Date.now();
     fsDesenharInicio_();
     if (!fsNoComputador_()) { MOBILE_NAV = { modulo: "frota", tela: "lista" }; atualizarTituloMobile_("Frota"); window.scrollTo(0, 0); }

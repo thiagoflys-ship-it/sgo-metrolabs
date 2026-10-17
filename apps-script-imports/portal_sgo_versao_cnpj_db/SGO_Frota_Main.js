@@ -290,6 +290,35 @@ function Frota_linkMiniatura_(v) {
   return /^(https?:\/\/|\/arquivos\/)/.test(s) && s.length < 500 ? s : '';
 }
 
+/**
+ * 17/10/2026: "deu erro, tentei de novo e disse que já foi retirado". A primeira tentativa tinha sido gravada e só a
+ * resposta se perdeu (sinal fraco). Se a mesma pessoa repete o pedido em até 30 min, é sucesso com o registro que já
+ * existe — nunca "já está retirado" para quem é o próprio dono da retirada.
+ */
+var FROTA_REPETICAO_MIN = 30;
+function Frota_feitoPorMimHaPouco_(m, sessao, campoPor, campoEm) {
+  if (SGO_UTILS.safe(m[campoPor]) !== SGO_UTILS.safe(sessao.userId) || !SGO_UTILS.safe(sessao.userId)) return false;
+  var em = new Date(String(m[campoEm] || ''));
+  return !isNaN(em.getTime()) && (Date.now() - em.getTime()) <= FROTA_REPETICAO_MIN * 60000;
+}
+function Frota_minhaRetiradaRecente_(veiculoId, sessao) {
+  return SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(function(m) {
+    return SGO_UTILS.safe(m.VEICULO_ID) === SGO_UTILS.safe(veiculoId) && Frota_movimentoAberto_(m) &&
+      Frota_feitoPorMimHaPouco_(m, sessao, 'REGISTRADO_SAIDA_POR_ID', 'CRIADO_EM');
+  })[0] || null;
+}
+function Frota_respostaRetiradaJaFeita_(m, placa) {
+  return { ok: true, jaRegistrada: true, movimentacaoId: m.ID, data: Frota_textoData_(m.DATA_SAIDA), hora: Frota_textoHora_(m.HORA_SAIDA),
+    registroPelaGestao: SGO_UTILS.safe(m.REGISTRO_GESTAO_SAIDA) === 'SIM', kmDivergencia: Frota_num_(m.KM_DIVERGENCIA_SAIDA, 0),
+    mensagem: 'Sua retirada do veículo ' + placa + ' já estava registrada (saída ' + Frota_textoData_(m.DATA_SAIDA) + ' às ' + Frota_textoHora_(m.HORA_SAIDA) + '). Nada foi registrado em dobro.' };
+}
+
+function Frota_respostaDevolucaoJaFeita_(m) {
+  var v = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, m.VEICULO_ID) || {};
+  return { ok: true, jaRegistrada: true, movimentacaoId: m.ID, data: Frota_textoData_(m.DATA_CHEGADA), hora: Frota_textoHora_(m.HORA_CHEGADA),
+    mensagem: 'Sua devolução do veículo ' + (SGO_UTILS.safe(v.PLACA) || '') + ' já estava registrada (chegada ' + Frota_textoData_(m.DATA_CHEGADA) + ' às ' + Frota_textoHora_(m.HORA_CHEGADA) + '). Nada foi registrado em dobro.' };
+}
+
 function Frota_validarVeiculoRetirada_(veiculo) {
   if (!veiculo) throw new Error('Veículo não encontrado.');
   var aberto = SGO_DATA.getAll(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO).filter(function(m) {
@@ -980,6 +1009,8 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
   if (!veiculo) throw new Error('Veículo não encontrado. Atualize a tela e escolha o veículo de novo.');
+  var jaFeita = Frota_minhaRetiradaRecente_(veiculoId, sessao);
+  if (jaFeita) return Frota_respostaRetiradaJaFeita_(jaFeita, veiculo.PLACA);
   Frota_validarVeiculoRetirada_(veiculo);
 
   // Trava de identidade (Fase 5, 2026-08-25): quem NÃO é gestão não escolhe
@@ -1040,6 +1071,8 @@ function Frota_apiIniciarViagem(sessionId, payload) {
   try {
     veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, veiculoId);
     if (!veiculo) throw new Error('Veículo não encontrado. Atualize a tela e escolha o veículo de novo.');
+    var jaFeitaNaTrava = Frota_minhaRetiradaRecente_(veiculoId, sessao);
+    if (jaFeitaNaTrava) return Frota_respostaRetiradaJaFeita_(jaFeitaNaTrava, veiculo.PLACA);
     Frota_validarVeiculoRetirada_(veiculo);
     depois = conferir(veiculo);
     if (depois.motivos.length > regra.motivos.length) justificativa = Frota_exigirJustificativa_(payload.justificativa, depois.motivos);
@@ -1111,7 +1144,11 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   var movId = SGO_UTILS.safe(payload.movimentacaoId);
   var mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
   if (!mov) throw new Error('Retirada não encontrada. Atualize a tela: ela pode ter sido devolvida por outra pessoa.');
-  if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada já foi devolvida. Atualize a tela para ver a situação atual do veículo.');
+  if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') {
+    // A mesma pessoa repetindo a devolução que já gravou (a resposta se perdeu): sucesso, sem registrar de novo.
+    if (Frota_feitoPorMimHaPouco_(mov, sessao, 'REGISTRADO_CHEGADA_POR_ID', 'FINALIZADO_EM')) return Frota_respostaDevolucaoJaFeita_(mov);
+    throw new Error('Esta retirada já foi devolvida. Atualize a tela para ver a situação atual do veículo.');
+  }
 
   var veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID);
   if (!veiculo) throw new Error('Veículo não encontrado.');
@@ -1162,7 +1199,10 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   try {
     mov = SGO_DATA.getById(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId);
     if (!mov) throw new Error('Retirada não encontrada. Atualize a tela.');
-    if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') throw new Error('Esta retirada acabou de ser devolvida por outra pessoa. Atualize a tela para ver a situação atual do veículo.');
+    if (SGO_UTILS.safeUpper(mov.STATUS) !== 'EM_ANDAMENTO') {
+      if (Frota_feitoPorMimHaPouco_(mov, sessao, 'REGISTRADO_CHEGADA_POR_ID', 'FINALIZADO_EM')) return Frota_respostaDevolucaoJaFeita_(mov);
+      throw new Error('Esta retirada acabou de ser devolvida por outra pessoa. Atualize a tela para ver a situação atual do veículo.');
+    }
     veiculo = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_VEICULOS, mov.VEICULO_ID) || veiculo;
 
     SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, movId, {
