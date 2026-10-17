@@ -186,16 +186,16 @@ Os quatro módulos repetem o mesmo padrão herdado dos sistemas avulsos:
 Contagem: 33 itens (P1 6, P2 18, P3 9).
 
 ### Casco e cabeçalho interno (os 4 módulos)
-- [P2] **Título duplicado.**
+- ~~[P2] **Título duplicado.**~~ — **feito em a0b91b7: o cabeçalho interno (H1, subtítulo, relógio e selo) saiu dos 4 módulos e do "Preencher modelo"; o manual foi para a barra do casco (Cadeia de frio e Estufa) e a norma da Cadeia de frio foi para o subtítulo do casco.**
   - O casco mostra o H2 "Autoclaves" com subtítulo, e logo abaixo o módulo repete o H1 "Autoclave" com outro subtítulo.
   - Lavadoras tem três subtítulos diferentes: casco, Preencher modelo e Gerar relatório.
   - **Fazer:** remover o `header-card` interno (h1 e subtítulo) e manter só o casco. Se a norma precisar aparecer (por exemplo "ABNT NBR 16328:2023, Anexo G" na Cadeia de frio), ela vai para o subtítulo do casco.
   - *Onde:* `JS_TemplateAutoclave.html › header-card (tplAppTitle)`, `JS_TemplateLavadora.html › tplLavAppTitle`, `SGO_AutoRel/LavRel/CadeiaFrioRel/EstufaBanhoRel_ConteudoModulo.js › <h1>`; subtítulos do casco em `JS_Core.html › renderMotorModulo_`.
   - (Captura: autoclave_preencher_1440.png, estufa_topo_1440.png)
-- [P2] **Relógio duplicado.** A barra superior já mostra data e hora, e o módulo mostra um segundo relógio em formato diferente.
+- ~~[P2] **Relógio duplicado.**~~ — **feito em a0b91b7: relógio removido (Autoclave, Lavadora e "Preencher modelo").** A barra superior já mostra data e hora, e o módulo mostra um segundo relógio em formato diferente.
   - **Fazer:** remover o relógio do módulo.
   - *Onde:* `tplClockWidget` + `setInterval` (Template Autoclave/Lavadora); `atualizarClockEStatus` (AutoRel/LavRel).
-- [P1] **O selo "Pronto" engana.** Depois de uma falha ao gerar, o selo continua verde "Pronto" e a página não rola. A mensagem só entra no "Histórico da operação", cerca de 3.000 px abaixo, e o operador acha que deu certo.
+- ~~[P1] **O selo "Pronto" engana.**~~ — **feito em 0d26929 + a0b91b7: o erro aparece na faixa vermelha do topo (pente fino) e o selo saiu com o cabeçalho; erro escrito no histórico também vai para a faixa.** Depois de uma falha ao gerar, o selo continua verde "Pronto" e a página não rola. A mensagem só entra no "Histórico da operação", cerca de 3.000 px abaixo, e o operador acha que deu certo.
   - **Fazer:** remover o selo e mostrar o erro numa faixa logo acima do botão clicado, dizendo o que falta e em qual seção (ex.: "Falta o arquivo do registrador: seção 4, Arquivo do registrador"). Rolar a página até a faixa.
   - *Onde:* `setStatusBadge` / `writeLog` dos 4 ConteudoModulo.
   - (Captura: autoclave_relatorio_1440.png)
@@ -203,27 +203,27 @@ Contagem: 33 itens (P1 6, P2 18, P3 9).
 - ~~[P3] Celular sem saída ("disponível apenas na versão para computador")~~ — **corrigido nesta rodada**: a mensagem orienta abrir no computador e tem o botão "Voltar ao Início".
 
 ### Autoclaves › Preencher modelo
-- [P2] **Botão "Carregar Exemplo" em produção.** Preenche dados fictícios ("Hospital Exemplo Ltda."), e um clique a mais em Gerar produz um relatório falso.
+- ~~[P2] **Botão "Carregar Exemplo" em produção.**~~ — **feito em a0b91b7: botão e função de exemplo removidos.** Preenche dados fictícios ("Hospital Exemplo Ltda."), e um clique a mais em Gerar produz um relatório falso.
   - **Fazer:** remover o botão e `tplAutoclave_preencherExemplo`.
   - *Onde:* `JS_TemplateAutoclave.html › .action-bar`.
-- [P2] **"Gerar Google Docs + PDF" / "Abrir Google Docs" / "pasta configurada".**
+- ~~[P2] **"Gerar Google Docs + PDF" / "Abrir Google Docs" / "pasta configurada".**~~ — **feito em 0d26929 + a0b91b7: "Gerar documento e PDF", "Abrir documento", "Abrir PDF", "Abrir pasta do cliente" e o subtítulo pedido.**
   - **Fazer:** botão "Gerar documento e PDF"; links "Abrir documento", "Abrir PDF" e "Abrir pasta dos relatórios"; subtítulo "Preencha os campos para gerar o relatório no modelo oficial."
   - *Onde:* `tplBtnGerarLabel`, `tplAutoclave_setLoading`, `tplDocLink`, `.panel-subtitle`.
-- [P2] **Jargão "template/placeholders".** Aparece em "PLACEHOLDERS DO TEMPLATE", "valide o template", "substitui os placeholders rastreados".
+- ~~[P2] **Jargão "template/placeholders".**~~ — **feito em a0b91b7: bloco de placeholders e cartões removidos; ajuda "Aparece no relatório e no nome do arquivo".** Aparece em "PLACEHOLDERS DO TEMPLATE", "valide o template", "substitui os placeholders rastreados".
   - **Fazer:** remover o bloco "Placeholders do template" e o cartão que explica a cópia do template. Trocar "Usado no template e no nome final do arquivo" por "Aparece no relatório e no nome do arquivo".
   - *Onde:* `.terminal-header`, `.card-note`, `tplAutoclave_renderPlaceholders`.
-- [P3] **Chip técnico `RELATORIO_AUTOCLAVE_NUMERO_CLIENTE_DATA`.**
+- ~~[P3] **Chip técnico `RELATORIO_AUTOCLAVE_NUMERO_CLIENTE_DATA`.**~~ — **feito em a0b91b7: chip removido.**
   - **Fazer:** remover o chip e deixar só a frase. *Onde:* `.tpl-code-chip`.
-- [P2] **Erro cru do proxy** ("Erro ao chamar Template Autoclave: <mensagem técnica>").
+- ~~[P2] **Erro cru do proxy**~~ — **feito em a0b91b7: a aba não chama mais o aplicativo antigo; erro com orientação (ver "Preencher modelo no servidor", abaixo).** ("Erro ao chamar Template Autoclave: <mensagem técnica>").
   - **Fazer:** "Não foi possível ler o modelo do relatório. Tente de novo em alguns minutos; se continuar, avise o administrador."
   - *Onde:* `SGO_TemplateAutoclave.js › chamarProxy_` (e o mesmo em `SGO_TemplateLavadora.js`).
-- [P3] **"Status final" com opções "APROVADO/REPROVADO".**
+- ~~[P3] **"Status final" com opções "APROVADO/REPROVADO".**~~ — **feito em a0b91b7: rótulo "Resultado", opções "Aprovado"/"Reprovado" (valor gravado igual) e sem valor pré-escolhido.**
   - **Fazer:** rótulo "Resultado"; opções "Aprovado" / "Reprovado" (o valor gravado continua o mesmo). *Onde:* `tplStatus`.
-- [P2] **Data do ciclo em texto livre** ("Informe como deseja que apareça no relatório").
+- ~~[P2] **Data do ciclo em texto livre**~~ — **feito em a0b91b7: máscara DD/MM/AAAA, validação de data real e a ajuda pedida.** ("Informe como deseja que apareça no relatório").
   - **Fazer:** campo com máscara DD/MM/AAAA e a ajuda "Data em que o ciclo foi executado". *Onde:* `tplData`.
 
 ### Autoclaves e Lavadoras › Gerar relatório
-- [P1] **"Relatório interno" em destaque e senha à mostra.**
+- ~~[P1] **"Relatório interno" em destaque e senha à mostra.**~~ — **feito em 0d26929 + a0b91b7: botão só para Admin e senha mascarada (pente fino); a opção saiu do seletor "Como enviar os dados" para os demais perfis nos 4 módulos.**
   - É o botão mais forte da tela (marrom cheio; verde nos módulos vizinhos).
   - A senha é pedida por `window.prompt`, que mostra o que se digita.
   - A mesma opção aparece para qualquer perfil no seletor "Modo de leitura".
@@ -232,60 +232,60 @@ Contagem: 33 itens (P1 6, P2 18, P3 9).
     - trocar o `prompt` por um modal com campo de senha mascarado, com a mensagem de erro "Senha incorreta. Peça a senha ao administrador." e o botão Cancelar;
     - tirar a opção do seletor.
   - *Onde:* `tplAutoRel_btnRelatorioInterno`, `ativarModoSimuladoAdmin`, `configurarModoEntrada` (AutoRel e LavRel).
-- [P2] **Textos do Google desatualizados.** "Ler por ID / Link do Google Sheets (Recomendado)", "enviado para a pasta do Drive", "Cole o ID da Planilha Google", "Verifique o Config.gs".
+- ~~[P2] **Textos do Google desatualizados.**~~ — **feito em 0d26929.** "Ler por ID / Link do Google Sheets (Recomendado)", "enviado para a pasta do Drive", "Cole o ID da Planilha Google", "Verifique o Config.gs".
   - **Fazer:**
     - opção "Arquivo do registrador (enviado ou já na pasta)";
     - alerta "A pasta ainda não está configurada. Avise o administrador (Administração › Configurações)."
   - *Onde:* `configurarModoEntrada`, `abrirLinkPasta`, `boxUpload`.
-- [P1] **Lavadora sem acentos.** "CLIENTE / INSTITUICAO", "CICLO N", "LOCALIZACAO (SETOR)", "PARAMETROS DE PROCESSO E RECEITA", "TEMP. ALVO DA RECEITA (C)", "20C a 100C", "ROBUSTEZ DA DETECCAO DA EXPOSICAO", "TOLERANCIA", "inicio", "Mantem", "oscilacoes", "Ponto e Virgula".
+- ~~[P1] **Lavadora sem acentos.**~~ — **feito em 0d26929.** "CLIENTE / INSTITUICAO", "CICLO N", "LOCALIZACAO (SETOR)", "PARAMETROS DE PROCESSO E RECEITA", "TEMP. ALVO DA RECEITA (C)", "20C a 100C", "ROBUSTEZ DA DETECCAO DA EXPOSICAO", "TOLERANCIA", "inicio", "Mantem", "oscilacoes", "Ponto e Virgula".
   - **Fazer:** corrigir para "Cliente / instituição", "Ciclo nº", "Localização (setor)", "Parâmetros de processo e receita", "Temp. alvo da receita (°C)", "20 °C a 100 °C", "início", "Mantém", "oscilações", "Ponto e vírgula".
   - *Onde:* `SGO_LavRel_ConteudoModulo.js`.
   - (Captura: lavadora_relatorio_1440.png)
-- [P2] **Decimal com ponto** ("134.0 °C").
+- ~~[P2] **Decimal com ponto**~~ — **feito em 0d26929 + a0b91b7: "134,0 °C" (pente fino) e "Temperatura programada".** ("134.0 °C").
   - **Fazer:** "134,0 °C" e trocar "Setpoint" por "Temperatura programada". *Onde:* `SGO_AutoRel_ConteudoModulo.js › <option>`.
-- [P2] **Inglês e jargão.** "LEAK TEST", "OFFSET", "DTL", "Ingestão de dados do logger", "PREVIEW TÉCNICO DOS DADOS", "(BETA)".
+- ~~[P2] **Inglês e jargão.**~~ — **feito em a0b91b7: "Teste de estanqueidade", "Correção de temperatura (°C)", "Identificação do registrador", "Dados do registrador", "Prévia dos dados lidos", sem "(Beta)".** "LEAK TEST", "OFFSET", "DTL", "Ingestão de dados do logger", "PREVIEW TÉCNICO DOS DADOS", "(BETA)".
   - **Fazer:** "Teste de estanqueidade", "Correção de temperatura (°C)", "Identificação do registrador", "Importação dos dados do registrador", "Prévia dos dados lidos", e tirar "(BETA)".
-- [P2] **Numeração quebrada.** No Autoclave só a primeira seção tem número; a Lavadora não tem nenhuma; Cadeia de frio e Estufa numeram de 1 a 6.
+- ~~[P2] **Numeração quebrada.**~~ — **feito em a0b91b7: Autoclave e Lavadora com 1 Cliente e ensaio, 2 Equipamento, 3 Parâmetros, 4 Dados do registrador, 5 Interpretação técnica; ajustes avançados (correções, detecção da exposição e janela manual) recolhidos num bloco próprio.** No Autoclave só a primeira seção tem número; a Lavadora não tem nenhuma; Cadeia de frio e Estufa numeram de 1 a 6.
   - **Fazer:** 1 Identificação, 2 Parâmetros, 3 Dados do registrador, 4 Gerar relatório, 5 Interpretação técnica.
-- [P2] **"Operador logado no sistema" digitado à mão.**
+- ~~[P2] **"Operador logado no sistema" digitado à mão.**~~ — **feito em a0b91b7: preenchido com o usuário da sessão, sem edição; rótulo "Operador".**
   - **Fazer:** preencher sozinho com o usuário da sessão, sem permitir edição; rótulo "Operador".
-- [P2] **Caixa explicativa da IA com 5 linhas em tom de conversa.**
+- ~~[P2] **Caixa explicativa da IA com 5 linhas em tom de conversa.**~~ — **feito em a0b91b7: texto pedido nos 4 módulos.**
   - **Fazer:** "Documento complementar com a interpretação técnica deste ciclo. Os textos de análise e conclusão são redigidos por IA a partir dos números calculados; revise antes de confirmar." (vale para os 4 módulos).
-- [P3] **Histórico com título duplicado e cerca de 700 px vazios.**
+- ~~[P3] **Histórico com título duplicado e cerca de 700 px vazios.**~~ — **feito em a0b91b7: virou "Detalhes técnicos da operação", recolhido, com altura limitada; erro aparece também na faixa do topo.**
   - **Fazer:** remover o cabeçalho interno e limitar a altura, com rolagem.
-- [P3] **Mensagens com ponto duplo** ("…faça o upload do arquivo.. Confira…").
+- ~~[P3] **Mensagens com ponto duplo**~~ — **feito em 0d26929.** ("…faça o upload do arquivo.. Confira…").
   - **Fazer:** não acrescentar ponto quando a mensagem já termina em ponto; "envie o arquivo" no lugar de "faça o upload". *Onde:* `normalizarErro_`.
-- [P2] **Alarme sonoro de ociosidade só em Autoclave e Lavadora** ("bip estridente" depois de 5 min). O cronômetro é global e pode continuar contando fora do módulo; confirmar em teste.
+- ~~[P2] **Alarme sonoro de ociosidade só em Autoclave e Lavadora**~~ — **feito em a0b91b7: alarme e cronômetro do módulo desligados (Autoclave e Lavadora).** ("bip estridente" depois de 5 min). O cronômetro é global e pode continuar contando fora do módulo; confirmar em teste.
   - **Fazer:** remover o alarme. Se o aviso ficar, parar o cronômetro ao sair do módulo.
   - *Onde:* `tocarBipEstridente`, `IDLE_LIMIT`.
 
 ### Lavadoras › Preencher modelo
-- [P2] **"Exemplo Lavadora" / "Exemplo Termodesinfectora"** são os únicos botões da barra de ações.
+- ~~[P2] **"Exemplo Lavadora" / "Exemplo Termodesinfectora"**~~ — **feito em a0b91b7: exemplos removidos; "Limpar campos" junto do botão de gerar.** são os únicos botões da barra de ações.
   - **Fazer:** remover os dois e pôr "Limpar campos" na barra. *Onde:* `JS_TemplateLavadora.html`, linhas 110-111.
-- [P2] **"Gerar Lavadora" / "Gerar Termodesinfectora"** não dizem o que sai.
+- ~~[P2] **"Gerar Lavadora" / "Gerar Termodesinfectora"**~~ — **feito em a0b91b7: "Gerar relatório da lavadora ultrassônica" / "Gerar relatório da termodesinfectora".** não dizem o que sai.
   - **Fazer:** "Gerar relatório da lavadora ultrassônica" / "Gerar relatório da termodesinfectora".
-- [P2] **Jargão: "Módulo ativo", "Google Docs", "PLACEHOLDERS DO MÓDULO ATIVO".**
+- ~~[P2] **Jargão: "Módulo ativo", "Google Docs", "PLACEHOLDERS DO MÓDULO ATIVO".**~~ — **feito em a0b91b7: subtítulo e mensagem pedidos; bloco de placeholders removido.**
   - **Fazer:** subtítulo "Escolha o tipo de equipamento e preencha os dados para gerar o relatório."; mensagem "Equipamento selecionado: Termodesinfectora."; remover o bloco de placeholders.
-- [P3] **Os dois formulários não batem** (Marca/Modelo/NS juntos num e separados no outro; "Resultado" só num).
+- ~~[P3] **Os dois formulários não batem**~~ — **feito em a0b91b7: um formulário só para os dois tipos (Tipo de equipamento em lista), com Marca, Modelo e Nº de série separados, "Tipo de ensaio" em lista e "Resultado" nos dois.** (Marca/Modelo/NS juntos num e separados no outro; "Resultado" só num).
   - **Fazer:** usar os mesmos campos e rótulos nos dois, com "Tipo de ensaio" como lista.
-- [P3] **Divisor "TERMODESINFECTORA" repete a aba.** **Fazer:** remover. (Captura: lavadora_preencher_1440.png)
+- ~~[P3] **Divisor "TERMODESINFECTORA" repete a aba.**~~ — **feito em a0b91b7: divisor removido (as abas viraram a lista "Tipo de equipamento").** **Fazer:** remover. (Captura: lavadora_preencher_1440.png)
 
 ### Cadeia de frio
-- [P1] **Identificador interno no rótulo:** "RESPONSÁVEL PELO ACEITE (TPLCADEIAFRIOREL_CLIENTE)". É uma troca de prefixo que atingiu a palavra "cliente".
+- ~~[P1] **Identificador interno no rótulo:**~~ — **feito em 0d26929.** "RESPONSÁVEL PELO ACEITE (TPLCADEIAFRIOREL_CLIENTE)". É uma troca de prefixo que atingiu a palavra "cliente".
   - **Fazer:** "Responsável pelo aceite (cliente)", e procurar outros "(tplCadeiaFrioRel_" no mesmo arquivo.
   - *Onde:* `SGO_CadeiaFrioRel_ConteudoModulo.js › label for="tplCadeiaFrioRel_certResponsavelAceite"`.
   - (Captura: cadeiafrio_secao6_1440.png)
-- [P1] **"Relatório interno" como botão principal verde e senha em `prompt`.**
+- ~~[P1] **"Relatório interno" como botão principal verde e senha em `prompt`.**~~ — **feito em 0d26929 + a0b91b7: botão discreto, à direita, só para Admin.**
   - **Fazer:** o mesmo do Autoclave. (Captura: cadeiafrio_topo_1440.png)
-- [P2] **"Limpar histórico" ao lado de "Gerar Relatório"**, sem confirmação.
+- ~~[P2] **"Limpar histórico" ao lado de "Gerar Relatório"**~~ — **feito em a0b91b7: virou o link "Limpar detalhes" dentro de "Detalhes técnicos da operação".**, sem confirmação.
   - **Fazer:** levar para dentro do bloco "Histórico da operação", como link pequeno.
-- [P2] **Nomes de documento desencontrados.** A Cadeia de frio fala em "Relatório em Planilha" e "Certificado"; o Autoclave, em "Relatório de Auditoria" e "Interpretação Técnica".
+- ~~[P2] **Nomes de documento desencontrados.**~~ — **feito em a0b91b7: "Relatório de dados (planilha)" com a ajuda pedida e "Certificado de qualificação térmica" (Cadeia de frio e Estufa); Autoclave e Lavadora com "Gerar relatório de dados (planilha)". A "Interpretação técnica" da Autoclave/Lavadora manteve o nome, porque é outro documento.** A Cadeia de frio fala em "Relatório em Planilha" e "Certificado"; o Autoclave, em "Relatório de Auditoria" e "Interpretação Técnica".
   - **Fazer:** nos 4 módulos, "Relatório de dados (planilha)" e "Certificado de qualificação térmica", com a ajuda "Gera a planilha com gráficos, estatísticas e veredito de cada estudo."
-- [P2] **Ajuda da rampa longa e informal** ("…então dá pra conferir sem depender do log").
+- ~~[P2] **Ajuda da rampa longa e informal**~~ — **feito em a0b91b7: texto pedido (Cadeia de frio e Estufa).** ("…então dá pra conferir sem depender do log").
   - **Fazer:** "Preencha só se o equipamento começou fora da faixa. Leituras antes deste horário aparecem no gráfico, mas não contam para o veredito." (igual na Estufa).
-- [P2] **Textos de Drive na seção 4.** "ID / link do arquivo no Drive", "faz upload automático para o Drive".
+- ~~[P2] **Textos de Drive na seção 4.**~~ — **feito em a0b91b7: "Arquivo do registrador" e a ajuda pedida (Cadeia de frio e Estufa).** "ID / link do arquivo no Drive", "faz upload automático para o Drive".
   - **Fazer:** "Arquivo do registrador"; "Ao escolher o arquivo do computador, ele é enviado e o campo acima é preenchido."
-- [P3] **Manual do operador.**
+- ~~[P3] **Manual do operador.**~~ — **feito em a0b91b7: "← Voltar ao formulário"; a seção 12 passou a explicar o "Relatório interno"; o "↑ Topo" subiu acima da bolha do chat; o manual cita "Detalhes técnicos" e a faixa de erro.**
   - "← Voltar ao sistema" deve ser "← Voltar ao formulário".
   - Remover a seção 12 "Modo Personalizado", que explica um recurso que não existe neste módulo.
   - Falta uma seção sobre o "Relatório interno".
@@ -293,16 +293,24 @@ Contagem: 33 itens (P1 6, P2 18, P3 9).
   - (Captura: cadeiafrio_manual_1440.png)
 
 ### Estufa, banho-maria e secadora
-- [P2] **A ajuda da secadora aparece em todos os perfis.**
+- ~~[P2] **A ajuda da secadora aparece em todos os perfis.**~~ — **feito em a0b91b7: a ajuda geral dos sensores não fala mais da secadora; a da secadora fica só no bloco dela.**
   - **Fazer:** mostrar só no perfil secadora, dentro do bloco dela na seção 3.
-- [P2] **Secadora: "informe 60 nos dois limites".**
+- ~~[P2] **Secadora: "informe 60 nos dois limites".**~~ — **feito em a0b91b7: no perfil secadora a faixa vira "Temperatura de trabalho (°C)" + "Tolerância (± °C)" (o valor vai para os dois limites).**
   - **Fazer:** no perfil secadora, trocar a faixa mínima/máxima por "Temperatura de trabalho (°C)" + "Tolerância (± °C)". (Captura: estufa_secadora_1440.png)
-- [P2] **Mensagem cita um estudo que não existe ("Autonomia"), não indica a seção e tem ponto duplo.**
+- ~~[P2] **Mensagem cita um estudo que não existe ("Autonomia"), não indica a seção e tem ponto duplo.**~~ — **feito em a0b91b7: texto pedido, sem ponto duplo (prévia e geração).**
   - **Fazer:** "Nenhum estudo selecionado. Na seção 3, escolha Sim em pelo menos um estudo (Distribuição, Abertura de porta ou Queda de energia) e gere de novo."
   - *Onde:* `SGO_EstufaBanhoRel_Main.js`, linha 205.
-- [P3] **Ordem dos perfis.** A secadora aparece em primeiro, mas o perfil padrão é "Estufa de Incubação".
+- ~~[P3] **Ordem dos perfis.**~~ — **feito em a0b91b7: Estufa de Incubação, Banho-maria, Estufa de Esterilização/Despirogenização, Secadora.** A secadora aparece em primeiro, mas o perfil padrão é "Estufa de Incubação".
   - **Fazer:** pôr o perfil padrão em primeiro e os demais em ordem alfabética.
-- [P3] **Subtítulos diferentes entre o casco e o cabeçalho interno.** Some junto com o item do título duplicado.
+- ~~[P3] **Subtítulos diferentes entre o casco e o cabeçalho interno.**~~ — **feito em a0b91b7: some com o cabeçalho interno.** Some junto com o item do título duplicado.
+
+### Fase 2 — situação e pendências deste bloco (16–17/10, commit a0b91b7)
+- **"Preencher modelo" no servidor (Autoclave e Lavadora).** As abas chamavam por UrlFetch o aplicativo antigo do Google (`SGO_CFG.MOTORES.*_TEMPLATE`). No servidor esse caminho depende da pasta `legado_modelos` e do documento-modelo importado; no modo ensaio a chamada é bloqueada, e o banco de desenvolvimento não tem os documentos-modelo. Agora a geração é feita pelo próprio SGO+ (`SGO_TemplateAutoclave.js`, motor `SGO_TPLMODELO`, também usado por `SGO_TemplateLavadora.js`):
+  1. se o documento-modelo oficial está no armazenamento do SGO+ (mesmo ID do Google, ou o ID gravado em `TPL_<AUTOCLAVE|LAVADORA|TERMO>_MODELO_ID`), copia, preenche os campos `{{...}}`, salva o documento e o PDF na pasta do cliente (subpasta por CNPJ dentro da pasta de saída do modelo);
+  2. se o modelo existe mas este ambiente não abre documentos (Google sem a permissão de Documentos), usa o aplicativo antigo como antes;
+  3. sem o modelo, gera a folha de identificação do relatório no modelo padrão do SGO+ (HTML A4 justificado + PDF, mesma pasta) e avisa o motivo e o caminho para voltar ao oficial (pedir ao administrador para importar o documento-modelo).
+  A tela mostra, antes de gerar, se o modelo oficial está disponível. Testado no servidor: Autoclave com um documento-modelo de teste (campos preenchidos, PDF de 48 KB) e Termodesinfectora sem modelo (folha padrão + PDF na pasta do cliente).
+- **Pendências fora dos arquivos deste bloco (para a frente do núcleo):** `JS_Core › renderMotorModulo_` — subtítulo do casco da Lavadora ainda diz só "termodesinfectoras" (o módulo também cobre lavadora ultrassônica).
 
 ### Nota fora do design (para o responsável pela segurança)
 - `tplAutoclaveGerarRelatorio(payload)` e o equivalente da Lavadora não chamam `exigirSessao`, ao contrário das outras funções do mesmo arquivo (`SGO_TemplateAutoclave.js`, `SGO_TemplateLavadora.js`).
@@ -613,7 +621,7 @@ Já corrigido na cópia de trabalho (falta publicar):
 - "Cópia salva no Drive".
 
 **Estrutura**
-- [P2] **Página única gigante.**
+- ~~[P2] **Página única gigante.**~~ — **feito em a0b91b7: abas "Situação e retiradas", "Veículos e condutores", "Manutenção e paradas" (só gestão), "Documentos e multas", "Abastecimentos" e "Histórico e relatório".**
   - **Fazer:** abas no estilo do Programa de conduta:
     - "Situação e retiradas" (avisos, retiradas em andamento, retirar, devolver);
     - "Veículos e condutores";
@@ -623,36 +631,36 @@ Já corrigido na cópia de trabalho (falta publicar):
     - "Histórico e relatório".
   - *Onde:* `SGO_Frota_ConteudoModulo.js › tplFrota_renderReal_`.
   - (Captura: frota_pagina_inteira_1440.png)
-- [P2] **Título duplicado** (H2 do casco e H1 "Frota" no `header-card`).
+- ~~[P2] **Título duplicado**~~ — **feito em a0b91b7: cabeçalho removido; "Manual do operador" na barra do casco.** (H2 do casco e H1 "Frota" no `header-card`).
   - **Fazer:** remover o `header-card` e levar o "Manual do Operador" para a barra do casco. (Captura: frota_topo_1440.png)
-- [P3] **CAIXA ALTA em todos os títulos de painel e rótulos.**
+- ~~[P3] **CAIXA ALTA em todos os títulos de painel e rótulos.**~~ — **feito em a0b91b7 (computador); a vistoria do celular é do JS_Core (ver pendências).**
   - **Fazer:** tirar o `text-transform` de `#tplFrotaContainer .panel h2` e dos rótulos.
 
 **Relatório**
-- [P2] **O subtítulo ainda diz "fica salvo no Drive".**
+- ~~[P2] **O subtítulo ainda diz "fica salvo no Drive".**~~ — **feito em 63123cf.**
   - **Fazer:** "Por veículo ou de toda a frota, em A4, pronto para imprimir; uma cópia fica guardada no SGO+."
-- [P2] **"Despesas" é citada no subtítulo, no relatório e no manual (seções 3 e 10), mas o painel não existe mais.**
+- ~~[P2] **"Despesas" é citada no subtítulo, no relatório e no manual (seções 3 e 10), mas o painel não existe mais.**~~ — **feito em a0b91b7: a palavra saiu do manual (seções 2, 10, 12, 13 e 14) e do histórico quando não há registro; despesas antigas continuam aparecendo no histórico. Decisão sobre trazer o painel de volta fica com o dono.**
   - **Fazer:** decidir com o dono se o painel volta. Se não voltar, tirar a palavra dos textos.
 
 **Avisos e retiradas**
-- [P2] **"Avisos de manutenção" também mostra CNH vencida.**
+- ~~[P2] **"Avisos de manutenção" também mostra CNH vencida.**~~ — **feito em 63123cf (título); o formato da linha vem do servidor e ficou como está.**
   - **Fazer:** título "Avisos de vencimento" e linha no formato "CNH de João da Silva vencida em 10/10/2026".
-- [P2] **"Retiradas em andamento" junta duas coisas:** o quadro de situação da frota e a lista de retiradas.
+- ~~[P2] **"Retiradas em andamento" junta duas coisas:**~~ — **feito em a0b91b7: painéis "Situação da frota" e "Retiradas em andamento" separados. O texto "0 disponível(is) · 0 em uso" é montado no JS_Core (frotaSituacaoHtml_) — pendência registrada.** o quadro de situação da frota e a lista de retiradas.
   - **Fazer:** separar em "Situação da frota" e "Retiradas em andamento", e escrever "1 disponível · 0 em uso".
-- [P2] **Situações cruas e "Status".** "DISPONIVEL", "EM USO", "ABERTA/PAGA/RECORRIDA".
+- ~~[P2] **Situações cruas e "Status".**~~ — **feito em 63123cf + a0b91b7: rótulos legíveis e colunas "Situação"; "em andamento" em caixa normal no histórico.** "DISPONIVEL", "EM USO", "ABERTA/PAGA/RECORRIDA".
   - **Fazer:** "Disponível", "Em uso", "Aberta", "Paga"…, e coluna "Situação".
   - *Onde:* `tplFrota_renderVeiculosTabela_`, `tplFrota_renderMultasTabela_`, `tplFrota_buscarHistorico`, `renderMobileFrotaOperacional_`.
 
 **Veículos, retirada e histórico**
-- [P3] **Condutor aparece como "JOÃO DA SILVA (ATIVO)".**
+- ~~[P3] **Condutor aparece como "JOÃO DA SILVA (ATIVO)".**~~ — **conferido em a0b91b7: a tela atual não mostra mais "(ATIVO)".**
   - **Fazer:** mostrar o nome sem forçar maiúsculas e sinalizar só quando estiver inativo.
-- [P3] **Seletor de arquivo nativo em inglês** em 6 campos.
+- ~~[P3] **Seletor de arquivo nativo em inglês**~~ — **feito pela frente do núcleo (JS_Core › SGO_melhorarSeletorArquivo_, ainda não publicado): todo campo de arquivo ganha "Escolher arquivo" em português.** em 6 campos.
   - **Fazer:** botão "Escolher fotos" ou "Escolher arquivo".
-- [P3] **Histórico do veículo: select sem rótulo e botão "Buscar" com meia largura.**
+- ~~[P3] **Histórico do veículo: select sem rótulo e botão "Buscar" com meia largura.**~~ — **feito em a0b91b7: rótulo "Veículo" e o histórico carrega ao escolher (sem botão "Buscar").**
   - **Fazer:** rótulo "Veículo" e carregar o histórico ao escolher.
 
 **Manual e celular**
-- [P2] **A seção 3 do manual diz que gestor vê a tela completa no celular.** No código, todos os perfis veem só retirar e devolver.
+- ~~[P2] **A seção 3 do manual diz que gestor vê a tela completa no celular.**~~ — **feito em 63123cf.** No código, todos os perfis veem só retirar e devolver.
   - **Fazer:** corrigir o texto. *Onde:* `tplFrota_manualHtml_ › #tplFrota_ms3`.
 - [P3] **Os 31 itens da vistoria no celular estão em CAIXA ALTA.** **Fazer:** tirar o uppercase. (Captura: frota_celular_retirar_390.png)
 
@@ -661,63 +669,69 @@ No uso diário a tela tem Conexão, Sincronização, Pendências e Relatório. A
 
 Já corrigido na cópia de trabalho: a mensagem de "Testar Conexão" mandava para "Propriedades do script" e agora aponta para "Chaves e senhas".
 
-- [P2] **Ferramentas de implantação na mesma tela do uso diário.** "Sincronizar todos (lote)", "Importação completa", "Auditoria do cadastro" e "Enviar cadastro pendente" ficam a um clique de qualquer gestor.
+- ~~[P2] **Ferramentas de implantação na mesma tela do uso diário.**~~ — **feito em a0b91b7: só o Administrador vê "Ferramentas de implantação"; o servidor também recusa essas funções para os outros perfis, com mensagem que diz a quem pedir.** "Sincronizar todos (lote)", "Importação completa", "Auditoria do cadastro" e "Enviar cadastro pendente" ficam a um clique de qualquer gestor.
   - **Fazer:** deixar só para ADMIN, em Administração. *Onde:* `SGO_Auvo_ConteudoModulo.js › #tplAuvo_avancado`. (Captura: auvo_painel_1440.png)
-- [P2] **"Conexão" mostra nomes de variáveis** (AUVO_API_KEY/AUVO_API_TOKEN).
+- ~~[P2] **"Conexão" mostra nomes de variáveis**~~ — **feito em a0b91b7: "Confere se a conta do Auvo está conectada ao SGO+…".** (AUVO_API_KEY/AUVO_API_TOKEN).
   - **Fazer:** "Confere se a conta do Auvo está conectada ao SGO+.", ou levar o teste para Chaves e senhas.
-- [P2] **Título duplicado** (casco e H1 interno). **Fazer:** remover o H1. *Onde:* `tplAuvo_paintPainel_`.
-- [P2] **Jargão e notas de desenvolvedor.** "testado e confirmado", "pro Portal", "dashboard principal", "Rodar agora (manual)", "(Portal → Auvo)".
+- ~~[P2] **Título duplicado**~~ — **feito em a0b91b7: cabeçalho removido; manual na barra do casco.** (casco e H1 interno). **Fazer:** remover o H1. *Onde:* `tplAuvo_paintPainel_`.
+- ~~[P2] **Jargão e notas de desenvolvedor.**~~ — **feito em 63123cf + a0b91b7: "SGO+" no lugar de "Portal" no painel e no manual.** "testado e confirmado", "pro Portal", "dashboard principal", "Rodar agora (manual)", "(Portal → Auvo)".
   - **Fazer:** "SGO+" em vez de "Portal", "Início" em vez de "dashboard", "Sincronizar agora", e o texto "O Auvo não permite encerrar a O.S. pelo SGO+; esta lista mostra o que falta e o link para encerrar no Auvo."
-- [P2] **Erro cru na tela:** "Aba não encontrada: AUVO_TAREFAS".
+- ~~[P2] **Erro cru na tela:**~~ — **feito em 63123cf.** "Aba não encontrada: AUVO_TAREFAS".
   - **Fazer:** estado vazio "Ainda não há atendimentos sincronizados do Auvo. Ligue a sincronização automática acima ou clique em Sincronizar agora."
-- [P3] **Escolha de colaboradores por Ctrl+clique num select múltiplo.** **Fazer:** caixas de marcação com busca.
-- [P3] **Colunas "Status".** **Fazer:** "Situação".
-- [P2] **Sincronização em lote grava no Auvo sem confirmação.**
+- ~~[P3] **Escolha de colaboradores por Ctrl+clique num select múltiplo.**~~ — **feito em a0b91b7: caixas de marcação com busca.** **Fazer:** caixas de marcação com busca.
+- ~~[P3] **Colunas "Status".**~~ — **feito em a0b91b7: colunas "Situação" e situações legíveis ("Sincronizado", "Com erro", "Pendente").** **Fazer:** "Situação".
+- ~~[P2] **Sincronização em lote grava no Auvo sem confirmação.**~~ — **feito em 63123cf.**
   - **Fazer:** perguntar "Enviar N clientes ativos para o Auvo? Os cadastros que já existem lá serão atualizados."
   - *Onde:* `tplAuvo_sincronizarTodosClientes`, `tplAuvo_sincronizarTodosTecnicos`.
-- [P2] **Importação pendurada deixa o operador no limbo.** Mostra "Em andamento — fase CLIENTES… gatilho automático" sem credenciais e sem data.
+- ~~[P2] **Importação pendurada deixa o operador no limbo.**~~ — **feito em a0b91b7: o servidor guarda quando o lote rodou e o motivo da parada; a tela diz "Importação parada desde dd/mm/aaaa hh:mm na fase Clientes e unidades. Motivo: … Para continuar, clique em Retomar…", ou "Nenhuma importação completa foi feita ainda" quando nunca rodou.** Mostra "Em andamento — fase CLIENTES… gatilho automático" sem credenciais e sem data.
   - **Fazer:** "Parada desde dd/mm/aaaa hh:mm na fase Clientes. Motivo: … Para continuar, clique em Retomar." *Onde:* `tplAuvo_renderStatusReverso_`.
-- [P2] **Manual com nomes internos.** "aba AUVO_TAREFAS", "futuro módulo de indicadores", "gatilho", "runs", "planilha".
+- ~~[P2] **Manual com nomes internos.**~~ — **feito em a0b91b7: trechos reescritos (5b, 5c, 6 e a nota de origem).** "aba AUVO_TAREFAS", "futuro módulo de indicadores", "gatilho", "runs", "planilha".
   - **Fazer:** reescrever esses trechos. *Onde:* `tplAuvo_manualHtml_` (5b, 5c, 6).
 
 ### Painel de qualidade
-- [P1] **Diz "0 itens que exigem ação / OK" com CNH vencida na Frota.** `tplQualidade_montarFrota_` retorna cedo sem movimentação, e documentos, CNH e multas ficam fora das pendências.
+- ~~[P1] **Diz "0 itens que exigem ação / OK" com CNH vencida na Frota.**~~ — **feito em 63123cf.** `tplQualidade_montarFrota_` retorna cedo sem movimentação, e documentos, CNH e multas ficam fora das pendências.
   - **Fazer:** mostrar sempre o bloco "Documentos, CNH e multas" e contar esses itens nas pendências.
   - (Captura: qualidade_painel_1440.png)
-- [P2] **"OK — integrações respondendo" com o Auvo sem credenciais.**
+- ~~[P2] **"OK — integrações respondendo" com o Auvo sem credenciais.**~~ — **feito em 63123cf.**
   - **Fazer:** basear no estado real e escrever "Auvo: conexão não configurada — peça ao administrador (Chaves e senhas)".
-- [P3] **Cartões em 1/3 da largura e dois títulos "Resumo".** **Fazer:** grade em largura total, com títulos "Atendimentos do Auvo" e "Uso da frota".
-- [P3] **Select de período ocupando 70% da barra** e botões quebrando linha.
-- [P3] **Plurais com parênteses ("integração(ões)"), CAIXA ALTA e "Erro: …" cru.** **Fazer:** plural de acordo com o número e mensagem que diga o que fazer.
-- [P2] **"Ocorrência" tem três sentidos no sistema** (aqui, no Auvo e no Programa de conduta).
+- ~~[P3] **Cartões em 1/3 da largura e dois títulos "Resumo".**~~ — **feito em a0b91b7: grade em largura total; títulos "Atendimentos do Auvo" e "Uso da frota".** **Fazer:** grade em largura total, com títulos "Atendimentos do Auvo" e "Uso da frota".
+- ~~[P3] **Select de período ocupando 70% da barra**~~ — **feito em a0b91b7: select com largura do conteúdo e barra que quebra linha sem espremer.** e botões quebrando linha.
+- ~~[P3] **Plurais com parênteses ("integração(ões)"), CAIXA ALTA e "Erro: …" cru.**~~ — **feito em a0b91b7: plural pelo número nos totais e cartões principais (as linhas de detalhe dos rankings ainda usam "(s)"); sem caixa alta; erros dizem o que fazer.** **Fazer:** plural de acordo com o número e mensagem que diga o que fazer.
+- ~~[P2] **"Ocorrência" tem três sentidos no sistema**~~ — **feito em a0b91b7: "Cobranças e elogios de campo" (botão, histórico e modal).** (aqui, no Auvo e no Programa de conduta).
   - **Fazer:** chamar aqui de "Cobranças e elogios de campo" e alinhar o vocabulário com a Conduta.
-- [P3] **Estado vazio sem orientação.**
+- ~~[P3] **Estado vazio sem orientação.**~~ — **feito em a0b91b7: cada bloco vazio diz de onde vêm os dados e o que fazer.**
 
 ### Programa de conduta
-- [P1] **"Aplicar agora: fechamentos pendentes e ajustes do programa" fecha competências sem confirmação.**
+- ~~[P1] **"Aplicar agora: fechamentos pendentes e ajustes do programa" fecha competências sem confirmação.**~~ — **feito em 63123cf (servidor exige confirmação) + JS_Core pela frente do núcleo (pede confirmação com a lista de meses; não publicado).**
   - O fechamento congela o mês, e o resultado só aparece num `alert()`.
   - O botão também aparece no Início do ADMIN (ver 1.4).
   - **Fazer:** perguntar antes: "Fechar setembro/2026 e aplicar N prazos vencidos? O fechamento congela o resultado do mês e não pode ser desfeito por aqui." Mostrar o resultado no próprio cartão.
   - *Onde:* `JS_Core.html › Conduta_aplicarRotinaAgora_`.
   - (Captura: conduta_farol_1440.png)
-- [P2] **Jargão da fórmula.** "ICO", "Demérito (D)", "Divisor (n)", "Modo sombra ativo".
+- ~~[P2] **Jargão da fórmula.**~~ — **feito em a0b91b7: "Índice de conduta", "Pontos de demérito", "Pessoas no cálculo" e o texto do período de teste.** "ICO", "Demérito (D)", "Divisor (n)", "Modo sombra ativo".
   - **Fazer:** "Índice de conduta", "Pontos de demérito", "Pessoas no cálculo", e "Período de teste: o índice é calculado, mas o bônus ainda não é pago."
 - [P3] **Velocímetro com o número sobre o ponteiro**, ilegível no celular. **Fazer:** número abaixo do arco. *Onde:* `Conduta_montarFarolCardHtml_`.
-- [P2] **"Como usar esta tela" ocupa um cartão inteiro em cada aba** e sempre abre o manual do colaborador, inclusive nas abas da gestão.
+- ~~[P2] **"Como usar esta tela" ocupa um cartão inteiro em cada aba**~~ — **feito em a0b91b7: link discreto à direita; abre o manual do gestor para a gestão e o do colaborador para os demais.** e sempre abre o manual do colaborador, inclusive nas abas da gestão.
   - **Fazer:** link discreto e o manual certo para cada papel. (Captura: conduta_ocorrencias_1440.png)
-- [P2] **Botões principais em quatro cores sem regra.**
+- ~~[P2] **Botões principais em quatro cores sem regra.**~~ — **feito em a0b91b7: verde para a ação principal, contorno para as secundárias, vermelho só para "Rejeitar" e "Manter (firme)".**
   - **Fazer:** verde para a ação principal, contorno para as secundárias, vermelho só para ações destrutivas.
-- [P2] **Erros crus** ("Erro: …", "Falha ao carregar.").
+- ~~[P2] **Erros crus**~~ — **feito em a0b91b7: erro aparece dentro da aba (ou do modal aberto) dizendo o que fazer.** ("Erro: …", "Falha ao carregar.").
   - **Fazer:** mensagem dentro da aba dizendo o que fazer. *Onde:* `tplConduta_chamarApi_`.
-- [P2] **"Tipo" é um select com cerca de 90 itens**, sem grupos.
+- ~~[P2] **"Tipo" é um select com cerca de 90 itens**~~ — **feito em a0b91b7: a lista já tinha grupos; ganhou busca por código ou descrição.**, sem grupos.
   - **Fazer:** `optgroup` por área e campo de busca.
-- [P3] **Situações cruas e coluna "Status".** **Fazer:** "Registrada", "Homologada"…, e coluna "Situação".
-- [P3] **Estados vazios sem o próximo passo.**
-- [P3] **Aba "Eventos Positivos"** destoa dos botões "Reconhecer…". **Fazer:** "Reconhecimentos".
-- [P3] **Relatórios semanais: campo de data sem rótulo.** **Fazer:** rótulo "Semana terminando em".
+- ~~[P3] **Situações cruas e coluna "Status".**~~ — **feito em a0b91b7: "Registrada", "Homologada", "Em recurso"…; coluna "Situação".** **Fazer:** "Registrada", "Homologada"…, e coluna "Situação".
+- ~~[P3] **Estados vazios sem o próximo passo.**~~ — **feito em a0b91b7: cada lista vazia diz o próximo passo.**
+- ~~[P3] **Aba "Eventos Positivos"**~~ — **feito em a0b91b7.** destoa dos botões "Reconhecer…". **Fazer:** "Reconhecimentos".
+- ~~[P3] **Relatórios semanais: campo de data sem rótulo.**~~ — **feito em a0b91b7: "Semana terminando em" e "Competência".** **Fazer:** rótulo "Semana terminando em".
 - [P2] **No celular não há como abrir os manuais.** **Fazer:** botão "Manual do colaborador" em `renderMobileConduta_`.
 - [P3] **Título "Minhas ocorrências recentes" desalinhado no celular.** (Captura: conduta_celular_390.png)
 
+
+### Fase 2 — pendências deste bloco que dependem do JS_Core (frente do núcleo)
+- `frotaSituacaoHtml_`: "0 disponível(is) · 0 em uso" → "1 disponível · 0 em uso" (plural pelo número).
+- `renderMobileFrotaOperacional_`: títulos em caixa alta ("RETIRADAS EM ANDAMENTO") e os 31 itens da vistoria em caixa alta (item [P3] acima).
+- `Conduta_montarFarolCardHtml_`: número do velocímetro abaixo do arco (item [P3] acima).
+- `renderMobileConduta_`: botão "Manual do colaborador" no celular e alinhamento de "Minhas ocorrências recentes" (itens [P2] e [P3] acima).
 
 ## 6. Principal, cadastros e administração
 
