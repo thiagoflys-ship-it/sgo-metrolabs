@@ -247,31 +247,31 @@ function SGO_Ajuda_apiManual(sessionId, modulo) {
       tituloCurto: 'Manual do operador',
       rotuloNumero: 'Módulo',
       numero: titulo,
-      revisao: hoje
+      revisao: hoje,
+      // Padrão A4 de 18/10/2026: capa e sumário automático com os números de página.
+      capa: { tipo: 'Manual do operador', linhas: [['Módulo', titulo], ['Telas', String(telas.length)], ['Edição', hoje]].concat(eu.perfil ? [['Perfil', SGO_AJUDA_PERFIS[eu.perfil] || eu.perfil]] : []) },
+      sumario: true
     }));
     h.push('<style>' +
       'ol.passos{margin:0 0 3mm 5mm;padding:0}ol.passos li{margin:0 0 1.2mm;text-align:left}' +
       '.tarefa{break-inside:avoid;page-break-inside:avoid}' +
       '.pergunta{break-inside:avoid;page-break-inside:avoid;margin:0 0 2.6mm}.pergunta .p{font-weight:700;margin:0 0 .8mm;text-align:left}' +
       'table.t.duas td:first-child,table.t.duas th:first-child{width:36%}' +
-      '.sumario ul{list-style:none;margin:0 0 4mm;padding:0}.sumario ul ul{margin:.6mm 0 1.6mm 6mm}.sumario li{margin:0 0 .8mm;text-align:left}' +
-      '.sum1>li>a{font-weight:700}.sumario a{color:#0b3d6e;text-decoration:none}' +
       '.uso{background:#f5f7fa;border-left:2.5pt solid #9fb3c8;padding:2.6mm 3.6mm;margin:1mm 0 4mm}' +
       '</style>');
     h.push('<div class="uso"><p>Este manual reúne a ajuda "Como usar esta tela" do módulo. A mesma ajuda aparece no SGO+ pelo botão "Como usar esta tela", no cabeçalho da tela (computador) ou na barra do topo (celular). Os nomes entre aspas são os botões exatamente como aparecem na tela.</p></div>');
-    var corpo = [], itens = [];
+    var corpo = [];
     telas.forEach(function (t, i) {
       var secs = [];
       corpo.push('<section' + (i > 0 ? ' class="quebra"' : '') + '>' + SGO_Ajuda_htmlSecoesTela_(t, i + 1, true, secs) + '</section>');
-      itens.push('<li><a href="#' + SGO_Ajuda_ancora_(t) + '">' + (i + 1) + '. ' + esc(t.titulo) + '</a>' +
-        (secs.length ? '<ul>' + secs.map(function (s) { return '<li><a href="#' + s.id + '">' + esc(s.texto) + '</a></li>'; }).join('') + '</ul>' : '') + '</li>');
     });
-    h.push('<section class="sumario"><h2>Sumário</h2><ul class="sum1">' + itens.join('') + '</ul></section>');
     h.push(corpo.join(''));
     h.push(SGO_DocA4_fimDocumento_());
     // Cabeçalho: "Módulo <nome> · Edição de dd/mm/aaaa" (o padrão escreve "Revisão"); título da aba sem "nº".
     var html = h.join('').split('Revisão ' + hoje).join('Edição de ' + hoje)
       .replace(/<title>[^<]*<\/title>/, '<title>' + esc('Manual do operador: ' + titulo) + '</title>');
+    // Números de página do sumário lidos do PDF (duas passagens); sem conversor, o sumário sai sem eles.
+    if (typeof SGO_DocA4_paginar_ === 'function') html = SGO_DocA4_paginar_(html, { nome: 'Manual do operador - ' + titulo }).html;
     return { ok: true, html: html, titulo: 'Manual do operador: ' + titulo };
   } catch (e) {
     return { ok: false, message: 'Não foi possível montar o manual: ' + (e && e.message ? e.message : e) + '. Tente de novo em instantes.' };

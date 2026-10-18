@@ -130,6 +130,7 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
     revisao: id.revisao || '0',
     empresa: empresa,
     ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm]],
+    sumario: true,
     resultado: { status: st, rotulo: 'Resultado do ensaio (pior sensor)', texto: ctx.piorSensorF0 ? ('F0 mínimo de ' + SGO_DocA4_val_(ctx.piorSensorF0.valor, 2, 'min') + ' no sensor ' + ctx.piorSensorF0.sensor + '; mínimo exigido ' + SGO_DocA4_val_(ctx.f0MinNormativo, 2, 'min') + '.') : '' }
   }));
 

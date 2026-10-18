@@ -26,7 +26,8 @@
   empresa: id.empresaExecutante,
   ficha: ficha,
   simulado: ctx.simulado,
-  resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado }
+  resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado },
+  sumario: true
 }) ?>
 
 <h2>1. Identificação</h2>
@@ -61,9 +62,9 @@
 <p class="formula">F<sub>0</sub> = Σ 10<sup>(T − T<sub>ref</sub>) / z</sup> · Δt</p>
 <p>com T<sub>ref</sub> = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).tBase, 1, '°C') ?>, z = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).z, 0, '°C') ?> e Δt igual ao intervalo entre leituras. O ciclo é avaliado pelo pior sensor (menor F<sub>0</sub>), que representa o ponto de mais difícil penetração do calor. A aprovação térmica não demonstra, isoladamente, a remoção completa do ar nem a ausência de gases não condensáveis, que dependem de ensaios específicos (por exemplo, o teste de Bowie-Dick).</p>
 <? } ?>
-<h3>Critérios de aceitação</h3>
+<h3>3.1 Critérios de aceitação</h3>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.referencia]; })) ?>
-<h3>Referências normativas</h3>
+<h3>3.2 Referências normativas</h3>
 <?!= SGO_DocA4_lista_(ctx.normas) ?>
 
 <h2>4. Resultados</h2>
@@ -119,8 +120,9 @@
 <? } ?>
 
 <h3>4.<?= leak ? (graficos && graficos.length ? '3' : '2') : (graficos && graficos.length ? '4' : '3') ?> Verificação dos critérios de aceitação</h3>
-<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
-  (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
+<p class="nota">O requisito de cada critério está na seção 3.1.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
+  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
 
 <h2>5. Análise técnica</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
@@ -130,16 +132,16 @@
   var ncs = (estudo.motivosReprovacao || []);
   var obs = [].concat(estudo.alertasAnalise || [], estudo.observacoesAnalise || [], (ctx.registradores && ctx.registradores.observacoes) || []);
 ?>
-<h3>Não conformidades</h3>
+<h3>6.1 Não conformidades</h3>
 <? if (ncs.length) { ?><?!= SGO_DocA4_lista_(ncs) ?><? } else { ?><p>Nenhuma não conformidade foi registrada neste ensaio.</p><? } ?>
-<h3>Observações</h3>
+<h3>6.2 Observações</h3>
 <? if (obs.length) { ?><?!= SGO_DocA4_lista_(obs) ?><? } else { ?><p>Sem observações adicionais.</p><? } ?>
 
 <h2>7. Conclusão</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.conclusaoGeral) ?></div>
-<h3>Em linguagem simples</h3>
+<h3>7.1 Em linguagem simples</h3>
 <div class="leigo"><?!= SGO_DocA4_paragrafos_(textos.conclusaoLeigo) ?></div>
-<?!= SGO_DocA4_quadroResultado_({ status: st, rotulo: 'Parecer deste ensaio', valor: (st === 'REPROVADO' ? 'Reprovado — o ensaio não atende aos critérios de aceitação' : (st === 'APROVADO' ? 'Aprovado — o ensaio atende aos critérios de aceitação' : 'Informativo — sem critério de aprovação aplicável')), texto: ctx.resumoResultado }) ?>
+<?!= SGO_DocA4_linhaParecer_(st, 'Parecer deste ensaio', 'Aprovado — o ensaio atende aos critérios de aceitação', 'Reprovado — o ensaio não atende aos critérios de aceitação', 'Informativo — sem critério de aprovação aplicável') ?>
 
 <div class="manter">
 <h2>8. Responsabilidade técnica</h2>

@@ -1,5 +1,12 @@
 # Manual do Operador — Módulo Cadeia de Frio
 
+## O que mudou em 18/10/2026
+
+- O certificado em A4 ganhou um sumário na primeira página, com o número da página de cada seção. As seções e subseções são numeradas (por exemplo, "5.1 Critérios de aceitação" e "7.2 Observações").
+- O quadro colorido com o parecer aparece só no início do documento. A conclusão termina com o parecer em uma linha.
+- A tabela "Verificação dos critérios de aceitação" mostra o resultado obtido e a situação de cada estudo. O requisito fica na seção 5.1.
+- A revisão do documento sai com dois dígitos ("Revisão 00"). A tela e os botões não mudaram.
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

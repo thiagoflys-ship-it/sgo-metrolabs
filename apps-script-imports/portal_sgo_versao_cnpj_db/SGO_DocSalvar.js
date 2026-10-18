@@ -59,7 +59,10 @@ function SGO_DocSalvar_salvarHtml_(pasta, nomeBase, html, opcoes) {
 /**
  * Grava nomeBase.html e nomeBase.pdf na pasta.
  * opcoes: { compartilhar: bool, pdfBlob: Blob (reaproveita PDF já gerado) }
- * Devolve { htmlId, htmlUrl, pdfId, pdfUrl, pdfNome, htmlNome }. Lança erro.
+ * Se o HTML tiver o sumário automático da SGO_DocA4 (data-sgo-sumario) e não
+ * vier pdfBlob, a paginação é feita aqui (duas passagens) e o HTML gravado já
+ * traz os números de página; ele volta em .html para a tela mostrar o mesmo.
+ * Devolve { htmlId, htmlUrl, pdfId, pdfUrl, pdfNome, htmlNome, html }. Lança erro.
  */
 function SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes) {
   opcoes = opcoes || {};
@@ -67,6 +70,12 @@ function SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes) {
   var base = SGO_DocSalvar_sanitizarNome_(SGO_DocSalvar_tirarExtensao_(nomeBase));
   var conteudo = SGO_DocSalvar_garantirCharset_(html);
   var pdfBlob = opcoes.pdfBlob;
+  // Documento com sumário automático (padrão A4 de 18/10/2026): números de página lidos do PDF.
+  if (!pdfBlob && /data-sgo-sumario/.test(conteudo) && typeof SGO_DocA4_paginar_ === 'function') {
+    var pag = SGO_DocA4_paginar_(conteudo, { nome: base });
+    conteudo = SGO_DocSalvar_garantirCharset_(pag.html);
+    pdfBlob = pag.pdfBlob;
+  }
   if (!pdfBlob) {
     var origem = Utilities.newBlob('', MimeType.HTML, base + '.html');
     origem.setDataFromString(conteudo, 'UTF-8');
@@ -83,7 +92,8 @@ function SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes) {
   var h = SGO_DocSalvar_salvarHtml_(pasta, base, conteudo, opcoes);
   return {
     htmlId: h.htmlId, htmlUrl: h.htmlUrl, htmlNome: h.htmlNome,
-    pdfId: pdf.getId(), pdfUrl: pdf.getUrl(), pdfNome: pdf.getName()
+    pdfId: pdf.getId(), pdfUrl: pdf.getUrl(), pdfNome: pdf.getName(),
+    html: conteudo
   };
 }
 
@@ -178,11 +188,11 @@ function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
   try {
     var raiz = typeof obterRaiz === 'function' ? obterRaiz() : obterRaiz;
     var pasta = SGO_DocSalvar_pastaClienteEm_(raiz, dados.cnpj, dados.cliente);
-    var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, dados.nomeBase || 'Certificado', html, {});
+    var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, dados.nomeBase || 'Certificado', html, dados.pdfBlob ? { pdfBlob: dados.pdfBlob } : {});
     return {
       salvo: true,
       htmlId: r.htmlId, htmlUrl: r.htmlUrl, pdfId: r.pdfId, pdfUrl: r.pdfUrl,
-      pastaUrl: pasta.getUrl(), avisoSalvar: ''
+      pastaUrl: pasta.getUrl(), avisoSalvar: '', html: r.html
     };
   } catch (e) {
     return {
@@ -203,6 +213,14 @@ function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
 function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, tz) {
   payload = payload || {};
   var resultado;
+  // Sumário com os números de página (padrão A4 de 18/10/2026). O mesmo HTML vai
+  // para a tela e para a pasta; o PDF da 2ª passagem é o que fica gravado.
+  var pdfPaginado = null;
+  if (/data-sgo-sumario/.test(String(html || '')) && typeof SGO_DocA4_paginar_ === 'function') {
+    var pag = SGO_DocA4_paginar_(html, { nome: rotulo || 'Documento' });
+    html = pag.html;
+    pdfPaginado = pag.pdfBlob;
+  }
   if (payload.modoRelatorioSimulado) {
     resultado = {
       salvo: false, htmlId: '', htmlUrl: '', pdfId: '', pdfUrl: '', pastaUrl: '',
@@ -215,7 +233,7 @@ function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, t
     var numero = String(payload.certNumero || '').trim();
     var nomeBase = [rotulo || 'Certificado', numero, tag, carimbo].filter(function (p) { return !!p; }).join(' - ');
     resultado = SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, {
-      cnpj: payload.cnpj, cliente: payload.cliente, nomeBase: nomeBase
+      cnpj: payload.cnpj, cliente: payload.cliente, nomeBase: nomeBase, pdfBlob: pdfPaginado
     }, html);
   }
   return {

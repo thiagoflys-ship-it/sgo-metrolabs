@@ -140,6 +140,12 @@ Novas (18/10/2026), todas opcionais:
 | `SGO_DocA4_legendaTabela_(n, texto)` | "Tabela N — texto" |
 | `SGO_DocA4_paginar_(html)` | acrescenta ids aos títulos, monta o sumário com as páginas lidas do PDF e devolve `{ html, pdfBlob, paginas, sumarioComPaginas }`. Nunca lança |
 | `SGO_DocA4_paginasDoPdf_(bytes)` | lê no PDF a página de cada destino interno (`{ 'sec-1': 2, ... }`) |
+| `SGO_DocA4_linhaParecer_(status, rótulo, txtAprovado, txtReprovado, txtInfo)` | parecer final em uma linha (o quadro fica só na abertura) |
+| `SGO_DocA4_revisao_(r)` | revisão com dois dígitos ("0" vira "00"); usada no cabeçalho, na tela e na capa |
+| `SGO_DocA4_tabelaIdent_(pares, classe, { porLinha: 3 })` | 3 pares rótulo/valor por linha, para paisagem (o padrão continua 2) |
+| assinatura com `papel` | "Elaborado por", "Revisado por", "Aprovado por" acima da assinatura; as demais reservam a linha para alinhar |
+
+Logo do cabeçalho corrido: na `SGO_DocA4` ele é um SVG em `data:` com o JPEG embutido e saiu em todas as páginas nos testes (Chromium 156). Moldura que usar imagem por URL no `@page` precisa pré-carregar a imagem no corpo, como a frente B fez.
 
 Documento de outra moldura pode usar só o sumário: basta ter `<nav class="sumario" data-sgo-sumario></nav>` no HTML e títulos h2/h3 numerados, e chamar `SGO_DocA4_paginar_(html)` antes de salvar.
 

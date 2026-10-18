@@ -20,7 +20,8 @@
   empresa: id.empresaExecutante,
   ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm], ['Tipo de ensaio', LavRel_lvTextoTipoEnsaio_(id.tipoEnsaio)], ['Ciclo nº', id.cicloNumero || '—']],
   simulado: ctx.simulado,
-  resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado }
+  resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado },
+  sumario: true
 }) ?>
 
 <h2>1. Identificação</h2>
@@ -55,9 +56,9 @@
 <p class="formula">A<sub>0</sub> = Σ 10<sup>(T − 80) / z</sup> · Δt &nbsp;&nbsp; (z = <?= SGO_DocA4_val_(f.z, 0, '°C') ?>, Δt em segundos)</p>
 <p>O ciclo é avaliado pelo pior sensor (menor A<sub>0</sub>). O valor mínimo exigido depende da classificação do artigo processado: 600 s para artigos semicríticos ou não críticos e 3.000 s para artigos críticos ou sujeitos a microrganismos termorresistentes. Neste ensaio o artigo foi classificado como <b><?= LavRel_lvTextoClasseArtigo_(f.classeArtigo).toLowerCase() ?></b>, e o critério aplicado é A<sub>0</sub> ≥ <?= SGO_DocA4_val_(f.limiteAprovacaoFinal, 0, 's') ?>. A soma considera apenas a fase principal, o que torna o resultado conservador em relação a uma soma que inclua a subida e a descida de temperatura.</p>
 <? } ?>
-<h3>Critérios de aceitação</h3>
+<h3>3.1 Critérios de aceitação</h3>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.referencia]; })) ?>
-<h3>Referências normativas</h3>
+<h3>3.2 Referências normativas</h3>
 <?!= SGO_DocA4_lista_(ctx.normas) ?>
 
 <h2>4. Resultados</h2>
@@ -87,8 +88,9 @@
 <? } ?>
 
 <h3>4.<?= us ? (temGraf ? '3' : '2') : (temGraf ? '4' : '3') ?> Verificação dos critérios de aceitação</h3>
-<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
-  (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
+<p class="nota">O requisito de cada critério está na seção 3.1.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
+  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
 
 <h2>5. Análise técnica</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
@@ -98,16 +100,16 @@
   var ncs = (estudo.motivosReprovacao || []);
   var obs = [].concat(estudo.alertasAnalise || [], estudo.observacoesAnalise || [], (ctx.registradores && ctx.registradores.observacoes) || []);
 ?>
-<h3>Não conformidades</h3>
+<h3>6.1 Não conformidades</h3>
 <? if (ncs.length) { ?><?!= SGO_DocA4_lista_(ncs) ?><? } else { ?><p>Nenhuma não conformidade foi registrada neste ensaio.</p><? } ?>
-<h3>Observações</h3>
+<h3>6.2 Observações</h3>
 <? if (obs.length) { ?><?!= SGO_DocA4_lista_(obs) ?><? } else { ?><p>Sem observações adicionais.</p><? } ?>
 
 <h2>7. Conclusão</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.conclusaoGeral) ?></div>
-<h3>Em linguagem simples</h3>
+<h3>7.1 Em linguagem simples</h3>
 <div class="leigo"><?!= SGO_DocA4_paragrafos_(textos.conclusaoLeigo) ?></div>
-<?!= SGO_DocA4_quadroResultado_({ status: st, rotulo: 'Parecer deste ensaio', valor: (st === 'REPROVADO' ? 'Reprovado — o ensaio não atende aos critérios de aceitação' : (st === 'APROVADO' ? 'Aprovado — o ensaio atende aos critérios de aceitação' : 'Informativo — sem critério de aprovação aplicável')), texto: ctx.resumoResultado }) ?>
+<?!= SGO_DocA4_linhaParecer_(st, 'Parecer deste ensaio', 'Aprovado — o ensaio atende aos critérios de aceitação', 'Reprovado — o ensaio não atende aos critérios de aceitação', 'Informativo — sem critério de aprovação aplicável') ?>
 
 <div class="manter">
 <h2>8. Responsabilidade técnica</h2>

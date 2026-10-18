@@ -152,12 +152,14 @@ function SGO_DocA4_estilos_(doc) {
   var empresa = doc.empresa || {};
   // Duas linhas no canto superior direito: "\A" é a quebra de linha do CSS (com white-space:pre).
   var topoDireita = SGO_DocA4_txtCss_(doc.tituloCurto || doc.titulo || 'Documento') + ' "\\A " ' +
-    SGO_DocA4_txtCss_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + (doc.revisao || '0'));
+    SGO_DocA4_txtCss_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao));
   var rodapeEsq = (empresa.nome || 'Metrolab Soluções em Engenharia Clínica LTDA') + (empresa.cnpj ? ' · CNPJ ' + empresa.cnpj : '');
   var linhaTopo = 'border-bottom:.6pt solid #9aa5b1;';
   var linhaRodape = 'border-top:.6pt solid #9aa5b1;';
+  // Orientação do documento (18/10/2026): retrato é o padrão; paisagem só quando o documento pede.
+  var paisagem = SGO_DocA4_ehPaisagem_(doc);
   return '' +
-    '@page{size:A4;margin:25mm 15mm 18mm 18mm;' +
+    '@page{size:A4 ' + (paisagem ? 'landscape' : 'portrait') + ';margin:' + (paisagem ? SGO_DocA4_MARGEM_PAISAGEM : SGO_DocA4_MARGEM_RETRATO) + ';' +
       '@top-left{content:url("' + SGO_DocA4_logoCabecalhoUri_() + '");vertical-align:bottom;padding-bottom:2.2mm;' + linhaTopo + '}' +
       '@top-center{content:"";' + linhaTopo + '}' +
       '@top-right{content:' + topoDireita + ';white-space:pre;text-align:right;vertical-align:bottom;padding-bottom:2.2mm;font:7.8pt/1.35 Arial,Helvetica,sans-serif;color:#3e4c59;' + linhaTopo + '}' +
@@ -225,7 +227,290 @@ function SGO_DocA4_estilos_(doc) {
     '.foto .q{height:60mm;display:flex;align-items:center;justify-content:center;background:#fafbfc}' +
     '.foto img{max-width:100%;max-height:60mm;display:block}' +
     '.foto .leg{font-size:8pt;padding:1.2mm 2mm;color:#3e4c59;text-align:left}' +
-    '.formula{font-family:"Times New Roman",Times,serif;font-style:italic;font-size:11pt;text-align:center;margin:2mm 0 3mm}';
+    '.formula{font-family:"Times New Roman",Times,serif;font-style:italic;font-size:11pt;text-align:center;margin:2mm 0 3mm}' +
+    SGO_DocA4_estilosPaginacao_(paisagem);
+}
+
+/* ============================================================
+ * Orientação, capa, sumário e numeração (padrão de 18/10/2026,
+ * docs/DOCUMENTOS_PADRAO_A4_20261018.md)
+ * ============================================================ */
+
+var SGO_DocA4_MARGEM_RETRATO = '25mm 15mm 18mm 18mm';
+var SGO_DocA4_MARGEM_PAISAGEM = '22mm 15mm 16mm 15mm';
+
+/** Revisão com dois dígitos ("0" → "00", "1" → "01"); texto livre (ex.: data da edição) fica como está. */
+function SGO_DocA4_revisao_(r) {
+  var t = String(r == null ? '' : r).trim();
+  if (!t) return '00';
+  return /^\d$/.test(t) ? '0' + t : t;
+}
+
+function SGO_DocA4_ehPaisagem_(doc) {
+  return !!doc && String(doc.orientacao || '').toLowerCase() === 'paisagem';
+}
+
+/**
+ * CSS das páginas nomeadas (paisagem/retrato dentro do documento e capa), do
+ * sumário e das legendas de tabela. As páginas nomeadas herdam o cabeçalho e o
+ * rodapé corridos do @page geral; a capa não tem cabeçalho nem rodapé.
+ */
+function SGO_DocA4_estilosPaginacao_(paisagem) {
+  var semCaixa = '@top-left{content:none}@top-center{content:none}@top-right{content:none}@bottom-left{content:none}@bottom-center{content:none}@bottom-right{content:none}';
+  return '' +
+    '@page paisagem{size:A4 landscape;margin:' + SGO_DocA4_MARGEM_PAISAGEM + '}' +
+    '@page retrato{size:A4 portrait;margin:' + SGO_DocA4_MARGEM_RETRATO + '}' +
+    '@page capa{size:A4 ' + (paisagem ? 'landscape' : 'portrait') + ';margin:18mm 18mm 16mm 18mm;' + semCaixa + '}' +
+    '.pg-paisagem{page:paisagem}.pg-retrato{page:retrato}' +
+    (paisagem ? '.folha{width:297mm}.barra-tela{max-width:297mm}' : '') +
+    '.pg-paisagem,.pg-retrato{overflow-x:auto}' +
+    // capa
+    '.capa{page:capa;display:flex;flex-direction:column;min-height:' + (paisagem ? '170mm' : '255mm') + ';break-after:page;page-break-after:always}' +
+    '.capa .logo img{height:22mm;width:auto;display:block}' +
+    '.capa .meio{margin-top:' + (paisagem ? '18mm' : '58mm') + ';border-left:3pt solid #0b3d6e;padding:2mm 0 2mm 7mm}' +
+    '.capa .tipo{font-size:10pt;letter-spacing:.04em;color:#52606d;margin:0 0 2mm;text-align:left}' +
+    '.capa h1{font-size:23pt;line-height:1.15;margin:0 0 3mm}' +
+    '.capa .sub{font-size:11pt;color:#3e4c59;margin:0 0 6mm;text-align:left}' +
+    '.capa table.t{max-width:150mm}' +
+    '.capa .texto{margin-top:4mm;max-width:150mm}' +
+    '.capa .pe{margin-top:auto;border-top:.6pt solid #9aa5b1;padding-top:2.4mm;font-size:8pt;color:#52606d;display:flex;justify-content:space-between;gap:6mm}' +
+    '.capa .pe p{margin:0;text-align:left}' +
+    '@media screen{.capa{min-height:0;border-bottom:.6pt dashed #bcc5cf;padding-bottom:8mm;margin-bottom:8mm}.capa .meio{margin-top:14mm}}' +
+    // sumário (números de página preenchidos por SGO_DocA4_paginar_)
+    'nav.sumario{margin:4mm 0 5mm;break-inside:auto}' +
+    'nav.sumario .sumario-tit{font-size:11pt;font-weight:700;color:#0b3d6e;margin:0 0 2mm;padding-bottom:1mm;border-bottom:.8pt solid #0b3d6e;text-align:left}' +
+    'nav.sumario ol{list-style:none;margin:0;padding:0}' +
+    'nav.sumario li{margin:0;break-inside:avoid;page-break-inside:avoid}' +
+    'nav.sumario a{display:flex;align-items:baseline;color:#1f2933;text-decoration:none;padding:.55mm 0}' +
+    'nav.sumario li.n2>a{font-weight:700;margin-top:.8mm}' +
+    'nav.sumario li.n3>a{padding-left:6mm;font-size:9pt}' +
+    'nav.sumario .t{flex:0 1 auto}' +
+    'nav.sumario .pt{flex:1 1 auto;border-bottom:.7pt dotted #9aa5b1;margin:0 1.6mm .9mm;min-width:6mm}' +
+    'nav.sumario .pg{flex:0 0 9mm;text-align:right;font-variant-numeric:tabular-nums}' +
+    // legenda de tabela (fica presa à tabela seguinte)
+    '.leg-tabela{font-size:8.3pt;color:#3e4c59;margin:2.6mm 0 0;text-align:left;break-after:avoid;page-break-after:avoid}' +
+    '.leg-tabela b{color:#1f2933}' +
+    '.leg-tabela+table.t{margin-top:1mm}' +
+    'table.ident3 th{width:12%}table.ident3 td{width:21.33%}' +
+    '.assinatura .papel{font-size:8pt;font-weight:700;color:#52606d;text-align:center;margin:0 0 1mm}' +
+    '.parecer-final{margin:3mm 0 2mm;padding:2mm 3.4mm;border-left:3pt solid #52606d;background:#f5f7fa;text-align:left;break-inside:avoid}' +
+    '.parecer-final.ok{border-left-color:#1d6b3f}.parecer-final.nok{border-left-color:#a61b1b}';
+}
+
+/** Trecho do documento numa folha em paisagem (tabela larga, gráfico longo). Começa e termina em folha nova. */
+function SGO_DocA4_paginaPaisagem_(html) {
+  return html ? '<section class="pg-paisagem">' + html + '</section>' : '';
+}
+
+/** Trecho do documento numa folha em retrato, dentro de um documento em paisagem. */
+function SGO_DocA4_paginaRetrato_(html) {
+  return html ? '<section class="pg-retrato">' + html + '</section>' : '';
+}
+
+/** Legenda numerada de tabela: "Tabela N — texto" (vai acima da tabela). */
+function SGO_DocA4_legendaTabela_(numero, texto) {
+  return '<p class="leg-tabela"><b>Tabela ' + SGO_DocA4_esc_(numero) + '</b>' + (texto ? ' — ' + SGO_DocA4_esc_(texto) : '') + '</p>';
+}
+
+/**
+ * Capa (1ª folha, sem cabeçalho e rodapé corridos).
+ * capa: { tipo, linhas:[[rótulo, valor]], texto }; usa titulo/subtitulo/numero/revisao/empresa do doc.
+ */
+function SGO_DocA4_capa_(doc) {
+  var c = doc.capa || {};
+  var empresa = doc.empresa || {};
+  var h = '<section class="capa"><div class="logo"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"></div>';
+  h += '<div class="meio">' + (c.tipo ? '<p class="tipo">' + SGO_DocA4_esc_(c.tipo) + '</p>' : '') +
+    '<h1>' + SGO_DocA4_esc_(doc.titulo || '') + '</h1>' +
+    (doc.subtitulo ? '<p class="sub">' + SGO_DocA4_esc_(doc.subtitulo) + '</p>' : '');
+  if (c.linhas && c.linhas.length) {
+    h += '<table class="t ident ficha"><tbody>' + c.linhas.filter(function (l) { return l && l[0]; }).map(function (l) {
+      return '<tr><th>' + SGO_DocA4_esc_(l[0]) + '</th><td>' + SGO_DocA4_esc_(String(l[1] == null ? '' : l[1]).trim() || '—') + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  if (c.texto) h += '<div class="texto">' + SGO_DocA4_paragrafos_(c.texto) + '</div>';
+  h += '</div><div class="pe"><p>' + SGO_DocA4_esc_((empresa.nome || 'Metrolab Soluções em Engenharia Clínica LTDA') + (empresa.cnpj ? ' · CNPJ ' + empresa.cnpj : '')) + '</p>' +
+    '<p>' + SGO_DocA4_esc_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao)) + '</p></div></section>';
+  return h;
+}
+
+/**
+ * Parecer final em uma linha (fim da conclusão). O quadro de resultado fica só
+ * na abertura do documento: regra de não repetir conteúdo (padrão de 18/10/2026).
+ */
+function SGO_DocA4_linhaParecer_(status, rotulo, textoAprovado, textoReprovado, textoInfo) {
+  var c = SGO_DocA4_classeStatus_(status);
+  var v = c === 'nok' ? (textoReprovado || 'Reprovado') : (c === 'ok' ? (textoAprovado || 'Aprovado') : (textoInfo || 'Informativo'));
+  return '<p class="parecer-final ' + c + '"><b>' + SGO_DocA4_esc_(rotulo || 'Parecer') + ':</b> <span class="' + c + '-txt">' + SGO_DocA4_esc_(v) + '</span></p>';
+}
+
+/** Marcador do sumário automático (preenchido por SGO_DocA4_paginar_). */
+function SGO_DocA4_marcadorSumario_() {
+  return '<nav class="sumario" data-sgo-sumario></nav>';
+}
+
+function SGO_DocA4_textoTitulo_(htmlInterno) {
+  return String(htmlInterno || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Dá id aos títulos h2/h3 (quando faltar) e, se houver o marcador do sumário,
+ * monta a lista com um espaço reservado para o número da página.
+ * Título com class "sem-sumario" fica fora. Devolve { html, temSumario, itens }.
+ */
+function SGO_DocA4_prepararSumario_(html) {
+  var h = String(html || '');
+  var marcador = /<nav class="sumario" data-sgo-sumario><\/nav>/;
+  var pos = h.search(marcador);
+  var itens = [], usados = {}, k = 0;
+  h.replace(/\sid="([^"]+)"/g, function (m, id) { usados[id] = true; return m; });
+  h = h.replace(/<h([23])((?:\s[^>]*)?)>([\s\S]*?)<\/h\1>/gi, function (m, nivel, attrs, interno, offset) {
+    if (pos >= 0 && offset < pos) return m;
+    if (/class="[^"]*\bsem-sumario\b/.test(attrs || '')) return m;
+    var texto = SGO_DocA4_textoTitulo_(interno);
+    if (!texto) return m;
+    var idm = /\sid="([^"]+)"/.exec(attrs || '');
+    var id = idm ? idm[1] : '';
+    if (!id) {
+      do { k++; id = 'sec-' + k; } while (usados[id]);
+      usados[id] = true;
+      attrs = (attrs || '') + ' id="' + id + '"';
+    }
+    itens.push({ nivel: Number(nivel), id: id, texto: texto });
+    return '<h' + nivel + attrs + '>' + interno + '</h' + nivel + '>';
+  });
+  if (pos < 0 || !itens.length) return { html: h.replace(marcador, ''), temSumario: false, itens: itens };
+  var lista = '<nav class="sumario" data-sgo-sumario="1"><p class="sumario-tit">Sumário</p><ol>' + itens.map(function (it) {
+    return '<li class="n' + it.nivel + '"><a href="#' + it.id + '"><span class="t">' + it.texto + '</span><span class="pt"></span>' +
+      '<span class="pg" data-sgo-pg="' + it.id + '"></span></a></li>';
+  }).join('') + '</ol></nav>';
+  return { html: h.replace(marcador, lista), temSumario: true, itens: itens };
+}
+
+/** HTML → PDF (Blob), pelo mesmo caminho que a gravação usa. */
+function SGO_DocA4_pdfDeHtml_(html, nome) {
+  var base = String(nome || 'Documento').replace(/\.(pdf|html?)$/i, '');
+  var conteudo = typeof SGO_DocSalvar_garantirCharset_ === 'function' ? SGO_DocSalvar_garantirCharset_(html) : String(html || '');
+  var origem = Utilities.newBlob('', MimeType.HTML, base + '.html');
+  origem.setDataFromString(conteudo, 'UTF-8');
+  origem.setContentType(MimeType.HTML);
+  var pdf = origem.getAs(MimeType.PDF);
+  pdf.setName(base + '.pdf');
+  return pdf;
+}
+
+/** Conteúdo do PDF como texto de 1 byte por caractere (para ler a estrutura). */
+function SGO_DocA4_pdfTexto_(pdf) {
+  if (typeof pdf === 'string') return pdf;
+  try { return pdf.getDataAsString('ISO-8859-1'); } catch (e) {}
+  var b = pdf.getBytes(), partes = [];
+  for (var i = 0; i < b.length; i += 8192) {
+    var fatia = [];
+    for (var j = i; j < Math.min(b.length, i + 8192); j++) fatia.push(b[j] & 255);
+    partes.push(String.fromCharCode.apply(null, fatia));
+  }
+  return partes.join('');
+}
+
+/**
+ * Página (1, 2, ...) de cada destino interno do PDF ({ 'sec-1': 2, ... }).
+ * Lê o catálogo, a árvore de páginas e os destinos nomeados (/Dests do
+ * catálogo ou árvore /Names). Só os destinos usados por links existem no PDF.
+ * Nunca lança: devolve {} se não reconhecer a estrutura.
+ */
+function SGO_DocA4_paginasDoPdf_(pdf) {
+  var saida = {};
+  try {
+    var s = SGO_DocA4_pdfTexto_(pdf);
+    var objs = {}, re = /(\d+)\s+0\s+obj\b/g, m;
+    while ((m = re.exec(s))) {
+      var fim = s.indexOf('endobj', re.lastIndex);
+      if (!objs[m[1]]) objs[m[1]] = s.substring(re.lastIndex, fim < 0 ? s.length : fim);
+      if (fim > 0) re.lastIndex = fim;
+    }
+    var catalogo = null;
+    Object.keys(objs).some(function (n) { if (/\/Type\s*\/Catalog\b/.test(objs[n])) { catalogo = objs[n]; return true; } return false; });
+    if (!catalogo) return saida;
+    var raiz = /\/Pages\s+(\d+)\s+0\s+R/.exec(catalogo);
+    if (!raiz) return saida;
+    var ordem = {}, total = 0, visto = {};
+    (function andar(n) {
+      if (visto[n] || !objs[n]) return;
+      visto[n] = true;
+      var o = objs[n];
+      if (/\/Type\s*\/Pages\b/.test(o)) {
+        var kids = /\/Kids\s*\[([^\]]*)\]/.exec(o);
+        if (kids) kids[1].replace(/(\d+)\s+0\s+R/g, function (x, k) { andar(k); return x; });
+      } else if (/\/Type\s*\/Page\b/.test(o)) {
+        total++; ordem[n] = total;
+      }
+    })(raiz[1]);
+    function nome(t) { return t.replace(/#([0-9A-Fa-f]{2})/g, function (x, hx) { return String.fromCharCode(parseInt(hx, 16)); }); }
+    function lerDicionario(txt) {
+      txt.replace(/\/([^\s\/\[\]<>()]+)\s*\[\s*(\d+)\s+0\s+R/g, function (x, n, p) { if (ordem[p]) saida[nome(n)] = ordem[p]; return x; });
+    }
+    var dests = /\/Dests\s+(\d+)\s+0\s+R/.exec(catalogo);
+    if (dests && objs[dests[1]]) lerDicionario(objs[dests[1]]);
+    var inline = /\/Dests\s*<<([\s\S]*?)>>/.exec(catalogo);
+    if (inline) lerDicionario(inline[1]);
+    // Árvore de nomes (/Names << /Dests N 0 R >>): ( nome ) [ página 0 R ... ]
+    var names = /\/Names\s+(\d+)\s+0\s+R/.exec(catalogo);
+    var namesTxt = names ? (objs[names[1]] || '') : ((/\/Names\s*<<([\s\S]*?)>>/.exec(catalogo) || [])[1] || '');
+    var arvore = /\/Dests\s+(\d+)\s+0\s+R/.exec(namesTxt);
+    if (arvore) {
+      var vistoN = {};
+      (function no(n) {
+        if (vistoN[n] || !objs[n]) return;
+        vistoN[n] = true;
+        var o = objs[n];
+        o.replace(/\(([^)]*)\)\s*\[\s*(\d+)\s+0\s+R/g, function (x, nm, p) { if (ordem[p]) saida[nm] = ordem[p]; return x; });
+        o.replace(/\(([^)]*)\)\s*(\d+)\s+0\s+R/g, function (x, nm, ref) {
+          var d = /\[\s*(\d+)\s+0\s+R/.exec(objs[ref] || '');
+          if (d && ordem[d[1]]) saida[nm] = ordem[d[1]];
+          return x;
+        });
+        var kids = /\/Kids\s*\[([^\]]*)\]/.exec(o);
+        if (kids) kids[1].replace(/(\d+)\s+0\s+R/g, function (x, k) { no(k); return x; });
+      })(arvore[1]);
+    }
+    saida._total = total;
+  } catch (e) { /* estrutura desconhecida: sem números */ }
+  return saida;
+}
+
+/**
+ * Finaliza a paginação de um documento A4: ids nos títulos, sumário com as
+ * páginas lidas do PDF (duas passagens, porque o PDF é gerado sem JavaScript e
+ * o Chromium ainda não implementa target-counter) e o PDF final pronto para
+ * gravar. Nunca lança; sem sumário, gera o PDF só se opcoes.gerarPdf.
+ * opcoes: { nome, gerarPdf }
+ * Devolve { html, pdfBlob, paginas, totalPaginas, sumarioComPaginas, aviso }.
+ */
+function SGO_DocA4_paginar_(html, opcoes) {
+  opcoes = opcoes || {};
+  var saida = { html: String(html || ''), pdfBlob: null, paginas: {}, totalPaginas: 0, sumarioComPaginas: false, aviso: '' };
+  try {
+    var prep = SGO_DocA4_prepararSumario_(saida.html);
+    saida.html = prep.html;
+    if (!prep.temSumario) {
+      if (opcoes.gerarPdf) saida.pdfBlob = SGO_DocA4_pdfDeHtml_(saida.html, opcoes.nome);
+      return saida;
+    }
+    var pdf1 = SGO_DocA4_pdfDeHtml_(saida.html, opcoes.nome);
+    var pags = SGO_DocA4_paginasDoPdf_(pdf1);
+    var achou = prep.itens.filter(function (it) { return pags[it.id]; }).length;
+    if (!achou) { saida.pdfBlob = pdf1; saida.aviso = 'O sumário saiu sem os números de página (o PDF não informou a posição das seções).'; return saida; }
+    saida.html = saida.html.replace(/<span class="pg" data-sgo-pg="([^"]+)"><\/span>/g, function (x, id) {
+      return '<span class="pg" data-sgo-pg="' + id + '">' + (pags[id] ? pags[id] : '') + '</span>';
+    });
+    saida.pdfBlob = SGO_DocA4_pdfDeHtml_(saida.html, opcoes.nome);
+    saida.paginas = pags;
+    saida.totalPaginas = pags._total || 0;
+    saida.sumarioComPaginas = achou === prep.itens.length;
+  } catch (e) {
+    saida.aviso = 'O sumário saiu sem os números de página: ' + (e && e.message ? e.message : e);
+  }
+  return saida;
 }
 
 /* ============================================================
@@ -233,7 +518,9 @@ function SGO_DocA4_estilos_(doc) {
  * doc: { titulo, subtitulo, tituloCurto, rotuloNumero, numero, revisao,
  *        emissao, empresa:{nome,cnpj}, ficha:[[rótulo, valor]...],
  *        resultado:{status, rotulo?, texto?} (opcional), simulado:bool,
- *        avisoSimulado:'...' }
+ *        avisoSimulado:'...',
+ *        orientacao:'retrato'|'paisagem' (18/10), sumario:bool (18/10),
+ *        capa:{ tipo, linhas, texto } (18/10) }
  * ============================================================ */
 
 function SGO_DocA4_inicioDocumento_(doc) {
@@ -247,14 +534,19 @@ function SGO_DocA4_inicioDocumento_(doc) {
   h.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   h.push('<main class="folha">');
   h.push('<div class="cab-tela"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta">' +
-    SGO_DocA4_esc_(doc.tituloCurto || doc.titulo || '') + '<br>' + SGO_DocA4_esc_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + (doc.revisao || '0')) + '</div></div>');
+    SGO_DocA4_esc_(doc.tituloCurto || doc.titulo || '') + '<br>' + SGO_DocA4_esc_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao)) + '</div></div>');
+  if (doc.capa) h.push(SGO_DocA4_capa_(doc));
   if (doc.simulado) {
     h.push('<div class="aviso-simulado">' + SGO_DocA4_esc_(doc.avisoSimulado || 'Documento de uso interno, gerado com dados simulados. Não representa ensaio real e não pode ser entregue ao cliente.') + '</div>');
   }
-  h.push('<h1>' + SGO_DocA4_esc_(doc.titulo || '') + '</h1>');
-  if (doc.subtitulo) h.push('<p class="subtitulo">' + SGO_DocA4_esc_(doc.subtitulo) + '</p>');
+  if (!doc.capa) {
+    h.push('<h1>' + SGO_DocA4_esc_(doc.titulo || '') + '</h1>');
+    if (doc.subtitulo) h.push('<p class="subtitulo">' + SGO_DocA4_esc_(doc.subtitulo) + '</p>');
+  }
   if (doc.ficha && doc.ficha.length) h.push(SGO_DocA4_tabelaIdent_(doc.ficha, 'ficha'));
   if (doc.resultado) h.push(SGO_DocA4_quadroResultado_(doc.resultado));
+  // Sumário automático: os números de página entram em SGO_DocA4_paginar_ (chamado ao salvar).
+  if (doc.sumario) h.push(SGO_DocA4_marcadorSumario_());
   return h.join('');
 }
 
@@ -275,26 +567,32 @@ function SGO_DocA4_quadroResultado_(r) {
  * Tabelas
  * ============================================================ */
 
-/** Tabela rótulo/valor em 2 pares por linha. pares: [[rótulo, valor, {largo:true}]]. Valor vazio → '—'. */
-function SGO_DocA4_tabelaIdent_(pares, classeExtra) {
+/**
+ * Tabela rótulo/valor em 2 pares por linha (padrão). pares: [[rótulo, valor, {largo:true}]]. Valor vazio → '—'.
+ * opcoes (18/10/2026, opcional): { porLinha: 3 } → 3 pares por linha, para página ou documento em paisagem.
+ */
+function SGO_DocA4_tabelaIdent_(pares, classeExtra, opcoes) {
+  var porLinha = (opcoes && Number(opcoes.porLinha) === 3) ? 3 : 2;
   var itens = (pares || []).filter(function (p) { return p && p[0]; });
   var linhas = [], atual = [];
+  var vazio = '<th></th><td></td>';
+  function completar(l) { var r = l.join(''); for (var k = l.length; k < porLinha; k++) r += vazio; return r; }
   function celula(p) {
     var v = p[1];
     var html = (v && typeof v === 'object' && v.html !== undefined) ? v.html : SGO_DocA4_esc_(String(v == null ? '' : v).trim() || '—');
-    return '<th>' + SGO_DocA4_esc_(p[0]) + '</th><td' + ((p[2] && p[2].largo) ? ' colspan="3"' : '') + '>' + html + '</td>';
+    return '<th>' + SGO_DocA4_esc_(p[0]) + '</th><td' + ((p[2] && p[2].largo) ? ' colspan="' + (porLinha * 2 - 1) + '"' : '') + '>' + html + '</td>';
   }
   itens.forEach(function (p) {
     if (p[2] && p[2].largo) {
-      if (atual.length) { linhas.push(atual.join('') + '<th></th><td></td>'); atual = []; }
+      if (atual.length) { linhas.push(completar(atual)); atual = []; }
       linhas.push(celula(p));
       return;
     }
     atual.push(celula(p));
-    if (atual.length === 2) { linhas.push(atual.join('')); atual = []; }
+    if (atual.length === porLinha) { linhas.push(atual.join('')); atual = []; }
   });
-  if (atual.length) linhas.push(atual.join('') + '<th></th><td></td>');
-  return '<table class="t ident' + (classeExtra ? ' ' + classeExtra : '') + '"><tbody>' + linhas.map(function (l) { return '<tr>' + l + '</tr>'; }).join('') + '</tbody></table>';
+  if (atual.length) linhas.push(completar(atual));
+  return '<table class="t ident' + (porLinha === 3 ? ' ident3' : '') + (classeExtra ? ' ' + classeExtra : '') + '"><tbody>' + linhas.map(function (l) { return '<tr>' + l + '</tr>'; }).join('') + '</tbody></table>';
 }
 
 /**
@@ -353,17 +651,21 @@ function SGO_DocA4_fotos_(fotos) {
 }
 
 /**
- * Bloco de assinaturas. lista: [{ nome, cargo, registro, imagemSvg, imagemBase64:{mimeType,data} }].
+ * Bloco de assinaturas. lista: [{ papel, nome, cargo, registro, imagemSvg, imagemBase64:{mimeType,data} }].
+ * papel (18/10/2026, opcional): "Elaborado por", "Revisado por", "Aprovado por"... mostrado acima da assinatura.
  * imagemSvg só é aceito se começar com <svg (vem da configuração do módulo).
  */
 function SGO_DocA4_assinaturas_(lista) {
   var l = (lista || []).filter(function (a) { return a && (a.nome || a.cargo); });
   if (!l.length) return '';
+  var temPapel = l.some(function (a) { return !!a.papel; });
   return '<div class="assinaturas">' + l.map(function (a) {
     var img = '';
     if (a.imagemSvg && /^\s*<svg[\s>]/i.test(a.imagemSvg)) img = a.imagemSvg;
     else if (a.imagemBase64 && a.imagemBase64.data) img = '<img src="data:' + SGO_DocA4_esc_(a.imagemBase64.mimeType || 'image/png') + ';base64,' + a.imagemBase64.data + '" alt="">';
-    return '<div class="assinatura"><div class="img">' + img + '</div>' +
+    // Com papel em alguma assinatura, as outras reservam a mesma linha (as linhas de assinatura ficam alinhadas).
+    var papel = a.papel ? SGO_DocA4_esc_(a.papel) : (temPapel ? '&nbsp;' : '');
+    return '<div class="assinatura">' + (papel ? '<div class="papel">' + papel + '</div>' : '') + '<div class="img">' + img + '</div>' +
       '<div class="linha">' + SGO_DocA4_esc_(a.nome || ' ') + '</div>' +
       '<div class="cargo">' + [a.cargo, a.registro].filter(Boolean).map(SGO_DocA4_esc_).join('<br>') + '</div></div>';
   }).join('') + '</div>';
@@ -816,7 +1118,8 @@ function SGO_DocA4_documentoQualificacaoTermica_(o) {
     empresa: id.empresaExecutante,
     ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', o.geradoEm], ['Estudos realizados', String((ctx.estudos || []).length)], ['Faixa de aceitação', SGO_DocA4_val_(faixa.tMin, 1, '°C') + ' a ' + SGO_DocA4_val_(faixa.tMax, 1, '°C')]],
     simulado: ctx.simulado,
-    resultado: { status: st, rotulo: 'Parecer', valor: parecer, texto: resumo }
+    resultado: { status: st, rotulo: 'Parecer', valor: parecer, texto: resumo },
+    sumario: true
   }));
 
   h.push('<h2>1. Identificação</h2>');
@@ -845,9 +1148,9 @@ function SGO_DocA4_documentoQualificacaoTermica_(o) {
 
   h.push('<h2>5. Metodologia, critérios de aceitação e referências</h2>');
   h.push('<p>' + SGO_DocA4_esc_(o.descricaoMetodo || 'Os sensores foram distribuídos no volume útil do equipamento e registraram a temperatura durante toda a janela de cada estudo. Para cada estudo calculam-se a mínima, a máxima, a média, a mediana, o desvio-padrão e a amplitude das leituras dos sensores ativos, além da conformidade de cada posição em relação à faixa de aceitação. Períodos de estabilização inicial identificados nos dados aparecem nos gráficos, mas não entram no julgamento.') + '</p>');
-  h.push('<h3>Critérios de aceitação</h3>');
+  h.push('<h3>5.1 Critérios de aceitação</h3>');
   h.push(SGO_DocA4_tabela_([{ t: 'Estudo' }, { t: 'Requisito' }], criterios.map(function (c) { return [c.criterio, c.requisito]; })));
-  h.push('<h3>Referências normativas</h3>' + SGO_DocA4_lista_(ctx.normas));
+  h.push('<h3>5.2 Referências normativas</h3>' + SGO_DocA4_lista_(ctx.normas));
 
   h.push('<h2>6. Resultados</h2>');
   var nFig = 0;
@@ -890,9 +1193,10 @@ function SGO_DocA4_documentoQualificacaoTermica_(o) {
     h.push('<p class="nota"><b>Resultado do estudo:</b> ' + (cs === true ? '<span class="ok-txt">Aprovado</span>' : (cs === false ? '<span class="nok-txt">Reprovado</span>' : '<span class="info-txt">Informativo</span>')) + '</p>');
   });
 
-  h.push('<h3>Verificação dos critérios de aceitação</h3>');
-  h.push(SGO_DocA4_tabela_([{ t: 'Estudo' }, { t: 'Requisito' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
-    criterios.map(function (c) { return [c.criterio, c.requisito, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })));
+  h.push('<h3>6.' + ((ctx.estudos || []).length + 1) + ' Verificação dos critérios de aceitação</h3>');
+  h.push('<p class="nota">O requisito de cada estudo está na seção 5.1.</p>');
+  h.push(SGO_DocA4_tabela_([{ t: 'Estudo' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
+    criterios.map(function (c) { return [c.criterio, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })));
 
   h.push('<h2>7. Não conformidades e observações</h2>');
   var ncs = [], obs = [];
@@ -901,11 +1205,11 @@ function SGO_DocA4_documentoQualificacaoTermica_(o) {
     (e.alertasAnalise || []).concat(e.observacoesAnalise || []).forEach(function (m) { obs.push(e.label + ': ' + m); });
   });
   ((ctx.registradores && ctx.registradores.observacoes) || []).forEach(function (m) { obs.push(m); });
-  h.push('<h3>Não conformidades</h3>' + (ncs.length ? SGO_DocA4_lista_(ncs) : '<p>Nenhuma não conformidade foi registrada.</p>'));
-  h.push('<h3>Observações</h3>' + (obs.length ? SGO_DocA4_lista_(obs) : '<p>Sem observações adicionais.</p>'));
+  h.push('<h3>7.1 Não conformidades</h3>' + (ncs.length ? SGO_DocA4_lista_(ncs) : '<p>Nenhuma não conformidade foi registrada.</p>'));
+  h.push('<h3>7.2 Observações</h3>' + (obs.length ? SGO_DocA4_lista_(obs) : '<p>Sem observações adicionais.</p>'));
 
   h.push('<h2>8. Conclusão</h2>' + SGO_DocA4_paragrafos_(textos.conclusaoGeral));
-  h.push(SGO_DocA4_quadroResultado_({ status: st, rotulo: 'Parecer final', valor: parecer, texto: resumo }));
+  h.push(SGO_DocA4_linhaParecer_(st, 'Parecer final', parecer, parecer, parecer));
 
   h.push('<div class="manter"><h2>9. Responsabilidade técnica</h2>');
   h.push('<p>Os resultados referem-se exclusivamente ao equipamento e às condições de ensaio aqui identificados. A requalificação é recomendada após manutenção corretiva relevante, mudança de local ou de carga, ou no prazo definido pelo plano de qualificação do cliente. A reprodução parcial deste documento depende de autorização da empresa executante.</p>');

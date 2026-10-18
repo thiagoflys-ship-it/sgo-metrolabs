@@ -290,6 +290,7 @@
         var eqp = res.equipamento || {};
         var nc = String(eqp.CLIENTE_NOME || "").trim(), nu = String(eqp.UNIDADE_NOME || "").trim();
         var linha = nu && nu.toUpperCase() !== nc.toUpperCase() ? nc + " - " + nu : nc;
+        EQP_QR_ATUAL = { qrUrl: res.qrUrl, tag: eqp.TAG, tipo: eqp.TIPO, modelo: eqp.MODELO, serie: eqp.SERIE, local: linha };
         body.innerHTML = '<img src="' + CadUI_esc_(res.qrUrl) + '" alt="QR Code do equipamento" class="qr-image"><div class="qr-info">' +
           "<div><strong>TAG:</strong> " + CadUI_esc_(eqp.TAG) + "</div><div><strong>Tipo:</strong> " + CadUI_esc_(eqp.TIPO) + "</div><div><strong>Modelo:</strong> " + CadUI_esc_(eqp.MODELO) + "</div><div><strong>Série:</strong> " + CadUI_esc_(eqp.SERIE) + "</div>" +
           '<div style="margin-top:10px; font-size:12px; color:#475569;">' + CadUI_esc_(linha) + "</div></div>";
@@ -301,7 +302,48 @@
         if (body) body.innerHTML = '<p class="text-danger">Não foi possível gerar o QR Code. Verifique a conexão e tente de novo. Nada foi alterado.</p>';
       })
       .qrcodeGerarParaEquipamento(SESSION, id);
+    EQP_QR_ATUAL = null;
   }
   function fecharModalQR_() { var m = document.getElementById("modal-qr-code"); if (m) m.style.display = "none"; }
-  function imprimirQRCode_() { document.body.classList.add("printing-qr"); window.print(); setTimeout(function () { document.body.classList.remove("printing-qr"); }, 500); }
+  // Etiqueta do equipamento numa folha A4 própria (padrão A4 de 18/10/2026): a etiqueta de 90 × 50 mm sai
+  // no canto superior da folha, com linha de corte. Antes, o botão imprimia a tela inteira do sistema.
+  var EQP_QR_ATUAL = null;
+  function imprimirQRCode_() {
+    var q = EQP_QR_ATUAL;
+    if (!q || !q.qrUrl) { CadUI_avisoQR_("Espere o QR Code aparecer e toque em \"Imprimir etiqueta\" de novo."); return; }
+    var w = window.open("", "_blank");
+    if (!w) { CadUI_avisoQR_("O navegador bloqueou a janela da etiqueta. Libere as janelas deste site (ícone na barra de endereço) e toque em \"Imprimir etiqueta\" de novo."); return; }
+    var e = CadUI_esc_;
+    var linha = function (r, v) { return v ? '<div class="l"><b>' + r + '</b> ' + e(v) + '</div>' : ''; };
+    w.document.open();
+    w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Etiqueta ' + e(q.tag || "") + '</title><style>' +
+      '@page{size:A4 portrait;margin:15mm}*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#1f2933;background:#e4e8ed}' +
+      '.barra{max-width:210mm;margin:12px auto 0;display:flex;justify-content:flex-end;gap:8px}.barra button{background:#0b3d6e;color:#fff;border:0;border-radius:4px;padding:10px 16px;font:700 14px Arial,sans-serif;cursor:pointer;min-height:44px}' +
+      '.folha{background:#fff;width:210mm;max-width:100%;min-height:120mm;margin:12px auto 30px;padding:15mm;box-shadow:0 1px 6px rgba(0,0,0,.18)}' +
+      '.corte{width:94mm;height:54mm;border:.4pt dashed #9aa5b1;padding:2mm}' +
+      '.etq{width:90mm;height:50mm;border:.6pt solid #3e4c59;display:flex;gap:3mm;padding:3mm;overflow:hidden}' +
+      '.etq img{width:38mm;height:38mm;display:block;flex:0 0 38mm;image-rendering:pixelated}' +
+      '.dados{flex:1;min-width:0;display:flex;flex-direction:column;font-size:7.6pt;line-height:1.3}' +
+      '.tag{font-size:13pt;font-weight:700;color:#0b3d6e;margin:0 0 1.4mm;word-break:break-all}.l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.l b{color:#52606d;font-weight:700}' +
+      '.loc{margin-top:auto;font-size:7pt;color:#52606d;border-top:.4pt solid #bcc5cf;padding-top:1mm;overflow:hidden;max-height:7.4mm}' +
+      '.instr{font-size:8pt;color:#52606d;margin:3mm 0 0}' +
+      '@media screen and (max-width:640px){.barra{margin:8px 16px 0}.folha{padding:16px 0;margin:8px 0 20px;box-shadow:none;display:flex;flex-direction:column;align-items:center}.instr{padding:0 16px}}' +
+      '@media print{body{background:#fff}.barra,.instr{display:none}.folha{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}}' +
+      '</style></head><body><div class="barra"><button type="button" onclick="window.print()">Imprimir etiqueta</button></div><main class="folha"><div class="corte"><div class="etq">' +
+      '<img src="' + e(q.qrUrl) + '" alt="QR Code do equipamento ' + e(q.tag || "") + '"><div class="dados"><div class="tag">' + e(q.tag || "Sem TAG") + '</div>' +
+      linha("Tipo:", q.tipo) + linha("Modelo:", q.modelo) + linha("Série:", q.serie) + (q.local ? '<div class="loc">' + e(q.local) + '</div>' : "") +
+      '</div></div></div><p class="instr">Recorte na linha tracejada e cole a etiqueta no equipamento, em local visível e sem dobras. Aponte a câmera do celular para o código para abrir o equipamento no SGO+.</p></main></body></html>');
+    w.document.close();
+    var img = w.document.images[0];
+    var imprimir = function () { try { w.focus(); w.print(); } catch (x) { /* o operador usa o botão da página */ } };
+    if (img && !img.complete) { img.onload = imprimir; img.onerror = function () {}; } else setTimeout(imprimir, 150);
+  }
+  function CadUI_avisoQR_(msg) {
+    var body = document.getElementById("qr-body-content");
+    if (!body) return;
+    var p = document.getElementById("qrAvisoImpressao");
+    if (!p) { p = document.createElement("p"); p.id = "qrAvisoImpressao"; p.className = "text-danger"; p.setAttribute("role", "alert"); body.appendChild(p); }
+    p.textContent = msg;
+  }
 </script>

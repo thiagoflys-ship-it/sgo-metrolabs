@@ -339,9 +339,10 @@ function SGO_ajudaTelas_Cadastros_() {
             "Toque em \"Mais\" na linha do equipamento.",
             "Toque em \"QR Code e etiqueta\".",
             "Confira TAG, tipo, modelo e série na janela.",
-            "Toque em \"Imprimir etiqueta\".",
-            "Cole a etiqueta no equipamento.",
-            "Toque em \"Fechar\" para sair da janela."
+            "Toque em \"Imprimir etiqueta\". Abre uma folha A4 com a etiqueta de 9 × 5 cm no canto de cima e a janela de impressão.",
+            "Escolha a impressora e imprima. Se a janela de impressão não abrir, toque em \"Imprimir etiqueta\" no alto da folha.",
+            "Recorte na linha tracejada e cole a etiqueta no equipamento, em local visível e sem dobras.",
+            "Toque em \"Fechar\" para sair da janela do QR Code."
           ]
         },
         {
@@ -396,6 +397,7 @@ function SGO_ajudaTelas_Cadastros_() {
         { situacao: "Ao reativar aparece que o cliente ou a unidade do equipamento está inativa.", oQueFazer: "Reative antes o cliente em \"Clientes\" ou a unidade em \"Unidades\" e depois o equipamento." },
         { situacao: "\"Excluir equipamento\" aparece apagado com \"Tem documento ligado: não é excluído\".", oQueFazer: "Use \"Inativar equipamento\". O histórico fica guardado." },
         { situacao: "O QR Code não foi gerado.", oQueFazer: "Confira a conexão e toque de novo em \"QR Code e etiqueta\". Nada foi alterado." },
+        { situacao: "Aparece \"O navegador bloqueou a janela da etiqueta\".", oQueFazer: "Libere as janelas deste site pelo ícone na barra de endereço do navegador e toque em \"Imprimir etiqueta\" de novo." },
         { situacao: "A aba \"Atendimentos\" mostra \"Nenhum atendimento do Auvo ligado a este equipamento\".", oQueFazer: "O atendimento ainda não foi ligado a este equipamento no Auvo. Fale com a gestão da integração Auvo." }
       ],
       quemPode: [

@@ -68,7 +68,7 @@ function AutoRel_acExecutarAnaliseLeakTestCompleta_(payload) {
   } else {
     const rich = AutoRel_lerDadosEntradaRich_(payload);
     if (!rich || !rich.matrix || !rich.matrix.length) {
-      throw new Error('Não foi possível ler os dados de entrada do Leak Test.');
+      throw new Error('Não foi possível ler os dados de entrada do teste de estanqueidade.');
     }
 
     dadosNormalizados = AutoRel_normalizarMatrizParaAnalise(
@@ -80,7 +80,7 @@ function AutoRel_acExecutarAnaliseLeakTestCompleta_(payload) {
   }
 
   if (!dadosNormalizados || !dadosNormalizados.length) {
-    throw new Error('Não foi possível normalizar os dados para o Leak Test.');
+    throw new Error('Não foi possível normalizar os dados para o teste de estanqueidade.');
   }
 
   const analiseLeak = AutoRel_analisarLeakTest_(dadosNormalizados, payload, {
@@ -106,7 +106,7 @@ function AutoRel_apiConverterLeakTest_(payload) {
 
   const infoPlanilha = AutoRel_gerarPlanilhaLeakTest_(dadosNormalizados, analiseLeak, payload);
   if (!infoPlanilha || !infoPlanilha.spreadsheetId) {
-    throw new Error('Falha ao gerar a planilha do Leak Test.');
+    throw new Error('Falha ao gerar a planilha do teste de estanqueidade.');
   }
 
   const ss = SpreadsheetApp.openById(infoPlanilha.spreadsheetId);
@@ -168,16 +168,16 @@ function AutoRel_gerarDadosSimuladosLeakTest_(payload, options) {
   const fim = AutoRel_parseDataHoraSimulador_(leakIn.fim);
 
   if (!inicio || !fim) {
-    throw new Error('Informe data/hora válidas de início e fim do Leak Test para gerar o relatório interno.');
+    throw new Error('Informe data/hora válidas de início e fim do teste de estanqueidade para gerar o relatório interno.');
   }
 
   if (fim.getTime() <= inicio.getTime()) {
-    throw new Error('O horário de fim do Leak Test deve ser posterior ao horário de início.');
+    throw new Error('O horário de fim do teste de estanqueidade deve ser posterior ao horário de início.');
   }
 
   const totalSeg = Math.round((fim.getTime() - inicio.getTime()) / 1000);
   if (totalSeg < 60) {
-    throw new Error('O Leak Test do relatório interno deve ter pelo menos 1 minuto de duração.');
+    throw new Error('O teste de estanqueidade do relatório interno deve ter pelo menos 1 minuto de duração.');
   }
 
   const intervaloSeg = totalSeg >= 300 ? 30 : Math.max(5, Math.floor(totalSeg / 8));
@@ -248,7 +248,7 @@ function AutoRel_gerarDadosSimuladosLeakTest_(payload, options) {
 // ------------------------------------------------------------
 function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   if (!dados || !dados.length) {
-    throw new Error('Nenhum dado normalizado foi recebido para o Leak Test.');
+    throw new Error('Nenhum dado normalizado foi recebido para o teste de estanqueidade.');
   }
 
   payload = payload || {};
@@ -262,18 +262,18 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   const fimStr = String(leakIn.fim || '').trim();
 
   if (!inicioStr || !fimStr) {
-    throw new Error('Informe a hora de início e a hora de fim do Leak Test.');
+    throw new Error('Informe a hora de início e a hora de fim do teste de estanqueidade.');
   }
 
   const idxInicio = AutoRel_localizarIndicePorTempo_(dados, inicioStr, '>=', null);
   const idxFim = AutoRel_localizarIndicePorTempo_(dados, fimStr, '<=', null);
 
   if (idxInicio === null || idxFim === null) {
-    throw new Error('Não foi possível localizar os horários informados do Leak Test dentro dos dados importados do datalogger.');
+    throw new Error('Não foi possível localizar os horários informados do teste de estanqueidade dentro dos dados importados do datalogger.');
   }
 
   if (idxFim <= idxInicio) {
-    throw new Error('O horário de fim do Leak Test deve ser posterior ao horário de início e conter ao menos uma leitura entre eles.');
+    throw new Error('O horário de fim do teste de estanqueidade deve ser posterior ao horário de início e conter ao menos uma leitura entre eles.');
   }
 
   const linhaInicio = dados[idxInicio];
@@ -283,7 +283,7 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   const pressaoFimBruta = AutoRel_parseFloatSeguroAnalise_(linhaFim.pressao, null);
 
   if (pressaoInicioBruta === null || pressaoFimBruta === null) {
-    throw new Error('Não foi possível obter leituras de pressão válidas nos horários informados do Leak Test.');
+    throw new Error('Não foi possível obter leituras de pressão válidas nos horários informados do teste de estanqueidade.');
   }
 
   const unidade = String(leakIn.unidadePressao || (AutoRel_UCFG.LEAK_TEST && AutoRel_UCFG.LEAK_TEST.unidadePressaoPadrao) || 'MBAR').toUpperCase().trim();
@@ -300,7 +300,7 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   );
 
   if (!tempoMinutos || tempoMinutos <= 0) {
-    throw new Error('A duração calculada do Leak Test é inválida. Verifique os horários informados.');
+    throw new Error('A duração calculada do teste de estanqueidade é inválida. Verifique os horários informados.');
   }
 
   const deltaPressaoMbar = Math.abs(pressaoFimMbar - pressaoInicioMbar);
@@ -327,7 +327,7 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   }
 
   const observacoesAnalise = [
-    'A avaliação de aprovação/reprovação do Leak Test considera exclusivamente a taxa de vazamento calculada a partir da Pressão Absoluta da Câmara no intervalo informado.'
+    'A avaliação de aprovação/reprovação do teste de estanqueidade considera exclusivamente a taxa de vazamento calculada a partir da pressão absoluta da câmara no intervalo informado.'
   ];
 
   const alertasAnalise = [];
@@ -550,7 +550,7 @@ function AutoRel_montarMemoriaCalculoLeakTest_(ctx) {
 }
 
 function AutoRel_montarDisclaimerTermicoLeakTest_() {
-  return 'ACOMPANHAMENTO TÉRMICO COMPLEMENTAR: os valores de temperatura registrados pelos sensores durante o Leak Test são ' +
+  return 'ACOMPANHAMENTO TÉRMICO COMPLEMENTAR: os valores de temperatura registrados pelos sensores durante o teste de estanqueidade são ' +
     'apresentados exclusivamente como registro técnico complementar do ensaio, sem interferência no critério de aceitação. ' +
     'A avaliação de aprovação/reprovação deste ensaio considera unicamente a taxa de vazamento calculada a partir da ' +
     'Pressão Absoluta da Câmara (ΔP / tempo) no intervalo informado.';
