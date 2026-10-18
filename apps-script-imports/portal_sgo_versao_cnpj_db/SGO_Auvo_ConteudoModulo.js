@@ -821,103 +821,137 @@ function tplAuvo_voltarDoManual_() {
 }
 
 function tplAuvo_manualHtml_() {
-  return '<div class="wrap manual-wrap">' +
-    '<h1>Integração Auvo — Manual do operador</h1>' +
-    '<p class="subtitulo">Uso diário pela gestão (Gestor, Administrador e Diretoria); ferramentas de implantação só pelo Administrador.</p>' +
+  function ir(id, txt) { return '<li><a onclick="document.getElementById(\\'' + id + '\\').scrollIntoView({behavior:\\'smooth\\'})">' + txt + '</a></li>'; }
+  return \`<div class="wrap manual-wrap">
+<h1>Integração Auvo — Manual do operador</h1>
+<p class="subtitulo">Uso diário pela gestão (Gestor, Administrador e Diretoria). Ferramentas de implantação só pelo Administrador.</p>
 
-    '<div class="toc"><h2>Índice</h2><ol>' +
-    '<li><a onclick="document.getElementById(\\'ma-1\\').scrollIntoView({behavior:\\'smooth\\'})">O que esta tela faz</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-2\\').scrollIntoView({behavior:\\'smooth\\'})">Como configurar as credenciais</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-3\\').scrollIntoView({behavior:\\'smooth\\'})">Sincronizar Clientes</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-4\\').scrollIntoView({behavior:\\'smooth\\'})">Sincronizar Técnicos</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-5\\').scrollIntoView({behavior:\\'smooth\\'})">Como as Tarefas são criadas</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-5b\\').scrollIntoView({behavior:\\'smooth\\'})">Sincronização diária (Tarefas)</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-5c\\').scrollIntoView({behavior:\\'smooth\\'})">Importação completa (manual)</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-6\\').scrollIntoView({behavior:\\'smooth\\'})">O que ainda não está incluído</a></li>' +
-    '<li><a onclick="document.getElementById(\\'ma-7\\').scrollIntoView({behavior:\\'smooth\\'})">Erros comuns</a></li>' +
-    '</ol></div>' +
+<div class="toc"><h2>Índice</h2><ol>\` +
+    ir('ma-1', 'O que esta tela faz') +
+    ir('ma-2', 'Antes de começar: as chaves do Auvo') +
+    ir('ma-3', 'Trazer os atendimentos do Auvo') +
+    ir('ma-4', 'O.S. abertas: pendências e cobrança') +
+    ir('ma-5', 'Relatório de atendimentos (A4)') +
+    ir('ma-6', 'Ver uma O.S. pelo Início') +
+    ir('ma-7', 'Tarefas criadas sozinhas pelo SGO+') +
+    ir('ma-8', 'Ferramentas de implantação (Administrador)') +
+    ir('ma-9', 'Cores e selos') +
+    ir('ma-10', 'Erros comuns e o que fazer') +
+    ir('ma-11', 'O que ainda não está incluído') +
+\`</ol></div>
 
-    '<h2 id="ma-1">1. O que esta tela faz</h2>' +
-    '<p>Sincroniza dados nos dois sentidos com o Auvo. SGO+ &rarr; Auvo: Clientes, Técnicos/Usuários e Tarefas (sempre que um ' +
-    'documento oficial é emitido). Auvo &rarr; SGO+: Clientes/Unidades e Equipamentos, trazidos automaticamente pra dentro do ' +
-    'SGO+ (ver seção 5b). Em ambos os sentidos, o SGO+ nunca cria registro duplicado — sempre casa com o que já existe antes ' +
-    'de criar algo novo.</p>' +
+<h2 id="ma-1">1. O que esta tela faz</h2>
+<p>Liga o SGO+ ao Auvo. Traz para o SGO+ os atendimentos (O.S.) feitos no Auvo, mostra as O.S. que ainda não foram encerradas e gera o relatório de atendimentos.</p>
+<div class="callout"><strong>Quem usa:</strong> Administrador, Gestor e Diretoria. O técnico continua usando o aplicativo do Auvo. As cobranças que a gestão registra aparecem para ele ao entrar no SGO+.</div>
 
-    '<h2 id="ma-2">2. Como configurar as credenciais</h2>' +
-    '<p>Gere a API Key e o API Token na conta Auvo, em <strong>Menu &gt; Integração</strong>. Depois, o administrador do SGO+ abre ' +
-    '<strong>Chaves e senhas</strong> (menu do administrador, grupo Auvo) e grava as duas chaves: ' +
-    '<strong>AUVO_API_KEY</strong> e <strong>AUVO_API_TOKEN</strong>, com os valores gerados. Use o botão "Testar conexão" ' +
-    'nesta tela pra confirmar que ficou certo.</p>' +
+<h2 id="ma-2">2. Antes de começar: as chaves do Auvo</h2>
+<ol>
+<li>No Auvo, gere a chave e o código de acesso em Menu &gt; Integração.</li>
+<li>No SGO+, o Administrador grava AUVO_API_KEY e AUVO_API_TOKEN em "Chaves e senhas" (grupo Auvo).</li>
+<li>Volte a esta tela e toque em "Testar conexão".</li>
+<li>Caixa verde "Conexão com o Auvo estabelecida com sucesso.": está pronto.</li>
+</ol>
 
-    '<h2 id="ma-3">3. Sincronizar Clientes (ferramentas de implantação, administrador)</h2>' +
-    '<p>Dentro de "Ferramentas de implantação", em "Consultar Cliente": busque pelo nome ou CNPJ (a lista não aparece inteira — ' +
-    'a base só cresce, então é sempre busca). O botão "Sincronizar" no resultado envia aquele cliente pro Auvo — se já ' +
-    'tiver sido sincronizado antes, os dados são atualizados lá; se não, um novo cadastro é criado. O status (OK / ERRO / ' +
-    'PENDENTE) mostra o resultado da última tentativa. "Sincronizar todos os clientes ativos" faz isso em lote, sem precisar ' +
-    'buscar um por um.</p>' +
+<h2 id="ma-3">3. Trazer os atendimentos do Auvo</h2>
+<p>O quadro "Sincronização automática de Tarefas" traz os atendimentos recentes (e os ainda abertos dos últimos 7 dias). O cliente só vem para o SGO+ quando aparece numa tarefa. Equipamentos não vêm por aqui.</p>
+<ol>
+<li>Ligue a chave "Sincronizar automaticamente a cada 30 minutos".</li>
+<li>Para trazer na hora, toque em "Sincronizar agora".</li>
+<li>Espere terminar e leia o resultado: tarefas encontradas e clientes novos.</li>
+<li>Confira a linha "Última execução".</li>
+</ol>
+<div class="callout"><strong>O histórico começa no dia em que a sincronização foi ligada.</strong> É ela que alimenta o Início (atendimentos abertos, concluídos, O.S. sem relato, últimos atendimentos) e o aviso "Atendimento iniciado" / "Atendimento concluído" no canto da tela do computador.</div>
 
-    '<h2 id="ma-4">4. Sincronizar Técnicos</h2>' +
-    '<p>São considerados "técnicos" os usuários ativos do SGO+ com perfil Técnico, Metrologia, Gestor ou Administrador. ' +
-    'O Auvo exige e-mail pra cada usuário — se o SGO+ não tiver o e-mail cadastrado, um campo aparece no próprio ' +
-    'resultado da busca pra preencher e salvar antes de sincronizar.</p>' +
+<h2 id="ma-4">4. O.S. abertas: pendências e cobrança</h2>
+<p>O Auvo não deixa o SGO+ encerrar a O.S. O quadro "Pendências de fechamento (O.S. abertas no Auvo)" mostra quem é o técnico, o que falta e o link para encerrar no Auvo.</p>
+<ol>
+<li>Se aparecer "Ainda não atualizado", toque em "Atualizar agora". Pode levar alguns minutos.</li>
+<li>Para ver um técnico só, escolha o nome em "Todos os técnicos".</li>
+<li>Para ver só as mais graves, escolha "Só sem evidência de execução".</li>
+<li>Toque em "Filtrar".</li>
+<li>Para encerrar, toque em "Ver no Auvo" e encerre lá.</li>
+<li>Para cobrar o técnico, toque em "Cobrar", confira a "Descrição" e toque em "Salvar".</li>
+</ol>
+<p>A cobrança fica registrada no Painel de qualidade. Para atualizar a lista todo dia sozinho, ligue "Atualizar automaticamente todo dia às 5h".</p>
+<div class="callout"><strong>"Atualização em andamento em segundo plano..."</strong> quer dizer que a varredura é grande e continua sozinha. Volte em alguns minutos e toque em "Atualizar agora" de novo.</div>
 
-    '<div class="callout"><strong>Nota:</strong> a sincronização usa os usuários reais do SGO+ (login), que são quem de ' +
-    'fato executa o serviço — não uma aba interna separada de técnicos.</div>' +
+<h2 id="ma-5">5. Relatório de atendimentos (A4)</h2>
+<ol>
+<li>No quadro "Relatório de atendimentos (A4)", escolha o período: "Últimos 7 dias", "Últimos 30 dias" ou "Últimos 90 dias".</li>
+<li>Para todos, toque em "Gerar relatório geral".</li>
+<li>Para uma pessoa ou um grupo, procure em "Buscar pelo nome", marque um ou mais nomes e toque em "Gerar relatório dos selecionados".</li>
+<li>Aguarde até 1 minuto. O relatório abre numa aba nova. Não feche a aba antes de terminar.</li>
+</ol>
+<p>O relatório traz o número de cada O.S., os indicadores e uma interpretação escrita a partir dos números.</p>
 
-    '<h2 id="ma-5">5. Como as Tarefas são criadas</h2>' +
-    '<p>Toda vez que um Certificado de Calibração, Laudo NR-13, Registro Operacional ou documento de PGT/POP é emitido no ' +
-    'SGO+, uma Tarefa concluída é criada automaticamente no Auvo pra registrar esse atendimento — sem nenhuma ação manual. ' +
-    'Se o cliente ou o técnico responsável ainda não tiverem sido sincronizados antes, isso acontece automaticamente na hora, ' +
-    'sem precisar passar por esta tela primeiro. Se o Auvo estiver fora do ar ou mal configurado no momento da emissão, o ' +
-    'documento é emitido normalmente mesmo assim — a Tarefa simplesmente não é criada.</p>' +
+<h2 id="ma-6">6. Ver uma O.S. pelo Início</h2>
+<ol>
+<li>No Início, em "Últimos atendimentos", toque na linha da O.S.</li>
+<li>Leia técnico, tipo, data, situação, endereço, relato, checklist, fotos e assinatura.</li>
+<li>Toque em "Abrir no Auvo" para ver lá, ou em "Fechar".</li>
+</ol>
 
-    '<h2 id="ma-5b">5b. Sincronização diária (Tarefas) — fluxo padrão</h2>' +
-    '<p>Todo dia, o SGO+ pergunta ao Auvo quais Tarefas/atendimentos aconteceram recentemente. Pra cada Tarefa nova, o ' +
-    'Cliente correspondente é trazido para o SGO+ <strong>só se ainda não estiver aqui</strong> — sob demanda, não a base ' +
-    'inteira do Auvo de uma vez. Isso alimenta o histórico de atendimentos do SGO+, usado no relatório de atendimentos e no Painel de qualidade.' +
-    ' Usa a mesma proteção de sempre: nunca sobrescreve dado que você já digitou (ver 5c). Equipamento não entra ' +
-    'por esse caminho — o Auvo não vincula equipamento a Tarefa por ID; equipamento continua só na Importação completa manual.</p>' +
-    '<p>O histórico é só a partir da data em que essa sincronização foi ligada — atendimentos antigos do Auvo (antes disso) ' +
-    'não entram automaticamente. O botão "Sincronizar agora" faz a consulta na hora; a chave liga e desliga a sincronização ' +
-    'automática a cada 30 minutos, que alimenta o alerta de atendimento no Início.</p>' +
+<h2 id="ma-7">7. Tarefas criadas sozinhas pelo SGO+</h2>
+<p>Ao emitir certificado de calibração, laudo NR-13, registro operacional ou PGT e POP, o SGO+ cria uma tarefa concluída no Auvo. O cliente e o técnico são enviados na hora, se ainda não estiverem lá. Se o Auvo falhar, o documento sai do mesmo jeito.</p>
 
-    '<h2 id="ma-5c">5c. Importação completa (manual, opcional)</h2>' +
-    '<p>Traz Clientes e Equipamentos cadastrados no Auvo para dentro do SGO+ <strong>de uma vez só</strong> — ferramenta ' +
-    'separada, não roda automaticamente (é pesada pra API do Auvo). Como o Auvo não tem o conceito de "Unidade" ' +
-    '(só Cliente), a regra é: clientes do Auvo com o mesmo CNPJ (8 primeiros dígitos, ignorando filial/DV) viram <strong>1 ' +
-    'Cliente no SGO+ + 1 Unidade pra cada endereço diferente</strong>. Clientes do Auvo sem CNPJ preenchido nunca são ' +
-    'mesclados automaticamente (fica 1 Cliente + 1 Unidade própria, pra revisão manual).</p>' +
-    '<p><strong>Nunca duplica</strong>: antes de criar qualquer registro novo, o sistema verifica se aquele Cliente/Unidade/' +
-    'Equipamento do Auvo já foi trazido antes (e só atualiza) e, se não, tenta casar com um cadastro manual já existente pelo ' +
-    'CNPJ (Cliente) ou pela TAG (Equipamento) antes de criar algo novo.</p>' +
-    '<p><strong>Nunca sobrescreve dado que você já digitou</strong>: um registro cadastrado manualmente é sempre protegido — ' +
-    'quando casa com um Cliente/Equipamento do Auvo, só ganha o vínculo (para as próximas importações o reconhecerem), nenhum campo dele é ' +
-    'alterado. Só um registro que já foi criado por uma sincronização anterior (marcado ORIGEM=AUVO) recebe atualização, e ' +
-    'mesmo assim só preenche campo que estava vazio — nunca troca um valor já preenchido por outro.</p>' +
-    '<p><strong>Sempre clique em "Simular" primeiro</strong> — mostra uma prévia (quantos Clientes/Unidades/Equipamentos ' +
-    'seriam criados ou atualizados, incluindo os grupos com mais de uma Unidade) sem gravar nada no SGO+. Só depois de ' +
-    'revisar essa prévia, clique em "Confirmar e executar de verdade".</p>' +
-    '<p>Bases grandes (milhares de registros) são processadas em lotes — a tela mostra o progresso e continua sozinha em ' +
-    'segundo plano mesmo se você fechar a aba (o SGO+ retoma sozinho de onde parou). Se parar, a tela mostra desde quando, o motivo e o botão para retomar.</p>' +
-    '<div class="callout"><strong>Nota:</strong> registros trazidos do Auvo ficam marcados com a origem Auvo nos cadastros de ' +
-    'Clientes, Unidades e Equipamentos, para diferenciar do que foi cadastrado manualmente.</div>' +
+<h2 id="ma-8">8. Ferramentas de implantação (Administrador)</h2>
+<p>Toque em "Mostrar ferramentas de implantação (administrador)". Use sempre "Simular (não grava nada)" antes de confirmar.</p>
+<h3>Enviar cliente ou técnico ao Auvo</h3>
+<ol>
+<li>Em "Consultar cliente (SGO+ → Auvo)" ou "Consultar técnico / usuário (SGO+ → Auvo)", digite pelo menos 2 letras e toque em "Buscar".</li>
+<li>Se o técnico não tiver e-mail, preencha e toque em "Salvar". O Auvo exige e-mail.</li>
+<li>Toque em "Sincronizar" na linha. Para todos de uma vez, use o botão de lote e confirme.</li>
+</ol>
+<h3>Procurar clientes repetidos</h3>
+<p>Em "Auditoria do cadastro do Auvo", toque em "Auditar nomes parecidos". Nada é alterado: a lista só mostra os pares para você conferir.</p>
+<h3>Importação completa (Auvo → SGO+, rara)</h3>
+<ol>
+<li>Toque em "Simular (não grava nada)" e leia a prévia.</li>
+<li>Toque em "Confirmar e executar de verdade".</li>
+<li>A importação anda em lotes e continua sozinha. Pode fechar a tela.</li>
+<li>Se aparecer "Importação parada", siga o que a caixa diz e toque em "Retomar sincronização em andamento".</li>
+</ol>
+<div class="callout"><strong>Regras que protegem o cadastro:</strong> os 8 primeiros números do CNPJ agrupam o cliente e suas unidades. Nada é duplicado. Cadastro feito no SGO+ é protegido: só ganha a ligação com o Auvo. Campo já preenchido não é trocado.</div>
+<h3>Enviar cadastro pendente (SGO+ → Auvo)</h3>
+<ol>
+<li>Em "Enviar cadastro pendente para o Auvo (SGO+ → Auvo)", toque em "Simular (não grava nada)".</li>
+<li>Confira quantas unidades e equipamentos faltam.</li>
+<li>Toque em "Confirmar e enviar de verdade" e espere "Envio concluído.".</li>
+</ol>
+<p>Cada unidade vira um cliente no Auvo. Equipamento sem unidade não pode ser enviado.</p>
 
-    '<h2 id="ma-6">6. O que ainda não está incluído</h2>' +
-    '<p>Equipes não são sincronizadas (o SGO+ não tem esse conceito hoje). Usuários/Técnicos do Auvo não são trazidos de ' +
-    'volta para o SGO+ (só o sentido SGO+ &rarr; Auvo existe pra Técnicos). Documentos gerados por Relatório de Calibração, ' +
-    'Declaração de Execução, Cronograma de Execução, Planejamento CME, Autoclave, Cadeia de Frio, Estufa/Banho-maria e ' +
-    'Lavadora ainda não criam Tarefa automaticamente — fica como uma próxima etapa a decidir.</p>' +
+<h2 id="ma-9">9. Cores e selos</h2>
+<table>
+<tr><th>O que aparece</th><th>O que quer dizer</th></tr>
+<tr><td>Vermelho "Sem evidência de execução"</td><td>O.S. aberta sem relato, questionário, check-in nem assinatura. Pode não ter sido feita</td></tr>
+<tr><td>Verde "Aberta há N dias"</td><td>Tem sinais de que foi feita, mas não foi encerrada</td></tr>
+<tr><td>Amarelo com número em "Cobranças"</td><td>Cobranças em aberto do técnico</td></tr>
+<tr><td>"Sem login"</td><td>O técnico não tem login no SGO+; a cobrança não chegaria até ele</td></tr>
+<tr><td>Verde "Sincronizado" / amarelo "Pendente" / vermelho "Com erro"</td><td>Situação do envio de cliente ou técnico</td></tr>
+<tr><td>Caixa verde / vermelha / azul / amarela</td><td>Deu certo / deu erro / em andamento / atenção ou prévia</td></tr>
+</table>
 
-    '<h2 id="ma-7">7. Erros comuns</h2>' +
-    '<table><tr><th>Situação</th><th>O que fazer</th></tr>' +
-    '<tr><td>"Credenciais do Auvo não configuradas"</td><td>Peça ao administrador para gravar AUVO_API_KEY e AUVO_API_TOKEN em Chaves e senhas (grupo Auvo).</td></tr>' +
-    '<tr><td>"Credenciais do Auvo inválidas"</td><td>Confira se a API Key/Token gerados no Auvo foram colados corretamente, sem espaços.</td></tr>' +
-    '<tr><td>"não tem e-mail cadastrado"</td><td>Preencha o e-mail do usuário na tabela de Técnicos antes de sincronizar.</td></tr>' +
-    '<tr><td>"Limite de requisições do Auvo atingido"</td><td>Aguarde alguns minutos e tente novamente — não é um erro de configuração.</td></tr>' +
-    '</table>' +
+<h2 id="ma-10">10. Erros comuns e o que fazer</h2>
+<table>
+<tr><th>O que aparece</th><th>O que fazer</th></tr>
+<tr><td>"Credenciais do Auvo não configuradas"</td><td>O Administrador grava AUVO_API_KEY e AUVO_API_TOKEN em "Chaves e senhas"</td></tr>
+<tr><td>"Credenciais do Auvo inválidas"</td><td>Gere as chaves de novo no Auvo e grave em "Chaves e senhas"</td></tr>
+<tr><td>"Limite de requisições do Auvo atingido"</td><td>Espere alguns minutos e tente de novo</td></tr>
+<tr><td>"Auvo temporariamente indisponível" ou "Falha ao comunicar com o Auvo"</td><td>Tente mais tarde. Nada se perde</td></tr>
+<tr><td>"não tem e-mail cadastrado"</td><td>Preencha o e-mail do técnico nas ferramentas de implantação e sincronize de novo</td></tr>
+<tr><td>Mensagem com "painel do gestor" ou "painel de vínculos"</td><td>Há cliente ou unidade repetidos ou ligados errado. Corrija em "Vínculos" e sincronize de novo</td></tr>
+<tr><td>"Chave GEMINI_API_KEY não configurada"</td><td>O Administrador grava a chave da IA em "Chaves e senhas"</td></tr>
+<tr><td>"A janela do relatório foi fechada antes de terminar"</td><td>Gere de novo e deixe a aba aberta</td></tr>
+</table>
 
-    '<button type="button" class="btn topo-link" onclick="tplAuvo_voltarDoManual_()">&larr; Voltar ao painel</button>' +
-    '</div>';
+<h2 id="ma-11">11. O que ainda não está incluído</h2>
+<ul>
+<li>Equipes do Auvo e técnicos criados no Auvo não voltam para o SGO+.</li>
+<li>Relatório de calibração, declaração de execução, cronograma, planejamento CME, autoclave, cadeia de frio, estufa e banho-maria e lavadora ainda não criam tarefa no Auvo.</li>
+</ul>
+
+<button type="button" class="btn topo-link" onclick="tplAuvo_voltarDoManual_()">&larr; Voltar ao painel</button>
+</div>\`;
 }
 
 function tplAuvo_paintPainel_() {
