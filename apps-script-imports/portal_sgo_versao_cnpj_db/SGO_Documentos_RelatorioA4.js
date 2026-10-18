@@ -1,21 +1,26 @@
 /****************************************************
- * MOLDURA A4 DOS RELATÓRIOS GERENCIAIS (17/10/2026)
+ * MOLDURA A4 DOS RELATÓRIOS GERENCIAIS
  *
- * Usada pelos relatórios da Frota (por veículo e geral), do Programa de
- * conduta (fechamento mensal, relatório semanal, prestação de missões e
- * extrato do colaborador) e do Inventário de equipamentos.
+ * Usada pelos relatórios da Frota (geral e por veículo), do Programa de
+ * conduta (fechamento mensal, semanal, missões, extrato e prévia), do Painel
+ * de qualidade, do Auvo e do Inventário de equipamentos.
  *
- * Segue o padrão SGO_DocA4 (SGO_DocA4_css_ / SGO_DocA4_num_): texto
- * justificado, cabeçalho de tabela repetido, quebras de página e
- * "Página X de Y" no rodapé. Aqui só se acrescenta:
- *  - topo com a logo na primeira página e cabeçalho corrido nas demais
- *    (caixas de margem do @page: empresa/título à esquerda, identificação
- *    à direita, emissão no rodapé à esquerda);
- *  - blocos prontos (seção, indicadores, tabela, gráfico em SVG);
- *  - análise do período pela IA (Gemini com raciocínio ligado), sempre
+ * 18/10/2026: passou a seguir o padrão comum dos documentos A4
+ * (docs/DOCUMENTOS_PADRAO_A4_20261018.md). A abertura, o cabeçalho e o
+ * rodapé corridos (logo, título curto, nº e revisão; empresa e "Página X de
+ * Y"), a capa, o sumário com páginas e as páginas em paisagem vêm da
+ * SGO_DocA4. Aqui ficam:
+ *  - os blocos prontos (seção e subseção numeradas, indicadores, tabela com
+ *    legenda "Tabela N", gráficos em SVG com "Figura N" e legenda, marcas de
+ *    situação, caixas, assinaturas);
+ *  - a numeração automática de seções, figuras e tabelas (o chamador não
+ *    numera nada à mão);
+ *  - o fecho: sumário só quando o documento passa de 3 páginas e capa
+ *    quando passa de 8 (decidido pelo próprio PDF);
+ *  - a análise do período pela IA (Gemini com raciocínio ligado), sempre
  *    com um texto padrão montado dos mesmos números quando a IA não está
  *    disponível — o relatório nunca deixa de sair;
- *  - gravação do HTML + PDF na pasta (SGO_DocSalvar), sem nunca lançar.
+ *  - a gravação do HTML + PDF na pasta (SGO_DocSalvar), sem nunca lançar.
  *
  * Nenhuma função devolve Date: só texto.
  ****************************************************/
@@ -24,6 +29,11 @@ var RELA4_TZ = 'America/Sao_Paulo';
 var RELA4_MODELO_PADRAO = 'gemini-2.5-flash';
 var RELA4_FALLBACKS_PADRAO = ['gemini-2.0-flash-lite'];
 var RELA4_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/';
+/** Sumário só a partir de 4 páginas; capa só a partir de 9 (padrão A4, item 3). */
+var RELA4_PAGINAS_SUMARIO = 4;
+var RELA4_PAGINAS_CAPA = 9;
+/** Paleta dos gráficos (a mesma da SGO_DocA4). */
+var RELA4_CORES = { azul: '#1f5fa8', verde: '#1d6b3f', vermelho: '#a61b1b', laranja: '#b45309', ambar: '#c98a12', cinza: '#7b8794', roxo: '#7b4fb0', petroleo: '#0f8b8d' };
 
 function RelA4_esc_(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -36,7 +46,7 @@ function RelA4_num_(v, casas) {
   if (!isFinite(n)) return '—';
   return SGO_DocA4_num_(n, casas === undefined ? (Math.round(n) === n ? 0 : 2) : casas);
 }
-function RelA4_moeda_(v) { var n = Number(v); return 'R$ ' + SGO_DocA4_num_(isFinite(n) ? n : 0, 2); }
+function RelA4_moeda_(v) { var n = Number(v); return 'R$ ' + SGO_DocA4_num_(isFinite(n) ? n : 0, 2); }
 function RelA4_plural_(n, singular, plural) { return RelA4_num_(n, 0) + ' ' + (Number(n) === 1 ? singular : plural); }
 function RelA4_agora_() { return Utilities.formatDate(new Date(), RELA4_TZ, 'dd/MM/yyyy HH:mm'); }
 
@@ -57,126 +67,185 @@ function RelA4_empresa_() {
   var e = (typeof CadeiaFrioRel_CFCFG !== 'undefined' && CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE) || {};
   return { nome: e.nome || 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: e.cnpj || '', site: e.site || '', telefone: e.telefone || '' };
 }
-function RelA4_logo_() {
-  var l = (typeof CadeiaFrioRel_CFCFG !== 'undefined' && CadeiaFrioRel_CFCFG.LOGO_BASE64) || null;
-  return l && l.data ? 'data:' + (l.mimeType || 'image/png') + ';base64,' + l.data : '';
+
+/** Número do documento sem numeração própria: SIGLA-aaaammdd-hhmm (padrão A4, item 2). */
+function RelA4_numero_(sigla) {
+  return String(sigla || 'REL').toUpperCase() + '-' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyyMMdd-HHmm');
 }
-function RelA4_cssTexto_(s) {
-  return '"' + String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ') + '"';
+
+// ------------------------------------------------------------
+// ESTILOS PRÓPRIOS DOS BLOCOS GERENCIAIS (somados aos da SGO_DocA4)
+// ------------------------------------------------------------
+function RelA4_estilosExtra_(paisagem) {
+  return '' +
+    '.secao{margin:0}' +
+    '.kpis{display:grid;grid-template-columns:repeat(' + (paisagem ? 6 : 4) + ',1fr);gap:2.2mm;margin:1.6mm 0 3.4mm;break-inside:avoid;page-break-inside:avoid}' +
+    '.kpi{border:.5pt solid #bcc5cf;border-top:2pt solid #0b3d6e;padding:2mm 2.4mm 1.8mm;background:#fff}' +
+    '.kpi .v{display:block;font-size:12.5pt;font-weight:700;color:#0b3d6e;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+    '.kpi .r{display:block;font-size:7.8pt;color:#52606d;margin-top:.6mm;line-height:1.3}' +
+    '.kpi.ok{border-top-color:#1d6b3f}.kpi.ok .v{color:#1d6b3f}.kpi.aviso{border-top-color:#b45309}.kpi.aviso .v{color:#8a4b00}.kpi.critico{border-top-color:#a61b1b}.kpi.critico .v{color:#a61b1b}' +
+    '.marca{display:inline-block;padding:.2mm 1.8mm;border-radius:1.6mm;font-size:7.8pt;font-weight:700;white-space:nowrap;line-height:1.5}' +
+    '.marca.ok{background:#e7f3ec;color:#1d6b3f}.marca.aviso{background:#fdf1dc;color:#8a4b00}.marca.critico{background:#fbe9e9;color:#a61b1b}.marca.neutra{background:#eef2f6;color:#3e4c59}' +
+    '.caixa{border:.5pt solid #bcc5cf;border-left:3pt solid #1f5fa8;background:#f5f7fa;padding:2.2mm 3.2mm;margin:2mm 0 3mm;break-inside:avoid;page-break-inside:avoid}' +
+    '.caixa p{margin:0 0 1.2mm}.caixa p:last-child{margin-bottom:0}' +
+    '.caixa.aviso{border-left-color:#b45309;background:#fdf8ee}.caixa.critico{border-left-color:#a61b1b;background:#fcf3f3}.caixa.ok{border-left-color:#1d6b3f;background:#f2f8f4}' +
+    'figure.grafico svg{max-width:177mm;height:auto}td.nw,th.nw{white-space:nowrap}' +
+    '.leg-grafico{display:flex;flex-wrap:wrap;gap:1mm 5mm;margin:1mm 0 0;font-size:8pt;color:#3e4c59}' +
+    '.leg-grafico span{display:inline-flex;align-items:center;gap:1.4mm}.leg-grafico i{display:inline-block;width:3.2mm;height:3.2mm;border-radius:.5mm}' +
+    '.leg-grafico i.tracejado{height:0;border-top:1.2pt dashed currentColor;border-radius:0}' +
+    '.duas{display:grid;grid-template-columns:1fr 1fr;gap:6mm}' +
+    '.gauge-kpis{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}' +
+    '.gauge-kpis .kpis{margin:0;grid-template-columns:repeat(3,1fr)}' +
+    '.analise ul{margin:0 0 2.4mm 4.5mm;padding:0;break-inside:avoid;page-break-inside:avoid}.analise li{margin:0 0 1.1mm}' +
+    'ol.conferencia{margin:0 0 2.4mm 5mm;padding:0}ol.conferencia li{margin:0 0 1.1mm}' +
+    'table.t td .sub{display:block;font-size:7.6pt;color:#52606d}' +
+    '.aviso-tela{max-width:210mm;margin:10px auto 0;padding:9px 12px;border-radius:4px;font:12.5px/1.45 Arial,sans-serif}' +
+    (paisagem ? '.aviso-tela{max-width:297mm}' : '') +
+    '.aviso-tela.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}' +
+    '.aviso-tela.alerta{background:#fffbeb;border:1px solid #fcd34d;color:#78350f}' +
+    '.aviso-tela a{color:inherit;font-weight:700}' +
+    '@media print{.aviso-tela,.no-print{display:none!important}}' +
+    '@media screen and (max-width:640px){.folha{padding:6mm 4mm}.kpis,.gauge-kpis .kpis{grid-template-columns:repeat(2,1fr)}.duas,.gauge-kpis{grid-template-columns:1fr}' +
+    'table.t{display:block;overflow-x:auto}.cab-tela .meta{font-size:10px}.barra-tela{padding:0 8px}}';
+}
+
+// ------------------------------------------------------------
+// DOCUMENTO
+// ------------------------------------------------------------
+/** Documentos montados nesta execução: guarda a variante com capa para o fecho. */
+var RELA4_DOCS = [];
+
+/**
+ * Numeração automática do corpo: seções (h2) "1.", subseções (h3) "1.1",
+ * figuras e tabelas na ordem em que aparecem. Número escrito à mão no
+ * título (ex.: "3. Abastecimentos") é trocado pelo automático.
+ */
+function RelA4_numerar_(corpo) {
+  var s = 0, ss = 0, fig = 0, tab = 0;
+  function semNumero(t) { return String(t).replace(/^\s*\d+(?:\.\d+)*\.?\s+/, ''); }
+  return String(corpo || '').replace(/<h2 data-rela4-sec>([\s\S]*?)<\/h2>|<h3 data-rela4-sub>([\s\S]*?)<\/h3>|<b data-rela4-fig>Figura<\/b>|<b data-rela4-tab>Tabela<\/b>/g, function (m, h2, h3) {
+    if (h2 !== undefined) { s++; ss = 0; return '<h2>' + s + '. ' + semNumero(h2) + '</h2>'; }
+    if (h3 !== undefined) { ss++; return '<h3>' + (s || 1) + '.' + ss + ' ' + semNumero(h3) + '</h3>'; }
+    if (m.indexOf('fig') > 0) { fig++; return '<b>Figura ' + fig + '</b>'; }
+    tab++; return '<b>Tabela ' + tab + '</b>';
+  });
 }
 
 /**
  * Documento completo.
- * o: { titulo, subtitulo, identificacao, corpo, cor, paisagem, emitidoPor }
+ * o: { titulo, subtitulo, identificacao (texto da referência: período, competência...),
+ *      rotuloIdentificacao ('Período' por padrão), corpo, paisagem, emitidoPor,
+ *      sigla (para o nº), numero, ficha: [[rótulo, valor]] extra, tituloCurto,
+ *      tipoCapa ('Relatório gerencial'), sumario (padrão true), capa (padrão 'auto') }
+ * O sumário e a capa entram ou saem no fecho (RelA4_finalizar_), pelo nº de páginas.
  */
 function RelA4_documento_(o) {
   o = o || {};
-  var cor = o.cor || '#0b4ea2';
+  var paisagem = !!o.paisagem;
   var empresa = RelA4_empresa_();
-  var logo = RelA4_logo_();
-  var emissao = RelA4_agora_();
-  var largura = o.paisagem ? 1180 : 900;
-  var css = [
-    '@page { size: A4' + (o.paisagem ? ' landscape' : '') + '; margin: 19mm 14mm 17mm 14mm;',
-    '  @top-left { content: ' + RelA4_cssTexto_("Metrolab's · " + (o.titulo || '')) + '; font: 8px Arial, Helvetica, sans-serif; color: #6b7280; }',
-    '  @top-right { content: ' + RelA4_cssTexto_(o.identificacao || '') + '; font: 8px Arial, Helvetica, sans-serif; color: #6b7280; }',
-    '  @bottom-left { content: ' + RelA4_cssTexto_('Emitido pelo SGO+ em ' + emissao) + '; font: 8px Arial, Helvetica, sans-serif; color: #6b7280; } }',
-    '@page :first { @top-left { content: none; } @top-right { content: none; } }',
-    '* { box-sizing: border-box; }',
-    'body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 11.5px; line-height: 1.5; margin: 0; background: #eef1f5; }',
-    '.folha { max-width: ' + largura + 'px; margin: 18px auto 30px; background: #fff; padding: 26px 32px 30px; box-shadow: 0 1px 8px rgba(15,23,42,.12); }',
-    '.barra-tela { max-width: ' + largura + 'px; margin: 14px auto 0; display: flex; justify-content: flex-end; gap: 8px; }',
-    '.barra-tela button { background: ' + cor + '; color: #fff; border: 0; padding: 9px 16px; border-radius: 4px; font-weight: 700; font-size: 12.5px; cursor: pointer; }',
-    '.aviso-tela { max-width: ' + largura + 'px; margin: 10px auto 0; padding: 9px 12px; border-radius: 4px; font-size: 12.5px; line-height: 1.45; }',
-    '.aviso-tela.ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }',
-    '.aviso-tela.alerta { background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; }',
-    '.aviso-tela a { color: inherit; font-weight: 700; }',
-    '.topo { display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 3px solid ' + cor + '; padding-bottom: 12px; margin-bottom: 16px; }',
-    '.topo img { height: 46px; max-width: 190px; object-fit: contain; }',
-    '.topo .titulos { text-align: right; }',
-    '.topo h1 { font-size: 18px; margin: 0 0 3px; color: ' + cor + '; font-weight: 800; }',
-    '.topo .sub { font-size: 11.5px; color: #4b5563; margin: 0; text-align: right; }',
-    '.topo .ident { display: inline-block; margin-top: 6px; font-size: 10.5px; font-weight: 700; color: ' + cor + '; border: 1px solid ' + cor + '; border-radius: 3px; padding: 2px 8px; }',
-    '.secao { margin-top: 18px; }',
-    '.secao > h2 { font-size: 13px; color: #111827; margin: 0 0 9px; padding: 0 0 5px 10px; border-left: 4px solid ' + cor + '; border-bottom: 1px solid #e5e7eb; font-weight: 700; }',
-    '.secao > h3, .secao h3 { font-size: 12px; color: #1f2937; margin: 12px 0 6px; }',
-    '.secao p { margin: 6px 0; }',
-    '.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 4px; }',
-    '.kpi { border: 1px solid #dbe1ea; border-radius: 4px; padding: 8px 10px; text-align: center; break-inside: avoid; }',
-    '.kpi .v { display: block; font-size: 17px; font-weight: 800; color: ' + cor + '; line-height: 1.25; }',
-    '.kpi .r { display: block; font-size: 10px; color: #4b5563; margin-top: 2px; }',
-    'table.dados { width: 100%; border-collapse: collapse; font-size: 10.5px; margin: 6px 0 10px; }',
-    'table.dados th { background: #f1f5f9; color: #1f2937; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #dbe1ea; }',
-    'table.dados td { padding: 4px 6px; border: 1px solid #e2e8f0; vertical-align: top; overflow-wrap: anywhere; }',
-    'table.dados tbody tr:nth-child(even) td { background: #fafbfc; }',
-    'table.dados tr.total td { font-weight: 700; background: #f1f5f9; }',
-    'table.ident { width: 100%; border-collapse: collapse; font-size: 11px; margin: 4px 0 8px; }',
-    'table.ident td { border: 1px solid #e2e8f0; padding: 5px 8px; vertical-align: top; }',
-    'table.ident td.rot { width: 28%; background: #f8fafc; color: #374151; font-weight: 700; }',
-    '.analise p { text-align: justify; margin: 6px 0; }',
-    '.analise ul { margin: 6px 0 6px 18px; padding: 0; } .analise li { margin: 3px 0; }',
-    '.nota { font-size: 10px; color: #4b5563; margin: 6px 0; }',
-    '.marca { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 10px; font-weight: 700; white-space: nowrap; }',
-    '.marca.ok { background: #dcfce7; color: #14532d; } .marca.aviso { background: #fef3c7; color: #78350f; } .marca.critico { background: #fee2e2; color: #7f1d1d; } .marca.neutra { background: #e5e7eb; color: #374151; }',
-    '.caixa { border: 1px solid #dbe1ea; border-left: 4px solid ' + cor + '; background: #f8fafc; padding: 8px 11px; margin: 8px 0; break-inside: avoid; }',
-    '.caixa.aviso { border-left-color: #d97706; background: #fffbeb; } .caixa.critico { border-left-color: #dc2626; background: #fef2f2; } .caixa.ok { border-left-color: #16a34a; background: #f0fdf4; }',
-    '.grafico { margin: 8px 0 12px; break-inside: avoid; } .grafico .tit { font-size: 11px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }',
-    '.duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }',
-    '.assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 46px; }',
-    '.assinaturas .linha { border-top: 1px solid #374151; text-align: center; padding-top: 5px; font-size: 10.5px; }',
-    '.fim { margin-top: 22px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 9.5px; color: #6b7280; text-align: center; }',
-    '@media print { body { background: #fff; } .folha { box-shadow: none; margin: 0; padding: 0; max-width: none; } .no-print { display: none !important; } }',
-    '@media (max-width: 640px) { .folha { padding: 16px; margin: 8px; } .kpis { grid-template-columns: repeat(2, 1fr); } .duas { grid-template-columns: 1fr; } .topo { flex-direction: column; align-items: flex-start; } .topo .titulos, .topo .sub { text-align: left; } table.dados { font-size: 10px; } }',
-    SGO_DocA4_css_()
-  ].join('\n');
+  var numero = o.numero || RelA4_numero_(o.sigla);
+  var ficha = [];
+  if (o.identificacao) ficha.push([o.rotuloIdentificacao || 'Período', o.identificacao]);
+  ficha.push(['Emissão', RelA4_agora_()]);
+  if (o.emitidoPor) ficha.push(['Emitido por', o.emitidoPor]);
+  (o.ficha || []).forEach(function (p) { if (p && p[0]) ficha.push(p); });
+  // número ímpar de itens: o último ocupa a linha inteira (sem célula vazia na ficha)
+  if (ficha.length % 2 === 1) ficha[ficha.length - 1] = [ficha[ficha.length - 1][0], ficha[ficha.length - 1][1], { largo: true }];
+  var corpo = RelA4_numerar_(o.corpo || '');
+  var base = {
+    titulo: o.titulo || 'Relatório', subtitulo: o.subtitulo || '', tituloCurto: o.tituloCurto || o.titulo || 'Relatório',
+    rotuloNumero: 'Nº', numero: numero, revisao: '00', empresa: { nome: empresa.nome, cnpj: empresa.cnpj },
+    orientacao: paisagem ? 'paisagem' : 'retrato'
+  };
+  function montar(comCapa, comSumario) {
+    var doc = {};
+    Object.keys(base).forEach(function (k) { doc[k] = base[k]; });
+    if (comCapa) doc.capa = { tipo: o.tipoCapa || 'Relatório gerencial', linhas: ficha };
+    else doc.ficha = ficha;
+    doc.sumario = !!comSumario;
+    var h = SGO_DocA4_inicioDocumento_(doc);
+    h = h.replace('</head>', '<style>' + RelA4_estilosExtra_(paisagem) + '</style></head>')
+      .replace('<main class="folha">', '<!--RELA4_AVISOS--><main class="folha">');
+    return h + corpo + SGO_DocA4_fimDocumento_();
+  }
+  var comSumario = o.sumario !== false;
+  var html = montar(o.capa === true, comSumario);
+  RELA4_DOCS.push({
+    html: html, numero: numero, tipo: o.tituloArquivo || o.titulo || 'Relatorio',
+    semSumario: comSumario ? function () { return montar(o.capa === true, false); } : null,
+    comCapa: (o.capa === true || o.capa === false) ? null : function () { return montar(true, comSumario); }
+  });
+  if (RELA4_DOCS.length > 8) RELA4_DOCS.shift();
+  return html;
+}
 
-  var h = [];
-  h.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
-  h.push('<title>' + RelA4_esc_((o.titulo || 'Relatório') + (o.identificacao ? ' — ' + o.identificacao : '')) + '</title>');
-  h.push('<style>' + css + '</style></head><body>');
-  h.push('<div class="barra-tela no-print"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
-  h.push('<!--RELA4_AVISOS-->');
-  h.push('<main class="folha">');
-  h.push('<header class="topo">' + (logo ? '<img src="' + logo + '" alt="Metrolab\'s">' : '<div></div>') +
-    '<div class="titulos"><h1>' + RelA4_esc_(o.titulo || 'Relatório') + '</h1>' +
-    (o.subtitulo ? '<p class="sub">' + RelA4_esc_(o.subtitulo) + '</p>' : '') +
-    (o.identificacao ? '<span class="ident">' + RelA4_esc_(o.identificacao) + '</span>' : '') + '</div></header>');
-  h.push(o.corpo || '');
-  h.push('<div class="fim">' + RelA4_esc_(empresa.nome) + (empresa.cnpj ? ' · CNPJ ' + RelA4_esc_(empresa.cnpj) : '') +
-    '<br>Documento emitido pelo SGO+ em ' + RelA4_esc_(emissao) + (o.emitidoPor ? ' por ' + RelA4_esc_(o.emitidoPor) : '') + '.</div>');
-  h.push('</main></body></html>');
-  return h.join('\n');
+function RelA4_registro_(html) {
+  for (var i = RELA4_DOCS.length - 1; i >= 0; i--) if (RELA4_DOCS[i].html === html) return RELA4_DOCS[i];
+  return null;
+}
+
+/**
+ * Fecho do documento: lê o nº de páginas no PDF e decide o sumário (a partir
+ * de 4 páginas, com os números de página) e a capa (a partir de 9).
+ * Nunca lança. Devolve { html, pdfBlob (ou null), paginas }.
+ */
+function RelA4_finalizar_(html, nome) {
+  var reg = RelA4_registro_(html);
+  if (typeof SGO_DocA4_paginar_ !== 'function') return { html: html, pdfBlob: null, paginas: 0 };
+  try {
+    var p = SGO_DocA4_paginar_(html, { nome: nome, gerarPdf: true });
+    var total = p.totalPaginas || 0;
+    if (reg && total && total < RELA4_PAGINAS_SUMARIO && reg.semSumario) {
+      p = SGO_DocA4_paginar_(reg.semSumario(), { nome: nome, gerarPdf: true });
+    } else if (reg && total >= RELA4_PAGINAS_CAPA && reg.comCapa) {
+      p = SGO_DocA4_paginar_(reg.comCapa(), { nome: nome, gerarPdf: true });
+    }
+    return { html: p.html, pdfBlob: p.pdfBlob, paginas: p.totalPaginas || total };
+  } catch (e) {
+    return { html: html, pdfBlob: null, paginas: 0 };
+  }
 }
 
 /** Faixas só de tela (somem na impressão). avisos: [{tipo:'ok'|'alerta', html}] — html já escapado. */
 function RelA4_injetarAvisos_(html, avisos) {
   var faixas = (avisos || []).filter(function (a) { return a && a.html; }).map(function (a) {
-    return '<div class="aviso-tela no-print ' + (a.tipo === 'ok' ? 'ok' : 'alerta') + '">' + a.html + '</div>';
+    return '<div class="aviso-tela no-print so-tela ' + (a.tipo === 'ok' ? 'ok' : 'alerta') + '">' + a.html + '</div>';
   }).join('');
   return String(html || '').replace('<!--RELA4_AVISOS-->', faixas);
 }
 
+// ------------------------------------------------------------
+// BLOCOS
+// ------------------------------------------------------------
+/** Seção numerada automaticamente (h2). */
 function RelA4_secao_(titulo, conteudo) {
-  return '<section class="secao"><h2>' + RelA4_esc_(titulo) + '</h2>' + (conteudo || '') + '</section>';
+  return '<section class="secao"><h2 data-rela4-sec>' + RelA4_esc_(titulo) + '</h2>' + (conteudo || '') + '</section>';
+}
+/** Subseção numerada automaticamente (h3), dentro da seção corrente. */
+function RelA4_subsecao_(titulo, conteudo) {
+  return '<h3 data-rela4-sub>' + RelA4_esc_(titulo) + '</h3>' + (conteudo || '');
+}
+/** Trecho em folha paisagem dentro de documento retrato (tabela larga). */
+function RelA4_paisagem_(html) {
+  return typeof SGO_DocA4_paginaPaisagem_ === 'function' ? SGO_DocA4_paginaPaisagem_(html) : html;
 }
 
-/** itens: [[valor, rótulo], ...] — valor já formatado (texto). */
+/** itens: [[valor, rótulo, situação opcional 'ok'|'aviso'|'critico'], ...] — valor já formatado (texto). */
 function RelA4_kpis_(itens) {
   return '<div class="kpis">' + (itens || []).map(function (k) {
-    return '<div class="kpi"><span class="v">' + RelA4_esc_(k[0]) + '</span><span class="r">' + RelA4_esc_(k[1]) + '</span></div>';
+    return '<div class="kpi' + (k[2] ? ' ' + k[2] : '') + '"><span class="v">' + RelA4_esc_(k[0]) + '</span><span class="r">' + RelA4_esc_(k[1]) + '</span></div>';
   }).join('') + '</div>';
 }
 
-/** pares: [[rótulo, valor], ...] em tabela de identificação de 2 colunas. */
+/** pares: [[rótulo, valor], ...] em tabela de identificação (dois pares por linha). */
 function RelA4_identificacao_(pares) {
-  return '<table class="ident"><tbody>' + (pares || []).map(function (p) {
-    return '<tr><td class="rot">' + RelA4_esc_(p[0]) + '</td><td>' + RelA4_esc_(p[1] === '' || p[1] == null ? '—' : p[1]) + '</td></tr>';
-  }).join('') + '</tbody></table>';
+  return SGO_DocA4_tabelaIdent_((pares || []).map(function (p) { return [p[0], p[1] === '' || p[1] == null ? '—' : p[1], p[2]]; }));
 }
 
 /**
- * colunas: [{t:'Título', num:true}] ; linhas: [[célula, ...]] (texto, escapado aqui;
- * objeto {html:'...'} passa sem escapar); opts: { vazio, total: [células] }.
+ * colunas: [{t:'Título', num:true, cen:true}] ; linhas: [[célula, ...]] (texto, escapado aqui;
+ * objeto {html:'...'} passa sem escapar); opts: { vazio, total: [células], legenda, compacta }.
+ * Com legenda, sai "Tabela N — legenda" acima (numeração automática).
  */
 function RelA4_tabela_(colunas, linhas, opts) {
   opts = opts || {};
@@ -184,16 +253,24 @@ function RelA4_tabela_(colunas, linhas, opts) {
   function cel(v, i, tag) {
     var c = colunas[i] || {};
     var conteudo = v && typeof v === 'object' && v.html !== undefined ? v.html : RelA4_esc_(v === '' || v == null ? '—' : v);
-    var data = typeof v === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(v);
-    return '<' + tag + (c.num ? ' class="num"' : '') + (data ? ' style="white-space:nowrap"' : '') + '>' + conteudo + '</' + tag + '>';
+    var data = typeof v === 'string' && /^\d{2}\/\d{2}\/\d{4}/.test(v);
+    var cls = (c.num ? 'num' : (c.cen ? 'cen' : '')) + (c.nw ? ' nw' : '');
+    cls = cls.trim();
+    return '<' + tag + (cls ? ' class="' + cls + '"' : '') + (data && !cls ? ' style="white-space:nowrap"' : '') + (c.w && tag === 'th' ? ' style="width:' + c.w + '"' : '') + '>' + conteudo + '</' + tag + '>';
   }
-  var h = '<table class="dados"><thead><tr>' + colunas.map(function (c, i) { return cel({ html: RelA4_esc_(c.t) }, i, 'th'); }).join('') + '</tr></thead><tbody>';
+  var h = (opts.legenda ? '<p class="leg-tabela"><b data-rela4-tab>Tabela</b> — ' + RelA4_esc_(opts.legenda) + '</p>' : '') +
+    '<table class="t' + (opts.compacta ? ' compacta' : '') + '"><thead><tr>' + colunas.map(function (c, i) { return cel({ html: RelA4_esc_(c.t) }, i, 'th'); }).join('') + '</tr></thead><tbody>';
   h += linhas.map(function (l) { return '<tr>' + l.map(function (v, i) { return cel(v, i, 'td'); }).join('') + '</tr>'; }).join('');
   if (opts.total) h += '<tr class="total">' + opts.total.map(function (v, i) { return cel(v === '' ? { html: '' } : v, i, 'td'); }).join('') + '</tr>';
-  return h + '</tbody></table>';
+  h += '</tbody></table>';
+  // tabela curta não se divide entre folhas (legenda e linhas juntas)
+  return linhas.length <= 8 ? '<div class="manter">' + h + '</div>' : h;
 }
 
 function RelA4_marca_(texto, tipo) { return { html: '<span class="marca ' + (tipo || 'neutra') + '">' + RelA4_esc_(texto) + '</span>' }; }
+
+/** Caixa de destaque (tipo: ''|'ok'|'aviso'|'critico'); texto simples, escapado. */
+function RelA4_caixa_(texto, tipo) { return '<div class="caixa' + (tipo ? ' ' + tipo : '') + '"><p>' + RelA4_esc_(texto) + '</p></div>'; }
 
 /** Texto (parágrafos separados por linha em branco; linhas "- " viram lista) em HTML justificado. */
 function RelA4_paragrafos_(texto) {
@@ -208,58 +285,127 @@ function RelA4_paragrafos_(texto) {
   return '<div class="analise">' + (out.join('') || '<p>—</p>') + '</div>';
 }
 
-/** Barras horizontais em SVG (o PDF não executa script). itens: [{rotulo, valor, rotuloValor}] */
+/** Assinaturas em branco para preenchimento (cargos). */
+function RelA4_assinaturas_(cargos) {
+  return '<div class="assinaturas manter">' + (cargos || []).map(function (c) {
+    return '<div class="assinatura"><div class="img"></div><div class="linha">' + RelA4_esc_(c) + '</div><div class="cargo">Nome e data</div></div>';
+  }).join('') + '</div>';
+}
+
+// ------------------------------------------------------------
+// GRÁFICOS EM SVG (o PDF não executa script). Cada gráfico sai numa
+// <figure> com "Figura N — título" e legenda das cores quando houver.
+// ------------------------------------------------------------
+function RelA4_figura_(svg, titulo, legenda) {
+  var leg = (legenda || []).filter(function (l) { return l && l.rotulo; });
+  return '<figure class="grafico">' + svg +
+    (leg.length ? '<div class="leg-grafico">' + leg.map(function (l) {
+      return '<span><i' + (l.tracejado ? ' class="tracejado" style="color:' + l.cor + '"' : ' style="background:' + l.cor + '"') + '></i>' + RelA4_esc_(l.rotulo) + '</span>';
+    }).join('') + '</div>' : '') +
+    '<figcaption><b data-rela4-fig>Figura</b> — ' + RelA4_esc_(titulo || '') + '</figcaption></figure>';
+}
+
+function RelA4_txtSvg_(x, y, texto, extra) {
+  return '<text x="' + Number(x).toFixed(1) + '" y="' + Number(y).toFixed(1) + '" font-family="Arial,Helvetica,sans-serif" ' + (extra || '') + '>' + RelA4_esc_(texto) + '</text>';
+}
+
+/**
+ * Barras horizontais. itens: [{rotulo, valor, rotuloValor, cor}] ;
+ * opts: { titulo (vira a legenda da figura), cor, vazio, unidade, legenda:[{cor, rotulo}] }
+ */
 function RelA4_barras_(itens, opts) {
   opts = opts || {};
   itens = (itens || []).filter(function (i) { return isFinite(Number(i.valor)); });
   if (!itens.length) return '<p class="nota">' + RelA4_esc_(opts.vazio || 'Sem dados no período.') + '</p>';
-  var W = 640, hb = 18, gap = 7, esq = 150, dir = 90, topo = 4;
-  var H = topo * 2 + itens.length * (hb + gap);
+  var maiorRotulo = Math.max.apply(null, itens.map(function (i) { return String(i.rotulo).length; }));
+  var maiorValor = Math.max.apply(null, itens.map(function (i) { return String(i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor)).length; }).concat([6]));
+  var W = 680, hb = 15, gap = 6, esq = Math.min(190, Math.max(70, maiorRotulo * 5.6 + 12)), dir = Math.min(280, Math.max(70, maiorValor * 5.5 + 12)), topo = 6;
+  var H = topo * 2 + itens.length * (hb + gap) + (opts.unidade ? 12 : 0);
   var larg = W - esq - dir;
   var max = Math.max.apply(null, itens.map(function (i) { return Math.max(Number(i.valor), 0); }).concat([0.0001]));
-  var cor = opts.cor || '#0b4ea2';
-  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:' + W + 'px;height:auto" role="img">'];
+  var cor = opts.cor || RELA4_CORES.azul;
+  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
+  s.push('<line x1="' + esq + '" y1="' + topo + '" x2="' + esq + '" y2="' + (H - topo - (opts.unidade ? 12 : 0)) + '" stroke="#9aa5b1" stroke-width="0.8"/>');
   itens.forEach(function (i, k) {
     var y = topo + k * (hb + gap), w = Math.max(Number(i.valor), 0) / max * larg;
-    s.push('<text x="' + (esq - 6) + '" y="' + (y + hb / 2 + 4) + '" font-size="10.5" fill="#374151" text-anchor="end" font-family="Arial,sans-serif">' + RelA4_esc_(String(i.rotulo).slice(0, 26)) + '</text>');
-    s.push('<rect x="' + esq + '" y="' + y + '" width="' + Math.max(w, 1).toFixed(1) + '" height="' + hb + '" fill="' + (i.cor || cor) + '" rx="2"/>');
-    s.push('<text x="' + (esq + w + 5).toFixed(1) + '" y="' + (y + hb / 2 + 4) + '" font-size="10.5" fill="#111827" font-family="Arial,sans-serif">' + RelA4_esc_(i.rotuloValor) + '</text>');
+    s.push(RelA4_txtSvg_(esq - 6, y + hb / 2 + 3.5, String(i.rotulo).slice(0, 34), 'font-size="9.5" fill="#1f2933" text-anchor="end"'));
+    s.push('<rect x="' + esq + '" y="' + y + '" width="' + Math.max(w, 1).toFixed(1) + '" height="' + hb + '" fill="' + (i.cor || cor) + '" fill-opacity="0.88"/>');
+    s.push(RelA4_txtSvg_(esq + w + 5, y + hb / 2 + 3.5, i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor), 'font-size="9.5" fill="#1f2933"'));
   });
+  if (opts.unidade) s.push(RelA4_txtSvg_(W - 4, H - 3, opts.unidade, 'font-size="8.5" fill="#52606d" text-anchor="end"'));
   s.push('</svg>');
-  return '<div class="grafico">' + (opts.titulo ? '<div class="tit">' + RelA4_esc_(opts.titulo) + '</div>' : '') + s.join('') + '</div>';
+  return RelA4_figura_(s.join(''), opts.titulo, opts.legenda);
 }
 
 /**
- * Colunas verticais em SVG com linhas de referência.
- * itens: [{rotulo, valor (null = sem dado), cor, rotuloValor}] ; opts: {min, max, linhas:[{valor, rotulo, cor}], titulo}
+ * Barras horizontais empilhadas. itens: [{rotulo, partes:[n, ...], rotuloValor}] ;
+ * series: [{rotulo, cor}] (mesma ordem das partes) ; opts: { titulo, vazio }
+ */
+function RelA4_barrasEmpilhadas_(itens, series, opts) {
+  opts = opts || {};
+  itens = (itens || []).filter(function (i) { return (i.partes || []).some(function (p) { return Number(p) > 0; }); });
+  if (!itens.length) return '<p class="nota">' + RelA4_esc_(opts.vazio || 'Sem dados no período.') + '</p>';
+  var maiorRotulo = Math.max.apply(null, itens.map(function (i) { return String(i.rotulo).length; }));
+  var maiorValor = Math.max.apply(null, itens.map(function (i) { return String(i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor)).length; }).concat([6]));
+  var W = 680, hb = 15, gap = 6, esq = Math.min(190, Math.max(70, maiorRotulo * 5.6 + 12)), dir = Math.min(280, Math.max(70, maiorValor * 5.5 + 12)), topo = 6;
+  var H = topo * 2 + itens.length * (hb + gap);
+  var larg = W - esq - dir;
+  function soma(i) { return (i.partes || []).reduce(function (a, b) { return a + Math.max(Number(b) || 0, 0); }, 0); }
+  var max = Math.max.apply(null, itens.map(soma).concat([0.0001]));
+  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
+  s.push('<line x1="' + esq + '" y1="' + topo + '" x2="' + esq + '" y2="' + (H - topo) + '" stroke="#9aa5b1" stroke-width="0.8"/>');
+  itens.forEach(function (i, k) {
+    var y = topo + k * (hb + gap), x = esq;
+    s.push(RelA4_txtSvg_(esq - 6, y + hb / 2 + 3.5, String(i.rotulo).slice(0, 34), 'font-size="9.5" fill="#1f2933" text-anchor="end"'));
+    (i.partes || []).forEach(function (p, j) {
+      var w = Math.max(Number(p) || 0, 0) / max * larg;
+      if (w <= 0) return;
+      s.push('<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + w.toFixed(1) + '" height="' + hb + '" fill="' + ((series[j] || {}).cor || RELA4_CORES.cinza) + '"/>');
+      x += w;
+    });
+    s.push(RelA4_txtSvg_(x + 5, y + hb / 2 + 3.5, i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(soma(i)), 'font-size="9.5" fill="#1f2933"'));
+  });
+  s.push('</svg>');
+  return RelA4_figura_(s.join(''), opts.titulo, series);
+}
+
+/**
+ * Colunas verticais com linhas de referência.
+ * itens: [{rotulo, valor (null = sem dado), cor, rotuloValor}] ;
+ * opts: {min, max, linhas:[{valor, rotulo, cor}], titulo, legenda:[{cor, rotulo}], unidade}
  */
 function RelA4_colunas_(itens, opts) {
   opts = opts || {};
-  var W = 640, H = 210, esq = 34, dir = 10, topo = 12, base = 30;
+  var W = 680, H = 210, esq = 40, dir = 10, topo = 14, base = 30;
   var min = opts.min !== undefined ? opts.min : 0, max = opts.max !== undefined ? opts.max : Math.max.apply(null, itens.map(function (i) { return Number(i.valor) || 0; }).concat([1]));
   var alt = H - topo - base, larg = W - esq - dir, passo = larg / Math.max(itens.length, 1), wb = Math.min(46, passo * 0.6);
   function y(v) { return topo + alt - (Math.max(min, Math.min(max, v)) - min) / (max - min || 1) * alt; }
-  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:' + W + 'px;height:auto" role="img">'];
-  s.push('<line x1="' + esq + '" y1="' + (topo + alt) + '" x2="' + (W - dir) + '" y2="' + (topo + alt) + '" stroke="#9ca3af" stroke-width="1"/>');
-  [min, (min + max) / 2, max].forEach(function (v) { s.push('<text x="' + (esq - 4) + '" y="' + (y(v) + 3) + '" font-size="9" fill="#6b7280" text-anchor="end" font-family="Arial,sans-serif">' + RelA4_num_(v, 0) + '</text>'); });
+  var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
+  [min, min + (max - min) / 4, (min + max) / 2, min + 3 * (max - min) / 4, max].forEach(function (v) {
+    s.push('<line x1="' + esq + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - dir) + '" y2="' + y(v).toFixed(1) + '" stroke="#e7ebef" stroke-width="0.7"/>');
+    s.push(RelA4_txtSvg_(esq - 5, y(v) + 3, RelA4_num_(v, 0), 'font-size="8.5" fill="#52606d" text-anchor="end"'));
+  });
+  s.push('<line x1="' + esq + '" y1="' + (topo + alt) + '" x2="' + (W - dir) + '" y2="' + (topo + alt) + '" stroke="#9aa5b1" stroke-width="0.8"/>');
+  if (opts.unidade) s.push(RelA4_txtSvg_(esq - 5, topo - 5, opts.unidade, 'font-size="8.5" fill="#52606d" text-anchor="start"'));
   (opts.linhas || []).forEach(function (l) {
-    s.push('<line x1="' + esq + '" y1="' + y(l.valor).toFixed(1) + '" x2="' + (W - dir) + '" y2="' + y(l.valor).toFixed(1) + '" stroke="' + l.cor + '" stroke-width="1" stroke-dasharray="5 4"/>');
-    s.push('<text x="' + (esq + 4) + '" y="' + (y(l.valor) - 3).toFixed(1) + '" font-size="9" fill="' + l.cor + '" text-anchor="start" font-family="Arial,sans-serif">' + RelA4_esc_(l.rotulo) + '</text>');
+    s.push('<line x1="' + esq + '" y1="' + y(l.valor).toFixed(1) + '" x2="' + (W - dir) + '" y2="' + y(l.valor).toFixed(1) + '" stroke="' + l.cor + '" stroke-width="1.1" stroke-dasharray="5 4"/>');
   });
   itens.forEach(function (i, k) {
     var cx = esq + passo * k + passo / 2;
     if (i.valor !== null && i.valor !== undefined && isFinite(Number(i.valor))) {
       var yy = y(Number(i.valor));
-      s.push('<rect x="' + (cx - wb / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + wb.toFixed(1) + '" height="' + Math.max(topo + alt - yy, 1).toFixed(1) + '" fill="' + (i.cor || '#0b4ea2') + '" rx="2"/>');
-      s.push('<text x="' + cx.toFixed(1) + '" y="' + (yy - 4).toFixed(1) + '" font-size="10" fill="#111827" text-anchor="middle" font-family="Arial,sans-serif">' + RelA4_esc_(i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor, 1)) + '</text>');
+      s.push('<rect x="' + (cx - wb / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + wb.toFixed(1) + '" height="' + Math.max(topo + alt - yy, 1).toFixed(1) + '" fill="' + (i.cor || RELA4_CORES.azul) + '" fill-opacity="0.9"/>');
+      s.push(RelA4_txtSvg_(cx, yy - 4, i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor, 1), 'font-size="9.5" font-weight="700" fill="#1f2933" text-anchor="middle"'));
     } else {
-      s.push('<text x="' + cx.toFixed(1) + '" y="' + (topo + alt - 6) + '" font-size="9.5" fill="#9ca3af" text-anchor="middle" font-family="Arial,sans-serif">sem dado</text>');
+      s.push(RelA4_txtSvg_(cx, topo + alt - 6, 'sem fechamento', 'font-size="8.5" fill="#7b8794" text-anchor="middle"'));
     }
-    s.push('<text x="' + cx.toFixed(1) + '" y="' + (H - base + 14) + '" font-size="10" fill="#374151" text-anchor="middle" font-family="Arial,sans-serif">' + RelA4_esc_(i.rotulo) + '</text>');
+    s.push(RelA4_txtSvg_(cx, H - base + 14, i.rotulo, 'font-size="9.5" fill="#1f2933" text-anchor="middle"'));
   });
   s.push('</svg>');
-  return '<div class="grafico">' + (opts.titulo ? '<div class="tit">' + RelA4_esc_(opts.titulo) + '</div>' : '') + s.join('') + '</div>';
+  var leg = (opts.legenda || []).concat((opts.linhas || []).map(function (l) { return { cor: l.cor, rotulo: l.rotulo, tracejado: true }; }));
+  return RelA4_figura_(s.join(''), opts.titulo, leg);
 }
+
 
 // ------------------------------------------------------------
 // ANÁLISE PELA IA (Gemini) — raciocínio ligado; sem chave ou com falha,
@@ -368,19 +514,36 @@ function RelA4_subpasta_(pai, nome) {
   return it.hasNext() ? it.next() : pai.createFolder(n);
 }
 
+/** Nome padrão do arquivo: "<Tipo> - <nº> - <identificador> - <aaaa-MM-dd HHmm>" (padrão A4, item 12). */
+function RelA4_nomeArquivo_(tipo, numero, identificador) {
+  return [tipo, numero, identificador, Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm')].filter(function (x) { return x && String(x).trim(); }).join(' - ');
+}
+
 /**
- * obterPasta: função que devolve a pasta de destino (pode lançar).
- * Devolve { salvo, pdfUrl, htmlUrl, pastaUrl, aviso }.
+ * Fecha o documento (sumário com páginas, capa quando longo) e grava
+ * HTML + PDF na pasta. obterPasta: função que devolve a pasta (pode lançar).
+ * identificador: o que distingue o arquivo (placa, competência, cliente...).
+ * O nome final segue o padrão; documento que não veio da moldura usa o
+ * identificador como nome.
+ * Devolve { salvo, pdfUrl, htmlUrl, pastaUrl, aviso, html (o documento final,
+ * para a tela e para guardar), paginas, nome }.
  */
-function RelA4_salvar_(obterPasta, nomeBase, html, opcoes) {
+function RelA4_salvar_(obterPasta, identificador, html, opcoes) {
+  opcoes = opcoes || {};
+  var reg = RelA4_registro_(html);
+  var nome = reg ? RelA4_nomeArquivo_(reg.tipo, reg.numero, identificador) : identificador;
+  var fin = RelA4_finalizar_(html, nome);
   try {
     var pasta = obterPasta();
-    var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, opcoes || {});
+    var op = { compartilhar: !!opcoes.compartilhar };
+    if (fin.pdfBlob) op.pdfBlob = fin.pdfBlob;
+    var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nome, fin.html, op);
     var pastaUrl = '';
     try { pastaUrl = pasta.getUrl(); } catch (eU) {}
-    return { salvo: true, pdfUrl: r.pdfUrl, htmlUrl: r.htmlUrl, pastaUrl: pastaUrl, aviso: '' };
+    return { salvo: true, pdfUrl: r.pdfUrl, htmlUrl: r.htmlUrl, pastaUrl: pastaUrl, aviso: '', html: r.html || fin.html, paginas: fin.paginas, nome: nome };
   } catch (e) {
-    return { salvo: false, pdfUrl: '', htmlUrl: '', pastaUrl: '', aviso: 'O relatório abriu para revisão, mas a cópia (PDF e HTML) não foi gravada na pasta: ' + String((e && e.message) || e).replace(/[.\s]+$/, '') + '. Use "Imprimir ou salvar em PDF" nesta página e avise o administrador se repetir.' };
+    return { salvo: false, pdfUrl: '', htmlUrl: '', pastaUrl: '', html: fin.html, paginas: fin.paginas, nome: nome,
+      aviso: 'O relatório abriu para revisão, mas a cópia (PDF e HTML) não foi gravada na pasta: ' + String((e && e.message) || e).replace(/[.\s]+$/, '') + '. Use "Imprimir ou salvar em PDF" nesta página e avise o administrador se repetir.' };
   }
 }
 

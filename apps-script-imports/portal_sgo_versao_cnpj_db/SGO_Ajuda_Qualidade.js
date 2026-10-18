@@ -44,7 +44,8 @@ function SGO_ajudaTelas_Qualidade_() {
         { titulo: "Gerar o relatório A4", itens: [
           "Escolha o período.",
           "Toque em \"Gerar relatório A4\".",
-          "Aguarde até 1 minuto. O relatório abre numa aba nova. Não feche a aba antes de terminar."
+          "Aguarde até 1 minuto. O relatório abre numa aba nova. Não feche a aba antes de terminar.",
+          "Uma cópia (PDF e HTML) fica guardada na pasta \"Painel de qualidade - Relatórios\". O link para o PDF aparece no topo do relatório."
         ] },
         { titulo: "Abrir uma O.S. com pendência", itens: [
           "Em \"Pendências identificadas por O.S.\", leia o motivo.",
@@ -70,7 +71,8 @@ function SGO_ajudaTelas_Qualidade_() {
         { situacao: "\"não tem login do SGO+ ligado a este cadastro\"", oQueFazer: "A cobrança foi salva, mas a pessoa não vai ver o aviso. Comunique pessoalmente, ou ligue o condutor a um usuário na Frota." },
         { situacao: "\"Esta ação já está sendo processada.\"", oQueFazer: "Espere terminar. Não toque de novo." },
         { situacao: "\"Não foi possível carregar o painel.\"", oQueFazer: "Toque em \"Atualizar\". Se continuar, avise o administrador." },
-        { situacao: "O relatório saiu sem a interpretação", oQueFazer: "A chave da IA não está gravada ou falhou. Os números do relatório estão certos. Peça ao administrador para conferir a chave em \"Chaves e senhas\"." }
+        { situacao: "Faixa amarela no topo: \"a análise saiu com o texto padrão\"", oQueFazer: "A chave da IA não está gravada ou falhou. A interpretação saiu com o texto padrão, montado com os mesmos números, e os números estão certos. Peça ao administrador para conferir a chave em \"Chaves e senhas\" e gere de novo." },
+        { situacao: "\"a cópia (PDF e HTML) não foi gravada na pasta\"", oQueFazer: "O relatório abriu, mas não foi guardado. Use \"Imprimir ou salvar em PDF\" no topo e avise o administrador se repetir." }
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Usar o painel, cobrar, parabenizar, ver o histórico, marcar resolvida e gerar o relatório." },

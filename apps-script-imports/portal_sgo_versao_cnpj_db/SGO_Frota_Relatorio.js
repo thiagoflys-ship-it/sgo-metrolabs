@@ -314,25 +314,33 @@ function FrotaRel_situacaoVeiculoLabel_(status) {
   return 'Disponível';
 }
 
+/**
+ * Avisos e providências numa tabela só (18/10/2026: antes eram duas tabelas
+ * com os mesmos itens — "avisos de vencimento" e "pendências").
+ */
+function FrotaRel_tabelaProvidencias_(alertas, legenda) {
+  if (!alertas.length) return RelA4_caixa_('Nenhuma manutenção, documento ou CNH vencida ou próxima do vencimento na data de emissão.', 'ok');
+  var ordem = alertas.slice().sort(function(a, b) { return (a.status === 'VENCIDO' ? 0 : 1) - (b.status === 'VENCIDO' ? 0 : 1); });
+  var pend = FrotaRel_montarPendencias_(ordem);
+  return RelA4_tabela_([{ t: 'Providência' }, { t: 'Responsável' }, { t: 'Vencimento' }, { t: 'Situação' }], pend.map(function(p) {
+    return [p.pendencia, p.responsavel, p.prazo, RelA4_marca_(p.critico ? 'Vencido' : 'Vence em breve', p.critico ? 'critico' : 'aviso')];
+  }), { legenda: legenda || 'Avisos de vencimento e providências na data de emissão' });
+}
+/** Mantidas para quem ainda chama. */
 function FrotaRel_tabelaPendencias_(pendencias) {
-  if (!pendencias.length) return '<div class="caixa ok">Nenhuma pendência em aberto na data de emissão.</div>';
+  if (!pendencias.length) return RelA4_caixa_('Nenhuma pendência em aberto na data de emissão.', 'ok');
   return RelA4_tabela_([{ t: 'Pendência' }, { t: 'Responsável' }, { t: 'Prazo' }, { t: 'Situação' }], pendencias.map(function(p) {
     return [p.pendencia, p.responsavel, p.prazo, RelA4_marca_(p.situacao, p.critico ? 'critico' : 'aviso')];
   }));
 }
+function FrotaRel_tabelaAvisos_(alertas) { return FrotaRel_tabelaProvidencias_(alertas); }
 
-function FrotaRel_tabelaAvisos_(alertas) {
-  if (!alertas.length) return '<div class="caixa ok">Nenhuma manutenção, documento ou CNH vencida ou próxima do vencimento na data de emissão.</div>';
-  return RelA4_tabela_([{ t: 'Veículo ou condutor' }, { t: 'Item' }, { t: 'Vencimento' }, { t: 'Situação' }], alertas.map(function(a) {
-    var critico = a.status === 'VENCIDO';
-    return [a.veiculoPlaca || '—', a.tipoLabel || '—', a.vencimento || '—', RelA4_marca_(critico ? 'Vencido' : 'Vence em breve', critico ? 'critico' : 'aviso')];
-  }));
-}
-
-var FROTAREL_NOTA_METODO = 'Notas de cálculo: quilometragem rodada é a diferença entre o km de devolução e o de retirada das retiradas concluídas no período. ' +
+var FROTAREL_NOTA_METODO = 'Quilometragem rodada é a diferença entre o km de devolução e o de retirada das retiradas concluídas no período. ' +
   'Consumo médio usa os trechos entre abastecimentos consecutivos do mesmo veículo (ordenados pelo km), por isso exige pelo menos dois abastecimentos no período. ' +
   'Custo total soma combustível, manutenção e outras despesas; multas aparecem à parte. Utilização é o tempo em uso dividido pelo tempo do período. ' +
-  'Avisos e pendências refletem a situação na data de emissão, não a do período.';
+  'Avisos e providências refletem a situação na data de emissão, não a do período.';
+
+var FROTAREL_SERIES_CUSTO = [{ rotulo: 'Combustível', cor: RELA4_CORES.azul }, { rotulo: 'Manutenção', cor: RELA4_CORES.laranja }, { rotulo: 'Outras despesas', cor: RELA4_CORES.petroleo }];
 
 // ------------------------------------------------------------
 // TEXTO PADRÃO (sem IA) — montado só com os números do relatório
@@ -353,7 +361,7 @@ function FrotaRel_textoPadraoGeral_(dados) {
   var venc = dados.alertasAtuais.filter(function(a) { return a.status === 'VENCIDO'; }).length;
   var prox = dados.alertasAtuais.length - venc;
   p.push(dados.alertasAtuais.length
-    ? 'Na data de emissão há ' + RelA4_plural_(venc, 'item vencido', 'itens vencidos') + ' e ' + RelA4_plural_(prox, 'item próximo do vencimento', 'itens próximos do vencimento') + ' entre manutenções, documentos e CNH, detalhados na seção de pendências. Recomenda-se tratar primeiro os itens vencidos, que impedem o uso regular do veículo.'
+    ? 'Na data de emissão há ' + RelA4_plural_(venc, 'item vencido', 'itens vencidos') + ' e ' + RelA4_plural_(prox, 'item próximo do vencimento', 'itens próximos do vencimento') + ' entre manutenções, documentos e CNH, listados em Avisos e providências. Recomenda-se tratar primeiro os itens vencidos, que impedem o uso regular do veículo.'
     : 'Na data de emissão não há manutenção, documento ou CNH vencida ou próxima do vencimento.');
   return p.join('\n\n');
 }
@@ -369,129 +377,145 @@ function FrotaRel_textoPadraoVeiculo_(v, periodo, pendencias) {
     (v.multasQtd ? ' Houve ' + RelA4_plural_(v.multasQtd, 'multa', 'multas') + ' (' + RelA4_moeda_(v.multasValor) + ').' : ' Não houve multa no período.') +
     (v.paradasQtd ? ' O veículo ficou parado ' + RelA4_num_(v.paradasDias, 1) + ' dias.' : ''));
   p.push(pendencias.length
-    ? 'Situação geral: há ' + RelA4_plural_(pendencias.length, 'pendência', 'pendências') + ' em aberto na data de emissão, listadas ao final. Recomenda-se resolvê-las antes da próxima utilização programada.'
+    ? 'Situação geral: há ' + RelA4_plural_(pendencias.length, 'pendência', 'pendências') + ' em aberto na data de emissão, listadas em Avisos e providências. Recomenda-se resolvê-las antes da próxima utilização programada.'
     : 'Situação geral: regular, sem pendências de manutenção, documentação ou CNH na data de emissão.');
   return p.join('\n\n');
 }
 
+function FrotaRel_celVeiculo_(v) {
+  return { html: '<strong style="white-space:nowrap">' + RelA4_esc_(v.placa) + '</strong>' + (v.modelo ? '<span class="sub">' + RelA4_esc_(v.modelo) + '</span>' : '') };
+}
+
 // ------------------------------------------------------------
-// DOCUMENTO GERAL
+// DOCUMENTO GERAL (retrato; o quadro de custos por veículo, largo, vai
+// numa folha em paisagem no fim)
 // ------------------------------------------------------------
 function FrotaRel_montarDocumentoHtml_(dados, analise, emitidoPor) {
   var t = dados.totais, c = [];
+  var venc = dados.alertasAtuais.filter(function(a) { return a.status === 'VENCIDO'; }).length;
   c.push(RelA4_secao_('Resumo do período', RelA4_kpis_([
     [RelA4_num_(dados.totalVeiculosFrota, 0), 'Veículos ativos'],
     [RelA4_num_(t.retiradas, 0), 'Retiradas'],
-    [RelA4_num_(t.km, 0) + ' km', 'Quilometragem rodada'],
-    [t.consumoMedioKmL > 0 ? RelA4_num_(t.consumoMedioKmL, 1) + ' km/L' : '—', 'Consumo médio'],
+    [RelA4_num_(t.km, 0) + ' km', 'Quilometragem rodada'],
+    [t.consumoMedioKmL > 0 ? RelA4_num_(t.consumoMedioKmL, 1) + ' km/L' : '—', 'Consumo médio'],
     [RelA4_moeda_(t.custoTotal), 'Custo total'],
     [t.km > 0 ? RelA4_moeda_(t.custoPorKm) : '—', 'Custo por km'],
-    [RelA4_num_(t.multasQtd, 0) + ' · ' + RelA4_moeda_(t.multasValor), 'Multas'],
-    [RelA4_num_(t.paradasDias, 1), 'Dias parados']
+    [RelA4_num_(t.multasQtd, 0) + ' · ' + RelA4_moeda_(t.multasValor), 'Multas', t.multasQtd ? 'aviso' : ''],
+    [RelA4_num_(venc, 0), 'Itens vencidos na emissão', venc ? 'critico' : 'ok']
   ])));
   c.push(RelA4_secao_('Análise do período', RelA4_paragrafos_(analise)));
 
   var porRet = dados.veiculos.slice().sort(function(a, b) { return b.retiradas - a.retiradas; }).slice(0, 15);
   var porKm = dados.veiculos.slice().sort(function(a, b) { return b.kmRodado - a.kmRodado; }).slice(0, 15);
-  var uso = '' +
-    RelA4_barras_(porRet.map(function(v) { return { rotulo: v.placa, valor: v.retiradas, rotuloValor: RelA4_num_(v.retiradas, 0) }; }), { titulo: 'Retiradas por veículo', cor: '#1f6f45' }) +
-    RelA4_barras_(porKm.map(function(v) { return { rotulo: v.placa, valor: v.kmRodado, rotuloValor: RelA4_num_(v.kmRodado, 0) + ' km' }; }), { titulo: 'Quilometragem por veículo', cor: '#2563a8' });
-  uso += dados.rankingOciosos.length
-    ? '<p class="nota">Sem uso no período: ' + RelA4_esc_(dados.rankingOciosos.map(function(v) { return v.placa + (v.modelo ? ' (' + v.modelo + ')' : ''); }).join(', ')) + '.</p>'
-    : '<p class="nota">Todos os veículos ativos tiveram ao menos uma retirada no período.</p>';
-  if (dados.condutorMaisAtuante) uso += '<p class="nota">Condutor com mais retiradas: ' + RelA4_esc_(dados.condutorMaisAtuante.nome) + ' (' + RelA4_plural_(dados.condutorMaisAtuante.retiradas, 'retirada', 'retiradas') + ').</p>';
-  c.push(RelA4_secao_('Uso dos veículos', uso));
+  var uso = RelA4_barras_(porRet.map(function(v) { return { rotulo: v.placa, valor: v.retiradas, rotuloValor: RelA4_plural_(v.retiradas, 'retirada', 'retiradas') }; }), { titulo: 'Retiradas por veículo no período', cor: RELA4_CORES.verde }) +
+    RelA4_barras_(porKm.map(function(v) { return { rotulo: v.placa, valor: v.kmRodado, rotuloValor: RelA4_num_(v.kmRodado, 0) + ' km · ' + RelA4_num_(v.taxaUtilizacao, 1) + '%' }; }), { titulo: 'Quilometragem rodada e utilização do tempo por veículo', cor: RELA4_CORES.azul });
+  var notas = [];
+  notas.push(dados.rankingOciosos.length ? 'Sem uso no período: ' + dados.rankingOciosos.map(function(v) { return v.placa + (v.modelo ? ' (' + v.modelo + ')' : ''); }).join(', ') + '.' : 'Todos os veículos ativos tiveram ao menos uma retirada no período.');
+  if (dados.condutorMaisAtuante) notas.push('Condutor com mais retiradas: ' + dados.condutorMaisAtuante.nome + ' (' + RelA4_plural_(dados.condutorMaisAtuante.retiradas, 'retirada', 'retiradas') + ').');
+  c.push(RelA4_secao_('Uso dos veículos', uso + '<p class="nota">' + RelA4_esc_(notas.join(' ')) + '</p>'));
 
-  var linhas = dados.veiculos.slice().sort(function(a, b) { return b.custoTotal - a.custoTotal; }).map(function(v) {
-    return [{ html: '<strong style="white-space:nowrap">' + RelA4_esc_(v.placa) + '</strong>' + (v.modelo ? '<br><span class="nota">' + RelA4_esc_(v.modelo) + '</span>' : '') }, RelA4_num_(v.retiradas, 0), RelA4_num_(v.kmRodado, 0), RelA4_num_(v.taxaUtilizacao, 1) + '%',
-      v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) : '—', RelA4_moeda_(v.abastecimentosValor), RelA4_moeda_(v.manutencoesCusto), RelA4_moeda_(v.despesasValor),
-      RelA4_moeda_(v.custoTotal), v.kmRodado > 0 ? RelA4_moeda_(v.custoPorKm) : '—', RelA4_num_(v.multasQtd, 0) + (v.multasQtd ? ' (' + RelA4_moeda_(v.multasValor) + ')' : '')];
-  });
-  c.push(RelA4_secao_('Custos por veículo', RelA4_tabela_(
-    [{ t: 'Veículo' }, { t: 'Retiradas', num: true }, { t: 'Km', num: true }, { t: 'Utilização', num: true }, { t: 'km/L', num: true }, { t: 'Combustível', num: true },
-      { t: 'Manutenção', num: true }, { t: 'Outras', num: true }, { t: 'Custo total', num: true }, { t: 'Custo/km', num: true }, { t: 'Multas', num: true }],
-    linhas, { vazio: 'Nenhum veículo ativo cadastrado.', total: ['Total da frota', RelA4_num_(t.retiradas, 0), RelA4_num_(t.km, 0), '', t.consumoMedioKmL > 0 ? RelA4_num_(t.consumoMedioKmL, 1) : '—',
-      RelA4_moeda_(t.abastecimentosValor), RelA4_moeda_(t.manutencao), RelA4_moeda_(t.despesas), RelA4_moeda_(t.custoTotal), t.km > 0 ? RelA4_moeda_(t.custoPorKm) : '—', RelA4_num_(t.multasQtd, 0)] }) +
-    RelA4_barras_(dados.veiculos.filter(function(v) { return v.custoTotal > 0; }).sort(function(a, b) { return b.custoTotal - a.custoTotal; }).slice(0, 15)
-      .map(function(v) { return { rotulo: v.placa, valor: v.custoTotal, rotuloValor: RelA4_moeda_(v.custoTotal) }; }), { titulo: 'Custo total por veículo', cor: '#b45309', vazio: 'Sem gastos lançados no período.' })));
-
-  var tipos = Object.keys(dados.despesasPorTipo || {});
+  var porCusto = dados.veiculos.filter(function(v) { return v.custoTotal > 0; }).sort(function(a, b) { return b.custoTotal - a.custoTotal; }).slice(0, 15);
+  var custos = RelA4_barrasEmpilhadas_(porCusto.map(function(v) {
+    return { rotulo: v.placa, partes: [v.abastecimentosValor, v.manutencoesCusto, v.despesasValor], rotuloValor: RelA4_moeda_(v.custoTotal) };
+  }), FROTAREL_SERIES_CUSTO, { titulo: 'Composição do custo por veículo no período', vazio: 'Sem gastos lançados no período.' });
+  var tipos = Object.keys(dados.despesasPorTipo || {}).sort(function(a, b) { return dados.despesasPorTipo[b] - dados.despesasPorTipo[a]; });
   if (tipos.length) {
-    c.push(RelA4_secao_('Outras despesas por tipo', RelA4_tabela_([{ t: 'Tipo' }, { t: 'Total', num: true }],
-      tipos.sort(function(a, b) { return dados.despesasPorTipo[b] - dados.despesasPorTipo[a]; }).map(function(k) { return [k, RelA4_moeda_(dados.despesasPorTipo[k])]; }))));
+    custos += RelA4_subsecao_('Outras despesas por tipo', RelA4_tabela_([{ t: 'Tipo de despesa' }, { t: 'Total', num: true }],
+      tipos.map(function(k) { return [k, RelA4_moeda_(dados.despesasPorTipo[k])]; }), { legenda: 'Outras despesas do período por tipo', total: ['Total', RelA4_moeda_(t.despesas)] }));
   }
+  custos += '<p class="nota">O detalhamento por veículo (retiradas, quilometragem, consumo, custos e multas) está no quadro da última seção.</p>';
+  c.push(RelA4_secao_('Custos', custos));
+
   var parados = dados.veiculos.filter(function(v) { return v.paradasDias > 0; }).sort(function(a, b) { return b.paradasDias - a.paradasDias; });
   if (parados.length) {
-    c.push(RelA4_secao_('Veículos parados', RelA4_barras_(parados.slice(0, 15).map(function(v) { return { rotulo: v.placa, valor: v.paradasDias, rotuloValor: RelA4_num_(v.paradasDias, 1) + ' dias' }; }), { cor: '#c98a12' })));
+    var listaParadas = [];
+    parados.forEach(function(v) { v.paradasLista.forEach(function(p) { listaParadas.push([v.placa, p.motivo || 'Motivo não informado', Frota_textoData_(p.dataInicio), p.dataFim ? Frota_textoData_(p.dataFim) : 'em aberto', RelA4_num_(p.dias, 1)]); }); });
+    c.push(RelA4_secao_('Veículos parados', RelA4_tabela_([{ t: 'Veículo' }, { t: 'Motivo' }, { t: 'Início' }, { t: 'Fim' }, { t: 'Dias no período', num: true }], listaParadas, { legenda: 'Paradas que tocaram o período' })));
   }
-  c.push(RelA4_secao_('Avisos de vencimento na data de emissão', FrotaRel_tabelaAvisos_(dados.alertasAtuais)));
-  c.push(RelA4_secao_('Pendências e providências', FrotaRel_tabelaPendencias_(FrotaRel_montarPendencias_(dados.alertasAtuais))));
-  c.push('<p class="nota">' + RelA4_esc_(FROTAREL_NOTA_METODO) + '</p>');
+  c.push(RelA4_secao_('Avisos e providências', FrotaRel_tabelaProvidencias_(dados.alertasAtuais)));
+  c.push(RelA4_secao_('Notas de cálculo', '<p>' + RelA4_esc_(FROTAREL_NOTA_METODO) + '</p>'));
+
+  var linhas = dados.veiculos.slice().sort(function(a, b) { return b.custoTotal - a.custoTotal; }).map(function(v) {
+    return [FrotaRel_celVeiculo_(v), RelA4_num_(v.retiradas, 0), RelA4_num_(v.kmRodado, 0), RelA4_num_(v.taxaUtilizacao, 1) + '%',
+      v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) : '—', RelA4_moeda_(v.abastecimentosValor), RelA4_moeda_(v.manutencoesCusto), RelA4_moeda_(v.despesasValor),
+      RelA4_moeda_(v.custoTotal), v.kmRodado > 0 ? RelA4_moeda_(v.custoPorKm) : '—', RelA4_num_(v.paradasDias, 1), v.multasQtd ? RelA4_num_(v.multasQtd, 0) + ' · ' + RelA4_moeda_(v.multasValor) : '—'];
+  });
+  c.push(RelA4_paisagem_(RelA4_secao_('Quadro por veículo', RelA4_tabela_(
+    [{ t: 'Veículo' }, { t: 'Retiradas', num: true }, { t: 'Km', num: true }, { t: 'Utilização', num: true }, { t: 'km/L', num: true }, { t: 'Combustível', num: true },
+      { t: 'Manutenção', num: true }, { t: 'Outras', num: true }, { t: 'Custo total', num: true }, { t: 'Custo/km', num: true }, { t: 'Dias parados', num: true }, { t: 'Multas', num: true }],
+    linhas, { legenda: 'Uso e custos por veículo no período, do maior para o menor custo', vazio: 'Nenhum veículo ativo cadastrado.',
+      total: ['Total da frota', RelA4_num_(t.retiradas, 0), RelA4_num_(t.km, 0), '', t.consumoMedioKmL > 0 ? RelA4_num_(t.consumoMedioKmL, 1) : '—',
+        RelA4_moeda_(t.abastecimentosValor), RelA4_moeda_(t.manutencao), RelA4_moeda_(t.despesas), RelA4_moeda_(t.custoTotal), t.km > 0 ? RelA4_moeda_(t.custoPorKm) : '—', RelA4_num_(t.paradasDias, 1),
+        t.multasQtd ? RelA4_num_(t.multasQtd, 0) + ' · ' + RelA4_moeda_(t.multasValor) : '—'] }))));
 
   return RelA4_documento_({
-    titulo: 'Relatório de frota', subtitulo: 'Uso, custos, avisos e pendências de toda a frota',
-    identificacao: dados.periodo.inicio + ' a ' + dados.periodo.fim, corpo: c.join('\n'), cor: '#1f6f45', emitidoPor: emitidoPor
+    titulo: 'Relatório de frota', subtitulo: 'Uso, custos, avisos e providências de toda a frota', tituloArquivo: 'Relatório de frota',
+    identificacao: dados.periodo.inicio + ' a ' + dados.periodo.fim + ' (' + RelA4_plural_(dados.periodo.dias, 'dia', 'dias') + ')', sigla: 'FRT', corpo: c.join('\n'), emitidoPor: emitidoPor
   });
 }
 
 // ------------------------------------------------------------
-// DOCUMENTO POR VEÍCULO — os 10 blocos pedidos pelo dono (25/08/2026)
+// DOCUMENTO POR VEÍCULO — os blocos pedidos pelo dono (25/08/2026)
 // ------------------------------------------------------------
 function FrotaRel_montarDocumentoVeiculoHtml_(v, periodo, analise, alertasVeiculo, documentosAtuais, pendencias, emitidoPor) {
   var c = [];
-  c.push(RelA4_secao_('1. Identificação', RelA4_identificacao_([
-    ['Placa', v.placa], ['Marca e modelo', (v.marca || '—') + ' / ' + (v.modelo || '—')], ['Ano', v.ano || '—'],
-    ['Condutor mais frequente no período', v.condutorResponsavel || 'Nenhuma retirada no período'],
+  c.push(RelA4_secao_('Identificação do veículo', RelA4_identificacao_([
+    ['Placa', v.placa], ['Marca e modelo', (v.marca || '—') + ' / ' + (v.modelo || '—')], ['Ano', v.ano || '—'], ['Situação atual', FrotaRel_situacaoVeiculoLabel_(v.status)],
     ['Km no início do período', v.kmInicioPeriodo !== null ? RelA4_num_(v.kmInicioPeriodo, 0) : '—'],
     ['Km no fim do período', v.kmFimPeriodo !== null ? RelA4_num_(v.kmFimPeriodo, 0) : '—'],
-    ['Situação atual', FrotaRel_situacaoVeiculoLabel_(v.status)]
+    ['Condutor mais frequente', v.condutorResponsavel || 'Nenhuma retirada no período', { largo: true }]
   ])));
-  c.push(RelA4_secao_('2. Utilização no período', RelA4_tabela_(
+  c.push(RelA4_secao_('Resumo do período', RelA4_kpis_([
+    [RelA4_num_(v.retiradas, 0), 'Retiradas'], [RelA4_num_(v.kmRodado, 0) + ' km', 'Quilometragem rodada'], [RelA4_num_(v.taxaUtilizacao, 1) + '%', 'Utilização do tempo'],
+    [v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) + ' km/L' : '—', 'Consumo médio'],
+    [RelA4_moeda_(v.custoTotal), 'Custo total'], [v.custoPorKm > 0 ? RelA4_moeda_(v.custoPorKm) : '—', 'Custo por km'],
+    [RelA4_num_(v.paradasDias, 1), 'Dias parados', v.paradasDias ? 'aviso' : ''], [pendencias.length ? RelA4_plural_(pendencias.length, 'pendência', 'pendências') : 'Regular', 'Situação geral', pendencias.length ? 'critico' : 'ok']
+  ]) + RelA4_barras_([
+    { rotulo: 'Combustível', valor: v.abastecimentosValor, rotuloValor: RelA4_moeda_(v.abastecimentosValor) + ' · ' + RelA4_num_(v.abastecimentosLitros, 1) + ' L', cor: RELA4_CORES.azul },
+    { rotulo: 'Manutenção', valor: v.manutencoesCusto, rotuloValor: RelA4_moeda_(v.manutencoesCusto), cor: RELA4_CORES.laranja },
+    { rotulo: 'Outras despesas', valor: v.despesasValor, rotuloValor: RelA4_moeda_(v.despesasValor), cor: RELA4_CORES.petroleo },
+    { rotulo: 'Multas (à parte)', valor: v.multasValor, rotuloValor: RelA4_moeda_(v.multasValor), cor: RELA4_CORES.vermelho }
+  ], { titulo: 'Gastos do veículo no período por categoria' })));
+  c.push(RelA4_secao_('Análise do responsável', RelA4_paragrafos_(analise)));
+  c.push(RelA4_secao_('Utilização no período', RelA4_tabela_(
     [{ t: 'Data' }, { t: 'Condutor' }, { t: 'Finalidade' }, { t: 'Km saída', num: true }, { t: 'Km chegada', num: true }, { t: 'Km rodado', num: true }, { t: 'Observações' }],
     v.movimentacoesLista.map(function(m) {
       return [Frota_textoData_(m.data), m.condutor || '—', m.finalidade || '—', RelA4_num_(m.kmSaida, 0), m.kmChegada !== null ? RelA4_num_(m.kmChegada, 0) : (m.emAndamento ? 'em andamento' : '—'),
         m.total !== null ? RelA4_num_(m.total, 0) : '—', m.observacoes || '—'];
-    }), { vazio: 'Nenhuma retirada registrada no período.' })));
-  c.push(RelA4_secao_('3. Abastecimentos', RelA4_tabela_(
+    }), { vazio: 'Nenhuma retirada registrada no período.', legenda: 'Retiradas e devoluções do veículo' })));
+  c.push(RelA4_secao_('Abastecimentos', RelA4_tabela_(
     [{ t: 'Data' }, { t: 'Km', num: true }, { t: 'Combustível' }, { t: 'Litros', num: true }, { t: 'Valor', num: true }, { t: 'R$/L', num: true }, { t: 'Posto' }, { t: 'Comprovante' }],
     v.abastecimentosLista.map(function(a) {
       return [Frota_textoData_(a.data), RelA4_num_(a.km, 0), a.tipoCombustivel || '—', RelA4_num_(a.litros, 2), RelA4_moeda_(a.valor), a.precoLitro > 0 ? RelA4_num_(a.precoLitro, 2) : '—', a.posto || '—',
         a.comprovante ? { html: '<a href="' + RelA4_esc_(a.comprovante) + '" target="_blank" rel="noopener">abrir</a>' } : '—'];
-    }), { vazio: 'Nenhum abastecimento registrado no período.' }) +
-    '<p class="nota">Consumo médio no período: ' + (v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) + ' km/L.' : 'sem dados suficientes (são necessários pelo menos dois abastecimentos).') + '</p>'));
-  c.push(RelA4_secao_('4. Outras despesas', RelA4_tabela_([{ t: 'Data' }, { t: 'Tipo' }, { t: 'Descrição' }, { t: 'Valor', num: true }],
-    v.despesasLista.map(function(d) { return [Frota_textoData_(d.data), d.tipo, d.descricao || '—', RelA4_moeda_(d.valor)]; }), { vazio: 'Nenhuma despesa avulsa registrada no período.' }) +
-    '<p class="nota">Total gasto no período (combustível, manutenção e outras despesas): ' + RelA4_esc_(RelA4_moeda_(v.custoTotal)) + '. Custo por quilômetro: ' + RelA4_esc_(v.custoPorKm > 0 ? RelA4_moeda_(v.custoPorKm) : '—') + '.</p>'));
-  c.push(RelA4_secao_('5. Manutenções', RelA4_tabela_([{ t: 'Serviço' }, { t: 'Data' }, { t: 'Km', num: true }, { t: 'Oficina' }, { t: 'Valor', num: true }, { t: 'Próxima' }],
+    }), { vazio: 'Nenhum abastecimento registrado no período.', legenda: 'Abastecimentos do período',
+      total: v.abastecimentosLista.length ? ['Total', '', '', RelA4_num_(v.abastecimentosLitros, 2), RelA4_moeda_(v.abastecimentosValor), '', '', ''] : null }) +
+    (v.consumoMedioKmL > 0 ? '' : '<p class="nota">Consumo médio sem dados suficientes: são necessários pelo menos dois abastecimentos no período.</p>')));
+  c.push(RelA4_secao_('Outras despesas', RelA4_tabela_([{ t: 'Data' }, { t: 'Tipo' }, { t: 'Descrição' }, { t: 'Valor', num: true }],
+    v.despesasLista.map(function(d) { return [Frota_textoData_(d.data), d.tipo, d.descricao || '—', RelA4_moeda_(d.valor)]; }),
+    { vazio: 'Nenhuma despesa avulsa registrada no período.', legenda: 'Despesas avulsas do período', total: v.despesasLista.length > 1 ? ['Total', '', '', RelA4_moeda_(v.despesasValor)] : null })));
+  c.push(RelA4_secao_('Manutenções', RelA4_tabela_([{ t: 'Serviço' }, { t: 'Data' }, { t: 'Km', num: true }, { t: 'Oficina' }, { t: 'Valor', num: true }, { t: 'Próxima' }],
     v.manutencoesLista.map(function(m) { return [m.servico, Frota_textoData_(m.data), m.km === '' || m.km == null ? '—' : RelA4_num_(Frota_num_(m.km, 0), 0), m.oficina || '—', RelA4_moeda_(m.valor), m.proxima ? Frota_textoData_(m.proxima) : '—']; }),
-    { vazio: 'Nenhuma manutenção registrada no período.' })));
+    { vazio: 'Nenhuma manutenção registrada no período.', legenda: 'Manutenções do período' })));
   var docs = documentosAtuais.map(function(d) { return [d.tipo, d.validade || 'sem prazo', d.situacao]; });
   docs.push(['CNH do condutor mais frequente', v.cnhValidadeResponsavel || 'não informada', v.cnhSituacaoResponsavel || '—']);
-  c.push(RelA4_secao_('6. Documentos', RelA4_tabela_([{ t: 'Documento' }, { t: 'Validade' }, { t: 'Situação' }], docs)));
+  c.push(RelA4_secao_('Documentos', RelA4_tabela_([{ t: 'Documento' }, { t: 'Validade' }, { t: 'Situação na emissão' }], docs, { legenda: 'Documentos do veículo e CNH do condutor' })));
   var ocorrencias = v.multasLista.map(function(m) {
     return [Frota_textoData_(m.data), m.tipo, m.condutor, m.valor > 0 ? RelA4_moeda_(m.valor) : '—', FrotaRel_rotuloMulta_(m.status), m.observacao || '—'];
   }).concat(v.paradasLista.map(function(p) {
     return [Frota_textoData_(p.dataInicio), 'Parada: ' + (p.motivo || 'motivo não informado'), '—', '—', p.dataFim ? 'Encerrada' : 'Em aberto', p.descricao || '—'];
   }));
-  c.push(RelA4_secao_('7. Multas e ocorrências', RelA4_tabela_([{ t: 'Data' }, { t: 'Tipo' }, { t: 'Condutor' }, { t: 'Valor', num: true }, { t: 'Situação' }, { t: 'Observação' }], ocorrencias,
-    { vazio: 'Nenhuma multa, parada ou ocorrência registrada no período.' })));
-  c.push(RelA4_secao_('8. Resumo gerencial', RelA4_tabela_([{ t: 'Indicador' }, { t: 'Resultado', num: true }], [
-    ['Quilometragem percorrida', RelA4_num_(v.kmRodado, 0) + ' km'],
-    ['Combustível abastecido', RelA4_num_(v.abastecimentosLitros, 2) + ' L'],
-    ['Consumo médio', v.consumoMedioKmL > 0 ? RelA4_num_(v.consumoMedioKmL, 1) + ' km/L' : '—'],
-    ['Combustível', RelA4_moeda_(v.abastecimentosValor)], ['Manutenção', RelA4_moeda_(v.manutencoesCusto)], ['Outras despesas', RelA4_moeda_(v.despesasValor)],
-    ['Custo total', RelA4_moeda_(v.custoTotal)], ['Custo por quilômetro', v.custoPorKm > 0 ? RelA4_moeda_(v.custoPorKm) : '—'],
-    ['Dias parados', RelA4_num_(v.paradasDias, 1)], ['Multas', RelA4_num_(v.multasQtd, 0) + (v.multasQtd ? ' (' + RelA4_moeda_(v.multasValor) + ')' : '')],
-    ['Situação geral', pendencias.length ? 'Com pendências' : 'Regular']
-  ])));
-  c.push(RelA4_secao_('9. Análise do responsável', RelA4_paragrafos_(analise)));
-  c.push(RelA4_secao_('10. Pendências e providências', FrotaRel_tabelaPendencias_(pendencias)));
-  c.push('<p class="nota">' + RelA4_esc_(FROTAREL_NOTA_METODO) + '</p>');
-  c.push('<div class="assinaturas"><div class="linha">Gestão da frota</div><div class="linha">Diretoria</div></div>');
+  c.push(RelA4_secao_('Multas e ocorrências', RelA4_tabela_([{ t: 'Data' }, { t: 'Tipo' }, { t: 'Condutor' }, { t: 'Valor', num: true }, { t: 'Situação' }, { t: 'Observação' }], ocorrencias,
+    { vazio: 'Nenhuma multa, parada ou ocorrência registrada no período.', legenda: 'Multas e paradas do período' })));
+  c.push(RelA4_secao_('Avisos e providências', FrotaRel_tabelaProvidencias_(alertasVeiculo, 'Avisos de vencimento e providências do veículo e da CNH do condutor')));
+  c.push(RelA4_secao_('Notas de cálculo e responsabilidade', '<p>' + RelA4_esc_(FROTAREL_NOTA_METODO) + '</p>' +
+    '<div class="manter"><p>Os dados acima vêm dos registros de retirada, abastecimento, manutenção, despesa e multa lançados no SGO+ até a data de emissão.</p>' +
+    RelA4_assinaturas_(['Gestão da frota', 'Diretoria']) + '</div>'));
 
   return RelA4_documento_({
-    titulo: 'Relatório de frota por veículo', subtitulo: 'Veículo ' + v.placa + (v.modelo ? ' — ' + v.modelo : '') + ' · ' + RelA4_plural_(periodo.dias, 'dia analisado', 'dias analisados'),
-    identificacao: v.placa + ' · ' + periodo.inicio + ' a ' + periodo.fim, corpo: c.join('\n'), cor: '#1f6f45', emitidoPor: emitidoPor
+    titulo: 'Relatório de frota por veículo', subtitulo: 'Veículo ' + v.placa + (v.modelo ? ' — ' + v.modelo : ''), tituloCurto: 'Relatório de frota — ' + v.placa,
+    tituloArquivo: 'Relatório de frota por veículo', identificacao: periodo.inicio + ' a ' + periodo.fim + ' (' + RelA4_plural_(periodo.dias, 'dia', 'dias') + ')',
+    sigla: 'FRV', corpo: c.join('\n'), emitidoPor: emitidoPor
   });
 }
 
@@ -535,7 +559,8 @@ function Frota_apiGerarRelatorio(sessionId, payload) {
   var dados = FrotaRel_agregarDados_(dataInicio, dataFim);
   var veiculoId = SGO_UTILS.safe(payload.veiculoId);
   var emitidoPor = SGO_UTILS.safe(sessao.nome || sessao.usuario);
-  var html, nomeBase, analise, subpasta;
+  var html, identificador, analise, subpasta;
+  var periodoArq = dataInicio.replace(/\//g, '-') + ' a ' + dataFim.replace(/\//g, '-');
 
   if (veiculoId) {
     var v = dados.veiculos.filter(function(x) { return x.id === veiculoId; })[0];
@@ -553,22 +578,22 @@ function Frota_apiGerarRelatorio(sessionId, payload) {
     }
     analise = RelA4_analise_(FrotaIA_promptVeiculo_(v, dados.periodo, alertasVeiculo), FrotaRel_textoPadraoVeiculo_(v, dados.periodo, pendencias));
     html = FrotaRel_montarDocumentoVeiculoHtml_(v, dados.periodo, analise.texto, alertasVeiculo, documentosAtuais, pendencias, emitidoPor);
-    nomeBase = 'Relatório de frota ' + v.placa + ' ' + dataInicio.replace(/\//g, '-') + ' a ' + dataFim.replace(/\//g, '-');
+    identificador = v.placa + ' ' + periodoArq;
     subpasta = v.placa;
   } else {
     analise = RelA4_analise_(FrotaIA_promptFrota_(dados), FrotaRel_textoPadraoGeral_(dados));
     html = FrotaRel_montarDocumentoHtml_(dados, analise.texto, emitidoPor);
-    nomeBase = 'Relatório de frota geral ' + dataInicio.replace(/\//g, '-') + ' a ' + dataFim.replace(/\//g, '-');
+    identificador = 'Frota completa ' + periodoArq;
     subpasta = 'Frota completa';
   }
 
-  var gravacao = RelA4_salvar_(FrotaRel_pastaDestino_(subpasta), nomeBase + ' emitido ' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm'), html, { compartilhar: true });
+  var gravacao = RelA4_salvar_(FrotaRel_pastaDestino_(subpasta), identificador, html, { compartilhar: true });
   if (!gravacao.salvo) SGO_DATA.log('FROTA_RELATORIO_PDF_FALHA', sessao.usuario, gravacao.aviso, 'FROTA');
   SGO_DATA.log('FROTA_RELATORIO_GERAR', sessao.usuario, 'Relatório de frota ' + (veiculoId ? 'do veículo ' + veiculoId : 'geral') + ' — ' + dataInicio + ' a ' + dataFim + ' (análise: ' + (analise.origem === 'IA' ? 'IA' : 'texto padrão') + ')', 'FROTA');
 
   var avisos = [gravacao.aviso, analise.aviso].filter(Boolean).join(' ');
   return {
-    ok: true, html: RelA4_injetarAvisos_(html, RelA4_avisosPadrao_(gravacao, [analise])),
+    ok: true, html: RelA4_injetarAvisos_(gravacao.html, RelA4_avisosPadrao_(gravacao, [analise])),
     link: gravacao.pdfUrl, htmlUrl: gravacao.htmlUrl, pastaUrl: gravacao.pastaUrl,
     analise: analise.origem, aviso: avisos
   };

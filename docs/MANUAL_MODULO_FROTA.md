@@ -221,9 +221,9 @@ Aparecem os totais de abastecimentos, manutenções, multas e outras despesas, o
 2. Confira as datas.
 3. Toque em "Gerar relatório".
 4. Aguarde até um minuto. O relatório abre numa aba nova.
-5. Para imprimir ou salvar em PDF, use Ctrl+P. Uma cópia fica guardada.
+5. Para imprimir ou salvar em PDF, toque em "Imprimir ou salvar em PDF" no topo do relatório. Uma cópia (PDF e HTML) fica guardada na pasta "Frota - Relatorios Gerados", na subpasta do veículo ou em "Frota completa".
 
-O relatório traz retiradas, abastecimentos e consumo, manutenções, documentos, CNH, multas, um resumo, uma análise escrita a partir dos números reais e as pendências em aberto. O relatório geral também mostra quais veículos são mais usados e quais ficam parados.
+O relatório por veículo traz identificação, resumo do período com o gráfico dos gastos, análise, retiradas, abastecimentos, despesas, manutenções, documentos e CNH, multas e paradas, avisos e providências, e o espaço para as assinaturas. O relatório geral traz o resumo, a análise, os gráficos de uso e de composição do custo por veículo, as paradas, os avisos e providências e, na última folha (deitada), o quadro de uso e custos de cada veículo. Relatório com mais de três páginas traz o sumário com o número das páginas.
 
 ## 14. Cores e selos
 

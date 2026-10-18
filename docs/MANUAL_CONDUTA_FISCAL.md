@@ -152,7 +152,7 @@ Quem está ausente sai do divisor do mês, mas continua recebendo o bônus. "Rem
 2. Em "Competência para conferência", confira o mês (já vem o mês anterior).
 3. Toque em "Consultar prévia".
 4. Confira as defesas pendentes, as missões aguardando aprovação e os valores por pessoa.
-5. Se quiser, toque em "Imprimir prévia".
+5. Se quiser, toque em "Imprimir prévia". A prévia abre em A4 numa aba nova e uma cópia fica na pasta do programa, em "Prévias".
 
 > A prévia não autoriza pagamento e pode mudar depois das decisões.
 

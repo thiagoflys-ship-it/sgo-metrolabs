@@ -144,6 +144,7 @@ function AuvoRelIA_gerarInterpretacao_(contexto) {
     'concentração de volume num só técnico. Se todos os indicadores estiverem saudáveis, diga isso claramente ' +
     'em vez de forçar um problema que não existe.\n\n' +
     'CONTEXTO REAL (única fonte de fatos):\n' + linhas.join('\n') + '\n\n' +
+    (typeof RELA4_REGRAS_REDACAO !== 'undefined' ? RELA4_REGRAS_REDACAO + '\n\n' : '') +
     AuvoRelIA_montarInstrucaoFormato_();
 
   var parts = [{ text: prompt }];

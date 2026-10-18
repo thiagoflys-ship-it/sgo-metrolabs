@@ -30,7 +30,8 @@ function SGO_ajudaTelas_Inventario_() {
         ] },
         { titulo: "Imprimir ou salvar em PDF", itens: [
           "Toque em \"Gerar PDF / Imprimir\".",
-          "Confira a pré-visualização. O papel é A4 deitado.",
+          "Confira a pré-visualização. O papel é A4 deitado e as páginas saem numeradas.",
+          "Esta impressão não guarda cópia. Para guardar o documento na pasta do cliente, use \"Relatório A4 com análise\".",
           "Toque em \"Imprimir / Salvar PDF\".",
           "Para PDF, escolha \"Salvar como PDF\" na janela de impressão.",
           "Toque em \"Fechar\" para voltar."
@@ -39,7 +40,8 @@ function SGO_ajudaTelas_Inventario_() {
           "Gere o inventário primeiro.",
           "Toque em \"Relatório A4 com análise\".",
           "Aguarde até um minuto. O relatório abre numa aba nova.",
-          "Uma cópia em PDF e HTML fica guardada na pasta do cliente. O link aparece na tela."
+          "Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.",
+          "Relatório longo traz capa e sumário com o número das páginas."
         ] },
         { titulo: "Achar um inventário já salvo", itens: [
           "Em \"Documentos já Gerados\", digite o nome do cliente ou do arquivo.",

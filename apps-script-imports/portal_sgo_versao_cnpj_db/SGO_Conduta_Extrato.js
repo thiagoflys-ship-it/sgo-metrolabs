@@ -113,30 +113,35 @@ function CondutaExt_comentario_(x) {
 
 function CondutaExt_html_(x, comentario) {
   var c = [];
-  if (!x.fechado) c.push('<div class="caixa aviso">Apuração parcial: o mês de ' + RelA4_esc_(RelA4_competencia_(x.competencia)) + ' ainda não foi fechado. Os valores podem mudar até o fechamento.</div>');
-  if (x.sombra) c.push('<div class="caixa aviso">Período de teste: os valores são simulados e não autorizam pagamento.</div>');
+  if (!x.fechado) c.push(RelA4_caixa_('Apuração parcial: o mês de ' + RelA4_competencia_(x.competencia) + ' ainda não foi fechado. Os valores podem mudar até o fechamento.', 'aviso'));
+  if (x.sombra) c.push(RelA4_caixa_('Período de teste: os valores são simulados e não autorizam pagamento.', 'aviso'));
+  var perfil = ({ ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico', METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro' })[String(x.colaborador.perfil || '').toUpperCase()] || x.colaborador.perfil;
   c.push(RelA4_secao_('Identificação', RelA4_identificacao_([
-    ['Colaborador', x.colaborador.nome], ['Perfil', ({ ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico', METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro' })[String(x.colaborador.perfil || '').toUpperCase()] || x.colaborador.perfil], ['Setor', x.colaborador.setor || '—'], ['Competência', RelA4_competencia_(x.competencia)],
-    ['Situação do mês', x.fechado ? 'Fechado em ' + RelA4_dataBr_(x.fechadoEm) : 'Em apuração'],
-    ['Resultado da equipe', 'Índice de conduta ' + Conduta_numBr_(x.equipe.ico) + ', farol ' + CondutaRel_farolTexto_(x.equipe.farol).toLowerCase()]
+    ['Colaborador', x.colaborador.nome], ['Perfil', perfil], ['Setor', x.colaborador.setor || '—'],
+    ['Situação do mês', x.fechado ? 'Fechado em ' + RelA4_dataBr_(x.fechadoEm) : 'Em apuração']
   ])));
+  var firmes = x.ocorrencias.filter(function (o) { return o.status === 'FIRME'; }).length;
+  var pontos = x.ocorrencias.reduce(function (s, o) { return s + o.pontos; }, 0);
   c.push(RelA4_secao_('Resumo do mês', RelA4_kpis_([
-    [x.recebeBonus ? 'Sim' : 'Não', 'Bônus coletivo'], [RelA4_moeda_(x.valorBonus), 'Valor do bônus'], [RelA4_moeda_(x.valorIncentivo), 'Incentivo de missão'], [RelA4_moeda_(x.total), x.fechado ? 'Total do mês' : 'Total parcial'],
-    [RelA4_num_(x.ocorrencias.filter(function (o) { return o.status === 'FIRME'; }).length, 0), 'Ocorrências firmes'], [RelA4_num_(x.ocorrencias.reduce(function (s, o) { return s + o.pontos; }, 0), 0), 'Pontos de demérito'],
+    [Conduta_numBr_(x.equipe.ico) + ' · ' + CondutaRel_farolTexto_(x.equipe.farol).toLowerCase(), 'Índice de conduta da equipe', CondutaRel_tipoFarol_(x.equipe.farol)],
+    [x.recebeBonus ? RelA4_moeda_(x.valorBonus) : 'Não recebe', 'Bônus coletivo', x.recebeBonus ? 'ok' : 'aviso'],
+    [RelA4_moeda_(x.valorIncentivo), 'Incentivo de missão'], [RelA4_moeda_(x.total), x.fechado ? 'Total do mês' : 'Total parcial'],
+    [RelA4_num_(firmes, 0), 'Ocorrências firmes', firmes ? 'critico' : 'ok'], [RelA4_num_(pontos, 0), 'Pontos de demérito'],
     [RelA4_num_(x.reconhecimentos.length, 0), 'Reconhecimentos'], [RelA4_num_(x.placar, 0), 'Placar individual']
   ]) + (x.ausenteNoMes ? '<p class="nota">Há ausência registrada no mês: a pessoa não entra no número de pessoas do cálculo coletivo.</p>' : '')));
   c.push(RelA4_secao_('Comentário do mês', RelA4_paragrafos_(comentario)));
   c.push(RelA4_secao_('Ocorrências', RelA4_tabela_([{ t: 'Data' }, { t: 'Código' }, { t: 'Descrição' }, { t: 'Situação' }, { t: 'Pontos', num: true }],
     x.ocorrencias.map(function (o) { return [RelA4_dataBr_(o.data), o.codigo, o.descricao, RelA4_marca_(o.situacao, o.status === 'FIRME' ? 'critico' : ['ANULADA', 'REJEITADA', 'DESCARTADA'].indexOf(o.status) >= 0 ? 'neutra' : 'aviso'), RelA4_num_(o.pontos, 0)]; }),
-    { vazio: 'Nenhuma ocorrência em seu nome neste mês.' })));
+    { vazio: 'Nenhuma ocorrência em seu nome neste mês.', legenda: 'Ocorrências do mês em seu nome' })));
   c.push(RelA4_secao_('Reconhecimentos', RelA4_tabela_([{ t: 'Data' }, { t: 'Motivo' }, { t: 'Relato' }],
-    x.reconhecimentos.map(function (r) { return [RelA4_dataBr_(r.data), r.descricao + (r.grupo ? ' (' + r.grupo + ')' : ''), r.texto || '—']; }), { vazio: 'Nenhum reconhecimento registrado neste mês.' })));
+    x.reconhecimentos.map(function (r) { return [RelA4_dataBr_(r.data), r.descricao + (r.grupo ? ' (' + r.grupo + ')' : ''), r.texto || '—']; }), { vazio: 'Nenhum reconhecimento registrado neste mês.', legenda: 'Reconhecimentos recebidos no mês' })));
   c.push(RelA4_secao_('Missões', RelA4_tabela_([{ t: 'Data' }, { t: 'Destino' }, { t: 'Distância', num: true }, { t: 'Aprovação' }, { t: 'Situação' }, { t: 'Valor', num: true }],
-    x.missoes.map(function (m) { return [RelA4_dataBr_(m.data), m.destino, RelA4_num_(m.km, 0) + ' km', m.aprovacaoRotulo, m.motivo, RelA4_moeda_(m.valor)]; }),
-    { vazio: 'Nenhuma missão neste mês.', total: x.missoes.length ? ['Total', '', '', '', '', RelA4_moeda_(x.missoes.reduce(function (s, m) { return s + m.valor; }, 0))] : null })));
-  if (x.ausencias.length) c.push(RelA4_secao_('Ausências registradas', RelA4_tabela_([{ t: 'Início' }, { t: 'Fim' }, { t: 'Tipo' }], x.ausencias.map(function (a) { return [RelA4_dataBr_(a.inicio), RelA4_dataBr_(a.fim), a.tipo || '—']; }))));
+    x.missoes.map(function (m) { return [RelA4_dataBr_(m.data), m.destino, RelA4_num_(m.km, 0) + ' km', m.aprovacaoRotulo, String(m.motivo || '').replace(' (aprovação legada)', ''), RelA4_moeda_(m.valor)]; }),
+    { vazio: 'Nenhuma missão neste mês.', legenda: 'Participações em missão no mês', total: x.missoes.length > 1 ? ['Total', '', '', '', '', RelA4_moeda_(x.missoes.reduce(function (s, m) { return s + m.valor; }, 0))] : null })));
+  if (x.ausencias.length) c.push(RelA4_secao_('Ausências registradas', RelA4_tabela_([{ t: 'Início' }, { t: 'Fim' }, { t: 'Tipo' }], x.ausencias.map(function (a) { return [RelA4_dataBr_(a.inicio), RelA4_dataBr_(a.fim), a.tipo || '—']; }), { legenda: 'Ausências que tocam o mês' })));
   c.push('<p class="nota">Documento individual e reservado: fica disponível ao próprio colaborador e à gestão. Dúvidas sobre ocorrências seguem o caminho de contestação e recurso do programa.</p>');
-  return RelA4_documento_({ titulo: 'Programa de conduta — extrato do colaborador', subtitulo: x.colaborador.nome, identificacao: RelA4_competencia_(x.competencia), corpo: c.join('\n'), cor: '#0b4ea2' });
+  return RelA4_documento_({ titulo: 'Programa de conduta — extrato do colaborador', subtitulo: x.colaborador.nome, tituloCurto: 'Extrato — ' + x.colaborador.nome,
+    tituloArquivo: 'Extrato do colaborador', sigla: 'CNE', rotuloIdentificacao: 'Competência', identificacao: RelA4_competencia_(x.competencia), corpo: c.join('\n') });
 }
 
 function Conduta_apiGerarExtratoColaborador(sessionId, payload) {
@@ -150,9 +155,8 @@ function Conduta_apiGerarExtratoColaborador(sessionId, payload) {
   if (competencia > Conduta_competenciaDe_(Conduta_hojeISO_())) throw new Error('A competência escolhida ainda não começou. Escolha o mês atual ou um mês anterior.');
   var x = CondutaExt_contexto_(alvo, competencia);
   var com = CondutaExt_comentario_(x);
-  var html = CondutaExt_html_(x, com.texto);
   var g = RelA4_salvar_(function () { return RelA4_subpasta_(CondutaRel_pastaRelatorios_('Extratos')(), x.colaborador.nome); },
-    'Extrato ' + x.colaborador.nome + ' ' + competencia + ' emitido ' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm'), html, { compartilhar: false });
+    x.colaborador.nome + ' ' + competencia, CondutaExt_html_(x, com.texto), { compartilhar: false });
   SGO_DATA.log('CONDUTA_EXTRATO', sessao.usuario, 'Extrato de ' + x.colaborador.nome + ' (' + competencia + ') gerado', 'CONDUTA');
-  return { ok: true, html: RelA4_injetarAvisos_(html, RelA4_avisosPadrao_(g, [com])), aviso: [g.aviso, com.aviso].filter(Boolean).join(' '), link: g.pdfUrl };
+  return { ok: true, html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [com])), aviso: [g.aviso, com.aviso].filter(Boolean).join(' '), link: g.pdfUrl };
 }

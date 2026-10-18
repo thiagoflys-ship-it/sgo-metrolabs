@@ -200,7 +200,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Em \"Competência para conferência\", confira o mês.",
           "Toque em \"Consultar prévia\".",
           "Confira as defesas pendentes, as missões aguardando aprovação e os valores por pessoa.",
-          "Se quiser, toque em \"Imprimir prévia\"."
+          "Se quiser, toque em \"Imprimir prévia\". A prévia abre em A4 numa aba nova e uma cópia (PDF e HTML) fica na pasta do programa, em \"Prévias\". Ela não autoriza pagamento."
         ] },
         { titulo: "Fechar o mês", itens: [
           "Resolva as defesas e as missões pendentes.",
@@ -240,6 +240,10 @@ function SGO_ajudaTelas_Conduta_() {
         ] },
         { titulo: "Abrir um relatório já publicado", itens: [
           "Na lista de relatórios, toque em \"Abrir\"."
+        ] },
+        { titulo: "Onde ficam as cópias", itens: [
+          "Cada extrato e cada relatório gerado fica guardado em PDF e HTML na pasta \"Programa de conduta - Relatórios\": \"Fechamentos mensais\", \"Relatórios semanais\", \"Missões\", \"Extratos\" (uma subpasta por pessoa) e \"Prévias\".",
+          "Relatório com mais de três páginas traz o sumário com o número das páginas."
         ] }
       ],
       problemas: [

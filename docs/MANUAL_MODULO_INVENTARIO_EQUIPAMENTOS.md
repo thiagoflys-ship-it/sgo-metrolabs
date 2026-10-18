@@ -51,7 +51,7 @@ Monta a lista dos equipamentos de um cliente com a situação da calibração e 
 
 1. Gere o inventário.
 2. Toque em "Gerar PDF / Imprimir".
-3. Confira a pré-visualização. O papel é A4 deitado.
+3. Confira a pré-visualização. O papel é A4 deitado e as páginas saem numeradas. Esta impressão não guarda cópia: para guardar o documento na pasta do cliente, use "Relatório A4 com análise".
 4. Toque em "Imprimir / Salvar PDF".
 5. Para PDF, escolha "Salvar como PDF" na janela de impressão.
 6. Toque em "Fechar" para voltar.
@@ -61,9 +61,9 @@ Monta a lista dos equipamentos de um cliente com a situação da calibração e 
 1. Gere o inventário.
 2. Toque em "Relatório A4 com análise".
 3. Aguarde até um minuto. O relatório abre numa aba nova.
-4. Uma cópia em PDF e HTML fica guardada na pasta do cliente. O link aparece na tela.
+4. Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.
 
-O relatório traz identificação, indicadores, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.
+O relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.
 
 Para achar um inventário salvo: em "Documentos já Gerados", digite o nome do cliente ou do arquivo, toque em "Buscar" e toque no link.
 

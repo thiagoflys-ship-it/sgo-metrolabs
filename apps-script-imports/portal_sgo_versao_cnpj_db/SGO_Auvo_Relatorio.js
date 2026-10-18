@@ -2,10 +2,11 @@
  * SGO_Auvo_Relatorio.js
  * RELATÓRIO DE ATENDIMENTOS (AUVO) — A4 PARA IMPRESSÃO
  *
- * Mesmo padrão de RelCalDoc_montarDocumentoHtml_ (SGO_RelCal_Documento.js):
- * HTML com @page{size:A4} + @media print + botão window.print(), aberto
- * numa aba nova pelo cliente. Gráficos via Chart.js embutido na própria
- * página impressa (CDN), igual ao dashboard principal.
+ * 18/10/2026: montado na moldura comum dos relatórios gerenciais
+ * (SGO_Documentos_RelatorioA4.js, padrão A4 de 18/10): cabeçalho e rodapé
+ * corridos, sumário com páginas quando longo, gráficos em SVG (antes eram
+ * desenhados por script e saíam em branco no PDF), seção de pendências de
+ * fechamento e cópia HTML + PDF na pasta "Auvo - Relatórios".
  ****************************************************/
 
 function AuvoRel_escaparHtml_(v) {
@@ -16,7 +17,9 @@ function AuvoRel_escaparHtml_(v) {
 
 function AuvoRel_parseData_(v) {
   if (!v) return null;
-  var d = (v instanceof Date) ? v : new Date(String(v));
+  // 18/10/2026: "dd/mm/aaaa [hh:mm]" era lido como mês/dia (10/09 virava 9 de outubro) e dia > 12 sumia do relatório.
+  var m = (v instanceof Date) ? null : /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/.exec(String(v));
+  var d = (v instanceof Date) ? v : (m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4] || 0), Number(m[5] || 0)) : new Date(String(v)));
   return (d && !isNaN(d.getTime())) ? d : null;
 }
 
@@ -125,121 +128,95 @@ function Auvo_montarContextoRelatorio_(periodoDias, tecnicosIds) {
 }
 
 // ------------------------------------------------------------
-// HTML A4 — mesmo esqueleto de RelCalDoc_montarDocumentoHtml_
+// HTML A4 — moldura comum dos relatórios gerenciais (18/10/2026:
+// gráficos em SVG, que saem no PDF; antes eram desenhados por script e o
+// PDF saía com os quadros em branco).
 // ------------------------------------------------------------
-function Auvo_montarRelatorioHtml_(ctx, ia) {
-  var html = [];
-  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
-  html.push('<title>Relatório de Atendimentos — Auvo</title>');
-  html.push('<style>');
-  html.push('@page { size: A4; margin: 16mm 15mm; }');
-  html.push('* { box-sizing: border-box; }');
-  html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 12.5px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
-  html.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 26px 32px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
-  html.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 18px; }');
-  html.push('.logo-topo { height: 42px; }');
-  html.push('.titulo-doc { text-align:right; }');
-  html.push('.titulo-doc h1 { font-size: 17px; margin: 0; color:#0b4ea2; }');
-  html.push('.titulo-doc small { color:#6b7280; }');
-  html.push('.kpis { display:flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }');
-  html.push('.kpi { flex: 1 1 21%; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; text-align: center; }');
-  html.push('.kpi .valor { font-size: 21px; font-weight: 800; color: #0b4ea2; }');
-  html.push('.kpi .rotulo { font-size: 10.5px; color: #6b7280; }');
-  html.push('.secao { margin-top: 22px; }');
-  html.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }');
-  html.push('p { text-align: justify; margin: 8px 0; }');
-  html.push('.grafico-box-full { margin: 10px 0; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 16px; }');
-  html.push('.grafico-box-full.tipos { height: 260px; }');
-  html.push('table.tabela-atend { border-collapse: collapse; width: 100%; font-size: 11px; }');
-  html.push('table.tabela-atend th, table.tabela-atend td { border: 1px solid #d1d5db; padding: 5px 8px; text-align: left; }');
-  html.push('table.tabela-atend thead th { background: #0b4ea2; color: #fff; text-align: center; }');
-  html.push('table.tabela-atend tbody tr:nth-child(even) { background: #f3f4f6; }');
-  html.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
-  html.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  html.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  html.push(SGO_DocA4_css_() + '</style></head><body>');
 
-  html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
-  html.push('<div class="folha">');
-
-  html.push('<div class="topo">');
-  html.push('<img class="logo-topo" src="' + AuvoRel_escaparHtml_(SGO_CFG.LOGO_URL || '') + '" alt="Metrolab\'s">');
-  html.push('<div class="titulo-doc"><h1>Relatório de Atendimentos — Auvo</h1><small>' + AuvoRel_escaparHtml_(ctx.periodoLabel) + '<br>Escopo: ' + AuvoRel_escaparHtml_(ctx.escopoLabel) + '</small></div>');
-  html.push('</div>');
-
-  html.push('<div class="kpis">');
-  html.push('<div class="kpi"><div class="valor">' + ctx.total + '</div><div class="rotulo">Total de atendimentos</div></div>');
-  html.push('<div class="kpi"><div class="valor">' + ctx.abertas + '</div><div class="rotulo">Em aberto</div></div>');
-  html.push('<div class="kpi"><div class="valor">' + ctx.concluidas + '</div><div class="rotulo">Concluídos</div></div>');
-  html.push('<div class="kpi"><div class="valor">' + (100 - ctx.pctSemRelato) + '%</div><div class="rotulo">O.S. com relato preenchido</div></div>');
-  html.push('</div>');
-
-  html.push('<div class="secao"><h2>Saúde Operacional — Interpretação</h2>');
-  html.push('<p>' + AuvoRel_escaparHtml_(ia.resumoExecutivo) + '</p>');
-  html.push('<p><strong>Pontos de atenção:</strong> ' + AuvoRel_escaparHtml_(ia.pontosDeAtencao) + '</p>');
-  html.push('</div>');
-
-  // Altura do gráfico de técnico cresce com a quantidade de técnicos —
-  // nome composto em português (bem comum) precisa da largura inteira
-  // da página pra não cortar (era o que acontecia com 2 gráficos lado
-  // a lado); a altura por barra evita as barras ficarem espremidas.
-  var alturaTecnicos = Math.max(160, 34 * Math.max(ctx.rankingTecnicos.length, 1) + 40);
-
-  html.push('<div class="secao"><h2>Atendimentos por Técnico</h2>');
-  html.push('<div class="grafico-box-full" style="height:' + alturaTecnicos + 'px"><canvas id="graficoTecnicos"></canvas></div>');
-  html.push('</div>');
-
-  html.push('<div class="secao"><h2>Atendimentos por Tipo</h2>');
-  html.push('<div class="grafico-box-full tipos"><canvas id="graficoTipos"></canvas></div>');
-  html.push('</div>');
-
-  html.push('<div class="secao"><h2>Atendimentos do Período (' + ctx.tabela.length + ')</h2>');
-  html.push('<table class="tabela-atend"><thead><tr><th>O.S.</th><th>Data</th><th>Cliente</th><th>Responsável</th><th>Tipo</th><th>Status</th></tr></thead><tbody>');
-  if (ctx.tabela.length) {
-    ctx.tabela.forEach(function(t) {
-      var osHtml = t.osUrl ? '<a href="' + AuvoRel_escaparHtml_(t.osUrl) + '" target="_blank">' + AuvoRel_escaparHtml_(t.osNumero) + '</a>' : AuvoRel_escaparHtml_(t.osNumero);
-      html.push('<tr><td>' + osHtml + '</td><td>' + AuvoRel_escaparHtml_(t.data) + '</td><td>' + AuvoRel_escaparHtml_(t.cliente) + '</td><td>' +
-        AuvoRel_escaparHtml_(t.tecnico) + '</td><td>' + AuvoRel_escaparHtml_(t.tipo) + '</td><td>' + AuvoRel_escaparHtml_(t.status) + '</td></tr>');
-    });
-  } else {
-    html.push('<tr><td colspan="6">Nenhum atendimento no período e escopo selecionados.</td></tr>');
+/** Pendências de fechamento (foto da última atualização), no mesmo escopo de técnicos. */
+function AuvoRel_pendencias_(tecnicosIds) {
+  try {
+    Auvo_pendBootstrap_();
+    var filtro = Array.isArray(tecnicosIds) ? tecnicosIds.map(String).filter(Boolean) : [];
+    var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.AUVO_PENDENCIAS).filter(function (p) {
+      if (!filtro.length) return true;
+      var chave = SGO_UTILS.safe(p.TECNICO_ID_SGO) ? 'sgo:' + SGO_UTILS.safe(p.TECNICO_ID_SGO) : (SGO_UTILS.safe(p.TECNICO_AUVO_ID) ? 'auvo:' + SGO_UTILS.safe(p.TECNICO_AUVO_ID) : '');
+      return filtro.indexOf(chave) !== -1;
+    }).sort(function (a, b) { return Number(b.DIAS_ABERTA || 0) - Number(a.DIAS_ABERTA || 0); });
+    var ultima = PropertiesService.getScriptProperties().getProperty(AUVO_PEND_CFG.ULTIMA_COMPLETA_KEY) || '';
+    var d = ultima ? new Date(ultima) : null;
+    return { itens: itens, ultima: d && !isNaN(d.getTime()) ? Utilities.formatDate(d, 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') : '' };
+  } catch (e) {
+    return { itens: [], ultima: '', erro: String((e && e.message) || e) };
   }
-  html.push('</tbody></table>');
-  html.push('</div>');
+}
 
-  html.push('<div style="margin-top:26px;font-size:10px;color:#6b7280;">Gerado automaticamente a partir da sincronização Auvo &rarr; Portal SGO+. ' +
-    'A interpretação acima é gerada por IA a partir dos números já calculados nesta página — nunca recalcula ou reinterpreta valores.</div>');
+/** Texto padrão (sem IA), só com os números do contexto. */
+function AuvoRel_textoPadrao_(ctx) {
+  var maior = ctx.rankingTecnicos[0];
+  var resumo = 'No período de ' + ((/\((.*)\)/.exec(ctx.periodoLabel) || [])[1] || ctx.periodoLabel) + ' foram registrados ' + RelA4_plural_(ctx.total, 'atendimento', 'atendimentos') + ', ' +
+    RelA4_plural_(ctx.concluidas, 'concluído', 'concluídos') + ' e ' + RelA4_plural_(ctx.abertas, 'em aberto', 'em aberto') + '.' +
+    (ctx.rankingTecnicos.length ? ' A média foi de ' + RelA4_num_(ctx.mediaTecnico, 1) + ' atendimentos por colaborador' + (maior ? ', com o maior volume em ' + RelA4_plural_(maior.qtd, 'atendimento', 'atendimentos') : '') + '.' : '') +
+    (ctx.porTipo.length ? ' O tipo mais frequente foi ' + ctx.porTipo[0].tipo.toLowerCase() + ' (' + RelA4_num_(ctx.porTipo[0].qtd, 0) + ').' : '');
+  var pontos = [];
+  if (ctx.pctSemRelato) pontos.push(RelA4_num_(ctx.pctSemRelato, 0) + '% das O.S. sem relato de serviço');
+  if (ctx.finalizadasSemCheckout) pontos.push(RelA4_plural_(ctx.finalizadasSemCheckout, 'O.S. finalizada sem check-out', 'O.S. finalizadas sem check-out'));
+  if (ctx.pendencias && ctx.pendencias.itens.length) pontos.push(RelA4_plural_(ctx.pendencias.itens.length, 'O.S. em aberto no Auvo', 'O.S. em aberto no Auvo') + ' na última atualização das pendências');
+  return { resumoExecutivo: resumo, pontosDeAtencao: pontos.length ? 'Merecem acompanhamento da gestão: ' + pontos.join('; ') + '.' : 'Os indicadores do período não mostram desvio que exija ação imediata.' };
+}
 
-  html.push('</div>');
-
-  var dadosGraficos = {
-    tecnicos: { labels: ctx.rankingTecnicos.map(function(r) { return r.nome; }), valores: ctx.rankingTecnicos.map(function(r) { return r.qtd; }) },
-    tipos: { labels: ctx.porTipo.map(function(t) { return t.tipo; }), valores: ctx.porTipo.map(function(t) { return t.qtd; }) }
-  };
-
-  html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>');
-  html.push('<script>');
-  html.push('var DADOS_GRAFICOS = ' + JSON.stringify(dadosGraficos) + ';');
-  html.push('window.addEventListener("load", function() {');
-  html.push('  var elT = document.getElementById("graficoTecnicos");');
-  html.push('  if (elT) new Chart(elT, { type: "bar", data: { labels: DADOS_GRAFICOS.tecnicos.labels, datasets: [{ data: DADOS_GRAFICOS.tecnicos.valores, backgroundColor: "#0b4ea2", maxBarThickness: 22 }] }, options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, layout: { padding: { left: 4 } }, plugins: { legend: { display: false } }, scales: { y: { ticks: { font: { size: 10.5 } } }, x: { ticks: { precision: 0 } } } } });');
-  html.push('  var elP = document.getElementById("graficoTipos");');
-  html.push('  if (elP) new Chart(elP, { type: "doughnut", data: { labels: DADOS_GRAFICOS.tipos.labels, datasets: [{ data: DADOS_GRAFICOS.tipos.valores, backgroundColor: ["#0b4ea2","#059669","#f59e0b","#dc2626","#7c3aed","#6b7280"] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } } });');
-  html.push('});');
-  html.push('</script>');
-
-  html.push('</body></html>');
-  return html.join('\n');
+function Auvo_montarRelatorioHtml_(ctx, ia) {
+  var c = [], pend = ctx.pendencias || { itens: [] };
+  var comRelato = 100 - ctx.pctSemRelato;
+  c.push(RelA4_secao_('Resumo do período', RelA4_kpis_([
+    [RelA4_num_(ctx.total, 0), 'Atendimentos no período'], [RelA4_num_(ctx.concluidas, 0), 'Concluídos', 'ok'], [RelA4_num_(ctx.abertas, 0), 'Em aberto', ctx.abertas ? 'aviso' : ''],
+    [RelA4_num_(comRelato, 0) + '%', 'O.S. com relato preenchido', comRelato < 90 ? 'aviso' : 'ok'],
+    [RelA4_num_(ctx.finalizadasSemCheckout, 0), 'Finalizadas sem check-out', ctx.finalizadasSemCheckout ? 'aviso' : 'ok'], [RelA4_num_(ctx.rankingTecnicos.length, 0), 'Colaboradores com atendimento'],
+    [RelA4_num_(ctx.mediaTecnico, 1), 'Média por colaborador'], [RelA4_num_(pend.itens.length, 0), 'Pendências de fechamento', pend.itens.length ? 'critico' : 'ok']
+  ])));
+  c.push(RelA4_secao_('Interpretação do período', RelA4_paragrafos_(ia.resumoExecutivo) + RelA4_subsecao_('Pontos de atenção', RelA4_paragrafos_(ia.pontosDeAtencao))));
+  c.push(RelA4_secao_('Distribuição dos atendimentos',
+    RelA4_barras_(ctx.rankingTecnicos.map(function (r) { return { rotulo: r.nome, valor: r.qtd, rotuloValor: RelA4_plural_(r.qtd, 'atendimento', 'atendimentos') + ' · ' + RelA4_num_(ctx.total ? r.qtd / ctx.total * 100 : 0, 0) + '%' }; }),
+      { titulo: 'Atendimentos por colaborador no período (quantidade e parcela do total)', vazio: 'Nenhum atendimento com colaborador identificado.' }) +
+    RelA4_barras_(ctx.porTipo.map(function (t) { return { rotulo: t.tipo, valor: t.qtd, rotuloValor: RelA4_num_(t.qtd, 0) + ' · ' + RelA4_num_(ctx.total ? t.qtd / ctx.total * 100 : 0, 0) + '%' }; }),
+      { titulo: 'Atendimentos por tipo no período (quantidade e parcela do total)', cor: RELA4_CORES.petroleo, vazio: 'Nenhum atendimento no período.' })));
+  c.push(RelA4_secao_('Pendências de fechamento', (pend.itens.length
+    ? RelA4_tabela_([{ t: 'O.S.' }, { t: 'Data' }, { t: 'Tipo' }, { t: 'Cliente' }, { t: 'Responsável' }, { t: 'Dias em aberto', num: true }, { t: 'Evidência' }],
+      pend.itens.map(function (p) {
+        var os = p.TASK_URL ? { html: '<a href="' + RelA4_esc_(p.TASK_URL) + '" target="_blank" rel="noopener">' + RelA4_esc_(p.AUVO_TASK_ID) + '</a>' } : String(p.AUVO_TASK_ID || '—');
+        return [os, RelA4_dataBr_(p.TASK_DATE) || '—', p.TASK_TYPE_DESCRICAO || '—', p.CLIENTE_NOME || '—', p.TECNICO_NOME || '—', RelA4_num_(Number(p.DIAS_ABERTA) || 0, 0),
+          p.TEM_EVIDENCIA === 'SIM' ? RelA4_marca_('Com evidência', 'aviso') : RelA4_marca_('Sem evidência', 'critico')];
+      }), { legenda: 'O.S. ainda não finalizadas no Auvo, da mais antiga para a mais recente' })
+    : RelA4_caixa_('Nenhuma O.S. em aberto na última atualização das pendências.', 'ok')) +
+    '<p class="nota">' + RelA4_esc_((pend.ultima ? 'Situação da última atualização das pendências, em ' + pend.ultima + '. ' : 'As pendências ainda não foram atualizadas pelo menos uma vez. ') +
+      '"Com evidência" quer dizer que há relato, questionário, check-in ou assinatura: o serviço provavelmente foi feito e falta só fechar a O.S.; "sem evidência" pede conferência antes de cobrar.') + '</p>'));
+  c.push(RelA4_secao_('Atendimentos do período', RelA4_tabela_([{ t: 'O.S.' }, { t: 'Data' }, { t: 'Cliente' }, { t: 'Responsável' }, { t: 'Tipo' }, { t: 'Situação' }],
+    ctx.tabela.map(function (t) {
+      return [t.osUrl ? { html: '<a href="' + RelA4_esc_(t.osUrl) + '" target="_blank" rel="noopener">' + RelA4_esc_(t.osNumero) + '</a>' } : t.osNumero, t.data, t.cliente, t.tecnico, t.tipo,
+        RelA4_marca_(t.status, t.status === 'Concluído' ? 'ok' : 'aviso')];
+    }), { vazio: 'Nenhum atendimento no período e escopo selecionados.', legenda: 'Atendimentos do período, do mais recente para o mais antigo', compacta: ctx.tabela.length > 40 }) +
+    '<p class="nota">Dados da sincronização do Auvo com o SGO+. A interpretação usa somente os números calculados neste relatório.</p>'));
+  return RelA4_documento_({ titulo: 'Relatório de atendimentos de campo', subtitulo: 'Atendimentos sincronizados do Auvo: volume, distribuição e pendências', tituloArquivo: 'Relatório de atendimentos (Auvo)',
+    sigla: 'AUV', identificacao: ctx.periodoLabel, ficha: [['Escopo', ctx.escopoLabel]], corpo: c.join('\n') });
 }
 
 // ------------------------------------------------------------
 // ORQUESTRAÇÃO — junta agregação + IA + HTML, exposta ao painel
 // ------------------------------------------------------------
-// 16/10/2026: relatório sai mesmo sem a chave da IA (números não dependem dela).
+// Sem a chave da IA (ou com falha) o relatório sai com o texto padrão; o aviso fica só na tela.
 function Auvo_iaComFallback_(ctx) {
-  try { return AuvoRelIA_gerarInterpretacao_(ctx); } catch (e) {
-    return { resumoExecutivo: 'Interpretação automática indisponível neste momento (' + (e && e.message ? e.message : e) + '). Os números e tabelas deste relatório são reais e não dependem dela.', pontosDeAtencao: 'Consulte as tabelas abaixo.' };
+  try {
+    var r = AuvoRelIA_gerarInterpretacao_(ctx);
+    return { resumoExecutivo: RelA4_limparTextoIa_(r.resumoExecutivo), pontosDeAtencao: RelA4_limparTextoIa_(r.pontosDeAtencao), origem: 'IA', aviso: '' };
+  } catch (e) {
+    var p = AuvoRel_textoPadrao_(ctx);
+    p.origem = 'PADRAO'; p.aviso = RelA4_avisoFalhaIa_(/GEMINI_API_KEY não configurada/.test(String(e && e.message)) ? { semChave: true } : e);
+    return p;
   }
+}
+
+function AuvoRel_pasta_() {
+  return SGO_DocSalvar_pastaPersistente_('AUVO_RELATORIOS_FOLDER_ID', 'Auvo - Relatórios');
 }
 
 function Auvo_apiGerarRelatorio(sessionId, payload) {
@@ -249,12 +226,16 @@ function Auvo_apiGerarRelatorio(sessionId, payload) {
 
   var tecnicosIds = Array.isArray((payload || {}).tecnicosIds) ? payload.tecnicosIds : [];
   var ctx = Auvo_montarContextoRelatorio_(periodoDias, tecnicosIds);
+  ctx.pendencias = AuvoRel_pendencias_(tecnicosIds);
   var ia = ctx.total
     ? Auvo_iaComFallback_(ctx)
-    : { resumoExecutivo: 'Nenhum atendimento registrado no período selecionado.', pontosDeAtencao: 'Sem dados suficientes pra análise neste período.' };
+    : { resumoExecutivo: 'Nenhum atendimento registrado no período selecionado.', pontosDeAtencao: 'Sem dados suficientes para análise neste período.', origem: 'PADRAO', aviso: '' };
 
-  var html = Auvo_montarRelatorioHtml_(ctx, ia);
-  return { ok: true, html: html };
+  var g = RelA4_salvar_(AuvoRel_pasta_, (tecnicosIds.length ? 'Colaboradores selecionados' : 'Todos os colaboradores') + ' - ' + ctx.periodoDias + ' dias', Auvo_montarRelatorioHtml_(ctx, ia), { compartilhar: false });
+  var sessao = null;
+  try { sessao = lerSessaoAuth_(sessionId); } catch (eS) {}
+  try { SGO_DATA.log('AUVO_RELATORIO', (sessao && sessao.usuario) || '', 'Relatório de atendimentos (' + ctx.periodoDias + ' dias, ' + ctx.escopoLabel + ', análise: ' + (ia.origem === 'IA' ? 'IA' : 'texto padrão') + ')' + (g.salvo ? '' : ' — cópia não gravada'), 'AUVO'); } catch (eL) {}
+  return { ok: true, html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [ia])), link: g.pdfUrl, pastaUrl: g.pastaUrl, aviso: [g.aviso, ia.aviso].filter(Boolean).join(' ') };
 }
 
 function Auvo_apiListarColaboradoresRelatorio(sessionId) {

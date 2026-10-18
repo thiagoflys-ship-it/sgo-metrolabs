@@ -52,7 +52,9 @@ function SGO_ajudaTelas_Auvo_() {
           "Para o relatório de todos, toque em \"Gerar relatório geral\".",
           "Para uma pessoa ou um grupo, procure o nome em \"Buscar pelo nome\" e marque uma ou mais pessoas.",
           "Toque em \"Gerar relatório dos selecionados\".",
-          "Aguarde a nova aba abrir. Pode levar até 1 minuto. Não feche a aba antes de terminar."
+          "Aguarde a nova aba abrir. Pode levar até 1 minuto. Não feche a aba antes de terminar.",
+          "O relatório traz os gráficos por colaborador e por tipo, as pendências de fechamento da última atualização e a lista de atendimentos.",
+          "Uma cópia (PDF e HTML) fica guardada na pasta \"Auvo - Relatórios\". O link para o PDF aparece no topo do relatório."
         ] },
         { titulo: "Abrir uma O.S. pelo Início", itens: [
           "No Início, no quadro \"Últimos atendimentos\", toque na linha da O.S.",

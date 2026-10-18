@@ -116,7 +116,7 @@ function CondutaRel_montarGaugeSvg_(ico, farol) {
     '<polygon points="' + ponta.x.toFixed(2) + ',' + ponta.y.toFixed(2) + ' ' + be.x.toFixed(2) + ',' + be.y.toFixed(2) + ' ' + bd.x.toFixed(2) + ',' + bd.y.toFixed(2) + '" fill="#1f2937"/>' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="8.5" fill="#1f2937"/><circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + CondutaRel_corFarol_(farol) + '"/>' +
     '<text x="' + cx + '" y="' + (cy + 30) + '" text-anchor="middle" font-size="24" font-weight="800" fill="#1f2937" font-family="Arial,sans-serif">' + RelA4_esc_(Conduta_numBr_(v)) + '</text>' +
-    '<text x="' + cx + '" y="' + (cy + 45) + '" text-anchor="middle" font-size="9.5" fill="#6b7280" font-family="Arial,sans-serif">índice de conduta</text></svg>';
+    '<text x="' + cx + '" y="' + (cy + 45) + '" text-anchor="middle" font-size="11" fill="#3e4c59" font-family="Arial,sans-serif">' + RelA4_esc_('farol ' + CondutaRel_farolTexto_(farol).toLowerCase()) + '</text></svg>';
 }
 
 /** Texto padrão do fechamento (sem IA), só com os números do contexto. */
@@ -140,36 +140,49 @@ function CondutaRel_textosPadrao_(ctx) {
   return { narrativa: narrativa, recomendacao: recomendacao };
 }
 
+function CondutaRel_tipoFarol_(farol) { return farol === 'VERDE' ? 'ok' : farol === 'AMARELO' ? 'aviso' : farol === 'VERMELHO' ? 'critico' : ''; }
+
+/** Legenda das cores do farol, usada nos gráficos de índice. */
+var CONDUTAREL_LEGENDA_FAROL = [{ cor: '#059669', rotulo: 'Verde (85 ou mais)' }, { cor: '#b45309', rotulo: 'Amarelo (70 a 84,9)' }, { cor: '#dc2626', rotulo: 'Vermelho (abaixo de 70)' }];
+
 function Conduta_montarRelatorioHtml_(ctx, ia) {
   var c = [];
-  if (ctx.sombra) c.push('<div class="caixa aviso">Período de teste: o índice é calculado e publicado, mas o bônus ainda não é pago. Os valores abaixo são simulados.</div>');
+  if (ctx.sombra) c.push(RelA4_caixa_('Período de teste: o índice é calculado e publicado, mas o bônus ainda não é pago. Os valores abaixo são simulados.', 'aviso'));
+  var folga = ctx.limiteVerdeD - ctx.D;
   c.push(RelA4_secao_('Resultado do mês',
-    '<div style="display:grid;grid-template-columns:180px 1fr;gap:14px;align-items:center">' + CondutaRel_montarGaugeSvg_(ctx.ico, ctx.farol) +
-    RelA4_kpis_([[CondutaRel_farolTexto_(ctx.farol), 'Farol do mês'], [Conduta_numBr_(ctx.ico), 'Índice de conduta'], [RelA4_num_(ctx.D, 0) + ' de ' + RelA4_num_(ctx.limiteVerdeD, 0), 'Pontos de demérito e limite do verde'],
-      [RelA4_num_(ctx.n, 0), 'Pessoas no cálculo'], [ctx.qtdColaboradoresComBonus + ' de ' + ctx.qtdColaboradoresTotal, 'Com bônus coletivo'], [RelA4_moeda_(ctx.valorBonus), 'Valor do bônus por pessoa'],
-      [RelA4_num_(ctx.missoes.qtdQualificadas, 0), 'Missões aprovadas com incentivo'], [ctx.icoMesAnterior === null ? '—' : Conduta_numBr_(ctx.icoMesAnterior), 'Índice do mês anterior']]) + '</div>' +
-    '<p class="nota">Fechado em ' + RelA4_esc_(RelA4_dataBr_(ctx.fechadoEm)) + (ctx.automatico ? ' (fechamento automático)' : '') + '.' + (ctx.observacao ? ' ' + RelA4_esc_(ctx.observacao) : '') + '</p>'));
+    '<div class="gauge-kpis">' + RelA4_figura_(CondutaRel_montarGaugeSvg_(ctx.ico, ctx.farol), 'Índice de conduta do mês') +
+    RelA4_kpis_([[RelA4_num_(ctx.D, 0) + ' de ' + RelA4_num_(ctx.limiteVerdeD, 0), 'Pontos de demérito e limite do verde', folga >= 0 ? 'ok' : 'critico'],
+      [RelA4_num_(ctx.n, 0), 'Pessoas no cálculo'], [ctx.qtdColaboradoresComBonus + ' de ' + ctx.qtdColaboradoresTotal, 'Com bônus coletivo', ctx.qtdColaboradoresComBonus ? 'ok' : 'aviso'],
+      [RelA4_moeda_(ctx.valorBonus), 'Bônus coletivo por pessoa'], [RelA4_num_(ctx.missoes.qtdQualificadas, 0), 'Missões aprovadas com incentivo'],
+      [ctx.icoMesAnterior === null ? '—' : Conduta_numBr_(ctx.icoMesAnterior), 'Índice do mês anterior']]) + '</div>' +
+    (ctx.temGG ? RelA4_caixa_('Houve infração gravíssima firme no mês: o bônus coletivo fica cancelado, qualquer que seja o índice.', 'critico') : '')));
   c.push(RelA4_secao_('Interpretação do mês', RelA4_paragrafos_(ia.narrativa)));
   c.push(RelA4_secao_('Pontos de demérito por grupo', ctx.composicaoPorGrupo.length
-    ? RelA4_barras_(ctx.composicaoPorGrupo.map(function (g) { return { rotulo: g.grupo, valor: g.somaPeso, rotuloValor: RelA4_plural_(g.somaPeso, 'ponto', 'pontos') }; }), { cor: '#dc2626' }) +
-      RelA4_tabela_([{ t: 'Grupo' }, { t: 'Ocorrências', num: true }, { t: 'Pontos', num: true }], ctx.composicaoPorGrupo.map(function (g) { return [g.grupo, RelA4_num_(g.qtdOcorrencias, 0), RelA4_num_(g.somaPeso, 0)]; }))
-    : '<div class="caixa ok">Nenhuma ocorrência firme no mês: nenhum ponto de demérito.</div>'));
-  c.push(RelA4_secao_('Códigos que mais pesaram', RelA4_tabela_([{ t: 'Código' }, { t: 'Descrição' }, { t: 'Ocorrências', num: true }, { t: 'Pontos', num: true }],
-    ctx.top5Codigos.map(function (k) { return [k.codigo, k.descricao, RelA4_num_(k.qtdOcorrencias, 0), RelA4_num_(k.somaPeso, 0)]; }), { vazio: 'Nenhuma ocorrência firme no mês.' })));
+    ? RelA4_barras_(ctx.composicaoPorGrupo.map(function (g) { return { rotulo: g.grupo, valor: g.somaPeso, rotuloValor: RelA4_plural_(g.somaPeso, 'ponto', 'pontos') + ' · ' + RelA4_plural_(g.qtdOcorrencias, 'ocorrência', 'ocorrências') }; }),
+      { cor: RELA4_CORES.vermelho, titulo: 'Pontos de demérito por grupo de ocorrência (ocorrências firmes do mês)' }) +
+      RelA4_tabela_([{ t: 'Código' }, { t: 'Descrição' }, { t: 'Ocorrências', num: true }, { t: 'Pontos', num: true }],
+        ctx.top5Codigos.map(function (k) { return [k.codigo, k.descricao, RelA4_num_(k.qtdOcorrencias, 0), RelA4_num_(k.somaPeso, 0)]; }), { legenda: 'Códigos que mais pesaram no mês (até cinco)' })
+    : RelA4_caixa_('Nenhuma ocorrência firme no mês: nenhum ponto de demérito.', 'ok')));
   c.push(RelA4_secao_('Evolução nos últimos seis meses', RelA4_colunas_(ctx.comparativo6Meses.map(function (m) {
-    return { rotulo: RelA4_competencia_(m.competencia).replace(' de ', '/').slice(0, 3) + '/' + m.competencia.slice(2, 4), valor: m.ico, cor: CondutaRel_corFarol_(m.farol), rotuloValor: m.ico === null ? '' : Conduta_numBr_(m.ico) };
-  }), { min: 0, max: 100, linhas: [{ valor: 85, rotulo: 'verde a partir de 85', cor: '#059669' }, { valor: 70, rotulo: 'vermelho abaixo de 70', cor: '#dc2626' }] }) +
-    RelA4_tabela_([{ t: 'Competência' }, { t: 'Índice de conduta', num: true }, { t: 'Farol' }], ctx.comparativo6Meses.map(function (m) {
-      return [RelA4_competencia_(m.competencia), m.ico === null ? 'sem fechamento' : Conduta_numBr_(m.ico), m.farol ? RelA4_marca_(CondutaRel_farolTexto_(m.farol), m.farol === 'VERDE' ? 'ok' : m.farol === 'AMARELO' ? 'aviso' : 'critico') : '—'];
-    }))));
-  c.push(RelA4_secao_('Incentivo de missão', '<p>' + RelA4_plural_(ctx.missoes.qtdQualificadas, 'missão aprovada', 'missões aprovadas') + ' com distância mínima no mês, total ' + (ctx.sombra ? 'simulado' : 'devido') + ' de ' + RelA4_esc_(RelA4_moeda_(ctx.missoes.valorTotal)) + '.' +
+    return { rotulo: RelA4_competencia_(m.competencia).slice(0, 3) + '/' + m.competencia.slice(2, 4), valor: m.ico, cor: CondutaRel_corFarol_(m.farol), rotuloValor: m.ico === null ? '' : Conduta_numBr_(m.ico) };
+  }), { min: 0, max: 100, titulo: 'Índice de conduta por mês fechado, com a cor do farol', legenda: CONDUTAREL_LEGENDA_FAROL,
+    linhas: [{ valor: 85, rotulo: 'limite do verde (85)', cor: '#059669' }, { valor: 70, rotulo: 'limite do vermelho (70)', cor: '#dc2626' }] })));
+  c.push(RelA4_secao_('Missões e contestações',
+    '<p>' + RelA4_plural_(ctx.missoes.qtdQualificadas, 'missão aprovada', 'missões aprovadas') + ' com distância mínima no mês, total ' + (ctx.sombra ? 'simulado' : 'devido') + ' de ' + RelA4_esc_(RelA4_moeda_(ctx.missoes.valorTotal)) + '.' +
     (ctx.missoes.qtdRecusadas ? ' ' + RelA4_plural_(ctx.missoes.qtdRecusadas, 'missão foi recusada', 'missões foram recusadas') + ' pela gestão e ' + (ctx.missoes.qtdRecusadas === 1 ? 'não entra' : 'não entram') + ' no valor.' : '') +
     (ctx.missoes.qtdLegadas ? ' ' + RelA4_plural_(ctx.missoes.qtdLegadas, 'missão lançada', 'missões lançadas') + ' antes da regra de aprovação ' + (ctx.missoes.qtdLegadas === 1 ? 'conta' : 'contam') + ' como aprovação legada.' : '') +
-    ' O incentivo de missão independe do farol do mês. O detalhamento por executante está no relatório de missões.</p>'));
-  c.push(RelA4_secao_('Contestações', '<p>' + RelA4_plural_(ctx.contestacoes.qtdContestadas, 'contestação', 'contestações') + ' no mês: ' + RelA4_plural_(ctx.contestacoes.qtdAnuladas, 'anulada', 'anuladas') + ' e ' + RelA4_plural_(ctx.contestacoes.qtdMantidas, 'mantida', 'mantidas') + '.</p>'));
-  c.push(RelA4_secao_('Recomendação', RelA4_paragrafos_(ia.recomendacao)));
-  c.push('<p class="nota">Os números deste relatório vêm do fechamento congelado do mês e não são recalculados. O relatório coletivo não identifica pessoas; o resultado individual fica no extrato de cada colaborador.</p>');
-  return RelA4_documento_({ titulo: 'Programa de conduta — fechamento mensal', subtitulo: 'Pontuação, farol do mês, missões e contestações', identificacao: RelA4_competencia_(ctx.competencia), corpo: c.join('\n'), cor: '#0b4ea2' });
+    ' O incentivo de missão independe do farol do mês; o detalhamento por executante está na prestação de contas de missões.</p>' +
+    '<p>' + (ctx.contestacoes.qtdContestadas
+      ? RelA4_plural_(ctx.contestacoes.qtdContestadas, 'ocorrência foi contestada', 'ocorrências foram contestadas') + ' no mês: ' + RelA4_plural_(ctx.contestacoes.qtdAnuladas, 'anulada', 'anuladas') + ' e ' + RelA4_plural_(ctx.contestacoes.qtdMantidas, 'mantida', 'mantidas') + '.'
+      : 'Nenhuma ocorrência foi contestada no mês.') + '</p>'));
+  c.push(RelA4_secao_('Recomendação', RelA4_paragrafos_(ia.recomendacao) +
+    '<p class="nota">Os números deste relatório vêm do fechamento congelado do mês e não são recalculados. O relatório coletivo não identifica pessoas; o resultado individual fica no extrato de cada colaborador.</p>'));
+  return RelA4_documento_({
+    titulo: 'Programa de conduta — fechamento mensal', subtitulo: 'Pontuação, farol do mês, missões e contestações', tituloCurto: 'Conduta — fechamento de ' + RelA4_competencia_(ctx.competencia),
+    tituloArquivo: 'Programa de conduta - fechamento mensal', sigla: 'CND', rotuloIdentificacao: 'Competência', identificacao: RelA4_competencia_(ctx.competencia),
+    ficha: [['Fechado em', RelA4_dataBr_(ctx.fechadoEm) + (ctx.automatico ? ' (fechamento automático)' : '')]].concat(ctx.observacao ? [['Observação do fechamento', ctx.observacao]] : []),
+    corpo: c.join('\n')
+  });
 }
 
 function CondutaRel_pastaRelatorios_(sub) {
@@ -177,9 +190,9 @@ function CondutaRel_pastaRelatorios_(sub) {
 }
 
 /**
- * Gera (ou regenera) o relatório de uma competência fechada, grava em
- * qual_relatorio (o contexto exato vai junto, para auditoria) e salva
- * HTML + PDF na pasta. Devolve { html (com avisos de tela), aviso, link }.
+ * Gera (ou regenera) o relatório de uma competência fechada, salva HTML + PDF
+ * na pasta e grava em qual_relatorio o documento final (o contexto exato vai
+ * junto, para auditoria). Devolve { html (com avisos de tela), aviso, link }.
  */
 function Conduta_gerarRelatorioCompleto_(competencia) {
   var ctx = Conduta_montarContextoRelatorio_(competencia);
@@ -187,11 +200,11 @@ function Conduta_gerarRelatorioCompleto_(competencia) {
   try { ia = CondutaIA_gerarInterpretacao_(ctx); analise = { origem: 'IA', aviso: '' }; }
   catch (eIa) { ia = padrao; analise = { origem: 'PADRAO', aviso: RelA4_avisoFalhaIa_(eIa) }; }
   ctx.textos = { narrativa: ia.narrativa, recomendacao: ia.recomendacao, origem: analise.origem };
-  var html = Conduta_montarRelatorioHtml_(ctx, ia);
+  var gravacao = RelA4_salvar_(CondutaRel_pastaRelatorios_('Fechamentos mensais'), competencia, Conduta_montarRelatorioHtml_(ctx, ia));
+  var html = gravacao.html;
   var existente = SGO_DATA.getAll(CONDUTA_SHEETS.RELATORIO).find(function (r) { return Conduta_soComp_(r.COMPETENCIA) === competencia && (!r.TIPO || r.TIPO === 'MENSAL'); });
   var dados = { TIPO: 'MENSAL', VISIBILIDADE: 'EQUIPE', COMPETENCIA: competencia, HTML: html, CONTEXTO_JSON: JSON.stringify(ctx), GERADO_EM: Conduta_hojeISO_() };
   if (existente) SGO_DATA.update(CONDUTA_SHEETS.RELATORIO, existente.ID, dados); else SGO_DATA.insert(CONDUTA_SHEETS.RELATORIO, dados);
-  var gravacao = RelA4_salvar_(CondutaRel_pastaRelatorios_('Fechamentos mensais'), 'Programa de conduta - fechamento ' + competencia + ' emitido ' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm'), html);
   return { html: RelA4_injetarAvisos_(html, RelA4_avisosPadrao_(gravacao, [analise])), aviso: [gravacao.aviso, analise.aviso].filter(Boolean).join(' '), link: gravacao.pdfUrl, pastaUrl: gravacao.pastaUrl };
 }
 
@@ -220,4 +233,41 @@ function Conduta_apiListarRelatorios(sessionId) {
   return SGO_DATA.getAll(CONDUTA_SHEETS.RELATORIO).filter(function (r) { return !r.TIPO || r.TIPO === 'MENSAL'; })
     .map(function (r) { return { competencia: r.COMPETENCIA, geradoEm: r.GERADO_EM }; })
     .sort(function (a, b) { return String(b.competencia).localeCompare(String(a.competencia)); });
+}
+
+/**
+ * Prévia do fechamento em A4 (18/10/2026; antes era uma página simples montada
+ * na tela, sem moldura, numeração nem cópia). Conferência restrita à gestão:
+ * mesma apuração da tela "Prévia", com os valores por pessoa.
+ */
+function Conduta_htmlPrevia_(p) {
+  var r = p.resultado || {}, c = [];
+  c.push(RelA4_caixa_('Prévia provisória, sem congelamento: a apuração foi feita agora com o cadastro atual de colaboradores ativos. Não autoriza pagamento e pode mudar com as decisões pendentes.', 'aviso'));
+  if (p.fechamentoCongelado) c.push(RelA4_caixa_('Esta competência já foi congelada em ' + RelA4_dataBr_(p.fechamentoData) + '. Os números abaixo são uma consulta atual e não substituem o resultado do fechamento; consulte o relatório do fechamento mensal.', 'critico'));
+  var limite = Math.round(((100 - (Number(Conduta_obterParametros_().ICO_VERDE_MIN) || 85)) / (Number(Conduta_obterParametros_().K_SENSIBILIDADE) || 5)) * (Number(r.n) || 1));
+  c.push(RelA4_secao_('Resultado provisório', RelA4_kpis_([
+    [Conduta_numBr_(r.ico), 'Índice de conduta', CondutaRel_tipoFarol_(r.farol)], [CondutaRel_farolTexto_(r.farol), 'Farol', CondutaRel_tipoFarol_(r.farol)],
+    [RelA4_num_(r.D, 0) + ' de ' + RelA4_num_(limite, 0), 'Pontos de demérito e limite do verde'], [RelA4_num_(r.n, 0), 'Pessoas no cálculo']
+  ]) + '<p>' + RelA4_esc_(p.podeFechar ? 'A competência pode ser fechada: não há defesa nem missão pendente.' :
+    p.fechamentoCongelado ? 'A competência já está fechada.' : 'O fechamento ainda está bloqueado: ' + [p.pendencias.length ? RelA4_plural_(p.pendencias.length, 'ocorrência com defesa ou decisão pendente', 'ocorrências com defesa ou decisão pendente') : '', (p.missoesPendentes || []).length ? RelA4_plural_(p.missoesPendentes.length, 'missão aguardando aprovação', 'missões aguardando aprovação') : '', p.competencia >= Conduta_competenciaDe_(Conduta_hojeISO_()) ? 'o mês ainda não terminou' : ''].filter(Boolean).join('; ') + '.') + '</p>'));
+  c.push(RelA4_secao_('Ocorrências e defesas pendentes', RelA4_tabela_([{ t: 'Ocorrência' }, { t: 'Situação' }, { t: 'Data do fato' }, { t: 'Contestação até' }, { t: 'Recurso até' }, { t: 'Julgamento até' }],
+    (p.pendencias || []).map(function (o) { var st = SGO_UTILS.safeUpper(o.status); return [String(o.id), (typeof CONDUTA_EXTRATO_SITUACAO !== 'undefined' && CONDUTA_EXTRATO_SITUACAO[st]) || o.status, RelA4_dataBr_(o.dataFato), RelA4_dataBr_(o.prazoContestacao) || '—', RelA4_dataBr_(o.prazoRecurso) || '—', RelA4_dataBr_(o.prazoJulgamento) || '—']; }),
+    { vazio: 'Nenhuma defesa pendente identificada. O fechamento confere de novo antes de congelar.', legenda: 'Ocorrências que ainda impedem o fechamento' })));
+  c.push(RelA4_secao_('Missões aguardando aprovação', RelA4_tabela_([{ t: 'Destino' }, { t: 'Data' }], (p.missoesPendentes || []).map(function (m) { return [m.destino, RelA4_dataBr_(m.data)]; }),
+    { vazio: 'Nenhuma missão aguardando decisão.', legenda: 'Missões a aprovar ou recusar na aba Missões' })));
+  var sombra = !!r.sombra, pessoas = (r.porColaborador || []).slice().sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || '')); });
+  function v(c, campo) { return Number(c[sombra ? campo.replace('valor', 'valorSimulado') : campo]) || 0; }
+  c.push(RelA4_secao_('Valores ' + (sombra ? 'simulados' : 'provisórios') + ' por colaborador', RelA4_tabela_([{ t: 'Colaborador' }, { t: 'Bônus coletivo', num: true }, { t: 'Incentivo de missão', num: true }, { t: 'Total', num: true }],
+    pessoas.map(function (x) { return [x.nome || String(x.colaboradorId), RelA4_moeda_(v(x, 'valorBonus')), RelA4_moeda_(v(x, 'valorIncentivo')), RelA4_moeda_(v(x, 'valorBonus') + v(x, 'valorIncentivo'))]; }),
+    { vazio: 'Nenhum colaborador no cálculo.', legenda: 'Valores ' + (sombra ? 'simulados (período de teste)' : 'provisórios') + ' por pessoa',
+      total: pessoas.length ? ['Total', RelA4_moeda_(pessoas.reduce(function (s, x) { return s + v(x, 'valorBonus'); }, 0)), RelA4_moeda_(pessoas.reduce(function (s, x) { return s + v(x, 'valorIncentivo'); }, 0)), RelA4_moeda_(pessoas.reduce(function (s, x) { return s + v(x, 'valorBonus') + v(x, 'valorIncentivo'); }, 0))] : null }) +
+    '<p class="nota">Documento de conferência restrito à gestão. Os valores só valem depois do fechamento da competência.</p>'));
+  return RelA4_documento_({ titulo: 'Programa de conduta — prévia do fechamento', subtitulo: 'Conferência da gestão antes de congelar a competência', tituloCurto: 'Conduta — prévia de ' + RelA4_competencia_(p.competencia),
+    tituloArquivo: 'Programa de conduta - prévia do fechamento', sigla: 'CNP', rotuloIdentificacao: 'Competência', identificacao: RelA4_competencia_(p.competencia), corpo: c.join('\n') });
+}
+
+function Conduta_apiDocumentoPrevia(sessionId, payload) {
+  var p = Conduta_apiPreviaFechamento(sessionId, payload);
+  var g = RelA4_salvar_(CondutaRel_pastaRelatorios_('Prévias'), p.competencia, Conduta_htmlPrevia_(p), { compartilhar: false });
+  return { ok: true, html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [])), link: g.pdfUrl, aviso: g.aviso };
 }

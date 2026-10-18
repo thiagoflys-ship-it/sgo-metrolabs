@@ -137,7 +137,7 @@ function QualidadeIA_gerarInterpretacao_(ctx) {
   linhas.push('Retiradas em aberto há 2+ dias sem devolução: ' + (f.viagensPenduradas || 0));
   linhas.push('Retiradas/devoluções sem checklist ou sem foto: ' + (f.totalIncompletas || 0));
   linhas.push('Documentos de veículo vencidos: ' + (f.documentosVencidos || 0) + ' (vencendo em breve: ' + (f.documentosVencendo || 0) + ')');
-  linhas.push('Multas em aberto: ' + (f.multasAbertas || 0) + ' (valor total: R$ ' + (f.valorMultasAbertas || 0).toFixed(2).replace('.', ',') + '), sem condutor vinculado: ' + (f.multasSemCondutor || 0));
+  linhas.push('Multas em aberto: ' + (f.multasAbertas || 0) + ' (valor total: R$ ' + SGO_DocA4_num_(f.valorMultasAbertas || 0, 2) + '), sem condutor vinculado: ' + (f.multasSemCondutor || 0));
   linhas.push('Consumo médio da frota: ' + (f.mediaFrotaConsumo ? f.mediaFrotaConsumo + ' km/L' : 'sem dado suficiente'));
   linhas.push('Veículos com consumo abaixo de 70% da média da frota: ' + ((f.consumoAbaixoDaMedia || []).length));
   linhas.push('--- AÇÕES DE GESTÃO NO PERÍODO ---');
@@ -150,6 +150,7 @@ function QualidadeIA_gerarInterpretacao_(ctx) {
     'RESUMO_EXECUTIVO (1-2 parágrafos): visão geral do padrão de qualidade no período (preenchimento de O.S., uso correto do processo de retirada/devolução de veículo) e se a gestão está agindo sobre os desvios (ocorrências registradas).\n\n' +
     'PONTOS_DE_ATENCAO (1 parágrafo, pode ser lista corrida): aponte objetivamente os números que merecem acompanhamento — sem citar ninguém, só o padrão. Se todos os indicadores estiverem saudáveis, diga isso claramente em vez de forçar um problema que não existe.\n\n' +
     'CONTEXTO REAL (única fonte de fatos, não tem nome de pessoa nenhum):\n' + linhas.join('\n') + '\n\n' +
+    (typeof RELA4_REGRAS_REDACAO !== 'undefined' ? RELA4_REGRAS_REDACAO + '\n\n' : '') +
     QualidadeIA_montarInstrucaoFormato_();
 
   var parts = [{ text: prompt }];

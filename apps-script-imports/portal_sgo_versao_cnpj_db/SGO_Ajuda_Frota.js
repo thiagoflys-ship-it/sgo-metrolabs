@@ -464,7 +464,8 @@ function SGO_ajudaTelas_Frota_() {
           "Confira \"Data início\" e \"Data fim\".",
           "Toque em \"Gerar relatório\".",
           "Aguarde até um minuto. O relatório abre numa aba nova.",
-          "Para imprimir ou salvar em PDF, use Ctrl+P. Uma cópia fica guardada na pasta da Frota."
+          "Para imprimir ou salvar em PDF, toque em \"Imprimir ou salvar em PDF\" no topo do relatório. Uma cópia (PDF e HTML) fica guardada na pasta da Frota, na subpasta do veículo ou em \"Frota completa\".",
+          "Relatório com mais de três páginas traz o sumário com o número das páginas. No relatório geral, o quadro de custos por veículo sai na última folha, deitada."
         ] }
       ],
       problemas: [

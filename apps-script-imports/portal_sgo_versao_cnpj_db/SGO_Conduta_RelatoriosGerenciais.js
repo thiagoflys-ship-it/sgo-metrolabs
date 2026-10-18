@@ -119,22 +119,31 @@ function CondutaRG_farolMarca_(farol) {
 
 function CondutaRG_htmlSemanal_(c, t) {
   var b = [];
-  b.push(RelA4_kpis_([[Conduta_numBr_(c.ico), 'Índice de conduta (parcial do mês)'], [CondutaRel_farolTexto_(c.farol), 'Farol do mês na geração'], [RelA4_num_(c.D, 0), 'Pontos de demérito no mês'], [RelA4_num_(c.elogios, 0), 'Reconhecimentos na semana']]));
-  if (c.anterior) b.push('<div class="caixa">Esta semana começa em ' + RelA4_esc_(c.anterior.nome) + ': o mês anterior está com ' + RelA4_plural_(c.anterior.D, 'ponto', 'pontos') + ' de demérito, índice ' + RelA4_esc_(Conduta_numBr_(c.anterior.ico)) + ' e farol ' + RelA4_esc_(CondutaRel_farolTexto_(c.anterior.farol).toLowerCase()) + '. Os números acima são de ' + RelA4_esc_(Conduta_nomeCompetencia_(c.competencia)) + '.</div>');
-  if (c.firmadas && c.firmadas.qtd) b.push('<div class="caixa">' + RelA4_plural_(c.firmadas.qtd, 'ocorrência ficou firme', 'ocorrências ficaram firmes') + ' nesta semana (' + RelA4_plural_(c.firmadas.pontos, 'ponto', 'pontos') + ' de demérito). Elas contam no mês da data do fato.</div>');
-  if (c.ocorrenciasPendentes) b.push('<div class="caixa aviso">' + RelA4_plural_(c.ocorrenciasPendentes, 'ocorrência desta semana ainda está', 'ocorrências desta semana ainda estão') + ' em registro ou em prazo de defesa. Elas só entram nos pontos quando ficarem firmes, e então contam no mês do fato.</div>');
+  var limite = Number(c.limiteVerdeD), temLimite = isFinite(limite) && c.limiteVerdeD !== '—';
+  var resumo = RelA4_kpis_([[Conduta_numBr_(c.ico), 'Índice de conduta (parcial do mês)', CondutaRel_tipoFarol_(c.farol)], [CondutaRel_farolTexto_(c.farol), 'Farol do mês na geração', CondutaRel_tipoFarol_(c.farol)],
+    [RelA4_num_(c.D, 0) + (temLimite ? ' de ' + RelA4_num_(limite, 0) : ''), 'Pontos de demérito no mês e limite do verde'], [RelA4_num_(c.ocorrencias, 0) + ' · ' + RelA4_num_(c.elogios, 0), 'Ocorrências e reconhecimentos na semana']]);
+  if (c.anterior) resumo += RelA4_caixa_('Esta semana começa em ' + c.anterior.nome + ': o mês anterior está com ' + RelA4_plural_(c.anterior.D, 'ponto', 'pontos') + ' de demérito, índice ' + Conduta_numBr_(c.anterior.ico) + ' e farol ' + CondutaRel_farolTexto_(c.anterior.farol).toLowerCase() + '. Os números acima são de ' + Conduta_nomeCompetencia_(c.competencia) + '.');
+  if (c.firmadas && c.firmadas.qtd) resumo += RelA4_caixa_(RelA4_plural_(c.firmadas.qtd, 'ocorrência ficou firme', 'ocorrências ficaram firmes') + ' nesta semana (' + RelA4_plural_(c.firmadas.pontos, 'ponto', 'pontos') + ' de demérito). Elas contam no mês da data do fato.');
+  if (c.ocorrenciasPendentes) resumo += RelA4_caixa_(RelA4_plural_(c.ocorrenciasPendentes, 'ocorrência desta semana ainda está', 'ocorrências desta semana ainda estão') + ' em registro ou em prazo de defesa. Elas só entram nos pontos quando ficarem firmes, e então contam no mês do fato.', 'aviso');
+  b.push(RelA4_secao_('Resumo da semana', resumo));
   b.push(RelA4_secao_('Interpretação da semana', RelA4_paragrafos_(t.analise) + '<div class="caixa ok">' + RelA4_paragrafos_(t.motivacao) + '</div>'));
-  b.push(RelA4_secao_('Situação do bônus coletivo', '<p>Farol ' + RelA4_esc_(CondutaRel_farolTexto_(c.farol).toLowerCase()) + ', índice ' + RelA4_esc_(Conduta_numBr_(c.ico)) + ' e ' + RelA4_plural_(c.D, 'ponto', 'pontos') + ' de demérito para um limite de ' + RelA4_plural_(c.limiteVerdeD, 'ponto', 'pontos') + ' no verde. ' +
-    (c.sombra ? 'Período de teste: este relatório não autoriza pagamento.' : c.temGG ? 'Há infração gravíssima firme, condição que cancela o bônus coletivo do mês.' : (c.beneficioPreservado ? 'A apuração parcial atende à regra do bônus coletivo.' : 'A apuração parcial ainda não atende à faixa verde exigida.')) +
-    ' O valor de referência do bônus coletivo é ' + RelA4_esc_(RelA4_moeda_(c.valorBonus)) + ' por pessoa.</p>'));
+  var folga = temLimite ? limite - c.D : null;
+  b.push(RelA4_secao_('Situação do bônus coletivo', '<p>' +
+    (c.sombra ? 'Período de teste: este relatório não autoriza pagamento.' : c.temGG ? 'Há infração gravíssima firme no mês, condição que cancela o bônus coletivo.' : (c.beneficioPreservado ? 'A apuração parcial atende à regra do bônus coletivo.' : 'A apuração parcial ainda não atende à faixa verde exigida.')) +
+    (folga === null ? '' : folga >= 0 ? ' Até o fechamento, a equipe pode somar mais ' + RelA4_plural_(folga, 'ponto', 'pontos') + ' de demérito sem sair do verde.' : ' A equipe já passou ' + RelA4_plural_(-folga, 'ponto', 'pontos') + ' do limite do verde.') +
+    ' O valor de referência do bônus coletivo é ' + RelA4_esc_(RelA4_moeda_(c.valorBonus)) + ' por pessoa.' +
+    (c.missoesPendentes ? ' ' + RelA4_plural_(c.missoesPendentes, 'missão aguarda', 'missões aguardam') + ' a aprovação da gestão no mês.' : '') + '</p>'));
   b.push(RelA4_secao_('Ocorrências e pontos', RelA4_tabela_([{ t: 'Código' }, { t: 'Descrição' }, { t: 'Quantidade', num: true }, { t: 'Pontos firmes', num: true }],
-    (c.codigos || []).map(function (x) { return [x.codigo, x.descricao, RelA4_num_(x.quantidade, 0), RelA4_num_(x.pontos, 0)]; }), { vazio: 'Nenhuma ocorrência no período.' }) +
+    (c.codigos || []).map(function (x) { return [x.codigo, x.descricao, RelA4_num_(x.quantidade, 0), RelA4_num_(x.pontos, 0)]; }), { vazio: 'Nenhuma ocorrência na semana.', legenda: 'Ocorrências da semana por motivo' }) +
     '<p class="nota">Privacidade: cobranças individuais e suas fotos ficam disponíveis só ao responsável, ao autor e à gestão. O relatório coletivo apresenta causas agregadas, sem expor pessoas.</p>'));
   b.push(RelA4_secao_('Reconhecimentos e melhorias observadas', RelA4_tabela_([{ t: 'Motivo' }, { t: 'Quantidade', num: true }, { t: 'Relatos' }],
-    (c.reconhecimentos || []).map(function (x) { return [x.descricao || x.codigo, RelA4_num_(x.quantidade, 0), (x.relatos || []).join(' | ')]; }), { vazio: 'Nenhum reconhecimento registrado no período.' })));
+    (c.reconhecimentos || []).map(function (x) { return [x.descricao || x.codigo, RelA4_num_(x.quantidade, 0), (x.relatos || []).join(' | ')]; }), { vazio: 'Nenhum reconhecimento registrado na semana.', legenda: 'Reconhecimentos da semana' })));
   b.push(RelA4_secao_('Plano para a próxima semana', RelA4_paragrafos_(t.acoes)));
-  return RelA4_documento_({ titulo: 'Programa de conduta — relatório semanal', subtitulo: 'Resultado parcial do mês, motivos, reconhecimentos e plano', identificacao: CondutaRG_br_(c.inicio) + ' a ' + CondutaRG_br_(c.fim), corpo: b.join('\n'), cor: '#0b4ea2' });
+  return RelA4_documento_({ titulo: 'Programa de conduta — relatório semanal', subtitulo: 'Resultado parcial do mês, motivos, reconhecimentos e plano', tituloCurto: 'Conduta — semana de ' + CondutaRG_br_(c.inicio),
+    tituloArquivo: 'Programa de conduta - relatório semanal', sigla: 'CNS', rotuloIdentificacao: 'Semana', identificacao: CondutaRG_br_(c.inicio) + ' a ' + CondutaRG_br_(c.fim),
+    ficha: [['Mês da apuração', Conduta_nomeCompetencia_(c.competencia) + ' (parcial)']], corpo: b.join('\n') });
 }
+
 
 function CondutaRG_contextoMissoes_(competencia) {
   var users = {};
@@ -175,21 +184,30 @@ function CondutaRG_contextoMissoes_(competencia) {
 
 function CondutaRG_htmlMissoes_(c, t) {
   var b = [];
-  b.push(RelA4_kpis_([[RelA4_num_(c.qtdMissoes, 0), 'Missões'], [RelA4_num_(c.qtdLancamentos, 0), 'Participações'], [RelA4_num_(c.qtdElegiveis, 0), 'Elegíveis'], [RelA4_moeda_(c.total), c.sombra ? 'Total simulado' : 'Total proposto']]));
-  if (c.qtdPendentes) b.push('<div class="caixa aviso">' + RelA4_plural_(c.qtdPendentes, 'participação aguarda', 'participações aguardam') + ' a aprovação da gestão e ainda não entram no total. O mês só fecha depois da decisão (Programa de conduta > Missões).</div>');
+  var resumo = RelA4_kpis_([[RelA4_num_(c.qtdMissoes, 0), 'Missões'], [RelA4_num_(c.qtdLancamentos, 0), 'Participações'], [RelA4_num_(c.qtdElegiveis, 0), 'Elegíveis ao incentivo', 'ok'], [RelA4_moeda_(c.total), c.sombra ? 'Total simulado' : 'Total proposto']]);
+  if (c.qtdPendentes) resumo += RelA4_caixa_(RelA4_plural_(c.qtdPendentes, 'participação aguarda', 'participações aguardam') + ' a aprovação da gestão e ainda não entram no total. O mês só fecha depois da decisão (Programa de conduta > Missões).', 'aviso');
+  if (c.sombra) resumo += RelA4_caixa_('Período de teste: os valores são simulados e não autorizam pagamento.', 'aviso');
+  b.push(RelA4_secao_('Resumo', resumo));
   b.push(RelA4_secao_('Análise das missões', RelA4_paragrafos_(t.analise)));
+  var porPessoa = {};
+  (c.linhas || []).forEach(function (x) { var k = x.nome || x.colaboradorId; porPessoa[k] = porPessoa[k] || { nome: k, valor: 0, qtd: 0, eleg: 0 }; porPessoa[k].qtd++; porPessoa[k].valor += Number(x.valor) || 0; if (x.qualifica) porPessoa[k].eleg++; });
+  var pessoas = Object.keys(porPessoa).map(function (k) { return porPessoa[k]; }).sort(function (a, b) { return b.valor - a.valor || b.qtd - a.qtd; });
   b.push(RelA4_secao_('Memória de cálculo para o Financeiro', '<p>Valor por missão elegível e por executante: ' + RelA4_esc_(RelA4_moeda_(c.valorUnitario)) + '. Quando há dois executantes, o valor não é dividido. Só entram missões aprovadas pela gestão (ou lançadas antes dessa regra, com aprovação legada).</p>' +
+    RelA4_barras_(pessoas.map(function (p) { return { rotulo: p.nome, valor: p.valor, rotuloValor: RelA4_moeda_(p.valor) + ' · ' + p.eleg + ' de ' + RelA4_plural_(p.qtd, 'participação', 'participações'), cor: p.valor > 0 ? RELA4_CORES.verde : RELA4_CORES.cinza }; }),
+      { titulo: 'Valor proposto por executante (participações elegíveis do total)', vazio: 'Nenhuma participação na competência.' }) +
     RelA4_tabela_([{ t: 'Data' }, { t: 'Destino' }, { t: 'Distância', num: true }, { t: 'Executante' }, { t: 'Aprovação' }, { t: 'Situação' }, { t: 'Valor', num: true }],
-      c.linhas.map(function (x) {
-        return [CondutaRG_br_(x.data), x.destino, RelA4_num_(x.km, (x.km % 1) ? 1 : 0) + ' km', x.nome,
+      (c.linhas || []).map(function (x) {
+        return [CondutaRG_br_(x.data), x.destino, RelA4_num_(x.km, (x.km % 1) ? 1 : 0) + ' km', x.nome,
           RelA4_marca_(x.aprovacaoRotulo || 'Aprovação legada', x.aprovacao === 'APROVADA' || x.aprovacao === 'LEGADA' || !x.aprovacao ? 'ok' : x.aprovacao === 'PENDENTE' ? 'aviso' : x.aprovacao === 'RECUSADA' ? 'critico' : 'neutra'),
-          x.motivo, RelA4_moeda_(x.valor)];
-      }), { vazio: 'Nenhuma missão registrada nesta competência.', total: ['Total', '', '', '', '', '', RelA4_moeda_(c.total)] })));
-  b.push(RelA4_secao_('Conferências antes do pagamento', RelA4_paragrafos_(t.acoes) +
-    '<ol><li>Confirmar data, destino, cliente e executantes.</li><li>Confirmar distância e regra mínima vigente.</li><li>Verificar ocorrências firmes vinculadas à missão.</li><li>Conferir duplicidades e competência financeira.</li><li>Diretoria aprova; Financeiro registra data e comprovante do pagamento.</li></ol>'));
-  b.push('<div class="assinaturas"><div class="linha">Aprovação da Diretoria / data</div><div class="linha">Conferência do Financeiro / data</div></div>');
-  return RelA4_documento_({ titulo: 'Programa de conduta — incentivo de missões', subtitulo: 'Prestação de contas por missão e executante', identificacao: CondutaRG_periodoLabel_(c.competencia), corpo: b.join('\n'), cor: '#0b4ea2' });
+          String(x.motivo || '').replace(' (aprovação legada)', ''), RelA4_moeda_(x.valor)];
+      }), { vazio: 'Nenhuma missão registrada nesta competência.', legenda: 'Missões por executante, com a decisão da gestão', total: ['Total', '', '', '', '', '', RelA4_moeda_(c.total)] })));
+  b.push(RelA4_secao_('Conferências antes do pagamento',
+    '<ol class="conferencia"><li>Confirmar data, destino, cliente e executantes de cada missão.</li><li>Confirmar a distância e a regra mínima vigente.</li><li>Verificar ocorrências firmes vinculadas à missão.</li><li>Conferir duplicidades e a competência financeira.</li><li>Diretoria aprova; Financeiro registra a data e o comprovante do pagamento.</li></ol>' +
+    '<div class="manter"><p>Depois das conferências, a Diretoria assina a aprovação e o Financeiro assina a conferência do pagamento.</p>' + RelA4_assinaturas_(['Aprovação da Diretoria', 'Conferência do Financeiro']) + '</div>'));
+  return RelA4_documento_({ titulo: 'Programa de conduta — incentivo de missões', subtitulo: 'Prestação de contas por missão e executante', tituloCurto: 'Conduta — missões de ' + CondutaRG_periodoLabel_(c.competencia).toLowerCase(),
+    tituloArquivo: 'Programa de conduta - missões', sigla: 'CNM', rotuloIdentificacao: 'Competência', identificacao: CondutaRG_periodoLabel_(c.competencia), corpo: b.join('\n') });
 }
+
 
 // A chave do relatório SEMANAL é um INTERVALO ('2026-09-06_2026-09-12'), não
 // uma competência. Normalizar com Conduta_soComp_ encurtaria para o mês e faria
@@ -215,14 +233,13 @@ function CondutaRG_salvar_(tipo, chave, ctx, html) {
   } finally { lock.releaseLock(); }
 }
 
-/** Gera, grava (qual_relatorio + HTML/PDF na pasta) e devolve o HTML com os avisos de tela. */
+/** Gera, salva (HTML/PDF na pasta + qual_relatorio com o documento final) e devolve o HTML com os avisos de tela. */
 function CondutaRG_gerarSemanal_(fim) {
   var per = CondutaRG_periodoSemanal_(fim), c = CondutaRG_contextoSemanal_(per), t = CondutaRG_textosSemanal_(c);
   c.textos = { analise: t.analise, acoes: t.acoes, motivacao: t.motivacao, origem: t.origem };
-  var h = CondutaRG_htmlSemanal_(c, t);
-  CondutaRG_salvar_('SEMANAL', per.inicio + '_' + per.fim, c, h);
-  var g = RelA4_salvar_(CondutaRel_pastaRelatorios_('Relatórios semanais'), 'Programa de conduta - semana ' + per.inicio + ' a ' + per.fim + ' emitido ' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm'), h);
-  return { html: RelA4_injetarAvisos_(h, RelA4_avisosPadrao_(g, [t])), aviso: [g.aviso, t.aviso].filter(Boolean).join(' '), link: g.pdfUrl };
+  var g = RelA4_salvar_(CondutaRel_pastaRelatorios_('Relatórios semanais'), per.inicio + ' a ' + per.fim, CondutaRG_htmlSemanal_(c, t));
+  CondutaRG_salvar_('SEMANAL', per.inicio + '_' + per.fim, c, g.html);
+  return { html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [t])), aviso: [g.aviso, t.aviso].filter(Boolean).join(' '), link: g.pdfUrl };
 }
 
 function Conduta_apiGerarRelatorioSemanal(sessionId, p) {
@@ -237,10 +254,9 @@ function Conduta_apiGerarRelatorioMissoes(sessionId, p) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(comp)) throw new Error('Competência inválida. Escolha o mês no campo Competência.');
   var c = CondutaRG_contextoMissoes_(comp), t = CondutaRG_ia_('MISSOES', c);
   c.textos = t;
-  var h = CondutaRG_htmlMissoes_(c, t);
-  CondutaRG_salvar_('MISSOES', comp, c, h);
-  var g = RelA4_salvar_(CondutaRel_pastaRelatorios_('Missões'), 'Programa de conduta - missões ' + comp + ' emitido ' + Utilities.formatDate(new Date(), RELA4_TZ, 'yyyy-MM-dd HHmm'), h);
-  return { ok: true, html: RelA4_injetarAvisos_(h, RelA4_avisosPadrao_(g, [])), aviso: g.aviso, link: g.pdfUrl };
+  var g = RelA4_salvar_(CondutaRel_pastaRelatorios_('Missões'), comp, CondutaRG_htmlMissoes_(c, t));
+  CondutaRG_salvar_('MISSOES', comp, c, g.html);
+  return { ok: true, html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [])), aviso: g.aviso, link: g.pdfUrl };
 }
 
 function Conduta_apiListarRelatoriosGerenciais(sessionId) {
@@ -265,7 +281,8 @@ function Conduta_apiObterRelatorioGerencial(sessionId, p) {
   if (c.limiteVerdeD === undefined) c.limiteVerdeD = '—';
   // texto da geração (IA ou padrão) quando guardado; relatório antigo usa o texto padrão
   var t = c.textos && c.textos.analise ? c.textos : CondutaRG_ia_(r.TIPO, c);
-  var h = r.TIPO === 'SEMANAL' ? CondutaRG_htmlSemanal_(c, t) : CondutaRG_htmlMissoes_(c, t);
+  // mesmo fecho da geração (sumário com páginas quando o documento é longo), sem gravar de novo
+  var h = RelA4_finalizar_(r.TIPO === 'SEMANAL' ? CondutaRG_htmlSemanal_(c, t) : CondutaRG_htmlMissoes_(c, t), 'Relatório').html;
   return { ok: true, html: RelA4_injetarAvisos_(h, [{ tipo: 'ok', html: 'Dados preservados da geração de ' + RelA4_esc_(CondutaRG_br_(r.GERADO_EM)) + '. Esta é a mesma apuração, não uma nova; não autoriza pagamento.' }]) };
 }
 

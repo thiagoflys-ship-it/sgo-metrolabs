@@ -53,6 +53,7 @@ function Conduta_apiDispatch(req) {
     apiListarOcorrencias: Conduta_apiListarOcorrencias,
     apiHomologarOcorrencia: Conduta_apiHomologarOcorrencia,
     apiPreviaFechamento: Conduta_apiPreviaFechamento,
+    apiDocumentoPrevia: Conduta_apiDocumentoPrevia,
     apiContestarOcorrencia: Conduta_apiContestarOcorrencia,
     apiJulgarOcorrencia: Conduta_apiJulgarOcorrencia,
     apiRecorrerOcorrencia: Conduta_apiRecorrerOcorrencia,

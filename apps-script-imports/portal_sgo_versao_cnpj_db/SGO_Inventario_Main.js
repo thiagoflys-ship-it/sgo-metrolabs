@@ -285,17 +285,25 @@ const SGO_INVENTARIO = (() => {
   function listarDocumentosSalvos(sessionId, termoBusca) {
     const sessao = exigirSessao(sessionId);
     // Perfil Cliente só vê os inventários da pasta da própria empresa.
-    const pastaPermitida = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE" ? INV_sanitizarNome_(INV_nomeClienteSessao_(sessao)) : null;
+    // 18/10/2026: o relatório A4 passou a gravar na subpasta do CNPJ (padrão A4); as pastas antigas, pelo nome, continuam valendo.
+    const ehCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE";
+    const pastaPermitida = ehCliente ? INV_sanitizarNome_(INV_nomeClienteSessao_(sessao)) : null;
+    const cnpjPermitido = ehCliente ? SGO_DocSalvar_cnpjDigitos_((SGO_DATA.getById(SHEET_CLI, SGO_UTILS.safe(sessao.clienteId)) || {}).CNPJ) : "";
     const termo = String(termoBusca || "").trim().toLowerCase();
     const raiz = INV_obterPastaDocumentos_();
     const resultado = [];
 
+    // nome do cliente das subpastas por CNPJ (o nome da pasta é só o número)
+    const nomePorCnpj = {};
+    SGO_DATA.getAll(SHEET_CLI).forEach(c => { const d = SGO_DocSalvar_cnpjDigitos_(c.CNPJ); if (d) nomePorCnpj[d] = SGO_UTILS.safe(c.NOME_FANTASIA || c.RAZAO_SOCIAL); });
     const pastasClientes = raiz.getFolders();
     while (pastasClientes.hasNext() && resultado.length < 300) {
       const pastaCliente = pastasClientes.next();
-      const nomeCliente = pastaCliente.getName();
-      if (pastaPermitida !== null && nomeCliente !== pastaPermitida) continue;
-      const bateNomeCliente = !termo || nomeCliente.toLowerCase().indexOf(termo) !== -1;
+      const nomePasta = pastaCliente.getName();
+      if (pastaPermitida !== null && nomePasta !== pastaPermitida && !(cnpjPermitido && nomePasta === cnpjPermitido)) continue;
+      let nomeCliente = nomePasta;
+      if (/^d{14}$/.test(nomePasta)) nomeCliente = nomePorCnpj[nomePasta] || nomePasta;
+      const bateNomeCliente = !termo || nomeCliente.toLowerCase().indexOf(termo) !== -1 || nomePasta.indexOf(termo.replace(/D/g, "") || "#") !== -1;
 
       const arquivos = pastaCliente.getFilesByType(MimeType.PDF);
       while (arquivos.hasNext() && resultado.length < 300) {
@@ -335,7 +343,7 @@ const SGO_INVENTARIO = (() => {
   function INV_celulaDoc_(d) {
     const m = INV_rotuloDoc_(d);
     const det = d && d.vencimento ? formatarDataBR_(d.vencimento) : "";
-    return { html: m.html + (det ? '<br><span class="nota">' + RelA4_esc_(det) + "</span>" : "") };
+    return { html: '<span style="white-space:nowrap">' + m.html + (det ? ' <span class="nota">' + RelA4_esc_(det) + "</span>" : "") + '</span>' };
   }
 
   function INV_textoPadrao_(dados, nomeCliente, porTipo) {
@@ -382,38 +390,53 @@ const SGO_INVENTARIO = (() => {
     const analise = RelA4_analise_(prompt, INV_textoPadrao_(dados, nomeCliente, porTipo));
 
     const cnpj = ci && ci.CNPJ ? SGO_UTILS.safe(ci.CNPJ).replace(/\D/g, "") : "";
+    const contar = (campo, st) => dados.itens.filter(e => e[campo].status === st).length;
+    const situacoes = [["OK", "Em dia", RELA4_CORES.verde], ["VENCENDO", "Vence em breve", RELA4_CORES.ambar], ["VENCIDO", "Vencido", RELA4_CORES.vermelho], ["SEM_VENCIMENTO", "Sem vencimento", RELA4_CORES.azul], ["SEM_DOC", "Sem documento", RELA4_CORES.cinza]];
     const c = [];
     c.push(RelA4_secao_("Identificação", RelA4_identificacao_([
       ["Cliente", ci ? SGO_UTILS.safe(ci.RAZAO_SOCIAL || ci.NOME_FANTASIA) : "Todos os clientes"],
       ["CNPJ", cnpj.length === 14 ? cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : (cnpj || "—")],
       ["Unidade", unidade],
-      ["Situação dos equipamentos", filtros && filtros.status ? (String(filtros.status).toUpperCase() === "ATIVO" ? "Somente ativos" : "Somente inativos") : "Ativos e inativos"],
-      ["Emitido por", SGO_UTILS.safe(sessao.nome || sessao.usuario)]
+      ["Situação dos equipamentos", filtros && filtros.status ? (String(filtros.status).toUpperCase() === "ATIVO" ? "Somente ativos" : "Somente inativos") : "Ativos e inativos"]
     ])));
     c.push(RelA4_secao_("Indicadores", RelA4_kpis_([
-      [RelA4_num_(i.total, 0), "Equipamentos"], [RelA4_num_(i.calibPct, 0) + "%", "Calibração em dia (" + i.calibOk + ")"], [RelA4_num_(i.qualPct, 0) + "%", "Qualificação em dia (" + i.qualOk + ")"],
-      [RelA4_num_(i.vencidos, 0), "Com documento vencido"], [RelA4_num_(i.vencendo, 0), "Vencendo em 30 dias"], [RelA4_num_(i.semDoc, 0), "Sem nenhum documento"],
-      [RelA4_num_(porTipo.length, 0), "Tipos de equipamento"], [RelA4_num_(dados.itens.filter(e => String(e.STATUS).toUpperCase() === "INATIVO").length, 0), "Inativos"]
-    ])));
+      [RelA4_num_(i.total, 0), "Equipamentos"], [RelA4_num_(i.calibPct, 0) + "%", "Calibração em dia (" + i.calibOk + ")", i.calibPct >= 90 ? "ok" : "aviso"], [RelA4_num_(i.qualPct, 0) + "%", "Qualificação em dia (" + i.qualOk + ")", i.qualPct >= 90 ? "ok" : "aviso"],
+      [RelA4_num_(i.vencidos, 0), "Com documento vencido", i.vencidos ? "critico" : "ok"], [RelA4_num_(i.vencendo, 0), "Vencendo em 30 dias", i.vencendo ? "aviso" : "ok"], [RelA4_num_(i.semDoc, 0), "Sem nenhum documento", i.semDoc ? "aviso" : "ok"]
+    ]) + RelA4_barrasEmpilhadas_(["CALIBRACAO", "QUALIFICACAO"].map(campo => ({
+      rotulo: campo === "CALIBRACAO" ? "Calibração" : "Qualificação",
+      partes: situacoes.map(s => contar(campo, s[0])),
+      rotuloValor: RelA4_plural_(i.total, "equipamento", "equipamentos")
+    })), situacoes.map(s => ({ rotulo: s[1], cor: s[2] })), { titulo: "Situação documental do parque na data de emissão", vazio: "Nenhum equipamento com os filtros escolhidos." })));
     c.push(RelA4_secao_("Análise do inventário", RelA4_paragrafos_(analise.texto)));
     c.push(RelA4_secao_("Distribuição por tipo", RelA4_tabela_([{ t: "Tipo" }, { t: "Quantidade", num: true }, { t: "Calibração em dia", num: true }, { t: "Qualificação em dia", num: true }, { t: "Com vencido", num: true }, { t: "Sem documento", num: true }],
-      porTipo.map(t => [t.tipo, RelA4_num_(t.qtd, 0), RelA4_num_(t.cal, 0), RelA4_num_(t.qual, 0), RelA4_num_(t.venc, 0), RelA4_num_(t.semDoc, 0)]), { vazio: "Nenhum equipamento com os filtros escolhidos." })));
-    c.push(RelA4_secao_("Itens que exigem ação", RelA4_tabela_([{ t: "TAG" }, { t: "Tipo" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }],
-      acao.map(e => [e.TAG || "—", e.TIPO || "—", e.UNIDADE_NOME || "—", INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO)]), { vazio: "Nenhum documento vencido ou vencendo nos próximos 30 dias." })));
-    c.push(RelA4_secao_("Inventário completo", RelA4_tabela_([{ t: "Nº", num: true }, { t: "TAG" }, { t: "Tipo" }, { t: "Fabricante e modelo" }, { t: "Série" }, { t: "Setor" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }, { t: "Situação" }],
+      porTipo.map(t => [t.tipo, RelA4_num_(t.qtd, 0), RelA4_num_(t.cal, 0), RelA4_num_(t.qual, 0), RelA4_num_(t.venc, 0), RelA4_num_(t.semDoc, 0)]),
+      { vazio: "Nenhum equipamento com os filtros escolhidos.", legenda: "Equipamentos por tipo e situação documental", total: porTipo.length > 1 ? ["Total", RelA4_num_(i.total, 0), RelA4_num_(i.calibOk, 0), RelA4_num_(i.qualOk, 0), RelA4_num_(porTipo.reduce((s, t) => s + t.venc, 0), 0), RelA4_num_(porTipo.reduce((s, t) => s + t.semDoc, 0), 0)] : null })));
+    c.push(RelA4_secao_("Itens que exigem ação", RelA4_tabela_([{ t: "TAG", nw: true }, { t: "Tipo" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }],
+      acao.map(e => [e.TAG || "—", e.TIPO || "—", e.UNIDADE_NOME || "—", INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO)]),
+      { vazio: "Nenhum documento vencido ou vencendo nos próximos 30 dias.", legenda: "Equipamentos com documento vencido (primeiro) ou vencendo em 30 dias", compacta: acao.length > 20 })));
+    c.push(RelA4_secao_("Inventário completo", RelA4_tabela_([{ t: "Nº", num: true }, { t: "TAG", nw: true }, { t: "Tipo" }, { t: "Fabricante e modelo" }, { t: "Série", nw: true }, { t: "Setor" }, { t: "Unidade" }, { t: "Calibração" }, { t: "Qualificação" }, { t: "Situação" }],
       dados.itens.map(e => [String(e.IDX), e.TAG || "—", e.TIPO || "—", [e.FABRICANTE, e.MODELO].filter(Boolean).join(" / ") || "—", e.SERIE || "—", e.SETOR || "—", e.UNIDADE_NOME || "—",
-        INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO), String(e.STATUS).toUpperCase() === "INATIVO" ? "Inativo" : "Ativo"]), { vazio: "Nenhum equipamento com os filtros escolhidos." })));
-    c.push('<p class="nota">Situação documental conforme os registros do SGO+ na data de emissão: considera o documento de calibração e o de qualificação de validade mais distante de cada equipamento; "vence em breve" significa nos próximos 30 dias. ' +
-      "O inventário não substitui os certificados, que prevalecem em caso de divergência.</p>");
-    const html = RelA4_documento_({ titulo: "Inventário de equipamentos", subtitulo: nomeCliente + (dados.unidadeInfo ? " — " + unidade : ""), identificacao: Utilities.formatDate(new Date(), RELA4_TZ, "dd/MM/yyyy"),
-      corpo: c.join("\n"), cor: "#007b3e", paisagem: true, emitidoPor: SGO_UTILS.safe(sessao.nome || sessao.usuario) });
+        INV_celulaDoc_(e.CALIBRACAO), INV_celulaDoc_(e.QUALIFICACAO), String(e.STATUS).toUpperCase() === "INATIVO" ? "Inativo" : "Ativo"]),
+      { vazio: "Nenhum equipamento com os filtros escolhidos.", legenda: "Equipamentos do inventário", compacta: dados.itens.length > 30 }) +
+      '<p class="nota">Situação documental conforme os registros do SGO+ na data de emissão: considera o documento de calibração e o de qualificação de validade mais distante de cada equipamento; "vence em breve" significa nos próximos 30 dias. ' +
+      "O inventário não substitui os certificados, que prevalecem em caso de divergência.</p>"));
+    const html = RelA4_documento_({ titulo: "Inventário de equipamentos", subtitulo: nomeCliente + (dados.unidadeInfo ? " — " + unidade : ""), tituloArquivo: "Inventário de equipamentos",
+      sigla: "INV", rotuloIdentificacao: "Posição em", identificacao: Utilities.formatDate(new Date(), RELA4_TZ, "dd/MM/yyyy"), tipoCapa: "Relatório de situação documental",
+      corpo: c.join("\n"), paisagem: true, emitidoPor: SGO_UTILS.safe(sessao.nome || sessao.usuario) });
 
-    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/Sao_Paulo", "yyyyMMdd_HHmmss");
-    const nomeBase = INV_sanitizarNome_("Inventario - " + nomeCliente + " - " + timestamp);
-    const pastaCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE" ? INV_nomeClienteSessao_(sessao) : nomeCliente;
-    const g = RelA4_salvar_(() => INV_obterPastaCliente_(pastaCliente), nomeBase, html, { compartilhar: true });
+    // Pasta do cliente pelo CNPJ (padrão A4); sem cliente escolhido, a pasta "Todos os clientes".
+    const ehCliente = SGO_UTILS.safeUpper(sessao.perfil) === "CLIENTE";
+    const cliPasta = ehCliente ? (SGO_DATA.getById(SHEET_CLI, SGO_UTILS.safe(sessao.clienteId)) || {}) : (ci || null);
+    const obterPasta = () => {
+      if (cliPasta && (cliPasta.CNPJ || cliPasta.RAZAO_SOCIAL || cliPasta.NOME_FANTASIA)) {
+        return SGO_DocSalvar_pastaClienteEm_(INV_obterPastaDocumentos_(), cliPasta.CNPJ, SGO_UTILS.safe(cliPasta.RAZAO_SOCIAL || cliPasta.NOME_FANTASIA));
+      }
+      return INV_obterPastaCliente_(ehCliente ? INV_nomeClienteSessao_(sessao) : nomeCliente);
+    };
+    const g = RelA4_salvar_(obterPasta, nomeCliente, html, { compartilhar: true });
+    const nomeBase = g.nome;
     SGO_DATA.log("INVENTARIO_RELATORIO_A4", sessao.usuario, "Relatório A4 do inventário (" + nomeCliente + ", " + i.total + " equipamentos, análise: " + (analise.origem === "IA" ? "IA" : "texto padrão") + ")" + (g.salvo ? "" : " — cópia não gravada"), "INVENTARIO");
-    return { success: true, html: RelA4_injetarAvisos_(html, RelA4_avisosPadrao_(g, [analise])), url: g.pdfUrl, htmlUrl: g.htmlUrl, pastaUrl: g.pastaUrl,
+    return { success: true, html: RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_(g, [analise])), url: g.pdfUrl, htmlUrl: g.htmlUrl, pastaUrl: g.pastaUrl,
       fileName: nomeBase + ".pdf", salvo: g.salvo, aviso: [g.aviso, analise.aviso].filter(Boolean).join(" "), analise: analise.origem };
   }
 
