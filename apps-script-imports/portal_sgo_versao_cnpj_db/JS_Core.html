@@ -760,6 +760,7 @@
       });
     }
     try { if (typeof Atividades_aoAbrirModulo_ === "function") Atividades_aoAbrirModulo_(mod); } catch (e) { console.error("Atividades do módulo:", e); }
+    try { if (typeof Ajuda_aoAbrirModulo_ === "function") Ajuda_aoAbrirModulo_(mod); } catch (e) { console.error("Ajuda da tela:", e); }
   }
 
   function abrirModulo_(mod) {
@@ -6903,5 +6904,264 @@
     fecharBalaoPadroes_();
     fecharAlertaCriticoPadroes_(true);
     abrir("padroes");
+  }
+
+  // ==========================================
+  // AJUDA "COMO USAR ESTA TELA" (17/10)
+  // ==========================================
+  // Botão "Como usar esta tela" no cabeçalho de toda tela (computador) e na barra do topo
+  // (celular, Index.html). Abre um painel lateral com a ajuda da tela atual
+  // (SGO_Ajuda.js › SGO_Ajuda_apiTela) e o "Manual completo do módulo" em A4
+  // (SGO_Ajuda_apiManual). Conteúdo: SGO_Ajuda_<Grupo>.js; contrato em docs/AJUDA_CONTRATO_20261017.md.
+  // A chave da tela é a mesma de abrir(mod) (window.SGO_MODULO_ATUAL).
+  var AJUDA = { cache: {}, chave: "", pedido: 0, origemFoco: null, timer: null };
+
+  function Ajuda_chaveAtual_() {
+    return window.SGO_MODULO_ATUAL || (ehMobileModo_() ? "mobile_home" : "dashboard");
+  }
+
+  function Ajuda_novoBotao_() {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn-secondary ajuda-btn-tela";
+    b.title = "Ajuda passo a passo desta tela";
+    b.innerHTML = '<i class="fas fa-circle-question" aria-hidden="true"></i>&nbsp;Como usar esta tela';
+    b.onclick = function () { Ajuda_abrir_(); };
+    return b;
+  }
+
+  // Põe o botão no cabeçalho da tela; sem cabeçalho, numa faixa curta no topo do conteúdo.
+  // Telas que montam o cabeçalho depois (resposta do servidor) recebem o botão quando ele aparece.
+  function Ajuda_garantirBotao_() {
+    if (!SESSION) return;
+    const cont = document.getElementById("conteudo");
+    if (!cont) return;
+    const cab = cont.querySelector(".module-header");
+    const existente = cont.querySelector(".ajuda-btn-tela");
+    if (existente) {
+      const naFaixa = existente.closest(".ajuda-faixa-btn");
+      if (!naFaixa || !cab) return;
+      naFaixa.remove();
+    }
+    const b = Ajuda_novoBotao_();
+    if (cab) {
+      let direita = cab.querySelector(".module-header-right");
+      if (!direita) { direita = document.createElement("div"); direita.className = "module-header-right"; cab.appendChild(direita); }
+      direita.insertBefore(b, direita.firstChild);
+      return;
+    }
+    const hero = cont.querySelector(".dash-hero");
+    if (hero) { hero.classList.add("ajuda-com-botao"); hero.appendChild(b); return; }
+    const faixa = document.createElement("div");
+    faixa.className = "ajuda-faixa-btn";
+    faixa.appendChild(b);
+    cont.insertBefore(faixa, cont.firstChild);
+  }
+
+  function Ajuda_aoAbrirModulo_(mod) {
+    Ajuda_fechar_(true);
+    Ajuda_garantirBotao_();
+  }
+
+  (function () {
+    function observar() {
+      const cont = document.getElementById("conteudo");
+      if (!cont || cont.__ajudaObservado) return;
+      cont.__ajudaObservado = true;
+      new MutationObserver(function () {
+        clearTimeout(AJUDA.timer);
+        AJUDA.timer = setTimeout(function () { try { Ajuda_garantirBotao_(); } catch (e) { console.error("Ajuda:", e); } }, 150);
+      }).observe(cont, { childList: true, subtree: true });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observar); else observar();
+  })();
+
+  // Celular: o "Voltar" da barra do topo fecha a ajuda antes de sair da tela.
+  (function () {
+    const voltarOriginal = voltarMobile_;
+    voltarMobile_ = function () {
+      if (document.getElementById("ajudaPainel")) { Ajuda_fechar_(); return; }
+      return voltarOriginal.apply(this, arguments);
+    };
+  })();
+
+  function Ajuda_tecla_(e) {
+    if (e.key === "Escape" && document.getElementById("ajudaPainel")) { e.stopPropagation(); Ajuda_fechar_(); }
+  }
+
+  function Ajuda_fechar_(semFoco) {
+    const p = document.getElementById("ajudaPainel");
+    const f = document.getElementById("ajudaPainelFundo");
+    if (p) p.remove();
+    if (f) f.remove();
+    document.removeEventListener("keydown", Ajuda_tecla_, true);
+    AJUDA.pedido++;
+    if (!semFoco && AJUDA.origemFoco && document.body.contains(AJUDA.origemFoco)) { try { AJUDA.origemFoco.focus(); } catch (e) {} }
+    AJUDA.origemFoco = null;
+  }
+
+  function Ajuda_abrir_(chave) {
+    const k = chave || Ajuda_chaveAtual_();
+    if (!document.getElementById("ajudaPainel")) AJUDA.origemFoco = document.activeElement;
+    AJUDA.chave = k;
+    const casa = document.getElementById("app") || document.body;
+    let p = document.getElementById("ajudaPainel");
+    if (!p) {
+      const fundo = document.createElement("div");
+      fundo.id = "ajudaPainelFundo";
+      fundo.className = "bc-painel-fundo ajuda-painel-fundo";
+      fundo.onclick = function () { Ajuda_fechar_(); };
+      casa.appendChild(fundo);
+      p = document.createElement("aside");
+      p.id = "ajudaPainel";
+      p.className = "bc-painel ajuda-painel";
+      p.setAttribute("role", "dialog");
+      p.setAttribute("aria-modal", "true");
+      p.setAttribute("aria-labelledby", "ajudaPainelTitulo");
+      casa.appendChild(p);
+      document.addEventListener("keydown", Ajuda_tecla_, true);
+    }
+    Ajuda_render_(p, null, "Carregando a ajuda desta tela...");
+    if (AJUDA.cache[k]) { Ajuda_render_(p, AJUDA.cache[k]); return; }
+    const meu = ++AJUDA.pedido;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (meu !== AJUDA.pedido || !document.getElementById("ajudaPainel")) return;
+        if (!res || !res.ok) { Ajuda_render_(p, null, "", (res && res.message) || "Não foi possível abrir a ajuda: o servidor não respondeu como esperado. Toque em \"Tentar de novo\"."); return; }
+        AJUDA.cache[k] = res;
+        Ajuda_render_(p, res);
+      })
+      .withFailureHandler(function (err) {
+        if (meu !== AJUDA.pedido || !document.getElementById("ajudaPainel")) return;
+        Ajuda_render_(p, null, "", "Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Confira a conexão e toque em \"Tentar de novo\".");
+      })
+      .SGO_Ajuda_apiTela(SGO_getSessionId(), k);
+  }
+
+  // Botão "Manual do operador" que a própria tela já tem (casco ou cabeçalho do módulo).
+  function Ajuda_botaoManualDaTela_() {
+    const cont = document.getElementById("conteudo");
+    if (!cont) return null;
+    const lista = cont.querySelectorAll("button, a");
+    for (let i = 0; i < lista.length; i++) {
+      const b = lista[i];
+      if (b.closest("#ajudaPainel")) continue;
+      if (!/manual do operador/i.test(b.textContent || "")) continue;
+      if (b.offsetParent === null && !b.classList.contains("sgo-btn-manual")) continue;
+      return b;
+    }
+    return null;
+  }
+
+  function Ajuda_secoesHtml_(a, prefixo) {
+    const esc = escapeHtml_;
+    const h = [];
+    function sec(id, titulo, corpo) {
+      if (!corpo) return;
+      h.push('<section class="ajuda-sec" id="' + prefixo + id + '"><h4 class="ajuda-sec-titulo">' + esc(titulo) + "</h4>" + corpo + "</section>");
+    }
+    sec("serve", "Para que serve", a.paraQueServe ? "<p>" + esc(a.paraQueServe).replace(/\n+/g, "</p><p>") + "</p>" : "");
+    sec("antes", "Antes de começar", a.antesDeComecar.length ? '<ul class="ajuda-lista">' + a.antesDeComecar.map(function (i) { return "<li>" + esc(i) + "</li>"; }).join("") + "</ul>" : "");
+    sec("passos", "Passo a passo", a.passos.length ? a.passos.map(function (t, i) {
+      return '<details class="ajuda-tarefa"' + (i === 0 ? " open" : "") + "><summary>" + esc(t.titulo || ("Tarefa " + (i + 1))) + "</summary>" +
+        '<ol class="ajuda-passos">' + t.itens.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ol></details>";
+    }).join("") : "");
+    sec("cores", "O que significa cada cor", a.cores.length ? '<dl class="ajuda-dl">' + a.cores.map(function (c) {
+      return "<dt>" + esc(c.nome) + "</dt><dd>" + esc(c.significado) + "</dd>";
+    }).join("") + "</dl>" : "");
+    sec("problemas", "Se algo der errado", a.problemas.length ? '<dl class="ajuda-dl ajuda-dl-problema">' + a.problemas.map(function (c) {
+      return "<dt>" + esc(c.situacao) + "</dt><dd>" + esc(c.oQueFazer) + "</dd>";
+    }).join("") + "</dl>" : "");
+    sec("quem", "Quem pode fazer", a.quemPode.length ? '<ul class="ajuda-quem">' + a.quemPode.map(function (q) {
+      return '<li class="' + (q.voce ? "is-voce" : "") + '"><b>' + esc(q.perfil) + (q.voce ? ' <span class="ajuda-selo-voce">Você</span>' : "") + "</b><span>" + esc(q.pode) + "</span></li>";
+    }).join("") + "</ul>" : "");
+    sec("perguntas", "Perguntas frequentes", a.perguntas.length ? a.perguntas.map(function (q) {
+      return '<details class="ajuda-pergunta"><summary>' + esc(q.p) + "</summary><p>" + esc(q.r) + "</p></details>";
+    }).join("") : "");
+    return h.join("");
+  }
+
+  function Ajuda_render_(p, res, carregando, erro) {
+    const esc = escapeHtml_;
+    const k = AJUDA.chave;
+    const nomeMenu = (function () {
+      try {
+        const btn = document.querySelector('#menu .menu-btn[data-mod="' + k.split("/")[0] + '"]');
+        if (!btn) return "";
+        const c = btn.cloneNode(true);
+        c.querySelectorAll(".menu-badge, .menu-btn-icon").forEach(function (x) { x.remove(); });
+        return c.textContent.replace(/\s+/g, " ").trim();
+      } catch (e) { return ""; }
+    })();
+    const titulo = (res && res.ajuda && res.ajuda.titulo) || (res && res.nomeTela) || nomeMenu || "Esta tela";
+    const manualTela = Ajuda_botaoManualDaTela_();
+    let corpo = "";
+    if (carregando) corpo = '<p class="ajuda-msg">' + esc(carregando) + "</p>";
+    else if (erro) corpo = '<div class="ajuda-msg ajuda-msg-erro" role="alert"><p>' + esc(erro) + '</p><button type="button" class="btn-primary" id="ajudaTentar">Tentar de novo</button></div>';
+    else if (!res.existe) {
+      corpo = '<div class="ajuda-msg ajuda-msg-preparo"><p><b>Ajuda desta tela em preparação.</b></p>' +
+        "<p>O passo a passo desta tela ainda está sendo escrito. Enquanto isso:</p><ol class=\"ajuda-passos\">" +
+        (manualTela ? "<li>Toque em \"Manual do operador (desta tela)\", logo abaixo, para ler o manual que a tela já tem.</li>" : "") +
+        "<li>Peça ajuda ao gestor da sua área ou ao administrador do sistema.</li></ol></div>";
+    } else {
+      const partes = [];
+      if (res.ajuda) partes.push(Ajuda_secoesHtml_(res.ajuda, "ajudaSec_"));
+      if (res.subtelas && res.subtelas.length) {
+        partes.push('<section class="ajuda-sec"><h4 class="ajuda-sec-titulo">Nesta tela também</h4>' + res.subtelas.map(function (s, i) {
+          return '<details class="ajuda-subtela"><summary>' + esc(s.titulo) + "</summary>" + Ajuda_secoesHtml_(s, "ajudaSub" + i + "_") + "</details>";
+        }).join("") + "</section>");
+      }
+      corpo = partes.join("");
+    }
+    const botoes = [];
+    if (res && res.temManual) botoes.push('<button type="button" class="btn-primary" id="ajudaManual"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Manual completo do módulo</button>');
+    if (manualTela) botoes.push('<button type="button" class="btn-secondary" id="ajudaManualTela"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador (desta tela)</button>');
+    const outras = (k !== "busca") ? '<p class="ajuda-outras">Para achar uma tela, um cliente ou uma TAG, use a busca. <button type="button" class="ajuda-link" id="ajudaBusca">Como usar a busca</button></p>' : "";
+    p.innerHTML =
+      '<div class="bc-painel-cab ajuda-cab"><div class="ajuda-cab-texto"><div class="ajuda-cab-rotulo">Como usar esta tela</div>' +
+        '<h3 id="ajudaPainelTitulo">' + esc(titulo) + "</h3>" +
+        (res && res.perfilRotulo ? '<div class="ajuda-cab-perfil">Você entrou com o perfil ' + esc(res.perfilRotulo) + ".</div>" : "") +
+      '</div><button type="button" class="ajuda-fechar" id="ajudaFecharX" aria-label="Fechar a ajuda">&times;</button></div>' +
+      (botoes.length ? '<div class="ajuda-acoes">' + botoes.join("") + "</div>" : "") +
+      '<div class="bc-painel-corpo ajuda-corpo">' + corpo + outras + "</div>" +
+      '<div class="bc-painel-rodape ajuda-rodape"><button type="button" class="btn-secondary" id="ajudaFechar">Fechar</button></div>';
+    p.querySelector("#ajudaFecharX").onclick = function () { Ajuda_fechar_(); };
+    p.querySelector("#ajudaFechar").onclick = function () { Ajuda_fechar_(); };
+    const bt = p.querySelector("#ajudaTentar");
+    if (bt) bt.onclick = function () { delete AJUDA.cache[k]; Ajuda_abrir_(k); };
+    const bm = p.querySelector("#ajudaManual");
+    if (bm) bm.onclick = function () { Ajuda_abrirManual_(res.modulo || k.split("/")[0]); };
+    const bmt = p.querySelector("#ajudaManualTela");
+    if (bmt) bmt.onclick = function () { Ajuda_fechar_(true); manualTela.click(); try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {} };
+    const bb = p.querySelector("#ajudaBusca");
+    if (bb) bb.onclick = function () { Ajuda_abrir_("busca"); };
+    if (!carregando) { try { p.querySelector("#ajudaFecharX").focus({ preventScroll: true }); } catch (e) {} }
+    const corpoEl = p.querySelector(".ajuda-corpo");
+    if (corpoEl) corpoEl.scrollTop = 0;
+  }
+
+  // Manual completo do módulo: abre a janela já (o navegador não bloqueia) e escreve o A4 nela.
+  function Ajuda_abrirManual_(modulo) {
+    const w = window.open("", "_blank");
+    if (!w) { alert("O navegador bloqueou a janela do manual. Permita janelas deste site (ícone na barra de endereço) e toque de novo em \"Manual completo do módulo\"."); return; }
+    try { w.opener = null; w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#374151;font-size:16px'>Montando o manual do módulo, aguarde...</p>"); } catch (e) {}
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (w.closed) return;
+        if (!res || !res.ok || !res.html) {
+          w.document.open();
+          w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#7f1d1d;font-size:16px'>" + escapeHtml_((res && res.message) || "Não foi possível montar o manual. Feche esta aba e tente de novo.") + "</p>");
+          w.document.close();
+          return;
+        }
+        w.document.open(); w.document.write(res.html); w.document.close();
+      })
+      .withFailureHandler(function (err) {
+        if (w.closed) return;
+        w.document.open();
+        w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#7f1d1d;font-size:16px'>Não foi possível falar com o servidor (" + escapeHtml_((err && err.message) || String(err)) + "). Confira a conexão, feche esta aba e tente de novo.</p>");
+        w.document.close();
+      })
+      .SGO_Ajuda_apiManual(SGO_getSessionId(), modulo);
   }
 </script>

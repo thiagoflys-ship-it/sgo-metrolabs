@@ -3658,4 +3658,56 @@
     .bc-painel { width: 100vw; border-left: 0; }
   }
 
+  /* AJUDA 17/10 — botão "Como usar esta tela" e painel lateral de ajuda (JS_Core › Ajuda_*) */
+  .ajuda-btn-tela { min-height: 40px; white-space: nowrap; }
+  .ajuda-faixa-btn { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+  .dash-hero.ajuda-com-botao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .app-shell.modo-mobile .ajuda-btn-tela, .app-shell.modo-mobile .ajuda-faixa-btn { display: none !important; }
+  .mobile-topbar-ajuda { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 44px; line-height: 1; }
+  .mobile-topbar-ajuda i { font-size: 18px; }
+  .mobile-topbar-ajuda span { font-size: 12px; font-weight: 600; }
+  .ajuda-painel { width: min(520px, 100vw); z-index: 10060; }
+  .ajuda-painel-fundo { z-index: 10050; }
+  .ajuda-cab { flex: 0 0 auto; }
+  .ajuda-cab-texto { flex: 1; min-width: 0; }
+  .ajuda-cab-rotulo { font: 600 12px var(--bc-sans); color: var(--bc-text-3); text-transform: uppercase; letter-spacing: .04em; }
+  .ajuda-cab h3 { margin: 2px 0 2px; font: 700 20px/1.25 var(--bc-sans); color: var(--bc-text); overflow-wrap: anywhere; }
+  .ajuda-cab-perfil { font-size: 14px; color: var(--bc-text-2); }
+  .ajuda-fechar { border: 0; background: none; font-size: 28px; line-height: 1; min-width: 44px; min-height: 44px; cursor: pointer; color: var(--bc-text-2); border-radius: 8px; }
+  .ajuda-fechar:hover, .ajuda-fechar:focus-visible { background: var(--bc-surface-3); }
+  .ajuda-acoes { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--bc-line); }
+  .ajuda-acoes button { min-height: 44px; }
+  .ajuda-corpo { font-size: 15px; line-height: 1.55; color: var(--bc-text); overflow-wrap: anywhere; }
+  .ajuda-corpo p { margin: 0 0 8px; }
+  .ajuda-sec { margin: 0 0 18px; }
+  .ajuda-sec-titulo { margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--bc-line); font: 700 16px var(--bc-sans); color: var(--bc-action); }
+  .ajuda-lista, .ajuda-passos { margin: 0 0 8px; padding-left: 22px; }
+  .ajuda-lista li, .ajuda-passos li { margin: 0 0 6px; }
+  .ajuda-tarefa, .ajuda-pergunta, .ajuda-subtela { border: 1px solid var(--bc-line); border-radius: 8px; margin: 0 0 8px; background: var(--bc-surface); }
+  .ajuda-tarefa > summary, .ajuda-pergunta > summary, .ajuda-subtela > summary { cursor: pointer; padding: 10px 12px; min-height: 44px; box-sizing: border-box; font-weight: 600; display: flex; align-items: center; }
+  .ajuda-tarefa[open] > summary, .ajuda-pergunta[open] > summary, .ajuda-subtela[open] > summary { border-bottom: 1px solid var(--bc-line-soft); background: var(--bc-surface-2); }
+  .ajuda-tarefa > .ajuda-passos { padding: 10px 12px 4px 34px; }
+  .ajuda-pergunta > p { padding: 10px 12px 4px; }
+  .ajuda-subtela > .ajuda-sec { padding: 10px 12px 0; }
+  .ajuda-dl { margin: 0; }
+  .ajuda-dl dt { font-weight: 700; margin: 8px 0 2px; }
+  .ajuda-dl dd { margin: 0 0 6px; color: var(--bc-text-2); }
+  .ajuda-dl-problema dt { color: var(--bc-danger); }
+  .ajuda-quem { list-style: none; margin: 0; padding: 0; }
+  .ajuda-quem li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--bc-line-soft); border-radius: 8px; margin: 0 0 6px; }
+  .ajuda-quem li.is-voce { border-color: var(--bc-action-line); background: var(--bc-action-bg); }
+  .ajuda-selo-voce { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--bc-action); color: #fff; font-size: 12px; font-weight: 700; vertical-align: middle; }
+  .ajuda-msg { padding: 12px 14px; border-radius: 8px; background: var(--bc-surface-2); border: 1px solid var(--bc-line); }
+  .ajuda-msg-erro { background: var(--bc-danger-bg); border-color: var(--bc-danger-line); color: var(--bc-danger); }
+  .ajuda-msg-erro button { min-height: 44px; }
+  .ajuda-msg-preparo { background: var(--bc-info-bg); border-color: var(--bc-info-line); }
+  .ajuda-outras { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--bc-line); font-size: 14px; color: var(--bc-text-2); }
+  .ajuda-link { border: 0; background: none; padding: 0 2px; min-height: 44px; font: inherit; color: var(--bc-info); text-decoration: underline; cursor: pointer; }
+  .ajuda-rodape { flex: 0 0 auto; justify-content: flex-start; }
+  .ajuda-rodape button { min-height: 44px; }
+  .app-shell.modo-mobile .ajuda-painel { top: var(--mobile-topbar-h, 64px); width: 100vw; border-left: 0; box-shadow: none; }
+  .app-shell.modo-mobile .ajuda-painel-fundo { top: var(--mobile-topbar-h, 64px); }
+  .app-shell.modo-mobile .ajuda-corpo { font-size: 16px; }
+  .app-shell.modo-mobile .ajuda-acoes button, .app-shell.modo-mobile .ajuda-rodape button { flex: 1 1 100%; }
+
 </style>
