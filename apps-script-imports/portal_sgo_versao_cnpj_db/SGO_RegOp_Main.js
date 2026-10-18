@@ -427,18 +427,17 @@ function RegOp_apiGerarRegistro(payload, sessionId) {
   var pdfUrl = '', fileName = '', htmlSalvo = { htmlId: '', htmlUrl: '' }, avisoPdf = '';
   try {
     var pasta = RegOp_obterPastaPorCnpj_(hospital.cnpj, hospital.razaoSocial);
-    var blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
-    // Data no formato aaaa-mm-dd (ordena certo) + hora da emissão: dois
-    // registros do mesmo tipo no mesmo dia não saem com o mesmo nome.
+    // Nome do padrão A4 (18/10/2026): "Registro operacional - <nº> - <tipo> - <aaaa-MM-dd HHmm>",
+    // com a data do registro e a hora da emissão; HTML e PDF com o mesmo nome, na pasta do CNPJ.
     var partesData = data.split('/');
-    fileName = RegOp_sanitizarNomeArquivo_(tipoDocumentoNome) + "_" + partesData[2] + "-" + partesData[1] + "-" + partesData[0] + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HHmmss") + ".pdf";
-    blob.setName(fileName);
-    var arquivo = pasta.createFile(blob);
-    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    pdfUrl = arquivo.getUrl();
+    var nomeBase = 'Registro operacional - ' + RegOp_numeroCurto_(registroId) + ' - ' + String(tipoDocumentoNome || 'Registro').substring(0, 60) + ' - ' +
+      partesData[2] + '-' + partesData[1] + '-' + partesData[0] + ' ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HHmm");
+    var salvoDoc = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
+    var arquivo = DriveApp.getFileById(salvoDoc.pdfId);
+    fileName = salvoDoc.pdfNome;
+    pdfUrl = salvoDoc.pdfUrl;
     RegOp_registrarDocumento_({ hospital: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', registroId: registroId }, arquivo);
-    // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do CNPJ.
-    htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, fileName, html, { compartilhar: true });
+    htmlSalvo = { htmlId: salvoDoc.htmlId, htmlUrl: salvoDoc.htmlUrl };
   } catch (e) {
     // não bloqueia o registro se o auto-save do PDF falhar — o registro
     // já fica salvo na planilha (abaixo) mesmo sem o PDF. Mas o operador

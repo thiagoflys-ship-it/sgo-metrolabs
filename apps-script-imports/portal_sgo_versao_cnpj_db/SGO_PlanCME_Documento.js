@@ -1,250 +1,408 @@
 /**
- * Divide um texto em parágrafos HTML (<p>...</p>) por linha em branco —
- * mesmo padrão já usado nos módulos de hoje do Portal SGO+ (Declaração/
- * QI-QO/Relatório de Calibração) pra texto gerado por IA, que costuma vir
- * com vários parágrafos separados por linha em branco.
+ * Planejamento técnico de qualificação e quantitativo de insumos (CME) — documento A4.
+ * Padrão de 18/10/2026 (docs/DOCUMENTOS_PADRAO_A4_20261018.md): moldura SGO_RelTecA4
+ * (cabeçalho e rodapé corridos, "Página X de Y"), tipografia e tabelas da SGO_DocA4,
+ * seções numeradas, "Tabela N —" acima das tabelas, "Figura N —" abaixo do gráfico,
+ * texto justificado e assinaturas presas ao parágrafo de responsabilidade.
+ * Sem a IA o documento sai completo: a fundamentação vira a Tabela "Base técnica das
+ * quantidades", escrita a partir das regras de cálculo. Com a IA, a fundamentação em
+ * prosa entra no lugar dessa tabela (nunca as duas).
  */
+
+/** Texto corrido (parágrafos separados por linha em branco) → <p>. */
 function PlanCMEDoc_paragrafosHtml_(texto) {
-  const partes = String(texto || "").split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
-  if (!partes.length) return "<p>-</p>";
+  const partes = String(texto || "").replace(/\r\n/g, "\n").split(/\n\s*\n/)
+    .map(p => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
+  if (!partes.length) return "";
   return partes.map(p => "<p>" + PlanCME_escaparHtml_(p) + "</p>").join("\n");
 }
 
-/**
- * CSS do documento único — mesmo padrão visual "folha A4" já usado hoje
- * nos módulos do Portal SGO+ (Declaração de Execução de Serviço/QI-QO/
- * Relatório de Calibração), replicado aqui verbatim (classes/valores)
- * porque este é um projeto Apps Script separado, sem escopo global
- * compartilhado com o Portal (2026-07-26, a pedido do usuário: "entra lá
- * no módulo e traz pra cá").
- */
-function PlanCME_getCss_() {
-  const css = [];
-  css.push('@page { size: A4; margin: 18mm 16mm; }');
-  css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
-  css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
-  css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 20px; }');
-  css.push('.logo-topo { height: 46px; }');
-  css.push('.titulo-doc { text-align:right; }');
-  css.push('.titulo-doc h1 { font-size: 18px; margin: 0; color:#0b4ea2; }');
-  css.push('.titulo-doc small { color:#6b7280; }');
-  css.push('table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; }');
-  css.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
-  css.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  css.push('.secao { margin-top: 26px; }');
-  // Fundamentação Técnica pode juntar QI+QO+QD e passar de 1 página — "avoid" no bloco
-  // inteiro é ignorado pelo navegador nesse caso e a quebra cai em qualquer ponto do
-  // texto (ex.: no meio de "ABNT NBR 16328:2024"). Cada QI/QO/QD vira uma .subsecao
-  // menor com seu próprio page-break-inside: avoid, que o navegador consegue respeitar.
-  css.push('.secao-fundamentacao { page-break-inside: auto; }');
-  css.push('.subsecao { page-break-inside: avoid; margin-bottom: 14px; }');
-  css.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; page-break-after: avoid; page-break-inside: avoid; }');
-  css.push('.secao h3 { font-size: 12.5px; color:#0b4ea2; margin: 14px 0 6px; page-break-after: avoid; page-break-inside: avoid; }');
-  css.push('p, li { text-align: justify; margin: 8px 0; orphans: 3; widows: 3; }');
-  css.push('table.tabela-itens { width:100%; border-collapse: collapse; margin: 10px 0 4px; }');
-  css.push('table.tabela-itens th, table.tabela-itens td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
-  css.push('table.tabela-itens th { background:#f3f4f6; text-align:left; }');
-  css.push('.destaque { background:#f3f4f6; border-left: 4px solid #0b4ea2; padding: 14px 16px; margin-top: 14px; page-break-inside: avoid; }');
-  css.push('.destaque.alerta { border-left-color: #d97706; background:#fffbeb; }');
-  // campo-eru + rodape-final abaixo: alturas/margens enxutas de propósito —
-  // texto gerado por IA varia de tamanho a cada documento, então o espaço
-  // sobrando na última página nunca é garantido; encolher esses blocos fixos
-  // recupera espaço que, em muitos casos, é a diferença entre a assinatura
-  // caber na mesma página do resto ou pular sozinha para uma página quase
-  // vazia (achado real 2026-07-28, reportado pelo usuário). Não elimina o
-  // problema 100% — impressão HTML→PDF sem motor de paginação não permite
-  // isso —, só reduz a frequência.
-  css.push('.campo-eru { height: 110px; }');
-  css.push('.rodape-final { page-break-inside: avoid; margin-top: 26px; }');
-  css.push('.assinaturas { display:flex; justify-content:space-around; }');
-  css.push('.assinatura-item { text-align:center; width: 45%; }');
-  css.push('.assinatura-item img, .assinatura-item svg { height: 60px; }');
-  css.push('.assinatura-linha { border-top: 1px solid #1f2937; margin-top: 4px; padding-top: 4px; font-size: 11.5px; }');
-  css.push('.rodape-aviso { margin-top: 18px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 10.5px; color:#6b7280; }');
-  css.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
-  css.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  css.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  return css.join('\n');
+/** Texto da IA: tira as frases que remetem a "tabela abaixo/acima" (o documento cita pelo número). */
+function PlanCMEDoc_textoIA_(texto) {
+  return String(texto || "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\s*\((?:ver|veja|conforme) (?:a )?tabela (?:abaixo|acima|a seguir)\)/gi, "")
+    .trim();
+}
+
+/** CSS: padrão SGO_DocA4 + ajustes deste documento + moldura SGO_RelTecA4 (por último). */
+function PlanCME_getCss_(opcoes) {
+  const o = opcoes || {};
+  const docA4 = (typeof SGO_DocA4_estilos_ === "function")
+    ? SGO_DocA4_estilos_({ tituloCurto: o.titulo, numero: o.numero, revisao: o.revisao })
+    : SGO_DocA4_css_();
+  const proprio = [
+    ".abertura{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.6pt solid #9aa5b1;padding-bottom:2.2mm;margin:0 0 6mm}",
+    ".abertura img{height:13mm;width:auto;display:block}",
+    ".abertura .meta{text-align:right;font-size:7.8pt;line-height:1.35;color:#3e4c59}",
+    "ul.lista li{text-align:left}",
+    ".campo-eru{border:.6pt solid #9aa5b1;margin:2mm 0 4mm;padding:2.4mm 3mm 3mm;break-inside:avoid;page-break-inside:avoid}",
+    ".campo-eru p{margin:0 0 1mm;font-weight:700;font-size:9pt;text-align:left}",
+    ".campo-eru .ln{border-bottom:.5pt solid #bcc5cf;height:7.5mm}",
+    ".reltec-fecho .assinaturas{margin-top:7mm}",
+    "td.base{color:#3e4c59}",
+    "table.t td.nat{white-space:nowrap}"
+  ].join("");
+  const molde = RelTecA4_css_({ titulo: o.titulo, numero: o.numero, revisao: o.revisao });
+  return docA4 + proprio + molde;
+}
+
+function PlanCMEDoc_empresa_() {
+  try {
+    const e = (typeof CadeiaFrioRel_CFCFG !== "undefined") ? CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE : null;
+    if (e && e.nome) return { nome: String(e.nome), cnpj: String(e.cnpj || "") };
+  } catch (err) { /* usa o nome do módulo */ }
+  return { nome: PLANCME_CFG.EMPRESA.NOME, cnpj: "" };
+}
+
+/** Logo leve (JPEG de 28 KB da SGO_DocA4) para a abertura; o PNG antigo fica de reserva. */
+function PlanCMEDoc_logo_() {
+  try { if (typeof SGO_DocA4_logoDataUri_ === "function") return SGO_DocA4_logoDataUri_(); } catch (e) { /* reserva */ }
+  return PlanCME_getLogoDataUri_();
+}
+
+/** Lista "A, B e C". */
+function PlanCMEDoc_juntar_(itens) {
+  const l = (itens || []).filter(Boolean);
+  if (l.length <= 1) return l.join("");
+  return l.slice(0, -1).join(", ") + " e " + l[l.length - 1];
 }
 
 /**
- * Monta o documento único de Planejamento Técnico, Fundamentação e
- * Orientação de E.R.U. — no padrão visual "folha A4" do Portal (ver
- * PlanCME_getCss_), com assinaturas reais. Substitui os antigos
- * montarHtmlDocumentoPlanejamento_/montarHtmlJustificativaERU_ (2
- * documentos separados), unificados em 2026-07-26 a pedido do usuário
- * ("quero que vc faça um documento só").
+ * Explicação do cálculo sem repetir o mesmo texto por receita: frases que só mudam no
+ * nome da receita viram uma frase só, com as receitas juntas.
+ */
+function PlanCMEDoc_consolidarDetalhes_(detalhes) {
+  const grupos = [];
+  const porChave = {};
+  (detalhes || []).forEach(function (t) {
+    const s = String(t || "").trim();
+    if (!s) return;
+    const m = /da receita "([^"]+)"/.exec(s);
+    const chave = m ? s.replace(m[0], "da receita \u0000") : s;
+    if (!(chave in porChave)) { porChave[chave] = grupos.length; grupos.push({ chave: chave, receitas: [] }); }
+    if (m) grupos[porChave[chave]].receitas.push(m[1]);
+  });
+  return grupos.map(function (g) {
+    if (!g.receitas.length) return g.chave;
+    if (g.receitas.length === 1) return g.chave.replace("\u0000", '"' + g.receitas[0] + '"');
+    const nomes = PlanCMEDoc_juntar_(g.receitas.map(function (r) { return '"' + r + '"'; }));
+    return g.chave.replace("da receita \u0000", "das receitas " + nomes)
+      .replace(/calculada com (\d+) repetições/, "calculada com $1 repetições por receita");
+  });
+}
+
+/** Referências normativas no mesmo formato curto usado no texto do documento. */
+function PlanCMEDoc_referencias_(normas) {
+  const vistos = {};
+  return (normas || []).map(function (n) {
+    let s = String(n || "").trim();
+    s = s.replace(/^Resolução da Diretoria Colegiada número 15 de 2012 da Agência Nacional de Vigilância Sanitária/i, "Anvisa — RDC nº 15/2012, boas práticas para o processamento de produtos para saúde");
+    s = s.replace(/^ABNT NBR 16328$/i, "ABNT NBR 16328:2024");
+    s = s.replace(/^ISO 17665$/i, "ISO 17665 — Esterilização de produtos para saúde: calor úmido");
+    s = s.replace(/ISO 15883 - Washer-Disinfectors/i, "ISO 15883 — Lavadoras desinfetadoras");
+    s = s.replace(/^Protocolos? (?:técnicos? )?do fabricante.*$/i, "Instruções de uso e protocolos técnicos do fabricante do equipamento");
+    s = s.replace(/\s+-\s+/g, " — ");
+    return s;
+  }).filter(function (s) {
+    if (!s || vistos[s]) return false;
+    vistos[s] = true;
+    return true;
+  });
+}
+
+/**
+ * Base técnica de cada quantidade (caminho sem a IA): fonte e natureza de cada número,
+ * tiradas das mesmas regras do cálculo (SGO_PlanCME_Calculo.js).
+ */
+function PlanCMEDoc_basesTecnicas_(tp, dados, resultado) {
+  const ultra = tp.indexOf("Ultrassônica") >= 0;
+  const termo = tp.indexOf("Termodesinfectora") >= 0;
+  const peroxido = tp.indexOf("Peróxido") >= 0, formaldeido = tp.indexOf("Formaldeído") >= 0, eto = tp.indexOf("Etileno") >= 0;
+  const vapor = !ultra && !termo && !peroxido && !formaldeido && !eto;
+  const s = dados.servicos || {};
+  const sensores = Number(resultado.sensores || 0);
+  const volume = PlanCME_formatarNumeroBr_(dados.equipamento && dados.equipamento.volume);
+  const limite = Number((PLANCME_CFG.CALCULO && PLANCME_CFG.CALCULO.LIMITE_VOLUME_SENSOR_AUTOCLAVE) || 54);
+  const temPrion = (dados.ciclos || []).some(function (c) { return /pr[ií]on/i.test(String(c)); });
+  const linhas = [];
+  if (ultra) {
+    linhas.push(["Pontos de verificação", "Quantidade definida pelo protocolo técnico do fabricante do equipamento (" + sensores + " pontos para " + volume + " L). O Anexo J da ABNT NBR 16328:2024, que trata de lavadoras ultrassônicas, é informativo e não fixa quantidade.", "Protocolo do fabricante"]);
+    linhas.push(["Teste de cavitação e indicador de limpeza", "Aplicados conforme o protocolo técnico do fabricante do equipamento: " + PlanCME_formatarNumeroBr_((PLANCME_CFG.CALCULO && PLANCME_CFG.CALCULO.LAVA_ULTR_PONTOS) || 9) + " pontos de cavitação por repetição e indicador de limpeza por ponto nas repetições com carga.", "Protocolo do fabricante"]);
+    return linhas;
+  }
+  if (termo) {
+    linhas.push(["Sensores de temperatura", "ABNT NBR 16328:2024, Anexo D: mínimo de 12 sensores, sem exceção por volume da câmara. Este planejamento prevê " + sensores + ".", "Normativa"]);
+    linhas.push(["Indicador de limpeza", "A ABNT NBR ISO 15883-1 comprova a termodesinfecção pelo valor A0 (letalidade térmica), sem indicador biológico. O indicador de limpeza (resíduo orgânico), um por sensor em cada repetição, verifica de forma quantitativa a eficácia da lavagem.", "Critério técnico da executante"]);
+    return linhas;
+  }
+  linhas.push(["Sensores de temperatura", "ABNT NBR 16328:2024: câmara de até " + limite + " L exige no mínimo 3 sensores; acima de " + limite + " L, no mínimo 12. Câmara de " + volume + " L: " + sensores + " sensores.", "Normativa"]);
+  if (s.qd) {
+    linhas.push(["Indicadores biológicos e integradores químicos", "ABNT NBR 16328:2024, Anexo C, item C.5: nas repetições com carga, 1 integrador químico e 1 indicador biológico por sensor, juntos, na mesma posição. O integrador verifica as condições físicas de exposição; o indicador biológico comprova a eficácia microbiológica." + (temPrion ? " Na receita de príons, o integrador convencional é substituído pelo específico para príons." : ""), "Normativa"]);
+    if (s.qo) linhas.push(["Ciclo em vazio (QO)", "No ciclo em vazio a norma não exige indicador biológico nem químico, apenas o mapeamento de temperatura pelos sensores.", "Normativa"]);
+  } else if (s.qo) {
+    linhas.push(["Indicadores na QO sem QD", "Sem Qualificação de Desempenho no escopo, cada repetição em vazio recebe 3 indicadores biológicos e 3 integradores químicos fixos (início, meio e fim da câmara), juntos em cada posição, para que a qualificação não seja emitida sem desafio microbiológico documentado. A quantidade não depende do número de sensores." + (temPrion ? " Na receita de príons, o integrador convencional é substituído pelo específico para príons." : ""), "Critério técnico da executante"]);
+  }
+  if (s.bowieDick && vapor) {
+    linhas.push(["Teste Bowie-Dick", "RDC nº 15/2012 (Anvisa), Art. 93: teste de rotina para esterilização a vapor, independente das etapas contratadas.", "Normativa"]);
+  }
+  return linhas;
+}
+
+/** Composição da base calculada por etapa e receita (Tabela 2). */
+function PlanCMEDoc_tabelaComposicao_(tp, dados, resultado) {
+  const ciclos = resultado.ciclosDetalhados || [];
+  const ultra = tp.indexOf("Ultrassônica") >= 0;
+  const termo = tp.indexOf("Termodesinfectora") >= 0;
+  const etapaNome = { QO: "Qualificação de Operação", QD: "Qualificação de Desempenho" };
+  let colunas, campos;
+  if (ultra) { colunas = ["Testes de cavitação", "Indicadores de limpeza"]; campos = ["baseCavitacao", "baseLimpeza"]; }
+  else if (termo) { colunas = ["Indicadores de limpeza"]; campos = ["baseLimpeza"]; }
+  else {
+    colunas = ["Indicadores biológicos", "Integradores químicos"]; campos = ["baseBI", "baseIQ"];
+    if (Number(resultado.baseIQPrion || 0) > 0) { colunas.push("Integradores p/ príons"); campos.push("baseIQPrion"); }
+  }
+  const soma = campos.map(function () { return 0; });
+  const linhas = [];
+  if (dados.servicos && dados.servicos.qi) {
+    linhas.push(["Qualificação de Instalação", "—", { t: "—", cls: "num" }].concat(campos.map(function () { return { t: "0", cls: "num" }; })));
+  }
+  ciclos.forEach(function (c) {
+    const vals = campos.map(function (k, i) { const v = Number(c[k] || 0); soma[i] += v; return { t: SGO_DocA4_num_(v, 0), cls: "num" }; });
+    linhas.push([etapaNome[c.etapa] || c.etapa, c.nome || "—", { t: SGO_DocA4_num_(Number(c.repeticoes || 0), 0), cls: "num" }].concat(vals));
+  });
+  if (!linhas.length) return "";
+  const cab = [{ t: "Etapa" }, { t: "Receita" }, { t: "Repetições", cls: "num" }].concat(colunas.map(function (c) { return { t: c, cls: "num" }; }));
+  const rodape = [{ t: "Base calculada" }, { t: "" }, { t: "" }].concat(soma.map(function (v) { return { t: SGO_DocA4_num_(v, 0), cls: "num" }; }));
+  return SGO_DocA4_tabela_(cab, linhas, { rodape: rodape, classe: "compacta" });
+}
+
+/** Frase com um exemplo da conta (quantidade por repetição × repetições) da Tabela 2. */
+function PlanCMEDoc_exemploCalculo_(tp, resultado) {
+  const sensores = Number(resultado.sensores || 0);
+  const ultra = tp.indexOf("Ultrassônica") >= 0, termo = tp.indexOf("Termodesinfectora") >= 0;
+  const etapa = { QO: "Qualificação de Operação", QD: "Qualificação de Desempenho" };
+  const c = (resultado.ciclosDetalhados || []).filter(function (x) { return Number(x.baseBI || x.baseLimpeza || x.baseCavitacao || 0) > 0; })[0];
+  let frase = "";
+  if (c) {
+    const r = Number(c.repeticoes || 0);
+    if (ultra && c.baseCavitacao) {
+      frase = "Cada valor é a quantidade por repetição multiplicada pelo número de repetições: na " + etapa[c.etapa] + " da receita “" + c.nome + "”, " +
+        SGO_DocA4_num_(c.baseCavitacao / r, 0) + " pontos de cavitação × " + r + " repetições = " + SGO_DocA4_num_(c.baseCavitacao, 0) + " testes.";
+    } else if ((ultra || termo) && c.baseLimpeza) {
+      frase = "Cada valor é a quantidade por repetição multiplicada pelo número de repetições: na " + etapa[c.etapa] + " da receita “" + c.nome + "”, " +
+        SGO_DocA4_num_(c.baseLimpeza / r, 0) + " indicadores de limpeza (1 por sensor) × " + r + " repetições = " + SGO_DocA4_num_(c.baseLimpeza, 0) + ".";
+    } else if (c.baseBI) {
+      const porRep = c.baseBI / r;
+      frase = "Cada valor é a quantidade por repetição multiplicada pelo número de repetições: na " + etapa[c.etapa] + " da receita “" + c.nome + "”, " +
+        (porRep === sensores && c.etapa === "QD" ? sensores + " sensores (1 indicador por sensor)" : SGO_DocA4_num_(porRep, 0) + " indicadores por repetição") +
+        " × " + r + " repetições = " + SGO_DocA4_num_(c.baseBI, 0) + " indicadores biológicos.";
+    }
+  }
+  if (Number(resultado.baseBD || 0) > 0) frase += (frase ? " " : "") + "O teste Bowie-Dick não depende das receitas e aparece só na Tabela 1.";
+  return frase;
+}
+
+/** Figura: base calculada × total com margem, por insumo (barras horizontais pareadas). */
+function PlanCMEDoc_graficoInsumos_(insumos, margem) {
+  const itens = (insumos || []).filter(function (i) { return Number(i.total || 0) > 0 || Number(i.base || 0) > 0; });
+  if (!itens.length) return "";
+  const W = 680, mL = 190, mR = 60, mT = 10, alt = 11, gapPar = 3, gapItem = 14, mB = 40;
+  const H = mT + mB + itens.length * (2 * alt + gapPar + gapItem) - gapItem;
+  let vmax = 0;
+  itens.forEach(function (i) { vmax = Math.max(vmax, Number(i.total || 0), Number(i.base || 0)); });
+  const passo = (typeof SGO_DocA4_passo_ === "function") ? SGO_DocA4_passo_(vmax * 1.05 || 1, 5) : Math.max(1, Math.ceil(vmax / 5));
+  const xmax = Math.ceil((vmax * 1.05 || 1) / passo) * passo;
+  const pw = W - mL - mR;
+  const X = function (v) { return mL + Math.max(0, v) / xmax * pw; };
+  const f = function (n) { return (Math.round(n * 10) / 10).toString(); };
+  const s = [];
+  s.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" font-family="Arial, Helvetica, sans-serif" font-size="10" role="img">');
+  for (let v = 0; v <= xmax + passo / 2; v += passo) {
+    s.push('<line x1="' + f(X(v)) + '" y1="' + mT + '" x2="' + f(X(v)) + '" y2="' + (H - mB) + '" stroke="#e4e8ed" stroke-width="0.8"/>');
+    s.push('<text x="' + f(X(v)) + '" y="' + (H - mB + 13) + '" text-anchor="middle" fill="#3e4c59">' + SGO_DocA4_num_(v, 0) + '</text>');
+  }
+  itens.forEach(function (it, k) {
+    const y0 = mT + k * (2 * alt + gapPar + gapItem);
+    const base = Number(it.base || 0), total = Number(it.total || 0);
+    s.push('<text x="' + (mL - 8) + '" y="' + f(y0 + alt + gapPar / 2 + 3.5) + '" text-anchor="end" fill="#1f2933">' + PlanCME_escaparHtml_(it.nome) + '</text>');
+    s.push('<rect x="' + mL + '" y="' + y0 + '" width="' + f(Math.max(1, X(base) - mL)) + '" height="' + alt + '" fill="#9fb3c8"/>');
+    s.push('<text x="' + f(X(base) + 4) + '" y="' + f(y0 + alt - 2) + '" fill="#3e4c59">' + SGO_DocA4_num_(base, 0) + '</text>');
+    s.push('<rect x="' + mL + '" y="' + (y0 + alt + gapPar) + '" width="' + f(Math.max(1, X(total) - mL)) + '" height="' + alt + '" fill="#1f5fa8"/>');
+    s.push('<text x="' + f(X(total) + 4) + '" y="' + f(y0 + 2 * alt + gapPar - 2) + '" fill="#1f2933" font-weight="700">' + SGO_DocA4_num_(total, 0) + '</text>');
+  });
+  s.push('<line x1="' + mL + '" y1="' + mT + '" x2="' + mL + '" y2="' + (H - mB) + '" stroke="#9aa5b1"/>');
+  const yl = H - 12;
+  s.push('<rect x="' + mL + '" y="' + (yl - 8) + '" width="10" height="9" fill="#9fb3c8"/><text x="' + (mL + 14) + '" y="' + yl + '" fill="#1f2933">Base calculada</text>');
+  s.push('<rect x="' + (mL + 120) + '" y="' + (yl - 8) + '" width="10" height="9" fill="#1f5fa8"/><text x="' + (mL + 134) + '" y="' + yl + '" fill="#1f2933">Total com margem de segurança (fator ' + PlanCME_formatarNumeroBr_(margem) + ')</text>');
+  s.push('<text x="' + (W - 4) + '" y="' + (H - mB + 13) + '" text-anchor="end" fill="#3e4c59">unidades</text>');
+  s.push('</svg>');
+  return s.join("");
+}
+
+/**
+ * Monta o documento único de Planejamento técnico, fundamentação e orientação de E.R.U.
+ * dados: { cliente, equipamento, servicos, ciclos, observacoes, numeroDocumento, resultado }
  */
 function PlanCME_montarDocumentoHtml_(dados) {
-  const logo = PlanCME_getLogoDataUri_();
+  dados = dados || {};
+  dados.cliente = dados.cliente || {};
+  dados.equipamento = dados.equipamento || {};
+  dados.servicos = dados.servicos || {};
   const resultado = dados.resultado || {};
   const textosIA = resultado.textosIA || {};
+  const temIA = !!(textosIA.introducao || textosIA.fundamentacaoQI || textosIA.fundamentacaoQO || textosIA.fundamentacaoQD);
   const tipoProcesso = PlanCME_obterTipoProcesso_(dados);
-  const normas = PlanCME_obterNormasPorProcesso_(tipoProcesso);
-  const dataAtual = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+  const normas = PlanCMEDoc_referencias_(PlanCME_obterNormasPorProcesso_(tipoProcesso));
+  const tz = Session.getScriptTimeZone();
+  const agora = new Date();
+  const emissao = Utilities.formatDate(agora, tz, "dd/MM/yyyy HH:mm");
   const isUltrassonica = tipoProcesso.includes("Ultrassônica");
   const checklistQI = resultado.checklistQI || [];
   const assinaturas = PLANCME_CFG.ASSINATURAS_PADRAO || [];
+  const numeroPlan = dados.numeroDocumento || ("PLC-" + Utilities.formatDate(agora, tz, "yyyyMMdd-HHmm"));
+  const tituloCurto = "Planejamento técnico do CME";
+  const empresa = PlanCMEDoc_empresa_();
+  const num = RelTecA4_numerador_();
+  const esc = PlanCME_escaparHtml_;
+  const s = dados.servicos;
+  const margem = Number(resultado.margem || PLANCME_CFG.CALCULO.MARGEM_SEGURANCA || 1.2);
+  const ciclos = (dados.ciclos || []).map(function (c) { return String(c || "").trim(); }).filter(Boolean);
+  let n = 0;
+  const h2 = function (titulo) { n++; return '<h2>' + n + '. ' + esc(titulo) + '</h2>'; };
+
+  const escopo = [];
+  if (s.qi) escopo.push("Qualificação de Instalação (QI)");
+  if (s.qo) escopo.push("Qualificação de Operação (QO)");
+  if (s.qd) escopo.push("Qualificação de Desempenho (QD)");
+  if (s.bowieDick) escopo.push("Teste Bowie-Dick");
 
   const html = [];
-  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
-  html.push('<title>Planejamento Técnico de Qualificação — ' + PlanCME_escaparHtml_(dados.cliente.razaoSocial || 'Cliente') + '</title>');
-  const numeroPlan = dados.numeroDocumento || ('PLC-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmm'));
-  html.push('<style>' + PlanCME_getCss_() + SGO_DocA4_css_() + RelTecA4_css_({ titulo: 'Planejamento Técnico de Qualificação — ' + (dados.cliente.razaoSocial || ''), numero: numeroPlan, revisao: '00' }) + '</style></head><body>');
+  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
+  // Identificador do arquivo salvo (lido por PlanCME_apiSalvarDocumento; não aparece na folha).
+  html.push('<meta name="sgo-identificador" content="' + esc([dados.equipamento.tipo, dados.equipamento.serie || dados.equipamento.modelo].filter(Boolean).join(" ")) + '">');
+  html.push('<title>Planejamento técnico ' + esc(numeroPlan) + ' — ' + esc(dados.cliente.razaoSocial || "Cliente") + '</title>');
+  html.push('<style>' + PlanCME_getCss_({ titulo: tituloCurto, numero: numeroPlan, revisao: "00" }) + '</style></head><body>');
+  html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
+  html.push('<main class="folha">');
 
-  html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
-  html.push('<div class="folha">');
+  html.push('<header class="abertura"><img src="' + PlanCMEDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numeroPlan) + ' · Revisão 00</div></header>');
+  html.push('<h1>Planejamento técnico de qualificação e quantitativo de insumos</h1>');
+  html.push('<p class="subtitulo">' + esc(tipoProcesso) + (dados.cliente.razaoSocial ? ' — ' + esc(dados.cliente.razaoSocial) : '') + '</p>');
+  html.push(SGO_DocA4_tabelaIdent_([["Emissão", emissao], ["Revisão", "00"]], "ficha"));
+  html.push('<!--sgo-sumario-->'); // sumário só se passar de 3 páginas (PlanCMEDoc_sumarioSeLongo_)
 
-  html.push('<div class="topo">');
-  if (logo) {
-    html.push('<img class="logo-topo" src="' + logo + '" alt="Metrolabs">');
-  } else {
-    html.push('<div></div>');
-  }
-  html.push('<div class="titulo-doc"><h1>PLANEJAMENTO TÉCNICO DE QUALIFICAÇÃO E QUANTITATIVO DE INSUMOS</h1><small>Documento nº ' + PlanCME_escaparHtml_(numeroPlan) + ' · Revisão 00 · emitido em ' + PlanCME_escaparHtml_(dataAtual) + '</small></div>');
-  html.push('</div>');
+  // 1. Identificação (uma tabela só: cliente, equipamento e executante)
+  html.push('<section>' + h2("Identificação"));
+  html.push(SGO_DocA4_tabelaIdent_([
+    ["Cliente", dados.cliente.razaoSocial || "—", { largo: true }],
+    ["CNPJ", dados.cliente.cnpj || "—"], ["Equipamento", dados.equipamento.tipo || "—"],
+    ["Endereço", PlanCME_montarEnderecoDoc_(dados.cliente) || "—", { largo: true }],
+    ["Tipo de processo", tipoProcesso], ["Marca / modelo", (dados.equipamento.marca || "—") + " / " + (dados.equipamento.modelo || "—")],
+    ["Número de série", dados.equipamento.serie || "—"], ["Volume da câmara", dados.equipamento.volume ? PlanCME_formatarNumeroBr_(dados.equipamento.volume) + " L" : "—"],
+    ["Bomba de vácuo", dados.equipamento.bombaVacuo ? "Sim" : "Não"], ["Receitas", ciclos.length ? ciclos.join("; ") : "—"],
+    ["Empresa executante", empresa.nome + (empresa.cnpj ? " — CNPJ " + empresa.cnpj : ""), { largo: true }],
+    ["Responsável técnico", PLANCME_CFG.EMPRESA.RESPONSAVEL_TECNICO, { largo: true }]
+  ]));
+  html.push('</section>');
 
-  html.push('<table class="dados">');
-  html.push('<tr><td class="rotulo">Cliente</td><td>' + PlanCME_escaparHtml_(dados.cliente.razaoSocial || '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">CNPJ</td><td>' + PlanCME_escaparHtml_(dados.cliente.cnpj || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Endereço</td><td>' + PlanCME_escaparHtml_(PlanCME_montarEnderecoDoc_(dados.cliente) || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Equipamento</td><td>' + PlanCME_escaparHtml_(dados.equipamento.tipo || '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Tipo de Processo</td><td>' + PlanCME_escaparHtml_(tipoProcesso) + '</td></tr>');
-  html.push('<tr><td class="rotulo">Marca / Modelo</td><td>' + PlanCME_escaparHtml_((dados.equipamento.marca || '—') + ' / ' + (dados.equipamento.modelo || '—')) + '</td></tr>');
-  html.push('<tr><td class="rotulo">Número de Série</td><td>' + PlanCME_escaparHtml_(dados.equipamento.serie || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Volume da Câmara</td><td>' + PlanCME_escaparHtml_(PlanCME_formatarNumeroBr_(dados.equipamento.volume)) + ' litros</td></tr>');
-  html.push('<tr><td class="rotulo">Bomba de Vácuo</td><td>' + (dados.equipamento.bombaVacuo ? 'Sim' : 'Não') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Empresa executante</td><td>' + PlanCME_escaparHtml_(PLANCME_CFG.EMPRESA.NOME) + ' — ' + PlanCME_escaparHtml_(PLANCME_CFG.EMPRESA.RESPONSAVEL_TECNICO) + '</td></tr>');
-  html.push('</table>');
-
+  // 2. Objetivo e escopo
+  html.push('<section>' + h2("Objetivo e escopo"));
   if (textosIA.introducao) {
-    html.push('<div class="secao"><h2>Introdução</h2>');
-    html.push(PlanCMEDoc_paragrafosHtml_(textosIA.introducao));
-    html.push('</div>');
-  }
-
-  html.push('<div class="secao"><h2>Escopo Contratado</h2>');
-  html.push('<ul>');
-  if (dados.servicos.qi) html.push('<li><strong>Qualificação de Instalação</strong></li>');
-  if (dados.servicos.qo) html.push('<li><strong>Qualificação de Operação</strong></li>');
-  if (dados.servicos.qd) html.push('<li><strong>Qualificação de Desempenho</strong></li>');
-  if (dados.servicos.bowieDick) html.push('<li><strong>Teste Bowie-Dick</strong></li>');
-  html.push('</ul>');
-  html.push('<p><strong>Receitas informadas:</strong></p>');
-  if (dados.ciclos && dados.ciclos.length) {
-    html.push('<ul>');
-    dados.ciclos.forEach(function(ciclo) { html.push('<li>' + PlanCME_escaparHtml_(String(ciclo)) + '</li>'); });
-    html.push('</ul>');
+    html.push(PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.introducao)));
   } else {
-    html.push('<p>Nenhuma receita informada.</p>');
+    html.push('<p>Este documento dimensiona os insumos necessários à qualificação do equipamento identificado na seção 1 e registra a base técnica de cada quantidade. Não avalia se o equipamento está apto ao uso: o resultado da qualificação constará do relatório próprio, emitido após a execução dos ensaios.</p>');
   }
-  html.push('</div>');
+  html.push('<p>Escopo contratado: ' + esc(PlanCMEDoc_juntar_(escopo) || "não informado") + '.' +
+    (ciclos.length ? ' Receitas a qualificar: ' + esc(PlanCMEDoc_juntar_(ciclos.map(function (c) { return "“" + c + "”"; }))) + '.' : '') + '</p>');
+  html.push('</section>');
 
-  html.push('<div class="secao"><h2>Quantitativo de Insumos</h2>');
-  html.push('<table class="tabela-itens"><thead><tr><th>Item</th><th>Base Calculada</th><th>Total com Margem de Segurança</th></tr></thead><tbody>');
-  (resultado.insumos || []).forEach(function(item) {
-    html.push('<tr><td>' + PlanCME_escaparHtml_(item.nome || '') + '</td><td>' + PlanCME_escaparHtml_(String(item.base || 0)) + '</td><td><strong>' + PlanCME_escaparHtml_(String(item.total || 0)) + '</strong></td></tr>');
-  });
-  html.push('</tbody></table>');
-  html.push('<div class="destaque"><div><strong>Quantidade de sensores prevista:</strong> ' + PlanCME_escaparHtml_(String(resultado.sensores || 0)) + '</div>');
-  html.push('<div><strong>Margem de segurança aplicada:</strong> ' + PlanCME_escaparHtml_(PlanCME_descreverMargem_(resultado.margem || PLANCME_CFG.CALCULO.MARGEM_SEGURANCA)) + '</div></div>');
-  html.push('</div>');
+  // 3. Quantitativo de insumos
+  const insumos = (resultado.insumos || []);
+  const comConsumo = insumos.filter(function (i) { return Number(i.base || 0) > 0 || Number(i.total || 0) > 0; });
+  const semConsumo = insumos.filter(function (i) { return !(Number(i.base || 0) > 0 || Number(i.total || 0) > 0); });
+  const nTab1 = num.proximaTabela();
+  const temGrafico = comConsumo.length > 0;
+  html.push('<section>' + h2("Quantitativo de insumos"));
+  html.push('<p>A Tabela ' + nTab1 + ' apresenta, para cada insumo, a base calculada e o total a providenciar, com margem de segurança de ' +
+    esc(PlanCME_formatarNumeroBr_(Math.round((margem - 1) * 1000) / 10)) + ' % sobre a base (fator ' + esc(PlanCME_formatarNumeroBr_(margem)) + ', arredondado para cima)' +
+    (temGrafico ? '; a Figura ' + num.proximaFigura() + ' compara os dois valores' : '') + '. A quantidade de sensores de temperatura prevista é de ' + esc(String(resultado.sensores || 0)) + '.' +
+    (semConsumo.length ? ' Sem consumo neste escopo: ' + esc(PlanCMEDoc_juntar_(semConsumo.map(function (i) { return String(i.nome || "").toLowerCase(); }))) + '.' : '') + '</p>');
+  html.push(num.tabela("Quantitativo de insumos"));
+  html.push(SGO_DocA4_tabela_([{ t: "Insumo" }, { t: "Base calculada", cls: "num" }, { t: "Total com margem de segurança", cls: "num" }],
+    (comConsumo.length ? comConsumo : insumos).map(function (i) { return [i.nome || "—", SGO_DocA4_num_(Number(i.base || 0), 0), { html: "<b>" + SGO_DocA4_num_(Number(i.total || 0), 0) + "</b>" }]; })));
+  if (temGrafico) html.push(num.figura(PlanCMEDoc_graficoInsumos_(comConsumo, margem), "Base calculada e total com margem de segurança, por insumo"));
 
-  if (textosIA.fundamentacaoQI || textosIA.fundamentacaoQO || textosIA.fundamentacaoQD) {
-    html.push('<div class="secao secao-fundamentacao"><h2>Fundamentação Técnica do Escopo</h2>');
-    if (dados.servicos.qi && textosIA.fundamentacaoQI) {
-      html.push('<div class="subsecao"><h3>Qualificação de Instalação</h3>');
-      html.push(PlanCMEDoc_paragrafosHtml_(textosIA.fundamentacaoQI));
-      html.push('</div>');
+  const composicao = PlanCMEDoc_tabelaComposicao_(tipoProcesso, dados, resultado);
+  // A composição por etapa e receita substitui a antiga lista "Explicação técnica do resultado",
+  // que repetia o mesmo texto para cada receita e a base normativa da seção seguinte.
+  if (composicao) {
+    const nTab2 = num.proximaTabela();
+    html.push('<h3>' + n + '.1 Composição do cálculo</h3>');
+    html.push('<p>A Tabela ' + nTab2 + ' detalha a base calculada por etapa e receita; a soma de cada coluna corresponde à base da Tabela ' + nTab1 + '. ' +
+      esc(PlanCMEDoc_exemploCalculo_(tipoProcesso, resultado)) + '</p>');
+    html.push(num.tabela("Composição da base calculada por etapa e receita"));
+    html.push(composicao);
+  }
+  html.push('</section>');
+
+  // 4. Fundamentação técnica: prosa da IA ou, sem ela, a tabela de bases
+  html.push('<section>' + h2("Fundamentação técnica"));
+  if (temIA) {
+    let k = 0;
+    if (s.qi && textosIA.fundamentacaoQI) { k++; html.push('<h3>' + n + '.' + k + ' Qualificação de Instalação</h3>' + PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.fundamentacaoQI))); }
+    if (s.qo && textosIA.fundamentacaoQO) { k++; html.push('<h3>' + n + '.' + k + ' Qualificação de Operação</h3>' + PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.fundamentacaoQO))); }
+    if (s.qd && textosIA.fundamentacaoQD) { k++; html.push('<h3>' + n + '.' + k + ' Qualificação de Desempenho</h3>' + PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.fundamentacaoQD))); }
+    if (textosIA.conclusao) { k++; html.push('<h3>' + n + '.' + k + ' Conclusão da fundamentação</h3>' + PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.conclusao))); }
+  } else {
+    const bases = PlanCMEDoc_basesTecnicas_(tipoProcesso, dados, resultado);
+    if (bases.length) {
+      const nTab = num.proximaTabela();
+      html.push('<p>A Tabela ' + nTab + ' indica a fonte de cada quantidade deste planejamento e a natureza da exigência: normativa, protocolo do fabricante do equipamento ou critério técnico da empresa executante.</p>');
+      html.push(num.tabela("Base técnica das quantidades"));
+      html.push(SGO_DocA4_tabela_([{ t: "Item" }, { t: "Base" }, { t: "Natureza" }], bases.map(function (b) { return [b[0], b[1], { t: b[2], cls: "nat" }]; })));
     }
-    if (dados.servicos.qo && textosIA.fundamentacaoQO) {
-      html.push('<div class="subsecao"><h3>Qualificação de Operação</h3>');
-      html.push(PlanCMEDoc_paragrafosHtml_(textosIA.fundamentacaoQO));
-      html.push('</div>');
-    }
-    if (dados.servicos.qd && textosIA.fundamentacaoQD) {
-      html.push('<div class="subsecao"><h3>Qualificação de Desempenho</h3>');
-      html.push(PlanCMEDoc_paragrafosHtml_(textosIA.fundamentacaoQD));
-      html.push('</div>');
-    }
-    html.push('</div>');
   }
-
-  if (isUltrassonica && PLANCME_CFG.TEXTOS.LAVA_ULTR_OBS) {
-    html.push('<div class="destaque alerta"><h3>Observação Técnica do Método (Metrolabs)</h3><p>' + PlanCME_escaparHtml_(PLANCME_CFG.TEXTOS.LAVA_ULTR_OBS) + '</p></div>');
+  if (isUltrassonica && PLANCME_CFG.TEXTOS && PLANCME_CFG.TEXTOS.LAVA_ULTR_OBS) {
+    html.push('<p class="nota"><b>Observação técnica do método:</b> ' + esc(PLANCME_CFG.TEXTOS.LAVA_ULTR_OBS) + '</p>');
   }
-
-  if (textosIA.conclusao) {
-    html.push('<div class="secao"><h2>Conclusão da Fundamentação</h2>');
-    html.push(PlanCMEDoc_paragrafosHtml_(textosIA.conclusao));
-    html.push('</div>');
-  }
-
-  if (resultado.detalhes && resultado.detalhes.length) {
-    html.push('<div class="secao"><h2>Explicação Técnica do Resultado</h2><ul>');
-    resultado.detalhes.forEach(function(texto) { html.push('<li>' + PlanCME_escaparHtml_(texto) + '</li>'); });
-    html.push('</ul></div>');
-  }
+  html.push('</section>');
 
   if (checklistQI.length) {
-    html.push('<div class="secao"><h2>Checklist de Inspeção para Qualificação de Instalação</h2><ul>');
-    checklistQI.forEach(function(item) { html.push('<li>' + PlanCME_escaparHtml_(item) + '</li>'); });
-    html.push('</ul></div>');
+    html.push('<section>' + h2("Checklist de inspeção da Qualificação de Instalação") + SGO_DocA4_lista_(checklistQI) + '</section>');
   }
 
   if (dados.observacoes) {
-    html.push('<div class="secao"><h2>Observações Adicionais</h2><p>' + PlanCME_escaparHtml_(dados.observacoes).replace(/\n/g, '<br>') + '</p></div>');
+    html.push('<section>' + h2("Observações") + PlanCMEDoc_paragrafosHtml_(dados.observacoes) + '</section>');
   }
 
-  html.push('<div class="secao"><h2>Referências Técnicas e Regulatórias</h2><ul>');
-  normas.forEach(function(norma) { html.push('<li>' + PlanCME_escaparHtml_(norma) + '</li>'); });
-  html.push('</ul></div>');
+  html.push('<section>' + h2("Referências normativas") + SGO_DocA4_lista_(normas) + '</section>');
 
-  html.push('<div class="secao"><h2>Orientação Técnica e Especificação de Requisitos do Usuário (E.R.U.)</h2>');
-  if (textosIA.orientacaoERU) {
-    html.push(PlanCMEDoc_paragrafosHtml_(textosIA.orientacaoERU));
-  } else {
-    html.push('<p>' + PlanCME_escaparHtml_(PLANCME_CFG.TEXTOS.ERU) + '</p>');
-  }
-  html.push('<p>Quando a instituição optar por alterar o número de ciclos, sensores, indicadores, receitas, testes ou qualquer outra premissa do planejamento original, deverá formalizar essa decisão por meio de documento assinado pelo responsável técnico ou setor competente.</p>');
-  html.push('<h3>Informações que devem constar na E.R.U.</h3><ul>');
-  html.push('<li>Modelo e número de série do equipamento.</li>');
-  html.push('<li>Receitas a serem qualificadas.</li>');
-  html.push('<li>Quantidade de ciclos, sensores e indicadores.</li>');
-  html.push('<li>Justificativa técnica para o ajuste pretendido.</li>');
-  html.push('<li>Assinatura e identificação do responsável.</li>');
-  html.push('</ul>');
-  html.push('<div class="destaque campo-eru"><p><strong>Descrever abaixo a Especificação de Requisitos do Usuário:</strong></p></div>');
-  html.push('</div>');
+  // E.R.U.: um texto só (o da IA ou o padrão), sem repetir o mesmo pedido em outro parágrafo
+  html.push('<section>' + h2("Especificação de Requisitos do Usuário (E.R.U.)"));
+  html.push(textosIA.orientacaoERU ? PlanCMEDoc_paragrafosHtml_(PlanCMEDoc_textoIA_(textosIA.orientacaoERU)) : PlanCMEDoc_paragrafosHtml_(PLANCME_CFG.TEXTOS.ERU));
+  html.push('<p>A E.R.U. deve conter, no mínimo:</p>');
+  html.push(SGO_DocA4_lista_(["Modelo e número de série do equipamento.", "Receitas a serem qualificadas.", "Quantidade de ciclos, sensores e indicadores.", "Justificativa técnica para o ajuste pretendido.", "Assinatura e identificação do responsável."]));
+  html.push('<div class="campo-eru"><p>Especificação de Requisitos do Usuário (preenchimento pela instituição):</p>' + new Array(7).join('<div class="ln"></div>') + '</div>');
+  html.push('</section>');
 
-  html.push('<div class="rodape-final">');
-  html.push('<div class="assinaturas">');
-  assinaturas.forEach(function(a) {
-    html.push('<div class="assinatura-item">');
-    if (a.imagemSvg) html.push(a.imagemSvg);
-    html.push('<div class="assinatura-linha"><strong>' + PlanCME_escaparHtml_(a.nome) + '</strong><br>' + PlanCME_escaparHtml_(a.cargo) + '<br>' + PlanCME_escaparHtml_(a.registro) + '</div>');
-    html.push('</div>');
-  });
-  html.push('</div>');
+  // Responsabilidade técnica: parágrafo e assinaturas juntos
+  html.push('<section class="reltec-fecho">' + h2("Responsabilidade técnica"));
+  html.push('<p>Este documento registra o planejamento técnico, a fundamentação do quantitativo de insumos e a orientação de E.R.U. para o escopo descrito na seção 2. Qualquer alteração de premissa segue o processo de E.R.U. da seção ' + (n - 1) + '.</p>');
+  html.push(SGO_DocA4_assinaturas_(assinaturas));
+  html.push('</section>');
 
-  html.push('<div class="rodape-aviso">Este documento é o registro completo do planejamento técnico, da fundamentação do quantitativo de insumos e da orientação de Especificação de Requisitos do Usuário (E.R.U.) para o escopo de qualificação descrito acima. Qualquer alteração de premissa deste planejamento deve seguir o processo de E.R.U. descrito neste documento.</div>');
-  html.push('</div>');
-
-  html.push('</div>');
-  html.push('</body></html>');
-  return html.join('\n');
+  html.push('</main></body></html>');
+  return html.join("\n");
 }
 
 /**
- * Monta o documento único e retorna só o HTML (sem tocar Drive) — mesmo
- * padrão de DeclExec_apiMontarDocumentoFinal (Portal): o frontend abre o
- * HTML numa nova aba e só salva no Drive quando o usuário clicar
- * separadamente em "Salvar no Drive" (ver PlanCME_apiSalvarDocumento).
+ * Monta o documento e devolve o HTML (sem gravar). Com sumário, os números de página
+ * já vêm preenchidos (duas passagens pelo PDF), para a tela mostrar o mesmo que será salvo.
  */
 function PlanCME_apiMontarDocumentoFinal(dados) {
   try {
-    const html = PlanCME_montarDocumentoHtml_(dados);
+    const html = PlanCMEDoc_sumarioSeLongo_(PlanCME_montarDocumentoHtml_(dados), "Planejamento técnico");
     return { ok: true, html: html };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
@@ -252,10 +410,9 @@ function PlanCME_apiMontarDocumentoFinal(dados) {
 }
 
 /**
- * Converte o HTML já gerado (e já aberto/conferido pelo usuário) em PDF e
- * salva na pasta de PDFs do Drive, registrando o documento na planilha.
- * Só roda quando o usuário clica em "Salvar no Drive" — nunca durante
- * PlanCME_apiMontarDocumentoFinal.
+ * Grava HTML + PDF do documento já aberto na pasta do cliente (subpasta = CNPJ com
+ * 14 dígitos; sem CNPJ, nome do cliente) dentro da pasta do módulo e registra na planilha.
+ * Nome: "Planejamento tecnico CME - <número> - <equipamento> - <aaaa-MM-dd HHmm>".
  */
 function PlanCME_apiSalvarDocumento(payload) {
   try {
@@ -266,42 +423,30 @@ function PlanCME_apiSalvarDocumento(payload) {
     const props = PropertiesService.getScriptProperties();
     let pastaId = props.getProperty("PLANCME_PASTA_PDF_ID");
     if (!pastaId) {
-      // Auto-provisiona (mesmo padrão de PlanCME_getDB_) — sem isso, esta
-      // função ficava dependendo da ORDEM de chamada (só funcionava porque
-      // PlanCME_salvarPlanejamento, chamada antes no fluxo de
-      // tplPlanCME_gerarDocumento, aciona o setup como efeito colateral).
-      // Frágil: qualquer mudança de fluxo futura reintroduziria o erro
-      // "não configurado". Auto-suficiente agora, independente de quem
-      // chamou antes.
+      // Auto-provisiona (mesmo padrão de PlanCME_getDB_): não depende da ordem de chamada.
       PlanCME_setupModulo();
       pastaId = props.getProperty("PLANCME_PASTA_PDF_ID");
     }
 
-    // pasta do cliente (CNPJ ou nome) dentro da pasta do módulo; data no nome para não sobrescrever emissões anteriores
     const raiz = DriveApp.getFolderById(pastaId);
     const pasta = (payload.cnpj || payload.cliente) ? SGO_DocSalvar_pastaClienteEm_(raiz, payload.cnpj, payload.cliente) : raiz;
-    const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
+    const tz = Session.getScriptTimeZone();
+    const numero = (/Nº\s*(PLC-[0-9-]+)/.exec(html) || [])[1] || payload.numeroDocumento || ("PLC-" + Utilities.formatDate(new Date(), tz, "yyyyMMdd-HHmm"));
+    const meta = /<meta name="sgo-identificador" content="([^"]*)">/.exec(html);
+    const ident = String((meta && meta[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'")) || payload.cliente || "Equipamento").trim();
+    const nomeBase = "Planejamento tecnico CME - " + numero + " - " + ident.substring(0, 60) + " - " + Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmm");
 
-    const nomeCliente = PlanCME_sanitizarNomeArquivo_(payload.cliente || "CLIENTE");
-    const nomeArquivo = "PLANEJAMENTO_CME_" + nomeCliente + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HHmm") + ".pdf";
-    blob.setName(nomeArquivo);
-
-    const arquivo = pasta.createFile(blob);
-    // Liberação cirúrgica do arquivo individual (mesmo padrão do Portal SGO+
-    // CNPJ/DB, ver SGO_Documentos.js) — sem isso o link enviado ao cliente
-    // por WhatsApp/e-mail dá "Acesso negado", porque a pasta em si continua
-    // privada. Achado real 2026-07-28: usuário testou o link do WhatsApp e
-    // o cliente não conseguia abrir o documento.
-    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, { compartilhar: true });
+    const arquivo = DriveApp.getFileById(salvo.pdfId);
 
     PlanCME_registrarDocumento_({
       cliente: { razaoSocial: payload.cliente || "" },
       planejamentoId: payload.planejamentoId || ""
     }, arquivo, "PLANEJAMENTO_TECNICO");
 
-    return { ok: true, url: arquivo.getUrl(), fileName: arquivo.getName() };
+    return { ok: true, url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
   } catch (e) {
-    return { ok: false, mensagem: "Erro ao salvar o documento no Drive: " + e.message };
+    return { ok: false, mensagem: "Erro ao salvar o documento na pasta do cliente: " + e.message };
   }
 }
 
@@ -319,6 +464,28 @@ function PlanCME_registrarDocumento_(dados, arquivo, tipoDocumento) {
     arquivo.getUrl(),
     dados.planejamentoId || ""
   ]);
+}
+
+
+/**
+ * Sumário só quando o documento passa de 3 páginas (padrão A4, item 3): converte uma vez
+ * para contar as folhas; se passar, põe o sumário no lugar do marcador e pagina (duas
+ * passagens). Sem conversor de PDF (ou se falhar), sai sem sumário. Nunca lança.
+ */
+function PlanCMEDoc_sumarioSeLongo_(html, nome) {
+  const marca = '<!--sgo-sumario-->';
+  const h = String(html || '');
+  if (h.indexOf(marca) < 0) return h;
+  try {
+    if (typeof SGO_DocA4_pdfDeHtml_ === 'function' && typeof SGO_DocA4_paginasDoPdf_ === 'function') {
+      const total = (SGO_DocA4_paginasDoPdf_(SGO_DocA4_pdfDeHtml_(h.replace(marca, ''), nome)) || {})._total || 0;
+      if (total > 3) {
+        const pag = RelTecA4_paginar_(h.replace(marca, SGO_DocA4_marcadorSumario_()), nome);
+        if (pag && pag.html) return pag.html;
+      }
+    }
+  } catch (e) { /* segue sem sumário */ }
+  return h.replace(marca, '');
 }
 
 /** Valores antigos com marca ("Lavadora Ultrassônica (…)") viram o nome genérico. */

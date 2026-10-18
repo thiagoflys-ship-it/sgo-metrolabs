@@ -1,5 +1,12 @@
 # Manual do Operador — Módulo Planejamento CME
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- O documento tem seções numeradas, o quantitativo na Tabela 1 com um gráfico (Figura 1) da base calculada e do total com a margem, e a composição do cálculo por etapa e receita na Tabela 2 (a soma das colunas é a base da Tabela 1). A antiga lista "Explicação técnica do resultado", que repetia o mesmo texto para cada receita, saiu.
+- Sem a IA, a fundamentação sai na Tabela 3 ("Base técnica das quantidades"), com a fonte e a natureza de cada número (normativa, protocolo do fabricante ou critério da executante). Com a IA, a fundamentação em texto entra no lugar dessa tabela.
+- Referências normativas no mesmo formato do texto (RDC nº 15/2012, ABNT NBR 16328:2024...); o parágrafo da E.R.U. não se repete mais; o campo da E.R.U. tem linhas para preenchimento; as assinaturas ficam junto do parágrafo de responsabilidade técnica. Sumário com páginas quando o documento passa de 3 páginas.
+- Arquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome "Planejamento tecnico CME - PLC-aaaammdd-hhmm - <equipamento e série> - aaaa-mm-dd hhmm".
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

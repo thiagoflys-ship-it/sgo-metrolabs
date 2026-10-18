@@ -869,7 +869,8 @@ function tplNR13_onFotosSelecionadas() {
       var idx = nr13State.fotos.length - 1;
       return tplNR13_chamarApi('apiUploadFoto', {
         base64: lido.base64, mimeType: lido.mimeType, nomeArquivo: file.name,
-        nomeCliente: nr13State.cliente ? nr13State.cliente.RAZAO_SOCIAL : ''
+        nomeCliente: nr13State.cliente ? nr13State.cliente.RAZAO_SOCIAL : '',
+        cnpj: nr13State.cliente ? (nr13State.cliente.CNPJ || '') : ''
       }).then(function(res) {
         nr13State.fotos[idx].fileId = res.fileId;
         nr13State.fotos[idx].link = res.link;

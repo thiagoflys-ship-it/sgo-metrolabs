@@ -1,5 +1,11 @@
 # Manual do Operador — Módulo Cronograma de Execução
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- O documento tem seções numeradas, a lista de equipamentos com a linha de total (Tabela 1), os grupos com início, término e dias úteis (Tabela 2) e um calendário dos grupos (Figura 1), com sábados, domingos e feriados nacionais sombreados.
+- As considerações finais e as assinaturas ficam juntas na mesma página; a nota de rodapé que repetia que as datas são previsões saiu.
+- Arquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome "Cronograma de execucao - CRN-aaaammdd-hhmm - <cliente> - aaaa-mm-dd hhmm".
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

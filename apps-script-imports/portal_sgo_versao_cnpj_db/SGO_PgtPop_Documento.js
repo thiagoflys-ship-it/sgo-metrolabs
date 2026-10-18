@@ -1,15 +1,49 @@
 /**
- * Converte o corpo gerado pela IA (texto com marcadores "## Título ##"
- * livres) em blocos HTML .secao/h2/p, um por seção.
+ * PGT (Plano de Gerenciamento de Tecnologias em Saúde) e POP — documento A4.
+ * Padrão de 18/10/2026 (docs/DOCUMENTOS_PADRAO_A4_20261018.md): moldura SGO_RelTecA4
+ * (cabeçalho e rodapé corridos, "Página X de Y"), tipografia e tabelas da SGO_DocA4.
+ * PGT: capa (documento longo, sem veredito), sumário com páginas, seções numeradas e
+ * subseções ("Requisitos específicos" → 6.1, 6.2...). POP: abertura com título e ficha,
+ * sumário só quando passa de 3 páginas. Os dois: controle de revisões (Tabela 1), figuras
+ * numeradas e aprovação com as quatro assinaturas na mesma folha.
  */
-function PgtPopDoc_corpoParaHtml_(corpo) {
-  const linhas = String(corpo || '').split('\n');
+
+/** Título vindo da IA: sem numeração própria, sem caixa alta e sem "Title Case". */
+function PgtPopDoc_tituloSecao_(t) {
+  let s = String(t || '').replace(/^\s*(?:\d+(?:\.\d+)*[.)]?|[IVX]+[.)])\s+/, '').replace(/[.:\s]+$/, '').trim();
+  const siglas = /^(PGTS|PGT|POP|POPs|RDC|ABNT|NBR|ISO|IEC|EPI|EPIs|EPC|EPCs|MP|CME|UTI|ANVISA|Anvisa|SUS|CNES|EAS|RH|TI)$/;
+  const palavras = s.split(/\s+/);
+  const letras = s.replace(/[^A-Za-zÀ-ÿ]/g, '');
+  const caixaAlta = letras.length > 3 && letras === letras.toUpperCase();
+  const longas = palavras.filter(function (p) { return p.replace(/[^A-Za-zÀ-ÿ]/g, '').length >= 4; });
+  const capitalizadas = longas.filter(function (p) { return /^[A-ZÀ-Ý]/.test(p); });
+  const titleCase = longas.length >= 2 && capitalizadas.length / longas.length >= 0.6;
+  if (caixaAlta || titleCase) {
+    s = palavras.map(function (p, i) {
+      const limpa = p.replace(/[^A-Za-zÀ-ÿ]/g, '');
+      if (siglas.test(limpa) || (!caixaAlta && limpa.length >= 2 && limpa === limpa.toUpperCase())) return p;
+      const min = p.toLowerCase();
+      return i === 0 ? min.charAt(0).toUpperCase() + min.slice(1) : min;
+    }).join(' ');
+    // depois de dois-pontos, a parte seguinte começa com maiúscula (vira subtítulo)
+    s = s.replace(/:\s*([a-zà-ÿ])/, function (m, c) { return ': ' + c.toUpperCase(); });
+  }
+  return s;
+}
+
+/**
+ * Corpo gerado pela IA (texto com marcadores "## Título ##") → seções
+ * [{ titulo, paragrafos[] }]. Títulos repetidos entre os blocos do PGT viram uma seção só.
+ */
+function PgtPopDoc_secoes_(corpo) {
+  const linhas = String(corpo || '').replace(/\r\n/g, '\n').split('\n');
   const secoes = [];
+  const porTitulo = {};
   let atual = null;
   let paragrafoAtual = [];
 
   function flushParagrafo() {
-    const texto = paragrafoAtual.join(' ').trim();
+    const texto = paragrafoAtual.join(' ').replace(/\s+/g, ' ').trim();
     if (texto) {
       if (!atual) { atual = { titulo: '', paragrafos: [] }; secoes.push(atual); }
       atual.paragrafos.push(texto);
@@ -22,14 +56,16 @@ function PgtPopDoc_corpoParaHtml_(corpo) {
     const m = linha.match(/^##\s*(.+?)\s*##$/);
     if (m) {
       flushParagrafo();
-      atual = { titulo: m[1], paragrafos: [] };
+      const titulo = PgtPopDoc_tituloSecao_(m[1]);
+      const chave = titulo.toLowerCase();
+      if (porTitulo[chave]) { atual = porTitulo[chave]; return; }
+      atual = { titulo: titulo, paragrafos: [] };
+      porTitulo[chave] = atual;
       secoes.push(atual);
     } else if (!linha) {
       flushParagrafo();
-    } else if (/^\d{1,2}[.)]\s/.test(linha)) {
-      // (2026-10-16) Passo numerado ("1. ...", "2) ...") em linha própria
-      // vira parágrafo próprio — antes os passos consecutivos sem linha em
-      // branco eram colados num parágrafo corrido só.
+    } else if (/^\d{1,2}[.)]\s/.test(linha) || /^[A-ZÀ-Ý][^:.;]{1,50}:\s+\S/.test(linha)) {
+      // Passo numerado ("1. ...") ou termo de glossário ("Termo: definição") em linha própria vira item próprio.
       flushParagrafo();
       paragrafoAtual.push(linha);
     } else {
@@ -37,89 +73,143 @@ function PgtPopDoc_corpoParaHtml_(corpo) {
     }
   });
   flushParagrafo();
+  return secoes.filter(function (s) { return s.titulo || s.paragrafos.length; });
+}
 
-  return secoes.map(function (s) {
-    const tituloHtml = s.titulo ? ('<h2>' + PgtPop_escaparHtml_(s.titulo) + '</h2>') : '';
-    const corpoHtml = s.paragrafos.map(function (p) { return '<p>' + PgtPop_escaparHtml_(p) + '</p>'; }).join('\n');
-    return '<div class="secao">' + tituloHtml + corpoHtml + '</div>';
-  }).join('\n');
+/** Parágrafos de uma seção: passos numerados viram lista numerada; glossário vira termo em negrito. */
+function PgtPopDoc_corpoSecao_(sec) {
+  const esc = PgtPop_escaparHtml_;
+  const ps = sec.paragrafos || [];
+  const reTermo = /^([A-ZÀ-Ý][^:.;]{1,70}?)\s*(?::|—|–)\s+(\S.*)$/;
+  const glossario = /defini|gloss|termos/i.test(sec.titulo || '') ||
+    (ps.length >= 6 && ps.filter(function (p) { return reTermo.test(p); }).length / ps.length >= 0.6);
+  const out = [];
+  let lista = null;
+  function fecharLista() { if (lista) { out.push('<ol class="passos" start="' + lista.inicio + '">' + lista.itens.join('') + '</ol>'); lista = null; } }
+  ps.forEach(function (p) {
+    const mp = /^(\d{1,2})[.)]\s+(.*)$/.exec(p);
+    if (mp) {
+      if (!lista) lista = { inicio: Number(mp[1]) || 1, itens: [] };
+      lista.itens.push('<li>' + esc(mp[2]) + '</li>');
+      return;
+    }
+    fecharLista();
+    const mt = glossario ? reTermo.exec(p) : null;
+    if (mt) out.push('<p class="termo"><b>' + esc(mt[1]) + ':</b> ' + esc(mt[2]) + '</p>');
+    else out.push('<p>' + esc(p) + '</p>');
+  });
+  fecharLista();
+  return out.join('\n');
 }
 
 /**
- * CSS do documento — "folha A4" padrão do Portal + o bloco de controle
- * de documento (código/revisão/histórico/assinaturas em branco) do
- * padrão real de POP/PGT da Metrolabs, que não existe nos outros
- * módulos do Portal.
+ * Seções numeradas. Seções seguidas com o mesmo prefixo ("Requisitos específicos: Aquisição",
+ * "Requisitos específicos: Instalação"...) viram uma seção com subseções (6.1, 6.2...).
+ * n0 = número da última seção já usada no documento. Devolve { html, ultimo }.
  */
-function PgtPop_getCss_() {
-  const css = [];
-  css.push('@page { size: A4; margin: 18mm 16mm; }');
-  css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
-  css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
-  css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 14px; }');
-  css.push('.logo-topo { height: 40px; }');
-  css.push('.marca-doc { text-align:right; font-size: 11px; color:#6b7280; font-weight:700; letter-spacing: .5px; }');
-  css.push('.controle-doc { border: 1px solid #d1d5db; border-radius: 4px; padding: 10px 14px; margin-bottom: 18px; background: #f9fafb; }');
-  css.push('.controle-doc-linha { display:flex; justify-content:space-between; flex-wrap:wrap; gap: 10px; font-size: 11.5px; color:#374151; }');
-  css.push('.controle-doc-linha b { color:#0b4ea2; }');
-  css.push('.titulo-central { text-align:center; margin: 16px 0 4px; }');
-  css.push('.titulo-central h1 { font-size: 16px; margin: 0; color:#0b4ea2; text-transform: uppercase; letter-spacing: .3px; }');
-  css.push('.titulo-central .norma { font-size: 11px; color:#6b7280; margin-top: 4px; }');
-  css.push('table.dados { width:100%; border-collapse: collapse; margin: 18px 0; }');
-  css.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
-  css.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  css.push('.secao { margin-top: 22px; }');
-  css.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; page-break-after: avoid; page-break-inside: avoid; }');
-  css.push('p, li { text-align: justify; margin: 8px 0; orphans: 3; widows: 3; }');
-  css.push('table.historico { width:100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12px; }');
-  css.push('table.historico th, table.historico td { border: 1px solid #d1d5db; padding: 6px 10px; text-align:left; }');
-  css.push('table.historico th { background:#f3f4f6; }');
-  css.push('.assinaturas-pop { margin-top: 18px; display:flex; flex-direction: column; gap: 22px; page-break-inside: avoid; }');
-  css.push('.assinatura-pop-item { max-width: 420px; }');
-  css.push('.assinatura-pop-svg { height: 52px; display: block; }');
-  css.push('.assinatura-pop-svg svg { height: 52px; width: auto; }');
-  css.push('.assinatura-pop-linha { border-top: 1px solid #1f2937; margin-top: 26px; padding-top: 4px; font-size: 12px; }');
-  css.push('.assinatura-pop-item.com-assinatura .assinatura-pop-linha { margin-top: 4px; }');
-  css.push('.assinatura-pop-linha .papel { font-size: 10.5px; color:#6b7280; text-transform: uppercase; letter-spacing: .4px; }');
-  css.push('.figura-item { margin: 14px 0; page-break-inside: avoid; text-align: center; }');
-  css.push('.figura-item img { max-width: 100%; max-height: 320px; border: 1px solid #d1d5db; border-radius: 4px; }');
-  css.push('.figura-legenda { font-size: 11.5px; color:#374151; font-weight:700; margin-top: 6px; }');
-  css.push('.figura-interpretacao { font-size: 12px; color:#4b5563; margin-top: 4px; text-align: left; }');
-  css.push('.destaque { background:#f3f4f6; border-left: 4px solid #0b4ea2; padding: 14px 16px; margin-top: 14px; page-break-inside: avoid; }');
-  css.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
-  css.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  css.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');  css.push(SGO_DocA4_css_());
-  return css.join('\n');
+function PgtPopDoc_secoesHtml_(secoes, n0) {
+  const esc = PgtPop_escaparHtml_;
+  let n = n0;
+  const out = [];
+  let i = 0;
+  const prefixo = function (t) { const m = /^([^:]{3,60}):\s*(.+)$/.exec(t || ''); return m ? { p: m[1].trim(), sub: m[2].trim() } : null; };
+  while (i < secoes.length) {
+    const s = secoes[i];
+    if (!s.titulo) { out.push(PgtPopDoc_corpoSecao_(s)); i++; continue; }
+    const pf = prefixo(s.titulo);
+    if (pf) {
+      const grupo = [];
+      let j = i;
+      while (j < secoes.length) {
+        const pj = prefixo(secoes[j].titulo);
+        if (!pj || pj.p.toLowerCase() !== pf.p.toLowerCase()) break;
+        grupo.push({ titulo: pj.sub, paragrafos: secoes[j].paragrafos });
+        j++;
+      }
+      n++;
+      out.push('<section><h2>' + n + '. ' + esc(pf.p) + '</h2>');
+      grupo.forEach(function (g, k) { out.push('<h3>' + n + '.' + (k + 1) + ' ' + esc(g.titulo.charAt(0).toUpperCase() + g.titulo.slice(1)) + '</h3>' + PgtPopDoc_corpoSecao_(g)); });
+      out.push('</section>');
+      i = j;
+      continue;
+    }
+    n++;
+    out.push('<section><h2>' + n + '. ' + esc(s.titulo) + '</h2>' + PgtPopDoc_corpoSecao_(s) + '</section>');
+    i++;
+  }
+  return { html: out.join('\n'), ultimo: n };
+}
+
+/** Compatibilidade: corpo → HTML de seções numeradas (a partir de 1). */
+function PgtPopDoc_corpoParaHtml_(corpo) {
+  return PgtPopDoc_secoesHtml_(PgtPopDoc_secoes_(corpo), 0).html;
+}
+
+/** CSS: padrão SGO_DocA4 + ajustes do PGT/POP + moldura SGO_RelTecA4 (por último). */
+function PgtPop_getCss_(opcoes) {
+  const o = opcoes || {};
+  const docA4 = (typeof SGO_DocA4_estilos_ === 'function')
+    ? SGO_DocA4_estilos_({ tituloCurto: o.titulo, numero: o.numero, revisao: o.revisao })
+    : SGO_DocA4_css_();
+  const proprio = [
+    '.abertura{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.6pt solid #9aa5b1;padding-bottom:2.2mm;margin:0 0 6mm}',
+    '.abertura img{height:13mm;width:auto;display:block}',
+    '.abertura .meta{text-align:right;font-size:7.8pt;line-height:1.35;color:#3e4c59}',
+    'ol.passos{margin:0 0 2.4mm 6mm;padding:0 0 0 2mm}',
+    'ol.passos li{margin:0 0 1.2mm;padding-left:1mm;text-align:justify;hyphens:auto}',
+    'p.termo{margin:0 0 1.6mm}',
+    'p.termo b{color:#243b53}',
+    '.figuras figure{margin:2mm 0 5mm}',
+    '.figuras .q{border:.5pt solid #bcc5cf;background:#fafbfc;display:flex;align-items:center;justify-content:center;height:78mm}',
+    '.figuras .q img{max-width:100%;max-height:78mm;display:block}',
+    '.figuras .interp{font-size:8.6pt;color:#3e4c59;margin:1mm 0 0}',
+    '.assinaturas.quatro .assinatura{flex:1 1 70mm}',
+    '.assinatura .papel{font-size:7.8pt;color:#52606d;margin:0 0 .6mm;text-transform:none}',
+    '.reltec-fecho .assinaturas{margin-top:4mm}',
+    '.capa .base{margin-top:5mm;font-size:9pt;color:#3e4c59;text-align:left}'
+  ].join('');
+  return docA4 + proprio + RelTecA4_css_({ titulo: o.titulo, numero: o.numero, revisao: o.revisao });
+}
+
+function PgtPopDoc_logo_() {
+  try { if (typeof SGO_DocA4_logoDataUri_ === 'function') return SGO_DocA4_logoDataUri_(); } catch (e) { /* reserva */ }
+  return PgtPop_getLogoDataUri_();
+}
+
+/** Bloco de assinatura no padrão SGO_DocA4, com o papel (Elaborado por...) em cima. */
+function PgtPopDoc_assinatura_(papel, pessoa) {
+  const esc = PgtPop_escaparHtml_;
+  const p = pessoa || {};
+  const img = (p.imagemSvg && /^\s*<svg[\s>]/i.test(p.imagemSvg)) ? p.imagemSvg : '';
+  return '<div class="assinatura"><div class="papel">' + esc(papel) + '</div><div class="img">' + img + '</div>' +
+    '<div class="linha">' + esc(p.nome || ' ') + '</div>' +
+    '<div class="cargo">' + [p.cargo, p.registro].filter(Boolean).map(esc).join('<br>') + '</div></div>';
 }
 
 /**
- * Monta o documento (PGT ou POP) no padrão real de controle de
- * documento da Metrolabs (código, revisão, histórico, 4 assinaturas —
- * Elaborado por [variável, sem rubrica], Revisado por [Charles, fixo,
- * com rubrica], Aprovado por Metrolabs [Douglas, fixo, com rubrica] e
- * Aprovado por/RT do Hospital [variável, sem rubrica]) + o corpo
- * gerado pela IA + seção de figuras (se houver imagens anexadas).
- * @param {object} dados { tipo, titulo, textoGerado, hospital, roteiro,
- *   pop, codigoDocumento, versaoAtual, historico, imagens }
+ * Monta o documento (PGT ou POP) no padrão de controle de documento da Metrolabs
+ * (código, revisão, histórico, 4 assinaturas — Elaborado por [variável, sem rubrica],
+ * Revisado por [fixo, com rubrica], Aprovado pela Metrolabs [fixo, com rubrica] e Aprovado
+ * pelo responsável técnico do hospital [variável, sem rubrica]) + o corpo gerado pela IA
+ * (ou o texto padrão do POP com roteiro) + figuras, quando houver imagens anexadas.
+ * @param {object} dados { tipo, titulo, textoGerado, hospital, roteiro, pop, codigoDocumento,
+ *   versaoAtual, historico, imagens, elaboradoPorNome/Cargo/Registro }
  */
 function PgtPop_montarDocumentoHtml_(dados) {
-  const logo = PgtPop_getLogoDataUri_();
+  dados = dados || {};
+  const esc = PgtPop_escaparHtml_;
   const hospital = dados.hospital || {};
   const tipo = dados.tipo === 'POP' ? 'POP' : 'PGT';
   const historico = dados.historico || [];
-  // (2026-10-16) "Data desta Revisão" é a data em que ESTA revisão foi
-  // emitida (registrada no histórico), não a data em que o documento é
-  // reaberto — antes, reabrir a revisão 1 meses depois saía com a data do dia.
+  // "Data desta revisão" é a data em que ESTA revisão foi emitida (registrada no histórico),
+  // não a data em que o documento é reaberto.
   const entradaRevisao = historico.filter(function (h) { return String(h && h.versao) === String(dados.versaoAtual || 1); }).pop() || historico[historico.length - 1];
-  const dataAtual = (entradaRevisao && entradaRevisao.data) ? String(entradaRevisao.data) : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
-  const imagens = dados.imagens || [];
-  // Nome/cargo/registro de "Elaborado por" são editáveis no wizard
-  // (2026-08-13) — cargo/registro NÃO podem mais cair no padrão fixo de
-  // PGTPOP_CFG quando o nome muda: um registro profissional (REA-GO) é
-  // específico de uma pessoa, aplicá-lo a outro nome é um erro real que
-  // já saiu em documento (reportado pelo usuário). Só usa o fallback do
-  // config quando o próprio campo do wizard também está vazio.
+  const dataRevisao = (entradaRevisao && entradaRevisao.data) ? String(entradaRevisao.data) : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy");
+  const revisao = String(dados.versaoAtual || 1) + '.0';
+  const codigo = String(dados.codigoDocumento || '').trim();
+  const imagens = (dados.imagens || []).filter(function (im) { return im && im.base64; });
+  // Nome/cargo/registro de "Elaborado por" são do formulário; cargo e registro nunca herdam
+  // o registro profissional fixo de outra pessoa (achado real de 2026-08-13).
   const elaborado = {
     nome: dados.elaboradoPorNome || PGTPOP_CFG.ENGENHEIRO_ELABORADO.nome,
     cargo: dados.elaboradoPorCargo || PGTPOP_CFG.ENGENHEIRO_ELABORADO.cargo,
@@ -128,118 +218,208 @@ function PgtPop_montarDocumentoHtml_(dados) {
   const revisado = PGTPOP_CFG.ENGENHEIRO_REVISADO;
   const aprovadorMetrolabs = PGTPOP_CFG.APROVADOR_METROLABS;
 
+  // Título: "Plano ... (PGTS) — Hospital" → título + subtítulo com a instituição
+  const tituloBruto = String(dados.titulo || (tipo === 'PGT' ? 'Plano de Gerenciamento de Tecnologias em Saúde (PGTS)' : ((dados.pop && dados.pop.nome) || 'Procedimento operacional padrão'))).trim();
+  const tituloDoc = tituloBruto.split(/\s+—\s+/)[0];
+  const tituloCurto = tipo === 'PGT' ? 'Plano de Gerenciamento de Tecnologias em Saúde' : 'Procedimento operacional padrão';
+  const subtitulo = (tipo === 'PGT' ? '' : 'Procedimento operacional padrão' + (codigo ? ' ' + codigo : '') + ' — ') + (hospital.razaoSocial || '');
+  const secoes = PgtPopDoc_secoes_(dados.textoGerado);
+  const comCapa = tipo === 'PGT';
+  const numDoc = codigo || (tipo === 'POP' ? 'POP' : 'PGTS');
+
   const html = [];
-  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
-  html.push('<title>' + PgtPop_escaparHtml_(dados.codigoDocumento || tipo) + ' — ' + PgtPop_escaparHtml_(dados.titulo || tipo) + '</title>');
-  html.push('<style>' + PgtPop_getCss_() + RelTecA4_css_({ titulo: (tipo === 'POP' ? 'Procedimento Operacional Padrão' : 'Plano de Gerenciamento das Tecnologias em Saúde') + (hospital.razaoSocial ? ' — ' + hospital.razaoSocial : ''), numero: dados.codigoDocumento || '', revisao: String(dados.versaoAtual || 1) + '.0' }) + '</style></head><body>');
+  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
+  html.push('<title>' + esc(numDoc) + ' — ' + esc(tituloDoc) + '</title>');
+  html.push('<style>' + PgtPop_getCss_({ titulo: tituloCurto, numero: numDoc, revisao: revisao }) + '</style></head><body>');
+  html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
+  html.push('<main class="folha">');
 
-  html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
-  html.push('<div class="folha">');
-
-  html.push('<div class="topo">');
-  if (logo) {
-    html.push('<img class="logo-topo" src="' + logo + '" alt="Metrolabs">');
+  const ficha = [['Código', codigo || '—'], ['Revisão', revisao], ['Data desta revisão', dataRevisao]]; // quem elaborou fica nas assinaturas
+  if (comCapa) {
+    html.push('<section class="capa"><div class="logo"><img src="' + PgtPopDoc_logo_() + '" alt="Metrolabs"></div>' +
+      '<div class="meio"><p class="tipo">Engenharia clínica</p><h1>' + esc(tituloDoc) + '</h1>' +
+      (hospital.razaoSocial ? '<p class="sub">' + esc(hospital.razaoSocial) + '</p>' : '') +
+      '<table class="t ident ficha"><tbody>' + ficha.map(function (l) { return '<tr><th>' + esc(l[0]) + '</th><td>' + esc(l[1]) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      '<p class="base">' + esc(PGTPOP_CFG.BASE_NORMATIVA_EXTENSO || PGTPOP_CFG.BASE_NORMATIVA) + '</p></div>' +
+      '<div class="pe"><p>' + esc(RelTecA4_empresa_()) + '</p><p>' + esc(numDoc + ' · Revisão ' + revisao) + '</p></div></section>');
   } else {
-    html.push('<div></div>');
+    html.push('<header class="abertura"><img src="' + PgtPopDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + '<br>Nº ' + esc(numDoc) + ' · Revisão ' + esc(revisao) + '</div></header>');
+    html.push('<h1>' + esc(tituloDoc) + '</h1>');
+    html.push('<p class="subtitulo">' + esc(subtitulo) + '</p>');
+    html.push(SGO_DocA4_tabelaIdent_(ficha, 'ficha'));
   }
-  html.push('<div class="marca-doc">ENGENHARIA CLÍNICA</div>');
-  html.push('</div>');
+  // PGT: sumário sempre (documento longo). POP: só se passar de 3 páginas (PgtPopDoc_sumarioSeLongo_).
+  html.push(tipo === 'PGT' ? SGO_DocA4_marcadorSumario_() : '<!--sgo-sumario-->');
 
-  html.push('<div class="controle-doc">');
-  html.push('<div class="controle-doc-linha">');
-  html.push('<span><b>Código:</b> ' + PgtPop_escaparHtml_(dados.codigoDocumento || '—') + '</span>');
-  html.push('<span><b>Data desta Revisão:</b> ' + PgtPop_escaparHtml_(dataAtual) + '</span>');
-  html.push('<span><b>Revisão:</b> ' + PgtPop_escaparHtml_(String(dados.versaoAtual || 1)) + '.0</span>');
-  html.push('</div>');
-  html.push('<div class="controle-doc-linha" style="margin-top:6px;"><span><b>Título:</b> ' + PgtPop_escaparHtml_(dados.titulo || '') + '</span></div>');
-  html.push('</div>');
+  let n = 0;
+  // 1. Identificação
+  n++;
+  const ident = [['Instituição', hospital.razaoSocial || '—', { largo: true }], ['CNPJ', hospital.cnpj || '—'], ['Tipo de documento', tipo === 'PGT' ? 'Plano de Gerenciamento de Tecnologias em Saúde (PGTS)' : 'Procedimento Operacional Padrão (POP)'],
+    ['Endereço', PgtPop_montarEnderecoDoc_(hospital) || '—', { largo: true }]];
+  if (hospital.porte) ident.push(['Porte / tipo', hospital.porte]);
+  if (hospital.leitos) ident.push(['Leitos', hospital.leitos]);
+  if (!comCapa) ident.push(['Base normativa', String(PGTPOP_CFG.BASE_NORMATIVA || '').replace(/^Conforme /, ''), { largo: true }]); // no PGT ela está na capa
+  html.push('<section><h2>' + n + '. Identificação</h2>' + SGO_DocA4_tabelaIdent_(ident) + '</section>');
 
-  html.push('<div class="titulo-central"><h1>' + PgtPop_escaparHtml_(dados.titulo || '') + '</h1><div class="norma">' + PgtPop_escaparHtml_(PGTPOP_CFG.BASE_NORMATIVA) + '</div></div>');
+  // 2. Controle de revisões (Tabela 1)
+  n++;
+  html.push('<section><h2>' + n + '. Controle de revisões</h2>');
+  html.push(SGO_DocA4_legendaTabela_(1, 'Histórico de revisões'));
+  html.push(SGO_DocA4_tabela_([{ t: 'Revisão', cls: 'num' }, { t: 'Descrição' }, { t: 'Data' }],
+    (historico.length ? historico : [{ versao: dados.versaoAtual || 1, descricao: 'Emissão inicial', data: dataRevisao }]).map(function (h) {
+      return [String(h.versao || '') + (String(h.versao || '').indexOf('.') < 0 ? '.0' : ''), h.descricao || '—', h.data || '—'];
+    })));
+  html.push('</section>');
 
-  html.push('<table class="dados">');
-  html.push('<tr><td class="rotulo">Hospital/Instituição</td><td>' + PgtPop_escaparHtml_(hospital.razaoSocial || '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">CNPJ</td><td>' + PgtPop_escaparHtml_(hospital.cnpj || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Endereço</td><td>' + PgtPop_escaparHtml_(PgtPop_montarEnderecoDoc_(hospital) || '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Tipo de Documento</td><td>' + (tipo === 'PGT' ? 'Plano de Gerenciamento de Tecnologias em Saúde (PGTS)' : 'Procedimento Operacional Padrão (POP)') + '</td></tr>');
-  html.push('</table>');
-
-  html.push('<div class="secao"><h2>Histórico de Revisões</h2>');
-  html.push('<table class="historico"><thead><tr><th>Versão</th><th>Descrição</th><th>Data</th></tr></thead><tbody>');
-  historico.forEach(function (h) {
-    html.push('<tr><td>' + PgtPop_escaparHtml_(String(h.versao || '')) + '</td><td>' + PgtPop_escaparHtml_(h.descricao || '') + '</td><td>' + PgtPop_escaparHtml_(h.data || '') + '</td></tr>');
-  });
-  html.push('</tbody></table></div>');
-
-  html.push(PgtPopDoc_corpoParaHtml_(dados.textoGerado));
+  // 3... Corpo (IA ou texto padrão do POP com roteiro)
+  const corpo = PgtPopDoc_secoesHtml_(secoes, n);
+  html.push(corpo.html);
+  n = corpo.ultimo;
 
   if (imagens.length) {
-    html.push('<div class="secao"><h2>Registros Fotográficos</h2>');
+    n++;
+    html.push('<section><h2>' + n + '. Registros fotográficos</h2><div class="figuras">');
     imagens.forEach(function (img, i) {
-      html.push('<div class="figura-item">');
       const mimeSeguro = /^image\/[a-z0-9.+-]+$/i.test(String(img.mimeType || '')) ? img.mimeType : 'image/jpeg';
-      html.push('<img src="data:' + mimeSeguro + ';base64,' + String(img.base64 || '').replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Figura ' + (i + 1) + '">');
-      html.push('<div class="figura-legenda">Figura ' + (i + 1) + (img.legenda ? (': ' + PgtPop_escaparHtml_(img.legenda)) : '') + '</div>');
-      if (img.interpretacao) {
-        html.push('<div class="figura-interpretacao">' + PgtPop_escaparHtml_(img.interpretacao) + '</div>');
-      }
-      html.push('</div>');
+      html.push('<figure><div class="q"><img src="data:' + mimeSeguro + ';base64,' + String(img.base64 || '').replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Figura ' + (i + 1) + '"></div>' +
+        '<figcaption><b>Figura ' + (i + 1) + '</b>' + (img.legenda ? ' — ' + esc(img.legenda) : '') + '</figcaption>' +
+        (img.interpretacao ? '<p class="interp">' + esc(img.interpretacao) + '</p>' : '') + '</figure>');
     });
-    html.push('</div>');
+    html.push('</div></section>');
   }
 
-  html.push('<div class="assinaturas-pop">');
-  html.push(PgtPop_montarBlocoAssinatura_('Elaborado por', elaborado));
-  html.push(PgtPop_montarBlocoAssinatura_('Revisado por', revisado));
-  html.push(PgtPop_montarBlocoAssinatura_('Aprovado por (Metrolabs)', aprovadorMetrolabs));
-  html.push('<div class="assinatura-pop-item"><div class="assinatura-pop-linha"><div class="papel">Aprovado por (Responsável Técnico do Hospital)</div>' + PgtPop_escaparHtml_(hospital.aprovadorNome || '—') + (hospital.aprovadorCargo ? (' — ' + PgtPop_escaparHtml_(hospital.aprovadorCargo)) : '') + '</div></div>');
-  html.push('</div>');
+  // Aprovação: parágrafo e as quatro assinaturas na mesma folha
+  n++;
+  html.push('<section class="reltec-fecho"><h2>' + n + '. Aprovação</h2>');
+  html.push('<p>Esta revisão (' + esc(revisao) + ', de ' + esc(dataRevisao) + ') entra em vigor na data da aprovação pelo responsável técnico da instituição e substitui as revisões anteriores listadas na Tabela 1.</p>');
+  html.push('<div class="assinaturas quatro">' +
+    PgtPopDoc_assinatura_('Elaborado por', elaborado) +
+    PgtPopDoc_assinatura_('Revisado por', revisado) +
+    PgtPopDoc_assinatura_('Aprovado por (Metrolabs)', aprovadorMetrolabs) +
+    PgtPopDoc_assinatura_('Aprovado por (responsável técnico da instituição)', { nome: hospital.aprovadorNome || '', cargo: hospital.aprovadorCargo || '' }) +
+    '</div>');
+  html.push('</section>');
 
-  html.push('</div>');
-  html.push('</body></html>');
+  html.push('</main></body></html>');
   return html.join('\n');
 }
 
+/** Monta o HTML para a tela. Com sumário, os números de página já vêm preenchidos (duas passagens). */
 function PgtPop_apiMontarDocumentoFinal(dados) {
   try {
-    const html = PgtPop_montarDocumentoHtml_(dados || {});
+    let html = PgtPopDoc_sumarioSeLongo_(PgtPop_montarDocumentoHtml_(dados || {}), 'POP');
+    if (/data-sgo-sumario><\/nav>/.test(html)) {
+      const pag = RelTecA4_paginar_(html, 'PGT e POP');
+      if (pag && pag.html) html = pag.html;
+    }
     return { ok: true, html: html };
   } catch (e) {
     return { ok: false, mensagem: "Erro ao montar o documento: " + e.message };
   }
 }
 
+
 /**
- * Converte o HTML já gerado em PDF, salva na pasta do CNPJ dentro da
- * pasta de PDFs do Drive (criada sob demanda), e registra o documento
- * na planilha. Usado tanto pelo botão manual "Salvar no Drive" quanto
- * pelo auto-save em PgtPop_salvarPdfAutomatico_ (mesma lógica).
+ * Sumário só quando o documento passa de 3 páginas (padrão A4, item 3): converte uma vez
+ * para contar as folhas; se passar, põe o sumário no lugar do marcador e pagina (duas
+ * passagens). Sem conversor de PDF (ou se falhar), sai sem sumário. Nunca lança.
+ */
+function PgtPopDoc_sumarioSeLongo_(html, nome) {
+  const marca = '<!--sgo-sumario-->';
+  const h = String(html || '');
+  if (h.indexOf(marca) < 0) return h;
+  try {
+    if (typeof SGO_DocA4_pdfDeHtml_ === 'function' && typeof SGO_DocA4_paginasDoPdf_ === 'function') {
+      const total = (SGO_DocA4_paginasDoPdf_(SGO_DocA4_pdfDeHtml_(h.replace(marca, ''), nome)) || {})._total || 0;
+      if (total > 3) {
+        const pag = RelTecA4_paginar_(h.replace(marca, SGO_DocA4_marcadorSumario_()), nome);
+        if (pag && pag.html) return pag.html;
+      }
+    }
+  } catch (e) { /* segue sem sumário */ }
+  return h.replace(marca, '');
+}
+
+/**
+ * Nome do arquivo no padrão A4: "<PGT|POP> - <código> rev <n.0> - <identificador> - <aaaa-MM-dd HHmm>".
+ * Identificador: nome do POP; no PGT, a instituição.
+ */
+function PgtPop_nomeArquivo_(registro) {
+  const tipo = registro.tipo === 'POP' ? 'POP' : 'PGT';
+  const codigo = String(registro.codigoDocumento || '').trim() || (tipo === 'POP' ? 'avulso' : 'PGTS');
+  const ident = tipo === 'POP' ? ((registro.pop && registro.pop.nome) || registro.titulo || 'POP') : ((registro.hospital && registro.hospital.razaoSocial) || 'Instituicao');
+  return tipo + ' - ' + codigo + ' rev ' + String(registro.versaoAtual || 1) + '.0 - ' + String(ident).substring(0, 60).trim() + ' - ' +
+    Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HHmm");
+}
+
+/** Arquivo já salvo para este registro (gravação automática ou "Salvar" anterior), ou null. */
+function PgtPop_documentoJaSalvo_(registroId) {
+  if (!registroId) return null;
+  try {
+    const aba = PgtPop_getDB_().getSheetByName(PGTPOP_CFG.PLANILHA.ABAS.DOCUMENTOS);
+    const dados = aba.getDataRange().getValues();
+    for (let i = dados.length - 1; i >= 1; i--) {
+      if (String(dados[i][7] || '') === String(registroId) && dados[i][6]) {
+        const r = { url: String(dados[i][6]), fileName: String(dados[i][5] || ''), htmlUrl: '', htmlId: '' };
+        try {
+          const id = SGO_DocSalvar_idDaUrl_(r.url);
+          const pais = id ? DriveApp.getFileById(id).getParents() : null;
+          if (pais && pais.hasNext()) {
+            const pasta = pais.next();
+            r.pastaUrl = pasta.getUrl();
+            const it = pasta.getFilesByName(r.fileName.replace(/\.pdf$/i, '') + '.html');
+            if (it.hasNext()) { const h = it.next(); r.htmlUrl = h.getUrl(); r.htmlId = h.getId(); }
+          }
+        } catch (eH) { /* só o PDF */ }
+        return r;
+      }
+    }
+  } catch (e) { /* sem registro: salva de novo */ }
+  return null;
+}
+
+/**
+ * Grava HTML + PDF na pasta do CNPJ e registra na planilha (MOV_DOCUMENTOS). Usado pela
+ * gravação automática (PgtPop_salvarPdfAutomatico_) e pelo "Salvar" manual. Lança erro.
+ */
+function PgtPop_gravarNaPasta_(registro, html) {
+  const hospital = registro.hospital || {};
+  const pasta = PgtPop_obterPastaPorCnpj_(hospital.cnpj || '', hospital.razaoSocial || '');
+  const salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, PgtPop_nomeArquivo_(registro), html, { compartilhar: true });
+  const arquivo = DriveApp.getFileById(salvo.pdfId);
+  PgtPop_registrarDocumento_({ hospital: hospital.razaoSocial || '', cnpj: hospital.cnpj || '', registroId: registro.registroId || '' }, arquivo, registro.tipo === 'POP' ? 'POP' : 'PGT');
+  return { url: salvo.pdfUrl, fileName: salvo.pdfNome, htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl(), html: salvo.html };
+}
+
+/**
+ * "Salvar na pasta do cliente" (botão). Se este registro já foi gravado (a geração grava
+ * sozinha), devolve o arquivo existente em vez de criar um segundo PDF com o mesmo nome.
  */
 function PgtPop_apiSalvarDocumento(payload) {
   try {
     payload = payload || {};
     const html = String(payload.html || "");
     if (!html) throw new Error("Nenhum conteúdo de documento recebido para salvar.");
-
-    const pasta = PgtPop_obterPastaPorCnpj_(payload.cnpj || "", payload.hospital || "HOSPITAL");
-    const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
-
-    const tipo = String(payload.tipo || 'DOCUMENTO').toUpperCase();
-    const codigo = PgtPop_sanitizarNomeArquivo_(payload.codigoDocumento || tipo);
-    const nomeArquivo = codigo + "_v" + (payload.versaoAtual || 1) + ".pdf";
-    blob.setName(nomeArquivo);
-
-    const arquivo = pasta.createFile(blob);
-    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-    PgtPop_registrarDocumento_({
-      hospital: payload.hospital || "",
-      cnpj: payload.cnpj || "",
-      registroId: payload.registroId || ""
-    }, arquivo, tipo);
-
-    return { ok: true, url: arquivo.getUrl(), fileName: arquivo.getName(), pastaUrl: pasta.getUrl() };
+    const existente = PgtPop_documentoJaSalvo_(payload.registroId);
+    if (existente) {
+      existente.ok = true;
+      existente.jaSalvo = true;
+      existente.mensagem = 'Este documento já estava salvo na pasta do cliente (' + existente.fileName + '). Nenhuma cópia nova foi criada.';
+      return existente;
+    }
+    const registro = {
+      tipo: String(payload.tipo || 'PGT').toUpperCase() === 'POP' ? 'POP' : 'PGT',
+      hospital: { razaoSocial: payload.hospital || '', cnpj: payload.cnpj || '' },
+      codigoDocumento: payload.codigoDocumento || '',
+      versaoAtual: payload.versaoAtual || 1,
+      pop: payload.pop || { nome: payload.titulo || '' },
+      titulo: payload.titulo || '',
+      registroId: payload.registroId || ''
+    };
+    const r = PgtPop_gravarNaPasta_(registro, html);
+    return { ok: true, url: r.url, fileName: r.fileName, htmlId: r.htmlId, htmlUrl: r.htmlUrl, pastaUrl: r.pastaUrl };
   } catch (e) {
-    return { ok: false, mensagem: "Erro ao salvar o documento no Drive: " + e.message };
+    return { ok: false, mensagem: "Erro ao salvar o documento na pasta do cliente: " + e.message };
   }
 }
 
@@ -299,32 +479,12 @@ function PgtPop_registrarDocumento_(dados, arquivo, tipoDocumento) {
 }
 
 /**
- * Gera o PDF automaticamente e salva na pasta do CNPJ assim que um
- * documento é gerado com sucesso — antes disso, o PDF só existia se o
- * usuário abrisse o documento manualmente e clicasse "Salvar no
- * Drive". Chamado de dentro de PgtPop_apiGerarDocumento (SGO_PgtPop_Main.js).
- * Nunca lança exceção pra fora — se o auto-save falhar, o documento já
- * foi gerado e salvo na planilha normalmente, o PDF é um bônus, não
- * pode derrubar a geração por causa disso.
+ * Grava HTML + PDF na pasta do CNPJ assim que o documento é gerado (com sumário paginado,
+ * via SGO_DocSalvar_salvarHtmlEPdf_). Nunca lança: se falhar, o documento já está na planilha.
  */
 function PgtPop_salvarPdfAutomatico_(registro) {
   try {
-    const html = PgtPop_montarDocumentoHtml_(registro);
-    const pasta = PgtPop_obterPastaPorCnpj_((registro.hospital && registro.hospital.cnpj) || '', (registro.hospital && registro.hospital.razaoSocial) || '');
-    const blob = Utilities.newBlob(html, MimeType.HTML).getAs(MimeType.PDF);
-    // POP avulso (sem código): o nome leva o nome do POP — antes todo avulso
-    // saía "POP_v1.pdf" e um sobrepunha o outro na lista da pasta do CNPJ.
-    const baseNome = registro.codigoDocumento || (registro.tipo + ((registro.pop && registro.pop.nome) ? ('_' + registro.pop.nome) : ''));
-    const nomeArquivo = PgtPop_sanitizarNomeArquivo_(baseNome) + "_v" + (registro.versaoAtual || 1) + ".pdf";
-    blob.setName(nomeArquivo);
-    const arquivo = pasta.createFile(blob);
-    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    PgtPop_registrarDocumento_({
-      hospital: (registro.hospital && registro.hospital.razaoSocial) || '',
-      cnpj: (registro.hospital && registro.hospital.cnpj) || '',
-      registroId: registro.registroId || ''
-    }, arquivo, registro.tipo);
-    return { url: arquivo.getUrl(), fileName: arquivo.getName() };
+    return PgtPop_gravarNaPasta_(registro, PgtPopDoc_sumarioSeLongo_(PgtPop_montarDocumentoHtml_(registro), registro.tipo || 'PGT'));
   } catch (e) {
     return { url: '', fileName: '', erro: e.message };
   }

@@ -559,7 +559,7 @@ function pdGenerate(tipo){
 }
 function pdShow(r,win){
   PD.documento=r;var el=pdEl('preview');el.classList.remove('hidden');
-  el.innerHTML='<h3>'+(r.status==='EMITIDO'?'Documento emitido e salvo':'Rascunho salvo')+'</h3><p>ID: '+pdEsc(r.id)+'</p>'+
+  el.innerHTML='<h3>'+(r.status==='EMITIDO'?'Documento emitido e salvo':'Rascunho salvo')+'</h3><p>Nº '+pdEsc(r.numero||r.id)+'</p>'+
     (r.status==='RASCUNHO'?'<label for="pd-texto">Texto — revise antes de emitir</label><textarea id="pd-texto" rows="6" maxlength="14000">'+pdEsc(r.texto)+'</textarea><button class="pdr-btn pdr-btn-primario" data-pd-action="emit">Emitir e salvar cópia</button>':'')+
     ' <button class="pdr-btn" data-pd-action="document-window">Abrir documento para impressão</button> <button class="pdr-btn" data-pd-action="print">Imprimir / salvar PDF</button>';
   pdDocumentWindow(r,win);
@@ -567,7 +567,7 @@ function pdShow(r,win){
 function pdPreviewText(){var w=PD.docWindow,box=w&&!w.closed&&w.document.querySelector('[data-paddoc-texto]');if(box&&pdEl('texto')){box.textContent=pdEl('texto').value;box.style.whiteSpace='pre-wrap';}}
 function pdEmit(){if(PD.busy)return;var win=pdPrepareWindow();return pdRun('Aguarde, emitindo e salvando a cópia...',async function(){try{var r=await pdApi('apiEmitirDocumentoPadroes',{id:PD.documento.id,texto:pdEl('texto').value});pdShow(r,win);pdMsg('Documento emitido e salvo.');}catch(e){pdWindowError(win,e);throw e;}});}
 function pdPrint(){if(PD.docWindow&&!PD.docWindow.closed){PD.docWindow.focus();PD.docWindow.print();}else pdDocumentWindow(PD.documento);}
-function pdDownload(){var url=URL.createObjectURL(new Blob([PD.documento.html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='Padroes-'+PD.documento.status+'-'+PD.documento.id+'.html';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);}
+function pdDownload(){var url=URL.createObjectURL(new Blob([PD.documento.html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='Padroes-'+PD.documento.status+'-'+(PD.documento.numero||PD.documento.id)+'.html';a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);}
 function pdAutoRender(r){
   var el=pdEl('auto');if(!el)return;var j=r.job;
   if(!j){el.textContent='Nenhuma atualização iniciada.';return;}

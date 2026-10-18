@@ -8,6 +8,15 @@
 - Padrão vencido na data da calibração bloqueia a emissão. O cadastro e a validade dos padrões ficam na página "Padrões de referência" (botões "Editar" e "⋯" Mais ações: Substituir PDF, Dados, localização e foto, Inativar, Reativar).
 - Os perfis Comercial e Financeiro só consultam certificados.
 
+## O que mudou em 18/10/2026
+
+- Certificado e relatório interpretativo em A4 com seções numeradas ("1. Identificação"…), tabelas numeradas ("Tabela N —") e figuras numeradas ("Figura N —"), identificação numa tabela só e cada informação uma vez (o aviso de que o certificado não contém declaração de conformidade fica só no quadro da abertura).
+- Certificado com três grandezas ou mais ganha sumário com o número das páginas.
+- O relatório interpretativo traz um gráfico por grandeza (tendência e intervalo de ±U95 em cada ponto) e a próxima calibração numa linha da identificação; o texto padrão explica os termos uma vez e resume as faixas, sem repetir a tabela do certificado.
+- Os dois documentos ficam na pasta do cliente com o CNPJ (14 dígitos) e com nome padrão: "Certificado de calibracao - <número> - <TAG> - <aaaa-MM-dd HHmm>" e "Relatorio interpretativo - <número> - <TAG> - <aaaa-MM-dd HHmm>", em HTML e PDF.
+- "Reabrir certificado" monta o mesmo HTML da emissão.
+- Relatórios gerenciais dos padrões (plano de renovação e desempenho da emissão de certificados): número próprio (REN-… e DES-…), período com as datas, gráficos legíveis no PDF e a contagem de pontos por grandeza corrigida (antes contava blocos).
+
 
 ### Emissão do certificado oficial de calibração (cálculo próprio de incerteza) + relatório interpretativo baseado nos resultados salvos
 
@@ -181,7 +190,7 @@ Anexe até 8 fotos tiradas durante a calibração. Cada foto pode receber uma le
 1. Clique em **"Gerar Certificado de Calibração"**.
 2. Uma nova aba abre imediatamente, mostrando "Gerando certificado, aguarde...".
 3. O sistema recalcula tudo no servidor (nunca confia em conta feita no navegador, por segurança), monta o documento, e a aba é preenchida com o certificado final, pronto pra imprimir ou salvar como PDF.
-4. O certificado também é salvo automaticamente no Drive, numa pasta com o nome do cliente — o link aparece na tela.
+4. O certificado também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ) — o link aparece na tela.
 5. O número do certificado (ex.: `202600001`) é gerado **sozinho** — ano atual + um número sequencial que nunca se repete. Você não digita esse número em lugar nenhum.
 
 ### Gerar Relatório Interpretativo
@@ -191,7 +200,7 @@ Depois que o certificado for gerado, aparece um segundo botão: **"Gerar Relató
 1. Clique nele.
 2. O sistema monta uma explicação didática a partir dos mesmos resultados salvos no certificado. Os textos e tabelas usam a mesma formatação; a interpretação numérica não depende de geração por IA.
 3. Uma nova aba abre com o documento pronto, com uma conclusão técnica (pra quem entende) e uma conclusão em linguagem simples (pra quem não entende de metrologia) — as duas dizendo a mesma coisa, cada uma no seu nível.
-4. Esse documento também é salvo automaticamente no Drive.
+4. Esse documento também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ).
 
 > **Este relatório é opcional e separado do certificado.** O certificado sozinho já é um documento completo e válido — o Relatório Interpretativo é um complemento, útil quando o cliente ou gestor não entende de metrologia e precisa de uma explicação mais acessível.
 

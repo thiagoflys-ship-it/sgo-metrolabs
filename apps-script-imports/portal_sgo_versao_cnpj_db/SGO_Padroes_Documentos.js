@@ -122,6 +122,12 @@ function PadDoc_pasta_() {
   props.setProperty('PADROES_CONTROLE_FOLDER_ID', pasta.getId());
   return pasta;
 }
+/** Subpasta por tipo de documento dentro da pasta interna dos padrões (documento sem cliente). */
+function PadDoc_pastaTipo_(tipo) {
+  var raiz = PadDoc_pasta_(), nome = tipo === 'ORCAMENTO' ? 'Solicitacoes de orcamento de calibracao' : 'Inventarios dos padroes de referencia';
+  var it = raiz.getFoldersByName(nome);
+  return it.hasNext() ? it.next() : raiz.createFolder(nome);
+}
 function PadDoc_pdf_(p) {
   var link = String(p.LINK_CERTIFICADO_PDF || '');
   if (!/^https:\/\/(drive|docs)\.google\.com\//.test(link)) throw new Error('Anexe o PDF ao cadastro do padrão antes de ler o certificado.');
@@ -243,12 +249,27 @@ function PadDoc_salvarDocumento_(ctx, requestId, sessao) {
     var existente=SGO_DATA.getAll(PAD_DOC_HISTORICO).filter(function(r){return r.REQUISICAO===requestId&&r.CRIADO_POR===sessao.usuario;})[0];
     if (existente) return PadDoc_reabrir_(existente);
     var id=Utilities.getUuid(); ctx.id=id;ctx.geradoEm=new Date().toISOString();ctx.geradoPor=sessao.usuario;
-    var html=PadDoc_html_(ctx), pasta=PadDoc_pasta_(), nome=ctx.tipo+'-'+ctx.status+'-'+ctx.geradoEm.slice(0,10)+'-'+id;
-    var jf=pasta.createFile(Utilities.newBlob(JSON.stringify(ctx),'application/json',nome+'.json'));
-    var hf=pasta.createFile(Utilities.newBlob(html,'text/html',nome+'.html'));
-    var row={ID:id,REQUISICAO:requestId,TIPO:ctx.tipo,STATUS:ctx.status,CRIADO_EM:ctx.geradoEm,CRIADO_POR:sessao.usuario,HTML_ID:hf.getId(),DADOS_ID:jf.getId(),RESUMO:ctx.itens.length+' padrões — '+(ctx.destinatario||ctx.localizacao||'Todas as localizações')};
+    ctx.geradoPorNome=SGO_UTILS.safe(sessao.nome)||PadDoc_nomeUsuario_(sessao.usuario);
+    // Número legível do documento (a emissão mantém o número da prévia); o uuid fica só como ID interno.
+    if(!ctx.numero)ctx.numero=RelTecA4_numeroAuto_(ctx.tipo==='ORCAMENTO'?'ORC':'INV');
+    var html=PadDoc_html_(ctx), sub=PadDoc_pastaTipo_(ctx.tipo);
+    var tipoNome=ctx.tipo==='ORCAMENTO'?'Solicitacao de orcamento de calibracao':'Inventario dos padroes de referencia';
+    var nome=tipoNome+' - '+ctx.numero+' - '+(ctx.status==='EMITIDO'?'Emitido':'Previa')+' - '+Utilities.formatDate(new Date(ctx.geradoEm),'America/Sao_Paulo','yyyy-MM-dd HHmm');
+    var jf=sub.createFile(Utilities.newBlob(JSON.stringify(ctx),'application/json',SGO_DocSalvar_sanitizarNome_(nome)+' - '+id+'.json'));
+    // Emitido: HTML + PDF (sumário com páginas quando houver). Prévia: só o HTML, porque é substituída pela emissão.
+    var salvo,aviso='';
+    if(ctx.status==='EMITIDO'){
+      try{salvo=SGO_DocSalvar_salvarHtmlEPdf_(sub,nome,html);html=salvo.html||html;}
+      catch(e){salvo=SGO_DocSalvar_salvarHtml_(sub,nome,html);aviso='A cópia em PDF não foi gravada ('+(e&&e.message?e.message:e)+'). O HTML foi salvo; use Imprimir > Salvar como PDF.';}
+    } else {
+      if(typeof SGO_DocA4_prepararSumario_==='function')html=SGO_DocA4_prepararSumario_(html).html;
+      salvo=SGO_DocSalvar_salvarHtml_(sub,nome,html);
+    }
+    var row={ID:id,REQUISICAO:requestId,TIPO:ctx.tipo,STATUS:ctx.status,CRIADO_EM:ctx.geradoEm,CRIADO_POR:sessao.usuario,HTML_ID:salvo.htmlId,DADOS_ID:jf.getId(),RESUMO:ctx.numero+' — '+ctx.itens.length+' padrões — '+(ctx.destinatario||ctx.localizacao||'Todas as localizações')};
     SGO_DATA.insert(PAD_DOC_HISTORICO,row);
-    return {ok:true,id:id,html:html,texto:ctx.texto,status:ctx.status};
+    var r={ok:true,id:id,numero:ctx.numero,html:html,texto:ctx.texto,status:ctx.status,htmlUrl:salvo.htmlUrl||'',pdfUrl:salvo.pdfUrl||'',pastaUrl:sub.getUrl()};
+    if(aviso)r.aviso=aviso;
+    return r;
   });
 }
 function CertCal_apiGerarDocumentoPadroes(sid,payload) {
@@ -268,8 +289,8 @@ function CertCal_apiGerarDocumentoPadroes(sid,payload) {
   var ctx={tipo:tipo,status:'RASCUNHO',itens:itens,destinatario:PadDoc_texto_(payload.destinatario),localizacao:PadDoc_texto_(payload.localizacao),orientacoes:PadDoc_texto_(payload.orientacoes,6000)};
   ctx.empresa=(typeof CadeiaFrioRel_CFCFG!=='undefined'&&CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE)||{nome:'Metrolab Soluções em Engenharia Clínica LTDA'};
   ctx.texto=tipo==='INVENTARIO'
-    ? 'Este inventário apresenta os registros selecionados e os dados disponíveis dos certificados anexados. O quadro de controle e as tabelas são calculados a partir da mesma relação de registros, na data de emissão. Um instrumento pode possuir vários canais e um certificado pode abranger vários registros.\n\nA situação de vencimento considera a validade cadastrada. Dados ausentes e divergências estão discriminados nas fichas técnicas para acompanhamento pela equipe.'
-    : 'Solicitamos proposta de calibração acreditada para os padrões relacionados, nas faixas e pontos propostos para nossos serviços, com intervalo de recalibração solicitado de 36 meses. Confirmar a cobertura integral do escopo e informar eventuais limitações antes da contratação.';
+    ? 'Este inventário apresenta os padrões de referência selecionados e os dados disponíveis dos certificados anexados. A Tabela 1 e a Tabela 2 partem da mesma relação de registros, na data de emissão. Um instrumento pode ter vários canais, e um certificado pode abranger vários registros.\n\nA situação de vencimento considera a validade cadastrada. Os dados a completar e as divergências estão discriminados em cada ficha técnica da seção 4, para acompanhamento pela equipe.'
+    : 'Solicitamos proposta de calibração acreditada para os padrões relacionados na Tabela 1, nas faixas e nos pontos propostos para os nossos serviços, conforme as exigências da seção 2. Pedimos confirmar a cobertura integral do escopo e informar eventuais limitações antes da contratação.';
   ctx.modeloIA='';
   if(tipo==='ORCAMENTO'){
     ctx.servicos=PadDoc_texto_(payload.servicos,4000)||PAD_ORC_SERVICOS;
@@ -282,7 +303,7 @@ function CertCal_apiGerarDocumentoPadroes(sid,payload) {
 }
 function PadDoc_reabrir_(row) {
   var ctx=JSON.parse(DriveApp.getFileById(row.DADOS_ID).getBlob().getDataAsString());
-  return {ok:true,id:row.ID,status:row.STATUS,html:DriveApp.getFileById(row.HTML_ID).getBlob().getDataAsString(),texto:ctx.texto};
+  return {ok:true,id:row.ID,numero:ctx.numero||'',status:row.STATUS,html:DriveApp.getFileById(row.HTML_ID).getBlob().getDataAsString(),texto:ctx.texto};
 }
 function CertCal_apiEmitirDocumentoPadroes(sid,payload) {
   var sessao=PadDoc_sessao_(sid);PadDoc_bootstrap_();

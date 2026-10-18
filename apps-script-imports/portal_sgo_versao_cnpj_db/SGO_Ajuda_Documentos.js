@@ -60,7 +60,9 @@ function SGO_ajudaTelas_Documentos_() {
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
       perguntas: [
-        { p: "A declaração diz se o equipamento foi aprovado?", r: "Não. Ela registra a execução do serviço. Resultado de aprovação fica nos relatórios técnicos, como QI/QO/QD, qualificação térmica ou calibração." }
+        { p: "A declaração diz se o equipamento foi aprovado?", r: "Não. Ela registra a execução do serviço. Resultado de aprovação fica nos relatórios técnicos, como QI/QO/QD, qualificação térmica ou calibração." },
+        { p: "Como a declaração é organizada?", r: "Em seções numeradas: identificação, introdução, metodologia, calibrações realizadas (com a Tabela 1 dos itens, quantidades e observações), referências normativas e, no fim, a declaração com a data de emissão e as assinaturas na mesma página. As normas aparecem uma vez só." },
+        { p: "Onde a declaração fica salva?", r: "Na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome \"Declaracao de execucao - número - TAG - data e hora\", em PDF e em HTML. As declarações antigas, na pasta com o nome do cliente, continuam aparecendo em \"Documentos já gerados\"." }
       ]
     },
 
@@ -91,7 +93,8 @@ function SGO_ajudaTelas_Documentos_() {
         ] },
         { titulo: "Abrir e salvar os documentos", itens: [
           "Na lista, toque em \"Abrir\" para ver o documento em nova aba.",
-          "Toque em \"Salvar na pasta do cliente\". Depois de salvo, o botão vira \"PDF salvo\".",
+          "Cada documento gerado já é salvo sozinho na pasta do cliente (PDF e cópia A4) e aparece com o botão \"PDF salvo\".",
+          "Se aparecer \"Salvar na pasta do cliente\" (documento aberto pela consulta), toque nele. Se o documento já estava salvo, o sistema mostra o arquivo que já existe e não cria outra cópia.",
           "Em \"5. Documentos\", toque em \"Atualizar lista\" para ver a lista de controle do cliente (código, título, revisão e data)."
         ] },
         { titulo: "Consultar o que já foi gerado para o cliente", itens: [
@@ -116,7 +119,8 @@ function SGO_ajudaTelas_Documentos_() {
         { perfil: "CLIENTE", pode: "Não acessa esta tela. Para receber um documento, solicite à Metrolabs." }
       ],
       perguntas: [
-        { p: "Gerar de novo apaga a versão anterior?", r: "Não. Cada geração cria uma nova revisão (1.0, 2.0...). A lista de controle mostra a revisão e a data." }
+        { p: "Gerar de novo apaga a versão anterior?", r: "Não. Cada geração cria uma nova revisão (1.0, 2.0...). A lista de controle mostra a revisão e a data." },
+        { p: "Como sai o documento?", r: "O PGT sai com capa, sumário com as páginas, seções numeradas e as quatro assinaturas na página final. O POP sai com título, histórico de revisões (Tabela 1), seções numeradas e as assinaturas. O arquivo se chama, por exemplo, \"POP - POP005 rev 1.0 - Etiquetagem de Equipamentos - 2026-10-18 1430\"." }
       ]
     },
 
@@ -174,7 +178,8 @@ function SGO_ajudaTelas_Documentos_() {
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
       perguntas: [
-        { p: "O que é uma pendência?", r: "É um registro que precisa de outro depois. Exemplo: uma não conformidade encontrada na ronda fica em aberto até alguém registrar a correção." }
+        { p: "O que é uma pendência?", r: "É um registro que precisa de outro depois. Exemplo: uma não conformidade encontrada na ronda fica em aberto até alguém registrar a correção." },
+        { p: "Onde fica o registro gerado?", r: "Na pasta do cliente (pelo CNPJ), em PDF e em cópia A4, com o nome \"Registro operacional - REG-… - <tipo> - <data> <hora>\". Cada seção do tipo de documento vira uma seção numerada; texto longo ocupa a linha inteira e as assinaturas saem com nome, cargo e papel." }
       ]
     }
   };

@@ -1,80 +1,62 @@
 /**
- * CSS do documento — "folha A4" padrão do Portal, com blocos de campos
- * agrupados por seção e 1+ blocos de assinatura (não há Elaborado/
- * Revisado/Aprovado aqui — quem preenche é o colaborador de campo).
+ * Registro operacional — documento A4 (padrão de 18/10/2026,
+ * docs/DOCUMENTOS_PADRAO_A4_20261018.md): moldura SGO_RelTecA4 (cabeçalho e rodapé corridos,
+ * "Página X de Y"), tipografia e tabelas da SGO_DocA4, seções com numeração simples,
+ * tabelas de campos com cabeçalho repetido em cada folha (registro com muitos campos),
+ * campo de texto longo em linha inteira e assinaturas com nome, cargo e papel legíveis.
  */
-function RegOp_getCss_() {
-  const css = [];
-  css.push('@page { size: A4; margin: 18mm 16mm; }');
-  css.push('* { box-sizing: border-box; }');
-  css.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');
-  css.push('.folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }');
-  css.push('.topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 14px; }');
-  css.push('.logo-topo { height: 40px; }');
-  css.push('.marca-doc { text-align:right; font-size: 11px; color:#6b7280; font-weight:700; letter-spacing: .5px; }');
-  css.push('.controle-doc { border: 1px solid #d1d5db; border-radius: 4px; padding: 10px 14px; margin-bottom: 18px; background: #f9fafb; }');
-  css.push('.controle-doc-linha { display:flex; justify-content:space-between; flex-wrap:wrap; gap: 10px; font-size: 11.5px; color:#374151; }');
-  css.push('.controle-doc-linha b { color:#0b4ea2; }');
-  css.push('.titulo-central { text-align:center; margin: 16px 0 4px; }');
-  css.push('.titulo-central h1 { font-size: 16px; margin: 0; color:#0b4ea2; text-transform: uppercase; letter-spacing: .3px; }');
-  css.push('.titulo-central .norma { font-size: 11px; color:#6b7280; margin-top: 4px; }');
-  css.push('table.dados { width:100%; border-collapse: collapse; margin: 18px 0; }');
-  css.push('table.dados tr { page-break-inside: avoid; }');
-  css.push('table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }');
-  css.push('table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }');
-  // .secao NÃO usa page-break-inside:avoid — seções com muitos campos
-  // (ex.: um treinamento com 5 participantes) não cabem inteiras numa
-  // página, e "avoid" fazia o navegador jogar a seção INTEIRA pra
-  // próxima página, deixando um vão enorme em branco na página
-  // anterior (bug real reportado em 2026-08-15). Cada LINHA da tabela
-  // continua protegida (não quebra no meio de 1 campo), só a seção
-  // como um todo pode fluir por várias páginas.
-  css.push('.secao { margin-top: 22px; }');
-  css.push('.secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; page-break-after: avoid; page-break-inside: avoid; }');
-  css.push('p, li { text-align: justify; margin: 8px 0; orphans: 3; widows: 3; }');
-  css.push('table.checklist { width:100%; border-collapse: collapse; margin: 6px 0; font-size: 12px; }');
-  css.push('table.checklist tr { page-break-inside: avoid; }');
-  css.push('table.checklist th, table.checklist td { border: 1px solid #d1d5db; padding: 7px 10px; text-align:left; vertical-align: top; }');
-  css.push('table.checklist th { background:#f3f4f6; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color:#374151; }');
-  css.push('table.checklist td.resposta { width: 90px; text-align:center; font-weight:700; }');
-  css.push('table.checklist td.resposta.sim { color:#059669; }');
-  css.push('table.checklist td.resposta.nao { color:#dc2626; }');
-  css.push('table.checklist td.resposta.na { color:#6b7280; }');
-  css.push('table.campos { width:100%; border-collapse: collapse; margin: 6px 0; }');
-  css.push('table.campos tr { page-break-inside: avoid; }');
-  css.push('table.campos td { border: 1px solid #d1d5db; padding: 7px 10px; font-size: 12.5px; vertical-align: top; }');
-  css.push('table.campos td.rotulo { background:#f3f4f6; font-weight:700; width: 260px; color:#374151; }');
-  css.push('table.campos td.valor.sim { color:#059669; font-weight:700; }');
-  css.push('table.campos td.valor.nao { color:#dc2626; font-weight:700; }');
-  css.push('table.campos td.valor.na { color:#6b7280; font-weight:700; }');
-  css.push('.figura-item { margin: 14px 0; page-break-inside: avoid; text-align: center; }');
-  css.push('.figura-item img { max-width: 100%; max-height: 320px; border: 1px solid #d1d5db; border-radius: 4px; }');
-  css.push('.figura-legenda { font-size: 11.5px; color:#374151; font-weight:700; margin-top: 6px; }');
-  css.push('.assinaturas-wrap { display:flex; flex-wrap:wrap; gap: 34px; margin-top: 26px; }');
-  css.push('.assinatura-item { max-width: 420px; flex: 1 1 260px; page-break-inside: avoid; }');
-  css.push('.assinatura-linha { border-top: 1px solid #1f2937; margin-top: 26px; padding-top: 4px; font-size: 12px; }');
-  css.push('.assinatura-linha .papel { font-size: 10.5px; color:#6b7280; text-transform: uppercase; letter-spacing: .4px; }');
-  css.push('.barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }');
-  css.push('.barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }');
-  css.push('@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }');
-  return css.join('\n');
+function RegOp_getCss_(opcoes) {
+  const o = opcoes || {};
+  const docA4 = (typeof SGO_DocA4_estilos_ === 'function')
+    ? SGO_DocA4_estilos_({ tituloCurto: o.titulo, numero: o.numero, revisao: o.revisao })
+    : SGO_DocA4_css_();
+  const proprio = [
+    '.abertura{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.6pt solid #9aa5b1;padding-bottom:2.2mm;margin:0 0 6mm}',
+    '.abertura img{height:13mm;width:auto;display:block}',
+    '.abertura .meta{text-align:right;font-size:7.8pt;line-height:1.35;color:#3e4c59}',
+    'table.campos th.rot{width:38%}',
+    'table.campos td.valor.sim{color:#1d6b3f;font-weight:700}',
+    'table.campos td.valor.nao{color:#a61b1b;font-weight:700}',
+    'table.campos td.valor.na{color:#3e4c59;font-weight:700}',
+    'table.campos tr.longo{break-inside:auto;page-break-inside:auto}',
+    'table.campos tr.longo td p{margin:0 0 1.6mm;text-align:justify;hyphens:auto}',
+    'table.campos tr.longo td .rot-longo{display:block;font-weight:700;color:#243b53;margin:0 0 1mm}',
+    '.reltec-fecho .assinaturas{margin-top:3mm}.reltec-fecho .assinatura{max-width:88mm}'
+  ].join('');
+  return docA4 + proprio + RelTecA4_css_({ titulo: o.titulo, numero: o.numero, revisao: o.revisao });
+}
+
+function RegOpDoc_logo_() {
+  try { if (typeof SGO_DocA4_logoDataUri_ === 'function') return SGO_DocA4_logoDataUri_(); } catch (e) { /* reserva */ }
+  return RegOp_getLogoDataUri_();
+}
+
+/** Texto digitado → parágrafos (linha em branco) com as quebras de linha mantidas. */
+function RegOpDoc_paragrafos_(texto) {
+  return String(texto || '').replace(/\r\n/g, '\n').split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean)
+    .map(function (p) { return '<p>' + RegOp_quebrasLinha_(RegOp_escaparHtml_(p)) + '</p>'; }).join('');
 }
 
 /**
  * Monta o HTML A4 do registro preenchido.
- * @param {object} dados { hospital, tipoDocumentoNome, data,
+ * @param {object} dados { hospital, tipoDocumentoNome, data, registroId, registroOrigemInfo,
  *   respostas: [{rotulo, tipo, secao, valor}], assinaturas: [{papel, nome, cargo}],
  *   observacoesGerais, imagens: [{base64, mimeType, legenda}] }
  */
 function RegOp_montarDocumentoHtml_(dados) {
-  const logo = RegOp_getLogoDataUri_();
+  dados = dados || {};
   const hospital = dados.hospital || {};
   const respostas = dados.respostas || [];
   const assinaturas = dados.assinaturas || [];
-  const imagens = dados.imagens || [];
+  const imagens = (dados.imagens || []).filter(function (im) { return im && im.base64; });
+  const esc = RegOp_escaparHtml_;
+  const numero = dados.registroId ? RegOp_numeroCurto_(dados.registroId) : '';
+  const tituloCurto = 'Registro operacional';
+  let n = 0;
+  const h2 = function (t) { n++; return '<h2>' + n + '. ' + esc(t) + '</h2>'; };
 
-  // agrupa respostas por seção, preservando a ordem de chegada; campos
-  // sem seção caem no grupo '' (renderizado primeiro, sem título de h2)
+  // agrupa respostas por seção, preservando a ordem de chegada; campos sem seção
+  // vão primeiro, numa seção "Informações gerais"
   const grupos = [];
   const indicePorSecao = {};
   respostas.forEach(function (r) {
@@ -88,84 +70,70 @@ function RegOp_montarDocumentoHtml_(dados) {
   grupos.sort(function (a, b) { return (a.secao === '' ? -1 : 0) - (b.secao === '' ? -1 : 0); });
 
   const html = [];
-  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');
-  html.push('<title>' + RegOp_escaparHtml_(dados.tipoDocumentoNome || 'Registro') + ' — ' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</title>');
-  html.push('<style>' + RegOp_getCss_() + SGO_DocA4_css_() + RelTecA4_css_({ titulo: (dados.tipoDocumentoNome || 'Registro operacional') + (hospital.razaoSocial ? ' — ' + hospital.razaoSocial : ''), numero: dados.registroId ? RegOp_numeroCurto_(dados.registroId) : '', revisao: '00' }) + '</style></head><body>');
+  html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
+  html.push('<title>' + esc(dados.tipoDocumentoNome || 'Registro operacional') + (numero ? ' ' + esc(numero) : '') + ' — ' + esc(hospital.razaoSocial || '') + '</title>');
+  html.push('<style>' + RegOp_getCss_({ titulo: tituloCurto, numero: numero, revisao: '00' }) + '</style></head><body>');
+  html.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
+  html.push('<main class="folha">');
+  html.push('<header class="abertura"><img src="' + RegOpDoc_logo_() + '" alt="Metrolabs"><div class="meta">' + esc(tituloCurto) + (numero ? '<br>Nº ' + esc(numero) + ' · Revisão 00' : '') + '</div></header>');
+  html.push('<h1>' + esc(dados.tipoDocumentoNome || 'Registro operacional') + '</h1>');
+  html.push('<p class="subtitulo">Registro operacional de engenharia clínica, ' + esc(String(REGOP_CFG.BASE_NORMATIVA || '').replace(/^Conforme /, 'conforme ')) + '</p>');
+  const ficha = [['Data do registro', dados.data || '—'], ['Registro nº', numero || '—']];
+  if (dados.registroOrigemInfo) ficha.push(['Referente ao registro', [dados.registroOrigemInfo.data, dados.registroOrigemInfo.tipoDocumentoNome].filter(Boolean).join(' — '), { largo: true }]);
+  html.push(SGO_DocA4_tabelaIdent_(ficha, 'ficha'));
 
-  html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');
-  html.push('<div class="folha">');
-
-  html.push('<div class="topo">');
-  if (logo) {
-    html.push('<img class="logo-topo" src="' + logo + '" alt="Metrolabs">');
-  } else {
-    html.push('<div></div>');
-  }
-  html.push('<div class="marca-doc">ENGENHARIA CLÍNICA — REGISTRO OPERACIONAL</div>');
-  html.push('</div>');
-
-  html.push('<div class="controle-doc">');
-  html.push('<div class="controle-doc-linha">');
-  html.push('<span><b>Tipo de Documento:</b> ' + RegOp_escaparHtml_(dados.tipoDocumentoNome || '—') + '</span>');
-  html.push('<span><b>Data do Registro:</b> ' + RegOp_escaparHtml_(dados.data || '') + '</span>');
-  if (dados.registroId) html.push('<span><b>Registro nº:</b> ' + RegOp_escaparHtml_(RegOp_numeroCurto_(dados.registroId)) + '</span>');
-  html.push('</div>');
-  if (dados.registroOrigemInfo) {
-    html.push('<div class="controle-doc-linha"><span><b>Referente ao registro de:</b> ' +
-      RegOp_escaparHtml_(dados.registroOrigemInfo.data || '') + ' — ' +
-      RegOp_escaparHtml_(dados.registroOrigemInfo.tipoDocumentoNome || '') + '</span></div>');
-  }
-  html.push('</div>');
-
-  html.push('<div class="titulo-central"><h1>' + RegOp_escaparHtml_(dados.tipoDocumentoNome || '') + '</h1><div class="norma">' + RegOp_escaparHtml_(REGOP_CFG.BASE_NORMATIVA) + '</div></div>');
-
-  html.push('<table class="dados">');
-  html.push('<tr><td class="rotulo">Cliente / instituição</td><td>' + RegOp_escaparHtml_(hospital.razaoSocial || '') + '</td></tr>');
-  html.push('<tr><td class="rotulo">CNPJ</td><td>' + RegOp_escaparHtml_(hospital.cnpj ? RegOp_formatarCnpj_(hospital.cnpj) : '—') + '</td></tr>');
-  html.push('<tr><td class="rotulo">Localização</td><td>' + RegOp_escaparHtml_([hospital.cidade, hospital.uf].filter(Boolean).join('/') || '—') + '</td></tr>');
-  html.push('</table>');
+  html.push('<section>' + h2('Identificação'));
+  html.push(SGO_DocA4_tabelaIdent_([
+    ['Cliente / instituição', hospital.razaoSocial || '—', { largo: true }],
+    ['CNPJ', hospital.cnpj ? RegOp_formatarCnpj_(hospital.cnpj) : '—'], ['Localização', [hospital.cidade, hospital.uf].filter(Boolean).join('/') || '—']
+  ]));
+  html.push('</section>');
 
   grupos.forEach(function (grupo) {
-    html.push('<div class="secao">');
-    if (grupo.secao) html.push('<h2>' + RegOp_escaparHtml_(grupo.secao) + '</h2>');
-    html.push('<table class="campos">');
+    html.push('<section>' + h2(grupo.secao || 'Informações gerais'));
+    html.push('<table class="t campos"><thead><tr><th>Item</th><th>Registro</th></tr></thead><tbody>');
     grupo.itens.forEach(function (item) {
       const valorBruto = String(item.valor === undefined || item.valor === null ? '' : item.valor);
+      const valor = RegOp_formatarValorCampo_(item.tipo, valorBruto);
+      // Texto longo (mais de ~3 linhas na coluna) vai em linha inteira, com o rótulo em cima.
+      if (item.tipo === 'texto' && (valor.length > 180 || (valor.match(/\n/g) || []).length > 2)) {
+        html.push('<tr class="longo"><td colspan="2"><span class="rot-longo">' + esc(item.rotulo || '') + '</span>' + RegOpDoc_paragrafos_(valor) + '</td></tr>');
+        return;
+      }
       let classeValor = '';
       if (item.tipo === 'sim_nao_na') {
         classeValor = valorBruto === 'Sim' ? 'sim' : (valorBruto === 'Não' ? 'nao' : (valorBruto === 'N/A' ? 'na' : ''));
       }
-      html.push('<tr><td class="rotulo">' + RegOp_escaparHtml_(item.rotulo || '') + '</td><td class="valor ' + classeValor + '">' + RegOp_quebrasLinha_(RegOp_escaparHtml_(RegOp_formatarValorCampo_(item.tipo, valorBruto) || '—')) + '</td></tr>');
+      html.push('<tr><th class="rot">' + esc(item.rotulo || '') + '</th><td class="valor ' + classeValor + '">' + RegOp_quebrasLinha_(esc(valor || '—')) + '</td></tr>');
     });
-    html.push('</table></div>');
+    html.push('</tbody></table></section>');
   });
 
   if (dados.observacoesGerais) {
-    // Parágrafos e quebras de linha digitados pelo colaborador são mantidos.
-    const paragrafosObs = String(dados.observacoesGerais).replace(/\r\n/g, '\n').split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean);
-    html.push('<div class="secao"><h2>Observações Gerais</h2>' + paragrafosObs.map(function (p) { return '<p>' + RegOp_quebrasLinha_(RegOp_escaparHtml_(p)) + '</p>'; }).join('') + '</div>');
+    html.push('<section>' + h2('Observações gerais') + RegOpDoc_paragrafos_(dados.observacoesGerais) + '</section>');
   }
 
   if (imagens.length) {
-    html.push('<div class="secao"><h2>Registros Fotográficos</h2>');
+    html.push('<section>' + h2('Registros fotográficos') + '<div class="fotos">');
     imagens.forEach(function (img, i) {
-      html.push('<div class="figura-item">');
-      html.push('<img src="data:' + (img.mimeType || 'image/jpeg') + ';base64,' + img.base64 + '" alt="Figura ' + (i + 1) + '">');
-      html.push('<div class="figura-legenda">Figura ' + (i + 1) + (img.legenda ? (': ' + RegOp_escaparHtml_(img.legenda)) : '') + '</div>');
-      html.push('</div>');
+      const mime = /^image\/(png|jpe?g|gif|webp)$/i.test(String(img.mimeType || '')) ? img.mimeType : 'image/jpeg';
+      html.push('<figure class="foto"><div class="q"><img src="data:' + mime + ';base64,' + String(img.base64).replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Figura ' + (i + 1) + '"></div>' +
+        '<figcaption class="leg"><b>Figura ' + (i + 1) + '</b>' + (img.legenda ? ' — ' + esc(img.legenda) : '') + '</figcaption></figure>');
     });
-    html.push('</div>');
+    html.push('</div></section>');
   }
 
-  html.push('<div class="assinaturas-wrap">');
-  assinaturas.forEach(function (assin) {
-    html.push('<div class="assinatura-item"><div class="assinatura-linha"><div class="papel">' + RegOp_escaparHtml_(assin.papel || 'Responsável') + '</div>' +
-      RegOp_escaparHtml_(assin.nome || '—') + (assin.cargo ? (' — ' + RegOp_escaparHtml_(assin.cargo)) : '') + '</div></div>');
-  });
-  html.push('</div>');
+  const assin = assinaturas.filter(function (a) { return a && (a.nome || a.papel); });
+  if (assin.length) {
+    html.push('<section class="reltec-fecho">' + h2(assin.length === 1 ? 'Assinatura' : 'Assinaturas'));
+    html.push('<p>As informações deste registro foram conferidas por quem assina abaixo.</p>');
+    html.push(SGO_DocA4_assinaturas_(assin.map(function (a) {
+      return { nome: a.nome || '', cargo: a.cargo || '', registro: a.papel || 'Responsável' };
+    })));
+    html.push('</section>');
+  }
 
-  html.push('</div>');
-  html.push('</body></html>');
+  html.push('</main></body></html>');
   return html.join('\n');
 }
 

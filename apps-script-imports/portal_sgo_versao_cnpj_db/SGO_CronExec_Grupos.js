@@ -189,7 +189,7 @@ function CronExec_sugerirGrupos_(equipamentos, params) {
   });
 
   const fraseCobertura = totalTipos > 1
-    ? `o(s) primeiro(s) grupo(s) recebe(m) 1 unidade de cada um dos ${totalTipos} tipos distintos de equipamento, para que nenhum tipo fique totalmente indisponível ao mesmo tempo`
+    ? `os primeiros grupos recebem uma unidade de cada um dos ${totalTipos} tipos de equipamento, para que nenhum tipo fique totalmente indisponível ao mesmo tempo`
     : `como há apenas 1 tipo de equipamento, a divisão em grupos segue só o limite de unidades por grupo`;
 
   return {

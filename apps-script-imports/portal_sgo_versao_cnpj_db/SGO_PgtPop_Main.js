@@ -41,7 +41,7 @@ function PgtPop_apiDispatch(req) {
     apiListarDocumentos: PgtPop_apiListarDocumentos,
     apiObterDocumentoPorId: PgtPop_apiObterDocumentoPorId,
     apiMontarDocumentoFinal: PgtPop_apiMontarDocumentoFinal,
-    apiSalvarDocumento: SGO_DocSalvar_comCopiaHtml_(PgtPop_apiSalvarDocumento), // PDF + cópia HTML A4 na pasta do CNPJ
+    apiSalvarDocumento: PgtPop_apiSalvarDocumento, // HTML A4 + PDF na pasta do CNPJ; não duplica o que a geração já gravou
     apiListarArquivosPdf: PgtPop_apiListarArquivosPdf
   };
 
@@ -202,16 +202,10 @@ function PgtPop_apiGerarDocumento(payload, sessionId) {
   // planilha de qualquer forma).
   var pdf = PgtPop_salvarPdfAutomatico_(registro);
 
-  // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do CNPJ
-  // (mesmo nome-base do PDF). Só tenta se o PDF foi salvo; nunca derruba a geração.
-  var htmlSalvo = { htmlId: '', htmlUrl: '' };
-  if (pdf && pdf.url) {
-    try {
-      var pastaPgtPop = PgtPop_obterPastaPorCnpj_((registro.hospital && registro.hospital.cnpj) || '', (registro.hospital && registro.hospital.razaoSocial) || '');
-      htmlSalvo = SGO_DocSalvar_htmlAoLado_(pastaPgtPop, pdf.fileName, PgtPop_montarDocumentoHtml_(registro), { compartilhar: true });
-    } catch (eHtml) {
-      htmlSalvo = { htmlId: '', htmlUrl: '', avisoHtml: 'O PDF foi salvo, mas a cópia em HTML (A4) não foi gravada na pasta: ' + eHtml.message + '. O PDF continua válido.' };
-    }
+  // A gravação acima já deixa o HTML A4 e o PDF (mesmo nome, sumário com páginas) na pasta do CNPJ.
+  var htmlSalvo = { htmlId: (pdf && pdf.htmlId) || '', htmlUrl: (pdf && pdf.htmlUrl) || '' };
+  if (pdf && pdf.erro) {
+    htmlSalvo.avisoHtml = 'O documento foi gerado e gravado no histórico, mas não foi salvo na pasta do cliente (' + pdf.erro + '). Abra o documento e use "Salvar na pasta do cliente".';
   }
 
   // Integração Auvo: cria uma Tarefa concluída pra este atendimento. Só
@@ -546,7 +540,7 @@ function PgtPop_textoPadraoPop_(hospital, pop, roteiro) {
   var cliente = (hospital && hospital.razaoSocial) || 'o estabelecimento';
   var corpo = [
     '## Objetivo ##',
-    'Estabelecer a sistemática de ' + nome.toLowerCase() + ' em ' + cliente + ', em atendimento à RDC nº 509/2021 (ANVISA) e à ABNT NBR 15943:2011.',
+    'Estabelecer a sistemática de ' + nome.toLowerCase() + ' em ' + cliente + '.',
     '',
     '## Responsabilidades ##',
     'A execução cabe à equipe de engenharia clínica responsável pelo serviço. A aprovação deste procedimento e a guarda dos registros cabem ao responsável técnico do estabelecimento.',

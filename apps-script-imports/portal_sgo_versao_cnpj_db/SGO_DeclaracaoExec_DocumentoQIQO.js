@@ -1,1 +1,139 @@
-function DeclExecQIQO_formatarMedicoes_(texto){return String(texto||"").replace(/(^|[^\w.,/])([+-]?(?:\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?)\s*(°C|°F|%|rpm|RPM|mmHg|hPa|kPa|MPa|bar|mbar|kg|mg|g|ms|min|s|Hz|V|mA|A|W|mL|L)(?=$|[^A-Za-z])/g,function(all,prefixo,valor,unidade){var n=Number(valor.indexOf(",")>=0?valor.replace(/\./g,"").replace(",","."):/^[-+]?[1-9]\d{0,2}(?:\.\d{3})+$/.test(valor)?valor.replace(/\./g,""):valor);if(!isFinite(n))return all;/* Mínimo de 2 casas, sem nunca cortar casas que o valor já tem (antes "0,035 °C" de um certificado virava "0,04 °C") e com milhar pt-BR. */var milhar=valor.indexOf(",")<0&&/^[-+]?[1-9]\d{0,2}(?:\.\d{3})+$/.test(valor);var mDec=/[.,](\d+)(?:[eE][+-]?\d+)?$/.exec(valor);var dec=(!milhar&&mDec)?mDec[1].length:0;return prefixo+SGO_DocA4_num_(n,Math.max(2,Math.min(dec,6)))+" "+unidade})}function DeclExecQIQO_validarTextos_(textos){var resultado={};["introducao","objetivo","qiTexto","qoTexto","qdTexto","conclusao"].forEach(function(chave){var texto=String(textos[chave]||"").trim();if(/\b(?:aprovad[oa]s?|reprovad[oa]s?|apto|inapto)\b/i.test(texto))throw new Error("Remova o julgamento de aprovação do texto: "+chave+". A decisão cabe à qualidade do cliente.");resultado[chave]=DeclExecQIQO_formatarMedicoes_(texto)});return resultado}function DeclExecQIQO_escaparHtml_(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function DeclExecQIQO_paragrafosHtml_(texto){var partes=String(texto||"").split(/\n{2,}/).map(function(p){return p.trim()}).filter(Boolean);if(!partes.length)return"<p>-</p>";return partes.map(function(p){return"<p>"+DeclExecQIQO_escaparHtml_(p)+"</p>"}).join("\n")}function DeclExecQIQO_montarListaItens_(itens){var marcados=(itens||[]).filter(function(it){return it&&it.marcado});if(!marcados.length)return"";var linhas=marcados.map(function(it){return"<li><strong>"+DeclExecQIQO_escaparHtml_(it.label)+"</strong>"+(it.observacao?' <span class="flag-achado">— achado técnico registrado, ver texto acima</span>':"")+"</li>"}).join("\n");return'<ul class="lista-itens">'+linhas+"</ul>"}function DeclExecQIQO_montarFotos_(fotos){if(!fotos||!fotos.length)return"";var html=['<div class="fotos-grid">'];fotos.forEach(function(f){html.push('<div class="foto-item"><div class="foto-frame"><img src="data:'+f.mimeType+";base64,"+f.base64+'" alt="Foto"></div>');if(f.legendaIA)html.push('<div class="legenda-ia"><strong>Análise da imagem:</strong> '+DeclExecQIQO_escaparHtml_(DeclExecQIQO_validarTextos_({qiTexto:f.legendaIA}).qiTexto)+"</div>");if(f.legendaTecnico)html.push('<div class="legenda-tecnico">'+DeclExecQIQO_escaparHtml_(DeclExecQIQO_validarTextos_({qiTexto:f.legendaTecnico}).qiTexto)+"</div>");html.push("</div>")});html.push("</div>");return html.join("\n")}function DeclExecQIQO_montarCertificadosQD_(certificados){if(!certificados||!certificados.length)return"";var html=['<div class="certificados-qd">'];certificados.forEach(function(c){html.push('<div class="certificado-item">');html.push('<div class="cert-label"><strong>'+DeclExecQIQO_escaparHtml_(c.label)+"</strong></div>");if(c.temCertificado){if(!String(c.leituraIA||"").trim())throw new Error("Leitura QD ausente para "+c.label+".");if(c.mimeType&&c.mimeType.indexOf("image/")===0&&c.base64){html.push('<img class="cert-thumb" src="data:'+c.mimeType+";base64,"+c.base64+'" alt="Certificado de calibração">')}else if(c.mimeType==="application/pdf"){html.push('<div class="cert-anexo-nota">Certificado em PDF anexado a este atendimento — arquivo original não exibido neste documento impresso.</div>')}if(c.leituraIA)html.push('<div class="legenda-ia"><strong>Leitura do certificado:</strong> '+DeclExecQIQO_escaparHtml_(DeclExecQIQO_validarTextos_({qdTexto:c.leituraIA}).qdTexto)+"</div>");if(c.observacao)html.push('<div class="legenda-tecnico">'+DeclExecQIQO_escaparHtml_(DeclExecQIQO_validarTextos_({qdTexto:c.observacao}).qdTexto)+"</div>")}else{html.push('<div class="cert-ausente">Certificado de calibração não anexado para este item nesta visita.</div>')}html.push("</div>")});html.push("</div>");return html.join("\n")}function DeclExecQIQO_montarDocumentoHtml_(ctx){ctx.textos=DeclExecQIQO_validarTextos_(ctx.textos||{});var empresa=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE||{nome:"Metrolab Soluções em Engenharia Clínica LTDA",cnpj:""};var logo=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.LOGO_BASE64||null;var assinaturas=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.ASSINATURAS_PADRAO||[];var temCertificadoQD=!!(ctx.usaQD&&(ctx.certificadosQD||[]).some(function(c){return c.temCertificado}));var etapasTit=["INSTALAÇÃO"].concat(ctx.usaQO?["OPERAÇÃO"]:[]).concat(temCertificadoQD?["DESEMPENHO"]:[]);var titulo="RELATÓRIO DE QUALIFICAÇÃO DE "+(etapasTit.length>1?etapasTit.slice(0,-1).join(", ")+" E "+etapasTit[etapasTit.length-1]:etapasTit[0]);var html=[];html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');html.push("<title>"+titulo+(ctx.numeroDocumento?" — "+DeclExecQIQO_escaparHtml_(ctx.numeroDocumento):"")+"</title>");html.push("<style>");html.push("@page { size: A4; margin: 18mm 16mm; }");html.push("* { box-sizing: border-box; }");html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');html.push(".folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }");html.push(".topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 20px; }");html.push(".logo-topo { height: 46px; }");html.push(".titulo-doc { text-align:right; }");html.push(".titulo-doc h1 { font-size: 17px; margin: 0; color:#0b4ea2; }");html.push(".titulo-doc small { color:#6b7280; }");html.push("table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; }");html.push("table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }");html.push("table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }");html.push(".secao { margin-top: 26px; }");html.push(".secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }");html.push(".secao h3 { font-size: 12px; color:#0b4ea2; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #d1d5db; }");html.push("p { text-align: justify; margin: 8px 0; }");html.push("ul.lista-itens { margin: 10px 0; padding-left: 20px; }");html.push("ul.lista-itens li { margin-bottom: 8px; }");html.push(".flag-achado { font-size: 11px; color:#b45309; font-style: italic; }");html.push(".status-banner-qiqo { text-align:center; font-weight:700; font-size: 12.5px; padding: 10px 14px; border-radius: 4px; border: 2px solid; margin: 4px 0 8px; letter-spacing:.2px; }");html.push(".status-banner-qiqo.sem-achado { background: rgba(11,78,162,.08); border-color: #0b4ea2; color: #0b4ea2; }");html.push(".status-banner-qiqo.com-achado { background: rgba(217,119,6,.10); border-color: #d97706; color: #b45309; }");html.push(".fotos-grid { display:flex; flex-wrap:wrap; gap: 14px; margin-top: 12px; }");html.push(".foto-item { width: 47%; border:1px solid #d1d5db; border-radius:4px; overflow:hidden; background:#ffffff; page-break-inside: avoid; }");html.push(".foto-item .foto-frame { height: 210px; display:flex; align-items:center; justify-content:center; background:#f9fafb; border-bottom:1px solid #d1d5db; }");html.push(".foto-item .foto-frame img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block; }");html.push(".legenda-ia { font-size: 11px; color:#374151; margin-top:6px; background:#f3f4f6; padding:6px 8px; border-radius:4px; border-left: 3px solid #0b4ea2; }");html.push(".legenda-tecnico { font-size: 10.5px; color:#6b7280; margin-top:4px; text-align:center; }");html.push(".certificados-qd { display:flex; flex-wrap:wrap; gap: 14px; margin-top: 12px; }");html.push(".certificado-item { width: 47%; page-break-inside: avoid; border: 1px solid #d1d5db; border-radius:4px; padding: 10px 12px; }");html.push(".certificado-item .cert-label { font-size: 12px; color:#0b4ea2; margin-bottom:6px; }");html.push(".cert-thumb { width:100%; border:1px solid #d1d5db; border-radius:4px; margin-bottom:6px; }");html.push(".cert-anexo-nota, .cert-ausente { font-size: 11px; color:#6b7280; font-style: italic; margin-bottom:6px; }");html.push(".assinaturas { display:flex; justify-content:space-around; margin-top: 50px; page-break-inside: avoid; }");html.push(".assinatura-item { text-align:center; width: 45%; }");html.push(".assinatura-item img, .assinatura-item svg { height: 65px; }");html.push(".assinatura-linha { border-top: 1px solid #1f2937; margin-top: 4px; padding-top: 4px; font-size: 11.5px; }");html.push(".rodape-aviso { margin-top: 34px; padding-top: 10px; border-top: 1px solid #d1d5db; font-size: 10.5px; color:#6b7280; }");html.push(".barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }");html.push(".barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }");html.push("@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }");html.push(SGO_DocA4_css_()+RelTecA4_css_({titulo:"Relatório de Qualificação (QI/QO/QD)",numero:ctx.numeroDocumento||"",revisao:ctx.revisao||"00"})+"</style></head><body>");html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');html.push('<div class="folha">');html.push('<div class="topo">');if(logo&&logo.data){html.push('<img class="logo-topo" src="data:'+logo.mimeType+";base64,"+logo.data+'" alt="Metrolabs">')}else{html.push("<div></div>")}html.push('<div class="titulo-doc"><h1>'+titulo+"</h1><small>"+DeclExecQIQO_escaparHtml_(ctx.numeroDocumento||"—")+" | "+DeclExecQIQO_escaparHtml_(ctx.dataEmissao||"")+"</small></div>");html.push("</div>");html.push('<table class="dados">');html.push('<tr><td class="rotulo">Cliente</td><td>'+DeclExecQIQO_escaparHtml_(ctx.cliente)+"</td></tr>");html.push('<tr><td class="rotulo">Endereço</td><td>'+DeclExecQIQO_escaparHtml_(ctx.endereco||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Equipamento</td><td>'+DeclExecQIQO_escaparHtml_(ctx.equipamentoLabel)+"</td></tr>");html.push('<tr><td class="rotulo">TAG</td><td>'+DeclExecQIQO_escaparHtml_(ctx.tag||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Marca / Modelo</td><td>'+DeclExecQIQO_escaparHtml_((ctx.marca||"—")+" / "+(ctx.modelo||"—"))+"</td></tr>");html.push('<tr><td class="rotulo">Localização</td><td>'+DeclExecQIQO_escaparHtml_(ctx.localizacao||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Período do atendimento</td><td>'+DeclExecQIQO_escaparHtml_(ctx.periodoLabel||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Local do atendimento</td><td>'+DeclExecQIQO_escaparHtml_(ctx.localAtendimento==="LABORATORIO"?"Laboratório da Metrolabs":"Instalações do cliente")+"</td></tr>");html.push('<tr><td class="rotulo">Técnico executor</td><td>'+DeclExecQIQO_escaparHtml_(ctx.tecnicoExecutor||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Empresa executante</td><td>'+DeclExecQIQO_escaparHtml_(empresa.nome)+(empresa.cnpj?" — CNPJ "+DeclExecQIQO_escaparHtml_(empresa.cnpj):"")+"</td></tr>");html.push("</table>");var temAchado=(ctx.itensQI||[]).concat(ctx.itensQO||[]).some(function(it){return it.marcado&&it.observacao});html.push('<div class="status-banner-qiqo '+(temAchado?"com-achado":"sem-achado")+'">'+(temAchado?"EXECUTADO COM ACHADO(S) TÉCNICO(S) REGISTRADO(S) — ver detalhes na seção correspondente":"EXECUTADO SEM ACHADOS TÉCNICOS REGISTRADOS")+"</div>");html.push('<div class="secao"><h2>Introdução</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.introducao));html.push("</div>");html.push('<div class="secao"><h2>Objetivo</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.objetivo));html.push("</div>");html.push('<div class="secao"><h2>Qualificação de Instalação (QI)</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.qiTexto));var listaQI=DeclExecQIQO_montarListaItens_(ctx.itensQI);if(listaQI){html.push("<h3>Itens verificados</h3>");html.push(listaQI)}var fotosQI=DeclExecQIQO_montarFotos_(ctx.fotosQI);if(fotosQI){html.push("<h3>Registros fotográficos — QI</h3>");html.push(fotosQI)}html.push("</div>");if(ctx.usaQO){html.push('<div class="secao"><h2>Qualificação de Operação (QO)</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.qoTexto));var listaQO=DeclExecQIQO_montarListaItens_(ctx.itensQO);if(listaQO){html.push("<h3>Itens verificados</h3>");html.push(listaQO)}var fotosQO=DeclExecQIQO_montarFotos_(ctx.fotosQO);if(fotosQO){html.push("<h3>Registros fotográficos — QO</h3>");html.push(fotosQO)}html.push("</div>")}if(temCertificadoQD){html.push('<div class="secao"><h2>Qualificação de Desempenho (QD)</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.qdTexto));var certificadosQD=DeclExecQIQO_montarCertificadosQD_(ctx.certificadosQD);if(certificadosQD){html.push("<h3>Certificados de calibração anexados</h3>");html.push(certificadosQD)}html.push("</div>")}if(ctx.normas&&ctx.normas.length){html.push('<div class="secao"><h2>Referências Normativas</h2>');html.push("<p>"+ctx.normas.map(DeclExecQIQO_escaparHtml_).join("<br>")+"</p>");html.push("</div>")}html.push('<div class="secao"><h2>Conclusão</h2>');html.push(DeclExecQIQO_paragrafosHtml_(ctx.textos.conclusao));html.push("</div>");html.push('<div class="assinaturas">');var assinantes=ctx.assinantesSelecionados&&ctx.assinantesSelecionados.length?ctx.assinantesSelecionados:assinaturas;assinantes.forEach(function(a){html.push('<div class="assinatura-item">');if(a.imagemSvg)html.push(a.imagemSvg);html.push('<div class="assinatura-linha"><strong>'+DeclExecQIQO_escaparHtml_(a.nome)+"</strong><br>"+DeclExecQIQO_escaparHtml_(a.cargo)+"<br>"+DeclExecQIQO_escaparHtml_(a.registro)+"</div>");html.push("</div>")});html.push("</div>");html.push('<div class="rodape-aviso">Este documento é o registro completo da verificação dos itens de '+"qualificação de instalação"+(ctx.usaQO?", operação":"")+(temCertificadoQD?" e desempenho":"")+" descritos acima. Não constitui laudo de aprovação/reprovação do equipamento como um todo — eventual achado "+"técnico registrado em algum item deve ser avaliado pela qualidade do cliente, responsável pela decisão de adequação e liberação. Datas de próxima calibração são exclusivamente as expressas na fonte; nenhum intervalo é definido por este relatório.</div>");html.push("</div>");html.push("</body></html>");return html.join("\n")}
+function DeclExecQIQO_formatarMedicoes_(texto){return String(texto||"").replace(/(^|[^\w.,/])([+-]?(?:\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?)\s*(°C|°F|%|rpm|RPM|mmHg|hPa|kPa|MPa|bar|mbar|kg|mg|g|ms|min|s|Hz|V|mA|A|W|mL|L)(?=$|[^A-Za-z])/g,function(all,prefixo,valor,unidade){var n=Number(valor.indexOf(",")>=0?valor.replace(/\./g,"").replace(",","."):/^[-+]?[1-9]\d{0,2}(?:\.\d{3})+$/.test(valor)?valor.replace(/\./g,""):valor);if(!isFinite(n))return all;/* Mínimo de 2 casas, sem nunca cortar casas que o valor já tem (antes "0,035 °C" de um certificado virava "0,04 °C") e com milhar pt-BR. */var milhar=valor.indexOf(",")<0&&/^[-+]?[1-9]\d{0,2}(?:\.\d{3})+$/.test(valor);var mDec=/[.,](\d+)(?:[eE][+-]?\d+)?$/.exec(valor);var dec=(!milhar&&mDec)?mDec[1].length:0;return prefixo+SGO_DocA4_num_(n,Math.max(2,Math.min(dec,6)))+" "+unidade})}function DeclExecQIQO_validarTextos_(textos){var resultado={};["introducao","objetivo","qiTexto","qoTexto","qdTexto","conclusao"].forEach(function(chave){var texto=String(textos[chave]||"").trim();if(/\b(?:aprovad[oa]s?|reprovad[oa]s?|apto|inapto)\b/i.test(texto))throw new Error("Remova o julgamento de aprovação do texto: "+chave+". A decisão cabe à qualidade do cliente.");resultado[chave]=DeclExecQIQO_formatarMedicoes_(texto)});return resultado}function DeclExecQIQO_escaparHtml_(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function DeclExecQIQO_paragrafosHtml_(texto){var partes=String(texto||"").split(/\n{2,}/).map(function(p){return p.trim()}).filter(Boolean);if(!partes.length)return"<p>-</p>";return partes.map(function(p){return"<p>"+DeclExecQIQO_escaparHtml_(p)+"</p>"}).join("\n")}
+/* ---------- Relatório QI/QO/QD em A4 (padrão de 18/10/2026; peças comuns DeclExecA4_* em SGO_DeclaracaoExec_Documento.js) ---------- */
+
+/* Texto que já passou pela conferência (sem veredito, medições pt-BR). */
+function DeclExecQIQO_limpo_(texto) {
+  return DeclExecQIQO_validarTextos_({ qiTexto: texto }).qiTexto;
+}
+
+/* Itens verificados de uma etapa: tabela com a observação do técnico (o achado aparece aqui, uma vez só). */
+function DeclExecQIQO_montarTabelaItens_(itens) {
+  var marcados = (itens || []).filter(function (it) { return it && it.marcado; });
+  if (!marcados.length) return '';
+  var temObs = marcados.some(function (it) { return it.observacao; });
+  var colunas = [{ t: 'Item verificado' }].concat(temObs ? [{ t: 'Achado técnico registrado' }] : []);
+  return SGO_DocA4_tabela_(colunas, marcados.map(function (it) {
+    var l = [it.label || '—'];
+    if (temObs) l.push(it.observacao ? { html: '<span class="obs">' + DeclExecQIQO_escaparHtml_(DeclExecQIQO_limpo_(it.observacao)) + '</span>' } : '—');
+    return l;
+  }));
+}
+
+/* Leitura padrão do certificado (sem IA): o texto da seção QD já diz o mesmo, então não se repete por instrumento. */
+function DeclExecQIQO_leituraPadrao_(leitura) {
+  return /^Certificado de calibração de .+ apresentado neste atendimento\./.test(String(leitura || '').trim());
+}
+
+/*
+ * QD: "Tabela N — Certificados de calibração" (instrumento e situação) e, logo depois, só as
+ * imagens dos certificados anexados, em figuras numeradas de altura limitada, com a leitura
+ * do certificado (quando não for a leitura padrão) e a observação do técnico.
+ */
+function DeclExecQIQO_montarCertificadosQD_(certificados, num) {
+  var lista = certificados || [];
+  if (!lista.length) return '';
+  var nFig = num.proximaFigura();
+  var figuras = [];
+  var temObs = lista.some(function (c) { return c.temCertificado && c.observacao; });
+  var linhas = lista.map(function (c) {
+    var situacao;
+    if (c.temCertificado) {
+      if (!String(c.leituraIA || '').trim()) throw new Error('Leitura QD ausente para ' + c.label + '.');
+      var ehImagem = c.mimeType && c.mimeType.indexOf('image/') === 0 && c.base64;
+      if (ehImagem) {
+        situacao = 'Anexado (Figura ' + (nFig + figuras.length) + ')';
+        figuras.push(c);
+      } else {
+        situacao = c.mimeType === 'application/pdf' ? 'Anexado (arquivo PDF, não reproduzido neste documento)' : 'Anexado';
+        if (!DeclExecQIQO_leituraPadrao_(c.leituraIA)) figuras.push(Object.assign({}, c, { semImagem: true }));
+      }
+    } else {
+      situacao = 'Não anexado nesta visita';
+    }
+    var l = [c.label || '—', { html: c.temCertificado ? '<span class="ok-txt">' + DeclExecQIQO_escaparHtml_(situacao) + '</span>' : '<span class="info-txt">' + situacao + '</span>' }];
+    if (temObs) l.push(c.temCertificado && c.observacao ? DeclExecQIQO_limpo_(c.observacao) : '—');
+    return l;
+  });
+  var h = [num.tabela('Certificados de calibração dos instrumentos'),
+    SGO_DocA4_tabela_([{ t: 'Instrumento' }, { t: 'Situação' }].concat(temObs ? [{ t: 'Observação do técnico' }] : []), linhas)];
+  figuras.forEach(function (c) {
+    var leitura = DeclExecQIQO_leituraPadrao_(c.leituraIA) ? '' : DeclExecQIQO_validarTextos_({ qdTexto: c.leituraIA }).qdTexto;
+    var textoLeitura = leitura ? '<p class="interp"><b>Leitura do certificado de ' + DeclExecQIQO_escaparHtml_(c.label) + ':</b> ' + DeclExecQIQO_escaparHtml_(leitura) + '</p>' : '';
+    if (c.semImagem) { h.push(textoLeitura); return; }
+    var mime = /^image\/(png|jpe?g|gif|webp)$/i.test(String(c.mimeType || '')) ? c.mimeType : 'image/jpeg';
+    h.push('<div class="de-cert">' + num.figura('<div class="q"><img src="data:' + mime + ';base64,' + String(c.base64).replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Certificado de calibração"></div>',
+      'Certificado de calibração: ' + c.label) + '</div>' + textoLeitura);
+  });
+  return h.join('\n');
+}
+
+/**
+ * @param {Object} ctx ver DeclExec_apiMontarDocumentoQIQO (SGO_DeclaracaoExec_Main.js)
+ * @param {Object} opcoes { sumario: bool } — marcador do sumário (documento com mais de 3 páginas)
+ */
+function DeclExecQIQO_montarDocumentoHtml_(ctx, opcoes) {
+  opcoes = opcoes || {};
+  ctx.textos = DeclExecQIQO_validarTextos_(ctx.textos || {});
+  var t = ctx.textos;
+  var temCertificadoQD = !!(ctx.usaQD && (ctx.certificadosQD || []).some(function (c) { return c.temCertificado; }));
+  var etapas = ['instalação'].concat(ctx.usaQO ? ['operação'] : []).concat(temCertificadoQD ? ['desempenho'] : []);
+  var titulo = 'Relatório de qualificação de ' + (etapas.length > 1 ? etapas.slice(0, -1).join(', ') + ' e ' + etapas[etapas.length - 1] : etapas[0]);
+  var siglas = ['QI'].concat(ctx.usaQO ? ['QO'] : []).concat(temCertificadoQD ? ['QD'] : []).join('/');
+  var num = RelTecA4_numerador_();
+  var sec = DeclExecA4_secoes_();
+  var html = [];
+  html.push(DeclExecA4_inicio_({
+    tituloCurto: 'Relatório de qualificação (' + siglas + ')', titulo: titulo,
+    subtitulo: [ctx.equipamentoLabel, ctx.tag ? 'TAG ' + ctx.tag : ''].filter(Boolean).join(' — '),
+    numero: ctx.numeroDocumento, revisao: ctx.revisao
+  }));
+
+  // Quadro de resultado (só na abertura): registro com ou sem achado técnico; nunca aprovação/reprovação.
+  var achados = (ctx.itensQI || []).concat(ctx.itensQO || []).filter(function (it) { return it.marcado && it.observacao; }).length;
+  html.push(SGO_DocA4_quadroResultado_(achados
+    ? { classe: 'achado', rotulo: 'Situação do registro', valor: 'Executado com achado técnico registrado', texto: (achados === 1 ? 'Um item tem achado técnico' : achados + ' itens têm achado técnico') + ', descrito na tabela da etapa correspondente. A avaliação cabe ao setor de qualidade do cliente.' }
+    : { classe: 'info', rotulo: 'Situação do registro', valor: 'Executado sem achado técnico registrado', texto: 'Nenhum item verificado tem achado técnico registrado.' }));
+  if (opcoes.sumario) html.push(RelTecA4_sumario_());
+
+  html.push(sec.h2('Identificação'));
+  html.push(DeclExecA4_identificacao_(ctx));
+
+  html.push(sec.h2('Introdução'));
+  html.push(DeclExecQIQO_paragrafosHtml_(t.introducao));
+  html.push(sec.h2('Objetivo'));
+  html.push(DeclExecQIQO_paragrafosHtml_(t.objetivo));
+
+  html.push(sec.h2('Qualificação de instalação (QI)'));
+  html.push(DeclExecQIQO_paragrafosHtml_(t.qiTexto));
+  var tabQI = DeclExecQIQO_montarTabelaItens_(ctx.itensQI);
+  if (tabQI) html.push(num.tabela('Itens verificados na qualificação de instalação') + tabQI);
+  var fotosQI = DeclExecA4_fotos_(ctx.fotosQI, num, 'Registro fotográfico da QI', DeclExecQIQO_limpo_);
+  if (fotosQI) { html.push(sec.h3('Registro fotográfico')); html.push(fotosQI); }
+
+  if (ctx.usaQO) {
+    html.push(sec.h2('Qualificação de operação (QO)'));
+    html.push(DeclExecQIQO_paragrafosHtml_(t.qoTexto));
+    var tabQO = DeclExecQIQO_montarTabelaItens_(ctx.itensQO);
+    if (tabQO) html.push(num.tabela('Itens verificados na qualificação de operação') + tabQO);
+    var fotosQO = DeclExecA4_fotos_(ctx.fotosQO, num, 'Registro fotográfico da QO', DeclExecQIQO_limpo_);
+    if (fotosQO) { html.push(sec.h3('Registro fotográfico')); html.push(fotosQO); }
+  }
+
+  if (temCertificadoQD) {
+    html.push(sec.h2('Qualificação de desempenho (QD)'));
+    html.push(DeclExecQIQO_paragrafosHtml_(t.qdTexto));
+    html.push(DeclExecQIQO_montarCertificadosQD_(ctx.certificadosQD, num));
+  }
+
+  if (ctx.normas && ctx.normas.length) {
+    html.push(sec.h2('Referências normativas'));
+    html.push(DeclExecA4_normas_(ctx.normas));
+  }
+
+  // Conclusão, nota e assinaturas juntas; a nota só diz o que a conclusão não diz.
+  html.push(DeclExecA4_fecho_(sec, 'Conclusão', t.conclusao, ctx,
+    temCertificadoQD ? 'As datas de próxima calibração são as informadas nos próprios certificados; este relatório não define intervalos de calibração.' : ''));
+
+  html.push('</main></body></html>');
+  return html.join('\n');
+}

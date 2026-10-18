@@ -38,7 +38,10 @@ var CRONEXECIA_REGRAS_BASE =
   "refira-se a ele pelo tipo (ex.: 'as autoclaves', 'a lavadora ultrassônica').\n" +
   "5. Nunca prometa nenhum outro documento além deste próprio cronograma.\n" +
   "6. Cada seção deve ser específica do cliente e do escopo deste cronograma, nunca um texto genérico que " +
-  "serviria para qualquer cronograma.";
+  "serviria para qualquer cronograma.\n" +
+  "7. Nunca escreva 'a tabela abaixo', 'a tabela a seguir' ou 'acima': no documento, a lista de equipamentos é a " +
+  "Tabela 1, os grupos com as datas são a Tabela 2 e o calendário dos grupos é a Figura 1. Cite pelo número quando " +
+  "precisar e não repita as datas e quantidades que já estão nelas.";
 
 function CronExecIA_montarInstrucaoFormato_(marcadoresAtivos) {
   var linhas = [];

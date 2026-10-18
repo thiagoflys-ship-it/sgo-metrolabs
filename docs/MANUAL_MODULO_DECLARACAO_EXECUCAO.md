@@ -1,5 +1,10 @@
 # Manual do Operador — Módulo Declaração de Execução de Serviço
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- A declaração sai em seções numeradas: identificação, introdução, metodologia, calibrações realizadas (Tabela 1 com itens, quantidades e observações), referências normativas e, no fim, a declaração com a data de emissão e as assinaturas na mesma página. As normas aparecem uma vez só.
+- O documento é salvo na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome "Declaracao de execucao - número - TAG - data e hora", em PDF e em HTML. As declarações antigas, na pasta com o nome do cliente, continuam aparecendo em "Documentos já gerados".
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
@@ -148,9 +153,9 @@ Depois de revisar (e, se necessário, corrigir) os textos, clique em **"Confirma
 
 1. Uma nova aba do navegador abre imediatamente, mostrando "Gerando documento, aguarde...".
 2. Quando o sistema termina de montar o documento, essa mesma aba é preenchida com o documento final completo, pronto para imprimir (`Ctrl+P`) ou salvar como PDF pelo próprio navegador.
-3. Na tela original, aparece um aviso de sucesso com um botão **"Salvar no Drive"** — clique nele para salvar uma cópia em PDF na pasta do cliente no Google Drive. Depois de salvo, aparece um link direto para o arquivo salvo.
+3. Na tela original, aparece "Salvando na pasta do cliente…" e, em seguida, o link do arquivo salvo (PDF e HTML). Se a gravação falhar, use "Tentar salvar de novo".
 
-**O documento não é salvo automaticamente no Drive.** Se você fechar a aba sem clicar em "Salvar no Drive", o documento gerado não fica registrado em lugar nenhum além da aba que você já tinha aberto — gere de novo se precisar.
+**O documento é salvo automaticamente na pasta do cliente** (PDF e HTML) ao ser gerado. Fechar a aba não apaga a cópia salva.
 
 ---
 
@@ -183,7 +188,7 @@ Se um cliente perguntar "esse equipamento está aprovado?", a resposta não est�
 5. Clique em **"Gerar Declaração com IA"** e aguarde.
 6. **Revise com atenção** cada texto gerado (Introdução, Metodologia, Calibrações, Declaração Final) — corrija o que precisar.
 7. Clique em **"Confirmar e Gerar Documento"**. O documento abre em uma nova aba.
-8. Clique em **"Salvar no Drive"** se quiser guardar uma cópia em PDF na pasta do cliente.
+8. A cópia em PDF e HTML é salva sozinha na pasta do cliente; o link aparece na tela.
 
 ---
 
@@ -194,7 +199,7 @@ Se um cliente perguntar "esse equipamento está aprovado?", a resposta não est�
 | A lista de calibrações mudou depois que eu já tinha marcado algumas | Você trocou o tipo de Equipamento (seção 2) depois de já ter marcado itens | Marque as calibrações **depois** de escolher o equipamento certo, não antes |
 | A seção "Calibrações Realizadas" não aparece no texto gerado | Nenhum item de calibração foi marcado na seção 3 | Comportamento esperado — marque ao menos um item se o atendimento envolveu calibração |
 | Os textos da revisão saíram genéricos, sem detalhe do que realmente aconteceu | O campo "Metodologia" da seção 3 foi preenchido com pouco ou nenhum detalhe | Escreva mais detalhe real na Metodologia antes de gerar — a IA só escreve em cima do que você informou, nunca inventa |
-| Fechei a aba do documento sem salvar no Drive | Comportamento esperado — o sistema não salva sozinho | Gere o documento de novo e clique em "Salvar no Drive" desta vez |
+| Fechei a aba do documento | A cópia já foi salva na pasta do cliente ao gerar | Abra o documento em "Documentos já gerados" |
 
 ---
 

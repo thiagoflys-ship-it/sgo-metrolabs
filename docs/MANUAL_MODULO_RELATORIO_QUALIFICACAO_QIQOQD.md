@@ -6,6 +6,15 @@
 - Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
 - O relatório é salvo sozinho na pasta do cliente. Se falhar, aparece "Tentar salvar de novo". Os perfis Comercial e Financeiro só consultam.
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- O documento segue o padrão A4 comum: seções numeradas (1. Identificação, 2. Introdução...), tabelas com "Tabela N —" e figuras com "Figura N —", cabeçalho e rodapé em todas as páginas com "Página X de Y". Passou de 3 páginas, ganha sumário com o número da página de cada seção.
+- No alto da primeira página, um quadro mostra "Executado sem achado técnico registrado" ou "Executado com achado técnico registrado". O relatório continua sem aprovar nem reprovar o equipamento.
+- Os itens verificados de QI e de QO aparecem uma vez só, numa tabela de cada etapa, com o achado técnico do item ao lado. As normas aparecem uma vez só, em "Referências normativas".
+- Na QD, a "Tabela — Certificados de calibração dos instrumentos" mostra cada instrumento como "Anexado (Figura N)" ou "Não anexado nesta visita"; só os certificados anexados aparecem como figura, com altura limitada.
+- Conclusão, data de emissão e assinaturas ficam juntas na mesma página.
+- O arquivo é salvo na subpasta com o CNPJ do cliente, com o nome "Relatorio de qualificacao - <número> - <TAG> - <aaaa-MM-dd HHmm>" (.pdf e .html). Os relatórios antigos, salvos na pasta com o nome do cliente, continuam aparecendo em "Documentos já gerados".
+
 
 ### Qualificação de Instalação, Operação e Desempenho — documento técnico separado, com texto de IA dedicado a cada item verificado
 
@@ -163,9 +172,9 @@ Esta é a parte que funciona **de forma diferente** de QI/QO: aqui não existe c
 
 1. Clique em **"Confirmar e Gerar Relatório de QI/QO"**. Uma nova aba abre imediatamente, com uma mensagem avisando que a IA também está analisando as fotos, o que pode levar mais tempo que o normal.
 2. Quando pronto, essa aba é preenchida com o documento final completo, pronto para imprimir ou salvar como PDF.
-3. Na tela original, aparece um botão **"Salvar no Drive"** — clique para salvar uma cópia em PDF na pasta do cliente.
+3. Na tela original, aparece "Salvando na pasta do cliente…" e, em seguida, o link do arquivo salvo (PDF e HTML), numa subpasta com o CNPJ do cliente.
 
-**O documento não é salvo automaticamente.** Clique em "Salvar no Drive" se quiser guardar uma cópia.
+**O documento é salvo automaticamente na pasta do cliente.** Se a gravação falhar, use "Tentar salvar de novo".
 
 ---
 
@@ -193,7 +202,7 @@ Se você já usa o módulo "Declaração de Execução de Serviço" para o mesmo
 8. Clique em **"Gerar Relatório de QI/QO com IA"** e aguarde.
 9. **Revise com atenção** cada seção gerada, especialmente a de QD.
 10. Clique em **"Confirmar e Gerar Relatório de QI/QO"**. O documento abre em nova aba.
-11. Clique em **"Salvar no Drive"** se quiser guardar uma cópia.
+11. A cópia em PDF e HTML é salva sozinha na pasta do cliente; o link aparece na tela.
 
 ---
 

@@ -42,12 +42,12 @@ function SGO_ajudaTelas_Calibracao_() {
           "Toque em \"Calcular\" e confira a prévia (média, tendência, U95, Veff).",
           "Em \"5. Fotos do ensaio (opcional)\", anexe as fotos, se tiver.",
           "Em \"6. Gerar\", toque em \"Gerar Certificado de Calibração\".",
-          "O certificado abre em nova aba, com número automático, e fica salvo na pasta do cliente."
+          "O certificado abre em nova aba, com número automático, e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ). O documento traz identificação, método e rastreabilidade, resultados com U95 e k, orçamento de incerteza, observações, próxima calibração e assinaturas, em seções numeradas."
         ] },
         { titulo: "Gerar o relatório interpretativo", itens: [
           "Depois de emitir o certificado, toque em \"Gerar Relatório Interpretativo\".",
-          "Espere até um minuto. O relatório abre em nova aba e fica salvo na pasta do cliente.",
-          "Ele explica os mesmos números do certificado, sem recalcular nada."
+          "Espere até um minuto. O relatório abre em nova aba e fica salvo em HTML e PDF na pasta do cliente (subpasta com o CNPJ).",
+          "Ele explica os mesmos números do certificado, sem recalcular nada, com um gráfico por grandeza (tendência e intervalo de ±U95 em cada ponto)."
         ] },
         { titulo: "Reabrir um certificado já emitido", itens: [
           "Em \"Certificados emitidos\", no fim da página, digite o CNPJ.",
@@ -243,6 +243,7 @@ function SGO_ajudaTelas_Calibracao_() {
           "Toque em \"Gerar inventário\" ou em \"Pesquisar faixas e gerar orçamento\".",
           "Revise o texto em \"Texto — revise antes de emitir\".",
           "Toque em \"Emitir e salvar cópia\".",
+          "O documento emitido recebe um número (INV-aaaammdd-hhmm no inventário, ORC-aaaammdd-hhmm no orçamento) e fica salvo em HTML e PDF na pasta interna dos padrões. A prévia fica salva só em HTML.",
           "Para imprimir, toque em \"Abrir documento para impressão\" e depois em \"Imprimir / salvar PDF\"."
         ] },
         { titulo: "Reabrir um documento salvo", itens: [
@@ -254,13 +255,13 @@ function SGO_ajudaTelas_Calibracao_() {
 
     "padroes/relatorios_gerenciais": {
       titulo: "Padrões de referência: relatórios gerenciais",
-      paraQueServe: "Gera o plano de renovação e auditoria dos padrões e o relatório de desempenho do módulo, prontos para imprimir em A4.",
+      paraQueServe: "Gera o plano de renovação e auditoria dos padrões e o relatório de desempenho da emissão de certificados de calibração, prontos para imprimir em A4. São documentos internos, com número próprio (REN-… e DES-…).",
       passos: [
         { titulo: "Gerar um relatório gerencial", itens: [
           "Toque na aba \"Relatórios gerenciais\".",
           "Em \"Plano de renovação e auditoria\", toque em \"Gerar plano\".",
           "Ou, em \"Relatório de desempenho\", escolha o \"Período\" e toque em \"Gerar relatório\".",
-          "O documento abre pronto para imprimir e fica salvo em HTML e PDF."
+          "O documento abre pronto para imprimir e fica salvo em HTML e PDF na pasta \"Relatorios gerenciais dos padroes\", dentro da pasta dos certificados de calibração."
         ] }
       ]
     }

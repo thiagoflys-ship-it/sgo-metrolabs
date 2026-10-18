@@ -285,11 +285,11 @@ function NR13IA_gerarParecerConclusivo_(payload) {
     'Observações adicionais: ' + (payload.observacoes || '-') + '\n\n' +
     'REGRAS:\n' +
     '1. Escreva 1 a 2 parágrafos, tom formal de laudo de engenharia, português brasileiro, sem markdown.\n' +
-    '2. Declare explicitamente o veredito (' + veredictoTexto + ') e fundamente com base SOMENTE nos dados acima.\n' +
+    '2. Declare explicitamente o veredito (' + veredictoTexto.toLowerCase() + ', em letras minúsculas, sem caixa alta) e fundamente com base SOMENTE nos dados acima.\n' +
     '3. NUNCA cite o número/algarismo romano da Categoria NR-13 do vaso (ex.: "Categoria III") neste texto — esse ' +
-    'dado já aparece, calculado à parte, na tabela de identificação do laudo, e pode ter sido recalculado depois ' +
+    'dado já aparece, calculado à parte, na seção de categorização do laudo, e pode ter sido recalculado depois ' +
     'que este parecer foi redigido; citá-lo aqui de novo criaria risco de o parecer ficar desatualizado em relação ' +
-    'ao resto do documento. Se precisar se referir a ela, diga apenas "a categoria indicada na identificação deste laudo".\n' +
+    'ao resto do documento. Se precisar se referir a ela, diga apenas "a categoria indicada na seção de categorização deste laudo".\n' +
     '4. Se o veredito for APROVADO COM RESSALVAS, deixe claro que a integridade está mantida até a próxima ' +
     'inspeção CONDICIONADA à execução das recomendações listadas, e que uma reinspeção de verificação é recomendada.\n' +
     '5. Se o veredito for REPROVADO, deixe claro que o vaso NÃO deve permanecer em operação até que as ' +
@@ -321,7 +321,9 @@ function NR13IA_gerarTextosLaudo_(ctx) {
     'Categoria (NR-13, Tabela 1): ' + (ctx.categoria.categoria || '-') + '\n' +
     'Tipo de inspeção: ' + (ctx.inspecao.tipo || '-') + '\n\n' +
     'A INTRODUÇÃO (1 parágrafo) deve contextualizar o laudo: identificar o cliente e o vaso, mencionar que a ' +
-    'inspeção foi realizada em atendimento à NR-13, e citar o nome completo da norma: "' + NR13_CFG.NORMA_REFERENCIA + '".\n\n' +
+    'inspeção foi realizada em atendimento à NR-13 (item 13.5, vasos de pressão). NÃO transcreva o título completo da norma ' +
+    'nem as portarias: a citação completa já consta, uma única vez, na seção "Referências normativas" do laudo; se precisar, ' +
+    'escreva apenas "conforme a redação citada nas referências normativas".\n\n' +
     'O OBJETIVO (1 parágrafo curto) deve declarar, em linguagem técnica formal, que o objetivo deste laudo é ' +
     'verificar as condições de integridade estrutural e segurança operacional do vaso de pressão descrito, através ' +
     'de inspeção visual/exames técnicos, determinando sua aptidão para continuar em operação até a próxima ' +

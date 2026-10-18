@@ -1,5 +1,11 @@
 # Manual do Operador — Módulo PGT e POP (Engenharia Clínica)
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- O PGT sai com capa, sumário com os números de página, seções numeradas (os requisitos gerais e específicos viram subseções 7.1, 8.1...), glossário com o termo em negrito e as quatro assinaturas juntas na página final ("Aprovação").
+- O POP sai com título, ficha (código, revisão e data), histórico de revisões (Tabela 1), seções numeradas, passos numerados em lista e as assinaturas. O sumário só aparece quando o POP passa de 3 páginas.
+- Cada documento gerado já fica na pasta do cliente (CNPJ) em PDF e em cópia A4 (HTML) com o nome "POP - POP005 rev 1.0 - Etiquetagem de Equipamentos - aaaa-mm-dd hhmm" (no PGT: "PGT - PGTS rev 1.0 - <instituição> - ..."). O botão "Salvar na pasta do cliente" não cria mais um segundo PDF com o mesmo nome: se o documento já estava salvo, mostra o arquivo que já existe.
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

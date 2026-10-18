@@ -1,5 +1,10 @@
 # Manual do Operador — Módulo Registros Operacionais
 
+## O que mudou em 18/10/2026 (documento A4)
+
+- O registro sai com título normal (sem caixa alta), ficha com a data e o número, seções numeradas (os campos sem seção ficam em "Informações gerais"), tabelas que repetem o cabeçalho "Item | Registro" em cada página, texto longo em linha inteira e assinaturas com nome, cargo e papel.
+- Arquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome "Registro operacional - REG-XXXXXXXX - <tipo> - aaaa-mm-dd hhmm".
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

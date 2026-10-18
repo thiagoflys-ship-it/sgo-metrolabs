@@ -339,8 +339,9 @@ function CronExec_textosPadrao_(cliente, equipamentos, agrupamento) {
     objetivo: 'Este cronograma organiza a execução dos serviços técnicos da Metrolabs nos equipamentos de ' + (cliente && cliente.razaoSocial ? cliente.razaoSocial : 'o cliente') +
       ', ' + total + (total === 1 ? ' unidade' : ' unidades') + ' (' + tipos.join(', ') + '), distribuídas em ' + grupos.length + (grupos.length === 1 ? ' grupo' : ' grupos') + periodo +
       ', para que a rotina do setor seja mantida durante os atendimentos.',
-    metodologia: 'Os equipamentos foram divididos em grupos de execução, considerando dias úteis (fins de semana e feriados nacionais não são contados) e o intervalo entre grupos definido no planejamento. As datas de cada grupo estão na tabela a seguir.',
-    gruposIntro: 'A tabela abaixo apresenta, para cada grupo, o período de execução e os equipamentos atendidos.',
+    metodologia: 'Cada equipamento passa pela calibração dos instrumentos e sensores do ensaio e pelas etapas de qualificação contratadas (instalação, operação e desempenho). Os equipamentos foram divididos em grupos de execução, considerando dias úteis e o intervalo entre grupos definido no planejamento.',
+    // A frase que só anunciava a tabela saiu: o documento cita a Tabela 2 e a Figura 1 pelo número.
+    gruposIntro: (grupos.length > 1 && agrupamento && agrupamento.fundamentacao && agrupamento.fundamentacao.estrategia) ? agrupamento.fundamentacao.estrategia : '',
     consideracoesFinais: 'As datas podem ser ajustadas em comum acordo com o cliente, conforme a disponibilidade dos equipamentos e da equipe. Alterações devem ser registradas em nova revisão deste cronograma.'
   };
 }

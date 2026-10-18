@@ -59,7 +59,8 @@ function SGO_ajudaTelas_Planejamento_() {
       ],
       perguntas: [
         { p: "Por que uma receita com \"Príons\" no nome muda os insumos?", r: "O sistema reconhece a palavra no nome e troca o integrador químico comum pelo integrador específico para príons nessa receita. O indicador biológico continua o mesmo." },
-        { p: "O que é a E.R.U.?", r: "Especificação de Requisitos do Usuário. É o documento que o cliente assina quando quer mudar um critério do planejamento." }
+        { p: "O que é a E.R.U.?", r: "Especificação de Requisitos do Usuário. É o documento que o cliente assina quando quer mudar um critério do planejamento." },
+        { p: "O que o documento traz?", r: "Seções numeradas: identificação, objetivo e escopo, quantitativo (Tabela 1 e um gráfico da base com a margem), composição do cálculo por etapa e receita (Tabela 2), fundamentação técnica, checklist da QI, referências, E.R.U. e assinaturas. Sem a IA, a fundamentação sai numa tabela com a base e a natureza de cada quantidade (normativa, protocolo do fabricante ou critério da executante)." }
       ],
       secoesManual: [
         { titulo: "Termos usados nesta tela", paragrafos: [
@@ -119,6 +120,7 @@ function SGO_ajudaTelas_Planejamento_() {
       perguntas: [
         { p: "O que é o \"Limite p/ grupo único\"?", r: "Se o total de unidades for menor ou igual a esse número, tudo fica num grupo só." },
         { p: "As datas contam fim de semana?", r: "Não. Os dias úteis pulam sábado, domingo e feriado nacional." },
+        { p: "O que o documento traz?", r: "Seções numeradas com a lista de equipamentos (Tabela 1), os grupos com início, término e dias úteis (Tabela 2) e um calendário dos grupos (Figura 1), em que sábados, domingos e feriados nacionais aparecem sombreados. As considerações finais e as assinaturas ficam na mesma página." },
         { p: "Os equipamentos do cadastro vêm um por um?", r: "Não. Vêm agrupados por tipo, marca e modelo, com a quantidade." }
       ]
     }

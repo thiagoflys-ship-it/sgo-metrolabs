@@ -65,7 +65,10 @@ var PLANCMEIA_REGRAS_BASE =
   "presença do agente esterilizante) — ele NÃO comprova sozinho a esterilização microbiológica; só o indicador " +
   "biológico comprova isso (morte de esporos-teste). Quando o CONTEXTO indicar que os dois são usados juntos na " +
   "mesma posição, deixe explícito que estão sempre juntos, simultâneos, no mesmo ponto — nunca como alternativas " +
-  "ou opções separadas.";
+  "ou opções separadas.\n" +
+  "10. Nunca escreva 'a tabela abaixo', 'a tabela a seguir' ou 'acima': no documento, o quantitativo de insumos é a " +
+  "Tabela 1 e a composição por etapa e receita é a Tabela 2. Cite pelo número quando precisar e não repita a lista " +
+  "de normas, que já sai numa seção própria de referências.";
 
 function PlanCMEIA_montarInstrucaoFormato_(marcadoresAtivos) {
   var linhas = [];
@@ -321,6 +324,9 @@ function PlanCME_gerarJustificativasIA_(dados, resultado) {
 
       if (codigo === 200) {
         var cand = corpo.candidates && corpo.candidates[0];
+        // Resposta cortada pelo limite de tokens vira falha (mesma regra do Cronograma e do PGT/POP):
+        // o documento sai sem a fundamentação em vez de sair com um texto pela metade.
+        if (cand && cand.finishReason === 'MAX_TOKENS') { erroModelo = 'resposta da IA incompleta'; break; }
         var partes = cand && cand.content && cand.content.parts;
         var texto = (partes || []).map(function (p) { return p && p.text ? p.text : ""; }).join("").trim();
         if (!texto) { erroModelo = "resposta vazia"; break; }

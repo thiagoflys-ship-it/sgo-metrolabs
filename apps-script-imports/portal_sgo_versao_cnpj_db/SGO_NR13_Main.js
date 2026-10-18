@@ -368,7 +368,7 @@ function NR13_apiUploadFoto(sessionId, payload) {
   exigirSessao(sessionId);
   if (!payload.base64) throw new Error('Nenhuma foto enviada.');
 
-  var pasta = NR13_obterPastaFotos_(payload.nomeCliente || 'Cliente nao informado');
+  var pasta = NR13_obterPastaFotos_(payload.nomeCliente || 'Cliente nao informado', payload.cnpj);
   var partes = String(payload.base64 || '').split(',');
   var dadosBase64 = partes.length > 1 ? partes[1] : partes[0];
   var mimeType = payload.mimeType || 'image/jpeg';
@@ -730,13 +730,19 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
     ctx.textosIA = { introducao: NR13Doc_textoIntroducaoFixo_(ctx), objetivo: NR13Doc_textoObjetivoFixo_(ctx) };
   }
 
-  var html = NR13Doc_montarDocumentoHtml_(ctx);
-
-  var pasta = NR13_obterPastaCliente_(ctx.cliente.razaoSocial);
-  var nomeArquivo = NR13_sanitizarNome_('Laudo NR13 - ' + numero + ' - ' + (ctx.vaso.tag || ctx.vaso.tipo)) + '.pdf';
-  var pdfBlob = Utilities.newBlob(html, 'text/html', nomeArquivo.replace(/\.pdf$/i, '.html')).getAs(MimeType.PDF).setName(nomeArquivo);
-  var arquivo = pasta.createFile(pdfBlob);
-  arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  // Pasta do cliente = CNPJ com 14 dígitos (padrão A4 de 18/10/2026); nome
+  // "<Tipo> - <número> - <TAG> - <aaaa-MM-dd HHmm>", .html e .pdf de mesmo nome.
+  var pasta = NR13_obterPastaCliente_(ctx.cliente.razaoSocial, ctx.cliente.cnpj);
+  var carimbo = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd HHmm');
+  var nomeBase = NR13_sanitizarNome_('Laudo NR-13 - ' + numero + ' - ' + (ctx.vaso.tag || ctx.vaso.tipo || 'sem TAG') + ' - ' + carimbo);
+  var nomeArquivo = nomeBase + '.pdf';
+  // Sumário com páginas só se o laudo passar de 3 páginas (NR13Doc_finalizar_).
+  var fin = NR13Doc_finalizar_(ctx, nomeBase);
+  ctx.sumario = !!fin.sumario;
+  var html = fin.html;
+  var salvo = SGO_DocSalvar_salvarHtmlEPdf_(pasta, nomeBase, html, fin.pdfBlob ? { pdfBlob: fin.pdfBlob, compartilhar: true } : { compartilhar: true });
+  html = salvo.html || html;
+  var arquivo = DriveApp.getFileById(salvo.pdfId);
 
   var novosDados = SGO_DATA.normalizarObjetoParaSheet(NR13_SHEET, Object.assign({}, dados, {
     ID: laudoId,
@@ -790,11 +796,8 @@ function NR13_apiEmitirLaudo(sessionId, payload) {
     SGO_DATA.log('AUVO_TAREFA_FALHOU', sessao.usuario, 'NR13 ' + numero + ': ' + e.message, 'AUVO');
   }
 
-  // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do cliente.
-  var htmlSalvo = SGO_DocSalvar_htmlAoLado_(pasta, nomeArquivo, html, { compartilhar: true });
-  var resposta = { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, linkPdf: arquivo.getUrl(), htmlId: htmlSalvo.htmlId, htmlUrl: htmlSalvo.htmlUrl };
-  if (htmlSalvo.avisoHtml) resposta.avisoHtml = htmlSalvo.avisoHtml;
-  return resposta;
+  // Regra do dono: além do PDF, a cópia HTML A4 fica na mesma pasta do cliente (gravada junto, acima).
+  return { ok: true, html: html, laudoId: laudoId, numeroLaudo: numero, linkPdf: arquivo.getUrl(), htmlId: salvo.htmlId, htmlUrl: salvo.htmlUrl, pastaUrl: pasta.getUrl() };
 }
 
 function NR13_validarParaEmissao_(dados) {
@@ -896,7 +899,10 @@ function NR13_apiReabrirLaudo(sessionId, payload) {
   var ctx;
   try { ctx = JSON.parse(registro.DADOS_JSON); } catch (e) { throw new Error('Não foi possível ler os dados salvos deste laudo.'); }
 
-  var html = NR13Doc_montarDocumentoHtml_(ctx);
+  // Laudo emitido com sumário: refaz os números de página para a tela (o PDF gravado não muda).
+  var html = ctx.sumario
+    ? RelTecA4_paginar_(NR13Doc_montarDocumentoHtml_(ctx, { sumario: true }), 'Laudo NR-13 ' + (ctx.numeroLaudo || '')).html
+    : NR13Doc_montarDocumentoHtml_(ctx);
   return { ok: true, ctx: ctx, html: html, linkPdf: registro.LINK_PDF };
 }
 
@@ -925,16 +931,33 @@ function NR13_sanitizarNome_(nome) {
   return limpo || 'sem-nome';
 }
 
-function NR13_obterPastaCliente_(nomeCliente) {
+/**
+ * Subpasta do cliente: CNPJ com 14 dígitos (SGO_DocSalvar_pastaClienteEm_), com a
+ * razão social na descrição. Sem CNPJ, procura o cliente no cadastro pelo nome;
+ * se não achar, usa o nome do cliente (como antes).
+ */
+function NR13_obterPastaCliente_(nomeCliente, cnpj) {
   var raiz = NR13_obterPastaDocumentos_();
-  var nome = NR13_sanitizarNome_(nomeCliente || 'Cliente nao informado');
-  var existentes = raiz.getFoldersByName(nome);
-  if (existentes.hasNext()) return existentes.next();
-  return raiz.createFolder(nome);
+  var nome = String(nomeCliente || '').trim() || 'Cliente nao informado';
+  var doc = String(cnpj || '').replace(/\D/g, '') || NR13_cnpjDoCadastro_(nome);
+  return SGO_DocSalvar_pastaClienteEm_(raiz, doc, nome);
 }
 
-function NR13_obterPastaFotos_(nomeCliente) {
-  var pastaCliente = NR13_obterPastaCliente_(nomeCliente);
+/** CNPJ (14 dígitos) do cliente com esta razão social ou nome fantasia no cadastro; '' se não achar. Nunca lança. */
+function NR13_cnpjDoCadastro_(nomeCliente) {
+  try {
+    var alvo = String(nomeCliente || '').trim().toUpperCase();
+    if (!alvo) return '';
+    var achado = (SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES) || []).filter(function (c) {
+      return String(c.RAZAO_SOCIAL || '').trim().toUpperCase() === alvo || String(c.NOME_FANTASIA || '').trim().toUpperCase() === alvo;
+    })[0];
+    var d = achado ? String(achado.CNPJ || '').replace(/\D/g, '') : '';
+    return d.length === 14 ? d : '';
+  } catch (e) { return ''; }
+}
+
+function NR13_obterPastaFotos_(nomeCliente, cnpj) {
+  var pastaCliente = NR13_obterPastaCliente_(nomeCliente, cnpj);
   var nome = 'Fotos';
   var existentes = pastaCliente.getFoldersByName(nome);
   if (existentes.hasNext()) return existentes.next();

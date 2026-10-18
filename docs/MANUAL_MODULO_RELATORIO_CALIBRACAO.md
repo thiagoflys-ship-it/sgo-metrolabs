@@ -1,5 +1,12 @@
 # Manual do Operador — Módulo Relatório de Calibração
 
+## O que mudou em 18/10/2026
+
+- O documento segue o padrão A4 dos documentos técnicos: seções numeradas (1. Identificação, 2. Introdução, 3. Resultados da calibração, Registro fotográfico quando houver fotos, Referências normativas e Conclusão e responsabilidade técnica), tabelas de resultados numeradas ("Tabela 1 — …") e o certificado anexado como figura numerada ("Figura 1 — Certificado de calibração anexado"), com altura limitada para a seção começar já na primeira folha.
+- As normas aparecem uma única vez, na seção "Referências normativas". A nota de escopo fica junto da conclusão e das assinaturas, na mesma folha.
+- A cópia (HTML + PDF) vai para a subpasta do cliente com o CNPJ de 14 dígitos, procurado no cadastro de clientes pela razão social ou pelo nome fantasia; sem CNPJ no cadastro, a subpasta usa o nome do cliente. Nome do arquivo: "Relatorio de calibracao - <número> - <TAG> - <aaaa-MM-dd HHmm>".
+- Sem número informado no formulário, o relatório recebe um número automático no formato RCL-aaaammdd-hhmm.
+
 ## O que mudou até 17/10/2026
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.

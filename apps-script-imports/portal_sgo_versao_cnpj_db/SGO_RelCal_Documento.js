@@ -1,1 +1,208 @@
-function RelCalDoc_escaparHtml_(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function RelCalDoc_paragrafosHtml_(texto){var partes=String(texto||"").split(/\n{2,}/).map(function(p){return p.trim()}).filter(Boolean);if(!partes.length)return"<p>-</p>";return partes.map(function(p){return"<p>"+RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(p))+"</p>"}).join("\n")}function RelCalDoc_formatarProsaMedicoes_(texto){return String(texto||"").replace(/(\b(?:tendência|incerteza(?: expandida)?|rotação|temperatura|pressão|massa|tempo|leitura|indicação|média|U95|U)\s*(?:(?:de|igual a|é)\s+|[:=]\s*)?)([+-]?(?:\d{1,3}(?:\.\d{3})+,\d+|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?\s*(?:°C|ºC|%UR|rpm|mmHg|kPa|hPa|Pa|kg|mg|g|min|s|Hz|%))(?=$|[^\w–—-])/gi,function(_,prefixo,valor){return prefixo+RelCalDoc_formatarMedicao_(valor)})}function RelCalDoc_ehCelulaNumerica_(s){return/^-?\d+([.,]\d+)?$/.test(String(s||"").trim())}function RelCalDoc_splitCelulas_(linha){return linha.split(" | ").map(function(c){return c.trim()})}function RelCalDoc_veff_(valor){return CertCalCalculo.formatarVeff(String(valor==null?"":valor).trim())}function RelCalDoc_formatarMedicao_(valor){var s=String(valor||"").trim();var m=s.match(/^([+-]?(?:\d{1,3}(?:\.\d{3})+,\d+|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?)(\s*(?:°C|ºC|%UR|%|rpm|mmHg|Pa|kPa|hPa|g|kg|mg|s|min|Hz))?$/i);if(!m)return s;var numeral=m[1].indexOf(",")!==-1?m[1].replace(/\./g,"").replace(",","."):m[1];var n=Number(numeral);if(!isFinite(n)||Math.abs(n)>=1e21)return s;return(Math.abs(n)<.005?0:n).toFixed(2).replace(".",",")+(m[2]||"")}function RelCalDoc_renderizarResultados_(texto){var linhas=String(texto||"").replace(/\r\n/g,"\n").split("\n");var html=[];var bufferProsa=[];var bufferTabela=[];var colunasAtual=null;function flushProsa(){if(!bufferProsa.length)return;var paragrafo=bufferProsa.join(" ").trim();if(paragrafo)html.push("<p>"+RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(paragrafo))+"</p>");bufferProsa=[]}function flushTabela(){if(!bufferTabela.length)return;var linhasCelulas=bufferTabela.map(RelCalDoc_splitCelulas_);var temCabecalho=linhasCelulas.length>0&&linhasCelulas[0].length>0&&!RelCalDoc_ehCelulaNumerica_(linhasCelulas[0][0]);var cabecalho=temCabecalho?linhasCelulas[0]:null;var corpo=temCabecalho?linhasCelulas.slice(1):linhasCelulas;var t=['<div class="tabela-resultados-wrap"><table class="tabela-resultados">'];if(cabecalho){t.push("<thead><tr>"+cabecalho.map(function(c){return"<th>"+RelCalDoc_escaparHtml_(c)+"</th>"}).join("")+"</tr></thead>")}if(corpo.length){t.push("<tbody>"+corpo.map(function(linhaCelulas){return"<tr>"+linhaCelulas.map(function(c,i){var coluna=cabecalho&&cabecalho[i]||"";if(/^(veff|graus de liberdade)/i.test(coluna))c=RelCalDoc_veff_(c);else if(/^(nominal|referência|padrão|indicação|valor medido|leitura|ensaio|média|tendência|incerteza|u95|fator|k$|veff|erro|módulo da tendência|\|tendência\|)/i.test(coluna))c=RelCalDoc_formatarMedicao_(c);return"<td>"+RelCalDoc_escaparHtml_(c)+"</td>"}).join("")+"</tr>"}).join("")+"</tbody>")}t.push("</table></div>");html.push(t.join(""));bufferTabela=[];colunasAtual=null}linhas.forEach(function(linhaBruta){var linha=linhaBruta.trim();if(!linha){flushProsa();flushTabela();return}if(linha.indexOf(" | ")!==-1){flushProsa();var nColunas=RelCalDoc_splitCelulas_(linha).length;if(colunasAtual!==null&&nColunas!==colunasAtual)flushTabela();colunasAtual=nColunas;bufferTabela.push(linha)}else{flushTabela();bufferProsa.push(linha)}});flushProsa();flushTabela();return html.join("\n")||"<p>-</p>"}function RelCalDoc_montarCertificados_(certificados){if(!certificados||!certificados.length)return"";var mostrarLabel=certificados.length>1;var html=['<div class="certificados-grid">'];certificados.forEach(function(c){html.push('<div class="certificado-item">');if(mostrarLabel)html.push('<div class="cert-label"><strong>'+RelCalDoc_escaparHtml_(c.label)+"</strong></div>");if(c.temCertificado){if(c.mimeType&&c.mimeType.indexOf("image/")===0&&c.base64){html.push('<img class="cert-thumb" src="data:'+c.mimeType+";base64,"+c.base64+'" alt="Certificado de calibração">')}else if(c.mimeType==="application/pdf"){html.push('<div class="cert-anexo-nota">Certificado em PDF anexado — arquivo original não exibido neste documento impresso.</div>')}}else{html.push('<div class="cert-ausente">Certificado não anexado para esta peça nesta visita.</div>')}html.push("</div>")});html.push("</div>");return html.join("\n")}function RelCalDoc_montarFotos_(fotos){if(!fotos||!fotos.length)return"";var html=['<div class="fotos-grid">'];fotos.forEach(function(f){html.push('<div class="foto-item"><div class="foto-frame"><img src="data:'+f.mimeType+";base64,"+f.base64+'" alt="Foto"></div>');if(f.legendaIA)html.push('<div class="legenda-ia"><strong>Análise da imagem:</strong> '+RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(f.legendaIA))+"</div>");if(f.legendaTecnico)html.push('<div class="legenda-tecnico">'+RelCalDoc_escaparHtml_(f.legendaTecnico)+"</div>");html.push("</div>")});html.push("</div>");return html.join("\n")}function RelCalDoc_montarDocumentoHtml_(ctx){var empresa=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.EMPRESA_EXECUTANTE||{nome:"Metrolab Soluções em Engenharia Clínica LTDA",cnpj:""};var logo=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.LOGO_BASE64||null;var assinaturas=typeof CadeiaFrioRel_CFCFG!=="undefined"&&CadeiaFrioRel_CFCFG.ASSINATURAS_PADRAO||[];var titulo="RELATÓRIO DE CALIBRAÇÃO";var localCalibracaoLabel=ctx.localCalibracao==="CLIENTE"?"Instalações do cliente — informação do formulário; conferir certificado de origem":"Laboratório — informação do formulário; conferir certificado de origem";var html=[];html.push('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">');html.push("<title>"+titulo+(ctx.numeroDocumento?" — "+RelCalDoc_escaparHtml_(ctx.numeroDocumento):"")+"</title>");html.push("<style>");html.push("@page { size: A4; margin: 18mm 16mm; }");html.push("* { box-sizing: border-box; }");html.push('body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 13px; line-height: 1.55; margin: 0; background: #f3f4f6; }');html.push(".folha { max-width: 900px; margin: 24px auto; background: #ffffff; padding: 28px 34px 40px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }");html.push(".topo { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid #0b4ea2; padding-bottom: 14px; margin-bottom: 20px; }");html.push(".logo-topo { height: 46px; }");html.push(".titulo-doc { text-align:right; }");html.push(".titulo-doc h1 { font-size: 17px; margin: 0; color:#0b4ea2; }");html.push(".titulo-doc small { color:#6b7280; }");html.push("table.dados { width:100%; border-collapse: collapse; margin-bottom: 18px; }");html.push("table.dados td { border: 1px solid #d1d5db; padding: 6px 10px; font-size: 12.5px; }");html.push("table.dados td.rotulo { background:#f3f4f6; font-weight:700; width: 190px; color:#374151; }");html.push(".secao { margin-top: 26px; }");html.push(".secao h2 { font-size: 13px; color:#ffffff; background:#0b4ea2; padding: 8px 12px; margin: 0 0 12px; border-left: 6px solid #059669; }");html.push("p { text-align: justify; margin: 8px 0; }");html.push(".tabela-resultados-wrap { overflow-x: auto; margin: 12px 0; }");html.push('table.tabela-resultados { border-collapse: collapse; width: 100%; font-family: "Consolas", "Courier New", monospace; font-size: 11px; }');html.push("table.tabela-resultados th, table.tabela-resultados td { border: 1px solid #d1d5db; padding: 6px 9px; text-align: right; white-space: nowrap; }");html.push("table.tabela-resultados th:first-child, table.tabela-resultados td:first-child { text-align: left; }");html.push('table.tabela-resultados thead th { background: #0b4ea2; color: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 11px; text-align: center; white-space: normal; }');html.push("table.tabela-resultados tbody tr:nth-child(even) { background: #f3f4f6; }");html.push(".certificados-grid { display:flex; flex-wrap:wrap; gap: 14px; margin: 10px 0; }");html.push(".certificado-item { width: 47%; page-break-inside: avoid; }");html.push(".cert-label { font-size: 12px; color:#0b4ea2; margin-bottom:6px; }");html.push(".cert-thumb { max-width:280px; width:100%; border:1px solid #d1d5db; border-radius:4px; }");html.push(".cert-anexo-nota, .cert-ausente { font-size: 11px; color:#6b7280; font-style: italic; }");html.push(".fotos-grid { display:flex; flex-wrap:wrap; gap: 14px; margin-top: 12px; }");html.push(".foto-item { width: 47%; border:1px solid #d1d5db; border-radius:4px; overflow:hidden; background:#ffffff; page-break-inside: avoid; }");html.push(".foto-item .foto-frame { height: 210px; display:flex; align-items:center; justify-content:center; background:#f9fafb; border-bottom:1px solid #d1d5db; }");html.push(".foto-item .foto-frame img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block; }");html.push(".legenda-ia { font-size: 11px; color:#374151; margin-top:6px; background:#f3f4f6; padding:6px 8px; border-radius:4px; border-left: 3px solid #0b4ea2; }");html.push(".legenda-tecnico { font-size: 10.5px; color:#6b7280; margin-top:4px; text-align:center; }");html.push(".assinaturas { display:flex; justify-content:space-around; margin-top: 50px; page-break-inside: avoid; }");html.push(".assinatura-item { text-align:center; width: 45%; }");html.push(".assinatura-item img, .assinatura-item svg { height: 65px; }");html.push(".assinatura-linha { border-top: 1px solid #1f2937; margin-top: 4px; padding-top: 4px; font-size: 11.5px; }");html.push(".rodape-aviso { margin-top: 34px; padding-top: 10px; border-top: 1px solid #d1d5db; font-size: 10.5px; color:#6b7280; }");html.push(".barra-imprimir { max-width: 900px; margin: 0 auto 12px; text-align: right; }");html.push(".barra-imprimir button { background:#0b4ea2; color:#fff; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; }");html.push("@media print { body { background:#ffffff; } .folha { box-shadow:none; margin:0; padding:0; max-width:none; } .no-print { display:none !important; } }");html.push(SGO_DocA4_css_()+RelTecA4_css_({titulo:"Relatório de Calibração",numero:ctx.numeroDocumento||"",revisao:ctx.revisao||"00",empresa:empresa.nome?empresa.nome+(empresa.cnpj?" — CNPJ "+empresa.cnpj:""):""})+"</style></head><body>");html.push('<div class="barra-imprimir no-print"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div>');html.push('<div class="folha">');html.push('<div class="topo">');if(logo&&logo.data){html.push('<img class="logo-topo" src="data:'+logo.mimeType+";base64,"+logo.data+'" alt="Metrolabs">')}else{html.push("<div></div>")}html.push('<div class="titulo-doc"><h1>'+titulo+"</h1><small>"+RelCalDoc_escaparHtml_(ctx.numeroDocumento||"—")+" | "+RelCalDoc_escaparHtml_(ctx.dataEmissao||"")+"</small></div>");html.push("</div>");html.push('<table class="dados">');html.push('<tr><td class="rotulo">Cliente</td><td>'+RelCalDoc_escaparHtml_(ctx.cliente||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Endereço</td><td>'+RelCalDoc_escaparHtml_(ctx.endereco||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Instrumento</td><td>'+RelCalDoc_escaparHtml_(ctx.instrumentoLabel)+"</td></tr>");html.push('<tr><td class="rotulo">TAG</td><td>'+RelCalDoc_escaparHtml_(ctx.tag||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Marca / Modelo</td><td>'+RelCalDoc_escaparHtml_((ctx.marca||"—")+" / "+(ctx.modelo||"—"))+"</td></tr>");html.push('<tr><td class="rotulo">Localização habitual</td><td>'+RelCalDoc_escaparHtml_(ctx.localizacao||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Data da calibração</td><td>'+RelCalDoc_escaparHtml_(ctx.dataCalibracao||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Local da calibração</td><td>'+RelCalDoc_escaparHtml_(localCalibracaoLabel)+"</td></tr>");html.push('<tr><td class="rotulo">Técnico responsável</td><td>'+RelCalDoc_escaparHtml_(ctx.tecnicoResponsavel||"—")+"</td></tr>");html.push('<tr><td class="rotulo">Empresa responsável pelo relatório</td><td>'+RelCalDoc_escaparHtml_(empresa.nome)+(empresa.cnpj?" — CNPJ "+RelCalDoc_escaparHtml_(empresa.cnpj):"")+"</td></tr>");html.push("</table>");html.push('<div class="secao"><h2>Introdução</h2>');html.push(RelCalDoc_paragrafosHtml_(ctx.textos.introducao));html.push("</div>");html.push('<div class="secao"><h2>Resultados da Calibração</h2>');var ausentes=(ctx.certificados||[]).filter(function(c){return!c.temCertificado});if(ausentes.length){html.push("<p><strong>Escopo parcial:</strong> não foi anexado certificado para "+ausentes.map(function(c){return RelCalDoc_escaparHtml_(c.label||c.codigo)}).join("; ")+". Este relatório não apresenta resultados para essas peças e não comprova a calibração de todos os componentes do instrumento.</p>")}html.push(RelCalDoc_montarCertificados_(ctx.certificados));html.push(RelCalDoc_renderizarResultados_(ctx.textos.resultadosExplicados));html.push("</div>");var fotos=RelCalDoc_montarFotos_(ctx.fotos);if(fotos){html.push('<div class="secao"><h2>Registro Fotográfico</h2>');html.push(fotos);html.push("</div>")}if(ctx.normas&&ctx.normas.length){html.push('<div class="secao"><h2>Referências Normativas</h2>');html.push("<p>"+ctx.normas.map(RelCalDoc_escaparHtml_).join("<br>")+"</p>");html.push("</div>")}html.push('<div class="secao"><h2>Conclusão</h2>');html.push(RelCalDoc_paragrafosHtml_(ctx.textos.conclusao));html.push("</div>");html.push('<div class="assinaturas">');assinaturas.forEach(function(a){html.push('<div class="assinatura-item">');if(a.imagemSvg)html.push(a.imagemSvg);html.push('<div class="assinatura-linha"><strong>'+RelCalDoc_escaparHtml_(a.nome)+"</strong><br>"+RelCalDoc_escaparHtml_(a.cargo)+"<br>"+RelCalDoc_escaparHtml_(a.registro)+"</div>");html.push("</div>")});html.push("</div>");html.push('<div class="rodape-aviso">Este relatório interpreta exclusivamente os certificados anexados e não substitui '+"os documentos originais, que prevalecem em caso de divergência. Não declara a execução de uma nova calibração, "+"não estabelece validade ou intervalo de recalibração e não emite declaração de conformidade. "+"A decisão de uso e a definição da periodicidade cabem ao contratante, por meio de seu setor de qualidade ou responsável designado.</div>");html.push("</div>");html.push("</body></html>");return html.join("\n")}
+function RelCalDoc_escaparHtml_(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function RelCalDoc_paragrafosHtml_(texto){var partes=String(texto||"").split(/\n{2,}/).map(function(p){return p.trim()}).filter(Boolean);if(!partes.length)return"<p>-</p>";return partes.map(function(p){return"<p>"+RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(p))+"</p>"}).join("\n")}function RelCalDoc_formatarProsaMedicoes_(texto){return String(texto||"").replace(/(\b(?:tendência|incerteza(?: expandida)?|rotação|temperatura|pressão|massa|tempo|leitura|indicação|média|U95|U)\s*(?:(?:de|igual a|é)\s+|[:=]\s*)?)([+-]?(?:\d{1,3}(?:\.\d{3})+,\d+|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?\s*(?:°C|ºC|%UR|rpm|mmHg|kPa|hPa|Pa|kg|mg|g|min|s|Hz|%))(?=$|[^\w–—-])/gi,function(_,prefixo,valor){return prefixo+RelCalDoc_formatarMedicao_(valor)})}function RelCalDoc_ehCelulaNumerica_(s){return/^-?\d+([.,]\d+)?$/.test(String(s||"").trim())}function RelCalDoc_splitCelulas_(linha){return linha.split(" | ").map(function(c){return c.trim()})}function RelCalDoc_veff_(valor){return CertCalCalculo.formatarVeff(String(valor==null?"":valor).trim())}function RelCalDoc_formatarMedicao_(valor){var s=String(valor||"").trim();var m=s.match(/^([+-]?(?:\d{1,3}(?:\.\d{3})+,\d+|\d+(?:[.,]\d+)?)(?:[eE][+-]?\d+)?)(\s*(?:°C|ºC|%UR|%|rpm|mmHg|Pa|kPa|hPa|g|kg|mg|s|min|Hz))?$/i);if(!m)return s;var numeral=m[1].indexOf(",")!==-1?m[1].replace(/\./g,"").replace(",","."):m[1];var n=Number(numeral);if(!isFinite(n)||Math.abs(n)>=1e21)return s;return(Math.abs(n)<.005?0:n).toFixed(2).replace(".",",")+(m[2]||"")}
+/* ============================================================
+ * Relatório de calibração em A4 retrato (padrão de 18/10/2026,
+ * docs/DOCUMENTOS_PADRAO_A4_20261018.md): estilos da SGO_DocA4, cabeçalho e
+ * rodapé corridos da SGO_RelTecA4, seções numeradas, tabelas e figuras
+ * numeradas, normas listadas uma vez, fecho (conclusão, nota de escopo e
+ * assinaturas) na mesma folha.
+ * ============================================================ */
+
+/**
+ * Texto dos resultados (IA ou padrão): linhas com " | " viram tabela numerada ("Tabela N —"),
+ * a linha "[CERTIFICADO: peça]" abre uma subseção da peça (secao.N), o resto vira parágrafo.
+ */
+function RelCalDoc_renderizarResultados_(texto, secao, num) {
+  var linhas = String(texto || '').replace(/\r\n/g, '\n').split('\n');
+  var html = [], bufferProsa = [], bufferTabela = [], colunasAtual = null, nPeca = 0, pecaAtual = '';
+  function flushProsa() {
+    if (!bufferProsa.length) return;
+    var paragrafo = bufferProsa.join(' ').trim();
+    if (paragrafo) html.push('<p>' + RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(paragrafo)) + '</p>');
+    bufferProsa = [];
+  }
+  function flushTabela() {
+    if (!bufferTabela.length) return;
+    var linhasCelulas = bufferTabela.map(RelCalDoc_splitCelulas_);
+    var temCabecalho = linhasCelulas.length > 0 && linhasCelulas[0].length > 0 && !RelCalDoc_ehCelulaNumerica_(linhasCelulas[0][0]);
+    var cabecalho = temCabecalho ? linhasCelulas[0] : null;
+    var corpo = temCabecalho ? linhasCelulas.slice(1) : linhasCelulas;
+    var t = [];
+    if (num) t.push(num.tabela('Resultados transcritos do certificado' + (pecaAtual ? ' — ' + pecaAtual : '')));
+    t.push('<table class="t compacta relcal-res">');
+    if (cabecalho) t.push('<thead><tr>' + cabecalho.map(function (c, i) { return '<th' + (i ? ' class="num"' : '') + '>' + RelCalDoc_escaparHtml_(c) + '</th>'; }).join('') + '</tr></thead>');
+    if (corpo.length) {
+      t.push('<tbody>' + corpo.map(function (linhaCelulas) {
+        return '<tr>' + linhaCelulas.map(function (c, i) {
+          var coluna = cabecalho && cabecalho[i] || '';
+          if (/^(veff|graus de liberdade)/i.test(coluna)) c = RelCalDoc_veff_(c);
+          else if (/^(nominal|referência|padrão|indicação|valor medido|leitura|ensaio|média|tendência|incerteza|u95|fator|k$|veff|erro|módulo da tendência|\|tendência\|)/i.test(coluna)) c = RelCalDoc_formatarMedicao_(c);
+          return '<td' + (i ? ' class="num"' : '') + '>' + RelCalDoc_escaparHtml_(c === '' ? '—' : c) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody>');
+    }
+    t.push('</table>');
+    html.push(t.join(''));
+    bufferTabela = [];
+    colunasAtual = null;
+  }
+  linhas.forEach(function (linhaBruta) {
+    var linha = linhaBruta.trim();
+    if (!linha) { flushProsa(); flushTabela(); return; }
+    var mc = /^\[CERTIFICADO:\s*(.+?)\s*\]$/i.exec(linha);
+    if (mc) {
+      flushProsa(); flushTabela();
+      pecaAtual = mc[1]; nPeca++;
+      html.push('<h3>' + (secao ? '<span class="n">' + secao + '.' + nPeca + '</span> ' : '') + 'Certificado da peça ' + RelCalDoc_escaparHtml_(pecaAtual) + '</h3>');
+      return;
+    }
+    if (linha.indexOf(' | ') !== -1) {
+      flushProsa();
+      var nColunas = RelCalDoc_splitCelulas_(linha).length;
+      if (colunasAtual !== null && nColunas !== colunasAtual) flushTabela();
+      colunasAtual = nColunas;
+      bufferTabela.push(linha);
+    } else {
+      flushTabela();
+      bufferProsa.push(linha);
+    }
+  });
+  flushProsa();
+  flushTabela();
+  return html.join('\n');
+}
+
+/** Certificados anexados em imagem viram figuras numeradas; PDF vira nota. */
+function RelCalDoc_montarCertificados_(certificados, num) {
+  if (!certificados || !certificados.length) return '';
+  var varios = certificados.length > 1, figs = [], notas = [];
+  certificados.forEach(function (c) {
+    if (c.temCertificado && c.mimeType && c.mimeType.indexOf('image/') === 0 && c.base64) {
+      var mime = /^image\/(png|jpe?g|gif|webp)$/i.test(c.mimeType) ? c.mimeType : 'image/png';
+      var img = '<img src="data:' + mime + ';base64,' + String(c.base64).replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Certificado de calibração ' + RelCalDoc_escaparHtml_(c.label || '') + '">';
+      var fig = num.figura(img, 'Certificado de calibração anexado' + (c.label ? ' (' + c.label + ')' : ''));
+      figs.push(fig.replace('<figure class="reltec-fig">', '<figure class="reltec-fig relcal-cert">'));
+    } else if (c.temCertificado && c.mimeType === 'application/pdf') {
+      notas.push('Certificado ' + (varios ? 'da peça ' + (c.label || c.codigo) + ' ' : '') + 'anexado em PDF; o arquivo original acompanha este relatório e não é reproduzido aqui.');
+    }
+  });
+  var h = notas.length ? '<p class="nota">' + notas.map(RelCalDoc_escaparHtml_).join(' ') + '</p>' : '';
+  if (figs.length) h += '<div class="relcal-certs' + (figs.length > 1 ? ' dois' : '') + '">' + figs.join('') + '</div>';
+  return h;
+}
+
+/** Fotos do atendimento como figuras numeradas; a análise da imagem (quando houver) fica na legenda. */
+function RelCalDoc_montarFotos_(fotos, num) {
+  if (!fotos || !fotos.length) return '';
+  return '<div class="relcal-fotos">' + fotos.map(function (f, i) {
+    var mime = /^image\/(png|jpe?g|gif|webp)$/i.test(String(f.mimeType || '')) ? f.mimeType : 'image/jpeg';
+    var img = '<div class="q"><img src="data:' + mime + ';base64,' + String(f.base64 || '').replace(/[^A-Za-z0-9+\/=]/g, '') + '" alt="Foto ' + (i + 1) + '"></div>';
+    var leg = f.legendaTecnico || ('Registro fotográfico ' + (i + 1));
+    var fig = num.figura(img, leg);
+    if (f.legendaIA) fig = fig.replace('</figcaption>', '<br>Análise da imagem: ' + RelCalDoc_escaparHtml_(RelCalDoc_formatarProsaMedicoes_(f.legendaIA)) + '</figcaption>');
+    return fig;
+  }).join('') + '</div>';
+}
+
+/** Separa o último parágrafo, que entra no fecho junto da nota e das assinaturas. */
+function RelCalDoc_dividirUltimo_(texto) {
+  var partes = String(texto || '').split(/\n{2,}/).map(function (p) { return p.trim(); }).filter(Boolean);
+  if (!partes.length) return { antes: '', ultimo: '' };
+  var ultimo = partes.pop();
+  return { antes: partes.join('\n\n'), ultimo: ultimo };
+}
+
+function RelCalDoc_cnpjFormatado_(c) {
+  var d = String(c || '').replace(/\D/g, '');
+  return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '';
+}
+
+function RelCalDoc_montarDocumentoHtml_(ctx) {
+  var cfg = typeof CadeiaFrioRel_CFCFG !== 'undefined' ? CadeiaFrioRel_CFCFG : {};
+  var empresa = cfg.EMPRESA_EXECUTANTE || { nome: 'Metrolab Soluções em Engenharia Clínica LTDA', cnpj: '' };
+  var assinaturas = cfg.ASSINATURAS_PADRAO || [];
+  var esc = RelCalDoc_escaparHtml_;
+  var titulo = 'Relatório de calibração';
+  var numero = ctx.numeroDocumento || '';
+  var revisao = RelTecA4_revisao_(ctx.revisao);
+  var empresaTxt = empresa.nome + (empresa.cnpj ? ' — CNPJ ' + empresa.cnpj : '');
+  var num = RelTecA4_numerador_();
+  var localCal = ctx.localCalibracao === 'CLIENTE'
+    ? 'Instalações do cliente (informado no formulário; confira no certificado de origem)'
+    : 'Laboratório (informado no formulário; confira no certificado de origem)';
+  var cnpjCli = RelCalDoc_cnpjFormatado_(ctx.cnpjCliente);
+  var css = SGO_DocA4_estilos_({ titulo: titulo, tituloCurto: titulo, numero: numero, revisao: revisao, empresa: { nome: empresa.nome, cnpj: empresa.cnpj } }) +
+    RelTecA4_css_({ titulo: titulo, numero: numero, revisao: revisao, empresa: empresaTxt }) +
+    '.rc-abertura{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.8pt solid #0b3d6e;padding-bottom:2.4mm;margin:0 0 4.5mm}' +
+    '.rc-abertura img{height:13mm;width:auto;display:block}.rc-abertura .meta{text-align:right;font-size:8pt;line-height:1.4;color:#3e4c59}.rc-abertura .meta b{color:#1f2933}' +
+    'h2 .n,h3 .n{display:inline-block;min-width:7mm}' +
+    'table.ident th{width:21%}table.ident td{width:29%}' +
+    'table.relcal-res td,table.relcal-res th{font-size:7.8pt;padding:.7mm 1.3mm}table.relcal-res thead th{white-space:normal;vertical-align:bottom}table.relcal-res td{white-space:nowrap}' +
+    '.relcal-certs{display:flex;gap:6mm;justify-content:center;flex-wrap:wrap}' +
+    '.relcal-cert{flex:0 1 auto;margin:2mm 0 3mm}' +
+    '.relcal-cert img{display:block;margin:0 auto;max-width:100%;max-height:118mm;width:auto;height:auto;border:.5pt solid #bcc5cf}' +
+    '.relcal-certs.dois .relcal-cert{flex:0 1 84mm}.relcal-certs.dois .relcal-cert img{max-height:105mm}' +
+    '.relcal-cert figcaption{text-align:center}' +
+    '.relcal-fotos{display:flex;flex-wrap:wrap;gap:0 6mm}.relcal-fotos figure{flex:1 1 80mm;margin:1mm 0 3mm}' +
+    '.relcal-fotos .q{height:62mm;display:flex;align-items:center;justify-content:center;background:#fafbfc;border:.5pt solid #bcc5cf}' +
+    '.relcal-fotos .q img{max-width:100%;max-height:62mm;display:block}' +
+    'ul.normas{margin:0 0 2.4mm 4.5mm;padding:0}ul.normas li{margin:0 0 1.1mm;text-align:left;hyphens:manual}' +
+    '.reltec-fecho .nota{margin-top:2.6mm;text-align:justify}';
+  var h = [];
+  h.push('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">');
+  // Dados para a gravação na pasta do cliente (RelCal_apiSalvarDocumento); não aparecem no papel.
+  h.push('<meta name="sgo-numero" content="' + esc(numero) + '"><meta name="sgo-cnpj" content="' + esc(String(ctx.cnpjCliente || '').replace(/\D/g, '')) + '">');
+  h.push('<title>' + esc(titulo + (numero ? ' nº ' + numero : '')) + '</title><style>' + css + '</style></head><body>');
+  h.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div><main class="folha">');
+  h.push('<header class="rc-abertura"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta"><b>Nº ' + esc(numero || '—') + '</b> · Revisão ' + esc(revisao) + '<br>Emissão ' + esc(ctx.dataEmissao || '—') + '</div></header>');
+  h.push('<h1>' + titulo + '</h1><p class="subtitulo">' + esc(ctx.instrumentoLabel || '') + (ctx.tag ? ' · TAG ' + esc(ctx.tag) : '') + '</p>');
+
+  var s = 0;
+  // 1. Identificação (uma tabela só)
+  h.push('<section><h2><span class="n">' + (++s) + '.</span> Identificação</h2>');
+  h.push(SGO_DocA4_tabelaIdent_([
+    ['Cliente', (ctx.cliente || '—') + (cnpjCli ? ' — CNPJ ' + cnpjCli : ''), { largo: true }],
+    ['Endereço', ctx.endereco, { largo: true }],
+    ['Instrumento', ctx.instrumentoLabel], ['TAG', ctx.tag],
+    ['Marca / modelo', (ctx.marca || '—') + ' / ' + (ctx.modelo || '—')], ['Localização habitual', ctx.localizacao],
+    ['Data da calibração', ctx.dataCalibracao], ['Técnico responsável', ctx.tecnicoResponsavel],
+    ['Local da calibração', localCal, { largo: true }],
+    ['Empresa emitente', empresaTxt, { largo: true }]
+  ]));
+  h.push('</section>');
+
+  // 2. Introdução
+  h.push('<section><h2><span class="n">' + (++s) + '.</span> Introdução</h2>' + RelCalDoc_paragrafosHtml_(ctx.textos.introducao) + '</section>');
+
+  // 3. Resultados: texto e tabelas transcritas; depois, o certificado anexado como figura
+  var secRes = ++s;
+  h.push('<section><h2><span class="n">' + secRes + '.</span> Resultados da calibração</h2>');
+  var ausentes = (ctx.certificados || []).filter(function (c) { return !c.temCertificado; });
+  if (ausentes.length) h.push('<p><b>Escopo parcial:</b> não foi anexado certificado para ' + ausentes.map(function (c) { return esc(c.label || c.codigo); }).join('; ') + '. Este relatório não apresenta resultados para essas peças e não comprova a calibração de todos os componentes do instrumento.</p>');
+  h.push(RelCalDoc_renderizarResultados_(ctx.textos.resultadosExplicados, secRes, num));
+  var comImagem = (ctx.certificados || []).filter(function (c) { return c.temCertificado && c.base64 && String(c.mimeType || '').indexOf('image/') === 0; }).length;
+  if (comImagem) {
+    var f1 = num.proximaFigura(), fN = f1 + comImagem - 1;
+    h.push('<p>' + (comImagem === 1 ? 'A Figura ' + f1 + ' reproduz o certificado anexado.' : 'As Figuras ' + f1 + (comImagem === 2 ? ' e ' : ' a ') + fN + ' reproduzem os certificados anexados.') + '</p>');
+  }
+  h.push(RelCalDoc_montarCertificados_(ctx.certificados, num));
+  h.push('</section>');
+
+  // Registro fotográfico (opcional)
+  var fotos = RelCalDoc_montarFotos_(ctx.fotos, num);
+  if (fotos) h.push('<section><h2><span class="n">' + (++s) + '.</span> Registro fotográfico</h2>' + fotos + '</section>');
+
+  // Referências normativas: listadas uma única vez no documento
+  if (ctx.normas && ctx.normas.length) {
+    h.push('<section><h2><span class="n">' + (++s) + '.</span> Referências normativas</h2><ul class="normas">' + ctx.normas.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul></section>');
+  }
+
+  // Conclusão: o último parágrafo, a nota de escopo e as assinaturas ficam juntos na mesma folha
+  var conc = RelCalDoc_dividirUltimo_(ctx.textos.conclusao);
+  h.push('<section><h2><span class="n">' + (++s) + '.</span> Conclusão e responsabilidade técnica</h2>');
+  if (conc.antes) h.push(RelCalDoc_paragrafosHtml_(conc.antes));
+  h.push('<div class="reltec-fecho">' + (conc.ultimo ? RelCalDoc_paragrafosHtml_(conc.ultimo) : '') +
+    '<p class="nota">Este relatório interpreta exclusivamente os certificados anexados. Não declara a execução de uma nova calibração, não estabelece validade ou intervalo de recalibração e não emite declaração de conformidade. A decisão de uso e a definição da periodicidade cabem ao contratante, por meio do seu setor de qualidade ou de responsável designado.</p>' +
+    SGO_DocA4_assinaturas_(assinaturas) + '</div></section>');
+  h.push('</main></body></html>');
+  return h.join('\n');
+}

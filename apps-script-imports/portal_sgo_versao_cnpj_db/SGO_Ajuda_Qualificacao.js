@@ -400,11 +400,12 @@ function SGO_ajudaTelas_Qualificacao_() {
       cores: [
         { nome: "Aviso acima dos campos de revisão", significado: "A IA não respondeu. Os campos vêm com texto padrão completo. Revise e confirme." },
         { nome: "Botão \"Tentar salvar de novo\"", significado: "O documento foi gerado, mas não chegou à pasta do cliente. Toque para salvar outra vez." },
+        { nome: "Quadro no alto do relatório", significado: "Cinza: \"Executado sem achado técnico registrado\". Laranja: \"Executado com achado técnico registrado\"; o achado aparece ao lado do item, na tabela da etapa. Não é aprovação nem reprovação." },
         FAIXA_VERMELHA
       ],
       problemas: [
         { situacao: "Apareceu \"Tentar salvar de novo\".", oQueFazer: "Toque no botão. Se falhar de novo, confira a internet e avise o administrador." },
-        { situacao: "Não tenho o certificado de algum instrumento.", oQueFazer: "Deixe o campo em branco. O texto de QD cita só os certificados anexados." },
+        { situacao: "Não tenho o certificado de algum instrumento.", oQueFazer: "Deixe o campo em branco. Na tabela de certificados do relatório, o instrumento aparece como \"Não anexado nesta visita\"." },
         { situacao: "A nova aba não abriu.", oQueFazer: "Libere janelas novas (pop-up) para o endereço do SGO+ e gere de novo." }
       ],
       quemPode: [
@@ -413,7 +414,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
       perguntas: [
-        { p: "O relatório aprova ou reprova o equipamento?", r: "Não. Ele registra o que foi verificado e as evidências. A conclusão não faz juízo de conformidade." }
+        { p: "O relatório aprova ou reprova o equipamento?", r: "Não. Ele registra o que foi verificado e as evidências. A conclusão não faz juízo de conformidade." },
+        { p: "Como o relatório é organizado?", r: "Em seções numeradas: identificação, introdução, objetivo, QI, QO, QD, referências normativas e conclusão com as assinaturas. Os itens verificados de cada etapa ficam numa tabela, e os certificados numa tabela que diz qual foi anexado. Acima de 3 páginas, o relatório ganha sumário." },
+        { p: "Onde o relatório fica salvo?", r: "Na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome \"Relatorio de qualificacao - número - TAG - data e hora\", em PDF e em HTML." }
       ]
     },
 
@@ -472,7 +475,9 @@ function SGO_ajudaTelas_Qualificacao_() {
         { perfil: "CLIENTE", pode: "Não acessa esta tela." }
       ],
       perguntas: [
-        { p: "Que pressão o sistema usa para a categoria?", r: "Usa a PMTA, que é o critério conservador. O laudo informa isso na memória de cálculo." },
+        { p: "Que pressão o sistema usa para a categoria?", r: "Usa a PMTA, que é o critério conservador. O laudo informa isso na seção 5 (Categorização e periodicidade), com a memória de cálculo na Tabela 1." },
+        { p: "Como o laudo é organizado?", r: "Abre com o parecer do PLH (Aprovado, Aprovado com ressalvas ou Reprovado) e segue em seções numeradas: identificação, introdução, objetivo, referências normativas, categorização, inspeção executada (válvulas, manômetros, teste hidrostático com gráfico e fotos), resultados e recomendações e, no fim, o parecer conclusivo com as datas e a assinatura do PLH na mesma página. Acima de 3 páginas, o laudo ganha sumário." },
+        { p: "Onde o laudo fica salvo?", r: "Na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome \"Laudo NR-13 - número - TAG - data e hora\", em PDF e em HTML. As fotos do exame ficam na subpasta \"Fotos\" da mesma pasta." },
         { p: "Qual redação da NR-13 o laudo cita?", r: "A da Portaria MTP nº 1.846, de 1º de julho de 2022 (retificada em 20/10/2022), alterada pela Portaria MTP nº 4.219, de 20 de dezembro de 2022." }
       ],
       secoesManual: [
