@@ -333,7 +333,7 @@ function CadeiaFrioRel_cfMontarResultadosEvento_(sh, analise, statusAprovacao, c
   if (analise.rompeu) {
     let colValor = CadeiaFrioRel_cfEscreverRotulo_(sh, row, 'Sensor / valor da ruptura');
     sh.getRange(row, colValor, 1, CadeiaFrioRel_CF_RESULTADOS_NUM_COLUNAS - colValor + 1).merge()
-      .setValue(analise.primeiraRuptura.sensor + ': ' + analise.primeiraRuptura.valor + ' °C em ' + analise.primeiraRuptura.tempoStr);
+      .setValue(analise.primeiraRuptura.sensor + ': ' + SGO_DocA4_num_(analise.primeiraRuptura.valor) + ' °C em ' + analise.primeiraRuptura.tempoStr);
     row++;
 
     sh.getRange(row, 1).setValue('Tempo até a ruptura').setFontWeight('bold');
@@ -469,7 +469,7 @@ function CadeiaFrioRel_cfEscreverTabelaComportamentoSensores_(sh, row, titulo, d
 // mas ter uma posição específica não conforme, ou o contrário.
 function CadeiaFrioRel_cfLabelStatusSensor_(status) {
   if (status === 'NAO_CONFORME') return 'NÃO CONFORME';
-  if (status === 'CONFORME_COM_RESSALVA') return 'CONFORME COM RESSALVA';
+  if (status === 'CONFORME_COM_RESSALVA') return 'DENTRO DA TOLERÂNCIA';
   return 'CONFORME';
 }
 
@@ -819,11 +819,11 @@ function CadeiaFrioRel_cfMontarTextoParecerConsolidado_(analises, payload, statu
     });
     texto += 'O equipamento deve passar por avaliação técnica, revisão do processo de refrigeração/isolamento térmico e nova qualificação dos estudos reprovados antes da liberação operacional.';
   } else if (comAlerta.length) {
-    texto += 'Alertas técnicos, por estudo:\n\n';
+    texto += 'Observações, por estudo (excursão dentro da tolerância declarada, que não reprova o estudo):\n\n';
     comAlerta.forEach(function(a) {
-      texto += CadeiaFrioRel_cfLabelEstudo_(a.tipoEstudo) + ':\n' + CadeiaFrioRel_cfTextoLista_(a.alertasAnalise, 'Nenhum alerta registrado.') + '\n\n';
+      texto += CadeiaFrioRel_cfLabelEstudo_(a.tipoEstudo) + ':\n' + CadeiaFrioRel_cfTextoLista_(a.alertasAnalise, 'Nenhuma observação registrada.') + '\n\n';
     });
-    texto += 'Recomenda-se investigar a causa da redução de margem operacional identificada e manter monitoramento reforçado do equipamento nas próximas verificações.';
+    texto += 'Os estudos foram aprovados. Recomenda-se investigar a causa da excursão registrada e acompanhá-la nas próximas verificações.';
   } else {
     texto += 'Todos os estudos realizados atenderam aos critérios operacionais configurados. O equipamento demonstrou desempenho compatível com a manutenção da faixa operacional exigida para o produto armazenado ou transportado, inclusive nos eventuais eventos de estresse avaliados (abertura de porta, queda de energia).\n\n' +
       'Equipamento liberado para uso operacional dentro dos critérios avaliados.';
@@ -1000,7 +1000,7 @@ function CadeiaFrioRel_cfTextoLista_(lista, vazio) {
 function CadeiaFrioRel_cfFmtC_(valor) {
   const n = Number(valor);
   if (!isFinite(n)) return '-';
-  return n.toFixed(2) + ' °C';
+  return SGO_DocA4_num_(n, 2) + ' °C';
 }
 
 function CadeiaFrioRel_cfEncontrarPiorAmplitude_(statsPorSensor) {
@@ -1018,7 +1018,8 @@ function CadeiaFrioRel_cfEncontrarPiorAmplitude_(statsPorSensor) {
 function CadeiaFrioRel_cfCorPorStatus_(status) {
   status = String(status || '').toUpperCase();
   if (status === 'REPROVADO') return CadeiaFrioRel_CFCFG.CORES.REPROVADO;
-  if (status === 'APROVADO_COM_ALERTA' || status === 'INFORMATIVO' || status === 'CARACTERIZACAO') return CadeiaFrioRel_CFCFG.CORES.ALERTA;
+  if (status === 'APROVADO_COM_ALERTA') return CadeiaFrioRel_CFCFG.CORES.APROVADO;
+  if (status === 'INFORMATIVO' || status === 'CARACTERIZACAO') return CadeiaFrioRel_CFCFG.CORES.ALERTA;
   return CadeiaFrioRel_CFCFG.CORES.APROVADO;
 }
 
@@ -1068,11 +1069,11 @@ function CadeiaFrioRel_cfListarNormasAplicaveis_(chavePerfil) {
 function CadeiaFrioRel_cfFmtMin_(valor) {
   const n = Number(valor);
   if (!isFinite(n)) return '-';
-  return n.toFixed(2) + ' min';
+  return SGO_DocA4_num_(n, 2) + ' min';
 }
 
 function CadeiaFrioRel_cfFmtHoras_(minutos) {
   const n = Number(minutos);
   if (!isFinite(n)) return '-';
-  return n.toFixed(1) + ' min (' + (n / 60).toFixed(2) + ' h)';
+  return SGO_DocA4_num_(n, 1) + ' min (' + SGO_DocA4_num_(n / 60, 2) + ' h)';
 }

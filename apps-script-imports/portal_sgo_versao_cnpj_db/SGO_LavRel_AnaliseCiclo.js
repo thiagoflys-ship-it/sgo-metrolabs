@@ -316,7 +316,7 @@ function LavRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetParametro, sen
     if (maxPiorSensor < paramsAnalise.limiteInicio) {
       analise.faseInicioExp = -1;
       analise.faseFimExp = -1;
-      analise.observacoesAnalise.push('Ciclo abortado/insuficiente. O pior sensor atingiu apenas ' + LavRel_roundAnalise_(maxPiorSensor, 2) + '°C, nunca cruzando a linha do setpoint para início de contagem.');
+      analise.observacoesAnalise.push('Ciclo abortado/insuficiente. O pior sensor atingiu apenas ' + SGO_DocA4_num_(LavRel_roundAnalise_(maxPiorSensor, 2), 2) + ' °C, nunca cruzando a linha do setpoint para início de contagem.');
     } else {
       // Busca do Fim da Exposicao (do pico para a frente)
       let contFim = 0;

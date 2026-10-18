@@ -8,7 +8,7 @@
  * - F0 e temperatura compatíveis com o novo motor
  * - síntese final consolidada sem redundância
  * - blindagem para cenários com poucos dados
- * - suporte a APROVADO / APROVADO_COM_ALERTA / REPROVADO
+ * - suporte a APROVADO / REPROVADO (sem "aprovado com alerta"; proximidade do limite vira observação)
  * - eixo temporal usando dados válidos do relatório
  * - conclusão sem rigidez excessiva e com critérios operacionais
  ****************************************************/
@@ -35,14 +35,15 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const corAzulVacuo = '#0b4ea2';
   const corTexto = '#374151';
 
-  const statusAprovacao = String(
+  // Decisão do dono (17/10/2026): não existe "aprovado com alerta". F0 abaixo do
+  // mínimo normativo reprova; acima do mínimo, mas perto dele, aprova e o ponto
+  // vai para as observações (mesma regra do relatório de ensaio A4).
+  const statusBruto = String(
     analise.statusAprovacao || (analise.aprovado ? 'APROVADO' : 'REPROVADO')
   ).toUpperCase();
+  const statusAprovacao = statusBruto === 'APROVADO_COM_ALERTA' ? 'APROVADO' : statusBruto;
 
-  const corStatus =
-    statusAprovacao === 'REPROVADO'
-      ? '#dc2626'
-      : (statusAprovacao === 'APROVADO_COM_ALERTA' ? '#d97706' : '#059669');
+  const corStatus = statusAprovacao === 'REPROVADO' ? '#dc2626' : '#059669';
 
   AutoRel_recriarAbaGrafico_(ss, '6. GRÁF. TEMPERATURA', 5);
   AutoRel_recriarAbaGrafico_(ss, '7. GRÁF. PRESSÃO', 6);
@@ -102,21 +103,24 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const limiteAprovacaoF0 = AutoRel_numGraf_(limitesAprovacao.limiteAprovacaoF0);
 
   function fmtBarAbs_(v) {
-    return AutoRel_numGraf_(v).toFixed(3) + ' BAR ABS';
+    return AutoRel_txtNumGraf_(v, 3) + ' BAR ABS';
   }
 
   function fmtTemp_(v) {
-    return AutoRel_numGraf_(v).toFixed(2) + ' °C';
+    return AutoRel_txtNumGraf_(v, 2) + ' °C';
   }
 
   function fmtMin_(v) {
-    return AutoRel_numGraf_(v).toFixed(2) + ' min';
+    return AutoRel_txtNumGraf_(v, 2) + ' min';
   }
 
+  // F0 mínimo acima do mínimo normativo, mas perto dele: observação registrada pelo motor.
+  const f0ProximoDoLimite = statusAprovacao !== 'REPROVADO' && observacoesAnalise.some(function(o) {
+    return /pr[oó]ximo do limite/i.test(String(o || ''));
+  });
+
   function statusLongo_() {
-    if (statusAprovacao === 'REPROVADO') return 'REPROVADO';
-    if (statusAprovacao === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
-    return 'APROVADO';
+    return statusAprovacao === 'REPROVADO' ? 'REPROVADO' : 'APROVADO';
   }
 
   function tituloPagina(sheet, texto) {
@@ -167,8 +171,6 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       [
         'APROVADO',
         'REPROVADO',
-        'APROVADO COM ALERTA',
-        'APROVADO_COM_ALERTA',
         'APROVADO.',
         'REPROVADO.'
       ].forEach(function(palavra) {
@@ -282,14 +284,10 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       ? 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
         'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia comportamento não uniforme suficiente para comprometer o desempenho térmico do processo no pior caso monitorado. ' +
         'Embora parte das curvas tenha apresentado aproximação ao setpoint, o ponto mais crítico identificado foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + ', indicando que a distribuição térmica na janela de exposição não foi plenamente satisfatória para sustentar a aprovação do ciclo.'
-      : (statusAprovacao === 'APROVADO_COM_ALERTA'
-          ? 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
-            'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia estabilidade operacional durante a janela de exposição, porém com margem reduzida no pior caso monitorado. ' +
-            'O pior sensor térmico identificado foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + '. A distribuição térmica foi suficiente para atendimento do limite operacional configurado, recomendando-se acompanhamento reforçado nas próximas execuções.'
-          : 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
-            'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia estabilidade e homogeneidade do calor no interior da câmara. ' +
-            'A convergência das curvas durante o platô térmico indica distribuição consistente da energia térmica e ausência de desvios críticos impeditivos entre os pontos válidos monitorados. ' +
-            'O pior sensor térmico identificado foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + ', ainda assim compatível com a manutenção das condições térmicas exigidas para o processo analisado.');
+      : 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
+        'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia estabilidade e homogeneidade do calor no interior da câmara. ' +
+        'A convergência das curvas durante o platô térmico indica distribuição consistente da energia térmica e ausência de desvios críticos impeditivos entre os pontos válidos monitorados. ' +
+        'O pior sensor térmico identificado foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + ', ainda assim compatível com a manutenção das condições térmicas exigidas para o processo analisado.';
 
   shTemp.getRange('A27:O34').merge();
   formatarTextoComNegrito(
@@ -302,7 +300,6 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       'sensores ativos',
       'janela de exposição',
       'estabilidade e homogeneidade',
-      'margem reduzida',
       'aprovação do ciclo'
     ],
     statusAprovacao === 'REPROVADO' ? corStatus : null,
@@ -385,17 +382,15 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     statusAprovacao === 'REPROVADO'
       ? 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
         'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
-        'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
-        'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o F0 mínimo normativo de ' + limiteAprovacaoF0.toFixed(2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
-      : (statusAprovacao === 'APROVADO_COM_ALERTA'
-          ? 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
-            'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
-            'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
-            'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atendeu ao F0 mínimo normativo de ' + limiteAprovacaoF0.toFixed(2) + ' min, porém permaneceu abaixo do valor normativo estrito de ' + f0MinNormativo.toFixed(2) + ' min, justificando aprovação com alerta.'
-          : 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
-            'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
-            'O valor médio obtido foi de ' + mediaF0.toFixed(2) + ' min, com pior caso de ' + minF0.toFixed(2) + ' min e melhor caso de ' + maxF0.toFixed(2) + ' min. ' +
-            'Como o pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atendeu ao critério configurado, conclui-se que a letalidade térmica foi suficiente para aprovação do ciclo.');
+        'O valor médio obtido foi de ' + AutoRel_txtNumGraf_(mediaF0, 2) + ' min, com pior caso de ' + AutoRel_txtNumGraf_(minF0, 2) + ' min e melhor caso de ' + AutoRel_txtNumGraf_(maxF0, 2) + ' min. ' +
+        'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o F0 mínimo normativo de ' + AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
+      : 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
+        'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
+        'O valor médio obtido foi de ' + AutoRel_txtNumGraf_(mediaF0, 2) + ' min, com pior caso de ' + AutoRel_txtNumGraf_(minF0, 2) + ' min e melhor caso de ' + AutoRel_txtNumGraf_(maxF0, 2) + ' min. ' +
+        'Como o pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atingiu o F0 mínimo normativo de ' + AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min, conclui-se que a letalidade térmica foi suficiente para aprovação do ciclo.' +
+        (f0ProximoDoLimite
+          ? ' O F0 mínimo ficou acima do mínimo normativo, porém próximo do limite; o ponto está registrado como observação e deve ser acompanhado nas próximas requalificações.'
+          : '');
 
   shF0.getRange('A27:O35').merge();
   formatarTextoComNegrito(
@@ -404,16 +399,16 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     txtF0,
     [
       'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):',
-      mediaF0.toFixed(2) + ' min',
-      minF0.toFixed(2) + ' min',
-      maxF0.toFixed(2) + ' min',
+      AutoRel_txtNumGraf_(mediaF0, 2) + ' min',
+      AutoRel_txtNumGraf_(minF0, 2) + ' min',
+      AutoRel_txtNumGraf_(maxF0, 2) + ' min',
       piorSensorF0 ? piorSensorF0.sensor : '',
-      limiteAprovacaoF0.toFixed(2) + ' min',
-      f0MinNormativo.toFixed(2) + ' min',
-      'aprovação com alerta',
+      AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min',
+      AutoRel_txtNumGraf_(f0MinNormativo, 2) + ' min',
+      'próximo do limite',
       'reprovado'
     ],
-    statusAprovacao !== 'APROVADO' ? corStatus : null,
+    statusAprovacao === 'REPROVADO' ? corStatus : null,
     11
   );
 
@@ -459,9 +454,7 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const blocoMotivos =
     statusAprovacao === 'REPROVADO'
       ? ('Motivos determinantes da reprovação: ' + textoListaGraficos_(motivosReprovacao, 'Não informados.'))
-      : (statusAprovacao === 'APROVADO_COM_ALERTA'
-          ? ('Alertas técnicos relevantes: ' + textoListaGraficos_(alertasAnalise, 'Nenhum alerta registrado.'))
-          : 'Todos os critérios configurados para os sensores ativos foram atendidos.');
+      : 'Todos os critérios configurados para os sensores ativos foram atendidos.';
 
   const blocoObservacoes = observacoesAnalise.length
     ? (' Observações complementares: ' + textoListaGraficos_(observacoesAnalise, ''))
@@ -474,9 +467,9 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     ', pressão média de ' + fmtBarAbs_(pressMed) +
     ', pressão máxima de ' + fmtBarAbs_(pressMax) +
     ' e amplitude total de ' + fmtBarAbs_(amplitudePress) + '. ' +
-    'Considerando o tempo total de ' + tempoTotal.toFixed(1) +
-    ' min, o tempo efetivo de exposição de ' + tempoExp.toFixed(1) +
-    ' min e o delta médio entre leituras de ' + deltaMin.toFixed(3) +
+    'Considerando o tempo total de ' + AutoRel_txtNumGraf_(tempoTotal, 1) +
+    ' min, o tempo efetivo de exposição de ' + AutoRel_txtNumGraf_(tempoExp, 1) +
+    ' min e o delta médio entre leituras de ' + AutoRel_txtNumGraf_(deltaMin, 3) +
     ' min, a dinâmica observada foi correlacionada com a resposta térmica e com o pior caso de letalidade do sensor ' +
     (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + '. ' +
     'Temperatura mínima de exposição observada: ' + fmtTemp_(exposicaoTemp.min) +
@@ -500,9 +493,9 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       fmtBarAbs_(pressMed),
       fmtBarAbs_(pressMax),
       fmtBarAbs_(amplitudePress),
-      tempoTotal.toFixed(1) + ' min',
-      tempoExp.toFixed(1) + ' min',
-      deltaMin.toFixed(3) + ' min',
+      AutoRel_txtNumGraf_(tempoTotal, 1) + ' min',
+      AutoRel_txtNumGraf_(tempoExp, 1) + ' min',
+      AutoRel_txtNumGraf_(deltaMin, 3) + ' min',
       piorSensorF0 ? piorSensorF0.sensor : '',
       fmtTemp_(exposicaoTemp.min),
       fmtTemp_(exposicaoTemp.media),
@@ -586,11 +579,11 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   }
 
   AutoRel_recriarAbaGrafico_(ss, '6. GRÁF. CICLO COMPLETO (VÁCUO)', 5);
-  AutoRel_recriarAbaGrafico_(ss, '7. GRÁF. PRESSÃO ABSOLUTA (INTERVALO DO LEAK TEST)', 6);
+  AutoRel_recriarAbaGrafico_(ss, '7. GRÁF. PRESSÃO ABSOLUTA (INTERVALO DO TESTE DE ESTANQUEIDADE)', 6);
   AutoRel_recriarAbaGrafico_(ss, '8. GRÁF. TEMPERATURA (ACOMPANHAMENTO)', 7);
 
   const shCiclo = ss.getSheetByName('6. GRÁF. CICLO COMPLETO (VÁCUO)');
-  const shPres = ss.getSheetByName('7. GRÁF. PRESSÃO ABSOLUTA (INTERVALO DO LEAK TEST)');
+  const shPres = ss.getSheetByName('7. GRÁF. PRESSÃO ABSOLUTA (INTERVALO DO TESTE DE ESTANQUEIDADE)');
   const shTemp = ss.getSheetByName('8. GRÁF. TEMPERATURA (ACOMPANHAMENTO)');
 
   [shCiclo, shPres, shTemp].forEach(function(sh) {
@@ -617,15 +610,15 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   const tempoDecorrido = AutoRel_numGraf_(analiseLeak.tempoDecorridoMinutos);
 
   function fmtMbar_(v) {
-    return AutoRel_numGraf_(v).toFixed(3) + ' mbar';
+    return AutoRel_txtNumGraf_(v, 3) + ' mbar';
   }
 
   function fmtTaxa_(v) {
-    return AutoRel_numGraf_(v).toFixed(4) + ' mbar/min';
+    return AutoRel_txtNumGraf_(v, 4) + ' mbar/min';
   }
 
   function fmtMin_(v) {
-    return AutoRel_numGraf_(v).toFixed(2) + ' min';
+    return AutoRel_txtNumGraf_(v, 2) + ' min';
   }
 
   function statusLongo_() {
@@ -726,7 +719,7 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   const idxInicioLeak = Math.round(AutoRel_numGraf_(analiseLeak.indiceInicio));
   const idxFimLeak = Math.round(AutoRel_numGraf_(analiseLeak.indiceFim));
 
-  const tabelaCiclo = [['Tempo', 'Vácuo Relativo (mbar)', 'Intervalo do Leak Test', 'Atmosfera (referência)']];
+  const tabelaCiclo = [['Tempo', 'Vácuo Relativo (mbar)', 'Intervalo do teste de estanqueidade', 'Atmosfera (referência)']];
   for (let i = 0; i < vacuoRelativoCol.length; i++) {
     const vBruto = vacuoRelativoCol[i][0];
     const vNum = (vBruto === '' || vBruto === null || vBruto === undefined) ? null : AutoRel_numGraf_(vBruto);
@@ -772,17 +765,17 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
 
   const txtCiclo = contextoRegistro.temRegistroCompleto
     ? ('PARECER TÉCNICO (CICLO COMPLETO DO ENSAIO):\n\n' +
-      'O gráfico acima representa o comportamento completo do ensaio em relação à pressão atmosférica, adotada como referência (' +
-      refAtmMbar.toFixed(2) + ' mbar = 0 no eixo, linha tracejada). A curva evidencia a rampa de formação do vácuo (queda em relação à atmosfera), ' +
+      'O gráfico desta seção representa o comportamento completo do ensaio em relação à pressão atmosférica, adotada como referência (' +
+      AutoRel_txtNumGraf_(refAtmMbar, 2) + ' mbar = 0 no eixo, linha tracejada). A curva evidencia a rampa de formação do vácuo (queda em relação à atmosfera), ' +
       'o período de manutenção do vácuo utilizado para o cálculo da taxa de vazamento — destacado em linha mais grossa, entre ' +
       AutoRel_valorSeguroGraficos_(analiseLeak.tempoInicioLeakTest) + ' e ' + AutoRel_valorSeguroGraficos_(analiseLeak.tempoFimLeakTest) +
       ' — e a rampa de retorno/despressurização até a condição atmosférica ao final do registro.\n\n' +
       'Registro completo do datalogger: de ' + tempoRegistroInicio + ' a ' + tempoRegistroFim + '. ' +
       'As temperaturas dos sensores não são exibidas neste gráfico; elas aparecem apenas na aba de acompanhamento térmico, como registro complementar.')
     : ('PARECER TÉCNICO (COMPORTAMENTO DO VÁCUO RELATIVO):\n\n' +
-      'O registro do datalogger disponível para este ensaio contém apenas o intervalo monitorado do Leak Test, sem leituras suficientes antes ou depois dessa janela para caracterizar a rampa de formação do vácuo ou o retorno à condição atmosférica. ' +
-      'O gráfico acima representa esse intervalo em relação à pressão atmosférica, adotada como referência (' +
-      refAtmMbar.toFixed(2) + ' mbar = 0 no eixo, linha tracejada), com destaque em linha mais grossa para o trecho utilizado no cálculo da taxa de vazamento, entre ' +
+      'O registro do datalogger disponível para este ensaio contém apenas o intervalo monitorado do teste de estanqueidade, sem leituras suficientes antes ou depois dessa janela para caracterizar a rampa de formação do vácuo ou o retorno à condição atmosférica. ' +
+      'O gráfico desta seção representa esse intervalo em relação à pressão atmosférica, adotada como referência (' +
+      AutoRel_txtNumGraf_(refAtmMbar, 2) + ' mbar = 0 no eixo, linha tracejada), com destaque em linha mais grossa para o trecho utilizado no cálculo da taxa de vazamento, entre ' +
       AutoRel_valorSeguroGraficos_(analiseLeak.tempoInicioLeakTest) + ' e ' + AutoRel_valorSeguroGraficos_(analiseLeak.tempoFimLeakTest) + '.\n\n' +
       'Registro disponível: de ' + tempoRegistroInicio + ' a ' + tempoRegistroFim + '. ' +
       'As temperaturas dos sensores não são exibidas neste gráfico; elas aparecem apenas na aba de acompanhamento térmico, como registro complementar.');
@@ -795,7 +788,7 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
     [
       'PARECER TÉCNICO (CICLO COMPLETO DO ENSAIO):',
       'PARECER TÉCNICO (COMPORTAMENTO DO VÁCUO RELATIVO):',
-      refAtmMbar.toFixed(2) + ' mbar',
+      AutoRel_txtNumGraf_(refAtmMbar, 2) + ' mbar',
       tempoRegistroInicio,
       tempoRegistroFim
     ],
@@ -806,9 +799,9 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   AutoRel_trimDimensoesParaImpressaoLeakTest_(shCiclo, LINHA_TEXTO_FIM, 15);
 
   // ==========================================================
-  // ABA 7: PRESSÃO ABSOLUTA DA CÂMARA (INTERVALO DO LEAK TEST)
+  // ABA 7: PRESSÃO ABSOLUTA DA CÂMARA (INTERVALO DO TESTE DE ESTANQUEIDADE)
   // ==========================================================
-  tituloPagina(shPres, 'PRESSÃO ABSOLUTA DA CÂMARA - INTERVALO AVALIADO NO LEAK TEST');
+  tituloPagina(shPres, 'PRESSÃO ABSOLUTA DA CÂMARA - INTERVALO AVALIADO NO TESTE DE ESTANQUEIDADE');
 
   // Gráfico técnico principal: mostra SÓ o intervalo usado no cálculo
   // (não o registro inteiro do datalogger), com marcadores de P1/P2 e
@@ -863,8 +856,8 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   shPres.insertChart(chartPres);
 
   const txtPres =
-    'PARECER TÉCNICO (PRESSÃO ABSOLUTA NO INTERVALO DO LEAK TEST):\n\n' +
-    'Este gráfico apresenta a Pressão Absoluta da Câmara exclusivamente durante o intervalo selecionado para o cálculo do Leak Test, entre ' +
+    'PARECER TÉCNICO (PRESSÃO ABSOLUTA NO INTERVALO DO TESTE DE ESTANQUEIDADE):\n\n' +
+    'Este gráfico apresenta a Pressão Absoluta da Câmara exclusivamente durante o intervalo selecionado para o cálculo do teste de estanqueidade, entre ' +
     AutoRel_valorSeguroGraficos_(analiseLeak.tempoInicioLeakTest) + ' e ' + AutoRel_valorSeguroGraficos_(analiseLeak.tempoFimLeakTest) +
     ', totalizando ' + fmtMin_(tempoDecorrido) + ' de observação (marcador verde = P1, início; marcador vermelho = P2, fim). ' +
     'A Pressão Absoluta inicial registrada (P1) foi de ' + fmtMbar_(pressaoInicioMbar) + ' e a final (P2) foi de ' + fmtMbar_(pressaoFimMbar) +
@@ -882,7 +875,7 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
     'A' + LINHA_TEXTO_INICIO,
     txtPres,
     [
-      'PARECER TÉCNICO (PRESSÃO ABSOLUTA NO INTERVALO DO LEAK TEST):',
+      'PARECER TÉCNICO (PRESSÃO ABSOLUTA NO INTERVALO DO TESTE DE ESTANQUEIDADE):',
       'P1',
       'P2',
       fmtMin_(tempoDecorrido),
@@ -949,7 +942,7 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   const chartTemp = shTemp.newChart()
     .asLineChart()
     .addRange(shAuxTemp.getRange(1, 1, tabelaTemp.length, cabecalhoTemp.length))
-    .setTitle('TEMPERATURA DOS SENSORES NO INTERVALO DO LEAK TEST (ACOMPANHAMENTO)')
+    .setTitle('TEMPERATURA DOS SENSORES NO INTERVALO DO TESTE DE ESTANQUEIDADE (ACOMPANHAMENTO)')
     .setXAxisTitle('TEMPO DECORRIDO (MIN)')
     .setYAxisTitle('TEMPERATURA (°C)')
     .setNumHeaders(1)
@@ -971,9 +964,9 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
   const txtTemp =
     'REGISTRO TÉCNICO (NÃO INTERFERE NO RESULTADO):\n\n' +
     AutoRel_valorSeguroGraficos_(analiseLeak.textoDisclaimerTermico) +
-    '\n\nDurante a janela do Leak Test, a faixa térmica registrada pelos sensores ativos foi de ' +
-    AutoRel_numGraf_(global.min).toFixed(2) + ' °C (mínima) a ' + AutoRel_numGraf_(global.max).toFixed(2) +
-    ' °C (máxima), com média de ' + AutoRel_numGraf_(global.media).toFixed(2) +
+    '\n\nDurante a janela do teste de estanqueidade, a faixa térmica registrada pelos sensores ativos foi de ' +
+    AutoRel_txtNumGraf_(global.min, 2) + ' °C (mínima) a ' + AutoRel_txtNumGraf_(global.max, 2) +
+    ' °C (máxima), com média de ' + AutoRel_txtNumGraf_(global.media, 2) +
     ' °C (linha tracejada no gráfico), apresentada aqui exclusivamente como evidência documental do ensaio.';
 
   shTemp.getRange(RANGE_TEXTO_SECAO).merge();
@@ -984,9 +977,9 @@ function AutoRel_gerarGraficosLeakTest_(ss, analiseLeak, nSensores) {
     [
       'REGISTRO TÉCNICO (NÃO INTERFERE NO RESULTADO):',
       'ACOMPANHAMENTO TÉRMICO COMPLEMENTAR:',
-      AutoRel_numGraf_(global.min).toFixed(2) + ' °C',
-      AutoRel_numGraf_(global.max).toFixed(2) + ' °C',
-      AutoRel_numGraf_(global.media).toFixed(2) + ' °C'
+      AutoRel_txtNumGraf_(global.min, 2) + ' °C',
+      AutoRel_txtNumGraf_(global.max, 2) + ' °C',
+      AutoRel_txtNumGraf_(global.media, 2) + ' °C'
     ],
     null,
     11
@@ -1085,6 +1078,11 @@ function AutoRel_aplicarLayoutA4PaisagemGrafico_(sheet) {
 // ------------------------------------------------------------
 // HELPER: número seguro
 // ------------------------------------------------------------
+/** Número de texto (pareceres, rótulos) em pt-BR: vírgula decimal e ponto no milhar. */
+function AutoRel_txtNumGraf_(v, casas) {
+  return SGO_DocA4_num_(AutoRel_numGraf_(v), casas);
+}
+
 function AutoRel_numGraf_(v) {
   if (v === null || v === undefined || v === '') return 0;
   const n = Number(String(v).replace(',', '.').trim());
@@ -1120,9 +1118,12 @@ function AutoRel_textoDiagnosticoPreVacuoGraficos_(analise) {
   const n = Number(d.contagemEvacuacoes);
   let texto;
   if (estado === 'NAO_APLICAVEL') texto = 'Pr\u00e9-v\u00e1cuo n\u00e3o aplic\u00e1vel ao modo de remo\u00e7\u00e3o de ar informado. ';
-  else if (estado === 'DETECTADO') texto = 'Foram identificadas ' + (isFinite(n) ? n : Number(fases.resumo && fases.resumo.pulsosPreVacuo || 0)) + ' evacua\u00e7\u00e3o(\u00f5es) antes da exposi\u00e7\u00e3o. ';
+  else if (estado === 'DETECTADO') {
+    const qtd = isFinite(n) ? n : Number(fases.resumo && fases.resumo.pulsosPreVacuo || 0);
+    texto = (qtd === 1 ? 'Foi identificada 1 evacua\u00e7\u00e3o' : 'Foram identificadas ' + SGO_DocA4_num_(qtd) + ' evacua\u00e7\u00f5es') + ' antes da exposi\u00e7\u00e3o. ';
+  }
   else if (estado === 'NAO_DETECTADO') texto = 'N\u00e3o foi identificada evacua\u00e7\u00e3o pr\u00e9via pelos crit\u00e9rios configurados. Esse resultado n\u00e3o comprova aus\u00eancia de bomba de v\u00e1cuo. ';
   else texto = 'A identifica\u00e7\u00e3o do pr\u00e9-v\u00e1cuo \u00e9 indeterminada com os dados e par\u00e2metros dispon\u00edveis. ';
-  if (Array.isArray(d.limitacoes) && d.limitacoes.length) texto += 'Limita\u00e7\u00f5es: ' + d.limitacoes.join('; ') + '. ';
+  if (Array.isArray(d.limitacoes) && d.limitacoes.length) texto += 'Limita\u00e7\u00f5es: ' + d.limitacoes.map(function(l) { return String(l || '').trim().replace(/[.;\s]+$/, ''); }).filter(Boolean).join('; ') + '. ';
   return texto + 'O perfil de press\u00e3o e a contagem de evacua\u00e7\u00f5es n\u00e3o comprovam, isoladamente, efic\u00e1cia da remo\u00e7\u00e3o de ar, aus\u00eancia de gases n\u00e3o condens\u00e1veis ou integridade da c\u00e2mara.';
 }

@@ -1140,7 +1140,7 @@ function SGO_DocA4_documentoQualificacaoTermica_(o) {
   h.push('<h2>3. Objetivo</h2>' + SGO_DocA4_paragrafos_(textos.objetivo));
 
   h.push('<h2>4. Instrumentação e rastreabilidade</h2>');
-  h.push('<p>As temperaturas foram registradas por registradores de dados (dataloggers) com sensores distribuídos no volume útil do equipamento. A tabela abaixo identifica os registradores utilizados e a situação dos seus certificados de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante.</p>');
+  h.push('<p>As temperaturas foram registradas por registradores de dados (dataloggers) com sensores distribuídos no volume útil do equipamento. Os registradores utilizados e a situação dos seus certificados de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados nesta seção.</p>');
   h.push(SGO_DocA4_tabelaRegistradores_(ctx.registradores));
   var parametros = [['Sensores utilizados', ctx.sensoresUtilizados || (ctx.quantidadeSensoresAtivos ? ctx.quantidadeSensoresAtivos + ' sensores ativos' : '—')]];
   if (o.intervaloLeiturasSegundos) parametros.push(['Intervalo entre leituras', SGO_DocA4_val_(o.intervaloLeiturasSegundos, 0, 's')]);

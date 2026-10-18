@@ -11,7 +11,7 @@
 
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
 - Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
-- Selo amarelo "APROVADO COM ALERTA": a leitura saiu da faixa, mas ficou dentro da tolerância declarada. O equipamento está aprovado; no certificado sai "Aprovado" e a saída aparece em Observações; na planilha sai "APROVADO (COM OBSERVAÇÃO)".
+- Selo verde "APROVADO (COM OBSERVAÇÃO)": a leitura saiu da faixa, mas ficou dentro da tolerância declarada. O equipamento está aprovado; no certificado sai "Aprovado" e a saída aparece em Observações; na planilha sai "APROVADO (COM OBSERVAÇÃO)".
 - O campo "DTL" do certificado virou "Identificação do registrador": digite a TAG do cadastro de Padrões de referência (ex.: DTL-01, DTL-06). O certificado mostra o certificado de calibração e a validade de cada registrador.
 - O botão final do certificado é "Confirmar e gerar o certificado". O documento A4 fica salvo em HTML e PDF na pasta do cliente.
 - Em "Como enviar os dados", a opção principal é "Arquivo do registrador (enviar ou informar o link)". Confira antes o "Formato de data nos arquivos".
@@ -242,13 +242,15 @@ O sistema mostra um "selo" colorido com o status geral do laudo, e um selo separ
 | Status | O que significa | O que fazer |
 |---|---|---|
 | **APROVADO** | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente |
-| **APROVADO COM ALERTA** | Passou, mas alguma leitura chegou perto do limite (dentro da margem de tolerância) | Pode entregar, mas vale mencionar ao cliente que houve uma leitura no limite |
+| **APROVADO (COM OBSERVAÇÃO)** | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha |
 | **REPROVADO** | O equipamento saiu da faixa aceitável em algum momento, além da tolerância (na Distribuição), ou rompeu antes do tempo-alvo definido (na Abertura de Porta/Queda de Energia) | **Não invente uma solução sozinho** — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 12) |
 | **INFORMATIVO** ou **CARACTERIZAÇÃO** | O estudo não teve critério de aprovação/reprovação definido (Abertura de Porta/Queda de Energia sem "Tempo-alvo mínimo" preenchido, ou o estudo de Autonomia, que nunca tem veredito) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado |
 
 Depois do selo de status, aparecem dois botões:
 
 - **Abrir planilha** — abre o relatório completo (com tabelas e gráfico) direto no navegador.
+
+> Atualização de 18/10/2026: não existe "aprovado com alerta". A excursão dentro da tolerância declarada aprova o estudo e vai para Observações (no certificado sai "Aprovado"; na planilha e no selo da tela, "APROVADO (COM OBSERVAÇÃO)", em verde). O PDF da planilha (relatório de dados) também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome "Relatório de dados ... - <TAG> - <aaaa-MM-dd HHmm>.pdf"; a frase logo abaixo dos botões confirma o arquivo ou diz por que não salvou.
 - **Baixar PDF** — baixa o mesmo relatório já convertido em PDF, pronto para enviar ao cliente.
 
 **Se o laudo tiver mais de um estudo marcado (ex.: Distribuição + Abertura de Porta + Queda de Energia), o status geral no topo é o pior status entre todos os estudos** — ou seja, se um estudo reprovar, o laudo inteiro aparece como Reprovado no selo geral, mesmo que os outros estudos tenham aprovado.

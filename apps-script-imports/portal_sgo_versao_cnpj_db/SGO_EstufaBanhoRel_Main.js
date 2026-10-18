@@ -505,6 +505,11 @@ function EstufaBanhoRel_apiConverter(payload) {
   EstufaBanhoRel_ebGerarGraficos(ss, analises, nSensores);
   SpreadsheetApp.flush();
   const pdfUrl = EstufaBanhoRel_ebConstruirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
+  // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
+    const id = EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID && String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).length > 10 ? String(EstufaBanhoRel_EBCFG.LAUDOS_FOLDER_ID).trim() : '';
+    return id ? DriveApp.getFolderById(id) : EstufaBanhoRel_ebObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Estufa+Banho-maria - Laudos');
+  }, 'Relatório de dados Estufa-Banho-maria', EstufaBanhoRel_EBCFG.TZ);
   const statusConsolidado = EstufaBanhoRel_ebConsolidarStatus_(analises);
   return {
     ok: true,
@@ -512,6 +517,12 @@ function EstufaBanhoRel_apiConverter(payload) {
     spreadsheetId: infoPlanilha.spreadsheetId,
     spreadsheetUrl: infoPlanilha.spreadsheetUrl || ss.getUrl(),
     pdfUrl: pdfUrl,
+    salvoNaPasta: salvoPlanilha.salvoNaPasta,
+    pdfId: salvoPlanilha.pdfId,
+    pdfSalvoUrl: salvoPlanilha.pdfSalvoUrl,
+    pdfNome: salvoPlanilha.pdfNome,
+    pastaUrl: salvoPlanilha.pastaUrl,
+    avisoSalvar: salvoPlanilha.avisoSalvar,
     estudos: analises.map(function (a) {
       return {
         tipoEstudo: a.tipoEstudo,

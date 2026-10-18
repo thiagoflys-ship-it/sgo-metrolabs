@@ -403,6 +403,10 @@ function LavRel_apiConverter(payload) {
   SpreadsheetApp.flush();
 
   const pdfUrl = LavRel_construirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
+  // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
+    return SGO_DocSalvar_pastaPersistente_('LAVREL_LAUDOS_FOLDER_ID', 'Lavadora - Laudos', LavRel_UCFG.LAUDOS_FOLDER_ID);
+  }, 'Relatório de dados Lavadora', LavRel_UCFG.TZ);
 
   return {
     ok: true,
@@ -411,6 +415,12 @@ function LavRel_apiConverter(payload) {
     spreadsheetId: infoPlanilha.spreadsheetId,
     spreadsheetUrl: infoPlanilha.spreadsheetUrl || ss.getUrl(),
     pdfUrl: pdfUrl,
+    salvoNaPasta: salvoPlanilha.salvoNaPasta,
+    pdfId: salvoPlanilha.pdfId,
+    pdfSalvoUrl: salvoPlanilha.pdfSalvoUrl,
+    pdfNome: salvoPlanilha.pdfNome,
+    pastaUrl: salvoPlanilha.pastaUrl,
+    avisoSalvar: salvoPlanilha.avisoSalvar,
     analiseResumo: {
       // Parametros Termodesinfectora (A0)
       minA0: analise.minA0 || 0,

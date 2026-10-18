@@ -32,8 +32,12 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const corAzulVacuo = '#0b4ea2';
   const corTexto = '#374151';
 
-  const statusAprovacao = String(analise.statusAprovacao || (analise.aprovado ? 'APROVADO' : 'REPROVADO')).toUpperCase();
-  const corStatus = statusAprovacao === 'REPROVADO' ? '#dc2626' : (statusAprovacao === 'APROVADO_COM_ALERTA' ? '#d97706' : '#059669');
+  // Decisão do dono (17/10/2026): não existe "aprovado com alerta". A0 (ou tempo de cavitação) abaixo do mínimo
+  // reprova; acima do mínimo, mas perto dele, aprova e o ponto vai para as observações (regra do relatório A4).
+  const statusBruto = String(analise.statusAprovacao || (analise.aprovado ? 'APROVADO' : 'REPROVADO')).toUpperCase();
+  const statusAprovacao = statusBruto === 'APROVADO_COM_ALERTA' ? 'APROVADO' : statusBruto;
+  const corStatus = statusAprovacao === 'REPROVADO' ? '#dc2626' : '#059669';
+  const proximoDoLimite = statusAprovacao !== 'REPROVADO' && (Array.isArray(analise.observacoesAnalise) ? analise.observacoesAnalise : []).some(function(o) { return /pr[oó]ximo do limite/i.test(String(o || '')); });
 
   LavRel_recriarAbaGrafico_(ss, '6. GRF. TEMPERATURA', 5);
   LavRel_recriarAbaGrafico_(ss, '7. GRF. ANALÓGICO', 6);
@@ -109,13 +113,12 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const parametroOperacional = LavRel_numGraf_(limitesAprovacao.parametroOperacional);
   const limiteAprovacaoFinal = LavRel_numGraf_(limitesAprovacao.limiteAprovacaoFinal);
 
-  function fmtBarAbs_(v) { return LavRel_numGraf_(v).toFixed(3); }
-  function fmtTemp_(v) { return LavRel_numGraf_(v).toFixed(2) + ' °C'; }
-  function fmtMin_(v) { return LavRel_numGraf_(v).toFixed(2) + ' min'; }
-  function fmtA0_(v) { return LavRel_numGraf_(v).toFixed(2); }
+  function fmtBarAbs_(v) { return SGO_DocA4_num_(LavRel_numGraf_(v), 3); }
+  function fmtTemp_(v) { return SGO_DocA4_num_(LavRel_numGraf_(v), 2) + ' °C'; }
+  function fmtMin_(v) { return SGO_DocA4_num_(LavRel_numGraf_(v), 2) + ' min'; }
+  function fmtA0_(v) { return SGO_DocA4_num_(LavRel_numGraf_(v), 2) + ' s'; }
   function statusLongo_() {
     if (statusAprovacao === 'REPROVADO') return 'REPROVADO';
-    if (statusAprovacao === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
     return 'APROVADO';
   }
 
@@ -150,7 +153,7 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     });
 
     if (corEspecial) {
-      ['APROVADO', 'REPROVADO', 'APROVADO COM ALERTA', 'APROVADO_COM_ALERTA'].forEach(function(palavra) {
+      ['APROVADO', 'REPROVADO'].forEach(function(palavra) {
         let pos = 0;
         while (true) {
           const idx = textoCompleto.indexOf(palavra, pos);
@@ -211,9 +214,7 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
 
   const txtTemp = statusAprovacao === 'REPROVADO'
     ? 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\nO mapeamento térmico evidencia comportamento não uniforme ou ciclo interrompido prematuramente, comprometendo o desempenho do processo. ' + (piorSensorTemperatura && analise.faseInicioExp !== -1 ? 'O ponto mais crítico identificado foi ' + piorSensorTemperatura.sensor + '.' : 'A câmara não atingiu estabilidade térmica regulamentar.')
-    : (statusAprovacao === 'APROVADO_COM_ALERTA'
-      ? 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\nO mapeamento térmico evidencia estabilidade durante a fase principal, porém com margem reduzida no pior caso monitorado (' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + '). A distribuição foi suficiente para atendimento operacional, requerendo acompanhamento.'
-      : 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\nO mapeamento térmico evidencia estabilidade e homogeneidade no interior do equipamento. A convergência das curvas indica distribuição consistente da energia térmica sem desvios críticos.');
+    : 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\nO mapeamento térmico evidencia estabilidade e homogeneidade no interior do equipamento. A convergência das curvas indica distribuição consistente da energia térmica sem desvios críticos.';
 
   shTemp.getRange('A27:O34').merge();
   formatarTextoComNegrito(shTemp, 'A27', txtTemp, ['PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):', piorSensorTemperatura && analise.faseInicioExp !== -1 ? piorSensorTemperatura.sensor : '', 'fase principal', 'estabilidade e homogeneidade'], statusAprovacao === 'REPROVADO' ? corStatus : null, 11);
@@ -229,7 +230,7 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
 
   if (temDadoAnalogico) {
     chartAnalogBuilder = chartAnalogBuilder.addRange(shDados.getRange(dadosIniciais, colPressao, totalLinhas, 1))
-      .setTitle(motor === 'TERMO' ? 'GRÁFICO DA BOMBA DE RECIRCULAÇÃO' : 'NÍVEL / DINMICA DO TANQUE')
+      .setTitle(motor === 'TERMO' ? 'GRÁFICO DA BOMBA DE RECIRCULAÇÃO' : 'NÍVEL / DINÂMICA DO TANQUE')
       .setYAxisTitle('VALOR MEDIDO (BAR / ANALÓGICO)')
       .setOption('series', { 0: { color: corAzulVacuo, lineWidth: 2 } });
   } else {
@@ -242,11 +243,11 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   shAnalogo.insertChart(chartAnalogBuilder.build());
 
   const txtAnalog = temDadoAnalogico
-    ? 'PARECER TÉCNICO (DINMICA DE FLUIDOS):\n\nA curva analógica foi avaliada. ' + (statusAprovacao === 'REPROVADO' ? 'A avaliação integrada evidencia que a descontinuidade ou queda no ciclo inviabiliza a aprovação da dinâmica mecânica.' : 'A estabilidade observada ao longo da fase crítica indica coerência, sem indícios relevantes de falha mecânica.')
-    : 'PARECER TÉCNICO (DINMICA DE FLUIDOS):\n\nO datalogger utilizado nesta validação não registrou colunas analógicas (pressão/nível). A aprovação baseou-se exclusivamente na eficácia térmica e mecânica inferida pelos termopares.';
+    ? 'PARECER TÉCNICO (DINÂMICA DE FLUIDOS):\n\nA curva analógica foi avaliada. ' + (statusAprovacao === 'REPROVADO' ? 'A avaliação integrada evidencia que a descontinuidade ou queda no ciclo inviabiliza a aprovação da dinâmica mecânica.' : 'A estabilidade observada ao longo da fase crítica indica coerência, sem indícios relevantes de falha mecânica.')
+    : 'PARECER TÉCNICO (DINÂMICA DE FLUIDOS):\n\nO datalogger utilizado nesta validação não registrou colunas analógicas (pressão/nível). A aprovação baseou-se exclusivamente na eficácia térmica e mecânica inferida pelos termopares.';
 
   shAnalogo.getRange('A27:O34').merge();
-  formatarTextoComNegrito(shAnalogo, 'A27', txtAnalog, ['PARECER TÉCNICO (DINMICA DE FLUIDOS):'], null, 11);
+  formatarTextoComNegrito(shAnalogo, 'A27', txtAnalog, ['PARECER TÉCNICO (DINÂMICA DE FLUIDOS):'], null, 11);
 
   // ABA 7: LETALIDADE
   tituloPagina(shLeta, motor === 'TERMO' ? 'INDICADOR DE LETALIDADE (VALOR A0)' : 'DESEMPENHO TÉRMICO NA FASE DE CAVITAÇÃO');
@@ -269,15 +270,15 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   if (analise.faseInicioExp === -1) {
     txtLeta = motor === 'TERMO'
       ? 'PARECER TÉCNICO (VALOR A0):\n\nCálculo de letalidade térmica interrompido. O ciclo não atingiu a temperatura mínima programada na fase principal devido à interrupção operacional prematura. Valor de A0 global calculado: 0.00.'
-      : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nFase de lavagem não iniciada de forma estável. O tempo em temperatura alvo de cavitação foi nulo (0.00 min), caracterizando falha crítica estrutural no ciclo.';
+      : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nFase de lavagem não iniciada de forma estável. O tempo em temperatura alvo de cavitação foi nulo (0,00 min), caracterizando falha crítica estrutural no ciclo.';
   } else {
     txtLeta = motor === 'TERMO'
-      ? 'PARECER TÉCNICO (VALOR A0):\n\nO indicador A0 representa a integração térmica. O pior caso (' + (piorSensorA0 ? piorSensorA0.sensor : 'N/A') + ') obteve ' + minA0.toFixed(2) + ', frente ao mínimo exigido de ' + limiteAprovacaoFinal.toFixed(2) + '. Classificação: ' + statusLongo_() + '.'
-      : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nO tempo de cavitação eficaz obtido foi de ' + tempoCavitacao.toFixed(2) + ' min, frente ao limite de ' + limiteAprovacaoFinal.toFixed(2) + ' min. Classificação: ' + statusLongo_() + '.';
+      ? 'PARECER TÉCNICO (VALOR A0):\n\nO indicador A0 representa a integração térmica. O pior caso (' + (piorSensorA0 ? piorSensorA0.sensor : 'N/A') + ') obteve ' + SGO_DocA4_num_(minA0, 2) + ' s, frente ao mínimo exigido de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 2) + ' s. Classificação: ' + statusLongo_() + '.'
+      : 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):\n\nO tempo de cavitação eficaz obtido foi de ' + SGO_DocA4_num_(tempoCavitacao, 2) + ' min, frente ao limite de ' + SGO_DocA4_num_(limiteAprovacaoFinal, 2) + ' min. Classificação: ' + statusLongo_() + '.';
   }
 
   shLeta.getRange('A27:O35').merge();
-  formatarTextoComNegrito(shLeta, 'A27', txtLeta, ['PARECER TÉCNICO (VALOR A0):', 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):', statusLongo_()], statusAprovacao !== 'APROVADO' ? corStatus : null, 11);
+  formatarTextoComNegrito(shLeta, 'A27', txtLeta, ['PARECER TÉCNICO (VALOR A0):', 'PARECER TÉCNICO (EFICÁCIA DE CAVITAÇÃO):', statusLongo_()], statusAprovacao === 'REPROVADO' ? corStatus : null, 11);
 
   // ABA 8: SNTESE CONCLUSIVA (GRAFICO DE FASES BLINDADO)
   tituloPagina(shConc, 'DURAÇÃO DAS FASES E CONCLUSÃO DO PROCESSO');
@@ -304,20 +305,20 @@ function LavRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   shConc.insertChart(chartConc);
 
   const resumoSensores = 'Sensores ativos: ' + (sensoresUtilizados.length ? sensoresUtilizados.join(', ') : 'Nenhum') + '. ';
-  const blocoMotivos = statusAprovacao === 'REPROVADO' ? ('Motivos: ' + textoListaGraficos_(motivosReprovacao, 'Não informados.')) : (statusAprovacao === 'APROVADO_COM_ALERTA' ? ('Alertas: ' + textoListaGraficos_(alertasAnalise, 'Nenhum alerta.')) : 'Critérios atendidos.');
+  const blocoMotivos = statusAprovacao === 'REPROVADO' ? ('Motivos: ' + textoListaGraficos_(motivosReprovacao, 'Não informados.')) : (proximoDoLimite ? 'Critérios atendidos; resultado mínimo acima do mínimo exigido, porém próximo do limite (registrado nas observações).' : 'Critérios atendidos.');
   
   let letalidadeInfoTxt = '';
   if (analise.faseInicioExp === -1) {
     letalidadeInfoTxt = motor === 'TERMO'
-      ? 'A0 mínimo alcançado: 0.00 (FALHA DO COLETOR TÉRMICO). Mínimo exigido: ' + fmtA0_(limiteAprovacaoFinal) + '. '
+      ? 'A0 mínimo alcançado: 0,00 s (FALHA DO COLETOR TÉRMICO). Mínimo exigido: ' + fmtA0_(limiteAprovacaoFinal) + '. '
       : 'Tempo eficaz mantido: 0.00 min (CICLO INTERROMPIDO). Mínimo exigido: ' + fmtMin_(limiteAprovacaoFinal) + '. ';
   } else {
     letalidadeInfoTxt = motor === 'TERMO' 
-      ? 'A0 mínimo alcançado: ' + fmtA0_(minA0) + '. Limite aprovativo: ' + fmtA0_(limiteAprovacaoFinal) + '. '
-      : 'Tempo eficaz mantido: ' + fmtMin_(tempoCavitacao) + '. Limite aprovativo: ' + fmtMin_(limiteAprovacaoFinal) + '. ';
+      ? 'A0 mínimo alcançado: ' + fmtA0_(minA0) + '. Mínimo exigido: ' + fmtA0_(limiteAprovacaoFinal) + '. '
+      : 'Tempo eficaz mantido: ' + fmtMin_(tempoCavitacao) + '. Mínimo exigido: ' + fmtMin_(limiteAprovacaoFinal) + '. ';
   }
 
-  const textoExposicaoExibicao = analise.faseInicioExp === -1 ? '0.0 min (Abortado)' : tempoExp.toFixed(1) + ' min';
+  const textoExposicaoExibicao = analise.faseInicioExp === -1 ? '0,0 min (abortado)' : SGO_DocA4_num_(tempoExp, 1) + ' min';
   const textoMinimaExibicao = analise.faseInicioExp !== -1 ? fmtTemp_(exposicaoTemp.min) : 'N/A';
 
   const txtConclusaoGeral = 'PARECER TÉCNICO CONSOLIDADO DO EQUIPAMENTO:\n\n' + resumoSensores +

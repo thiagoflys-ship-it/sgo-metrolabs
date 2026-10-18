@@ -11,7 +11,7 @@
  * - usa tempo do conjunto realmente analisado
  * - evita duplicação indevida de offset de temperatura
  * - separa estatística global do ciclo e da exposição
- * - trata APROVADO / APROVADO_COM_ALERTA / REPROVADO
+ * - trata APROVADO / REPROVADO (sem "aprovado com alerta")
  * - melhora textos técnicos e consistência temporal
  * - tabela consolidada compatível com sensores excluídos
  * - blindagem extra contra campos ausentes
@@ -59,16 +59,20 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     throw new Error('Não foi possível identificar os sensores instalados.');
   }
 
-  const statusAprovacao = String(
+  const statusBruto = String(
     analise.statusAprovacao || (analise.aprovado ? 'APROVADO' : 'REPROVADO')
   ).toUpperCase();
+  const statusAprovacao = statusBruto === 'APROVADO_COM_ALERTA' ? 'APROVADO' : statusBruto;
+
+  // Decisão do dono (17/10/2026): sem "aprovado com alerta"; perto do mínimo = aprovado com observação.
+  const proximoDoLimite = statusAprovacao !== 'REPROVADO' && (Array.isArray(analise.observacoesAnalise) ? analise.observacoesAnalise : []).some(function(o) {
+    return /pr[oó]ximo do limite/i.test(String(o || ''));
+  });
 
   const statusCor =
     statusAprovacao === 'REPROVADO'
       ? AutoRel_UCFG.CORES.REPROVADO
-      : (statusAprovacao === 'APROVADO_COM_ALERTA'
-          ? (AutoRel_UCFG.CORES.ALERTA || '#d97706')
-          : AutoRel_UCFG.CORES.APROVADO);
+      : AutoRel_UCFG.CORES.APROVADO;
 
   const idxInicioCiclo = AutoRel_numeroInteiroSeguroPlanilha_(analise.indiceInicioCiclo, 0);
   const idxFimCiclo = AutoRel_numeroInteiroSeguroPlanilha_(analise.indiceFimCiclo, dados.length - 1);
@@ -166,15 +170,15 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   }
 
   function fmtBarAbs_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(3) + ' BAR ABS';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 3) + ' BAR ABS';
   }
 
   function fmtTemp_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' °C';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 2) + ' °C';
   }
 
   function fmtMin_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' MIN';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 2) + ' MIN';
   }
 
   function richTexto(sheet, rangeA1, textoCompleto, termosNegrito, corStatusPalavra, fontSize) {
@@ -214,10 +218,8 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       [
         'APROVADO',
         'REPROVADO',
-        'APROVADO_COM_ALERTA',
         'APROVADO.',
-        'REPROVADO.',
-        'APROVADO_COM_ALERTA.'
+        'REPROVADO.'
       ].forEach(function(palavra) {
         let pos = 0;
         while (true) {
@@ -267,7 +269,6 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   function obterTextoStatusLongo_(status) {
     if (status === 'REPROVADO') return 'REPROVADO';
-    if (status === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
     return 'APROVADO';
   }
 
@@ -318,9 +319,9 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     ['ENDEREÇO:', AutoRel_valorSeguroPlanilha_(payload.endereco), '', 'MODELO:', AutoRel_valorSeguroPlanilha_(payload.modelo), ''],
     ['TIPO DE ENSAIO:', AutoRel_valorSeguroPlanilha_(payload.ensaio), '', 'NÚMERO DE SÉRIE:', AutoRel_valorSeguroPlanilha_(payload.numSerie), ''],
     ['RECEITA / CICLO Nº:', AutoRel_valorSeguroPlanilha_(payload.programa) + ' (CICLO ' + AutoRel_valorSeguroPlanilha_(payload.cicloNum) + ')', '', 'LOTE DA CARGA:', AutoRel_valorSeguroPlanilha_(payload.lote), ''],
-    ['TEMP. PROGRAMADA:', AutoRel_valorSeguroPlanilha_(payload.setpoint) + '°C', '', 'LOCALIZAÇÃO:', AutoRel_valorSeguroPlanilha_(payload.local), ''],
+    ['TEMP. PROGRAMADA:', AutoRel_txtNumPlanilha_(payload.setpoint) + ' °C', '', 'LOCALIZAÇÃO:', AutoRel_valorSeguroPlanilha_(payload.local), ''],
     ['INÍCIO DO CICLO:', dataInicio, '', 'TÉRMINO DO CICLO:', dataFim, ''],
-    ['TEMPO TOTAL:', AutoRel_valorSeguroPlanilha_(analise.tempoTotalMinutos) + ' MINUTOS', '', 'TEMPO EM PLATÔ:', AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' MINUTOS', '']
+    ['TEMPO TOTAL:', AutoRel_txtNumPlanilha_(analise.tempoTotalMinutos) + ' MINUTOS', '', 'TEMPO EM PLATÔ:', AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' MINUTOS', '']
   ];
 
   shCapa.getRange('A5:F12')
@@ -350,7 +351,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   estiloCabecalhoClaro(shCapa.getRange('A14:F14'));
 
   const criterioTxt =
-    'CRITÉRIO: F0 ≥ ' + limiteAprovacaoF0.toFixed(2).replace('.', ',') + ' MIN EM TODOS OS SENSORES ATIVOS (MÍNIMO NORMATIVO)';
+    'CRITÉRIO: F0 ≥ ' + SGO_DocA4_num_(limiteAprovacaoF0, 2) + ' MIN EM TODOS OS SENSORES ATIVOS (MÍNIMO NORMATIVO)';
 
   const sensoresResumoTxt = qtdSensoresUtilizados + ' DE ' + qtdSensoresInstalados + ' PONTOS';
 
@@ -420,22 +421,14 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   if (statusAprovacao === 'REPROVADO') {
     txtP1 =
       'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-      'A análise termobarométrica identificou janela de exposição com duração de ' + AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
+      'A análise termobarométrica identificou janela de exposição com duração de ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
       'Entretanto, o pior caso de letalidade térmica foi insuficiente para aprovação. O F0 médio calculado foi de ' + fmtMin_(analise.mediaF0) +
       ', enquanto o menor valor obtido foi de ' + fmtMin_(analise.minF0) +
       ', abaixo do F0 mínimo normativo de ' + fmtMin_(limiteAprovacaoF0) + '.';
-  } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
-    txtP1 =
-      'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-      'A análise termobarométrica confirmou estabilidade operacional durante a exposição, com duração de ' + AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
-      'A letalidade térmica apresentou F0 médio de ' + fmtMin_(analise.mediaF0) +
-      ' e pior caso de ' + fmtMin_(analise.minF0) +
-      ', atendendo ao F0 mínimo normativo de ' + fmtMin_(limiteAprovacaoF0) +
-      ', porém abaixo do valor normativo estrito de ' + fmtMin_(f0MinNormativo) + '.';
   } else {
     txtP1 =
       'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-      'A análise termobarométrica confirmou estabilidade operacional durante a exposição, com duração de ' + AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
+      'A análise termobarométrica confirmou estabilidade operacional durante a exposição, com duração de ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
       'A letalidade térmica apresentou F0 médio de ' + fmtMin_(analise.mediaF0) +
       ', sendo o pior caso igual a ' + fmtMin_(analise.minF0) +
       ', atendendo ao critério configurado do processo.';
@@ -457,7 +450,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       motorText,
       normaText,
       'ONA',
-      AutoRel_valorSeguroPlanilha_(analise.tempoExposicaoMinutos) + ' minutos',
+      AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos',
       fmtMin_(analise.mediaF0),
       fmtMin_(analise.minF0),
       fmtMin_(limiteAprovacaoF0),
@@ -486,20 +479,15 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'Parecer final da engenharia clínica: REPROVADO.\n\n' +
       'Foram identificadas não conformidades nos sensores ativos monitorados.\n\n' +
       'Motivos técnicos da reprovação:\n' + textoLista(motivosReprovacao, 'Nenhum motivo registrado.') + '\n\n' +
-      (alertasAnalise.length ? 'Alertas adicionais:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
+      (alertasAnalise.length ? 'Registros técnicos adicionais:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
       'O equipamento deve passar por avaliação técnica, revisão do processo e nova qualificação antes de liberação operacional.';
-  } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
-    txtP2 =
-      'Parecer final da engenharia clínica: APROVADO_COM_ALERTA.\n\n' +
-      'Todos os critérios operacionais configurados foram atendidos para os sensores ativos monitorados, porém foram registrados alertas de engenharia que exigem análise crítica da equipe técnica.\n\n' +
-      'Alertas técnicos:\n' + textoLista(alertasAnalise, 'Nenhum alerta registrado.') + '\n\n' +
-      'Recomenda-se rastrear a causa da redução de margem e manter monitoramento reforçado do processo nas próximas execuções.';
   } else {
     txtP2 =
       'Parecer final da engenharia clínica: APROVADO.\n\n' +
       'Todos os critérios configurados para os sensores ativos foram atendidos. ' +
       'O processo demonstrou desempenho compatível com o nível de letalidade térmica requerido e com os critérios térmicos avaliados.\n\n' +
-      (alertasAnalise.length ? 'Alertas registrados sem impacto reprovativo:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
+      (proximoDoLimite ? 'Observação: o F0 mínimo ficou acima do mínimo normativo, porém próximo do limite; o ponto está registrado nas observações e deve ser acompanhado nas próximas requalificações.\n\n' : '') +
+      (alertasAnalise.length ? 'Registros técnicos sem impacto no resultado:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
       'Critérios térmicos atendidos para o ciclo analisado.';
   }
 
@@ -540,9 +528,8 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'Parecer final da engenharia clínica:',
       'APROVADO',
       'REPROVADO',
-      'APROVADO_COM_ALERTA',
       'Motivos técnicos da reprovação:',
-      'Alertas técnicos:',
+      'Observação:',
       'Critérios térmicos atendidos',
       'nova qualificação'
     ],
@@ -630,7 +617,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     const ativo = !!statsSensor.ativo;
 
     const f0Sensor = Array.isArray(analise.f0PorSensor) && analise.f0PorSensor[s] !== null && analise.f0PorSensor[s] !== undefined
-      ? AutoRel_valorNumericoSeguroPlanilha_(analise.f0PorSensor[s]).toFixed(2)
+      ? SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(analise.f0PorSensor[s]), 2)
       : 'DESCONSIDERADO';
 
     linhasConsolidado.push([
@@ -682,7 +669,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     piorF0Txt + '\n' +
     piorTempTxt + '\n' +
     'F0 normativo de referência: ' + fmtMin_(f0MinNormativo) + '. ' +
-    'Limite operacional aplicado: ' + fmtMin_(limiteAprovacaoF0) + '. ' +
+    'Critério de aprovação: F0 mínimo de ' + fmtMin_(limiteAprovacaoF0) + ' em todos os sensores ativos. ' +
     'Status final do ciclo: ' + statusLongo + '.';
 
   const linhaTexto = 4 + linhasConsolidado.length + 2;
@@ -735,7 +722,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     ['FASE', 'COR DE IDENTIFICAÇÃO', 'CRITÉRIO DE ENGENHARIA', 'STATUS'],
     ['PRÉ-VÁCUO OBSERVADO', 'COR 1', 'QUEDA ABAIXO DA REFERÊNCIA ATMOSFÉRICA + RECUPERAÇÃO; CRITÉRIOS OBSERVACIONAIS', AutoRel_resumoPreVacuoPlanilha_(analise)],
     ['RAMPA DE AQUECIMENTO', 'COR 2', 'ELEVAÇÃO DE TEMPERATURA E PRESSÃO', 'OK'],
-    ['ESTERILIZAÇÃO / EXPOSIÇÃO', 'COR 3', 'MODO ' + modoExp + ' | LIMIAR DE INÍCIO: ' + AutoRel_valorSeguroPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C', 'OK'],
+    ['ESTERILIZAÇÃO / EXPOSIÇÃO', 'COR 3', 'MODO ' + modoExp + ' | LIMIAR DE INÍCIO: ' + AutoRel_txtNumPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C', 'OK'],
     ['SECAGEM / DESPRESSURIZAÇÃO', 'COR 4', 'VÁCUO PÓS-EXPOSIÇÃO (QUANDO OBSERVADO) / RETORNO DE PRESSÃO', 'OBSERVACIONAL'],
     ['PRESSÃO MÍNIMA DO PROCESSO', fmtBarAbs_(globalPres.min), 'MENOR PRESSÃO MEDIDA NO CICLO', 'OK'],
     ['PRESSÃO MÁXIMA DO PROCESSO', fmtBarAbs_(globalPres.max), 'MAIOR PRESSÃO MEDIDA NO CICLO', 'OK']
@@ -885,7 +872,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 // ------------------------------------------------------------
 function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   if (!dados || !dados.length) {
-    throw new Error('Nenhum dado foi recebido para geração da planilha do Leak Test.');
+    throw new Error('Nenhum dado foi recebido para geração da planilha do teste de estanqueidade.');
   }
 
   payload = payload || {};
@@ -932,7 +919,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   const estabilidadeCurva = analiseLeak.estabilidadeCurva || { tendencia: 'INDEFINIDA', estabilidade: 'INDEFINIDA', percentualConsistente: 0, amplitudeMaxContraTendencia: 0 };
 
   function textoEstabilidadeCurvaLeakTest_(estab, statusAprovacaoAtual) {
-    const percentual = (AutoRel_valorNumericoSeguroPlanilha_(estab.percentualConsistente) * 100).toFixed(0);
+    const percentual = SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(estab.percentualConsistente) * 100, 0);
     const reprovadoAtual = statusAprovacaoAtual === 'REPROVADO';
 
     if (estab.tendencia === 'ELEVACAO') {
@@ -944,7 +931,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
             : 'Esse padrão é compatível com o comportamento normalmente esperado de uma câmara com boa estanqueidade, com variação mínima e previsível ao longo do tempo.');
       }
       return 'A curva de Pressão Absoluta apresentou oscilações relevantes durante o intervalo avaliado (variação pontual de até ' +
-        AutoRel_valorNumericoSeguroPlanilha_(estab.amplitudeMaxContraTendencia).toFixed(3) + ' mbar em sentido contrário à tendência geral de elevação), ' +
+        SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(estab.amplitudeMaxContraTendencia), 3) + ' mbar em sentido contrário à tendência geral de elevação), ' +
         'reduzindo a consistência das leituras nesse trecho e recomendando atenção adicional na interpretação da curva - ainda que o cálculo da taxa de vazamento considere apenas os pontos inicial e final do intervalo informado.';
     }
 
@@ -1044,19 +1031,19 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   }
 
   function fmtMbar_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(3) + ' MBAR';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 3) + ' MBAR';
   }
 
   function fmtMin_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' MIN';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 2) + ' MIN';
   }
 
   function fmtTaxa_(valor) {
-    return AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(4) + ' MBAR/MIN';
+    return SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 4) + ' MBAR/MIN';
   }
 
   function fmtTemp_(valor) {
-    return valor === null || valor === undefined ? '-' : (AutoRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' °C');
+    return valor === null || valor === undefined ? '-' : (SGO_DocA4_num_(AutoRel_valorNumericoSeguroPlanilha_(valor), 2) + ' °C');
   }
 
   // =========================================================
@@ -1074,7 +1061,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
 
   shCapa.getRange('A1:F2')
     .merge()
-    .setValue('RELATÓRIO DE TESTE DE ESTANQUEIDADE (LEAK TEST)\nMETROLABS - AVALIAÇÃO DA TAXA DE VAZAMENTO SOB VÁCUO')
+    .setValue('RELATÓRIO DE TESTE DE ESTANQUEIDADE\nMETROLABS - AVALIAÇÃO DA TAXA DE VAZAMENTO SOB VÁCUO')
     .setFontSize(13);
   estiloCabecalhoEscuro(shCapa.getRange('A1:F2'));
   shCapa.setRowHeight(1, 30);
@@ -1101,9 +1088,9 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
     ['CLIENTE:', AutoRel_valorSeguroPlanilha_(payload.cliente), '', 'TAG / CÓDIGO:', AutoRel_valorSeguroPlanilha_(payload.tag), ''],
     ['CNPJ:', AutoRel_valorSeguroPlanilha_(payload.cnpj), '', 'MARCA:', AutoRel_valorSeguroPlanilha_(payload.marca), ''],
     ['ENDEREÇO:', AutoRel_valorSeguroPlanilha_(payload.endereco), '', 'MODELO:', AutoRel_valorSeguroPlanilha_(payload.modelo), ''],
-    ['TIPO DE ENSAIO:', 'LEAK TEST / TESTE DE ESTANQUEIDADE', '', 'NÚMERO DE SÉRIE:', AutoRel_valorSeguroPlanilha_(payload.numSerie), ''],
+    ['TIPO DE ENSAIO:', 'TESTE DE ESTANQUEIDADE', '', 'NÚMERO DE SÉRIE:', AutoRel_valorSeguroPlanilha_(payload.numSerie), ''],
     ['LOTE DA CARGA:', AutoRel_valorSeguroPlanilha_(payload.lote), '', 'LOCALIZAÇÃO:', AutoRel_valorSeguroPlanilha_(payload.local), ''],
-    ['INÍCIO DO LEAK TEST:', AutoRel_valorSeguroPlanilha_(analiseLeak.tempoInicioLeakTest), '', 'TÉRMINO DO LEAK TEST:', AutoRel_valorSeguroPlanilha_(analiseLeak.tempoFimLeakTest), ''],
+    ['INÍCIO DO TESTE:', AutoRel_valorSeguroPlanilha_(analiseLeak.tempoInicioLeakTest), '', 'TÉRMINO DO TESTE:', AutoRel_valorSeguroPlanilha_(analiseLeak.tempoFimLeakTest), ''],
     ['TEMPO DECORRIDO:', fmtMin_(analiseLeak.tempoDecorridoMinutos), '', 'UNIDADE DA PRESSÃO ABSOLUTA:', AutoRel_valorSeguroPlanilha_(analiseLeak.unidadePressaoOriginal), '']
   ];
 
@@ -1125,7 +1112,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   shCapa.getRange('B5:C11').setFontWeight('normal');
   shCapa.getRange('E5:F11').setFontWeight('normal');
 
-  shCapa.getRange('A13:F13').merge().setValue('RESULTADOS DO LEAK TEST');
+  shCapa.getRange('A13:F13').merge().setValue('RESULTADOS DO TESTE DE ESTANQUEIDADE');
   estiloCabecalhoClaro(shCapa.getRange('A13:F13'));
 
   const resMatriz = [
@@ -1162,7 +1149,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   shConclusao.setColumnWidth(1, 1120);
   shConclusao.setRowHeight(2, 32);
 
-  shConclusao.getRange('A2').setValue('CONCLUSÃO DO LEAK TEST').setFontSize(14);
+  shConclusao.getRange('A2').setValue('CONCLUSÃO DO TESTE DE ESTANQUEIDADE').setFontSize(14);
   estiloCabecalhoEscuro(shConclusao.getRange('A2'));
 
   if (relatorioSimulado) {
@@ -1185,7 +1172,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
     'A6',
     txtMemoria,
     [
-      'MEMÓRIA DE CÁLCULO DA TAXA DE VAZAMENTO (LEAK TEST)',
+      'MEMÓRIA DE CÁLCULO DA TAXA DE VAZAMENTO',
       'Pressão Absoluta da Câmara - início (P1):',
       'Pressão Absoluta da Câmara - fim (P2):',
       'Variação de pressão (ΔP):',
@@ -1313,7 +1300,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
 
   shTermico.getRange('A1:D1')
     .merge()
-    .setValue('REGISTRO TÉRMICO COMPLEMENTAR - NÃO INTERFERE NO RESULTADO DO LEAK TEST');
+    .setValue('REGISTRO TÉRMICO COMPLEMENTAR - NÃO INTERFERE NO RESULTADO DO TESTE');
   estiloCabecalhoEscuro(shTermico.getRange('A1:D1'));
   shTermico.setRowHeight(1, 30);
 
@@ -1388,7 +1375,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
 
   const headers = ['Tempo']
     .concat(Array.from({ length: nSensoresInstalados }, function(_, i) { return 'S' + (i + 1) + ' (°C)'; }))
-    .concat(['Pressão Absoluta (' + unidadeOriginal + ')', 'Vácuo Relativo (mbar)', 'Evento do Leak Test']);
+    .concat(['Pressão Absoluta (' + unidadeOriginal + ')', 'Vácuo Relativo (mbar)', 'Evento do teste de estanqueidade']);
 
   shDados.getRange(1, 1, 1, headers.length)
     .setValues([headers])
@@ -1404,9 +1391,9 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
     let cor = '#ffffff';
     let eventoTexto = '';
 
-    if (i === idxInicio) eventoTexto = 'INÍCIO DO LEAK TEST';
+    if (i === idxInicio) eventoTexto = 'INÍCIO DO TESTE';
     if (i === idxFim) {
-      eventoTexto = eventoTexto ? (eventoTexto + ' | TÉRMINO DO LEAK TEST') : 'TÉRMINO DO LEAK TEST';
+      eventoTexto = eventoTexto ? (eventoTexto + ' | TÉRMINO DO TESTE') : 'TÉRMINO DO TESTE';
     }
 
     if (i >= idxInicio && i <= idxFim) {
@@ -1513,6 +1500,13 @@ function AutoRel_garantirGradeDadosPlanilha_(sheet, linhas, colunas) {
   const maxColunas = sheet.getMaxColumns();
   if (linhas > maxLinhas) sheet.insertRowsAfter(maxLinhas, linhas - maxLinhas);
   if (colunas > maxColunas) sheet.insertColumnsAfter(maxColunas, colunas - maxColunas);
+}
+
+/** Número que vira texto na planilha: pt-BR (vírgula decimal, ponto no milhar); vazio fica vazio. */
+function AutoRel_txtNumPlanilha_(valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  var t = SGO_DocA4_num_(valor);
+  return t === '—' ? String(valor) : t;
 }
 
 function AutoRel_valorSeguroPlanilha_(valor) {

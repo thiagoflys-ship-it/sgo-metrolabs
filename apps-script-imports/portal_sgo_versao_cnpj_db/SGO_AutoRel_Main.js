@@ -384,6 +384,10 @@ function AutoRel_apiConverter(payload) {
   SpreadsheetApp.flush();
 
   const pdfUrl = AutoRel_construirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
+  // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
+    return SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', AutoRel_UCFG.LAUDOS_FOLDER_ID);
+  }, 'Relatório de dados Autoclave', AutoRel_UCFG.TZ);
 
   return {
     ok: true,
@@ -392,6 +396,12 @@ function AutoRel_apiConverter(payload) {
     spreadsheetId: infoPlanilha.spreadsheetId,
     spreadsheetUrl: infoPlanilha.spreadsheetUrl || ss.getUrl(),
     pdfUrl: pdfUrl,
+    salvoNaPasta: salvoPlanilha.salvoNaPasta,
+    pdfId: salvoPlanilha.pdfId,
+    pdfSalvoUrl: salvoPlanilha.pdfSalvoUrl,
+    pdfNome: salvoPlanilha.pdfNome,
+    pastaUrl: salvoPlanilha.pastaUrl,
+    avisoSalvar: salvoPlanilha.avisoSalvar,
     analiseResumo: {
       minF0: analise.minF0,
       mediaF0: analise.mediaF0,

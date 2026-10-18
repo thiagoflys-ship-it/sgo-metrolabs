@@ -82,7 +82,7 @@ function AutoRel_mf0MontarContexto_(payload) {
 // ------------------------------------------------------------
 function AutoRel_mf0Num_(v, casas) {
   if (v === null || v === undefined || !isFinite(v)) return '—';
-  return Number(v).toFixed(casas == null ? 2 : casas).replace('.', ',');
+  return SGO_DocA4_num_(Number(v), casas == null ? 2 : casas);
 }
 
 function AutoRel_mf0SoTempo_(tempoStr) {

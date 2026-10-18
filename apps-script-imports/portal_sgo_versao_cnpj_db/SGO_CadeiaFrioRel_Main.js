@@ -490,6 +490,11 @@ function CadeiaFrioRel_apiConverter(payload) {
   SpreadsheetApp.flush();
 
   const pdfUrl = CadeiaFrioRel_cfConstruirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
+  // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
+    const id = (CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID && String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).length > 10) ? String(CadeiaFrioRel_CFCFG.LAUDOS_FOLDER_ID).trim() : '';
+    return id ? DriveApp.getFolderById(id) : CadeiaFrioRel_cfObterPastaPersistente_('LAUDOS_FOLDER_ID', 'Cadeia de Frio - Laudos');
+  }, 'Relatório de dados Cadeia de Frio', CadeiaFrioRel_CFCFG.TZ);
   const statusConsolidado = CadeiaFrioRel_cfConsolidarStatus_(analises);
 
   return {
@@ -498,6 +503,12 @@ function CadeiaFrioRel_apiConverter(payload) {
     spreadsheetId: infoPlanilha.spreadsheetId,
     spreadsheetUrl: infoPlanilha.spreadsheetUrl || ss.getUrl(),
     pdfUrl: pdfUrl,
+    salvoNaPasta: salvoPlanilha.salvoNaPasta,
+    pdfId: salvoPlanilha.pdfId,
+    pdfSalvoUrl: salvoPlanilha.pdfSalvoUrl,
+    pdfNome: salvoPlanilha.pdfNome,
+    pastaUrl: salvoPlanilha.pastaUrl,
+    avisoSalvar: salvoPlanilha.avisoSalvar,
     estudos: analises.map(function(a) {
       return {
         tipoEstudo: a.tipoEstudo,

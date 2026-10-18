@@ -170,30 +170,30 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
       analise.aprovado = false;
       analise.statusAprovacao = 'REPROVADO';
       analise.motivosReprovacao.push(
-        'Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + piorInfo.valor +
-        ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + faixa.tMin + ' a ' + faixa.tMax +
-        ' °C, além da tolerância de ' + faixa.tolerancia + ' °C permitida.'
+        'Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) +
+        ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
+        ' °C, além da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C permitida.'
       );
     } else {
       analise.statusAprovacao = 'APROVADO_COM_ALERTA';
       analise.alertasAnalise.push(
-        'Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + piorInfo.valor +
-        ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + faixa.tolerancia + ' °C.'
+        'Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) +
+        ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C.'
       );
     }
   } else {
     analise.observacoesAnalise.push(
-      'Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + faixa.tMin + ' a ' + faixa.tMax +
-      ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + analise.statsGlobal.min + ' °C, média ' + analise.statsGlobal.media +
-      ' °C, máxima ' + analise.statsGlobal.max + ' °C — amplitude (máx-mín) de ' + analise.statsGlobal.indicacaoMaxMin.maxMin + ' °C.'
+      'Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
+      ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + SGO_DocA4_num_(analise.statsGlobal.min) + ' °C, média ' + SGO_DocA4_num_(analise.statsGlobal.media) +
+      ' °C, máxima ' + SGO_DocA4_num_(analise.statsGlobal.max) + ' °C — amplitude (máx-mín) de ' + SGO_DocA4_num_(analise.statsGlobal.indicacaoMaxMin.maxMin) + ' °C.'
     );
   }
 
   if (analise.rampaEstabilizacao) {
     analise.observacoesAnalise.push(
       'Período de estabilização inicial identificado: o equipamento levou ' +
-      CadeiaFrioRel_cfRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2) + 'h (de ' + analise.tempoInicio + ' até ' +
-      analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + analise.rampaEstabilizacao.temperaturaInicial +
+      SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2), 2) + 'h (de ' + analise.tempoInicio + ' até ' +
+      analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + SGO_DocA4_num_(analise.rampaEstabilizacao.temperaturaInicial) +
       ' °C até estabilizar dentro da faixa operacional. Esse intervalo foi registrado nos dados brutos e no gráfico, ' +
       'mas excluído do julgamento de aprovação/reprovação e das estatísticas acima, por representar o acionamento ' +
       'do equipamento e não seu regime operacional estável.'
@@ -209,7 +209,7 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
   if (piorAmplitudeSensor) {
     analise.observacoesAnalise.push(
       'O sensor com maior amplitude térmica ao longo do ensaio foi ' + piorAmplitudeSensor.sensor +
-      ', com variação de ' + piorAmplitudeSensor.amp + ' °C entre a leitura mínima e máxima registradas.'
+      ', com variação de ' + SGO_DocA4_num_(piorAmplitudeSensor.amp) + ' °C entre a leitura mínima e máxima registradas.'
     );
   }
 
@@ -221,7 +221,7 @@ function CadeiaFrioRel_cfAnalisarDistribuicao(dados, faixa, sensoresAtivos, opco
   if (tempoEfetivoMinutos > 0 && tempoEfetivoMinutos < 23 * 60) {
     analise.alertasAnalise.push(
       'Duração ' + (analise.rampaEstabilizacao ? 'efetivamente avaliada (após a rampa de estabilização)' : 'total monitorada') +
-      ' (' + CadeiaFrioRel_cfRound_(tempoEfetivoMinutos / 60, 1) + 'h) abaixo das 24h contínuas recomendadas pela norma para este estudo.'
+      ' (' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(tempoEfetivoMinutos / 60, 1), 1) + 'h) abaixo das 24h contínuas recomendadas pela norma para este estudo.'
     );
   }
 
@@ -450,8 +450,8 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
   } else {
     const janelaObservadaMin = CadeiaFrioRel_cfCalcularDiferencaTempoMin_(dados[idxInicioEvento], dados[Math.min(idxLimiteBuscaRuptura, dados.length - 1)]);
     analise.observacoesAnalise.push(
-      'Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + faixa.tMin + ' a ' + faixa.tMax +
-      ' °C) durante os ' + CadeiaFrioRel_cfRound_(janelaObservadaMin, 1) + ' minutos de dados disponíveis a partir do início do evento — o equipamento sustentou a temperatura sem depender da fonte de refrigeração ativa nesse intervalo.'
+      'Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) +
+      ' °C) durante os ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(janelaObservadaMin, 1), 1) + ' minutos de dados disponíveis a partir do início do evento — o equipamento sustentou a temperatura sem depender da fonte de refrigeração ativa nesse intervalo.'
     );
   }
 
@@ -481,8 +481,8 @@ function CadeiaFrioRel_cfAnalisarEventoRuptura(dados, faixa, sensoresAtivos, jan
     } else {
       analise.statusAprovacao = 'REPROVADO';
       analise.motivosReprovacao.push(
-        'O equipamento rompeu a faixa operacional em ' + analise.tempoAteRupturaMinutos +
-        ' min, antes do tempo-alvo definido para o ensaio (' + analise.tempoAlvoMinutos + ' min).'
+        'O equipamento rompeu a faixa operacional em ' + SGO_DocA4_num_(analise.tempoAteRupturaMinutos) +
+        ' min, antes do tempo-alvo definido para o ensaio (' + SGO_DocA4_num_(analise.tempoAlvoMinutos) + ' min).'
       );
     }
   }
@@ -551,13 +551,13 @@ function CadeiaFrioRel_cfAnalisarAutonomia(dados, faixa, sensoresAtivos, opcoes)
     analise.primeiraRuptura = ruptura;
     analise.autonomiaMinutos = CadeiaFrioRel_cfRound_(ruptura.minutosDesdeInicio, 2);
     analise.observacoesAnalise.push(
-      'Autonomia registrada: ' + CadeiaFrioRel_cfRound_(analise.autonomiaMinutos / 60, 2) + 'h (' + analise.autonomiaMinutos +
+      'Autonomia registrada: ' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.autonomiaMinutos / 60, 2), 2) + 'h (' + SGO_DocA4_num_(analise.autonomiaMinutos) +
       ' min) até o sensor ' + ruptura.sensor + ' ultrapassar a faixa operacional.'
     );
   } else {
     analise.autonomiaMinutos = analise.tempoTotalGravadoMinutos;
     analise.observacoesAnalise.push(
-      'Nenhuma ruptura observada durante todo o período gravado (' + CadeiaFrioRel_cfRound_(analise.tempoTotalGravadoMinutos / 60, 2) +
+      'Nenhuma ruptura observada durante todo o período gravado (' + SGO_DocA4_num_(CadeiaFrioRel_cfRound_(analise.tempoTotalGravadoMinutos / 60, 2), 2) +
       'h). A autonomia real pode ser maior que o período monitorado — considere estender a gravação.'
     );
   }

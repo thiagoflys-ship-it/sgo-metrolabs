@@ -12,7 +12,7 @@
 - O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
 - Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
 - São quatro perfis: Estufa de Incubação, Banho-maria, Estufa de Esterilização/Despirogenização e Secadora de traqueias (CME).
-- Selo amarelo "APROVADO COM ALERTA": saída da faixa dentro da tolerância declarada. O equipamento está aprovado e a saída aparece em Observações do certificado.
+- Selo verde "APROVADO (COM OBSERVAÇÃO)": saída da faixa dentro da tolerância declarada. O equipamento está aprovado e a saída aparece em Observações do certificado.
 - O campo "DTL" virou "Identificação do registrador" (TAG do cadastro de Padrões de referência). O botão final é "Confirmar e gerar o certificado".
 - Se o arquivo tem várias abas, informe "Nome da aba de dados (opcional)".
 
@@ -257,13 +257,15 @@ O sistema mostra um "selo" colorido com o status geral do laudo, e um selo separ
 | Status | O que significa | O que fazer |
 |---|---|---|
 | **APROVADO** | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente |
-| **APROVADO COM ALERTA** | Passou, mas alguma leitura chegou perto do limite (dentro da margem de tolerância) | Pode entregar, mas vale mencionar ao cliente que houve uma leitura no limite |
+| **APROVADO (COM OBSERVAÇÃO)** | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha |
 | **REPROVADO** | O equipamento saiu da faixa aceitável em algum momento (além da tolerância), ou uma repetição/indicador de laboratório reprovou | **Não invente uma solução sozinho** — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 11) |
 | **INFORMATIVO** ou **CARACTERIZAÇÃO** | O estudo não teve critério de aprovação/reprovação definido (ex.: Abertura de Porta ou Queda de Energia sem "Tempo-alvo mínimo" preenchido) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado |
 
 Depois do selo de status, aparecem dois botões:
 
 - **Abrir planilha** — abre o relatório completo (com tabelas e gráfico) direto no navegador.
+
+> Atualização de 18/10/2026: não existe "aprovado com alerta". A excursão dentro da tolerância declarada aprova o estudo e vai para Observações (no certificado sai "Aprovado"; na planilha e no selo da tela, "APROVADO (COM OBSERVAÇÃO)", em verde). O PDF da planilha (relatório de dados) também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome "Relatório de dados ... - <TAG> - <aaaa-MM-dd HHmm>.pdf"; a frase logo abaixo dos botões confirma o arquivo ou diz por que não salvou.
 - **Baixar PDF** — baixa o mesmo relatório já convertido em PDF, pronto para enviar ao cliente.
 
 **Se o laudo tiver mais de um estudo marcado (ex.: Distribuição + Abertura de Porta), o status geral no topo é o pior status entre todos os estudos** — ou seja, se um estudo reprovar, o laudo inteiro aparece como Reprovado no selo geral, mesmo que os outros estudos tenham aprovado.

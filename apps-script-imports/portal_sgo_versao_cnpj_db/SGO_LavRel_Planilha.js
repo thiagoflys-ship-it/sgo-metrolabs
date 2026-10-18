@@ -47,16 +47,20 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     throw new Error('Não foi possível identificar os sensores instalados.');
   }
 
-  const statusAprovacao = String(
+  const statusBruto = String(
     analise.statusAprovacao || (analise.aprovado ? 'APROVADO' : 'REPROVADO')
   ).toUpperCase();
+  const statusAprovacao = statusBruto === 'APROVADO_COM_ALERTA' ? 'APROVADO' : statusBruto;
+
+  // Decisão do dono (17/10/2026): sem "aprovado com alerta"; perto do mínimo = aprovado com observação.
+  const proximoDoLimite = statusAprovacao !== 'REPROVADO' && (Array.isArray(analise.observacoesAnalise) ? analise.observacoesAnalise : []).some(function(o) {
+    return /pr[oó]ximo do limite/i.test(String(o || ''));
+  });
 
   const statusCor =
     statusAprovacao === 'REPROVADO'
       ? LavRel_UCFG.CORES.REPROVADO
-      : (statusAprovacao === 'APROVADO_COM_ALERTA'
-          ? (LavRel_UCFG.CORES.ALERTA || '#d97706')
-          : LavRel_UCFG.CORES.APROVADO);
+      : LavRel_UCFG.CORES.APROVADO;
 
   const idxInicioCiclo = LavRel_numeroInteiroSeguroPlanilha_(analise.indiceInicioCiclo, 0);
   const idxFimCiclo = LavRel_numeroInteiroSeguroPlanilha_(analise.indiceFimCiclo, dados.length - 1);
@@ -136,8 +140,8 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       tempoPreparoMinutos = p * (analise.deltaMinutosEstimado || 1);
   }
 
-  const tempoPreparoExibicao = LavRel_valorNumericoSeguroPlanilha_(tempoPreparoMinutos).toFixed(1) + ' MINUTOS';
-  const tempoExpExibicao = analise.faseInicioExp === -1 ? 'N/A (CICLO ABORTADO)' : LavRel_valorNumericoSeguroPlanilha_(analise.tempoExposicaoMinutos).toFixed(1) + ' MINUTOS';
+  const tempoPreparoExibicao = SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(tempoPreparoMinutos), 1) + ' MINUTOS';
+  const tempoExpExibicao = analise.faseInicioExp === -1 ? 'N/A (CICLO ABORTADO)' : SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(analise.tempoExposicaoMinutos), 1) + ' MINUTOS';
 
   function aplicarBorda(rg) {
     rg.setBorder(true, true, true, true, true, true, '#cbd5e1', SpreadsheetApp.BorderStyle.SOLID);
@@ -174,19 +178,19 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   }
 
   function fmtBarAbs_(valor) {
-    return LavRel_valorNumericoSeguroPlanilha_(valor).toFixed(3);
+    return SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(valor), 3);
   }
 
   function fmtTemp_(valor) {
-    return LavRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' °C';
+    return SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(valor), 2) + ' °C';
   }
 
   function fmtMin_(valor) {
-    return LavRel_valorNumericoSeguroPlanilha_(valor).toFixed(2) + ' MIN';
+    return SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(valor), 2) + ' MIN';
   }
   
   function fmtA0_(valor) {
-    return LavRel_valorNumericoSeguroPlanilha_(valor).toFixed(2);
+    return SGO_DocA4_num_(LavRel_valorNumericoSeguroPlanilha_(valor), 2) + ' s';
   }
 
   function richTexto(sheet, rangeA1, textoCompleto, termosNegrito, corStatusPalavra, fontSize) {
@@ -226,10 +230,8 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       [
         'APROVADO',
         'REPROVADO',
-        'APROVADO_COM_ALERTA',
         'APROVADO.',
-        'REPROVADO.',
-        'APROVADO_COM_ALERTA.'
+        'REPROVADO.'
       ].forEach(function(palavra) {
         let pos = 0;
         while (true) {
@@ -282,7 +284,6 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   function obterTextoStatusLongo_(status) {
     if (status === 'REPROVADO') return 'REPROVADO';
-    if (status === 'APROVADO_COM_ALERTA') return 'APROVADO COM ALERTA';
     return 'APROVADO';
   }
 
@@ -336,9 +337,9 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     ['ENDEREÇO:', LavRel_valorSeguroPlanilha_(payload.endereco), '', 'MODELO:', LavRel_valorSeguroPlanilha_(payload.modelo), ''],
     ['TIPO DE ENSAIO:', LavRel_valorSeguroPlanilha_(payload.ensaio), '', 'NÚMERO DE SÉRIE:', LavRel_valorSeguroPlanilha_(payload.numSerie), ''],
     ['RECEITA / CICLO N:', LavRel_valorSeguroPlanilha_(payload.programa) + ' (CICLO ' + LavRel_valorSeguroPlanilha_(payload.cicloNum) + ')', '', 'LOTE DA CARGA:', LavRel_valorSeguroPlanilha_(payload.lote), ''],
-    ['TEMP. PROGRAMADA:', LavRel_valorSeguroPlanilha_(payload.setpoint) + '°C', '', 'LOCALIZAÇÃO:', LavRel_valorSeguroPlanilha_(payload.local), ''],
+    ['TEMP. PROGRAMADA:', LavRel_txtNumPlanilha_(payload.setpoint) + ' °C', '', 'LOCALIZAÇÃO:', LavRel_valorSeguroPlanilha_(payload.local), ''],
     ['INÍCIO DO CICLO:', dataInicio, '', 'TÉRMINO DO CICLO:', dataFim, ''],
-    ['TEMPO TOTAL:', LavRel_valorSeguroPlanilha_(analise.tempoTotalMinutos) + ' MINUTOS', '', 'TEMPO DA FASE PRINCIPAL:', tempoExpExibicao, '']
+    ['TEMPO TOTAL:', LavRel_txtNumPlanilha_(analise.tempoTotalMinutos) + ' MINUTOS', '', 'TEMPO DA FASE PRINCIPAL:', tempoExpExibicao, '']
   ];
 
   shCapa.getRange('A5:F12')
@@ -376,15 +377,15 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   let letalidadeValorMax = '';
 
   if (motor === 'TERMO') {
-    criterioTxt = 'CRITÉRIO: A0 ≥ ' + limiteAprovacaoFinal.toFixed(0) + ' S EM TODOS OS SENSORES ATIVOS (' + (String((analise.configuracaoCiclo || {}).classeArtigo) === 'CRITICO' ? 'ARTIGO CRÍTICO' : 'ARTIGO SEMICRÍTICO OU NÃO CRÍTICO') + ')';
+    criterioTxt = 'CRITÉRIO: A0 ≥ ' + SGO_DocA4_num_(limiteAprovacaoFinal, 0) + ' S EM TODOS OS SENSORES ATIVOS (' + (String((analise.configuracaoCiclo || {}).classeArtigo) === 'CRITICO' ? 'ARTIGO CRÍTICO' : 'ARTIGO SEMICRÍTICO OU NÃO CRÍTICO') + ')';
     letalidadeTituloMin = 'A0 MÍNIMO OBTIDO:';
     letalidadeValorMin = analise.faseInicioExp !== -1 ? fmtA0_(analise.minA0) : 'N/A';
-    letalidadeTituloMed = 'A0 MÉDIO DA CMARA:';
+    letalidadeTituloMed = 'A0 MÉDIO DA CÂMARA:';
     letalidadeValorMed = analise.faseInicioExp !== -1 ? fmtA0_(analise.mediaA0) : 'N/A';
     letalidadeTituloMax = 'A0 MÁXIMO OBTIDO:';
     letalidadeValorMax = analise.faseInicioExp !== -1 ? fmtA0_(analise.maxA0) : 'N/A';
   } else {
-    criterioTxt = 'CRITÉRIO: TEMPO DE CAVITAÇÃO ≥ ' + limiteAprovacaoFinal.toFixed(2).replace('.', ',') + ' MIN';
+    criterioTxt = 'CRITÉRIO: TEMPO DE CAVITAÇÃO ≥ ' + SGO_DocA4_num_(limiteAprovacaoFinal, 2) + ' MIN';
     letalidadeTituloMin = 'TEMPO DE CAVITAÇÃO:';
     letalidadeValorMin = analise.faseInicioExp !== -1 ? fmtMin_(analise.tempoCavitacao) : 'N/A';
     letalidadeTituloMed = 'TEMPO DE EXPOSIÇÃO GERAL:';
@@ -474,14 +475,6 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
               'Entretanto, o pior caso de letalidade (A0) foi insuficiente para aprovação. O A0 médio calculado foi de ' + fmtA0_(analise.mediaA0) +
               ', enquanto o menor valor obtido foi de ' + fmtA0_(analise.minA0) +
               ', abaixo do mínimo exigido de ' + fmtA0_(limiteAprovacaoFinal) + '.';
-          } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
-            txtP1 =
-              'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-              'A análise térmica confirmou estabilidade operacional durante a desinfecção, com duração de ' + tempoExpExibicao + ' contínuos. ' +
-              'A letalidade (A0) apresentou média de ' + fmtA0_(analise.mediaA0) +
-              ' e pior caso de ' + fmtA0_(analise.minA0) +
-              ', atendendo ao mínimo exigido de ' + fmtA0_(limiteAprovacaoFinal) +
-              ', porém abaixo do valor normativo estrito de ' + fmtA0_(parametroNormativo) + '.';
           } else {
             txtP1 =
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
@@ -496,12 +489,6 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
               'A análise térmica e de exposição identificou que o equipamento manteve as condições operacionais (Cavitação) por ' + fmtMin_(analise.tempoCavitacao) +
               ', o que é insuficiente e está abaixo do mínimo exigido de ' + fmtMin_(limiteAprovacaoFinal) + '.';
-          } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
-            txtP1 =
-              'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-              'A análise térmica e de exposição confirmou estabilidade operacional, com duração de cavitação efetiva de ' + fmtMin_(analise.tempoCavitacao) +
-              ', atendendo ao mínimo exigido de ' + fmtMin_(limiteAprovacaoFinal) +
-              ', porém abaixo do valor estrito de projeto de ' + fmtMin_(parametroNormativo) + '.';
           } else {
             txtP1 =
               'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
@@ -563,20 +550,15 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'Parecer final da engenharia clínica: REPROVADO.\n\n' +
       'Foram identificadas não conformidades nos sensores ativos monitorados ou falha estrutural no ciclo processado.\n\n' +
       'Motivos técnicos da reprovação:\n' + textoLista(motivosReprovacao, 'Nenhum motivo registrado.') + '\n\n' +
-      (alertasAnalise.length ? 'Alertas adicionais:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
+      (alertasAnalise.length ? 'Registros técnicos adicionais:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
       'O equipamento deve passar por avaliação técnica, revisão do processo e nova qualificação antes de liberação operacional.';
-  } else if (statusAprovacao === 'APROVADO_COM_ALERTA') {
-    txtP2 =
-      'Parecer final da engenharia clínica: APROVADO_COM_ALERTA.\n\n' +
-      'Todos os critérios operacionais configurados foram atendidos para os sensores ativos monitorados, porém foram registrados alertas de engenharia que exigem análise crítica da equipe técnica.\n\n' +
-      'Alertas técnicos:\n' + textoLista(alertasAnalise, 'Nenhum alerta registrado.') + '\n\n' +
-      'Recomenda-se rastrear a causa da redução de margem e manter monitoramento reforçado do processo nas próximas execuções.';
   } else {
     txtP2 =
       'Parecer final da engenharia clínica: APROVADO.\n\n' +
       'Todos os critérios configurados para os sensores ativos foram atendidos. ' +
       'O processo demonstrou desempenho compatível com o nível de eficácia requerido e com a integridade operacional do ciclo.\n\n' +
-      (alertasAnalise.length ? 'Alertas registrados sem impacto reprovativo:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
+      (proximoDoLimite ? 'Observação: o resultado mínimo ficou acima do mínimo exigido, porém próximo do limite; o ponto está registrado nas observações e deve ser acompanhado nas próximas requalificações.\n\n' : '') +
+      (alertasAnalise.length ? 'Registros técnicos sem impacto no resultado:\n' + textoLista(alertasAnalise, '') + '\n\n' : '') +
       'Equipamento liberado para processamento dentro dos critérios avaliados.';
   }
 
@@ -620,9 +602,8 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'Parecer final da engenharia clínica:',
       'APROVADO',
       'REPROVADO',
-      'APROVADO_COM_ALERTA',
       'Motivos técnicos da reprovação:',
-      'Alertas técnicos:',
+      'Observação:',
       'Equipamento liberado',
       'nova qualificação'
     ],
@@ -857,7 +838,7 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     if (codigo === 'LAVAGEM_AQUECIMENTO_ULTRA') return 'Aquecimento e preparação do banho antes da ação ultrassônica';
     if (codigo === 'ENXAGUE_INTERMEDIARIO' || codigo === 'ENXAGUE_INTERMEDIARIO_ULTRA') return 'Renovação de banho/enxágue para remover resíduos solúveis';
     if (codigo === 'DESGASEIFICACAO') return 'Remoção de ar dissolvido para favorecer cavitação estável';
-    if (codigo === 'DESINFECCAO_TERMICA') return 'Cálculo de A0 - modo ' + modoExp + ' | Tmín: ' + LavRel_valorSeguroPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C';
+    if (codigo === 'DESINFECCAO_TERMICA') return 'Cálculo de A0 - modo ' + modoExp + ' | Tmín: ' + LavRel_txtNumPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C';
     if (codigo === 'CAVITACAO_ULTRASSOM') return 'Tempo efetivo de cavitação em temperatura operacional';
     if (codigo === 'ENXAGUE_FINAL' || codigo === 'ENXAGUE_FINAL_ULTRA') return 'Remoção final de detergente/resíduos e preparação para término';
     if (codigo === 'SECAGEM_RESFRIAMENTO') return 'Redução térmica, secagem e finalização segura do ciclo';
@@ -1047,6 +1028,13 @@ function LavRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     spreadsheetId: ss.getId(),
     spreadsheetUrl: ss.getUrl()
   };
+}
+
+/** Número que vira texto na planilha: pt-BR (vírgula decimal, ponto no milhar); vazio fica vazio. */
+function LavRel_txtNumPlanilha_(valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  var t = SGO_DocA4_num_(valor);
+  return t === '—' ? String(valor) : t;
 }
 
 function LavRel_valorSeguroPlanilha_(valor) {

@@ -114,6 +114,10 @@ function AutoRel_apiConverterLeakTest_(payload) {
   SpreadsheetApp.flush();
 
   const pdfUrl = AutoRel_construirLinkPdfPaisagem(infoPlanilha.spreadsheetId);
+  // Regra do dono: o PDF da planilha (relatório de dados) também fica na pasta do cliente. Nunca lança.
+  const salvoPlanilha = SGO_DocSalvar_salvarPdfPlanilha_(pdfUrl, payload, function() {
+    return SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', AutoRel_UCFG.LAUDOS_FOLDER_ID);
+  }, 'Relatório de dados Autoclave - estanqueidade', AutoRel_UCFG.TZ);
 
   return {
     ok: true,
@@ -123,6 +127,12 @@ function AutoRel_apiConverterLeakTest_(payload) {
     spreadsheetId: infoPlanilha.spreadsheetId,
     spreadsheetUrl: infoPlanilha.spreadsheetUrl || ss.getUrl(),
     pdfUrl: pdfUrl,
+    salvoNaPasta: salvoPlanilha.salvoNaPasta,
+    pdfId: salvoPlanilha.pdfId,
+    pdfSalvoUrl: salvoPlanilha.pdfSalvoUrl,
+    pdfNome: salvoPlanilha.pdfNome,
+    pastaUrl: salvoPlanilha.pastaUrl,
+    avisoSalvar: salvoPlanilha.avisoSalvar,
     leakTestResumo: {
       tempoInicioLeakTest: analiseLeak.tempoInicioLeakTest,
       tempoFimLeakTest: analiseLeak.tempoFimLeakTest,
@@ -321,8 +331,8 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   const motivosReprovacao = [];
   if (!aprovado) {
     motivosReprovacao.push(
-      'Taxa de vazamento obtida (' + taxaVazamentoMbarMin.toFixed(3) + ' mbar/min) acima do limite de referência (' +
-      limite.toFixed(3) + ' mbar/min).'
+      'Taxa de vazamento obtida (' + SGO_DocA4_num_(taxaVazamentoMbarMin, 3) + ' mbar/min) acima do limite de referência (' +
+      SGO_DocA4_num_(limite, 3) + ' mbar/min).'
     );
   }
 
@@ -333,8 +343,8 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
   const alertasAnalise = [];
   if (unidade === 'MBAR' && pressaoInicioBruta < 15 && pressaoFimBruta < 15) {
     alertasAnalise.push(
-      'A pressão informada em mbar resultou em um valor muito baixo (' + pressaoInicioMbar.toFixed(3) + ' a ' +
-      pressaoFimMbar.toFixed(3) + ' mbar). Confirme se a unidade de pressão do datalogger foi selecionada ' +
+      'A pressão informada em mbar resultou em um valor muito baixo (' + SGO_DocA4_num_(pressaoInicioMbar, 3) + ' a ' +
+      SGO_DocA4_num_(pressaoFimMbar, 3) + ' mbar). Confirme se a unidade de pressão do datalogger foi selecionada ' +
       'corretamente: muitos dataloggers de autoclave exportam a leitura em bar (ex.: 1,013), não em mbar, o que ' +
       'distorceria a taxa de vazamento calculada.'
     );
@@ -532,20 +542,20 @@ function AutoRel_montarMemoriaCalculoLeakTest_(ctx) {
   ctx = ctx || {};
 
   return [
-    'MEMÓRIA DE CÁLCULO DA TAXA DE VAZAMENTO (LEAK TEST)',
+    'MEMÓRIA DE CÁLCULO DA TAXA DE VAZAMENTO',
     '',
-    'Pressão Absoluta da Câmara - início (P1): ' + Number(ctx.pressaoInicioMbar).toFixed(3) + ' mbar, registrada em ' + (ctx.tempoInicio || '-') + '.',
-    'Pressão Absoluta da Câmara - fim (P2): ' + Number(ctx.pressaoFimMbar).toFixed(3) + ' mbar, registrada em ' + (ctx.tempoFim || '-') + '.',
-    'Variação de pressão (ΔP): |P2 - P1| = ' + Number(ctx.deltaPressaoMbar).toFixed(3) + ' mbar.',
-    'Tempo decorrido: T = ' + Number(ctx.tempoMinutos).toFixed(2) + ' minutos.',
+    'Pressão Absoluta da Câmara - início (P1): ' + SGO_DocA4_num_(Number(ctx.pressaoInicioMbar), 3) + ' mbar, registrada em ' + (ctx.tempoInicio || '-') + '.',
+    'Pressão Absoluta da Câmara - fim (P2): ' + SGO_DocA4_num_(Number(ctx.pressaoFimMbar), 3) + ' mbar, registrada em ' + (ctx.tempoFim || '-') + '.',
+    'Variação de pressão (ΔP): |P2 - P1| = ' + SGO_DocA4_num_(Number(ctx.deltaPressaoMbar), 3) + ' mbar.',
+    'Tempo decorrido: T = ' + SGO_DocA4_num_(Number(ctx.tempoMinutos), 2) + ' minutos.',
     '',
     'Taxa de vazamento = ΔP / T = ' +
-      Number(ctx.deltaPressaoMbar).toFixed(3) + ' / ' + Number(ctx.tempoMinutos).toFixed(2) +
-      ' = ' + Number(ctx.taxaVazamento).toFixed(4) + ' mbar/min.',
+      SGO_DocA4_num_(Number(ctx.deltaPressaoMbar), 3) + ' / ' + SGO_DocA4_num_(Number(ctx.tempoMinutos), 2) +
+      ' = ' + SGO_DocA4_num_(Number(ctx.taxaVazamento), 4) + ' mbar/min.',
     '',
-    'Critério de referência: taxa de vazamento ≤ ' + Number(ctx.limite).toFixed(2) + ' mbar/min (' + (ctx.norma || '-') + ').',
+    'Critério de referência: taxa de vazamento ≤ ' + SGO_DocA4_num_(Number(ctx.limite), 2) + ' mbar/min (' + (ctx.norma || '-') + ').',
     '',
-    'Resultado obtido: ' + Number(ctx.taxaVazamento).toFixed(4) + ' mbar/min → ' + (ctx.statusAprovacao || '-') + '.'
+    'Resultado obtido: ' + SGO_DocA4_num_(Number(ctx.taxaVazamento), 4) + ' mbar/min → ' + (ctx.statusAprovacao || '-') + '.'
   ].join('\n');
 }
 

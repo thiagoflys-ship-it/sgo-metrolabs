@@ -203,14 +203,14 @@ function EstufaBanhoRel_ebMontarResultadosAnexoE_(sh, analise, statusAprovacao, 
     sh.getRange(row, 3).setValue(rep.tempoFim || '-');
     sh.getRange(row, 4).setValue(EstufaBanhoRel_ebFmtHoras_(rep.tempoTotalMinutos));
     if (ehPenetracao) {
-      sh.getRange(row, 5).setValue(rep.minLetalidade + ' min (pior: ' + (rep.piorSensor ? rep.piorSensor.sensor : 'N/A') + ')');
+      sh.getRange(row, 5).setValue(SGO_DocA4_num_(rep.minLetalidade) + ' min (pior: ' + (rep.piorSensor ? rep.piorSensor.sensor : 'N/A') + ')');
       const ind = rep.indicadorResultado;
       sh.getRange(row, 6).setValue(ind && ind.tipo ? ind.tipo + ' — ' + (ind.aprovado === false ? 'REPROVADO' : ind.aprovado === true ? 'APROVADO' : 'SEM RESULTADO') : 'Não informado');
     } else {
       sh.getRange(row, 5).setValue(EstufaBanhoRel_ebFmtC_(rep.statsGlobal ? rep.statsGlobal.min : null));
       sh.getRange(row, 6).setValue(EstufaBanhoRel_ebFmtC_(rep.statsGlobal ? rep.statsGlobal.max : null));
     }
-    const corRep = rep.statusAprovacao === 'REPROVADO' ? EstufaBanhoRel_EBCFG.CORES.REPROVADO : rep.statusAprovacao === 'APROVADO_COM_ALERTA' ? EstufaBanhoRel_EBCFG.CORES.ALERTA : EstufaBanhoRel_EBCFG.CORES.APROVADO;
+    const corRep = rep.statusAprovacao === 'REPROVADO' ? EstufaBanhoRel_EBCFG.CORES.REPROVADO : rep.statusAprovacao === 'APROVADO_COM_ALERTA' ? EstufaBanhoRel_EBCFG.CORES.APROVADO : EstufaBanhoRel_EBCFG.CORES.APROVADO;
     sh.getRange(row, 7).setValue(EstufaBanhoRel_ebLabelStatus_(rep.statusAprovacao)).setFontColor(corRep).setFontWeight('bold');
     row++;
   });
@@ -287,7 +287,7 @@ function EstufaBanhoRel_ebMontarResultadosEvento_(sh, analise, statusAprovacao, 
   row++;
   if (analise.rompeu) {
     let colValor = EstufaBanhoRel_ebEscreverRotulo_(sh, row, 'Sensor / valor da ruptura');
-    sh.getRange(row, colValor, 1, EstufaBanhoRel_EB_RESULTADOS_NUM_COLUNAS - colValor + 1).merge().setValue(analise.primeiraRuptura.sensor + ': ' + analise.primeiraRuptura.valor + ' °C em ' + analise.primeiraRuptura.tempoStr);
+    sh.getRange(row, colValor, 1, EstufaBanhoRel_EB_RESULTADOS_NUM_COLUNAS - colValor + 1).merge().setValue(analise.primeiraRuptura.sensor + ': ' + SGO_DocA4_num_(analise.primeiraRuptura.valor) + ' °C em ' + analise.primeiraRuptura.tempoStr);
     row++;
     sh.getRange(row, 1).setValue('Tempo até a ruptura').setFontWeight('bold');
     sh.getRange(row, 2).setValue(EstufaBanhoRel_ebFmtMin_(analise.tempoAteRupturaMinutos));
@@ -418,7 +418,7 @@ function EstufaBanhoRel_ebEscreverTabelaComportamentoSensores_(sh, row, titulo, 
 // mas ter uma posição específica não conforme, ou o contrário.
 function EstufaBanhoRel_ebLabelStatusSensor_(status) {
   if (status === 'NAO_CONFORME') return 'NÃO CONFORME';
-  if (status === 'CONFORME_COM_RESSALVA') return 'CONFORME COM RESSALVA';
+  if (status === 'CONFORME_COM_RESSALVA') return 'DENTRO DA TOLERÂNCIA';
   return 'CONFORME';
 }
 function EstufaBanhoRel_ebCorStatusSensor_(status) {
@@ -700,7 +700,7 @@ function EstufaBanhoRel_ebMontarTextoTecnico_(analise, payload, perfilCfg, statu
     }, null);
     texto += 'Foram avaliadas ' + reps.length + ' repetições de penetração com carga, com cálculo de letalidade (' + valorLabel + ') ' + 'acumulada por sensor ao longo de toda a janela de exposição marcada em cada repetição. ';
     if (piorRep) {
-      texto += 'A repetição mais crítica foi a de nº ' + piorRep.numeroRepeticao + ', com ' + valorLabel + ' mínimo de ' + piorRep.minLetalidade + ' min (sensor ' + (piorRep.piorSensor ? piorRep.piorSensor.sensor : 'N/A') + '), frente ao mínimo exigido de ' + piorRep.valorMinimoExigido + ' min. ';
+      texto += 'A repetição mais crítica foi a de nº ' + piorRep.numeroRepeticao + ', com ' + valorLabel + ' mínimo de ' + SGO_DocA4_num_(piorRep.minLetalidade) + ' min (sensor ' + (piorRep.piorSensor ? piorRep.piorSensor.sensor : 'N/A') + '), frente ao mínimo exigido de ' + piorRep.valorMinimoExigido + ' min. ';
     }
     const algumIndicadorReprovado = reps.some(function (r) {
       return r.indicadorResultado && r.indicadorResultado.aprovado === false;
@@ -749,11 +749,11 @@ function EstufaBanhoRel_ebMontarTextoParecerConsolidado_(analises, payload, stat
     });
     texto += 'O equipamento deve passar por avaliação técnica, revisão do processo de aquecimento/isolamento térmico e nova qualificação dos estudos reprovados antes da liberação operacional.';
   } else if (comAlerta.length) {
-    texto += 'Alertas técnicos, por estudo:\n\n';
+    texto += 'Observações, por estudo (excursão dentro da tolerância declarada, que não reprova o estudo):\n\n';
     comAlerta.forEach(function (a) {
-      texto += EstufaBanhoRel_ebLabelEstudo_(a.tipoEstudo) + ':\n' + EstufaBanhoRel_ebTextoLista_(a.alertasAnalise, 'Nenhum alerta registrado.') + '\n\n';
+      texto += EstufaBanhoRel_ebLabelEstudo_(a.tipoEstudo) + ':\n' + EstufaBanhoRel_ebTextoLista_(a.alertasAnalise, 'Nenhuma observação registrada.') + '\n\n';
     });
-    texto += 'Recomenda-se investigar a causa da redução de margem operacional identificada e manter monitoramento reforçado do equipamento nas próximas verificações.';
+    texto += 'Os estudos foram aprovados. Recomenda-se investigar a causa da excursão registrada e acompanhá-la nas próximas verificações.';
   } else if(statusConsolidado==='INFORMATIVO'||statusConsolidado==='CARACTERIZACAO') {
     texto += 'Resultado: '+EstufaBanhoRel_ebParecerResultado_(statusConsolidado)+'.';
   } else {
@@ -885,7 +885,7 @@ function EstufaBanhoRel_ebTextoLista_(lista, vazio) {
 function EstufaBanhoRel_ebFmtC_(valor) {
   const n = Number(valor);
   if (!isFinite(n)) return '-';
-  return n.toFixed(2) + ' °C';
+  return SGO_DocA4_num_(n, 2) + ' °C';
 }
 function EstufaBanhoRel_ebEncontrarPiorAmplitude_(statsPorSensor) {
   if (!Array.isArray(statsPorSensor) || !statsPorSensor.length) return null;
@@ -903,7 +903,8 @@ function EstufaBanhoRel_ebEncontrarPiorAmplitude_(statsPorSensor) {
 function EstufaBanhoRel_ebCorPorStatus_(status) {
   status = String(status || '').toUpperCase();
   if (status === 'REPROVADO') return EstufaBanhoRel_EBCFG.CORES.REPROVADO;
-  if (status === 'APROVADO_COM_ALERTA' || status === 'INFORMATIVO' || status === 'CARACTERIZACAO') return EstufaBanhoRel_EBCFG.CORES.ALERTA;
+  if (status === 'APROVADO_COM_ALERTA') return EstufaBanhoRel_EBCFG.CORES.APROVADO;
+  if (status === 'INFORMATIVO' || status === 'CARACTERIZACAO') return EstufaBanhoRel_EBCFG.CORES.ALERTA;
   return status==='APROVADO'?EstufaBanhoRel_EBCFG.CORES.APROVADO:EstufaBanhoRel_EBCFG.CORES.ALERTA;
 }
 function EstufaBanhoRel_ebLabelStatus_(status) {
@@ -956,10 +957,10 @@ function EstufaBanhoRel_ebListarNormasAplicaveis_(chavePerfil) {
 function EstufaBanhoRel_ebFmtMin_(valor) {
   const n = Number(valor);
   if (!isFinite(n)) return '-';
-  return n.toFixed(2) + ' min';
+  return SGO_DocA4_num_(n, 2) + ' min';
 }
 function EstufaBanhoRel_ebFmtHoras_(minutos) {
   const n = Number(minutos);
   if (!isFinite(n)) return '-';
-  return n.toFixed(1) + ' min (' + (n / 60).toFixed(2) + ' h)';
+  return SGO_DocA4_num_(n, 1) + ' min (' + SGO_DocA4_num_(n / 60, 2) + ' h)';
 }

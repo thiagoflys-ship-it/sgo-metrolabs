@@ -12,6 +12,7 @@
  *  - SGO_DocSalvar_pastaClienteEm_(raiz, cnpj, nomeCliente)
  *  - SGO_DocSalvar_salvarCertificadoEquipamento_(raiz|fnRaiz, dados, html)
  *  - SGO_DocSalvar_injetarAvisoTela_(html, aviso, tipo)
+ *  - SGO_DocSalvar_salvarPdfPlanilha_(urlExport, payload, raiz|fnRaiz, rotulo, tz) (nunca lança)
  *
  * Nenhuma função devolve objeto Date: só strings.
  ****************************************************/
@@ -245,6 +246,57 @@ function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, t
     pastaUrl: resultado.pastaUrl,
     avisoSalvar: resultado.avisoSalvar
   };
+}
+
+/**
+ * Relatório de dados (planilha de auditoria em PDF A4 paisagem) da Autoclave,
+ * Lavadora, Cadeia de Frio e Estufa/Banho: grava o PDF exportado da planilha
+ * na subpasta do cliente (CNPJ, ou nome) dentro da pasta de laudos do módulo,
+ * com o nome padrão "<rótulo> - <número> - <TAG> - <aaaa-MM-dd HHmm>.pdf".
+ * A planilha não tem versão HTML: só o PDF é gravado. O PDF vem do link de
+ * exportação (no Google, com o token do script; no servidor próprio, o mesmo
+ * link é desenhado localmente). Relatório simulado (uso interno) não é gravado.
+ * NUNCA lança: devolve { salvoNaPasta, pdfId, pdfSalvoUrl, pdfNome, pastaUrl, avisoSalvar }.
+ */
+function SGO_DocSalvar_salvarPdfPlanilha_(urlExportPdf, payload, obterRaiz, rotulo, tz) {
+  payload = payload || {};
+  var vazio = { salvoNaPasta: false, pdfId: '', pdfSalvoUrl: '', pdfNome: '', pastaUrl: '', avisoSalvar: '' };
+  if (payload.modoRelatorioSimulado) {
+    vazio.avisoSalvar = 'Relatório SIMULADO (uso interno): o PDF da planilha não foi salvo na pasta do cliente.';
+    return vazio;
+  }
+  try {
+    if (!urlExportPdf) throw new Error('link de exportação da planilha não informado');
+    var blob = null, codigo = 0;
+    for (var tentativa = 0; tentativa < 2 && !blob; tentativa++) {
+      if (tentativa) { try { Utilities.sleep(1500); } catch (e0) {} }
+      var resp = UrlFetchApp.fetch(String(urlExportPdf), {
+        headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true
+      });
+      codigo = resp.getResponseCode();
+      var b = resp.getBlob();
+      if (codigo === 200 && /pdf/i.test(String(b.getContentType() || ''))) blob = b;
+    }
+    if (!blob) throw new Error('a exportação da planilha em PDF respondeu com o código ' + codigo);
+    var raiz = typeof obterRaiz === 'function' ? obterRaiz() : obterRaiz;
+    var pasta = SGO_DocSalvar_pastaClienteEm_(raiz, payload.cnpj, payload.cliente);
+    var carimbo = '';
+    try { carimbo = Utilities.formatDate(new Date(), tz || Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd HHmm'); } catch (e1) {}
+    var tag = String(payload.tag || payload.tagEquipamento || '').trim() || 'sem-tag';
+    var numero = String(payload.certNumero || '').trim();
+    var base = SGO_DocSalvar_sanitizarNome_([rotulo || 'Relatório de dados', numero, tag, carimbo].filter(function (p) { return !!p; }).join(' - '));
+    blob.setName(base + '.pdf');
+    var pdf = pasta.createFile(blob);
+    return {
+      salvoNaPasta: true, pdfId: pdf.getId(), pdfSalvoUrl: pdf.getUrl(), pdfNome: pdf.getName(),
+      pastaUrl: pasta.getUrl(), avisoSalvar: ''
+    };
+  } catch (e) {
+    vazio.avisoSalvar = 'A planilha foi gerada, mas o PDF não foi salvo na pasta do cliente: ' +
+      String(e && e.message ? e.message : e).replace(/[.\s]+$/, '') + '. Baixe o PDF pelo botão desta tela e guarde o arquivo.';
+    return vazio;
+  }
 }
 
 /** Pasta raiz persistente (ID em Script Property), criada no Drive se faltar. */

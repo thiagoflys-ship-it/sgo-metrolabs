@@ -43,7 +43,7 @@
 ].concat(id.tarefaOrigem ? [['Tarefa de origem', id.tarefaOrigem, { largo: true }]] : [])) ?>
 
 <h2>2. Instrumentação e rastreabilidade</h2>
-<p>As temperaturas foram registradas por registrador de dados (datalogger) com sensores posicionados na câmara<?= us ? ' e na solução de lavagem' : ' e junto à carga' ?>. A tabela abaixo identifica o registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante.</p>
+<p>As temperaturas foram registradas por registrador de dados (datalogger) com sensores posicionados na câmara<?= us ? ' e na solução de lavagem' : ' e junto à carga' ?>. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados nesta seção.</p>
 <?!= SGO_DocA4_tabelaRegistradores_(ctx.registradores) ?>
 <?!= SGO_DocA4_tabelaIdent_(ctx.parametros || []) ?>
 

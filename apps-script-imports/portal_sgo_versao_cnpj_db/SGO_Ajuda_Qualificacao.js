@@ -42,7 +42,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Toque em \"Pré-visualizar dados\".",
           "Confira na \"Prévia dos dados lidos\" se as datas, horas e temperaturas estão certas.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\"."
+          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\".",
+          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
         ] },
         { titulo: "Gerar o relatório de ensaio (interpretação técnica, A4)", itens: [
           "Gere antes o relatório de dados (tarefa acima) com os mesmos dados.",
@@ -145,7 +146,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se cada sensor gravou um arquivo, escolha \"Um arquivo por sensor (registrador individual)\" e envie um arquivo por sensor.",
           "Toque em \"Pré-visualizar dados\" e confira as leituras.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\"."
+          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\".",
+          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
         ] },
         { titulo: "Gerar o relatório de ensaio (interpretação técnica, A4)", itens: [
           "Gere antes o relatório de dados com os mesmos dados.",
@@ -237,7 +239,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Confira o período importado (início e fim) e os sensores detectados.",
           "Em \"5. Relatório de dados (planilha)\", toque em \"Gerar relatório de dados (planilha)\".",
           "Confira o selo do laudo e o selo de cada estudo.",
-          "Toque em \"Abrir planilha\" ou em \"Baixar PDF\"."
+          "Toque em \"Abrir planilha\" ou em \"Baixar PDF\".",
+          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
         ] },
         { titulo: "Gerar o certificado de qualificação térmica (A4)", itens: [
           "Gere antes a planilha, com os mesmos dados.",
@@ -253,7 +256,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       ],
       cores: [
         { nome: "Selo verde \"LAUDO: APROVADO\"", significado: "Todas as leituras ficaram dentro da faixa em todos os estudos com critério." },
-        { nome: "Selo amarelo \"LAUDO: APROVADO COM ALERTA\"", significado: "Houve saída da faixa, mas dentro da tolerância declarada. O equipamento está aprovado. No certificado sai \"Aprovado\" e a saída aparece em Observações. Na planilha sai \"APROVADO (COM OBSERVAÇÃO)\"." },
+        { nome: "Selo verde \"LAUDO: APROVADO (COM OBSERVAÇÃO)\"", significado: "Houve saída da faixa, mas dentro da tolerância declarada. O equipamento está aprovado. No certificado sai \"Aprovado\" e a saída aparece em Observações. Na planilha sai \"APROVADO (COM OBSERVAÇÃO)\"; não existe \"aprovado com alerta\"." },
         { nome: "Selo vermelho \"LAUDO: REPROVADO\"", significado: "Saiu da faixa além da tolerância, ou rompeu antes do tempo-alvo de porta ou energia. Avise o responsável técnico." },
         { nome: "Selo cinza \"INFORMATIVO\" ou \"CARACTERIZACAO\"", significado: "Estudo sem critério de aprovação, por exemplo porta ou energia sem tempo-alvo, ou a autonomia da caixa térmica. Só registra os tempos medidos." },
         { nome: "Faixa mínima e máxima em cinza (sem digitar)", significado: "Perfil com faixa fixa de 2 °C a 8 °C (câmara de conservação, refrigerador comum, caixa térmica). É de propósito." },
@@ -324,7 +327,8 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se o arquivo tem várias abas, digite o nome da aba do ensaio em \"Nome da aba de dados (opcional)\".",
           "Toque em \"Pré-visualizar dados\" e confira o período importado.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Confira os selos e toque em \"Abrir planilha\" ou \"Baixar PDF\"."
+          "Confira os selos e toque em \"Abrir planilha\" ou \"Baixar PDF\".",
+          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
         ] },
         { titulo: "Gerar o certificado de qualificação térmica (A4)", itens: [
           "Em \"6. Certificado de qualificação térmica\", preencha número, revisão, \"Identificação do registrador\" (TAG do cadastro de padrões) e o responsável pelo aceite.",
@@ -336,7 +340,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       ],
       cores: [
         { nome: "Selo verde \"LAUDO: APROVADO\"", significado: "Todos os estudos com critério foram atendidos." },
-        { nome: "Selo amarelo \"LAUDO: APROVADO COM ALERTA\"", significado: "Houve saída da faixa dentro da tolerância declarada. O equipamento está aprovado; a saída vai para Observações do certificado." },
+        { nome: "Selo verde \"LAUDO: APROVADO (COM OBSERVAÇÃO)\"", significado: "Houve saída da faixa dentro da tolerância declarada. O equipamento está aprovado; a saída vai para Observações do certificado e da planilha. Não existe \"aprovado com alerta\"." },
         { nome: "Selo vermelho \"LAUDO: REPROVADO\"", significado: "Saiu da faixa além da tolerância, uma repetição reprovou ou o laboratório reprovou o indicador. Avise o responsável técnico." },
         { nome: "Selo cinza \"INFORMATIVO\" ou \"CARACTERIZACAO\"", significado: "Estudo sem critério de aprovação, por exemplo porta ou energia sem tempo-alvo." },
         FAIXA_VERMELHA,

@@ -603,7 +603,7 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
       analise.observacoesAnalise.push(
         'F0 mínimo próximo do limite: o pior sensor ativo (' + (analise.piorSensorF0 ? analise.piorSensorF0.sensor : 'N/A') +
         ') obteve ' + SGO_DocA4_num_(analise.minF0, 2) + ' min, acima do mínimo normativo de ' +
-        SGO_DocA4_num_(limiteAprovacaoF0, 2) + ' min, porém a menos de ' + margemObservacaoF0 +
+        SGO_DocA4_num_(limiteAprovacaoF0, 2) + ' min, porém a menos de ' + SGO_DocA4_num_(margemObservacaoF0) +
         '% dele. Recomenda-se acompanhar este ponto nas próximas requalificações.'
       );
     }
@@ -707,7 +707,7 @@ function AutoRel_detectarFasesProcesso_(linhas, analise, cfg, opcoesAnalise) {
   fases.pulsosPreVacuo.forEach(function(pulso) {
     AutoRel_adicionarSegmentoFase_(fases, 'PRE_VACUO', pulso.inicioIdx, pulso.fimIdx, linhas, { numero: pulso.numero });
     AutoRel_adicionarEventoFase_(fases, pulso.inicioIdx, 'INÍCIO DA EVACUAÇÃO OBSERVADA ' + pulso.numero);
-    AutoRel_adicionarEventoFase_(fases, pulso.minPressaoIdx, 'MÍNIMO DE PRESSÃO ' + pulso.numero + ' (' + pulso.pressaoMin + ' bar abs)');
+    AutoRel_adicionarEventoFase_(fases, pulso.minPressaoIdx, 'MÍNIMO DE PRESSÃO ' + pulso.numero + ' (' + SGO_DocA4_num_(pulso.pressaoMin, 3) + ' bar abs)');
     AutoRel_adicionarEventoFase_(fases, pulso.fimIdx, 'RECUPERAÇÃO DA PRESSÃO - EVACUAÇÃO ' + pulso.numero);
   });
   const inicioRampaLegado = typeof analise.faseInicioRampa === 'number' && analise.faseInicioRampa >= 0 ? analise.faseInicioRampa : 0;

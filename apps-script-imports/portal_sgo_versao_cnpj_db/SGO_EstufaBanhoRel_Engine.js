@@ -172,16 +172,16 @@ function EstufaBanhoRel_ebAnalisarDistribuicao(dados, faixa, sensoresAtivos, opc
     if (piorDesvio > faixa.tolerancia) {
       analise.aprovado = false;
       analise.statusAprovacao = 'REPROVADO';
-      analise.motivosReprovacao.push('Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + piorInfo.valor + ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + faixa.tMin + ' a ' + faixa.tMax + ' °C, além da tolerância de ' + faixa.tolerancia + ' °C permitida.');
+      analise.motivosReprovacao.push('Ruptura de faixa operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) + ' °C em ' + piorInfo.tempoStr + ', fora da faixa ' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) + ' °C, além da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C permitida.');
     } else {
       analise.statusAprovacao = 'APROVADO_COM_ALERTA';
-      analise.alertasAnalise.push('Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + piorInfo.valor + ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + faixa.tolerancia + ' °C.');
+      analise.alertasAnalise.push('Excursão dentro da tolerância operacional: sensor ' + piorInfo.sensor + ' registrou ' + SGO_DocA4_num_(piorInfo.valor) + ' °C em ' + piorInfo.tempoStr + ', fora da faixa nominal, mas dentro da tolerância de ' + SGO_DocA4_num_(faixa.tolerancia) + ' °C.');
     }
   } else {
-    analise.observacoesAnalise.push('Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + faixa.tMin + ' a ' + faixa.tMax + ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + analise.statsGlobal.min + ' °C, média ' + analise.statsGlobal.media + ' °C, máxima ' + analise.statsGlobal.max + ' °C — amplitude (máx-mín) de ' + analise.statsGlobal.indicacaoMaxMin.maxMin + ' °C.');
+    analise.observacoesAnalise.push('Todos os ' + ativosIdx.length + ' sensor(es) ativo(s) permaneceram dentro da faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) + ' °C) durante todo o período ' + (analise.rampaEstabilizacao ? 'avaliado' : 'monitorado') + '. Leitura global: mínima ' + SGO_DocA4_num_(analise.statsGlobal.min) + ' °C, média ' + SGO_DocA4_num_(analise.statsGlobal.media) + ' °C, máxima ' + SGO_DocA4_num_(analise.statsGlobal.max) + ' °C — amplitude (máx-mín) de ' + SGO_DocA4_num_(analise.statsGlobal.indicacaoMaxMin.maxMin) + ' °C.');
   }
   if (analise.rampaEstabilizacao) {
-    analise.observacoesAnalise.push('Período de estabilização inicial identificado: o equipamento levou ' + EstufaBanhoRel_ebRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2) + 'h (de ' + analise.tempoInicio + ' até ' + analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + analise.rampaEstabilizacao.temperaturaInicial + ' °C até estabilizar dentro da faixa operacional. Esse intervalo foi registrado nos dados brutos e no gráfico, ' + 'mas excluído do julgamento de aprovação/reprovação e das estatísticas acima, por representar o acionamento ' + 'do equipamento e não seu regime operacional estável.');
+    analise.observacoesAnalise.push('Período de estabilização inicial identificado: o equipamento levou ' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(analise.rampaEstabilizacao.duracaoMinutos / 60, 2), 2) + 'h (de ' + analise.tempoInicio + ' até ' + analise.rampaEstabilizacao.fimRampaStr + ') partindo de ' + SGO_DocA4_num_(analise.rampaEstabilizacao.temperaturaInicial) + ' °C até estabilizar dentro da faixa operacional. Esse intervalo foi registrado nos dados brutos e no gráfico, ' + 'mas excluído do julgamento de aprovação/reprovação e das estatísticas acima, por representar o acionamento ' + 'do equipamento e não seu regime operacional estável.');
   }
   const piorAmplitudeSensor = acumuladorSensor.reduce(function (pior, s) {
     if (s.min === null || s.max === null) return pior;
@@ -192,12 +192,12 @@ function EstufaBanhoRel_ebAnalisarDistribuicao(dados, faixa, sensoresAtivos, opc
     } : pior;
   }, null);
   if (piorAmplitudeSensor) {
-    analise.observacoesAnalise.push('O sensor com maior amplitude térmica ao longo do ensaio foi ' + piorAmplitudeSensor.sensor + ', com variação de ' + piorAmplitudeSensor.amp + ' °C entre a leitura mínima e máxima registradas.');
+    analise.observacoesAnalise.push('O sensor com maior amplitude térmica ao longo do ensaio foi ' + piorAmplitudeSensor.sensor + ', com variação de ' + SGO_DocA4_num_(piorAmplitudeSensor.amp) + ' °C entre a leitura mínima e máxima registradas.');
   }
   const tempoEfetivoMinutos = analise.rampaEstabilizacao ? EstufaBanhoRel_ebCalcularDiferencaTempoMin_(dados[idxFimRampa], dados[dados.length - 1]) : analise.tempoTotalMinutos;
   analise.tempoEfetivoAvaliadoMinutos = EstufaBanhoRel_ebRound_(tempoEfetivoMinutos, 2);
   if (!opcoes.duracaoLivre && tempoEfetivoMinutos < 24 * 60) {
-    analise.alertasAnalise.push('Duração ' + (analise.rampaEstabilizacao ? 'efetivamente avaliada (após a rampa de estabilização)' : 'total monitorada') + ' (' + EstufaBanhoRel_ebRound_(tempoEfetivoMinutos / 60, 1) + 'h) abaixo das 24h contínuas recomendadas pela norma para este estudo.');
+    analise.alertasAnalise.push('Duração ' + (analise.rampaEstabilizacao ? 'efetivamente avaliada (após a rampa de estabilização)' : 'total monitorada') + ' (' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(tempoEfetivoMinutos / 60, 1), 1) + 'h) abaixo das 24h contínuas recomendadas pela norma para este estudo.');
   }
 
   // Conformidade por posição/sensor: o veredito global (aprovado/reprovado)
@@ -403,7 +403,7 @@ function EstufaBanhoRel_ebAnalisarEventoRuptura(dados, faixa, sensoresAtivos, ja
     }
   } else {
     const janelaObservadaMin = EstufaBanhoRel_ebCalcularDiferencaTempoMin_(dados[idxInicioEvento], dados[Math.min(idxLimiteBuscaRuptura, dados.length - 1)]);
-    analise.observacoesAnalise.push('Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + faixa.tMin + ' a ' + faixa.tMax + ' °C) durante os ' + EstufaBanhoRel_ebRound_(janelaObservadaMin, 1) + ' minutos de dados disponíveis a partir do início do evento — o equipamento sustentou a temperatura por inércia térmica/isolamento nesse intervalo.');
+    analise.observacoesAnalise.push('Nenhum dos ' + ativosIdx.length + ' sensor(es) ativo(s) ultrapassou a faixa operacional (' + SGO_DocA4_num_(faixa.tMin) + ' a ' + SGO_DocA4_num_(faixa.tMax) + ' °C) durante os ' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(janelaObservadaMin, 1), 1) + ' minutos de dados disponíveis a partir do início do evento — o equipamento sustentou a temperatura por inércia térmica/isolamento nesse intervalo.');
   }
 
   // Fase 2: recuperação — só faz sentido buscar se houve ruptura e/ou
@@ -428,12 +428,12 @@ function EstufaBanhoRel_ebAnalisarEventoRuptura(dados, faixa, sensoresAtivos, ja
     if (analise.tempoAlvoMinutos <= 0) throw new Error('Tempo-alvo do evento deve ser positivo.');
     if (!analise.rompeu && tempoObservado < analise.tempoAlvoMinutos) {
       analise.statusAprovacao = 'INFORMATIVO';
-      analise.alertasAnalise.push('Período observado de ' + tempoObservado + ' min insuficiente para confirmar o tempo-alvo de ' + analise.tempoAlvoMinutos + ' min.');
+      analise.alertasAnalise.push('Período observado de ' + SGO_DocA4_num_(tempoObservado) + ' min insuficiente para confirmar o tempo-alvo de ' + SGO_DocA4_num_(analise.tempoAlvoMinutos) + ' min.');
     } else if (sustentouOTempoAlvo) {
       analise.statusAprovacao = 'APROVADO';
     } else {
       analise.statusAprovacao = 'REPROVADO';
-      analise.motivosReprovacao.push('O equipamento rompeu a faixa operacional em ' + analise.tempoAteRupturaMinutos + ' min, antes do tempo-alvo definido para o ensaio (' + analise.tempoAlvoMinutos + ' min).');
+      analise.motivosReprovacao.push('O equipamento rompeu a faixa operacional em ' + SGO_DocA4_num_(analise.tempoAteRupturaMinutos) + ' min, antes do tempo-alvo definido para o ensaio (' + SGO_DocA4_num_(analise.tempoAlvoMinutos) + ' min).');
     }
   }
 
@@ -491,10 +491,10 @@ function EstufaBanhoRel_ebAnalisarAutonomia(dados, faixa, sensoresAtivos, opcoes
     analise.rompeu = true;
     analise.primeiraRuptura = ruptura;
     analise.autonomiaMinutos = EstufaBanhoRel_ebRound_(ruptura.minutosDesdeInicio, 2);
-    analise.observacoesAnalise.push('Autonomia registrada: ' + EstufaBanhoRel_ebRound_(analise.autonomiaMinutos / 60, 2) + 'h (' + analise.autonomiaMinutos + ' min) até o sensor ' + ruptura.sensor + ' ultrapassar a faixa operacional.');
+    analise.observacoesAnalise.push('Autonomia registrada: ' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(analise.autonomiaMinutos / 60, 2), 2) + 'h (' + SGO_DocA4_num_(analise.autonomiaMinutos) + ' min) até o sensor ' + ruptura.sensor + ' ultrapassar a faixa operacional.');
   } else {
     analise.autonomiaMinutos = analise.tempoTotalGravadoMinutos;
-    analise.observacoesAnalise.push('Nenhuma ruptura observada durante todo o período gravado (' + EstufaBanhoRel_ebRound_(analise.tempoTotalGravadoMinutos / 60, 2) + 'h). A autonomia real pode ser maior que o período monitorado — considere estender a gravação.');
+    analise.observacoesAnalise.push('Nenhuma ruptura observada durante todo o período gravado (' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(analise.tempoTotalGravadoMinutos / 60, 2), 2) + 'h). A autonomia real pode ser maior que o período monitorado — considere estender a gravação.');
   }
   return analise;
 }
@@ -889,7 +889,7 @@ function EstufaBanhoRel_ebAnalisarPenetracaoELetalidade_(repeticoesDados, faixa,
       motivosReprovacao.push('Não foi possível calcular ' + cfgLetalidade.valorLabel + ' válido para os sensores ativos.');
     } else if (minLetalidadeBruta < valorMinimoExigido - 1e-10) {
       statusRepeticao = 'REPROVADO';
-      motivosReprovacao.push(cfgLetalidade.valorLabel + ' mínimo insuficiente: pior sensor (' + (piorSensor ? piorSensor.sensor : 'N/A') + ') acumulou ' + minLetalidade + ' min, abaixo do mínimo exigido de ' + EstufaBanhoRel_ebRound_(valorMinimoExigido, 2) + ' min.');
+      motivosReprovacao.push(cfgLetalidade.valorLabel + ' mínimo insuficiente: pior sensor (' + (piorSensor ? piorSensor.sensor : 'N/A') + ') acumulou ' + SGO_DocA4_num_(minLetalidade) + ' min, abaixo do mínimo exigido de ' + SGO_DocA4_num_(EstufaBanhoRel_ebRound_(valorMinimoExigido, 2), 2) + ' min.');
     }
     if (indicador && indicador.aprovado === false) {
       statusRepeticao = 'REPROVADO';
