@@ -1266,15 +1266,16 @@ function tplNR13_manualHtml_() {
 
   '<h2 id="tplNR13_ms2">2. Mapa da tela</h2>' +
   '<ol>' +
-  '  <li><strong>Consultar laudos já emitidos</strong> — pra reabrir um laudo antigo pelo CNPJ do cliente.</li>' +
-  '  <li><strong>1. Cliente</strong> — quem é o dono do vaso inspecionado.</li>' +
-  '  <li><strong>2. Equipamento</strong> — qual vaso foi inspecionado.</li>' +
-  '  <li><strong>3. Dados técnicos do vaso</strong> — PMTA, volume, fluido — aqui a categoria é calculada sozinha.</li>' +
-  '  <li><strong>4. Dados da inspeção</strong> — tipo, datas, PH responsável.</li>' +
-  '  <li><strong>5. Registro fotográfico</strong> — fotos com legenda e interpretação por IA.</li>' +
-  '  <li><strong>6. Descrição/Resultado/Recomendações</strong> — texto livre, com botão de melhoria por IA.</li>' +
-  '  <li><strong>7. Veredito e parecer conclusivo</strong> — a decisão do engenheiro.</li>' +
-  '  <li><strong>8. Salvar/Emitir</strong> — rascunho a qualquer momento, ou emissão final.</li>' +
+  '  <li><strong>Consultar laudos já emitidos ou continuar rascunho salvo</strong> — digite o CNPJ e toque em "Buscar laudos emitidos" ou "Buscar rascunhos salvos".</li>' +
+  '  <li><strong>1. Cliente</strong> — digite o CNPJ e toque em "Buscar / Selecionar Cliente". Cliente novo: confira os dados e toque em "Cadastrar Cliente".</li>' +
+  '  <li><strong>2. Equipamento (vaso de pressão)</strong> — escolha o vaso e toque em "Usar este equipamento". Vaso novo: toque em "+ Cadastrar equipamento novo". O quadro fecha depois da escolha.</li>' +
+  '  <li><strong>3. Dados técnicos do vaso</strong> — tipo de vaso, PMTA, volume e fluido, copiados da plaqueta. Aqui a categoria é calculada sozinha.</li>' +
+  '  <li><strong>4. Dados da inspeção</strong> — tipo, datas, PLH responsável, válvulas de segurança e manômetros.</li>' +
+  '  <li><strong>5. Teste hidrostático (TH)</strong> — se foi feito, pressões e tempos do ensaio.</li>' +
+  '  <li><strong>6. Registro fotográfico</strong> — fotos com legenda e "Interpretar com IA".</li>' +
+  '  <li><strong>7. Descrição, resultado e recomendações</strong> — texto livre, com o botão "Revisar texto (IA)".</li>' +
+  '  <li><strong>8. Veredito e parecer conclusivo</strong> — a decisão do engenheiro; "Sugerir parecer com IA" ajuda na redação.</li>' +
+  '  <li><strong>9. Salvar / Emitir</strong> — "Salvar rascunho" a qualquer momento, ou "Emitir laudo final".</li>' +
   '</ol>' +
 
   '<h2 id="tplNR13_ms3">3. Categorização automática (Tabela 1 e 2 da NR-13)</h2>' +
@@ -1283,7 +1284,7 @@ function tplNR13_manualHtml_() {
   '<table><tr><th>Campo calculado</th><th>Como é calculado</th></tr>' +
   '<tr><td>P.V (Grupo de Potencial de Risco)</td><td>Produto entre PMTA e Volume — quanto maior, maior o grupo de risco (1 a 5)</td></tr>' +
   '<tr><td>Categoria (I a V)</td><td>Cruza o Grupo de Risco com a Classe do Fluido, na Tabela 1 oficial da norma</td></tr>' +
-  '<tr><td>Prazo até a próxima inspeção</td><td>Depende só da Categoria, na Tabela 2 oficial (prazo do exame interno, o mais restritivo)</td></tr>' +
+  '<tr><td>Prazo até a próxima inspeção</td><td>Depende só da Categoria, na Tabela 2 oficial. A data prevista vem preenchida com 1 ano após o término e pode ser alterada</td></tr>' +\n  '<tr><td>Pressão usada no cálculo</td><td>A própria PMTA (critério conservador). O laudo informa isso na memória de cálculo</td></tr>' +
   '</table>' +
   '<div class="callout"><strong>Classes de fluido:</strong> A = inflamáveis/tóxicos graves/hidrogênio/acetileno; B = combustíveis/tóxicos moderados; ' +
   'C = vapor d\\'água, gases asfixiantes simples, ar comprimido (o caso mais comum em autoclaves e compressores); D = outros fluidos.</div>' +
@@ -1306,14 +1307,16 @@ function tplNR13_manualHtml_() {
   'extraordinária) já vinculado ao laudo anterior; ao emitir esse novo laudo, a pendência do laudo antigo é fechada automaticamente.</div>' +
 
   '<h2 id="tplNR13_ms6">6. Rascunho × Emissão final</h2>' +
-  '<p>Clique em <strong>"Salvar Rascunho"</strong> a qualquer momento — os dados ficam salvos e você pode continuar depois. ' +
-  'O rascunho pode ser editado livremente. Quando estiver tudo pronto e revisado, clique em <strong>"Emitir Laudo Final"</strong>: ' +
+  '<p>Clique em <strong>"Salvar rascunho"</strong> a qualquer momento — os dados ficam salvos e você pode continuar depois. ' +
+  'O rascunho pode ser editado livremente. Quando estiver tudo pronto e revisado, clique em <strong>"Emitir laudo final"</strong>: ' +
   'o sistema gera o PDF oficial, numera o laudo, salva na pasta do cliente, e a partir daí o laudo <strong>não pode mais ser editado</strong> — ' +
   'exatamente como os outros certificados e laudos oficiais do Portal.</p>' +
 
   '<h2 id="tplNR13_ms7">7. Consultar laudos já emitidos</h2>' +
-  '<p>No topo da tela, digite o CNPJ do cliente e clique em Buscar — aparece a lista de laudos NR13 já emitidos, com um ' +
-  'botão "Reabrir laudo" pra reimprimir/revisualizar o PDF sem recalcular nada.</p>' +
+  '<p>No topo da tela, digite o CNPJ do cliente e clique em \"Buscar laudos emitidos\" — aparece a lista de laudos NR-13 já emitidos, com um ' +
+  'botão "Reabrir laudo" pra reimprimir o PDF sem recalcular nada. Para continuar um laudo não emitido, use "Buscar rascunhos salvos". ' +
+  'Os perfis Comercial e Financeiro só consultam laudos: o preenchimento e a emissão são da equipe técnica, da metrologia ou da gestão. ' +
+  'A ajuda rápida desta tela fica no botão "Como usar esta tela", no cabeçalho.</p>' +
 
   '<h2 id="tplNR13_ms8">8. Erros comuns</h2>' +
   '<table><tr><th>O que aconteceu</th><th>O que fazer</th></tr>' +

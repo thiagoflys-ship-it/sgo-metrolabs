@@ -1,0 +1,119 @@
+# Manual do Operador — Módulo Cronograma de Execução
+
+## O que mudou até 17/10/2026
+
+- O manual em vigor é o que abre dentro do SGO+: botão "Manual do operador" da tela e botão "Como usar esta tela" (cabeçalho no computador, barra do topo no celular), que também oferece o "Manual completo do módulo" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.
+- Os documentos são salvos na pasta do cliente no SGO+ (não mais "no Drive"). O antigo "Console Operacional" agora se chama "Detalhes técnicos da operação" (ou "Histórico da operação"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.
+- Na etapa 2, o botão "Trazer equipamentos do cadastro" busca os equipamentos do cliente (por unidade ou todas), agrupados por tipo, marca e modelo. "+ Adicionar" continua para acréscimo à mão.
+- "Avançar" confere razão social, ao menos 1 equipamento e a data de início. Sem IA, o cronograma sai com texto padrão.
+
+
+### Agrupamento de equipamentos e sugestão de datas para calibração e qualificação técnica (QI/QO/QD)
+
+---
+
+## Como usar este manual
+
+Este manual foi escrito para quem **nunca usou o sistema**. Leia na ordem, de cima para baixo, seguindo a tela também de cima para baixo. Se aparecer uma palavra técnica desconhecida, vá direto ao **Glossário** (seção 10).
+
+---
+
+## 1. O que este sistema faz, em uma frase
+
+Você informa o cliente e a lista de equipamentos que precisam de calibração/qualificação técnica (QI/QO/QD), e o sistema **divide automaticamente** esses equipamentos em grupos de execução, sugerindo datas de início e fim de cada grupo — evitando que o técnico monte essa divisão manualmente numa planilha.
+
+> **Importante:** a divisão em grupos é feita por uma regra fixa e determinística (não é Inteligência Artificial) — os mesmos equipamentos sempre vão gerar a mesma divisão. A Inteligência Artificial entra só depois, na etapa 4, pra escrever o texto explicativo do cronograma final.
+
+---
+
+## 2. Etapa 1 — Dados do Cliente
+
+| Campo | O que fazer |
+|---|---|
+| **CNPJ** | Digite e clique em "Buscar" — o sistema preenche Razão Social, Logradouro, Bairro, Cidade e UF automaticamente |
+| **Razão Social / Logradouro / Bairro / Cidade / UF** | Confira os dados preenchidos; corrija manualmente se necessário |
+
+Clique em **"Avançar"** pra ir pra etapa 2.
+
+---
+
+## 3. Etapa 2 — Lista de Equipamentos
+
+| Campo | O que fazer |
+|---|---|
+| **Tipo de Equipamento** | Digite o tipo (ex.: Autoclave, Lavadora) |
+| **Marca / Modelo** | Identificação do equipamento |
+| **Quantidade** | Quantas unidades desse mesmo tipo/marca/modelo existem |
+
+Clique em **"+ Adicionar"** pra incluir cada equipamento na lista. Use **"Remover"** pra tirar um item adicionado por engano. Repita até a lista completa estar pronta, depois clique em **"Avançar"**.
+
+---
+
+## 4. Etapa 3 — Parâmetros e Sugestão de Grupos
+
+| Campo | O que é | O que fazer |
+|---|---|---|
+| **Data de início do Grupo 1** | Quando a execução começa | `dd/mm/aaaa` |
+| **Máx. unidades por grupo** | Quantos equipamentos, no máximo, entram no mesmo grupo | Padrão 6 |
+| **Dias úteis por grupo** | Quantos dias úteis a execução de 1 grupo deve levar | Padrão 5 |
+| **Intervalo entre grupos (dias úteis)** | Folga entre o fim de um grupo e o início do próximo | Padrão 0 |
+| **Limite p/ grupo único** | Se o total de unidades for menor ou igual a esse número, tudo vira 1 grupo só | Padrão 3 |
+
+Clique em **"Sugerir Grupos"** — o sistema aplica a regra e mostra a divisão, com data de Início e Fim de cada grupo. Pra montar a divisão manualmente do zero, use **"+ Novo grupo vazio"**.
+
+> **Datas pulam fim de semana.** O cálculo de "dias úteis" nunca conta sábado/domingo.
+
+---
+
+## 5. Etapa 4 — Gerar Cronograma
+
+Clique em **"Gerar Cronograma"**. O sistema confere se a quantidade de equipamentos nos grupos bate com a lista original (etapa 2) e, se estiver tudo certo, chama a Inteligência Artificial **uma única vez** pra escrever o texto explicativo, e salva o registro.
+
+> **O que acontece se as quantidades não baterem?** O sistema recusa gerar e avisa exatamente qual equipamento está com quantidade divergente — revise a divisão na etapa 3 antes de tentar de novo.
+
+---
+
+## 6. Etapa 5 — Documento
+
+| Botão | O que faz |
+|---|---|
+| **Abrir Documento** | Abre o cronograma final numa nova aba, pronto pra imprimir ou salvar como PDF |
+| **Salvar no Drive** | Salva uma cópia em PDF na pasta do cliente |
+| **Abrir WhatsApp** | Abre o WhatsApp com uma mensagem padrão pronta, pra enviar ao cliente |
+
+O documento final também inclui, sempre com o mesmo texto fixo (não passa pela IA de propósito, por ser um compromisso operacional): orientações que o cliente precisa seguir antes da execução (manutenção em dia, desligamento prévio dos equipamentos com antecedência mínima, acesso liberado à área técnica, presença de responsável local, etc.).
+
+---
+
+## 7. Passo a passo completo
+
+1. Etapa 1: CNPJ, buscar, conferir dados do cliente.
+2. Etapa 2: adicionar todos os equipamentos.
+3. Etapa 3: ajustar parâmetros, clicar em "Sugerir Grupos", revisar a divisão.
+4. Etapa 4: clicar em "Gerar Cronograma" e aguardar a IA escrever o texto.
+5. Etapa 5: abrir o documento, salvar no Drive, enviar pelo WhatsApp se quiser.
+
+---
+
+## 8. Erros comuns e o que fazer
+
+| O que aconteceu | O que fazer |
+|---|---|
+| "Adicione ao menos um equipamento antes de sugerir os grupos" | Volte pra etapa 2 e adicione a lista |
+| "A quantidade de equipamento nos grupos não bate com a lista informada" | Revise a divisão manual da etapa 3 |
+| As datas dos grupos parecem "erradas" | Dias úteis pulam fim de semana — confira o dia da semana ao lado de cada data |
+
+---
+
+## 9. Glossário
+
+| Termo | Explicação simples |
+|---|---|
+| **Grupo** | Conjunto de equipamentos executados no mesmo período |
+| **QI / QO / QD** | Qualificação de Instalação / Operação / Desempenho |
+| **Dias úteis** | Dias da semana sem contar sábado e domingo |
+| **Grupo único** | Quando o total de equipamentos é pequeno o bastante pra não precisar dividir |
+
+---
+
+*Este manual descreve o módulo Cronograma de Execução tal como implementado em 2026-08-20.*
