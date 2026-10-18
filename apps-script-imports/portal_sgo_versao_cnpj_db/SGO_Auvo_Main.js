@@ -33,7 +33,7 @@ function Auvo_bootstrap_() {
 
 function Auvo_exigirAdmin_(sessionId) {
   if (!isAdminSession(sessionId)) {
-    throw new Error('Acesso restrito a Gestor/Administrador — a integração com o Auvo não está disponível para o seu perfil.');
+    throw new Error('Acesso restrito à gestão (Administrador, Gestor ou Diretoria) — a integração com o Auvo não está disponível para o seu perfil.');
   }
 }
 

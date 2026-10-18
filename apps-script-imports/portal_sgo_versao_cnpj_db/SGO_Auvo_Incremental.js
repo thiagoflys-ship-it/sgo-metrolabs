@@ -690,5 +690,5 @@ function Auvo_apiDesativarSincronizacaoIncremental(sessionId) {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'Auvo_dispararSincronizacaoIncremental_') ScriptApp.deleteTrigger(t);
   });
-  return { ok: true, message: 'Sincronização automática desativada. Você ainda pode rodar manualmente com "Rodar agora".' };
+  return { ok: true, message: 'Sincronização automática desativada. Você ainda pode sincronizar manualmente com "Sincronizar agora".' };
 }

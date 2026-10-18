@@ -356,7 +356,7 @@ function tplAuvo_renderAuditoriaNomes_(res) {
     var tipoLabel = a.tipo === 'NOME_IDENTICO_CNPJ_DIFERENTE' ? 'Nome idêntico, CNPJ diferente' : 'Nome parecido';
     return '<tr><td>' + a.similaridade + '%</td><td>' + tipoLabel + '</td><td>' + nomes + '</td></tr>';
   }).join('');
-  el.innerHTML = '<div class="alert-box warning">' + res.totalAchados + ' possível(is) duplicata(s) por nome, em ' + res.totalGruposAnalisados + ' cliente(s) analisado(s) — isso é SÓ leitura, nada foi alterado. Revise e me diga o que fazer com cada caso.</div>' +
+  el.innerHTML = '<div class="alert-box warning">' + res.totalAchados + ' possível(is) duplicata(s) por nome, em ' + res.totalGruposAnalisados + ' cliente(s) analisado(s) — isso é SÓ leitura, nada foi alterado. Confira cada caso e decida se é a mesma empresa (juntar) ou empresas diferentes (manter).</div>' +
     '<table class="tabela-resultado"><thead><tr><th>Similaridade</th><th>Tipo</th><th>Nomes (CNPJ raiz)</th></tr></thead><tbody>' + linhas + '</tbody></table>';
 }
 

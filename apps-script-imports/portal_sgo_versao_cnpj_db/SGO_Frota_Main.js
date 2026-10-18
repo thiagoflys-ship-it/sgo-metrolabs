@@ -784,7 +784,7 @@ function Frota_apiCriarCondutor(sessionId, payload) {
 
   var usuarioId = SGO_UTILS.safe(payload.usuarioId);
   // 17/10/2026: nome gravado como digitado (só sem espaços nas pontas); os já gravados não mudam.
-  var nome = SGO_UTILS.safe(payload.nome).replace(/s+/g, ' ').trim();
+  var nome = SGO_UTILS.safe(payload.nome).replace(/\s+/g, ' ').trim();
 
   if (usuarioId) {
     var usuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, usuarioId);
@@ -996,7 +996,7 @@ function Frota_dataHoraMovimento_(data, hora, rotulo) {
   var h = String(hora || '').trim() || Utilities.formatDate(agora, 'America/Sao_Paulo', 'HH:mm');
   if (/^\d:\d{2}$/.test(h)) h = '0' + h;
   var quando = Frota_parseDataHora_(d, h);
-  if (!quando) throw new Error('Data/hora de ' + rotulo + ' inválida (' + d + ' ' + h + '). Use dd/mm/aaaa e hh:mm, ou toque em "Usar data/hora atual".');
+  if (!quando) throw new Error('Data/hora de ' + rotulo + ' inválida (' + d + ' ' + h + '). Use dd/mm/aaaa e hh:mm, ou deixe a data e a hora em branco para usar a hora atual.');
   return { data: d, hora: h, quando: quando };
 }
 
@@ -1051,7 +1051,7 @@ function Frota_apiIniciarViagem(sessionId, payload) {
     }
     if (dif !== 0 && !fotosPainel.length) {
       throw new Error('O KM de saída (' + Frota_kmTexto_(kmSaida) + ') é diferente do KM registrado do veículo ' + v.PLACA + ' (' + Frota_kmTexto_(kmAtual) +
-        '): diferença de ' + Frota_kmTexto_(dif) + ' km. A retirada não é bloqueada, mas precisa da foto do painel mostrando o odômetro: anexe no campo "Foto do painel (odômetro)" e registre de novo. A gestão será avisada para conferir.');
+        '): diferença de ' + Frota_kmTexto_(dif) + ' km. A retirada não é bloqueada, mas precisa da foto do painel mostrando o odômetro: tire a foto do painel na tela (aparece "foto do painel (obrigatória)") e toque em Confirmar de novo. A gestão será avisada para conferir.');
     }
     var motivos = [];
     if (emNomeDeOutro) motivos.push('retirada registrada pela gestão em nome de ' + condutor.NOME);
@@ -1185,7 +1185,7 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
   var fotosPainel = Frota_fotosPainel_(payload, veiculo.PLACA);
   if (alertaKm && !fotosPainel.length) {
     throw new Error('O KM de chegada ficou fora do esperado: ' + alertaKm + '. A devolução não é bloqueada, mas precisa da foto do painel mostrando o odômetro: ' +
-      'anexe no campo "Foto do painel (odômetro)" e registre de novo. Se o número foi digitado errado, corrija o KM de chegada. A gestão será avisada para conferir.');
+      'tire a foto do painel na tela (aparece "foto do painel (obrigatória)") e toque em Confirmar de novo. Se o número foi digitado errado, corrija o KM de chegada. A gestão será avisada para conferir.');
   }
 
   var motivos = [];

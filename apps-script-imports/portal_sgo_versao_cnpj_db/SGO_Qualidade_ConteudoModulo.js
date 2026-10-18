@@ -545,7 +545,7 @@ function tplQualidade_carregarHistorico_(status) {
     .then(function(res) {
       if (!lista) return;
       var itens = (res && res.items) || [];
-      if (!itens.length) { lista.innerHTML = '<p class="vazio">Nenhuma cobrança ou elogio registrado com estes filtros. Para registrar, use os botões Cobrar e Elogiar nas listas do painel.</p>'; return; }
+      if (!itens.length) { lista.innerHTML = '<p class="vazio">Nenhuma cobrança ou elogio registrado com estes filtros. Para registrar, use os botões Cobrar e Parabenizar nas listas do painel.</p>'; return; }
       var linhas = itens.map(function(o) {
         return '<tr>' +
           '<td><span class="pill ' + tplQualidade_esc(o.TIPO) + '">' + tplQualidade_esc(o.TIPO) + '</span></td>' +
