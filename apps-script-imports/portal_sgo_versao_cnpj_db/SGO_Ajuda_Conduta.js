@@ -102,7 +102,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Ver o farol, registrar ocorrência, reconhecer colegas, registrar missão, contestar e recorrer das próprias ocorrências, gerar o próprio extrato, ver os fechamentos e os relatórios semanais e ler os manuais." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: homologar e julgar (nunca a ocorrência que registrou ou em que é o envolvido), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões, gerar o extrato de qualquer pessoa e cuidar da automação de prazos." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: homologar e julgar (nunca a ocorrência que registrou; a ocorrência em que é o envolvido só a Diretoria decide, com fundamentação), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões, gerar o extrato de qualquer pessoa e cuidar da automação de prazos." },
         { perfil: "RH", pode: "Tudo da equipe. Também consulta, de todas as pessoas: ocorrências, missões, ausências, meses fechados, relatórios e extratos. Não homologa, não julga, não decide missões, não registra ausências e não fecha o mês." },
         { perfil: "CLIENTE", pode: "Não usa o programa." }
       ],
@@ -131,6 +131,12 @@ function SGO_ajudaTelas_Conduta_() {
           "Escreva a fundamentação.",
           "Toque em \"Anular\" ou em \"Manter (firme)\"."
         ] },
+        { titulo: "Diretoria: decidir ocorrência em que é a envolvida", itens: [
+          "Vale para o perfil Diretoria e para o responsável pelo sistema. Gestor e Administrador pedem a outra pessoa da gestão.",
+          "Toque em \"Homologar\" ou \"Julgar\", como em qualquer ocorrência.",
+          "Escreva a fundamentação no campo de texto da janela (pelo menos 15 caracteres), também para aprovar.",
+          "Toque na decisão. Fica gravado \"Decisão da Diretoria sobre ocorrência em que é envolvida\" no histórico da ocorrência, na auditoria e no extrato."
+        ] },
         { titulo: "Conferir a automação de prazos", itens: [
           "Leia o quadro \"Automação de prazos\".",
           "Deve estar \"LIGADA\". Se estiver desligada, toque em \"Ligar agora\".",
@@ -141,7 +147,8 @@ function SGO_ajudaTelas_Conduta_() {
         { nome: "\"Você registrou — outro gestor homologa\"", significado: "Quem registrou não decide. Peça a outra pessoa da gestão." }
       ],
       problemas: [
-        { situacao: "\"Você é o fiscal que registrou esta ocorrência\" ou \"Você é o colaborador envolvido\"", oQueFazer: "Peça a outra pessoa da gestão para decidir." },
+        { situacao: "\"Você é o fiscal que registrou esta ocorrência\" ou \"Você é o colaborador envolvido\"", oQueFazer: "Peça a outra pessoa da gestão para decidir. A Diretoria decide a ocorrência em que é envolvida, mas nunca a que ela mesma registrou." },
+        { situacao: "\"Você é a pessoa envolvida nesta ocorrência e decide como Diretoria: escreva a fundamentação\"", oQueFazer: "Escreva a fundamentação no campo de texto da janela, com pelo menos 15 caracteres, e toque de novo na decisão." },
         { situacao: "Automação \"DESLIGADA\"", oQueFazer: "Nenhuma ocorrência fica firme sozinha e o mês não é contado. Toque em \"Ligar agora\"." }
       ],
       perguntas: [
@@ -149,7 +156,8 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "RH", pode: "Ver as ocorrências de todas as pessoas e registrar ocorrência, como qualquer colaborador. Não homologa, não julga e não processa prazos." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Homologar, julgar, processar prazos e ligar ou desligar a automação." }
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Homologar, julgar, processar prazos e ligar ou desligar a automação." },
+        { perfil: "DIRETORIA", pode: "Também homologar e julgar a ocorrência em que é a envolvida, com fundamentação obrigatória. Vale também para o responsável pelo sistema." }
       ]
     },
 

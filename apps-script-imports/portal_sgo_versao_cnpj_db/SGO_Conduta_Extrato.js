@@ -41,7 +41,9 @@ function CondutaExt_contexto_(colaboradorId, competencia) {
   }).map(function (o) {
     var t = catalogo[SGO_UTILS.safeUpper(o.TIPO_CODIGO)] || {}, st = SGO_UTILS.safeUpper(o.STATUS);
     return { data: Conduta_soData_(o.DATA_FATO), codigo: o.TIPO_CODIGO, descricao: t.DESCRICAO || '', status: st, situacao: CONDUTA_EXTRATO_SITUACAO[st] || st,
-      pontos: st === 'FIRME' ? (Number(o.PESO_APLICADO) || 0) : 0, gravissima: st === 'FIRME' && SGO_UTILS.safeUpper(o.NIVEL_APLICADO) === 'GG' };
+      pontos: st === 'FIRME' ? (Number(o.PESO_APLICADO) || 0) : 0, gravissima: st === 'FIRME' && SGO_UTILS.safeUpper(o.NIVEL_APLICADO) === 'GG',
+      // 19/10/2026: decisão da Diretoria em ocorrência própria aparece no extrato
+      decisaoDiretoria: SGO_UTILS.safe(o.DECISAO_DIRETORIA), fundamentacao: CondutaExt_fundamentacaoDiretoria_(o) };
   }).sort(function (a, b) { return a.data.localeCompare(b.data); });
 
   var reconhecimentos = SGO_DATA.getAll(CONDUTA_SHEETS.EVENTO_POSITIVO).filter(function (e) {
@@ -131,8 +133,8 @@ function CondutaExt_html_(x, comentario) {
   ]) + (x.ausenteNoMes ? '<p class="nota">Há ausência registrada no mês: a pessoa não entra no número de pessoas do cálculo coletivo.</p>' : '')));
   c.push(RelA4_secao_('Comentário do mês', RelA4_paragrafos_(comentario)));
   c.push(RelA4_secao_('Ocorrências', RelA4_tabela_([{ t: 'Data' }, { t: 'Código' }, { t: 'Descrição' }, { t: 'Situação' }, { t: 'Pontos', num: true }],
-    x.ocorrencias.map(function (o) { return [RelA4_dataBr_(o.data), o.codigo, o.descricao, RelA4_marca_(o.situacao, o.status === 'FIRME' ? 'critico' : ['ANULADA', 'REJEITADA', 'DESCARTADA'].indexOf(o.status) >= 0 ? 'neutra' : 'aviso'), RelA4_num_(o.pontos, 0)]; }),
-    { vazio: 'Nenhuma ocorrência em seu nome neste mês.', legenda: 'Ocorrências do mês em seu nome' })));
+    x.ocorrencias.map(function (o) { return [RelA4_dataBr_(o.data), o.codigo, o.descricao, CondutaExt_situacaoCelula_(o), RelA4_num_(o.pontos, 0)]; }),
+    { vazio: 'Nenhuma ocorrência em seu nome neste mês.', legenda: 'Ocorrências do mês em seu nome' }) + CondutaExt_notaDiretoria_(x)));
   c.push(RelA4_secao_('Reconhecimentos', RelA4_tabela_([{ t: 'Data' }, { t: 'Motivo' }, { t: 'Relato' }],
     x.reconhecimentos.map(function (r) { return [RelA4_dataBr_(r.data), r.descricao + (r.grupo ? ' (' + r.grupo + ')' : ''), r.texto || '—']; }), { vazio: 'Nenhum reconhecimento registrado neste mês.', legenda: 'Reconhecimentos recebidos no mês' })));
   c.push(RelA4_secao_('Missões', RelA4_tabela_([{ t: 'Data' }, { t: 'Destino' }, { t: 'Distância', num: true }, { t: 'Aprovação' }, { t: 'Situação' }, { t: 'Valor', num: true }],
@@ -142,6 +144,29 @@ function CondutaExt_html_(x, comentario) {
   c.push('<p class="nota">Documento individual e reservado: fica disponível ao próprio colaborador e à gestão. Dúvidas sobre ocorrências seguem o caminho de contestação e recurso do programa.</p>');
   return RelA4_documento_({ titulo: 'Programa de conduta — extrato do colaborador', subtitulo: x.colaborador.nome, tituloCurto: 'Extrato — ' + x.colaborador.nome,
     tituloArquivo: 'Extrato do colaborador', sigla: 'CNE', rotuloIdentificacao: 'Competência', identificacao: RelA4_competencia_(x.competencia), corpo: c.join('\n') });
+}
+
+/** Fundamentação da última decisão marcada da Diretoria (histórico); sem histórico, a do julgamento. */
+function CondutaExt_fundamentacaoDiretoria_(o) {
+  if (!SGO_UTILS.safe(o.DECISAO_DIRETORIA)) return '';
+  var h = [];
+  try { h = JSON.parse(String(o.HISTORICO_JSON || '[]')); } catch (e) { h = []; }
+  var marcados = (Array.isArray(h) ? h : []).filter(function (p) { return p && p.marca; });
+  return marcados.length ? String(marcados[marcados.length - 1].texto || '') : SGO_UTILS.safe(o.TEXTO_JULGAMENTO);
+}
+
+function CondutaExt_situacaoCelula_(o) {
+  var m = RelA4_marca_(o.situacao, o.status === 'FIRME' ? 'critico' : ['ANULADA', 'REJEITADA', 'DESCARTADA'].indexOf(o.status) >= 0 ? 'neutra' : 'aviso');
+  return o.decisaoDiretoria ? { html: m.html + '<br>' + RelA4_marca_('Decisão da Diretoria', 'neutra').html } : m;
+}
+
+/** 19/10/2026: as ocorrências decididas pela Diretoria sendo ela a envolvida, com a fundamentação. */
+function CondutaExt_notaDiretoria_(x) {
+  var lista = x.ocorrencias.filter(function (o) { return o.decisaoDiretoria; });
+  if (!lista.length) return '';
+  return '<p class="nota">' + RelA4_esc_(lista.map(function (o) {
+    return o.decisaoDiretoria + ' (' + RelA4_dataBr_(o.data) + ', ' + o.codigo + ')' + (o.fundamentacao ? '. Fundamentação: ' + o.fundamentacao : '');
+  }).join(' | ')) + '</p>';
 }
 
 function Conduta_apiGerarExtratoColaborador(sessionId, payload) {

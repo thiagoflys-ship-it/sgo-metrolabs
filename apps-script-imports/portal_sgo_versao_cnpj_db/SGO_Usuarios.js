@@ -136,8 +136,16 @@ const SGO_USUARIOS = (() => {
   // inativada ou excluída por outro Administrador: sem isso, um Gestor
   // trocava a senha do admin e entrava como dono do sistema.
   function exigirAdminParaContaAdmin_(sessao, perfilAlvo, acao) {
-    if (SGO_UTILS.safeUpper(perfilAlvo) !== "ADMIN") return "";
-    if (SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN") return "";
+    var alvo = SGO_UTILS.safeUpper(perfilAlvo), meu = SGO_UTILS.safeUpper(sessao.perfil);
+    // 19/10/2026: a Diretoria decide ocorrência em que é envolvida (Programa de
+    // conduta); por isso o perfil Diretoria é dado só por Administrador ou Diretoria
+    // — um Gestor não se promove nem promove outra pessoa a Diretoria.
+    if (alvo === "DIRETORIA") {
+      if (meu === "ADMIN" || meu === "DIRETORIA") return "";
+      return "Não foi possível " + acao + ": o perfil Diretoria só é dado ou alterado por um Administrador ou pela Diretoria. Peça ao administrador do sistema.";
+    }
+    if (alvo !== "ADMIN") return "";
+    if (meu === "ADMIN") return "";
     return "Não foi possível " + acao + ": contas de Administrador só podem ser criadas ou alteradas por um Administrador. Peça ao administrador do sistema.";
   }
 
@@ -489,6 +497,8 @@ function usuariosPainel(sessionId) {
     var base = SGO_USUARIOS.pesquisar(sessionId, "");
     if (!base || !base.success) return base || { success: false, message: "Não foi possível carregar os usuários." };
     var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
+    // 19/10/2026: o perfil Diretoria é dado só por Administrador ou Diretoria (exigirAdminParaContaAdmin_).
+    var podeDarDiretoria = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
     // Perfil RH só consulta (19/10/2026): a tela esconde Novo usuário, Editar e Mais.
     var podeGerir = isAdminPerfilAuth_(sessao.perfil);
     var acessos = Usuarios_ultimosAcessos_();
@@ -504,7 +514,7 @@ function usuariosPainel(sessionId) {
       o.SEM_CELULAR = !String(u.CELULAR || "").replace(/\D/g, "");
       o.EU = SGO_UTILS.safe(u.ID) === SGO_UTILS.safe(sessao.userId);
       // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
-      o.PODE_ALTERAR = podeGerir && (souAdmin || perfil !== "ADMIN");
+      o.PODE_ALTERAR = podeGerir && (souAdmin || perfil !== "ADMIN") && (podeDarDiretoria || perfil !== "DIRETORIA");
       o.VINCULO_TRABALHO = SGO_UTILS.safeUpper(u.VINCULO_TRABALHO);
       o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
       return o;
@@ -513,7 +523,8 @@ function usuariosPainel(sessionId) {
       var sa = SGO_UTILS.safeUpper(a.STATUS) === "ATIVO" ? 0 : 1, sb = SGO_UTILS.safeUpper(b.STATUS) === "ATIVO" ? 0 : 1;
       return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
     });
-    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeGerir: podeGerir, perfis: SGO_CFG.PROFILES || [] }));
+    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir,
+      perfis: (SGO_CFG.PROFILES || []).filter(function (p) { var k = SGO_UTILS.safeUpper(p); return (souAdmin || k !== "ADMIN") && (podeDarDiretoria || k !== "DIRETORIA"); }) }));
   } catch (e) {
     return { success: false, message: SGO_textoFalhaOperador_("carregar os usuários", e) };
   }

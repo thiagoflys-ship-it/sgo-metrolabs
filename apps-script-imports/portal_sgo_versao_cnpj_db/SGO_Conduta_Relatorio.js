@@ -82,7 +82,9 @@ function Conduta_montarContextoRelatorio_(competencia) {
     contestacoes: {
       qtdContestadas: ocorrenciasCompetencia.filter(function (o) { return !!o.CONTESTADA_EM; }).length,
       qtdAnuladas: ocorrenciasCompetencia.filter(function (o) { return SGO_UTILS.safeUpper(o.STATUS) === 'ANULADA'; }).length,
-      qtdMantidas: ocorrenciasCompetencia.filter(function (o) { return !!o.CONTESTADA_EM && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME'; }).length
+      qtdMantidas: ocorrenciasCompetencia.filter(function (o) { return !!o.CONTESTADA_EM && SGO_UTILS.safeUpper(o.STATUS) === 'FIRME'; }).length,
+      // 19/10/2026: decisões da Diretoria sobre ocorrência em que é envolvida (sem nome: relatório coletivo)
+      qtdDecisoesDiretoria: ocorrenciasCompetencia.filter(function (o) { return !!SGO_UTILS.safe(o.DECISAO_DIRETORIA); }).length
     }
   };
 }
@@ -174,7 +176,8 @@ function Conduta_montarRelatorioHtml_(ctx, ia) {
     ' O incentivo de missão independe do farol do mês; o detalhamento por executante está na prestação de contas de missões.</p>' +
     '<p>' + (ctx.contestacoes.qtdContestadas
       ? RelA4_plural_(ctx.contestacoes.qtdContestadas, 'ocorrência foi contestada', 'ocorrências foram contestadas') + ' no mês: ' + RelA4_plural_(ctx.contestacoes.qtdAnuladas, 'anulada', 'anuladas') + ' e ' + RelA4_plural_(ctx.contestacoes.qtdMantidas, 'mantida', 'mantidas') + '.'
-      : 'Nenhuma ocorrência foi contestada no mês.') + '</p>'));
+      : 'Nenhuma ocorrência foi contestada no mês.') + '</p>' +
+    (ctx.contestacoes.qtdDecisoesDiretoria ? '<p>' + RelA4_plural_(ctx.contestacoes.qtdDecisoesDiretoria, 'ocorrência teve', 'ocorrências tiveram') + ' decisão da Diretoria sobre ocorrência em que é envolvida, com fundamentação registrada no histórico da ocorrência.</p>' : '')));
   c.push(RelA4_secao_('Recomendação', RelA4_paragrafos_(ia.recomendacao) +
     '<p class="nota">Os números deste relatório vêm do fechamento congelado do mês e não são recalculados. O relatório coletivo não identifica pessoas; o resultado individual fica no extrato de cada colaborador.</p>'));
   return RelA4_documento_({

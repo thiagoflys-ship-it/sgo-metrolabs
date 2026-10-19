@@ -166,7 +166,9 @@ function CondutaRG_contextoMissoes_(competencia) {
       total += v;
       linhas.push({
         missaoId: m.ID, data: Conduta_soData_(m.DATA), destino: m.DESTINO, km: Number(m.KM_TRECHO) || 0, colaboradorId: id, nome: users[id] || id, qualifica: elegivel, valor: v,
-        aprovacao: situacao, aprovacaoRotulo: Conduta_rotuloAprovacao_(situacao), aprovadoPor: m.APROVACAO_POR_NOME || '',
+        // 19/10/2026: decisão da Diretoria sobre missão em que é envolvida fica visível no relatório e no extrato
+        aprovacao: situacao, aprovacaoRotulo: Conduta_rotuloAprovacao_(situacao) + (SGO_UTILS.safe(m.DECISAO_DIRETORIA) ? ' (decisão da Diretoria)' : ''), aprovadoPor: m.APROVACAO_POR_NOME || '',
+        decisaoDiretoria: SGO_UTILS.safe(m.DECISAO_DIRETORIA),
         motivo: elegivel ? (situacao === 'LEGADA' ? 'Elegível (aprovação legada)' : 'Elegível para repasse')
           : !distanciaOk ? 'Não atingiu a distância mínima'
             : situacao === 'PENDENTE' ? 'Aguardando aprovação da gestão'

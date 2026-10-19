@@ -161,16 +161,23 @@ function Conduta_apiDecidirMissao(sessionId, payload) {
     if (!m || SGO_UTILS.safe(m.EXCLUIDA_EM)) throw new Error('Missão não encontrada (pode ter sido removida). Atualize a lista de missões.');
     var situacao = Conduta_situacaoAprovacao_(m);
     if (situacao !== 'PENDENTE') throw new Error('Esta missão não está aguardando aprovação (situação atual: ' + Conduta_rotuloAprovacao_(situacao) + '). Atualize a lista.');
-    if ([m.EXECUTANTE_1_ID, m.EXECUTANTE_2_ID].map(String).indexOf(String(sessao.userId)) >= 0) {
+    // 19/10/2026 (decisão do dono): a Diretoria (perfil DIRETORIA ou dono do
+    // sistema) decide a própria missão, com fundamentação e a marca gravada.
+    var diretoriaPropria = [m.EXECUTANTE_1_ID, m.EXECUTANTE_2_ID].map(String).indexOf(String(sessao.userId)) >= 0;
+    if (diretoriaPropria && !Conduta_ehDiretoriaOuDono_(sessao)) {
       throw new Error('Você é executante desta missão e não pode decidir sobre ela. Peça a outra pessoa da gestão (Gestor ou Diretoria) para aprovar ou recusar.');
     }
+    if (diretoriaPropria) motivo = Conduta_exigirFundamentacaoDiretoria_(motivo, 'missão');
+    var marca = diretoriaPropria ? CONDUTA_MARCA_DIRETORIA_MISSAO : '';
     Conduta_exigirCompetenciaAberta_(Conduta_soComp_(m.COMPETENCIA || m.DATA));
     var nova = decisao === 'APROVAR' ? 'APROVADA' : 'RECUSADA';
-    SGO_DATA.update(CONDUTA_SHEETS.MISSAO, m.ID, {
+    var camposMissao = {
       APROVACAO: nova, APROVACAO_POR: sessao.userId, APROVACAO_POR_NOME: String(sessao.nome || sessao.usuario || ''),
       APROVACAO_EM: SGO_UTILS.nowIso(), APROVACAO_MOTIVO: motivo || (nova === 'APROVADA' ? 'Aprovada pela gestão.' : '')
-    });
-    SGO_DATA.log('CONDUTA_MISSAO_' + nova, sessao.usuario, 'Missão ' + m.DESTINO + ' em ' + Conduta_soData_(m.DATA) + ' ' + nova.toLowerCase() + (motivo ? ': ' + motivo : ''), 'CONDUTA');
+    };
+    if (marca) camposMissao.DECISAO_DIRETORIA = marca;
+    SGO_DATA.update(CONDUTA_SHEETS.MISSAO, m.ID, camposMissao);
+    SGO_DATA.log(marca ? 'CONDUTA_DECISAO_DIRETORIA_PROPRIA' : 'CONDUTA_MISSAO_' + nova, sessao.usuario, (marca ? marca + '. ' : '') + 'Missão ' + m.DESTINO + ' em ' + Conduta_soData_(m.DATA) + ' ' + nova.toLowerCase() + (motivo ? ': ' + motivo : ''), 'CONDUTA');
   } finally { lock.releaseLock(); }
 
   try {
@@ -218,6 +225,7 @@ function Conduta_apiListarMissoes(sessionId, payload) {
   payload = payload || {};
   var somenteMinhas = !Conduta_podeConsultarTodos_(sessionId); // gestão ou RH veem todas
   var podeDecidirMissao = isAdminSession(sessionId); // aprovar/recusar: só a gestão (o RH só consulta)
+  var souDiretoria = podeDecidirMissao && Conduta_ehDiretoriaOuDono_(sessao);
   var nomes = Object.create(null);
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function(u){nomes[String(u.ID)] = String(u.NOME || '').trim();});
 
@@ -241,7 +249,14 @@ function Conduta_apiListarMissoes(sessionId, payload) {
     item.REGISTRADO_POR_NOME = nomes[String(m.REGISTRADO_POR)] || '';
     item.CONTA_INCENTIVO = item.QUALIFICA && Conduta_missaoAprovada_(m);
     // gestão decide, exceto quem é executante da própria missão
-    item.PODE_DECIDIR = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && String(m.EXECUTANTE_1_ID) !== String(sessao.userId) && String(m.EXECUTANTE_2_ID) !== String(sessao.userId);
+    // 19/10/2026: o servidor já aceita a Diretoria decidir a própria missão com
+    // fundamentação (Conduta_apiDecidirMissao), mas as telas de missão ainda não
+    // têm o campo de texto no "Aprovar": até ganharem, o botão continua só para
+    // quem não é executante (DECIDE_COMO_DIRETORIA avisa a tela quando ganhar).
+    var souExecutante = String(m.EXECUTANTE_1_ID) === String(sessao.userId) || String(m.EXECUTANTE_2_ID) === String(sessao.userId);
+    item.PODE_DECIDIR = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && !souExecutante;
+    item.DECIDE_COMO_DIRETORIA = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && souExecutante && souDiretoria;
+    item.DECISAO_DIRETORIA = SGO_UTILS.safe(m.DECISAO_DIRETORIA);
     return item;
   }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
 }

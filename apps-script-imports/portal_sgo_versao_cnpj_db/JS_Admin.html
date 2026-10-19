@@ -466,7 +466,9 @@
     var st = CADUI.telas.usuarios || {};
     var souAdmin = !!(st.extra && st.extra.souAdmin);
     var perfis = (st.extra && st.extra.perfis && st.extra.perfis.length ? st.extra.perfis : ["ADMIN", "DIRETORIA", "GESTOR", "TECNICO", "METROLOGIA", "COMERCIAL", "FINANCEIRO", "RH", "CLIENTE"])
-      .filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; });
+      .filter(function (p) { return souAdmin || String(p).toUpperCase() !== "ADMIN"; })
+      // 19/10/2026: o perfil Diretoria só é dado por Administrador ou Diretoria (o servidor confere).
+      .filter(function (p) { return souAdmin || (st.extra && st.extra.podeDarDiretoria) || String(p).toUpperCase() !== "DIRETORIA"; });
     var cfg = {
       chave: "usuarios", id: id || "", titulo: novo ? "Novo usuário" : "Editar usuário", sub: novo ? "Conta de acesso ao SGO+." : CadUI_esc_(Usuarios_nome_(u) + " · " + u.USUARIO),
       corpo: function () {
@@ -484,7 +486,7 @@
         ]) +
         CadUI_secao_("Acesso", [
           CadUI_campo_({ id: "usr_perfil", rotulo: "Perfil de acesso", obrigatorio: true, tipo: "select", valor: String(u.PERFIL || "").toUpperCase(), opcoes: [["", "Escolha o perfil"]].concat(perfis.map(function (p) { return [String(p).toUpperCase(), SGO_rotuloPerfil_(p)]; })),
-            dica: souAdmin ? "" : "O perfil Administrador só é dado por outro Administrador." }),
+            dica: souAdmin ? "Diretoria: perfil da direção da empresa. Além do que o Gestor faz, decide no Programa de conduta a ocorrência em que é a envolvida, com fundamentação." : "O perfil Administrador só é dado por outro Administrador; o perfil Diretoria, por Administrador ou Diretoria." }),
           '<div id="usr_cliente_bloco" hidden>' + CadUI_campo_({ id: "usr_cliente_id", rotulo: "Empresa (cliente)", obrigatorio: true, tipo: "select", opcoes: [["", "Carregando os clientes…"]], dica: "O perfil Cliente só vê os dados desta empresa." }) + "</div>",
           novo ? CadUI_campo_({ id: "usr_senha", rotulo: "Senha inicial", tipo: "password", obrigatorio: true, inteiro: true, attrs: ' autocomplete="new-password"', dica: "Mínimo de 6 caracteres. Combine com a pessoa por um canal seguro." })
                : '<p class="cadx-dica" style="grid-column:1/-1">Para trocar a senha, use Mais › Redefinir senha.</p>'

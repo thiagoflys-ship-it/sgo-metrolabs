@@ -137,3 +137,22 @@ test('módulos técnicos recusam o perfil RH no despacho (Relatório de calibra�
   assert.throws(() => s.RelCal_apiDispatch({ fn: 'apiPing', sessionId: 'RH', payload: {} }), /perfil RH/);
   assert.equal(s.RelCal_apiDispatch({ fn: 'apiPing', sessionId: 'TECNICO' }).ok, true);
 });
+
+test('perfil Diretoria (19/10/2026): Administrador e Diretoria dão; Gestor não dá nem altera conta da Diretoria', () => {
+  const usuarios = equipe().concat([
+    { ID: 'a1', USUARIO: 'admin', NOME: 'ADMIN', PERFIL: 'ADMIN', EMAIL: 'a@x.com.br', STATUS: 'ATIVO' },
+    { ID: 'd1', USUARIO: 'dir', NOME: 'DIRETORA', PERFIL: 'DIRETORIA', EMAIL: 'd@x.com.br', STATUS: 'ATIVO' },
+  ]);
+  const ses = Object.assign({}, sessoes, { A: { userId: 'a1', usuario: 'admin', perfil: 'ADMIN' }, D: { userId: 'd1', usuario: 'dir', perfil: 'DIRETORIA' } });
+  const { s, tabelas } = contexto(usuarios, ses);
+  const u = (id) => tabelas.CAD_USUARIOS.find((x) => x.ID === id);
+  const negadoGestor = s.SGO_USUARIOS.atualizar('G', 'u1', { PERFIL: 'DIRETORIA' });
+  assert.equal(negadoGestor.success, false);
+  assert.match(negadoGestor.message, /perfil Diretoria só é dado ou alterado por um Administrador ou pela Diretoria/);
+  assert.equal(s.SGO_USUARIOS.atualizar('G', 'd1', { NOME: 'Outra' }).success, false);
+  assert.equal(s.SGO_USUARIOS.criar('G', { USUARIO: 'eva', NOME: 'Eva', EMAIL: 'eva@x.com.br', PERFIL: 'DIRETORIA', SENHA: '123456' }).success, false);
+  assert.equal(s.SGO_USUARIOS.atualizar('A', 'u1', { PERFIL: 'DIRETORIA' }).success, true);
+  assert.equal(u('u1').PERFIL, 'DIRETORIA');
+  assert.equal(s.SGO_USUARIOS.criar('D', { USUARIO: 'eva', NOME: 'Eva', EMAIL: 'eva@x.com.br', PERFIL: 'DIRETORIA', SENHA: '123456' }).success, true);
+  assert.equal(s.SGO_USUARIOS.atualizar('D', 'u2', { PERFIL: 'ADMIN' }).success, false);
+});

@@ -142,6 +142,48 @@ function Conduta_exigirGestor_(sessionId) {
 }
 
 // ------------------------------------------------------------
+// DIRETORIA DECIDE O QUE É DELA (19/10/2026, decisão do dono)
+// Quem é o colaborador envolvido não homologa nem julga a própria ocorrência
+// (regra de 15/10), e quem é executante não decide a própria missão. A
+// Diretoria não precisa pedir a ninguém: perfil DIRETORIA, ou o dono do
+// sistema (mesma lista SGO_DONOS de Chaves e senhas, SGO_Chaves.js), decide
+// mesmo sendo a envolvida — com fundamentação obrigatória e a marca gravada
+// na ocorrência (DECISAO_DIRETORIA), no histórico (HISTORICO_JSON) e na
+// auditoria (SGO_DATA.log). Gestor e Administrador comum seguem a regra de
+// 15/10. A Regra 12 (o fiscal que registrou não decide) não muda para ninguém.
+// ------------------------------------------------------------
+var CONDUTA_MARCA_DIRETORIA_OCORRENCIA = 'Decisão da Diretoria sobre ocorrência em que é envolvida';
+var CONDUTA_MARCA_DIRETORIA_MISSAO = 'Decisão da Diretoria sobre missão em que é envolvida';
+var CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN = 15;
+
+/** Perfil DIRETORIA ou dono do sistema (SGO_DONOS). */
+function Conduta_ehDiretoriaOuDono_(sessao) {
+  if (!sessao) return false;
+  if (SGO_UTILS.safeUpper(sessao.perfil) === 'DIRETORIA') return true;
+  try { return typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(sessao.usuario); } catch (e) { return false; }
+}
+
+/** Fundamentação da decisão da Diretoria em caso próprio: obrigatória, com conteúdo. */
+function Conduta_exigirFundamentacaoDiretoria_(texto, oQue) {
+  var t = String(texto || '').trim();
+  if (t.length < CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN) {
+    throw new Error('Você é a pessoa envolvida nesta ' + oQue + ' e decide como Diretoria: escreva a fundamentação da decisão (pelo menos ' +
+      CONDUTA_FUNDAMENTACAO_DIRETORIA_MIN + ' caracteres) no campo de texto da janela e confirme de novo. Ela fica gravada no histórico e no extrato.');
+  }
+  return t;
+}
+
+/** Acrescenta um passo ao histórico da ocorrência (HISTORICO_JSON); devolve o texto JSON novo. */
+function Conduta_historicoAcrescentar_(oc, sessao, acao, decisao, texto, marca) {
+  var lista = [];
+  try { lista = JSON.parse(String((oc && oc.HISTORICO_JSON) || '[]')); } catch (e) { lista = []; }
+  if (!Array.isArray(lista)) lista = [];
+  lista.push({ em: SGO_UTILS.nowIso(), porId: String(sessao.userId || ''), por: String(sessao.nome || sessao.usuario || ''),
+    perfil: SGO_UTILS.safeUpper(sessao.perfil), acao: acao, decisao: decisao, texto: String(texto || ''), marca: marca || '' });
+  return JSON.stringify(lista);
+}
+
+// ------------------------------------------------------------
 // DATAS / DIAS ÚTEIS (não existe um genérico "somar N dias úteis" no
 // projeto — o único parecido, CronExec_garantirDiaUtil_, só empurra pro
 // próximo dia útil, não soma N. Sem calendário de feriados, igual ao
@@ -414,6 +456,7 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
   payload = payload || {};
   // não-gestor só vê as próprias (fiscal ou envolvido); o RH consulta todas, sem homologar nem julgar
   var podeDecidir = isAdminSession(sessionId);
+  var souDiretoria = podeDecidir && Conduta_ehDiretoriaOuDono_(sessao);
   var somenteMinhas = !podeDecidir && !Conduta_podeConsultarTodos_(sessionId);
 
   // CORREÇÃO 2026-09-24: a tela decidia às cegas. Quem homologava via só
@@ -454,12 +497,17 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     o.HOMOLOGADA_EM = Conduta_soData_(o.HOMOLOGADA_EM);
     o.SOU_O_FISCAL = String(o.FISCAL_ID) === String(sessao.userId);
     o.SOU_O_COLABORADOR = String(o.COLABORADOR_ID) === String(sessao.userId);
-    o.PODE_HOMOLOGAR = podeDecidir && !o.SOU_O_FISCAL;
+    // 19/10/2026: o envolvido não decide a própria ocorrência, salvo a Diretoria
+    // (perfil DIRETORIA ou dono do sistema), que decide com fundamentação.
+    o.DECIDE_COMO_DIRETORIA = o.SOU_O_COLABORADOR && souDiretoria;
+    var envolvidoBloqueado = o.SOU_O_COLABORADOR && !souDiretoria;
+    o.DECISAO_DIRETORIA = SGO_UTILS.safe(o.DECISAO_DIRETORIA);
+    o.PODE_HOMOLOGAR = podeDecidir && !o.SOU_O_FISCAL && !envolvidoBloqueado;
     // Julgar tem a MESMA regra da homologação (gestor e não ser o fiscal):
     // antes a tela oferecia "Julgar" a todo mundo e o erro só aparecia depois
     // de escrever a fundamentação -- inclusive para o colaborador que tinha
     // acabado de contestar, que acreditava poder se absolver.
-    o.PODE_JULGAR = podeDecidir && !o.SOU_O_FISCAL;
+    o.PODE_JULGAR = podeDecidir && !o.SOU_O_FISCAL && !envolvidoBloqueado;
     // Contestar/recorrer são do ACUSADO (ou da gestão em nome dele), e só
     // dentro do prazo -- o servidor já recusava fora disso, mas a tela nunca
     // mostrava a data limite, então a pessoa descobria que perdeu o prazo
@@ -500,7 +548,9 @@ function Conduta_apiHomologarOcorrencia(sessionId, payload) {
   // 2026-10-15: ninguém homologa (nem rejeita) a ocorrência em que é o próprio
   // colaborador envolvido — em setembro a conta "Administrador" homologou as
   // ocorrências lançadas em nome dela mesma.
-  if (String(oc.COLABORADOR_ID) === String(sessao.userId)) {
+  // 19/10/2026 (decisão do dono): a Diretoria decide mesmo sendo a envolvida.
+  var diretoriaPropria = String(oc.COLABORADOR_ID) === String(sessao.userId);
+  if (diretoriaPropria && !Conduta_ehDiretoriaOuDono_(sessao)) {
     throw new Error('Você é o colaborador envolvido nesta ocorrência — peça a outro Gestor/Administrador/Diretoria para decidir.');
   }
   // 2026-10-15: competência já fechada não recebe ocorrência nova — senão ela
@@ -509,27 +559,43 @@ function Conduta_apiHomologarOcorrencia(sessionId, payload) {
 
   var decisao = SGO_UTILS.safeUpper(payload.decisao);
   if (decisao !== 'APROVAR' && decisao !== 'REJEITAR') throw new Error('Decisão inválida (use APROVAR ou REJEITAR).');
+  var justificativa = String(payload.justificativa || '').trim();
+  if (diretoriaPropria) justificativa = Conduta_exigirFundamentacaoDiretoria_(justificativa, 'ocorrência');
+  var marca = diretoriaPropria ? CONDUTA_MARCA_DIRETORIA_OCORRENCIA : '';
+  var historico = Conduta_historicoAcrescentar_(oc, sessao, 'HOMOLOGACAO', decisao, justificativa, marca);
 
+  var campos;
   if (decisao === 'REJEITAR') {
-    SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
+    campos = {
       STATUS: 'REJEITADA',
       JULGADA_EM: Conduta_hojeISO_(),
       JULGADA_POR: sessao.userId,
-      TEXTO_JULGAMENTO: String(payload.justificativa || '')
-    });
-    return { success: true };
+      TEXTO_JULGAMENTO: justificativa
+    };
+  } else {
+    var parametros = Conduta_obterParametros_();
+    var prazoContestacaoDias = Number(parametros.PRAZO_CONTESTACAO_DIAS_UTEIS) || 3;
+    campos = {
+      STATUS: 'HOMOLOGADA',
+      HOMOLOGADA_EM: Conduta_hojeISO_(),
+      HOMOLOGADA_POR: sessao.userId,
+      PRAZO_CONTESTACAO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoContestacaoDias)
+    };
   }
+  campos.HISTORICO_JSON = historico;
+  if (marca) campos.DECISAO_DIRETORIA = marca;
+  SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, campos);
+  Conduta_auditarDecisao_(sessao, oc, decisao === 'REJEITAR' ? 'REJEITADA' : 'HOMOLOGADA', justificativa, marca);
+  return { success: true, decisaoDiretoria: marca };
+}
 
-  var parametros = Conduta_obterParametros_();
-  var prazoContestacaoDias = Number(parametros.PRAZO_CONTESTACAO_DIAS_UTEIS) || 3;
-
-  SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
-    STATUS: 'HOMOLOGADA',
-    HOMOLOGADA_EM: Conduta_hojeISO_(),
-    HOMOLOGADA_POR: sessao.userId,
-    PRAZO_CONTESTACAO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoContestacaoDias)
-  });
-  return { success: true };
+/** Auditoria da decisão (homologação/julgamento); a marca da Diretoria vai no texto. */
+function Conduta_auditarDecisao_(sessao, oc, resultado, texto, marca) {
+  try {
+    SGO_DATA.log(marca ? 'CONDUTA_DECISAO_DIRETORIA_PROPRIA' : 'CONDUTA_OCORRENCIA_' + resultado, sessao.usuario,
+      (marca ? marca + '. ' : '') + 'Ocorrência ' + oc.ID + ' (' + (oc.TIPO_CODIGO || '') + ', fato em ' + Conduta_soData_(oc.DATA_FATO) + '): ' + resultado.toLowerCase() +
+      (texto ? '. Fundamentação: ' + texto : ''), 'CONDUTA');
+  } catch (e) { console.error('Conduta auditoria decisão: ' + ((e && e.message) || e)); }
 }
 
 // ------------------------------------------------------------
@@ -556,6 +622,7 @@ function Conduta_apiContestarOcorrencia(sessionId, payload) {
     STATUS: 'CONTESTADA',
     CONTESTADA_EM: Conduta_hojeISO_(),
     TEXTO_CONTESTACAO: texto,
+    HISTORICO_JSON: Conduta_historicoAcrescentar_(oc, sessao, 'CONTESTACAO', 'CONTESTAR', texto, ''),
     PRAZO_JULGAMENTO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoJulgamentoDias)
   });
   return { success: true };
@@ -577,38 +644,47 @@ function Conduta_apiJulgarOcorrencia(sessionId, payload) {
     throw new Error('Você é o fiscal que registrou esta ocorrência — peça a outro Gestor/Administrador/Diretoria para julgar.');
   }
   // 2026-10-15 (auditoria): quem é o colaborador envolvido não julga a própria contestação/recurso.
-  if (String(oc.COLABORADOR_ID) === String(sessao.userId)) {
+  // 19/10/2026 (decisão do dono): a Diretoria julga mesmo sendo a envolvida.
+  var diretoriaPropria = String(oc.COLABORADOR_ID) === String(sessao.userId);
+  if (diretoriaPropria && !Conduta_ehDiretoriaOuDono_(sessao)) {
     throw new Error('Você é o colaborador envolvido nesta ocorrência — peça a outro Gestor/Administrador/Diretoria para julgar.');
   }
 
   var decisao = SGO_UTILS.safeUpper(payload.decisao);
   if (decisao !== 'ANULAR' && decisao !== 'MANTER') throw new Error('Decisão inválida (use ANULAR ou MANTER).');
+  var textoJulgamento = String(payload.textoJulgamento || '').trim();
+  if (diretoriaPropria) textoJulgamento = Conduta_exigirFundamentacaoDiretoria_(textoJulgamento, 'ocorrência');
+  var marca = diretoriaPropria ? CONDUTA_MARCA_DIRETORIA_OCORRENCIA : '';
+  var historico = Conduta_historicoAcrescentar_(oc, sessao, statusAtual === 'EM_RECURSO' ? 'JULGAMENTO_RECURSO' : 'JULGAMENTO_CONTESTACAO', decisao, textoJulgamento, marca);
 
+  var campos;
   if (decisao === 'ANULAR') {
-    SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
+    campos = {
       STATUS: 'ANULADA',
       ANULADA_EM: Conduta_hojeISO_(),
       JULGADA_EM: Conduta_hojeISO_(),
       JULGADA_POR: sessao.userId,
-      TEXTO_JULGAMENTO: String(payload.textoJulgamento || '')
-    });
-    return { success: true };
+      TEXTO_JULGAMENTO: textoJulgamento
+    };
+  } else {
+    var parametros = Conduta_obterParametros_();
+    var prazoRecursoDias = Number(parametros.PRAZO_RECURSO_DIAS_UTEIS) || 2;
+    campos = {
+      STATUS: 'FIRME',
+      FIRME_EM: Conduta_hojeISO_(),
+      JULGADA_EM: Conduta_hojeISO_(),
+      JULGADA_POR: sessao.userId,
+      TEXTO_JULGAMENTO: textoJulgamento,
+      // 2026-10-15 (auditoria): recurso já julgado não abre novo prazo de recurso —
+      // antes o ciclo FIRME → recurso → FIRME era infinito e travava o fechamento do mês.
+      PRAZO_RECURSO: statusAtual === 'EM_RECURSO' ? Conduta_hojeISO_() : Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoRecursoDias)
+    };
   }
-
-  var parametros = Conduta_obterParametros_();
-  var prazoRecursoDias = Number(parametros.PRAZO_RECURSO_DIAS_UTEIS) || 2;
-
-  SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
-    STATUS: 'FIRME',
-    FIRME_EM: Conduta_hojeISO_(),
-    JULGADA_EM: Conduta_hojeISO_(),
-    JULGADA_POR: sessao.userId,
-    TEXTO_JULGAMENTO: String(payload.textoJulgamento || ''),
-    // 2026-10-15 (auditoria): recurso já julgado não abre novo prazo de recurso —
-    // antes o ciclo FIRME → recurso → FIRME era infinito e travava o fechamento do mês.
-    PRAZO_RECURSO: statusAtual === 'EM_RECURSO' ? Conduta_hojeISO_() : Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoRecursoDias)
-  });
-  return { success: true };
+  campos.HISTORICO_JSON = historico;
+  if (marca) campos.DECISAO_DIRETORIA = marca;
+  SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, campos);
+  Conduta_auditarDecisao_(sessao, oc, decisao === 'ANULAR' ? 'ANULADA' : 'MANTIDA', textoJulgamento, marca);
+  return { success: true, decisaoDiretoria: marca };
 }
 
 // ------------------------------------------------------------
@@ -633,7 +709,8 @@ function Conduta_apiRecorrerOcorrencia(sessionId, payload) {
   SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, oc.ID, {
     STATUS: 'EM_RECURSO',
     RECURSO_EM: Conduta_hojeISO_(),
-    TEXTO_RECURSO: texto
+    TEXTO_RECURSO: texto,
+    HISTORICO_JSON: Conduta_historicoAcrescentar_(oc, sessao, 'RECURSO', 'RECORRER', texto, '')
   });
   return { success: true };
 }

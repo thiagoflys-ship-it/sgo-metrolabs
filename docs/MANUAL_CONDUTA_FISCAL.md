@@ -8,7 +8,7 @@ Gestão, neste programa, é Administrador, Gestor e Diretoria. A gestão faz tud
 
 Perfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausências, os meses fechados, os relatórios e os extratos. O RH registra ocorrência como qualquer colaborador, mas não homologa, não julga, não aprova nem recusa missão, não registra ausência e não fecha o mês: essas decisões continuam com a gestão. (19/10/2026)
 
-> Regra de ouro: quem registrou a ocorrência e quem é o envolvido nunca decidem sobre ela. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer.
+> Regra de ouro: quem registrou a ocorrência nunca decide sobre ela, e quem é o envolvido também não. Exceção (19/10/2026, decisão da direção): a Diretoria, e o responsável pelo sistema, decide a ocorrência em que é a envolvida, com fundamentação obrigatória (pelo menos 15 caracteres, também para aprovar); fica gravado "Decisão da Diretoria sobre ocorrência em que é envolvida" no histórico da ocorrência, na auditoria e no extrato. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer.
 
 ## 1. Qual aba usar
 

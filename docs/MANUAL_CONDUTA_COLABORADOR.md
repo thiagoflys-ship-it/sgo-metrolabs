@@ -114,7 +114,7 @@ Você vê as ocorrências que registrou e as que são em seu nome. Quando uma oc
 2. Escreva o motivo do recurso.
 3. Toque em "Enviar recurso" (no celular, "Enviar").
 
-Cabe só um recurso por ocorrência. Quem registrou e o próprio envolvido nunca decidem: quem julga é outra pessoa da gestão.
+Cabe só um recurso por ocorrência. Quem registrou e o próprio envolvido nunca decidem: quem julga é outra pessoa da gestão. A única exceção é a Diretoria, que decide a ocorrência em que é a envolvida, com fundamentação registrada no histórico e no extrato.
 
 ## 4. Reconhecimentos
 

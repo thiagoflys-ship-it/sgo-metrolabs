@@ -68,7 +68,8 @@ function Conduta_migrate_() {
     'PRAZO_CONTESTACAO', 'CONTESTADA_EM', 'TEXTO_CONTESTACAO',
     'PRAZO_JULGAMENTO', 'JULGADA_EM', 'JULGADA_POR', 'TEXTO_JULGAMENTO',
     'PRAZO_RECURSO', 'RECURSO_EM', 'TEXTO_RECURSO',
-    'FIRME_EM', 'ANULADA_EM', 'DESCARTADA_EM', 'FOTO_URL', 'FOTO_LEGENDA', 'MISSAO_ID', 'CRIADO_EM'
+    'FIRME_EM', 'ANULADA_EM', 'DESCARTADA_EM', 'FOTO_URL', 'FOTO_LEGENDA', 'MISSAO_ID', 'CRIADO_EM',
+    'DECISAO_DIRETORIA', 'HISTORICO_JSON'
   ]);
 
   // Eventos positivos registrados (distinto do catálogo qual_evento_positivo_tipo):
@@ -195,6 +196,15 @@ function Conduta_migrate_() {
     });
     propsFmt.setProperty('CONDUTA_MISSAO_APROVACAO_V1', '1');
     if (qtdLegadas) SGO_DATA.log('CONDUTA_MISSAO_LEGADA', 'sistema', qtdLegadas + ' missão(ões) existente(s) marcada(s) como aprovação legada', 'CONDUTA');
+  }
+  // 19/10/2026 (decisão do dono): a Diretoria decide ocorrência/missão em que é
+  // a envolvida; a marca fica em DECISAO_DIRETORIA e cada passo da ocorrência
+  // em HISTORICO_JSON. Linhas antigas ficam vazias (nada é reescrito).
+  if (propsFmt.getProperty('CONDUTA_DECISAO_DIRETORIA_V1') !== '1') {
+    CertCal_garantirColuna_(CONDUTA_SHEETS.OCORRENCIA, 'DECISAO_DIRETORIA');
+    CertCal_garantirColuna_(CONDUTA_SHEETS.OCORRENCIA, 'HISTORICO_JSON');
+    CertCal_garantirColuna_(CONDUTA_SHEETS.MISSAO, 'DECISAO_DIRETORIA');
+    propsFmt.setProperty('CONDUTA_DECISAO_DIRETORIA_V1', '1');
   }
 }
 
