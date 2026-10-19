@@ -4323,6 +4323,7 @@
           '<div><strong>' + escapeHtml_(o.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(o.DATA_FATO)) + ' · ' + escapeHtml_(mobileCondutaRotuloSituacao_(st)) + '</div>' +
           (o.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(o.TIPO_DESCRICAO) + '</div>' : "") +
           (o.COLABORADOR_NOME ? '<div class="mobile-card-subtitulo">Envolvido: ' + escapeHtml_(o.COLABORADOR_NOME) + '</div>' : "") +
+          (o.DECISAO_DIRETORIA ? '<div class="mobile-card-subtitulo" style="font-weight:700" title="' + escapeHtml_(o.DECISAO_DIRETORIA) + '">Decisão da Diretoria</div>' : "") +
           acao +
         '</div>';
       }).join("");
@@ -4397,9 +4398,13 @@
         let acao = "";
         if (m.PODE_DECIDIR) {
           acao = '<div class="mobile-form-actions" style="margin-top:8px">' +
-            '<button type="button" class="mobile-btn-cancelar" onclick="mobileCondutaRecusarMissao_(\'' + escapeHtml_(m.ID) + '\')">Recusar</button>' +
-            '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaDecidirMissao_(\'' + escapeHtml_(m.ID) + '\',\'APROVAR\',\'\')">Aprovar</button>' +
-          '</div>';
+            '<button type="button" class="mobile-btn-cancelar" onclick="mobileCondutaRecusarMissao_(\'' + escapeHtml_(m.ID) + '\',' + (m.DECIDE_COMO_DIRETORIA ? 'true' : 'false') + ')">Recusar</button>' +
+            (m.DECIDE_COMO_DIRETORIA
+              ? '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaAprovarMissaoDiretoria_(\'' + escapeHtml_(m.ID) + '\')">Aprovar</button>'
+              : '<button type="button" class="mobile-btn-salvar" onclick="mobileCondutaDecidirMissao_(\'' + escapeHtml_(m.ID) + '\',\'APROVAR\',\'\')">Aprovar</button>') +
+          '</div>' +
+          // 19/10/2026: a Diretoria decide a própria missão, com fundamentação gravada
+          (m.DECIDE_COMO_DIRETORIA ? '<div class="mobile-card-subtitulo" style="margin-top:6px">Você é executante desta missão e decide como Diretoria: escreva a fundamentação (pelo menos 15 caracteres). Fica gravado "Decisão da Diretoria sobre missão em que é envolvida".</div>' : '');
         } else if (st === "PENDENTE") {
           acao = '<div class="mobile-card-subtitulo" style="margin-top:6px">' + (mobileCondutaEhGestao_()
             ? "Você é executante desta missão: outra pessoa da gestão (Gestor ou Diretoria) precisa aprovar."
@@ -4410,6 +4415,7 @@
           '<div class="mobile-card-subtitulo">' + escapeHtml_(km) + ' km · ' + escapeHtml_(execs) + '</div>' +
           '<div class="mobile-card-subtitulo" style="color:' + cor + ';font-weight:700">' + escapeHtml_(m.APROVACAO_ROTULO || st) + '</div>' +
           (st === "RECUSADA" && m.APROVACAO_MOTIVO ? '<div class="mobile-card-subtitulo">Motivo: ' + escapeHtml_(m.APROVACAO_MOTIVO) + '</div>' : "") +
+          (m.DECISAO_DIRETORIA ? '<div class="mobile-card-subtitulo" style="font-weight:700" title="' + escapeHtml_(m.DECISAO_DIRETORIA) + '">Decisão da Diretoria</div>' : "") +
           acao +
         '</div>';
       }).join("");
@@ -4470,11 +4476,22 @@
     });
   }
 
-  function mobileCondutaRecusarMissao_(id) {
-    const motivo = prompt("Motivo da recusa (vai no aviso para quem lançou a missão):", "");
+  function mobileCondutaRecusarMissao_(id, comoDiretoria) {
+    const motivo = prompt(comoDiretoria
+      ? "Fundamentação da recusa (pelo menos 15 caracteres). Vai no aviso para quem lançou e fica gravada como decisão da Diretoria:"
+      : "Motivo da recusa (vai no aviso para quem lançou a missão):", "");
     if (motivo === null) return;
-    if (String(motivo).trim().length < 8) return alert("Para recusar, escreva o motivo com pelo menos 8 caracteres.");
+    const minimo = comoDiretoria ? 15 : 8;
+    if (String(motivo).trim().length < minimo) return alert("Para recusar, escreva o motivo com pelo menos " + minimo + " caracteres e toque de novo em Recusar.");
     mobileCondutaDecidirMissao_(id, "RECUSAR", motivo);
+  }
+
+  // 19/10/2026: a Diretoria executante aprova a própria missão com fundamentação (o servidor confere e grava a marca).
+  function mobileCondutaAprovarMissaoDiretoria_(id) {
+    const fund = prompt("Fundamentação da aprovação (pelo menos 15 caracteres). Fica gravado: Decisão da Diretoria sobre missão em que é envolvida.", "");
+    if (fund === null) return;
+    if (String(fund).trim().length < 15) return alert("Escreva a fundamentação com pelo menos 15 caracteres e toque de novo em Aprovar.");
+    mobileCondutaDecidirMissao_(id, "APROVAR", fund);
   }
 
   function mobileCondutaDecidirMissao_(id, decisao, motivo) {

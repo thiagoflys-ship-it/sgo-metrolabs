@@ -561,6 +561,8 @@ function Conduta_apiHomologarOcorrencia(sessionId, payload) {
   if (decisao !== 'APROVAR' && decisao !== 'REJEITAR') throw new Error('Decisão inválida (use APROVAR ou REJEITAR).');
   var justificativa = String(payload.justificativa || '').trim();
   if (diretoriaPropria) justificativa = Conduta_exigirFundamentacaoDiretoria_(justificativa, 'ocorrência');
+  // 19/10/2026: rejeitar sempre pede a fundamentação (a tela já pedia no rótulo do campo).
+  if (decisao === 'REJEITAR' && !justificativa) throw new Error('Para rejeitar, escreva a fundamentação no campo de texto da janela e toque de novo em Rejeitar.');
   var marca = diretoriaPropria ? CONDUTA_MARCA_DIRETORIA_OCORRENCIA : '';
   var historico = Conduta_historicoAcrescentar_(oc, sessao, 'HOMOLOGACAO', decisao, justificativa, marca);
 

@@ -123,7 +123,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Na linha com selo \"Registrada\", toque em \"Homologar\".",
           "Leia o resumo e abra a foto, se houver.",
           "Para confirmar, toque em \"Aprovar\".",
-          "Para rejeitar, escreva a justificativa e toque em \"Rejeitar\"."
+          "Para rejeitar, escreva a fundamentação e toque em \"Rejeitar\". Sem fundamentação, a rejeição não é aceita."
         ] },
         { titulo: "Julgar uma contestação ou recurso", itens: [
           "Na linha com selo \"Contestada\" ou \"Em recurso\", toque em \"Julgar\".",
@@ -135,7 +135,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Vale para o perfil Diretoria e para o responsável pelo sistema. Gestor e Administrador pedem a outra pessoa da gestão.",
           "Toque em \"Homologar\" ou \"Julgar\", como em qualquer ocorrência.",
           "Escreva a fundamentação no campo de texto da janela (pelo menos 15 caracteres), também para aprovar.",
-          "Toque na decisão. Fica gravado \"Decisão da Diretoria sobre ocorrência em que é envolvida\" no histórico da ocorrência, na auditoria e no extrato."
+          "Toque na decisão. Fica gravado \"Decisão da Diretoria sobre ocorrência em que é envolvida\" no histórico da ocorrência, na auditoria e no extrato, e a lista mostra o selo \"Decisão da Diretoria\"."
         ] },
         { titulo: "Conferir a automação de prazos", itens: [
           "Leia o quadro \"Automação de prazos\".",
@@ -171,6 +171,12 @@ function SGO_ajudaTelas_Conduta_() {
           "Para recusar, toque em \"Recusar\", escreva o motivo e toque em \"Recusar missão\".",
           "Quem lançou recebe o aviso da decisão."
         ] },
+        { titulo: "Diretoria: decidir a própria missão", itens: [
+          "Vale para o perfil Diretoria e para o responsável pelo sistema. Gestor e Administrador pedem a outra pessoa da gestão.",
+          "Na linha da missão em que você é executante, toque em \"Aprovar\" ou \"Recusar\".",
+          "Escreva a fundamentação (pelo menos 15 caracteres) e confirme. No celular, o texto é pedido numa caixa.",
+          "Fica gravado \"Decisão da Diretoria sobre missão em que é envolvida\" e a linha mostra o selo \"Decisão da Diretoria\"."
+        ] },
         { titulo: "Cadastrar um destino", itens: [
           "Toque em \"+ Cadastrar cidade/destino\".",
           "Se o destino é um cliente, digite o CNPJ e toque em \"Buscar CNPJ\".",
@@ -179,7 +185,7 @@ function SGO_ajudaTelas_Conduta_() {
         ] }
       ],
       problemas: [
-        { situacao: "\"Você é executante desta missão e não pode decidir sobre ela.\"", oQueFazer: "Peça a outra pessoa da gestão." },
+        { situacao: "\"Você é executante desta missão e não pode decidir sobre ela.\"", oQueFazer: "Peça a outra pessoa da gestão. A Diretoria decide a própria missão, com fundamentação." },
         { situacao: "\"Para recusar, escreva o motivo (pelo menos 8 caracteres).\"", oQueFazer: "Escreva um motivo mais completo." }
       ],
       quemPode: [

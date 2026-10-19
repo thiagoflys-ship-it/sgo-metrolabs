@@ -249,12 +249,10 @@ function Conduta_apiListarMissoes(sessionId, payload) {
     item.REGISTRADO_POR_NOME = nomes[String(m.REGISTRADO_POR)] || '';
     item.CONTA_INCENTIVO = item.QUALIFICA && Conduta_missaoAprovada_(m);
     // gestão decide, exceto quem é executante da própria missão
-    // 19/10/2026: o servidor já aceita a Diretoria decidir a própria missão com
-    // fundamentação (Conduta_apiDecidirMissao), mas as telas de missão ainda não
-    // têm o campo de texto no "Aprovar": até ganharem, o botão continua só para
-    // quem não é executante (DECIDE_COMO_DIRETORIA avisa a tela quando ganhar).
+    // 19/10/2026: a Diretoria decide também a própria missão; a tela pede a
+    // fundamentação quando DECIDE_COMO_DIRETORIA (o servidor confere e grava a marca).
     var souExecutante = String(m.EXECUTANTE_1_ID) === String(sessao.userId) || String(m.EXECUTANTE_2_ID) === String(sessao.userId);
-    item.PODE_DECIDIR = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && !souExecutante;
+    item.PODE_DECIDIR = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && (!souExecutante || souDiretoria);
     item.DECIDE_COMO_DIRETORIA = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && souExecutante && souDiretoria;
     item.DECISAO_DIRETORIA = SGO_UTILS.safe(m.DECISAO_DIRETORIA);
     return item;

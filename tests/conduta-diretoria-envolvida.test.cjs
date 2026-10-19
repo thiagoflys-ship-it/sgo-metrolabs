@@ -150,3 +150,24 @@ test('missão: a Diretoria executante decide com fundamentação e a marca; Gest
   assert.throws(() => amb.ctx.Conduta_apiDecidirMissao('s', { id: 'm1', decisao: 'APROVAR', motivo: 'Deslocamento confirmado na agenda.' }), /executante desta missão/);
   assert.equal(m.APROVACAO, 'PENDENTE');
 });
+
+test('rejeitar sem fundamentação é recusado para qualquer perfil', () => {
+  const oc = ocorrencia('u_outro', 'REGISTRADA');
+  const { ctx } = ambiente(GESTOR, { ocorrencias: [oc] });
+  assert.throws(() => ctx.Conduta_apiHomologarOcorrencia('s', { id: 'oc1', decisao: 'REJEITAR', justificativa: '  ' }), /Para rejeitar, escreva a fundamentação/);
+  assert.equal(oc.STATUS, 'REGISTRADA');
+  ctx.Conduta_apiHomologarOcorrencia('s', { id: 'oc1', decisao: 'REJEITAR', justificativa: 'Fato não comprovado.' });
+  assert.equal(oc.STATUS, 'REJEITADA');
+});
+
+test('lista de missões: Aprovar/Recusar para a Diretoria executante (com DECIDE_COMO_DIRETORIA), não para o Gestor executante', () => {
+  for (const [sessao, espera] of [[DIRETORIA, true], [GESTOR, false]]) {
+    const m = { ID: 'm1', APROVACAO: 'PENDENTE', DESTINO: 'CAMPINAS', DATA: '2026-10-12', COMPETENCIA: '2026-10', EXECUTANTE_1_ID: sessao.userId, REGISTRADO_POR: sessao.userId };
+    const { ctx } = ambiente(sessao, { missoes: [m] });
+    ctx.SGO_CFG = { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS' } };
+    ctx.Conduta_ler_ = (aba) => ctx.SGO_DATA.getAll(aba);
+    const item = ctx.Conduta_apiListarMissoes('s', {})[0];
+    assert.equal(item.PODE_DECIDIR, espera, sessao.perfil);
+    assert.equal(item.DECIDE_COMO_DIRETORIA, espera, sessao.perfil);
+  }
+});
