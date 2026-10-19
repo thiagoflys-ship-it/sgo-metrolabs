@@ -63,7 +63,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Aviso vermelho \"Vencido\" (avisos da frota)", significado: "Documento, manutenção ou CNH com prazo vencido. A gestão precisa resolver." },
         { nome: "Aviso amarelo \"A vencer\"", significado: "Vence em até 30 dias." },
         { nome: "Aviso vermelho \"Multa a conferir\"", significado: "Chegou multa e o sistema não achou com certeza quem estava com o veículo. A gestão confere." },
-        { nome: "Aviso vermelho no topo sobre o rastreador", significado: "A partida do veículo não foi liberada. A retirada já está registrada. Ligue para a gestão." }
+        { nome: "Aviso vermelho no topo sobre o rastreador", significado: "Só aparece quando a iTracker liberar o bloqueio da partida (hoje não há). A partida do veículo não foi liberada. A retirada já está registrada. Ligue para a gestão." }
       ],
       problemas: [
         { situacao: "Deu erro ao confirmar, ou o sinal está fraco", oQueFazer: "Não saia da tela. O sistema tenta de novo sozinho. Se a tela pedir, toque de novo em \"Confirmar retirada\" ou \"Confirmar devolução\": as fotos já enviadas não são enviadas outra vez." },
@@ -76,7 +76,7 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "Tocou num veículo que está com outra pessoa", oQueFazer: "A tela mostra com quem ele está. Escolha outro veículo ou fale com essa pessoa." },
         { situacao: "\"Nenhum veículo disponível agora\"", oQueFazer: "Todos estão em uso. Veja em \"Em uso por outras pessoas\". A lista se atualiza sozinha quando alguém devolver." },
         { situacao: "\"O veículo ... não está mais disponível. A lista foi atualizada.\"", oQueFazer: "Outra pessoa retirou antes. Escolha outro veículo." },
-        { situacao: "\"Partida não liberada pelo rastreador\"", oQueFazer: "A retirada já está registrada. Não registre de novo. Ligue para a gestão, que libera a partida." },
+        { situacao: "\"Partida não liberada pelo rastreador\" (só quando o bloqueio da partida estiver ligado)", oQueFazer: "A retirada já está registrada. Não registre de novo. Ligue para a gestão, que libera a partida." },
         { situacao: "\"Não foi possível carregar a frota agora\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\". Se continuar, avise o administrador." },
         { situacao: "Esqueceu de devolver", oQueFazer: "Retirada aberta há mais de 12 horas aparece no Início como possível devolução esquecida. Devolva assim que puder ou avise a gestão." }
       ],
@@ -338,57 +338,67 @@ function SGO_ajudaTelas_Frota_() {
 
     "frota/rastreador": {
       titulo: "Rastreador e bloqueio da partida",
-      paraQueServe: "Liga a Frota ao rastreador dos veículos. Quando ligado, a retirada libera a partida e a devolução bloqueia a partida, sempre com o veículo parado. Hoje o rastreador está desligado no SGO+.",
+      paraQueServe: "Liga a Frota ao rastreador dos veículos (iTracker). Hoje o acesso é somente leitura: o SGO+ avisa o uso sem registro, confere o KM e guarda o ponto de chegada de cada devolução, mas não bloqueia nem libera a partida. O bloqueio depende de a iTracker liberar o acesso com comandos.",
       antesDeComecar: [
-        "Hoje o rastreador está desligado. Nada é liberado nem bloqueado pelo SGO+. A retirada e a devolução funcionam normalmente.",
-        "A liberação e o bloqueio da partida só passam a funcionar quando a gestão ligar o rastreador (Chaves e senhas > Rastreador da frota) e o bloqueio.",
-        "O veículo nunca é bloqueado em movimento."
+        "O acesso da iTracker é somente leitura: o SGO+ monitora o veículo, mas não bloqueia nem libera a partida. Para isso, a Metrolabs pede à iTracker um acesso com comandos.",
+        "Quando o acesso com comandos chegar, o responsável pelo sistema preenche os endereços dos comandos em Chaves e senhas > Rastreador da frota e liga o bloqueio. Aí a retirada libera a partida e a devolução bloqueia.",
+        "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada e com posição recente.",
+        "Só a gestão vê a localização. A localização fica guardada pelo prazo de Chaves e senhas (padrão de 90 dias) e depois é apagada sozinha."
       ],
       passos: [
         { titulo: "Ver a situação do rastreador", itens: [
           "Abra a aba \"Rastreador\".",
-          "Leia a caixa do topo: diz se o rastreador e o bloqueio estão ligados ou desligados."
+          "Leia a caixa do topo: diz se o rastreador está ligado, se o acesso é somente leitura e por quantos dias a localização fica guardada."
         ] },
         { titulo: "Ligar um veículo ao aparelho do rastreador", itens: [
           "Em \"Vínculo veículo e dispositivo\", escolha o aparelho do veículo. O sugerido pela placa vem marcado.",
-          "Toque em \"Gravar vínculo\".",
-          "Toque em \"Conferir comandos\" para saber se o aparelho aceita bloquear e liberar."
+          "Toque em \"Gravar vínculo\". O SGO+ confere se o aparelho aparece na iTracker."
         ] },
-        { titulo: "Liberar a partida numa emergência", itens: [
-          "Em \"Liberar ou bloquear a partida\", escolha o veículo.",
-          "Escreva a justificativa, com pelo menos 15 letras.",
-          "Toque em \"Liberar partida\" e confirme.",
-          "No celular: Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"."
-        ] },
-        { titulo: "Bloquear a partida", itens: [
-          "Escolha o veículo e escreva a justificativa.",
-          "Toque em \"Bloquear agora\" e confirme.",
-          "Se o veículo estiver andando, o bloqueio fica pendente até ele parar com a ignição desligada."
+        { titulo: "Ver onde o veículo chegou na devolução", itens: [
+          "Na lista de veículos, leia \"Última chegada (devolução)\": hora e endereço.",
+          "Toque em \"ver no mapa\" para abrir o local."
         ] },
         { titulo: "Conferir um alerta de uso sem registro", itens: [
           "Leia o alerta vermelho \"Uso sem registro\".",
           "Descubra quem estava com o veículo.",
           "Se foi esquecimento, registre a retirada no lugar do condutor, em \"Opções da gestão\".",
           "Toque em \"Conferido\" e escreva o que foi conferido, com pelo menos 10 letras."
+        ] },
+        { titulo: "Quando o acesso com comandos estiver ligado: liberar a partida numa emergência", itens: [
+          "Em \"Liberar ou bloquear a partida\", escolha o veículo.",
+          "Escreva a justificativa, com pelo menos 15 letras.",
+          "Toque em \"Liberar partida\" e confirme.",
+          "No celular: Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"."
+        ] },
+        { titulo: "Quando o acesso com comandos estiver ligado: bloquear a partida", itens: [
+          "Escolha o veículo e escreva a justificativa.",
+          "Toque em \"Bloquear agora\" e confirme.",
+          "Se o veículo estiver andando, o bloqueio fica pendente até ele parar com a ignição desligada.",
+          "Depois de testar no pátio, toque em \"Marcar: usa o bloqueio\" no veículo."
         ] }
       ],
       cores: [
-        { nome: "Caixa vermelha \"Rastreador desligado\"", significado: "Nenhuma chamada é feita ao rastreador. Retirada e devolução funcionam sem liberar nem bloquear." },
-        { nome: "Caixa azul \"Rastreador ligado\"", significado: "O SGO+ lê o rastreador." },
-        { nome: "\"Bloqueio da partida desligado\"", significado: "Só monitoramento. \"Bloquear agora\" fica indisponível." },
+        { nome: "Caixa vermelha \"Rastreador desligado\"", significado: "Nenhuma chamada é feita ao rastreador. Retirada e devolução funcionam normalmente." },
+        { nome: "Caixa azul \"Rastreador ligado\"", significado: "O SGO+ lê o rastreador a cada 2 minutos." },
+        { nome: "\"O acesso da iTracker é somente leitura\"", significado: "O SGO+ monitora, mas não bloqueia nem libera a partida. A parte de liberar e bloquear fica escondida." },
+        { nome: "\"Bloqueio da partida desligado\"", significado: "Há acesso com comandos, mas o bloqueio está desligado: só monitoramento." },
         { nome: "Comando \"Pendente\"", significado: "Esperando o veículo parar e a ignição desligar." },
         { nome: "Comando \"Enviado\", \"Cancelado\" ou \"Não enviado\"", significado: "Enviado: chegou ao rastreador. Cancelado: uma nova retirada cancelou o bloqueio. Não enviado: falhou; tente de novo ou use o aplicativo do rastreador." },
         { nome: "Alerta vermelho \"Uso sem registro\"", significado: "O veículo andou ou ligou sem retirada aberta no SGO+." },
-        { nome: "Alerta vermelho \"Sem comunicação com o rastreador\"", significado: "O SGO+ não conseguiu ler o rastreador. Some sozinho quando a conexão voltar." }
+        { nome: "Alerta vermelho \"Sem comunicação com o rastreador\"", significado: "O SGO+ não conseguiu ler o rastreador. Aparece uma vez só e some sozinho quando a conexão voltar." }
       ],
       problemas: [
-        { situacao: "Condutor diz \"Partida não liberada pelo rastreador\"", oQueFazer: "A retirada já está registrada. Libere a partida aqui ou no aplicativo do rastreador." },
+        { situacao: "\"recusou a chave de acesso (HTTP 401)\"", oQueFazer: "A chave da iTracker está errada ou foi cancelada. Avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota)." },
+        { situacao: "\"excesso de consultas (HTTP 429)\"", oQueFazer: "Não precisa fazer nada. O SGO+ espera e lê de novo na próxima rodada." },
+        { situacao: "\"A iTracker só aceita ler as posições a cada 30 segundos\"", oQueFazer: "Espere os segundos indicados e toque de novo em \"Ler o rastreador agora\"." },
+        { situacao: "\"plataforma da iTracker está indisponível (HTTP 503)\"", oQueFazer: "Aguarde. O SGO+ tenta de novo sozinho." },
+        { situacao: "Condutor diz \"Partida não liberada pelo rastreador\"", oQueFazer: "Só acontece com o acesso com comandos ligado. A retirada já está registrada. Libere a partida aqui ou no aplicativo do rastreador." },
         { situacao: "\"não tem dispositivo do rastreador vinculado\"", oQueFazer: "Ligue o veículo ao aparelho em \"Vínculo veículo e dispositivo\"." },
-        { situacao: "\"Faltam as credenciais do rastreador\"", oQueFazer: "Avise o responsável pelo sistema (Chaves e senhas)." }
+        { situacao: "\"Falta a chave de acesso da iTracker\"", oQueFazer: "Avise o responsável pelo sistema (Chaves e senhas)." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Usar a aba Rastreador e a Partida do veículo no celular." },
-        { perfil: "TODOS", pode: "A equipe só aciona o rastreador ao retirar e devolver. Em emergência, ligue para a gestão." }
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Usar a aba Rastreador, ver a localização e a Partida do veículo no celular." },
+        { perfil: "TODOS", pode: "A equipe não vê a localização. Só retira e devolve normalmente. Em emergência, ligue para a gestão." }
       ]
     },
 

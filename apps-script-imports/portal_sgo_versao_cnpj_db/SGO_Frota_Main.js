@@ -1322,9 +1322,15 @@ function Frota_kmAConferir_() {
       var div = m['KM_RASTREADOR_DIVERGENCIA_' + e];
       if (String(div === undefined || div === null ? '' : div).trim() === '' || Frota_num_(div, 0) === 0 || SGO_UTILS.safe(m['KM_CONFERIDO_RASTREADOR_' + e + '_EM'])) return;
       var kmDig = e === 'SAIDA' ? m.KM_SAIDA : m.KM_CHEGADA;
+      // 19/10/2026: sem hodômetro no rastreador, a chegada é conferida pela distância do resumo da iTracker (KM_RASTREADOR_RODADO).
+      var porResumo = e === 'CHEGADA' && String(m.KM_RASTREADOR_CHEGADA === undefined || m.KM_RASTREADOR_CHEGADA === null ? '' : m.KM_RASTREADOR_CHEGADA).trim() === '' &&
+        String(m.KM_RASTREADOR_RODADO === undefined || m.KM_RASTREADOR_RODADO === null ? '' : m.KM_RASTREADOR_RODADO).trim() !== '';
       lista.push(Object.assign({ etapa: 'RASTREADOR_' + e, rastreador: true,
         data: e === 'SAIDA' ? comum.dataSaida : Frota_textoData_(m.DATA_CHEGADA), hora: e === 'SAIDA' ? comum.horaSaida : Frota_textoHora_(m.HORA_CHEGADA),
-        motivo: 'KM ' + (e === 'SAIDA' ? 'de saída' : 'de chegada') + ' digitado ' + Frota_kmTexto_(kmDig) + ' e hodômetro do rastreador ' + Frota_kmTexto_(m['KM_RASTREADOR_' + e]) +
+        motivo: (porResumo
+          ? 'KM rodado digitado ' + Frota_kmTexto_(Frota_num_(m.KM_CHEGADA, 0) - Frota_num_(m.KM_SAIDA, 0)) + ' (saída ' + Frota_kmTexto_(m.KM_SAIDA) + ', chegada ' + Frota_kmTexto_(m.KM_CHEGADA) +
+            ') e distância medida pelo rastreador no período ' + Frota_kmTexto_(m.KM_RASTREADOR_RODADO) + ' km'
+          : 'KM ' + (e === 'SAIDA' ? 'de saída' : 'de chegada') + ' digitado ' + Frota_kmTexto_(kmDig) + ' e hodômetro do rastreador ' + Frota_kmTexto_(m['KM_RASTREADOR_' + e])) +
           ' (diferença de ' + Frota_kmTexto_(Frota_num_(div, 0)) + ' km, acima de 20 km ou 5%)',
         fotos: fotos(e === 'SAIDA' ? m.FOTOS_PAINEL_SAIDA_JSON : m.FOTOS_PAINEL_CHEGADA_JSON),
         registradoPor: SGO_UTILS.safe(e === 'SAIDA' ? m.REGISTRADO_SAIDA_POR_NOME : m.REGISTRADO_CHEGADA_POR_NOME) }, comum));

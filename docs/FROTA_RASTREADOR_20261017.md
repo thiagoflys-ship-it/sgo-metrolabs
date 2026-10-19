@@ -57,3 +57,39 @@ Segurança: credenciais só nas propriedades do script; `Rastreador_limpar_` tir
 4. Testar com um veículo parado no pátio: "Bloquear agora" e "Liberar partida".
 5. Gravar `RASTREADOR_BLOQUEIO_LIGADO` = 1. Avisar a equipe (manual, seção 17) e combinar o telefone de emergência da gestão.
 6. Conferir que o gatilho `Frota_rastreadorRotina` existe (no servidor: `npx tsx scripts/instalar_gatilhos.ts`; ligar a chave também instala).
+
+---
+
+# 19/10/2026 — API real da iTracker (Bearer, somente leitura) e envio de comando configurável
+
+Não publicado. Nenhuma chamada à iTracker real: tudo testado contra uma API falsa local no formato da documentação da iTracker.
+
+## O que mudou
+
+| Parte | Onde |
+|---|---|
+| Cliente HTTP novo: URL base `https://api.itrackergo.com.br/v1/` (a URL antiga `acesso.itrackergo.com.br` vira esta), `Authorization: Bearer` em toda chamada, `Accept: application/json`; `GET /devices`, `GET /positions[?deviceId=]`, `GET /reports/summary?deviceId=&from=&to=` (até 7 dias). Login, cookie e usuário/senha do Traccar saíram | `Rastreador_chamar_`, `Rastreador_exigirOk_` |
+| Limites: no mínimo 600 ms entre chamadas (2 por segundo por IP, contando todas as execuções); `/positions` no máximo a cada 30 s (a rotina espera o que falta; tela e ganchos usam a leitura guardada ou deixam para a rotina); uma leitura de `/positions` por rodada; "Ler o rastreador agora" com intervalo de 30 s; HTTP 429 = espera o `Retry-After` (até 10 s) e tenta mais 2 vezes | |
+| Erros com mensagem própria: 401 (chave inválida), 403 (acesso negado ou sem HTTPS), 404 (confira RASTREADOR_URL), 429, 503, outros 5xx; falha = um alerta único de conexão, resolvido sozinho | |
+| Chaves e senhas, grupo Rastreador: `RASTREADOR_URL`, `RASTREADOR_TOKEN` ("Chave de acesso (Bearer)"), `RASTREADOR_LIGADO`, `RASTREADOR_RETENCAO_DIAS` (7 a 1825; vazio = 90), `RASTREADOR_BLOQUEIO_LIGADO`, `RASTREADOR_CMD_BLOQUEIO_URL`, `RASTREADOR_CMD_LIBERACAO_URL`, `RASTREADOR_TOKEN_COMANDOS` (opcionais). "Testar conexão" chama `GET /devices` e diz quantos veículos achou, sem a chave | `SGO_Chaves.js`, `JS_Chaves.html` |
+| Bloqueio da partida: caminho completo mantido (retirada libera, devolução deixa pendente, nunca em movimento, só parado com ignição desligada e posição dos últimos 30 min, liberação de emergência pela gestão). Só age com os DOIS endereços de comando preenchidos; envio `POST` com `{deviceId, type: engineStop|engineResume}`, endereço completo ou caminho a partir da base, `{deviceId}` substituído no endereço. Sem os endereços: aviso "O acesso da iTracker é somente leitura..." na tela da gestão (computador e celular), Liberar/Bloquear recusados com esse texto, pendências antigas canceladas e o cliente recusa qualquer método que não seja GET. Decisão de bloqueio sempre com leitura nova da posição (nunca a guardada) | `Rastreador_cfg_`, seção COMANDOS |
+| A API não informa quais aparelhos aceitam o corte: "Conferir comandos" virou "Marcar: usa o bloqueio" / "Marcar: só monitoramento" (gestão, depois do teste no pátio) | `Frota_apiRastreadorConferirComandos` |
+| KM: com `odometer`/`totalDistance`, KM digitado x hodômetro (20 km ou 5%); sem hodômetro, KM rodado digitado x distância do `/reports/summary` no período da retirada (o mais largo entre a hora digitada e a hora do registro, com 5 min de margem; o critério de 5% só conta acima de 2 km). Colunas novas `KM_RASTREADOR_RODADO` e `KM_RASTREADOR_OBS`; "KM a conferir" diz "distância medida pelo rastreador no período" | `Rastreador_conferirKmPorResumo_`, `Frota_kmAConferir_` |
+| Ponto de chegada na devolução (hora, endereço, mapa) na aba nova `REG_FROTA_RASTREADOR_PONTOS`; a gestão vê "Última chegada (devolução)" no painel | `Rastreador_gravarChegada_` |
+| LGPD: sem histórico de rota (última posição só no cache, 15 min); auditoria e avisos por e-mail/WhatsApp sem endereço nem mapa; limpeza diária pela rotina (mesmo com o rastreador desligado, sem chamar a iTracker): pontos mais velhos que o prazo apagados, local retirado dos alertas; só a gestão vê localização; o técnico não vê (nem na própria retirada) | `Rastreador_limparRetencao_` |
+| Ajuda (`frota/rastreador`, retirada/devolução, Chaves e senhas), manual dentro do módulo (seção 17) e `docs/MANUAL_MODULO_FROTA.md` | |
+
+## Testes
+
+- API falsa: `%TEMP%\sgo_rastreador2\h\itracker_falso.mjs` (Bearer, `/v1/devices`, `/v1/positions`, `/v1/reports/summary`, 401, 429 forçado com `Retry-After`, 2 por segundo, 30 s do `/positions`, 500/503, modo "com comandos" com `POST /v1/commands` e `/v1/devices/{id}/block|unblock`).
+- Cópia da base dev em `%TEMP%\sgo_rastreador2\pglite` (sem SMTP_SENHA nem chaves de WhatsApp; a cópia já não tinha), `SGO_ENSAIO=0`.
+- Bateria do legado (`zz.js`): 71 de 71, entre eles: desligado sem nenhuma chamada (inclusive a rotina como gatilho); Testar conexão; Chaves; 401; vínculo e sugestão; KM pelo hodômetro e pelo resumo; ponto de chegada; uso sem registro; 429/503/500/404; espaçamento; 30 s; somente leitura; modo com comandos (liberação, bloqueio pendente andando, ignição ligada, posição velha, engineStop parado, emergência, endereço com {deviceId}, chave própria dos comandos); retenção 90 e 7 dias; técnico sem localização; chave fora de tudo.
+- HTTP (servidor 8160, `SGO_AGENDADOR=0`): 14 de 14.
+- Playwright: computador 1440 (gestão somente leitura e com comandos; dono em Chaves e senhas; técnico) e iPhone 13 (gestão somente leitura e com comandos; técnico); sem rolagem lateral; único erro, o 404 do logo da base dev, que já existia.
+- `npx vitest run` no sgo_servidor: 110 de 110. Servidor e API falsa parados no fim.
+
+## Para ativar
+
+1. Gravar a "Chave de acesso (Bearer)" em Chaves e senhas > Rastreador da frota e clicar em "Testar conexão".
+2. Ligar "Rastreador ligado no SGO+", vincular os veículos na aba Rastreador e acompanhar uso sem registro e KM a conferir.
+3. Quando a iTracker liberar o acesso com comandos: preencher os dois endereços de comando (e a chave dos comandos, se for outra), testar "Bloquear agora" e "Liberar partida" com o veículo parado no pátio, marcar cada veículo "usa o bloqueio" e ligar "Bloqueio da partida pelo SGO+".

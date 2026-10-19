@@ -18,7 +18,7 @@
     "E-mail": { icone: "fa-envelope", teste: "email", obrig: [["SMTP_SENHA"]], resumo: "Envio dos avisos e documentos por e-mail (sistema@metrolabs.com.br)." },
     "WhatsApp oficial (Meta)": { icone: "fa-comment-dots", teste: "whatsapp", provedor: "meta", obrig: [["META_WA_TOKEN", "META_WA_PHONE_ID"]], resumo: "Avisos por WhatsApp pelo número oficial, com modelos aprovados pela Meta." },
     "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp por instância da Z-API (texto simples), alternativa à Meta." },
-    "Rastreador da frota": { icone: "fa-location-crosshairs", teste: "rastreador", obrig: [["RASTREADOR_TOKEN"], ["RASTREADOR_USUARIO", "RASTREADOR_SENHA"]], resumo: "Posição, hodômetro e bloqueio da partida dos veículos (iTracker)." },
+    "Rastreador da frota": { icone: "fa-location-crosshairs", teste: "rastreador", obrig: [["RASTREADOR_TOKEN"]], resumo: "Posição e KM dos veículos pela API da iTracker (hoje somente leitura). O bloqueio da partida depende de a iTracker liberar o acesso com comandos." },
     "Relatórios técnicos": { icone: "fa-file-shield", obrig: [["MODO_PERSONALIZADO_SENHA", "SIMULADOR_ADMIN_SENHA"]], resumo: "Senhas do Modo personalizado e do Simulador dos relatórios de qualificação." },
     "COMMAND": { icone: "fa-tower-broadcast", obrig: [["PONTE_COMMAND_SEGREDO"]], resumo: "Segredo da ponte entre o SGO+ e o COMMAND." }
   };
@@ -27,7 +27,7 @@
     auvo: "Entra na API do Auvo com a chave e o token gravados.",
     email: "Envia um e-mail de teste para o e-mail do seu usuário.",
     whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto simples.",
-    rastreador: "Entra na plataforma do rastreador e lista os dispositivos (número, nome e situação). Não envia comando e não mostra usuário, senha nem token."
+    rastreador: "Consulta a lista de veículos na iTracker (GET /devices) e mostra quantos encontrou, com número, nome e situação. Não envia comando e não mostra a chave."
   };
 
   function ChavesTela_esc_(v) { return CadUI_esc_(v); }

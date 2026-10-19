@@ -332,7 +332,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Aguarde o texto \"Testando…\" sumir.",
             "Leia o resultado: faixa verde começa com \"Funcionou\"; faixa vermelha começa com \"Não funcionou\" e diz o que fazer.",
             "O teste de e-mail envia uma mensagem para o e-mail do seu usuário. Confira também o lixo eletrônico.",
-            "O teste do rastreador lista os veículos encontrados. Ele não envia comando aos veículos."
+            "O teste do rastreador consulta a iTracker e mostra quantos veículos encontrou. Ele não envia comando aos veículos e não mostra a chave."
           ]
         },
         {
@@ -380,7 +380,8 @@ function SGO_ajudaTelas_Administracao_() {
         { p: "O teste usa o que eu digitei no campo?", r: "Não. O teste usa o valor gravado. Grave primeiro, depois teste." },
         { p: "O que acontece se eu apagar uma chave?", r: "O que depende dela para de funcionar até você gravar outra. O valor apagado não pode ser recuperado por esta tela." },
         { p: "Por que as integrações \"Relatórios técnicos\" e \"COMMAND\" não têm botão de teste?", r: "Essas chaves não têm teste nesta tela. Confira se aparecem como \"Configurada\" e use o recurso que depende delas para conferir." },
-        { p: "O rastreador precisa de usuário e senha e também do código de acesso?", r: "Não. Basta gravar o código de acesso do rastreador ou, no lugar dele, o usuário e a senha de integração." }
+        { p: "O que gravar no rastreador da frota?", r: "Só a \"Chave de acesso (Bearer)\" que a iTracker enviou. O endereço já vem preenchido. Os endereços dos comandos de bloqueio e liberação ficam vazios até a iTracker liberar o acesso com comandos; sem eles o SGO+ só monitora." },
+        { p: "Por quanto tempo a localização dos veículos fica guardada?", r: "Pelo número de dias de \"Rastreador: dias de guarda da localização\" (vazio = 90). Depois disso o SGO+ apaga sozinho." }
       ]
     },
 

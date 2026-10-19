@@ -257,7 +257,7 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | "Justificativa obrigatória" (gestão) | Escreva o motivo em "Justificativa", com pelo menos 15 letras |
 | "está no futuro" (gestão) | Corrija a data e a hora, ou deixe vazio para usar a hora atual |
 | "Anexe a foto ou o PDF do comprovante do abastecimento." | Anexe o comprovante e salve de novo |
-| "Partida não liberada pelo rastreador" | A retirada já está registrada. Ligue para a gestão (seção 17) |
+| "Partida não liberada pelo rastreador" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17) |
 | "Não foi possível carregar a frota agora" | Confira a internet e toque em "Tentar de novo" |
 | O consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período |
 
@@ -275,30 +275,41 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | Parada | Período em que o veículo ficou fora de uso |
 | Consumo (km/L) | Quantos quilômetros o veículo roda com 1 litro |
 | Cruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo |
-| Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada |
+| Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a iTracker liberar o acesso com comandos |
 | Uso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador |
 
-## 17. Rastreador: liberação e bloqueio da partida
+## 17. Rastreador: monitoramento, localização e bloqueio da partida
 
-> **Hoje o rastreador está desligado no SGO+.** Nada é liberado nem bloqueado pelo sistema, e a retirada e a devolução funcionam normalmente. A liberação e o bloqueio da partida só passam a valer quando a gestão ligar o rastreador e o bloqueio. A aba "Rastreador" mostra se está ligado ou desligado.
+> **Hoje o acesso da iTracker é somente leitura.** O SGO+ monitora os veículos (uso sem registro, KM e ponto de chegada), mas não bloqueia nem libera a partida. A retirada e a devolução funcionam normalmente. O bloqueio da partida depende de a iTracker liberar um acesso com comandos; a Metrolabs já vai pedir. A aba "Rastreador" mostra a situação.
 
-Quando estiver ligado, funciona assim:
+### O que o SGO+ faz com o rastreador
+
+- **Uso sem registro:** se o rastreador mostrar o veículo ligado ou andando sem retirada aberta, a gestão recebe um alerta vermelho com placa, hora e local. Descubra quem estava com o veículo. Se foi esquecimento, registre a retirada no lugar do condutor. Depois toque em "Conferido".
+- **KM:** quando o rastreador informa o hodômetro, o KM digitado é comparado com ele. Quando não informa, o KM rodado (chegada menos saída) é comparado com a distância que o rastreador mediu no período da retirada. Diferença acima de 20 km (ou de 5%) vai para "KM a conferir".
+- **Ponto de chegada:** na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, na aba "Rastreador".
+
+### Quando a iTracker liberar o acesso com comandos
+
+O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, os endereços do comando de bloqueio e de liberação e liga o "Bloqueio da partida pelo SGO+". A partir daí:
 
 - **Na retirada:** ao confirmar, o sistema libera a partida. Se aparecer "Partida não liberada pelo rastreador", a retirada já está registrada: não registre de novo. Ligue para a gestão. O sistema também tenta de novo sozinho.
 - **Na devolução:** o bloqueio só é enviado quando o veículo estiver parado e com a ignição desligada. Estacione e desligue normalmente.
 
-> **O veículo nunca é bloqueado em movimento.** Se o veículo estiver andando, com a ignição ligada, ou se a posição for antiga, o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.
+> **O veículo nunca é bloqueado em movimento.** Se o veículo estiver andando, com a ignição ligada, ou se a posição for antiga (mais de 30 minutos), o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.
 
 > **Emergência (a partida não liberou e você precisa sair):** ligue para a gestão. A gestão libera no computador (Frota > aba "Rastreador") ou no celular (Frota > "Opções da gestão" > "Partida do veículo (rastreador)"): escolhe o veículo, escreve a justificativa e toca em "Liberar partida". Também pode liberar pelo aplicativo do rastreador.
 
 ### Para a gestão (aba "Rastreador")
 
-1. Leia a caixa do topo: diz se o rastreador e o bloqueio estão ligados.
-2. Em "Vínculo veículo e dispositivo", escolha o aparelho de cada veículo e toque em "Gravar vínculo".
-3. Toque em "Conferir comandos" para saber se o aparelho aceita bloquear e liberar.
-4. Para liberar ou bloquear, escolha o veículo, escreva a justificativa (pelo menos 15 letras) e toque em "Liberar partida" ou "Bloquear agora".
-5. Para ler o rastreador na hora, toque em "Ler o rastreador agora".
+1. Leia a caixa do topo: diz se o rastreador está ligado e se o acesso é somente leitura.
+2. Em "Vínculo veículo e dispositivo", escolha o aparelho de cada veículo (a sugestão vem pela placa) e toque em "Gravar vínculo".
+3. Para ler o rastreador na hora, toque em "Ler o rastreador agora" (a iTracker aceita uma leitura a cada 30 segundos).
+4. Com o acesso com comandos: teste "Bloquear agora" e "Liberar partida" com o veículo parado no pátio e depois toque em "Marcar: usa o bloqueio". Para liberar ou bloquear, escolha o veículo, escreva a justificativa (pelo menos 15 letras) e toque no botão.
 
-> **Uso sem registro:** se o rastreador mostrar o veículo ligado ou andando sem retirada aberta, a gestão recebe um alerta vermelho com placa, hora e local. Descubra quem estava com o veículo. Se foi esquecimento, registre a retirada no lugar do condutor. Depois toque em "Conferido".
+### Localização e LGPD
 
-> **Hodômetro:** o KM digitado é comparado com o do rastreador. Diferença acima de 20 km (ou de 5%) vai para "KM a conferir".
+- A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.
+- O SGO+ não guarda histórico de rota. Fica só a última posição de cada veículo, por poucos minutos, o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.
+- Depois do prazo de guarda (padrão de 90 dias, ajustável em Chaves e senhas > "Rastreador: dias de guarda da localização"), a localização é apagada sozinha, uma vez por dia.
+- Só a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
+- Os avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.

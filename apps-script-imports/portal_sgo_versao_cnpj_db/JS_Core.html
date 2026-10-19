@@ -2894,7 +2894,9 @@
     mobileFrota_chamarApiSilencioso_("apiListarRastreador").then(function (r) {
       MOBILE_FROTA.rastreador = r;
       const est = document.getElementById("mob_frota_p_estado");
+      // 19/10/2026: acesso da iTracker somente leitura = sem liberar/bloquear; a tela mostra só a situação do veículo.
       if (est) est.innerHTML = !r.ligado ? '<div class="mobile-frota-alerta critico">Rastreador desligado no SGO+: nada é enviado por aqui. Em emergência, use o app da iTracker.</div>'
+        : r.somenteLeitura ? '<div class="mobile-frota-alerta aviso">' + escapeHtml_(r.textoSomenteLeitura || "") + '</div>'
         : (r.bloqueio ? 'O bloqueio só é enviado com o veículo parado e a ignição desligada; nunca em movimento.' : '<div class="mobile-frota-alerta aviso">Bloqueio desligado no SGO+: só monitoramento. "Liberar partida" continua disponível.</div>');
       const comDispositivo = (r.veiculos || []).filter(function (v) { return v.deviceId; });
       const sel = document.getElementById("mob_frota_p_veiculo");
@@ -2902,8 +2904,10 @@
         return '<option value="' + escapeHtml_(v.id) + '">' + escapeHtml_(v.placa + " — " + (v.modelo || "") + (v.situacao === "EM_USO" ? " (em uso)" : "")) + '</option>';
       }).join("");
       const bL = document.getElementById("mob_frota_p_liberar"), bB = document.getElementById("mob_frota_p_bloquear");
-      if (bL) bL.disabled = !r.ligado;
-      if (bB) bB.disabled = !r.ligado || !r.bloqueio;
+      if (bL) { bL.disabled = !r.ligado || !!r.somenteLeitura; bL.style.display = r.somenteLeitura ? "none" : ""; }
+      if (bB) { bB.disabled = !r.ligado || !r.bloqueio; bB.style.display = r.somenteLeitura ? "none" : ""; }
+      const jus = document.getElementById("mob_frota_p_justificativa");
+      if (jus && r.somenteLeitura) { const campo = jus.closest(".mobile-field") || jus.parentNode; if (campo) campo.style.display = "none"; }
     }).catch(function (err) { mobileFrotaErro_("mob_frota_p_status", err); });
   }
   function mobileFrotaPartidaMostrar_() {
