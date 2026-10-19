@@ -115,7 +115,7 @@ function CondutaExt_html_(x, comentario) {
   var c = [];
   if (!x.fechado) c.push(RelA4_caixa_('Apuração parcial: o mês de ' + RelA4_competencia_(x.competencia) + ' ainda não foi fechado. Os valores podem mudar até o fechamento.', 'aviso'));
   if (x.sombra) c.push(RelA4_caixa_('Período de teste: os valores são simulados e não autorizam pagamento.', 'aviso'));
-  var perfil = ({ ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico', METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro' })[String(x.colaborador.perfil || '').toUpperCase()] || x.colaborador.perfil;
+  var perfil = ({ ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico', METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', RH: 'RH' })[String(x.colaborador.perfil || '').toUpperCase()] || x.colaborador.perfil;
   c.push(RelA4_secao_('Identificação', RelA4_identificacao_([
     ['Colaborador', x.colaborador.nome], ['Perfil', perfil], ['Setor', x.colaborador.setor || '—'],
     ['Situação do mês', x.fechado ? 'Fechado em ' + RelA4_dataBr_(x.fechadoEm) : 'Em apuração']
@@ -148,8 +148,8 @@ function Conduta_apiGerarExtratoColaborador(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
   var alvo = String(payload.colaboradorId || '').trim() || String(sessao.userId);
-  if (alvo !== String(sessao.userId) && !isAdminSession(sessionId)) {
-    throw new Error('Você pode gerar só o seu próprio extrato. O extrato de outra pessoa fica com a gestão.');
+  if (alvo !== String(sessao.userId) && !Conduta_podeConsultarTodos_(sessionId)) {
+    throw new Error('Você pode gerar só o seu próprio extrato. O extrato de outra pessoa fica com a gestão e o RH.');
   }
   var competencia = Conduta_validarCompetencia_(payload.competencia);
   if (competencia > Conduta_competenciaDe_(Conduta_hojeISO_())) throw new Error('A competência escolhida ainda não começou. Escolha o mês atual ou um mês anterior.');

@@ -260,7 +260,7 @@ function Conduta_apiGerarRelatorioMissoes(sessionId, p) {
 }
 
 function Conduta_apiListarRelatoriosGerenciais(sessionId) {
-  Conduta_exigirEquipe_(sessionId); var adm = isAdminSession(sessionId);
+  Conduta_exigirEquipe_(sessionId); var adm = Conduta_podeConsultarTodos_(sessionId); // gestão ou RH
   var rows = SGO_DATA.getAll(CONDUTA_SHEETS.RELATORIO).filter(function (r) { return r.TIPO === 'SEMANAL' || (adm && r.TIPO === 'MISSOES'); }).map(function (r) {
     return { id: r.ID, tipo: r.TIPO, periodo: String(r.COMPETENCIA || ''), periodoLabel: CondutaRG_periodoLabel_(r.COMPETENCIA), geradoEm: Conduta_soData_(r.GERADO_EM), geradoEmLabel: CondutaRG_br_(r.GERADO_EM), criadoEm: String(r.CRIADO_EM || ''), tipoLabel: r.TIPO === 'SEMANAL' ? 'Semanal' : 'Missões' };
   });
@@ -274,7 +274,7 @@ function Conduta_apiListarRelatoriosGerenciais(sessionId) {
 function Conduta_apiObterRelatorioGerencial(sessionId, p) {
   Conduta_exigirEquipe_(sessionId);
   var r = SGO_DATA.getById(CONDUTA_SHEETS.RELATORIO, (p || {}).id);
-  if (!r || !(r.TIPO === 'SEMANAL' || (r.TIPO === 'MISSOES' && isAdminSession(sessionId)))) throw new Error('Relatório não encontrado ou de acesso restrito à gestão.');
+  if (!r || !(r.TIPO === 'SEMANAL' || (r.TIPO === 'MISSOES' && Conduta_podeConsultarTodos_(sessionId)))) throw new Error('Relatório não encontrado ou de acesso restrito à gestão.');
   var c;
   try { c = JSON.parse(r.CONTEXTO_JSON || ''); } catch (e) { throw new Error('Este relatório não tem os dados da geração guardados. Gere uma nova edição.'); }
   if ((r.TIPO === 'SEMANAL' && (!c.inicio || !c.fim || !Array.isArray(c.codigos) || !Array.isArray(c.reconhecimentos))) || (r.TIPO === 'MISSOES' && !Array.isArray(c.linhas))) throw new Error('Os dados guardados deste relatório estão incompletos. Gere uma nova edição.');

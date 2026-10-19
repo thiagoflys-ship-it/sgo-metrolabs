@@ -11,6 +11,7 @@
 function CronExec_apiDispatch(req) {
   req = req || {};
   var sessaoCron = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoCron, 'o Cronograma de execução'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   // Módulo interno da equipe técnica: o menu já esconde para o perfil
   // CLIENTE; aqui o servidor também recusa a chamada direta.
   if (String(sessaoCron && sessaoCron.perfil || '').toUpperCase() === 'CLIENTE') {

@@ -15,7 +15,7 @@
 
 var SGO_AJUDA_PERFIS = {
   ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico',
-  METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', CLIENTE: 'Cliente', TODOS: 'Todos'
+  METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', RH: 'RH', CLIENTE: 'Cliente', TODOS: 'Todos'
 };
 
 /** Nome de cada tela (igual ao menu), para o título quando a ajuda ainda não existe. */

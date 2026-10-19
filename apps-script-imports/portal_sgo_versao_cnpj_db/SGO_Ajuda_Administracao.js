@@ -9,9 +9,10 @@ function SGO_ajudaTelas_Administracao_() {
   return {
     "usuarios": {
       titulo: "Usuários",
-      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, a situação, o e-mail, o celular (WhatsApp) e o último acesso da pessoa.",
+      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT ou PJ), a situação, o e-mail, o celular (WhatsApp) e o último acesso da pessoa.",
       antesDeComecar: [
-        "Esta tela é usada pela gestão: Administrador, Gestor e Diretoria. Os demais perfis não veem o item \"Usuários\" no menu.",
+        "Esta tela é usada pela gestão: Administrador, Gestor e Diretoria. O perfil RH também abre a tela, só para consultar (sem criar nem alterar contas). Os demais perfis não veem o item \"Usuários\" no menu.",
+        "Vínculo de trabalho: mensagens do ponto só vão para quem é CLT. Quem é PJ ou está como \"Não informado\" não recebe mensagens do ponto; os outros avisos (WhatsApp e e-mail) chegam para todos, inclusive PJ.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
         "Para um usuário do perfil Cliente, a empresa dele precisa estar cadastrada e ativa em Clientes.",
@@ -23,7 +24,7 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "Toque em \"Usuários\" no menu, no grupo de administração.",
             "Outra forma: em \"Configurações\", no bloco \"Empresa e sistema\", toque em \"Usuários e perfis\".",
-            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\" e \"Nunca entraram\"."
+            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\" e \"Nunca entraram\"."
           ]
         },
         {
@@ -34,6 +35,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Toque de novo no mesmo número para desfazer o filtro.",
             "Use a lista \"Todos os perfis\" para ver só um perfil.",
             "Use a lista \"Todas as situações\" para ver só ativos ou só inativos.",
+            "Use a lista \"Todos os vínculos\" para ver só CLT, só PJ ou só quem está como \"Não informado\".",
             "Use a ordenação para escolher entre \"Ordenar por nome\" e \"Último acesso mais recente\".",
             "Toque em \"Limpar filtros\" para voltar à lista completa. Esse botão só aparece quando há filtro ativo."
           ]
@@ -46,7 +48,8 @@ function SGO_ajudaTelas_Administracao_() {
             "Preencha \"Login (nome de usuário)\" em letras minúsculas, sem espaço. Exemplo: joao.silva.",
             "Preencha \"E-mail\". O e-mail é obrigatório e recebe os avisos do sistema.",
             "Preencha \"Celular (WhatsApp)\" com DDD. O sistema coloca a máscara sozinho.",
-            "Escolha o \"Perfil de acesso\".",
+            "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ ou Não informado. Para Cliente, deixe \"Não informado\".",
+            "Escolha o \"Perfil de acesso\". Para quem cuida do RH, escolha \"RH\".",
             "Se escolheu o perfil Cliente, escolha a \"Empresa (cliente)\".",
             "Preencha a \"Senha inicial\" com pelo menos 6 caracteres.",
             "Toque em \"Cadastrar usuário\".",
@@ -57,7 +60,7 @@ function SGO_ajudaTelas_Administracao_() {
           titulo: "Ver os detalhes de uma conta",
           itens: [
             "Toque na linha do usuário (ou no cartão, no celular).",
-            "Confira no painel as seções \"Identificação\", \"Contato\" e \"Acesso\".",
+            "Confira no painel as seções \"Identificação\", \"Contato\", \"Trabalho\" (vínculo de trabalho) e \"Acesso\".",
             "Em \"Acesso\", confira o perfil, a empresa (se for Cliente), o último acesso e a data do cadastro.",
             "Para fechar, toque fora do painel ou aperte a tecla Esc. No celular, toque em Voltar."
           ]
@@ -66,7 +69,7 @@ function SGO_ajudaTelas_Administracao_() {
           titulo: "Editar uma conta",
           itens: [
             "Toque em \"Editar\" na linha do usuário ou no rodapé do painel de detalhe.",
-            "Altere só o que precisa.",
+            "Altere só o que precisa. Os campos que você não mexer ficam como estavam (o vínculo de trabalho também).",
             "Toque em \"Salvar alterações\".",
             "Se mudou o perfil, avise a pessoa: o perfil novo vale em até 5 minutos ou no próximo login.",
             "Para desistir, toque em \"Cancelar\". Se já digitou algo, o sistema pergunta se quer fechar sem salvar."
@@ -107,6 +110,9 @@ function SGO_ajudaTelas_Administracao_() {
         { nome: "Selo cinza \"Inativo\"", significado: "O acesso está bloqueado. A conta e o histórico continuam guardados. Para liberar, use \"Mais\" e \"Reativar (liberar o acesso)\"." },
         { nome: "Selo azul \"Você\"", significado: "É a sua própria conta. Você não pode inativar nem excluir a si mesmo." },
         { nome: "Selo amarelo \"Sem celular\"", significado: "A pessoa não tem celular cadastrado. Ela não recebe avisos por WhatsApp e não usa o Assistente do ponto do COMMAND. Toque em \"Editar\" e informe o celular com DDD." },
+        { nome: "Selo azul \"CLT\" ou \"PJ\" na coluna Vínculo", significado: "Vínculo de trabalho informado. Só quem é CLT recebe as mensagens do ponto." },
+        { nome: "\"Não informado\" na coluna Vínculo", significado: "Ninguém informou se a pessoa é CLT ou PJ. Ela não recebe mensagens do ponto até a gestão escolher o vínculo em \"Editar\"." },
+        { nome: "Número amarelo \"Sem vínculo (ativos)\" no resumo", significado: "Quantas contas ativas da equipe estão sem CLT ou PJ. Toque no número para ver quais são." },
         { nome: "Selo amarelo \"Sem e-mail\"", significado: "A conta não tem e-mail. O e-mail é obrigatório: toque em \"Editar\" e preencha." },
         { nome: "\"Não informado\" no celular de um usuário Cliente", significado: "O celular é opcional para o perfil Cliente. Por isso não aparece em destaque." },
         { nome: "\"Nunca entrou\" no último acesso", significado: "Não há registro de entrada recente desta conta. Confira se a pessoa recebeu o login e a senha." },
@@ -133,6 +139,8 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "Aparece \"Único Administrador ativo: cadastre ou reative outro antes.\"", oQueFazer: "O sistema não pode ficar sem Administrador ativo. Cadastre ou reative outro Administrador e depois repita a ação." },
         { situacao: "Aparece \"Você não pode inativar nem excluir a sua própria conta.\"", oQueFazer: "Peça a outra pessoa da gestão para fazer isso na sua conta." },
         { situacao: "Aparece \"Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista.\"", oQueFazer: "Outra pessoa mexeu na conta ao mesmo tempo. Saia e entre de novo na tela \"Usuários\" e confira." },
+        { situacao: "Aparece \"Vínculo de trabalho inválido: escolha CLT, PJ ou Não informado.\"", oQueFazer: "Escolha uma das três opções da lista \"Vínculo de trabalho\" e salve de novo." },
+        { situacao: "Sou do RH e não vejo \"Novo usuário\", \"Editar\" nem \"Mais\"", oQueFazer: "O perfil RH só consulta a lista. Para criar uma conta, trocar o perfil, o vínculo ou a senha, peça a um Administrador, Gestor ou Diretoria." },
         { situacao: "A tela mostra \"A gestão de usuários é feita pelos perfis Administrador, Gestor e Diretoria.\"", oQueFazer: "O seu perfil não gerencia contas. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um Administrador, Gestor ou Diretoria." },
         { situacao: "A lista de empresas aparece como \"A lista de clientes não carregou\"", oQueFazer: "Verifique a conexão, feche o formulário e abra de novo." },
         { situacao: "A pessoa inativada ainda está usando o sistema", oQueFazer: "Aguarde até 5 minutos. A sessão aberta dela é encerrada nesse prazo." }
@@ -140,6 +148,7 @@ function SGO_ajudaTelas_Administracao_() {
       quemPode: [
         { perfil: "ADMIN", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir qualquer conta, inclusive de Administrador. Dar o perfil Administrador." },
         { perfil: "GESTOR,DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir contas que não sejam de Administrador. Não dão o perfil Administrador." },
+        { perfil: "RH", pode: "Consultar a lista, os filtros e o detalhe de cada conta (vínculo de trabalho, celular, e-mail, situação e último acesso). Não cria, não edita, não redefine senha, não inativa e não exclui." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão." },
         { perfil: "CLIENTE", pode: "Não usa esta tela. Para acesso de mais alguém da sua empresa, peça à Metrolabs." },
         { perfil: "TODOS", pode: "Ninguém inativa ou exclui a própria conta. O sistema nunca fica sem um Administrador ativo." }
@@ -232,6 +241,7 @@ function SGO_ajudaTelas_Administracao_() {
         { perfil: "ADMIN", pode: "Usar todos os blocos, inclusive \"Alertas de calibração\"." },
         { perfil: "GESTOR,DIRETORIA", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar os atalhos para Usuários e Padrões." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar o atalho para Padrões." },
+        { perfil: "RH", pode: "Não usa esta tela: o item \"Configurações\" não aparece no menu do RH." },
         { perfil: "CLIENTE", pode: "Não vê o grupo de administração no menu." },
         { perfil: "TODOS", pode: "O atalho \"Chaves e senhas das integrações\" só aparece para o responsável pelo sistema." }
       ],

@@ -42,7 +42,7 @@ function Conduta_apiListarAusencias(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
   // 2026-10-15 (auditoria): férias/afastamentos de todos ficam com a gestão; cada um vê os próprios.
-  var gestor = isAdminSession(sessionId);
+  var gestor = Conduta_podeConsultarTodos_(sessionId); // gestão ou RH (consulta)
   return Conduta_ativos_(CONDUTA_SHEETS.AUSENCIA).filter(function (a) {
     if (!gestor && String(a.COLABORADOR_ID) !== String(sessao.userId)) return false;
     if (payload.colaboradorId && String(a.COLABORADOR_ID) !== String(payload.colaboradorId)) return false;

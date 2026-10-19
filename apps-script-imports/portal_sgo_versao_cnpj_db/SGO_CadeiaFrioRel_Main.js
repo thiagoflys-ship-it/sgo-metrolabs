@@ -39,7 +39,8 @@ function CadeiaFrioRel_cfObterPastaPersistente_(propKey, nomePasta) {
  */
 function CadeiaFrioRel_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoDispatchRH = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Cadeia de frio'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
 
   const fn = String(req.fn || '').trim();
   const payload = req.payload || {};

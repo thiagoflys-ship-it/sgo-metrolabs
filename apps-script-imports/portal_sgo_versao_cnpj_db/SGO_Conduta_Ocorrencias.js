@@ -124,6 +124,15 @@ function Conduta_exigirEquipe_(sessionId) {
   return sessao;
 }
 
+// Consulta de todos (19/10/2026): gestão (isAdminSession) e o perfil RH. Só LEITURA:
+// ocorrências, missões, ausências, fechamentos, relatórios e extratos de qualquer pessoa.
+// Homologar, julgar, decidir missão, registrar ausência e fechar o mês continuam em
+// Conduta_exigirGestor_ (o RH não faz). Ver SGO_Auth.js › SGO_podeConsultarPessoas_.
+function Conduta_podeConsultarTodos_(sessionId) {
+  if (isAdminSession(sessionId)) return true;
+  try { var s = exigirSessao(sessionId); return typeof SGO_ehPerfilRH_ === 'function' && SGO_ehPerfilRH_(s && s.perfil); } catch (e) { return false; }
+}
+
 function Conduta_exigirGestor_(sessionId) {
   if (!isAdminSession(sessionId)) throw new Error('Acesso restrito a Gestor/Administrador/Diretoria.');
   return exigirSessao(sessionId);
@@ -400,7 +409,9 @@ function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
 function Conduta_apiListarOcorrencias(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
-  var somenteMinhas = !isAdminSession(sessionId); // não-gestor só vê as próprias (fiscal ou envolvido)
+  // não-gestor só vê as próprias (fiscal ou envolvido); o RH consulta todas, sem homologar nem julgar
+  var podeDecidir = isAdminSession(sessionId);
+  var somenteMinhas = !podeDecidir && !Conduta_podeConsultarTodos_(sessionId);
 
   // CORREÇÃO 2026-09-24: a tela decidia às cegas. Quem homologava via só
   // "M03 · 24/09 · REGISTRADA" -- sem saber DE QUEM era, O QUE tinha
@@ -440,12 +451,12 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     o.HOMOLOGADA_EM = Conduta_soData_(o.HOMOLOGADA_EM);
     o.SOU_O_FISCAL = String(o.FISCAL_ID) === String(sessao.userId);
     o.SOU_O_COLABORADOR = String(o.COLABORADOR_ID) === String(sessao.userId);
-    o.PODE_HOMOLOGAR = !somenteMinhas && !o.SOU_O_FISCAL;
+    o.PODE_HOMOLOGAR = podeDecidir && !o.SOU_O_FISCAL;
     // Julgar tem a MESMA regra da homologação (gestor e não ser o fiscal):
     // antes a tela oferecia "Julgar" a todo mundo e o erro só aparecia depois
     // de escrever a fundamentação -- inclusive para o colaborador que tinha
     // acabado de contestar, que acreditava poder se absolver.
-    o.PODE_JULGAR = !somenteMinhas && !o.SOU_O_FISCAL;
+    o.PODE_JULGAR = podeDecidir && !o.SOU_O_FISCAL;
     // Contestar/recorrer são do ACUSADO (ou da gestão em nome dele), e só
     // dentro do prazo -- o servidor já recusava fora disso, mas a tela nunca
     // mostrava a data limite, então a pessoa descobria que perdeu o prazo
@@ -457,8 +468,8 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     // servidor recusava) — cada ocorrência tem um recurso só. E só oferece cada
     // ação no status em que ela é aceita.
     var statusO = SGO_UTILS.safeUpper(o.STATUS);
-    o.PODE_CONTESTAR = statusO === 'HOMOLOGADA' && (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_CONTESTACAO_VENCIDO;
-    o.PODE_RECORRER = statusO === 'FIRME' && !Conduta_soData_(o.RECURSO_EM) && (o.SOU_O_COLABORADOR || !somenteMinhas) && !o.PRAZO_RECURSO_VENCIDO;
+    o.PODE_CONTESTAR = statusO === 'HOMOLOGADA' && (o.SOU_O_COLABORADOR || podeDecidir) && !o.PRAZO_CONTESTACAO_VENCIDO;
+    o.PODE_RECORRER = statusO === 'FIRME' && !Conduta_soData_(o.RECURSO_EM) && (o.SOU_O_COLABORADOR || podeDecidir) && !o.PRAZO_RECURSO_VENCIDO;
     // Contexto para quem decide (e para quem se defende saber do que é acusado)
     var d = descricoes[SGO_UTILS.safeUpper(o.TIPO_CODIGO)] || {};
     o.COLABORADOR_NOME = nomes[String(o.COLABORADOR_ID)] || o.COLABORADOR_ID || '';

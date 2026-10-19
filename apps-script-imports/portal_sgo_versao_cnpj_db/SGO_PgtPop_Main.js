@@ -26,6 +26,7 @@
 function PgtPop_apiDispatch(req) {
   req = req || {};
   var sessaoPgtPop = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoPgtPop, 'o módulo PGT e POP'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   // (2026-10-16) Módulo interno da equipe: o perfil CLIENTE só tinha o menu
   // escondido no navegador, mas chamando a API listava documentos de qualquer
   // CNPJ (de outros clientes) e podia gerar documentos.

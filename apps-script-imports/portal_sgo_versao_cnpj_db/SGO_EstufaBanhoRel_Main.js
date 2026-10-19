@@ -33,7 +33,8 @@ function EstufaBanhoRel_ebObterPastaPersistente_(propKey, nomePasta) {
  */
 function EstufaBanhoRel_apiDispatch(req) {
   req = req || {};
-  exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  var sessaoDispatchRH = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Estufa, banho-maria e secadora'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   const fn = String(req.fn || '').trim();
   const payload = req.payload || {};
   const allow = {

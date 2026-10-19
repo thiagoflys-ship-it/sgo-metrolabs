@@ -86,12 +86,14 @@ function Avisos_sessao_(sessionId) {
   Avisos_garantirAbas_();
   return {
     id: SGO_UTILS.safe(s.userId), usuario: SGO_UTILS.safe(s.usuario),
-    nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario), perfil: perfil, gestor: isAdminPerfilAuth_(perfil)
+    nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario), perfil: perfil,
+    // Publicar comunicados: gestão e, desde 19/10/2026, o perfil RH (comunicados de RH; ver SGO_Auth.js).
+    gestor: isAdminPerfilAuth_(perfil) || (typeof SGO_ehPerfilRH_ === 'function' && SGO_ehPerfilRH_(perfil))
   };
 }
 
 function Avisos_exigirGestor_(eu, acao) {
-  if (!eu.gestor) throw new Error('Não foi possível ' + acao + ': esta ação é só para os perfis Gestor, Admin e Diretoria. Se precisar publicar um aviso, peça a um gestor.');
+  if (!eu.gestor) throw new Error('Não foi possível ' + acao + ': esta ação é só para os perfis Gestor, Admin, Diretoria e RH. Se precisar publicar um aviso, peça a um gestor ou ao RH.');
 }
 
 function Avisos_agora_() {

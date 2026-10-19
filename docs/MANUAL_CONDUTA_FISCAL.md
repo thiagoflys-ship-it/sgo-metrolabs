@@ -6,6 +6,8 @@ Registro com evidência, homologação, julgamento, missões, ausências, fecham
 
 Gestão, neste programa, é Administrador, Gestor e Diretoria. A gestão faz tudo o que a equipe faz e mais as decisões. Leia também o Manual do colaborador.
 
+Perfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausências, os meses fechados, os relatórios e os extratos. O RH registra ocorrência como qualquer colaborador, mas não homologa, não julga, não aprova nem recusa missão, não registra ausência e não fecha o mês: essas decisões continuam com a gestão. (19/10/2026)
+
 > Regra de ouro: quem registrou a ocorrência e quem é o envolvido nunca decidem sobre ela. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer.
 
 ## 1. Qual aba usar

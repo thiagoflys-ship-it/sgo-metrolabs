@@ -17,6 +17,7 @@ Apenas administradores ou pessoas autorizadas pela diretoria/suporte. Usuário c
 - `Cliente vinculado`: usado quando o usuário deve ver somente dados de um cliente.
 - `Status`: ativo ou inativo.
 - `E-mail` e `Telefone`: contato do usuário.
+- `Vínculo de trabalho` (19/10/2026): CLT, PJ ou Não informado. Mensagens do ponto só vão para quem é CLT; PJ e Não informado não recebem (o envio pulado fica registrado com o motivo). Os outros avisos chegam para todos, inclusive PJ. A lista de Usuários mostra a coluna Vínculo, o filtro "Todos os vínculos" e o número "Sem vínculo (ativos)". Editar outro campo nunca apaga o vínculo.
 
 ## Perfis mais comuns
 
@@ -24,6 +25,7 @@ Apenas administradores ou pessoas autorizadas pela diretoria/suporte. Usuário c
 - `Operacional`: usa cadastros e rotinas do dia a dia.
 - `Técnico`: usa módulos técnicos e relatórios.
 - `Cliente`: acesso limitado aos dados do proprio cliente, quando configurado.
+- `RH` (19/10/2026): vê o que um colaborador vê (Início, Minhas atividades, Avisos, Frota e o próprio farol), publica avisos (comunicados de RH), consulta o Programa de conduta de toda a equipe (sem homologar, julgar ou fechar o mês) e consulta a lista de Usuários (sem criar, editar ou excluir contas). Não acessa Chaves e senhas, Configurações, emissão de certificados, laudos e documentos técnicos, cadastros técnicos, Auvo, Painel de qualidade nem o Comercial.
 
 Os nomes podem variar, mas a regra e a mesma: perfil define permissão.
 

@@ -216,7 +216,8 @@ function Conduta_notificarMissao_(registro, sessao, execs, qualifica, kmMinimo) 
 function Conduta_apiListarMissoes(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
   payload = payload || {};
-  var somenteMinhas = !isAdminSession(sessionId);
+  var somenteMinhas = !Conduta_podeConsultarTodos_(sessionId); // gestão ou RH veem todas
+  var podeDecidirMissao = isAdminSession(sessionId); // aprovar/recusar: só a gestão (o RH só consulta)
   var nomes = Object.create(null);
   SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function(u){nomes[String(u.ID)] = String(u.NOME || '').trim();});
 
@@ -240,7 +241,7 @@ function Conduta_apiListarMissoes(sessionId, payload) {
     item.REGISTRADO_POR_NOME = nomes[String(m.REGISTRADO_POR)] || '';
     item.CONTA_INCENTIVO = item.QUALIFICA && Conduta_missaoAprovada_(m);
     // gestão decide, exceto quem é executante da própria missão
-    item.PODE_DECIDIR = !somenteMinhas && item.APROVACAO === 'PENDENTE' && String(m.EXECUTANTE_1_ID) !== String(sessao.userId) && String(m.EXECUTANTE_2_ID) !== String(sessao.userId);
+    item.PODE_DECIDIR = podeDecidirMissao && item.APROVACAO === 'PENDENTE' && String(m.EXECUTANTE_1_ID) !== String(sessao.userId) && String(m.EXECUTANTE_2_ID) !== String(sessao.userId);
     return item;
   }).sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); });
 }

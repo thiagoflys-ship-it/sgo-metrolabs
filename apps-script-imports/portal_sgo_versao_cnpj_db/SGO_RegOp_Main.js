@@ -6,6 +6,7 @@
 function RegOp_apiDispatch(req) {
   req = req || {};
   var sessaoRegOp = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoRegOp, 'os Registros operacionais'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   // Módulo interno da equipe técnica: o menu já esconde para o perfil
   // CLIENTE; aqui o servidor também recusa a chamada direta (a consulta
   // por CNPJ listaria registros e PDFs de qualquer hospital).

@@ -211,7 +211,7 @@ function Conduta_apiObterFechamento(sessionId, payload) {
   payload = payload || {};
   // 2026-10-15 (auditoria): o resultado individual de todos fica com a gestão;
   // cada pessoa da equipe vê só a própria linha.
-  var gestorF = isAdminSession(sessionId);
+  var gestorF = Conduta_podeConsultarTodos_(sessionId); // gestão ou RH (consulta)
   var fechamento = SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO)
     .find(function (f) { return Conduta_soComp_(f.COMPETENCIA) === Conduta_soComp_(payload.competencia); });
   if (!fechamento) return null;

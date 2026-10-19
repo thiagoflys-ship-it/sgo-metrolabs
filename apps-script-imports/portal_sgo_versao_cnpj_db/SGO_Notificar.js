@@ -18,6 +18,11 @@
  *             do PULADO ("Sem e-mail no cadastro do <cadastro>"); 'motivo' preenchido = pula
  *             e registra esse motivo.
  *     semLink: true — não põe o endereço do SGO+ no e-mail/WhatsApp (destinatário externo).
+ *     categoria: 'PONTO' — opcional (19/10/2026). Mensagem do ponto (marcação, banco de horas,
+ *             espelho) só vai para quem tem CAD_USUARIOS.VINCULO_TRABALHO = "CLT". PJ e vínculo
+ *             vazio (e contato externo, que não tem vínculo) ficam PULADO em NTF_ENVIOS com o
+ *             motivo. Sem categoria (ou qualquer outra) a mensagem vai para todos, inclusive PJ.
+ *             Hoje o SGO+ não manda mensagem de ponto: é proteção para o futuro.
  *   })
  *
  * Canais:
@@ -110,7 +115,9 @@ function Notificar_contatos_(ids) {
       ativo: SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO',
       // CELULAR do cadastro de usuários vem PRIMEIRO; se vazio/inválido, tenta
       // WHATSAPP/TELEFONE e, por fim, Condutor (Frota) e Técnico (abaixo).
-      telefone: Notificar_normalizarTelefone_(u.CELULAR) || Notificar_normalizarTelefone_(u.WHATSAPP) || Notificar_normalizarTelefone_(u.TELEFONE)
+      telefone: Notificar_normalizarTelefone_(u.CELULAR) || Notificar_normalizarTelefone_(u.WHATSAPP) || Notificar_normalizarTelefone_(u.TELEFONE),
+      // Vínculo de trabalho (Usuários): "CLT", "PJ" ou "" — usado pela categoria PONTO.
+      vinculo: String(u.VINCULO_TRABALHO || '').replace(/\s+/g, '').toUpperCase()
     };
   });
   var completar = function (aba) {
@@ -392,6 +399,20 @@ function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros) {
  * Envia a notificação pelos canais pedidos. Devolve { ok, erro, pulado } (contagens).
  * Nunca lança erro.
  */
+/**
+ * Categoria PONTO (19/10/2026): devolve o motivo para NÃO enviar, ou '' quando pode enviar.
+ * Só a categoria PONTO tem restrição; ela vale para todos os canais.
+ */
+var NTF_MOTIVO_PONTO_PJ = 'PJ: mensagens do ponto não são enviadas';
+var NTF_MOTIVO_PONTO_SEM_VINCULO = 'vínculo de trabalho não informado';
+function Notificar_motivoCategoria_(categoria, contato) {
+  if (String(categoria || '').trim().toUpperCase() !== 'PONTO') return '';
+  var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
+  if (v === 'CLT') return '';
+  if (v === 'PJ') return NTF_MOTIVO_PONTO_PJ;
+  return NTF_MOTIVO_PONTO_SEM_VINCULO;
+}
+
 function SGO_notificar_(opcoes) {
   var resumo = { ok: 0, erro: 0, pulado: 0 };
   try {
@@ -415,6 +436,7 @@ function SGO_notificar_(opcoes) {
     var texto = String(o.texto || '').trim();
     var link = o.semLink ? '' : (o.link === undefined || o.link === null || o.link === '' ? Notificar_linkSgo_() : String(o.link));
     var origem = String(o.origem || '').slice(0, 40), refId = String(o.refId || '').slice(0, 80);
+    var categoria = String(o.categoria || '').trim().toUpperCase();
     var contatos = Notificar_contatos_(ids);
     contatosFora.forEach(function (e) {
       contatos[e.k] = {
@@ -475,6 +497,8 @@ function SGO_notificar_(opcoes) {
           if (!c) { registrar(uid, '', canal, '', 'PULADO', 'Usuário não encontrado no cadastro.'); return; }
           if (!c.ativo) { registrar(uid, c.nome, canal, '', 'PULADO', 'Usuário inativo.'); return; }
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
+          var barradoCategoria = Notificar_motivoCategoria_(categoria, c);
+          if (barradoCategoria) { registrar(uid, c.nome, canal, '', 'PULADO', barradoCategoria); return; }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;
           if (jaFoi) { registrar(uid, c.nome, canal, canal === 'email' ? c.email : c.telefone, 'PULADO', 'Mesma mensagem já enviada a esta pessoa por este canal às ' + String(jaFoi).split('|')[0] + ' (origem ' + (String(jaFoi).split('|')[1] || 'SGO+') + '); não foi repetida.'); return; }
           // reserva antes de enviar (dois caminhos ao mesmo tempo não enviam os dois); falhou = libera

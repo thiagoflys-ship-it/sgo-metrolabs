@@ -11,21 +11,44 @@ const SGO_USUARIOS = (() => {
     }
   }
 
+  // Consulta da lista (19/10/2026): a gestão e o perfil RH (para conferir o
+  // vínculo de trabalho e o celular). Criar, editar, redefinir senha, inativar,
+  // reativar e excluir continuam em verificarPermissaoAdmin_ (só a gestão).
+  function verificarPermissaoConsulta_(sessao) {
+    const perfil = SGO_UTILS.safeUpper(sessao.perfil);
+    if (perfil !== "ADMIN" && perfil !== "GESTOR" && perfil !== "DIRETORIA" && perfil !== "RH") {
+      throw new Error("Acesso negado: a lista de usuários é consultada pelos perfis Administrador, Gestor, Diretoria e RH.");
+    }
+  }
+
+  // VINCULO_TRABALHO (19/10/2026): "CLT", "PJ" ou vazio (não informado).
+  // O COMMAND lê esta coluna do CAD_USUARIOS pelo mesmo caminho do CELULAR
+  // (cmdSgoUsuarios_ em Sgo.js): não mudar o nome. As mensagens da categoria
+  // PONTO (SGO_notificar_) só vão para quem é CLT.
+  const VINCULOS_TRABALHO = ["CLT", "PJ"];
+  function normalizarVinculo_(v) {
+    const t = SGO_UTILS.safeUpper(v).replace(/\s+/g, "");
+    if (!t || t === "NAOINFORMADO" || t === "NÃOINFORMADO") return "";
+    return VINCULOS_TRABALHO.indexOf(t) >= 0 ? t : null;
+  }
+
   // CELULAR (WhatsApp) — 2026-10-16. Coluna garantida como as dos outros
   // módulos; formato texto para o "55..." não virar número na planilha.
   // Cache de 6 h: forçar formato a cada chamada já derrubou a Frota.
   function garantirColunaCelular_() {
     try {
       const cache = CacheService.getScriptCache();
-      if (cache.get("USR_CELULAR_OK_V2")) return;
+      if (cache.get("USR_CELULAR_OK_V3")) return;
       // EMAIL também: o cadastro exige e-mail, mas a coluna só nascia quando a
       // integração Auvo rodava — sem ela o e-mail era descartado em silêncio e
       // toda edição seguinte falhava com "E-mail é obrigatório".
       CertCal_garantirColuna_(SHEET_NAME, "EMAIL");
       CertCal_garantirColuna_(SHEET_NAME, "CELULAR");
       CertCal_forcarColunaTexto_(SHEET_NAME, "CELULAR");
+      // Vínculo de trabalho (19/10/2026): acrescenta a coluna no fim, sem apagar nada.
+      CertCal_garantirColuna_(SHEET_NAME, "VINCULO_TRABALHO");
       SGO_DATA._headersCache = {}; SGO_DATA._headerMapCache = {};
-      cache.put("USR_CELULAR_OK_V2", "1", 21600);
+      cache.put("USR_CELULAR_OK_V3", "1", 21600);
     } catch (e) {
       console.warn("Não foi possível garantir a coluna CELULAR: " + e.message);
     }
@@ -43,7 +66,7 @@ const SGO_USUARIOS = (() => {
 
   function listar(sessionId) {
     const sessao = exigirSessao(sessionId);
-    verificarPermissaoAdmin_(sessao);
+    verificarPermissaoConsulta_(sessao);
     garantirColunaCelular_();
 
     const registros = SGO_DATA.getAll(SHEET_NAME);
@@ -79,7 +102,7 @@ const SGO_USUARIOS = (() => {
 
   function obter(sessionId, id) {
     const sessao = exigirSessao(sessionId);
-    verificarPermissaoAdmin_(sessao);
+    verificarPermissaoConsulta_(sessao);
 
     const usuarioId = SGO_UTILS.safe(id);
 
@@ -159,6 +182,7 @@ const SGO_USUARIOS = (() => {
         CLIENTE_ID: dados.PERFIL === "CLIENTE" ? dados.CLIENTE_ID : "",
         EMAIL: dados.EMAIL,
         CELULAR: dados.CELULAR || "",
+        VINCULO_TRABALHO: dados.VINCULO_TRABALHO || "",
         STATUS: STATUS_ATIVO
       })
     );
@@ -198,6 +222,7 @@ const SGO_USUARIOS = (() => {
     dados.EMAIL = SGO_UTILS.safeLower(dados.EMAIL);
     dados.SENHA = normal.SENHA;
     dados.CELULAR = normal.CELULAR;
+    dados.VINCULO_TRABALHO = normal.VINCULO_TRABALHO;
     const erros = validarPayload_(dados, true);
 
     if (erros.length) {
@@ -230,6 +255,8 @@ const SGO_USUARIOS = (() => {
       CLIENTE_ID: dados.PERFIL === "CLIENTE" ? dados.CLIENTE_ID : "",
       EMAIL: dados.EMAIL,
       CELULAR: dados.CELULAR === undefined ? SGO_UTILS.safe(atual.CELULAR) : dados.CELULAR,
+      // Sem a chave no pedido (redefinir senha, por exemplo) o vínculo fica como está.
+      VINCULO_TRABALHO: dados.VINCULO_TRABALHO === undefined ? SGO_UTILS.safeUpper(atual.VINCULO_TRABALHO) : dados.VINCULO_TRABALHO,
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
@@ -318,7 +345,8 @@ const SGO_USUARIOS = (() => {
 
   function pesquisar(sessionId, termo) {
     const sessao = exigirSessao(sessionId);
-    verificarPermissaoAdmin_(sessao);
+    verificarPermissaoConsulta_(sessao);
+    garantirColunaCelular_();
 
     const q = SGO_UTILS.safeLower(termo);
     const registros = SGO_DATA.getAll(SHEET_NAME);
@@ -332,7 +360,7 @@ const SGO_USUARIOS = (() => {
     if (!q) return { success: true, items: base, total: base.length };
 
     const filtrados = base.filter(function (r) {
-      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR].some(v => SGO_UTILS.safeLower(v).includes(q));
+      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR, r.VINCULO_TRABALHO].some(v => SGO_UTILS.safeLower(v).includes(q));
     });
 
     return { success: true, items: filtrados, total: filtrados.length };
@@ -362,7 +390,9 @@ const SGO_USUARIOS = (() => {
       CLIENTE_ID: SGO_UTILS.safe(payload.CLIENTE_ID),
       EMAIL: SGO_UTILS.safeLower(payload.EMAIL).trim(),
       // Sem a chave CELULAR no pedido = "não mexer" (undefined), não "apagar".
-      CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined
+      CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined,
+      // Mesma regra: sem a chave = não mexer; "" = não informado; null = valor inválido.
+      VINCULO_TRABALHO: Object.prototype.hasOwnProperty.call(payload, "VINCULO_TRABALHO") ? normalizarVinculo_(payload.VINCULO_TRABALHO) : undefined
     };
   }
 
@@ -381,6 +411,9 @@ const SGO_USUARIOS = (() => {
       erros.push("E-mail é obrigatório — usado como identidade do usuário no Portal.");
     } else if (dados.EMAIL.indexOf("@") === -1 || dados.EMAIL.indexOf(".") === -1) {
       erros.push("E-mail inválido.");
+    }
+    if (dados.VINCULO_TRABALHO === null) {
+      erros.push("Vínculo de trabalho inválido: escolha CLT, PJ ou Não informado.");
     }
     if (dados.CELULAR === null) {
       erros.push("Não foi possível aceitar o celular: informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
@@ -421,8 +454,9 @@ function usuariosListarClientesAtivos(sessionId) { try { return JSON.parse(JSON.
 /* =========================
    CADASTROS E ADMINISTRAÇÃO 17/10 — tela Usuários
    Lista com perfil, situação, e-mail, celular (WhatsApp) e último acesso.
-   Só leitura: a permissão é a mesma da lista (Administrador, Gestor e
-   Diretoria, conferida em SGO_USUARIOS.pesquisar); a senha nunca sai daqui.
+   Só leitura: a permissão é a mesma da lista (Administrador, Gestor,
+   Diretoria e RH, conferida em SGO_USUARIOS.pesquisar); a senha nunca sai daqui.
+   O RH só consulta (podeGerir falso): nada de criar, editar ou excluir.
    Último acesso: o LOGIN_OK mais recente de cada login nas últimas 40 mil
    linhas do SYS_LOGS (lido do fim, guardado 60 s).
 ========================= */
@@ -455,6 +489,8 @@ function usuariosPainel(sessionId) {
     var base = SGO_USUARIOS.pesquisar(sessionId, "");
     if (!base || !base.success) return base || { success: false, message: "Não foi possível carregar os usuários." };
     var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
+    // Perfil RH só consulta (19/10/2026): a tela esconde Novo usuário, Editar e Mais.
+    var podeGerir = isAdminPerfilAuth_(sessao.perfil);
     var acessos = Usuarios_ultimosAcessos_();
     var clientes = {};
     try { SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[SGO_UTILS.safe(c.ID)] = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL); }); } catch (e) {}
@@ -468,7 +504,8 @@ function usuariosPainel(sessionId) {
       o.SEM_CELULAR = !String(u.CELULAR || "").replace(/\D/g, "");
       o.EU = SGO_UTILS.safe(u.ID) === SGO_UTILS.safe(sessao.userId);
       // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
-      o.PODE_ALTERAR = souAdmin || perfil !== "ADMIN";
+      o.PODE_ALTERAR = podeGerir && (souAdmin || perfil !== "ADMIN");
+      o.VINCULO_TRABALHO = SGO_UTILS.safeUpper(u.VINCULO_TRABALHO);
       o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
       return o;
     });
@@ -476,7 +513,7 @@ function usuariosPainel(sessionId) {
       var sa = SGO_UTILS.safeUpper(a.STATUS) === "ATIVO" ? 0 : 1, sb = SGO_UTILS.safeUpper(b.STATUS) === "ATIVO" ? 0 : 1;
       return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
     });
-    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, perfis: SGO_CFG.PROFILES || [] }));
+    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeGerir: podeGerir, perfis: SGO_CFG.PROFILES || [] }));
   } catch (e) {
     return { success: false, message: SGO_textoFalhaOperador_("carregar os usuários", e) };
   }

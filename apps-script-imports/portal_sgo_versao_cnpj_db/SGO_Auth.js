@@ -402,6 +402,47 @@ function isAdminPerfilAuth_(perfil) {
   return p === "ADMIN" || p === "DIRETORIA" || p === "GESTOR";
 }
 
+/* =========================================================================
+   PERFIL RH (19/10/2026)
+   O RH vê o que um colaborador vê (Início, Minhas atividades, Avisos, Frota
+   e o próprio farol da conduta) e, além disso:
+     - Avisos: publica comunicados (as mesmas ações de publicação da gestão:
+       publicar, ver quem leu, reenviar e arquivar);
+     - Programa de conduta: consulta ocorrências, missões, ausências,
+       fechamentos, relatórios e extratos de todos. Não homologa, não julga,
+       não decide missão, não registra ausência e não fecha o mês (isso
+       continua com isAdminPerfilAuth_ / Conduta_exigirGestor_). O "fiscal" do
+       programa é quem registra a ocorrência, e isso o RH pode, como todos;
+     - Usuários: consulta da lista (vínculo de trabalho, celular, situação),
+       sem criar, editar, redefinir senha, inativar ou excluir. Conta de
+       Administrador continua só com Administrador.
+   O RH NÃO acessa: Chaves e senhas, Configurações, emissão de certificados,
+   laudos, relatórios e documentos técnicos (qualificação, calibração, NR-13,
+   PGT/POP, Planejamento CME, Cronograma, Registros operacionais), os
+   cadastros técnicos (clientes, unidades, equipamentos, vínculos, arquivo de
+   documentos, inventário), Integração Auvo, Painel de qualidade, nem o
+   Comercial. O menu esconde e o servidor recusa (SGO_bloquearRH_ no despacho
+   de cada módulo técnico).
+   Sem SGO_UTILS de propósito: os testes carregam os módulos sozinhos.
+   ========================================================================= */
+function SGO_ehPerfilRH_(perfil) {
+  return String(perfil === null || perfil === undefined ? "" : perfil).trim().toUpperCase() === "RH";
+}
+
+/** Gestão (Administrador, Gestor, Diretoria) ou RH: consulta dados de pessoas de toda a equipe. */
+function SGO_podeConsultarPessoas_(perfil) {
+  return isAdminPerfilAuth_(perfil) || SGO_ehPerfilRH_(perfil);
+}
+
+/** Recusa o perfil RH nos módulos técnicos. "oQue" = nome da área, ex.: "o Certificado de calibração". */
+function SGO_bloquearRH_(sessao, oQue) {
+  if (sessao && SGO_ehPerfilRH_(sessao.perfil)) {
+    throw new Error("Não foi possível abrir " + (oQue || "esta área") + ": o perfil RH não tem acesso aos documentos técnicos. " +
+      "Use o menu para voltar ao Início. Se precisar de um documento técnico, peça à equipe técnica ou à gestão.");
+  }
+  return sessao;
+}
+
 /**
  * Salva sessão em dupla camada:
  * 1) CacheService (Rápido, temporário)

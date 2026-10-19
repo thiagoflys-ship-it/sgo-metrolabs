@@ -14,6 +14,7 @@
 function PlanCME_apiDispatch(req) {
   req = req || {};
   var sessaoPlanCME = exigirSessao(String(req.sessionId || '')); // SEGURANCA: exige sessao valida do portal (SGO_Auth)
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoPlanCME, 'o Planejamento CME'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   // (2026-10-16) Módulo interno da equipe: o perfil CLIENTE só tinha o menu
   // escondido no navegador; pela API conseguia calcular, gravar planejamento
   // e salvar PDF na pasta de qualquer cliente.

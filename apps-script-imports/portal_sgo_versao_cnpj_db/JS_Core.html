@@ -689,6 +689,13 @@
     });
   }
 
+  // PERFIL RH (19/10/2026): o RH vê o que um colaborador vê (Início, Minhas atividades, Avisos,
+  // Frota e Programa de conduta) e a lista de Usuários (só consulta). O resto do menu some e
+  // abrir() mostra uma tela explicando. O servidor também recusa (SGO_Auth.js › SGO_bloquearRH_).
+  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "avisos", "frota", "conduta", "usuarios"];
+  function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
+  function SGO_telaLiberadaRH_(mod) { return !SGO_ehRH_() || SGO_TELAS_RH.indexOf(String(mod || "")) >= 0; }
+
   function aplicarRegrasDeAcesso_() {
     if (!USER_CONTEXT) return;
 
@@ -722,6 +729,14 @@
       const el = document.querySelector(sel);
       if (el) el.style.display = ehGestaoMenu ? "" : "none";
     });
+    // Perfil RH: consulta a lista de Usuários; tudo que não é do RH some do menu (os grupos vazios somem sozinhos).
+    if (SGO_ehRH_()) {
+      document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
+        const mod = btn.getAttribute("data-mod");
+        if (!mod) return;
+        btn.style.display = SGO_TELAS_RH.indexOf(mod) >= 0 && mod !== "atividades_equipe" ? "" : "none";
+      });
+    }
     if (typeof Menu_iniciar_ === "function") Menu_iniciar_();
   }
 
@@ -732,6 +747,16 @@
   // (JS_Atividades.html) injeta o botão "Atividades do módulo" no cabeçalho
   // — Kanban das atividades ligadas àquele módulo, sem editar cada módulo.
   function abrir(mod) {
+    // Perfil RH: tela fora do perfil (busca, atalho antigo, link) mostra o motivo e o caminho de volta.
+    if (!SGO_telaLiberadaRH_(mod)) {
+      const divRh = document.getElementById("conteudo");
+      if (divRh) divRh.innerHTML =
+        '<div class="module-shell"><h2 class="content-title">Tela fora do perfil RH</h2>' +
+        '<p class="content-subtitle">O perfil RH usa o Início, Minhas atividades, Avisos (inclusive para publicar comunicados), Frota, Programa de conduta (consulta de toda a equipe) e Usuários (consulta). ' +
+        'Documentos técnicos, cadastros de clientes e equipamentos, Configurações e Chaves e senhas ficam com a equipe técnica e a gestão. Se precisar de algo daqui, peça à gestão.</p>' +
+        '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
     // celular: "Início" (busca, logotipo, atalhos) é a tela inicial do celular, não o painel do computador
     if (mod === "dashboard" && ehMobileModo_()) mod = "mobile_home";
     // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
@@ -1013,6 +1038,8 @@
     const totalMotores = contarMotoresAtivos_();
     const isCliente = USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE";
     const styleAdminOnly = isCliente ? "display:none;" : "";
+    // Perfil RH: sem os quadros técnicos (clientes, equipamentos, documentos e vencimentos); fica o farol e a frota.
+    const styleTecnico = SGO_ehRH_() ? "display:none;" : "";
     const nomeUsuario = (USER_CONTEXT && USER_CONTEXT.nome) ? USER_CONTEXT.nome.split(" ")[0] : "";
     const agora = new Date();
     const dataExtenso = agora.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
@@ -1032,6 +1059,7 @@
         <div id="dashboardAlertaFrota" style="${styleAdminOnly}"></div>
         <div id="dashboardSituacaoFrota" style="${styleAdminOnly}">${isCliente ? "" : SGO_esqFrotaHtml_()}</div>
 
+        <div id="dashcQuadrosTecnicos" style="${styleTecnico}">
         <div class="dashc-grid-top dashc-grid-top-2">
           <div class="dashc-stats">
             <div class="dashc-stat" style="${styleAdminOnly}">
@@ -1100,6 +1128,7 @@
             <h3 class="dashc-card-title">Documentos por mês</h3>
             <div class="dashc-chart-box"><canvas id="dashcGraficoBarras"></canvas></div>
           </div>
+        </div>
         </div>
 
         <div id="dashcAuvoSecao" style="display:none">
@@ -3556,6 +3585,11 @@
     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
+    // Perfil RH: só as telas do perfil, e a lista de Usuários (consulta).
+    if (SGO_ehRH_()) {
+      for (let i = itens.length - 1; i >= 0; i--) { if (SGO_TELAS_RH.indexOf(itens[i].mod) < 0) itens.splice(i, 1); }
+      itens.push({ icone: '<i class="fas fa-users" aria-hidden="true"></i>', legenda: "Usuários", mod: "usuarios" });
+    }
 
     const nomeMobile = (USER_CONTEXT && USER_CONTEXT.nome) ? String(USER_CONTEXT.nome).split(" ")[0] : "";
     atualizarTituloMobile_("Início");
@@ -3817,7 +3851,7 @@
       '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirManual_()">Manual do colaborador</button>' +
       '<div class="mobile-frota-secao-titulo">Minhas ocorrências recentes</div>' +
       '<div class="mobile-list" id="mobileCondutaRecentes">Carregando...</div>' +
-      '<div class="mobile-frota-secao-titulo">' + (mobileCondutaEhGestao_() ? "Missões" : "Minhas missões") + '</div>' +
+      '<div class="mobile-frota-secao-titulo">' + ((mobileCondutaEhGestao_() || SGO_ehRH_()) ? "Missões" : "Minhas missões") + '</div>' +
       '<div class="mobile-list" id="mobileCondutaMissoes">Carregando...</div>';
     mobileCondutaCarregarMissoes_();
 

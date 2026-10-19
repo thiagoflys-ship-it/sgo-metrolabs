@@ -95,6 +95,7 @@ function SGO_ajudaTelas_Conduta_() {
       quemPode: [
         { perfil: "TODOS", pode: "Ver o farol, registrar ocorrência, reconhecer colegas, registrar missão, contestar e recorrer das próprias ocorrências, gerar o próprio extrato, ver os fechamentos e os relatórios semanais e ler os manuais." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: homologar e julgar (nunca a ocorrência que registrou ou em que é o envolvido), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões, gerar o extrato de qualquer pessoa e cuidar da automação de prazos." },
+        { perfil: "RH", pode: "Tudo da equipe. Também consulta, de todas as pessoas: ocorrências, missões, ausências, meses fechados, relatórios e extratos. Não homologa, não julga, não decide missões, não registra ausências e não fecha o mês." },
         { perfil: "CLIENTE", pode: "Não usa o programa." }
       ],
       perguntas: [
@@ -139,6 +140,7 @@ function SGO_ajudaTelas_Conduta_() {
         { p: "Quais são os prazos?", r: "Registro: 2 dias úteis após o fato. Homologação: 3 dias úteis (sem decisão, é descartada). Contestação: 3 dias úteis (sem contestação, fica firme). Julgamento: 5 dias úteis. Recurso: 2 dias úteis após manter, uma vez só." }
       ],
       quemPode: [
+        { perfil: "RH", pode: "Ver as ocorrências de todas as pessoas e registrar ocorrência, como qualquer colaborador. Não homologa, não julga e não processa prazos." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Homologar, julgar, processar prazos e ligar ou desligar a automação." }
       ]
     },
@@ -165,6 +167,7 @@ function SGO_ajudaTelas_Conduta_() {
         { situacao: "\"Para recusar, escreva o motivo (pelo menos 8 caracteres).\"", oQueFazer: "Escreva um motivo mais completo." }
       ],
       quemPode: [
+        { perfil: "RH", pode: "Ver as missões de todas as pessoas e registrar as próprias. Não aprova, não recusa e não remove." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Aprovar, recusar, remover missões e cadastrar destinos." }
       ]
     },
@@ -187,6 +190,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Registrar e remover ausências." },
+        { perfil: "RH", pode: "Ver as ausências de todas as pessoas. Não registra nem remove." },
         { perfil: "TODOS", pode: "Ver as próprias ausências." }
       ]
     },
@@ -221,6 +225,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Consultar a prévia, fechar e gerar o relatório de novo." },
+        { perfil: "RH", pode: "Ver os meses fechados com o resultado de todas as pessoas e abrir o relatório. Não consulta a prévia e não fecha o mês." },
         { perfil: "TODOS", pode: "Ver a lista de meses fechados e o relatório." }
       ]
     },
@@ -252,6 +257,7 @@ function SGO_ajudaTelas_Conduta_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Gerar o próprio extrato e abrir os relatórios semanais." },
+        { perfil: "RH", pode: "Gerar o extrato de qualquer pessoa e abrir os relatórios semanais e de missões. Não gera o relatório semanal nem o de missões." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o extrato de qualquer pessoa, o relatório semanal e o de missões." }
       ]
     },

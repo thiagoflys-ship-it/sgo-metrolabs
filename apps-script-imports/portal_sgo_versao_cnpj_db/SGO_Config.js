@@ -57,6 +57,11 @@ const SGO_CFG = (() => {
       "METROLOGIA",
       "COMERCIAL",
       "FINANCEIRO",
+      // RH (19/10/2026): vê o que um colaborador vê, publica avisos, consulta o
+      // Programa de conduta e a lista de usuários de todos; não emite documento
+      // técnico nem abre Chaves e senhas ou Configurações. Regras em SGO_Auth.js
+      // (SGO_ehPerfilRH_ / SGO_bloquearRH_ / SGO_podeConsultarPessoas_).
+      "RH",
       "CLIENTE"
     ],
 

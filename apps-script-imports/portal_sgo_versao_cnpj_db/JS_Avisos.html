@@ -71,7 +71,8 @@
     setTimeout(function () { t.classList.add("auvo-toast-saindo"); setTimeout(function () { t.remove(); }, 400); }, 6000);
   }
   function AvisosTela_ehCliente_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); }
-  function AvisosTela_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  // Quem publica avisos: gestão e o perfil RH (19/10/2026, comunicados de RH). O servidor confere de novo (Avisos_exigirGestor_).
+  function AvisosTela_ehGestor_() { var p = USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA" || p === "RH"; }
 
   /** Chamada padrão ao servidor. res.ok=false vira erro com a mensagem do servidor. */
   function AvisosTela_chamar_(fn, payload, ok, erro, opcoes) {
@@ -118,7 +119,7 @@
 
   /** Ao entrar: mostra a janela com todos os pendentes. Depois, de 5 em 5 min: só se chegou aviso novo. */
   function AvisosTela_perfil_(p) {
-    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", CLIENTE: "Cliente" })[String(p || "").toUpperCase()] || p;
+    return ({ ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH", CLIENTE: "Cliente" })[String(p || "").toUpperCase()] || p;
   }
 
   /** Há formulário ou janela em uso? Então a janela do aviso espera e tenta de novo em 30 s
@@ -284,7 +285,7 @@
     div.innerHTML =
       '<div class="module-shell">' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Avisos</h2>' +
-          '<p class="content-subtitle">Comunicados da gestão. Cada aviso precisa da sua confirmação de leitura ("Li e estou ciente").</p></div>' +
+          '<p class="content-subtitle">Comunicados da gestão e do RH. Cada aviso precisa da sua confirmação de leitura ("Li e estou ciente").</p></div>' +
           (gestor ? '<div class="module-header-right" style="display:flex;gap:8px"><button type="button" class="btn-primary" onclick="AvisosTela_abrirFormulario_()"><i class="fas fa-bullhorn" aria-hidden="true"></i>&nbsp;Novo aviso</button></div>' : "") +
         "</div>" +
         (gestor ? '<div class="motores-tabs atv-tabs">' +
@@ -419,7 +420,7 @@
 
   // ---------- formulário de publicação (gestão) ----------
   function AvisosTela_abrirFormulario_() {
-    if (!AvisosTela_ehGestor_()) { alert("Não foi possível abrir: publicar aviso é só para os perfis Gestor, Admin e Diretoria."); return; }
+    if (!AvisosTela_ehGestor_()) { alert("Não foi possível abrir: publicar aviso é só para os perfis Gestor, Admin, Diretoria e RH."); return; }
     AvisosTela_chamar_("Avisos_apiOpcoes", {}, function (res) {
       AVT.opcoes = res; AVT.anexosForm = [];
       var ov = document.createElement("div");

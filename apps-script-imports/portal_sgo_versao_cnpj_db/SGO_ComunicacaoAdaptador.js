@@ -11,7 +11,7 @@
  *  - o SGO+ não cria a planilha compartilhada: espera o COMMAND criar.
  */
 
-var SGO_COM_SETORES = { ADMIN: "Administração", DIRETORIA: "Diretoria", GESTOR: "Gestão", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro" };
+var SGO_COM_SETORES = { ADMIN: "Administração", DIRETORIA: "Diretoria", GESTOR: "Gestão", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH" };
 
 function comAdaptador_() {
   var url = "";

@@ -29,6 +29,7 @@
 function NR13_apiDispatch(req) {
   req = req || {};
   var sessaoDispatch = exigirSessao(String(req.sessionId || ''));
+  if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatch, 'o Laudo NR-13'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
   // Laudo NR-13 é ferramenta da equipe interna: o perfil CLIENTE não pode
   // chamar nenhuma função daqui (sem esta trava, um cliente lia por CNPJ ou
   // por ID os laudos de outra empresa). O cliente recebe o laudo pelos
