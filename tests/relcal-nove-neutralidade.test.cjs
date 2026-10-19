@@ -34,15 +34,16 @@ test('nove instrumentos preservam origem, identidade e decisão do cliente no do
 test('milhar brasileiro, científico e unidades formatam somente medições', () => {
  const html = s.RelCalDoc_renderizarResultados_('Referência | Indicação | Incerteza | K | Série | Data\n1.234,567 rpm | 2.3456e-3 s | 0.122 s | 2 | 202600250 | 08/10/2026');
  // Padrão A4 de 18/10 (157d735): da segunda coluna em diante as células saem com class="num" (alinhadas à direita).
- assert.ok(html.includes('<td>1234,57 rpm</td>'));
- for (const x of ['0,00 s','0,12 s','2,00','202600250','08/10/2026']) assert.ok(html.includes('<td class="num">'+x+'</td>'));
+ // 19/10: milhar sempre e incerteza pequena com 2 algarismos significativos (antes 2,3456e-3 s saía "0,00 s", como se a incerteza fosse zero).
+ assert.ok(html.includes('<td>1.234,57 rpm</td>'));
+ for (const x of ['0,0023 s','0,12 s','2,00','202600250','08/10/2026']) assert.ok(html.includes('<td class="num">'+x+'</td>'));
  assert.equal(s.RelCalDoc_formatarMedicao_('Não informado'),'Não informado');
  assert.equal(s.RelCalDoc_formatarMedicao_('Infinity'),'Infinity');
 });
 test('medições também são formatadas na prosa sem alterar identificação', () => {
  const text = 'Certificado 202600250 de 08/10/2026, TAG QA-0108: tendência -0.1234 °C; rotação 1.234,567 rpm; U 2.3456e-3 s.';
  const formatted = s.RelCalDoc_formatarProsaMedicoes_(text);
- for (const x of ['202600250','08/10/2026','QA-0108','-0,12 °C','1234,57 rpm','0,00 s.']) assert.ok(formatted.includes(x), formatted);
+ for (const x of ['202600250','08/10/2026','QA-0108','-0,12 °C','1.234,57 rpm','0,0023 s.']) assert.ok(formatted.includes(x), formatted);
  assert.ok(s.RelCalDoc_paragrafosHtml_(text).includes('-0,12 °C'));
  assert.ok(s.RelCalDoc_renderizarResultados_(text).includes('-0,12 °C'));
  for (const untouched of ['Modelo 5s, TAG ABC-20rpm','Temperatura 10–20 °C','Temperatura 10-20 °C','Data 08/10/2026','Norma ISO 17025','Tempo 10 s–20 s']) assert.equal(s.RelCalDoc_formatarProsaMedicoes_(untouched), untouched);
