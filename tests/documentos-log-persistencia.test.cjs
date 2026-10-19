@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../apps-script-imports/portal_sgo_versao_cnpj_db');
+let saved;
+const ctx={SGO_CFG:{SHEETS:{SYS_LOGS:'SYS_LOGS'}},SGO_UTILS:{uuid:()=> 'ID',nowIso:()=> '2026-10-09',safe:v=>String(v)}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(path.join(root,'SGO_Data.js'),'utf8')+'\nthis.data = SGO_DATA;',ctx);
+ctx.data.getSheet=()=>({appendRow:row=>{saved=row;}});
+assert.equal(ctx.data.log('EMITIR','QA','CERT-1','CERTCAL'),true);
+assert.deepEqual(Array.from(saved),['ID','2026-10-09','QA','EMITIR','CERTCAL','CERT-1']);
+ctx.data.getSheet=()=>({appendRow:()=>{throw Error('Google indisponível');}});
+assert.equal(ctx.data.log('EMITIR','QA','CERT-1','CERTCAL'),false);
+ctx.data.getSheet=()=>{throw Error('Aba inacessível');};
+assert.equal(ctx.data.log('EMITIR','QA','CERT-1','CERTCAL'),false);
+console.log('PASS: log real informa persistência ou falha sem lançar erro após emissão.');

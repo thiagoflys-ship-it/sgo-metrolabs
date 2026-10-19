@@ -1,0 +1,50 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const server = {};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/SGO_CertCal_ConteudoModulo.js'), 'utf8'), server);
+const html = server.CERTCAL_CONTEUDO_MODULO;
+assert(!/validadeMeses|certcal-validade-meses|Deixe 12|valor nominal\/esperado|valor esperado naquele ponto|Pior tendência/.test(html));
+assert(html.includes('id=\\"certcal-proxima-nao\\" value=\\"NAO\\" checked'));
+const elements = {
+  'certcal-proxima-sim': { checked: false },
+  'certcal-proxima-campos': { classList: { toggle(name, hide) { elements.hidden = hide; } } }
+};
+for (const field of ['data', 'solicitante', 'cargo-setor', 'referencia', 'observacao']) elements['certcal-proxima-' + field] = { value: 'valor residual', disabled: true };
+const context = { document: { getElementById: id => elements[id] } };
+vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], context);
+const empty = { solicitada: false, data: '', solicitante: '', cargoSetor: '', referencia: '', observacao: '' };
+assert.deepEqual(JSON.parse(JSON.stringify(context.tplCertCal_montarProximaCalibracaoPayload_())), empty);
+context.tplCertCal_alternarProximaCalibracao_();
+assert.equal(elements.hidden, true);
+assert.equal(elements['certcal-proxima-data'].value, '');
+elements['certcal-proxima-sim'].checked = true;
+context.tplCertCal_alternarProximaCalibracao_();
+assert.equal(elements.hidden, false);
+assert.equal(elements['certcal-proxima-data'].required, true);
+assert.equal(elements['certcal-proxima-observacao'].required, false);
+assert.throws(() => context.tplCertCal_montarProximaCalibracaoPayload_(), /Informe data/);
+for (const [field, value] of Object.entries({ data: '31/02/2027', solicitante: ' Maria ', 'cargo-setor': 'Qualidade', referencia: 'OS 123', observacao: '' })) elements['certcal-proxima-' + field].value = value;
+assert.throws(() => context.tplCertCal_montarProximaCalibracaoPayload_(), /inválida/);
+elements['certcal-proxima-data'].value = '08/10/2027';
+assert.deepEqual(JSON.parse(JSON.stringify(context.tplCertCal_montarProximaCalibracaoPayload_())), { solicitada: true, data: '08/10/2027', solicitante: 'Maria', cargoSetor: 'Qualidade', referencia: 'OS 123', observacao: '' });
+elements['certcal-proxima-sim'].checked = false;
+context.tplCertCal_alternarProximaCalibracao_();
+assert.equal(elements['certcal-proxima-solicitante'].value, '');
+assert.deepEqual(JSON.parse(JSON.stringify(context.tplCertCal_montarProximaCalibracaoPayload_())), empty);
+// Verify the actual generation flow forwards the request, rather than only testing its helper.
+for (const id of ['tecnico', 'tecnico-livre', 'data-calibracao', 'temp-ambiente', 'umidade-ambiente']) elements['certcal-' + id] = { value: '' };
+elements['certcal-local-lab'] = { checked: true };
+elements['certcal-btn-gerar'] = { disabled: false };
+context.certcalState.cliente = { ID: 'CLIENTE' };
+context.certcalState.equipamentoSelecionado = { ID: 'EQ' };
+context.certcalState.blocos = [{ titulo: 'Rotação', unidade: 'rpm', padroesIds: ['TAC'], pontos: [{ nominal: '3000', leituras: ['3000', '3001', '3002'] }] }];
+context.window = { open: () => null };
+context.tplCertCal_msg = () => {};
+let emitted;
+context.tplCertCal_chamarApi = (fn, payload) => { emitted = payload; return new Promise(() => {}); };
+context.tplCertCal_gerarCertificado();
+assert.deepEqual(JSON.parse(JSON.stringify(emitted.proximaCalibracao)), empty);
+assert(!Object.hasOwn(emitted, 'validadeMeses'));
+console.log('OK: próxima calibração desktop, padrão NÃO, alternância, obrigatórios e payload.');

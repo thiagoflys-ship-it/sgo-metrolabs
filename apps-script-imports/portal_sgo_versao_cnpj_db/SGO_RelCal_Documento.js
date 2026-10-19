@@ -198,10 +198,13 @@ function RelCalDoc_montarDocumentoHtml_(ctx) {
 
   // Conclusão: o último parágrafo, a nota de escopo e as assinaturas ficam juntos na mesma folha
   var conc = RelCalDoc_dividirUltimo_(ctx.textos.conclusao);
+  // "O certificado prevalece" sai uma vez só: na nota, a menos que a conclusão (texto padrão) já o diga.
+  var prevalece = /prevalece/i.test(String(ctx.textos.conclusao || '')) ? '' :
+    ' e não substitui os certificados originais, que prevalecem em caso de divergência';
   h.push('<section><h2><span class="n">' + (++s) + '.</span> Conclusão e responsabilidade técnica</h2>');
   if (conc.antes) h.push(RelCalDoc_paragrafosHtml_(conc.antes));
   h.push('<div class="reltec-fecho">' + (conc.ultimo ? RelCalDoc_paragrafosHtml_(conc.ultimo) : '') +
-    '<p class="nota">Este relatório interpreta exclusivamente os certificados anexados. Não declara a execução de uma nova calibração, não estabelece validade ou intervalo de recalibração e não emite declaração de conformidade. A decisão de uso e a definição da periodicidade cabem ao contratante, por meio do seu setor de qualidade ou de responsável designado.</p>' +
+    '<p class="nota">Este relatório interpreta exclusivamente os certificados anexados' + prevalece + '. Não declara a execução de uma nova calibração, não estabelece validade ou intervalo de recalibração e não emite declaração de conformidade. A decisão de uso e a definição da periodicidade cabem ao contratante, por meio do seu setor de qualidade ou de responsável designado.</p>' +
     SGO_DocA4_assinaturas_(assinaturas) + '</div></section>');
   h.push('</main></body></html>');
   return h.join('\n');

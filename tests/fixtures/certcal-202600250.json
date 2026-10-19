@@ -1,0 +1,288 @@
+{
+  "origem": "PDF oficial e snapshot original DADOS_JSON, CERT_CALIBRACAO!K251, consulta somente leitura em 08/10/2026",
+  "numeroCertificado": "202600250",
+  "tag": "CORA-0108",
+  "dataCalibracao": "06/10/2026",
+  "blocos": [
+    {
+      "titulo": "Rotação",
+      "unidade": "RPM",
+      "fonte": {
+        "codigo": 260101580,
+        "incertezaU95": 1.3,
+        "fatorK": 2.13,
+        "veff": 20
+      },
+      "pontos": [
+        {
+          "nominal": 503,
+          "leituras": [
+            495.9,
+            496.5,
+            498.7
+          ],
+          "media": "497,03",
+          "tendencia": "-5,97",
+          "u95": "2,88",
+          "veff": "4,47",
+          "soma": "8,85"
+        },
+        {
+          "nominal": 1001,
+          "leituras": [
+            1009.1,
+            1008.3,
+            1010.5
+          ],
+          "media": "1009,30",
+          "tendencia": "8,30",
+          "u95": "2,17",
+          "veff": "6,69",
+          "soma": "10,47"
+        },
+        {
+          "nominal": 2000,
+          "leituras": [
+            2009.5,
+            2009.4,
+            2009.1
+          ],
+          "media": "2009,33",
+          "tendencia": "9,33",
+          "u95": "1,32",
+          "veff": "21,26",
+          "soma": "10,65"
+        },
+        {
+          "nominal": 3000,
+          "leituras": [
+            3003.5,
+            3002.6,
+            3002.1
+          ],
+          "media": "3002,73",
+          "tendencia": "2,73",
+          "u95": "1,61",
+          "veff": "13,89",
+          "soma": "4,35"
+        },
+        {
+          "nominal": 3549,
+          "leituras": [
+            3521.2,
+            3523.5,
+            3523.1
+          ],
+          "media": "3522,60",
+          "tendencia": "-26,40",
+          "u95": "2,38",
+          "veff": "5,74",
+          "soma": "28,78"
+        }
+      ],
+      "snapshot": [
+        {
+          "nominal": 503,
+          "leituras": [
+            495.9,
+            496.5,
+            498.7
+          ],
+          "media": 497.0333333333333,
+          "tendencia": -5.966666666666697,
+          "incertezaPadraoCombinada": 1.0473516560424416,
+          "incertezaU95": 2.8805717984646955,
+          "veff": 4.467419940307209,
+          "k": 2.7503387060553486,
+          "erroMaximo": 8.847238465131392
+        },
+        {
+          "nominal": 1001,
+          "leituras": [
+            1009.1,
+            1008.3,
+            1010.5
+          ],
+          "media": 1009.3000000000001,
+          "tendencia": 8.300000000000068,
+          "incertezaPadraoCombinada": 0.8864730003241753,
+          "incertezaU95": 2.17449752430211,
+          "veff": 6.686175620935472,
+          "k": 2.4529765977157965,
+          "erroMaximo": 10.474497524302178
+        },
+        {
+          "nominal": 2000,
+          "leituras": [
+            2009.5,
+            2009.4,
+            2009.1
+          ],
+          "media": 2009.3333333333333,
+          "tendencia": 9.333333333333258,
+          "incertezaPadraoCombinada": 0.6220494284338278,
+          "incertezaU95": 1.3216485037542571,
+          "veff": 21.261452143510866,
+          "k": 2.1246679819027454,
+          "erroMaximo": 10.654981837087515
+        },
+        {
+          "nominal": 3000,
+          "leituras": [
+            3003.5,
+            3002.6,
+            3002.1
+          ],
+          "media": 3002.7333333333336,
+          "tendencia": 2.733333333333576,
+          "incertezaPadraoCombinada": 0.735036614562975,
+          "incertezaU95": 1.6148410619067244,
+          "veff": 13.891760290397308,
+          "k": 2.1969532264278397,
+          "erroMaximo": 4.3481743952403
+        },
+        {
+          "nominal": 3549,
+          "leituras": [
+            3521.2,
+            3523.5,
+            3523.1
+          ],
+          "media": 3522.6,
+          "tendencia": -26.40000000000009,
+          "incertezaPadraoCombinada": 0.9358602354538852,
+          "incertezaU95": 2.3820718758011816,
+          "veff": 5.741227740944428,
+          "k": 2.545328656523049,
+          "erroMaximo": 28.78207187580127
+        }
+      ]
+    },
+    {
+      "titulo": "Tempo",
+      "unidade": "S",
+      "fonte": {
+        "codigo": "CRO-001",
+        "incertezaU95": 0.122,
+        "fatorK": 2,
+        "veff": 0
+      },
+      "pontos": [
+        {
+          "nominal": 60,
+          "leituras": [
+            60,
+            59.9,
+            60
+          ],
+          "media": "59,97",
+          "tendencia": "-0,03",
+          "u95": "0,14",
+          "veff": "37,83",
+          "soma": "0,18"
+        },
+        {
+          "nominal": 180,
+          "leituras": [
+            180.2,
+            180,
+            180.1
+          ],
+          "media": "180,10",
+          "tendencia": "0,10",
+          "u95": "0,19",
+          "veff": "8,96",
+          "soma": "0,29"
+        },
+        {
+          "nominal": 420,
+          "leituras": [
+            420.3,
+            420,
+            420.2
+          ],
+          "media": "420,17",
+          "tendencia": "0,17",
+          "u95": "0,30",
+          "veff": "4,37",
+          "soma": "0,46"
+        },
+        {
+          "nominal": 900,
+          "leituras": [
+            900.1,
+            900.2,
+            900.1
+          ],
+          "media": "900,13",
+          "tendencia": "0,13",
+          "u95": "0,14",
+          "veff": "37,83",
+          "soma": "0,28"
+        }
+      ],
+      "snapshot": [
+        {
+          "nominal": 60,
+          "leituras": [
+            60,
+            59.9,
+            60
+          ],
+          "media": 59.96666666666667,
+          "tendencia": -0.03333333333333144,
+          "incertezaPadraoCombinada": 0.06951338799908362,
+          "incertezaU95": 0.14377378781249103,
+          "veff": 37.82586241999834,
+          "k": 2.068289173509805,
+          "erroMaximo": 0.17710712114582247
+        },
+        {
+          "nominal": 180,
+          "leituras": [
+            180.2,
+            180,
+            180.1
+          ],
+          "media": 180.1,
+          "tendencia": 0.09999999999999432,
+          "incertezaPadraoCombinada": 0.08399007877918055,
+          "incertezaU95": 0.19498724184510866,
+          "veff": 8.957451380001071,
+          "k": 2.321550886477345,
+          "erroMaximo": 0.29498724184510294
+        },
+        {
+          "nominal": 420,
+          "leituras": [
+            420.3,
+            420,
+            420.2
+          ],
+          "media": 420.1666666666667,
+          "tendencia": 0.16666666666668561,
+          "incertezaPadraoCombinada": 0.10723235415572187,
+          "incertezaU95": 0.29725782350954344,
+          "veff": 4.371417600408026,
+          "k": 2.77209081018466,
+          "erroMaximo": 0.46392449017622905
+        },
+        {
+          "nominal": 900,
+          "leituras": [
+            900.1,
+            900.2,
+            900.1
+          ],
+          "media": 900.1333333333333,
+          "tendencia": 0.13333333333332575,
+          "incertezaPadraoCombinada": 0.06951338799908702,
+          "incertezaU95": 0.1437737878125014,
+          "veff": 37.825862419973504,
+          "k": 2.0682891735098528,
+          "erroMaximo": 0.27710712114582714
+        }
+      ]
+    }
+  ]
+}
