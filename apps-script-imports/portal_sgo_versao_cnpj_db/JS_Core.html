@@ -1378,7 +1378,7 @@
     else {
       if (!(amareloD > verdeD)) return "";
       limite = amareloD; base = verdeD; rotulo = "Margem até o vermelho";
-      extra = '<p class="farol-frase">O mês está ' + escapeHtml_(Conduta_farolPontos_(Math.max(0, D - verdeD))) + " acima do limite do verde. Ainda dá tempo de voltar ao verde neste mês.</p>";
+      extra = '<p class="farol-frase">O mês já tem ' + escapeHtml_(Conduta_farolPontos_(Math.max(0, D - verdeD))) + " de demérito além do limite do verde. Ainda dá tempo de voltar ao verde neste mês.</p>";
     }
     var total = limite - base;
     var margem = Math.max(0, limite - D);

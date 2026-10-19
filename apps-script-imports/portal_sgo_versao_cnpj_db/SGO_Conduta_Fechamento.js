@@ -267,7 +267,7 @@ function Conduta_apiObterFarolAtual(sessionId) {
     linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — a equipe pode acumular mais ' + Math.max(0, limiteVerdeD - apurado.D) + ' pontos de demérito sem sair do verde';
   } else if (apurado.farol === 'AMARELO') {
     titulo = 'Bônus em risco';
-    linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — o mês está ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito acima do limite do verde. Ainda dá tempo neste mês';
+    linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — o mês já tem ' + Math.max(0, apurado.D - limiteVerdeD) + ' pontos de demérito além do limite do verde. Ainda dá tempo de voltar ao verde neste mês';
   } else {
     titulo = 'Bônus perdido neste mês';
     linha = 'Índice de conduta ' + Conduta_numBr_(apurado.ico) + ' — não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos';
