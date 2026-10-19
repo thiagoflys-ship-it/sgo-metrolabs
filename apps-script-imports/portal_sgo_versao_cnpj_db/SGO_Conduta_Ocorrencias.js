@@ -878,12 +878,15 @@ function Conduta_processarPrazosVencidos_() {
   var hoje = Conduta_hojeISO_();
   var todas = SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA);
   var processadas = 0;
+  var ROTINA = { userId: 'SISTEMA', nome: 'Rotina diária de prazos', perfil: 'SISTEMA' };
 
   todas.forEach(function (o) {
     var status = SGO_UTILS.safeUpper(o.STATUS);
 
     if (status === 'REGISTRADA' && o.PRAZO_HOMOLOGACAO && Conduta_soData_(o.PRAZO_HOMOLOGACAO) < hoje) {
-      SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, o.ID, { STATUS: 'DESCARTADA', DESCARTADA_EM: hoje });
+      // O passo automático também fica no histórico, para quem abrir a ocorrência saber por que ela saiu da fila.
+      SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, o.ID, { STATUS: 'DESCARTADA', DESCARTADA_EM: hoje,
+        HISTORICO_JSON: Conduta_historicoAcrescentar_(o, ROTINA, 'DESCARTE_PRAZO', 'DESCARTAR', 'Descartada pelo sistema: o prazo de homologação venceu em ' + Conduta_dataBr_(o.PRAZO_HOMOLOGACAO) + ' sem decisão.', '') });
       processadas++;
       return;
     }
@@ -894,7 +897,8 @@ function Conduta_processarPrazosVencidos_() {
       SGO_DATA.update(CONDUTA_SHEETS.OCORRENCIA, o.ID, {
         STATUS: 'FIRME',
         FIRME_EM: hoje,
-        PRAZO_RECURSO: Conduta_somarDiasUteis_(hoje, prazoRecursoDias)
+        PRAZO_RECURSO: Conduta_somarDiasUteis_(hoje, prazoRecursoDias),
+        HISTORICO_JSON: Conduta_historicoAcrescentar_(o, ROTINA, 'FIRME_PRAZO', 'FIRMAR', 'Ficou firme pelo sistema: o prazo de contestação venceu em ' + Conduta_dataBr_(o.PRAZO_CONTESTACAO) + ' sem contestação.', '')
       });
       processadas++;
     }
