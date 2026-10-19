@@ -18,10 +18,10 @@ function SGO_ajudaTelas_Conduta_() {
         { titulo: "Ver como está o mês", itens: [
           "Toque em \"Programa de conduta\" no menu.",
           "Na aba \"Farol do mês\", olhe a cor do farol e o \"Índice de conduta\".",
-          "Leia a frase abaixo do farol. Ela diz quantos pontos ainda cabem sem sair do verde.",
-          "Veja a barra \"Margem até o amarelo\" (no amarelo, \"Margem até o vermelho\"): ela mostra quantos pontos ainda cabem. A parte listrada são pontos em prazo de defesa.",
-          "Se houver ocorrência em prazo de defesa, a marca tracejada no velocímetro mostra onde o índice vai parar se ela ficar firme.",
-          "Os mini gráficos mostram o índice do mês dia a dia e os últimos meses fechados. A linha tracejada é o limite do verde.",
+          "Ao lado do velocímetro, leia o selo do bônus (\"Bônus preservado\", \"Bônus em risco\"...).",
+          "Veja a barra \"Margem até o amarelo\" (no amarelo, \"Margem até o vermelho\"): ela diz quantos pontos ainda cabem. A parte listrada são pontos em prazo de defesa.",
+          "Se houver ocorrência em prazo de defesa, a linha \"Em prazo de defesa\" diz para onde o índice vai se ela ficar firme. No velocímetro, a marca tracejada mostra o mesmo ponto.",
+          "O gráfico \"dia a dia\" só aparece quando o índice mudou no mês; sem mudança aparece \"Sem perda de pontos\". O gráfico dos meses fechados aparece a partir de 3 meses fechados. O tracejado é o limite do verde.",
           "Deixe a tela aberta: o farol se atualiza sozinho (\"Ao vivo\"). Quando o índice muda, o ponteiro anda e aparece um aviso no canto, por exemplo \"Índice atualizado: 98,5\". Não precisa recarregar a página."
         ] },
         { titulo: "Registrar uma ocorrência", itens: [

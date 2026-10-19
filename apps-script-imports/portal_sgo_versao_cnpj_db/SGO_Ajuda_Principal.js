@@ -67,7 +67,7 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Leia o cartão do farol: o ponteiro mostra o índice de conduta do mês e o selo mostra a situação do bônus.",
             "Confira as linhas abaixo do título: a margem em pontos até o amarelo, as ocorrências em prazo de defesa e a situação do mês anterior.",
-            "A marca tracejada no velocímetro mostra onde o índice vai parar se as ocorrências em prazo de defesa ficarem firmes. Os mini gráficos mostram o mês dia a dia e os últimos meses fechados.",
+            "A marca tracejada no velocímetro mostra onde o índice vai parar se as ocorrências em prazo de defesa ficarem firmes. O gráfico do mês aparece quando o índice mudou; o dos meses fechados, a partir de 3 meses.",
             "O cartão se atualiza sozinho enquanto o Início está aberto (\"Ao vivo\"): quando o índice muda, o ponteiro anda e aparece um aviso no canto da tela.",
             "Toque no cartão para abrir o Programa de conduta.",
             "Na gestão, use \"Aplicar agora: fechamentos pendentes e ajustes do programa\" quando o botão aparecer.",

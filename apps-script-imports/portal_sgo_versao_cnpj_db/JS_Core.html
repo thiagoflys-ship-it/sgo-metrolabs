@@ -1261,8 +1261,11 @@
   }
   function Conduta_farolDeValor_(v, lim) { return v < lim.amarelo ? "VERMELHO" : (v < lim.verde ? "AMARELO" : "VERDE"); }
 
-  // Geometria do velocímetro: valor 0 à esquerda, 100 à direita, 180 graus.
-  var CONDUTA_GAUGE = { cx: 120, cy: 112, r: 92, sw: 14 };
+  // Geometria do velocímetro (20/10/2026, revisão do dono): pivô no centro do arco,
+  // ponteiro de verdade (do pivô até a faixa), número abaixo do pivô sem tocar nas
+  // faixas, 70 e 85 do lado de fora do arco, 0 e 100 sob as pontas do arco.
+  // Valor 0 à esquerda, 100 à direita; o ponteiro é desenhado no 0 e girado (valor x 1,8 grau).
+  var CONDUTA_GAUGE = { cx: 120, cy: 110, r: 86, sw: 14, w: 240, h: 176 };
   function Conduta_anguloDoValor_(v) { return 180 - (v / 100) * 180; }
   function Conduta_pontoGauge_(cx, cy, r, anguloGraus) {
     var rad = anguloGraus * Math.PI / 180;
@@ -1273,6 +1276,7 @@
     var largeArc = Math.abs(a1 - a2) > 180 ? 1 : 0;
     return "M " + p1.x.toFixed(2) + " " + p1.y.toFixed(2) + " A " + r + " " + r + " 0 " + largeArc + " 1 " + p2.x.toFixed(2) + " " + p2.y.toFixed(2);
   }
+  function Conduta_farolRotulo_(n) { return Conduta_farolNum_(n, n % 1 ? 1 : 0); }
 
   /** SVG do velocímetro. valorInicial: onde o ponteiro começa (a animação leva até ico). */
   function Conduta_montarGaugeSvg_(ico, farol, res, valorInicial) {
@@ -1282,7 +1286,7 @@
     var icoClamp = Math.max(0, Math.min(100, Number(ico) || 0));
     var inicio = (valorInicial === undefined || valorInicial === null) ? icoClamp : Math.max(0, Math.min(100, Number(valorInicial) || 0));
     var faixaAtual = Conduta_farolClasse_(farol);
-    var gap = 1.6;
+    var gap = 1.2;
 
     function zona(v0, v1, classe) {
       var a0 = Conduta_anguloDoValor_(v0) - (v0 === 0 ? 0 : gap / 2);
@@ -1294,82 +1298,128 @@
     }
     var zonas = zona(0, lim.amarelo, "vermelho") + zona(lim.amarelo, lim.verde, "amarelo") + zona(lim.verde, 100, "verde");
 
-    // marcações a cada 5; maiores a cada 10; números em 0, nos limites e em 100
+    // marcações por dentro do arco: a cada 5, maiores a cada 10
     var marcas = "";
     for (var v = 0; v <= 100; v += 5) {
       var maior = v % 10 === 0;
       var a = Conduta_anguloDoValor_(v);
-      var p1 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 3, a), p2 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - (maior ? 9 : 6), a);
+      var p1 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 3, a), p2 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - (maior ? 10 : 6), a);
       marcas += '<line class="fg-marca' + (maior ? " fg-marca-maior" : "") + '" x1="' + p1.x.toFixed(2) + '" y1="' + p1.y.toFixed(2) + '" x2="' + p2.x.toFixed(2) + '" y2="' + p2.y.toFixed(2) + '"/>';
     }
-    var numeros = [0, lim.amarelo, lim.verde, 100].map(function (n) {
-      var p = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 19, Conduta_anguloDoValor_(n));
-      if (n === 0 || n === 100) p = { x: cx + (n === 0 ? -r : r), y: cy + 15 };
-      return '<text class="fg-numero" x="' + p.x.toFixed(1) + '" y="' + (p.y + 3.5).toFixed(1) + '" text-anchor="middle">' + Conduta_farolNum_(n, n % 1 ? 1 : 0) + "</text>";
+    // limites do lado de fora do arco, com uma marquinha ligando ao arco
+    var limites = [lim.amarelo, lim.verde].map(function (n) {
+      var ang = Conduta_anguloDoValor_(n);
+      var q1 = Conduta_pontoGauge_(cx, cy, r + sw / 2 + 1, ang), q2 = Conduta_pontoGauge_(cx, cy, r + sw / 2 + 5, ang);
+      var t = Conduta_pontoGauge_(cx, cy, r + sw / 2 + 13, ang);
+      return '<line class="fg-marca-limite" x1="' + q1.x.toFixed(2) + '" y1="' + q1.y.toFixed(2) + '" x2="' + q2.x.toFixed(2) + '" y2="' + q2.y.toFixed(2) + '"/>' +
+        '<text class="fg-numero" x="' + t.x.toFixed(1) + '" y="' + (t.y + 3.5).toFixed(1) + '" text-anchor="middle">' + Conduta_farolRotulo_(n) + "</text>";
     }).join("");
+    // 0 e 100 centrados sob as pontas do arco
+    var pontas = '<text class="fg-numero" x="' + (cx - r) + '" y="' + (cy + 16) + '" text-anchor="middle">0</text>' +
+      '<text class="fg-numero" x="' + (cx + r) + '" y="' + (cy + 16) + '" text-anchor="middle">100</text>';
 
-    // ponteiro: lâmina que cruza o arco (desenhada no valor 0 e girada)
-    function lamina(classe) {
-      var x1 = cx - (r - sw / 2 - 26), x2 = cx - (r + sw / 2 + 3);
-      return '<line class="' + classe + '" x1="' + x1 + '" y1="' + cy + '" x2="' + x2 + '" y2="' + cy + '"/>';
-    }
+    // ponteiro: do pivô até a borda interna da faixa, afinando; com uma cauda curta atrás do pivô
+    var ponta = r - sw / 2 - 3, cauda = 12, meia = 3.6;
+    var agulha = (cx - ponta) + "," + cy + " " + cx + "," + (cy - meia) + " " + (cx + cauda) + "," + (cy - 1.6) + " " + (cx + cauda) + "," + (cy + 1.6) + " " + cx + "," + (cy + meia);
 
-    // projeção: lâmina tracejada + arco tracejado externo entre o índice atual e o previsto
+    // projeção: ponteiro tracejado + arco tracejado por fora da faixa, entre o índice e o previsto
     var proj = "";
     var e = res && res.emApuracao;
     if (e && Number(e.emDefesa) > 0 && isFinite(Number(e.icoPrevisto)) && Number(e.icoPrevisto) !== icoClamp) {
       var ip = Math.max(0, Math.min(100, Number(e.icoPrevisto)));
-      var rp = r + sw / 2 + 5;
+      var rp = r + sw / 2 + 3;
       var classeP = Conduta_farolClasse_(e.farolPrevisto || Conduta_farolDeValor_(ip, lim));
       proj = '<g class="fg-projecao fg-' + classeP + '">' +
         '<path class="fg-projecao-arco" d="' + Conduta_arcoGaugePath_(cx, cy, rp, Conduta_anguloDoValor_(Math.min(ip, icoClamp)), Conduta_anguloDoValor_(Math.max(ip, icoClamp))) + '" fill="none"/>' +
-        '<g transform="rotate(' + (ip * 1.8).toFixed(2) + " " + cx + " " + cy + ')">' + lamina("fg-fantasma") + "</g>" +
+        '<line class="fg-fantasma" x1="' + (cx - 14) + '" y1="' + cy + '" x2="' + (cx - ponta) + '" y2="' + cy + '" transform="rotate(' + (ip * 1.8).toFixed(2) + " " + cx + " " + cy + ')"/>' +
         "<title>Projeção: " + Conduta_farolNum_(ip) + " se as ocorrências em prazo de defesa ficarem firmes</title></g>";
     }
 
     var rotulo = "Índice de conduta " + Conduta_farolNum_(icoClamp) + ", farol " + String(farol || "").toLowerCase() +
       (proj ? "; projeção " + Conduta_farolNum_(e.icoPrevisto) : "");
-    return '<svg class="farol-gauge fg-' + faixaAtual + '" viewBox="0 0 240 136" width="100%" role="img" aria-label="' + escapeHtml_(rotulo) + '">' +
+    return '<svg class="farol-gauge fg-' + faixaAtual + '" viewBox="0 0 ' + G.w + " " + G.h + '" width="100%" role="img" aria-label="' + escapeHtml_(rotulo) + '">' +
       '<defs><filter id="' + uid + 'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>' +
       '<path class="fg-trilho" d="' + Conduta_arcoGaugePath_(cx, cy, r, 180, 0) + '" fill="none" stroke-width="' + (sw + 2) + '"/>' +
-      zonas + marcas + numeros + proj +
-      '<g class="fg-ponteiro" transform="rotate(' + (inicio * 1.8).toFixed(2) + " " + cx + " " + cy + ')">' + lamina("fg-lamina-fundo") + lamina("fg-lamina") + "</g>" +
-      '<text class="fg-valor" x="' + cx + '" y="' + (cy - 16) + '" text-anchor="middle">' + Conduta_farolNum_(inicio) + "</text>" +
-      '<text class="fg-legenda" x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle">Índice de conduta</text>' +
+      zonas + marcas + limites + pontas + proj +
+      '<g class="fg-ponteiro" transform="rotate(' + (inicio * 1.8).toFixed(2) + " " + cx + " " + cy + ')"><polygon class="fg-agulha" points="' + agulha + '"/></g>' +
+      '<circle class="fg-pivo" cx="' + cx + '" cy="' + cy + '" r="6.5"/><circle class="fg-pivo-centro" cx="' + cx + '" cy="' + cy + '" r="2.4"/>' +
+      '<text class="fg-valor" x="' + cx + '" y="' + (cy + 44) + '" text-anchor="middle">' + Conduta_farolNum_(inicio) + "</text>" +
+      '<text class="fg-legenda" x="' + cx + '" y="' + (cy + 62) + '" text-anchor="middle">Índice de conduta</text>' +
       "</svg>";
   }
 
   /** Selo curto da situação do bônus. */
   function Conduta_farolSelo_(res) {
-    if (res.temGG) return { texto: "Bônus cancelado", classe: "vermelho" };
+    if (res.temGG) return { texto: "Bônus cancelado: infração gravíssima", classe: "vermelho" };
     if (res.farol === "VERDE") return { texto: "Bônus preservado", classe: "verde" };
     if (res.farol === "AMARELO") return { texto: "Bônus em risco", classe: "amarelo" };
-    return { texto: "Bônus perdido", classe: "vermelho" };
+    return { texto: "Bônus perdido neste mês", classe: "vermelho" };
   }
 
-  /** Barra "margem até o amarelo" (ou até o vermelho, no amarelo). Parte listrada = pontos em prazo de defesa. */
+  function Conduta_farolPontos_(n) { return SGO_qtd_(n, "ponto", "pontos"); }
+
+  /**
+   * Margem com a barra (uma forma só da informação). No verde: até o amarelo; no amarelo: até
+   * o vermelho, com a distância do verde; no vermelho e na gravíssima: a consequência, sem barra.
+   * A parte listrada da barra são os pontos em prazo de defesa.
+   */
   function Conduta_farolMargemHtml_(res) {
-    if (res.temGG || res.farol === "VERMELHO") return "";
     var D = Number(res.D) || 0;
     var verdeD = Number(res.limiteVerdeD), amareloD = Number(res.limiteAmareloD);
-    var limite, base, rotulo;
-    if (res.farol === "VERDE") { if (!(verdeD > 0)) return ""; limite = verdeD; base = 0; rotulo = "Margem até o amarelo"; }
-    else { if (!(amareloD > verdeD)) return ""; limite = amareloD; base = verdeD; rotulo = "Margem até o vermelho"; }
+    if (res.temGG) {
+      var txt = String(res.linha || "").replace(/,? que está em [0-9.,]+\.?\s*$/, ".").replace(/\.\.$/, ".");
+      return '<p class="farol-frase">' + escapeHtml_(txt) + "</p>";
+    }
+    if (res.farol === "VERMELHO" || !(verdeD > 0)) {
+      return '<p class="farol-frase">Não há recuperação dentro do mês. Os incentivos de missão continuam sendo pagos.</p>';
+    }
+    var limite, base, rotulo, extra = "";
+    if (res.farol === "VERDE") { limite = verdeD; base = 0; rotulo = "Margem até o amarelo"; }
+    else {
+      if (!(amareloD > verdeD)) return "";
+      limite = amareloD; base = verdeD; rotulo = "Margem até o vermelho";
+      extra = '<p class="farol-frase">O mês está ' + escapeHtml_(Conduta_farolPontos_(Math.max(0, D - verdeD))) + " acima do limite do verde. Ainda dá tempo de voltar ao verde neste mês.</p>";
+    }
     var total = limite - base;
     var margem = Math.max(0, limite - D);
     var e = res.emApuracao || {};
     var emDefesa = Math.max(0, Number(e.pontosEmDefesa) || 0);
     var margemPrevista = Math.max(0, margem - emDefesa);
     var pct = function (x) { return Math.max(0, Math.min(100, (x / total) * 100)).toFixed(1); };
-    var texto = SGO_qtd_(margem, "ponto de margem", "pontos de margem");
+    var texto = Conduta_farolPontos_(margem);
     return '<div class="farol-margem farol-margem-' + Conduta_farolClasse_(res.farol) + '">' +
-      '<div class="farol-margem-topo"><span>' + rotulo + '</span><strong>' + escapeHtml_(texto) + "</strong></div>" +
+      '<div class="farol-margem-rotulo">' + rotulo + ": <strong>" + escapeHtml_(texto) + "</strong></div>" +
       '<div class="farol-margem-barra" role="progressbar" aria-label="' + escapeHtml_(rotulo) + '" aria-valuemin="0" aria-valuemax="' + total + '" aria-valuenow="' + margem + '" aria-valuetext="' + escapeHtml_(texto) + '">' +
         '<span class="farol-margem-cheia" style="width:' + pct(margemPrevista) + '%"></span>' +
-        (emDefesa && margem > margemPrevista ? '<span class="farol-margem-defesa" style="width:' + pct(margem - margemPrevista) + '%" title="' + escapeHtml_(SGO_qtd_(Math.min(emDefesa, margem), "ponto", "pontos")) + ' em prazo de defesa"></span>' : "") +
-      "</div>" +
-      (emDefesa && margem > 0 ? '<div class="farol-margem-nota">Listrado: ' + escapeHtml_(SGO_qtd_(emDefesa, "ponto", "pontos")) + " em prazo de defesa. Se ficarem firmes, restam " + escapeHtml_(SGO_qtd_(margemPrevista, "ponto", "pontos")) + ".</div>" : "") +
-      "</div>";
+        (emDefesa && margem > margemPrevista ? '<span class="farol-margem-defesa" style="width:' + pct(margem - margemPrevista) + '%"></span>' : "") +
+      "</div></div>" + extra;
+  }
+
+  /** Prazo de defesa e projeção, numa frase só (com a amostra do listrado quando a barra o mostra). */
+  function Conduta_farolDefesaHtml_(res) {
+    var e = res.emApuracao || {};
+    var emDefesa = Number(e.emDefesa) || 0, registradas = Number(e.registradas) || 0;
+    if (!emDefesa && !registradas) return "";
+    var partes = [];
+    if (emDefesa) {
+      partes.push("Em prazo de defesa: " + SGO_qtd_(emDefesa, "ocorrência", "ocorrências") + " (" + Conduta_farolPontos_(e.pontosEmDefesa) + "). " +
+        (emDefesa === 1 ? "Se ficar firme" : "Se ficarem firmes") + ", o índice vai a " + Conduta_farolNum_(e.icoPrevisto) + " (" + String(e.farolPrevisto || "").toLowerCase() + ").");
+    }
+    if (registradas) partes.push(SGO_qtd_(registradas, "ocorrência aguardando", "ocorrências aguardando") + " homologação.");
+    var amostra = emDefesa && !res.temGG && res.farol !== "VERMELHO" ? '<i class="farol-amostra-defesa" aria-hidden="true"></i>' : '<i class="farol-amostra-projecao" aria-hidden="true"></i>';
+    return '<p class="farol-frase farol-frase-defesa">' + (emDefesa ? amostra : "") + "<span>" + escapeHtml_(partes.join(" ")) + "</span></p>";
+  }
+
+  /** Último mês, numa linha. */
+  function Conduta_farolAnteriorHtml_(res) {
+    var a = res.anterior;
+    if (!a) return "";
+    var nome = String(a.nome || "");
+    nome = nome.charAt(0).toUpperCase() + nome.slice(1);
+    var situacao = a.fechado ? "fechado" + (a.automatico ? " automaticamente" : "") : "ainda não fechado";
+    var resto = "";
+    if (!a.fechado) resto = a.pendencias ? "; " + SGO_qtd_(a.pendencias, "pendência de defesa", "pendências de defesa") : a.prazoVencido ? "; o fechamento automático sai na próxima rotina (06h)" : "; fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento);
+    return '<p class="farol-frase farol-frase-anterior">' + escapeHtml_(nome + " " + situacao + ": índice " + Conduta_farolNum_(a.ico) + ", farol " + String(a.farol || "").toLowerCase() + ", " + SGO_qtd_(a.D, "ponto de demérito", "pontos de demérito") + resto + ".") + "</p>";
   }
 
   /** Mini gráfico de linha (uma série) com a linha do limite do verde tracejada. */
@@ -1398,37 +1448,54 @@
       alvos + "</svg>";
   }
 
+  /**
+   * Evolução, só quando diz alguma coisa: o mês dia a dia aparece se o índice variou (sem
+   * variação, uma frase curta); os meses fechados, só com 3 ou mais (o último mês já está na
+   * linha acima). Rótulos agrupados à esquerda.
+   */
   function Conduta_farolTendenciasHtml_(res) {
     var s = res.serie || {};
     var lim = Conduta_farolLimites_(res);
     var dias = Array.isArray(s.dias) ? s.dias : [], meses = Array.isArray(s.meses) ? s.meses : [];
-    if (!dias.length && !meses.length) return "";
-    var mesAtual = "";
-    if (/^\d{4}-\d{2}$/.test(String(res.competencia || ""))) mesAtual = CONDUTA_FAROL_MESES_EXT[Number(res.competencia.substring(5, 7)) - 1];
-    var bloco = function (titulo, svg, rodape) {
-      return '<div class="farol-tendencia"><div class="farol-tendencia-titulo">' + escapeHtml_(titulo) + "</div>" + svg +
-        '<div class="farol-tendencia-rodape">' + rodape + "</div></div>";
-    };
-    var html = "";
+    var mesAtual = /^\d{4}-\d{2}$/.test(String(res.competencia || "")) ? CONDUTA_FAROL_MESES_EXT[Number(res.competencia.substring(5, 7)) - 1] : "";
+    var html = "", frase = "";
     if (dias.length) {
-      var minD = dias.reduce(function (m, p) { return Math.min(m, Number(p.ico)); }, 100);
-      html += bloco((mesAtual ? mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1) : "Este mês") + ", dia a dia",
-        Conduta_farolSparkSvg_(dias, lim, function (p) { return "Dia " + String(p.dia).substring(8, 10); }),
-        "<span>dia 1</span><span>" + (minD < 100 ? "menor " + Conduta_farolNum_(minD) : "sem perda de pontos") + "</span><span>hoje</span>");
+      var dm = function (p) { return String(p.dia).substring(8, 10) + "/" + String(p.dia).substring(5, 7); };
+      var quedas = Number(dias[0].ico) < 100 ? [dm(dias[0])] : [];
+      for (var i = 1; i < dias.length; i++) if (Number(dias[i].ico) !== Number(dias[i - 1].ico)) quedas.push(dm(dias[i]));
+      if (quedas.length) {
+        var listaDias = quedas.length <= 4 ? quedas.slice(0, -1).join(", ") + (quedas.length > 1 ? " e " : "") + quedas[quedas.length - 1] : quedas.length + " dias";
+        html += '<div class="farol-tendencia"><div class="farol-tendencia-titulo">' + escapeHtml_((mesAtual ? mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1) : "Este mês") + ", dia a dia") + "</div>" +
+          Conduta_farolSparkSvg_(dias, lim, function (p) { return "Dia " + String(p.dia).substring(8, 10); }) +
+          '<div class="farol-tendencia-nota">' + escapeHtml_("O índice mudou em " + listaDias + ". Tracejado: limite do verde.") + "</div></div>";
+      } else {
+        frase = Number(dias[dias.length - 1].ico) >= 100 ? "Sem perda de pontos em " + (mesAtual || "este mês") + "." : "Índice sem mudança em " + (mesAtual || "este mês") + ".";
+      }
     }
-    if (meses.length) {
+    if (meses.length >= 3) {
       var rot = function (p) { var c = String(p.competencia || ""); return /^\d{4}-\d{2}$/.test(c) ? CONDUTA_FAROL_MESES[Number(c.substring(5, 7)) - 1] + "/" + c.substring(2, 4) : c; };
-      html += bloco(meses.length === 1 ? "Último mês fechado" : "Últimos " + meses.length + " meses fechados",
-        Conduta_farolSparkSvg_(meses, lim, rot),
-        "<span>" + escapeHtml_(rot(meses[0])) + "</span><span>" + escapeHtml_(rot(meses[meses.length - 1]) + " " + Conduta_farolNum_(meses[meses.length - 1].ico)) + "</span>");
+      html += '<div class="farol-tendencia"><div class="farol-tendencia-titulo">Últimos ' + meses.length + " meses fechados</div>" +
+        Conduta_farolSparkSvg_(meses, lim, rot) +
+        '<div class="farol-tendencia-nota">' + escapeHtml_("De " + rot(meses[0]) + " a " + rot(meses[meses.length - 1]) + ". Tracejado: limite do verde.") + "</div></div>";
     }
-    return '<div class="farol-tendencias">' + html + '</div><div class="farol-tendencias-nota">Linha tracejada: limite do verde (' + Conduta_farolNum_(lim.verde, lim.verde % 1 ? 1 : 0) + ").</div>";
+    return (frase ? '<p class="farol-frase">' + escapeHtml_(frase) + "</p>" : "") + (html ? '<div class="farol-tendencias">' + html + "</div>" : "");
+  }
+
+  /** Ações da gestão no farol (sem texto informativo repetido). */
+  function Conduta_farolAcoesHtml_(res, compacto) {
+    if (compacto || !Conduta_ehGestorFront_()) return "";
+    var out = "";
+    if (res.rotinaPendente) out += '<button type="button" class="btn-primary farol-acao" onclick="event.stopPropagation();Conduta_aplicarRotinaAgora_(this)">Aplicar agora: fechamentos pendentes e ajustes do programa</button>';
+    out += '<a href="#" class="farol-link" onclick="event.stopPropagation();Conduta_abrirPainelCiencia_();return false;">Ver quem confirmou a leitura dos avisos</a>';
+    return '<div class="farol-acoes">' + out + "</div>";
   }
 
   /**
    * Cartão completo do farol. opcoes.compacto = celular; opcoes.valorInicial = de onde o
    * ponteiro parte (padrão 0, a animação de abertura). O cartão se anima sozinho ao entrar
    * na página e passa a ser atualizado em tempo real.
+   * Hierarquia (uma forma de cada informação): situação e selo; número (no velocímetro);
+   * margem com a barra; prazo de defesa com a projeção; último mês numa linha; evolução.
    */
   function Conduta_montarFarolCardHtml_(res, onclickJs, opcoes) {
     if (!res) return "";
@@ -1436,33 +1503,34 @@
     Conduta_farolGuardar_(res);
     var corVar = Conduta_farolCorVar_(res.farol);
     var selo = Conduta_farolSelo_(res);
+    var lim = Conduta_farolLimites_(res);
     var inicio = opcoes.valorInicial === undefined ? 0 : opcoes.valorInicial;
     if (Conduta_farolSemMovimento_()) inicio = res.ico;
+    var farolTxt = { VERDE: "Farol verde", AMARELO: "Farol amarelo", VERMELHO: "Farol vermelho" }[res.farol] || "Farol";
     var html = '<div class="farol-card farol-vivo farol-' + Conduta_farolClasse_(res.farol) + (opcoes.compacto ? " farol-compacto" : "") + '" data-farol-vivo="1"' +
       ' data-ico="' + escapeHtml_(String(res.ico)) + '" data-de="' + escapeHtml_(String(inicio)) + '"' +
       (opcoes.compacto ? ' data-compacto="1"' : "") +
       (onclickJs ? ' data-onclick="' + escapeHtml_(onclickJs) + '" onclick="' + onclickJs + '" tabindex="0" title="Abrir o Programa de conduta"' : "") +
       ' style="--farol-cor:' + corVar + (onclickJs ? ";cursor:pointer" : "") + '">' +
-      '<div class="farol-gauge-wrap">' + Conduta_montarGaugeSvg_(res.ico, res.farol, res, inicio) + "</div>" +
+      '<div class="farol-gauge-wrap">' + Conduta_montarGaugeSvg_(res.ico, res.farol, res, inicio) +
+        '<div class="farol-legenda">' +
+          '<span><i class="fg-cor-vermelho"></i>abaixo de ' + Conduta_farolRotulo_(lim.amarelo) + "</span>" +
+          '<span><i class="fg-cor-amarelo"></i>' + Conduta_farolRotulo_(lim.amarelo) + " a " + Conduta_farolNum_(lim.verde - 0.1) + "</span>" +
+          '<span><i class="fg-cor-verde"></i>' + Conduta_farolRotulo_(lim.verde) + " ou mais</span>" +
+        "</div>" +
+      "</div>" +
       '<div class="farol-body">' +
         '<div class="farol-topo">' +
-          '<span class="farol-eyebrow"><span class="dot"></span>' + escapeHtml_(res.farol) + (res.temGG ? " · GRAVÍSSIMA" : "") + "</span>" +
-          (res.sombra ? '<span class="farol-selo farol-selo-teste">Período de teste</span>' : "") +
-        "</div>" +
-        // selo da situação do bônus: o próprio título do servidor ("Bônus preservado", "Bônus em risco"...)
-        '<h3 class="farol-titulo"><span class="farol-selo farol-selo-' + selo.classe + '">' + escapeHtml_(res.titulo || selo.texto) + "</span></h3>" +
-        '<p class="farol-linha">' + escapeHtml_(res.linha) + "</p>" +
-        (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Período de teste: o índice é calculado, mas o bônus ainda não é pago.</p>' : "") +
-        Conduta_farolMargemHtml_(res) +
-        Conduta_extrasFarolHtml_(res, !!opcoes.compacto) +
-        Conduta_farolTendenciasHtml_(res) +
-        (opcoes.compacto ? "" :
-        '<div class="farol-legenda">' +
-          '<span><i class="fg-cor-vermelho"></i>&lt; ' + Conduta_farolNum_(Conduta_farolLimites_(res).amarelo, 0) + " vermelho</span>" +
-          '<span><i class="fg-cor-amarelo"></i>' + Conduta_farolNum_(Conduta_farolLimites_(res).amarelo, 0) + "–" + Conduta_farolNum_(Conduta_farolLimites_(res).verde - 0.1) + " amarelo</span>" +
-          '<span><i class="fg-cor-verde"></i>≥ ' + Conduta_farolNum_(Conduta_farolLimites_(res).verde, 0) + " verde</span>" +
+          '<span class="farol-situacao"><span class="dot"></span>' + escapeHtml_(farolTxt) + (res.temGG ? " (gravíssima)" : "") + "</span>" +
           '<span class="farol-ao-vivo" title="Atualiza sozinho enquanto a tela está aberta"><i class="farol-ao-vivo-ponto"></i>Ao vivo</span>' +
-        "</div>") +
+        "</div>" +
+        '<h3 class="farol-titulo"><span class="farol-selo farol-selo-' + selo.classe + '">' + escapeHtml_(selo.texto) + "</span>" +
+          (res.sombra ? '<span class="farol-selo farol-selo-teste" title="O índice é calculado, mas o bônus ainda não é pago.">Período de teste: bônus ainda não é pago</span>' : "") + "</h3>" +
+        Conduta_farolMargemHtml_(res) +
+        Conduta_farolDefesaHtml_(res) +
+        Conduta_farolAnteriorHtml_(res) +
+        Conduta_farolTendenciasHtml_(res) +
+        Conduta_farolAcoesHtml_(res, !!opcoes.compacto) +
       "</div>" +
     "</div>";
     Conduta_farolAgendarMontagem_();
@@ -6057,32 +6125,8 @@
       .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiPreverRotina", payload: {} });
   }
 
-  /** Linhas extras do farol: o que ainda está em apuração no mês e o mês anterior. */
-  function Conduta_extrasFarolHtml_(res, compacto) {
-    if (!res) return "";
-    var num = function (v) { return Conduta_farolNum_(v); };
-    var out = "";
-    var e = res.emApuracao;
-    if (e && (e.emDefesa || e.registradas)) {
-      out += '<p class="farol-linha" style="margin-top:6px">' +
-        (e.emDefesa ? SGO_qtd_(e.emDefesa, "ocorrência", "ocorrências") + " em prazo de defesa (" + SGO_qtd_(e.pontosEmDefesa, "ponto", "pontos") + "). " + (Number(e.emDefesa) === 1 ? "Se ficar firme" : "Se ficarem firmes") + ", o índice de conduta vai a " + num(e.icoPrevisto) + " (" + escapeHtml_(e.farolPrevisto) + ")." : "") +
-        (e.registradas ? " " + Number(e.registradas).toLocaleString("pt-BR") + " aguardando homologação." : "") + "</p>";
-    }
-    var a = res.anterior;
-    if (a) {
-      out += '<p class="farol-linha" style="margin-top:6px">' + escapeHtml_(a.nome.charAt(0).toUpperCase() + a.nome.slice(1)) + ": " +
-        (a.fechado ? "fechado" + (a.automatico ? " automaticamente" : "") : "ainda não fechado") +
-        " · índice de conduta " + num(a.ico) + " · " + SGO_qtd_(a.D, "ponto de demérito", "pontos de demérito") + " · farol " + escapeHtml_(String(a.farol || "").toLowerCase()) +
-        (!a.fechado ? (a.pendencias ? " · " + SGO_qtd_(a.pendencias, "pendência de defesa", "pendências de defesa") : a.prazoVencido ? " · o fechamento automático sai na próxima rotina (06h)" : " · fecha sozinho depois de " + Conduta_dataHoraBr_(a.limiteFechamento)) : "") + "</p>";
-    }
-    if (!compacto && Conduta_ehGestorFront_()) {
-      if (res.rotinaPendente) {
-        out += '<p class="farol-linha" style="margin-top:8px"><button type="button" class="btn-primary" style="padding:6px 12px;font-size:12.5px" onclick="event.stopPropagation();Conduta_aplicarRotinaAgora_(this)">Aplicar agora: fechamentos pendentes e ajustes do programa</button></p>';
-      }
-      out += '<p class="farol-linha" style="margin-top:6px"><a href="#" onclick="event.stopPropagation();Conduta_abrirPainelCiencia_();return false;">Ver quem confirmou a leitura dos avisos</a></p>';
-    }
-    return out;
-  }
+  // 20/10/2026: as linhas extras do farol (prazo de defesa, mês anterior, ações da gestão) passaram para
+  // Conduta_farolDefesaHtml_, Conduta_farolAnteriorHtml_ e Conduta_farolAcoesHtml_, uma forma de cada informação.
 
   function lerPreferenciaSomOciosidade_() {
     try {

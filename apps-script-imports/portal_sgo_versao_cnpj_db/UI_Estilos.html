@@ -1587,12 +1587,13 @@
   .mobile-farol-strip .farol-gauge-mini { width: 84px; flex: 0 0 auto; }
   .mobile-farol-strip .farol-mini-linha { display: flex; align-items: center; gap: 10px; }
 
-  /* Farol do Programa de Conduta (19/10/2026: velocímetro vivo) — cartão usado no
-     Início, na aba "Farol do mês" e no celular (.farol-compacto). A cor da situação
-     vem em --farol-cor (var(--success)/var(--warning)/var(--danger)); as faixas do
-     arco usam tons mais vivos (--fg-*), e os textos ficam nos tons escuros. */
+  /* Farol do Programa de Conduta (19/10/2026; revisão de 20/10/2026 com o dono) — cartão usado
+     no Início, na aba "Farol do mês" e no celular (.farol-compacto). Duas colunas: velocímetro
+     com a legenda logo abaixo dele; texto em coluna única, alinhado à esquerda, com espaçamento
+     vertical regular. Tipografia e cores do visual Bancada (--bc-*), sem espaçamento de letras. */
   .farol-card {
     --farol-cor: var(--success);
+    --farol-tinta: var(--bc-action);
     --fg-vermelho: #C8402F;
     --fg-amarelo: #E3A21A;
     --fg-verde: #2E8B3E;
@@ -1600,91 +1601,93 @@
     color: var(--bc-text);
     border: 1px solid var(--bc-line);
     border-radius: 6px;
-    padding: 16px 20px 14px;
+    padding: 18px 20px;
     margin-bottom: 16px;
-    display: flex;
-    align-items: flex-start;
-    gap: 22px;
+    display: grid;
+    grid-template-columns: 248px minmax(0, 640px);
+    column-gap: 28px;
+    row-gap: 12px;
+    align-items: start;
     position: relative;
     overflow: hidden;
   }
+  .farol-card.farol-amarelo { --farol-tinta: var(--bc-warn); }
+  .farol-card.farol-vermelho { --farol-tinta: var(--bc-danger); }
   .farol-card.farol-vivo:focus-visible { outline: 2px solid var(--farol-cor); outline-offset: 2px; }
-  .farol-gauge-wrap { flex: 0 0 auto; width: 232px; max-width: 100%; position: relative; z-index: 1; }
-  .farol-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
-  .farol-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 6px; }
-  .farol-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    color: var(--farol-cor);
-  }
-  .farol-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--farol-cor); }
-  .farol-selo { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; border: 1px solid; }
+  .farol-gauge-wrap { width: 248px; max-width: 100%; position: relative; z-index: 1; }
+  .farol-body { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; position: relative; z-index: 1; text-align: left; }
+  .farol-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+  .farol-situacao { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--farol-tinta); }
+  .farol-situacao .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--farol-cor); }
+  .farol-ao-vivo { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--bc-text-3); }
+  .farol-ao-vivo-ponto { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: var(--fg-verde); animation: farolVivoPonto 2.4s ease-in-out infinite; }
+  @keyframes farolVivoPonto { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .farol-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--text-strong); }
+  .farol-selo { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; border: 1px solid; line-height: 1.25; }
   .farol-selo-verde { color: var(--bc-action); background: var(--bc-action-bg); border-color: var(--bc-action-line); }
   .farol-selo-amarelo { color: var(--bc-warn); background: var(--bc-warn-bg); border-color: var(--bc-warn-line); }
   .farol-selo-vermelho { color: var(--bc-danger); background: var(--bc-danger-bg); border-color: var(--bc-danger-line); }
-  .farol-selo-teste { color: var(--bc-text-2); background: #F2F2EF; border-color: var(--bc-line-2); }
-  .farol-titulo { font-size: 16.5px; font-weight: 800; margin: 0 0 4px; color: var(--text-strong); letter-spacing: -.01em; }
-  .farol-titulo .farol-selo { font-size: 14px; min-height: 28px; padding: 3px 12px; letter-spacing: 0; }
-  .farol-linha { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0; }
-  .farol-legenda { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
-  .farol-legenda span { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); font-weight: 600; }
+  .farol-selo-teste { font-size: 12.5px; min-height: 24px; color: var(--bc-text-2); background: #F2F2EF; border-color: var(--bc-line-2); }
+  .farol-frase { margin: 0; font-size: 13px; line-height: 1.5; color: var(--bc-text-2); }
+  .farol-frase-defesa { display: flex; align-items: baseline; gap: 8px; }
+  .farol-frase-anterior { color: var(--bc-text-3); }
+  .farol-amostra-defesa, .farol-amostra-projecao { flex: 0 0 auto; display: inline-block; width: 16px; height: 8px; border-radius: 3px; }
+  .farol-amostra-defesa { background: repeating-linear-gradient(135deg, var(--fg-amarelo) 0 3px, #FFFFFF 3px 6px); border: 1px solid var(--fg-amarelo); box-sizing: border-box; }
+  .farol-amostra-projecao { height: 0; border-top: 3px dashed var(--bc-text-3); border-radius: 0; transform: translateY(-3px); }
+  .farol-legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 2px; }
+  .farol-legenda span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--bc-text-3); font-weight: 600; }
   .farol-legenda i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
   .farol-legenda .fg-cor-vermelho { background: var(--fg-vermelho); }
   .farol-legenda .fg-cor-amarelo { background: var(--fg-amarelo); }
   .farol-legenda .fg-cor-verde { background: var(--fg-verde); }
-  .farol-ao-vivo { margin-left: auto; }
-  .farol-ao-vivo-ponto { border-radius: 50% !important; background: var(--fg-verde); animation: farolVivoPonto 2.4s ease-in-out infinite; }
-  @keyframes farolVivoPonto { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .farol-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 2px; }
+  .farol-acao { padding: 7px 12px; font-size: 12.5px; }
+  .farol-link { font-size: 13px; }
 
   /* Velocímetro (SVG) */
   .farol-gauge { display: block; width: 100%; height: auto; overflow: visible; }
   .farol-gauge .fg-trilho { stroke: #EEEEEA; }
-  .farol-gauge .fg-faixa { opacity: .28; transition: opacity .4s ease; }
+  .farol-gauge .fg-faixa { opacity: .3; transition: opacity .4s ease; }
   .farol-gauge .fg-faixa.fg-ativa { opacity: 1; }
   .farol-gauge .fg-vermelho { stroke: var(--fg-vermelho); }
   .farol-gauge .fg-amarelo { stroke: var(--fg-amarelo); }
   .farol-gauge .fg-verde { stroke: var(--fg-verde); }
   .farol-gauge .fg-brilho { opacity: .35; animation: farolBrilho 3.2s ease-in-out infinite; }
   @keyframes farolBrilho { 0%, 100% { opacity: .22; } 50% { opacity: .5; } }
-  .farol-gauge .fg-marca { stroke: #A8A59B; stroke-width: 1; }
-  .farol-gauge .fg-marca-maior { stroke: #6E6B63; stroke-width: 1.4; }
-  .farol-gauge .fg-numero { font-size: 9.5px; font-weight: 700; fill: var(--muted); font-variant-numeric: tabular-nums; }
-  .farol-gauge .fg-lamina { stroke: var(--text-strong); stroke-width: 4; stroke-linecap: round; }
-  .farol-gauge .fg-lamina-fundo { stroke: #FFFFFF; stroke-width: 8; stroke-linecap: round; }
-  .farol-gauge .fg-valor { font-size: 34px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .farol-gauge .fg-marca { stroke: #B8B5AC; stroke-width: 1; }
+  .farol-gauge .fg-marca-maior { stroke: #7C796F; stroke-width: 1.3; }
+  .farol-gauge .fg-marca-limite { stroke: #7C796F; stroke-width: 1.3; }
+  .farol-gauge .fg-numero { font-size: 11px; font-weight: 600; fill: var(--bc-text-3); font-variant-numeric: tabular-nums; }
+  .farol-gauge .fg-agulha { fill: var(--bc-text); }
+  .farol-gauge .fg-pivo { fill: var(--bc-text); }
+  .farol-gauge .fg-pivo-centro { fill: #FFFFFF; }
+  .farol-gauge .fg-valor { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .farol-gauge.fg-verde .fg-valor { fill: var(--bc-action); }
   .farol-gauge.fg-amarelo .fg-valor { fill: var(--bc-warn); }
   .farol-gauge.fg-vermelho .fg-valor { fill: var(--bc-danger); }
-  .farol-gauge .fg-legenda { font-size: 10.5px; font-weight: 700; fill: var(--muted); }
+  .farol-gauge .fg-legenda { font-size: 11.5px; font-weight: 600; fill: var(--bc-text-3); }
   .farol-gauge .fg-projecao { opacity: 0; transition: opacity .5s ease .1s; }
   .farol-assentado .farol-gauge .fg-projecao { opacity: 1; }
   .farol-gauge .fg-projecao-arco { stroke-width: 3; stroke-dasharray: 3 3; stroke-linecap: butt; }
   .farol-gauge .fg-projecao.fg-verde .fg-projecao-arco, .farol-gauge .fg-projecao.fg-verde .fg-fantasma { stroke: var(--fg-verde); }
   .farol-gauge .fg-projecao.fg-amarelo .fg-projecao-arco, .farol-gauge .fg-projecao.fg-amarelo .fg-fantasma { stroke: var(--fg-amarelo); }
   .farol-gauge .fg-projecao.fg-vermelho .fg-projecao-arco, .farol-gauge .fg-projecao.fg-vermelho .fg-fantasma { stroke: var(--fg-vermelho); }
-  .farol-gauge .fg-fantasma { stroke-width: 3; stroke-dasharray: 4 3; stroke-linecap: round; }
+  .farol-gauge .fg-fantasma { stroke-width: 2.5; stroke-dasharray: 4 3; stroke-linecap: round; }
 
   /* Margem em pontos (parte listrada = em prazo de defesa) */
-  .farol-margem { margin-top: 10px; max-width: 460px; }
-  .farol-margem-topo { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
-  .farol-margem-topo strong { color: var(--text-strong); font-variant-numeric: tabular-nums; }
-  .farol-margem-barra { display: flex; gap: 2px; height: 8px; border-radius: 4px; background: #EEEEEA; overflow: hidden; }
-  .farol-margem-cheia { display: block; height: 100%; border-radius: 4px; background: var(--fg-verde); transition: width .8s cubic-bezier(.22, 1, .36, 1); }
+  .farol-margem { width: 100%; max-width: 420px; }
+  .farol-margem-rotulo { font-size: 13px; color: var(--bc-text-2); margin-bottom: 5px; }
+  .farol-margem-rotulo strong { color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  .farol-margem-barra { display: flex; gap: 2px; height: 10px; border-radius: 5px; background: #EEEEEA; overflow: hidden; }
+  .farol-margem-cheia { display: block; height: 100%; border-radius: 5px; background: var(--fg-verde); transition: width .8s cubic-bezier(.22, 1, .36, 1); }
   .farol-margem-amarelo .farol-margem-cheia { background: var(--fg-amarelo); }
-  .farol-margem-defesa { display: block; height: 100%; border-radius: 4px; background: repeating-linear-gradient(135deg, var(--fg-amarelo) 0 3px, #FFFFFF 3px 6px); border: 1px solid var(--fg-amarelo); box-sizing: border-box; transition: width .8s cubic-bezier(.22, 1, .36, 1); }
-  .farol-margem-nota { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .farol-margem-defesa { display: block; height: 100%; border-radius: 5px; background: repeating-linear-gradient(135deg, var(--fg-amarelo) 0 3px, #FFFFFF 3px 6px); border: 1px solid var(--fg-amarelo); box-sizing: border-box; transition: width .8s cubic-bezier(.22, 1, .36, 1); }
 
-  /* Mini gráficos da evolução */
-  .farol-tendencias { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-  .farol-tendencia { flex: 1 1 150px; min-width: 0; max-width: 260px; }
-  .farol-tendencia-titulo { font-size: 11px; font-weight: 700; color: var(--text-strong); margin-bottom: 2px; }
-  .farol-tendencia-rodape { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .farol-tendencias-nota { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  /* Mini gráficos da evolução (só quando dizem alguma coisa) */
+  .farol-tendencias { display: flex; flex-wrap: wrap; gap: 12px 24px; width: 100%; }
+  .farol-tendencia { flex: 0 1 240px; min-width: 0; }
+  .farol-tendencia-titulo { font-size: 12.5px; font-weight: 700; color: var(--text-strong); margin-bottom: 4px; }
+  .farol-tendencia-nota { font-size: 11.5px; line-height: 1.4; color: var(--bc-text-3); margin-top: 4px; }
   .farol-spark { display: block; width: 100%; height: 40px; overflow: visible; }
   .farol-spark .fs-linha { stroke: var(--text-strong); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .farol-spark .fs-limite { stroke: #A8A59B; stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
@@ -1697,23 +1700,22 @@
 
   /* Pulso discreto quando o índice muda e aviso "Índice atualizado" */
   .farol-card.farol-pulso { animation: farolPulso 1.6s ease-out 1; }
-  @keyframes farolPulso { 0% { box-shadow: 0 0 0 0 rgba(46, 139, 62, .0); } 20% { box-shadow: 0 0 0 4px var(--bc-line-2); } 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); } }
-  .farol-aviso-vivo { position: fixed; right: 16px; bottom: 16px; z-index: 9000; max-width: min(420px, calc(100vw - 32px)); display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; background: #FFFFFF; color: var(--bc-text); border: 1px solid var(--bc-line); border-left: 4px solid var(--farol-cor, var(--success)); border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); font-size: 12.5px; line-height: 1.4; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+  @keyframes farolPulso { 0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); } 20% { box-shadow: 0 0 0 4px var(--bc-line-2); } 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); } }
+  .farol-aviso-vivo { position: fixed; right: 16px; bottom: 16px; z-index: 9000; max-width: min(420px, calc(100vw - 32px)); display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; background: #FFFFFF; color: var(--bc-text); border: 1px solid var(--bc-line); border-left: 4px solid var(--farol-cor, var(--success)); border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); font-size: 13px; line-height: 1.4; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
   .farol-aviso-vivo.visivel { opacity: 1; transform: none; }
   .farol-aviso-vivo .dot { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--farol-cor, var(--success)); }
 
-  /* Compacto (celular) */
-  .farol-card.farol-compacto { padding: 12px 14px; gap: 12px; margin-bottom: 0; flex-direction: column; align-items: stretch; border: 0; border-radius: 0; background: transparent; }
-  .farol-compacto .farol-gauge-wrap { width: 100%; max-width: 260px; align-self: center; }
-  .farol-compacto .farol-titulo { font-size: 15px; }
+  /* Uma coluna: celular (compacto) e telas estreitas */
+  .farol-card.farol-compacto { padding: 14px 16px 16px; margin-bottom: 0; border: 0; border-radius: 0; background: transparent; }
+  .farol-card.farol-compacto, .farol-card.farol-compacto .farol-gauge-wrap { grid-template-columns: minmax(0, 1fr); }
+  .farol-compacto .farol-gauge-wrap { width: 100%; max-width: 280px; justify-self: center; }
   .farol-compacto .farol-margem { max-width: none; }
-  .farol-compacto .farol-tendencia { max-width: none; }
+  .farol-compacto .farol-tendencia { flex: 1 1 100%; }
   .mobile-farol-strip.mobile-farol-vivo { padding: 0; background: #FFFFFF; }
-
   @media (max-width: 900px) {
-    .farol-card { flex-direction: column; align-items: stretch; gap: 10px; }
-    .farol-gauge-wrap { width: 100%; max-width: 260px; align-self: center; }
-    .farol-ao-vivo { margin-left: 0; }
+    .farol-card { grid-template-columns: minmax(0, 1fr); }
+    .farol-gauge-wrap { width: 100%; max-width: 280px; justify-self: center; }
+    .farol-margem { max-width: none; }
   }
   @media (max-width: 640px) {
     .farol-aviso-vivo { left: 16px; right: 16px; bottom: 16px; max-width: none; }
