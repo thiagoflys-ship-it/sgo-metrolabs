@@ -178,7 +178,7 @@ function Conduta_avisosVigentes_() {
       titulo: 'Resultado de ' + Conduta_nomeCompetencia_(comp) + ': farol ' + f.FAROL + (preservado ? ' · bônus coletivo preservado' : ' · bônus coletivo perdido'),
       linhas: [
         'Índice de conduta ' + Conduta_numBr_(f.ICO) + ' · pontos de demérito: ' + Conduta_numBr_(f.D, 0) + ' ponto(s) · ' + Conduta_numBr_(f.N, 0) + ' colaborador(es) na conta',
-        temGG ? 'Houve infração gravíssima firme no mês, o que cancela o bônus coletivo.' : (preservado ? 'A equipe ficou na faixa verde (ICO ≥ ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').' : 'A equipe ficou abaixo da faixa verde (ICO < ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').'),
+        temGG ? 'Houve infração gravíssima firme no mês, o que cancela o bônus coletivo.' : (preservado ? 'A equipe ficou na faixa verde (índice de conduta de ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ' ou mais).' : 'A equipe ficou abaixo da faixa verde (índice de conduta menor que ' + Conduta_numBr_(p.ICO_VERDE_MIN || 85) + ').'),
         (function () {
           var base = (f.FECHADO_POR === 'SISTEMA' ? 'Fechamento automático em ' : 'Fechado em ') + Conduta_dataBr_(em) + '.';
           var obs = String(f.OBSERVACAO || '').trim();
@@ -368,7 +368,7 @@ function Conduta_apiPreverRotina(sessionId) {
   var p = Conduta_preverRotina_();
   p.ok = true;
   p.mensagemConfirmacao = p.mesesAFechar.length
-    ? 'Esta ação vai FECHAR e CONGELAR: ' + p.mesesAFecharNomes.join(', ') + '. Depois de fechado, o resultado do mês (ICO, farol e bônus) não muda mais e nada com data nesse mês pode ser lançado. Confirma?'
+    ? 'Esta ação vai FECHAR e CONGELAR: ' + p.mesesAFecharNomes.join(', ') + '. Depois de fechado, o resultado do mês (índice de conduta, farol e bônus) não muda mais e nada com data nesse mês pode ser lançado. Confirma?'
     : 'Nenhum mês será fechado agora. A rotina só aplica os prazos vencidos.';
   return p;
 }

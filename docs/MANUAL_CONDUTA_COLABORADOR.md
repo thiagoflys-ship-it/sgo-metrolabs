@@ -169,6 +169,10 @@ O fechamento acontece sozinho depois do prazo, desde que não haja defesa nem mi
 1. Abra a aba "Fechamentos".
 2. Na linha do mês, toque em "Ver relatório".
 
+O relatório do mês abre em A4. No topo ficam o velocímetro do índice de conduta (o mesmo do farol), a situação do bônus, os pontos de demérito com a margem e os números do mês. Depois vêm a interpretação, a composição do demérito por grupo, a evolução dos meses fechados, os reconhecimentos, as missões e as contestações. O relatório é coletivo e não mostra o nome de ninguém.
+
+Se a faixa no topo disser que a cópia gravada estava no modelo anterior, é a versão atual do mesmo fechamento: os números não mudam. A cópia do dia do fechamento abre pelo link "Abrir a cópia original".
+
 ## 8. Relatórios e extratos
 
 ### Gerar o seu extrato do mês

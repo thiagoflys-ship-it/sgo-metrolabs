@@ -66,7 +66,7 @@ function CondutaExt_contexto_(colaboradorId, competencia) {
   var valorIncentivo = linha ? (sombra ? Number(linha.valorSimuladoIncentivo) || 0 : Number(linha.valorIncentivo) || 0) : 0;
   return {
     competencia: competencia, fechado: fechado, fechadoEm: fech ? Conduta_soData_(fech.FECHADO_EM) : '', sombra: sombra,
-    colaborador: { id: u.ID, nome: u.NOME || u.USUARIO, perfil: u.PERFIL, setor: u.SETOR || u.DEPARTAMENTO || '' },
+    colaborador: { id: u.ID, nome: u.NOME || u.USUARIO, perfil: u.PERFIL, setor: Conduta_areaDe_(u) },
     noCalculo: !!linha, ausenteNoMes: Conduta_colaboradorAusenteNaCompetencia_(colaboradorId, competencia),
     equipe: resumo, recebeBonus: !!(linha && linha.recebeBonus), ggPropria: !!(linha && linha.ggPropria),
     valorBonus: valorBonus, valorIncentivo: valorIncentivo, total: valorBonus + valorIncentivo,
@@ -75,22 +75,24 @@ function CondutaExt_contexto_(colaboradorId, competencia) {
   };
 }
 
+/**
+ * Texto padrão (sem IA). 20/10/2026: não repete os valores do resumo (índice,
+ * bônus, incentivo, total, contagens); explica o resultado e o que acompanhar.
+ */
 function CondutaExt_textoPadrao_(x) {
-  var firmes = x.ocorrencias.filter(function (o) { return o.status === 'FIRME'; });
-  var pontos = firmes.reduce(function (s, o) { return s + o.pontos; }, 0);
+  var firmes = x.ocorrencias.filter(function (o) { return o.status === 'FIRME'; }).length;
   var emAndamento = x.ocorrencias.filter(function (o) { return ['REGISTRADA', 'HOMOLOGADA', 'CONTESTADA', 'EM_RECURSO'].indexOf(o.status) >= 0; }).length;
-  var missOk = x.missoes.filter(function (m) { return m.qualifica; }).length, missPend = x.missoes.filter(function (m) { return m.aprovacao === 'PENDENTE'; }).length;
+  var missPend = x.missoes.filter(function (m) { return m.aprovacao === 'PENDENTE'; }).length;
   var p = [];
-  p.push('Em ' + RelA4_competencia_(x.competencia) + ' (' + (x.fechado ? 'mês fechado' : 'apuração parcial, o mês ainda não foi fechado') + '), a equipe está com índice de conduta ' + Conduta_numBr_(x.equipe.ico) + ' e farol ' + CondutaRel_farolTexto_(x.equipe.farol).toLowerCase() + '. ' +
-    (x.recebeBonus ? 'Pela apuração, você ' + (x.fechado ? 'recebe' : 'receberia') + ' o bônus coletivo de ' + RelA4_moeda_(x.valorBonus) + (x.sombra ? ' (valor simulado, período de teste)' : '') + '.'
+  p.push((x.fechado ? 'O mês está fechado. ' : 'O mês ainda não foi fechado, e o resultado pode mudar até o fechamento. ') +
+    (x.recebeBonus ? 'O bônus coletivo é devido porque a equipe ' + (x.fechado ? 'fechou' : 'está') + ' no farol verde, sem infração gravíssima' + (x.sombra ? '; no período de teste, o valor é só simulado' : '') + '.'
       : x.ggPropria ? 'Uma infração gravíssima firme registrada para você no mês zera o bônus coletivo e o incentivo de missão.'
         : !x.noCalculo ? 'Você não entrou no cálculo deste mês (ausência registrada ou cadastro inativo).'
-          : 'O bônus coletivo não é devido neste mês porque o farol da equipe não está verde.'));
-  p.push('No mês há ' + RelA4_plural_(firmes.length, 'ocorrência firme', 'ocorrências firmes') + ' em seu nome (' + RelA4_plural_(pontos, 'ponto', 'pontos') + ' de demérito)' + (emAndamento ? ' e ' + RelA4_plural_(emAndamento, 'ocorrência ainda em andamento', 'ocorrências ainda em andamento') : '') +
-    ', ' + RelA4_plural_(x.reconhecimentos.length, 'reconhecimento', 'reconhecimentos') + ' e ' + RelA4_plural_(x.missoes.length, 'participação em missão', 'participações em missão') +
-    (x.missoes.length ? ' (' + RelA4_plural_(missOk, 'elegível', 'elegíveis') + (missPend ? ', ' + RelA4_plural_(missPend, 'aguardando aprovação da gestão', 'aguardando aprovação da gestão') : '') + ')' : '') +
-    '. Incentivo de missão ' + (x.fechado ? 'do mês' : 'apurado até agora') + ': ' + RelA4_moeda_(x.valorIncentivo) + '.');
-  if (emAndamento) p.push('Ocorrências em andamento só contam quando ficarem firmes; acompanhe os prazos de defesa em Programa de conduta > Ocorrências.');
+          : 'O bônus coletivo não é devido porque o farol da equipe não está verde; o incentivo de missão não depende do farol.'));
+  p.push((firmes ? 'As ocorrências firmes em seu nome, listadas na seção Ocorrências, entram no demérito de toda a equipe.' : 'Não há ocorrência firme em seu nome no mês.') +
+    (emAndamento ? ' As que estão em andamento só contam se forem mantidas; acompanhe os prazos de defesa em Programa de conduta > Ocorrências.' : '') +
+    (missPend ? ' Há missão sua aguardando a aprovação da gestão: o incentivo só entra depois da decisão.' : '') +
+    (x.reconhecimentos.length ? ' Os reconhecimentos do mês ficam registrados no seu histórico.' : ''));
   return p.join('\n\n');
 }
 
@@ -106,7 +108,7 @@ function CondutaExt_comentario_(x) {
     l.push('Missões: ' + (x.missoes.map(function (m) { return m.destino + ' (' + RelA4_num_(m.km, 0) + ' km) — ' + m.motivo.toLowerCase() + ', ' + RelA4_moeda_(m.valor); }).join('; ') || 'nenhuma'));
     l.push('Incentivo de missão: ' + RelA4_moeda_(x.valorIncentivo) + '; total do mês: ' + RelA4_moeda_(x.total));
     var r = CondutaIA_secoes_('escreva o COMENTARIO do extrato individual de um colaborador, dirigido a ele em segunda pessoa ("você"), em 2 parágrafos curtos: o resultado do mês para ele ' +
-      '(bônus e incentivo, citando os valores) e, de forma construtiva, o que manter e o que cuidar no próximo mês. Não use o nome da pessoa.', l, ['COMENTARIO']);
+      '(o que explica o bônus e o incentivo, sem repetir os valores, que o resumo do extrato já mostra) e, de forma construtiva, o que manter e o que cuidar no próximo mês. Não use o nome da pessoa.', l, ['COMENTARIO']);
     return { texto: r.COMENTARIO, origem: 'IA', aviso: '' };
   } catch (e) {
     return { texto: padrao, origem: 'PADRAO', aviso: RelA4_avisoFalhaIa_(e) };
@@ -119,7 +121,7 @@ function CondutaExt_html_(x, comentario) {
   if (x.sombra) c.push(RelA4_caixa_('Período de teste: os valores são simulados e não autorizam pagamento.', 'aviso'));
   var perfil = ({ ADMIN: 'Administrador', DIRETORIA: 'Diretoria', GESTOR: 'Gestor', TECNICO: 'Técnico', METROLOGIA: 'Metrologia', COMERCIAL: 'Comercial', FINANCEIRO: 'Financeiro', RH: 'RH' })[String(x.colaborador.perfil || '').toUpperCase()] || x.colaborador.perfil;
   c.push(RelA4_secao_('Identificação', RelA4_identificacao_([
-    ['Colaborador', x.colaborador.nome], ['Perfil', perfil], ['Setor', x.colaborador.setor || '—'],
+    ['Colaborador', x.colaborador.nome], ['Perfil', perfil], ['Área', x.colaborador.setor || 'Área não informada'],
     ['Situação do mês', x.fechado ? 'Fechado em ' + RelA4_dataBr_(x.fechadoEm) : 'Em apuração']
   ])));
   var firmes = x.ocorrencias.filter(function (o) { return o.status === 'FIRME'; }).length;

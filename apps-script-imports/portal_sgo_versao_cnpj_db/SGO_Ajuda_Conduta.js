@@ -235,15 +235,24 @@ function SGO_ajudaTelas_Conduta_() {
           "O resultado fica congelado e o relatório do mês é gerado."
         ] },
         { titulo: "Ver o relatório de um mês fechado", itens: [
-          "Na lista de fechamentos, toque em \"Ver relatório\".",
+          "Na lista de fechamentos, toque em \"Ver relatório\". O relatório abre em A4 numa aba nova.",
+          "No topo: o velocímetro do índice (o mesmo do farol), a situação do bônus, os pontos de demérito com a margem e os números do mês. Depois: a interpretação, a composição do demérito por grupo e código, a evolução dos meses fechados (a partir de três), reconhecimentos, missões, contestações e as assinaturas.",
+          "Se a cópia gravada do mês estiver no modelo anterior do relatório, a versão atual é gerada na hora com os números do fechamento congelado (nada é recalculado) e sai como nova revisão. A faixa no topo da aba avisa e traz o link \"Abrir a cópia original\".",
+          "A cópia gravada no dia do fechamento nunca é apagada: ela abre pelo link \"Abrir a cópia original\" da faixa.",
           "Se o relatório não existir, a gestão toca em \"Gerar de novo\"."
+        ] },
+        { titulo: "Gerar o relatório de novo (gestão)", itens: [
+          "Toque em \"Gerar de novo\" na linha do mês. A aba abre na hora com \"Gerando...\" e mostra o relatório quando ficar pronto.",
+          "O número do documento é o do mês (por exemplo, CND-202609) e a revisão sobe a cada geração (01, 02...). Os números são sempre os do fechamento congelado."
         ] }
       ],
       problemas: [
         { situacao: "\"Fechamento bloqueado: ... missão aguarda aprovação\"", oQueFazer: "Abra a aba \"Missões\", aprove ou recuse cada uma e feche de novo." },
         { situacao: "\"Fechamento bloqueado: ... ocorrência(s) com decisão ou prazo de defesa pendente\"", oQueFazer: "Aguarde os prazos ou julgue as defesas. Depois feche." },
         { situacao: "\"Aguarde o término do mês para congelar a competência.\"", oQueFazer: "O mês ainda não acabou." },
-        { situacao: "No farol aparece \"Aplicar agora: fechamentos pendentes e ajustes do programa\"", oQueFazer: "Há rotina atrasada. Toque no botão, leia o que será fechado e confirme." }
+        { situacao: "No farol aparece \"Aplicar agora: fechamentos pendentes e ajustes do programa\"", oQueFazer: "Há rotina atrasada. Toque no botão, leia o que será fechado e confirme." },
+        { situacao: "\"Ver relatório\" mostra a faixa \"A cópia gravada deste mês estava no modelo anterior\"", oQueFazer: "Nada a fazer: é a versão atual do mesmo fechamento. Para conferir a cópia do dia do fechamento, toque em \"Abrir a cópia original\" na faixa." },
+        { situacao: "A aba do relatório não abriu", oQueFazer: "O navegador bloqueou a janela. Permita janelas do SGO+ no navegador e toque no botão de novo; se ele baixar o arquivo, abra o arquivo baixado." }
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Consultar a prévia, fechar e gerar o relatório de novo." },
@@ -254,8 +263,15 @@ function SGO_ajudaTelas_Conduta_() {
 
     "conduta/relatorios_e_extratos": {
       titulo: "Relatórios e extratos",
-      paraQueServe: "Gera o extrato de cada pessoa, o relatório semanal da equipe e a prestação de contas das missões, todos em A4.",
+      paraQueServe: "Gera o extrato de cada pessoa, o relatório da equipe com todos os colaboradores, o relatório semanal e a prestação de contas das missões, todos em A4.",
       passos: [
+        { titulo: "Gerar o relatório da equipe (gestão, Diretoria e RH)", itens: [
+          "Em \"Relatório da equipe\", escolha o mês em \"De\" e em \"Até\" (o mesmo mês, ou um intervalo de até 12 meses).",
+          "Toque em \"Gerar relatório da equipe\". O relatório abre em A4 deitado numa aba nova.",
+          "Traz uma linha por colaborador (área, ocorrências firmes e em andamento, pontos, reconhecimentos, missões elegíveis, incentivo, ciência dos avisos e situação do bônus) e os totais por área. O gráfico por área só aparece com quatro ou mais áreas com pontos.",
+          "Quem está sem área no cadastro aparece como \"Área não informada\", nunca fica de fora. Para corrigir, a gestão informa a área no cadastro da pessoa, em Administração > Usuários, e gera o relatório de novo.",
+          "O documento tem o resultado de cada pessoa: é de consulta da gestão, da Diretoria e do RH e não deve ser publicado para a equipe."
+        ] },
         { titulo: "Gerar o relatório semanal (gestão)", itens: [
           "Em \"Relatório semanal para toda a equipe\", escolha \"Semana terminando em\".",
           "Toque em \"Gerar os 7 dias em A4\".",
@@ -269,18 +285,20 @@ function SGO_ajudaTelas_Conduta_() {
           "Na lista de relatórios, toque em \"Abrir\"."
         ] },
         { titulo: "Onde ficam as cópias", itens: [
-          "Cada extrato e cada relatório gerado fica guardado em PDF e HTML na pasta \"Programa de conduta - Relatórios\": \"Fechamentos mensais\", \"Relatórios semanais\", \"Missões\", \"Extratos\" (uma subpasta por pessoa) e \"Prévias\".",
+          "Cada extrato e cada relatório gerado fica guardado em PDF e HTML na pasta \"Programa de conduta - Relatórios\": \"Fechamentos mensais\", \"Relatórios semanais\", \"Missões\", \"Extratos\" (uma subpasta por pessoa), \"Relatórios da equipe\" e \"Prévias\".",
           "Relatório com mais de três páginas traz o sumário com o número das páginas."
         ] }
       ],
       problemas: [
         { situacao: "\"O navegador bloqueou a janela.\"", oQueFazer: "O relatório foi baixado. Abra o arquivo baixado." },
-        { situacao: "\"A competência escolhida ainda não começou.\"", oQueFazer: "Escolha o mês atual ou um anterior." }
+        { situacao: "\"A competência escolhida ainda não começou.\"", oQueFazer: "Escolha o mês atual ou um anterior." },
+        { situacao: "\"O período do relatório da equipe vai até 12 meses.\"", oQueFazer: "Escolha em \"De\" e \"Até\" um intervalo de no máximo 12 meses." },
+        { situacao: "No relatório da equipe aparece \"Área não informada\"", oQueFazer: "A pessoa está sem área no cadastro. A gestão informa a área em Administração > Usuários e gera o relatório de novo." }
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Gerar o próprio extrato e abrir os relatórios semanais." },
-        { perfil: "RH", pode: "Gerar o extrato de qualquer pessoa e abrir os relatórios semanais e de missões. Não gera o relatório semanal nem o de missões." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o extrato de qualquer pessoa, o relatório semanal e o de missões." }
+        { perfil: "RH", pode: "Gerar o extrato de qualquer pessoa e o relatório da equipe, e abrir os relatórios semanais e de missões. Não gera o relatório semanal nem o de missões." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Gerar o extrato de qualquer pessoa, o relatório da equipe, o relatório semanal e o de missões." }
       ]
     },
 

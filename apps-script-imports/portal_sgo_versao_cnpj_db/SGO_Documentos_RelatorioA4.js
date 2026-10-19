@@ -96,6 +96,16 @@ function RelA4_estilosExtra_(paisagem) {
     '.duas{display:grid;grid-template-columns:1fr 1fr;gap:6mm}' +
     '.gauge-kpis{display:grid;grid-template-columns:44mm 1fr;gap:4mm;align-items:center;break-inside:avoid;page-break-inside:avoid}' +
     '.gauge-kpis .kpis{margin:0;grid-template-columns:repeat(3,1fr)}' +
+    // resumo com o velocímetro do farol (Programa de conduta), 20/10/2026
+    '.resumo-farol{display:grid;grid-template-columns:56mm 1fr;gap:6mm;align-items:center;margin:1mm 0 3.4mm;break-inside:avoid;page-break-inside:avoid}' +
+    '.resumo-farol .gauge svg{width:56mm;height:auto;display:block}' +
+    '.resumo-farol .situacao{font-size:12.5pt;font-weight:700;line-height:1.25;margin:0 0 .8mm;text-align:left}' +
+    '.resumo-farol .situacao.verde{color:#1F6B2A}.resumo-farol .situacao.amarelo{color:#7A5200}.resumo-farol .situacao.vermelho{color:#A3261B}' +
+    '.resumo-farol .sub{font-size:8.6pt;color:#3e4c59;margin:0 0 2.6mm;text-align:left;hyphens:manual}' +
+    '.resumo-farol .kpis{grid-template-columns:repeat(2,1fr);margin:0}' +
+    '.margem{margin:0 0 3mm}.margem .rot{display:flex;justify-content:space-between;gap:3mm;font-size:8.6pt;color:#243b53;margin:0 0 1mm}.margem .rot b{white-space:nowrap}' +
+    '.margem .barra{height:2.6mm;background:#EEEEEA;border-radius:1.3mm;overflow:hidden;display:flex}.margem .barra i{display:block;height:100%}' +
+    '.margem .escala{display:flex;justify-content:space-between;font-size:7.6pt;color:#616e7c;margin-top:.6mm}' +
     '.analise ul{margin:0 0 2.4mm 4.5mm;padding:0;break-inside:avoid;page-break-inside:avoid}.analise li{margin:0 0 1.1mm}' +
     'ol.conferencia{margin:0 0 2.4mm 5mm;padding:0}ol.conferencia li{margin:0 0 1.1mm}' +
     'table.t td .sub{display:block;font-size:7.6pt;color:#52606d}' +
@@ -105,7 +115,7 @@ function RelA4_estilosExtra_(paisagem) {
     '.aviso-tela.alerta{background:#fffbeb;border:1px solid #fcd34d;color:#78350f}' +
     '.aviso-tela a{color:inherit;font-weight:700}' +
     '@media print{.aviso-tela,.no-print{display:none!important}}' +
-    '@media screen and (max-width:640px){.folha{padding:6mm 4mm}.kpis,.gauge-kpis .kpis{grid-template-columns:repeat(2,1fr)}.duas,.gauge-kpis{grid-template-columns:1fr}' +
+    '@media screen and (max-width:640px){.folha{padding:6mm 4mm}.kpis,.gauge-kpis .kpis{grid-template-columns:repeat(2,1fr)}.duas,.gauge-kpis,.resumo-farol{grid-template-columns:1fr}.resumo-farol .gauge svg{margin:0 auto}' +
     'table.t{display:block;overflow-x:auto}.cab-tela .meta{font-size:10px}.barra-tela{padding:0 8px}}';
 }
 
@@ -136,7 +146,8 @@ function RelA4_numerar_(corpo) {
  * o: { titulo, subtitulo, identificacao (texto da referência: período, competência...),
  *      rotuloIdentificacao ('Período' por padrão), corpo, paisagem, emitidoPor,
  *      sigla (para o nº), numero, ficha: [[rótulo, valor]] extra, tituloCurto,
- *      tipoCapa ('Relatório gerencial'), sumario (padrão true), capa (padrão 'auto') }
+ *      tipoCapa ('Relatório gerencial'), sumario (padrão true), capa (padrão 'auto'),
+ *      revisao (número; padrão 0, sai "00") }
  * O sumário e a capa entram ou saem no fecho (RelA4_finalizar_), pelo nº de páginas.
  */
 function RelA4_documento_(o) {
@@ -154,7 +165,7 @@ function RelA4_documento_(o) {
   var corpo = RelA4_numerar_(o.corpo || '');
   var base = {
     titulo: o.titulo || 'Relatório', subtitulo: o.subtitulo || '', tituloCurto: o.tituloCurto || o.titulo || 'Relatório',
-    rotuloNumero: 'Nº', numero: numero, revisao: '00', empresa: { nome: empresa.nome, cnpj: empresa.cnpj },
+    rotuloNumero: 'Nº', numero: numero, revisao: (typeof SGO_DocA4_revisao_ === 'function' ? SGO_DocA4_revisao_(o.revisao || 0) : '00'), empresa: { nome: empresa.nome, cnpj: empresa.cnpj },
     orientacao: paisagem ? 'paisagem' : 'retrato'
   };
   function montar(comCapa, comSumario) {
@@ -311,7 +322,8 @@ function RelA4_txtSvg_(x, y, texto, extra) {
 
 /**
  * Barras horizontais. itens: [{rotulo, valor, rotuloValor, cor}] ;
- * opts: { titulo (vira a legenda da figura), cor, vazio, unidade, legenda:[{cor, rotulo}] }
+ * opts: { titulo (vira a legenda da figura), cor, vazio, unidade, legenda:[{cor, rotulo}],
+ *         altura (da barra, padrão 15), espaco (entre barras, padrão 6) }
  */
 function RelA4_barras_(itens, opts) {
   opts = opts || {};
@@ -319,7 +331,7 @@ function RelA4_barras_(itens, opts) {
   if (!itens.length) return '<p class="nota">' + RelA4_esc_(opts.vazio || 'Sem dados no período.') + '</p>';
   var maiorRotulo = Math.max.apply(null, itens.map(function (i) { return String(i.rotulo).length; }));
   var maiorValor = Math.max.apply(null, itens.map(function (i) { return String(i.rotuloValor !== undefined ? i.rotuloValor : RelA4_num_(i.valor)).length; }).concat([6]));
-  var W = 680, hb = 15, gap = 6, esq = Math.min(190, Math.max(70, maiorRotulo * 5.6 + 12)), dir = Math.min(280, Math.max(70, maiorValor * 5.5 + 12)), topo = 6;
+  var W = 680, hb = opts.altura || 15, gap = opts.espaco || 6, esq = Math.min(190, Math.max(70, maiorRotulo * 5.6 + 12)), dir = Math.min(280, Math.max(70, maiorValor * 5.5 + 12)), topo = 6;
   var H = topo * 2 + itens.length * (hb + gap) + (opts.unidade ? 12 : 0);
   var larg = W - esq - dir;
   var max = Math.max.apply(null, itens.map(function (i) { return Math.max(Number(i.valor), 0); }).concat([0.0001]));
@@ -372,18 +384,18 @@ function RelA4_barrasEmpilhadas_(itens, series, opts) {
 /**
  * Colunas verticais com linhas de referência.
  * itens: [{rotulo, valor (null = sem dado), cor, rotuloValor}] ;
- * opts: {min, max, linhas:[{valor, rotulo, cor}], titulo, legenda:[{cor, rotulo}], unidade}
+ * opts: {min, max, linhas:[{valor, rotulo, cor}], titulo, legenda:[{cor, rotulo}], unidade, altura (padrão 210), casas (rótulos do eixo)}
  */
 function RelA4_colunas_(itens, opts) {
   opts = opts || {};
-  var W = 680, H = 210, esq = 40, dir = 10, topo = 14, base = 30;
+  var W = 680, H = opts.altura || 210, esq = 40, dir = 10, topo = 14, base = 30;
   var min = opts.min !== undefined ? opts.min : 0, max = opts.max !== undefined ? opts.max : Math.max.apply(null, itens.map(function (i) { return Number(i.valor) || 0; }).concat([1]));
   var alt = H - topo - base, larg = W - esq - dir, passo = larg / Math.max(itens.length, 1), wb = Math.min(46, passo * 0.6);
   function y(v) { return topo + alt - (Math.max(min, Math.min(max, v)) - min) / (max - min || 1) * alt; }
   var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
   [min, min + (max - min) / 4, (min + max) / 2, min + 3 * (max - min) / 4, max].forEach(function (v) {
     s.push('<line x1="' + esq + '" y1="' + y(v).toFixed(1) + '" x2="' + (W - dir) + '" y2="' + y(v).toFixed(1) + '" stroke="#e7ebef" stroke-width="0.7"/>');
-    s.push(RelA4_txtSvg_(esq - 5, y(v) + 3, RelA4_num_(v, 0), 'font-size="8.5" fill="#52606d" text-anchor="end"'));
+    s.push(RelA4_txtSvg_(esq - 5, y(v) + 3, RelA4_num_(v, opts.casas || 0), 'font-size="8.5" fill="#52606d" text-anchor="end"'));
   });
   s.push('<line x1="' + esq + '" y1="' + (topo + alt) + '" x2="' + (W - dir) + '" y2="' + (topo + alt) + '" stroke="#9aa5b1" stroke-width="0.8"/>');
   if (opts.unidade) s.push(RelA4_txtSvg_(esq - 5, topo - 5, opts.unidade, 'font-size="8.5" fill="#52606d" text-anchor="start"'));

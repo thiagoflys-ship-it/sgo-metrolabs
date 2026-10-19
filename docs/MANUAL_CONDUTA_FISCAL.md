@@ -173,6 +173,8 @@ Quem está ausente sai do divisor do mês, mas continua recebendo o bônus. "Rem
 
 Se o relatório de um mês fechado não abrir, toque em "Gerar de novo".
 
+Relatório do mês (20/10/2026): o número é o do mês (por exemplo, CND-202609) e a revisão sobe a cada "Gerar de novo". Os números vêm sempre do fechamento congelado. Quando a cópia gravada está no modelo anterior, "Ver relatório" gera a revisão no modelo atual e a cópia do dia do fechamento continua guardada, aberta pelo link "Abrir a cópia original" da faixa no topo.
+
 | O que aparece | O que fazer |
 |---|---|
 | "Fechamento bloqueado: ... missão aguarda aprovação" | Abra a aba "Missões", aprove ou recuse cada uma e feche de novo |
@@ -183,6 +185,7 @@ Se o relatório de um mês fechado não abrir, toque em "Gerar de novo".
 ## 8. Relatórios e extratos
 
 - "Extrato do colaborador": escolha a pessoa e a competência e toque em "Gerar extrato em A4". A gestão gera o de qualquer pessoa.
+- "Relatório da equipe" (gestão, Diretoria e RH): escolha o mês em "De" e "Até" (até 12 meses) e toque em "Gerar relatório da equipe". Sai em A4 deitado, com uma linha por colaborador (área, ocorrências, pontos, reconhecimentos, missões, ciência dos avisos e situação do bônus) e os totais por área. Quem está sem área no cadastro aparece como "Área não informada"; para corrigir, informe a área em Administração > Usuários e gere de novo. O documento tem o resultado de cada pessoa e não deve ser publicado para a equipe.
 - "Relatório semanal para toda a equipe": escolha "Semana terminando em" e toque em "Gerar os 7 dias em A4". Para gerar sozinho todo domingo às 18h, toque em "Ativar geração todo domingo".
 - "Prestação de contas das missões": escolha a competência e toque em "Gerar missões em A4". Serve para o Financeiro conferir e a Diretoria aprovar.
 

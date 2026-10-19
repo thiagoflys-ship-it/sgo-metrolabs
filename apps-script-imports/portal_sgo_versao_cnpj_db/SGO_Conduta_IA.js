@@ -15,7 +15,7 @@
 var CONDUTAIA_TOKENS = 2048;
 
 var CONDUTAIA_REGRAS_BASE =
-  'Você escreve um trecho de relatório do Programa de Conduta, Pontuação e Bonificação da Metrolab\'s ' +
+  'Você escreve um trecho de relatório do Programa de Conduta, Pontuação e Bonificação da Metrolabs ' +
   '(programa interno com um bônus coletivo mensal, pago só se o farol do mês fechar verde, e um incentivo de missão por deslocamento longo, ' +
   'independente do farol; missão lançada pelo próprio colaborador só conta depois de aprovada pela gestão).\n' +
   'REGRAS ABSOLUTAS:\n' +
@@ -58,7 +58,7 @@ function CondutaIA_contextoMensal_(ctx) {
   l.push('Infração gravíssima firme no mês: ' + (ctx.temGG ? 'sim (cancela o bônus coletivo)' : 'não'));
   l.push('Pontos de demérito no mês: ' + ctx.D + '; pessoas no cálculo: ' + ctx.n);
   l.push('Limite de pontos para continuar no verde: ' + ctx.limiteVerdeD + ' (folga ou excesso: ' + (ctx.limiteVerdeD - ctx.D) + ')');
-  l.push('Índice do mês anterior: ' + (ctx.icoMesAnterior === null ? 'sem dado' : Conduta_numBr_(ctx.icoMesAnterior)));
+  l.push('Índice do mês anterior' + (ctx.competenciaAnterior ? ' (' + RelA4_competencia_(ctx.competenciaAnterior) + ')' : '') + ': ' + (ctx.icoMesAnterior === null ? 'sem dado' : Conduta_numBr_(ctx.icoMesAnterior)));
   l.push('Colaboradores com bônus coletivo: ' + ctx.qtdColaboradoresComBonus + ' de ' + ctx.qtdColaboradoresTotal);
   l.push('Pontos por grupo: ' + ((ctx.composicaoPorGrupo || []).map(function (g) { return g.grupo + ' ' + g.somaPeso + ' pontos em ' + g.qtdOcorrencias + ' ocorrência(s)'; }).join('; ') || 'nenhum ponto'));
   l.push('Códigos que mais pesaram: ' + ((ctx.top5Codigos || []).map(function (c) { return c.codigo + ' (' + c.descricao + ') ' + c.somaPeso + ' pontos'; }).join('; ') || 'nenhum'));
@@ -71,8 +71,10 @@ function CondutaIA_contextoMensal_(ctx) {
 /** Fechamento mensal: { narrativa, recomendacao } (lança erro se a IA não estiver disponível). */
 function CondutaIA_gerarInterpretacao_(ctx) {
   var r = CondutaIA_secoes_(
-    'escreva duas seções do relatório mensal lido pela diretoria e por toda a equipe. NARRATIVA (2 parágrafos): a distância para o verde em pontos de demérito (folga ou excesso), ' +
-    'os grupos e códigos que mais pesaram e a comparação com o mês anterior quando houver. RECOMENDACAO (1 parágrafo curto e prático) para a equipe e a gestão no próximo mês.',
+    // 20/10/2026: texto curto, que não repete o que o resumo do relatório já mostra
+    'escreva duas seções do relatório mensal lido pela diretoria e por toda a equipe. NARRATIVA (1 parágrafo de no máximo 90 palavras): onde o demérito se concentrou (grupos e códigos) ' +
+    'e a comparação com o mês anterior quando houver. O resumo do relatório já mostra o índice de conduta, o farol, o total de pontos de demérito, a margem até o limite, o bônus coletivo e as missões: ' +
+    'não repita esses números. RECOMENDACAO (1 ou 2 frases práticas, começando por "Para o próximo mês") para a equipe e a gestão.',
     CondutaIA_contextoMensal_(ctx), ['NARRATIVA', 'RECOMENDACAO']);
   return { narrativa: r.NARRATIVA, recomendacao: r.RECOMENDACAO };
 }

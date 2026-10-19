@@ -66,6 +66,8 @@ function Conduta_apiDispatch(req) {
     apiRemoverMissao: Conduta_apiRemoverMissao,
     apiDecidirMissao: Conduta_apiDecidirMissao,
     apiGerarExtratoColaborador: Conduta_apiGerarExtratoColaborador,
+    // 20/10/2026: relatório de todos os colaboradores (gestão, Diretoria e RH)
+    apiGerarRelatorioEquipe: Conduta_apiGerarRelatorioEquipe,
 
     apiRegistrarAusencia: Conduta_apiRegistrarAusencia,
     apiListarAusencias: Conduta_apiListarAusencias,
