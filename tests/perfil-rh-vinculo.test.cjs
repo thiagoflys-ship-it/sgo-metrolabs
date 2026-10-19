@@ -7,7 +7,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const base = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
-const ler = (f) => fs.readFileSync(path.join(base, f), 'utf8');
+// Fim de linha normalizado: a cópia do git (git archive) pode vir com CRLF e as extrações por expressão esperam LF.
+const ler = (f) => fs.readFileSync(path.join(base, f), 'utf8').replace(/\r\n/g, '\n');
 
 function contexto(usuarios, sessoes) {
   const tabelas = { CAD_USUARIOS: usuarios, NTF_ENVIOS: [] };
