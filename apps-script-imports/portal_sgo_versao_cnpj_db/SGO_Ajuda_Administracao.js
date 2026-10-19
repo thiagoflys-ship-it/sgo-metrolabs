@@ -12,6 +12,7 @@ function SGO_ajudaTelas_Administracao_() {
       paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT ou PJ), a situação, o e-mail, o celular (WhatsApp) e o último acesso da pessoa.",
       antesDeComecar: [
         "Esta tela é usada pela gestão: Administrador, Gestor e Diretoria. O perfil RH também abre a tela, só para consultar (sem criar nem alterar contas). Os demais perfis não veem o item \"Usuários\" no menu.",
+        "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
         "Vínculo de trabalho: mensagens do ponto só vão para quem é CLT. Quem é PJ ou está como \"Não informado\" não recebe mensagens do ponto; os outros avisos (WhatsApp e e-mail) chegam para todos, inclusive PJ.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
@@ -24,7 +25,19 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "Toque em \"Usuários\" no menu, no grupo de administração.",
             "Outra forma: em \"Configurações\", no bloco \"Empresa e sistema\", toque em \"Usuários e perfis\".",
-            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\" e \"Nunca entraram\"."
+            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\", \"Sem área (ativos)\" e \"Nunca entraram\"."
+          ]
+        },
+        {
+          titulo: "Cuidar das áreas (gestão e RH)",
+          itens: [
+            "Toque em \"Áreas\", no alto da tela de Usuários.",
+            "A faixa diz quantas pessoas ativas estão sem área. Em \"Sem área\", escolha a área de cada uma: grava na hora.",
+            "Em \"Pessoas e áreas\", troque a área de qualquer pessoa. É o mesmo que trocar no cadastro.",
+            "Para criar uma área, toque em \"Nova área\", escreva o nome e toque em \"Criar área\".",
+            "Para corrigir o nome, toque em \"Editar\" na linha da área. As pessoas continuam nela.",
+            "Para tirar uma área da lista, toque em \"Inativar\". Só é possível quando ninguém ativo está nela; nada é apagado.",
+            "Na primeira vez, o SGO+ preencheu a área de quem estava sem ela pelo perfil de acesso (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico). Administrador e Gestor não dizem a área: escolha na lista."
           ]
         },
         {
@@ -36,6 +49,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Use a lista \"Todos os perfis\" para ver só um perfil.",
             "Use a lista \"Todas as situações\" para ver só ativos ou só inativos.",
             "Use a lista \"Todos os vínculos\" para ver só CLT, só PJ ou só quem está como \"Não informado\".",
+            "Use a lista \"Todas as áreas\" para ver uma área ou quem está \"Sem área\".",
             "Use a ordenação para escolher entre \"Ordenar por nome\" e \"Último acesso mais recente\".",
             "Toque em \"Limpar filtros\" para voltar à lista completa. Esse botão só aparece quando há filtro ativo."
           ]
@@ -48,6 +62,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Preencha \"Login (nome de usuário)\" em letras minúsculas, sem espaço. Exemplo: joao.silva.",
             "Preencha \"E-mail\". O e-mail é obrigatório e recebe os avisos do sistema.",
             "Preencha \"Celular (WhatsApp)\" com DDD. O sistema coloca a máscara sozinho.",
+            "Em \"Trabalho\", escolha a \"Área\" da pessoa. Ao escolher um perfil que diz a área (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico), ela já vem marcada se o campo estiver vazio; confira.",
             "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ ou Não informado. Para Cliente, deixe \"Não informado\".",
             "Escolha o \"Perfil de acesso\". Para quem cuida do RH, escolha \"RH\". Para a direção da empresa, escolha \"Diretoria\" (só aparece para Administrador e Diretoria).",
             "Se escolheu o perfil Cliente, escolha a \"Empresa (cliente)\".",

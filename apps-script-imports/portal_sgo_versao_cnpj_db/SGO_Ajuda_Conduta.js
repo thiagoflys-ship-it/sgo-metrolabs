@@ -9,9 +9,10 @@ function SGO_ajudaTelas_Conduta_() {
       titulo: "Programa de conduta",
       paraQueServe: "Mede a conduta da equipe como um time. As ocorrências confirmadas tiram pontos do índice do mês. Se o mês fecha no verde, toda a equipe recebe o bônus. Aqui também ficam os reconhecimentos, as missões, as ausências, os fechamentos e os relatórios.",
       antesDeComecar: [
-        "A tela tem as abas \"Farol do mês\", \"Ocorrências\", \"Reconhecimentos\", \"Missões\", \"Ausências\", \"Fechamentos\", \"Relatórios e extratos\" e \"Manuais e documentos\".",
+        "A tela tem as abas \"Farol do mês\", \"Ocorrências\", \"Reconhecimentos\", \"Missões\", \"Ausências\", \"Fechamentos\", \"Relatórios e extratos\" e \"Manuais e documentos\". A gestão e o RH também veem \"Sugestões\" e \"Qualidade e planos\".",
+        "A área de cada pessoa (Comercial, Técnica/Campo, Financeiro...) vem do cadastro do usuário, em Administração > Usuários. Quem está sem área aparece como \"Sem área definida\".",
         "No topo de cada aba há o link \"Manual do colaborador\" (ou \"Manual do gestor\", para a gestão). Ele abre o manual já na parte daquela aba.",
-        "No celular a tela é mais simples: farol, \"Registrar ocorrência\", \"Reconhecer colega\", \"Registrar missão\", suas ocorrências e suas missões. O restante fica no computador.",
+        "No celular a tela é mais simples: farol, \"Registrar ocorrência\", \"Reconhecer colega\", \"Registrar missão\", suas ocorrências e suas missões. A gestão e o RH têm também \"Sugestões de ocorrência\" e \"Kanban, planos de ação e indicadores\". O restante fica no computador.",
         "Gestão, neste programa, é Administrador, Gestor e Diretoria."
       ],
       passos: [
@@ -30,6 +31,7 @@ function SGO_ajudaTelas_Conduta_() {
           "Escolha o \"Colaborador envolvido\".",
           "Em \"Tipo\", busque pelo código ou pela descrição e escolha.",
           "Preencha a \"Data do fato\". O prazo é de até 2 dias úteis depois do fato.",
+          "Em \"O que aconteceu\", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres). É o que a gestão lê para homologar.",
           "Se tiver, anexe a foto e escreva a legenda.",
           "Toque em \"Registrar\".",
           "A ocorrência vai para a homologação da gestão."
@@ -103,15 +105,112 @@ function SGO_ajudaTelas_Conduta_() {
       quemPode: [
         { perfil: "TODOS", pode: "Ver o farol, registrar ocorrência, reconhecer colegas, registrar missão, contestar e recorrer das próprias ocorrências, gerar o próprio extrato, ver os fechamentos e os relatórios semanais e ler os manuais." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: homologar e julgar (nunca a ocorrência que registrou; a ocorrência em que é o envolvido só a Diretoria decide, com fundamentação), aprovar e recusar missões (nunca a própria), cadastrar destinos, registrar ausências, conferir e fechar o mês, gerar relatórios semanais e de missões, gerar o extrato de qualquer pessoa e cuidar da automação de prazos." },
-        { perfil: "RH", pode: "Tudo da equipe. Também consulta, de todas as pessoas: ocorrências, missões, ausências, meses fechados, relatórios e extratos. Não homologa, não julga, não decide missões, não registra ausências e não fecha o mês." },
+        { perfil: "RH", pode: "Tudo da equipe. Também consulta, de todas as pessoas: ocorrências, missões, ausências, meses fechados, relatórios, extratos, sugestões, Kanban, planos de ação e indicadores. Não homologa, não julga, não decide missões nem sugestões, não registra ausências e não fecha o mês." },
         { perfil: "CLIENTE", pode: "Não usa o programa." }
       ],
       perguntas: [
+        { p: "Outro módulo pode lançar ocorrência sozinho?", r: "Não. Frota, Auvo, Painel de qualidade, Minhas atividades, Avisos e o ponto do COMMAND só geram sugestões. A ocorrência só existe quando alguém da gestão aceita a sugestão, e depois segue o fluxo normal (homologação por outra pessoa, contestação, julgamento)." },
         { p: "Uma ocorrência registrada já tira ponto?", r: "Não. Só conta quando fica \"Firme\": depois de homologada e sem contestação no prazo, ou mantida no julgamento." },
         { p: "Como o índice é calculado?", r: "Índice = 100 menos (pontos de demérito divididos pelo número de pessoas) vezes 5. Quem está de férias ou afastado sai da conta." },
         { p: "Quanto vale cada nível?", r: "Leve 2 pontos, leve reincidente 5, média 8, média reincidente 15, grave 30. A gravíssima cancela o bônus do mês." },
         { p: "O incentivo de missão depende do farol?", r: "Não. A missão aprovada paga o incentivo mesmo com o farol vermelho. Só perde quem tem gravíssima própria no mês." },
         { p: "Quem vê as ocorrências?", r: "O envolvido, quem registrou e a gestão. Os reconhecimentos são vistos por toda a equipe." }
+      ]
+    },
+
+    "conduta/sugestoes": {
+      titulo: "Sugestões de ocorrência (gestão e RH)",
+      paraQueServe: "Junta numa fila o que os outros módulos encontraram e pode virar ocorrência: multa com condutor identificado, avaria na devolução, devolução ou retirada registrada pela gestão e KM a conferir (Frota); O.S. finalizada sem foto, sem relato ou sem check-out e O.S. aberta há dias (Auvo); cobrança do Painel de qualidade; três ou mais atividades atrasadas no mês (Minhas atividades); ciência de aviso vencida (Avisos); resumo do terceiro esquecimento de ponto (COMMAND, só informativo). Nada vira ocorrência sem a gestão aceitar.",
+      antesDeComecar: [
+        "A busca nos módulos é automática: todo dia às 6h e quando a aba é aberta (no máximo a cada 3 horas). O botão \"Buscar sugestões agora\" faz na hora.",
+        "Cada sugestão aparece uma vez só. A aceita, a descartada e a que saiu da fila não voltam.",
+        "Quando a origem se resolve sozinha (KM conferido, O.S. finalizada, ciência confirmada), a sugestão sai da fila como \"Saiu da fila\".",
+        "O prazo de registro (2 dias úteis) conta da data em que o SGO+ encontrou o caso, porque multas e falhas de registro chegam depois do fato."
+      ],
+      passos: [
+        { titulo: "Aceitar e registrar", itens: [
+          "Abra a aba \"Sugestões\". O número ao lado do nome é quantas esperam decisão.",
+          "Leia o cartão: pessoa, área, data do fato, de onde veio e o código sugerido.",
+          "Para conferir a origem, toque em \"Abrir Frota\" (ou \"Abrir no Auvo\", \"Abrir Avisos\"...).",
+          "Toque em \"Aceitar e registrar\". Confira o colaborador, o código, a data do fato e o texto de \"O que aconteceu\".",
+          "Toque em \"Registrar ocorrência\". Você fica como fiscal: outra pessoa da gestão homologa na aba \"Ocorrências\"."
+        ] },
+        { titulo: "Descartar", itens: [
+          "Toque em \"Descartar\".",
+          "Escreva por que a sugestão não vira ocorrência (pelo menos 10 caracteres), por exemplo \"KM conferido, a foto do painel confirma\".",
+          "Toque em \"Descartar\". O motivo fica guardado com o seu nome e a data."
+        ] },
+        { titulo: "Consultar o histórico", itens: [
+          "No primeiro filtro, escolha \"Aceitas\", \"Descartadas\", \"Saiu da fila\" ou \"Todas\". No segundo, filtre pela área."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo azul com o nome do módulo", significado: "De onde veio a sugestão." },
+        { nome: "\"Informativa\"", significado: "Veio do ponto do COMMAND: é um resumo, não acusa nada. Registre só se houver falta de comunicação ou atraso recorrente." },
+        { nome: "\"Sem código sugerido\"", significado: "O catálogo não tem um código próprio para o caso: escolha o código ao aceitar, ou descarte." }
+      ],
+      problemas: [
+        { situacao: "\"A sugestão é sobre você\"", oQueFazer: "Quem é o envolvido não decide. Peça a outra pessoa da gestão." },
+        { situacao: "\"Prazo de registro ... já venceu\"", oQueFazer: "O caso foi encontrado há mais de 2 dias úteis. Descarte com o motivo \"fora do prazo\"." },
+        { situacao: "\"O mês de ... já foi fechado\"", oQueFazer: "O fato é de um mês congelado. Descarte com o motivo; o fechamento não é refeito." },
+        { situacao: "Aviso \"multa(s) com condutor sem login\" ou \"O.S. sem técnico ligado\"", oQueFazer: "Ligue o condutor a um usuário em Frota > Condutores, ou vincule o técnico em Integração Auvo. A sugestão aparece na próxima busca." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver, buscar agora, aceitar e descartar (nunca a sugestão sobre si)." },
+        { perfil: "RH", pode: "Ver as sugestões e o histórico. Não aceita nem descarta." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não vê a aba. Sugestão não é acusação: a pessoa só fica sabendo quando a ocorrência é registrada e homologada." }
+      ]
+    },
+
+    "conduta/qualidade": {
+      titulo: "Qualidade e planos: Kanban, análise de causa, 5W2H/PDCA e indicadores",
+      paraQueServe: "Acompanha cada ocorrência até o fim e trata as graves e as repetidas com análise de causa e plano de ação. As ações do plano viram atividades em Minhas atividades, com responsável e prazo; não existe outra lista de tarefas.",
+      passos: [
+        { titulo: "Ler o Kanban das ocorrências", itens: [
+          "Abra a aba \"Qualidade e planos\" e escolha \"Kanban das ocorrências\".",
+          "Colunas: \"Registrada\" (aguarda homologação), \"Em defesa\" (prazo de contestação, contestada ou em recurso), \"Homologada\" (firme), \"Plano de ação\" (com plano em andamento) e \"Concluída\" (plano concluído, ou firme sem necessidade de plano e com o prazo de recurso encerrado).",
+          "O cartão anda sozinho conforme o fluxo do programa; não se arrasta.",
+          "\"Plano recomendado\" marca ocorrência grave, gravíssima ou reincidente.",
+          "Filtre pelo período e pela área. Marque \"Mostrar as encerradas sem efeito\" para ver rejeitadas, anuladas e descartadas."
+        ] },
+        { titulo: "Fazer a análise de causa (5 Porquês)", itens: [
+          "No cartão, toque em \"Análise de causa\" (ou, em \"Indicadores por área\", no código recorrente).",
+          "Escreva o problema: o que aconteceu, onde e quantas vezes.",
+          "Responda o 1º por quê. A resposta vira a pergunta seguinte. Responda pelo menos 3.",
+          "Escreva a causa raiz: a causa que a empresa controla (processo, treinamento, ferramenta).",
+          "Se quiser, abra \"Ishikawa (6M)\" e anote as causas por método, mão de obra, material, máquina, medida e meio ambiente.",
+          "Toque em \"Salvar a análise\"."
+        ] },
+        { titulo: "Criar o plano de ação 5W2H", itens: [
+          "No cartão firme, toque em \"Criar plano 5W2H\" (ou \"+ Novo plano de ação\" na aba dos planos).",
+          "Ligue a análise de causa, se houver.",
+          "Preencha O quê, Por quê, Onde, Quando, Quem, Como e Quanto. Onde e Quanto podem ficar vazios.",
+          "Toque em \"Criar o plano\". A ação vira uma atividade para o responsável em Minhas atividades e aparece em \"Atividades do módulo\"."
+        ] },
+        { titulo: "Levar o plano pelo ciclo PDCA", itens: [
+          "Planejar (P): análise e 5W2H. Executar (D): as ações em Minhas atividades. Para mais ações, toque em \"+ Ação\".",
+          "Quando todas as ações estiverem concluídas ou canceladas em Minhas atividades, toque em \"Passar para Verificar\".",
+          "Verificar (C): confira se o problema voltou (por exemplo, nenhuma ocorrência do mesmo código em 30 dias), toque em \"Registrar a verificação\" e escreva o que conferiu.",
+          "Toque em \"Foi eficaz\" para ir a Agir, ou em \"Não foi eficaz (novo ciclo)\": o plano volta a Planejar no ciclo seguinte.",
+          "Agir (A): toque em \"Concluir (padronizar)\" e escreva o que virou padrão (procedimento, treinamento, checklist).",
+          "Se o plano não fizer mais sentido, toque em \"Cancelar plano\" e escreva o motivo. Nada é apagado."
+        ] },
+        { titulo: "Ler os indicadores por área", itens: [
+          "Escolha \"Indicadores por área\" e o período.",
+          "Reincidência: das firmes, quantas repetem o código da mesma pessoa. Tempo de homologação: dias úteis do registro à homologação. Homologadas no prazo. Descartadas por prazo (ninguém homologou a tempo). Planos concluídos, atrasados e eficácia. Sugestões pendentes.",
+          "Em \"Códigos recorrentes\" (3 ou mais firmes no período), toque em \"Análise de causa\" ou \"Criar plano\".",
+          "Se aparecer pessoa sem área, toque em \"Abrir Usuários\" e use o botão \"Áreas\"."
+        ] }
+      ],
+      problemas: [
+        { situacao: "\"Ainda há ação(ões) em aberto\"", oQueFazer: "Conclua ou cancele as atividades listadas em Minhas atividades e toque em \"Passar para Verificar\" de novo." },
+        { situacao: "\"Esta ocorrência já tem o plano ... em andamento\"", oQueFazer: "Abra o plano existente na aba dos planos e acrescente a ação com \"+ Ação\"." },
+        { situacao: "\"Responda pelo menos 3 porquês\"", oQueFazer: "Preencha o 1º, o 2º e o 3º por quê antes de salvar." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver tudo, fazer análises, criar e conduzir os planos." },
+        { perfil: "RH", pode: "Ver o Kanban de toda a equipe, os planos, as análises e os indicadores. Não cria nem altera." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não vê a aba. Quem é responsável por uma ação a recebe em Minhas atividades." }
       ]
     },
 

@@ -85,6 +85,10 @@ function PonteCmd_tratar_(req) {
     case "alertas.painel": return PonteCmd_alertasPainel_();
     case "docs.equipamento": return PonteCmd_docsEquipamento_(d);
     case "docs.desde": return PonteCmd_docsDesde_(d);
+    // 19/10/2026: o Assistente do ponto manda o resumo do 3º esquecimento do mês. Vira
+    // sugestão INFORMATIVA no Programa de conduta (a gestão decide; nada é automático).
+    // dados: { sgoUsuarioId, mes 'aaaa-mm', quantidade, texto, chave }.
+    case "conduta.sugestao": return typeof Conduta_sugestaoDoPonto_ === "function" ? Conduta_sugestaoDoPonto_(d) : { ok: false, erro: "Programa de conduta indisponível." };
   }
   return { ok: false, erro: "Ação desconhecida." };
 }

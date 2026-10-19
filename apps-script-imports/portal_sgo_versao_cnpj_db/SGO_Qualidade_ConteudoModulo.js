@@ -169,7 +169,7 @@ function tplQualidade_renderReal_() {
 // 17/10/2026: as pendências do painel vêm da central (as mesmas do Início): por área e o que fazer.
 function tplQualidade_resumoCentral_(c) {
   if (!c) return '';
-  var nomes = { frota: 'Frota', auvo: 'Auvo', qualidade: 'Registros' };
+  var nomes = { frota: 'Frota', auvo: 'Auvo', qualidade: 'Registros', conduta: 'Programa de conduta' };
   var partes = Object.keys(nomes).map(function (m) { var x = (c.porModulo || {})[m] || { total: 0 }; return nomes[m] + ' ' + (x.total || 0); });
   var lista = (c.grupos || []).slice(0, 6).map(function (g) {
     return '<li><strong>' + tplQualidade_esc(g.titulo) + '</strong><br><span class="rank-sub">' + tplQualidade_esc(g.oQueFazer || g.detalhe) + '</span></li>';

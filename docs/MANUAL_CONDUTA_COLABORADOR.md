@@ -75,9 +75,10 @@ Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização en
 3. Escolha o "Colaborador envolvido".
 4. Em "Tipo", busque pelo código ou pela descrição e escolha.
 5. Preencha a "Data do fato". O prazo é de até 2 dias úteis depois do fato.
-6. Se tiver, anexe a foto e escreva a "Legenda da foto".
-7. Toque em "Registrar".
-8. A ocorrência vai para a homologação da gestão.
+6. Em "O que aconteceu", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres).
+7. Se tiver, anexe a foto e escreva a "Legenda da foto".
+8. Toque em "Registrar".
+9. A ocorrência vai para a homologação da gestão.
 
 > Registre o fato, não a pessoa. Escreva o que viu, onde e quando. Foto ajuda a gestão a decidir.
 

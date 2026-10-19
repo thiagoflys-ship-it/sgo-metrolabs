@@ -64,7 +64,8 @@ function Qualidade_apiObterPainel(sessionId,payload) {
 }
 
 /** Módulos que o Painel de qualidade acompanha na central de pendências. */
-var QUALIDADE_MODULOS_PENDENCIA = ['frota', 'auvo', 'qualidade'];
+// 19/10/2026: o Programa de conduta entra com as sugestões de ocorrência e o fechamento do mês (gestão).
+var QUALIDADE_MODULOS_PENDENCIA = ['frota', 'auvo', 'qualidade', 'conduta'];
 
 /** Pendências abertas agora das áreas do painel, lidas da central (mesmos números do Início). */
 function Qualidade_pendenciasCentral_(sessionId) {

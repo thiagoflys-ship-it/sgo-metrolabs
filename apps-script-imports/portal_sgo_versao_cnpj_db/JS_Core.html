@@ -4262,6 +4262,14 @@
       .Conduta_apiDispatch({ sessionId: SESSION, fn: fn, payload: payload || {} });
   }
 
+  /** Abre o módulo completo do Programa de conduta numa aba da gestão (Sugestões ou Qualidade e planos). */
+  function mobileCondutaAbrirQualidade_(aba) {
+    window.CNDQ_ABA_INICIAL = aba;
+    MOBILE_NAV = { modulo: "conduta", tela: "form" };
+    atualizarTituloMobile_(aba === "sugestoes" ? "Sugestões" : "Qualidade e planos");
+    renderMotorModulo_("Programa de conduta", "conduta");
+  }
+
   function renderMobileConduta_() {
     MOBILE_NAV = { modulo: "conduta", tela: "lista" };
     atualizarTituloMobile_("Conduta");
@@ -4277,6 +4285,9 @@
       '</div>' +
       '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="renderMobileCondutaFormMissao_()">Registrar missão</button>' +
       '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirManual_()">Manual do colaborador</button>' +
+      // 19/10/2026: gestão e RH chegam às sugestões de ocorrência, ao Kanban, aos planos e aos indicadores também pelo celular.
+      ((mobileCondutaEhGestao_() || SGO_ehRH_()) ? '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirQualidade_(\'sugestoes\')">Sugestões de ocorrência</button>' +
+        '<button type="button" class="mobile-btn-cancelar mobile-btn-linha" onclick="mobileCondutaAbrirQualidade_(\'qualidade\')">Kanban, planos de ação e indicadores</button>' : '') +
       '<div class="mobile-frota-secao-titulo">Minhas ocorrências recentes</div>' +
       '<div class="mobile-list" id="mobileCondutaRecentes">Carregando...</div>' +
       '<div class="mobile-frota-secao-titulo">' + ((mobileCondutaEhGestao_() || SGO_ehRH_()) ? "Missões" : "Minhas missões") + '</div>' +
@@ -4322,7 +4333,8 @@
         return '<div class="mobile-card" style="display:block">' +
           '<div><strong>' + escapeHtml_(o.TIPO_CODIGO || "") + '</strong> · ' + escapeHtml_(mobileCondutaDataBR_(o.DATA_FATO)) + ' · ' + escapeHtml_(mobileCondutaRotuloSituacao_(st)) + '</div>' +
           (o.TIPO_DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(o.TIPO_DESCRICAO) + '</div>' : "") +
-          (o.COLABORADOR_NOME ? '<div class="mobile-card-subtitulo">Envolvido: ' + escapeHtml_(o.COLABORADOR_NOME) + '</div>' : "") +
+          (o.COLABORADOR_NOME ? '<div class="mobile-card-subtitulo">Envolvido: ' + escapeHtml_(o.COLABORADOR_NOME) + (o.COLABORADOR_AREA_NOME ? " · " + escapeHtml_(o.COLABORADOR_AREA_NOME) : "") + '</div>' : "") +
+          (o.DESCRICAO ? '<div class="mobile-card-subtitulo">' + escapeHtml_(String(o.DESCRICAO).slice(0, 160)) + '</div>' : "") +
           (o.DECISAO_DIRETORIA ? '<div class="mobile-card-subtitulo" style="font-weight:700" title="' + escapeHtml_(o.DECISAO_DIRETORIA) + '">Decisão da Diretoria</div>' : "") +
           acao +
         '</div>';
@@ -4557,6 +4569,8 @@
           mobileFieldHtml_("Colaborador envolvido *", '<select id="mob_cond_colaborador">' + mobileCondutaOptionsColegas_() + '</select>') +
           mobileFieldHtml_("Tipo de ocorrência *", '<select id="mob_cond_tipo">' + mobileCondutaOptionsCatalogo_() + '</select>') +
           mobileFieldHtml_("Data do fato *", '<input type="date" id="mob_cond_data" value="' + mobileCondutaDataHoje_() + '">') +
+          // 19/10/2026: o que aconteceu (antes só havia a legenda da foto, e sem foto quem homologava não sabia do fato).
+          mobileFieldHtml_("O que aconteceu *", '<textarea id="mob_cond_descricao" rows="3" maxlength="2000" placeholder="Onde, quando e o que foi visto. Fatos, sem opinião."></textarea>') +
           mobileFieldHtml_("Foto (opcional)", '<input type="file" accept="image/*" capture="environment" id="mob_cond_foto" onchange="mobileCondutaPreverFoto_(this,\'mob_cond_foto_preview\')">' +
             '<div id="mob_cond_foto_preview" style="margin-top:8px"></div>') +
           mobileFieldHtml_("Legenda da foto", '<input type="text" id="mob_cond_foto_legenda" placeholder="Descreva o que a foto mostra">') +
@@ -4588,8 +4602,10 @@
       colaboradorId: getValue_("mob_cond_colaborador"),
       tipoCodigo: getValue_("mob_cond_tipo"),
       dataFato: getValue_("mob_cond_data"),
+      descricao: getValue_("mob_cond_descricao"),
       fotoLegenda: getValue_("mob_cond_foto_legenda")
     };
+    if (String(payload.descricao || "").trim().length < 10) return alert("Escreva o que aconteceu (pelo menos 10 caracteres) no campo \"O que aconteceu\" e toque em Registrar de novo.");
     if (!payload.colaboradorId) return alert("Selecione o colaborador envolvido.");
     if (!payload.tipoCodigo) return alert("Selecione o tipo de ocorrência.");
     if (!payload.dataFato) return alert("Informe a data do fato.");

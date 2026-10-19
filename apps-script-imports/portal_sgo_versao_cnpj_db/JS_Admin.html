@@ -337,6 +337,7 @@
       ajuda:
         "<ul><li><b>Perfil</b> define o que a pessoa vê e faz. Administrador, Gestor e Diretoria são a gestão; Cliente vê só a própria empresa.</li>" +
         "<li><b>RH</b> vê o que um colaborador vê, publica avisos, consulta o Programa de conduta de toda a equipe e esta lista (sem criar nem alterar contas). Não abre documentos técnicos, Configurações nem Chaves e senhas.</li>" +
+        "<li><b>Área</b> (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez aqui e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. O botão <i>Áreas</i> mostra quem está sem área e permite criar ou corrigir áreas.</li>" +
         "<li><b>Vínculo de trabalho</b> (CLT, PJ ou Não informado): mensagens do ponto só vão para quem é CLT. PJ e Não informado não recebem; os outros avisos chegam para todos.</li>" +
         "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
         "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
@@ -349,23 +350,26 @@
         { id: "semcel", rotulo: "Sem celular (ativos)", tom: "tom-alerta", dica: "Ativos sem celular: não recebem WhatsApp nem usam o Assistente do ponto do COMMAND.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE"; } },
         { id: "gestao", rotulo: "Administração e gestão", filtro: function (u) { return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(u.PERFIL).toUpperCase()) >= 0; } },
         { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT ou PJ informado: não recebe as mensagens do ponto.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.VINCULO_TRABALHO; } },
+        { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.AREA && String(u.USUARIO).toLowerCase() !== "admin"; } },
         { id: "nunca", rotulo: "Nunca entraram", filtro: function (u) { return u.STATUS === "ATIVO" && !u.ULTIMO_ACESSO; } }
       ],
       filtros: [
         { id: "perfil", rotulo: "Todos os perfis", opcoes: function (its) { return CadTela_opcoesDe_(its, "PERFIL", "PERFIL").map(function (o) { return [o[0], SGO_rotuloPerfil_(o[0])]; }); }, aplicar: function (u, v) { return String(u.PERFIL).toUpperCase() === v.toUpperCase(); } },
         { id: "situacao", rotulo: "Todas as situações", opcoes: function () { return [["ATIVO", "Ativos"], ["INATIVO", "Inativos"]]; }, aplicar: function (u, v) { return v === "ATIVO" ? u.STATUS === "ATIVO" : u.STATUS !== "ATIVO"; } },
+        { id: "area", rotulo: "Todas as áreas", opcoes: function (its) { var m = {}; its.forEach(function (u) { if (u.AREA) m[u.AREA] = u.AREA_NOME || u.AREA; }); return Object.keys(m).sort(function (a, b) { return m[a].localeCompare(m[b], "pt-BR"); }).map(function (k) { return [k, m[k]]; }).concat([["-", "Sem área"]]); }, aplicar: function (u, v) { return v === "-" ? !u.AREA && String(u.PERFIL).toUpperCase() !== "CLIENTE" : u.AREA === v; } },
         { id: "vinculo", rotulo: "Todos os vínculos", opcoes: function () { return [["CLT", "CLT"], ["PJ", "PJ"], ["NI", "Não informado"]]; }, aplicar: function (u, v) { return v === "NI" ? !u.VINCULO_TRABALHO : String(u.VINCULO_TRABALHO || "").toUpperCase() === v; } }
       ],
       ordenar: [
         { id: "nome", rotulo: "Ordenar por nome", fn: null },
         { id: "acesso", rotulo: "Último acesso mais recente", fn: function (a, b) { return String(b.ULTIMO_ACESSO || "").localeCompare(String(a.ULTIMO_ACESSO || "")); } }
       ],
-      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO].join(" "); },
+      texto: function (u) { return [u.NOME, u.USUARIO, u.EMAIL, u.CELULAR, usuariosMascaraCelular_(u.CELULAR), SGO_rotuloPerfil_(u.PERFIL), u.CLIENTE_NOME, u.VINCULO_TRABALHO, u.AREA_NOME].join(" "); },
       acao: soConsulta ? null : { texto: "Novo usuário", fn: function () { Usuarios_formulario_(null); } },
       vazioTitulo: "Nenhum usuário além de você.", vazio: "Clique em Novo usuário para dar acesso a alguém.",
       colunas: [
         { titulo: "Usuário", html: function (u) { return '<div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + (u.EU ? ' <span class="cadx-chip tom-info">Você</span>' : "") + '</div><div class="cadx-sub cadx-mono">' + CadUI_esc_(u.USUARIO) + "</div>"; } },
         { titulo: "Perfil", html: function (u) { return CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + (u.CLIENTE_NOME ? '<div class="cadx-sub">' + CadUI_esc_(u.CLIENTE_NOME) + "</div>" : ""); } },
+        { titulo: "Área", html: function (u) { return Usuarios_seloArea_(u); } },
         { titulo: "Vínculo", html: function (u) { return Usuarios_seloVinculo_(u); } },
         { titulo: "E-mail", html: function (u) { return u.EMAIL ? CadUI_esc_(u.EMAIL) : '<span class="cadx-chip tom-alerta">Sem e-mail</span>'; } },
         { titulo: "Celular (WhatsApp)", html: function (u) { return u.SEM_CELULAR ? (String(u.PERFIL).toUpperCase() === "CLIENTE" ? '<span class="cadx-sub">Não informado</span>' : '<span class="cadx-chip tom-alerta">Sem celular</span>') : '<span class="cadx-mono">' + CadUI_esc_(usuariosMascaraCelular_(u.CELULAR)) + "</span>"; } },
@@ -375,14 +379,30 @@
       ],
       cartao: function (u) {
         return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(Usuarios_nome_(u)) + '</div><div class="cadx-sub">' + CadUI_esc_(u.USUARIO + " · " + SGO_rotuloPerfil_(u.PERFIL)) + "</div></div>" + CadUI_selo_(u.STATUS) + "</div>" +
-          '<div class="cadx-cartao-linhas"><span>Vínculo: ' + Usuarios_seloVinculo_(u) + "</span><span>" + CadUI_esc_(u.EMAIL || "Sem e-mail") + "</span><span>" + (u.SEM_CELULAR ? '<span class="cadx-chip tom-alerta">Sem celular</span>' : CadUI_esc_(usuariosMascaraCelular_(u.CELULAR))) + "</span><span>" + CadUI_esc_(u.ULTIMO_ACESSO ? "Último acesso " + CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou") + "</span></div>";
+          '<div class="cadx-cartao-linhas"><span>Área: ' + Usuarios_seloArea_(u) + "</span><span>Vínculo: " + Usuarios_seloVinculo_(u) + "</span><span>" + CadUI_esc_(u.EMAIL || "Sem e-mail") + "</span><span>" + (u.SEM_CELULAR ? '<span class="cadx-chip tom-alerta">Sem celular</span>' : CadUI_esc_(usuariosMascaraCelular_(u.CELULAR))) + "</span><span>" + CadUI_esc_(u.ULTIMO_ACESSO ? "Último acesso " + CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou") + "</span></div>";
       },
       botaoPrincipal: function (u) { return u.PODE_ALTERAR ? { texto: "Editar", acao: "editar" } : null; },
       editar: function (u) { Usuarios_formulario_(u.ID); },
       mais: soConsulta ? null : function (u) { return Usuarios_menu_(u); },
       abrir: function (u) { Usuarios_detalhe_(u); },
-      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [] }); }, erro); }
+      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas }); }, erro); }
     });
+    // Áreas (19/10/2026): gestão e RH abrem a tela das áreas a partir daqui.
+    var dirUsr = document.querySelector("#cadxTela_usuarios .module-header-right");
+    if (dirUsr && (CadUI_gestao_() || CadUI_perfil_() === "RH")) {
+      var bAreas = document.createElement("button");
+      bAreas.type = "button"; bAreas.className = "btn-secondary"; bAreas.id = "usrBtnAreas";
+      bAreas.innerHTML = '<i class="fas fa-sitemap" aria-hidden="true"></i>&nbsp;Áreas';
+      bAreas.title = "Áreas da empresa e a área de cada pessoa";
+      bAreas.onclick = function () { Usuarios_areasAbrir_(); };
+      dirUsr.appendChild(bAreas);
+    }
+  }
+
+  // Área (19/10/2026): CAD_USUARIOS.AREA, fonte única lida pelo Programa de conduta (SGO_Areas.js).
+  function Usuarios_seloArea_(u) {
+    if (String(u.PERFIL).toUpperCase() === "CLIENTE") return '<span class="cadx-sub">Não se aplica</span>';
+    return u.AREA ? CadUI_esc_(u.AREA_NOME || u.AREA) : '<span class="cadx-chip tom-alerta">Sem área</span>';
   }
 
   function Usuarios_menu_(u) {
@@ -411,7 +431,7 @@
           (u.STATUS !== "ATIVO" ? '<div class="cadx-faixa bc-faixa">Acesso bloqueado (inativo). Para liberar, use Mais › Reativar.</div>' : "") +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["Login", u.USUARIO]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["E-mail", u.EMAIL], ["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" ? "Não se aplica (cliente)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
       },
       depois: function (p) {
@@ -481,6 +501,10 @@
           CadUI_campo_({ id: "usr_celular", rotulo: "Celular (WhatsApp)", tipo: "tel", inteiro: true, valor: usuariosMascaraCelular_(u.CELULAR), placeholder: "(11) 98765-4321", attrs: ' inputmode="numeric" maxlength="16"', dica: "Usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Pode ficar vazio, mas a pessoa aparece como Sem celular." })
         ]) +
         CadUI_secao_("Trabalho", [
+          CadUI_campo_({ id: "usr_area", rotulo: "Área", tipo: "select", valor: String(u.AREA || "").toUpperCase(),
+            opcoes: [["", "Sem área"]].concat(((st.extra && st.extra.areas) || []).map(function (a) { return [a.CODIGO, a.NOME]; }))
+              .concat(u.AREA && !((st.extra && st.extra.areas) || []).some(function (a) { return a.CODIGO === String(u.AREA).toUpperCase(); }) ? [[String(u.AREA).toUpperCase(), (u.AREA_NOME || u.AREA) + " (inativa)"]] : []),
+            dica: "Preencha uma vez: o Programa de conduta e os indicadores de qualidade leem daqui. Para criar uma área, use o botão Áreas da lista." }),
           CadUI_campo_({ id: "usr_vinculo", rotulo: "Vínculo de trabalho", tipo: "select", valor: String(u.VINCULO_TRABALHO || "").toUpperCase(), opcoes: [["", "Não informado"], ["CLT", "CLT"], ["PJ", "PJ"]],
             dica: "Mensagens do ponto só vão para quem é CLT. PJ e Não informado não recebem; os outros avisos chegam para todos." })
         ]) +
@@ -500,6 +524,9 @@
         var atualizarCliente = function () { bloco.hidden = perfilSel.value !== "CLIENTE"; };
         perfilSel.addEventListener("change", atualizarCliente);
         atualizarCliente();
+        // Área (19/10/2026): ao escolher um perfil que diz a área, ela é sugerida se o campo estiver vazio.
+        var areaPorPerfil = { COMERCIAL: "COMERCIAL", FINANCEIRO: "FINANCEIRO", RH: "RH", DIRETORIA: "DIRETORIA", METROLOGIA: "METROLOGIA", TECNICO: "TECNICA" };
+        perfilSel.addEventListener("change", function () { var a = p.querySelector("#usr_area"); if (a && !a.value && areaPorPerfil[perfilSel.value] && a.querySelector('option[value="' + areaPorPerfil[perfilSel.value] + '"]')) a.value = areaPorPerfil[perfilSel.value]; });
         p.querySelector("#usr_celular").addEventListener("input", function (e) { e.target.value = usuariosMascaraCelular_(e.target.value); });
         p.querySelector("#usr_usuario").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
         CadUI_chamar_("usuariosListarClientesAtivos", [], function (res) {
@@ -518,7 +545,7 @@
   function Usuarios_salvar_(id) {
     var novo = !id;
     var cel = usuariosCelularDigitos_(getValue_("usr_celular"));
-    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo") };
+    var p = { NOME: getValue_("usr_nome"), USUARIO: getValue_("usr_usuario").toLowerCase(), EMAIL: getValue_("usr_email"), CELULAR: cel === null ? "" : cel, PERFIL: getValue_("usr_perfil"), CLIENTE_ID: getValue_("usr_perfil") === "CLIENTE" ? getValue_("usr_cliente_id") : "", VINCULO_TRABALHO: getValue_("usr_vinculo"), AREA: getValue_("usr_perfil") === "CLIENTE" ? "" : getValue_("usr_area") };
     if (novo) p.SENHA = (document.getElementById("usr_senha") || {}).value || "";
     var erros = {};
     if (!p.NOME) erros.usr_nome = "Informe o nome completo.";
@@ -546,6 +573,7 @@
       else if (/e-?mail/i.test(msg)) CadUI_erroCampo_("usr_email", CadUI_esc_(msg));
       else if (/celular/i.test(msg)) CadUI_erroCampo_("usr_celular", CadUI_esc_(msg));
       else if (/vínculo de trabalho/i.test(msg)) CadUI_erroCampo_("usr_vinculo", CadUI_esc_(msg));
+      else if (/^Área/i.test(msg)) CadUI_erroCampo_("usr_area", CadUI_esc_(msg));
       else if (/perfil|Administrador/i.test(msg)) CadUI_erroCampo_("usr_perfil", CadUI_esc_(msg));
       CadUI_aviso_(msg, "erro");
     }, novo ? "Aguarde, cadastrando o usuário…" : "Aguarde, salvando…");
@@ -555,6 +583,83 @@
   function usuariosPesquisar_() { CadTela_buscarDoCampo_("usuarios"); }
   function usuariosNovo_() { Usuarios_formulario_(null); }
   function usuariosEditar_(id) { Usuarios_formulario_(id); }
+
+  // ---------- Áreas (19/10/2026): gestão e RH ----------
+  // Lista das áreas (criar, corrigir o nome, inativar), quem está sem área e a
+  // área de cada pessoa. Nada é apagado: área com gente ativa não é inativada.
+  var USR_AREAS = { dados: null };
+  function Usuarios_areasAbrir_() {
+    CadUI_painelAbrir_({ chave: "usuarios", id: "__areas", titulo: "Áreas", sub: "Áreas da empresa e a área de cada pessoa.",
+      corpo: function () { return '<div id="usrAreasCorpo">' + CadUI_esqueleto_(5) + "</div>"; },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="CadUI_painelFechar_()">Fechar</button>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Usuarios_areasNova_()">Nova área</button>',
+      depois: function () { Usuarios_areasCarregar_(); } });
+  }
+  function Usuarios_areasCarregar_() {
+    CadUI_chamar_("areasPainel", [], function (res) { USR_AREAS.dados = res; Usuarios_areasDesenhar_(); },
+      function (msg) { var c = document.getElementById("usrAreasCorpo"); if (c) c.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta" role="alert">' + CadUI_esc_(msg) + "</div>"; });
+  }
+  function Usuarios_areasOpcoes_(atual) {
+    var areas = ((USR_AREAS.dados && USR_AREAS.dados.areas) || []).filter(function (a) { return a.ATIVO || a.CODIGO === atual; });
+    return '<option value="">Sem área</option>' + areas.map(function (a) { return '<option value="' + CadUI_esc_(a.CODIGO) + '"' + (a.CODIGO === atual ? " selected" : "") + ">" + CadUI_esc_(a.NOME + (a.ATIVO ? "" : " (inativa)")) + "</option>"; }).join("");
+  }
+  function Usuarios_areasDesenhar_() {
+    var c = document.getElementById("usrAreasCorpo");
+    var d = USR_AREAS.dados;
+    if (!c || !d) return;
+    var mig = d.migracao;
+    var linhaPessoa = function (p) {
+      return '<tr><td><div class="cadx-tit">' + CadUI_esc_(p.nome) + '</div><div class="cadx-sub">' + CadUI_esc_(SGO_rotuloPerfil_(p.perfil) + (p.ativo ? "" : " · inativo")) + "</div></td>" +
+        '<td><select id="usrArea_' + CadUI_esc_(p.id) + '" data-pessoa="' + CadUI_esc_(p.id) + '" aria-label="Área de ' + CadUI_esc_(p.nome) + '" onchange="Usuarios_areasDefinir_(this)">' + Usuarios_areasOpcoes_(p.area) + "</select></td></tr>";
+    };
+    c.innerHTML =
+      (d.semArea.length ? '<div class="cadx-faixa bc-faixa tom-alerta" role="status"><b>' + d.semArea.length + (d.semArea.length === 1 ? " pessoa ativa está" : " pessoas ativas estão") + ' sem área.</b> Escolha a área de cada uma na lista abaixo: a gravação é na hora.</div>' :
+        '<div class="cadx-faixa bc-faixa tom-ok" role="status">Toda a equipe ativa tem área.</div>') +
+      (mig ? '<p class="cadx-dica">Preenchimento automático de ' + CadUI_esc_(CadUI_dataHora_(mig.em)) + ": " + (mig.preenchidas || []).length + " pessoa(s) preenchida(s) pelo perfil de acesso; " + (mig.semDeducao || []).length + " sem como deduzir (Administrador e Gestor não dizem a área). Nada que já estava preenchido foi trocado.</p>" : "") +
+      '<section class="cadx-sec"><h4 class="cadx-sec-tit">Áreas</h4><div class="usr-areas-caixa" style="overflow-x:auto"><table class="cadx-tabela bc-tabela"><thead><tr><th>Área</th><th>Pessoas ativas</th><th>Situação</th><th></th></tr></thead><tbody>' +
+      d.areas.map(function (a) {
+        return '<tr><td><div class="cadx-tit">' + CadUI_esc_(a.NOME) + '</div><div class="cadx-sub">' + CadUI_esc_(a.DESCRICAO || "") + "</div></td><td>" + a.QTD_ATIVOS + "</td><td>" + (a.ATIVO ? '<span class="cadx-chip tom-ok">Ativa</span>' : '<span class="cadx-chip">Inativa</span>') + "</td>" +
+          '<td style="white-space:nowrap"><button type="button" class="cadx-btn" data-area-editar="' + CadUI_esc_(a.ID) + '">Editar</button> ' +
+          '<button type="button" class="cadx-btn" data-area-situacao="' + CadUI_esc_(a.ID) + '" data-ativar="' + (a.ATIVO ? "0" : "1") + '">' + (a.ATIVO ? "Inativar" : "Reativar") + "</button></td></tr>";
+      }).join("") + "</tbody></table></div></section>" +
+      (d.semArea.length ? '<section class="cadx-sec"><h4 class="cadx-sec-tit">Sem área</h4><div class="usr-areas-caixa" style="overflow-x:auto"><table class="cadx-tabela bc-tabela"><thead><tr><th>Pessoa</th><th>Área</th></tr></thead><tbody>' + d.semArea.map(linhaPessoa).join("") + "</tbody></table></div></section>" : "") +
+      '<section class="cadx-sec"><h4 class="cadx-sec-tit">Pessoas e áreas</h4><p class="cadx-dica">Toda a equipe (ativos e inativos). Trocar a área aqui é o mesmo que trocar no cadastro da pessoa.</p><div class="usr-areas-caixa" style="overflow-x:auto"><table class="cadx-tabela bc-tabela"><thead><tr><th>Pessoa</th><th>Área</th></tr></thead><tbody>' +
+      d.pessoas.map(linhaPessoa).join("") + "</tbody></table></div></section>";
+    c.querySelectorAll("[data-area-editar]").forEach(function (b) { b.onclick = function () { Usuarios_areasEditar_(b.getAttribute("data-area-editar")); }; });
+    c.querySelectorAll("[data-area-situacao]").forEach(function (b) { b.onclick = function () { Usuarios_areasSituacao_(b.getAttribute("data-area-situacao"), b.getAttribute("data-ativar") === "1"); }; });
+  }
+  function Usuarios_areasDefinir_(sel) {
+    var id = sel.getAttribute("data-pessoa"), area = sel.value;
+    sel.disabled = true;
+    CadUI_chamar_("areasDefinirDoUsuario", [{ usuarioId: id, area: area }], function (res) {
+      CadUI_aviso_(res.message || "Área salva.", "ok");
+      Usuarios_areasCarregar_();
+    }, function (msg) { sel.disabled = false; CadUI_aviso_(msg, "erro"); Usuarios_areasCarregar_(); });
+  }
+  function Usuarios_areasFormulario_(a) {
+    CadUI_confirmar_({ titulo: a ? "Editar a área" : "Nova área", botao: a ? "Salvar área" : "Criar área",
+      texto: a ? "<p>As pessoas desta área continuam nela; só o nome e a descrição mudam.</p>" : "<p>A área nova aparece na lista do cadastro de usuários.</p>",
+      extraHtml: '<div class="cadx-campo" data-campo="usrAreaNome"><label for="usrAreaNome">Nome da área <span class="cadx-obr">*</span></label><input id="usrAreaNome" maxlength="60" value="' + CadUI_esc_(a ? a.NOME : "") + '"></div>' +
+        '<div class="cadx-campo" style="margin-top:10px"><label for="usrAreaDesc">Descrição (opcional)</label><input id="usrAreaDesc" maxlength="200" value="' + CadUI_esc_(a ? a.DESCRICAO : "") + '"></div>',
+      validar: function (f) { var n = f.querySelector("#usrAreaNome").value.trim(); return n.length < 2 ? "Escreva o nome da área (pelo menos 2 letras)." : ""; },
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("areasSalvar", [{ id: a ? a.ID : "", nome: document.getElementById("usrAreaNome").value, descricao: document.getElementById("usrAreaDesc").value }], function (res) {
+          fechar(); CadUI_aviso_(res.message || "Área salva.", "ok"); Usuarios_areasCarregar_();
+        }, function (msg) { var e = document.getElementById("cadxDlgErro"); if (e) e.textContent = msg; reabilitar(); });
+      } });
+  }
+  function Usuarios_areasNova_() { Usuarios_areasFormulario_(null); }
+  function Usuarios_areasEditar_(id) { var a = ((USR_AREAS.dados && USR_AREAS.dados.areas) || []).filter(function (x) { return x.ID === id; })[0]; if (a) Usuarios_areasFormulario_(a); }
+  function Usuarios_areasSituacao_(id, ativar) {
+    var a = ((USR_AREAS.dados && USR_AREAS.dados.areas) || []).filter(function (x) { return x.ID === id; })[0];
+    if (!a) return;
+    CadUI_confirmar_({ titulo: ativar ? "Reativar a área" : "Inativar a área", botao: ativar ? "Reativar" : "Inativar", risco: !ativar,
+      texto: ativar ? "<p>A área <b>" + CadUI_esc_(a.NOME) + "</b> volta a aparecer para escolha.</p>" : "<p>A área <b>" + CadUI_esc_(a.NOME) + "</b> deixa de aparecer para escolha. Nada é apagado; o histórico continua com o nome dela.</p>",
+      aoConfirmar: function (v, fechar, reabilitar) {
+        CadUI_chamar_("areasAlterarSituacao", [{ id: id, ativo: !!ativar }], function (res) { fechar(); CadUI_aviso_(res.message, "ok"); Usuarios_areasCarregar_(); },
+          function (msg) { var e = document.getElementById("cadxDlgErro"); if (e) e.textContent = msg; reabilitar(); });
+      } });
+  }
 
   // =====================================================================
   // CONFIGURAÇÕES — blocos com título, explicação curta e Salvar próprio

@@ -19,13 +19,17 @@ Perfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausê
 | Reconhecimentos | Elogiar uma pessoa, um grupo ou um departamento |
 | Missões | Registrar viagens de serviço que geram incentivo |
 | Ausências | Ver férias e afastamentos (quem registra é a gestão) |
+| Sugestões | Aceitar ou descartar o que os outros módulos encontraram (gestão; o RH consulta) |
+| Qualidade e planos | Kanban das ocorrências, análise de causa, planos 5W2H com PDCA e indicadores por área (gestão; o RH consulta) |
 | Fechamentos | Ver os meses fechados e o relatório de cada um |
 | Relatórios e extratos | Gerar o seu extrato do mês e abrir os relatórios semanais |
 | Manuais e documentos | Ler os manuais, os guias e os documentos originais |
 
+A área de cada pessoa vem do cadastro do usuário (Administração > Usuários > Áreas). Quem está sem área aparece como "Sem área definida" nas listas, nos indicadores e nos relatórios.
+
 No topo de cada aba há o link "Manual do gestor". Ele abre este manual já na parte daquela aba.
 
-No celular a gestão também aprova e recusa missões. Homologar, julgar, ausências, fechamentos, relatórios e automação ficam no computador.
+No celular a gestão também aprova e recusa missões e abre "Sugestões de ocorrência" e "Kanban, planos de ação e indicadores". Homologar, julgar, ausências, fechamentos, relatórios e automação ficam no computador.
 
 ## 2. Farol do mês
 
@@ -191,6 +195,37 @@ Relatório do mês (20/10/2026): o número é o do mês (por exemplo, CND-202609
 
 A cópia de cada relatório fica guardada na pasta do programa. A análise escrita usa só os números e nunca recebe o nome das pessoas.
 
+## 8a. Sugestões de ocorrência
+
+Os outros módulos não lançam ocorrência: geram sugestões, e a gestão decide.
+
+| De onde vem | O que vira sugestão | Código sugerido |
+|---|---|---|
+| Frota | Multa com o condutor identificado pela retirada ou indicado pela gestão | VEI-06 |
+| Frota | Item do checklist em ordem na retirada e com problema na devolução | VEI-08 (só se houve imprudência) |
+| Frota | Retirada ou devolução registrada pela gestão no lugar do condutor | VEI-04 |
+| Frota | KM a conferir | VEI-04 (sai da fila quando o KM é conferido) |
+| Auvo | O.S. finalizada sem foto, sem relato ou sem check-out; O.S. aberta há 3 dias ou mais | CAM-01 ou CAM-02 |
+| Painel de qualidade | Cobrança registrada para técnico ou condutor | CAM-08 (só se a reclamação do cliente foi procedente) |
+| Minhas atividades | Três ou mais atividades atrasadas no mesmo mês | sem código: escolha ou descarte |
+| Avisos | Ciência de aviso vencida há 2 dias úteis | sem código (sai da fila quando a pessoa confirma) |
+| Ponto do COMMAND | Resumo do terceiro esquecimento do mês | informativo, sem código |
+
+1. A busca é automática (todo dia às 6h e ao abrir a aba, no máximo a cada 3 horas). "Buscar sugestões agora" faz na hora.
+2. Leia o cartão e confira a origem pelo botão "Abrir ...".
+3. "Aceitar e registrar": confira o colaborador, o código, a data e "O que aconteceu" e toque em "Registrar ocorrência". Você fica como fiscal; outra pessoa da gestão homologa.
+4. "Descartar": escreva o motivo (pelo menos 10 caracteres). A sugestão não volta.
+
+O prazo de registro de 2 dias úteis conta da data em que o SGO+ encontrou o caso. Quem é o envolvido não decide a sugestão sobre si. O RH vê e não decide. Os demais perfis não veem a aba.
+
+## 8b. Qualidade e planos
+
+- **Kanban das ocorrências**: Registrada, Em defesa, Homologada, Plano de ação e Concluída. O cartão anda pelo fluxo do programa; não se arrasta. "Plano recomendado" marca a grave, a gravíssima e a reincidente.
+- **Análise de causa**: problema, pelo menos 3 porquês e a causa raiz; Ishikawa (6M) opcional. Ligada a uma ocorrência ou a um código recorrente.
+- **Plano de ação 5W2H**: O quê, Por quê, Onde, Quando, Quem, Como e Quanto. Cada ação vira uma atividade em Minhas atividades para o responsável, com prazo, e aparece em "Atividades do módulo".
+- **PDCA**: Executar enquanto houver ação aberta; "Passar para Verificar" quando todas estiverem concluídas ou canceladas; "Registrar a verificação" (o problema voltou?) com "Foi eficaz" (vai para Agir) ou "Não foi eficaz" (novo ciclo); "Concluir (padronizar)" com o que virou padrão. "Cancelar plano" pede o motivo. Nada é apagado.
+- **Indicadores por área**: reincidência, tempo médio de homologação (dias úteis), homologadas no prazo, descartadas por prazo, planos concluídos e atrasados, eficácia e sugestões pendentes; e os códigos recorrentes (3 ou mais firmes no período), com atalho para a análise e o plano.
+
 ## 9. Automação de prazos e rotina
 
 Na aba "Ocorrências", o quadro "Automação de prazos" deve estar "LIGADA". Assim, todo dia às 6h o sistema aplica os prazos vencidos sozinho.
@@ -201,11 +236,12 @@ Na aba "Ocorrências", o quadro "Automação de prazos" deve estar "LIGADA". Ass
 
 ### Rotina da semana
 
-1. Homologue as ocorrências registradas.
+1. Decida as sugestões de ocorrência e homologue as ocorrências registradas.
 2. Julgue as contestações dentro do prazo.
 3. Aprove ou recuse as missões.
 4. Registre as férias e os afastamentos.
 5. Confira o farol e publique o relatório semanal.
+6. Em "Qualidade e planos", veja os planos atrasados e os códigos recorrentes.
 
 ## 10. Cuidados de quem registra e decide
 

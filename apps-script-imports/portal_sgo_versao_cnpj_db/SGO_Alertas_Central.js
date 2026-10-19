@@ -102,6 +102,8 @@ var PEND_TIPOS = {
   aviso_ciencia: { modulo: 'avisos', um: 'aviso aguardando sua ciência', varios: 'avisos aguardando sua ciência', rotulo: 'Ciência pendente', fazer: 'leia e clique em "Li e estou ciente"', tela: { tipo: 'modulo', mod: 'avisos' }, origem: 'AVISOS' },
   aviso_leitura_atrasada: { modulo: 'avisos', um: 'aviso com leitura atrasada', varios: 'avisos com leitura atrasada', rotulo: 'Revisar', fazer: 'veja quem não leu e reenvie ou arquive', tela: { tipo: 'modulo', mod: 'avisos' }, origem: 'AVISOS' },
   conduta_ciencia: { modulo: 'conduta', um: 'aviso do Programa de Conduta', varios: 'avisos do Programa de Conduta', rotulo: 'Ciência pendente', fazer: 'confirme a leitura para registrar sua ciência', tela: { tipo: 'conduta_ciencia' }, origem: 'CONDUTA' },
+  // 19/10/2026: sugestões de ocorrência vindas da Frota, Auvo, Painel de qualidade, Atividades, Avisos e do ponto (COMMAND).
+  conduta_sugestao: { modulo: 'conduta', um: 'sugestão de ocorrência para decidir', varios: 'sugestões de ocorrência para decidir', rotulo: 'Decidir', fazer: 'aceite ou descarte em Programa de conduta > Sugestões', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
   conduta_fechamento: { modulo: 'conduta', um: 'mês do Programa de Conduta a fechar', varios: 'meses do Programa de Conduta a fechar', rotulo: 'Fechamento', fazer: 'feche o mês no Programa de Conduta', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
   qualidade_cobranca: { modulo: 'qualidade', um: 'cobrança da gestão aguardando sua ciência', varios: 'cobranças da gestão aguardando sua ciência', rotulo: 'Ciência pendente', fazer: 'leia e clique em "Estou ciente"', tela: { tipo: 'qualidade_ciencia' }, origem: 'QUALIDADE' },
   qualidade_os: { modulo: 'qualidade', um: 'O.S. concluída com registro incompleto', varios: 'O.S. concluídas com registro incompleto', rotulo: 'Revisar', fazer: 'complete o registro no Auvo', tela: { tipo: 'modulo', mod: 'qualidade' }, origem: 'QUALIDADE' },
@@ -803,6 +805,14 @@ function Pend_fonteConduta_(add, ctx) {
         oQueFazer: 'Abra o aviso e clique em confirmar a leitura para registrar sua ciência.'
       }));
     });
+  }
+  if (ctx.gestao && typeof Conduta_qtdSugestoesPendentes_ === 'function') {
+    var qSug = 0;
+    try { qSug = Conduta_qtdSugestoesPendentes_(); } catch (eSug) { qSug = 0; }
+    if (qSug) add(Pend_item_('conduta_sugestao', { id: 'CONDUTA:SUGESTOES', nome: 'Sugestões de ocorrência', publico: 'GESTAO', responsavel: 'Gestão', gravidade: 'INFO', dias: null,
+      titulo: Pend_plural_(qSug, 'sugestão de ocorrência aguarda', 'sugestões de ocorrência aguardam') + ' a decisão da gestão',
+      detalhe: 'Vieram da Frota, do Auvo, do Painel de qualidade, de Minhas atividades, dos Avisos ou do ponto. Nada vira ocorrência sem a gestão aceitar.',
+      oQueFazer: 'Abra Programa de conduta > Sugestões, confira a origem e aceite ou descarte com o motivo.' }));
   }
   if (!ctx.gestao || typeof Conduta_resumoMesAnterior_ !== 'function' || typeof Conduta_competenciaDe_ !== 'function') return;
   var r = Conduta_resumoMesAnterior_(Conduta_competenciaDe_(Conduta_hojeISO_()));

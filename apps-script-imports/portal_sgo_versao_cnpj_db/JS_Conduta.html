@@ -30,11 +30,25 @@
 
           tplConduta_carregado_ = true;
 
-          if (typeof tplConduta_renderReal_ === 'function') {
-            tplConduta_renderReal_();
-          } else {
-            container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
-          }
+          // 19/10/2026: abas Sugestões e Qualidade e planos (SGO_Conduta_TelaQualidade.js), ligadas
+          // depois do módulo. Se falhar, o módulo abre sem elas e o motivo fica no console.
+          var desenhar = function () {
+            if (typeof tplConduta_renderReal_ === 'function') {
+              tplConduta_renderReal_();
+            } else {
+              container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+            }
+          };
+          google.script.run
+            .withSuccessHandler(function (tela) {
+              try {
+                if (tela && tela.css) { var st = document.createElement('style'); st.textContent = tela.css; document.head.appendChild(st); }
+                if (tela && tela.js) window.eval(tela.js);
+              } catch (eTela) { console.error('tplConduta: abas de qualidade não carregaram:', eTela); }
+              desenhar();
+            })
+            .withFailureHandler(function (eTela) { console.error('tplConduta: abas de qualidade não carregaram:', eTela); desenhar(); })
+            .Conduta_obterTelaQualidade();
         } catch (e) {
           console.error('tplConduta: erro ao montar o módulo:', e);
           container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';

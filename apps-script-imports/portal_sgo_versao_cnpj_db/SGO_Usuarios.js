@@ -47,11 +47,25 @@ const SGO_USUARIOS = (() => {
       CertCal_forcarColunaTexto_(SHEET_NAME, "CELULAR");
       // Vínculo de trabalho (19/10/2026): acrescenta a coluna no fim, sem apagar nada.
       CertCal_garantirColuna_(SHEET_NAME, "VINCULO_TRABALHO");
+      // Área (19/10/2026): fonte única da área da pessoa (SGO_Areas.js), lida pelo
+      // Programa de conduta e pelos indicadores. Coluna no fim, sem apagar nada.
+      CertCal_garantirColuna_(SHEET_NAME, "AREA");
       SGO_DATA._headersCache = {}; SGO_DATA._headerMapCache = {};
       cache.put("USR_CELULAR_OK_V3", "1", 21600);
     } catch (e) {
       console.warn("Não foi possível garantir a coluna CELULAR: " + e.message);
     }
+  }
+
+  /** Código de área ativa (SGO_Areas.js). "" = sem área; null = não existe ou está inativa. */
+  function normalizarArea_(v) {
+    const t = SGO_UTILS.safe(v);
+    if (!t) return "";
+    if (typeof Areas_codigoDeTexto_ !== "function") return null;
+    try { Areas_garantir_(); } catch (e) {}
+    const cod = Areas_codigoDeTexto_(t);
+    if (!cod) return null;
+    return Areas_todas_().some(function (a) { return a.CODIGO === cod && a.ATIVO; }) ? cod : null;
   }
 
   /** "(11) 98765-4321" -> "5511987654321". Vazio = sem celular. null = inválido. */
@@ -191,6 +205,8 @@ const SGO_USUARIOS = (() => {
         EMAIL: dados.EMAIL,
         CELULAR: dados.CELULAR || "",
         VINCULO_TRABALHO: dados.VINCULO_TRABALHO || "",
+        // Sem a chave AREA no pedido (cadastro por outra tela ou pela ponte), a área vem do perfil quando ele a diz.
+        AREA: dados.PERFIL === "CLIENTE" ? "" : (dados.AREA !== undefined ? (dados.AREA || "") : ((typeof AREAS_POR_PERFIL !== "undefined" && AREAS_POR_PERFIL[dados.PERFIL]) || "")),
         STATUS: STATUS_ATIVO
       })
     );
@@ -231,6 +247,7 @@ const SGO_USUARIOS = (() => {
     dados.SENHA = normal.SENHA;
     dados.CELULAR = normal.CELULAR;
     dados.VINCULO_TRABALHO = normal.VINCULO_TRABALHO;
+    dados.AREA = normal.AREA;
     const erros = validarPayload_(dados, true);
 
     if (erros.length) {
@@ -265,6 +282,8 @@ const SGO_USUARIOS = (() => {
       CELULAR: dados.CELULAR === undefined ? SGO_UTILS.safe(atual.CELULAR) : dados.CELULAR,
       // Sem a chave no pedido (redefinir senha, por exemplo) o vínculo fica como está.
       VINCULO_TRABALHO: dados.VINCULO_TRABALHO === undefined ? SGO_UTILS.safeUpper(atual.VINCULO_TRABALHO) : dados.VINCULO_TRABALHO,
+      // Área: mesma regra (sem a chave no pedido, fica como está).
+      AREA: dados.PERFIL === "CLIENTE" ? "" : (dados.AREA === undefined ? SGO_UTILS.safeUpper(atual.AREA) : dados.AREA),
       STATUS: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO,
       CRIADO_EM: atual.CRIADO_EM
     });
@@ -368,7 +387,7 @@ const SGO_USUARIOS = (() => {
     if (!q) return { success: true, items: base, total: base.length };
 
     const filtrados = base.filter(function (r) {
-      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR, r.VINCULO_TRABALHO].some(v => SGO_UTILS.safeLower(v).includes(q));
+      return [r.USUARIO, r.NOME, r.PERFIL, r.STATUS, r.CELULAR, r.VINCULO_TRABALHO, r.AREA].some(v => SGO_UTILS.safeLower(v).includes(q));
     });
 
     return { success: true, items: filtrados, total: filtrados.length };
@@ -400,7 +419,9 @@ const SGO_USUARIOS = (() => {
       // Sem a chave CELULAR no pedido = "não mexer" (undefined), não "apagar".
       CELULAR: Object.prototype.hasOwnProperty.call(payload, "CELULAR") ? normalizarCelular_(payload.CELULAR) : undefined,
       // Mesma regra: sem a chave = não mexer; "" = não informado; null = valor inválido.
-      VINCULO_TRABALHO: Object.prototype.hasOwnProperty.call(payload, "VINCULO_TRABALHO") ? normalizarVinculo_(payload.VINCULO_TRABALHO) : undefined
+      VINCULO_TRABALHO: Object.prototype.hasOwnProperty.call(payload, "VINCULO_TRABALHO") ? normalizarVinculo_(payload.VINCULO_TRABALHO) : undefined,
+      // Área (19/10/2026): sem a chave = não mexer; "" = sem área; null = área desconhecida ou inativa.
+      AREA: Object.prototype.hasOwnProperty.call(payload, "AREA") ? normalizarArea_(payload.AREA) : undefined
     };
   }
 
@@ -419,6 +440,9 @@ const SGO_USUARIOS = (() => {
       erros.push("E-mail é obrigatório — usado como identidade do usuário no Portal.");
     } else if (dados.EMAIL.indexOf("@") === -1 || dados.EMAIL.indexOf(".") === -1) {
       erros.push("E-mail inválido.");
+    }
+    if (dados.AREA === null) {
+      erros.push("Área inválida: escolha uma das áreas da lista (Administração > Usuários > Áreas) ou deixe Sem área.");
     }
     if (dados.VINCULO_TRABALHO === null) {
       erros.push("Vínculo de trabalho inválido: escolha CLT, PJ ou Não informado.");
@@ -502,6 +526,9 @@ function usuariosPainel(sessionId) {
     // Perfil RH só consulta (19/10/2026): a tela esconde Novo usuário, Editar e Mais.
     var podeGerir = isAdminPerfilAuth_(sessao.perfil);
     var acessos = Usuarios_ultimosAcessos_();
+    // Áreas (19/10/2026): lista para o formulário e nomes para a coluna da lista.
+    var areasAtivas = [], nomesAreas = {};
+    try { Areas_garantir_(); areasAtivas = Areas_todas_().filter(function (a) { return a.ATIVO; }); nomesAreas = Areas_mapaNomes_(); } catch (eAr) { console.warn("Áreas: " + ((eAr && eAr.message) || eAr)); }
     var clientes = {};
     try { SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[SGO_UTILS.safe(c.ID)] = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL); }); } catch (e) {}
     var ativosAdmin = (base.items || []).filter(function (u) { return SGO_UTILS.safeUpper(u.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO"; }).length;
@@ -516,6 +543,9 @@ function usuariosPainel(sessionId) {
       // Conta de Administrador só é alterada por Administrador (a regra vale no servidor; aqui só orienta a tela).
       o.PODE_ALTERAR = podeGerir && (souAdmin || perfil !== "ADMIN") && (podeDarDiretoria || perfil !== "DIRETORIA");
       o.VINCULO_TRABALHO = SGO_UTILS.safeUpper(u.VINCULO_TRABALHO);
+      var ar = perfil === "CLIENTE" ? { codigo: "", nome: "" } : (typeof SGO_areaDoUsuario_ === "function" ? SGO_areaDoUsuario_(u, nomesAreas) : { codigo: SGO_UTILS.safeUpper(u.AREA), nome: SGO_UTILS.safe(u.AREA) });
+      o.AREA = ar.codigo;
+      o.AREA_NOME = ar.codigo ? ar.nome : "";
       o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
       return o;
     });
@@ -524,6 +554,7 @@ function usuariosPainel(sessionId) {
       return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
     });
     return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir,
+      areas: areasAtivas, podeGerirAreas: SGO_podeConsultarPessoas_(sessao.perfil),
       perfis: (SGO_CFG.PROFILES || []).filter(function (p) { var k = SGO_UTILS.safeUpper(p); return (souAdmin || k !== "ADMIN") && (podeDarDiretoria || k !== "DIRETORIA"); }) }));
   } catch (e) {
     return { success: false, message: SGO_textoFalhaOperador_("carregar os usuários", e) };

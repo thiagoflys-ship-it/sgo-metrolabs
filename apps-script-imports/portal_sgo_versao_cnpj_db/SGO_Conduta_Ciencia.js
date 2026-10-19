@@ -337,6 +337,11 @@ function Conduta_rotinaImediata_() {
 function Conduta_rotinaDiaria_() {
   Conduta_setup_();
   var r = { saneamento: Conduta_saneamento20261015_(), prazos: Conduta_processarPrazosVencidos_(), fechamentos: Conduta_fecharAutomatico_() };
+  // 19/10/2026: sugestões de ocorrência vindas dos outros módulos (só sugere; a gestão decide).
+  if (typeof Conduta_coletarSugestoes_ === 'function') {
+    try { var col = Conduta_coletarSugestoes_('sistema'); r.sugestoes = { novas: col.novas, superadas: col.superadas }; }
+    catch (eSug) { r.sugestoes = { falha: String((eSug && eSug.message) || eSug) }; }
+  }
   SGO_DATA.log('CONDUTA_ROTINA', 'sistema', JSON.stringify(r).slice(0, 900), 'CONDUTA');
   if (typeof Conduta_marcarMudancaFarol_ === 'function') Conduta_marcarMudancaFarol_(); // prazos vencidos e fechamentos mudam o farol
   return r;
@@ -358,6 +363,10 @@ function Conduta_preverRotina_() {
     if (hoje <= limite) { aguardando.push(Conduta_nomeCompetencia_(comp) + ' (prazo do gestor até ' + Conduta_dataBr_(limite) + ')'); continue; }
     var pend = Conduta_pendenciasCompetencia_(comp);
     if (pend.length) { aguardando.push(Conduta_nomeCompetencia_(comp) + ' (' + pend.length + ' pendência(s) de defesa)'); continue; }
+    // 19/10/2026 (pente fino): a prévia anunciava fechar o mês com missão aguardando aprovação,
+    // mas o fechamento automático recusava (mesma regra de Conduta_fecharAutomatico_).
+    var missPend = typeof Conduta_missoesPendentesCompetencia_ === 'function' ? Conduta_missoesPendentesCompetencia_(comp) : [];
+    if (missPend.length) { aguardando.push(Conduta_nomeCompetencia_(comp) + ' (' + missPend.length + ' missão(ões) aguardando aprovação da gestão)'); continue; }
     fechar.push(comp);
   }
   return { mesesAFechar: fechar, mesesAFecharNomes: fechar.map(Conduta_nomeCompetencia_), aguardando: aguardando };

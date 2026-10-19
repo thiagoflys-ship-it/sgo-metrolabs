@@ -206,6 +206,8 @@ function Conduta_migrate_() {
     CertCal_garantirColuna_(CONDUTA_SHEETS.MISSAO, 'DECISAO_DIRETORIA');
     propsFmt.setProperty('CONDUTA_DECISAO_DIRETORIA_V1', '1');
   }
+  // 19/10/2026: sugestões dos outros módulos, análise de causa e planos de ação (SGO_Conduta_Qualidade.js).
+  if (typeof Conduta_qualidadeMigrar_ === 'function') Conduta_qualidadeMigrar_();
 }
 
 /** Linhas válidas (não excluídas) de qual_missao / qual_ausencia. */

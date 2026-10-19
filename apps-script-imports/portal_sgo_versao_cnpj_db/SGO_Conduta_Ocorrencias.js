@@ -99,6 +99,19 @@ function Conduta_apiDispatch(req) {
     ,apiPainelCiencia: Conduta_apiPainelCiencia
     ,apiRodarRotinaAgora: Conduta_apiRodarRotinaAgora
     ,apiPreverRotina: Conduta_apiPreverRotina
+    // 19/10/2026: sugestões vindas dos outros módulos, análise de causa, planos 5W2H/PDCA,
+    // Kanban e indicadores por área (SGO_Conduta_Qualidade.js)
+    ,apiListarSugestoes: Conduta_apiListarSugestoes
+    ,apiColetarSugestoesAgora: Conduta_apiColetarSugestoesAgora
+    ,apiAceitarSugestao: Conduta_apiAceitarSugestao
+    ,apiDescartarSugestao: Conduta_apiDescartarSugestao
+    ,apiSalvarAnaliseCausa: Conduta_apiSalvarAnaliseCausa
+    ,apiCriarPlanoAcao: Conduta_apiCriarPlanoAcao
+    ,apiAdicionarAcaoPlano: Conduta_apiAdicionarAcaoPlano
+    ,apiAvancarPlano: Conduta_apiAvancarPlano
+    ,apiListarPlanos: Conduta_apiListarPlanos
+    ,apiKanbanQualidade: Conduta_apiKanbanQualidade
+    ,apiIndicadoresQualidade: Conduta_apiIndicadoresQualidade
   };
 
   if (!fn) throw new Error('Função não informada.');
@@ -106,11 +119,11 @@ function Conduta_apiDispatch(req) {
 
   var resultado = allow[fn](req.sessionId, payload);
   // 17/10/2026: ocorrência, ciência, missão e fechamento mudam pendências do Início.
-  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato|Kanban|Indicadores)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   // 19/10/2026: o farol aberto em outras telas só busca de novo quando este carimbo muda.
-  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato|UploadFoto|Documento)/.test(fn) && typeof Conduta_marcarMudancaFarol_ === 'function') Conduta_marcarMudancaFarol_();
+  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato|UploadFoto|Documento|Kanban|Indicadores|ColetarSugestoes|SalvarAnalise|CriarPlano|AdicionarAcao|AvancarPlano|DescartarSugestao)/.test(fn) && typeof Conduta_marcarMudancaFarol_ === 'function') Conduta_marcarMudancaFarol_();
   return resultado;
 }
 
@@ -296,9 +309,11 @@ function Conduta_apiListarDistancias(sessionId) {
  */
 function Conduta_apiListarColegas(sessionId) {
   Conduta_exigirEquipe_(sessionId);
+  var nomesAreas = typeof Cndq_nomesAreas_ === 'function' ? Cndq_nomesAreas_() : {};
   return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS)
     .filter(function (u) { return SGO_UTILS.safeUpper(u.STATUS) === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && !Conduta_ehContaGenerica_(u); })
-    .map(function (u) { return { ID: u.ID, NOME: u.NOME, SETOR: u.SETOR || u.DEPARTAMENTO || '' }; })
+    // 19/10/2026: a área vem de CAD_USUARIOS.AREA (SGO_Areas.js); SETOR fica igual para as telas antigas.
+    .map(function (u) { var ar = typeof Conduta_areaColaborador_ === 'function' ? Conduta_areaColaborador_(u, nomesAreas) : { codigo: '', nome: '' }; return { ID: u.ID, NOME: u.NOME, AREA: ar.codigo, AREA_NOME: ar.codigo ? ar.nome : '', SETOR: ar.codigo ? ar.nome : '' }; })
     .sort(function (a, b) { return String(a.NOME).localeCompare(String(b.NOME)); });
 }
 
@@ -401,8 +416,17 @@ function Conduta_apiUploadFoto(sessionId, payload) {
 // ------------------------------------------------------------
 function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
   var sessao = Conduta_exigirEquipe_(sessionId);
-  payload = payload || {};
+  return Conduta_registrarOcorrencia_(sessao, payload || {}, {});
+}
 
+/**
+ * Registro de ocorrência (tela ou sugestão aceita, SGO_Conduta_Qualidade.js).
+ * opcoes.dataBasePrazo: data a partir da qual conta o prazo de registro (a
+ * sugestão usa a data em que o SGO+ encontrou o caso); vazio = data do fato.
+ * opcoes.origem: colunas ORIGEM_* e SUGESTAO_ID gravadas na ocorrência.
+ */
+function Conduta_registrarOcorrencia_(sessao, payload, opcoes) {
+  opcoes = opcoes || {};
   var tipo = Conduta_buscarTipoOcorrencia_(payload.tipoCodigo);
   var colaboradorId = String(payload.colaboradorId || '').trim();
   if (!colaboradorId) throw new Error('Informe o colaborador envolvido.');
@@ -411,6 +435,10 @@ function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
   var colaboradorUsuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, colaboradorId);
   if (!colaboradorUsuario) throw new Error('Colaborador não encontrado.');
   if (Conduta_ehContaGenerica_(colaboradorUsuario)) throw new Error('Escolha a pessoa envolvida: a conta "' + (colaboradorUsuario.NOME || colaboradorUsuario.USUARIO) + '" é uma conta do sistema, não um colaborador.');
+  // 19/10/2026 (pente fino): a lista da tela já trazia só a equipe ativa, mas o servidor aceitava
+  // qualquer ID (cliente ou pessoa inativa), e a ocorrência ficava fora do farol de todos.
+  if (SGO_UTILS.safeUpper(colaboradorUsuario.PERFIL) === 'CLIENTE') throw new Error('Escolha uma pessoa da equipe: a conta escolhida é de cliente.');
+  if (SGO_UTILS.safeUpper(colaboradorUsuario.STATUS || 'ATIVO') !== 'ATIVO') throw new Error('A pessoa escolhida está inativa no SGO+: ocorrência só é registrada para quem está ativo. Se ela voltou, peça à gestão para reativar o usuário.');
 
   var dataFato = String(payload.dataFato || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dataFato)) throw new Error('Data do fato inválida (use AAAA-MM-DD).');
@@ -420,10 +448,13 @@ function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
 
   var parametros = Conduta_obterParametros_();
   var prazoRegistroDias = Number(parametros.PRAZO_REGISTRO_DIAS_UTEIS) || 2;
-  var limiteRegistro = Conduta_somarDiasUteis_(dataFato, prazoRegistroDias);
+  var basePrazo = Conduta_soData_(opcoes.dataBasePrazo) > dataFato ? Conduta_soData_(opcoes.dataBasePrazo) : dataFato;
+  var limiteRegistro = Conduta_somarDiasUteis_(basePrazo, prazoRegistroDias);
   if (limiteRegistro < Conduta_hojeISO_()) {
-    throw new Error('Prazo de registro (' + prazoRegistroDias + ' dias úteis após o fato) já venceu para esta data.');
+    throw new Error('Prazo de registro (' + prazoRegistroDias + ' dias úteis após ' + (basePrazo === dataFato ? 'o fato' : 'a data em que o caso foi encontrado, ' + Conduta_dataBr_(basePrazo)) +
+      ') já venceu: terminou em ' + Conduta_dataBr_(limiteRegistro) + '. Ocorrência fora do prazo não é registrada no programa; se for sugestão, descarte com o motivo "fora do prazo".');
   }
+  var descricao = String(payload.descricao || '').trim().slice(0, 2000);
 
   var janelaDias = Number(parametros.JANELA_REINCIDENCIA_DIAS) || 90;
   var ultimaFirme = Conduta_ultimaFirmeMesmoTipo_(colaboradorId, tipo.CODIGO, dataFato);
@@ -447,7 +478,16 @@ function Conduta_apiRegistrarOcorrencia(sessionId, payload) {
     PRAZO_HOMOLOGACAO: Conduta_somarDiasUteis_(Conduta_hojeISO_(), prazoHomologacaoDias),
     FOTO_URL: String(payload.fotoUrl || ''),
     FOTO_LEGENDA: String(payload.fotoLegenda || ''),
-    MISSAO_ID: String(payload.missaoId || '')
+    MISSAO_ID: String(payload.missaoId || ''),
+    // 19/10/2026: o que aconteceu (antes só existia a legenda da foto) e o vínculo com a origem da sugestão.
+    DESCRICAO: descricao,
+    ORIGEM_MODULO: (opcoes.origem && opcoes.origem.ORIGEM_MODULO) || '',
+    ORIGEM_TIPO: (opcoes.origem && opcoes.origem.ORIGEM_TIPO) || '',
+    ORIGEM_ID: (opcoes.origem && opcoes.origem.ORIGEM_ID) || '',
+    ORIGEM_ROTULO: (opcoes.origem && opcoes.origem.ORIGEM_ROTULO) || '',
+    ORIGEM_TELA: (opcoes.origem && opcoes.origem.ORIGEM_TELA) || '',
+    ORIGEM_LINK: (opcoes.origem && opcoes.origem.ORIGEM_LINK) || '',
+    SUGESTAO_ID: (opcoes.origem && opcoes.origem.SUGESTAO_ID) || ''
   });
 
   return { success: true, item: registro };
@@ -468,8 +508,12 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
   // TEXTO_RECURSO eram gravados e nunca lidos por nenhuma tela. Montamos os
   // dois mapas UMA vez por chamada (não por linha) para não repetir leitura
   // de planilha.
-  var nomes = {};
-  SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) { nomes[String(u.ID)] = u.NOME; });
+  var nomes = {}, areasCol = {};
+  var nomesAreas = typeof Cndq_nomesAreas_ === 'function' ? Cndq_nomesAreas_() : {};
+  SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) {
+    nomes[String(u.ID)] = u.NOME;
+    if (typeof Conduta_areaColaborador_ === 'function') areasCol[String(u.ID)] = Conduta_areaColaborador_(u, nomesAreas);
+  });
   var descricoes = {};
   SGO_DATA.getAll(CONDUTA_SHEETS.OCORRENCIA_TIPO).forEach(function (t) {
     descricoes[SGO_UTILS.safeUpper(t.CODIGO)] = { descricao: t.DESCRICAO, grupo: t.GRUPO };
@@ -529,6 +573,14 @@ function Conduta_apiListarOcorrencias(sessionId, payload) {
     o.FISCAL_NOME = nomes[String(o.FISCAL_ID)] || o.FISCAL_ID || '';
     o.TIPO_DESCRICAO = d.descricao || '';
     o.TIPO_GRUPO = d.grupo || '';
+    // 19/10/2026: área do envolvido (CAD_USUARIOS.AREA) e o caminho até a origem da sugestão.
+    var ar = areasCol[String(o.COLABORADOR_ID)] || { codigo: '', nome: 'Sem área definida' };
+    o.COLABORADOR_AREA = ar.codigo;
+    o.COLABORADOR_AREA_NOME = ar.nome;
+    o.DESCRICAO = SGO_UTILS.safe(o.DESCRICAO);
+    o.ORIGEM_ROTULO = SGO_UTILS.safe(o.ORIGEM_ROTULO);
+    o.ORIGEM_TELA = SGO_UTILS.safe(o.ORIGEM_TELA);
+    o.ORIGEM_LINK = SGO_UTILS.safe(o.ORIGEM_LINK);
     return o;
   }).sort(function (a, b) { return String(b.DATA_FATO).localeCompare(String(a.DATA_FATO)); });
 }
