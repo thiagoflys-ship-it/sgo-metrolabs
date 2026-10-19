@@ -18,7 +18,11 @@ function SGO_ajudaTelas_Conduta_() {
         { titulo: "Ver como está o mês", itens: [
           "Toque em \"Programa de conduta\" no menu.",
           "Na aba \"Farol do mês\", olhe a cor do farol e o \"Índice de conduta\".",
-          "Leia a frase abaixo do farol. Ela diz quantos pontos ainda cabem sem sair do verde."
+          "Leia a frase abaixo do farol. Ela diz quantos pontos ainda cabem sem sair do verde.",
+          "Veja a barra \"Margem até o amarelo\" (no amarelo, \"Margem até o vermelho\"): ela mostra quantos pontos ainda cabem. A parte listrada são pontos em prazo de defesa.",
+          "Se houver ocorrência em prazo de defesa, a marca tracejada no velocímetro mostra onde o índice vai parar se ela ficar firme.",
+          "Os mini gráficos mostram o índice do mês dia a dia e os últimos meses fechados. A linha tracejada é o limite do verde.",
+          "Deixe a tela aberta: o farol se atualiza sozinho (\"Ao vivo\"). Quando o índice muda, o ponteiro anda e aparece um aviso no canto, por exemplo \"Índice atualizado: 98,5\". Não precisa recarregar a página."
         ] },
         { titulo: "Registrar uma ocorrência", itens: [
           "Abra a aba \"Ocorrências\".",
@@ -69,6 +73,10 @@ function SGO_ajudaTelas_Conduta_() {
         { nome: "Farol \"AMARELO\" (70 a 84,9)", significado: "\"Bônus em risco\". Ainda dá tempo de voltar ao verde no mês." },
         { nome: "Farol \"VERMELHO\" (abaixo de 70)", significado: "\"Bônus perdido neste mês\". Os incentivos de missão continuam sendo pagos." },
         { nome: "\"GRAVÍSSIMA\" junto do farol", significado: "Uma ocorrência gravíssima confirmada cancela o bônus do mês, qualquer que seja o índice." },
+        { nome: "Selo do bônus no farol (verde, amarelo ou vermelho)", significado: "Situação do bônus do mês: preservado, em risco, perdido ou cancelado. O selo cinza \"Período de teste\" indica que o bônus ainda não é pago." },
+        { nome: "Marca e arco tracejados no velocímetro", significado: "Projeção: onde o índice vai parar se as ocorrências em prazo de defesa ficarem firmes. Ainda não conta." },
+        { nome: "Parte listrada na barra de margem", significado: "Pontos de ocorrências em prazo de defesa. Se ficarem firmes, a margem diminui nesse tanto." },
+        { nome: "\"Ao vivo\" com ponto verde piscando", significado: "O farol confere sozinho a cada 45 segundos se algo mudou. Com a aba do navegador escondida, a conferência para." },
         { nome: "Selo azul \"Registrada\"", significado: "Aguardando a homologação da gestão." },
         { nome: "Selo âmbar \"Homologada\"", significado: "A gestão aprovou. Está no prazo de contestação. Ainda não conta." },
         { nome: "Selo roxo \"Contestada\" ou \"Em recurso\"", significado: "A defesa está em julgamento pela gestão." },

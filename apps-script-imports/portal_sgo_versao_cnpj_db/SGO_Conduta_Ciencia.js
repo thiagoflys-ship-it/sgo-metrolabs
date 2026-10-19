@@ -338,6 +338,7 @@ function Conduta_rotinaDiaria_() {
   Conduta_setup_();
   var r = { saneamento: Conduta_saneamento20261015_(), prazos: Conduta_processarPrazosVencidos_(), fechamentos: Conduta_fecharAutomatico_() };
   SGO_DATA.log('CONDUTA_ROTINA', 'sistema', JSON.stringify(r).slice(0, 900), 'CONDUTA');
+  if (typeof Conduta_marcarMudancaFarol_ === 'function') Conduta_marcarMudancaFarol_(); // prazos vencidos e fechamentos mudam o farol
   return r;
 }
 

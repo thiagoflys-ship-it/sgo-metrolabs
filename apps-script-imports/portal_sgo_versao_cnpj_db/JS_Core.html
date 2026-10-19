@@ -1214,16 +1214,55 @@
   }
 
   // ---------------------------------------------------------------
-  // GAUGE/SINALEIRO DO FAROL DE CONDUTA (2026-09-02) — velocímetro em
-  // SVG com as 3 zonas fixas (vermelho <70 / amarelo 70-84,9 / verde
-  // >=85) e um ponteiro na posição do ICO atual. Função compartilhada:
-  // usada no dashboard principal, no card do próprio módulo (tab
-  // "Farol do mês", chamada de dentro do script eval'd do módulo — o
-  // mesmo window, então enxerga essa função globalmente) e nas 2 telas
-  // mobile (home + módulo Conduta).
+  // FAROL DO PROGRAMA DE CONDUTA (velocímetro vivo, 19/10/2026).
+  // Componente único usado no Início (computador), na aba "Farol do mês"
+  // do módulo (chamado de dentro do script do módulo — mesmo window) e
+  // nas 2 telas do celular (Início e Conduta).
+  //  - faixas do velocímetro proporcionais aos limites do programa
+  //    (res.limites; padrão 70 e 85), marcações a cada 5 e números;
+  //  - ponteiro com mola e número que conta até o valor (pt-BR, 1 casa);
+  //    sem animação com prefers-reduced-motion;
+  //  - marcador tracejado da projeção (ocorrências em prazo de defesa);
+  //  - margem em pontos, selo do bônus e mini gráficos da evolução;
+  //  - tempo real: consulta leve do carimbo (apiObterVersaoFarol) a cada
+  //    45 s com a aba visível e só busca o farol quando ele mudou; depois
+  //    de gravar no Conduta busca na hora. Só o painel do farol é
+  //    redesenhado — nunca formulário nem janela aberta.
+  // Nenhum cálculo do índice é feito aqui: tudo vem do servidor.
   // ---------------------------------------------------------------
   var CONDUTA_FAROL_AMARELO_MIN = 70, CONDUTA_FAROL_VERDE_MIN = 85;
+  var CONDUTA_FAROL = { res: null, versao: "", timer: null, emVoo: false, ultimaBusca: 0, ultimaVersao: 0, seq: 0, pendente: false };
+  var CONDUTA_FAROL_INTERVALO_MS = 45000;      // consulta do carimbo
+  var CONDUTA_FAROL_BUSCA_FORCADA_MS = 600000; // busca completa de garantia (10 min)
+  var CONDUTA_FAROL_MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  var CONDUTA_FAROL_MESES_EXT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
+  function Conduta_farolNum_(v, casas) {
+    var n = Number(v);
+    if (!isFinite(n)) return "—";
+    var c = casas === undefined ? 1 : casas;
+    return n.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+  }
+  function Conduta_farolSemMovimento_() {
+    try { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { return false; }
+  }
+  function Conduta_farolLimites_(res) {
+    var l = (res && res.limites) || {};
+    var am = Number(l.amarelo), ve = Number(l.verde);
+    if (!(am > 0 && am < 100)) am = CONDUTA_FAROL_AMARELO_MIN;
+    if (!(ve > am && ve <= 100)) ve = CONDUTA_FAROL_VERDE_MIN;
+    return { amarelo: am, verde: ve };
+  }
+  function Conduta_farolCorVar_(farol) {
+    return farol === "VERDE" ? "var(--success)" : (farol === "AMARELO" ? "var(--warning)" : "var(--danger)");
+  }
+  function Conduta_farolClasse_(farol) {
+    return farol === "VERDE" ? "verde" : (farol === "AMARELO" ? "amarelo" : "vermelho");
+  }
+  function Conduta_farolDeValor_(v, lim) { return v < lim.amarelo ? "VERMELHO" : (v < lim.verde ? "AMARELO" : "VERDE"); }
+
+  // Geometria do velocímetro: valor 0 à esquerda, 100 à direita, 180 graus.
+  var CONDUTA_GAUGE = { cx: 120, cy: 112, r: 92, sw: 14 };
   function Conduta_anguloDoValor_(v) { return 180 - (v / 100) * 180; }
   function Conduta_pontoGauge_(cx, cy, r, anguloGraus) {
     var rad = anguloGraus * Math.PI / 180;
@@ -1232,56 +1271,375 @@
   function Conduta_arcoGaugePath_(cx, cy, r, a1, a2) {
     var p1 = Conduta_pontoGauge_(cx, cy, r, a1), p2 = Conduta_pontoGauge_(cx, cy, r, a2);
     var largeArc = Math.abs(a1 - a2) > 180 ? 1 : 0;
-    return 'M ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2) + ' A ' + r + ' ' + r + ' 0 ' + largeArc + ' 1 ' + p2.x.toFixed(2) + ' ' + p2.y.toFixed(2);
+    return "M " + p1.x.toFixed(2) + " " + p1.y.toFixed(2) + " A " + r + " " + r + " 0 " + largeArc + " 1 " + p2.x.toFixed(2) + " " + p2.y.toFixed(2);
   }
 
-  function Conduta_montarGaugeSvg_(ico, farol) {
-    var cx = 100, cy = 92, r = 76, sw = 14, gap = 2.2;
-    var corFarol = farol === 'VERDE' ? 'var(--success)' : (farol === 'AMARELO' ? 'var(--warning)' : 'var(--danger)');
+  /** SVG do velocímetro. valorInicial: onde o ponteiro começa (a animação leva até ico). */
+  function Conduta_montarGaugeSvg_(ico, farol, res, valorInicial) {
+    var G = CONDUTA_GAUGE, cx = G.cx, cy = G.cy, r = G.r, sw = G.sw;
+    var lim = Conduta_farolLimites_(res);
+    var uid = "fg" + (++CONDUTA_FAROL.seq);
+    var icoClamp = Math.max(0, Math.min(100, Number(ico) || 0));
+    var inicio = (valorInicial === undefined || valorInicial === null) ? icoClamp : Math.max(0, Math.min(100, Number(valorInicial) || 0));
+    var faixaAtual = Conduta_farolClasse_(farol);
+    var gap = 1.6;
 
-    function zona(v0, v1, cor) {
+    function zona(v0, v1, classe) {
       var a0 = Conduta_anguloDoValor_(v0) - (v0 === 0 ? 0 : gap / 2);
       var a1 = Conduta_anguloDoValor_(v1) + (v1 === 100 ? 0 : gap / 2);
-      return '<path d="' + Conduta_arcoGaugePath_(cx, cy, r, a0, a1) + '" fill="none" stroke="' + cor + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
+      var d = Conduta_arcoGaugePath_(cx, cy, r, a0, a1);
+      var ativa = classe === faixaAtual;
+      return (ativa ? '<path class="fg-brilho fg-' + classe + '" d="' + d + '" fill="none" stroke-width="' + (sw + 6) + '" filter="url(#' + uid + 'b)"/>' : "") +
+        '<path class="fg-faixa fg-' + classe + (ativa ? " fg-ativa" : "") + '" d="' + d + '" fill="none" stroke-width="' + sw + '"/>';
+    }
+    var zonas = zona(0, lim.amarelo, "vermelho") + zona(lim.amarelo, lim.verde, "amarelo") + zona(lim.verde, 100, "verde");
+
+    // marcações a cada 5; maiores a cada 10; números em 0, nos limites e em 100
+    var marcas = "";
+    for (var v = 0; v <= 100; v += 5) {
+      var maior = v % 10 === 0;
+      var a = Conduta_anguloDoValor_(v);
+      var p1 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 3, a), p2 = Conduta_pontoGauge_(cx, cy, r - sw / 2 - (maior ? 9 : 6), a);
+      marcas += '<line class="fg-marca' + (maior ? " fg-marca-maior" : "") + '" x1="' + p1.x.toFixed(2) + '" y1="' + p1.y.toFixed(2) + '" x2="' + p2.x.toFixed(2) + '" y2="' + p2.y.toFixed(2) + '"/>';
+    }
+    var numeros = [0, lim.amarelo, lim.verde, 100].map(function (n) {
+      var p = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 19, Conduta_anguloDoValor_(n));
+      if (n === 0 || n === 100) p = { x: cx + (n === 0 ? -r : r), y: cy + 15 };
+      return '<text class="fg-numero" x="' + p.x.toFixed(1) + '" y="' + (p.y + 3.5).toFixed(1) + '" text-anchor="middle">' + Conduta_farolNum_(n, n % 1 ? 1 : 0) + "</text>";
+    }).join("");
+
+    // ponteiro: lâmina que cruza o arco (desenhada no valor 0 e girada)
+    function lamina(classe) {
+      var x1 = cx - (r - sw / 2 - 26), x2 = cx - (r + sw / 2 + 3);
+      return '<line class="' + classe + '" x1="' + x1 + '" y1="' + cy + '" x2="' + x2 + '" y2="' + cy + '"/>';
     }
 
-    var zonas = zona(0, CONDUTA_FAROL_AMARELO_MIN, 'var(--danger)') +
-      zona(CONDUTA_FAROL_AMARELO_MIN, CONDUTA_FAROL_VERDE_MIN, 'var(--warning)') +
-      zona(CONDUTA_FAROL_VERDE_MIN, 100, 'var(--success)');
+    // projeção: lâmina tracejada + arco tracejado externo entre o índice atual e o previsto
+    var proj = "";
+    var e = res && res.emApuracao;
+    if (e && Number(e.emDefesa) > 0 && isFinite(Number(e.icoPrevisto)) && Number(e.icoPrevisto) !== icoClamp) {
+      var ip = Math.max(0, Math.min(100, Number(e.icoPrevisto)));
+      var rp = r + sw / 2 + 5;
+      var classeP = Conduta_farolClasse_(e.farolPrevisto || Conduta_farolDeValor_(ip, lim));
+      proj = '<g class="fg-projecao fg-' + classeP + '">' +
+        '<path class="fg-projecao-arco" d="' + Conduta_arcoGaugePath_(cx, cy, rp, Conduta_anguloDoValor_(Math.min(ip, icoClamp)), Conduta_anguloDoValor_(Math.max(ip, icoClamp))) + '" fill="none"/>' +
+        '<g transform="rotate(' + (ip * 1.8).toFixed(2) + " " + cx + " " + cy + ')">' + lamina("fg-fantasma") + "</g>" +
+        "<title>Projeção: " + Conduta_farolNum_(ip) + " se as ocorrências em prazo de defesa ficarem firmes</title></g>";
+    }
 
-    var icoClamp = Math.max(0, Math.min(100, Number(ico) || 0));
-    var anguloP = Conduta_anguloDoValor_(icoClamp);
-    var pontaP = Conduta_pontoGauge_(cx, cy, r - sw / 2 - 10, anguloP);
-    var baseEsq = Conduta_pontoGauge_(cx, cy, 7, anguloP + 90);
-    var baseDir = Conduta_pontoGauge_(cx, cy, 7, anguloP - 90);
-    var ponteiro = '<polygon points="' + pontaP.x.toFixed(2) + ',' + pontaP.y.toFixed(2) + ' ' + baseEsq.x.toFixed(2) + ',' + baseEsq.y.toFixed(2) + ' ' + baseDir.x.toFixed(2) + ',' + baseDir.y.toFixed(2) + '" fill="var(--text-strong)"/>' +
-      '<circle cx="' + cx + '" cy="' + cy + '" r="8.5" fill="var(--text-strong)"/>' +
-      '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + corFarol + '"/>';
-
-    return '<svg viewBox="0 0 200 160" width="100%" style="display:block" role="img" aria-label="Índice de conduta ' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '">' + zonas + ponteiro +
-      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="42" font-size="28" font-weight="800" fill="var(--text-strong)" style="font-variant-numeric:tabular-nums">' + String(Math.floor(icoClamp * 10) / 10).replace('.', ',') + '</text>' +
-      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dy="60" font-size="14" font-weight="700" fill="var(--muted)">Índice</text>' +
-      '</svg>';
+    var rotulo = "Índice de conduta " + Conduta_farolNum_(icoClamp) + ", farol " + String(farol || "").toLowerCase() +
+      (proj ? "; projeção " + Conduta_farolNum_(e.icoPrevisto) : "");
+    return '<svg class="farol-gauge fg-' + faixaAtual + '" viewBox="0 0 240 136" width="100%" role="img" aria-label="' + escapeHtml_(rotulo) + '">' +
+      '<defs><filter id="' + uid + 'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>' +
+      '<path class="fg-trilho" d="' + Conduta_arcoGaugePath_(cx, cy, r, 180, 0) + '" fill="none" stroke-width="' + (sw + 2) + '"/>' +
+      zonas + marcas + numeros + proj +
+      '<g class="fg-ponteiro" transform="rotate(' + (inicio * 1.8).toFixed(2) + " " + cx + " " + cy + ')">' + lamina("fg-lamina-fundo") + lamina("fg-lamina") + "</g>" +
+      '<text class="fg-valor" x="' + cx + '" y="' + (cy - 16) + '" text-anchor="middle">' + Conduta_farolNum_(inicio) + "</text>" +
+      '<text class="fg-legenda" x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle">Índice de conduta</text>' +
+      "</svg>";
   }
 
-  function Conduta_montarFarolCardHtml_(res, onclickJs) {
-    if (!res) return '';
-    var corVar = res.farol === 'VERDE' ? 'var(--success)' : (res.farol === 'AMARELO' ? 'var(--warning)' : 'var(--danger)');
-    return '<div class="farol-card" style="--farol-cor:' + corVar + (onclickJs ? ';cursor:pointer' : '') + '"' + (onclickJs ? ' onclick="' + onclickJs + '"' : '') + '>' +
-      '<div class="farol-gauge-wrap">' + Conduta_montarGaugeSvg_(res.ico, res.farol) + '</div>' +
+  /** Selo curto da situação do bônus. */
+  function Conduta_farolSelo_(res) {
+    if (res.temGG) return { texto: "Bônus cancelado", classe: "vermelho" };
+    if (res.farol === "VERDE") return { texto: "Bônus preservado", classe: "verde" };
+    if (res.farol === "AMARELO") return { texto: "Bônus em risco", classe: "amarelo" };
+    return { texto: "Bônus perdido", classe: "vermelho" };
+  }
+
+  /** Barra "margem até o amarelo" (ou até o vermelho, no amarelo). Parte listrada = pontos em prazo de defesa. */
+  function Conduta_farolMargemHtml_(res) {
+    if (res.temGG || res.farol === "VERMELHO") return "";
+    var D = Number(res.D) || 0;
+    var verdeD = Number(res.limiteVerdeD), amareloD = Number(res.limiteAmareloD);
+    var limite, base, rotulo;
+    if (res.farol === "VERDE") { if (!(verdeD > 0)) return ""; limite = verdeD; base = 0; rotulo = "Margem até o amarelo"; }
+    else { if (!(amareloD > verdeD)) return ""; limite = amareloD; base = verdeD; rotulo = "Margem até o vermelho"; }
+    var total = limite - base;
+    var margem = Math.max(0, limite - D);
+    var e = res.emApuracao || {};
+    var emDefesa = Math.max(0, Number(e.pontosEmDefesa) || 0);
+    var margemPrevista = Math.max(0, margem - emDefesa);
+    var pct = function (x) { return Math.max(0, Math.min(100, (x / total) * 100)).toFixed(1); };
+    var texto = SGO_qtd_(margem, "ponto de margem", "pontos de margem");
+    return '<div class="farol-margem farol-margem-' + Conduta_farolClasse_(res.farol) + '">' +
+      '<div class="farol-margem-topo"><span>' + rotulo + '</span><strong>' + escapeHtml_(texto) + "</strong></div>" +
+      '<div class="farol-margem-barra" role="progressbar" aria-label="' + escapeHtml_(rotulo) + '" aria-valuemin="0" aria-valuemax="' + total + '" aria-valuenow="' + margem + '" aria-valuetext="' + escapeHtml_(texto) + '">' +
+        '<span class="farol-margem-cheia" style="width:' + pct(margemPrevista) + '%"></span>' +
+        (emDefesa && margem > margemPrevista ? '<span class="farol-margem-defesa" style="width:' + pct(margem - margemPrevista) + '%" title="' + escapeHtml_(SGO_qtd_(Math.min(emDefesa, margem), "ponto", "pontos")) + ' em prazo de defesa"></span>' : "") +
+      "</div>" +
+      (emDefesa && margem > 0 ? '<div class="farol-margem-nota">Listrado: ' + escapeHtml_(SGO_qtd_(emDefesa, "ponto", "pontos")) + " em prazo de defesa. Se ficarem firmes, restam " + escapeHtml_(SGO_qtd_(margemPrevista, "ponto", "pontos")) + ".</div>" : "") +
+      "</div>";
+  }
+
+  /** Mini gráfico de linha (uma série) com a linha do limite do verde tracejada. */
+  function Conduta_farolSparkSvg_(pontos, lim, rotuloX) {
+    if (!pontos || !pontos.length) return "";
+    var W = 160, H = 44, px = 5, py = 6;
+    var vals = pontos.map(function (p) { return Number(p.ico) || 0; });
+    var minV = Math.min(lim.amarelo - 5, Math.min.apply(null, vals) - 2), maxV = 100;
+    var y = function (v) { return py + (1 - (v - minV) / (maxV - minV)) * (H - 2 * py); };
+    var x = function (i) { return pontos.length === 1 ? W / 2 : px + i * (W - 2 * px) / (pontos.length - 1); };
+    var d = pontos.map(function (p, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(vals[i]).toFixed(1); }).join(" ");
+    var yv = y(lim.verde).toFixed(1);
+    // pontos como traço de comprimento zero com ponta redonda: continuam redondos com o gráfico esticado na largura
+    var ponto = function (i) { return "M" + x(i).toFixed(1) + " " + y(vals[i]).toFixed(1) + "h0"; };
+    var ult = pontos.length - 1;
+    var alvos = pontos.map(function (p, i) {
+      return '<path class="fs-alvo" d="' + ponto(i) + '"><title>' + escapeHtml_(rotuloX(p) + ": " + Conduta_farolNum_(vals[i])) + "</title></path>";
+    }).join("");
+    var marcadores = pontos.length <= 8 ? pontos.map(function (p, i) {
+      return i === ult ? "" : '<path class="fs-ponto fs-' + Conduta_farolClasse_(p.farol || Conduta_farolDeValor_(vals[i], lim)) + '" d="' + ponto(i) + '"/>';
+    }).join("") : "";
+    return '<svg class="farol-spark" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<line class="fs-limite" x1="0" x2="' + W + '" y1="' + yv + '" y2="' + yv + '"/>' +
+      (pontos.length > 1 ? '<path class="fs-linha" d="' + d + '" fill="none"/>' : "") + marcadores +
+      '<path class="fs-ponto fs-ultimo fs-' + Conduta_farolClasse_(pontos[ult].farol || Conduta_farolDeValor_(vals[ult], lim)) + '" d="' + ponto(ult) + '"/>' +
+      alvos + "</svg>";
+  }
+
+  function Conduta_farolTendenciasHtml_(res) {
+    var s = res.serie || {};
+    var lim = Conduta_farolLimites_(res);
+    var dias = Array.isArray(s.dias) ? s.dias : [], meses = Array.isArray(s.meses) ? s.meses : [];
+    if (!dias.length && !meses.length) return "";
+    var mesAtual = "";
+    if (/^\d{4}-\d{2}$/.test(String(res.competencia || ""))) mesAtual = CONDUTA_FAROL_MESES_EXT[Number(res.competencia.substring(5, 7)) - 1];
+    var bloco = function (titulo, svg, rodape) {
+      return '<div class="farol-tendencia"><div class="farol-tendencia-titulo">' + escapeHtml_(titulo) + "</div>" + svg +
+        '<div class="farol-tendencia-rodape">' + rodape + "</div></div>";
+    };
+    var html = "";
+    if (dias.length) {
+      var minD = dias.reduce(function (m, p) { return Math.min(m, Number(p.ico)); }, 100);
+      html += bloco((mesAtual ? mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1) : "Este mês") + ", dia a dia",
+        Conduta_farolSparkSvg_(dias, lim, function (p) { return "Dia " + String(p.dia).substring(8, 10); }),
+        "<span>dia 1</span><span>" + (minD < 100 ? "menor " + Conduta_farolNum_(minD) : "sem perda de pontos") + "</span><span>hoje</span>");
+    }
+    if (meses.length) {
+      var rot = function (p) { var c = String(p.competencia || ""); return /^\d{4}-\d{2}$/.test(c) ? CONDUTA_FAROL_MESES[Number(c.substring(5, 7)) - 1] + "/" + c.substring(2, 4) : c; };
+      html += bloco(meses.length === 1 ? "Último mês fechado" : "Últimos " + meses.length + " meses fechados",
+        Conduta_farolSparkSvg_(meses, lim, rot),
+        "<span>" + escapeHtml_(rot(meses[0])) + "</span><span>" + escapeHtml_(rot(meses[meses.length - 1]) + " " + Conduta_farolNum_(meses[meses.length - 1].ico)) + "</span>");
+    }
+    return '<div class="farol-tendencias">' + html + '</div><div class="farol-tendencias-nota">Linha tracejada: limite do verde (' + Conduta_farolNum_(lim.verde, lim.verde % 1 ? 1 : 0) + ").</div>";
+  }
+
+  /**
+   * Cartão completo do farol. opcoes.compacto = celular; opcoes.valorInicial = de onde o
+   * ponteiro parte (padrão 0, a animação de abertura). O cartão se anima sozinho ao entrar
+   * na página e passa a ser atualizado em tempo real.
+   */
+  function Conduta_montarFarolCardHtml_(res, onclickJs, opcoes) {
+    if (!res) return "";
+    opcoes = opcoes || {};
+    Conduta_farolGuardar_(res);
+    var corVar = Conduta_farolCorVar_(res.farol);
+    var selo = Conduta_farolSelo_(res);
+    var inicio = opcoes.valorInicial === undefined ? 0 : opcoes.valorInicial;
+    if (Conduta_farolSemMovimento_()) inicio = res.ico;
+    var html = '<div class="farol-card farol-vivo farol-' + Conduta_farolClasse_(res.farol) + (opcoes.compacto ? " farol-compacto" : "") + '" data-farol-vivo="1"' +
+      ' data-ico="' + escapeHtml_(String(res.ico)) + '" data-de="' + escapeHtml_(String(inicio)) + '"' +
+      (opcoes.compacto ? ' data-compacto="1"' : "") +
+      (onclickJs ? ' data-onclick="' + escapeHtml_(onclickJs) + '" onclick="' + onclickJs + '" tabindex="0" title="Abrir o Programa de conduta"' : "") +
+      ' style="--farol-cor:' + corVar + (onclickJs ? ";cursor:pointer" : "") + '">' +
+      '<div class="farol-gauge-wrap">' + Conduta_montarGaugeSvg_(res.ico, res.farol, res, inicio) + "</div>" +
       '<div class="farol-body">' +
-        '<div class="farol-eyebrow"><span class="dot"></span>' + escapeHtml_(res.farol) + (res.temGG ? ' · GRAVÍSSIMA' : '') + '</div>' +
-        '<h3 class="farol-titulo">' + escapeHtml_(res.titulo) + '</h3>' +
-        '<p class="farol-linha">' + escapeHtml_(res.linha) + '</p>' +
-        (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Período de teste: o índice é calculado, mas o bônus ainda não é pago.</p>' : '') +
-        Conduta_extrasFarolHtml_(res) +
+        '<div class="farol-topo">' +
+          '<span class="farol-eyebrow"><span class="dot"></span>' + escapeHtml_(res.farol) + (res.temGG ? " · GRAVÍSSIMA" : "") + "</span>" +
+          (res.sombra ? '<span class="farol-selo farol-selo-teste">Período de teste</span>' : "") +
+        "</div>" +
+        // selo da situação do bônus: o próprio título do servidor ("Bônus preservado", "Bônus em risco"...)
+        '<h3 class="farol-titulo"><span class="farol-selo farol-selo-' + selo.classe + '">' + escapeHtml_(res.titulo || selo.texto) + "</span></h3>" +
+        '<p class="farol-linha">' + escapeHtml_(res.linha) + "</p>" +
+        (res.sombra ? '<p class="farol-linha" style="color:var(--warning);font-weight:700;margin-top:6px">Período de teste: o índice é calculado, mas o bônus ainda não é pago.</p>' : "") +
+        Conduta_farolMargemHtml_(res) +
+        Conduta_extrasFarolHtml_(res, !!opcoes.compacto) +
+        Conduta_farolTendenciasHtml_(res) +
+        (opcoes.compacto ? "" :
         '<div class="farol-legenda">' +
-          '<span><i style="background:var(--danger)"></i>&lt; 70 vermelho</span>' +
-          '<span><i style="background:var(--warning)"></i>70–84,9 amarelo</span>' +
-          '<span><i style="background:var(--success)"></i>≥ 85 verde</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+          '<span><i class="fg-cor-vermelho"></i>&lt; ' + Conduta_farolNum_(Conduta_farolLimites_(res).amarelo, 0) + " vermelho</span>" +
+          '<span><i class="fg-cor-amarelo"></i>' + Conduta_farolNum_(Conduta_farolLimites_(res).amarelo, 0) + "–" + Conduta_farolNum_(Conduta_farolLimites_(res).verde - 0.1) + " amarelo</span>" +
+          '<span><i class="fg-cor-verde"></i>≥ ' + Conduta_farolNum_(Conduta_farolLimites_(res).verde, 0) + " verde</span>" +
+          '<span class="farol-ao-vivo" title="Atualiza sozinho enquanto a tela está aberta"><i class="farol-ao-vivo-ponto"></i>Ao vivo</span>' +
+        "</div>") +
+      "</div>" +
+    "</div>";
+    Conduta_farolAgendarMontagem_();
+    return html;
+  }
+
+  /** Números do farol na aba "Farol do mês" do módulo (também atualizados em tempo real). */
+  function Conduta_farolKpisHtml_(res) {
+    if (!res) return "";
+    var comp = String(res.competencia || ""), compBR = comp;
+    if (/^\d{4}-\d{2}$/.test(comp)) compBR = CONDUTA_FAROL_MESES_EXT[Number(comp.substring(5, 7)) - 1] + "/" + comp.substring(0, 4);
+    compBR = compBR.charAt(0).toUpperCase() + compBR.slice(1);
+    var kpi = function (valor, rotulo) { return '<div class="conduta-kpi"><div class="valor">' + escapeHtml_(String(valor)) + '</div><div class="rotulo">' + rotulo + "</div></div>"; };
+    return '<div class="conduta-kpis" data-farol-kpis="1">' +
+      kpi(Conduta_farolNum_(res.ico), "Índice de conduta") +
+      kpi(Number(res.D || 0).toLocaleString("pt-BR"), "Pontos de demérito") +
+      kpi(Number(res.n || 0).toLocaleString("pt-BR"), "Pessoas no cálculo") +
+      kpi(compBR, "Competência") + "</div>";
+  }
+
+  function Conduta_farolGuardar_(res) {
+    CONDUTA_FAROL.res = res;
+    if (res && res.versao) CONDUTA_FAROL.versao = res.versao;
+    CONDUTA_FAROL.ultimaBusca = Date.now();
+  }
+
+  function Conduta_farolAgendarMontagem_() {
+    if (CONDUTA_FAROL.pendente) return;
+    CONDUTA_FAROL.pendente = true;
+    setTimeout(function () { CONDUTA_FAROL.pendente = false; Conduta_farolMontarPendentes_(); Conduta_farolIniciarTempoReal_(); }, 30);
+  }
+
+  /** Anima todo cartão recém-colocado na página (de data-de até data-ico). */
+  function Conduta_farolMontarPendentes_() {
+    var cards = document.querySelectorAll('[data-farol-vivo]:not([data-montado])');
+    for (var i = 0; i < cards.length; i++) {
+      var c = cards[i];
+      c.setAttribute("data-montado", "1");
+      Conduta_farolAnimar_(c, Number(c.getAttribute("data-de")) || 0, Number(c.getAttribute("data-ico")) || 0);
+      if (c.getAttribute("data-onclick") && !c.__farolTecla) {
+        c.__farolTecla = true;
+        c.addEventListener("keydown", function (ev) { if ((ev.key === "Enter" || ev.key === " ") && ev.target === this) { ev.preventDefault(); this.click(); } });
+      }
+    }
+  }
+
+  /** Ponteiro com mola (leve sobressalto) e número contando; um requestAnimationFrame por cartão, só enquanto anda. */
+  function Conduta_farolAnimar_(card, de, para) {
+    var G = CONDUTA_GAUGE;
+    var ponteiro = card.querySelector(".fg-ponteiro"), valor = card.querySelector(".fg-valor");
+    if (!ponteiro || !valor) return;
+    var aplicar = function (x, texto) {
+      ponteiro.setAttribute("transform", "rotate(" + (Math.max(-1.5, Math.min(101.5, x)) * 1.8).toFixed(2) + " " + G.cx + " " + G.cy + ")");
+      valor.textContent = Conduta_farolNum_(texto);
+    };
+    if (card.__farolRaf) cancelAnimationFrame(card.__farolRaf);
+    if (Conduta_farolSemMovimento_() || !window.requestAnimationFrame || de === para) { aplicar(para, para); card.classList.add("farol-assentado"); return; }
+    card.classList.remove("farol-assentado");
+    var x = de, vel = 0, k = 42, amort = 8.6, anterior = null, inicio = null;
+    var lo = Math.min(de, para), hi = Math.max(de, para);
+    function passo(t) {
+      if (!card.isConnected) return;
+      if (anterior === null) { anterior = t; inicio = t; }
+      var dt = Math.min(0.034, (t - anterior) / 1000); anterior = t;
+      // duas subetapas por quadro deixam a mola estável em telas de 30 a 144 Hz
+      for (var s = 0; s < 2; s++) { var acel = -k * (x - para) - amort * vel; vel += acel * dt / 2; x += vel * dt / 2; }
+      // o número conta pela mesma curva, sem passar do valor final
+      aplicar(x, Math.round(Math.max(lo, Math.min(hi, x)) * 10) / 10);
+      if ((Math.abs(x - para) < 0.02 && Math.abs(vel) < 0.05) || t - inicio > 3000) { aplicar(para, para); card.__farolRaf = null; card.classList.add("farol-assentado"); return; }
+      card.__farolRaf = requestAnimationFrame(passo);
+    }
+    card.__farolRaf = requestAnimationFrame(passo);
+  }
+
+  // ---------------- tempo real ----------------
+  function Conduta_farolPaineis_() { return document.querySelectorAll("[data-farol-vivo]"); }
+
+  function Conduta_farolIniciarTempoReal_() {
+    if (CONDUTA_FAROL.timer) return;
+    CONDUTA_FAROL.timer = setInterval(Conduta_farolVerificar_, CONDUTA_FAROL_INTERVALO_MS);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && Date.now() - CONDUTA_FAROL.ultimaVersao > 15000) Conduta_farolVerificar_();
+    });
+  }
+
+  /** Consulta leve: só o carimbo. Pausa com a aba oculta, sem sessão ou sem farol na tela. */
+  function Conduta_farolVerificar_() {
+    if (document.visibilityState === "hidden" || !SESSION || CONDUTA_FAROL.emVoo) return;
+    if (USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE") return;
+    if (!Conduta_farolPaineis_().length) return;
+    if (Date.now() - CONDUTA_FAROL.ultimaBusca > CONDUTA_FAROL_BUSCA_FORCADA_MS) { Conduta_farolBuscar_(); return; }
+    CONDUTA_FAROL.emVoo = true;
+    CONDUTA_FAROL.ultimaVersao = Date.now();
+    google.script.run
+      .withSuccessHandler(function (r) {
+        CONDUTA_FAROL.emVoo = false;
+        if (r && r.versao && r.versao !== CONDUTA_FAROL.versao) Conduta_farolBuscar_();
+      })
+      .withFailureHandler(function () { CONDUTA_FAROL.emVoo = false; /* tenta de novo na próxima volta */ })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterVersaoFarol", payload: {} });
+  }
+
+  /** Busca o farol completo e atualiza só os painéis do farol que estão na tela. */
+  function Conduta_farolBuscar_() {
+    if (!SESSION) return;
+    if (CONDUTA_FAROL.emVoo) { CONDUTA_FAROL.versao = ""; clearTimeout(CONDUTA_FAROL.retentar); CONDUTA_FAROL.retentar = setTimeout(Conduta_farolBuscar_, 1500); return; }
+    if (!Conduta_farolPaineis_().length) { CONDUTA_FAROL.versao = ""; return; }
+    CONDUTA_FAROL.emVoo = true;
+    google.script.run
+      .withSuccessHandler(function (res) { CONDUTA_FAROL.emVoo = false; if (res) Conduta_farolAplicar_(res); })
+      .withFailureHandler(function () { CONDUTA_FAROL.emVoo = false; })
+      .Conduta_apiDispatch({ sessionId: SESSION, fn: "apiObterFarolAtual", payload: {} });
+  }
+
+  /** Depois de gravar no Conduta (desktop ou celular): busca o farol na hora. */
+  function Conduta_farolAposChamada_(fn) {
+    if (!/^api(Registrar|Homologar|Contestar|Julgar|Recorrer|Decidir|Remover|Fechar|Processar|Rodar)/.test(String(fn || ""))) return;
+    if (/^apiRegistrarCiencia$/.test(String(fn))) return;
+    CONDUTA_FAROL.versao = "";
+    setTimeout(Conduta_farolBuscar_, 250);
+  }
+
+  function Conduta_farolAplicar_(res) {
+    var antes = CONDUTA_FAROL.res;
+    var paineis = Conduta_farolPaineis_();
+    var adiado = false;
+    for (var i = 0; i < paineis.length; i++) {
+      var p = paineis[i];
+      // nunca troca o painel com alguém digitando dentro dele: tenta na próxima volta
+      var foco = document.activeElement;
+      if (foco && foco !== p && p.contains(foco) && /^(INPUT|SELECT|TEXTAREA)$/.test(foco.tagName)) { adiado = true; continue; }
+      var de = Number(p.getAttribute("data-ico"));
+      var tmp = document.createElement("div");
+      tmp.innerHTML = Conduta_montarFarolCardHtml_(res, p.getAttribute("data-onclick") || "", { compacto: p.getAttribute("data-compacto") === "1", valorInicial: isFinite(de) ? de : 0 });
+      var novo = tmp.firstChild;
+      if (!novo) continue;
+      p.parentNode.replaceChild(novo, p);
+      if (antes && Number(antes.ico) !== Number(res.ico)) novo.classList.add("farol-pulso");
+      var faixa = novo.parentNode && novo.parentNode.classList && novo.parentNode.classList.contains("mobile-farol-strip") ? novo.parentNode : null;
+      if (faixa) faixa.style.borderLeftColor = Conduta_farolCorVar_(res.farol);
+    }
+    var kpis = document.querySelectorAll("[data-farol-kpis]");
+    for (var j = 0; j < kpis.length; j++) {
+      var t2 = document.createElement("div");
+      t2.innerHTML = Conduta_farolKpisHtml_(res);
+      if (t2.firstChild) kpis[j].parentNode.replaceChild(t2.firstChild, kpis[j]);
+    }
+    if (adiado) CONDUTA_FAROL.versao = ""; // a próxima consulta busca de novo
+    if (antes) Conduta_farolAvisarMudanca_(antes, res);
+  }
+
+  /** Aviso discreto quando algo visível mudou ("Índice atualizado: 98,5 · nova ocorrência em prazo de defesa"). */
+  function Conduta_farolAvisarMudanca_(a, b) {
+    var ea = a.emApuracao || {}, eb = b.emApuracao || {};
+    var partes = [];
+    var mudouIco = Number(a.ico) !== Number(b.ico);
+    if (Number(eb.emDefesa || 0) > Number(ea.emDefesa || 0)) partes.push(Number(eb.emDefesa) - Number(ea.emDefesa || 0) === 1 ? "nova ocorrência em prazo de defesa" : "novas ocorrências em prazo de defesa");
+    else if (Number(eb.emDefesa || 0) < Number(ea.emDefesa || 0)) partes.push(Number(b.D) > Number(a.D) ? "ocorrência ficou firme" : "ocorrência saiu do prazo de defesa");
+    if (Number(eb.registradas || 0) > Number(ea.registradas || 0)) partes.push("nova ocorrência aguardando homologação");
+    if (Number(b.D) < Number(a.D)) partes.push("pontos de demérito: " + Number(a.D).toLocaleString("pt-BR") + " para " + Number(b.D).toLocaleString("pt-BR"));
+    if (a.farol !== b.farol) partes.push("farol " + String(b.farol || "").toLowerCase());
+    if (!mudouIco && !partes.length) return;
+    var texto = (mudouIco ? "Índice atualizado: " + Conduta_farolNum_(b.ico) : "Farol atualizado") + (partes.length ? " · " + partes.join(" · ") : "");
+    var caixa = document.getElementById("farolAvisoVivo");
+    if (!caixa) {
+      caixa = document.createElement("div");
+      caixa.id = "farolAvisoVivo";
+      caixa.className = "farol-aviso-vivo";
+      caixa.setAttribute("role", "status");
+      caixa.setAttribute("aria-live", "polite");
+      document.body.appendChild(caixa);
+    }
+    caixa.style.setProperty("--farol-cor", Conduta_farolCorVar_(b.farol));
+    caixa.innerHTML = '<span class="dot"></span><span>' + escapeHtml_(texto) + "</span>";
+    caixa.classList.add("visivel");
+    clearTimeout(caixa.__t);
+    caixa.__t = setTimeout(function () { caixa.classList.remove("visivel"); }, 7000);
   }
 
   // Card do farol do Programa de Conduta — sempre visível na home de
@@ -3627,12 +3985,10 @@
           const el = document.getElementById("mobileFarolCondutaStrip");
           if (!el) return;
           if (!res) { el.style.display = "none"; return; }
-          const corVar = res.farol === "VERDE" ? "var(--success)" : (res.farol === "AMARELO" ? "var(--warning)" : "var(--danger)");
-          el.style.borderLeftColor = corVar;
-          el.innerHTML = '<div class="farol-mini-linha">' +
-            '<div class="farol-gauge-mini">' + Conduta_montarGaugeSvg_(res.ico, res.farol) + '</div>' +
-            '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + Conduta_extrasFarolHtml_(res, true) + '</div>' +
-          '</div>';
+          // 19/10/2026: o mesmo farol vivo do computador, em versão compacta
+          el.classList.add("mobile-farol-vivo");
+          el.style.borderLeftColor = Conduta_farolCorVar_(res.farol);
+          el.innerHTML = Conduta_montarFarolCardHtml_(res, "", { compacto: true });
         })
         .withFailureHandler(function (err) {
           console.error("Conduta apiObterFarolAtual falhou (mobile):", err);
@@ -3828,7 +4184,7 @@
       SGO_finalizarCarregamento_();
     }
     google.script.run
-      .withSuccessHandler(function (r) { encerrar_(); if (onSucesso) onSucesso(r); })
+      .withSuccessHandler(function (r) { encerrar_(); if (onSucesso) onSucesso(r); Conduta_farolAposChamada_(fn); })
       .withFailureHandler(function (err) {
         encerrar_();
         if (onErro) { onErro(err); return; }
@@ -3863,12 +4219,9 @@
       const el = document.getElementById("mobileCondutaFarol");
       if (!el) return;
       if (!res) { el.style.display = "none"; return; }
-      const corVar = res.farol === "VERDE" ? "var(--success)" : (res.farol === "AMARELO" ? "var(--warning)" : "var(--danger)");
-      el.style.borderLeftColor = corVar;
-      el.innerHTML = '<div class="farol-mini-linha">' +
-        '<div class="farol-gauge-mini">' + Conduta_montarGaugeSvg_(res.ico, res.farol) + '</div>' +
-        '<div><strong>' + escapeHtml_(res.titulo) + '</strong><br>' + escapeHtml_(res.linha) + Conduta_extrasFarolHtml_(res, true) + '</div>' +
-      '</div>';
+      el.classList.add("mobile-farol-vivo");
+      el.style.borderLeftColor = Conduta_farolCorVar_(res.farol);
+      el.innerHTML = Conduta_montarFarolCardHtml_(res, "", { compacto: true });
     }, function (err) {
       console.error("Conduta apiObterFarolAtual falhou:", err);
       const el = document.getElementById("mobileCondutaFarol");
@@ -5694,7 +6047,7 @@
             if (f.aguardando && f.aguardando.length) linhas.push("Aguardando: " + f.aguardando.join("; ") + ".");
             if (r && r.prazos && r.prazos.processadas) linhas.push(Number(r.prazos.processadas) === 1 ? "1 prazo vencido aplicado." : SGO_qtd_(r.prazos.processadas, "prazo vencido aplicado", "prazos vencidos aplicados") + ".");
             alert(linhas.join(String.fromCharCode(10)));
-            if (typeof carregarFarolCondutaDashboard_ === "function") carregarFarolCondutaDashboard_();
+            Conduta_farolAposChamada_("apiRodarRotinaAgora"); // 19/10: atualiza todo farol aberto, sem reabrir a tela
             Conduta_verificarAvisos_();
           })
           .withFailureHandler(falha)
@@ -5707,7 +6060,7 @@
   /** Linhas extras do farol: o que ainda está em apuração no mês e o mês anterior. */
   function Conduta_extrasFarolHtml_(res, compacto) {
     if (!res) return "";
-    var num = function (v) { var n = Number(v); return isFinite(n) ? String(n).replace(".", ",") : "—"; };
+    var num = function (v) { return Conduta_farolNum_(v); };
     var out = "";
     var e = res.emApuracao;
     if (e && (e.emDefesa || e.registradas)) {

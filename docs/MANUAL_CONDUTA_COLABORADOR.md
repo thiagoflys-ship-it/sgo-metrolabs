@@ -45,6 +45,10 @@ O farol mostra como está o mês da equipe. Ele aparece no Início e na aba "Far
 
 Abaixo do farol, a tela diz quantos pontos ainda cabem sem sair do verde e quantas ocorrências estão em prazo de defesa.
 
+O farol se atualiza sozinho enquanto a tela está aberta (no computador aparece "Ao vivo" ao lado da legenda). A cada 45 segundos o sistema confere se algo mudou; quando muda, o ponteiro anda até o novo índice e aparece um aviso no canto da tela, por exemplo "Índice atualizado: 98,5 · nova ocorrência em prazo de defesa". Depois de gravar algo no Programa de conduta, o farol se atualiza na hora. Com a aba do navegador escondida a conferência para, e nada do que você estiver digitando é apagado.
+
+O que mais aparece no farol: o selo da situação do bônus (preservado, em risco, perdido ou cancelado); a marca tracejada no velocímetro, que mostra onde o índice vai parar se as ocorrências em prazo de defesa ficarem firmes; a barra "Margem até o amarelo" (no amarelo, "Margem até o vermelho"), em que a parte listrada são os pontos ainda em prazo de defesa; e dois mini gráficos, o índice do mês dia a dia (pela data do fato das ocorrências firmes) e os últimos meses fechados, com a linha tracejada no limite do verde. As faixas do velocímetro seguem os limites do programa.
+
 > Se aparecer "Período de teste: o índice é calculado, mas o bônus ainda não é pago.", os valores do mês são só simulação.
 
 **Níveis das ocorrências:**

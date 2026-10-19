@@ -1587,12 +1587,15 @@
   .mobile-farol-strip .farol-gauge-mini { width: 84px; flex: 0 0 auto; }
   .mobile-farol-strip .farol-mini-linha { display: flex; align-items: center; gap: 10px; }
 
-  /* Gauge/sinaleiro do Programa de Conduta (2026-09-02) — card com
-     velocímetro de ICO, usado no dashboard principal, no card do
-     módulo e nas telas mobile. Cor do "eyebrow"/glow é setada via
-     --farol-cor inline (var(--success)/var(--warning)/var(--danger)). */
+  /* Farol do Programa de Conduta (19/10/2026: velocímetro vivo) — cartão usado no
+     Início, na aba "Farol do mês" e no celular (.farol-compacto). A cor da situação
+     vem em --farol-cor (var(--success)/var(--warning)/var(--danger)); as faixas do
+     arco usam tons mais vivos (--fg-*), e os textos ficam nos tons escuros. */
   .farol-card {
     --farol-cor: var(--success);
+    --fg-vermelho: #C8402F;
+    --fg-amarelo: #E3A21A;
+    --fg-verde: #2E8B3E;
     background: #FFFFFF;
     color: var(--bc-text);
     border: 1px solid var(--bc-line);
@@ -1600,13 +1603,15 @@
     padding: 16px 20px 14px;
     margin-bottom: 16px;
     display: flex;
-    align-items: center;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 22px;
     position: relative;
     overflow: hidden;
   }
-  .farol-gauge-wrap { flex: 0 0 auto; width: 128px; position: relative; z-index: 1; }
+  .farol-card.farol-vivo:focus-visible { outline: 2px solid var(--farol-cor); outline-offset: 2px; }
+  .farol-gauge-wrap { flex: 0 0 auto; width: 232px; max-width: 100%; position: relative; z-index: 1; }
   .farol-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+  .farol-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 6px; }
   .farol-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -1616,17 +1621,106 @@
     letter-spacing: .07em;
     text-transform: uppercase;
     color: var(--farol-cor);
-    margin-bottom: 6px;
   }
   .farol-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--farol-cor); }
+  .farol-selo { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; border: 1px solid; }
+  .farol-selo-verde { color: var(--bc-action); background: var(--bc-action-bg); border-color: var(--bc-action-line); }
+  .farol-selo-amarelo { color: var(--bc-warn); background: var(--bc-warn-bg); border-color: var(--bc-warn-line); }
+  .farol-selo-vermelho { color: var(--bc-danger); background: var(--bc-danger-bg); border-color: var(--bc-danger-line); }
+  .farol-selo-teste { color: var(--bc-text-2); background: #F2F2EF; border-color: var(--bc-line-2); }
   .farol-titulo { font-size: 16.5px; font-weight: 800; margin: 0 0 4px; color: var(--text-strong); letter-spacing: -.01em; }
+  .farol-titulo .farol-selo { font-size: 14px; min-height: 28px; padding: 3px 12px; letter-spacing: 0; }
   .farol-linha { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin: 0; }
-  .farol-legenda { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+  .farol-legenda { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
   .farol-legenda span { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); font-weight: 600; }
   .farol-legenda i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .farol-legenda .fg-cor-vermelho { background: var(--fg-vermelho); }
+  .farol-legenda .fg-cor-amarelo { background: var(--fg-amarelo); }
+  .farol-legenda .fg-cor-verde { background: var(--fg-verde); }
+  .farol-ao-vivo { margin-left: auto; }
+  .farol-ao-vivo-ponto { border-radius: 50% !important; background: var(--fg-verde); animation: farolVivoPonto 2.4s ease-in-out infinite; }
+  @keyframes farolVivoPonto { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* Velocímetro (SVG) */
+  .farol-gauge { display: block; width: 100%; height: auto; overflow: visible; }
+  .farol-gauge .fg-trilho { stroke: #EEEEEA; }
+  .farol-gauge .fg-faixa { opacity: .28; transition: opacity .4s ease; }
+  .farol-gauge .fg-faixa.fg-ativa { opacity: 1; }
+  .farol-gauge .fg-vermelho { stroke: var(--fg-vermelho); }
+  .farol-gauge .fg-amarelo { stroke: var(--fg-amarelo); }
+  .farol-gauge .fg-verde { stroke: var(--fg-verde); }
+  .farol-gauge .fg-brilho { opacity: .35; animation: farolBrilho 3.2s ease-in-out infinite; }
+  @keyframes farolBrilho { 0%, 100% { opacity: .22; } 50% { opacity: .5; } }
+  .farol-gauge .fg-marca { stroke: #A8A59B; stroke-width: 1; }
+  .farol-gauge .fg-marca-maior { stroke: #6E6B63; stroke-width: 1.4; }
+  .farol-gauge .fg-numero { font-size: 9.5px; font-weight: 700; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .farol-gauge .fg-lamina { stroke: var(--text-strong); stroke-width: 4; stroke-linecap: round; }
+  .farol-gauge .fg-lamina-fundo { stroke: #FFFFFF; stroke-width: 8; stroke-linecap: round; }
+  .farol-gauge .fg-valor { font-size: 34px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .farol-gauge.fg-verde .fg-valor { fill: var(--bc-action); }
+  .farol-gauge.fg-amarelo .fg-valor { fill: var(--bc-warn); }
+  .farol-gauge.fg-vermelho .fg-valor { fill: var(--bc-danger); }
+  .farol-gauge .fg-legenda { font-size: 10.5px; font-weight: 700; fill: var(--muted); }
+  .farol-gauge .fg-projecao { opacity: 0; transition: opacity .5s ease .1s; }
+  .farol-assentado .farol-gauge .fg-projecao { opacity: 1; }
+  .farol-gauge .fg-projecao-arco { stroke-width: 3; stroke-dasharray: 3 3; stroke-linecap: butt; }
+  .farol-gauge .fg-projecao.fg-verde .fg-projecao-arco, .farol-gauge .fg-projecao.fg-verde .fg-fantasma { stroke: var(--fg-verde); }
+  .farol-gauge .fg-projecao.fg-amarelo .fg-projecao-arco, .farol-gauge .fg-projecao.fg-amarelo .fg-fantasma { stroke: var(--fg-amarelo); }
+  .farol-gauge .fg-projecao.fg-vermelho .fg-projecao-arco, .farol-gauge .fg-projecao.fg-vermelho .fg-fantasma { stroke: var(--fg-vermelho); }
+  .farol-gauge .fg-fantasma { stroke-width: 3; stroke-dasharray: 4 3; stroke-linecap: round; }
+
+  /* Margem em pontos (parte listrada = em prazo de defesa) */
+  .farol-margem { margin-top: 10px; max-width: 460px; }
+  .farol-margem-topo { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .farol-margem-topo strong { color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  .farol-margem-barra { display: flex; gap: 2px; height: 8px; border-radius: 4px; background: #EEEEEA; overflow: hidden; }
+  .farol-margem-cheia { display: block; height: 100%; border-radius: 4px; background: var(--fg-verde); transition: width .8s cubic-bezier(.22, 1, .36, 1); }
+  .farol-margem-amarelo .farol-margem-cheia { background: var(--fg-amarelo); }
+  .farol-margem-defesa { display: block; height: 100%; border-radius: 4px; background: repeating-linear-gradient(135deg, var(--fg-amarelo) 0 3px, #FFFFFF 3px 6px); border: 1px solid var(--fg-amarelo); box-sizing: border-box; transition: width .8s cubic-bezier(.22, 1, .36, 1); }
+  .farol-margem-nota { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+  /* Mini gráficos da evolução */
+  .farol-tendencias { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+  .farol-tendencia { flex: 1 1 150px; min-width: 0; max-width: 260px; }
+  .farol-tendencia-titulo { font-size: 11px; font-weight: 700; color: var(--text-strong); margin-bottom: 2px; }
+  .farol-tendencia-rodape { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .farol-tendencias-nota { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .farol-spark { display: block; width: 100%; height: 40px; overflow: visible; }
+  .farol-spark .fs-linha { stroke: var(--text-strong); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .farol-spark .fs-limite { stroke: #A8A59B; stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+  .farol-spark .fs-ponto { stroke-width: 6; stroke-linecap: round; vector-effect: non-scaling-stroke; fill: none; }
+  .farol-spark .fs-ultimo { stroke-width: 9; }
+  .farol-spark .fs-verde { stroke: var(--fg-verde); }
+  .farol-spark .fs-amarelo { stroke: var(--fg-amarelo); }
+  .farol-spark .fs-vermelho { stroke: var(--fg-vermelho); }
+  .farol-spark .fs-alvo { stroke: transparent; stroke-width: 16; stroke-linecap: round; vector-effect: non-scaling-stroke; fill: none; pointer-events: stroke; }
+
+  /* Pulso discreto quando o índice muda e aviso "Índice atualizado" */
+  .farol-card.farol-pulso { animation: farolPulso 1.6s ease-out 1; }
+  @keyframes farolPulso { 0% { box-shadow: 0 0 0 0 rgba(46, 139, 62, .0); } 20% { box-shadow: 0 0 0 4px var(--bc-line-2); } 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); } }
+  .farol-aviso-vivo { position: fixed; right: 16px; bottom: 16px; z-index: 9000; max-width: min(420px, calc(100vw - 32px)); display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; background: #FFFFFF; color: var(--bc-text); border: 1px solid var(--bc-line); border-left: 4px solid var(--farol-cor, var(--success)); border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, .12); font-size: 12.5px; line-height: 1.4; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+  .farol-aviso-vivo.visivel { opacity: 1; transform: none; }
+  .farol-aviso-vivo .dot { flex: 0 0 auto; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--farol-cor, var(--success)); }
+
+  /* Compacto (celular) */
+  .farol-card.farol-compacto { padding: 12px 14px; gap: 12px; margin-bottom: 0; flex-direction: column; align-items: stretch; border: 0; border-radius: 0; background: transparent; }
+  .farol-compacto .farol-gauge-wrap { width: 100%; max-width: 260px; align-self: center; }
+  .farol-compacto .farol-titulo { font-size: 15px; }
+  .farol-compacto .farol-margem { max-width: none; }
+  .farol-compacto .farol-tendencia { max-width: none; }
+  .mobile-farol-strip.mobile-farol-vivo { padding: 0; background: #FFFFFF; }
+
   @media (max-width: 900px) {
-    .farol-card { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .farol-gauge-wrap { width: 108px; align-self: center; }
+    .farol-card { flex-direction: column; align-items: stretch; gap: 10px; }
+    .farol-gauge-wrap { width: 100%; max-width: 260px; align-self: center; }
+    .farol-ao-vivo { margin-left: 0; }
+  }
+  @media (max-width: 640px) {
+    .farol-aviso-vivo { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .farol-gauge .fg-brilho, .farol-ao-vivo-ponto, .farol-card.farol-pulso { animation: none; }
+    .farol-gauge .fg-faixa, .farol-gauge .fg-projecao, .farol-margem-cheia, .farol-margem-defesa, .farol-aviso-vivo { transition: none; }
   }
 
   .mobile-fab {

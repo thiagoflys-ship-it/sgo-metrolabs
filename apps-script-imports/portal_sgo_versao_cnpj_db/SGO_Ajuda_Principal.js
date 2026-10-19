@@ -65,8 +65,10 @@ function SGO_ajudaTelas_Principal_() {
         {
           titulo: "Ver o farol do Programa de Conduta",
           itens: [
-            "Leia o cartão do farol: o ponteiro mostra o índice de conduta do mês.",
-            "Confira as linhas abaixo do título: ocorrências em prazo de defesa e a situação do mês anterior.",
+            "Leia o cartão do farol: o ponteiro mostra o índice de conduta do mês e o selo mostra a situação do bônus.",
+            "Confira as linhas abaixo do título: a margem em pontos até o amarelo, as ocorrências em prazo de defesa e a situação do mês anterior.",
+            "A marca tracejada no velocímetro mostra onde o índice vai parar se as ocorrências em prazo de defesa ficarem firmes. Os mini gráficos mostram o mês dia a dia e os últimos meses fechados.",
+            "O cartão se atualiza sozinho enquanto o Início está aberto (\"Ao vivo\"): quando o índice muda, o ponteiro anda e aparece um aviso no canto da tela.",
             "Toque no cartão para abrir o Programa de conduta.",
             "Na gestão, use \"Aplicar agora: fechamentos pendentes e ajustes do programa\" quando o botão aparecer.",
             "Na gestão, toque em \"Ver quem confirmou a leitura dos avisos\" para ver quem já leu os avisos do programa."
@@ -181,7 +183,8 @@ function SGO_ajudaTelas_Principal_() {
           titulo: "Ver o farol da conduta",
           itens: [
             "Leia a faixa do farol logo abaixo das pendências.",
-            "Confira a cor da borda e o ponteiro: mostram o índice de conduta do mês.",
+            "Confira a cor da borda e o ponteiro: mostram o índice de conduta do mês. O selo mostra a situação do bônus e a barra mostra a margem em pontos.",
+            "A faixa se atualiza sozinha com o Início aberto: quando o índice muda, o ponteiro anda e aparece um aviso no pé da tela.",
             "Para ver o detalhe, toque no atalho \"Conduta\"."
           ]
         }

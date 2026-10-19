@@ -248,8 +248,11 @@ function Conduta_apiObterFarolAtual(sessionId) {
   var kSensibilidade = Number(parametros.K_SENSIBILIDADE) || 5.0;
   var icoVerdeMin = Number(parametros.ICO_VERDE_MIN) || 85.0;
 
+  var icoAmareloMinF = Number(parametros.ICO_AMARELO_MIN) || 70.0;
   var anteriorF = Conduta_resumoMesAnterior_(competencia);
   var limiteVerdeD = Math.round(((100 - icoVerdeMin) / kSensibilidade) * (apurado.n || 1));
+  // 19/10/2026: o mesmo arredondamento do limite do verde, para a barra "margem até o vermelho" do farol amarelo.
+  var limiteAmareloD = Math.round(((100 - icoAmareloMinF) / kSensibilidade) * (apurado.n || 1));
   var titulo, linha;
 
   if (apurado.temGG) {
@@ -277,6 +280,66 @@ function Conduta_apiObterFarolAtual(sessionId) {
     // (vai contar quando ficar firme) e o resultado do mês anterior.
     emApuracao: Conduta_emApuracao_(competencia, apurado),
     anterior: anteriorF,
-    rotinaPendente: Conduta_rotinaPendente_(anteriorF)
+    rotinaPendente: Conduta_rotinaPendente_(anteriorF),
+    // 19/10/2026 (farol em tempo real): só leitura para o desenho — limites do
+    // programa (faixas do velocímetro), margens em pontos, evolução do índice e
+    // o carimbo de versão (a tela só busca o farol de novo quando ele muda).
+    limites: { verde: icoVerdeMin, amarelo: icoAmareloMinF },
+    limiteVerdeD: limiteVerdeD, limiteAmareloD: limiteAmareloD,
+    serie: Conduta_serieFarol_(competencia, apurado, kSensibilidade),
+    versao: Conduta_versaoFarol_()
   };
+}
+
+/**
+ * 19/10/2026: evolução do índice para o mini gráfico do farol. Não muda nenhum
+ * cálculo: usa CondutaCalculo.calcularICO com o mesmo divisor n e o mesmo K.
+ *  - dias: índice de cada dia do mês corrente até hoje, somando as ocorrências
+ *    FIRMES do mês pela data do fato (o último ponto é o índice de agora);
+ *  - meses: últimos 6 meses fechados (valor congelado do fechamento).
+ */
+function Conduta_serieFarol_(competencia, apurado, kSensibilidade) {
+  var saida = { dias: [], meses: [] };
+  try {
+    var hoje = Conduta_hojeISO_();
+    var ultimoDia = Conduta_soComp_(hoje) === competencia ? Number(hoje.substring(8, 10)) : Number(Conduta_ultimoDiaCompetencia_(competencia).substring(8, 10));
+    var porDia = {};
+    Conduta_ler_(CONDUTA_SHEETS.OCORRENCIA).forEach(function (o) {
+      if (Conduta_soComp_(o.COMPETENCIA) !== competencia || SGO_UTILS.safeUpper(o.STATUS) !== 'FIRME') return;
+      var d = Conduta_soData_(o.DATA_FATO);
+      var dia = (Conduta_soComp_(d) === competencia) ? Number(d.substring(8, 10)) : 1;
+      if (!(dia >= 1)) dia = 1;
+      if (dia > ultimoDia) dia = ultimoDia;
+      porDia[dia] = (porDia[dia] || 0) + (Number(o.PESO_APLICADO) || 0);
+    });
+    var acum = 0;
+    for (var dd = 1; dd <= ultimoDia; dd++) {
+      acum += porDia[dd] || 0;
+      saida.dias.push({ dia: competencia + '-' + String(dd).padStart(2, '0'), D: acum, ico: CondutaCalculo.calcularICO(acum, apurado.n || 1, kSensibilidade) });
+    }
+    // o último ponto é sempre o índice oficial de agora
+    if (saida.dias.length) { saida.dias[saida.dias.length - 1].ico = apurado.ico; saida.dias[saida.dias.length - 1].D = apurado.D; }
+    saida.meses = SGO_DATA.getAll(CONDUTA_SHEETS.FECHAMENTO)
+      .filter(function (f) { return Conduta_soComp_(f.COMPETENCIA) < competencia && (f.CONGELADO === true || SGO_UTILS.safeUpper(f.CONGELADO) === 'TRUE') && isFinite(Number(f.ICO)) && String(f.ICO) !== ''; })
+      .map(function (f) { return { competencia: Conduta_soComp_(f.COMPETENCIA), nome: Conduta_nomeCompetencia_(Conduta_soComp_(f.COMPETENCIA)), ico: Number(f.ICO), farol: f.FAROL, D: Number(f.D) || 0 }; })
+      .sort(function (a, b) { return String(a.competencia).localeCompare(String(b.competencia)); })
+      .slice(-6);
+  } catch (e) { /* a série é só desenho: falha nunca derruba o farol */ }
+  return saida;
+}
+
+/** 19/10/2026: carimbo de versão do farol (muda a cada gravação do Programa de conduta e a cada dia). */
+var CONDUTA_FAROL_VERSAO_PROP = 'CONDUTA_FAROL_VERSAO';
+function Conduta_versaoFarol_() {
+  var v = '';
+  try { v = PropertiesService.getScriptProperties().getProperty(CONDUTA_FAROL_VERSAO_PROP) || ''; } catch (e) {}
+  return (v || '0') + '|' + Conduta_hojeISO_();
+}
+function Conduta_marcarMudancaFarol_() {
+  try { PropertiesService.getScriptProperties().setProperty(CONDUTA_FAROL_VERSAO_PROP, String(Date.now())); } catch (e) {}
+}
+/** Consulta leve da tela: devolve só o carimbo; a tela pede o farol inteiro quando ele muda. */
+function Conduta_apiObterVersaoFarol(sessionId) {
+  Conduta_exigirEquipe_(sessionId);
+  return { versao: Conduta_versaoFarol_() };
 }

@@ -80,6 +80,7 @@ function Conduta_apiDispatch(req) {
     apiObterFechamento: Conduta_apiObterFechamento,
     apiListarFechamentos: Conduta_apiListarFechamentos,
     apiObterFarolAtual: Conduta_apiObterFarolAtual,
+    apiObterVersaoFarol: Conduta_apiObterVersaoFarol,
 
     apiGerarRelatorio: Conduta_apiGerarRelatorio,
     apiObterRelatorio: Conduta_apiObterRelatorio,
@@ -106,6 +107,8 @@ function Conduta_apiDispatch(req) {
   if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
+  // 19/10/2026: o farol aberto em outras telas só busca de novo quando este carimbo muda.
+  if (!/^api(Ping|Listar|Obter|Previa|Prever|Status|Painel|GerarRelatorio|GerarExtrato|UploadFoto|Documento)/.test(fn) && typeof Conduta_marcarMudancaFarol_ === 'function') Conduta_marcarMudancaFarol_();
   return resultado;
 }
 
