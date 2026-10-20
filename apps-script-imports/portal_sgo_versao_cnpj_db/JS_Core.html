@@ -902,6 +902,14 @@
       return;
     }
 
+    // ESTERILIZAÇÃO A BAIXA TEMPERATURA (21/10/2026): peróxido de hidrogênio e VBTF — ver JS_BaixaTemp.html / SGO_BaixaTemp_*.js.
+    if (mod === "baixa_temperatura") {
+      if (typeof renderTplBaixaTemp_ === "function") renderTplBaixaTemp_();
+      else { const dBt = document.getElementById("conteudo"); if (dBt) dBt.innerHTML = SGO_montarDiagnosticoModulo_("renderTplBaixaTemp_", "JS_BaixaTemp"); }
+      atualizarBadgeModulo_("baixa_temperatura");
+      return;
+    }
+
     if (mod === "declaracao_exec") {
       renderMotorModulo_("Declaração de execução de serviço", "declaracao_exec");
       atualizarBadgeModulo_("declaracao_exec");
@@ -5508,6 +5516,7 @@
       lavadora: "Lavadoras",
       cadeia_frio: "Cadeia de frio",
       estufa_banhomaria: "Estufa, banho-maria e secadora",
+      baixa_temperatura: "Esterilização a baixa temperatura",
       declaracao_exec: "Declaração de execução de serviço",
       declaracao_qiqo: "Relatório de qualificação (QI/QO/QD)",
       relatorio_calibracao: "Relatório de calibração",

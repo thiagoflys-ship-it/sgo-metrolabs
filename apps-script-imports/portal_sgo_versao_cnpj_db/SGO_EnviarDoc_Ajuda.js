@@ -12,6 +12,7 @@ var ENVDOC_AJUDA_TELAS = {
   lavadora: 'depois de emitir o relatório de ensaio ou o relatório de dados',
   cadeia_frio: 'depois de emitir o relatório de qualificação ou o relatório de dados',
   estufa_banhomaria: 'depois de emitir o relatório de qualificação ou o relatório de dados',
+  baixa_temperatura: 'depois de emitir o relatório de qualificação (botão "Enviar ao cliente" em 8. Revisão e emissão)',
   declaracao_qiqo: 'depois de gerar o relatório QI/QO/QD',
   nr13: 'depois de emitir ou reabrir o laudo',
   certificado_calibracao: 'depois de gerar o certificado ou o relatório interpretativo',

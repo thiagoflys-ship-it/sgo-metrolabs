@@ -1,0 +1,42 @@
+<script>
+  // Esterilização a baixa temperatura (21/10/2026): qualificação QI/QO/QD de esterilizadores a peróxido de hidrogênio
+  // e a vapor a baixa temperatura com formaldeído. Carregador leve: o conteúdo da tela vem de
+  // SGO_BaixaTemp_Tela.js › BaixaTemp_obterConteudoModulo() na primeira abertura (mesmo padrão dos outros módulos).
+  var tplBaixaTemp_carregado_ = false;
+
+  function renderTplBaixaTemp_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    div.innerHTML =
+      '<div class="module-shell">' +
+        '<div class="module-header"><div class="module-header-left">' +
+          '<h2 class="content-title">Esterilização a baixa temperatura</h2>' +
+          '<p class="content-subtitle">Qualificação de esterilizadores a peróxido de hidrogênio e a vapor a baixa temperatura com formaldeído (QI, QO e QD).</p>' +
+        '</div></div>' +
+        '<div id="tplBaixaTempContainer" class="native-module-container">Carregando…</div>' +
+      '</div>';
+    var container = document.getElementById("tplBaixaTempContainer");
+    if (tplBaixaTemp_carregado_) {
+      if (typeof window.tplBaixaTemp_renderReal_ === "function") window.tplBaixaTemp_renderReal_();
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function (conteudo) {
+        try {
+          var estilo = String(conteudo || "").match(/<style>([\s\S]*?)<\/style>/);
+          var codigo = String(conteudo || "").match(/<script>([\s\S]*?)<\/script>/);
+          if (estilo) { var el = document.createElement("style"); el.textContent = estilo[1]; document.head.appendChild(el); }
+          if (codigo) window.eval(codigo[1]);
+          tplBaixaTemp_carregado_ = true;
+          if (typeof window.tplBaixaTemp_renderReal_ === "function") window.tplBaixaTemp_renderReal_();
+          else container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">A tela não foi montada (função de abertura não encontrada). Recarregue a página; se continuar, avise o administrador.</p>';
+        } catch (e) {
+          container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar a tela: ' + (e && e.message ? e.message : e) + '. Recarregue a página; se continuar, avise o administrador.</p>';
+        }
+      })
+      .withFailureHandler(function (err) {
+        container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Não foi possível carregar a tela: ' + ((err && err.message) ? err.message : err) + '. Confira a conexão e abra o módulo de novo pelo menu.</p>';
+      })
+      .BaixaTemp_obterConteudoModulo();
+  }
+</script>

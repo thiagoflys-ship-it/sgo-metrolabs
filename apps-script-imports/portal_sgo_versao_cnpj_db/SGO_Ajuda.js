@@ -23,7 +23,7 @@ var SGO_AJUDA_NOMES = {
   dashboard: 'Início', mobile_home: 'Início do celular', busca: 'Busca rápida',
   minhas_atividades: 'Minhas atividades', atividades_equipe: 'Atividades da equipe', avisos: 'Avisos',
   autoclave: 'Autoclaves', lavadora: 'Lavadoras', cadeia_frio: 'Cadeia de frio',
-  estufa_banhomaria: 'Estufa, banho-maria e secadora', declaracao_qiqo: 'Relatório QI/QO/QD', nr13: 'Laudo NR-13',
+  estufa_banhomaria: 'Estufa, banho-maria e secadora', baixa_temperatura: 'Esterilização a baixa temperatura', declaracao_qiqo: 'Relatório QI/QO/QD', nr13: 'Laudo NR-13',
   certificado_calibracao: 'Certificado de calibração', relatorio_calibracao: 'Relatório de calibração',
   padroes: 'Padrões de referência', declaracao_exec: 'Declaração de execução', pgt_pop: 'PGT e POP',
   reg_op: 'Registros operacionais', planejamento_cme: 'Planejamento CME', cronograma_execucao: 'Cronograma de execução',
@@ -45,6 +45,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Cadastros_ === 'function') fontes.push(['Cadastros', SGO_ajudaTelas_Cadastros_]);
   if (typeof SGO_ajudaTelas_Administracao_ === 'function') fontes.push(['Administracao', SGO_ajudaTelas_Administracao_]);
   if (typeof SGO_ajudaTelas_Qualificacao_ === 'function') fontes.push(['Qualificacao', SGO_ajudaTelas_Qualificacao_]);
+  // 21/10/2026: Esterilização a baixa temperatura (SGO_Ajuda_BaixaTemp.js).
+  if (typeof SGO_ajudaTelas_BaixaTemp_ === 'function') fontes.push(['BaixaTemp', SGO_ajudaTelas_BaixaTemp_]);
   if (typeof SGO_ajudaTelas_Calibracao_ === 'function') fontes.push(['Calibracao', SGO_ajudaTelas_Calibracao_]);
   if (typeof SGO_ajudaTelas_Documentos_ === 'function') fontes.push(['Documentos', SGO_ajudaTelas_Documentos_]);
   if (typeof SGO_ajudaTelas_Planejamento_ === 'function') fontes.push(['Planejamento', SGO_ajudaTelas_Planejamento_]);
