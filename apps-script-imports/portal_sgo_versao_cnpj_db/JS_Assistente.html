@@ -1,0 +1,58 @@
+<script>
+  // ==========================================
+  // ASSISTENTE "TIRE SUA DÚVIDA" (20/10/2026)
+  // ==========================================
+  // Liga o componente comum (AssistenteWidget.html, idêntico ao do COMMAND) ao SGO+: quem está logado, a tela aberta,
+  // "Abrir esta tela" (abrir(mod)), "Falar com o administrador" (bate-papo com a pergunta já escrita) e a tela
+  // "Perguntas ao assistente" (menu Administração; só Administrador e Diretoria). Servidor: SGO_Assistente.js.
+  // Ganchos na casca (JS_Core): Assistente_iniciar_ no login; abrirModulo_("assistente") desenha o painel.
+  function Assistente_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
+  function Assistente_podePainel_() { var p = Assistente_perfil_(); return p === "ADMIN" || p === "DIRETORIA"; }
+
+  window.ASSIST_CFG = {
+    sistema: "SGO+",
+    ativo: function () { return !!(SESSION && USER_CONTEXT && Assistente_perfil_() && Assistente_perfil_() !== "CLIENTE"); },
+    chamar: function (acao, dados, ok, falha) {
+      google.script.run.withSuccessHandler(ok).withFailureHandler(falha).SGO_Assist_api(SGO_getSessionId(), acao, dados || {});
+    },
+    telaAtual: function () { return window.SGO_MODULO_ATUAL || (ehMobileModo_() ? "mobile_home" : "dashboard"); },
+    abrirTela: function (chave) {
+      var k = String(chave || "");
+      if (!/^[a-z0-9_]{2,40}$/.test(k)) return;
+      if (k === "mobile_home") { irTelaInicial_(); return; }
+      abrir(k);
+      try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {}
+    },
+    falarCom: function (nomes, texto) {
+      if (window.ComunicacaoWidget && ComunicacaoWidget.conversarCom) { ComunicacaoWidget.conversarCom(nomes || [], texto); return; }
+      alert("O bate-papo não está disponível agora. Fale com o administrador do sistema e leve esta pergunta:\n\n" + texto);
+    },
+    abrirAjudaTela: function () { if (typeof Ajuda_abrir_ === "function") Ajuda_abrir_(); }
+  };
+
+  /** Login: mostra o item do painel no menu só para quem pode. */
+  function Assistente_iniciar_() {
+    var b = document.getElementById("menu-btn-assistente");
+    if (b) b.style.display = Assistente_podePainel_() ? "" : "none";
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+  }
+
+  /** Tela "Perguntas ao assistente" (Administração). */
+  function Assistente_renderPainel_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (ehMobileModo_()) atualizarTituloMobile_("Perguntas ao assistente");
+    var esc = escapeHtml_;
+    if (!Assistente_podePainel_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Perguntas ao assistente</h2><p class="content-subtitle">Este painel é do Administrador e da Diretoria. ' +
+        'Para tirar uma dúvida, use o botão "Tire sua dúvida", no canto da tela. Para sugerir uma melhoria na ajuda, escreva ao administrador pelo bate-papo.</p>' +
+        '<p><button type="button" class="btn-primary" onclick="irTelaInicial_()">Voltar ao Início</button></p></div>';
+      return;
+    }
+    div.innerHTML = '<div class="module-shell"><div class="module-header"><div class="module-header-left"><h2 class="content-title">' + esc("Perguntas ao assistente") + '</h2>' +
+      '<p class="content-subtitle">' + esc("O que a equipe pergunta ao \"Tire sua dúvida\": os assuntos mais frequentes, o que ficou sem resposta e um rascunho de texto de ajuda para você revisar.") + '</p></div>' +
+      '<div class="module-header-right"><button type="button" class="btn-secondary" onclick="AssistenteWidget.abrir()"><i class="fas fa-circle-question" aria-hidden="true"></i>&nbsp;Testar o assistente</button></div></div>' +
+      '<div id="assistPainel"></div></div>';
+    if (window.AssistenteWidget) AssistenteWidget.montarPainel(document.getElementById("assistPainel"));
+  }
+</script>

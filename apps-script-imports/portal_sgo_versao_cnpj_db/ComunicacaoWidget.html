@@ -544,9 +544,14 @@
     if (!ST.pessoas) { corpo.innerHTML = "<div class='comw-vazio'>Carregando pessoas…</div>"; return carregarPessoas(desenhar); }
     corpo.innerHTML = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar'>←</button><b>Nova conversa</b></div>" +
       "<input class='comw-busca' type='search' placeholder='Buscar por nome ou área' aria-label='Buscar por nome ou área' id='comw-busca'><div id='comw-lista-p' style='margin-top:8px'></div>";
+    // vindo do assistente "Tire sua dúvida": mostra primeiro os administradores e avisa que a pergunta já vai escrita
+    var filtro = ST.filtroNova && ST.filtroNova.length ? ST.filtroNova : null;
+    if (ST.rascNova) corpo.querySelector(".comw-linha").insertAdjacentHTML("afterend", "<div class='comw-aviso-sis' style='background:var(--comw-card2);color:var(--comw-txt);border-color:var(--comw-borda)'>" +
+      (filtro ? "Escolha o administrador com quem falar." : "Escolha com quem falar (o administrador ou a gestão da sua área).") + " A sua pergunta já vai escrita na conversa; confira e envie." +
+      (filtro ? " <button type='button' class='comw-btn comw-sec' data-acao='todosNova'>Mostrar todas as pessoas</button>" : "") + "</div>");
     var desenharLista = function () {
       var q = semAcento(document.getElementById("comw-busca").value || "");
-      document.getElementById("comw-lista-p").innerHTML = ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false && (!q || semAcento(p.nome + " " + (p.area_nome || "")).indexOf(q) >= 0); }).map(function (p) {
+      document.getElementById("comw-lista-p").innerHTML = ST.pessoas.filter(function (p) { return !p.eu && p.ativo !== false && (!filtro || filtro.indexOf(p.pessoa_id) >= 0) && (!q || semAcento(p.nome + " " + (p.area_nome || "")).indexOf(q) >= 0); }).map(function (p) {
         return "<button type='button' class='comw-item' data-pessoa='" + h(p.pessoa_id) + "' aria-label='Conversar com " + h(p.nome) + "'><div class='comw-linha'><div class='comw-cresce'><div class='comw-tit'>" + h(p.nome) + "</div>" +
           "<div class='comw-mut'>" + linhaPessoa(p) + " · " + h(visto(p.visto_em)) + "</div></div><div>" + tagsPessoa(p) + "</div></div></button>";
       }).join("") || "<div class='comw-vazio'>Ninguém encontrado.</div>";
@@ -624,6 +629,25 @@
     api("criarGrupo", { tipo: "GRUPO", titulo: ST.grupoTit, membros: Object.keys(ST.sel) }, function (r) {
       ST.sel = {}; ST.grupoTit = ""; entrouConversa(r.conversa); anunciar("Grupo criado.");
     }, function (e) { if (bt) bt.disabled = false; toastErro(e); });
+  }
+  /** Pergunta que veio do assistente "Tire sua dúvida": fica escrita na caixa de texto da conversa (não envia sozinha). */
+  function comRascunho(c) {
+    if (!ST.rascNova || !c || !c.conversa_id) return;
+    if (!lsGet(rascChave(c.conversa_id))) lsSet(rascChave(c.conversa_id), ST.rascNova);
+    ST.rascNova = ""; ST.filtroNova = null;
+  }
+  /** Abre o balão numa conversa com uma das pessoas (pelo nome) com o texto já escrito; sem achar só uma, mostra a lista para escolher. */
+  function conversarCom(nomes, texto) {
+    abrir();
+    ST.rascNova = String(texto || "");
+    carregarPessoas(function () {
+      var alvo = (nomes || []).map(function (n) { return semAcento(String(n || "").trim()); }).filter(String);
+      var achados = (ST.pessoas || []).filter(function (p) { return !p.eu && p.ativo !== false && alvo.indexOf(semAcento(p.nome)) >= 0; });
+      ST.aba = "conversas"; ST.aberta = null;
+      if (achados.length === 1) return api("abrirDireta", { pessoa_id: achados[0].pessoa_id }, function (r) { comRascunho(r.conversa); entrouConversa(r.conversa); }, toastErro);
+      ST.filtroNova = achados.length ? achados.map(function (p) { return p.pessoa_id; }) : null;
+      ir("nova");
+    });
   }
   function entrouConversa(c) {
     if (!ST.conv[c.conversa_id]) { c.nao_lidas = 0; ST.conv[c.conversa_id] = c; ST.ordem.unshift(c.conversa_id); }
@@ -852,12 +876,13 @@
       }
       if (t.getAttribute("data-aba")) return irAba(t.getAttribute("data-aba"));
       if (t.getAttribute("data-conv")) return abrirConversa(t.getAttribute("data-conv"));
-      if (t.getAttribute("data-pessoa")) return api("abrirDireta", { pessoa_id: t.getAttribute("data-pessoa") }, function (r) { entrouConversa(r.conversa); }, toastErro);
+      if (t.getAttribute("data-pessoa")) return api("abrirDireta", { pessoa_id: t.getAttribute("data-pessoa") }, function (r) { comRascunho(r.conversa); entrouConversa(r.conversa); }, toastErro);
       if (t.getAttribute("data-ciente")) return ciente(t.getAttribute("data-ciente"));
       if (t.getAttribute("data-local")) { try { CFG.abrirLocal(t.getAttribute("data-local"), t.getAttribute("data-id")); } catch (x) { } return; }
       var a = t.getAttribute("data-acao");
       if (a === "fechar") { fechar(); botao.focus(); }
-      else if (a === "voltar") { ST.aberta = null; ir("lista"); }
+      else if (a === "voltar") { ST.aberta = null; ST.rascNova = ""; ST.filtroNova = null; ir("lista"); }
+      else if (a === "todosNova") { ST.filtroNova = null; ir("nova"); }
       else if (a === "nova") ir("nova");
       else if (a === "grupo") { ST.sel = {}; ST.grupoTit = ""; carregarPessoas(function () { ir("grupo"); }, true); }
       else if (a === "setor") api("criarGrupo", { tipo: "SETOR", area: ST.d.eu.area }, function (r) { entrouConversa(r.conversa); }, toastErro);
@@ -900,6 +925,7 @@
     setInterval(vigiarToken, 3000);
   }
   if (document.body) montar(); else document.addEventListener("DOMContentLoaded", montar);
-  window.ComunicacaoWidget = { abrir: function () { abrir(); }, atualizar: function () { if (ST.d) novidades(); else iniciar(); } };
+  window.ComunicacaoWidget = { abrir: function () { abrir(); }, atualizar: function () { if (ST.d) novidades(); else iniciar(); },
+    conversarCom: function (nomes, texto) { conversarCom(nomes, texto); } };
 })();
 </script>

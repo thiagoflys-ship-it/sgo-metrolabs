@@ -1,0 +1,1643 @@
+/**
+ * Base dos manuais do assistente "Tire sua dúvida" (docs/MANUAL_*.md transformados em dados).
+ * ARQUIVO GERADO por _tools/gerar_base_assistente.cjs: não edite à mão. Para mudar, edite o manual e gere de novo
+ * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+ */
+var SGO_ASSIST_MANUAIS = {
+ "versao": "3c0acca59953",
+ "manuais": [
+  {
+   "arquivo": "MANUAL_ASSISTENTE_DUVIDAS.md",
+   "titulo": "Manual do assistente \"Tire sua dúvida\" (SGO+ e COMMAND)",
+   "tela": "assistente_duvidas",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Atualizado em 20/10/2026. O mesmo assistente aparece no SGO+ e no COMMAND. Cada sistema responde com a ajuda e os manuais dele."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O \"Tire sua dúvida\" é um assistente para perguntar como usar o sistema: como fazer uma tarefa, onde fica uma tela, quem faz o quê. Ele responde com o passo a passo para o seu perfil, o caminho no menu, o botão \"Abrir esta tela\" e a fonte da informação.\n\nO assistente só orienta. Ele não faz nenhuma alteração no sistema: quem faz a tarefa é você, na tela."
+    },
+    {
+     "titulo": "Onde fica",
+     "texto": "Computador: botão \"Tire sua dúvida\", no canto direito da tela, acima do balão do bate-papo.\nCelular: aba \"Dúvida\", na borda direita, logo acima da aba do bate-papo.\nTambém abre pelo botão \"Tire sua dúvida\" do painel \"Como usar esta tela\"."
+    },
+    {
+     "titulo": "Fazer uma pergunta",
+     "texto": "1. Toque em \"Tire sua dúvida\".\n2. Escreva a dúvida com as suas palavras. Exemplo: \"Como reservo um veículo?\".\n3. Toque em \"Perguntar\" (ou aperte Enter).\n4. Leia o passo a passo. O primeiro passo mostra o caminho no menu, por exemplo \"Menu > Operação de campo > Frota\".\n5. Toque em \"Abrir esta tela\" para ir direto à tela.\n6. Confira a fonte no fim da resposta, por exemplo \"Ajuda da tela Reservas de veículo\".\n\nNão escreva senhas nem dados de clientes na pergunta."
+    },
+    {
+     "titulo": "De onde vêm as respostas",
+     "texto": "O assistente responde só com o conteúdo oficial do sistema:\na ajuda \"Como usar esta tela\" de cada tela;\nos manuais dos módulos;\no menu do sistema (o nome de cada tela, o grupo em que fica e quem pode abrir).\n\nQuando a ajuda ou um manual é atualizado, o assistente passa a responder pelo texto novo, sem nenhum passo extra.\n\nSe a informação não está nesses textos, o assistente diz que não encontrou e oferece \"Falar com o administrador\". Ele nunca inventa tela, botão ou regra."
+    },
+    {
+     "titulo": "O seu perfil",
+     "texto": "O assistente sabe com qual perfil você entrou e ensina só o que esse perfil pode fazer. Quando a tarefa é de outro perfil, a resposta diz quem faz e como pedir. Exemplo: o ajuste de KM de um veículo é feito pela gestão; quem não é da gestão recebe a orientação de avisar a gestão, que confere e ajusta com o motivo registrado."
+    },
+    {
+     "titulo": "O que o assistente não faz",
+     "texto": "O assistente não ajuda a contornar regras ou controles do sistema. Nesses casos, ele explica com educação o caminho correto. Exemplos:\nPedido | O que o assistente respondeApagar uma ocorrência ou multa | Os registros não são apagados. Se não concorda, conteste no prazo; se foi engano, peça a correção à gestão.\nMudar a data ou a hora de uma retirada ou do ponto | A data vale como comprovante. Peça a correção à gestão, que ajusta com o motivo registrado.\nEsconder ou mudar o KM | O KM é o do painel do veículo. Se digitou errado, avise a gestão.\nVer dados, e-mail ou conversas de colegas | Cada pessoa vê só o que é dela; peça à gestão a informação de que precisa para o trabalho.\nEvitar pontos do Programa de conduta | Não há como evitar ou apagar pontos; o caminho é a contestação no prazo.\nRegistrar o ponto por outra pessoa | O ponto é pessoal; esquecimento se resolve com o pedido de ajuste e a justificativa.\nPegar um veículo reservado por outra pessoa | Reserve outro veículo disponível ou peça à gestão para remanejar.\nSenhas, chaves e códigos de acesso | Não são informados. Para a sua senha, peça a redefinição à gestão.\nTexto que tente mudar a forma como o assistente funciona ou pedir as instruções internas dele também é recusado."
+    },
+    {
+     "titulo": "\"Isso resolveu?\" e \"Falar com o administrador\"",
+     "texto": "No fim de cada resposta, toque em \"Sim\" ou \"Não\" ao lado de \"Isso resolveu?\". A avaliação ajuda a gestão a melhorar a ajuda.\n\n\"Falar com o administrador\" abre o bate-papo na conversa com o administrador, com a sua pergunta já escrita. Se houver mais de um administrador, escolha na lista. Confira o texto e envie."
+    },
+    {
+     "titulo": "Limite de perguntas",
+     "texto": "Cada pessoa faz até 20 perguntas por hora. Depois do limite, o assistente avisa e volta a responder na hora seguinte. Enquanto isso, use \"Como usar esta tela\" ou o bate-papo."
+    },
+    {
+     "titulo": "Sem a resposta automática",
+     "texto": "Quando a resposta automática não está disponível, o assistente continua útil: ele mostra os trechos da ajuda e dos manuais mais próximos da pergunta, cada um com o caminho, a fonte e o botão \"Abrir esta tela\". Uma faixa amarela avisa quando isso acontece."
+    },
+    {
+     "titulo": "Privacidade",
+     "texto": "O registro de cada pergunta guarda o texto (com e-mail, telefone, documento e placa escondidos), a tela, o perfil, o tipo da resposta e o \"Isso resolveu?\". O nome de quem perguntou não é guardado."
+    },
+    {
+     "titulo": "Painel \"Perguntas ao assistente\" (Administrador e Diretoria)",
+     "texto": "No SGO+, fica em Menu > Administração > Perguntas ao assistente. No COMMAND, fica em Menu > ADMINISTRAÇÃO > Perguntas ao assistente (Administrador e Direção).\n\"Assuntos mais frequentes\": perguntas parecidas juntas, com o número de perguntas, as telas, os perfis e os selos de sem resposta, não resolveu, resolveu e recusada.\n\"Sem resposta ou não resolveu\": o que a ajuda ainda não cobre.\n\"Por tela\": em que telas surgem mais dúvidas.\n\"Base do assistente\": quantos trechos, telas e manuais a base tem e quando foi montada.\n\nO botão \"Sugerir texto de ajuda\" escreve um rascunho a partir das perguntas daquele assunto e dos trechos atuais da ajuda, com a lista do que falta conferir na tela. O rascunho é só para revisar: nada é publicado sozinho. Depois da revisão, o texto entra na ajuda da tela e no manual do módulo na próxima atualização do sistema."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_BATE_PAPO.md",
+   "titulo": "Manual do bate-papo (Comunicação do SGO+ e do COMMAND)",
+   "tela": "bate_papo",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Atualizado em 20/10/2026. O mesmo balão de conversas aparece no SGO+ e no COMMAND; quem está num sistema conversa\ncom quem está no outro. Dentro do balão, o ícone de interrogação abre \"Como usar esta tela\" com este mesmo conteúdo,\nresumido."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Conversas diretas entre duas pessoas, grupos, a conversa da sua área e a conversa geral de todos.\nAvisos automáticos que vêm do outro sistema e comunicados da gestão (com \"Li e estou ciente\").\nAviso no WhatsApp quando alguém manda mensagem direta para você, ou chama você com @ num grupo, e você está fora\n do sistema. A resposta pelo WhatsApp volta para a conversa."
+    },
+    {
+     "titulo": "Conversas e grupos (parte 1)",
+     "texto": "Conversa com uma pessoa: «+ Conversa» → buscar pelo nome ou pela área → tocar na pessoa → escrever. Enter envia;\nShift+Enter quebra a linha. Se a internet cair, o texto fica guardado na caixa.\n\nCriar um grupo:\n1. «+ Grupo» e escreva o nome do grupo.\n2. Busque pelo nome ou pela área e marque as pessoas. Para chamar uma área inteira, escolha a área no filtro e toque\n em «Marcar a área inteira». O que foi marcado continua marcado enquanto você busca.\n3. «Revisar e criar»: aparece \"Você vai criar o grupo … com:\" e a lista de nomes e áreas.\n4. «Confirmar e criar» (ou «Voltar e ajustar»). A criação fica escrita na conversa.\n\nVer quem está no grupo: dentro do grupo, «Participantes». Mostra o nome, a área do cadastro e o sistema que cada\npessoa usa (SGO+, COMMAND ou os dois). Quem criou o grupo tem o selo \"criou o grupo\". Só quem está na conversa vê\nessa lista.\n\nAdicionar, remover e mudar o nome: só quem criou o grupo e a gestão (Administrador, Gestor e Diretoria no SGO+;\nquem gere missões no COMMAND). Em «Participantes»: «+ Adicionar pessoas» → marcar → «Conferir» → «Confirmar»;\n«Remover» ao lado do nome; ou escreva o nome novo e toque em «Salvar nome». Cada mudança fica numa linha tracejada\nna conversa, com quem fez (\"Ana adicionou Bruno.\", \"Gil removeu Caio.\", \"Ana mudou o nome do grupo de … para …\").\n\nSair do grupo: em «Participantes», «Sair do grupo» e confirmar. Você deixa de ver o grupo; as mensagens não são\napagadas. Para voltar, peça a quem criou o grupo ou à gestão. Quem é removido também deixa de ver o grupo e recebe o\naviso \"Você não está mais nesta conversa\"."
+    },
+    {
+     "titulo": "Conversas e grupos (parte 2)",
+     "texto": "Minha área: abre a conversa de todas as pessoas da sua área no cadastro do SGO+ (Administração › Usuários › Área,\nos códigos de Administração › Usuários › Áreas). Quem muda de área entra e sai sozinho, sem ninguém editar. Se o\nbotão não aparece, sua área ainda não foi preenchida. As conversas de setor antigas (pelo perfil de acesso) continuam\ncomo estavam.\n\nChamar alguém com @: na caixa de mensagem de um grupo, escreva @ e o começo do nome e escolha a pessoa na lista\n(Enter escolhe o primeiro). Só quem é chamado assim pode receber aviso fora do sistema."
+    },
+    {
+     "titulo": "Aviso no WhatsApp quando você está fora do sistema",
+     "texto": "Quando vira aviso:\nmensagem DIRETA para você, ou @ com o seu nome num grupo, na área ou na geral;\nvocê não está com o sistema aberto e visível há pelo menos 10 minutos (configurável) e ainda não leu;\nsó em dia útil e no horário de trabalho (os mesmos de Atividades da equipe › Avisos e horários). O que chegar à\n noite, no fim de semana ou no feriado sai junto, num aviso só, no começo do expediente seguinte;\nno máximo 1 aviso por pessoa por hora e 4 por dia (configurável); o que passar espera e vai junto no aviso seguinte.\n\nMensagem comum de grupo (sem @) nunca vai para o WhatsApp. Mudança de participantes também não.\n\nO aviso traz quem escreveu, o texto (ou \"3 mensagens. A última: …\") e o link do SGO+. Pelo provedor atual (Z-API) é\numa mensagem de texto do número da empresa; pelo WhatsApp oficial da Meta é o modelo sgo_bate_papo_mensagem.\n\nQuem recebe por e-mail em vez de WhatsApp: vínculo PJ, vínculo não informado no cadastro, sem celular no cadastro e,\npela Meta, enquanto o modelo não estiver aprovado. Tudo no mesmo horário e com os mesmos limites.\n\nDesligar para você: engrenagem do balão (Preferências) → desmarque \"Avisar no meu WhatsApp (ou e-mail) quando eu\nestiver fora do sistema\" → «Salvar minha preferência». As mensagens continuam no balão.\n\nSeu celular vem do cadastro do SGO+ (Administração › Usuários › Celular). Ele nunca aparece para os colegas nem é\ngravado na planilha da Comunicação."
+    },
+    {
+     "titulo": "Responder pelo WhatsApp",
+     "texto": "Segure o aviso no WhatsApp e toque em Responder: a resposta entra na mesma conversa, marcada \"(pelo WhatsApp)\".\nMensagem nova, sem responder a um aviso: vai para a última conversa direta avisada a você nas últimas 24 horas.\nSe não houver: vai para a conversa \"Recebidas pelo WhatsApp: Seu nome\", que você e a gestão veem; a gestão lê e\n encaminha.\nTexto com código de demanda (DEM-…) continua indo para as Demandas do COMMAND, como antes.\nFoto, áudio, vídeo ou documento chega como aviso (\"Ana enviou uma foto pelo WhatsApp.\", com a legenda). O arquivo\n fica no celular de quem enviou: peça por e-mail se precisar dele.\nSó entra no bate-papo quem é da equipe, reconhecido pelo celular do cadastro. Número desconhecido (cliente) segue\n para a Caixa de Entrada e o atendente do COMMAND, como sempre."
+    },
+    {
+     "titulo": "Administração (ligar e acompanhar)",
+     "texto": "Engrenagem do balão → \"Avisos fora do sistema (administração)\" (só administrador):\nligar ou desligar; minutos sem a pessoa no sistema antes de avisar (5 a 240); avisos por hora (1 a 6) e por dia\n (1 a 12);\n«Ver últimos envios e respostas»: para quem, de qual conversa, por qual canal, situação e motivo (sem telefone).\n\nDesligada (padrão), nada sai; resposta a um aviso que já saiu ainda chega; mensagem solta de colaborador fica na\nCaixa de Entrada do COMMAND, como antes.\n\nAntes de ligar:\n1. Z-API (em uso): no painel da Z-API, instância da Metrolabs → Webhooks → \"Ao receber\" = o endereço do webhook do\n COMMAND (COMMAND › Integrações mostra o endereço completo, com o segredo). Sem isso, os avisos saem mas as respostas\n não voltam.\n2. Meta (se o provedor for meta): cadastrar e aprovar sgo_bate_papo_mensagem, assinar o webhook (campo\n messages) no painel de desenvolvedores e gravar META_APP_SECRET em Chaves e senhas. Passo a passo em\n sgo_servidor/docs/MODELOS_WHATSAPP_META.md, seção 9.\n3. Conferir celulares e vínculos em SGO+ › Administração › Usuários.\n4. Rotina: SGO_comWhatsappRodada a cada 5 min (instalada por SGO_comInstalarGatilho, que o instalador de gatilhos\n do servidor já roda)."
+    },
+    {
+     "titulo": "Erros comuns",
+     "texto": "Mensagem | O que fazer\"Só quem criou o grupo e a gestão mudam os participantes e o nome.\" | Peça a quem criou o grupo (selo \"criou o grupo\" em Participantes).\n\"Sua área ainda não está no cadastro…\" | A gestão preenche a área em SGO+ › Administração › Usuários.\n\"A conversa de área é só de quem está na área…\" | Crie um grupo e use «Marcar a área inteira».\n\"O grupo precisa de pelo menos duas pessoas…\" | Adicione alguém antes de remover, ou use «Sair do grupo».\n\"Para sair do grupo, use o botão «Sair do grupo».\" | Você tentou se remover pela lista; use o botão de sair.\nNão recebi aviso no WhatsApp | Confira: era direta ou @ seu? estava em horário de trabalho? passou o limite da hora? é PJ (vai por e-mail)? o aviso está ligado em Preferências? o celular está no cadastro?"
+    },
+    {
+     "titulo": "Quem pode o quê",
+     "texto": "Quem | PodeTodos | Conversar, criar grupo, ver participantes das próprias conversas, sair de grupo, falar com a própria área e com todos, ligar ou desligar o próprio aviso fora do sistema.\nQuem criou o grupo | Adicionar, remover e mudar o nome do grupo.\nGestão | O mesmo em qualquer grupo em que esteja; publicar comunicados; ler \"Recebidas pelo WhatsApp\".\nAdministrador | Ligar os avisos fora do sistema, ajustar minutos e limites, ver os últimos envios e respostas."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_CLIENTES_UNIDADES_VINCULOS.md",
+   "titulo": "Manual — Clientes, Unidades e Vínculos",
+   "tela": "vinculos",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "O botão Como usar, disponível nas telas Clientes e Unidades e no painel de vínculos, abre este conteúdo operacional dentro do portal."
+    },
+    {
+     "titulo": "Antes de cadastrar",
+     "texto": "Digite o nome ou o CNPJ completo, inclusive zeros iniciais. O painel Cadastros e vínculos consulta o portal enquanto você preenche. Também é possível pesquisar diretamente nele. A busca foi concentrada nesse painel para evitar campos de pesquisa repetidos. A consulta não altera os campos do formulário.\n\nNo computador, o painel fica ao lado do formulário. No celular, fica abaixo, em uma seção que pode ser recolhida. Resultados aparecem em cartões: os clientes mostram suas unidades agrupadas; unidades encontradas separadamente mostram o cliente responsável.\nVer vínculos: abre os relacionamentos sem substituir o formulário.\nAbrir cadastro: pede confirmação antes de trocar a tela; alterações não salvas no formulário atual serão descartadas.\nBuscar junto ao CNPJ do formulário: consulta os dados externos para autopreenchimento. Não significa que já exista cadastro no portal."
+    },
+    {
+     "titulo": "Cadastrar um cliente",
+     "texto": "1. Confira no painel se ele já existe.\n2. Preencha CNPJ, razão social, endereço e contatos.\n3. Mantenha marcada Criar unidade principal quando o próprio cliente for o local atendido. Cliente e unidade principal podem ter o mesmo CNPJ.\n4. Desmarque somente quando o cliente for um agrupador de outras unidades.\n5. Clique em Salvar e aguarde a conclusão. Se houver duplicidade, localize o registro existente e confira seu vínculo."
+    },
+    {
+     "titulo": "Cadastrar outra unidade",
+     "texto": "1. Em Unidades, selecione o cliente responsável.\n2. Informe nome, CNPJ, endereço e demais dados do local.\n3. Confira os resultados da consulta. Se a unidade já existir sob outro cliente, peça ao gestor a correção do vínculo.\n4. Salve e aguarde a confirmação. Não crie variações de nome/CNPJ para contornar um bloqueio."
+    },
+    {
+     "titulo": "Editar um cadastro",
+     "texto": "Localize o cadastro, clique em Abrir cadastro, confirme a troca de tela, ajuste os dados e salve. Para mudar o cliente responsável ou a unidade de um equipamento, use o painel do gestor."
+    },
+    {
+     "titulo": "Corrigir vínculos — gestor",
+     "texto": "1. Clique em Abrir painel de vínculos ou Ver vínculos no cartão correto.\n2. Confira o cadastro de origem, o responsável atual, os filhos e as referências nos módulos.\n3. Escolha a ação e, quando necessário, o destino.\n4. Explique o motivo e clique em Conferir impacto.\n5. Leia os impedimentos, o histórico preservado e os campos que mudarão.\n6. Confirme somente a alteração conferida. Se a prévia expirar ou os dados mudarem, atualize e confira novamente.\nAção | Quando usarTransferir | Mudar a unidade para outro cliente ou o equipamento para outra unidade; também vincular novamente um cadastro pendente.\nDesvincular | Deixar o cadastro temporariamente sem responsável. Novos atendimentos ficam bloqueados até a correção.\nConsolidar | Reunir cadastros duplicados da mesma identificação. A origem fica inativa para preservar o histórico. Não usar para juntar filiais diferentes.\nInativar | Impedir novos usos, mantendo o cadastro e seu histórico.\nReativar | Retomar o uso após conferir vínculo e duplicidades.\nExcluir | Remover cadastro sem dependências. O sistema impede a exclusão quando encontra vínculos.\nAs mudanças do painel registram usuário, motivo e valores anteriores e posteriores na auditoria. Equipamentos acompanham a transferência de sua unidade; documentos antigos permanecem associados ao atendimento original."
+    },
+    {
+     "titulo": "Avisos e carregamento",
+     "texto": "Regular: pronto para uso. Sem unidade: falta criar ou vincular um local. Vínculo pendente/inconsistente: o gestor deve corrigir. Duplicidade: conferir as identificações antes de prosseguir. Inativo: preservado no histórico.\n\nQuando aparecer Aguarde, espere a conclusão. Uma consulta com erro oferece Tentar novamente e mantém o formulário. Uma consulta sem resultados não garante que a gravação será aceita: o sistema verifica novamente ao salvar.\n\nApós corrigir um vínculo, reabra o módulo de destino e selecione novamente cliente, unidade e equipamento. Se uma gravação falhar, leia a mensagem e confira o cadastro/auditoria antes de repetir."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_CONDUTA_COLABORADOR.md",
+   "titulo": "Programa de conduta — Manual do colaborador",
+   "tela": "conduta",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Como consultar, registrar e acompanhar a sua participação no programa. Para toda a equipe.\n\nRevisão: 17/10/2026, conferido com as telas do módulo. É o mesmo texto do manual aberto em Programa de conduta > Manuais e documentos.\n\nO programa mede a conduta da equipe como um time. As ocorrências confirmadas tiram pontos do índice do mês. Se o mês fecha no verde, toda a equipe recebe o bônus. Se fecha no amarelo ou no vermelho, ninguém recebe.\n\nNão é um sistema para punir pessoas. O cuidado de cada um aparece no resultado de todos.\n\nCada tarefa tem passos numerados: faça um passo de cada vez. O nome de cada botão aparece entre aspas, igual ao que está na tela."
+    },
+    {
+     "titulo": "Qual aba usar",
+     "texto": "Aba | Para que serveFarol do mês | Ver o índice de conduta e a cor do farol do mês\nOcorrências | Registrar, acompanhar e contestar ocorrências\nReconhecimentos | Elogiar uma pessoa, um grupo ou um departamento\nMissões | Registrar viagens de serviço que geram incentivo\nAusências | Ver férias e afastamentos (quem registra é a gestão)\nFechamentos | Ver os meses fechados e o relatório de cada um\nRelatórios e extratos | Gerar o seu extrato do mês e abrir os relatórios semanais\nManuais e documentos | Ler os manuais, os guias e os documentos originais\nNo topo de cada aba há o link \"Manual do colaborador\". Ele abre este manual já na parte daquela aba.\n\nNo celular a tela é mais simples: o farol, \"Registrar ocorrência\", \"Reconhecer colega\", \"Registrar missão\", \"Minhas ocorrências recentes\" e as suas missões. O restante fica no computador."
+    },
+    {
+     "titulo": "Farol do mês (parte 1)",
+     "texto": "O farol mostra como está o mês da equipe. Ele aparece no Início e na aba \"Farol do mês\".\n\nComo o índice é calculado: índice de conduta = 100 menos (pontos de demérito do mês divididos pelo número de pessoas) vezes 5. Só contam as ocorrências firmes. Quem está de férias ou afastado sai da conta.\nFarol | Índice de conduta | O que aconteceVERDE (\"Bônus preservado\") | 85 ou mais | Se o mês fechar assim, toda a equipe recebe o bônus coletivo\nAMARELO (\"Bônus em risco\") | de 70 a 84,9 | Ainda dá tempo de voltar ao verde dentro do mês\nVERMELHO (\"Bônus perdido neste mês\") | abaixo de 70 | Sem bônus coletivo no mês. O incentivo de missão continua\nGravíssima: uma única ocorrência gravíssima firme no mês cancela o bônus, mesmo com o índice alto. Junto do farol aparece \"GRAVÍSSIMA\".\n\nExemplo: equipe de 10 pessoas, uma ocorrência grave (30 pontos). Índice = 100 menos (30 dividido por 10) vezes 5 = 85,0. Farol verde. Se aparecer mais uma média (8 pontos): índice 81,0. Farol amarelo.\n\nAbaixo do farol, a tela diz quantos pontos ainda cabem sem sair do verde e quantas ocorrências estão em prazo de defesa.\n\nO farol se atualiza sozinho enquanto a tela está aberta (aparece \"Ao vivo\" ao lado da cor do farol). A cada 45 segundos o sistema confere se algo mudou; quando muda, o ponteiro anda até o novo índice e aparece um aviso no canto da tela, por exemplo \"Índice atualizado: 98,5 · nova ocorrência em prazo de defesa\". Depois de gravar algo no Programa de conduta, o farol se atualiza na hora. Com a aba do navegador escondida a conferência para, e nada do que você estiver digitando é apagado."
+    },
+    {
+     "titulo": "Farol do mês (parte 2)",
+     "texto": "Como ler o farol, de cima para baixo: a cor do farol e o selo da situação do bônus (preservado, em risco, perdido ou cancelado); o índice, no velocímetro (o ponteiro sai do centro e aponta o valor; 70 e 85 são os limites do programa); a barra \"Margem até o amarelo\" (no amarelo, \"Margem até o vermelho\"), com a parte listrada para os pontos ainda em prazo de defesa; a linha \"Em prazo de defesa\", com o índice previsto se elas ficarem firmes (no velocímetro, a marca tracejada); e o último mês fechado, numa linha. O gráfico do mês dia a dia só aparece quando o índice mudou no mês (pela data do fato das ocorrências firmes); sem mudança aparece \"Sem perda de pontos\". O gráfico dos meses fechados só aparece a partir de 3 meses fechados. Em ambos, o tracejado é o limite do verde.\nSe aparecer \"Período de teste: o índice é calculado, mas o bônus ainda não é pago.\", os valores do mês são só simulação.\n\nNíveis das ocorrências:\nNível | Pontos de deméritoL — Leve | 2\nLR — Leve reincidente | 5\nM — Média | 8\nMR — Média reincidente | 15\nG — Grave | 30\nGG — Gravíssima | cancela o bônus do mês, qualquer que seja o índice\nReincidência: a mesma ocorrência de novo em até 90 dias sobe de nível. Leve vira leve reincidente; as demais viram média reincidente. A reincidência nunca baixa o peso."
+    },
+    {
+     "titulo": "Ocorrências",
+     "texto": "Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização entre colegas."
+    },
+    {
+     "titulo": "Ocorrências > Registrar uma ocorrência",
+     "texto": "1. Abra a aba \"Ocorrências\" (no celular, toque em \"Registrar ocorrência\").\n2. Toque em \"+ Registrar ocorrência\".\n3. Escolha o \"Colaborador envolvido\".\n4. Em \"Tipo\", busque pelo código ou pela descrição e escolha.\n5. Preencha a \"Data do fato\". O prazo é de até 2 dias úteis depois do fato.\n6. Em \"O que aconteceu\", escreva o fato: onde, quando e o que foi visto (pelo menos 10 caracteres).\n7. Se tiver, anexe a foto e escreva a \"Legenda da foto\".\n8. Toque em \"Registrar\".\n9. A ocorrência vai para a homologação da gestão.\nRegistre o fato, não a pessoa. Escreva o que viu, onde e quando. Foto ajuda a gestão a decidir."
+    },
+    {
+     "titulo": "Ocorrências > O que acontece depois",
+     "texto": "Selo | Cor | O que quer dizerRegistrada | azul | Aguardando a homologação da gestão. Ainda não conta\nHomologada | âmbar | A gestão aprovou. Está no prazo de contestação. Ainda não conta\nContestada / Em recurso | roxo | A defesa está em julgamento pela gestão\nFirme | vermelho | Confirmada. Já conta no índice da equipe\nAnulada / Descartada / Rejeitada | cinza | Não contaEtapa | Prazo (dias úteis) | Se ninguém agirRegistrar a ocorrência | até 2 depois do fato | Depois disso não pode mais registrar\nHomologar (gestão) | 3 | A ocorrência é descartada\nContestar (envolvido) | 3 | A ocorrência fica firme\nJulgar a contestação (gestão) | 5 | O julgamento nunca é automático\nRecorrer (uma vez só) | 2 depois de mantida | A ocorrência continua firme\nVocê vê as ocorrências que registrou e as que são em seu nome. Quando uma ocorrência em seu nome é homologada, aparece um aviso ao entrar no SGO+, com o selo \"Requer sua ação\"."
+    },
+    {
+     "titulo": "Ocorrências > Contestar uma ocorrência em seu nome",
+     "texto": "1. Abra a aba \"Ocorrências\" (no celular, \"Minhas ocorrências recentes\").\n2. Na linha da ocorrência, toque em \"Contestar\". O prazo aparece ao lado.\n3. Escreva o motivo com fatos: o que aconteceu, onde, quem viu.\n4. Toque em \"Enviar contestação\" (no celular, \"Enviar\")."
+    },
+    {
+     "titulo": "Ocorrências > Recorrer de uma ocorrência firme",
+     "texto": "1. Na linha da ocorrência firme, toque em \"Recorrer\". O prazo aparece ao lado.\n2. Escreva o motivo do recurso.\n3. Toque em \"Enviar recurso\" (no celular, \"Enviar\").\n\nCabe só um recurso por ocorrência. Quem registrou e o próprio envolvido nunca decidem: quem julga é outra pessoa da gestão. A única exceção é a Diretoria, que decide a ocorrência em que é a envolvida, com fundamentação registrada no histórico e no extrato."
+    },
+    {
+     "titulo": "Reconhecimentos",
+     "texto": "O reconhecimento não tira nem dá pontos. Serve para mostrar o que foi bem feito. Todos da equipe veem os reconhecimentos.\n1. Abra a aba \"Reconhecimentos\" (no celular, toque em \"Reconhecer colega\").\n2. Toque em \"+ Reconhecer pessoa, grupo ou departamento\".\n3. Escolha \"Uma pessoa\" ou \"Grupo ou departamento\".\n4. Escolha o colega (ou escreva o nome do grupo e escolha as pessoas).\n5. Escolha o \"Motivo\".\n6. Escreva o que foi visto de melhoria.\n7. Preencha a data e toque em \"Reconhecer\"."
+    },
+    {
+     "titulo": "Missões",
+     "texto": "Missão é uma viagem de serviço a um destino a 200 km ou mais da sede. Cada executante de missão aprovada recebe o incentivo de R$ 300, mesmo com o farol vermelho. Com dois executantes, cada um recebe o valor inteiro.\n\nSó perde o incentivo do mês quem tem gravíssima própria no mês.\nSelo | Cor | O que quer dizerAguardando aprovação da gestão | âmbar | Ainda não conta para o incentivo\nAprovada | verde | Conta para o incentivo do mês\nRecusada | vermelho | Não conta. O motivo aparece ao lado\nAprovação legada | cinza | Missão antiga, de antes da regra de aprovação. Conta como aprovada\nSem incentivo (abaixo da distância mínima) | cinza claro | Destino com menos de 200 km. Fica registrada, sem incentivo"
+    },
+    {
+     "titulo": "Missões > Registrar uma missão",
+     "texto": "1. Abra a aba \"Missões\" (no celular, toque em \"Registrar missão\").\n2. Toque em \"+ Registrar missão\".\n3. Escolha o \"Destino\".\n4. Preencha a data e o \"1º executante\". Se houve um segundo, escolha em \"2º executante (opcional)\".\n5. Toque em \"Registrar\".\nA missão que você lança vai para a aprovação da gestão. O incentivo só conta depois de aprovada. Você recebe o aviso da decisão.\n\nSe o destino não estiver na lista, peça à gestão para cadastrar."
+    },
+    {
+     "titulo": "Férias e afastamentos",
+     "texto": "Quem está de férias ou afastado sai da conta do índice do mês, mas continua recebendo o bônus se o mês fechar no verde.\n\nQuem registra a ausência é a gestão. Avise a gestão das suas férias. Na aba \"Ausências\" você vê as suas."
+    },
+    {
+     "titulo": "Fechamento do mês",
+     "texto": "No começo do mês seguinte, o mês anterior é fechado e congelado. Depois disso nada com data naquele mês pode ser lançado ou alterado.\n\nO fechamento acontece sozinho depois do prazo, desde que não haja defesa nem missão pendente. A gestão também pode fechar antes, depois de conferir.\n1. Abra a aba \"Fechamentos\".\n2. Na linha do mês, toque em \"Ver relatório\".\n\nO relatório do mês abre em A4. No topo ficam o velocímetro do índice de conduta (o mesmo do farol), a situação do bônus, os pontos de demérito com a margem e os números do mês. Depois vêm a interpretação, a composição do demérito por grupo, a evolução dos meses fechados, os reconhecimentos, as missões e as contestações. O relatório é coletivo e não mostra o nome de ninguém.\n\nSe a faixa no topo disser que a cópia gravada estava no modelo anterior, é a versão atual do mesmo fechamento: os números não mudam. A cópia do dia do fechamento abre pelo link \"Abrir a cópia original\"."
+    },
+    {
+     "titulo": "Relatórios e extratos > Gerar o seu extrato do mês",
+     "texto": "1. Abra a aba \"Relatórios e extratos\".\n2. No quadro \"Extrato do colaborador\", escolha a \"Competência\" (o mês).\n3. Toque em \"Gerar extrato em A4\".\n\nO extrato mostra o bônus coletivo, o incentivo de missão, as suas ocorrências, os reconhecimentos e as ausências do mês. Mês ainda aberto sai como apuração parcial."
+    },
+    {
+     "titulo": "Relatórios e extratos > Ler o relatório semanal",
+     "texto": "A gestão publica o relatório da semana. Na lista de relatórios, toque em \"Abrir\"."
+    },
+    {
+     "titulo": "Avisos, erros comuns e perguntas > Avisos ao entrar",
+     "texto": "1. Leia cada aviso do programa.\n2. Toque em \"Li e estou ciente\" em cada um.\n3. Ou role até o fim e toque em \"Li todos e estou ciente\".\n\nO sistema guarda quando o aviso apareceu e quando você confirmou. \"Fechar sem confirmar\" fecha a janela, mas o aviso continua pendente."
+    },
+    {
+     "titulo": "Avisos, erros comuns e perguntas > Erros comuns",
+     "texto": "O que aparece | O que fazer\"Prazo de registro (2 dias úteis após o fato) já venceu para esta data.\" | A ocorrência não pode mais ser registrada. Fale com a gestão se for caso grave\n\"A data do fato não pode estar no futuro.\" | Corrija a data\n\"O mês de ... já foi fechado e congelado\" | Nada com data nesse mês pode ser lançado. Fale com a gestão\n\"Prazo de contestação encerrado\" | O prazo passou. Se a ocorrência ficar firme, ainda cabe o recurso no prazo\n\"Já existe missão lançada para este destino, nesta data, com este executante.\" | A missão já está registrada. Confira a lista\n\"Nenhum destino cadastrado para missões\" (celular) | Peça à gestão para cadastrar o destino\n\"Você pode gerar só o seu próprio extrato.\" | O extrato de outra pessoa fica com a gestão\n\"Acesso restrito a Gestor/Administrador/Diretoria.\" | Esta ação é da gestão. Peça a ela"
+    },
+    {
+     "titulo": "Avisos, erros comuns e perguntas > Perguntas",
+     "texto": "Pergunta | RespostaUma ocorrência registrada já tira ponto? | Não. Só conta quando fica firme\nQuem vê as minhas ocorrências? | Você, quem registrou e a gestão\nO incentivo de missão depende do farol? | Não. Missão aprovada paga mesmo com o farol vermelho\nPosso registrar uma ocorrência sobre a gestão? | Sim. Qualquer pessoa da equipe pode ser envolvida\nDiscordo de um valor. O que faço? | Fale com a gestão antes do fechamento. Depois de fechado, o mês fica congelado"
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_CONDUTA_FISCAL.md",
+   "titulo": "Programa de conduta — Manual do fiscal e da gestão",
+   "tela": "conduta",
+   "perfis": [
+    "ADMIN",
+    "GESTOR",
+    "DIRETORIA",
+    "RH"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Registro com evidência, homologação, julgamento, missões, ausências, fechamento e relatórios. Para Administrador, Gestor e Diretoria.\n\nRevisão: 17/10/2026, conferido com as telas do módulo. É o mesmo texto do manual aberto em Programa de conduta > Manuais e documentos.\n\nGestão, neste programa, é Administrador, Gestor e Diretoria. A gestão faz tudo o que a equipe faz e mais as decisões. Leia também o Manual do colaborador.\n\nPerfil RH: consulta, de todas as pessoas, as ocorrências, as missões, as ausências, os meses fechados, os relatórios e os extratos. O RH registra ocorrência como qualquer colaborador, mas não homologa, não julga, não aprova nem recusa missão, não registra ausência e não fecha o mês: essas decisões continuam com a gestão. (19/10/2026)\nRegra de ouro: quem registrou a ocorrência nunca decide sobre ela, e quem é o envolvido também não. Exceção (19/10/2026, decisão da direção): a Diretoria, e o responsável pelo sistema, decide a ocorrência em que é a envolvida, com fundamentação obrigatória (pelo menos 15 caracteres, também para aprovar); fica gravado \"Decisão da Diretoria sobre ocorrência em que é envolvida\" no histórico da ocorrência, na auditoria e no extrato, e a lista mostra o selo \"Decisão da Diretoria\". Rejeitar uma ocorrência sempre pede a fundamentação. Quem é executante de uma missão não aprova nem recusa a própria missão. O sistema bloqueia e diz o que fazer."
+    },
+    {
+     "titulo": "Qual aba usar",
+     "texto": "Aba | Para que serveFarol do mês | Ver o índice de conduta e a cor do farol do mês\nOcorrências | Registrar, acompanhar e contestar ocorrências\nReconhecimentos | Elogiar uma pessoa, um grupo ou um departamento\nMissões | Registrar viagens de serviço que geram incentivo\nAusências | Ver férias e afastamentos (quem registra é a gestão)\nSugestões | Aceitar ou descartar o que os outros módulos encontraram (gestão; o RH consulta)\nQualidade e planos | Kanban das ocorrências, análise de causa, planos 5W2H com PDCA e indicadores por área (gestão; o RH consulta)\nFechamentos | Ver os meses fechados e o relatório de cada um\nRelatórios e extratos | Gerar o seu extrato do mês e abrir os relatórios semanais\nManuais e documentos | Ler os manuais, os guias e os documentos originais\nA área de cada pessoa vem do cadastro do usuário (Administração > Usuários > Áreas). Quem está sem área aparece como \"Sem área definida\" nas listas, nos indicadores e nos relatórios.\n\nNo topo de cada aba há o link \"Manual do gestor\". Ele abre este manual já na parte daquela aba.\n\nNo celular a gestão também aprova e recusa missões e abre \"Sugestões de ocorrência\" e \"Kanban, planos de ação e indicadores\". Homologar, julgar, ausências, fechamentos, relatórios e automação ficam no computador."
+    },
+    {
+     "titulo": "Farol do mês (parte 1)",
+     "texto": "O farol mostra como está o mês da equipe. Ele aparece no Início e na aba \"Farol do mês\".\n\nComo o índice é calculado: índice de conduta = 100 menos (pontos de demérito do mês divididos pelo número de pessoas) vezes 5. Só contam as ocorrências firmes. Quem está de férias ou afastado sai da conta.\nFarol | Índice de conduta | O que aconteceVERDE (\"Bônus preservado\") | 85 ou mais | Se o mês fechar assim, toda a equipe recebe o bônus coletivo\nAMARELO (\"Bônus em risco\") | de 70 a 84,9 | Ainda dá tempo de voltar ao verde dentro do mês\nVERMELHO (\"Bônus perdido neste mês\") | abaixo de 70 | Sem bônus coletivo no mês. O incentivo de missão continua\nGravíssima: uma única ocorrência gravíssima firme no mês cancela o bônus, mesmo com o índice alto. Junto do farol aparece \"GRAVÍSSIMA\".\n\nExemplo: equipe de 10 pessoas, uma ocorrência grave (30 pontos). Índice = 100 menos (30 dividido por 10) vezes 5 = 85,0. Farol verde. Se aparecer mais uma média (8 pontos): índice 81,0. Farol amarelo.\n\nAbaixo do farol, a tela diz quantos pontos ainda cabem sem sair do verde e quantas ocorrências estão em prazo de defesa.\n\nO farol se atualiza sozinho enquanto a tela está aberta (aparece \"Ao vivo\" ao lado da cor do farol). A cada 45 segundos o sistema confere se algo mudou; quando muda, o ponteiro anda até o novo índice e aparece um aviso no canto da tela, por exemplo \"Índice atualizado: 98,5 · nova ocorrência em prazo de defesa\". Depois de gravar algo no Programa de conduta, o farol se atualiza na hora. Com a aba do navegador escondida a conferência para, e nada do que você estiver digitando é apagado."
+    },
+    {
+     "titulo": "Farol do mês (parte 2)",
+     "texto": "Como ler o farol, de cima para baixo: a cor do farol e o selo da situação do bônus (preservado, em risco, perdido ou cancelado); o índice, no velocímetro (o ponteiro sai do centro e aponta o valor; 70 e 85 são os limites do programa); a barra \"Margem até o amarelo\" (no amarelo, \"Margem até o vermelho\"), com a parte listrada para os pontos ainda em prazo de defesa; a linha \"Em prazo de defesa\", com o índice previsto se elas ficarem firmes (no velocímetro, a marca tracejada); e o último mês fechado, numa linha. O gráfico do mês dia a dia só aparece quando o índice mudou no mês (pela data do fato das ocorrências firmes); sem mudança aparece \"Sem perda de pontos\". O gráfico dos meses fechados só aparece a partir de 3 meses fechados. Em ambos, o tracejado é o limite do verde.\nSe aparecer \"Período de teste: o índice é calculado, mas o bônus ainda não é pago.\", os valores do mês são só simulação.\n\nSó a gestão vê:\n\"Conferir competência e fechamento\": leva à aba Fechamentos.\n\"Ver quem confirmou a leitura dos avisos\": mostra quem confirmou (verde), quem viu e não confirmou (amarelo) e quem ainda não viu (vermelho).\n\"Aplicar agora: fechamentos pendentes e ajustes do programa\": aparece quando há rotina atrasada. Leia o que será fechado e confirme.\nNível | Pontos de deméritoL — Leve | 2\nLR — Leve reincidente | 5\nM — Média | 8\nMR — Média reincidente | 15\nG — Grave | 30\nGG — Gravíssima | cancela o bônus do mês, qualquer que seja o índice\nReincidência: a mesma ocorrência de novo em até 90 dias sobe de nível. Leve vira leve reincidente; as demais viram média reincidente. A reincidência nunca baixa o peso."
+    },
+    {
+     "titulo": "Ocorrências: homologar e julgar",
+     "texto": "Selo | Cor | O que quer dizerRegistrada | azul | Aguardando a homologação da gestão. Ainda não conta\nHomologada | âmbar | A gestão aprovou. Está no prazo de contestação. Ainda não conta\nContestada / Em recurso | roxo | A defesa está em julgamento pela gestão\nFirme | vermelho | Confirmada. Já conta no índice da equipe\nAnulada / Descartada / Rejeitada | cinza | Não contaEtapa | Prazo (dias úteis) | Se ninguém agirRegistrar a ocorrência | até 2 depois do fato | Depois disso não pode mais registrar\nHomologar (gestão) | 3 | A ocorrência é descartada\nContestar (envolvido) | 3 | A ocorrência fica firme\nJulgar a contestação (gestão) | 5 | O julgamento nunca é automático\nRecorrer (uma vez só) | 2 depois de mantida | A ocorrência continua firme"
+    },
+    {
+     "titulo": "Ocorrências: homologar e julgar > Homologar",
+     "texto": "1. Na linha com selo \"Registrada\", toque em \"Homologar\".\n2. Leia o resumo: envolvido, ocorrência, nível, data, quem registrou e a foto.\n3. Para confirmar, toque em \"Aprovar\".\n4. Para rejeitar, escreva a fundamentação no campo \"Fundamentação\" e toque em \"Rejeitar\" (sem ela, a rejeição não é aceita). Se a ocorrência é sua e você é da Diretoria, a fundamentação é obrigatória também para aprovar."
+    },
+    {
+     "titulo": "Ocorrências: homologar e julgar > Julgar uma contestação ou um recurso",
+     "texto": "1. Na linha com selo \"Contestada\" ou \"Em recurso\", toque em \"Julgar\".\n2. Leia a defesa do colaborador.\n3. Escreva a fundamentação.\n4. Toque em \"Anular\" ou em \"Manter (firme)\".\nDecida pelo fato e pela evidência. Na dúvida, peça mais informação antes do prazo acabar. O julgamento nunca é automático."
+    },
+    {
+     "titulo": "Reconhecimentos",
+     "texto": "Igual para todos (veja o Manual do colaborador). Os reconhecimentos não passam por homologação e são vistos por toda a equipe."
+    },
+    {
+     "titulo": "Missões: aprovar, recusar e destinos",
+     "texto": "Missão é uma viagem de serviço a um destino a 200 km ou mais da sede. Cada executante de missão aprovada recebe o incentivo de R$ 300, mesmo com o farol vermelho. Com dois executantes, cada um recebe o valor inteiro.\n\nSó perde o incentivo do mês quem tem gravíssima própria no mês.\nSelo | Cor | O que quer dizerAguardando aprovação da gestão | âmbar | Ainda não conta para o incentivo\nAprovada | verde | Conta para o incentivo do mês\nRecusada | vermelho | Não conta. O motivo aparece ao lado\nAprovação legada | cinza | Missão antiga, de antes da regra de aprovação. Conta como aprovada\nSem incentivo (abaixo da distância mínima) | cinza claro | Destino com menos de 200 km. Fica registrada, sem incentivo\nMissão lançada pelo próprio colaborador nasce \"Aguardando aprovação da gestão\". Missão lançada pela gestão para outra pessoa já nasce aprovada. Se você for executante, ela vai para a aprovação de outra pessoa da gestão. Exceção: a Diretoria decide a própria missão, com fundamentação de pelo menos 15 caracteres, e fica gravado \"Decisão da Diretoria sobre missão em que é envolvida\"."
+    },
+    {
+     "titulo": "Missões: aprovar, recusar e destinos > Aprovar ou recusar",
+     "texto": "1. Abra a aba \"Missões\". A caixa âmbar diz quantas aguardam aprovação.\n2. Na linha, toque em \"Aprovar\" e confirme.\n3. Para recusar, toque em \"Recusar\", escreva o motivo (pelo menos 8 letras) e toque em \"Recusar missão\".\n4. Quem lançou recebe o aviso da decisão.\nMissão aguardando aprovação trava o fechamento do mês. Decida todas antes de fechar."
+    },
+    {
+     "titulo": "Missões: aprovar, recusar e destinos > Cadastrar um destino",
+     "texto": "1. Toque em \"+ Cadastrar cidade/destino\".\n2. Se o destino é um cliente, digite o CNPJ e toque em \"Buscar CNPJ\".\n3. Confira a \"Cidade/UF\" e preencha a \"Distância do trecho em km\".\n4. Toque em \"Salvar destino\".\n\n\"Remover\" tira a missão da lista e do cálculo. O registro fica guardado no histórico."
+    },
+    {
+     "titulo": "Ausências",
+     "texto": "1. Abra a aba \"Ausências\".\n2. Toque em \"+ Registrar ausência\".\n3. Escolha o colaborador e o tipo: \"Férias\" ou \"Afastamento\".\n4. Preencha a data de início e a data de fim.\n5. Toque em \"Registrar\".\n\nQuem está ausente sai do divisor do mês, mas continua recebendo o bônus. \"Remover\" tira a ausência do cálculo; o registro fica no histórico."
+    },
+    {
+     "titulo": "Fechamento do mês > Conferir a prévia",
+     "texto": "1. Abra a aba \"Fechamentos\".\n2. Em \"Competência para conferência\", confira o mês (já vem o mês anterior).\n3. Toque em \"Consultar prévia\".\n4. Confira as defesas pendentes, as missões aguardando aprovação e os valores por pessoa.\n5. Se quiser, toque em \"Imprimir prévia\". A prévia abre em A4 numa aba nova e uma cópia fica na pasta do programa, em \"Prévias\".\nA prévia não autoriza pagamento e pode mudar depois das decisões."
+    },
+    {
+     "titulo": "Fechamento do mês > Fechar",
+     "texto": "1. Resolva as defesas e as missões pendentes.\n2. Consulte a prévia de novo.\n3. Toque em \"Fechar competência conferida\" e confirme.\n4. O resultado fica congelado e o relatório do mês é gerado.\n\nFechamento automático: todo dia às 6h o sistema aplica os prazos vencidos. O mês que passou de 7 dias úteis depois do fim fecha sozinho, se não houver defesa nem missão pendente.\n\nSe o relatório de um mês fechado não abrir, toque em \"Gerar de novo\".\n\nRelatório do mês (20/10/2026): o número é o do mês (por exemplo, CND-202609) e a revisão sobe a cada \"Gerar de novo\". Os números vêm sempre do fechamento congelado. Quando a cópia gravada está no modelo anterior, \"Ver relatório\" gera a revisão no modelo atual e a cópia do dia do fechamento continua guardada, aberta pelo link \"Abrir a cópia original\" da faixa no topo.\nO que aparece | O que fazer\"Fechamento bloqueado: ... missão aguarda aprovação\" | Abra a aba \"Missões\", aprove ou recuse cada uma e feche de novo\n\"Fechamento bloqueado: ... ocorrência(s) com decisão ou prazo de defesa pendente\" | Aguarde os prazos ou julgue as defesas\n\"Aguarde o término do mês para congelar a competência.\" | O mês ainda não acabou\n\"já foi fechada e está congelada\" | Nada a fazer. O mês já está fechado"
+    },
+    {
+     "titulo": "Relatórios e extratos",
+     "texto": "\"Extrato do colaborador\": escolha a pessoa e a competência e toque em \"Gerar extrato em A4\". A gestão gera o de qualquer pessoa.\n\"Relatório da equipe\" (gestão, Diretoria e RH): escolha o mês em \"De\" e \"Até\" (até 12 meses) e toque em \"Gerar relatório da equipe\". Sai em A4 deitado, com uma linha por colaborador (área, ocorrências, pontos, reconhecimentos, missões, ciência dos avisos e situação do bônus) e os totais por área. Quem está sem área no cadastro aparece como \"Área não informada\"; para corrigir, informe a área em Administração > Usuários e gere de novo. O documento tem o resultado de cada pessoa e não deve ser publicado para a equipe.\n\"Relatório semanal para toda a equipe\": escolha \"Semana terminando em\" e toque em \"Gerar os 7 dias em A4\". Para gerar sozinho todo domingo às 18h, toque em \"Ativar geração todo domingo\".\n\"Prestação de contas das missões\": escolha a competência e toque em \"Gerar missões em A4\". Serve para o Financeiro conferir e a Diretoria aprovar.\n\nA cópia de cada relatório fica guardada na pasta do programa. A análise escrita usa só os números e nunca recebe o nome das pessoas."
+    },
+    {
+     "titulo": "8a. Sugestões de ocorrência",
+     "texto": "Os outros módulos não lançam ocorrência: geram sugestões, e a gestão decide.\nDe onde vem | O que vira sugestão | Código sugeridoFrota | Multa com o condutor identificado pela retirada ou indicado pela gestão | VEI-06\nFrota | Item do checklist em ordem na retirada e com problema na devolução | VEI-08 (só se houve imprudência)\nFrota | Retirada ou devolução registrada pela gestão no lugar do condutor | VEI-04\nFrota | KM a conferir | VEI-04 (sai da fila quando o KM é conferido)\nAuvo | O.S. finalizada sem foto, sem relato ou sem check-out; O.S. aberta há 3 dias ou mais | CAM-01 ou CAM-02\nPainel de qualidade | Cobrança registrada para técnico ou condutor | CAM-08 (só se a reclamação do cliente foi procedente)\nMinhas atividades | Três ou mais atividades atrasadas no mesmo mês | sem código: escolha ou descarte\nAvisos | Ciência de aviso vencida há 2 dias úteis | sem código (sai da fila quando a pessoa confirma)\nPonto do COMMAND | Resumo do terceiro esquecimento do mês | informativo, sem código\n1. A busca é automática (todo dia às 6h e ao abrir a aba, no máximo a cada 3 horas). \"Buscar sugestões agora\" faz na hora.\n2. Leia o cartão e confira a origem pelo botão \"Abrir ...\".\n3. \"Aceitar e registrar\": confira o colaborador, o código, a data e \"O que aconteceu\" e toque em \"Registrar ocorrência\". Você fica como fiscal; outra pessoa da gestão homologa.\n4. \"Descartar\": escreva o motivo (pelo menos 10 caracteres). A sugestão não volta.\n\nO prazo de registro de 2 dias úteis conta da data em que o SGO+ encontrou o caso. Quem é o envolvido não decide a sugestão sobre si. O RH vê e não decide. Os demais perfis não veem a aba."
+    },
+    {
+     "titulo": "8b. Qualidade e planos",
+     "texto": "Kanban das ocorrências: Registrada, Em defesa, Homologada, Plano de ação e Concluída. O cartão anda pelo fluxo do programa; não se arrasta. \"Plano recomendado\" marca a grave, a gravíssima e a reincidente.\nAnálise de causa: problema, pelo menos 3 porquês e a causa raiz; Ishikawa (6M) opcional. Ligada a uma ocorrência ou a um código recorrente.\nPlano de ação 5W2H: O quê, Por quê, Onde, Quando, Quem, Como e Quanto. Cada ação vira uma atividade em Minhas atividades para o responsável, com prazo, e aparece em \"Atividades do módulo\".\nPDCA: Executar enquanto houver ação aberta; \"Passar para Verificar\" quando todas estiverem concluídas ou canceladas; \"Registrar a verificação\" (o problema voltou?) com \"Foi eficaz\" (vai para Agir) ou \"Não foi eficaz\" (novo ciclo); \"Concluir (padronizar)\" com o que virou padrão. \"Cancelar plano\" pede o motivo. Nada é apagado.\nIndicadores por área: reincidência, tempo médio de homologação (dias úteis), homologadas no prazo, descartadas por prazo, planos concluídos e atrasados, eficácia e sugestões pendentes; e os códigos recorrentes (3 ou mais firmes no período), com atalho para a análise e o plano."
+    },
+    {
+     "titulo": "Automação de prazos e rotina",
+     "texto": "Na aba \"Ocorrências\", o quadro \"Automação de prazos\" deve estar \"LIGADA\". Assim, todo dia às 6h o sistema aplica os prazos vencidos sozinho.\nCom a automação \"DESLIGADA\", nenhuma ocorrência fica firme sozinha e o mês não é contado. Toque em \"Ligar agora\".\n\n\"Processar prazos vencidos agora\" aplica todos os prazos vencidos de uma vez. Não há como desfazer."
+    },
+    {
+     "titulo": "Automação de prazos e rotina > Rotina da semana",
+     "texto": "1. Decida as sugestões de ocorrência e homologue as ocorrências registradas.\n2. Julgue as contestações dentro do prazo.\n3. Aprove ou recuse as missões.\n4. Registre as férias e os afastamentos.\n5. Confira o farol e publique o relatório semanal.\n6. Em \"Qualidade e planos\", veja os planos atrasados e os códigos recorrentes."
+    },
+    {
+     "titulo": "Cuidados de quem registra e decide",
+     "texto": "Registre o fato com data, local e evidência. Evite opinião.\nNão registre e decida a mesma ocorrência. O sistema bloqueia.\nRespeite os prazos. Ocorrência registrada e não homologada em 3 dias úteis é descartada.\nMexa no catálogo de ocorrências só com decisão formal.\nOcorrências e cobranças são vistas só pelo envolvido, por quem registrou e pela gestão. Não comente fora disso."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_ENVIAR_DOCUMENTO.md",
+   "titulo": "Manual: enviar documento ao cliente (e-mail e WhatsApp)",
+   "tela": "enviar_documento",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Vale para todo o SGO+ a partir de 20/10/2026. Componente único: SGO_EnviarDoc.js (servidor), JS_EnviarDoc.html (tela) e SGO_EnviarDoc_Ajuda.js (ajuda \"Como usar esta tela\")."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Todo documento gerado pelo SGO+ pode ser enviado ao cliente por e-mail, por WhatsApp ou pelos dois, com o PDF anexado. O envio é sempre feito por uma pessoa da equipe: o sistema nunca manda documento ao cliente sozinho. Cada envio fica registrado no histórico do documento e do cliente."
+    },
+    {
+     "titulo": "Onde aparece o botão \"Enviar\" (parte 1)",
+     "texto": "Onde | ComoLogo depois de gerar qualquer documento | Barra \"Documento salvo\" no canto da tela, com o botão \"Enviar ao cliente\" (ou \"Enviar\", para documento interno). Links de documento salvo nas telas dos módulos (\"Abrir PDF\", \"PDF salvo\", \"Baixar relatório (PDF)\", \"Salvo na pasta do cliente\") | Botão \"Enviar\" ao lado do link. Documento aberto em outra aba (faixa verde \"Documento salvo na pasta do cliente\") | Link \"Enviar ao cliente (e-mail ou WhatsApp)\": abre a janela na aba do SGO+. Arquivo de documentos | Botão \"Enviar\" ao lado de \"Abrir arquivo\", item \"Enviar ao cliente\" no menu \"Mais\" de cada documento e botão \"Envios de documentos\" no topo da tela. Cadastros > Clientes > (cliente) | Aba \"Documentos gerados e envios\": todos os documentos gravados nas pastas do cliente, com o último envio de cada um e o botão \"Enviar\". Pasta do cliente no servidor (link \"Abrir pasta do cliente\") | Link \"enviar por e-mail ou WhatsApp\" ao lado de cada PDF e HTML. Documentos ligados (inventário de 20/10/2026):"
+    },
+    {
+     "titulo": "Onde aparece o botão \"Enviar\" (parte 2)",
+     "texto": "Módulo | Documento | ClasseAutoclaves | Relatório de ensaio (ciclo e estanqueidade), memória de cálculo do F0, relatório de dados (planilha em PDF), modelo oficial preenchido | cliente\nLavadoras | Relatório de ensaio, relatório de dados, modelo oficial preenchido | cliente\nCadeia de frio | Relatório de qualificação térmica, relatório de dados | cliente\nEstufa, banho-maria e secadora | Relatório de qualificação térmica, relatório de dados | cliente\nCertificado de calibração | Certificado e relatório interpretativo | cliente\nRelatório de calibração | Relatório de calibração | cliente\nLaudo NR-13 | Laudo (emitir e reabrir) | cliente\nDeclaração de execução | Declaração e relatório QI/QO/QD | cliente\nPGT e POP | PGT e POP | cliente\nPlanejamento CME | Planejamento técnico do CME | cliente\nCronograma de execução | Cronograma | cliente\nRegistros operacionais | Registro operacional | cliente\nInventário de equipamentos | Inventário com análise | cliente\nArquivo de documentos | Qualquer arquivo ligado a um cliente | cliente\nPadrões de referência | Inventário dos padrões, solicitação de orçamento, relatórios gerenciais | interno\nFrota | Relatório da frota, por veículo, reservas, rastreamento | interno\nPainel de qualidade, Auvo | Relatórios de gestão e de atendimentos | interno\nPrograma de conduta, Desempenho da gestão | Fechamentos, extratos, relatórios da equipe, avaliação do gestor | bloqueado (dado pessoal)"
+    },
+    {
+     "titulo": "Passo a passo",
+     "texto": "1. Toque em \"Enviar\" (ou em \"Enviar ao cliente\" na barra \"Documento salvo\").\n2. Passo 1, documento e anexos: confira o PDF (\"Conferir o documento\"). Se quiser, marque \"Incluir a cópia em HTML\" e \"Anexar outros documentos deste cliente\" (só aparecem os da pasta do mesmo cliente; no máximo 5).\n3. Passo 2, por onde enviar: marque E-mail, WhatsApp ou os dois.\n4. Passo 3, para quem: os contatos do cliente do documento já aparecem (cadastro do cliente, responsável das unidades, acessos do cliente ao SGO+ e quem já recebeu documento desse cliente). Os três primeiros vêm marcados. Para outro destinatário, preencha nome, e-mail e/ou celular e toque em \"Acrescentar\". O campo \"Cópia do e-mail (Cc)\" é opcional.\n5. Passo 4, mensagem: o assunto e os textos já vêm prontos, com o nome do documento, o número, o cliente e o equipamento quando houver. No WhatsApp, \"{nome}\" vira o primeiro nome de cada destinatário.\n6. Toque em \"Revisar e enviar\" e confira a pré-visualização do e-mail (de, responder para, para, cópia, assunto, anexos e texto) e do WhatsApp.\n7. Toque em \"Confirmar e enviar\". Cada destinatário aparece como \"Enviado\" ou \"Falhou\", com o motivo."
+    },
+    {
+     "titulo": "Regras (parte 1)",
+     "texto": "Cliente certo: o servidor descobre o cliente pelo próprio arquivo (registro do Arquivo de documentos ou pasta do cliente, pelo CNPJ ou pelo nome). O que a tela informa nunca troca esse cliente; se a tela indicar outro, a janela avisa e os contatos continuam sendo os do cliente do arquivo. Documento interno (sem pasta de cliente): a janela avisa e oferece as pessoas da equipe (o e-mail e o celular saem do cadastro de Usuários e não aparecem na tela) ou o destinatário digitado. Dado pessoal de colaborador (Programa de conduta, avaliação da gestão, cópias privadas de certificado): não sai por e-mail nem por WhatsApp (LGPD). A janela explica e não envia. Quem envia: Administrador, Diretoria, Gestor, Técnico, Metrologia, Comercial e Financeiro. O cliente (portal) e o RH não enviam. E-mail: quando o e-mail integrado do usuário existir (SGO_Email_enviarComoUsuario_), sai pela caixa da pessoa; sem ela, sai pela caixa do sistema da Metrolabs com o nome da pessoa e \"responder para\" o e-mail do cadastro dela. Usuário sem e-mail no cadastro: a janela avisa que a resposta vai para a caixa do sistema. Limite: 20 endereços e 18 MB de anexos por envio. WhatsApp: pelo WhatsApp da empresa (Z-API), com o documento na própria mensagem (base64, sem link público). Respeita a proteção do número (intervalo de alguns segundos entre mensagens e limites por hora, por dia e por celular, somados com o COMMAND). Só celular (DDD + 9 + 8 dígitos); telefone fixo aparece marcado \"(sem WhatsApp)\". Limite: 8 celulares e 15 MB por arquivo. Horário: fora do horário comercial (dias úteis, horário de Avisos e horários) a janela mostra o aviso, mas o envio continua liberado; o envio fica marcado \"fora do horário comercial\" no histórico. Sem envio duplicado: cada confirmação leva um número de pedido;"
+    },
+    {
+     "titulo": "Regras (parte 2)",
+     "texto": "o mesmo pedido nunca é enviado duas vezes (duplo clique, conexão que repete). O botão fica desabilitado durante o envio. Nada é apagado: \"Tentar de novo\" cria um envio novo ligado ao que falhou; o que falhou continua no histórico com o motivo."
+    },
+    {
+     "titulo": "Histórico",
+     "texto": "Tabela DOC_ENVIOS: uma linha por e-mail (todos os endereços juntos) e uma por celular. Campos: quem enviou, quando, documento (arquivo, tipo, título, número, equipamento), cliente, canal, destino, cópia, nome do destinatário, assunto, mensagem, anexos, modo do e-mail (caixa do usuário ou do sistema), situação (ENVIANDO, ENVIADO, FALHOU), motivo, identificação no provedor, \"fora do horário\" e a tentativa de origem.\n\nOnde consultar: na janela (\"Envios anteriores deste documento\"), em Cadastros > Clientes > (cliente) > \"Documentos gerados e envios\" e em Arquivo de documentos > \"Envios de documentos\" (filtros por cliente e \"Com falha\")."
+    },
+    {
+     "titulo": "Se algo der errado",
+     "texto": "O que aconteceu | O que fazerLista de destinatários vazia | O cadastro do cliente não tem e-mail nem celular. Digite e toque em \"Acrescentar\"; depois complete o contato em Cadastros > Clientes ou na unidade.\nWhatsApp desligado na janela | O WhatsApp da empresa não está configurado: o responsável grava as chaves da Z-API em Administração > Chaves e senhas. Enquanto isso, use o e-mail.\n\"Falhou\" com limite por hora ou por dia | Proteção do número da empresa. Espere e toque em \"Tentar de novo\", ou envie por e-mail.\n\"Falhou\" com WhatsApp desconectado | O celular da empresa precisa ler de novo o QR Code no painel da Z-API. Depois toque em \"Tentar de novo\".\n\"Este documento não é enviado pelo sistema\" | Documento com dado pessoal de colaborador. Entregue pessoalmente ou peça orientação à Diretoria.\n\"A tela indicou outro cliente\" | O arquivo está na pasta de outro cliente. Confira o documento antes de enviar."
+    },
+    {
+     "titulo": "Para quem mantém o sistema",
+     "texto": "Chamadas da tela: EnviarDoc_apiConferir, EnviarDoc_apiPreparar, EnviarDoc_apiEnviar, EnviarDoc_apiTentarDeNovo, EnviarDoc_apiHistorico, EnviarDoc_apiEnvios, EnviarDoc_apiDocumentosDoCliente.\nA barra \"Documento salvo\" vem de uma observação passiva das respostas do google.script.run (o módulo não precisa mudar): se a resposta traz o link de um arquivo salvo, o servidor confere qual é o documento. Para ligar um botão explícito em qualquer tela: SGO_EnviarDoc.abrir({ arquivoId | url, htmlId, docDocumentoId, dica: { clienteId, numero, equipamento } }) ou o atributo data-sgo-enviar=\"<id ou link>\".\nPasta raiz nova de módulo: acrescentar em ENVDOC_RAIZES (tipo, classe e frase do e-mail).\nWhatsApp: se a equipe da Z-API criar SGO_zapiEnviarDocumento_(telefone, { nome, mime, base64, legenda }, { tipo }), ela é usada no lugar do envio próprio (send-document).\nTestes: tests/enviar-documento.test.cjs."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_CADEIA_FRIO.md",
+   "titulo": "Manual do Operador — Módulo Cadeia de Frio",
+   "tela": "cadeia_frio",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026",
+     "texto": "O certificado em A4 ganhou um sumário na primeira página, com o número da página de cada seção. As seções e subseções são numeradas (por exemplo, \"5.1 Critérios de aceitação\" e \"7.2 Observações\").\nO quadro colorido com o parecer aparece só no início do documento. A conclusão termina com o parecer em uma linha.\nA tabela \"Verificação dos critérios de aceitação\" mostra o resultado obtido e a situação de cada estudo. O requisito fica na seção 5.1.\nA revisão do documento sai com dois dígitos (\"Revisão 00\"). A tela e os botões não mudaram."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nSelo verde \"APROVADO (COM OBSERVAÇÃO)\": a leitura saiu da faixa, mas ficou dentro da tolerância declarada. O equipamento está aprovado; no certificado sai \"Aprovado\" e a saída aparece em Observações; na planilha sai \"APROVADO (COM OBSERVAÇÃO)\".\nO campo \"DTL\" do certificado virou \"Identificação do registrador\": digite a TAG do cadastro de Padrões de referência (ex.: DTL-01, DTL-06). O certificado mostra o certificado de calibração e a validade de cada registrador.\nO botão final do certificado é \"Confirmar e gerar o certificado\". O documento A4 fica salvo em HTML e PDF na pasta do cliente.\nEm \"Como enviar os dados\", a opção principal é \"Arquivo do registrador (enviar ou informar o link)\". Confira antes o \"Formato de data nos arquivos\".\nNo celular, a tela abre com uma apresentação curta: toque em \"Abrir a tela completa\"."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Quando terminar a seção 13 (Passo a Passo), você já vai ter feito um laudo inteiro, do início ao fim.\n\nSe em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 15) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você recebe um arquivo de um aparelho chamado datalogger (um gravador de temperatura), que ficou registrando a temperatura de um equipamento de cadeia de frio por um período (geralmente 24 horas). Você importa esse arquivo no sistema, preenche alguns dados do cliente e do equipamento, e o sistema:\n1. Lê e organiza os dados de temperatura;\n2. Compara com o que a norma técnica (ABNT NBR 16328, Anexo G) exige;\n3. Decide se o equipamento passou ou não passou no teste;\n4. Gera um relatório em planilha (com gráfico) e, se você quiser, um certificado em PDF com texto explicativo, prontos para entregar ao cliente.\n\nVocê nunca precisa fazer nenhuma conta. O sistema faz todos os cálculos. Sua função é: preencher os dados certos, no campo certo, e conferir se o resultado faz sentido antes de entregar."
+    },
+    {
+     "titulo": "Os nove tipos de equipamento (perfis) (parte 1)",
+     "texto": "Antes de tudo, você escolhe um destes tipos na tela (campo \"Perfil do equipamento\", seção 2). É a decisão mais importante da tela — a tela inteira muda de acordo com o que você escolhe, mostrando só os campos que fazem sentido para aquele equipamento e escondendo o resto. Perfil que você escolhe | Faixa de temperatura sugerida | Tolerância | A faixa pode ser editada? | Estudos que aparecemCâmara de Conservação (Imunobiológicos/Vacinas) | 2 °C a 8 °C | 0,5 °C | Não — faixa travada | Distribuição, Abertura de Porta, Queda de Energia\nRefrigerador Comum | 2 °C a 8 °C | 0,5 °C | Não — faixa travada | Distribuição, Abertura de Porta, Queda de Energia\nCâmara Fria | 2 °C a 8 °C (sugerido) | 0,5 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nFreezer -10 °C | -14 °C a -6 °C | 1,0 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nFreezer -20 °C | -25 °C a -15 °C | 1,0 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nFreezer -30 °C | -35 °C a -25 °C | 1,0 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nUltrafreezer -80 °C | -86 °C a -74 °C | 2,0 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nUltrafreezer -85 °C | -91 °C a -79 °C | 2,0 °C | Sim | Distribuição, Abertura de Porta, Queda de Energia\nCaixa Térmica (Transporte) | 2 °C a 8 °C | 0,5 °C | Não — faixa travada | Só Autonomia (ver seção 6.4)\nPor que alguns perfis têm a faixa \"travada\" e outros não? Câmara de Vacina, Refrigerador Comum e Caixa Térmica têm uma faixa regulatória fixa (2 °C a 8 °C, é lei/norma para produtos termolábeis) — por isso os campos de faixa mínima/máxima ficam desabilitados (cinza, não dá pra digitar) para esses três."
+    },
+    {
+     "titulo": "Os nove tipos de equipamento (perfis) (parte 2)",
+     "texto": "Já Câmara Fria, Freezer e Ultrafreezer variam de instalação para instalação (cada fabricante/modelo tem sua faixa real) — por isso, nesses perfis, os campos ficam liberados para você ajustar conforme o equipamento real. A Tolerância, em todos os perfis, sempre pode ser editada, mesmo quando a faixa está travada.\n\nPor que a Caixa Térmica é tão diferente dos outros oito? Porque fisicamente ela é outra coisa: não tem porta que abre/fecha durante o uso normal, não tem fonte de energia, e não fica ligada continuamente — ela é uma caixa isolada usada para transportar produto por um tempo limitado. Por isso ela não tem os estudos de Distribuição/Abertura de Porta/Queda de Energia (não fazem sentido para ela) — o único ensaio que ela precisa é a Autonomia: quanto tempo ela consegue segurar a temperatura entre 2 °C e 8 °C antes de sair da faixa, sem eletricidade, contando só com o isolamento térmico. Não existe \"ensaio de 24 horas\" para caixa térmica — o teste dura o tempo que ela aguentar (ou o tempo que você gravou)."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "A tela é dividida em 6 blocos numerados, de cima para baixo:\n1. Cliente — quem é o dono do equipamento.\n2. Equipamento — qual equipamento está sendo testado, e em qual faixa de temperatura.\n3. Estudos do Ensaio — quais testes você vai reportar (mudam de acordo com o perfil escolhido).\n4. Importação do Datalogger — de onde vêm os dados de temperatura.\n5. Gerar Relatório — o botão que processa tudo e entrega a planilha + PDF.\n6. Certificado de Qualificação Térmica (Beta) — um segundo documento, opcional, com texto explicativo gerado por Inteligência Artificial.\n\nExiste ainda um Console Operacional no fim da tela — um \"diário de bordo\" que mostra tudo que o sistema está fazendo, em tempo real, enquanto você usa."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço do cliente | Digite o CNPJ e clique em \"Buscar CNPJ\" — o sistema consulta uma base pública e preenche os dois campos abaixo sozinho\nBuscar CNPJ (botão) | Dispara a busca automática | Evita digitar nome/endereço manualmente | Clique depois de digitar o CNPJ\nCliente / Razão Social | Nome oficial da empresa | Aparece na capa do laudo | Confira se veio certo depois da busca automática; se a busca falhar, digite manualmente\nEndereço | Endereço da empresa | Aparece na capa do laudo | Mesma lógica do campo acima\nResponsável técnico (assinatura do laudo) | Seu nome, ou o nome de quem está assinando tecnicamente o laudo | É o nome que aparece como responsável pelo documento | Digite o nome completo da pessoa que vai assinar\nO que acontece se eu deixar em branco? O laudo é gerado do mesmo jeito, mas fica com campos vazios na capa — o que passa uma imagem pouco profissional para o cliente. Preencha sempre antes de gerar o relatório final."
+    },
+    {
+     "titulo": "Seção 2 — Equipamento",
+     "texto": "Campo | O que é | Para que serve | O que fazerPerfil do equipamento | O tipo de equipamento (ver seção 2 deste manual) | Define toda a lógica da tela: faixa sugerida, se a faixa é editável, quais estudos aparecem | Escolha o tipo certo antes de preencher qualquer outra coisa — trocar depois reseta os estudos habilitados\nTAG / Identificação | Código interno do equipamento no cliente (etiqueta, patrimônio) | Identifica qual equipamento específico foi testado, entre vários do mesmo cliente | Copie do equipamento físico ou peça ao cliente\nMarca | Fabricante do equipamento | Informação de identificação no laudo | Digite o nome do fabricante\nModelo | Modelo do equipamento | Informação de identificação no laudo | Digite o modelo\nNúmero de série | Número de série de fábrica | Informação de identificação no laudo | Digite o número de série\nLocalização | Onde o equipamento fica fisicamente (sala, setor) | Ajuda a rastrear o equipamento no cliente | Digite o local\nVolume interno declarado (L) | Volume em litros da câmara interna | Sugere automaticamente um número de sensores (ver seção 7) | Preencha se souber — não é obrigatório\nEquipamento conjugado (caixa de marcar) | Se o equipamento é dois aparelhos numa peça só (ex.: geladeira com freezer embutido) | Também influencia a sugestão automática de sensores (ver seção 7) | Marque só se o equipamento físico realmente tiver duas partes distintas conjugadas"
+    },
+    {
+     "titulo": "Seção 2 — Equipamento > Faixa operacional",
+     "texto": "Campo | O que é | Para que serve | O que fazerFaixa mínima (°C) | Temperatura mínima aceitável para este equipamento | É o piso: leituras abaixo disso reprovam o ensaio | Já vem preenchido ao escolher o perfil. Travado (cinza) para Câmara de Vacina, Refrigerador Comum e Caixa Térmica; editável para Câmara Fria, Freezer e Ultrafreezer\nFaixa máxima (°C) | Temperatura máxima aceitável | É o teto: leituras acima disso reprovam o ensaio | Mesma lógica do campo acima\nTolerância operacional (°C) | Uma margem de segurança em torno da faixa | Uma leitura que passou da faixa por pouco (dentro da tolerância) vira \"Aprovado com Alerta\" em vez de \"Reprovado\" direto | Sempre editável, em qualquer perfil. Normalmente não precisa mexer — já vem com um valor padrão sensato"
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio",
+     "texto": "Ideia central desta seção: todos os estudos que você marcar aqui são lidos do mesmo arquivo de datalogger, que você importa na seção 4. Você não precisa de um arquivo separado para cada estudo — o sistema recorta os pedaços certos do mesmo arquivo, usando os horários de início/fim que você informar em cada bloco abaixo.\n\nVocê pode marcar mais de um estudo no mesmo laudo (por exemplo: Distribuição de Temperatura + Abertura de Porta + Queda de Energia, os três no mesmo relatório e no mesmo arquivo).\n\nOs blocos que aparecem mudam conforme o perfil escolhido. Para os oito perfis \"normais\" (Câmara de Vacina, Refrigerador, Câmara Fria, Freezers, Ultrafreezers), aparecem Distribuição + Abertura de Porta + Queda de Energia. Para Caixa Térmica, só aparece o bloco de Autonomia (seção 6.4) — os outros três somem da tela. Se um bloco não aparece na sua tela, é porque a norma não pede aquele estudo para o equipamento que você escolheu — não é um erro do sistema, é intencional."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Distribuição de Temperatura (24h) (parte 1)",
+     "texto": "Campo | O que é | Para que serve | O que fazerIncluir estudo de distribuição? | Liga/desliga este estudo no laudo | Se \"Não incluir\", nada deste bloco entra no relatório final | Escolha \"Sim — em vazio\" (equipamento sem produto dentro) ou \"Sim — com carga\" (equipamento com produto/amostras dentro)\nInício do estudo | Data/hora em que a gravação do teste começou | Delimita, dentro do arquivo completo, onde este estudo começa | Digite no formato dd/MM/aaaa HH:mm:ss, ex.: 10/07/2026 08:00:00\nFim do estudo | Data/hora em que a gravação do teste terminou | Delimita onde este estudo termina | Mesmo formato do campo acima\nFim da rampa de estabilização (opcional) | O momento em que o equipamento terminou de esfriar e entrou na faixa de trabalho | Leituras antes desse horário não contam para aprovação/reprovação (é normal um equipamento recém-ligado ainda não estar na temperatura certa) | Deixe em branco se o equipamento já estava estável quando a gravação começou. Preencha só se o técnico ligou o equipamento quente/fora da faixa e já começou a gravar\nDetectar rampa automaticamente (botão) | Pede para o sistema sugerir esse horário sozinho, olhando os dados | Evita você ter que descobrir manualmente, olhando gráfico por gráfico | Clique — o sistema mostra a sugestão e pede sua confirmação antes de aplicar. Você sempre pode recusar\nSobre a duração exigida: a norma pede 24 horas contínuas de gravação para o estudo de Distribuição, para todos os oito perfis (exceto Caixa Térmica, que não tem este estudo)."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Distribuição de Temperatura (24h) (parte 2)",
+     "texto": "O que acontece se eu não usar \"Detectar rampa automaticamente\" e nem preencher manualmente? O sistema assume que todas as leituras do arquivo, do início ao fim, contam para aprovação — inclusive as primeiras, quando o equipamento ainda pode estar esfriando. Se o equipamento já estava estável quando você começou a gravar (o mais comum), isso é o comportamento certo e você não precisa fazer nada."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Abertura de Porta",
+     "texto": "Simula o que acontece quando um funcionário abre a porta do equipamento durante o uso — quanto tempo a temperatura demora para sair da faixa (se sair) e quanto tempo leva para voltar ao normal.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de abertura de porta neste laudo (caixa de marcar) | Liga/desliga este bloco inteiro | Sem marcar, os campos abaixo ficam escondidos e não entram no laudo | Marque só se este teste foi realmente feito\nTipo de abertura | Se a porta foi aberta parcialmente ou totalmente | Documenta como o teste foi conduzido — é só um metadado, não muda o cálculo | Escolha \"Porta semiaberta\" ou \"Porta totalmente aberta\"\nInício do evento | Hora exata em que a porta foi aberta | Marca, dentro do arquivo, onde está esse evento | Digite dd/MM/aaaa HH:mm:ss\nFim do evento (opcional) | Hora em que a porta foi fechada de novo | Ajuda a visualizar o evento no gráfico | Preencha se souber; pode deixar em branco\nTempo-alvo mínimo (min) (opcional) | Quanto tempo, no mínimo, o equipamento precisa aguentar sem sair da faixa depois do evento | Este é o campo que decide se o resultado é Aprovado/Reprovado ou só informativo — veja o quadro abaixo | Preencha só se o protocolo do cliente definir um tempo-limite\nMuito importante — leia com atenção: Se você preencher o \"Tempo-alvo mínimo\", o sistema vai comparar quanto tempo o equipamento aguentou sem sair da faixa com esse valor e marcar o estudo como Aprovado ou Reprovado. Se você deixar em branco, o sistema só documenta os tempos observados (até romper e até recuperar), sem aprovar nem reprovar — vira uma informação de caracterização do equipamento, não um critério de corte. Use isso a seu favor: se o cliente não tem um critério definido, deixe em branco e apenas reporte os tempos medidos."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Queda de Energia",
+     "texto": "Mesma lógica da Abertura de Porta, mas simulando uma falta de energia em vez de porta aberta — a porta permanece fechada durante todo este ensaio.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de queda de energia neste laudo | Liga/desliga este bloco | — | Marque só se este teste foi realmente feito\nInício do evento | Hora em que a energia caiu | Marca o evento no arquivo | dd/MM/aaaa HH:mm:ss\nFim do evento (opcional) | Hora em que a energia voltou | Ajuda o gráfico | Preencha se souber\nTempo-alvo mínimo (min) (opcional) | Quanto tempo o equipamento pode ficar sem energia antes de sair da faixa seguramente | Mesma regra da seção 6.2: com valor preenchido vira Aprovado/Reprovado; em branco vira só informativo | Preencha conforme o protocolo do cliente, ou deixe em branco para só documentar"
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Autonomia (só Caixa Térmica)",
+     "texto": "Este é o único estudo do perfil Caixa Térmica — mede quanto tempo ela sustenta a faixa de 2 °C a 8 °C, sem eletricidade, contando só com o isolamento térmico e a carga fria (gelo/gelox) colocada dentro.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de autonomia neste laudo | Liga/desliga este bloco | — | Marque para incluir o ensaio\nInício do período gravado | Hora em que a gravação começou (caixa fechada, pronta para o teste) | Marca o início da contagem | dd/MM/aaaa HH:mm:ss\nFim do período gravado | Hora em que a gravação terminou | Marca o fim da contagem | dd/MM/aaaa HH:mm:ss\nComo o sistema decide o resultado? Diferente de Abertura de Porta/Queda de Energia, aqui não existe \"tempo-alvo\" para preencher — o próprio objetivo do ensaio é descobrir quanto tempo a caixa aguenta, não verificar se ela bateu uma meta. O sistema procura o primeiro momento em que algum sensor saiu da faixa e reporta esse tempo como a autonomia medida. Se nenhum sensor saiu da faixa durante todo o período gravado, o sistema reporta a autonomia como \"pelo menos o tempo todo gravado\" e sugere estender a gravação da próxima vez, para descobrir o limite real. Este estudo nunca aparece como Aprovado/Reprovado — o status é sempre uma caracterização (a norma não define um tempo mínimo universal; cada cliente define, por fora do sistema, se a autonomia medida atende à necessidade dele de transporte)."
+    },
+    {
+     "titulo": "Sensores",
+     "texto": "Aparece logo depois dos blocos de estudos, ainda dentro da seção 3.\nCampo | O que é | Para que serve | O que fazerNº de sensores instalados | Quantos sensores de temperatura foram usados na gravação | Define quantos \"canais\" de temperatura o sistema vai procurar no arquivo importado | Digite o número real de sensores usados no teste\nSensores S1, S2, S3... (caixas de marcar, uma para cada sensor) | Lista de todos os sensores, de acordo com o número informado acima | Permite desmarcar um sensor específico se ele, por exemplo, teve defeito durante a gravação e não deve entrar no cálculo | Deixe todos marcados por padrão; desmarque só sensores que você sabe que falharam\nDe onde vem o número que já aparece preenchido nesse campo? O sistema sugere automaticamente um número, calculado a partir de dois campos da seção 2 (Equipamento):\nSituação | Sugestão automática\"Equipamento conjugado\" marcado | 12 sensores\nNão conjugado, e \"Volume interno declarado\" preenchido com menos de 60 L | 3 sensores\nNão conjugado, volume em branco, ou 60 L ou mais | 12 sensores\nEssa conta roda de novo, sozinha, toda vez que você edita o Volume ou marca/desmarca o Equipamento Conjugado.\n\nIsso me impede de usar outro número? Não. É só uma sugestão de partida — o campo \"Nº de sensores instalados\" é um número comum, você pode digitar por cima o valor real que foi usado no teste, seja maior ou menor que a sugestão. O sistema não bloqueia a geração do relatório com um número de sensores diferente do sugerido. Isso é diferente de outros módulos do Metrolabs (como Estufa+Banho-maria), onde o mínimo de sensores é uma trava rígida. Aqui, a responsabilidade de garantir que o número de sensores usado no ensaio real está de acordo com o protocolo/norma do equipamento é sua, como técnico responsável."
+    },
+    {
+     "titulo": "Seção 4 — Importação do Datalogger",
+     "texto": "Aqui você diz ao sistema de onde vêm os dados de temperatura.\nCampo | O que é | Para que serve | O que fazerModo de entrada | Escolha de como os dados vão chegar ao sistema | Cada opção muda os campos que aparecem embaixo | Escolha uma das opções da tabela abaixo"
+    },
+    {
+     "titulo": "Seção 4 — Importação do Datalogger > As opções de \"Modo de entrada\"",
+     "texto": "Opção | Quando usar | Como funcionaID / link do arquivo no Drive | O caso mais comum: você já tem o arquivo exportado do datalogger (uma planilha/CSV) | Cole o link do Google Drive no campo, ou clique no campo de arquivo abaixo e escolha o arquivo direto do computador — o sistema faz o upload sozinho e preenche o link\nColar dados brutos | Quando você tem os dados mas não quer subir um arquivo — por exemplo, copiou de outro programa | Cole o texto (cabeçalho + linhas, com colunas separadas por tab, vírgula ou ponto e vírgula) direto na caixa de texto\nUm arquivo por sensor (datalogger individual) | Quando cada sensor gravou seu próprio arquivo separado (dataloggers individuais, não um gravador central) | Volte à seção \"Sensores\": cada sensor marcado ganha seu próprio campo de link/upload. O sistema junta e alinha os horários de todos automaticamente\nPré-visualizar dados (botão, mais abaixo nesta seção): depois de escolher o arquivo/dados, clique aqui para conferir, antes de gerar o laudo final, se o sistema está lendo os dados certos — ele mostra quantas linhas, quantos sensores e qual formato de data foi detectado, e uma prévia da tabela. Use sempre antes de gerar o relatório, é a forma mais rápida de pegar um arquivo errado antes de gastar tempo gerando um laudo que vai sair errado."
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório",
+     "texto": "Elemento | O que é | O que fazerGerar Relatório (botão) | Processa tudo que você preencheu e produz o laudo final | Clique só depois de conferir tudo (recomendado: rodar \"Pré-visualizar dados\" antes)\nLimpar Log (botão) | Apaga o histórico do Console Operacional (seção 12) | Use se a tela de log estiver muito cheia e você quiser começar do zero visualmente — não afeta os dados já preenchidos"
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório > O que aparece depois de clicar em \"Gerar Relatório\" (parte 1)",
+     "texto": "O sistema mostra um \"selo\" colorido com o status geral do laudo, e um selo separado para cada estudo incluído. Veja o que cada status significa: Status | O que significa | O que fazerAPROVADO | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente\nAPROVADO (COM OBSERVAÇÃO) | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha\nREPROVADO | O equipamento saiu da faixa aceitável em algum momento, além da tolerância (na Distribuição), ou rompeu antes do tempo-alvo definido (na Abertura de Porta/Queda de Energia) | Não invente uma solução sozinho — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 12)\nINFORMATIVO ou CARACTERIZAÇÃO | O estudo não teve critério de aprovação/reprovação definido (Abertura de Porta/Queda de Energia sem \"Tempo-alvo mínimo\" preenchido, ou o estudo de Autonomia, que nunca tem veredito) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado\nDepois do selo de status, aparecem dois botões: Abrir planilha — abre o relatório completo (com tabelas e gráfico) direto no navegador. Atualização de 18/10/2026: não existe \"aprovado com alerta\". A excursão dentro da tolerância declarada aprova o estudo e vai para Observações (no certificado sai \"Aprovado\"; na planilha e no selo da tela, \"APROVADO (COM OBSERVAÇÃO)\", em verde). O PDF da planilha (relatório de dados) também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ... - <TAG> - <aaaa-MM-dd HHmm>.pdf\"; a frase logo abaixo dos botões confirma o arquivo ou diz por que não salvou."
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório > O que aparece depois de clicar em \"Gerar Relatório\" (parte 2)",
+     "texto": "Baixar PDF — baixa o mesmo relatório já convertido em PDF, pronto para enviar ao cliente.\n\nSe o laudo tiver mais de um estudo marcado (ex.: Distribuição + Abertura de Porta + Queda de Energia), o status geral no topo é o pior status entre todos os estudos — ou seja, se um estudo reprovar, o laudo inteiro aparece como Reprovado no selo geral, mesmo que os outros estudos tenham aprovado."
+    },
+    {
+     "titulo": "Seção 6 — Certificado de Qualificação Térmica (Beta)",
+     "texto": "Este é um segundo documento, opcional, diferente da planilha da seção 5. Ele não substitui a planilha — é complementar. É um PDF em formato de página A4, com texto corrido explicando o ensaio (não uma tabela de dados). Os textos (Introdução, Objetivo, Análise por estudo, Conclusão) são escritos por Inteligência Artificial, a partir dos números que o sistema já calculou.\nCampo | O que é | Para que serveNúmero do Certificado | Código do documento (ex.: 02062026/01RJ) | Numeração/controle interno\nRevisão | Número da versão do certificado (0, 1, 2...) | Controle de revisões, caso o certificado precise ser reemitido\nDTL (identificação do data logger) | Código do equipamento gravador usado | Rastreabilidade do instrumento de medição\nResponsável pelo aceite (cliente) | Nome de quem, do lado do cliente, está aceitando o certificado | Aparece no documento como aceite formal\nTarefa de origem (opcional) | Código de uma ordem de serviço/tarefa relacionada, se houver | Rastreabilidade interna\nRegistros fotográficos (até 4, opcional) | Fotos do equipamento/ensaio, cada uma com uma legenda | Ilustra o certificado com evidência visual"
+    },
+    {
+     "titulo": "Seção 6 — Certificado de Qualificação Térmica (Beta) > Como gerar",
+     "texto": "1. Clique em \"Gerar Rascunho com IA\" — o sistema roda a mesma análise da seção 5 e pede para a IA escrever os textos.\n2. Revise os textos que aparecem (Introdução, Objetivo, Análise por estudo, Conclusão Geral) — eles vão direto para o documento final exatamente como estiverem na tela, então corrija qualquer coisa que pareça errada antes de continuar.\n3. Clique em \"Confirmar e Gerar Certificado\" — o documento abre em uma nova aba, pronto para imprimir (Ctrl+P) ou salvar como PDF.\n\nAtenção: como o texto é gerado por IA, sempre leia antes de confirmar. A IA escreve com base nos números certos, mas o texto em si precisa da sua revisão antes de virar um documento oficial.\n\nQuais normas o certificado/relatório citam? Sempre a ABNT NBR 16328 (Anexo G) e a RDC nº 430/2020 da Anvisa (Boas Práticas de Distribuição, Armazenagem e Transporte de Medicamentos). Para o perfil Câmara de Conservação (Vacinas) especificamente, o sistema também cita o Manual de Rede de Frio do Programa Nacional de Imunizações (PNI/Ministério da Saúde) — a referência técnica específica para conservação de imunobiológicos."
+    },
+    {
+     "titulo": "Sobre o número de sensores — por que este módulo não tem \"Modo Personalizado\"",
+     "texto": "Se você já usa outro módulo Metrolabs (como Estufa+Banho-maria), talvez espere encontrar aqui um \"Modo Personalizado\" protegido por senha, que libera usar menos sensores que o mínimo. Este módulo não tem esse recurso — e a razão é simples: aqui não existe nenhuma trava para liberar. Como já explicado na seção 7, o número de sensores é só uma sugestão automática que você pode sobrescrever livremente, a qualquer momento, sem senha nenhuma. A responsabilidade de conferir se o número usado está de acordo com o protocolo do cliente é sempre sua."
+    },
+    {
+     "titulo": "Console Operacional (o log)",
+     "texto": "É a caixa preta, no fim da tela, com fundo escuro, chamada \"LOG OPERACIONAL\". Toda ação que o sistema faz — carregar a configuração, ler o arquivo, calcular resultados, gerar o PDF — aparece ali como uma linha de texto, com hora.\nCor da linha | O que significaVerde | Sucesso — a ação deu certo\nAmarelo | Aviso — algo que você deve prestar atenção, mas não é um erro\nVermelho | Erro — algo falhou e precisa da sua ação\nQuando algo dá errado e você não sabe por quê, olhe sempre o Console Operacional primeiro — a mensagem de erro exata, e muitas vezes o motivo específico (ex.: \"sensor 3 ficou 2,1 °C acima da faixa às 14:32:00\"), está sempre registrada ali."
+    },
+    {
+     "titulo": "Passo a passo — gerando um laudo do zero",
+     "texto": "Um roteiro prático, resumindo tudo o que este manual explica, para você seguir na primeira vez.\n1. Abra o sistema. Espere o selo \"SISTEMA ONLINE\" aparecer no topo.\n2. Seção 1 (Cliente): digite o CNPJ, clique em \"Buscar CNPJ\", confira nome/endereço, preencha o responsável técnico.\n3. Seção 2 (Equipamento): escolha o perfil correto (um dos nove da tabela da seção 2 deste manual). Preencha TAG, marca, modelo, número de série, localização, volume e se é conjugado. Confira a faixa de temperatura sugerida e ajuste se o perfil permitir e o protocolo do cliente pedir outro valor.\n4. Seção 3 (Estudos): marque os estudos que você realmente fez (o sistema já mostra só as opções válidas para o perfil escolhido). Preencha os horários de início/fim de cada um. Confira o número de sensores sugerido e ajuste se necessário.\n5. Seção 4 (Importação): escolha o modo de entrada certo e informe o arquivo/dados. Clique em \"Pré-visualizar dados\" e confira se o número de linhas e sensores detectados bate com o que você espera.\n6. Seção 5: clique em \"Gerar Relatório\". Confira o selo de status geral e o de cada estudo. Se algo reprovou, olhe o Console Operacional para entender o motivo exato.\n7. Clique em \"Abrir planilha\" para conferir visualmente o relatório completo (tabela, gráfico), ou \"Baixar PDF\" para já baixar o documento final.\n8. (Opcional) Seção 6: se o cliente pediu também o Certificado, preencha os campos daquela seção, clique em \"Gerar Rascunho com IA\", leia com atenção os textos gerados, corrija o que precisar, e clique em \"Confirmar e Gerar Certificado\"."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazer\"Pré-visualizar dados\" mostra um número de sensores diferente do que você esperava | O arquivo importado tem mais ou menos colunas de temperatura do que você imaginava | Confira o arquivo original antes de prosseguir — não gere o laudo até bater o número certo\nUm estudo aparece como \"Reprovado\" mas você achava que devia estar \"Aprovado\" | Alguma leitura de temperatura saiu da faixa/tolerância configurada, ou o equipamento rompeu antes do tempo-alvo (Abertura de Porta/Queda de Energia) | Olhe o Console Operacional — o motivo exato da reprovação sempre aparece ali\nOs campos de Faixa mínima/máxima estão cinza e não deixam digitar | O perfil escolhido (Câmara de Vacina, Refrigerador Comum ou Caixa Térmica) tem faixa regulatória fixa, travada de propósito | Comportamento esperado — se realmente precisar de outra faixa, confirme se o perfil escolhido é o certo\nBloco de estudo (ex.: Abertura de Porta) não aparece na tela | O perfil escolhido não usa esse estudo, segundo a norma (ex.: Caixa Térmica só tem Autonomia) | Confira a tabela da seção 6 deste manual — não é erro, é intencional\nPreenchi menos sensores que o sugerido e o sistema deixou gerar mesmo assim | Comportamento esperado — este módulo não bloqueia por número de sensores (ver seção 11) | Confira se o número usado está de acordo com o protocolo antes de entregar o laudo"
+    },
+    {
+     "titulo": "Glossário (parte 1)",
+     "texto": "Termo | Explicação simplesAnexo G | O capítulo da norma ABNT NBR 16328 que traz as regras específicas para refrigeradores, freezers, câmaras frias e ultrafreezers\nDatalogger | Aparelho gravador de temperatura, que fica registrando leituras ao longo do tempo e depois gera um arquivo com esses dados\nFaixa operacional | O intervalo de temperatura (mínima até máxima) considerado aceitável para aquele equipamento funcionar corretamente\nTolerância | Uma margem extra em torno da faixa — uma leitura que passou um pouco do limite, mas dentro dessa margem, não é tratada como uma falha grave\nRampa de estabilização | O período inicial em que um equipamento recém-ligado ainda está esfriando até chegar na temperatura de trabalho — leituras desse período não contam para aprovação\nEquipamento conjugado | Um único aparelho físico com duas partes distintas (ex.: geladeira com freezer embutido) — influencia a sugestão automática de número de sensores\nAutonomia | O tempo que um equipamento sem energia (como uma caixa térmica) consegue manter a temperatura dentro da faixa aceitável, contando só com isolamento/carga fria\nCâmara de Conservação | Nome técnico do refrigerador usado especificamente para guardar vacinas/imunobiológicos, com faixa regulatória fixa de 2 °C a 8 °C\nRDC nº 430/2020 | Norma da Anvisa sobre Boas Práticas de Distribuição, Armazenagem e Transporte de Medicamentos — é o motivo regulatório pelo qual a qualificação térmica de cadeia de frio é exigida\nPNI | Programa Nacional de Imunizações (Ministério da Saúde) — dono do \"Manual de Rede de Frio\", referência específica para conservação de vacinas\nEste manual descreve o módulo Cadeia de Frio tal como implementado em 2026-07-22."
+    },
+    {
+     "titulo": "Glossário (parte 2)",
+     "texto": "Se a tela mudar no futuro (novos campos, novos perfis), este documento precisa ser atualizado junto — ele não se atualiza sozinho."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_CERTIFICADO_CALIBRACAO.md",
+   "titulo": "Manual do Operador — Módulo Certificado de Calibração",
+   "tela": "certificado_calibracao",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nCada bloco tem o campo \"Resolução do instrumento (na unidade do bloco)\". A resolução entra no orçamento de incerteza; em branco, é deduzida das leituras e marcada com asterisco.\nPadrão vencido na data da calibração bloqueia a emissão. O cadastro e a validade dos padrões ficam na página \"Padrões de referência\" (botões \"Editar\" e \"⋯\" Mais ações: Substituir PDF, Dados, localização e foto, Inativar, Reativar).\nOs perfis Comercial e Financeiro só consultam certificados."
+    },
+    {
+     "titulo": "O que mudou em 18/10/2026",
+     "texto": "Certificado e relatório interpretativo em A4 com seções numeradas (\"1. Identificação\"…), tabelas numeradas (\"Tabela N —\") e figuras numeradas (\"Figura N —\"), identificação numa tabela só e cada informação uma vez (o aviso de que o certificado não contém declaração de conformidade fica só no quadro da abertura).\nCertificado com três grandezas ou mais ganha sumário com o número das páginas.\nO relatório interpretativo traz um gráfico por grandeza (tendência e intervalo de ±U95 em cada ponto) e a próxima calibração numa linha da identificação; o texto padrão explica os termos uma vez e resume as faixas, sem repetir a tabela do certificado.\nOs dois documentos ficam na pasta do cliente com o CNPJ (14 dígitos) e com nome padrão: \"Certificado de calibracao - <número> - <TAG> - <aaaa-MM-dd HHmm>\" e \"Relatorio interpretativo - <número> - <TAG> - <aaaa-MM-dd HHmm>\", em HTML e PDF.\n\"Reabrir certificado\" monta o mesmo HTML da emissão.\nRelatórios gerenciais dos padrões (plano de renovação e desempenho da emissão de certificados): número próprio (REN-… e DES-…), período com as datas, gráficos legíveis no PDF e a contagem de pontos por grandeza corrigida (antes contava blocos)."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Se aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 12) — todo termo técnico está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você digita as leituras feitas durante a calibração de um equipamento (por comparação com um padrão de referência) e o sistema calcula sozinho a tendência, a incerteza e monta o Certificado de Calibração oficial, pronto pra imprimir — exatamente no mesmo formato que a Metrolab's já usa.\n\nIsto é diferente do módulo \"Relatório de Calibração\" (que só lê um certificado que já existe, pronto, anexado como PDF). Aqui não existe certificado prévio — é este sistema que emite o certificado do zero, fazendo a conta de verdade.\n\nDepois de emitir o certificado, você também pode gerar, com 1 clique a mais, um Relatório Interpretativo — um segundo documento, em linguagem simples, explicando o que os números do certificado significam, para quem não entende de metrologia."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "A tela é dividida em blocos, de cima para baixo:\n1. Consultar certificados já emitidos (por CNPJ) — para reabrir um certificado antigo.\n2. Padrões de Referência do Laboratório — cadastro e controle de vencimento dos instrumentos-padrão usados nas calibrações. Fica sempre visível, independente de você estar emitindo um certificado agora.\n3. 1. Cliente — quem é o dono do equipamento calibrado.\n4. 2. Equipamento — qual equipamento foi calibrado.\n5. 3. Dados da calibração — técnico, data, local, condições ambientais.\n6. 4. Ensaios (blocos de resultado) — onde você digita as leituras e o sistema calcula.\n7. 5. Resultados de medição — responsabilidade do cliente pela decisão de uso.\n8. 6. Fotos do ensaio — opcional.\n9. 7. Gerar — os botões finais: gerar o certificado e, depois, o relatório interpretativo."
+    },
+    {
+     "titulo": "Padrões de Referência do Laboratório (parte 1)",
+     "texto": "Um padrão de referência é o instrumento que a Metrolab's usa para comparar e calibrar o equipamento do cliente (ex.: um termômetro certificado, mais preciso que o equipamento sendo calibrado). Todo padrão tem sua própria validade — se ele vencer, qualquer calibração feita com ele fica questionável."
+    },
+    {
+     "titulo": "Padrões de Referência do Laboratório (parte 2)",
+     "texto": "Este bloco fica sempre visível no topo da tela, independente de você estar no meio de emitir um certificado ou não — é um cadastro permanente do laboratório, não uma etapa do certificado.\nCampo | O que é | Para que serve | O que fazerIdentificação (TAG) | Código do padrão (ex.: \"THM-002\") | Identifica qual padrão foi usado, no certificado | Digite o código físico do instrumento-padrão\nDescrição | O que é o padrão | Aparece na tabela \"Padrões utilizados\" do certificado | Ex.: \"Registro de temperatura e umidade\"\nNº do certificado do padrão | Número do certificado de calibração do próprio padrão (emitido por outro laboratório) | Rastreabilidade | Copie do certificado do padrão\nIncerteza (U95) | O valor de incerteza expandida escrito no certificado do padrão | Entra direto na conta de incerteza do certificado que você vai emitir | Copie o número exatamente como está no certificado do padrão\nFator K (padrão 2) | O fator de abrangência usado no certificado do padrão | Usado para converter a incerteza do padrão pro cálculo | Deixe 2, a menos que o certificado do padrão diga outro valor explicitamente\nGraus de liberdade (0 = infinito) | Um número técnico do cálculo de incerteza do próprio padrão | Ajusta a conta com precisão | Deixe 0 (infinito) — é o caso normal. Só mude se souber exatamente o motivo\nValidade | Até quando o padrão pode ser usado | Controla o aviso de vencimento | dd/mm/aaaa\nCertificado do padrão (PDF) | O arquivo do certificado do próprio padrão | Fica salvo pra consulta futura, sem precisar procurar no computador/gaveta | Anexe o PDF (opcional, mas recomendado)"
+    },
+    {
+     "titulo": "Padrões de Referência do Laboratório > Status de validade (selo colorido)",
+     "texto": "Cada padrão cadastrado mostra um selo:\nSelo | O que significa🟢 Válido | Mais de 30 dias até vencer\n🟡 Vencendo | Vence em 30 dias ou menos\n🔴 VENCIDO | Já passou da validade\n⚪ Sem validade | Nenhuma data foi cadastrada\nO que acontece se algum padrão estiver vencendo ou vencido? Aparece um aviso vermelho no topo deste bloco. O mesmo aviso também aparece na tela inicial do Portal (Dashboard) e como um número vermelho no menu lateral, ao lado de \"Certificado de Calibração\" — em qualquer tela do sistema, não só aqui. A ideia é você nunca ser pego de surpresa usando um padrão vencido sem perceber."
+    },
+    {
+     "titulo": "Padrões de Referência do Laboratório > Anexar/trocar o PDF de um padrão já cadastrado",
+     "texto": "Na tabela de padrões, a coluna \"Certificado (PDF)\" tem um campo pequeno de upload — use pra anexar o certificado depois, se você cadastrou o padrão sem o PDF na hora, ou pra substituir por um certificado renovado."
+    },
+    {
+     "titulo": "Padrões de Referência do Laboratório > Inativar / Reativar",
+     "texto": "Um padrão vencido ou fora de uso não precisa ser excluído — clique em Inativar. Ele some da lista de seleção (seção 4 deste manual), mas continua no histórico. Reativar traz ele de volta."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Busca ou cria o cadastro do cliente | Digite o CNPJ (só números) e clique em \"Buscar / Selecionar Cliente\"\nO que acontece? Se o CNPJ já existe no cadastro do Portal, o cliente é selecionado automaticamente. Se não existe, o sistema consulta a Receita Federal (BrasilAPI) e pré-preenche um formulário de cadastro novo (razão social, endereço, telefone) — confira os dados e clique em \"Cadastrar Cliente\". Esse cliente fica salvo pra sempre, reaproveitável em qualquer certificado futuro (não precisa cadastrar de novo)."
+    },
+    {
+     "titulo": "Seção 2 — Equipamento",
+     "texto": "Depois de selecionar o cliente, você escolhe um equipamento já cadastrado para esse cliente, ou cadastra um novo.\nCampo | O que é | Para que serve | O que fazerEquipamento já cadastrado (lista) | Equipamentos que esse cliente já tem no sistema | Reaproveitar cadastro existente | Escolha na lista e clique em \"Usar este equipamento\"\nUnidade | O local/filial do cliente onde o equipamento fica | Organização do cadastro | Escolha a unidade (criada automaticamente como \"Matriz\" quando o cliente é novo)\nDescrição/Tipo | O que é o equipamento (ex.: \"Termo higrômetro\") | Aparece no certificado | Digite o tipo\nFabricante / Modelo / Nº de série / TAG / Setor | Identificação física do equipamento | Aparecem no certificado | Copie da placa/etiqueta do equipamento\nO que acontece? Um equipamento novo, uma vez cadastrado, também fica salvo pra sempre — nas próximas calibrações desse mesmo cliente, ele já aparece na lista \"Equipamento já cadastrado\", sem precisar digitar tudo de novo."
+    },
+    {
+     "titulo": "Seção 3 — Dados da calibração",
+     "texto": "Campo | O que é | Para que serve | O que fazerTécnico executor (cadastrado) | Lista de técnicos já cadastrados | Reaproveitar nome sem digitar toda vez | Escolha na lista, ou clique em \"+ Novo\" pra cadastrar um técnico (só o nome, sem precisar de login)\nou nome do técnico executor (texto livre) | Campo alternativo | Pra quando o técnico não está cadastrado e você não quer cadastrar agora | Digite o nome diretamente — funciona igual, não precisa das duas opções preenchidas\nData da calibração | Quando a calibração foi feita | Aparece no certificado | dd/mm/aaaa\nO cliente solicitou a apresentação de uma data de próxima calibração? | Solicitação expressa do cliente | Registra a data solicitada e a sua origem, sem calcular intervalo | Deixe NÃO. Se SIM, preencha data dd/mm/aaaa, nome do solicitante, cargo/setor e referência da OS, email, contrato ou documento; observação é opcional\nRealizado no laboratório da Metrolab's (já vem marcado) | Onde a calibração foi feita | Muda o texto do certificado | Deixe marcado se foi no laboratório; desmarque se foi nas instalações do cliente\nTemperatura ambiente (°C) / Umidade Relativa do ar (%) | As condições do ambiente durante a calibração | Aparecem no certificado, num texto padronizado | Digite só o número (ex.: 23,5) — o texto ao redor é sempre igual, pra todo mundo, sem variar de técnico pra técnico"
+    },
+    {
+     "titulo": "Seção 4 — Ensaios (blocos de resultado)",
+     "texto": "Esta é a parte principal — onde o cálculo acontece de verdade."
+    },
+    {
+     "titulo": "Seção 4 — Ensaios (blocos de resultado) > O que é um \"bloco de ensaio\"",
+     "texto": "Um bloco é uma grandeza física medida (ex.: \"Temperatura\", \"Umidade\", ou, num equipamento com mais de um sensor, \"Sensor Interno\" e \"Sensor Externo\" — dois blocos separados). Um certificado pode ter vários blocos."
+    },
+    {
+     "titulo": "Seção 4 — Ensaios (blocos de resultado) > O que é um \"ponto\"",
+     "texto": "Dentro de cada bloco, um ponto é um valor de referência testado (ex.: 15°C, 25°C, 30°C). Cada ponto tem uma Referência (o valor de referência informado conforme o procedimento) e 3 leituras (Ensaio 1, Ensaio 2, Ensaio 3) — as 3 medições reais feitas pelo equipamento sendo calibrado, naquele ponto.\nCampo | O que é | O que fazerTítulo (grandeza/canal) | Nome do bloco | Ex.: \"Sensor Interno — Temperatura\"\nUnidade | A unidade de medida do bloco | Ex.: \"°C\", \"% UR\"\nPadrões de referência usados neste bloco | Quais padrões (seção 3) entram na conta de incerteza | Marque um ou mais padrões cadastrados — sem marcar nenhum, a conta de incerteza fica incompleta\nReferência (Nominal) | O valor de referência do ponto | Informe o valor de referência conforme o procedimento; sua origem ainda precisa de definição técnica explícita\nEnsaio 1 / Ensaio 2 / Ensaio 3 | As 3 leituras reais | Digite os 3 valores medidos pelo equipamento\nUse \"+ Adicionar ponto\" pra incluir mais pontos no mesmo bloco, e \"+ Adicionar bloco de ensaio\" pra incluir outra grandeza inteira."
+    },
+    {
+     "titulo": "Seção 4 — Ensaios (blocos de resultado) > Botão \"Calcular\"",
+     "texto": "Depois de preencher os pontos, clique em \"Calcular\" — o sistema mostra uma prévia da tabela de resultados (Média, Tendência, Incerteza, Veff, |Tendência| + U95) antes de gerar o certificado final, pra você conferir se os números fazem sentido.\nO que acontece se eu não marcar nenhum padrão num bloco? O cálculo de incerteza considera só a variação entre as 3 leituras (sem a contribuição do padrão) — os números saem incompletos. Sempre marque ao menos 1 padrão por bloco."
+    },
+    {
+     "titulo": "Seção 5 — Resultados de medição",
+     "texto": "O laboratório apresenta as leituras, a tendência, as incertezas e as condições da calibração. O certificado não declara aprovação, reprovação ou autorização de uso do equipamento. A avaliação de aptidão cabe ao setor de qualidade do cliente, considerando seus requisitos e os resultados com suas incertezas.\n\nOs resultados dos documentos usam duas casas decimais e vírgula. O cálculo e os dados salvos conservam a precisão integral; 0,00 na apresentação pode representar um valor pequeno não nulo. A retirada do veredito não elimina a responsabilidade do laboratório pela correção e rastreabilidade dos resultados."
+    },
+    {
+     "titulo": "Seção 6 — Fotos do ensaio (opcional)",
+     "texto": "Anexe até 8 fotos tiradas durante a calibração. Cada foto pode receber uma legenda escrita por você — se você não escrever nada, e depois gerar o Relatório Interpretativo, a Inteligência Artificial escreve uma legenda descritiva sozinha."
+    },
+    {
+     "titulo": "Seção 7 — Gerar > Gerar Certificado de Calibração",
+     "texto": "1. Clique em \"Gerar Certificado de Calibração\".\n2. Uma nova aba abre imediatamente, mostrando \"Gerando certificado, aguarde...\".\n3. O sistema recalcula tudo no servidor (nunca confia em conta feita no navegador, por segurança), monta o documento, e a aba é preenchida com o certificado final, pronto pra imprimir ou salvar como PDF.\n4. O certificado também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ) — o link aparece na tela.\n5. O número do certificado (ex.: 202600001) é gerado sozinho — ano atual + um número sequencial que nunca se repete. Você não digita esse número em lugar nenhum."
+    },
+    {
+     "titulo": "Seção 7 — Gerar > Gerar Relatório Interpretativo",
+     "texto": "Depois que o certificado for gerado, aparece um segundo botão: \"Gerar Relatório Interpretativo\".\n1. Clique nele.\n2. O sistema monta uma explicação didática a partir dos mesmos resultados salvos no certificado. Os textos e tabelas usam a mesma formatação; a interpretação numérica não depende de geração por IA.\n3. Uma nova aba abre com o documento pronto, com uma conclusão técnica (pra quem entende) e uma conclusão em linguagem simples (pra quem não entende de metrologia) — as duas dizendo a mesma coisa, cada uma no seu nível.\n4. Esse documento também é salvo automaticamente, em HTML e PDF, na pasta do cliente (subpasta com o CNPJ).\nEste relatório é opcional e separado do certificado. O certificado sozinho já é um documento completo e válido — o Relatório Interpretativo é um complemento, útil quando o cliente ou gestor não entende de metrologia e precisa de uma explicação mais acessível."
+    },
+    {
+     "titulo": "Consultar certificados já emitidos (por CNPJ)",
+     "texto": "No topo da tela, digite o CNPJ do cliente e clique em \"Buscar\" — aparece a lista de todos os certificados já emitidos para esse cliente, com data e 2 botões: \"Reabrir certificado\" (monta o documento com os dados salvos e a apresentação atual; o PDF histórico permanece no Drive) e o link direto pro Relatório Interpretativo, se ele já tiver sido gerado."
+    },
+    {
+     "titulo": "Passo a passo — emitindo um certificado do zero",
+     "texto": "1. Abra o módulo. Se algum padrão estiver vencendo/vencido, resolva isso primeiro (ou ao menos tome ciência).\n2. Padrões: confira se o(s) padrão(ões) que você vai usar estão com selo verde. Se não tiver nenhum cadastrado ainda, cadastre agora.\n3. Seção 1: CNPJ, buscar/cadastrar cliente.\n4. Seção 2: escolher ou cadastrar o equipamento.\n5. Seção 3: técnico, data, local, condições ambientais.\n6. Seção 4: monte os blocos — título, unidade, marque os padrões, preencha os pontos (referência + 3 leituras). Clique em \"Calcular\" pra conferir.\n7. Seção 5: o engenheiro decide Aprovado/Reprovado.\n8. Seção 6: anexe fotos, se tiver.\n9. Clique em \"Gerar Certificado de Calibração\" — confira o documento na nova aba.\n10. Se quiser, clique em \"Gerar Relatório Interpretativo\" — confira o segundo documento."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazer\"Selecione o cliente e o equipamento antes de gerar\" | Você pulou a seção 1 ou 2 | Volte e complete cliente + equipamento\n\"Adicione ao menos 1 bloco de ensaio\" | Nenhum bloco foi criado, ou todos foram removidos | Clique em \"+ Adicionar bloco de ensaio\"\nOs números da prévia parecem estranhos | Padrão errado marcado, ou leitura digitada com erro de dedo | Confira os valores digitados e os padrões marcados no bloco\nUm padrão que eu preciso usar não aparece na lista de seleção | Ele está Inativo | Vá no bloco \"Padrões de Referência\" no topo e clique em \"Reativar\"\nO balão vermelho no menu não some depois que eu resolvi o padrão vencido | A tela ainda não recarregou a contagem | Saia e entre de novo no Portal, ou aguarde a próxima ação que atualiza o balão"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesPadrão de referência | O instrumento mais preciso usado pra comparar e calibrar o equipamento do cliente\nBloco de ensaio | Um grupo de resultados de uma mesma grandeza física (ex.: temperatura)\nPonto de calibração | Um valor de referência testado, com 3 leituras\nReferência / Nominal | O valor de referência informado conforme o procedimento\nTendência | A diferença entre a média do que o equipamento mediu e o valor de referência\nIncerteza (U95) | A margem de confiança do resultado — o quanto o valor real pode variar\nVeff | Um número técnico do cálculo de incerteza (graus de liberdade efetivos)\nFator K | O número usado pra transformar a incerteza \"crua\" na incerteza final do certificado\nTendência | + U95 | A soma do módulo da tendência com U95; não constitui decisão de aceitação\nDecisão de uso | Avaliação de aptidão feita pelo setor de qualidade do cliente\nRelatório Interpretativo | Documento separado que explica o certificado em linguagem simples, com ajuda de Inteligência Artificial\nEste manual descreve o módulo Certificado de Calibração tal como implementado em 2026-08-20. Se a tela mudar no futuro (novos campos, novo cálculo), este documento precisa ser atualizado junto."
+    },
+    {
+     "titulo": "Glossário > Data de próxima calibração solicitada pelo cliente",
+     "texto": "A opção inicial é NÃO: nenhuma data é calculada nem incluída por padrão. Ao selecionar SIM, data, nome do solicitante, cargo/setor e referência da solicitação são obrigatórios; a observação é opcional. A data deve reproduzir a solicitação documentada do cliente. Ao retornar para NÃO, os campos são limpos. O registro da solicitação e da emissão é feito pelo servidor com a sessão autenticada. A apresentação dessa data não representa validade automática do certificado nem decisão de adequação ao uso.\n\nMaior tendência em módulo identifica a tendência de maior magnitude, preservando seu sinal. |Tendência| + U95 é uma expressão numérica; não constitui decisão de aceitação. A origem do valor de referência informado em cada ponto permanece uma pendência técnica a ser definida no procedimento."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_CRONOGRAMA_EXECUCAO.md",
+   "titulo": "Manual do Operador — Módulo Cronograma de Execução",
+   "tela": "cronograma_execucao",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "O documento tem seções numeradas, a lista de equipamentos com a linha de total (Tabela 1), os grupos com início, término e dias úteis (Tabela 2) e um calendário dos grupos (Figura 1), com sábados, domingos e feriados nacionais sombreados.\nAs considerações finais e as assinaturas ficam juntas na mesma página; a nota de rodapé que repetia que as datas são previsões saiu.\nArquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome \"Cronograma de execucao - CRN-aaaammdd-hhmm - <cliente> - aaaa-mm-dd hhmm\"."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nNa etapa 2, o botão \"Trazer equipamentos do cadastro\" busca os equipamentos do cliente (por unidade ou todas), agrupados por tipo, marca e modelo. \"+ Adicionar\" continua para acréscimo à mão.\n\"Avançar\" confere razão social, ao menos 1 equipamento e a data de início. Sem IA, o cronograma sai com texto padrão."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema. Leia na ordem, de cima para baixo, seguindo a tela também de cima para baixo. Se aparecer uma palavra técnica desconhecida, vá direto ao Glossário (seção 10)."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você informa o cliente e a lista de equipamentos que precisam de calibração/qualificação técnica (QI/QO/QD), e o sistema divide automaticamente esses equipamentos em grupos de execução, sugerindo datas de início e fim de cada grupo — evitando que o técnico monte essa divisão manualmente numa planilha.\nImportante: a divisão em grupos é feita por uma regra fixa e determinística (não é Inteligência Artificial) — os mesmos equipamentos sempre vão gerar a mesma divisão. A Inteligência Artificial entra só depois, na etapa 4, pra escrever o texto explicativo do cronograma final."
+    },
+    {
+     "titulo": "Etapa 1 — Dados do Cliente",
+     "texto": "Campo | O que fazerCNPJ | Digite e clique em \"Buscar\" — o sistema preenche Razão Social, Logradouro, Bairro, Cidade e UF automaticamente\nRazão Social / Logradouro / Bairro / Cidade / UF | Confira os dados preenchidos; corrija manualmente se necessário\nClique em \"Avançar\" pra ir pra etapa 2."
+    },
+    {
+     "titulo": "Etapa 2 — Lista de Equipamentos",
+     "texto": "Campo | O que fazerTipo de Equipamento | Digite o tipo (ex.: Autoclave, Lavadora)\nMarca / Modelo | Identificação do equipamento\nQuantidade | Quantas unidades desse mesmo tipo/marca/modelo existem\nClique em \"+ Adicionar\" pra incluir cada equipamento na lista. Use \"Remover\" pra tirar um item adicionado por engano. Repita até a lista completa estar pronta, depois clique em \"Avançar\"."
+    },
+    {
+     "titulo": "Etapa 3 — Parâmetros e Sugestão de Grupos",
+     "texto": "Campo | O que é | O que fazerData de início do Grupo 1 | Quando a execução começa | dd/mm/aaaa\nMáx. unidades por grupo | Quantos equipamentos, no máximo, entram no mesmo grupo | Padrão 6\nDias úteis por grupo | Quantos dias úteis a execução de 1 grupo deve levar | Padrão 5\nIntervalo entre grupos (dias úteis) | Folga entre o fim de um grupo e o início do próximo | Padrão 0\nLimite p/ grupo único | Se o total de unidades for menor ou igual a esse número, tudo vira 1 grupo só | Padrão 3\nClique em \"Sugerir Grupos\" — o sistema aplica a regra e mostra a divisão, com data de Início e Fim de cada grupo. Pra montar a divisão manualmente do zero, use \"+ Novo grupo vazio\".\nDatas pulam fim de semana. O cálculo de \"dias úteis\" nunca conta sábado/domingo."
+    },
+    {
+     "titulo": "Etapa 4 — Gerar Cronograma",
+     "texto": "Clique em \"Gerar Cronograma\". O sistema confere se a quantidade de equipamentos nos grupos bate com a lista original (etapa 2) e, se estiver tudo certo, chama a Inteligência Artificial uma única vez pra escrever o texto explicativo, e salva o registro.\nO que acontece se as quantidades não baterem? O sistema recusa gerar e avisa exatamente qual equipamento está com quantidade divergente — revise a divisão na etapa 3 antes de tentar de novo."
+    },
+    {
+     "titulo": "Etapa 5 — Documento",
+     "texto": "Botão | O que fazAbrir Documento | Abre o cronograma final numa nova aba, pronto pra imprimir ou salvar como PDF\nSalvar no Drive | Salva uma cópia em PDF na pasta do cliente\nAbrir WhatsApp | Abre o WhatsApp com uma mensagem padrão pronta, pra enviar ao cliente\nO documento final também inclui, sempre com o mesmo texto fixo (não passa pela IA de propósito, por ser um compromisso operacional): orientações que o cliente precisa seguir antes da execução (manutenção em dia, desligamento prévio dos equipamentos com antecedência mínima, acesso liberado à área técnica, presença de responsável local, etc.)."
+    },
+    {
+     "titulo": "Passo a passo completo",
+     "texto": "1. Etapa 1: CNPJ, buscar, conferir dados do cliente.\n2. Etapa 2: adicionar todos os equipamentos.\n3. Etapa 3: ajustar parâmetros, clicar em \"Sugerir Grupos\", revisar a divisão.\n4. Etapa 4: clicar em \"Gerar Cronograma\" e aguardar a IA escrever o texto.\n5. Etapa 5: abrir o documento, salvar no Drive, enviar pelo WhatsApp se quiser."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | O que fazer\"Adicione ao menos um equipamento antes de sugerir os grupos\" | Volte pra etapa 2 e adicione a lista\n\"A quantidade de equipamento nos grupos não bate com a lista informada\" | Revise a divisão manual da etapa 3\nAs datas dos grupos parecem \"erradas\" | Dias úteis pulam fim de semana — confira o dia da semana ao lado de cada data"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesGrupo | Conjunto de equipamentos executados no mesmo período\nQI / QO / QD | Qualificação de Instalação / Operação / Desempenho\nDias úteis | Dias da semana sem contar sábado e domingo\nGrupo único | Quando o total de equipamentos é pequeno o bastante pra não precisar dividir\nEste manual descreve o módulo Cronograma de Execução tal como implementado em 2026-08-20."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_DECLARACAO_EXECUCAO.md",
+   "titulo": "Manual do Operador — Módulo Declaração de Execução de Serviço",
+   "tela": "declaracao_exec",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "A declaração sai em seções numeradas: identificação, introdução, metodologia, calibrações realizadas (Tabela 1 com itens, quantidades e observações), referências normativas e, no fim, a declaração com a data de emissão e as assinaturas na mesma página. As normas aparecem uma vez só.\nO documento é salvo na pasta do cliente, numa subpasta com o CNPJ (14 dígitos), com o nome \"Declaracao de execucao - número - TAG - data e hora\", em PDF e em HTML. As declarações antigas, na pasta com o nome do cliente, continuam aparecendo em \"Documentos já gerados\"."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nO documento é salvo sozinho na pasta do cliente ao ser gerado. Se falhar, aparece o botão \"Tentar salvar de novo\". Sem IA, os campos de revisão vêm com texto padrão e um aviso."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Quando terminar a seção 13 (Passo a Passo), você já vai ter feito uma declaração inteira, do início ao fim.\n\nSe em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 15) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você preenche quem é o cliente, qual equipamento foi atendido, o que foi feito nele (metodologia, calibrações realizadas, fotos) e o sistema escreve um documento inteiro, com texto técnico redigido por Inteligência Artificial, pronto para você revisar e entregar ao cliente.\n\nEste documento é uma Declaração de Execução de Serviço — ele registra que o técnico esteve lá e executou o atendimento, exatamente como foi conduzido. Ele nunca diz se o equipamento está aprovado ou reprovado — esse é sempre um documento diferente (o relatório técnico de qualificação/calibração), gerado à parte. Misturar os dois é proibido de propósito: a Declaração é sobre o que foi feito, não sobre o resultado."
+    },
+    {
+     "titulo": "Os 15 tipos de equipamento (perfis)",
+     "texto": "Antes de tudo, você escolhe um destes tipos na tela (campo \"Equipamento\", seção 2). Essa escolha muda automaticamente quais itens de calibração aparecem na seção 3 — cada tipo de equipamento tem sua própria lista de peças calibráveis.\nPerfil que você escolhe | Exemplo de itens calibráveis que aparecemAutoclave a Vapor | Válvula de Segurança, Manômetro, Manovacuômetro, Sensor de Temperatura, Pressostato, Transdutor de Pressão\nCâmara de Conservação | Sensores de temperatura da câmara\nCâmara Fria | Sensores de temperatura da câmara\nRefrigerador | Sensores de temperatura\nFreezer / Ultrafreezer | Sensores de temperatura\nCentrífuga (sem refrigeração) | Temporizador/Cronômetro do ciclo, Indicador de Rotação (RPM)\nCentrífuga Refrigerada | Temporizador/Cronômetro do ciclo, Indicador de Rotação (RPM), Sensor de Temperatura\nTermodesinfectora / Lavadora Desinfetadora Automática | Itens específicos do processo de termodesinfecção\nLavadora Ultrassônica | Itens específicos do processo de cavitação/limpeza\nEsterilizador a Peróxido de Hidrogênio (Gás Plasma) | Itens específicos do processo\nEsterilizador a Óxido de Etileno (ETO) | Itens específicos do processo\nEsterilizador a Vapor de Baixa Temperatura e Formaldeído (VBTF) | Itens específicos do processo\nCapela de Fluxo Laminar | Itens específicos da capela\nSeladora de Grau Cirúrgico | Itens específicos da seladora\nIncubadora de Testes Biológicos | Itens específicos da incubadora\nVocê não precisa decorar essa tabela. Assim que você escolhe o equipamento na tela, o sistema já mostra sozinho a lista certa de itens calibráveis daquele perfil — você só marca os que foram realmente calibrados neste atendimento."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "A tela é dividida em blocos, de cima para baixo:\n1. Cliente — quem é o dono do equipamento.\n2. Equipamento — qual equipamento foi atendido, com quais dados.\n3. Declaração de Execução — o que foi feito (metodologia, calibrações, fotos) e o botão que gera o rascunho com IA.\n4. Revisão dos textos (só aparece depois de gerar o rascunho) — onde você lê e ajusta o que a IA escreveu, antes de confirmar.\n5. Documentos já gerados — busca de declarações antigas, sem precisar gerar de novo."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço do cliente | Digite o CNPJ e clique em \"Buscar CNPJ\"\nBuscar CNPJ (botão) | Dispara a busca automática | Evita digitar nome/endereço manualmente | Clique depois de digitar o CNPJ\nCliente / Razão Social | Nome oficial da empresa | Aparece na capa do documento | Confira se veio certo depois da busca automática; se a busca falhar, digite manualmente\nEndereço | Endereço da empresa | Aparece na capa do documento | Mesma lógica do campo acima\nO que acontece se eu deixar em branco? O documento é gerado do mesmo jeito, mas fica com campos vazios na capa. Preencha sempre antes de gerar o documento final."
+    },
+    {
+     "titulo": "Seção 2 — Equipamento",
+     "texto": "Campo | O que é | Para que serve | O que fazerEquipamento (dropdown) | O tipo de equipamento atendido (ver seção 2 deste manual) | Define quais itens calibráveis aparecem na seção 3 | Escolha o tipo certo antes de marcar as calibrações — trocar depois muda a lista de itens\nTAG / Identificação | Código interno do equipamento no cliente | Identifica qual equipamento específico foi atendido | Copie do equipamento físico ou peça ao cliente\nMarca | Fabricante do equipamento | Informação de identificação no documento | Digite o nome do fabricante\nModelo | Modelo do equipamento | Informação de identificação no documento | Digite o modelo\nLocalização | Onde o equipamento fica fisicamente (sala, setor) | Ajuda a rastrear o equipamento no cliente | Digite o local\nData de início | Data em que o atendimento começou | Aparece no documento | dd/MM/aaaa\nData de fim | Data em que o atendimento terminou | Aparece no documento | Deixe em branco se o atendimento foi feito em um único dia\nTécnico executor | Nome de quem realizou o atendimento | Aparece como responsável pela execução no documento | Digite o nome completo"
+    },
+    {
+     "titulo": "Seção 2 — Equipamento > Local do atendimento",
+     "texto": "Campo | O que é | Para que serve | O que fazerRealizado no laboratório da Metrolab's (caixa de marcar) | Diz se o atendimento foi feito no laboratório ou nas instalações do cliente | Muda a redação do documento (menciona onde o serviço foi realizado) | Deixe desmarcado no caso mais comum (atendimento em campo, na casa do cliente). Marque só quando o equipamento foi trazido até o laboratório da Metrolab's"
+    },
+    {
+     "titulo": "Seção 3 — Declaração de Execução",
+     "texto": "Campo | O que é | Para que serve | O que fazerMetodologia | Texto livre descrevendo como o atendimento foi conduzido | Vira a base para a IA escrever a seção \"Metodologia\" do documento | Descreva o procedimento seguido, instrumentos padrão usados, sequência de verificação. Quanto mais detalhe real você der aqui, mais rico e específico sai o texto da IA\nCalibrações realizadas (lista de itens, muda por perfil) | Cada peça calibrável do equipamento escolhido (ver seção 2) | Registra o que foi de fato calibrado neste atendimento | Marque a caixa de cada item calibrado; ajuste a quantidade (padrão 1) se mais de uma peça igual foi calibrada; preencha o achado técnico só se algo estiver fora do padrão (ex.: vazamento, desgaste, corrosão) — deixe em branco se estava tudo normal\nRegistros fotográficos (até 4, opcional) | Fotos do atendimento, cada uma com legenda opcional | Ilustra o documento com evidência visual | Anexe as fotos relevantes; a legenda é livre, só um complemento\nNúmero do documento (opcional) | Código de referência interno, se sua empresa usar um | Numeração/controle interno | Preencha só se tiver um código — a data já aparece sozinha no documento, não repita a data aqui\nO que acontece se eu não marcar nenhuma calibração? O documento é gerado do mesmo jeito — a seção \"Calibrações Realizadas\" simplesmente não aparece nele. Use isso quando o atendimento não envolveu calibração nenhuma (por exemplo, uma visita só de inspeção)."
+    },
+    {
+     "titulo": "Gerar Declaração com IA — o que acontece",
+     "texto": "Depois de preencher as seções 1, 2 e 3, clique em \"Gerar Declaração com IA\".\n\nO sistema lê tudo o que você preencheu e pede para a Inteligência Artificial escrever, numa única chamada, os textos do documento: Introdução, Metodologia (redação formal em cima do que você escreveu), Calibrações Realizadas (só se houver alguma marcada) e Declaração Final. Isso pode levar alguns segundos — o botão fica desabilitado e uma mensagem de \"Gerando textos com IA...\" aparece até terminar.\n\nQuando terminar, a caixa de Revisão (seção 8 deste manual) aparece na tela, logo abaixo, já com o cursor descendo até ela automaticamente."
+    },
+    {
+     "titulo": "Revisão dos textos antes de confirmar",
+     "texto": "Campo | O que éIntrodução | Parágrafo de abertura do documento, apresentando o objetivo do atendimento\nMetodologia | Versão formal, redigida pela IA, do que você escreveu no campo \"Metodologia\" da seção 3\nCalibrações Realizadas (só aparece se houve alguma marcada) | Texto explicando o que foi calibrado\nDeclaração Final | O parágrafo que efetivamente declara que o serviço foi executado\nMuito importante — leia com atenção: estes textos vão direto para o documento final, exatamente como estiverem na tela quando você clicar em \"Confirmar\". A IA escreve com base no que você informou, mas a revisão é sua responsabilidade — leia cada campo, corrija qualquer coisa que pareça errada, incompleta ou que não reflita o que realmente aconteceu, antes de confirmar."
+    },
+    {
+     "titulo": "Confirmar e Gerar Documento",
+     "texto": "Depois de revisar (e, se necessário, corrigir) os textos, clique em \"Confirmar e Gerar Documento\".\n1. Uma nova aba do navegador abre imediatamente, mostrando \"Gerando documento, aguarde...\".\n2. Quando o sistema termina de montar o documento, essa mesma aba é preenchida com o documento final completo, pronto para imprimir (Ctrl+P) ou salvar como PDF pelo próprio navegador.\n3. Na tela original, aparece \"Salvando na pasta do cliente…\" e, em seguida, o link do arquivo salvo (PDF e HTML). Se a gravação falhar, use \"Tentar salvar de novo\".\n\nO documento é salvo automaticamente na pasta do cliente (PDF e HTML) ao ser gerado. Fechar a aba não apaga a cópia salva."
+    },
+    {
+     "titulo": "Documentos já gerados",
+     "texto": "No fim da tela, você pode buscar declarações que já foram salvas no Drive anteriormente, sem precisar gerar tudo de novo.\nCampo | O que fazerBuscar por cliente, TAG ou nome do arquivo | Digite qualquer parte do nome do cliente, da TAG do equipamento, ou do nome do arquivo, e clique em \"Buscar\"\nO resultado aparece como uma lista de links — clique em qualquer um para abrir o documento salvo direto no Drive."
+    },
+    {
+     "titulo": "O que este documento NÃO é",
+     "texto": "Este é o ponto mais importante deste manual, e vale repetir: a Declaração de Execução de Serviço nunca diz se o equipamento passou ou não passou em algum teste. Ela só registra que o serviço técnico foi realizado, como foi conduzido, e o que foi calibrado. O resultado técnico (conforme/não conforme, aprovado/reprovado) é sempre um documento separado — o Relatório de Qualificação (QI/QO/QD), quando aplicável, ou o relatório técnico específico do ensaio realizado.\n\nSe um cliente perguntar \"esse equipamento está aprovado?\", a resposta não está neste documento — está no relatório técnico correspondente."
+    },
+    {
+     "titulo": "Passo a passo — gerando uma declaração do zero",
+     "texto": "1. Abra o módulo. Espere o selo de status virar \"pronto\" no topo.\n2. Seção 1 (Cliente): digite o CNPJ, clique em \"Buscar CNPJ\", confira nome/endereço.\n3. Seção 2 (Equipamento): escolha o tipo de equipamento correto. Preencha TAG, marca, modelo, localização, datas de início/fim, técnico executor. Marque \"Realizado no laboratório\" só se for o caso.\n4. Seção 3 (Declaração de Execução): escreva a metodologia com o máximo de detalhe real possível. Marque as calibrações realizadas, ajuste quantidades e registre achados técnicos se houver algo fora do padrão. Anexe fotos se quiser. Preencha o número do documento se sua empresa usar um.\n5. Clique em \"Gerar Declaração com IA\" e aguarde.\n6. Revise com atenção cada texto gerado (Introdução, Metodologia, Calibrações, Declaração Final) — corrija o que precisar.\n7. Clique em \"Confirmar e Gerar Documento\". O documento abre em uma nova aba.\n8. A cópia em PDF e HTML é salva sozinha na pasta do cliente; o link aparece na tela."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazerA lista de calibrações mudou depois que eu já tinha marcado algumas | Você trocou o tipo de Equipamento (seção 2) depois de já ter marcado itens | Marque as calibrações depois de escolher o equipamento certo, não antes\nA seção \"Calibrações Realizadas\" não aparece no texto gerado | Nenhum item de calibração foi marcado na seção 3 | Comportamento esperado — marque ao menos um item se o atendimento envolveu calibração\nOs textos da revisão saíram genéricos, sem detalhe do que realmente aconteceu | O campo \"Metodologia\" da seção 3 foi preenchido com pouco ou nenhum detalhe | Escreva mais detalhe real na Metodologia antes de gerar — a IA só escreve em cima do que você informou, nunca inventa\nFechei a aba do documento | A cópia já foi salva na pasta do cliente ao gerar | Abra o documento em \"Documentos já gerados\""
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesDeclaração de Execução de Serviço | Documento que registra que um atendimento técnico foi realizado, como foi conduzido e o que foi calibrado — sem julgar se o equipamento está apto\nPerfil de equipamento | O tipo de equipamento escolhido na seção 2 — define a lista de itens calibráveis que aparece na seção 3\nItem calibrável | Uma peça específica do equipamento que pode ser calibrada (ex.: manômetro, sensor de temperatura)\nAchado técnico | Uma observação sobre algo fora do padrão encontrado durante a calibração de um item (ex.: vazamento, desgaste)\nRascunho | O texto gerado pela IA na primeira etapa, ainda sujeito a revisão antes de virar documento final\nEste manual descreve o módulo Declaração de Execução de Serviço tal como implementado em 2026-07-27. Se a tela mudar no futuro (novos campos, novos perfis), este documento precisa ser atualizado junto — ele não se atualiza sozinho."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_EMAIL.md",
+   "titulo": "Manual do módulo E-mail integrado (SGO+ e COMMAND)",
+   "tela": "email",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 21/10/2026. Telas: SGO+ › Principal › E-mail (JS_Email.html, SGO_Email.js); COMMAND › E-mail (ModEmail.html, Email.js). Servidor: sgo_servidor/src/servicos/emailPessoal.ts (caixa, leitura, envio, verificação), cofre.ts (senha cifrada), htmlSeguro.ts (limpeza do HTML), global SGO_EMAIL (compat/email.ts)."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "Cada colaborador usa a própria caixa @metrolabs.com.br dentro do sistema: Entrada, Enviados, Rascunhos, Lixeira e as demais pastas do servidor de e-mail; busca; filtros Não lidas, Com anexo e De cliente; ler; escrever; responder; responder a todos; encaminhar; anexar; baixar anexo; salvar rascunho; mover; marcar como não lida; apagar para a Lixeira; apagar para sempre (só na Lixeira, com confirmação). O sistema reconhece o cliente pelo remetente, avisa e-mail novo e cobra o e-mail de cliente sem resposta."
+    },
+    {
+     "titulo": "Conectar a caixa",
+     "texto": "1. Abra E-mail › aba \"Minha caixa e assinatura\".\n2. Informe o endereço (vem preenchido com o e-mail do cadastro) e a senha da caixa, a mesma do webmail.\n3. Toque em \"Testar e conectar\". O servidor testa a leitura (IMAP mail.metrolabs.com.br:993) e o envio (SMTP mail.metrolabs.com.br:465) antes de gravar.\n4. Pronto: a aba \"Caixa de e-mail\" abre a Entrada.\n\nSó caixas do domínio da empresa (configurável no servidor: EMAIL_DOMINIOS, padrão metrolabs.com.br). No COMMAND a conexão é feita uma vez também (mesma senha); cada sistema só usa a caixa de quem conectou nele.\n\n\"Trocar a senha guardada\" grava a senha nova depois de testar. \"Desconectar\" apaga a senha guardada e o rastro das mensagens no servidor; as mensagens continuam na caixa."
+    },
+    {
+     "titulo": "Segurança e privacidade (parte 1)",
+     "texto": "A senha é cifrada (AES-256-GCM) com a chave do servidor assim que chega. A chave fica em /opt/metrolabs/sgo/cofre/chave (fora do banco, da pasta de dados e do .env, portanto fora do backup). Quem tiver só o backup não lê as senhas. Perdendo o servidor, cada colaborador conecta de novo. A senha nunca volta para o navegador, nunca vai para o registro e não é lida pelo código do SGO+/COMMAND (só o serviço do servidor a abre, na hora de conectar no servidor de e-mail). Caixa pessoal só abre para o dono. O dono é \"sistema:id do usuário\" montado pelo servidor com a sessão: nem Administrador, nem gestão, nem o mesmo usuário em outro sistema abrem. Leitura sob demanda: nada da caixa é copiado para o banco. O banco guarda, das mensagens novas da Entrada, só remetente, assunto, data, lida e respondida, por 30 dias, para o contador e as pendências. HTML limpo no servidor (sem script, iframe, formulário, eventos, links javascript, CSS perigoso) e mostrado num iframe com sandbox sem script e política de conteúdo que não carrega nada de fora. Imagens externas só com \"Mostrar imagens\". Link pede confirmação mostrando o site de destino e destaca quando o texto do link mostra outro endereço. Limites por usuário: 30 mensagens ou 100 destinatários por hora, 50 destinatários por mensagem, 18 MB de anexos somados por envio, 25 MB para baixar anexo (EMAIL_LIMITE_HORA, EMAIL_LIMITE_DESTINATARIOS_HORA, EMAIL_MAX_DESTINATARIOS, EMAIL_ENVIO_MAX_MB, EMAIL_ANEXO_MAX_MB). O envio em nome do usuário pela caixa do sistema também conta. Trilha email_auditoria (sem conteúdo): conectar, reconectar, desconectar, envio (quantidade e domínios dos destinatários), apagar para sempre, abrir e ler caixa compartilhada, cadastro e mudança de acesso. O Administrador vê a trilha de cada caixa compartilhada."
+    },
+    {
+     "titulo": "Segurança e privacidade (parte 2)",
+     "texto": "Senha recusada pelo servidor de e-mail: o sistema marca e para de tentar até o dono gravar a senha nova (o provedor bloqueia por tentativas erradas)."
+    },
+    {
+     "titulo": "Cliente",
+     "texto": "O remetente é comparado com o e-mail do cadastro de clientes (SGO+: CAD_CLIENTES.EMAIL; COMMAND: CONTATOS.email e EMPRESAS.email) e com o domínio desses e-mails (provedores públicos como gmail.com ficam de fora; domínio que aparece em dois clientes também). A leitura mostra \"Cliente: nome\" com \"Abrir cadastro\" e \"Registrar no cliente\", que guarda resumo, assunto, remetente, data e quem registrou (SGO+: aba EML_CLIENTE_REGISTROS; COMMAND: EMAIL_REGISTROS). No COMMAND, o detalhe do chamado tem \"Responder por e-mail\", que abre a janela com o e-mail do contato do cliente e o código do chamado no assunto."
+    },
+    {
+     "titulo": "Avisos",
+     "texto": "Número de não lidas no item E-mail do menu e balão \"Novo e-mail\" (SGO+ e COMMAND), lidos a cada 60 s só com a aba visível; a verificação das caixas roda no servidor a cada 3 min (EMAIL_VERIFICAR_SEG), uma conta por vez, só com STATUS e os envelopes novos.\nPendência da própria pessoa no Início (central de pendências): e-mail de cliente não lido há mais de 4 horas úteis, ou lido e sem resposta há mais de 8 horas úteis.\nGestão: sem resposta há mais de 16 horas úteis (2 dias úteis) vira item \"colaborador com e-mail de cliente parado\" na Caixa de decisões do gestor da área da pessoa (GES_TIPOS email_cliente_parado) e sobe a escada de cobrança (e-mail diário, resumo diário do WhatsApp da gestão, Diretoria). O item tem só o nome, os clientes e o tempo parado; nunca assunto ou texto.\nWhatsApp: nunca um aviso por e-mail recebido; só o resumo diário da escada da gestão.\nPrazos ajustáveis pelo Administrador em E-mail › Caixas compartilhadas › Prazos dos avisos."
+    },
+    {
+     "titulo": "Caixas compartilhadas (Administrador do SGO+)",
+     "texto": "E-mail › aba \"Caixas compartilhadas\" › \"Cadastrar caixa compartilhada\": endereço, nome que o cliente vê, senha (testada), áreas e pessoas com acesso. Quem tem acesso escolhe a caixa no seletor acima das pastas. Ao responder, a mensagem fica marcada \"Respondendo: nome\" por 30 minutos e, depois do envio, \"Respondida por nome\". No COMMAND a caixa aparece para quem tem a conta ligada ao SGO+ (sgo_id) e foi liberado por pessoa ou pela área do cadastro do SGO+. Uma caixa é pessoal ou compartilhada, nunca as duas."
+    },
+    {
+     "titulo": "Para as outras telas: enviar como o usuário",
+     "texto": "SGO+ (servidor do legado):\n\nSGO_Email_enviarComoUsuario_({ usuarioId, para, cc, cco, assunto, html | texto, responderPara,\n anexos: [ { arquivoId, nome?, tipo? } | { conteudo: base64, nome, tipo } | { blob, nome? } | Blob ] })\n→ { ok, via: 'pessoal' | 'sistema', de, responderPara, messageId?, salvoEmEnviados?, message? }\n\nCOMMAND: cmdEmailEnviarComoUsuario_({ usuarioId, para, cc, cco, assunto, html | texto, anexos: [{ conteudo, nome, tipo } | Blob] }), mesmo retorno.\n\nCom caixa pessoal conectada, sai da caixa da pessoa (cópia em Enviados; a resposta do cliente cai na caixa dela). Sem caixa, sai pela caixa do sistema (sistema@metrolabs.com.br) com o nome da pessoa e \"responder para\" o e-mail do cadastro. Nunca lança erro. Os dois caminhos contam no limite por hora. Já usado por \"Enviar documento\" (SGO_EnviarDoc.js)."
+    },
+    {
+     "titulo": "Erros comuns",
+     "texto": "O que aparece | O que fazerO servidor de e-mail recusou a senha | Confira no webmail; se trocou a senha, \"Trocar a senha guardada\".\nSó dá para conectar caixas da empresa | Use o endereço @metrolabs.com.br.\nLimite de envio atingido | \"Salvar rascunho\" e envie mais tarde.\nA mensagem não está mais na pasta | Foi movida ou apagada no webmail ou celular; procure nas pastas e na Lixeira.\nO e-mail integrado só funciona no servidor próprio | Entre por sgo.metrolabs.com.br ou command.metrolabs.com.br."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_ESTUFA_BANHOMARIA.md",
+   "titulo": "Manual do Operador — Módulo Estufa + Banho-maria",
+   "tela": "estufa_banhomaria",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026",
+     "texto": "O certificado em A4 ganhou um sumário na primeira página, com o número da página de cada seção. As seções e subseções são numeradas (por exemplo, \"5.1 Critérios de aceitação\" e \"7.2 Observações\").\nO quadro colorido com o parecer aparece só no início do documento. A conclusão termina com o parecer em uma linha.\nA tabela \"Verificação dos critérios de aceitação\" mostra o resultado obtido e a situação de cada estudo. O requisito fica na seção 5.1.\nA revisão do documento sai com dois dígitos (\"Revisão 00\"). A tela e os botões não mudaram."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nSão quatro perfis: Estufa de Incubação, Banho-maria, Estufa de Esterilização/Despirogenização e Secadora de traqueias (CME).\nSelo verde \"APROVADO (COM OBSERVAÇÃO)\": saída da faixa dentro da tolerância declarada. O equipamento está aprovado e a saída aparece em Observações do certificado.\nO campo \"DTL\" virou \"Identificação do registrador\" (TAG do cadastro de Padrões de referência). O botão final é \"Confirmar e gerar o certificado\".\nSe o arquivo tem várias abas, informe \"Nome da aba de dados (opcional)\".\nAtualização de 21/09/2026 — produção v280: sensores agora são selecionáveis livremente, sem senha para reduzir a quantidade. Orientações antigas de mínimo obrigatório e bloqueio por quantidade neste documento estão substituídas. Incluído o perfil Secadora de traqueias — CME, com três períodos em vazio e três com carga, temperatura e duração editáveis. Consulte o guia atualizado de operação e relatórios. O manual incorporado à tela já apresenta o novo funcionamento."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Quando terminar a seção 12 (Passo a Passo), você já vai ter feito um laudo inteiro, do início ao fim.\n\nSe em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 14) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você recebe um arquivo de um aparelho chamado datalogger (um gravador de temperatura), que ficou registrando a temperatura de um equipamento por um período (geralmente 24 horas). Você importa esse arquivo no sistema, preenche alguns dados do cliente e do equipamento, e o sistema:\n1. Lê e organiza os dados de temperatura;\n2. Compara com o que a norma técnica (ABNT NBR 16328:2024) exige;\n3. Decide se o equipamento passou ou não passou no teste;\n4. Gera um relatório em planilha (com gráfico) e, se você quiser, um certificado em PDF com texto explicativo, prontos para entregar ao cliente.\n\nVocê nunca precisa fazer nenhuma conta. O sistema faz todos os cálculos. Sua função é: preencher os dados certos, no campo certo, e conferir se o resultado faz sentido antes de entregar."
+    },
+    {
+     "titulo": "Os três tipos de equipamento (perfis)",
+     "texto": "Antes de tudo, você escolhe um destes três tipos na tela (campo \"Perfil do equipamento\", seção 2). É a decisão mais importante da tela — a tela inteira muda de acordo com o que você escolhe, mostrando só os campos que fazem sentido para aquele equipamento e escondendo o resto.\nPerfil que você escolhe | Nome técnico da norma | Faixa de temperatura sugerida | Sensores mínimos exigidosEstufa de Incubação | Anexo F | 33 °C a 37 °C (ajustável) | 12\nBanho-maria | Anexo I | 36 °C a 40 °C (ajustável) | 6\nEstufa de Esterilização/Despirogenização | Anexo E | 160 °C a 260 °C (ajustável) | 12\nPor que a faixa de temperatura é \"sugerida\" e ajustável? Porque, ao contrário de uma geladeira de vacina (que sempre tem que ficar entre 2 °C e 8 °C por lei), a norma não fixa uma temperatura única para estes três equipamentos — cada cliente usa a temperatura que o processo dele exige. O sistema já vem com um valor de partida plausível, mas você sempre confirma com o cliente/protocolo antes de gerar o laudo final.\n\nPor que os sensores mínimos mudam? É exigência direta da norma para cada tipo de equipamento — não é um número que o sistema escolhe. Se você tentar gerar um laudo oficial com menos sensores que o mínimo, o sistema bloqueia e não deixa continuar (mais detalhes na seção 8)."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "A tela é dividida em 6 blocos numerados, de cima para baixo:\n1. Cliente — quem é o dono do equipamento.\n2. Equipamento — qual equipamento está sendo testado, e em qual faixa de temperatura.\n3. Estudos do Ensaio — quais testes você vai reportar (mudam de acordo com o perfil escolhido).\n4. Importação do Datalogger — de onde vêm os dados de temperatura.\n5. Gerar Relatório — o botão que processa tudo e entrega a planilha + PDF.\n6. Certificado de Qualificação Térmica (Beta) — um segundo documento, opcional, com texto explicativo gerado por Inteligência Artificial.\n\nExiste ainda um Console Operacional no fim da tela — um \"diário de bordo\" que mostra tudo que o sistema está fazendo, em tempo real, enquanto você usa."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço do cliente | Digite o CNPJ e clique em \"Buscar CNPJ\" — o sistema consulta uma base pública e preenche os dois campos abaixo sozinho\nBuscar CNPJ (botão) | Dispara a busca automática | Evita digitar nome/endereço manualmente | Clique depois de digitar o CNPJ\nCliente / Razão Social | Nome oficial da empresa | Aparece na capa do laudo | Confira se veio certo depois da busca automática; se a busca falhar, digite manualmente\nEndereço | Endereço da empresa | Aparece na capa do laudo | Mesma lógica do campo acima\nResponsável técnico (assinatura do laudo) | Seu nome, ou o nome de quem está assinando tecnicamente o laudo | É o nome que aparece como responsável pelo documento | Digite o nome completo da pessoa que vai assinar\nO que acontece se eu deixar em branco? O laudo é gerado do mesmo jeito, mas fica com campos vazios na capa — o que passa uma imagem pouco profissional para o cliente. Preencha sempre antes de gerar o relatório final."
+    },
+    {
+     "titulo": "Seção 2 — Equipamento",
+     "texto": "Campo | O que é | Para que serve | O que fazerPerfil do equipamento | O tipo de equipamento (ver seção 2 deste manual) | Define toda a lógica da tela: faixa sugerida, sensores mínimos, quais estudos aparecem | Escolha o tipo certo antes de preencher qualquer outra coisa — trocar depois reseta alguns campos\nTAG / Identificação | Código interno do equipamento no cliente (etiqueta, patrimônio) | Identifica qual equipamento específico foi testado, entre vários do mesmo cliente | Copie do equipamento físico ou peça ao cliente\nMarca | Fabricante do equipamento | Informação de identificação no laudo | Digite o nome do fabricante\nModelo | Modelo do equipamento | Informação de identificação no laudo | Digite o modelo\nNúmero de série | Número de série de fábrica | Informação de identificação no laudo | Digite o número de série\nLocalização | Onde o equipamento fica fisicamente (sala, setor) | Ajuda a rastrear o equipamento no cliente | Digite o local\nVolume interno declarado (L) | Volume em litros da câmara interna | Só um dado informativo do laudo | Preencha se souber — não muda o número mínimo de sensores (isso é decidido só pelo tipo de equipamento, explicado na seção 2)"
+    },
+    {
+     "titulo": "Seção 2 — Equipamento > Faixa operacional",
+     "texto": "Campo | O que é | Para que serve | O que fazerFaixa mínima (°C) | Temperatura mínima aceitável para este equipamento | É o piso: leituras abaixo disso reprovam o ensaio | Já vem preenchido com um valor sugerido ao escolher o perfil — ajuste se o protocolo do cliente pedir outro valor\nFaixa máxima (°C) | Temperatura máxima aceitável | É o teto: leituras acima disso reprovam o ensaio | Mesma lógica do campo acima\nTolerância operacional (°C) | Uma margem de segurança em torno da faixa | Uma leitura que passou da faixa por pouco (dentro da tolerância) vira \"Aprovado com Alerta\" em vez de \"Reprovado\" direto | Normalmente não precisa mexer — já vem com um valor padrão sensato para o perfil\nImportante: estes três campos sempre podem ser editados, em qualquer perfil — o sistema não trava nenhum deles. Eles só vêm pré-preenchidos com um valor de partida razoável para te ajudar; a responsabilidade de confirmar o valor certo com o protocolo do cliente é sua."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio",
+     "texto": "Ideia central desta seção: todos os estudos que você marcar aqui são lidos do mesmo arquivo de datalogger, que você importa na seção 4. Você não precisa de um arquivo separado para cada estudo — o sistema recorta os pedaços certos do mesmo arquivo, usando os horários de início/fim que você informar em cada bloco abaixo.\n\nVocê pode marcar mais de um estudo no mesmo laudo (por exemplo: Distribuição de Temperatura + Abertura de Porta, os dois no mesmo relatório).\n\nOs blocos que aparecem mudam conforme o perfil escolhido. A tabela abaixo mostra o que aparece em cada um:\nEstudo | Estufa de Incubação | Banho-maria | Estufa Esterilização/DespirogenizaçãoDistribuição de Temperatura | ✅ | ✅ | —\nAbertura de Porta | ✅ | — | —\nQueda de Energia | ✅ | — | —\nDistribuição em Vazio (3 repetições) | — | — | ✅\nPenetração com Carga e Letalidade (3 repetições) | — | — | ✅\nSe um bloco não aparece na sua tela, é porque a norma não pede aquele estudo para o equipamento que você escolheu — não é um erro do sistema, é intencional."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Distribuição de Temperatura (Estufa de Incubação e Banho-maria) (parte 1)",
+     "texto": "Campo | O que é | Para que serve | O que fazerIncluir estudo de distribuição? | Liga/desliga este estudo no laudo | Se \"Não incluir\", nada deste bloco entra no relatório final | Escolha \"Sim — em vazio\" (equipamento sem produto dentro) ou \"Sim — com carga\" (equipamento com produto/amostras dentro)\nInício do estudo | Data/hora em que a gravação do teste começou | Delimita, dentro do arquivo completo, onde este estudo começa | Digite no formato dd/MM/aaaa HH:mm:ss, ex.: 10/07/2026 08:00:00\nFim do estudo | Data/hora em que a gravação do teste terminou | Delimita onde este estudo termina | Mesmo formato do campo acima\nFim da rampa de estabilização (opcional) | O momento em que o equipamento terminou de esquentar/esfriar e entrou na faixa de trabalho | Leituras antes desse horário não contam para aprovação/reprovação (é normal um equipamento recém-ligado ainda não estar na temperatura certa) | Deixe em branco se o equipamento já estava estável quando a gravação começou. Preencha só se o técnico ligou o equipamento frio/fora da faixa e já começou a gravar\nDetectar rampa automaticamente (botão) | Pede para o sistema sugerir esse horário sozinho, olhando os dados | Evita você ter que descobrir manualmente, olhando gráfico por gráfico | Clique — o sistema mostra a sugestão e pede sua confirmação antes de aplicar."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Distribuição de Temperatura (Estufa de Incubação e Banho-maria) (parte 2)",
+     "texto": "Você sempre pode recusar\nUtilizou tampa durante o ensaio? (só aparece no Banho-maria) | Se a cuba do banho-maria estava com tampa ou aberta | A norma pede que isso conste no laudo (item I.2.f) | Escolha \"Sim, com tampa\" ou \"Não, sem tampa\"\nQuantidade de líquido na cuba (só aparece no Banho-maria) | Observação livre sobre o nível de líquido | A norma pede que a quantidade de líquido seja registrada (item I.2.e) | Escreva algo como \"cuba cheia até a marca de nível\"\nSobre a duração exigida: para Estufa de Incubação, a norma recomenda 24 horas contínuas de gravação. Para Banho-maria, não há duração fixa — o tempo é definido pelo protocolo do cliente. O aviso que aparece embaixo do título do bloco muda sozinho conforme o perfil escolhido, avisando qual das duas regras se aplica.\n\nO que acontece se eu não usar \"Detectar rampa automaticamente\" e nem preencher manualmente? O sistema assume que todas as leituras do arquivo, do início ao fim, contam para aprovação — inclusive as primeiras, quando o equipamento ainda pode estar esquentando. Se o equipamento já estava estável quando você começou a gravar (o mais comum), isso é o comportamento certo e você não precisa fazer nada."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Abertura de Porta (só Estufa de Incubação)",
+     "texto": "Simula o que acontece quando um funcionário abre a porta do equipamento durante o uso — quanto tempo a temperatura demora para voltar ao normal.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de abertura de porta neste laudo (caixa de marcar) | Liga/desliga este bloco inteiro | Sem marcar, os campos abaixo ficam escondidos e não entram no laudo | Marque só se este teste foi realmente feito\nTipo de abertura | Se a porta foi aberta parcialmente ou totalmente | Documenta como o teste foi conduzido | Escolha \"Porta semiaberta\" ou \"Porta totalmente aberta\"\nInício do evento | Hora exata em que a porta foi aberta | Marca, dentro do arquivo, onde está esse evento | Digite dd/MM/aaaa HH:mm:ss\nFim do evento (opcional) | Hora em que a porta foi fechada de novo | Ajuda a visualizar o evento no gráfico | Preencha se souber; pode deixar em branco\nTempo-alvo mínimo (min) (opcional) | Quanto tempo, no máximo, o equipamento pode demorar para voltar à faixa normal depois do evento | Este é o campo que decide se o resultado é Aprovado/Reprovado ou só informativo — veja o quadro abaixo | Preencha só se o protocolo do cliente definir um tempo-limite\nMuito importante — leia com atenção: Se você preencher o \"Tempo-alvo mínimo\", o sistema vai comparar o tempo real de recuperação com esse valor e marcar o estudo como Aprovado ou Reprovado. Se você deixar em branco, o sistema só documenta quanto tempo o equipamento levou para se recuperar, sem aprovar nem reprovar — vira uma informação de caracterização do equipamento, não um critério de corte. Use isso a seu favor: se o cliente não tem um critério definido, deixe em branco e apenas reporte o tempo medido."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Queda de Energia (só Estufa de Incubação)",
+     "texto": "Mesma lógica da Abertura de Porta, mas simulando uma falta de energia em vez de porta aberta.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de queda de energia neste laudo | Liga/desliga este bloco | — | Marque só se este teste foi realmente feito\nInício do evento | Hora em que a energia caiu | Marca o evento no arquivo | dd/MM/aaaa HH:mm:ss\nFim do evento (opcional) | Hora em que a energia voltou | Ajuda o gráfico | Preencha se souber\nTempo-alvo mínimo (min) (opcional) | Quanto tempo o equipamento pode ficar sem energia antes de sair da faixa seguramente | Mesma regra da seção 6.2: com valor preenchido vira Aprovado/Reprovado; em branco vira só informativo | Preencha conforme o protocolo do cliente, ou deixe em branco para só documentar"
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Distribuição em Vazio — Anexo E (só Estufa de Esterilização/Despirogenização)",
+     "texto": "Este estudo verifica se a temperatura fica uniforme dentro da estufa sem nenhum produto/carga dentro, e a norma exige que ele seja feito 3 vezes (3 repetições independentes), não apenas uma.\nCampo | O que é | Para que serve | O que fazerIncluir estudo de distribuição em vazio (Anexo E) neste laudo | Liga/desliga o bloco inteiro | — | Marque se este ensaio foi feito\nRepetição 1/2/3 — Início e Fim | Data/hora de cada uma das 3 execuções do teste | Cada repetição é analisada separadamente, e depois o sistema junta o resultado das três num veredito único | Preencha as 3 repetições — são 3 pares de campos (início e fim de cada uma)\nPor que 3 vezes? Porque um único teste pode ter sido sorte ou azar. Repetir 3 vezes garante que o resultado é consistente. Se qualquer uma das 3 repetições reprovar, o resultado final do estudo é Reprovado — mesmo que as outras duas tenham passado."
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Penetração com Carga e Letalidade — Anexo E (só Estufa de Esterilização/Despirogenização) (parte 1)",
+     "texto": "Este é o estudo mais técnico do sistema. Ele mede se o calor realmente penetrou dentro da carga (produto/material dentro da estufa) o suficiente para matar micro-organismos (esterilização) ou destruir endotoxinas (despirogenização). Também exige 3 repetições. Campo | O que é | Para que serve | O que fazerIncluir estudo de penetração com carga (Anexo E) neste laudo | Liga/desliga o bloco | — | Marque se este ensaio foi feito\nTipo de ensaio | Escolha entre Esterilização (calor seco — FH) ou Despirogenização (endotoxina — FD) | Cada tipo usa uma fórmula de cálculo diferente (ver Glossário:"
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Penetração com Carga e Letalidade — Anexo E (só Estufa de Esterilização/Despirogenização) (parte 2)",
+     "texto": "FH e FD) | Escolha conforme o objetivo do cliente — nunca os dois ao mesmo tempo neste bloco\nValor mínimo exigido (min) (opcional) | O valor de FH ou FD mínimo que o processo precisa atingir | Se deixar em branco, o sistema usa um valor padrão internacional (30 min) | Preencha só se o cliente/protocolo exigir um valor diferente do padrão\nRepetição 1/2/3 — Início e Fim | Data/hora de cada uma das 3 execuções | O sistema calcula o FH ou FD de cada repetição a partir da curva de temperatura registrada | Preencha as 3\nResultado de laboratório (por repetição) | Se um laboratório terceirizado testou um Indicador Biológico ou fez um Ensaio de Endotoxina naquela repetição | Este resultado manda mais que o cálculo do sistema — veja o aviso abaixo | Escolha o tipo, se aplicável\nResultado (por repetição) | Se o laboratório aprovou ou reprovou aquela amostra | Junto com o campo acima, define o resultado final daquela repetição | Escolha \"Aprovado\" ou \"Reprovado\" conforme o laudo do laboratório\nLote / Validade / Laboratório responsável (por repetição) | Dados de rastreabilidade do indicador/ensaio usado | Documentação, exigida para auditoria | Preencha com os dados do produto usado no teste\nLaudo do laboratório (PDF) (por repetição, opcional) | Upload do laudo que o laboratório terceirizado emitiu | Anexa o comprovante junto ao seu relatório | Clique no campo de arquivo e escolha o PDF do computador\nRegistro impresso do ciclo do equipamento (por repetição) | Upload do papel/gráfico que o próprio equipamento imprime durante o ciclo | Obrigatório quando o tipo de ensaio é Despirogenização (exigência direta da norma, item B.3.f) | Anexe o arquivo (PDF ou imagem). Se faltar, o sistema avisa no laudo, mas não bloqueia a geração\nO ponto mais importante deste bloco:"
+    },
+    {
+     "titulo": "Seção 3 — Estudos do Ensaio > Penetração com Carga e Letalidade — Anexo E (só Estufa de Esterilização/Despirogenização) (parte 3)",
+     "texto": "o cálculo térmico (FH/FD) que o sistema faz é uma estimativa a partir da temperatura registrada. Mas se você preencher o Resultado de laboratório como \"Reprovado\", isso vale mais que o cálculo — mesmo que o número de FH/FD tenha batido a meta, a repetição é considerada reprovada. É assim porque o teste de laboratório mede o efeito real (micro-organismo morto de verdade, endotoxina destruída de verdade), enquanto o cálculo térmico é só uma previsão baseada na curva de temperatura."
+    },
+    {
+     "titulo": "Sensores",
+     "texto": "Aparece logo depois dos blocos de estudos, ainda dentro da seção 3.\nCampo | O que é | Para que serve | O que fazerNº de sensores instalados | Quantos sensores de temperatura foram usados na gravação | Define quantos \"canais\" de temperatura o sistema vai procurar no arquivo importado | Digite o número real de sensores usados no teste. Já vem pré-preenchido com o mínimo exigido pelo perfil escolhido\nSensores S1, S2, S3... (caixas de marcar, uma para cada sensor) | Lista de todos os sensores, de acordo com o número informado acima | Permite desmarcar um sensor específico se ele, por exemplo, teve defeito durante a gravação e não deve entrar no cálculo | Deixe todos marcados por padrão; desmarque só sensores que você sabe que falharam\nO que acontece se eu colocar menos sensores que o mínimo exigido? Um aviso vermelho aparece na tela na hora, e o sistema bloqueia a geração do laudo, mostrando uma mensagem de erro. Isso é proposital: impede que um laudo saia fora da norma sem ninguém perceber."
+    },
+    {
+     "titulo": "Seção 4 — Importação do Datalogger",
+     "texto": "Aqui você diz ao sistema de onde vêm os dados de temperatura.\nCampo | O que é | Para que serve | O que fazerModo de entrada | Escolha de como os dados vão chegar ao sistema | Cada opção muda os campos que aparecem embaixo | Escolha uma das 3 opções da tabela abaixo"
+    },
+    {
+     "titulo": "Seção 4 — Importação do Datalogger > As opções de \"Modo de entrada\"",
+     "texto": "Opção | Quando usar | Como funcionaID / link do arquivo no Drive | O caso mais comum: você já tem o arquivo exportado do datalogger (uma planilha/CSV) | Cole o link do Google Drive no campo, ou clique no campo de arquivo abaixo e escolha o arquivo direto do computador — o sistema faz o upload sozinho e preenche o link\nColar dados brutos | Quando você tem os dados mas não quer subir um arquivo — por exemplo, copiou de outro programa | Cole o texto (cabeçalho + linhas, com colunas separadas por tab, vírgula ou ponto e vírgula) direto na caixa de texto\nUm arquivo por sensor (datalogger individual) | Quando cada sensor gravou seu próprio arquivo separado (dataloggers individuais, não um gravador central) | Volte à seção \"Sensores\": cada sensor marcado ganha seu próprio campo de link/upload. O sistema junta e alinha os horários de todos automaticamente\nPré-visualizar dados (botão, mais abaixo nesta seção): depois de escolher o arquivo/dados, clique aqui para conferir, antes de gerar o laudo final, se o sistema está lendo os dados certos — ele mostra quantas linhas, quantos sensores e qual formato de data foi detectado, e uma prévia da tabela. Use sempre antes de gerar o relatório, é a forma mais rápida de pegar um arquivo errado antes de gastar tempo gerando um laudo que vai sair errado."
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório",
+     "texto": "Elemento | O que é | O que fazerGerar Relatório (botão) | Processa tudo que você preencheu e produz o laudo final | Clique só depois de conferir tudo (recomendado: rodar \"Pré-visualizar dados\" antes)\nLimpar Log (botão) | Apaga o histórico do Console Operacional (seção 11) | Use se a tela de log estiver muito cheia e você quiser começar do zero visualmente — não afeta os dados já preenchidos"
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório > O que aparece depois de clicar em \"Gerar Relatório\" (parte 1)",
+     "texto": "O sistema mostra um \"selo\" colorido com o status geral do laudo, e um selo separado para cada estudo incluído. Veja o que cada status significa: Status | O que significa | O que fazerAPROVADO | O equipamento passou em tudo, dentro da faixa e da tolerância, o tempo todo | Pode entregar o laudo normalmente\nAPROVADO (COM OBSERVAÇÃO) | Passou; alguma leitura saiu da faixa, mas ficou dentro da tolerância declarada | Pode entregar; a saída aparece em Observações do certificado e da planilha\nREPROVADO | O equipamento saiu da faixa aceitável em algum momento (além da tolerância), ou uma repetição/indicador de laboratório reprovou | Não invente uma solução sozinho — reporte ao responsável técnico/cliente. O motivo exato da reprovação aparece no Console Operacional (seção 11)\nINFORMATIVO ou CARACTERIZAÇÃO | O estudo não teve critério de aprovação/reprovação definido (ex.: Abertura de Porta ou Queda de Energia sem \"Tempo-alvo mínimo\" preenchido) — o sistema só está documentando o que aconteceu, sem julgar se é bom ou ruim | Normal — nada a fazer, é assim que o estudo foi configurado\nDepois do selo de status, aparecem dois botões: Abrir planilha — abre o relatório completo (com tabelas e gráfico) direto no navegador. Atualização de 18/10/2026: não existe \"aprovado com alerta\". A excursão dentro da tolerância declarada aprova o estudo e vai para Observações (no certificado sai \"Aprovado\"; na planilha e no selo da tela, \"APROVADO (COM OBSERVAÇÃO)\", em verde). O PDF da planilha (relatório de dados) também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ... - <TAG> - <aaaa-MM-dd HHmm>.pdf\"; a frase logo abaixo dos botões confirma o arquivo ou diz por que não salvou."
+    },
+    {
+     "titulo": "Seção 5 — Gerar Relatório > O que aparece depois de clicar em \"Gerar Relatório\" (parte 2)",
+     "texto": "Baixar PDF — baixa o mesmo relatório já convertido em PDF, pronto para enviar ao cliente.\n\nSe o laudo tiver mais de um estudo marcado (ex.: Distribuição + Abertura de Porta), o status geral no topo é o pior status entre todos os estudos — ou seja, se um estudo reprovar, o laudo inteiro aparece como Reprovado no selo geral, mesmo que os outros estudos tenham aprovado."
+    },
+    {
+     "titulo": "Seção 6 — Certificado de Qualificação Térmica (Beta)",
+     "texto": "Este é um segundo documento, opcional, diferente da planilha da seção 5. Ele não substitui a planilha — é complementar. É um PDF em formato de página A4, com texto corrido explicando o ensaio (não uma tabela de dados). Os textos (Introdução, Objetivo, Análise, Conclusão) são escritos por Inteligência Artificial, a partir dos números que o sistema já calculou.\nCampo | O que é | Para que serveNúmero do Certificado | Código do documento (ex.: 02062026/01RJ) | Numeração/controle interno\nRevisão | Número da versão do certificado (0, 1, 2...) | Controle de revisões, caso o certificado precise ser reemitido\nDTL (identificação do data logger) | Código do equipamento gravador usado | Rastreabilidade do instrumento de medição\nResponsável pelo aceite (cliente) | Nome de quem, do lado do cliente, está aceitando o certificado | Aparece no documento como aceite formal\nTarefa de origem (opcional) | Código de uma ordem de serviço/tarefa relacionada, se houver | Rastreabilidade interna\nRegistros fotográficos (até 4, opcional) | Fotos do equipamento/ensaio, cada uma com uma legenda | Ilustra o certificado com evidência visual"
+    },
+    {
+     "titulo": "Seção 6 — Certificado de Qualificação Térmica (Beta) > Como gerar",
+     "texto": "1. Clique em \"Gerar Rascunho com IA\" — o sistema roda a mesma análise da seção 5 e pede para a IA escrever os textos.\n2. Revise os textos que aparecem (Introdução, Objetivo, Análise por estudo, Conclusão Geral) — eles vão direto para o documento final exatamente como estiverem na tela, então corrija qualquer coisa que pareça errada antes de continuar.\n3. Clique em \"Confirmar e Gerar Certificado\" — o documento abre em uma nova aba, pronto para imprimir (Ctrl+P) ou salvar como PDF.\n\nAtenção: como o texto é gerado por IA, sempre leia antes de confirmar. A IA escreve com base nos números certos, mas o texto em si precisa da sua revisão antes de virar um documento oficial."
+    },
+    {
+     "titulo": "Console Operacional (o log)",
+     "texto": "É a caixa preta, no fim da tela, com fundo escuro, chamada \"LOG OPERACIONAL\". Toda ação que o sistema faz — carregar a configuração, ler o arquivo, calcular resultados, gerar o PDF — aparece ali como uma linha de texto, com hora.\nCor da linha | O que significaVerde | Sucesso — a ação deu certo\nAmarelo | Aviso — algo que você deve prestar atenção, mas não é um erro\nVermelho | Erro — algo falhou e precisa da sua ação\nQuando algo dá errado e você não sabe por quê, olhe sempre o Console Operacional primeiro — a mensagem de erro exata, e muitas vezes o motivo específico (ex.: \"sensor 3 ficou 2,1 °C acima da faixa às 14:32:00\"), está sempre registrada ali."
+    },
+    {
+     "titulo": "Passo a passo — gerando um laudo do zero",
+     "texto": "Um roteiro prático, resumindo tudo o que este manual explica, para você seguir na primeira vez.\n1. Abra o sistema. Espere o selo \"SISTEMA ONLINE\" aparecer no topo.\n2. Seção 1 (Cliente): digite o CNPJ, clique em \"Buscar CNPJ\", confira nome/endereço, preencha o responsável técnico.\n3. Seção 2 (Equipamento): escolha o perfil correto (Estufa de Incubação / Banho-maria / Estufa de Esterilização-Despirogenização). Preencha TAG, marca, modelo, número de série, localização. Confira a faixa de temperatura sugerida e ajuste se o protocolo do cliente pedir outro valor.\n4. Seção 3 (Estudos): marque os estudos que você realmente fez (o sistema já mostra só as opções válidas para o perfil escolhido). Preencha os horários de início/fim de cada um. Preencha o número de sensores usados.\n5. Seção 4 (Importação): escolha o modo de entrada certo e informe o arquivo/dados. Clique em \"Pré-visualizar dados\" e confira se o número de linhas e sensores detectados bate com o que você espera.\n6. Seção 5: clique em \"Gerar Relatório\". Confira o selo de status geral e o de cada estudo. Se algo reprovou, olhe o Console Operacional para entender o motivo exato.\n7. Clique em \"Abrir planilha\" para conferir visualmente o relatório completo (tabela, gráfico), ou \"Baixar PDF\" para já baixar o documento final.\n8. (Opcional) Seção 6: se o cliente pediu também o Certificado, preencha os campos daquela seção, clique em \"Gerar Rascunho com IA\", leia com atenção os textos gerados, corrija o que precisar, e clique em \"Confirmar e Gerar Certificado\"."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazerSistema bloqueia e diz que o número de sensores é insuficiente | Você digitou menos sensores que o mínimo exigido para o perfil escolhido | Confira o mínimo na tabela da seção 2 deste manual e ajuste o número de sensores usados no ensaio\n\"Pré-visualizar dados\" mostra um número de sensores diferente do que você esperava | O arquivo importado tem mais ou menos colunas de temperatura do que você imaginava | Confira o arquivo original antes de prosseguir — não gere o laudo até bater o número certo\nUm estudo aparece como \"Reprovado\" mas você achava que devia estar \"Aprovado\" | Alguma leitura de temperatura saiu da faixa/tolerância configurada, ou (no Anexo E) o indicador de laboratório foi marcado como reprovado | Olhe o Console Operacional — o motivo exato da reprovação sempre aparece ali\nBloco de estudo (ex.: Abertura de Porta) não aparece na tela | O perfil escolhido não usa esse estudo, segundo a norma | Confira a tabela da seção 6 deste manual — não é erro, é intencional"
+    },
+    {
+     "titulo": "Glossário (parte 1)",
+     "texto": "Termo | Explicação simplesAnexo E, F, I | São capítulos numerados dentro da norma ABNT NBR 16328:2024, cada um com regras específicas para um tipo de equipamento. E = Estufa de Esterilização/Despirogenização; F = Estufa de Incubação;"
+    },
+    {
+     "titulo": "Glossário (parte 2)",
+     "texto": "I = Banho-maria\nDatalogger | Aparelho gravador de temperatura, que fica registrando leituras ao longo do tempo e depois gera um arquivo com esses dados\nFaixa operacional | O intervalo de temperatura (mínima até máxima) considerado aceitável para aquele equipamento funcionar corretamente\nTolerância | Uma margem extra em torno da faixa — uma leitura que passou um pouco do limite, mas dentro dessa margem, não é tratada como uma falha grave\nRampa de estabilização | O período inicial em que um equipamento recém-ligado ainda está esquentando/esfriando até chegar na temperatura de trabalho — leituras desse período não contam para aprovação\nFH | Sigla usada no cálculo de esterilização por calor seco — um número que resume, em minutos equivalentes, o quanto de \"efeito esterilizante\" a temperatura registrada realmente entregou\nFD | Mesma ideia do FH, mas para despirogenização (destruição de endotoxinas) — usa uma fórmula com parâmetros diferentes\nIndicador Biológico | Um produto de laboratório com micro-organismos conhecidos, usado para testar na prática se o processo de esterilização realmente matou o que precisava matar\nEnsaio de Endotoxina | Teste de laboratório que mede se o processo de despirogenização realmente destruiu as endotoxinas presentes\nLetalidade | Termo geral para \"o quanto aquele processo térmico foi eficaz em matar/destruir o que precisava\" — é o que o FH e o FD medem\nPenetração com carga | Estudo que verifica se o calor chegou de verdade até o centro do material que está sendo processado, não só na câmara vazia ao redor\nDistribuição em vazio | Estudo que verifica se a temperatura é uniforme dentro da câmara sem nada dentro, só o ar\nEste manual descreve o módulo Estufa + Banho-maria tal como implementado em 2026-07-21."
+    },
+    {
+     "titulo": "Glossário (parte 3)",
+     "texto": "Se a tela mudar no futuro (novos campos, novos perfis), este documento precisa ser atualizado junto — ele não se atualiza sozinho."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_FROTA.md",
+   "titulo": "Manual do Operador — Módulo Frota",
+   "tela": "frota",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Retirar e devolver veículo, vistoria, KM, abastecimento, despesas, multas, documentos, manutenção, relatório e rastreador.\n\nRevisão: 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão \"Manual do operador\" da tela."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Leia na ordem. Cada tarefa tem passos numerados: faça um passo de cada vez. O nome de cada botão aparece entre aspas, igual ao que está na tela. Palavras desconhecidas estão no Glossário (seção 16)."
+    },
+    {
+     "titulo": "Para que serve a Frota",
+     "texto": "A Frota registra quem pegou cada veículo da empresa e quando devolveu. Em cada ponta você confere o KM, tira fotos e faz a vistoria. Assim, qualquer problema novo aparece logo.\n\nO sistema também avisa sozinho quando manutenção, documento ou CNH vão vencer, descobre quem estava com o veículo quando chega uma multa e monta o relatório da frota.\nAbas do computador (19/10/2026): \"Situação e retiradas\", \"Gestão e melhoria\", \"Veículos e condutores\", \"Manutenção e paradas\", \"Documentos e multas\", \"Abastecimentos e despesas\", \"Rastreamento\" e \"Histórico e relatório\". Cada pessoa só vê as abas do seu perfil."
+    },
+    {
+     "titulo": "Celular e computador; quem pode o quê",
+     "texto": "No celular a tela é a mesma para todos: avisos, botão de devolver, veículos para retirar e veículos em uso. A gestão tem também o quadro \"Opções da gestão\", com \"Registrar abastecimento\", \"Ajustar KM do veículo\" e \"Partida do veículo (rastreador)\".\n\nNo computador, a mesma tela de retirar e devolver fica na aba \"Situação e retiradas\", quadro \"Retirar e devolver\".\nPerfil | O que pode fazerToda a equipe | Retirar em seu próprio nome. Devolver a própria retirada. Ver a situação da frota, os avisos, as listas e o histórico.\nGestão (Administrador, Gestor e Diretoria) | Tudo da equipe. Também: retirar em nome de outra pessoa e devolver no lugar dela, com justificativa; informar outra data e hora; cadastrar veículos e condutores; ajustar e conferir KM; ver a trilha de auditoria; registrar manutenção, parada, documentos, multas e abastecimentos; consultar despesas; gerar relatório; usar o rastreador.\nSó o Administrador | \"Levantamento de valores suspeitos\", na aba Despesas.\nCliente | Não usa a Frota."
+    },
+    {
+     "titulo": "Veículos e condutores",
+     "texto": "Cada veículo e cada condutor são cadastrados uma vez só. Isso é feito pela gestão, na aba \"Veículos e condutores\"."
+    },
+    {
+     "titulo": "Veículos e condutores > Cadastrar um veículo",
+     "texto": "1. Toque em \"+ Cadastrar novo veículo\".\n2. Preencha placa, modelo, marca, ano, cor e \"KM atual\".\n3. Toque em \"Salvar veículo\"."
+    },
+    {
+     "titulo": "Veículos e condutores > Cadastrar um condutor",
+     "texto": "1. Toque em \"+ Cadastrar novo condutor\".\n2. Em \"Vincular a um usuário do SGO (opcional)\", escolha o login da pessoa. Sem isso ela não consegue retirar pelo próprio login.\n3. Preencha nome e telefone.\n4. Se tiver, preencha a CNH, a validade e anexe o arquivo.\n5. Toque em \"Salvar condutor\".\nPor que ligar o condutor ao login? Porque é assim que o sistema sabe quem está retirando. Quem não é da gestão retira sempre em seu próprio nome. Não há como escolher outra pessoa."
+    },
+    {
+     "titulo": "Veículos e condutores > Editar um condutor (validade da CNH, telefone, login)",
+     "texto": "1. Na lista de condutores, toque em \"Editar\" na linha da pessoa.\n2. Preencha o que mudou: \"Validade da CNH\" (dd/mm/aaaa), \"Número da CNH\", \"Telefone\" ou o \"Login do SGO+\" (só se ainda não tiver).\n3. Campo vazio mantém o que já estava gravado.\n4. Toque em \"Salvar alterações\". Para trocar o arquivo da CNH, use \"Trocar CNH\" na mesma linha.\n\nA validade aparece na lista: em vermelho quando venceu, em amarelo quando vence em até 30 dias. O aviso de CNH some sozinho quando a nova validade é gravada. Telefone, número e arquivo da CNH só aparecem para a gestão.\n\nVeículo ou condutor que não vai mais ser usado: toque em \"Inativar\" e confirme. Ele some das listas, mas o histórico continua guardado. Para voltar, toque em \"Reativar\"."
+    },
+    {
+     "titulo": "Retirar veículo",
+     "texto": "1. Abra a Frota.\n2. Em \"Retirar um veículo\", toque no cartão do veículo. Só aparecem os disponíveis.\n3. Olhe o número no painel do carro.\n4. Se for igual ao KM que já aparece na tela, não mexa.\n5. Se for diferente, corrija o número e toque em \"Tirar foto do painel (obrigatória: KM diferente)\".\n6. Toque em \"Tirar foto do veículo\". A câmera abre direto. Tire pelo menos uma foto.\n7. Olhe o veículo por fora e por dentro.\n8. Se estiver tudo certo, toque em \"Tudo OK\".\n9. Se achar um problema, toque em \"Tem problema\", toque no item e escreva o que viu.\n10. Se quiser, preencha \"Finalidade (opcional)\".\n11. Toque em \"Confirmar retirada\".\n12. Espere o aviso \"Retirada registrada\".\nA linha acima do botão diz o que falta, por exemplo \"Falta: a foto do painel\". Quando aparece \"Tudo pronto.\", pode confirmar.\nData e hora: vale sempre a hora do momento em que você confirma (horário de Brasília). Você não digita data nem hora.\nKM maior que o registrado: não é erro. Alguém pode ter usado sem registrar. Corrija o número, tire a foto do painel e continue. A gestão confere depois. KM menor não é aceito, porque o odômetro não volta. Se o número registrado estiver errado, peça à gestão o ajuste de KM.\nVeículo com outra pessoa: ele aparece em \"Em uso por outras pessoas\". Se você tocar nele, a tela diz com quem está. Se duas pessoas tentarem retirar o mesmo veículo ao mesmo tempo, só a primeira consegue.\nSaiu da tela sem confirmar? Ao abrir a Frota de novo, toque em \"Continuar a retirada\" com a placa. As fotos já enviadas continuam lá. Para desistir, toque em \"Cancelar e voltar\" e confirme: nada é registrado."
+    },
+    {
+     "titulo": "Devolver veículo",
+     "texto": "1. Abra a Frota (ou o Início, no celular).\n2. Toque no botão verde \"Devolver\" com a placa do veículo.\n3. Digite o KM que está no painel agora.\n4. Toque em \"Tirar foto do painel (obrigatória)\".\n5. Faça a vistoria: \"Tudo OK\" ou \"Tem problema\".\n6. Se quiser, abra \"Mais fotos e observações (opcional)\".\n7. Toque em \"Confirmar devolução\".\n8. Espere o aviso \"Devolução registrada\".\nQuem devolve: só quem retirou. A gestão pode devolver no lugar da pessoa, com justificativa (seção 8). A pessoa recebe um aviso.\nEsqueceu de devolver? Retirada aberta há mais de 12 horas aparece no Início como possível devolução esquecida, para você e para a gestão. Devolva assim que puder.\nKM muito alto: se o KM rodado passar de 1.500 km, ou der média acima de 120 km/h, a devolução não é bloqueada. Confira se digitou certo. A gestão recebe o aviso para conferir.\nPor que a vistoria se repete na devolução? Para comparar com a saída. Se um item saiu OK e voltou com problema, fica claro que aconteceu durante o uso."
+    },
+    {
+     "titulo": "Sinal fraco e erro ao confirmar",
+     "texto": "Cada foto mostra um selo: \"Preparando…\", \"Enviando…\", \"Enviada\", \"Sem sinal: nova tentativa em instantes\" ou \"Não enviada: toque para tentar de novo\".\n1. Se aparecer \"Sem sinal\", não faça nada. O sistema tenta de novo sozinho, três vezes.\n2. Se aparecer \"Não enviada: toque para tentar de novo\", toque na foto. Ou remova no \"×\" e tire outra.\n3. Você pode tocar em \"Confirmar retirada\" ou \"Confirmar devolução\" mesmo com foto subindo. A tela mostra \"Terminando de enviar as fotos\" e depois \"Gravando o registro…\".\n4. Se der erro ao confirmar, não saia da tela. Leia a mensagem. Se for falta de conexão, espere o sinal voltar e toque em confirmar de novo. As fotos já enviadas não são enviadas outra vez.\nApareceu \"Já estava registrado\" ou \"já estava registrada\"? Está tudo certo. O primeiro toque já tinha gravado e nada foi registrado em dobro. Não faça mais nada.\nApareceu \"Registro conferido\"? A conexão caiu na resposta, mas o registro foi gravado. Não registre de novo."
+    },
+    {
+     "titulo": "Gestão: opções, KM a conferir, ajuste de KM e trilha > Registrar em nome de outra pessoa (\"Opções da gestão\")",
+     "texto": "1. Na retirada ou na devolução, abra \"Opções da gestão\" (no fim da tela).\n2. Na retirada, escolha o \"Condutor\".\n3. Se foi em outro horário, preencha \"Data (vazio = agora)\" e \"Hora (vazio = agora)\".\n4. Escreva a \"Justificativa\", com pelo menos 15 letras.\n5. Termine a retirada ou a devolução normalmente e confirme.\n\nA justificativa é obrigatória para outro condutor, para devolução no lugar do condutor e para data ou hora com mais de 10 minutos de diferença. Data no futuro não é aceita. O registro fica marcado como \"registrado pela gestão\", entra na trilha de auditoria e o condutor recebe um aviso."
+    },
+    {
+     "titulo": "Gestão: opções, KM a conferir, ajuste de KM e trilha > KM a conferir",
+     "texto": "1. Abra a aba \"Situação e retiradas\".\n2. No quadro \"KM a conferir\", leia o motivo de cada linha.\n3. Toque em \"Foto do painel\" e confira o número.\n4. Toque em \"Conferido\". Se quiser, escreva o que a foto mostrou."
+    },
+    {
+     "titulo": "Gestão: opções, KM a conferir, ajuste de KM e trilha > Ajustar o KM do veículo",
+     "texto": "1. Abra a aba \"Veículos e condutores\" (no celular: \"Opções da gestão\" > \"Ajustar KM do veículo\").\n2. Escolha o veículo.\n3. Digite o \"KM novo\".\n4. Escreva a justificativa, com pelo menos 15 letras.\n5. Toque em \"Ajustar KM\".\n\nÉ o único jeito de mudar o KM. O botão \"Editar\" do veículo não muda o KM. Veículo em uso só é ajustado depois da devolução."
+    },
+    {
+     "titulo": "Gestão: opções, KM a conferir, ajuste de KM e trilha > Trilha de auditoria",
+     "texto": "1. Na aba \"Histórico e relatório\", vá ao quadro \"Trilha de auditoria\".\n2. Escolha o veículo ou deixe \"Todos os veículos\".\n3. Toque em \"Consultar\".\n\nA trilha mostra quem fez cada registro especial, quando, o valor antes e depois e a justificativa. Nada nela pode ser apagado."
+    },
+    {
+     "titulo": "Abastecimentos",
+     "texto": "1. Abra a aba \"Abastecimentos e despesas\" e toque em \"+ Registrar abastecimento\" (no celular: \"Opções da gestão\" > \"Registrar abastecimento\").\n2. Escolha o veículo e, se souber, o condutor.\n3. Preencha a data, o \"KM no abastecimento\", o tipo de combustível, os litros, o valor total e o posto.\n4. Anexe a foto ou o PDF do comprovante. Sem ele não salva.\n5. Toque em \"Salvar abastecimento\" (no celular, \"Registrar abastecimento\").\nConsumo (km por litro): o sistema calcula sozinho, comparando o KM entre dois abastecimentos do mesmo veículo. Com menos de 2 abastecimentos, o consumo não aparece."
+    },
+    {
+     "titulo": "Manutenção e paradas > Registrar uma manutenção",
+     "texto": "1. Abra a aba \"Manutenção e paradas\".\n2. Escolha o veículo e o tipo. A próxima troca em KM já vem sugerida.\n3. Preencha data, KM, custo, oficina e descrição.\n4. Ajuste a próxima troca, se precisar.\n5. Toque em \"Registrar manutenção\"."
+    },
+    {
+     "titulo": "Manutenção e paradas > Registrar uma parada",
+     "texto": "1. Escolha o veículo.\n2. Preencha \"Data início\", o motivo e a descrição. A data de fim pode ficar vazia.\n3. Toque em \"Registrar parada\".\nAvisos de vencimento: o topo da Frota mostra sozinho manutenção, documento ou CNH vencidos ou que vencem em até 30 dias (ou 500 km). O mesmo aviso aparece no Início."
+    },
+    {
+     "titulo": "Documentos e multas > Anexar um documento do veículo",
+     "texto": "1. Abra a aba \"Documentos e multas\".\n2. Toque em \"+ Anexar documento\".\n3. Escolha o veículo e o \"Tipo de documento\".\n4. Se o documento tiver prazo, preencha a validade.\n5. Anexe o arquivo e toque em \"Salvar documento\".\n\nAo anexar a renovação (por exemplo, o CRLV do ano seguinte), o anterior aparece como \"substituído por um mais novo\" e deixa de gerar aviso. Documento sem validade nunca gera aviso."
+    },
+    {
+     "titulo": "Documentos e multas > Registrar uma multa",
+     "texto": "1. Toque em \"+ Registrar multa\".\n2. Escolha o veículo.\n3. Preencha a data e a hora da infração, o local, a descrição e o valor.\n4. Se tiver, preencha o órgão autuador, o número do AIT, os pontos e o vencimento, e anexe a notificação.\n5. Toque em \"Salvar multa\".\n6. Leia a mensagem. Ela diz se o sistema achou quem estava com o veículo na hora.\n\nSe o sistema não achou, escolha o condutor na linha da multa e toque em \"Indicar\". Se a retirada foi lançada depois da multa, toque em \"Recruzar\". A situação da multa (Aberta, Paga, Recorrida, Cancelada) é escolhida na própria linha."
+    },
+    {
+     "titulo": "Despesas",
+     "texto": "1. Abra a aba \"Abastecimentos e despesas\" e vá ao quadro \"Despesas por veículo e período\".\n2. Escolha o veículo, ou deixe \"Todos os veículos\".\n3. Confira \"Data início\" e \"Data fim\". Já vêm com os últimos 30 dias.\n4. Escolha a categoria, ou deixe \"Todas\".\n5. Toque em \"Consultar\".\n\nAparecem os totais de abastecimentos, manutenções, multas e outras despesas, o \"Total do período\" e a lista de lançamentos.\nSó o Administrador: o quadro \"Levantamento de valores suspeitos\" procura valores que parecem ter sido gravados sem a vírgula (por exemplo, R$ 35.090 no lugar de R$ 350,90). Toque em \"Fazer o levantamento\". Nada é alterado: corrija o lançamento no lugar onde ele foi feito."
+    },
+    {
+     "titulo": "Histórico e relatório > Histórico de um veículo",
+     "texto": "1. Abra a aba \"Histórico e relatório\".\n2. Em \"Histórico do veículo\", escolha o veículo. O histórico aparece na hora."
+    },
+    {
+     "titulo": "Histórico e relatório > Relatório da frota (gestão)",
+     "texto": "1. Em \"Relatório da frota\", escolha um veículo ou deixe \"Toda a frota (relatório geral)\".\n2. Confira as datas.\n3. Toque em \"Gerar relatório\".\n4. Aguarde até um minuto. O relatório abre numa aba nova.\n5. Para imprimir ou salvar em PDF, toque em \"Imprimir ou salvar em PDF\" no topo do relatório. Uma cópia (PDF e HTML) fica guardada na pasta \"Frota - Relatorios Gerados\", na subpasta do veículo ou em \"Frota completa\".\n\nO relatório por veículo traz identificação, resumo do período com o gráfico dos gastos, análise, retiradas, abastecimentos, despesas, manutenções, documentos e CNH, multas e paradas, avisos e providências, e o espaço para as assinaturas. O relatório geral traz o resumo, a análise, os gráficos de uso e de composição do custo por veículo, as paradas, os avisos e providências e, na última folha (deitada), o quadro de uso e custos de cada veículo. Relatório com mais de três páginas traz o sumário com o número das páginas."
+    },
+    {
+     "titulo": "Cores e selos",
+     "texto": "O que aparece | O que quer dizerBotão verde \"Devolver\" com a placa | Este veículo está com você\n\"Disponível\" (verde) | Pode ser retirado\n\"Em uso\" (amarelo) | Está com alguém\n\"Em manutenção\" ou \"Inativo\" (cinza) | Não pode ser retirado\nSelo da foto \"Enviada\" (verde) | A foto chegou\nSelo da foto \"Sem sinal: nova tentativa em instantes\" | O sistema vai tentar de novo sozinho\nSelo da foto \"Não enviada\" ou \"Não deu para ler\" (vermelho) | Toque na foto para tentar de novo, ou remova e tire outra\n\"Tudo OK\" verde / \"Tem problema\" vermelho | Resultado da vistoria\nAviso \"Vencido\" (vermelho) | Prazo vencido ou vencendo hoje\nAviso \"A vencer\" (amarelo) | Vence em até 30 dias\nDocumento \"VENCIDO\" vermelho, \"VENCENDO\" amarelo, \"OK\" verde | Situação da validade\nMulta: \"(automático)\" verde, \"(manual)\" azul, \"(conferir)\" amarelo, \"Não identificado\" vermelho | Como o condutor da multa foi definido"
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aparece | O que fazer\"Seu login ainda não tem condutor vinculado\" | Peça à gestão para ligar o seu usuário a um condutor (seção 4). Depois abra a Frota de novo\nKM \"Menor que o KM registrado\" | Confira o número no painel. Se o registro estiver errado, peça à gestão o ajuste de KM\nKM \"Diferente do KM registrado\" | Tire a foto do painel e continue. A gestão confere depois\n\"Esta retirada está com [nome]. Só [nome] ou a gestão podem registrar a devolução\" | Peça a essa pessoa para registrar. Se não der, procure a gestão\n\"O veículo [placa] já está retirado por [nome]\" ou \"não está mais disponível\" | Escolha outro veículo\n\"Nenhum veículo disponível agora\" | Todos estão em uso. A lista se atualiza sozinha quando alguém devolver\n\"Já estava registrado\" / \"já estava registrada\" | Está tudo certo. Nada foi registrado em dobro\n\"Registro conferido\" | O registro foi gravado. Não registre de novo\n\"Justificativa obrigatória\" (gestão) | Escreva o motivo em \"Justificativa\", com pelo menos 15 letras\n\"está no futuro\" (gestão) | Corrija a data e a hora, ou deixe vazio para usar a hora atual\n\"Anexe a foto ou o PDF do comprovante do abastecimento.\" | Anexe o comprovante e salve de novo\n\"Partida não liberada pelo rastreador\" (só quando o bloqueio estiver ligado) | A retirada já está registrada. Ligue para a gestão (seção 17)\n\"Não foi possível carregar a frota agora\" | Confira a internet e toque em \"Tentar de novo\"\nO consumo (km/L) não aparece | Precisa de pelo menos 2 abastecimentos do veículo no período"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | O que éVistoria | Conferência dos itens do veículo na retirada e na devolução\nRetirada em andamento | Veículo que foi pego e ainda não foi devolvido\nCondutor vinculado | Condutor ligado a um login do SGO+. É o que permite retirar em seu próprio nome\nFoto do painel | Foto do odômetro. Obrigatória na devolução e quando o KM foge do registrado\nRegistrado pela gestão | Retirada ou devolução que a gestão registrou no lugar do condutor, com justificativa\nTrilha de auditoria | Lista que guarda quem fez cada registro especial, quando, o antes e o depois e o motivo\nVencendo / Vencido | Prazo perto de acabar (até 30 dias) / prazo acabado ou vencendo hoje\nParada | Período em que o veículo ficou fora de uso\nConsumo (km/L) | Quantos quilômetros o veículo roda com 1 litro\nCruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo\nBloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos\nUso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador"
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida",
+     "texto": "Hoje o acesso é somente leitura. Funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada. Não funciona bloquear nem liberar a partida pelo SGO+: isso depende de a empresa do rastreador liberar o acesso com comandos. A retirada e a devolução funcionam normalmente."
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > Como a tela \"Rastreador\" está organizada",
+     "texto": "1. Para que serve (no topo): o que o SGO+ faz com o rastreador, em três linhas.\n2. Situação: se o rastreador está ligado, a hora da última leitura, por quantos dias a localização fica guardada e o que funciona com o acesso de hoje.\n3. O que fazer agora: a lista do que precisa da gestão, veículo por veículo. Exemplo: \"PQB4394 tem sugestão de aparelho: confira no cartão do veículo e clique em Gravar vínculo\". Quando está tudo em dia, aparece \"Nada a fazer\".\n4. Alertas para conferir (só quando houver): uso sem registro e falha de comunicação.\n5. Veículos e aparelhos: um cartão por veículo, com o aparelho ligado a ele, a situação agora (parado ou andando, onde está), o hodômetro do aparelho e a última devolução.\n6. Liberar ou bloquear a partida e Comandos enviados: só aparecem quando o acesso com comandos estiver liberado."
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > Ligar um veículo ao aparelho do rastreador",
+     "texto": "1. No cartão do veículo, escolha o aparelho na lista. O aparelho com a placa no nome já vem marcado e o cartão fica verde com \"Sugestão\".\n2. Toque em \"Gravar vínculo\".\n3. Se o aparelho já estava ligado ao veículo, aparece \"Vínculo já estava gravado\": está tudo certo, nada foi mudado."
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > O que o SGO+ faz com o rastreador",
+     "texto": "Uso sem registro: se o rastreador mostrar o veículo ligado ou andando sem retirada aberta, a gestão recebe um alerta vermelho com placa, hora e local. Descubra quem estava com o veículo. Se foi esquecimento, registre a retirada no lugar do condutor. Depois toque em \"Conferido\".\nParado ou andando: abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado (oscilação normal do sinal): o SGO+ mostra \"parado, ignição desligada\" e não trata como uso.\nKM: o hodômetro do aparelho conta desde a instalação e nunca é igual ao painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). Por isso o SGO+ não compara esses números. Ele guarda o hodômetro do aparelho na retirada e na devolução e compara o KM rodado: o informado (chegada menos saída) com o medido pelo aparelho. Se o aparelho não informar o hodômetro, vale a distância que o rastreador mediu no período da retirada. Diferença acima de 20 km (ou de 5%) vai para \"KM a conferir\".\nKM do painel estimado: no cartão do veículo aparece o KM do painel calculado pelo rastreador (hodômetro do aparelho mais a diferença fixa medida na última retirada). Serve só para a gestão perceber uso sem registro; não muda nenhum KM.\nPonto de chegada: na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, na aba \"Rastreador\"."
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > Quando o acesso com comandos for liberado",
+     "texto": "O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, os endereços do comando de bloqueio e de liberação e liga o \"Bloqueio da partida pelo SGO+\". A partir daí:\nNa retirada: ao confirmar, o sistema libera a partida. Se aparecer \"Partida não liberada pelo rastreador\", a retirada já está registrada: não registre de novo. Ligue para a gestão. O sistema também tenta de novo sozinho.\nNa devolução: o bloqueio só é enviado com o veículo parado, a ignição desligada e menos de 5 km/h. Estacione e desligue normalmente.\nO veículo nunca é bloqueado em movimento. Se o veículo estiver andando, com a ignição ligada, com o GPS ainda oscilando ou com a posição antiga (mais de 30 minutos), o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.\nEmergência (a partida não liberou e você precisa sair): ligue para a gestão. A gestão libera no computador (Frota > aba \"Rastreador\") ou no celular (Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"): escolhe o veículo, escreve a justificativa e toca em \"Liberar partida\". Também pode liberar pelo aplicativo do rastreador."
+    },
+    {
+     "titulo": "Rastreador: monitoramento, localização e bloqueio da partida > Localização e LGPD",
+     "texto": "A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.\nDesde 20/10/2026 (decisão da diretoria) o SGO+ guarda a rota de cada veículo: cada posição lida do rastreador vira um ponto da rota, numa tabela própria do servidor. Ficam também o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.\nDepois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.\nCada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).\nQuem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.\nSó a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.\nOs avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.\nTelefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas."
+    },
+    {
+     "titulo": "Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores",
+     "texto": "Aba só da gestão. Serve para tratar o que dá problema na frota e para acompanhar os números do período. Tem duas partes: \"Quadro dos casos (Kanban)\" e \"Indicadores do período\"."
+    },
+    {
+     "titulo": "Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores > Quadro dos casos (parte 1)",
+     "texto": "Cada caso anda por quatro colunas: Aberta, Em análise, Em execução e Concluída.\n1. Aberta mostra sozinha, sem ninguém digitar: avaria na devolução (item que estava em ordem na retirada e voltou com problema), multa em aberto e manutenção vencida ou a vencer. Toque em \"Abrir caso\". Se não precisa de tratamento (desgaste normal, por exemplo), toque em \"Descartar\" e escreva o motivo.\n2. Em Em análise, toque em \"5 Porquês\": responda \"por que isso aconteceu?\" e continue perguntando \"por quê?\" a cada resposta (no mínimo 3), até chegar a uma causa que a empresa consegue mudar. Escreva a causa raiz e salve.\n3. Se a solução foi simples (multa paga, conserto feito), toque em \"Concluir\" e escreva como foi resolvido.\n4. Se precisa de mudança, toque em \"Plano de ação (5W2H)\": o quê, por quê, onde, quando, quem, como e quanto. A ação vira uma atividade em Minhas atividades para o responsável, com o prazo, e o caso passa para Em execução. Para outra ação, toque em \"Mais uma ação\".\n5. Quando as ações forem concluídas em Minhas atividades, toque em \"Concluir (verificar)\": escreva o que foi conferido e marque se resolveu. Se não resolveu, o caso volta para Em análise (novo ciclo).\n6. Se quiser, escreva \"O que muda para não repetir\" (regra, item do checklist, treinamento).\nCaso recorrente: duas avarias no mesmo veículo ou com o mesmo condutor em 180 dias, ou duas multas do mesmo condutor em 12 meses. O cartão mostra \"Recorrente\" e o caso só pode ser concluído depois dos 5 Porquês.\nCores e selos do cartão: tipo do caso (azul), \"Recorrente\" e \"Prazo do plano vencido\" (amarelo), \"Multa já paga\", \"Manutenção já registrada\" (verde: pode concluir), \"Ciclo 2\" (cinza: a primeira ação não resolveu). A faixa P, D, C, A mostra em que passo do ciclo o caso está."
+    },
+    {
+     "titulo": "Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores > Quadro dos casos (parte 2)",
+     "texto": "\"+ Novo caso\" serve para o que não aparece sozinho, por exemplo um barulho no freio relatado pelo condutor. Nada é apagado: o caso descartado fica guardado com quem decidiu, quando e o motivo.\n\nMulta e avaria com condutor identificado também viram sugestão no Programa de conduta, onde a gestão decide se vira ocorrência. Avaria sem caso aberto e multa perto do vencimento aparecem na central de avisos do Início."
+    },
+    {
+     "titulo": "Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores > Indicadores do período",
+     "texto": "1. Escolha o período (30, 90, 180 ou 365 dias).\n2. Leia os números do topo: KM rodado, custo por km, consumo médio, disponibilidade, manutenção preventiva no prazo, avarias, multas e casos em andamento.\n3. Em \"Por veículo\" e \"Por condutor\", veja onde estão os problemas.\nIndicador | Como é calculadoCusto por km | Abastecimentos, manutenções e despesas avulsas do período divididos pelo KM rodado nas retiradas. A multa fica fora (é do condutor)\nConsumo médio | KM entre dois abastecimentos do mesmo veículo dividido pelos litros. Precisa de pelo menos 2 abastecimentos\nDisponibilidade | Dias do período em que o veículo não estava em parada registrada\nPreventiva no prazo | Manutenção feita até a data ou o KM da \"próxima troca\" da manutenção anterior do mesmo tipo\nAvarias por 1.000 km | Avarias na devolução divididas pelo KM rodado, vezes 1.000\nEficácia dos planos | Casos com plano em que a verificação disse \"resolveu\", sobre os verificados"
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto",
+     "texto": "Aba \"Rastreamento\", só da gestão (Administrador, Gestor e Diretoria). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.\nRastreador não configurado? A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e \"Rastreador ligado no SGO+\"). Depois volte e toque em \"Atualizar\"."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Mapa ao vivo",
+     "texto": "1. Abra a aba \"Rastreamento\". O mapa abre com todos os veículos que têm aparelho ligado.\n2. Cada veículo aparece com a cor da situação; a lista ao lado (embaixo, no celular) mostra placa, situação, condutor da retirada aberta, velocidade em km/h, local e a hora da última posição.\n3. Com a tela aberta, o mapa se atualiza sozinho a cada 30 segundos (limite da empresa do rastreador). Nada que você estiver digitando é apagado.\n4. Toque num veículo da lista para centralizar o mapa nele.\nCor | SituaçãoAzul | Em uso, com retirada registrada\nVermelho | Andando sem retirada registrada (uso sem registro)\nAmarelo | Parado com a ignição ligada e sem retirada\nVerde | Parado\nCinza | Sem sinal há mais de 30 minutos"
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Rotas",
+     "texto": "1. Em \"Rotas\", escolha o período e toque em \"Buscar retiradas\", ou escolha um veículo e toque em \"Ver rota do período\".\n2. Na lista de retiradas, toque em \"Ver rota\": o trajeto aparece no mapa (em vermelho os trechos acima do limite de velocidade), com saída, chegada e paradas numeradas.\n3. Abaixo do mapa: km do trajeto, tempo em movimento e parado, velocidade máxima, trechos acima do limite, paradas de 5 minutos ou mais e, quando o condutor tem atendimentos no Auvo, o deslocamento até cada um.\n4. \"Relatório A4\" gera o relatório de rota da retirada para imprimir (fica salvo em PDF e HTML).\n\nA empresa do rastreador não informa trânsito. O SGO+ mostra o que os pontos permitem: velocidade, paradas, horários e uso fora do expediente. Trânsito em tempo real exigiria um serviço pago de mapas."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Combustível e KM",
+     "texto": "1. Escolha o período e toque em \"Calcular\".\n2. \"Consumo por veículo\": km/L do período, a média do próprio veículo e o desvio. Vermelho = gastou mais que a média além do limite configurado (padrão 15%): revise o veículo.\n3. \"Capacidade do tanque\": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.\n4. \"Abastecimentos a conferir\": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque \"Conferir com a posição do veículo\").\n5. \"KM por condutor\": km informado nas retiradas do período.\n6. \"Pedir comprovante\": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, e-mail no horário de trabalho e no máximo um resumo por dia no WhatsApp). Ele envia em Frota > Abastecimentos e despesas > \"Comprovantes pedidos a você\"; o pedido e a atividade fecham sozinhos.\n\nConsumo pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. Abastecimento parcial distorce o resultado daquele intervalo. O registro de abastecimento ganhou o campo \"Hora (opcional)\": com ela o SGO+ confere a posição do veículo no horário."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Relatórios",
+     "texto": "Quatro relatórios A4 para imprimir, salvos em PDF e HTML na pasta \"Frota - Relatorios Gerados/Rastreamento\": rota da retirada, mensal do veículo (km, consumo, custos, paradas, excessos, manutenção), consumo da frota e uso fora do expediente."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Aparelhos e alertas",
+     "texto": "É a tela do rastreador descrita na seção 17: ligar veículo e aparelho, alertas de uso sem registro e de conexão."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Privacidade e configuração",
+     "texto": "Prazo de guarda das rotas (padrão 90 dias), limite de velocidade (padrão 110 km/h), expediente da frota (padrão 07:00 a 19:00, segunda a sexta; feriados contam como fora) e desvio de consumo aceito (padrão 15%).\n\"Quem consultou\": a trilha de quem abriu o mapa, viu rotas ou gerou relatório com localização."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Gantt da frota e copiloto (aba Gestão e melhoria)",
+     "texto": "Gantt da frota: por veículo, no tempo: retiradas (tracejada se em andamento), paradas, manutenção prevista pela data ou pelo KM (média de km por dia) e vencimento de documentos. Uma linha extra mostra as ações dos planos (Minhas atividades). Reservas de veículo ainda não existem no SGO+.\nCopiloto de sugestões: o SGO+ lê os dados do período e sugere ações: veículo gastando mais combustível que a média, abastecimento a conferir, condutor com trechos acima do limite, uso fora do expediente, uso sem registro repetido, manutenção próxima pelo KM estimado do rastreador, aparelho sem sinal e muito KM sem abastecimento lançado. Marque \"Pedir ajuda da IA\" para a IA ordenar e escrever a recomendação com os mesmos números (texto com número que não está nos dados é trocado pelo das regras).\nToda sugestão é só sugestão: \"Abrir caso no Kanban\", \"Lançar atividade\" (Minhas atividades), \"Pedir comprovante\" ou \"Descartar\" com o motivo. Decidida, ela não volta no mesmo mês.\n\nExcesso de velocidade numa retirada e comprovante pedido e não enviado no prazo também viram sugestão no Programa de conduta, onde a gestão decide. Uso sem registro não vira sugestão para ninguém: o rastreador sabe onde o veículo estava, não quem dirigia."
+    },
+    {
+     "titulo": "Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto > Comprovantes pedidos a você (toda a equipe)",
+     "texto": "1. Abra a Frota, aba \"Abastecimentos e despesas\".\n2. No quadro amarelo \"Comprovante pedido a você\", preencha data, KM, litros e valor (hora e posto, se souber).\n3. Em \"Foto da nota ou PDF\", tire a foto ou escolha o arquivo e toque em \"Enviar comprovante\". O pedido some e a atividade é concluída sozinha."
+    },
+    {
+     "titulo": "Reservas de veículo",
+     "texto": "A reserva garante o veículo para quem já tem compromisso marcado (viagem, atendimento no cliente). Ela existe para que ninguém chegue para uma viagem e encontre o carro retirado por outra pessoa. Fica na aba Reservas da Frota, para toda a equipe interna (no celular, botão \"Reservas: agenda e reservar um veículo\")."
+    },
+    {
+     "titulo": "Reservas de veículo > Reservar",
+     "texto": "1. Abra a Frota, aba \"Reservas\", e toque em \"Reservar um veículo\" (ou toque num espaço vazio da agenda).\n2. Preencha o início e a devolução prevista (data e hora).\n3. O campo \"Veículo\" já sugere o primeiro veículo livre no período; os ocupados aparecem com o motivo.\n4. Escreva o destino e o motivo. Passageiros e \"Ligar a\" (O.S. do Auvo, atividade ou cliente) são opcionais.\n5. Toque em \"Reservar\". Aparece o código da reserva (RV-AAAA-NNNN).\n\nQuem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Gestor ou Diretoria) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa."
+    },
+    {
+     "titulo": "Reservas de veículo > Regras (parte 1)",
+     "texto": "Regra | Como funcionaSem sobreposição | O mesmo veículo não tem duas reservas no mesmo horário, nem reserva sobre manutenção programada, parada ou retirada em andamento. O sistema mostra os livres no mesmo período. Uma pessoa não segura dois veículos ao mesmo tempo. A conferência final é feita dentro da trava do sistema, relendo o banco. A retirada respeita a reserva | Ao retirar, informe a devolução prevista. Se o veículo tem reserva de outra pessoa (ou manutenção programada) começando antes da devolução prevista mais a folga (1 hora), a retirada é recusada com quem reservou, quando e os veículos livres agora. Só a gestão libera, com justificativa; quem reservou é avisado na hora com a sugestão de outro veículo. A liberação não vira registro \"pela gestão\" nem sugestão no Programa de conduta. Dono da reserva | Retira normalmente a partir de 2 horas antes do início; a reserva passa a \"em uso\" e, na devolução, a \"concluída\". Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); e-mail no expediente; WhatsApp só se a reserva for no mesmo dia, pela regra sutil (vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). A gestão e quem reservou também são avisados. Se a reserva começar com o veículo fora, conta como \"atraso que afetou reserva\" e vira só sugestão no Programa de conduta. Véspera | Último dia útil antes do início, a partir das 14:00: lembrete ao reservante (sistema; e-mail no expediente) e conferência do veículo (ativo, sem parada ou manutenção no período, sem manutenção vencida, documentos e CNH válidos, veículo de volta a tempo). Problema avisa o reservante e a gestão, com os livres para troca;"
+    },
+    {
+     "titulo": "Reservas de veículo > Regras (parte 2)",
+     "texto": "problema que aparece depois avisa de novo. Não comparecimento | Sem retirada até 1 hora depois do início, a reserva vira \"não utilizada\" e o veículo fica livre (o reservante é avisado). Se o veículo ainda estava fora com outra pessoa, a tolerância conta da devolução. Nada é apagado | Canceladas, não utilizadas e concluídas ficam no histórico, com quem e quando. As regras de tempo (folga, tolerância, antecipação, hora do lembrete, antecedência e duração máximas) ficam em Reservas > Regras (gestão)."
+    },
+    {
+     "titulo": "Reservas de veículo > Telas",
+     "texto": "Agenda: semana ou dia, uma linha por veículo. Verde: sua reserva; azul claro: de outra pessoa; laranja: manutenção programada; azul forte: retirado agora; vermelho: devolução atrasada; cinza: parada. No celular a semana vira uma lista por dia.\nMinhas reservas: cancelar (com o motivo) e trocar o veículo (só os livres no mesmo período).\nTodas as reservas, Indicadores e relatório, Regras (gestão): cumpridas, não utilizadas, canceladas, retiradas bloqueadas, liberações, atrasos que afetaram reserva, pedidos recusados por sobreposição, por veículo, por condutor e por dia da semana; relatório A4 de uso e reservas do mês (HTML e PDF em \"Frota - Relatorios Gerados/Reservas\").\nTela de retirada: o cartão do veículo mostra a próxima reserva (\"Reservado para ... · devolva até ...\"); o passo \"Devolução prevista\" já vem preenchido (fim da sua reserva ou fim do expediente).\nGantt da frota (Gestão e melhoria): reservas (planejado) na faixa de cima, retiradas (realizado) na de baixo.\nCopiloto: sugere ação para veículo disputado, dia da semana de pico, reservas não utilizadas e atrasos recorrentes de um condutor, e liberações frequentes.\nCOMMAND: tela \"Reservas de veículo\" para quem tem a conta ligada ao SGO+ (minhas reservas, livres, reservar, cancelar; a gestão vê a agenda), pela ponte assinada, com as mesmas regras."
+    },
+    {
+     "titulo": "Enviar o documento por e-mail ou WhatsApp (20/10/2026)",
+     "texto": "Os relatórios da frota são documentos internos: depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar\"; a janela \"Enviar documento\" oferece as pessoas da equipe (e-mail e celular do cadastro de Usuários) ou o destinatário digitado. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_GESTAO_DECISOES.md",
+   "titulo": "Caixa de decisões e Desempenho da gestão — manual do módulo",
+   "tela": "gestao_decisoes",
+   "perfis": [
+    "ADMIN",
+    "GESTOR",
+    "DIRETORIA"
+   ],
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Versão de 20/10/2026. Telas no SGO+: Gestão > Caixa de decisões e Gestão > Desempenho da gestão (também no celular, no Início, e no COMMAND, menu Caixa de decisões).\nArquivos: SGO_Gestao_Decisoes.js (caixa, quem recebe, regras), SGO_Gestao_Escada.js (escada de cobrança e automações), SGO_Gestao_Avaliacao.js (avaliação do gestor e relatórios A4), JS_Gestao.html (telas), SGO_Ajuda_Gestao.js (ajuda \"Como usar esta tela\")."
+    },
+    {
+     "titulo": "Para que serve",
+     "texto": "O gestor que fica dias sem entrar no sistema não sabe o que espera por ele, e a Diretoria acaba cobrando os próprios líderes. A Caixa de decisões junta numa lista só tudo o que depende de um gestor ou da Diretoria, de todos os módulos, com quem decide, o prazo, há quanto tempo está parado e o botão que leva à tela de resolver. O sistema cobra sozinho, em escada, e mede o desempenho de cada gestor."
+    },
+    {
+     "titulo": "O que entra na caixa",
+     "texto": "A fonte é a central de pendências do SGO+ (a mesma do Início). Entram as pendências que são decisão da gestão:\nMódulo | ItensPrograma de conduta | homologar ocorrência, julgar contestação ou recurso, aprovar missão, sugestão de ocorrência (uma a uma), fechamento do mês\nFrota | KM a conferir, devolução esquecida, multa sem condutor, multa vencendo ou vencida, CNH vencida ou com 7 dias ou menos, manutenção e documento do veículo (vencidos ou com 15 dias ou menos), avaria sem caso, comprovante não enviado, reserva em risco ou com problema, uso sem registro e alertas do rastreador, caso do Kanban em análise, plano de ação vencido, sugestão do copiloto de alta gravidade\nAtividades | atividade atrasada da equipe, justificativa de atraso a avaliar (últimos 30 dias)\nAvisos | aviso com prazo de leitura vencido e gente sem confirmar\nQualidade e Auvo | O.S. com registro incompleto, retirada com registro incompleto, O.S. aberta, O.S. sem vínculo, importação do Auvo parada (administrador)\nPadrões e planos | padrão vencido, sem validade ou com 15 dias ou menos; plano de ação do Programa de conduta com prazo vencido\nAcompanhamento | documentos, calibrações e laudos NR-13 vencidos dos clientes: aparecem em aba própria e no e-mail como contagem, mas não sobem a escada nem entram na avaliação (dependem do cliente)\nNovos itens que a central não tinha (homologar, julgar, missão, justificativa, caso, plano, copiloto) também aparecem no Início da gestão."
+    },
+    {
+     "titulo": "Quem recebe cada item",
+     "texto": "1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.\n2. Gestor responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram).\n3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.\n4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.\n5. Área sem responsável (ou só com a própria pessoa envolvida): reserva da Diretoria (perfil Diretoria e o dono do sistema; sem ninguém, os administradores).\n6. Casos da Frota e planos de ação vão para quem conduz o caso ou criou o plano."
+    },
+    {
+     "titulo": "Idade, prazo e providência",
+     "texto": "Cada item ganha um registro quando entra na caixa (GES_DECISOES) e sai sozinho quando a pendência some da origem. Itens que já existiam quando a caixa foi ligada começam a contar do dia em que a caixa os viu.\nPrazo de decisão: o da própria regra quando existe (prazo de homologação, de julgamento, de registro da sugestão, vencimento) ou a entrada mais N dias úteis do tipo (1 a 5).\nParado: dias úteis desde a entrada ou desde a última providência. Fins de semana e feriados não contam (expediente da empresa).\n\"Registrar providência\": o que foi feito e até quando acompanhar (no máximo 10 dias). Conta como decisão tomada e pausa a escada até a data.\n\"Ciente\": só para justificativa de atraso; tira o item da caixa.\nOcorrência que o sistema descartou porque o prazo de homologação venceu fica como \"venceu sem decisão\" e conta na avaliação."
+    },
+    {
+     "titulo": "Escada de cobrança",
+     "texto": "Quando | CanalNa hora | item na caixa, no Início da gestão e no balão do menu\nTodo dia útil, a partir das 08:00 | UM e-mail por pessoa da gestão com o resumo do que espera por ela (só se houver algo), agrupado: paradas, prazo vencido, novas e demais, com o caminho de cada item\nParado há 2 dias úteis | entra no resumo diário do WhatsApp do gestor\nParado há 5 dias úteis | escala para a Diretoria (aba \"Com a Diretoria\" e e-mail diário da Diretoria com o nome de quem está segurando)\nPrimeiro dia útil da semana, 08:00 | o e-mail da Diretoria leva o relatório A4 semanal da gestão\nPrimeiro dia útil do mês | relatórios do mês anterior (Desempenho da gestão, Frota, Programa de conduta, Atividades da equipe) gerados e enviados no e-mail da Diretoria\nRegras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-mail por dia (as decisões dela, os escalados, as áreas sem gestor e os relatórios do dia); o mesmo item não é cobrado duas vezes no mesmo dia (cada envio fica em GES_ENVIOS). WhatsApp: no máximo uma mensagem por pessoa por dia somando atividades e gestão (no dia em que o gestor recebe o resumo da gestão, ele já leva a contagem das atividades dele), só no horário de trabalho, só para o vínculo liberado (padrão CLT). Modelo da Meta próprio: sgo_gestao_resumo_dia (até ser aprovado, sai pelo sgo_aviso_geral).\n\nTudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários."
+    },
+    {
+     "titulo": "Avaliação do gestor (parte 1)",
+     "texto": "Por gestor e por mês. É avaliado quem tem o perfil Gestor e quem responde por uma área (a Diretoria avalia, não é avaliada).\nComponente | Como é contado | Nota do componente | Peso padrãoDecidido no prazo | decisões até o prazo / decisões do mês mais prazos vencidos sem decisão | o próprio percentual | 30\nTempo médio de decisão | dias úteis da entrada até a decisão | 100 até 1 dia útil; -25 por dia útil a mais | 15\nItens vencidos | prazos que venceram no mês sem decisão até a data | 100 - 20 por item | 15\nEscalonamentos à Diretoria | itens dele parados até a Diretoria | 100 - 25 por item | 15\nDias sem acessar | dias úteis do mês sem abrir o SGO+ (ou o COMMAND pela caixa), desde a ligação da caixa | 100 - 15 por dia | 10\nDecisões revertidas | ocorrências que ele homologou e foram anuladas | 100 - 25 por reversão | 5\nAtividades da equipe | % das atividades da área dele com prazo no mês sem atraso | o próprio percentual | 5\nPlanos de ação | % dos planos dele com prazo no mês cumpridos no prazo | o próprio percentual | 5\nNota = média ponderada dos componentes com dado no mês (sem dado, o componente não entra e os pesos se redistribuem). Farol: verde a partir de 85, amarelo a partir de 70, vermelho abaixo. Pesos e faixas: só a Diretoria muda (Desempenho da gestão > Regra da nota). O mês fechado é congelado no primeiro dia útil do mês seguinte (GES_AVALIACOES).\n\nQuem vê: o próprio gestor (só a dele) e a Diretoria (todas). Ninguém mais, nem na tela, nem no COMMAND, nem no relatório.\n\nFalha grave recorrente (farol vermelho dois meses seguidos, ou 3 escalonamentos ou mais no mês) vira SUGESTÃO no Programa de conduta, visível e decidida só pela Diretoria. Nunca vira ocorrência sozinha."
+    },
+    {
+     "titulo": "Avaliação do gestor (parte 2)",
+     "texto": "Relatório A4 \"Desempenho da gestão\" (todos, para a Diretoria; ou só o do gestor, para ele): resumo, nota e farol por gestor, gráfico de notas só quando há dois ou mais gestores, itens que chegaram à Diretoria, prazos vencidos, dias sem acesso e a regra da nota. Texto montado dos números, sem IA (a avaliação de pessoas não sai do sistema). Guardado em \"Gestão - Relatórios\" (HTML e PDF, sem compartilhamento público)."
+    },
+    {
+     "titulo": "Automações",
+     "texto": "Automação | RegraCNH ao condutor | e-mail direto ao condutor com 30, 15 e 7 dias do vencimento (um de cada, só em dia útil); só com 7 dias ou menos a CNH entra na caixa do gestor\nManutenção preventiva na agenda | manutenção prevista pela data ou pelo KM vira atividade do gestor da área da Frota em Minhas atividades (agenda e Gantt), uma por veículo e tipo a cada 60 dias\nAtividade sem responsável | atividade aberta com responsável inativo, apagado ou vazio volta para quem lançou (ou para o gestor da área, ou para a Diretoria), com histórico e aviso\nRelatórios do mês | gerados no primeiro dia útil do mês e enviados à Diretoria\nCopiloto da Frota | a lista das sugestões de alta gravidade sem decisão é atualizada a cada 3 horas para a caixa"
+    },
+    {
+     "titulo": "Rotina",
+     "texto": "Gatilho Gestao_rotinaDecisoes a cada 15 minutos (instalado por Gestao_garantirRotina_, também conferido uma vez por dia quando alguém da gestão abre o sistema; no servidor, scripts/instalar_gatilhos.ts). O resumo do WhatsApp também é chamado no começo do resumo de atividades, para sair antes dele."
+    },
+    {
+     "titulo": "COMMAND",
+     "texto": "Menu Caixa de decisões (permissão gestao.decisoes: Diretoria, Gestor operacional, supervisores e Gestor comercial), só leitura pela ponte (gestao.caixa, gestao.resumo, gestao.avaliacao), e cartão na Central \"Decisões aguardando você\". Providência, regras e relatórios ficam no SGO+."
+    },
+    {
+     "titulo": "Decisões para o dono",
+     "texto": "Padrões adotados (seguros e já funcionando), para confirmar ou mudar em Regras e responsáveis:\n1. Áreas padrão de cada módulo (Frota em Administrativo, Programa de conduta em RH, documentos de clientes em Comercial).\n2. Vencimentos de clientes como acompanhamento (fora da escada e da avaliação).\n3. Janela da caixa para \"a vencer\": 15 dias (padrões, documentos e manutenção de veículo) e 7 dias (CNH).\n4. Pausa máxima da providência: 10 dias.\n5. Mensal no primeiro dia útil do mês (o dia 1 pode cair em fim de semana ou feriado).\n6. Pesos e faixas do farol (30/15/15/15/10/5/5/5; 85 e 70).\n7. Gatilho da sugestão no Programa de conduta (vermelho dois meses seguidos ou 3 escalonamentos no mês).\n8. Cadastrar na Meta o modelo sgo_gestao_resumo_dia (texto em sgo_servidor/docs/MODELOS_WHATSAPP_META.md).\n9. Configurar os gestores responsáveis por área (sem isso, tudo vai para a Diretoria)."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_INVENTARIO_EQUIPAMENTOS.md",
+   "titulo": "Manual do Operador — Inventário de Equipamentos",
+   "tela": "inventario",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "Introdução",
+     "texto": "Lista dos equipamentos de um cliente com a situação de calibração e qualificação.\n\nRevisão: 17/10/2026, conferido com a tela. É o mesmo texto do botão \"Manual do operador\" da tela."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Leia na ordem. Cada tarefa tem passos numerados: faça um passo de cada vez. O nome de cada botão aparece entre aspas, igual ao que está na tela. Palavras desconhecidas estão no Glossário (seção 10)."
+    },
+    {
+     "titulo": "Para que serve esta tela",
+     "texto": "Monta a lista dos equipamentos de um cliente com a situação da calibração e da qualificação de cada um. Gera o PDF para imprimir e o relatório A4 com análise.\nEsta tela não cadastra nada. Ela só lê clientes, equipamentos e documentos que já estão no sistema. Para cadastrar ou corrigir, use \"Equipamentos\" e \"Arquivo de documentos\". Depois gere o inventário de novo.\nÉ um retrato do momento. O inventário gerado hoje não muda sozinho amanhã. Gere de novo quando precisar da situação atual."
+    },
+    {
+     "titulo": "Filtros",
+     "texto": "Campo | O que fazerBuscar por CNPJ | Digite o CNPJ (só números) e toque em \"Buscar\". O cliente é escolhido sozinho\nCliente | Escolha o cliente, ou deixe \"Todos os clientes\"\nUnidade | Depois de escolher o cliente, escolha a unidade, ou deixe \"Todas as unidades\"\nStatus | Escolha \"Todos\", \"Ativo\" ou \"Inativo\""
+    },
+    {
+     "titulo": "Gerar o inventário",
+     "texto": "1. Ajuste os filtros.\n2. Toque em \"Gerar Inventário\".\n3. Aguarde a tabela aparecer.\n4. Olhe primeiro os cartões do topo: total, em dia, vencendo, vencidos e sem documentação.\n5. Na tabela, olhe primeiro as linhas vermelhas e depois as amarelas.\nQual documento conta: o documento ativo, ligado ao equipamento, com o tipo de calibração ou de qualificação. Se houver mais de um, vale o de validade mais distante."
+    },
+    {
+     "titulo": "Cores e selos",
+     "texto": "Selo ou cor | O que quer dizer\"OK\" (verde) | Em dia. Faltam mais de 30 dias para vencer\n\"Vencendo\" (amarelo) | Vence em 1 a 30 dias. Programe o serviço\n\"Vencido\" (vermelho) | Já venceu ou vence hoje. O equipamento está irregular\n\"Sem doc\" (cinza) | Não há documento, ou o documento não tem data de vencimento (\"Sem data de vencimento\")\nLinha com fundo vermelho | O equipamento tem pelo menos um documento vencido\nLinha com fundo amarelo | O equipamento tem documento vencendo\nLinha apagada | Equipamento inativo"
+    },
+    {
+     "titulo": "Imprimir ou salvar em PDF",
+     "texto": "1. Gere o inventário.\n2. Toque em \"Gerar PDF / Imprimir\".\n3. Confira a pré-visualização. O papel é A4 deitado e as páginas saem numeradas. Esta impressão não guarda cópia: para guardar o documento na pasta do cliente, use \"Relatório A4 com análise\".\n4. Toque em \"Imprimir / Salvar PDF\".\n5. Para PDF, escolha \"Salvar como PDF\" na janela de impressão.\n6. Toque em \"Fechar\" para voltar."
+    },
+    {
+     "titulo": "Relatório A4 com análise e documentos já gerados",
+     "texto": "1. Gere o inventário.\n2. Toque em \"Relatório A4 com análise\".\n3. Aguarde até um minuto. O relatório abre numa aba nova.\n4. Uma cópia em PDF e HTML fica guardada na pasta do cliente (a subpasta com o CNPJ). O link aparece na tela.\n\nO relatório traz identificação, indicadores com o gráfico da situação documental, análise do inventário, distribuição por tipo, itens que exigem ação e a lista completa. Relatório longo traz capa e sumário com o número das páginas. Sem a chave da IA, a análise sai com o texto padrão do sistema e a tela avisa. Os números continuam certos.\n\nPara achar um inventário salvo: em \"Documentos já Gerados\", digite o nome do cliente ou do arquivo, toque em \"Buscar\" e toque no link."
+    },
+    {
+     "titulo": "Quem pode usar",
+     "texto": "Perfil | O que pode fazerEquipe interna (todos os perfis da Metrolabs) | Gerar o inventário de qualquer cliente, imprimir, gerar o relatório A4 e buscar os já gerados\nCliente | Só a própria empresa, quando a tela estiver liberada no seu menu"
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aparece | O que fazer\"Gere o inventário antes de imprimir\" ou \"antes de emitir o relatório\" | Toque em \"Gerar Inventário\" primeiro\n\"Nenhum equipamento encontrado com os filtros selecionados.\" | Troque para \"Todas as unidades\" e \"Todos\" e gere de novo\n\"Digite o CNPJ (ou parte dele) pra buscar.\" | Digite o CNPJ e toque em \"Buscar\"\n\"Nenhum cliente ativo encontrado com esse CNPJ.\" | Confira o número ou escolha o cliente na lista\nEquipamento \"Sem doc\" mas tem certificado | Confira no \"Arquivo de documentos\" se o documento está ativo, ligado ao equipamento e com data de vencimento\n\"O navegador bloqueou a nova aba\" | Toque no link para abrir o relatório\n\"a cópia (PDF e HTML) não foi gravada na pasta\" | Gere de novo. Se repetir, avise o administrador"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | O que éInventário | Lista dos equipamentos de um cliente com a situação dos documentos\nCalibração / Qualificação | Os dois tipos de documento acompanhados em cada equipamento\nRetrato do momento | O inventário mostra a situação de quando foi gerado e não muda sozinho"
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_PGT_POP.md",
+   "titulo": "Manual do Operador — Módulo PGT e POP (Engenharia Clínica)",
+   "tela": "pgt_pop",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "O PGT sai com capa, sumário com os números de página, seções numeradas (os requisitos gerais e específicos viram subseções 7.1, 8.1...), glossário com o termo em negrito e as quatro assinaturas juntas na página final (\"Aprovação\").\nO POP sai com título, ficha (código, revisão e data), histórico de revisões (Tabela 1), seções numeradas, passos numerados em lista e as assinaturas. O sumário só aparece quando o POP passa de 3 páginas.\nCada documento gerado já fica na pasta do cliente (CNPJ) em PDF e em cópia A4 (HTML) com o nome \"POP - POP005 rev 1.0 - Etiquetagem de Equipamentos - aaaa-mm-dd hhmm\" (no PGT: \"PGT - PGTS rev 1.0 - <instituição> - ...\"). O botão \"Salvar na pasta do cliente\" não cria mais um segundo PDF com o mesmo nome: se o documento já estava salvo, mostra o arquivo que já existe."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nNome, cargo e registro de quem elaborou ficam na etapa 1. \"Avançar\" confere razão social, responsável técnico e \"Elaborado por\".\nSem IA, o PGT e os POPs sem roteiro não são gerados (nada é gravado e a revisão continua a mesma). O POP com roteiro sai com texto padrão."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema. Leia na ordem, de cima para baixo, seguindo a tela também de cima para baixo. Se aparecer uma palavra técnica desconhecida, vá direto ao Glossário (seção 10)."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você preenche os dados de um hospital e o sistema gera, com ajuda de Inteligência Artificial, o PGT (Plano de Gerenciamento de Tecnologias em Saúde) inteiro e os POPs (Procedimentos Operacionais Padrão) escolhidos — todos personalizados pra aquele hospital, seguindo a RDC nº 509/2021 (ANVISA) e a ABNT NBR 15.943:2011.\nPGT é um documento grande e denso — é gerado em 6 blocos de Inteligência Artificial (não 1 chamada só), o que deixa o texto bem mais completo, mas também demora — pode levar alguns minutos. É normal a tela mostrar \"gerando...\" por um tempo."
+    },
+    {
+     "titulo": "Etapa 1 — Dados do Hospital",
+     "texto": "Campo | O que fazerCNPJ | Digite e clique em \"Buscar\" — preenche Razão Social, Logradouro, Bairro, Cidade, UF sozinho\nPorte / Tipo do Hospital | Ex.: hospital de grande porte, clínica, etc.\nNº de Leitos | Quantidade de leitos do hospital\nNome do Responsável Técnico | Responsável técnico do hospital (aparece no documento)\nCargo | Cargo desse responsável\nUse \"Consultar documentos já gerados\" pra ver se esse hospital já tem PGT/POPs gerados antes, sem precisar gerar de novo."
+    },
+    {
+     "titulo": "Etapa 2 — PGT",
+     "texto": "Campo | O que fazerNome de quem elaborou | Nome de quem está montando o documento agora\nCargo | Sugestão: \"Gestor de Engenharia Clínica\" — editável\nRegistro profissional | Nº de registro (CREA, etc.) de quem elaborou\nRoteiro / Observações do PGT (opcional) | Texto livre com informações específicas desse hospital pra IA considerar\nImagens (opcional) | A IA analisa cada foto anexada e escreve uma interpretação técnica sozinha\nAtenção com nome/cargo/registro: esses 3 campos são sempre editáveis e nunca vêm fixos — um documento gerado com um nome diferente do de costume sai assinado com o registro profissional certo daquela pessoa, não de outra. Preencha com cuidado."
+    },
+    {
+     "titulo": "Etapa 3 — POPs",
+     "texto": "Marque, na lista, quais Procedimentos Operacionais Padrão você quer gerar pra esse hospital. Se precisar de um POP que não está na lista, use \"+ Adicionar POP avulso\" pra criar um personalizado — remova qualquer um marcado por engano com \"Remover\"."
+    },
+    {
+     "titulo": "Etapa 4 — Gerar Documentos",
+     "texto": "Clique em \"Gerar Tudo\". O sistema gera o PGT (em 6 blocos de IA) e todos os POPs marcados, um por um — pode levar alguns minutos. Acompanhe pelo LOG OPERACIONAL (visível em todas as etapas), que mostra o progresso em tempo real. Ao terminar, clique em \"Ver Documentos\"."
+    },
+    {
+     "titulo": "Etapa 5 — Documentos Gerados",
+     "texto": "Botão | O que fazAbrir | Abre o documento numa nova aba, pronto pra imprimir\nSalvar no Drive | Salva uma cópia em PDF na pasta do hospital\nAtualizar lista | Recarrega a lista de documentos gerados"
+    },
+    {
+     "titulo": "Passo a passo completo",
+     "texto": "1. Etapa 1: CNPJ, buscar, preencher porte/leitos/responsável técnico.\n2. Etapa 2: preencher quem elaborou (nome/cargo/registro), roteiro e imagens.\n3. Etapa 3: marcar os POPs desejados (ou adicionar avulso).\n4. Etapa 4: clicar em \"Gerar Tudo\" e acompanhar o log.\n5. Etapa 5: abrir cada documento, salvar no Drive."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | O que fazerA geração está demorando muito | Normal — o PGT sozinho são 6 chamadas de IA em sequência; acompanhe o log\nQuero reaproveitar um documento já gerado pra esse hospital | Use \"Consultar documentos já gerados\" na etapa 1\nUm POP que eu preciso não está na lista | Use \"+ Adicionar POP avulso\" na etapa 3"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesPGT | Plano de Gerenciamento de Tecnologias em Saúde — documento amplo, exigido por norma, sobre a gestão dos equipamentos do hospital\nPOP | Procedimento Operacional Padrão — instrução passo a passo de como um processo deve ser feito\nRDC nº 509/2021 | Norma da ANVISA que embasa a exigência do PGT\nPOP avulso | Um POP personalizado, criado na hora, fora da lista padrão\nEste manual descreve o módulo PGT e POP tal como implementado em 2026-08-20."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_PLANEJAMENTO_CME.md",
+   "titulo": "Manual do Operador — Módulo Planejamento CME",
+   "tela": "planejamento_cme",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "O documento tem seções numeradas, o quantitativo na Tabela 1 com um gráfico (Figura 1) da base calculada e do total com a margem, e a composição do cálculo por etapa e receita na Tabela 2 (a soma das colunas é a base da Tabela 1). A antiga lista \"Explicação técnica do resultado\", que repetia o mesmo texto para cada receita, saiu.\nSem a IA, a fundamentação sai na Tabela 3 (\"Base técnica das quantidades\"), com a fonte e a natureza de cada número (normativa, protocolo do fabricante ou critério da executante). Com a IA, a fundamentação em texto entra no lugar dessa tabela.\nReferências normativas no mesmo formato do texto (RDC nº 15/2012, ABNT NBR 16328:2024...); o parágrafo da E.R.U. não se repete mais; o campo da E.R.U. tem linhas para preenchimento; as assinaturas ficam junto do parágrafo de responsabilidade técnica. Sumário com páginas quando o documento passa de 3 páginas.\nArquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome \"Planejamento tecnico CME - PLC-aaaammdd-hhmm - <equipamento e série> - aaaa-mm-dd hhmm\"."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nSão 6 tipos de processo: as três \"Lavadora Ultrassônica\" com marca viraram uma só, \"Lavadora Ultrassônica\". O Bowie-Dick só aparece na Autoclave a Vapor.\n\"Próximo\" confere razão social, tipo de processo, volume maior que zero e ao menos um serviço contratado. \"Voltar\" não apaga o cálculo."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também (a tela é dividida em passos numerados — você avança de um pro outro clicando em \"Próximo\"). Se em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 12) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você informa o cliente, o equipamento (autoclave, termodesinfectora ou lavadora ultrassônica), o que foi contratado (Qualificação de Instalação, Operação, Desempenho) e as receitas a qualificar — e o sistema calcula automaticamente quantos sensores, indicadores biológicos, integradores químicos e outros insumos são necessários, e gera um único documento técnico explicando, com Inteligência Artificial, o porquê de cada número, citando norma ou protocolo do fabricante.\n\nEste documento reúne, num só arquivo: o planejamento técnico e o quantitativo de insumos, a fundamentação de cada exigência, e a orientação de como o cliente pode formalizar uma alteração de critério (Especificação de Requisitos do Usuário — E.R.U.), caso não concorde com algo."
+    },
+    {
+     "titulo": "Os 8 tipos de processo",
+     "texto": "Você escolhe um tipo de processo na tela (Etapa 2, campo \"Tipo de processo\"). Essa escolha muda a fórmula de cálculo de sensores e a exigência (ou não) do Teste Bowie-Dick.\nTipo de processo | Família | Bowie-Dick disponível?Autoclave a Vapor | Autoclave | Sim\nAutoclave de Peróxido de Hidrogênio | Autoclave | Não\nEsterilizador a Vapor de Baixa Temperatura e Formaldeído (VBTF) | Autoclave | Não\nEsterilizador a Óxido de Etileno (ETO) | Autoclave | Não\nTermodesinfectora | Termodesinfectora | Não se aplica\nLavadora Ultrassônica (Brasmedical) | Lavadora | Não se aplica\nLavadora Ultrassônica (Sanders) | Lavadora | Não se aplica\nLavadora Ultrassônica (Outros) | Lavadora | Não se aplica\nPor que só a Autoclave a Vapor tem Bowie-Dick? O teste Bowie-Dick detecta ar residual num ciclo de vácuo fracionado — isso é específico do processo a vapor. Peróxido, Formaldeído e Óxido de Etileno não usam vapor saturado sob vácuo fracionado, então não existe um equivalente físico direto. O sistema já esconde sozinho o campo de Bowie-Dick da tela quando você escolhe qualquer processo que não seja Vapor — você não precisa lembrar dessa regra, o sistema aplica por você."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "A tela é organizada em passos, avançados com o botão \"Próximo\":\n1. Dados do cliente — CNPJ e endereço.\n2. Dados do equipamento — tipo de processo, marca, modelo, volume da câmara.\n3. O que foi vendido? — quais etapas (QI/QO/QD) e o Bowie-Dick foram contratados.\n4. Receitas que serão qualificadas — lista de receitas/ciclos.\n5. Resultado do planejamento — os números calculados, observações, e o botão que gera o documento final."
+    },
+    {
+     "titulo": "Etapa 1 — Dados do cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Tenta preencher automaticamente razão social e endereço | Digite o CNPJ e clique em \"Buscar\"\nRazão social | Nome oficial da empresa | Aparece no documento | Confira depois da busca automática; se falhar, digite manualmente\nLogradouro / Bairro / Cidade / UF | Endereço da empresa | Aparece no documento | Preenchidos automaticamente pela busca, ou digite manualmente\nO que acontece se a busca automática falhar? Uma mensagem avisa que a consulta não funcionou e pede para completar manualmente — você pode continuar normalmente, só precisa digitar os campos você mesmo."
+    },
+    {
+     "titulo": "Etapa 2 — Dados do equipamento",
+     "texto": "Campo | O que é | Para que serve | O que fazerTipo de equipamento | Categoria geral (ex.: \"Autoclave\") | Informação de identificação no documento | Já vem preenchido com um valor padrão; ajuste se necessário\nTipo de processo (dropdown) | Um dos 8 processos (seção 2 deste manual) | Define a fórmula de sensores e se o Bowie-Dick fica disponível na Etapa 3 | Escolha o processo real do equipamento\nMarca / Modelo | Fabricante e modelo | Identificação no documento | Digite conforme a placa\nNúmero de série | Número de série de fábrica | Identificação no documento | Digite o número de série\nVolume da câmara em litros | Volume interno da câmara | Usado para calcular a quantidade de sensores | Digite o volume real — este número afeta diretamente o cálculo\nPossui bomba de vácuo? | Se o equipamento tem bomba de vácuo | Informação de identificação no documento | Escolha Sim ou Não"
+    },
+    {
+     "titulo": "Etapa 3 — O que foi vendido?",
+     "texto": "Marque exatamente o que foi contratado — o sistema usa exatamente essas marcações para calcular os insumos, nada além disso.\nCampo | O que é | O que fazerQualificação de Instalação | Verificação da infraestrutura e das condições de instalação | Marque se foi contratada\nQualificação de Operação | Avaliação do funcionamento do equipamento vazio | Marque se foi contratada\nQualificação de Desempenho | Avaliação do equipamento com carga ou receitas a qualificar | Marque se foi contratada\nTeste Bowie-Dick (só aparece para Autoclave a Vapor) | Teste independente de rotina | Marque se foi contratado — este campo some sozinho para os outros 7 processos\nImportante — leia com atenção, essa é a regra mais perguntada deste sistema: quando o cliente contrata só QI+QO, sem QD (comum em orçamentos que não incluem a etapa de desempenho), o sistema ainda inclui 3 indicadores biológicos e 3 integradores químicos fixos por ciclo, posicionados conceitualmente no início, meio e fim da câmara. Isso existe porque um relatório de qualificação não pode sair sem nenhum teste microbiológico documentado. Quando o cliente contrata QD junto, essa responsabilidade passa a ser inteiramente da Qualificação de Desempenho (1 indicador biológico + 1 integrador químico por sensor), e a Qualificação de Operação não leva mais indicador nenhum — ela avalia só a distribuição de temperatura em vazio. Você não precisa fazer nada de diferente na tela para isso funcionar — o sistema decide sozinho qual dos dois regimes se aplica, só olhando se QD foi marcado ou não."
+    },
+    {
+     "titulo": "Etapa 4 — Receitas que serão qualificadas",
+     "texto": "Campo | O que é | Para que serve | O que fazerNome da receita | O nome do ciclo/receita (ex.: \"Instrumental 134 °C\", \"Lavagem Geral\", \"Príons\") | Cada receita informada gera sua própria linha de cálculo no relatório | Digite o nome e clique em \"Adicionar receita\" — repita para cada receita\nO que acontece se eu não marcar Qualificação de Operação nem Desempenho? Uma mensagem avisa que não é necessário informar receitas nesta etapa, e o campo de receitas fica oculto — isso é normal quando o cliente contratou só Qualificação de Instalação.\nAtenção com a receita \"Príons\": se você digitar uma receita cujo nome contenha a palavra \"Príons\" (em qualquer capitalização), o sistema automaticamente troca o integrador químico convencional por um integrador químico específico para Príons nessa receita — mantendo o indicador biológico normal. Não existe um campo separado para isso, o sistema reconhece pelo nome da receita."
+    },
+    {
+     "titulo": "Etapa 5 — Calcular o planejamento",
+     "texto": "Depois de preencher as etapas 1 a 4, clique em \"Calcular planejamento\".\n\nO sistema calcula o quantitativo de insumos (sensores, indicadores biológicos, integradores químicos, Bowie-Dick, testes de cavitação/limpeza, dependendo do processo) e, na mesma chamada, já pede à Inteligência Artificial para escrever a fundamentação técnica do documento inteiro — por isso este passo pode levar alguns segundos a mais que um cálculo simples. Uma mensagem \"Calculando e gerando a fundamentação técnica com IA...\" aparece enquanto isso acontece.\n\nAo terminar, a tela mostra:\nIndicadores (KPIs) — sensores, indicadores biológicos, integradores químicos, Bowie-Dick, integrador para Príons, testes de cavitação, testes de limpeza — só aparecem os que tiverem valor maior que zero para o processo escolhido.\nTabela de insumos — cada item, a base calculada e o total já com margem de segurança aplicada."
+    },
+    {
+     "titulo": "Observações adicionais e Refinar com IA",
+     "texto": "Campo | O que é | Para que serve | O que fazerObservações adicionais | Texto livre sobre particularidades do caso | Some no documento final como uma seção de observações | Escreva livremente\nRefinar texto com IA (botão) | Pede à IA para melhorar a redação do que você escreveu | Deixa o texto mais formal/claro, sem mudar o conteúdo | Escreva algo no campo antes de clicar — o botão substitui o texto pela versão refinada"
+    },
+    {
+     "titulo": "Gerar Documento, Salvar no Drive e WhatsApp",
+     "texto": "Elemento | O que é | O que fazerGerar Documento (botão) | Monta o documento único completo (planejamento + fundamentação + orientação de E.R.U.) | Clique depois de calcular. Uma nova aba abre imediatamente com \"Gerando documento, aguarde...\" e é preenchida com o documento assim que pronto\nSalvar no Drive (botão, aparece depois de gerar) | Converte o documento em PDF e salva na pasta do cliente no Google Drive | Clique se quiser guardar uma cópia — depois de salvo, aparece um link direto para o arquivo\nAbrir WhatsApp (botão) | Monta uma mensagem pronta com o resumo dos insumos calculados | Clique a qualquer momento depois de calcular. O link do documento só aparece na mensagem se você já tiver clicado em \"Salvar no Drive\" antes\nO documento não é salvo automaticamente no Drive. Se você fechar a aba sem clicar em \"Salvar no Drive\", o documento gerado não fica registrado em lugar nenhum — gere de novo se precisar."
+    },
+    {
+     "titulo": "Passo a passo — do zero até o documento pronto",
+     "texto": "1. Etapa 1: digite o CNPJ, clique em \"Buscar\", confira/complete o endereço, clique em \"Próximo\".\n2. Etapa 2: escolha o tipo de processo correto, preencha marca/modelo/série/volume/bomba de vácuo, clique em \"Próximo\".\n3. Etapa 3: marque exatamente o que foi vendido (QI/QO/QD/Bowie-Dick), clique em \"Próximo\".\n4. Etapa 4: adicione cada receita a ser qualificada, uma de cada vez, clique em \"Calcular planejamento\".\n5. Etapa 5: confira os indicadores e a tabela de insumos. Escreva observações adicionais se houver, use \"Refinar texto com IA\" se quiser.\n6. Clique em \"Gerar Documento\" — o documento abre em nova aba assim que pronto.\n7. Clique em \"Salvar no Drive\" se quiser guardar uma cópia em PDF.\n8. Clique em \"Abrir WhatsApp\" se quiser enviar o resumo ao cliente."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazerO campo de Bowie-Dick sumiu da tela | Você trocou o tipo de processo para algo diferente de \"Autoclave a Vapor\" | Comportamento esperado — Bowie-Dick só existe para o processo a Vapor\nO cálculo demorou mais do que eu esperava | O passo de \"Calcular\" já inclui a geração da fundamentação técnica pela IA, numa única chamada | Normal — espere a mensagem de carregamento terminar\nRecebi um erro ao calcular, mensagem sobre a IA | Falha temporária na geração do texto (ex.: instabilidade de rede) | Tente calcular novamente\nO link do documento não apareceu na mensagem do WhatsApp | Você ainda não clicou em \"Salvar no Drive\" | Clique em \"Salvar no Drive\" primeiro, depois abra o WhatsApp\nA quantidade de indicadores biológicos/químicos veio diferente do que eu esperava para QI+QO sem QD | Comportamento esperado — ver a explicação da seção 6 deste manual sobre o regime de 3 indicadores fixos por ciclo | Confira se QD estava realmente marcado ou não — isso muda completamente o cálculo"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesQI (Qualificação de Instalação) | Verificação de que o equipamento foi instalado corretamente\nQO (Qualificação de Operação) | Verificação de que o equipamento opera conforme especificado, em ciclo vazio\nQD (Qualificação de Desempenho) | Verificação de que o equipamento entrega o resultado esperado, com carga real\nBowie-Dick | Teste de rotina que detecta ar residual num ciclo de esterilização a vapor com vácuo fracionado\nIndicador biológico | Insumo que comprova a eficácia microbiológica (morte de esporos-teste) de um ciclo de esterilização\nIntegrador químico | Insumo que verifica se as condições físicas de exposição (tempo, temperatura, agente esterilizante) foram atingidas\nReceita/ciclo | O programa específico que o equipamento executa para um tipo de carga (ex.: \"Instrumental\", \"Têxteis\", \"Príons\")\nE.R.U. (Especificação de Requisitos do Usuário) | Documento que o cliente preenche e assina quando quer alterar algum critério do planejamento original\nMargem de segurança | Percentual adicional aplicado sobre a quantidade base calculada, para cobrir repetições/imprevistos\nEste manual descreve o módulo Planejamento CME tal como implementado em 2026-07-27. Se a tela mudar no futuro (novos processos, novos campos), este documento precisa ser atualizado junto — ele não se atualiza sozinho."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_REGISTROS_OPERACIONAIS.md",
+   "titulo": "Manual do Operador — Módulo Registros Operacionais",
+   "tela": "reg_op",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "O registro sai com título normal (sem caixa alta), ficha com a data e o número, seções numeradas (os campos sem seção ficam em \"Informações gerais\"), tabelas que repetem o cabeçalho \"Item | Registro\" em cada página, texto longo em linha inteira e assinaturas com nome, cargo e papel.\nArquivo salvo na pasta do cliente (CNPJ), PDF e cópia A4, com o nome \"Registro operacional - REG-XXXXXXXX - <tipo> - aaaa-mm-dd hhmm\"."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nPara criar um tipo novo, escolha \"+ Criar novo tipo de documento\" na lista da etapa 2 e, no fim, clique em \"Salvar tipo de documento\"."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema. Leia na ordem, de cima para baixo, seguindo a tela também de cima para baixo. Se aparecer uma palavra técnica desconhecida, vá direto ao Glossário (seção 10)."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você registra a execução de qualquer documento operacional do hospital (ronda, checklist, formulário, treinamento, etc.) — o sistema guarda tudo organizado por hospital e por tipo de documento, e avisa quando algum registro ficou pendente (aberto, esperando um documento que o feche).\n\"Tipo de Documento\" é flexível. Você não está preso a uma lista fixa — pode criar, editar e excluir os tipos de documento que o hospital precisa, cada um com seus próprios campos."
+    },
+    {
+     "titulo": "Etapa 1 — Dados do Hospital",
+     "texto": "Campo | O que fazerCNPJ | Digite e clique em \"Buscar\" — preenche Razão Social, Cidade e UF sozinho\nClique em \"Avançar\" pra ir pra etapa 2."
+    },
+    {
+     "titulo": "Etapa 2 — Tipo de Documento",
+     "texto": "Escolha o tipo de documento que você vai registrar. Se o tipo que você precisa não existe ainda, crie um novo:\nCampo | O que fazerNome do tipo de documento | Ex.: \"Checklist de Ronda Noturna\", \"Ata de Treinamento\"\nPOP(s) relacionado(s) (opcional) | Se esse documento comprova a execução de um POP específico, relacione aqui\nDocumento que fecha esta pendência | Marque se esse tipo de documento deve ficar \"pendente\" até outro documento futuro fechar essa pendência\nClique em \"Gerar sugestão de campos com IA\" pra deixar a Inteligência Artificial sugerir quais campos esse tipo de documento normalmente precisa — aceite, edite ou remova qualquer campo sugerido. Use \"+ Adicionar campo\" e \"+ Adicionar assinatura\" pra montar manualmente. Um tipo já criado pode ser mudado com \"Editar este tipo\", ou removido com \"Excluir este tipo\" (pede confirmação)."
+    },
+    {
+     "titulo": "Etapa 3 — Preenchimento do Registro",
+     "texto": "Preencha os campos definidos pro tipo de documento escolhido (variam conforme o tipo). Em qualquer campo de texto, o botão \"✨ Melhorar com IA\" reescreve o que você digitou de forma mais clara e profissional — você decide entre \"Usar sugestão da IA\" ou \"Manter o que escrevi\", a IA nunca troca o texto sozinha sem sua confirmação. Anexe imagens se o tipo de documento permitir. Clique em \"Gerar Registro\" pra finalizar."
+    },
+    {
+     "titulo": "Etapa 4 — Consultar Registros Já Gerados",
+     "texto": "Digite o CNPJ e clique em \"Buscar\" pra ver o Histórico Completo de registros desse hospital."
+    },
+    {
+     "titulo": "Pendências em aberto",
+     "texto": "Na mesma etapa de consulta, a seção \"Pendências em Aberto\" mostra registros que ainda não foram fechados — cada um mostra a data em que ficou pendente. Pra fechar, clique em \"Registrar Fechamento\" na pendência correspondente — isso abre um novo preenchimento já vinculado àquela pendência."
+    },
+    {
+     "titulo": "Passo a passo completo",
+     "texto": "1. Etapa 1: CNPJ, buscar, conferir dados do hospital.\n2. Etapa 2: escolher ou criar o tipo de documento.\n3. Etapa 3: preencher os campos, usar \"Melhorar com IA\" se quiser, gerar o registro.\n4. Etapa 4: consultar histórico e pendências em aberto quando precisar."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | O que fazerO botão \"Avançar\" da etapa 2 está desabilitado | Escolha ou finalize a criação de um tipo de documento antes de avançar\nNão sei quais campos colocar num tipo novo | Use \"Gerar sugestão de campos com IA\" como ponto de partida\nUm registro sumiu da lista de pendências | Provavelmente já foi fechado — confira no Histórico Completo"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesTipo de Documento | Modelo reutilizável, com campos próprios, pra um tipo de registro operacional\nPendência | Um registro que ficou \"em aberto\", esperando um documento futuro que o feche\nRegistrar Fechamento | Preencher o documento que fecha uma pendência específica\nPOP | Procedimento Operacional Padrão que esse registro comprova ter sido executado\nEste manual descreve o módulo Registros Operacionais tal como implementado em 2026-08-20."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_RELATORIO_CALIBRACAO.md",
+   "titulo": "Manual do Operador — Módulo Relatório de Calibração",
+   "tela": "relatorio_calibracao",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou em 18/10/2026",
+     "texto": "O documento segue o padrão A4 dos documentos técnicos: seções numeradas (1. Identificação, 2. Introdução, 3. Resultados da calibração, Registro fotográfico quando houver fotos, Referências normativas e Conclusão e responsabilidade técnica), tabelas de resultados numeradas (\"Tabela 1 — …\") e o certificado anexado como figura numerada (\"Figura 1 — Certificado de calibração anexado\"), com altura limitada para a seção começar já na primeira folha.\nAs normas aparecem uma única vez, na seção \"Referências normativas\". A nota de escopo fica junto da conclusão e das assinaturas, na mesma folha.\nA cópia (HTML + PDF) vai para a subpasta do cliente com o CNPJ de 14 dígitos, procurado no cadastro de clientes pela razão social ou pelo nome fantasia; sem CNPJ no cadastro, a subpasta usa o nome do cliente. Nome do arquivo: \"Relatorio de calibracao - <número> - <TAG> - <aaaa-MM-dd HHmm>\".\nSem número informado no formulário, o relatório recebe um número automático no formato RCL-aaaammdd-hhmm."
+    },
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nO relatório é salvo sozinho na pasta do cliente. Depois aparece o quadro \"Vincular ao Cadastro\" para ligar o documento ao equipamento do Inventário. Os perfis Comercial e Financeiro só consultam."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Se em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 11) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você anexa o certificado de calibração real de um instrumento simples (termômetro, balança, esfigmomanômetro, etc.), o sistema lê o certificado automaticamente e escreve um relatório inteiro, com Inteligência Artificial, explicando de forma didática cada resultado — sem arredondar nem reescrever nenhum número.\n\nEste é um módulo separado da Declaração de Execução de Serviço e do Relatório de QI/QO/QD: aqui não existe etapa de instalação ou operação — são instrumentos de bancada ou de bolso, calibrados principalmente no laboratório da própria Metrolab's (diferente do resto do Portal, que assume atendimento em campo por padrão)."
+    },
+    {
+     "titulo": "Os 9 tipos de instrumento",
+     "texto": "Você escolhe um instrumento na tela (campo \"Instrumento\", seção 2).\nInstrumento | Peças calibráveis (certificados separados)Termo-higrômetro | 1 certificado só\nTermômetro | 1 certificado só\nEsfigmomanômetro | 1 certificado só\nBalança | 1 certificado só\nCentrífuga (sem refrigeração) | Temporizador/Cronômetro do ciclo + Indicador de Rotação (RPM) — 2 certificados separados\nCentrífuga Refrigerada | Temporizador/Cronômetro do ciclo + Indicador de Rotação (RPM) + Sensor de Temperatura — 3 certificados separados\nIncubadora de Testes Biológicos | 1 certificado só\nEstufa de Incubação (bancada de laboratório) | 1 certificado só\nBanho-maria (bancada de laboratório) | 1 certificado só\nPor que a Centrífuga tem mais de um certificado? Porque, na prática, o temporizador, o indicador de rotação e (na versão refrigerada) o sensor de temperatura são calibrados como peças separadas, cada uma com seu próprio certificado emitido pelo laboratório de calibração. O sistema mostra um campo de upload para cada peça — nunca junte vários certificados num arquivo só, isso pode confundir a leitura automática de qual dado pertence a qual peça."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "1. Cliente — quem é o dono do instrumento.\n2. Instrumento — qual instrumento foi calibrado, com quais dados, e onde a calibração foi feita.\n3. Certificado e Fotos — os certificados de calibração (obrigatório ao menos um), fotos opcionais, e o botão que gera o relatório.\n4. Documentos já gerados — busca de relatórios antigos."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço | Digite o CNPJ e clique em \"Buscar CNPJ\"\nBuscar CNPJ (botão) | Dispara a busca automática | Evita digitar manualmente | Clique depois de digitar o CNPJ\nCliente / Razão Social | Nome oficial da empresa | Aparece na capa do documento | Confira depois da busca; corrija manualmente se necessário\nEndereço | Endereço da empresa | Aparece na capa do documento | Mesma lógica"
+    },
+    {
+     "titulo": "Seção 2 — Instrumento",
+     "texto": "Campo | O que é | Para que serve | O que fazerInstrumento (dropdown) | O tipo de instrumento calibrado (seção 2 deste manual) | Define quantos slots de certificado aparecem na seção 3 | Escolha antes de anexar qualquer certificado — trocar depois reconstrói os campos de certificado e você perderia o arquivo já anexado\nTAG / Identificação | Código interno do instrumento no cliente | Identifica qual instrumento específico foi calibrado | Copie do instrumento físico ou peça ao cliente\nMarca / Modelo | Fabricante e modelo | Identificação no documento | Digite conforme a placa\nLocalização habitual do instrumento | Onde o instrumento fica normalmente | Rastreabilidade | Digite o local\nData da calibração | Data em que a calibração foi realizada | Aparece no documento | dd/MM/aaaa\nTécnico responsável | Quem realizou a calibração | Responsável no documento | Nome completo"
+    },
+    {
+     "titulo": "Seção 2 — Instrumento > Local da calibração",
+     "texto": "Campo | O que é | O que fazerRealizado no laboratório da Metrolab's (já vem marcado) | Diz se a calibração foi feita no laboratório ou no cliente | Diferente dos outros módulos do Portal, aqui a caixa já vem marcada por padrão, porque a maioria das calibrações deste tipo é feita no laboratório. Desmarque só nos casos raros em que foi feito nas instalações do cliente — isso muda a redação do relatório"
+    },
+    {
+     "titulo": "Seção 2 — Instrumento > Observações do técnico (opcional)",
+     "texto": "Campo | O que é | Para que serve | O que fazerObservações do técnico sobre esta calibração | Texto livre | Enriquece o relatório com contexto real (ex.: condição do instrumento antes da calibração, particularidades do atendimento) | Escreva livremente — a IA usa isso como contexto adicional, nunca como substituto dos dados do certificado"
+    },
+    {
+     "titulo": "Seção 3 — Certificado e Fotos",
+     "texto": "Campo | O que é | Para que serve | O que fazerDetectar automaticamente os dados do certificado (caixa de marcar, já vem marcada) | Liga a leitura automática do certificado pela IA | Assim que você anexa o certificado, o sistema lê e preenche sozinho cliente, TAG, marca, modelo, número do documento, data da calibração e técnico responsável | Deixe marcado no uso normal. Desmarque só se quiser preencher tudo manualmente\nCertificado(s) de calibração (1 slot por peça calibrável, PDF ou imagem — obrigatório ao menos 1) | O certificado real emitido pelo laboratório de calibração | A IA lê o certificado e escreve o relatório inteiro com base nos dados reais dele | Anexe o certificado de cada peça. Nunca junte vários certificados num arquivo só quando o instrumento tiver mais de uma peça calibrável\nRegistros fotográficos (até 6, opcional) | Fotos do instrumento/calibração | A IA analisa cada foto automaticamente e gera uma legenda descritiva sozinha | Anexe as fotos relevantes — a legenda de texto é só um complemento opcional\nNúmero do documento (opcional) | Código de referência interno | Numeração/controle interno | Preencha só se tiver um código — não é uma data\nO que acontece quando você anexa um certificado com \"Detectar automaticamente\" marcado? Aparece uma mensagem \"Detectando dados do certificado automaticamente...\" e, em poucos segundos, os campos da seção 2 são preenchidos sozinhos (só os que estavam vazios — o sistema nunca sobrescreve algo que você já tinha digitado). Se a detecção falhar, aparece um aviso pedindo para preencher manualmente — isso não impede você de continuar, só significa que você preenche os campos você mesmo."
+    },
+    {
+     "titulo": "Gerar Relatório de Calibração",
+     "texto": "Diferente da Declaração de Execução e do Relatório de QI/QO/QD, este módulo não tem uma etapa separada de rascunho/revisão — um único clique já vai direto para o documento final.\n1. Clique em \"Gerar Relatório de Calibração\".\n2. Uma nova aba abre imediatamente, mostrando \"Gerando relatório de calibração, aguarde...\".\n3. O sistema lê o(s) certificado(s) e as fotos, e pede à Inteligência Artificial para escrever o relatório inteiro — isso pode levar até 1 minuto.\n4. A aba é preenchida com o documento final completo, pronto para imprimir ou salvar como PDF.\n5. Na tela original, aparece um botão \"Salvar no Drive\" — clique para salvar uma cópia em PDF na pasta do cliente.\n\nO que acontece se eu não anexar nenhum certificado? O sistema recusa gerar o relatório e avisa: \"Anexe ao menos um certificado de calibração (PDF ou imagem) antes de gerar o relatório.\" É uma exigência do sistema — sem certificado real, não há relatório."
+    },
+    {
+     "titulo": "Documentos já gerados",
+     "texto": "Busque relatórios de calibração já salvos, por cliente, TAG ou nome do arquivo — sem precisar gerar de novo."
+    },
+    {
+     "titulo": "Passo a passo — gerando um relatório do zero",
+     "texto": "1. Abra o módulo. Espere o selo de status virar \"pronto\".\n2. Seção 1: CNPJ, buscar, conferir cliente/endereço.\n3. Seção 2: escolha o instrumento certo antes de qualquer upload. Se souber os dados de antemão, pode preencher TAG/marca/modelo/localização/data/técnico — senão, deixe para a detecção automática preencher.\n4. Seção 3: com \"Detectar automaticamente\" marcado, anexe o(s) certificado(s) — um por peça calibrável, se o instrumento tiver mais de uma. Confira os campos preenchidos automaticamente. Anexe fotos se quiser. Preencha observações do técnico e número do documento se aplicável.\n5. Clique em \"Gerar Relatório de Calibração\" e aguarde — o documento abre em nova aba assim que pronto.\n6. Clique em \"Salvar no Drive\" se quiser guardar uma cópia em PDF."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazer\"Anexe ao menos um certificado...\" ao clicar em gerar | Nenhum certificado foi anexado, ou o upload falhou | Confira se o arquivo foi realmente selecionado antes de gerar\nA detecção automática não preencheu nada | Certificado ilegível, ou formato muito diferente do esperado | Preencha os campos manualmente — o relatório funciona do mesmo jeito\nTroquei o instrumento e o certificado que eu tinha anexado sumiu | Comportamento esperado — trocar de instrumento reconstrói os slots de certificado | Escolha o instrumento certo antes de anexar qualquer certificado\nA data/cliente detectados automaticamente vieram errados | O certificado real tinha esse dado diferente do que você esperava, ou a leitura confundiu algum campo | Revise e corrija manualmente antes de gerar — a detecção automática é um ponto de partida, não a palavra final"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesInstrumento | O tipo de equipamento de medição calibrado (termômetro, balança, etc.)\nCertificado de calibração | Documento oficial emitido pelo laboratório de calibração, com os dados reais da calibração\nPeça calibrável | Uma parte específica de um instrumento composto (ex.: temporizador de uma centrífuga) que recebe seu próprio certificado\nDetecção automática | Recurso que lê o certificado anexado via IA e preenche os campos da tela sozinho\nRastreabilidade metrológica | A garantia documentada de que a calibração de um instrumento está ligada, por uma cadeia de comparações, a um padrão nacional/internacional reconhecido\nEste manual descreve o módulo Relatório de Calibração tal como implementado em 2026-07-27. Se a tela mudar no futuro (novos instrumentos, novos campos), este documento precisa ser atualizado junto."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  },
+  {
+   "arquivo": "MANUAL_MODULO_RELATORIO_QUALIFICACAO_QIQOQD.md",
+   "titulo": "Manual do Operador — Módulo Relatório de Qualificação (QI/QO/QD)",
+   "tela": "declaracao_qiqo",
+   "perfis": null,
+   "secoes": [
+    {
+     "titulo": "O que mudou até 17/10/2026",
+     "texto": "O manual em vigor é o que abre dentro do SGO+: botão \"Manual do operador\" da tela e botão \"Como usar esta tela\" (cabeçalho no computador, barra do topo no celular), que também oferece o \"Manual completo do módulo\" em A4. Este arquivo é a cópia de consulta e pode estar desatualizado nos detalhes abaixo.\nOs documentos são salvos na pasta do cliente no SGO+ (não mais \"no Drive\"). O antigo \"Console Operacional\" agora se chama \"Detalhes técnicos da operação\" (ou \"Histórico da operação\"); quando algo falha, a mensagem aparece também numa faixa vermelha no topo da tela.\nO relatório é salvo sozinho na pasta do cliente. Se falhar, aparece \"Tentar salvar de novo\". Os perfis Comercial e Financeiro só consultam."
+    },
+    {
+     "titulo": "O que mudou em 18/10/2026 (documento A4)",
+     "texto": "O documento segue o padrão A4 comum: seções numeradas (1. Identificação, 2. Introdução...), tabelas com \"Tabela N —\" e figuras com \"Figura N —\", cabeçalho e rodapé em todas as páginas com \"Página X de Y\". Passou de 3 páginas, ganha sumário com o número da página de cada seção.\nNo alto da primeira página, um quadro mostra \"Executado sem achado técnico registrado\" ou \"Executado com achado técnico registrado\". O relatório continua sem aprovar nem reprovar o equipamento.\nOs itens verificados de QI e de QO aparecem uma vez só, numa tabela de cada etapa, com o achado técnico do item ao lado. As normas aparecem uma vez só, em \"Referências normativas\".\nNa QD, a \"Tabela — Certificados de calibração dos instrumentos\" mostra cada instrumento como \"Anexado (Figura N)\" ou \"Não anexado nesta visita\"; só os certificados anexados aparecem como figura, com altura limitada.\nConclusão, data de emissão e assinaturas ficam juntas na mesma página.\nO arquivo é salvo na subpasta com o CNPJ do cliente, com o nome \"Relatorio de qualificacao - <número> - <TAG> - <aaaa-MM-dd HHmm>\" (.pdf e .html). Os relatórios antigos, salvos na pasta com o nome do cliente, continuam aparecendo em \"Documentos já gerados\"."
+    },
+    {
+     "titulo": "Como usar este manual",
+     "texto": "Este manual foi escrito para quem nunca usou o sistema e não precisa entender de engenharia ou metrologia para operá-lo. Cada campo da tela está explicado em quatro partes:\nO que é — o nome em português simples do que você está vendo.\nPara que serve — por que esse campo existe.\nO que fazer — como preencher, na prática.\nO que acontece — o resultado de preencher certo, errado, ou deixar em branco.\n\nLeia este manual na ordem, de cima para baixo, seguindo a tela de cima para baixo também. Se em algum momento aparecer uma palavra técnica que você não entende, vá direto ao Glossário (seção 16) — todo termo técnico do manual está lá, explicado sem jargão."
+    },
+    {
+     "titulo": "O que este sistema faz, em uma frase",
+     "texto": "Você preenche o cliente, o equipamento, e marca quais itens de Qualificação de Instalação (QI) e Qualificação de Operação (QO) foram verificados, ou anexa certificados de calibração reais para a Qualificação de Desempenho (QD) — e o sistema escreve, com Inteligência Artificial, um relatório técnico extenso e específico, seção por seção, pronto para você revisar e entregar ao cliente.\n\nEste módulo é separado da Declaração de Execução de Serviço (mesmo que o cliente e o equipamento sejam os mesmos): a Declaração registra que o serviço foi executado, sem julgar nada; este relatório de QI/QO/QD é o documento técnico de qualificação, com o mesmo rigor de citação de norma ou protocolo do fabricante em cada afirmação."
+    },
+    {
+     "titulo": "Os 15 tipos de equipamento (perfis)",
+     "texto": "Você escolhe um tipo de equipamento na tela (campo \"Equipamento\", seção 2) — a mesma lista de 15 perfis usada na Declaração de Execução de Serviço (são o mesmo cadastro de equipamentos por trás dos dois módulos). Essa escolha define quais itens de checklist de QI e de QO aparecem, e quais itens calibráveis têm slot de upload de certificado na seção de QD.\nPerfil | ObservaçãoAutoclave a Vapor | Itens calibráveis: Válvula de Segurança, Manômetro, Manovacuômetro, Sensor de Temperatura, Pressostato, Transdutor de Pressão\nCâmara de Conservação | —\nCâmara Fria | —\nRefrigerador | —\nFreezer / Ultrafreezer | —\nCentrífuga (sem refrigeração) | Temporizador/Cronômetro do ciclo, Indicador de Rotação (RPM)\nCentrífuga Refrigerada | Temporizador/Cronômetro do ciclo, Indicador de Rotação (RPM), Sensor de Temperatura\nTermodesinfectora / Lavadora Desinfetadora Automática | —\nLavadora Ultrassônica | —\nEsterilizador a Peróxido de Hidrogênio (Gás Plasma) | —\nEsterilizador a Óxido de Etileno (ETO) | —\nEsterilizador a Vapor de Baixa Temperatura e Formaldeído (VBTF) | —\nCapela de Fluxo Laminar | —\nSeladora de Grau Cirúrgico | —\nIncubadora de Testes Biológicos | —\nVocê não precisa decorar os itens — assim que escolhe o equipamento, o sistema já monta sozinho a lista certa de checklist e de certificados."
+    },
+    {
+     "titulo": "Mapa da tela — visão geral",
+     "texto": "1. Cliente — quem é o dono do equipamento.\n2. Equipamento — qual equipamento foi atendido.\n3. Qualificação de Instalação/Operação (QI/QO) — checklist de itens verificados, fotos, e a Qualificação de Desempenho (QD) por certificado de calibração — tudo no mesmo painel, seguido do botão de gerar com IA.\n4. Revisão dos textos (só aparece depois de gerar) — onde você lê e ajusta o que a IA escreveu antes de confirmar.\n5. Documentos já gerados — busca de relatórios antigos."
+    },
+    {
+     "titulo": "Seção 1 — Cliente",
+     "texto": "Campo | O que é | Para que serve | O que fazerCNPJ | Número de identificação da empresa cliente | Preenche automaticamente nome e endereço | Digite o CNPJ e clique em \"Buscar CNPJ\"\nBuscar CNPJ (botão) | Dispara a busca automática | Evita digitar manualmente | Clique depois de digitar o CNPJ\nCliente / Razão Social | Nome oficial da empresa | Aparece na capa do documento | Confira depois da busca; corrija manualmente se necessário\nEndereço | Endereço da empresa | Aparece na capa do documento | Mesma lógica"
+    },
+    {
+     "titulo": "Seção 2 — Equipamento",
+     "texto": "Campo | O que é | Para que serve | O que fazerEquipamento (dropdown) | Tipo de equipamento (seção 2 deste manual) | Define os checklists de QI/QO e os certificados de QD que aparecem | Escolha antes de marcar qualquer item — trocar depois reseta a seleção\nTAG / Identificação | Código interno do equipamento | Identifica o equipamento específico | Copie do equipamento físico\nMarca / Modelo | Fabricante e modelo | Identificação no documento | Digite conforme a placa\nLocalização | Onde o equipamento fica | Rastreabilidade | Digite o local\nData de início / Data de fim | Datas do atendimento | Aparecem no documento | dd/MM/aaaa; deixe fim em branco se foi 1 dia só\nTécnico executor | Quem realizou o atendimento | Responsável no documento | Nome completo"
+    },
+    {
+     "titulo": "Seção 2 — Equipamento > Local do atendimento",
+     "texto": "Campo | O que é | O que fazerRealizado no laboratório da Metrolab's | Diz se foi no laboratório ou no cliente | Deixe desmarcado no caso mais comum (atendimento em campo) — marque só se o equipamento foi trazido ao laboratório"
+    },
+    {
+     "titulo": "Seção 3 — Qualificação de Instalação (QI)",
+     "texto": "Campo | O que é | Para que serve | O que fazerChecklist de QI (itens variam por perfil) | Lista dos pontos de instalação verificados | Cada item marcado vira um parágrafo específico no relatório, escrito pela IA | Marque cada item verificado; preencha o \"achado técnico\" (livre) só se algo estiver fora do padrão\nRegistros fotográficos — QI (até 6, opcional) | Fotos da instalação | A IA analisa cada foto automaticamente e escreve uma legenda descritiva sozinha | Anexe as fotos relevantes — a legenda de texto é só um complemento opcional, não precisa escrever nada\nComo a Qualificação de Instalação foi conduzida (opcional) | Texto livre de contexto geral | Enriquece o texto da IA sobre a QI | Descreva particularidades da instalação, se houver\nSobre as fotos: diferente de outros campos deste sistema, a IA aqui analisa a imagem em si (não só a legenda que você escrever) — ela identifica o que está na foto e gera uma descrição técnica sozinha. Escrever uma legenda é opcional e serve só como contexto adicional."
+    },
+    {
+     "titulo": "Qualificação de Operação (QO)",
+     "texto": "Este bloco só aparece se o perfil escolhido usa QO (todos os 15 perfis atuais usam).\nCampo | O que é | Para que serve | O que fazerChecklist de QO | Lista dos pontos de operação verificados | Mesmo mecanismo do QI — cada item vira parágrafo específico | Marque os itens verificados; achado técnico opcional\nRegistros fotográficos — QO (até 6, opcional) | Fotos da operação | Mesma análise automática por IA do QI | Anexe as fotos relevantes\nComo a Qualificação de Operação foi conduzida (opcional) | Texto livre | Enriquece o texto da IA sobre a QO | Descreva particularidades da operação"
+    },
+    {
+     "titulo": "Qualificação de Desempenho (QD)",
+     "texto": "Esta é a parte que funciona de forma diferente de QI/QO: aqui não existe checklist de autoavaliação — você anexa o certificado de calibração real de cada peça calibrável do equipamento (a mesma lista de itens calibráveis da seção 2 deste manual).\nCampo | O que é | Para que serve | O que fazerCertificado de Calibração — [item] (um slot por item calibrável, PDF ou imagem) | O certificado real, emitido para aquela peça específica | A IA lê o certificado (não uma autoavaliação) e escreve o texto de QD com base nos dados reais dele | Anexe o certificado de cada item que já tiver disponível; deixe em branco os que ainda não têm\nObservações gerais sobre a Qualificação de Desempenho (opcional) | Texto livre de contexto | Complementa o texto — nunca substitui os dados dos certificados | Use para contexto geral do atendimento\nMuito importante: a Qualificação de Desempenho deste sistema nunca é uma autoavaliação marcada em caixa de seleção — ela sempre depende de um certificado de calibração real anexado. Se você não tiver o certificado de um item ainda, deixe o campo em branco; o relatório sai sem aquele item de QD, e você pode gerar de novo depois quando tiver o certificado."
+    },
+    {
+     "titulo": "Número do documento e o botão de gerar",
+     "texto": "Campo | O que é | O que fazerNúmero do documento (opcional) | Código de referência interno | Preencha só se sua empresa usar um — não é uma data\nGerar Relatório de QI/QO com IA (botão) | Processa tudo e pede à IA os textos | Clique depois de preencher tudo. Se houver certificado de calibração anexado, a leitura pode levar até 1 minuto"
+    },
+    {
+     "titulo": "Revisão dos textos antes de confirmar",
+     "texto": "Campo | Aparece quandoIntrodução | Sempre\nObjetivo | Sempre\nQualificação de Instalação (QI) | Sempre\nQualificação de Operação (QO) | Só se o perfil usa QO (praticamente sempre)\nQualificação de Desempenho (QD) | Só se pelo menos um certificado foi anexado e lido com sucesso\nConclusão | Sempre\nMuito importante — leia com atenção: estes textos vão direto para o documento final, exatamente como estiverem na tela. Revise cada seção com cuidado — principalmente a de QD, que cita números reais lidos do certificado — antes de clicar em \"Confirmar\"."
+    },
+    {
+     "titulo": "Confirmar e Gerar Relatório de QI/QO",
+     "texto": "1. Clique em \"Confirmar e Gerar Relatório de QI/QO\". Uma nova aba abre imediatamente, com uma mensagem avisando que a IA também está analisando as fotos, o que pode levar mais tempo que o normal.\n2. Quando pronto, essa aba é preenchida com o documento final completo, pronto para imprimir ou salvar como PDF.\n3. Na tela original, aparece \"Salvando na pasta do cliente…\" e, em seguida, o link do arquivo salvo (PDF e HTML), numa subpasta com o CNPJ do cliente.\n\nO documento é salvo automaticamente na pasta do cliente. Se a gravação falhar, use \"Tentar salvar de novo\"."
+    },
+    {
+     "titulo": "Documentos já gerados",
+     "texto": "Busque relatórios de QI/QO já salvos, por cliente, TAG ou nome do arquivo — sem precisar gerar de novo."
+    },
+    {
+     "titulo": "Por que este módulo é separado da Declaração de Execução",
+     "texto": "Se você já usa o módulo \"Declaração de Execução de Serviço\" para o mesmo cliente/equipamento, pode estranhar ter dois módulos parecidos. A diferença é de propósito: a Declaração registra que o serviço foi feito, de forma neutra; o Relatório de QI/QO/QD é o documento técnico de qualificação, com o mesmo cliente e equipamento, mas com foco na verificação técnica ponto a ponto (instalação, operação, desempenho) — inclusive citando os dados reais dos certificados de calibração anexados. Um cliente pode precisar dos dois documentos, ou só de um, dependendo do que foi contratado."
+    },
+    {
+     "titulo": "Passo a passo — gerando um relatório do zero",
+     "texto": "1. Abra o módulo. Espere o selo de status virar \"pronto\".\n2. Seção 1: CNPJ, buscar, conferir cliente/endereço.\n3. Seção 2: escolha o equipamento certo, preencha TAG/marca/modelo/localização/datas/técnico, marque local do atendimento se aplicável.\n4. QI: marque os itens do checklist verificados, anexe fotos se quiser, preencha o campo de metodologia se houver particularidade.\n5. QO (se aplicável): mesma lógica do QI.\n6. QD: anexe os certificados de calibração disponíveis, um por item calibrável.\n7. Preencha o número do documento se usar um.\n8. Clique em \"Gerar Relatório de QI/QO com IA\" e aguarde.\n9. Revise com atenção cada seção gerada, especialmente a de QD.\n10. Clique em \"Confirmar e Gerar Relatório de QI/QO\". O documento abre em nova aba.\n11. A cópia em PDF e HTML é salva sozinha na pasta do cliente; o link aparece na tela."
+    },
+    {
+     "titulo": "Erros comuns e o que fazer",
+     "texto": "O que aconteceu | Motivo mais provável | O que fazerA seção de QO não aparece na revisão | O perfil escolhido não usa QO, ou nenhum item de QO foi marcado | Confira se marcou algum item do checklist de QO\nA seção de QD não aparece na revisão | Nenhum certificado de calibração foi anexado com sucesso | Anexe ao menos um certificado válido (PDF ou imagem legível)\nA leitura do certificado demorou muito ou falhou | Arquivo de certificado ilegível, corrompido, ou muito grande | Confira se o arquivo abre normalmente antes de anexar; tente novamente\nTroquei o equipamento e os itens marcados sumiram | Comportamento esperado — trocar de perfil reseta os checklists | Marque os itens de novo depois de escolher o equipamento certo"
+    },
+    {
+     "titulo": "Glossário",
+     "texto": "Termo | Explicação simplesQI (Qualificação de Instalação) | Verificação de que o equipamento foi instalado corretamente\nQO (Qualificação de Operação) | Verificação de que o equipamento opera conforme especificado\nQD (Qualificação de Desempenho) | Verificação de que o equipamento entrega o resultado esperado, com base em certificado de calibração real\nItem calibrável | Uma peça específica do equipamento que pode ser calibrada\nAchado técnico | Observação sobre algo fora do padrão encontrado durante a verificação\nCertificado de calibração | Documento oficial emitido para uma peça calibrada, com os dados reais da calibração\nEste manual descreve o módulo Relatório de Qualificação (QI/QO/QD) tal como implementado em 2026-07-27. Se a tela mudar no futuro, este documento precisa ser atualizado junto."
+    },
+    {
+     "titulo": "Enviar o documento ao cliente (20/10/2026)",
+     "texto": "Depois de gerar, a barra \"Documento salvo\" mostra o botão \"Enviar ao cliente\"; os links do PDF salvo na tela ganham o botão \"Enviar\". A janela \"Enviar documento\" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: MANUAL_ENVIAR_DOCUMENTO.md."
+    }
+   ]
+  }
+ ]
+};

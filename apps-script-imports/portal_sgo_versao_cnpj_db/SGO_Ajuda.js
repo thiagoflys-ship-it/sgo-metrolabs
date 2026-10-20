@@ -30,7 +30,8 @@ var SGO_AJUDA_NOMES = {
   auvo: 'Integração Auvo', frota: 'Frota', qualidade: 'Painel de qualidade', conduta: 'Programa de conduta',
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
-  chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail'
+  chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão', email: 'E-mail',
+  assistente: 'Perguntas ao assistente', assistente_duvidas: 'Tire sua dúvida'
 };
 
 /**
@@ -56,6 +57,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Gestao_ === 'function') fontes.push(['Gestao', SGO_ajudaTelas_Gestao_]);
   // 21/10/2026: E-mail integrado (SGO_Ajuda_Email.js).
   if (typeof SGO_ajudaTelas_Email_ === 'function') fontes.push(['Email', SGO_ajudaTelas_Email_]);
+  // 20/10/2026: assistente "Tire sua dúvida" e o painel das perguntas (SGO_Ajuda_Assistente.js).
+  if (typeof SGO_ajudaTelas_Assistente_ === 'function') fontes.push(['Assistente', SGO_ajudaTelas_Assistente_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

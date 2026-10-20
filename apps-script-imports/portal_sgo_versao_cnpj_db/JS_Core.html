@@ -253,6 +253,7 @@
           if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
           if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
           if (typeof Email_iniciar_ === "function") Email_iniciar_();
+          if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
         } else {
           limparSessaoFront_();
         }
@@ -324,6 +325,7 @@
         if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
         if (typeof Gestao_iniciar_ === "function") Gestao_iniciar_();
         if (typeof Email_iniciar_ === "function") Email_iniciar_();
+        if (typeof Assistente_iniciar_ === "function") Assistente_iniciar_();
       })
       .withFailureHandler(function (err) {
         LOGIN_EM_ANDAMENTO = false;
@@ -841,6 +843,12 @@
     if (mod === "avisos") {
       AvisosTela_render_();
       atualizarBadgeModulo_("avisos");
+      return;
+    }
+
+    // ASSISTENTE "TIRE SUA DÚVIDA" (2026-10-20): painel das perguntas — ver JS_Assistente.html / SGO_Assistente.js.
+    if (mod === "assistente" && typeof Assistente_renderPainel_ === "function") {
+      Assistente_renderPainel_();
       return;
     }
 
@@ -7727,6 +7735,7 @@
     const botoes = [];
     if (res && res.temManual) botoes.push('<button type="button" class="btn-primary" id="ajudaManual"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Manual completo do módulo</button>');
     if (manualTela) botoes.push('<button type="button" class="btn-secondary" id="ajudaManualTela"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;Manual do operador (desta tela)</button>');
+    if (window.AssistenteWidget) botoes.push('<button type="button" class="btn-secondary" id="ajudaAssistente"><i class="fas fa-comments" aria-hidden="true"></i>&nbsp;Tire sua dúvida</button>');
     const outras = (k !== "busca") ? '<p class="ajuda-outras">Para achar uma tela, um cliente ou uma TAG, use a busca. <button type="button" class="ajuda-link" id="ajudaBusca">Como usar a busca</button></p>' : "";
     p.innerHTML =
       '<div class="bc-painel-cab ajuda-cab"><div class="ajuda-cab-texto"><div class="ajuda-cab-rotulo">Como usar esta tela</div>' +
@@ -7744,6 +7753,8 @@
     if (bm) bm.onclick = function () { Ajuda_abrirManual_(res.modulo || k.split("/")[0]); };
     const bmt = p.querySelector("#ajudaManualTela");
     if (bmt) bmt.onclick = function () { Ajuda_fechar_(true); manualTela.click(); try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) {} };
+    const bas = p.querySelector("#ajudaAssistente");
+    if (bas) bas.onclick = function () { Ajuda_fechar_(true); AssistenteWidget.abrir(); };
     const bb = p.querySelector("#ajudaBusca");
     if (bb) bb.onclick = function () { Ajuda_abrir_("busca"); };
     if (!carregando) { try { p.querySelector("#ajudaFecharX").focus({ preventScroll: true }); } catch (e) {} }
