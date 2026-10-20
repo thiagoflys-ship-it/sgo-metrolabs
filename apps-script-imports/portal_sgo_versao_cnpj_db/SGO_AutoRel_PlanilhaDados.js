@@ -709,7 +709,7 @@ function AutoRel_pdEstilos_() {
     '.pd-passo .eq{font-family:"Times New Roman",Times,serif;font-size:10.5pt}' +
     '.pd-colunas{display:flex;gap:8mm;align-items:flex-start}.pd-colunas>div{flex:1 1 0;min-width:0}' +
     'table.t td.sit{white-space:nowrap}' +
-    'table.t.pd-fases td:first-child{white-space:nowrap}' +
+    'table.t.pd-fases td:first-child,table.t.pd-sens td:first-child{white-space:nowrap}' +
     'table.t.pd-resumo td,table.t.pd-resumo th{font-size:8.4pt}' +
     '.pd-secao>h2:first-child,.pd-folha-fig>h2:first-child{margin-top:0}';
 }
@@ -728,7 +728,7 @@ function AutoRel_pdEstilosPagina_(doc, linhaTopo2) {
     '}';
 }
 
-function AutoRel_pdCapa_(doc, ctx, D, aprovacao, minuta) {
+function AutoRel_pdCapa_(doc, ctx, D, aprovacao, minuta, aviso) {
   var id = ctx.identificacao;
   var esc = AutoRel_pdE_;
   var leak = D.leak;
@@ -749,6 +749,7 @@ function AutoRel_pdCapa_(doc, ctx, D, aprovacao, minuta) {
     regs.map(function(r) { return [r.tag, r.certificado || '—', { t: r.validade || '—', cls: 'cen' }, isFinite(r.incertezaU95) && r.incertezaU95 !== null ? SGO_DocA4_val_(r.incertezaU95, 2, '°C') + (r.fatorK ? ' (k = ' + SGO_DocA4_num_(r.fatorK, 0) + ')' : '') : '—']; }))
     : '<p class="nota">Registrador não informado.</p>';
   var h = '<section class="capa"><div class="logo"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"></div>' +
+    (aviso ? '<div class="aviso-simulado" style="margin:5mm 0 0">' + esc(aviso) + '</div>' : '') +
     '<div class="pd-capa-corpo"><div class="pd-capa-esq">' +
     '<p class="tipo">Qualificação térmica — dados do ensaio</p>' +
     '<h1>' + esc(doc.titulo) + '</h1>' +
@@ -847,7 +848,7 @@ function AutoRel_pdCorpoCiclo_(ctx, D, op) {
         return [s.sensor + (s.pior ? ' (pior F0)' : '') + (s.referencia ? ' (referência)' : ''), String(s.n), val(s.min, 2), val(s.max, 2), val(s.media, 2), val(s.desvio, 2), val(s.tempoFaixaMin, 2),
           { t: s.primeiraHora || '—', cls: 'cen' }, s.atrasoSeg === null ? '—' : n(s.atrasoSeg, 0), val(s.f0, 2),
           f.exigeF0 ? Object.assign(SGO_DocA4_celSituacao_(s.conforme, 'Atende', 'Abaixo do mínimo'), { cls: 'cen sit' }) : { html: '<span class="info-txt">Informativo</span>', cls: 'cen' }];
-      }), { classe: D.porSensor.length > 12 ? 'compacta' : '' }) + '</div>');
+      }), { classe: 'pd-sens' + (D.porSensor.length > 12 ? ' compacta' : '') }) + '</div>');
     h.push('<p class="nota">Mínima, máxima, média e F0 são os valores do cálculo do ensaio (os mesmos do relatório de ensaio). Desvio-padrão amostral das leituras da exposição. Tempo na faixa: soma dos intervalos do patamar em que o sensor ficou entre ' +
       esc(val(D.tMin, 1, '°C')) + ' e ' + esc(val(D.tMax, 1, '°C')) + ' nas duas leituras do intervalo. Diferença para a referência: tempo entre a ' + esc(D.refIdx >= 0 ? 'referência da câmara (S' + (D.refIdx + 1) + ')' : 'primeira leitura de qualquer sensor') + ' e o sensor atingirem a temperatura mínima de esterilização.' +
       (f.sensoresDesabilitados && f.sensoresDesabilitados.length ? ' Sensores desconsiderados pelo técnico: ' + esc(f.sensoresDesabilitados.join(', ')) + '.' : '') + '</p>');
@@ -1166,7 +1167,7 @@ function AutoRel_pdMontarHtml_(contexto, interno, op) {
     rotuloNumero: 'Planilha de dados nº',
     numero: numero, revisao: id.revisao, empresa: id.empresaExecutante, orientacao: 'paisagem'
   };
-  var topo2 = [id.tag ? 'TAG ' + id.tag : '', id.cicloNumero ? 'Ciclo nº ' + id.cicloNumero : '', id.dataDoEnsaio || ''].filter(Boolean).join(' · ');
+  var topo2 = [op.minuta ? 'MINUTA — não entregar ao cliente' : '', id.tag ? 'TAG ' + id.tag : '', id.cicloNumero ? 'Ciclo nº ' + id.cicloNumero : '', id.dataDoEnsaio || ''].filter(Boolean).join(' · ');
   var opDoc = { aprovacao: op.aprovacao || null, minuta: !!op.minuta, assinaturas: AutoRel_acListaAssinaturas_(ctx, op.aprovacao) };
   var h = [];
   var tituloAba = doc.titulo + ' nº ' + numero;
@@ -1176,14 +1177,14 @@ function AutoRel_pdMontarHtml_(contexto, interno, op) {
   h.push('<div class="barra-tela"><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   h.push('<main class="folha">');
   h.push('<div class="cab-tela"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta">' + AutoRel_pdE_(doc.tituloCurto) + '<br>' + AutoRel_pdE_(doc.rotuloNumero + ' ' + numero + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao)) + '</div></div>');
-  h.push(AutoRel_pdCapa_(doc, ctx, D, opDoc.aprovacao, opDoc.minuta));
-  if (ctx.simulado || opDoc.minuta) {
-    h.push('<div class="aviso-simulado">' + AutoRel_pdE_(opDoc.minuta ? 'MINUTA PARA CONFERÊNCIA DO RESPONSÁVEL TÉCNICO — documento ainda não aprovado; não entregar ao cliente.' : 'Documento de uso interno, gerado com dados reconstituídos. Não representa ensaio real e não pode ser entregue ao cliente.') + '</div>');
-  }
+  var aviso = opDoc.minuta ? 'MINUTA PARA CONFERÊNCIA DO RESPONSÁVEL TÉCNICO — documento ainda não aprovado; não entregar ao cliente.'
+    : (ctx.simulado ? 'Documento de uso interno, gerado com dados reconstituídos. Não representa ensaio real e não pode ser entregue ao cliente.' : '');
+  h.push(AutoRel_pdCapa_(doc, ctx, D, opDoc.aprovacao, opDoc.minuta, aviso));
   h.push(SGO_DocA4_marcadorSumario_());
   h.push(leak ? AutoRel_pdCorpoLeak_(ctx, D, opDoc) : AutoRel_pdCorpoCiclo_(ctx, D, opDoc));
   h.push(SGO_DocA4_fimDocumento_());
-  return h.join('\n');
+  // Minuta e prévia não passam pela paginação do PDF: o sumário sai com as seções, sem os números de página.
+  return opDoc.minuta ? SGO_DocA4_prepararSumario_(h.join('\n')).html : h.join('\n');
 }
 
 /* ============================================================

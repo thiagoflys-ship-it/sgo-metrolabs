@@ -84,6 +84,7 @@ test('emissão pelo fluxo de aprovação: técnico envia (minuta), responsável 
   assert.equal(envio.aguardandoAprovacao, true);
   assert.match(envio.html, /MINUTA PARA CONFERÊNCIA/);
   assert.match(envio.html, /Aguardando a aprovação do responsável técnico/);
+  assert.match(envio.html, /class="sumario-tit">Sumário/, 'a minuta também tem o sumário (sem os números de página)');
   const reg = env.fn('SGO_QE_obter_')(envio.id);
   assert.equal(reg.MODULO, 'AUTOCLAVE_DADOS');
   assert.equal(reg.STATUS, 'AGUARDANDO_APROVACAO');
