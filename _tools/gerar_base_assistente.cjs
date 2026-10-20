@@ -107,7 +107,9 @@ function gerar(pastaDocs) {
   const manuais = [];
   for (const f of arquivos) {
     if (!MAPA[f]) continue;
-    const m = lerManual(f, fs.readFileSync(path.join(pastaDocs, f), "utf8"));
+    const m = lerManual(f, fs.readFileSync(path.join(pastaDocs, f), "utf8").replace(/
+/g, "
+"));
     manuais.push({ arquivo: f, titulo: m.titulo, tela: MAPA[f].tela, perfis: MAPA[f].perfis || null, secoes: m.secoes });
   }
   const json = JSON.stringify(manuais);
