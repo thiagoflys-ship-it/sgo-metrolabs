@@ -875,8 +875,9 @@ function EnviarDoc_apiDocumentosDoCliente(sessionId, payload) {
     });
     var envios = {};
     EnviarDoc_linhas_().forEach(function (r) {
-      var e = envios[r.ARQUIVO_ID];
-      if (!e || String(r.QUANDO) > String(e.QUANDO)) envios[r.ARQUIVO_ID] = r;
+      // último envio que deu certo; sem nenhum, o último que falhou
+      var e = envios[r.ARQUIVO_ID], ok = r.SITUACAO === 'ENVIADO', eOk = e && e.SITUACAO === 'ENVIADO';
+      if (!e || (ok && !eOk) || (ok === eOk && String(r.QUANDO) > String(e.QUANDO))) envios[r.ARQUIVO_ID] = r;
     });
     var docs = [], vistos = {};
     Object.keys(nomes).forEach(function (nomePasta) {

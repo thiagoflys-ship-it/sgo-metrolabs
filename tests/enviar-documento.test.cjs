@@ -453,4 +453,10 @@ test('tela: a barra "Documento salvo" reconhece a resposta de cada gerador e ign
   deq(ch.args, ['a', 'b']);
   ch.ok({ ok: true, valor: 1 });
   deq(recebido, { ok: true, valor: 1 });
+  assert.equal(T.win.google.script.run.__envdocEnvolvido, true, 'o google.script.run não foi envolvido');
+  // resposta de geração que passa pelo google.script.run envolvido pede a conferência sozinha
+  const antes = T.chamadas.filter((c) => c.fn === 'EnviarDoc_apiConferir').length;
+  T.win.google.script.run.withSuccessHandler(() => {}).RegOp_apiGerarRegistro({});
+  T.chamadas.find((c) => c.fn === 'RegOp_apiGerarRegistro').ok({ ok: true, pdfUrl: U('PDF010'), htmlId: 'HTM010' });
+  assert.equal(T.chamadas.filter((c) => c.fn === 'EnviarDoc_apiConferir').length, antes + 1);
 });

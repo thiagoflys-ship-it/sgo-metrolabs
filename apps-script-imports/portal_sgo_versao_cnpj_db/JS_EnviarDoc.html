@@ -72,7 +72,7 @@
   .envdoc-btn-sec { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 36px; border: 1px solid var(--bc-line-2); border-radius: 4px; background: var(--bc-surface); color: var(--bc-text); font: 600 13px var(--bc-sans); cursor: pointer; }
   .envdoc-btn-sec:hover { background: var(--bc-surface-3); }
   .envdoc-btn-sec[disabled] { opacity: .55; cursor: wait; }
-  .envdoc-dock { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 10020; width: min(430px, calc(100vw - 32px)); background: var(--bc-surface); border: 1px solid var(--bc-line-2); border-left: 4px solid var(--bc-action); border-radius: 8px; box-shadow: 0 8px 28px rgba(28,31,29,.18); padding: 12px 12px 12px 14px; display: flex; gap: 10px; align-items: flex-start; font-family: var(--bc-sans); }
+  .envdoc-dock { position: fixed; right: 18px; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 10020; width: min(430px, calc(100vw - 32px)); background: var(--bc-surface); border: 1px solid var(--bc-line-2); border-left: 4px solid var(--bc-action); border-radius: 8px; box-shadow: 0 8px 28px rgba(28,31,29,.18); padding: 12px 12px 12px 14px; display: flex; gap: 10px; align-items: flex-start; font-family: var(--bc-sans); }
   .envdoc-dock-txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--bc-text-2); overflow-wrap: anywhere; }
   .envdoc-dock-txt b { display: block; color: var(--bc-text); font-size: 14px; margin: 1px 0 2px; }
   .envdoc-dock-acoes { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
@@ -91,10 +91,14 @@
     .envdoc-campo input, .envdoc-campo textarea, .envdoc-campo select, .envdoc-filtros select { font-size: 16px; }
     .envdoc-dock { right: 16px; left: 16px; width: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
     .envdoc-mini { min-height: 36px; }
+    .envdoc-ajuda-txt { display: none; }
+    .envdoc-ajuda { min-width: 44px; justify-content: center; }
+    .envdoc-cab h3 { font-size: 17px; }
     .envdoc-tabela thead { display: none; }
     .envdoc-tabela tr { display: block; border-bottom: 1px solid var(--bc-line); padding: 6px 0; }
     .envdoc-tabela td { display: block; border: 0; padding: 3px 0; }
   }
+  body.envdoc-aberto .comw-botao { display: none !important; }
   @media print { .envdoc-dock, .envdoc-mini { display: none !important; } }
 </style>
 <script>
@@ -157,10 +161,11 @@
     p.id = "envdocPainel"; p.className = "bc-painel envdoc-painel"; p.setAttribute("role", "dialog"); p.setAttribute("aria-modal", "true"); p.setAttribute("aria-labelledby", "envdocTitulo");
     p.setAttribute("data-sgo-sem-enviar", "1");
     p.innerHTML = '<div class="bc-painel-cab envdoc-cab"><div class="envdoc-cab-texto"><div class="envdoc-rotulo" id="envdocRotulo">Enviar documento</div><h3 id="envdocTitulo">Carregando…</h3><div class="envdoc-cab-sub" id="envdocSub"></div></div>' +
-      '<div class="envdoc-cab-botoes"><button type="button" class="envdoc-btn-sec envdoc-ajuda" onclick="SGO_EnviarDoc.ajuda()" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i> Como usar</button>' +
+      '<div class="envdoc-cab-botoes"><button type="button" class="envdoc-btn-sec envdoc-ajuda" onclick="SGO_EnviarDoc.ajuda()" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i><span class="envdoc-ajuda-txt"> Como usar</span></button>' +
       '<button type="button" class="envdoc-x" aria-label="Fechar" onclick="SGO_EnviarDoc.fechar()">×</button></div></div>' +
       '<div class="bc-painel-corpo" id="envdocCorpo"></div><div class="bc-painel-rodape envdoc-rodape" id="envdocRodape"></div>';
     casa.appendChild(p);
+    try { document.body.classList.add("envdoc-aberto"); } catch (e) {}
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && $("envdocPainel") && !E.enviando && !$("ajudaPainel")) fechar(); });
     return p;
   }
@@ -168,6 +173,7 @@
     if (E.enviando) { alert("Aguarde: o envio está em andamento. A janela fecha sozinha no fim, com o resultado de cada destinatário."); return; }
     var p = $("envdocPainel"), f = $("envdocFundo");
     if (p) p.remove(); if (f) f.remove();
+    try { document.body.classList.remove("envdoc-aberto"); } catch (e) {}
     E.doc = null;
     try { if (E.foco && E.foco.focus) E.foco.focus(); } catch (e) {}
   }
@@ -493,11 +499,11 @@
   /** Observa as respostas do google.script.run sem mudar o comportamento de quem chamou. */
   function envolverRun() {
     try {
-      if (!window.google || !google.script || !google.script.run || google.script.run.__envdoc || typeof Proxy === "undefined") return;
+      if (!window.google || !google.script || !google.script.run || window.__envdocRunEnvolvido || typeof Proxy === "undefined") return;
       var original = google.script.run;
       var exec = function (ok, falha, obj) {
         var base = {
-          __envdoc: true,
+          __envdocEnvolvido: true,
           withSuccessHandler: function (f) { return exec(f, falha, obj); },
           withFailureHandler: function (f) { return exec(ok, f, obj); },
           withUserObject: function (o) { return exec(ok, falha, o); }
@@ -518,6 +524,7 @@
       var novo = exec(null, null, undefined);
       try { google.script.run = novo; } catch (e) { return; }
       if (google.script.run !== novo) return;
+      window.__envdocRunEnvolvido = true;
     } catch (e) { /* sem observação: o resto continua igual */ }
   }
 
@@ -556,7 +563,7 @@
 
   /* ---------------------------------------------------------------- painéis: cliente e Arquivo de documentos */
   function linhaDocCliente(d) {
-    return "<tr><td><b>" + esc(d.titulo || d.nome) + '</b><div class="envdoc-nota">' + esc(d.tipo) + "</div></td><td>" + esc(d.quandoBr || "") + "</td><td>" +
+    return "<tr><td><b>" + esc(d.titulo || d.nome) + '</b><div class="envdoc-nota">' + esc(d.tipo) + '</div></td><td style="white-space:nowrap">' + esc(d.quandoBr || "") + "</td><td>" +
       (d.ultimoEnvio ? selo(d.ultimoEnvio.situacao) + '<div class="envdoc-nota">' + esc(d.ultimoEnvio.canal + " · " + d.ultimoEnvio.quando + (d.ultimoEnvio.usuario ? " · " + d.ultimoEnvio.usuario : "")) + "</div>" : '<span class="envdoc-nota">Ainda não enviado</span>') + "</td>" +
       '<td style="white-space:nowrap"><a class="envdoc-btn-sec" data-sgo-sem-enviar="1" href="' + esc(d.url) + '" target="_blank" rel="noopener">Abrir</a> <button type="button" class="envdoc-btn-sec" data-sgo-enviar="' + esc(d.arquivoId) + '"' + (d.docDocumentoId ? ' data-sgo-enviar-doc="' + esc(d.docDocumentoId) + '"' : "") + '><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar</button></td></tr>';
   }
@@ -635,11 +642,16 @@
 
   envolverRun();
   try {
-    new MutationObserver(function (lista) {
-      agendarDecorar();
-      // trocou de módulo: a barra "Documento salvo" sai
-      for (var i = 0; i < lista.length; i++) if (lista[i].target && lista[i].target.id === "conteudo" && lista[i].type === "childList" && lista[i].addedNodes.length) { esconderDock(); DOCK.ultimo = ""; break; }
-    }).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(function () { agendarDecorar(); }).observe(document.body, { childList: true, subtree: true });
+  } catch (e) {}
+  // trocou de módulo pelo menu: a barra "Documento salvo" sai (o módulo pode redesenhar a tela sozinho; isso não tira a barra)
+  try {
+    if (typeof window.abrir === "function" && !window.abrir.__envdoc) {
+      var abrirOriginal = window.abrir;
+      var abrirNovo = function () { esconderDock(); DOCK.ultimo = ""; return abrirOriginal.apply(this, arguments); };
+      abrirNovo.__envdoc = true;
+      window.abrir = abrirNovo;
+    }
   } catch (e) {}
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkDireto); else linkDireto();
 })();
