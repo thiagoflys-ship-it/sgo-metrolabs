@@ -1,0 +1,409 @@
+<style>
+  /* CAIXA DE DECISÕES E DESEMPENHO DA GESTÃO (20/10/2026) — servidor: SGO_Gestao_Decisoes.js, SGO_Gestao_Escada.js, SGO_Gestao_Avaliacao.js */
+  .gd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .gd-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 40px; }
+  .gd-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .gd-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .gd-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 10px 12px; }
+  .gd-kpi .v { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; }
+  .gd-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .gd-kpi.critico { border-top-color: var(--danger); } .gd-kpi.critico .v { color: var(--danger); }
+  .gd-kpi.aviso { border-top-color: var(--warning); } .gd-kpi.aviso .v { color: var(--warning); }
+  .gd-kpi.ok { border-top-color: var(--success); }
+  .gd-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--bc-line-2, var(--border)); border-left: 4px solid var(--warning); border-radius: 8px; background: var(--bc-surface-2, var(--card)); font-size: 13px; line-height: 1.5; }
+  .gd-faixa.info { border-left-color: var(--info, #1f5fa8); }
+  .gd-lista { display: flex; flex-direction: column; gap: 10px; }
+  .gd-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-card.DIRETORIA { border-left-color: var(--danger); } .gd-card.WHATSAPP { border-left-color: var(--warning); }
+  .gd-card.PAUSADO { border-left-color: var(--success); } .gd-card.ACOMPANHAMENTO { border-left-color: var(--muted); }
+  .gd-card-tit { font-weight: 700; font-size: 14px; color: var(--text-strong, var(--text)); margin: 0 0 4px; overflow-wrap: anywhere; }
+  .gd-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin-right: 6px; white-space: nowrap; }
+  .gd-selo.DIRETORIA { color: var(--danger); background: var(--danger-bg); } .gd-selo.WHATSAPP { color: var(--warning); background: var(--warning-bg); }
+  .gd-selo.EMAIL, .gd-selo.NA_HORA { color: var(--info, #1f5fa8); background: var(--info-bg, transparent); } .gd-selo.PAUSADO { color: var(--success); background: var(--success-bg); }
+  .gd-selo.ACOMPANHAMENTO, .gd-selo.neutro { color: var(--muted); }
+  .gd-selo.vencido { color: var(--danger); }
+  .gd-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .gd-form { margin-top: 10px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; background: var(--bc-surface-2, transparent); }
+  .gd-form label { display: block; font-size: 12.5px; font-weight: 700; margin: 6px 0 4px; }
+  .gd-form textarea { width: 100%; box-sizing: border-box; min-height: 64px; font: inherit; }
+  .gd-form input[type=date] { min-height: 40px; }
+  .gd-msg { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; }
+  .gd-msg.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+  .gd-msg.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+  .gd-vazio { padding: 22px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .gd-regras { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gd-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .gd-area { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  .gd-area:last-child { border-bottom: 0; }
+  .gd-area b { display: block; font-size: 13px; margin-bottom: 4px; }
+  .gd-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .gd-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+  .gd-linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+  .gd-linha input[type=number], .gd-linha input[type=time], .gd-linha select { min-height: 36px; max-width: 180px; }
+  .gd-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .gd-tabela th, .gd-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .gd-tabela td.n, .gd-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gd-farol { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 12px; }
+  .gd-farol.VERDE { background: var(--success-bg); color: var(--success); } .gd-farol.AMARELO { background: var(--warning-bg); color: var(--warning); }
+  .gd-farol.VERMELHO { background: var(--danger-bg); color: var(--danger); } .gd-farol.SEM_DADOS { color: var(--muted); border: 1px solid var(--border); }
+  .gd-gestor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; margin-bottom: 12px; }
+  .gd-gestor-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .gd-nota { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gd-comp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .gd-comp > div { border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; }
+  .gd-comp b { display: block; font-size: 15px; }
+  .gd-barra { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .gd-barra > i { display: block; height: 100%; background: var(--info, #1f5fa8); }
+  .gd-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .gd-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .gd-filtros select { min-height: 38px; }
+  @media (max-width: 900px) {
+    .gd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-regras { grid-template-columns: 1fr; }
+    .gd-comp { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-tabela-rolar { overflow-x: auto; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // CAIXA DE DECISÕES DA GESTÃO E DESEMPENHO DA GESTÃO (20/10/2026)
+  // Telas: abrir('gestao_decisoes') -> Gestao_renderCaixa_; abrir('gestao_desempenho') -> Gestao_renderDesempenho_.
+  // Ganchos na casca (JS_Core): Gestao_iniciar_ no login, Gestao_parar_ no logout.
+  // Atualização: o balão do menu a cada 5 min (só com a aba visível). A tela não se redesenha sozinha
+  // (formulário de providência nunca é apagado no meio da digitação): recarrega depois de cada ação ou em "Atualizar".
+  // ==========================================================
+  var GD = { aba: "minhas", dados: null, timer: null, regras: null, aval: null, avalComp: "", avalGestor: "", abaDes: "notas", gerados: null };
+  var GD_ETAPA = { NA_HORA: "Novo", EMAIL: "No e-mail diário", WHATSAPP: "Parado: WhatsApp", DIRETORIA: "Com a Diretoria", PAUSADO: "Providência registrada", ACOMPANHAMENTO: "Acompanhamento" };
+
+  function Gestao_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Gestao_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
+  function Gestao_ehGestao_() { var p = Gestao_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+
+  function Gestao_chamar_(fn, payload, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (msg) { fim(); if (erro) erro(msg); else if (!o.silencioso) alert(msg); };
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { falhou((res && res.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+        fim();
+        try { if (ok) ok(res); } catch (e) { console.error("Gestão " + fn + ":", e); if (!o.silencioso) alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+      })
+      .withFailureHandler(function (err) { falhou("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado."); })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  // ---------------- casca: menu e balão ----------------
+  function Gestao_iniciar_() {
+    var g = Gestao_ehGestao_();
+    ["menu-btn-gestao-decisoes", "menu-btn-gestao-desempenho"].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = g ? "" : "none"; });
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+    if (!g) return;
+    Gestao_atualizarBalao_();
+    if (GD.timer) clearInterval(GD.timer);
+    GD.timer = setInterval(function () { if (document.visibilityState === "visible") Gestao_atualizarBalao_(); }, 5 * 60 * 1000);
+  }
+  function Gestao_parar_() { if (GD.timer) clearInterval(GD.timer); GD.timer = null; GD.dados = null; GD.aval = null; }
+  function Gestao_atualizarBalao_() {
+    google.script.run.withSuccessHandler(function (r) {
+      var b = document.getElementById("menuBadgeDecisoes");
+      if (!b || !r || !r.ok || !r.gestao) return;
+      b.textContent = r.total ? String(r.total) : "";
+      b.title = r.total ? r.total + " decisão(ões) esperando por você" + (r.parados ? ", " + r.parados + " parada(s) há 2 dias úteis ou mais" : "") : "";
+      b.style.background = r.escalados ? "var(--danger)" : (r.parados ? "var(--warning)" : "");
+    }).withFailureHandler(function () {}).Gestao_apiResumo(SGO_getSessionId());
+  }
+
+  // ---------------- Caixa de decisões ----------------
+  function Gestao_cabecalho_(titulo, subtitulo, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Gestao_esc_(titulo) + '</h2><p class="content-subtitle">' + Gestao_esc_(subtitulo) + '</p></div>' +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + botoes + '</div></div>';
+  }
+
+  function Gestao_renderCaixa_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    GD.modoRegras = false;
+    if (ehMobileModo_()) atualizarTituloMobile_("Caixa de decisões");
+    if (!Gestao_ehGestao_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Caixa de decisões</h2><div class="gd-faixa">A Caixa de decisões é da gestão (Administrador, Gestor e Diretoria). O que depende de você aparece no Início e em Minhas atividades.</div></div>';
+      return;
+    }
+    div.innerHTML = '<div class="module-shell">' +
+      Gestao_cabecalho_("Caixa de decisões", "Tudo o que depende da gestão, de todos os módulos, numa lista: quem decide, o prazo, há quanto tempo está parado e o botão que leva à tela de resolver.",
+        '<button type="button" class="btn-secondary" onclick="Gestao_carregarCaixa_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_abrirRegras_()"><i class="fas fa-sliders" aria-hidden="true"></i>&nbsp;Regras e responsáveis</button>' +
+        '<button type="button" class="btn-secondary" onclick="abrir(\'gestao_desempenho\')"><i class="fas fa-chart-line" aria-hidden="true"></i>&nbsp;Desempenho da gestão</button>') +
+      '<div id="gdAviso"></div><div id="gdKpis" class="gd-kpis"></div>' +
+      '<div class="gd-tabs" id="gdTabs"></div>' +
+      '<div id="gdCorpo"><div class="gd-vazio">Carregando...</div></div></div>';
+    Gestao_carregarCaixa_();
+  }
+
+  function Gestao_carregarCaixa_(comAviso) {
+    Gestao_chamar_("Gestao_apiCaixa", { filtro: GD.aba }, function (res) {
+      GD.dados = res;
+      Gestao_desenharCaixa_();
+      Gestao_atualizarBalao_();
+    }, function (m) {
+      var c = document.getElementById("gdCorpo");
+      if (c) c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Gestao_carregarCaixa_(true)">Tentar de novo</button></p>';
+    }, comAviso ? { carregando: "Atualizando a caixa" } : {});
+  }
+
+  function Gestao_trocarAba_(aba) { GD.modoRegras = false; GD.aba = aba; var c = document.getElementById("gdCorpo"); if (c) c.innerHTML = '<div class="gd-vazio">Carregando...</div>'; Gestao_carregarCaixa_(); }
+
+  function Gestao_desenharCaixa_() {
+    var d = GD.dados;
+    if (!d || GD.modoRegras || !document.getElementById("gdCorpo")) return;
+    var r = d.resumo, R = d.regras;
+    var kp = function (v, rot, cls) { return '<div class="gd-kpi ' + (cls || "") + '"><span class="v">' + Gestao_esc_(v) + '</span><span class="r">' + Gestao_esc_(rot) + '</span></div>'; };
+    document.getElementById("gdKpis").innerHTML = kp(r.total, "Esperando por você", r.total ? "" : "ok") + kp(r.parados, "Paradas há " + R.whatsDiasUteis + " dias úteis ou mais", r.parados ? "aviso" : "ok") +
+      kp(r.escalados, "Com a Diretoria", r.escalados ? "critico" : "ok") + kp(r.prazoVencido, "Prazo de decisão vencido", r.prazoVencido ? "critico" : "ok") + kp(r.novos, "Novas");
+    var av = [];
+    if (!d.configurado) av.push('<div class="gd-faixa">Nenhum gestor responsável por área foi configurado: tudo vai para a reserva da Diretoria. O Administrador ou a Diretoria escolhe os responsáveis em "Regras e responsáveis".</div>');
+    if (d.naoVerificado && d.naoVerificado.length) av.push('<div class="gd-faixa">Não foi possível conferir agora: ' + Gestao_esc_(d.naoVerificado.join(", ")) + '. Os itens dessas fontes podem estar faltando; toque em "Atualizar" daqui a pouco.</div>');
+    av.push('<div class="gd-faixa info">Como funciona: o item entra aqui na hora. Todo dia útil, a partir das ' + Gestao_esc_(R.horaEmail) + ', sai um e-mail com o resumo. Parado há ' + R.whatsDiasUteis + ' dias úteis, entra no resumo do WhatsApp (no máximo um por dia, só no horário de trabalho). Parado há ' + R.diretoriaDiasUteis +
+      ' dias úteis, vai para a Diretoria com o nome de quem está com ele. Resolvido na tela de origem, sai sozinho. "Registrar providência" pausa a cobrança por até ' + R.pausaMaxDias + ' dias.' + (d.eu.areas && d.eu.areas.length ? ' Você responde por: ' + Gestao_esc_(d.eu.areas.join(", ")) + '.' : '') + '</div>');
+    document.getElementById("gdAviso").innerHTML = av.join("");
+    var abas = [["minhas", "Para mim (" + r.total + ")"], ["todas", "Toda a gestão (" + d.resumoTodas.total + ")"], ["escalados", "Com a Diretoria (" + d.resumoTodas.escalados + ")"], ["acompanhamento", "Acompanhamento (" + d.acompanhamento + ")"]];
+    document.getElementById("gdTabs").innerHTML = abas.map(function (a) { return '<button type="button" class="gd-tab' + (GD.aba === a[0] ? " active" : "") + '" onclick="Gestao_trocarAba_(\'' + a[0] + '\')">' + Gestao_esc_(a[1]) + '</button>'; }).join("");
+    var c = document.getElementById("gdCorpo");
+    if (!d.itens.length) {
+      c.innerHTML = '<div class="gd-vazio">' + (GD.aba === "minhas" ? "Nada esperando pela sua decisão agora." : GD.aba === "acompanhamento" ? "Nenhum vencimento de cliente para acompanhar." : "Nenhum item nesta lista.") + '</div>';
+      return;
+    }
+    c.innerHTML = '<div class="gd-lista">' + d.itens.map(Gestao_cartao_).join("") + '</div>' + (d.cortado ? '<p class="gd-meta">Mostrando os 400 primeiros.</p>' : '') + '<p class="gd-meta">Atualizado em ' + Gestao_esc_(d.geradoEm) + '.</p>';
+  }
+
+  function Gestao_cartao_(i, k) {
+    var podeAgir = i.meu || (GD.dados.eu.diretoria) || Gestao_perfil_() === "ADMIN";
+    var meta = [i.moduloNome, "área " + i.areaNome, (i.reserva ? "reserva da Diretoria" : "com " + (i.responsaveisNomes.join(", ") || "ninguém")), i.envolvido ? "envolve " + i.envolvido : ""].filter(Boolean).join(" · ");
+    var tempo = "Na caixa desde " + i.entrouEm + " · " + (i.prazo ? "prazo de decisão " + i.prazo : "sem prazo") + (i.diasParado ? " · parado há " + i.diasParado + (i.diasParado === 1 ? " dia útil" : " dias úteis") : "");
+    return '<div class="gd-card ' + Gestao_esc_(i.etapa) + '" id="gdItem' + k + '">' +
+      '<div class="gd-card-tit"><span class="gd-selo ' + Gestao_esc_(i.etapa) + '">' + Gestao_esc_(GD_ETAPA[i.etapa] || i.etapa) + '</span>' + (i.prazoVencido ? '<span class="gd-selo vencido">Prazo vencido</span>' : '') + Gestao_esc_(i.titulo) + '</div>' +
+      '<div class="gd-meta">' + Gestao_esc_(meta) + '</div>' +
+      (i.detalhe ? '<div class="gd-txt">' + Gestao_esc_(i.detalhe) + '</div>' : '') +
+      (i.oQueFazer ? '<div class="gd-txt"><strong>O que fazer:</strong> ' + Gestao_esc_(i.oQueFazer) + '</div>' : '') +
+      '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(i.motivoRota) : '') + '</div>' +
+      (i.providencia ? '<div class="gd-txt"><strong>Providência</strong> (' + Gestao_esc_(i.providenciaPor) + ', ' + Gestao_esc_(i.providenciaEm) + (i.pausadoAte ? '; acompanhar até ' + Gestao_esc_(i.pausadoAte) : '') + '): ' + Gestao_esc_(i.providencia) + '</div>' : '') +
+      '<div class="gd-acoes">' + (i.tela ? '<button type="button" class="btn-primary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a tela de resolver") + '</button>' : '') +
+      (podeAgir && !i.acompanhamento ? (i.resolveNaCaixa ? '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', true)">Ciente</button>' : '') +
+        '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', false)">Registrar providência</button>' : '') + '</div>' +
+      '<div id="gdForm' + k + '"></div></div>';
+  }
+
+  function Gestao_abrirItem_(k) {
+    var i = GD.dados && GD.dados.itens[k];
+    if (!i || !i.tela) return;
+    if (typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(i.tela);
+    else if (i.tela.mod) abrir(i.tela.mod);
+  }
+
+  function Gestao_hojeMais_(dias) { var d = new Date(); d.setDate(d.getDate() + dias); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+
+  function Gestao_formProvidencia_(k, ciente) {
+    var box = document.getElementById("gdForm" + k), i = GD.dados.itens[k];
+    if (!box || !i) return;
+    if (box.innerHTML) { box.innerHTML = ""; return; }
+    var max = GD.dados.regras.pausaMaxDias;
+    box.innerHTML = '<div class="gd-form">' +
+      '<label for="gdTxt' + k + '">' + (ciente ? "Avaliação da justificativa" : "O que foi feito") + '</label>' +
+      '<textarea id="gdTxt' + k + '" maxlength="900" placeholder="' + (ciente ? "Ex.: Justificativa procede; a peça chegou hoje." : "Ex.: Liguei para o condutor; ele devolve hoje às 17h.") + '"></textarea>' +
+      (ciente ? '' : '<label for="gdAte' + k + '">Acompanhar até (até ' + max + ' dias)</label><input type="date" id="gdAte' + k + '" min="' + Gestao_hojeMais_(0) + '" max="' + Gestao_hojeMais_(max) + '" value="' + Gestao_hojeMais_(3) + '">') +
+      '<div class="gd-acoes"><button type="button" class="btn-primary" id="gdOk' + k + '" onclick="Gestao_registrar_(' + k + ', ' + (ciente ? "true" : "false") + ')">' + (ciente ? "Confirmar ciente" : "Registrar") + '</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdForm' + k + '\').innerHTML=\'\'">Cancelar</button></div><div id="gdSt' + k + '"></div>' +
+      '<div class="gd-meta">' + (ciente ? "O item sai da caixa e a avaliação fica registrada com o seu nome." : "Conta como decisão tomada. O item continua na caixa até ser resolvido na tela de origem; a cobrança volta a contar depois da data.") + '</div></div>';
+    var t = document.getElementById("gdTxt" + k); if (t) t.focus();
+  }
+
+  function Gestao_registrar_(k, ciente) {
+    var i = GD.dados.itens[k], st = document.getElementById("gdSt" + k), bt = document.getElementById("gdOk" + k);
+    var texto = (document.getElementById("gdTxt" + k) || {}).value || "", ate = ciente ? "" : ((document.getElementById("gdAte" + k) || {}).value || "");
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Gestao_apiProvidencia", { itemId: i.id, texto: texto, acompanharAte: ate, ciente: !!ciente }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  // ---------------- Regras e responsáveis ----------------
+  function Gestao_abrirRegras_() {
+    var c = document.getElementById("gdCorpo");
+    if (!c) return;
+    GD.modoRegras = true;
+    ["gdKpis", "gdTabs"].forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = ""; });
+    c.innerHTML = '<div class="gd-vazio">Carregando as regras...</div>';
+    Gestao_chamar_("Gestao_apiConfig", {}, function (res) { GD.regras = res; Gestao_desenharRegras_(); },
+      function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_desenharRegras_() {
+    var r = GD.regras, c = document.getElementById("gdCorpo");
+    if (!r || !c) return;
+    var dis = r.podeConfigurar ? "" : " disabled";
+    var e = r.cfg.escada, au = r.cfg.automacoes;
+    var areas = r.areas.map(function (a) {
+      var sel = r.cfg.gestoresPorArea[a.codigo] || [];
+      return '<div class="gd-area"><b>' + Gestao_esc_(a.nome) + '</b><div class="gd-checks">' + (r.gestao.length ? r.gestao.map(function (p) {
+        return '<label><input type="checkbox" data-gd-area="' + Gestao_esc_(a.codigo) + '" value="' + Gestao_esc_(p.id) + '"' + (sel.indexOf(p.id) >= 0 ? " checked" : "") + dis + '> ' + Gestao_esc_(p.nome) + '</label>';
+      }).join("") : '<span class="gd-meta">Ninguém com perfil de gestão ativo.</span>') + (sel.length ? '' : '<span class="gd-meta">Sem responsável: vai para a reserva da Diretoria.</span>') + '</div></div>';
+    }).join("");
+    var mods = r.modulos.map(function (m) {
+      var atual = r.cfg.areaPorModulo[m.chave] || r.areaPadrao[m.chave] || "";
+      return '<div class="gd-linha"><span>' + Gestao_esc_(m.nome) + '</span><select data-gd-mod="' + Gestao_esc_(m.chave) + '"' + dis + '>' + r.areas.map(function (a) { return '<option value="' + Gestao_esc_(a.codigo) + '"' + (a.codigo === atual ? " selected" : "") + '>' + Gestao_esc_(a.nome) + '</option>'; }).join("") + '</select></div>';
+    }).join("");
+    var chk = function (id, rot, v) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="checkbox" id="' + id + '"' + (v ? " checked" : "") + dis + '></div>'; };
+    var num = function (id, rot, v, min, max) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
+    var hora = function (id, rot, v) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="time" id="' + id + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
+    c.innerHTML = (r.podeConfigurar ? '' : '<div class="gd-faixa">Só o Administrador e a Diretoria mudam estas regras. Você vê como estão.</div>') +
+      '<div class="gd-regras"><div class="gd-caixa"><h3>Gestor responsável por área</h3><p class="gd-meta">Quem recebe os itens de cada área. Área sem responsável vai para a reserva da Diretoria (' + Gestao_esc_(r.diretoria.join(", ") || "ninguém com perfil Diretoria") + '). Ninguém decide sobre si mesmo: o item da própria pessoa vai para outro responsável ou para a Diretoria.</p>' + areas + '</div>' +
+      '<div><div class="gd-caixa"><h3>Área de cada módulo</h3><p class="gd-meta">Usada quando o item não é de uma pessoa (padrão, veículo, documento). Item de uma pessoa vai para a área dela (Administração > Usuários > Áreas).</p>' + mods + '</div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Escada de cobrança</h3><p class="gd-meta">Sempre só em dia útil e no horário de trabalho (' + Gestao_esc_(r.expediente.ini) + ' a ' + Gestao_esc_(r.expediente.fim) + ', em Atividades da equipe > Avisos e horários).</p>' +
+        chk("gdEmail", "E-mail diário com o resumo", e.emailDiario) + hora("gdHoraEmail", "Hora do e-mail diário", e.horaEmail) +
+        chk("gdWhats", "Resumo pelo WhatsApp (um por dia, vínculo liberado)", e.whatsapp) + num("gdWhatsDias", "WhatsApp depois de quantos dias úteis parado", e.whatsDiasUteis, 1, 20) +
+        num("gdDirDias", "Diretoria depois de quantos dias úteis parado", e.diretoriaDiasUteis, 2, 30) +
+        chk("gdSemanal", "Relatório semanal à Diretoria (primeiro dia útil da semana)", e.semanal) + hora("gdHoraSemanal", "Hora do semanal", e.horaSemanal) +
+        chk("gdMensal", "Relatórios do mês à Diretoria (primeiro dia útil do mês)", e.mensal) + '</div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Automações</h3>' +
+        chk("gdAutoCnh", "CNH: avisar o condutor com 30, 15 e 7 dias", au.cnhCondutor) + chk("gdAutoMan", "Manutenção prevista vira atividade do gestor da Frota", au.manutencaoAgenda) +
+        chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div></div></div>' +
+      '<div class="gd-acoes">' + (r.podeConfigurar ? '<button type="button" class="btn-primary" id="gdSalvarRegras" onclick="Gestao_salvarRegras_()">Salvar regras</button>' : '') +
+      '<button type="button" class="btn-secondary" onclick="Gestao_renderCaixa_()">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
+  }
+
+  function Gestao_salvarRegras_() {
+    var gpa = {}, apm = {};
+    document.querySelectorAll("[data-gd-area]").forEach(function (cb) { if (cb.checked) (gpa[cb.getAttribute("data-gd-area")] = gpa[cb.getAttribute("data-gd-area")] || []).push(cb.value); });
+    document.querySelectorAll("[data-gd-mod]").forEach(function (s) { apm[s.getAttribute("data-gd-mod")] = s.value; });
+    var v = function (id) { var e = document.getElementById(id); return e ? e.value : ""; }, ck = function (id) { var e = document.getElementById(id); return !!(e && e.checked); };
+    var st = document.getElementById("gdRegrasSt"), bt = document.getElementById("gdSalvarRegras");
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Gestao_apiConfig", { salvar: { gestoresPorArea: gpa, areaPorModulo: apm,
+      escada: { emailDiario: ck("gdEmail"), horaEmail: v("gdHoraEmail"), whatsapp: ck("gdWhats"), whatsDiasUteis: Number(v("gdWhatsDias")), diretoriaDiasUteis: Number(v("gdDirDias")), semanal: ck("gdSemanal"), horaSemanal: v("gdHoraSemanal"), mensal: ck("gdMensal") },
+      automacoes: { cnhCondutor: ck("gdAutoCnh"), manutencaoAgenda: ck("gdAutoMan"), atividadeSemResponsavel: ck("gdAutoSem"), relatoriosMensais: ck("gdAutoRel") } } }, function (res) {
+      GD.regras = res; Gestao_desenharRegras_();
+      var s2 = document.getElementById("gdRegrasSt"); if (s2) s2.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  // ---------------- Desempenho da gestão ----------------
+  function Gestao_renderDesempenho_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (ehMobileModo_()) atualizarTituloMobile_("Desempenho da gestão");
+    div.innerHTML = '<div class="module-shell">' +
+      Gestao_cabecalho_("Desempenho da gestão", "Como cada gestor decide o que depende dele: prazo, tempo, itens vencidos, escalonamentos, acesso, decisões revertidas, equipe e planos de ação. Cada gestor vê a própria avaliação; a Diretoria vê todas.",
+        '<button type="button" class="btn-secondary" onclick="Gestao_carregarDesempenho_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+        '<button type="button" class="btn-secondary" onclick="abrir(\'gestao_decisoes\')"><i class="fas fa-inbox" aria-hidden="true"></i>&nbsp;Caixa de decisões</button>') +
+      '<div id="gdDesFiltros" class="gd-filtros"></div><div class="gd-tabs" id="gdDesTabs"></div><div id="gdDesCorpo"><div class="gd-vazio">Carregando...</div></div></div>';
+    Gestao_carregarDesempenho_();
+  }
+
+  function Gestao_carregarDesempenho_(comAviso) {
+    Gestao_chamar_("Gestao_apiAvaliacao", { competencia: GD.avalComp, gestorId: "" }, function (res) {
+      GD.aval = res; GD.avalComp = res.competencia;
+      Gestao_desenharDesempenho_();
+    }, function (m) {
+      var c = document.getElementById("gdDesCorpo");
+      if (c) c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>';
+    }, comAviso ? { carregando: "Calculando o desempenho" } : {});
+  }
+
+  function Gestao_desenharDesempenho_() {
+    var a = GD.aval, c = document.getElementById("gdDesCorpo");
+    if (!a || !c) return;
+    document.getElementById("gdDesFiltros").innerHTML = '<div><label for="gdDesMes">Mês</label><select id="gdDesMes" onchange="GD.avalComp=this.value;Gestao_carregarDesempenho_(true)">' +
+      a.meses.map(function (m) { return '<option value="' + Gestao_esc_(m.valor) + '"' + (m.valor === a.competencia ? " selected" : "") + '>' + Gestao_esc_(m.nome) + '</option>'; }).join("") + '</select></div>' +
+      (a.diretoria ? '<div><label for="gdDesGestor">Gestor</label><select id="gdDesGestor" onchange="GD.avalGestor=this.value;Gestao_desenharDesempenho_()"><option value="">Todos</option>' + a.gestoresLista.map(function (g) { return '<option value="' + Gestao_esc_(g.id) + '"' + (g.id === GD.avalGestor ? " selected" : "") + '>' + Gestao_esc_(g.nome) + '</option>'; }).join("") + '</select></div>' : '') +
+      '<div class="gd-meta" style="align-self:center">' + (a.congelada ? "Mês fechado: números congelados em " + Gestao_esc_(a.geradoEm) + "." : a.parcial ? "Mês em curso: números até agora." : "Calculado em " + Gestao_esc_(a.geradoEm) + ".") + '</div>';
+    var abas = [["notas", a.diretoria ? "Gestores" : "Minha avaliação"], ["regra", "Regra da nota"]].concat(a.diretoria ? [["relatorios", "Relatórios"]] : []);
+    document.getElementById("gdDesTabs").innerHTML = abas.map(function (x) { return '<button type="button" class="gd-tab' + (GD.abaDes === x[0] ? " active" : "") + '" onclick="GD.abaDes=\'' + x[0] + '\';Gestao_desenharDesempenho_()">' + Gestao_esc_(x[1]) + '</button>'; }).join("");
+    if (GD.abaDes === "regra") { c.innerHTML = Gestao_htmlRegraNota_(a); return; }
+    if (GD.abaDes === "relatorios") { Gestao_desenharRelatorios_(); return; }
+    var gs = a.gestores.filter(function (g) { return !GD.avalGestor || g.id === GD.avalGestor; });
+    var botoes = a.diretoria ? '<div class="gd-acoes" style="margin-bottom:10px"><button type="button" class="btn-primary" onclick="Gestao_gerarRelatorio_(\'desempenho\', GD.avalGestor)">Gerar relatório A4 do mês</button>' +
+      '<button type="button" class="btn-secondary" onclick="Gestao_gerarRelatorio_(\'semanal\')">Relatório semanal A4</button><button type="button" class="btn-secondary" onclick="Gestao_gerarRelatorio_(\'atividades\')">Atividades da equipe A4</button></div>'
+      : (gs.length ? '<div class="gd-acoes" style="margin-bottom:10px"><button type="button" class="btn-primary" onclick="Gestao_gerarRelatorio_(\'desempenho\', \'' + Gestao_esc_(gs[0].id) + '\')">Gerar meu relatório A4</button></div>' : '');
+    if (!gs.length) { c.innerHTML = botoes + '<div class="gd-vazio">Nenhum gestor avaliado neste mês. A avaliação conta quem tem o perfil Gestor e quem responde por uma área em Caixa de decisões > Regras e responsáveis.</div>'; return; }
+    c.innerHTML = botoes + gs.map(Gestao_cartaoGestor_).join("");
+  }
+
+  function Gestao_n_(v, c) { if (v === null || v === undefined || !isFinite(Number(v))) return "—"; return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: c || 0, maximumFractionDigits: c || 0 }); }
+
+  function Gestao_cartaoGestor_(g) {
+    var i = g.indicadores, comp = g.componentes || {};
+    var item = function (rot, valor, nota) {
+      return '<div><span class="gd-meta">' + Gestao_esc_(rot) + '</span><b>' + Gestao_esc_(valor) + '</b>' + (nota === null || nota === undefined ? '<span class="gd-meta">sem dado no mês</span>' : '<div class="gd-barra" title="Nota do componente: ' + Gestao_n_(nota) + '"><i style="width:' + Math.max(2, Math.min(100, nota)) + '%"></i></div>') + '</div>';
+    };
+    var det = g.detalhes || {};
+    var lst = function (tit, l) { return l && l.length ? '<div class="gd-txt"><strong>' + Gestao_esc_(tit) + ':</strong> ' + Gestao_esc_(l.join("; ")) + '</div>' : ''; };
+    return '<div class="gd-gestor"><div class="gd-gestor-cab"><div><div class="gd-card-tit">' + Gestao_esc_(g.nome) + '</div><div class="gd-meta">' + Gestao_esc_(g.areas && g.areas.length ? "Responde por: " + g.areas.join(", ") : "Sem área configurada em Regras e responsáveis") + '</div></div>' +
+      '<div style="text-align:right"><div class="gd-nota">' + (g.nota === null ? "—" : Gestao_n_(g.nota, 1)) + '</div><span class="gd-farol ' + Gestao_esc_(g.farol) + '">' + Gestao_esc_(g.farolTexto) + '</span></div></div>' +
+      '<div class="gd-comp">' +
+        item("Decidido no prazo", i.pctPrazo === null ? "—" : Gestao_n_(i.pctPrazo, 1) + "% (" + i.noPrazo + " de " + i.basePrazo + ")", comp.prazo) +
+        item("Tempo médio de decisão", i.tempoMedio === null ? "—" : Gestao_n_(i.tempoMedio, 1) + " dia(s) útil(eis)", comp.tempo) +
+        item("Prazos vencidos sem decisão", String(i.vencidos), comp.vencidos) + item("Escalonamentos à Diretoria", String(i.escalonamentos), comp.escalonamentos) +
+        item("Dias úteis sem acessar", i.diasSemAcesso + " de " + i.diasUteis, comp.acesso) + item("Decisões revertidas", i.revertidas + " de " + i.homologou + " homologadas", comp.revertidas) +
+        item("Atividades da equipe sem atraso", i.pctEquipe === null ? "—" : Gestao_n_(i.pctEquipe, 1) + "% (" + (i.equipe - i.equipeAtrasadas) + " de " + i.equipe + ")", comp.equipe) +
+        item("Planos de ação no prazo", i.pctPlanos === null ? "—" : Gestao_n_(i.pctPlanos, 1) + "% (" + i.planosOk + " de " + i.planos + ")", comp.planos) +
+      '</div>' +
+      '<div style="margin-top:8px">' + lst("Chegaram à Diretoria", (det.escalados || []).map(function (e) { return e.titulo; })) + lst("Prazos vencidos", (det.vencidos || []).map(function (e) { return e.titulo + " (prazo " + e.prazo + ")"; })) +
+      lst("Dias sem acesso", det.semAcesso) + lst("Revertidas", det.revertidas) + lst("Planos atrasados", det.planosAtrasados) + '</div></div>';
+  }
+
+  function Gestao_htmlRegraNota_(a) {
+    var r = a.regras;
+    var h = '<div class="gd-caixa"><h3>Como a nota é calculada</h3><p class="gd-txt">Cada componente vira uma nota de 0 a 100 e a nota do mês é a média ponderada dos que tiveram dado. Componente sem dado no mês não entra e os pesos dos outros são redistribuídos. Farol verde a partir de ' + r.farol.verde + ', amarelo a partir de ' + r.farol.amarelo + ', vermelho abaixo. Vencimentos de clientes (acompanhamento) não entram. Dias sem acesso contam desde ' + Gestao_esc_(r.implantadoEm || "a ligação da caixa") + '.</p>' +
+      '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Componente</th><th class="n">Peso</th><th>Como é contado</th></tr></thead><tbody>' +
+      r.componentes.map(function (k) { return '<tr><td>' + Gestao_esc_(k.nome) + '</td><td class="n">' + Gestao_esc_(r.pesos[k.chave]) + '</td><td>' + Gestao_esc_(r.textos[k.chave]) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+      '<p class="gd-meta">Falha grave recorrente (farol vermelho dois meses seguidos, ou 3 escalonamentos ou mais no mês) vira sugestão no Programa de conduta só para a Diretoria decidir. Nunca vira ocorrência sozinha.</p></div>';
+    if (a.podeConfigurar) {
+      h += '<div class="gd-caixa" style="margin-top:14px"><h3>Pesos e faixas (Diretoria)</h3>' + r.componentes.map(function (k) {
+        return '<div class="gd-linha"><label for="gdPeso_' + k.chave + '">' + Gestao_esc_(k.nome) + '</label><input type="number" min="0" max="100" id="gdPeso_' + k.chave + '" value="' + Gestao_esc_(r.pesos[k.chave]) + '"></div>';
+      }).join("") + '<div class="gd-linha"><label for="gdVerde">Verde a partir de</label><input type="number" min="1" max="100" id="gdVerde" value="' + r.farol.verde + '"></div>' +
+        '<div class="gd-linha"><label for="gdAmarelo">Amarelo a partir de</label><input type="number" min="0" max="99" id="gdAmarelo" value="' + r.farol.amarelo + '"></div>' +
+        '<div class="gd-linha"><label for="gdSug">Gerar sugestão no Programa de conduta para falha grave recorrente</label><input type="checkbox" id="gdSug"' + (r.sugestaoConduta === false ? '' : ' checked') + '></div>' +
+        '<div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_salvarPesos_()">Salvar pesos</button></div><div id="gdPesosSt"></div></div>';
+    }
+    return h;
+  }
+
+  function Gestao_salvarPesos_() {
+    var pesos = {};
+    GD.aval.regras.componentes.forEach(function (k) { pesos[k.chave] = Number((document.getElementById("gdPeso_" + k.chave) || {}).value); });
+    var st = document.getElementById("gdPesosSt");
+    Gestao_chamar_("Gestao_apiConfigAvaliacao", { salvar: { pesos: pesos, farol: { verde: Number(document.getElementById("gdVerde").value), amarelo: Number(document.getElementById("gdAmarelo").value) }, sugestaoConduta: !!document.getElementById("gdSug").checked } }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarDesempenho_(); }, 800);
+    }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_desenharRelatorios_() {
+    var c = document.getElementById("gdDesCorpo");
+    c.innerHTML = '<div class="gd-vazio">Carregando a lista...</div>';
+    Gestao_chamar_("Gestao_apiRelatoriosGerados", {}, function (res) {
+      if (!res.itens.length) { c.innerHTML = '<div class="gd-vazio">Os relatórios automáticos aparecem aqui depois do primeiro dia útil da semana (semanal) e do mês (mensais).</div>'; return; }
+      c.innerHTML = '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Relatório</th><th>Gerado em</th><th>Situação</th><th></th></tr></thead><tbody>' + res.itens.map(function (r) {
+        return '<tr><td>' + Gestao_esc_(r.nome) + (r.motivo && r.situacao !== "Gerado" ? '<div class="gd-meta">' + Gestao_esc_(r.motivo) + '</div>' : '') + '</td><td>' + Gestao_esc_(r.dia) + '</td><td>' + Gestao_esc_(r.situacao) + '</td><td>' +
+          (r.link && /^https?:\/\//i.test(r.link) ? '<a href="' + Gestao_esc_(r.link) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+    }, function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_gerarRelatorio_(tipo, gestorId) {
+    var w = window.open("", "_blank");
+    try { if (w) w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#374151;font-size:16px'>Montando o relatório, aguarde...</p>"); } catch (e) {}
+    Gestao_chamar_("Gestao_apiRelatorio", { tipo: tipo, competencia: GD.avalComp, gestorId: gestorId || "" }, function (res) {
+      if (w && !w.closed) { w.document.open(); w.document.write(res.html); w.document.close(); }
+      else alert("O navegador bloqueou a janela do relatório. Libere as janelas do SGO+ e toque de novo." + (res.link ? " O PDF também ficou guardado na pasta." : ""));
+    }, function (m) {
+      if (w && !w.closed) w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#7f1d1d;font-size:16px'>" + Gestao_esc_(m) + "</p>");
+      else alert(m);
+    });
+  }
+</script>

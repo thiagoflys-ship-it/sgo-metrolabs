@@ -122,7 +122,15 @@ var PEND_TIPOS = {
   qualidade_mov: { modulo: 'qualidade', um: 'retirada de veículo com registro incompleto', varios: 'retiradas de veículos com registro incompleto', rotulo: 'Revisar', fazer: 'confira a movimentação na Frota', tela: { tipo: 'modulo', mod: 'qualidade' }, origem: 'QUALIDADE' },
   auvo_os_aberta: { modulo: 'auvo', um: 'O.S. aberta no Auvo', varios: 'O.S. abertas no Auvo', rotulo: 'Revisar', fazer: 'finalize ou reagende no Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
   auvo_sem_vinculo: { modulo: 'auvo', um: 'O.S. do Auvo sem vínculo de cadastro', varios: 'O.S. do Auvo sem vínculo de cadastro', rotulo: 'Revisar', fazer: 'vincule cliente e técnico em Integração Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
-  auvo_importacao: { modulo: 'auvo', um: 'importação do Auvo parada', varios: 'importações do Auvo paradas', rotulo: 'Revisar', fazer: 'retome a importação em Integração Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' }
+  auvo_importacao: { modulo: 'auvo', um: 'importação do Auvo parada', varios: 'importações do Auvo paradas', rotulo: 'Revisar', fazer: 'retome a importação em Integração Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
+  // 20/10/2026 (Caixa de decisões da gestão, SGO_Gestao_Decisoes.js › Gestao_fontePendencias_): decisões que a central ainda não listava.
+  conduta_homologar: { modulo: 'conduta', um: 'ocorrência do Programa de conduta para homologar', varios: 'ocorrências do Programa de conduta para homologar', rotulo: 'Homologar', fazer: 'homologue ou rejeite em Programa de conduta > Ocorrências', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
+  conduta_julgar: { modulo: 'conduta', um: 'contestação ou recurso para julgar', varios: 'contestações ou recursos para julgar', rotulo: 'Julgar', fazer: 'julgue a defesa em Programa de conduta > Ocorrências', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
+  conduta_missao: { modulo: 'conduta', um: 'missão aguardando aprovação', varios: 'missões aguardando aprovação', rotulo: 'Aprovar', fazer: 'aprove ou recuse em Programa de conduta > Missões', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
+  atividade_justificativa: { modulo: 'atividades', um: 'justificativa de atraso para avaliar', varios: 'justificativas de atraso para avaliar', rotulo: 'Avaliar', fazer: 'leia a justificativa e toque em Ciente na Caixa de decisões', tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, origem: 'ATIVIDADES' },
+  frota_caso: { modulo: 'frota', um: 'caso da Frota em análise', varios: 'casos da Frota em análise', rotulo: 'Analisar', fazer: 'decida a causa e o tratamento em Frota > Gestão e melhoria', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  plano_atrasado: { modulo: 'qualidade', um: 'plano de ação com prazo vencido', varios: 'planos de ação com prazo vencido', rotulo: 'Plano atrasado', fazer: 'cobre as ações ou replaneje o plano', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'QUALIDADE' },
+  frota_copiloto: { modulo: 'frota', um: 'sugestão do copiloto da Frota para decidir', varios: 'sugestões do copiloto da Frota para decidir', rotulo: 'Decidir', fazer: 'aceite ou descarte em Frota > Gestão e melhoria > Copiloto', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' }
 };
 
 // Tipos que já têm janela própria ao entrar (não se repetem no resumo da janela de avisos).
@@ -244,6 +252,8 @@ function Pend_contextoDaSessao_(sessao) {
     userId: SGO_UTILS.safe(sessao.userId), perfil: perfil, nome: SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario),
     clienteId: SGO_UTILS.safe(sessao.clienteId), cliente: perfil === 'CLIENTE',
     gestao: typeof isAdminPerfilAuth_ === 'function' ? isAdminPerfilAuth_(perfil) : (perfil === 'ADMIN' || perfil === 'GESTOR' || perfil === 'DIRETORIA'),
+    // 20/10/2026: Diretoria (perfil ou dono do sistema) vê o que é só dela (sugestões sobre gestor).
+    diretoria: perfil === 'DIRETORIA' || (function () { try { return typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(sessao.usuario); } catch (e) { return false; } })(),
     interno: false
   };
 }
@@ -267,6 +277,7 @@ function Pend_podeVer_(it, ctx) {
     case 'TECNICA': return ctx.gestao || ctx.perfil === 'METROLOGIA';
     case 'GESTAO': return ctx.gestao;
     case 'ADMIN': return ctx.perfil === 'ADMIN' && !ctx.interno;
+    case 'DIRETORIA': return !!ctx.interno || !!ctx.diretoria;
     default: return false;
   }
 }
@@ -285,7 +296,9 @@ function Pend_item_(tipo, o) {
     tela: o.tela || t.tela, telaOutro: o.telaOutro || null, telaCliente: o.telaCliente || null,
     responsavel: o.responsavel || '', responsavelId: o.responsavelId || '',
     publico: o.publico || 'GESTAO', paraUsuarios: (o.paraUsuarios || []).filter(Boolean).map(String),
-    clienteId: o.clienteId || '', textoEstavel: o.textoEstavel || ''
+    clienteId: o.clienteId || '', textoEstavel: o.textoEstavel || '',
+    // 20/10/2026: dados para a Caixa de decisões (área, prazo próprio, quem não pode decidir, dono do caso); não vai para a tela.
+    extra: o.extra || null
   };
 }
 
@@ -824,7 +837,8 @@ function Pend_fonteConduta_(add, ctx) {
       }));
     });
   }
-  if (ctx.gestao && typeof Conduta_qtdSugestoesPendentes_ === 'function') {
+  // 20/10/2026: com a Caixa de decisões, as sugestões entram uma a uma (Gestao_fontePendencias_); a contagem só fica sem ela.
+  if (ctx.gestao && typeof Conduta_qtdSugestoesPendentes_ === 'function' && typeof Gestao_fontePendencias_ !== 'function') {
     var qSug = 0;
     try { qSug = Conduta_qtdSugestoesPendentes_(); } catch (eSug) { qSug = 0; }
     if (qSug) add(Pend_item_('conduta_sugestao', { id: 'CONDUTA:SUGESTOES', nome: 'Sugestões de ocorrência', publico: 'GESTAO', responsavel: 'Gestão', gravidade: 'INFO', dias: null,
@@ -938,7 +952,9 @@ var PEND_FONTES = [
   { nome: 'atividades', fn: Pend_fonteAtividades_ },
   { nome: 'avisos', fn: Pend_fonteAvisos_ },
   { nome: 'Programa de Conduta', fn: Pend_fonteConduta_ },
-  { nome: 'Auvo', fn: Pend_fonteAuvo_ }
+  { nome: 'Auvo', fn: Pend_fonteAuvo_ },
+  // 20/10/2026: decisões da gestão que só a Caixa de decisões conhecia (SGO_Gestao_Decisoes.js).
+  { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } }
 ];
 
 function Pend_ordenar_(a, b) {

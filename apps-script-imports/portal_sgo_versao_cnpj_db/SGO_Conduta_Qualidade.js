@@ -41,7 +41,9 @@ var CNDQ_ORIGENS = {
   QUALIDADE: { nome: 'Painel de qualidade', tela: 'qualidade' },
   ATIVIDADES: { nome: 'Minhas atividades', tela: 'atividades_equipe' },
   AVISOS: { nome: 'Avisos', tela: 'avisos' },
-  COMMAND_PONTO: { nome: 'Assistente do ponto (COMMAND)', tela: '' }
+  COMMAND_PONTO: { nome: 'Assistente do ponto (COMMAND)', tela: '' },
+  // 20/10/2026: avaliação do gestor (SGO_Gestao_Avaliacao.js). Sugestão sobre gestor: só a Diretoria vê e decide.
+  GESTAO: { nome: 'Desempenho da gestão', tela: 'gestao_desempenho' }
 };
 
 // ------------------------------------------------------------
@@ -417,7 +419,7 @@ function Cndq_sugestaoParaTela_(s, usuarios, nomesAreas, podeDecidir, sessao) {
     TITULO: SGO_UTILS.safe(s.TITULO), DETALHE: SGO_UTILS.safe(s.DETALHE), INFORMATIVA: SGO_UTILS.safeUpper(s.INFORMATIVA) === 'SIM',
     DECIDIDA_POR_NOME: SGO_UTILS.safe(s.DECIDIDA_POR_NOME), DECIDIDA_EM: SGO_UTILS.safe(s.DECIDIDA_EM).substring(0, 10), MOTIVO: SGO_UTILS.safe(s.MOTIVO), OCORRENCIA_ID: SGO_UTILS.safe(s.OCORRENCIA_ID),
     // A pessoa envolvida não decide a sugestão sobre ela mesma (mesma regra da homologação).
-    PODE_DECIDIR: podeDecidir && status === 'PENDENTE' && !envolvido,
+    PODE_DECIDIR: podeDecidir && status === 'PENDENTE' && !envolvido && (SGO_UTILS.safeUpper(s.ORIGEM_MODULO) !== 'GESTAO' || Conduta_ehDiretoriaOuDono_(sessao)),
     SOU_O_ENVOLVIDO: envolvido
   };
 }
@@ -429,7 +431,9 @@ function Conduta_apiListarSugestoes(sessionId, payload) {
   var usuarios = Cndq_usuarios_(), nomes = Cndq_nomesAreas_();
   var podeDecidir = isAdminSession(sessionId);
   var filtro = SGO_UTILS.safeUpper(payload.status || 'PENDENTE');
-  var todas = Cndq_ler_(CNDQ_SHEETS.SUGESTAO);
+  // 20/10/2026: sugestão vinda da avaliação do gestor só aparece para a Diretoria (perfil Diretoria ou dono).
+  var veGestao = Conduta_ehDiretoriaOuDono_(sessao);
+  var todas = Cndq_ler_(CNDQ_SHEETS.SUGESTAO).filter(function (s) { return veGestao || SGO_UTILS.safeUpper(s.ORIGEM_MODULO) !== 'GESTAO'; });
   var contagem = { PENDENTE: 0, ACEITA: 0, DESCARTADA: 0, SUPERADA: 0 };
   todas.forEach(function (s) { var st = SGO_UTILS.safeUpper(s.STATUS); if (contagem[st] !== undefined) contagem[st]++; });
   var itens = todas.filter(function (s) { return filtro === 'TODAS' || SGO_UTILS.safeUpper(s.STATUS) === filtro; })
@@ -461,11 +465,19 @@ function Conduta_regraPrazoSugestao_() {
       : 'O prazo de registro (' + (Number(p.PRAZO_REGISTRO_DIAS_UTEIS) || 2) + ' dias úteis) conta da data do fato, como no registro manual.' };
 }
 
+/** Sugestão da avaliação do gestor: só a Diretoria decide (regra do dono: o que envolve gestão é da Diretoria). */
+function Cndq_exigirDiretoriaSeGestao_(s, sessao) {
+  if (SGO_UTILS.safeUpper(s && s.ORIGEM_MODULO) === 'GESTAO' && !Conduta_ehDiretoriaOuDono_(sessao)) {
+    throw new Error('Esta sugestão vem da avaliação de um gestor (Desempenho da gestão) e só a Diretoria decide. Ela fica na fila da Diretoria; nada foi alterado.');
+  }
+}
+
 function Conduta_apiAceitarSugestao(sessionId, payload) {
   var sessao = Conduta_exigirGestor_(sessionId);
   payload = payload || {};
   var s = SGO_DATA.getById(CNDQ_SHEETS.SUGESTAO, String(payload.id || ''));
   if (!s) throw new Error('A sugestão não foi encontrada: atualize a lista de sugestões.');
+  Cndq_exigirDiretoriaSeGestao_(s, sessao);
   if (SGO_UTILS.safeUpper(s.STATUS) !== 'PENDENTE') throw new Error('Esta sugestão já foi decidida (' + SGO_UTILS.safe(s.STATUS).toLowerCase() + ' por ' + (SGO_UTILS.safe(s.DECIDIDA_POR_NOME) || 'outra pessoa') + '). Atualize a lista.');
   var colaboradorId = String(payload.colaboradorId || s.COLABORADOR_ID || '');
   if (colaboradorId === String(sessao.userId)) throw new Error('A sugestão é sobre você: peça a outra pessoa da gestão para decidir.');
@@ -494,6 +506,7 @@ function Conduta_apiDescartarSugestao(sessionId, payload) {
   payload = payload || {};
   var s = SGO_DATA.getById(CNDQ_SHEETS.SUGESTAO, String(payload.id || ''));
   if (!s) throw new Error('A sugestão não foi encontrada: atualize a lista de sugestões.');
+  Cndq_exigirDiretoriaSeGestao_(s, sessao);
   if (SGO_UTILS.safeUpper(s.STATUS) !== 'PENDENTE') throw new Error('Esta sugestão já foi decidida. Atualize a lista.');
   if (String(s.COLABORADOR_ID) === String(sessao.userId)) throw new Error('A sugestão é sobre você: peça a outra pessoa da gestão para decidir.');
   var motivo = String(payload.motivo || '').trim();

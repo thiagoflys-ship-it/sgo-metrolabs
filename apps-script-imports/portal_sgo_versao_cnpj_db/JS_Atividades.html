@@ -1167,6 +1167,10 @@
       '<div class="atv-campo"><label for="atvCfgHora">Hora do resumo</label><input type="time" id="atvCfgHora" value="' + Atividades_esc_(av.horaResumo) + '"></div>' +
       '<div class="atv-campo"><label>Quem recebe o resumo pelo WhatsApp (vínculo de trabalho em Administração &gt; Usuários)</label><div class="atv-cfg-dias">' + vincs + "</div>" +
         '<div class="atv-sub">Padrão: só CLT. PJ e vínculo não informado seguem com os avisos no sistema e por e-mail.</div></div>' +
+      // 20/10/2026: a escada de cobrança da gestão usa este mesmo horário e o mesmo limite de um WhatsApp por dia.
+      '<h4 style="margin:14px 0 8px;font-size:13px">Cobrança da gestão</h4>' +
+      '<div class="atv-sub">O que depende de gestor ou da Diretoria segue a escada da Caixa de decisões (e-mail diário, WhatsApp depois de dias úteis parado, Diretoria), neste mesmo horário de trabalho. O WhatsApp continua no máximo um por pessoa por dia, somando atividades e gestão. ' +
+        '<button type="button" class="btn-secondary" style="margin-top:6px" onclick="var o=document.getElementById(\'atvCfgOverlay\');if(o)o.remove();abrir(\'gestao_decisoes\');setTimeout(function(){if(typeof Gestao_abrirRegras_===\'function\')Gestao_abrirRegras_();},400);">Abrir a escada e os responsáveis</button></div>' +
       '<h4 style="margin:14px 0 8px;font-size:13px">Resumos de hoje</h4>' + resumos;
     var ov = Atividades_modal_("Avisos e horários das atividades", corpo,
       '<button type="button" class="btn-secondary" data-x="cancelar">Fechar</button><button type="button" class="btn-primary" data-x="ok">Salvar</button>', { id: "atvCfgOverlay", largura: 720 });

@@ -18,9 +18,6 @@
  *             do PULADO ("Sem e-mail no cadastro do <cadastro>"); 'motivo' preenchido = pula
  *             e registra esse motivo.
  *     semLink: true — não põe o endereço do SGO+ no e-mail/WhatsApp (destinatário externo).
- *     Retorno (20/10/2026): além das contagens, resumo.ids = { usuárioId: id da mensagem no WhatsApp (Meta: wamid;
- *             Z-API: messageId) } para quem recebeu — o bate-papo (SGO_ComunicacaoWhatsapp.js, origem BATE_PAPO)
- *             guarda esse id para a resposta da pessoa ("responder a") voltar para a conversa certa.
  *     categoria: 'PONTO' — opcional (19/10/2026). Mensagem do ponto (marcação, banco de horas,
  *             espelho) só vai para quem tem CAD_USUARIOS.VINCULO_TRABALHO = "CLT". PJ e vínculo
  *             vazio (e contato externo, que não tem vínculo) ficam PULADO em NTF_ENVIOS com o
@@ -33,6 +30,9 @@
  *     categoria: 'FROTA_RESERVAS' — (20/10/2026) WhatsApp das reservas de veículo (SGO_Frota_Reservas.js): a mesma regra
  *             sutil (vínculo liberado, padrão CLT; dia útil e horário de trabalho; no máximo UMA mensagem de reservas por
  *             pessoa por dia, ORIGEM começando por FROTA_RESERVAS). Só é pedido quando a reserva está em risco no mesmo dia.
+ *     categoria: 'GESTAO' — (20/10/2026) resumo da Caixa de decisões para o gestor (SGO_Gestao_Escada.js): mesma regra sutil, e o
+ *             limite de UMA mensagem por dia é somado com o de atividades (ORIGEM começando por ATIVIDADES ou GESTAO): quem
+ *             recebe o resumo da gestão no dia não recebe outro de atividades (o da gestão já leva a contagem das atividades).
  *   })
  *
  * Canais:
@@ -48,9 +48,7 @@
  *            Propriedades: META_WA_TOKEN (segredo), META_WA_PHONE_ID, META_WA_WABA_ID.
  *    zapi  — Z-API (POST /instances/<INSTANCIA>/token/<TOKEN>/send-text, header
  *            Client-Token). Credenciais SÓ nas propriedades do script:
- *            ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN. Sem modelo: texto pronto por
- *            destinatário (Notificar_textoZapi_) e envio por SGO_zapiEnviarTexto_ (SGO_Zapi.js,
- *            20/10/2026): só celular, fila única com o COMMAND, intervalo e limites do número.
+ *            ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN.
  *               Telefone: primeiro
  *               CAD_USUARIOS.CELULAR (Administração > Usuários); depois
  *               WHATSAPP/TELEFONE do usuário se a coluna existir; senão o telefone
@@ -190,11 +188,7 @@ function Notificar_enviarWhatsapp_(cred, telefone, mensagem) {
     payload: JSON.stringify({ phone: telefone, message: mensagem })
   });
   var codigo = r.getResponseCode();
-  if (codigo >= 200 && codigo < 300) {
-    var id = '';
-    try { var j = JSON.parse(r.getContentText() || '{}') || {}; id = String(j.messageId || j.id || ''); } catch (e) { id = ''; }
-    return { ok: true, id: id };
-  }
+  if (codigo >= 200 && codigo < 300) return { ok: true };
   return { ok: false, motivo: 'Z-API respondeu ' + codigo + ': ' + String(r.getContentText() || '').slice(0, 200) };
 }
 
@@ -243,20 +237,19 @@ var NTF_MODELOS_META = {
     texto: 'Olá, {{1}}. Este é o resumo das suas atividades no SGO+.\n\nNovas para você: {{2}}\nVencem hoje: {{3}}\nVenceram desde o último resumo: {{4}}\n\nPara ver os detalhes, acesse Minhas atividades: {{5}}\n\nMetrolabs — SGO+',
     exemplos: ['Maria', '2', '1', '0', 'https://sgo.metrolabs.com.br']
   },
+  // 20/10/2026: resumo do dia da Caixa de decisões (um por gestor por dia, só quando há decisão parada há 2 dias úteis ou mais;
+  // dia útil e horário de trabalho — SGO_Gestao_Escada.js). Enquanto a Meta não aprovar, o resumo sai pelo sgo_aviso_geral.
+  sgo_gestao_resumo_dia: {
+    uso: 'Caixa de decisões: resumo do dia do gestor (nome, decisões aguardando, paradas há 2 dias úteis ou mais, atividades próprias, link)',
+    limites: [60, 10, 10, 60, 300],
+    texto: 'Olá, {{1}}. Este é o resumo do que espera pela sua decisão no SGO+.\n\nDecisões aguardando você: {{2}}\nParadas há 2 dias úteis ou mais: {{3}}\nSuas atividades: {{4}}\n\nPara decidir, acesse a Caixa de decisões: {{5}}\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '4', '2', '1 nova, 1 vence hoje', 'https://sgo.metrolabs.com.br']
+  },
   sgo_justificativa_recebida: {
     uso: 'Minhas atividades: justificativa de atraso (colaborador, atividade, motivo, nova previsão)',
     limites: [80, 200, 300, 40],
     texto: 'Justificativa de atraso registrada no SGO+.\n\nColaborador: {{1}}\nAtividade: {{2}}\nMotivo: {{3}}\nNova previsão: {{4}}\n\nVeja o histórico em Atividades da equipe, no SGO+.\n\nMetrolabs — SGO+',
     exemplos: ['João Pereira', 'Emitir certificado da autoclave 2', 'O padrão de temperatura voltou da calibração externa só hoje.', '17/10/2026 18:00']
-  },
-  // 20/10/2026: aviso do bate-papo (mensagem direta ou menção para quem está fora do sistema; SGO_ComunicacaoWhatsapp.js:
-  // dia útil, horário de trabalho, no máximo 1 por hora e 4 por dia, várias mensagens num aviso só). Enquanto a Meta
-  // não aprovar, o aviso vai só por e-mail.
-  sgo_bate_papo_mensagem: {
-    uso: 'Bate-papo: mensagem direta ou menção para quem está fora do sistema (nome, remetente, mensagem, link)',
-    limites: [60, 160, 600, 300],
-    texto: 'Olá, {{1}}. Você tem mensagem de {{2}} no bate-papo do SGO+.\n\n{{3}}\n\nPara responder, responda esta mensagem ou abra a conversa no SGO+: {{4}}\n\nMetrolabs — SGO+',
-    exemplos: ['Maria', 'João Pereira', 'Consegue confirmar o horário da visita de amanhã na unidade Centro?', 'https://sgo.metrolabs.com.br']
   },
   sgo_missao_nova: {
     uso: 'Programa de conduta: missão nova (nome, destino, data, link)',
@@ -473,6 +466,27 @@ function Notificar_motivoAtividadesWhatsapp_(contato, enviadosHoje, agora) {
   return '';
 }
 
+/**
+ * Categoria GESTAO (20/10/2026): resumo da Caixa de decisões. Mesma regra sutil (vínculo liberado, dia útil, horário de
+ * trabalho) e o MESMO limite diário das atividades: uma mensagem por pessoa por dia somando as duas.
+ */
+var NTF_MOTIVO_GESTAO_LIMITE = 'limite de uma mensagem por dia pelo WhatsApp (atividades e gestão) já atingido hoje';
+function Notificar_motivoGestaoWhatsapp_(contato, enviadosHoje, agora) {
+  var cfg = typeof Atividades_avisosCfg_ === 'function' ? Atividades_avisosCfg_() : { vinculosWhatsapp: ['CLT'] };
+  var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
+  var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
+  if (lib.indexOf(v || 'VAZIO') < 0) {
+    return v === 'PJ' ? 'PJ: o resumo da gestão não vai pelo WhatsApp (segue no sistema e por e-mail)'
+      : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); o resumo segue no sistema e por e-mail');
+  }
+  if (typeof SGO_dentroDoExpediente_ === 'function') {
+    var ex = SGO_dentroDoExpediente_(agora || new Date());
+    if (!ex.dentro) return 'fora do expediente (' + ex.motivo + '); WhatsApp da gestão só em dia útil e no horário de trabalho';
+  }
+  if (contato && enviadosHoje && enviadosHoje[String(contato.id)]) return NTF_MOTIVO_GESTAO_LIMITE;
+  return '';
+}
+
 /** Categoria FROTA_RESERVAS (20/10/2026): mesma regra sutil das atividades, com limite próprio (uma por pessoa por dia). */
 var NTF_MOTIVO_FROTA_LIMITE = 'limite de uma mensagem de reservas da Frota por dia pelo WhatsApp já atingido hoje';
 function Notificar_motivoFrotaReservasWhatsapp_(contato, enviadosHoje, agora) {
@@ -491,13 +505,18 @@ function Notificar_motivoFrotaReservasWhatsapp_(contato, enviadosHoje, agora) {
   return '';
 }
 
-/** Quem já recebeu hoje (fuso da empresa) mensagem de atividades pelo WhatsApp: { usuárioId: true }. */
+/**
+ * Quem já recebeu hoje (fuso da empresa) mensagem pelo WhatsApp com ORIGEM começando pelo prefixo: { usuárioId: true }.
+ * prefixo pode ser uma lista (20/10/2026: atividades e gestão dividem o mesmo limite de uma por dia).
+ */
 function Notificar_whatsAtividadesHoje_(prefixo) {
   var hoje = Utilities.formatDate(new Date(), NTF_FUSO, 'yyyy-MM-dd'), mapa = {};
+  var prefixos = (Array.isArray(prefixo) ? prefixo : [prefixo || 'ATIVIDADES']).map(function (p) { return String(p).toUpperCase(); });
   try {
     SGO_DATA.getAll(Notificar_aba_()).forEach(function (r) {
       if (String(r.CANAL || '').toLowerCase() !== 'whatsapp' || String(r.SITUACAO || '').toUpperCase() !== 'OK') return;
-      if (String(r.ORIGEM || '').toUpperCase().indexOf(prefixo || 'ATIVIDADES') !== 0) return;
+      var org = String(r.ORIGEM || '').toUpperCase();
+      if (!prefixos.some(function (p) { return org.indexOf(p) === 0; })) return;
       var q = r.QUANDO;
       var dia = Object.prototype.toString.call(q) === '[object Date]' ? Utilities.formatDate(q, NTF_FUSO, 'yyyy-MM-dd') : String(q || '').slice(0, 10);
       if (dia === hoje) mapa[String(r.USUARIO_ID || '')] = true;
@@ -566,14 +585,13 @@ function SGO_notificar_(opcoes) {
     };
     var htmlEmail = Notificar_htmlEmail_(titulo, texto, link);
     var txtEmail = Notificar_textoEmail_(titulo, texto, link);
-    // 20/10/2026: Z-API sem modelo — texto pronto por destinatário (SGO_Zapi.js, Notificar_textoZapi_): o texto próprio do
-    // módulo; senão o texto do modelo que o módulo pediu, preenchido; senão o aviso geral com saudação, assunto e link.
-    var baseZapi = { textoWhatsapp: String(o.textoWhatsapp || '').trim(), modelo: o.modelo && o.modelo.nome ? modelo : null, params: paramsPara, titulo: titulo, texto: texto, link: link };
-    var txtWhatsPara = function (c) {
-      if (typeof Notificar_textoZapi_ === 'function') return Notificar_textoZapi_(baseZapi, c);
-      var t = baseZapi.textoWhatsapp || ('SGO+ Metrolabs - ' + titulo + (texto ? '\n\n' + texto.replace(/\s+/g, ' ').slice(0, 400) : ''));
-      return link && t.indexOf(link) < 0 ? t + '\n\nAbra o SGO+: ' + link : t;
-    };
+    var txtWhats = String(o.textoWhatsapp || '').trim();
+    if (!txtWhats) {
+      var curto = texto.replace(/\s+/g, ' ');
+      if (curto.length > 400) curto = curto.slice(0, 397) + '...';
+      txtWhats = 'SGO+ Metrolabs - ' + titulo + (curto ? '\n\n' + curto : '');
+    }
+    if (link && txtWhats.indexOf(link) < 0) txtWhats += '\n\nAbra o SGO+: ' + link;
 
     // 17/10/2026: a mesma mensagem para a mesma pessoa pelo mesmo canal não sai duas vezes em 10 minutos,
     // venha do caminho que vier (duplo clique em Publicar/Reenviar, a verificação das telas e a rotina de
@@ -595,9 +613,9 @@ function SGO_notificar_(opcoes) {
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
           var barradoCategoria = Notificar_motivoCategoria_(categoria, c);
           if (barradoCategoria) { registrar(uid, c.nome, canal, '', 'PULADO', barradoCategoria); return; }
-          if (categoria === 'ATIVIDADES' && canal === 'whatsapp') {
-            if (whatsAtvHoje === null) whatsAtvHoje = Notificar_whatsAtividadesHoje_();
-            var barradoAtv = Notificar_motivoAtividadesWhatsapp_(c, whatsAtvHoje);
+          if ((categoria === 'ATIVIDADES' || categoria === 'GESTAO') && canal === 'whatsapp') {
+            if (whatsAtvHoje === null) whatsAtvHoje = Notificar_whatsAtividadesHoje_(['ATIVIDADES', 'GESTAO']);
+            var barradoAtv = categoria === 'GESTAO' ? Notificar_motivoGestaoWhatsapp_(c, whatsAtvHoje) : Notificar_motivoAtividadesWhatsapp_(c, whatsAtvHoje);
             if (barradoAtv) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoAtv); return; }
           }
           if (categoria === 'FROTA_RESERVAS' && canal === 'whatsapp') {
@@ -625,12 +643,10 @@ function SGO_notificar_(opcoes) {
             reservar(); reservaFeita = true;
             if (wa.provedor === 'meta') {
               r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
-              if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
+              if (r.ok) { if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
             } else {
-              // envio único da Z-API (SGO_Zapi.js): só celular válido, fila única com o COMMAND, intervalo e limites do número
-              r = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(c.telefone, txtWhatsPara(c), { cred: wa.cred, tipo: 'AVISO' }) : Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhatsPara(c));
-              if (r.pulado) { liberar(); registrar(uid, c.nome, canal, c.telefone, 'PULADO', r.motivo); return; }
-              if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
+              r = Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhats);
+              if (r.ok) { if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
             }
             liberar();
             registrar(uid, c.nome, canal, c.telefone, 'ERRO', Notificar_limparSegredos_(r.motivo, segredos));

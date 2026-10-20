@@ -103,6 +103,11 @@ function PonteCmd_tratar_(req) {
   if (/^frota\.reservas\.(painel|livres|criar|cancelar)$/.test(String(req.acao || ""))) {
     return typeof FrotaRes_ponte_ === "function" ? FrotaRes_ponte_(String(req.acao), d) : { ok: false, erro: "Reservas da frota indisponíveis no SGO+." };
   }
+  // 20/10/2026: Caixa de decisões e avaliação do gestor no COMMAND (SGO_Gestao_Decisoes.js, Gestao_ponte_): só leitura, em nome do
+  // usuário do SGO+ ligado à conta; a caixa só para a gestão do SGO+ e a avaliação só para o próprio gestor e a Diretoria.
+  if (/^gestao\.(caixa|resumo|avaliacao)$/.test(String(req.acao || ""))) {
+    return typeof Gestao_ponte_ === "function" ? Gestao_ponte_(String(req.acao), d) : { ok: false, erro: "Caixa de decisões indisponível no SGO+." };
+  }
   if (/^atividades\.[a-z]+$/.test(String(req.acao || ""))) {
     return typeof Atividades_ponte_ === "function" ? Atividades_ponte_(String(req.acao), d) : { ok: false, erro: "Minhas atividades indisponível no SGO+." };
   }

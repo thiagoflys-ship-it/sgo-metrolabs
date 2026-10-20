@@ -124,8 +124,6 @@ function Atividades_enviarEmailsPendentes_(destinatarios) {
 // ------------------------------------------------------------
 /** O modelo do resumo já foi aprovado pela Meta? (consulta guardada por 6 h; falha = não aprovado). */
 function Atividades_modeloResumoAprovado_() {
-  // 20/10/2026: pela Z-API não há modelo a aprovar: o resumo completo sai como texto pronto (SGO_Zapi.js).
-  if (typeof Notificar_whatsappSemModelo_ === 'function' && Notificar_whatsappSemModelo_()) return true;
   var forcado = '';
   try { forcado = String(PropertiesService.getScriptProperties().getProperty('ATV_RESUMO_MODELO_APROVADO') || '').trim().toUpperCase(); } catch (e) {}
   if (forcado === 'SIM') return true;
@@ -200,6 +198,13 @@ function Atividades_resumoDiario_(agoraData) {
   var ex = SGO_dentroDoExpediente_(quando);
   if (!ex.dentro) return { fora: ex.motivo };
   if (ex.hora < cfg.horaResumo) return { fora: 'antes da hora do resumo (' + cfg.horaResumo + ')' };
+  // 20/10/2026: o resumo da Caixa de decisões (gestor com decisão parada) sai primeiro e já leva a contagem das
+  // atividades da pessoa; quem o recebeu hoje não recebe um segundo WhatsApp de atividades (SGO_Gestao_Escada.js).
+  var gestaoHoje = {};
+  try {
+    if (typeof Gestao_whatsDiario_ === 'function') Gestao_whatsDiario_(quando);
+    if (typeof Notificar_whatsAtividadesHoje_ === 'function') gestaoHoje = Notificar_whatsAtividadesHoje_(['GESTAO']);
+  } catch (eG) { console.error('Resumo da gestão: ' + ((eG && eG.message) || eG)); }
   Atividades_garantirAbaResumos_();
   var abaR = Atividades_abaResumos_();
   var agora = Atividades_agora_();
@@ -224,6 +229,10 @@ function Atividades_resumoDiario_(agoraData) {
     var reg = { USUARIO_ID: u.id, USUARIO_NOME: u.nome, DIA: ex.dia, NOVAS: c.novas.length, VENCEM_HOJE: c.venceHoje.length, VENCIDAS_NOVAS: c.vencidasNovas.length, MODELO: '', MOTIVO: '', AVALIADO_EM: agora };
     if (!c.novas.length && !c.venceHoje.length && !c.vencidasNovas.length) {
       reg.SITUACAO = 'SEM_NOVIDADE'; reg.MOTIVO = 'nada novo desde o último resumo';
+      linhas.push(reg); return;
+    }
+    if (gestaoHoje[u.id]) {
+      reg.SITUACAO = 'NO_RESUMO_DA_GESTAO'; reg.MOTIVO = 'o resumo da Caixa de decisões de hoje já levou a contagem das suas atividades (uma mensagem por dia)';
       linhas.push(reg); return;
     }
     if (aprovado === null) aprovado = Atividades_modeloResumoAprovado_();

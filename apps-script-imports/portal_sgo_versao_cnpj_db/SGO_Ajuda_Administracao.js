@@ -407,7 +407,7 @@ function SGO_ajudaTelas_Administracao_() {
       paraQueServe: "O SGO+ envia avisos por WhatsApp por um provedor de cada vez: o WhatsApp oficial (Meta) ou a Z-API. Aqui se escolhe o provedor, se gravam as chaves e se cuidam dos modelos de mensagem da Meta.",
       antesDeComecar: [
         "Pela Meta, o SGO+ só envia mensagens por modelo aprovado.",
-        "Pela Z-API, as mensagens saem em texto pronto, sem modelo a aprovar, com intervalo entre elas e limite por hora e por dia para proteger o número. O passo a passo da Z-API fica no cartão \"Z-API\".",
+        "Pela Z-API, as mensagens saem em texto simples.",
         "Para testar, tenha um celular com DDD que possa receber a mensagem de teste."
       ],
       passos: [
@@ -452,53 +452,6 @@ function SGO_ajudaTelas_Administracao_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Só o responsável pelo sistema escolhe o provedor, grava as chaves, testa e cadastra os modelos." }
-      ]
-    },
-
-    // 20/10/2026: WhatsApp da empresa pela Z-API (SGO_Zapi.js) — passo a passo e os três botões do cartão "Z-API".
-    "chaves/zapi": {
-      titulo: "WhatsApp pela Z-API",
-      paraQueServe: "Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados do Auvo, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
-      antesDeComecar: [
-        "Tenha a conta da Z-API aberta (app.z-api.io) e o celular da empresa à mão, com o WhatsApp instalado e internet.",
-        "Cadastre o seu celular em Administração > Usuários > Celular, para receber a mensagem de teste.",
-        "A Z-API usa o WhatsApp de um celular: muitas mensagens seguidas podem bloquear o número. Por isso existem o intervalo e os limites deste cartão."
-      ],
-      passos: [
-        {
-          titulo: "Ligar a Z-API, em ordem",
-          itens: [
-            "No painel da Z-API, abra a instância da Metrolabs e copie a identificação da instância e o token da instância. No menu Segurança, copie o token de segurança da conta.",
-            "No cartão \"Z-API\", cole cada valor no campo dele e toque em \"Gravar\".",
-            "No cartão \"WhatsApp oficial (Meta)\", em \"Provedor do WhatsApp em uso\", escolha \"Z-API\" e toque em \"Gravar\". Vale para o SGO+ e para o COMMAND.",
-            "Volte ao cartão \"Z-API\" e toque em \"Conferir conexão\". Faixa verde: conectada, com o número. Faixa vermelha \"Desconectada\": leia o QR Code no painel da Z-API com o celular da empresa e confira de novo.",
-            "Toque em \"Configurar recebimento\" (uma vez). A Z-API passa a entregar ao COMMAND as mensagens que chegam ao número; o endereço é protegido e não aparece na tela.",
-            "Toque em \"Enviar mensagem de teste para mim\" e confira no seu celular."
-          ]
-        },
-        {
-          titulo: "Ajustar a proteção do número (opcional)",
-          itens: [
-            "Os campos \"intervalo mínimo\", \"intervalo máximo\", \"limite por hora\", \"limite por dia\" e \"limite por hora para o mesmo celular\" ficam no cartão \"Z-API\". Vazio = padrão (3 a 8 segundos; 40 por hora; 200 por dia; 6 por hora para a mesma pessoa).",
-            "Os limites somam o SGO+ e o COMMAND, que mandam pelo mesmo número.",
-            "Passou do limite, o aviso continua no sistema e o envio fica registrado como pulado, com o motivo. Respostas a quem escreveu para a empresa e testes não são barrados."
-          ]
-        }
-      ],
-      cores: [
-        { nome: "Faixa verde \"Conectada\"", significado: "A instância está ligada ao WhatsApp do celular da empresa. Mostra o número." },
-        { nome: "Faixa vermelha \"Desconectada\"", significado: "Leia o QR Code no painel da Z-API com o celular da empresa e toque em \"Conferir conexão\" de novo." },
-        { nome: "Faixa verde \"Recebimento configurado\"", significado: "As mensagens recebidas no número vão para o COMMAND. Mensagens de grupo e as enviadas pelo próprio celular são ignoradas." }
-      ],
-      problemas: [
-        { situacao: "Aparece \"faltam chaves da Z-API\"", oQueFazer: "Grave as 3 chaves no cartão \"Z-API\" e toque no botão de novo." },
-        { situacao: "Aparece \"a Z-API exige o token de segurança da conta\"", oQueFazer: "No painel da Z-API, menu Segurança, ative o token de segurança da conta, copie e grave em \"Z-API: token de segurança da conta\"." },
-        { situacao: "Aparece \"o seu cadastro não tem celular válido\"", oQueFazer: "Cadastre o seu celular com DDD em Administração > Usuários > Celular e toque em \"Enviar mensagem de teste para mim\" de novo." },
-        { situacao: "Aparece \"este botão funciona no SGO+ do servidor próprio\"", oQueFazer: "Abra o SGO+ pelo endereço sgo.metrolabs.com.br, ou use no COMMAND: Integrações > Z-API > Cadastrar webhook." },
-        { situacao: "Uma pessoa diz que não recebeu", oQueFazer: "Confira o celular no cadastro (telefone fixo não recebe pela Z-API) e o motivo em Notificações enviadas: limite, fora do expediente ou um resumo por dia são regras do sistema, não erro." }
-      ],
-      quemPode: [
-        { perfil: "TODOS", pode: "Só o responsável pelo sistema grava as chaves, confere a conexão, configura o recebimento e envia o teste." }
       ]
     }
   };

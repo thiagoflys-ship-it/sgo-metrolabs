@@ -30,7 +30,7 @@ var SGO_AJUDA_NOMES = {
   auvo: 'Integração Auvo', frota: 'Frota', qualidade: 'Painel de qualidade', conduta: 'Programa de conduta',
   inventario: 'Inventário de equipamentos', clientes: 'Clientes', unidades: 'Unidades', equipamentos: 'Equipamentos',
   vinculos: 'Vínculos', documentos: 'Arquivo de documentos', usuarios: 'Usuários', admin: 'Configurações',
-  chaves: 'Chaves e senhas'
+  chaves: 'Chaves e senhas', gestao_decisoes: 'Caixa de decisões', gestao_desempenho: 'Desempenho da gestão'
 };
 
 /**
@@ -52,6 +52,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_Qualidade_ === 'function') fontes.push(['Qualidade', SGO_ajudaTelas_Qualidade_]);
   if (typeof SGO_ajudaTelas_Conduta_ === 'function') fontes.push(['Conduta', SGO_ajudaTelas_Conduta_]);
   if (typeof SGO_ajudaTelas_Inventario_ === 'function') fontes.push(['Inventario', SGO_ajudaTelas_Inventario_]);
+  // 20/10/2026: Caixa de decisões e Desempenho da gestão (SGO_Ajuda_Gestao.js).
+  if (typeof SGO_ajudaTelas_Gestao_ === 'function') fontes.push(['Gestao', SGO_ajudaTelas_Gestao_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;
