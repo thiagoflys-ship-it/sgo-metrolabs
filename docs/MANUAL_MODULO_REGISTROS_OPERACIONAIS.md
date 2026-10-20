@@ -103,3 +103,7 @@ Na mesma etapa de consulta, a seção "Pendências em Aberto" mostra registros q
 ---
 
 *Este manual descreve o módulo Registros Operacionais tal como implementado em 2026-08-20.*
+
+## Enviar o documento ao cliente (20/10/2026)
+
+Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; os links do PDF salvo na tela ganham o botão "Enviar". A janela "Enviar documento" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).

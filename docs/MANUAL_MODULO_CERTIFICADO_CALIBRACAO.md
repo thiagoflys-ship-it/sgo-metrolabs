@@ -264,3 +264,7 @@ No topo da tela, digite o CNPJ do cliente e clique em "Buscar" — aparece a lis
 A opção inicial é **NÃO**: nenhuma data é calculada nem incluída por padrão. Ao selecionar **SIM**, data, nome do solicitante, cargo/setor e referência da solicitação são obrigatórios; a observação é opcional. A data deve reproduzir a solicitação documentada do cliente. Ao retornar para NÃO, os campos são limpos. O registro da solicitação e da emissão é feito pelo servidor com a sessão autenticada. A apresentação dessa data não representa validade automática do certificado nem decisão de adequação ao uso.
 
 **Maior tendência em módulo** identifica a tendência de maior magnitude, preservando seu sinal. **|Tendência| + U95** é uma expressão numérica; não constitui decisão de aceitação. A origem do valor de referência informado em cada ponto permanece uma pendência técnica a ser definida no procedimento.
+
+## Enviar o documento ao cliente (20/10/2026)
+
+Depois de gerar, a barra "Documento salvo" mostra o botão "Enviar ao cliente"; os links do PDF salvo na tela ganham o botão "Enviar". A janela "Enviar documento" sugere os contatos do cliente do documento (descoberto pela pasta em que o PDF foi gravado), envia por e-mail e/ou WhatsApp com o PDF anexado, mostra a pré-visualização antes de confirmar e registra cada envio no histórico do documento e do cliente. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).

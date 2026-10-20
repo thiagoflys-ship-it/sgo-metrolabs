@@ -1,0 +1,646 @@
+<!--
+  ENVIAR DOCUMENTO AO CLIENTE (20/10/2026) — componente único do SGO+ (servidor: SGO_EnviarDoc.js).
+  Uma janela só ("Enviar documento") para todos os módulos. Pontos de entrada, todos daqui:
+   1) Depois de gerar: toda resposta do servidor que traz o link de um documento salvo (PDF/HTML) faz aparecer a
+      barra "Documento salvo ... Enviar" (o servidor confere qual arquivo é o documento e de qual cliente).
+   2) Listas: todo link de documento salvo na tela (Abrir PDF, PDF salvo, Abrir arquivo...) ganha o botão "Enviar".
+   3) Explícito: SGO_EnviarDoc.abrir({ arquivoId | url, htmlId, docDocumentoId, dica }) e o atributo
+      data-sgo-enviar="<id ou link>" em qualquer botão.
+   4) Link direto: /?enviarDoc=<id> (faixa do documento aberto em outra aba e a pasta do cliente no servidor).
+   5) Painéis: documentos gerados e envios do cliente (Cadastros > Clientes) e do Arquivo de documentos.
+  Cliente (portal) não vê nada disto. Nenhum envio sai sem a confirmação do usuário.
+-->
+<style>
+  .envdoc-painel { width: min(760px, 100vw); z-index: 10044; }
+  .envdoc-fundo { z-index: 10042; }
+  .envdoc-cab-texto { flex: 1; min-width: 0; }
+  .envdoc-rotulo { font: 600 12px var(--bc-sans); color: var(--bc-text-3); text-transform: uppercase; letter-spacing: .04em; }
+  .envdoc-cab h3 { margin: 2px 0; font: 700 19px/1.3 var(--bc-sans); color: var(--bc-text); overflow-wrap: anywhere; }
+  .envdoc-cab-sub { font-size: 13.5px; color: var(--bc-text-2); overflow-wrap: anywhere; }
+  .envdoc-cab-botoes { display: flex; gap: 4px; align-items: center; }
+  .envdoc-x { border: 0; background: none; font-size: 28px; line-height: 1; min-width: 44px; min-height: 44px; cursor: pointer; color: var(--bc-text-2); border-radius: 8px; }
+  .envdoc-x:hover { background: var(--bc-surface-3); }
+  .envdoc-ajuda { min-height: 40px; }
+  .envdoc-sec { margin: 0 0 18px; }
+  .envdoc-sec h4 { margin: 0 0 8px; font: 700 14px var(--bc-sans); color: var(--bc-text); display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+  .envdoc-num { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; background: var(--bc-action-bg); color: var(--bc-action); font-size: 12px; margin-right: 6px; }
+  .envdoc-nota { font-size: 12.5px; color: var(--bc-text-3); margin: 4px 0 0; }
+  .envdoc-cartao { border: 1px solid var(--bc-line); border-radius: 6px; background: var(--bc-surface); padding: 10px 12px; }
+  .envdoc-arq { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .envdoc-arq-ic { width: 34px; height: 40px; border-radius: 4px; background: var(--bc-danger-bg); color: var(--bc-danger); display: flex; align-items: center; justify-content: center; font-size: 17px; flex: 0 0 auto; }
+  .envdoc-arq-txt { flex: 1; min-width: 160px; overflow-wrap: anywhere; font-size: 13.5px; }
+  .envdoc-arq-txt b { display: block; font-size: 14px; color: var(--bc-text); }
+  .envdoc-linha { display: flex; gap: 10px; align-items: flex-start; padding: 9px 4px; border-bottom: 1px solid var(--bc-line-soft); cursor: pointer; }
+  .envdoc-linha:last-child { border-bottom: 0; }
+  .envdoc-linha input[type=checkbox] { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--bc-action); }
+  .envdoc-linha-txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--bc-text-2); overflow-wrap: anywhere; }
+  .envdoc-linha-txt b { color: var(--bc-text); }
+  .envdoc-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--bc-line); background: var(--bc-surface-2); font-size: 12px; color: var(--bc-text-2); margin: 3px 4px 0 0; }
+  .envdoc-chip.ok { background: var(--bc-action-bg); border-color: var(--bc-action-line); color: var(--bc-action); }
+  .envdoc-chip.aviso { background: var(--bc-warn-bg); border-color: var(--bc-warn-line); color: var(--bc-warn); }
+  .envdoc-chip.erro { background: var(--bc-danger-bg); border-color: var(--bc-danger-line); color: var(--bc-danger); }
+  .envdoc-canais { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .envdoc-canal { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--bc-line); border-radius: 6px; padding: 10px 12px; cursor: pointer; background: var(--bc-surface); }
+  .envdoc-canal.marcado { border-color: var(--bc-action); box-shadow: 0 0 0 1px var(--bc-action) inset; background: var(--bc-action-bg); }
+  .envdoc-canal.off { opacity: .75; cursor: not-allowed; background: var(--bc-surface-2); }
+  .envdoc-canal input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--bc-action); }
+  .envdoc-canal b { display: block; font-size: 14px; color: var(--bc-text); }
+  .envdoc-canal span { font-size: 12.5px; color: var(--bc-text-2); }
+  .envdoc-campo { display: block; margin: 0 0 10px; }
+  .envdoc-campo > span { display: block; font: 600 12.5px var(--bc-sans); color: var(--bc-text-2); margin: 0 0 4px; }
+  .envdoc-campo input, .envdoc-campo textarea, .envdoc-campo select { width: 100%; box-sizing: border-box; border: 1px solid var(--bc-line-2); border-radius: 4px; padding: 9px 10px; font: 14px/1.45 var(--bc-sans); color: var(--bc-text); background: #fff; min-height: 40px; }
+  .envdoc-campo textarea { min-height: 150px; resize: vertical; }
+  .envdoc-novo { display: grid; grid-template-columns: 1.2fr 1.3fr 1fr auto; gap: 8px; align-items: end; margin-top: 10px; }
+  .envdoc-novo .envdoc-campo { margin: 0; }
+  .envdoc-rodape { justify-content: space-between; }
+  .envdoc-rodape-esq { font-size: 13px; color: var(--bc-text-2); flex: 1; min-width: 180px; }
+  .envdoc-rodape .btn-primary, .envdoc-rodape .btn-secondary { min-height: 44px; }
+  .envdoc-prev { border: 1px solid var(--bc-line); border-radius: 6px; overflow: hidden; margin: 0 0 14px; }
+  .envdoc-prev-cab { background: var(--bc-surface-2); border-bottom: 1px solid var(--bc-line); padding: 8px 12px; font-size: 13px; color: var(--bc-text-2); }
+  .envdoc-prev-cab div { margin: 2px 0; overflow-wrap: anywhere; }
+  .envdoc-prev-cab b { color: var(--bc-text); display: inline-block; min-width: 108px; }
+  .envdoc-prev-corpo { padding: 12px 14px; font: 14px/1.55 Arial, Helvetica, sans-serif; color: #1f2a24; background: #fff; overflow-wrap: anywhere; }
+  .envdoc-prev-corpo p { margin: 0 0 10px; }
+  .envdoc-wa { background: #efeae2; padding: 14px; }
+  .envdoc-wa-balao { background: #fff; border-radius: 8px; padding: 8px 10px; max-width: 420px; box-shadow: 0 1px 1px rgba(0,0,0,.08); font: 14px/1.45 var(--bc-sans); color: #111; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .envdoc-wa-doc { display: flex; gap: 8px; align-items: center; background: #f5f6f6; border-radius: 6px; padding: 8px; margin: 0 0 6px; font-size: 13px; }
+  .envdoc-res { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--bc-line-soft); flex-wrap: wrap; }
+  .envdoc-res-txt { flex: 1; min-width: 200px; font-size: 13.5px; color: var(--bc-text-2); overflow-wrap: anywhere; }
+  .envdoc-res-txt b { color: var(--bc-text); }
+  .envdoc-mini { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; padding: 4px 10px; min-height: 30px; border: 1px solid var(--bc-action-line); border-radius: 4px; background: var(--bc-surface); color: var(--bc-action); font: 600 12.5px var(--bc-sans); cursor: pointer; vertical-align: middle; white-space: nowrap; }
+  .envdoc-mini:hover { background: var(--bc-action-bg); }
+  .envdoc-btn-sec { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 36px; border: 1px solid var(--bc-line-2); border-radius: 4px; background: var(--bc-surface); color: var(--bc-text); font: 600 13px var(--bc-sans); cursor: pointer; }
+  .envdoc-btn-sec:hover { background: var(--bc-surface-3); }
+  .envdoc-btn-sec[disabled] { opacity: .55; cursor: wait; }
+  .envdoc-dock { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 10020; width: min(430px, calc(100vw - 32px)); background: var(--bc-surface); border: 1px solid var(--bc-line-2); border-left: 4px solid var(--bc-action); border-radius: 8px; box-shadow: 0 8px 28px rgba(28,31,29,.18); padding: 12px 12px 12px 14px; display: flex; gap: 10px; align-items: flex-start; font-family: var(--bc-sans); }
+  .envdoc-dock-txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--bc-text-2); overflow-wrap: anywhere; }
+  .envdoc-dock-txt b { display: block; color: var(--bc-text); font-size: 14px; margin: 1px 0 2px; }
+  .envdoc-dock-acoes { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+  .envdoc-dock .btn-primary { min-height: 40px; white-space: nowrap; }
+  .envdoc-dock-x { border: 0; background: none; color: var(--bc-text-3); font-size: 13px; cursor: pointer; min-height: 32px; text-decoration: underline; }
+  .envdoc-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .envdoc-tabela td, .envdoc-tabela th { padding: 8px 6px; border-bottom: 1px solid var(--bc-line-soft); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .envdoc-tabela th { font: 600 12px var(--bc-sans); color: var(--bc-text-3); text-transform: uppercase; letter-spacing: .03em; }
+  .envdoc-filtros { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+  .envdoc-filtros select { min-height: 40px; border: 1px solid var(--bc-line-2); border-radius: 4px; padding: 6px 8px; font: 14px var(--bc-sans); max-width: 100%; }
+  .envdoc-vazio { padding: 14px; text-align: center; color: var(--bc-text-3); font-size: 13.5px; border: 1px dashed var(--bc-line-2); border-radius: 6px; }
+  .envdoc-detalhes summary { cursor: pointer; font: 600 13.5px var(--bc-sans); color: var(--bc-text); padding: 6px 0; min-height: 32px; }
+  @media (max-width: 760px), (pointer: coarse) {
+    .envdoc-canais { grid-template-columns: 1fr; }
+    .envdoc-novo { grid-template-columns: 1fr; }
+    .envdoc-campo input, .envdoc-campo textarea, .envdoc-campo select, .envdoc-filtros select { font-size: 16px; }
+    .envdoc-dock { right: 16px; left: 16px; width: auto; bottom: calc(16px + env(safe-area-inset-bottom)); }
+    .envdoc-mini { min-height: 36px; }
+    .envdoc-tabela thead { display: none; }
+    .envdoc-tabela tr { display: block; border-bottom: 1px solid var(--bc-line); padding: 6px 0; }
+    .envdoc-tabela td { display: block; border: 0; padding: 3px 0; }
+  }
+  @media print { .envdoc-dock, .envdoc-mini { display: none !important; } }
+</style>
+<script>
+(function () {
+  "use strict";
+  var E = { doc: null, sel: {}, extras: {}, novos: [], etapa: "editar", pedidoId: "", enviando: false, retry: {}, foco: null };
+
+  /* ---------------------------------------------------------------- utilidades */
+  function esc(v) { return String(v === null || v === undefined ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  function sid() { try { return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } }
+  function perfil() { try { return String((window.USER_CONTEXT || (typeof USER_CONTEXT !== "undefined" ? USER_CONTEXT : null) || {}).perfil || "").toUpperCase(); } catch (e) { return ""; } }
+  function logado() { try { var u = typeof USER_CONTEXT !== "undefined" ? USER_CONTEXT : window.USER_CONTEXT; return !!(u && u.perfil); } catch (e) { return false; } }
+  function podeEnviar() { var p = perfil(); return !!p && p !== "CLIENTE" && p !== "RH"; }
+  function novoId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, ""); } catch (e) {}
+    var s = ""; for (var i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16); return s;
+  }
+  function idDeLink(v) {
+    var s = String(v || "").trim();
+    var m = /\/arquivos\/([A-Za-z0-9_-]{6,})/.exec(s) || /\/file\/d\/([A-Za-z0-9_-]{10,})/.exec(s) || /\/document\/d\/([A-Za-z0-9_-]{10,})/.exec(s);
+    if (m) return m[1];
+    return /^[A-Za-z0-9_-]{6,}$/.test(s) ? s : "";
+  }
+  function chamar(fn, payload, ok, erro) {
+    try {
+      var r = google.script.run
+        .withSuccessHandler(function (res) { if (res && res.ok === false) erro(res.message || "Não foi possível concluir."); else ok(res || {}); })
+        .withFailureHandler(function (e) { erro((e && e.message) || String(e || "Falha de comunicação com o servidor.")); });
+      r[fn](sid(), payload || {});
+    } catch (e) { erro("Não foi possível falar com o servidor: " + ((e && e.message) || e) + ". Atualize a página e tente de novo."); }
+  }
+  function paragrafos(t) {
+    return String(t || "").replace(/\r\n?/g, "\n").split(/\n{2,}/).map(function (p) { return "<p>" + esc(p).replace(/\n/g, "<br>") + "</p>"; }).join("");
+  }
+  function primeiroNome(n) { var p = String(n || "").trim().split(/\s+/)[0] || ""; return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : ""; }
+  function aplicarNome(t, n) { var p = primeiroNome(n); t = String(t || ""); return p ? t.replace(/\{nome\}/g, p) : t.replace(/,?\s*\{nome\}/g, "").replace(/\{nome\}/g, ""); }
+  function foneBr(f) {
+    var d = String(f || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+    return d.length === 11 ? "(" + d.slice(0, 2) + ") " + d.slice(2, 7) + "-" + d.slice(7) : d.length === 10 ? "(" + d.slice(0, 2) + ") " + d.slice(2, 6) + "-" + d.slice(6) : d;
+  }
+  function celularOk(f) { var d = String(f || "").replace(/\D/g, "").replace(/^0+/, ""); if (d.length === 10 || d.length === 11) d = "55" + d; return /^55[1-9][1-9](9\d{8}|[6-9]\d{7})$/.test(d) ? d : ""; }
+  function emailOk(e) { return /^[^\s@<>(),;:"\[\]]+@[^\s@<>(),;:"\[\]]+\.[a-z]{2,}$/i.test(String(e || "").trim()); }
+  function selo(sit) {
+    if (sit === "ENVIADO") return '<span class="envdoc-chip ok">Enviado</span>';
+    if (sit === "FALHOU") return '<span class="envdoc-chip erro">Falhou</span>';
+    return '<span class="envdoc-chip aviso">Enviando</span>';
+  }
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------------------------------------------------------------- painel lateral */
+  function painel() {
+    var p = $("envdocPainel");
+    if (p) return p;
+    var casa = document.getElementById("app") || document.body;
+    var fundo = document.createElement("div");
+    fundo.id = "envdocFundo"; fundo.className = "bc-painel-fundo envdoc-fundo";
+    fundo.onclick = function () { fechar(); };
+    casa.appendChild(fundo);
+    p = document.createElement("aside");
+    p.id = "envdocPainel"; p.className = "bc-painel envdoc-painel"; p.setAttribute("role", "dialog"); p.setAttribute("aria-modal", "true"); p.setAttribute("aria-labelledby", "envdocTitulo");
+    p.setAttribute("data-sgo-sem-enviar", "1");
+    p.innerHTML = '<div class="bc-painel-cab envdoc-cab"><div class="envdoc-cab-texto"><div class="envdoc-rotulo" id="envdocRotulo">Enviar documento</div><h3 id="envdocTitulo">Carregando…</h3><div class="envdoc-cab-sub" id="envdocSub"></div></div>' +
+      '<div class="envdoc-cab-botoes"><button type="button" class="envdoc-btn-sec envdoc-ajuda" onclick="SGO_EnviarDoc.ajuda()" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i> Como usar</button>' +
+      '<button type="button" class="envdoc-x" aria-label="Fechar" onclick="SGO_EnviarDoc.fechar()">×</button></div></div>' +
+      '<div class="bc-painel-corpo" id="envdocCorpo"></div><div class="bc-painel-rodape envdoc-rodape" id="envdocRodape"></div>';
+    casa.appendChild(p);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && $("envdocPainel") && !E.enviando && !$("ajudaPainel")) fechar(); });
+    return p;
+  }
+  function fechar() {
+    if (E.enviando) { alert("Aguarde: o envio está em andamento. A janela fecha sozinha no fim, com o resultado de cada destinatário."); return; }
+    var p = $("envdocPainel"), f = $("envdocFundo");
+    if (p) p.remove(); if (f) f.remove();
+    E.doc = null;
+    try { if (E.foco && E.foco.focus) E.foco.focus(); } catch (e) {}
+  }
+  function cab(rotulo, titulo, sub) { $("envdocRotulo").textContent = rotulo; $("envdocTitulo").textContent = titulo; $("envdocSub").textContent = sub || ""; }
+  function corpo(h) { $("envdocCorpo").innerHTML = h; $("envdocCorpo").scrollTop = 0; }
+  function rodape(h) { $("envdocRodape").innerHTML = h; }
+  function carregando(txt) { corpo('<div class="envdoc-vazio">' + esc(txt || "Carregando…") + "</div>"); rodape(""); }
+  function erroTela(msg, voltar) {
+    corpo('<div class="bc-faixa bc-faixa-erro" role="alert">' + esc(msg) + "</div>");
+    rodape('<span class="envdoc-rodape-esq"></span>' + (voltar ? '<button type="button" class="btn-secondary" onclick="' + voltar + '">Voltar</button>' : "") + '<button type="button" class="btn-secondary" onclick="SGO_EnviarDoc.fechar()">Fechar</button>');
+  }
+
+  /* ---------------------------------------------------------------- abrir */
+  function abrir(opcoes) {
+    opcoes = opcoes || {};
+    if (!podeEnviar()) { alert(perfil() === "CLIENTE" ? "Os documentos da sua empresa são enviados pela equipe da Metrolabs. Se precisar de um documento, fale com a Metrolabs." : "Este acesso não envia documentos ao cliente. O envio é feito pela equipe técnica, comercial ou pela gestão."); return; }
+    var arquivoId = idDeLink(opcoes.arquivoId || opcoes.url || "");
+    E.foco = document.activeElement;
+    painel();
+    cab("Enviar documento", "Carregando o documento…", "");
+    if (!arquivoId) { erroTela('O documento não foi informado. Feche esta janela, gere ou abra o documento de novo e toque em "Enviar".'); return; }
+    E.doc = null; E.sel = {}; E.extras = {}; E.novos = []; E.etapa = "editar"; E.pedidoId = ""; E.html = !!opcoes.incluirHtml;
+    E.pedido = { arquivoId: arquivoId, htmlId: idDeLink(opcoes.htmlId || ""), docDocumentoId: opcoes.docDocumentoId || "", dica: opcoes.dica || {} };
+    carregando("Conferindo o documento, o cliente e os contatos…");
+    chamar("EnviarDoc_apiPreparar", E.pedido, function (r) { E.doc = r; montarEdicao(true); }, function (m) { cab("Enviar documento", "Não foi possível abrir", ""); erroTela(m); });
+  }
+
+  function montarEdicao(primeiraVez) {
+    var r = E.doc, d = r.documento;
+    E.etapa = "editar";
+    cab("Enviar documento", d.titulo || d.nome, [d.tipo, r.cliente ? r.cliente.nome : (d.classe === "INTERNO" ? "Documento interno" : "Cliente não identificado"), d.criadoEm ? "salvo em " + d.criadoEm : ""].filter(Boolean).join(" · "));
+    if (r.bloqueado) {
+      corpo('<div class="bc-faixa bc-faixa-erro" role="alert"><b>Este documento não é enviado pelo sistema.</b> ' + esc(r.motivoBloqueio) + "</div>");
+      rodape('<span class="envdoc-rodape-esq"></span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc.fechar()">Fechar</button>');
+      return;
+    }
+    if (primeiraVez) {
+      (r.contatos || []).forEach(function (c, i) { if (i < 3 && (c.email || c.whatsOk) && c.origem !== "Já recebeu documento deste cliente") E.sel[c.ref] = true; });
+      E.canalEmail = r.canais.email.ok && (r.contatos || []).some(function (c) { return c.email; }) || r.canais.email.ok && !(r.contatos || []).length;
+      E.canalWhats = false;
+      E.assunto = r.textos.assunto; E.txtEmail = r.textos.email; E.txtWhats = r.textos.whatsapp; E.cc = "";
+    }
+    var h = "";
+    if (r.horario && r.horario.fora) h += '<div class="bc-faixa bc-faixa-aviso"><b>Fora do horário comercial.</b> ' + esc(r.horario.texto) + "</div>";
+    (r.avisos || []).forEach(function (a) { h += '<div class="bc-faixa tom-info">' + esc(a) + "</div>"; });
+    // 1. documento
+    h += '<section class="envdoc-sec"><h4><span><span class="envdoc-num">1</span>Documento e anexos</span></h4><div class="envdoc-cartao"><div class="envdoc-arq"><div class="envdoc-arq-ic"><i class="fas fa-file-pdf" aria-hidden="true"></i></div>' +
+      '<div class="envdoc-arq-txt"><b>' + esc(d.nome) + "</b>" + esc([d.tipo, d.tamanhoKb ? d.tamanhoKb.toLocaleString("pt-BR") + " KB" : "", r.cliente ? "cliente " + r.cliente.nome + (r.cliente.origem ? " (pela " + r.cliente.origem + ")" : "") : ""].filter(Boolean).join(" · ")) + "</div>" +
+      (d.url ? '<a class="envdoc-btn-sec" href="' + esc(d.url) + '" target="_blank" rel="noopener" data-sgo-sem-enviar="1"><i class="fas fa-up-right-from-square" aria-hidden="true"></i> Conferir o documento</a>' : "") + "</div>" +
+      (d.html ? '<label class="envdoc-linha" style="border:0;padding-bottom:0"><input type="checkbox" id="envdocHtml"' + (E.html ? " checked" : "") + '><span class="envdoc-linha-txt"><b>Incluir a cópia em HTML</b> (' + esc(d.html.nome) + '). Opcional: o PDF já é o documento oficial; o HTML abre no navegador e pode ser impresso em A4.</span></label>' : "") + "</div>";
+    if ((r.outrosArquivos || []).length) {
+      h += '<details class="envdoc-detalhes" style="margin-top:8px"' + (Object.keys(E.extras).length ? " open" : "") + '><summary>Anexar outros documentos deste cliente (' + r.outrosArquivos.length + ")</summary><div class=\"envdoc-cartao\">" +
+        r.outrosArquivos.map(function (o) { return '<label class="envdoc-linha"><input type="checkbox" data-extra="' + esc(o.id) + '"' + (E.extras[o.id] ? " checked" : "") + '><span class="envdoc-linha-txt"><b>' + esc(o.nome) + "</b>" + esc([o.quandoBr, o.tamanhoKb ? o.tamanhoKb.toLocaleString("pt-BR") + " KB" : ""].filter(Boolean).join(" · ")) + "</span></label>"; }).join("") +
+        '<p class="envdoc-nota">Só aparecem documentos gravados na pasta do mesmo cliente. No máximo ' + r.limites.anexosExtras + " por envio.</p></div></details>";
+    }
+    h += "</section>";
+    // 2. canais
+    h += '<section class="envdoc-sec"><h4><span><span class="envdoc-num">2</span>Por onde enviar</span></h4><div class="envdoc-canais">' +
+      '<label class="envdoc-canal' + (E.canalEmail ? " marcado" : "") + (r.canais.email.ok ? "" : " off") + '"><input type="checkbox" id="envdocCanalEmail"' + (E.canalEmail ? " checked" : "") + (r.canais.email.ok ? "" : " disabled") + '><span><b>E-mail</b><span>' + esc(r.canais.email.texto) + "</span></span></label>" +
+      '<label class="envdoc-canal' + (E.canalWhats ? " marcado" : "") + (r.canais.whatsapp.ok ? "" : " off") + '"><input type="checkbox" id="envdocCanalWhats"' + (E.canalWhats ? " checked" : "") + (r.canais.whatsapp.ok ? "" : " disabled") + '><span><b>WhatsApp</b><span>' + esc(r.canais.whatsapp.texto) + "</span></span></label></div></section>";
+    // 3. destinatários
+    h += '<section class="envdoc-sec"><h4><span><span class="envdoc-num">3</span>Para quem</span><span class="envdoc-nota" id="envdocContagem"></span></h4><div class="envdoc-cartao" id="envdocDest">' + htmlDestinatarios() + "</div>" +
+      '<div class="envdoc-novo"><label class="envdoc-campo"><span>Nome</span><input id="envdocNovoNome" autocomplete="off" placeholder="Nome do contato"></label>' +
+      '<label class="envdoc-campo"><span>E-mail</span><input id="envdocNovoEmail" type="email" inputmode="email" autocomplete="off" placeholder="nome@empresa.com.br"></label>' +
+      '<label class="envdoc-campo"><span>Celular (WhatsApp)</span><input id="envdocNovoCel" type="tel" inputmode="tel" autocomplete="off" placeholder="(62) 99999-0000"></label>' +
+      '<button type="button" class="envdoc-btn-sec" style="min-height:40px" onclick="SGO_EnviarDoc._acrescentar()"><i class="fas fa-plus" aria-hidden="true"></i> Acrescentar</button></div>' +
+      '<label class="envdoc-campo" style="margin-top:10px"' + (E.canalEmail ? "" : " hidden") + ' id="envdocCcCaixa"><span>Cópia do e-mail (Cc), opcional: separe por vírgula</span><input id="envdocCc" type="text" inputmode="email" autocomplete="off" value="' + esc(E.cc) + '"></label></section>';
+    // 4. mensagem
+    h += '<section class="envdoc-sec"><h4><span><span class="envdoc-num">4</span>Mensagem</span></h4>' +
+      '<div id="envdocMsgEmail"' + (E.canalEmail ? "" : " hidden") + '><label class="envdoc-campo"><span>Assunto do e-mail</span><input id="envdocAssunto" maxlength="180" value="' + esc(E.assunto) + '"></label>' +
+      '<label class="envdoc-campo"><span>Texto do e-mail</span><textarea id="envdocTxtEmail">' + esc(E.txtEmail) + "</textarea></label></div>" +
+      '<div id="envdocMsgWhats"' + (E.canalWhats ? "" : " hidden") + '><label class="envdoc-campo"><span>Texto do WhatsApp (vai junto com o documento)</span><textarea id="envdocTxtWhats" style="min-height:120px">' + esc(E.txtWhats) + "</textarea></label>" +
+      '<p class="envdoc-nota">Onde estiver escrito {nome}, entra o primeiro nome de cada destinatário.</p></div>' +
+      (!E.canalEmail && !E.canalWhats ? '<p class="envdoc-nota">Marque E-mail e/ou WhatsApp no passo 2 para escrever a mensagem.</p>' : "") + "</section>";
+    // histórico
+    h += '<section class="envdoc-sec"><details class="envdoc-detalhes"' + ((r.historico || []).length ? "" : "") + "><summary>Envios anteriores deste documento (" + (r.historico || []).length + ")</summary>" + htmlHistorico(r.historico || [], "doc") + "</details></section>";
+    corpo(h);
+    rodape('<span class="envdoc-rodape-esq" id="envdocResumo"></span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc.fechar()">Cancelar</button><button type="button" class="btn-primary" id="envdocRevisar" onclick="SGO_EnviarDoc._revisar()">Revisar e enviar</button>');
+    ligarEdicao();
+    contar();
+  }
+
+  function htmlDestinatarios() {
+    var r = E.doc, h = "";
+    var contatos = (r.contatos || []).concat(E.novos);
+    if (contatos.length) {
+      h += contatos.map(function (c) {
+        var chips = (c.email ? '<span class="envdoc-chip"><i class="fas fa-envelope" aria-hidden="true"></i> ' + esc(c.email) + "</span>" : "") +
+          (c.whatsOk ? '<span class="envdoc-chip ok"><i class="fab fa-whatsapp" aria-hidden="true"></i> ' + esc(c.telefone || foneBr(c.celular)) + "</span>" : (c.telefone ? '<span class="envdoc-chip aviso" title="' + esc(c.notaFone) + '">' + esc(c.telefone) + " (sem WhatsApp)</span>" : ""));
+        return '<label class="envdoc-linha"><input type="checkbox" data-dest="' + esc(c.ref) + '"' + (E.sel[c.ref] ? " checked" : "") + '><span class="envdoc-linha-txt"><b>' + esc(c.nome || c.email || c.telefone || "Contato") + "</b> <span class=\"envdoc-nota\" style=\"display:inline\">" + esc(c.origem) + "</span><br>" + chips + "</span></label>";
+      }).join("");
+    } else if (!(r.equipe || []).length) {
+      h += '<div class="envdoc-vazio">' + (r.cliente ? "O cadastro de " + esc(r.cliente.nome) + " não tem e-mail nem celular de contato. Acrescente o destinatário abaixo. Para não digitar da próxima vez, complete o contato em Cadastros > Clientes (ou na unidade)." : "Digite o destinatário abaixo.") + "</div>";
+    }
+    if ((r.equipe || []).length) {
+      h += '<details class="envdoc-detalhes"' + (Object.keys(E.sel).some(function (k) { return k.indexOf("u:") === 0 && E.sel[k]; }) ? " open" : "") + '><summary>Pessoas da equipe (' + r.equipe.length + ")</summary>" +
+        r.equipe.map(function (u) {
+          return '<label class="envdoc-linha"><input type="checkbox" data-dest="u:' + esc(u.usuarioId) + '"' + (E.sel["u:" + u.usuarioId] ? " checked" : "") + '><span class="envdoc-linha-txt"><b>' + esc(u.nome) + "</b><br>" +
+            (u.temEmail ? '<span class="envdoc-chip"><i class="fas fa-envelope" aria-hidden="true"></i> e-mail do cadastro</span>' : "") + (u.temCelular ? '<span class="envdoc-chip ok"><i class="fab fa-whatsapp" aria-hidden="true"></i> celular do cadastro</span>' : "") + "</span></label>";
+        }).join("") + '<p class="envdoc-nota">O e-mail e o celular de cada pessoa saem do cadastro de Usuários; o número não aparece na tela.</p></details>';
+    }
+    return h;
+  }
+
+  function lerEdicao() {
+    var g = function (id) { var el = $(id); return el ? el.value : null; };
+    if (g("envdocAssunto") !== null) E.assunto = g("envdocAssunto");
+    if (g("envdocTxtEmail") !== null) E.txtEmail = g("envdocTxtEmail");
+    if (g("envdocTxtWhats") !== null) E.txtWhats = g("envdocTxtWhats");
+    if (g("envdocCc") !== null) E.cc = g("envdocCc");
+    var h = $("envdocHtml"); if (h) E.html = h.checked;
+  }
+
+  function ligarEdicao() {
+    var c = $("envdocCorpo");
+    c.onchange = function (e) {
+      var t = e.target;
+      if (t.hasAttribute("data-dest")) { E.sel[t.getAttribute("data-dest")] = t.checked; contar(); return; }
+      if (t.hasAttribute("data-extra")) {
+        var id = t.getAttribute("data-extra");
+        if (t.checked && Object.keys(E.extras).filter(function (k) { return E.extras[k]; }).length >= E.doc.limites.anexosExtras) { t.checked = false; alert("No máximo " + E.doc.limites.anexosExtras + " documentos a mais por envio."); return; }
+        E.extras[id] = t.checked; contar(); return;
+      }
+      if (t.id === "envdocCanalEmail" || t.id === "envdocCanalWhats") {
+        lerEdicao();
+        if (t.id === "envdocCanalEmail") E.canalEmail = t.checked; else E.canalWhats = t.checked;
+        montarEdicao(false);
+        return;
+      }
+      if (t.id === "envdocHtml") { E.html = t.checked; contar(); }
+    };
+    c.oninput = function () { lerEdicao(); };
+  }
+
+  function escolhidos() {
+    var r = E.doc, lista = [];
+    (r.contatos || []).concat(E.novos).forEach(function (c) { if (E.sel[c.ref]) lista.push(c); });
+    (r.equipe || []).forEach(function (u) { if (E.sel["u:" + u.usuarioId]) lista.push({ usuarioId: u.usuarioId, nome: u.nome, temEmail: u.temEmail, temCelular: u.temCelular, equipe: true }); });
+    return lista;
+  }
+  function contagem() {
+    var l = escolhidos(), em = 0, wa = 0;
+    l.forEach(function (c) { if (E.canalEmail && (c.email || c.temEmail)) em++; if (E.canalWhats && (c.whatsOk || c.temCelular)) wa++; });
+    return { pessoas: l.length, email: em, whats: wa };
+  }
+  function contar() {
+    var n = contagem(), el = $("envdocResumo"), cc = $("envdocContagem");
+    var partes = [];
+    if (E.canalEmail) partes.push(n.email + (n.email === 1 ? " e-mail" : " e-mails"));
+    if (E.canalWhats) partes.push(n.whats + (n.whats === 1 ? " WhatsApp" : " WhatsApps"));
+    var anexos = 1 + (E.html ? 1 : 0) + Object.keys(E.extras).filter(function (k) { return E.extras[k]; }).length;
+    if (el) el.textContent = (partes.length ? partes.join(" e ") : "Nenhum canal marcado") + " · " + anexos + (anexos === 1 ? " anexo" : " anexos");
+    if (cc) cc.textContent = n.pessoas + (n.pessoas === 1 ? " escolhido" : " escolhidos");
+  }
+
+  function acrescentar() {
+    var nome = ($("envdocNovoNome").value || "").trim(), email = ($("envdocNovoEmail").value || "").trim().toLowerCase(), cel = ($("envdocNovoCel").value || "").trim();
+    if (!email && !cel) { alert("Digite o e-mail e/ou o celular do destinatário e toque em Acrescentar."); return; }
+    if (email && !emailOk(email)) { alert('O e-mail "' + email + '" não parece válido. Confira e toque em Acrescentar de novo.'); return; }
+    var c = cel ? celularOk(cel) : "";
+    if (cel && !c) { alert("O número " + cel + " não é um celular com WhatsApp (DDD + 9 + 8 dígitos). Para e-mail, deixe o celular em branco."); return; }
+    lerEdicao();
+    var ref = "n" + E.novos.length;
+    E.novos.push({ ref: ref, nome: nome, email: email, celular: c, telefone: c ? foneBr(c) : "", whatsOk: !!c, origem: "Digitado agora" });
+    E.sel[ref] = true;
+    if (email && !E.canalEmail && E.doc.canais.email.ok) E.canalEmail = true;
+    if (c && !E.canalWhats && E.doc.canais.whatsapp.ok) E.canalWhats = true;
+    montarEdicao(false);
+  }
+
+  /* ---------------------------------------------------------------- revisar */
+  function montarPedido() {
+    var lista = escolhidos().map(function (c) { return c.usuarioId ? { usuarioId: c.usuarioId } : { nome: c.nome || "", email: c.email || "", celular: c.celular || "" }; });
+    return {
+      pedidoId: E.pedidoId, arquivoId: E.doc.documento.arquivoId, htmlId: E.doc.documento.html ? E.doc.documento.html.id : "", docDocumentoId: E.doc.documento.docDocumentoId || E.pedido.docDocumentoId || "",
+      dica: E.pedido.dica || {}, incluirHtml: !!E.html, extras: Object.keys(E.extras).filter(function (k) { return E.extras[k]; }),
+      destinatarios: lista, cc: E.canalEmail ? E.cc : "", canais: { email: !!E.canalEmail, whatsapp: !!E.canalWhats },
+      assunto: E.assunto, mensagemEmail: E.txtEmail, mensagemWhatsapp: E.txtWhats
+    };
+  }
+
+  function revisar() {
+    lerEdicao();
+    var n = contagem(), faltas = [];
+    if (!E.canalEmail && !E.canalWhats) faltas.push("Marque E-mail e/ou WhatsApp (passo 2).");
+    if (E.canalEmail && !n.email) faltas.push("E-mail marcado, mas ninguém escolhido tem e-mail (passo 3).");
+    if (E.canalWhats && !n.whats) faltas.push("WhatsApp marcado, mas ninguém escolhido tem celular com WhatsApp (passo 3).");
+    if (E.canalEmail && (!String(E.assunto).trim() || !String(E.txtEmail).trim())) faltas.push("Preencha o assunto e o texto do e-mail (passo 4).");
+    if (E.canalWhats && !String(E.txtWhats).trim()) faltas.push("Preencha o texto do WhatsApp (passo 4).");
+    if (E.canalEmail && n.email > E.doc.limites.destinosEmail) faltas.push("No máximo " + E.doc.limites.destinosEmail + " e-mails por envio.");
+    if (E.canalWhats && n.whats > E.doc.limites.destinosWhats) faltas.push("No máximo " + E.doc.limites.destinosWhats + " celulares por envio pelo WhatsApp (proteção do número da empresa).");
+    var ccRuim = String(E.cc || "").split(/[;,\s]+/).filter(function (x) { return x && !emailOk(x); });
+    if (E.canalEmail && ccRuim.length) faltas.push("E-mail em cópia inválido: " + ccRuim.join(", ") + ".");
+    if (faltas.length) { alert("Antes de enviar:\n\n- " + faltas.join("\n- ")); return; }
+    E.etapa = "revisar";
+    E.pedidoId = novoId(); // um número por confirmação: clicar duas vezes não envia duas vezes
+    var r = E.doc, d = r.documento, lista = escolhidos();
+    var anexos = [d.nome].concat(E.html && d.html ? [d.html.nome] : []).concat((r.outrosArquivos || []).filter(function (o) { return E.extras[o.id]; }).map(function (o) { return o.nome; }));
+    var h = '<div class="bc-faixa tom-info">Confira como o documento vai sair. Nada foi enviado ainda: toque em <b>Confirmar e enviar</b> para enviar ou em <b>Voltar e corrigir</b>.</div>';
+    if (r.horario && r.horario.fora) h += '<div class="bc-faixa bc-faixa-aviso"><b>Fora do horário comercial.</b> ' + esc(r.horario.texto) + "</div>";
+    if (E.canalEmail) {
+      var paras = lista.filter(function (c) { return c.email || c.temEmail; }).map(function (c) { return c.equipe ? c.nome + " (e-mail do cadastro)" : (c.nome ? c.nome + " <" + c.email + ">" : c.email); });
+      h += '<section class="envdoc-sec"><h4><span><i class="fas fa-envelope" aria-hidden="true"></i>&nbsp; E-mail</span></h4><div class="envdoc-prev"><div class="envdoc-prev-cab">' +
+        "<div><b>De</b>" + esc(r.canais.email.modo === "USUARIO" ? "o seu e-mail (" + (r.eu.email || "integrado") + ")" : (r.eu.nome ? r.eu.nome + " | " : "") + "Metrolabs (caixa do sistema)") + "</div>" +
+        (r.canais.email.modo !== "USUARIO" ? "<div><b>Responder para</b>" + esc(r.eu.email || "caixa do sistema (seu cadastro não tem e-mail)") + "</div>" : "") +
+        "<div><b>Para</b>" + esc(paras.join("; ")) + "</div>" + (String(E.cc || "").trim() ? "<div><b>Cópia</b>" + esc(E.cc) + "</div>" : "") +
+        "<div><b>Assunto</b>" + esc(E.assunto) + "</div><div><b>Anexos</b>" + esc(anexos.join("; ")) + "</div></div>" +
+        '<div class="envdoc-prev-corpo">' + paragrafos(E.txtEmail) + "</div></div></section>";
+    }
+    if (E.canalWhats) {
+      var ws = lista.filter(function (c) { return c.whatsOk || c.temCelular; });
+      var exemplo = ws[0] || {};
+      h += '<section class="envdoc-sec"><h4><span><i class="fab fa-whatsapp" aria-hidden="true"></i>&nbsp; WhatsApp para ' + ws.length + (ws.length === 1 ? " pessoa" : " pessoas") + "</span></h4>" +
+        '<p class="envdoc-nota" style="margin:0 0 6px">' + esc(ws.map(function (c) { return c.equipe ? c.nome + " (celular do cadastro)" : (c.nome ? c.nome + " " : "") + (c.telefone || foneBr(c.celular)); }).join("; ")) + "</p>" +
+        '<div class="envdoc-prev"><div class="envdoc-wa"><div class="envdoc-wa-balao">' + anexos.map(function (a) { return '<div class="envdoc-wa-doc"><i class="fas fa-file-pdf" aria-hidden="true" style="color:#a3261b"></i> ' + esc(a) + "</div>"; }).join("") +
+        esc(aplicarNome(E.txtWhats, exemplo.nome)) + '</div></div></div><p class="envdoc-nota">Exemplo com o primeiro destinatário. Entre uma mensagem e outra há um intervalo de alguns segundos (proteção do número da empresa): o envio pode levar até um minuto.</p></section>';
+    }
+    corpo(h);
+    rodape('<span class="envdoc-rodape-esq">' + esc(d.titulo) + '</span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc._voltar()">Voltar e corrigir</button><button type="button" class="btn-primary" id="envdocConfirmar" onclick="SGO_EnviarDoc._confirmar()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Confirmar e enviar</button>');
+  }
+
+  function confirmar() {
+    if (E.enviando) return;
+    var b = $("envdocConfirmar");
+    if (b) { b.disabled = true; b.innerHTML = "Enviando…"; }
+    E.enviando = true;
+    var pedido = montarPedido();
+    $("envdocCorpo").insertAdjacentHTML("afterbegin", '<div class="bc-faixa tom-info" role="status" id="envdocAndamento">Enviando. Não feche esta janela: o resultado de cada destinatário aparece aqui.</div>');
+    chamar("EnviarDoc_apiEnviar", pedido, function (res) { E.enviando = false; resultado(res); },
+      function (m) { E.enviando = false; var a = $("envdocAndamento"); if (a) a.remove(); var b2 = $("envdocConfirmar"); if (b2) { b2.disabled = false; b2.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Confirmar e enviar'; }
+        $("envdocCorpo").insertAdjacentHTML("afterbegin", '<div class="bc-faixa bc-faixa-erro" role="alert"><b>Nada foi enviado.</b> ' + esc(m) + ' Toque em "Voltar e corrigir" para ajustar.</div>'); });
+  }
+
+  function resultado(res) {
+    E.etapa = "resultado";
+    var itens = res.itens || [];
+    var h = "";
+    if (res.repetido) h += '<div class="bc-faixa tom-info">' + esc(res.message) + "</div>";
+    if (res.falhas && !res.enviados) h += '<div class="bc-faixa bc-faixa-erro" role="alert"><b>O envio não foi concluído.</b> Veja o motivo de cada um abaixo e toque em "Tentar de novo" depois de resolver.</div>';
+    else if (res.falhas) h += '<div class="bc-faixa bc-faixa-aviso" role="alert"><b>' + res.enviados + " enviado(s) e " + res.falhas + ' com falha.</b> Os que falharam têm o motivo e o botão "Tentar de novo".</div>';
+    else h += '<div class="bc-faixa tom-ok" role="status"><b>Pronto.</b> ' + (itens.length === 1 ? "Envio registrado" : itens.length + " envios registrados") + " no histórico do documento e do cliente.</div>";
+    h += '<section class="envdoc-sec">' + htmlHistorico(itens, "res") + "</section>";
+    corpo(h);
+    rodape('<span class="envdoc-rodape-esq"></span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc._novoEnvio()">Enviar para mais alguém</button><button type="button" class="btn-primary" onclick="SGO_EnviarDoc.fechar()">Fechar</button>');
+  }
+
+  /* ---------------------------------------------------------------- histórico e "tentar de novo" */
+  function htmlHistorico(itens, onde) {
+    if (!itens.length) return '<div class="envdoc-vazio">Nenhum envio ainda.</div>';
+    return itens.map(function (i) {
+      return '<div class="envdoc-res" data-envio="' + esc(i.id) + '">' + selo(i.situacao) + '<div class="envdoc-res-txt"><b>' + esc(i.canal) + " para " + esc(i.destinoNome && i.destinoNome !== i.destino ? i.destinoNome + " (" + i.destino + ")" : i.destino) + "</b><br>" +
+        esc([i.quando, "por " + (i.usuario || "—"), onde === "cli" || onde === "geral" ? i.documento.titulo || i.documento.nome : "", onde === "geral" && i.cliente ? i.cliente : "", i.foraHorario ? "fora do horário comercial" : "", i.tentativaDe ? "nova tentativa" : ""].filter(Boolean).join(" · ")) +
+        (i.copia ? "<br>Cópia: " + esc(i.copia) : "") +
+        (i.motivo && i.situacao === "FALHOU" ? '<br><span style="color:var(--bc-danger)">Motivo: ' + esc(i.motivo) + "</span>" : (i.motivo ? "<br>" + esc(i.motivo) : "")) +
+        (i.refeitoEm ? "<br>Tentado de novo em " + esc(i.refeitoEm) : "") + "</div>" +
+        (i.podeTentar || (i.situacao === "FALHOU" && onde === "res") ? '<button type="button" class="envdoc-btn-sec" data-tentar="' + esc(i.id) + '" onclick="SGO_EnviarDoc._tentar(this)"><i class="fas fa-rotate-right" aria-hidden="true"></i> Tentar de novo</button>' : "") +
+        (onde === "cli" || onde === "geral" ? '<button type="button" class="envdoc-btn-sec" onclick="SGO_EnviarDoc.abrir({arquivoId:\'' + esc(i.documento.arquivoId) + '\'})"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar de novo</button>' : "") +
+        "</div>";
+    }).join("");
+  }
+
+  function tentar(botao) {
+    var id = botao.getAttribute("data-tentar");
+    if (!id || botao.disabled) return;
+    if (!E.retry[id]) E.retry[id] = novoId(); // o mesmo número enquanto não houver resposta
+    botao.disabled = true; botao.textContent = "Enviando…";
+    chamar("EnviarDoc_apiTentarDeNovo", { envioId: id, pedidoId: E.retry[id] }, function (res) {
+      delete E.retry[id];
+      var item = (res.itens || [])[0], caixa = botao.closest(".envdoc-res");
+      if (caixa && item) caixa.outerHTML = htmlHistorico([item], "res");
+      if (res.repetido && caixa) alert(res.message);
+    }, function (m) { delete E.retry[id]; botao.disabled = false; botao.innerHTML = '<i class="fas fa-rotate-right" aria-hidden="true"></i> Tentar de novo'; alert("Não foi possível tentar de novo: " + m); });
+  }
+
+  /* ---------------------------------------------------------------- barra "documento salvo" (depois de gerar) */
+  var DOCK = { ultimo: "" };
+  function mostrarDock(doc) {
+    if (!doc || !podeEnviar()) return;
+    var chave = doc.arquivoId;
+    if (DOCK.ultimo === chave && $("envdocDock")) return;
+    DOCK.ultimo = chave;
+    var d = $("envdocDock");
+    if (!d) { d = document.createElement("div"); d.id = "envdocDock"; d.className = "envdoc-dock"; d.setAttribute("role", "status"); d.setAttribute("data-sgo-sem-enviar", "1"); document.body.appendChild(d); }
+    d.innerHTML = '<div class="envdoc-dock-txt">Documento salvo' + (doc.cliente ? " na pasta do cliente" : "") + '<b>' + esc(doc.titulo || doc.nome) + "</b>" + esc(doc.cliente ? doc.cliente : (doc.classe === "INTERNO" ? "Documento interno" : "")) + "</div>" +
+      '<div class="envdoc-dock-acoes"><button type="button" class="btn-primary" id="envdocDockEnviar"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;' + (doc.classe === "CLIENTE" ? "Enviar ao cliente" : "Enviar") + "</button>" +
+      '<button type="button" class="envdoc-dock-x" id="envdocDockFechar">Agora não</button></div>';
+    $("envdocDockEnviar").onclick = function () { esconderDock(); abrir({ arquivoId: doc.arquivoId, htmlId: doc.htmlId, dica: doc.dica }); };
+    $("envdocDockFechar").onclick = esconderDock;
+  }
+  function esconderDock() { var d = $("envdocDock"); if (d) d.remove(); }
+
+  var NAO_E_GERACAO = /foto|upload|anexo|imagem|comprovante|listar|pesquis|buscar|historico|ConteudoModulo|Painel|Dashboard|Alertas|Pendencias|Busca_|Ajuda_|EnviarDoc_|avatar|login|sessao|Comunic|^com/i;
+  function idsDoResultado(res) {
+    var achados = [], visto = {}, nos = 0, lista = false;
+    (function andar(v, prof, chave) {
+      if (nos++ > 400 || prof > 3 || v === null || v === undefined) return;
+      if (typeof v === "string") {
+        if (chave === "html" || v.length > 600) return;
+        var id = (/\/arquivos\/([A-Za-z0-9_-]{6,})/.exec(v) || /drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{10,})/.exec(v) || [])[1];
+        if (id && !visto[id]) { visto[id] = 1; achados.push(id); }
+        return;
+      }
+      if (Array.isArray(v)) { if (v.length > 3) { lista = true; return; } v.forEach(function (x) { andar(x, prof + 1, ""); }); return; }
+      if (typeof v === "object") {
+        Object.keys(v).forEach(function (k) {
+          if ((k === "pdfId" || k === "htmlId") && typeof v[k] === "string" && /^[A-Za-z0-9_-]{6,}$/.test(v[k]) && !visto[v[k]]) { visto[v[k]] = 1; achados.push(v[k]); }
+          andar(v[k], prof + 1, k);
+        });
+      }
+    })(res, 0, "");
+    return lista && achados.length > 2 ? [] : achados;
+  }
+  function observar(fn, res) {
+    if (!podeEnviar() || NAO_E_GERACAO.test(String(fn || "")) || !res || typeof res !== "object") return;
+    if (res.ok === false || res.success === false) return;
+    var ids = idsDoResultado(res);
+    if (!ids.length || ids.length > 4) return;
+    var dica = {};
+    ["numero", "numeroLaudo", "certNumero", "numeroCertificado"].forEach(function (k) { if (!dica.numero && typeof res[k] === "string") dica.numero = res[k]; });
+    chamar("EnviarDoc_apiConferir", { ids: ids, dica: dica }, function (r) { if (r.documento) { r.documento.dica = dica; mostrarDock(r.documento); } }, function () {});
+  }
+
+  /** Observa as respostas do google.script.run sem mudar o comportamento de quem chamou. */
+  function envolverRun() {
+    try {
+      if (!window.google || !google.script || !google.script.run || google.script.run.__envdoc || typeof Proxy === "undefined") return;
+      var original = google.script.run;
+      var exec = function (ok, falha, obj) {
+        var base = {
+          __envdoc: true,
+          withSuccessHandler: function (f) { return exec(f, falha, obj); },
+          withFailureHandler: function (f) { return exec(ok, f, obj); },
+          withUserObject: function (o) { return exec(ok, falha, o); }
+        };
+        return new Proxy(base, {
+          get: function (alvo, nome) {
+            if (nome in alvo) return alvo[nome];
+            if (typeof nome !== "string" || nome === "then") return undefined;
+            return function () {
+              var r = original.withSuccessHandler(function (res, o) { try { observar(nome, res); } catch (e) {} if (ok) return ok(res, o); });
+              if (falha) r = r.withFailureHandler(falha);
+              if (obj !== undefined) r = r.withUserObject(obj);
+              return r[nome].apply(r, arguments);
+            };
+          }
+        });
+      };
+      var novo = exec(null, null, undefined);
+      try { google.script.run = novo; } catch (e) { return; }
+      if (google.script.run !== novo) return;
+    } catch (e) { /* sem observação: o resto continua igual */ }
+  }
+
+  /* ---------------------------------------------------------------- botão "Enviar" nos links de documento */
+  var LINK_DOC = /pdf|relat|certific|laudo|documento|declara|arquivo|abrir|salvo|baixar|invent|cronograma|planejamento|registro|pgt|pop|emitid|gerad/i;
+  var LINK_NAO = /foto|imagem|comprovante|logo|assinatura|planilha|pasta/i;
+  function decorar() {
+    if (!podeEnviar()) return;
+    var raiz = document.getElementById("app") || document.body;
+    var links = raiz.querySelectorAll('a[href*="/arquivos/"]:not([data-envdoc]), a[href*="drive.google.com/file/d/"]:not([data-envdoc])');
+    for (var i = 0; i < links.length && i < 300; i++) {
+      var a = links[i];
+      a.setAttribute("data-envdoc", "1");
+      if (a.closest("[data-sgo-sem-enviar], .envdoc-painel, .ajuda-painel, .comw-painel, .comw-janela, #envdocDock")) continue;
+      var txt = (a.textContent || "") + " " + (a.getAttribute("title") || "");
+      if (LINK_NAO.test(txt) || !LINK_DOC.test(txt + " " + a.getAttribute("href"))) continue;
+      if (/\?baixar|\bbaixar=1/.test(a.getAttribute("href") || "") && a.parentNode && a.parentNode.querySelector(".envdoc-mini")) continue;
+      var id = idDeLink(a.getAttribute("href"));
+      if (!id) continue;
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "envdoc-mini"; b.setAttribute("data-sgo-enviar", id); b.title = "Enviar este documento por e-mail ou WhatsApp";
+      b.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar';
+      a.insertAdjacentElement("afterend", b);
+    }
+  }
+  var agendado = null;
+  function agendarDecorar() { if (agendado) return; agendado = setTimeout(function () { agendado = null; try { decorar(); } catch (e) {} }, 350); }
+  document.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest("[data-sgo-enviar]") : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var dica = {};
+    try { dica = JSON.parse(b.getAttribute("data-sgo-enviar-dica") || "{}") || {}; } catch (x) {}
+    abrir({ arquivoId: b.getAttribute("data-sgo-enviar"), htmlId: b.getAttribute("data-sgo-enviar-html") || "", docDocumentoId: b.getAttribute("data-sgo-enviar-doc") || "", dica: dica });
+  }, true);
+
+  /* ---------------------------------------------------------------- painéis: cliente e Arquivo de documentos */
+  function linhaDocCliente(d) {
+    return "<tr><td><b>" + esc(d.titulo || d.nome) + '</b><div class="envdoc-nota">' + esc(d.tipo) + "</div></td><td>" + esc(d.quandoBr || "") + "</td><td>" +
+      (d.ultimoEnvio ? selo(d.ultimoEnvio.situacao) + '<div class="envdoc-nota">' + esc(d.ultimoEnvio.canal + " · " + d.ultimoEnvio.quando + (d.ultimoEnvio.usuario ? " · " + d.ultimoEnvio.usuario : "")) + "</div>" : '<span class="envdoc-nota">Ainda não enviado</span>') + "</td>" +
+      '<td style="white-space:nowrap"><a class="envdoc-btn-sec" data-sgo-sem-enviar="1" href="' + esc(d.url) + '" target="_blank" rel="noopener">Abrir</a> <button type="button" class="envdoc-btn-sec" data-sgo-enviar="' + esc(d.arquivoId) + '"' + (d.docDocumentoId ? ' data-sgo-enviar-doc="' + esc(d.docDocumentoId) + '"' : "") + '><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar</button></td></tr>';
+  }
+  /** Dentro de um elemento (aba do cliente em Cadastros): documentos gerados do cliente e envios. */
+  function desenharDocumentosCliente(el, clienteId) {
+    if (!el) return;
+    if (!podeEnviar()) { el.innerHTML = '<div class="envdoc-vazio">Os documentos da sua empresa ficam no Arquivo de documentos.</div>'; return; }
+    el.setAttribute("data-sgo-sem-enviar", "1");
+    el.innerHTML = '<div class="envdoc-vazio">Procurando os documentos gerados nas pastas do cliente…</div>';
+    chamar("EnviarDoc_apiDocumentosDoCliente", { clienteId: clienteId }, function (r) {
+      var docs = r.documentos || [];
+      el.innerHTML = '<section class="envdoc-sec"><h4><span>Documentos gerados (' + docs.length + ")</span></h4>" +
+        (docs.length ? '<table class="envdoc-tabela"><thead><tr><th>Documento</th><th>Salvo em</th><th>Último envio</th><th></th></tr></thead><tbody>' + docs.map(linhaDocCliente).join("") + "</tbody></table>"
+          : '<div class="envdoc-vazio">Nenhum documento gerado nas pastas deste cliente ainda. Os documentos aparecem aqui depois de salvos pelos módulos (certificados, relatórios, laudos, declarações).</div>') + "</section>" +
+        '<section class="envdoc-sec"><h4><span>Envios a este cliente (' + (r.historico || []).length + ")</span></h4>" + htmlHistorico(r.historico || [], "cli") + "</section>";
+    }, function (m) { el.innerHTML = '<div class="bc-faixa bc-faixa-erro">' + esc(m) + "</div>"; });
+  }
+  /** Painel do Arquivo de documentos: envios recentes (filtro por cliente e situação). */
+  function abrirEnvios(filtro) {
+    if (!podeEnviar()) return;
+    filtro = filtro || {};
+    E.foco = document.activeElement;
+    painel();
+    cab("Arquivo de documentos", "Envios de documentos", "E-mails e WhatsApps enviados a clientes, com a situação de cada um");
+    carregando("Carregando os envios…");
+    chamar("EnviarDoc_apiEnvios", filtro, function (r) {
+      var h = '<div class="envdoc-filtros"><select id="envdocFCli" aria-label="Cliente"><option value="">Todos os clientes</option>' + (r.clientes || []).map(function (c) { return '<option value="' + esc(c.id) + '"' + (filtro.clienteId === c.id ? " selected" : "") + ">" + esc(c.nome) + "</option>"; }).join("") + "</select>" +
+        '<select id="envdocFSit" aria-label="Situação"><option value="">Todas as situações</option><option value="FALHOU"' + (filtro.situacao === "FALHOU" ? " selected" : "") + '>Com falha</option><option value="ENVIADO"' + (filtro.situacao === "ENVIADO" ? " selected" : "") + ">Enviados</option></select></div>" +
+        '<p class="envdoc-nota" style="margin:0 0 10px">Para enviar um documento, abra-o no módulo que o gerou, na lista do Arquivo de documentos ou em Cadastros > Clientes > (cliente) > Documentos gerados e envios, e toque em "Enviar".</p>' +
+        htmlHistorico(r.itens || [], "geral");
+      corpo(h);
+      rodape('<span class="envdoc-rodape-esq">' + (r.itens || []).length + ' envio(s)</span><button type="button" class="btn-secondary" onclick="SGO_EnviarDoc.fechar()">Fechar</button>');
+      var f = function () { abrirEnvios({ clienteId: $("envdocFCli").value, situacao: $("envdocFSit").value }); };
+      $("envdocFCli").onchange = f; $("envdocFSit").onchange = f;
+    }, function (m) { erroTela(m); });
+  }
+  /** Botão "Envios de documentos" no cabeçalho de uma tela (Arquivo de documentos). */
+  function botaoCabecalho(idTela) {
+    if (!podeEnviar()) return;
+    var t = $(idTela);
+    var lugar = t && t.querySelector(".module-header-right");
+    if (!lugar || lugar.querySelector(".envdoc-cab-btn")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "btn-secondary envdoc-cab-btn";
+    b.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Envios de documentos';
+    b.onclick = function () { abrirEnvios({}); };
+    lugar.appendChild(b);
+  }
+
+  /* ---------------------------------------------------------------- link direto ?enviarDoc= */
+  function linkDireto() {
+    var id = "";
+    try { id = new URLSearchParams(location.search).get("enviarDoc") || ""; } catch (e) { id = ""; }
+    if (!id) return;
+    var tentativas = 0;
+    var t = setInterval(function () {
+      tentativas++;
+      if (logado()) {
+        clearInterval(t);
+        try { var u = new URL(location.href); u.searchParams.delete("enviarDoc"); history.replaceState(null, "", u.pathname + (u.search || "") + u.hash); } catch (e) {}
+        setTimeout(function () { abrir({ arquivoId: id }); }, 600);
+      } else if (tentativas > 300) clearInterval(t);
+    }, 1000);
+  }
+
+  /* ---------------------------------------------------------------- público */
+  window.SGO_EnviarDoc = {
+    abrir: abrir, fechar: fechar, abrirEnvios: abrirEnvios, desenharDocumentosCliente: desenharDocumentosCliente, botaoCabecalho: botaoCabecalho,
+    mostrarDock: mostrarDock, esconderDock: esconderDock, observar: observar, _idsDoResultado: idsDoResultado,
+    ajuda: function () { if (typeof Ajuda_abrir_ === "function") Ajuda_abrir_("enviar_documento"); },
+    _acrescentar: acrescentar, _revisar: revisar, _voltar: function () { montarEdicao(false); }, _confirmar: confirmar, _tentar: tentar,
+    _novoEnvio: function () { var d = E.doc && E.doc.documento; if (!d) return fechar(); abrir({ arquivoId: d.arquivoId, docDocumentoId: d.docDocumentoId, dica: E.pedido && E.pedido.dica }); }
+  };
+  // documento aberto em outra aba (faixa "Documento salvo"): pede a esta aba para abrir a janela
+  window.SGO_EnviarDoc_abrirDeOutraAba = function (id) { try { window.focus(); } catch (e) {} abrir({ arquivoId: id }); return true; };
+
+  envolverRun();
+  try {
+    new MutationObserver(function (lista) {
+      agendarDecorar();
+      // trocou de módulo: a barra "Documento salvo" sai
+      for (var i = 0; i < lista.length; i++) if (lista[i].target && lista[i].target.id === "conteudo" && lista[i].type === "childList" && lista[i].addedNodes.length) { esconderDock(); DOCK.ultimo = ""; break; }
+    }).observe(document.body, { childList: true, subtree: true });
+  } catch (e) {}
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", linkDireto); else linkDireto();
+})();
+</script>

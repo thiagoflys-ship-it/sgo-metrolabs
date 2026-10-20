@@ -104,6 +104,8 @@
         CadUI_chamar_("cadastrosPainel", ["documentos"], function (res) { ok(res.items || []); setTimeout(function () { CadTela_cumprirIrPara_("documentos"); }, 0); }, erro);
       }
     });
+    // 20/10/2026: envios de documentos por e-mail e WhatsApp (JS_EnviarDoc.html)
+    if (!cliente && window.SGO_EnviarDoc) SGO_EnviarDoc.botaoCabecalho("cadxTela_documentos");
   }
 
   function Documentos_abrirArquivo_(d) {
@@ -116,6 +118,7 @@
     return [
       { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("documentos", d.ID); } },
       { texto: d.LINK_ARQUIVO ? "Abrir arquivo" : "Abrir arquivo (sem arquivo)", icone: "fa-up-right-from-square", desabilitado: !d.LINK_ARQUIVO, nota: d.LINK_ARQUIVO ? "" : "Sem arquivo: clique em Editar e anexe.", acao: function () { Documentos_abrirArquivo_(d); } },
+      { texto: "Enviar ao cliente (e-mail ou WhatsApp)", icone: "fa-paper-plane", desabilitado: !d.LINK_ARQUIVO || !window.SGO_EnviarDoc, nota: d.LINK_ARQUIVO ? "" : "Sem arquivo: anexe o arquivo antes de enviar.", acao: function () { SGO_EnviarDoc.abrir({ url: d.LINK_ARQUIVO, docDocumentoId: d.ID, dica: { clienteId: d.CLIENTE_ID } }); } },
       "-",
       ativo
         ? { texto: "Inativar documento", icone: "fa-ban", risco: true, acao: function () { Documentos_inativar_(d); } }

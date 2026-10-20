@@ -67,6 +67,10 @@ function SGO_Ajuda_todas_() {
       todas[chave].__grupo = f[0];
     });
   });
+  // 20/10/2026: complementos comuns a várias telas (ex.: "Enviar ao cliente" em toda tela que gera documento, SGO_EnviarDoc_Ajuda.js).
+  if (typeof SGO_ajudaComplementos_ === 'function') {
+    try { SGO_ajudaComplementos_(todas, ordem); } catch (e) { try { console.error('Complementos da ajuda com erro: ' + (e && e.message ? e.message : e)); } catch (x) {} }
+  }
   return { telas: todas, ordem: ordem };
 }
 

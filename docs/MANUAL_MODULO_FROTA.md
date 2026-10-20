@@ -479,3 +479,7 @@ As regras de tempo (folga, tolerância, antecipação, hora do lembrete, anteced
 - **Gantt da frota** (Gestão e melhoria): reservas (planejado) na faixa de cima, retiradas (realizado) na de baixo.
 - **Copiloto**: sugere ação para veículo disputado, dia da semana de pico, reservas não utilizadas e atrasos recorrentes de um condutor, e liberações frequentes.
 - **COMMAND**: tela "Reservas de veículo" para quem tem a conta ligada ao SGO+ (minhas reservas, livres, reservar, cancelar; a gestão vê a agenda), pela ponte assinada, com as mesmas regras.
+
+## Enviar o documento por e-mail ou WhatsApp (20/10/2026)
+
+Os relatórios da frota são documentos internos: depois de gerar, a barra "Documento salvo" mostra o botão "Enviar"; a janela "Enviar documento" oferece as pessoas da equipe (e-mail e celular do cadastro de Usuários) ou o destinatário digitado. Detalhes, regras e o que fazer em caso de falha: [MANUAL_ENVIAR_DOCUMENTO.md](MANUAL_ENVIAR_DOCUMENTO.md).

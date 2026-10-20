@@ -316,6 +316,23 @@ function SGO_DocSalvar_esc_(s) {
 }
 
 /**
+ * "Enviar ao cliente" na faixa de tela (20/10/2026, SGO_EnviarDoc.js): o documento costuma abrir em outra aba;
+ * o link pede à aba do SGO+ que abriu esta para mostrar a janela "Enviar documento" e, sem ela, abre o SGO+
+ * com ?enviarDoc=<id>. Nunca lança (sem endereço do sistema, a faixa fica como era).
+ */
+function SGO_DocSalvar_linkEnviar_(pdfId) {
+  var id = String(pdfId || '').trim();
+  if (!/^[A-Za-z0-9_-]{6,}$/.test(id)) return '';
+  var base = '';
+  try { base = String(ScriptApp.getService().getUrl() || ''); } catch (e) { base = ''; }
+  base = base.replace(/[?#].*$/, '');
+  if (/^https?:\/\/[^\/]+$/i.test(base)) base += '/';
+  var href = (base || '/') + '?enviarDoc=' + encodeURIComponent(id);
+  var js = "try{var o=window.opener;if(o&&o.SGO_EnviarDoc_abrirDeOutraAba&&o.SGO_EnviarDoc_abrirDeOutraAba('" + id + "')){try{o.focus()}catch(x){}alert('A janela Enviar documento abriu na aba do SGO+ de onde este documento veio. Volte para aquela aba para escolher os destinatários.');return false}}catch(e){}return true";
+  return ' · <a href="' + SGO_DocSalvar_esc_(href) + '" target="_blank" rel="opener" onclick="' + SGO_DocSalvar_esc_(js) + '">Enviar ao cliente (e-mail ou WhatsApp)</a>';
+}
+
+/**
  * Faixa SÓ DE TELA (some na impressão) no topo do HTML devolvido ao navegador,
  * para o operador saber se o documento foi salvo e onde. Não altera o arquivo salvo.
  */
@@ -324,10 +341,11 @@ function SGO_DocSalvar_injetarAvisoTela_(html, resultado) {
   resultado = resultado || {};
   var faixa;
   if (resultado.salvo) {
-    faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;padding:8px 12px;margin:0 0 8px">' +
+    faixa = '<div class="sgo-docsalvar-aviso" data-sgo-sem-enviar="1" style="font:13px Arial,sans-serif;background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7;padding:8px 12px;margin:0 0 8px">' +
       'Documento salvo na pasta do cliente (PDF e HTML A4). ' +
       (resultado.pdfUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a> · ' : '') +
       (resultado.pastaUrl ? '<a href="' + SGO_DocSalvar_esc_(resultado.pastaUrl) + '" target="_blank" rel="noopener">Abrir pasta do cliente</a>' : '') +
+      SGO_DocSalvar_linkEnviar_(resultado.pdfId) +
       '</div>';
   } else {
     faixa = '<div class="sgo-docsalvar-aviso" style="font:13px Arial,sans-serif;background:#fff3e0;color:#8a4b00;border:1px solid #ffb74d;padding:8px 12px;margin:0 0 8px">' +

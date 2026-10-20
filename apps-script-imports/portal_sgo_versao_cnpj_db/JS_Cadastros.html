@@ -794,7 +794,7 @@
       chave: "clientes", id: c.ID, titulo: Clientes_nome_(c),
       sub: CadUI_esc_(c.CNPJ ? "CNPJ " + CadUI_cnpj_(c.CNPJ) : "Sem CNPJ"),
       seloHtml: CadUI_selo_(c.STATUS) + CadUI_chips_(c).replace('<div class="cadx-chips">', "").replace(/<\/div>$/, ""),
-      abas: [{ id: "dados", rotulo: "Dados" }, { id: "vinculos", rotulo: "Unidades e equipamentos (" + CadUI_num_(c.QTD_UNIDADES_TOTAL || c.QTD_UNIDADES) + ")" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(c.QTD_DOCUMENTOS) + ")" }],
+      abas: [{ id: "dados", rotulo: "Dados" }, { id: "vinculos", rotulo: "Unidades e equipamentos (" + CadUI_num_(c.QTD_UNIDADES_TOTAL || c.QTD_UNIDADES) + ")" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(c.QTD_DOCUMENTOS) + ")" }].concat(cliente || !window.SGO_EnviarDoc ? [] : [{ id: "envios", rotulo: "Documentos gerados e envios" }]),
       aba: aba || "dados",
       corpo: function (a) {
         if (a === "dados") {
@@ -815,6 +815,7 @@
           if (b) b.onclick = function () { Clientes_criarPrincipal_(c); };
           return;
         }
+        if (a === "envios") { var cEnv = p.querySelector("#cadxPainelCorpo"); if (cEnv && window.SGO_EnviarDoc) SGO_EnviarDoc.desenharDocumentosCliente(cEnv, c.ID); return; }
         var desenhar = function () {
           var corpo = p.querySelector("#cadxPainelCorpo");
           if (!corpo || !det) return;
