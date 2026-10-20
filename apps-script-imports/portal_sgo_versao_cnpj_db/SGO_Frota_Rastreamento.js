@@ -186,7 +186,12 @@ function FrotaR_veiculosPorDevice_() {
 function FrotaR_lerRotaApi_(c, deviceId, deMs, ateMs) {
   var res = Rastreador_exigirOk_(Rastreador_chamar_(c, 'get', '/reports/route', [['deviceId', deviceId], ['from', new Date(deMs).toISOString()], ['to', new Date(ateMs).toISOString()]]), c, 'a rota do período');
   return Rastreador_lista_(res.j).filter(function (p) { return p && (p.deviceId === undefined || String(p.deviceId) === String(deviceId)); })
-    .map(function (p) { if (p.deviceId === undefined) p.deviceId = deviceId; return Rastreador_posicao_(p); });
+    .map(function (p) {
+      if (p.deviceId === undefined) p.deviceId = deviceId;
+      // 20/10/2026, dado real: nos pontos da rota o hodômetro veio fixo (47 km o dia inteiro) enquanto a posição ao
+      // vivo dava 26.238 km. O campo da rota não é o hodômetro; não é guardado (KM e manutenção usam a posição ao vivo).
+      var pos = Rastreador_posicao_(p); pos.odometroKm = null; return pos;
+    });
 }
 
 /** Rodada: importa a rota completa de até 2 veículos (um a cada 15 min). Devolve quantos pontos novos. */
