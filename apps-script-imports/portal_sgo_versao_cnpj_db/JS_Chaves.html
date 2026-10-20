@@ -17,7 +17,7 @@
     "Auvo": { icone: "fa-arrows-rotate", teste: "auvo", obrig: [["AUVO_API_KEY", "AUVO_API_TOKEN"]], resumo: "Sincronização de clientes, equipamentos e ordens de serviço com o Auvo." },
     "E-mail": { icone: "fa-envelope", teste: "email", obrig: [["SMTP_SENHA"]], resumo: "Envio dos avisos e documentos por e-mail (sistema@metrolabs.com.br)." },
     "WhatsApp oficial (Meta)": { icone: "fa-comment-dots", teste: "whatsapp", provedor: "meta", obrig: [["META_WA_TOKEN", "META_WA_PHONE_ID"]], resumo: "Avisos por WhatsApp pelo número oficial, com modelos aprovados pela Meta." },
-    "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp por instância da Z-API (texto simples), alternativa à Meta." },
+    "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp da empresa pela Z-API: avisos do SGO+ e do COMMAND com texto pronto (sem modelo a aprovar) e mensagens recebidas no COMMAND." },
     "Rastreador da frota": { icone: "fa-location-crosshairs", teste: "rastreador", obrig: [["RASTREADOR_TOKEN"]], resumo: "Posição e KM dos veículos pela API da iTracker (hoje somente leitura). O bloqueio da partida depende de a iTracker liberar o acesso com comandos." },
     "Relatórios técnicos": { icone: "fa-file-shield", obrig: [["MODO_PERSONALIZADO_SENHA", "SIMULADOR_ADMIN_SENHA"]], resumo: "Senhas do Modo personalizado e do Simulador dos relatórios de qualificação." },
     "COMMAND": { icone: "fa-tower-broadcast", obrig: [["PONTE_COMMAND_SEGREDO"]], resumo: "Segredo da ponte entre o SGO+ e o COMMAND." }
@@ -26,7 +26,7 @@
     gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
     auvo: "Entra na API do Auvo com a chave e o token gravados.",
     email: "Envia um e-mail de teste para o e-mail do seu usuário.",
-    whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto simples.",
+    whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto pronto (só para celular).",
     rastreador: "Consulta a lista de veículos na iTracker (GET /devices) e mostra quantos encontrou, com número, nome e situação. Não envia comando e não mostra a chave."
   };
 
@@ -168,6 +168,7 @@
           '<div class="chvx-res" id="chvRes_' + gid + '">' + (CHV.resultados[gid] || "") + "</div></div>" : "") +
         ChavesTela_itensDo_(g).map(ChavesTela_htmlItem_).join("") +
         (g === "WhatsApp oficial (Meta)" ? ChavesTela_htmlModelos_() : "") +
+        (g === "Z-API" ? ChavesTela_htmlZapi_() : "") +
       "</div></details>";
   }
 
@@ -193,6 +194,39 @@
       '<div><div class="chvx-linha">' + controle + "</div>" +
         (it.ajuda ? '<details class="chvx-ajuda-item"><summary>Onde encontrar e para que serve</summary><p>' + ChavesTela_esc_(it.ajuda) + "</p></details>" : "") +
         '<div class="cadx-msg" id="chvMsg_' + k + '" role="status"></div></div></div>';
+  }
+
+  // ---------- Z-API (20/10/2026): passo a passo, conferir conexão, recebimento no COMMAND e teste para mim ----------
+  // Servidor: SGO_Zapi.js (Chaves_apiZapiConferir, Chaves_apiZapiReceber, Chaves_apiZapiTesteParaMim). O endereço do
+  // webhook leva o segredo do COMMAND: é montado e gravado na Z-API pelo servidor e nunca chega a esta tela.
+  function ChavesTela_htmlZapi_() {
+    var b = function (id, fn, rot) { return '<button type="button" class="cadx-btn cadx-btn-grande" id="' + id + '" onclick="ChavesTela_zapi_(\'' + fn + "','" + id + '\')">' + rot + "</button>"; };
+    return '<div class="chvx-item"><div><div class="chvx-item-nome">Passo a passo da Z-API</div><div class="chvx-item-sit">Do painel da Z-API até a primeira mensagem, em ordem.</div></div><div>' +
+      '<ol style="margin:4px 0 10px 18px;padding:0;line-height:1.55">' +
+        "<li>No painel da Z-API (app.z-api.io), abra a instância da Metrolabs e copie a <b>identificação da instância</b> e o <b>token da instância</b>; no menu Segurança, copie o <b>token de segurança da conta</b>.</li>" +
+        "<li>Cole cada um no campo dele, abaixo, e clique em Gravar.</li>" +
+        "<li>No grupo <b>WhatsApp oficial (Meta)</b>, em <i>Provedor do WhatsApp em uso</i>, escolha <b>Z-API</b> e clique em Gravar. Vale para o SGO+ e para o COMMAND.</li>" +
+        "<li>Clique em <b>Conferir conexão</b>. Desconectada: leia o QR Code no painel da Z-API com o celular da empresa e confira de novo.</li>" +
+        "<li>Clique em <b>Configurar recebimento</b> (uma vez): as mensagens que chegam ao número passam a cair no COMMAND.</li>" +
+        "<li>Clique em <b>Enviar mensagem de teste para mim</b> e confira no seu celular.</li></ol>" +
+      '<div class="chvx-linha">' + b("chvZapiConferir", "Chaves_apiZapiConferir", "Conferir conexão") + b("chvZapiReceber", "Chaves_apiZapiReceber", "Configurar recebimento") +
+        b("chvZapiTeste", "Chaves_apiZapiTesteParaMim", "Enviar mensagem de teste para mim") + "</div>" +
+      '<details class="chvx-ajuda-item"><summary>Proteção do número</summary><p>A Z-API usa o WhatsApp de um celular: muitas mensagens seguidas podem fazer o WhatsApp bloquear o número. Por isso o SGO+ e o COMMAND mandam por uma fila só, com intervalo sorteado entre as mensagens e limite por hora, por dia e por pessoa (campos abaixo; vazio = padrão). Só recebe quem tem celular válido no cadastro, e as regras de cada aviso continuam valendo (dia útil, horário de trabalho, um resumo por dia).</p></details>' +
+      '<div class="chvx-res" id="chvZapiRes" role="status">' + (CHV.resultados.zapi || "") + "</div></div></div>";
+  }
+  function ChavesTela_zapi_(fn, id) {
+    var res = document.getElementById("chvZapiRes"), btn = document.getElementById(id), rotulo = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Aguarde…"; }
+    if (res) res.innerHTML = '<div class="cadx-sub">Falando com a Z-API…</div>';
+    CHV.abertos["Z-API"] = true;
+    ChavesTela_chamar_(fn, {}, function (r) {
+      CHV.resultados.zapi = '<div class="cadx-faixa bc-faixa ' + (r.funcionou ? "tom-ok" : "tom-perigo") + '">' + ChavesTela_esc_(r.texto) + "</div>" + (r.fila ? '<div class="cadx-sub" style="margin-top:6px">' + ChavesTela_esc_(r.fila) + "</div>" : "");
+      ChavesTela_chamar_("Chaves_apiListar", {}, function (l) { CHV.dados = l; ChavesTela_desenhar_(); }, function () { var el = document.getElementById("chvZapiRes"); if (el) el.innerHTML = CHV.resultados.zapi; if (btn) { btn.disabled = false; btn.textContent = rotulo; } });
+    }, function (m) {
+      if (btn) { btn.disabled = false; btn.textContent = rotulo; }
+      CHV.resultados.zapi = '<div class="cadx-faixa bc-faixa tom-perigo">' + ChavesTela_esc_(m) + "</div>";
+      if (res) res.innerHTML = CHV.resultados.zapi;
+    });
   }
 
   // ---------- modelos do WhatsApp oficial (Meta) ----------

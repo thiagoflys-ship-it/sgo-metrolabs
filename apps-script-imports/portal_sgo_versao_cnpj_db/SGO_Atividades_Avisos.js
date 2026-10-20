@@ -124,6 +124,8 @@ function Atividades_enviarEmailsPendentes_(destinatarios) {
 // ------------------------------------------------------------
 /** O modelo do resumo já foi aprovado pela Meta? (consulta guardada por 6 h; falha = não aprovado). */
 function Atividades_modeloResumoAprovado_() {
+  // 20/10/2026: pela Z-API não há modelo a aprovar: o resumo completo sai como texto pronto (SGO_Zapi.js).
+  if (typeof Notificar_whatsappSemModelo_ === 'function' && Notificar_whatsappSemModelo_()) return true;
   var forcado = '';
   try { forcado = String(PropertiesService.getScriptProperties().getProperty('ATV_RESUMO_MODELO_APROVADO') || '').trim().toUpperCase(); } catch (e) {}
   if (forcado === 'SIM') return true;

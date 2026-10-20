@@ -60,19 +60,33 @@ var CHV_ITENS = [
   { chave: 'SMTP_SENHA', grupo: 'E-mail', tipo: 'senha', teste: 'email', nome: 'Senha do e-mail sistema@metrolabs.com.br',
     ajuda: 'A senha da caixa sistema@metrolabs.com.br (servidor mail.metrolabs.com.br, porta 465). Os e-mails do SGO+ saem por ela.' },
   { chave: 'WHATSAPP_PROVEDOR', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', teste: 'whatsapp', exemplo: 'meta', opcoes: [['meta', 'WhatsApp oficial (Meta)'], ['zapi', 'Z-API']], vazio: 'Automático', nome: 'Provedor do WhatsApp em uso',
-    ajuda: 'WhatsApp oficial (Meta): mensagens por modelos aprovados. Z-API: texto simples pela instância da Z-API. Automático: usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas.' },
+    ajuda: 'WhatsApp oficial (Meta): mensagens por modelos aprovados. Z-API: texto pronto pela instância da Z-API, sem modelo a aprovar, com intervalo e limites para proteger o número (grupo Z-API). Automático: usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas. Vale também para o COMMAND (lembretes do ponto, avisos, demandas), que não tenha provedor próprio gravado.' },
   { chave: 'META_WA_TOKEN', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', teste: 'whatsapp', nome: 'WhatsApp oficial (Meta): token permanente',
     ajuda: 'No Gerenciador de Negócios da Meta: Configurações do negócio → Usuários → Usuários do sistema → crie (ou abra) um usuário do sistema com acesso ao app e à conta do WhatsApp → Gerar novo token, sem validade, com as permissões whatsapp_business_messaging e whatsapp_business_management. Não use o token temporário de 24 h da tela de teste. As mensagens só saem por modelos aprovados (docs/MODELOS_WHATSAPP_META.md).' },
   { chave: 'META_WA_PHONE_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1409597008899044', nome: 'WhatsApp oficial (Meta): identificação do número de telefone',
     ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → WhatsApp → Configuração da API: campo "Identificação do número de telefone" (Phone Number ID). O da Metrolabs (+55 62 98241-7106) é 1409597008899044. Não é o número de telefone.' },
   { chave: 'META_WA_WABA_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1406451067859707', nome: 'WhatsApp oficial (Meta): identificação da conta comercial',
     ajuda: 'Na mesma tela da Configuração da API: "Identificação da conta do WhatsApp Business" (WABA ID). O da Metrolabs é 1406451067859707. Usado para conferir os modelos de mensagem cadastrados.' },
+  // 20/10/2026: com esta chave, o webhook do COMMAND só aceita evento da Meta com a assinatura X-Hub-Signature-256 certa.
+  { chave: 'META_APP_SECRET', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', nome: 'WhatsApp oficial (Meta): chave secreta do aplicativo',
+    ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → Configurações do app → Básico → "Chave secreta do aplicativo" → Mostrar. Com ela gravada, o COMMAND confere a assinatura de cada mensagem recebida pelo webhook e recusa o que não veio da Meta. Vazia: vale só o segredo do endereço do webhook, como hoje.' },
   { chave: 'ZAPI_INSTANCIA', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: identificação da instância',
     ajuda: 'No painel da Z-API (app.z-api.io): Instâncias → abra a instância do WhatsApp da Metrolabs → copie o campo "ID da instância". Sem as 3 chaves Z-API, o WhatsApp por Z-API fica desligado.' },
   { chave: 'ZAPI_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token da instância',
     ajuda: 'Na mesma tela da instância na Z-API, copie o campo "Token da instância" (não é o Client-Token). Se a instância for recriada, o token muda e precisa ser gravado de novo aqui.' },
   { chave: 'ZAPI_CLIENT_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token de segurança da conta',
     ajuda: 'Na Z-API: menu Segurança → "Token de segurança da conta" (Client-Token). Ative o token lá e cole aqui o mesmo valor; sem ele a Z-API recusa os envios.' },
+  // 20/10/2026: proteção do número (SGO_Zapi.js; no servidor a fila é uma só para o SGO+ e o COMMAND). Vazio = padrão.
+  { chave: 'ZAPI_INTERVALO_MIN_S', grupo: 'Z-API', tipo: 'aberto', exemplo: '3', nome: 'Z-API: intervalo mínimo entre mensagens (segundos)',
+    ajuda: 'Proteção do número: entre uma mensagem e a próxima (SGO+ e COMMAND juntos) o sistema espera um tempo sorteado entre o mínimo e o máximo. Vazio = 3. Aceita de 2 a 60.' },
+  { chave: 'ZAPI_INTERVALO_MAX_S', grupo: 'Z-API', tipo: 'aberto', exemplo: '8', nome: 'Z-API: intervalo máximo entre mensagens (segundos)',
+    ajuda: 'Vazio = 8. Aceita de 2 a 120 (menor que o mínimo vale o mínimo). Intervalos variados parecem envio de pessoa, não de robô.' },
+  { chave: 'ZAPI_LIMITE_HORA', grupo: 'Z-API', tipo: 'aberto', exemplo: '40', nome: 'Z-API: limite de mensagens por hora',
+    ajuda: 'Avisos automáticos somados do SGO+ e do COMMAND nos últimos 60 minutos. Passou do limite, o aviso fica no sistema e o envio é registrado como pulado, com o motivo. Respostas a quem escreveu e testes não são barrados. Vazio = 40. Aceita de 1 a 500.' },
+  { chave: 'ZAPI_LIMITE_DIA', grupo: 'Z-API', tipo: 'aberto', exemplo: '200', nome: 'Z-API: limite de mensagens por dia',
+    ajuda: 'O mesmo, nas últimas 24 horas. Número novo na Z-API: comece baixo (100 a 200) e aumente aos poucos. Vazio = 200. Aceita de 1 a 3000.' },
+  { chave: 'ZAPI_LIMITE_PESSOA_HORA', grupo: 'Z-API', tipo: 'aberto', exemplo: '6', nome: 'Z-API: limite por hora para o mesmo celular',
+    ajuda: 'Quantas mensagens automáticas a mesma pessoa pode receber em 60 minutos. Vazio = 6. Aceita de 1 a 60.' },
   // 17/10/2026: rastreador dos veículos — SGO_Frota_Rastreador.js. 19/10/2026: API real da iTracker (Bearer, somente leitura);
   // usuário e senha da versão Traccar saíram da tela. Comandos de bloqueio/liberação configuráveis para quando a iTracker liberar.
   { chave: 'RASTREADOR_URL', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: 'https://api.itrackergo.com.br/v1/', nome: 'Rastreador: endereço da API',
@@ -200,6 +214,11 @@ function Chaves_validarValor_(item, valor) {
     if (!/^\/[^\s?#]*$/.test(v) && !/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s?#]*)?$/.test(v) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s?#]*)?$/.test(v)) {
       throw new Error('Não foi possível gravar: informe o caminho começando por / (ex.: /commands) ou o endereço completo com https:// (sem espaços, sem ? e sem #).');
     }
+  }
+  if (typeof ZAPI_PROPS !== 'undefined' && ZAPI_PROPS[item.chave]) {
+    var fx = ZAPI_FAIXA[ZAPI_PROPS[item.chave]];
+    if (!/^\d{1,4}$/.test(v) || Number(v) < fx[0] || Number(v) > fx[1]) throw new Error('Não foi possível gravar: informe um número inteiro de ' + fx[0] + ' a ' + fx[1] + ' (ex.: ' + item.exemplo + ').');
+    v = String(Number(v));
   }
   if (item.chave === 'RASTREADOR_RETENCAO_DIAS') {
     if (!/^\d{1,4}$/.test(v) || Number(v) < 7 || Number(v) > 1825) throw new Error('Não foi possível gravar: informe o número de dias, de 7 a 1825 (ex.: 90).');
@@ -410,7 +429,9 @@ function Chaves_testarWhatsapp_(telefone) {
         'Teste do SGO+', 'Mensagem de teste enviada pelo módulo Chaves e senhas.', Notificar_linkSgo_() || 'https://sgo.metrolabs.com.br'
       ]);
     } else {
-      res = Notificar_enviarWhatsapp_(pv.cred, tel, 'SGO+ Metrolabs: mensagem de teste enviada pelo módulo Chaves e senhas.');
+      // 20/10/2026: pelo envio único da Z-API (só celular, fila que protege o número) — SGO_Zapi.js
+      res = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(tel, 'SGO+ Metrolabs: mensagem de teste enviada pelo módulo Chaves e senhas.', { cred: pv.cred, tipo: 'TESTE' })
+        : Notificar_enviarWhatsapp_(pv.cred, tel, 'SGO+ Metrolabs: mensagem de teste enviada pelo módulo Chaves e senhas.');
     }
   } catch (e) {
     res = { ok: false, motivo: String((e && e.message) || e) };
