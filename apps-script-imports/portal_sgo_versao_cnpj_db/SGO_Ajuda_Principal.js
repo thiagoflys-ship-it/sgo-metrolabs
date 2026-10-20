@@ -294,12 +294,13 @@ function SGO_ajudaTelas_Principal_() {
     // ============================================================
     "minhas_atividades": {
       titulo: "Minhas atividades",
-      paraQueServe: "Reúne as atividades sob sua responsabilidade, com prazo, situação e o que você está fazendo agora. Também mostra as atividades em agenda e em quadro de cartões (Kanban).",
+      paraQueServe: "Reúne as atividades sob sua responsabilidade, com prazo, situação e o que você está fazendo agora. Também mostra as atividades em agenda e em quadro de cartões (Kanban). As atividades são as mesmas do METROLABS COMMAND: o que é lançado em um sistema aparece no outro, com o mesmo histórico.",
       antesDeComecar: [
         "Abra pelo menu, no grupo Principal, em \"Minhas atividades\".",
         "O número ao lado do nome no menu mostra as atividades abertas. Se ficar vermelho, mostra as vencidas.",
         "Você lança atividades só para você. Para lançar para outra pessoa, peça a um gestor.",
-        "Quando o prazo de uma atividade passa sem conclusão, o SGO+ abre uma janela que pede a justificativa. Ela não fecha sem justificar."
+        "Quando o prazo de uma atividade passa sem conclusão, o SGO+ abre uma janela que pede a justificativa. Ela não fecha sem justificar.",
+        "A atividade pode ser vista pela equipe em \"Atividades da equipe\". Marque \"Restrita\" quando só você, quem lançou e a gestão devem ver."
       ],
       passos: [
         {
@@ -313,6 +314,8 @@ function SGO_ajudaTelas_Principal_() {
             "Preencha \"Início previsto\", se souber.",
             "Escolha o \"Módulo ligado\", se a atividade for de uma tela do sistema.",
             "Digite o cliente e toque no nome dele na lista que aparece. Depois escolha a unidade, se houver.",
+            "Se quiser, abra \"Planejamento 5W2H (opcional)\" e preencha \"Por quê\", \"Onde\", \"Como\" e \"Quanto\". O quê é o título, quando é o prazo e quem é o responsável.",
+            "Marque \"Restrita\" se a atividade não deve aparecer para a equipe toda.",
             "Toque em \"Salvar atividade\"."
           ]
         },
@@ -357,7 +360,8 @@ function SGO_ajudaTelas_Principal_() {
           titulo: "Justificar uma atividade atrasada",
           itens: [
             "Quando aparecer a janela \"Atividade com prazo vencido\", leia o nome da atividade.",
-            "Escreva em \"Motivo da demora\" o que atrasou e o que falta (mínimo 15 letras).",
+            "Escolha em \"O que causou o atraso\" o motivo da lista. Se nenhum servir, escolha \"Outro motivo\".",
+            "Escreva em \"Explique a demora\" o que atrasou e o que falta (mínimo 15 letras).",
             "Escolha em \"Nova previsão de entrega\" a data e a hora. Ela já vem com amanhã às 18h.",
             "Toque em \"Registrar justificativa\".",
             "Repita para cada atividade da janela. A janela fecha quando todas estiverem justificadas.",
@@ -397,11 +401,15 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Situação \"Cancelada\" em cinza escuro", significado: "Não será feita." },
         { nome: "Prioridade \"Urgente\" em vermelho, \"Alta\" em amarelo escuro, \"Baixa\" em cinza", significado: "Grau de urgência escolhido ao lançar. \"Normal\" fica sem cor." },
         { nome: "Cartão com borda vermelha (celular e quadro de cartões)", significado: "Atividade vencida." },
-        { nome: "Número vermelho ao lado de \"Minhas atividades\" no menu", significado: "Quantidade de atividades vencidas. Sem vermelho, o número mostra as abertas." }
+        { nome: "Número vermelho ao lado de \"Minhas atividades\" no menu", significado: "Quantidade de atividades vencidas. Sem vermelho, o número mostra as abertas." },
+        { nome: "Selo cinza \"COMMAND\"", significado: "A atividade foi lançada pelo METROLABS COMMAND. Ela é a mesma nos dois sistemas." },
+        { nome: "Selo cinza \"Restrita\"", significado: "Só o responsável, quem lançou e a gestão veem a atividade." }
       ],
       problemas: [
         { situacao: "A janela \"Atividade com prazo vencido\" não fecha", oQueFazer: "É assim mesmo. Escreva o motivo e a nova previsão de cada atividade e toque em \"Registrar justificativa\"." },
         { situacao: "Aparece \"o motivo precisa ter pelo menos 15 letras\"", oQueFazer: "Explique melhor o que atrasou. O contador abaixo do campo mostra quantas letras faltam." },
+        { situacao: "Aparece \"escolha em O que causou o atraso o motivo\"", oQueFazer: "Escolha o motivo na lista acima do texto. Se nenhum servir, escolha \"Outro motivo\" e registre de novo." },
+        { situacao: "Aparece \"Não foi possível mudar a situação: a atividade é de\"", oQueFazer: "A atividade é de outra pessoa. Só o responsável, quem lançou e a gestão mudam a situação; você acompanha em Atividades da equipe." },
         { situacao: "Aparece \"a nova previsão já passou\"", oQueFazer: "Escolha uma data e hora depois de agora e registre de novo." },
         { situacao: "Aparece \"o título está vazio ou curto demais\"", oQueFazer: "Escreva no campo \"Título\" o que precisa ser feito (mínimo 3 letras) e salve de novo." },
         { situacao: "Aparece \"o início previsto está depois do prazo\"", oQueFazer: "Ajuste uma das duas datas e salve de novo." },
@@ -419,8 +427,10 @@ function SGO_ajudaTelas_Principal_() {
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
-        { p: "Quem fica sabendo quando lanço ou justifico?", r: "Quem recebe uma atividade nova é avisado no SGO+, por e-mail e por WhatsApp. Quem lançou a atividade é avisado da justificativa de atraso." },
-        { p: "Recebo aviso de atraso?", r: "Sim. O responsável recebe um aviso por e-mail e WhatsApp a cada atraso." },
+        { p: "Quem fica sabendo quando lanço ou justifico?", r: "Quem recebe uma atividade nova é avisado na hora no SGO+ e no COMMAND, e por e-mail no horário de trabalho. Quem lançou a atividade é avisado da justificativa de atraso do mesmo jeito." },
+        { p: "Recebo aviso de atraso?", r: "Sim. No sistema, a janela de justificativa e a lista de pendências cobram até a atividade ser concluída ou justificada. O e-mail do atraso sai uma vez, no horário de trabalho." },
+        { p: "Recebo mensagem de WhatsApp?", r: "No máximo um resumo por dia, em dia útil e no horário de trabalho, e só quando há novidade: atividade nova, que vence hoje ou que venceu desde o último resumo. Nunca à noite, no fim de semana ou em feriado. O resumo vai para quem tem vínculo CLT no cadastro; a Diretoria pode mudar isso em Avisos e horários." },
+        { p: "Posso lançar a atividade no COMMAND?", r: "Sim. A lista é a mesma: lance uma vez só, no sistema que for mais prático." },
         { p: "A tela atualiza sozinha?", r: "Sim, a cada 30 segundos, quando você não está digitando nem com janela aberta." },
         { p: "Posso mudar o responsável?", r: "Só a gestão. O novo responsável é avisado e a troca fica no histórico." },
         { p: "Onde vejo o que mudou?", r: "No \"Histórico\" do detalhe da atividade." }
@@ -487,9 +497,10 @@ function SGO_ajudaTelas_Principal_() {
     // ============================================================
     "atividades_equipe": {
       titulo: "Atividades da equipe",
-      paraQueServe: "Mostra para a gestão quem está fazendo o quê agora, os prazos, as justificativas de atraso e o andamento da equipe em gráfico de barras no tempo (Gantt), em quadro de cartões (Kanban) e em lista.",
+      paraQueServe: "Mostra para toda a equipe quem está fazendo o quê agora, os prazos e o andamento em gráfico de barras no tempo (Gantt), em quadro de cartões (Kanban), em lista e em indicadores, com as atividades lançadas no SGO+ e no METROLABS COMMAND. Só o responsável, quem lançou e a gestão alteram; os demais acompanham.",
       antesDeComecar: [
-        "Abra pelo menu, no grupo Principal, em \"Atividades da equipe\". O item só aparece para Gestor, Admin e Diretoria.",
+        "Abra pelo menu, no grupo Principal, em \"Atividades da equipe\". O item aparece para todos os perfis, menos Cliente.",
+        "Atividades marcadas como restritas e as do Programa de conduta só aparecem para os envolvidos e para a gestão.",
         "A tela atualiza sozinha a cada 30 segundos, quando você não está digitando.",
         "O período começa 7 dias antes de hoje e vai até 30 dias depois. Mude nas datas, se precisar."
       ],
@@ -499,7 +510,7 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Leia os quadros do alto: \"Abertas\", \"Vencidas\", \"Concluídas nos últimos 30 dias\" e \"Concluídas no prazo (30 dias)\".",
             "No bloco \"Agora\", confira cada colaborador, o que está fazendo, há quanto tempo, quantas abertas e quantas vencidas.",
-            "No bloco \"Justificativas recentes\", leia os motivos de atraso e as novas previsões.",
+            "No bloco \"Justificativas recentes\" (para a gestão) ou \"Justificativas das suas atividades\" (para os demais), leia os motivos de atraso e as novas previsões.",
             "Toque no título de uma atividade para abrir o detalhe.",
             "Toque em \"Atualizar\" para buscar os dados agora."
           ]
@@ -510,6 +521,7 @@ function SGO_ajudaTelas_Principal_() {
             "Escolha as datas em \"Período de\" e \"até\".",
             "Escolha a \"Pessoa\", se quiser ver só uma.",
             "Escolha o \"Módulo\", se quiser ver só uma tela do sistema.",
+            "Em \"Lançada no\", escolha SGO+ ou COMMAND, se quiser ver só as de um sistema.",
             "Os blocos de baixo mudam na hora."
           ]
         },
@@ -519,7 +531,7 @@ function SGO_ajudaTelas_Principal_() {
             "Toque em \"Nova atividade\".",
             "Escolha a pessoa em \"Responsável\".",
             "Preencha \"Título\", \"Prazo\" e os demais campos.",
-            "Toque em \"Salvar atividade\". A pessoa é avisada no SGO+, por e-mail e por WhatsApp."
+            "Toque em \"Salvar atividade\". A pessoa é avisada na hora no SGO+ e no COMMAND, por e-mail no horário de trabalho e no resumo do dia pelo WhatsApp."
           ]
         },
         {
@@ -536,7 +548,27 @@ function SGO_ajudaTelas_Principal_() {
           itens: [
             "Toque na aba \"Lista\".",
             "Confira a atividade, o responsável, a prioridade, o prazo, a situação do prazo e a situação.",
-            "Use os botões da linha para mudar a situação ou editar."
+            "Use os botões da linha para mudar a situação ou editar. Os botões só aparecem nas atividades que você pode alterar."
+          ]
+        },
+        {
+          titulo: "Ler os indicadores",
+          itens: [
+            "Toque na aba \"Indicadores\".",
+            "Leia os quadros: concluídas no prazo nos últimos 30 dias, atrasadas agora, justificativas de atraso e atividades aguardando algo.",
+            "Em \"Carga por pessoa\", veja abertas, vencidas, que vencem hoje, dos próximos 7 dias e aguardando. A carga soma as abertas pelo peso da prioridade.",
+            "Em \"Justificativas por motivo (30 dias)\", veja o que mais atrasa a equipe.",
+            "Em \"Abertas por módulo\", veja onde está o trabalho aberto e quantas foram lançadas no SGO+ e no COMMAND."
+          ]
+        },
+        {
+          titulo: "Configurar os avisos (Admin e Diretoria)",
+          itens: [
+            "Toque em \"Avisos e horários\", no alto da tela.",
+            "Confira o horário de trabalho, os dias de trabalho e os feriados estaduais, municipais e de recesso.",
+            "Confira a hora do resumo do dia e quem recebe o resumo pelo WhatsApp (padrão: só CLT).",
+            "Toque em \"Salvar\".",
+            "Em \"Resumos de hoje\", veja para quem o resumo saiu, quem não tinha novidade e o motivo de quem não recebeu."
           ]
         }
       ],
@@ -548,19 +580,21 @@ function SGO_ajudaTelas_Principal_() {
         { nome: "Selos e situações", significado: "Os mesmos de Minhas atividades: \"Vencida\" vermelho, \"Vence hoje\" amarelo, \"Em dia\" verde." }
       ],
       problemas: [
-        { situacao: "Aparece \"Esta tela é dos perfis Gestor, Admin e Diretoria.\"", oQueFazer: "Use \"Minhas atividades\", no menu. Se precisar desta tela, fale com o administrador." },
+        { situacao: "Aparece \"Não foi possível mudar a situação: a atividade é de\"", oQueFazer: "A atividade é de outra pessoa. Só o responsável, quem lançou e a gestão mudam a situação. Fale com o responsável." },
         { situacao: "Aparece \"Não foi possível montar o Gantt: o período está inválido.\"", oQueFazer: "Ajuste as datas \"Período de\" e \"até\". A data final precisa ser depois da inicial." },
         { situacao: "Aparece \"Nenhuma atividade no período e filtros escolhidos.\"", oQueFazer: "Aumente o período ou escolha \"Todas\" em \"Pessoa\" e \"Todos\" em \"Módulo\"." },
         { situacao: "Os blocos mostram \"Não carregou. Veja o aviso abaixo.\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\"." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Ver todas as atividades da equipe, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar." },
-        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Não acessam esta tela. Usam \"Minhas atividades\"." },
-        { perfil: "RH", pode: "Não acessa esta tela. Usa \"Minhas atividades\"." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Ver todas as atividades da equipe, inclusive as restritas, ler todas as justificativas, lançar para qualquer pessoa, editar, trocar responsável, replanejar, reabrir e cancelar. Admin e Diretoria também configuram Avisos e horários." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO", pode: "Ver as atividades da equipe (menos as restritas de outras pessoas). Alteram só as próprias e as que lançaram. O texto das justificativas aparece só nas atividades em que estão envolvidos." },
+        { perfil: "RH", pode: "O mesmo dos demais colaboradores: acompanha a equipe e altera só as próprias atividades e as que lançou." },
         { perfil: "CLIENTE", pode: "Não usa esta tela." }
       ],
       perguntas: [
         { p: "O gestor é avisado da justificativa?", r: "Quem lançou a atividade é avisado. A justificativa também aparece em \"Justificativas recentes\"." },
+        { p: "Por que não vejo uma atividade que um colega citou?", r: "Ela pode ser restrita ou do Programa de conduta. Essas só aparecem para os envolvidos e para a gestão." },
+        { p: "As atividades do COMMAND aparecem aqui?", r: "Sim. A lista é a mesma nos dois sistemas. As lançadas pelo COMMAND têm o selo \"COMMAND\"." },
         { p: "Como vejo o que cada pessoa está fazendo?", r: "No bloco \"Agora\". A coluna \"Há\" mostra há quanto tempo a atividade está marcada." },
         { p: "Como calculo o percentual no prazo?", r: "O quadro \"Concluídas no prazo (30 dias)\" já mostra: quantas das concluídas nos últimos 30 dias terminaram até o prazo original." }
       ]
@@ -601,7 +635,7 @@ function SGO_ajudaTelas_Principal_() {
         {
           titulo: "Mudar a situação pelo quadro",
           itens: [
-            "Toque na aba \"Kanban da equipe\".",
+            "Toque na aba \"Kanban\". Os cartões de outras pessoas, com borda tracejada, você só acompanha.",
             "Arraste o cartão para a coluna da nova situação.",
             "Ao soltar em \"Aguardando\", escreva o motivo e toque em \"Confirmar\".",
             "Toque no cartão para abrir o detalhe.",

@@ -20,9 +20,32 @@
  * Datas gravadas como texto no horário de Brasília, "aaaa-mm-ddThh:mm"
  * (comparáveis como texto). Nada de Date cru volta ao navegador.
  *
- * Perfis: lançar atividade para OUTRA pessoa e ver a equipe = Gestor,
- * Admin, Diretoria (isAdminPerfilAuth_, SGO_Auth.js). Demais perfis só
- * criam para si. Perfil CLIENTE não usa o módulo.
+ * Perfis: lançar atividade para OUTRA pessoa = Gestor, Admin, Diretoria
+ * (isAdminPerfilAuth_, SGO_Auth.js). Demais perfis só criam para si.
+ * Perfil CLIENTE não usa o módulo.
+ *
+ * 19/10/2026 — equipe inteira e COMMAND:
+ *  - VER: todo perfil interno vê a equipe (Gantt, Kanban, lista). Fica fora
+ *    só a atividade restrita (RESTRITA = SIM, ou do Programa de conduta),
+ *    que só o responsável, quem lançou e a gestão veem.
+ *  - ALTERAR (situação, comentário, andamento): só o responsável, quem
+ *    lançou e a gestão. Os demais só veem. Editar os campos continua com
+ *    a gestão e com quem lançou para si (Atividades_podeEditar_).
+ *  - A justificativa de atraso (texto) só aparece para os envolvidos e a
+ *    gestão; os demais veem que houve justificativa e a nova previsão.
+ *  - COMMAND: uma fonte só. O COMMAND lê e grava pela ponte assinada
+ *    (SGO_PonteCommand.js, ações "atividades.*" -> Atividades_ponte_), em
+ *    nome do usuário do SGO+ ligado à conta (sgo_id). As MESMAS funções e
+ *    regras daqui atendem as duas telas. SISTEMA_ORIGEM diz onde foi lançada.
+ *  - 5W2H opcional na atividade: o quê (título), por quê, onde, quando
+ *    (prazo), quem (responsável), como, quanto. O PDCA fica no plano de
+ *    ação do Programa de conduta (SGO_Conduta_Qualidade.js), cujas ações
+ *    são atividades daqui.
+ *  - Avisos (SGO_Atividades_Avisos.js): no sistema na hora (ATV_AVISOS e a
+ *    central de pendências, que cobra até concluir ou justificar); e-mail
+ *    só no expediente (fora dele fica guardado e sai na abertura do próximo
+ *    expediente); WhatsApp só no resumo diário, no máximo um por pessoa por
+ *    dia, em dia útil e no horário de trabalho, sem repetir cobrança.
  ****************************************************/
 
 var ATV_SITUACOES = ['A fazer', 'Em andamento', 'Aguardando', 'Concluída', 'Cancelada'];
@@ -36,13 +59,23 @@ var ATV_COLUNAS = [
   'AGORA_DESDE', 'MOTIVO_AGUARDANDO', 'OBS_CONCLUSAO', 'QTD_JUSTIFICATIVAS', 'ATUALIZADO_EM', 'CRIADO_EM',
   // 2026-10-16: previsão cujo atraso já foi avisado por e-mail/WhatsApp (um aviso por atraso;
   // nova previsão vencida = novo atraso = novo aviso). Ver Atividades_notificarAtrasos_.
-  'ATRASO_AVISADO_PREV'
+  'ATRASO_AVISADO_PREV',
+  // 19/10/2026: sistema onde foi lançada (SGO+ ou COMMAND), 5W2H opcional e atividade restrita.
+  'SISTEMA_ORIGEM', 'POR_QUE', 'ONDE', 'COMO', 'QUANTO', 'RESTRITA'
 ];
 var ATV_COLUNAS_HIST = [
   'ID', 'ATIVIDADE_ID', 'TIPO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'DE', 'PARA', 'TEXTO',
-  'PREVISAO_ANTERIOR', 'PREVISAO_NOVA', 'CRIADO_EM'
+  'PREVISAO_ANTERIOR', 'PREVISAO_NOVA', 'CRIADO_EM',
+  'CATEGORIA' // 19/10/2026: motivo da justificativa de atraso (ATV_MOTIVOS_ATRASO), para os indicadores
 ];
-var ATV_COLUNAS_AVISOS = ['ID', 'DESTINATARIO_ID', 'ATIVIDADE_ID', 'TIPO', 'TITULO', 'TEXTO', 'DATA', 'LIDO_EM', 'CRIADO_EM'];
+// EMAIL_*: fila do e-mail do aviso (PENDENTE até sair no expediente; ENVIADO; PULADO). Ver SGO_Atividades_Avisos.js.
+var ATV_COLUNAS_AVISOS = ['ID', 'DESTINATARIO_ID', 'ATIVIDADE_ID', 'TIPO', 'TITULO', 'TEXTO', 'DATA', 'LIDO_EM', 'CRIADO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO'];
+/** Motivo do atraso, escolhido na justificativa (o texto continua obrigatório). */
+var ATV_MOTIVOS_ATRASO = [
+  'Aguardando cliente', 'Aguardando peça ou material', 'Aguardando outra área ou pessoa', 'Outra prioridade definida pela gestão',
+  'Volume de trabalho acima do previsto', 'Problema técnico ou de equipamento', 'Prazo estimado curto demais', 'Ausência (férias, folga ou afastamento)', 'Outro motivo'
+];
+var ATV_SISTEMAS = ['SGO+', 'COMMAND'];
 
 // ------------------------------------------------------------
 // INFRA
@@ -58,7 +91,7 @@ function Atividades_abas_() {
 /** Cria/completa as abas sob demanda. Guardado em cache para não conferir a planilha a cada chamada. */
 function Atividades_garantirAbas_() {
   var cache = CacheService.getScriptCache();
-  if (cache.get('ATV_ABAS_OK_V2')) return;
+  if (cache.get('ATV_ABAS_OK_V3')) return;
   var abas = Atividades_abas_();
   CertCal_garantirTabela_(abas.ATIVIDADES, ATV_COLUNAS);
   CertCal_garantirTabela_(abas.HISTORICO, ATV_COLUNAS_HIST);
@@ -73,11 +106,18 @@ function Atividades_garantirAbas_() {
   ['DATA', 'PREVISAO_ANTERIOR', 'PREVISAO_NOVA'].forEach(function (c) { CertCal_forcarColunaTexto_(abas.HISTORICO, c); });
   CertCal_forcarColunaTexto_(abas.AVISOS, 'DATA');
   CertCal_forcarColunaTexto_(abas.AVISOS, 'LIDO_EM');
-  cache.put('ATV_ABAS_OK_V2', '1', 21600);
+  CertCal_forcarColunaTexto_(abas.AVISOS, 'EMAIL_EM');
+  cache.put('ATV_ABAS_OK_V3', '1', 21600);
 }
+
+// Chamada vinda do COMMAND pela ponte (Atividades_ponte_): enquanto a ação roda, as APIs abaixo
+// aceitam este identificador de uso único no lugar da sessão. Ele é sorteado no servidor e
+// descartado no fim da mesma execução; o navegador nunca o conhece.
+var ATV_PONTE_CTX = null;
 
 /** Sessão válida e perfil que pode usar o módulo. Lança erro com mensagem para a tela. */
 function Atividades_sessao_(sessionId) {
+  if (ATV_PONTE_CTX && ATV_PONTE_CTX.token && sessionId === ATV_PONTE_CTX.token) return ATV_PONTE_CTX.eu;
   var s = exigirSessao(sessionId);
   var perfil = SGO_UTILS.safeUpper(s.perfil);
   if (perfil === 'CLIENTE') {
@@ -132,6 +172,14 @@ function Atividades_texto_(v, max) {
   return max && s.length > max ? s.slice(0, max) : s;
 }
 
+/** 5W2H opcional (o quê = título, quando = prazo, quem = responsável já são campos próprios). */
+function Atividades_campos5w2h_(p) {
+  return {
+    POR_QUE: Atividades_texto_(p.porQue, 1000), ONDE: Atividades_texto_(p.onde, 300),
+    COMO: Atividades_texto_(p.como, 2000), QUANTO: Atividades_texto_(p.quanto, 300)
+  };
+}
+
 function Atividades_comTrava_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -143,20 +191,18 @@ function Atividades_comTrava_(fn) {
   }
 }
 
-// E-mail/WhatsApp (SGO_Notificar.js) pedidos durante a chamada: só saem depois que
-// a gravação deu certo e a trava foi solta; se a chamada falhar, nada é enviado.
+// E-mails pedidos durante a chamada (avisos com EMAIL_SITUACAO = PENDENTE): só saem depois que
+// a gravação deu certo e a trava foi solta, e só no expediente (SGO_Atividades_Avisos.js).
+// Aqui ficam só os destinatários a conferir; se a chamada falhar, nada é enviado agora
+// (o aviso já gravado sai na rotina de hora em hora, no expediente).
 var ATV_FILA_NTF = [];
-
-// modelo: WhatsApp oficial (Meta) — { nome, parametros } de NTF_MODELOS_META (SGO_Notificar.js).
-function Atividades_notificarExterno_(destinatarioId, atividadeId, titulo, texto, modelo) {
-  if (!destinatarioId) return;
-  ATV_FILA_NTF.push({ usuarios: [destinatarioId], titulo: titulo, texto: texto, modelo: modelo || null, canais: ['sgo', 'email', 'whatsapp'], origem: 'ATIVIDADES', refId: atividadeId });
-}
 
 function Atividades_enviarFila_() {
   var fila = ATV_FILA_NTF;
   ATV_FILA_NTF = [];
-  fila.forEach(function (n) { try { SGO_notificar_(n); } catch (e) { console.error('Atividades notificar: ' + ((e && e.message) || e)); } });
+  if (!fila.length) return;
+  try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(fila); }
+  catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
 }
 
 function Atividades_resposta_(fn) {
@@ -180,14 +226,15 @@ function Atividades_textoNtf_(a, extra) {
   if (a.CLIENTE_NOME) linhas.push('Cliente: ' + a.CLIENTE_NOME + (a.UNIDADE_NOME ? ' - ' + a.UNIDADE_NOME : ''));
   if (a.PRIORIDADE) linhas.push('Prioridade: ' + a.PRIORIDADE);
   linhas.push('Prazo: ' + Atividades_dataBr_(a.PREVISAO_ATUAL || a.PRAZO) + '.');
-  linhas.push('Veja em Minhas atividades, no SGO+.');
+  linhas.push('Veja em Minhas atividades, no SGO+ ou no COMMAND.');
   return linhas.join('\n');
 }
 
 /**
- * Atraso: avisa o responsável por e-mail/WhatsApp UMA vez por atraso (marca a
- * previsão avisada em ATRASO_AVISADO_PREV; nova previsão que vencer = novo aviso).
- * Chamado pela verificação periódica das telas (no máximo a cada 10 min) e pela
+ * Atraso: grava UM aviso por atraso para o responsável (marca a previsão avisada em
+ * ATRASO_AVISADO_PREV; nova previsão que vencer = novo aviso). O aviso nasce lido (a cobrança
+ * na tela é a janela de justificativa e a central de pendências) e leva o e-mail, que sai no
+ * expediente. Chamado pela verificação periódica das telas (no máximo a cada 10 min) e pela
  * rotina de hora em hora (Atividades_rotinaAtrasos).
  */
 function Atividades_notificarAtrasos_() {
@@ -198,13 +245,11 @@ function Atividades_notificarAtrasos_() {
       if (!Atividades_vencida_(a, agora) || !a.RESPONSAVEL_ID) return;
       if (a.ATRASO_AVISADO_PREV && a.ATRASO_AVISADO_PREV === a.PREVISAO_ATUAL) return;
       SGO_DATA.update(Atividades_abas_().ATIVIDADES, a.ID, { ATRASO_AVISADO_PREV: a.PREVISAO_ATUAL });
+      Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'ATRASO', 'Atividade atrasada: ' + a.TITULO,
+        'A atividade passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Registre a justificativa de atraso com a nova previsão, ou conclua a atividade.',
+        { email: true, lido: true });
       avisar.push(a);
     });
-  });
-  avisar.forEach(function (a) {
-    Atividades_notificarExterno_(a.RESPONSAVEL_ID, a.ID, 'Atividade atrasada: ' + a.TITULO,
-      Atividades_textoNtf_(a, 'A atividade abaixo passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Entre no SGO+ e registre a justificativa de atraso com a nova previsão, ou conclua a atividade.'),
-      { nome: 'sgo_atividade_atrasada', parametros: ['@NOME', a.TITULO, Atividades_dataBr_(a.PREVISAO_ATUAL), '@LINK'] });
   });
   return avisar.length;
 }
@@ -240,7 +285,10 @@ function Atividades_rotinaAtrasos() {
   Atividades_garantirAbas_();
   ATV_FILA_NTF = [];
   var n = Atividades_notificarAtrasos_();
-  Atividades_enviarFila_();
+  ATV_FILA_NTF = [];
+  // e-mails guardados (inclusive os que chegaram fora do expediente) e o resumo diário do WhatsApp
+  try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(null); } catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
+  try { if (typeof Atividades_resumoDiario_ === 'function') Atividades_resumoDiario_(); } catch (e) { console.error('Atividades resumo: ' + ((e && e.message) || e)); }
   return n;
 }
 
@@ -264,6 +312,8 @@ function Atividades_limpar_(r) {
   o.PERCENTUAL = isFinite(p) && String(o.PERCENTUAL) !== '' ? Math.max(0, Math.min(100, Math.round(p))) : '';
   o.QTD_JUSTIFICATIVAS = Number(o.QTD_JUSTIFICATIVAS) || 0;
   o.SITUACAO = ATV_SITUACOES.indexOf(o.SITUACAO) >= 0 ? o.SITUACAO : 'A fazer';
+  o.SISTEMA_ORIGEM = ATV_SISTEMAS.indexOf(String(o.SISTEMA_ORIGEM)) >= 0 ? String(o.SISTEMA_ORIGEM) : 'SGO+';
+  ['POR_QUE', 'ONDE', 'COMO', 'QUANTO', 'RESTRITA'].forEach(function (c) { o[c] = String(o[c] === undefined || o[c] === null ? '' : o[c]); });
   return o;
 }
 
@@ -283,8 +333,54 @@ function Atividades_obter_(id) {
   return Atividades_limpar_(r);
 }
 
+/** Responsável ou quem lançou. */
+function Atividades_envolvido_(eu, a) {
+  return !!eu.id && (a.RESPONSAVEL_ID === eu.id || a.CRIADO_POR_ID === eu.id);
+}
+
+/** Restrita: marcada ao lançar ou ligada ao Programa de conduta (ação de plano disciplinar não é da equipe toda). */
+function Atividades_restrita_(a) {
+  return SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' || a.MODULO === 'conduta';
+}
+
+/** Ver: toda a equipe interna, menos atividade restrita de outra pessoa. */
 function Atividades_podeVer_(eu, a) {
-  return eu.gestor || a.RESPONSAVEL_ID === eu.id || a.CRIADO_POR_ID === eu.id;
+  if (eu.gestor || Atividades_envolvido_(eu, a)) return true;
+  return !Atividades_restrita_(a);
+}
+
+/** Alterar situação, comentar: só o responsável, quem lançou e a gestão. */
+function Atividades_podeAlterar_(eu, a) {
+  return eu.gestor || Atividades_envolvido_(eu, a);
+}
+
+/** Atividade para a tela, com o que esta pessoa pode fazer nela (a tela só mostra; o servidor confere de novo). */
+function Atividades_paraTela_(eu, a) {
+  var o = Object.assign({}, a);
+  o.PODE_ALTERAR = Atividades_podeAlterar_(eu, a);
+  o.PODE_EDITAR = Atividades_podeEditar_(eu, a);
+  o.ENVOLVIDO = Atividades_envolvido_(eu, a);
+  o.RESTRITA = Atividades_restrita_(a) ? 'SIM' : '';
+  o.SISTEMA_ORIGEM = o.SISTEMA_ORIGEM || 'SGO+';
+  return o;
+}
+
+/** Quem vê o texto da justificativa de atraso: envolvidos e gestão. */
+function Atividades_veJustificativa_(eu, a) {
+  return eu.gestor || Atividades_envolvido_(eu, a);
+}
+
+/** Pessoa do SGO+ pelo ID (chamadas da ponte do COMMAND). Lança erro com mensagem para a tela. */
+function Atividades_euDoUsuario_(userId, sistema) {
+  var id = SGO_UTILS.safe(userId);
+  if (!id) throw new Error('Não foi possível abrir as atividades: a sua conta do COMMAND não está ligada a um usuário do SGO+. Peça ao administrador para ligar a conta em Usuários e papéis (Migrar do SGO+).');
+  var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, id);
+  if (!u) throw new Error('Não foi possível abrir as atividades: o usuário do SGO+ ligado à sua conta não existe mais. Peça ao administrador para ligar a conta de novo em Usuários e papéis.');
+  if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') throw new Error('Não foi possível abrir as atividades: o seu usuário está inativo no SGO+. Peça ao administrador para reativar em Administração > Usuários.');
+  var perfil = SGO_UTILS.safeUpper(u.PERFIL);
+  if (perfil === 'CLIENTE') throw new Error('Não foi possível abrir as atividades: o perfil Cliente não usa este módulo.');
+  Atividades_garantirAbas_();
+  return { id: String(u.ID), usuario: SGO_UTILS.safe(u.USUARIO), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: perfil, gestor: isAdminPerfilAuth_(perfil), sistema: sistema || 'COMMAND' };
 }
 
 function Atividades_usuariosAtivos_() {
@@ -326,16 +422,25 @@ function Atividades_registrarHist_(eu, atividadeId, tipo, extra) {
   SGO_DATA.insert(Atividades_abas_().HISTORICO, {
     ATIVIDADE_ID: atividadeId, TIPO: tipo, USUARIO_ID: eu.id, USUARIO_NOME: eu.nome, DATA: Atividades_agora_(),
     DE: e.de || '', PARA: e.para || '', TEXTO: Atividades_texto_(e.texto, 4000),
-    PREVISAO_ANTERIOR: e.previsaoAnterior || '', PREVISAO_NOVA: e.previsaoNova || ''
+    PREVISAO_ANTERIOR: e.previsaoAnterior || '', PREVISAO_NOVA: e.previsaoNova || '', CATEGORIA: e.categoria || ''
   });
 }
 
-function Atividades_avisar_(destinatarioId, atividadeId, tipo, titulo, texto) {
+/**
+ * Aviso no sistema (toast no SGO+ e no COMMAND, central de pendências).
+ * opcoes.email: o aviso também vai por e-mail (fila: sai depois da gravação, só no expediente).
+ * opcoes.lido: já nasce lido (aviso que só carrega o e-mail; a cobrança na tela é outra).
+ */
+function Atividades_avisar_(destinatarioId, atividadeId, tipo, titulo, texto, opcoes) {
   if (!destinatarioId) return;
+  var o = opcoes || {};
+  var agora = Atividades_agora_();
   SGO_DATA.insert(Atividades_abas_().AVISOS, {
     DESTINATARIO_ID: destinatarioId, ATIVIDADE_ID: atividadeId, TIPO: tipo,
-    TITULO: Atividades_texto_(titulo, 200), TEXTO: Atividades_texto_(texto, 2000), DATA: Atividades_agora_(), LIDO_EM: ''
+    TITULO: Atividades_texto_(titulo, 200), TEXTO: Atividades_texto_(texto, 2000), DATA: agora, LIDO_EM: o.lido ? agora : '',
+    EMAIL_SITUACAO: o.email ? 'PENDENTE' : '', EMAIL_EM: '', EMAIL_MOTIVO: ''
   });
+  if (o.email && ATV_FILA_NTF.indexOf(String(destinatarioId)) < 0) ATV_FILA_NTF.push(String(destinatarioId));
 }
 
 function Atividades_gravar_(id, dados) {
@@ -360,8 +465,8 @@ function Atividades_apiOpcoes(sessionId, payload) {
       .map(function (c) { return { ID: String(c.ID), NOME: SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL), CNPJ: SGO_UTILS.safe(c.CNPJ) }; })
       .sort(function (a, b) { return a.NOME.localeCompare(b.NOME); });
     return {
-      eu: { id: eu.id, nome: eu.nome, perfil: eu.perfil, gestor: eu.gestor },
-      usuarios: usuarios, clientes: clientes, situacoes: ATV_SITUACOES, prioridades: ATV_PRIORIDADES, agora: Atividades_agora_()
+      eu: { id: eu.id, nome: eu.nome, perfil: eu.perfil, gestor: eu.gestor, configuraAvisos: eu.perfil === 'ADMIN' || eu.perfil === 'DIRETORIA' },
+      usuarios: usuarios, clientes: clientes, situacoes: ATV_SITUACOES, prioridades: ATV_PRIORIDADES, motivosAtraso: ATV_MOTIVOS_ATRASO, agora: Atividades_agora_()
     };
   });
 }
@@ -383,18 +488,22 @@ function Atividades_apiUnidades(sessionId, payload) {
 function Atividades_apiListarMinhas(sessionId, payload) {
   return Atividades_resposta_(function () {
     var eu = Atividades_sessao_(sessionId);
-    var itens = Atividades_todas_().filter(function (a) { return a.RESPONSAVEL_ID === eu.id; });
+    var itens = Atividades_todas_().filter(function (a) { return a.RESPONSAVEL_ID === eu.id; }).map(function (a) { return Atividades_paraTela_(eu, a); });
     return { itens: itens, agora: Atividades_agora_() };
   });
 }
 
-/** Kanban de um módulo: gestor vê todas daquele módulo; colaborador, as que são dele ou que ele lançou. */
+/**
+ * Kanban de um módulo: todas as atividades daquele módulo que a pessoa pode ver (a equipe inteira,
+ * menos as restritas de outras pessoas). Cada item diz se a pessoa pode alterar.
+ */
 function Atividades_apiListarModulo(sessionId, payload) {
   return Atividades_resposta_(function () {
     var eu = Atividades_sessao_(sessionId);
     var modulo = SGO_UTILS.safe(payload && payload.modulo);
     if (!/^[a-z0-9_]{1,60}$/.test(modulo)) throw new Error('Não foi possível abrir as atividades do módulo: módulo não identificado. Abra o módulo pelo menu e tente de novo.');
-    var itens = Atividades_todas_().filter(function (a) { return a.MODULO === modulo && a.SITUACAO !== 'Cancelada' && Atividades_podeVer_(eu, a); });
+    var itens = Atividades_todas_().filter(function (a) { return a.MODULO === modulo && a.SITUACAO !== 'Cancelada' && Atividades_podeVer_(eu, a); })
+      .map(function (a) { return Atividades_paraTela_(eu, a); });
     return { itens: itens, agora: Atividades_agora_(), gestor: eu.gestor };
   });
 }
@@ -403,8 +512,14 @@ function Atividades_apiDetalhe(sessionId, payload) {
   return Atividades_resposta_(function () {
     var eu = Atividades_sessao_(sessionId);
     var a = Atividades_obter_(payload && payload.id);
-    if (!Atividades_podeVer_(eu, a)) throw new Error('Não foi possível abrir a atividade: ela é de outra pessoa. Só o responsável, quem lançou e os gestores podem ver.');
-    return { item: a, historico: Atividades_historico_(a.ID), agora: Atividades_agora_(), eu: { id: eu.id, gestor: eu.gestor } };
+    if (!Atividades_podeVer_(eu, a)) throw new Error('Não foi possível abrir a atividade: ela é restrita. Só o responsável, quem lançou e a gestão veem atividades restritas e as do Programa de conduta.');
+    var veJust = Atividades_veJustificativa_(eu, a);
+    var hist = Atividades_historico_(a.ID).map(function (h) {
+      if (h.TIPO === 'JUSTIFICATIVA' && !veJust) { h.TEXTO = ''; h.CATEGORIA = ''; h.OCULTO = true; }
+      return h;
+    });
+    var plano = typeof Atividades_planoDaAtividade_ === 'function' ? Atividades_planoDaAtividade_(a) : null;
+    return { item: Atividades_paraTela_(eu, a), historico: hist, plano: plano, agora: Atividades_agora_(), eu: { id: eu.id, gestor: eu.gestor } };
   });
 }
 
@@ -443,6 +558,7 @@ function Atividades_apiCriar(sessionId, payload) {
         unidadeNome = SGO_UTILS.safe(u.NOME_UNIDADE);
       }
     } else unidadeId = '';
+    var w = Atividades_campos5w2h_(p);
 
     return Atividades_comTrava_(function () {
       var agora = Atividades_agora_();
@@ -452,16 +568,15 @@ function Atividades_apiCriar(sessionId, payload) {
         RESPONSAVEL_ID: respId, RESPONSAVEL_NOME: respNome, CRIADO_POR_ID: eu.id, CRIADO_POR_NOME: eu.nome,
         PRIORIDADE: prioridade, INICIO_PREVISTO: inicio, PRAZO: prazo, PREVISAO_ATUAL: prazo, SITUACAO: 'A fazer',
         PERCENTUAL: '', INICIADA_EM: '', CONCLUIDA_EM: '', AGORA_DESDE: '', MOTIVO_AGUARDANDO: '', OBS_CONCLUSAO: '',
-        QTD_JUSTIFICATIVAS: 0, ATUALIZADO_EM: agora
+        QTD_JUSTIFICATIVAS: 0, ATUALIZADO_EM: agora,
+        SISTEMA_ORIGEM: eu.sistema === 'COMMAND' ? 'COMMAND' : 'SGO+', POR_QUE: w.POR_QUE, ONDE: w.ONDE, COMO: w.COMO, QUANTO: w.QUANTO,
+        RESTRITA: p.restrita === true || SGO_UTILS.safeUpper(p.restrita) === 'SIM' ? 'SIM' : ''
       });
-      Atividades_registrarHist_(eu, reg.ID, 'CRIACAO', { para: 'A fazer', texto: 'Atividade lançada para ' + respNome + '. Prazo: ' + Atividades_dataBr_(prazo) + '.' });
+      Atividades_registrarHist_(eu, reg.ID, 'CRIACAO', { para: 'A fazer', texto: 'Atividade lançada para ' + respNome + (eu.sistema === 'COMMAND' ? ' pelo COMMAND' : '') + '. Prazo: ' + Atividades_dataBr_(prazo) + '.' });
       if (respId !== eu.id) {
-        Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.');
-        Atividades_notificarExterno_(respId, reg.ID, 'Nova atividade para você: ' + titulo,
-          Atividades_textoNtf_(Atividades_limpar_(reg), eu.nome + ' lançou uma atividade para você no SGO+.'),
-          { nome: 'sgo_atividade_atribuida', parametros: ['@NOME', titulo, Atividades_dataBr_(prazo), '@LINK'] });
+        Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.', { email: true });
       }
-      return { item: Atividades_limpar_(reg), message: 'Atividade lançada para ' + respNome + '.' };
+      return { item: Atividades_paraTela_(eu, Atividades_limpar_(reg)), message: 'Atividade lançada para ' + respNome + '.' };
     });
   });
 }
@@ -510,6 +625,19 @@ function Atividades_apiEditar(sessionId, payload) {
         mudou('TITULO', 'Título', a.TITULO, titulo);
       }
       if (tem('descricao')) mudou('DESCRICAO', 'Descrição', a.DESCRICAO, Atividades_texto_(p.descricao, 4000));
+      var w = Atividades_campos5w2h_(p);
+      if (tem('porQue')) mudou('POR_QUE', 'Por quê', a.POR_QUE, w.POR_QUE);
+      if (tem('onde')) mudou('ONDE', 'Onde', a.ONDE, w.ONDE);
+      if (tem('como')) mudou('COMO', 'Como', a.COMO, w.COMO);
+      if (tem('quanto')) mudou('QUANTO', 'Quanto', a.QUANTO, w.QUANTO);
+      if (tem('restrita')) {
+        var restr = p.restrita === true || SGO_UTILS.safeUpper(p.restrita) === 'SIM' ? 'SIM' : '';
+        if (restr !== (SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' ? 'SIM' : '')) {
+          if (!eu.gestor && a.CRIADO_POR_ID !== eu.id) throw new Error('Não foi possível mudar a visibilidade: só quem lançou a atividade ou a gestão decide se ela é restrita.');
+          mudou('RESTRITA', 'Visibilidade', SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' ? 'restrita' : 'equipe', restr ? 'restrita' : 'equipe');
+          dados.RESTRITA = restr;
+        }
+      }
       if (tem('prioridade')) {
         if (ATV_PRIORIDADES.indexOf(p.prioridade) < 0) throw new Error('Não foi possível salvar a atividade: prioridade desconhecida. Escolha Baixa, Normal, Alta ou Urgente.');
         mudou('PRIORIDADE', 'Prioridade', a.PRIORIDADE, p.prioridade);
@@ -603,10 +731,7 @@ function Atividades_apiEditar(sessionId, payload) {
       var titAtual = dados.TITULO || a.TITULO, prazoTxt = Atividades_dataBr_(prazo);
       if (novoResp && novoResp.id !== eu.id) {
         Atividades_avisar_(novoResp.id, a.ID, 'NOVA', 'Atividade passada para você',
-          eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.');
-        Atividades_notificarExterno_(novoResp.id, a.ID, 'Atividade passada para você: ' + titAtual,
-          Atividades_textoNtf_(Object.assign({}, a, dados), eu.nome + ' passou para você uma atividade que estava com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '.'),
-          { nome: 'sgo_atividade_atribuida', parametros: ['@NOME', titAtual, prazoTxt, '@LINK'] });
+          eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.', { email: true });
       }
       if (novoResp && a.RESPONSAVEL_ID && a.RESPONSAVEL_ID !== eu.id) {
         Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'RESPONSAVEL', 'Atividade passada para outra pessoa',
@@ -617,7 +742,7 @@ function Atividades_apiEditar(sessionId, payload) {
         Atividades_avisar_(respFinal, a.ID, replanejada ? 'REPLANEJAMENTO' : 'EDICAO', replanejada ? 'Atividade replanejada' : 'Atividade alterada',
           eu.nome + (replanejada ? ' mudou o prazo de "' + titAtual + '" de ' + Atividades_dataBr_(a.PRAZO) + ' para ' + prazoTxt + '.' : ' alterou "' + titAtual + '": ' + mudancas.join('; ') + '.'));
       }
-      return { item: Atividades_obter_(a.ID), message: 'Atividade alterada.' + (replanejada ? ' Novo prazo: ' + prazoTxt + '.' : '') + (novoResp ? ' Responsável agora: ' + novoResp.nome + '.' : '') };
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Atividade alterada.' + (replanejada ? ' Novo prazo: ' + prazoTxt + '.' : '') + (novoResp ? ' Responsável agora: ' + novoResp.nome + '.' : '') };
     });
   });
 }
@@ -631,7 +756,7 @@ function Atividades_apiMudarSituacao(sessionId, payload) {
     if (ATV_SITUACOES.indexOf(nova) < 0) throw new Error('Não foi possível mudar a situação: situação desconhecida. Escolha A fazer, Em andamento, Aguardando, Concluída ou Cancelada.');
     return Atividades_comTrava_(function () {
       var a = Atividades_obter_(p.id);
-      if (!Atividades_podeVer_(eu, a)) throw new Error('Não foi possível mudar a situação: a atividade é de outra pessoa. Só o responsável, quem lançou e os gestores podem mudar.');
+      if (!Atividades_podeAlterar_(eu, a)) throw new Error('Não foi possível mudar a situação: a atividade é de ' + (a.RESPONSAVEL_NOME || 'outra pessoa') + '. Só o responsável, quem lançou e a gestão mudam a situação; os demais só acompanham. Se precisar de algo, fale com ' + (a.RESPONSAVEL_NOME || 'o responsável') + '.');
       var dono = eu.gestor || a.CRIADO_POR_ID === eu.id;
       if (a.SITUACAO === nova) return { item: a, message: 'A atividade já estava em ' + nova + '.' };
       if (!Atividades_aberta_(a) && !dono) throw new Error('Não foi possível reabrir a atividade: ela já está ' + a.SITUACAO.toLowerCase() + '. Só quem lançou ou um gestor pode reabrir; peça a essa pessoa.');
@@ -659,7 +784,7 @@ function Atividades_apiMudarSituacao(sessionId, payload) {
           nova === 'Concluída' ? 'Atividade concluída' : 'Atividade aguardando',
           eu.nome + ' mudou "' + a.TITULO + '" para ' + nova + (texto ? '. ' + texto : '.'));
       }
-      return { item: Atividades_obter_(a.ID), message: 'Situação alterada para ' + nova + '.' };
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Situação alterada para ' + nova + '.' };
     });
   });
 }
@@ -672,7 +797,7 @@ function Atividades_apiComentar(sessionId, payload) {
     if (texto.length < 2) throw new Error('Não foi possível registrar o comentário: o texto está vazio. Escreva o comentário e clique em Comentar de novo.');
     return Atividades_comTrava_(function () {
       var a = Atividades_obter_(p.id);
-      if (!Atividades_podeVer_(eu, a)) throw new Error('Não foi possível comentar: a atividade é de outra pessoa.');
+      if (!Atividades_podeAlterar_(eu, a)) throw new Error('Não foi possível comentar: só o responsável (' + (a.RESPONSAVEL_NOME || 'outra pessoa') + '), quem lançou e a gestão comentam nesta atividade. Para combinar algo, fale com o responsável.');
       Atividades_registrarHist_(eu, a.ID, 'COMENTARIO', { texto: texto });
       var destino = eu.id === a.RESPONSAVEL_ID ? a.CRIADO_POR_ID : a.RESPONSAVEL_ID;
       if (destino && destino !== eu.id) Atividades_avisar_(destino, a.ID, 'COMENTARIO', 'Comentário em atividade', eu.nome + ' comentou em "' + a.TITULO + '": ' + texto);
@@ -744,7 +869,9 @@ function Atividades_apiVerificar(sessionId, payload) {
       .filter(function (v) { return String(v.DESTINATARIO_ID) === eu.id && !SGO_UTILS.safe(v.LIDO_EM); })
       .map(function (v) { return { ID: String(v.ID), ATIVIDADE_ID: String(v.ATIVIDADE_ID), TIPO: String(v.TIPO), TITULO: String(v.TITULO), TEXTO: String(v.TEXTO), DATA: Atividades_normData_(v.DATA, '00:00') }; })
       .slice(-20);
-    return { pendentes: pendentes, avisos: avisos, abertas: minhas.length, agora: agora, gestor: eu.gestor };
+    var venceHoje = minhas.filter(function (a) { return !Atividades_vencida_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === agora.slice(0, 10); })
+      .map(function (a) { return { ID: a.ID, TITULO: a.TITULO, PREVISAO_ATUAL: a.PREVISAO_ATUAL }; });
+    return { pendentes: pendentes, avisos: avisos, abertas: minhas.length, venceHoje: venceHoje, agora: agora, gestor: eu.gestor, motivosAtraso: ATV_MOTIVOS_ATRASO };
   });
 }
 
@@ -772,6 +899,8 @@ function Atividades_apiJustificar(sessionId, payload) {
     if (motivo.replace(/\s+/g, ' ').length < 15) throw new Error('Não foi possível registrar a justificativa: o motivo está curto demais (mínimo 15 letras). Explique o que atrasou a atividade e registre de novo.');
     var nova = Atividades_normData_(p.novaPrevisao, '18:00');
     if (!nova) throw new Error('Não foi possível registrar a justificativa: a nova previsão não foi informada. Preencha data e hora da nova previsão de entrega.');
+    var categoria = String(p.categoria || '').trim();
+    if (ATV_MOTIVOS_ATRASO.indexOf(categoria) < 0) throw new Error('Não foi possível registrar a justificativa: escolha o motivo do atraso na lista (se nenhum servir, escolha "Outro motivo") e registre de novo.');
     return Atividades_comTrava_(function () {
       var agora = Atividades_agora_();
       if (nova <= agora) throw new Error('Não foi possível registrar a justificativa: a nova previsão (' + Atividades_dataBr_(nova) + ') já passou. Escolha uma data e hora depois de agora.');
@@ -780,29 +909,30 @@ function Atividades_apiJustificar(sessionId, payload) {
       if (!Atividades_vencida_(a, agora)) return { item: a, message: 'Esta atividade não está mais atrasada; nada a justificar.' };
       var anterior = a.PREVISAO_ATUAL;
       Atividades_gravar_(a.ID, { PREVISAO_ATUAL: nova, QTD_JUSTIFICATIVAS: (a.QTD_JUSTIFICATIVAS || 0) + 1 });
-      Atividades_registrarHist_(eu, a.ID, 'JUSTIFICATIVA', { texto: motivo, previsaoAnterior: anterior, previsaoNova: nova });
+      Atividades_registrarHist_(eu, a.ID, 'JUSTIFICATIVA', { texto: motivo, previsaoAnterior: anterior, previsaoNova: nova, categoria: categoria });
       if (a.CRIADO_POR_ID && a.CRIADO_POR_ID !== eu.id) {
         Atividades_avisar_(a.CRIADO_POR_ID, a.ID, 'JUSTIFICATIVA', 'Justificativa de atraso',
-          eu.nome + ' justificou o atraso de "' + a.TITULO + '": ' + motivo + ' Previsão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.');
-        Atividades_notificarExterno_(a.CRIADO_POR_ID, a.ID, 'Justificativa de atraso: ' + a.TITULO,
-          eu.nome + ' registrou a justificativa de atraso de uma atividade que você lançou.\n' +
-          'Atividade: ' + a.TITULO + '\nMotivo: ' + motivo + '\nPrevisão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.\n' +
-          'Veja o histórico em Atividades da equipe, no SGO+.',
-          { nome: 'sgo_justificativa_recebida', parametros: [eu.nome, a.TITULO, motivo, Atividades_dataBr_(nova)] });
+          eu.nome + ' justificou o atraso de "' + a.TITULO + '" (' + categoria + '): ' + motivo + ' Previsão: ' + Atividades_dataBr_(anterior) + ' para ' + Atividades_dataBr_(nova) + '.', { email: true });
       }
-      return { item: Atividades_obter_(a.ID), message: 'Justificativa registrada. Nova previsão: ' + Atividades_dataBr_(nova) + '.' };
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Justificativa registrada. Nova previsão: ' + Atividades_dataBr_(nova) + '.' };
     });
   });
 }
 
-/** Painel do gestor: todas as atividades, painel Agora, indicadores e justificativas recentes. */
+/**
+ * Atividades da equipe (19/10/2026: aberta a todo perfil interno, não só à gestão).
+ * Cada pessoa recebe as atividades que pode ver (Atividades_podeVer_), cada uma dizendo se ela pode
+ * alterar; o painel Agora, os indicadores e a carga por pessoa saem dessas mesmas atividades.
+ * Texto das justificativas: só das atividades em que a pessoa é envolvida (ou todas, para a gestão);
+ * os números por motivo valem para todos.
+ */
 function Atividades_apiPainelEquipe(sessionId, payload) {
   return Atividades_resposta_(function () {
     var eu = Atividades_sessao_(sessionId);
-    Atividades_exigirGestor_(eu, 'abrir as atividades da equipe');
-    var agora = Atividades_agora_();
+    var agora = Atividades_agora_(), hoje = agora.slice(0, 10);
     var limite30 = Atividades_menosDias_(30);
-    var todas = Atividades_todas_();
+    var em7 = Utilities.formatDate(new Date(Date.now() + 7 * 86400000), ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+    var todas = Atividades_todas_().filter(function (a) { return Atividades_podeVer_(eu, a); });
     var usuarios = Atividades_usuariosAtivos_();
 
     var abertas = todas.filter(Atividades_aberta_);
@@ -810,32 +940,123 @@ function Atividades_apiPainelEquipe(sessionId, payload) {
     var concl30 = todas.filter(function (a) { return a.SITUACAO === 'Concluída' && a.CONCLUIDA_EM && a.CONCLUIDA_EM >= limite30; });
     var noPrazo = concl30.filter(function (a) { return a.PRAZO && a.CONCLUIDA_EM <= a.PRAZO; });
 
+    var pesoPri = { Urgente: 3, Alta: 2, Normal: 1, Baixa: 1 };
     var agoraPainel = usuarios.map(function (u) {
       var minhas = abertas.filter(function (a) { return a.RESPONSAVEL_ID === u.id; });
       var atual = minhas.filter(function (a) { return a.AGORA_DESDE; })[0] || null;
       return {
         id: u.id, nome: u.nome, perfil: u.perfil, abertas: minhas.length,
         vencidas: minhas.filter(function (a) { return Atividades_vencida_(a, agora); }).length,
+        venceHoje: minhas.filter(function (a) { return !Atividades_vencida_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === hoje; }).length,
+        prox7: minhas.filter(function (a) { return a.PREVISAO_ATUAL >= agora && a.PREVISAO_ATUAL <= em7; }).length,
+        aguardando: minhas.filter(function (a) { return a.SITUACAO === 'Aguardando'; }).length,
+        carga: minhas.reduce(function (s, a) { return s + (pesoPri[a.PRIORIDADE] || 1); }, 0),
         atual: atual ? { ID: atual.ID, TITULO: atual.TITULO, AGORA_DESDE: atual.AGORA_DESDE, MODULO_NOME: atual.MODULO_NOME, CLIENTE_NOME: atual.CLIENTE_NOME } : null
       };
     }).filter(function (p) { return p.abertas > 0 || p.atual; });
 
     var porId = {};
     todas.forEach(function (a) { porId[a.ID] = a; });
-    var justificativas = SGO_DATA.getAll(Atividades_abas_().HISTORICO)
-      .filter(function (h) { return String(h.TIPO) === 'JUSTIFICATIVA'; })
+    var justTodas = SGO_DATA.getAll(Atividades_abas_().HISTORICO)
+      .filter(function (h) { return String(h.TIPO) === 'JUSTIFICATIVA' && porId[String(h.ATIVIDADE_ID)]; })
       .map(Atividades_limparHist_)
-      .sort(Atividades_ordemHistDesc_)
+      .sort(Atividades_ordemHistDesc_);
+    var porMotivo = {};
+    justTodas.forEach(function (h) {
+      if (h.DATA < limite30) return;
+      var k = h.CATEGORIA || 'Sem motivo escolhido (anterior a 19/10/2026)';
+      porMotivo[k] = (porMotivo[k] || 0) + 1;
+    });
+    var justificativas = justTodas
+      .filter(function (h) { return Atividades_veJustificativa_(eu, porId[h.ATIVIDADE_ID]); })
       .slice(0, 30)
       .map(function (h) { var a = porId[h.ATIVIDADE_ID] || {}; h.TITULO = a.TITULO || ''; h.RESPONSAVEL_NOME = a.RESPONSAVEL_NOME || h.USUARIO_NOME; h.SITUACAO = a.SITUACAO || ''; return h; });
 
+    var porModulo = {};
+    abertas.forEach(function (a) {
+      var k = a.MODULO || '-';
+      var m = porModulo[k] = porModulo[k] || { modulo: k, nome: a.MODULO_NOME || (a.MODULO ? a.MODULO : 'Sem módulo'), abertas: 0, vencidas: 0 };
+      m.abertas++; if (Atividades_vencida_(a, agora)) m.vencidas++;
+    });
+    var porSistema = { 'SGO+': 0, COMMAND: 0 };
+    abertas.forEach(function (a) { porSistema[a.SISTEMA_ORIGEM === 'COMMAND' ? 'COMMAND' : 'SGO+']++; });
+
     return {
-      agora: agora, itens: todas.filter(function (a) { return a.SITUACAO !== 'Cancelada'; }), usuarios: usuarios, painelAgora: agoraPainel,
+      agora: agora, eu: { id: eu.id, gestor: eu.gestor, configuraAvisos: eu.perfil === 'ADMIN' || eu.perfil === 'DIRETORIA' },
+      itens: todas.filter(function (a) { return a.SITUACAO !== 'Cancelada'; }).map(function (a) { return Atividades_paraTela_(eu, a); }),
+      usuarios: usuarios.map(function (u) { return { id: u.id, nome: u.nome }; }), painelAgora: agoraPainel,
       indicadores: {
         abertas: abertas.length, vencidas: vencidas.length, concluidas30: concl30.length, noPrazo30: noPrazo.length,
-        percNoPrazo30: concl30.length ? Math.round(noPrazo.length * 1000 / concl30.length) / 10 : null
+        percNoPrazo30: concl30.length ? Math.round(noPrazo.length * 1000 / concl30.length) / 10 : null,
+        aguardando: abertas.filter(function (a) { return a.SITUACAO === 'Aguardando'; }).length,
+        justificativas30: Object.keys(porMotivo).reduce(function (s, k) { return s + porMotivo[k]; }, 0),
+        porMotivo: Object.keys(porMotivo).map(function (k) { return { motivo: k, qtd: porMotivo[k] }; }).sort(function (a, b) { return b.qtd - a.qtd; }),
+        porModulo: Object.keys(porModulo).map(function (k) { return porModulo[k]; }).sort(function (a, b) { return b.abertas - a.abertas; }),
+        porSistema: porSistema
       },
       justificativas: justificativas
     };
   });
+}
+
+/** Plano de ação do Programa de conduta (5W2H + PDCA) de que a atividade faz parte, para o detalhe. Só leitura. */
+function Atividades_planoDaAtividade_(a) {
+  if (!a || a.MODULO !== 'conduta') return null;
+  try {
+    var aba = (typeof CNDQ_SHEETS !== 'undefined' && CNDQ_SHEETS.PLANO) || 'qual_plano_acao';
+    var achado = null;
+    SGO_DATA.getAll(aba).forEach(function (p) {
+      if (achado) return;
+      var ids = [];
+      try { ids = JSON.parse(String(p.ATIVIDADES_JSON || '[]')); } catch (e) { ids = []; }
+      if (Array.isArray(ids) && ids.map(String).indexOf(String(a.ID)) >= 0) achado = p;
+    });
+    if (!achado) return null;
+    var fases = typeof CNDQ_FASES !== 'undefined' ? CNDQ_FASES : {};
+    var fase = SGO_UTILS.safeUpper(achado.FASE);
+    return { CODIGO: SGO_UTILS.safe(achado.CODIGO), TITULO: SGO_UTILS.safe(achado.TITULO), FASE: fase, FASE_NOME: fases[fase] || fase, CICLO: Number(achado.CICLO) || 1 };
+  } catch (e) { return null; }
+}
+
+// ------------------------------------------------------------
+// PONTE COMMAND -> SGO+ (SGO_PonteCommand.js, ações "atividades.*")
+// ------------------------------------------------------------
+/**
+ * O COMMAND chama em nome do usuário do SGO+ ligado à conta (dados.sgoUsuarioId) e as MESMAS funções
+ * das telas do SGO+ respondem, com as mesmas regras de quem vê e quem altera (o perfil vale o do SGO+).
+ * A assinatura (HMAC) já foi conferida por PonteCmd_tratar_. dados = { sgoUsuarioId, payload }.
+ * Resposta: a mesma da tela; erro vem com ok:false, message e erro (texto para o operador).
+ */
+var ATV_PONTE_ACOES = {
+  'atividades.opcoes': function (t, p) { return Atividades_apiOpcoes(t, p); },
+  'atividades.unidades': function (t, p) { return Atividades_apiUnidades(t, p); },
+  'atividades.minhas': function (t, p) { return Atividades_apiListarMinhas(t, p); },
+  'atividades.modulo': function (t, p) { return Atividades_apiListarModulo(t, p); },
+  'atividades.detalhe': function (t, p) { return Atividades_apiDetalhe(t, p); },
+  'atividades.criar': function (t, p) { return Atividades_apiCriar(t, p); },
+  'atividades.editar': function (t, p) { return Atividades_apiEditar(t, p); },
+  'atividades.situacao': function (t, p) { return Atividades_apiMudarSituacao(t, p); },
+  'atividades.comentar': function (t, p) { return Atividades_apiComentar(t, p); },
+  'atividades.percentual': function (t, p) { return Atividades_apiPercentual(t, p); },
+  'atividades.agora': function (t, p) { return Atividades_apiFazendoAgora(t, p); },
+  'atividades.verificar': function (t, p) { return Atividades_apiVerificar(t, p); },
+  'atividades.lidos': function (t, p) { return Atividades_apiMarcarAvisosLidos(t, p); },
+  'atividades.justificar': function (t, p) { return Atividades_apiJustificar(t, p); },
+  'atividades.equipe': function (t, p) { return Atividades_apiPainelEquipe(t, p); }
+};
+
+function Atividades_ponte_(acao, dados) {
+  var fn = Object.prototype.hasOwnProperty.call(ATV_PONTE_ACOES, acao) ? ATV_PONTE_ACOES[acao] : null;
+  if (!fn) return { ok: false, erro: 'Ação de atividades desconhecida.', message: 'Ação de atividades desconhecida.' };
+  var d = dados || {};
+  var eu;
+  try { eu = Atividades_euDoUsuario_(d.sgoUsuarioId, 'COMMAND'); }
+  catch (e) { var m = String((e && e.message) || e); return { ok: false, erro: m, message: m }; }
+  var anterior = ATV_PONTE_CTX;
+  ATV_PONTE_CTX = { token: 'PONTE-' + Utilities.getUuid(), eu: eu };
+  var r;
+  try { r = fn(ATV_PONTE_CTX.token, d.payload || {}); }
+  finally { ATV_PONTE_CTX = anterior; }
+  if (r && r.ok === false && !r.erro) r.erro = r.message;
+  return r;
 }

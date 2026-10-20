@@ -90,6 +90,12 @@ function PonteCmd_tratar_(req) {
     // dados: { sgoUsuarioId, mes 'aaaa-mm', quantidade, texto, chave }.
     case "conduta.sugestao": return typeof Conduta_sugestaoDoPonto_ === "function" ? Conduta_sugestaoDoPonto_(d) : { ok: false, erro: "Programa de conduta indisponível." };
   }
+  // 19/10/2026: Minhas atividades no COMMAND. Uma fonte só (as atividades ficam aqui); o COMMAND lê e grava
+  // em nome do usuário do SGO+ ligado à conta (dados: { sgoUsuarioId, payload }), com as mesmas regras das
+  // telas do SGO+ (SGO_Atividades.js, Atividades_ponte_).
+  if (/^atividades\.[a-z]+$/.test(String(req.acao || ""))) {
+    return typeof Atividades_ponte_ === "function" ? Atividades_ponte_(String(req.acao), d) : { ok: false, erro: "Minhas atividades indisponível no SGO+." };
+  }
   return { ok: false, erro: "Ação desconhecida." };
 }
 

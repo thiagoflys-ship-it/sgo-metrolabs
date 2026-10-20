@@ -23,6 +23,10 @@
  *             vazio (e contato externo, que não tem vínculo) ficam PULADO em NTF_ENVIOS com o
  *             motivo. Sem categoria (ou qualquer outra) a mensagem vai para todos, inclusive PJ.
  *             Hoje o SGO+ não manda mensagem de ponto: é proteção para o futuro.
+ *     categoria: 'ATIVIDADES' — (19/10/2026) WhatsApp de Minhas atividades: só vínculo liberado (padrão CLT),
+ *             só em dia útil e no horário de trabalho (SGO_Expediente.js) e no máximo UMA mensagem por
+ *             pessoa por dia (conferido em NTF_ENVIOS: ORIGEM começando por ATIVIDADES, canal whatsapp, OK).
+ *             E-mail não é barrado aqui: os e-mails de atividades já saem só no expediente (fila em ATV_AVISOS).
  *   })
  *
  * Canais:
@@ -217,6 +221,15 @@ var NTF_MODELOS_META = {
     limites: [60, 200, 40, 300],
     texto: 'Olá, {{1}}. A atividade abaixo passou da previsão de entrega e ainda está aberta.\n\nAtividade: {{2}}\nPrevisão vencida em: {{3}}\n\nRegistre a justificativa com a nova previsão ou conclua a atividade em: {{4}}\n\nMetrolabs — SGO+',
     exemplos: ['João', 'Emitir certificado da autoclave 2', '15/10/2026 18:00', 'https://sgo.metrolabs.com.br']
+  },
+  // 19/10/2026: resumo do dia de Minhas atividades (no máximo um por pessoa por dia, só em dia útil e no
+  // horário de trabalho — SGO_Atividades_Avisos.js). Enquanto a Meta não aprovar este modelo, o resumo
+  // usa sgo_atividade_atrasada ou sgo_atividade_atribuida (já aprovados), com uma atividade e "e mais N".
+  sgo_atividades_resumo_dia: {
+    uso: 'Minhas atividades: resumo do dia (nome, novas, vencem hoje, venceram desde o último resumo, link)',
+    limites: [60, 10, 10, 10, 300],
+    texto: 'Olá, {{1}}. Este é o resumo das suas atividades no SGO+.\n\nNovas para você: {{2}}\nVencem hoje: {{3}}\nVenceram desde o último resumo: {{4}}\n\nPara ver os detalhes, acesse Minhas atividades: {{5}}\n\nMetrolabs — SGO+',
+    exemplos: ['Maria', '2', '1', '0', 'https://sgo.metrolabs.com.br']
   },
   sgo_justificativa_recebida: {
     uso: 'Minhas atividades: justificativa de atraso (colaborador, atividade, motivo, nova previsão)',
@@ -413,6 +426,47 @@ function Notificar_motivoCategoria_(categoria, contato) {
   return NTF_MOTIVO_PONTO_SEM_VINCULO;
 }
 
+/**
+ * Categoria ATIVIDADES (19/10/2026), só no WhatsApp: mensagem de atividades é sutil por regra.
+ * Devolve o motivo para NÃO enviar ('' = pode enviar):
+ *  - vínculo de trabalho fora da lista liberada (padrão: só CLT; PJ e vazio ficam no sistema e no e-mail);
+ *  - fora do expediente (fim de semana, feriado, antes ou depois do horário — SGO_Expediente.js);
+ *  - a pessoa já recebeu hoje uma mensagem de atividades pelo WhatsApp (no máximo uma por dia).
+ * enviadosHoje: mapa usuárioId -> true, lido uma vez por chamada de NTF_ENVIOS.
+ */
+var NTF_MOTIVO_ATV_LIMITE = 'limite de uma mensagem de atividades por dia pelo WhatsApp já atingido hoje';
+function Notificar_motivoAtividadesWhatsapp_(contato, enviadosHoje, agora) {
+  var cfg = typeof Atividades_avisosCfg_ === 'function' ? Atividades_avisosCfg_() : { vinculosWhatsapp: ['CLT'] };
+  if (cfg.whatsappResumo === false) return 'resumo de atividades pelo WhatsApp desligado em Avisos e horários';
+  var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
+  var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
+  if (lib.indexOf(v || 'VAZIO') < 0) {
+    return v === 'PJ' ? 'PJ: atividades não são cobradas pelo WhatsApp (seguem no sistema e por e-mail)'
+      : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp de atividades' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); atividades seguem no sistema e por e-mail');
+  }
+  if (typeof SGO_dentroDoExpediente_ === 'function') {
+    var ex = SGO_dentroDoExpediente_(agora || new Date());
+    if (!ex.dentro) return 'fora do expediente (' + ex.motivo + '); WhatsApp de atividades só em dia útil e no horário de trabalho';
+  }
+  if (contato && enviadosHoje && enviadosHoje[String(contato.id)]) return NTF_MOTIVO_ATV_LIMITE;
+  return '';
+}
+
+/** Quem já recebeu hoje (fuso da empresa) mensagem de atividades pelo WhatsApp: { usuárioId: true }. */
+function Notificar_whatsAtividadesHoje_() {
+  var hoje = Utilities.formatDate(new Date(), NTF_FUSO, 'yyyy-MM-dd'), mapa = {};
+  try {
+    SGO_DATA.getAll(Notificar_aba_()).forEach(function (r) {
+      if (String(r.CANAL || '').toLowerCase() !== 'whatsapp' || String(r.SITUACAO || '').toUpperCase() !== 'OK') return;
+      if (String(r.ORIGEM || '').toUpperCase().indexOf('ATIVIDADES') !== 0) return;
+      var q = r.QUANDO;
+      var dia = Object.prototype.toString.call(q) === '[object Date]' ? Utilities.formatDate(q, NTF_FUSO, 'yyyy-MM-dd') : String(q || '').slice(0, 10);
+      if (dia === hoje) mapa[String(r.USUARIO_ID || '')] = true;
+    });
+  } catch (e) { /* aba ausente: ninguém recebeu */ }
+  return mapa;
+}
+
 function SGO_notificar_(opcoes) {
   var resumo = { ok: 0, erro: 0, pulado: 0 };
   try {
@@ -448,6 +502,7 @@ function SGO_notificar_(opcoes) {
     var linhas = [];
     var registrar = function (uid, nome, canal, destino, situacao, motivo) {
       resumo[situacao === 'OK' ? 'ok' : situacao === 'ERRO' ? 'erro' : 'pulado']++;
+      if (situacao !== 'OK') resumo.motivo = String(motivo || '').slice(0, 300); // último motivo de PULADO/ERRO (quem chamou pode registrar)
       linhas.push({
         QUANDO: Notificar_agora_(), USUARIO_ID: uid, USUARIO_NOME: nome || '', CANAL: canal, DESTINO: destino || '',
         ASSUNTO: titulo, ORIGEM: origem, REF_ID: refId, SITUACAO: situacao, MOTIVO: String(motivo || '').slice(0, 480)
@@ -455,6 +510,7 @@ function SGO_notificar_(opcoes) {
     };
 
     var cotaEmail = null;
+    var whatsAtvHoje = null; // categoria ATIVIDADES: quem já recebeu hoje (lido só se precisar)
     var wa = externos.indexOf('whatsapp') >= 0 ? Notificar_provedorWhatsapp_() : { provedor: '', segredos: [] };
     var segredos = wa.segredos || [];
     var modelo = o.modelo && o.modelo.nome ? { nome: String(o.modelo.nome), parametros: (o.modelo.parametros || []).slice() } : null;
@@ -499,6 +555,11 @@ function SGO_notificar_(opcoes) {
           if (c.motivo) { registrar(uid, c.nome, canal, '', 'PULADO', c.motivo); return; }
           var barradoCategoria = Notificar_motivoCategoria_(categoria, c);
           if (barradoCategoria) { registrar(uid, c.nome, canal, '', 'PULADO', barradoCategoria); return; }
+          if (categoria === 'ATIVIDADES' && canal === 'whatsapp') {
+            if (whatsAtvHoje === null) whatsAtvHoje = Notificar_whatsAtividadesHoje_();
+            var barradoAtv = Notificar_motivoAtividadesWhatsapp_(c, whatsAtvHoje);
+            if (barradoAtv) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoAtv); return; }
+          }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;
           if (jaFoi) { registrar(uid, c.nome, canal, canal === 'email' ? c.email : c.telefone, 'PULADO', 'Mesma mensagem já enviada a esta pessoa por este canal às ' + String(jaFoi).split('|')[0] + ' (origem ' + (String(jaFoi).split('|')[1] || 'SGO+') + '); não foi repetida.'); return; }
           // reserva antes de enviar (dois caminhos ao mesmo tempo não enviam os dois); falhou = libera
@@ -519,10 +580,10 @@ function SGO_notificar_(opcoes) {
             reservar(); reservaFeita = true;
             if (wa.provedor === 'meta') {
               r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
-              if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
+              if (r.ok) { if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
             } else {
               r = Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhats);
-              if (r.ok) { registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
+              if (r.ok) { if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
             }
             liberar();
             registrar(uid, c.nome, canal, c.telefone, 'ERRO', Notificar_limparSegredos_(r.motivo, segredos));

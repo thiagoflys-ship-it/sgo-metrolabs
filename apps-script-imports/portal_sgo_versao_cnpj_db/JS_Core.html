@@ -692,7 +692,8 @@
   // PERFIL RH (19/10/2026): o RH vê o que um colaborador vê (Início, Minhas atividades, Avisos,
   // Frota e Programa de conduta) e a lista de Usuários (só consulta). O resto do menu some e
   // abrir() mostra uma tela explicando. O servidor também recusa (SGO_Auth.js › SGO_bloquearRH_).
-  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "avisos", "frota", "conduta", "usuarios"];
+  // 19/10/2026: Atividades da equipe aberta a todos os perfis internos (o RH acompanha, não altera o que não é dele).
+  var SGO_TELAS_RH = ["dashboard", "mobile_home", "minhas_atividades", "atividades_equipe", "avisos", "frota", "conduta", "usuarios"];
   function SGO_ehRH_() { return !!(USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "RH"); }
   function SGO_telaLiberadaRH_(mod) { return !SGO_ehRH_() || SGO_TELAS_RH.indexOf(String(mod || "")) >= 0; }
 
@@ -734,7 +735,7 @@
       document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
         const mod = btn.getAttribute("data-mod");
         if (!mod) return;
-        btn.style.display = SGO_TELAS_RH.indexOf(mod) >= 0 && mod !== "atividades_equipe" ? "" : "none";
+        btn.style.display = SGO_TELAS_RH.indexOf(mod) >= 0 ? "" : "none";
       });
     }
     if (typeof Menu_iniciar_ === "function") Menu_iniciar_();

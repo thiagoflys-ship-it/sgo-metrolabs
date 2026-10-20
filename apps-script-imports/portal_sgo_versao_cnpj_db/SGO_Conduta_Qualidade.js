@@ -615,7 +615,9 @@ function Cndq_criarAtividade_(sessionId, plano, o) {
   if (typeof Atividades_apiCriar !== 'function') throw new Error('o módulo Minhas atividades não está disponível nesta instalação');
   var r = Atividades_apiCriar(sessionId, {
     titulo: (plano.CODIGO ? plano.CODIGO + ': ' : '') + String(o.oQue).slice(0, 180), descricao: String(o.descricao || '').slice(0, 3900),
-    prazo: o.quando + 'T18:00', prioridade: o.prioridade || 'Alta', responsavelId: o.quemId, modulo: 'conduta', moduloNome: 'Programa de conduta'
+    prazo: o.quando + 'T18:00', prioridade: o.prioridade || 'Alta', responsavelId: o.quemId, modulo: 'conduta', moduloNome: 'Programa de conduta',
+    // 19/10/2026: o 5W2H do plano também fica nos campos próprios da atividade (por quê, onde, como, quanto)
+    porQue: o.porQue || '', onde: o.onde || '', como: o.como || '', quanto: o.quanto || ''
   });
   if (!r || r.ok !== true) throw new Error((r && r.message) || 'não foi possível criar a atividade do plano');
   return r.item;
@@ -660,7 +662,7 @@ function Conduta_apiCriarPlanoAcao(sessionId, payload) {
   var plano = { CODIGO: Cndq_proximoCodigo_(), TITULO: titulo, ORIGEM_TIPO: origemTipo, OCORRENCIA_ID: oc ? String(oc.ID) : '', TIPO_CODIGO: tipoCodigo, AREA: areaCod, ANALISE_ID: analiseId,
     O_QUE: oQue, POR_QUE: porQue, ONDE: onde, QUANDO: quando, QUEM_ID: String(quem.ID), QUEM_NOME: SGO_UTILS.safe(quem.NOME) || quem.USUARIO, COMO: como, QUANTO: quanto,
     FASE: 'EXECUTAR', CICLO: 1, CRIADO_POR_ID: sessao.userId, CRIADO_POR_NOME: sessao.nome || sessao.usuario, ATUALIZADO_EM: SGO_UTILS.nowIso() };
-  var atv = Cndq_criarAtividade_(sessionId, plano, { oQue: oQue, quemId: plano.QUEM_ID, quando: quando,
+  var atv = Cndq_criarAtividade_(sessionId, plano, { oQue: oQue, quemId: plano.QUEM_ID, quando: quando, porQue: porQue, onde: onde, como: como, quanto: quanto,
     descricao: 'Plano de ação ' + plano.CODIGO + ' do Programa de conduta (5W2H).\nO quê: ' + oQue + '\nPor quê: ' + porQue + '\nOnde: ' + onde + '\nQuando: ' + Conduta_dataBr_(quando) +
       '\nQuem: ' + plano.QUEM_NOME + '\nComo: ' + como + '\nQuanto: ' + quanto + '\nAo terminar, marque esta atividade como Concluída; a gestão verifica a eficácia no plano.' });
   plano.ATIVIDADES_JSON = JSON.stringify([atv.ID]);
