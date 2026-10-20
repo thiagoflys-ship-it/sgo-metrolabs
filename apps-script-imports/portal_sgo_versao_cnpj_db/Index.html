@@ -412,6 +412,9 @@
 
     function sgoQrBootstrap_() {
       try {
+        // 20/10/2026: com a tela do equipamento no próprio SGO+ (JS_Core.html, renderProntuarioDigital_, com a seção
+        // Qualificação), este desvio direto para a pasta não roda mais: ele trocava a página e escondia a seção.
+        if (typeof renderProntuarioDigital_ === "function") return;
         sgoQrPatchLogin_();
 
         if (sgoQrTemFluxo_()) {
