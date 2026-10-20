@@ -116,6 +116,28 @@ function SGO_Ajuda_normalizar_(chave, e, perfil) {
   if (perfil === 'CLIENTE') quem = quem.filter(function (q) { return q.voce || q.todos; });
   // as linhas de quem está vendo primeiro
   quem.sort(function (a, b) { return (a.voce === b.voce) ? 0 : (a.voce ? -1 : 1); });
+  var r = SGO_Ajuda_montar_(chave, e, quem);
+  return perfil === 'ADMIN' ? r : SGO_Ajuda_semRecursoAdmin_(r);
+}
+
+/**
+ * 20/10/2026: recursos que só o administrador usa (relatório interno, dados reconstituídos, modo personalizado) não
+ * aparecem na ajuda de quem não é administrador (regra do manual do operador). O assistente de dúvidas já filtrava.
+ */
+var SGO_AJUDA_SO_ADMIN = /relat[óo]rio interno|dados reconstitu|modo personalizado|senha administrativa/i;
+function SGO_Ajuda_semRecursoAdmin_(r) {
+  var ok = function (t) { return !SGO_AJUDA_SO_ADMIN.test(String(t || '')); };
+  r.antesDeComecar = r.antesDeComecar.filter(ok);
+  r.passos = r.passos.map(function (p) { return { titulo: p.titulo, itens: p.itens.filter(ok) }; }).filter(function (p) { return ok(p.titulo) && (p.itens.length || !p.titulo); });
+  r.cores = r.cores.filter(function (c) { return ok(c.nome) && ok(c.significado); });
+  r.problemas = r.problemas.filter(function (c) { return ok(c.situacao) && ok(c.oQueFazer); });
+  r.quemPode = r.quemPode.filter(function (q) { return ok(q.pode); });
+  r.perguntas = r.perguntas.filter(function (c) { return ok(c.p) && ok(c.r); });
+  r.secoesManual = r.secoesManual.map(function (x) { return { titulo: x.titulo, paragrafos: x.paragrafos.filter(ok) }; }).filter(function (x) { return ok(x.titulo) && x.paragrafos.length; });
+  return r;
+}
+
+function SGO_Ajuda_montar_(chave, e, quem) {
   return {
     chave: chave,
     titulo: SGO_Ajuda_txt_(e.titulo) || SGO_AJUDA_NOMES[chave] || chave,

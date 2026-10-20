@@ -1173,15 +1173,18 @@ function FrotaRes_indicadores_(p) {
 function FrotaRes_sugestoesCopiloto_(dias) {
   var out = [];
   try {
-    var agora = FrotaRes_agora_(), de = FrotaRes_iniDia_(agora) - (dias || 30) * 86400000;
-    var ind = FrotaRes_indicadores_({ de: FrotaRes_data_(de), ate: FrotaRes_data_(agora) });
+    // 20/10/2026: o período inclui as reservas dos próximos dias. A disputa por um veículo aparece quando alguém tenta
+    // reservar uma viagem que vem pela frente; olhando só até hoje, a disputa das viagens de amanhã não era vista.
+    var agora = FrotaRes_agora_(), de = FrotaRes_iniDia_(agora) - (dias || 30) * 86400000, ate = agora + (dias || 30) * 86400000;
+    var ind = FrotaRes_indicadores_({ de: FrotaRes_data_(de), ate: FrotaRes_data_(ate) });
+    var periodo = 'De ' + FrotaRes_data_(de) + ' a ' + FrotaRes_data_(ate);
     var mes = new Date(agora).getFullYear() + '-' + FrotaRes_2_(new Date(agora).getMonth() + 1);
     var veics = {}; FrotaRes_veiculosAtivos_().forEach(function (v) { veics[FrotaRes_s_(v.PLACA)] = FrotaRes_s_(v.ID); });
     ind.veiculos.forEach(function (v) {
       if (v.disputas < 3) return;
       out.push({ chave: 'RESDISP|' + v.placa + '|' + mes, tipo: 'USO', gravidade: v.disputas >= 6 ? 'ALTA' : 'MEDIA', veiculoId: veics[v.placa] || '', placa: v.placa,
         titulo: 'Veículo ' + v.placa + ': disputado (' + v.disputas + ' pedidos recusados ou retiradas bloqueadas por reserva)',
-        detalhe: 'Nos últimos ' + dias + ' dias: ' + v.recusas + ' pedido(s) de reserva recusado(s) por sobreposição e ' + v.bloqueios + ' retirada(s) bloqueada(s) por reserva; ' + v.reservas + ' reserva(s), ' + String(v.ocupacaoPct).replace('.', ',') + '% do tempo reservado.',
+        detalhe: periodo + ': ' + v.recusas + ' pedido(s) de reserva recusado(s) por sobreposição e ' + v.bloqueios + ' retirada(s) bloqueada(s) por reserva; ' + v.reservas + ' reserva(s), ' + String(v.ocupacaoPct).replace('.', ',') + '% do tempo reservado.',
         acao: 'Avaliar se a frota precisa de mais um veículo nos dias de pico, combinar a escala de uso ou reservar com mais antecedência as viagens fixas.', destinos: ['CASO', 'ATIVIDADE'], casoTipo: 'USO' });
     });
     var maxDia = 0, diaPico = -1;
@@ -1190,7 +1193,7 @@ function FrotaRes_sugestoesCopiloto_(dias) {
       var nomes = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
       out.push({ chave: 'RESPICO|' + diaPico + '|' + mes, tipo: 'USO', gravidade: 'MEDIA', veiculoId: '', placa: '',
         titulo: 'Reservas: ' + nomes[diaPico] + ' concentra a disputa por veículo (' + maxDia + ' ocorrências)',
-        detalhe: 'Nos últimos ' + dias + ' dias houve ' + maxDia + ' pedido(s) recusado(s) ou retirada(s) bloqueada(s) por reserva em ' + nomes[diaPico] + '.',
+        detalhe: periodo + ' houve ' + maxDia + ' pedido(s) recusado(s) ou retirada(s) bloqueada(s) por reserva em ' + nomes[diaPico] + '.',
         acao: 'Planejar as viagens desse dia da semana com antecedência (reserva na semana anterior) ou remanejar compromissos para outros dias.', destinos: ['ATIVIDADE', 'CASO'], casoTipo: 'USO' });
     }
     ind.condutores.forEach(function (c) {
