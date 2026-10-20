@@ -278,7 +278,7 @@ function AutoOficialDoc_montar_(o) {
   // 13. Recomendações e requalificação
   h += sec('Recomendações e requalificação');
   var rec = [];
-  if (status === 'APROVADO') rec.push('Realizar a requalificação até ' + (ctx.validadeAte || '—') + ', o que corresponde à periodicidade de ' + ctx.periodicidadeMeses + ' meses contada a partir da conclusão dos ensaios' + (ctx.fim ? ' (' + ctx.fim + ')' : '') + '.');
+  if (status === 'APROVADO') rec.push('Realizar a requalificação até ' + (ctx.validadeAte || '—') + ', o que corresponde à periodicidade de ' + ctx.periodicidadeMeses + (Number(ctx.periodicidadeMeses) === 1 ? ' mês' : ' meses') + ' contada a partir da conclusão dos ensaios' + (ctx.fim ? ' (' + ctx.fim + ')' : '') + '.');
   else rec.push('Investigar as causas das não conformidades, corrigir e repetir a qualificação dos programas reprovados antes de liberar o equipamento para uso nesses programas.');
   rec.push('Antecipar a requalificação depois de manutenção que afete a câmara, a porta e sua vedação, o sistema de controle ou a instrumentação' + (comPressao ? ', a remoção de ar ou a geração de vapor' : '') + '; de mudança do local de instalação; de alteração de programa, de parâmetros ou da configuração de carga; e de resultado insatisfatório no controle de rotina.');
   rec.push('Manter o controle de rotina com indicadores químicos e biológicos' + (comPressao ? ' e, nos equipamentos com remoção dinâmica do ar, com o ensaio de Bowie-Dick no início de cada dia de uso' : '') + ', conforme os procedimentos do serviço.');
