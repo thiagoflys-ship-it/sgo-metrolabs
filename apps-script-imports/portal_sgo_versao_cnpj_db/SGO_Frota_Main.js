@@ -101,7 +101,17 @@ function Frota_apiDispatch(req) {
     apiRastrGantt: Frota_apiRastrGantt,
     apiRastrCopiloto: Frota_apiRastrCopiloto,
     apiRastrCopilotoDecidir: Frota_apiRastrCopilotoDecidir,
-    apiRastrRelatorio: Frota_apiRastrRelatorio
+    apiRastrRelatorio: Frota_apiRastrRelatorio,
+    // 20/10/2026: reservas de veículo (SGO_Frota_Reservas.js). Agenda, livres, reservar, cancelar e trocar: toda a equipe
+    // (as regras de quem pode o quê ficam lá); indicadores, regras e relatório: só a gestão.
+    apiReservaPainel: Frota_apiReservaPainel,
+    apiReservaLivres: Frota_apiReservaLivres,
+    apiReservaCriar: Frota_apiReservaCriar,
+    apiReservaCancelar: Frota_apiReservaCancelar,
+    apiReservaTrocarVeiculo: Frota_apiReservaTrocarVeiculo,
+    apiReservaIndicadores: Frota_apiReservaIndicadores,
+    apiReservaConfig: Frota_apiReservaConfig,
+    apiReservaRelatorio: Frota_apiReservaRelatorio
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -111,7 +121,7 @@ function Frota_apiDispatch(req) {
   var resultado = allow[fn](req.sessionId, payload);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio|ReservaPainel|ReservaLivres|ReservaIndicadores|ReservaRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -301,6 +311,9 @@ function Frota_apiInicioFrota(sessionId) {
   });
   var alertas = [];
   try { alertas = Frota_calcularAlertasManutencao_(); } catch (eAl) { console.error('Frota início, alertas: ' + ((eAl && eAl.message) || eAl)); }
+  // 20/10/2026 (reservas): próxima reserva de cada veículo e as minhas, para a tela de retirada respeitar a reserva.
+  var reservas = typeof FrotaRes_resumoInicio_ === 'function' ? FrotaRes_resumoInicio_({ userId: meuId, gestao: gestor }, meuCondutor ? SGO_UTILS.safe(meuCondutor.ID) : '') : null;
+  if (reservas) enxuto.forEach(function (v) { v.reserva = reservas.porVeiculo[v.id] || null; });
   return {
     ok: true, agora: SGO_UTILS.nowIso(), gestor: gestor,
     condutor: meuCondutor ? { id: SGO_UTILS.safe(meuCondutor.ID), nome: SGO_UTILS.safe(meuCondutor.NOME) } : null,
@@ -308,6 +321,7 @@ function Frota_apiInicioFrota(sessionId) {
     veiculos: enxuto, emAndamento: emAndamento,
     gruposChecklist: FROTA_CFG.GRUPOS_CHECKLIST, tiposCombustivel: FROTA_CFG.TIPOS_COMBUSTIVEL,
     alertas: alertas,
+    reservas: reservas ? { minhas: reservas.minhas, folgaMin: reservas.folgaMin, antecipacaoMin: reservas.antecipacaoMin, agoraData: reservas.agoraData, agoraHora: reservas.agoraHora, fimExpediente: reservas.fimExpediente } : null,
     // 20/10/2026: aviso ao condutor de que o veículo é rastreado durante o uso (LGPD); null com o rastreador desligado
     rastreamento: typeof FrotaR_avisoRetirada_ === 'function' ? FrotaR_avisoRetirada_() : null
   };
@@ -471,6 +485,8 @@ function Frota_bootstrapSemTrava_() {
   if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
   // 20/10/2026 (rastreamento): pedidos de comprovante, trilha de consultas, HORA/ORIGEM no abastecimento e capacidade do tanque. Só colunas e tabelas novas.
   if (typeof FrotaR_garantirAbas_ === 'function') FrotaR_garantirAbas_();
+  // 20/10/2026 (reservas): tabelas das reservas, eventos e avisos; devolução prevista e reserva na movimentação. Só colunas e tabelas novas.
+  if (typeof FrotaRes_garantirAbas_ === 'function') FrotaRes_garantirAbas_();
 }
 
 // ------------------------------------------------------------
@@ -1116,6 +1132,20 @@ function Frota_apiIniciarViagem(sessionId, payload) {
     }
   }
 
+  // 20/10/2026 (reservas): a retirada respeita a reserva. Devolução prevista informada; reserva de outra pessoa (ou manutenção
+  // programada) começando antes da devolução prevista + folga recusa a retirada, salvo liberação da gestão com justificativa.
+  var reservasLigadas = typeof FrotaRes_conferirRetirada_ === 'function';
+  var prevista = reservasLigadas ? FrotaRes_previstaRetirada_(payload, quandoSaida.quando.getTime()) : null;
+  var liberacao = '';
+  var chkReserva = null;
+  if (reservasLigadas) {
+    chkReserva = FrotaRes_conferirRetirada_(veiculoId, SGO_UTILS.safe(condutorId), quandoSaida.quando.getTime(), prevista.ms);
+    if (chkReserva.bloqueio) {
+      if (!(gestao && payload.liberarReserva === true)) return FrotaRes_respostaBloqueio_(chkReserva, veiculo, condutor, sessao, quandoSaida.quando.getTime(), prevista.ms, gestao);
+      liberacao = Frota_exigirJustificativa_(payload.justificativa, ['liberação do veículo reservado (' + SGO_UTILS.safe(chkReserva.bloqueio.r.CODIGO) + ') para esta retirada'], 'viagem urgente ao cliente; a reserva foi remanejada para outro veículo');
+    }
+  }
+
   var fotosSalvas = Array.isArray(payload.fotosSalvas) ? payload.fotosSalvas : Frota_uploadFotos_(veiculo.PLACA, payload.fotos);
   var checklistNormalizado = Frota_normalizarChecklist_(payload.checklist);
   Frota_validarQualidadeMovimentacao_(checklistNormalizado, fotosSalvas, 'retirada');
@@ -1156,6 +1186,11 @@ function Frota_apiIniciarViagem(sessionId, payload) {
     Frota_validarVeiculoRetirada_(veiculo);
     depois = conferir(veiculo);
     if (depois.motivos.length > regra.motivos.length) justificativa = Frota_exigirJustificativa_(payload.justificativa, depois.motivos);
+    // Reservas relidas dentro da trava: outra pessoa pode ter reservado o veículo agora há pouco.
+    if (reservasLigadas) {
+      chkReserva = FrotaRes_conferirRetirada_(veiculoId, SGO_UTILS.safe(condutorId), quandoSaida.quando.getTime(), prevista.ms);
+      if (chkReserva.bloqueio && !liberacao) return FrotaRes_respostaBloqueio_(chkReserva, veiculo, condutor, sessao, quandoSaida.quando.getTime(), prevista.ms, gestao);
+    }
 
     var pelaGestao = emNomeDeOutro || quandoSaida.retroativo || depois.dif < 0;
     registro = SGO_DATA.normalizarObjetoParaSheet(
@@ -1180,7 +1215,13 @@ function Frota_apiIniciarViagem(sessionId, payload) {
         MOTIVO_GESTAO_SAIDA: depois.motivos.join('; '),
         KM_VEICULO_NA_SAIDA: depois.kmAtual,
         KM_DIVERGENCIA_SAIDA: depois.dif !== 0 ? depois.dif : '',
-        FOTOS_PAINEL_SAIDA_JSON: fotosPainel.length ? JSON.stringify(fotosPainel) : ''
+        FOTOS_PAINEL_SAIDA_JSON: fotosPainel.length ? JSON.stringify(fotosPainel) : '',
+        DEVOLUCAO_PREVISTA_DATA: prevista ? FrotaRes_data_(prevista.ms) : '',
+        DEVOLUCAO_PREVISTA_HORA: prevista ? FrotaRes_hora_(prevista.ms) : '',
+        DEVOLUCAO_PREVISTA_ORIGEM: prevista ? prevista.origem : '',
+        RESERVA_ID: chkReserva && chkReserva.minha ? SGO_UTILS.safe(chkReserva.minha.r.ID) : '',
+        RESERVA_LIBERADA_ID: liberacao && chkReserva && chkReserva.bloqueio ? SGO_UTILS.safe(chkReserva.bloqueio.r.ID) : '',
+        RESERVA_LIBERADA_JUSTIFICATIVA: liberacao
       })
     );
     SGO_DATA.insert(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, registro);
@@ -1209,10 +1250,13 @@ function Frota_apiIniciarViagem(sessionId, payload) {
       ' e KM ' + Frota_kmTexto_(kmSaida) + '.\nJustificativa: ' + justificativa + '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Ao devolver o veículo, registre a devolução normalmente.',
       registro.ID);
   }
+  // Reservas (20/10/2026): a reserva do condutor vira "iniciada"; a liberação avisa quem tinha reservado. Nunca derruba a retirada.
+  var resRes = reservasLigadas ? FrotaRes_aposRetirada_(sessao, registro, veiculo, condutor, chkReserva, liberacao, prevista.ms) : {};
   // Rastreador (17/10/2026): libera a partida. Nunca derruba a retirada, que já está gravada.
   var rastreador = Frota_rastreadorAoRetirar_(sessao, veiculoId, registro.ID);
   return { ok: true, movimentacaoId: registro.ID, registroPelaGestao: registro.REGISTRO_GESTAO_SAIDA === 'SIM', kmDivergencia: depois.dif || 0,
-    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador };
+    data: quandoSaida.data, hora: quandoSaida.hora, horaDoServidor: quandoSaida.horaDoServidor, rastreador: rastreador,
+    devolucaoPrevista: prevista ? FrotaRes_txt_(prevista.ms) : '', reservaIniciada: resRes.reservaIniciada || '', reservaLiberada: resRes.reservaLiberada || '' };
 }
 
 function Frota_apiFinalizarViagem(sessionId, payload) {
@@ -1330,6 +1374,8 @@ function Frota_apiFinalizarViagem(sessionId, payload) {
       '\n\nConfira os dados na Frota. Se algo estiver errado, fale com ' + (sessao.nome || sessao.usuario) + ' ou com a gestão. Da próxima vez, registre a devolução assim que entregar o veículo.',
       movId);
   }
+  // Reservas (20/10/2026): reserva iniciada vira concluída; cobrança de atraso encerrada; o próximo reservante sabe que o veículo voltou.
+  if (typeof FrotaRes_aposDevolucao_ === 'function') FrotaRes_aposDevolucao_(sessao, mov, veiculo);
   // Rastreador (17/10/2026): bloqueio da partida fica pendente até o veículo estar parado com a ignição desligada.
   var rastreador = Frota_rastreadorAoDevolver_(sessao, veiculo.ID, movId);
   return { ok: true, registroPelaGestao: marcaGestao, alertaKm: alertaKm, data: quandoChegada.data, hora: quandoChegada.hora, horaDoServidor: quandoChegada.horaDoServidor, rastreador: rastreador };

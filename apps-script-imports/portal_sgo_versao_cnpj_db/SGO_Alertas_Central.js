@@ -101,6 +101,12 @@ var PEND_TIPOS = {
   frota_avaria: { modulo: 'frota', um: 'avaria de veículo sem tratamento', varios: 'avarias de veículos sem tratamento', rotulo: 'Tratar', fazer: 'abra o caso em Frota > Gestão e melhoria > Kanban', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   multa_vencida: { modulo: 'frota', um: 'multa vencida sem pagamento', varios: 'multas vencidas sem pagamento', rotulo: 'Vencida', fazer: 'pague ou recorra e atualize em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   multa_vencendo: { modulo: 'frota', um: 'multa a vencer', varios: 'multas a vencer', rotulo: 'A vencer', fazer: 'pague ou recorra antes do vencimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
+  // 20/10/2026 (reservas de veículo, SGO_Frota_Reservas.js): devolução atrasada com reserva a seguir, reserva com problema na conferência,
+  // lembrete da reserva próxima e avisos (liberada pela gestão, cancelada pela gestão, não utilizada).
+  frota_reserva_atraso: { modulo: 'frota', um: 'devolução atrasada com reserva a seguir', varios: 'devoluções atrasadas com reserva a seguir', rotulo: 'Reserva em risco', fazer: 'devolva o veículo ou troque a reserva por um veículo livre em Frota > Reservas', tela: { tipo: 'frota_reservas' }, origem: 'FROTA' },
+  frota_reserva_problema: { modulo: 'frota', um: 'reserva de veículo com problema', varios: 'reservas de veículo com problema', rotulo: 'Conferir reserva', fazer: 'troque o veículo da reserva em Frota > Reservas ou resolva o problema do veículo', tela: { tipo: 'frota_reservas' }, origem: 'FROTA' },
+  frota_reserva_proxima: { modulo: 'frota', um: 'reserva de veículo próxima', varios: 'reservas de veículo próximas', rotulo: 'Reserva', fazer: 'retire o veículo no horário ou cancele a reserva se não for usar', tela: { tipo: 'frota_reservas' }, origem: 'FROTA' },
+  frota_reserva_aviso: { modulo: 'frota', um: 'aviso sobre sua reserva de veículo', varios: 'avisos sobre suas reservas de veículo', rotulo: 'Informativo', fazer: 'confira em Frota > Reservas > Minhas reservas', tela: { tipo: 'frota_reservas' }, origem: 'FROTA' },
   frota_registro_gestao: { modulo: 'frota', um: 'registro da Frota feito pela gestão em seu nome', varios: 'registros da Frota feitos pela gestão em seu nome', rotulo: 'Informativo', fazer: 'confira os dados na Frota e fale com a gestão se algo estiver errado', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   atividade_atrasada: { modulo: 'atividades', um: 'atividade atrasada', varios: 'atividades atrasadas', rotulo: 'Atrasada', fazer: 'conclua ou justifique com a nova previsão', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
   atividade_hoje: { modulo: 'atividades', um: 'atividade vence hoje', varios: 'atividades vencem hoje', rotulo: 'Vence hoje', fazer: 'conclua até o horário previsto', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
@@ -599,6 +605,8 @@ function Pend_fonteFrota_(add) {
   if (typeof Frota_gestaoPendencias_ === 'function') { try { Frota_gestaoPendencias_(add); } catch (eG) { console.error('Pendências da gestão da Frota: ' + ((eG && eG.message) || eG)); } }
   // 20/10/2026: comprovante de abastecimento pedido ao condutor e não enviado no prazo (Frota > Rastreamento).
   if (typeof FrotaR_pendencias_ === 'function') { try { FrotaR_pendencias_(add); } catch (eR) { console.error('Pendências do rastreamento da Frota: ' + ((eR && eR.message) || eR)); } }
+  // 20/10/2026: reservas de veículo (atraso com reserva a seguir, conferência com problema, lembrete e avisos ao reservante).
+  if (typeof FrotaRes_pendencias_ === 'function') { try { FrotaRes_pendencias_(add); } catch (eRes) { console.error('Pendências das reservas da Frota: ' + ((eRes && eRes.message) || eRes)); } }
 
   // Registro feito pela gestão em nome do condutor: informativo para o condutor por 7 dias.
   var diasInfo = typeof FROTA_DIAS_AVISO_REGISTRO_GESTAO !== 'undefined' ? FROTA_DIAS_AVISO_REGISTRO_GESTAO : 7;

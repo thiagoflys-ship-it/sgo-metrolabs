@@ -4,6 +4,7 @@
  * Conferido contra a tela real (JS_Core.html, trecho da Frota, e SGO_Frota_ConteudoModulo.js) em 17/10/2026.
  * 19/10/2026 (revisão da Frota): abas reorganizadas, Gestão e melhoria, editar condutor, rastreador que se explica sozinho e KM rodado.
  * 20/10/2026: aba Rastreamento (mapa ao vivo, rotas, combustível e KM, relatórios, privacidade), Gantt e copiloto em Gestão e melhoria, comprovantes pedidos.
+ * 20/10/2026: reservas de veículo (aba Reservas, devolução prevista na retirada, retirada bloqueada por reserva e liberação pela gestão).
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -27,6 +28,7 @@ function SGO_ajudaTelas_Frota_() {
           "Olhe o veículo por fora e por dentro.",
           "Se estiver tudo certo, toque em \"Tudo OK\".",
           "Se achar algum problema, toque em \"Tem problema\", toque no item e escreva o que viu.",
+          "Em \"Devolução prevista\", confira a data e a hora em que você pretende devolver. Se você tem reserva deste veículo, já vem o fim da reserva.",
           "Toque em \"Confirmar retirada\".",
           "Espere o aviso \"Retirada registrada\"."
         ] },
@@ -80,10 +82,12 @@ function SGO_ajudaTelas_Frota_() {
         { situacao: "\"O veículo ... não está mais disponível. A lista foi atualizada.\"", oQueFazer: "Outra pessoa retirou antes. Escolha outro veículo." },
         { situacao: "\"Partida não liberada pelo rastreador\" (só quando o bloqueio da partida estiver ligado)", oQueFazer: "A retirada já está registrada. Não registre de novo. Ligue para a gestão, que libera a partida." },
         { situacao: "\"Não foi possível carregar a frota agora\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\". Se continuar, avise o administrador." },
+        { situacao: "\"Retirada não registrada: o veículo ... está reservado por ...\"", oQueFazer: "Outra pessoa reservou este veículo e a sua devolução prevista (mais a folga de 1 hora) passa do início da reserva dela. Toque num dos botões \"Retirar o ... em vez deste\" para levar um veículo livre, ou, se você devolve antes, corrija a devolução prevista e confirme de novo. Se precisar mesmo deste veículo, fale com a gestão: só ela libera, com justificativa, e quem reservou é avisado." },
+        { situacao: "Cartão do veículo com \"Reservado para ...\"", oQueFazer: "O veículo pode ser retirado só se você devolver até o horário mostrado em \"devolva até\". Se não, escolha outro veículo." },
         { situacao: "Esqueceu de devolver", oQueFazer: "Retirada aberta há mais de 12 horas aparece no Início como possível devolução esquecida. Devolva assim que puder ou avise a gestão." }
       ],
       quemPode: [
-        { perfil: "TODOS", pode: "Retirar em seu próprio nome e devolver a própria retirada. Ver a situação da frota, os avisos e o histórico." },
+        { perfil: "TODOS", pode: "Reservar veículo, retirar em seu próprio nome e devolver a própria retirada. Ver a situação da frota, a agenda das reservas, os avisos e o histórico." },
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: retirar em nome de outro condutor e devolver no lugar dele (com justificativa), informar outra data e hora, cadastrar veículos e condutores, ajustar KM, conferir KM, ver a trilha de auditoria, registrar manutenção, parada, documentos, multas e abastecimentos, consultar despesas, gerar relatório, usar o rastreador e tratar os casos e ver os indicadores em \"Gestão e melhoria\"." },
         { perfil: "ADMIN", pode: "Também o \"Levantamento de valores suspeitos\", na aba Abastecimentos e despesas." },
         { perfil: "CLIENTE", pode: "Não usa a Frota." }
@@ -94,6 +98,7 @@ function SGO_ajudaTelas_Frota_() {
         { p: "Posso escolher a data e a hora?", r: "Não. Vale a hora em que você confirma. Só a gestão pode informar outra, com justificativa." },
         { p: "Tirei a foto sem internet. Perdi?", r: "Não. O sistema tenta de novo sozinho em alguns segundos. Se ficar \"Não enviada\", toque na foto." },
         { p: "Toquei duas vezes em confirmar. Ficou em dobro?", r: "Não. O botão vira \"Registrando…\" e fica desligado. Se o pedido se repetir, aparece \"já estava registrada\" e nada é gravado em dobro." },
+        { p: "Para que serve a devolução prevista?", r: "Para proteger quem reservou o veículo depois de você. Se a devolução passar do início da próxima reserva, você recebe a cobrança no sistema e em Minhas atividades, e a gestão e quem reservou são avisados." },
         { p: "Para que serve a vistoria na devolução?", r: "Para comparar com a saída. Se um item saiu OK e voltou com problema, fica claro que aconteceu durante o uso." }
       ]
     },
@@ -623,6 +628,76 @@ function SGO_ajudaTelas_Frota_() {
           "p": "Como é calculado o consumo?",
           "r": "Pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. A média do veículo é a mediana de todo o histórico dele."
         }
+      ]
+    },
+
+    "frota/reservas": {
+      titulo: "Reservas de veículo",
+      paraQueServe: "Garantir o veículo para quem já tem compromisso marcado (viagem, atendimento no cliente). Com a reserva, ninguém chega para viajar e encontra o carro retirado por outra pessoa.",
+      antesDeComecar: [
+        "O seu login precisa estar ligado a um condutor, com a validade da CNH cadastrada e válida até o fim da reserva. Quem cadastra é a gestão, em Frota > Veículos e condutores > Condutores.",
+        "Reservas abrem com até 90 dias de antecedência e duram até 15 dias (a gestão pode mudar em Reservas > Regras).",
+        "A reserva não substitui a retirada: no horário, retire o veículo normalmente em \"Situação e retiradas\"."
+      ],
+      passos: [
+        { titulo: "Reservar um veículo", itens: [
+          "Abra a Frota, aba \"Reservas\" (no celular: botão \"Reservas: agenda e reservar um veículo\").",
+          "Toque em \"Reservar um veículo\", ou toque num espaço vazio da agenda no dia (e na hora) que você quer.",
+          "Preencha o início e a devolução prevista (data e hora).",
+          "Em \"Veículo\", o primeiro veículo livre no período já vem escolhido. Os ocupados aparecem na lista com o motivo.",
+          "Escreva o destino e o motivo. Passageiros e \"Ligar a\" (O.S. do Auvo, atividade ou cliente) são opcionais.",
+          "Toque em \"Reservar\". Aparece o código da reserva, por exemplo RV-2026-0001."
+        ] },
+        { titulo: "Ver a agenda", itens: [
+          "Na parte \"Agenda\", escolha \"Semana\" ou \"Dia\". Use \"‹ Anterior\", \"Hoje\" e \"Próximo ›\" para andar no tempo.",
+          "Cada linha é um veículo. Toque numa reserva para ver o detalhe."
+        ] },
+        { titulo: "Cancelar ou trocar o veículo", itens: [
+          "Abra \"Minhas reservas\".",
+          "Não vai usar? Toque em \"Cancelar reserva\", escreva o motivo e confirme. O veículo fica livre para quem precisa.",
+          "Para mudar de veículo, toque em \"Trocar veículo\" e escolha um dos livres no mesmo período."
+        ] },
+        { titulo: "No dia da reserva", itens: [
+          "Na véspera (último dia útil antes, a partir das 14:00) você recebe o lembrete no sistema e por e-mail, com o resultado da conferência do veículo.",
+          "A partir de 2 horas antes do início, retire o veículo em \"Situação e retiradas\". A reserva passa a \"em uso\" e, na devolução, a \"concluída\".",
+          "Sem retirada até 1 hora depois do início, a reserva vira \"não utilizada\" e o veículo fica livre."
+        ] },
+        { titulo: "Gestão: manutenção programada, reservar por outra pessoa, indicadores e regras", itens: [
+          "No formulário \"Reservar\", marque \"Manutenção programada\" para bloquear o veículo no período (sem condutor).",
+          "Para reservar em nome de outra pessoa, escolha o condutor. Ela é avisada.",
+          "\"Todas as reservas\": cancele com justificativa (a pessoa é avisada) ou troque o veículo quando houver problema.",
+          "\"Indicadores e relatório\": reservas cumpridas, não utilizadas, retiradas bloqueadas, liberações e atrasos que afetaram reserva; relatório A4 do mês em \"Gerar relatório\".",
+          "\"Regras\": folga, tolerância, antecipação, hora do lembrete, antecedência e duração máximas."
+        ] }
+      ],
+      cores: [
+        { nome: "Faixa verde", significado: "Sua reserva." },
+        { nome: "Faixa azul clara", significado: "Reserva de outra pessoa." },
+        { nome: "Faixa laranja", significado: "Manutenção programada: o veículo não pode ser reservado nem retirado." },
+        { nome: "Faixa azul forte", significado: "Veículo retirado agora." },
+        { nome: "Faixa vermelha", significado: "Devolução atrasada." },
+        { nome: "Faixa cinza", significado: "Parada registrada (oficina, acidente)." },
+        { nome: "Texto riscado", significado: "Reserva não utilizada." }
+      ],
+      problemas: [
+        { situacao: "\"O veículo ... não está livre de ...\"", oQueFazer: "O veículo já tem reserva, manutenção, parada ou retirada no período. Toque em um dos botões \"Reservar o ...\" com os livres, ou mude o horário." },
+        { situacao: "\"você já tem a reserva ... no mesmo horário\"", oQueFazer: "Uma pessoa não segura dois veículos ao mesmo tempo. Para mudar de veículo, use \"Trocar veículo\" em Minhas reservas." },
+        { situacao: "\"a CNH ... vence ... antes do fim da reserva\" ou \"a validade da CNH ... não está cadastrada\"", oQueFazer: "Peça à gestão para atualizar a validade da CNH em Frota > Veículos e condutores > Condutores > Editar, com a CNH nova anexada. Depois reserve de novo." },
+        { situacao: "Aviso \"o veículo da sua reserva foi liberado pela gestão\"", oQueFazer: "A sua reserva continua valendo, mas o veículo pode não voltar a tempo. Para garantir, troque o veículo em Minhas reservas." },
+        { situacao: "Aviso \"Reserva com problema\"", oQueFazer: "A conferência achou algo (parada, documento vencido, veículo fora). Troque o veículo em Minhas reservas ou fale com a gestão." },
+        { situacao: "Aviso \"O veículo da sua reserva ainda não voltou\"", oQueFazer: "Quem está com o veículo já foi cobrado e a gestão foi avisada. Se preferir garantir, troque o veículo por um livre." }
+      ],
+      quemPode: [
+        { perfil: "TODOS", pode: "Reservar em seu próprio nome, ver a agenda, cancelar e trocar o veículo das próprias reservas." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Também: reservar em nome de outra pessoa, lançar manutenção programada, cancelar ou trocar qualquer reserva (com justificativa; a pessoa é avisada), liberar uma retirada sobre reserva (na tela de retirada, com justificativa), ver indicadores, gerar o relatório A4 e mudar as regras." },
+        { perfil: "CLIENTE", pode: "Não usa a Frota." }
+      ],
+      perguntas: [
+        { p: "Preciso de aprovação para reservar?", r: "Não. A reserva vale assim que aparece o código." },
+        { p: "Alguém pode pegar o carro que eu reservei?", r: "Não. A retirada é recusada se a devolução prevista dela, mais 1 hora de folga, passar do início da sua reserva. Só a gestão pode liberar, com justificativa, e você é avisado na hora com a sugestão de outro veículo." },
+        { p: "E se quem está com o veículo atrasar?", r: "A pessoa recebe a cobrança no sistema e em Minhas atividades; você e a gestão são avisados, com os veículos livres para trocar." },
+        { p: "Recebo mensagem no WhatsApp?", r: "Só quando a reserva está em risco no mesmo dia, no horário de trabalho e no máximo uma mensagem por dia. O resto fica no sistema e no e-mail." },
+        { p: "Reserva cancelada some?", r: "Não. Canceladas, não utilizadas e concluídas ficam no histórico." }
       ]
     },
 

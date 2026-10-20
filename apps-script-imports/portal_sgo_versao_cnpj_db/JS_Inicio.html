@@ -329,6 +329,16 @@
         abrir("minhas_atividades");
         if (acao.id && typeof Atividades_abrirDetalhe_ === "function") setTimeout(function () { Atividades_abrirDetalhe_(acao.id); }, 300);
         break;
+      case "frota_reservas": {
+        // 20/10/2026: pendência das reservas de veículo abre a Frota na aba Reservas (no celular, a tela completa da Frota).
+        if (typeof fsAbrirFrotaCompleta_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) { fsAbrirFrotaCompleta_("reservas"); break; }
+        abrir("frota");
+        var nRes = 0, tRes = setInterval(function () {
+          if (typeof tplFrota_mostrarAba_ === "function" && document.querySelector("#tplFrotaContainer .frota-abas")) { clearInterval(tRes); tplFrota_mostrarAba_("reservas"); }
+          else if (++nRes > 80) clearInterval(tRes);
+        }, 250);
+        break;
+      }
       case "conduta_ciencia":
         if (typeof Conduta_verificarAvisos_ === "function") Conduta_verificarAvisos_(); else abrir("conduta");
         break;

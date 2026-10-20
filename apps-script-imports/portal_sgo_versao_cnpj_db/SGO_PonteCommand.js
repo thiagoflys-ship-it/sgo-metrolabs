@@ -98,6 +98,11 @@ function PonteCmd_tratar_(req) {
   if (/^frota\.(painel|pedidos)$/.test(String(req.acao || ""))) {
     return typeof FrotaR_ponte_ === "function" ? FrotaR_ponte_(String(req.acao), d) : { ok: false, erro: "Frota indisponível no SGO+." };
   }
+  // 20/10/2026: reservas de veículo no COMMAND (SGO_Frota_Reservas.js, FrotaRes_ponte_): ver a agenda (gestão), as minhas reservas,
+  // os veículos livres, reservar e cancelar, em nome do usuário do SGO+ ligado à conta, com as mesmas regras e a mesma trava.
+  if (/^frota\.reservas\.(painel|livres|criar|cancelar)$/.test(String(req.acao || ""))) {
+    return typeof FrotaRes_ponte_ === "function" ? FrotaRes_ponte_(String(req.acao), d) : { ok: false, erro: "Reservas da frota indisponíveis no SGO+." };
+  }
   if (/^atividades\.[a-z]+$/.test(String(req.acao || ""))) {
     return typeof Atividades_ponte_ === "function" ? Atividades_ponte_(String(req.acao), d) : { ok: false, erro: "Minhas atividades indisponível no SGO+." };
   }

@@ -801,6 +801,9 @@ function Frota_rastreadorRotina() {
   if (!SGO_execucaoInterna_()) return null;
   // LGPD: a limpeza do prazo de retenção roda mesmo com o rastreador desligado (não chama a empresa do rastreador).
   try { Rastreador_limparRetencao_(false); } catch (eL) { console.error('Retenção do rastreador: ' + ((eL && eL.message) || eL)); }
+  // 20/10/2026: reservas de veículo (não comparecimento, devolução atrasada com reserva a seguir, véspera, e-mails no expediente).
+  // Roda mesmo com o rastreador desligado; no máximo a cada 4 minutos (SGO_Frota_Reservas.js).
+  try { if (typeof FrotaRes_rodada_ === 'function') FrotaRes_rodada_({}); } catch (eRes) { console.error('Rotina das reservas da Frota: ' + ((eRes && eRes.message) || eRes)); }
   try { return Rastreador_rodada_({}); }
   catch (e) { console.error('Rotina do rastreador: ' + Rastreador_limpar_(e && e.message, Rastreador_cfg_())); return { erro: true }; }
 }

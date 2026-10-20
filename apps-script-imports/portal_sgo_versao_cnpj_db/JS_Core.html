@@ -2487,7 +2487,14 @@
       ".fs-desk .fs-barra{position:sticky;bottom:0;border-radius:10px;border:1px solid var(--bc-line)}",
       ".fs-desk{padding-bottom:16px}",
       ".fs-esq{height:84px;border-radius:10px}",
-      ".fs-rodape{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}"
+      ".fs-rodape{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+      // 20/10/2026 (reservas): selo da reserva no cartão do veículo, campos de data e hora nativos e a lista de livres
+      ".fs-res{display:block;font-size:12.5px;font-weight:700;margin-top:3px;color:#1f3a7a}",
+      ".fs-res.outra{color:var(--bc-warn)}.fs-res.minha{color:var(--bc-action)}",
+      ".fs input[type=date],.fs input[type=time]{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-strong);font-size:16px;box-sizing:border-box}",
+      ".fs-livres{display:flex;flex-direction:column;gap:8px;margin-top:8px}",
+      ".fs-check{display:flex;gap:10px;align-items:flex-start;font-size:15px;font-weight:700;color:var(--text-strong)}",
+      ".fs-check input{width:22px;height:22px;flex:0 0 auto;margin-top:2px}"
     ].join("\n");
     document.head.appendChild(st);
   }
@@ -2616,6 +2623,13 @@
       h += '<button type="button" class="fs-btn" data-acao="continuar">Continuar ' + (rascunho.tipo === "retirada" ? "a retirada do " : "a devolução do ") + fsEsc_(rascunho.placa) +
         (enviadas ? " (" + SGO_qtd_(enviadas, "foto enviada", "fotos enviadas") + ")" : "") + "</button>";
     }
+    // 20/10/2026 (reservas): as minhas próximas reservas e o atalho para a agenda (toda a equipe)
+    const res = d.reservas || null;
+    if (res && res.minhas && res.minhas.length) {
+      h += '<div class="fs-aviso info"><b>' + (res.minhas.length === 1 ? 'Sua reserva' : 'Suas reservas') + ':</b> ' + res.minhas.map(function (r) {
+        return fsEsc_(r.placa) + ' ' + fsEsc_(r.quando) + (r.destino ? ' (' + fsEsc_(r.destino) + ')' : '');
+      }).join('; ') + '. No horário, toque no veículo para retirar.</div>';
+    }
     if (semCondutor) h += '<div class="fs-aviso">Seu login ainda não tem condutor vinculado, então a retirada não pode ser registrada em seu nome. Peça à gestão (Administrador, Gestor ou Diretoria) para vincular o seu usuário em Frota &gt; Condutores e abra a Frota de novo.</div>';
     if (alertas.length) {
       h += alertas.length > 2
@@ -2625,7 +2639,7 @@
     h += '<div class="fs-titulo">' + (minhas.length ? "Retirar outro veículo" : "Retirar um veículo") + ' <span class="fs-sub">(' + SGO_qtd_(livres.length, "disponível", "disponíveis") + ")</span></div>";
     h += livres.length ? '<div class="fs-veics">' + livres.map(function (v) {
       return '<button type="button" class="fs-veic" data-acao="retirar" data-id="' + fsEsc_(v.id) + '"' + (semCondutor ? ' aria-disabled="true"' : "") + ">" + fsFotoVeicHtml_(v) +
-        '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(v.placa) + '</span><span class="fs-modelo">' + fsEsc_([v.modelo, v.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">KM ' + fsEsc_(fsKm_(v.km)) + "</span></span>" +
+        '<span class="fs-veic-txt"><span class="fs-placa">' + fsEsc_(v.placa) + '</span><span class="fs-modelo">' + fsEsc_([v.modelo, v.cor].filter(Boolean).join(" · ")) + '</span><span class="fs-km">KM ' + fsEsc_(fsKm_(v.km)) + "</span>" + fsReservaSelo_(v) + "</span>" +
         '<span class="fs-seta" aria-hidden="true">&rsaquo;</span></button>';
     }).join("") + "</div>"
       : '<div class="fs-aviso info">Nenhum veículo disponível agora. Os veículos em uso aparecem abaixo; quando alguém devolver, ele volta para esta lista (a tela se atualiza sozinha).</div>';
@@ -2644,6 +2658,7 @@
         '<button type="button" class="fs-btn" data-acao="completa" data-aba="rastreador">Rastreamento: mapa, rotas, combustível e relatórios</button>' +
         '<button type="button" class="fs-btn" data-acao="completa" data-aba="gestao">Gestão e melhoria: Kanban, Gantt e copiloto</button></div></details>';
     }
+    h += '<button type="button" class="fs-btn" data-acao="reservas">Reservas: agenda e reservar um veículo</button>';
     h += '<div id="fs_pedidosComp"></div>';
     const hora = new Date(FS.inicioEm || Date.now());
     h += '<div class="fs-rodape">Atualizado às ' + ("0" + hora.getHours()).slice(-2) + ":" + ("0" + hora.getMinutes()).slice(-2) + '<button type="button" class="fs-link" data-acao="recarregar">Atualizar agora</button></div>';
@@ -2661,6 +2676,46 @@
       el.innerHTML = '<div class="fs-aviso">A gestão pediu ' + (r.itens.length === 1 ? 'o comprovante de um abastecimento' : 'comprovantes de ' + r.itens.length + ' abastecimentos') + ' (veículo ' + fsEsc_(r.itens.map(function (p) { return p.placa; }).join(', ')) + ').' +
         '<button type="button" class="fs-btn" data-acao="completa" data-aba="despesas">Enviar comprovante</button></div>';
     }).withFailureHandler(function () {}).Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: "apiRastrMeusPedidos", payload: {} });
+  }
+
+  // 20/10/2026 (reservas): selo no cartão do veículo com a próxima reserva (de quem e quando).
+  function fsReservaSelo_(v) {
+    const r = v && v.reserva;
+    if (!r) return "";
+    if (r.minha) return '<span class="fs-res minha">Sua reserva: ' + fsEsc_(r.periodo) + "</span>";
+    return '<span class="fs-res outra">' + (r.manutencao ? "Manutenção programada " : "Reservado para " + fsEsc_(r.quem) + " ") + fsEsc_(r.quando) + " · devolva até " + fsEsc_(r.devolverAte) + "</span>";
+  }
+  function fsAbrirReservas_() {
+    if (fsNoComputador_() && typeof tplFrota_mostrarAba_ === "function") { tplFrota_mostrarAba_("reservas"); const b = document.querySelector('#tplFrotaContainer .frota-aba-btn[data-aba="reservas"]'); if (b) b.scrollIntoView({ block: "start" }); return; }
+    fsAbrirFrotaCompleta_("reservas");
+  }
+  function fsIsoDeBr_(br) { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(br || "")); return m ? m[3] + "-" + m[2] + "-" + m[1] : ""; }
+  function fsBrDeIso_(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || "")); return m ? m[3] + "/" + m[2] + "/" + m[1] : ""; }
+  /** Devolução prevista sugerida: o fim da minha reserva; senão o fim do expediente de hoje, ou 2 horas depois de agora. */
+  function fsPrevistaPadrao_(v) {
+    const d = FS.inicio || {}, res = d.reservas || {};
+    if (v && v.reserva && v.reserva.minha) return { data: v.reserva.fimData, hora: v.reserva.fimHora };
+    const hoje = res.agoraData || "", agora = res.agoraHora || "", fim = res.fimExpediente || "17:30";
+    const min = function (h) { const m = /^(\d{2}):(\d{2})$/.exec(h || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+    const a = min(agora), f = min(fim);
+    if (a !== null && f !== null && a <= f - 60) return { data: hoje, hora: fim };
+    if (a === null) return { data: hoje, hora: fim };
+    let x = Math.ceil((a + 120) / 30) * 30;
+    if (x >= 1440) x = 1439;
+    return { data: hoje, hora: ("0" + Math.floor(x / 60)).slice(-2) + ":" + ("0" + (x % 60)).slice(-2) };
+  }
+  function fsBloqueioReserva_(f, res) {
+    FS.enviando = false;
+    f.bloqueio = res.reserva || {};
+    f.bloqueioMsg = res.message || "";
+    f.livres = res.livres || [];
+    f.podeLiberar = !!res.podeLiberar;
+    fsDesenharFluxo_();
+    const el = document.getElementById("fs_status");
+    if (!el) return;
+    el.innerHTML = '<div class="fs-aviso erro" role="alert">' + fsEsc_(f.bloqueioMsg) + "</div>" +
+      (f.livres.length ? '<div class="fs-livres">' + f.livres.slice(0, 5).map(function (l) { return '<button type="button" class="fs-btn" data-acao="trocarRetirada" data-id="' + fsEsc_(l.id) + '">Retirar o ' + fsEsc_(l.placa) + (l.modelo ? " (" + fsEsc_(l.modelo) + ")" : "") + " em vez deste</button>"; }).join("") + "</div>" : "");
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
   function fsAbrirFrotaCompleta_(abaId) {
@@ -2685,6 +2740,8 @@
     if (acao === "ajustarKm") { renderMobileFrotaAjustarKm_(); return; }
     if (acao === "partida") { renderMobileFrotaPartida_(); return; }
     if (acao === "completa") { fsAbrirFrotaCompleta_(alvo.getAttribute("data-aba") || "situacao"); return; }
+    if (acao === "reservas") { fsAbrirReservas_(); return; }
+    if (acao === "trocarRetirada") { const f0 = FS.fluxo; if (f0) { f0.fotos.concat(f0.painel).forEach(function (x) { x.removida = true; if (x.url) URL.revokeObjectURL(x.url); }); } FS.fluxo = null; fsAbrirRetirada_(id); return; }
     if (acao === "vistoria") { fsVistoria_(alvo.getAttribute("data-v")); return; }
     if (acao === "item") { fsAlternarItem_(alvo); return; }
     if (acao === "removerFoto") { ev.preventDefault(); ev.stopPropagation(); fsRemoverFoto_(id); return; }
@@ -2696,7 +2753,7 @@
   // ---- fluxo (retirada / devolução) ----
   function fsNovoFluxo_(tipo, o) {
     return Object.assign({ tipo: tipo, fotos: [], painel: [], vistoria: "", problemas: {}, km: "", kmTocado: false, finalidade: "", observacoes: "",
-      condutorId: "", data: "", hora: "", justificativa: "", miniatura: null, concluido: false }, o);
+      condutorId: "", data: "", hora: "", justificativa: "", miniatura: null, concluido: false, prevData: "", prevHora: "", liberarReserva: false, bloqueio: null, livres: [], podeLiberar: false }, o);
   }
   function fsAbrirRetirada_(veiculoId) {
     const d = FS.inicio || {};
@@ -2705,7 +2762,8 @@
     if (!d.condutor && !d.gestor) { fsDesenharInicio_(); const r = fsRaiz_(); if (r) r.scrollIntoView({ block: "start" }); return; }
     if (v.situacao !== "DISPONIVEL") { alert("O veículo " + v.placa + " não está mais disponível. A lista foi atualizada."); FS.inicioEm = 0; renderMobileFrotaOperacional_(); return; }
     if (!(FS.fluxo && !FS.fluxo.concluido && FS.fluxo.tipo === "retirada" && FS.fluxo.veiculo.id === v.id)) {
-      FS.fluxo = fsNovoFluxo_("retirada", { veiculo: v, placa: v.placa, km: fsKm_(v.km), condutorId: d.condutor ? d.condutor.id : "" });
+      const pp = fsPrevistaPadrao_(v);
+      FS.fluxo = fsNovoFluxo_("retirada", { veiculo: v, placa: v.placa, km: fsKm_(v.km), condutorId: d.condutor ? d.condutor.id : "", prevData: pp.data, prevHora: pp.hora });
     }
     fsDesenharFluxo_();
   }
@@ -2774,6 +2832,14 @@
       '<div class="fs-sub" id="fs_vistInfo">' + (f.vistoria === "ok" ? "Todos os itens serão gravados como OK." : (f.vistoria === "problema" ? (nProb ? SGO_qtd_(nProb, "item marcado", "itens marcados") + " com problema." : "Toque nos itens com problema e escreva o que encontrou.") : "")) + "</div></section>";
     // Complementos opcionais
     if (ret) {
+      // 20/10/2026 (reservas): a devolução prevista é o que garante a reserva de quem vem depois
+      const rv = f.veiculo.reserva;
+      h += '<section class="fs-passo" id="fsPassoPrev"><h3><span class="fs-num">4</span>Devolução prevista</h3>' +
+        (rv && rv.minha ? '<div class="fs-aviso ok">Sua reserva ' + fsEsc_(rv.codigo) + ": " + fsEsc_(rv.periodo) + ". A retirada fica ligada a ela.</div>" : "") +
+        (rv && !rv.minha ? '<div class="fs-aviso">' + (rv.manutencao ? "Este veículo tem manutenção programada " : "Este veículo está reservado para " + fsEsc_(rv.quem) + " ") + fsEsc_(rv.quando) + ". Devolva até " + fsEsc_(rv.devolverAte) + " (folga de " + fsEsc_((FS.inicio.reservas || {}).folgaMin || 60) + " min) ou escolha outro veículo.</div>" : "") +
+        '<div class="fs-duas"><div class="fs-campo"><label for="fs_prevData">Data</label><input type="date" id="fs_prevData" value="' + fsEsc_(fsIsoDeBr_(f.prevData)) + '"></div>' +
+        '<div class="fs-campo"><label for="fs_prevHora">Hora</label><input type="time" id="fs_prevHora" value="' + fsEsc_(f.prevHora) + '"></div></div>' +
+        '<div class="fs-sub">Quando você pretende devolver. Se mudar, avise a gestão: quem reservou o veículo depois conta com este horário.</div></section>';
       h += '<div class="fs-campo"><label for="fs_finalidade">Finalidade (opcional)</label><input type="text" id="fs_finalidade" value="' + fsEsc_(f.finalidade) + '" placeholder="Ex.: visita técnica ao cliente"></div>';
     } else {
       h += '<details id="fs_maisDev"' + (f.fotos.length || f.observacoes ? " open" : "") + '><summary>Mais fotos e observações (opcional)</summary><div class="fs-det">' +
@@ -2783,7 +2849,7 @@
     }
     // Opções da gestão (recolhido)
     if (gestao) {
-      const abrir = noLugar || semCondutorProprio || !!(f.data || f.hora || f.justificativa) || (ret && d.condutor && f.condutorId && f.condutorId !== d.condutor.id);
+      const abrir = noLugar || semCondutorProprio || !!(f.data || f.hora || f.justificativa) || (ret && d.condutor && f.condutorId && f.condutorId !== d.condutor.id) || (ret && f.podeLiberar);
       h += '<details id="fs_gestao"' + (abrir ? " open" : "") + '><summary>Opções da gestão</summary><div class="fs-det">' +
         (semCondutorProprio ? '<div class="fs-aviso">Seu login não tem condutor vinculado: escolha o condutor desta retirada e escreva a justificativa.</div>' : "") +
         (ret ? '<div class="fs-campo"><label for="fs_condutor">Condutor</label><select id="fs_condutor"><option value="">Escolha o condutor</option>' + (d.condutores || []).map(function (c) {
@@ -2791,6 +2857,7 @@
         }).join("") + "</select></div>" : "") +
         '<div class="fs-duas"><div class="fs-campo"><label for="fs_data">Data (vazio = agora)</label><input type="text" id="fs_data" inputmode="numeric" placeholder="dd/mm/aaaa" value="' + fsEsc_(f.data) + '"></div>' +
         '<div class="fs-campo"><label for="fs_hora">Hora (vazio = agora)</label><input type="text" id="fs_hora" inputmode="numeric" placeholder="hh:mm" value="' + fsEsc_(f.hora) + '"></div></div>' +
+        (ret && f.podeLiberar ? '<label class="fs-check"><input type="checkbox" id="fs_liberar"' + (f.liberarReserva ? " checked" : "") + '> Liberar mesmo com a reserva ' + fsEsc_(f.bloqueio && f.bloqueio.codigo || "") + ' (quem reservou é avisado na hora; escreva a justificativa abaixo)</label>' : "") +
         '<div class="fs-campo"><label for="fs_just">Justificativa</label><textarea id="fs_just" placeholder="Obrigatória (mínimo de 15 caracteres) para outro condutor, data/hora diferente de agora ou devolução no lugar do condutor">' + fsEsc_(f.justificativa) + "</textarea></div></div></details>";
     } else {
       h += '<div class="fs-sub">Registro com a hora atual do servidor (horário de Brasília) no momento em que você confirmar.</div>';
@@ -2871,11 +2938,16 @@
     else if (t.id === "fs_data") f.data = t.value;
     else if (t.id === "fs_hora") f.hora = t.value;
     else if (t.id === "fs_just") f.justificativa = t.value;
+    else if (t.id === "fs_prevData") { f.prevData = fsBrDeIso_(t.value); fsAtualizarBarra_(); }
+    else if (t.id === "fs_prevHora") { f.prevHora = t.value; fsAtualizarBarra_(); }
     else if (t.classList.contains("fs-obs")) { const k = t.getAttribute("data-obs"); if (f.problemas[k]) f.problemas[k].obs = t.value; fsAtualizarBarra_(); }
   }
   function fsAoMudar_(ev) {
     const f = FS.fluxo, t = ev.target; if (!f || !t) return;
     if (t.id === "fs_condutor") { f.condutorId = t.value; return; }
+    if (t.id === "fs_liberar") { f.liberarReserva = !!t.checked; return; }
+    if (t.id === "fs_prevData") { f.prevData = fsBrDeIso_(t.value); fsAtualizarBarra_(); return; }
+    if (t.id === "fs_prevHora") { f.prevHora = t.value; fsAtualizarBarra_(); return; }
     if (t.type === "file") {
       const arquivos = Array.prototype.slice.call(t.files || []).slice(0, 10);
       const destino = t.getAttribute("data-destino") === "painel" ? "painel" : "fotos";
@@ -3122,6 +3194,7 @@
       else if (ks.some(function (k) { return !String(f.problemas[k].obs || "").trim(); })) p.push("escrever o que tem em cada item com problema");
     }
     if (f.tipo === "retirada" && d.gestor && !f.condutorId) p.push("o condutor (Opções da gestão)");
+    if (f.tipo === "retirada" && (!/^\d{2}\/\d{2}\/\d{4}$/.test(f.prevData || "") || !/^\d{2}:\d{2}$/.test(f.prevHora || ""))) p.push("a devolução prevista (data e hora)");
     return p;
   }
   function fsAtualizarBarra_() {
@@ -3173,7 +3246,8 @@
     const payload = ret ? {
       veiculoId: f.veiculo.id, condutorId: gestao ? f.condutorId : (d.condutor ? d.condutor.id : ""), kmSaida: String(f.km).trim(),
       dataSaida: gestao ? String(f.data || "").trim() : "", horaSaida: gestao ? String(f.hora || "").trim() : "",
-      finalidade: String(f.finalidade || "").trim(), justificativa: gestao ? String(f.justificativa || "").trim() : "", checklist: fsChecklist_(f)
+      finalidade: String(f.finalidade || "").trim(), justificativa: gestao ? String(f.justificativa || "").trim() : "", checklist: fsChecklist_(f),
+      devolucaoPrevistaData: f.prevData, devolucaoPrevistaHora: f.prevHora, liberarReserva: !!(gestao && f.liberarReserva)
     } : {
       movimentacaoId: f.mov.id, kmChegada: String(f.km).trim(),
       dataChegada: gestao ? String(f.data || "").trim() : "", horaChegada: gestao ? String(f.hora || "").trim() : "",
@@ -3204,6 +3278,7 @@
       f.msFotosNoConfirmar = Date.now() - t0;
       return mobileFrota_chamarApiSilencioso_(ret ? "apiIniciarViagem" : "apiFinalizarViagem", payload);
     }).then(function (res) {
+      if (res && res.bloqueadoPorReserva) { fsBloqueioReserva_(f, res); return; }
       if (!res || res.ok !== true) throw new Error((res && res.message) || "O servidor não confirmou o registro.");
       fsConcluido_(f, res, payload);
     }).catch(function (err) {
@@ -3259,7 +3334,7 @@
     const rt = res.rastreador || {};
     const quando = res.data ? " · " + res.data + " " + res.hora : "";
     if (ret) {
-      frotaToastEnvio_(!rt.aviso, "Retirada registrada", f.placa + quando + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
+      frotaToastEnvio_(!rt.aviso, "Retirada registrada", f.placa + quando + (res.devolucaoPrevista ? " · devolução prevista " + res.devolucaoPrevista : "") + (res.reservaIniciada ? " · reserva " + res.reservaIniciada + " em uso" : "") + (res.reservaLiberada ? " · reserva " + res.reservaLiberada + " liberada (quem reservou foi avisado)" : "") + (res.kmDivergencia ? " · KM diferente do registrado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));
       if (rt.aviso) MOBILE_FROTA.avisoRastreador = rt.aviso + " A retirada já está registrada: não registre de novo.";
     } else {
       frotaToastEnvio_(true, "Devolução registrada", f.placa + quando + (res.alertaKm ? " · KM fora do esperado: a gestão vai conferir" : "") + (res.registroPelaGestao ? " · registrada pela gestão" : "") + (rt.texto ? " · " + rt.texto : ""));

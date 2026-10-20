@@ -27,6 +27,9 @@
  *             só em dia útil e no horário de trabalho (SGO_Expediente.js) e no máximo UMA mensagem por
  *             pessoa por dia (conferido em NTF_ENVIOS: ORIGEM começando por ATIVIDADES, canal whatsapp, OK).
  *             E-mail não é barrado aqui: os e-mails de atividades já saem só no expediente (fila em ATV_AVISOS).
+ *     categoria: 'FROTA_RESERVAS' — (20/10/2026) WhatsApp das reservas de veículo (SGO_Frota_Reservas.js): a mesma regra
+ *             sutil (vínculo liberado, padrão CLT; dia útil e horário de trabalho; no máximo UMA mensagem de reservas por
+ *             pessoa por dia, ORIGEM começando por FROTA_RESERVAS). Só é pedido quando a reserva está em risco no mesmo dia.
  *   })
  *
  * Canais:
@@ -452,13 +455,31 @@ function Notificar_motivoAtividadesWhatsapp_(contato, enviadosHoje, agora) {
   return '';
 }
 
+/** Categoria FROTA_RESERVAS (20/10/2026): mesma regra sutil das atividades, com limite próprio (uma por pessoa por dia). */
+var NTF_MOTIVO_FROTA_LIMITE = 'limite de uma mensagem de reservas da Frota por dia pelo WhatsApp já atingido hoje';
+function Notificar_motivoFrotaReservasWhatsapp_(contato, enviadosHoje, agora) {
+  var cfg = typeof Atividades_avisosCfg_ === 'function' ? Atividades_avisosCfg_() : { vinculosWhatsapp: ['CLT'] };
+  var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
+  var lib = (cfg.vinculosWhatsapp || ['CLT']).map(function (x) { return String(x).toUpperCase(); });
+  if (lib.indexOf(v || 'VAZIO') < 0) {
+    return v === 'PJ' ? 'PJ: avisos de reserva da Frota não vão pelo WhatsApp (seguem no sistema e por e-mail)'
+      : (v ? 'vínculo ' + v + ' fora da lista do WhatsApp' : 'vínculo de trabalho não informado (Administração > Usuários > Vínculo); o aviso segue no sistema e por e-mail');
+  }
+  if (typeof SGO_dentroDoExpediente_ === 'function') {
+    var ex = SGO_dentroDoExpediente_(agora || new Date());
+    if (!ex.dentro) return 'fora do expediente (' + ex.motivo + '); WhatsApp de reservas só em dia útil e no horário de trabalho';
+  }
+  if (contato && enviadosHoje && enviadosHoje[String(contato.id)]) return NTF_MOTIVO_FROTA_LIMITE;
+  return '';
+}
+
 /** Quem já recebeu hoje (fuso da empresa) mensagem de atividades pelo WhatsApp: { usuárioId: true }. */
-function Notificar_whatsAtividadesHoje_() {
+function Notificar_whatsAtividadesHoje_(prefixo) {
   var hoje = Utilities.formatDate(new Date(), NTF_FUSO, 'yyyy-MM-dd'), mapa = {};
   try {
     SGO_DATA.getAll(Notificar_aba_()).forEach(function (r) {
       if (String(r.CANAL || '').toLowerCase() !== 'whatsapp' || String(r.SITUACAO || '').toUpperCase() !== 'OK') return;
-      if (String(r.ORIGEM || '').toUpperCase().indexOf('ATIVIDADES') !== 0) return;
+      if (String(r.ORIGEM || '').toUpperCase().indexOf(prefixo || 'ATIVIDADES') !== 0) return;
       var q = r.QUANDO;
       var dia = Object.prototype.toString.call(q) === '[object Date]' ? Utilities.formatDate(q, NTF_FUSO, 'yyyy-MM-dd') : String(q || '').slice(0, 10);
       if (dia === hoje) mapa[String(r.USUARIO_ID || '')] = true;
@@ -559,6 +580,11 @@ function SGO_notificar_(opcoes) {
             if (whatsAtvHoje === null) whatsAtvHoje = Notificar_whatsAtividadesHoje_();
             var barradoAtv = Notificar_motivoAtividadesWhatsapp_(c, whatsAtvHoje);
             if (barradoAtv) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoAtv); return; }
+          }
+          if (categoria === 'FROTA_RESERVAS' && canal === 'whatsapp') {
+            if (whatsAtvHoje === null) whatsAtvHoje = Notificar_whatsAtividadesHoje_('FROTA_RESERVAS');
+            var barradoRes = Notificar_motivoFrotaReservasWhatsapp_(c, whatsAtvHoje);
+            if (barradoRes) { registrar(uid, c.nome, canal, c.telefone, 'PULADO', barradoRes); return; }
           }
           var jaFoi = cacheDup ? cacheDup.get(chaveDup(uid, canal)) : null;
           if (jaFoi) { registrar(uid, c.nome, canal, canal === 'email' ? c.email : c.telefone, 'PULADO', 'Mesma mensagem já enviada a esta pessoa por este canal às ' + String(jaFoi).split('|')[0] + ' (origem ' + (String(jaFoi).split('|')[1] || 'SGO+') + '); não foi repetida.'); return; }

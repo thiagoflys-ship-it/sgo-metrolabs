@@ -65,6 +65,12 @@ var FROTAR_TELA_CSS = [
   '.frr-g-barra{position:absolute;top:7px;height:20px;border-radius:5px;color:#fff;font-size:10.5px;line-height:20px;padding:0 5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;box-sizing:border-box;min-width:6px}',
   '.frr-g-barra.RETIRADA{background:#1f5fa8}.frr-g-barra.PARADA{background:#7b8794}.frr-g-barra.ACAO{background:#7b4fb0}.frr-g-barra.ACAO.ok{background:#1d6b3f}.frr-g-barra.ACAO.vencida{background:#a61b1b}',
   '.frr-g-barra.andamento{border:2px dashed #fff;outline:1px solid #1f5fa8}',
+  // 20/10/2026 (reservas): planejado (reserva, manutenção programada) na faixa de cima; realizado (retirada) na de baixo
+  '.frr-g-linha.dupla{min-height:50px}',
+  '.frr-g-barra.RESERVA,.frr-g-barra.MANUT_PROG{top:4px;height:18px;line-height:18px;background:#e8eefc;color:#1f3a7a;border:1px dashed #1f5fa8}',
+  '.frr-g-barra.MANUT_PROG{background:#fdecd8;color:#7a3c06;border-color:#b45309}',
+  '.frr-g-barra.RESERVA.ok{background:#e3f5ec;color:#0f6b43;border-color:#1d6b3f}.frr-g-barra.RESERVA.vencida{background:#fde8e8;color:#9b1c1c;border-color:#a61b1b}',
+  '.frr-g-linha.dupla .frr-g-barra:not(.RESERVA):not(.MANUT_PROG){top:26px}.frr-g-linha.dupla .frr-g-marco{top:28px}',
   '.frr-g-marco{position:absolute;top:9px;width:14px;height:14px;transform:translateX(-7px) rotate(45deg);cursor:pointer;border:1px solid #fff}',
   '.frr-g-marco.MANUTENCAO{background:#b45309}.frr-g-marco.DOCUMENTO{background:#0f8b8d}.frr-g-marco.vencida{background:#a61b1b}',
   '.frr-g-hoje{position:absolute;top:0;bottom:0;border-left:2px solid #a61b1b;z-index:1}',
@@ -78,7 +84,10 @@ var FROTAR_TELA_CSS = [
 ].join('\n');
 
 function Frota_obterTelaRastreamento() {
-  return { css: FROTAR_TELA_CSS, js: '(' + FrotaR_telaNavegador_.toString() + ')();' };
+  var t = { css: FROTAR_TELA_CSS, js: '(' + FrotaR_telaNavegador_.toString() + ')();' };
+  // 20/10/2026: a tela das reservas (SGO_Frota_ReservasTela.js) vem junto, na mesma chamada.
+  if (typeof Frota_telaReservas_ === 'function') { var r = Frota_telaReservas_(); t.css += '\n' + r.css; t.js += '\n' + r.js; }
+  return t;
 }
 
 function FrotaR_telaNavegador_() {
@@ -517,7 +526,7 @@ function FrotaR_telaNavegador_() {
     if (!corpo) return;
     corpo.classList.remove('muted');
     var de = R.gantt.de || diasBr(-7), ate = R.gantt.ate || diasBr(30);
-    corpo.innerHTML = '<div class="frr-faixa"><strong>Como usar:</strong> cada linha é um veículo. Barras azuis são retiradas (tracejada: em andamento), cinzas são paradas; losangos marcam manutenção prevista (pela data ou pelo KM) e documento que vence; a última linha mostra as ações dos planos. Toque numa barra para ver o detalhe. A linha vermelha é hoje.</div>' +
+    corpo.innerHTML = '<div class="frr-faixa"><strong>Como usar:</strong> cada linha é um veículo. Na faixa de cima ficam as reservas e a manutenção programada (o planejado: verde quando a reserva foi cumprida, vermelha quando ficou sem uso); na de baixo, as retiradas (o realizado: barras azuis, tracejada em andamento) e as paradas (cinzas); losangos marcam manutenção prevista (pela data ou pelo KM) e documento que vence; a última linha mostra as ações dos planos. Toque numa barra para ver o detalhe. A linha vermelha é hoje.</div>' +
       '<div class="frr-filtros"><div><label for="frr_gDe">De</label><input id="frr_gDe" value="' + esc(de) + '"></div><div><label for="frr_gAte">Até</label><input id="frr_gAte" value="' + esc(ate) + '"></div><div><button type="button" class="btn" id="frr_gAtualizar">Atualizar</button></div></div>' +
       '<div id="frr_gRes"><span class="muted">Carregando...</span></div><div id="frr_gDetalhe" class="frr-meta" aria-live="polite"></div>';
     el('frr_gAtualizar').onclick = function () { R.gantt.de = val('frr_gDe'); R.gantt.ate = val('frr_gAte'); window.tplFrotaR_gantt_(corpo); };
@@ -535,7 +544,8 @@ function FrotaR_telaNavegador_() {
     var hoje = r.hoje >= r.de && r.hoje <= r.ate ? '<div class="frr-g-hoje" style="left:' + pct(r.hoje).toFixed(2) + '%"></div>' : '';
     var detalhes = [];
     var linhas = r.linhas.map(function (l) {
-      return '<div class="frr-g-linha"><div class="frr-g-rot">' + esc(l.placa) + '<small>' + esc(l.modelo) + '</small></div><div class="frr-g-trilho">' + hoje +
+      var dupla = l.itens.some(function (it) { return it.tipo === 'RESERVA' || it.tipo === 'MANUT_PROG'; });
+      return '<div class="frr-g-linha' + (dupla ? ' dupla' : '') + '"><div class="frr-g-rot">' + esc(l.placa) + '<small>' + esc(l.modelo) + '</small></div><div class="frr-g-trilho">' + hoje +
         l.itens.map(function (it) {
           var k = detalhes.push(it.detalhe) - 1;
           if (it.ini === it.fim) return '<span class="frr-g-marco ' + it.tipo + (it.vencida ? ' vencida' : '') + '" style="left:' + pct(it.ini).toFixed(2) + '%" title="' + esc(it.detalhe) + '" data-frr-gd="' + k + '" tabindex="0" role="button" aria-label="' + esc(it.detalhe) + '"></span>';
@@ -543,7 +553,7 @@ function FrotaR_telaNavegador_() {
           return '<span class="frr-g-barra ' + it.tipo + (it.emAndamento ? ' andamento' : '') + (it.concluida ? ' ok' : '') + (it.vencida ? ' vencida' : '') + '" style="left:' + l0.toFixed(2) + '%;width:' + w.toFixed(2) + '%" title="' + esc(it.detalhe) + '" data-frr-gd="' + k + '" tabindex="0" role="button">' + esc(it.rotulo) + '</span>';
         }).join('') + '</div></div>';
     }).join('');
-    alvo.innerHTML = '<div class="frr-leg-g"><span><i style="background:#1f5fa8"></i>Retirada</span><span><i style="background:#7b8794"></i>Parada</span><span><i style="background:#b45309"></i>Manutenção prevista</span><span><i style="background:#0f8b8d"></i>Documento vence</span><span><i style="background:#7b4fb0"></i>Ação de plano</span><span><i style="background:#a61b1b"></i>Vencido / hoje</span></div>' +
+    alvo.innerHTML = '<div class="frr-leg-g"><span><i style="background:#e8eefc;border:1px dashed #1f5fa8"></i>Reserva (planejado)</span><span><i style="background:#e3f5ec;border:1px dashed #1d6b3f"></i>Reserva cumprida</span><span><i style="background:#fde8e8;border:1px dashed #a61b1b"></i>Reserva não utilizada</span><span><i style="background:#fdecd8;border:1px dashed #b45309"></i>Manutenção programada</span><span><i style="background:#1f5fa8"></i>Retirada (realizado)</span><span><i style="background:#7b8794"></i>Parada</span><span><i style="background:#b45309"></i>Manutenção prevista</span><span><i style="background:#0f8b8d"></i>Documento vence</span><span><i style="background:#7b4fb0"></i>Ação de plano</span><span><i style="background:#a61b1b"></i>Vencido / hoje</span></div>' +
       '<div class="frr-gantt-rolar"><div class="frr-gantt" style="min-width:' + Math.max(600, 130 + dias * 22) + 'px"><div class="frr-g-linha frr-g-cab"><div class="frr-g-rot">Veículo</div><div class="frr-g-trilho">' + cab + '</div></div>' +
       (linhas || '<p class="muted" style="padding:10px">Nenhum veículo ativo.</p>') + '</div></div><p class="frr-meta">' + esc(r.nota) + '</p>';
     Array.prototype.forEach.call(alvo.querySelectorAll('[data-frr-gd]'), function (b) {

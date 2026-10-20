@@ -221,6 +221,11 @@ function Cndq_coletarFrota_(usuarios, desde, avisos) {
     try { saida = saida.concat(FrotaR_sugestoesConduta_(desde, usuarioDoCondutor, avisos) || []); }
     catch (eR) { avisos.push('Rastreamento da Frota não foi lido: ' + String((eR && eR.message) || eR)); }
   }
+  // 20/10/2026 (reservas): devolução atrasada que prejudicou reserva de outra pessoa (sempre sugestão; retirada liberada pela gestão não entra).
+  if (typeof FrotaRes_sugestoesConduta_ === 'function') {
+    try { saida = saida.concat(FrotaRes_sugestoesConduta_(desde, usuarioDoCondutor) || []); }
+    catch (eRes) { avisos.push('Reservas da Frota não foram lidas: ' + String((eRes && eRes.message) || eRes)); }
+  }
   return saida;
 }
 

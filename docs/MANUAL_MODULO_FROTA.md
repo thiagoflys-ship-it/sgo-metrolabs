@@ -441,3 +441,41 @@ Excesso de velocidade numa retirada e comprovante pedido e não enviado no prazo
 1. Abra a Frota, aba "Abastecimentos e despesas".
 2. No quadro amarelo "Comprovante pedido a você", preencha data, KM, litros e valor (hora e posto, se souber).
 3. Em "Foto da nota ou PDF", tire a foto ou escolha o arquivo e toque em "Enviar comprovante". O pedido some e a atividade é concluída sozinha.
+
+## 20. Reservas de veículo
+
+A reserva garante o veículo para quem já tem compromisso marcado (viagem, atendimento no cliente). Ela existe para que ninguém chegue para uma viagem e encontre o carro retirado por outra pessoa. Fica na aba **Reservas** da Frota, para toda a equipe interna (no celular, botão "Reservas: agenda e reservar um veículo").
+
+### Reservar
+
+1. Abra a Frota, aba "Reservas", e toque em "Reservar um veículo" (ou toque num espaço vazio da agenda).
+2. Preencha o início e a devolução prevista (data e hora).
+3. O campo "Veículo" já sugere o primeiro veículo livre no período; os ocupados aparecem com o motivo.
+4. Escreva o destino e o motivo. Passageiros e "Ligar a" (O.S. do Auvo, atividade ou cliente) são opcionais.
+5. Toque em "Reservar". Aparece o código da reserva (RV-AAAA-NNNN).
+
+Quem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Gestor ou Diretoria) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa.
+
+### Regras
+
+| Regra | Como funciona |
+|---|---|
+| Sem sobreposição | O mesmo veículo não tem duas reservas no mesmo horário, nem reserva sobre manutenção programada, parada ou retirada em andamento. O sistema mostra os livres no mesmo período. Uma pessoa não segura dois veículos ao mesmo tempo. A conferência final é feita dentro da trava do sistema, relendo o banco. |
+| A retirada respeita a reserva | Ao retirar, informe a devolução prevista. Se o veículo tem reserva de outra pessoa (ou manutenção programada) começando antes da devolução prevista mais a folga (1 hora), a retirada é recusada com quem reservou, quando e os veículos livres agora. Só a gestão libera, com justificativa; quem reservou é avisado na hora com a sugestão de outro veículo. A liberação não vira registro "pela gestão" nem sugestão no Programa de conduta. |
+| Dono da reserva | Retira normalmente a partir de 2 horas antes do início; a reserva passa a "em uso" e, na devolução, a "concluída". |
+| Devolução atrasada com reserva a seguir (próximas 24 h) | Cobrança ao condutor atual no sistema e em Minhas atividades (atividade urgente, concluída sozinha na devolução); e-mail no expediente; WhatsApp só se a reserva for no mesmo dia, pela regra sutil (vínculo CLT, dia útil, horário de trabalho, no máximo uma por dia). A gestão e quem reservou também são avisados. Se a reserva começar com o veículo fora, conta como "atraso que afetou reserva" e vira só sugestão no Programa de conduta. |
+| Véspera | Último dia útil antes do início, a partir das 14:00: lembrete ao reservante (sistema; e-mail no expediente) e conferência do veículo (ativo, sem parada ou manutenção no período, sem manutenção vencida, documentos e CNH válidos, veículo de volta a tempo). Problema avisa o reservante e a gestão, com os livres para troca; problema que aparece depois avisa de novo. |
+| Não comparecimento | Sem retirada até 1 hora depois do início, a reserva vira "não utilizada" e o veículo fica livre (o reservante é avisado). Se o veículo ainda estava fora com outra pessoa, a tolerância conta da devolução. |
+| Nada é apagado | Canceladas, não utilizadas e concluídas ficam no histórico, com quem e quando. |
+
+As regras de tempo (folga, tolerância, antecipação, hora do lembrete, antecedência e duração máximas) ficam em Reservas > Regras (gestão).
+
+### Telas
+
+- **Agenda**: semana ou dia, uma linha por veículo. Verde: sua reserva; azul claro: de outra pessoa; laranja: manutenção programada; azul forte: retirado agora; vermelho: devolução atrasada; cinza: parada. No celular a semana vira uma lista por dia.
+- **Minhas reservas**: cancelar (com o motivo) e trocar o veículo (só os livres no mesmo período).
+- **Todas as reservas, Indicadores e relatório, Regras** (gestão): cumpridas, não utilizadas, canceladas, retiradas bloqueadas, liberações, atrasos que afetaram reserva, pedidos recusados por sobreposição, por veículo, por condutor e por dia da semana; relatório A4 de uso e reservas do mês (HTML e PDF em "Frota - Relatorios Gerados/Reservas").
+- **Tela de retirada**: o cartão do veículo mostra a próxima reserva ("Reservado para ... · devolva até ..."); o passo "Devolução prevista" já vem preenchido (fim da sua reserva ou fim do expediente).
+- **Gantt da frota** (Gestão e melhoria): reservas (planejado) na faixa de cima, retiradas (realizado) na de baixo.
+- **Copiloto**: sugere ação para veículo disputado, dia da semana de pico, reservas não utilizadas e atrasos recorrentes de um condutor, e liberações frequentes.
+- **COMMAND**: tela "Reservas de veículo" para quem tem a conta ligada ao SGO+ (minhas reservas, livres, reservar, cancelar; a gestão vê a agenda), pela ponte assinada, com as mesmas regras.

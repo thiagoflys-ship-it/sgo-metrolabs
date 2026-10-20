@@ -134,9 +134,30 @@ function Frota_apiRastrGantt(sessionId, payload) {
     } catch (e) {}
   }
   if (acoes.length) linhas.push({ veiculoId: '', placa: 'Ações dos planos', modelo: 'Minhas atividades', itens: acoes });
+  // 20/10/2026 (reservas): o planejado (reservas e manutenção programada) na mesma linha do realizado (retiradas).
+  if (typeof FrotaRes_todas_ === 'function') {
+    try {
+      var porV = {};
+      linhas.forEach(function (l) { if (l.veiculoId) porV[l.veiculoId] = l; });
+      var agoraRes = FrotaRes_agora_();
+      FrotaRes_todas_().forEach(function (r) {
+        var sit = SGO_UTILS.safeUpper(r.SITUACAO), l = porV[SGO_UTILS.safe(r.VEICULO_ID)];
+        if (!l || sit === 'CANCELADA') return;
+        var a = FrotaRes_iniMs_(r), b = FrotaRes_fimMs_(r);
+        if (a === null || b === null) return;
+        // a régua das reservas é a das retiradas (horário de Brasília): para o Gantt (instante real) soma a diferença
+        var ra = FrotaR_msDe_(FrotaRes_data_(a), FrotaRes_hora_(a)), rb = FrotaR_msDe_(FrotaRes_data_(b), FrotaRes_hora_(b));
+        if (ra === null || rb === null || !dentro(ra, rb)) return;
+        var manut = SGO_UTILS.safeUpper(r.TIPO) === 'MANUTENCAO';
+        l.itens.push({ tipo: manut ? 'MANUT_PROG' : 'RESERVA', ini: ra, fim: rb, rotulo: manut ? 'Manutenção' : SGO_UTILS.safe(r.CONDUTOR_NOME), vencida: sit === 'NAO_UTILIZADA', concluida: sit === 'INICIADA' || sit === 'CONCLUIDA',
+          detalhe: (manut ? 'Manutenção programada ' : 'Reserva ') + SGO_UTILS.safe(r.CODIGO) + ' ' + FrotaRes_periodo_(a, b) + (manut ? ': ' + SGO_UTILS.safe(r.MOTIVO) : ' de ' + SGO_UTILS.safe(r.CONDUTOR_NOME) + (r.DESTINO ? ' — ' + SGO_UTILS.safe(r.DESTINO) : '')) + ' (' + (FROTA_RES_SITUACOES[sit] || sit).toLowerCase() + ')' });
+      });
+      linhas.forEach(function (l) { l.itens.sort(function (x, y) { return x.ini - y.ini; }); });
+    } catch (eRes) { console.error('Gantt, reservas: ' + ((eRes && eRes.message) || eRes)); }
+  }
   return { ok: true, de: per.deMs, ate: per.ateMs, hoje: Date.now(), periodo: per.texto, linhas: linhas,
-    legenda: [['RETIRADA', 'Retirada (em andamento com borda tracejada)'], ['PARADA', 'Parada do veículo'], ['MANUTENCAO', 'Manutenção prevista (data ou KM)'], ['DOCUMENTO', 'Documento vence'], ['ACAO', 'Ação de plano (Minhas atividades)']],
-    nota: 'Reservas de veículo não existem no SGO+ hoje: o Gantt mostra as retiradas registradas. A previsão de manutenção pelo KM usa a média de km por dia dos últimos 60 dias.' };
+    legenda: [['RESERVA', 'Reserva (planejado; verde: cumprida; vermelha: não utilizada)'], ['MANUT_PROG', 'Manutenção programada (bloqueia a agenda)'], ['RETIRADA', 'Retirada (realizado; em andamento com borda tracejada)'], ['PARADA', 'Parada do veículo'], ['MANUTENCAO', 'Manutenção prevista (data ou KM)'], ['DOCUMENTO', 'Documento vence'], ['ACAO', 'Ação de plano (Minhas atividades)']],
+    nota: 'Em cada veículo, a faixa de cima é o planejado (reservas e manutenção programada) e a de baixo o realizado (retiradas). A previsão de manutenção pelo KM usa a média de km por dia dos últimos 60 dias.' };
 }
 
 // ------------------------------------------------------------
@@ -279,6 +300,9 @@ function FrotaR_sugestoes_(dias) {
       }
     }
   });
+
+  // 9. reservas: veículo disputado, dia de pico, não utilizadas, atrasos que afetaram reserva e liberações (SGO_Frota_Reservas.js)
+  if (typeof FrotaRes_sugestoesCopiloto_ === 'function') FrotaRes_sugestoesCopiloto_(dias).forEach(add);
 
   // 8. KM rodado sem abastecimento registrado
   var km = FrotaR_kmPeriodo_(per, veics);
