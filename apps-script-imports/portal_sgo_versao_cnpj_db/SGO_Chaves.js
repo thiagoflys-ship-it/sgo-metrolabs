@@ -185,6 +185,12 @@ function Chaves_lerTodas_() {
   return out;
 }
 
+/** De um endereço da Z-API colado inteiro, devolve o trecho depois de /instances/ ou de /token/; valor simples volta igual. */
+function Chaves_zapiParte_(v, parte) {
+  var m = String(v || '').match(new RegExp('/' + parte + '/([A-Za-z0-9_-]+)'));
+  return m ? m[1] : String(v || '').trim();
+}
+
 /** Normaliza e confere o valor antes de gravar. Lança erro com o que fazer. */
 function Chaves_validarValor_(item, valor) {
   var v = String(valor === null || valor === undefined ? '' : valor).trim();
@@ -195,6 +201,9 @@ function Chaves_validarValor_(item, valor) {
     v = v.toLowerCase();
     if (v !== 'meta' && v !== 'zapi') throw new Error('Não foi possível gravar: o provedor do WhatsApp aceita só meta ou zapi.');
   }
+  // 20/10/2026: no painel da Z-API é comum copiar o endereço inteiro (https://api.z-api.io/instances/<ID>/token/<TOKEN>/...).
+  // Guarda só a identificação; o token continua sendo gravado no campo dele.
+  if (item.chave === 'ZAPI_INSTANCIA' || item.chave === 'ZAPI_TOKEN') v = Chaves_zapiParte_(v, item.chave === 'ZAPI_INSTANCIA' ? 'instances' : 'token');
   if (item.chave === 'AUVO_AVISOS_WHATSAPP' && v !== '1' && v !== '0') {
     throw new Error('Não foi possível gravar: os avisos de O.S. aceitam só 1 (liga) ou 0 (desliga).');
   }
