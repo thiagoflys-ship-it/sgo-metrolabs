@@ -122,6 +122,8 @@
   .atv-cfg-dias { display: flex; flex-wrap: wrap; gap: 6px 14px; }
   .atv-cfg-dias label { display: flex; gap: 6px; align-items: center; font-weight: 600 !important; color: var(--text) !important; }
   .atv-cfg-dias input { width: auto !important; }
+  .atv-agora-cel { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .atv-agora-cel:last-child { border-bottom: 0; }
   /* Celular (fase 3, 17/10): título só na barra do topo, abas numa linha, lista em cartões */
   #app.modo-mobile .atv-cab-titulo { display: none; }
   #app.modo-mobile .atv-cab .module-header-right { width: 100%; }
@@ -1016,7 +1018,14 @@
       '<div class="atv-ind-card"><div class="v">' + Atividades_num_(ind.concluidas30) + '</div><div class="l">Concluídas nos últimos 30 dias</div></div>' +
       '<div class="atv-ind-card"><div class="v">' + (ind.percNoPrazo30 === null ? "—" : Atividades_num_(ind.percNoPrazo30, 1) + "%") + '</div><div class="l">Concluídas no prazo (30 dias)' + (ind.concluidas30 ? ": " + ind.noPrazo30 + " de " + ind.concluidas30 : "") + "</div></div>";
     var ag = document.getElementById("atvEqAgora");
-    if (ag) ag.innerHTML = r.painelAgora.length ? '<table class="table"><thead><tr><th>Colaborador</th><th>Fazendo agora</th><th>Há</th><th>Abertas</th><th>Vencidas</th></tr></thead><tbody>' +
+    // celular: uma linha por pessoa (a tabela de 5 colunas não cabe em 390 px)
+    if (ag && r.painelAgora.length && typeof ehMobileModo_ === "function" && ehMobileModo_()) {
+      ag.innerHTML = r.painelAgora.map(function (p) {
+        return '<div class="atv-agora-cel"><b>' + Atividades_esc_(p.nome) + "</b>" +
+          '<div class="atv-sub">' + Atividades_pl_(p.abertas, "aberta", "abertas") + (p.vencidas ? ' · <b style="color:var(--danger)">' + Atividades_pl_(p.vencidas, "vencida", "vencidas") + "</b>" : "") + "</div>" +
+          (p.atual ? '<div>Agora: <button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + p.atual.ID + '\')">' + Atividades_esc_(p.atual.TITULO) + '</button> <span class="atv-sub">' + Atividades_duracao_(p.atual.AGORA_DESDE) + "</span></div>" : '<div class="atv-sub">Nenhuma marcada como fazendo agora</div>') + "</div>";
+      }).join("");
+    } else if (ag) ag.innerHTML = r.painelAgora.length ? '<table class="table"><thead><tr><th>Colaborador</th><th>Fazendo agora</th><th>Há</th><th>Abertas</th><th>Vencidas</th></tr></thead><tbody>' +
       r.painelAgora.map(function (p) {
         return "<tr><td>" + Atividades_esc_(p.nome) + "</td><td>" + (p.atual ? '<button type="button" class="atv-titulo-link" onclick="Atividades_abrirDetalhe_(\'' + p.atual.ID + '\')">' + Atividades_esc_(p.atual.TITULO) + "</button>" + (p.atual.CLIENTE_NOME ? '<div class="atv-sub">' + Atividades_esc_(p.atual.CLIENTE_NOME) + "</div>" : "") : '<span class="atv-sub">Nenhuma marcada</span>') + "</td>" +
           "<td>" + (p.atual ? Atividades_duracao_(p.atual.AGORA_DESDE).replace(/^há /, "") : "") + "</td><td>" + Atividades_num_(p.abertas) + "</td><td>" + (p.vencidas ? '<b style="color:var(--danger)">' + Atividades_num_(p.vencidas) + "</b>" : "0") + "</td></tr>";
@@ -1103,6 +1112,14 @@
         return "<tr><td>" + Atividades_esc_(p.nome) + "</td><td>" + Atividades_num_(p.abertas) + "</td><td>" + (p.vencidas ? '<b style="color:var(--danger)">' + Atividades_num_(p.vencidas) + "</b>" : "0") + "</td><td>" + Atividades_num_(p.venceHoje || 0) +
           "</td><td>" + Atividades_num_(p.prox7 || 0) + "</td><td>" + Atividades_num_(p.aguardando || 0) + "</td><td><b>" + Atividades_num_(p.carga || 0) + "</b></td></tr>";
       }).join("") + "</tbody></table></div>" : '<div class="atv-sub">Ninguém com atividade aberta.</div>';
+    // celular: uma linha por pessoa (7 colunas não cabem em 390 px)
+    if (carga.length && typeof ehMobileModo_ === "function" && ehMobileModo_()) {
+      tabCarga = carga.map(function (p) {
+        return '<div class="atv-agora-cel"><b>' + Atividades_esc_(p.nome) + '</b> <span class="atv-sub">carga ' + Atividades_num_(p.carga || 0) + "</span>" +
+          '<div class="atv-sub">' + [Atividades_pl_(p.abertas, "aberta", "abertas"), p.vencidas ? '<b style="color:var(--danger)">' + Atividades_pl_(p.vencidas, "vencida", "vencidas") + "</b>" : "", p.venceHoje ? Atividades_num_(p.venceHoje) + " vence(m) hoje" : "",
+            p.prox7 ? Atividades_num_(p.prox7) + " nos próximos 7 dias" : "", p.aguardando ? Atividades_num_(p.aguardando) + " aguardando" : ""].filter(Boolean).join(" · ") + "</div></div>";
+      }).join("") + '<div class="atv-sub" style="margin-top:6px">Carga: abertas somadas pelo peso da prioridade (Urgente 3, Alta 2, Normal e Baixa 1).</div>';
+    }
     var motivos = (ind.porMotivo || []).map(function (m) { return { t: m.motivo, n: m.qtd, cor: "var(--warning)" }; });
     var modulos = (ind.porModulo || []).slice(0, 10).map(function (m) { return { t: m.nome + (m.vencidas ? " (" + m.vencidas + " vencida" + (m.vencidas === 1 ? "" : "s") + ")" : ""), n: m.abertas }; });
     var sis = ind.porSistema || {};
