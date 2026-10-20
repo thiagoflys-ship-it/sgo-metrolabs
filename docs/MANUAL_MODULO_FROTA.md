@@ -14,7 +14,7 @@ A Frota registra quem pegou cada veículo da empresa e quando devolveu. Em cada 
 
 O sistema também avisa sozinho quando manutenção, documento ou CNH vão vencer, descobre quem estava com o veículo quando chega uma multa e monta o relatório da frota.
 
-> **Abas do computador:** "Situação e retiradas", "Veículos e condutores", "Rastreador", "Manutenção e paradas", "Documentos e multas", "Abastecimentos", "Despesas" e "Histórico e relatório". Cada pessoa só vê as abas do seu perfil.
+> **Abas do computador (19/10/2026):** "Situação e retiradas", "Gestão e melhoria", "Veículos e condutores", "Manutenção e paradas", "Documentos e multas", "Abastecimentos e despesas", "Rastreador" e "Histórico e relatório". Cada pessoa só vê as abas do seu perfil.
 
 ## 3. Celular e computador; quem pode o quê
 
@@ -48,6 +48,15 @@ Cada veículo e cada condutor são cadastrados uma vez só. Isso é feito pela g
 5. Toque em "Salvar condutor".
 
 > **Por que ligar o condutor ao login?** Porque é assim que o sistema sabe quem está retirando. Quem não é da gestão retira sempre em seu próprio nome. Não há como escolher outra pessoa.
+
+### Editar um condutor (validade da CNH, telefone, login)
+
+1. Na lista de condutores, toque em "Editar" na linha da pessoa.
+2. Preencha o que mudou: "Validade da CNH" (dd/mm/aaaa), "Número da CNH", "Telefone" ou o "Login do SGO+" (só se ainda não tiver).
+3. Campo vazio mantém o que já estava gravado.
+4. Toque em "Salvar alterações". Para trocar o arquivo da CNH, use "Trocar CNH" na mesma linha.
+
+A validade aparece na lista: em vermelho quando venceu, em amarelo quando vence em até 30 dias. O aviso de CNH some sozinho quando a nova validade é gravada. Telefone, número e arquivo da CNH só aparecem para a gestão.
 
 Veículo ou condutor que não vai mais ser usado: toque em "Inativar" e confirme. Ele some das listas, mas o histórico continua guardado. Para voltar, toque em "Reativar".
 
@@ -139,7 +148,7 @@ A justificativa é obrigatória para outro condutor, para devolução no lugar d
 
 ### Trilha de auditoria
 
-1. Na aba "Veículos e condutores", vá ao quadro "Trilha de auditoria".
+1. Na aba "Histórico e relatório", vá ao quadro "Trilha de auditoria".
 2. Escolha o veículo ou deixe "Todos os veículos".
 3. Toque em "Consultar".
 
@@ -147,7 +156,7 @@ A trilha mostra quem fez cada registro especial, quando, o valor antes e depois 
 
 ## 9. Abastecimentos
 
-1. Abra a aba "Abastecimentos" e toque em "+ Registrar abastecimento" (no celular: "Opções da gestão" > "Registrar abastecimento").
+1. Abra a aba "Abastecimentos e despesas" e toque em "+ Registrar abastecimento" (no celular: "Opções da gestão" > "Registrar abastecimento").
 2. Escolha o veículo e, se souber, o condutor.
 3. Preencha a data, o "KM no abastecimento", o tipo de combustível, os litros, o valor total e o posto.
 4. Anexe a foto ou o PDF do comprovante. Sem ele não salva.
@@ -198,7 +207,7 @@ Se o sistema não achou, escolha o condutor na linha da multa e toque em "Indica
 
 ## 12. Despesas
 
-1. Abra a aba "Despesas".
+1. Abra a aba "Abastecimentos e despesas" e vá ao quadro "Despesas por veículo e período".
 2. Escolha o veículo, ou deixe "Todos os veículos".
 3. Confira "Data início" e "Data fim". Já vêm com os últimos 30 dias.
 4. Escolha a categoria, ou deixe "Todas".
@@ -275,41 +284,90 @@ O relatório por veículo traz identificação, resumo do período com o gráfic
 | Parada | Período em que o veículo ficou fora de uso |
 | Consumo (km/L) | Quantos quilômetros o veículo roda com 1 litro |
 | Cruzamento de multa | Comparação da hora da multa com as retiradas, para achar quem estava com o veículo |
-| Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a iTracker liberar o acesso com comandos |
+| Bloqueio da partida | Comando do rastreador que impede o motor de ligar. Só é enviado com o veículo parado e a ignição desligada. Depende de a empresa do rastreador liberar o acesso com comandos |
 | Uso sem registro | Veículo ligado ou andando sem retirada aberta, visto pelo rastreador |
 
 ## 17. Rastreador: monitoramento, localização e bloqueio da partida
 
-> **Hoje o acesso da iTracker é somente leitura.** O SGO+ monitora os veículos (uso sem registro, KM e ponto de chegada), mas não bloqueia nem libera a partida. A retirada e a devolução funcionam normalmente. O bloqueio da partida depende de a iTracker liberar um acesso com comandos; a Metrolabs já vai pedir. A aba "Rastreador" mostra a situação.
+> **Hoje o acesso é somente leitura.** Funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada. Não funciona bloquear nem liberar a partida pelo SGO+: isso depende de a empresa do rastreador liberar o acesso com comandos. A retirada e a devolução funcionam normalmente.
+
+### Como a tela "Rastreador" está organizada
+
+1. **Para que serve** (no topo): o que o SGO+ faz com o rastreador, em três linhas.
+2. **Situação**: se o rastreador está ligado, a hora da última leitura, por quantos dias a localização fica guardada e o que funciona com o acesso de hoje.
+3. **O que fazer agora**: a lista do que precisa da gestão, veículo por veículo. Exemplo: "PQB4394 tem sugestão de aparelho: confira no cartão do veículo e clique em Gravar vínculo". Quando está tudo em dia, aparece "Nada a fazer".
+4. **Alertas para conferir** (só quando houver): uso sem registro e falha de comunicação.
+5. **Veículos e aparelhos**: um cartão por veículo, com o aparelho ligado a ele, a situação agora (parado ou andando, onde está), o hodômetro do aparelho e a última devolução.
+6. **Liberar ou bloquear a partida** e **Comandos enviados**: só aparecem quando o acesso com comandos estiver liberado.
+
+### Ligar um veículo ao aparelho do rastreador
+
+1. No cartão do veículo, escolha o aparelho na lista. O aparelho com a placa no nome já vem marcado e o cartão fica verde com "Sugestão".
+2. Toque em "Gravar vínculo".
+3. Se o aparelho já estava ligado ao veículo, aparece "Vínculo já estava gravado": está tudo certo, nada foi mudado.
 
 ### O que o SGO+ faz com o rastreador
 
 - **Uso sem registro:** se o rastreador mostrar o veículo ligado ou andando sem retirada aberta, a gestão recebe um alerta vermelho com placa, hora e local. Descubra quem estava com o veículo. Se foi esquecimento, registre a retirada no lugar do condutor. Depois toque em "Conferido".
-- **KM:** quando o rastreador informa o hodômetro, o KM digitado é comparado com ele. Quando não informa, o KM rodado (chegada menos saída) é comparado com a distância que o rastreador mediu no período da retirada. Diferença acima de 20 km (ou de 5%) vai para "KM a conferir".
+- **Parado ou andando:** abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado (oscilação normal do sinal): o SGO+ mostra "parado, ignição desligada" e não trata como uso.
+- **KM:** o hodômetro do aparelho conta desde a instalação e nunca é igual ao painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). Por isso o SGO+ não compara esses números. Ele guarda o hodômetro do aparelho na retirada e na devolução e compara o **KM rodado**: o informado (chegada menos saída) com o medido pelo aparelho. Se o aparelho não informar o hodômetro, vale a distância que o rastreador mediu no período da retirada. Diferença acima de 20 km (ou de 5%) vai para "KM a conferir".
+- **KM do painel estimado:** no cartão do veículo aparece o KM do painel calculado pelo rastreador (hodômetro do aparelho mais a diferença fixa medida na última retirada). Serve só para a gestão perceber uso sem registro; não muda nenhum KM.
 - **Ponto de chegada:** na devolução, o SGO+ guarda a hora e o endereço onde o veículo parou. Só a gestão vê, na aba "Rastreador".
 
-### Quando a iTracker liberar o acesso com comandos
+### Quando o acesso com comandos for liberado
 
 O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, os endereços do comando de bloqueio e de liberação e liga o "Bloqueio da partida pelo SGO+". A partir daí:
 
 - **Na retirada:** ao confirmar, o sistema libera a partida. Se aparecer "Partida não liberada pelo rastreador", a retirada já está registrada: não registre de novo. Ligue para a gestão. O sistema também tenta de novo sozinho.
-- **Na devolução:** o bloqueio só é enviado quando o veículo estiver parado e com a ignição desligada. Estacione e desligue normalmente.
+- **Na devolução:** o bloqueio só é enviado com o veículo parado, a ignição desligada e menos de 5 km/h. Estacione e desligue normalmente.
 
-> **O veículo nunca é bloqueado em movimento.** Se o veículo estiver andando, com a ignição ligada, ou se a posição for antiga (mais de 30 minutos), o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.
+> **O veículo nunca é bloqueado em movimento.** Se o veículo estiver andando, com a ignição ligada, com o GPS ainda oscilando ou com a posição antiga (mais de 30 minutos), o bloqueio espera. Se esperar mais de 30 minutos, a gestão recebe um alerta.
 
 > **Emergência (a partida não liberou e você precisa sair):** ligue para a gestão. A gestão libera no computador (Frota > aba "Rastreador") ou no celular (Frota > "Opções da gestão" > "Partida do veículo (rastreador)"): escolhe o veículo, escreve a justificativa e toca em "Liberar partida". Também pode liberar pelo aplicativo do rastreador.
-
-### Para a gestão (aba "Rastreador")
-
-1. Leia a caixa do topo: diz se o rastreador está ligado e se o acesso é somente leitura.
-2. Em "Vínculo veículo e dispositivo", escolha o aparelho de cada veículo (a sugestão vem pela placa) e toque em "Gravar vínculo".
-3. Para ler o rastreador na hora, toque em "Ler o rastreador agora" (a iTracker aceita uma leitura a cada 30 segundos).
-4. Com o acesso com comandos: teste "Bloquear agora" e "Liberar partida" com o veículo parado no pátio e depois toque em "Marcar: usa o bloqueio". Para liberar ou bloquear, escolha o veículo, escreva a justificativa (pelo menos 15 letras) e toque no botão.
 
 ### Localização e LGPD
 
 - A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.
 - O SGO+ não guarda histórico de rota. Fica só a última posição de cada veículo, por poucos minutos, o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.
-- Depois do prazo de guarda (padrão de 90 dias, ajustável em Chaves e senhas > "Rastreador: dias de guarda da localização"), a localização é apagada sozinha, uma vez por dia.
+- Depois do prazo de guarda (padrão de 90 dias, ajustável em Chaves e senhas), a localização é apagada sozinha.
 - Só a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
 - Os avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.
+- Telefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas.
+
+## 18. Gestão e melhoria: Kanban, 5 Porquês, plano de ação e indicadores
+
+Aba só da gestão. Serve para tratar o que dá problema na frota e para acompanhar os números do período. Tem duas partes: "Quadro dos casos (Kanban)" e "Indicadores do período".
+
+### Quadro dos casos
+
+Cada caso anda por quatro colunas: **Aberta**, **Em análise**, **Em execução** e **Concluída**.
+
+1. **Aberta** mostra sozinha, sem ninguém digitar: avaria na devolução (item que estava em ordem na retirada e voltou com problema), multa em aberto e manutenção vencida ou a vencer. Toque em "Abrir caso". Se não precisa de tratamento (desgaste normal, por exemplo), toque em "Descartar" e escreva o motivo.
+2. Em **Em análise**, toque em "5 Porquês": responda "por que isso aconteceu?" e continue perguntando "por quê?" a cada resposta (no mínimo 3), até chegar a uma causa que a empresa consegue mudar. Escreva a causa raiz e salve.
+3. Se a solução foi simples (multa paga, conserto feito), toque em "Concluir" e escreva como foi resolvido.
+4. Se precisa de mudança, toque em "Plano de ação (5W2H)": o quê, por quê, onde, quando, quem, como e quanto. A ação vira uma atividade em Minhas atividades para o responsável, com o prazo, e o caso passa para **Em execução**. Para outra ação, toque em "Mais uma ação".
+5. Quando as ações forem concluídas em Minhas atividades, toque em "Concluir (verificar)": escreva o que foi conferido e marque se resolveu. Se não resolveu, o caso volta para Em análise (novo ciclo).
+6. Se quiser, escreva "O que muda para não repetir" (regra, item do checklist, treinamento).
+
+> **Caso recorrente:** duas avarias no mesmo veículo ou com o mesmo condutor em 180 dias, ou duas multas do mesmo condutor em 12 meses. O cartão mostra "Recorrente" e o caso só pode ser concluído depois dos 5 Porquês.
+
+> **Cores e selos do cartão:** tipo do caso (azul), "Recorrente" e "Prazo do plano vencido" (amarelo), "Multa já paga", "Manutenção já registrada" (verde: pode concluir), "Ciclo 2" (cinza: a primeira ação não resolveu). A faixa P, D, C, A mostra em que passo do ciclo o caso está.
+
+"+ Novo caso" serve para o que não aparece sozinho, por exemplo um barulho no freio relatado pelo condutor. Nada é apagado: o caso descartado fica guardado com quem decidiu, quando e o motivo.
+
+Multa e avaria com condutor identificado também viram sugestão no Programa de conduta, onde a gestão decide se vira ocorrência. Avaria sem caso aberto e multa perto do vencimento aparecem na central de avisos do Início.
+
+### Indicadores do período
+
+1. Escolha o período (30, 90, 180 ou 365 dias).
+2. Leia os números do topo: KM rodado, custo por km, consumo médio, disponibilidade, manutenção preventiva no prazo, avarias, multas e casos em andamento.
+3. Em "Por veículo" e "Por condutor", veja onde estão os problemas.
+
+| Indicador | Como é calculado |
+| --- | --- |
+| Custo por km | Abastecimentos, manutenções e despesas avulsas do período divididos pelo KM rodado nas retiradas. A multa fica fora (é do condutor) |
+| Consumo médio | KM entre dois abastecimentos do mesmo veículo dividido pelos litros. Precisa de pelo menos 2 abastecimentos |
+| Disponibilidade | Dias do período em que o veículo não estava em parada registrada |
+| Preventiva no prazo | Manutenção feita até a data ou o KM da "próxima troca" da manutenção anterior do mesmo tipo |
+| Avarias por 1.000 km | Avarias na devolução divididas pelo KM rodado, vezes 1.000 |
+| Eficácia dos planos | Casos com plano em que a verificação disse "resolveu", sobre os verificados |

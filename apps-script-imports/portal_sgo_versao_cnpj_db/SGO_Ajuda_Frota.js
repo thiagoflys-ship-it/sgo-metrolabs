@@ -2,6 +2,7 @@
  * Ajuda "Como usar esta tela" — grupo Frota (frente C).
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Texto puro, sem HTML.
  * Conferido contra a tela real (JS_Core.html, trecho da Frota, e SGO_Frota_ConteudoModulo.js) em 17/10/2026.
+ * 19/10/2026 (revisão da Frota): abas reorganizadas, Gestão e melhoria, editar condutor, rastreador que se explica sozinho e KM rodado.
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -63,7 +64,7 @@ function SGO_ajudaTelas_Frota_() {
         { nome: "Aviso vermelho \"Vencido\" (avisos da frota)", significado: "Documento, manutenção ou CNH com prazo vencido. A gestão precisa resolver." },
         { nome: "Aviso amarelo \"A vencer\"", significado: "Vence em até 30 dias." },
         { nome: "Aviso vermelho \"Multa a conferir\"", significado: "Chegou multa e o sistema não achou com certeza quem estava com o veículo. A gestão confere." },
-        { nome: "Aviso vermelho no topo sobre o rastreador", significado: "Só aparece quando a iTracker liberar o bloqueio da partida (hoje não há). A partida do veículo não foi liberada. A retirada já está registrada. Ligue para a gestão." }
+        { nome: "Aviso vermelho no topo sobre o rastreador", significado: "Só aparece quando a empresa do rastreador liberar o bloqueio da partida (hoje não há). A partida do veículo não foi liberada. A retirada já está registrada. Ligue para a gestão." }
       ],
       problemas: [
         { situacao: "Deu erro ao confirmar, ou o sinal está fraco", oQueFazer: "Não saia da tela. O sistema tenta de novo sozinho. Se a tela pedir, toque de novo em \"Confirmar retirada\" ou \"Confirmar devolução\": as fotos já enviadas não são enviadas outra vez." },
@@ -82,8 +83,8 @@ function SGO_ajudaTelas_Frota_() {
       ],
       quemPode: [
         { perfil: "TODOS", pode: "Retirar em seu próprio nome e devolver a própria retirada. Ver a situação da frota, os avisos e o histórico." },
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: retirar em nome de outro condutor e devolver no lugar dele (com justificativa), informar outra data e hora, cadastrar veículos e condutores, ajustar KM, conferir KM, ver a trilha de auditoria, registrar manutenção, parada, documentos, multas e abastecimentos, consultar despesas, gerar relatório e usar o rastreador." },
-        { perfil: "ADMIN", pode: "Também o \"Levantamento de valores suspeitos\", na aba Despesas." },
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Tudo da equipe. Também: retirar em nome de outro condutor e devolver no lugar dele (com justificativa), informar outra data e hora, cadastrar veículos e condutores, ajustar KM, conferir KM, ver a trilha de auditoria, registrar manutenção, parada, documentos, multas e abastecimentos, consultar despesas, gerar relatório, usar o rastreador e tratar os casos e ver os indicadores em \"Gestão e melhoria\"." },
+        { perfil: "ADMIN", pode: "Também o \"Levantamento de valores suspeitos\", na aba Abastecimentos e despesas." },
         { perfil: "CLIENTE", pode: "Não usa a Frota." }
       ],
       perguntas: [
@@ -139,7 +140,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       passos: [
         { titulo: "Registrar um abastecimento (computador)", itens: [
-          "Abra a aba \"Abastecimentos\".",
+          "Abra a aba \"Abastecimentos e despesas\".",
           "Toque em \"+ Registrar abastecimento\".",
           "Escolha o veículo.",
           "Escolha o condutor, se souber.",
@@ -170,7 +171,7 @@ function SGO_ajudaTelas_Frota_() {
       paraQueServe: "Junta numa consulta tudo o que a frota gastou: abastecimentos, manutenções, multas e outras despesas, por veículo e por período.",
       passos: [
         { titulo: "Consultar as despesas", itens: [
-          "Abra a aba \"Despesas\".",
+          "Abra a aba \"Abastecimentos e despesas\" e vá ao quadro \"Despesas por veículo e período\".",
           "Escolha o veículo, ou deixe \"Todos os veículos\".",
           "Confira \"Data início\" e \"Data fim\". Já vêm com os últimos 30 dias.",
           "Escolha a categoria, ou deixe \"Todas\".",
@@ -268,7 +269,8 @@ function SGO_ajudaTelas_Frota_() {
       titulo: "KM a conferir",
       paraQueServe: "Lista as retiradas e devoluções em que o KM digitado fugiu do esperado, para a gestão olhar a foto do painel e confirmar.",
       antesDeComecar: [
-        "Entra na lista: KM de saída diferente do registrado; devolução com mais de 1.500 km ou média acima de 120 km/h; diferença com o hodômetro do rastreador (quando ligado)."
+        "Entra na lista: KM de saída diferente do registrado; devolução com mais de 1.500 km ou média acima de 120 km/h; e, com o rastreador ligado, devolução em que o KM rodado informado (chegada menos saída) difere do KM rodado medido pelo rastreador em mais de 20 km ou 5%.",
+        "O hodômetro do aparelho do rastreador conta desde a instalação e nunca é igual ao painel. Por isso o SGO+ compara o KM rodado, não o número do painel: um aparelho com 26.238 km num carro com 189.561 km não gera aviso."
       ],
       passos: [
         { titulo: "Conferir um KM", itens: [
@@ -281,7 +283,8 @@ function SGO_ajudaTelas_Frota_() {
         ] }
       ],
       problemas: [
-        { situacao: "A linha mostra \"Sem foto\"", oQueFazer: "Fale com o condutor para confirmar o número antes de marcar como conferido." }
+        { situacao: "A linha mostra \"Sem foto\"", oQueFazer: "Fale com o condutor para confirmar o número antes de marcar como conferido." },
+        { situacao: "Linha \"(KM rodado pelo rastreador)\"", oQueFazer: "Compare o KM rodado informado com o medido pelo rastreador e veja a foto do painel da devolução. Se o condutor digitou errado, corrija em \"Ajustar KM do veículo\" com a justificativa; depois toque em \"Conferido\"." }
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver e conferir." }
@@ -325,7 +328,7 @@ function SGO_ajudaTelas_Frota_() {
       paraQueServe: "Mostra os registros especiais: o que a gestão fez no lugar do condutor, KM divergente, KM conferido, ajuste de KM e ações do rastreador. Nada aqui pode ser apagado.",
       passos: [
         { titulo: "Consultar a trilha", itens: [
-          "Abra a aba \"Veículos e condutores\".",
+          "Abra a aba \"Histórico e relatório\".",
           "No quadro \"Trilha de auditoria\", escolha o veículo ou deixe \"Todos os veículos\".",
           "Toque em \"Consultar\".",
           "Leia as colunas: quando, ação, veículo, condutor, quem fez, antes, depois e justificativa."
@@ -337,68 +340,275 @@ function SGO_ajudaTelas_Frota_() {
     },
 
     "frota/rastreador": {
-      titulo: "Rastreador e bloqueio da partida",
-      paraQueServe: "Liga a Frota ao rastreador dos veículos (iTracker). Hoje o acesso é somente leitura: o SGO+ avisa o uso sem registro, confere o KM e guarda o ponto de chegada de cada devolução, mas não bloqueia nem libera a partida. O bloqueio depende de a iTracker liberar o acesso com comandos.",
-      antesDeComecar: [
-        "O acesso da iTracker é somente leitura: o SGO+ monitora o veículo, mas não bloqueia nem libera a partida. Para isso, a Metrolabs pede à iTracker um acesso com comandos.",
-        "Quando o acesso com comandos chegar, o responsável pelo sistema preenche os endereços dos comandos em Chaves e senhas > Rastreador da frota e liga o bloqueio. Aí a retirada libera a partida e a devolução bloqueia.",
-        "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada e com posição recente.",
-        "Só a gestão vê a localização. A localização fica guardada pelo prazo de Chaves e senhas (padrão de 90 dias) e depois é apagada sozinha."
+      "titulo": "Rastreador e bloqueio da partida",
+      "paraQueServe": "Mostrar à gestão onde cada veículo está e se está andando. O SGO+ lê o rastreador a cada 2 minutos e: 1) avisa se um veículo andar sem retirada registrada; 2) confere o KM rodado de cada retirada com o que o rastreador mediu; 3) guarda o local onde o veículo parou na devolução.",
+      "antesDeComecar": [
+        "Acesso somente leitura: funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada; não funciona bloquear nem liberar a partida pelo SGO+ (depende de a empresa do rastreador liberar o acesso com comandos).",
+        "O hodômetro do aparelho conta desde a instalação e não é o número do painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). O SGO+ compara o KM rodado, não esses números.",
+        "Abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado: a tela mostra \"parado, ignição desligada\" e o SGO+ não trata como uso.",
+        "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada, abaixo de 5 km/h e com posição recente.",
+        "Só a gestão vê a localização. Ela fica guardada pelo prazo de Chaves e senhas (padrão de 90 dias) e depois é apagada sozinha."
       ],
-      passos: [
-        { titulo: "Ver a situação do rastreador", itens: [
-          "Abra a aba \"Rastreador\".",
-          "Leia a caixa do topo: diz se o rastreador está ligado, se o acesso é somente leitura e por quantos dias a localização fica guardada."
-        ] },
-        { titulo: "Ligar um veículo ao aparelho do rastreador", itens: [
-          "Em \"Vínculo veículo e dispositivo\", escolha o aparelho do veículo. O sugerido pela placa vem marcado.",
-          "Toque em \"Gravar vínculo\". O SGO+ confere se o aparelho aparece na iTracker."
-        ] },
-        { titulo: "Ver onde o veículo chegou na devolução", itens: [
-          "Na lista de veículos, leia \"Última chegada (devolução)\": hora e endereço.",
-          "Toque em \"ver no mapa\" para abrir o local."
-        ] },
-        { titulo: "Conferir um alerta de uso sem registro", itens: [
-          "Leia o alerta vermelho \"Uso sem registro\".",
-          "Descubra quem estava com o veículo.",
-          "Se foi esquecimento, registre a retirada no lugar do condutor, em \"Opções da gestão\".",
-          "Toque em \"Conferido\" e escreva o que foi conferido, com pelo menos 10 letras."
-        ] },
-        { titulo: "Quando o acesso com comandos estiver ligado: liberar a partida numa emergência", itens: [
-          "Em \"Liberar ou bloquear a partida\", escolha o veículo.",
-          "Escreva a justificativa, com pelo menos 15 letras.",
-          "Toque em \"Liberar partida\" e confirme.",
-          "No celular: Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"."
-        ] },
-        { titulo: "Quando o acesso com comandos estiver ligado: bloquear a partida", itens: [
-          "Escolha o veículo e escreva a justificativa.",
-          "Toque em \"Bloquear agora\" e confirme.",
-          "Se o veículo estiver andando, o bloqueio fica pendente até ele parar com a ignição desligada.",
-          "Depois de testar no pátio, toque em \"Marcar: usa o bloqueio\" no veículo."
-        ] }
+      "passos": [
+        {
+          "titulo": "Entender a tela, de cima para baixo",
+          "itens": [
+            "Abra a aba \"Rastreador\".",
+            "\"Para que serve\": as três coisas que o SGO+ faz com o rastreador.",
+            "Caixa azul: se está ligado, a hora da última leitura e o que funciona com o acesso de hoje.",
+            "\"O que fazer agora\": a lista do que precisa de você, veículo por veículo. Quando está tudo em dia, aparece \"Nada a fazer\".",
+            "\"Alertas para conferir\": só aparece quando há uso sem registro ou falha de comunicação.",
+            "\"Veículos e aparelhos\": um cartão por veículo, com o aparelho, a situação agora, o hodômetro e a última devolução."
+          ]
+        },
+        {
+          "titulo": "Ligar um veículo ao aparelho do rastreador",
+          "itens": [
+            "No cartão do veículo, escolha o aparelho na lista. Se o nome do aparelho tem a placa, ele já vem marcado e o cartão fica verde com \"Sugestão\".",
+            "Toque em \"Gravar vínculo\".",
+            "Se aparecer \"Vínculo já estava gravado\", está tudo certo: o veículo já estava ligado a esse aparelho.",
+            "Veículo sem rastreador: deixe \"Sem aparelho\"."
+          ]
+        },
+        {
+          "titulo": "Ver onde o veículo está e onde chegou na devolução",
+          "itens": [
+            "No cartão do veículo, leia \"Agora\": parado ou andando, a hora e o local. Toque em \"ver no mapa\".",
+            "Leia \"Última devolução\": hora e endereço onde o veículo parou."
+          ]
+        },
+        {
+          "titulo": "Conferir um alerta de uso sem registro",
+          "itens": [
+            "Leia o alerta vermelho \"Uso sem registro\".",
+            "Descubra quem estava com o veículo.",
+            "Se foi esquecimento, registre a retirada no lugar do condutor, em \"Opções da gestão\".",
+            "Toque em \"Conferido\" e escreva o que foi conferido, com pelo menos 10 letras."
+          ]
+        },
+        {
+          "titulo": "Quando o acesso com comandos estiver ligado: liberar ou bloquear a partida",
+          "itens": [
+            "Em \"Liberar ou bloquear a partida\", escolha o veículo e escreva a justificativa (pelo menos 15 letras).",
+            "Toque em \"Liberar partida\" ou em \"Bloquear agora\" e confirme.",
+            "Se o veículo estiver andando ou o GPS ainda oscilando, o bloqueio fica pendente até ele parar.",
+            "No celular: Frota > \"Opções da gestão\" > \"Partida do veículo (rastreador)\"."
+          ]
+        }
       ],
-      cores: [
-        { nome: "Caixa vermelha \"Rastreador desligado\"", significado: "Nenhuma chamada é feita ao rastreador. Retirada e devolução funcionam normalmente." },
-        { nome: "Caixa azul \"Rastreador ligado\"", significado: "O SGO+ lê o rastreador a cada 2 minutos." },
-        { nome: "\"O acesso da iTracker é somente leitura\"", significado: "O SGO+ monitora, mas não bloqueia nem libera a partida. A parte de liberar e bloquear fica escondida." },
-        { nome: "\"Bloqueio da partida desligado\"", significado: "Há acesso com comandos, mas o bloqueio está desligado: só monitoramento." },
-        { nome: "Comando \"Pendente\"", significado: "Esperando o veículo parar e a ignição desligar." },
-        { nome: "Comando \"Enviado\", \"Cancelado\" ou \"Não enviado\"", significado: "Enviado: chegou ao rastreador. Cancelado: uma nova retirada cancelou o bloqueio. Não enviado: falhou; tente de novo ou use o aplicativo do rastreador." },
-        { nome: "Alerta vermelho \"Uso sem registro\"", significado: "O veículo andou ou ligou sem retirada aberta no SGO+." },
-        { nome: "Alerta vermelho \"Sem comunicação com o rastreador\"", significado: "O SGO+ não conseguiu ler o rastreador. Aparece uma vez só e some sozinho quando a conexão voltar." }
+      "cores": [
+        {
+          "nome": "Caixa vermelha \"Rastreador desligado\"",
+          "significado": "Nada é lido. Retirada e devolução funcionam normalmente."
+        },
+        {
+          "nome": "Caixa azul \"Rastreador ligado\"",
+          "significado": "O SGO+ lê o rastreador a cada 2 minutos."
+        },
+        {
+          "nome": "Caixa amarela \"O que fazer agora\"",
+          "significado": "O próximo passo de cada veículo ou alerta."
+        },
+        {
+          "nome": "Cartão verde com \"Sugestão\"",
+          "significado": "O SGO+ achou o aparelho pela placa. Confira e toque em \"Gravar vínculo\"."
+        },
+        {
+          "nome": "\"parado, ignição desligada (o GPS marcou ... km/h)\"",
+          "significado": "O veículo está parado. A velocidade é oscilação normal do sinal."
+        },
+        {
+          "nome": "Alerta vermelho \"Uso sem registro\"",
+          "significado": "O veículo andou ou ligou sem retirada aberta no SGO+."
+        },
+        {
+          "nome": "Alerta vermelho \"Sem comunicação com o rastreador\"",
+          "significado": "O SGO+ não conseguiu ler o rastreador. Aparece uma vez só e some sozinho quando a conexão voltar."
+        },
+        {
+          "nome": "Comando \"Pendente\", \"Enviado\", \"Cancelado\" ou \"Não enviado\"",
+          "significado": "Só com acesso com comandos. Pendente: esperando o veículo parar. Cancelado: uma nova retirada cancelou o bloqueio. Não enviado: tente de novo ou use o aplicativo do rastreador."
+        }
       ],
-      problemas: [
-        { situacao: "\"recusou a chave de acesso (HTTP 401)\"", oQueFazer: "A chave da iTracker está errada ou foi cancelada. Avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota)." },
-        { situacao: "\"excesso de consultas (HTTP 429)\"", oQueFazer: "Não precisa fazer nada. O SGO+ espera e lê de novo na próxima rodada." },
-        { situacao: "\"A iTracker só aceita ler as posições a cada 30 segundos\"", oQueFazer: "Espere os segundos indicados e toque de novo em \"Ler o rastreador agora\"." },
-        { situacao: "\"plataforma da iTracker está indisponível (HTTP 503)\"", oQueFazer: "Aguarde. O SGO+ tenta de novo sozinho." },
-        { situacao: "Condutor diz \"Partida não liberada pelo rastreador\"", oQueFazer: "Só acontece com o acesso com comandos ligado. A retirada já está registrada. Libere a partida aqui ou no aplicativo do rastreador." },
-        { situacao: "\"não tem dispositivo do rastreador vinculado\"", oQueFazer: "Ligue o veículo ao aparelho em \"Vínculo veículo e dispositivo\"." },
-        { situacao: "\"Falta a chave de acesso da iTracker\"", oQueFazer: "Avise o responsável pelo sistema (Chaves e senhas)." }
+      "problemas": [
+        {
+          "situacao": "\"recusou a chave de acesso (HTTP 401)\"",
+          "oQueFazer": "A chave está errada ou foi cancelada. Avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota)."
+        },
+        {
+          "situacao": "\"excesso de consultas (HTTP 429)\"",
+          "oQueFazer": "Não precisa fazer nada. O SGO+ espera e lê de novo na próxima rodada."
+        },
+        {
+          "situacao": "\"O rastreador só aceita ler as posições a cada 30 segundos\"",
+          "oQueFazer": "Espere os segundos indicados e toque de novo em \"Ler o rastreador agora\"."
+        },
+        {
+          "situacao": "\"plataforma do rastreador está indisponível (HTTP 503)\"",
+          "oQueFazer": "Aguarde. O SGO+ tenta de novo sozinho."
+        },
+        {
+          "situacao": "Condutor diz \"Partida não liberada pelo rastreador\"",
+          "oQueFazer": "Só acontece com o acesso com comandos ligado. A retirada já está registrada. Libere a partida aqui ou no aplicativo do rastreador."
+        },
+        {
+          "situacao": "\"não tem aparelho do rastreador ligado\"",
+          "oQueFazer": "Ligue o veículo ao aparelho em \"Veículos e aparelhos\" e toque em \"Gravar vínculo\"."
+        },
+        {
+          "situacao": "O hodômetro do aparelho é muito diferente do KM do painel",
+          "oQueFazer": "É normal: o aparelho conta desde a instalação. Não precisa fazer nada; o SGO+ compara o KM rodado."
+        },
+        {
+          "situacao": "\"Falta a chave de acesso do rastreador\"",
+          "oQueFazer": "Avise o responsável pelo sistema (Chaves e senhas)."
+        }
       ],
-      quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Usar a aba Rastreador, ver a localização e a Partida do veículo no celular." },
-        { perfil: "TODOS", pode: "A equipe não vê a localização. Só retira e devolve normalmente. Em emergência, ligue para a gestão." }
+      "quemPode": [
+        {
+          "perfil": "ADMIN,GESTOR,DIRETORIA",
+          "pode": "Usar a aba Rastreador, ver a localização e a Partida do veículo no celular."
+        },
+        {
+          "perfil": "TODOS",
+          "pode": "A equipe não vê a localização. Só retira e devolve normalmente. Em emergência, ligue para a gestão."
+        }
+      ]
+    },
+
+    "frota/gestao_e_melhoria": {
+      "titulo": "Gestão e melhoria",
+      "paraQueServe": "Tratar o que dá problema na frota (avarias, multas e manutenções) até resolver de vez, e acompanhar os números do período. Só a gestão.",
+      "antesDeComecar": [
+        "O quadro tem quatro colunas: Aberta, Em análise, Em execução e Concluída.",
+        "Em \"Aberta\" aparece sozinho, sem ninguém digitar: avaria na devolução (item em ordem na retirada e com problema na volta), multa em aberto e manutenção vencida ou a vencer.",
+        "Nada vira caso sozinho: a gestão abre o caso ou descarta com o motivo.",
+        "As ações do plano viram atividades em Minhas atividades, com responsável e prazo."
+      ],
+      "passos": [
+        {
+          "titulo": "Abrir um caso",
+          "itens": [
+            "Abra a aba \"Gestão e melhoria\", parte \"Quadro dos casos (Kanban)\".",
+            "Na coluna \"Aberta\", leia o cartão.",
+            "Toque em \"Abrir caso\". Ele vai para \"Em análise\".",
+            "Se não precisa de tratamento (desgaste normal, por exemplo), toque em \"Descartar\" e escreva o motivo."
+          ]
+        },
+        {
+          "titulo": "Achar a causa (5 Porquês)",
+          "itens": [
+            "No cartão, toque em \"5 Porquês\".",
+            "Responda \"Por que isso aconteceu?\".",
+            "Pergunte \"por quê?\" de novo sobre a resposta, no mínimo 3 vezes, até chegar a uma causa que a empresa consegue mudar.",
+            "Escreva a causa raiz e toque em \"Salvar análise\"."
+          ]
+        },
+        {
+          "titulo": "Resolver sem plano (caso simples)",
+          "itens": [
+            "Toque em \"Concluir\".",
+            "Escreva como foi resolvido (exemplo: multa paga pelo condutor; orientado sobre a velocidade) e toque em \"Concluir\"."
+          ]
+        },
+        {
+          "titulo": "Criar o plano de ação (5W2H)",
+          "itens": [
+            "Toque em \"Plano de ação (5W2H)\".",
+            "Preencha o quê, quando (prazo), quem (responsável), por quê, onde, quanto e como.",
+            "Toque em \"Criar plano\". A ação vira atividade em Minhas atividades e o caso vai para \"Em execução\".",
+            "Para outra ação, toque em \"Mais uma ação\"."
+          ]
+        },
+        {
+          "titulo": "Verificar e concluir (PDCA)",
+          "itens": [
+            "Quando as ações forem concluídas em Minhas atividades, toque em \"Concluir (verificar)\".",
+            "Escreva o que foi conferido e o resultado.",
+            "Marque se resolveu. Se não resolveu, o caso volta para \"Em análise\" (ciclo 2).",
+            "Se quiser, escreva o que muda para não repetir (regra, item do checklist, treinamento)."
+          ]
+        },
+        {
+          "titulo": "Ver os indicadores",
+          "itens": [
+            "Toque em \"Indicadores do período\" e escolha 30, 90, 180 ou 365 dias.",
+            "Leia os números do topo: KM rodado, custo por km, consumo, disponibilidade, preventiva no prazo, avarias, multas e casos.",
+            "Veja \"Por veículo\" e \"Por condutor\" para saber onde estão os problemas."
+          ]
+        }
+      ],
+      "cores": [
+        {
+          "nome": "Selo azul (Avaria, Multa, Manutenção, Outro)",
+          "significado": "O tipo do caso."
+        },
+        {
+          "nome": "Selo amarelo \"Recorrente\"",
+          "significado": "Duas avarias no mesmo veículo ou com o mesmo condutor em 180 dias, ou duas multas do mesmo condutor em 12 meses. Só conclui com os 5 Porquês feitos."
+        },
+        {
+          "nome": "Selo amarelo \"Prazo do plano vencido\"",
+          "significado": "O prazo (Quando) do plano passou e o caso ainda está em execução."
+        },
+        {
+          "nome": "Selo verde \"Multa já paga\", \"Manutenção já registrada\"",
+          "significado": "A origem foi resolvida: confira e conclua o caso."
+        },
+        {
+          "nome": "Faixa P, D, C, A",
+          "significado": "Passo do ciclo: Planejar, Executar, Verificar, Agir. O escuro é o passo atual; o verde, os feitos."
+        }
+      ],
+      "problemas": [
+        {
+          "situacao": "\"Caso recorrente: faça primeiro a análise de causa\"",
+          "oQueFazer": "Toque em \"5 Porquês\" no cartão, responda e salve. Depois conclua."
+        },
+        {
+          "situacao": "\"Ainda há ações em aberto\"",
+          "oQueFazer": "A pessoa responsável conclui a atividade em Minhas atividades (ou cancela lá a que não vale mais). Depois toque em \"Concluir (verificar)\" de novo."
+        },
+        {
+          "situacao": "\"Este item já tinha o caso FC-...\"",
+          "oQueFazer": "Está tudo certo: o caso já existia e nada foi criado em dobro. Atualize o quadro."
+        },
+        {
+          "situacao": "\"Este item não precisa mais de tratamento\"",
+          "oQueFazer": "A multa foi paga ou a manutenção já foi registrada. Toque em \"Atualizar\"."
+        },
+        {
+          "situacao": "\"O prazo (Quando) não pode estar no passado\"",
+          "oQueFazer": "Escolha hoje ou uma data à frente."
+        }
+      ],
+      "perguntas": [
+        {
+          "p": "A multa ou a avaria vira ocorrência no Programa de conduta?",
+          "r": "Não sozinha. Com o condutor identificado, ela vira uma sugestão no Programa de conduta, e lá a gestão decide."
+        },
+        {
+          "p": "Como é calculado o custo por km?",
+          "r": "Abastecimentos, manutenções e despesas avulsas do período divididos pelo KM rodado nas retiradas. A multa fica fora: é do condutor."
+        },
+        {
+          "p": "O que é \"preventiva no prazo\"?",
+          "r": "A manutenção feita até a data ou o KM da \"próxima troca\" da manutenção anterior do mesmo tipo."
+        },
+        {
+          "p": "Dá para apagar um caso?",
+          "r": "Não. O caso descartado fica guardado com quem decidiu, quando e o motivo."
+        }
+      ],
+      "quemPode": [
+        {
+          "perfil": "ADMIN,GESTOR,DIRETORIA",
+          "pode": "Abrir, analisar, planejar, concluir e descartar casos; ver os indicadores."
+        },
+        {
+          "perfil": "TODOS",
+          "pode": "A equipe não vê esta aba. Quem é responsável por uma ação recebe a atividade em Minhas atividades."
+        }
       ]
     },
 
@@ -419,6 +629,12 @@ function SGO_ajudaTelas_Frota_() {
           "Se tiver, preencha a CNH, a validade e anexe o arquivo.",
           "Toque em \"Salvar condutor\"."
         ] },
+        { titulo: "Editar um condutor (validade da CNH, telefone, login)", itens: [
+          "Na lista de condutores, toque em \"Editar\" na linha da pessoa.",
+          "Preencha o que mudou: \"Validade da CNH\" (dd/mm/aaaa), \"Número da CNH\", \"Telefone\" ou o \"Login do SGO+\" (só se ainda não tiver).",
+          "Campo vazio mantém o que já estava gravado.",
+          "Toque em \"Salvar alterações\". Para trocar o arquivo da CNH, toque em \"Trocar CNH\" na mesma linha."
+        ] },
         { titulo: "Tirar um veículo ou condutor de uso", itens: [
           "Na linha, toque em \"Inativar\" e confirme.",
           "Ele some das listas, mas o histórico fica guardado. Para voltar, toque em \"Reativar\"."
@@ -427,11 +643,17 @@ function SGO_ajudaTelas_Frota_() {
       problemas: [
         { situacao: "\"Já existe um veículo cadastrado com essa placa.\"", oQueFazer: "O veículo já está no cadastro. Procure na lista." },
         { situacao: "\"Este usuário já está vinculado ao condutor\"", oQueFazer: "Cada login só pode ter um condutor. Escolha outro usuário." },
-        { situacao: "\"Este veículo está em uso\" ao inativar", oQueFazer: "Registre a devolução primeiro e depois inative." }
+        { situacao: "\"Este veículo está em uso\" ao inativar", oQueFazer: "Registre a devolução primeiro e depois inative." },
+        { situacao: "Aviso de CNH vencida ou a vencer no Início", oQueFazer: "Quando chegar a CNH nova, toque em \"Editar\" no condutor, grave a nova validade e anexe a CNH em \"Trocar CNH\". O aviso some sozinho." },
+        { situacao: "\"Este condutor já está ligado a outro login\"", oQueFazer: "Inative este condutor e cadastre de novo com o login certo. O histórico continua guardado." }
+      ],
+      cores: [
+        { nome: "\"CNH até ...\" em vermelho", significado: "A CNH venceu. O condutor não deve retirar veículo até renovar." },
+        { nome: "\"CNH até ...\" em amarelo", significado: "A CNH vence em até 30 dias." }
       ],
       quemPode: [
-        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar e anexar CNH." },
-        { perfil: "TODOS", pode: "Ver as listas." }
+        { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Cadastrar, editar, inativar, reativar, anexar CNH e ver telefone e CNH dos condutores." },
+        { perfil: "TODOS", pode: "Ver as listas (dos colegas, só o nome)." }
       ]
     },
 

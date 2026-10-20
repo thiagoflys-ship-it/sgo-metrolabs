@@ -1,7 +1,7 @@
 /****************************************************
- * FROTA — RASTREADOR (17/10/2026; API real da iTracker em 19/10/2026)
+ * FROTA — RASTREADOR (17/10/2026; API real do rastreador em 19/10/2026)
  *
- * Integração com o rastreador dos veículos pela API da iTracker (somente leitura):
+ * Integração com o rastreador dos veículos pela API do rastreador (somente leitura):
  *   URL base: https://api.itrackergo.com.br/v1/   (chave RASTREADOR_URL; vazio = esta)
  *   Autenticação: cabeçalho "Authorization: Bearer <RASTREADOR_TOKEN>" em toda chamada.
  *   GET /devices                       veículos (id, nome, situação, última atualização)
@@ -13,7 +13,7 @@
  * Bloqueio da partida (objetivo: a partida só libera com a retirada registrada no SGO+):
  *   o caminho completo continua aqui (seção COMANDOS), com as travas de segurança: nunca bloquear em
  *   movimento, só com ignição desligada e posição dos últimos 30 minutos, liberação de emergência pela
- *   gestão. Fica desligado enquanto a iTracker não liberar um acesso com comandos. Para encaixar a API
+ *   gestão. Fica desligado enquanto a empresa do rastreador não liberar um acesso com comandos. Para encaixar a API
  *   de comando sem reescrever, o envio é configurável em Chaves e senhas:
  *     RASTREADOR_CMD_BLOQUEIO_URL / RASTREADOR_CMD_LIBERACAO_URL: endereço completo (https://...) ou
  *       caminho a partir da URL base (ex.: /commands); {deviceId} no endereço é trocado pelo ID.
@@ -22,7 +22,7 @@
  *   Os dois endereços vazios = aviso "acesso somente leitura"; preenchidos e com
  *   RASTREADOR_BLOQUEIO_LIGADO = 1, a retirada libera e a devolução bloqueia (com as travas).
  *
- * Limites da iTracker: /positions no máximo a cada 30 segundos; 2 requisições por segundo por IP
+ * Limites do rastreador: /positions no máximo a cada 30 segundos; 2 requisições por segundo por IP
  * (o SGO+ espaça as chamadas em 600 ms); HTTP 429 = espera (Retry-After, até 10 s) e tenta de
  * novo até 2 vezes. Erros: 401 chave inválida, 403 acesso negado/sem HTTPS, 404 caminho,
  * 429 limite, 503 indisponível — cada um com mensagem própria (Rastreador_exigirOk_).
@@ -35,10 +35,12 @@
  *   telas), exceto o botão "Testar conexão" do dono.
  *
  * Monitoramento (rotina a cada 2 minutos):
- *   - ignição ligada ou veículo andando sem retirada aberta = alerta crítico "uso sem registro";
- *   - KM: com hodômetro (attributes.odometer ou totalDistance, em metros), KM digitado x
- *     hodômetro; sem hodômetro, KM rodado digitado x distância do /reports/summary no período
- *     da retirada. Divergência acima de 20 km ou de 5% = "KM a conferir";
+ *   - ignição ligada ou veículo andando sem retirada aberta = alerta crítico "uso sem registro"
+ *     (ignição desligada abaixo de 20 km/h é oscilação do GPS: parado; Rastreador_movimento_);
+ *   - KM (19/10/2026): o hodômetro do aparelho conta desde a instalação, não é o do painel. Compara-se
+ *     o KM RODADO: chegada - saída informados x hodômetro na devolução - hodômetro na retirada; sem os
+ *     dois hodômetros, x distância do /reports/summary no período. Diferença acima de 20 km ou de 5%
+ *     = "KM a conferir" (Rastreador_kmRodadoConferencia_);
  *   - falha de conexão = um alerta único (não um por rodada);
  *   - na devolução, o ponto de chegada (hora, endereço, mapa) fica para a gestão.
  *
@@ -60,7 +62,8 @@
 
 var RASTR_URL_PADRAO = 'https://api.itrackergo.com.br/v1';
 var RASTR_URLS_ANTIGAS = ['https://acesso.itrackergo.com.br']; // padrão da versão de 17/10 (Traccar): vira a URL da API
-var RASTR_TEXTO_SOMENTE_LEITURA = 'O acesso da iTracker é somente leitura: o SGO+ monitora o veículo, mas não bloqueia nem libera a partida. Para isso, peça à iTracker um acesso com comandos.';
+// 19/10/2026: uma frase com o que funciona e o que não funciona (o dono não entendia a tela).
+var RASTR_TEXTO_SOMENTE_LEITURA = 'Acesso somente leitura: funcionam a localização, o aviso de uso sem registro, a conferência do KM e o ponto de chegada; não funciona bloquear nem liberar a partida pelo SGO+ (depende de a empresa do rastreador liberar o acesso com comandos).';
 var RASTR_ABA_COMANDOS = 'REG_FROTA_RASTREADOR_COMANDOS';
 var RASTR_ABA_ALERTAS = 'REG_FROTA_RASTREADOR_ALERTAS';
 var RASTR_ABA_PONTOS = 'REG_FROTA_RASTREADOR_PONTOS';
@@ -77,7 +80,11 @@ var RASTR_COLUNAS_MOV = ['KM_RASTREADOR_SAIDA', 'KM_RASTREADOR_DIVERGENCIA_SAIDA
   'KM_RASTREADOR_CHEGADA', 'KM_RASTREADOR_DIVERGENCIA_CHEGADA', 'KM_CONFERIDO_RASTREADOR_CHEGADA_EM', 'KM_CONFERIDO_RASTREADOR_CHEGADA_POR',
   'KM_RASTREADOR_RODADO', 'KM_RASTREADOR_OBS'];
 
-var RASTR_VEL_PARADO_KMH = 3;              // abaixo disso = parado
+// 19/10/2026 (revisão da Frota): abaixo de 5 km/h = parado. Com a ignição desligada, velocidade abaixo de
+// 20 km/h é oscilação do GPS (o aparelho parado marca 5, 11 km/h): o veículo está parado e não é "uso".
+// Ignição desligada a 20 km/h ou mais = andando (reboque ou sensor com defeito): nunca é tratado como parado.
+var RASTR_VEL_PARADO_KMH = 5;              // abaixo disso = parado
+var RASTR_VEL_DERIVA_MAX_KMH = 20;         // ignição desligada e abaixo disso = oscilação do GPS (parado)
 var RASTR_NOS_PARA_KMH = 1.852;            // a API grava a velocidade em nós
 var RASTR_POSICAO_MAX_IDADE_BLOQUEIO_MIN = 30; // posição mais velha que isso não autoriza o bloqueio (provedor com comandos)
 var RASTR_POSICAO_RECENTE_USO_MIN = 15;    // "uso sem registro" só com posição dos últimos 15 min
@@ -89,11 +96,11 @@ var RASTR_KM_TOLERANCIA_PCT = 5;           // ...ou acima de 5% = KM a conferir
 var RASTR_KM_MIN_PCT_RESUMO = 2;           // no KM rodado (resumo), o critério de 5% só conta acima de 2 km (arredondamento)
 var RASTR_INTERVALO_ROTINA_SEG = 100;      // rotina: no mínimo ~2 min entre rodadas
 var RASTR_INTERVALO_MANUAL_SEG = 30;       // "Ler o rastreador agora" da gestão
-var RASTR_POSICOES_MIN_SEG = 30;           // limite da iTracker: /positions no máximo a cada 30 s
-var RASTR_ESPACO_MS = 600;                 // limite da iTracker: 2 requisições por segundo por IP
+var RASTR_POSICOES_MIN_SEG = 30;           // limite do rastreador: /positions no máximo a cada 30 s
+var RASTR_ESPACO_MS = 600;                 // limite do rastreador: 2 requisições por segundo por IP
 var RASTR_429_TENTATIVAS = 2;              // HTTP 429: tenta de novo até 2 vezes...
 var RASTR_429_ESPERA_MAX_SEG = 10;         // ...esperando o Retry-After (no máximo 10 s)
-var RASTR_RESUMO_MAX_DIAS = 7;             // relatórios da iTracker: períodos de até 7 dias
+var RASTR_RESUMO_MAX_DIAS = 7;             // relatórios do rastreador: períodos de até 7 dias
 var RASTR_RESUMOS_POR_RODADA = 3;          // no máximo 3 consultas de resumo por rodada
 var RASTR_RETENCAO_PADRAO_DIAS = 90;
 var RASTR_ORCAMENTO_RODADA_MS = 45000;     // depois disso o resto fica para a próxima rodada
@@ -179,7 +186,7 @@ function Rastreador_num_(n, casas) {
 function Rastreador_textoSomenteLeitura_() { return RASTR_TEXTO_SOMENTE_LEITURA; }
 
 // ------------------------------------------------------------
-// HTTP (API da iTracker: Bearer, só GET)
+// HTTP (API do rastreador: Bearer, só GET)
 // ------------------------------------------------------------
 /** 2 requisições por segundo por IP: no mínimo 600 ms entre chamadas, contando todas as execuções (cache do script). */
 function Rastreador_esperarVez_() {
@@ -216,7 +223,7 @@ function Rastreador_consulta_(params) {
 
 /**
  * Uma chamada à API. params = [[nome, valor], ...] (deviceId pode repetir). Devolve { http, txt, j, esperas429 }.
- * Sem resposta vira erro com rastreadorRede=true, sem segredo. Só GET: com a iTracker (sem comandos) qualquer outro
+ * Sem resposta vira erro com rastreadorRede=true, sem segredo. Só GET: com o acesso atual (sem comandos) qualquer outro
  * método é recusado aqui, antes de sair.
  */
 function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
@@ -224,11 +231,11 @@ function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
   metodo = String(metodo || 'get').toLowerCase();
   if (metodo !== 'get' && !c.comandos) throw Rastreador_erro_('o acesso ao rastreador é somente leitura; o SGO+ não envia nada além de consultas', false);
   if (!Rastreador_temCredencial_(c)) {
-    throw Rastreador_erro_('falta a chave de acesso da iTracker: o responsável pelo sistema grava a "Chave de acesso (Bearer)" (RASTREADOR_TOKEN) em Chaves e senhas > Rastreador da frota', false);
+    throw Rastreador_erro_('falta a chave de acesso do rastreador: o responsável pelo sistema grava a "Chave de acesso (Bearer)" (RASTREADOR_TOKEN) em Chaves e senhas > Rastreador da frota', false);
   }
   var url = (/^https?:\/\//i.test(caminho) ? caminho : c.url + caminho) + Rastreador_consulta_(params);
   if (!/^https:\/\//i.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url)) {
-    throw Rastreador_erro_('o endereço do rastreador precisa começar com https:// (a iTracker só aceita HTTPS); o padrão é ' + RASTR_URL_PADRAO + '/', false);
+    throw Rastreador_erro_('o endereço do rastreador precisa começar com https:// (a empresa do rastreador só aceita HTTPS); o padrão é ' + RASTR_URL_PADRAO + '/', false);
   }
   var chave = o.comando && c.tokenComandos ? c.tokenComandos : c.token;
   var op = { method: metodo, muteHttpExceptions: true, followRedirects: false, headers: { Authorization: 'Bearer ' + chave, Accept: 'application/json' } };
@@ -237,7 +244,7 @@ function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
     Rastreador_esperarVez_();
     var r;
     try { r = UrlFetchApp.fetch(url, op); }
-    catch (e) { throw Rastreador_erro_('sem resposta da iTracker (' + Rastreador_limpar_(e && e.message, c) + ')', true); }
+    catch (e) { throw Rastreador_erro_('sem resposta do rastreador (' + Rastreador_limpar_(e && e.message, c) + ')', true); }
     var http = r.getResponseCode();
     if (http === 429 && t < RASTR_429_TENTATIVAS) { Utilities.sleep(Rastreador_esperaDo429_(r) * 1000); continue; }
     var txt = '';
@@ -252,16 +259,16 @@ function Rastreador_chamar_(c, metodo, caminho, params, corpo, o) {
 function Rastreador_exigirOk_(res, c, oQue) {
   var h = res.http;
   if (h >= 200 && h < 300) {
-    if (res.j === null) throw Rastreador_erro_('a resposta da iTracker para ' + oQue + ' não veio no formato esperado (JSON); confira o endereço RASTREADOR_URL (o padrão é ' + RASTR_URL_PADRAO + '/)', false, h);
+    if (res.j === null) throw Rastreador_erro_('a resposta do rastreador para ' + oQue + ' não veio no formato esperado (JSON); confira o endereço RASTREADOR_URL (o padrão é ' + RASTR_URL_PADRAO + '/)', false, h);
     return res;
   }
-  if (h === 401) throw Rastreador_erro_('a iTracker recusou a chave de acesso (HTTP 401: chave inválida ou cancelada); o responsável pelo sistema grava a chave certa em Chaves e senhas > Rastreador da frota', false, h);
-  if (h === 403) throw Rastreador_erro_('a iTracker negou o acesso a ' + oQue + ' (HTTP 403: acesso negado ou chamada sem HTTPS); confira se RASTREADOR_URL começa com https:// e peça à iTracker para conferir a permissão da chave', false, h);
-  if (h === 404) throw Rastreador_erro_('a iTracker não reconheceu o endereço de ' + oQue + ' (HTTP 404); confira RASTREADOR_URL em Chaves e senhas (o padrão é ' + RASTR_URL_PADRAO + '/)', false, h);
-  if (h === 429) throw Rastreador_erro_('a iTracker recusou por excesso de consultas (HTTP 429; limite de 2 por segundo e posições a cada 30 segundos); o SGO+ esperou, tentou de novo ' + RASTR_429_TENTATIVAS + ' vezes e deixou para a próxima rodada', true, h);
-  if (h === 503) throw Rastreador_erro_('a plataforma da iTracker está indisponível no momento (HTTP 503); o SGO+ tenta de novo na próxima rodada', true, h);
-  if (h >= 500) throw Rastreador_erro_('a iTracker respondeu com erro interno (HTTP ' + h + ') em ' + oQue + '; o SGO+ tenta de novo na próxima rodada', true, h);
-  throw Rastreador_erro_('a iTracker respondeu HTTP ' + h + ' em ' + oQue + (res.txt ? ' (' + Rastreador_limpar_(res.txt.slice(0, 160), c) + ')' : ''), false, h);
+  if (h === 401) throw Rastreador_erro_('a empresa do rastreador recusou a chave de acesso (HTTP 401: chave inválida ou cancelada); o responsável pelo sistema grava a chave certa em Chaves e senhas > Rastreador da frota', false, h);
+  if (h === 403) throw Rastreador_erro_('a empresa do rastreador negou o acesso a ' + oQue + ' (HTTP 403: acesso negado ou chamada sem HTTPS); confira se RASTREADOR_URL começa com https:// e peça à empresa do rastreador para conferir a permissão da chave', false, h);
+  if (h === 404) throw Rastreador_erro_('a empresa do rastreador não reconheceu o endereço de ' + oQue + ' (HTTP 404); confira RASTREADOR_URL em Chaves e senhas (o padrão é ' + RASTR_URL_PADRAO + '/)', false, h);
+  if (h === 429) throw Rastreador_erro_('a empresa do rastreador recusou por excesso de consultas (HTTP 429; limite de 2 por segundo e posições a cada 30 segundos); o SGO+ esperou, tentou de novo ' + RASTR_429_TENTATIVAS + ' vezes e deixou para a próxima rodada', true, h);
+  if (h === 503) throw Rastreador_erro_('a plataforma do rastreador está indisponível no momento (HTTP 503); o SGO+ tenta de novo na próxima rodada', true, h);
+  if (h >= 500) throw Rastreador_erro_('a empresa do rastreador respondeu com erro interno (HTTP ' + h + ') em ' + oQue + '; o SGO+ tenta de novo na próxima rodada', true, h);
+  throw Rastreador_erro_('a empresa do rastreador respondeu HTTP ' + h + ' em ' + oQue + (res.txt ? ' (' + Rastreador_limpar_(res.txt.slice(0, 160), c) + ')' : ''), false, h);
 }
 
 function Rastreador_lista_(j) {
@@ -310,6 +317,29 @@ function Rastreador_posicao_(p) {
   };
 }
 
+/**
+ * Estado do veículo pela última posição (19/10/2026): ANDANDO, LIGADO (ignição ligada, parado), PARADO ou SEM_DADO.
+ * deriva = a velocidade marcada é oscilação do GPS (ignição desligada, abaixo de 20 km/h): não conta como movimento.
+ * texto = frase curta para a tela da gestão.
+ */
+function Rastreador_movimento_(pos) {
+  if (!pos) return { estado: 'SEM_DADO', deriva: false, texto: 'sem posição' };
+  var kmh = pos.kmh, ign = pos.ignicao;
+  var vel = kmh === null || kmh === undefined ? null : Number(kmh);
+  if (ign === false) {
+    if (vel !== null && vel >= RASTR_VEL_DERIVA_MAX_KMH) {
+      return { estado: 'ANDANDO', deriva: false, texto: 'andando a ' + Rastreador_num_(vel, 0) + ' km/h com a ignição desligada (reboque ou sensor da ignição com defeito)' };
+    }
+    var deriva = vel !== null && vel >= 1;
+    return { estado: 'PARADO', deriva: deriva, texto: 'parado, ignição desligada' + (deriva ? ' (o GPS marcou ' + Rastreador_num_(vel, 0) + ' km/h: oscilação normal do sinal com o veículo parado)' : '') };
+  }
+  if ((vel !== null && vel >= RASTR_VEL_PARADO_KMH) || pos.movimento === true) {
+    return { estado: 'ANDANDO', deriva: false, texto: 'andando' + (vel !== null ? ' a ' + Rastreador_num_(vel, 0) + ' km/h' : '') };
+  }
+  if (ign === true) return { estado: 'LIGADO', deriva: false, texto: 'parado com a ignição ligada' };
+  return { estado: 'PARADO', deriva: false, texto: 'parado (o aparelho não informa a ignição)' };
+}
+
 function Rastreador_localTexto_(pos) {
   if (!pos) return 'local não informado';
   if (pos.endereco) return pos.endereco;
@@ -339,7 +369,7 @@ function Rastreador_guardarPosicoes_(c, mapa, juntar) {
 /**
  * GET /positions (todas, uma chamada) ou só de um veículo. Devolve mapa deviceId -> posição.
  * o.aceitarCacheSeg: usa a última leitura guardada se for desta idade ou mais nova (e tiver o veículo pedido).
- * Limite da iTracker (uma leitura a cada 30 s): o.esperar = espera o tempo que falta (só a rotina, em segundo
+ * Limite do rastreador (uma leitura a cada 30 s): o.esperar = espera o tempo que falta (só a rotina, em segundo
  * plano); sem esperar, usa a leitura guardada dos últimos 2 minutos ou devolve erro "intervalo".
  * o.fresco: decisão de bloqueio — nunca usa leitura guardada; dentro dos 30 s devolve erro "intervalo" (o comando fica
  * pendente e a rotina decide com a leitura dela).
@@ -358,7 +388,7 @@ function Rastreador_lerPosicoes_(c, deviceId, o) {
     else {
       var g1 = o.fresco ? null : Rastreador_posicoesGuardadas_(c, 120);
       if (g1 && (!dev || g1[dev])) return g1;
-      var eInt = Rastreador_erro_('as posições foram lidas há menos de ' + RASTR_POSICOES_MIN_SEG + ' segundos (limite da iTracker); a próxima rodada lê de novo', false);
+      var eInt = Rastreador_erro_('as posições foram lidas há menos de ' + RASTR_POSICOES_MIN_SEG + ' segundos (limite do rastreador); a próxima rodada lê de novo', false);
       eInt.rastreadorIntervalo = true;
       throw eInt;
     }
@@ -381,16 +411,16 @@ function Rastreador_lerPosicoes_(c, deviceId, o) {
  */
 function Rastreador_lerDistancia_(c, deviceId, de, ate) {
   if (!(de instanceof Date) || isNaN(de.getTime()) || !(ate instanceof Date) || isNaN(ate.getTime()) || ate <= de) return { km: null, motivo: 'período da retirada sem data e hora válidas' };
-  if (ate.getTime() - de.getTime() > RASTR_RESUMO_MAX_DIAS * 86400000) return { km: null, motivo: 'retirada com mais de ' + RASTR_RESUMO_MAX_DIAS + ' dias: o resumo da iTracker cobre no máximo ' + RASTR_RESUMO_MAX_DIAS + ' dias' };
+  if (ate.getTime() - de.getTime() > RASTR_RESUMO_MAX_DIAS * 86400000) return { km: null, motivo: 'retirada com mais de ' + RASTR_RESUMO_MAX_DIAS + ' dias: o resumo do rastreador cobre no máximo ' + RASTR_RESUMO_MAX_DIAS + ' dias' };
   var res = Rastreador_exigirOk_(Rastreador_chamar_(c, 'get', '/reports/summary', [['deviceId', deviceId], ['from', de.toISOString()], ['to', ate.toISOString()]]), c, 'o resumo do período');
   var itens = Rastreador_lista_(res.j);
   if (!itens.length && res.j && typeof res.j === 'object' && !Array.isArray(res.j)) itens = [res.j];
   var it = itens.filter(function (x) { return x && String(x.deviceId) === String(deviceId); })[0] || (itens.length === 1 ? itens[0] : null);
-  if (!it) return { km: null, motivo: 'o resumo da iTracker veio sem este veículo' };
+  if (!it) return { km: null, motivo: 'o resumo do rastreador veio sem este veículo' };
   var numero = function (v) { return v === null || v === undefined || v === '' || !isFinite(Number(v)) ? null : Number(v); };
   var m = numero(it.distance);
   if (m === null && numero(it.endOdometer) !== null && numero(it.startOdometer) !== null) m = numero(it.endOdometer) - numero(it.startOdometer);
-  if (m === null || m < 0) return { km: null, motivo: 'o resumo da iTracker veio sem a distância percorrida' };
+  if (m === null || m < 0) return { km: null, motivo: 'o resumo do rastreador veio sem a distância percorrida' };
   return { km: Math.round(m / 1000) };
 }
 
@@ -531,26 +561,80 @@ function Rastreador_kmDivergente_(kmDigitado, kmRastreador, minAbsPct) {
   return { dif: dif, divergente: Math.abs(dif) > RASTR_KM_TOLERANCIA || porPct };
 }
 
-/** Grava o hodômetro lido na retirada (SAIDA) ou devolução (CHEGADA) e marca "KM a conferir" se divergir. */
+/**
+ * 19/10/2026 (revisão da Frota): o hodômetro do rastreador conta desde a instalação do aparelho, não é o número do
+ * painel (ex.: aparelho em 26.238 km num carro com 189.561 km). Comparar os dois valores dava "KM a conferir" em toda
+ * retirada. O que se compara é a VARIAÇÃO: KM rodado informado (chegada - saída) x KM rodado pelo rastreador
+ * (hodômetro na devolução - hodômetro na retirada). Na retirada o hodômetro só é guardado, sem comparação.
+ *
+ * Rastreador_kmRodadoConferencia_(mov): lê só o que está gravado na movimentação. Devolve null (nada a comparar) ou
+ * { fonte: 'HODOMETRO'|'RESUMO', rodadoInformado, rodadoRastreador, odoSaida, odoChegada, dif, divergente }.
+ */
+function Rastreador_numOuNulo_(v) {
+  if (v === null || v === undefined || String(v).trim() === '') return null;
+  var n = Frota_num_(v, NaN);
+  return isFinite(n) ? n : null;
+}
+
+function Rastreador_kmRodadoConferencia_(mov) {
+  if (!mov || SGO_UTILS.safeUpper(mov.STATUS) !== 'FINALIZADO') return null;
+  var ks = Rastreador_numOuNulo_(mov.KM_SAIDA), kc = Rastreador_numOuNulo_(mov.KM_CHEGADA);
+  if (ks === null || kc === null) return null;
+  var informado = kc - ks;
+  var os = Rastreador_numOuNulo_(mov.KM_RASTREADOR_SAIDA), oc = Rastreador_numOuNulo_(mov.KM_RASTREADOR_CHEGADA);
+  var r;
+  // aparelho trocado ou zerado no meio da retirada (chegada menor que a saída): o hodômetro não serve; vale o resumo
+  if (os !== null && oc !== null && oc >= os) r = { fonte: 'HODOMETRO', rodadoRastreador: oc - os, odoSaida: os, odoChegada: oc };
+  else {
+    var rod = Rastreador_numOuNulo_(mov.KM_RASTREADOR_RODADO);
+    if (rod === null) return null;
+    r = { fonte: 'RESUMO', rodadoRastreador: rod, odoSaida: os, odoChegada: oc };
+  }
+  var k = Rastreador_kmDivergente_(informado, r.rodadoRastreador, RASTR_KM_MIN_PCT_RESUMO);
+  r.rodadoInformado = informado; r.dif = k.dif; r.divergente = k.divergente;
+  return r;
+}
+
+/** Frase da conferência para a tela, a trilha e a central ("KM rodado informado 120 km ... e pelo rastreador 118 km"). */
+function Rastreador_textoConferencia_(mov, r) {
+  return 'KM rodado informado ' + Frota_kmTexto_(r.rodadoInformado) + ' km (saída ' + Frota_kmTexto_(mov.KM_SAIDA) + ', chegada ' + Frota_kmTexto_(mov.KM_CHEGADA) +
+    ') e KM rodado medido pelo rastreador ' + Frota_kmTexto_(r.rodadoRastreador) + ' km' +
+    (r.fonte === 'HODOMETRO' ? ' (hodômetro do aparelho de ' + Frota_kmTexto_(r.odoSaida) + ' a ' + Frota_kmTexto_(r.odoChegada) + ')' : ' (distância do período da retirada)') +
+    ': diferença de ' + Frota_kmTexto_(r.dif) + ' km';
+}
+
+/**
+ * Grava o hodômetro do rastreador lido na retirada (SAIDA, só guarda) ou na devolução (CHEGADA, compara o KM rodado).
+ * Na CHEGADA sem o hodômetro da saída devolve { precisaResumo: true } para quem chamou conferir pela distância do período.
+ */
 function Rastreador_conferirKm_(mov, veiculo, etapa, pos, sessao) {
   if (!pos || pos.odometroKm === null || !mov) return null;
-  var kmDig = Frota_num_(etapa === 'SAIDA' ? mov.KM_SAIDA : mov.KM_CHEGADA, NaN);
-  if (!isFinite(kmDig)) return null;
-  var k = Rastreador_kmDivergente_(kmDig, pos.odometroKm, 0);
   var upd = {};
   upd['KM_RASTREADOR_' + etapa] = pos.odometroKm;
-  upd['KM_RASTREADOR_DIVERGENCIA_' + etapa] = k.divergente ? k.dif : '';
+  if (etapa === 'SAIDA') {
+    SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, mov.ID, upd);
+    Object.assign(mov, upd);
+    return { fonte: 'HODOMETRO', odometroKm: pos.odometroKm, guardado: true, divergente: false };
+  }
+  Object.assign(mov, upd);
+  var r = Rastreador_kmRodadoConferencia_(mov);
+  if (!r || r.fonte !== 'HODOMETRO') {
+    SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, mov.ID, upd);
+    return { fonte: 'HODOMETRO', odometroKm: pos.odometroKm, precisaResumo: true, divergente: false };
+  }
+  upd.KM_RASTREADOR_RODADO = r.rodadoRastreador;
+  upd.KM_RASTREADOR_DIVERGENCIA_CHEGADA = r.divergente ? r.dif : '';
+  upd.KM_RASTREADOR_OBS = '';
   SGO_DATA.update(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO, mov.ID, upd);
   Object.assign(mov, upd);
-  if (k.divergente) {
+  if (r.divergente) {
     Frota_auditar_(sessao || RASTR_SISTEMA, {
-      acao: 'RASTREADOR_KM_DIVERGENTE_' + etapa, veiculoId: SGO_UTILS.safe(veiculo.ID), placa: SGO_UTILS.safe(veiculo.PLACA), movimentacaoId: SGO_UTILS.safe(mov.ID),
-      condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), campo: etapa === 'SAIDA' ? 'KM_SAIDA' : 'KM_CHEGADA', antes: pos.odometroKm, depois: kmDig,
-      detalhe: 'KM ' + (etapa === 'SAIDA' ? 'de saída' : 'de chegada') + ' digitado ' + Frota_kmTexto_(kmDig) + ' e hodômetro do rastreador ' + Frota_kmTexto_(pos.odometroKm) +
-        ' (diferença de ' + Frota_kmTexto_(k.dif) + ' km; tolerância de ' + RASTR_KM_TOLERANCIA + ' km ou ' + RASTR_KM_TOLERANCIA_PCT + '%). A gestão confere em KM a conferir.'
+      acao: 'RASTREADOR_KM_DIVERGENTE_CHEGADA', veiculoId: SGO_UTILS.safe(veiculo.ID), placa: SGO_UTILS.safe(veiculo.PLACA), movimentacaoId: SGO_UTILS.safe(mov.ID),
+      condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), campo: 'KM_RODADO', antes: r.rodadoRastreador, depois: r.rodadoInformado,
+      detalhe: Rastreador_textoConferencia_(mov, r) + ' (tolerância de ' + RASTR_KM_TOLERANCIA + ' km ou ' + RASTR_KM_TOLERANCIA_PCT + '%). A gestão confere em KM a conferir.'
     });
   }
-  return { fonte: 'HODOMETRO', odometroKm: pos.odometroKm, dif: k.dif, divergente: k.divergente };
+  return { fonte: 'HODOMETRO', odometroKm: pos.odometroKm, rodado: r.rodadoInformado, rodadoRastreador: r.rodadoRastreador, dif: r.dif, divergente: r.divergente };
 }
 
 /** Início e fim da retirada (data e hora digitadas; na falta, a hora do registro). */
@@ -592,16 +676,33 @@ function Rastreador_conferirKmPorResumo_(c, mov, veiculo, sessao) {
     Frota_auditar_(sessao || RASTR_SISTEMA, {
       acao: 'RASTREADOR_KM_DIVERGENTE_CHEGADA', veiculoId: SGO_UTILS.safe(veiculo.ID), placa: SGO_UTILS.safe(veiculo.PLACA), movimentacaoId: SGO_UTILS.safe(mov.ID),
       condutorId: SGO_UTILS.safe(mov.CONDUTOR_ID), campo: 'KM_RODADO', antes: d.km, depois: rodado,
-      detalhe: 'KM rodado digitado ' + Frota_kmTexto_(rodado) + ' (saída ' + Frota_kmTexto_(saida) + ', chegada ' + Frota_kmTexto_(chegada) + ') e distância medida pelo rastreador no período ' +
+      detalhe: 'KM rodado informado ' + Frota_kmTexto_(rodado) + ' km (saída ' + Frota_kmTexto_(saida) + ', chegada ' + Frota_kmTexto_(chegada) + ') e distância medida pelo rastreador no período ' +
         Frota_kmTexto_(d.km) + ' km (diferença de ' + Frota_kmTexto_(k.dif) + ' km; tolerância de ' + RASTR_KM_TOLERANCIA + ' km ou ' + RASTR_KM_TOLERANCIA_PCT + '%). A gestão confere em KM a conferir.'
     });
   }
   return { fonte: 'RESUMO', km: d.km, rodado: rodado, dif: k.dif, divergente: k.divergente };
 }
 
+/** Conferência da devolução já feita (pelo hodômetro, pelo resumo ou com o motivo de não ter como conferir). */
 function Rastreador_kmChegadaFeito_(m) {
   var v = function (x) { return String(x === undefined || x === null ? '' : x).trim(); };
-  return v(m.KM_RASTREADOR_CHEGADA) !== '' || v(m.KM_RASTREADOR_RODADO) !== '' || v(m.KM_RASTREADOR_OBS) !== '';
+  return v(m.KM_RASTREADOR_RODADO) !== '' || v(m.KM_RASTREADOR_OBS) !== '';
+}
+
+/**
+ * Diferença fixa entre o painel e o hodômetro do aparelho, da retirada mais recente que tem os dois
+ * (KM de saída - hodômetro na saída). Só para mostrar à gestão o "KM do painel estimado"; não entra em regra.
+ */
+function Rastreador_deslocamentosPainel_(movs) {
+  var out = {};
+  (movs || []).forEach(function (m) {
+    var vid = SGO_UTILS.safe(m.VEICULO_ID);
+    var ks = Rastreador_numOuNulo_(m.KM_SAIDA), os = Rastreador_numOuNulo_(m.KM_RASTREADOR_SAIDA);
+    if (!vid || ks === null || os === null) return;
+    var em = String(m.CRIADO_EM || '');
+    if (!out[vid] || em > out[vid].em) out[vid] = { em: em, deslocamento: ks - os };
+  });
+  return out;
 }
 
 // ------------------------------------------------------------
@@ -675,7 +776,8 @@ function Rastreador_aposDevolucao_(sessao, veiculoId, movId) {
       pos = Rastreador_lerPosicoes_(c, dev, c.bloqueio ? { fresco: true } : { aceitarCacheSeg: 60 })[dev] || null;
       Rastreador_gravarChegada_(veiculo, movId, pos);
       km = Rastreador_conferirKm_(mov, veiculo, 'CHEGADA', pos, sessao);
-      if (!km && pos && pos.odometroKm === null) km = Rastreador_conferirKmPorResumo_(c, mov, veiculo, sessao);
+      // sem o hodômetro da retirada (ou aparelho sem hodômetro), confere pela distância do período
+      if (pos && (!km || km.precisaResumo)) km = Rastreador_conferirKmPorResumo_(c, mov, veiculo, sessao);
       Rastreador_conexaoOk_();
     } catch (eLe) {
       erroLeitura = Rastreador_limpar_(eLe && eLe.message, c);
@@ -695,7 +797,7 @@ function Rastreador_aposDevolucao_(sessao, veiculoId, movId) {
 /** Gatilho de tempo. Nome sem "_" no fim para o Google achar; recusada quando chamada pelo navegador. */
 function Frota_rastreadorRotina() {
   if (!SGO_execucaoInterna_()) return null;
-  // LGPD: a limpeza do prazo de retenção roda mesmo com o rastreador desligado (não chama a iTracker).
+  // LGPD: a limpeza do prazo de retenção roda mesmo com o rastreador desligado (não chama a empresa do rastreador).
   try { Rastreador_limparRetencao_(false); } catch (eL) { console.error('Retenção do rastreador: ' + ((eL && eL.message) || eL)); }
   try { return Rastreador_rodada_({}); }
   catch (e) { console.error('Rotina do rastreador: ' + Rastreador_limpar_(e && e.message, Rastreador_cfg_())); return { erro: true }; }
@@ -723,10 +825,10 @@ function Rastreador_rodada_(o) {
   try {
     var ultima = Number(props.getProperty(RASTR_PROP_ULTIMA_RODADA) || 0);
     if (cache.get(RASTR_CACHE_RODADA)) return { ligado: true, pulada: true, texto: 'Já há uma leitura do rastreador em andamento. Aguarde um minuto.' };
-    if (Date.now() - ultima < intervalo) return { ligado: true, pulada: true, texto: 'O rastreador foi lido há menos de ' + Math.round(intervalo / 1000) + ' segundos (limite da iTracker). Aguarde e tente de novo.' };
+    if (Date.now() - ultima < intervalo) return { ligado: true, pulada: true, texto: 'O rastreador foi lido há menos de ' + Math.round(intervalo / 1000) + ' segundos (limite do rastreador). Aguarde e tente de novo.' };
     if (o.manual) {
       var desdePos = Date.now() - Number(cache.get(RASTR_CACHE_ULTIMAS_POSICOES) || 0);
-      if (desdePos < RASTR_POSICOES_MIN_SEG * 1000) return { ligado: true, pulada: true, texto: 'A iTracker só aceita ler as posições a cada ' + RASTR_POSICOES_MIN_SEG + ' segundos. Tente de novo em ' + Math.ceil((RASTR_POSICOES_MIN_SEG * 1000 - desdePos) / 1000) + ' segundos.' };
+      if (desdePos < RASTR_POSICOES_MIN_SEG * 1000) return { ligado: true, pulada: true, texto: 'O rastreador só aceita ler as posições a cada ' + RASTR_POSICOES_MIN_SEG + ' segundos. Tente de novo em ' + Math.ceil((RASTR_POSICOES_MIN_SEG * 1000 - desdePos) / 1000) + ' segundos.' };
     }
     props.setProperty(RASTR_PROP_ULTIMA_RODADA, String(Date.now()));
     cache.put(RASTR_CACHE_RODADA, '1', 120);
@@ -766,7 +868,7 @@ function Rastreador_rodada_(o) {
       if (isFinite(fim) && (!ultimaDevolucao[vid] || fim > ultimaDevolucao[vid])) ultimaDevolucao[vid] = fim;
     });
 
-    // 1) comandos pendentes: só com provedor com comandos; com a iTracker, pendências antigas são canceladas.
+    // 1) comandos pendentes: só com provedor com comandos; com o acesso atual, pendências antigas são canceladas.
     if (!c.comandos) {
       Rastreador_pendentes_().forEach(function (cmd) { Rastreador_encerrar_(cmd, 'CANCELADO', RASTR_TEXTO_SOMENTE_LEITURA); out.cancelados++; });
     } else {
@@ -783,10 +885,12 @@ function Rastreador_rodada_(o) {
       if (!pos) return;
       var vid = SGO_UTILS.safe(v.ID);
       var recente = pos.quandoMs && (agora - pos.quandoMs) <= RASTR_POSICAO_RECENTE_USO_MIN * 60000;
-      var emUso = pos.ignicao === true || pos.movimento === true || (pos.kmh !== null && pos.kmh >= RASTR_VEL_PARADO_KMH);
+      // 19/10/2026: ignição desligada com velocidade baixa é oscilação do GPS, não uso (Rastreador_movimento_)
+      var mvto = Rastreador_movimento_(pos);
+      var emUso = mvto.estado === 'ANDANDO' || mvto.estado === 'LIGADO';
       var carencia = ultimaDevolucao[vid] && (agora - ultimaDevolucao[vid]) < RASTR_CARENCIA_DEVOLUCAO_MIN * 60000;
       if (!abertas[vid] && recente && emUso && !carencia) {
-        var estado = [pos.ignicao === true ? 'ignição ligada' : '', pos.kmh !== null ? Rastreador_num_(pos.kmh, 0) + ' km/h' : ''].filter(String).join(', ');
+        var estado = mvto.texto;
         var local = Rastreador_localTexto_(pos);
         var a = Rastreador_abrirAlerta_('USO_SEM_REGISTRO', 'USO:' + vid, {
           veiculoId: vid, placa: SGO_UTILS.safe(v.PLACA), deviceId: dev, quando: pos.quandoTexto, local: local, link: pos.link,
@@ -817,8 +921,11 @@ function Rastreador_rodada_(o) {
         // ponto de chegada que faltou (devolução dos últimos 15 minutos, veículo ainda parado)
         if (agora - fim < 15 * 60000 && !emUso && Rastreador_gravarChegada_(v, SGO_UTILS.safe(m.ID), pos)) out.chegadas++;
         if (agora - fim >= 2 * 3600000 || Rastreador_kmChegadaFeito_(m)) return;
-        if (pos.odometroKm !== null) {
-          if (!emUso) { var k2 = Rastreador_conferirKm_(m, v, 'CHEGADA', pos, RASTR_SISTEMA); if (k2) out.km.push(SGO_UTILS.safe(v.PLACA) + ' chegada'); }
+        // hodômetro da devolução: lido uma vez só (veículo parado); retirada sem o hodômetro da saída = confere pelo resumo
+        var temOdoChegada = Rastreador_numOuNulo_(m.KM_RASTREADOR_CHEGADA) !== null;
+        var precisaResumo = pos.odometroKm === null || Rastreador_numOuNulo_(m.KM_RASTREADOR_SAIDA) === null;
+        if (!precisaResumo && !temOdoChegada) {
+          if (!emUso) { var k2 = Rastreador_conferirKm_(m, v, 'CHEGADA', pos, RASTR_SISTEMA); if (k2 && !k2.precisaResumo) out.km.push(SGO_UTILS.safe(v.PLACA) + ' chegada'); }
         } else if (resumos < RASTR_RESUMOS_POR_RODADA && Date.now() - inicio < RASTR_ORCAMENTO_RODADA_MS) {
           resumos++;
           try { var k3 = Rastreador_conferirKmPorResumo_(c, m, v, RASTR_SISTEMA); if (k3 && k3.km !== null) out.km.push(SGO_UTILS.safe(v.PLACA) + ' rodado'); }
@@ -840,7 +947,7 @@ function Rastreador_rodada_(o) {
 // ------------------------------------------------------------
 /**
  * Apaga os pontos de chegada mais velhos que o prazo e tira o local (endereço, mapa) dos alertas cujo último
- * registro passou do prazo. Uma vez por dia (forcar = agora). Não chama a iTracker. Devolve { pontos, alertas }.
+ * registro passou do prazo. Uma vez por dia (forcar = agora). Não chama a empresa do rastreador. Devolve { pontos, alertas }.
  */
 function Rastreador_limparRetencao_(forcar) {
   var props = PropertiesService.getScriptProperties();
@@ -881,7 +988,7 @@ function Rastreador_enderecoComando_(c, tipo, deviceId) {
   return String(e || '').split('{deviceId}').join(encodeURIComponent(String(deviceId)));
 }
 
-/** Pode bloquear? Só com posição recente, parado (abaixo de 3 km/h, sem movimento) e ignição desligada. */
+/** Pode bloquear? Só com posição recente, parado (abaixo de 5 km/h, sem movimento) e ignição desligada. */
 function Rastreador_avaliarParado_(pos) {
   if (!pos) return { pode: false, motivo: 'o rastreador não tem posição deste veículo' };
   var idadeMin = pos.quandoMs ? (Date.now() - pos.quandoMs) / 60000 : Infinity;
@@ -890,6 +997,10 @@ function Rastreador_avaliarParado_(pos) {
       ' minutos); sem posição recente o bloqueio não é enviado, para o comando não ficar na fila do rastreador e chegar com o veículo andando' };
   }
   if (pos.kmh === null) return { pode: false, motivo: 'a última posição (' + pos.quandoTexto + ') não informa a velocidade' };
+  // 19/10/2026: para BLOQUEAR vale a regra mais segura: ignição desligada E menos de 5 km/h, mesmo quando a velocidade é só oscilação do GPS.
+  if (pos.ignicao === false && pos.kmh >= RASTR_VEL_PARADO_KMH && pos.kmh < RASTR_VEL_DERIVA_MAX_KMH && pos.movimento !== true) {
+    return { pode: false, motivo: 'o GPS marca ' + Rastreador_num_(pos.kmh, 0) + ' km/h com a ignição desligada (oscilação do sinal); por segurança o bloqueio espera a velocidade marcar menos de ' + RASTR_VEL_PARADO_KMH + ' km/h' };
+  }
   if (pos.kmh >= RASTR_VEL_PARADO_KMH || pos.movimento === true) {
     return { pode: false, motivo: 'veículo em movimento (' + Rastreador_num_(pos.kmh, 0) + ' km/h às ' + pos.quandoTexto.slice(-5) + ')' };
   }
@@ -910,9 +1021,9 @@ function Rastreador_enviar_(c, deviceId, tipo) {
     var res = Rastreador_chamar_(c, 'post', Rastreador_enderecoComando_(c, tipo, deviceId), [], { deviceId: dev, type: tipo }, { comando: true });
     if (res.http === 200 || res.http === 201 || res.http === 204) return { ok: true, naFila: false, motivo: '' };
     if (res.http === 202) return { ok: true, naFila: true, motivo: 'aceito pela plataforma e guardado na fila: o aparelho recebe quando se conectar' };
-    if (res.http === 401 || res.http === 403) return { ok: false, motivo: 'a iTracker recusou o comando por permissão (HTTP ' + res.http + '); a chave de comandos precisa poder bloquear e liberar (Chaves e senhas > Rastreador da frota)' };
-    if (res.http === 404) return { ok: false, motivo: 'a iTracker não reconheceu o endereço do comando (HTTP 404); confira o endereço do comando de ' + (tipo === 'engineStop' ? 'bloqueio' : 'liberação') + ' em Chaves e senhas' };
-    if (res.http === 429) return { ok: false, rede: true, motivo: 'a iTracker limitou as consultas (HTTP 429); o SGO+ tenta de novo na próxima rodada' };
+    if (res.http === 401 || res.http === 403) return { ok: false, motivo: 'a empresa do rastreador recusou o comando por permissão (HTTP ' + res.http + '); a chave de comandos precisa poder bloquear e liberar (Chaves e senhas > Rastreador da frota)' };
+    if (res.http === 404) return { ok: false, motivo: 'a empresa do rastreador não reconheceu o endereço do comando (HTTP 404); confira o endereço do comando de ' + (tipo === 'engineStop' ? 'bloqueio' : 'liberação') + ' em Chaves e senhas' };
+    if (res.http === 429) return { ok: false, rede: true, motivo: 'a empresa do rastreador limitou as consultas (HTTP 429); o SGO+ tenta de novo na próxima rodada' };
     if (res.http >= 400 && res.http < 500) return { ok: false, rede: res.http === 429, motivo: 'o rastreador recusou o comando (HTTP ' + res.http + (res.txt ? ': ' + Rastreador_limpar_(res.txt.slice(0, 160), c) : '') + ')' };
     return { ok: false, rede: res.http >= 500, motivo: 'o rastreador respondeu HTTP ' + res.http + ' ao comando' };
   } catch (e) {
@@ -1049,7 +1160,7 @@ function Rastreador_pendencias_(add, veiculos, condutores) {
         id: 'FROTA:RASTR:CONEXAO', nome: 'Rastreador', publico: 'GESTAO', gravidade: 'ATENCAO', dias: null, vencimento: '', responsavel: 'Gestão da frota',
         titulo: 'Sem comunicação com o rastreador desde ' + Rastreador_agoraTexto_(new Date(Pend_s_(a.PRIMEIRO_EM))),
         detalhe: Pend_s_(a.DETALHE) + ' Tentativas sem sucesso: ' + Pend_num_(a.OCORRENCIAS) + '. Enquanto isso o SGO+ não acompanha o uso sem registro nem confere o KM pelo rastreador.',
-        oQueFazer: 'Confira a internet do servidor e se a plataforma da iTracker está no ar. Se a chave de acesso foi recusada (HTTP 401) ou mudou, avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota > Testar conexão).',
+        oQueFazer: 'Confira a internet do servidor e se a plataforma do rastreador está no ar. Se a chave de acesso foi recusada (HTTP 401) ou mudou, avise o responsável pelo sistema (Chaves e senhas > Rastreador da frota > Testar conexão).',
         textoEstavel: 'O SGO+ está sem comunicação com o rastreador.'
       }));
     }
@@ -1109,7 +1220,7 @@ function Rastreador_veiculo_(veiculoId) {
 
 function Rastreador_exigirDispositivo_(v) {
   var dev = SGO_UTILS.safe(v.RASTREADOR_DEVICE_ID);
-  if (!dev) throw new Error('O veículo ' + v.PLACA + ' não tem dispositivo do rastreador vinculado. Vincule em Frota > Rastreador > Vínculo veículo e dispositivo.');
+  if (!dev) throw new Error('O veículo ' + v.PLACA + ' não tem aparelho do rastreador ligado. Ligue em Frota > Rastreador > Veículos e aparelhos (escolha o aparelho e clique em Gravar vínculo).');
   return dev;
 }
 
@@ -1148,11 +1259,11 @@ function Frota_apiListarRastreador(sessionId) {
   var ul = props.getProperty(RASTR_PROP_ULTIMA_LEITURA);
   if (ul) out.ultimaLeituraOk = Rastreador_agoraTexto_(new Date(ul));
 
-  // A tela usa o que a rotina já leu (cache); só lê na hora se não houver nada guardado e a iTracker permitir.
+  // A tela usa o que a rotina já leu (cache); só lê na hora se não houver nada guardado e a empresa do rastreador permitir.
   var posicoes = {};
   if (c.ligado && Rastreador_temCredencial_(c)) {
     try { out.dispositivos = Rastreador_lerDispositivos_(c, true); }
-    catch (e) { out.dispositivosErro = 'Não foi possível ler a lista de veículos da iTracker: ' + Rastreador_limpar_(e && e.message, c) + '.'; }
+    catch (e) { out.dispositivosErro = 'Não foi possível ler a lista de veículos do rastreador: ' + Rastreador_limpar_(e && e.message, c) + '.'; }
     var g = Rastreador_posicoesGuardadas_(c, 900);
     if (g) posicoes = g;
     else if (!out.dispositivosErro) {
@@ -1162,6 +1273,7 @@ function Frota_apiListarRastreador(sessionId) {
   }
   var usados = {};
   var chegadas = Rastreador_ultimasChegadas_();
+  var deslocamentos = Rastreador_deslocamentosPainel_(Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO));
   var veiculos = Frota_veiculosComSituacao_().filter(function (v) { return SGO_UTILS.safeUpper(v.STATUS) !== 'INATIVO'; })
     .sort(function (a, b) { return SGO_UTILS.safe(a.PLACA).localeCompare(SGO_UTILS.safe(b.PLACA)); });
   veiculos.forEach(function (v) { var d = SGO_UTILS.safe(v.RASTREADOR_DEVICE_ID); if (d) usados[d] = SGO_UTILS.safe(v.PLACA); });
@@ -1176,8 +1288,14 @@ function Frota_apiListarRastreador(sessionId) {
       kmAtual: Frota_num_(v.KM_ATUAL, 0), deviceId: dev, deviceNome: SGO_UTILS.safe(v.RASTREADOR_DEVICE_NOME), aceitaBloqueio: c.comandos ? SGO_UTILS.safeUpper(v.RASTREADOR_ACEITA_BLOQUEIO) : '',
       comandosConferidosEm: c.comandos && v.RASTREADOR_COMANDOS_CONFERIDOS_EM ? Rastreador_agoraTexto_(new Date(v.RASTREADOR_COMANDOS_CONFERIDOS_EM)) : '',
       sugestao: sug ? { id: sug.id, nome: sug.nome } : null,
-      posicao: pos ? { quando: pos.quandoTexto, kmh: pos.kmh, ignicao: pos.ignicao, movimento: pos.movimento, odometroKm: pos.odometroKm, local: Rastreador_localTexto_(pos), link: pos.link,
-        parado: Rastreador_avaliarParado_(pos).pode } : null,
+      posicao: pos ? (function () {
+        var mv = Rastreador_movimento_(pos), d = deslocamentos[SGO_UTILS.safe(v.ID)];
+        // parado = estado do veículo para a tela (oscilação do GPS com a ignição desligada conta como parado);
+        // podeBloquear = a regra mais estrita do bloqueio (Rastreador_avaliarParado_).
+        return { quando: pos.quandoTexto, kmh: pos.kmh, ignicao: pos.ignicao, movimento: pos.movimento, odometroKm: pos.odometroKm, local: Rastreador_localTexto_(pos), link: pos.link,
+          estado: mv.estado, estadoTexto: mv.texto, deriva: mv.deriva, parado: mv.estado === 'PARADO', podeBloquear: Rastreador_avaliarParado_(pos).pode,
+          kmPainelEstimado: pos.odometroKm !== null && d ? Math.round(pos.odometroKm + d.deslocamento) : null };
+      })() : null,
       ultimaChegada: ch ? { quando: SGO_UTILS.safe(ch.QUANDO), local: SGO_UTILS.safe(ch.LOCAL), link: SGO_UTILS.safe(ch.LINK_MAPA) } : null
     };
   });
@@ -1199,9 +1317,12 @@ function Rastreador_vincular_(sessao, veiculoId, deviceId) {
   var c = Rastreador_cfg_();
   var v = Rastreador_veiculo_(veiculoId);
   var dev = String(deviceId === null || deviceId === undefined ? '' : deviceId).trim();
-  if (dev && !/^[A-Za-z0-9_-]{1,40}$/.test(dev)) throw new Error('O ID do dispositivo no rastreador é o "ID" da lista de veículos da iTracker (ex.: 1234), sem espaços; não é a placa.');
+  if (dev && !/^[A-Za-z0-9_-]{1,40}$/.test(dev)) throw new Error('O ID do dispositivo no rastreador é o "ID" da lista de veículos do rastreador (ex.: 1234), sem espaços; não é a placa.');
   var antes = SGO_UTILS.safe(v.RASTREADOR_DEVICE_ID);
-  if (dev === antes) return { placa: v.PLACA, deviceId: dev, deviceNome: SGO_UTILS.safe(v.RASTREADOR_DEVICE_NOME), aceitaBloqueio: SGO_UTILS.safeUpper(v.RASTREADOR_ACEITA_BLOQUEIO), semMudanca: true, aviso: '' };
+  if (dev === antes) {
+    return { placa: v.PLACA, deviceId: dev, deviceNome: SGO_UTILS.safe(v.RASTREADOR_DEVICE_NOME), aceitaBloqueio: SGO_UTILS.safeUpper(v.RASTREADOR_ACEITA_BLOQUEIO), semMudanca: true, aviso: '',
+      mensagem: dev ? 'Vínculo já estava gravado: o veículo ' + v.PLACA + ' continua ligado ao aparelho ' + (SGO_UTILS.safe(v.RASTREADOR_DEVICE_NOME) || dev) + '.' : 'O veículo ' + v.PLACA + ' já estava sem aparelho do rastreador.' };
+  }
   if (dev) {
     var outro = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_VEICULOS).filter(function (x) { return SGO_UTILS.safe(x.ID) !== SGO_UTILS.safe(v.ID) && SGO_UTILS.safe(x.RASTREADOR_DEVICE_ID) === dev; })[0];
     if (outro) throw new Error('O dispositivo ' + dev + ' já está vinculado ao veículo ' + outro.PLACA + '. Desvincule lá primeiro (deixe o campo vazio e grave).');
@@ -1210,14 +1331,14 @@ function Rastreador_vincular_(sessao, veiculoId, deviceId) {
   if (dev && c.ligado) {
     try {
       var d = Rastreador_lerDispositivos_(c, false).filter(function (x) { return x.id === dev; })[0];
-      if (!d) throw new Error('O dispositivo ' + dev + ' não aparece na lista de veículos da iTracker para esta chave de acesso. Confira o ID na lista ou peça à iTracker o acesso a ele.');
+      if (!d) throw new Error('O dispositivo ' + dev + ' não aparece na lista de veículos do rastreador para esta chave de acesso. Confira o ID na lista ou peça à empresa do rastreador o acesso a ele.');
       nome = d.nome;
     } catch (e) {
       if (!e.rastreadorRede && /não aparece/.test(String(e.message))) throw e;
-      aviso = 'Vínculo gravado sem conferir na iTracker (' + Rastreador_limpar_(e && e.message, c) + ').';
+      aviso = 'Vínculo gravado sem conferir na plataforma do rastreador (' + Rastreador_limpar_(e && e.message, c) + ').';
     }
   } else if (dev) {
-    aviso = 'O rastreador está desligado no SGO+: o vínculo foi gravado sem conferir o dispositivo na iTracker.';
+    aviso = 'O rastreador está desligado no SGO+: o vínculo foi gravado sem conferir o dispositivo na plataforma do rastreador.';
   }
   SGO_DATA.update(SGO_CFG.SHEETS.CAD_VEICULOS, v.ID, {
     RASTREADOR_DEVICE_ID: dev, RASTREADOR_DEVICE_NOME: nome, RASTREADOR_ACEITA_BLOQUEIO: aceita, RASTREADOR_COMANDOS_CONFERIDOS_EM: conferidoEm,
@@ -1240,7 +1361,7 @@ function Frota_apiRastreadorVincular(sessionId, payload) {
 }
 
 /**
- * "Bloqueio neste veículo" (gestão): a API da iTracker não informa quais aparelhos aceitam o corte da partida.
+ * "Bloqueio neste veículo" (gestão): a API do rastreador não informa quais aparelhos aceitam o corte da partida.
  * Depois do teste no pátio, a gestão marca se o veículo usa o bloqueio (SIM) ou fica só no monitoramento (NAO).
  */
 function Frota_apiRastreadorConferirComandos(sessionId, payload) {
@@ -1258,7 +1379,7 @@ function Frota_apiRastreadorConferirComandos(sessionId, payload) {
   return { ok: true, placa: v.PLACA, aceitaBloqueio: aceita };
 }
 
-/** "Liberar partida" (gestão, com justificativa). Só com provedor com comandos; com a iTracker é recusado com a explicação. */
+/** "Liberar partida" (gestão, com justificativa). Só com provedor com comandos; com o acesso atual é recusado com a explicação. */
 function Frota_apiRastreadorLiberar(sessionId, payload) {
   var sessao = Rastreador_exigirGestao_(sessionId);
   payload = payload || {};
@@ -1330,7 +1451,7 @@ function Frota_apiRastreadorConferirAlerta(sessionId, payload) {
   return { ok: true };
 }
 
-/** "Ler o rastreador agora" (gestão): a mesma rodada da rotina, com intervalo mínimo de 30 segundos (limite da iTracker). */
+/** "Ler o rastreador agora" (gestão): a mesma rodada da rotina, com intervalo mínimo de 30 segundos (limite do rastreador). */
 function Frota_apiRastreadorAtualizarAgora(sessionId) {
   Rastreador_exigirGestao_(sessionId);
   var c = Rastreador_cfg_();
@@ -1349,7 +1470,7 @@ function Frota_apiRastreadorAtualizarAgora(sessionId) {
 function Rastreador_testarConexao_() {
   var c = Rastreador_cfg_();
   if (!Rastreador_temCredencial_(c)) {
-    return { funcionou: false, texto: 'Não funcionou: falta a chave de acesso da iTracker. Grave a "Chave de acesso (Bearer)" e teste de novo.', dispositivos: [] };
+    return { funcionou: false, texto: 'Não funcionou: falta a chave de acesso do rastreador. Grave a "Chave de acesso (Bearer)" e teste de novo.', dispositivos: [] };
   }
   Rastreador_esquecerSessao_();
   try {
@@ -1357,7 +1478,7 @@ function Rastreador_testarConexao_() {
     return {
       funcionou: true, total: lista.length,
       dispositivos: lista.map(function (d) { return { id: d.id, nome: d.nome, situacao: d.situacao === 'online' ? 'conectado' : (d.situacao === 'offline' ? 'desconectado' : (d.situacao ? 'sem informação' : '')) }; }),
-      texto: 'Funcionou: a iTracker respondeu (' + c.url.replace(/^https?:\/\//, '') + ') e encontrou ' + lista.length + (lista.length === 1 ? ' veículo' : ' veículos') + '.' +
+      texto: 'Funcionou: a empresa do rastreador respondeu (' + c.url.replace(/^https?:\/\//, '') + ') e encontrou ' + lista.length + (lista.length === 1 ? ' veículo' : ' veículos') + '.' +
         (c.comandos ? ' Endereços de comando preenchidos (o teste não envia comando); bloqueio da partida ' + (c.bloqueioPedido ? 'ligado.' : 'ainda desligado.')
           : ' Acesso somente leitura: o SGO+ monitora, mas não bloqueia nem libera a partida.' + (c.comandosIncompletos ? ' Falta um dos dois endereços de comando (bloqueio e liberação).' : '')) + (c.ligado ? '' : ' O rastreador continua desligado no SGO+ até "Rastreador ligado no SGO+" = Ligado.')
     };

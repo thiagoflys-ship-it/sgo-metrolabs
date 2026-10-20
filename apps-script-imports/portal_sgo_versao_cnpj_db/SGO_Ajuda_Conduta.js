@@ -153,7 +153,7 @@ function SGO_ajudaTelas_Conduta_() {
         { situacao: "\"A sugestão é sobre você\"", oQueFazer: "Quem é o envolvido não decide. Peça a outra pessoa da gestão." },
         { situacao: "\"Prazo de registro ... já venceu\"", oQueFazer: "O caso foi encontrado há mais de 2 dias úteis. Descarte com o motivo \"fora do prazo\"." },
         { situacao: "\"O mês de ... já foi fechado\"", oQueFazer: "O fato é de um mês congelado. Descarte com o motivo; o fechamento não é refeito." },
-        { situacao: "Aviso \"multa(s) com condutor sem login\" ou \"O.S. sem técnico ligado\"", oQueFazer: "Ligue o condutor a um usuário em Frota > Condutores, ou vincule o técnico em Integração Auvo. A sugestão aparece na próxima busca." }
+        { situacao: "Aviso \"multa(s) com condutor sem login\" ou \"O.S. sem técnico ligado\"", oQueFazer: "Ligue o condutor a um usuário em Frota > Veículos e condutores > Condutores > Editar, ou vincule o técnico em Integração Auvo. A sugestão aparece na próxima busca." }
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Ver, buscar agora, aceitar e descartar (nunca a sugestão sobre si)." },

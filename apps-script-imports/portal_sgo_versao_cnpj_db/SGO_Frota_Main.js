@@ -32,6 +32,7 @@ function Frota_apiDispatch(req) {
     apiListarCondutoresAtivos: Frota_apiListarCondutoresAtivos,
     apiListarCondutoresTodos: Frota_apiListarCondutoresTodos,
     apiCriarCondutor: Frota_apiCriarCondutor,
+    apiAtualizarCondutor: Frota_apiAtualizarCondutor,
     apiListarUsuariosParaVinculo: Frota_apiListarUsuariosParaVinculo,
     apiUploadCnh: Frota_apiUploadCnh,
     apiInativarCondutor: Frota_apiInativarCondutor,
@@ -74,7 +75,16 @@ function Frota_apiDispatch(req) {
     apiRastreadorLiberar: Frota_apiRastreadorLiberar,
     apiRastreadorBloquear: Frota_apiRastreadorBloquear,
     apiRastreadorConferirAlerta: Frota_apiRastreadorConferirAlerta,
-    apiRastreadorAtualizarAgora: Frota_apiRastreadorAtualizarAgora
+    apiRastreadorAtualizarAgora: Frota_apiRastreadorAtualizarAgora,
+    // 19/10/2026: gestão e melhoria (SGO_Frota_Gestao.js) — Kanban dos casos, 5 Porquês, 5W2H/PDCA e indicadores; só a gestão
+    apiGestaoKanban: Frota_apiGestaoKanban,
+    apiGestaoIndicadores: Frota_apiGestaoIndicadores,
+    apiGestaoAbrirCaso: Frota_apiGestaoAbrirCaso,
+    apiGestaoDescartar: Frota_apiGestaoDescartar,
+    apiGestaoSalvarAnalise: Frota_apiGestaoSalvarAnalise,
+    apiGestaoCriarPlano: Frota_apiGestaoCriarPlano,
+    apiGestaoAdicionarAcao: Frota_apiGestaoAdicionarAcao,
+    apiGestaoConcluir: Frota_apiGestaoConcluir
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -84,7 +94,7 @@ function Frota_apiDispatch(req) {
   var resultado = allow[fn](req.sessionId, payload);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -718,7 +728,7 @@ function Frota_apiListarCondutoresAtivos(sessionId) {
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES)
     .filter(function(c) { return SGO_UTILS.safeUpper(c.STATUS) !== 'INATIVO'; })
     .sort(function(a, b) { return SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME)); });
-  return { ok: true, items: itens };
+  return { ok: true, items: Frota_condutoresParaPerfil_(sessionId, itens) };
 }
 
 function Frota_apiListarCondutoresTodos(sessionId) {
@@ -726,7 +736,13 @@ function Frota_apiListarCondutoresTodos(sessionId) {
   Frota_exigirEquipe_(sessionId);
   var itens = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES)
     .sort(function(a, b) { return SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME)); });
-  return { ok: true, items: itens };
+  return { ok: true, items: Frota_condutoresParaPerfil_(sessionId, itens) };
+}
+
+/** LGPD (19/10/2026): a equipe vê só nome e situação dos colegas; telefone, CNH e o arquivo da CNH são da gestão. */
+function Frota_condutoresParaPerfil_(sessionId, itens) {
+  if (Frota_ehGestao_(sessionId)) return itens;
+  return itens.map(function(c) { return { ID: c.ID, NOME: c.NOME, STATUS: c.STATUS, USUARIO_ID: c.USUARIO_ID }; });
 }
 
 /** Condutor vinculado a um login específico (ativo), ou null. Usado pra travar a identidade na retirada (não-gestor). */
@@ -814,6 +830,49 @@ function Frota_apiCriarCondutor(sessionId, payload) {
   SGO_DATA.insert(SGO_CFG.SHEETS.CAD_CONDUTORES, registro);
   SGO_DATA.log('FROTA_CONDUTOR_CRIAR', sessao.usuario, 'Condutor criado: ' + nome + (usuarioId ? ' (vinculado a login)' : ''), 'FROTA');
   return { ok: true, item: registro };
+}
+
+/**
+ * Editar condutor (19/10/2026, revisão da Frota): sem isto o aviso "CNH vencida" não tinha como ser resolvido (a central
+ * mandava atualizar a validade e não existia tela para isso). Gestão. Campo vazio no pedido = mantém o que está gravado
+ * (nunca apaga); vincular a um login só se o condutor ainda não tiver um. Mudanças vão para a trilha de auditoria.
+ */
+function Frota_apiAtualizarCondutor(sessionId, payload) {
+  Frota_bootstrap_();
+  var sessao = Frota_exigirEquipe_(sessionId);
+  Frota_exigirGestor_(sessionId);
+  payload = payload || {};
+  var id = SGO_UTILS.safe(payload.id);
+  var atual = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CONDUTORES, id);
+  if (!atual) throw new Error('Condutor não encontrado. Atualize a tela (aba Veículos e condutores) e tente de novo.');
+  var upd = {};
+  var validade = String(payload.cnhValidade === undefined ? '' : payload.cnhValidade).trim();
+  if (validade) {
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(validade) || !Frota_parseDataHora_(validade, '00:00')) throw new Error('Validade da CNH inválida (' + validade + '). Use dd/mm/aaaa, por exemplo 15/03/2031.');
+    if (validade !== Frota_textoData_(atual.CNH_VALIDADE)) upd.CNH_VALIDADE = validade;
+  }
+  var cnh = String(payload.cnh === undefined ? '' : payload.cnh).trim();
+  if (cnh && cnh !== SGO_UTILS.safe(atual.CNH)) upd.CNH = cnh.slice(0, 40);
+  var tel = SGO_UTILS.onlyDigits(payload.telefone);
+  if (tel && tel !== SGO_UTILS.onlyDigits(atual.TELEFONE)) upd.TELEFONE = tel;
+  var usuarioId = SGO_UTILS.safe(payload.usuarioId);
+  if (usuarioId && usuarioId !== SGO_UTILS.safe(atual.USUARIO_ID)) {
+    if (SGO_UTILS.safe(atual.USUARIO_ID)) throw new Error('Este condutor já está ligado a outro login. Para trocar, inative este condutor e cadastre de novo com o login certo (o histórico continua guardado).');
+    var usuario = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, usuarioId);
+    if (!usuario) throw new Error('Usuário do SGO+ não encontrado. Escolha de novo na lista.');
+    var outro = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CONDUTORES).filter(function(c) { return SGO_UTILS.safe(c.USUARIO_ID) === usuarioId && SGO_UTILS.safeUpper(c.STATUS) !== 'INATIVO' && SGO_UTILS.safe(c.ID) !== id; })[0];
+    if (outro) throw new Error('Este login já está ligado ao condutor "' + outro.NOME + '".');
+    upd.USUARIO_ID = usuarioId;
+  }
+  var nome = SGO_UTILS.safe(payload.nome).replace(/\s+/g, ' ').trim();
+  if (nome && nome !== SGO_UTILS.safe(atual.NOME) && !SGO_UTILS.safe(atual.USUARIO_ID) && !upd.USUARIO_ID) upd.NOME = nome;
+  if (!Object.keys(upd).length) return { ok: true, semMudanca: true, mensagem: 'Nada mudou no cadastro de ' + atual.NOME + ': os dados já estavam gravados.' };
+  SGO_DATA.update(SGO_CFG.SHEETS.CAD_CONDUTORES, id, upd);
+  Frota_auditar_(sessao, { acao: 'CONDUTOR_ATUALIZADO', condutorId: id, condutorNome: SGO_UTILS.safe(atual.NOME), campo: Object.keys(upd).join(', '),
+    antes: Object.keys(upd).map(function(k) { return k === 'USUARIO_ID' ? (atual[k] ? 'login vinculado' : 'sem login') : SGO_UTILS.safe(atual[k]); }).join(' | '),
+    depois: Object.keys(upd).map(function(k) { return k === 'USUARIO_ID' ? 'login vinculado' : upd[k]; }).join(' | '),
+    detalhe: 'Cadastro do condutor ' + atual.NOME + ' atualizado por ' + (sessao.nome || sessao.usuario) + '.' });
+  return { ok: true, mensagem: 'Cadastro de ' + (upd.NOME || atual.NOME) + ' atualizado.' + (upd.CNH_VALIDADE ? ' O aviso de CNH some se a nova validade estiver a mais de 30 dias.' : '') };
 }
 
 function Frota_apiInativarCondutor(sessionId, payload) {
@@ -1317,24 +1376,19 @@ function Frota_kmAConferir_() {
         motivo: 'KM de chegada ' + Frota_kmTexto_(m.KM_CHEGADA) + ' (saída ' + Frota_kmTexto_(m.KM_SAIDA) + '): ' + SGO_UTILS.safe(m.KM_ALERTA_CHEGADA),
         fotos: fotos(m.FOTOS_PAINEL_CHEGADA_JSON), registradoPor: SGO_UTILS.safe(m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
     }
-    // 17/10/2026: hodômetro do rastreador x KM digitado (acima de 20 km ou 5%), gravado por SGO_Frota_Rastreador.js.
-    ['SAIDA', 'CHEGADA'].forEach(function(e) {
-      var div = m['KM_RASTREADOR_DIVERGENCIA_' + e];
-      if (String(div === undefined || div === null ? '' : div).trim() === '' || Frota_num_(div, 0) === 0 || SGO_UTILS.safe(m['KM_CONFERIDO_RASTREADOR_' + e + '_EM'])) return;
-      var kmDig = e === 'SAIDA' ? m.KM_SAIDA : m.KM_CHEGADA;
-      // 19/10/2026: sem hodômetro no rastreador, a chegada é conferida pela distância do resumo da iTracker (KM_RASTREADOR_RODADO).
-      var porResumo = e === 'CHEGADA' && String(m.KM_RASTREADOR_CHEGADA === undefined || m.KM_RASTREADOR_CHEGADA === null ? '' : m.KM_RASTREADOR_CHEGADA).trim() === '' &&
-        String(m.KM_RASTREADOR_RODADO === undefined || m.KM_RASTREADOR_RODADO === null ? '' : m.KM_RASTREADOR_RODADO).trim() !== '';
-      lista.push(Object.assign({ etapa: 'RASTREADOR_' + e, rastreador: true,
-        data: e === 'SAIDA' ? comum.dataSaida : Frota_textoData_(m.DATA_CHEGADA), hora: e === 'SAIDA' ? comum.horaSaida : Frota_textoHora_(m.HORA_CHEGADA),
-        motivo: (porResumo
-          ? 'KM rodado digitado ' + Frota_kmTexto_(Frota_num_(m.KM_CHEGADA, 0) - Frota_num_(m.KM_SAIDA, 0)) + ' (saída ' + Frota_kmTexto_(m.KM_SAIDA) + ', chegada ' + Frota_kmTexto_(m.KM_CHEGADA) +
-            ') e distância medida pelo rastreador no período ' + Frota_kmTexto_(m.KM_RASTREADOR_RODADO) + ' km'
-          : 'KM ' + (e === 'SAIDA' ? 'de saída' : 'de chegada') + ' digitado ' + Frota_kmTexto_(kmDig) + ' e hodômetro do rastreador ' + Frota_kmTexto_(m['KM_RASTREADOR_' + e])) +
-          ' (diferença de ' + Frota_kmTexto_(Frota_num_(div, 0)) + ' km, acima de 20 km ou 5%)',
-        fotos: fotos(e === 'SAIDA' ? m.FOTOS_PAINEL_SAIDA_JSON : m.FOTOS_PAINEL_CHEGADA_JSON),
-        registradoPor: SGO_UTILS.safe(e === 'SAIDA' ? m.REGISTRADO_SAIDA_POR_NOME : m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
-    });
+    // 19/10/2026 (revisão da Frota): o hodômetro do rastreador conta desde a instalação do aparelho e nunca é igual ao
+    // painel; comparar o número de cada ponta dava alerta falso em toda retirada. Vale só a conferência do KM RODADO
+    // na devolução (Rastreador_kmRodadoConferencia_), calculada aqui com o que está gravado. As divergências antigas
+    // gravadas pela regra anterior (KM_RASTREADOR_DIVERGENCIA_SAIDA) ficam na planilha e não aparecem mais.
+    if (typeof Rastreador_kmRodadoConferencia_ === 'function' && !SGO_UTILS.safe(m.KM_CONFERIDO_RASTREADOR_CHEGADA_EM)) {
+      var rc = Rastreador_kmRodadoConferencia_(m);
+      if (rc && rc.divergente) {
+        lista.push(Object.assign({ etapa: 'RASTREADOR_CHEGADA', rastreador: true, data: Frota_textoData_(m.DATA_CHEGADA), hora: Frota_textoHora_(m.HORA_CHEGADA),
+          motivo: Rastreador_textoConferencia_(m, rc) + ' (tolerância de 20 km ou 5%)',
+          rodadoInformado: rc.rodadoInformado, rodadoRastreador: rc.rodadoRastreador, fonteRastreador: rc.fonte,
+          fotos: fotos(m.FOTOS_PAINEL_CHEGADA_JSON), registradoPor: SGO_UTILS.safe(m.REGISTRADO_CHEGADA_POR_NOME) }, comum));
+      }
+    }
   });
   return lista;
 }

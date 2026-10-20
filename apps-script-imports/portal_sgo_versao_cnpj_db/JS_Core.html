@@ -3321,8 +3321,8 @@
     mobileFrota_chamarApiSilencioso_("apiListarRastreador").then(function (r) {
       MOBILE_FROTA.rastreador = r;
       const est = document.getElementById("mob_frota_p_estado");
-      // 19/10/2026: acesso da iTracker somente leitura = sem liberar/bloquear; a tela mostra só a situação do veículo.
-      if (est) est.innerHTML = !r.ligado ? '<div class="mobile-frota-alerta critico">Rastreador desligado no SGO+: nada é enviado por aqui. Em emergência, use o app da iTracker.</div>'
+      // 19/10/2026: acesso somente leitura = sem liberar/bloquear; a tela mostra só a situação do veículo.
+      if (est) est.innerHTML = !r.ligado ? '<div class="mobile-frota-alerta critico">Rastreador desligado no SGO+: nada é enviado por aqui. Em emergência, use o aplicativo do rastreador.</div>'
         : r.somenteLeitura ? '<div class="mobile-frota-alerta aviso">' + escapeHtml_(r.textoSomenteLeitura || "") + '</div>'
         : (r.bloqueio ? 'O bloqueio só é enviado com o veículo parado e a ignição desligada; nunca em movimento.' : '<div class="mobile-frota-alerta aviso">Bloqueio desligado no SGO+: só monitoramento. "Liberar partida" continua disponível.</div>');
       const comDispositivo = (r.veiculos || []).filter(function (v) { return v.deviceId; });
@@ -3346,7 +3346,8 @@
     const p = v.posicao;
     const pend = (r.comandos || []).filter(function (c) { return c.placa === v.placa && c.situacao === "PENDENTE"; })[0];
     el.textContent = (v.situacao === "EM_USO" ? "Em uso por " + (v.condutorNome || "condutor não localizado") + ". " : "Disponível. ") +
-      (p ? "Última posição " + p.quando + ": " + (p.parado ? "parado, ignição desligada" : (p.kmh != null ? Number(p.kmh).toLocaleString("pt-BR") + " km/h" : "velocidade não informada") + (p.ignicao === true ? ", ignição ligada" : "")) + ". " : "Sem posição lida ainda. ") +
+      // 19/10/2026: o servidor já explica o estado (ignição desligada com velocidade baixa = parado, oscilação do GPS).
+      (p ? "Última posição " + p.quando + ": " + (p.estadoTexto || (p.parado ? "parado, ignição desligada" : (p.kmh != null ? Number(p.kmh).toLocaleString("pt-BR") + " km/h" : "velocidade não informada") + (p.ignicao === true ? ", ignição ligada" : ""))) + ". " : "Sem posição lida ainda. ") +
       (pend ? (pend.acao === "BLOQUEAR" ? "Bloqueio pendente desde " : "Liberação pendente desde ") + pend.pedidoEm + "." : "");
   }
   function mobileFrotaPartidaComando_(qual) {

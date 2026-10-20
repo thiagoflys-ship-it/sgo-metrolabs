@@ -82,19 +82,23 @@ var PEND_TIPOS = {
   nr13_vencendo: { modulo: 'nr13', um: 'inspeção NR-13 a vencer', varios: 'inspeções NR-13 a vencer', rotulo: 'A vencer', fazer: 'agende a inspeção antes do vencimento', tela: { tipo: 'modulo', mod: 'nr13' }, origem: 'DOCUMENTO', vencimento: true },
   cnh_vencida: { modulo: 'frota', um: 'CNH vencida', varios: 'CNHs vencidas', rotulo: 'Vencida', fazer: 'renove a CNH e atualize o cadastro do condutor', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   cnh_vencendo: { modulo: 'frota', um: 'CNH a vencer', varios: 'CNHs a vencer', rotulo: 'A vencer', fazer: 'renove antes do vencimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
-  veiculo_doc_vencido: { modulo: 'frota', um: 'documento de veículo vencido', varios: 'documentos de veículos vencidos', rotulo: 'Vencido', fazer: 'renove e cadastre o novo em Frota > Documentos', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
+  veiculo_doc_vencido: { modulo: 'frota', um: 'documento de veículo vencido', varios: 'documentos de veículos vencidos', rotulo: 'Vencido', fazer: 'renove e cadastre o novo em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   veiculo_doc_vencendo: { modulo: 'frota', um: 'documento de veículo a vencer', varios: 'documentos de veículos a vencer', rotulo: 'A vencer', fazer: 'providencie a renovação', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
-  manutencao_vencida: { modulo: 'frota', um: 'manutenção de veículo vencida', varios: 'manutenções de veículos vencidas', rotulo: 'Vencida', fazer: 'faça a manutenção e lance em Frota > Manutenções', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
+  manutencao_vencida: { modulo: 'frota', um: 'manutenção de veículo vencida', varios: 'manutenções de veículos vencidas', rotulo: 'Vencida', fazer: 'faça a manutenção e lance em Frota > Manutenção e paradas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   manutencao_vencendo: { modulo: 'frota', um: 'manutenção de veículo a vencer', varios: 'manutenções de veículos a vencer', rotulo: 'A vencer', fazer: 'agende a manutenção', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
-  multa_conferir: { modulo: 'frota', um: 'multa sem condutor definido', varios: 'multas sem condutor definido', rotulo: 'Revisar', fazer: 'indique o condutor em Frota > Multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
+  multa_conferir: { modulo: 'frota', um: 'multa sem condutor definido', varios: 'multas sem condutor definido', rotulo: 'Revisar', fazer: 'indique o condutor em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   frota_viagem_aberta: { modulo: 'frota', um: 'possível devolução esquecida (retirada aberta há mais de 12 horas)', varios: 'possíveis devoluções esquecidas (retiradas abertas há mais de 12 horas)', rotulo: 'Revisar', fazer: 'se o veículo já voltou, o condutor registra a devolução na Frota; se não puder, a gestão registra no lugar dele com justificativa', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   // 17/10/2026 (travas da Frota): KM divergente com foto do painel e registro feito pela gestão em nome do condutor.
   frota_km_conferir: { modulo: 'frota', um: 'KM de veículo a conferir', varios: 'KMs de veículos a conferir', rotulo: 'Conferir', fazer: 'confira a foto do painel em Frota > Situação e retiradas > KM a conferir', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   // 17/10/2026 (rastreador): uso sem registro, partida não liberada, bloqueio pendente há 30 min e falha de conexão (SGO_Frota_Rastreador.js).
   frota_rastreador_uso: { modulo: 'frota', um: 'veículo usado sem registro (rastreador)', varios: 'veículos usados sem registro (rastreador)', rotulo: 'Uso sem registro', fazer: 'confirme quem está com o veículo e marque como conferido em Frota > Rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
-  frota_rastreador_liberar: { modulo: 'frota', um: 'partida não liberada pelo rastreador', varios: 'partidas não liberadas pelo rastreador', rotulo: 'Liberar partida', fazer: 'libere em Frota > Rastreador ou pelo app da iTracker', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_rastreador_liberar: { modulo: 'frota', um: 'partida não liberada pelo rastreador', varios: 'partidas não liberadas pelo rastreador', rotulo: 'Liberar partida', fazer: 'libere em Frota > Rastreador ou pelo aplicativo do rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_rastreador_bloqueio: { modulo: 'frota', um: 'bloqueio da partida pendente há mais de 30 minutos', varios: 'bloqueios da partida pendentes há mais de 30 minutos', rotulo: 'Bloqueio pendente', fazer: 'veja a posição do veículo em Frota > Rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
-  frota_rastreador_conexao: { modulo: 'frota', um: 'falha de comunicação com o rastreador', varios: 'falhas de comunicação com o rastreador', rotulo: 'Sem conexão', fazer: 'confira a internet do servidor e a plataforma da iTracker', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  frota_rastreador_conexao: { modulo: 'frota', um: 'falha de comunicação com o rastreador', varios: 'falhas de comunicação com o rastreador', rotulo: 'Sem conexão', fazer: 'confira a internet do servidor e a plataforma do rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  // 19/10/2026 (revisão da Frota): avaria na devolução sem caso aberto e multa com pagamento vencendo (SGO_Frota_Gestao.js).
+  frota_avaria: { modulo: 'frota', um: 'avaria de veículo sem tratamento', varios: 'avarias de veículos sem tratamento', rotulo: 'Tratar', fazer: 'abra o caso em Frota > Gestão e melhoria > Kanban', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
+  multa_vencida: { modulo: 'frota', um: 'multa vencida sem pagamento', varios: 'multas vencidas sem pagamento', rotulo: 'Vencida', fazer: 'pague ou recorra e atualize em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
+  multa_vencendo: { modulo: 'frota', um: 'multa a vencer', varios: 'multas a vencer', rotulo: 'A vencer', fazer: 'pague ou recorra antes do vencimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   frota_registro_gestao: { modulo: 'frota', um: 'registro da Frota feito pela gestão em seu nome', varios: 'registros da Frota feitos pela gestão em seu nome', rotulo: 'Informativo', fazer: 'confira os dados na Frota e fale com a gestão se algo estiver errado', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   atividade_atrasada: { modulo: 'atividades', um: 'atividade atrasada', varios: 'atividades atrasadas', rotulo: 'Atrasada', fazer: 'conclua ou justifique com a nova previsão', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
   atividade_hoje: { modulo: 'atividades', um: 'atividade vence hoje', varios: 'atividades vencem hoje', rotulo: 'Vence hoje', fazer: 'conclua até o horário previsto', tela: { tipo: 'modulo', mod: 'minhas_atividades' }, origem: 'ATIVIDADES' },
@@ -484,7 +488,7 @@ function Pend_fonteFrota_(add) {
           gravidade: critico ? 'CRITICO' : 'ATENCAO', dias: dias, vencimento: Pend_br_(venc), responsavel: 'Gestão da frota',
           titulo: a.tipoLabel + ' do veículo ' + placa + (dias === 0 ? ' vence hoje' : (critico ? ' vencido' : ' vence') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : '')),
           detalhe: 'Documento do veículo ' + Pend_textoPrazo_(dias, false) + '. Veículo com documento vencido não deve circular.',
-          oQueFazer: 'Renove o ' + a.tipoLabel + ' e cadastre o novo em Frota > Documentos do veículo ' + placa + '; o novo substitui o vencido.',
+          oQueFazer: 'Renove o ' + a.tipoLabel + ' e cadastre o novo em Frota > Documentos e multas (veículo ' + placa + '); o novo substitui o vencido.',
           textoEstavel: 'O veículo \'' + placa + '\' está com o documento \'' + a.tipoLabel + '\' ' + (critico ? 'vencido' : 'vencendo') + (venc ? ' (validade ' + Pend_br_(venc) + ')' : '') + '.'
         }));
       } else {
@@ -495,7 +499,7 @@ function Pend_fonteFrota_(add) {
           titulo: a.tipoLabel + ' do veículo ' + placa + (critico ? ' vencida' : ' a vencer') + (venc ? (critico ? ' desde ' : ' em ') + Pend_br_(venc) : ''),
           detalhe: porKm ? (critico ? 'Passou da quilometragem prevista para a manutenção.' : 'Faltam menos de ' + Pend_num_((typeof FROTA_CFG !== 'undefined' && FROTA_CFG.KM_AVISO_VENCIMENTO) || 500) + ' km para a manutenção prevista.')
             : 'Manutenção ' + Pend_textoPrazo_(dias, true) + (critico ? ' (pela data ou pela quilometragem, o que vencer primeiro).' : '.'),
-          oQueFazer: 'Faça a manutenção e lance em Frota > Manutenções do veículo ' + placa + '; o alerta some quando a nova manutenção for registrada.',
+          oQueFazer: 'Faça a manutenção e lance em Frota > Manutenção e paradas (veículo ' + placa + '); o alerta some quando a nova manutenção for registrada.',
           textoEstavel: 'O veículo \'' + placa + '\' está com a manutenção \'' + a.tipoLabel + '\' ' + (critico ? 'vencida' : 'vencendo') + (venc ? ' (prevista para ' + Pend_br_(venc) + ')' : ' (pela quilometragem)') + '.'
         }));
       }
@@ -516,8 +520,8 @@ function Pend_fonteFrota_(add) {
       gravidade: grav, dias: dias, vencimento: Pend_br_(venc),
       titulo: 'CNH de ' + nome + (dias === 0 ? ' vence hoje' : (grav === 'CRITICO' ? ' vencida desde ' : ' vence em ') + Pend_br_(venc)),
       detalhe: 'CNH ' + Pend_textoPrazo_(dias, true) + '.' + (grav === 'CRITICO' ? ' Com a CNH vencida o condutor não deve retirar veículo.' : ''),
-      oQueFazer: 'Renove a CNH e atualize a validade no cadastro do condutor (Frota > Condutores), anexando a CNH nova.',
-      oQueFazerOutro: 'Cobre a renovação de ' + nome + ' e atualize a validade em Frota > Condutores quando chegar a CNH nova.',
+      oQueFazer: 'Renove a CNH e atualize a validade no cadastro do condutor (Frota > Veículos e condutores > Condutores > Editar), anexando a CNH nova.',
+      oQueFazerOutro: 'Cobre a renovação de ' + nome + ' e atualize a validade em Frota > Veículos e condutores > Condutores > Editar quando chegar a CNH nova.',
       textoEstavel: 'O condutor \'' + nome + '\' está com a CNH ' + (grav === 'CRITICO' ? 'vencida' : 'vencendo') + ' (validade ' + Pend_br_(venc) + ').'
     }));
   });
@@ -536,7 +540,7 @@ function Pend_fonteFrota_(add) {
       vencimento: data, responsavel: 'Gestão da frota',
       titulo: 'Multa do veículo ' + placa + (data ? ' de ' + data : '') + (ambigua ? ' com condutor a conferir' : ' sem condutor definido'),
       detalhe: ambigua ? 'Mais de uma retirada cobre o horário da infração; o condutor gravado é só um palpite.' : 'O cruzamento automático não achou retirada no horário da infração.',
-      oQueFazer: 'Em Frota > Multas, confira as retiradas do horário da infração e indique o condutor responsável.',
+      oQueFazer: 'Em Frota > Documentos e multas, confira as retiradas do horário da infração e indique o condutor responsável.',
       textoEstavel: 'O veículo \'' + placa + '\' tem uma multa' + (data ? ' (' + data + ')' : '') + (ambigua ? ' com condutor a conferir' : ' sem condutor vinculado') + '. Indique em Frota > Multas.'
     }));
   });
@@ -562,8 +566,8 @@ function Pend_fonteFrota_(add) {
       gravidade: 'ATENCAO', dias: null, vencimento: dataSaida,
       titulo: 'Possível devolução esquecida: veículo ' + placa + ' fora há ' + fora,
       detalhe: 'Retirado por ' + nome + ' em ' + (dataSaida || 'data não informada') + (horaSaida ? ' às ' + horaSaida : '') + ' e sem devolução registrada há mais de ' + limiteHoras + ' horas.',
-      oQueFazer: 'Se o veículo já voltou, registre a devolução agora em Frota > Situação e retiradas > Retiradas em andamento (KM, checklist e fotos). Se ainda está com você, nada a fazer: o aviso some quando a devolução for registrada.',
-      oQueFazerOutro: 'Confirme com ' + nome + '. Se o veículo já voltou, ' + nome + ' registra a devolução; se não puder, a gestão registra no lugar dele em Frota > Retiradas em andamento, com justificativa (o condutor é avisado).',
+      oQueFazer: 'Se o veículo já voltou, registre a devolução agora em Frota > Situação e retiradas (botão verde "Devolver" com a placa: KM, vistoria e fotos). Se ainda está com você, nada a fazer: o aviso some quando a devolução for registrada.',
+      oQueFazerOutro: 'Confirme com ' + nome + '. Se o veículo já voltou, ' + nome + ' registra a devolução; se não puder, a gestão registra no lugar dele em Frota > Situação e retiradas > "Em uso por outras pessoas", com justificativa (o condutor é avisado).',
       textoEstavel: 'O veículo \'' + placa + '\' saiu em ' + dataSaida + ' com ' + nome + ' e não tem devolução registrada.'
     }));
   });
@@ -572,15 +576,15 @@ function Pend_fonteFrota_(add) {
   if (typeof Frota_kmAConferir_ === 'function') {
     Frota_kmAConferir_().forEach(function (k) {
       var placa = k.placa || 'veículo não identificado';
-      // 17/10/2026: etapa RASTREADOR_SAIDA/RASTREADOR_CHEGADA = hodômetro do rastreador x KM digitado.
-      var etapaTxt = (/SAIDA$/.test(k.etapa) ? 'retirada' : 'devolução') + (k.rastreador ? ' (hodômetro do rastreador)' : '');
+      // 19/10/2026: etapa RASTREADOR_CHEGADA = KM rodado informado x KM rodado medido pelo rastreador (Rastreador_kmRodadoConferencia_).
+      var etapaTxt = (/SAIDA$/.test(k.etapa) ? 'retirada' : 'devolução') + (k.rastreador ? ' (KM rodado pelo rastreador)' : '');
       add(Pend_item_('frota_km_conferir', {
         id: 'FROTA:KM:' + k.movimentacaoId + ':' + k.etapa, nome: placa + ' (' + etapaTxt + ' de ' + k.data + ')', publico: 'GESTAO',
         gravidade: 'ATENCAO', dias: null, vencimento: k.data, responsavel: 'Gestão da frota',
         titulo: 'KM a conferir: veículo ' + placa + ' na ' + etapaTxt + ' de ' + k.data,
         detalhe: k.motivo + '. Condutor: ' + (k.condutorNome || 'não identificado') + '.' + (k.fotos && k.fotos.length ? ' Registrado com foto do painel.' : ''),
         oQueFazer: k.rastreador
-          ? 'Abra Frota > Situação e retiradas > KM a conferir e compare o KM digitado com o hodômetro do rastreador. Se o KM do cadastro estiver errado, use "Ajustar KM"; se o hodômetro do rastreador estiver desajustado, peça à iTracker a calibração. Depois clique em "Conferido".'
+          ? 'Abra Frota > Situação e retiradas > KM a conferir e compare o KM rodado informado com o medido pelo rastreador (veja a foto do painel). Se o condutor digitou errado, use "Ajustar KM" com a justificativa; depois clique em "Conferido".'
           : 'Abra Frota > Situação e retiradas > KM a conferir, veja a foto do painel e clique em "Conferido". Se o KM do cadastro estiver errado, use "Ajustar KM" com a justificativa.',
         textoEstavel: 'O veículo \'' + placa + '\' tem KM divergente a conferir na ' + etapaTxt + ' de ' + k.data + '.'
       }));
@@ -589,6 +593,8 @@ function Pend_fonteFrota_(add) {
 
   // Rastreador (17/10/2026): uso sem registro, partida não liberada, bloqueio pendente há 30 min, falha de conexão.
   if (typeof Rastreador_pendencias_ === 'function') Rastreador_pendencias_(add, veiculos, condutores);
+  // 19/10/2026: avaria sem caso aberto e multa com pagamento vencendo (Frota > Gestão e melhoria).
+  if (typeof Frota_gestaoPendencias_ === 'function') { try { Frota_gestaoPendencias_(add); } catch (eG) { console.error('Pendências da gestão da Frota: ' + ((eG && eG.message) || eG)); } }
 
   // Registro feito pela gestão em nome do condutor: informativo para o condutor por 7 dias.
   var diasInfo = typeof FROTA_DIAS_AVISO_REGISTRO_GESTAO !== 'undefined' ? FROTA_DIAS_AVISO_REGISTRO_GESTAO : 7;
