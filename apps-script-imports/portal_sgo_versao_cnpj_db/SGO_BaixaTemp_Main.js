@@ -22,6 +22,7 @@ var BAIXATEMP_COLUNAS_ENSAIOS = ['ID', 'NUMERO', 'REVISAO', 'TIPO', 'ETAPAS', 'C
   'ENVIADO_REVISAO_EM', 'APROVADO_POR_ID', 'APROVADO_POR', 'APROVADO_RT', 'APROVADO_EM', 'PARECER_RT', 'EMITIDO_POR', 'EMITIDO_EM', 'PDF_ID', 'LINK_PDF',
   'HTML_ID', 'LINK_HTML', 'PASTA_URL', 'REGISTRO_ORIGEM_ID', 'ATUALIZADO_EM', 'CRIADO_EM'];
 var BAIXATEMP_COLUNAS_HISTORICO = ['ID', 'ENSAIO_ID', 'ACAO', 'USUARIO_ID', 'USUARIO', 'PERFIL', 'QUANDO', 'DETALHE', 'ASSINATURA_DADOS', 'CRIADO_EM'];
+var BAIXATEMP_ROTULO_ACAO = { CRIADO: 'Criado', SALVO: 'Dados salvos', ALTERADO_APOS_REVISAO: 'Alterado após revisão', ENVIADO_REVISAO: 'Enviado para revisão', APROVADO: 'Revisado e aprovado', DEVOLVIDO: 'Devolvido ao técnico', EMITIDO: 'Emitido' };
 var BAIXATEMP_STATUS = { RASCUNHO: 'RASCUNHO', EM_REVISAO: 'EM_REVISAO', APROVADO: 'APROVADO', EMITIDO: 'EMITIDO' };
 
 function BaixaTemp_apiDispatch(req) {
@@ -106,7 +107,7 @@ function BaixaTemp_historicoDe_(ensaioId) {
     .sort(function (a, b) { return String(a.QUANDO).localeCompare(String(b.QUANDO)); })
     .map(function (h) {
       var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(h.QUANDO || ''));
-      return { acao: h.ACAO, usuario: h.USUARIO, perfil: h.PERFIL, quando: m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : String(h.QUANDO || ''), detalhe: h.DETALHE, assinatura: h.ASSINATURA_DADOS };
+      return { acao: BAIXATEMP_ROTULO_ACAO[h.ACAO] || h.ACAO, codigo: h.ACAO, usuario: h.USUARIO, perfil: h.PERFIL, quando: m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : String(h.QUANDO || ''), detalhe: h.DETALHE, assinatura: h.ASSINATURA_DADOS };
     });
 }
 
@@ -526,7 +527,7 @@ function BaixaTemp_proximoNumero_() {
 
 /** Monta o HTML do relatório (prévia ou emissão). */
 function BaixaTemp_montarHtml_(calc, dados, l, extra) {
-  var hist = BaixaTemp_historicoDe_(l.ID).map(function (h) { return { quando: h.quando, acao: { CRIADO: 'Criado', SALVO: 'Dados salvos', ALTERADO_APOS_REVISAO: 'Alterado após revisão', ENVIADO_REVISAO: 'Enviado para revisão', APROVADO: 'Revisado e aprovado', DEVOLVIDO: 'Devolvido ao técnico', EMITIDO: 'Emitido' }[h.acao] || h.acao, usuario: h.usuario, detalhe: h.detalhe }; })
+  var hist = BaixaTemp_historicoDe_(l.ID).map(function (h) { return { quando: h.quando, acao: h.acao, usuario: h.usuario, detalhe: h.detalhe }; })
     .filter(function (h) { return h.acao !== 'Dados salvos'; });
   if (extra && extra.emitindo) hist.push({ quando: BaixaTemp_agoraBr_(), acao: 'Emitido', usuario: extra.emissor, detalhe: 'Relatório ' + extra.numero });
   var rt = BaixaTemp_assinaturasRT_().filter(function (a) { return a.nome === l.APROVADO_RT; })[0];

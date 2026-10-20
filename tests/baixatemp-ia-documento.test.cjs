@@ -129,7 +129,7 @@ test('fluxo completo: salvar, travas no envio, revisão independente, aprovaçã
   assert.equal(doc.EQUIPAMENTO_ID, 'eq1');
   // imutável
   assert.throws(() => amb.api('tec', 'apiSalvar', { id: s1.id, versaoDados: 2, dados }), /já foi emitido/);
-  const hist = amb.api('tec', 'apiObter', { id: s1.id }).historico.map((h) => h.acao);
+  const hist = amb.api('tec', 'apiObter', { id: s1.id }).historico.map((h) => h.codigo);
   assert.deepEqual(hist, ['CRIADO', 'SALVO', 'ENVIADO_REVISAO', 'APROVADO', 'EMITIDO']);
   // nova revisão: rascunho novo ligado ao original
   const nr = amb.api('tec', 'apiNovaRevisao', { id: s1.id });

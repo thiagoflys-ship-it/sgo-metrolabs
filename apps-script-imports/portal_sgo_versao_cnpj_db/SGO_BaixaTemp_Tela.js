@@ -636,7 +636,7 @@ function BaixaTempTela_cliente_() {
       Object.keys(r.leituras || {}).forEach(function (fid) { (BT.d.ciclos || []).forEach(function (c) { (c.arquivos || []).forEach(function (a) { if (a.fileId === fid) a.leituras = r.leituras[fid]; }); }); });
       if (!silencioso) msg(BT.av.travas.length ? 'aviso' : 'ok', BT.av.travas.length ? 'Resultado calculado com ' + BT.av.travas.length + ' pendência(s). Veja "O que falta" abaixo.' : 'Resultado calculado: ' + (BT.av.resultado === 'CONFORME' ? 'conforme' : 'não conforme') + '.');
       redesenharAba();
-    }, { espera: 'Lendo os arquivos e calculando… pode levar até um minuto.', paralelo: !!silencioso });
+    }, silencioso ? { paralelo: true } : { espera: 'Lendo os arquivos e calculando… pode levar até um minuto.' });
   }
 
   function redigir() {
