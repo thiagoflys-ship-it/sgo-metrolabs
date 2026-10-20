@@ -204,6 +204,17 @@ function Chaves_validarValor_(item, valor) {
   // 20/10/2026: no painel da Z-API é comum copiar o endereço inteiro (https://api.z-api.io/instances/<ID>/token/<TOKEN>/...).
   // Guarda só a identificação; o token continua sendo gravado no campo dele.
   if (item.chave === 'ZAPI_INSTANCIA' || item.chave === 'ZAPI_TOKEN') v = Chaves_zapiParte_(v, item.chave === 'ZAPI_INSTANCIA' ? 'instances' : 'token');
+  // 20/10/2026, caso real: o mesmo valor foi colado em dois campos e a Z-API recusou. Os três valores são diferentes.
+  if (/^ZAPI_(INSTANCIA|TOKEN|CLIENT_TOKEN)$/.test(item.chave)) {
+    var nomesZapi = { ZAPI_INSTANCIA: 'identificação da instância', ZAPI_TOKEN: 'token da instância', ZAPI_CLIENT_TOKEN: 'token de segurança da conta' };
+    var pz = PropertiesService.getScriptProperties();
+    Object.keys(nomesZapi).forEach(function (outra) {
+      if (outra !== item.chave && String(pz.getProperty(outra) || '').trim() === v) {
+        throw new Error('Não foi possível gravar: este valor já está gravado em "' + nomesZapi[outra] + '". No painel da Z-API são três valores diferentes: '
+          + 'identificação e token ficam dentro da instância (no endereço, depois de /instances/ e de /token/); o token de segurança fica em Segurança, no menu da conta.');
+      }
+    });
+  }
   if (item.chave === 'AUVO_AVISOS_WHATSAPP' && v !== '1' && v !== '0') {
     throw new Error('Não foi possível gravar: os avisos de O.S. aceitam só 1 (liga) ou 0 (desliga).');
   }
