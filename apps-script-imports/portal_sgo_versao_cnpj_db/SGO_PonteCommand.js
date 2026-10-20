@@ -93,6 +93,11 @@ function PonteCmd_tratar_(req) {
   // 19/10/2026: Minhas atividades no COMMAND. Uma fonte só (as atividades ficam aqui); o COMMAND lê e grava
   // em nome do usuário do SGO+ ligado à conta (dados: { sgoUsuarioId, payload }), com as mesmas regras das
   // telas do SGO+ (SGO_Atividades.js, Atividades_ponte_).
+  // 20/10/2026: Frota no COMMAND (SGO_Frota_Rastreamento.js, FrotaR_ponte_): só leitura; frota.painel só para a gestão do SGO+
+  // (localização do veículo, nunca para controlar a pessoa: o ponto do COMMAND não usa isto); frota.pedidos = comprovantes pedidos à própria pessoa.
+  if (/^frota\.(painel|pedidos)$/.test(String(req.acao || ""))) {
+    return typeof FrotaR_ponte_ === "function" ? FrotaR_ponte_(String(req.acao), d) : { ok: false, erro: "Frota indisponível no SGO+." };
+  }
   if (/^atividades\.[a-z]+$/.test(String(req.acao || ""))) {
     return typeof Atividades_ponte_ === "function" ? Atividades_ponte_(String(req.acao), d) : { ok: false, erro: "Minhas atividades indisponível no SGO+." };
   }

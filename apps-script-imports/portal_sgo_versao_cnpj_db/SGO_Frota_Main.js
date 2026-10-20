@@ -84,7 +84,24 @@ function Frota_apiDispatch(req) {
     apiGestaoSalvarAnalise: Frota_apiGestaoSalvarAnalise,
     apiGestaoCriarPlano: Frota_apiGestaoCriarPlano,
     apiGestaoAdicionarAcao: Frota_apiGestaoAdicionarAcao,
-    apiGestaoConcluir: Frota_apiGestaoConcluir
+    apiGestaoConcluir: Frota_apiGestaoConcluir,
+    // 20/10/2026: rastreamento (SGO_Frota_Rastreamento.js e SGO_Frota_RastreamentoGestao.js). Mapa, rotas, combustível,
+    // Gantt, copiloto e relatórios só da gestão; pedidos de comprovante: o próprio condutor vê e responde os dele.
+    apiRastrMapa: Frota_apiRastrMapa,
+    apiRastrRota: Frota_apiRastrRota,
+    apiRastrRetiradas: Frota_apiRastrRetiradas,
+    apiRastrCombustivel: Frota_apiRastrCombustivel,
+    apiRastrCapacidadeTanque: Frota_apiRastrCapacidadeTanque,
+    apiRastrPedirComprovante: Frota_apiRastrPedirComprovante,
+    apiRastrCancelarPedido: Frota_apiRastrCancelarPedido,
+    apiRastrMeusPedidos: Frota_apiRastrMeusPedidos,
+    apiRastrEnviarComprovante: Frota_apiRastrEnviarComprovante,
+    apiRastrConfig: Frota_apiRastrConfig,
+    apiRastrConsultas: Frota_apiRastrConsultas,
+    apiRastrGantt: Frota_apiRastrGantt,
+    apiRastrCopiloto: Frota_apiRastrCopiloto,
+    apiRastrCopilotoDecidir: Frota_apiRastrCopilotoDecidir,
+    apiRastrRelatorio: Frota_apiRastrRelatorio
     // 17/10/2026: apiDiagLogTempoCliente (medidor provisório de 09/09) removido por decisão do dono.
   };
 
@@ -94,7 +111,7 @@ function Frota_apiDispatch(req) {
   var resultado = allow[fn](req.sessionId, payload);
   // 17/10/2026: gravação que muda pendência (CNH, documentos, manutenção, multa, retirada)
   // avisa a central de alertas, para o Início atualizar na hora.
-  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
+  if (!/^api(Ping|Listar|Situacao|Inicio|Contexto|Historico|Verificar|Consultar|Levantamento|GerarRelatorio|GestaoKanban|GestaoIndicadores|RastrMapa|RastrRota|RastrRetiradas|RastrCombustivel|RastrMeusPedidos|RastrConsultas|RastrGantt|RastrCopiloto(?!Decidir)|RastrRelatorio)/.test(fn) && typeof SGO_Pendencias_invalidar_ === 'function') {
     try { SGO_Pendencias_invalidar_(); } catch (eInv) {}
   }
   return resultado;
@@ -290,7 +307,9 @@ function Frota_apiInicioFrota(sessionId) {
     condutores: (gestor ? condutoresAtivos : (meuCondutor ? [meuCondutor] : [])).map(function(c) { return { id: SGO_UTILS.safe(c.ID), nome: SGO_UTILS.safe(c.NOME) }; }),
     veiculos: enxuto, emAndamento: emAndamento,
     gruposChecklist: FROTA_CFG.GRUPOS_CHECKLIST, tiposCombustivel: FROTA_CFG.TIPOS_COMBUSTIVEL,
-    alertas: alertas
+    alertas: alertas,
+    // 20/10/2026: aviso ao condutor de que o veículo é rastreado durante o uso (LGPD); null com o rastreador desligado
+    rastreamento: typeof FrotaR_avisoRetirada_ === 'function' ? FrotaR_avisoRetirada_() : null
   };
 }
 
@@ -450,6 +469,8 @@ function Frota_bootstrapSemTrava_() {
   CertCal_garantirColuna_(SGO_CFG.SHEETS.CAD_VEICULOS, 'FOTO_MINIATURA_LINK');
   // Rastreador (17/10/2026): vínculo no veículo, hodômetro na movimentação, comandos e alertas (SGO_Frota_Rastreador.js).
   if (typeof Rastreador_bootstrapSemTrava_ === 'function') Rastreador_bootstrapSemTrava_();
+  // 20/10/2026 (rastreamento): pedidos de comprovante, trilha de consultas, HORA/ORIGEM no abastecimento e capacidade do tanque. Só colunas e tabelas novas.
+  if (typeof FrotaR_garantirAbas_ === 'function') FrotaR_garantirAbas_();
 }
 
 // ------------------------------------------------------------
@@ -1731,6 +1752,8 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
 
   var km = Frota_num_(payload.km, NaN);
   if (!isFinite(km)) throw new Error('Informe o KM no momento do abastecimento.');
+  var hora = String(payload.hora || '').trim();
+  if (hora && !/^\d{1,2}:\d{2}$/.test(hora)) throw new Error('Informe a hora do abastecimento no formato hh:mm (exemplo: 14:35) ou deixe vazio.');
 
   // Achado real 2026-08-28: comprovante era opcional — abastecimento ficava
   // registrado sem nenhuma evidência. Passa a ser obrigatório, mesmo padrão
@@ -1749,7 +1772,10 @@ function Frota_apiRegistrarAbastecimento(sessionId, payload) {
       LITROS: litros,
       VALOR: Frota_num_(payload.valor, 0),
       POSTO: SGO_UTILS.safe(payload.posto),
-      COMPROVANTE_LINK: link
+      COMPROVANTE_LINK: link,
+      // 20/10/2026: hora (opcional) para conferir com a posição do veículo; origem do lançamento
+      HORA: hora,
+      ORIGEM: 'GESTAO'
     })
   );
   SGO_DATA.insert(SGO_CFG.SHEETS.REG_FROTA_ABASTECIMENTO, registro);

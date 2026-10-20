@@ -45,7 +45,9 @@
  *   - na devolução, o ponto de chegada (hora, endereço, mapa) fica para a gestão.
  *
  * LGPD (a guarda dos dados de localização passa a ser da Metrolabs):
- *   - nada de histórico de rota: a última posição de cada veículo fica só no cache (15 min);
+ *   - 20/10/2026 (decisão do dono: guardar rotas): cada posição lida vira ponto da rota do veículo, numa tabela
+ *     própria do servidor (SGO_Frota_Rastreamento.js), apagada pelo mesmo prazo de retenção abaixo; a trilha de
+ *     quem consultou mapa e rotas fica em REG_FROTA_RASTREADOR_CONSULTAS;
  *   - ficam gravados só o ponto de chegada de cada devolução (REG_FROTA_RASTREADOR_PONTOS) e o
  *     local do alerta de uso sem registro (REG_FROTA_RASTREADOR_ALERTAS);
  *   - a trilha de auditoria e os avisos por e-mail/WhatsApp não levam a localização;
@@ -859,6 +861,9 @@ function Rastreador_rodada_(o) {
     var veiculos = Frota_lerSeExistir_(SGO_CFG.SHEETS.CAD_VEICULOS);
     var porId = {};
     veiculos.forEach(function (v) { porId[SGO_UTILS.safe(v.ID)] = v; });
+    // 20/10/2026 (rastreamento): cada leitura vira ponto da rota guardada (tabela própria no servidor) e a rota
+    // completa do período é importada aos poucos (SGO_Frota_Rastreamento.js). Nunca lança.
+    if (typeof FrotaR_aposLeitura_ === 'function') out.pontosRota = FrotaR_aposLeitura_(c, posicoes, veiculos, inicio).pontos;
     var movs = Frota_lerSeExistir_(SGO_CFG.SHEETS.REG_FROTA_MOVIMENTACAO);
     var abertas = {}, ultimaDevolucao = {};
     movs.forEach(function (m) {
@@ -957,7 +962,11 @@ function Rastreador_limparRetencao_(forcar) {
   var c = Rastreador_cfg_();
   var limite = Date.now() - c.retencaoDias * 86400000;
   var velho = function (iso) { var t = new Date(SGO_UTILS.safe(iso)).getTime(); return isFinite(t) && t < limite; };
-  var out = { pontos: 0, alertas: 0, dias: c.retencaoDias };
+  var out = { pontos: 0, alertas: 0, rotas: 0, dias: c.retencaoDias };
+  // 20/10/2026: pontos das rotas guardadas (tabela própria no servidor): só os mais velhos que o prazo.
+  if (typeof FrotaR_limparRotas_ === 'function') {
+    try { out.rotas = FrotaR_limparRotas_(c.retencaoDias); } catch (eR) { console.error('Retenção das rotas: ' + ((eR && eR.message) || eR)); }
+  }
   Frota_lerSeExistir_(RASTR_ABA_PONTOS).forEach(function (p) {
     if (velho(p.CRIADO_EM)) { SGO_DATA.remove(RASTR_ABA_PONTOS, p.ID); out.pontos++; }
   });
@@ -971,8 +980,8 @@ function Rastreador_limparRetencao_(forcar) {
     SGO_DATA.update(RASTR_ABA_ALERTAS, a.ID, { LOCAL: '', LINK_MAPA: '', DETALHE: det.slice(0, 1000) });
     out.alertas++;
   });
-  if (out.pontos || out.alertas) {
-    try { SGO_DATA.log('FROTA_RASTREADOR_RETENCAO', 'sistema', 'Prazo de ' + c.retencaoDias + ' dias: ' + out.pontos + ' ponto(s) de chegada apagado(s) e local retirado de ' + out.alertas + ' alerta(s).', 'FROTA'); } catch (e) {}
+  if (out.pontos || out.alertas || out.rotas) {
+    try { SGO_DATA.log('FROTA_RASTREADOR_RETENCAO', 'sistema', 'Prazo de ' + c.retencaoDias + ' dias: ' + out.pontos + ' ponto(s) de chegada apagado(s), ' + out.rotas + ' ponto(s) de rota apagado(s) e local retirado de ' + out.alertas + ' alerta(s).', 'FROTA'); } catch (e) {}
   }
   return out;
 }

@@ -3,6 +3,7 @@
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Texto puro, sem HTML.
  * Conferido contra a tela real (JS_Core.html, trecho da Frota, e SGO_Frota_ConteudoModulo.js) em 17/10/2026.
  * 19/10/2026 (revisão da Frota): abas reorganizadas, Gestão e melhoria, editar condutor, rastreador que se explica sozinho e KM rodado.
+ * 20/10/2026: aba Rastreamento (mapa ao vivo, rotas, combustível e KM, relatórios, privacidade), Gantt e copiloto em Gestão e melhoria, comprovantes pedidos.
  */
 function SGO_ajudaTelas_Frota_() {
   return {
@@ -144,7 +145,7 @@ function SGO_ajudaTelas_Frota_() {
           "Toque em \"+ Registrar abastecimento\".",
           "Escolha o veículo.",
           "Escolha o condutor, se souber.",
-          "Preencha a data, o \"KM no abastecimento\", o \"Tipo de combustível\", os litros, o \"Valor total (R$)\" e o posto.",
+          "Preencha a data, a hora (opcional: com ela o SGO+ confere se o veículo estava parado no horário), o \"KM no abastecimento\", o \"Tipo de combustível\", os litros, o \"Valor total (R$)\" e o posto.",
           "Em \"Comprovante (obrigatório)\", anexe a foto ou o PDF.",
           "Toque em \"Salvar abastecimento\"."
         ] },
@@ -162,7 +163,7 @@ function SGO_ajudaTelas_Frota_() {
       ],
       quemPode: [
         { perfil: "ADMIN,GESTOR,DIRETORIA", pode: "Registrar e excluir abastecimentos." },
-        { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\")." }
+        { perfil: "TODOS", pode: "Ver a lista e o comprovante (\"Ver comprovante\"). Quem recebeu um pedido de comprovante da gestão envia no quadro \"Comprovante pedido a você\", no topo desta aba." }
       ]
     },
 
@@ -347,7 +348,7 @@ function SGO_ajudaTelas_Frota_() {
         "O hodômetro do aparelho conta desde a instalação e não é o número do painel (exemplo: aparelho com 26.238 km num carro com 189.561 km). O SGO+ compara o KM rodado, não esses números.",
         "Abaixo de 5 km/h o veículo está parado. Com a ignição desligada, o GPS às vezes marca 5 ou 11 km/h com o carro parado: a tela mostra \"parado, ignição desligada\" e o SGO+ não trata como uso.",
         "O veículo nunca é bloqueado em movimento: só parado, com a ignição desligada, abaixo de 5 km/h e com posição recente.",
-        "Só a gestão vê a localização. Ela fica guardada pelo prazo de Chaves e senhas (padrão de 90 dias) e depois é apagada sozinha."
+        "Só a gestão vê a localização. As rotas e a localização ficam guardadas pelo prazo de Rastreamento > Privacidade e configuração (padrão de 90 dias) e depois são apagadas sozinhas. Esta tela agora é a parte \"Aparelhos e alertas\" da aba Rastreamento."
       ],
       "passos": [
         {
@@ -476,9 +477,198 @@ function SGO_ajudaTelas_Frota_() {
       ]
     },
 
+    "frota/rastreamento": {
+      "titulo": "Rastreamento (mapa, rotas, combustível e relatórios)",
+      "paraQueServe": "Mostrar à gestão onde cada veículo está, guardar as rotas, conferir o consumo de combustível e o KM, cobrar comprovantes de abastecimento e gerar os relatórios para imprimir. Só a gestão.",
+      "antesDeComecar": [
+        "O rastreador precisa estar configurado pelo responsável pelo sistema (Configurações > Chaves e senhas > Rastreador da frota). Sem isso, a tela diz \"Rastreador não configurado\" e o caminho para configurar.",
+        "Cada veículo precisa estar ligado ao aparelho dele, na parte \"Aparelhos e alertas\".",
+        "O acesso ao rastreador é só de leitura: nada aqui bloqueia ou manda comando ao veículo.",
+        "Toda abertura do mapa, consulta de rota e relatório com localização fica registrada em \"Privacidade e configuração > Quem consultou\"."
+      ],
+      "passos": [
+        {
+          "titulo": "Ver os veículos no mapa",
+          "itens": [
+            "Abra a aba \"Rastreamento\". O \"Mapa ao vivo\" abre primeiro.",
+            "Leia a cor de cada veículo na legenda abaixo do mapa.",
+            "Toque num veículo da lista para centralizar o mapa nele e ver condutor, velocidade e local.",
+            "A tela se atualiza sozinha a cada 30 segundos enquanto estiver aberta. \"Atualizar agora\" lê na hora (se já passaram 30 segundos)."
+          ]
+        },
+        {
+          "titulo": "Ver a rota de uma retirada",
+          "itens": [
+            "Toque em \"Rotas\".",
+            "Confira o período e toque em \"Buscar retiradas\".",
+            "Na linha da retirada, toque em \"Ver rota\". O trajeto aparece no mapa, com as paradas numeradas e os trechos acima do limite em vermelho.",
+            "Para imprimir, toque em \"Relatório A4\"."
+          ]
+        },
+        {
+          "titulo": "Ver tudo o que um veículo rodou",
+          "itens": [
+            "Em \"Rotas\", escolha o veículo e o período (até 31 dias).",
+            "Toque em \"Ver rota do período\"."
+          ]
+        },
+        {
+          "titulo": "Conferir o consumo e os abastecimentos",
+          "itens": [
+            "Toque em \"Combustível e KM\".",
+            "Escolha o período e toque em \"Calcular\".",
+            "Desvio em vermelho: o veículo gastou mais combustível que a média dele. Revise o veículo.",
+            "Informe a capacidade do tanque (litros) de cada veículo e toque em \"Gravar\".",
+            "Marque \"Conferir com a posição do veículo\" para saber se o veículo estava parado na hora do abastecimento (precisa da hora no lançamento)."
+          ]
+        },
+        {
+          "titulo": "Pedir o comprovante de um abastecimento",
+          "itens": [
+            "Em \"Combustível e KM\", vá até \"Pedir comprovante de abastecimento\".",
+            "Escolha o veículo e o condutor, escreva o que pedir e o prazo.",
+            "Toque em \"Pedir comprovante\". O condutor recebe uma atividade em Minhas atividades.",
+            "Quando ele enviar, o pedido aparece como \"Enviado\" e a atividade fecha sozinha. Se o comprovante chegou por outro meio, toque em \"Cancelar\" e escreva o motivo."
+          ]
+        },
+        {
+          "titulo": "Gerar um relatório para imprimir",
+          "itens": [
+            "Toque em \"Relatórios\".",
+            "Escolha: rota da retirada, mensal do veículo, consumo da frota ou uso fora do expediente.",
+            "Preencha e toque em \"Gerar\". O relatório abre numa aba nova; a cópia em PDF e HTML fica na pasta \"Frota - Relatorios Gerados/Rastreamento\"."
+          ]
+        },
+        {
+          "titulo": "Mudar o prazo de guarda e os limites",
+          "itens": [
+            "Toque em \"Privacidade e configuração\".",
+            "Ajuste os dias de guarda das rotas (padrão 90), o limite de velocidade (padrão 110 km/h), o expediente da frota e o desvio de consumo aceito (padrão 15%).",
+            "Toque em \"Gravar configuração\". A mudança fica na trilha de auditoria da Frota."
+          ]
+        }
+      ],
+      "cores": [
+        {
+          "nome": "Azul",
+          "significado": "Em uso, com retirada registrada."
+        },
+        {
+          "nome": "Vermelho",
+          "significado": "Andando sem retirada registrada (uso sem registro). No mapa da rota, vermelho é trecho acima do limite de velocidade."
+        },
+        {
+          "nome": "Amarelo",
+          "significado": "Parado com a ignição ligada e sem retirada."
+        },
+        {
+          "nome": "Verde",
+          "significado": "Parado. Na rota, verde é a saída."
+        },
+        {
+          "nome": "Cinza",
+          "significado": "Sem sinal há mais de 30 minutos."
+        },
+        {
+          "nome": "Laranja numerado (rota)",
+          "significado": "Parada de 5 minutos ou mais; o número é o da tabela de paradas."
+        }
+      ],
+      "problemas": [
+        {
+          "situacao": "\"Rastreador não configurado\" ou \"Rastreador desligado no SGO+\"",
+          "oQueFazer": "Avise o responsável pelo sistema: ele grava a chave e liga o rastreador em Configurações > Chaves e senhas > Rastreador da frota. Depois toque em \"Atualizar agora\"."
+        },
+        {
+          "situacao": "\"Nenhum ponto de rota guardado neste período\"",
+          "oQueFazer": "Confira se o veículo tem aparelho ligado (Aparelhos e alertas). Rotas de antes de o rastreador ser ligado não existem, e pontos mais velhos que o prazo de guarda já foram apagados."
+        },
+        {
+          "situacao": "\"O mapa de fundo não carregou\"",
+          "oQueFazer": "A internet ou a rede bloqueou o mapa. A lista dos veículos continua funcionando; use \"abrir no mapa\" de cada um."
+        },
+        {
+          "situacao": "\"O condutor ... não tem login do SGO+ ligado\"",
+          "oQueFazer": "Ligue o login do condutor em Frota > Veículos e condutores > Editar condutor (campo Login) e peça de novo."
+        },
+        {
+          "situacao": "Média do veículo aparece como \"poucos dados\"",
+          "oQueFazer": "A média precisa de pelo menos 3 intervalos entre abastecimentos com o KM informado. Continue lançando os abastecimentos com o KM."
+        }
+      ],
+      "quemPode": [
+        {
+          "perfil": "ADMIN,GESTOR,DIRETORIA",
+          "pode": "Ver o mapa, as rotas, o consumo, pedir comprovantes, gerar relatórios e mudar a configuração."
+        },
+        {
+          "perfil": "TODOS",
+          "pode": "A equipe não vê esta aba nem a localização de nenhum veículo. Quem recebe um pedido de comprovante responde na aba Abastecimentos e despesas."
+        }
+      ],
+      "perguntas": [
+        {
+          "p": "O rastreador mostra o trânsito?",
+          "r": "Não. A empresa do rastreador não informa trânsito. O SGO+ mostra velocidade, paradas, horários e uso fora do expediente. Trânsito em tempo real exigiria um serviço pago de mapas."
+        },
+        {
+          "p": "Quanto tempo a rota fica guardada?",
+          "r": "Pelo prazo da configuração (padrão de 90 dias). Depois os pontos são apagados sozinhos, uma vez por dia."
+        },
+        {
+          "p": "O rastreamento controla a pessoa?",
+          "r": "Não. O dado é do veículo. O ponto do COMMAND não usa a localização do veículo, e uso sem registro não vira ocorrência para ninguém."
+        },
+        {
+          "p": "Como é calculado o consumo?",
+          "r": "Pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. A média do veículo é a mediana de todo o histórico dele."
+        }
+      ]
+    },
+
+    "frota/comprovantes_pedidos": {
+      "titulo": "Comprovantes pedidos a você",
+      "paraQueServe": "Enviar à gestão o comprovante (nota) de um abastecimento que ela pediu.",
+      "antesDeComecar": [
+        "Tenha a nota do abastecimento (foto ou PDF), os litros e o KM do painel na hora.",
+        "O pedido também aparece em Minhas atividades, com o prazo."
+      ],
+      "passos": [
+        {
+          "titulo": "Enviar o comprovante",
+          "itens": [
+            "Abra a Frota, aba \"Abastecimentos e despesas\".",
+            "No quadro amarelo \"Comprovante pedido a você\", preencha data, KM, litros e valor (hora e posto, se souber).",
+            "Em \"Foto da nota ou PDF\", tire a foto ou escolha o arquivo.",
+            "Toque em \"Enviar comprovante\". O pedido some e a atividade é concluída sozinha."
+          ]
+        }
+      ],
+      "problemas": [
+        {
+          "situacao": "\"Anexe a foto da nota ou o PDF do comprovante.\"",
+          "oQueFazer": "Escolha o arquivo e toque em \"Enviar comprovante\" de novo."
+        },
+        {
+          "situacao": "Não tenho mais a nota",
+          "oQueFazer": "Fale com a gestão. Ela pode cancelar o pedido com o motivo."
+        }
+      ],
+      "quemPode": [
+        {
+          "perfil": "TODOS",
+          "pode": "Responder os pedidos feitos a você."
+        },
+        {
+          "perfil": "ADMIN,GESTOR,DIRETORIA",
+          "pode": "Pedir, acompanhar e cancelar pedidos (aba Rastreamento > Combustível e KM)."
+        }
+      ]
+    },
+
     "frota/gestao_e_melhoria": {
       "titulo": "Gestão e melhoria",
-      "paraQueServe": "Tratar o que dá problema na frota (avarias, multas e manutenções) até resolver de vez, e acompanhar os números do período. Só a gestão.",
+      "paraQueServe": "Tratar o que dá problema na frota (avarias, multas, manutenções, consumo, condução e uso) até resolver de vez, acompanhar os números do período, ver a frota no tempo (Gantt) e receber sugestões do copiloto. Só a gestão.",
       "antesDeComecar": [
         "O quadro tem quatro colunas: Aberta, Em análise, Em execução e Concluída.",
         "Em \"Aberta\" aparece sozinho, sem ninguém digitar: avaria na devolução (item em ordem na retirada e com problema na volta), multa em aberto e manutenção vencida ou a vencer.",
@@ -535,6 +725,25 @@ function SGO_ajudaTelas_Frota_() {
             "Toque em \"Indicadores do período\" e escolha 30, 90, 180 ou 365 dias.",
             "Leia os números do topo: KM rodado, custo por km, consumo, disponibilidade, preventiva no prazo, avarias, multas e casos.",
             "Veja \"Por veículo\" e \"Por condutor\" para saber onde estão os problemas."
+          ]
+        },
+        {
+          "titulo": "Ver a frota no tempo (Gantt)",
+          "itens": [
+            "Toque em \"Gantt da frota\".",
+            "Escolha o período e toque em \"Atualizar\".",
+            "Cada linha é um veículo: barras azuis são retiradas (tracejada em andamento), cinzas são paradas, losangos são manutenção prevista e documento que vence.",
+            "Toque numa barra ou losango para ver o detalhe embaixo do quadro."
+          ]
+        },
+        {
+          "titulo": "Usar o copiloto de sugestões",
+          "itens": [
+            "Toque em \"Copiloto de sugestões\" e escolha o período.",
+            "Se quiser, marque \"Pedir ajuda da IA\" e toque em \"Atualizar\".",
+            "Leia cada cartão: o problema, os números e a recomendação.",
+            "Escolha o que fazer: \"Abrir caso no Kanban\", \"Lançar atividade\" (com responsável e prazo) ou \"Pedir comprovante\".",
+            "Se não precisa de ação, toque em \"Descartar\" e escreva o motivo. A sugestão decidida não volta no mesmo mês."
           ]
         }
       ],
@@ -598,6 +807,14 @@ function SGO_ajudaTelas_Frota_() {
         {
           "p": "Dá para apagar um caso?",
           "r": "Não. O caso descartado fica guardado com quem decidiu, quando e o motivo."
+        },
+        {
+          "p": "O copiloto faz alguma coisa sozinho?",
+          "r": "Não. Ele só sugere. Nada vira caso, atividade ou pedido sem alguém da gestão escolher. Sem a chave da IA, as sugestões continuam saindo pelas regras do sistema."
+        },
+        {
+          "p": "A IA pode inventar números?",
+          "r": "Ela recebe só os números calculados pelo sistema. Se a recomendação dela citar um número que não está nos dados, o sistema descarta o texto e mostra o das regras."
         }
       ],
       "quemPode": [

@@ -2,7 +2,7 @@
 
 Retirar e devolver veículo, vistoria, KM, abastecimento, despesas, multas, documentos, manutenção, relatório e rastreador.
 
-*Revisão: 17/10/2026, conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
+*Revisão: 20/10/2026 (aba Rastreamento, Gantt, copiloto e comprovantes), conferido com a tela. É o mesmo texto do botão "Manual do operador" da tela.*
 
 ## 1. Como usar este manual
 
@@ -14,7 +14,7 @@ A Frota registra quem pegou cada veículo da empresa e quando devolveu. Em cada 
 
 O sistema também avisa sozinho quando manutenção, documento ou CNH vão vencer, descobre quem estava com o veículo quando chega uma multa e monta o relatório da frota.
 
-> **Abas do computador (19/10/2026):** "Situação e retiradas", "Gestão e melhoria", "Veículos e condutores", "Manutenção e paradas", "Documentos e multas", "Abastecimentos e despesas", "Rastreador" e "Histórico e relatório". Cada pessoa só vê as abas do seu perfil.
+> **Abas do computador (19/10/2026):** "Situação e retiradas", "Gestão e melhoria", "Veículos e condutores", "Manutenção e paradas", "Documentos e multas", "Abastecimentos e despesas", "Rastreamento" e "Histórico e relatório". Cada pessoa só vê as abas do seu perfil.
 
 ## 3. Celular e computador; quem pode o quê
 
@@ -328,8 +328,10 @@ O responsável pelo sistema preenche, em Chaves e senhas > Rastreador da frota, 
 ### Localização e LGPD
 
 - A guarda dos dados de localização (inclusive de quem dirige) é da Metrolabs.
-- O SGO+ não guarda histórico de rota. Fica só a última posição de cada veículo, por poucos minutos, o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.
-- Depois do prazo de guarda (padrão de 90 dias, ajustável em Chaves e senhas), a localização é apagada sozinha.
+- Desde 20/10/2026 (decisão da diretoria) o SGO+ guarda a rota de cada veículo: cada posição lida do rastreador vira um ponto da rota, numa tabela própria do servidor. Ficam também o ponto de chegada de cada devolução e o local dos alertas de uso sem registro.
+- Depois do prazo de guarda (padrão de 90 dias, ajustável pela gestão em Rastreamento > Privacidade e configuração), os pontos de rota e a localização são apagados sozinhos, uma vez por dia.
+- Cada vez que alguém da gestão abre o mapa, consulta uma rota ou gera relatório com localização, fica registrado quem, quando e o quê (Rastreamento > Privacidade e configuração > Quem consultou).
+- Quem dirige é avisado na tela de retirada: o veículo é rastreado durante o uso, para quê e por quanto tempo fica guardado. O registro é do veículo, não da pessoa.
 - Só a gestão (Administrador, Gestor e Diretoria) vê a localização. A equipe não vê, nem durante a própria retirada: quem está no veículo já sabe onde está.
 - Os avisos por e-mail e WhatsApp e a trilha de auditoria não levam o local; ele fica só no SGO+.
 - Telefone, número e arquivo da CNH dos condutores também são só da gestão: a equipe vê apenas o nome dos colegas.
@@ -371,3 +373,71 @@ Multa e avaria com condutor identificado também viram sugestão no Programa de 
 | Preventiva no prazo | Manutenção feita até a data ou o KM da "próxima troca" da manutenção anterior do mesmo tipo |
 | Avarias por 1.000 km | Avarias na devolução divididas pelo KM rodado, vezes 1.000 |
 | Eficácia dos planos | Casos com plano em que a verificação disse "resolveu", sobre os verificados |
+
+## 19. Rastreamento: mapa ao vivo, rotas, combustível, relatórios, Gantt e copiloto
+
+Aba "Rastreamento", só da gestão (Administrador, Gestor e Diretoria). Tem seis partes, nos botões do topo da aba. Nada aqui manda comando ao veículo: o acesso ao rastreador é só de leitura.
+
+> **Rastreador não configurado?** A tela diz o que falta. Quem configura é o responsável pelo sistema, em Configurações > Chaves e senhas > Rastreador da frota (chave de acesso e "Rastreador ligado no SGO+"). Depois volte e toque em "Atualizar".
+
+### Mapa ao vivo
+
+1. Abra a aba "Rastreamento". O mapa abre com todos os veículos que têm aparelho ligado.
+2. Cada veículo aparece com a cor da situação; a lista ao lado (embaixo, no celular) mostra placa, situação, condutor da retirada aberta, velocidade em km/h, local e a hora da última posição.
+3. Com a tela aberta, o mapa se atualiza sozinho a cada 30 segundos (limite da empresa do rastreador). Nada que você estiver digitando é apagado.
+4. Toque num veículo da lista para centralizar o mapa nele.
+
+| Cor | Situação |
+| --- | --- |
+| Azul | Em uso, com retirada registrada |
+| Vermelho | Andando sem retirada registrada (uso sem registro) |
+| Amarelo | Parado com a ignição ligada e sem retirada |
+| Verde | Parado |
+| Cinza | Sem sinal há mais de 30 minutos |
+
+### Rotas
+
+1. Em "Rotas", escolha o período e toque em "Buscar retiradas", ou escolha um veículo e toque em "Ver rota do período".
+2. Na lista de retiradas, toque em "Ver rota": o trajeto aparece no mapa (em vermelho os trechos acima do limite de velocidade), com saída, chegada e paradas numeradas.
+3. Abaixo do mapa: km do trajeto, tempo em movimento e parado, velocidade máxima, trechos acima do limite, paradas de 5 minutos ou mais e, quando o condutor tem atendimentos no Auvo, o deslocamento até cada um.
+4. "Relatório A4" gera o relatório de rota da retirada para imprimir (fica salvo em PDF e HTML).
+
+A empresa do rastreador não informa trânsito. O SGO+ mostra o que os pontos permitem: velocidade, paradas, horários e uso fora do expediente. Trânsito em tempo real exigiria um serviço pago de mapas.
+
+### Combustível e KM
+
+1. Escolha o período e toque em "Calcular".
+2. "Consumo por veículo": km/L do período, a média do próprio veículo e o desvio. Vermelho = gastou mais que a média além do limite configurado (padrão 15%): revise o veículo.
+3. "Capacidade do tanque": informe os litros do tanque de cada veículo para o SGO+ apontar abastecimento com litros acima da capacidade.
+4. "Abastecimentos a conferir": litros acima do tanque, rendimento muito abaixo da média, sem comprovante e, com a hora informada, se o veículo estava parado no horário (marque "Conferir com a posição do veículo").
+5. "KM por condutor": km informado nas retiradas do período.
+6. "Pedir comprovante": escolha veículo e condutor, escreva o que ele deve enviar e o prazo. O condutor recebe uma atividade em Minhas atividades (cobrança no sistema até enviar, e-mail no horário de trabalho e no máximo um resumo por dia no WhatsApp). Ele envia em Frota > Abastecimentos e despesas > "Comprovantes pedidos a você"; o pedido e a atividade fecham sozinhos.
+
+Consumo pelo método do tanque cheio: os km entre dois abastecimentos divididos pelos litros do segundo. Abastecimento parcial distorce o resultado daquele intervalo. O registro de abastecimento ganhou o campo "Hora (opcional)": com ela o SGO+ confere a posição do veículo no horário.
+
+### Relatórios
+
+Quatro relatórios A4 para imprimir, salvos em PDF e HTML na pasta "Frota - Relatorios Gerados/Rastreamento": rota da retirada, mensal do veículo (km, consumo, custos, paradas, excessos, manutenção), consumo da frota e uso fora do expediente.
+
+### Aparelhos e alertas
+
+É a tela do rastreador descrita na seção 17: ligar veículo e aparelho, alertas de uso sem registro e de conexão.
+
+### Privacidade e configuração
+
+- Prazo de guarda das rotas (padrão 90 dias), limite de velocidade (padrão 110 km/h), expediente da frota (padrão 07:00 a 19:00, segunda a sexta; feriados contam como fora) e desvio de consumo aceito (padrão 15%).
+- "Quem consultou": a trilha de quem abriu o mapa, viu rotas ou gerou relatório com localização.
+
+### Gantt da frota e copiloto (aba Gestão e melhoria)
+
+- **Gantt da frota:** por veículo, no tempo: retiradas (tracejada se em andamento), paradas, manutenção prevista pela data ou pelo KM (média de km por dia) e vencimento de documentos. Uma linha extra mostra as ações dos planos (Minhas atividades). Reservas de veículo ainda não existem no SGO+.
+- **Copiloto de sugestões:** o SGO+ lê os dados do período e sugere ações: veículo gastando mais combustível que a média, abastecimento a conferir, condutor com trechos acima do limite, uso fora do expediente, uso sem registro repetido, manutenção próxima pelo KM estimado do rastreador, aparelho sem sinal e muito KM sem abastecimento lançado. Marque "Pedir ajuda da IA" para a IA ordenar e escrever a recomendação com os mesmos números (texto com número que não está nos dados é trocado pelo das regras).
+- Toda sugestão é só sugestão: "Abrir caso no Kanban", "Lançar atividade" (Minhas atividades), "Pedir comprovante" ou "Descartar" com o motivo. Decidida, ela não volta no mesmo mês.
+
+Excesso de velocidade numa retirada e comprovante pedido e não enviado no prazo também viram sugestão no Programa de conduta, onde a gestão decide. Uso sem registro não vira sugestão para ninguém: o rastreador sabe onde o veículo estava, não quem dirigia.
+
+### Comprovantes pedidos a você (toda a equipe)
+
+1. Abra a Frota, aba "Abastecimentos e despesas".
+2. No quadro amarelo "Comprovante pedido a você", preencha data, KM, litros e valor (hora e posto, se souber).
+3. Em "Foto da nota ou PDF", tire a foto ou escolha o arquivo e toque em "Enviar comprovante". O pedido some e a atividade é concluída sozinha.

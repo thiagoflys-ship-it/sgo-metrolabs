@@ -30,7 +30,8 @@ var FROTA_COLUNAS_CASO = ['ID', 'CODIGO', 'TIPO', 'ORIGEM_CHAVE', 'ORIGEM_ID', '
   'ETAPA', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'PORQUES_JSON', 'CAUSA_RAIZ', 'O_QUE', 'POR_QUE', 'ONDE', 'QUANDO', 'QUEM_ID', 'QUEM_NOME', 'COMO', 'QUANTO',
   'ATIVIDADES_JSON', 'CICLO', 'VERIFICACAO_TEXTO', 'EFICAZ', 'RESOLUCAO', 'PADRONIZACAO_TEXTO', 'CONCLUIDO_EM', 'CANCELADO_EM', 'CANCELADO_MOTIVO',
   'HISTORICO_JSON', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'];
-var FROTA_CASO_TIPOS = { AVARIA: 'Avaria', MULTA: 'Multa', MANUTENCAO: 'Manutenção', OUTRO: 'Outro' };
+// 20/10/2026: tipos dos casos abertos pelo copiloto do rastreamento (SGO_Frota_RastreamentoGestao.js).
+var FROTA_CASO_TIPOS = { AVARIA: 'Avaria', MULTA: 'Multa', MANUTENCAO: 'Manutenção', CONSUMO: 'Consumo', ABASTECIMENTO: 'Abastecimento', CONDUCAO: 'Condução', USO: 'Uso do veículo', OUTRO: 'Outro' };
 var FROTA_CASO_ETAPAS = { ABERTA: 'Aberta', ANALISE: 'Em análise', EXECUCAO: 'Em execução', CONCLUIDA: 'Concluída', CANCELADA: 'Descartada' };
 var FROTA_CASO_COLUNAS = [
   { id: 'ABERTA', nome: 'Aberta', ajuda: 'O que precisa de tratamento. Abra o caso para analisar ou descarte com o motivo.' },
@@ -206,7 +207,8 @@ function FrotaG_casoParaTela_(c, ativas, ctx, todasAtv) {
     etapa: etapa, etapaNome: FROTA_CASO_ETAPAS[etapa] || etapa, placa: item.placa, condutorNome: item.condutorNome, data: Frota_textoData_(c.DATA_FATO),
     titulo: SGO_UTILS.safe(c.TITULO), detalhe: SGO_UTILS.safe(c.DESCRICAO), responsavelNome: SGO_UTILS.safe(c.RESPONSAVEL_NOME),
     recorrente: etapa === 'CONCLUIDA' || etapa === 'CANCELADA' ? '' : FrotaG_recorrencia_(item, ctx.avarias180, ctx.multas),
-    origemAtiva: !SGO_UTILS.safe(c.ORIGEM_CHAVE) || !!ativas[SGO_UTILS.safe(c.ORIGEM_CHAVE)],
+    // casos do copiloto (COP|...) não têm origem que "se resolve sozinha" (20/10/2026)
+    origemAtiva: !SGO_UTILS.safe(c.ORIGEM_CHAVE) || /^COP\|/.test(SGO_UTILS.safe(c.ORIGEM_CHAVE)) || !!ativas[SGO_UTILS.safe(c.ORIGEM_CHAVE)],
     porques: Array.isArray(porques) ? porques : [], causaRaiz: SGO_UTILS.safe(c.CAUSA_RAIZ),
     plano: SGO_UTILS.safe(c.O_QUE) ? { oQue: SGO_UTILS.safe(c.O_QUE), porQue: SGO_UTILS.safe(c.POR_QUE), onde: SGO_UTILS.safe(c.ONDE), quando: quando, quemNome: SGO_UTILS.safe(c.QUEM_NOME),
       como: SGO_UTILS.safe(c.COMO), quanto: SGO_UTILS.safe(c.QUANTO) } : null,

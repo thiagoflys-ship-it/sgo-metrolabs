@@ -927,7 +927,11 @@
     if (mod === "frota") {
       // Mesma tela pra toda a equipe no celular (2026-09-01) — gestão
       // completa de frota (cadastro de veículo, etc.) fica só no computador.
-      if (ehMobileModo_()) { renderMobileFrotaOperacional_(); return; }
+      // 20/10/2026: a gestão abre a tela completa no celular (Rastreamento, Gestão e melhoria) pelos botões de
+      // "Opções da gestão"; quem recebeu pedido de comprovante abre a aba Abastecimentos. Depois volta à tela simples.
+      const completa = !!window.SGO_FROTA_COMPLETA;
+      window.SGO_FROTA_COMPLETA = false;
+      if (ehMobileModo_() && !completa) { renderMobileFrotaOperacional_(); return; }
       renderMotorModulo_("Frota", "frota");
       atualizarBadgeModulo_("frota");
       return;
@@ -2636,12 +2640,37 @@
       h += '<details><summary>Opções da gestão</summary><div class="fs-det">' +
         '<button type="button" class="fs-btn" data-acao="abastecer">Registrar abastecimento</button>' +
         '<button type="button" class="fs-btn" data-acao="ajustarKm">Ajustar KM do veículo</button>' +
-        '<button type="button" class="fs-btn" data-acao="partida">Partida do veículo (rastreador)</button></div></details>';
+        '<button type="button" class="fs-btn" data-acao="partida">Partida do veículo (rastreador)</button>' +
+        '<button type="button" class="fs-btn" data-acao="completa" data-aba="rastreador">Rastreamento: mapa, rotas, combustível e relatórios</button>' +
+        '<button type="button" class="fs-btn" data-acao="completa" data-aba="gestao">Gestão e melhoria: Kanban, Gantt e copiloto</button></div></details>';
     }
+    h += '<div id="fs_pedidosComp"></div>';
     const hora = new Date(FS.inicioEm || Date.now());
     h += '<div class="fs-rodape">Atualizado às ' + ("0" + hora.getHours()).slice(-2) + ":" + ("0" + hora.getMinutes()).slice(-2) + '<button type="button" class="fs-link" data-acao="recarregar">Atualizar agora</button></div>';
     host.innerHTML = '<div class="fs' + (fsNoComputador_() ? ' fs-desk' : '') + '" id="fsRaiz" data-tela="inicio">' + h + "</div>";
     fsRaiz_().addEventListener("click", fsClique_);
+    if (!fsNoComputador_()) fsPedidosComprovante_();
+  }
+
+  // 20/10/2026: comprovante de abastecimento pedido pela gestão (Frota > Rastreamento). No celular, aviso na tela inicial
+  // da Frota com o botão que abre a aba Abastecimentos e despesas (onde o comprovante é enviado).
+  function fsPedidosComprovante_() {
+    google.script.run.withSuccessHandler(function (r) {
+      const el = document.getElementById("fs_pedidosComp");
+      if (!el || !r || !r.itens || !r.itens.length) return;
+      el.innerHTML = '<div class="fs-aviso">A gestão pediu ' + (r.itens.length === 1 ? 'o comprovante de um abastecimento' : 'comprovantes de ' + r.itens.length + ' abastecimentos') + ' (veículo ' + fsEsc_(r.itens.map(function (p) { return p.placa; }).join(', ')) + ').' +
+        '<button type="button" class="fs-btn" data-acao="completa" data-aba="despesas">Enviar comprovante</button></div>';
+    }).withFailureHandler(function () {}).Frota_apiDispatch({ sessionId: SGO_getSessionId(), fn: "apiRastrMeusPedidos", payload: {} });
+  }
+
+  function fsAbrirFrotaCompleta_(abaId) {
+    window.SGO_FROTA_COMPLETA = true;
+    abrir("frota");
+    let n = 0;
+    const t = setInterval(function () {
+      if (typeof tplFrota_mostrarAba_ === "function" && document.querySelector("#tplFrotaContainer .frota-abas")) { clearInterval(t); tplFrota_mostrarAba_(abaId); }
+      else if (++n > 80) clearInterval(t);
+    }, 250);
   }
 
   function fsClique_(ev) {
@@ -2655,6 +2684,7 @@
     if (acao === "abastecer") { renderMobileFrotaAbastecer_(); return; }
     if (acao === "ajustarKm") { renderMobileFrotaAjustarKm_(); return; }
     if (acao === "partida") { renderMobileFrotaPartida_(); return; }
+    if (acao === "completa") { fsAbrirFrotaCompleta_(alvo.getAttribute("data-aba") || "situacao"); return; }
     if (acao === "vistoria") { fsVistoria_(alvo.getAttribute("data-v")); return; }
     if (acao === "item") { fsAlternarItem_(alvo); return; }
     if (acao === "removerFoto") { ev.preventDefault(); ev.stopPropagation(); fsRemoverFoto_(id); return; }
@@ -2765,6 +2795,8 @@
     } else {
       h += '<div class="fs-sub">Registro com a hora atual do servidor (horário de Brasília) no momento em que você confirmar.</div>';
     }
+    // 20/10/2026 (LGPD): quem retira o veículo sabe que ele é rastreado durante o uso, para quê e por quanto tempo.
+    if (ret && d.rastreamento && d.rastreamento.ativo) h += '<div class="fs-sub" role="note"><strong>Veículo rastreado.</strong> ' + fsEsc_(d.rastreamento.texto) + '</div>';
     h += '<div id="fs_status" aria-live="polite"></div>';
     h += '<button type="button" class="fs-link" data-acao="cancelar">Cancelar e voltar</button>';
     h += '<div class="fs-barra"><div class="fs-barra-sub" id="fs_barraSub"></div><button type="button" class="fs-btn prim" id="fs_confirmar" data-acao="confirmar">' + (ret ? "Confirmar retirada" : "Confirmar devolução") + "</button></div>";

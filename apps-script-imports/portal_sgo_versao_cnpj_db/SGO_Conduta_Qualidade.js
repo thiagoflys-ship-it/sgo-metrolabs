@@ -216,6 +216,11 @@ function Cndq_coletarFrota_(usuarios, desde, avisos) {
       });
     } catch (e) { avisos.push('KM a conferir da Frota não foi lido: ' + String((e && e.message) || e)); }
   }
+  // 20/10/2026 (rastreamento): excesso de velocidade durante a retirada e comprovante de abastecimento não enviado no prazo.
+  if (typeof FrotaR_sugestoesConduta_ === 'function') {
+    try { saida = saida.concat(FrotaR_sugestoesConduta_(desde, usuarioDoCondutor, avisos) || []); }
+    catch (eR) { avisos.push('Rastreamento da Frota não foi lido: ' + String((eR && eR.message) || eR)); }
+  }
   return saida;
 }
 
@@ -372,9 +377,9 @@ function Conduta_coletarSugestoes_(quem) {
   existentes.forEach(function (s) {
     if (SGO_UTILS.safeUpper(s.STATUS) !== 'PENDENTE' || vistas[String(s.CHAVE)]) return;
     var t = SGO_UTILS.safeUpper(s.ORIGEM_TIPO);
-    if (t !== 'KM_A_CONFERIR' && t !== 'OS_ABERTA' && t !== 'CIENCIA_PENDENTE') return;
+    if (t !== 'KM_A_CONFERIR' && t !== 'OS_ABERTA' && t !== 'CIENCIA_PENDENTE' && t !== 'COMPROVANTE_PENDENTE') return;
     SGO_DATA.update(CNDQ_SHEETS.SUGESTAO, s.ID, { STATUS: 'SUPERADA', DECIDIDA_EM: agora, DECIDIDA_POR_NOME: 'Sistema',
-      MOTIVO: 'A origem foi resolvida em ' + Conduta_dataBr_(hoje) + ' (' + (t === 'KM_A_CONFERIR' ? 'KM conferido pela gestão' : t === 'OS_ABERTA' ? 'O.S. finalizada' : 'ciência confirmada') + ').' });
+      MOTIVO: 'A origem foi resolvida em ' + Conduta_dataBr_(hoje) + ' (' + (t === 'KM_A_CONFERIR' ? 'KM conferido pela gestão' : t === 'OS_ABERTA' ? 'O.S. finalizada' : t === 'COMPROVANTE_PENDENTE' ? 'comprovante enviado ou pedido cancelado' : 'ciência confirmada') + ').' });
     superadas++;
   });
   PropertiesService.getScriptProperties().setProperty(CNDQ_COLETA_PROP, agora);

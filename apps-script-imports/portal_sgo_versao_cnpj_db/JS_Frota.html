@@ -30,11 +30,25 @@
 
           tplFrota_carregado_ = true;
 
-          if (typeof tplFrota_renderReal_ === 'function') {
-            tplFrota_renderReal_();
-          } else {
-            container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
-          }
+          var desenhar = function () {
+            if (typeof tplFrota_renderReal_ === 'function') {
+              tplFrota_renderReal_();
+            } else {
+              container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Falha ao inicializar o módulo (função de renderização não encontrada).</p>';
+            }
+          };
+          // 20/10/2026: rastreamento (mapa, rotas, combustível, relatórios, Gantt, copiloto e comprovantes), em
+          // SGO_Frota_RastreamentoTela.js, ligado depois do módulo. Se falhar, a Frota abre sem ele e o motivo fica no console.
+          google.script.run
+            .withSuccessHandler(function (tela) {
+              try {
+                if (tela && tela.css) { var st = document.createElement('style'); st.textContent = tela.css; document.head.appendChild(st); }
+                if (tela && tela.js) window.eval(tela.js);
+              } catch (eTela) { console.error('tplFrota: rastreamento não carregou:', eTela); }
+              desenhar();
+            })
+            .withFailureHandler(function (eTela) { console.error('tplFrota: rastreamento não carregou:', eTela); desenhar(); })
+            .Frota_obterTelaRastreamento();
         } catch (e) {
           console.error('tplFrota: erro ao montar o módulo:', e);
           container.innerHTML = '<p style="padding:20px;color:var(--bc-danger);">Erro ao montar o módulo: ' + (e && e.message ? e.message : e) + '</p>';

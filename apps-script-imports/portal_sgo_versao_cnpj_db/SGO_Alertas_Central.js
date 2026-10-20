@@ -96,6 +96,8 @@ var PEND_TIPOS = {
   frota_rastreador_bloqueio: { modulo: 'frota', um: 'bloqueio da partida pendente há mais de 30 minutos', varios: 'bloqueios da partida pendentes há mais de 30 minutos', rotulo: 'Bloqueio pendente', fazer: 'veja a posição do veículo em Frota > Rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_rastreador_conexao: { modulo: 'frota', um: 'falha de comunicação com o rastreador', varios: 'falhas de comunicação com o rastreador', rotulo: 'Sem conexão', fazer: 'confira a internet do servidor e a plataforma do rastreador', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   // 19/10/2026 (revisão da Frota): avaria na devolução sem caso aberto e multa com pagamento vencendo (SGO_Frota_Gestao.js).
+  // 20/10/2026 (rastreamento): pedido de comprovante de abastecimento vencido sem resposta (SGO_Frota_Rastreamento.js).
+  frota_comprovante: { modulo: 'frota', um: 'comprovante de abastecimento pedido e não enviado', varios: 'comprovantes de abastecimento pedidos e não enviados', rotulo: 'Comprovante', fazer: 'fale com o condutor ou cancele o pedido em Frota > Rastreamento > Combustível e KM', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   frota_avaria: { modulo: 'frota', um: 'avaria de veículo sem tratamento', varios: 'avarias de veículos sem tratamento', rotulo: 'Tratar', fazer: 'abra o caso em Frota > Gestão e melhoria > Kanban', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA' },
   multa_vencida: { modulo: 'frota', um: 'multa vencida sem pagamento', varios: 'multas vencidas sem pagamento', rotulo: 'Vencida', fazer: 'pague ou recorra e atualize em Frota > Documentos e multas', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
   multa_vencendo: { modulo: 'frota', um: 'multa a vencer', varios: 'multas a vencer', rotulo: 'A vencer', fazer: 'pague ou recorra antes do vencimento', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
@@ -595,6 +597,8 @@ function Pend_fonteFrota_(add) {
   if (typeof Rastreador_pendencias_ === 'function') Rastreador_pendencias_(add, veiculos, condutores);
   // 19/10/2026: avaria sem caso aberto e multa com pagamento vencendo (Frota > Gestão e melhoria).
   if (typeof Frota_gestaoPendencias_ === 'function') { try { Frota_gestaoPendencias_(add); } catch (eG) { console.error('Pendências da gestão da Frota: ' + ((eG && eG.message) || eG)); } }
+  // 20/10/2026: comprovante de abastecimento pedido ao condutor e não enviado no prazo (Frota > Rastreamento).
+  if (typeof FrotaR_pendencias_ === 'function') { try { FrotaR_pendencias_(add); } catch (eR) { console.error('Pendências do rastreamento da Frota: ' + ((eR && eR.message) || eR)); } }
 
   // Registro feito pela gestão em nome do condutor: informativo para o condutor por 7 dias.
   var diasInfo = typeof FROTA_DIAS_AVISO_REGISTRO_GESTAO !== 'undefined' ? FROTA_DIAS_AVISO_REGISTRO_GESTAO : 7;
