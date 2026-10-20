@@ -1,20 +1,23 @@
 <?
   // Relatório de ensaio térmico — Autoclave (um ciclo ou um teste de estanqueidade).
-  // Padrão comum SGO_DocA4: cabeçalho/rodapé em todas as páginas, A4, sem JavaScript no PDF.
+  // Padrão comum SGO_DocA4: capa, sumário, cabeçalho/rodapé em todas as páginas, A4, sem JavaScript no PDF.
+  // 20/10/2026: critérios do patamar com a fonte, escopo e limitações, travas, aprovação registrada do
+  // responsável técnico, F0 acumulado e vapor saturado. Ensaio só de temperatura (pressão desligada):
+  // nenhuma menção a pressão fora da frase do escopo.
   var id = ctx.identificacao;
   var estudo = ctx.estudos[0];
   var f = estudo.fatos || {};
   var leak = ctx.tipoRelatorio === 'LEAK_TEST';
+  var comPressao = ctx.analisarPressao !== false;
   var st = String(ctx.statusConsolidado || '').toUpperCase();
   var numeroDoc = id.certificadoNumero || 'sem número';
-  var ficha = [
-    ['Data do ensaio', id.dataDoEnsaio || '—'],
-    ['Emissão', geradoEm],
-    ['Tipo de ensaio', leak ? 'Teste de estanqueidade da câmara' : AutoRel_acTextoTipoEnsaio_(id.tipoEnsaio)],
-    ['Ciclo nº', id.cicloNumero || '—']
-  ];
   var nFig = 0;
+  var nTab = 0;
   var cicloTxt = leak ? 'teste de estanqueidade da câmara' : String(ctx.equipamentoLabel || '').replace(/^Ciclo de Esterilização/, 'ciclo de esterilização').replace(/^Ciclo de Baixa Temperatura/, 'ciclo de baixa temperatura');
+  var capaLinhas = [
+    ['Cliente', id.cliente], ['Equipamento', id.equipamentoTipo + (id.tag ? ' — TAG ' + id.tag : '')],
+    ['Ensaio', leak ? 'Teste de estanqueidade da câmara' : AutoRel_acTextoTipoEnsaio_(id.tipoEnsaio) + ' — ' + cicloTxt]
+  ];
 ?>
 <?!= SGO_DocA4_inicioDocumento_({
   titulo: 'Relatório de ensaio térmico — Autoclave',
@@ -24,47 +27,50 @@
   numero: numeroDoc,
   revisao: id.revisao,
   empresa: id.empresaExecutante,
-  ficha: ficha,
-  simulado: ctx.simulado,
+  capa: { tipo: 'Qualificação térmica', linhas: capaLinhas },
+  ficha: [['Data do ensaio', id.dataDoEnsaio || '—'], ['Emissão', geradoEm], ['Ciclo nº', id.cicloNumero || '—'], ['Registrador', id.dtl || '—']].filter(function(l) { return l[1] !== '—' || l[0] === 'Data do ensaio'; }),
+  simulado: ctx.simulado || minuta,
+  avisoSimulado: minuta ? 'MINUTA PARA CONFERÊNCIA DO RESPONSÁVEL TÉCNICO — documento ainda não aprovado; não entregar ao cliente.' : undefined,
   resultado: { status: st, rotulo: 'Resultado do ensaio', texto: ctx.resumoResultado },
   sumario: true
 }) ?>
 
 <h2>1. Identificação</h2>
-<?!= SGO_DocA4_tabelaIdent_([
-  ['Cliente', id.cliente],
-  ['CNPJ', id.cnpj],
-  ['Endereço', id.endereco, { largo: true }],
-  ['Setor', id.setor],
-  ['TAG', id.tag],
-  ['Equipamento', 'Autoclave a vapor'],
-  ['Marca', id.marca],
-  ['Modelo', id.modelo],
-  ['Nº de série', id.numeroSerie],
-  ['Receita / programa', id.programa],
-  ['Lote', id.lote],
-  ['Técnico executor', id.tecnicoExecutor],
-  ['Responsável pelo aceite', id.responsavelAceite],
-  ['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]
-].concat(id.tarefaOrigem ? [['Tarefa de origem', id.tarefaOrigem, { largo: true }]] : [])) ?>
+<?
+  // Campos opcionais vazios não aparecem (sem linha com travessão); cliente, CNPJ, TAG, equipamento,
+  // técnico e empresa executante aparecem sempre.
+  var identOpc = function(rotulo, valor, extra) { return String(valor || '').trim() ? [[rotulo, valor].concat(extra ? [extra] : [])] : []; };
+  var identLinhas = [['Cliente', id.cliente], ['CNPJ', id.cnpj]]
+    .concat(identOpc('Endereço', id.endereco, { largo: true }), identOpc('Setor', id.setor), [['TAG', id.tag], ['Equipamento', id.equipamentoTipo]],
+      identOpc('Marca', id.marca), identOpc('Modelo', id.modelo), identOpc('Nº de série', id.numeroSerie), identOpc('Receita / programa', id.programa), identOpc('Lote', id.lote),
+      [['Técnico executor', id.tecnicoExecutor]], identOpc('Responsável pelo aceite', id.responsavelAceite),
+      [['Empresa executante', id.empresaExecutante.nome + ' — CNPJ ' + id.empresaExecutante.cnpj, { largo: true }]], identOpc('Tarefa de origem', id.tarefaOrigem, { largo: true }));
+?>
+<?!= SGO_DocA4_tabelaIdent_(identLinhas) ?>
 
 <h2>2. Instrumentação e rastreabilidade</h2>
-<p>As temperaturas<?= leak ? ' e a pressão' : ' e a pressão da câmara' ?> foram registradas por registrador de dados (datalogger) com sensores distribuídos na câmara. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados nesta seção.</p>
+<p>As temperaturas<?= leak ? ' e a pressão' : (comPressao ? ' e a pressão da câmara' : '') ?> foram registradas por registrador de dados com sensores distribuídos na câmara. O registrador utilizado e a situação do seu certificado de calibração na data do ensaio, conforme o cadastro de padrões da empresa executante, estão identificados abaixo.</p>
 <?!= SGO_DocA4_tabelaRegistradores_(ctx.registradores) ?>
+<? if (f.incertezaF0) { ?>
+<p class="nota">Incerteza expandida do registrador considerada: <?= SGO_DocA4_val_(f.incertezaF0.uTemperatura, 2, '°C') ?> (certificado de calibração). Propagada ao F<sub>0</sub> do pior sensor como erro constante de temperatura durante a exposição: U(F<sub>0</sub>) ≈ F<sub>0</sub> · ln 10 / z · U(T) = <?= SGO_DocA4_val_(f.incertezaF0.uF0, 2, 'min') ?> (<?= SGO_DocA4_num_(f.incertezaF0.relativo, 1) ?> % do valor).</p>
+<? } ?>
 <?!= SGO_DocA4_tabelaIdent_(ctx.parametros || []) ?>
 
 <h2>3. Metodologia, critérios de aceitação e referências</h2>
 <? if (leak) { ?>
-<p>O teste de estanqueidade avalia a capacidade da câmara de manter o vácuo. Após a evacuação, a pressão absoluta da câmara é registrada durante a janela de espera. A taxa de vazamento é calculada como a variação de pressão dividida pelo tempo decorrido na janela (mbar/min) e comparada ao limite de referência. A curva também é avaliada quanto à estabilidade e à ausência de ruído de medição.</p>
+<p>O teste de estanqueidade avalia a capacidade da câmara de manter o vácuo. Após a evacuação, com a câmara isolada, a pressão absoluta é registrada durante a fase de espera. A taxa de vazamento é a variação de pressão dividida pelo tempo decorrido na janela (mbar/min), comparada ao limite configurado.</p>
 <? } else { ?>
-<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. A fase de exposição (patamar de esterilização) é reconhecida quando os sensores ativos atingem e mantêm a temperatura mínima de esterilização do ciclo, com histerese e número mínimo de leituras consecutivas para evitar que oscilações isoladas abram ou fechem a janela.</p>
-<p>Para cada sensor calcula-se a letalidade térmica acumulada na fase de exposição, expressa em minutos equivalentes à temperatura de referência:</p>
-<p class="formula">F<sub>0</sub> = Σ 10<sup>(T − T<sub>ref</sub>) / z</sup> · Δt</p>
-<p>com T<sub>ref</sub> = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).tBase, 1, '°C') ?>, z = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).z, 0, '°C') ?> e Δt igual ao intervalo entre leituras. O ciclo é avaliado pelo pior sensor (menor F<sub>0</sub>), que representa o ponto de mais difícil penetração do calor. A aprovação térmica não demonstra, isoladamente, a remoção completa do ar nem a ausência de gases não condensáveis, que dependem de ensaios específicos (por exemplo, o teste de Bowie-Dick).</p>
+<p>As leituras de temperatura de cada sensor ativo foram registradas ao longo do ciclo, no intervalo programado no registrador. A fase de exposição é reconhecida quando os sensores ativos atingem e mantêm a temperatura mínima de esterilização, com histerese e número mínimo de leituras consecutivas para que oscilações isoladas não abram nem fechem a janela. O patamar avaliado nos critérios de tempo e de faixa vai do início da exposição até a última leitura com todos os sensores na temperatura de esterilização.</p>
+<p>Para cada sensor calcula-se a letalidade acumulada na exposição, em minutos equivalentes à temperatura de referência:</p>
+<p class="formula">F<sub>0</sub> = Σ ½ · [10<sup>(T<sub>i−1</sub> − T<sub>ref</sub>) / z</sup> + 10<sup>(T<sub>i</sub> − T<sub>ref</sub>) / z</sup>] · Δt<sub>i</sub></p>
+<p>com T<sub>ref</sub> = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).tBase, 1, '°C') ?>, z = <?= SGO_DocA4_val_((f.temperaturaReferencia || {}).z, 0, '°C') ?> e Δt<sub>i</sub> o intervalo real entre leituras consecutivas (regra dos trapézios). O ciclo é avaliado pelo pior sensor (menor F<sub>0</sub>).<? if (comPressao) { ?> A temperatura do vapor saturado correspondente à pressão absoluta registrada é calculada pela equação de saturação da IAPWS-IF97 e comparada à temperatura medida.<? } ?> Leituras impossíveis, sensores parados, picos isolados ou lacunas na exposição impedem a emissão do documento até serem corrigidos.</p>
 <? } ?>
 <h3>3.1 Critérios de aceitação</h3>
+<p class="nota">Critérios configurados pela empresa executante e revisáveis pelo responsável técnico; a coluna Referência indica a fonte técnica de cada critério.</p>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Requisito' }, { t: 'Referência' }], (ctx.criterios || []).map(function(c) { return [c.criterio, c.requisito, c.referencia]; })) ?>
-<h3>3.2 Referências normativas</h3>
+<h3>3.2 Escopo e limitações</h3>
+<?!= SGO_DocA4_lista_(ctx.escopo || []) ?>
+<h3>3.3 Referências normativas</h3>
 <?!= SGO_DocA4_lista_(ctx.normas) ?>
 
 <h2>4. Resultados</h2>
@@ -78,7 +84,7 @@
   ['Pressão final', SGO_DocA4_val_(f.pressaoFimMbar, 2, 'mbar')],
   ['Variação de pressão', SGO_DocA4_val_(f.deltaPressaoMbar, 2, 'mbar')],
   ['Taxa de vazamento', SGO_DocA4_val_(f.taxaVazamentoMbarMin, 2, 'mbar/min')],
-  ['Limite de referência', SGO_DocA4_val_(f.limiteTaxaVazamentoMbarMin, 2, 'mbar/min')]
+  ['Limite configurado', SGO_DocA4_val_(f.limiteTaxaVazamentoMbarMin, 2, 'mbar/min')]
 ]) ?>
 <? } else { ?>
 <h3>4.1 Fases do ciclo</h3>
@@ -86,30 +92,35 @@
   var fr = f.fasesProcesso || {};
   var dg = f.diagnosticoPreVacuo || {};
   var pres = f.pressaoRegistrada || {};
+  var pt = f.patamar || {};
   var txtPre = { DETECTADO: 'Evacuações observadas', NAO_DETECTADO: 'Nenhuma evacuação observada', NAO_APLICAVEL: 'Não aplicável ao modo de remoção de ar informado', INDETERMINADO: 'Indeterminado pelos dados registrados' }[dg.status] || 'Indeterminado pelos dados registrados';
+  var linhasFases = [
+    ['Início da exposição', f.tempoInicioExposicao || '—'],
+    ['Fim da exposição', f.tempoFimExposicao || '—'],
+    ['Duração da exposição', SGO_DocA4_val_(f.tempoExposicaoMinutos, 2, 'min')],
+    ['Patamar na temperatura de esterilização', pt.duracaoMin !== undefined ? SGO_DocA4_val_(pt.duracaoMin, 2, 'min') + ' (' + pt.leituras + ' leituras)' : '—'],
+    ['Duração total registrada', SGO_DocA4_val_(f.tempoTotalMinutos, 2, 'min')]
+  ];
+  if (comPressao) {
+    linhasFases.push(['Remoção de ar (pré-vácuo)', txtPre + (fr.contagemEvacuacoes ? ' — ' + fr.contagemEvacuacoes + (fr.contagemEvacuacoes === 1 ? ' evacuação' : ' evacuações') : '')]);
+    linhasFases.push(['Pressão mínima antes da exposição', isFinite(dg.pressaoMinimaBarAbs) && dg.pressaoMinimaBarAbs !== null ? SGO_DocA4_val_(dg.pressaoMinimaBarAbs, 3, 'bar abs.') : '—']);
+    linhasFases.push(['Pressão registrada (mín. / máx.)', (pres.min !== null && pres.min !== undefined && pres.count) ? SGO_DocA4_val_(pres.min, 3, '') + ' / ' + SGO_DocA4_val_(pres.max, 3, 'bar abs.') : '—']);
+    linhasFases.push(['Vácuo pós-exposição observado', fr.vacuoPosExposicaoDetectado ? 'Sim (secagem não comprovada pela curva)' : 'Não observado']);
+  }
 ?>
-<?!= SGO_DocA4_tabelaIdent_([
-  ['Início da exposição', f.tempoInicioExposicao || '—'],
-  ['Fim da exposição', f.tempoFimExposicao || '—'],
-  ['Duração da exposição', SGO_DocA4_val_(f.tempoExposicaoMinutos, 2, 'min')],
-  ['Duração total registrada', SGO_DocA4_val_(f.tempoTotalMinutos, 2, 'min')],
-  ['Remoção de ar (pré-vácuo)', txtPre + (fr.contagemEvacuacoes ? ' — ' + fr.contagemEvacuacoes + (fr.contagemEvacuacoes === 1 ? ' evacuação' : ' evacuações') : '')],
-  ['Pressão mínima antes da exposição', isFinite(dg.pressaoMinimaBarAbs) && dg.pressaoMinimaBarAbs !== null ? SGO_DocA4_val_(dg.pressaoMinimaBarAbs, 3, 'bar abs.') : '—'],
-  ['Pressão registrada (mín. / máx.)', (pres.min !== null && pres.min !== undefined) ? SGO_DocA4_val_(pres.min, 3, '') + ' / ' + SGO_DocA4_val_(pres.max, 3, 'bar abs.') : '—'],
-  ['Vácuo pós-exposição observado', fr.vacuoPosExposicaoDetectado ? 'Sim (secagem não comprovada pela curva)' : 'Não observado']
-]) ?>
+<?!= SGO_DocA4_tabelaIdent_(linhasFases) ?>
 <? if (f.conformidadePorSensor && f.conformidadePorSensor.length) { ?>
 <h3>4.2 Resultados por sensor (fase de exposição)</h3>
 <?!= SGO_DocA4_tabela_(
   [{ t: 'Sensor' }, { t: 'Mínima (°C)', cls: 'num' }, { t: 'Média (°C)', cls: 'num' }, { t: 'Máxima (°C)', cls: 'num' }, { t: 'F0 (min)', cls: 'num' }, { t: 'Situação' }],
   f.conformidadePorSensor.map(function(c) {
     var pior = f.piorSensorF0 && f.piorSensorF0.sensor === c.sensor;
-    return [c.sensor + (pior ? ' (pior)' : ''), SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2), SGO_DocA4_val_(c.f0, 2),
+    return [c.sensor + (pior ? ' (pior)' : '') + (f.sensorReferencia === c.sensor ? ' (referência)' : ''), SGO_DocA4_val_(c.minTemp, 2), SGO_DocA4_val_(c.mediaTemp, 2), SGO_DocA4_val_(c.maxTemp, 2), SGO_DocA4_val_(c.f0, 2),
       f.exigeF0 ? SGO_DocA4_celSituacao_(c.statusSensor === 'CONFORME', 'Atende', 'Abaixo do mínimo') : { html: '<span class="info-txt">Informativo</span>' }];
   })
 ) ?>
 <? if (f.exigeF0) { ?>
-<p class="nota">F<sub>0</sub> do ciclo entre os sensores ativos: mínimo <?= SGO_DocA4_val_(f.minF0, 2, 'min') ?>, médio <?= SGO_DocA4_val_(f.mediaF0, 2, 'min') ?> e máximo <?= SGO_DocA4_val_(f.maxF0, 2, 'min') ?>. Exigido: <?= SGO_DocA4_val_(f.f0MinNormativo, 2, 'min') ?> ou mais em todos os sensores.</p>
+<p class="nota">F<sub>0</sub> entre os sensores ativos: mínimo <?= SGO_DocA4_val_(f.minF0, 2, 'min') ?>, médio <?= SGO_DocA4_val_(f.mediaF0, 2, 'min') ?> e máximo <?= SGO_DocA4_val_(f.maxF0, 2, 'min') ?>. Exigido: <?= SGO_DocA4_val_(f.f0MinNormativo, 2, 'min') ?> ou mais em todos os sensores.<?= (f.sensoresDesabilitados && f.sensoresDesabilitados.length) ? ' Sensores desconsiderados pelo técnico: ' + f.sensoresDesabilitados.join(', ') + '.' : '' ?></p>
 <? } ?>
 <? } ?>
 <? } ?>
@@ -120,9 +131,9 @@
 <? } ?>
 
 <h3>4.<?= leak ? (graficos && graficos.length ? '3' : '2') : (graficos && graficos.length ? '4' : '3') ?> Verificação dos critérios de aceitação</h3>
-<p class="nota">O requisito de cada critério está na seção 3.1.</p>
+<p class="nota">O requisito de cada critério está na seção 3.1. Critério não avaliado não aprova nem reprova o ensaio; o motivo está na coluna do resultado.</p>
 <?!= SGO_DocA4_tabela_([{ t: 'Critério' }, { t: 'Resultado obtido' }, { t: 'Situação' }],
-  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
+  (ctx.criterios || []).map(function(c) { return [c.criterio, c.obtido, c.naoAvaliado ? { html: '<span class="info-txt">Não avaliado</span>' } : SGO_DocA4_celSituacao_(c.conforme)]; })) ?>
 
 <h2>5. Análise técnica</h2>
 <div class="prosa"><?!= SGO_DocA4_paragrafos_(textos.analisePorEstudo[estudo.tipoEstudo]) ?></div>
@@ -145,12 +156,24 @@
 
 <div class="manter">
 <h2>8. Responsabilidade técnica</h2>
-<p>Este relatório refere-se exclusivamente ao ensaio identificado, com os dados do registrador informado. Numa campanha de qualificação com vários ciclos, cada ciclo tem o seu relatório, e a qualificação do equipamento é declarada no documento consolidado da campanha. A reprodução parcial deste documento depende de autorização da empresa executante.</p>
+<p>Este relatório refere-se exclusivamente ao ensaio identificado. Numa campanha de qualificação com vários ciclos, a qualificação do equipamento é declarada no documento consolidado da campanha. O resultado foi calculado pelo sistema a partir dos dados do registrador; os textos foram revisados antes da emissão. A reprodução parcial deste documento depende de autorização da empresa executante.</p>
+<? if (aprovacao) { ?>
+<p><b>Revisado e aprovado para emissão por</b> <?= aprovacao.nome || '—' ?><?= aprovacao.perfil ? ' (' + String(aprovacao.perfil).toLowerCase() + ')' : '' ?>, em <?= aprovacao.em ?>, com registro no sistema. Revisão <?= id.revisao || '0' ?> deste relatório<?= Number(id.revisao) > 0 ? '; as revisões anteriores continuam arquivadas e são substituídas por esta' : '' ?>.</p>
+<? } else if (minuta) { ?>
+<p><b>Aguardando a aprovação do responsável técnico.</b></p>
+<? } ?>
 <?!= SGO_DocA4_assinaturas_(assinaturas) ?>
 </div>
 
+<? if (ctx.mesclagem && ctx.mesclagem.sensores && ctx.mesclagem.sensores.length) { ?>
+<h2 class="quebra">Anexo A — Alinhamento dos registradores individuais</h2>
+<p>Cada sensor foi registrado por um registrador próprio. As leituras foram alinhadas pela linha do tempo do <?= ctx.mesclagem.referencia ?>, com tolerância de <?= SGO_DocA4_val_(ctx.mesclagem.toleranciaSeg, 1, 's') ?> (metade do intervalo típico). Leitura sem correspondência dentro da tolerância fica em branco e, se cair na exposição, impede a emissão.</p>
+<?!= SGO_DocA4_tabela_([{ t: 'Sensor' }, { t: 'Leituras', cls: 'num' }, { t: 'Primeira leitura' }, { t: 'Última leitura' }, { t: 'Sem correspondência', cls: 'num' }, { t: 'Maior diferença de horário (s)', cls: 'num' }],
+  ctx.mesclagem.sensores.map(function(r) { return [r.sensor, String(r.leituras), r.inicio, r.fim, String(r.semCorrespondencia), SGO_DocA4_num_(r.maiorDefasagemSeg, 0)]; })) ?>
+<? } ?>
+
 <? if (fotos && fotos.length) { ?>
-<h2 class="quebra">Anexo A — Registro fotográfico</h2>
+<h2 class="quebra">Anexo <?= (ctx.mesclagem && ctx.mesclagem.sensores && ctx.mesclagem.sensores.length) ? 'B' : 'A' ?> — Registro fotográfico</h2>
 <?!= SGO_DocA4_fotos_(fotos) ?>
 <? } ?>
 <?!= SGO_DocA4_fimDocumento_() ?>

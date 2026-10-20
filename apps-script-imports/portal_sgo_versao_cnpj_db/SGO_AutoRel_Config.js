@@ -59,7 +59,7 @@ const AutoRel_UCFG = Object.freeze({
     permitirReconstrucaoTempo: false,
     maxTimestampsIguaisSequenciais: 3,
     maxSaltosMinutos: 120,
-    intervaloEsperadoMin: 0.1,
+    intervaloEsperadoMin: 1 / 60, // 1 s (20/10/2026: era 6 s; registrador a 1–5 s é o adequado para medir o tempo de equilíbrio)
     intervaloEsperadoMax: 10,
     diferencaMaxPercentualDelta: 0.35
   }),
@@ -123,6 +123,16 @@ const AutoRel_UCFG = Object.freeze({
       tMin: 134.0,
       tMax: 137.0,
 
+      // Critérios de aceitação do ciclo a vapor (20/10/2026): valores configurados pela
+      // empresa executante e revisáveis pelo responsável técnico (referências em
+      // CRITERIOS_REFERENCIAS). O motor determinístico decide; a IA nunca decide.
+      criterios: Object.freeze({
+        tempoMinimoPatamarMin: 3,
+        variacaoMaxEntreSensoresK: 2.0,
+        tempoEquilibrioMaxSeg: 15,
+        desvioMaxVaporSaturadoK: 2.0
+      }),
+
       analise: Object.freeze({
         histereseTemperatura: 0.5,
         consecutivasInicio: 2,
@@ -151,6 +161,13 @@ const AutoRel_UCFG = Object.freeze({
       tMin: 121.0,
       tMax: 124.0,
 
+      criterios: Object.freeze({
+        tempoMinimoPatamarMin: 15,
+        variacaoMaxEntreSensoresK: 2.0,
+        tempoEquilibrioMaxSeg: 15,
+        desvioMaxVaporSaturadoK: 2.0
+      }),
+
       analise: Object.freeze({
         histereseTemperatura: 0.5,
         consecutivasInicio: 2,
@@ -178,6 +195,14 @@ const AutoRel_UCFG = Object.freeze({
 
       tMin: 127.0,
       tMax: 130.0,
+
+      // Tempo mínimo: a combinação de referência mais próxima é 126 °C por 10 min (a confirmar pelo responsável técnico).
+      criterios: Object.freeze({
+        tempoMinimoPatamarMin: 10,
+        variacaoMaxEntreSensoresK: 2.0,
+        tempoEquilibrioMaxSeg: 15,
+        desvioMaxVaporSaturadoK: 2.0
+      }),
 
       analise: Object.freeze({
         histereseTemperatura: 0.5,
@@ -248,6 +273,76 @@ const AutoRel_UCFG = Object.freeze({
   }),
 
   /****************************************************
+   * 8.1 REFERÊNCIAS DOS CRITÉRIOS E NORMAS CITADAS (20/10/2026)
+   *
+   * O sistema não tem o texto integral das normas: nenhum número de cláusula
+   * é citado. Cada critério diz "conforme critério configurado" e a
+   * referência técnica que o motivou. O responsável técnico confere os
+   * valores (CICLOS[...].criterios e LEAK_TEST) contra a norma e ajusta aqui.
+   *
+   * obrigatorio: o critério precisa ser avaliado para o documento ser
+   * emitido. Os não obrigatórios dependem da instrumentação (pressão
+   * registrada, intervalo de leitura curto): quando os dados permitem, são
+   * avaliados e decidem; quando não permitem, aparecem como "não avaliado"
+   * com o motivo.
+   ****************************************************/
+  CRITERIOS_REFERENCIAS: Object.freeze({
+    textoGeral: 'Critérios configurados pela empresa executante e revisáveis pelo responsável técnico.',
+    exposicao: Object.freeze({ referencia: 'ABNT NBR ISO 17665-1', obrigatorio: true }),
+    tempoPatamar: Object.freeze({ referencia: 'ABNT NBR ISO 17665-1 e EN 285 (combinação tempo × temperatura de esterilização)', obrigatorio: true }),
+    faixa: Object.freeze({ referencia: 'EN 285 (faixa de temperatura de esterilização)', obrigatorio: true }),
+    variacao: Object.freeze({ referencia: 'EN 285 (diferença de temperatura entre os pontos de medição no patamar)', obrigatorio: true }),
+    equilibrio: Object.freeze({ referencia: 'EN 285 (tempo de equilíbrio)', obrigatorio: false }),
+    vaporSaturado: Object.freeze({ referencia: 'EN 285 (temperatura do vapor saturado calculada pela pressão da câmara)', obrigatorio: false }),
+    f0: Object.freeze({ referencia: 'ABNT NBR ISO 17665-1 (F0 com Tref = 121,1 °C e z = 10 °C)', obrigatorio: true })
+  }),
+
+  // Únicas normas que o documento e a IA podem citar.
+  NORMAS_CITAVEIS: Object.freeze([
+    'RDC ANVISA nº 15/2012 — Boas práticas para o processamento de produtos para saúde',
+    'ABNT NBR ISO 17665-1 — Esterilização de produtos para saúde — Calor úmido — Parte 1: Requisitos para o desenvolvimento, validação e controle de rotina de um processo de esterilização para produtos para saúde',
+    'ISO/TS 17665-2 — Orientação para a aplicação da ISO 17665-1',
+    'ABNT NBR 11816 — Esterilização — Esterilizadores a vapor com vácuo, para produtos de saúde',
+    'EN 285 — Esterilizadores a vapor de grande porte (referência técnica dos ensaios)',
+    'EN 13060 — Esterilizadores a vapor de pequeno porte (referência técnica dos ensaios)',
+    'ABNT NBR ISO 11140 — Indicadores químicos (inclui o indicador do ensaio de Bowie-Dick)',
+    'ABNT NBR ISO 11138 — Indicadores biológicos'
+  ]),
+
+  // Citadas em versões anteriores e fora do documento até o responsável técnico
+  // confirmar número e título (não se cita o que não foi conferido).
+  NORMAS_A_CONFIRMAR: Object.freeze([
+    'ABNT NBR 16328 (citada antes neste relatório como norma de qualificação térmica; no SGO+ ela é a referência do módulo Cadeia de Frio, de equipamentos de refrigeração, e não trata de esterilização a vapor; confirmar com o responsável técnico)'
+  ]),
+
+  /****************************************************
+   * 8.2 QUALIDADE DOS DADOS — TRAVAS DE EMISSÃO (20/10/2026)
+   * Dado com problema não vira resultado: o documento não é emitido e a
+   * tela diz o que corrigir.
+   ****************************************************/
+  QUALIDADE_DADOS: Object.freeze({
+    faixaFisicaC: Object.freeze([-10, 160]),
+    paradoMinLeituras: 10,
+    paradoVariacaoProcessoC: 5,
+    picoMinC: 10,
+    minLeiturasPatamar: 5,
+    maxLeiturasFaltandoPatamar: 0,
+    lacunaMaxIntervalos: 3,
+    exigirRegistradorValido: true
+  }),
+
+  /****************************************************
+   * 8.3 EMISSÃO COM APROVAÇÃO DO RESPONSÁVEL TÉCNICO (20/10/2026)
+   * Só um perfil aprovador emite, depois de conferir; quem não é aprovador
+   * envia para aprovação. Reemissão do mesmo número gera nova revisão; as
+   * anteriores continuam na pasta do cliente.
+   ****************************************************/
+  EMISSAO: Object.freeze({
+    perfisAprovadores: Object.freeze(['ADMIN', 'DIRETORIA', 'GESTOR', 'METROLOGIA']),
+    regraDecisao: 'Aceitação simples: o valor medido é comparado diretamente ao limite; a incerteza de medição é informada, sem banda de guarda.'
+  }),
+
+  /****************************************************
    * 9. MODO SIMULADO / RECONSTITUIDO
    *
    * Preferencialmente configure a senha real em:
@@ -283,7 +378,10 @@ const AutoRel_UCFG = Object.freeze({
    ****************************************************/
   LEAK_TEST: Object.freeze({
     limiteTaxaVazamentoMbarMin: 1.3,
-    normaReferencia: 'Prática técnica baseada na EN 285 para esterilizadores a vapor de grande porte',
+    // Duração mínima da janela de medição da taxa (20/10/2026; a confirmar pelo
+    // responsável técnico contra a EN 285). Janela menor não emite documento.
+    duracaoMinimaJanelaMin: 10,
+    normaReferencia: 'EN 285 (teste de estanqueidade ao ar), critério configurado',
     unidadePressaoPadrao: 'MBAR',
     referenciaAtmosfericaMbar: 1013.25
   }),

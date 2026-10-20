@@ -37,8 +37,11 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Informe a \"Quantidade de sensores\".",
           "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou durante o ensaio.",
           "Escolha a \"Remoção de ar do ciclo\" que foi usada.",
-          "Em \"4. Dados do registrador\", deixe \"Enviar arquivo ou informar o link (recomendado)\".",
-          "Toque em \"Escolher arquivo\" e escolha o arquivo do registrador. O link é preenchido sozinho.",
+          "\"Analisar pressão\" vem ligado. Desligue só se não foi possível instalar o transmissor de pressão (autoclave de pequeno porte/cassete) e escreva a justificativa no campo que aparece. O relatório passa a considerar só a temperatura.",
+          "Se um sensor ficou junto ao dreno (ponto de referência da câmara), informe o número dele em \"Sensor de referência da câmara\". É opcional.",
+          "Em \"4. Dados do registrador\", escolha como os dados chegaram: \"Enviar arquivo ou informar o link\" (um arquivo com todos os sensores) ou \"Um arquivo por sensor (registradores individuais)\".",
+          "Arquivo único: toque em \"Escolher arquivo\" e escolha o arquivo do registrador. O link é preenchido sozinho.",
+          "Um arquivo por sensor: na grade \"Sensores considerados na análise\" (seção 3), escolha o arquivo de cada sensor marcado. Se a pressão estiver num registrador separado, envie o arquivo dele em \"Arquivo do registrador de pressão\".",
           "Toque em \"Pré-visualizar dados\".",
           "Confira na \"Prévia dos dados lidos\" se as datas, horas e temperaturas estão certas.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
@@ -51,20 +54,25 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Em \"Identificação do registrador\", digite a TAG do registrador como está no cadastro de padrões (exemplo: DTL-01, DTL-06).",
           "Se quiser, anexe até 4 fotos com legenda.",
           "Toque em \"Gerar rascunho da interpretação\". Pode levar até um minuto e meio.",
-          "Leia os textos que apareceram em \"Revise os textos antes de confirmar\". Corrija o que precisar.",
-          "Toque em \"Confirmar e gerar a interpretação\".",
-          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente."
+          "Se aparecer a caixa vermelha \"O relatório não pode ser emitido\", leia cada item: o que aconteceu, por quê e como corrigir. Corrija e gere o rascunho de novo. Nada é redigido enquanto houver problema nos dados.",
+          "Leia os textos que apareceram em \"Revise os textos antes de confirmar\". Corrija o que precisar. O resultado (aprovado ou reprovado) é o calculado: texto que diga outra coisa é recusado.",
+          "Técnico: toque em \"Enviar para aprovação do responsável técnico\". O pedido aparece em \"6. Aguardando aprovação\".",
+          "Responsável técnico: marque \"Conferi os dados, os critérios e os textos e aprovo a emissão\" e toque em \"Aprovar e emitir\". Ou, em \"6. Aguardando aprovação\", toque em \"Ver prévia\", confira e toque em \"Aprovar e emitir\" (ou \"Devolver\", com o motivo).",
+          "O documento abre em nova aba e fica salvo em HTML e PDF na pasta do cliente, com o nome de quem aprovou. Para enviar ao cliente, use \"Enviar ao cliente\" na faixa verde do documento.",
+          "Emitir de novo o mesmo número gera a revisão seguinte (Revisão 1, 2...). As revisões anteriores continuam na pasta."
         ] },
         { titulo: "Gerar a memória de cálculo do F0", itens: [
           "Gere o rascunho da interpretação (tarefa acima).",
-          "Toque em \"Confirmar e gerar a memória do F0\".",
+          "Toque em \"Gerar a memória do F0\".",
           "O documento mostra, leitura a leitura, a temperatura e o F0 somado de cada sensor. Ele não usa IA e fica salvo na pasta do cliente."
         ] },
         { titulo: "Avaliar um teste de estanqueidade (vazamento da câmara)", itens: [
           "Preencha as seções 1 a 4 como no relatório de dados.",
           "Marque \"Este relatório é um teste de estanqueidade (pressão/vácuo da câmara)\".",
           "Informe o início e o fim do teste e a unidade de pressão do registrador.",
-          "Toque em \"Gerar relatório de dados (planilha)\". O sistema calcula a taxa de vazamento em mbar/min. O limite aceito é 1,3 mbar/min."
+          "Toque em \"Gerar relatório de dados (planilha)\". O sistema calcula a taxa de vazamento em mbar/min. O limite aceito é 1,3 mbar/min, numa janela de pelo menos 10 min.",
+          "Se a pressão cair na janela, o sistema avisa: a janela informada não é a fase de espera (câmara isolada). Corrija os horários.",
+          "O teste de estanqueidade não aparece com \"Analisar pressão\" desligado."
         ] },
         { titulo: "Preencher o modelo oficial (folha de identificação)", itens: [
           "Toque na aba \"Preencher modelo\".",
@@ -84,6 +92,8 @@ function SGO_ajudaTelas_Qualificacao_() {
         { nome: "Selo verde \"Pronto\"", significado: "A tela está carregada e pronta para uso." },
         { nome: "Selo laranja \"Relatório interno\"", significado: "O modo de dados reconstituídos está ligado. Só o administrador usa. O documento sai com a faixa \"uso interno\" e não vai para a pasta do cliente." },
         { nome: "Observação \"próximo do limite\" no relatório", significado: "O F0 passou do mínimo, mas por menos de 10%. O ciclo é aprovado e o relatório registra a observação." },
+        { nome: "Caixa vermelha \"O relatório não pode ser emitido\"", significado: "Os dados têm problema (sensor com leitura impossível, sensor parado, pico na exposição, leitura faltando, poucas leituras, registrador sem cadastro ou vencido). Cada item diz como corrigir." },
+        { nome: "Critério \"Não avaliado\" no relatório", significado: "Os dados não permitiram avaliar aquele critério (por exemplo, tempo de equilíbrio com leitura a cada 30 s). Não aprova nem reprova; o motivo está escrito." },
         FAIXA_VERMELHA,
         DETALHES
       ],
@@ -93,11 +103,16 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Um sensor mostra temperatura absurda (por exemplo, abaixo de zero) no início.", oQueFazer: "É leitura de sensor desconectado. O gráfico já deixa essa leitura de fora da escala e avisa na legenda. Se o sensor falhou o ciclo inteiro, desmarque-o em \"Sensores considerados na análise\" e registre o motivo." },
         { situacao: "Reprovado com \"exposição não identificada\".", oQueFazer: "Algum sensor não chegou à temperatura de exposição. Confira se a \"Temperatura programada\" está certa e se o arquivo é do ciclo certo. Não altere os \"Ajustes avançados da análise\" sem orientação do responsável técnico." },
         { situacao: "O relatório diz que o certificado do registrador está vencido ou que o registrador não está cadastrado.", oQueFazer: "Atualize o padrão em \"Padrões de referência\" e gere de novo. Confira se a TAG em \"Identificação do registrador\" está escrita igual ao cadastro." },
-        { situacao: "O rascunho abriu com aviso de que a IA não está disponível.", oQueFazer: "O rascunho vem com texto padrão. Revise, complete à mão e confirme. A chave da IA é configurada pelo administrador em \"Chaves e senhas\"." },
+        { situacao: "O rascunho abriu com aviso de que a IA não está disponível ou de que o texto não passou na conferência.", oQueFazer: "O rascunho vem com o texto padrão, montado só com os resultados calculados. Revise, complete se quiser e siga para a aprovação. A chave da IA é configurada pelo administrador em \"Chaves e senhas\"." },
+        { situacao: "Ao emitir, aparece \"Os textos revisados não podem ser emitidos\".", oQueFazer: "O texto diz um resultado diferente do calculado, cita norma fora da lista ou cita pressão num ensaio só de temperatura. Corrija o trecho indicado e emita de novo." },
+        { situacao: "Um arquivo por sensor: aviso de leitura faltando na exposição.", oQueFazer: "O arquivo daquele sensor não cobre todo o ciclo ou o relógio do registrador estava fora de hora. Confira o arquivo; se o sensor falhou, desmarque-o e registre a falha." },
+        { situacao: "Aviso \"Pressão incompatível com a temperatura\".", oQueFazer: "A coluna de pressão provavelmente está em bar relativo, kPa ou mbar. O ciclo usa bar absoluto: converta a coluna e envie de novo." },
         { situacao: "Apareceu a janela \"Tela sem uso\".", oQueFazer: "Toque em \"Continuar\". O que você preencheu continua na tela." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, relatório de ensaio, memória do F0 e folha do modelo." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, rascunho do relatório de ensaio, memória do F0 e folha do modelo." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir o relatório de ensaio (responsável técnico), ver a prévia dos pedidos e devolver com o motivo." },
+        { perfil: "TECNICO", pode: "Envia o relatório para aprovação do responsável técnico." },
         { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (dados reconstituídos, com senha administrativa)." },
         { perfil: "COMERCIAL,FINANCEIRO", pode: "A tela abre, mas a emissão é tarefa da equipe técnica." },
         { perfil: "CLIENTE", pode: "Não acessa esta tela. Recebe o relatório pela Metrolabs ou consulta em \"Arquivo de documentos\"." }

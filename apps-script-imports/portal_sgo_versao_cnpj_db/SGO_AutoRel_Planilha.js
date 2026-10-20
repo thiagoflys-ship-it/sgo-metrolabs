@@ -25,6 +25,8 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   payload = payload || {};
   analise = analise || {};
   const relatorioSimulado = !!payload.modoRelatorioSimulado;
+  // Ensaio só de temperatura (20/10/2026): nada de pressão na planilha (sem campo vazio, coluna ou texto).
+  const semPressaoPlan = !!(typeof analise !== 'undefined' && analise && analise.semPressao);
   const metaSimulacao = payload._simulacaoMeta || {};
 
   const motor = String(payload.motor || '134').trim();
@@ -45,8 +47,9 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       : '';
 
     if (folderId) {
+      // Pasta configurada ou, se ela não existir (Google Drive antigo), a pasta própria de laudos (20/10/2026).
       const file = DriveApp.getFileById(ss.getId());
-      const folder = DriveApp.getFolderById(folderId);
+      const folder = SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', folderId);
       folder.addFile(file);
       DriveApp.getRootFolder().removeFile(file);
     }
@@ -289,7 +292,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   shCapa.getRange('A1:F2')
     .merge()
-    .setValue('RELATÓRIO DE QUALIFICAÇÃO TÉRMICA E VALIDAÇÃO DE PROCESSOS\nMETROLABS - ENGENHARIA CLÍNICA (LAYOUT ONA/VISA)')
+    .setValue('RELATÓRIO DE QUALIFICAÇÃO TÉRMICA E VALIDAÇÃO DE PROCESSOS\nMETROLABS - ENGENHARIA CLÍNICA')
     .setFontSize(13);
 
   estiloCabecalhoEscuro(shCapa.getRange('A1:F2'));
@@ -358,7 +361,9 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   const resMatriz = [
     ['F0 MÍNIMO OBTIDO:', fmtMin_(analise.minF0), 'F0 MÉDIO DA CÂMARA:', fmtMin_(analise.mediaF0), 'F0 MÁXIMO OBTIDO:', fmtMin_(analise.maxF0)],
     ['TEMP. MÍNIMA EXP.:', fmtTemp_(exposicaoTemp.min), 'TEMP. MÉDIA EXP.:', fmtTemp_(mediaTempExposicao), 'TEMP. MÁXIMA EXP.:', fmtTemp_(exposicaoTemp.max)],
-    ['PRESSÃO MÍNIMA:', fmtBarAbs_(globalPres.min), 'PRESSÃO MÉDIA:', fmtBarAbs_(mediaPresGeral), 'PRESSÃO MÁXIMA:', fmtBarAbs_(globalPres.max)],
+    semPressaoPlan
+      ? ['PATAMAR AVALIADO:', fmtMin_(((analise.criteriosPatamar || {}).patamar || {}).duracaoMin), 'INTERVALO DE LEITURA:', AutoRel_txtNumPlanilha_(Number(analise.deltaMinutosEstimado) * 60) + ' S', 'PIOR SENSOR (F0):', analise.piorSensorF0 ? analise.piorSensorF0.sensor : '—']
+      : ['PRESSÃO MÍNIMA:', fmtBarAbs_(globalPres.min), 'PRESSÃO MÉDIA:', fmtBarAbs_(mediaPresGeral), 'PRESSÃO MÁXIMA:', fmtBarAbs_(globalPres.max)],
     ['CRITÉRIO EXIGIDO:', criterioTxt, 'SENSORES UTILIZADOS:', sensoresResumoTxt, 'PARECER FINAL:', statusLongo]
   ];
 
@@ -420,15 +425,14 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   let txtP1 = '';
   if (statusAprovacao === 'REPROVADO') {
     txtP1 =
-      'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-      'A análise termobarométrica identificou janela de exposição com duração de ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
-      'Entretanto, o pior caso de letalidade térmica foi insuficiente para aprovação. O F0 médio calculado foi de ' + fmtMin_(analise.mediaF0) +
-      ', enquanto o menor valor obtido foi de ' + fmtMin_(analise.minF0) +
-      ', abaixo do F0 mínimo normativo de ' + fmtMin_(limiteAprovacaoF0) + '.';
+      'Os dados do ensaio (' + motorText + ') foram processados pelos critérios configurados pela empresa executante (referências: ' + normaText + ').\n\n' +
+      'A janela de exposição identificada durou ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos. O F0 médio calculado foi de ' + fmtMin_(analise.mediaF0) +
+      ' e o menor valor, de ' + fmtMin_(analise.minF0) + '. O ciclo foi reprovado: ' +
+      ((analise.motivosReprovacao && analise.motivosReprovacao.length) ? analise.motivosReprovacao.join(' ') : 'critério de aceitação não atendido.');
   } else {
     txtP1 =
-      'Com base nos ensaios de qualificação de desempenho (' + motorText + '), os dados coletados foram processados em conformidade com as exigências da ' + normaText + ' e diretrizes de acreditação ONA.\n\n' +
-      'A análise termobarométrica confirmou estabilidade operacional durante a exposição, com duração de ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos contínuos. ' +
+      'Os dados do ensaio (' + motorText + ') foram processados pelos critérios configurados pela empresa executante (referências: ' + normaText + ').\n\n' +
+      'A exposição identificada durou ' + AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos, com os critérios do patamar atendidos. ' +
       'A letalidade térmica apresentou F0 médio de ' + fmtMin_(analise.mediaF0) +
       ', sendo o pior caso igual a ' + fmtMin_(analise.minF0) +
       ', atendendo ao critério configurado do processo.';
@@ -436,7 +440,9 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   const resumoFasesAuto = (analise.fasesProcesso && analise.fasesProcesso.resumo) ? analise.fasesProcesso.resumo : {};
   if (txtP1) {
-    txtP1 += '\n\nA leitura técnica considerou simultaneamente temperatura, pressão, pior sensor ativo, estabilidade da exposição e letalidade acumulada.\n\n' + formatarResumoFasesAuto_(resumoFasesAuto);
+    txtP1 += semPressaoPlan
+      ? '\n\nA leitura técnica considerou a temperatura de cada sensor ativo, o pior sensor, a estabilidade da exposição e a letalidade acumulada.'
+      : '\n\nA leitura técnica considerou simultaneamente temperatura, pressão, pior sensor ativo, estabilidade da exposição e letalidade acumulada.\n\n' + formatarResumoFasesAuto_(resumoFasesAuto);
   }
 
   txtP1 = compactarTextoLaudo_(txtP1);
@@ -449,7 +455,6 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     [
       motorText,
       normaText,
-      'ONA',
       AutoRel_txtNumPlanilha_(analise.tempoExposicaoMinutos) + ' minutos',
       fmtMin_(analise.mediaF0),
       fmtMin_(analise.minF0),
@@ -468,7 +473,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     .setHorizontalAlignment('center');
 
   shConclusao.getRange('A21')
-    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'RESPONSÁVEL TÉCNICO') + ' - RESPONSÁVEL TÉCNICO / ENGENHARIA CLÍNICA')
+    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'TÉCNICO EXECUTOR') + ' - TÉCNICO EXECUTOR DO ENSAIO')
     .setHorizontalAlignment('center')
     .setFontSize(10)
     .setFontWeight('bold');
@@ -491,7 +496,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       'Critérios térmicos atendidos para o ciclo analisado.';
   }
 
-  txtP2 += '\n\nInterpretação operacional: a classificação apresentada resulta dos critérios térmicos e de letalidade configurados. A remoção de ar e o comportamento pós-exposição são descritos separadamente pelas evidências disponíveis; não decorrem automaticamente do F0. A liberação rotineira requer avaliação técnica do processo e dos demais controles aplicáveis.';
+  txtP2 += '\n\nInterpretação operacional: a classificação apresentada resulta dos critérios térmicos e de letalidade configurados. ' + (semPressaoPlan ? 'O F0 e os critérios de temperatura não demonstram, isoladamente, a remoção do ar da câmara, que depende de ensaio específico. ' : 'A remoção de ar e o comportamento pós-exposição são descritos separadamente pelas evidências disponíveis; não decorrem automaticamente do F0. ') + 'A liberação rotineira requer avaliação técnica do processo e dos demais controles aplicáveis.';
 
   txtP2 = compactarTextoLaudo_(txtP2);
 
@@ -568,7 +573,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     .setHorizontalAlignment('center');
 
   shParecer.getRange('A' + (linhaAssinatura + 1))
-    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'RESPONSÁVEL TÉCNICO') + ' - RESPONSÁVEL TÉCNICO / ENGENHARIA CLÍNICA')
+    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'TÉCNICO EXECUTOR') + ' - TÉCNICO EXECUTOR DO ENSAIO')
     .setHorizontalAlignment('center')
     .setFontSize(10)
     .setFontWeight('bold');
@@ -595,7 +600,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
   estiloCabecalhoEscuro(shConsolidado.getRange('A1:H1'));
 
   shConsolidado.getRange('A3:H3')
-    .setValues([['SENSOR ID', 'STATUS', 'F0 ACUMULADO', 'TEMP. MÍN. EXP.', 'TEMP. MÉDIA EXP.', 'TEMP. MÁX. EXP.', 'PRESSÃO MÍN', 'PRESSÃO MÁX']])
+    .setValues([['SENSOR ID', 'STATUS', 'F0 ACUMULADO', 'TEMP. MÍN. EXP.', 'TEMP. MÉDIA EXP.', 'TEMP. MÁX. EXP.'].concat(semPressaoPlan ? ['MÚLTIPLO DO F0 MÍNIMO', 'SITUAÇÃO DO F0'] : ['PRESSÃO MÍN', 'PRESSÃO MÁX'])])
     .setBackground('#e2e8f0')
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
@@ -626,10 +631,14 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
       f0Sensor,
       ativo ? fmtTemp_(statsSensor.minExposicao !== null ? statsSensor.minExposicao : statsSensor.min) : 'DESCONSIDERADO',
       ativo ? fmtTemp_(statsSensor.mediaExposicao !== null ? statsSensor.mediaExposicao : statsSensor.media) : 'DESCONSIDERADO',
-      ativo ? fmtTemp_(statsSensor.maxExposicao !== null ? statsSensor.maxExposicao : statsSensor.max) : 'DESCONSIDERADO',
+      ativo ? fmtTemp_(statsSensor.maxExposicao !== null ? statsSensor.maxExposicao : statsSensor.max) : 'DESCONSIDERADO'
+    ].concat(semPressaoPlan ? [
+      ativo && limiteAprovacaoF0 > 0 && isFinite(Number(analise.f0PorSensor[s])) ? AutoRel_txtNumPlanilha_(Number(analise.f0PorSensor[s]) / limiteAprovacaoF0) + '×' : 'DESCONSIDERADO',
+      ativo && isFinite(Number(analise.f0PorSensor[s])) ? (Number(analise.f0PorSensor[s]) >= limiteAprovacaoF0 ? 'ATENDE' : 'ABAIXO DO MÍNIMO') : 'DESCONSIDERADO'
+    ] : [
       ativo ? fmtBarAbs_(globalPres.min) : 'DESCONSIDERADO',
       ativo ? fmtBarAbs_(globalPres.max) : 'DESCONSIDERADO'
-    ]);
+    ]));
   }
 
   shConsolidado.getRange(4, 1, linhasConsolidado.length, 8)
@@ -707,7 +716,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   const headers = ['Tempo']
     .concat(Array.from({ length: nSensoresInstalados }, function(_, i) { return 'S' + (i + 1) + ' (°C)'; }))
-    .concat(['Pressão (bar abs)', 'Fases e Eventos do Processo']);
+    .concat(semPressaoPlan ? ['Fases e Eventos do Processo'] : ['Pressão (bar abs)', 'Fases e Eventos do Processo']);
 
   const modoExp = AutoRel_valorSeguroPlanilha_(
     analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.modoReconhecimentoExposicao
@@ -719,14 +728,22 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
 
   const legenda = [
     [relatorioSimulado ? 'METROLABS - MAPEAMENTO DE FASES | ANÁLISE MANUAL DO LABORATÓRIO DE METROLOGIA' : 'METROLABS - MAPEAMENTO DE FASES', '', '', ''],
-    ['FASE', 'COR DE IDENTIFICAÇÃO', 'CRITÉRIO DE ENGENHARIA', 'STATUS'],
+    ['FASE', 'COR DE IDENTIFICAÇÃO', 'CRITÉRIO DE ENGENHARIA', 'STATUS']
+  ].concat(semPressaoPlan ? [
+    ['AQUECIMENTO', 'COR 2', 'ELEVAÇÃO DE TEMPERATURA ATÉ A EXPOSIÇÃO', 'OK'],
+    ['ESTERILIZAÇÃO / EXPOSIÇÃO', 'COR 3', 'MODO ' + modoExp + ' | LIMIAR DE INÍCIO: ' + AutoRel_txtNumPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C', 'OK'],
+    ['RESFRIAMENTO', 'SEM COR', 'TEMPERATURA ABAIXO DA FAIXA DEPOIS DA EXPOSIÇÃO', 'OBSERVACIONAL'],
+    ['TEMPERATURA MÍNIMA NA EXPOSIÇÃO', fmtTemp_(exposicaoTemp.min), 'MENOR LEITURA DOS SENSORES ATIVOS', 'OK'],
+    ['TEMPERATURA MÁXIMA NA EXPOSIÇÃO', fmtTemp_(exposicaoTemp.max), 'MAIOR LEITURA DOS SENSORES ATIVOS', 'OK'],
+    ['F0 MÍNIMO (PIOR SENSOR)', fmtMin_(analise.minF0), 'MÍNIMO EXIGIDO: ' + fmtMin_(limiteAprovacaoF0), analise.minF0 >= limiteAprovacaoF0 ? 'OK' : 'ABAIXO DO MÍNIMO']
+  ] : [
     ['PRÉ-VÁCUO OBSERVADO', 'COR 1', 'QUEDA ABAIXO DA REFERÊNCIA ATMOSFÉRICA + RECUPERAÇÃO; CRITÉRIOS OBSERVACIONAIS', AutoRel_resumoPreVacuoPlanilha_(analise)],
     ['RAMPA DE AQUECIMENTO', 'COR 2', 'ELEVAÇÃO DE TEMPERATURA E PRESSÃO', 'OK'],
     ['ESTERILIZAÇÃO / EXPOSIÇÃO', 'COR 3', 'MODO ' + modoExp + ' | LIMIAR DE INÍCIO: ' + AutoRel_txtNumPlanilha_(analise.configuracaoDeteccaoExposicao && analise.configuracaoDeteccaoExposicao.limiteInicio) + ' °C', 'OK'],
     ['SECAGEM / DESPRESSURIZAÇÃO', 'COR 4', 'VÁCUO PÓS-EXPOSIÇÃO (QUANDO OBSERVADO) / RETORNO DE PRESSÃO', 'OBSERVACIONAL'],
     ['PRESSÃO MÍNIMA DO PROCESSO', fmtBarAbs_(globalPres.min), 'MENOR PRESSÃO MEDIDA NO CICLO', 'OK'],
     ['PRESSÃO MÁXIMA DO PROCESSO', fmtBarAbs_(globalPres.max), 'MAIOR PRESSÃO MEDIDA NO CICLO', 'OK']
-  ];
+  ]);
 
   shDados.getRange('A1:D8')
     .setValues(legenda)
@@ -824,7 +841,7 @@ function AutoRel_gerarPlanilhaAuditoria(dados, analise, payload) {
     rows.push(
       [AutoRel_normalizarTempoPlanilha_(d.tempoDate || d.tempoStr)]
         .concat(temps)
-        .concat([pressaoNum === null ? '' : pressaoNum, eventoTexto])
+        .concat(semPressaoPlan ? [eventoTexto] : [pressaoNum === null ? '' : pressaoNum, eventoTexto])
     );
 
     colors.push(new Array(headers.length).fill(cor));
@@ -879,6 +896,8 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
   analiseLeak = analiseLeak || {};
 
   const relatorioSimulado = !!payload.modoRelatorioSimulado;
+  // Ensaio só de temperatura (20/10/2026): nada de pressão na planilha (sem campo vazio, coluna ou texto).
+  const semPressaoPlan = !!(typeof analise !== 'undefined' && analise && analise.semPressao);
   const metaSimulacao = payload._simulacaoMeta || {};
 
   const nomeArquivo = 'METROLABS_LEAKTEST_' +
@@ -892,8 +911,9 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
       : '';
 
     if (folderId) {
+      // Pasta configurada ou, se ela não existir (Google Drive antigo), a pasta própria de laudos (20/10/2026).
       const file = DriveApp.getFileById(ss.getId());
-      const folder = DriveApp.getFolderById(folderId);
+      const folder = SGO_DocSalvar_pastaPersistente_('AUTOREL_LAUDOS_FOLDER_ID', 'Autoclave - Laudos', folderId);
       folder.addFile(file);
       DriveApp.getRootFolder().removeFile(file);
     }
@@ -1190,7 +1210,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
     .setValue('______________________________________________________________')
     .setHorizontalAlignment('center');
   shConclusao.getRange('A22')
-    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'RESPONSÁVEL TÉCNICO') + ' - RESPONSÁVEL TÉCNICO / ENGENHARIA CLÍNICA')
+    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'TÉCNICO EXECUTOR') + ' - TÉCNICO EXECUTOR DO ENSAIO')
     .setHorizontalAlignment('center')
     .setFontSize(10)
     .setFontWeight('bold');
@@ -1282,7 +1302,7 @@ function AutoRel_gerarPlanilhaLeakTest_(dados, analiseLeak, payload) {
     .setValue('______________________________________________________________')
     .setHorizontalAlignment('center');
   shParecer.getRange('A' + (linhaAssinaturaParecer + 1))
-    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'RESPONSÁVEL TÉCNICO') + ' - RESPONSÁVEL TÉCNICO / ENGENHARIA CLÍNICA')
+    .setValue((AutoRel_valorSeguroPlanilha_(payload.respTecnico) || 'TÉCNICO EXECUTOR') + ' - TÉCNICO EXECUTOR DO ENSAIO')
     .setHorizontalAlignment('center')
     .setFontSize(10)
     .setFontWeight('bold');

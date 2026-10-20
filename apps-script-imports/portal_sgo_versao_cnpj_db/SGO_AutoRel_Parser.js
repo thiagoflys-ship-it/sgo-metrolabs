@@ -297,6 +297,9 @@ function AutoRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, d
   const idxHora = AutoRel_findAnyIndexParser_(hlow, ['hora', 'time']);
   const idxPressao = AutoRel_findPressaoIndexParser_(hlow);
   const tempIdx = AutoRel_findTempColumnsParser_(headerDisplay, idxTempo, idxData, idxHora, idxPressao);
+  // Colunas de numeração (Nº, Item, Índice): nunca são temperatura (20/10/2026).
+  const idxIndice = [];
+  hlow.forEach(function(h, i) { if (/^(n|no|nº|n°|num|numero|item|indice|index|id|#|seq|sequencia|registro|amostra)\.?$/.test(h.replace(/\s+/g, ''))) idxIndice.push(i); });
 
   let startIdx = 1;
   const temCabecalhoDetectado =
@@ -356,7 +359,8 @@ function AutoRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, d
       idxTempo: idxTempo,
       idxData: idxData,
       idxHora: idxHora,
-      idxPressao: idxPressao
+      idxPressao: idxPressao,
+      idxIgnorar: idxIndice
     });
 
     while (temps.length < nSensores) {
@@ -366,7 +370,10 @@ function AutoRel_normalizarMatrizParaAnalise(matriz, displayMatrix, nSensores, d
     let pressao = null;
     if (idxPressao !== -1) {
       pressao = AutoRel_parseNumeroRobusto_(row[idxPressao]);
-    } else {
+    } else if (!temCabecalhoDetectado) {
+      // 20/10/2026: só deduz a pressão pela posição quando o arquivo não tem cabeçalho.
+      // Com cabeçalho e sem coluna de pressão, a coluna numérica que sobra é outra coisa
+      // (nº da leitura do registrador individual, umidade...): antes ela virava "pressão".
       pressao = AutoRel_inferirPressaoSemCabecalhoParser_(row, nSensores, tempoInfo.colunasConsumidas);
     }
 
@@ -420,6 +427,18 @@ function AutoRel_extrairTempoDaLinhaParser_(row, ctx) {
   const idxHora = ctx.idxHora;
   const dateStyle = ctx.dateStyle || 'BR';
   const ultimaDataValida = ctx.ultimaDataValida || null;
+
+  // 20/10/2026: data guardada como data de planilha (valor nativo Date ou número de série) é
+  // inequívoca e vale antes do texto exibido. No servidor próprio a célula de data aparece como
+  // "m/d/aa" e, lida como dia/mês, 10/09 virava 9 de outubro trocado por 10 de setembro.
+  if (idxData !== -1 && idxHora !== -1 && AutoRel_ehDataNativaParser_(row[idxData])) {
+    const dtNativa = AutoRel_parseDataHoraSeparadaRobusta_(row[idxData], rowDisplay[idxHora], dateStyle, ultimaDataValida) ||
+      AutoRel_parseDataHoraSeparadaRobusta_(row[idxData], row[idxHora], dateStyle, ultimaDataValida);
+    if (dtNativa) return { tempoDate: dtNativa, colunasConsumidas: [idxData, idxHora] };
+  }
+  if (idxTempo !== -1 && Object.prototype.toString.call(row[idxTempo]) === '[object Date]' && !isNaN(row[idxTempo].getTime())) {
+    return { tempoDate: new Date(row[idxTempo].getTime()), colunasConsumidas: [idxTempo] };
+  }
 
   if (idxData !== -1 && idxHora !== -1) {
     const dataBrutaDisplay = rowDisplay[idxData];
@@ -554,7 +573,7 @@ function AutoRel_extrairTemperaturasDaLinhaParser_(row, tempIdx, nSensores, ctx)
   }
 
   const ignorar = {};
-  [ctx.idxTempo, ctx.idxData, ctx.idxHora, ctx.idxPressao].forEach(function(v) {
+  [ctx.idxTempo, ctx.idxData, ctx.idxHora, ctx.idxPressao].concat(ctx.idxIgnorar || []).forEach(function(v) {
     if (v !== null && v !== undefined && v !== -1) ignorar[v] = true;
   });
 
@@ -767,8 +786,13 @@ function AutoRel_parseDataHoraSeparadaRobusta_(valorData, valorHora, dateStyle, 
   );
 }
 
+function AutoRel_ehDataNativaParser_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]') return !isNaN(v.getTime());
+  return typeof v === 'number' && isFinite(v) && v > 20000 && v < 80000;
+}
+
 function AutoRel_parseSomenteDataRobustaParser_(valorData, dateStyle, ultimaDataValida) {
-  if (valorData instanceof Date && !isNaN(valorData.getTime())) {
+  if (Object.prototype.toString.call(valorData) === '[object Date]' && !isNaN(valorData.getTime())) {
     return new Date(valorData.getFullYear(), valorData.getMonth(), valorData.getDate(), 0, 0, 0);
   }
 

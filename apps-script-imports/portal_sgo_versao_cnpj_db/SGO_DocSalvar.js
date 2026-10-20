@@ -302,7 +302,9 @@ function SGO_DocSalvar_salvarPdfPlanilha_(urlExportPdf, payload, obterRaiz, rotu
 /** Pasta raiz persistente (ID em Script Property), criada no Drive se faltar. */
 function SGO_DocSalvar_pastaPersistente_(propKey, nomePasta, idConfigurado) {
   var id = String(idConfigurado || '').trim();
-  if (id.length > 10) return DriveApp.getFolderById(id);
+  // 20/10/2026: a pasta fixa da configuração pode ser do Google Drive antigo e não existir
+  // no servidor; nesse caso usa a pasta própria do módulo (antes o documento não era salvo).
+  if (id.length > 10) { try { return DriveApp.getFolderById(id); } catch (e0) { /* segue para a pasta própria */ } }
   var props = PropertiesService.getScriptProperties();
   var salvo = props.getProperty(propKey);
   if (salvo) { try { return DriveApp.getFolderById(salvo); } catch (e) {} }

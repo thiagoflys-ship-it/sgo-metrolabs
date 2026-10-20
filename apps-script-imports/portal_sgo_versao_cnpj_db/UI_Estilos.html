@@ -2540,15 +2540,24 @@
      linha toda (minmax(118px,1fr)). Aqui elas encolhem pro tamanho do
      conteúdo. Identificada via :has(.sensor-check) porque esse grid não
      tem id próprio (usa a mesma classe .check-grid de outras seções). */
-  #tplAutoRelContainer .check-grid:has(.sensor-check) {
+  #tplAutoRelContainer .check-grid:has(.sensor-check):not(.check-grid-multiarquivo) {
     grid-template-columns: repeat(auto-fill, minmax(46px, max-content)) !important;
     justify-content: start !important;
     gap: 6px !important;
   }
-  #tplAutoRelContainer .check-grid:has(.sensor-check) .check-item {
+  #tplAutoRelContainer .check-grid:has(.sensor-check):not(.check-grid-multiarquivo) .check-item {
     padding: 4px 7px !important;
     gap: 4px !important;
     font-size: 10.5px !important;
+  }
+  /* 20/10/2026: modo "um arquivo por sensor" da Autoclave — colunas largas para o
+     botão de arquivo e o campo do link (sem o :not() acima, a regra compacta cortava). */
+  #tplAutoRelContainer .check-grid-multiarquivo {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
+  }
+  #tplAutoRelContainer .check-item-com-import {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
   }
 
 

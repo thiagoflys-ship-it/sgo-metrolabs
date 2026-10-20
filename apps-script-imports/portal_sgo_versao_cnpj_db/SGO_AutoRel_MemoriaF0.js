@@ -33,6 +33,8 @@ function AutoRel_mf0MontarContexto_(payload) {
 
   const resultado = AutoRel_acExecutarAnaliseCompleta_(payload);
   const a = resultado.analise;
+  // Dado com problema não vira documento (20/10/2026).
+  if (!resultado.payload.modoRelatorioSimulado) AutoRel_exigirSemTravas_((a.qualidadeDados || {}).travas);
   const cicloCfg = resultado.cicloCfg || {};
 
   const f0MinNormativo = a.limitesAprovacao && typeof a.limitesAprovacao.f0MinNormativo === 'number'
@@ -144,7 +146,7 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
 
   h.push('<h2>2. Fundamentação</h2>');
   h.push('<p>O F<sub>0</sub> não mede tempo de relógio. Ele converte o efeito letal obtido na temperatura real do ensaio para uma escala de referência fixa em ' + esc(SGO_DocA4_val_(ctx.tBase, 1, '°C')) + ', conforme a ABNT NBR ISO 17665-1. O efeito do calor sobre os microrganismos cresce de forma multiplicativa com a temperatura: cada ' + esc(SGO_DocA4_val_(ctx.z, 0, '°C')) + ' acima da referência multiplica a taxa de inativação por dez. Por isso um minuto de exposição acima da referência vale mais do que um minuto de F<sub>0</sub>, e um minuto abaixo dela vale menos.</p>');
-  h.push('<p class="formula">F<sub>0</sub> = Σ 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup> · Δt &nbsp;&nbsp; (Δt = ' + esc(SGO_DocA4_val_(ctx.dtMin, 2, 'min')) + ')</p>');
+  h.push('<p class="formula">F<sub>0</sub> = Σ 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup> · Δt, somado pela regra dos trapézios: cada intervalo entre duas leituras soma a média dos fatores das duas leituras vezes o intervalo real entre elas (intervalo típico de ' + esc(SGO_DocA4_val_(ctx.dtMin * 60, 0, 's')) + ').</p>');
   const linhasEscala = [
     { t: ctx.tBase, c: [SGO_DocA4_val_(ctx.tBase, 1, '°C'), 'temperatura de referência', '1,0×'] },
     { t: ctx.tBase + 10, c: [SGO_DocA4_val_(ctx.tBase + 10, 1, '°C'), '+10 °C', '10×'] },
@@ -174,16 +176,16 @@ function AutoRel_mf0MontarDocumentoHtml_(ctx) {
     })));
 
   h.push('<h2>4. Memória de cálculo por sensor</h2>');
-  h.push('<p>Para cada leitura da janela de exposição: fator = 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup>; contribuição = fator × Δt; o F<sub>0</sub> do sensor é a soma das contribuições.</p>');
+  h.push('<p>Para cada leitura da janela de exposição: fator = 10<sup>(T − ' + esc(n(ctx.tBase, 1)) + ') / ' + esc(n(ctx.z, 0)) + '</sup>; contribuição do intervalo = (fator da leitura anterior + fator da leitura) ÷ 2 × Δt real; a primeira leitura da exposição não tem intervalo anterior e contribui com zero; o F<sub>0</sub> do sensor é a soma das contribuições.</p>');
   ctx.sensores.forEach(function(sv) {
     h.push('<h3>Sensor ' + esc(sv.sensor) + ' — F<sub>0</sub> = ' + esc(SGO_DocA4_val_(sv.f0, 2, 'min')) + '</h3>');
     if (!sv.leituras.length) {
       h.push('<p class="nota">Sem leituras válidas deste sensor na janela de exposição identificada.</p>');
       return;
     }
-    h.push(SGO_DocA4_tabela_([{ t: 'Horário' }, { t: 'Temperatura (°C)', cls: 'num' }, { t: 'Fator', cls: 'num' }, { t: 'Contribuição (min)', cls: 'num' }, { t: 'F0 acumulado (min)', cls: 'num' }],
-      sv.leituras.map(function(r) { return [AutoRel_mf0SoTempo_(r.tempoStr), n(r.temperatura, 2), n(r.fator, 2) + '×', n(r.contribuicao, 3), n(r.acumulado, 2)]; }),
-      { classe: 'compacta', rodape: [{ t: 'Soma das ' + sv.leituras.length + ' leituras da janela de exposição', colspan: 4 }, { t: n(sv.f0, 2), cls: 'num' }] }));
+    h.push(SGO_DocA4_tabela_([{ t: 'Horário' }, { t: 'Temperatura (°C)', cls: 'num' }, { t: 'Fator', cls: 'num' }, { t: 'Δt (s)', cls: 'num' }, { t: 'Contribuição (min)', cls: 'num' }, { t: 'F0 acumulado (min)', cls: 'num' }],
+      sv.leituras.map(function(r) { return [AutoRel_mf0SoTempo_(r.tempoStr), n(r.temperatura, 2), n(r.fator, 2) + '×', n((r.dtMin || 0) * 60, 0), n(r.contribuicao, 3), n(r.acumulado, 2)]; }),
+      { classe: 'compacta', rodape: [{ t: 'Soma dos intervalos entre as ' + sv.leituras.length + ' leituras da janela de exposição', colspan: 5 }, { t: n(sv.f0, 2), cls: 'num' }] }));
   });
 
   h.push('<h2>5. Observações</h2>');

@@ -33,11 +33,21 @@ var AutoRel_ACIA_ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1
 var AutoRel_ACIA_MAX_TENTATIVAS = 3;
 var AutoRel_ACIA_DELAYS_MS = [800, 1600];
 
-function AutoRel_acIARegrasBase_() {
-  return 'Você é engenheiro sênior em qualificação térmica de autoclaves a vapor hospitalares e redige o relatório técnico ' +
-    'de um ensaio (ciclo de esterilização ou teste de estanqueidade da câmara), no padrão de laboratórios de metrologia e ' +
-    'engenharia clínica. Pense com cuidado antes de escrever: confira cada número com o contexto e não afirme nada que os ' +
-    'dados não sustentem.\n' + SGO_DocA4_regrasRedacaoIA_() + '\n' +
+function AutoRel_acIARegrasBase_(dados) {
+  var semPressao = dados && dados.analisarPressao === false;
+  return 'Você é engenheiro sênior em validação de processos de esterilização a vapor e metrologista, com domínio da ' +
+    'ABNT NBR ISO 17665-1, da RDC ANVISA nº 15/2012 e dos ensaios de referência técnica da EN 285 e da EN 13060 ' +
+    '(perfil térmico, equilíbrio, faixa de esterilização, letalidade F0 e estanqueidade). Redige o relatório técnico de UM ' +
+    'ensaio, no padrão de laboratórios de metrologia e engenharia clínica. Pense com cuidado antes de escrever: confira cada ' +
+    'número com o contexto e não afirme nada que os dados não sustentem.\n' + SGO_DocA4_regrasRedacaoIA_() + '\n' +
+    '- O resultado (APROVADO, REPROVADO ou INFORMATIVO) já foi decidido pelo cálculo e está no contexto. Você não decide nem ' +
+    'questiona o resultado: explica-o. Critério "não avaliado" não aprova nem reprova; diga só por que não foi avaliado.\n' +
+    '- Não cite número de cláusula, item, seção ou anexo de norma. Cite as normas só pelo nome, exatamente como na lista.\n' +
+    '- Todo número que você escrever tem de estar no contexto, com as mesmas casas decimais. O texto é conferido ' +
+    'automaticamente e descartado se tiver número, norma ou resultado que não esteja no contexto.\n' +
+    (semPressao ? '- ESTE ENSAIO CONSIDEROU SOMENTE A TEMPERATURA. É proibido escrever sobre pressão, vácuo, remoção de ar, ' +
+      'estanqueidade, vapor saturado ou qualquer grandeza de pressão, mesmo para dizer que não foi medida (isso já consta ' +
+      'no escopo do documento).\n' : '') +
     '- Cada seção deve ser substancial e escrita a partir dos fatos; não copie frases prontas.';
 }
 
@@ -170,14 +180,19 @@ function AutoRel_acIAMontarContextoCertificado_(dados) {
   linhas.push('TAG: ' + (dados.tag || '-'));
   linhas.push('CLIENTE: ' + (dados.cliente || '-'));
   linhas.push('ORIGEM DOS DADOS: ' + (dados.origemDados || 'DADOS INFORMADOS PARA O ENSAIO'));
-  linhas.push('LIMITAÇÃO: aprovação térmica e F0 não comprovam eficácia da remoção de ar ou ausência de gases não condensáveis. Zero pulsos detectados não significa zero pulsos realizados; respeite o diagnóstico e suas limitações. Equipamento gravitacional não deve ser descrito como pré-vácuo pulsado. Não deduza o tipo do equipamento apenas pela curva.');
+  if (dados.analisarPressao === false) {
+    linhas.push('ESCOPO: o ensaio considerou somente a temperatura (autoclave de pequeno porte). Não escreva nada sobre outra grandeza.');
+  } else {
+    linhas.push('LIMITAÇÃO: aprovação térmica e F0 não comprovam eficácia da remoção de ar ou ausência de gases não condensáveis. Zero pulsos detectados não significa zero pulsos realizados; respeite o diagnóstico e suas limitações. Equipamento gravitacional não deve ser descrito como pré-vácuo pulsado. Não deduza o tipo do equipamento apenas pela curva.');
+  }
+  if (dados.escopo && dados.escopo.length) linhas.push('ESCOPO E LIMITAÇÕES DO DOCUMENTO (já impressos; não repita): ' + dados.escopo.join(' '));
   linhas.push('SETOR/LOCALIZAÇÃO: ' + (dados.setor || '-'));
   linhas.push('NORMAS APLICÁVEIS (cite somente estas): ' + dados.normas.join(' | '));
   if (dados.criterios && dados.criterios.length) {
     linhas.push('CRITÉRIOS DE ACEITAÇÃO E RESULTADO OBTIDO (cite exatamente):');
     dados.criterios.forEach(function(c) {
-      linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + ' (' + c.referencia + '); obtido ' + c.obtido + '; situação ' +
-        (c.conforme === true ? 'CONFORME' : (c.conforme === false ? 'NÃO CONFORME' : 'INFORMATIVO')));
+      linhas.push('  - ' + c.criterio + ': requisito ' + c.requisito + ' (critério configurado; referência ' + c.referencia + '); obtido ' + c.obtido + '; situação ' +
+        (c.conforme === true ? 'CONFORME' : (c.conforme === false ? 'NÃO CONFORME' : (c.naoAvaliado ? 'NÃO AVALIADO (não aprova nem reprova)' : 'INFORMATIVO'))));
     });
   }
   if (dados.parametros && dados.parametros.length) {
@@ -224,7 +239,13 @@ function AutoRel_acIAMontarContextoCertificado_(dados) {
  * selecionada programaticamente (não deixada a critério da IA) porque os
  * dois estudos têm físicas e vetores de falha completamente diferentes.
  */
-function AutoRel_acIARegraCausasPorTipo_(tipoEstudo) {
+function AutoRel_acIARegraCausasPorTipo_(tipoEstudo, semPressao) {
+  if (tipoEstudo !== 'LEAK_TEST' && semPressao) {
+    return '2. Se algum critério não for atendido, explique as causas técnicas PROVÁVEIS mais comuns, sempre como hipótese e ' +
+      'nunca como diagnóstico certo (não houve inspeção física): carga mal distribuída ou excessiva, embalagens que dificultam ' +
+      'a penetração do calor até a posição do sensor, ou desempenho do sistema de aquecimento do equipamento. Traduza cada ' +
+      'achado em orientação prática (redistribuir ou reduzir a carga, avaliar o equipamento com a assistência técnica, repetir o ensaio).\n';
+  }
   if (tipoEstudo === 'LEAK_TEST') {
     return (
       '2. Se a taxa de vazamento medida ultrapassar o limite de referência, explique em linguagem acessível as ' +
@@ -259,10 +280,10 @@ function AutoRel_acIARegraCausasPorTipo_(tipoEstudo) {
 function AutoRel_acIACriarTextosCertificado_(dadosContexto) {
   var contextoStr = AutoRel_acIAMontarContextoCertificado_(dadosContexto);
   var tiposEstudo = dadosContexto.estudos.map(function(e) { return e.tipoEstudo; });
-  var regraCausas = tiposEstudo.map(AutoRel_acIARegraCausasPorTipo_).join('\n');
+  var regraCausas = tiposEstudo.map(function(t) { return AutoRel_acIARegraCausasPorTipo_(t, dadosContexto.analisarPressao === false); }).join('\n');
 
   var prompt =
-    AutoRel_acIARegrasBase_() + '\n\n' +
+    AutoRel_acIARegrasBase_(dadosContexto) + '\n\n' +
     'TAREFA: com base no contexto de um único ciclo/ensaio abaixo, escreva os textos narrativos da Interpretação ' +
     'Técnica deste ensaio específico. Este NÃO é um certificado final — é uma leitura técnica de UM ciclo dentro ' +
     'de uma campanha de qualificação maior (outros ciclos/receitas são analisados em documentos separados, iguais ' +

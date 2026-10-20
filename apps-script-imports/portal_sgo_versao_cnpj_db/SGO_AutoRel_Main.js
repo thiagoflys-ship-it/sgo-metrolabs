@@ -37,7 +37,13 @@ function AutoRel_apiDispatch(req) {
     apiValidarSenhaSimuladorAdmin: AutoRel_apiValidarSenhaSimuladorAdmin,
     apiGerarRascunhoCertificado: AutoRel_apiGerarRascunhoCertificado,
     apiMontarCertificadoFinal: AutoRel_apiMontarCertificadoFinal,
-    apiGerarMemoriaF0: AutoRel_apiGerarMemoriaF0
+    apiGerarMemoriaF0: AutoRel_apiGerarMemoriaF0,
+    // Aprovação do responsável técnico (20/10/2026, SGO_QualifEmissao.js)
+    apiEnviarParaAprovacao: AutoRel_apiEnviarParaAprovacao,
+    apiListarAprovacoes: AutoRel_apiListarAprovacoes,
+    apiPreverAprovacao: AutoRel_apiPreverAprovacao,
+    apiAprovarEmitir: AutoRel_apiAprovarEmitir,
+    apiDevolverAprovacao: AutoRel_apiDevolverAprovacao
   };
 
   if (!fn) {
@@ -48,7 +54,7 @@ function AutoRel_apiDispatch(req) {
     throw new Error('Função não permitida ou não encontrada: ' + fn);
   }
 
-  return allow[fn](payload);
+  return allow[fn](payload, sessaoDispatchRH);
 }
 
 // ------------------------------------------------------------
@@ -84,8 +90,9 @@ function AutoRel_apiPing() {
     defaultDateStyle: String(AutoRel_UCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase(),
     defaultNSensores: Number(AutoRel_UCFG.DEFAULT_N || 12),
     motoresDisponiveis: Object.keys(AutoRel_UCFG.CICLOS || {}),
-    laudosUrl: laudosId ? ('https://drive.google.com/drive/folders/' + laudosId) : '',
-    uploadsUrl: uploadsId ? ('https://drive.google.com/drive/folders/' + uploadsId) : '',
+    // 20/10/2026: endereço real da pasta (a pasta fixa do Google Drive antigo não existe no servidor).
+    laudosUrl: AutoRel_urlPastaExistente_(laudosId, 'AUTOREL_LAUDOS_FOLDER_ID'),
+    uploadsUrl: AutoRel_urlPastaExistente_(uploadsId, 'AUTOREL_UPLOAD_PASTA_ID'),
     logoFileId: logoFileId,
     analise: {
       histereseTemperatura: AutoRel_parseFloatSeguro_(analiseCfg.histereseTemperatura, 0.5),
@@ -237,6 +244,28 @@ function AutoRel_apiPreviewEntrada(payload) {
     };
   }
 
+  if (String(payload.modoEntrada || '').toUpperCase().trim() === 'ARQUIVO_POR_SENSOR') {
+    const nS = AutoRel_clampIntSeguro_(payload.nSensores, 1, 60, AutoRel_UCFG.DEFAULT_N || 12);
+    const ativosPrev = AutoRel_normalizarSensoresAtivosMain_(payload.sensoresAtivos, nS);
+    const estiloPrev = String(payload.dateStyle || AutoRel_UCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase().trim();
+    const mesc = AutoRel_lerEMesclarPorSensor_(payload, nS, ativosPrev, estiloPrev);
+    const comPressao = AutoRel_analisaPressao_(payload) && !!mesc.resumo.pressao;
+    const cab = ['Tempo'].concat(Array.from({ length: nS }, function(_, i) { return 'S' + (i + 1); })).concat(comPressao ? ['Pressão (bar abs)'] : []);
+    const prev = [cab].concat(mesc.linhas.slice(0, AutoRel_UCFG.PREVIEW_ROWS || 20).map(function(r) {
+      return [r.tempoStr].concat(r.temperaturas.map(function(t) { return t === null ? '' : t; })).concat(comPressao ? [r.pressao === null ? '' : r.pressao] : []);
+    }));
+    return {
+      ok: true, rows: mesc.linhas.length, cols: cab.length, preview: prev,
+      diagnostico: {
+        modoEntrada: 'ARQUIVO_POR_SENSOR', qtdTemperaturas: mesc.resumo.sensores.length, hasPressao: comPressao,
+        observacao: 'Arquivos de ' + mesc.resumo.sensores.length + ' sensor(es) alinhados pela linha do tempo do ' + mesc.resumo.referencia +
+          ' (tolerância de ' + SGO_DocA4_num_(mesc.resumo.toleranciaSeg, 1) + ' s). Leituras sem correspondência: ' +
+          mesc.resumo.sensores.map(function(r) { return r.sensor + ' ' + r.semCorrespondencia; }).join(', ') + '. Maior defasagem de relógio: ' +
+          mesc.resumo.sensores.map(function(r) { return r.sensor + ' ' + SGO_DocA4_num_(r.maiorDefasagemSeg, 0) + ' s'; }).join(', ') + '.'
+      }
+    };
+  }
+
   const rich = AutoRel_lerDadosEntradaRich_(payload);
   const bruto = rich.displayMatrix || rich.matrix || [];
 
@@ -309,6 +338,10 @@ function AutoRel_acExecutarAnaliseCompleta_(payload) {
   if (modoEntradaNormalizado === 'SIMULADO_ADMIN') {
     dadosNormalizados = AutoRel_gerarDadosSimuladosAdmin_(payload, { converter: true });
     AutoRel_aplicarOverrideSimulacaoNoPayload_(payload);
+  } else if (modoEntradaNormalizado === 'ARQUIVO_POR_SENSOR') {
+    const mesc = AutoRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStyle);
+    dadosNormalizados = mesc.linhas;
+    payload._mesclagem = mesc.resumo;
   } else {
     const rich = AutoRel_lerDadosEntradaRich_(payload);
     if (!rich || !rich.matrix || !rich.matrix.length) {
@@ -324,6 +357,14 @@ function AutoRel_acExecutarAnaliseCompleta_(payload) {
   }
 
   opcoesAnalise = AutoRel_normalizarOpcoesAnaliseMain_(payload);
+
+  // Ensaio só de temperatura (autoclave de pequeno porte/cassete sem ponto para o
+  // transmissor de pressão): a pressão sai dos dados antes da análise; fases e
+  // critérios são avaliados só pela temperatura (20/10/2026).
+  if (!AutoRel_analisaPressao_(payload)) {
+    dadosNormalizados = dadosNormalizados.map(function(r) { return Object.assign({}, r, { pressao: null }); });
+    opcoesAnalise.semPressao = true;
+  }
 
   if (!dadosNormalizados || !dadosNormalizados.length) {
     throw new Error('Não foi possível normalizar os dados para análise.');
@@ -368,6 +409,8 @@ function AutoRel_apiConverter(payload) {
   const nSensores = pipeline.nSensores;
   const dadosNormalizados = pipeline.dadosNormalizados;
   const analise = pipeline.analise;
+  // Dado com problema não vira documento (20/10/2026).
+  if (!payload.modoRelatorioSimulado) AutoRel_exigirSemTravas_((analise.qualidadeDados || {}).travas);
 
   const infoPlanilha = AutoRel_gerarPlanilhaAuditoria(dadosNormalizados, analise, payload);
   if (!infoPlanilha || !infoPlanilha.spreadsheetId) {
@@ -607,7 +650,9 @@ function AutoRel_normalizarOpcoesAnaliseMain_(payload) {
   return {
     robustez: robustez,
     overrideJanela: overrideJanela,
-    equipamento: AutoRel_normalizarEquipamentoMain_(payload.equipamento)
+    equipamento: AutoRel_normalizarEquipamentoMain_(payload.equipamento),
+    // Sensor no ponto de referência da câmara (dreno), 1 a N; vazio = não informado (20/10/2026).
+    sensorReferencia: AutoRel_clampIntOpcionalSeguro_(payload.sensorReferencia, 1, 60)
   };
 }
 
@@ -697,4 +742,118 @@ function AutoRel_pastaUploads_(folderIdConfigurado) {
   const pasta = DriveApp.getRootFolder().createFolder('Autoclave - Planilhas enviadas');
   props.setProperty('AUTOREL_UPLOAD_PASTA_ID', pasta.getId());
   return pasta;
+}
+
+
+// ------------------------------------------------------------
+// 20/10/2026 — pastas, ensaio sem pressão, um arquivo por sensor, travas
+// ------------------------------------------------------------
+
+/** Endereço da pasta que existe de fato (configurada ou a própria do módulo); '' se nenhuma existe ainda. Não cria pasta. */
+function AutoRel_urlPastaExistente_(idConfigurado, propKey) {
+  const ids = [String(idConfigurado || '').trim()];
+  try { ids.push(String(PropertiesService.getScriptProperties().getProperty(propKey) || '').trim()); } catch (e) {}
+  for (let i = 0; i < ids.length; i++) {
+    if (!ids[i]) continue;
+    try { return DriveApp.getFolderById(ids[i]).getUrl(); } catch (e) { /* pasta do Google Drive antigo: não existe aqui */ }
+  }
+  return '';
+}
+
+/**
+ * Seletor "Analisar pressão" (ligado por padrão). Desligado: autoclave de pequeno porte
+ * (cassete) sem ponto para o transmissor de pressão; exige justificativa curta.
+ */
+function AutoRel_analisaPressao_(payload) {
+  payload = payload || {};
+  if (payload.analisarPressao === false || String(payload.analisarPressao).toLowerCase() === 'false') {
+    const just = String(payload.justificativaSemPressao || '').trim();
+    if (just.length < 10) {
+      throw new Error('Com "Analisar pressão" desligado, escreva a justificativa (ao menos 10 caracteres), por exemplo: "equipamento sem ponto para instalar o transmissor de pressão". Ela fica registrada no ensaio e no documento.');
+    }
+    return false;
+  }
+  return true;
+}
+
+/** Lê a série de pressão de um arquivo próprio do registrador de pressão (Data/Hora + coluna de pressão). */
+function AutoRel_lerSeriePressaoArquivo_(fileId, delimManual, dateStyle) {
+  const rich = AutoRel_lerDadosEntradaRich_({ modoEntrada: 'FILE_ID', fileId: fileId, delimManual: delimManual });
+  const disp = rich.displayMatrix || rich.matrix;
+  const hlow = (disp[0] || []).map(function(h) { return AutoRel_normalizarTextoComparacaoParser_(h); });
+  const idxPressao = AutoRel_findPressaoIndexParser_(hlow);
+  if (idxPressao === -1) throw new Error('O arquivo de pressão não tem coluna de pressão reconhecida no cabeçalho (ex.: "Pressão (bar abs)"). Confira o arquivo e envie de novo.');
+  const ctxTempo = {
+    idxTempo: AutoRel_findAnyIndexParser_(hlow, ['tempo', 'timestamp', 'datetime', 'date time', 'datahora', 'data/hora']),
+    idxData: AutoRel_findAnyIndexParser_(hlow, ['data', 'date']),
+    idxHora: AutoRel_findAnyIndexParser_(hlow, ['hora', 'time'])
+  };
+  let estilo = String(dateStyle || 'AUTO').toUpperCase();
+  if (estilo === 'AUTO') estilo = AutoRel_detectarPadraoDataNaMatriz_(disp, 1, ctxTempo.idxTempo !== -1 ? ctxTempo.idxTempo : (ctxTempo.idxData !== -1 ? ctxTempo.idxData : 0));
+  const out = [];
+  for (let r = 1; r < rich.matrix.length; r++) {
+    const info = AutoRel_extrairTempoDaLinhaParser_(rich.matrix[r], Object.assign({ rowDisplay: disp[r], dateStyle: estilo }, ctxTempo));
+    const p = AutoRel_parseNumeroRobusto_(rich.matrix[r][idxPressao]);
+    if (!info.tempoDate || isNaN(info.tempoDate.getTime()) || p === null || !isFinite(p)) continue;
+    out.push({ tempoDate: info.tempoDate, tempoStr: Utilities.formatDate(info.tempoDate, AutoRel_UCFG.TZ, 'dd/MM/yyyy HH:mm:ss'), valor: p });
+  }
+  out.sort(function(a, b) { return a.tempoDate.getTime() - b.tempoDate.getTime(); });
+  if (out.length < 3) throw new Error('O arquivo de pressão não tem leituras válidas de data, hora e pressão.');
+  return out;
+}
+
+/**
+ * Modo "um arquivo por sensor" (registradores individuais): cada sensor ativo tem o seu
+ * arquivo (payload.arquivosPorSensor[s]); a pressão vem de payload.arquivoPressao ou, se
+ * não houver, do primeiro arquivo de sensor que tenha coluna de pressão. Mescla pela linha
+ * do tempo mais completa (SGO_QT_mesclarSeries_); leitura sem correspondência fica vazia e
+ * vira trava se cair dentro da exposição.
+ */
+function AutoRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStyle) {
+  const arquivos = Array.isArray(payload.arquivosPorSensor) ? payload.arquivosPorSensor : [];
+  const delim = String(payload.delimManual || 'AUTO').toUpperCase().trim();
+  const series = [];
+  let pressaoDeSensor = null;
+  for (let s = 0; s < nSensores; s++) {
+    if (!sensoresAtivos[s]) { series.push(null); continue; }
+    const id = String(arquivos[s] || '').trim();
+    if (!id) throw new Error('O sensor S' + (s + 1) + ' está marcado como ativo, mas não tem arquivo. Envie o arquivo do registrador desse sensor no campo dele ou desmarque o sensor.');
+    let linhas;
+    try {
+      const rich = AutoRel_lerDadosEntradaRich_({ modoEntrada: 'FILE_ID', fileId: id, delimManual: delim });
+      linhas = AutoRel_normalizarMatrizParaAnalise(rich.matrix, rich.displayMatrix, 1, dateStyle);
+    } catch (e) {
+      throw new Error('Arquivo do sensor S' + (s + 1) + ': ' + e.message);
+    }
+    series.push(linhas.map(function(l) { return { tempoDate: l.tempoDate, tempoStr: l.tempoStr, valor: l.temperaturas[0] }; }));
+    if (!pressaoDeSensor && linhas.some(function(l) { return l.pressao !== null && isFinite(l.pressao); })) {
+      pressaoDeSensor = linhas.filter(function(l) { return l.pressao !== null && isFinite(l.pressao); }).map(function(l) { return { tempoDate: l.tempoDate, tempoStr: l.tempoStr, valor: l.pressao }; });
+    }
+  }
+  let seriePressao = null;
+  const idPressao = String(payload.arquivoPressao || '').trim();
+  if (idPressao && AutoRel_analisaPressao_(payload)) seriePressao = AutoRel_lerSeriePressaoArquivo_(idPressao, delim, dateStyle);
+  else seriePressao = pressaoDeSensor;
+
+  const mesc = SGO_QT_mesclarSeries_(series.concat([seriePressao]));
+  const linhas = mesc.linhas.map(function(l) {
+    return { tempoStr: l.tempoStr, tempoDate: l.tempoDate, temperaturas: l.valores.slice(0, nSensores), pressao: l.valores[nSensores] };
+  });
+  const resumo = {
+    referencia: mesc.referencia < nSensores ? 'S' + (mesc.referencia + 1) : 'arquivo de pressão',
+    toleranciaSeg: Math.round(mesc.toleranciaMs / 100) / 10,
+    sensores: mesc.resumo.slice(0, nSensores).map(function(r, s) { return r ? Object.assign({ sensor: 'S' + (s + 1) }, r) : null; }).filter(Boolean),
+    pressao: seriePressao ? Object.assign({ origem: idPressao ? 'arquivo próprio de pressão' : 'arquivo de um dos sensores' }, mesc.resumo[nSensores]) : null
+  };
+  return { linhas: linhas, resumo: resumo };
+}
+
+/**
+ * Trava de emissão: dado com problema não vira documento. Lança erro com a lista do que
+ * corrigir (o que aconteceu, por que, como corrigir).
+ */
+function AutoRel_exigirSemTravas_(travas) {
+  if (!travas || !travas.length) return;
+  throw new Error('O documento não foi emitido porque os dados têm ' + travas.length + ' problema(s) a corrigir: ' +
+    travas.map(function(t, i) { return (i + 1) + ') ' + t.oQue + ' Por quê: ' + t.porQue + ' Como corrigir: ' + t.comoCorrigir; }).join(' '));
 }

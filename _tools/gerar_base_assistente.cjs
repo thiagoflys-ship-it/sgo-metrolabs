@@ -25,6 +25,7 @@ const MAPA = {
   "MANUAL_CONDUTA_FISCAL.md": { tela: "conduta", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "RH"] },
   "MANUAL_ENVIAR_DOCUMENTO.md": { tela: "enviar_documento" },
   "MANUAL_MODULO_BAIXA_TEMPERATURA.md": { tela: "baixa_temperatura" },
+  "MANUAL_MODULO_AUTOCLAVE.md": { tela: "autoclave" },
   "MANUAL_MODULO_CADEIA_FRIO.md": { tela: "cadeia_frio" },
   "MANUAL_MODULO_CERTIFICADO_CALIBRACAO.md": { tela: "certificado_calibracao" },
   "MANUAL_MODULO_CRONOGRAMA_EXECUCAO.md": { tela: "cronograma_execucao" },

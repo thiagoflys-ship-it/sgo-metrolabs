@@ -45,10 +45,12 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
 
   const corStatus = statusAprovacao === 'REPROVADO' ? '#dc2626' : '#059669';
 
+  // Ensaio só de temperatura (20/10/2026): sem as abas de pressão.
+  const semPressao = !!analise.semPressao;
   AutoRel_recriarAbaGrafico_(ss, '6. GRÁF. TEMPERATURA', 5);
-  AutoRel_recriarAbaGrafico_(ss, '7. GRÁF. PRESSÃO', 6);
-  AutoRel_recriarAbaGrafico_(ss, '8. GRÁF. LETALIDADE', 7);
-  AutoRel_recriarAbaGrafico_(ss, '9. CONCLUSÃO PRESSÃO', 8);
+  if (semPressao) AutoRel_excluirAbaSeExistir_(ss, '7. GRÁF. PRESSÃO'); else AutoRel_recriarAbaGrafico_(ss, '7. GRÁF. PRESSÃO', 6);
+  AutoRel_recriarAbaGrafico_(ss, '8. GRÁF. LETALIDADE', semPressao ? 6 : 7);
+  if (semPressao) AutoRel_excluirAbaSeExistir_(ss, '9. CONCLUSÃO PRESSÃO'); else AutoRel_recriarAbaGrafico_(ss, '9. CONCLUSÃO PRESSÃO', 8);
 
   AutoRel_excluirAbaSeExistir_(ss, '8. ANÁLISE AVANÇADA DE PRESSÃO');
   AutoRel_excluirAbaSeExistir_(ss, '8. CONCLUSÃO PRESSÃO');
@@ -238,8 +240,8 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   const dadosGrafico = shDados.getRange(dadosIniciais, 1, totalLinhas, nSensores + 2).getValues();
   const temposGrafico = dadosGrafico.map(function(r) { return r[0]; });
   const minutosGrafico = AutoRel_minutosDecorridosGraficos_(temposGrafico);
-  const tabelaGrafico = [['Tempo decorrido (min)'].concat(colsSensoresAtivos.map(function(c) { return 'S' + (c - 1) + ' (\u00b0C)'; })).concat(['Press\u00e3o (bar abs)'])];
-  dadosGrafico.forEach(function(r, i) { tabelaGrafico.push([minutosGrafico[i]].concat(colsSensoresAtivos.map(function(c) { return r[c - 1]; })).concat([r[colPressao - 1]])); });
+  const tabelaGrafico = [['Tempo decorrido (min)'].concat(colsSensoresAtivos.map(function(c) { return 'S' + (c - 1) + ' (\u00b0C)'; })).concat(semPressao ? [] : ['Press\u00e3o (bar abs)'])];
+  dadosGrafico.forEach(function(r, i) { tabelaGrafico.push([minutosGrafico[i]].concat(colsSensoresAtivos.map(function(c) { return r[c - 1]; })).concat(semPressao ? [] : [r[colPressao - 1]])); });
   AutoRel_recriarAbaGrafico_(ss, '_AUX_CICLO_AUTOCLAVE', 9);
   const shAuxGrafico = ss.getSheetByName('_AUX_CICLO_AUTOCLAVE');
   AutoRel_garantirGradeFonteGraficos_(shAuxGrafico, tabelaGrafico.length, tabelaGrafico[0].length);
@@ -279,11 +281,13 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     shTemp.insertChart(chartTempBuilder.build());
   }
 
+  const criteriosPatamarGraf = (analise.criteriosPatamar && analise.criteriosPatamar.lista) || [];
+  const ncTermicos = criteriosPatamarGraf.filter(function(c) { return c.situacao === 'NAO_CONFORME' && ['faixa', 'variacao', 'tempoPatamar', 'equilibrio'].indexOf(c.chave) >= 0; });
   const txtTemp =
-    statusAprovacao === 'REPROVADO'
+    ncTermicos.length
       ? 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
-        'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia comportamento não uniforme suficiente para comprometer o desempenho térmico do processo no pior caso monitorado. ' +
-        'Embora parte das curvas tenha apresentado aproximação ao setpoint, o ponto mais crítico identificado foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + ', indicando que a distribuição térmica na janela de exposição não foi plenamente satisfatória para sustentar a aprovação do ciclo.'
+        'O mapeamento térmico dos sensores ativos não atendeu a critério(s) do patamar: ' + ncTermicos.map(function(c) { return c.motivo; }).join(' ') +
+        ' O ponto mais frio na exposição foi ' + (piorSensorTemperatura ? piorSensorTemperatura.sensor : 'N/A') + '.'
       : 'PARECER TÉCNICO (DISTRIBUIÇÃO TÉRMICA):\n\n' +
         'O mapeamento térmico considerando exclusivamente os sensores ativos evidencia estabilidade e homogeneidade do calor no interior da câmara. ' +
         'A convergência das curvas durante o platô térmico indica distribuição consistente da energia térmica e ausência de desvios críticos impeditivos entre os pontos válidos monitorados. ' +
@@ -307,8 +311,9 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   );
 
   // ==========================================================
-  // ABA 6: PRESSÃO / PRÉ-VÁCUO
+  // ABA 6: PRESSÃO / PRÉ-VÁCUO (só quando a pressão é analisada)
   // ==========================================================
+  if (!semPressao) {
   tituloPagina(shPres, 'COMPORTAMENTO TERMOBAROMÉTRICO E IDENTIFICAÇÃO DO PRÉ-VÁCUO');
 
   const chartPres = shPres.newChart()
@@ -351,6 +356,8 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
     11
   );
 
+  }
+
   // ==========================================================
   // ABA 7: LETALIDADE F0
   // ==========================================================
@@ -383,7 +390,9 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
       ? 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
         'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
         'O valor médio obtido foi de ' + AutoRel_txtNumGraf_(mediaF0, 2) + ' min, com pior caso de ' + AutoRel_txtNumGraf_(minF0, 2) + ' min e melhor caso de ' + AutoRel_txtNumGraf_(maxF0, 2) + ' min. ' +
-        'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o F0 mínimo normativo de ' + AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
+        (minF0 < limiteAprovacaoF0
+          ? 'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') não atingiu o F0 mínimo normativo de ' + AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min, motivo pelo qual o ciclo foi classificado como reprovado.'
+          : 'O pior sensor ativo (' + (piorSensorF0 ? piorSensorF0.sensor : 'N/A') + ') atingiu o F0 mínimo normativo de ' + AutoRel_txtNumGraf_(limiteAprovacaoF0, 2) + ' min; o ciclo foi reprovado por outro critério, descrito na conclusão.')
       : 'PARECER TÉCNICO (VALOR DE LETALIDADE TÉRMICA):\n\n' +
         'O indicador F0 representa a integração do tempo e temperatura na janela válida de exposição para os sensores ativos considerados na análise. ' +
         'O valor médio obtido foi de ' + AutoRel_txtNumGraf_(mediaF0, 2) + ' min, com pior caso de ' + AutoRel_txtNumGraf_(minF0, 2) + ' min e melhor caso de ' + AutoRel_txtNumGraf_(maxF0, 2) + ' min. ' +
@@ -413,8 +422,9 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
   );
 
   // ==========================================================
-  // ABA 8: CONCLUSÃO PRESSÃO / SÍNTESE FINAL
+  // ABA 8: CONCLUSÃO PRESSÃO / SÍNTESE FINAL (só quando a pressão é analisada)
   // ==========================================================
+  if (!semPressao) {
   tituloPagina(shPresConc, 'SÍNTESE CONCLUSIVA DA ANÁLISE BAROMÉTRICA');
 
   const dadosIndicadores = [
@@ -515,6 +525,7 @@ function AutoRel_gerarGraficosAuditoria(ss, analise, nSensores) {
 
   for (let r = 24; r <= 35; r++) {
     shPresConc.setRowHeight(r, 20);
+  }
   }
 
   SpreadsheetApp.flush();

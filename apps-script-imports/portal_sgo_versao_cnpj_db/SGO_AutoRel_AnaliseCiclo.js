@@ -398,7 +398,40 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
     if (ativos[s]) memoriaF0PorSensor[s] = [];
   }
 
+  // 20/10/2026: F0 pela regra dos trapézios com o intervalo REAL entre leituras
+  // (SGO_QualifTermica_Calculos.js). Antes era Σ L(T)·Δt com Δt = mediana do
+  // arquivo e uma parcela por leitura: N leituras somavam N intervalos para um
+  // patamar que dura N − 1 intervalos (ex.: 3 min a cada 30 s = 7 leituras →
+  // 3,5 min contados, F0 superestimado em 1/6) e lacunas no registro não eram
+  // vistas. Intervalo maior que QUALIDADE_DADOS.lacunaMaxIntervalos × Δt não soma
+  // (vira trava de qualidade dos dados).
+  const qdCfg = (AutoRel_UCFG && AutoRel_UCFG.QUALIDADE_DADOS) || {};
+  const maxIntervaloF0Ms = Math.max(1, Number(qdCfg.lacunaMaxIntervalos) || 3) * dtMin * 60000;
+  analise.lacunasF0 = [];
   if (analise.faseInicioExp !== -1 && analise.faseFimExp !== -1 && analise.faseFimExp >= analise.faseInicioExp) {
+    for (let s = 0; s < nSensores; s++) {
+      if (!ativos[s]) continue;
+      const pontos = [];
+      for (let i = analise.faseInicioExp; i <= analise.faseFimExp; i++) {
+        pontos.push({ ms: AutoRel_converterTempoLinhaParaMsAnalise_(linhas[i]), t: linhas[i].temperaturas[s] });
+      }
+      const integ = SGO_QT_letalidadeTrapezio_(pontos, cfg.tBase, cfg.z, { maxIntervaloMs: maxIntervaloF0Ms });
+      f0Acumulado[s] = integ.total;
+      integ.lacunas.forEach(function(l) { analise.lacunasF0.push({ sensor: 'S' + (s + 1), motivo: l.motivo, ms0: l.ms0, ms1: l.ms1 }); });
+      integ.linhas.forEach(function(l, k) {
+        if (l.t === null) return;
+        memoriaF0PorSensor[s].push({
+          tempoStr: linhas[analise.faseInicioExp + k].tempoStr || '',
+          ms: l.ms,
+          temperatura: l.t,
+          fator: l.fator,
+          dtMin: l.dtMin,
+          contribuicao: l.contribuicao,
+          acumulado: l.acumulado
+        });
+      });
+    }
+
     for (let i = analise.faseInicioExp; i <= analise.faseFimExp; i++) {
       const row = linhas[i];
 
@@ -407,20 +440,6 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
 
         const t = row.temperaturas[s];
         if (t === null || !isFinite(t)) continue;
-
-        const fatorEquivalencia = Math.pow(10, (t - cfg.tBase) / cfg.z);
-        const contribuicaoF0 = fatorEquivalencia * dtMin;
-        f0Acumulado[s] += contribuicaoF0;
-
-        if (memoriaF0PorSensor[s]) {
-          memoriaF0PorSensor[s].push({
-            tempoStr: row.tempoStr || '',
-            temperatura: t,
-            fator: fatorEquivalencia,
-            contribuicao: contribuicaoF0,
-            acumulado: f0Acumulado[s]
-          });
-        }
 
         if (analise.stats.exposicaoTemp.min === null || t < analise.stats.exposicaoTemp.min) {
           analise.stats.exposicaoTemp.min = t;
@@ -612,6 +631,24 @@ function AutoRel_analisarCiclo(dados, tipoCiclo, offsetTemp, offsetF0, sensoresA
     analise.statusAprovacao = 'REPROVADO';
     analise.motivosReprovacao.push('Não foi possível calcular F0 válido para os sensores ativos.');
   }
+
+  // ==========================================================
+  // PASSO 7B — Critérios do patamar (vapor) e qualidade dos dados (20/10/2026)
+  // ==========================================================
+  const sensorRefIdx = AutoRel_sensorReferenciaIdx_(opcoesAnalise, ativos);
+  analise.sensorReferencia = sensorRefIdx >= 0 ? 'S' + (sensorRefIdx + 1) : '';
+  analise.semPressao = !!(opcoesAnalise && opcoesAnalise.semPressao);
+  analise.criteriosPatamar = AutoRel_avaliarCriteriosPatamar_(linhas, analise, cfg, sensoresAtivosIdx, dtMin, sensorRefIdx);
+  analise.qualidadeDados = AutoRel_avaliarQualidadeDados_(linhas, analise, cfg, sensoresAtivosIdx, dtMin);
+  (analise.criteriosPatamar.lista || []).forEach(function(c) {
+    if (c.situacao === 'NAO_CONFORME') {
+      analise.aprovado = false;
+      analise.statusAprovacao = 'REPROVADO';
+      analise.motivosReprovacao.push(c.motivo);
+    }
+  });
+  analise.emissaoBloqueada = analise.qualidadeDados.travas.length > 0;
+  analise.qualidadeDados.alertas.forEach(function(t) { analise.alertasAnalise.push(t); });
 
   if (analise.tempoTotalMinutos <= 0 && linhas.length > 1) {
     analise.alertasAnalise.push('Tempo total calculado igual ou inferior a zero; foi utilizada a sequência temporal disponível para a análise.');
@@ -1153,11 +1190,13 @@ function AutoRel_encontrarPiorSensorTemperaturaExposicao_(statsSensores, ativos)
 // ------------------------------------------------------------
 // FUNÇÃO AUXILIAR PARA CÁLCULO DE TEMPO
 // ------------------------------------------------------------
+// 20/10/2026: minutos com 4 casas (antes 1: a taxa de vazamento era dividida por um tempo já
+// arredondado e a exposição de 3,83 min aparecia como 3,80 min).
 function AutoRel_calcularDiferencaTempo(str1, str2, dt1, dt2) {
   try {
     if (dt1 instanceof Date && !isNaN(dt1.getTime()) && dt2 instanceof Date && !isNaN(dt2.getTime())) {
       const diffMs = dt2.getTime() - dt1.getTime();
-      return diffMs > 0 ? AutoRel_roundAnalise_(diffMs / 60000, 1) : 0;
+      return diffMs > 0 ? AutoRel_roundAnalise_(diffMs / 60000, 4) : 0;
     }
 
     const ms1 = AutoRel_parseTempoSeguroAnalise_(str1);
@@ -1166,7 +1205,7 @@ function AutoRel_calcularDiferencaTempo(str1, str2, dt1, dt2) {
     if (!isFinite(ms1) || !isFinite(ms2)) return 0;
 
     const diffMs = ms2 - ms1;
-    return diffMs > 0 ? AutoRel_roundAnalise_(diffMs / 60000, 1) : 0;
+    return diffMs > 0 ? AutoRel_roundAnalise_(diffMs / 60000, 4) : 0;
   } catch (e) {
     return 0;
   }
@@ -1321,3 +1360,281 @@ function AutoRel_parseTempoSeguroAnalise_(valor) {
 }
 
 
+
+// ------------------------------------------------------------
+// CRITÉRIOS DO PATAMAR (VAPOR) E QUALIDADE DOS DADOS — 20/10/2026
+// Os limites vêm de CICLOS[...].criterios (Config). Cada critério devolve
+// situacao CONFORME | NAO_CONFORME | NAO_AVALIADO, com requisito, valor
+// obtido e motivo em texto pt-BR. A comparação usa os valores arredondados
+// a 2 casas, as mesmas mostradas no documento (o documento nunca mostra
+// "3,00 min" reprovado por 2,999 min).
+// ------------------------------------------------------------
+function AutoRel_sensorReferenciaIdx_(opcoesAnalise, ativos) {
+  const n = parseInt(opcoesAnalise && opcoesAnalise.sensorReferencia, 10);
+  if (isFinite(n) && n >= 1 && n <= ativos.length && ativos[n - 1]) return n - 1;
+  return -1;
+}
+
+function AutoRel_horaLinhaAnalise_(row) {
+  const s = String((row && row.tempoStr) || '').trim();
+  const m = s.match(/(\d{1,2}:\d{2}:\d{2})\s*$/);
+  return m ? m[1] : (s || '—');
+}
+
+function AutoRel_horaMsAnalise_(msValor) {
+  try { return Utilities.formatDate(new Date(msValor), AutoRel_UCFG.TZ || 'America/Sao_Paulo', 'HH:mm:ss'); } catch (e) { return '—'; }
+}
+
+function AutoRel_leiturasAtivasLinha_(row, idxAtivos) {
+  const out = [];
+  idxAtivos.forEach(function(s) {
+    const t = row.temperaturas[s];
+    if (t !== null && t !== undefined && isFinite(t)) out.push({ s: s, t: t });
+  });
+  return out;
+}
+
+function AutoRel_avaliarCriteriosPatamar_(linhas, analise, cfg, idxAtivos, dtMin, refIdx) {
+  const crit = cfg && cfg.criterios;
+  const refs = (AutoRel_UCFG && AutoRel_UCFG.CRITERIOS_REFERENCIAS) || {};
+  const out = { aplicavel: !!crit && String(cfg.tipoProcesso || '') === 'VAPOR', lista: [], patamar: null };
+  if (!out.aplicavel) return out;
+
+  const num = SGO_DocA4_num_;
+  const r2 = function(v) { return AutoRel_roundAnalise_(v, 2); };
+  const tMin = Number(cfg.tMin), tMax = Number(cfg.tMax);
+  const ini = analise.faseInicioExp, fimExp = analise.faseFimExp;
+  const ms = AutoRel_converterTempoLinhaParaMsAnalise_;
+
+  function item(chave, criterio, requisito, obtido, situacao, motivo, extra) {
+    const ref = refs[chave] || {};
+    out.lista.push(Object.assign({
+      chave: chave, criterio: criterio, requisito: requisito, obtido: obtido, situacao: situacao, motivo: motivo || '',
+      referencia: ref.referencia || '', obrigatorio: ref.obrigatorio !== false
+    }, extra || {}));
+  }
+
+  const tReq = Number(crit.tempoMinimoPatamarMin);
+  const varMax = Number(crit.variacaoMaxEntreSensoresK);
+  const eqMax = Number(crit.tempoEquilibrioMaxSeg);
+  const vsMax = Number(crit.desvioMaxVaporSaturadoK);
+  const reqTempo = '≥ ' + num(tReq, 0) + ' min com todos os sensores ativos na temperatura de esterilização';
+  const reqFaixa = 'De ' + num(tMin, 1) + ' °C a ' + num(tMax, 1) + ' °C em todos os sensores ativos durante o patamar';
+  const reqVar = '≤ ' + num(varMax, 1) + ' °C entre o sensor mais quente e o mais frio, em cada leitura do patamar';
+  const reqEq = '≤ ' + num(eqMax, 0) + ' s entre a referência atingir a temperatura de esterilização e todos os sensores a atingirem';
+  const reqVs = 'Diferença ≤ ' + num(vsMax, 1) + ' °C entre a temperatura medida e a do vapor saturado calculada pela pressão';
+
+  if (ini < 0 || fimExp < ini) {
+    const motivo = 'Não avaliado: a fase de exposição não foi identificada.';
+    item('tempoPatamar', 'Tempo de patamar na temperatura de esterilização', reqTempo, 'Não avaliado', 'NAO_AVALIADO', motivo);
+    item('faixa', 'Faixa de temperatura de esterilização', reqFaixa, 'Não avaliado', 'NAO_AVALIADO', motivo);
+    item('variacao', 'Diferença de temperatura entre sensores', reqVar, 'Não avaliado', 'NAO_AVALIADO', motivo);
+    item('equilibrio', 'Tempo de equilíbrio', reqEq, 'Não avaliado', 'NAO_AVALIADO', motivo);
+    if (!analise.semPressao) item('vaporSaturado', 'Temperatura medida × vapor saturado', reqVs, 'Não avaliado', 'NAO_AVALIADO', motivo);
+    return out;
+  }
+
+  // Patamar avaliado: do início da exposição até a última leitura com todos os
+  // sensores ativos na temperatura de esterilização (a descida final, que a
+  // histerese mantém na janela do F0, não entra nos critérios de faixa e tempo).
+  function todosAcima(i) {
+    const l = AutoRel_leiturasAtivasLinha_(linhas[i], idxAtivos);
+    return l.length > 0 && l.every(function(x) { return r2(x.t) >= tMin; });
+  }
+  let fimT = fimExp;
+  while (fimT > ini && !todosAcima(fimT)) fimT--;
+  const duracaoMin = r2((ms(linhas[fimT]) - ms(linhas[ini])) / 60000);
+  out.patamar = {
+    inicioIdx: ini, fimIdx: fimT, inicio: linhas[ini].tempoStr || '', fim: linhas[fimT].tempoStr || '',
+    duracaoMin: duracaoMin, leituras: fimT - ini + 1
+  };
+
+  // 1. Tempo de patamar
+  if (isFinite(tReq) && tReq > 0) {
+    const ok = duracaoMin >= tReq;
+    item('tempoPatamar', 'Tempo de patamar na temperatura de esterilização', reqTempo,
+      num(duracaoMin, 2) + ' min (' + AutoRel_horaLinhaAnalise_(linhas[ini]) + ' a ' + AutoRel_horaLinhaAnalise_(linhas[fimT]) + ')',
+      ok ? 'CONFORME' : 'NAO_CONFORME',
+      ok ? '' : 'Tempo de patamar insuficiente: ' + num(duracaoMin, 2) + ' min com todos os sensores ativos na temperatura de esterilização, abaixo do mínimo configurado de ' + num(tReq, 0) + ' min.',
+      { valor: duracaoMin, limite: tReq });
+  }
+
+  // 2. Faixa e 3. diferença entre sensores
+  let minG = null, maxG = null, varG = null, varHora = '';
+  for (let i = ini; i <= fimT; i++) {
+    const l = AutoRel_leiturasAtivasLinha_(linhas[i], idxAtivos);
+    if (!l.length) continue;
+    l.forEach(function(x) {
+      if (!minG || x.t < minG.t) minG = { t: x.t, s: x.s, hora: AutoRel_horaLinhaAnalise_(linhas[i]) };
+      if (!maxG || x.t > maxG.t) maxG = { t: x.t, s: x.s, hora: AutoRel_horaLinhaAnalise_(linhas[i]) };
+    });
+    if (l.length > 1) {
+      const v = Math.max.apply(null, l.map(function(x) { return x.t; })) - Math.min.apply(null, l.map(function(x) { return x.t; }));
+      if (varG === null || v > varG) { varG = v; varHora = AutoRel_horaLinhaAnalise_(linhas[i]); }
+    }
+  }
+  if (minG && maxG) {
+    const okFaixa = r2(minG.t) >= tMin && r2(maxG.t) <= tMax;
+    let motivoFaixa = '';
+    if (r2(minG.t) < tMin) motivoFaixa = 'Temperatura abaixo da faixa de esterilização no patamar: ' + num(minG.t, 2) + ' °C no sensor S' + (minG.s + 1) + ' às ' + minG.hora + ', abaixo de ' + num(tMin, 1) + ' °C.';
+    if (r2(maxG.t) > tMax) motivoFaixa += (motivoFaixa ? ' ' : '') + 'Temperatura acima da faixa de esterilização no patamar: ' + num(maxG.t, 2) + ' °C no sensor S' + (maxG.s + 1) + ' às ' + maxG.hora + ', acima de ' + num(tMax, 1) + ' °C.';
+    item('faixa', 'Faixa de temperatura de esterilização', reqFaixa,
+      'Mínima ' + num(minG.t, 2) + ' °C (S' + (minG.s + 1) + '); máxima ' + num(maxG.t, 2) + ' °C (S' + (maxG.s + 1) + ')',
+      okFaixa ? 'CONFORME' : 'NAO_CONFORME', motivoFaixa, { valorMin: r2(minG.t), valorMax: r2(maxG.t) });
+  }
+  if (isFinite(varMax) && varMax > 0) {
+    if (varG === null) {
+      item('variacao', 'Diferença de temperatura entre sensores', reqVar, 'Não avaliado', 'NAO_AVALIADO', 'Não avaliado: é preciso mais de um sensor ativo.');
+    } else {
+      const okVar = r2(varG) <= varMax;
+      item('variacao', 'Diferença de temperatura entre sensores', reqVar, 'Maior diferença: ' + num(varG, 2) + ' °C (às ' + varHora + ')',
+        okVar ? 'CONFORME' : 'NAO_CONFORME',
+        okVar ? '' : 'Diferença de temperatura entre sensores acima do limite no patamar: ' + num(varG, 2) + ' °C às ' + varHora + ', acima de ' + num(varMax, 1) + ' °C.',
+        { valor: r2(varG), limite: varMax });
+    }
+  }
+
+  // 4. Tempo de equilíbrio
+  if (isFinite(eqMax) && eqMax > 0) {
+    const dtSeg = dtMin * 60;
+    let iRef = -1, iTodos = -1;
+    for (let i = 0; i <= ini && (iRef < 0 || iTodos < 0); i++) {
+      const l = AutoRel_leiturasAtivasLinha_(linhas[i], idxAtivos);
+      if (iRef < 0) {
+        if (refIdx >= 0) { const t = linhas[i].temperaturas[refIdx]; if (t !== null && isFinite(t) && r2(t) >= tMin) iRef = i; }
+        else if (l.some(function(x) { return r2(x.t) >= tMin; })) iRef = i;
+      }
+      if (iTodos < 0 && l.length === idxAtivos.length && l.every(function(x) { return r2(x.t) >= tMin; })) iTodos = i;
+    }
+    const origem = refIdx >= 0 ? 'referência: sensor S' + (refIdx + 1) + ', informado como ponto de referência da câmara' : 'referência: primeiro sensor a atingir a temperatura, pois nenhum sensor de referência da câmara foi informado';
+    if (dtSeg > eqMax) {
+      item('equilibrio', 'Tempo de equilíbrio', reqEq, 'Não avaliado', 'NAO_AVALIADO',
+        'Não avaliado: o intervalo entre leituras (' + num(dtSeg, 0) + ' s) é maior que o limite de ' + num(eqMax, 0) + ' s. Para avaliar, programe o registrador com intervalo de até ' + num(eqMax, 0) + ' s.');
+    } else if (iRef < 0 || iTodos < 0) {
+      item('equilibrio', 'Tempo de equilíbrio', reqEq, 'Não avaliado', 'NAO_AVALIADO', 'Não avaliado: os sensores não atingiram a temperatura de esterilização antes do início da exposição identificada.');
+    } else {
+      const eqSeg = Math.max(0, (ms(linhas[iTodos]) - ms(linhas[iRef])) / 1000);
+      const okEq = eqSeg <= eqMax;
+      item('equilibrio', 'Tempo de equilíbrio', reqEq, num(eqSeg, 0) + ' s (' + origem + '; resolução de ' + num(dtSeg, 0) + ' s)',
+        okEq ? 'CONFORME' : 'NAO_CONFORME',
+        okEq ? '' : 'Tempo de equilíbrio acima do limite: ' + num(eqSeg, 0) + ' s, acima de ' + num(eqMax, 0) + ' s (' + origem + ').',
+        { valor: eqSeg, limite: eqMax });
+    }
+  }
+
+  // 5. Temperatura medida × vapor saturado (pressão absoluta da câmara). Ensaio só de
+  // temperatura (pressão desligada): o critério não existe neste ensaio.
+  if (isFinite(vsMax) && vsMax > 0 && !analise.semPressao) {
+    let n = 0, maior = null, piorHora = '', tsMin = null, tsMax = null;
+    for (let i = ini; i <= fimT; i++) {
+      const p = linhas[i].pressao;
+      if (p === null || !isFinite(p) || p <= 0) continue;
+      const ts = SGO_QT_tSatVaporC_(p);
+      if (ts === null) continue;
+      let tCam = null;
+      if (refIdx >= 0) tCam = linhas[i].temperaturas[refIdx];
+      else { const l = AutoRel_leiturasAtivasLinha_(linhas[i], idxAtivos); if (l.length) tCam = AutoRel_mediaArrayAnalise_(l.map(function(x) { return x.t; })); }
+      if (tCam === null || !isFinite(tCam)) continue;
+      n++;
+      const d = tCam - ts;
+      if (maior === null || Math.abs(d) > Math.abs(maior)) { maior = d; piorHora = AutoRel_horaLinhaAnalise_(linhas[i]); }
+      tsMin = tsMin === null ? ts : Math.min(tsMin, ts);
+      tsMax = tsMax === null ? ts : Math.max(tsMax, ts);
+    }
+    const base = refIdx >= 0 ? 'sensor de referência S' + (refIdx + 1) : 'média dos sensores ativos';
+    if (n < 2) {
+      item('vaporSaturado', 'Temperatura medida × vapor saturado', reqVs, 'Não avaliado', 'NAO_AVALIADO', 'Não avaliado: a pressão da câmara não foi registrada no patamar.');
+    } else if (Math.abs(maior) > 3 * vsMax) {
+      item('vaporSaturado', 'Temperatura medida × vapor saturado', reqVs, 'Não avaliado', 'NAO_AVALIADO',
+        'Pressão incompatível com a temperatura: a ' + base + ' difere ' + num(Math.abs(maior), 2) + ' °C da temperatura do vapor saturado calculada pela pressão (às ' + piorHora + ').',
+        { incoerente: true, valor: r2(maior) });
+    } else {
+      const okVs = r2(Math.abs(maior)) <= vsMax;
+      item('vaporSaturado', 'Temperatura medida × vapor saturado', reqVs,
+        'Maior diferença: ' + num(maior, 2) + ' °C (' + base + ' menos a do vapor saturado, que variou de ' + num(tsMin, 2) + ' °C a ' + num(tsMax, 2) + ' °C)',
+        okVs ? 'CONFORME' : 'NAO_CONFORME',
+        okVs ? '' : 'Temperatura medida diferente da do vapor saturado: ' + num(maior, 2) + ' °C às ' + piorHora + ' (' + base + '), acima de ' + num(vsMax, 1) + ' °C. Pode indicar ar ou gases não condensáveis na câmara, ou vapor superaquecido.',
+        { valor: r2(maior), limite: vsMax, tSatMin: r2(tsMin), tSatMax: r2(tsMax) });
+    }
+  }
+  return out;
+}
+
+/**
+ * Travas de qualidade dos dados: cada uma diz o que aconteceu, por que impede o
+ * documento e como corrigir (o operador nunca fica sem saber o próximo passo).
+ */
+function AutoRel_avaliarQualidadeDados_(linhas, analise, cfg, idxAtivos, dtMin) {
+  const q = (AutoRel_UCFG && AutoRel_UCFG.QUALIDADE_DADOS) || {};
+  const out = { travas: [], alertas: [] };
+  const num = SGO_DocA4_num_;
+  const faixa = Array.isArray(q.faixaFisicaC) ? q.faixaFisicaC : [-10, 160];
+  const ini = analise.faseInicioExp, fimExp = analise.faseFimExp;
+  const comoSensor = 'Se o sensor falhou durante o ensaio, desmarque-o em "Sensores considerados na análise" (seção Dados do registrador) e registre a falha nas observações; se o arquivo saiu errado, exporte de novo do registrador e envie.';
+  function trava(codigo, oQue, porQue, comoCorrigir) { out.travas.push({ codigo: codigo, oQue: oQue, porQue: porQue, comoCorrigir: comoCorrigir }); }
+
+  const ms = AutoRel_converterTempoLinhaParaMsAnalise_;
+  const media = linhas.map(function(r) {
+    const l = AutoRel_leiturasAtivasLinha_(r, idxAtivos);
+    return { ms: ms(r), t: l.length ? AutoRel_mediaArrayAnalise_(l.map(function(x) { return x.t; })) : null };
+  });
+  idxAtivos.forEach(function(s) {
+    const nome = 'S' + (s + 1);
+    const serie = linhas.map(function(r) { return { ms: ms(r), t: r.temperaturas[s] }; });
+    const qs = SGO_QT_qualidadeSensor_(serie, {
+      faixaFisica: faixa, paradoMinLeituras: q.paradoMinLeituras, paradoVariacaoProcesso: q.paradoVariacaoProcessoC,
+      picoMin: q.picoMinC, referencia: idxAtivos.length > 1 ? media : null
+    });
+    if (qs.foraFaixa.length) {
+      const p = qs.foraFaixa[0];
+      trava('LEITURA_IMPOSSIVEL', 'O sensor ' + nome + ' registrou ' + qs.foraFaixa.length + ' leitura(s) fora da faixa possível do processo; a primeira, ' + num(p.t, 2) + ' °C às ' + AutoRel_horaLinhaAnalise_(linhas[p.i]) + '.',
+        'Leitura fora de ' + num(faixa[0], 0) + ' °C a ' + num(faixa[1], 0) + ' °C indica sensor desconectado, danificado ou arquivo exportado com erro; usar esses valores falsearia o resultado.', comoSensor);
+    }
+    if (qs.parado.length) {
+      const p = qs.parado[0];
+      trava('SENSOR_PARADO', 'O sensor ' + nome + ' ficou com o mesmo valor (' + num(p.t, 2) + ' °C) em ' + (p.i1 - p.i0 + 1) + ' leituras seguidas, de ' + AutoRel_horaLinhaAnalise_(linhas[p.i0]) + ' a ' + AutoRel_horaLinhaAnalise_(linhas[p.i1]) + ', enquanto os outros sensores variaram.',
+        'Valor que não acompanha o processo indica sensor travado ou desconectado.', comoSensor);
+    }
+    qs.picos.forEach(function(p) {
+      const noPatamar = ini >= 0 && p.i >= ini && p.i <= fimExp;
+      const texto = 'O sensor ' + nome + ' tem um pico isolado de ' + num(p.t, 2) + ' °C às ' + AutoRel_horaLinhaAnalise_(linhas[p.i]) + ' (diferente das leituras vizinhas em mais de ' + num(q.picoMinC || 10, 0) + ' °C).';
+      if (noPatamar) trava('PICO_NO_PATAMAR', texto, 'Um pico isolado dentro da exposição altera o F0 e os critérios do patamar sem representar a temperatura real.', comoSensor);
+      else out.alertas.push(texto + ' Fora da exposição: não altera o resultado.');
+    });
+  });
+
+  if (ini >= 0 && fimExp >= ini) {
+    const n = fimExp - ini + 1;
+    const minL = Number(q.minLeiturasPatamar) || 5;
+    if (n < minL) {
+      trava('POUCAS_LEITURAS', 'A exposição tem só ' + n + ' leitura(s) por sensor (intervalo entre leituras de ' + num(dtMin * 60, 0) + ' s).',
+        'Com menos de ' + minL + ' leituras o F0 e os critérios do patamar ficam sem base suficiente.',
+        'Repita o ensaio com o registrador programado com intervalo menor (por exemplo, 5 ou 10 s).');
+    }
+    const maxFalta = Number(q.maxLeiturasFaltandoPatamar) || 0;
+    idxAtivos.forEach(function(s) {
+      let falta = 0, primeira = -1;
+      for (let i = ini; i <= fimExp; i++) { const t = linhas[i].temperaturas[s]; if (t === null || t === undefined || !isFinite(t)) { falta++; if (primeira < 0) primeira = i; } }
+      if (falta > maxFalta) {
+        trava('LEITURA_FALTANDO', 'O sensor S' + (s + 1) + ' não tem ' + falta + ' leitura(s) dentro da exposição (a primeira às ' + AutoRel_horaLinhaAnalise_(linhas[primeira]) + ').',
+          'Sem a leitura, o F0 e os critérios daquele trecho não podem ser calculados para o sensor.',
+          'No modo um arquivo por sensor, confira se o arquivo do sensor cobre todo o ciclo e se os relógios dos registradores estavam acertados; no arquivo único, confira a coluna do sensor. Se o sensor falhou, desmarque-o e registre a falha.');
+      }
+    });
+    const vistas = {};
+    (analise.lacunasF0 || []).forEach(function(l) {
+      if (l.motivo === 'LEITURA_AUSENTE' || vistas[l.ms0]) return;
+      vistas[l.ms0] = true;
+      trava('LACUNA_NO_PATAMAR', 'Há um intervalo sem leituras dentro da exposição, de ' + AutoRel_horaMsAnalise_(l.ms0) + ' a ' + AutoRel_horaMsAnalise_(l.ms1) + '.',
+        'Um intervalo maior que ' + (Number(q.lacunaMaxIntervalos) || 3) + ' vezes o intervalo normal de leitura não permite calcular o F0 daquele trecho.',
+        'Confira se o arquivo do registrador está completo (exporte de novo, sem filtros) e envie.');
+    });
+  }
+
+  const vs = ((analise.criteriosPatamar && analise.criteriosPatamar.lista) || []).filter(function(c) { return c.chave === 'vaporSaturado' && c.incoerente; })[0];
+  if (vs) {
+    trava('PRESSAO_INCOERENTE', vs.motivo, 'Diferença tão grande costuma indicar pressão registrada em outra unidade (relativa em vez de absoluta, kPa ou mbar), e não uma condição real da câmara.',
+      'Confira a unidade da coluna de pressão do registrador: o ciclo usa bar absoluto. Converta a coluna (bar relativo + pressão atmosférica local) e envie de novo.');
+  }
+  return out;
+}

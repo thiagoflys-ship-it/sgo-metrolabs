@@ -61,10 +61,16 @@ function AutoRel_acExecutarAnaliseLeakTestCompleta_(payload) {
 
   let dadosNormalizados = null;
 
+  if (!AutoRel_analisaPressao_(payload)) {
+    throw new Error('O teste de estanqueidade é avaliado pela pressão da câmara e não pode ser feito com "Analisar pressão" desligado. Para um ensaio só de temperatura, desmarque o teste de estanqueidade e gere o relatório do ciclo.');
+  }
+
   if (modoEntradaNormalizado === 'LEAK_TEST_RECONSTITUIDO') {
     dadosNormalizados = AutoRel_gerarDadosSimuladosLeakTest_(payload, { converter: true });
   } else if (modoEntradaNormalizado === 'SIMULADO_ADMIN') {
     dadosNormalizados = AutoRel_gerarDadosSimuladosAdmin_(payload, { converter: true });
+  } else if (modoEntradaNormalizado === 'ARQUIVO_POR_SENSOR') {
+    dadosNormalizados = AutoRel_lerEMesclarPorSensor_(payload, nSensores, sensoresAtivos, dateStyle).linhas;
   } else {
     const rich = AutoRel_lerDadosEntradaRich_(payload);
     if (!rich || !rich.matrix || !rich.matrix.length) {
@@ -98,7 +104,9 @@ function AutoRel_acExecutarAnaliseLeakTestCompleta_(payload) {
 }
 
 function AutoRel_apiConverterLeakTest_(payload) {
+  payload = payload || {};
   const pipeline = AutoRel_acExecutarAnaliseLeakTestCompleta_(payload);
+  if (!pipeline.payload.modoRelatorioSimulado) AutoRel_exigirSemTravas_((pipeline.analiseLeak.qualidadeDados || {}).travas);
   payload = pipeline.payload;
   const nSensores = pipeline.nSensores;
   const dadosNormalizados = pipeline.dadosNormalizados;
@@ -350,6 +358,22 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
     );
   }
 
+  // Travas de qualidade (20/10/2026): o documento não é emitido com estes problemas.
+  const travasLeak = [];
+  if (pressaoFimMbar < pressaoInicioMbar) {
+    travasLeak.push({ codigo: 'PRESSAO_CAIU',
+      oQue: 'A pressão caiu durante a janela do teste (de ' + SGO_DocA4_num_(pressaoInicioMbar, 2) + ' mbar para ' + SGO_DocA4_num_(pressaoFimMbar, 2) + ' mbar).',
+      porQue: 'No teste de estanqueidade a câmara fica isolada e a pressão só pode subir; queda indica bomba de vácuo ainda ligada ou janela fora da fase de espera.',
+      comoCorrigir: 'Confira na curva o início e o fim da fase de espera (câmara isolada) e corrija os horários do teste.' });
+  }
+  const duracaoMin = Number(cfgLeak.duracaoMinimaJanelaMin);
+  if (isFinite(duracaoMin) && duracaoMin > 0 && AutoRel_roundAnalise_(tempoMinutos, 2) < duracaoMin) {
+    travasLeak.push({ codigo: 'JANELA_CURTA',
+      oQue: 'A janela do teste tem ' + SGO_DocA4_num_(tempoMinutos, 2) + ' min.',
+      porQue: 'A taxa de vazamento é calculada numa janela de pelo menos ' + SGO_DocA4_num_(duracaoMin, 0) + ' min (critério configurado, referência: ' + normaReferencia + ').',
+      comoCorrigir: 'Informe início e fim da fase de espera com pelo menos ' + SGO_DocA4_num_(duracaoMin, 0) + ' min; se o ensaio foi mais curto, repita o teste.' });
+  }
+
   const memoriaCalculo = AutoRel_montarMemoriaCalculoLeakTest_({
     pressaoInicioMbar: pressaoInicioMbar,
     pressaoFimMbar: pressaoFimMbar,
@@ -394,7 +418,9 @@ function AutoRel_analisarLeakTest_(dados, payload, opcoes) {
 
     motivosReprovacao: motivosReprovacao,
     observacoesAnalise: observacoesAnalise,
-    alertasAnalise: alertasAnalise
+    alertasAnalise: alertasAnalise,
+    duracaoMinimaJanelaMin: isFinite(duracaoMin) ? duracaoMin : null,
+    qualidadeDados: { travas: travasLeak, alertas: [] }
   };
 }
 

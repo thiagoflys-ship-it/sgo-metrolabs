@@ -746,7 +746,10 @@ function SGO_DocA4_registradores_(textoDtl, dataReferencia) {
     if (inativo) situacao += ' (cadastro inativo)';
     saida.itens.push({
       tag: String(achado.TAG || tok), descricao: String(achado.DESCRICAO || ''), certificado: String(achado.CERTIFICADO_NUMERO || ''),
-      validade: SGO_DocA4_fmtData_(val), situacao: situacao, conforme: val ? !vencido : null, encontrado: true
+      validade: SGO_DocA4_fmtData_(val), situacao: situacao, conforme: val ? !vencido : null, encontrado: true,
+      // 20/10/2026: incerteza do certificado (cadastro de padrões), para a propagação no documento.
+      incertezaU95: isFinite(Number(String(achado.INCERTEZA_U95 == null ? '' : achado.INCERTEZA_U95).replace(',', '.'))) && String(achado.INCERTEZA_U95 == null ? '' : achado.INCERTEZA_U95).trim() !== '' ? Number(String(achado.INCERTEZA_U95).replace(',', '.')) : null,
+      fatorK: isFinite(Number(String(achado.FATOR_K == null ? '' : achado.FATOR_K).replace(',', '.'))) && String(achado.FATOR_K == null ? '' : achado.FATOR_K).trim() !== '' ? Number(String(achado.FATOR_K).replace(',', '.')) : null
     });
   });
   saida.itens.forEach(function (it) {
@@ -855,6 +858,9 @@ function SGO_DocA4_graficoLinhas_(o) {
   var folga = (ymax - ymin) * 0.06;
   var passoY = SGO_DocA4_passo_(ymax - ymin + 2 * folga, 6);
   var y0 = Math.floor((ymin - folga) / passoY) * passoY, y1 = Math.ceil((ymax + folga) / passoY) * passoY;
+  // yMin/yMax informados são piso/teto do eixo (20/10/2026: o F0 acumulado começava em −20).
+  if (isFinite(o.yMin)) y0 = Math.max(y0, Math.floor(o.yMin / passoY) * passoY);
+  if (isFinite(o.yMax)) y1 = Math.min(y1, Math.ceil(o.yMax / passoY) * passoY);
 
   // legenda abaixo do gráfico, em linhas de até 6 itens
   var porLinha = series.length > 12 ? 7 : 6;
