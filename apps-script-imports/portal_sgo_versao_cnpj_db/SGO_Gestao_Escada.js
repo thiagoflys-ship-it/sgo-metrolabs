@@ -243,6 +243,8 @@ function Ges_emailsDiarios_(ex) {
 // WHATSAPP: resumo do dia do gestor (sutil)
 // ------------------------------------------------------------
 function Ges_modeloWhatsAprovado_() {
+  // 20/10/2026: pela Z-API não há modelo a aprovar: o resumo sai como texto pronto, com o texto do modelo preenchido (SGO_Zapi.js).
+  if (typeof Notificar_whatsappSemModelo_ === 'function' && Notificar_whatsappSemModelo_()) return true;
   var forcado = '';
   try { forcado = Ges_up_(PropertiesService.getScriptProperties().getProperty('GES_RESUMO_MODELO_APROVADO')); } catch (e) {}
   if (forcado === 'SIM') return true;

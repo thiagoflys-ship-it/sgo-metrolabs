@@ -531,3 +531,11 @@ test('tela: menu, include, ganchos da casca, link ?tela= e ajuda das duas telas'
   assert.ok(aj.gestao_decisoes.passos.length >= 4 && aj.gestao_desempenho.passos.length >= 2);
   assert.doesNotMatch(JSON.stringify(aj) + js, /[\u{1F300}-\u{1FAFF}]/u, 'sem emoji');
 });
+
+test('WhatsApp pela Z-API: não espera aprovação da Meta e usa o resumo próprio da gestão', () => {
+  const amb = ambiente({ agora: em('2026-10-19T10:00:00-03:00') });
+  assert.equal(amb.ctx.Ges_modeloWhatsAprovado_(), false, 'Meta sem o modelo aprovado');
+  amb.ctx.Notificar_whatsappSemModelo_ = () => true;
+  amb.cache && Object.keys(amb.cache).forEach((k) => delete amb.cache[k]);
+  assert.equal(amb.ctx.Ges_modeloWhatsAprovado_(), true);
+});
