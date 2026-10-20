@@ -76,10 +76,10 @@ var GES_SITUACOES = { ABERTA: 'Aberta', RESOLVIDA: 'Resolvida', PERDIDA: 'Venceu
 /** Área padrão de cada módulo quando o item não é de uma pessoa (configurável em Regras e responsáveis). */
 var GES_AREA_MODULO_PADRAO = {
   padroes: 'METROLOGIA', certificados: 'METROLOGIA', documentos: 'COMERCIAL', nr13: 'TECNICA', frota: 'ADMINISTRATIVO',
-  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO'
+  conduta: 'RH', qualidade: 'QUALIDADE', auvo: 'TECNICA', atividades: 'ADMINISTRATIVO', avisos: 'ADMINISTRATIVO', email: 'COMERCIAL'
 };
 var GES_MODULOS_CONFIG = [['padroes', 'Padrões de referência'], ['certificados', 'Certificados de calibração'], ['documentos', 'Documentos de clientes'], ['nr13', 'NR-13'],
-  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos']];
+  ['frota', 'Frota'], ['conduta', 'Programa de conduta'], ['qualidade', 'Qualidade'], ['auvo', 'Integração Auvo'], ['atividades', 'Atividades'], ['avisos', 'Avisos'], ['email', 'E-mail de clientes']];
 
 /**
  * Pendências da central que são decisão da gestão.
@@ -102,7 +102,9 @@ var GES_TIPOS = {
   conduta_sugestao: { prazo: 2 }, conduta_fechamento: { prazo: 3 }, conduta_homologar: { prazo: 3 }, conduta_julgar: { prazo: 5 }, conduta_missao: { prazo: 3 },
   atividade_justificativa: { prazo: 2, resolveNaCaixa: true }, frota_caso: { prazo: 5 }, plano_atrasado: { prazo: 2 }, frota_copiloto: { prazo: 5 },
   qualidade_os: { prazo: 3 }, qualidade_mov: { prazo: 3 },
-  auvo_os_aberta: { prazo: 3 }, auvo_sem_vinculo: { prazo: 3 }, auvo_importacao: { prazo: 1 }
+  auvo_os_aberta: { prazo: 3 }, auvo_sem_vinculo: { prazo: 3 }, auvo_importacao: { prazo: 1 },
+  // 21/10/2026: e-mail de cliente sem resposta além do prazo da gestão (SGO_Email.js); vai ao gestor da área da pessoa
+  email_cliente_parado: { prazo: 1 }
 };
 
 var GES_CFG_PADRAO = {

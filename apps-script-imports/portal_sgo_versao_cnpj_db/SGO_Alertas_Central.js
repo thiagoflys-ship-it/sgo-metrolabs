@@ -62,7 +62,8 @@ var PEND_MODULOS = {
   qualidade: 'Qualidade',
   auvo: 'Integração Auvo',
   atividades: 'Atividades',
-  avisos: 'Avisos'
+  avisos: 'Avisos',
+  email: 'E-mail'
 };
 
 /**
@@ -122,6 +123,10 @@ var PEND_TIPOS = {
   qualidade_mov: { modulo: 'qualidade', um: 'retirada de veículo com registro incompleto', varios: 'retiradas de veículos com registro incompleto', rotulo: 'Revisar', fazer: 'confira a movimentação na Frota', tela: { tipo: 'modulo', mod: 'qualidade' }, origem: 'QUALIDADE' },
   auvo_os_aberta: { modulo: 'auvo', um: 'O.S. aberta no Auvo', varios: 'O.S. abertas no Auvo', rotulo: 'Revisar', fazer: 'finalize ou reagende no Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
   auvo_sem_vinculo: { modulo: 'auvo', um: 'O.S. do Auvo sem vínculo de cadastro', varios: 'O.S. do Auvo sem vínculo de cadastro', rotulo: 'Revisar', fazer: 'vincule cliente e técnico em Integração Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
+  // 21/10/2026: e-mail integrado (SGO_Email.js). Os dois primeiros são só da própria pessoa; o terceiro é da gestão (sem assunto nem texto).
+  email_cliente_nao_lido: { modulo: 'email', um: 'e-mail de cliente não lido', varios: 'e-mails de cliente não lidos', rotulo: 'Ler', fazer: 'leia a mensagem do cliente em E-mail', tela: { tipo: 'modulo', mod: 'email' }, origem: 'EMAIL' },
+  email_cliente_sem_resposta: { modulo: 'email', um: 'e-mail de cliente sem resposta', varios: 'e-mails de cliente sem resposta', rotulo: 'Responder', fazer: 'responda o cliente em E-mail', tela: { tipo: 'modulo', mod: 'email' }, origem: 'EMAIL' },
+  email_cliente_parado: { modulo: 'email', um: 'colaborador com e-mail de cliente parado', varios: 'colaboradores com e-mail de cliente parado', rotulo: 'Cobrar resposta', fazer: 'combine com a pessoa a resposta ao cliente hoje', tela: { tipo: 'modulo', mod: 'email' }, origem: 'EMAIL' },
   auvo_importacao: { modulo: 'auvo', um: 'importação do Auvo parada', varios: 'importações do Auvo paradas', rotulo: 'Revisar', fazer: 'retome a importação em Integração Auvo', tela: { tipo: 'modulo', mod: 'auvo' }, origem: 'AUVO' },
   // 20/10/2026 (Caixa de decisões da gestão, SGO_Gestao_Decisoes.js › Gestao_fontePendencias_): decisões que a central ainda não listava.
   conduta_homologar: { modulo: 'conduta', um: 'ocorrência do Programa de conduta para homologar', varios: 'ocorrências do Programa de conduta para homologar', rotulo: 'Homologar', fazer: 'homologue ou rejeite em Programa de conduta > Ocorrências', tela: { tipo: 'modulo', mod: 'conduta' }, origem: 'CONDUTA' },
@@ -953,6 +958,8 @@ var PEND_FONTES = [
   { nome: 'avisos', fn: Pend_fonteAvisos_ },
   { nome: 'Programa de Conduta', fn: Pend_fonteConduta_ },
   { nome: 'Auvo', fn: Pend_fonteAuvo_ },
+  // 21/10/2026: e-mails de cliente sem leitura/resposta (SGO_Email.js): da própria pessoa e, parados, da gestão.
+  { nome: 'e-mail', fn: function (add, ctx) { if (!ctx.cliente && typeof Email_pendencias_ === 'function') Email_pendencias_(add, ctx); } },
   // 20/10/2026: decisões da gestão que só a Caixa de decisões conhecia (SGO_Gestao_Decisoes.js).
   { nome: 'decisões da gestão', fn: function (add, ctx) { if (ctx.gestao && typeof Gestao_fontePendencias_ === 'function') Gestao_fontePendencias_(add, ctx); } }
 ];
