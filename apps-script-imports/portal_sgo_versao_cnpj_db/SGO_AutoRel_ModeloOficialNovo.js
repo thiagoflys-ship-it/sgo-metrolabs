@@ -430,7 +430,7 @@ function AutoOficial_textosPadrao_(ctx) {
     if (ctx.piorF0) partes.push('O menor F0 entre os ciclos foi de ' + SGO_DocA4_val_(ctx.piorF0.valor, 2, 'min') + (ctx.piorF0.sensor ? ', no sensor ' + ctx.piorF0.sensor : '') + ' do relatório ' + ctx.piorF0.numero + ', para o mínimo de ' + SGO_DocA4_val_(ctx.piorF0.minimo, 2, 'min') + '.');
     partes.push('Com base nesses resultados, o equipamento está APROVADO na qualificação, para os programas e as configurações de carga ensaiados' + (ctx.validadeAte ? ', com requalificação prevista até ' + ctx.validadeAte : '') + '.');
   } else {
-    partes.push('Foram registradas as seguintes não conformidades: ' + ctx.naoConformidades.map(function (n) { return n.origem.toLowerCase().replace(/^relatório/, 'no relatório') + ', ' + n.texto.replace(/[.\s]+$/, ''); }).join('; ') + '.');
+    partes.push('Foram registradas as seguintes não conformidades: ' + ctx.naoConformidades.map(function (n) { return n.origem.toLowerCase().replace(/^relatório/, 'no relatório') + ', ' + (n.texto.charAt(0).toLowerCase() + n.texto.slice(1)).replace(/[.\s]+$/, ''); }).join('; ') + '.');
     partes.push('O equipamento está REPROVADO na qualificação e não deve ser liberado para uso nos programas avaliados até que as causas sejam investigadas e corrigidas e uma nova qualificação tenha resultado aprovado.');
   }
   var simples = ctx.statusConsolidado === 'APROVADO'
@@ -510,6 +510,7 @@ function AutoOficial_assinaturas_(ctx, aprovacao, enviadoPor) {
   if (enviadoPor) lista.push({ papel: 'Elaborado por', nome: enviadoPor, cargo: 'Equipe técnica da empresa executante' });
   var padrao = (typeof AutoRel_UCFG !== 'undefined' && AutoRel_UCFG.ASSINATURAS_PADRAO) || [];
   padrao.forEach(function (a) { lista.push(Object.assign({ papel: 'Responsável técnico' }, a)); });
+  if (aprovacao && aprovacao.nome) lista.push({ papel: 'Aprovado para emissão por', nome: aprovacao.nome, cargo: 'Aprovação registrada no sistema em ' + aprovacao.em });
   lista.push({ papel: 'Ciência do contratante', nome: ctx.identificacao.responsavelCliente || ' ', cargo: 'Responsável pelo serviço — ' + (ctx.identificacao.cliente || 'contratante') });
   return lista;
 }
