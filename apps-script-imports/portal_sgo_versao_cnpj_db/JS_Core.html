@@ -531,8 +531,8 @@
 
           google.script.run
             .withSuccessHandler(function (res) {
-              if (res && res.success && res.redirectUrl && res.equipamento) {
-                renderProntuarioDigital_(res.redirectUrl, res.equipamento);
+              if (res && res.success && res.equipamento) {
+                renderProntuarioDigital_(res.redirectUrl || "", res.equipamento, res.avisoPasta || "");
               } else {
                 alert(res ? res.message : "Não foi possível abrir os dados do equipamento. Tente de novo; se repetir, avise o administrador.");
                 irTelaInicial_();
@@ -556,7 +556,7 @@
     }
   }
 
-  function renderProntuarioDigital_(urlPasta, eqp) {
+  function renderProntuarioDigital_(urlPasta, eqp, avisoPasta) {
     const div = document.getElementById("conteudo");
     if (!div) return;
 
@@ -618,7 +618,8 @@
             </div>
           </div>
 
-          <button onclick="window.open('${urlPasta}', '_blank')" style="width: 100%; padding: 14px; background-color: var(--metro-green, #007b3e); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin-top: 25px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          ${urlPasta ? "" : '<p style="font-size: 12.5px; color: var(--muted, #5f6368); margin: 20px 0 0;">' + escapeHtml_(avisoPasta || "A pasta de documentos do equipamento não está disponível agora.") + '</p>'}
+          <button ${urlPasta ? "" : 'style="display:none" '}onclick="window.open('${urlPasta}', '_blank')" style="width: 100%; padding: 14px; background-color: var(--metro-green, #007b3e); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; margin-top: 25px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
             Abrir Prontuário Digital ↗
           </button>
         </div>

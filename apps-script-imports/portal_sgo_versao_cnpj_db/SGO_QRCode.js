@@ -173,14 +173,19 @@ const SGO_QRCODE = (() => {
       return { success: false, message: "Acesso negado: seu perfil não possui permissão para consultar prontuários de equipamentos via QR." };
     }
 
-    // Gera/Busca a pasta raiz desse equipamento no Google Drive
-    const linkPasta = obterLinkPastaEquipamento_(eqp);
+    // Gera/Busca a pasta raiz desse equipamento no Google Drive.
+    // 20/10/2026: sem a pasta (configuração das pastas ausente), a tela do equipamento abre do mesmo jeito,
+    // com a identificação e a seção Qualificação; só o botão da pasta fica de fora, com o aviso.
+    let linkPasta = "", avisoPasta = "";
+    try { linkPasta = obterLinkPastaEquipamento_(eqp); }
+    catch (ePasta) { avisoPasta = "A pasta de documentos do equipamento não está disponível agora (" + String(ePasta && ePasta.message ? ePasta.message : ePasta).replace(/[.\s]+$/, "") + "). Os relatórios de qualificação aparecem abaixo."; }
 
     SGO_DATA.log("QRCODE_ACESSO", sessao.usuario, "Acesso via QR liberado para TAG: " + SGO_UTILS.safe(eqp.TAG), "QRCODE");
 
     return {
       success: true,
       redirectUrl: linkPasta,
+      avisoPasta: avisoPasta,
       equipamento: eqp
     };
   }
