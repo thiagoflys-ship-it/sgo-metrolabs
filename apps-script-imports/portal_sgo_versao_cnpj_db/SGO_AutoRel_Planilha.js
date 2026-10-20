@@ -1,4 +1,10 @@
 /****************************************************
+ * MODELO ANTERIOR DA PLANILHA DE DADOS (20/10/2026): guardado sem mudança e
+ * desligado. O botão "Gerar relatório de dados" usa o modelo novo
+ * (SGO_AutoRel_PlanilhaDados.js); este só volta a ser usado com
+ * AUTOREL_PLANILHA_MODELO = ANTERIOR em Chaves e senhas (responsável pelo
+ * sistema), por AutoRel_apiConverterModeloAnterior_ (SGO_AutoRel_Main.js).
+ *
  * METROLABS — CONVERSOR UNIVERSAL DATALOGGER — V4.4
  * ARQUIVO: Planilha.gs
  * DESCRIÇÃO:

@@ -14,7 +14,7 @@ const ARQUIVOS = [
   'SGO_QualifTermica_Calculos.js', 'SGO_QualifIA_Verificador.js', 'SGO_QualifEmissao.js',
   'SGO_AutoRel_Config.js', 'SGO_AutoRel_Parser.js', 'SGO_AutoRel_AnaliseCiclo.js', 'SGO_AutoRel_Main.js',
   'SGO_AutoRel_Simulador.js', 'SGO_AutoRel_LeakTest.js', 'SGO_AutoRel_MemoriaF0.js',
-  'SGO_AutoRel_CertificadoIA.js', 'SGO_AutoRel_CertificadoRelatorio.js'
+  'SGO_AutoRel_CertificadoIA.js', 'SGO_AutoRel_CertificadoRelatorio.js', 'SGO_AutoRel_PlanilhaDados.js'
 ];
 
 function ler(nome) { return fs.readFileSync(path.join(BASE, nome), 'utf8').replace(/\r\n/g, '\n'); }

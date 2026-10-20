@@ -2,6 +2,7 @@
 
 ## O que mudou em 20/10/2026
 
+- **Planilha de dados nova** (modelo novo, padrão): documento A4 em paisagem com capa, sumário com páginas, quadro-resumo dos critérios, condições do ensaio, resultados por sensor e por fase, gráficos, memória de cálculo passo a passo e todas as leituras do registrador, salvo em HTML e PDF na pasta do cliente e emitido com a aprovação do responsável técnico (mesmo fluxo do relatório de ensaio). A planilha antiga do Google Planilhas foi guardada sem mudança e está desligada; só o responsável pelo sistema pode religá-la (seção 7.1). Planilhas já emitidas no modelo antigo continuam na pasta como estão.
 - O envio da planilha do registrador voltou a funcionar no servidor próprio: a pasta fixa de envios do Google Drive antigo não existe mais; o arquivo vai para a pasta própria do módulo ("Autoclave - Planilhas enviadas"). A pasta de laudos segue a mesma regra.
 - Nova opção em "Como enviar os dados": **Um arquivo por sensor (registradores individuais)**. Cada sensor marcado recebe o seu arquivo na grade "Sensores considerados na análise"; a pressão pode vir de um arquivo próprio.
 - Novo seletor **Analisar pressão** (ligado por padrão). Desligado (autoclave de pequeno porte/cassete sem ponto para o transmissor de pressão), pede uma justificativa curta e o relatório considera somente a temperatura.
@@ -16,11 +17,11 @@
 
 Gera, para UM ciclo de uma autoclave a vapor, três documentos com os mesmos números:
 
-1. **Relatório de dados (planilha, PDF em paisagem)** — todas as leituras, estatísticas e gráficos.
+1. **Planilha de dados (A4 em paisagem, HTML e PDF)** — capa, sumário, quadro-resumo dos critérios, resultados por sensor e por fase, gráficos, memória de cálculo e todas as leituras do registrador (seção 3.1).
 2. **Relatório de ensaio térmico (A4)** — capa, sumário, identificação, instrumentação, metodologia, critérios com a referência de cada um, escopo e limitações, resultados, gráficos, não conformidades, análise, conclusão, responsabilidade técnica e anexos.
 3. **Memória de cálculo do F0 (A4)** — leitura a leitura, a conta do F0 de cada sensor.
 
-Todos ficam salvos na pasta do cliente (subpasta do CNPJ), em PDF; o relatório de ensaio e a memória também em HTML A4. O botão "Enviar ao cliente" fica na faixa verde que aparece no topo do documento.
+Todos ficam salvos na pasta do cliente (subpasta do CNPJ), em HTML A4 e PDF. O botão "Enviar ao cliente" fica na faixa verde que aparece no topo do documento.
 
 ## 2. Quem decide o resultado
 
@@ -36,12 +37,32 @@ O resultado (aprovado, reprovado ou informativo) é calculado pelo sistema, semp
    - **Arquivo único**: "Enviar arquivo ou informar o link" e escolha o arquivo (CSV, planilha ou texto). O link é preenchido sozinho.
    - **Um arquivo por sensor**: escolha o arquivo de cada sensor na grade da seção 3. Se a pressão estiver em registrador separado, envie em "Arquivo do registrador de pressão". As leituras são alinhadas pelo horário; a prévia mostra quantas leituras de cada sensor ficaram sem par e a maior diferença de relógio.
 4. **Pré-visualizar dados** e confira datas, horas e temperaturas.
-5. **Gerar relatório de dados (planilha)**.
-6. **Seção 5** — número do ensaio, identificação do registrador (TAG do cadastro de Padrões de referência), fotos (opcional) e **Gerar rascunho da interpretação**.
-7. Revise os textos.
+5. **Seção 5** — número do ensaio e identificação do registrador (TAG do cadastro de Padrões de referência). A planilha de dados usa esses dois campos.
+6. **Gerar relatório de dados (planilha)**. Responsável técnico: confirme a aprovação; a planilha abre em nova aba e fica salva na pasta do cliente. Técnico: a planilha vai para **6. Aguardando aprovação** (coluna "Documento" = "Planilha de dados") e a minuta abre em outra aba, com a faixa "MINUTA PARA CONFERÊNCIA". Depois da emissão: "Abrir PDF da planilha de dados", "Abrir pasta do cliente" e "Enviar ao cliente".
+7. Fotos (opcional) e **Gerar rascunho da interpretação**.
+8. Revise os textos.
    - **Técnico**: "Enviar para aprovação do responsável técnico".
    - **Responsável técnico** (perfis Administrador, Diretoria, Gestor e Metrologia): marque "Conferi os dados, os critérios e os textos e aprovo a emissão" e "Aprovar e emitir"; ou, em **6. Aguardando aprovação**, "Ver prévia" (minuta, não entregar), "Aprovar e emitir" ou "Devolver" com o motivo.
-8. **Gerar a memória do F0**, se precisar explicar o F0 ao cliente.
+9. **Gerar a memória do F0**, se precisar explicar o F0 ao cliente.
+
+## 3.1 O que tem na planilha de dados
+
+A4 em paisagem; cabeçalho com o título, a TAG, o ciclo e a data; rodapé com a empresa, o número da planilha, a revisão e "Página X de Y" em todas as folhas.
+
+| Parte | Conteúdo |
+|---|---|
+| Capa | Cliente, CNPJ, unidade, equipamento (TAG, modelo, nº de série; sem fabricante), ensaio, ciclo, programa, data, lote, técnico executor, responsável técnico, número e revisão; resultado do ensaio; registrador com certificado, validade e incerteza (U95). |
+| Sumário | Seções e anexos com o número da página. |
+| 1. Quadro-resumo | Um critério por linha: critério de aceitação, valor medido, fonte do critério e situação. O resultado geral fica só na capa. |
+| 2. Condições do ensaio | Parâmetros (temperatura programada, faixa, remoção de ar, intervalo, sensores, correção, origem dos dados, leituras), escopo e limitações, normas. |
+| 3. Resultados | Por sensor na exposição: leituras, mínima, máxima, média, desvio-padrão, tempo na faixa no patamar, horário em que atingiu a temperatura, diferença para a referência, F0. Por fase: início, término, duração, leituras, temperaturas e pressões. |
+| 4. Gráficos | Perfil térmico com as fases; detalhe da exposição com a faixa de esterilização; F0 acumulado por sensor; pressão da câmara e temperatura medida × vapor saturado (só com pressão); mapa dos sensores do mais frio ao mais quente. Teste de estanqueidade: pressão no registro e na janela. |
+| 5. Memória de cálculo | F0 (fórmula, Tref 121,1 °C, z 10 °C, regra dos trapézios com o intervalo real, exemplo passo a passo do pior sensor, F0 de cada sensor), vapor saturado (IAPWS-IF97, exemplo na leitura de maior diferença), tempo de equilíbrio, incerteza (U(F0) e o resultado declarado com dois algarismos significativos). Estanqueidade: taxa = variação de pressão ÷ tempo, passo a passo. |
+| 6 e 7 | Não conformidades e observações; responsabilidade técnica, aprovação registrada e assinaturas. |
+| 8. Leituras da exposição | Todas as leituras da janela do F0, folha a folha, com o cabeçalho em todas as folhas; com mais de 12 sensores, em blocos de sensores. Fundo azul: menor temperatura da linha; laranja: maior; número vermelho: leitura do patamar fora da faixa; linha cinza: descida depois do patamar (entra no F0, fora dos critérios de tempo e faixa). |
+| Anexos | A: demais leituras, compactas, com a fase de cada leitura. B: alinhamento dos registradores (um arquivo por sensor). |
+
+Os números (F0, mínimas, médias, máximas, critérios) são os mesmos do relatório de ensaio. Com "Analisar pressão" desligado, nenhuma coluna, gráfico ou texto de pressão aparece; só a frase do escopo com a justificativa.
 
 ## 4. Critérios de aceitação (configurados e revisáveis pelo responsável técnico)
 
@@ -85,8 +106,12 @@ Regra de decisão: aceitação simples (o valor medido é comparado ao limite); 
 
 ## 7. Revisões e arquivo
 
-- Cada emissão grava um registro (tabela QUALIF_EMISSOES): número, revisão, resultado, quem enviou, quem aprovou, data e hora, arquivos.
+- Cada emissão grava um registro (tabela QUALIF_EMISSOES): número, revisão, resultado, quem enviou, quem aprovou, data e hora, arquivos. A planilha de dados tem revisões próprias (módulo AUTOCLAVE_DADOS), independentes das do relatório de ensaio do mesmo número.
 - Emitir de novo o mesmo número gera a revisão seguinte; a anterior fica marcada como substituída e o arquivo continua na pasta do cliente.
+
+### 7.1 Modelo da planilha de dados
+
+O modelo novo é o padrão. O modelo anterior (planilha do Google Planilhas exportada em PDF) está guardado sem mudança e desligado. Para religá-lo, o responsável pelo sistema abre **Chaves e senhas**, grupo **Relatórios técnicos**, item **Autoclave: modelo da planilha de dados**, e escolhe "Modelo anterior". Voltar para "Modelo novo" (ou deixar vazio) usa o novo. Documentos já emitidos em qualquer dos modelos não mudam.
 
 ## 8. Normas citadas
 

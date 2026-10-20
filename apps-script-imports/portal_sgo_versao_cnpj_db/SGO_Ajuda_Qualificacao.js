@@ -16,7 +16,7 @@ function SGO_ajudaTelas_Qualificacao_() {
     // ================================================================
     "autoclave": {
       titulo: "Autoclaves",
-      paraQueServe: "Gera o relatório de qualificação térmica de uma autoclave a partir do arquivo do registrador de temperatura e pressão. O sistema calcula o F0 de cada sensor, diz se o ciclo foi aprovado ou reprovado e monta a planilha de dados e o relatório de ensaio em A4.",
+      paraQueServe: "Gera o relatório de qualificação térmica de uma autoclave a partir do arquivo do registrador de temperatura e pressão. O sistema calcula o F0 de cada sensor, diz se o ciclo foi aprovado ou reprovado e monta a planilha de dados (A4 deitado, com todas as leituras, gráficos e cálculos) e o relatório de ensaio (A4 em pé).",
       antesDeComecar: [
         "Tenha o arquivo exportado pelo registrador (planilha, CSV ou texto) com as leituras do ciclo.",
         "Saiba quantos sensores foram usados e qual ciclo foi rodado (121 °C, 127 °C, 134 °C ou baixa temperatura).",
@@ -44,9 +44,21 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Um arquivo por sensor: na grade \"Sensores considerados na análise\" (seção 3), escolha o arquivo de cada sensor marcado. Se a pressão estiver num registrador separado, envie o arquivo dele em \"Arquivo do registrador de pressão\".",
           "Toque em \"Pré-visualizar dados\".",
           "Confira na \"Prévia dos dados lidos\" se as datas, horas e temperaturas estão certas.",
+          "Em \"5. Interpretação técnica do ensaio\", preencha \"Nº do ensaio (referência)\" e \"Identificação do registrador\" (TAG do cadastro de padrões, exemplo: DTL-01). A planilha usa esses dois campos: sem o registrador cadastrado e válido, ela não é gerada.",
           "Toque em \"Gerar relatório de dados (planilha)\".",
-          "Espere o selo do resultado e os botões \"Abrir planilha de dados\" e \"Baixar relatório (PDF)\".",
-          "O PDF da planilha também fica salvo na pasta do cliente (subpasta do CNPJ), com o nome \"Relatório de dados ...\"; a frase abaixo dos botões confirma o nome do arquivo ou diz por que não salvou."
+          "Responsável técnico: confirme a mensagem de aprovação. A planilha abre em nova aba e fica salva em HTML e PDF na pasta do cliente (subpasta do CNPJ), com o nome \"Planilha de dados Autoclave ...\" e o seu nome como aprovador.",
+          "Técnico: a planilha vai para aprovação do responsável técnico. A minuta abre em outra aba com a faixa \"MINUTA PARA CONFERÊNCIA\" (não entregue ao cliente) e o pedido aparece em \"6. Aguardando aprovação\", com a coluna \"Documento\" = \"Planilha de dados\".",
+          "Depois de emitida, use os botões \"Abrir PDF da planilha de dados\", \"Abrir pasta do cliente\" e \"Enviar ao cliente\" que aparecem abaixo do botão. Emitir de novo o mesmo número gera a revisão seguinte da planilha; as anteriores continuam na pasta.",
+          "Se os dados tiverem problema (sensor com leitura impossível, sensor parado, leitura faltando, registrador sem cadastro ou vencido), a faixa vermelha diz o que corrigir e a planilha não é gerada."
+        ] },
+        { titulo: "Ler a planilha de dados", itens: [
+          "Capa: cliente, equipamento, ciclo, data, responsáveis, registrador com certificado, validade e incerteza, e o resultado do ensaio.",
+          "Sumário com o número da página de cada seção.",
+          "1. Quadro-resumo: cada critério com o valor medido, o critério de aceitação, a fonte e a situação.",
+          "2. Condições do ensaio, escopo, limitações e normas. 3. Resultados por sensor (mínima, máxima, média, desvio-padrão, tempo na faixa, horário em que atingiu a temperatura, F0) e por fase do ciclo.",
+          "4. Gráficos: perfil térmico com as fases, detalhe da exposição com a faixa de esterilização, F0 acumulado, pressão e vapor saturado (só com \"Analisar pressão\" ligado) e o mapa do sensor mais frio ao mais quente.",
+          "5. Memória de cálculo passo a passo: F0, vapor saturado, tempo de equilíbrio e incerteza. 6. Não conformidades e observações. 7. Assinaturas.",
+          "8. Leituras da fase de exposição, folha a folha, com o cabeçalho em todas as folhas. Com mais de 12 sensores, a tabela vem em blocos de sensores. Anexo A: as demais leituras, em formato compacto. Anexo B: alinhamento dos registradores (um arquivo por sensor)."
         ] },
         { titulo: "Gerar o relatório de ensaio (interpretação técnica, A4)", itens: [
           "Gere antes o relatório de dados (tarefa acima) com os mesmos dados.",
@@ -70,7 +82,7 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Preencha as seções 1 a 4 como no relatório de dados.",
           "Marque \"Este relatório é um teste de estanqueidade (pressão/vácuo da câmara)\".",
           "Informe o início e o fim do teste e a unidade de pressão do registrador.",
-          "Toque em \"Gerar relatório de dados (planilha)\". O sistema calcula a taxa de vazamento em mbar/min. O limite aceito é 1,3 mbar/min, numa janela de pelo menos 10 min.",
+          "Toque em \"Gerar relatório de dados (planilha)\". O sistema calcula a taxa de vazamento em mbar/min e a planilha mostra a conta passo a passo e as leituras da janela do teste. O limite aceito é 1,3 mbar/min, numa janela de pelo menos 10 min.",
           "Se a pressão cair na janela, o sistema avisa: a janela informada não é a fase de espera (câmara isolada). Corrija os horários.",
           "O teste de estanqueidade não aparece com \"Analisar pressão\" desligado."
         ] },
@@ -94,6 +106,8 @@ function SGO_ajudaTelas_Qualificacao_() {
         { nome: "Observação \"próximo do limite\" no relatório", significado: "O F0 passou do mínimo, mas por menos de 10%. O ciclo é aprovado e o relatório registra a observação." },
         { nome: "Caixa vermelha \"O relatório não pode ser emitido\"", significado: "Os dados têm problema (sensor com leitura impossível, sensor parado, pico na exposição, leitura faltando, poucas leituras, registrador sem cadastro ou vencido). Cada item diz como corrigir." },
         { nome: "Critério \"Não avaliado\" no relatório", significado: "Os dados não permitiram avaliar aquele critério (por exemplo, tempo de equilíbrio com leitura a cada 30 s). Não aprova nem reprova; o motivo está escrito." },
+        { nome: "Cores nas leituras da planilha de dados", significado: "Fundo azul: menor temperatura da linha. Fundo laranja: maior temperatura da linha. Número vermelho: leitura do patamar fora da faixa de esterilização. Linha cinza: leitura depois do patamar (descida final), que entra no F0 mas fica fora dos critérios de tempo e de faixa." },
+        { nome: "Faixa \"MINUTA PARA CONFERÊNCIA\" na planilha", significado: "A planilha ainda não foi aprovada pelo responsável técnico. Não entregue ao cliente." },
         FAIXA_VERMELHA,
         DETALHES
       ],
@@ -107,18 +121,21 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Ao emitir, aparece \"Os textos revisados não podem ser emitidos\".", oQueFazer: "O texto diz um resultado diferente do calculado, cita norma fora da lista ou cita pressão num ensaio só de temperatura. Corrija o trecho indicado e emita de novo." },
         { situacao: "Um arquivo por sensor: aviso de leitura faltando na exposição.", oQueFazer: "O arquivo daquele sensor não cobre todo o ciclo ou o relógio do registrador estava fora de hora. Confira o arquivo; se o sensor falhou, desmarque-o e registre a falha." },
         { situacao: "Aviso \"Pressão incompatível com a temperatura\".", oQueFazer: "A coluna de pressão provavelmente está em bar relativo, kPa ou mbar. O ciclo usa bar absoluto: converta a coluna e envie de novo." },
+        { situacao: "A planilha de dados não gera e diz que o registrador não foi informado ou não está no cadastro.", oQueFazer: "Preencha \"Identificação do registrador\" na seção 5 com a TAG do cadastro de padrões e gere de novo. Se o certificado venceu, atualize em \"Padrões de referência\"." },
+        { situacao: "A planilha não abriu em outra aba.", oQueFazer: "O navegador bloqueou a nova aba. Permita janelas do SGO+ no navegador e gere de novo; a planilha emitida também fica na pasta do cliente (botão \"Abrir PDF da planilha de dados\")." },
         { situacao: "Apareceu a janela \"Tela sem uso\".", oQueFazer: "Toque em \"Continuar\". O que você preencheu continua na tela." }
       ],
       quemPode: [
         { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, rascunho do relatório de ensaio, memória do F0 e folha do modelo." },
-        { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir o relatório de ensaio (responsável técnico), ver a prévia dos pedidos e devolver com o motivo." },
-        { perfil: "TECNICO", pode: "Envia o relatório para aprovação do responsável técnico." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir o relatório de ensaio e a planilha de dados (responsável técnico), ver a prévia dos pedidos e devolver com o motivo." },
+        { perfil: "TECNICO", pode: "Envia o relatório de ensaio e a planilha de dados para aprovação do responsável técnico." },
         { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (dados reconstituídos, com senha administrativa)." },
         { perfil: "COMERCIAL,FINANCEIRO", pode: "A tela abre, mas a emissão é tarefa da equipe técnica." },
         { perfil: "CLIENTE", pode: "Não acessa esta tela. Recebe o relatório pela Metrolabs ou consulta em \"Arquivo de documentos\"." }
       ],
       perguntas: [
-        { p: "Qual a diferença entre o relatório de dados e o relatório de ensaio?", r: "O relatório de dados é a planilha com todas as leituras, estatísticas e gráficos. O relatório de ensaio (interpretação técnica) é o documento A4 para o cliente, com identificação, critérios, resultados, análise, conclusão e assinaturas. Gere sempre os dois com os mesmos dados." },
+        { p: "Qual a diferença entre o relatório de dados e o relatório de ensaio?", r: "O relatório de dados é a planilha de dados (A4 deitado) com todas as leituras, estatísticas, gráficos e a memória de cálculo. O relatório de ensaio (interpretação técnica) é o documento A4 em pé para o cliente, com identificação, critérios, resultados, análise, conclusão e assinaturas. Os números dos dois são os mesmos; gere sempre os dois com os mesmos dados e o mesmo número." },
+        { p: "E a planilha antiga do Google Planilhas?", r: "Foi guardada sem mudança e está desligada. Só o responsável pelo sistema pode voltar a usá-la, em \"Chaves e senhas\", grupo \"Relatórios técnicos\", item \"Autoclave: modelo da planilha de dados\". Planilhas já emitidas no modelo antigo continuam na pasta do cliente como estão." },
         { p: "Existe \"aprovado com alerta\"?", r: "Não. Abaixo do mínimo da norma o ciclo é reprovado. Acima do mínimo, mas perto dele, o ciclo é aprovado e o relatório registra a observação \"próximo do limite\"." },
         { p: "Numa campanha com vários ciclos, como faço?", r: "Gere uma planilha e uma interpretação para cada ciclo, mudando o \"Ciclo Nº\" e o \"Nº do ensaio (referência)\"." },
         { p: "Os ciclos de baixa temperatura usam F0?", r: "Não. Nos ciclos de 55 °C e 60 °C o resultado é avaliado pela temperatura na faixa do ciclo. O F0 vale para os ciclos a vapor de 121 °C, 127 °C e 134 °C." }

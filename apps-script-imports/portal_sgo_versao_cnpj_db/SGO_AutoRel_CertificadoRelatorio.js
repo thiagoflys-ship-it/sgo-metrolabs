@@ -637,17 +637,18 @@ function AutoRel_acExigirAprovador_(sessao) {
 function AutoRel_apiListarAprovacoes(payload, sessao) {
   const aprovador = AutoRel_acEhAprovador_(sessao);
   const nome = SGO_QE_nomeSessao_(sessao);
-  const lista = SGO_QE_listar_(AUTOREL_MODULO_EMISSAO).filter(function(r) {
+  // 20/10/2026: relatórios de ensaio e planilhas de dados (modelo novo) na mesma lista.
+  const lista = SGO_QE_listar_(AUTOREL_MODULO_EMISSAO).concat(SGO_QE_listar_(AUTOREL_MODULO_EMISSAO_DADOS)).filter(function(r) {
     return r.STATUS === 'AGUARDANDO_APROVACAO' || (r.STATUS === 'DEVOLVIDO' && r.ENVIADO_POR === nome);
   }).filter(function(r) { return aprovador || r.ENVIADO_POR === nome; });
   return { ok: true, podeAprovar: aprovador, itens: lista.map(function(r) {
-    return { id: r.ID, status: r.STATUS, numero: r.NUMERO, cliente: r.CLIENTE, tag: r.TAG, resultado: r.RESULTADO, enviadoPor: r.ENVIADO_POR, enviadoEm: r.ENVIADO_EM, motivoDevolucao: r.DEVOLVIDO_MOTIVO };
+    return { id: r.ID, documento: r.MODULO === AUTOREL_MODULO_EMISSAO_DADOS ? 'Planilha de dados' : 'Relatório de ensaio', status: r.STATUS, numero: r.NUMERO, cliente: r.CLIENTE, tag: r.TAG, resultado: r.RESULTADO, enviadoPor: r.ENVIADO_POR, enviadoEm: r.ENVIADO_EM, motivoDevolucao: r.DEVOLVIDO_MOTIVO };
   }) };
 }
 
 function AutoRel_acCarregarPendente_(id) {
   const reg = SGO_QE_obter_(id);
-  if (!reg || reg.MODULO !== AUTOREL_MODULO_EMISSAO) throw new Error('Registro de aprovação não encontrado. Atualize a lista.');
+  if (!reg || (reg.MODULO !== AUTOREL_MODULO_EMISSAO && reg.MODULO !== AUTOREL_MODULO_EMISSAO_DADOS)) throw new Error('Registro de aprovação não encontrado. Atualize a lista.');
   if (reg.STATUS !== 'AGUARDANDO_APROVACAO') throw new Error('Este registro não está aguardando aprovação (situação: ' + reg.STATUS + ').');
   const payload = JSON.parse(reg.PAYLOAD_JSON || '{}');
   payload.fotosCertificado = (payload.fotosArquivos || []).map(function(f) {
@@ -659,6 +660,7 @@ function AutoRel_acCarregarPendente_(id) {
 function AutoRel_apiPreverAprovacao(payload, sessao) {
   AutoRel_acExigirAprovador_(sessao);
   const p = AutoRel_acCarregarPendente_(payload && payload.id);
+  if (p.reg.MODULO === AUTOREL_MODULO_EMISSAO_DADOS) return AutoRel_pdPreverPendente_(p.reg, p.payload);
   const validado = AutoRel_acValidarParaEmissao_(p.payload);
   if (AutoRel_acAssinatura_(validado.contexto) !== p.reg.HASH_CONTEXTO) throw new Error('Os dados mudaram desde o envio para aprovação (por exemplo, o cadastro do registrador). Devolva ao técnico para gerar o rascunho de novo.');
   return { ok: true, html: AutoRel_acMontarHtml_(validado.contexto, validado.interno, validado.textos, p.payload.fotosCertificado, null, true) };
@@ -669,6 +671,7 @@ function AutoRel_apiAprovarEmitir(payload, sessao) {
   payload = payload || {};
   if (payload.confirmacaoRevisao !== true) throw new Error('Marque "Conferi os dados, os critérios e os textos e aprovo a emissão" antes de aprovar.');
   const p = AutoRel_acCarregarPendente_(payload.id);
+  if (p.reg.MODULO === AUTOREL_MODULO_EMISSAO_DADOS) return AutoRel_pdAprovarPendente_(p.reg, p.payload, sessao);
   const validado = AutoRel_acValidarParaEmissao_(p.payload);
   if (AutoRel_acAssinatura_(validado.contexto) !== p.reg.HASH_CONTEXTO) throw new Error('Os dados mudaram desde o envio para aprovação. Devolva ao técnico para gerar o rascunho de novo.');
   return AutoRel_acEmitir_(p.payload, validado, sessao, p.reg.ID);

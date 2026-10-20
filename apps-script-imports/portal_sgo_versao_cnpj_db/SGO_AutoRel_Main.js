@@ -66,7 +66,7 @@ function AutoRel_apiValidarSenhaSimuladorAdmin(payload) {
   AutoRel_validarSenhaSimuladorAdmin_(payload.senha);
   return { ok: true };
 }
-function AutoRel_apiPing() {
+function AutoRel_apiPing(payload, sessao) {
   const laudosId = (AutoRel_UCFG.LAUDOS_FOLDER_ID && String(AutoRel_UCFG.LAUDOS_FOLDER_ID).length > 10)
     ? String(AutoRel_UCFG.LAUDOS_FOLDER_ID).trim()
     : '';
@@ -90,6 +90,9 @@ function AutoRel_apiPing() {
     defaultDateStyle: String(AutoRel_UCFG.DEFAULT_DATE_STYLE || 'AUTO').toUpperCase(),
     defaultNSensores: Number(AutoRel_UCFG.DEFAULT_N || 12),
     motoresDisponiveis: Object.keys(AutoRel_UCFG.CICLOS || {}),
+    // 20/10/2026: modelo da planilha de dados e se a sessão aprova a emissão (responsável técnico).
+    planilhaModelo: AutoRel_planilhaModelo_(),
+    podeAprovarEmissao: !!(sessao && AutoRel_acEhAprovador_(sessao)),
     // 20/10/2026: endereço real da pasta (a pasta fixa do Google Drive antigo não existe no servidor).
     laudosUrl: AutoRel_urlPastaExistente_(laudosId, 'AUTOREL_LAUDOS_FOLDER_ID'),
     uploadsUrl: AutoRel_urlPastaExistente_(uploadsId, 'AUTOREL_UPLOAD_PASTA_ID'),
@@ -397,7 +400,20 @@ function AutoRel_acExecutarAnaliseCompleta_(payload) {
   };
 }
 
-function AutoRel_apiConverter(payload) {
+/**
+ * Botão "Gerar planilha de dados" (20/10/2026). Modelo NOVO (padrão): documento A4 em
+ * paisagem em HTML + PDF com aprovação do responsável técnico (SGO_AutoRel_PlanilhaDados.js).
+ * Modelo ANTERIOR (planilha do Google Planilhas, SGO_AutoRel_Planilha.js): preservado sem
+ * mudança e usado só se o responsável pelo sistema gravar AUTOREL_PLANILHA_MODELO = ANTERIOR
+ * em Chaves e senhas.
+ */
+function AutoRel_apiConverter(payload, sessao) {
+  if (AutoRel_planilhaModelo_() === 'ANTERIOR') return AutoRel_apiConverterModeloAnterior_(payload);
+  return AutoRel_apiGerarPlanilhaDados(payload, sessao);
+}
+
+/** Modelo anterior da planilha de dados (Google Planilhas → PDF em paisagem), sem alteração. */
+function AutoRel_apiConverterModeloAnterior_(payload) {
   payload = payload || {};
 
   if (String(payload.tipoRelatorio || '').toUpperCase().trim() === 'LEAK_TEST') {

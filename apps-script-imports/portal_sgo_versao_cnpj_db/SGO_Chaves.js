@@ -57,6 +57,9 @@ var CHV_ITENS = [
     ajuda: 'A mesma senha usada hoje no Modo Personalizado dos relatórios técnicos.' },
   { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
     ajuda: 'A mesma senha usada hoje no Simulador dos relatórios técnicos.' },
+  // 20/10/2026: modelo da planilha de dados da Autoclave (SGO_AutoRel_PlanilhaDados.js). Vazio = modelo novo.
+  { chave: 'AUTOREL_PLANILHA_MODELO', grupo: 'Relatórios técnicos', tipo: 'aberto', exemplo: 'NOVO', opcoes: [['NOVO', 'Modelo novo (A4 paisagem, com aprovação)'], ['ANTERIOR', 'Modelo anterior (Google Planilhas)']], vazio: 'Modelo novo', nome: 'Autoclave: modelo da planilha de dados',
+    ajuda: 'Modelo novo: documento A4 em paisagem com índice, gráficos, memória de cálculo e as leituras do registrador, salvo em HTML e PDF na pasta do cliente e emitido com a aprovação do responsável técnico. Modelo anterior: a planilha antiga, guardada sem mudança; use só se o novo apresentar problema. Documentos já emitidos não mudam.' },
   { chave: 'SMTP_SENHA', grupo: 'E-mail', tipo: 'senha', teste: 'email', nome: 'Senha do e-mail sistema@metrolabs.com.br',
     ajuda: 'A senha da caixa sistema@metrolabs.com.br (servidor mail.metrolabs.com.br, porta 465). Os e-mails do SGO+ saem por ela.' },
   { chave: 'WHATSAPP_PROVEDOR', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', teste: 'whatsapp', exemplo: 'meta', opcoes: [['meta', 'WhatsApp oficial (Meta)'], ['zapi', 'Z-API']], vazio: 'Automático', nome: 'Provedor do WhatsApp em uso',
