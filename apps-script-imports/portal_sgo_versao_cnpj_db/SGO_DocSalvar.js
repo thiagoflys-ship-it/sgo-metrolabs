@@ -188,7 +188,11 @@ function SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, dados, html) {
   dados = dados || {};
   try {
     var raiz = typeof obterRaiz === 'function' ? obterRaiz() : obterRaiz;
-    var pasta = SGO_DocSalvar_pastaClienteEm_(raiz, dados.cnpj, dados.cliente);
+    // 20/10/2026: ensaio ligado ao cadastro → pasta do equipamento dentro da pasta do cliente
+    // (<CNPJ>/<TAG - tipo>/Qualificação, SGO_QualifEquipamento.js); sem vínculo, a pasta do cliente como antes.
+    var pasta = (dados.equipamento && typeof SGO_QEQ_pastaEquipamento_ === 'function')
+      ? SGO_QEQ_pastaEquipamento_(raiz, dados.equipamento)
+      : SGO_DocSalvar_pastaClienteEm_(raiz, dados.cnpj, dados.cliente);
     var r = SGO_DocSalvar_salvarHtmlEPdf_(pasta, dados.nomeBase || 'Certificado', html, dados.pdfBlob ? { pdfBlob: dados.pdfBlob } : {});
     return {
       salvo: true,
@@ -234,7 +238,8 @@ function SGO_DocSalvar_finalizarCertificado_(html, payload, obterRaiz, rotulo, t
     var numero = String(payload.certNumero || '').trim();
     var nomeBase = [rotulo || 'Certificado', numero, tag, carimbo].filter(function (p) { return !!p; }).join(' - ');
     resultado = SGO_DocSalvar_salvarCertificadoEquipamento_(obterRaiz, {
-      cnpj: payload.cnpj, cliente: payload.cliente, nomeBase: nomeBase, pdfBlob: pdfPaginado
+      cnpj: payload.cnpj, cliente: payload.cliente, nomeBase: nomeBase, pdfBlob: pdfPaginado,
+      equipamento: payload.equipamentoId ? { cnpj: payload.cnpj, cliente: payload.cliente, tag: tag === 'sem-tag' ? '' : tag, tipo: payload.tipoEquipamento || 'Equipamento' } : null
     }, html);
   }
   return {

@@ -17,6 +17,9 @@
  * - blindagem do fluxo de leitura temporal
  ****************************************************/
 
+/** Chamadas que geram documento do ensaio: exigem o vínculo com o cadastro (SGO_QEQ_aplicarVinculoPayload_). */
+var AUTOREL_FN_COM_VINCULO = ['apiConverter', 'apiGerarRascunhoCertificado', 'apiMontarCertificadoFinal', 'apiGerarMemoriaF0', 'apiEnviarParaAprovacao'];
+
 /**
  * Roteador seguro de funções chamadas pelo frontend.
  */
@@ -26,7 +29,13 @@ function AutoRel_apiDispatch(req) {
   if (typeof SGO_bloquearRH_ === 'function') SGO_bloquearRH_(sessaoDispatchRH, 'o módulo Autoclaves'); // perfil RH: sem documentos técnicos (SGO_Auth.js)
 
   const fn = String(req.fn || '').trim();
-  const payload = req.payload || {};
+  let payload = req.payload || {};
+  // 20/10/2026 (fluxo cliente → unidade → equipamento): documento do ensaio só com o equipamento escolhido no cadastro;
+  // cliente, CNPJ, endereço, TAG e nº de série passam a vir do cadastro (equipamento de outro cliente é recusado).
+  // Relatório interno (dados reconstituídos) fica de fora. SGO_QualifEquipamento.js.
+  if (AUTOREL_FN_COM_VINCULO.indexOf(fn) >= 0 && !payload.modoRelatorioSimulado && typeof SGO_QEQ_aplicarVinculoPayload_ === 'function') {
+    payload = SGO_QEQ_aplicarVinculoPayload_(String(req.sessionId || ''), payload);
+  }
 
   const allow = {
     apiPing: AutoRel_apiPing,

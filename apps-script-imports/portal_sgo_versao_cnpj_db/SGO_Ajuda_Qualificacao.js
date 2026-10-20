@@ -20,7 +20,7 @@ function SGO_ajudaTelas_Qualificacao_() {
       antesDeComecar: [
         "Tenha o arquivo exportado pelo registrador (planilha, CSV ou texto) com as leituras do ciclo.",
         "Saiba quantos sensores foram usados e qual ciclo foi rodado (121 °C, 127 °C, 134 °C ou baixa temperatura).",
-        "Tenha o CNPJ do cliente e os dados da placa do equipamento (TAG, marca, modelo, número de série).",
+        "Cadastre antes o cliente, a unidade e a autoclave (Cadastros: Clientes, depois Unidades, depois Equipamentos). O ensaio começa pela escolha deles; se faltar algum, os botões \"Cadastrar cliente\", \"Cadastrar unidade\" e \"Cadastrar equipamento\" abrem o cadastro em outra aba.",
         "Confira se os registradores usados estão cadastrados e com o certificado em dia em \"Padrões de referência\". O relatório informa o certificado e a validade de cada um.",
         "F0 é a quantidade de esterilização que o ciclo entregou, contada em minutos equivalentes a 121,1 °C. O sistema calcula sozinho; você não faz conta.",
         CELULAR_TELA_COMPLETA
@@ -29,10 +29,11 @@ function SGO_ajudaTelas_Qualificacao_() {
         { titulo: "Gerar o relatório de dados (planilha)", itens: [
           "Toque em \"Autoclaves\" no menu.",
           "Toque na aba \"Gerar relatório\".",
-          "Em \"1. Cliente e ensaio\", digite o CNPJ e toque em \"Buscar\".",
-          "Confira o nome e o endereço que apareceram. Corrija se precisar.",
+          "No quadro \"Cliente e equipamento (do cadastro)\", digite o nome ou o CNPJ do cliente e toque em \"Buscar cliente\". Escolha o cliente, a unidade e a autoclave.",
+          "Cliente, CNPJ, endereço, TAG, número de série e local são preenchidos pelo cadastro e ficam travados. Equipamento de outro cliente ou de outra unidade é recusado. Para corrigir um dado, edite o cadastro e escolha o equipamento de novo.",
+          "Se algo não aparecer, toque em \"Cadastrar cliente\", \"Cadastrar unidade\" ou \"Cadastrar equipamento\" (abre em outra aba), salve lá, volte para esta aba e toque em \"Atualizar listas\". O que já foi preenchido continua.",
           "Preencha \"Receita / Programa\", \"Tipo de Ensaio\" e \"Ciclo Nº\".",
-          "Em \"2. Equipamento\", preencha TAG, marca, modelo, número de série, lote, setor e o responsável técnico. O campo \"Operador\" já vem com o seu nome.",
+          "Em \"2. Equipamento\", preencha o lote e o responsável técnico. TAG, número de série e local vêm do cadastro; marca e modelo não entram no documento. O campo \"Operador\" já vem com o seu nome.",
           "Em \"3. Parâmetros de processo e norma\", escolha a \"Norma / ciclo alvo\" e a \"Temperatura programada\".",
           "Informe a \"Quantidade de sensores\".",
           "Em \"Sensores considerados na análise\", desmarque só o sensor que falhou durante o ensaio.",
@@ -86,11 +87,27 @@ function SGO_ajudaTelas_Qualificacao_() {
           "Se a pressão cair na janela, o sistema avisa: a janela informada não é a fase de espera (câmara isolada). Corrija os horários.",
           "O teste de estanqueidade não aparece com \"Analisar pressão\" desligado."
         ] },
-        { titulo: "Preencher o modelo oficial (folha de identificação)", itens: [
-          "Toque na aba \"Preencher modelo\".",
-          "Preencha número do relatório, data do ciclo, cliente, local, equipamento e o resultado.",
-          "Toque em \"Gerar documento e PDF\".",
-          "Se o modelo oficial ainda não foi importado, sai a folha no modelo padrão do SGO+. Para usar o modelo oficial, peça ao administrador para importar o documento-modelo."
+        { titulo: "Fazer o relatório de qualificação (aba \"Relatório oficial\")", itens: [
+          "Emita antes, na aba \"Gerar relatório\", o relatório de ensaio de cada ciclo (câmara vazia, com carga e teste de estanqueidade) com o mesmo cliente e equipamento.",
+          "Toque na aba \"Relatório oficial\". Em \"Cliente e equipamento\", busque o cliente e escolha a unidade e a autoclave.",
+          "Em \"Situação do equipamento\", confira se ele está qualificado, vencendo ou vencido.",
+          "Em \"Relatórios de ensaio do equipamento\", marque os relatórios dos ciclos desta qualificação. Revisões substituídas não aparecem para escolha.",
+          "Relatório emitido antes do vínculo com o cadastro aparece em \"Relatórios de ensaio sem vínculo\": confira o número e a TAG e toque em \"Vincular a este equipamento\". Só o vínculo é gravado; o documento não muda. Se a TAG do relatório for diferente da do cadastro, marque \"É o mesmo equipamento\" antes.",
+          "Em \"Qualificação\", marque as etapas (instalação, operação, desempenho), escolha o motivo, confira a periodicidade da requalificação (padrão 12 meses) e informe quem acompanhou pelo cliente.",
+          "Com a instalação marcada, responda cada item da lista (Conforme, Não conforme ou Não aplicável) e a data da verificação. Item não conforme precisa da descrição e reprova a qualificação.",
+          "Se houver, registre os indicadores (ensaio de Bowie-Dick, químico, biológico) com o resultado. Indicador não conforme reprova.",
+          "Toque em \"Gerar rascunho\". O sistema calcula o resultado: aprovado só se todos os ciclos e verificações atenderem aos critérios. Se aparecer a lista vermelha, cada item diz o que corrigir.",
+          "Revise a conclusão e o texto em linguagem simples. Para o assistente redigir a conclusão, marque a opção antes de gerar: o texto é conferido e, se não passar, vale o texto padrão.",
+          "Toque em \"Prévia do documento\" para ver a minuta e em \"Enviar para aprovação\". O número (RQA-ano-sequência) é dado no envio.",
+          "Responsável técnico: em \"Aguardando aprovação\", toque em \"Prévia\", marque \"Conferi os dados, os critérios e a conclusão e aprovo a emissão\" e toque em \"Aprovar e emitir\"; ou escreva o motivo e toque em \"Devolver ao técnico\".",
+          "O relatório fica em HTML e PDF na pasta do equipamento, dentro da pasta do cliente, entra no Arquivo de documentos com a validade e aparece na ficha do equipamento (aba Qualificações) e no QR Code. Use \"Enviar ao cliente\" para mandar por e-mail ou WhatsApp.",
+          "Para corrigir um relatório emitido, toque em \"Nova revisão\" em \"Relatórios de qualificação deste equipamento\", ajuste, gere o rascunho, escreva o motivo da revisão e envie. A revisão anterior fica guardada como substituída.",
+          "Envio devolvido: toque em \"Abrir para corrigir\", corrija e envie de novo."
+        ] },
+        { titulo: "Modelo anterior do relatório oficial (Administrador)", itens: [
+          "O formulário antigo (campos digitados e resultado escolhido pelo técnico) foi desativado e guardado.",
+          "Só o Administrador o reativa, em \"Modelo do relatório (administração)\", no topo da aba \"Relatório oficial\". Para voltar, escolha \"Modelo novo\".",
+          "Documentos já emitidos nos dois modelos continuam abrindo na pasta do cliente."
         ] },
         { titulo: "Reabrir documentos e arquivos", itens: [
           "Toque em \"Relatórios emitidos\" para abrir a pasta dos relatórios.",
@@ -123,10 +140,15 @@ function SGO_ajudaTelas_Qualificacao_() {
         { situacao: "Aviso \"Pressão incompatível com a temperatura\".", oQueFazer: "A coluna de pressão provavelmente está em bar relativo, kPa ou mbar. O ciclo usa bar absoluto: converta a coluna e envie de novo." },
         { situacao: "A planilha de dados não gera e diz que o registrador não foi informado ou não está no cadastro.", oQueFazer: "Preencha \"Identificação do registrador\" na seção 5 com a TAG do cadastro de padrões e gere de novo. Se o certificado venceu, atualize em \"Padrões de referência\"." },
         { situacao: "A planilha não abriu em outra aba.", oQueFazer: "O navegador bloqueou a nova aba. Permita janelas do SGO+ no navegador e gere de novo; a planilha emitida também fica na pasta do cliente (botão \"Abrir PDF da planilha de dados\")." },
-        { situacao: "Apareceu a janela \"Tela sem uso\".", oQueFazer: "Toque em \"Continuar\". O que você preencheu continua na tela." }
+        { situacao: "Apareceu a janela \"Tela sem uso\".", oQueFazer: "Toque em \"Continuar\". O que você preencheu continua na tela." },
+        { situacao: "Aparece \"Escolha o cliente, a unidade e o equipamento\" ao gerar.", oQueFazer: "Escolha os três no quadro \"Cliente e equipamento (do cadastro)\", no início da tela. Se faltar cadastro, use os botões de cadastrar (abrem em outra aba) e depois \"Atualizar listas\"." },
+        { situacao: "Aparece que o equipamento pertence a outro cliente ou está em outra unidade.", oQueFazer: "Escolha o equipamento na lista do cliente certo. Se o cadastro estiver errado, a gestão corrige em Cadastros › Vínculos." },
+        { situacao: "Relatório oficial: \"foi emitido sem o registro dos dados\" ou \"os dados mudaram desde a aprovação\".", oQueFazer: "Emita de novo o relatório daquele ciclo na aba \"Gerar relatório\" (sai uma nova revisão) e marque a revisão nova." },
+        { situacao: "Relatório oficial: \"a qualificação de desempenho foi marcada, mas nenhum relatório escolhido é de ciclo com carga\".", oQueFazer: "Marque o relatório do ciclo com carga (tipo de ensaio QD) ou desmarque a etapa de desempenho." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, rascunho do relatório de ensaio, memória do F0 e folha do modelo." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR,TECNICO,METROLOGIA", pode: "Gerar planilha, rascunho do relatório de ensaio, memória do F0 e rascunho do relatório de qualificação (aba Relatório oficial)." },
+        { perfil: "ADMIN", pode: "Escolher o modelo do relatório oficial (novo, padrão, ou anterior, desativado)." },
         { perfil: "ADMIN,DIRETORIA,GESTOR,METROLOGIA", pode: "Aprovar e emitir o relatório de ensaio e a planilha de dados (responsável técnico), ver a prévia dos pedidos e devolver com o motivo." },
         { perfil: "TECNICO", pode: "Envia o relatório de ensaio e a planilha de dados para aprovação do responsável técnico." },
         { perfil: "ADMIN", pode: "Também usa o \"Relatório interno\" (dados reconstituídos, com senha administrativa)." },
@@ -137,7 +159,8 @@ function SGO_ajudaTelas_Qualificacao_() {
         { p: "Qual a diferença entre o relatório de dados e o relatório de ensaio?", r: "O relatório de dados é a planilha de dados (A4 deitado) com todas as leituras, estatísticas, gráficos e a memória de cálculo. O relatório de ensaio (interpretação técnica) é o documento A4 em pé para o cliente, com identificação, critérios, resultados, análise, conclusão e assinaturas. Os números dos dois são os mesmos; gere sempre os dois com os mesmos dados e o mesmo número." },
         { p: "E a planilha antiga do Google Planilhas?", r: "Foi guardada sem mudança e está desligada. Só o responsável pelo sistema pode voltar a usá-la, em \"Chaves e senhas\", grupo \"Relatórios técnicos\", item \"Autoclave: modelo da planilha de dados\". Planilhas já emitidas no modelo antigo continuam na pasta do cliente como estão." },
         { p: "Existe \"aprovado com alerta\"?", r: "Não. Abaixo do mínimo da norma o ciclo é reprovado. Acima do mínimo, mas perto dele, o ciclo é aprovado e o relatório registra a observação \"próximo do limite\"." },
-        { p: "Numa campanha com vários ciclos, como faço?", r: "Gere uma planilha e uma interpretação para cada ciclo, mudando o \"Ciclo Nº\" e o \"Nº do ensaio (referência)\"." },
+        { p: "Numa campanha com vários ciclos, como faço?", r: "Gere uma planilha e uma interpretação para cada ciclo, mudando o \"Ciclo Nº\" e o \"Nº do ensaio (referência)\". Depois, na aba \"Relatório oficial\", consolide os relatórios de ensaio no relatório de qualificação do equipamento." },
+        { p: "Onde o cliente vê o relatório?", r: "No Arquivo de documentos, na ficha do equipamento (aba Qualificações) e na seção Qualificação do QR Code da etiqueta. Só aparecem documentos emitidos e aprovados; o cliente vê apenas os equipamentos dele." },
         { p: "Os ciclos de baixa temperatura usam F0?", r: "Não. Nos ciclos de 55 °C e 60 °C o resultado é avaliado pela temperatura na faixa do ciclo. O F0 vale para os ciclos a vapor de 121 °C, 127 °C e 134 °C." }
       ],
       secoesManual: [

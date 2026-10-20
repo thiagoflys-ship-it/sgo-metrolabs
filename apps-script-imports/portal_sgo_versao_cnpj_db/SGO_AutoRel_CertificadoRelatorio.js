@@ -574,6 +574,8 @@ function AutoRel_acEmitir_(payload, validado, sessao, idPendente) {
       STATUS: 'EMITIDO', REVISAO: String(revisao), APROVADO_POR: aprovacao.nome, APROVADO_LOGIN: aprovacao.login, APROVADO_PERFIL: aprovacao.perfil,
       APROVADO_EM: aprovacao.em, PDF_ID: r.pdfId || '', HTML_ID: r.htmlId || '', RESULTADO: contexto.statusConsolidado
     };
+    // 20/10/2026: resumo dos resultados guardado na emissão, para o relatório de qualificação (SGO_AutoRel_ModeloOficialNovo.js).
+    if (typeof AutoOficial_resumoCiclo_ === 'function') { try { campos.RESUMO_JSON = JSON.stringify(AutoOficial_resumoCiclo_(contexto)); } catch (eResumo) { /* recalculado quando for consolidado */ } }
     let id = idPendente;
     if (id) SGO_QE_atualizar_(id, campos);
     else id = SGO_QE_registrar_(Object.assign(AutoRel_acCamposRegistro_(contexto, payload, sessao), campos));
@@ -590,7 +592,9 @@ function AutoRel_acCamposRegistro_(contexto, payload, sessao) {
     MODULO: AUTOREL_MODULO_EMISSAO, NUMERO: contexto.identificacao.certificadoNumero, REVISAO: contexto.identificacao.revisao,
     CLIENTE: contexto.identificacao.cliente, CNPJ: contexto.identificacao.cnpj, TAG: contexto.identificacao.tag, RESULTADO: contexto.statusConsolidado,
     HASH_CONTEXTO: AutoRel_acAssinatura_(contexto), ENVIADO_POR: SGO_QE_nomeSessao_(sessao), ENVIADO_EM: SGO_QE_agora_(),
-    JUSTIFICATIVA_ESCOPO: contexto.justificativaSemPressao || ''
+    JUSTIFICATIVA_ESCOPO: contexto.justificativaSemPressao || '',
+    // 20/10/2026: vínculo com o cadastro (cliente, unidade e equipamento escolhidos na tela).
+    CLIENTE_ID: String((payload && payload.clienteId) || ''), UNIDADE_ID: String((payload && payload.unidadeId) || ''), EQUIPAMENTO_ID: String((payload && payload.equipamentoId) || '')
   };
 }
 

@@ -74,6 +74,14 @@ function SGO_QEQ_iso_(v) {
   return '';
 }
 
+/** Data e hora (dd/mm/aaaa hh:mm[:ss] ou ISO) → 'aaaa-mm-dd hh:mm:ss', para ordenar emissões do mesmo dia. */
+function SGO_QEQ_carimbo_(v) {
+  var s = SGO_QEQ_s_(v), d = SGO_QEQ_iso_(s);
+  if (!d) return '';
+  var h = /(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s.replace(/^\d{4}-\d{2}-\d{2}/, '').replace(/^\d{1,2}\/\d{1,2}\/\d{4}/, ''));
+  return d + ' ' + (h ? ('0' + h[1]).slice(-2) + ':' + h[2] + ':' + (h[3] || '00') : '00:00:00');
+}
+
 function SGO_QEQ_br_(iso) {
   var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(SGO_QEQ_s_(iso));
   return m ? m[3] + '/' + m[2] + '/' + m[1] : '';
@@ -193,7 +201,7 @@ function SGO_QEQ_aplicarVinculoPayload_(sessionId, payload) {
   return Object.assign({}, payload, {
     clienteId: id.clienteId, unidadeId: id.unidadeId, equipamentoId: id.equipamentoId,
     cliente: id.cliente, cnpj: id.cnpj, endereco: [id.endereco, id.cidadeUf].filter(Boolean).join(' - '),
-    setor: [id.unidade, id.setor].filter(Boolean).join(' — '), tag: id.tag, numSerie: id.numeroSerie
+    setor: [id.unidade, id.setor].filter(Boolean).join(' — '), tag: id.tag, numSerie: id.numeroSerie, tipoEquipamento: id.tipo, marca: '', modelo: ''
   });
 }
 
@@ -266,7 +274,7 @@ function SGO_QEQ_todosItens_() {
     var validade = SGO_QEQ_iso_(r.VALIDADE_ATE) || vencPorArquivo[SGO_QEQ_s_(r.PDF_ID)] || '';
     add(eq, {
       ref: 'QE:' + SGO_QEQ_s_(r.ID), origem: 'EMISSAO', modulo: SGO_QEQ_up_(r.MODULO), titulo: mod.titulo, ordem: mod.ordem,
-      numero: SGO_QEQ_s_(r.NUMERO), revisao: SGO_QEQ_s_(r.REVISAO) || '0', emitidoEmIso: SGO_QEQ_iso_(r.APROVADO_EM),
+      numero: SGO_QEQ_s_(r.NUMERO), revisao: SGO_QEQ_s_(r.REVISAO) || '0', emitidoEmIso: SGO_QEQ_iso_(r.APROVADO_EM), carimbo: SGO_QEQ_carimbo_(r.APROVADO_EM || r.ENVIADO_EM) + '#' + ('000000' + (r._linha || 0)).slice(-6),
       validadeIso: validade, resultado: SGO_QEQ_up_(r.RESULTADO), situacao: sit, conta: mod.conta && sit === 'VIGENTE',
       aprovadoPor: sit === 'MINUTA' ? '' : SGO_QEQ_s_(r.APROVADO_POR), pdfId: sit === 'MINUTA' ? '' : SGO_QEQ_s_(r.PDF_ID), htmlId: sit === 'MINUTA' ? '' : SGO_QEQ_s_(r.HTML_ID), link: ''
     });
@@ -288,7 +296,7 @@ function SGO_QEQ_todosItens_() {
     var pdf = SGO_QEQ_s_(r.PDF_ID);
     add(eq, {
       ref: 'BT:' + SGO_QEQ_s_(r.ID), origem: 'BAIXA_TEMPERATURA', modulo: 'BAIXA_TEMPERATURA', titulo: 'Relatório de qualificação — esterilizador a baixa temperatura', ordem: 1,
-      numero: SGO_QEQ_s_(r.NUMERO), revisao: SGO_QEQ_s_(r.REVISAO) || '0', emitidoEmIso: emit,
+      numero: SGO_QEQ_s_(r.NUMERO), revisao: SGO_QEQ_s_(r.REVISAO) || '0', emitidoEmIso: emit, carimbo: SGO_QEQ_carimbo_(r.EMITIDO_EM),
       validadeIso: minuta ? '' : (vencPorArquivo[pdf] || SGO_QEQ_somarMeses_(emit, mesesBt)), resultado: SGO_QEQ_up_(r.RESULTADO),
       situacao: minuta ? 'MINUTA' : (vigente ? 'VIGENTE' : 'SUBSTITUIDO'), conta: vigente,
       aprovadoPor: minuta ? '' : SGO_QEQ_s_(r.APROVADO_RT || r.APROVADO_POR), pdfId: minuta ? '' : pdf, htmlId: minuta ? '' : SGO_QEQ_s_(r.HTML_ID), link: minuta ? '' : SGO_QEQ_s_(r.LINK_PDF)
@@ -303,14 +311,14 @@ function SGO_QEQ_todosItens_() {
     if (id && idsArquivo[id]) return;
     add(eq, {
       ref: 'DOC:' + SGO_QEQ_s_(d.ID), origem: 'ARQUIVO', modulo: 'ARQUIVO', titulo: SGO_QEQ_s_(d.NOME_ARQUIVO) || 'Relatório de qualificação', ordem: 4,
-      numero: '', revisao: '', emitidoEmIso: SGO_QEQ_iso_(d.DATA_EMISSAO || d.CRIADO_EM), validadeIso: SGO_QEQ_iso_(d.DATA_VENCIMENTO),
+      numero: '', revisao: '', emitidoEmIso: SGO_QEQ_iso_(d.DATA_EMISSAO || d.CRIADO_EM), carimbo: SGO_QEQ_carimbo_(d.DATA_EMISSAO || d.CRIADO_EM), validadeIso: SGO_QEQ_iso_(d.DATA_VENCIMENTO),
       resultado: '', situacao: 'VIGENTE', conta: true, aprovadoPor: '', pdfId: id, htmlId: '', link: SGO_QEQ_s_(d.LINK_ARQUIVO)
     });
   });
 
   Object.keys(porEq).forEach(function (eq) {
     porEq[eq].sort(function (a, b) {
-      return (a.situacao === 'MINUTA') - (b.situacao === 'MINUTA') || b.emitidoEmIso.localeCompare(a.emitidoEmIso) || a.ordem - b.ordem || (parseInt(b.revisao, 10) || 0) - (parseInt(a.revisao, 10) || 0);
+      return (a.situacao === 'MINUTA') - (b.situacao === 'MINUTA') || String(b.carimbo || '').localeCompare(String(a.carimbo || '')) || a.ordem - b.ordem || (parseInt(b.revisao, 10) || 0) - (parseInt(a.revisao, 10) || 0);
     });
   });
   return porEq;
@@ -318,12 +326,13 @@ function SGO_QEQ_todosItens_() {
 
 /** Situação do equipamento pelos documentos vigentes que têm validade. */
 function SGO_QEQ_situacao_(itens, hojeIso) {
-  var cand = (itens || []).filter(function (i) { return i.conta && i.validadeIso; });
+  // Vale o último relatório de qualificação emitido (vigente): o reprovado não tem validade, mas também conta.
+  var cand = (itens || []).filter(function (i) { return i.conta && (i.validadeIso || i.resultado === 'REPROVADO'); });
   if (!cand.length) {
     var temCiclo = (itens || []).some(function (i) { return i.situacao === 'VIGENTE'; });
     return { situacao: 'SEM_QUALIFICACAO', rotulo: temCiclo ? 'Sem relatório de qualificação emitido (há relatórios de ensaio de ciclo)' : 'Sem qualificação registrada', validadeAte: '', dias: null };
   }
-  cand.sort(function (a, b) { return b.emitidoEmIso.localeCompare(a.emitidoEmIso) || b.validadeIso.localeCompare(a.validadeIso); });
+  cand.sort(function (a, b) { return String(b.carimbo || '').localeCompare(String(a.carimbo || '')) || String(b.validadeIso).localeCompare(String(a.validadeIso)); });
   var it = cand[0];
   var dias = SGO_QEQ_diasAte_(it.validadeIso, hojeIso);
   var br = SGO_QEQ_br_(it.validadeIso);
@@ -431,6 +440,7 @@ function qualifEquipamentoListar(sessionId, equipamentoId) {
     var sessao = exigirSessao(String(sessionId || ''));
     return JSON.parse(JSON.stringify(SGO_QEQ_listarParaSessao_(sessao, equipamentoId)));
   } catch (e) {
+    if (/^Acesso negado/.test(String(e && e.message))) return { success: false, message: String(e.message) };
     return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('carregar as qualificações do equipamento', e) : String(e && e.message ? e.message : e) };
   }
 }
@@ -448,6 +458,7 @@ function qrcodeQualificacao(sessionId, equipamentoId) {
     SGO_QEQ_log_('QRCODE_QUALIFICACAO_VISTA', sessao, 'Equipamento ' + equipamentoId + ' (perfil ' + SGO_QEQ_up_(sessao.perfil) + '): ' + r.itens.length + ' documento(s) listados.');
     return JSON.parse(JSON.stringify(r));
   } catch (e) {
+    if (/^Acesso negado/.test(String(e && e.message))) return { success: false, message: String(e.message) };
     return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('carregar a qualificação do equipamento', e) : String(e && e.message ? e.message : e) };
   }
 }
@@ -471,6 +482,7 @@ function qualifEquipamentoAbrir(sessionId, equipamentoId, ref, via) {
     SGO_QEQ_log_(via === 'qr' ? 'QRCODE_QUALIFICACAO_ABERTO' : 'QUALIF_DOCUMENTO_ABERTO', sessao, 'Equipamento ' + equipamentoId + ', ' + it.titulo + (it.numero ? ' nº ' + it.numero + ' rev ' + it.revisao : '') + ' (' + it.situacao + ').');
     return { success: true, url: url };
   } catch (e) {
+    if (/^(Acesso negado|Este documento ainda aguarda)/.test(String(e && e.message))) return { success: false, message: String(e.message) };
     return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('abrir o documento', e) : String(e && e.message ? e.message : e) };
   }
 }

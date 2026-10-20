@@ -2,6 +2,9 @@
 
 ## O que mudou em 20/10/2026
 
+- **O ensaio começa pelo cadastro.** Nas duas abas, o técnico busca o cliente e escolhe a unidade e a autoclave (quadro "Cliente e equipamento"). Cliente, CNPJ, endereço, TAG, número de série e local vêm do cadastro e ficam travados; marca e modelo não entram nos documentos. Equipamento de outro cliente ou de outra unidade é recusado. Sem cadastro, os botões "Cadastrar cliente", "Cadastrar unidade" e "Cadastrar equipamento" abrem o cadastro em outra aba; ao voltar, "Atualizar listas".
+- **Pasta do equipamento.** Relatório de ensaio, planilha de dados, memória do F0 e relatório de qualificação ficam em `Autoclave - Laudos/<CNPJ>/<TAG - tipo>/Qualificação`, dentro da pasta do cliente.
+- **Relatório no modelo oficial novo** (aba "Relatório oficial", antes "Preencher modelo"): o relatório de qualificação do equipamento (seção 7.2). O modelo anterior (documento-modelo com nove campos digitados e o resultado escolhido pelo técnico) foi guardado e desativado; só o Administrador o reativa.
 - **Planilha de dados nova** (modelo novo, padrão): documento A4 em paisagem com capa, sumário com páginas, quadro-resumo dos critérios, condições do ensaio, resultados por sensor e por fase, gráficos, memória de cálculo passo a passo e todas as leituras do registrador, salvo em HTML e PDF na pasta do cliente e emitido com a aprovação do responsável técnico (mesmo fluxo do relatório de ensaio). A planilha antiga do Google Planilhas foi guardada sem mudança e está desligada; só o responsável pelo sistema pode religá-la (seção 7.1). Planilhas já emitidas no modelo antigo continuam na pasta como estão.
 - O envio da planilha do registrador voltou a funcionar no servidor próprio: a pasta fixa de envios do Google Drive antigo não existe mais; o arquivo vai para a pasta própria do módulo ("Autoclave - Planilhas enviadas"). A pasta de laudos segue a mesma regra.
 - Nova opção em "Como enviar os dados": **Um arquivo por sensor (registradores individuais)**. Cada sensor marcado recebe o seu arquivo na grade "Sensores considerados na análise"; a pressão pode vir de um arquivo próprio.
@@ -29,7 +32,8 @@ O resultado (aprovado, reprovado ou informativo) é calculado pelo sistema, semp
 
 ## 3. Passo a passo
 
-1. **Seção 1 e 2** — cliente (CNPJ e "Buscar"), ensaio e equipamento.
+1. **Cliente e equipamento** — busque o cliente (nome ou CNPJ), escolha a unidade e a autoclave. A identificação é preenchida pelo cadastro.
+   **Seção 1 e 2** — programa, tipo de ensaio, ciclo nº, lote e responsável técnico.
 2. **Seção 3** — escolha o ciclo (121 °C, 127 °C ou 134 °C), a temperatura programada e a quantidade de sensores. Desmarque só o sensor que falhou no ensaio (e registre a falha). Informe a remoção de ar.
    - **Analisar pressão**: deixe ligado. Desligue apenas quando não foi possível instalar o transmissor de pressão e escreva a justificativa (exemplo: "equipamento sem ponto para instalar o transmissor de pressão").
    - **Sensor de referência da câmara** (opcional): o número do sensor junto ao dreno.
@@ -112,6 +116,23 @@ Regra de decisão: aceitação simples (o valor medido é comparado ao limite); 
 ### 7.1 Modelo da planilha de dados
 
 O modelo novo é o padrão. O modelo anterior (planilha do Google Planilhas exportada em PDF) está guardado sem mudança e desligado. Para religá-lo, o responsável pelo sistema abre **Chaves e senhas**, grupo **Relatórios técnicos**, item **Autoclave: modelo da planilha de dados**, e escolhe "Modelo anterior". Voltar para "Modelo novo" (ou deixar vazio) usa o novo. Documentos já emitidos em qualquer dos modelos não mudam.
+
+## 7.2 Relatório de qualificação (aba "Relatório oficial")
+
+O relatório de qualificação consolida, para um equipamento, os relatórios de ensaio de ciclo já emitidos (câmara vazia, com carga e teste de estanqueidade), a lista de verificação da instalação e os indicadores informados. Ele substitui o "Preencher modelo" antigo, cujo documento repetia um texto fixo (protocolo, conceito de eficiência, responsabilidades, instrumentação com marca do registrador, critérios genéricos, cálculo do F0, esquema de sensores, identificação com nove campos digitados e uma conclusão "aprovado" escolhida à mão).
+
+1. Escolha o cliente, a unidade e a autoclave. A tela mostra a situação do equipamento (qualificado, vencendo, vencido, reprovado ou sem qualificação).
+2. Marque os relatórios de ensaio do equipamento que fundamentam a qualificação. Relatório emitido antes do vínculo aparece em "Relatórios de ensaio sem vínculo"; "Vincular a este equipamento" só preenche o vínculo (nunca troca um vínculo existente; outro CNPJ é recusado; TAG diferente pede confirmação).
+3. Marque as etapas (QI, QO, QD), o motivo, a periodicidade da requalificação (padrão 12 meses, de 1 a 24, contada do último ensaio) e quem acompanhou pelo cliente.
+4. QI: responda a lista de verificação (conforme, não conforme com descrição, não aplicável) e a data. O item sobre vapor sai da lista quando nenhum ciclo analisou a pressão.
+5. Indicadores (opcional): Bowie-Dick, químico ou biológico, com o resultado informado.
+6. "Gerar rascunho": o sistema decide. Aprovado só se todos os ciclos estiverem aprovados e nenhum item da instalação ou indicador for não conforme. Travas (o que corrigir): sem etapa, sem motivo, periodicidade fora da faixa, relatório de ensaio de outro equipamento, sem vínculo, substituído, sem os dados registrados ou com dados mudados desde a aprovação, QO sem ciclo em câmara vazia ou estanqueidade, QD sem ciclo com carga, lista da instalação incompleta.
+7. A conclusão sai em texto padrão (montado só com os resultados) ou, se marcado, redigida pelo assistente e conferida (números, normas da lista, veredito, fabricante do cadastro e, sem pressão, nenhum termo de pressão). Revise e envie para aprovação; o número é RQA-ano-sequência.
+8. O responsável técnico confere a prévia (minuta), aprova e emite, ou devolve com o motivo. "Nova revisão" reabre um relatório emitido; o motivo entra no registro de revisões e a revisão anterior fica guardada como substituída.
+
+**O documento** (A4 em pé, HTML e PDF): capa, sumário com páginas, objetivo, escopo e limitações, identificação (do cadastro, sem marca nem modelo), referências normativas (só as da lista configurada), definições, responsabilidades da executante e do contratante, metodologia (instalação, ensaios térmicos, cálculo do F0 pela regra dos trapézios, estanqueidade quando houver, regra de decisão), instrumentos com certificado, validade e incerteza, critérios de aceitação com a fonte, resultados (lista da instalação, resumo dos ensaios, critérios por ensaio, indicadores), não conformidades e observações, conclusão com o texto em linguagem simples, recomendações e data da requalificação, assinaturas (elaborado por, responsáveis técnicos, ciência do contratante), Anexo A (relatórios de ensaio com o código de conferência dos dados) e Anexo B (registro de revisões). Sem pressão analisada, nenhuma referência a pressão fora da frase do escopo.
+
+**Depois de emitido**: fica na pasta do equipamento, entra no Arquivo de documentos (categoria "3. Relatórios de qualificação", com a validade), aparece na ficha do equipamento (aba Qualificações), na unidade, no cliente e na seção Qualificação do QR Code (só emitido e aprovado, só para o próprio cliente, com registro de cada acesso). A validade vira pendência de requalificação 30 dias antes e no vencimento, na central de pendências e na Caixa de decisões.
 
 ## 8. Normas citadas
 
