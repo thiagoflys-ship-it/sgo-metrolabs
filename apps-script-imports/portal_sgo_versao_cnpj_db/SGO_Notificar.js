@@ -48,7 +48,9 @@
  *            Propriedades: META_WA_TOKEN (segredo), META_WA_PHONE_ID, META_WA_WABA_ID.
  *    zapi  — Z-API (POST /instances/<INSTANCIA>/token/<TOKEN>/send-text, header
  *            Client-Token). Credenciais SÓ nas propriedades do script:
- *            ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN.
+ *            ZAPI_INSTANCIA, ZAPI_TOKEN, ZAPI_CLIENT_TOKEN. Sem modelo: texto pronto por
+ *            destinatário (Notificar_textoZapi_) e envio por SGO_zapiEnviarTexto_ (SGO_Zapi.js,
+ *            20/10/2026): só celular, fila única com o COMMAND, intervalo e limites do número.
  *               Telefone: primeiro
  *               CAD_USUARIOS.CELULAR (Administração > Usuários); depois
  *               WHATSAPP/TELEFONE do usuário se a coluna existir; senão o telefone
@@ -564,13 +566,14 @@ function SGO_notificar_(opcoes) {
     };
     var htmlEmail = Notificar_htmlEmail_(titulo, texto, link);
     var txtEmail = Notificar_textoEmail_(titulo, texto, link);
-    var txtWhats = String(o.textoWhatsapp || '').trim();
-    if (!txtWhats) {
-      var curto = texto.replace(/\s+/g, ' ');
-      if (curto.length > 400) curto = curto.slice(0, 397) + '...';
-      txtWhats = 'SGO+ Metrolabs - ' + titulo + (curto ? '\n\n' + curto : '');
-    }
-    if (link && txtWhats.indexOf(link) < 0) txtWhats += '\n\nAbra o SGO+: ' + link;
+    // 20/10/2026: Z-API sem modelo — texto pronto por destinatário (SGO_Zapi.js, Notificar_textoZapi_): o texto próprio do
+    // módulo; senão o texto do modelo que o módulo pediu, preenchido; senão o aviso geral com saudação, assunto e link.
+    var baseZapi = { textoWhatsapp: String(o.textoWhatsapp || '').trim(), modelo: o.modelo && o.modelo.nome ? modelo : null, params: paramsPara, titulo: titulo, texto: texto, link: link };
+    var txtWhatsPara = function (c) {
+      if (typeof Notificar_textoZapi_ === 'function') return Notificar_textoZapi_(baseZapi, c);
+      var t = baseZapi.textoWhatsapp || ('SGO+ Metrolabs - ' + titulo + (texto ? '\n\n' + texto.replace(/\s+/g, ' ').slice(0, 400) : ''));
+      return link && t.indexOf(link) < 0 ? t + '\n\nAbra o SGO+: ' + link : t;
+    };
 
     // 17/10/2026: a mesma mensagem para a mesma pessoa pelo mesmo canal não sai duas vezes em 10 minutos,
     // venha do caminho que vier (duplo clique em Publicar/Reenviar, a verificação das telas e a rotina de
@@ -624,7 +627,9 @@ function SGO_notificar_(opcoes) {
               r = Notificar_enviarMeta_(wa.cred, c.telefone, modelo.nome, paramsPara(c));
               if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Meta (modelo ' + modelo.nome + (r.id ? ', id ' + r.id : '') + ').'); return; }
             } else {
-              r = Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhats);
+              // envio único da Z-API (SGO_Zapi.js): só celular válido, fila única com o COMMAND, intervalo e limites do número
+              r = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(c.telefone, txtWhatsPara(c), { cred: wa.cred, tipo: 'AVISO' }) : Notificar_enviarWhatsapp_(wa.cred, c.telefone, txtWhatsPara(c));
+              if (r.pulado) { liberar(); registrar(uid, c.nome, canal, c.telefone, 'PULADO', r.motivo); return; }
               if (r.ok) { resumo.ids = resumo.ids || {}; resumo.ids[uid] = r.id || ''; if (whatsAtvHoje) whatsAtvHoje[uid] = true; registrar(uid, c.nome, canal, c.telefone, 'OK', 'Aceito pela Z-API.'); return; }
             }
             liberar();
