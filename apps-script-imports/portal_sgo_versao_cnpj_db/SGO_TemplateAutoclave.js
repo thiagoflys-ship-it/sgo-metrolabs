@@ -274,6 +274,10 @@ function tplAutoclaveObterPlaceholders(sessionId) {
 function tplAutoclaveGerarRelatorio(sessionId, payload) {
   try {
     exigirSessao(String(typeof sessionId === 'string' ? sessionId : '')); // tela antiga sem sessão recebe o aviso de login
+    // 20/10/2026: o modelo anterior foi desativado (SGO_AutoRel_ModeloOficialNovo.js); só gera se o Administrador o reativou.
+    if (typeof AutoOficial_modelo_ === 'function' && AutoOficial_modelo_() !== 'ANTERIOR') {
+      return { ok: false, erro: 'O modelo anterior do relatório oficial foi desativado. Atualize a página (F5): a aba "Relatório oficial" usa o modelo novo, com o cliente e o equipamento do cadastro e o resultado calculado dos relatórios de ensaio. Só o Administrador pode reativar o modelo anterior.' };
+    }
     return JSON.parse(JSON.stringify(SGO_TEMPLATE_AUTOCLAVE.gerarRelatorio(payload)));
   } catch (e) {
     return { ok: false, erro: SGO_textoFalhaOperador_('gerar o relatório pelo modelo', e) };

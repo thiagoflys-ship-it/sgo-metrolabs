@@ -19,7 +19,10 @@
 var SGO_QE_ABA = 'QUALIF_EMISSOES';
 var SGO_QE_CAMPOS = ['ID', 'MODULO', 'STATUS', 'NUMERO', 'REVISAO', 'CLIENTE', 'CNPJ', 'TAG', 'RESULTADO', 'HASH_CONTEXTO',
   'ENVIADO_POR', 'ENVIADO_EM', 'APROVADO_POR', 'APROVADO_LOGIN', 'APROVADO_PERFIL', 'APROVADO_EM', 'DEVOLVIDO_MOTIVO',
-  'PDF_ID', 'HTML_ID', 'JUSTIFICATIVA_ESCOPO', 'PAYLOAD_JSON', 'ATUALIZADO_EM'];
+  'PDF_ID', 'HTML_ID', 'JUSTIFICATIVA_ESCOPO', 'PAYLOAD_JSON', 'ATUALIZADO_EM',
+  // 20/10/2026 (fluxo cliente → unidade → equipamento): vínculo com o cadastro, validade da qualificação
+  // e resumo dos resultados guardado na emissão. Colunas novas entram no fim da aba (nada é apagado).
+  'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'VALIDADE_ATE', 'RESUMO_JSON'];
 var SGO_QE_MEMORIA_ = null; // só nos testes (sem banco)
 
 function SGO_QE_agora_() {
@@ -42,6 +45,12 @@ function SGO_QE_aba_() {
   if (!aba) {
     aba = ss.insertSheet(SGO_QE_ABA);
     aba.getRange(1, 1, 1, SGO_QE_CAMPOS.length).setValues([SGO_QE_CAMPOS]);
+  } else {
+    // Aba criada antes das colunas novas: acrescenta só os títulos que faltam, no fim (sem mexer nos dados).
+    var ultCol = aba.getLastColumn();
+    var cab = ultCol ? aba.getRange(1, 1, 1, ultCol).getValues()[0].map(String) : [];
+    var faltam = SGO_QE_CAMPOS.filter(function (c) { return cab.indexOf(c) < 0; });
+    if (faltam.length) aba.getRange(1, ultCol + 1, 1, faltam.length).setValues([faltam]);
   }
   return aba;
 }
@@ -59,7 +68,23 @@ function SGO_QE_lerTudo_() {
   });
 }
 
+/** Cliente, unidade e equipamento do cadastro guardados no envio (payload da tela), quando a chamada não os trouxe. */
+function SGO_QE_vinculoDoPayload_(dados) {
+  if (dados.EQUIPAMENTO_ID || !dados.PAYLOAD_JSON) return dados;
+  try {
+    var p = JSON.parse(String(dados.PAYLOAD_JSON));
+    if (p && p.equipamentoId) {
+      dados = Object.assign({}, dados);
+      dados.CLIENTE_ID = dados.CLIENTE_ID || String(p.clienteId || '');
+      dados.UNIDADE_ID = dados.UNIDADE_ID || String(p.unidadeId || '');
+      dados.EQUIPAMENTO_ID = String(p.equipamentoId);
+    }
+  } catch (e) { /* payload antigo ou ilegível: segue sem vínculo */ }
+  return dados;
+}
+
 function SGO_QE_registrar_(dados) {
+  dados = SGO_QE_vinculoDoPayload_(dados || {});
   var reg = {};
   SGO_QE_CAMPOS.forEach(function (c) { reg[c] = dados[c] === undefined || dados[c] === null ? '' : String(dados[c]); });
   reg.ID = reg.ID || ('QE-' + Utilities.getUuid().slice(0, 8).toUpperCase());

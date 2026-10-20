@@ -20,7 +20,7 @@ O módulo registra o ensaio de qualificação, lê os arquivos do registrador de
 
 ### 3.1 Identificação
 
-Tipo de processo (peróxido de hidrogênio ou VBTF), etapas executadas (QI, QO, QD), cliente (busca por nome ou CNPJ), unidade, equipamento, datas do ensaio, técnico executor, quem acompanhou pelo cliente, motivo da qualificação e observações gerais. Os dados do cliente e do equipamento vêm sempre do cadastro.
+Tipo de processo (peróxido de hidrogênio ou VBTF), etapas executadas (QI, QO, QD), cliente (busca por nome ou CNPJ), unidade, equipamento, datas do ensaio, técnico executor, quem acompanhou pelo cliente, motivo da qualificação e observações gerais. Os dados do cliente e do equipamento vêm sempre do cadastro, e o relatório só pode ser feito para equipamento do próprio cliente: equipamento de outro cliente ou de outra unidade é recusado já ao salvar. Se faltar cadastro, os botões **Cadastrar cliente**, **Cadastrar unidade** e **Cadastrar equipamento** abrem o cadastro em outra aba; depois de salvar, volte e toque em **Buscar cliente** de novo. O relatório emitido aparece na ficha do equipamento (aba **Qualificações**), no Arquivo de documentos e na seção **Qualificação** do QR Code, com a validade da requalificação.
 
 ### 3.2 Ciclo e critérios
 

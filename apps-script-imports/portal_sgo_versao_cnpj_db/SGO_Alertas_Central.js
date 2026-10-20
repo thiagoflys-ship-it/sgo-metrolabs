@@ -79,6 +79,9 @@ var PEND_TIPOS = {
   documento_vencendo: { modulo: 'documentos', um: 'documento a vencer', varios: 'documentos a vencer', rotulo: 'A vencer', fazer: 'providencie a renovação antes do vencimento', tela: { tipo: 'modulo', mod: 'documentos' }, origem: 'DOCUMENTO', vencimento: true },
   calibracao_vencida: { modulo: 'certificados', um: 'calibração de equipamento vencida', varios: 'calibrações de equipamentos vencidas', rotulo: 'Vencida', fazer: 'agende a recalibração com o cliente', tela: { tipo: 'modulo', mod: 'certificado_calibracao' }, origem: 'DOCUMENTO', vencimento: true },
   calibracao_vencendo: { modulo: 'certificados', um: 'calibração de equipamento a vencer', varios: 'calibrações de equipamentos a vencer', rotulo: 'A vencer', fazer: 'agende a recalibração antes do vencimento', tela: { tipo: 'modulo', mod: 'certificado_calibracao' }, origem: 'DOCUMENTO', vencimento: true },
+  // 20/10/2026 (fluxo cliente → equipamento → qualificação): relatório de qualificação com requalificação a vencer (SGO_QualifEquipamento.js).
+  requalificacao_vencida: { modulo: 'qualificacao', um: 'requalificação de equipamento vencida', varios: 'requalificações de equipamentos vencidas', rotulo: 'Vencida', fazer: 'agende a requalificação com o cliente', tela: { tipo: 'modulo', mod: 'equipamentos' }, origem: 'DOCUMENTO', vencimento: true },
+  requalificacao_vencendo: { modulo: 'qualificacao', um: 'requalificação de equipamento a vencer', varios: 'requalificações de equipamentos a vencer', rotulo: 'A vencer', fazer: 'agende a requalificação antes do vencimento', tela: { tipo: 'modulo', mod: 'equipamentos' }, origem: 'DOCUMENTO', vencimento: true },
   nr13_vencida: { modulo: 'nr13', um: 'inspeção NR-13 vencida', varios: 'inspeções NR-13 vencidas', rotulo: 'Vencida', fazer: 'agende a nova inspeção com o cliente', tela: { tipo: 'modulo', mod: 'nr13' }, origem: 'DOCUMENTO', vencimento: true },
   nr13_vencendo: { modulo: 'nr13', um: 'inspeção NR-13 a vencer', varios: 'inspeções NR-13 a vencer', rotulo: 'A vencer', fazer: 'agende a inspeção antes do vencimento', tela: { tipo: 'modulo', mod: 'nr13' }, origem: 'DOCUMENTO', vencimento: true },
   cnh_vencida: { modulo: 'frota', um: 'CNH vencida', varios: 'CNHs vencidas', rotulo: 'Vencida', fazer: 'renove a CNH e atualize o cadastro do condutor', tela: { tipo: 'modulo', mod: 'frota' }, origem: 'FROTA', vencimento: true },
@@ -367,6 +370,7 @@ function Pend_categoriaDocumento_(tipo) {
   var t = Pend_semAcento_(tipo);
   if (/calibra/.test(t)) return 'CAL';
   if (/nr ?-?13|vaso de press/.test(t)) return 'NR13';
+  if (/qualifica/.test(t)) return 'QUAL';
   return 'DOC';
 }
 
@@ -473,6 +477,17 @@ function Pend_fonteDocumentos_(add) {
         tela: { tipo: 'modulo', mod: 'nr13' },
         telaCliente: { tipo: 'modulo', mod: 'documentos' },
         textoEstavel: 'A inspeção NR-13 ' + (eq ? 'do equipamento \'' + eq + '\' ' : '') + (cli ? 'do cliente \'' + cli + '\' ' : '') + (vencido ? 'venceu em ' : 'vence em ') + Pend_br_(c.venc) + '.'
+      })));
+    } else if (c.cat === 'QUAL') {
+      add(Pend_item_(vencido ? 'requalificacao_vencida' : 'requalificacao_vencendo', Object.assign(base, {
+        nome: eq || cli || 'equipamento',
+        titulo: 'Requalificação ' + (eq ? 'do equipamento ' + eq + ' ' : '') + (dias === 0 ? 'vence hoje' : (vencido ? 'vencida desde ' : 'vence em ') + Pend_br_(c.venc)),
+        detalhe: [onde, c.nomeArquivo ? 'relatório ' + Pend_curto_(c.nomeArquivo, 70) : ''].filter(Boolean).join(' · ') + '. Requalificação ' + prazo + '.',
+        oQueFazer: 'Agende a requalificação com o cliente e emita o novo relatório de qualificação no módulo do equipamento; o novo substitui este vencimento.',
+        oQueFazerCliente: 'Entre em contato com a Metrolabs para agendar a requalificação deste equipamento.',
+        tela: { tipo: 'modulo', mod: 'equipamentos' },
+        telaCliente: { tipo: 'modulo', mod: 'equipamentos' },
+        textoEstavel: 'A requalificação ' + (eq ? 'do equipamento \'' + eq + '\' ' : '') + (cli ? 'do cliente \'' + cli + '\' ' : '') + (vencido ? 'venceu em ' : 'vence em ') + Pend_br_(c.venc) + '.'
       })));
     } else {
       var nomeDoc = c.nomeArquivo || c.tipoDoc || 'Documento';

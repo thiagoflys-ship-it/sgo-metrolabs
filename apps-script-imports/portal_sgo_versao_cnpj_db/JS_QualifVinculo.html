@@ -1,0 +1,197 @@
+<!--
+  Fluxo integrado cliente → unidade → equipamento → qualificação (20/10/2026) — componentes de tela comuns.
+   - SGO_QVinc.montar(el, opcoes): escolha do cliente, da unidade e do equipamento a partir do cadastro, com atalhos
+     para cadastrar o que faltar (abre o cadastro em outra aba e a tela atual continua como está; ao voltar,
+     "Atualizar listas"). Usado pelo Relatório oficial e pela aba "Gerar relatório" da Autoclave.
+   - SGO_QVinc.htmlQualificacoes(res, opcoes): lista de qualificações do equipamento (ficha do equipamento e QR code).
+   - SGO_QVinc.abrirDocumento(equipamentoId, ref, via): abre um documento da lista (com trilha de acesso no servidor).
+  Servidor: SGO_QualifEquipamento.js e AutoOficial_apiDispatch (SGO_AutoRel_ModeloOficialNovo.js).
+-->
+<style>
+  .qvinc { border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 14px; background: var(--bc-surface, #fff); margin-bottom: 14px; min-width: 0; }
+  .qvinc h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+  .qvinc .qvinc-sub { margin: 0 0 10px; font-size: 12.5px; color: var(--bc-text-3); line-height: 1.5; }
+  .qvinc .qvinc-linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .qvinc .qvinc-campo { flex: 1 1 220px; min-width: 0; }
+  .qvinc .qvinc-campo label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 5px; }
+  .qvinc input, .qvinc select { width: 100%; min-height: 42px; padding: 9px 10px; border-radius: var(--radius-sm, 6px); font-size: 14px; }
+  .qvinc .qvinc-btn { min-height: 42px; padding: 9px 14px; border-radius: var(--radius-sm, 6px); font-weight: 700; font-size: 13px; cursor: pointer; }
+  .qvinc .qvinc-atalhos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .qvinc .qvinc-atalhos button { font-size: 12.5px; padding: 7px 10px; min-height: 36px; }
+  .qvinc .qvinc-msg { font-size: 12.5px; line-height: 1.5; padding: 9px 11px; border-radius: 6px; margin: 6px 0 8px; display: none; }
+  .qvinc .qvinc-msg.mostrar { display: block; }
+  .qvinc .qvinc-msg.aviso { background: var(--bc-warn-bg); color: var(--bc-warn); border: 1px solid var(--bc-warn-line); }
+  .qvinc .qvinc-msg.info { background: var(--bc-info-bg); color: var(--bc-text-2); border: 1px solid var(--bc-info-line); }
+  .qvinc .qvinc-msg.erro { background: var(--bc-danger-bg); color: var(--bc-danger); border: 1px solid var(--bc-danger-line); }
+  .qvinc .qvinc-cartao { display: none; border-left: 3px solid var(--bc-action-line, #2a7); background: var(--bc-action-bg, #f2f8f4); padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.55; }
+  .qvinc .qvinc-cartao.mostrar { display: block; }
+  .qvinc .qvinc-cartao b { font-weight: 700; }
+  .qualif-lista { list-style: none; margin: 0; padding: 0; }
+  .qualif-lista li { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  .qualif-lista li.substituido { opacity: .72; }
+  .qualif-lista .qualif-txt { flex: 1 1 240px; min-width: 0; font-size: 13px; line-height: 1.5; }
+  .qualif-lista .qualif-txt small { display: block; color: var(--bc-text-3); }
+  .qualif-situacao { padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 13.5px; font-weight: 700; }
+  .qualif-situacao.QUALIFICADO { background: var(--bc-action-bg, #eef7f0); color: var(--bc-ok, #1d6b3f); border: 1px solid var(--bc-action-line, #9fd3b0); }
+  .qualif-situacao.VENCENDO { background: var(--bc-warn-bg); color: var(--bc-warn); border: 1px solid var(--bc-warn-line); }
+  .qualif-situacao.VENCIDO, .qualif-situacao.REPROVADO { background: var(--bc-danger-bg); color: var(--bc-danger); border: 1px solid var(--bc-danger-line); }
+  .qualif-situacao.SEM_QUALIFICACAO { background: var(--bc-info-bg); color: var(--bc-text-2); border: 1px solid var(--bc-info-line); }
+  @media (max-width: 768px) { .qvinc .qvinc-btn { width: 100%; } .qvinc .qvinc-campo { flex-basis: 100%; } }
+</style>
+<script>
+  var SGO_QVinc = (function () {
+    function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+
+    function chamarOficial(fn, payload, ok, erro) {
+      google.script.run
+        .withSuccessHandler(function (r) { if (r && r.ok) ok(r); else erro((r && r.erro) || "O servidor não confirmou a operação. Tente de novo."); })
+        .withFailureHandler(function (e) { erro("Não foi possível falar com o servidor (" + String(e && e.message ? e.message : e).replace(/[.\s]+$/, "") + "). Confira a conexão e tente de novo."); })
+        .AutoOficial_apiDispatch({ sessionId: SGO_getSessionId(), fn: fn, payload: payload || {} });
+    }
+
+    /** Abre o cadastro numa aba nova do SGO+ (a tela atual continua como está). */
+    function abrirCadastro(tela) {
+      var base = String(window.location.href || "").replace(/[?#].*$/, "");
+      try { window.open(base + "?tela=" + encodeURIComponent(tela), "_blank"); } catch (e) { try { abrir(tela); } catch (e2) {} }
+    }
+
+    /**
+     * opcoes: { prefixo, titulo, subtitulo, valor:{clienteId, unidadeId, equipamentoId, cliente}, aoMudar(ident|null), somenteLeitura }
+     * Devolve { valor(), recarregar() }.
+     */
+    function montar(el, opcoes) {
+      opcoes = opcoes || {};
+      var px = opcoes.prefixo || "qv";
+      var st = { clientes: [], unidades: [], equipamentos: [], v: Object.assign({ clienteId: "", unidadeId: "", equipamentoId: "", cliente: "" }, opcoes.valor || {}), ident: null };
+      function $(s) { return el.querySelector("#" + px + s); }
+      el.innerHTML = '<div class="qvinc">' +
+        '<h3>' + esc(opcoes.titulo || "Cliente e equipamento") + '</h3>' +
+        '<p class="qvinc-sub">' + esc(opcoes.subtitulo || "O ensaio começa pelo cadastro: escolha o cliente, a unidade e o equipamento. Os dados de identificação vêm do cadastro, sem digitar de novo.") + '</p>' +
+        '<div class="qvinc-linha"><div class="qvinc-campo"><label for="' + px + 'Busca">Buscar cliente (nome ou CNPJ)</label><input id="' + px + 'Busca" type="text" autocomplete="off" placeholder="Digite ao menos 2 letras ou 3 números"></div>' +
+        '<button type="button" class="btn-secondary qvinc-btn" id="' + px + 'BtnBuscar">Buscar cliente</button></div>' +
+        '<div class="qvinc-linha"><div class="qvinc-campo"><label for="' + px + 'Cliente">Cliente</label><select id="' + px + 'Cliente"><option value="">Busque o cliente acima</option></select></div>' +
+        '<div class="qvinc-campo"><label for="' + px + 'Unidade">Unidade</label><select id="' + px + 'Unidade"><option value="">Escolha o cliente primeiro</option></select></div>' +
+        '<div class="qvinc-campo"><label for="' + px + 'Equip">Equipamento (TAG — tipo — nº de série)</label><select id="' + px + 'Equip"><option value="">Escolha a unidade primeiro</option></select></div></div>' +
+        '<div class="qvinc-msg" id="' + px + 'Msg"></div>' +
+        '<div class="qvinc-cartao" id="' + px + 'Cartao"></div>' +
+        '<div class="qvinc-atalhos"><span style="font-size:12px;color:var(--bc-text-3);align-self:center">Falta no cadastro?</span>' +
+        '<button type="button" class="btn-secondary" data-tela="clientes">Cadastrar cliente</button>' +
+        '<button type="button" class="btn-secondary" data-tela="unidades">Cadastrar unidade</button>' +
+        '<button type="button" class="btn-secondary" data-tela="equipamentos">Cadastrar equipamento</button>' +
+        '<button type="button" class="btn-secondary" id="' + px + 'BtnAtualizar">Atualizar listas</button></div></div>';
+
+      function msg(tipo, texto) { var m = $("Msg"); if (!m) return; m.className = "qvinc-msg" + (texto ? " mostrar " + tipo : ""); m.textContent = texto || ""; }
+      function avisar() { if (typeof opcoes.aoMudar === "function") { try { opcoes.aoMudar(st.ident ? Object.assign({}, st.ident) : null); } catch (e) { console.error(e); } } }
+      function desenharSelect(sel, itens, vazio, rotulo, atual) {
+        sel.innerHTML = '<option value="">' + esc(vazio) + '</option>' + itens.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === atual ? " selected" : "") + '>' + esc(rotulo(x)) + '</option>'; }).join("");
+      }
+      function cartao() {
+        var c = $("Cartao"); if (!c) return;
+        var i = st.ident;
+        if (!i) { c.className = "qvinc-cartao"; c.innerHTML = ""; return; }
+        c.className = "qvinc-cartao mostrar";
+        c.innerHTML = "<b>" + esc(i.cliente) + "</b>" + (i.cnpj ? " — CNPJ " + esc(i.cnpj) : "") + "<br>" + esc(i.unidade) + (i.setor ? " · " + esc(i.setor) : "") +
+          "<br>Equipamento: <b>" + esc(i.tag || "sem TAG") + "</b> · " + esc(i.tipo) + (i.numeroSerie ? " · nº de série " + esc(i.numeroSerie) : "") +
+          (i.tipoCompativel === false ? '<br><span style="color:var(--bc-warn)">O tipo cadastrado não é de autoclave: confira se escolheu o equipamento certo.</span>' : "");
+      }
+      function buscar() {
+        var t = ($("Busca").value || "").trim();
+        if (t.replace(/\D/g, "").length < 3 && t.length < 2) { msg("aviso", "Digite ao menos 2 letras do nome ou 3 números do CNPJ do cliente."); return; }
+        msg("info", "Buscando…");
+        chamarOficial("apiPesquisarClientes", { termo: t }, function (r) {
+          st.clientes = r.items || [];
+          desenharSelect($("Cliente"), st.clientes, st.clientes.length ? "Escolha o cliente" : "Nenhum cliente encontrado", function (c) { return c.nome + (c.cnpj ? " — " + c.cnpj : ""); }, st.v.clienteId);
+          msg(st.clientes.length ? "info" : "aviso", st.clientes.length ? "Escolha o cliente na lista." : 'Nenhum cliente ativo encontrado com "' + t + '". Confira a grafia ou cadastre em "Cadastrar cliente" (abre em outra aba) e depois clique em "Atualizar listas".');
+          if (st.clientes.length === 1 && !st.v.clienteId) { $("Cliente").value = st.clientes[0].id; escolherCliente(st.clientes[0].id); }
+        }, function (e) { msg("erro", e); });
+      }
+      function escolherCliente(id) {
+        var c = st.clientes.filter(function (x) { return x.id === id; })[0];
+        st.v = { clienteId: id || "", unidadeId: "", equipamentoId: "", cliente: c ? c.razao : "" };
+        st.ident = null; st.unidades = []; st.equipamentos = []; cartao(); avisar();
+        desenharSelect($("Equip"), [], "Escolha a unidade primeiro", function () { return ""; }, "");
+        if (!id) { desenharSelect($("Unidade"), [], "Escolha o cliente primeiro", function () { return ""; }, ""); return; }
+        carregarUnidades();
+      }
+      function carregarUnidades(depois) {
+        chamarOficial("apiListarUnidades", { clienteId: st.v.clienteId }, function (r) {
+          st.unidades = r.items || [];
+          desenharSelect($("Unidade"), st.unidades, st.unidades.length ? "Escolha a unidade" : "Este cliente não tem unidade ativa", function (u) { return u.nome; }, st.v.unidadeId);
+          if (!st.unidades.length) msg("aviso", 'Este cliente não tem unidade ativa. Cadastre em "Cadastrar unidade" (abre em outra aba) e depois clique em "Atualizar listas".');
+          else msg("", "");
+          if (st.unidades.length === 1 && !st.v.unidadeId) { $("Unidade").value = st.unidades[0].id; st.v.unidadeId = st.unidades[0].id; }
+          if (st.v.unidadeId) carregarEquipamentos(depois); else if (depois) depois();
+        }, function (e) { msg("erro", e); });
+      }
+      function carregarEquipamentos(depois) {
+        chamarOficial("apiListarEquipamentos", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId }, function (r) {
+          st.equipamentos = r.items || [];
+          desenharSelect($("Equip"), st.equipamentos, st.equipamentos.length ? "Escolha o equipamento" : "Nenhum equipamento ativo nesta unidade", function (q) { return [q.tag || "sem TAG", q.tipo, q.serie].filter(Boolean).join(" — ") + (q.compativel ? "" : " (outro tipo)"); }, st.v.equipamentoId);
+          if (!st.equipamentos.length) msg("aviso", 'Nenhum equipamento ativo nesta unidade. Cadastre em "Cadastrar equipamento" (abre em outra aba) e depois clique em "Atualizar listas".');
+          if (st.v.equipamentoId) identificar(); else if (depois) depois();
+        }, function (e) { msg("erro", e); });
+      }
+      function identificar() {
+        if (!st.v.equipamentoId) { st.ident = null; cartao(); avisar(); return; }
+        chamarOficial("apiIdentificacao", { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId }, function (r) {
+          st.ident = Object.assign({}, r.identificacao, { tipoCompativel: r.tipoCompativel });
+          msg("", ""); cartao(); avisar();
+        }, function (e) { st.ident = null; cartao(); msg("erro", e); avisar(); });
+      }
+      $("BtnBuscar").onclick = buscar;
+      $("Busca").onkeydown = function (ev) { if (ev.key === "Enter") { ev.preventDefault(); buscar(); } };
+      $("Cliente").onchange = function () { escolherCliente(this.value); };
+      $("Unidade").onchange = function () { st.v.unidadeId = this.value; st.v.equipamentoId = ""; st.ident = null; cartao(); avisar(); if (this.value) carregarEquipamentos(); else desenharSelect($("Equip"), [], "Escolha a unidade primeiro", function () { return ""; }, ""); };
+      $("Equip").onchange = function () { st.v.equipamentoId = this.value; identificar(); };
+      $("BtnAtualizar").onclick = function () {
+        if (st.v.clienteId) { msg("info", "Atualizando…"); carregarUnidades(function () { msg("info", "Listas atualizadas."); }); }
+        else if (($("Busca").value || "").trim()) buscar();
+        else msg("aviso", "Busque o cliente para atualizar as listas.");
+      };
+      Array.prototype.forEach.call(el.querySelectorAll("[data-tela]"), function (b) { b.onclick = function () { abrirCadastro(b.getAttribute("data-tela")); msg("info", 'O cadastro abriu em outra aba. Depois de salvar, volte para esta aba e clique em "Atualizar listas": o que já foi preenchido aqui continua.'); }; });
+      if (opcoes.somenteLeitura) Array.prototype.forEach.call(el.querySelectorAll("input,select,button"), function (x) { x.disabled = true; });
+
+      // Valor inicial (ensaio reaberto): carrega as listas do cliente salvo.
+      if (st.v.clienteId) {
+        st.clientes = [{ id: st.v.clienteId, nome: st.v.cliente || "Cliente salvo", razao: st.v.cliente || "" }];
+        desenharSelect($("Cliente"), st.clientes, "Escolha o cliente", function (c) { return c.nome; }, st.v.clienteId);
+        carregarUnidades();
+      }
+      return {
+        valor: function () { return st.ident ? { clienteId: st.v.clienteId, unidadeId: st.v.unidadeId, equipamentoId: st.v.equipamentoId } : null; },
+        identificacao: function () { return st.ident ? Object.assign({}, st.ident) : null; },
+        recarregar: function () { if (st.v.clienteId) carregarUnidades(); },
+        definir: function (v) { st.v = Object.assign({ clienteId: "", unidadeId: "", equipamentoId: "", cliente: "" }, v || {}); st.ident = null; if (st.v.clienteId) { st.clientes = [{ id: st.v.clienteId, nome: st.v.cliente || "Cliente salvo", razao: st.v.cliente || "" }]; desenharSelect($("Cliente"), st.clientes, "Escolha o cliente", function (c) { return c.nome; }, st.v.clienteId); carregarUnidades(); } }
+      };
+    }
+
+    /** Lista de qualificações (ficha do equipamento e QR). res: resposta de qualifEquipamentoListar/qrcodeQualificacao. */
+    function htmlQualificacoes(res, opcoes) {
+      opcoes = opcoes || {};
+      var s = res.situacao || { situacao: "SEM_QUALIFICACAO", rotulo: "Sem qualificação registrada" };
+      var h = '<div class="qualif-situacao ' + esc(s.situacao) + '">' + esc(s.rotulo) + '</div>';
+      var itens = res.itens || [];
+      if (!itens.length) return h + '<p style="font-size:13px;color:var(--bc-text-3)">Nenhum relatório de qualificação emitido para este equipamento.' + (opcoes.cliente ? " Em caso de dúvida, fale com a Metrolabs." : " O relatório emitido no módulo de qualificação aparece aqui automaticamente.") + "</p>";
+      h += '<ul class="qualif-lista">' + itens.map(function (i) {
+        var detalhes = [i.numero ? "nº " + i.numero + (i.revisao !== "" ? " · revisão " + (String(i.revisao).length === 1 ? "0" + i.revisao : i.revisao) : "") : "", i.emitidoEm ? "emitido em " + i.emitidoEm : "", i.validadeAte && i.situacao === "VIGENTE" ? "válido até " + i.validadeAte : "", i.resultado ? (i.resultado === "APROVADO" ? "aprovado" : (i.resultado === "REPROVADO" ? "reprovado" : "")) : ""].filter(Boolean).join(" · ");
+        return '<li class="' + (i.situacao === "SUBSTITUIDO" ? "substituido" : "") + '"><div class="qualif-txt"><b>' + esc(i.titulo) + "</b><small>" + esc(detalhes) + "</small><small>" + esc(i.situacaoRotulo) + "</small></div>" +
+          (i.temArquivo && i.situacao !== "MINUTA" ? '<button type="button" class="btn-secondary" style="min-height:40px" onclick="SGO_QVinc.abrirDocumento(\'' + esc(res.equipamento.ID) + "','" + esc(i.ref) + "','" + (opcoes.via || "ficha") + '\')">Abrir</button>' : "") + "</li>";
+      }).join("") + "</ul>";
+      return h;
+    }
+
+    function abrirDocumento(equipamentoId, ref, via) {
+      var janela = null;
+      try { janela = window.open("", "_blank"); } catch (e) { janela = null; }
+      google.script.run
+        .withSuccessHandler(function (r) {
+          if (r && r.success && r.url) { if (janela) janela.location.href = r.url; else window.open(r.url, "_blank"); }
+          else { if (janela) janela.close(); alert((r && r.message) || "Não foi possível abrir o documento. Tente de novo."); }
+        })
+        .withFailureHandler(function () { if (janela) janela.close(); alert("Não foi possível falar com o servidor. Confira a conexão e tente de novo."); })
+        .qualifEquipamentoAbrir(SGO_getSessionId(), equipamentoId, ref, via || "ficha");
+    }
+
+    return { montar: montar, htmlQualificacoes: htmlQualificacoes, abrirDocumento: abrirDocumento, chamarOficial: chamarOficial, esc: esc };
+  })();
+</script>

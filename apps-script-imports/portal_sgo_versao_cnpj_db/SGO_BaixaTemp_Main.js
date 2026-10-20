@@ -397,6 +397,9 @@ function BaixaTemp_apiSalvar(sessionId, p, sessao) {
   BaixaTemp_tipoCfg_(dados.tipo);
   dados.identificacao = BaixaTemp_identificacao_(sessionId, dados.identificacao);
   delete dados.identificacao._nomesProibidos;
+  // 20/10/2026: equipamento de outro cliente (ou de outra unidade) é recusado já ao salvar (SGO_QualifEquipamento.js).
+  var idt = dados.identificacao;
+  if (idt.equipamentoId && typeof SGO_QEQ_identificacao_ === 'function') SGO_QEQ_identificacao_(sessionId, idt.clienteId, idt.unidadeId, idt.equipamentoId);
   var trava = LockService.getScriptLock();
   if (!trava.tryLock(20000)) throw new Error('Outro salvamento está em andamento. Aguarde alguns segundos e toque em "Salvar" de novo; o que você preencheu continua na tela.');
   try {

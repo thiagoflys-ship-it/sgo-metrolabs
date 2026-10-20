@@ -318,10 +318,15 @@ function CronExec_apiEquipamentosDoCadastro(payload) {
   }).map(function (u) { return { id: String(u.ID), nome: String(u.NOME_UNIDADE || u.NOME || 'Unidade') }; });
   var nomeUnidade = {};
   unidades.forEach(function (u) { nomeUnidade[u.id] = u.nome; });
+  // 20/10/2026: situação da qualificação e próxima requalificação de cada equipamento (SGO_QualifEquipamento.js), para o planejamento.
+  var qualif = {};
+  try { if (typeof SGO_QEQ_situacoesPorEquipamento_ === 'function') qualif = SGO_QEQ_situacoesPorEquipamento_(); } catch (eQ) { qualif = {}; }
   var equipamentos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) {
     return String(e.CLIENTE_ID) === String(cliente.ID) && String(e.STATUS || 'ATIVO').toUpperCase() === 'ATIVO';
   }).map(function (e) {
-    return { unidadeId: String(e.UNIDADE_ID || ''), unidade: nomeUnidade[String(e.UNIDADE_ID || '')] || '', tipo: String(e.TIPO || '').trim(), marca: String(e.FABRICANTE || '').trim(), modelo: String(e.MODELO || '').trim(), tag: String(e.TAG || '').trim() };
+    var q = qualif[String(e.ID)] || null;
+    return { unidadeId: String(e.UNIDADE_ID || ''), unidade: nomeUnidade[String(e.UNIDADE_ID || '')] || '', tipo: String(e.TIPO || '').trim(), marca: String(e.FABRICANTE || '').trim(), modelo: String(e.MODELO || '').trim(), tag: String(e.TAG || '').trim(),
+      situacaoQualificacao: q ? q.situacao : '', proximaRequalificacao: q ? q.validadeAte : '', qualificacaoRotulo: q ? q.rotulo : '' };
   }).filter(function (e) { return e.tipo; });
   return { ok: true, encontrado: true, cliente: { id: String(cliente.ID), razaoSocial: String(cliente.RAZAO_SOCIAL || cliente.NOME_FANTASIA || '') }, unidades: unidades, equipamentos: equipamentos };
 }

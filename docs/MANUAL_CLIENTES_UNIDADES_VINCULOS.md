@@ -58,3 +58,27 @@ As mudanças do painel registram usuário, motivo e valores anteriores e posteri
 Quando aparecer **Aguarde**, espere a conclusão. Uma consulta com erro oferece **Tentar novamente** e mantém o formulário. Uma consulta sem resultados não garante que a gravação será aceita: o sistema verifica novamente ao salvar.
 
 Após corrigir um vínculo, reabra o módulo de destino e selecione novamente cliente, unidade e equipamento. Se uma gravação falhar, leia a mensagem e confira o cadastro/auditoria antes de repetir.
+
+## Do cadastro ao relatório de qualificação (20/10/2026)
+
+A ordem de trabalho é sempre a mesma: **Clientes → Unidades → Equipamentos → módulo de qualificação**. O módulo de qualificação (Autoclaves, Esterilização a baixa temperatura) não pede para digitar cliente, CNPJ, endereço, TAG nem número de série: o técnico busca o cliente, escolhe a unidade e o equipamento, e a identificação vem do cadastro. O relatório só pode ser feito para equipamento do próprio cliente; equipamento de outro cliente ou de outra unidade é recusado com a explicação.
+
+Se o cliente, a unidade ou o equipamento ainda não existir, os botões **Cadastrar cliente**, **Cadastrar unidade** e **Cadastrar equipamento** abrem o cadastro em outra aba. Depois de salvar, volte para a aba do ensaio e clique em **Atualizar listas** (na baixa temperatura, **Buscar cliente** de novo): o que já foi preenchido no ensaio continua.
+
+Ao emitir, o relatório:
+
+- fica na pasta do equipamento, dentro da pasta do cliente: `<pasta do módulo>/<CNPJ do cliente>/<TAG - tipo>/Qualificação`, em HTML (para imprimir) e PDF;
+- entra no **Arquivo de documentos** na categoria **3. Relatórios de qualificação**, ligado ao cliente, à unidade e ao equipamento, com o vencimento da requalificação — por isso aparece no cadastro do cliente, da unidade e do equipamento, sem arquivo repetido;
+- aparece na ficha do equipamento, aba **Qualificações**, e na seção **Qualificação** do QR Code.
+
+### Ficha do equipamento — aba Qualificações
+
+Mostra a situação (qualificado até a data, requalificação vencendo, qualificação vencida, última qualificação reprovada ou sem qualificação), o relatório de qualificação vigente, a validade, as revisões anteriores marcadas como **substituídas** e os relatórios de ensaio de cada ciclo. A aba **Dados** traz a mesma situação em uma faixa colorida. Minuta (aguardando aprovação do responsável técnico) aparece só para a equipe e não abre pela ficha.
+
+### QR Code — seção Qualificação
+
+Quem lê a etiqueta do equipamento e entra no SGO+ vê, abaixo da identificação, a seção **Qualificação**: situação, relatório vigente com a validade e revisões anteriores. Só aparecem documentos **emitidos e aprovados**; o cliente vê apenas os equipamentos da própria empresa. Cada consulta, cada documento aberto e cada tentativa negada ficam registrados (trilha de acesso).
+
+### Vencimento da requalificação
+
+A validade do relatório de qualificação vira pendência **Requalificação a vencer** (30 dias antes) e **Requalificação vencida** na central de pendências, na Caixa de decisões da gestão (acompanhamento) e para o próprio cliente. No Cronograma de execução, ao trazer os equipamentos do cadastro, a tela avisa quais estão com a requalificação vencida ou a vencer. O novo relatório emitido substitui o vencimento anterior.

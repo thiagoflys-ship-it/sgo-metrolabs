@@ -280,7 +280,7 @@ function SGO_ajudaTelas_Cadastros_() {
     // =====================================================================
     "equipamentos": {
       titulo: "Equipamentos",
-      paraQueServe: "Cadastra o parque de equipamentos de cada cliente e unidade, identificados pela TAG. Mostra a situação dos documentos de cada equipamento e gera o QR Code da etiqueta.",
+      paraQueServe: "Cadastra o parque de equipamentos de cada cliente e unidade, identificados pela TAG. Mostra a situação dos documentos e da qualificação de cada equipamento e gera o QR Code da etiqueta. Os módulos de qualificação (Autoclaves, baixa temperatura) começam por este cadastro: o relatório emitido aparece sozinho na ficha do equipamento.",
       antesDeComecar: [
         "O cliente e a unidade precisam estar cadastrados e ativos.",
         "Tenha em mãos a TAG (código da etiqueta ou do patrimônio), o número de série, o fabricante e o modelo, como estão na placa do equipamento.",
@@ -327,7 +327,9 @@ function SGO_ajudaTelas_Cadastros_() {
             "Toque na linha do equipamento. O painel de detalhe abre ao lado.",
             "Na aba \"Dados\", confira a identificação, onde o equipamento está e o resumo dos documentos.",
             "Toque em \"Abrir cliente\" ou \"Abrir unidade\" para ir ao cadastro deles.",
-            "Toque na aba \"Documentos\" para ver os documentos e o vencimento de cada um.",
+            "Toque na aba \"Qualificações\" para ver a situação (qualificado, vencendo, vencido ou reprovado), o relatório de qualificação vigente, a validade (próxima requalificação), as revisões anteriores (marcadas como substituídas) e os relatórios de ensaio de cada ciclo. Toque em \"Abrir\" para ver o documento.",
+            "Minuta aguardando aprovação aparece só para a equipe, com a indicação \"Aguardando aprovação\", e não abre por aqui: o cliente vê só documentos emitidos e aprovados.",
+            "Toque na aba \"Documentos\" para ver os documentos e o vencimento de cada um. O relatório de qualificação emitido entra aqui sozinho, na categoria \"3. Relatórios de qualificação\".",
             "Toque em \"Novo documento deste equipamento\" para enviar um documento já ligado a ele.",
             "Toque na aba \"Atendimentos\" para ver os atendimentos do Auvo ligados ao equipamento.",
             "Toque em \"Ver O.S.\" para abrir a ordem de serviço do atendimento."
@@ -343,6 +345,15 @@ function SGO_ajudaTelas_Cadastros_() {
             "Escolha a impressora e imprima. Se a janela de impressão não abrir, toque em \"Imprimir etiqueta\" no alto da folha.",
             "Recorte na linha tracejada e cole a etiqueta no equipamento, em local visível e sem dobras.",
             "Toque em \"Fechar\" para sair da janela do QR Code."
+          ]
+        },
+        {
+          titulo: "O que a pessoa vê ao ler o QR Code",
+          itens: [
+            "Depois de entrar no SGO+ (o cliente com o próprio login), abre a identificação do equipamento e o botão \"Abrir Prontuário Digital\".",
+            "Logo abaixo, a seção \"Qualificação\" mostra a situação, o relatório de qualificação vigente com a validade e as revisões anteriores, marcadas como substituídas.",
+            "Só aparecem documentos emitidos e aprovados pelo responsável técnico. Minuta nunca aparece.",
+            "O cliente só vê os equipamentos da própria empresa. Cada consulta e cada documento aberto ficam registrados."
           ]
         },
         {
@@ -386,6 +397,10 @@ function SGO_ajudaTelas_Cadastros_() {
         { nome: "Etiqueta vermelha \"N vencido(s)\" na coluna Documentos", significado: "Quantos documentos do equipamento estão vencidos." },
         { nome: "Etiqueta amarela \"N vencendo\" na coluna Documentos", significado: "Quantos documentos vencem em até 30 dias." },
         { nome: "Etiqueta azul \"Sem documento\"", significado: "O equipamento ainda não tem documento no arquivo." },
+        { nome: "Faixa verde \"Qualificado até ...\" (Dados e Qualificações)", significado: "O relatório de qualificação vigente está aprovado e dentro da validade." },
+        { nome: "Faixa amarela \"Requalificação vence em ...\"", significado: "Faltam 30 dias ou menos para a requalificação. Também aparece nas pendências e na Caixa de decisões." },
+        { nome: "Faixa vermelha \"Qualificação vencida\" ou \"Última qualificação reprovada\"", significado: "Passou da validade ou o último relatório reprovou o equipamento: agende a requalificação (ou a correção e o novo ensaio)." },
+        { nome: "Faixa azul \"Sem qualificação registrada\"", significado: "Nenhum relatório de qualificação emitido para o equipamento." },
         { nome: "Selo verde \"Concluído\" na aba Atendimentos", significado: "O atendimento do Auvo foi finalizado." },
         { nome: "Selo amarelo \"Em andamento\" na aba Atendimentos", significado: "O atendimento do Auvo ainda não foi finalizado." }
       ],
@@ -409,7 +424,8 @@ function SGO_ajudaTelas_Cadastros_() {
         { p: "O que é a TAG?", r: "É o código que identifica o equipamento no cliente, como o número do patrimônio ou da etiqueta. Exemplo: AUT-01." },
         { p: "Posso usar a mesma TAG em clientes diferentes?", r: "Sim. A TAG só não pode se repetir entre equipamentos ativos do mesmo cliente." },
         { p: "Por que não consigo excluir um equipamento?", r: "Porque ele tem documento, certificado, laudo ou atendimento ligado. Use \"Inativar equipamento\", que guarda o histórico." },
-        { p: "Para que serve o QR Code?", r: "A etiqueta colada no equipamento leva ao cadastro dele no sistema, com os documentos, sem precisar procurar pela TAG." },
+        { p: "Para que serve o QR Code?", r: "A etiqueta colada no equipamento leva ao cadastro dele no sistema, com os documentos e a seção Qualificação (relatório vigente, validade e revisões), sem precisar procurar pela TAG." },
+        { p: "Por que o relatório de qualificação apareceu sozinho no equipamento?", r: "Porque os módulos de qualificação começam pelo cadastro (cliente, unidade e equipamento). Ao emitir, o relatório vai para a pasta do equipamento, dentro da pasta do cliente, e entra no Arquivo de documentos ligado ao equipamento." },
         { p: "Como mudo o equipamento de unidade?", r: "Pela tela \"Vínculos\", com o tipo Equipamento e a ação Transferir. Só a gestão faz. Os documentos do equipamento acompanham." }
       ]
     },

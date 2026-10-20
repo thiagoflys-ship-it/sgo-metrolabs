@@ -89,7 +89,7 @@
       chave: "equipamentos", id: e.ID, titulo: (e.TAG || "Sem TAG") + (e.TIPO ? " · " + CadUI_maiusculaInicial_(e.TIPO) : ""),
       sub: CadUI_esc_([e.CLIENTE_NOME, e.UNIDADE_NOME].filter(Boolean).join(" · ")),
       seloHtml: CadUI_selo_(e.STATUS) + CadUI_chips_(e).replace('<div class="cadx-chips">', "").replace(/<\/div>$/, ""),
-      abas: [{ id: "dados", rotulo: "Dados" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(e.QTD_DOCUMENTOS) + ")" }].concat(cliente ? [] : [{ id: "auvo", rotulo: "Atendimentos" }]),
+      abas: [{ id: "dados", rotulo: "Dados" }, { id: "qualificacoes", rotulo: "Qualificações" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(e.QTD_DOCUMENTOS) + ")" }].concat(cliente ? [] : [{ id: "auvo", rotulo: "Atendimentos" }]),
       aba: aba || "dados",
       corpo: function (a) {
         if (a !== "dados") return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(5) + "</div>";
@@ -100,13 +100,21 @@
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["TAG", e.TAG], ["Tipo", CadUI_maiusculaInicial_(e.TIPO)], ["Número de série", e.SERIE], ["Fabricante", e.FABRICANTE], ["Modelo", e.MODELO]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Onde está</h4>' + CadUI_dados_([["Cliente", e.CLIENTE_NOME], ["Unidade", e.UNIDADE_NOME], ["Setor ou local", e.SETOR]]) +
             (cliente ? "" : '<div class="cadx-acoes" style="margin-top:8px"><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'clientes\',\'' + CadUI_esc_(e.CLIENTE_ID) + '\')">Abrir cliente</button><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'unidades\',\'' + CadUI_esc_(e.UNIDADE_ID) + '\')">Abrir unidade</button></div>') + "</section>" +
+          (e.QUALIF_ROTULO ? '<section class="cadx-sec"><h4 class="cadx-sec-tit">Qualificação</h4><div class="qualif-situacao ' + CadUI_esc_(e.QUALIF_SITUACAO) + '">' + CadUI_esc_(e.QUALIF_ROTULO) + '</div><p class="cadx-sub">Relatórios, revisões e próxima requalificação na aba Qualificações.</p></section>' : "") +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Documentos</h4>' + CadUI_dados_([["Documentos", CadUI_num_(e.QTD_DOCUMENTOS)], ["Vencidos", CadUI_num_(e.DOCS_VENCIDOS)], ["Vencendo em 30 dias", CadUI_num_(e.DOCS_VENCENDO)], ["Cadastrado em", CadUI_dataHora_(e.CRIADO_EM)]]) + "</section>";
       },
       depois: function (p, a) {
         var mais = p.querySelector("#cadxPainelMais");
         if (mais) mais.onclick = function () { CadUI_menu_(mais, Equipamentos_menu_(e, gestao).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes e documentos"; })); };
         var corpo = p.querySelector("#cadxPainelCorpo");
-        if (a === "documentos") {
+        if (a === "qualificacoes") {
+          // 20/10/2026: relatórios de qualificação emitidos (vigente, revisões substituídas e próxima requalificação).
+          CadUI_chamar_("qualifEquipamentoListar", [e.ID], function (res) {
+            if (!corpo || CADUI.painel !== cfg || cfg.aba !== "qualificacoes") return;
+            corpo.innerHTML = (typeof SGO_QVinc !== "undefined" ? SGO_QVinc.htmlQualificacoes(res, { cliente: cliente, via: "ficha" }) : "") +
+              (res.podeVerMinutas ? '<p class="cadx-sub" style="margin-top:8px">Minutas aguardando aprovação aparecem só para a equipe; o cliente vê apenas documentos emitidos e aprovados.</p>' : "");
+          }, function (msg) { if (corpo) corpo.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + CadUI_esc_(msg) + "</div>"; });
+        } else if (a === "documentos") {
           var d1 = function () { if (corpo && det) corpo.innerHTML = (!cliente && e.STATUS === "ATIVO" ? '<div class="cadx-acoes" style="margin-bottom:10px"><button type="button" class="cadx-btn" id="cadxNovoDocEq">Novo documento deste equipamento</button></div>' : "") + CadTela_htmlDocumentos_(det.documentos, "Nenhum documento deste equipamento."); var b = p.querySelector("#cadxNovoDocEq"); if (b) b.onclick = function () { Documentos_novoPara_(e); }; };
           if (det) d1(); else CadTela_detalheRemoto_("equipamentos", e.ID, function (res) { det = res; if (CADUI.painel === cfg) d1(); });
         } else if (a === "auvo") {

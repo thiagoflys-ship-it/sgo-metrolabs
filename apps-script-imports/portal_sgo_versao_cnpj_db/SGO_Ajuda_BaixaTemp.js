@@ -23,7 +23,8 @@ function SGO_ajudaTelas_BaixaTemp_() {
           "Toque em \"Novo ensaio\".",
           "Em \"1. Identificação\", escolha o tipo de processo e marque as etapas executadas (QI, QO e QD).",
           "Digite o nome ou o CNPJ do cliente, toque em \"Buscar cliente\" e escolha na lista.",
-          "Escolha a unidade e o equipamento.",
+          "Escolha a unidade e o equipamento. Só aparecem os equipamentos ativos da unidade escolhida; equipamento de outro cliente ou de outra unidade é recusado ao salvar.",
+          "Se o cliente, a unidade ou o equipamento não aparecer, toque em \"Cadastrar cliente\", \"Cadastrar unidade\" ou \"Cadastrar equipamento\": o cadastro abre em outra aba. Salve lá, volte para esta aba e toque em \"Buscar cliente\" de novo; o ensaio continua como estava.",
           "Confira a data de início, o técnico executor e o motivo da qualificação.",
           "Toque em \"Salvar\". Você pode salvar a qualquer momento e continuar depois pela lista."
         ] },

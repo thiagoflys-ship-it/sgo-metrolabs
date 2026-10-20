@@ -160,6 +160,9 @@ function CadPainel_montar_(sessionId, tipo) {
     itens.sort(function (a, x) { return (CadPainel_ativo_(x) - CadPainel_ativo_(a)) || (a.CLIENTE_NOME + a.NOME_UNIDADE).localeCompare(x.CLIENTE_NOME + x.NOME_UNIDADE, 'pt-BR'); });
   } else if (tipo === 'equipamentos') {
     var docsE = CadPainel_contarDocs_(b.D, 'EQUIPAMENTO_ID');
+    // 20/10/2026: situação da qualificação (qualificado, vencendo, vencido) — SGO_QualifEquipamento.js.
+    var qualifE = {};
+    try { if (typeof SGO_QEQ_situacoesPorEquipamento_ === 'function') qualifE = SGO_QEQ_situacoesPorEquipamento_(); } catch (eQ) { qualifE = {}; }
     itens = b.E.map(function (e) {
       var id = CadPainel_txt_(e.ID);
       var cli = b.mC[CadPainel_txt_(e.CLIENTE_ID)] || null, uni = b.mU[CadPainel_txt_(e.UNIDADE_ID)] || null;
@@ -176,6 +179,7 @@ function CadPainel_montar_(sessionId, tipo) {
       return Object.assign(CadPainel_limpo_(e), {
         CLIENTE_NOME: CadPainel_nomeCliente_(cli), CLIENTE_CNPJ: cli ? CadPainel_txt_(cli.CNPJ) : '', UNIDADE_NOME: uni ? CadPainel_txt_(uni.NOME_UNIDADE) : '',
         QTD_DOCUMENTOS: de.total, DOCS_VENCIDOS: de.vencidos, DOCS_VENCENDO: de.vencendo, PROXIMO_VENCIMENTO_DIAS: de.proximo,
+        QUALIF_SITUACAO: qualifE[id] ? qualifE[id].situacao : '', QUALIF_ROTULO: qualifE[id] ? qualifE[id].rotulo : '', QUALIF_VALIDADE: qualifE[id] ? qualifE[id].validadeAte : '',
         FALTAM: faltam, PENDENCIAS: pend
       });
     });

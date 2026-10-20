@@ -1,5 +1,9 @@
 <!--
-  "Preencher modelo" da Autoclave — tela nativa do SGO+ (sem iframe).
+  Aba "Relatório oficial" da Autoclave (antes "Preencher modelo") — tela nativa do SGO+ (sem iframe).
+  20/10/2026: modelo NOVO (padrão) = relatório de qualificação consolidado a partir dos relatórios de ensaio
+  emitidos, com cliente/unidade/equipamento do cadastro e aprovação do responsável técnico (código no fim
+  deste arquivo, JS_QualifVinculo.html e SGO_AutoRel_ModeloOficialNovo.js). O formulário ANTERIOR, logo abaixo,
+  foi preservado sem mudança e só aparece se o Administrador reativar o modelo anterior.
   Fase 2 (16/10): sem cabeçalho repetido, sem relógio, sem exemplo fictício e
   sem jargão técnico; a geração é feita pelo próprio SGO+ (SGO_TemplateAutoclave.js).
   CSS escopado sob #tplAutoclaveContainer.
@@ -51,8 +55,8 @@
     <div class="wrap">
       <main class="grid-layout">
         <section class="panel">
-          <h2>Relatório no modelo oficial</h2>
-          <p class="panel-subtitle">Preencha os campos para gerar o relatório no modelo oficial. O documento e o PDF ficam guardados na pasta do cliente.</p>
+          <h2>Relatório no modelo anterior</h2>
+          <p class="panel-subtitle">Preencha os campos para gerar o relatório no modelo anterior. O documento e o PDF ficam guardados na pasta do cliente.</p>
 
           <form id="tplFormRelatorio" onsubmit="event.preventDefault(); tplAutoclave_gerarRelatorioUI();" novalidate>
             <div class="section-divider">1. Identificação do relatório</div>
@@ -285,7 +289,7 @@
       .tplAutoclaveObterConfig(SGO_getSessionId());
   }
 
-  function renderTplAutoclave_() {
+  function tplAutoclave_renderAnterior_() {
     const container = document.getElementById('tplAutoclaveContainer');
     if (!container) return;
     try {
@@ -296,5 +300,370 @@
       container.innerHTML = '<div style="padding:24px;color:var(--bc-danger);background:var(--bc-danger-bg);border:1px solid var(--bc-danger-line);border-radius:6px;">' +
         'Não foi possível abrir esta tela. Recarregue a página (F5); se persistir, avise o administrador.</div>';
     }
+  }
+
+  /* ==================================================================
+   * RELATÓRIO NO MODELO OFICIAL — MODELO NOVO (20/10/2026)
+   * Cliente → unidade → equipamento do cadastro; relatórios de ensaio emitidos do equipamento;
+   * etapas, lista da instalação e indicadores; rascunho com o resultado calculado; aprovação do
+   * responsável técnico; emissão em HTML e PDF na pasta do equipamento (dentro da pasta do cliente).
+   * Servidor: SGO_AutoRel_ModeloOficialNovo.js (AutoOficial_apiDispatch). O formulário antigo
+   * (acima) só aparece se o Administrador escolher "Modelo anterior".
+   * ================================================================== */
+  var TPLAUTOF = null;
+
+  function tplAutOf_esc(s) { return SGO_QVinc.esc(s); }
+  function tplAutOf_el(id) { return document.getElementById(id); }
+
+  function tplAutOf_chamar(fn, payload, ok, erro, espera) {
+    if (espera) SGO_iniciarCarregamento_(espera);
+    SGO_QVinc.chamarOficial(fn, payload, function (r) { if (espera) SGO_finalizarCarregamento_(); ok(r); }, function (e) { if (espera) SGO_finalizarCarregamento_(); (erro || tplAutOf_msgErro)(e); });
+  }
+
+  function tplAutOf_msg(id, tipo, texto) {
+    var b = tplAutOf_el(id);
+    if (!b) return;
+    b.className = 'alert-box' + (texto ? ' show ' + (tipo || 'info') : '');
+    b.textContent = texto || '';
+    if (texto && tipo === 'error') { try { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {} }
+  }
+  function tplAutOf_msgErro(e) { tplAutOf_msg('tplAutOfMsgGeral', 'error', e); }
+
+  function tplAutOf_formInicial(sit) {
+    var qi = {};
+    (sit.qiItens || []).forEach(function (it) { qi[it.id] = { situacao: '', observacao: '' }; });
+    return { etapas: { QI: true, QO: true, QD: true }, motivo: '', periodicidadeMeses: sit.periodicidadePadrao || 12, responsavelCliente: '', dataQi: '', qi: qi, indicadores: [], observacoes: '', ciclos: [] };
+  }
+
+  function tplAutOf_html(sit) {
+    var adm = sit.podeAlterarModelo ? '<div class="panel" style="margin-bottom:14px"><h2>Modelo do relatório (administração)</h2>' +
+      '<p class="panel-subtitle" style="margin-bottom:10px">O modelo novo é o padrão. O modelo anterior (documento-modelo com campos digitados) fica desativado e só volta se o Administrador escolher abaixo. Documentos já emitidos nos dois modelos continuam abrindo na pasta do cliente.</p>' +
+      '<div class="form-row"><div class="form-group"><label for="tplAutOfModelo">Modelo em uso</label><select id="tplAutOfModelo" class="form-control"><option value="NOVO">Modelo novo (padrão)</option><option value="ANTERIOR">Modelo anterior (desativado)</option></select></div>' +
+      '<div class="form-group" style="display:flex;align-items:flex-end"><button type="button" class="btn btn-secondary" onclick="tplAutOf_definirModelo()">Aplicar</button></div></div></div>' : '';
+    return '<div class="wrap">' + adm +
+      '<div id="tplAutOfMsgGeral" class="alert-box"></div>' +
+      '<div id="tplAutOfVinculo"></div>' +
+      '<div id="tplAutOfEquip" class="hidden">' +
+        '<section class="panel" style="margin-bottom:14px"><h2>Situação do equipamento</h2><div id="tplAutOfSituacao"></div>' +
+          '<div class="section-divider">Relatórios de ensaio do equipamento</div>' +
+          '<p class="panel-subtitle">Marque os relatórios dos ciclos que fundamentam esta qualificação. Só aparecem relatórios emitidos com a aprovação do responsável técnico, na aba "Gerar relatório".</p>' +
+          '<div id="tplAutOfCiclos"></div>' +
+          '<div id="tplAutOfSemVinculoBox" class="hidden"><div class="section-divider">Relatórios de ensaio sem vínculo</div>' +
+          '<p class="panel-subtitle">Relatórios deste cliente emitidos antes do vínculo com o cadastro. Confira o número e a TAG e ligue ao equipamento: só o vínculo é gravado, o documento emitido não muda.</p><div id="tplAutOfSemVinculo"></div></div>' +
+        '</section>' +
+        '<section class="panel" style="margin-bottom:14px"><h2>Qualificação</h2>' +
+          '<div id="tplAutOfRevisaoBox" class="hidden"><div class="alert-box show warning" id="tplAutOfRevisaoTxt"></div><div class="form-row"><div class="form-group w-100"><label for="tplAutOfMotivoRev">Motivo da nova revisão</label><input id="tplAutOfMotivoRev" class="form-control" type="text" maxlength="300" placeholder="Ex.: correção da lista de verificação da instalação"><span class="field-help">Aparece no registro de revisões do documento (ao menos 10 caracteres).</span></div></div></div>' +
+          '<div class="form-row"><div class="form-group w-100"><label>Etapas executadas</label><div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px">' +
+            '<label style="font-weight:500"><input type="checkbox" id="tplAutOfQI" onchange="tplAutOf_lerForm();tplAutOf_mostrarQi()"> Instalação (QI)</label>' +
+            '<label style="font-weight:500"><input type="checkbox" id="tplAutOfQO" onchange="tplAutOf_lerForm()"> Operação (QO)</label>' +
+            '<label style="font-weight:500"><input type="checkbox" id="tplAutOfQD" onchange="tplAutOf_lerForm()"> Desempenho (QD)</label></div></div></div>' +
+          '<div class="form-row"><div class="form-group"><label for="tplAutOfMotivo">Motivo</label><select id="tplAutOfMotivo" class="form-control" onchange="tplAutOf_lerForm()"><option value="">Escolha o motivo</option>' + (sit.motivos || []).map(function (m) { return '<option>' + tplAutOf_esc(m) + '</option>'; }).join('') + '</select></div>' +
+          '<div class="form-group"><label for="tplAutOfPeriodo">Requalificação a cada (meses)</label><input id="tplAutOfPeriodo" class="form-control" type="number" inputmode="numeric" min="' + sit.periodicidadeMin + '" max="' + sit.periodicidadeMax + '" onchange="tplAutOf_lerForm()"><span class="field-help">Padrão ' + sit.periodicidadePadrao + ' meses, contados a partir do último ensaio.</span></div></div>' +
+          '<div class="form-row"><div class="form-group w-100"><label for="tplAutOfAcomp">Acompanhado por (contratante)</label><input id="tplAutOfAcomp" class="form-control" type="text" maxlength="120" placeholder="Nome e função de quem acompanhou os ensaios" onchange="tplAutOf_lerForm()"></div></div>' +
+          '<div class="form-row"><div class="form-group w-100"><label for="tplAutOfObs">Observações (opcional)</label><textarea id="tplAutOfObs" class="form-control" rows="3" maxlength="2000" placeholder="Condições do ensaio que o cliente precisa conhecer. Não muda o resultado." onchange="tplAutOf_lerForm()"></textarea></div></div>' +
+        '</section>' +
+        '<section class="panel hidden" id="tplAutOfQiBox" style="margin-bottom:14px"><h2>Qualificação de instalação</h2>' +
+          '<p class="panel-subtitle">Marque cada item. Item não conforme precisa da descrição do que foi encontrado e reprova a qualificação.</p>' +
+          '<div class="form-row"><div class="form-group"><label for="tplAutOfDataQi">Data da verificação</label><input id="tplAutOfDataQi" class="form-control" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" oninput="tplAutoclave_mascaraData(this)" onchange="tplAutOf_lerForm()"></div><div class="form-group"></div></div>' +
+          '<div id="tplAutOfQiItens"></div>' +
+          '<div class="btn-container" style="margin-top:8px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_qiTodos()">Marcar todos como conforme</button></div>' +
+        '</section>' +
+        '<section class="panel" style="margin-bottom:14px"><h2>Indicadores químicos e biológicos (opcional)</h2>' +
+          '<p class="panel-subtitle">Registre os resultados informados durante os ensaios. Indicador não conforme reprova a qualificação.</p>' +
+          '<div id="tplAutOfIndicadores"></div><div class="btn-container" style="margin-top:8px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_addIndicador()">Acrescentar indicador</button></div>' +
+        '</section>' +
+        '<section class="panel" style="margin-bottom:14px"><h2>Rascunho e envio para aprovação</h2>' +
+          '<p class="panel-subtitle">O resultado é calculado pelo sistema a partir dos relatórios de ensaio e das verificações. A conclusão pode ser revisada; ela é conferida antes do envio.</p>' +
+          '<label style="font-size:13px;display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="tplAutOfIA"> Redigir a conclusão com o assistente de redação (o texto é conferido; se não passar, vale o texto padrão)</label>' +
+          '<div class="btn-container" style="margin-top:0"><button type="button" class="btn btn-primary" onclick="tplAutOf_rascunho()">Gerar rascunho</button></div>' +
+          '<div id="tplAutOfMsgRascunho" class="alert-box"></div>' +
+          '<div id="tplAutOfRascunho"></div>' +
+        '</section>' +
+      '</div>' +
+      '<section class="panel" style="margin-bottom:14px"><h2>Aguardando aprovação</h2><div id="tplAutOfMsgAprov" class="alert-box"></div><div id="tplAutOfAprovacoes"><p class="panel-subtitle">Carregando…</p></div>' +
+        '<div class="btn-container" style="margin-top:8px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_listarAprovacoes()">Atualizar lista</button></div></section>' +
+      '<section class="panel hidden" id="tplAutOfEmitidosBox"><h2>Relatórios de qualificação deste equipamento</h2><div id="tplAutOfMsgEmit" class="alert-box"></div><div id="tplAutOfEmitidos"></div></section>' +
+      '<p class="modelo-situacao" style="margin-top:12px">Modelo novo do relatório oficial. Os documentos ficam na pasta do equipamento, dentro da pasta do cliente, e aparecem na ficha do equipamento, no Arquivo de documentos e no QR code.</p>' +
+    '</div>';
+  }
+
+  function tplAutOf_render(container, sit) {
+    TPLAUTOF = { sit: sit, ident: null, eq: null, form: tplAutOf_formInicial(sit), numero: '', rascunho: null, textos: null };
+    container.innerHTML = tplAutOf_html(sit);
+    if (sit.podeAlterarModelo) tplAutOf_el('tplAutOfModelo').value = sit.modelo;
+    TPLAUTOF.vinc = SGO_QVinc.montar(tplAutOf_el('tplAutOfVinculo'), {
+      prefixo: 'tplAutOfV', titulo: 'Cliente e equipamento',
+      subtitulo: 'O relatório começa pelo cadastro: escolha o cliente, a unidade e a autoclave. A identificação vem do cadastro, sem digitar de novo, e o relatório só pode ser feito para equipamento do próprio cliente.',
+      aoMudar: function (ident) { TPLAUTOF.ident = ident; TPLAUTOF.rascunho = null; tplAutOf_carregarEquipamento(); }
+    });
+    tplAutOf_preencherForm();
+    tplAutOf_listarAprovacoes();
+  }
+
+  function tplAutOf_payloadBase() {
+    var i = TPLAUTOF.ident || {};
+    var f = TPLAUTOF.form;
+    return { clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId, etapas: f.etapas, motivo: f.motivo, periodicidadeMeses: f.periodicidadeMeses,
+      responsavelCliente: f.responsavelCliente, dataQi: f.dataQi, qi: f.qi, indicadores: f.indicadores, observacoes: f.observacoes, ciclos: f.ciclos,
+      numero: TPLAUTOF.numero || '', motivoRevisao: (tplAutOf_el('tplAutOfMotivoRev') || {}).value || '' };
+  }
+
+  function tplAutOf_carregarEquipamento(depois) {
+    var box = tplAutOf_el('tplAutOfEquip'), emit = tplAutOf_el('tplAutOfEmitidosBox');
+    if (!TPLAUTOF.ident) { box.classList.add('hidden'); emit.classList.add('hidden'); return; }
+    var i = TPLAUTOF.ident;
+    tplAutOf_chamar('apiEquipamento', { clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId }, function (r) {
+      TPLAUTOF.eq = r;
+      box.classList.remove('hidden'); emit.classList.remove('hidden');
+      var s = r.situacao || {};
+      tplAutOf_el('tplAutOfSituacao').innerHTML = '<div class="qualif-situacao ' + tplAutOf_esc(s.situacao) + '">' + tplAutOf_esc(s.rotulo || '') + '</div>';
+      tplAutOf_desenharCiclos(); tplAutOf_desenharEmitidos();
+      if (depois) depois();
+    }, function (e) { box.classList.add('hidden'); tplAutOf_msgErro(e); }, 'Carregando o equipamento…');
+  }
+
+  function tplAutOf_desenharCiclos() {
+    var r = TPLAUTOF.eq, sel = TPLAUTOF.form.ciclos;
+    var vig = (r.ciclos || []).filter(function (c) { return c.status === 'EMITIDO'; });
+    var subst = (r.ciclos || []).filter(function (c) { return c.status !== 'EMITIDO'; });
+    var h = vig.length ? '<div style="display:grid;gap:8px">' + vig.map(function (c) {
+      return '<label style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:13px;line-height:1.5"><input type="checkbox" data-ciclo="' + tplAutOf_esc(c.id) + '"' + (sel.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="tplAutOf_marcarCiclo(this)" style="margin-top:3px">' +
+        '<span><b>' + tplAutOf_esc(c.numero) + '</b> · revisão ' + tplAutOf_esc(c.revisao) + ' · ' + tplAutOf_esc(c.tipoEnsaio) + (c.programa ? ' · ' + tplAutOf_esc(c.programa) : '') +
+        '<br><span style="color:var(--bc-text-3)">' + (c.data ? 'Ensaio em ' + tplAutOf_esc(c.data) + ' · ' : '') + 'emitido em ' + tplAutOf_esc(c.emitidoEm) + ' por ' + tplAutOf_esc(c.aprovadoPor || '—') + ' · ' +
+        (c.resultado === 'APROVADO' ? '<span class="ok-txt" style="color:var(--bc-ok,#1d6b3f);font-weight:700">aprovado</span>' : '<span style="color:var(--bc-danger);font-weight:700">' + tplAutOf_esc(String(c.resultado || '').toLowerCase()) + '</span>') + '</span></span></label>';
+    }).join('') + '</div>' : '<div class="alert-box show info">Nenhum relatório de ensaio emitido para este equipamento. Emita o relatório de cada ciclo na aba "Gerar relatório" (com o mesmo cliente e equipamento) e volte aqui. Para um relatório só da qualificação de instalação, desmarque operação e desempenho.</div>';
+    if (subst.length) h += '<p class="field-help" style="margin-top:8px">' + subst.length + ' revisão(ões) anterior(es) substituída(s) não aparece(m) para escolha: vale a revisão vigente.</p>';
+    tplAutOf_el('tplAutOfCiclos').innerHTML = h;
+    var sv = r.semVinculo || [];
+    tplAutOf_el('tplAutOfSemVinculoBox').classList.toggle('hidden', !sv.length);
+    tplAutOf_el('tplAutOfSemVinculo').innerHTML = sv.map(function (c) {
+      return '<div style="border:1px dashed var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.5"><b>' + tplAutOf_esc(c.numero) + '</b> · revisão ' + tplAutOf_esc(c.revisao) + ' · TAG no relatório: ' + tplAutOf_esc(c.tag || '—') + ' · emitido em ' + tplAutOf_esc(c.emitidoEm || '—') +
+        (c.mesmaTag ? '' : '<br><label style="font-weight:500"><input type="checkbox" id="tplAutOfTag_' + tplAutOf_esc(c.id) + '"> É o mesmo equipamento (a TAG do relatório é diferente da TAG do cadastro)</label>') +
+        '<div class="btn-container" style="margin-top:6px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_vincular(\'' + tplAutOf_esc(c.id) + '\')">Vincular a este equipamento</button></div></div>';
+    }).join('');
+  }
+
+  function tplAutOf_marcarCiclo(cb) {
+    var id = cb.getAttribute('data-ciclo'), l = TPLAUTOF.form.ciclos, k = l.indexOf(id);
+    if (cb.checked && k < 0) l.push(id);
+    if (!cb.checked && k >= 0) l.splice(k, 1);
+    TPLAUTOF.rascunho = null;
+  }
+
+  function tplAutOf_vincular(id) {
+    var i = TPLAUTOF.ident, cb = tplAutOf_el('tplAutOfTag_' + id);
+    tplAutOf_chamar('apiVincular', { emissaoId: id, clienteId: i.clienteId, unidadeId: i.unidadeId, equipamentoId: i.equipamentoId, confirmarTagDiferente: !!(cb && cb.checked) }, function (r) {
+      tplAutOf_msg('tplAutOfMsgGeral', 'success', r.mensagem);
+      tplAutOf_carregarEquipamento();
+    }, null, 'Vinculando…');
+  }
+
+  function tplAutOf_preencherForm() {
+    var f = TPLAUTOF.form;
+    tplAutOf_el('tplAutOfQI').checked = !!f.etapas.QI; tplAutOf_el('tplAutOfQO').checked = !!f.etapas.QO; tplAutOf_el('tplAutOfQD').checked = !!f.etapas.QD;
+    tplAutOf_el('tplAutOfMotivo').value = f.motivo || ''; tplAutOf_el('tplAutOfPeriodo').value = f.periodicidadeMeses || '';
+    tplAutOf_el('tplAutOfAcomp').value = f.responsavelCliente || ''; tplAutOf_el('tplAutOfObs').value = f.observacoes || ''; tplAutOf_el('tplAutOfDataQi').value = f.dataQi || '';
+    tplAutOf_mostrarQi(); tplAutOf_desenharIndicadores();
+  }
+
+  function tplAutOf_lerForm() {
+    var f = TPLAUTOF.form;
+    f.etapas = { QI: tplAutOf_el('tplAutOfQI').checked, QO: tplAutOf_el('tplAutOfQO').checked, QD: tplAutOf_el('tplAutOfQD').checked };
+    f.motivo = tplAutOf_el('tplAutOfMotivo').value; f.periodicidadeMeses = parseInt(tplAutOf_el('tplAutOfPeriodo').value, 10) || '';
+    f.responsavelCliente = tplAutOf_el('tplAutOfAcomp').value.trim(); f.observacoes = tplAutOf_el('tplAutOfObs').value.trim(); f.dataQi = tplAutOf_el('tplAutOfDataQi').value.trim();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-qi-sit]'), function (s) { f.qi[s.getAttribute('data-qi-sit')] = f.qi[s.getAttribute('data-qi-sit')] || {}; f.qi[s.getAttribute('data-qi-sit')].situacao = s.value; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-qi-obs]'), function (s) { f.qi[s.getAttribute('data-qi-obs')] = f.qi[s.getAttribute('data-qi-obs')] || {}; f.qi[s.getAttribute('data-qi-obs')].observacao = s.value.trim(); });
+    f.indicadores = Array.prototype.map.call(document.querySelectorAll('[data-ind]'), function (row) {
+      return { tipo: row.querySelector('.ind-tipo').value, ciclo: row.querySelector('.ind-ciclo').value.trim(), resultado: row.querySelector('.ind-res').value, observacao: row.querySelector('.ind-obs').value.trim() };
+    });
+    TPLAUTOF.rascunho = null;
+  }
+
+  function tplAutOf_mostrarQi() {
+    var on = tplAutOf_el('tplAutOfQI').checked, f = TPLAUTOF.form;
+    tplAutOf_el('tplAutOfQiBox').classList.toggle('hidden', !on);
+    if (!on) return;
+    tplAutOf_el('tplAutOfQiItens').innerHTML = (TPLAUTOF.sit.qiItens || []).map(function (it) {
+      var r = f.qi[it.id] || {};
+      return '<div style="border-bottom:1px solid var(--border);padding:8px 0"><div style="font-size:13px;line-height:1.5;margin-bottom:6px">' + tplAutOf_esc(it.texto) + (it.pressao ? ' <span class="field-help" style="display:inline">(só quando a pressão é analisada)</span>' : '') + '</div>' +
+        '<div class="form-row" style="margin-bottom:0"><div class="form-group" style="min-width:170px;flex:0 0 190px"><select class="form-control" data-qi-sit="' + it.id + '" onchange="tplAutOf_lerForm()"><option value="">Escolha</option><option value="C"' + (r.situacao === 'C' ? ' selected' : '') + '>Conforme</option><option value="NC"' + (r.situacao === 'NC' ? ' selected' : '') + '>Não conforme</option><option value="NA"' + (r.situacao === 'NA' ? ' selected' : '') + '>Não aplicável</option></select></div>' +
+        '<div class="form-group"><input class="form-control" type="text" maxlength="400" placeholder="Observação (obrigatória se não conforme)" data-qi-obs="' + it.id + '" value="' + tplAutOf_esc(r.observacao || '') + '" onchange="tplAutOf_lerForm()"></div></div></div>';
+    }).join('');
+  }
+
+  function tplAutOf_qiTodos() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-qi-sit]'), function (s) { if (!s.value) s.value = 'C'; });
+    tplAutOf_lerForm();
+  }
+
+  function tplAutOf_desenharIndicadores() {
+    var f = TPLAUTOF.form, tipos = TPLAUTOF.sit.indicadores || [];
+    tplAutOf_el('tplAutOfIndicadores').innerHTML = f.indicadores.length ? f.indicadores.map(function (x, k) {
+      return '<div data-ind="' + k + '" class="form-row" style="border-bottom:1px solid var(--border);padding-bottom:8px">' +
+        '<div class="form-group"><label>Indicador</label><select class="form-control ind-tipo" onchange="tplAutOf_lerForm()"><option value="">Escolha</option>' + tipos.map(function (t) { return '<option' + (t === x.tipo ? ' selected' : '') + '>' + tplAutOf_esc(t) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="form-group"><label>Ciclo</label><input class="form-control ind-ciclo" type="text" maxlength="60" placeholder="Ex.: ciclo 2, relatório AUT-0002" value="' + tplAutOf_esc(x.ciclo) + '" onchange="tplAutOf_lerForm()"></div>' +
+        '<div class="form-group"><label>Resultado</label><select class="form-control ind-res" onchange="tplAutOf_lerForm()"><option value="">Escolha</option><option value="CONFORME"' + (x.resultado === 'CONFORME' ? ' selected' : '') + '>Conforme</option><option value="NAO_CONFORME"' + (x.resultado === 'NAO_CONFORME' ? ' selected' : '') + '>Não conforme</option></select></div>' +
+        '<div class="form-group"><label>Observação</label><input class="form-control ind-obs" type="text" maxlength="300" value="' + tplAutOf_esc(x.observacao) + '" onchange="tplAutOf_lerForm()"></div>' +
+        '<div class="form-group" style="flex:0 0 auto;min-width:0;display:flex;align-items:flex-end"><button type="button" class="btn btn-secondary" onclick="tplAutOf_removerIndicador(' + k + ')">Remover</button></div></div>';
+    }).join('') : '<p class="panel-subtitle" style="margin:0">Nenhum indicador registrado.</p>';
+  }
+  function tplAutOf_addIndicador() { tplAutOf_lerForm(); TPLAUTOF.form.indicadores.push({ tipo: '', ciclo: '', resultado: '', observacao: '' }); tplAutOf_desenharIndicadores(); }
+  function tplAutOf_removerIndicador(k) { tplAutOf_lerForm(); TPLAUTOF.form.indicadores.splice(k, 1); tplAutOf_desenharIndicadores(); TPLAUTOF.rascunho = null; }
+
+  function tplAutOf_rascunho() {
+    if (!TPLAUTOF.ident) { tplAutOf_msg('tplAutOfMsgRascunho', 'error', 'Escolha o cliente, a unidade e o equipamento no início da tela.'); return; }
+    tplAutOf_lerForm();
+    var p = tplAutOf_payloadBase();
+    p.redigirComIA = tplAutOf_el('tplAutOfIA').checked;
+    tplAutOf_msg('tplAutOfMsgRascunho', '', '');
+    tplAutOf_chamar('apiGerarRascunho', p, function (r) {
+      TPLAUTOF.rascunho = r;
+      var box = tplAutOf_el('tplAutOfRascunho');
+      if (r.bloqueado) {
+        box.innerHTML = '<div class="alert-box show error"><b>O relatório não pode seguir.</b> Resolva os itens abaixo e gere o rascunho de novo:</div><ul style="font-size:13px;line-height:1.55;padding-left:18px">' +
+          r.travas.map(function (t) { return '<li><b>' + tplAutOf_esc(t.texto) + '</b> ' + tplAutOf_esc(t.comoCorrigir) + '</li>'; }).join('') + '</ul>';
+        return;
+      }
+      var res = r.resumo;
+      box.innerHTML = '<div class="qualif-situacao ' + (res.statusConsolidado === 'APROVADO' ? 'QUALIFICADO' : 'REPROVADO') + '">Resultado calculado: ' + (res.statusConsolidado === 'APROVADO' ? 'APROVADO' : 'REPROVADO') + (res.validadeAte ? ' · requalificação até ' + tplAutOf_esc(res.validadeAte) : '') + '</div>' +
+        (res.naoConformidades.length ? '<ul style="font-size:13px;line-height:1.55;padding-left:18px">' + res.naoConformidades.map(function (n) { return '<li>' + tplAutOf_esc(n.origem + ': ' + n.texto) + '</li>'; }).join('') + '</ul>' : '') +
+        (r.avisoIA ? '<div class="alert-box show warning">' + tplAutOf_esc(r.avisoIA) + '</div>' : '') +
+        '<div class="form-row"><div class="form-group w-100"><label for="tplAutOfConclusao">Conclusão' + (r.origemTexto === 'IA' ? ' (redigida pelo assistente e conferida)' : ' (texto padrão)') + '</label><textarea id="tplAutOfConclusao" class="form-control" rows="7">' + tplAutOf_esc(r.textos.conclusao) + '</textarea></div></div>' +
+        '<div class="form-row"><div class="form-group w-100"><label for="tplAutOfSimples">Em termos práticos (linguagem simples)</label><textarea id="tplAutOfSimples" class="form-control" rows="3">' + tplAutOf_esc(r.textos.conclusaoSimples) + '</textarea><span class="field-help">O resultado não muda pelo texto: um texto que contradiga o resultado calculado é recusado no envio.</span></div></div>' +
+        '<div class="btn-container"><button type="button" class="btn btn-secondary" onclick="tplAutOf_previa()">Prévia do documento</button><button type="button" class="btn btn-primary" onclick="tplAutOf_enviar()">Enviar para aprovação</button></div>';
+    }, function (e) { tplAutOf_msg('tplAutOfMsgRascunho', 'error', e); }, 'Calculando o resultado…');
+  }
+
+  function tplAutOf_textos() { return { conclusao: (tplAutOf_el('tplAutOfConclusao') || {}).value || '', conclusaoSimples: (tplAutOf_el('tplAutOfSimples') || {}).value || '' }; }
+
+  function tplAutOf_abrirHtml(html) {
+    var w = window.open('', '_blank');
+    if (!w) { alert('O navegador bloqueou a nova aba. Permita janelas deste site e tente de novo.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+
+  function tplAutOf_previa() {
+    var p = tplAutOf_payloadBase(); p.textos = tplAutOf_textos();
+    tplAutOf_chamar('apiPrevia', p, function (r) { tplAutOf_abrirHtml(r.html); }, function (e) { tplAutOf_msg('tplAutOfMsgRascunho', 'error', e); }, 'Montando a prévia…');
+  }
+
+  function tplAutOf_enviar() {
+    if (!TPLAUTOF.rascunho || TPLAUTOF.rascunho.bloqueado) { tplAutOf_msg('tplAutOfMsgRascunho', 'error', 'Gere o rascunho antes de enviar (algo mudou desde o último rascunho).'); return; }
+    var p = tplAutOf_payloadBase(); p.textos = tplAutOf_textos(); p.assinaturaContexto = TPLAUTOF.rascunho.assinaturaContexto;
+    tplAutOf_chamar('apiEnviarParaAprovacao', p, function (r) {
+      tplAutOf_msg('tplAutOfMsgRascunho', 'success', r.mensagem);
+      TPLAUTOF.numero = ''; TPLAUTOF.rascunho = null;
+      tplAutOf_el('tplAutOfRevisaoBox').classList.add('hidden');
+      tplAutOf_listarAprovacoes(); tplAutOf_carregarEquipamento();
+    }, function (e) { tplAutOf_msg('tplAutOfMsgRascunho', 'error', e); }, 'Enviando para aprovação…');
+  }
+
+  function tplAutOf_listarAprovacoes() {
+    tplAutOf_chamar('apiListarAprovacoes', {}, function (r) {
+      var box = tplAutOf_el('tplAutOfAprovacoes');
+      if (!box) return;
+      if (!r.itens.length) { box.innerHTML = '<p class="panel-subtitle" style="margin:0">' + (r.podeAprovar ? 'Nenhum relatório de qualificação aguardando a sua aprovação.' : 'Nenhum envio seu aguardando aprovação ou devolvido.') + '</p>'; return; }
+      box.innerHTML = r.itens.map(function (i) {
+        var dev = i.status === 'DEVOLVIDO';
+        return '<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.55"><b>' + tplAutOf_esc(i.numero) + '</b> · ' + tplAutOf_esc(i.cliente) + ' · TAG ' + tplAutOf_esc(i.tag || '—') + ' · resultado calculado ' + tplAutOf_esc(String(i.resultado || '').toLowerCase()) +
+          '<br><span style="color:var(--bc-text-3)">Enviado por ' + tplAutOf_esc(i.enviadoPor) + ' em ' + tplAutOf_esc(i.enviadoEm) + '</span>' +
+          (dev ? '<div class="alert-box show warning" style="margin-top:6px">Devolvido: ' + tplAutOf_esc(i.motivoDevolucao) + '</div><div class="btn-container" style="margin-top:6px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_abrirRegistro(\'' + tplAutOf_esc(i.id) + '\')">Abrir para corrigir</button></div>'
+            : (r.podeAprovar ? '<div class="btn-container" style="margin-top:6px"><button type="button" class="btn btn-secondary" onclick="tplAutOf_preverAprov(\'' + tplAutOf_esc(i.id) + '\')">Prévia</button>' +
+              '<label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="tplAutOfConf_' + tplAutOf_esc(i.id) + '"> Conferi os dados, os critérios e a conclusão e aprovo a emissão</label>' +
+              '<button type="button" class="btn btn-primary" onclick="tplAutOf_aprovar(\'' + tplAutOf_esc(i.id) + '\')">Aprovar e emitir</button></div>' +
+              '<div class="form-row" style="margin-top:6px"><div class="form-group"><input class="form-control" type="text" id="tplAutOfDev_' + tplAutOf_esc(i.id) + '" maxlength="300" placeholder="Motivo da devolução (ao menos 10 caracteres)"></div><div class="form-group" style="flex:0 0 auto;min-width:0"><button type="button" class="btn btn-secondary" onclick="tplAutOf_devolver(\'' + tplAutOf_esc(i.id) + '\')">Devolver ao técnico</button></div></div>'
+              : '<p class="field-help">Aguardando a conferência do responsável técnico.</p>')) + '</div>';
+      }).join('');
+    }, function (e) { tplAutOf_msg('tplAutOfMsgAprov', 'error', e); });
+  }
+
+  function tplAutOf_preverAprov(id) { tplAutOf_chamar('apiPreverAprovacao', { id: id }, function (r) { tplAutOf_abrirHtml(r.html); }, function (e) { tplAutOf_msg('tplAutOfMsgAprov', 'error', e); }, 'Montando a prévia…'); }
+
+  function tplAutOf_aprovar(id) {
+    var cb = tplAutOf_el('tplAutOfConf_' + id);
+    if (!cb || !cb.checked) { tplAutOf_msg('tplAutOfMsgAprov', 'error', 'Marque "Conferi os dados, os critérios e a conclusão e aprovo a emissão" antes de aprovar.'); return; }
+    tplAutOf_chamar('apiAprovarEmitir', { id: id, confirmacaoRevisao: true }, function (r) {
+      tplAutOf_msg('tplAutOfMsgAprov', r.avisoArquivo ? 'warning' : 'success', r.mensagem + (r.avisoArquivo ? ' ' + r.avisoArquivo : ''));
+      tplAutOf_listarAprovacoes();
+      if (TPLAUTOF.ident) tplAutOf_carregarEquipamento();
+      if (r.pdfId && typeof SGO_EnviarDoc !== 'undefined' && SGO_EnviarDoc && confirm('Relatório emitido. Deseja enviar ao cliente agora (e-mail ou WhatsApp)?')) {
+        SGO_EnviarDoc.abrir({ arquivoId: r.pdfId, htmlId: r.htmlId, dica: { clienteId: r.clienteId, numero: r.numero, titulo: 'Relatório de qualificação ' + r.numero } });
+      }
+    }, function (e) { tplAutOf_msg('tplAutOfMsgAprov', 'error', e); }, 'Emitindo o relatório…');
+  }
+
+  function tplAutOf_devolver(id) {
+    var m = (tplAutOf_el('tplAutOfDev_' + id) || {}).value || '';
+    tplAutOf_chamar('apiDevolver', { id: id, motivo: m }, function (r) { tplAutOf_msg('tplAutOfMsgAprov', 'success', r.mensagem); tplAutOf_listarAprovacoes(); }, function (e) { tplAutOf_msg('tplAutOfMsgAprov', 'error', e); }, 'Devolvendo…');
+  }
+
+  /** Envio devolvido (corrigir) ou relatório emitido (nova revisão): recarrega o formulário. */
+  function tplAutOf_abrirRegistro(id) {
+    tplAutOf_chamar('apiAbrir', { id: id }, function (r) {
+      var d = r.dados || {};
+      TPLAUTOF.form = Object.assign(tplAutOf_formInicial(TPLAUTOF.sit), { etapas: d.etapas || {}, motivo: d.motivo || '', periodicidadeMeses: d.periodicidadeMeses || TPLAUTOF.sit.periodicidadePadrao,
+        responsavelCliente: d.responsavelCliente || '', dataQi: d.dataQi || '', qi: Object.assign(tplAutOf_formInicial(TPLAUTOF.sit).qi, d.qi || {}), indicadores: d.indicadores || [], observacoes: d.observacoes || '', ciclos: d.ciclos || [] });
+      TPLAUTOF.numero = r.modo === 'REVISAR' ? (d.numero || '') : (d.numero || '');
+      TPLAUTOF.rascunho = null;
+      tplAutOf_preencherForm();
+      var rev = tplAutOf_el('tplAutOfRevisaoBox');
+      rev.classList.toggle('hidden', !TPLAUTOF.numero);
+      if (TPLAUTOF.numero) tplAutOf_el('tplAutOfRevisaoTxt').textContent = 'Nova revisão do relatório ' + TPLAUTOF.numero + '. A revisão emitida antes continua guardada e passa a constar como substituída.';
+      tplAutOf_msg('tplAutOfMsgGeral', 'info', r.mensagem);
+      TPLAUTOF.vinc.definir({ clienteId: d.clienteId, unidadeId: d.unidadeId, equipamentoId: d.equipamentoId, cliente: '' });
+      try { tplAutOf_el('tplAutOfVinculo').scrollIntoView({ behavior: 'smooth' }); } catch (e) {}
+    }, null, 'Carregando…');
+  }
+
+  function tplAutOf_desenharEmitidos() {
+    var l = (TPLAUTOF.eq && TPLAUTOF.eq.oficiais) || [];
+    var box = tplAutOf_el('tplAutOfEmitidos');
+    var emit = l.filter(function (r) { return r.status === 'EMITIDO' || r.status === 'SUBSTITUIDO'; });
+    box.innerHTML = emit.length ? emit.map(function (r) {
+      var vig = r.status === 'EMITIDO';
+      return '<div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.55;' + (vig ? '' : 'opacity:.75') + '"><b>' + tplAutOf_esc(r.numero) + '</b> · revisão ' + tplAutOf_esc(r.revisao) + ' · ' + tplAutOf_esc(String(r.resultado || '').toLowerCase()) +
+        (r.validadeAte && vig ? ' · requalificação até ' + tplAutOf_esc(r.validadeAte) : '') + '<br><span style="color:var(--bc-text-3)">' + (vig ? 'Vigente' : 'Substituída por revisão posterior') + ' · aprovado por ' + tplAutOf_esc(r.aprovadoPor || '—') + ' em ' + tplAutOf_esc(String(r.aprovadoEm || '').slice(0, 16)) + '</span>' +
+        '<div class="btn-container" style="margin-top:6px">' + (r.pdfUrl ? '<a class="btn btn-secondary" href="' + tplAutOf_esc(r.pdfUrl) + '" target="_blank" rel="noopener">Abrir PDF</a>' : '') + (r.htmlUrl ? '<a class="btn btn-secondary" href="' + tplAutOf_esc(r.htmlUrl) + '" target="_blank" rel="noopener">Abrir para imprimir</a>' : '') +
+        (vig && r.pdfId ? '<button type="button" class="btn btn-secondary" onclick="tplAutOf_enviarCliente(\'' + tplAutOf_esc(r.pdfId) + '\',\'' + tplAutOf_esc(r.htmlId) + '\',\'' + tplAutOf_esc(r.numero) + '\')">Enviar ao cliente</button>' : '') +
+        (vig ? '<button type="button" class="btn btn-secondary" onclick="tplAutOf_abrirRegistro(\'' + tplAutOf_esc(r.id) + '\')">Nova revisão</button>' : '') + '</div></div>';
+    }).join('') : '<p class="panel-subtitle" style="margin:0">Nenhum relatório de qualificação emitido para este equipamento.</p>';
+  }
+
+  function tplAutOf_enviarCliente(pdfId, htmlId, numero) {
+    if (typeof SGO_EnviarDoc === 'undefined' || !SGO_EnviarDoc) { alert('O envio ao cliente não está disponível nesta tela. Use o Arquivo de documentos.'); return; }
+    SGO_EnviarDoc.abrir({ arquivoId: pdfId, htmlId: htmlId, dica: { clienteId: (TPLAUTOF.ident || {}).clienteId, numero: numero, titulo: 'Relatório de qualificação ' + numero } });
+  }
+
+  function tplAutOf_definirModelo() {
+    var m = tplAutOf_el('tplAutOfModelo').value;
+    if (m === 'ANTERIOR' && !confirm('Reativar o modelo anterior? A aba volta a mostrar o formulário antigo (campos digitados e resultado escolhido pelo técnico) até o Administrador escolher o modelo novo de novo.')) return;
+    tplAutOf_chamar('apiDefinirModelo', { modelo: m }, function (r) { alert(r.mensagem); renderTplAutoclave_(); }, null, 'Aplicando…');
+  }
+
+  function renderTplAutoclave_() {
+    const container = document.getElementById('tplAutoclaveContainer');
+    if (!container) return;
+    container.innerHTML = '<div class="panel">Carregando o relatório oficial…</div>';
+    SGO_QVinc.chamarOficial('apiSituacao', {}, function (sit) {
+      try {
+        if (sit.modelo === 'ANTERIOR') {
+          tplAutoclave_renderAnterior_();
+          var aviso = '<div class="alert-box show warning" style="margin-bottom:12px">Modelo anterior reativado pelo Administrador. O documento sai com os campos digitados abaixo, sem o resultado calculado dos ensaios.' +
+            (sit.podeAlterarModelo ? ' <button type="button" class="btn btn-secondary" style="margin-left:8px" onclick="tplAutOf_voltarNovo()">Voltar ao modelo novo</button>' : '') + '</div>';
+          container.insertAdjacentHTML('afterbegin', aviso);
+          return;
+        }
+        tplAutOf_render(container, sit);
+      } catch (e) {
+        console.error('renderTplAutoclave_ falhou:', e);
+        container.innerHTML = '<div style="padding:24px;color:var(--bc-danger);background:var(--bc-danger-bg);border:1px solid var(--bc-danger-line);border-radius:6px;">Não foi possível abrir esta tela. Recarregue a página (F5); se persistir, avise o administrador.</div>';
+      }
+    }, function (e) {
+      container.innerHTML = '<div class="alert-box show error">' + tplAutOf_esc(e) + ' <button type="button" class="btn btn-secondary" onclick="renderTplAutoclave_()">Tentar de novo</button></div>';
+    });
+  }
+
+  function tplAutOf_voltarNovo() {
+    SGO_QVinc.chamarOficial('apiDefinirModelo', { modelo: 'NOVO' }, function () { renderTplAutoclave_(); }, function (e) { alert(e); });
   }
 </script>

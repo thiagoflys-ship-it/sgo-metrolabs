@@ -90,7 +90,7 @@ var GES_MODULOS_CONFIG = [['padroes', 'Padrões de referência'], ['certificados
  */
 var GES_TIPOS = {
   padrao_vencido: { prazo: 1 }, padrao_vencendo: { prazo: 5, janela: 15 }, padrao_sem_validade: { prazo: 2 },
-  documento_vencido: { prazo: 5, acompanhamento: true }, calibracao_vencida: { prazo: 5, acompanhamento: true }, nr13_vencida: { prazo: 5, acompanhamento: true },
+  documento_vencido: { prazo: 5, acompanhamento: true }, requalificacao_vencida: { prazo: 5, acompanhamento: true }, calibracao_vencida: { prazo: 5, acompanhamento: true }, nr13_vencida: { prazo: 5, acompanhamento: true },
   cnh_vencida: { prazo: 1 }, cnh_vencendo: { prazo: 2, janela: 7 },
   veiculo_doc_vencido: { prazo: 1 }, veiculo_doc_vencendo: { prazo: 5, janela: 15 },
   manutencao_vencida: { prazo: 2 }, manutencao_vencendo: { prazo: 5, janela: 15 },
